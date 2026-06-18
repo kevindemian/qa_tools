@@ -32,18 +32,46 @@ export function writeReport(filename: string, content: string): string {
     const dir = reportsDir();
     const dateStr = formatDateISO();
     const targetDir = join(dir, dateStr);
-    mkdirSync(targetDir, { recursive: true });
+    try {
+        mkdirSync(targetDir, { recursive: true });
+    } catch (err) {
+        const msg = err instanceof Error ? err.message : String(err);
+        rootLogger.warn(
+            `writeReport: failed to create directory ${targetDir} (${msg}). Verify permissions and disk space.`,
+        );
+        throw err;
+    }
     const filepath = join(targetDir, filename);
-    writeFileSync(filepath, content, 'utf8');
+    try {
+        writeFileSync(filepath, content, 'utf8');
+    } catch (err) {
+        const msg = err instanceof Error ? err.message : String(err);
+        rootLogger.warn(`writeReport: failed to write ${filepath} (${msg}). Verify disk space and permissions.`);
+        throw err;
+    }
     return filepath;
 }
 
 /** Write a temp file under `tempDir/{category}/`. Cleaned up on exit via {@link registerCleanup}. */
 export function writeEphemeral(category: string, filename: string, content: string): string {
     const dir = join(tempDir(), category);
-    mkdirSync(dir, { recursive: true });
+    try {
+        mkdirSync(dir, { recursive: true });
+    } catch (err) {
+        const msg = err instanceof Error ? err.message : String(err);
+        rootLogger.warn(
+            `writeEphemeral: failed to create directory ${dir} (${msg}). Verify permissions and disk space.`,
+        );
+        throw err;
+    }
     const filepath = join(dir, filename);
-    writeFileSync(filepath, content, 'utf8');
+    try {
+        writeFileSync(filepath, content, 'utf8');
+    } catch (err) {
+        const msg = err instanceof Error ? err.message : String(err);
+        rootLogger.warn(`writeEphemeral: failed to write ${filepath} (${msg}). Verify disk space and permissions.`);
+        throw err;
+    }
     return filepath;
 }
 
@@ -54,11 +82,22 @@ export function tempDirPath(): string {
 
 /** Create all required subdirectories (temp/previews, temp/vars, temp/cache, reports, logs). */
 export function ensureDirs(): void {
-    mkdirSync(join(tempDir(), 'previews'), { recursive: true });
-    mkdirSync(join(tempDir(), 'vars'), { recursive: true });
-    mkdirSync(join(tempDir(), 'cache'), { recursive: true });
-    mkdirSync(reportsDir(), { recursive: true });
-    mkdirSync(logsDir(), { recursive: true });
+    const dirs = [
+        join(tempDir(), 'previews'),
+        join(tempDir(), 'vars'),
+        join(tempDir(), 'cache'),
+        reportsDir(),
+        logsDir(),
+    ];
+    for (const dir of dirs) {
+        try {
+            mkdirSync(dir, { recursive: true });
+        } catch (err) {
+            const msg = err instanceof Error ? err.message : String(err);
+            rootLogger.warn(`ensureDirs: failed to create ${dir} (${msg}). Verify permissions and disk space.`);
+            throw err;
+        }
+    }
 }
 
 /** Clean up temporary subdirectories. Exported so SIGINT handler in cli_base.ts
@@ -70,8 +109,12 @@ export function cleanupTempDirs(): void {
         const p = join(td, sub);
         try {
             if (existsSync(p)) rmSync(p, { recursive: true, force: true });
-        } catch {
-            rootLogger.debug('cleanupTempDirs: failed to remove ' + sub + ' (may not exist)');
+        } catch (err) {
+            if (err instanceof Error && 'code' in err && err.code === 'ENOENT') {
+                continue;
+            }
+            const msg = err instanceof Error ? err.message : String(err);
+            rootLogger.warn(`cleanupTempDirs: failed to remove ${sub} (${msg}). Verify permissions and disk space.`);
         }
     }
 }

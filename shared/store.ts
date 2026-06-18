@@ -19,19 +19,31 @@ export interface BranchEntry {
     timestamp: number;
 }
 
+function emptyRecord<V>(): Record<string, V> {
+    return Object.create(null) as { [key: string]: V };
+}
+
 function readJson<T>(backend: StoreBackend, relPath: string): T | null {
-    const buf = backend.read(relPath);
-    if (!buf) return null;
     try {
+        const buf = backend.read(relPath);
+        if (!buf) return null;
         const parsed: unknown = JSON.parse(buf.toString('utf8'));
-        if (parsed === null || typeof parsed !== 'object' || Array.isArray(parsed)) return parsed as T;
+        if (parsed === null || typeof parsed !== 'object' || Array.isArray(parsed)) {
+            rootLogger.warn(
+                `store: ${relPath} — esperado objeto, recebido ${typeof parsed}. Verifique se o arquivo não foi corrompido.`,
+            );
+            return null;
+        }
         const source = parsed as { [key: string]: unknown };
         const safe = Object.create(null) as { [key: string]: unknown };
         for (const key of Object.keys(source)) {
             safe[key] = source[key];
         }
         return safe as T;
-    } catch {
+    } catch (err: unknown) {
+        rootLogger.warn(
+            `store: falha ao ler ${relPath} — ${err instanceof Error ? err.message : String(err)}. Verifique permissões e espaço em disco.`,
+        );
         return null;
     }
 }
@@ -41,7 +53,7 @@ function writeJson<T>(backend: StoreBackend, relPath: string, data: T): void {
         backend.write(relPath, Buffer.from(JSON.stringify(data, null, 2), 'utf8'));
     } catch (err) {
         const msg = err instanceof Error ? err.message : String(err);
-        rootLogger.warn(`store: falha ao escrever ${relPath} — ${msg}`);
+        rootLogger.warn(`store: falha ao escrever ${relPath} — ${msg}. Verifique permissões e espaço em disco.`);
         throw err;
     }
 }
@@ -61,7 +73,7 @@ export class Store {
                 this.initialized = true;
             } catch (err) {
                 const msg = err instanceof Error ? err.message : String(err);
-                rootLogger.warn(`store: falha ao inicializar backend — ${msg}`);
+                rootLogger.warn(`store: falha ao inicializar backend — ${msg}. Verifique o estado do repositório.`);
                 throw err;
             }
         }
@@ -75,14 +87,13 @@ export class Store {
     put(sha: string, meta: ReportMeta): void {
         this.ensure();
         const globalIndex =
-            readJson<Record<string, ReportMeta>>(this.backend, 'reports/index.json') ??
-            (Object.create(null) as Record<string, ReportMeta>);
+            readJson<Record<string, ReportMeta>>(this.backend, 'reports/index.json') ?? emptyRecord<ReportMeta>();
         globalIndex[sha] = meta;
         writeJson(this.backend, 'reports/index.json', globalIndex);
 
         const projIndex =
             readJson<Record<string, ReportMeta>>(this.backend, `reports/${this.project}/index.json`) ??
-            (Object.create(null) as Record<string, ReportMeta>);
+            emptyRecord<ReportMeta>();
         projIndex[sha] = meta;
         writeJson(this.backend, `reports/${this.project}/index.json`, projIndex);
     }
@@ -90,25 +101,28 @@ export class Store {
     listByProject(): ReportMeta[] {
         const projIndex =
             readJson<Record<string, ReportMeta>>(this.backend, `reports/${this.project}/index.json`) ??
-            (Object.create(null) as Record<string, ReportMeta>);
+            emptyRecord<ReportMeta>();
         return Object.values(projIndex).sort((a, b) => b.timestamp - a.timestamp);
     }
 
     appendBranch(branch: string, entry: BranchEntry): void {
         this.ensure();
-        const bi =
-            readJson<Record<string, BranchEntry[]>>(this.backend, `reports/${this.project}/branch-index.json`) ??
-            (Object.create(null) as Record<string, BranchEntry[]>);
-        if (!Object.prototype.hasOwnProperty.call(bi, branch)) bi[branch] = [];
-        (bi[branch] as BranchEntry[]).unshift(entry);
-        writeJson(this.backend, `reports/${this.project}/branch-index.json`, bi);
+        const raw =
+            readJson<Record<string, unknown>>(this.backend, `reports/${this.project}/branch-index.json`) ??
+            emptyRecord<unknown>();
+        if (!Object.prototype.hasOwnProperty.call(raw, branch) || !Array.isArray(raw[branch])) {
+            raw[branch] = [];
+        }
+        (raw[branch] as BranchEntry[]).unshift(entry);
+        writeJson(this.backend, `reports/${this.project}/branch-index.json`, raw);
     }
 
     getBranch(branch: string): BranchEntry[] {
-        const bi =
-            readJson<Record<string, BranchEntry[]>>(this.backend, `reports/${this.project}/branch-index.json`) ??
-            (Object.create(null) as Record<string, BranchEntry[]>);
-        return Object.prototype.hasOwnProperty.call(bi, branch) ? (bi[branch] as BranchEntry[]) : [];
+        const raw =
+            readJson<Record<string, unknown>>(this.backend, `reports/${this.project}/branch-index.json`) ??
+            emptyRecord<unknown>();
+        const val = raw[branch];
+        return Array.isArray(val) ? (val as BranchEntry[]) : [];
     }
 
     saveReport(sha: string, data: FlatTest[]): void {

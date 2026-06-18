@@ -14,6 +14,7 @@ import fs from 'node:fs';
 import os from 'node:os';
 import path from 'node:path';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
+import { rootLogger } from '../../../shared/logger.js';
 
 let TEST_DIR: string;
 
@@ -28,7 +29,7 @@ describe('Integration: Temp Dir', () => {
         try {
             fs.rmSync(TEST_DIR, { recursive: true, force: true });
         } catch {
-            /* best effort */
+            rootLogger.warn('temp-dir integration cleanup failed');
         }
     });
 
@@ -39,12 +40,17 @@ describe('Integration: Temp Dir', () => {
             ensureDirs();
 
             // Verify that ensureDirs ran without error and the functions return paths
-            expect(tempDirPath()).toBeTruthy();
-            expect(reportsDir()).toBeTruthy();
-            expect(logsDir()).toBeTruthy();
+            expect(typeof tempDirPath()).toBe('string');
+            expect(tempDirPath().length).toBeGreaterThan(0);
+            expect(typeof reportsDir()).toBe('string');
+            expect(reportsDir().length).toBeGreaterThan(0);
+            expect(typeof logsDir()).toBe('string');
+            expect(logsDir().length).toBeGreaterThan(0);
 
             // The directories should exist at the paths these functions report
             expect(fs.existsSync(tempDirPath())).toBe(true);
+            expect(fs.existsSync(reportsDir())).toBe(true);
+            expect(fs.existsSync(logsDir())).toBe(true);
         });
     });
 

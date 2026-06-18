@@ -13,8 +13,8 @@ import os from 'node:os';
 import path from 'node:path';
 import { describe, expect, it } from 'vitest';
 import { Store, type ReportMeta } from '../store.js';
-import type { BranchEntry } from '../store.js';
 import { FsStoreBackend } from '../store-backend.js';
+import { rootLogger } from '../logger.js';
 
 /* ──────────────────────────────────────────────────────────────
  * Property-Based Arbitraries
@@ -33,7 +33,7 @@ function cleanupDir(dir: string): void {
     try {
         fs.rmSync(dir, { recursive: true, force: true });
     } catch {
-        /* best effort */
+        rootLogger.warn('cleanup failed for property test dir');
     }
 }
 
@@ -49,7 +49,7 @@ const ReportMetaArb = fc
         failed: fc.nat({ max: 1000 }),
         skipped: fc.nat({ max: 1000 }),
     })
-    .map((r) => r as ReportMeta);
+    .map((r): ReportMeta => r);
 
 const BranchEntryArb = fc
     .record({
@@ -71,15 +71,16 @@ describe('Store — property-based', () => {
                     store.put(meta.sha, meta);
                     const loaded = store.lookup(meta.sha);
                     expect(loaded).not.toBeNull();
-                    expect((loaded as ReportMeta).sha).toBe(meta.sha);
-                    expect((loaded as ReportMeta).project).toBe(meta.project);
-                    expect((loaded as ReportMeta).tool).toBe(meta.tool);
-                    expect((loaded as ReportMeta).branch).toBe(meta.branch);
-                    expect((loaded as ReportMeta).total).toBe(meta.total);
-                    expect((loaded as ReportMeta).passed).toBe(meta.passed);
-                    expect((loaded as ReportMeta).failed).toBe(meta.failed);
-                    expect((loaded as ReportMeta).skipped).toBe(meta.skipped);
-                    expect((loaded as ReportMeta).timestamp).toBe(meta.timestamp);
+                    if (!loaded) throw new Error('lookup returned null');
+                    expect(loaded.sha).toBe(meta.sha);
+                    expect(loaded.project).toBe(meta.project);
+                    expect(loaded.tool).toBe(meta.tool);
+                    expect(loaded.branch).toBe(meta.branch);
+                    expect(loaded.total).toBe(meta.total);
+                    expect(loaded.passed).toBe(meta.passed);
+                    expect(loaded.failed).toBe(meta.failed);
+                    expect(loaded.skipped).toBe(meta.skipped);
+                    expect(loaded.timestamp).toBe(meta.timestamp);
                 } finally {
                     cleanupDir(dir);
                 }
@@ -110,7 +111,9 @@ describe('Store — property-based', () => {
         fc.assert(
             fc.property(fc.array(ReportMetaArb, { minLength: 1, maxLength: 20 }), (metas) => {
                 fc.pre(metas.length > 0);
-                const project = (metas[0] as ReportMeta).project;
+                const meta = metas[0];
+                if (!meta) throw new Error('expected at least one meta');
+                const project = meta.project;
                 const { store, dir } = createFreshStore(project);
                 try {
                     for (const m of metas) {
@@ -119,9 +122,10 @@ describe('Store — property-based', () => {
                     const list = store.listByProject();
                     expect(list.length).toBeGreaterThanOrEqual(1);
                     for (let i = 1; i < list.length; i++) {
-                        expect((list[i - 1] as ReportMeta).timestamp).toBeGreaterThanOrEqual(
-                            (list[i] as ReportMeta).timestamp,
-                        );
+                        const prev = list[i - 1];
+                        const curr = list[i];
+                        if (!prev || !curr) throw new Error('expected entries');
+                        expect(prev.timestamp).toBeGreaterThanOrEqual(curr.timestamp);
                     }
                 } finally {
                     cleanupDir(dir);
@@ -169,12 +173,11 @@ describe('Store — property-based', () => {
                         const loaded = store.getBranch(branch);
                         expect(loaded).toHaveLength(entries.length);
                         for (let i = 0; i < entries.length; i++) {
-                            expect((loaded[entries.length - 1 - i] as BranchEntry).sha).toBe(
-                                (entries[i] as BranchEntry).sha,
-                            );
-                            expect((loaded[entries.length - 1 - i] as BranchEntry).timestamp).toBe(
-                                (entries[i] as BranchEntry).timestamp,
-                            );
+                            const loadedEntry = loaded[entries.length - 1 - i];
+                            const entry = entries[i];
+                            if (!loadedEntry || !entry) throw new Error('expected entries');
+                            expect(loadedEntry.sha).toBe(entry.sha);
+                            expect(loadedEntry.timestamp).toBe(entry.timestamp);
                         }
                     } finally {
                         cleanupDir(dir);
@@ -217,14 +220,13 @@ describe('Store — property-based', () => {
                         store.saveReport(sha, tests);
                         const loaded = store.loadReport(sha);
                         expect(loaded).not.toBeNull();
-                        const loadedReport = loaded as {
-                            tests: Array<{ title: string; state: 'passed' | 'failed' | 'skipped'; duration: number }>;
-                        };
-                        expect(loadedReport.tests).toHaveLength(tests.length);
+                        if (!loaded) throw new Error('loadReport returned null');
+                        expect(loaded.tests).toHaveLength(tests.length);
                         if (tests.length > 0) {
-                            expect(
-                                (loadedReport.tests[0] as { title: string; state: string; duration: number }).title,
-                            ).toBe((tests[0] as { title: string; state: string; duration: number }).title);
+                            const firstLoaded = loaded.tests[0];
+                            const firstTest = tests[0];
+                            if (!firstLoaded || !firstTest) throw new Error('expected tests');
+                            expect(firstLoaded.title).toBe(firstTest.title);
                         }
                     } finally {
                         cleanupDir(dir);

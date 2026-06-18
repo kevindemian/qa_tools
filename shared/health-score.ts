@@ -10,7 +10,7 @@
  * ISO/IEC 25020:2019 Annex D: Normalized measurement function — linear interpolation
  * between target (score=100) and floor (score=0).
  */
-import type { MetricsStore, MetricsRun, CoverageSnapshot } from './metrics.js';
+import type { MetricsStore, MetricsRun } from './metrics.js';
 import type { HealthScoreResult, HealthScoreGrade, HealthScoreDimensions, HealthScoreProvenance } from './types.js';
 
 export interface HealthScoreConfig {
@@ -67,6 +67,13 @@ const DEFAULT_GRADE_BOUNDARIES: Record<HealthScoreGrade, number> = {
     poor: 60,
     critical: 0,
 };
+
+/** Floor below which pass rate / execution rate score is 0. */
+const SCORE_FLOOR = 50;
+/** If any dimension score is below this threshold, overall score is capped. */
+const PENALTY_THRESHOLD = 40;
+/** Maximum overall score when penalty threshold is triggered. */
+const PENALTY_CAP = 60;
 
 function pickConfig(options?: Partial<HealthScoreConfig>): HealthScoreConfig {
     const w = DEFAULTS.weights;
@@ -167,7 +174,7 @@ function computeActualMetrics(store: MetricsStore, config: HealthScoreConfig): A
         config.coverageOverride !== undefined
             ? config.coverageOverride
             : store.coverageHistory && store.coverageHistory.length > 0
-              ? (store.coverageHistory[store.coverageHistory.length - 1] as CoverageSnapshot).coveragePct
+              ? (store.coverageHistory[store.coverageHistory.length - 1]?.coveragePct ?? 0)
               : 0;
 
     const actualSuiteSpeed = _computeSuiteSpeed(runs);
@@ -183,8 +190,8 @@ function computeActualMetrics(store: MetricsStore, config: HealthScoreConfig): A
 
 function scorePassRate(actual: number, config: HealthScoreConfig): number {
     if (actual >= config.passRateTarget) return 100;
-    if (actual <= 50) return 0;
-    return ((actual - 50) / (config.passRateTarget - 50)) * 100;
+    if (actual <= SCORE_FLOOR) return 0;
+    return ((actual - SCORE_FLOOR) / (config.passRateTarget - SCORE_FLOOR)) * 100;
 }
 
 function scoreFlakyRate(actual: number, config: HealthScoreConfig): number {
@@ -204,8 +211,8 @@ function scoreCoverage(actual: number, config: HealthScoreConfig): number {
 
 function scoreExecutionRate(actual: number, config: HealthScoreConfig): number {
     if (actual >= config.executionRateTarget) return 100;
-    if (actual <= 50) return 0;
-    return ((actual - 50) / (config.executionRateTarget - 50)) * 100;
+    if (actual <= SCORE_FLOOR) return 0;
+    return ((actual - SCORE_FLOOR) / (config.executionRateTarget - SCORE_FLOOR)) * 100;
 }
 
 function scoreSuiteSpeed(actual: number, config: HealthScoreConfig): number {
@@ -335,8 +342,8 @@ export function calculateHealthScore(
 
     const dimCheck = [scPassRate, scCoverage, scExecutionRate, scSuiteSpeed];
     if (actual.flakyPct !== null) dimCheck.push(scFlakyRate);
-    if (dimCheck.some((d) => d < 40)) {
-        overall = Math.min(overall, 60);
+    if (dimCheck.some((d) => d < PENALTY_THRESHOLD)) {
+        overall = Math.min(overall, PENALTY_CAP);
     }
 
     const statusPassRate: 'pass' | 'fail' = actual.passRate >= config.minPassRateGate ? 'pass' : 'fail';

@@ -12,7 +12,7 @@
  * Pure function — no filesystem dependencies.
  */
 import { describe, expect, it } from 'vitest';
-import type { MetricsRun, MetricsStore } from '../../metrics.js';
+import type { CoverageSnapshot, MetricsRun, MetricsStore } from '../../metrics.js';
 
 /** Helper to create a MetricsStore with controllable data. */
 function createStore(
@@ -133,9 +133,9 @@ describe('Integration: Health Score', () => {
             const result = calculateHealthScore(createStore(), {});
 
             for (const p of result.provenance ?? []) {
-                expect(p.source).toBeTruthy();
-                expect(p.formula).toBeTruthy();
-                expect(p.thresholdBasis).toBeTruthy();
+                expect(p.source.length).toBeGreaterThan(0);
+                expect(p.formula.length).toBeGreaterThan(0);
+                expect(p.thresholdBasis.length).toBeGreaterThan(0);
             }
         });
     });
@@ -190,6 +190,17 @@ describe('Integration: Health Score', () => {
             expect(result.runCount).toBe(0);
             expect(result.dimensions.passRate.status).toBe('fail');
             expect(result.dimensions.coverage.status).toBe('fail');
+        });
+
+        it('handles coverageHistory entry with missing coveragePct without NaN (G1 RED)', async () => {
+            const { calculateHealthScore } = await import('../../health-score.js');
+            const store: MetricsStore = {
+                runs: [],
+                coverageHistory: [{ timestamp: '', project: '', totalIssues: 0, mappedIssues: 0 } as CoverageSnapshot],
+            };
+            const result = calculateHealthScore(store);
+            expect(Number.isNaN(result.dimensions.coverage.score)).toBe(false);
+            expect(result.dimensions.coverage.score).toBe(0);
         });
     });
 });

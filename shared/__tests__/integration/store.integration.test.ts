@@ -14,9 +14,9 @@ import fs from 'node:fs';
 import os from 'node:os';
 import path from 'node:path';
 import { afterEach, beforeEach, describe, expect, it } from 'vitest';
-import { Store, type ReportMeta } from '../../store.js';
-import type { BranchEntry } from '../../store.js';
+import { Store } from '../../store.js';
 import { FsStoreBackend } from '../../store-backend.js';
+import { rootLogger } from '../../logger.js';
 import { createFlatTestArrayFixture } from './integration-helpers.js';
 
 let TEST_DIR: string;
@@ -33,7 +33,7 @@ describe('Integration: Store', () => {
         try {
             fs.rmSync(TEST_DIR, { recursive: true, force: true });
         } catch {
-            /* best effort */
+            rootLogger.warn('store integration cleanup failed');
         }
     });
 
@@ -100,8 +100,9 @@ describe('Integration: Store', () => {
             const second = list[1];
             expect(first).toBeDefined();
             expect(second).toBeDefined();
-            expect((first as ReportMeta).sha).toBe('sha2'); // newer first
-            expect((second as ReportMeta).sha).toBe('sha1');
+            if (!first || !second) throw new Error('expected two entries');
+            expect(first.sha).toBe('sha2'); // newer first
+            expect(second.sha).toBe('sha1');
         });
 
         it('returns empty array when no entries exist', () => {
@@ -121,7 +122,8 @@ describe('Integration: Store', () => {
             expect(entries).toHaveLength(1);
             const firstEntry = entries[0];
             expect(firstEntry).toBeDefined();
-            expect((firstEntry as BranchEntry).sha).toBe('branch-sha');
+            if (!firstEntry) throw new Error('expected entry');
+            expect(firstEntry.sha).toBe('branch-sha');
         });
 
         it('returns empty array for unknown branch', () => {
@@ -139,8 +141,9 @@ describe('Integration: Store', () => {
             const secondEntry = entries[1];
             expect(firstEntry).toBeDefined();
             expect(secondEntry).toBeDefined();
-            expect((firstEntry as BranchEntry).sha).toBe('new');
-            expect((secondEntry as BranchEntry).sha).toBe('old');
+            if (!firstEntry || !secondEntry) throw new Error('expected two entries');
+            expect(firstEntry.sha).toBe('new');
+            expect(secondEntry.sha).toBe('old');
         });
     });
 
@@ -200,8 +203,9 @@ describe('Integration: Store', () => {
             const first2 = store2.listByProject()[0];
             expect(first1).toBeDefined();
             expect(first2).toBeDefined();
-            expect((first1 as ReportMeta).project).toBe('project-a');
-            expect((first2 as ReportMeta).project).toBe('project-b');
+            if (!first1 || !first2) throw new Error('expected entries');
+            expect(first1.project).toBe('project-a');
+            expect(first2.project).toBe('project-b');
         });
 
         it('lookup uses global index (shared across projects)', () => {

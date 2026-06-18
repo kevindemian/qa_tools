@@ -50,7 +50,7 @@ qa_tools/
 ├─────────────────────────────────────────────────────────────┤
 │                    shared/                                   │
 │  config-accessor, logger, http-client, jira-client,         │
-│  llm-client (6 tiers), state, store, metrics,               │
+│  llm-client (6 tiers), state, store, metrics, temp-dir,    │
 │  invariants (13), palette, prompts, validation,             │
 │  reports, markdown, coverage, health-score                  │
 ├─────────────────────────────────────────────────────────────┤
@@ -71,6 +71,8 @@ qa_tools/
 | **Store (Git-backed Cache)** | `shared/store.ts`                                             | SHA-keyed report cache, commits com `[skip ci]`, cross-session/sync                    |
 | **Invariants**               | `shared/invariants/`                                          | 13 regras T-01 a T-13 + 5 I-01 a I-05 para validação de artefatos de teste             |
 | **Feature Config**           | `shared/feature-config.ts` + `shared/types/feature-config.ts` | Config store + Zod schema — **PR-Report-specific** até segundo consumer existir        |
+| **Temp Dir**                 | `shared/temp-dir.ts`                                          | Gerenciamento de diretórios temporários (reports, ephemeral, cache, logs, previews)    |
+| **Integration Helpers**      | `shared/__tests__/integration/integration-helpers.ts`         | Fixtures factories + I/O helpers para testes de integração                             |
 
 ### Resilience Stack (LLM)
 

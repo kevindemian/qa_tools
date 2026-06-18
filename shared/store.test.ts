@@ -263,6 +263,135 @@ describe('Store', () => {
         });
     });
 
+    describe('G1: readJson type safety', () => {
+        it('G1: lookup returns null when stored data is a string, not an object', () => {
+            const invalidBackend = {
+                init: () => {},
+                read: () => Buffer.from('"string-instead-of-object"', 'utf8'),
+                write: () => {},
+                exists: () => false,
+                flush: () => {},
+            };
+            const store = new Store(invalidBackend, project);
+            const warnSpy = vi.spyOn(rootLogger, 'warn');
+            const result = store.lookup('any-sha');
+            expect(result).toBeNull();
+            expect(warnSpy).toHaveBeenCalled();
+            warnSpy.mockRestore();
+        });
+
+        it('G1: loadReport returns null when stored data is a number, not an object', () => {
+            const invalidBackend = {
+                init: () => {},
+                read: () => Buffer.from('42', 'utf8'),
+                write: () => {},
+                exists: () => false,
+                flush: () => {},
+            };
+            const store = new Store(invalidBackend, project);
+            expect(store.loadReport('any-sha')).toBeNull();
+        });
+    });
+
+    describe('G2: readJson error handling', () => {
+        it('G2: logs warning when backend read throws', () => {
+            const failBackend = {
+                init: () => {},
+                read: () => {
+                    throw new Error('EACCES');
+                },
+                write: () => {},
+                exists: () => false,
+                flush: () => {},
+            };
+            const store = new Store(failBackend, project);
+            const warnSpy = vi.spyOn(rootLogger, 'warn');
+            store.lookup('any-sha');
+            expect(warnSpy).toHaveBeenCalled();
+            warnSpy.mockRestore();
+        });
+
+        it('G2: logs warning when backend read throws in listByProject', () => {
+            const failBackend = {
+                init: () => {},
+                read: () => {
+                    throw new Error('EACCES');
+                },
+                write: () => {},
+                exists: () => false,
+                flush: () => {},
+            };
+            const store = new Store(failBackend, project);
+            const warnSpy = vi.spyOn(rootLogger, 'warn');
+            store.listByProject();
+            expect(warnSpy).toHaveBeenCalled();
+            warnSpy.mockRestore();
+        });
+    });
+
+    describe('G3: corrupt data in branch-index', () => {
+        it('G3: getBranch returns empty when branch data is an object, not an array', () => {
+            const corruptBackend = {
+                init: () => {},
+                read: () => Buffer.from('{"main": {"sha": "abc", "timestamp": 123}}', 'utf8'),
+                write: () => {},
+                exists: () => false,
+                flush: () => {},
+            };
+            const store = new Store(corruptBackend, project);
+            expect(store.getBranch('main')).toEqual([]);
+        });
+
+        it('G3: appendBranch handles corrupt index gracefully', () => {
+            const corruptBackend = {
+                init: () => {},
+                read: () => Buffer.from('{"main": "not-an-array"}', 'utf8'),
+                write: () => {},
+                exists: () => false,
+                flush: () => {},
+            };
+            const store = new Store(corruptBackend, project);
+            const entry: BranchEntry = { sha: 'abc', timestamp: 1 };
+            expect(() => store.appendBranch('main', entry)).not.toThrow();
+        });
+    });
+
+    describe('G4: UX — mensagens acionáveis', () => {
+        it('G4: readJson type mismatch warns with action guidance', () => {
+            const invalidBackend = {
+                init: () => {},
+                read: () => Buffer.from('"string"', 'utf8'),
+                write: () => {},
+                exists: () => false,
+                flush: () => {},
+            };
+            const store = new Store(invalidBackend, project);
+            const warnSpy = vi.spyOn(rootLogger, 'warn');
+            store.lookup('any-sha');
+            const msg = warnSpy.mock.calls[0]?.[0];
+            expect(msg).toMatch(/verifique|tente|ação|permissão|disco|execute|certifique/i);
+            warnSpy.mockRestore();
+        });
+
+        it('G4: writeJson failure warns with action guidance', () => {
+            const failBackend = {
+                init: () => {},
+                read: () => null,
+                write: () => {
+                    throw new Error('EACCES');
+                },
+                exists: () => false,
+                flush: () => {},
+            };
+            const store = new Store(failBackend, project);
+            const warnSpy = vi.spyOn(rootLogger, 'warn');
+            expect(() => store.saveMetrics({ runs: [] })).toThrow();
+            const msg = warnSpy.mock.calls[0]?.[0];
+            expect(msg).toMatch(/verifique|tente|ação|permissão|disco|execute|certifique/i);
+            warnSpy.mockRestore();
+        });
+    });
+
     describe('error handling (G3 regression)', () => {
         it('logs warning when backend init fails', () => {
             const failBackend = {

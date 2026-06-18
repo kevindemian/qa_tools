@@ -469,7 +469,7 @@ export function checkIntegrity(): CheckResult {
         const selfContent = readFileSync('scripts/quality-check.ts', 'utf-8');
         const contentWithoutHash = selfContent.replace(/\/\* HASH:[0-9a-f]{64} \*\//g, '');
         const currentHash = createHash('sha256').update(contentWithoutHash, 'utf-8').digest('hex');
-        /* HASH:8a102f4f44830818c8e5158ad94c68eafeb458e467e1b16e8dc0d779be20cdef */
+        /* HASH:448446617b18aa2a48f97d816dad6e78be857cc2d0a90c7232b4de6fbc28216b */
         const match = selfContent.match(/\/\* HASH:([0-9a-f]{64}) \*\//);
         if (!match) {
             violations.push({ file: 'scripts/quality-check.ts', line: 1, content: 'Missing HASH comment' });
@@ -561,7 +561,10 @@ export async function main(): Promise<void> {
     }
 }
 
-main().catch((err: unknown) => {
-    process.stderr.write(err instanceof Error ? err.message : String(err));
-    gracefulExit(ExitCode.ERROR);
-});
+const isMainImport = process.argv[1]?.replace(/\\/g, '/').endsWith('/quality-check.ts');
+if (isMainImport) {
+    main().catch((err: unknown) => {
+        process.stderr.write(err instanceof Error ? err.message : String(err));
+        gracefulExit(ExitCode.ERROR);
+    });
+}

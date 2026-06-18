@@ -16,19 +16,14 @@ import fs from 'node:fs';
 import os from 'node:os';
 import path from 'node:path';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
+import Config from '../../config.js';
 import { rootLogger } from '../../logger.js';
 import { createMetricsRunFixture, createCoverageSnapshotFixture } from './integration-helpers.js';
 
 let TEST_DIR: string;
 
 function getConfig() {
-    return {
-        get: (key: string) => {
-            if (key === 'xdgStateHome') return TEST_DIR;
-            if (key === 'METRICS_MAX_RUNS') return '50';
-            return undefined;
-        },
-    } as never;
+    return Config.create({ xdgStateHome: TEST_DIR, METRICS_MAX_RUNS: 50 });
 }
 
 describe('Integration: Metrics Store', () => {

@@ -1,1269 +1,571 @@
-# FUNCTIONAL-AUDIT-SOP — Standard Operating Procedure
+# FUNCTIONAL-AUDIT-SOP — Executable Specification
 
-> **Propósito:** Checklist linear, sem ambiguidade, para auditar uma feature (FT-xx).
-> Cada passo tem comando exato, critério e destino de registro.
-> Se qualquer passo falhar → PARAR. Reportar. Não continuar.
+> Checklist linear para auditar FT-xx.
+> Cada seção = comando exato + critério binário + checkpoint.
+> Regras de execução (formato de cabeçalho, sequencialidade, proibições) em AGENTS.md §22.
+> Se qualquer passo falhar: PARAR. Reportar. Não continuar.
 
----
+**Pré-requisito:** antes de cada Phase, ler `${SOURCE}`, `${TEST_FILE_UNIT}`, `${TEST_FILE_INTEGRATION}`, `${TEST_FILE_PBT}`, `${FEATURE_NAME}`, `${CONSUMERS}` dos metadados da feature no PROGRESS.md.
 
-## Regras de Execução
-
-1. Ordem absoluta: execute os passos em sequência. Nunca pule.
-2. Cada passo só termina quando o critério de conclusão for satisfeito.
-3. Se um passo falhar (critério não atingido): PARAR, reportar o que falhou e por quê.
-4. Registo de gaps é cumulative: diagnosticar T1-T20 e D1-D7 primeiro (Phases 2-3), depois registrar todos os gaps (Phase 4), depois corrigir (Phases 5-6). Proibido corrigir antes de registrar todos os gaps.
-5. Proibido corrigir antes de registrar todos os gaps da fase.
-6. **Checkpoint obrigatório:** após cada Phase, escrever no PROGRESS.md:
-   `<!-- CHECKPOINT: Phase N complete -->`
-   Se a sessão for interrompida, o checkpoint indica de onde retomar.
-7. **Variáveis de estado:** os valores extraídos nos passos (SOURCE, TEST_FILES, CONSUMERS, FEATURE_NAME) devem ser escritos no PROGRESS.md como bloco de metadados, para consulta em passos posteriores sem depender de memória do agente.
-8. **Cabeçalho de comando obrigatório:** Antes de executar qualquer comando do SOP, o agente DEVE exibir o bloco literal do SOP e o comando exato no formato:
-    ```
-    [SOP <seção>]
-    Comando exato: <comando literal do SOP>
-    ```
-    Execução sem cabeçalho = **violação, sessão inválida**.
-9. **execução sequencial entre fases:** Dentro de uma fase, comandos independentes podem rodar em paralelo. Entre fases, execução é estritamente sequencial. O checkpoint de fase (`<!-- CHECKPOINT: Phase N complete -->`) DEVE ser escrito antes de iniciar a fase seguinte.
-10. **Proibição de otimização silenciosa:** É proibido substituir um comando do SOP por um "equivalente", pular comandos, combinar múltiplos passos em um, ou executar de memória. Cada comando DEVE ser executado exatamente como escrito.
-
----
+<!-- Phase 0: lines 14-60 -->
 
 ## Phase 0 — Preparação
 
-### P0.1 — Identificar a feature
+### P0.1 — Identificar feature
 
-Feature ID e nome vêm de `FUNCTIONAL-AUDIT-PROGRESS.md` (procurar por "still pending" ou "Próximo").
+`grep -n 'still pending\|Próximo' FUNCTIONAL-AUDIT-PROGRESS.md`
+✅ found FT-XX / ❌
+Fallback: `grep -n '### FT-' FUNCTIONAL-AUDIT-PROGRESS.md | tail -1`
+Fallback2: `grep -n 'FT-' FUNCTIONAL-AUDIT-INTEGRATED-PLAN.md | grep 'pending\|still' | head -5`
+Extrair FEATURE_NAME e FT-ID da linha encontrada (ex: `FT-09 Metrics Adapter` → ID=09, FEATURE_NAME=metrics-adapter).
+Registrar: `**Início:** $(date +%Y-%m-%d)` no PROGRESS.md
 
-- **Comando primário:** `grep -n 'still pending\|Próximo' FUNCTIONAL-AUDIT-PROGRESS.md`
-- **Fallback se primário retornar vazio:** `grep -n '### FT-' FUNCTIONAL-AUDIT-PROGRESS.md | tail -1` (última feature iniciada, pode estar in-progress)
-- **Fallback se ambos vazios:** `grep -n 'FT-' FUNCTIONAL-AUDIT-INTEGRATED-PLAN.md | grep 'pending\|still' | head -5`
-- **Registrar em:** progresso da feature no PROGRESS.md com `**Início:** $(date +%Y-%m-%d)` (YYYY-MM-DD)
+### P0.2 — Carregar definições
 
-### P0.2 — Carregar definições do plano
+`grep -A 10 "\bFT-${ID}\b" FUNCTIONAL-AUDIT-INTEGRATED-PLAN.md`
+Extrair: módulo, grupo, ordem. Registrar no PROGRESS.md.
 
-- **Comando:** `grep -A 10 "\bFT-${ID}\b" FUNCTIONAL-AUDIT-INTEGRATED-PLAN.md`
-  (uso de `\b` evita casar "FT-370" quando ID é "FT-37")
-- **Extrair:** Nome da feature, módulo, grupo, ordem
-- **Registrar em:** PROGRESS.md > header da feature
+### P0.3 — Encontrar source, tests, consumers
 
-### P0.3 — Inicializar variáveis de estado
+```
+find . -name "${FEATURE_NAME}.ts" -not -path '*/node_modules/*'
+find . -path "*__tests__/${FEATURE_NAME}.test.ts" -not -path '*/node_modules/*'
+find . -path "*__tests__/integration/${FEATURE_NAME}.integration.test.ts" -not -path '*/node_modules/*'
+find . -path "*__tests__/${FEATURE_NAME}.property.test.ts" -not -path '*/node_modules/*'
+```
 
-Após identificar feature e carregar definições, extrair e registrar no PROGRESS.md:
+`wc -l ${SOURCE}` — contar linhas do source
+`grep -rl "'${FEATURE_NAME}'" shared/ --include='*.ts' | grep -v test | grep -v node_modules` — consumers
+`npx vitest run ${FEATURE_NAME} --reporter=verbose 2>&1 | grep 'Tests'` — contagem de testes
+
+### P0.4 — Registrar metadados
+
+Escrever no PROGRESS.md:
 
 ```markdown
-**Metadados FT-${ID}:**
+**Metadados FT-XX:**
 
-- FEATURE_NAME: git-metrics-adapter
-- SOURCE: shared/git-metrics-adapter.ts
-- TEST_FILE_PREVIOUS: shared/git-metrics-adapter.test.ts (se existir na raiz de shared/)
-- TEST_FILE_UNIT: shared/**tests**/git-metrics-adapter.test.ts
-- TEST_FILE_INTEGRATION: shared/**tests**/integration/git-metrics-adapter.integration.test.ts
-- TEST_FILE_PBT: shared/**tests**/git-metrics-adapter.property.test.ts
-- CONSUMERS: (lista de paths)
-- DOCS: docs/03-git-triggers.md (se aplicável)
+- FEATURE_NAME:
+- MODULE_NAME:
+- SOURCE:
+- TEST_FILE_UNIT:
+- TEST_FILE_INTEGRATION:
+- TEST_FILE_PBT:
+- CONSUMERS:
+- DOCS:
 ```
 
-**Comando para localizar TEST_FILE_PREVIOUS (testes na raiz do módulo):**
+`<!-- CHECKPOINT: Phase 0 complete -->`
+
+<!-- Phase 0.1: lines 62-103 -->
+
+## Phase 0.1 — Deep read & pre-scan
+
+### 0.1.1 — Ler source
+
+`cat ${SOURCE}`
+Para cada função, verificar e registrar tabela no PROGRESS.md (colunas: # | Categoria | Local | Descrição):
+| # | Pergunta | ❌ registra |
+|---|----------|-------------|
+| 1 | Nome revela o que faz? | gap clareza |
+| 2 | `unknown` / parsing sem validação? | gap tipo |
+| 3 | `as`, `!`, `@ts-ignore`, `eslint-disable`? | gap T14 |
+| 4 | `Object.entries(objeto)` propaga `any`? | gap typesafety |
+| 5 | I/O sem try/catch? | gap error handling |
+| 6 | catch vazio ou `(err as Error).message`? | gap T14e/b |
+| 7 | Error handler chama módulo de volta? | gap segurança |
+| 8 | Getter com side effect? | gap arquitetura |
+| 9 | Mensagem de erro diz o que fazer? | gap UX |
+| 10 | Importa lib externa sem DepWall? | gap DepWall |
+| 11 | Estado mutável compartilhado? | gap isolamento |
+| 12 | Constantes mágicas? | gap manutenibilidade |
+
+### 0.1.2 — Ler testes
+
+`cat ${TEST_FILE_UNIT} ${TEST_FILE_INTEGRATION} ${TEST_FILE_PBT} 2>/dev/null`
+Para cada describe/it, verificar:
+| # | Pergunta | ❌ registra |
+|---|----------|-------------|
+| T1 | Nome descreve comportamento? | gap naming |
+| T2 | `as`, `!`, `@ts-ignore`? | gap T14 |
+| T3 | Mock shape idêntico ao real? | gap mock |
+| T4 | Expected value de requirements ou de output copiado? | gap Oracle |
+| T5 | Testa uma coisa ou várias asserts? | gap coesão |
+| T6 | `.skip`, `.only`, `.todo`? | gap |
+| T7 | `toBeDefined()` sem assert real? | gap weak assertion |
+| T8 | Estado compartilhado entre describes? | gap isolamento |
+| T9 | beforeEach/afterEach limpam estado? | gap |
+
+### 0.1.3 — Registrar pre-scan
+
+Escrever no PROGRESS.md: `**Pre-scan achados (Phase 0.1):` com #, categoria, local, descrição.
+
+`<!-- CHECKPOINT: Phase 0.1 complete -->`
+
+<!-- Phase 1: lines 105-140 -->
+
+## Phase 1 — Mapeamento
+
+### 1.1 — Exports
+
+`grep -oP '^export (function|const|class|interface) \K\w+' ${SOURCE}`
+✅ lista de exports / ❌ sem exports públicos
+
+### 1.2 — Consumers
+
+Para CADA export E encontrado em 1.1:
+`grep -rl --include='*.ts' "(from ['\"']\\.\\.?/${FEATURE_NAME}|from ['\"']\\.\\./${FEATURE_NAME}|import\\s*\\{\\s*'${E}'\\s*\\} )" .`
+✅ lista de paths (excluindo tests + node_modules) / ❌
+
+### 1.3 — TECHDOC
+
+`grep -n "${FEATURE_NAME}" docs/TECHDOC.md`
+✅ encontrado / ❌ gap T19-1
+
+### 1.4 — Consumer test run
+
+Para CADA CONSUMER na lista de 1.2:
+`npx vitest run $(basename $(dirname ${C})) --reporter=verbose 2>&1 | tail -5`
+
+Registrar lista de CONSUMERS no PROGRESS.md (para uso em Phase 7).
+
+`<!-- CHECKPOINT: Phase 1 complete -->`
+
+<!-- Phase 2: lines 142-245 -->
+
+## Phase 2 — T1-T20
+
+Para cada T: executar comando, registrar ✅/❌. Se ❌: criar gap (não corrigir ainda).
+Registrar tabela no PROGRESS.md (ID | comando | status | observação).
+
+### T1: Entry point
+
+`grep '^export function\|^export const\|^export class\|^export default' ${SOURCE}`
+✅ exports públicos / ❌
+
+### T2: Config model
+
+`grep -n 'interface\|type\|z\.object\|z\.string\|z\.number\|zod' ${SOURCE} | head -10`
+✅ interfaces + schema / ⚠️ sem schema / ❌ sem interface
+
+### T3: Config accessor
+
+`grep -n 'config-accessor\|Config\b\|config\.get\|configAccessor' ${SOURCE} | head -5`
+✅ / ❌ N/A
+
+### T4: Runtime lê config
+
+`grep -n 'config\|process\.env\|\.env\|xdgStateHome' ${SOURCE} | head -10`
+✅ / ❌ N/A
+
+### T5: Wizard entry
+
+`grep -rn "${FEATURE_NAME}" setup/ --include='*.ts' 2>/dev/null | head -5`
+✅ / ❌ N/A
+
+### T6: Wizard detection
+
+`grep -rn "${FEATURE_NAME}" setup/ --include='*.ts' 2>/dev/null | grep -i 'detect\|auto' | head -5`
+✅ / ❌ N/A
+
+### T7: Wizard output
+
+`grep -rn "${FEATURE_NAME}" setup/ --include='*.ts' 2>/dev/null | grep -i 'write\|generate\|create\|output' | head -5`
+✅ / ❌ N/A
+
+### T8: Wizard prompts
+
+`grep -rn "${FEATURE_NAME}" setup/ --include='*.ts' 2>/dev/null | grep -i 'prompt\|question\|ask\|input' | head -5`
+✅ / ❌ N/A
+
+### T9: Reconfig handler
+
+`grep -rn "${FEATURE_NAME}" git_triggers/ --include='*.ts' 2>/dev/null | grep -i 'reconfig\|reconfigure\|handler' | head -5`
+✅ / ❌ N/A
+
+### T10: CI integration
+
+`grep -rn "${FEATURE_NAME}\|${MODULE_NAME}" .github/ --include='*.yml' --include='*.yaml' 2>/dev/null | head -5`
+✅ / ⚠️ / ❌ N/A
+
+### T11: CI safety
+
+`grep -n 'try\|catch\|fallback\|catch' ${SOURCE} | head -10`
+✅ safety mechanisms ativos / ⚠️ / ❌
+
+### T12: Test coverage
+
+`npx vitest run ${FEATURE_NAME} --reporter=verbose 2>&1 | grep -E 'Tests|Test Files'`
+✅ unit + integration + PBT (quando aplicável) / ❌ missing coverage
+
+### T13: Dead code
 
 ```
-find . -name "${FEATURE_NAME}.test.ts" -not -path '*/node_modules/*' -not -path '*/__tests__/*'
+grep -oP '^function \K\w+' ${SOURCE} | while read fn; do count=$(grep -cP "\b${fn}\b" ${SOURCE}); if [ "$count" -le 1 ]; then echo "POSSIVELMENTE MORTO: $fn (refs: $count)"; fi; done
+grep -oP '^const \K\w+' ${SOURCE} | grep -vP '^export' | while read cn; do count=$(grep -cP "\b${cn}\b" ${SOURCE}); if [ "$count" -le 1 ]; then echo "POSSIVELMENTE MORTO: $cn (refs: $count)"; fi; done
 ```
 
-Arquivos encontrados neste caminho (ex: `shared/metrics.test.ts`) contêm testes que usam `memfs` ou mock global de fs. Eles DEVEM ser incluídos na contagem de testes (T12) e auditados em D7. Não omitir.
+✅ zero mortos / ❌
 
-**Comando para localizar TEST_FILE_UNIT (testes no diretório **tests**):**
+### T14: Suppressions (sub-checks)
+
+Definir: `FILES="${SOURCE} ${TEST_FILE_UNIT} ${TEST_FILE_INTEGRATION} ${TEST_FILE_PBT}"`
+Para CADA sub-check: executar o comando. 0 hits = ✅, hits = ❌ gap.
+| Código | Comando |
+|--------|---------|
+| T14a | `grep -P 'as any\|as unknown' $FILES 2>/dev/null` |
+| T14b | `grep -nP '[a-zA-Z0-9)\]>]\s*!\s*[);,}\]]' $FILES 2>/dev/null` |
+| T14c | `grep -P '@ts-ignore\|@ts-expect-error' $FILES 2>/dev/null` |
+| T14d | `grep -P 'eslint-disable' $FILES 2>/dev/null` |
+| T14e | `grep -A1P 'catch\s*\{' $FILES 2>/dev/null \| grep -P '^\s*\}'` |
+| T14f | `grep -nP 'JSON\.parse\(.*\) as [A-Z]\w+' $FILES 2>/dev/null` |
+| T14g | `grep -nP 'as never' $FILES 2>/dev/null` |
+| T14h | `grep -nP 'as (string\|number\|boolean)\b' $FILES 2>/dev/null` |
+| T14i | `grep -nP 'Object\.entries\(' $FILES 2>/dev/null` |
+
+T14i pós-grep: inspecionar MANUALMENTE cada match. Se `Object.entries()` usado só como `for (const [key])` → não é gap. Se `any` propagado (ex: `val` em expressão tipada) → ❌ gap.
+
+### T15: Bidirectional consistency
+
+`grep -rl "${FEATURE_NAME}" --include='*.ts' . | grep -v 'test\|node_modules' | sort -u`
+✅ unidirecional ou consistente / ❌
+
+### T16: CLI interface
+
+`grep -rn "${FEATURE_NAME}\|${MODULE_NAME}" --include='*.ts' . | grep -i 'cli\|arg\|command\|--help\|program\|dispatch' | head -5`
+✅ / ❌ N/A
+
+### T17: Env var dependency
+
+`grep -n 'process\.env' ${SOURCE} | head -10`
+✅ nenhuma / ⚠️ usa mas não documentada / ✅ documentada
+
+### T18: Error handling
+
+Comandos individuais (executar 4, consolidar status):
+
+1. `grep -nP '^\s*(try|catch)\s*\{' ${SOURCE}`
+2. `grep -nP 'throw\s+(new\s+)?[A-Z]\w*(Error)?' ${SOURCE}`
+3. `grep -nP 'rootLogger\.(warn|error|info)\(' ${SOURCE} | grep -vP 'Error|error'`
+4. `grep -nP 'return \[\]|return null|return {}|catch' ${SOURCE} | head -10`
+   ✅ I/O com try/catch, throw new Error, logs com contexto, fallbacks / ⚠️ catch vazio / ❌ I/O sem try/catch
+
+### T19: TECHDOC presente
+
+`grep -n "${MODULE_NAME}" docs/TECHDOC.md`
+✅ / ❌
+
+### T20: CI/Config contract
+
+`grep -rn "${FEATURE_NAME}" .github/ --include='*.yml' --include='*.yaml' 2>/dev/null`
+✅ parâmetros consistentes entre CI args, CLI flags e config keys / ❌ N/A
+
+`<!-- CHECKPOINT: Phase 2 complete -->`
+
+<!-- Phase 3: lines 247-330 -->
+
+## Phase 3 — D1-D7
+
+### D1: Isolamento de Testes
+
+`head -80 ${TEST_FILE_UNIT} ${TEST_FILE_INTEGRATION} ${TEST_FILE_PBT} 2>/dev/null | grep -n 'beforeEach\|afterEach\|vi\.mock\|vi\.clearAllMocks\|vi\.resetAllMocks\|vi\.restoreAllMocks'`
+D1.1✅ cleanup beforeEach/afterEach / D1.2✅ vi.mock / D1.3✅ sem estado compartilhado / D1.4✅ limpeza de recursos
+
+### D2: Robustez
+
+`grep -nP '^(export )?function \w+\(.*:.*\)' ${SOURCE} | head -15`
+D2.1✅ input validation (verificar se parâmetros têm null/undefined/default) / D2.2✅ guard clauses / D2.3✅ fallbacks I/O / D2.4✅ timeout
+Pelo menos 3/4 ✅
+
+### D3: Boas Práticas
+
+`wc -l ${SOURCE}`
+`grep -nP "^import .* from '" ${SOURCE} | grep -vP "\.js|\.json" | grep -v "shared/deps"`
+D3.1✅ SRP (cada função, uma responsabilidade) / D3.2✅ DepWall (sem imports diretos de libs externas) / D3.3✅ sem bypass/workaround / D3.4✅ sem duplicação / D3.5✅ nomes claros
+Pelo menos 4/5 ✅
+
+### D4: Implementação
+
+`grep -n 'for\|while\|map\|filter\|reduce\|forEach' ${SOURCE} | head -20`
+D4.1✅ complexidade adequada / D4.2✅ sem cópias desnecessárias / D4.3✅ sem constantes mágicas / D4.4✅ early returns / D4.5✅ sem dead code
+Pelo menos 4/5 ✅
+
+### D5: Métricas
+
+`grep -n 'saveMetrics\|loadMetrics\|MetricsRun\|FailureClassification' ${SOURCE} | head -5`
+✅ produz métricas persistidas / ❌ N/A
+
+### D6: UX
 
 ```
-find . -path "*/__tests__/${FEATURE_NAME}.test.ts" -not -path '*/node_modules/*'
-```
-
-**Comando para localizar TEST_FILE_INTEGRATION:**
-
-```
-find . -path "*/__tests__/integration/${FEATURE_NAME}.integration.test.ts" -not -path '*/node_modules/*'
-```
-
-**Comando para localizar TEST_FILE_PBT:**
-
-```
-find . -path "*/__tests__/${FEATURE_NAME}.property.test.ts" -not -path '*/node_modules/*'
-```
-
-Os comandos dos passos seguintes usarão `${FEATURE_NAME}`, `${SOURCE}`, `${TEST_FILE_UNIT}`, etc.
-Sempre consultar o PROGRESS.md para resolver estas variáveis — nunca depender de memória de sessão.
-
----
-
-## Phase 0.1 — Deep read & quality pre-scan
-
-> **Propósito:** Antes de qualquer diagnóstico formal (T1-T20), ler o código fonte e os testes
-> COMPLETAMENTE — linha por linha — e catalogar TODOS os problemas de qualidade visíveis.
->
-> **Esta é a fase mais importante do SOP.** Se for bem executada, as fases seguintes
-> são consequência. Se for ignorada ou feita de forma superficial, o restante do SOP
-> será um loop infinito de "corrige → acha mais → corrige → acha mais".
->
-> **A falsa eficiência de pular esta fase** é o que gera 6 passagens de correção no mesmo código.
-> Fazer certo uma vez é mais rápido que corrigir 6 vezes.
-
-### 0.1.1 — Ler fonte completo
-
-- **Comando:** `cat ${SOURCE}`
-- **Ação:** Ler cada linha do arquivo fonte. Para CADA função ou método, responder mentalmente:
-
-| #   | Pergunta                                                              | Se SIM → ação                                      |
-| --- | --------------------------------------------------------------------- | -------------------------------------------------- |
-| 1   | O nome da função revela o que ela faz?                                | Se não: registrar como gap de clareza              |
-| 2   | Ela recebe `unknown` ou faz parsing sem validação?                    | Registrar gap de tipo                              |
-| 3   | Tem `as`, `!`, `@ts-ignore`, `eslint-disable`?                        | Registrar gap T14 (cast)                           |
-| 4   | Tem `Object.entries()` em parâmetro `object`?                         | Verificar se `any` propaga — se sim, registrar gap |
-| 5   | Tem I/O sem try/catch?                                                | Registrar gap de error handling                    |
-| 6   | Tem catch vazio ou `(err as Error).message`?                          | Registrar gap T14e/T14b                            |
-| 7   | Algum error handler chama de volta o próprio módulo? (self-reference) | Registrar gap de segurança (recursão)              |
-| 8   | Algum getter tem side effect? (ex: `get filePath()` cria diretório)   | Registrar gap arquitetural                         |
-| 9   | Mensagens de erro dizem o que fazer? (são acionáveis?)                | Se não: registrar gap UX                           |
-| 10  | Importa lib externa diretamente em vez de `./deps.js`?                | Registrar gap DepWall                              |
-| 11  | Tem estado mutável compartilhado no módulo?                           | Registrar gap de isolamento                        |
-| 12  | Tem constantes mágicas (números/strings soltos)?                      | Registrar gap de manutenibilidade                  |
-
-- **Registrar:** para cada resposta SIM, anotar em PROGRESS.md sob "**Pre-scan achados:**" com local (linha) e categoria.
-
-### 0.1.2 — Ler testes completo
-
-- **Comando:** `cat ${TEST_FILE_UNIT} ${TEST_FILE_INTEGRATION} ${TEST_FILE_PBT} 2>/dev/null`
-- **Ação:** Ler cada linha de cada arquivo de teste. Para CADA describe/it, responder:
-
-| #   | Pergunta                                                           | Se SIM → ação                              |
-| --- | ------------------------------------------------------------------ | ------------------------------------------ |
-| T1  | Nome do teste descreve COMPORTAMENTO, não implementação?           | Se não: renomear                           |
-| T2  | Teste tem `as`, `as never`, `as string`, `!`, `@ts-ignore`?        | Registrar gap T14                          |
-| T3  | Mock retorna shape IDÊNTICO ao real (não `{}` ou `as never`)?      | Se não: corrigir mock                      |
-| T4  | Expected value veio de REQUIREMENTS ou de "rodou e copiou output"? | Se copiou output: registrar Oracle Problem |
-| T5  | Teste testa UMA coisa ou várias asserts soltas?                    | Se várias: quebrar em testes menores       |
-| T6  | Tem `.skip`, `.only`, `.todo`?                                     | Registrar gap                              |
-| T7  | Usa `expect(...).toBeDefined()` sem assert real depois?            | Registrar weak assertion                   |
-| T8  | Tem estado compartilhado entre describes?                          | Registrar gap de isolamento                |
-| T9  | beforeEach/afterEach limpam estado?                                | Registrar gap                              |
-
-- **Registrar:** anotar cada achado em PROGRESS.md.
-
-### 0.1.3 — Consolidar no PROGRESS.md
-
-Após as leituras, registrar no início da entrada da feature no PROGRESS.md:
-
-```markdown
-#### Pre-scan achados (Phase 0.1)
-
-| #   | Categoria | Local         | Descrição                                       |
-| --- | --------- | ------------- | ----------------------------------------------- |
-| 1   | Cast      | logger.ts:88  | `as NodeJS.ErrnoException` em narrowing de erro |
-| 2   | Self-ref  | logger.ts:159 | `rootLogger.debug()` dentro de `_writeFile`     |
-| ... | ...       | ...           | ...                                             |
-```
-
-Este registro serve como **checkpoint obrigatório**: sem ele, a Phase 0.1 não foi executada.
-
-### 0.1.4 — Relação com Phase 1-4
-
-Os achados do pre-scan **não são gaps formais ainda**. Eles servem para:
-
-1. Direcionar a atenção durante T1-T20 e D1-D7 (você sabe ONDE olhar)
-2. Serem validados ou refutados pelas ferramentas de análise (grep, tsc, lint)
-3. Se confirmados, viram gaps registrados em Phase 4
-4. Se o pre-scan foi completo e a Phase 4.5 não achar nada novo: **vitória** — uma passagem só
-
-**A execução correta da Phase 0.1 é o que elimina o loop de 6 correções no mesmo código.**
-
----
-
-## Phase 1 — Mapeamento de Arquivos
-
-### 1.1 — Localizar source
-
-- **Comando:** `find . -name "${feature}.ts" -not -path '*/node_modules/*'`
-- **Critério:** encontrar exatamente 1 arquivo `.ts`
-- **Registrar:** path completo + linhas de código (`wc -l`)
-
-### 1.2 — Localizar tests existentes
-
-Buscar arquivos de teste que referenciam o módulo:
-
-- **Comandos:**
-    ```
-    find . -name "${feature}.test.ts" -not -path '*/node_modules/*'
-    find . -name "${feature}.integration.test.ts" -not -path '*/node_modules/*'
-    find . -name "${feature}.property.test.ts" -not -path '*/node_modules/*'
-    ```
-- **Critério:** listar todos; registrar quantos de cada tipo
-- **Registrar:** paths + contagem total de testes (rodar `npx vitest run ${feature} --reporter=verbose 2>&1 | grep 'Tests'`)
-
-### 1.3 — Mapear consumidores diretos
-
-- **Comando 1: exports do módulo**
-  `grep -oP '^export (function|const|class|interface) \K\w+' ${SOURCE}`
-
-- **Comando 2: quem importa cada export**
-  Para cada export E encontrado no comando 1:
-
-    ```
-    grep -rl --include='*.ts' '(from ["'\'']\.\.?/${FEATURE_NAME}|from ["'\'']\.\./${FEATURE_NAME}|import\s*\{\s*'${E}'\s*\} )' .
-    ```
-
-    (dois comandos separados: barrel import e named import)
-
-- **Comando 3: quem chama a função principal**  
-  `grep -rl --include='*.ts' '${MAIN_EXPORT}' . | grep -v node_modules | grep -v test | grep -v '\.d\.ts'`
-
-- **Critério:** listar todos os arquivos que importam e usam a feature
-- **Registrar:** paths dos consumidores (excluindo testes e node_modules)
-
-### 1.4 — Verificar TECHDOC
-
-- **Comando:** `grep -n "${feature}" docs/TECHDOC.md`
-- **Critério:** o módulo deve estar listado na tabela `shared/`
-- **Status:**
-    - ✅ encontrado
-    - ❌ não encontrado → registrar gap
-- **Registrar:** gap se ausente (ID: T19-1)
-
-### 1.5 — Verificar documentação externa
-
-- **Comando:** `grep -rn "${feature}" docs/ --include='*.md' | grep -v TECHDOC.md`
-- **Critério:** se feature tem entry point CLI, deve estar em `docs/03-git-triggers.md` ou `docs/02-jira-management.md`
-- **Registrar:** status + caminho da doc
-
----
-
-## Phase 2 — Auditoria T1-T20
-
-Regras:
-
-- Para cada T: ler o critério em `FUNCTIONAL-AUDIT-INTEGRATED-PLAN.md` Seção 5
-- Executar comando, registrar status, se ❌ criar gap
-- **Não corrigir ainda** — apenas diagnosticar e registrar
-
-### 2.1 — T1: Entry point
-
-- **Comando:** `grep '^export function\|^export const\|^export class\|^export default' ${SOURCE}`
-- **Critério:** feature tem entry point(s) público(s) acessível(is) por CLI, trigger, ou API programática
-- **Registrar:** lista de exports públicos
-
-### 2.2 — T2: Config model
-
-- **Comando:** `grep -n 'interface\|type\|z\.object\|z\.string\|z\.number\|zod' ${SOURCE} | head -10`
-- **Critério:** interfaces + schemas (Zod) existem e estão exportados quando relevantes
-- **Status:**
-    - ✅ interfaces exportadas + Zod schema (se aplicável)
-    - ⚠️ interfaces existem mas sem schema de runtime
-    - ❌ sem interfaces
-
-### 2.3 — T3: Config accessor
-
-- **Comando:** `grep -n 'config-accessor\|Config\b\|config\.get\|configAccessor' ${SOURCE} | head -5`
-- **Critério:** se feature precisa de config, usa `config-accessor.ts` com getters tipados
-- **Status:** ✅ / ❌ N/A
-
-### 2.4 — T4: Runtime lê config
-
-- **Comando:** `grep -n 'config\|process\.env\|\.env\|xdgStateHome' ${SOURCE} | head -10`
-- **Critério:** runtime lê config de fonte externa (config file, env vars, CLI flags)
-- **Status:** ✅ / ❌ N/A
-
-### 2.5 — T5: Wizard entry
-
-- **Comando:** `grep -rn "${FEATURE_NAME}" setup/ --include='*.ts' 2>/dev/null | head -5`
-- **Critério:** setup wizard tem entrada para configurar esta feature
-- **Status:** ✅ / ❌ N/A
-
-### 2.6 — T6: Wizard detection
-
-- **Comando:** `grep -rn "${FEATURE_NAME}" setup/ --include='*.ts' 2>/dev/null | grep -i 'detect\|auto' | head -5`
-- **Critério:** wizard detecta automaticamente contexto relevante para a feature
-- **Status:** ✅ / ❌ N/A
-
-### 2.7 — T7: Wizard output
-
-- **Comando:** `grep -rn "${FEATURE_NAME}" setup/ --include='*.ts' 2>/dev/null | grep -i 'write\|generate\|create\|output' | head -5`
-- **Critério:** wizard gera/configura arquivos necessários para a feature
-- **Status:** ✅ / ❌ N/A
-
-### 2.8 — T8: Wizard prompts
-
-- **Comando:** `grep -rn "${FEATURE_NAME}" setup/ --include='*.ts' 2>/dev/null | grep -i 'prompt\|question\|ask\|input' | head -5`
-- **Critério:** perguntas do wizard são claras e completas
-- **Status:** ✅ / ❌ N/A
-
-### 2.9 — T9: Reconfig handler
-
-- **Comando:** `grep -rn "${FEATURE_NAME}" git_triggers/ --include='*.ts' 2>/dev/null | grep -i 'reconfig\|reconfigure\|handler' | head -5`
-- **Critério:** handler para reconfigurar existe (se feature tem config)
-- **Status:** ✅ / ❌ N/A
-
-### 2.10 — T10: CI integration
-
-- **Comando:** `grep -rn "${FEATURE_NAME}\|${MODULE_NAME}" .github/ --include='*.yml' --include='*.yaml' 2>/dev/null | head -5`
-- **Critério:** feature integrada em templates CI (GitHub Actions, GitLab CI)
-- **Status:** ✅ (workflow + steps corretos) / ⚠️ (parcial) / ❌ N/A
-
-### 2.11 — T11: CI safety
-
-- **Comando:** `grep -n 'try\|catch\|fallback\|catch' ${SOURCE} | head -10`
-- **Critério:** safety mechanisms ativos (try/catch, fallbacks) para falhas de I/O, rede, parsing
-- **Status:** ✅ / ⚠️ / ❌
-
-### 2.12 — T12: Test coverage
-
-- **Comando:** `npx vitest run ${FEATURE} --reporter=verbose 2>&1 | grep -E 'Tests|Test Files'`
-- **Critério:** testes existem, cobrem caminhos principais + edge cases
-- **Sub-checks:**
-    1. ✅ Existem testes unitários
-    2. ✅ Existem testes de integração (se feature faz I/O de rede, disco, git)
-    3. ✅ Existem PBT (se feature tem lógica numérica/validação/state machine)
-- **Registrar:** contagem total (unit + integration + PBT)
-
-### 2.13 — T13: Dead code
-
-- **Comando 1 (funções privadas):**
-    ```
-    # Extrair nomes de funções não exportadas
-    grep -oP '^function \K\w+' ${SOURCE} | while read fn; do
-      count=$(grep -cP "\b${fn}\b" ${SOURCE})
-      if [ "$count" -le 1 ]; then echo "POSSIVELMENTE MORTO: $fn (refs: $count)"; fi
-    done
-    ```
-- **Comando 2 (constantes privadas):**
-    ```
-    grep -oP '^const \K\w+' ${SOURCE} | grep -vP '^export' | while read cn; do
-      count=$(grep -cP "\b${cn}\b" ${SOURCE})
-      if [ "$count" -le 1 ]; then echo "POSSIVELMENTE MORTO: $cn (refs: $count)"; fi
-    done
-    ```
-- **Critério:** zero ocorrências de código não referenciado (contagem de referências <= 1 = declarado mas não usado)
-- **Status:** ✅ / ❌
-
-### 2.14 — T14: Suppressions
-
-**Sub-categorias a verificar separadamente:**
-
-> **Escopo expandido (T14a a T14i):** todos os comandos devem ser executados contra
-> `${SOURCE}`, `${TEST_FILE_UNIT}`, `${TEST_FILE_INTEGRATION}` e `${TEST_FILE_PBT}`.
-> Suppressions em testes são tão graves quanto em código-fonte — mascarar tipos em testes
-> impede que o sistema de tipos detecte violações de contrato.
-> Se um arquivo não existir (ex: `${TEST_FILE_PBT}` vazio), pular.
-
-- **T14a — Type cast `as any` / `as unknown as`**
-  `grep -P 'as any|as unknown' ${SOURCE} ${TEST_FILE_UNIT} ${TEST_FILE_INTEGRATION} ${TEST_FILE_PBT} 2>/dev/null`
-- **T14b — Non-null assertion `!` (pós-fixo)**
-  `grep -nP '[a-zA-Z0-9)\]>]\s*!\s*[);,}\]]' ${SOURCE} ${TEST_FILE_UNIT} ${TEST_FILE_INTEGRATION} ${TEST_FILE_PBT} 2>/dev/null`
-  (apenas operador pós-fixo, não negação `if(!x)`)
-- **T14c — `@ts-ignore` / `@ts-expect-error`**
-  `grep -P '@ts-ignore|@ts-expect-error' ${SOURCE} ${TEST_FILE_UNIT} ${TEST_FILE_INTEGRATION} ${TEST_FILE_PBT} 2>/dev/null`
-- **T14d — `eslint-disable`**
-  `grep -P 'eslint-disable' ${SOURCE} ${TEST_FILE_UNIT} ${TEST_FILE_INTEGRATION} ${TEST_FILE_PBT} 2>/dev/null`
-- **T14e — catch vazio**
-  `grep -A1P 'catch\s*\{' ${SOURCE} ${TEST_FILE_UNIT} ${TEST_FILE_INTEGRATION} ${TEST_FILE_PBT} 2>/dev/null | grep -P '^\s*\}'`
-  (catch sem conteúdo)
-
-- **T14f — Type cast não-any com `as TypeName` em parsing/deserialização**
-  `grep -nP 'JSON\.parse\(.*\) as [A-Z]\w+|as (MetricsStore|Record<)' ${SOURCE} ${TEST_FILE_UNIT} ${TEST_FILE_INTEGRATION} ${TEST_FILE_PBT} 2>/dev/null`
-  (casts de parsing que pulam validação de runtime — `JSON.parse(...) as MetricsStore` é gap mesmo sem `as any`)
-
-- **T14g — `as never` (bypass total do sistema de tipos)**
-  `grep -nP 'as never' ${SOURCE} ${TEST_FILE_UNIT} ${TEST_FILE_INTEGRATION} ${TEST_FILE_PBT} 2>/dev/null`
-
-    > **Justificativa:** `as never` é pior que `as any` — permite atribuir o valor a qualquer tipo
-    > sem nenhuma verificação. `as never` em mocks de teste indica que o mock não respeita o tipo real.
-    > Solução correta: criar objeto que satisfaça a interface esperada, ou usar `Partial<T>` se aplicável.
-
-- **T14h — `as string` / `as number` em valores nullable**
-  `grep -nP 'as (string|number|boolean)\b' ${SOURCE} ${TEST_FILE_UNIT} ${TEST_FILE_INTEGRATION} ${TEST_FILE_PBT} 2>/dev/null`
-
-    > **Justificativa:** `as string` em um `string | null` esconde o null — se o valor for null,
-    > o cast silencia o erro. A correção é usar narrowing (`if (x)`) ou `??` com fallback.
-    > **Exceção:** `global.as string` em `process.env` é aceitável pois o env var SEMPRE retorna string.
-    > Qualquer outra ocorrência é gap.
-
-- **T14i — `Object.entries()` em parâmetro tipado como `object`**
-  `grep -nP 'Object\.entries\(' ${SOURCE} ${TEST_FILE_UNIT} ${TEST_FILE_INTEGRATION} ${TEST_FILE_PBT} 2>/dev/null`
-    > **Justificativa:** `Object.entries(object)` retorna `[string, any][]` segundo a definição de tipo
-    > do TypeScript. O `any` no retorno propaga type-unsafety. A correção é usar um tipo indexado
-    > (`Record<string, T>` ou `{[key: string]: unknown}`) em vez de `object`, ou usar um helper
-    > tipado como `Object.entries(obj as Record<string, unknown>)` em contexto controlado (testes).
-    > **Verificação manual:** inspecionar cada match. Se o valor de retorno de `Object.entries` for
-    > usado apenas como `string` (ex: `for (const [key] of ...`), o `any` no value não é propagado e
-    > pode ser aceito. Se o `any` for propagado (ex: `val` usado em expressão tipada): ❌ gap.
-    > Bloqueios de `as Record<...>` em T14a não se aplicam aqui — o custo de tipar a variável fonte
-    > como indexada é aceitável.
-    > **Justificativa:** `JSON.parse` retorna `unknown` ou `any`, e fazer cast direto para `MetricsStore` sem validação
-    > (Zod, class-transformer, ou guard manual) é um bypass de type safety equivalente a `as any`.
-    > A diferença é puramente estilística — ambos permitem que dados inválidos entrem no sistema sem checagem.
-
-> **Nota:** O comando T14b usa pattern mais restritivo para evitar falso positivo com `if(!x)`.
-> Falsos positivos residuais devem ser verificados manualmente (inspecionar cada match).
->
-> **Nota T14f:** O padrão `as [A-Z]\w+` captura casts em parsing. Falsos positivos (ex: `x as MyType` em código
-> que já validou o dado em passo anterior) devem ser julgados manualmente. Se o cast segue uma validação real
-> (Zod parse, class-transformer, guard com `if`), não é gap.
-
-- **Critério:** zero type suppressions, zero catch vazios, zero eslint-disable, zero casts não-validados de parsing
-- **Status:**
-    - ✅ zero ocorrências em todas as sub-categorias
-    - ❌ encontradas → registrar cada localização como gap (T14a-1, T14b-1, ...)
-
-### 2.15 — T15: Bidirectional consistency
-
-- **Comando:** Identificar se feature tem fluxo bidirecional (read + write). Se sim:
-  `grep -rn "${FEATURE}" --include='*.ts' . | grep -v 'test\|node_modules'`
-- **Critério:** se A→B e B→A existem, os dois caminhos produzem estados consistentes
-- **Status:** ✅ / ❌ N/A (fluxo unidirecional)
-
-### 2.16 — T16: CLI interface
-
-- **Comando:** `grep -rn "${FEATURE_NAME}\|${MODULE_NAME}" --include='*.ts' . | grep -i 'cli\|arg\|command\|--help\|program\|dispatch' | head -5`
-- **Critério:** feature tem CLI própria (subcomando). `--help` funciona. Unknown flags reportadas.
-- **Status:** ✅ / ❌ N/A (sem CLI própria)
-
-### 2.17 — T17: Env var dependency
-
-- **Comando:** `grep -n 'process\.env' ${SOURCE} | head -10`
-- **Critério:** se depende de env vars, estão em `.env.example` e no schema de config
-- **Status:** ✅ (nenhuma) / ⚠️ (usa mas não documentada) / ✅ (documentada)
-
-### 2.18 — T18: Error handling
-
-- **T18a — Blocos try/catch**
-  `grep -nP '^\s*(try|catch)\s*\{' ${SOURCE}`
-  Verificar contexto do log.
-- **T18b — throw new Error (vs throw string)**
-  `grep -nP 'throw\s+(new\s+)?[A-Z]\w*(Error)?' ${SOURCE}`
-- **T18c — Logging com contexto**
-  `grep -nP 'rootLogger\.(warn|error|info)\(' ${SOURCE} | grep -vP 'Error|error'`
-  (logs sem variável de contexto são suspeitos)
-- **T18d — Fallbacks**
-  `grep -nP 'return \[\]|return null|return {}|catch' ${SOURCE} | head -10`
-
-- **Critério:**
-    - ✅ T18a + T18c + T18d presentes — erros logados com contexto, fallbacks explícitos
-    - ⚠️ catch vazio (T14e) ou log sem contexto
-    - ❌ operações de I/O sem try/catch que podem quebrar o runtime
-
-### 2.19 — T19: TECHDOC presente
-
-- **Comando:** `grep -n "${MODULE_FILE}" docs/TECHDOC.md`
-- **Critério:** módulo listado na tabela `shared/` do TECHDOC.md
-- **Status:** ✅ / ❌
-
-### 2.20 — T20: CI/Config contract
-
-- **Comando:** Verificar se feature faz parte de cadeia: Github Action → CLI args → config key. Se sim:
-  `grep -rn "${FEATURE_NAME}" .github/ --include='*.yml' --include='*.yaml' 2>/dev/null`
-- **Critério:** parâmetros de CI correspondem aos args de CLI que correspondem às config keys
-- **Status:** ✅ / ❌ N/A
-
----
-
-## Phase 3 — Auditoria D1 a D7
-
-### 3.1 — D1: Isolamento de Testes
-
-**Comando:** `head -80 ${TEST_FILE} | grep -n 'beforeEach\|afterEach\|vi\.mock\|vi\.clearAllMocks\|vi\.resetAllMocks\|vi\.restoreAllMocks'`
-
-**Itens a verificar:**
-
-```
-D1.1: beforeEach/afterEach com cleanup de estado? (file system, mocks, globals)
-D1.2: vi.mock usado para isolar dependências externas?
-D1.3: Testes compartilham estado mutável entre si?
-D1.4: Testes de integração limpam recursos (arquivos temporários, diretórios)?
-```
-
-**Critério de aprovação:** todos os 4 itens ✅
-
-**Registrar:** ✅ / ⚠️ / ❌ para cada sub-item
-
-### 3.2 — D2: Robustez
-
-**Comandos:**
-
-- **D2.1 — Input validation**
-  `grep -nP '^(export )?function \w+\(.*:.*\)' ${SOURCE} | head -15`
-  Verificar se parâmetros têm tratamento de null/undefined/default.
-- **D2.2 — Guard clauses**
-  `grep -nP '\bif\s*\([^)]*(null|undefined|!==|===)\s' ${SOURCE} | head -15`
-- **D2.3 — Fallbacks para I/O**
-  `grep -nP 'catch' ${SOURCE} | head -10`
-    - ler cada catch para verificar fallback.
-- **D2.4 — Timeout**
-  `grep -nP 'timeout|maxBuffer|Signal' ${SOURCE} | head -5`
-
-**Itens a verificar:**
-
-```
-D2.1: Input validation — parâmetros de função validados? (defaults, null checks, type guards)
-D2.2: Guard clauses para edge cases (arrays vazios, undefined, strings vazias)?
-D2.3: Fallbacks para falhas externas (git, rede, arquivo)?
-D2.4: Timeout configurado para operações externas (execFileSync, HTTP calls)?
-```
-
-**Critério:** pelo menos 3/4 ✅
-
-**Registrar:** ✅ / ⚠️ / ❌ para cada sub-item
-
-### 3.3 — D3: Boas Práticas
-
-**Comando:** `wc -l ${SOURCE}` — arquivos > 400 linhas merecem atenção
-
-**Itens a verificar:**
-
-```
-D3.1: SRP — cada função tem uma responsabilidade única?
-D3.2: DIP — imports externos passam pelo DepWall (shared/deps.ts)?
-D3.3: workarounds? bypasses? código comentado?
-D3.4: código duplicado com outros módulos?
-D3.5: Nomes de funções/variáveis revelam intenção?
-```
-
-**Comando DIP (D3.2):**
-
-```
-# Listar imports que violam DepWall (importam bibliotecas externas fora de shared/deps.ts)
-grep -nP "^import .* from '" ${SOURCE} | grep -vP "\.js|\.json" | grep -v "shared/deps"
-```
-
-Se houver imports de bibliotecas externas (chalk, axios, zod, etc.) que NÃO passam por shared/deps.ts: ❌.
-
-**Critério:** pelo menos 4/5 ✅
-
-**Registrar:** ✅ / ⚠️ / ❌ para cada sub-item
-
-### 3.4 — D4: Implementação Ótima
-
-**Comando:** `grep -n 'for\|while\|map\|filter\|reduce\|forEach' ${SOURCE} | head -20`
-
-**Itens a verificar:**
-
-```
-D4.1: Algoritmos com complexidade adequada (evitar O(n²) desnecessário)?
-D4.2: Cópias desnecessárias? (ex: [...arr] sem motivo)
-D4.3: Constantes mágicas? (números soltos sem nome)
-D4.4: Early returns bem utilizados?
-D4.5: Código comentado ou dead code?
-```
-
-**Critério:** pelo menos 4/5 ✅
-
-### 3.5 — D5: Métricas
-
-**Itens a verificar:**
-
-```
-D5.1: A feature PRODUZ métricas (valores quantitativos sobre qualidade)?
-   - Se NÃO: ❌ N/A — pular o resto
-   - Se SIM: continuar
-D5.2: As métricas são persistidas? Formato consistente com shared/metrics.ts?
-D5.3: As métricas têm unidade/documentação clara?
-D5.4: Erro em métrica pode corromper dados a montante?
-```
-
-**Referência:** `grep -n 'saveMetrics\|loadMetrics\|MetricsRun\|FailureClassification' ${SOURCE} | head -5`
-
-**Registrar:** ✅ / ⚠️ / ❌ / ❌ N/A
-
-### 3.6 — D6: UX (com documentação)
-
-> **Definição (conforme decisão registrada no PROGRESS.md e FUNCTIONAL-AUDIT-INTEGRATED-PLAN.md):**
-> UX engloba **toda a experiência do usuário** — interface (CLI, menus, flags, outputs),
-> **documentação** (TECHDOC, README, --help, guias, mensagens de erro), e comportamento
-> (feedback, confirmações, navegação, terminologia).
-> Documentação incorreta, desatualizada, incompleta ou contraditória **é gap de UX**, não N/A.
-
-**Comandos:**
-
-```
-# Documentação externa
 find docs/ -name '*.md' -exec grep -l "${FEATURE_NAME}" {} \; 2>/dev/null
-# Mensagens para o usuário no código
 grep -nP '"(error|warn|info|Usage|Error|Warning):' ${SOURCE} | head -15
-# Mensagens de erro/feedback
 grep -nP 'rootLogger\.(warn|error|info)' ${SOURCE} | head -15
 ```
 
-**Itens a verificar:**
+D6.1✅ mensagens acionáveis (causa + ação) / D6.2✅ documentação existe e reflete comportamento / D6.3✅ terminologia consistente
+D6.1+D6.2+D6.3 obrigatórios ✅
 
-```
-D6.1: Mensagens de erro são acionáveis (dizem o que fazer, não só o que falhou)?
-      Protocolo de verificação (para cada rootLogger.{warn,error,info} encontrado):
-        1. Copiar a mensagem literal
-        2. O usuário sabe EXATAMENTE o que aconteceu? (causa)
-        3. O usuário sabe EXATAMENTE o que fazer? (ação)
-        4. Se resposta for NÃO para 2 ou 3: ❌
-D6.2: Documentação da feature existe (TECHDOC + docs/*.md) e reflete o comportamento real?
-      (Se ausente em TECHDOC: ❌. Se presente mas desatualizada: ⚠️)
-      Comando para detectar docs desatualizadas:
-        for doc in $(find docs/ -name '*.md' -exec grep -l "${FEATURE_NAME}" {} \;); do
-            echo "=== $doc ==="
-            grep -n "${FEATURE_NAME}\|${MODULE}" "$doc"
-        done
-      Critério: cada menção à feature no doc deve ser verificada manualmente
-      contra o comportamento real do código (pós-correção). Se doc descreve
-      comportamento que não existe mais (ou omite comportamento adicionado): ⚠️.
-D6.3: Terminologia consistente entre código, docs, CLI e mensagens?
-D6.4: CLI --help claro e completo (se aplicável)?
-D6.5: Output legível para o usuário (quando aplicável)?
-```
+### D7: Deep Test Audit
 
-**Critério:** D6.1 + D6.2 + D6.3 obrigatórios ✅. D6.1+D6.2+D6.3 é requisito mínimo.
-Se documentação estiver ausente: ❌ (não N/A).
+Definir: `TEST_FILES="${TEST_FILE_UNIT} ${TEST_FILE_INTEGRATION} ${TEST_FILE_PBT}"`
+Comandos individuais para CADA sub-check:
 
-**Regra D6.1 (protocolo de acionabilidade):** Mensagens que apenas descrevem o que aconteceu
-sem orientar o usuário sobre o que fazer são ❌. Exemplo de mensagem NÃO acionável:
-"Arquivo de estado corrompido. Recuperando backup..." — diz o que aconteceu e o que o sistema fez,
-mas não diz se o usuário precisa agir, verificar algo, ou reexecutar. Exemplo de mensagem acionável:
-"Falha ao salvar configuração: permissão negada. Verifique as permissões do diretório e tente novamente."
+1. `grep -P 'toBeDefined|toBeTruthy|toBeNull' $TEST_FILES 2>/dev/null` — ✅ 0 hits ou cada hit tem assert real após / ❌
+2. `grep -cP '^\s*(it|test)\(' $TEST_FILES 2>/dev/null` e `grep -cP 'expect\(' $TEST_FILES 2>/dev/null` — ✅ expects >= tests / ❌
+3. `grep -nP 'expect\(.*\)\.toBe\(|expect\(.*\)\.toEqual\(|expect\(.*\)\.toStrictEqual\(' $TEST_FILES 2>/dev/null` — inspecionar cada match: ✅ de requisitos / ❌ Oracle Problem
+4. `grep -P 'vi\.fn|mockReturnValue|mockImplementation' $TEST_FILES | head -10` — ✅ mocks com shape real / ❌ leniente
+5. `grep -P 'toThrow\(\s*\)' $TEST_FILES 2>/dev/null` — ✅ 0 hits / ❌ toThrow() sem argumento
+6. `grep -P '\.skip\(' $TEST_FILES 2>/dev/null` — ✅ 0 hits ou documentado / ❌ .skip sem doc
+7. `grep -P '^\s*(it|test)\("' $TEST_FILES 2>/dev/null` — ✅ nomes de comportamento / ❌ nomes de implementação
+8. `grep -P 'beforeEach|afterEach|vi\.(clear|reset|restore)AllMocks' $TEST_FILES | head -5` — ✅ cleanup presente / ❌
+9. `grep -P 'as any|@ts-ignore|@ts-expect-error|nullAs\(' $TEST_FILES 2>/dev/null` — ✅ 0 hits / ❌ suppression
+10. Inspecionar expects: ✅ invariantes / ❌ dual-implementation (teste replica fórmula do source)
+11. `ls ${TEST_FILE_PBT} 2>/dev/null && echo 'EXISTS'` — ✅ PBT presente / ❌ PBT ausente (para lógica crítica)
+12. N/A para features existentes (não é código novo)
 
-**Registrar:** ✅ / ⚠️ / ❌ para cada sub-item
+`<!-- CHECKPOINT: Phase 3 complete -->`
 
-### 3.7 — D7: Deep Test Audit
-
-Esta dimensão audita os **testes existentes**, não o código-fonte.
-
-**Comando base:** `cat ${TEST_FILE}` + `cat ${INTEGRATION_TEST_FILE}` + `cat ${PBT_FILE}`
-
-**Itens a verificar:**
-
-```
-7.1  — Testes usam toBeDefined() / toBeTruthy() / toBeNull() sem assert real?
-        Comando: grep -P 'toBeDefined|toBeTruthy|toBeNull' ${TEST_FILE_UNIT} ${TEST_FILE_INTEGRATION} ${TEST_FILE_PBT} 2>/dev/null
-        Critério: cada ocorrência deve ser seguida de um assert real (ex: expect(x).toBeDefined(); expect(x.field).toBe(value))
-7.2  — Testes têm zero expect calls (no-assert test)?
-        Comando (contar testes): grep -cP '^\s*(it|test)\(' ${TEST_FILES} 2>/dev/null | awk -F: '{s+=$2} END {print s}'
-        Comando (contar expects): grep -cP 'expect\(' ${TEST_FILES} 2>/dev/null | awk -F: '{s+=$2} END {print s}'
-        Critério: nº expects >= nº tests. Se expects < tests: há no-assert tests.
-7.3  — Oracle Problem: valores esperados vêm de requisitos ou de output do código?
-        Comando: grep -nP 'expect\(.*\)\.toBe\(|expect\(.*\)\.toEqual\(|expect\(.*\)\.toStrictEqual\(' ${TEST_FILES} 2>/dev/null
-        Critério: para cada match, ler o JSDoc/contrato da função testada. Se o valor esperado
-        for um literal que corresponde ao output atual do código em vez de uma invariante
-        de domínio → Oracle Problem. Exemplo de OK: expect(ratio).toBeGreaterThan(0).
-        Exemplo de Oracle: expect(calculate({x:1})).toEqual({result: 42}) onde 42 veio de execução manual.
-7.4  — Mock discipline: mocks têm shape idêntico ao real (sem campos omitidos)?
-        Comando: grep -P 'vi\.fn|mockReturnValue|mockImplementation' ${TEST_FILES} | head -10
-        Critério: para cada mock, verificar se o shape (campos + tipos) corresponde ao
-        tipo real. Dica: comparar com a interface no SOURCE. Se mock omite campos
-        obrigatórios → mock leniente (❌).
-7.5  — toThrow() sem argumento?
-        Comando: grep -P 'toThrow\(\s*\)' ${TEST_FILES} 2>/dev/null
-        Critério: toda ocorrência é gap. toThrow() sem argumento não diferencia
-        entre erro esperado e erro inesperado.
-7.6  — describe.skip / it.skip / test.skip presentes sem documentação?
-        Comando: grep -P '\.skip\(' ${TEST_FILES} 2>/dev/null
-        Critério: se existir, deve haver comentário/documentação explicando por quê.
-7.7  — Test names descrevem comportamento, não implementação?
-        Comando: grep -P '^\s*(it|test)\("' ${TEST_FILES} 2>/dev/null | head -20
-        Critério: "returns 400 when key is invalid" ✅. "calls validateJiraKey" ❌.
-7.8  — Testes são determinísticos (sem dependência de estado global não resetado)?
-        Comando: grep -P 'beforeEach|afterEach|vi\.(clear|reset|restore)AllMocks' ${TEST_FILES} | head -5
-        Critério: beforeEach/afterEach devem limpar estado. Se testa fs: rmSync em afterEach.
-7.9  — Type suppressions em testes (as any, !, nullAs(), @ts-ignore, @ts-expect-error)?
-        Comando: grep -P 'as any|@ts-ignore|@ts-expect-error|nullAs[(\b]' ${TEST_FILES} 2>/dev/null
-        Critério: zero ocorrências. Cada suppression contorna o sistema de tipos em vez de
-        testar contratos reais. nullAs() merece atenção especial — é helper de supressão.
-7.10 — Dual-implementation detectada (teste replica fórmula do source)?
-        Critério: ler os expects. Se o teste implementa a MESMA lógica (mesma fórmula,
-        mesmo algoritmo) do código-fonte em vez de testar invariantes — dual-implementation.
-        Exemplo: source faz total = a + b; teste faz expect(total).toBe(a + b) → ❌.
-        Correto: expect(total).toBeGreaterThanOrEqual(a + b) (invariante).
-7.11 — PBT obrigatório para lógica crítica foi implementado?
-        Comando: ls ${TEST_FILE_PBT} 2>/dev/null && echo 'EXISTS' || echo 'MISSING'
-        Critério: se feature tem validação numérica, state machine, parsing, filtros,
-        algoritmos com limites — PBT deve existir e cobrir invariantes.
-7.12 — Test-first violado (código escrito sem teste correspondente)?
-        Critério: apenas para código novo (N/A para features existentes).
-        Se feature já existia antes desta auditoria: ❌ N/A.
-```
-
-**Status agregado:** ✅ todos 12 itens / ⚠️ até 2 violações / ❌ 3+ violações
-
-**Registrar:** tabela com cada item + evidência + status
-
----
+<!-- Phase 4: lines 332-355 -->
 
 ## Phase 4 — Registro de Gaps
 
-### 4.1 — Consolidar gaps
+### 4.1 — Consolidar
 
-- **Ação:** reunir todos os ❌ e ⚠️ das fases 2 e 3
-- **Formato:** cada gap vira uma linha na tabela no PROGRESS.md
+Reunir todos ❌ e ⚠️ de Phases 2 e 3. Cada gap vira uma linha:
 
-```
-| ID | Severidade | Descrição | Local | Origem (T/D) |
-|----|-----------|-----------|-------|--------------|
-| G1 | Alto      | ...       | ${FILE}:${LINE} | T14 |
-| G2 | Médio     | ...       | ${FILE}:${LINE} | T12 |
+```markdown
+| ID  | Severidade | Descrição | Local     | Origem (T/D) |
+| --- | ---------- | --------- | --------- | ------------ |
+| G1  | Alto       | ...       | ${F}:${L} | T14          |
 ```
 
-- **Critério:** todo ❌ e ⚠️ deve ter um gap ID
-- **Proibido:** omitir gap, minimizar severidade, ou justificar como "não se aplica" sem evidência
+Proibido: omitir gap, minimizar severidade, justificar como N/A sem evidência.
 
-### 4.2 — Priorizar gaps
+### 4.2 — Priorizar
 
-Ordem de correção (sequencial — cada passo depende do anterior):
+Ordem de correção: T14 (suppressions) → TSC check → T12 (testes) → D7 → T11+T18 → demais T → D1-D6
 
-1. **T14 (suppressions)** — remover supressões primeiro, pois mascaram outros problemas
-2. **TSC check** — compilar SEM as supressões. Erros de tipo reais aparecem aqui.
-   Se TSC falhar: corrigir tipos adequadamente (reintroduzir supressão NÃO é permitido).
-3. **T12 (test coverage)** — criar testes. Só depois de compilação limpa.
-4. **D7 (deep test audit)** — verificar qualidade dos testes existentes + novos.
-5. **T11 + T18 (CI safety + error handling)** — robustez do runtime.
-6. **Demais T1-T20** — completude arquitetural.
-7. **D1-D6** — demais dimensões.
+`<!-- CHECKPOINT: Phase 4 complete -->`
 
----
+<!-- Phase 4.5: lines 353-380 -->
 
-## Phase 4.5 — File-wide consistency enforcement
+## Phase 4.5 — Varredura de consistência
 
-> **Propósito:** Evitar que violações pré-existentes no mesmo arquivo passem despercebidas.
-> Um gap no diff nunca é um problema isolado — o mesmo padrão pode existir no restante do arquivo.
-> Ignorar violações existentes porque "não estão no diff" é aceitar dívida técnica deliberadamente.
+### 4.5.1 — Identificar categoria
 
-### 4.5.1 — Identificar categoria do gap
-
-Para cada gap registrado em Phase 4, identificar sua **categoria**:
-
-| Categoria         | Exemplos de gap                               |
-| ----------------- | --------------------------------------------- |
-| **Cast**          | `as X`, `!`, `@ts-ignore`, `@ts-expect-error` |
-| **DepWall**       | Import direto de lib externa                  |
-| **ErrorHandling** | catch vazio, `(err as Error).message`         |
-| **UX**            | Mensagem não acionável                        |
-| **TestIsolation** | Estado compartilhado, falta de cleanup        |
-| **TestCoverage**  | PBT ausente, teste faltando                   |
-| **TypeSafety**    | `Object.entries()` em `object` retorna `any`  |
+| Categoria     | Exemplos                                    |
+| ------------- | ------------------------------------------- |
+| Cast          | `as`, `!`, `@ts-ignore`, `@ts-expect-error` |
+| DepWall       | import direto de lib externa                |
+| ErrorHandling | catch vazio, `(err as Error).message`       |
+| UX            | mensagem não acionável                      |
+| TestIsolation | estado compartilhado, falta cleanup         |
+| TestCoverage  | PBT ausente, teste faltando                 |
+| TypeSafety    | `Object.entries(objeto)` propaga `any`      |
 
 ### 4.5.2 — Varrer arquivo completo
 
-Para cada arquivo que contém gap(s) registrados:
+Para CADA gap na tabela, extrair o caminho do arquivo da coluna `Local` (${F}:${L}). Agrupar por arquivo único, depois:
+`cat ${CAMINHO_DO_ARQUIVO}` — ler o arquivo completo
+Para CADA ocorrência da MESMA categoria (não só no diff):
 
-- **Comando:** `find . -path './${FILE_PATH}' -exec cat {} \;` (ler o arquivo completo)
-- **Ação:** para CADA ocorrência da MESMA categoria no arquivo (não apenas no diff):
-    1. Se for nova ocorrência (fora do diff original): **registrar como gap adicional** na tabela de gaps
-    2. A correção do gap adicional ocorre junto com os gaps originais (Phase 6)
-- **Critério:** zero ocorrências residuais da categoria no arquivo após correção
+- Se nova: registrar gap adicional na tabela
+- Corrigir junto com gaps originais (Phase 6)
 
-### 4.5.3 — Escopo expandido para teste e fonte
+### 4.5.3 — Verificação
 
-A varredura aplica-se a **arquivos de código-fonte E de teste** sem distinção.
+`git diff --stat` — diff deve cobrir TODAS ocorrências. Se alguma não aparecer: PARAR.
 
-Se o arquivo `logger.test.ts` tem 6 `as {...}` casts em testes existentes e o gap original é "Cast em logger.ts":
+`<!-- CHECKPOINT: Phase 4.5 complete -->`
 
-- A varredura encontra os 6 casts em `logger.test.ts`
-- Cada um é registrado como gap adicional
-- Todos são corrigidos em Phase 6
+<!-- Phase 5: lines 395-418 -->
 
-### 4.5.4 — Verificação
+## Phase 5 — RED (Testes que expõem gaps)
 
-Após corrigir todos os gaps (adicionais + originais):
+### 5.1 — Criar testes
 
-- Rodar `git diff --stat` e verificar que o diff cobre todas as ocorrências identificadas
-- Se alguma ocorrência conhecida não aparecer no diff: **não foi corrigida. PARAR.**
+Para cada gap de T12 (cobertura): criar test que reproduz comportamento esperado.
 
-**Invariante:** nenhuma violação da categoria pode permanecer no arquivo após a correção, independente de ser pré-existente ou introduzida.
+- Teste deve FALHAR (RED) contra código atual
+- Expected values de requisitos, NUNCA de output atual
+- Mock shape IDÊNTICO ao real
 
----
+### 5.2 — Verificar Oracle Problem
 
-## Phase 5 — RED Phase (Testes que expõem gaps)
+Para cada `expect.*toBe\|toEqual\|toStrictEqual` suspeito:
 
-> ⚠️ **Limite de fronteira Phase 4→5:** Phase 5 **pode modificar arquivos de TESTE** (criar ou editar `*.test.ts`, `*.property.test.ts`, `*.integration.test.ts`).
-> **Arquivos de SOURCE** (`${SOURCE}`, mais qualquer arquivo em `src/`, `shared/`, `scripts/`) **NÃO podem ser modificados** em Phase 5.
-> A correção de código-fonte (SOURCE) ocorre exclusivamente em **Phase 6**.
->
-> **Razão:** respeitar RED-GREEN-REFACTOR: o teste deve falhar (RED) contra o código atual antes de qualquer correção.
-> Corrigir SOURCE antes de verificar RED viola a ordem e mascara se o teste realmente expõe o bug.
+- ✅ veio de requisito / ❌ veio de output do código
+- Se ❌: criar NOVO teste com valor correto. Teste antigo não alterado.
 
-### 5.1 — Para cada gap de T12 (cobertura)
+### 5.3 — Run
 
-**Regra:** criar testes que reproduzem o comportamento esperado da feature.
+`npx vitest run ${FEATURE_NAME} --reporter=verbose`
+Ao menos 1 bug-fix test em RED para avançar.
 
-- **Se não existe teste de integração:** criar `${MODULE}.integration.test.ts`
-    - Usar fixture real (arquivo temporário, git init, chamada HTTP real mockada)
-    - Mock apenas o necessário (camada de I/O)
-    - Shape do mock: IDÊNTICO ao tipo real (verificar com `grep 'interface\|type' ${SOURCE}`)
-- **Se não existe PBT:** criar `${MODULE}.property.test.ts`
-    - Invariantes devem vir da especificação (JSDoc), NUNCA do output atual do código
-    - PBT obrigatório para: validação numérica, state machine, parsing, filtros
-- **Expected values:** derivados da lógica de negócio, NUNCA do output atual do código
+Exceção — código já corrigido (re-auditoria): se o código fonte já foi corrigido em sessão anterior e os testes RED foram convertidos para GREEN e estão no histórico de commits, documentar os testes como prevenção de regressão e avançar. Não recriar RED tests artificiais.
 
-### 5.2 — Para cada gap de D7 (Oracle Problem)
+Proibido modificar SOURCE em Phase 5. Apenas arquivos de teste.
 
-- **Comando para cada expect suspeito:**
-    ```
-    grep -A1 'expect.*toBe\|expect.*toEqual\|expect.*toStrictEqual' ${TEST_FILE}
-    ```
-- **Verificar:** o valor esperado veio de:
-    - ✅ Requisito/domínio (ex: `expect(ratio).toBeGreaterThan(0)`)
-    - ❌ Output do código (ex: copiar resultado de console.log)
-- **Se ❌:** o teste está errado. Criar um NOVO teste com valor correto baseado em requisito. O teste antigo deve ser documentado como defeituoso, não alterado.
+`<!-- CHECKPOINT: Phase 5 complete -->`
 
-### 5.3 — Verificação
+<!-- Phase 6: lines 420-443 -->
 
-- Rodar os novos testes: `npx vitest run ${FEATURE} --reporter=verbose`
-- **Classificar cada teste novo em uma das categorias:**
-    1. **Bug-fix test** — reproduz um bug conhecido (gap T14, T9, T11, T18). **DEVE falhar (RED)** com o código atual.
-    2. **Coverage test** — cobre caminho existente sem bug conhecido (integration, PBT para comportamento já correto). **Pode passar (GREEN)** — é esperado se o código já implementa o comportamento corretamente.
-- **Se bug-fix test passar (GREEN):** o teste não está expondo o bug. Revisar o teste e o gap.
-- **Se coverage test falhar (RED):** pode indicar bug não identificado durante o diagnóstico. Investigar.
-- **Regra:** ao menos 1 bug-fix test deve estar em RED para avançar. Se só existirem coverage tests e todos passarem, avançar mesmo assim.
+## Phase 6 — GREEN (Correção)
 
----
+### 6.1 — Corrigir source
 
-## Phase 6 — GREEN Phase (Correção de Causa Raiz)
+Para cada teste RED: corrigir SOURCE para satisfazer o teste.
+Ordem: remover T14 → `npx tsc --noEmit` → corrigir tipos → demais gaps.
+Proibido: alterar expected values, workaround, bypass, correção temporária.
 
-### 6.1 — Corrigir código-fonte
+### 6.2 — Verificar
 
-- Para cada teste em RED: corrigir o **código-fonte** para satisfazer o teste.
-- **Ordem de correção:**
-    1. Remover supressões (T14) — depois rodar `npx tsc --noEmit`
-    2. Se TSC falhar: corrigir tipos adequadamente (tipos mais precisos, não re-suppress)
-    3. Se TSC passar: continuar para os demais gaps
-- **Proibido:**
-    - ❌ Alterar valores esperados no teste
-    - ❌ workaround / bypass / suppress
-    - ❌ correção temporária
-    - ❌ "depois a gente melhora"
-- **Obrigatório:**
-    - ✅ Identificar causa raiz (não sintoma)
-    - ✅ Corrigir na origem
-    - ✅ Preservar ou fortalecer mecanismos de segurança
+`npx vitest run ${FEATURE_NAME} --reporter=verbose`
+Se falhar: voltar 6.1. Se passar: avançar.
 
-### 6.2 — Verificação
+### 6.3 — Corrigir gaps não-testáveis
 
-- Rodar `npx vitest run ${FEATURE} --reporter=verbose`
-- **Se algum teste ainda falhar:** voltar para 6.1
-- **Se todos passarem:** avançar
+Para gaps sem teste (D2, D6, T18⚠️): aplicar correção diretamente no SOURCE.
+Proibido: ignorar, registrar tech debt, postergar.
+`npx vitest run ${FEATURE_NAME} --reporter=verbose` — confirmar que nada quebrou.
 
-### 6.3 — Corrigir gaps não-testáveis (OBRIGATÓRIO)
+`<!-- CHECKPOINT: Phase 6 complete -->`
 
-Gaps que **não têm teste associado** (D2, D6, T18⚠️, etc.) também precisam de correção. **Tech debt não é permitido** — todo gap, independente de severidade, deve ser corrigido na raiz.
+<!-- Phase 7: lines 445-478 -->
 
-- **Identificar:** na tabela de gaps (Phase 4), quais têm `severidade = ⚠️ ou ❌` mas nenhum teste os expõe.
-- **Para cada gap não-testável:**
-    1. Aplicar correção diretamente no código-fonte (não requer teste — a auditoria manual é a evidência)
-    2. Se a correção exigir testes para comprovação (ex: validação de input, mensagem de erro), criar testes específicos
-- **Proibido:**
-    - ❌ Ignorar gap de qualquer severidade
-    - ❌ Registrar como tech debt
-    - ❌ Postergar correção
-- **Verificação:** após cada correção:
-    1. Rodar `npx vitest run ${FEATURE} --reporter=verbose` para confirmar que nada quebrou
-    2. Registrar a correção na tabela de gaps do PROGRESS.md com diff
-
----
-
-## Phase 7 — Integração (antes da refatoração)
+## Phase 7 — Integração
 
 ### 7.1 — Testar consumidores
 
-- **Comando:** para cada consumidor identificado em 1.3, rodar seus testes:
-    ```
-    npx vitest run $(basename $(dirname ${CONSUMER}))/$(basename ${CONSUMER} .ts) --reporter=verbose 2>&1 | tail -5
-    ```
-- **Critério:** consumidores não quebram
-- **Se quebrar:** verificar se a mudança de contrato (assinatura/tipo) afetou o consumidor. Se sim, a mudança é inválida — reverter e encontrar abordagem que preserve contrato.
-- **⚠️ Limitação:** se consumidores mockam o módulo (vi.mock), os testes PASSAM mesmo com mudanças comportamentais. A etapa 7.1b cobre este caso.
+Para CADA CONSUMER (lista de 1.2):
+`npx vitest run $(basename $(dirname ${C})) --reporter=verbose 2>&1 | tail -5`
+✅ consumidores intactos / ❌ quebrou → reverter
 
-### 7.1b — Revisão manual de mudanças comportamentais
+### 7.1b — Revisão comportamental
 
-**Quando:** sempre que o diff da correção (Phase 6) alterar lógica que consumidores mockam nos testes.
+`git diff HEAD -- ${SOURCE} | head -80`
+✅ sem mudança comportamental / ⚠️ com mudança → precisa autorização
 
-- **Comando:** gerar diff das correções aplicadas:
-    ```
-    git diff HEAD -- ${SOURCE} | head -80
-    ```
-- **Para cada bloco alterado, verificar:**
-    1. O comportamento mudou? (ex: `--all` → `HEAD` reduz escopo de dados)
-    2. Consumidores dependem do comportamento antigo?
-    3. Se sim: a mudança precisa de **autorização explícita** do usuário (Appendix B — STOP)
-    4. Se não: registrar no PROGRESS.md que não há impacto em consumidores
-- **Registrar:** resultado da análise no PROGRESS.md como `**Análise de impacto em consumidores:** sem impacto / carece decisão`
+### 7.2 — Full suite
 
-### 7.2 — Full test suite
+`npx vitest run --reporter=verbose 2>&1 | tail -10`
+✅ sem regressões
 
-- **Comando:** `npx vitest run --reporter=verbose 2>&1 | tail -10`
-- **Critério:** sem regressões
-- **Nota:** esta etapa pode ser lenta (5-15 min). Se o conjunto completo for proibitivo, rodar pelo menos os módulos que compartilham dependências com a feature auditada.
+### 7.3 — Docs pós-correção
 
-### 7.3 — Verificar documentação em docs/ (pós-correção)
+`find docs/ -name '*.md' -exec grep -l "${FEATURE_NAME}\|${MODULE_NAME}" {} \;`
+✅ docs consistentes com código / ❌ gap
 
-Correções de código (Phase 6) podem tornar `docs/*.md` obsoletos ou inconsistentes.
+`<!-- CHECKPOINT: Phase 7 complete -->`
 
-- **Comando para localizar docs que referenciam a feature:**
-    ```
-    find docs/ -name '*.md' -exec grep -l "${FEATURE_NAME}\|${MODULE}" {} \;
-    ```
-- **Para cada doc encontrado, verificar:**
-    1. O comportamento descrito no doc corresponde ao comportamento atual do código?
-    2. Funcionalidades adicionadas na correção estão documentadas?
-    3. Funcionalidades removidas na correção foram removidas do doc?
-- **Se qualquer item falhar:**
-    - Registrar como gap na tabela de gaps (Phase 4) com severidade ⚠️
-    - A correção do doc ocorre na Phase 10 (10.1 item 9)
-- **Critério:** não pode haver discrepância entre doc e implementação. Se houver, a feature NÃO está completa.
-
----
+<!-- Phase 8: lines 464-490 -->
 
 ## Phase 8 — Refatoração (Decisão)
 
-### 8.0 — Gate de decisão
+### 8.0 — Gate
 
-Antes de refatorar, o auditor DEVE responder explicitamente:
+| Condição                           | Ação           |
+| ---------------------------------- | -------------- |
+| Duplicação estrutural (D3.4 > 0)   | 🔴 Refatorar   |
+| Nomes confusos/enganosos           | 🔴 Refatorar   |
+| Complexidade > 5                   | 🔴 Refatorar   |
+| Funções impuras misturadas com I/O | 🟡 Recomendado |
+| Nenhuma das acima                  | 🟢 Skip        |
 
-| Condição                                                | Ação                                                           |
-| ------------------------------------------------------- | -------------------------------------------------------------- |
-| Duplicação estrutural (D3.4 > 0)                        | 🔴 **Obrigatório refatorar**                                   |
-| Nomes confusos/enganosos                                | 🔴 **Obrigatório refatorar**                                   |
-| Complexidade ciclomática > 5 (inspecionar manualmente)  | 🔴 **Obrigatório refatorar**                                   |
-| Funções impuras misturadas com I/O sem extração (D3/D4) | 🟡 **Recomendado refatorar**                                   |
-| Nenhuma das condições acima                             | 🟢 **Skip permitido** — registrar "Sem refatoração necessária" |
+Se SKIP: registrar `**Refatoração:** Nenhuma necessária.` no PROGRESS.md. Pular para Phase 9.
 
-**Se decisão for SKIP (🟢):**
+### 8.1 — Refatorar (se 🔴 ou 🟡)
 
-- Registrar em PROGRESS.md: `**Refatoração:** Nenhuma necessária.`
-- Pular para Phase 9.
+Extrair funções puras, renomear, remover duplicação, adicionar JSDoc.
+Não alterar: exports públicos, assinaturas, tipos, comportamento observável.
 
-### 8.1 — Aplicar refatorações seguras (se decisão for REFATORAR)
+### 8.2 — Verificar
 
-Após testes verdes + consumidores intactos, refatorar:
+`npx vitest run ${FEATURE_NAME} --reporter=verbose`
+✅ todos passam
 
-- Extrair funções puras de lógica misturada com I/O (se identificado em D3/D4)
-- Renomear variáveis para clareza
-- Remover duplicação (se identificado em D3.4)
-- Adicionar JSDoc onde ausente
+`<!-- CHECKPOINT: Phase 8 complete -->`
 
-> **Limite da refatoração:** não alterar:
->
-> 1. Exports públicos
-> 2. Assinaturas de função
-> 3. Contratos de tipos (interfaces, schemas)
-> 4. **Comportamento observável** — a saída da função para mesmas entradas deve permanecer idêntica
->
-> Se a refatoração exigir mudança de contrato OU comportamento:
-> → PARAR e reportar (Appendix B). A mudança de comportamento requer **autorização explícita**.
->
-> **Exemplo de violação:** trocar `--all` por `HEAD` em um comando git muda o conjunto de
-> commits retornados. Contratos (assinatura, tipos) não mudaram, mas **comportamento observável
-> sim** — consumidores que esperavam múltiplas branches agora recebem só a branch atual.
+<!-- Phase 8.5: lines 492-512 -->
 
-### 8.2 — Verificação pós-refatoração
+## Phase 8.5 — Self-review
 
-- **Comandos:**
-    ```
-    npx vitest run ${FEATURE} --reporter=verbose
-    npx vitest run $(basename $(dirname ${CONSUMER_FIRST}))/...  (testar consumidores novamente)
-    ```
-- **Critério:** todos os testes da feature + consumidores ainda passam
-- **Se falhar:** reverter a refatoração que quebrou e tentar abordagem diferente
+### 8.5.1 — Ler diff
 
----
+`git diff HEAD -- ${SOURCE} ${TEST_FILES} 2>/dev/null || git diff --cached -- ${SOURCE} ${TEST_FILES}`
+Ler linha por linha. Atenção a padrões que Phase 4.5 pode ter perdido.
 
-## Phase 8.5 — Author self-review
+### 8.5.2 — 4 perguntas
 
-> **Propósito:** O autor deve ler criticamente o próprio diff antes de commitar,
-> para detectar violações que passariam despercebidas na automação.
-> Nenhuma ferramenta substitui o julgamento humano sobre qualidade de código.
+| #   | Pergunta                                  | Se SIM            |
+| --- | ----------------------------------------- | ----------------- |
+| Q1  | Violação de tipo/cast/assert introduzida? | PARAR e corrigir  |
+| Q2  | Violação pré-existente ignorada?          | Voltar Phase 4.5  |
+| Q3  | Causa raiz ou sintoma?                    | Se sintoma: PARAR |
+| Q4  | Mensagem de erro acionável?               | Se não: corrigir  |
 
-### 8.5.1 — Ler diff completo
+Registrar respostas no PROGRESS.md.
 
-- **Comando:** `git diff HEAD -- ${SOURCE} ${TEST_FILES} 2>/dev/null || git diff --cached -- ${SOURCE} ${TEST_FILES}`
-- **Ação:** ler o diff completo, linha por linha. Especial atenção para:
-    - Linhas que não foram alteradas mas estão no mesmo contexto do gap
-    - Padrões que a Phase 4.5 deveria ter pego mas pode ter perdido
+`<!-- CHECKPOINT: Phase 8.5 complete -->`
 
-### 8.5.2 — Responder a 4 perguntas
-
-O autor DEVE responder explicitamente (registrar no PROGRESS.md):
-
-| #   | Pergunta                                                       | Critério                              |
-| --- | -------------------------------------------------------------- | ------------------------------------- |
-| 1   | Alguma violação de tipo/cast/assert foi introduzida?           | Se sim: PARAR e corrigir              |
-| 2   | Alguma violação pré-existente no mesmo arquivo foi ignorada?   | Se sim: retornar à Phase 4.5          |
-| 3   | O código resolve a causa raiz do defeito, ou apenas o sintoma? | Se apenas sintoma: PARAR e reanalisar |
-| 4   | Alguma mensagem de erro não é acionável para o usuário?        | Se sim: corrigir                      |
-
-### 8.5.3 — Registrar autoavaliação
-
-- Escrever no PROGRESS.md como:
-
-```
-#### Autoavaliação (Phase 8.5)
-
-- Q1 (violação introduzida): ❌ NÃO
-- Q2 (violação pré-existente ignorada): ❌ NÃO
-- Q3 (causa raiz vs sintoma): ✅ Causa raiz
-- Q4 (mensagens acionáveis): ✅ Sim
-```
-
-### 8.5.4 — Se qualquer resposta for diferente do esperado
-
-**PARAR.** Corrigir antes de prosseguir para Phase 9.
-
----
+<!-- Phase 9: lines 514-539 -->
 
 ## Phase 9 — Validação Final
 
 ### 9.1 — TypeScript
 
-- **Comando:** `npx tsc --noEmit`
-- **Critério:** 0 erros
-- **Se falhar:** corrigir erros de tipo (podem ser de T14 corrigido)
+`npx tsc --noEmit`
+✅ 0 erros / ❌
 
 ### 9.2 — Lint
 
-- **Comando:** `npm run lint`
-- **Critério:** ✅ All quality checks passed
-- **Se falhar:** corrigir violações (começar pelas de eslint)
+`npm run lint`
+✅ All quality checks passed / ❌
 
-### 9.3 — TSC + Lint + Tests (batelada final)
+### 9.3 — Batelada final
 
-- **Comando:**
-    ```
-    npx tsc --noEmit && npm run lint && npx vitest run ${FEATURE} --reporter=verbose
-    ```
-- **Critério:** todos os 3 passam
+`npx tsc --noEmit && npm run lint && npx vitest run ${FEATURE_NAME} --reporter=verbose`
+✅ todos passam
 
 ### 9.4 — Git diff audit
 
-**Obrigatório — verificar que apenas arquivos intencionados foram alterados.**
+`git diff --stat` — verificar escopo
+`git diff HEAD` — inspecionar diffs
+✅ apenas arquivos esperados / ✅ sem alteração acidental em config / ✅ diff cobre todos os gaps
 
-- **Comandos:**
+`<!-- CHECKPOINT: Phase 9 complete -->`
 
-    ```
-    git diff --stat
-    git diff HEAD
-    ```
+<!-- Phase 10: lines 541-548 -->
 
-- **Verificar:**
-    1. ✅ Todos os arquivos no diff são esperados para esta FT
-    2. ✅ Nenhum arquivo de config, CI, ou proteção foi alterado acidentalmente
-    3. ✅ Nenhum arquivo fora do escopo da FT (ex: outra feature, infra, docs não relacionados) aparece
-    4. ✅ Mudanças em cada arquivo correspondem exatamente ao que foi planejado nas fases 5-7
+## Phase 10 — Atualizar PROGRESS.md
 
-- **Se arquivo inesperado aparecer:** reverter mudança no arquivo, investigar causa raiz, refazer fase relevante.
-- **Se diff contiver lixo (comentários de debug, console.log, espaços em branco):** corrigir antes de avançar.
-- **Critério:** diff limpo e intencional. Zero arquivos acidentais.
+Escrever sumário da auditoria: gaps encontrados, corrigidos, mantidos, status final das fases, contagem de testes.
+Registrar em seção dedicada da feature no PROGRESS.md.
 
----
+`<!-- CHECKPOINT: Phase 10 complete -->`
 
-## Phase 10 — Atualização do Progresso
+<!-- Phase 11: lines 550-569 -->
 
-### 10.1 — Preencher PROGRESS.md
+## Phase 11 — Quality Gate + Self-Audit
 
-Atualizar na entrada da feature:
+### 11.1 — Quality Gate
 
-1. **T1-T20:** tabela completa com status + gap de cada T
-2. **D1-D7:** tabela completa com status + achados de cada dimensão
-3. **D6 detalhado:** tabela 6.1-6.9 com evidência
-4. **D7 detalhado:** tabela 7.1-7.12 com evidência
-5. **Gaps:** tabela com ID, severidade, descrição, correção
-6. **Correções aplicadas:** diff relevante para cada gap
-7. **Testes de integração:** tabela com sub-testes criados
-8. **Validação:** resultados de tsc + vitest + lint
-9. **docs/ atualizados:** se Phase 7.3 identificou gaps de documentação, aplicar correções nos arquivos docs/\*.md e registrar diff
-10. **Marcador de conclusão:** `🔜 FT-${ID} aguardando Quality Gate` (o marcador final `✅ FT-${ID} completo` só é escrito após aprovação na Phase 11)
+Verificar e registrar cada dimensão (✅/❌):
+| Dimensão | Itens |
+|----------|-------|
+| Architecture | SRP, DepWall, zero duplicação |
+| Security | Path traversal, sem eval, sem secrets |
+| Error handling | zero catches vazios, discriminados, fallbacks |
+| Type safety | casts com guard, zero `!`, zero suppressions |
+| Maintainability | nomes claros, <400L, baixa complexidade |
+| Consistency | checkpoints completos, testes passam |
 
-### 10.2 — Atualizar "Próximo"
+Registrar resultado no PROGRESS.md.
 
-- Ler o PLAN (`FUNCTIONAL-AUDIT-INTEGRATED-PLAN.md`) para saber o próximo FT-ID após o atual:
-    ```
-    grep -A 2 "FT-${ID}" FUNCTIONAL-AUDIT-INTEGRATED-PLAN.md | grep "FT-" | tail -1
-    ```
-- Se houver próximo: escrever `## Próximo: FT-${NEXT} a FT-${LAST} (still pending)` no final
-- Se esta for a última feature: escrever `## Todas as features auditadas. ✅`
+### 11.2 — Self-Audit (checkpoints)
 
----
+`grep -c 'CHECKPOINT: Phase' FUNCTIONAL-AUDIT-PROGRESS.md`
+✅ 15 checkpoints (0, 0.1, 1, 2, 3, 4, 4.5, 5, 6, 7, 8, 8.5, 9, 10, 11) / ❌ faltando → PARAR
 
-## Phase 11 — Final Quality Gate
-
-> **Propósito:** Após todas as correções, validações e registros, a Phase 11 é a **porta de saída absoluta**.
-> Nenhuma feature é considerada completa sem passar por esta avaliação holística.
-> Diferente das fases anteriores (que verificam corretude técnica), esta fase pergunta:
-> **"O código está BOM? Atende aos padrões arquiteturais e de qualidade do projeto?"**
-
-### 11.1 — Architecture compliance check
-
-| #   | Pergunta                                                                                           | Critério |
-| --- | -------------------------------------------------------------------------------------------------- | -------- |
-| A1  | O código segue SRP? Cada função/método tem uma responsabilidade única?                             | ✅ / ❌  |
-| A2  | O código segue DIP? Dependências de bibliotecas externas passam pelo DepWall (`shared/deps.ts`)?   | ✅ / ❌  |
-| A3  | Separação de camadas está preservada? (não há lógica de domínio misturada com I/O no mesmo método) | ✅ / ❌  |
-| A4  | Não há duplicação estrutural com outro módulo?                                                     | ✅ / ❌  |
-
-**Comando:** `grep -nP "^import .* from '" ${SOURCE} | grep -vP "\.js|\.json" | grep -v "shared/deps"` — verificar DepWall
-
-**Se qualquer A ❌:** PARAR. Feature não está completa.
-
-### 11.2 — Security review
-
-| #   | Pergunta                                                                                                           | Critério |
-| --- | ------------------------------------------------------------------------------------------------------------------ | -------- |
-| S1  | Nenhum caminho de arquivo é construído por concatenação de string sem validação? (path traversal)                  | ✅ / ❌  |
-| S2  | Nenhum `eval()`, `Function()`, ou `setTimeout(string)` está presente?                                              | ✅ / ❌  |
-| S3  | Dados de entrada do usuário são validados antes de uso em I/O, HTTP, ou shell?                                     | ✅ / ❌  |
-| S4  | Nenhuma chave/segredo/token está hardcoded no código?                                                              | ✅ / ❌  |
-| S5  | Nenhum `__proto__`, `constructor`, ou `prototype` é usado como chave de objeto sem proteção? (prototype pollution) | ✅ / ❌  |
-
-**Comandos:**
-
-```
-grep -nP '(eval|Function\s*\()' ${SOURCE}
-grep -nP '(path\.join|path\.resolve).*\+' ${SOURCE}
-grep -nP '"__proto__"|"constructor"|"prototype"' ${SOURCE}
-```
-
-**Se qualquer S ❌:** PARAR. Feature não está completa.
-
-### 11.3 — Error handling audit
-
-| #   | Pergunta                                                                            | Critério |
-| --- | ----------------------------------------------------------------------------------- | -------- |
-| E1  | Toda operação de I/O (fs, rede, git) está dentro de try/catch?                      | ✅ / ❌  |
-| E2  | Todo catch trata ou loga o erro? (nenhum catch vazio ou sem log)                    | ✅ / ❌  |
-| E3  | Nenhum erro é propagado como string (`throw "erro"`) em vez de `throw new Error()`? | ✅ / ❌  |
-| E4  | Mensagens de erro são acionáveis (dizem o que fazer)?                               | ✅ / ❌  |
-| E5  | Nenhum error handler chama de volta o próprio serviço (risco de recursão infinita)? | ✅ / ❌  |
-
-**Comandos:**
-
-```
-grep -A1P 'catch\s*\{' ${SOURCE}
-grep -nP 'throw\s+"' ${SOURCE}
-grep -nP 'rootLogger\.(debug|info|warn|error)' ${SOURCE} | grep -v '//.*test'
-```
-
-**Se qualquer E ❌:** PARAR. Feature não está completa.
-
-### 11.4 — Type safety audit
-
-| #   | Pergunta                                                               | Critério |
-| --- | ---------------------------------------------------------------------- | -------- |
-| T1  | Zero `as` casts em código-fonte (source)?                              | ✅ / ❌  |
-| T2  | Zero `as` casts em testes?                                             | ✅ / ❌  |
-| T3  | Zero `!` non-null assertions em código-fonte?                          | ✅ / ❌  |
-| T4  | Zero `@ts-ignore` / `@ts-expect-error`?                                | ✅ / ❌  |
-| T5  | Zero `eslint-disable` / `noqa`?                                        | ✅ / ❌  |
-| T6  | Zero `Object.entries()` em parâmetro `object` com propagação de `any`? | ✅ / ❌  |
-
-**Comandos:**
-
-```
-grep -nP 'as (any|never|string|number|boolean|Record|unknown)' ${SOURCE} ${TEST_FILE_UNIT} ${TEST_FILE_INTEGRATION} ${TEST_FILE_PBT} 2>/dev/null
-grep -nP '@ts-(ignore|expect-error)' ${SOURCE} ${TEST_FILE_UNIT} ${TEST_FILE_INTEGRATION} ${TEST_FILE_PBT} 2>/dev/null
-grep -nP 'eslint-disable' ${SOURCE} ${TEST_FILE_UNIT} ${TEST_FILE_INTEGRATION} ${TEST_FILE_PBT} 2>/dev/null
-```
-
-**Se qualquer T ❌:** PARAR. Feature não está completa.
-
-### 11.5 — Maintainability check
-
-| #   | Pergunta                                                                                | Critério |
-| --- | --------------------------------------------------------------------------------------- | -------- |
-| M1  | Nomes de funções, variáveis e classes revelam intenção? (sem `fn`, `temp`, `data`, `x`) | ✅ / ❌  |
-| M2  | Não há constantes mágicas (números/strings soltos sem nome)?                            | ✅ / ❌  |
-| M3  | Código comentado ou dead code está ausente?                                             | ✅ / ❌  |
-| M4  | Complexidade ciclomática é aceitável? (métodos < 30 linhas idealmente)                  | ✅ / ❌  |
-
-**Comandos:**
-
-```
-grep -nP '=\s*[0-9]{1,2}\s*[;,]' ${SOURCE} | grep -vP 'index|length|size|count|offset|limit|timeout|port|max|min|threshold|version|status|code|level|id|num|total|default|type|retry|attempt|seq|page|step|delay|interval|retries|chunk|batch|workers'
-grep -nP '//.*$' ${SOURCE} | grep -vP '(eslint|istanbul|prettier|@ts-)' | head -5
-```
-
-**Se M1 ou M3 ❌:** PARAR. Feature não está completa.
-**Se M2 ou M4 ❌:** ⚠️ Registrar como gap técnico.
-
-### 11.6 — System consistency check
-
-| #   | Pergunta                                                                                                          | Critério |
-| --- | ----------------------------------------------------------------------------------------------------------------- | -------- |
-| C1  | Todos os consumidores identificados em Phase 1 continuam funcionando?                                             | ✅ / ❌  |
-| C2  | Contratos públicos (exports, tipos, assinaturas) estão preservados (a menos que alteração tenha sido autorizada)? | ✅ / ❌  |
-| C3  | Nenhum arquivo fora do escopo da FT foi alterado acidentalmente?                                                  | ✅ / ❌  |
-| C4  | Equivalência comportamental: se a correção mudou comportamento, a mudança foi autorizada?                         | ✅ / N/A |
-
-**Comando:** `git diff --stat` — verificar que apenas arquivos esperados foram alterados.
-
-**Se qualquer C ❌:** PARAR. Feature não está completa.
-
-### 11.7 — Registro da avaliação
-
-Após responder a todas as perguntas, registrar no PROGRESS.md:
-
-```markdown
-#### Final Quality Gate (Phase 11)
-
-| Categoria               | Status  |
-| ----------------------- | ------- |
-| A1-A4 (Architecture)    | ✅ / ❌ |
-| S1-S5 (Security)        | ✅ / ❌ |
-| E1-E5 (Error handling)  | ✅ / ❌ |
-| T1-T6 (Type safety)     | ✅ / ❌ |
-| M1-M4 (Maintainability) | ✅ / ❌ |
-| C1-C4 (Consistency)     | ✅ / ❌ |
-
-**Resultado:** ✅ APROVADO / ❌ REPROVADO
-```
-
-**Se REPROVADO:** a feature retorna à fase de correção (Phase 5) para os gaps identificados.
-
-**Se APROVADO:** a feature está oficialmente completa. O marcador `✅ FT-${ID} completo` no PROGRESS.md (Phase 10.1 item 10) só pode ser escrito APÓS a aprovação na Phase 11.
-
----
-
-## Appendix A — Comandos de Diagnóstico Rápido
-
-```bash
-# Verificar estrutura da feature
-ls -la shared/${FEATURE}.ts*
-ls -la shared/__tests__/${FEATURE}* 2>/dev/null
-ls -la shared/__tests__/integration/${FEATURE}* 2>/dev/null
-
-# Contar linhas
-wc -l shared/${FEATURE}.ts
-wc -l shared/${FEATURE}.test.ts 2>/dev/null
-
-# Verificar tipo de retorno da função principal
-grep -P '^export function' shared/${FEATURE}.ts
-
-# Verificar Zod schemas (se existem)
-grep -P 'z\.' shared/${FEATURE}.ts | head -5
-
-# Verificar imports do módulo
-grep -P "^import" shared/${FEATURE}.ts
-
-# Verificar suppressions no source (T14)
-grep -P 'as any|as unknown|@ts-(ignore|expect-error)|eslint-disable' shared/${FEATURE}.ts
-grep -nP '[a-zA-Z0-9)\]>]\s*!\s*[);,}\]]' shared/${FEATURE}.ts  # non-null assertion
-
-# Verificar suppressions nos testes
-grep -P 'as any|@ts-(ignore|expect-error)|nullAs\b' shared/${FEATURE}.test.ts 2>/dev/null
-```
-
----
-
-## Appendix B — Critérios de Parada Obrigatória (STOP conditions)
-
-| Condição                                                     | Ação                                                                                                 |
-| ------------------------------------------------------------ | ---------------------------------------------------------------------------------------------------- |
-| Ambiguidade na especificação                                 | PARAR. Reportar qual especificação está ambígua.                                                     |
-| Contradição entre regras                                     | PARAR. Reportar quais regras conflitam.                                                              |
-| Dependência não mapeada                                      | PARAR. Reportar qual dependência não foi analisada.                                                  |
-| Teste falha e causa raiz não é óbvia                         | PARAR. Reportar o teste que falha e o que foi tentado.                                               |
-| Mudança de contrato necessária                               | PARAR. Reportar contrato, produtores e consumidores afetados.                                        |
-| **Mudança de comportamento observável** (ex: `--all`→`HEAD`) | PARAR. Reportar comportamento antigo, novo, e consumidores afetados. Aguardar autorização explícita. |
-| Workaround seria mais rápido que correção real               | PARAR. Reportar que workaround foi considerado e rejeitado.                                          |
-| Mecanismo de segurança precisa ser enfraquecido              | PARAR. Reportar qual mecanismo e por que não pode ser preservado.                                    |
-| Feature não se encaixa em nenhuma dimensão                   | PARAR. Reportar qual dimensão não se aplica e por quê.                                               |
-
----
-
-> Este documento é auto-suficiente. Consulte `FUNCTIONAL-AUDIT-INTEGRATED-PLAN.md` para definições de cada T e cada Dimensão.
-> A ordem dos passos é absoluta. Nunca pule.
+`<!-- CHECKPOINT: Phase 11 complete -->`
