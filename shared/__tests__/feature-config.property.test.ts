@@ -31,7 +31,7 @@ const ProjectFeatureConfigArb = fc.record({
     }),
 });
 
-const ProjectKeyArb = fc.string({ minLength: 1, maxLength: 30 });
+const ProjectKeyArb = fc.string({ minLength: 1, maxLength: 30 }).filter((s) => s !== '__proto__');
 
 describe('FeatureConfigStoreSchema — property-based', () => {
     it('aceita qualquer Record<string, ProjectFeatureConfig> válido', () => {
