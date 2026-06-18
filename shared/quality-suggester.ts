@@ -5,6 +5,7 @@
  *   - Benchmark regression (called from llm-benchmark.ts, SW-15)
  *
  * Outputs QualitySignal[] and persists to _llmConfigSuggestions in state. */
+import { rootLogger } from './logger.js';
 import { detectDrift } from './quality-metrics.js';
 import { snapshotLlmMetrics } from './llm-metrics.js';
 import { updateTyped } from './state.js';
@@ -42,7 +43,13 @@ export function checkQualitySignals(benchmarkSignals?: QualitySignal[]): Quality
     const signals: QualitySignal[] = [];
 
     // 1. Drift detection
-    const driftAlerts = detectDrift();
+    let driftAlerts: string[];
+    try {
+        driftAlerts = detectDrift();
+    } catch (err) {
+        rootLogger.warn('quality-suggester: detectDrift failed', err instanceof Error ? err.message : String(err));
+        driftAlerts = [];
+    }
     for (const alert of driftAlerts) {
         signals.push({
             severity: 'warning',
@@ -53,32 +60,42 @@ export function checkQualitySignals(benchmarkSignals?: QualitySignal[]): Quality
     }
 
     // 2. LLM metrics analysis
-    const snapshot = snapshotLlmMetrics();
-    const totalRequests = snapshot.totalRequests || 0;
+    let snapshot: ReturnType<typeof snapshotLlmMetrics> | null = null;
+    try {
+        snapshot = snapshotLlmMetrics();
+    } catch (err) {
+        rootLogger.warn(
+            'quality-suggester: snapshotLlmMetrics failed',
+            err instanceof Error ? err.message : String(err),
+        );
+    }
+    if (snapshot) {
+        const totalRequests = snapshot.totalRequests || 0;
 
-    if (totalRequests > 0) {
-        // Average latency check
-        if (snapshot.avgLatencyMs > LATENCY_WARNING_MS) {
-            signals.push({
-                severity: severityFromLatency(snapshot.avgLatencyMs),
-                source: 'llm-metrics',
-                message: `Latência média ${snapshot.avgLatencyMs.toFixed(0)}ms acima do limiar de alerta.`,
-                suggestedAction:
-                    'Considere trocar para um modelo mais rápido ou verificar a conectividade com o provedor.',
-            });
-        }
+        if (totalRequests > 0) {
+            // Average latency check
+            if (snapshot.avgLatencyMs > LATENCY_WARNING_MS) {
+                signals.push({
+                    severity: severityFromLatency(snapshot.avgLatencyMs),
+                    source: 'llm-metrics',
+                    message: `Latência média ${snapshot.avgLatencyMs.toFixed(0)}ms acima do limiar de alerta.`,
+                    suggestedAction:
+                        'Considere trocar para um modelo mais rápido ou verificar a conectividade com o provedor.',
+                });
+            }
 
-        // Per-tier failure rate
-        const totalFailures = Object.values(snapshot.failuresByTier).reduce((a, b) => a + b, 0);
-        const rate = failureRate(totalFailures, totalRequests);
-        if (rate > FAILURE_RATE_WARNING) {
-            signals.push({
-                severity: rate > FAILURE_RATE_CRITICAL ? 'critical' : 'warning',
-                source: 'llm-metrics',
-                message: `Taxa de falha ${(rate * 100).toFixed(1)}% (${totalFailures}/${totalRequests}) acima do limiar de alerta.`,
-                suggestedAction:
-                    'Verifique a chave de API, o status do provedor ou alterne para um provedor alternativo.',
-            });
+            // Per-tier failure rate
+            const totalFailures = Object.values(snapshot.failuresByTier).reduce((a, b) => a + b, 0);
+            const rate = failureRate(totalFailures, totalRequests);
+            if (rate > FAILURE_RATE_WARNING) {
+                signals.push({
+                    severity: rate > FAILURE_RATE_CRITICAL ? 'critical' : 'warning',
+                    source: 'llm-metrics',
+                    message: `Taxa de falha ${(rate * 100).toFixed(1)}% (${totalFailures}/${totalRequests}) acima do limiar de alerta.`,
+                    suggestedAction:
+                        'Verifique a chave de API, o status do provedor ou alterne para um provedor alternativo.',
+                });
+            }
         }
     }
 
@@ -88,13 +105,17 @@ export function checkQualitySignals(benchmarkSignals?: QualitySignal[]): Quality
     }
 
     // Persist to state
-    updateTyped((s) => {
-        s._llmConfigSuggestions = {
-            pending: signals.length > 0,
-            qualitySignals: signals,
-            timestamp: new Date().toISOString(),
-        };
-    });
+    try {
+        updateTyped((s) => {
+            s._llmConfigSuggestions = {
+                pending: signals.length > 0,
+                qualitySignals: signals,
+                timestamp: new Date().toISOString(),
+            };
+        });
+    } catch (err) {
+        rootLogger.warn('quality-suggester: updateTyped failed', err instanceof Error ? err.message : String(err));
+    }
 
     return signals;
 }
