@@ -13,7 +13,6 @@ import fs from 'node:fs';
 import os from 'node:os';
 import path from 'node:path';
 import { afterEach, beforeEach, describe, expect, it } from 'vitest';
-import type { CoverageResult } from '../../coverage-source.js';
 
 let TEST_DIR: string;
 
@@ -23,10 +22,8 @@ describe('Integration: Coverage Source', () => {
     });
 
     afterEach(() => {
-        try {
+        if (TEST_DIR) {
             fs.rmSync(TEST_DIR, { recursive: true, force: true });
-        } catch {
-            /* best effort */
         }
     });
 
@@ -47,10 +44,9 @@ describe('Integration: Coverage Source', () => {
             );
 
             const result = readIstanbulCoverage(coveragePath);
-            expect(result).not.toBeUndefined();
-            expect((result as CoverageResult).coveragePct).toBe(85);
-            expect((result as CoverageResult).source).toBe('istanbul');
-            expect((result as CoverageResult).detail).toContain('85.0%');
+            expect(result?.coveragePct).toBe(85);
+            expect(result?.source).toBe('istanbul');
+            expect(result?.detail).toContain('85.0%');
         });
 
         it('returns undefined when file does not exist', async () => {
@@ -88,8 +84,8 @@ describe('Integration: Coverage Source', () => {
             );
 
             const result = resolveCoverage({ istanbulPath: coveragePath, ctrfCoverage: 75 });
-            expect((result as CoverageResult).source).toBe('istanbul');
-            expect((result as CoverageResult).coveragePct).toBe(90);
+            expect(result?.source).toBe('istanbul');
+            expect(result?.coveragePct).toBe(90);
         });
 
         it('falls back to CTRF when Istanbul unavailable', async () => {
@@ -98,9 +94,8 @@ describe('Integration: Coverage Source', () => {
                 istanbulPath: path.join(TEST_DIR, 'nonexistent.json'),
                 ctrfCoverage: 75.5,
             });
-            expect(result).not.toBeUndefined();
-            expect((result as CoverageResult).source).toBe('ctrf');
-            expect((result as CoverageResult).coveragePct).toBe(75.5);
+            expect(result?.source).toBe('ctrf');
+            expect(result?.coveragePct).toBe(75.5);
         });
 
         it('returns undefined when no source available', async () => {

@@ -14,6 +14,9 @@ const THRESHOLDS = {
     maxFlakyPct: 30,
     minCoverage: 70,
     maxSuiteSpeed: 8,
+    minHealthScore: 70,
+    flakyMinRuns: 2,
+    p95Percentile: 0.95,
 } as const;
 
 export interface QualityGateResult {
@@ -49,7 +52,7 @@ function _healthCheck(health: HealthScoreResult): GateCheck {
         name: 'health-score',
         status: health.qualityGate,
         score: health.overall,
-        threshold: 70,
+        threshold: THRESHOLDS.minHealthScore,
         details: 'Health score: ' + health.overall + ' (' + health.grade + '), gate: ' + health.qualityGate,
     };
 }
@@ -66,7 +69,7 @@ function _passRateCheck(health: HealthScoreResult): GateCheck {
 }
 
 function _flakyCheck(runs: MetricsRun[]): GateCheck {
-    const flakyEntries = calculateFlakiness({ runs }, 2);
+    const flakyEntries = calculateFlakiness({ runs }, THRESHOLDS.flakyMinRuns);
 
     // Compute total unique tests that appear in at least 2 runs (same minRuns as calculateFlakiness).
     // This is the correct denominator: flaky rate = flaky tests / total stable tests with enough data.
@@ -120,7 +123,8 @@ function _suiteSpeedCheck(health: HealthScoreResult, runs: MetricsRun[]): GateCh
         }
     }
     allDurations.sort((a, b) => a - b);
-    const idx = allDurations.length > 0 ? Math.max(0, Math.ceil(allDurations.length * 0.95) - 1) : -1;
+    const idx =
+        allDurations.length > 0 ? Math.max(0, Math.ceil(allDurations.length * THRESHOLDS.p95Percentile) - 1) : -1;
     const p95 = idx >= 0 ? (allDurations[idx] ?? 0) : 0;
     const thresholdMs = THRESHOLDS.maxSuiteSpeed * 1000;
     const status = p95 <= thresholdMs ? 'pass' : 'fail';
@@ -161,7 +165,8 @@ export function runQualityGate(options?: QualityGateOptions): QualityGateResult 
                 status: 'fail',
                 score: 0,
                 threshold: 1,
-                details: 'Sem dados históricos — gate não aplicável',
+                details:
+                    'Sem dados históricos — gate não aplicável. Execute uma pipeline de testes para gerar métricas.',
             });
             return { overall: 'fail', checks, score: 0 };
         }
@@ -170,13 +175,18 @@ export function runQualityGate(options?: QualityGateOptions): QualityGateResult 
         _buildChecks(checks, health, runs);
         return _aggregateResult(checks);
     } catch (err) {
-        rootLogger.error('Quality gate error: ' + (err instanceof Error ? err.message : String(err)));
+        rootLogger.error(
+            'Quality gate error — verifique o backend de métricas: ' +
+                (err instanceof Error ? err.message : String(err)),
+        );
         checks.push({
             name: 'error',
             status: 'fail',
             score: 0,
             threshold: 0,
-            details: 'Erro: ' + (err instanceof Error ? err.message : String(err)),
+            details:
+                'Erro no quality gate — verifique permissões e dados de métricas: ' +
+                (err instanceof Error ? err.message : String(err)),
         });
         return { overall: 'fail', checks, score: 0 };
     }

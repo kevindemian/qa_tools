@@ -18,6 +18,9 @@ import path from 'path';
 import os from 'os';
 import Config from './config.js';
 
+const MAX_PASS_RATE = 1;
+const DRIFT_SIGMA_MULTIPLIER = 2;
+
 export interface QualityMetricsSnapshot {
     timestamp: string;
     invariantFireCount: Record<string, number>;
@@ -50,7 +53,12 @@ function loadStore(): StoredQualityMetrics {
         const p = storePath();
         if (!fs.existsSync(p)) return { snapshots: [] };
         return safeParseJson<StoredQualityMetrics>(fs.readFileSync(p, 'utf8'), { snapshots: [] });
-    } catch {
+    } catch (err) {
+        rootLogger.warn(
+            'Failed to load quality metrics: ' +
+                (err instanceof Error ? err.message : String(err)) +
+                '. Starting with empty state.',
+        );
         return { snapshots: [] };
     }
 }
@@ -63,7 +71,11 @@ function saveStore(store: StoredQualityMetrics): void {
         fs.writeFileSync(tmp, JSON.stringify(store, null, 2), 'utf8');
         fs.renameSync(tmp, p);
     } catch (err) {
-        rootLogger.error('Failed to persist quality metrics: ' + (err instanceof Error ? err.message : String(err)));
+        rootLogger.error(
+            'Failed to persist quality metrics: ' +
+                (err instanceof Error ? err.message : String(err)) +
+                '. Check disk space and permissions for the state directory.',
+        );
     }
 }
 
@@ -105,7 +117,7 @@ export class QualityMetricsCollector {
     layerPassRate(layer: 'layer1' | 'layer2' | 'layer3'): number {
         const attempts = this._layerAttempts[layer];
         if (attempts === 0) return 1;
-        return Math.min(this._layerPasses[layer] / attempts, 1);
+        return Math.min(this._layerPasses[layer] / attempts, MAX_PASS_RATE);
     }
 
     /** Detect drift: if any invariant's fire rate is >2σ from baseline. */
@@ -135,7 +147,7 @@ export class QualityMetricsCollector {
             const variance = ratios.reduce((sum, r) => sum + (r - mean) ** 2, 0) / ratios.length;
             const stdDev = Math.sqrt(variance);
 
-            if (stdDev > 0 && currentRatio > mean + 2 * stdDev) {
+            if (stdDev > 0 && currentRatio > mean + DRIFT_SIGMA_MULTIPLIER * stdDev) {
                 const firstBaselinePct = ratios[0] !== undefined ? (ratios[0] * 100).toFixed(1) : 'N/A';
                 alerts.push(
                     'DRIFT: invariant "' +
@@ -217,4 +229,8 @@ export function snapshotQualityMetrics(): QualityMetricsSnapshot {
 export function detectDrift(): string[] {
     const history = _defaultCollector.getHistory();
     return _defaultCollector.detectDrift(history);
+}
+
+export function resetQualityMetrics(): void {
+    _defaultCollector.clear();
 }

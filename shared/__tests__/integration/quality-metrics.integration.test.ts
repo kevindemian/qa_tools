@@ -83,7 +83,7 @@ describe('Integration: Quality Metrics', () => {
             collector.recordStructureScore(85);
 
             const snapshot = collector.snapshot();
-            expect(snapshot.timestamp).toBeTruthy();
+            expect(snapshot.timestamp).toMatch(/^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2}/);
             expect(snapshot.invariantFireCount['T-01']).toBe(1);
             expect(snapshot.layerPassRates.layer1).toBe(1);
             expect(snapshot.layerAttempts.layer1).toBe(1);

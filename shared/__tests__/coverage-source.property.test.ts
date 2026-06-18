@@ -11,7 +11,6 @@ import fs from 'node:fs';
 import os from 'node:os';
 import path from 'node:path';
 import { afterEach, beforeEach, describe, expect, it } from 'vitest';
-import type { CoverageResult } from '../coverage-source.js';
 import { readIstanbulCoverage, resolveCoverage } from '../coverage-source.js';
 
 /* ── Helpers ─────────────────────────────────────────────────── */
@@ -59,10 +58,8 @@ describe('readIstanbulCoverage — property-based', () => {
         TEST_DIR = fs.mkdtempSync(path.join(os.tmpdir(), 'pbt-istanbul-'));
     });
     afterEach(() => {
-        try {
+        if (TEST_DIR) {
             fs.rmSync(TEST_DIR, { recursive: true, force: true });
-        } catch {
-            /* best effort */
         }
     });
 
@@ -106,8 +103,7 @@ describe('readIstanbulCoverage — property-based', () => {
                 };
                 const coveragePath = writeFixture(fixture);
                 const result = readIstanbulCoverage(coveragePath);
-                expect(result).toBeDefined();
-                expect((result as CoverageResult).coveragePct).toBe(coveredLines);
+                expect(result?.coveragePct).toBe(coveredLines);
             }),
             { numRuns: 50 },
         );
@@ -124,8 +120,7 @@ describe('readIstanbulCoverage — property-based', () => {
                 };
                 const coveragePath = writeFixture(fixture);
                 const result = readIstanbulCoverage(coveragePath);
-                expect(result).toBeDefined();
-                expect((result as CoverageResult).coveragePct).toBe(covered);
+                expect(result?.coveragePct).toBe(covered);
             }),
             { numRuns: 50 },
         );
@@ -141,11 +136,10 @@ describe('readIstanbulCoverage — property-based', () => {
                     : { total: { statements: { total: 100, covered: coveredStmts, pct: coveredStmts } } };
                 const coveragePath = writeFixture(fixture);
                 const result = readIstanbulCoverage(coveragePath);
-                expect(result).toBeDefined();
                 if (useLines) {
-                    expect((result as CoverageResult).detail).toMatch(/^lines /);
+                    expect(result?.detail).toMatch(/^lines /);
                 } else {
-                    expect((result as CoverageResult).detail).toMatch(/^statements /);
+                    expect(result?.detail).toMatch(/^statements /);
                 }
             }),
             { numRuns: 50 },
@@ -158,10 +152,8 @@ describe('resolveCoverage — property-based', () => {
         TEST_DIR = fs.mkdtempSync(path.join(os.tmpdir(), 'pbt-resolve-'));
     });
     afterEach(() => {
-        try {
+        if (TEST_DIR) {
             fs.rmSync(TEST_DIR, { recursive: true, force: true });
-        } catch {
-            /* best effort */
         }
     });
 
@@ -174,9 +166,8 @@ describe('resolveCoverage — property-based', () => {
                 };
                 const coveragePath = writeFixture(fixture);
                 const result = resolveCoverage({ istanbulPath: coveragePath, ctrfCoverage: ctrfPct });
-                expect(result).toBeDefined();
-                expect((result as CoverageResult).source).toBe('istanbul');
-                expect((result as CoverageResult).coveragePct).toBe(covered);
+                expect(result?.source).toBe('istanbul');
+                expect(result?.coveragePct).toBe(covered);
             }),
             { numRuns: 50 },
         );
@@ -189,9 +180,8 @@ describe('resolveCoverage — property-based', () => {
                     istanbulPath: path.join(TEST_DIR, 'nonexistent.json'),
                     ctrfCoverage: ctrfPct,
                 });
-                expect(result).toBeDefined();
-                expect((result as CoverageResult).source).toBe('ctrf');
-                expect((result as CoverageResult).coveragePct).toBe(ctrfPct);
+                expect(result?.source).toBe('ctrf');
+                expect(result?.coveragePct).toBe(ctrfPct);
             }),
             { numRuns: 50 },
         );
