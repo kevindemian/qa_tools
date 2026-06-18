@@ -14,14 +14,12 @@ import { formatDateISO } from './date-utils.js';
 import { Logger, rootLogger, maskDeep } from './logger.js';
 import { nonNull } from './test-utils.js';
 
-let testCounter = 0;
-
 beforeAll(() => {
     fs.mkdirSync('/tmp', { recursive: true });
 });
 
 function testDir(label: string): string {
-    const dir = `/tmp/qa-tools-logger-${label}-${testCounter++}`;
+    const dir = `/tmp/qa-tools-logger-${label}-${Math.random().toString(36).slice(2, 10)}`;
     fs.mkdirSync(dir, { recursive: true });
     return dir;
 }
@@ -329,7 +327,7 @@ describe('Logger', () => {
         });
 
         it('maskValue with short string (≤8 chars) returns ****', () => {
-            const result = maskDeep({ secret: 'ab' }) as Record<string, string>;
+            const result = maskDeep({ secret: 'ab' }) as { [key: string]: unknown };
             expect(result['secret']).toBe('****');
         });
     });
@@ -403,5 +401,121 @@ describe('Logger', () => {
             spyLog.mockRestore();
             spyError.mockRestore();
         });
+    });
+});
+
+import fc from 'fast-check';
+
+const PBT_SECRET_RE = /token|secret|key|password|authorization/i;
+
+describe('maskDeep (PBT)', () => {
+    it('primitives and null return input unchanged', () => {
+        fc.assert(
+            fc.property(fc.constantFrom(null, undefined, 42, 'hello', true, false), (input) =>
+                Object.is(maskDeep(input), input),
+            ),
+        );
+    });
+
+    it('does not mutate original object', () => {
+        fc.assert(
+            fc.property(fc.dictionary(fc.string(), fc.oneof(fc.string(), fc.integer(), fc.boolean())), (original) => {
+                const snapshot = JSON.stringify(original);
+                maskDeep(original);
+                return JSON.stringify(original) === snapshot;
+            }),
+        );
+    });
+
+    it('sensitive keys (token/secret/password) have "****" in output values', () => {
+        fc.assert(
+            fc.property(
+                fc.dictionary(
+                    fc.constantFrom('token', 'secret', 'password', 'authorization'),
+                    fc.string({ minLength: 9 }),
+                    { maxKeys: 3 },
+                ),
+                (input) => {
+                    const result = maskDeep(input);
+                    if (typeof result !== 'object' || result === null) return false;
+                    return Object.values(result).every((v) => typeof v !== 'string' || v.includes('****'));
+                },
+            ),
+        );
+    });
+
+    it('non-sensitive keys (name/id/status) have unchanged values', () => {
+        fc.assert(
+            fc.property(
+                fc.dictionary(fc.constantFrom('name', 'id', 'count', 'status', 'message', 'timestamp'), fc.string(), {
+                    maxKeys: 3,
+                }),
+                (input) => {
+                    const result = maskDeep(input);
+                    if (typeof result !== 'object' || result === null) return false;
+                    const pairs = Object.entries(result);
+                    const origPairs = Object.entries(input);
+                    return pairs.every(([key, val]) => {
+                        const match = origPairs.find(([k]) => k === key);
+                        return match !== undefined && match[1] === val;
+                    });
+                },
+            ),
+        );
+    });
+
+    it('sensitive keys nested inside non-sensitive objects are masked', () => {
+        fc.assert(
+            fc.property(
+                fc.dictionary(
+                    fc.constantFrom('user', 'data', 'config'),
+                    fc.dictionary(fc.constantFrom('token', 'name', 'password'), fc.string({ minLength: 9 }), {
+                        maxKeys: 2,
+                    }),
+                    { maxKeys: 2 },
+                ),
+                (input) => {
+                    const check = (obj: unknown): boolean => {
+                        if (!obj || typeof obj !== 'object') return true;
+                        return Object.entries(obj).every(([key, val]) => {
+                            if (PBT_SECRET_RE.test(key)) {
+                                if (typeof val === 'string') return val.includes('****');
+                            }
+                            return typeof val !== 'object' || val === null || check(val);
+                        });
+                    };
+                    return check(maskDeep(input));
+                },
+            ),
+        );
+    });
+
+    it('sensitive keys in arrays are masked', () => {
+        fc.assert(
+            fc.property(
+                fc.array(fc.dictionary(fc.constantFrom('token', 'name'), fc.string({ minLength: 9 }), { maxKeys: 2 }), {
+                    maxLength: 3,
+                }),
+                (input) => {
+                    const result = maskDeep(input);
+                    return Array.isArray(result) && JSON.stringify(result).includes('****');
+                },
+            ),
+        );
+    });
+
+    it('short sensitive strings (≤8 chars) are fully masked to "****"', () => {
+        fc.assert(
+            fc.property(
+                fc.dictionary(fc.constantFrom('token', 'secret', 'password'), fc.string({ maxLength: 8 }), {
+                    maxKeys: 2,
+                }),
+                (input) => {
+                    const result = maskDeep(input);
+                    if (typeof result !== 'object' || result === null) return false;
+                    return Object.values(result).every((v) => v === '****');
+                },
+            ),
+        );
     });
 });

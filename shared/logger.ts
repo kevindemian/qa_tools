@@ -1,4 +1,4 @@
-import chalk from 'chalk';
+import { chalk } from './deps.js';
 import fs from 'fs';
 import path from 'path';
 import Config from './config.js';
@@ -25,16 +25,19 @@ function maskValue(v: unknown): unknown {
 
 /** Recursively mask sensitive fields (token, secret, key, password, authorization) in an object.
  * Strings shorter than 8 chars are fully masked; longer ones keep the first 4 chars visible.
- * @returns A new object with masked values — original is not mutated. */
+ * Object and array values are recursively inspected so that sensitive keys at any depth are masked.
+ * @returns A new array/object with masked values — original is not mutated. */
 export function maskDeep(obj: unknown): unknown {
     if (!obj || typeof obj !== 'object') return obj;
+    if (Array.isArray(obj)) return obj.map((item) => maskDeep(item));
     const masked: Record<string, unknown> = {};
-    for (const key of Object.keys(obj)) {
-        const val = (obj as Record<string, unknown>)[key];
-        if (Array.isArray(val)) {
+    for (const [key, val] of Object.entries(obj)) {
+        if (SECRET_RE.test(key)) {
+            masked[key] = typeof val === 'string' ? maskValue(val) : maskDeep(val);
+        } else if (Array.isArray(val)) {
             masked[key] = val.map((item) => maskDeep(item));
-        } else if (SECRET_RE.test(key)) {
-            masked[key] = maskValue(val);
+        } else if (typeof val === 'object' && val !== null) {
+            masked[key] = maskDeep(val);
         } else {
             masked[key] = val;
         }
@@ -81,13 +84,19 @@ export class Logger {
             try {
                 const stat = fs.statSync(this._filePathCached);
                 this._bytesWritten = stat.size;
-            } catch {
-                /* arquivo não existe ainda — bytesWritten=0 é o default correto */
+            } catch (err) {
+                if (!(err instanceof Error && 'code' in err && (err as NodeJS.ErrnoException)['code'] === 'ENOENT')) {
+                    console.error(
+                        `[logger] Falha ao verificar arquivo de log: ${err instanceof Error ? err.message : String(err)}. Verifique permissões e integridade do diretório.`,
+                    );
+                }
             }
             return true;
         } catch (err) {
             this._fileError = true;
-            console.error(`[logger] Falha ao criar diretório de log: ${(err as Error).message}`);
+            console.error(
+                `[logger] Falha ao criar diretório de log: ${err instanceof Error ? err.message : String(err)}. Verifique permissões e espaço em disco.`,
+            );
             return false;
         }
     }
@@ -106,7 +115,9 @@ export class Logger {
             fs.renameSync(this._filePathCached, rotated);
             this._bytesWritten = 0;
         } catch (err) {
-            console.error(`[logger] Falha ao rotacionar log: ${(err as Error).message}`);
+            console.error(
+                `[logger] Falha ao rotacionar log: ${err instanceof Error ? err.message : String(err)}. Verifique permissões e espaço em disco.`,
+            );
         }
     }
 
@@ -160,7 +171,9 @@ export class Logger {
             this._bytesWritten += Buffer.byteLength(line);
         } catch (err) {
             this._fileError = true;
-            console.error(`[logger] Falha ao escrever no arquivo de log: ${(err as Error).message}`);
+            console.error(
+                `[logger] Falha ao escrever no arquivo de log: ${err instanceof Error ? err.message : String(err)}. Verifique permissões, espaço em disco e sistema de arquivos.`,
+            );
         }
     }
 

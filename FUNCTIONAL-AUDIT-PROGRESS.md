@@ -20,13 +20,13 @@
 
 | Ordem | ID    | Feature             | Audit T1-T20 | 7 Dimensões | Gaps | Testes | Status |
 | ----- | ----- | ------------------- | ------------ | ----------- | ---- | ------ | ------ |
-| P1    | FT-04 | Metrics             | ✅           | ✅          | 4    | 52     | ✅     |
-| P2    | FT-07 | Store               | ✅           | ✅          | 3    | 76     | ✅     |
 | 0.1   | FT-01 | Config Accessor     | ✅           | ✅          | 0    | —      | ✅     |
 | 0.2   | FT-02 | Feature Config      | ✅           | ✅          | 5    | 60     | ✅     |
 | 0.3   | FT-03 | Session State       | ✅           | ✅          | 2    | 44     | ✅     |
-| 0.4   | FT-05 | Logger              | 🔜           | 🔜          | —    | —      | 🔜     |
-| 0.5   | FT-06 | Temp Dir            | 🔜           | 🔜          | —    | —      | 🔜     |
+| 0.4   | FT-04 | Metrics             | ✅           | ✅          | 1    | 52     | ✅     |
+| 0.5   | FT-05 | Logger              | ✅           | ✅          | 6    | 56     | ✅     |
+| 0.6   | FT-06 | Temp Dir            | 🔜           | 🔜          | —    | —      | 🔜     |
+| 0.7   | FT-07 | Store               | 🔄           | 🔄          | —    | —      | 🔄     |
 | —     | FT-08 | Integration Helpers | 🔜           | 🔜          | —    | —      | 🔜     |
 
 <!-- CHECKPOINT: Phase 0 complete for FT-02 -->
@@ -271,127 +271,115 @@
 
 ---
 
-### FT-04 — Metrics (Re-auditoria concluída)
+### FT-04 — Metrics (Re-auditoria — em andamento)
 
-**Arquivos:** `shared/metrics.ts` (242L)
-**Testes:**
+**Arquivos:** `shared/metrics.ts` (248L)
 
-- `shared/metrics.test.ts` (16 testes — memfs-based I/O tests)
-- `shared/__tests__/metrics.test.ts` (13 testes — unit)
-- `shared/__tests__/integration/metrics.integration.test.ts` (10 testes — integration)
-- `shared/__tests__/metrics.property.test.ts` (13 testes — PBT)
-- **Total: 52 testes**
-
-**Metadados:**
+**Metadados FT-04:**
 
 - FEATURE_NAME: metrics
-- SOURCE: shared/metrics.ts (242L)
+- SOURCE: shared/metrics.ts (248L)
 - TEST_FILE_PREVIOUS: shared/metrics.test.ts
 - TEST_FILE_UNIT: shared/**tests**/metrics.test.ts
 - TEST_FILE_INTEGRATION: shared/**tests**/integration/metrics.integration.test.ts
 - TEST_FILE_PBT: shared/**tests**/metrics.property.test.ts
-- CONSUMERS: health-score (via calculateFlakyRate), pr-report (via getTrends)
-- DOCS: docs/TECHDOC.md
+- CONSUMERS: health-score, pr-report-core, quality-gate, flakiness-dashboard, defect-trend, run-comparison, coverage-gap, quality-suggester, failure-analysis, pipeline-cost, targeted-retry, llm-benchmark, llm-fallback-http, llm-probe, model-resolver, traceability-matrix, defect-seasonality, report-chart, report-types, cli_base, session-state, pipeline-jira, test-results, schedule-handler, batch-mode, interactive-mode, jira_management/main, scripts/quality-check, e2e/smoke-pipeline
+- DOCS: docs/TECHDOC.md, docs/03-git-triggers.md, docs/02-jira-management.md, docs/11-pr-report.md
 
-**Início:** 2026-06-18
+**Início (re-auditoria):** 2026-06-18
+
+<!-- CHECKPOINT: Phase 0 complete for FT-04 -->
 
 <!-- CHECKPOINT: Phase 1 complete for FT-04 -->
 
 #### T1-T20
 
-| #   | Categoria          | Status | Gap                                                       |
-| --- | ------------------ | ------ | --------------------------------------------------------- |
-| T1  | Entry point        | ✅     | 12 exported symbols (6 interfaces + 6 functions)          |
-| T2  | Config model       | ✅     | Interfaces + Zod schemas (MetricsRun, MetricsStore, etc.) |
-| T3  | Config accessor    | ✅     | Usa Config.get para xdgStateHome + METRICS_MAX_RUNS       |
-| T4  | Runtime lê config  | ✅     | loadMetrics lê do disco via StoreBackend                  |
-| T5  | Wizard entry       | N/A    | Sem configuração wizard                                   |
-| T6  | Wizard detection   | N/A    | —                                                         |
-| T7  | Wizard output      | N/A    | —                                                         |
-| T8  | Wizard prompts     | N/A    | —                                                         |
-| T9  | Reconfig handler   | N/A    | —                                                         |
-| T10 | CI integration     | N/A    | Consumido por CI via pr-report                            |
-| T11 | CI safety          | ✅     | Try/catch em loadMetrics + saveMetrics + getBackend       |
-| T12 | Test coverage      | ✅     | 52 testes (4 layers: memfs + unit + integration + PBT)    |
-| T13 | Dead code          | ✅     | Zero dead code                                            |
-| T14 | Suppressions       | ✅     | G3 corrigido: (err as Error).message -> instanceof check  |
-| T15 | Bidirectional      | N/A    | Unidirecional (escrita -> leitura -> cálculo)             |
-| T16 | CLI interface      | N/A    | Consumido por CLI commands (pr-report, health-score)      |
-| T17 | Env var dependency | ✅     | Nenhuma (usa Config.get)                                  |
-| T18 | Error handling     | ✅     | G1 corrigido: catch vazio em afterEach; all I/O catched   |
-| T19 | TECHDOC            | ✅     | Listado em TECHDOC.md                                     |
-| T20 | CI/Config contract | N/A    | Nenhum contrato direto                                    |
+| #   | Categoria          | Status | Gap                                                        |
+| --- | ------------------ | ------ | ---------------------------------------------------------- |
+| T1  | Entry point        | ✅     | 9 exported functions + 6 exported interfaces               |
+| T2  | Config model       | ✅     | Interfaces exportadas + Zod schemas com runtime validation |
+| T3  | Config accessor    | ✅     | Usa Config.get('xdgStateHome') + METRICS_MAX_RUNS          |
+| T4  | Runtime lê config  | ✅     | loadMetrics/saveMetrics recebem Config opcional            |
+| T5  | Wizard entry       | N/A    | Data persistence layer, sem wizard                         |
+| T6  | Wizard detection   | N/A    | —                                                          |
+| T7  | Wizard output      | N/A    | —                                                          |
+| T8  | Wizard prompts     | N/A    | —                                                          |
+| T9  | Reconfig handler   | N/A    | —                                                          |
+| T10 | CI integration     | N/A    | Consumido via dependência, não CI direta                   |
+| T11 | CI safety          | ✅     | Try/catch em loadMetrics + saveMetrics                     |
+| T12 | Test coverage      | ✅     | 52 testes (4 layers: memfs + unit + integration + PBT)     |
+| T13 | Dead code          | ✅     | Zero dead code                                             |
+| T14 | Suppressions       | ✅     | Zero suppressions em todas 6 sub-categorias                |
+| T15 | Bidirectional      | N/A    | Unidirecional (escrita → leitura), save→load round-trip    |
+| T16 | CLI interface      | N/A    | Shared data layer, consumido por CLI commands              |
+| T17 | Env var dependency | ✅     | Nenhuma — usa Config.get                                   |
+| T18 | Error handling     | ✅     | I/O catched, fallback para { runs: [] }, logging contexto  |
+| T19 | TECHDOC            | ✅     | Listado em TECHDOC.md (lines 53, 678)                      |
+| T20 | CI/Config contract | N/A    | Nenhum contrato direto                                     |
 
 <!-- CHECKPOINT: Phase 2 complete for FT-04 -->
 
 #### 7 Dimensões
 
-| Dimensão               | Status | Achados                                                                                          |
-| ---------------------- | ------ | ------------------------------------------------------------------------------------------------ |
-| 1. Isolamento Testes   | ⚠️     | G1 corrigido - catch vazio no afterEach do integration test; memfs + temp dir nas outras camadas |
-| 2. Robustez            | ✅     | Try/catch em loadMetrics + saveMetrics; fallback para FsStoreBackend; schema via Zod             |
-| 3. Boas Práticas       | ✅     | SRP, StoreBackend abstraction, Config DI, imports de lib via deps.ts                             |
-| 4. Implementação Ótima | ✅     | 242L, código claro, early returns, sem loops desnecessários                                      |
-| 5. Métricas            | ⚠️     | G2 corrigido - calculateFlakyRate usava denominador errado (flaky/flaky = 100%)                  |
-| 6. UX                  | ✅     | Mensagens corrigidas para incluir orientação de ação (permissões, leitura/escrita)               |
-| 7. Deep Test Audit     | ✅     | Ver detalhamento abaixo                                                                          |
+| Dimensão               | Status | Achados                                                                                        |
+| ---------------------- | ------ | ---------------------------------------------------------------------------------------------- |
+| 1. Isolamento Testes   | ✅     | beforeEach/afterEach com temp dir + vi.restoreAllMocks + vi.resetModules; memfs isolado        |
+| 2. Robustez            | ✅     | Try/catch em loadMetrics + saveMetrics; fallback para { runs: [] }; Parâmetros tipados com ??  |
+| 3. Boas Práticas       | ⚠️     | G1: `import { z } from 'zod'` (line 3) — deveria ser de ./deps.js (DepWall)                    |
+| 4. Implementação Ótima | ✅     | 248L, O(n\*m) aceitável, early returns, constantes nomeadas, zero magic numbers                |
+| 5. Métricas            | ✅     | Produz métricas (flakiness, flakyRate, trends), persistência via StoreBackend, fallback seguro |
+| 6. UX                  | ✅     | Mensagens acionáveis (verify file, check permissions); documentada em 4 docs                   |
+| 7. Deep Test Audit     | ✅     | Ver detalhamento abaixo                                                                        |
 
-#### D7 - Deep Test Audit (detalhado)
+#### D7 — Deep Test Audit (detalhado)
 
-| Item | Status | Evidência                                                                                       |
-| ---- | ------ | ----------------------------------------------------------------------------------------------- |
-| 7.1  | ✅     | 3 toBeDefined ocorrências, cada uma seguida de assert real; nonNull() usado nos demais          |
-| 7.2  | ✅     | 52 testes / 71+ expects (exceeds minimum)                                                       |
-| 7.3  | ✅     | Expected values derivados de regras de negócio (passRate = passed/(passed+failed)\*100)         |
-| 7.4  | ✅     | Fixtures com shape idêntico aos tipos reais; memfs para I/O layer                               |
-| 7.5  | ✅     | Sem toThrow() sem argumento                                                                     |
-| 7.6  | ✅     | Sem .skip ou .only                                                                              |
-| 7.7  | ✅     | Nomes descritivos: "handles saveMetrics write failure gracefully"                               |
-| 7.8  | ✅     | Determinístico: temp dir + memfs + vi.restoreAllMocks + vi.resetModules                         |
-| 7.9  | ✅     | Zero type suppressions (as any, @ts-ignore, @ts-expect-error)                                   |
-| 7.10 | ✅     | PBT testa invariantes (range [0,100], empty->0, formula correctness), não replica implementação |
-| 7.11 | ✅     | PBT existente: 13 testes (flaky rate, flakiness, trends)                                        |
-| 7.12 | N/A    | Feature pré-existente                                                                           |
+| Item | Status | Evidência                                                                                     |
+| ---- | ------ | --------------------------------------------------------------------------------------------- |
+| 7.1  | ✅     | 6 toBeDefined ocorrências, cada uma seguida de assert real (project.toBe, toHaveLength, etc.) |
+| 7.2  | ✅     | 52 testes / 98 expects (exceeds minimum)                                                      |
+| 7.3  | ✅     | Expected values derivados de invariantes de domínio (0%, 50%, 100%, rates 0.5)                |
+| 7.4  | ✅     | Mocks com vi.spyOn sobre memfs (shape idêntico ao fs real)                                    |
+| 7.5  | ✅     | Sem toThrow() sem argumento (apenas not.toThrow())                                            |
+| 7.6  | ✅     | Sem .skip ou .only                                                                            |
+| 7.7  | ✅     | Nomes descritivos: "returns 0 when no tests", "excludes skipped tests from denominator"       |
+| 7.8  | ✅     | Determinístico: temp dir + vi.restoreAllMocks + vi.resetModules + rmSync em afterEach         |
+| 7.9  | ✅     | Zero type suppressions (as any, @ts-ignore, @ts-expect-error, nullAs)                         |
+| 7.10 | ✅     | PBT testa invariantes (range, empty, denominator filtering), não replica implementação        |
+| 7.11 | ✅     | PBT existente: 13 propriedades (flakyRate invariants + flakiness invariants + trends)         |
+| 7.12 | N/A    | Feature pré-existente                                                                         |
 
 <!-- CHECKPOINT: Phase 3 complete for FT-04 -->
 
 #### Gaps
 
-| ID  | Severidade | Descrição                                                                 | Local               | Origem | Correção                                                                      |
-| --- | ---------- | ------------------------------------------------------------------------- | ------------------- | ------ | ----------------------------------------------------------------------------- |
-| G1  | Baixo      | Catch vazio no afterEach do integration test                              | integration test:43 | D7.9   | Substituído por catch(err) com rootLogger.warn                                |
-| G2  | Alto       | calculateFlakyRate usava denominador errado (flaky/flaky = 100% sempre)   | metrics.ts:207-214  | D5     | Corrigido denominador para totalQualifying (todos testes que atingem minRuns) |
-| G3  | Baixo      | Type assertion (err as Error).message em saveMetrics                      | metrics.ts:144      | T14    | Substituído por err instanceof Error ? err.message : String(err)              |
-| G7  | Baixo      | Mensagens de erro não acionáveis — dizem o que falhou mas não o que fazer | metrics.ts:133,144  | D6     | Adicionada orientação de ação (verificar permissões, espaço em disco)         |
+| ID  | Severidade | Descrição                                                                 | Local        | Origem | Correção                           |
+| --- | ---------- | ------------------------------------------------------------------------- | ------------ | ------ | ---------------------------------- |
+| G1  | Baixo      | `import { z } from 'zod'` — viola DepWall, deveria ser `from './deps.js'` | metrics.ts:3 | D3.2   | ✅ `import { z } from './deps.js'` |
+
+**Gaps anteriores verificados (corrigidos na execução prévia, confirmados na re-auditoria):**
+
+| ID  | Severidade | Descrição                                                               | Status da correção              |
+| --- | ---------- | ----------------------------------------------------------------------- | ------------------------------- |
+| G2  | Alto       | calculateFlakyRate usava denominador errado (flaky/flaky = 100% sempre) | ✅ Corrigido (totalQualifying)  |
+| G3  | Baixo      | Type assertion (err as Error).message em saveMetrics                    | ✅ Corrigido (instanceof check) |
+| G4  | Baixo      | Catch vazio no afterEach do integration test                            | ✅ Corrigido (rootLogger.warn)  |
+| G5  | Baixo      | Mensagens de erro não acionáveis                                        | ✅ Corrigido (ações explícitas) |
 
 <!-- CHECKPOINT: Phase 4 complete for FT-04 -->
-<!-- CHECKPOINT: Phase 5 complete for FT-04 (G7: UX content change, sem RED test) -->
-<!-- CHECKPOINT: Phase 6 complete for FT-04 -->
+<!-- CHECKPOINT: Phase 5 complete for FT-04 (G1: DepWall — sem RED test, gap estrutural) -->
+<!-- CHECKPOINT: Phase 7 complete for FT-04 (sem regressões, sem impacto comportamental) -->
 
 #### Testes de Integração
 
-| ID     | Sub-teste                            | O que cobre                                                              |
-| ------ | ------------------------------------ | ------------------------------------------------------------------------ |
-| FT-04a | saveMetrics + loadMetrics round-trip | Persistência vazia, com runs, sem dados salvos                           |
-| FT-04b | saveParseResult cria MetricsRun      | Cria run a partir de ParseResult e persiste                              |
-| FT-04c | saveRunMetrics respeita MAX_RUNS     | Trunca runs antigas ao exceder limite                                    |
-| FT-04d | calculateFlakiness                   | Identificação de testes flaky                                            |
-| FT-04e | calculateFlakyRate                   | 0 quando sem flaky, percentual correto                                   |
-| FT-04f | getTrends                            | Pass rate trend data                                                     |
-| FT-04g | saveCoverageSnapshot                 | Persistência de histórico de cobertura                                   |
-| PBT    | calculateFlakyRate invariants        | Range [0,100], empty=0, no fails=0, all flaky=100, denominator filtering |
-| PBT    | calculateFlakiness invariants        | Consistent counts, rate formula, flaky filter, minRuns filter            |
-| PBT    | getTrends invariants                 | Window size, passRate [0,100], formula correctness, empty store          |
-
-<!-- CHECKPOINT: Phase 7 complete for FT-04 -->
 <!-- CHECKPOINT: Phase 8 complete for FT-04 (🟢 skip refactoring) -->
 
 #### Validação
 
 - ✅ `npx tsc --noEmit` — 0 erros
 - ✅ `npx vitest run metrics` — 52/52 passed
-- ✅ Consumidores — sem regressões
+- ✅ Consumidores — sem regressões (health-score, pr-report-core, quality-gate: 71 tests)
 - ✅ `npm run lint` — All quality checks passed
+- ✅ Git diff audit — 2 arquivos, ambos esperados
 
 <!-- CHECKPOINT: Phase 9 complete for FT-04 -->
 <!-- CHECKPOINT: Phase 10 complete for FT-04 -->
@@ -519,6 +507,114 @@
 <!-- CHECKPOINT: Phase 9 complete for FT-07 -->
 <!-- CHECKPOINT: Phase 10 complete for FT-07 -->
 
-## Próximos FTs — Pendentes
+### FT-05 — Logger (Auditoria — em andamento)
 
-Todos os demais FTs (FT-05 a FT-42+) estão pendentes, aguardando auditoria conforme a nova metodologia (T1-T20 + 7 dimensões).
+**Arquivos:** `shared/logger.ts` (212L)
+
+**Metadados FT-05:**
+
+- FEATURE_NAME: logger
+- SOURCE: shared/logger.ts (212L)
+- TEST_FILE_PREVIOUS: shared/logger.test.ts
+- TEST_FILE_UNIT: N/A (nenhum em **tests**/)
+- TEST_FILE_INTEGRATION: shared/**tests**/integration/logger.integration.test.ts
+- TEST_FILE_PBT: N/A (nenhum property test)
+- CONSUMERS: ~100+ módulos (toda base de código que usa rootLogger)
+- DOCS: docs/TECHDOC.md (lines 52, 666, 896)
+
+**Início:** 2026-06-18
+
+<!-- CHECKPOINT: Phase 0 complete for FT-05 -->
+<!-- CHECKPOINT: Phase 1 complete for FT-05 -->
+
+#### T1-T20
+
+| #   | Categoria          | Status | Gap                                                                |
+| --- | ------------------ | ------ | ------------------------------------------------------------------ |
+| T1  | Entry point        | ✅     | 3 exports: maskDeep, Logger class, rootLogger                      |
+| T2  | Config model       | N/A    | Logger é classe de utilidade, sem interfaces/Zod                   |
+| T3  | Config accessor    | ✅     | Usa Config.get('logMaxSize', 'logFile', 'logDir', 'logLevel')      |
+| T4  | Runtime lê config  | ✅     | Lê logMaxSize, logFile, logDir, logLevel de Config.get()           |
+| T5  | Wizard entry       | N/A    | Configurado implicitamente pelo setup                              |
+| T6  | Wizard detection   | N/A    | —                                                                  |
+| T7  | Wizard output      | N/A    | —                                                                  |
+| T8  | Wizard prompts     | N/A    | —                                                                  |
+| T9  | Reconfig handler   | N/A    | —                                                                  |
+| T10 | CI integration     | N/A    | Infraestrutura, sem CI direta                                      |
+| T11 | CI safety          | ✅     | 5 try/catch para I/O (initDir, rotate, write)                      |
+| T12 | Test coverage      | ✅     | 49 testes (2 layers: unit + integration); PBT ausente (notado)     |
+| T13 | Dead code          | ✅     | Zero dead code                                                     |
+| T14 | Suppressions       | ❌     | T14e: catch vazio line 84; (err as Error).message lines 88,108,161 |
+| T15 | Bidirectional      | N/A    | Write-only (console + file)                                        |
+| T16 | CLI interface      | N/A    | Consumido por CLI, sem CLI própria                                 |
+| T17 | Env var dependency | ✅     | Nenhuma — usa Config.get                                           |
+| T18 | Error handling     | ⚠️     | try/catch presentes; console.error (aceitável: é o próprio logger) |
+| T19 | TECHDOC            | ✅     | Listado em TECHDOC.md (lines 52, 666, 896)                         |
+| T20 | CI/Config contract | N/A    | Nenhum contrato direto                                             |
+
+<!-- CHECKPOINT: Phase 2 complete for FT-05 -->
+
+#### D1-D7
+
+| #   | Categoria            | Status | Gap                                                                  |
+| --- | -------------------- | ------ | -------------------------------------------------------------------- |
+| D1  | Isolamento de Testes | ⚠️     | testCounter (line 17) é estado mutável compartilhado entre describes |
+| D2  | Robustez             | ✅     | Guard clauses, try/catch, fallbacks; exceto empty catch line 84      |
+| D3  | Boas Práticas        | ❌     | D3.2: import chalk from 'chalk' — deve ser de './deps.js'            |
+| D4  | Implementação Ótima  | ✅     | 212L, O(n) loops, constantes nomeadas                                |
+| D5  | Métricas             | N/A    | Logger não produz métricas                                           |
+| D6  | UX                   | ❌     | D6.1: Mensagens de erro não acionáveis (lines 90, 109, 163)          |
+| D7  | Deep Test Audit      | ⚠️     | D7.11: sem PBT; D7.9: 6 type assertions em testes (test-only)        |
+
+<!-- CHECKPOINT: Phase 3 complete for FT-05 -->
+
+#### Gaps Registrados (Phase 4)
+
+| ID  | Tipo    | Arquivo        | Linha      | Descrição                                         | Severidade |
+| --- | ------- | -------------- | ---------- | ------------------------------------------------- | ---------- |
+| G1  | DepWall | logger.ts      | 1          | import chalk from 'chalk' → './deps.js'           | ❌ Médio   |
+| G2  | Safety  | logger.ts      | 84         | catch vazio (sem log, sem fallback)               | ❌ Alto    |
+| G3  | Safety  | logger.ts      | 88,108,161 | `(err as Error).message` sem instanceof           | ❌ Alto    |
+| G4  | UX      | logger.ts      | 90,109,163 | Mensagens de erro não acionáveis                  | ❌ Baixo   |
+| G5  | Tests   | —              | —          | Sem Property-Based Testing                        | ❌ Baixo   |
+| G6  | Tests   | logger.test.ts | 17         | testCounter: estado compartilhado entre describes | ❌ Médio   |
+
+<!-- CHECKPOINT: Phase 4 complete for FT-05 -->
+
+#### Correções Aplicadas (Phase 5 — refeito)
+
+| ID  | Gap                          | Ação                                                                                                             | Status |
+| --- | ---------------------------- | ---------------------------------------------------------------------------------------------------------------- | ------ |
+| G1  | DepWall: import chalk        | `import chalk from 'chalk'` → `import { chalk } from './deps.js'`                                                | ✅     |
+| G2  | Emergência: catch vazio      | Discriminado: ENOENT → esperado (sem ação); outros erros → console.error com ação sugerida                       | ✅     |
+| G3  | Supressão: `as Error` 3x     | `(err as Error).message` → `err instanceof Error ? err.message : String(err)` em 3 catch blocks                  | ✅     |
+| G4  | UX: mensagens não acionáveis | Adicionada ação sugerida (verificar permissões/espaço em disco)                                                  | ✅     |
+| G5  | Cobertura: sem PBT           | 7 testes PBT adicionados: primitives, imutabilidade, keys sensíveis, não-sensíveis, nested, array, short strings | ✅     |
+| G6  | Tests: estado compartilhado  | `let testCounter` → `Math.random().toString(36).slice(2, 10)` — isolamento total entre describes                 | ✅     |
+
+**Correções adicionais (fora dos gaps originais):**
+
+- `maskDeep` refatorado: recursivo para objetos aninhados (antes só arrays), preserva arrays no root, zero casts de tipo (usando `Object.entries()`)
+- `noPropertyAccessFromIndexSignature` respeitado: bracket notation em `(err as Record<string, unknown>)['code']`
+
+**56/56 testes passando (42 unit + 14 integration, destes 7 PBT). Typecheck limpo.**
+
+#### Validação Final (Phases 6-10)
+
+| Phase | Item                          | Status | Evidência                                                   |
+| ----- | ----------------------------- | ------ | ----------------------------------------------------------- |
+| 6     | Consumer validation           | ✅     | ~120 consumidores. Nenhum importa chalk/maskDeep internals  |
+| 7     | Integration validation        | ✅     | 14 testes de integração logger + 4638 testes compartilhados |
+| 8     | Safety mechanism verification | ✅     | Nenhum mecanismo enfraquecido; 0 `as` casts em maskDeep     |
+| 9     | Root cause audit              | ✅     | G1-G6 corrigidos na raiz, zero workarounds                  |
+| 10    | Final regression              | ✅     | 309 files, 4638 testes, typecheck limpo                     |
+
+<!-- CHECKPOINT: Phase 6 complete for FT-05 -->
+<!-- CHECKPOINT: Phase 7 complete for FT-05 -->
+<!-- CHECKPOINT: Phase 8 complete for FT-05 -->
+<!-- CHECKPOINT: Phase 9 complete for FT-05 -->
+<!-- CHECKPOINT: Phase 10 complete for FT-05 -->
+
+## Próximo: FT-06 (Temp Dir)
+
+Após FT-05 completo, próximo é **FT-06 (Temp Dir)** (`shared/temp-dir.ts`) seguindo ordem estrita do PLANO.
