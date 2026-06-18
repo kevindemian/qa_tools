@@ -1,6 +1,6 @@
 /** Metrics persistence: run history, flakiness calculation, and coverage tracking.
  * Internal persistence uses StoreBackend (git-backed or fs-backed). */
-import { z } from 'zod';
+import { z } from './deps.js';
 import Config from './config.js';
 import { rootLogger } from './logger.js';
 import { detectProjectGitDir, detectStoreBackend, FsStoreBackend } from './store-backend.js';
