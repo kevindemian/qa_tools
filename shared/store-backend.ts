@@ -57,7 +57,8 @@ export class GitStoreBackend implements StoreBackend {
             fs.mkdirSync(path.dirname(full), { recursive: true });
             fs.writeFileSync(full, data);
         } catch (err) {
-            throw new Error(`GitStoreBackend: falha ao escrever ${relPath} — ${(err as Error).message}`, {
+            const msg = err instanceof Error ? err.message : String(err);
+            throw new Error(`GitStoreBackend: falha ao escrever ${relPath} — ${msg}`, {
                 cause: err,
             });
         }
@@ -78,10 +79,8 @@ export class GitStoreBackend implements StoreBackend {
                 },
             );
         } catch (err) {
-            throw new Error(
-                `GitStoreBackend: git add/commit falhou em ${this.gitWorkDir} — ${(err as Error).message}`,
-                { cause: err },
-            );
+            const msg = err instanceof Error ? err.message : String(err);
+            throw new Error(`GitStoreBackend: git add/commit falhou em ${this.gitWorkDir} — ${msg}`, { cause: err });
         }
     }
 }
@@ -108,7 +107,8 @@ export class FsStoreBackend implements StoreBackend {
             fs.mkdirSync(path.dirname(full), { recursive: true });
             fs.writeFileSync(full, data);
         } catch (err) {
-            throw new Error(`FsStoreBackend: falha ao escrever ${relPath} — ${(err as Error).message}`, { cause: err });
+            const msg = err instanceof Error ? err.message : String(err);
+            throw new Error(`FsStoreBackend: falha ao escrever ${relPath} — ${msg}`, { cause: err });
         }
     }
 
