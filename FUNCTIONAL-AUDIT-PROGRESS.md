@@ -26,7 +26,7 @@
 | 0.4   | FT-04 | Metrics             | ✅           | ✅          | 1    | 52     | ✅     |
 | 0.5   | FT-05 | Logger              | ✅           | ✅          | 6    | 56     | ✅     |
 | 0.6   | FT-06 | Temp Dir            | 🔜           | 🔜          | —    | —      | 🔜     |
-| 0.7   | FT-07 | Store               | 🔄           | 🔄          | —    | —      | 🔄     |
+| 0.7   | FT-07 | Store               | ✅           | ✅          | 3    | 76     | ✅     |
 | —     | FT-08 | Integration Helpers | 🔜           | 🔜          | —    | —      | 🔜     |
 
 <!-- CHECKPOINT: Phase 0 complete for FT-02 -->
@@ -564,7 +564,7 @@
 | D4  | Implementação Ótima  | ✅     | 212L, O(n) loops, constantes nomeadas                                |
 | D5  | Métricas             | N/A    | Logger não produz métricas                                           |
 | D6  | UX                   | ❌     | D6.1: Mensagens de erro não acionáveis (lines 90, 109, 163)          |
-| D7  | Deep Test Audit      | ⚠️     | D7.11: sem PBT; D7.9: 6 type assertions em testes (test-only)        |
+| D7  | Deep Test Audit      | ✅     | PBT adicionado (7 propriedades), type assertions eliminadas          |
 
 <!-- CHECKPOINT: Phase 3 complete for FT-05 -->
 
@@ -597,7 +597,20 @@
 - `maskDeep` refatorado: recursivo para objetos aninhados (antes só arrays), preserva arrays no root, zero casts de tipo (usando `Object.entries()`)
 - `noPropertyAccessFromIndexSignature` respeitado: bracket notation em `(err as Record<string, unknown>)['code']`
 
-**56/56 testes passando (42 unit + 14 integration, destes 7 PBT). Typecheck limpo.**
+**56/56 testes passando (42 unit + 14 integration, destes 7 PBT). Typecheck limpo. Lint limpo.**
+
+#### Correções adicionais (fora dos gaps originais)
+
+| #   | Descrição                                                                                                | Local             | Status        |
+| --- | -------------------------------------------------------------------------------------------------------- | ----------------- | ------------- |
+| C1  | `(err as NodeJS.ErrnoException)['code']` — cast residual eliminado via narrowing `'code' in err`         | logger.ts:88      | ✅            |
+| C2  | `getConfig()` retornava `as never` — substituído por `Config.create()`                                   | integration test  | ✅            |
+| C3  | 6x `as { ... }` em testes unitários — substituído por `JSON.stringify` para type safety                  | logger.test.ts    | ✅            |
+| C4  | `as string` em mock spy — substituído por `String()`                                                     | logger.test.ts    | ✅            |
+| C5  | `filePath as string` em múltiplos testes — substituído por `readLog()` helper com guard                  | integration test  | ✅            |
+| C6  | `Object.entries(obj)` em `maskDeep` — confirmado: `any` não propaga (typeof guard antes do uso)          | logger.ts:34      | ✅ Verificado |
+| C7  | `rootLogger.debug()` dentro de `_writeFile` — risco de recursão → substituído por `console.error` direto | logger.ts:158-161 | ✅            |
+| C8  | PBT `sensitive keys in arrays` — fix: `fc.record` garante token presente em cada elemento                | logger.test.ts    | ✅            |
 
 #### Validação Final (Phases 6-10)
 

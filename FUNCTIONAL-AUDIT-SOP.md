@@ -94,6 +94,88 @@ Sempre consultar o PROGRESS.md para resolver estas variáveis — nunca depender
 
 ---
 
+## Phase 0.1 — Deep read & quality pre-scan
+
+> **Propósito:** Antes de qualquer diagnóstico formal (T1-T20), ler o código fonte e os testes
+> COMPLETAMENTE — linha por linha — e catalogar TODOS os problemas de qualidade visíveis.
+>
+> **Esta é a fase mais importante do SOP.** Se for bem executada, as fases seguintes
+> são consequência. Se for ignorada ou feita de forma superficial, o restante do SOP
+> será um loop infinito de "corrige → acha mais → corrige → acha mais".
+>
+> **A falsa eficiência de pular esta fase** é o que gera 6 passagens de correção no mesmo código.
+> Fazer certo uma vez é mais rápido que corrigir 6 vezes.
+
+### 0.1.1 — Ler fonte completo
+
+- **Comando:** `cat ${SOURCE}`
+- **Ação:** Ler cada linha do arquivo fonte. Para CADA função ou método, responder mentalmente:
+
+| #   | Pergunta                                                              | Se SIM → ação                                      |
+| --- | --------------------------------------------------------------------- | -------------------------------------------------- |
+| 1   | O nome da função revela o que ela faz?                                | Se não: registrar como gap de clareza              |
+| 2   | Ela recebe `unknown` ou faz parsing sem validação?                    | Registrar gap de tipo                              |
+| 3   | Tem `as`, `!`, `@ts-ignore`, `eslint-disable`?                        | Registrar gap T14 (cast)                           |
+| 4   | Tem `Object.entries()` em parâmetro `object`?                         | Verificar se `any` propaga — se sim, registrar gap |
+| 5   | Tem I/O sem try/catch?                                                | Registrar gap de error handling                    |
+| 6   | Tem catch vazio ou `(err as Error).message`?                          | Registrar gap T14e/T14b                            |
+| 7   | Algum error handler chama de volta o próprio módulo? (self-reference) | Registrar gap de segurança (recursão)              |
+| 8   | Algum getter tem side effect? (ex: `get filePath()` cria diretório)   | Registrar gap arquitetural                         |
+| 9   | Mensagens de erro dizem o que fazer? (são acionáveis?)                | Se não: registrar gap UX                           |
+| 10  | Importa lib externa diretamente em vez de `./deps.js`?                | Registrar gap DepWall                              |
+| 11  | Tem estado mutável compartilhado no módulo?                           | Registrar gap de isolamento                        |
+| 12  | Tem constantes mágicas (números/strings soltos)?                      | Registrar gap de manutenibilidade                  |
+
+- **Registrar:** para cada resposta SIM, anotar em PROGRESS.md sob "**Pre-scan achados:**" com local (linha) e categoria.
+
+### 0.1.2 — Ler testes completo
+
+- **Comando:** `cat ${TEST_FILE_UNIT} ${TEST_FILE_INTEGRATION} ${TEST_FILE_PBT} 2>/dev/null`
+- **Ação:** Ler cada linha de cada arquivo de teste. Para CADA describe/it, responder:
+
+| #   | Pergunta                                                           | Se SIM → ação                              |
+| --- | ------------------------------------------------------------------ | ------------------------------------------ |
+| T1  | Nome do teste descreve COMPORTAMENTO, não implementação?           | Se não: renomear                           |
+| T2  | Teste tem `as`, `as never`, `as string`, `!`, `@ts-ignore`?        | Registrar gap T14                          |
+| T3  | Mock retorna shape IDÊNTICO ao real (não `{}` ou `as never`)?      | Se não: corrigir mock                      |
+| T4  | Expected value veio de REQUIREMENTS ou de "rodou e copiou output"? | Se copiou output: registrar Oracle Problem |
+| T5  | Teste testa UMA coisa ou várias asserts soltas?                    | Se várias: quebrar em testes menores       |
+| T6  | Tem `.skip`, `.only`, `.todo`?                                     | Registrar gap                              |
+| T7  | Usa `expect(...).toBeDefined()` sem assert real depois?            | Registrar weak assertion                   |
+| T8  | Tem estado compartilhado entre describes?                          | Registrar gap de isolamento                |
+| T9  | beforeEach/afterEach limpam estado?                                | Registrar gap                              |
+
+- **Registrar:** anotar cada achado em PROGRESS.md.
+
+### 0.1.3 — Consolidar no PROGRESS.md
+
+Após as leituras, registrar no início da entrada da feature no PROGRESS.md:
+
+```markdown
+#### Pre-scan achados (Phase 0.1)
+
+| #   | Categoria | Local         | Descrição                                       |
+| --- | --------- | ------------- | ----------------------------------------------- |
+| 1   | Cast      | logger.ts:88  | `as NodeJS.ErrnoException` em narrowing de erro |
+| 2   | Self-ref  | logger.ts:159 | `rootLogger.debug()` dentro de `_writeFile`     |
+| ... | ...       | ...           | ...                                             |
+```
+
+Este registro serve como **checkpoint obrigatório**: sem ele, a Phase 0.1 não foi executada.
+
+### 0.1.4 — Relação com Phase 1-4
+
+Os achados do pre-scan **não são gaps formais ainda**. Eles servem para:
+
+1. Direcionar a atenção durante T1-T20 e D1-D7 (você sabe ONDE olhar)
+2. Serem validados ou refutados pelas ferramentas de análise (grep, tsc, lint)
+3. Se confirmados, viram gaps registrados em Phase 4
+4. Se o pre-scan foi completo e a Phase 4.5 não achar nada novo: **vitória** — uma passagem só
+
+**A execução correta da Phase 0.1 é o que elimina o loop de 6 correções no mesmo código.**
+
+---
+
 ## Phase 1 — Mapeamento de Arquivos
 
 ### 1.1 — Localizar source
