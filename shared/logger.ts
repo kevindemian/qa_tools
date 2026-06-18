@@ -156,10 +156,10 @@ export class Logger {
             try {
                 dataStr = ' | ' + JSON.stringify(maskDeep(data));
             } catch (err) {
-                rootLogger.debug(
-                    'Data serialization failed for log entry: ' + (err instanceof Error ? err.message : String(err)),
-                );
                 dataStr = ' | [data serialization error]';
+                console.error(
+                    '[logger] Data serialization failed: ' + (err instanceof Error ? err.message : String(err)),
+                );
             }
         }
         const line = `[${timestamp}] [${level}]${ctxStr} ${msg}${dataStr}\n`;
