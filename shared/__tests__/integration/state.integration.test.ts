@@ -15,6 +15,7 @@ import fs from 'node:fs';
 import os from 'node:os';
 import path from 'node:path';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
+import { rootLogger } from '../../logger.js';
 
 let TEST_DIR: string;
 let stateModule: typeof import('../../state.js');
@@ -34,8 +35,8 @@ describe('Integration: Session State', () => {
     afterEach(() => {
         try {
             fs.rmSync(TEST_DIR, { recursive: true, force: true });
-        } catch {
-            /* best effort */
+        } catch (err) {
+            rootLogger.warn('Cleanup failed for test dir: ' + String(err));
         }
     });
 
@@ -136,6 +137,46 @@ describe('Integration: Session State', () => {
             const config = getConfig();
             const sp = stateModule.getStatePath(config);
             expect(sp).toContain('state.json');
+        });
+    });
+
+    describe('FT-03f: backup recovery on corruption', () => {
+        it('recovers from backup when state.json is corrupted', async () => {
+            const config = getConfig();
+            const stateDir = path.join(TEST_DIR, 'qa-tools');
+            const statePath = path.join(stateDir, 'state.json');
+            const bakPath = path.join(stateDir, 'state.json.bak');
+
+            stateModule.save({ lastProject: 'ORIGINAL', counter: 42 }, config);
+            const beforeCorruption = stateModule.load(config);
+            expect(beforeCorruption).toEqual({ lastProject: 'ORIGINAL', counter: 42 });
+
+            fs.writeFileSync(statePath, '{corrupted json!!!', 'utf8');
+            expect(fs.existsSync(bakPath)).toBe(true);
+
+            vi.resetModules();
+            const freshModule = await import('../../state.js');
+            const recovered = freshModule.load(config);
+
+            expect(recovered).toEqual({ lastProject: 'ORIGINAL', counter: 42 });
+        });
+
+        it('returns empty object when both state and backup are corrupted', async () => {
+            const config = getConfig();
+            const stateDir = path.join(TEST_DIR, 'qa-tools');
+            const statePath = path.join(stateDir, 'state.json');
+            const bakPath = path.join(stateDir, 'state.json.bak');
+
+            stateModule.save({ data: 'valid' }, config);
+
+            fs.writeFileSync(statePath, '{garbage}', 'utf8');
+            fs.writeFileSync(bakPath, 'also{broken}', 'utf8');
+
+            vi.resetModules();
+            const freshModule = await import('../../state.js');
+            const result = freshModule.load(config);
+
+            expect(result).toEqual({});
         });
     });
 });

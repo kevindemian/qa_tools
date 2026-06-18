@@ -12,7 +12,12 @@ import {
 const CONFIG_PATH = path.resolve('config', 'features.json');
 
 function ensureDir(): void {
-    fs.mkdirSync(path.dirname(CONFIG_PATH), { recursive: true });
+    try {
+        fs.mkdirSync(path.dirname(CONFIG_PATH), { recursive: true });
+    } catch (err) {
+        rootLogger.warn('Failed to create config directory: ' + (err instanceof Error ? err.message : String(err)));
+        throw err;
+    }
 }
 
 /** Load the full feature config store from disk. Returns empty store on failure. */
@@ -37,8 +42,13 @@ export function loadFeatureConfig(): FeatureConfigStore {
 
 /** Save the full feature config store to disk. */
 export function saveFeatureConfig(store: FeatureConfigStore): void {
-    ensureDir();
-    fs.writeFileSync(CONFIG_PATH, JSON.stringify(store, null, 2) + '\n', 'utf8');
+    try {
+        ensureDir();
+        fs.writeFileSync(CONFIG_PATH, JSON.stringify(store, null, 2) + '\n', 'utf8');
+    } catch (err) {
+        rootLogger.warn('Failed to save features.json: ' + (err instanceof Error ? err.message : String(err)));
+        throw err;
+    }
 }
 
 /** Get feature config for a specific project. Returns default config when missing. */
@@ -77,8 +87,9 @@ export function resolvePublishTarget(projectName: string, gitProvider?: string):
     if (config.enabled) {
         return config.publishTarget;
     }
-    // Fallback: if project has no config, derive from provider
-    if (gitProvider === 'gitlab') {
+    // Fallback: derive from project's own gitProvider or explicit hint
+    const provider = gitProvider ?? getProjectFeatureConfig(projectName)?.gitProvider;
+    if (provider === 'gitlab') {
         return 'gitlab-ci';
     }
     return 'github-actions';

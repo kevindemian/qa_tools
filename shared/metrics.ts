@@ -141,7 +141,7 @@ export function saveMetrics(store: MetricsStore, config?: Config, backend?: Stor
         b.write(METRICS_FILE, Buffer.from(JSON.stringify(store, null, 2), 'utf8'));
         b.flush('qa-tools: update metrics run');
     } catch (err) {
-        rootLogger.error('Failed to save metrics: ' + (err as Error).message);
+        rootLogger.error('Failed to save metrics: ' + (err instanceof Error ? err.message : String(err)));
     }
 }
 
@@ -205,12 +205,23 @@ export function calculateFlakiness(store: MetricsStore, minRuns = 2): FlakinessE
 }
 
 export function calculateFlakyRate(store: MetricsStore, minRuns = 2): number {
-    const entries = calculateFlakiness(store, minRuns);
-    if (entries.length === 0) return 0;
-    const flakyCount = entries.filter((e) => e.rate > 0).length;
-    const totalConsidered = entries.length;
-    if (totalConsidered === 0) return 0;
-    return (flakyCount / totalConsidered) * 100;
+    const flakyEntries = calculateFlakiness(store, minRuns);
+    if (flakyEntries.length === 0) return 0;
+
+    const testRunCounts = new Map<string, number>();
+    for (const run of store.runs) {
+        for (const t of run.tests) {
+            testRunCounts.set(t.title, (testRunCounts.get(t.title) || 0) + 1);
+        }
+    }
+
+    let totalQualifying = 0;
+    for (const count of testRunCounts.values()) {
+        if (count >= minRuns) totalQualifying++;
+    }
+
+    if (totalQualifying === 0) return 0;
+    return (flakyEntries.length / totalQualifying) * 100;
 }
 
 export function saveCoverageSnapshot(snapshot: CoverageSnapshot, config?: Config): void {

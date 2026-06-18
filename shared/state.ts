@@ -95,7 +95,10 @@ export function load(config?: Config): Record<string, unknown> {
         }
     } catch (err: unknown) {
         warn('Arquivo de estado corrompido. Recuperando backup...');
-        rootLogger.warn('Arquivo de estado corrompido, recuperando backup...', (err as Error).message);
+        rootLogger.warn(
+            'Arquivo de estado corrompido, recuperando backup...',
+            err instanceof Error ? err.message : String(err),
+        );
         try {
             if (fs.existsSync(bp)) {
                 const backup: Record<string, unknown> = JSON.parse(fs.readFileSync(bp, UTF8)) as Record<
@@ -108,7 +111,9 @@ export function load(config?: Config): Record<string, unknown> {
             }
         } catch (err2) {
             warn('Falha ao recuperar backup de estado.');
-            rootLogger.error('Falha ao recuperar backup de estado: ' + (err2 as Error).message);
+            rootLogger.error(
+                'Falha ao recuperar backup de estado: ' + (err2 instanceof Error ? err2.message : String(err2)),
+            );
         }
         try {
             fs.renameSync(sp, bp);
@@ -134,7 +139,7 @@ export function save(state: Record<string, unknown>, config?: Config): void {
         fs.writeFileSync(bp, JSON.stringify(state, null, 2), UTF8);
     } catch (err) {
         warn('Falha ao salvar estado. Alteracoes podem ser perdidas.');
-        rootLogger.error('Falha ao salvar estado: ' + (err as Error).message);
+        rootLogger.error('Falha ao salvar estado: ' + (err instanceof Error ? err.message : String(err)));
     }
 }
 

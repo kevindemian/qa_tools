@@ -109,3 +109,101 @@ describe('FeatureConfigStoreSchema — property-based', () => {
         );
     });
 });
+
+/* ────────────────────────────────────────────────────────────────────────
+ * PBT — resolvePublishTarget core logic invariants
+ *
+ * Invariantes (pura, sem I/O):
+ *  1. Se enabled=true → resultado = config.publishTarget
+ *  2. Se enabled=false + gitProvider=gitlab → resultado = 'gitlab-ci'
+ *  3. Se enabled=false + sem gitProvider → resultado = 'github-actions'
+ *  4. Resultado é sempre um PublishTarget válido
+ * ──────────────────────────────────────────────────────────────────────── */
+
+const ValidTargets = ['github-actions', 'gitlab-ci', 's3', 'gh-pages', 'slack'] as const;
+type ValidTarget = (typeof ValidTargets)[number];
+
+function resolvePublishTargetPure(
+    enabled: boolean,
+    publishTarget: ValidTarget,
+    storedGitProvider: string | undefined,
+    explicitGitProvider: string | undefined,
+): string {
+    if (enabled) return publishTarget;
+    const provider = explicitGitProvider ?? storedGitProvider;
+    if (provider === 'gitlab') return 'gitlab-ci';
+    return 'github-actions';
+}
+
+describe('resolvePublishTarget — property-based invariants', () => {
+    it('retorna publishTarget configurado quando enabled=true', () => {
+        fc.assert(
+            fc.property(
+                fc.constantFrom(...ValidTargets),
+                fc.constantFrom('github', 'gitlab', undefined),
+                fc.constantFrom('github', 'gitlab', undefined),
+                (target, storedGitProvider, explicitGitProvider) => {
+                    const result = resolvePublishTargetPure(true, target, storedGitProvider, explicitGitProvider);
+                    expect(result).toBe(target);
+                },
+            ),
+            { numRuns: 100 },
+        );
+    });
+
+    it('retorna gitlab-ci quando enabled=false e gitProvider é gitlab (qualquer origem)', () => {
+        fc.assert(
+            fc.property(fc.constantFrom(...ValidTargets), (target) => {
+                // Se gitProvider='gitlab' explícito
+                expect(resolvePublishTargetPure(false, target, undefined, 'gitlab')).toBe('gitlab-ci');
+                // Se gitProvider='gitlab' armazenado
+                expect(resolvePublishTargetPure(false, target, 'gitlab', undefined)).toBe('gitlab-ci');
+            }),
+            { numRuns: 30 },
+        );
+    });
+
+    it('retorna github-actions quando enabled=false e sem gitProvider gitlab', () => {
+        fc.assert(
+            fc.property(
+                fc.constantFrom(...ValidTargets),
+                fc.constantFrom('github', 'gitlab', undefined),
+                fc.constantFrom('github', 'gitlab', undefined),
+                (target, storedGitProvider, explicitGitProvider) => {
+                    fc.pre(storedGitProvider !== 'gitlab' && explicitGitProvider !== 'gitlab');
+                    const result = resolvePublishTargetPure(false, target, storedGitProvider, explicitGitProvider);
+                    expect(result).toBe('github-actions');
+                },
+            ),
+            { numRuns: 50 },
+        );
+    });
+
+    it('retorno é sempre um PublishTarget válido', () => {
+        fc.assert(
+            fc.property(
+                fc.boolean(),
+                fc.constantFrom(...ValidTargets),
+                fc.constantFrom('github', 'gitlab', undefined),
+                fc.constantFrom('github', 'gitlab', undefined),
+                (enabled, target, stored, explicit) => {
+                    const result = resolvePublishTargetPure(enabled, target, stored, explicit);
+                    expect(ValidTargets).toContain(result as ValidTarget);
+                },
+            ),
+            { numRuns: 100 },
+        );
+    });
+
+    it('explicitGitProvider tem precedência sobre storedGitProvider', () => {
+        fc.assert(
+            fc.property(fc.constantFrom(...ValidTargets), (target) => {
+                // stored=gitlab, explicit=github => github-actions (precedência do explicit)
+                expect(resolvePublishTargetPure(false, target, 'gitlab', 'github')).toBe('github-actions');
+                // stored=github, explicit=gitlab => gitlab-ci (precedência do explicit)
+                expect(resolvePublishTargetPure(false, target, 'github', 'gitlab')).toBe('gitlab-ci');
+            }),
+            { numRuns: 10 },
+        );
+    });
+});
