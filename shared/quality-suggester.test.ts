@@ -2,7 +2,9 @@ import { describe, it, expect, vi, beforeEach, assert } from 'vitest';
 
 const mockDetectDrift = vi.hoisted(() => vi.fn());
 const mockSnapshot = vi.hoisted(() => vi.fn());
-const mockUpdateTyped = vi.hoisted(() => vi.fn());
+const mockUpdateTyped = vi.hoisted(() => vi.fn<(fn: (s: Record<string, unknown>) => void) => void>());
+
+vi.mock('./logger');
 
 vi.mock('./quality-metrics', () => ({
     detectDrift: mockDetectDrift,
@@ -118,12 +120,31 @@ describe('checkQualitySignals', () => {
         mockDetectDrift.mockReturnValue(['DRIFT: invariant "T-01" fire rate 50% exceeds baseline']);
         checkQualitySignals();
 
-        const updateCalls = mockUpdateTyped.mock.calls;
-        const updateFn = updateCalls[0]?.[0] as (s: Record<string, unknown>) => void;
+        const updateFn = mockUpdateTyped.mock.calls[0]?.[0];
+        assert(updateFn !== undefined);
         const mockState: Record<string, unknown> = {};
         updateFn(mockState);
-        const suggestions = mockState['_llmConfigSuggestions'] as Record<string, unknown> | undefined;
+        const suggestions: unknown = mockState['_llmConfigSuggestions'];
         expect(suggestions).toBeDefined();
-        expect(suggestions?.['pending']).toBe(true);
+        expect(suggestions).toEqual(expect.objectContaining({ pending: true }));
+    });
+
+    // ── RED tests (Phase 5) ──
+
+    it('handles detectDrift failure gracefully — G01', () => {
+        mockDetectDrift.mockImplementation(() => {
+            throw new Error('drift error');
+        });
+        const signals = checkQualitySignals();
+        expect(Array.isArray(signals)).toBe(true);
+    });
+
+    it('returns signals even when updateTyped fails — G02', () => {
+        mockDetectDrift.mockReturnValue(['DRIFT: invariant "T-01" fire rate 50% exceeds baseline']);
+        mockUpdateTyped.mockImplementation(() => {
+            throw new Error('persist error');
+        });
+        const signals = checkQualitySignals();
+        expect(signals).toHaveLength(1);
     });
 });

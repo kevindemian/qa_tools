@@ -128,7 +128,9 @@ describe('calculateReleaseScore — property-based', () => {
                 const resultB = calculateReleaseScore(100, 100, 'pass', 100, b);
                 const flkAEntry = resultA.breakdown.find((d) => d.label === 'Flakiness');
                 const flkBEntry = resultB.breakdown.find((d) => d.label === 'Flakiness');
-                if (flkAEntry === undefined || flkBEntry === undefined) return;
+                if (flkAEntry === undefined || flkBEntry === undefined) {
+                    throw new Error('Flakiness entry not found in breakdown');
+                }
                 const flkA = flkAEntry.score;
                 const flkB = flkBEntry.score;
                 if (a > b) {

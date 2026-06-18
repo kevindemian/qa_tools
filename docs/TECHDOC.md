@@ -76,6 +76,7 @@ qa_tools/
 | **Quality Gate**             | `shared/quality-gate.ts`                                      | Orquestrador de quality gate — thresholds fixos, compõe health/coverage/flakiness       |
 | **Coverage Source**          | `shared/coverage-source.ts`                                   | Resolução de cobertura em camadas: Istanbul coverage-summary.json > CTRF > 0 padrão     |
 | **Quality Metrics**          | `shared/quality-metrics.ts`                                   | Coleta e persistência de métricas de qualidade: fire rates, pass rates, drift detection |
+| **Quality Suggester**        | `shared/quality-suggester.ts`                                 | Pipeline de detecção de sinais de qualidade: drift, latência, taxa de falha, benchmark  |
 
 ### Resilience Stack (LLM)
 
