@@ -181,6 +181,41 @@ describe('calculateFlakyRate — unified implementation', () => {
         expect(calculateFlakyRate(store, 2)).toBe(0);
     });
 
+    it('returns intermediate value when mix of flaky and stable tests', () => {
+        // 1 flaky + 1 stable, both meet minRuns=2 → rate = 1/2 * 100 = 50
+        const store: MetricsStore = {
+            runs: [
+                {
+                    timestamp: '2026-01-01',
+                    project: 'p',
+                    total: 2,
+                    passed: 1,
+                    failed: 1,
+                    skipped: 0,
+                    duration: 10,
+                    tests: [
+                        { title: 'stable', state: 'passed', duration: 10 },
+                        { title: 'flaky', state: 'passed', duration: 10 },
+                    ],
+                },
+                {
+                    timestamp: '2026-01-02',
+                    project: 'p',
+                    total: 2,
+                    passed: 1,
+                    failed: 1,
+                    skipped: 0,
+                    duration: 10,
+                    tests: [
+                        { title: 'stable', state: 'passed', duration: 10 },
+                        { title: 'flaky', state: 'failed', duration: 10, error: 'err' },
+                    ],
+                },
+            ],
+        };
+        expect(calculateFlakyRate(store, 2)).toBe(50);
+    });
+
     it('handles 1 single test', () => {
         const store: MetricsStore = {
             runs: [

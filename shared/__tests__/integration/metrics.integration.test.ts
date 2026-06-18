@@ -16,6 +16,7 @@ import fs from 'node:fs';
 import os from 'node:os';
 import path from 'node:path';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
+import { rootLogger } from '../../logger.js';
 import { createMetricsRunFixture, createCoverageSnapshotFixture } from './integration-helpers.js';
 
 let TEST_DIR: string;
@@ -40,8 +41,8 @@ describe('Integration: Metrics Store', () => {
     afterEach(() => {
         try {
             fs.rmSync(TEST_DIR, { recursive: true, force: true });
-        } catch {
-            /* best effort */
+        } catch (err) {
+            rootLogger.warn('Integration metrics cleanup: ' + (err instanceof Error ? err.message : String(err)));
         }
     });
 

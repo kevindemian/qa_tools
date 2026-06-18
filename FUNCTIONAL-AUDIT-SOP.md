@@ -47,11 +47,38 @@ Após identificar feature e carregar definições, extrair e registrar no PROGRE
 
 - FEATURE_NAME: git-metrics-adapter
 - SOURCE: shared/git-metrics-adapter.ts
-- TEST_FILE_UNIT: shared/git-metrics-adapter.test.ts
+- TEST_FILE_PREVIOUS: shared/git-metrics-adapter.test.ts (se existir na raiz de shared/)
+- TEST_FILE_UNIT: shared/**tests**/git-metrics-adapter.test.ts
 - TEST_FILE_INTEGRATION: shared/**tests**/integration/git-metrics-adapter.integration.test.ts
 - TEST_FILE_PBT: shared/**tests**/git-metrics-adapter.property.test.ts
 - CONSUMERS: (lista de paths)
 - DOCS: docs/03-git-triggers.md (se aplicável)
+```
+
+**Comando para localizar TEST_FILE_PREVIOUS (testes na raiz do módulo):**
+
+```
+find . -name "${FEATURE_NAME}.test.ts" -not -path '*/node_modules/*' -not -path '*/__tests__/*'
+```
+
+Arquivos encontrados neste caminho (ex: `shared/metrics.test.ts`) contêm testes que usam `memfs` ou mock global de fs. Eles DEVEM ser incluídos na contagem de testes (T12) e auditados em D7. Não omitir.
+
+**Comando para localizar TEST_FILE_UNIT (testes no diretório **tests**):**
+
+```
+find . -path "*/__tests__/${FEATURE_NAME}.test.ts" -not -path '*/node_modules/*'
+```
+
+**Comando para localizar TEST_FILE_INTEGRATION:**
+
+```
+find . -path "*/__tests__/integration/${FEATURE_NAME}.integration.test.ts" -not -path '*/node_modules/*'
+```
+
+**Comando para localizar TEST_FILE_PBT:**
+
+```
+find . -path "*/__tests__/${FEATURE_NAME}.property.test.ts" -not -path '*/node_modules/*'
 ```
 
 Os comandos dos passos seguintes usarão `${FEATURE_NAME}`, `${SOURCE}`, `${TEST_FILE_UNIT}`, etc.
@@ -241,10 +268,21 @@ Regras:
   `grep -A1P 'catch\s*\{' ${SOURCE} | grep -P '^\s*\}'`
   (catch sem conteúdo)
 
+- **T14f — Type cast não-any com `as TypeName` em parsing/deserialização**
+  `grep -nP 'JSON\.parse\(.*\) as [A-Z]\w+|as (MetricsStore|Record<)' ${SOURCE}`
+  (casts de parsing que pulam validação de runtime — `JSON.parse(...) as MetricsStore` é gap mesmo sem `as any`)
+    > **Justificativa:** `JSON.parse` retorna `unknown` ou `any`, e fazer cast direto para `MetricsStore` sem validação
+    > (Zod, class-transformer, ou guard manual) é um bypass de type safety equivalente a `as any`.
+    > A diferença é puramente estilística — ambos permitem que dados inválidos entrem no sistema sem checagem.
+
 > **Nota:** O comando T14b usa pattern mais restritivo para evitar falso positivo com `if(!x)`.
 > Falsos positivos residuais devem ser verificados manualmente (inspecionar cada match).
+>
+> **Nota T14f:** O padrão `as [A-Z]\w+` captura casts em parsing. Falsos positivos (ex: `x as MyType` em código
+> que já validou o dado em passo anterior) devem ser julgados manualmente. Se o cast segue uma validação real
+> (Zod parse, class-transformer, guard com `if`), não é gap.
 
-- **Critério:** zero type suppressions, zero catch vazios, zero eslint-disable
+- **Critério:** zero type suppressions, zero catch vazios, zero eslint-disable, zero casts não-validados de parsing
 - **Status:**
     - ✅ zero ocorrências em todas as sub-categorias
     - ❌ encontradas → registrar cada localização como gap (T14a-1, T14b-1, ...)
@@ -431,6 +469,11 @@ grep -nP 'rootLogger\.(warn|error|info)' ${SOURCE} | head -15
 
 ```
 D6.1: Mensagens de erro são acionáveis (dizem o que fazer, não só o que falhou)?
+      Protocolo de verificação (para cada rootLogger.{warn,error,info} encontrado):
+        1. Copiar a mensagem literal
+        2. O usuário sabe EXATAMENTE o que aconteceu? (causa)
+        3. O usuário sabe EXATAMENTE o que fazer? (ação)
+        4. Se resposta for NÃO para 2 ou 3: ❌
 D6.2: Documentação da feature existe (TECHDOC + docs/*.md) e reflete o comportamento real?
       (Se ausente em TECHDOC: ❌. Se presente mas desatualizada: ⚠️)
       Comando para detectar docs desatualizadas:
@@ -448,6 +491,12 @@ D6.5: Output legível para o usuário (quando aplicável)?
 
 **Critério:** D6.1 + D6.2 + D6.3 obrigatórios ✅. D6.1+D6.2+D6.3 é requisito mínimo.
 Se documentação estiver ausente: ❌ (não N/A).
+
+**Regra D6.1 (protocolo de acionabilidade):** Mensagens que apenas descrevem o que aconteceu
+sem orientar o usuário sobre o que fazer são ❌. Exemplo de mensagem NÃO acionável:
+"Arquivo de estado corrompido. Recuperando backup..." — diz o que aconteceu e o que o sistema fez,
+mas não diz se o usuário precisa agir, verificar algo, ou reexecutar. Exemplo de mensagem acionável:
+"Falha ao salvar configuração: permissão negada. Verifique as permissões do diretório e tente novamente."
 
 **Registrar:** ✅ / ⚠️ / ❌ para cada sub-item
 
@@ -548,6 +597,13 @@ Ordem de correção (sequencial — cada passo depende do anterior):
 ---
 
 ## Phase 5 — RED Phase (Testes que expõem gaps)
+
+> ⚠️ **Limite de fronteira Phase 4→5:** Phase 5 **pode modificar arquivos de TESTE** (criar ou editar `*.test.ts`, `*.property.test.ts`, `*.integration.test.ts`).
+> **Arquivos de SOURCE** (`${SOURCE}`, mais qualquer arquivo em `src/`, `shared/`, `scripts/`) **NÃO podem ser modificados** em Phase 5.
+> A correção de código-fonte (SOURCE) ocorre exclusivamente em **Phase 6**.
+>
+> **Razão:** respeitar RED-GREEN-REFACTOR: o teste deve falhar (RED) contra o código atual antes de qualquer correção.
+> Corrigir SOURCE antes de verificar RED viola a ordem e mascara se o teste realmente expõe o bug.
 
 ### 5.1 — Para cada gap de T12 (cobertura)
 
@@ -680,9 +736,26 @@ Correções de código (Phase 6) podem tornar `docs/*.md` obsoletos ou inconsist
 
 ---
 
-## Phase 8 — Refatoração
+## Phase 8 — Refatoração (Decisão)
 
-### 8.1 — Aplicar refatorações seguras
+### 8.0 — Gate de decisão
+
+Antes de refatorar, o auditor DEVE responder explicitamente:
+
+| Condição                                                | Ação                                                           |
+| ------------------------------------------------------- | -------------------------------------------------------------- |
+| Duplicação estrutural (D3.4 > 0)                        | 🔴 **Obrigatório refatorar**                                   |
+| Nomes confusos/enganosos                                | 🔴 **Obrigatório refatorar**                                   |
+| Complexidade ciclomática > 5 (inspecionar manualmente)  | 🔴 **Obrigatório refatorar**                                   |
+| Funções impuras misturadas com I/O sem extração (D3/D4) | 🟡 **Recomendado refatorar**                                   |
+| Nenhuma das condições acima                             | 🟢 **Skip permitido** — registrar "Sem refatoração necessária" |
+
+**Se decisão for SKIP (🟢):**
+
+- Registrar em PROGRESS.md: `**Refatoração:** Nenhuma necessária.`
+- Pular para Phase 9.
+
+### 8.1 — Aplicar refatorações seguras (se decisão for REFATORAR)
 
 Após testes verdes + consumidores intactos, refatorar:
 
@@ -738,6 +811,27 @@ Após testes verdes + consumidores intactos, refatorar:
     npx tsc --noEmit && npm run lint && npx vitest run ${FEATURE} --reporter=verbose
     ```
 - **Critério:** todos os 3 passam
+
+### 9.4 — Git diff audit
+
+**Obrigatório — verificar que apenas arquivos intencionados foram alterados.**
+
+- **Comandos:**
+
+    ```
+    git diff --stat
+    git diff HEAD
+    ```
+
+- **Verificar:**
+    1. ✅ Todos os arquivos no diff são esperados para esta FT
+    2. ✅ Nenhum arquivo de config, CI, ou proteção foi alterado acidentalmente
+    3. ✅ Nenhum arquivo fora do escopo da FT (ex: outra feature, infra, docs não relacionados) aparece
+    4. ✅ Mudanças em cada arquivo correspondem exatamente ao que foi planejado nas fases 5-7
+
+- **Se arquivo inesperado aparecer:** reverter mudança no arquivo, investigar causa raiz, refazer fase relevante.
+- **Se diff contiver lixo (comentários de debug, console.log, espaços em branco):** corrigir antes de avançar.
+- **Critério:** diff limpo e intencional. Zero arquivos acidentais.
 
 ---
 

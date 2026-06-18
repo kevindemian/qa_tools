@@ -15,6 +15,7 @@ import fs from 'node:fs';
 import os from 'node:os';
 import path from 'node:path';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
+import { rootLogger } from '../../logger.js';
 import { createFeaturesJsonFixture } from './integration-helpers.js';
 
 let TEST_DIR: string;
@@ -30,8 +31,8 @@ describe('Integration: Feature Config', () => {
     afterEach(() => {
         try {
             fs.rmSync(TEST_DIR, { recursive: true, force: true });
-        } catch {
-            /* best effort */
+        } catch (err) {
+            rootLogger.warn('Cleanup failed for test dir: ' + String(err));
         }
     });
 
@@ -176,11 +177,11 @@ describe('Integration: Feature Config', () => {
             expect(resolvePublishTarget('test-project')).toBe('github-actions');
         });
 
-        it('falls back to github-actions for disabled gitlab project without hint', async () => {
+        it('falls back to gitlab-ci for disabled gitlab project using stored gitProvider', async () => {
             const { saveFeatureConfig, resolvePublishTarget } = await import('../../feature-config.js');
             saveFeatureConfig(createFeaturesJsonFixture());
-            // When project is disabled and no explicit gitProvider hint, falls back to github-actions
-            expect(resolvePublishTarget('gitlab-project')).toBe('github-actions');
+            // When project is disabled, derive from the project's stored gitProvider
+            expect(resolvePublishTarget('gitlab-project')).toBe('gitlab-ci');
         });
 
         it('falls back to github-actions for unknown project', async () => {

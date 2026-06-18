@@ -10,6 +10,7 @@ import fs from 'node:fs';
 import os from 'node:os';
 import path from 'node:path';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
+import { rootLogger } from '../logger.js';
 
 /** Temporary directory for test isolation — prevents real project file mutation. */
 let TEST_DIR: string;
@@ -54,11 +55,10 @@ describe('feature-config', () => {
     });
 
     afterEach(() => {
-        // Clean up temporary directory — no real project files are affected
         try {
             fs.rmSync(TEST_DIR, { recursive: true, force: true });
-        } catch {
-            /* best effort */
+        } catch (err) {
+            rootLogger.warn('Cleanup failed for test dir: ' + String(err));
         }
     });
 
