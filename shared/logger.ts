@@ -85,7 +85,7 @@ export class Logger {
                 const stat = fs.statSync(this._filePathCached);
                 this._bytesWritten = stat.size;
             } catch (err) {
-                if (!(err instanceof Error && 'code' in err && (err as NodeJS.ErrnoException)['code'] === 'ENOENT')) {
+                if (!(err instanceof Error && 'code' in err && err['code'] === 'ENOENT')) {
                     console.error(
                         `[logger] Falha ao verificar arquivo de log: ${err instanceof Error ? err.message : String(err)}. Verifique permissões e integridade do diretório.`,
                     );
