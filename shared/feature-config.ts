@@ -15,7 +15,10 @@ function ensureDir(): void {
     try {
         fs.mkdirSync(path.dirname(CONFIG_PATH), { recursive: true });
     } catch (err) {
-        rootLogger.warn('Failed to create config directory: ' + (err instanceof Error ? err.message : String(err)));
+        rootLogger.warn(
+            'Failed to create config directory. Check write permissions and disk space: ' +
+                (err instanceof Error ? err.message : String(err)),
+        );
         throw err;
     }
 }
@@ -30,12 +33,17 @@ export function loadFeatureConfig(): FeatureConfigStore {
         const parsed: unknown = JSON.parse(raw);
         const result = FeatureConfigStoreSchema.safeParse(parsed);
         if (!result.success) {
-            rootLogger.warn('Invalid features.json schema: ' + result.error.message);
+            rootLogger.warn(
+                'Invalid features.json schema. Fix the file to match the expected schema: ' + result.error.message,
+            );
             return {};
         }
         return result.data;
     } catch (err) {
-        rootLogger.warn('Failed to load features.json: ' + (err instanceof Error ? err.message : String(err)));
+        rootLogger.warn(
+            'Failed to load features.json. Verify the file exists and is readable: ' +
+                (err instanceof Error ? err.message : String(err)),
+        );
         return {};
     }
 }
@@ -46,7 +54,10 @@ export function saveFeatureConfig(store: FeatureConfigStore): void {
         ensureDir();
         fs.writeFileSync(CONFIG_PATH, JSON.stringify(store, null, 2) + '\n', 'utf8');
     } catch (err) {
-        rootLogger.warn('Failed to save features.json: ' + (err instanceof Error ? err.message : String(err)));
+        rootLogger.warn(
+            'Failed to save features.json. Check write permissions and disk space: ' +
+                (err instanceof Error ? err.message : String(err)),
+        );
         throw err;
     }
 }
