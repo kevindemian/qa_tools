@@ -130,7 +130,10 @@ export function loadMetrics(config?: Config, backend?: StoreBackend): MetricsSto
         const parsed: unknown = JSON.parse(raw.toString('utf8'));
         return MetricsStoreSchema.parse(parsed) as MetricsStore;
     } catch (err) {
-        rootLogger.warn('Failed to load metrics: ' + (err instanceof Error ? err.message : String(err)));
+        rootLogger.warn(
+            'Failed to load metrics. Verify the metrics file exists and is readable: ' +
+                (err instanceof Error ? err.message : String(err)),
+        );
         return { runs: [] };
     }
 }
@@ -141,7 +144,10 @@ export function saveMetrics(store: MetricsStore, config?: Config, backend?: Stor
         b.write(METRICS_FILE, Buffer.from(JSON.stringify(store, null, 2), 'utf8'));
         b.flush('qa-tools: update metrics run');
     } catch (err) {
-        rootLogger.error('Failed to save metrics: ' + (err instanceof Error ? err.message : String(err)));
+        rootLogger.error(
+            'Failed to save metrics. Check write permissions and disk space: ' +
+                (err instanceof Error ? err.message : String(err)),
+        );
     }
 }
 

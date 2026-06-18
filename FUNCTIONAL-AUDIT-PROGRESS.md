@@ -20,7 +20,7 @@
 
 | Ordem | ID    | Feature             | Audit T1-T20 | 7 Dimensões | Gaps | Testes | Status |
 | ----- | ----- | ------------------- | ------------ | ----------- | ---- | ------ | ------ |
-| P1    | FT-04 | Metrics             | ✅           | ✅          | 3    | 52     | ✅     |
+| P1    | FT-04 | Metrics             | ✅           | ✅          | 4    | 52     | ✅     |
 | P2    | FT-07 | Store               | ✅           | ✅          | 3    | 76     | ✅     |
 | 0.1   | FT-01 | Config Accessor     | ✅           | ✅          | 0    | —      | ✅     |
 | 0.2   | FT-02 | Feature Config      | ✅           | ✅          | 5    | 60     | ✅     |
@@ -271,7 +271,7 @@
 
 ---
 
-### FT-04 — Metrics (Concluído)
+### FT-04 — Metrics (Re-auditoria concluída)
 
 **Arquivos:** `shared/metrics.ts` (242L)
 **Testes:**
@@ -333,7 +333,7 @@
 | 3. Boas Práticas       | ✅     | SRP, StoreBackend abstraction, Config DI, imports de lib via deps.ts                             |
 | 4. Implementação Ótima | ✅     | 242L, código claro, early returns, sem loops desnecessários                                      |
 | 5. Métricas            | ⚠️     | G2 corrigido - calculateFlakyRate usava denominador errado (flaky/flaky = 100%)                  |
-| 6. UX                  | ✅     | Documentada em TECHDOC.md + consumida por health-score e pr-report                               |
+| 6. UX                  | ✅     | Mensagens corrigidas para incluir orientação de ação (permissões, leitura/escrita)               |
 | 7. Deep Test Audit     | ✅     | Ver detalhamento abaixo                                                                          |
 
 #### D7 - Deep Test Audit (detalhado)
@@ -357,13 +357,16 @@
 
 #### Gaps
 
-| ID  | Severidade | Descrição                                                               | Local               | Origem | Correção                                                                      |
-| --- | ---------- | ----------------------------------------------------------------------- | ------------------- | ------ | ----------------------------------------------------------------------------- |
-| G1  | Baixo      | Catch vazio no afterEach do integration test                            | integration test:43 | D7.9   | Substituído por catch(err) com rootLogger.warn                                |
-| G2  | Alto       | calculateFlakyRate usava denominador errado (flaky/flaky = 100% sempre) | metrics.ts:207-214  | D5     | Corrigido denominador para totalQualifying (todos testes que atingem minRuns) |
-| G3  | Baixo      | Type assertion (err as Error).message em saveMetrics                    | metrics.ts:144      | T14    | Substituído por err instanceof Error ? err.message : String(err)              |
+| ID  | Severidade | Descrição                                                                 | Local               | Origem | Correção                                                                      |
+| --- | ---------- | ------------------------------------------------------------------------- | ------------------- | ------ | ----------------------------------------------------------------------------- |
+| G1  | Baixo      | Catch vazio no afterEach do integration test                              | integration test:43 | D7.9   | Substituído por catch(err) com rootLogger.warn                                |
+| G2  | Alto       | calculateFlakyRate usava denominador errado (flaky/flaky = 100% sempre)   | metrics.ts:207-214  | D5     | Corrigido denominador para totalQualifying (todos testes que atingem minRuns) |
+| G3  | Baixo      | Type assertion (err as Error).message em saveMetrics                      | metrics.ts:144      | T14    | Substituído por err instanceof Error ? err.message : String(err)              |
+| G7  | Baixo      | Mensagens de erro não acionáveis — dizem o que falhou mas não o que fazer | metrics.ts:133,144  | D6     | Adicionada orientação de ação (verificar permissões, espaço em disco)         |
 
 <!-- CHECKPOINT: Phase 4 complete for FT-04 -->
+<!-- CHECKPOINT: Phase 5 complete for FT-04 (G7: UX content change, sem RED test) -->
+<!-- CHECKPOINT: Phase 6 complete for FT-04 -->
 
 #### Testes de Integração
 
@@ -381,14 +384,17 @@
 | PBT    | getTrends invariants                 | Window size, passRate [0,100], formula correctness, empty store          |
 
 <!-- CHECKPOINT: Phase 7 complete for FT-04 -->
+<!-- CHECKPOINT: Phase 8 complete for FT-04 (🟢 skip refactoring) -->
 
 #### Validação
 
 - ✅ `npx tsc --noEmit` — 0 erros
 - ✅ `npx vitest run metrics` — 52/52 passed
 - ✅ Consumidores — sem regressões
+- ✅ `npm run lint` — All quality checks passed
 
 <!-- CHECKPOINT: Phase 9 complete for FT-04 -->
+<!-- CHECKPOINT: Phase 10 complete for FT-04 -->
 
 ---
 
