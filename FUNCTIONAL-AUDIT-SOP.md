@@ -263,22 +263,55 @@ Regras:
 
 **Sub-categorias a verificar separadamente:**
 
+> **Escopo expandido (T14a a T14i):** todos os comandos devem ser executados contra
+> `${SOURCE}`, `${TEST_FILE_UNIT}`, `${TEST_FILE_INTEGRATION}` e `${TEST_FILE_PBT}`.
+> Suppressions em testes são tão graves quanto em código-fonte — mascarar tipos em testes
+> impede que o sistema de tipos detecte violações de contrato.
+> Se um arquivo não existir (ex: `${TEST_FILE_PBT}` vazio), pular.
+
 - **T14a — Type cast `as any` / `as unknown as`**
-  `grep -P 'as any|as unknown' ${SOURCE}`
+  `grep -P 'as any|as unknown' ${SOURCE} ${TEST_FILE_UNIT} ${TEST_FILE_INTEGRATION} ${TEST_FILE_PBT} 2>/dev/null`
 - **T14b — Non-null assertion `!` (pós-fixo)**
-  `grep -nP '[a-zA-Z0-9)\]>]\s*!\s*[);,}\]]' ${SOURCE}`
+  `grep -nP '[a-zA-Z0-9)\]>]\s*!\s*[);,}\]]' ${SOURCE} ${TEST_FILE_UNIT} ${TEST_FILE_INTEGRATION} ${TEST_FILE_PBT} 2>/dev/null`
   (apenas operador pós-fixo, não negação `if(!x)`)
 - **T14c — `@ts-ignore` / `@ts-expect-error`**
-  `grep -P '@ts-ignore|@ts-expect-error' ${SOURCE}`
+  `grep -P '@ts-ignore|@ts-expect-error' ${SOURCE} ${TEST_FILE_UNIT} ${TEST_FILE_INTEGRATION} ${TEST_FILE_PBT} 2>/dev/null`
 - **T14d — `eslint-disable`**
-  `grep -P 'eslint-disable' ${SOURCE}`
+  `grep -P 'eslint-disable' ${SOURCE} ${TEST_FILE_UNIT} ${TEST_FILE_INTEGRATION} ${TEST_FILE_PBT} 2>/dev/null`
 - **T14e — catch vazio**
-  `grep -A1P 'catch\s*\{' ${SOURCE} | grep -P '^\s*\}'`
+  `grep -A1P 'catch\s*\{' ${SOURCE} ${TEST_FILE_UNIT} ${TEST_FILE_INTEGRATION} ${TEST_FILE_PBT} 2>/dev/null | grep -P '^\s*\}'`
   (catch sem conteúdo)
 
 - **T14f — Type cast não-any com `as TypeName` em parsing/deserialização**
-  `grep -nP 'JSON\.parse\(.*\) as [A-Z]\w+|as (MetricsStore|Record<)' ${SOURCE}`
+  `grep -nP 'JSON\.parse\(.*\) as [A-Z]\w+|as (MetricsStore|Record<)' ${SOURCE} ${TEST_FILE_UNIT} ${TEST_FILE_INTEGRATION} ${TEST_FILE_PBT} 2>/dev/null`
   (casts de parsing que pulam validação de runtime — `JSON.parse(...) as MetricsStore` é gap mesmo sem `as any`)
+
+- **T14g — `as never` (bypass total do sistema de tipos)**
+  `grep -nP 'as never' ${SOURCE} ${TEST_FILE_UNIT} ${TEST_FILE_INTEGRATION} ${TEST_FILE_PBT} 2>/dev/null`
+
+    > **Justificativa:** `as never` é pior que `as any` — permite atribuir o valor a qualquer tipo
+    > sem nenhuma verificação. `as never` em mocks de teste indica que o mock não respeita o tipo real.
+    > Solução correta: criar objeto que satisfaça a interface esperada, ou usar `Partial<T>` se aplicável.
+
+- **T14h — `as string` / `as number` em valores nullable**
+  `grep -nP 'as (string|number|boolean)\b' ${SOURCE} ${TEST_FILE_UNIT} ${TEST_FILE_INTEGRATION} ${TEST_FILE_PBT} 2>/dev/null`
+
+    > **Justificativa:** `as string` em um `string | null` esconde o null — se o valor for null,
+    > o cast silencia o erro. A correção é usar narrowing (`if (x)`) ou `??` com fallback.
+    > **Exceção:** `global.as string` em `process.env` é aceitável pois o env var SEMPRE retorna string.
+    > Qualquer outra ocorrência é gap.
+
+- **T14i — `Object.entries()` em parâmetro tipado como `object`**
+  `grep -nP 'Object\.entries\(' ${SOURCE} ${TEST_FILE_UNIT} ${TEST_FILE_INTEGRATION} ${TEST_FILE_PBT} 2>/dev/null`
+    > **Justificativa:** `Object.entries(object)` retorna `[string, any][]` segundo a definição de tipo
+    > do TypeScript. O `any` no retorno propaga type-unsafety. A correção é usar um tipo indexado
+    > (`Record<string, T>` ou `{[key: string]: unknown}`) em vez de `object`, ou usar um helper
+    > tipado como `Object.entries(obj as Record<string, unknown>)` em contexto controlado (testes).
+    > **Verificação manual:** inspecionar cada match. Se o valor de retorno de `Object.entries` for
+    > usado apenas como `string` (ex: `for (const [key] of ...`), o `any` no value não é propagado e
+    > pode ser aceito. Se o `any` for propagado (ex: `val` usado em expressão tipada): ❌ gap.
+    > Bloqueios de `as Record<...>` em T14a não se aplicam aqui — o custo de tipar a variável fonte
+    > como indexada é aceitável.
     > **Justificativa:** `JSON.parse` retorna `unknown` ou `any`, e fazer cast direto para `MetricsStore` sem validação
     > (Zod, class-transformer, ou guard manual) é um bypass de type safety equivalente a `as any`.
     > A diferença é puramente estilística — ambos permitem que dados inválidos entrem no sistema sem checagem.
@@ -604,6 +637,57 @@ Ordem de correção (sequencial — cada passo depende do anterior):
 
 ---
 
+## Phase 4.5 — File-wide consistency enforcement
+
+> **Propósito:** Evitar que violações pré-existentes no mesmo arquivo passem despercebidas.
+> Um gap no diff nunca é um problema isolado — o mesmo padrão pode existir no restante do arquivo.
+> Ignorar violações existentes porque "não estão no diff" é aceitar dívida técnica deliberadamente.
+
+### 4.5.1 — Identificar categoria do gap
+
+Para cada gap registrado em Phase 4, identificar sua **categoria**:
+
+| Categoria         | Exemplos de gap                               |
+| ----------------- | --------------------------------------------- |
+| **Cast**          | `as X`, `!`, `@ts-ignore`, `@ts-expect-error` |
+| **DepWall**       | Import direto de lib externa                  |
+| **ErrorHandling** | catch vazio, `(err as Error).message`         |
+| **UX**            | Mensagem não acionável                        |
+| **TestIsolation** | Estado compartilhado, falta de cleanup        |
+| **TestCoverage**  | PBT ausente, teste faltando                   |
+| **TypeSafety**    | `Object.entries()` em `object` retorna `any`  |
+
+### 4.5.2 — Varrer arquivo completo
+
+Para cada arquivo que contém gap(s) registrados:
+
+- **Comando:** `find . -path './${FILE_PATH}' -exec cat {} \;` (ler o arquivo completo)
+- **Ação:** para CADA ocorrência da MESMA categoria no arquivo (não apenas no diff):
+    1. Se for nova ocorrência (fora do diff original): **registrar como gap adicional** na tabela de gaps
+    2. A correção do gap adicional ocorre junto com os gaps originais (Phase 6)
+- **Critério:** zero ocorrências residuais da categoria no arquivo após correção
+
+### 4.5.3 — Escopo expandido para teste e fonte
+
+A varredura aplica-se a **arquivos de código-fonte E de teste** sem distinção.
+
+Se o arquivo `logger.test.ts` tem 6 `as {...}` casts em testes existentes e o gap original é "Cast em logger.ts":
+
+- A varredura encontra os 6 casts em `logger.test.ts`
+- Cada um é registrado como gap adicional
+- Todos são corrigidos em Phase 6
+
+### 4.5.4 — Verificação
+
+Após corrigir todos os gaps (adicionais + originais):
+
+- Rodar `git diff --stat` e verificar que o diff cobre todas as ocorrências identificadas
+- Se alguma ocorrência conhecida não aparecer no diff: **não foi corrigida. PARAR.**
+
+**Invariante:** nenhuma violação da categoria pode permanecer no arquivo após a correção, independente de ser pré-existente ou introduzida.
+
+---
+
 ## Phase 5 — RED Phase (Testes que expõem gaps)
 
 > ⚠️ **Limite de fronteira Phase 4→5:** Phase 5 **pode modificar arquivos de TESTE** (criar ou editar `*.test.ts`, `*.property.test.ts`, `*.integration.test.ts`).
@@ -798,6 +882,49 @@ Após testes verdes + consumidores intactos, refatorar:
 
 ---
 
+## Phase 8.5 — Author self-review
+
+> **Propósito:** O autor deve ler criticamente o próprio diff antes de commitar,
+> para detectar violações que passariam despercebidas na automação.
+> Nenhuma ferramenta substitui o julgamento humano sobre qualidade de código.
+
+### 8.5.1 — Ler diff completo
+
+- **Comando:** `git diff HEAD -- ${SOURCE} ${TEST_FILES} 2>/dev/null || git diff --cached -- ${SOURCE} ${TEST_FILES}`
+- **Ação:** ler o diff completo, linha por linha. Especial atenção para:
+    - Linhas que não foram alteradas mas estão no mesmo contexto do gap
+    - Padrões que a Phase 4.5 deveria ter pego mas pode ter perdido
+
+### 8.5.2 — Responder a 4 perguntas
+
+O autor DEVE responder explicitamente (registrar no PROGRESS.md):
+
+| #   | Pergunta                                                       | Critério                              |
+| --- | -------------------------------------------------------------- | ------------------------------------- |
+| 1   | Alguma violação de tipo/cast/assert foi introduzida?           | Se sim: PARAR e corrigir              |
+| 2   | Alguma violação pré-existente no mesmo arquivo foi ignorada?   | Se sim: retornar à Phase 4.5          |
+| 3   | O código resolve a causa raiz do defeito, ou apenas o sintoma? | Se apenas sintoma: PARAR e reanalisar |
+| 4   | Alguma mensagem de erro não é acionável para o usuário?        | Se sim: corrigir                      |
+
+### 8.5.3 — Registrar autoavaliação
+
+- Escrever no PROGRESS.md como:
+
+```
+#### Autoavaliação (Phase 8.5)
+
+- Q1 (violação introduzida): ❌ NÃO
+- Q2 (violação pré-existente ignorada): ❌ NÃO
+- Q3 (causa raiz vs sintoma): ✅ Causa raiz
+- Q4 (mensagens acionáveis): ✅ Sim
+```
+
+### 8.5.4 — Se qualquer resposta for diferente do esperado
+
+**PARAR.** Corrigir antes de prosseguir para Phase 9.
+
+---
+
 ## Phase 9 — Validação Final
 
 ### 9.1 — TypeScript
@@ -858,7 +985,7 @@ Atualizar na entrada da feature:
 7. **Testes de integração:** tabela com sub-testes criados
 8. **Validação:** resultados de tsc + vitest + lint
 9. **docs/ atualizados:** se Phase 7.3 identificou gaps de documentação, aplicar correções nos arquivos docs/\*.md e registrar diff
-10. **Marcador de conclusão:** `✅ FT-${ID} completo`
+10. **Marcador de conclusão:** `🔜 FT-${ID} aguardando Quality Gate` (o marcador final `✅ FT-${ID} completo` só é escrito após aprovação na Phase 11)
 
 ### 10.2 — Atualizar "Próximo"
 
@@ -868,6 +995,144 @@ Atualizar na entrada da feature:
     ```
 - Se houver próximo: escrever `## Próximo: FT-${NEXT} a FT-${LAST} (still pending)` no final
 - Se esta for a última feature: escrever `## Todas as features auditadas. ✅`
+
+---
+
+## Phase 11 — Final Quality Gate
+
+> **Propósito:** Após todas as correções, validações e registros, a Phase 11 é a **porta de saída absoluta**.
+> Nenhuma feature é considerada completa sem passar por esta avaliação holística.
+> Diferente das fases anteriores (que verificam corretude técnica), esta fase pergunta:
+> **"O código está BOM? Atende aos padrões arquiteturais e de qualidade do projeto?"**
+
+### 11.1 — Architecture compliance check
+
+| #   | Pergunta                                                                                           | Critério |
+| --- | -------------------------------------------------------------------------------------------------- | -------- |
+| A1  | O código segue SRP? Cada função/método tem uma responsabilidade única?                             | ✅ / ❌  |
+| A2  | O código segue DIP? Dependências de bibliotecas externas passam pelo DepWall (`shared/deps.ts`)?   | ✅ / ❌  |
+| A3  | Separação de camadas está preservada? (não há lógica de domínio misturada com I/O no mesmo método) | ✅ / ❌  |
+| A4  | Não há duplicação estrutural com outro módulo?                                                     | ✅ / ❌  |
+
+**Comando:** `grep -nP "^import .* from '" ${SOURCE} | grep -vP "\.js|\.json" | grep -v "shared/deps"` — verificar DepWall
+
+**Se qualquer A ❌:** PARAR. Feature não está completa.
+
+### 11.2 — Security review
+
+| #   | Pergunta                                                                                                           | Critério |
+| --- | ------------------------------------------------------------------------------------------------------------------ | -------- |
+| S1  | Nenhum caminho de arquivo é construído por concatenação de string sem validação? (path traversal)                  | ✅ / ❌  |
+| S2  | Nenhum `eval()`, `Function()`, ou `setTimeout(string)` está presente?                                              | ✅ / ❌  |
+| S3  | Dados de entrada do usuário são validados antes de uso em I/O, HTTP, ou shell?                                     | ✅ / ❌  |
+| S4  | Nenhuma chave/segredo/token está hardcoded no código?                                                              | ✅ / ❌  |
+| S5  | Nenhum `__proto__`, `constructor`, ou `prototype` é usado como chave de objeto sem proteção? (prototype pollution) | ✅ / ❌  |
+
+**Comandos:**
+
+```
+grep -nP '(eval|Function\s*\()' ${SOURCE}
+grep -nP '(path\.join|path\.resolve).*\+' ${SOURCE}
+grep -nP '"__proto__"|"constructor"|"prototype"' ${SOURCE}
+```
+
+**Se qualquer S ❌:** PARAR. Feature não está completa.
+
+### 11.3 — Error handling audit
+
+| #   | Pergunta                                                                            | Critério |
+| --- | ----------------------------------------------------------------------------------- | -------- |
+| E1  | Toda operação de I/O (fs, rede, git) está dentro de try/catch?                      | ✅ / ❌  |
+| E2  | Todo catch trata ou loga o erro? (nenhum catch vazio ou sem log)                    | ✅ / ❌  |
+| E3  | Nenhum erro é propagado como string (`throw "erro"`) em vez de `throw new Error()`? | ✅ / ❌  |
+| E4  | Mensagens de erro são acionáveis (dizem o que fazer)?                               | ✅ / ❌  |
+| E5  | Nenhum error handler chama de volta o próprio serviço (risco de recursão infinita)? | ✅ / ❌  |
+
+**Comandos:**
+
+```
+grep -A1P 'catch\s*\{' ${SOURCE}
+grep -nP 'throw\s+"' ${SOURCE}
+grep -nP 'rootLogger\.(debug|info|warn|error)' ${SOURCE} | grep -v '//.*test'
+```
+
+**Se qualquer E ❌:** PARAR. Feature não está completa.
+
+### 11.4 — Type safety audit
+
+| #   | Pergunta                                                               | Critério |
+| --- | ---------------------------------------------------------------------- | -------- |
+| T1  | Zero `as` casts em código-fonte (source)?                              | ✅ / ❌  |
+| T2  | Zero `as` casts em testes?                                             | ✅ / ❌  |
+| T3  | Zero `!` non-null assertions em código-fonte?                          | ✅ / ❌  |
+| T4  | Zero `@ts-ignore` / `@ts-expect-error`?                                | ✅ / ❌  |
+| T5  | Zero `eslint-disable` / `noqa`?                                        | ✅ / ❌  |
+| T6  | Zero `Object.entries()` em parâmetro `object` com propagação de `any`? | ✅ / ❌  |
+
+**Comandos:**
+
+```
+grep -nP 'as (any|never|string|number|boolean|Record|unknown)' ${SOURCE} ${TEST_FILE_UNIT} ${TEST_FILE_INTEGRATION} ${TEST_FILE_PBT} 2>/dev/null
+grep -nP '@ts-(ignore|expect-error)' ${SOURCE} ${TEST_FILE_UNIT} ${TEST_FILE_INTEGRATION} ${TEST_FILE_PBT} 2>/dev/null
+grep -nP 'eslint-disable' ${SOURCE} ${TEST_FILE_UNIT} ${TEST_FILE_INTEGRATION} ${TEST_FILE_PBT} 2>/dev/null
+```
+
+**Se qualquer T ❌:** PARAR. Feature não está completa.
+
+### 11.5 — Maintainability check
+
+| #   | Pergunta                                                                                | Critério |
+| --- | --------------------------------------------------------------------------------------- | -------- |
+| M1  | Nomes de funções, variáveis e classes revelam intenção? (sem `fn`, `temp`, `data`, `x`) | ✅ / ❌  |
+| M2  | Não há constantes mágicas (números/strings soltos sem nome)?                            | ✅ / ❌  |
+| M3  | Código comentado ou dead code está ausente?                                             | ✅ / ❌  |
+| M4  | Complexidade ciclomática é aceitável? (métodos < 30 linhas idealmente)                  | ✅ / ❌  |
+
+**Comandos:**
+
+```
+grep -nP '=\s*[0-9]{1,2}\s*[;,]' ${SOURCE} | grep -vP 'index|length|size|count|offset|limit|timeout|port|max|min|threshold|version|status|code|level|id|num|total|default|type|retry|attempt|seq|page|step|delay|interval|retries|chunk|batch|workers'
+grep -nP '//.*$' ${SOURCE} | grep -vP '(eslint|istanbul|prettier|@ts-)' | head -5
+```
+
+**Se M1 ou M3 ❌:** PARAR. Feature não está completa.
+**Se M2 ou M4 ❌:** ⚠️ Registrar como gap técnico.
+
+### 11.6 — System consistency check
+
+| #   | Pergunta                                                                                                          | Critério |
+| --- | ----------------------------------------------------------------------------------------------------------------- | -------- |
+| C1  | Todos os consumidores identificados em Phase 1 continuam funcionando?                                             | ✅ / ❌  |
+| C2  | Contratos públicos (exports, tipos, assinaturas) estão preservados (a menos que alteração tenha sido autorizada)? | ✅ / ❌  |
+| C3  | Nenhum arquivo fora do escopo da FT foi alterado acidentalmente?                                                  | ✅ / ❌  |
+| C4  | Equivalência comportamental: se a correção mudou comportamento, a mudança foi autorizada?                         | ✅ / N/A |
+
+**Comando:** `git diff --stat` — verificar que apenas arquivos esperados foram alterados.
+
+**Se qualquer C ❌:** PARAR. Feature não está completa.
+
+### 11.7 — Registro da avaliação
+
+Após responder a todas as perguntas, registrar no PROGRESS.md:
+
+```markdown
+#### Final Quality Gate (Phase 11)
+
+| Categoria               | Status  |
+| ----------------------- | ------- |
+| A1-A4 (Architecture)    | ✅ / ❌ |
+| S1-S5 (Security)        | ✅ / ❌ |
+| E1-E5 (Error handling)  | ✅ / ❌ |
+| T1-T6 (Type safety)     | ✅ / ❌ |
+| M1-M4 (Maintainability) | ✅ / ❌ |
+| C1-C4 (Consistency)     | ✅ / ❌ |
+
+**Resultado:** ✅ APROVADO / ❌ REPROVADO
+```
+
+**Se REPROVADO:** a feature retorna à fase de correção (Phase 5) para os gaps identificados.
+
+**Se APROVADO:** a feature está oficialmente completa. O marcador `✅ FT-${ID} completo` no PROGRESS.md (Phase 10.1 item 10) só pode ser escrito APÓS a aprovação na Phase 11.
 
 ---
 

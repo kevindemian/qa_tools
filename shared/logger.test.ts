@@ -283,18 +283,16 @@ describe('Logger', () => {
 
     describe('maskDeep', () => {
         it('masks values for keys matching token/secret/key', () => {
-            const input = { token: 'abcdefghij', name: 'public', secret: 'my-secret-value!' };
-            const result = maskDeep(input) as { token: string; name: string; secret: string };
-            expect(result.token).toBe('abcd****');
-            expect(result.name).toBe('public');
-            expect(result.secret).toBe('my-s****');
+            const result = maskDeep({ token: 'abcdefghij', name: 'public', secret: 'my-secret-value!' });
+            expect(JSON.stringify(result)).toBe(
+                JSON.stringify({ token: 'abcd****', name: 'public', secret: 'my-s****' }),
+            );
         });
 
         it('does not mutate the original object', () => {
             const input = { token: 'abcdefghij' };
-            const result = maskDeep(input) as { token: string };
-            expect(input.token).toBe('abcdefghij');
-            expect(result.token).toBe('abcd****');
+            expect(JSON.stringify(maskDeep(input))).toBe(JSON.stringify({ token: 'abcd****' }));
+            expect(JSON.stringify(input)).toBe(JSON.stringify({ token: 'abcdefghij' }));
         });
 
         it('handles null/undefined gracefully', () => {
@@ -309,26 +307,22 @@ describe('Logger', () => {
 
         it('recursively masks nested arrays', () => {
             const input = { items: [{ token: 'abcdefghij' }, { name: 'public' }] };
-            const result = maskDeep(input) as { items: Array<{ token: string; name: string }> };
-            expect(nonNull(result.items[0]).token).toBe('abcd****');
-            expect(nonNull(result.items[1]).name).toBe('public');
+            const expected = { items: [{ token: 'abcd****' }, { name: 'public' }] };
+            expect(JSON.stringify(maskDeep(input))).toBe(JSON.stringify(expected));
         });
 
         it('masks keys matching password/authorization patterns', () => {
             const input = { password: 'supersecret!', authorization: 'Bearer tok12345' };
-            const result = maskDeep(input) as { password: string; authorization: string };
-            expect(result.password).toBe('supe****');
-            expect(result.authorization).toBe('Bear****');
+            const expected = { password: 'supe****', authorization: 'Bear****' };
+            expect(JSON.stringify(maskDeep(input))).toBe(JSON.stringify(expected));
         });
 
         it('maskValue with non-string value does not mask', () => {
-            const result = maskDeep({ secret: 123 }) as { [key: string]: unknown };
-            expect(result['secret']).toBe(123);
+            expect(JSON.stringify(maskDeep({ secret: 123 }))).toBe(JSON.stringify({ secret: 123 }));
         });
 
         it('maskValue with short string (≤8 chars) returns ****', () => {
-            const result = maskDeep({ secret: 'ab' }) as { [key: string]: unknown };
-            expect(result['secret']).toBe('****');
+            expect(JSON.stringify(maskDeep({ secret: 'ab' }))).toBe(JSON.stringify({ secret: '****' }));
         });
     });
 
@@ -346,7 +340,7 @@ describe('Logger', () => {
             const logger = new Logger();
             const bigData = { big: 'x'.repeat(200) };
             logger._writeConsole('ERROR', 'fail', bigData);
-            const text = nonNull(spyError.mock.calls[0])[0] as string;
+            const text = String(nonNull(spyError.mock.calls[0])[0]);
             expect(text.length).toBeLessThan(400);
             spyError.mockRestore();
         });
@@ -493,9 +487,13 @@ describe('maskDeep (PBT)', () => {
     it('sensitive keys in arrays are masked', () => {
         fc.assert(
             fc.property(
-                fc.array(fc.dictionary(fc.constantFrom('token', 'name'), fc.string({ minLength: 9 }), { maxKeys: 2 }), {
-                    maxLength: 3,
-                }),
+                fc.array(
+                    fc.record({
+                        token: fc.string({ minLength: 9 }),
+                        extra: fc.option(fc.constantFrom('name', 'status'), { nil: undefined }),
+                    }),
+                    { minLength: 1, maxLength: 3 },
+                ),
                 (input) => {
                     const result = maskDeep(input);
                     return Array.isArray(result) && JSON.stringify(result).includes('****');
