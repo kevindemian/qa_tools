@@ -602,4 +602,57 @@ Every defect caused by speed requires:
 
 Cost: always greater than doing it right once.
 
-**Correct first. Speed follows. Never the opposite.**
+\*\*Correct first. Speed follows. Never the opposite.
+
+---
+
+## 22. SOP PROTOCOL ENFORCEMENT
+
+The following rules bind this agent and any subagent or assistant executing FUNCTIONAL-AUDIT-SOP.
+
+### 22.1 Command Header Requirement
+
+Before executing any command prescribed by SOP, the agent MUST display the exact SOP block text as a header, followed by the command and its output. Format:
+
+```
+[SOP <section>]
+Comando exato: <literal command from SOP>
+Resultado:
+<output>
+Status: ✅ / ❌ / ⚠️ / N/A
+```
+
+If a command is executed without this header → **violation, session invalid**.
+
+### 22.2 Sequential Phase Execution
+
+- Within a Phase, parallel execution is allowed (independent commands may run concurrently).
+- Between Phases, execution is **strictly sequential**.
+- A Phase is not complete until its checkpoint (`<!-- CHECKPOINT: Phase N complete -->`) is written to PROGRESS.md.
+- Cycle: Phase N → checkpoint N → Phase N+1 → checkpoint N+1
+- If a checkpoint is missing → Phase is not considered complete. Resume from the last checkpoint.
+
+### 22.3 No Silent Optimization
+
+Prohibited without exception:
+
+- Replacing a SOP command with a "equivalent" command not listed in SOP
+- Skipping a command because "the result is obvious"
+- Combining multiple SOP steps into one consolidated action
+- Executing SOP steps from memory instead of reading and following the literal text
+
+Each SOP command must be executed **exactly as written**. If the command would fail (e.g., file path mismatch), the agent must STOP and report, not adapt.
+
+### 22.4 Violation = Session Invalid
+
+Any violation of 22.1, 22.2, or 22.3 renders the entire session invalid. The agent must:
+
+1. STOP immediately
+2. Report which violation occurred
+3. Await explicit user instruction before resuming
+
+No continuation, partial acceptance, or "let's proceed anyway" is permitted.
+
+### 22.5 Audit Trail in Output
+
+Each Phase result must be recorded in FUNCTIONAL-AUDIT-PROGRESS.md before the next Phase begins. The agent's output must contain the Phase header, each command result, and the final status for each item, so the user can verify compliance without reading files.\*\*
