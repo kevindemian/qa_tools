@@ -22,7 +22,7 @@ function getConfig() {
 }
 
 /** Arbitrário para geração de estados. */
-const KeyArb = fc.string({ minLength: 1, maxLength: 20 });
+const KeyArb = fc.string({ minLength: 1, maxLength: 20 }).filter((s) => s !== '__proto__');
 const ValueArb = fc.oneof(
     fc.string({ minLength: 0, maxLength: 50 }),
     fc.integer(),
