@@ -445,12 +445,12 @@ describe('generatePrReport', () => {
         delete process.env['GITHUB_STEP_SUMMARY'];
 
         try {
-            await generatePrReport({
+            const result = await generatePrReport({
                 tests: [sampleTest],
                 stats: defaultStats,
             });
 
-            expect(true).toBe(true);
+            expect(result.healthScore).toBeDefined();
         } finally {
             if (original) process.env['GITHUB_STEP_SUMMARY'] = original;
         }

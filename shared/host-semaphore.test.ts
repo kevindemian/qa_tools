@@ -61,8 +61,7 @@ describe('HostSemaphore', () => {
 
     it('rateLimitWait returns immediately when no releases recorded', async () => {
         const sem = new HostSemaphore(1);
-        await sem.acquire('fresh-host');
-        expect(true).toBe(true);
+        await expect(sem.acquire('fresh-host')).resolves.toBeUndefined();
     });
 
     it('rateLimitWait delays when releases are recent', async () => {

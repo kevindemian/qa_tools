@@ -247,6 +247,48 @@ describe('calculateFlakiness', () => {
 
         expect(calculateFlakiness(store, 2)).toEqual([]);
     });
+
+    it('computes flakiness rate excluding skipped runs (D8-01)', () => {
+        const store: MetricsStore = {
+            runs: [
+                {
+                    timestamp: '2026-01-01T00:00:00.000Z',
+                    project: 'p',
+                    total: 3,
+                    passed: 0,
+                    failed: 1,
+                    skipped: 2,
+                    duration: 0,
+                    tests: [{ title: 'FlakySkip', state: 'failed', duration: 100 }],
+                },
+                {
+                    timestamp: '2026-01-02T00:00:00.000Z',
+                    project: 'p',
+                    total: 3,
+                    passed: 1,
+                    failed: 0,
+                    skipped: 2,
+                    duration: 0,
+                    tests: [{ title: 'FlakySkip', state: 'passed', duration: 100 }],
+                },
+                {
+                    timestamp: '2026-01-03T00:00:00.000Z',
+                    project: 'p',
+                    total: 3,
+                    passed: 0,
+                    failed: 0,
+                    skipped: 3,
+                    duration: 0,
+                    tests: [{ title: 'FlakySkip', state: 'skipped', duration: 0 }],
+                },
+            ],
+        };
+
+        const flaky = calculateFlakiness(store);
+        expect(flaky).toHaveLength(1);
+        expect(nonNull(flaky[0]).title).toBe('FlakySkip');
+        expect(nonNull(flaky[0]).rate).toBe(0.5);
+    });
 });
 
 describe('saveCoverageSnapshot', () => {

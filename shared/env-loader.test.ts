@@ -8,8 +8,7 @@ describe('env-loader — dotenv wrapper', () => {
     describe('ensureDotenv', () => {
         it('is idempotent', () => {
             ensureDotenv();
-            ensureDotenv(); // should not throw
-            expect(true).toBe(true);
+            expect(() => ensureDotenv()).not.toThrow();
         });
     });
 
@@ -75,9 +74,7 @@ describe('env-loader — dotenv wrapper', () => {
         it('resets the loaded flag', () => {
             ensureDotenv();
             __resetDotenvLoaded();
-            // Should not throw after reset
-            ensureDotenv();
-            expect(true).toBe(true);
+            expect(() => ensureDotenv()).not.toThrow();
         });
     });
 });
