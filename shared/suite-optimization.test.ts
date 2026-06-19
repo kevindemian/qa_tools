@@ -136,8 +136,7 @@ describe('analyzeSuiteOptimization', () => {
             { title: 'c', duration: 8, flakiness: 0.05 },
             { title: 'd', duration: 6, flakiness: 0 },
         ]);
-        const expected = 16 - 5 + (11 - 5) + (8 - 5) + (6 - 5);
-        expect(result.potentialSavings).toBe(expected);
+        expect(result.potentialSavings).toBe(21);
     });
 
     it('returns zero potential savings when all tests are none', () => {

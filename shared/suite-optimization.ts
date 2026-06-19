@@ -6,12 +6,13 @@
  */
 
 import { sanitizeHtml } from './escape.js';
-import { buildHtmlPage } from './html-factory.js';
+import { buildHtmlPage, buildErrorPage } from './html-factory.js';
 import { Container, Section } from './primitives/layout.js';
 import { MetricCard, MetricGrid } from './primitives/card.js';
 import { Badge, SeverityBadge } from './primitives/badge.js';
 import { DataTable, type TableColumn, type TableRow } from './primitives/table.js';
 import { buildCss } from './report-styles.js';
+import { rootLogger } from './logger.js';
 
 export type OptimizationAction = 'parallelize' | 'quarantine' | 'speed_up' | 'split' | 'remove_wait' | 'none';
 
@@ -40,6 +41,10 @@ function toFinite(value: unknown, fallback: number): number {
 
 const DEFAULT_SLOW_THRESHOLD = 5;
 const DEFAULT_FLAKY_THRESHOLD = 0.3;
+const SPLIT_MULTIPLIER = 3;
+const PARALLELIZE_MULTIPLIER = 2;
+const REMOVE_WAIT_MULTIPLIER = 1.5;
+const REMOVE_WAIT_FLAKINESS_CAP = 0.1;
 
 export function analyzeSuiteOptimization(
     tests: Array<{ title: string; duration: number; flakiness: number }>,
@@ -64,13 +69,13 @@ export function analyzeSuiteOptimization(
         if (flakiness > safeFlaky) {
             action = 'quarantine';
             reason = `Flakiness ${(flakiness * 100).toFixed(0)}% exceeds threshold of ${(safeFlaky * 100).toFixed(0)}%`;
-        } else if (duration > safeSlow * 3) {
+        } else if (duration > safeSlow * SPLIT_MULTIPLIER) {
             action = 'split';
             reason = `Duration ${duration.toFixed(1)}s is ${(duration / safeSlow).toFixed(1)}x over ${safeSlow}s threshold — consider splitting`;
-        } else if (duration > safeSlow * 2) {
+        } else if (duration > safeSlow * PARALLELIZE_MULTIPLIER) {
             action = 'parallelize';
             reason = `Duration ${duration.toFixed(1)}s is ${(duration / safeSlow).toFixed(1)}x over ${safeSlow}s threshold — candidate for parallel execution`;
-        } else if (duration > safeSlow * 1.5 && flakiness < 0.1) {
+        } else if (duration > safeSlow * REMOVE_WAIT_MULTIPLIER && flakiness < REMOVE_WAIT_FLAKINESS_CAP) {
             action = 'remove_wait';
             reason = `Duration ${duration.toFixed(1)}s is ${(duration / safeSlow).toFixed(1)}x over ${safeSlow}s threshold with low flakiness — likely unnecessary waits`;
         } else if (duration > safeSlow) {
@@ -82,7 +87,11 @@ export function analyzeSuiteOptimization(
         }
 
         const impact: 'high' | 'medium' | 'low' =
-            duration > safeSlow * 3 || flakiness > safeFlaky ? 'high' : duration > safeSlow ? 'medium' : 'low';
+            duration > safeSlow * SPLIT_MULTIPLIER || flakiness > safeFlaky
+                ? 'high'
+                : duration > safeSlow
+                  ? 'medium'
+                  : 'low';
 
         if (action !== 'none') {
             potentialSavings += Math.max(0, duration - safeSlow);
@@ -191,9 +200,22 @@ export function generateOptimizationHtml(result: OptimizationResult, title?: str
         }),
     });
 
-    return buildHtmlPage({
-        title: pageTitle,
-        styles,
-        bodyContent,
-    });
+    try {
+        return buildHtmlPage({
+            title: pageTitle,
+            styles,
+            bodyContent,
+        });
+    } catch (err) {
+        const msg = err instanceof Error ? err.message : String(err);
+        rootLogger.error(
+            'Failed to generate optimization HTML: ' +
+                msg +
+                '. Verify that all dependencies (html-factory, report-styles, layout) and input data are valid.',
+        );
+        return buildErrorPage(
+            'Error generating optimization report',
+            'Failed to generate the optimization report. Verify that all dependencies (html-factory, report-styles, layout primitives) are available and the input data is valid.',
+        );
+    }
 }

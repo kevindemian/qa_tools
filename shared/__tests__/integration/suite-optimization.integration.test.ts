@@ -55,4 +55,19 @@ describe('Integration: Suite Optimization (FT-26)', () => {
             expect(html).not.toContain('Suite Optimization Report');
         });
     });
+
+    describe('FT-26b: error fallback', () => {
+        it('returns error page when buildHtmlPage throws', async () => {
+            const { analyzeSuiteOptimization, generateOptimizationHtml } = await import('../../suite-optimization.js');
+            const htmlFactory = await import('../../html-factory.js');
+            const spy = vi.spyOn(htmlFactory, 'buildHtmlPage').mockImplementation(() => {
+                throw new Error('mock crash');
+            });
+            const tests = [{ title: 't', duration: 10, flakiness: 0.05 }];
+            const result = analyzeSuiteOptimization(tests);
+            const html = generateOptimizationHtml(result);
+            expect(html).toContain('Error generating');
+            spy.mockRestore();
+        });
+    });
 });

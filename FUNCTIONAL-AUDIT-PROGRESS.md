@@ -947,3 +947,195 @@ Decisão arquitetural (solução tecnicamente superior): tipos ampliados em vez 
 | Consistency     | ✅     | checkpoints completos, 54/54 testes passam                                       |
 
 `<!-- CHECKPOINT: Phase 11 complete -->`
+
+## FT-26 — Suite Optimization
+
+**Inicio:** 2026-06-19 | **Grupo:** 2 (Relatorios HTML) | **Ordem:** 2.11
+
+**Metadados FT-26:**
+
+- FEATURE_NAME: suite-optimization
+- MODULE_NAME: suite-optimization
+- SOURCE: shared/suite-optimization.ts (199L)
+- TEST_FILE_UNIT: shared/suite-optimization.test.ts (344L)
+- TEST_FILE_INTEGRATION: shared/**tests**/integration/suite-optimization.integration.test.ts (58L)
+- TEST_FILE_PBT: shared/**tests**/suite-optimization.property.test.ts (182L)
+- CONSUMERS: git_triggers/schedule-handler.ts, git_triggers/interactive-mode.ts, scripts/quality-check.ts
+- DOCS: ❌ TECHDOC — pendente
+
+**Pre-scan source (Phase 0.1.1):**
+| # | Categoria | Local | Descrição |
+|---|-----------|-------|-----------|
+| 5 | Error handling | suite-optimization.ts:194 | `generateOptimizationHtml` chama `buildHtmlPage` sem try/catch — se throw, erro propaga sem log |
+| 9 | UX | suite-optimization.ts | Nenhuma mensagem de erro acionável — sem rootLogger, sem buildErrorPage |
+| 12 | Manutenibilidade | suite-optimization.ts:67-78 | Multiplicadores mágicos inline (3, 2, 1.5) em vez de constantes nomeadas |
+
+**Pre-scan tests (Phase 0.1.2):** ✅ todas as 9 perguntas OK.
+
+`<!-- CHECKPOINT: Phase 0 complete -->
+
+`<!-- CHECKPOINT: Phase 0.1 complete -->`
+
+**Phase 1 — Mapeamento (SOP §1):**
+
+- TECHDOC: docs/TECHDOC.md — ✅ entrada adicionada (L711 + FILES section)
+- Consumers: schedule-handler.ts, interactive-mode.ts (ambos ✅)
+- Export registry: quality-check.ts ✅
+- ⚠️ D7 violation detected: consumer test mocks return `({})` para analyzeSuiteOptimization — partial mock (D7.12-D7.14)
+
+`<!-- CHECKPOINT: Phase 1 complete -->`
+
+**Phase 2 — T1-T20 (SOP §2):**
+
+| ID    | Resultado | Descrição                                                                                      |
+| ----- | --------- | ---------------------------------------------------------------------------------------------- |
+| T1    | ✅        | Exports: analyzeSuiteOptimization, generateOptimizationHtml                                    |
+| T2    | ✅        | Interfaces: OptimizationEntry, OptimizationResult                                              |
+| T3    | N/A       | Sem config accessor                                                                            |
+| T4    | N/A       | Sem config/process.env                                                                         |
+| T5-T9 | N/A       | Sem wizard/setup                                                                               |
+| T10   | N/A       | CI integration não registrada                                                                  |
+| T11   | ❌        | Zero safety mechanisms (try/catch) — generateOptimizationHtml chama buildHtmlPage sem fallback |
+| T12   | ✅        | 3 files, 53 tests passed                                                                       |
+| T13   | ✅        | Zero dead code                                                                                 |
+| T14   | ✅        | Zero suppressions (9/9 sub-checks)                                                             |
+| T15   | ✅        | consumers bidirecional consistentes                                                            |
+| T16   | N/A       | Sem CLI interface                                                                              |
+| T17   | N/A       | Sem env var dependency                                                                         |
+| T18   | ❌        | Zero error handling (no try/catch, no rootLogger, no throw, no fallbacks)                      |
+| T19   | ✅        | TECHDOC presente                                                                               |
+| T20   | N/A       | Sem CI/Config contract                                                                         |
+
+`<!-- CHECKPOINT: Phase 2 complete -->
+
+**Phase 3 — D1-D7 (SOP §3):**
+
+| D         | Resultado | Sub-itens                     | Observações                                                               |
+| --------- | --------- | ----------------------------- | ------------------------------------------------------------------------- |
+| D1        | ✅        | 4/4                           | isolation: vi.mock + beforeEach/afterEach                                 |
+| D2        | ✅        | 2/2 aplicáveis                | input validation via toFinite, guard clauses                              |
+| D3        | ✅        | 5/5                           | SRP, DepWall, no bypass, no duplicação, nomes claros                      |
+| D4        | ⚠️        | 4/5                           | D4.3: multiplicadores mágicos inline (3, 2, 1.5)                          |
+| D5        | N/A       | —                             | Sem persistência de métricas                                              |
+| D6        | ❌        | 2/3                           | D6.1: sem rootLogger, sem mensagens acionáveis, sem buildErrorPage        |
+| D7        | ⚠️        | 8/9 D7 manual + 9/9 D7 script | D7.10: dual-implementation line 139 (computeSavings test replica fórmula) |
+| D7 script | ✅        | 9/9                           | D7.12-D7.18 zero violações                                                |
+
+**Gaps identificados (acumulados):**
+
+- **G-01 (Alto)**: generateOptimizationHtml sem try/catch — buildHtmlPage pode lançar, sem fallback, sem log
+- **G-02 (Médio)**: D6.1 UX — sem rootLogger.error, sem mensagens acionáveis, sem buildErrorPage
+- **G-03 (Baixo)**: D4.3 — multiplicadores mágicos inline 3/2/1.5 em vez de constantes nomeadas
+- **G-04 (Baixo)**: D7.10 — dual-implementation: test line 139 replica `Math.max(0, duration - safeSlow)` do source
+
+**Consumer test mocks (FT-10/FT-09, não corrigir em FT-26):**
+
+- schedule-handler.test.ts:87 `vi.fn(() => ({}))` → OptimizationResult espera 7 campos
+- interactive-mode.test.ts:160 `vi.fn(() => ({}))` → idem
+
+`<!-- CHECKPOINT: Phase 3 complete -->
+
+**Phase 3.5 — D8 Domain Adequacy (SOP §3.5):**
+
+**D8.0 — Tipos de cálculo identificados:**
+| Operação | Fonte | ID Registry | Status |
+|----------|-------|-------------|--------|
+| potentialSavings | Domain heuristic | — | Sem gold standard conhecido |
+| Impact classification | Domain heuristic | — | Sem gold standard conhecido |
+| Action selection (priority chain) | Domain heuristic | — | Sem gold standard conhecido |
+
+**D8.1 — Gold standard:** Nenhum cálculo tem gold standard formal. Verificados apenas por corretude via testes.
+
+`<!-- CHECKPOINT: Phase 3.5 complete -->
+
+### Phase 4 — Gaps consolidados
+
+| ID   | Severidade | Local                          | Causa raiz                                                           | Correção                                                                                     |
+| ---- | ---------- | ------------------------------ | -------------------------------------------------------------------- | -------------------------------------------------------------------------------------------- |
+| G-01 | Alto       | generateOptimizationHtml       | buildHtmlPage sem try/catch, erro propaga sem fallback               | Adicionar try/catch + rootLogger.error + buildErrorPage                                      |
+| G-02 | Médio      | suite-optimization.ts          | Sem rootLogger, sem buildErrorPage, sem mensagens acionáveis         | Corrigido junto com G-01                                                                     |
+| G-03 | Baixo      | suite-optimization.ts:67-78    | Multiplicadores inline (3, 2, 1.5)                                   | Extrair constantes nomeadas SPLIT_MULTIPLIER, PARALLELIZE_MULTIPLIER, REMOVE_WAIT_MULTIPLIER |
+| G-04 | Baixo      | suite-optimization.test.ts:139 | Dual-implementation: test replica `Math.max(0, duration - safeSlow)` | Hardcodar expected = 21                                                                      |
+
+### Phase 4.5 — Consistência
+
+Pattern `generateXHtml` com try/catch + `rootLogger.error` + `buildErrorPage` é o mesmo usado em:
+
+- FT-03 report-html.ts (try/catch + buildErrorPage)
+- FT-07 flakiness-dashboard.ts
+- FT-14 defect-trend.ts
+- FT-17 silent-regression.ts
+- FT-21 ai-comparison.ts
+- FT-24 ai-effectiveness.ts
+- FT-25 cross-squad-benchmark.ts (padrão de referência usado)
+
+✅ Consistente. Zero desvios.
+
+`<!-- CHECKPOINT: Phase 4 complete -->
+
+`<!-- CHECKPOINT: Phase 4.5 complete -->
+
+### Phase 5 — RED
+
+Teste de erro adicionado em integration test: `FT-26b: error fallback → returns error page when buildHtmlPage throws`.
+Resultado: ❌ 1 failed (erro propaga, não é capturado) — RED confirmado.
+
+`<!-- CHECKPOINT: Phase 5 complete -->
+
+### Phase 6 — GREEN
+
+Correções aplicadas:
+
+- G-01/G-02: try/catch + rootLogger.error + buildErrorPage em generateOptimizationHtml
+- G-03: SPLIT_MULTIPLIER=3, PARALLELIZE_MULTIPLIER=2, REMOVE_WAIT_MULTIPLIER=1.5, REMOVE_WAIT_FLAKINESS_CAP=0.1
+- G-04: expected 21 (hardcoded, não replica fórmula)
+
+Resultado: ✅ 54/54 tests pass (53 + 1 error fallback)
+
+`<!-- CHECKPOINT: Phase 6 complete -->
+
+### Phase 7 — Integração
+
+Consumers testados:
+
+- schedule-handler.test.ts ✅ (36 pass)
+- interactive-mode.test.ts ✅ (35 pass)
+- quality-check.test.ts ✅ (35 pass)
+
+`<!-- CHECKPOINT: Phase 7 complete -->
+
+### Phase 8 — Refactoring
+
+Nenhum refactoring adicional necessário. Source final: 221L (< 400), 5 imports shared/, zero suppressions.
+
+`<!-- CHECKPOINT: Phase 8 complete -->
+
+`<!-- CHECKPOINT: Phase 8.5 complete -->
+
+### Phase 9 — Validation
+
+- unit: 42 tests ✅
+- integration: 5 tests ✅
+- PBT: 7 tests ✅ (50 runs cada)
+- total: 54 tests ✅ em 3 files
+
+`<!-- CHECKPOINT: Phase 9 complete -->
+
+### Phase 10 — PROGRESS atualizado
+
+FT-26 completo. D7 pós-correção: arrasto --all executado, 0 violações.
+
+`<!-- CHECKPOINT: Phase 10 complete -->
+
+### Phase 11 — Quality Gate
+
+| Dimensão        | Status | Itens                                                                                                                                                  |
+| --------------- | ------ | ------------------------------------------------------------------------------------------------------------------------------------------------------ |
+| Architecture    | ✅     | SRP, DepWall (só shared/), zero duplicação, 221L (<400)                                                                                                |
+| Security        | ✅     | sem eval, sem secrets, sanitizeHtml em titles                                                                                                          |
+| Error handling  | ✅     | try/catch discriminado, rootLogger.error com contexto, buildErrorPage fallback, zero catches vazios                                                    |
+| Type safety     | ✅     | tipos explícitos, toFinite guard, zero `!`, zero `as`, zero suppressions                                                                               |
+| Maintainability | ✅     | constantes nomeadas, nomes claros, complexidade baixa, 0 dead code                                                                                     |
+| Consistency     | ✅     | mesmo padrão de error handling de FT-03/FT-07/FT-14/FT-17/FT-21/FT-24/FT-25, TECHDOC adicionado, checkpoints completos, 54/54 testes passam, D7 9/9 ✅ |
+
+`<!-- CHECKPOINT: Phase 11 complete -->`
