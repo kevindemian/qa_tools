@@ -231,7 +231,7 @@ export function generateSeasonalityHtml(result: SeasonalityResult, title?: strin
         });
     } catch (err) {
         const msg = err instanceof Error ? err.message : String(err);
-        rootLogger.error('Failed to generate seasonality dashboard: ' + msg);
+        rootLogger.error('Failed to generate seasonality dashboard: ' + msg + '. Verify buildCss dependency.');
         return buildErrorPage('Error generating dashboard', 'Error generating dashboard');
     }
 }

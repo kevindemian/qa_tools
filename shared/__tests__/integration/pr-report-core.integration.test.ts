@@ -18,6 +18,11 @@ vi.mock('../../github-pr-comment.js', () => ({
     postPrComment: vi.fn().mockResolvedValue({ html_url: 'https://github.com/mock/pull/1' }),
 }));
 
+vi.mock('../../report-html.js', async (importOriginal) => {
+    const actual = await importOriginal<typeof import('../../report-html.js')>();
+    return { ...actual, generateHtmlReport: vi.fn(actual.generateHtmlReport) };
+});
+
 // Mock store-backend to avoid git operations and use temp dir instead
 const mockStorageDir = vi.hoisted(() => ({ value: '' }));
 vi.mock('../../store-backend.js', async (importOriginal) => {
@@ -298,6 +303,57 @@ describe('Integration: PR Report (FT-16)', () => {
 
             expect(result.passRate).toBe(100);
             expect(fs.existsSync(htmlPath)).toBe(true);
+        });
+    });
+
+    describe('FT-16f: error handling in generatePrReport', () => {
+        it('logs warning and continues when createCheckRun fails', async () => {
+            const { generatePrReport } = await import('../../pr-report-core.js');
+            const { createCheckRun } = await import('../../github-check-run.js');
+            const { rootLogger } = await import('../../logger.js');
+            const htmlPath = path.join(TEST_DIR, 'pr-report.html');
+
+            vi.mocked(createCheckRun).mockRejectedValueOnce(new Error('check run failed'));
+
+            const result = await generatePrReport({
+                tests: MIXED_TESTS,
+                stats: MIXED_STATS,
+                project: 'test-project',
+                skipAi: true,
+                skipQuality: false,
+                skipFlaky: true,
+                htmlOutputPath: htmlPath,
+            });
+
+            expect(vi.spyOn(rootLogger, 'warn')).toHaveBeenCalledWith(expect.stringContaining('createCheckRun error'));
+            expect(result.healthScore).toBeDefined();
+        });
+
+        it('logs error and returns result when generateHtmlReport throws', async () => {
+            const { generatePrReport } = await import('../../pr-report-core.js');
+            const { generateHtmlReport } = await import('../../report-html.js');
+            const { rootLogger } = await import('../../logger.js');
+            const htmlPath = path.join(TEST_DIR, 'pr-report.html');
+
+            vi.mocked(generateHtmlReport).mockImplementationOnce(() => {
+                throw new Error('HTML generation failed');
+            });
+
+            const result = await generatePrReport({
+                tests: PASSING_TESTS,
+                stats: { passed: 5, failed: 0, skipped: 0, total: 5, duration: 1150 },
+                project: 'test-project',
+                skipAi: true,
+                skipQuality: true,
+                skipFlaky: true,
+                htmlOutputPath: htmlPath,
+            });
+
+            expect(vi.spyOn(rootLogger, 'error')).toHaveBeenCalledWith(
+                expect.stringContaining('Failed to generate HTML report'),
+            );
+            expect(result.healthScore).toBeDefined();
+            expect(result.passRate).toBe(100);
         });
     });
 

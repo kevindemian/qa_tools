@@ -21,10 +21,12 @@ const recordArb = fc.record({
     promptVersion: fc.stringMatching(/^[a-zA-Z0-9._-]{0,10}$/),
 });
 
+const recordsArb = fc.array(recordArb, { minLength: 0, maxLength: 20 });
+
 describe('compareAiVsManual — property-based', () => {
     it('total counts match record filtering', () => {
         fc.assert(
-            fc.property(fc.array(recordArb, { minLength: 0, maxLength: 20 }), (records) => {
+            fc.property(recordsArb, (records) => {
                 const result = compareAiVsManual(records);
                 const aiCount = records.filter((r) => r.generatedBy === 'ai').length;
                 const manualCount = records.filter((r) => r.generatedBy === 'manual').length;
@@ -37,7 +39,7 @@ describe('compareAiVsManual — property-based', () => {
 
     it('aiAdvantage is consistent with computed values', () => {
         fc.assert(
-            fc.property(fc.array(recordArb, { minLength: 0, maxLength: 20 }), (records) => {
+            fc.property(recordsArb, (records) => {
                 const result = compareAiVsManual(records);
                 const aiRecords = records.filter((r) => r.generatedBy === 'ai');
                 const manualRecords = records.filter((r) => r.generatedBy === 'manual');
@@ -66,7 +68,7 @@ describe('compareAiVsManual — property-based', () => {
 
     it('byVersion counts sum to aiTotal', () => {
         fc.assert(
-            fc.property(fc.array(recordArb, { minLength: 0, maxLength: 20 }), (records) => {
+            fc.property(recordsArb, (records) => {
                 const result = compareAiVsManual(records);
                 const sum = result.byVersion.reduce((s, v) => s + v.count, 0);
                 const expectedAi = records.filter((r) => r.generatedBy === 'ai').length;
@@ -91,16 +93,62 @@ describe('compareAiVsManual — property-based', () => {
             { numRuns: 50 },
         );
     });
+
+    it('acceptance rate matches AI accepted / AI total', () => {
+        fc.assert(
+            fc.property(recordsArb, (records) => {
+                const result = compareAiVsManual(records);
+                const aiRecords = records.filter((r) => r.generatedBy === 'ai');
+                const aiAccepted = aiRecords.filter((r) => r.accepted).length;
+                const expected = aiRecords.length > 0 ? aiAccepted / aiRecords.length : 0;
+                expect(result.aiAcceptanceRate).toBe(expected);
+                expect(result.manualAcceptanceRate).toBe(1);
+            }),
+            { numRuns: 50 },
+        );
+    });
+
+    it('timestamp is valid ISO format', () => {
+        fc.assert(
+            fc.property(recordsArb, (records) => {
+                const result = compareAiVsManual(records);
+                expect(result.timestamp).toMatch(/^\d{4}-\d{2}-\d{2}T/);
+            }),
+            { numRuns: 50 },
+        );
+    });
 });
 
 describe('generateAiComparisonHtml — property-based', () => {
-    it('always produces valid HTML', () => {
+    it('structural HTML invariants for all valid inputs', () => {
         fc.assert(
-            fc.property(fc.array(recordArb, { minLength: 0, maxLength: 10 }), (records) => {
+            fc.property(fc.array(recordArb, { minLength: 0, maxLength: 10 }), fc.string(), (records, title) => {
                 const result = compareAiVsManual(records);
-                const html = generateAiComparisonHtml(result, 'PBT');
+                const html = generateAiComparisonHtml(result, title);
                 expect(html).toContain('<!DOCTYPE html>');
+                expect(html).toContain('<html');
                 expect(html).toContain('</html>');
+                expect(html).toContain('<head>');
+                expect(html).toContain('</head>');
+                expect(html).toContain('<body>');
+                expect(html).toContain('</body>');
+                expect(html).toContain('prefers-color-scheme');
+                expect(html).toContain('--color-surface-page');
+                expect(html).toContain('html.dark');
+            }),
+            { numRuns: 50 },
+        );
+    });
+
+    it('contains metric-card and badge components for non-empty data', () => {
+        fc.assert(
+            fc.property(fc.array(recordArb, { minLength: 1, maxLength: 10 }), (records) => {
+                const result = compareAiVsManual(records);
+                const html = generateAiComparisonHtml(result);
+                if (result.aiTotal > 0 || result.manualTotal > 0) {
+                    expect(html).toContain('data-component="metric-card"');
+                    expect(html).toContain('data-component="badge"');
+                }
             }),
             { numRuns: 50 },
         );
@@ -115,6 +163,18 @@ describe('generateAiComparisonHtml — property-based', () => {
                 expect(html).toContain(`${result.manualPassRate}%`);
             }),
             { numRuns: 50 },
+        );
+    });
+
+    it('shows no-data message when both groups empty', () => {
+        fc.assert(
+            fc.property(fc.array(recordArb, { minLength: 0, maxLength: 0 }), (records) => {
+                const result = compareAiVsManual(records);
+                const html = generateAiComparisonHtml(result);
+                expect(html).toContain('No comparison data available.');
+                expect(html).not.toContain('data-component="metric-card"');
+            }),
+            { numRuns: 10 },
         );
     });
 });

@@ -19,6 +19,11 @@ vi.mock('../../config.js', () => ({
     get: vi.fn(() => ''),
 }));
 
+vi.mock('../../html-factory.js', async (importOriginal) => {
+    const actual = await importOriginal<typeof import('../../html-factory.js')>();
+    return { ...actual, buildHtmlPage: vi.fn(actual.buildHtmlPage) };
+});
+
 function makeResult(overrides?: Partial<DefectTrendResult>): DefectTrendResult {
     return {
         trends: [
@@ -60,6 +65,32 @@ describe('Integration: Defect Trend (FT-20)', () => {
             const result = makeResult({ trends: [], topCategories: [], period: { from: '', to: '' } });
             const html = generateDefectTrendHtml(result);
             expect(html).toContain('No defect data available.');
+        });
+    });
+
+    describe('FT-20c: error fallback', () => {
+        it('returns buildErrorPage when buildHtmlPage throws', async () => {
+            const { generateDefectTrendHtml } = await import('../../defect-trend.js');
+            const { buildHtmlPage } = await import('../../html-factory.js');
+            const { rootLogger } = await import('../../logger.js');
+
+            vi.mocked(buildHtmlPage).mockImplementationOnce(() => {
+                throw new Error('page assembly failed');
+            });
+
+            const html = generateDefectTrendHtml(
+                {
+                    trends: [{ date: '2026-06-01', categories: { A: 1 }, total: 1 }],
+                    topCategories: [{ category: 'A', count: 1 }],
+                    period: { from: '2026-06-01', to: '2026-06-01' },
+                },
+                'Error Test',
+            );
+
+            expect(html).toContain('Error generating dashboard');
+            expect(vi.spyOn(rootLogger, 'error')).toHaveBeenCalledWith(
+                expect.stringContaining('Failed to generate defect trend dashboard'),
+            );
         });
     });
 

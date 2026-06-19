@@ -1,6 +1,7 @@
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 import type { FailureClassification } from '../../metrics.js';
 import type { SeasonalityResult } from '../../defect-seasonality.js';
+import * as reportStyles from '../../report-styles.js';
 
 vi.mock('../../logger.js', () => ({
     rootLogger: { error: vi.fn(), info: vi.fn(), child: vi.fn().mockReturnThis() },
@@ -109,6 +110,22 @@ describe('Integration: Defect Seasonality (FT-21)', () => {
             expect(result.totalRecords).toBe(0);
             expect(result.peakDay).toBe('N/A');
             expect(result.peakHour).toBe(-1);
+        });
+    });
+
+    describe('FT-21e: error fallback', () => {
+        it('returns error page when buildCss throws', async () => {
+            const spy = vi.spyOn(reportStyles, 'buildCss').mockImplementation(() => {
+                throw new Error('CSS failure');
+            });
+            const { aggregateDefectSeasonality, generateSeasonalityHtml } = await import('../../defect-seasonality.js');
+            const input: FailureClassification[] = [
+                { timestamp: '2026-06-01T10:00:00Z', testTitle: 't1', category: 'ASSERTION', project: 'p1' },
+            ];
+            const result = aggregateDefectSeasonality(input);
+            const html = generateSeasonalityHtml(result);
+            expect(html).toContain('Error generating dashboard');
+            spy.mockRestore();
         });
     });
 });
