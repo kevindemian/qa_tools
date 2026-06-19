@@ -195,7 +195,11 @@ export function generateAiComparisonHtml(result: AiComparisonResult | null | und
         });
     } catch (err) {
         const msg = err instanceof Error ? err.message : String(err);
-        rootLogger.error('Failed to generate AI comparison dashboard: ' + msg);
+        rootLogger.error(
+            'Failed to generate AI comparison dashboard: ' +
+                msg +
+                '. Verify your AI test data format and ensure records contain required fields (testTitle, generatedBy, passed, flakiness).',
+        );
         return buildErrorPage(
             'Error generating dashboard',
             'An error occurred while generating the AI comparison dashboard. Check the logs for details and ensure your AI test data is valid.',

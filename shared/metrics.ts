@@ -191,16 +191,16 @@ export function calculateFlakiness(store: MetricsStore, minRuns = 2): FlakinessE
 
     const result: FlakinessEntry[] = [];
     for (const [title, counts] of testMap) {
-        const totalRunAppearances = counts.pass + counts.fail + counts.skip;
-        if (totalRunAppearances < minRuns) continue;
-        const rate = totalRunAppearances > 0 ? counts.fail / totalRunAppearances : 0;
+        const executedCount = counts.pass + counts.fail;
+        if (executedCount < minRuns) continue;
+        const rate = executedCount > 0 ? counts.fail / executedCount : 0;
         if (counts.fail > 0 && counts.pass > 0) {
             result.push({
                 title,
                 passCount: counts.pass,
                 failCount: counts.fail,
                 skipCount: counts.skip,
-                totalRuns: totalRunAppearances,
+                totalRuns: executedCount,
                 rate,
             });
         }
@@ -217,6 +217,7 @@ export function calculateFlakyRate(store: MetricsStore, minRuns = 2): number {
     const testRunCounts = new Map<string, number>();
     for (const run of store.runs) {
         for (const t of run.tests) {
+            if (t.state === 'skipped') continue;
             testRunCounts.set(t.title, (testRunCounts.get(t.title) || 0) + 1);
         }
     }

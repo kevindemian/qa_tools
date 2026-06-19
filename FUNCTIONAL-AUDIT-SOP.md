@@ -322,11 +322,148 @@ Comandos individuais para CADA sub-check:
 9. `grep -P 'as any|@ts-ignore|@ts-expect-error|nullAs\(' $TEST_FILES 2>/dev/null` — ✅ 0 hits / ❌ suppression
 10. Inspecionar expects: ✅ invariantes / ❌ dual-implementation (teste replica fórmula do source)
 11. `ls ${TEST_FILE_PBT} 2>/dev/null && echo 'EXISTS'` — ✅ PBT presente / ❌ PBT ausente (para lógica crítica)
-12. N/A para features existentes (não é código novo)
+12. Coverage suppressors (istanbul/c8/v8/nyc):
+    `grep -rnP '/\*\s*istanbul\s+ignore|c8\s+ignore|v8\s+ignore|nyc\s+(disable|ignore)|coverage-disable' ${SOURCE} ${TEST_FILES} 2>/dev/null`
+    — ✅ 0 hits / ❌ coverage suppression
+13. Testes vazios (corpo `{}` sem conteúdo):
+    `grep -nP '(it|test)\s*\(\s*['"'"'`][^'"'"'`]+['"'"'`]\s*,\s*(async\s*)?\s*\(\s*\)\s*=>\s*\{\s*\}' ${TEST_FILES} 2>/dev/null`
+    — ✅ 0 hits / ❌ empty test body
+14. Assertions triviais/tautológicas:
+    `grep -nP 'expect\(true\)\.toBe\(true\)|expect\(false\)\.toBe\(false\)|expect\.assertions\(\s*0\s*\)|expect\(([a-zA-Z_]\w*)\)\.to(?:Be|Equal|StrictEqual)\(\s*\1\s*\)' ${TEST_FILES} 2>/dev/null`
+    — ✅ 0 hits / ❌ trivial/tautological assertion
+15. Catch silenciando falha de teste:
+    `grep -Pz '(?s)catch\s*\([^)]*\)\s*\{\s*//\s*(ignore|skip|suppress|swallow|silence|test\s+fail)' ${TEST_FILES} 2>/dev/null`
+    — ✅ 0 hits / ❌ catch suppression
+16. Oracle Problem — adaptação expected ao output (commits recentes):
+    `git log --oneline -20 2>/dev/null | grep -Pi 'update.*expected.*(match|reflect).*(actual|current|new)|change.*assertion.*to match.*actual|(adjust|fix|update).*test.*to match.*(returns|outputs)'` — ✅ 0 hits / ❌ Oracle adaptation
+17. `--updateSnapshot` proposto como fix (sem review):
+    `grep -rnP 'jest\s+(--updateSnapshot|-u)(?![^;]*after\s+(review|inspect|check|verify))' ${SOURCE} ${TEST_FILES} 2>/dev/null` — ✅ 0 hits / ❌ blind snapshot update
+18. Atualização de snapshot como fix (commit message):
+    `git log --oneline -20 2>/dev/null | grep -Pi 'update\s+snapshot|fix\s+test.*snapshot|snapshot.*update'`
+    — ✅ 0 hits / ❌ snapshot update as test fix
+19. N/A para features existentes (não é código novo)
 
 `<!-- CHECKPOINT: Phase 3 complete -->`
 
-<!-- Phase 4: lines 332-355 -->
+<!-- Phase 3.5: lines 329-420 -->
+
+## Phase 3.5 — Domain Adequacy (D8)
+
+### D8.0 — Catalogar tipos de cálculo
+
+Identificar toda operação aritmética, estatística ou transformação numérica que produz métrica de domínio **para a qual existe gold standard formal** na hierarquia de fontes.
+
+Hierarquia de fontes (ordem absoluta):
+
+1. **Legislação** — leis, regulamentos, normas jurídicas
+2. **Acreditação** — ISO, NIST, ABNT, IEC, institutos oficiais
+3. **Literatura** — livros, journals, proceedings revisados por pares
+4. **Indústria** — práticas estabelecidas sem autoridade formal
+
+Teste binário para cada operação:
+
+1. Existe fórmula matemática/estatística formal para esta operação?
+2. Essa fórmula tem fonte na hierarquia?
+3. → SIM: D8 se aplica. NÃO: D8 não se aplica (verificar só corretude via testes).
+
+Registrar no PROGRESS.md:
+
+```markdown
+**D8 — Tipos de cálculo identificados:**
+| Operação | Fonte | ID Registry |
+|----------|-------|-------------|
+| averageScore | NIST/SEMATECH §2.3.1 | F01 |
+| stdDev | NIST/SEMATECH §2.3.6 | F02 |
+```
+
+### D8.1 — Pesquisar gold standard
+
+Para cada tipo de cálculo **não catalogado**:
+
+1. Pesquisar gold standard na hierarquia
+2. Se encontrado: adicionar ao **Formula Type Registry** (ver ANEXO A)
+3. Se NÃO encontrado: operação é verificada apenas por corretude, não adequação. Registrar como "sem gold standard conhecido".
+
+```
+Comandos:
+grep -F "[F" SOP.md | grep "|"   # listar tipos existentes no registry
+```
+
+Ao adicionar novo tipo ao registry, varrer features já auditadas que contenham o mesmo tipo e verificar retroativamente.
+
+### D8.2 — Verificar derivação (3 camadas)
+
+Para CADA tipo de cálculo, confrontar a fórmula da fonte com a implementação:
+
+| Camada                                    | O que verifica                                                                    | Evidência         |
+| ----------------------------------------- | --------------------------------------------------------------------------------- | ----------------- |
+| **1 — Expressão de referência**           | A fórmula matemática extraída da fonte (ex: σ = √(Σ(xi−μ)²/N))                    | Fonte citada      |
+| **2 — Núcleo da implementação**           | A expressão do código reduzida à sua essência matemática (ignorando flow control) | Código reduzido   |
+| **3 — Análise de cada desvio estrutural** | TODO if/else/early-return/filter catch que afeta o resultado                      | Tabela de desvios |
+
+Registrar no PROGRESS.md:
+
+```markdown
+**D8.2 — stdDev (F02):**
+| Camada | Expressão | Match? |
+|--------|-----------|--------|
+| Referência | σ = √(Σ(xi−μ)² / N) | — |
+| Núcleo code | sqrt(variance) onde variance = sum((s-avg)²)/n | ✅ |
+```
+
+### D8.3 — Analisar desvios estruturais
+
+Para cada desvio entre a fórmula de referência e a implementação:
+
+| Desvio            | Código              | Justificativa              | Impacto        | Status |
+| ----------------- | ------------------- | -------------------------- | -------------- | ------ |
+| Guard n < 1       | if (n < 1) return 0 | Input vazio inválido       | Só empty input | ✅     |
+| Guard n === 1     | stdDev = 0          | N=1 → σ=0 por definição    | Só n=1         | ✅     |
+| Filter pre-filter | N = len(filtered)   | NaN removido (ISO 16269-4) | N reduzido     | ✅     |
+
+### D8.4 — Ambiguidade entre fontes do mesmo nível
+
+Se duas fontes no mesmo nível conflitam:
+
+1. Registrar "D8⚠️ ambiguidade" com ambas as fontes citadas
+2. Analisar divergência PRATICAMENTE: as fórmulas produzem resultados diferentes para dados reais?
+    - Se mesmo resultado → não é conflito real
+    - Se divergem → documentar sob quais condições
+3. Se divergem e não há fonte superior:
+    - A implementação atual permanece
+    - Registrar no ANEXO A e no TECHDOC como "pendente de padronização"
+    - Criar issue para buscar fonte de nível superior
+4. Ambiguidade só resolvida quando fonte de nível SUPERIOR for encontrada
+
+### D8.5 — Aplicabilidade
+
+Verificar se a aplicação da fórmula é apropriada para o domínio e os dados.
+
+| Pergunta                                 | Evidência necessária                       |
+| ---------------------------------------- | ------------------------------------------ |
+| A fórmula pressupõe população completa?  | Requisito documenta que dados = população? |
+| A fórmula pressupõe distribuição normal? | Dados suportam essa premissa?              |
+| Outliers foram tratados?                 | Critério de exclusão documentado?          |
+| A escala é adequada?                     | Linear vs log vs percentil documentado?    |
+
+Se aplicabilidade não verificável por falta de evidência nos requisitos:
+
+- Registrar gap de **requisito**, não de implementação
+- A implementação atual permanece
+- Issue criada para documentar o requisito ausente
+- ANEXO A registra: "Não foi possível verificar — requisito não especifica [premissa]. Issue #XX."
+
+### D8.6 — Gaps
+
+Gaps de D8 seguem o fluxo normal:
+
+1. Entram na tabela de gaps (Phase 4)
+2. RED (testes que expõem o gap) + GREEN (correção)
+3. Se gap de requisito (D8.5): issue criada, gap registrado, mas implementação não alterada sem autorização de domínio.
+
+`<!-- CHECKPOINT: Phase 3.5 complete -->`
+
+<!-- Phase 4: lines 447-480 -->
 
 ## Phase 4 — Registro de Gaps
 
@@ -568,6 +705,113 @@ Registrar resultado no PROGRESS.md.
 ### 11.2 — Self-Audit (checkpoints)
 
 `grep -c 'CHECKPOINT: Phase' FUNCTIONAL-AUDIT-PROGRESS.md`
-✅ 15 checkpoints (0, 0.1, 1, 2, 3, 4, 4.5, 5, 6, 7, 8, 8.5, 9, 10, 11) / ❌ faltando → PARAR
+✅ 16 checkpoints (0, 0.1, 1, 2, 3, 3.5, 4, 4.5, 5, 6, 7, 8, 8.5, 9, 10, 11) / ❌ faltando → PARAR
 
 `<!-- CHECKPOINT: Phase 11 complete -->`
+
+---
+
+## ANEXO A — Formula Type Registry
+
+Registro central de tipos de fórmula. Cada tipo é pesquisado uma vez contra a hierarquia de fontes (legislação > acreditação > literatura > indústria) e reutilizado por todas as features que o implementam.
+
+### Estrutura
+
+| ID  | Tipo                          | Fonte                                                     | Fórmula                               | Features                        | Status |
+| --- | ----------------------------- | --------------------------------------------------------- | ------------------------------------- | ------------------------------- | ------ |
+| F01 | Média aritmética              | NIST/SEMATECH e-Handbook §2.3.1                           | μ = Σx/N                              | FT-25, ...                      | ✅     |
+| F02 | Desvio padrão (populacional)  | NIST/SEMATECH e-Handbook §2.3.6                           | σ = √(Σ(x−μ)²/N)                      | FT-25, ...                      | ✅     |
+| F03 | Filtro de outliers (NaN/IQR)  | ISO 16269-4:2017                                          | Exclusão de NaN por Number.isFinite   | FT-19, FT-20, FT-22, FT-25, ... | ✅     |
+| F04 | Taxa de flakiness individual  | ISO/IEC 25010:2011 §4.2.1; NIST/SEMATECH §2.1 (proporção) | p(falha) = falhas / (passes + falhas) | FT-04                           | ✅     |
+| F05 | Taxa de flakiness agregada    | Indústria CI/CD (prática universal)                       | flaky / qualifying × 100              | FT-04                           | ✅     |
+| F06 | Pass rate (trend)             | ISO/IEC 25010:2011 §4.2.1                                 | passed / (passed + failed) × 100      | FT-04                           | ✅     |
+| F07 | Média exponencial ponderada   | NIST/SEMATECH e-Handbook §6.4.4 (EWMA control charts)     | μₜ = α·xₜ + (1−α)·μₜ₋₁                | FT-09                           | ✅     |
+| F08 | Percentil (p95)               | ISO 16269-4:2017                                          | Valor na posição ⌈p·n/100⌉ ordenada   | FT-09, FT-10                    | ✅     |
+| F09 | Score por interpolação linear | ISO/IEC 25020:2019 Annex D                                | v = m·x + b por faixa                 | FT-09, FT-10, FT-14             | ✅     |
+| F10 | Média ponderada               | NIST/SEMATECH e-Handbook §2.3.1                           | μ = Σ(wᵢ·xᵢ) / Σwᵢ                    | FT-09, FT-14                    | ✅     |
+
+### Protocolo de inclusão
+
+1. Pesquisar gold standard na hierarquia: legislação → acreditação → literatura → indústria
+2. Se encontrado: preencher ID, Tipo, Fonte (com seção/artigo), Fórmula, Features que usam
+3. Se NÃO encontrado: registrar como "sem gold standard conhecido"; operação verificada só por corretude
+4. Ao adicionar novo tipo, varrer features já auditadas que contenham o mesmo padrão e verificar retroativamente
+
+### Protocolo de ambiguidade (mesmo nível)
+
+Se duas fontes no mesmo nível conflitam:
+
+1. Registrar ambas as fontes no campo Fórmula
+2. Status: ⚠️ pendente
+3. Issue criada para buscar fonte superior
+4. Implementação atual permanece até resolução
+
+### Protocolo de aplicabilidade
+
+Se a aplicação da fórmula a um domínio específico não for verificável por falta de evidência documental:
+
+1. Registrar gap de requisito (não de implementação) no PROGRESS.md
+2. Issue criada para documentar requisito
+3. Status: ⚠️ requisito pendente
+
+---
+
+## ANEXO B — D7 Script Refinement Workflow
+
+### B.1 — Propósito
+
+O script `scripts/audit/d7-bad-testing.sh` automatiza os 9 checks de D7. Este anexo define o protocolo de refinamento progressivo do script durante a auditoria, para garantir que, ao final, o script cubra 100% dos padrões detectáveis sem falsos positivos.
+
+### B.2 — Workflow por feature auditada
+
+Para cada feature nova (FT-XX):
+
+```
+1. MANUAL ──→ auditor D7 manual (9 checks, ler arquivos de teste)
+2. SCRIPT ──→ `bash scripts/audit/d7-bad-testing.sh --feature <nome>`
+3. CONFRONTO ──→ comparar achados manuais vs script
+4. REFINAMENTO:
+   ├── se script perdeu algo → ajustar regex/padrão no script
+   └── se falso positivo → ajustar script para excluir
+5. REPETIR 1-4 até manual === script (ambos zero violações ou mesmos achados)
+```
+
+**Proibido:** avançar para próxima feature enquanto `manual !== script`.
+
+### B.3 — Arrasto único no final
+
+Após a última feature auditada:
+
+```bash
+bash scripts/audit/d7-bad-testing.sh --all
+```
+
+Propósito: detectar padrões introduzidos inadvertidamente em features já auditadas ou que o script inicialmente não capturava.
+
+Se o arrasto achar violações:
+
+1. Corrigir pela causa raiz (se violação real)
+2. Se foi perdida pelo refinamento → ajustar script
+3. Re-arrastar `--all` até zero violações
+
+### B.4 — Limites do script
+
+O script detecta padrões **sintáticos** (regex). Os seguintes checks são **sempre manuais**:
+
+| Check                                   | Motivo                                                      |
+| --------------------------------------- | ----------------------------------------------------------- |
+| D7.1 toBeDefined sem assert real        | Requer semântica: `expect(x).toBeDefined()` pode ser válido |
+| D7.3 Expected de requisitos vs output   | Requer conhecimento de requisitos                           |
+| D7.4 Mock shape real vs leniente        | Requer inspeção do mock                                     |
+| D7.10 Invariante vs dual-implementation | Requer leitura do source                                    |
+| D7.11 PBT presente?                     | Script verifica existência do arquivo (coberto)             |
+
+Para estes, o script reporta os hits mas a **decisão final** é do auditor.
+
+### B.5 — Alterações no script
+
+Toda alteração no script deve:
+
+1. Ser testada contra as fixtures em `scripts/__fixtures__/d7-violations/` (se existirem)
+2. Ser testada contra a feature atual (`--feature <nome>`)
+3. Ser verificada com `--all` para garantir que não introduziu falso positivo em features já auditadas

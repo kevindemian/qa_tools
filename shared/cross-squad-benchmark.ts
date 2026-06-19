@@ -44,17 +44,33 @@ function _determineTrend(current: number, previous?: number): 'up' | 'down' | 's
 }
 
 export function computeCrossSquadBenchmark(
-    projects: Array<{
-        name: string;
-        healthScore: number;
-        grade: string;
-        passRate: number;
-        flakyRate: number;
-        coveragePct: number;
-        runCount: number;
-        previousScore?: number;
-    }>,
+    projects:
+        | Array<{
+              name: string;
+              healthScore: number;
+              grade: string;
+              passRate: number;
+              flakyRate: number;
+              coveragePct: number;
+              runCount: number;
+              previousScore?: number;
+          }>
+        | null
+        | undefined,
 ): CrossSquadResult {
+    if (!Array.isArray(projects)) {
+        rootLogger.warn(
+            'Cross-squad benchmark: projects parameter is not an array — returning empty result. Verify that the caller passes a valid array of project data.',
+        );
+        return {
+            benchmarks: [],
+            topSquad: '',
+            bottomSquad: '',
+            averageScore: 0,
+            stdDev: 0,
+            timestamp: new Date().toISOString(),
+        };
+    }
     const valid = projects.filter((p) => {
         if (
             Number.isNaN(p.healthScore) ||
@@ -67,7 +83,9 @@ export function computeCrossSquadBenchmark(
             p.coveragePct < 0 ||
             p.runCount < 0
         ) {
-            rootLogger.warn(`Cross-squad benchmark: excluding project "${p.name}" — invalid numeric fields`);
+            rootLogger.warn(
+                `Cross-squad benchmark: excluding project "${p.name}" — invalid numeric fields. Verify that healthScore, passRate, flakyRate, coveragePct, and runCount are finite numbers >= 0.`,
+            );
             return false;
         }
         return true;
@@ -201,7 +219,16 @@ function _buildLeaderboard(result: CrossSquadResult): string {
     });
 }
 
-export function generateBenchmarkHtml(result: CrossSquadResult, title?: string): string {
+export function generateBenchmarkHtml(result: CrossSquadResult | null | undefined, title?: string): string {
+    if (result == null) {
+        rootLogger.warn(
+            'Cross-squad benchmark: result parameter is null or undefined — returning error page. Verify that the caller passes a valid CrossSquadResult.',
+        );
+        return buildErrorPage(
+            'Error generating benchmark report',
+            'Failed to generate benchmark report: no result data provided. Verify that computeCrossSquadBenchmark returned a valid result.',
+        );
+    }
     try {
         const reportTitle = title || 'Cross-Squad Benchmark';
         const bodyContent =
@@ -229,6 +256,9 @@ export function generateBenchmarkHtml(result: CrossSquadResult, title?: string):
                 msg +
                 '. Verify that all dependencies (html-factory, report-styles, date-utils) and input data are valid.',
         );
-        return buildErrorPage('Error generating benchmark report', 'Error generating benchmark report');
+        return buildErrorPage(
+            'Error generating benchmark report',
+            'Failed to generate benchmark report. Verify that all dependencies (html-factory, report-styles, date-utils) are available and the input data is valid.',
+        );
     }
 }

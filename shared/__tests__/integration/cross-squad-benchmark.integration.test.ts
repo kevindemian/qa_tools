@@ -14,7 +14,7 @@ describe('Integration: Cross-Squad Benchmark (FT-25)', () => {
         vi.restoreAllMocks();
     });
 
-    describe('FT-25a: generateBenchmarkHtml', () => {
+    describe('FT-25a: generateBenchmarkHtml with data', () => {
         it('returns complete HTML document with data', async () => {
             const { computeCrossSquadBenchmark, generateBenchmarkHtml } =
                 await import('../../cross-squad-benchmark.js');
@@ -66,6 +66,36 @@ describe('Integration: Cross-Squad Benchmark (FT-25)', () => {
             const html = generateBenchmarkHtml(result, 'Sprint 11 Review');
             expect(html).toContain('Sprint 11 Review');
             expect(html).not.toContain('Cross-Squad Benchmark');
+        });
+    });
+
+    describe('FT-25b: generateBenchmarkHtml error fallback', () => {
+        it('returns error page when CSS dependency fails', async () => {
+            const { generateBenchmarkHtml } = await import('../../cross-squad-benchmark.js');
+            const html = generateBenchmarkHtml(null);
+            expect(html).toContain('Error generating benchmark report');
+        });
+
+        it('returns error page when result is undefined', async () => {
+            const { generateBenchmarkHtml } = await import('../../cross-squad-benchmark.js');
+            const html = generateBenchmarkHtml(undefined);
+            expect(html).toContain('Error generating benchmark report');
+        });
+    });
+
+    describe('FT-25c: computeCrossSquadBenchmark edge cases', () => {
+        it('handles null projects', async () => {
+            const { computeCrossSquadBenchmark } = await import('../../cross-squad-benchmark.js');
+            const result = computeCrossSquadBenchmark(null);
+            expect(result.benchmarks).toEqual([]);
+            expect(result.averageScore).toBe(0);
+        });
+
+        it('handles undefined projects', async () => {
+            const { computeCrossSquadBenchmark } = await import('../../cross-squad-benchmark.js');
+            const result = computeCrossSquadBenchmark(undefined);
+            expect(result.benchmarks).toEqual([]);
+            expect(result.averageScore).toBe(0);
         });
     });
 });

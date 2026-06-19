@@ -99,6 +99,7 @@ describe('computeCrossSquadBenchmark', () => {
         expect(result.averageScore).toBe(0);
         expect(result.stdDev).toBe(0);
         expect(result.timestamp).toBeDefined();
+        expect(result.timestamp).toMatch(/^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2}/);
     });
 
     it('handles single squad with same top and bottom', () => {
@@ -233,6 +234,24 @@ describe('computeCrossSquadBenchmark', () => {
         ];
         const result = computeCrossSquadBenchmark(projects);
         expect(result.benchmarks.find((b) => b.project === 'Invalid Squad')).toBeUndefined();
+    });
+
+    it('handles null projects gracefully (G-02)', () => {
+        const result = computeCrossSquadBenchmark(null);
+        expect(result.benchmarks).toEqual([]);
+        expect(result.topSquad).toBe('');
+        expect(result.bottomSquad).toBe('');
+        expect(result.averageScore).toBe(0);
+        expect(result.stdDev).toBe(0);
+    });
+
+    it('handles undefined projects gracefully (G-02)', () => {
+        const result = computeCrossSquadBenchmark(undefined);
+        expect(result.benchmarks).toEqual([]);
+        expect(result.topSquad).toBe('');
+        expect(result.bottomSquad).toBe('');
+        expect(result.averageScore).toBe(0);
+        expect(result.stdDev).toBe(0);
     });
 });
 
@@ -419,5 +438,15 @@ describe('generateBenchmarkHtml', () => {
         const html = generateBenchmarkHtml(result);
         expect(html).toContain('data-variant="default"');
         expect(html).toContain('Squad X');
+    });
+
+    it('handles null result gracefully returning error page (G-03)', () => {
+        const html = generateBenchmarkHtml(null);
+        expect(html).toContain('Error generating benchmark report');
+    });
+
+    it('handles undefined result gracefully returning error page (G-03)', () => {
+        const html = generateBenchmarkHtml(undefined);
+        expect(html).toContain('Error generating benchmark report');
     });
 });

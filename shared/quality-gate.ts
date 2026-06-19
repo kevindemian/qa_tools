@@ -73,9 +73,11 @@ function _flakyCheck(runs: MetricsRun[]): GateCheck {
 
     // Compute total unique tests that appear in at least 2 runs (same minRuns as calculateFlakiness).
     // This is the correct denominator: flaky rate = flaky tests / total stable tests with enough data.
+    // Skipped tests are excluded because they were not executed and cannot be classified as flaky.
     const testRunCount = new Map<string, number>();
     for (const run of runs) {
         for (const t of run.tests) {
+            if (t.state === 'skipped') continue;
             testRunCount.set(t.title, (testRunCount.get(t.title) ?? 0) + 1);
         }
     }
