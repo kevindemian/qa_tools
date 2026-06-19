@@ -3,7 +3,6 @@ import os from 'node:os';
 import path from 'node:path';
 import { afterAll, afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import type { FlatTest } from '../../result_parser.js';
-import type { DiffComparison } from '../../pr-report-core.js';
 
 // ── Mock external boundaries ──────────────────────────────────────────────
 
@@ -319,12 +318,10 @@ describe('Integration: PR Report (FT-16)', () => {
             const { computeDiffComparison } = await import('../../pr-report-core.js');
 
             const diff = computeDiffComparison(curr, prev);
-            expect(diff).not.toBeNull();
-            const d = diff as DiffComparison;
-            expect(d.newFailures).toHaveLength(1);
-            const firstFailure = d.newFailures[0] as (typeof d.newFailures)[number];
-            expect(firstFailure.title).toBe('Logout');
-            expect(d.newPasses).toHaveLength(0);
+            if (!diff) throw new Error('Expected diff to be defined');
+            expect(diff.newFailures).toHaveLength(1);
+            expect(diff.newFailures[0]).toMatchObject({ title: 'Logout' });
+            expect(diff.newPasses).toHaveLength(0);
         });
 
         it('returns undefined when identical', async () => {
@@ -370,11 +367,9 @@ describe('Integration: PR Report (FT-16)', () => {
             const previousRun = store.runs.length > 0 ? store.runs[store.runs.length - 1] : undefined;
             const diff = previousRun ? computeDiffComparison(secondTests, previousRun.tests) : undefined;
 
-            expect(diff).not.toBeNull();
-            const d = diff as DiffComparison;
-            expect(d.newPasses).toHaveLength(1);
-            const firstPass = d.newPasses[0] as (typeof d.newPasses)[number];
-            expect(firstPass.title).toBe('T2');
+            if (!diff) throw new Error('Expected diff to be defined');
+            expect(diff.newPasses).toHaveLength(1);
+            expect(diff.newPasses[0]).toMatchObject({ title: 'T2' });
         });
     });
 });

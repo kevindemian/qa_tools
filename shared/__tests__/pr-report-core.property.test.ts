@@ -203,9 +203,9 @@ describe('computeDiffComparison — invariants (property-based)', () => {
                     if (result === undefined) return;
                     for (const nf of result.newFailures) {
                         const prev = previous.find((p) => p.title === nf.title);
-                        expect(prev).toBeDefined();
+                        if (!prev) throw new Error('prev must exist in newFailures');
                         expect(nf.state).toBe('failed');
-                        expect(prev?.state).not.toBe('failed');
+                        expect(prev.state).not.toBe('failed');
                     }
                 },
             ),
@@ -223,9 +223,9 @@ describe('computeDiffComparison — invariants (property-based)', () => {
                     if (result === undefined) return;
                     for (const np of result.newPasses) {
                         const prev = previous.find((p) => p.title === np.title);
-                        expect(prev).toBeDefined();
+                        if (!prev) throw new Error('prev must exist in newPasses');
                         expect(np.state).not.toBe('failed');
-                        expect(prev?.state).toBe('failed');
+                        expect(prev.state).toBe('failed');
                     }
                 },
             ),
@@ -244,9 +244,9 @@ describe('computeDiffComparison — invariants (property-based)', () => {
                     for (const f of result.flaky) {
                         const prev = previous.find((p) => p.title === f.title);
                         const curr = current.find((c) => c.title === f.title);
-                        expect(prev).toBeDefined();
-                        expect(curr).toBeDefined();
-                        expect(f.state).not.toBe(prev?.state);
+                        if (!prev) throw new Error('prev must exist in flaky');
+                        if (!curr) throw new Error('curr must exist in flaky');
+                        expect(f.state).not.toBe(prev.state);
                     }
                 },
             ),

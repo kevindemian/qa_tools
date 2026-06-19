@@ -123,6 +123,11 @@ export interface DesignTokens {
         text: TextColors;
         border: BorderColors;
         badge: BadgeColors;
+        bg: {
+            healthy: ColorPair;
+            warning: ColorPair;
+            critical: ColorPair;
+        };
         chart: ChartColors;
     };
     spacing: SpacingScale;
@@ -151,7 +156,7 @@ export const tokens: DesignTokens = {
         text: {
             primary: { light: '#111827', dark: '#c9d1d9' },
             secondary: { light: '#4b5563', dark: '#8b949e' },
-            muted: { light: '#6b7280', dark: '#6b7280' },
+            muted: { light: '#6b7280', dark: '#9ca3af' },
         },
         border: {
             default: { light: '#d1d5db', dark: '#30363d' },
@@ -161,6 +166,11 @@ export const tokens: DesignTokens = {
             pass: { bg: { light: '#dcfce7', dark: '#052e16' }, text: { light: '#166534', dark: '#4ade80' } },
             fail: { bg: { light: '#fecaca', dark: '#450a0a' }, text: { light: '#991b1b', dark: '#f87171' } },
             skip: { bg: { light: '#fef9c3', dark: '#451a03' }, text: { light: '#854d0e', dark: '#fbbf24' } },
+        },
+        bg: {
+            healthy: { light: '#f0fdf4', dark: '#022c22' },
+            warning: { light: '#fefce8', dark: '#292524' },
+            critical: { light: '#fef2f2', dark: '#2d0a0a' },
         },
         chart: {
             pass: '#22c55e',

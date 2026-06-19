@@ -90,8 +90,18 @@ const defaultStats = {
 };
 
 const defaultHealthScore = {
-    score: 80,
+    overall: 80,
     grade: 'B' as const,
+    qualityGate: 'pass' as const,
+    runCount: 1,
+    timestamp: '2024-01-01T00:00:00.000Z',
+    dimensions: {
+        passRate: { score: 80, status: 'pass' as const },
+        flakyRate: { score: 100, status: 'pass' as const },
+        coverage: { score: 80, status: 'pass' as const },
+        suiteSpeed: { score: 100, status: 'pass' as const },
+        executionRate: { score: 100, status: 'pass' as const },
+    },
     passRate: 80,
     metrics: {
         passRate: 80,
@@ -242,7 +252,7 @@ describe('generatePrReport', () => {
             skipAi: true,
         });
 
-        expect(result.healthScore).toBeDefined();
+        expect(result.healthScore.overall).toBeGreaterThanOrEqual(0);
         expect(mockPRComment.postPrComment).toHaveBeenCalled();
     });
 
@@ -387,12 +397,10 @@ describe('generatePrReport', () => {
                 },
             });
 
-            const writeCalls = (fs.writeFileSync as ReturnType<typeof vi.fn>).mock.calls;
-            const summaryCall = writeCalls.find((call: unknown[]) => String(call[0]) === summaryPath) as
-                | unknown[]
-                | undefined;
-            expect(summaryCall).toBeDefined();
-            const content = String((summaryCall as unknown[])[1]);
+            const writeCalls = vi.mocked(fs.writeFileSync).mock.calls;
+            const summaryCall = writeCalls.find((call) => String(call[0]) === summaryPath);
+            if (!summaryCall) throw new Error('Expected summaryCall to be defined');
+            const content = typeof summaryCall[1] === 'string' ? summaryCall[1] : '';
             expect(content).toContain('QA Tools — PR Report');
             expect(content).toContain('| ✅ Passed | ❌ Failed | ⏭ Skipped |');
             expect(content).toContain('| 8 | 1 | 1 | 10 |');

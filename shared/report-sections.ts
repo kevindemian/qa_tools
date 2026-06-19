@@ -326,9 +326,9 @@ function healthColor(score: number): string {
 }
 
 function healthBg(score: number): string {
-    if (score >= 80) return '#f0fdf4';
-    if (score >= 50) return '#fefce8';
-    return '#fef2f2';
+    if (score >= 80) return 'var(--color-bg-healthy)';
+    if (score >= 50) return 'var(--color-bg-warning)';
+    return 'var(--color-bg-critical)';
 }
 
 export function buildHealthSection(health: HealthScoreResult): string {

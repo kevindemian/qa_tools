@@ -94,16 +94,16 @@ beforeEach(() => {
     mockFeatureConfig.isQualitySkipped.mockReturnValue(false);
     mockFeatureConfig.isFlakySkipped.mockReturnValue(false);
     mockParseResult.mockReturnValue({
-        tests: [] as FlatTest[],
+        tests: [] satisfies FlatTest[],
         stats: { passed: 0, failed: 0, skipped: 0, total: 0, duration: 0 },
         error: undefined,
     });
-    (fs.existsSync as ReturnType<typeof vi.fn>).mockReturnValue(true);
+    vi.mocked(fs.existsSync).mockReturnValue(true);
 });
 
 describe('main', () => {
     it('returns early when CTRF file does not exist', async () => {
-        (fs.existsSync as ReturnType<typeof vi.fn>).mockReturnValue(false);
+        vi.mocked(fs.existsSync).mockReturnValue(false);
         await main();
         expect(mockPRComment.postPrComment).not.toHaveBeenCalled();
     });

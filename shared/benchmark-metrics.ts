@@ -1,4 +1,7 @@
+import { rootLogger } from './logger.js';
 import type { UserStoryFixture } from './prompts/__fixtures__/index.js';
+
+const MAX_PARTITION_TYPES = 3;
 
 export interface BenchmarkMetrics {
     criteriaCoverage: number;
@@ -51,7 +54,7 @@ function countCoveredPartitions(tests: TestCaseShape[], min: number, max: number
     if (validRe.test(allText)) partitions++;
     if (belowMinRe.test(allText) || /below|less than|under/i.test(allText)) partitions++;
     if (aboveMaxRe.test(allText) || /above|greater than|over|exceed/i.test(allText)) partitions++;
-    return Math.min(partitions, 3);
+    return Math.min(partitions, MAX_PARTITION_TYPES);
 }
 
 function countCoveredBoundaries(tests: TestCaseShape[], min: number, max: number): number {
@@ -85,7 +88,9 @@ export function computeCoverageMetrics(body: string, fixture: UserStoryFixture):
                 totalCriteria: fixture.coverage.expectedCriteria.length,
             };
         }
-        const tests = parsed as TestCaseShape[];
+        const tests: TestCaseShape[] = parsed.filter(
+            (item): item is TestCaseShape => typeof item === 'object' && item !== null && !Array.isArray(item),
+        );
         const totalCriteria = fixture.coverage.expectedCriteria.length;
         const coveredCriteriaCount =
             fixture.coverage.expectedCriteria.length > 0
@@ -117,7 +122,8 @@ export function computeCoverageMetrics(body: string, fixture: UserStoryFixture):
             coveredCriteriaCount,
             totalCriteria,
         };
-    } catch {
+    } catch (err) {
+        rootLogger.warn(`Failed to compute benchmark metrics: ${err instanceof Error ? err.message : String(err)}`);
         return {
             criteriaCoverage: 0,
             partitionCoverage: 0,

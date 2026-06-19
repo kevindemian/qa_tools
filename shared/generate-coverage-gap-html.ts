@@ -70,8 +70,12 @@ function buildQualityGateSection(result: CoverageGapResult): string {
 function buildEpicCards(result: CoverageGapResult): string {
     let html =
         '<div style="display:grid;grid-template-columns:repeat(auto-fill,minmax(280px,1fr));gap:12px;margin-bottom:20px">';
-    for (const [key, epic] of Object.entries(result.byEpic)) {
+    const byEpic = result.byEpic;
+    const epicKeys = Object.keys(byEpic);
+    for (const key of epicKeys) {
         if (key === '__no_epic__') continue;
+        const epic = byEpic[key];
+        if (!epic) continue;
         const color = epic.weightedPct >= 50 ? tokens.color.chart.pass : tokens.color.chart.fail;
         const badge = epic.gatePass
             ? Badge({ variant: 'pass', children: 'PASS' })
@@ -203,7 +207,10 @@ export function generateCoverageGapHtml(result: CoverageGapResult, title?: strin
         });
     } catch (err) {
         const msg = err instanceof Error ? err.message : String(err);
-        rootLogger.error('Failed to generate coverage gap HTML: ' + msg);
+        rootLogger.error(
+            'Failed to generate coverage gap HTML. Verify that coverage data is valid and complete, then retry. Details: ' +
+                msg,
+        );
         return buildErrorPage('Error generating coverage gap report', 'Error generating coverage gap report');
     }
 }

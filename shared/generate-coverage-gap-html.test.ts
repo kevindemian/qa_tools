@@ -2,9 +2,13 @@
  * Tests for generate-coverage-gap-html — coverage gap report using primitives.
  */
 
-import { nullAs } from './test-utils.js';
+import { describe, expect, it, vi } from 'vitest';
 import { generateCoverageGapHtml } from './generate-coverage-gap-html.js';
 import type { CoverageGapResult } from './types.js';
+
+vi.mock('./date-utils.js', () => ({
+    formatDateISO: vi.fn(() => '2026-06-19'),
+}));
 
 function makeFixture(): CoverageGapResult {
     return {
@@ -145,8 +149,12 @@ describe('generateCoverageGapHtml', () => {
         expect(html).not.toContain('Coverage Gap Analysis');
     });
 
-    it('returns error HTML on invalid input', () => {
-        const result = generateCoverageGapHtml(nullAs());
+    it('returns error HTML when date formatting fails', async () => {
+        const { formatDateISO } = await import('./date-utils.js');
+        vi.mocked(formatDateISO).mockImplementationOnce(() => {
+            throw new Error('mock error');
+        });
+        const result = generateCoverageGapHtml(makeFixture());
         expect(result).toContain('Error generating coverage gap report');
     });
 

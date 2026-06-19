@@ -2,7 +2,7 @@
  * Tests for defect-trend — Defect Trend Dashboard aggregator and HTML generator.
  */
 
-import { aggregateDefectTrends, generateDefectTrendHtml } from './defect-trend.js';
+import { aggregateDefectTrends, generateDefectTrendHtml, sanitizeTrendResult } from './defect-trend.js';
 import type { FailureClassification } from './metrics.js';
 
 describe('aggregateDefectTrends', () => {
@@ -24,7 +24,8 @@ describe('aggregateDefectTrends', () => {
         expect(topCats).toContain(poison);
         expect(topCats).toContain('NORMAL');
         expect(result.trends).toHaveLength(1);
-        const cats = (result.trends[0] as { categories: Record<string, number> }).categories;
+        expect(result.trends[0]).toBeDefined();
+        const cats = result.trends[0]?.categories ?? {};
         expect(Object.keys(cats)).toContain(poison);
         expect(Object.keys(cats)).toContain('NORMAL');
     });
@@ -100,6 +101,56 @@ describe('aggregateDefectTrends', () => {
         expect(result.topCategories[0]).toEqual({ category: 'ASSERTION', count: 3 });
         expect(result.topCategories[1]).toEqual({ category: 'TIMEOUT', count: 2 });
         expect(result.topCategories[2]).toEqual({ category: 'ENV', count: 1 });
+    });
+});
+
+describe('sanitizeTrendResult', () => {
+    it('converts NaN to zero', () => {
+        const input = {
+            trends: [{ date: '2026-01-01', categories: { A: NaN }, total: NaN }],
+            topCategories: [{ category: 'A', count: NaN }],
+            period: { from: '2026-01-01', to: '2026-01-01' },
+        };
+        const result = sanitizeTrendResult(input);
+        expect(result.trends[0]?.total).toBe(0);
+        expect(result.trends[0]?.categories['A']).toBe(0);
+        expect(result.topCategories[0]?.count).toBe(0);
+    });
+
+    it('converts Infinity to zero', () => {
+        const input = {
+            trends: [
+                { date: '2026-01-01', categories: { A: Number.POSITIVE_INFINITY }, total: Number.NEGATIVE_INFINITY },
+            ],
+            topCategories: [{ category: 'A', count: Number.POSITIVE_INFINITY }],
+            period: { from: '2026-01-01', to: '2026-01-01' },
+        };
+        const result = sanitizeTrendResult(input);
+        expect(result.trends[0]?.total).toBe(0);
+        expect(result.trends[0]?.categories['A']).toBe(0);
+        expect(result.topCategories[0]?.count).toBe(0);
+    });
+
+    it('preserves valid finite numbers', () => {
+        const input = {
+            trends: [{ date: '2026-01-01', categories: { A: 5 }, total: 10 }],
+            topCategories: [{ category: 'A', count: 5 }],
+            period: { from: '2026-01-01', to: '2026-01-01' },
+        };
+        const result = sanitizeTrendResult(input);
+        expect(result.trends[0]?.total).toBe(10);
+        expect(result.trends[0]?.categories['A']).toBe(5);
+        expect(result.topCategories[0]?.count).toBe(5);
+    });
+
+    it('preserves rest structure', () => {
+        const input = {
+            trends: [],
+            topCategories: [],
+            period: { from: '2026-01-01', to: '2026-01-10' },
+        };
+        const result = sanitizeTrendResult(input);
+        expect(result.period).toEqual({ from: '2026-01-01', to: '2026-01-10' });
     });
 });
 
@@ -186,13 +237,26 @@ describe('generateDefectTrendHtml', () => {
         expect(html).toContain('2026-06-03');
     });
 
-    it('handles NaN in total gracefully', () => {
+    it('sanitizes NaN and Infinity to zero in output', () => {
         const result = {
-            trends: [{ date: '2026-06-01', categories: { ASSERTION: NaN }, total: NaN }],
-            topCategories: [{ category: 'ASSERTION', count: NaN }],
+            trends: [
+                {
+                    date: '2026-06-01',
+                    categories: { ASSERTION: NaN, TIMEOUT: Number.POSITIVE_INFINITY, ENV: 3 },
+                    total: NaN,
+                },
+            ],
+            topCategories: [
+                { category: 'ASSERTION', count: NaN },
+                { category: 'TIMEOUT', count: Number.POSITIVE_INFINITY },
+                { category: 'ENV', count: 3 },
+            ],
             period: { from: '2026-06-01', to: '2026-06-01' },
         };
         const html = generateDefectTrendHtml(result);
-        expect(html).toContain('NaN');
+        expect(html).not.toContain('NaN');
+        expect(html).not.toContain('Infinity');
+        expect(html).toContain('>0<');
+        expect(html).toContain('>3<');
     });
 });

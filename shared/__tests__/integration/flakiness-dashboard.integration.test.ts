@@ -19,16 +19,19 @@ vi.mock('../../config.js', () => ({
     get: vi.fn(() => ''),
 }));
 
+vi.mock('../../escape.js', () => ({
+    sanitizeHtml: vi.fn((s: string) => s),
+}));
+
 function makeEntries(overrides?: Partial<FlakinessEntry>): FlakinessEntry[] {
     return [
         {
-            title: 'Login test',
-            passCount: 5,
-            failCount: 5,
-            skipCount: 0,
-            totalRuns: 10,
-            rate: 0.5,
-            ...overrides,
+            title: overrides?.title ?? 'Login test',
+            passCount: overrides?.passCount ?? 5,
+            failCount: overrides?.failCount ?? 5,
+            skipCount: overrides?.skipCount ?? 0,
+            totalRuns: overrides?.totalRuns ?? 10,
+            rate: overrides?.rate ?? 0.5,
         },
     ];
 }
@@ -78,6 +81,36 @@ describe('Integration: Flakiness Dashboard (FT-19)', () => {
             expect(html).toContain('qa-report-theme');
             expect(html).toContain('--color-surface-page');
             expect(html).toContain('html.dark');
+        });
+    });
+
+    describe('FT-19d: error fallback', () => {
+        it('returns error page when sanitizeHtml throws', async () => {
+            const { sanitizeHtml } = await import('../../escape.js');
+            const sanitizeMock = vi.mocked(sanitizeHtml);
+            sanitizeMock.mockImplementationOnce(() => {
+                throw new Error('simulated failure');
+            });
+            const { rootLogger } = await import('../../logger.js');
+            const { generateFlakinessHtml } = await import('../../flakiness-dashboard.js');
+            const html = generateFlakinessHtml([]);
+            expect(html).toContain('Error generating dashboard');
+            expect(rootLogger['error']).toHaveBeenCalled();
+        });
+    });
+
+    describe('FT-19f: entries with extreme rate values', () => {
+        it('handles NaN and Infinity rates without crashing', async () => {
+            const { generateFlakinessHtml } = await import('../../flakiness-dashboard.js');
+            const entries: FlakinessEntry[] = [
+                { title: 'NaN-test', passCount: 0, failCount: 0, skipCount: 0, totalRuns: 1, rate: NaN },
+                { title: 'Inf-test', passCount: 0, failCount: 10, skipCount: 0, totalRuns: 10, rate: Infinity },
+                { title: 'NegInf-test', passCount: 10, failCount: 0, skipCount: 0, totalRuns: 10, rate: -Infinity },
+            ];
+            const html = generateFlakinessHtml(entries);
+            expect(html).toContain('<!DOCTYPE html>');
+            expect(html).not.toContain('NaN');
+            expect(html).not.toContain('Infinity');
         });
     });
 });

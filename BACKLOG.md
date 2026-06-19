@@ -61,6 +61,71 @@
 
 ---
 
+## 🎨 Sprint CSS Refactoring — Sistema de Design Unificado + Acessibilidade (FT-17)
+
+**Data:** 2026-06-19
+**Origem:** Auditoria funcional FT-17 (FUNCTIONAL-AUDIT-PROGRESS.md) + Sprint Score Fix. Relatórios HTML usam prefixos CSS inconsistentes (`ph-`, `tbl-`, `text-`, `empty-`), build de CSS monolítico (`buildAllStyles()`), emojis como ícones (renderização cross-platform imprevisível), e zero tratamento de acessibilidade.
+**Estratégia:** 12 fases sequenciais — namespacing BEM `.qa-*`, build seletivo por página, substituição de emojis por SVG (Lucide), tokens de tipografia, acessibilidade (WCAG), variantes de layout, estados vazios/erro/loading.
+**Regra absoluta:** zero workarounds, 100% teste para código novo, deletar código obsoleto, nenhum débito deixado.
+
+### Alterações Arquiteturais
+
+| ID  | Proposta                                             | Substitui                                 | Motivo                                           |
+| --- | ---------------------------------------------------- | ----------------------------------------- | ------------------------------------------------ |
+| A1  | `buildStyles(...domains)` seletivo                   | `buildAllStyles()` monolítico             | Cada página carrega só o CSS que usa             |
+| A2  | BEM-like namespacing `.qa-*`                         | Prefixos `ph-`, `tbl-`, `text-`, `empty-` | Taxonomia escalável sem colisão entre N domínios |
+| A3  | Fase 0 já redireciona `buildCss()` → `buildStyles()` | Fase 6 separada                           | Zero convivência de duplicação                   |
+
+### Fases
+
+| Fase | Descrição                                                                                                            | Itens     | Status |
+| ---- | -------------------------------------------------------------------------------------------------------------------- | --------- | ------ |
+| 0    | Redirect: `buildAllStyles()` → `buildCss()` → `buildStyles()`                                                        | A3        | 🔜     |
+| 1    | CSS Reset + CSS Variables (buildThemeCss)                                                                            | existente | ✅     |
+| 2    | BEM Namespacing: `.qa-*` em todas as classes                                                                         | A2        | 🔜     |
+| 3    | `buildStyles(...domains)` — build seletivo por domínio                                                               | A1        | 🔜     |
+| 4a   | Sticky headers + sort indicators CSS                                                                                 | CSS-40a   | 🔜     |
+| 4b   | Card hover states (border-color transition)                                                                          | CSS-43a   | 🔜     |
+| 4d   | Color-independent indicators (aria-label + text label)                                                               | CSS-56a   | 🔜     |
+| 5    | Badge: suporte a ícone Lucide via `data-icon`                                                                        | CSS-60a   | 🔜     |
+| 6    | BEM `.qa-*` completo — remover prefixos legados                                                                      | A2        | 🔜     |
+| 7    | Icon System: `shared/icons.ts` com SVG inline (Lucide)                                                               | V1        | 🔜     |
+| 8    | Typography: Inter + JetBrains Mono via `@font-face` (WOFF2 base64)                                                   | V2        | 🔜     |
+| 9    | Accessibility: focus indicators, keyboard nav, `prefers-reduced-motion`, `prefers-contrast`, skip-link, print styles | V3        | 🔜     |
+| 10   | Layout Variants: `buildHtmlPage()` com suporte a single/double/sidebar                                               | V4        | 🔜     |
+| 11   | Empty/Error/Loading States: skeleton shimmer, error page, empty state                                                | V5        | 🔜     |
+
+### Itens Suplementares por Fase
+
+| Onde    | ID               | Item                                                                                            |
+| ------- | ---------------- | ----------------------------------------------------------------------------------------------- |
+| Fase 3  | A3               | `buildAllStyles()` já chamar `buildCss()` internamente                                          |
+| Fase 4a | CSS-40a          | Sticky headers + sort indicators CSS                                                            |
+| Fase 4b | CSS-43a          | Card hover states (`border-color` transition)                                                   |
+| Fase 4d | CSS-56a          | Color-independent indicators (`aria-label` + text label junto com cor)                          |
+| Fase 5  | CSS-60a          | Badge: suporte a ícone Lucide via `data-icon`                                                   |
+| Fase 6  | A2               | Nomenclatura BEM `.qa-*` em vez de prefixos                                                     |
+| Global  | U4/U6/U10        | Emojis redundantes removidos; flakiness-dashboard sem DataTable; `filterByHierarchy` redundante |
+| Global  | V6 (U12/U13/U14) | `prefers-reduced-motion`, `scrollToTest` CSS transition, `detail-screenshots` responsive        |
+
+### Métricas Alvo
+
+| Métrica                                   | Alvo                                              |
+| ----------------------------------------- | ------------------------------------------------- |
+| `npx tsc --noEmit`                        | **0 erros**                                       |
+| `npx vitest run`                          | **100% pass**                                     |
+| `npm run lint`                            | **0 violações**                                   |
+| `buildAllStyles()`                        | **0 referências** (substituído por `buildStyles`) |
+| Prefixos `ph-`, `tbl-`, `text-`, `empty-` | **0 ocorrências em CSS novo**                     |
+| Emojis em reports HTML                    | **0** (substituídos por SVG Lucide)               |
+| WCAG AA (contraste)                       | **100% tokens**                                   |
+| Skip-link / keyboard nav                  | **implementado**                                  |
+| Layout variants (single/double/sidebar)   | **suportado**                                     |
+| Empty/error/loading states                | **padronizados**                                  |
+| Focus indicators visíveis                 | **presentes em todos os interactive elements**    |
+
+---
+
 ## 📊 Sprint PR Report UX — Visualização e Acessibilidade do Report (Jun/2026)
 
 **Data:** 2026-06-14

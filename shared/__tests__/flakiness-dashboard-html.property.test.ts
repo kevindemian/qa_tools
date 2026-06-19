@@ -7,6 +7,9 @@
  * - Summary count matches filterHighFlakiness().length
  * - Error severity when >5 high entries
  * - Empty input shows no-threshold message
+ * - Never outputs NaN or Infinity strings
+ * - HTML always contains structural elements (metric-card, heading)
+ * - Summary cards always show threshold and all-candidates count
  */
 import fc from 'fast-check';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
@@ -23,6 +26,37 @@ vi.mock('../config.js', () => ({
 }));
 
 const safeTitle = fc.string({ minLength: 1, maxLength: 20 }).map((s) => s.replace(/[^a-zA-Z0-9 _.-]/g, '_'));
+
+const nanEntry: FlakinessEntry = {
+    title: 'NaN-rate',
+    passCount: 0,
+    failCount: 0,
+    skipCount: 0,
+    totalRuns: 1,
+    rate: NaN,
+};
+const infEntry: FlakinessEntry = {
+    title: 'Inf-rate',
+    passCount: 0,
+    failCount: 10,
+    skipCount: 0,
+    totalRuns: 10,
+    rate: Infinity,
+};
+const negInfEntry: FlakinessEntry = {
+    title: 'NegInf-rate',
+    passCount: 10,
+    failCount: 0,
+    skipCount: 0,
+    totalRuns: 10,
+    rate: -Infinity,
+};
+
+const extremeEntryArb: fc.Arbitrary<FlakinessEntry> = fc.oneof(
+    fc.constant(nanEntry),
+    fc.constant(infEntry),
+    fc.constant(negInfEntry),
+);
 
 const flakyEntryArb: fc.Arbitrary<FlakinessEntry> = fc
     .record({
@@ -48,12 +82,14 @@ describe('generateFlakinessHtml — property-based', () => {
         vi.restoreAllMocks();
     });
 
-    it('always produces valid HTML', () => {
+    it('always produces valid HTML with structural elements', () => {
         fc.assert(
             fc.property(fc.array(flakyEntryArb, { minLength: 0, maxLength: 10 }), (entries) => {
                 const html = generateFlakinessHtml(entries);
                 expect(html).toContain('<!DOCTYPE html>');
                 expect(html).toContain('</html>');
+                expect(html).toContain('data-component="metric-card"');
+                expect(html).toContain('Flakiness Dashboard');
             }),
             { numRuns: 50 },
         );
@@ -106,6 +142,32 @@ describe('generateFlakinessHtml — property-based', () => {
                 if (high.length === 0) {
                     expect(html).toContain('No tests exceed');
                 }
+            }),
+            { numRuns: 50 },
+        );
+    });
+
+    it('never outputs NaN or Infinity in HTML', () => {
+        fc.assert(
+            fc.property(
+                fc.array(fc.oneof(flakyEntryArb, extremeEntryArb), { minLength: 0, maxLength: 10 }),
+                (entries) => {
+                    const html = generateFlakinessHtml(entries);
+                    expect(html).not.toContain('NaN');
+                    expect(html).not.toContain('Infinity');
+                },
+            ),
+            { numRuns: 100 },
+        );
+    });
+
+    it('always shows summary cards with threshold and all-candidates count', () => {
+        fc.assert(
+            fc.property(fc.array(flakyEntryArb, { minLength: 0, maxLength: 10 }), (entries) => {
+                const html = generateFlakinessHtml(entries);
+                expect(html).toContain('Threshold');
+                expect(html).toContain('All Candidates');
+                expect(html).toContain(String(entries.length));
             }),
             { numRuns: 50 },
         );

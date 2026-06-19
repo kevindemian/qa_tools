@@ -31,7 +31,11 @@ export function pct(value: number, total: number): string {
 
 export function pctSub(value: number, total: number): string {
     if (total === 0) return '';
-    return ' <span style="font-size:0.75rem;color:#6b7280;font-weight:400">(' + pct(value, total) + '%)</span>';
+    return (
+        ' <span style="font-size:0.75rem;color:var(--color-text-muted);font-weight:400">(' +
+        pct(value, total) +
+        '%)</span>'
+    );
 }
 
 export { sanitizeHtml as escapeHtml } from './escape.js';
