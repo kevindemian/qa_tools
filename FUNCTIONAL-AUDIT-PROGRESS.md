@@ -1139,3 +1139,176 @@ FT-26 completo. D7 pós-correção: arrasto --all executado, 0 violações.
 | Consistency     | ✅     | mesmo padrão de error handling de FT-03/FT-07/FT-14/FT-17/FT-21/FT-24/FT-25, TECHDOC adicionado, checkpoints completos, 54/54 testes passam, D7 9/9 ✅ |
 
 `<!-- CHECKPOINT: Phase 11 complete -->`
+
+---
+
+## FT-27 — Developer Profile
+
+**Início:** 2026-06-19
+
+**Metadados FT-27:**
+
+- FEATURE_NAME: developer-profile
+- MODULE_NAME: developer-profile
+- SOURCE: shared/developer-profile.ts (261L)
+- TEST_FILE_UNIT: shared/developer-profile.test.ts
+- TEST_FILE_INTEGRATION: shared/**tests**/integration/developer-profile.integration.test.ts
+- TEST_FILE_PBT: shared/**tests**/developer-profile.property.test.ts
+- CONSUMERS: scripts/quality-check.ts, git_triggers/interactive-mode.ts, git_triggers/schedule-handler.ts
+- DOCS: ❌ TECHDOC ausente
+
+**Pre-scan achados (Phase 0.1):**
+
+| #   | Categoria        | Local              | Descrição                                                        |
+| --- | ---------------- | ------------------ | ---------------------------------------------------------------- |
+| 1   | UX               | devprof.ts:122     | "Failed to build developer profile" — mensagem genérica sem ação |
+| 2   | UX               | devprof.ts:258     | "Failed to generate developer profile HTML" — genérica sem ação  |
+| 3   | Manutenibilidade | devprof.ts:153-178 | Thresholds (50, 20, 10) literais em buildSeverityBadge/html      |
+| 4   | Docs             | TECHDOC            | Sem entrada para developer-profile                               |
+
+`<!-- CHECKPOINT: Phase 0.1 complete -->`
+
+### Phase 1 — Mapeamento
+
+- Exports: `AuthorStat`, `DeveloperProfileResult`, `buildDeveloperProfile`, `generateDeveloperProfileHtml`
+- Consumers:
+    - `git_triggers/interactive-mode.ts` — buildDeveloperProfile, generateDeveloperProfileHtml
+    - `git_triggers/schedule-handler.ts` — buildDeveloperProfile, generateDeveloperProfileHtml
+    - `scripts/quality-check.ts` — referência de export (metadata)
+- Consumer tests: 106 ✅ (interactive-mode 71, schedule-handler 36, quality-check 35)
+- TECHDOC: ❌ ausente
+
+`<!-- CHECKPOINT: Phase 1 complete -->`
+
+### Phase 2 — T1-T20
+
+| ID  | Comando                   | Status | Observação                                 |
+| --- | ------------------------- | ------ | ------------------------------------------ |
+| T1  | Entry point exports       | ✅     | 2 exports públicos                         |
+| T2  | Config model (interfaces) | ✅     | AuthorStat, DeveloperProfileResult         |
+| T3  | Config accessor           | ❌ N/A | Sem config accessor                        |
+| T4  | Runtime lê config         | ❌ N/A | Sem env/config                             |
+| T5  | Wizard entry              | ❌ N/A | Sem wizard                                 |
+| T6  | Wizard detection          | ❌ N/A | —                                          |
+| T7  | Wizard output             | ❌ N/A | —                                          |
+| T8  | Wizard prompts            | ❌ N/A | —                                          |
+| T9  | Reconfig handler          | ❌ N/A | Apenas import (não handler)                |
+| T10 | CI integration            | ❌ N/A | Sem .github/ integration                   |
+| T11 | Safety mechanisms         | ✅     | try/catch em ambas funções                 |
+| T12 | Test coverage             | ✅     | 3 files, 36 tests (u+i+PBT)                |
+| T13 | Dead code                 | ✅     | Zero mortos                                |
+| T14 | Suppressions              | ✅     | T14a-i: 0 hits; Object.entries seguro      |
+| T15 | Bidirectional consistency | ✅     | 3 consumers consistentes                   |
+| T16 | CLI interface             | ❌ N/A | Sem CLI                                    |
+| T17 | Env var dependency        | ✅     | Zero env vars                              |
+| T18 | Error handling            | ✅     | try/catch + throw + rootLogger + fallbacks |
+| T19 | TECHDOC                   | ❌     | Ausente                                    |
+| T20 | CI/Config contract        | ❌ N/A | —                                          |
+
+`<!-- CHECKPOINT: Phase 2 complete -->`
+
+### Phase 3 — D1-D7
+
+| ID  | Status | Observação                                              |
+| --- | ------ | ------------------------------------------------------- |
+| D1  | ✅     | vi.mock + beforeEach vi.clearAllMocks + restoreAllMocks |
+| D2  | ✅     | null guard, 3 funções com input validation              |
+| D3  | ✅     | SRP, DepWall, 261L (<400), sem duplicação               |
+| D4  | ✅     | Complexidade adequada, zero dead code                   |
+| D5  | ❌ N/A | Feature não produz métricas                             |
+| D6  | ❌     | Mensagens genéricas sem ação sugerida (gaps 1-2)        |
+| D7  | ✅     | 9/9 PASS no script; 2x toBeDefined com assert real      |
+
+`<!-- CHECKPOINT: Phase 3 complete -->`
+
+### Phase 3.5 — D8 Domain Adequacy
+
+**D8.0 — Tipos de cálculo:**
+| Operação | Fonte | ID Registry |
+| ------------------ | ------------------------------------------ | ---------------- |
+| failureRate | `(totalFailures / testsTouched) * 100` | Sem gold standard |
+| totalFailures | Contagem simples | — |
+| totalAuthors | Unique count | — |
+| testsTouched | Cardinalidade de Set | — |
+| topFailureCategory | Moda (maior contagem) | Sem gold standard |
+
+**D8.2 — failureRate (derivação):**
+| Camada | Expressão | Match? |
+| -------------------- | ----------------------------------------------------------- | ------ |
+| Referência | N/A — métrica de domínio sem gold standard formal | — |
+| Núcleo implementação | `(data.totalFailures / testsTouched) * 100` | — |
+| Observação | Métrica pode exceder 100% (1 teste pode falhar N vezes). | — |
+
+**D8.2 — totalFailures (derivação):**
+| Camada | Expressão | Match? |
+| -------------------- | ----------------------------- | ------ |
+| Referência | Contagem simples | — |
+| Núcleo implementação | Incremento por iteração | ✅ |
+
+**D8.3 — Desvios estruturais:** Nenhum — operações sem desvios entre input e saída.
+
+**Conclusão:** Nenhum gap aritmético. Nenhum novo tipo de fórmula a registrar no registry.
+
+`<!-- CHECKPOINT: Phase 3.5 complete -->`
+
+### Phase 4 — Registro de Gaps
+
+| ID   | Severidade | Descrição                                                     | Local              | Origem |
+| ---- | ---------- | ------------------------------------------------------------- | ------------------ | ------ |
+| G-01 | Baixo      | "Failed to build developer profile" — genérica sem ação       | devprof.ts:122     | D6     |
+| G-02 | Baixo      | "Failed to generate developer profile HTML" — genérica        | devprof.ts:258     | D6     |
+| G-03 | Baixo      | Thresholds (50, 20, 10) literais em buildSeverityBadge        | devprof.ts:152-156 | D4     |
+| G-04 | Baixo      | TECHDOC sem entrada para developer-profile                    | docs/TECHDOC.md    | T19    |
+| G-05 | Info       | Oracle Problem menor: topFailureCategory em empate testa impl | test.ts:56         | D7.3   |
+| G-06 | Info       | Dual-implementation menor: failureRate = 150 replica fórmula  | test.ts:85         | D7.10  |
+
+**Prioridade:** G-03 (constantes) → G-01/G-02 (UX) → G-04 (docs) → G-05/G-06 (D7, coberto por PBT)
+
+### Phase 5 — RED
+
+Integration test FT-27c (error fallback null/undefined) adicionado — 2 novos testes.
+
+### Phase 6 — GREEN
+
+Source corrigido:
+
+- G-03: constantes nomeadas `RATE_THRESHOLD_HIGH` (50), `RATE_THRESHOLD_MEDIUM` (20), `RATE_THRESHOLD_LOW` (10)
+- G-01/G-02: mensagens com ação sugerida (". Verify input data integrity and retry.", ". Check result data and try again.")
+- G-04: TECHDOC entrada adicionada na tabela + FILES section
+
+### Phase 7 — Consumer tests
+
+144/144 pass (developer-profile 38 + interactive-mode 71 + schedule-handler 36 + quality-check 35)
+
+### Phase 8 — Refatoração
+
+🟢 Skip — 261L, SRP, DepWall, zero duplicação, nomes claros
+
+### Phase 8.5 — Self-review
+
+Q1(casts)❌ Q2(violação ignorada)❌ Q3(causa raiz)✅ Q4(UX acionável)✅
+
+### Phase 9 — Validation
+
+- tsc --noEmit: ✅ 0 erros
+- lint: ✅ All quality checks passed
+- Tests: 38/38 (unit 23 + integration 5 + PBT 10)
+
+### Phase 10 — PROGRESS atualizado
+
+FT-27 completo. Gaps corrigidos: G-01/G-02 (UX), G-03 (constantes), G-04 (TECHDOC). G-05/G-06 (D7) mantidos como info — cobertos por PBT.
+
+`<!-- CHECKPOINT: Phase 10 complete -->`
+
+### Phase 11 — Quality Gate
+
+| Dimensão        | Status | Itens                                                                                           |
+| --------------- | ------ | ----------------------------------------------------------------------------------------------- |
+| Architecture    | ✅     | SRP, DepWall (só shared/), zero duplicação, 261L (<400)                                         |
+| Security        | ✅     | sanitizeHtml em entradas do usuário, sem eval, sem secrets                                      |
+| Error handling  | ✅     | try/catch discriminado, rootLogger.error com contexto, buildErrorPage fallback, ações sugeridas |
+| Type safety     | ✅     | tipos explícitos, zero `!`, zero `as`, zero suppressions                                        |
+| Maintainability | ✅     | constantes nomeadas, nomes claros, complexidade baixa, 0 dead code                              |
+| Consistency     | ✅     | mesmo padrão UX+error de FT-26, checkpoints Phases 0-11 completos, 38/38 testes, D7 9/9 ✅      |
+
+`<!-- CHECKPOINT: Phase 11 complete -->`

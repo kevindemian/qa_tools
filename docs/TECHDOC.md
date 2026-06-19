@@ -704,6 +704,7 @@ import { globSync } from 'glob'; // file globbing
 | `test-utils/`                   | Test utilities (factories, mock types)                 | `MockedSafe<T>`, `mockedSafe()`                                                   |
 | `run-comparison.ts`             | Compare two MetricsRun objects via LLM                 | `compareRuns()`                                                                   |
 | `cross-squad-benchmark.ts`      | Cross-squad health score leaderboard with trends       | `computeCrossSquadBenchmark()`, `generateBenchmarkHtml()`                         |
+| `developer-profile.ts`          | Developer profile failure breakdown dashboard          | `buildDeveloperProfile()`, `generateDeveloperProfileHtml()`                       |
 | `report-*.ts`                   | Report generation (HTML, sections, tables, charts)     | `ReportGenerator`                                                                 |
 | `silent-regression.ts`          | Silent regression detector                             | `detectSilentRegression()`, `generateSilentRegressionHtml()`                      |
 | `ai-effectiveness.ts`           | AI effectiveness dashboard HTML report                 | `computeAiEffectiveness()`, `generateAiEffectivenessHtml()`                       |
@@ -997,6 +998,7 @@ Features divergentes devem ser registradas no backlog para conformização.
 | `config/features.json`                    | Feature toggles store (Zod-validated)                    |
 | `shared/feature-config.ts`                | Feature config accessor — PR-Report-specific             |
 | `shared/types/feature-config.ts`          | Zod schemas + TypeScript types for feature store         |
+| `shared/developer-profile.ts`             | Developer profile failure breakdown dashboard            |
 | `shared/suite-optimization.ts`            | Suite optimization advisor (duration/flakiness analysis) |
 | `shared/pr-report-core.ts`                | PR Report runtime (CLI entry point)                      |
 | `shared/report-html.ts`                   | HTML report generator (sections, charts, themes)         |
