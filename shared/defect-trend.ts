@@ -24,6 +24,29 @@ export interface DefectTrendResult {
     period: { from: string; to: string };
 }
 
+function sanitizeNumber(v: number): number {
+    return Number.isFinite(v) ? v : 0;
+}
+
+/**
+ * Sanitizes all numeric fields in a DefectTrendResult at the output boundary.
+ * Converts NaN and Infinity to 0 before HTML rendering.
+ */
+export function sanitizeTrendResult(r: DefectTrendResult): DefectTrendResult {
+    return {
+        ...r,
+        trends: r.trends.map((t) => ({
+            date: t.date,
+            total: sanitizeNumber(t.total),
+            categories: Object.fromEntries(Object.entries(t.categories).map(([k, v]) => [k, sanitizeNumber(v)])),
+        })),
+        topCategories: r.topCategories.map((c) => ({
+            category: c.category,
+            count: sanitizeNumber(c.count),
+        })),
+    };
+}
+
 function extractDate(ts: string): string {
     return ts.slice(0, 10);
 }
@@ -81,11 +104,8 @@ export function aggregateDefectTrends(classifications: FailureClassification[] |
         return { trends: [], topCategories: [], period: { from: '', to: '' } };
     }
 
-    const grouped: Record<string, Record<string, number>> = Object.create(null) as Record<
-        string,
-        Record<string, number>
-    >;
-    const overallCounts: Record<string, number> = Object.create(null) as Record<string, number>;
+    const grouped = Object.create(null) as { [key: string]: { [key: string]: number } };
+    const overallCounts = Object.create(null) as { [key: string]: number };
     let minDate = '';
     let maxDate = '';
 
@@ -93,8 +113,12 @@ export function aggregateDefectTrends(classifications: FailureClassification[] |
         const date = extractDate(fc.timestamp);
         const cat = fc.category;
 
-        if (!grouped[date]) grouped[date] = Object.create(null) as Record<string, number>;
-        grouped[date][cat] = (grouped[date][cat] ?? 0) + 1;
+        let dayGroup = grouped[date];
+        if (!dayGroup) {
+            dayGroup = Object.create(null) as { [key: string]: number };
+            grouped[date] = dayGroup;
+        }
+        dayGroup[cat] = (dayGroup[cat] ?? 0) + 1;
 
         overallCounts[cat] = (overallCounts[cat] ?? 0) + 1;
 
@@ -117,6 +141,7 @@ export function aggregateDefectTrends(classifications: FailureClassification[] |
 }
 
 export function generateDefectTrendHtml(result: DefectTrendResult, title?: string): string {
+    result = sanitizeTrendResult(result);
     try {
         const pageTitle = title || 'Defect Trend Dashboard';
 
@@ -146,7 +171,7 @@ export function generateDefectTrendHtml(result: DefectTrendResult, title?: strin
         });
     } catch (err) {
         const msg = err instanceof Error ? err.message : String(err);
-        rootLogger.error('Failed to generate defect trend dashboard: ' + msg);
+        rootLogger.error('Failed to generate defect trend dashboard. Check input data for validity: ' + msg);
         return buildErrorPage('Error generating dashboard', 'Error generating dashboard');
     }
 }

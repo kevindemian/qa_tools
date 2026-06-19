@@ -139,7 +139,7 @@ describe('generateHtmlReport', () => {
         const diffComparison = {
             newFailures: [{ title: 'F1', state: 'failed' as const, duration: 100 }],
             newPasses: [{ title: 'P1', state: 'passed' as const, duration: 50 }],
-            flaky: [] as FlatTest[],
+            flaky: [] satisfies FlatTest[],
         };
         const html = generateHtmlReport(MOCK_TESTS, { title: 'Diff', diffComparison });
         expect(html).toContain('Diff');

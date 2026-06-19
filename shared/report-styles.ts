@@ -42,6 +42,11 @@ export function buildCssVars(): string {
     vars.push(`--color-badge-skip-bg:${tokens.color.badge.skip.bg.light}`);
     vars.push(`--color-badge-skip-text:${tokens.color.badge.skip.text.light}`);
 
+    // Health background colors
+    vars.push(`--color-bg-healthy:${tokens.color.bg.healthy.light}`);
+    vars.push(`--color-bg-warning:${tokens.color.bg.warning.light}`);
+    vars.push(`--color-bg-critical:${tokens.color.bg.critical.light}`);
+
     return `:root{${vars.join(';')}}`;
 }
 
@@ -73,6 +78,11 @@ export function buildDarkVars(): string {
     vars.push(`--color-badge-skip-bg:${tokens.color.badge.skip.bg.dark}`);
     vars.push(`--color-badge-skip-text:${tokens.color.badge.skip.text.dark}`);
 
+    // Health background colors (dark mode)
+    vars.push(`--color-bg-healthy:${tokens.color.bg.healthy.dark}`);
+    vars.push(`--color-bg-warning:${tokens.color.bg.warning.dark}`);
+    vars.push(`--color-bg-critical:${tokens.color.bg.critical.dark}`);
+
     return `html.dark{${vars.join(';')}}`;
 }
 
@@ -98,7 +108,7 @@ const TABS_SIDEBAR_CSS = `
 .tabs{display:flex;gap:4px;margin-bottom:12px}
 .tab-btn{padding:6px 14px;border:1px solid var(--color-border-default);background:var(--color-surface-card);border-radius:6px 6px 0 0;cursor:pointer;font-size:0.8rem;color:var(--color-text-primary)}
 .tab-btn:hover{background:var(--color-surface-elevated)}
-.tab-btn.active{background:var(--color-surface-elevated);border-bottom-color:var(--color-surface-elevated);font-weight:600}
+.tab-btn.active{background:var(--color-surface-elevated);border-bottom:2px solid var(--color-info);font-weight:600}
 .tab-content{display:none}
 .tab-content.active{display:block}
 .sidebar{float:left;width:220px;margin-right:16px;margin-bottom:16px;background:var(--color-surface-card);border-radius:${tokens.borderRadius.lg}px;padding:${tokens.spacing.md}px;box-shadow:${tokens.shadow.card};font-size:0.85rem}
@@ -162,7 +172,6 @@ const PRINT_CSS = `
 const RESPONSIVE_CSS = `
 @media(max-width:${tokens.breakpoint.md}px){
   .sidebar{float:none;width:auto;margin-right:0}
-  .summary{flex-direction:column}
   .card{min-width:auto}
   .detail-screenshots img{max-width:100%}
 }

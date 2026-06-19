@@ -99,7 +99,7 @@ describe('computeCoverageMetrics', () => {
             ...ageFixture,
             coverage: {
                 expectedCriteria: ['Criterion 1'],
-                numericRanges: [] as Array<{ field: string; min: number; max: number }>,
+                numericRanges: [] satisfies Array<{ field: string; min: number; max: number }>,
             },
         };
         const body = JSON.stringify([

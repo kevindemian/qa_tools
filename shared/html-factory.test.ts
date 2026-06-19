@@ -115,7 +115,7 @@ describe('buildErrorPage', () => {
     it('returns minimal error HTML with given label', () => {
         const html = buildErrorPage('Error', 'Something went wrong');
         expect(html).toContain('<!DOCTYPE html>');
-        expect(html).toContain('<html>');
+        expect(html).toContain('<html');
         expect(html).toContain('<body>');
         expect(html).toContain('<h1>Something went wrong</h1>');
     });

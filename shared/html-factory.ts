@@ -59,11 +59,28 @@ var _toggleTheme = function toggleTheme() {
     var html = document.documentElement;
     html.classList.toggle('dark');
     var isDark = html.classList.contains('dark');
-    try { localStorage.setItem('${key}', isDark ? 'dark' : 'light'); } catch(e) { if (typeof console !== 'undefined') console.warn('Theme persistence failed:', e); }
+    try { localStorage.setItem('${key}', isDark ? 'dark' : 'light'); } catch {/* localStorage unavailable — non-critical */}
 };
 </script>`;
 }
 
+const _ERROR_PAGE_CSS = `
+body{font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,sans-serif;margin:0;padding:40px 20px;background:var(--color-surface-page,#f9fafb);color:var(--color-text-primary,#111827)}
+h1{font-size:1.5rem;margin:0;color:var(--color-error,#ef4444)}
+.er-msg{margin-top:12px;color:var(--color-text-secondary,#4b5563)}
+.er-foot{margin-top:32px;font-size:0.75rem;color:var(--color-text-muted,#6b7280);text-align:center}
+html.dark h1{color:var(--color-error,#f87171)}
+html.dark .er-msg{color:var(--color-text-secondary,#8b949e)}
+html.dark .er-foot{color:var(--color-text-muted,#9ca3af)}
+`;
+
 export function buildErrorPage(title: string, label: string): string {
-    return `<!DOCTYPE html><html><body><h1>${label || title}</h1></body></html>`;
+    return buildHtmlPage({
+        title,
+        styles: _ERROR_PAGE_CSS,
+        theme: 'system',
+        bodyContent: `<h1>${sanitizeHtml(label || title)}</h1>
+            <div class="er-msg">An unexpected error occurred while generating this report.</div>
+            <div class="er-foot">QA Tools</div>`,
+    });
 }

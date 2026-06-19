@@ -21,6 +21,10 @@ vi.mock('../config', () => ({
     get: vi.fn(() => ''),
 }));
 
+vi.mock('../date-utils', () => ({
+    formatDateISO: vi.fn(() => '2026-06-19'),
+}));
+
 const safeString = (min: number, max: number) =>
     fc
         .string({ minLength: min, maxLength: max })
@@ -91,12 +95,14 @@ const itemArb = fc
     }));
 
 describe('generateCoverageGapHtml — property-based', () => {
-    it('always produces valid HTML', () => {
+    it('always produces valid HTML with structural elements', () => {
         fc.assert(
             fc.property(fc.array(itemArb, { minLength: 0, maxLength: 10 }), (items) => {
                 const html = generateCoverageGapHtml(makeResult(items));
                 expect(html).toContain('<!DOCTYPE html>');
                 expect(html).toContain('</html>');
+                expect(html).toContain('data-component="metric-card"');
+                expect(html).toContain('Coverage Gap Analysis');
             }),
             { numRuns: 50 },
         );
@@ -135,6 +141,31 @@ describe('generateCoverageGapHtml — property-based', () => {
                     expect(html).toContain('below');
                 } else {
                     expect(html).toContain('All epics pass');
+                }
+            }),
+            { numRuns: 50 },
+        );
+    });
+
+    it('summary totals are consistent: covered + gap = totalIssues', () => {
+        fc.assert(
+            fc.property(fc.array(itemArb, { minLength: 1, maxLength: 10 }), (items) => {
+                const result = makeResult(items);
+                expect(result.totals.covered + result.totals.gap).toBe(result.totals.totalIssues);
+            }),
+            { numRuns: 50 },
+        );
+    });
+
+    it('renders gap table rows with Badge for uncovered items', () => {
+        fc.assert(
+            fc.property(fc.array(itemArb, { minLength: 1, maxLength: 10 }), (items) => {
+                const gaps = items.filter((i) => !i.hasTest);
+                if (gaps.length === 0) return;
+                const html = generateCoverageGapHtml(makeResult(items));
+                for (const gap of gaps) {
+                    expect(html).toContain(gap.issueKey);
+                    expect(html).toContain('GAP');
                 }
             }),
             { numRuns: 50 },

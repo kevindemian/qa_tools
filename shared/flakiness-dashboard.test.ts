@@ -4,7 +4,6 @@
 
 import { filterHighFlakiness, generateFlakinessHtml } from './flakiness-dashboard.js';
 import type { FlakinessEntry } from './metrics.js';
-import { nonNull } from './test-utils.js';
 
 describe('filterHighFlakiness', () => {
     it('filters entries above threshold', () => {
@@ -16,8 +15,8 @@ describe('filterHighFlakiness', () => {
 
         const result = filterHighFlakiness(entries, 30);
         expect(result).toHaveLength(2);
-        expect(nonNull(result[0]).title).toBe('Very Flaky');
-        expect(nonNull(result[1]).title).toBe('Borderline');
+        expect(result[0]?.title).toBe('Very Flaky');
+        expect(result[1]?.title).toBe('Borderline');
     });
 
     it('returns empty array when no entries exceed threshold', () => {

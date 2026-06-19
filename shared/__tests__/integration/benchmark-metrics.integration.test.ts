@@ -78,3 +78,18 @@ describe('Integration: Benchmark Metrics', () => {
         });
     });
 });
+
+/* ── Phase 5: RED tests ────────────────────────────────────── */
+
+describe('RED: G1 — catch vazio sem log', () => {
+    vi.mock('../../logger.js');
+
+    it('logs rootLogger.warn when JSON.parse fails (body inválido)', async () => {
+        const { rootLogger } = await import('../../logger.js');
+        const warnSpy = vi.spyOn(rootLogger, 'warn');
+        const { computeCoverageMetrics } = await import('../../benchmark-metrics.js');
+        const result = computeCoverageMetrics('not json', createFixture());
+        expect(warnSpy).toHaveBeenCalled();
+        expect(result.totalTests).toBe(0);
+    });
+});

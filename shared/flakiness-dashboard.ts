@@ -15,10 +15,12 @@ import { buildCss } from './report-styles.js';
 import { MetricCard, MetricGrid, Badge, Sparkline } from './primitives/index.js';
 
 const THRESHOLD_PCT = 30;
+const ERROR_SEVERITY_THRESHOLD = 5;
+const HIGH_FLAKINESS_PCT = 50;
 
 /** Filter flaky entries whose rate exceeds a percentage threshold. */
 export function filterHighFlakiness(flaky: FlakinessEntry[], thresholdPct = THRESHOLD_PCT): FlakinessEntry[] {
-    return flaky.filter((f) => f.rate * 100 >= thresholdPct);
+    return flaky.filter((f) => Number.isFinite(f.rate) && f.rate * 100 >= thresholdPct);
 }
 
 function buildFlakinessSummary(high: FlakinessEntry[], flaky: FlakinessEntry[]): string {
@@ -27,7 +29,7 @@ function buildFlakinessSummary(high: FlakinessEntry[], flaky: FlakinessEntry[]):
             MetricCard({
                 label: 'Total Flaky Tests',
                 value: String(high.length),
-                severity: high.length > 5 ? 'error' : 'warn',
+                severity: high.length > ERROR_SEVERITY_THRESHOLD ? 'error' : 'warn',
             }) +
             MetricCard({ label: 'Threshold', value: '>' + THRESHOLD_PCT + '%' }) +
             MetricCard({ label: 'All Candidates', value: String(flaky.length) }),
@@ -48,7 +50,7 @@ function buildFlakinessTable(high: FlakinessEntry[]): string {
         '</tr></thead><tbody>';
     for (const f of high) {
         const pct = Math.round(f.rate * 100);
-        const severity = pct >= 50 ? 'high' : 'medium';
+        const severity = pct >= HIGH_FLAKINESS_PCT ? 'high' : 'medium';
         const rowStyle =
             'border-bottom:1px solid var(--color-border-subtle);transition:background 0.15s" onmouseover="this.style.background=\'var(--color-surface-elevated)\'" onmouseout="this.style.background=\'\'">';
         html += '<tr style="' + rowStyle;
@@ -94,7 +96,10 @@ export function generateFlakinessHtml(flaky: FlakinessEntry[], title?: string): 
         });
     } catch (err) {
         const msg = err instanceof Error ? err.message : String(err);
-        rootLogger.error('Failed to generate flakiness dashboard: ' + msg);
+        rootLogger.error(
+            'Failed to generate flakiness dashboard. Verify that flakiness data is valid and complete, then retry. Details: ' +
+                msg,
+        );
         return buildErrorPage('Error generating dashboard', 'Error generating dashboard');
     }
 }

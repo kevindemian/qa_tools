@@ -151,7 +151,7 @@ function buildFailureTable(tests: FlatTest[]): string {
     if (failed.length === 0) return '';
 
     const rows = failed.map((t) => {
-        const error = t.error ? t.error.replace(/\n/g, ' ').slice(0, 200) : '';
+        const error = t.error ? t.error.replace(/\n/g, ' ').slice(0, MAX_ERROR_LENGTH) : '';
         return `| ${t.title.replace(/\|/g, '\\|')} | ${t.duration}ms | ${error.replace(/\|/g, '\\|')} |`;
     });
 
@@ -174,7 +174,7 @@ function buildFailureTable(tests: FlatTest[]): string {
 function buildFlakySection(): string {
     try {
         const store = loadMetrics();
-        const flakyEntries = calculateFlakiness(store, 2);
+        const flakyEntries = calculateFlakiness(store, MIN_FLAKINESS_RUNS);
         const highFlaky = flakyEntries.filter((e) => e.rate >= 0.3);
 
         if (highFlaky.length === 0) return '';
@@ -340,6 +340,11 @@ function validatePrReportStats(tests: FlatTest[], stats: PrReportStats): void {
     }
 }
 
+/** Minimum number of runs required to compute flakiness metrics. */
+const MIN_FLAKINESS_RUNS = 2;
+/** Maximum length for error messages in markdown tables. */
+const MAX_ERROR_LENGTH = 200;
+
 export async function generatePrReport(options: PrReportCoreOptions): Promise<PrReportResult> {
     const { tests, stats } = options;
     validatePrReportStats(tests, stats);
@@ -367,11 +372,10 @@ export async function generatePrReport(options: PrReportCoreOptions): Promise<Pr
     const healthConfig = coverageResult ? { coverageOverride: coverageResult.coveragePct } : {};
     const healthScore = calculateHealthScore(store, healthConfig);
 
-    const penv = process.env as Record<string, string | undefined>;
-    const ghServer = penv['GITHUB_SERVER_URL'];
-    const ghRepo = penv['GITHUB_REPOSITORY'];
-    const ghRunId = penv['GITHUB_RUN_ID'];
-    const ghBranch = penv['GITHUB_REF_NAME'];
+    const ghServer = process.env['GITHUB_SERVER_URL'];
+    const ghRepo = process.env['GITHUB_REPOSITORY'];
+    const ghRunId = process.env['GITHUB_RUN_ID'];
+    const ghBranch = process.env['GITHUB_REF_NAME'];
     const workflowUrl = ghServer && ghRepo && ghRunId ? `${ghServer}/${ghRepo}/actions/runs/${ghRunId}` : undefined;
     const artifactUrl = workflowUrl ? `${workflowUrl}?pr=1#artifacts` : undefined;
 
@@ -428,7 +432,7 @@ export async function generatePrReport(options: PrReportCoreOptions): Promise<Pr
     let htmlPath: string | undefined;
 
     try {
-        const flakyEntries = calculateFlakiness(store, 2);
+        const flakyEntries = calculateFlakiness(store, MIN_FLAKINESS_RUNS);
         const flakinessMap: Record<string, number> = {};
         for (const entry of flakyEntries) {
             flakinessMap[entry.title] = entry.rate;
