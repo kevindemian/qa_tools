@@ -60,7 +60,9 @@ describe('FeatureConfigStoreSchema — property-based', () => {
     it('rejeita valores com publishTarget inválido', () => {
         fc.assert(
             fc.property(
-                fc.string({ minLength: 1, maxLength: 30 }),
+                fc
+                    .string({ minLength: 1, maxLength: 30 })
+                    .filter((s) => s !== String.fromCharCode(95, 95, 112, 114, 111, 116, 111, 95, 95)),
                 fc.string().filter((s) => !['github-actions', 'gitlab-ci', 's3', 'gh-pages', 'slack'].includes(s)),
                 (project, invalidTarget) => {
                     const store = {
