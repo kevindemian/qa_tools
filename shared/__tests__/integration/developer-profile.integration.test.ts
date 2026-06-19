@@ -4,7 +4,8 @@
  * Validates the Developer Profile HTML report end-to-end:
  * - generateDeveloperProfileHtml with varying profiles
  * - Empty state
- * - Error fallback
+ * - Error fallback (null/undefined result)
+ * - Custom title
  * - Custom title
  */
 import { beforeEach, describe, expect, it, vi } from 'vitest';
@@ -83,6 +84,21 @@ describe('Integration: Developer Profile (FT-27)', () => {
             expect(html).toContain('<!DOCTYPE html>');
             expect(html).toContain('No developer profile data available');
             expect(html).toContain('0');
+        });
+    });
+
+    describe('FT-27c: error fallback for null result', () => {
+        it('returns error page for null result', async () => {
+            const { generateDeveloperProfileHtml } = await import('../../developer-profile.js');
+            const html = generateDeveloperProfileHtml(null);
+            expect(html).toContain('Error generating developer profile');
+            expect(html).toContain('qa-report-theme');
+        });
+
+        it('returns error page for undefined result', async () => {
+            const { generateDeveloperProfileHtml } = await import('../../developer-profile.js');
+            const html = generateDeveloperProfileHtml(undefined);
+            expect(html).toContain('Error generating developer profile');
         });
     });
 
