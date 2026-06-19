@@ -37,10 +37,10 @@ export interface AiComparisonResult {
     timestamp: string;
 }
 
-export function compareAiVsManual(records: AiComparisonRecord[]): AiComparisonResult {
+export function compareAiVsManual(records: AiComparisonRecord[] | null | undefined): AiComparisonResult {
     const timestamp = new Date().toISOString();
 
-    if (records.length === 0) {
+    if (!records || records.length === 0) {
         return {
             aiTotal: 0,
             aiPassRate: 0,
@@ -168,8 +168,11 @@ function buildVersionTable(result: AiComparisonResult): string {
     return `<h2>Version Breakdown</h2>${DataTable({ columns, rows })}`;
 }
 
-export function generateAiComparisonHtml(result: AiComparisonResult, title?: string): string {
+export function generateAiComparisonHtml(result: AiComparisonResult | null | undefined, title?: string): string {
     try {
+        if (!result) {
+            return buildErrorPage('Error generating dashboard', 'Invalid or missing AI comparison data');
+        }
         const pageTitle = title || 'AI vs Manual Test Comparison';
 
         let bodyContent = `<h1>${sanitizeHtml(pageTitle)}</h1>`;
@@ -193,6 +196,9 @@ export function generateAiComparisonHtml(result: AiComparisonResult, title?: str
     } catch (err) {
         const msg = err instanceof Error ? err.message : String(err);
         rootLogger.error('Failed to generate AI comparison dashboard: ' + msg);
-        return buildErrorPage('Error generating dashboard', 'Error generating dashboard');
+        return buildErrorPage(
+            'Error generating dashboard',
+            'An error occurred while generating the AI comparison dashboard. Check the logs for details and ensure your AI test data is valid.',
+        );
     }
 }

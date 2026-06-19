@@ -120,4 +120,30 @@ describe('generateHtmlReport — property-based', () => {
             { numRuns: 50 },
         );
     });
+
+    it('always produces valid HTML structure', () => {
+        fc.assert(
+            fc.property(fc.array(flatTestArb, { minLength: 0, maxLength: 10 }), (tests) => {
+                const html = generateHtmlReport(tests);
+                expect(html).toContain('<!DOCTYPE html>');
+                expect(html).toContain('<html');
+                expect(html).toContain('</html>');
+            }),
+            { numRuns: 50 },
+        );
+    });
+});
+
+describe('generateCoverageHtml — invariants (property-based)', () => {
+    it('always produces valid HTML structure', () => {
+        fc.assert(
+            fc.property(fc.array(epicArb, { minLength: 0, maxLength: 5 }), (epics) => {
+                const html = generateCoverageHtml(epics);
+                expect(html).toContain('<!DOCTYPE html>');
+                expect(html).toContain('<html');
+                expect(html).toContain('</html>');
+            }),
+            { numRuns: 50 },
+        );
+    });
 });

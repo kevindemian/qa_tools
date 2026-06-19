@@ -31,22 +31,31 @@ export interface RegressionResult {
     timestamp: string;
 }
 
+const SEVERITY_THRESHOLD_CRITICAL = 5;
+const SEVERITY_THRESHOLD_HIGH = 3;
+const SEVERITY_THRESHOLD_MEDIUM = 2;
+const SEVERITY_THRESHOLD_LOW = 1;
+const STDDEV_DENOM_FALLBACK = 0.001;
+
 function computeMean(values: number[]): number {
     if (values.length === 0) return 0;
-    return values.reduce((a, b) => a + b, 0) / values.length;
+    const sum = values.reduce((a, b) => a + b, 0);
+    return Number.isFinite(sum) ? sum / values.length : 0;
 }
 
 function computeStdDev(values: number[], mean: number): number {
     if (values.length === 0) return 0;
     const squaredDiffs = values.map((v) => (v - mean) ** 2);
-    return Math.sqrt(squaredDiffs.reduce((a, b) => a + b, 0) / values.length);
+    const variance = squaredDiffs.reduce((a, b) => a + b, 0) / values.length;
+    return Number.isFinite(variance) ? Math.sqrt(variance) : 0;
 }
 
 function computeSeverity(zScore: number): RegressionEntry['severity'] {
-    if (zScore > 5) return 'critical';
-    if (zScore > 3) return 'high';
-    if (zScore > 2) return 'medium';
-    if (zScore > 1) return 'low';
+    if (!Number.isFinite(zScore)) return 'none';
+    if (zScore > SEVERITY_THRESHOLD_CRITICAL) return 'critical';
+    if (zScore > SEVERITY_THRESHOLD_HIGH) return 'high';
+    if (zScore > SEVERITY_THRESHOLD_MEDIUM) return 'medium';
+    if (zScore > SEVERITY_THRESHOLD_LOW) return 'low';
     return 'none';
 }
 
@@ -60,10 +69,12 @@ export function detectSilentRegression(testHistories: Record<string, number[]>, 
         totalTests++;
 
         const hist = durations.slice(0, -1);
-        const currentDuration = durations[durations.length - 1] as number;
+        const last = durations[durations.length - 1];
+        if (last === undefined) continue;
+        const currentDuration = last;
         const mean = computeMean(hist);
         const stdDev = computeStdDev(hist, mean);
-        const denom = stdDev || 0.001;
+        const denom = stdDev || STDDEV_DENOM_FALLBACK;
         const zScore = (currentDuration - mean) / denom;
         const severity = computeSeverity(zScore);
 
@@ -107,7 +118,7 @@ function severityBadgeVariant(severity: RegressionEntry['severity']): 'fail' | '
 export function generateSilentRegressionHtml(result: RegressionResult | null | undefined, title?: string): string {
     try {
         if (!result) {
-            rootLogger.error('Silent regression result is null or undefined');
+            rootLogger.error('Silent regression result is null or undefined. Provide a valid RegressionResult.');
             return buildErrorPage('Error generating report', 'Error generating silent regression report');
         }
         const pageTitle = title || 'Silent Regression Detector';
@@ -166,7 +177,9 @@ export function generateSilentRegressionHtml(result: RegressionResult | null | u
         });
     } catch (err) {
         const msg = err instanceof Error ? err.message : String(err);
-        rootLogger.error('Failed to generate silent regression HTML: ' + msg);
+        rootLogger.error(
+            'Failed to generate silent regression HTML: ' + msg + '. Verify buildCss and buildHtmlPage dependencies.',
+        );
         return buildErrorPage('Error generating report', 'Error generating silent regression report');
     }
 }

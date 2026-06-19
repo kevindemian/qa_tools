@@ -31,7 +31,7 @@ describe('compareAiVsManual', () => {
         expect(result.manualAcceptanceRate).toBe(1);
         expect(result.aiAdvantage).toBe('none');
         expect(result.byVersion).toEqual([]);
-        expect(result.timestamp).toBeTruthy();
+        expect(result.timestamp).toMatch(/^\d{4}-\d{2}-\d{2}T/);
     });
 
     it('computes stats for AI-only records', () => {

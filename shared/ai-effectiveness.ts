@@ -35,8 +35,8 @@ export interface AiEffectivenessResult {
     timestamp: string;
 }
 
-export function computeAiEffectiveness(store: AiFeedbackStore): AiEffectivenessResult {
-    if (store.records.length === 0) {
+export function computeAiEffectiveness(store: AiFeedbackStore | null | undefined): AiEffectivenessResult {
+    if (!store || store.records.length === 0) {
         return {
             acceptanceRate: 0,
             totalRecords: 0,
@@ -106,8 +106,11 @@ export function computeAiEffectiveness(store: AiFeedbackStore): AiEffectivenessR
     };
 }
 
-export function generateAiEffectivenessHtml(result: AiEffectivenessResult, title?: string): string {
+export function generateAiEffectivenessHtml(result: AiEffectivenessResult | null | undefined, title?: string): string {
     try {
+        if (!result) {
+            return buildErrorPage('Error generating dashboard', 'Invalid or missing AI effectiveness data');
+        }
         const pageTitle = title || 'AI Effectiveness Dashboard';
         let bodyContent = `<h1>${sanitizeHtml(pageTitle)}</h1>`;
 
@@ -129,7 +132,10 @@ export function generateAiEffectivenessHtml(result: AiEffectivenessResult, title
     } catch (err) {
         const msg = err instanceof Error ? err.message : String(err);
         rootLogger.error('Failed to generate AI effectiveness dashboard: ' + msg);
-        return buildErrorPage('Error generating dashboard', 'Error generating dashboard');
+        return buildErrorPage(
+            'Error generating dashboard',
+            'An error occurred while generating the AI effectiveness dashboard. Check the logs for details and ensure your AI feedback data is valid.',
+        );
     }
 }
 

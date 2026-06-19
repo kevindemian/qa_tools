@@ -695,6 +695,7 @@ import { globSync } from 'glob'; // file globbing
 | `quarantine.ts`                 | Quarantine management for flaky tests                 | `quarantineTest()`, `isQuarantined()`, `generatePipelineQuarantine()`             |
 | `defect-trend.ts`               | Defect trend dashboard HTML report                    | `aggregateDefectTrends()`, `generateDefectTrendHtml()`                            |
 | `flakiness-dashboard.ts`        | Flakiness dashboard HTML report                       | `filterHighFlakiness()`, `generateFlakinessHtml()`                                |
+| `defect-seasonality.ts`         | Defect seasonality dashboard HTML report              | `aggregateDefectSeasonality()`, `generateSeasonalityHtml()`                       |
 | `markdown.ts`                   | Markdown lexer/renderer                               | `tokenize()`, `renderToHtml()`                                                    |
 | `csrf/`                         | CSV parsing/validation                                | `CsvResource`, schemas                                                            |
 | `invariants/`                   | 13 domain + 5 structural invariant rules              | `createTestCaseValidator()`                                                       |
@@ -704,6 +705,9 @@ import { globSync } from 'glob'; // file globbing
 | `run-comparison.ts`             | Compare two MetricsRun objects via LLM                | `compareRuns()`                                                                   |
 | `cross-squad-benchmark.ts`      | Cross-squad health score leaderboard with trends      | `computeCrossSquadBenchmark()`, `generateBenchmarkHtml()`                         |
 | `report-*.ts`                   | Report generation (HTML, sections, tables, charts)    | `ReportGenerator`                                                                 |
+| `silent-regression.ts`          | Silent regression detector                            | `detectSilentRegression()`, `generateSilentRegressionHtml()`                      |
+| `ai-effectiveness.ts`           | AI effectiveness dashboard HTML report                | `computeAiEffectiveness()`, `generateAiEffectivenessHtml()`                       |
+| `ai-comparison.ts`              | AI vs manual test comparison dashboard                | `compareAiVsManual()`, `generateAiComparisonHtml()`                               |
 | `markdown-html.ts`              | Markdown-to-HTML converter                            | `markdownToHtml()`                                                                |
 
 ### `jira_management/` (75 files) — Jira CLI App

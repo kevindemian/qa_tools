@@ -451,6 +451,7 @@ Para CADA CONSUMER (lista de 1.2):
 
 `npx vitest run --reporter=verbose 2>&1 | tail -10`
 ✅ sem regressões
+⚠️ full suite: ~375 files, ~5700 tests — usar timeout $\ge$ 300s no tool call
 
 ### 7.3 — Docs pós-correção
 
@@ -527,6 +528,7 @@ Registrar respostas no PROGRESS.md.
 
 `npx tsc --noEmit && npm run lint && npx vitest run ${FEATURE_NAME} --reporter=verbose`
 ✅ todos passam
+⚠️ `npx tsc --noEmit && npm run lint` é suficiente para validação rápida. Full suite (Phase 7.2) requer timeout $\ge$ 300s.
 
 ### 9.4 — Git diff audit
 

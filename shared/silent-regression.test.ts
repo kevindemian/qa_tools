@@ -145,6 +145,25 @@ describe('detectSilentRegression', () => {
         expect(() => new Date(result.timestamp)).not.toThrow();
         expect(result.timestamp).toMatch(/^\d{4}-\d{2}-\d{2}T/);
     });
+
+    it('handles Infinity durations without producing NaN z-score', () => {
+        const result = detectSilentRegression({ 'inf test': [Infinity, Infinity, Infinity, 100] });
+        for (const reg of result.regressions) {
+            expect(Number.isFinite(reg.zScore)).toBe(true);
+        }
+    });
+
+    it('handles NaN durations without propagating NaN', () => {
+        const result = detectSilentRegression({ 'nan test': [NaN, NaN, NaN, 100] });
+        for (const reg of result.regressions) {
+            expect(Number.isFinite(reg.zScore)).toBe(true);
+        }
+    });
+
+    it('handles negative durations without crashing', () => {
+        const result = detectSilentRegression({ 'neg test': [-5, -3, -1, 10] });
+        expect(Number.isFinite(result.regressions[0]?.zScore ?? 0)).toBe(true);
+    });
 });
 
 describe('generateSilentRegressionHtml', () => {
