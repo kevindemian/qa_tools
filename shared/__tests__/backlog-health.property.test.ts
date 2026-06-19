@@ -57,6 +57,16 @@ describe('analyzeBacklogHealth — property-based', () => {
         );
     });
 
+    it('unassigned count matches direct filter on input, not result', () => {
+        fc.assert(
+            fc.property(fc.array(issueArb, { maxLength: 50 }), (issues) => {
+                const result = analyzeBacklogHealth(issues);
+                expect(result.unassignedIssues.length).toBe(countUnassigned(issues));
+            }),
+            { numRuns: 50 },
+        );
+    });
+
     it('analyzeUnassignedIssues matches filter for all issues', () => {
         fc.assert(
             fc.property(fc.array(issueArb, { maxLength: 50 }), (issues) => {

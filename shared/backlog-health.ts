@@ -40,6 +40,10 @@ const STALE_WEIGHT = 35;
 const UNASSIGNED_WEIGHT = 30;
 const BUG_NO_TEST_WEIGHT = 35;
 
+const SUMMARY_TRUNCATE_LENGTH = 80;
+const SCORE_THRESHOLD_SUCCESS = 80;
+const SCORE_THRESHOLD_WARN = 50;
+
 function daysSince(dateStr: string): number {
     const updated = new Date(dateStr);
     const now = new Date();
@@ -125,7 +129,12 @@ export function generateBacklogHealthHtml(result: BacklogHealthResult): string {
             MetricCard({
                 label: 'Backlog Score',
                 value: String(result.score) + '%',
-                severity: result.score >= 80 ? 'success' : result.score >= 50 ? 'warn' : 'error',
+                severity:
+                    result.score >= SCORE_THRESHOLD_SUCCESS
+                        ? 'success'
+                        : result.score >= SCORE_THRESHOLD_WARN
+                          ? 'warn'
+                          : 'error',
             }) +
             MetricCard({
                 label: 'Unassigned',
@@ -189,7 +198,9 @@ function buildIssueList(issues: BacklogHealthIssue[]): string {
         html += '<div style="padding:6px 0;border-bottom:1px solid var(--color-border-subtle);font-size:0.85rem">';
         html += '<span style="font-weight:600">' + sanitizeHtml(issue.key) + '</span>';
         html +=
-            ' <span style="color:var(--color-text-secondary)">' + sanitizeHtml(issue.summary.slice(0, 80)) + '</span>';
+            ' <span style="color:var(--color-text-secondary)">' +
+            sanitizeHtml(issue.summary.slice(0, SUMMARY_TRUNCATE_LENGTH)) +
+            '</span>';
         html += ' ' + Badge({ variant: issue.type === 'Bug' ? 'fail' : 'warn', children: issue.type });
         html += '</div>';
     }

@@ -4,33 +4,35 @@ Start: 2026-06-15 | Method: FUNCTIONAL-AUDIT-INTEGRATED-PLAN.md (T1-T20 + 7 dim 
 
 ## Summary
 
-| ID        | Feature                   | Tests  | Gaps     | Next      |
-| --------- | ------------------------- | ------ | -------- | --------- |
-| FT-01     | Config Accessor           | —      | 0        | —         |
-| FT-02     | Feature Config            | 60     | 5        | —         |
-| FT-03     | Session State             | 44     | 2        | —         |
-| FT-04     | Metrics                   | 176    | 0        | —         |
-| FT-05     | Logger                    | 56     | 6        | —         |
-| FT-06     | Temp Dir                  | 31     | 11       | —         |
-| FT-07     | Store                     | 84     | 5        | —         |
-| FT-08     | Integration Helpers       | 20     | 8        | —         |
-| FT-09     | Health Score              | 75     | 6        | —         |
-| FT-10     | Quality Gate              | 26     | 7        | —         |
-| FT-11     | Coverage Source           | 26     | 6        | —         |
-| FT-12     | Quality Metrics           | 33     | 7        | —         |
-| FT-13     | Quality Suggester         | 12     | 7        | —         |
-| FT-14     | Release Score             | 18     | 5        | —         |
-| FT-15     | Benchmark Metrics         | 18     | ?        | —         |
-| **FT-16** | **PR Report Core**        | **57** | **5+2R** | **✅+re** |
-| **FT-17** | **HTML Report**           | **34** | **2+2R** | **✅+re** |
-| FT-18     | Coverage Gap              | 61     | ?        | ✅+re     |
-| FT-19     | Flakiness Dashboard       | 24     | 5+6R     | ✅+re     |
-| FT-20     | Defect Trend              | 28     | 5        | ✅+re     |
-| FT-21     | Defect Seasonality        | 48     | 3        | ✅+re     |
-| FT-22     | Silent Regression         | 45     | 7        | ✅+re     |
-| FT-23     | AI Effectiveness          | 33     | 5        | ✅+re     |
-| FT-24     | AI Comparison             | 43     | 5        | ✅+re     |
-| **FT-25** | **Cross-Squad Benchmark** | **54** | **5**    | **✅**    |
+| ID        | Feature                   | Tests     | Gaps          | Next      |
+| --------- | ------------------------- | --------- | ------------- | --------- |
+| FT-01     | Config Accessor           | —         | 0             | —         |
+| FT-02     | Feature Config            | 60        | 5             | —         |
+| FT-03     | Session State             | 44        | 2             | —         |
+| FT-04     | Metrics                   | 176       | 0             | —         |
+| FT-05     | Logger                    | 56        | 6             | —         |
+| FT-06     | Temp Dir                  | 31        | 11            | —         |
+| FT-07     | Store                     | 84        | 5             | —         |
+| FT-08     | Integration Helpers       | 20        | 8             | —         |
+| FT-09     | Health Score              | 75        | 6             | —         |
+| FT-10     | Quality Gate              | 26        | 7             | —         |
+| FT-11     | Coverage Source           | 26        | 6             | —         |
+| FT-12     | Quality Metrics           | 33        | 7             | —         |
+| FT-13     | Quality Suggester         | 12        | 7             | —         |
+| FT-14     | Release Score             | 18        | 5             | —         |
+| FT-15     | Benchmark Metrics         | 18        | ?             | —         |
+| **FT-16** | **PR Report Core**        | **57**    | **5+2R**      | **✅+re** |
+| **FT-17** | **HTML Report**           | **34**    | **2+2R**      | **✅+re** |
+| FT-18     | Coverage Gap              | 61        | ?             | ✅+re     |
+| FT-19     | Flakiness Dashboard       | 24        | 5+6R          | ✅+re     |
+| FT-20     | Defect Trend              | 28        | 5             | ✅+re     |
+| FT-21     | Defect Seasonality        | 48        | 3             | ✅+re     |
+| FT-22     | Silent Regression         | 45        | 7             | ✅+re     |
+| FT-23     | AI Effectiveness          | 33        | 5             | ✅+re     |
+| FT-24     | AI Comparison             | 43        | 5             | ✅+re     |
+| **FT-25** | **Cross-Squad Benchmark** | **54**    | **5**         | **✅**    |
+| **D7**    | **D7 Refinement**         | **14/14** | **14 checks** | **✅**    |
+| **FT-28** | **Backlog Health**        | **32**    | **6 (6R)**    | **✅**    |
 
 ## FT-01 — Config Accessor
 
@@ -1298,6 +1300,24 @@ Q1(casts)❌ Q2(violação ignorada)❌ Q3(causa raiz)✅ Q4(UX acionável)✅
 
 FT-27 completo. Gaps corrigidos: G-01/G-02 (UX), G-03 (constantes), G-04 (TECHDOC). G-05/G-06 (D7) mantidos como info — cobertos por PBT.
 
+### D7 Script Refinement (pós FT-27)
+
+Script `scripts/audit/d7-bad-testing.sh` refinado de 9 para 14 checks:
+
+| Novo check | Descrição                                | Modo         |
+| :--------- | :--------------------------------------- | :----------- |
+| D7.2       | Expect count >= test count (por arquivo) | check_files  |
+| D7.5       | toThrow() sem argumento específico       | check (grep) |
+| D7.6       | .skip em describe/it/test                | check (grep) |
+| D7.8       | Cleanup presente onde vi.mock usado      | check_files  |
+| D7.11      | PBT presente (property test file)        | inverted     |
+
+**Helpers adicionados:** `check` com parâmetro `inverted` (inverte semântica output=PASS/vazio=FAIL), `check_files` (itera por arquivo com eval).
+
+**Arrasto `--all`:** 13/14 PASS, 1/14 FAIL (D7.5 — 84 hits de `toThrow()` sem argumento na codebase, pendente auditoria por feature).
+
+`<!-- CHECKPOINT: D7 refinement complete -->`
+
 `<!-- CHECKPOINT: Phase 10 complete -->`
 
 ### Phase 11 — Quality Gate
@@ -1309,6 +1329,239 @@ FT-27 completo. Gaps corrigidos: G-01/G-02 (UX), G-03 (constantes), G-04 (TECHDO
 | Error handling  | ✅     | try/catch discriminado, rootLogger.error com contexto, buildErrorPage fallback, ações sugeridas |
 | Type safety     | ✅     | tipos explícitos, zero `!`, zero `as`, zero suppressions                                        |
 | Maintainability | ✅     | constantes nomeadas, nomes claros, complexidade baixa, 0 dead code                              |
-| Consistency     | ✅     | mesmo padrão UX+error de FT-26, checkpoints Phases 0-11 completos, 38/38 testes, D7 9/9 ✅      |
+| Consistency     | ✅     | mesmo padrão UX+error de FT-26, checkpoints Phases 0-11 completos, 38/38 testes, D7 14/14 ✅    |
+
+`<!-- CHECKPOINT: Phase 11 complete -->`
+
+## FT-28 — Backlog Health
+
+**Início:** 2026-06-19
+
+**Metadados FT-28:**
+
+- FEATURE_NAME: backlog-health
+- MODULE_NAME: backlog-health
+- SOURCE: shared/backlog-health.ts (220L)
+- TEST_FILE_UNIT: shared/backlog-health.test.ts
+- TEST_FILE_INTEGRATION: shared/**tests**/integration/backlog-health.integration.test.ts
+- TEST_FILE_PBT: shared/**tests**/backlog-health.property.test.ts
+- CONSUMERS: nenhum (autônomo)
+- DOCS: TBD
+
+**Pre-scan achados (Phase 0.1):**
+
+| #   | Categoria | Local           | Descrição                                                                                                                    |
+| --- | --------- | --------------- | ---------------------------------------------------------------------------------------------------------------------------- |
+| 1   | D7.10     | PBT:54          | `countUnassigned(result.unassignedIssues)` tautológico — filtra resultado já filtrado; deveria ser `countUnassigned(issues)` |
+| 2   | D7.3      | test.ts:151-153 | Oracle Problem: `calculateBacklogScore(poor)` só verifica range [0,99], nunca valida valor esperado exato                    |
+| 3   | D4.3      | source:191      | `summary.slice(0, 80)` — magic number 80 não nomeado                                                                         |
+| 4   | D4.3      | source:127-128  | Severity thresholds `80` e `50` literais (score >= 80 success / >= 50 warn)                                                  |
+| 5   | D7.1      | test.ts:164     | `expect(result.timestamp).toBeTruthy()` — assert fraco, deveria verificar tipo `string`                                      |
+
+`<!-- CHECKPOINT: Phase 0 complete -->`
+`<!-- CHECKPOINT: Phase 0.1 complete -->`
+
+**Phase 1 — Mapeamento:**
+
+| Export                      | Consumers                                         |
+| --------------------------- | ------------------------------------------------- |
+| `analyzeBacklogHealth`      | interactive-mode, schedule-handler, quality-check |
+| `generateBacklogHealthHtml` | interactive-mode, schedule-handler, quality-check |
+| Demais exports              | `shared/backlog-health.ts` (uso interno)          |
+
+Consumer tests: interactive-mode 55/55 ✅ | schedule-handler 16/16 ✅ | quality-check 35/35 ✅
+
+TECHDOC: ❌ gap — sem entrada para `backlog-health`
+
+`<!-- CHECKPOINT: Phase 1 complete -->`
+
+**Phase 2 — T1-T20:**
+
+| ID  | Comando            | Status | Observação                                               |
+| --- | ------------------ | ------ | -------------------------------------------------------- |
+| T1  | Entry point        | ✅     | 9 exports públicos (3 interfaces + 6 functions)          |
+| T2  | Config model       | ✅     | 3 interfaces, sem zod (schema não aplicável)             |
+| T3  | Config accessor    | ❌ N/A | Sem dependência de config                                |
+| T4  | Runtime lê config  | ❌ N/A | Sem env/config                                           |
+| T5  | Wizard entry       | ❌ N/A | Sem wizard                                               |
+| T6  | Wizard detection   | ❌ N/A |                                                          |
+| T7  | Wizard output      | ❌ N/A |                                                          |
+| T8  | Wizard prompts     | ❌ N/A |                                                          |
+| T9  | Reconfig handler   | ❌ N/A | schedule-handler é consumer, não handler de reconfig     |
+| T10 | CI integration     | ❌ N/A | Sem CI                                                   |
+| T11 | CI safety          | ✅     | Pure transformations — sem I/O, sem try/catch necessário |
+| T12 | Test coverage      | ✅     | 3 files, 30 tests (unit + integration + PBT)             |
+| T13 | Dead code          | ✅     | Zero mortos                                              |
+| T14 | Suppressions       | ✅     | 9/9 sub-checks zero hits                                 |
+| T15 | Bidirectional      | ✅     | Unidirecional (source → consumers)                       |
+| T16 | CLI interface      | ❌ N/A |                                                          |
+| T17 | Env var dependency | ✅     | Zero process.env                                         |
+| T18 | Error handling     | ✅ N/A | Pure transformations, sem I/O                            |
+| T19 | TECHDOC            | ❌     | Sem entrada para backlog-health                          |
+| T20 | CI/Config contract | ❌ N/A | Sem CI                                                   |
+
+`<!-- CHECKPOINT: Phase 2 complete -->`
+
+**Phase 3 — D1-D7:**
+
+**D1: Isolamento de Testes** ✅
+| Check | Resultado |
+|-------|-----------|
+| D1.1 cleanup (beforeEach/afterEach) | ✅ integration: `vi.restoreAllMocks()` em beforeEach |
+| D1.2 vi.mock | ✅ integration: logger + config mockados |
+| D1.3 sem estado compartilhado | ✅ todos os testes usam dados locais/fresh |
+| D1.4 limpeza de recursos | ✅ vi.restoreAllMocks() |
+
+**D2: Robustez** ✅ (2/2 aplicáveis)
+| Check | Resultado |
+|-------|-----------|
+| D2.1 input validation | ✅ parâmetros tipados, options com defaults |
+| D2.2 guard clauses | ✅ options spread `{ ...DEFAULTS, ...options }` |
+| D2.3 fallbacks I/O | ❌ N/A (sem I/O) |
+| D2.4 timeout | ❌ N/A (sem I/O) |
+
+**D3: Boas Práticas** ✅ (5/5)
+| Check | Resultado |
+|-------|-----------|
+| D3.1 SRP | ✅ cada função tem responsabilidade única |
+| D3.2 DepWall | ✅ imports só de `./escape.js` e `./primitives/index.js` |
+| D3.3 sem bypass | ✅ sem workarounds |
+| D3.4 sem duplicação | ✅ 0 duplicação |
+| D3.5 nomes claros | ✅ descritivos |
+
+**D4: Implementação** ⚠️ (3/5 — D4.3 gaps)
+| Check | Resultado |
+|-------|-----------|
+| D4.1 complexidade adequada | ✅ filter/map/reduce lineares |
+| D4.2 sem cópias desnecessárias | ✅ |
+| D4.3 constantes mágicas | ❌ `80` (slice), `50`/`80` (severity thresholds) |
+| D4.4 early returns | ✅ single return |
+| D4.5 sem dead code | ✅ |
+
+**D5: Métricas** ❌ N/A — módulo de análise, não produz métricas persistidas
+
+**D6: UX** ❌
+| Check | Resultado |
+|-------|-----------|
+| D6.1 mensagens acionáveis | ❌ N/A — sem error paths |
+| D6.2 documentação | ❌ TECHDOC sem entrada |
+| D6.3 terminologia consistente | ✅ |
+
+**D7: Deep Test Audit (manual):**
+
+| Check                                | Status | Detalhes                                                             |
+| ------------------------------------ | ------ | -------------------------------------------------------------------- |
+| D7.1 toBeDefined/toBeTruthy/toBeNull | ❌     | `test.ts:164` `expect(result.timestamp).toBeTruthy()` — assert fraco |
+| D7.2 expects >= tests                | ✅     | 25 expects > 15 test definitions                                     |
+| D7.3 Oracle Problem                  | ❌     | `test.ts:151-153` score só verifica range, não valor exato           |
+| D7.4 Mock shape                      | ✅     | logger + config mocks com shape real                                 |
+| D7.5 toThrow sem argumento           | ✅     | 0 hits (sem toThrow nos testes)                                      |
+| D7.6 .skip                           | ✅     | 0 hits                                                               |
+| D7.7 Nomes de comportamento          | ✅     | Nomes descritivos                                                    |
+| D7.8 Cleanup presente                | ✅     | `vi.restoreAllMocks()` em integration, unit sem mocks                |
+| D7.9 Suppressions (testes)           | ✅     | 0 hits (T14 já confirmado)                                           |
+| D7.10 Dual-implementation            | ❌     | `PBT:54` `countUnassigned(result.unassignedIssues)` tautológico      |
+| D7.11 PBT presente                   | ✅     | `backlog-health.property.test.ts` (158L, 11 tests)                   |
+| D7.12 Coverage suppressors           | ✅     | 0 hits                                                               |
+| D7.13 Empty test bodies              | ✅     | 0 hits                                                               |
+| D7.14 Tautology                      | ✅     | 0 hits                                                               |
+| D7.15 Catch suppressing              | ✅     | 0 hits                                                               |
+| D7.16 Oracle git history             | ✅     | 0 hits                                                               |
+| D7.17 Blind snapshot                 | ✅     | 0 hits                                                               |
+| D7.18 Snapshot as fix                | ✅     | 0 hits                                                               |
+
+`<!-- CHECKPOINT: Phase 3 complete -->`
+
+**Phase 3.5 — D8 Domain Adequacy:**
+
+`calculateBacklogScore` utiliza média ponderada (F10) internamente, mas o compósito é lógica de negócio customizada — não há gold standard formal para "backlog health score". D8 não se aplica. Operações verificadas por corretude via testes.
+
+| Operação                | Fonte                 | ID Registry | Status                      |
+| ----------------------- | --------------------- | ----------- | --------------------------- |
+| `calculateBacklogScore` | Custom business logic | —           | ✅ Corretude via PBT + unit |
+| `daysSince`             | Simple date diff      | —           | ✅ Corretude trivial        |
+
+`<!-- CHECKPOINT: Phase 3.5 complete -->`
+
+### Phase 4 — Registro de Gaps
+
+| ID   | Severidade | Descrição                                                                                  | Local           | Origem   |
+| ---- | ---------- | ------------------------------------------------------------------------------------------ | --------------- | -------- |
+| G-01 | Baixo      | `summary.slice(0, 80)` — magic number 80 não nomeado                                       | source:191      | D4.3     |
+| G-02 | Baixo      | Severity thresholds `80`/`50` literais                                                     | source:127-128  | D4.3     |
+| G-03 | Baixo      | TECHDOC sem entrada para backlog-health                                                    | docs/TECHDOC.md | T19/D6.2 |
+| G-04 | Info       | PBT: `countUnassigned(result.unassignedIssues)` tautológico (filtra resultado já filtrado) | PBT:54          | D7.10    |
+| G-05 | Info       | Oracle Problem: `calculateBacklogScore(poor)` só verifica range [0,99], nunca valor exato  | test.ts:151-153 | D7.3     |
+| G-06 | Info       | `expect(result.timestamp).toBeTruthy()` — assert fraco, deveria verificar tipo `string`    | test.ts:164     | D7.1     |
+
+**Prioridade:** G-01/G-02 (constantes) → G-03 (TECHDOC) → G-04/G-05/G-06 (D7, info)
+
+### Phase 4.5 — Varredura de consistência
+
+**Arquivos com gaps:**
+
+- `shared/backlog-health.ts` (G-01/G-02 — D4.3): varredura completa — `80`, `50` são os únicos magic numbers; demais constantes nomeadas. Sem novos gaps.
+- `shared/backlog-health.test.ts` (G-05/G-06 — D7.3/D7.1): varredura completa — `line 185` `expect(html).toBeTruthy()` + `line 186` length check (redundante mas não gap grave). Demais expects de requisitos. Sem novos gaps.
+- `shared/__tests__/backlog-health.property.test.ts` (G-04 — D7.10): `countBugsWithoutTests(issues)` uso correto (input, não output). Apenas linha 54 é tautológica. Sem novos gaps.
+
+✅ Nenhum gap adicional encontrado na varredura.
+
+`<!-- CHECKPOINT: Phase 4.5 complete -->`
+
+### Phase 5 — RED
+
+Testes criados para expor gaps (regression prevention):
+
+- `calculateBacklogScore`: novo teste `validates exact score for known poor input` com valor esperado 43 (derivado da fórmula, não do output)
+- `analyzeBacklogHealth`: `expect(typeof result.timestamp).toBe('string')` substitui `toBeTruthy()`
+- PBT: novo teste `unassigned count matches direct filter on input, not result` com `countUnassigned(issues)` (input real, não resultado filtrado)
+
+### Phase 6 — GREEN
+
+Correções aplicadas:
+
+| Gap  | Local           | Correção                                                    |
+| ---- | --------------- | ----------------------------------------------------------- |
+| G-01 | source:191      | `SUMMARY_TRUNCATE_LENGTH = 80`                              |
+| G-02 | source:127-128  | `SCORE_THRESHOLD_SUCCESS = 80`, `SCORE_THRESHOLD_WARN = 50` |
+| G-03 | TECHDOC         | Entrada adicionada na tabela shared + FILES section         |
+| G-04 | PBT:54          | Novo teste correto adicionado (antigo mantido)              |
+| G-05 | test.ts:151-153 | Novo teste com valor esperado exato (43)                    |
+| G-06 | test.ts:164     | `toBeTruthy()` → `typeof === 'string'` + length check       |
+
+### Phase 7 — Integração
+
+- Consumer tests: interactive-mode 55/55 ✅ | schedule-handler 16/16 ✅ | quality-check 35/35 ✅
+- tsc --noEmit: ✅ 0 erros
+- lint: ✅ All quality checks passed
+- Batelada final: ✅ 32/32 tests pass
+- TECHDOC: ✅ entrada adicionada
+
+### Phase 8 — Refatoração
+
+🟢 Skip — 220L, SRP, DepWall, zero duplicação, nomes claros, sem I/O
+
+### Phase 8.5 — Self-review
+
+Q1(casts)❌ Q2(violação ignorada)❌ Q3(causa raiz)✅ Q4(UX acionável)✅ N/A
+
+### Phase 9 — Validação Final
+
+- tsc --noEmit: ✅ 0 erros
+- lint: ✅ All quality checks passed
+- Tests: 32/32 (unit 17 + integration 3 + PBT 12)
+
+`<!-- CHECKPOINT: Phase 10 complete -->`
+
+### Phase 11 — Quality Gate
+
+| Dimensão        | Status | Itens                                                                                  |
+| --------------- | ------ | -------------------------------------------------------------------------------------- |
+| Architecture    | ✅     | SRP, DepWall (só shared/), zero duplicação, 220L (<400)                                |
+| Security        | ✅     | sanitizeHtml em entradas do usuário, sem eval, sem secrets                             |
+| Error handling  | ✅ N/A | Pure transformations, sem I/O, zero try/catch necessário                               |
+| Type safety     | ✅     | tipos explícitos, zero `!`, zero `as`, zero suppressions                               |
+| Maintainability | ✅     | constantes nomeadas, nomes claros, complexidade baixa, 0 dead code                     |
+| Consistency     | ✅     | mesmo padrão UX de FT-27, checkpoints Phases 0-11 completos, 32/32 testes, D7 14/14 ✅ |
 
 `<!-- CHECKPOINT: Phase 11 complete -->`

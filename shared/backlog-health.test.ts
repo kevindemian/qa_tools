@@ -152,6 +152,24 @@ describe('calculateBacklogScore', () => {
         expect(score).toBeGreaterThanOrEqual(0);
         expect(score).toBeLessThan(100);
     });
+
+    it('validates exact score for known poor input', () => {
+        const poor: BacklogHealthResult = {
+            unassignedIssues: [nonNull(sampleIssues[1])],
+            staleIssues: [nonNull(sampleIssues[2]), nonNull(sampleIssues[3])],
+            bugsWithoutTests: [nonNull(sampleIssues[1]), nonNull(sampleIssues[3])],
+            densityByEpic: [{ epic: 'PROJ', bugCount: 3, testCount: 1 }],
+            score: 0,
+            timestamp: new Date().toISOString(),
+        };
+        const score = calculateBacklogScore(poor);
+        // totalFlagged=3, totalIssues=3, effective=3
+        // unassignScore = 100 - (1/3)*100 = 66.67
+        // staleScore = 100 - (2/3)*100 = 33.33
+        // bugNoTestScore = 100 - (2/3)*100 = 33.33
+        // weighted = 66.67*0.30 + 33.33*0.35 + 33.33*0.35 = 43.33
+        expect(score).toBe(43);
+    });
 });
 
 describe('analyzeBacklogHealth', () => {
@@ -162,7 +180,8 @@ describe('analyzeBacklogHealth', () => {
         expect(result.bugsWithoutTests).toHaveLength(2);
         expect(result.densityByEpic.length).toBeGreaterThan(0);
         expect(result.score).toBeGreaterThanOrEqual(0);
-        expect(result.timestamp).toBeTruthy();
+        expect(typeof result.timestamp).toBe('string');
+        expect(result.timestamp.length).toBeGreaterThan(0);
     });
 
     it('handles empty input', () => {
