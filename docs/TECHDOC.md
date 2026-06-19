@@ -710,6 +710,7 @@ import { globSync } from 'glob'; // file globbing
 | `ai-effectiveness.ts`           | AI effectiveness dashboard HTML report                 | `computeAiEffectiveness()`, `generateAiEffectivenessHtml()`                       |
 | `ai-comparison.ts`              | AI vs manual test comparison dashboard                 | `compareAiVsManual()`, `generateAiComparisonHtml()`                               |
 | `suite-optimization.ts`         | Suite optimization advisor for test duration/flakiness | `analyzeSuiteOptimization()`, `generateOptimizationHtml()`                        |
+| `backlog-health.ts`             | Backlog health analysis (stale, unassigned, untested)  | `analyzeBacklogHealth()`, `generateBacklogHealthHtml()`                           |
 | `markdown-html.ts`              | Markdown-to-HTML converter                             | `markdownToHtml()`                                                                |
 
 ### `jira_management/` (75 files) — Jira CLI App
@@ -1000,6 +1001,7 @@ Features divergentes devem ser registradas no backlog para conformização.
 | `shared/types/feature-config.ts`          | Zod schemas + TypeScript types for feature store         |
 | `shared/developer-profile.ts`             | Developer profile failure breakdown dashboard            |
 | `shared/suite-optimization.ts`            | Suite optimization advisor (duration/flakiness analysis) |
+| `shared/backlog-health.ts`                | Backlog health analysis (stale/unassigned/untested)      |
 | `shared/pr-report-core.ts`                | PR Report runtime (CLI entry point)                      |
 | `shared/report-html.ts`                   | HTML report generator (sections, charts, themes)         |
 | `shared/parseArgs()`                      | CLI parser (--help, --project, unknown flag warn)        |

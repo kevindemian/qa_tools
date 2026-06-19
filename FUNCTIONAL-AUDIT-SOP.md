@@ -760,7 +760,10 @@ Se a aplicação da fórmula a um domínio específico não for verificável por
 
 ### B.1 — Propósito
 
-O script `scripts/audit/d7-bad-testing.sh` automatiza os 9 checks de D7. Este anexo define o protocolo de refinamento progressivo do script durante a auditoria, para garantir que, ao final, o script cubra 100% dos padrões detectáveis sem falsos positivos.
+O script `scripts/audit/d7-bad-testing.sh` automatiza os 14 checks de D7. Este anexo define o protocolo de refinamento progressivo do script durante a auditoria, para garantir que, ao final, o script cubra 100% dos padrões detectáveis sem falsos positivos.
+
+**Checks atuais (14):** D7.2, D7.5, D7.6, D7.8, D7.11, D7.12-14/14b/14c, D7.15-18.  
+**Funções:** `check` (suporta modo `inverted`) + `check_files` (itera por arquivo com eval).
 
 ### B.2 — Workflow por feature auditada
 
@@ -794,21 +797,51 @@ Se o arrasto achar violações:
 2. Se foi perdida pelo refinamento → ajustar script
 3. Re-arrastar `--all` até zero violações
 
-### B.4 — Limites do script
+### B.4 — Cobertura do script
 
-O script detecta padrões **sintáticos** (regex). Os seguintes checks são **sempre manuais**:
+O script automatiza todos os checks detectáveis sintaticamente. Cada check está mapeado para um modo de execução:
 
-| Check                                   | Motivo                                                      |
-| --------------------------------------- | ----------------------------------------------------------- |
-| D7.1 toBeDefined sem assert real        | Requer semântica: `expect(x).toBeDefined()` pode ser válido |
-| D7.3 Expected de requisitos vs output   | Requer conhecimento de requisitos                           |
-| D7.4 Mock shape real vs leniente        | Requer inspeção do mock                                     |
-| D7.10 Invariante vs dual-implementation | Requer leitura do source                                    |
-| D7.11 PBT presente?                     | Script verifica existência do arquivo (coberto)             |
+| Check    | Modo          | Como detecta                                                    |
+| :------- | :------------ | :-------------------------------------------------------------- | ----- | ---------------- |
+| D7.1     | Sempre manual | Requer semântica (toBeDefined pode ser válido)                  |
+| D7.2     | Script        | `check_files`: por arquivo, expects >= tests via grep -cP       |
+| D7.3     | Sempre manual | Requer conhecimento de requisitos (oracle problem)              |
+| D7.4     | Sempre manual | Requer inspeção do mock shape                                   |
+| D7.5     | Script        | `check`: grep de `toThrow()` sem argumento                      |
+| D7.6     | Script        | `check`: grep de `(describe                                     | it    | test)\.skip\(`   |
+| D7.7     | Sempre manual | Nomes de implementation vs comportamento em describe/it labels  |
+| D7.8     | Script        | `check_files`: vi.mock presente → vi.(clear                     | reset | restore)AllMocks |
+| D7.10    | Sempre manual | Requer leitura do source (dual-implementation)                  |
+| D7.11    | Script        | `check` c/ `inverted`: ls do .property.test.ts ou find nos dirs |
+| D7.12-18 | Script        | `check`: grep de patterns no source + tests + git log           |
 
-Para estes, o script reporta os hits mas a **decisão final** é do auditor.
+Para checks manuais, o script reporta hits como alerta, mas a **decisão final** é do auditor.
 
-### B.5 — Alterações no script
+### B.5 — Helpers do script
+
+#### `check` function (modo normal e inverted)
+
+```bash
+check <id> <label> <cmd> [inverted]
+```
+
+- **Normal** (default): output vazio = PASS, output presente = FAIL (violação)
+- **Inverted** (`inverted=true`): output presente = PASS (requisito atendido), output vazio = FAIL (padrão ausente)
+
+Usado para: D7.11 (PBT presente — verificar se arquivo existe).
+
+#### `check_files` function
+
+```bash
+check_files <id> <label> <file-list> <cmd>
+```
+
+Itera por cada arquivo na lista. O comando `cmd` é `eval`'d com `$f` disponível (path do arquivo atual).
+Output de qualquer arquivo = FAIL.
+
+Usado para: D7.2 (expect count per file), D7.8 (cleanup onde vi.mock presente).
+
+### B.6 — Alterações no script
 
 Toda alteração no script deve:
 
