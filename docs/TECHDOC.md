@@ -1002,6 +1002,7 @@ Features divergentes devem ser registradas no backlog para conformização.
 | `shared/developer-profile.ts`             | Developer profile failure breakdown dashboard            |
 | `shared/suite-optimization.ts`            | Suite optimization advisor (duration/flakiness analysis) |
 | `shared/backlog-health.ts`                | Backlog health analysis (stale/unassigned/untested)      |
+| `shared/pipeline-cost.ts`                 | Pipeline cost analytics (cost/duration per run)          |
 | `shared/pr-report-core.ts`                | PR Report runtime (CLI entry point)                      |
 | `shared/report-html.ts`                   | HTML report generator (sections, charts, themes)         |
 | `shared/parseArgs()`                      | CLI parser (--help, --project, unknown flag warn)        |

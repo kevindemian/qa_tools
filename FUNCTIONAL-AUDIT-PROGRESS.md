@@ -33,6 +33,7 @@ Start: 2026-06-15 | Method: FUNCTIONAL-AUDIT-INTEGRATED-PLAN.md (T1-T20 + 7 dim 
 | **FT-25** | **Cross-Squad Benchmark** | **54**    | **5**         | **✅**    |
 | **D7**    | **D7 Refinement**         | **14/14** | **14 checks** | **✅**    |
 | **FT-28** | **Backlog Health**        | **32**    | **6 (6R)**    | **✅**    |
+| **FT-29** | **Pipeline Cost**         | **48**    | **5 (5R)**    | **✅**    |
 
 ## FT-01 — Config Accessor
 
@@ -1563,5 +1564,202 @@ Q1(casts)❌ Q2(violação ignorada)❌ Q3(causa raiz)✅ Q4(UX acionável)✅ N
 | Type safety     | ✅     | tipos explícitos, zero `!`, zero `as`, zero suppressions                               |
 | Maintainability | ✅     | constantes nomeadas, nomes claros, complexidade baixa, 0 dead code                     |
 | Consistency     | ✅     | mesmo padrão UX de FT-27, checkpoints Phases 0-11 completos, 32/32 testes, D7 14/14 ✅ |
+
+`<!-- CHECKPOINT: Phase 11 complete -->`
+
+## FT-29 — Pipeline Cost
+
+**Início:** 2026-06-19
+
+**Metadados FT-29:**
+
+- FEATURE_NAME: pipeline-cost
+- MODULE_NAME: Pipeline Cost
+- SOURCE: shared/pipeline-cost.ts (161L)
+- TEST_FILE_UNIT: shared/pipeline-cost.test.ts (29 tests)
+- TEST_FILE_INTEGRATION: shared/**tests**/integration/pipeline-cost.integration.test.ts (3 tests)
+- TEST_FILE_PBT: shared/**tests**/pipeline-cost.property.test.ts (14 tests)
+- CONSUMERS: git_triggers/interactive-mode.ts, git_triggers/schedule-handler.ts, scripts/quality-check.ts
+- DOCS: ✅ TECHDOC menciona QA_COST_PER_COMPUTE_MINUTE, mas sem entrada específica pipeline-cost
+
+`<!-- CHECKPOINT: Phase 0 complete -->`
+
+**Pre-scan achados (Phase 0.1):**
+
+Source:
+| # | Categoria | Local | Descrição |
+|---|-----------|-------|-----------|
+| 1 | UX (D6.1) | source:101 | `rootLogger.error('Pipeline cost result is null or undefined')` — mensagem não acionável, não diz o que fazer |
+| 2 | D4.3 | source:37 | Magic number `0.01` como default inline — sem constante nomeada |
+
+Tests:
+| # | Categoria | Local | Descrição |
+|---|-----------|-------|-----------|
+| T1 | D7.5 | test:174 | `expect(() => new Date(result.timestamp)).not.toThrow()` — toThrow() sem argumento |
+| T2 | D7.1 | test:298 | `expect(html).toContain('Pipeline Cost Analytics')` — assert genérico, substring do título, não valida footer especificamente |
+
+`<!-- CHECKPOINT: Phase 0.1 complete -->`
+
+### Phase 1 — Mapeamento
+
+**1.1 — Exports:**
+
+- `calculatePipelineCost`, `generatePipelineCostHtml`, `PipelineCostEntry`, `PipelineCostResult`
+  ✅ 4 exports públicos
+
+**1.2 — Consumers:**
+
+- `git_triggers/interactive-mode.ts` (importa ambos os exports)
+- `git_triggers/schedule-handler.ts` (importa ambos os exports)
+- `scripts/quality-check.ts` (referencia ambos os exports no enforce-exports)
+
+**1.3 — TECHDOC:**
+❌ gap — sem entrada específica `pipeline-cost`
+
+**1.4 — Consumer test run:**
+
+- interactive-mode: 55/55 ✅
+- schedule-handler: 16/16 ✅
+- quality-check: 35/35 ✅
+  ✅ Todos consumidores intactos
+
+`<!-- CHECKPOINT: Phase 1 complete -->`
+
+### Phase 2 — T1-T20
+
+| ID     | Status | Observação                                                                 |
+| ------ | ------ | -------------------------------------------------------------------------- |
+| T1     | ✅     | 2 exports (calculatePipelineCost, generatePipelineCostHtml) + 2 interfaces |
+| T2     | ⚠️     | Interfaces TS mas sem schema Zod                                           |
+| T3     | ❌ N/A | Não usa config-accessor                                                    |
+| T4     | ✅     | Lê process.env.QA_COST_PER_COMPUTE_MINUTE                                  |
+| T5-T8  | ❌ N/A | Sem wizard                                                                 |
+| T9     | ❌ N/A | Sem reconfig handler                                                       |
+| T10    | ❌ N/A | Sem CI integration                                                         |
+| T11    | ✅     | try/catch em generatePipelineCostHtml                                      |
+| T12    | ✅     | 46 tests (29u + 14pbt + 3i)                                                |
+| T13    | ✅     | Zero dead code                                                             |
+| T14a-i | ✅     | Zero suppressions de qualquer tipo                                         |
+| T15    | ✅     | Consumidores apontam unidirecionalmente ao source                          |
+| T16    | ❌ N/A | Sem CLI                                                                    |
+| T17    | ⚠️     | process.env usado (documentado em TECHDOC + config-schema)                 |
+| T18    | ✅     | try/catch + rootLogger.error + instanceof check                            |
+| T19    | ❌     | TECHDOC sem entrada pipeline-cost                                          |
+| T20    | ❌ N/A | Sem referência em CI                                                       |
+
+`<!-- CHECKPOINT: Phase 2 complete -->`
+
+### Phase 3 — D1-D7
+
+**D1: Isolamento de Testes** — D1.1✅ cleanup (integration beforeEach), D1.2✅ vi.mock no topo, D1.3✅ sem estado compartilhado, D1.4✅ limpeza via finally
+**D2: Robustez** — D2.1✅ guard null/undefined input, D2.2✅ guard clauses, D2.3✅ fallback error page, D2.4❌ N/A
+**D3: Boas Práticas** — 161L < 400 ✅. D3.1✅ SRP, D3.2✅ DepWall (só imports locais), D3.3✅ sem bypass, D3.4✅ sem duplicação, D3.5✅ nomes claros
+**D4: Implementação** — D4.1✅ complexidade adequada, D4.2✅ sem cópias, D4.3⚠️ magic number `0.01` inline, D4.4✅ early returns, D4.5✅ sem dead code
+**D5: Métricas** — ❌ N/A (consome MetricsRun, não produz métricas)
+**D6: UX** — D6.1⚠️ msgs não acionáveis (dizem o que, não o que fazer), D6.2⚠️ documentação dedicada ausente (só menção em 03-git-triggers), D6.3✅ terminologia consistente. **Obrigatório D6.1+D6.2 — ❌**
+**D7: Deep Test Audit** — Script D7: 13/14 PASS, 1 FAIL (D7.5 — toThrow sem argumento line 174)
+
+`<!-- CHECKPOINT: Phase 3 complete -->`
+
+### Phase 3.5 — D8 Domain Adequacy
+
+| Operação                                    | Fonte                                    | ID Registry | Status                                                         |
+| ------------------------------------------- | ---------------------------------------- | ----------- | -------------------------------------------------------------- |
+| `avgCostPerRun = totalCost / runCount`      | NIST/SEMATECH §2.3.1                     | F01         | ✅ já registrado                                               |
+| `cost = (durationSec / 60) * costPerMinute` | Prática industrial (custo computacional) | —           | ⚠️ sem gold standard formal — verificado por corretude via PBT |
+| `totalCost = sum(costs)`                    | Aritmética básica                        | —           | ✅ corretude trivial via PBT                                   |
+| `formatDuration`                            | Formatação textual                       | —           | ✅ corretude trivial                                           |
+
+D8 aplica-se apenas para `avgCostPerRun` (F01, já registrado). Demais operações são aritmética simples ou formatação sem gold standard formal.
+
+`<!-- CHECKPOINT: Phase 3.5 complete -->`
+
+### Phase 4 — Registro de Gaps
+
+| ID   | Severidade | Descrição                                                                                                                     | Local           | Origem   |
+| ---- | ---------- | ----------------------------------------------------------------------------------------------------------------------------- | --------------- | -------- |
+| G-01 | Baixo      | Magic number `0.01` (default cost per minute) inline sem constante nomeada                                                    | source:37       | D4.3     |
+| G-02 | Info       | `expect(() => new Date(result.timestamp)).not.toThrow()` — toThrow sem argumento                                              | test:174        | D7.5     |
+| G-03 | Info       | `expect(html).toContain('Pipeline Cost Analytics')` — assert genérico, substring do título, não valida footer especificamente | test:298        | D7.1     |
+| G-04 | Baixo      | `rootLogger.error('Pipeline cost result is null or undefined')` — mensagem não acionável (não diz o que fazer)                | source:101      | D6.1     |
+| G-05 | Baixo      | TECHDOC sem entrada dedicada `pipeline-cost` — apenas menção da env var em lista                                              | docs/TECHDOC.md | T19/D6.2 |
+
+**Prioridade:** G-01 (D4.3 fonte) → G-04 (D6.1 UX) → G-05 (TECHDOC) → G-02/G-03 (D7 info)
+
+`<!-- CHECKPOINT: Phase 4 complete -->`
+
+### Phase 4.5 — Varredura de consistência
+
+**Arquivos com gaps:**
+
+- `shared/pipeline-cost.ts` (G-01 D4.3, G-04 D6.1): varredura completa — `0.01` é único magic number de negócio. `60` é constante física (segundos/minuto). `25%` é apresentação. Mensagens de erro consistentes (ambas não acionáveis). Sem novos gaps.
+- `shared/pipeline-cost.test.ts` (G-02 D7.5, G-03 D7.1): varredura completa — único `toThrow()` no arquivo. `toContain('Pipeline Cost Analytics')` é único assert genérico. Demais expects são específicos. Sem novos gaps.
+
+✅ Nenhum gap adicional encontrado na varredura.
+
+`<!-- CHECKPOINT: Phase 4.5 complete -->`
+
+### Phase 5 — RED
+
+Teste criado para expor bug (RED contra source original):
+
+- `allows explicit zero cost per minute`: `calculatePipelineCost(runs, 0)` retornava `0.01` ao invés de `0` — bug de operador `||` engolindo `0` como falsy. Teste falhou: `expected 0.01 to be 0`.
+
+`<!-- CHECKPOINT: Phase 5 complete -->`
+
+### Phase 6 — GREEN
+
+| Gap        | Local           | Correção                                                                                                                               |
+| ---------- | --------------- | -------------------------------------------------------------------------------------------------------------------------------------- |
+| G-01 + bug | source:39       | `const DEFAULT_COST_PER_MINUTE = 0.01` + `(costPerMinute ?? Number(...) \|\| DEFAULT)` → `costPerMinute ?? (Number(...) \|\| DEFAULT)` |
+| G-04       | source:101,159  | Mensagens de erro acionáveis                                                                                                           |
+| G-05       | docs/TECHDOC.md | Entrada adicionada na tabela FILES                                                                                                     |
+| G-02       | test:174        | `not.toThrow()` → `new Date(...).toString() not.toBe('Invalid Date')`                                                                  |
+| G-03       | test:+311       | Novo teste `includes footer with full attribution text`                                                                                |
+
+`<!-- CHECKPOINT: Phase 6 complete -->`
+
+### Phase 7 — Integração
+
+- Consumer tests: interactive-mode 55/55 ✅ | schedule-handler 16/16 ✅ | quality-check 35/35 ✅
+- tsc --noEmit: ✅ 0 erros | lint: ✅ All quality checks passed
+- Full suite: 373 files, 5707 tests ✅ | TECHDOC ✅
+
+`<!-- CHECKPOINT: Phase 7 complete -->`
+
+### Phase 8 — Refatoração
+
+🟢 Skip — 161L, SRP, DepWall, zero duplicação, nomes claros
+
+`<!-- CHECKPOINT: Phase 8 complete -->`
+
+### Phase 8.5 — Self-review
+
+Q1(casts)❌ Q2(violação ignorada)❌ Q3(causa raiz)✅ Q4(UX acionável)✅
+
+`<!-- CHECKPOINT: Phase 8.5 complete -->`
+
+### Phase 9 — Validação Final
+
+- tsc, lint, 48/48 tests, D7 14/14 ✅
+
+`<!-- CHECKPOINT: Phase 9 complete -->`
+
+`<!-- CHECKPOINT: Phase 10 complete -->`
+
+### Phase 11 — Quality Gate
+
+| Dimensão        | Status | Itens                                                                                                |
+| --------------- | ------ | ---------------------------------------------------------------------------------------------------- |
+| Architecture    | ✅     | SRP (calculate pura / generate com I/O separadas), DepWall (só shared/), 161L < 400, zero duplicação |
+| Security        | ✅     | sanitizeHtml em entradas do usuário, sem eval, sem secrets                                           |
+| Error handling  | ✅     | try/catch em generatePipelineCostHtml, instanceof check, rootLogger.error com ação sugerida          |
+| Type safety     | ✅     | tipos explícitos, zero `!`, zero `as`, zero suppressions                                             |
+| Maintainability | ✅     | DEFAULT_COST_PER_MINUTE nomeada, nomes claros, complexidade baixa, 0 dead code                       |
+| Consistency     | ✅     | mesmo padrão UX de FT-28, checkpoints Phases 0-11 completos, 48/48 testes, D7 14/14 ✅               |
+
+### 11.2 — Self-Audit (checkpoints)
+
+`grep -c 'CHECKPOINT: Phase' FUNCTIONAL-AUDIT-PROGRESS.md`
 
 `<!-- CHECKPOINT: Phase 11 complete -->`
