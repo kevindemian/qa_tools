@@ -100,29 +100,17 @@ check "13" "Testes vazios (corpo {})" \
     "grep -rnP ${EXCLUDE_PATHS} '(it|test)\\s*\\(\\s*[\\x27\"]+[^\\x27\"]+[\\x27\"]+\\s*,\\s*(async\\s*)?\\s*\\(\\s*\\)\\s*=>\\s*\\{\\s*\\}' ${ALL_TESTS} 2>/dev/null || true"
 
 # ── 3. Trivial/tautological assertions ──────────────────────────────────────────
-check "14a" "expect(true).toBe(true) / expect(false).toBe(false)" \
-    "grep -rnP ${EXCLUDE_PATHS} 'expect\\(true\\)\\.toBe\\(true\\)|expect\\(false\\)\\.toBe\\(false\\)' ${ALL_TESTS} 2>/dev/null || true"
+# TC_BOOL=true|false  TC_NUM=-?(?:(?:\d+(?:\.\d*)?|\.\d+)(?:[eE][+-]?\d+)?|0[xX][0-9a-fA-F]+|0[oO][0-7]+|0[bB][01]+)
+# TC_DQ=\x22(?:[^\x22\\]|\\.)*\x22  TC_SQ=\x27(?:[^\x27\\]|\\.)*\x27  TC_TL=\x60(?:[^\x60\\]|\\.)*\x60  TC_NULL=null|undefined
+# Branch-reset (?|...) garante \1 sempre o literal capturado em cada alternativa
+check "14" "Tautologia literal (bool|num|string|template|null|undefined)" \
+    "grep -rnP ${EXCLUDE_PATHS} '(?|expect\((true|false)\)\.to(?:Be|Equal|StrictEqual)\(\s*\1\s*\)|expect\((-?(?:(?:\d+(?:\.\d*)?|\.\d+)(?:[eE][+-]?\d+)?|0[xX][0-9a-fA-F]+|0[oO][0-7]+|0[bB][01]+))\)\.to(?:Be|Equal|StrictEqual)\(\s*\1\s*\)|expect\(\x22((?:[^\x22\\]|\\.)*)\x22\)\.to(?:Be|Equal|StrictEqual)\(\s*\x22\1\x22\s*\)|expect\(\x27((?:[^\x27\\]|\\.)*)\x27\)\.to(?:Be|Equal|StrictEqual)\(\s*\x27\1\x27\s*\)|expect\(\x60((?:[^\x60\\]|\\.)*)\x60\)\.to(?:Be|Equal|StrictEqual)\(\s*\x60\1\x60\s*\)|expect\((null|undefined)\)\.to(?:Be|Equal|StrictEqual)\(\s*\1\s*\))' ${ALL_TESTS} 2>/dev/null || true"
 
 check "14b" "expect.assertions(0)" \
     "grep -rnP ${EXCLUDE_PATHS} 'expect\\.assertions\\s*\\(\\s*0\\s*\\)' ${ALL_TESTS} 2>/dev/null || true"
 
 check "14c" "Tautologia: expect(x).toBe(x)" \
     "grep -rnP ${EXCLUDE_PATHS} 'expect\\(([a-zA-Z_]\\w*)\\)\\.to(?:Be|Equal|StrictEqual)\\(\\s*\\1\\s*\\)' ${ALL_TESTS} 2>/dev/null || true"
-
-check "14d" "Tautologia numerica (42, -1, 3.14, 0xff)" \
-    "grep -rnP ${EXCLUDE_PATHS} 'expect\\((-?(?:(?:\\d+(?:\\.\\d*)?|\\.\\d+)(?:[eE][+-]?\\d+)?|0[xX][0-9a-fA-F]+|0[oO][0-7]+|0[bB][01]+))\\)\\.to(?:Be|Equal|StrictEqual)\\(\\s*\\1\\s*\\)' ${ALL_TESTS} 2>/dev/null || true"
-
-check "14e" "Tautologia string \"...\"" \
-    "grep -rnP ${EXCLUDE_PATHS} 'expect\\(\\x22((?:[^\\x22\\\\]|\\\\.)*)\\x22\\)\\.to(?:Be|Equal|StrictEqual)\\(\\s*\\x22\\1\\x22\\s*\\)' ${ALL_TESTS} 2>/dev/null || true"
-
-check "14f" "Tautologia string '\x27...\x27" \
-    "grep -rnP ${EXCLUDE_PATHS} 'expect\\(\\x27((?:[^\\x27\\\\]|\\\\.)*)\\x27\\)\\.to(?:Be|Equal|StrictEqual)\\(\\s*\\x27\\1\\x27\\s*\\)' ${ALL_TESTS} 2>/dev/null || true"
-
-check "14g" "Tautologia template \`...\`" \
-    "grep -rnP ${EXCLUDE_PATHS} 'expect\\(\\x60((?:[^\\x60\\\\]|\\\\.)*)\\x60\\)\\.to(?:Be|Equal|StrictEqual)\\(\\s*\\x60\\1\\x60\\s*\\)' ${ALL_TESTS} 2>/dev/null || true"
-
-check "14h" "Tautologia null/undefined" \
-    "grep -rnP ${EXCLUDE_PATHS} 'expect\\((null|undefined)\\)\\.to(?:Be|Equal|StrictEqual)\\(\\s*\\1\\s*\\)' ${ALL_TESTS} 2>/dev/null || true"
 
 # ── 4. Catch suppressing test failure ───────────────────────────────────────────
 check "15" "Catch silenciando falha de teste" \
