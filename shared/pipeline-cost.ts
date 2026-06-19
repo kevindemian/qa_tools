@@ -12,6 +12,8 @@ import type { TableColumn, TableRow } from './primitives/index.js';
 import { rootLogger } from './logger.js';
 import type { MetricsRun } from './metrics.js';
 
+const DEFAULT_COST_PER_MINUTE = 0.01;
+
 export interface PipelineCostEntry {
     timestamp: string;
     durationSec: number;
@@ -34,7 +36,7 @@ export function calculatePipelineCost(
     runs: MetricsRun[] | null | undefined,
     costPerMinute?: number,
 ): PipelineCostResult {
-    const cpm = (costPerMinute ?? Number(process.env['QA_COST_PER_COMPUTE_MINUTE'])) || 0.01;
+    const cpm = costPerMinute ?? (Number(process.env['QA_COST_PER_COMPUTE_MINUTE']) || DEFAULT_COST_PER_MINUTE);
 
     if (!runs || runs.length === 0) {
         const now = new Date().toISOString();
@@ -98,8 +100,13 @@ function formatDuration(seconds: number): string {
 export function generatePipelineCostHtml(result: PipelineCostResult | null | undefined, title?: string): string {
     try {
         if (!result) {
-            rootLogger.error('Pipeline cost result is null or undefined');
-            return buildErrorPage('Error generating report', 'Pipeline Cost Report Error');
+            rootLogger.error(
+                'Pipeline cost result is null or undefined. Ensure calculatePipelineCost is called before generatePipelineCostHtml.',
+            );
+            return buildErrorPage(
+                'Error generating report — no pipeline cost data found',
+                'Pipeline Cost Report Error',
+            );
         }
 
         const pageTitle = title || 'Pipeline Cost Analytics';
@@ -156,6 +163,9 @@ export function generatePipelineCostHtml(result: PipelineCostResult | null | und
     } catch (err) {
         const msg = err instanceof Error ? err.message : String(err);
         rootLogger.error('Failed to generate pipeline cost HTML: ' + msg);
-        return buildErrorPage('Error generating report', 'Pipeline Cost Report Error');
+        return buildErrorPage(
+            'Error generating report — check pipeline cost data and try again',
+            'Pipeline Cost Report Error',
+        );
     }
 }
