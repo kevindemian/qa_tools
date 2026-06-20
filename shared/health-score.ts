@@ -135,7 +135,8 @@ function _computeExpWeighted(runs: MetricsRun[], n: number, getValue: (run: Metr
     for (let i = 0; i < n; i++) {
         const run = runs[i];
         if (!run) continue;
-        const value = getValue(run);
+        const raw = getValue(run);
+        const value = Number.isFinite(raw) ? raw : 0;
         const weight = Math.exp((i - n + 1) / Math.max(n / 2, 1));
         weightedSum += value * weight;
         weightTotal += weight;
@@ -147,7 +148,7 @@ function _computeSuiteSpeed(runs: MetricsRun[]): number {
     const allDurations: number[] = [];
     for (const run of runs) {
         for (const t of run.tests) {
-            allDurations.push(t.duration);
+            if (Number.isFinite(t.duration)) allDurations.push(t.duration);
         }
     }
     if (allDurations.length === 0) return 0;
@@ -180,11 +181,11 @@ function computeActualMetrics(store: MetricsStore, config: HealthScoreConfig): A
     const actualSuiteSpeed = _computeSuiteSpeed(runs);
 
     return {
-        passRate: actualPassRate,
-        flakyPct: actualFlakyPct,
-        coverage: actualCoverage,
-        executionRate: actualExecutionRate,
-        suiteSpeed: actualSuiteSpeed,
+        passRate: Number.isFinite(actualPassRate) ? actualPassRate : 0,
+        flakyPct: actualFlakyPct === null ? null : Number.isFinite(actualFlakyPct) ? actualFlakyPct : 0,
+        coverage: Number.isFinite(actualCoverage) ? actualCoverage : 0,
+        executionRate: Number.isFinite(actualExecutionRate) ? actualExecutionRate : 0,
+        suiteSpeed: Number.isFinite(actualSuiteSpeed) ? actualSuiteSpeed : 0,
     };
 }
 
@@ -339,6 +340,7 @@ export function calculateHealthScore(
 
     const effectiveTotal = overallWeight > 0 ? overallWeight : 100;
     let overall = effectiveTotal > 0 ? overallNum / effectiveTotal : 0;
+    if (!Number.isFinite(overall)) overall = 0;
 
     const dimCheck = [scPassRate, scCoverage, scExecutionRate, scSuiteSpeed];
     if (actual.flakyPct !== null) dimCheck.push(scFlakyRate);
