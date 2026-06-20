@@ -147,7 +147,8 @@ export function printSessionSummary(): void {
     const state = (() => {
         try {
             return loadState() as { history?: Array<{ status: string; op: string; detail: string }> };
-        } catch {
+        } catch (err) {
+            rootLogger.debug('Failed to load session state: ' + (err instanceof Error ? err.message : String(err)));
             return {};
         }
     })();

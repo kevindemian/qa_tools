@@ -55,8 +55,10 @@ async function processGitHubArtifacts(
                     allTestsByTitle[name].states.push(t.status);
                 }
             }
-        } catch {
-            /* skip individual run */
+        } catch (err) {
+            rootLogger.debug(
+                'git-artifact-downloader: skip individual run: ' + (err instanceof Error ? err.message : String(err)),
+            );
         }
     }
     return { runStats, allTestsByTitle };
@@ -168,8 +170,11 @@ async function fetchGitLabHistory(): Promise<CiContext> {
             try {
                 const stats = await processGitLabPipelineArtifacts(projectId, run as Record<string, unknown>, client);
                 runStats.push(...stats);
-            } catch {
-                /* skip individual pipeline */
+            } catch (err) {
+                rootLogger.debug(
+                    'git-artifact-downloader: skip individual pipeline: ' +
+                        (err instanceof Error ? err.message : String(err)),
+                );
             }
         }
         return { commits: '', runs: runStats, flakyTests: '' };

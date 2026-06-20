@@ -43,8 +43,10 @@ export function getHeadSha(env?: NodeJS.ProcessEnv): string | null {
             } else {
                 return head;
             }
-        } catch {
-            rootLogger.debug('getHeadSha: filesystem HEAD resolution failed, returning null');
+        } catch (err) {
+            rootLogger.debug(
+                'getHeadSha: filesystem HEAD resolution failed: ' + (err instanceof Error ? err.message : String(err)),
+            );
         }
         /* .git found but ref could not be resolved via filesystem —
          * do NOT fall back to git CLI: it may resolve in parent repo
@@ -58,7 +60,8 @@ export function getHeadSha(env?: NodeJS.ProcessEnv): string | null {
             stdio: ['ignore', 'pipe', 'ignore'],
         }).trim();
         return sha || null;
-    } catch {
+    } catch (err) {
+        rootLogger.debug('getHeadSha: git CLI fallback failed: ' + (err instanceof Error ? err.message : String(err)));
         return null;
     }
 }
@@ -76,7 +79,10 @@ export function getCurrentBranch(env?: NodeJS.ProcessEnv): string | null {
                 stdio: ['ignore', 'pipe', 'ignore'],
             }).trim() || null
         );
-    } catch {
+    } catch (err) {
+        rootLogger.debug(
+            'getCurrentBranch: git branch resolution failed: ' + (err instanceof Error ? err.message : String(err)),
+        );
         return null;
     }
 }

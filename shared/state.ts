@@ -52,18 +52,27 @@ export function migrateOldState(config?: Config): void {
             fs.renameSync(tmpPath(config), statePath(config));
             try {
                 fs.unlinkSync(OLD_STATE_PATH + '.bak');
-            } catch {
-                rootLogger.debug('Old backup file not found for cleanup — expected during first migration');
+            } catch (err) {
+                rootLogger.debug(
+                    'Old backup file not found for cleanup — expected during first migration: ' +
+                        (err instanceof Error ? err.message : String(err)),
+                );
             }
             try {
                 fs.unlinkSync(OLD_STATE_PATH + '.tmp');
-            } catch {
-                rootLogger.debug('Old tmp file not found for cleanup — expected during first migration');
+            } catch (err) {
+                rootLogger.debug(
+                    'Old tmp file not found for cleanup — expected during first migration: ' +
+                        (err instanceof Error ? err.message : String(err)),
+                );
             }
             try {
                 fs.unlinkSync(OLD_STATE_PATH);
-            } catch {
-                rootLogger.debug('Old state file not found for cleanup — expected during first migration');
+            } catch (err) {
+                rootLogger.debug(
+                    'Old state file not found for cleanup — expected during first migration: ' +
+                        (err instanceof Error ? err.message : String(err)),
+                );
             }
         }
     } catch (err: unknown) {

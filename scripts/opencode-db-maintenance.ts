@@ -54,7 +54,8 @@ function getDbSizeBytes(): number {
             ? execFileSync('stat', ['--format=%s', DB_PATH], { encoding: 'utf-8' }).trim()
             : '0';
         return Number(stats);
-    } catch {
+    } catch (err) {
+        rootLogger.debug(`[db-maintenance] Failed to get DB size: ${err instanceof Error ? err.message : String(err)}`);
         return 0;
     }
 }
@@ -93,7 +94,8 @@ function backupDb(dbPath: string): string | null {
         const backupPath = dbPath + '.pre-run';
         copyFileSync(dbPath, backupPath);
         return backupPath;
-    } catch {
+    } catch (err) {
+        rootLogger.warn(`[db-maintenance] Backup failed: ${err instanceof Error ? err.message : String(err)}`);
         return null;
     }
 }
@@ -107,7 +109,10 @@ function backupDb(dbPath: string): string | null {
 function ensureWalMode(): string | null {
     try {
         return runSqlite('PRAGMA journal_mode=WAL;');
-    } catch {
+    } catch (err) {
+        rootLogger.debug(
+            `[db-maintenance] Failed to set WAL mode: ${err instanceof Error ? err.message : String(err)}`,
+        );
         return null;
     }
 }
@@ -133,7 +138,10 @@ function checkMountDevice(dbPath: string): string | null {
             );
         }
         return null;
-    } catch {
+    } catch (err) {
+        rootLogger.debug(
+            `[db-maintenance] Mount device check failed: ${err instanceof Error ? err.message : String(err)}`,
+        );
         return null;
     }
 }
@@ -302,7 +310,8 @@ function checkSqlite3(): boolean {
     try {
         execFileSync(SQLITE_BIN, ['--version'], { encoding: 'utf-8', stdio: 'pipe', timeout: 5_000 });
         return true;
-    } catch {
+    } catch (err) {
+        rootLogger.debug(`[db-maintenance] sqlite3 not available: ${err instanceof Error ? err.message : String(err)}`);
         return false;
     }
 }
@@ -311,7 +320,10 @@ function ensureDbDir(): boolean {
     try {
         mkdirSync(DB_DIR, { recursive: true });
         return true;
-    } catch {
+    } catch (err) {
+        rootLogger.warn(
+            `[db-maintenance] Failed to create DB directory: ${err instanceof Error ? err.message : String(err)}`,
+        );
         return false;
     }
 }

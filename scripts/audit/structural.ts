@@ -4,6 +4,7 @@
  *  Output: JSON array of findings. */
 
 import { execFileSync } from 'child_process';
+import { rootLogger } from '../../shared/logger.js';
 
 interface Finding {
     pattern: string;
@@ -29,7 +30,8 @@ function grep(pattern: string, path: string): string {
             maxBuffer: 10 * 1024 * 1024,
             stdio: ['ignore', 'pipe', 'ignore'],
         }).trim();
-    } catch {
+    } catch (err) {
+        rootLogger.warn('structural: git command failed: ' + (err instanceof Error ? err.message : String(err)));
         return '';
     }
 }

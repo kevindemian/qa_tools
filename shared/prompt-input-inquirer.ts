@@ -47,7 +47,8 @@ async function _loadSelect(): Promise<unknown> {
     try {
         _selectMod = await import('@inquirer/select');
         return _selectMod;
-    } catch {
+    } catch (err) {
+        warn('@inquirer/select not available, using fallback: ' + (err instanceof Error ? err.message : String(err)));
         _selectMod = false;
         return false;
     }
@@ -65,7 +66,8 @@ async function _loadInput(): Promise<unknown> {
     try {
         _inputMod = await import('@inquirer/input');
         return _inputMod;
-    } catch {
+    } catch (err) {
+        warn('@inquirer/input not available, using fallback: ' + (err instanceof Error ? err.message : String(err)));
         _inputMod = false;
         return false;
     }
@@ -83,7 +85,8 @@ async function _loadConfirm(): Promise<unknown> {
     try {
         _confirmMod = await import('@inquirer/confirm');
         return _confirmMod;
-    } catch {
+    } catch (err) {
+        warn('@inquirer/confirm not available, using fallback: ' + (err instanceof Error ? err.message : String(err)));
         _confirmMod = false;
         return false;
     }
@@ -143,7 +146,8 @@ export async function ask(label: string, options: PromptOptions = {}): Promise<s
             const trimmed = (answer as string).trim().toLowerCase();
             if (NAV_CMDS.includes(trimmed)) throw new CancelError(trimmed);
             return (answer as string).trim();
-        } catch {
+        } catch (err) {
+            warn('Inquirer prompt failed, using sync fallback: ' + (err instanceof Error ? err.message : String(err)));
             return prompt(label, options);
         }
     }
@@ -161,7 +165,8 @@ export async function askConfirm(label: string, defaultYes = false): Promise<boo
                 theme: inquirerTheme,
             });
             return answer as boolean;
-        } catch {
+        } catch (err) {
+            warn('Inquirer confirm failed, using sync fallback: ' + (err instanceof Error ? err.message : String(err)));
             return confirm(label, defaultYes);
         }
     }
@@ -237,8 +242,10 @@ export async function showSelect(label: string, choices: SelectChoice[], options
                 theme: inquirerTheme,
             });
             return answer as string;
-        } catch {
-            warn('Falha no seletor interativo. Usando modo texto.');
+        } catch (err) {
+            warn(
+                'Falha no seletor interativo. Usando modo texto: ' + (err instanceof Error ? err.message : String(err)),
+            );
             return '__error__';
         }
     }

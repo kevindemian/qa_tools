@@ -5,6 +5,7 @@ import type { FlatTest } from '../../shared/result_parser.js';
 import type { TestHistoryRun } from '../../shared/report-generator.js';
 import { createHistoryProvider, TestHistoryCache } from '../xray-history.js';
 import type { CommandContext } from './context.js';
+import { rootLogger } from '../../shared/logger.js';
 
 export { fetchGitHistory, fetchLatestTestRun } from '../../shared/git-artifact-downloader.js';
 
@@ -27,8 +28,11 @@ export function resolveMapping(): Map<string, string> {
                 if (t['title'] && t['key']) entries.push([t['title'], t['key']]);
             }
             return new Map(entries);
-        } catch {
-            /* try next candidate */
+        } catch (err) {
+            rootLogger.warn(
+                'case17-test-utils: failed to parse test data, trying next: ' +
+                    (err instanceof Error ? err.message : String(err)),
+            );
         }
     }
     return new Map();

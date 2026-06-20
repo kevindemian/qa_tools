@@ -78,8 +78,10 @@ async function main(): Promise<void> {
             try {
                 const models = await discoverModels(provider, key);
                 allDiscovered.set(provider, models);
-            } catch {
-                // Per-provider failure is non-fatal — continue with others
+            } catch (err) {
+                rootLogger.debug(
+                    'Discovery failed for ' + provider + ': ' + (err instanceof Error ? err.message : String(err)),
+                );
                 allDiscovered.set(provider, []);
             }
         }

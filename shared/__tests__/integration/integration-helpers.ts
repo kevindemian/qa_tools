@@ -11,6 +11,7 @@ import fs from 'node:fs';
 import os from 'node:os';
 import path from 'node:path';
 import type { FeatureConfigStore } from '../../types/feature-config.js';
+import { rootLogger } from '../../logger.js';
 
 /**
  * Create an isolated temporary directory for a test suite.
@@ -90,7 +91,8 @@ export function readFile(baseDir: string, relPath: string): string | null {
 export function fileExists(baseDir: string, relPath: string): boolean {
     try {
         return fs.existsSync(path.join(baseDir, relPath));
-    } catch {
+    } catch (err) {
+        rootLogger.warn('test helper: fileExists check failed: ' + (err instanceof Error ? err.message : String(err)));
         return false;
     }
 }

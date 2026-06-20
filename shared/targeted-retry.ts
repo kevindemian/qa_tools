@@ -14,6 +14,7 @@ import type { LlmPromptOptions } from './types/llm.js';
 import { type ValidationResult, type ValidatorSummary } from './artifact-validator.js';
 import { type ZodSchemaTyped } from './types.js';
 import { recordRetry } from './llm-metrics.js';
+import { rootLogger } from './logger.js';
 
 export interface LayerConfig {
     maxRetries: number;
@@ -79,7 +80,10 @@ export async function generateWithRetry<T>(
             const parsed = schema.safeParse(result);
             if (parsed.success) return parsed.data;
             return null;
-        } catch {
+        } catch (err) {
+            rootLogger.warn(
+                'targeted-retry: LLM + schema parsing failed: ' + (err instanceof Error ? err.message : String(err)),
+            );
             return null;
         }
     }

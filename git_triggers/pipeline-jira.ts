@@ -11,6 +11,7 @@ import { classifyFailure } from '../shared/failure-analysis.js';
 import type { ParseResult } from '../shared/result_parser.js';
 import type { AnalysisReport } from '../shared/failure-analysis.js';
 import type { StoreBackend } from '../shared/store-backend.js';
+import { rootLogger } from '../shared/logger.js';
 
 function isAutoBugEnabled(): boolean {
     return Config.get('QA_AUTO_BUG') === 'true' || process.env['QA_AUTO_BUG'] === 'true';
@@ -33,8 +34,8 @@ async function persistFailureClassifications(parsed: ParseResult, backend: Store
             });
         }
         saveMetrics(store, undefined, backend);
-    } catch {
-        // Non-critical — do not fail the pipeline
+    } catch (err) {
+        rootLogger.warn('pipeline-jira: metrics save failed: ' + (err instanceof Error ? err.message : String(err)));
     }
 }
 

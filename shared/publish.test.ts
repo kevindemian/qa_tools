@@ -20,7 +20,7 @@ vi.mock('fs', () => ({
 }));
 
 vi.mock('./logger', () => ({
-    rootLogger: { info: mockLoggerInfo, error: mockLoggerError },
+    rootLogger: { info: mockLoggerInfo, warn: vi.fn(), error: mockLoggerError },
 }));
 
 import { publishReport, type PublishTarget } from './publish.js';

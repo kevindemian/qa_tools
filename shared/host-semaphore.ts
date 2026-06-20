@@ -1,10 +1,12 @@
+import { rootLogger } from './logger.js';
+
 /** Extract hostname from a URL for per-host throttling. */
 export function extractHost(url: string): string {
     try {
         const u = new URL(url);
         return u.hostname;
-    } catch {
-        /* URL inválida — fallback */
+    } catch (err) {
+        rootLogger.warn('extractHost: invalid URL, returning unknown', err);
         return 'unknown';
     }
 }

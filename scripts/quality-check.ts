@@ -16,6 +16,7 @@ import { isBuiltin } from 'module';
 import { globSync } from '../shared/deps.js';
 import { gracefulExit } from '../shared/cli_base.js';
 import { ExitCode } from '../shared/types.js';
+import { rootLogger } from '../shared/logger.js';
 
 // ---------------------------------------------------------------------------
 // Configuration
@@ -51,8 +52,8 @@ function grepLines(file: string, pattern: RegExp): Array<{ line: number; content
                 results.push({ line: i + 1, content: line.trim() });
             }
         });
-    } catch {
-        // skip unreadable
+    } catch (err) {
+        rootLogger.warn('quality-check: skip unreadable file: ' + (err instanceof Error ? err.message : String(err)));
     }
     return results;
 }
@@ -260,7 +261,8 @@ export function checkNoImplicitOverride(): CheckResult {
                 content: 'noImplicitOverride must be true in compilerOptions',
             });
         }
-    } catch {
+    } catch (err) {
+        rootLogger.warn('quality-check: tsconfig parse failed: ' + (err instanceof Error ? err.message : String(err)));
         violations.push({ file: 'tsconfig.json', line: 1, content: 'Could not parse tsconfig.json' });
     }
     return { name: 'noImplicitOverride active in tsconfig', passed: violations.length === 0, violations };

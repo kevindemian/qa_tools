@@ -1,6 +1,7 @@
 import { z } from 'zod';
 import { LLMEnrichment } from './llm.js';
 import { HealthScoreGrade } from './common.js';
+import { rootLogger } from '../logger.js';
 
 /** A structured bug report, optionally enriched by LLM analysis. */
 export interface BugReport {
@@ -61,7 +62,11 @@ export function parseFileTestMappings(raw: string): FileTestMapping[] {
     try {
         const parsed: unknown = JSON.parse(raw);
         return FileTestMappingArraySchema.parse(parsed);
-    } catch {
+    } catch (err) {
+        rootLogger.warn(
+            'bugs: invalid FileTestMapping JSON, returning empty: ' +
+                (err instanceof Error ? err.message : String(err)),
+        );
         return [];
     }
 }

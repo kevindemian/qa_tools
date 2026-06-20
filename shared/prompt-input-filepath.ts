@@ -6,6 +6,7 @@ import * as readline from 'readline';
 import chalk from 'chalk';
 import { CancelError } from './prompt-ui.js';
 import { NAV_CMDS, prompt, isTTY, PromptOptions } from './prompt-input-base.js';
+import { rootLogger } from './logger.js';
 
 export interface FilePathOptions extends PromptOptions {
     extensions?: string[];
@@ -28,7 +29,8 @@ export function filePathCompleter(line: string, extensions?: string[]): [string[
     let entries: string[];
     try {
         entries = fs.readdirSync(dir);
-    } catch {
+    } catch (err) {
+        rootLogger.warn('prompt-input-filepath: readdir failed: ' + (err instanceof Error ? err.message : String(err)));
         return [[], line];
     }
 
@@ -41,7 +43,10 @@ export function filePathCompleter(line: string, extensions?: string[]): [string[
             const full = path.join(dir, e);
             try {
                 if (fs.statSync(full).isDirectory()) return true;
-            } catch {
+            } catch (err) {
+                rootLogger.warn(
+                    'prompt-input-filepath: stat failed: ' + (err instanceof Error ? err.message : String(err)),
+                );
                 return false;
             }
             return extensions.some((ext) => lowerE.endsWith(ext));
@@ -51,7 +56,10 @@ export function filePathCompleter(line: string, extensions?: string[]): [string[
             const full = path.join(dir, e);
             try {
                 return fs.statSync(full).isDirectory() ? full + '/' : full;
-            } catch {
+            } catch (err) {
+                rootLogger.warn(
+                    'prompt-input-filepath: stat failed: ' + (err instanceof Error ? err.message : String(err)),
+                );
                 return e;
             }
         });

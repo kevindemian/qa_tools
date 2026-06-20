@@ -62,12 +62,19 @@ export function getCommitAuthor(diff: string): string {
                     }
                     break;
                 }
-            } catch {
+            } catch (err) {
+                rootLogger.debug(
+                    'failure-analysis: git blame failed for candidate: ' +
+                        (err instanceof Error ? err.message : String(err)),
+                );
                 continue;
             }
         }
         return author;
-    } catch {
+    } catch (err) {
+        rootLogger.debug(
+            'failure-analysis: author extraction failed: ' + (err instanceof Error ? err.message : String(err)),
+        );
         return 'unknown';
     }
 }
@@ -125,7 +132,8 @@ export async function analyzeFailuresWithReport(tests: FlatTest[], context?: Llm
     let result: ReviewResult;
     try {
         result = await withSpinner('Analisando falhas com IA...', () => reviewWithLlm(systemTemplate, userMessage));
-    } catch {
+    } catch (err) {
+        rootLogger.warn('Failure analysis LLM call failed: ' + (err instanceof Error ? err.message : String(err)));
         return { content: '', confidence: 'medium', fallbackUsed: true };
     }
 
@@ -180,8 +188,10 @@ export async function classifyFailure(title: string, error: string): Promise<str
             rootLogger.info('classifyFailure: self-consistency divergence level = ' + result.divergence);
         }
         return result.winner;
-    } catch {
-        rootLogger.warn('Self-consistency failed for classifyFailure, falling back to regular llmPrompt');
+    } catch (err) {
+        rootLogger.warn(
+            'Self-consistency failed for classifyFailure: ' + (err instanceof Error ? err.message : String(err)),
+        );
         try {
             const fallbackResult = await llmPrompt({
                 tier: 'fast',
@@ -191,8 +201,11 @@ export async function classifyFailure(title: string, error: string): Promise<str
                 schema: ClassifyResponseSchema,
             });
             return fallbackResult;
-        } catch {
-            rootLogger.warn('classifyFailure: llmPrompt + Zod validation failed, falling back to UNKNOWN');
+        } catch (err) {
+            rootLogger.warn(
+                'classifyFailure: llmPrompt + Zod validation failed: ' +
+                    (err instanceof Error ? err.message : String(err)),
+            );
             return 'UNKNOWN: Could not classify failure after retry';
         }
     }

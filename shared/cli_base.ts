@@ -147,7 +147,8 @@ function _createSigintHandler(getIsBusy: (() => boolean) | null, onExit: (() => 
                     info('Continuando...');
                     process.on('SIGINT', handler);
                 }
-            } catch {
+            } catch (err) {
+                rootLogger.debug('SIGINT handler cleanup: ' + (err instanceof Error ? err.message : String(err)));
                 _cleanupConfirm();
                 info('Continuando...');
                 process.on('SIGINT', handler);

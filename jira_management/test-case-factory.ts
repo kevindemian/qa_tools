@@ -3,6 +3,7 @@ import { success, info as promptInfo, onError, isQuiet, ProgressBar } from '../s
 import type { JiraResourceLike } from '../shared/types.js';
 import type { XrayStepImporter } from './xray-client.js';
 import type { JsonObject, LogContext, TestCase } from '../shared/types.js';
+import { rootLogger } from '../shared/logger.js';
 
 interface CreateIssueResult {
     key?: string;
@@ -47,8 +48,11 @@ class TestCaseFactory {
                     opLog.info('Issue pulada (já existe)', { key, title: testTitle });
                     return { key, skipped: true };
                 }
-            } catch {
-                /* skip-existing é otimização — se falhar busca, prossegue criação */
+            } catch (err) {
+                rootLogger.warn(
+                    'test-case-factory: skip-existing lookup failed: ' +
+                        (err instanceof Error ? err.message : String(err)),
+                );
             }
         }
 

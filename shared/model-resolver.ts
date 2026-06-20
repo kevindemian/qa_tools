@@ -65,7 +65,11 @@ function loadRegistry(): RegistryData {
     try {
         const content = readFileSync(REGISTRY_PATH, 'utf8');
         _registry = JSON.parse(content) as RegistryData;
-    } catch {
+    } catch (err) {
+        rootLogger.warn(
+            'model-resolver: failed to read registry, using defaults: ' +
+                (err instanceof Error ? err.message : String(err)),
+        );
         _registry = { version: 0, updated: '', providers: {} };
     }
     return _registry;

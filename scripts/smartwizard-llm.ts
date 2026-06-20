@@ -40,7 +40,10 @@ const ENV_LOCAL = resolve(__dirname, '..', '.env.local');
 function readEnvLocal(): string[] {
     try {
         return fs.readFileSync(ENV_LOCAL, 'utf8').split('\n');
-    } catch {
+    } catch (err) {
+        rootLogger.debug(
+            'smartwizard-llm: failed to read .env.local: ' + (err instanceof Error ? err.message : String(err)),
+        );
         return [];
     }
 }
