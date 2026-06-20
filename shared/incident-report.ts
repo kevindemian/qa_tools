@@ -45,6 +45,9 @@ const TYPE_ORDER: Record<string, number> = {
     seasonality: 3,
 };
 
+const FAIL_RATE_THRESHOLD = 30;
+const REGRESSION_COUNT_THRESHOLD = 2;
+
 function severityToCardSeverity(s: string): 'error' | 'warn' | 'info' | 'default' {
     if (s === 'high') return 'error';
     if (s === 'medium') return 'warn';
@@ -62,7 +65,9 @@ export function buildIncidentReport(
     const timestamp = new Date().toISOString();
 
     if (failRate == null || passRate == null) {
-        rootLogger.warn('Insufficient data for incident report: failRate or passRate is null/undefined');
+        rootLogger.warn(
+            'Insufficient data for incident report: failRate or passRate is null/undefined. Ensure both failRate and passRate are provided as numbers.',
+        );
         return {
             events: [],
             eventCount: 0,
@@ -77,22 +82,22 @@ export function buildIncidentReport(
 
     const events: IncidentEvent[] = [];
 
-    if (failRate > 30) {
+    if (failRate > FAIL_RATE_THRESHOLD) {
         events.push({
             date: timestamp,
             type: 'failure',
             title: 'High failure rate detected',
-            description: `Failure rate is ${failRate.toFixed(1)}%, exceeding the 30% threshold.`,
+            description: `Failure rate is ${failRate.toFixed(1)}%, exceeding the ${FAIL_RATE_THRESHOLD}% threshold.`,
             severity: 'high',
         });
     }
 
-    if (regressionCount > 2) {
+    if (regressionCount > REGRESSION_COUNT_THRESHOLD) {
         events.push({
             date: timestamp,
             type: 'regression',
             title: 'Multiple regressions detected',
-            description: `${regressionCount} regressions found, exceeding the threshold of 2.`,
+            description: `${regressionCount} regressions found, exceeding the threshold of ${REGRESSION_COUNT_THRESHOLD}.`,
             severity: 'high',
         });
     }
@@ -164,7 +169,9 @@ export function buildIncidentReport(
 export function generateIncidentReportHtml(report: IncidentReport | null | undefined, title?: string): string {
     try {
         if (!report) {
-            rootLogger.error('Incident report is null or undefined');
+            rootLogger.error(
+                'Incident report is null or undefined. Ensure a valid IncidentReport object is passed to generateIncidentReportHtml.',
+            );
             return buildErrorPage('Error generating report', 'Error generating incident investigation report');
         }
 
@@ -240,7 +247,11 @@ export function generateIncidentReportHtml(report: IncidentReport | null | undef
         });
     } catch (err) {
         const msg = err instanceof Error ? err.message : String(err);
-        rootLogger.error('Failed to generate incident report HTML: ' + msg);
+        rootLogger.error(
+            'Failed to generate incident report HTML: ' +
+                msg +
+                '. Verify that input data (failRate, passRate, regressionCount) is valid and the html-factory module is working correctly.',
+        );
         return buildErrorPage('Error generating report', 'Error generating incident investigation report');
     }
 }

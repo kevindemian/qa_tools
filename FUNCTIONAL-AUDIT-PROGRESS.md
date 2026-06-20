@@ -2844,3 +2844,6 @@ Full suite: 374/376 files pass (2 skipped), 5731/5740 tests pass (9 skipped) —
 | FT-30 Impact Alert       |  ✅   |     0     | D8-D12: zero gaps (comparações agem como NaN guard implícito).                                                 |
 | FT-31 Incident Report    |  ✅   |     0     | D8-D12: zero gaps.                                                                                             |
 | FT-32 Requirement Score  |  ✅   |     0     | D8-D12: zero gaps (acceptanceRate computado localmente, sempre finito).                                        |
+
+<!-- CHECKPOINT: D8-D12 Delta Audit complete (2026-06-20) -->
+<!-- FT-16..FT-32 scanned: 1 real gap fixed (FT-29 Pipeline Cost → NaN propagation). Full suite: 374/376 files, 5742/5751 tests passed, 0 failures. -->

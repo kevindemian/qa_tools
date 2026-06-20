@@ -40,11 +40,18 @@ export interface RequirementScoreResult {
     timestamp: string;
 }
 
+const GRADE_A_THRESHOLD = 90;
+const GRADE_B_THRESHOLD = 75;
+const GRADE_C_THRESHOLD = 60;
+const GRADE_D_THRESHOLD = 40;
+const USER_STORY_TRUNCATE_LENGTH = 120;
+const VOLUME_NORMALIZATION_DIVISOR = 10;
+
 function calculateGrade(score: number): 'A' | 'B' | 'C' | 'D' | 'F' {
-    if (score >= 90) return 'A';
-    if (score >= 75) return 'B';
-    if (score >= 60) return 'C';
-    if (score >= 40) return 'D';
+    if (score >= GRADE_A_THRESHOLD) return 'A';
+    if (score >= GRADE_B_THRESHOLD) return 'B';
+    if (score >= GRADE_C_THRESHOLD) return 'C';
+    if (score >= GRADE_D_THRESHOLD) return 'D';
     return 'F';
 }
 
@@ -54,8 +61,9 @@ function computeEntryScore(entry: Omit<RequirementScoreEntry, 'score' | 'scoreGr
     const volumeWeight = 0.2;
 
     const normalizedAcceptance = entry.acceptanceRate;
-    const retentionRate = entry.totalTests > 0 ? ((entry.keptTests + entry.modifiedTests) / entry.totalTests) * 100 : 0;
-    const volumeScore = Math.min(100, (entry.totalTests / 10) * 100);
+    const retentionRate =
+        entry.totalTests > 0 ? Math.min(100, ((entry.keptTests + entry.modifiedTests) / entry.totalTests) * 100) : 0;
+    const volumeScore = Math.min(100, (entry.totalTests / VOLUME_NORMALIZATION_DIVISOR) * 100);
 
     const score = Math.round(
         normalizedAcceptance * acceptanceWeight + retentionRate * retentionWeight + volumeScore * volumeWeight,
@@ -108,7 +116,7 @@ export function calculateRequirementScores(records: AiGenerationRecord[] | null 
         entries.push(
             computeEntryScore({
                 requirementId: record.id,
-                userStory: record.userStory.slice(0, 120),
+                userStory: record.userStory.slice(0, USER_STORY_TRUNCATE_LENGTH),
                 totalTests,
                 keptTests: keptCount,
                 modifiedTests: modifiedCount,
@@ -153,7 +161,9 @@ export function generateRequirementScoreHtml(
 ): string {
     try {
         if (!result) {
-            rootLogger.error('Requirement score result is null or undefined');
+            rootLogger.error(
+                'Requirement score result is null or undefined. Ensure a valid RequirementScoreResult object is passed to generateRequirementScoreHtml.',
+            );
             return buildErrorPage('Error generating report', 'Requirement Score Report Error');
         }
 
@@ -231,7 +241,11 @@ export function generateRequirementScoreHtml(
         });
     } catch (err) {
         const msg = err instanceof Error ? err.message : String(err);
-        rootLogger.error('Failed to generate requirement score HTML: ' + msg);
+        rootLogger.error(
+            'Failed to generate requirement score HTML: ' +
+                msg +
+                '. Verify that requirement data and html-factory module are working correctly.',
+        );
         return buildErrorPage('Error generating report', 'Requirement Score Report Error');
     }
 }

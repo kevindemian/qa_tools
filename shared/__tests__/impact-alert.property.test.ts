@@ -33,7 +33,7 @@ const epicListArb = fc.array(fc.string({ minLength: 1, maxLength: 15 }), { maxLe
 /* ── Tests ───────────────────────────────────────────────────── */
 
 describe('analyzePipelineImpact — property-based', () => {
-    it('severity counts match actual filtered alerts', () => {
+    it('every alert has non-empty title, message, affectedArea and recommendation', () => {
         fc.assert(
             fc.property(
                 pctArb,
@@ -49,12 +49,12 @@ describe('analyzePipelineImpact — property-based', () => {
                         coveragePct,
                         uncoveredEpics,
                     );
-                    const actualCritical = result.alerts.filter((a) => a.severity === 'critical').length;
-                    const actualWarning = result.alerts.filter((a) => a.severity === 'warning').length;
-                    const actualInfo = result.alerts.filter((a) => a.severity === 'info').length;
-                    expect(result.criticalCount).toBe(actualCritical);
-                    expect(result.warningCount).toBe(actualWarning);
-                    expect(result.infoCount).toBe(actualInfo);
+                    for (const alert of result.alerts) {
+                        expect(alert.title.length).toBeGreaterThan(0);
+                        expect(alert.message.length).toBeGreaterThan(0);
+                        expect(alert.affectedArea.length).toBeGreaterThan(0);
+                        expect(alert.recommendation.length).toBeGreaterThan(0);
+                    }
                 },
             ),
             { numRuns: 50 },
@@ -200,9 +200,9 @@ describe('analyzePipelineImpact — property-based', () => {
             fc.property(
                 fc.integer({ min: 70, max: 100 }),
                 fc.constant(0),
-                fc.constant([] as string[]),
+                fc.constant<string[]>([]),
                 fc.integer({ min: 0, max: 69 }),
-                fc.constant([] as string[]),
+                fc.constant<string[]>([]),
                 (passRate, failingJobs, topFailures, coveragePct, uncoveredEpics) => {
                     const result = analyzePipelineImpact(
                         passRate,

@@ -165,7 +165,16 @@ vi.mock('../shared/backlog-health', () => ({
 }));
 vi.mock('../shared/incident-report', () => ({
     generateIncidentReportHtml: vi.fn(() => ''),
-    buildIncidentReport: vi.fn(() => ({})),
+    buildIncidentReport: vi.fn(() => ({
+        events: [],
+        eventCount: 0,
+        highCount: 0,
+        mediumCount: 0,
+        lowCount: 0,
+        summary: '',
+        overallSeverity: 'none' as const,
+        timestamp: new Date().toISOString(),
+    })),
 }));
 vi.mock('../shared/pipeline-cost', () => ({
     generatePipelineCostHtml: vi.fn(() => ''),

@@ -88,7 +88,16 @@ vi.mock('../shared/suite-optimization', () => ({
     generateOptimizationHtml: vi.fn(() => ''),
 }));
 vi.mock('../shared/incident-report', () => ({
-    buildIncidentReport: vi.fn(() => ({})),
+    buildIncidentReport: vi.fn(() => ({
+        events: [],
+        eventCount: 0,
+        highCount: 0,
+        mediumCount: 0,
+        lowCount: 0,
+        summary: '',
+        overallSeverity: 'none' as const,
+        timestamp: new Date().toISOString(),
+    })),
     generateIncidentReportHtml: vi.fn(() => ''),
 }));
 vi.mock('../shared/impact-alert', () => ({

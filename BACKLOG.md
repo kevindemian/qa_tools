@@ -3,6 +3,74 @@
 > ⚠️ Sprints anteriores a esta estão **concluídos**. Movidos para `BACKLOG-historico.md`.
 > Consulte os históricos para detalhes de sprints passados.
 
+---
+
+---
+
+## 🚀 Sprint GitHub API + PR Report — Integração com Dados do Provider (Jul/2026)
+
+**Data:** 2026-07 (planejado)
+**Origem:** PR Report mostrava duração da post-action (não da test job) e coverage = 0. Análise do ecossistema GitHub identificou 7 oportunidades de dados disponíveis via API sem esforço extra de geração.
+**Estratégia:** 3 fases sequenciais — Fase 1 corrige os 2 bugs, Fase 2 explora dados do Jobs API, Fase 3 adiciona segurança. Módulo compartilhado `github-client.ts` como pré-requisito.
+**Regra absoluta:** zero workarounds, 100% teste para código novo, nenhum débito deixado.
+
+### Pré-requisito — `shared/github-client.ts`
+
+| ID    | Item                                                                                                                          | Arquivo(s)                | Status |
+| ----- | ----------------------------------------------------------------------------------------------------------------------------- | ------------------------- | ------ |
+| GH-00 | ✨ Criar `shared/github-client.ts` — módulo único para chamadas autenticadas à GitHub API (token, rate limit, error handling) | `shared/github-client.ts` | 📌     |
+
+### Fase 1 — Correções (bugs atuais)
+
+| ID     | Item                                                                                                                                                                             | Arquivo(s)                                              | Esforço | Status |
+| ------ | -------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | ------------------------------------------------------- | ------- | ------ |
+| GH-01  | 🔧 **Duração via GitHub Jobs API** — `fetchTestJobDuration()` usando `GET .../runs/{run_id}/jobs`, filtrar job `qa-tools`, usar `completed_at - started_at`. CTRF vira fallback. | `shared/pr-report-core.ts`, `shared/github-client.ts`   | 30min   | 📌     |
+| GH-02a | 🔧 **Vitest coverage reporter** — add `reporter: ['text', 'json-summary']` no coverage config                                                                                    | `vitest.config.ts`                                      | 5min    | 📌     |
+| GH-02b | 🔧 **Upload coverage artifact no job de teste** — `coverage/coverage-summary.json` como artefato `coverage-report`                                                               | `shared/ci-injector.ts`, `setup/templates/github-ci.ts` | 15min   | 📌     |
+| GH-02c | 🔧 **Download coverage no post-process** — baixar `coverage-report` antes do `pr-report-core.ts`                                                                                 | `setup/templates/qa-post-process-workflow.ts`           | 10min   | 📌     |
+
+### Fase 2 — Dados do Jobs API (Annotations + Timeline + Conclusion)
+
+| ID    | Item                                                                                                                                                | Arquivo(s)                                                                        | Esforço | Status |
+| ----- | --------------------------------------------------------------------------------------------------------------------------------------------------- | --------------------------------------------------------------------------------- | ------- | ------ |
+| GH-03 | ✨ **Annotations no Check Run** — add `annotations[]` para cada teste falho no `createCheckRun()` (arquivo, linha, mensagem)                        | `shared/github-check-run.ts`, `shared/pr-report-core.ts`                          | 30min   | 📌     |
+| GH-04 | ✨ **Step timing + timeline no HTML report** — extrair `steps[]` do job, renderizar timeline com duração por step (Checkout, Install, Test, Upload) | `shared/pr-report-core.ts`, `shared/report-types.ts`, `shared/report-sections.ts` | 45min   | 📌     |
+| GH-05 | ✨ **Workflow conclusion no PR comment** — exibir `conclusion` da workflow run na seção CI Context                                                  | `shared/pr-report-core.ts`, `shared/github-client.ts`                             | 15min   | 📌     |
+
+### Fase 3 — Segurança (Health Score + Enablement)
+
+| ID    | Item                                                                                                                                                                    | Arquivo(s)                                                                                                                                                     | Esforço | Status |
+| ----- | ----------------------------------------------------------------------------------------------------------------------------------------------------------------------- | -------------------------------------------------------------------------------------------------------------------------------------------------------------- | ------- | ------ |
+| GH-06 | ✨ **Security alerts no health score** — nova dimensão `security` (peso 5), score = f(critical/high/medium/low alerts), Quality Gate check `security` com threshold ≥70 | `shared/types/bugs.ts`, `shared/health-score.ts`, `shared/quality-gate.ts`, `shared/github-client.ts`, `shared/pr-report-core.ts`, `shared/report-sections.ts` | 1h      | 📌     |
+| GH-07 | ✨ **Security enablement check** — detectar Code Scanning / Dependabot / Secret Scanning status via `GET /repos/{owner}/{repo}`, exibir badges no PR comment            | `shared/github-client.ts`, `shared/pr-report-core.ts`                                                                                                          | 20min   | 📌     |
+
+### Dependências
+
+```
+github-client.ts (GH-00)
+    ├── GH-01 (Jobs API → duração)
+    ├── GH-03 (Jobs API → steps → annotations)
+    ├── GH-04 (Jobs API → steps → timeline)
+    ├── GH-05 (Workflow Runs API → conclusion)
+    ├── GH-06 (Code Scanning + Dependabot API → alerts)
+    └── GH-07 (Repos API → enablement)
+```
+
+### Métricas Alvo
+
+| Métrica               | Alvo                                          |
+| --------------------- | --------------------------------------------- |
+| `npx tsc --noEmit`    | **0 erros**                                   |
+| `npx vitest run`      | **100% pass**                                 |
+| `npm run lint`        | **0 violações**                               |
+| Duração do PR report  | **= test job real duration** (via GitHub API) |
+| Coverage no PR report | **≠ 0** (via `coverage-summary.json`)         |
+| Check Run annotations | **presentes** para testes falhos              |
+| Security dimension    | **presente** no health score (peso 5)         |
+| Workflow conclusion   | **visível** no PR comment                     |
+
+---
+
 ## 🚀 Sprint Score Fix — Correções de Score, CI Path e Pass Rate (Jun/2026) ✅
 
 **Data:** 2026-06-16
@@ -2760,3 +2828,113 @@ export function buildAllStyles(): string {
 7. **Fase V** → `chore: tsc + vitest + lint + push + CI verify`
 
 **Regra:** Cada commit seguido de `tsc --noEmit + vitest run`. CI monitorado via GitHub API.
+
+---
+
+## 🔍 Avaliação GitLab — Mesmas Oportunidades para GitLab CI
+
+**Data:** 2026-06-19
+**Contexto:** As 7 oportunidades mapeadas para GitHub Actions foram avaliadas para GitLab CI. Abaixo, o resultado por item, considerando APIs disponíveis, variáveis de ambiente e arquitetura atual do `git_triggers/gitlab-*.ts`.
+
+### Cenário atual do GitLab no qa_tools
+
+O template `setup/templates/gitlab-ci.ts` executa testes e pr-report-core **no mesmo job** (`qa-tools`, stage `test`). Não há job separado de post-process como no GitHub. Isso elimina alguns problemas (artefatos entre jobs) mas cria outros (sem suporte a Check Runs, sem step granularity).
+
+As APIs GitLab já implementadas em `git_triggers/gitlab-workflow.ts`:
+
+- `glGetPipelineJobs()` → `PipelineJob[]` (id, name, stage, status — **sem timing**)
+- `glGetPipeline()` → `PipelineInfo` (id, status, state — **sem timing**)
+- `glGetRecentPipelines()` → `PipelineRun[]` (com `run_started_at`)
+- `glDownloadArtifact()` → download ZIP do artifact
+
+### Avaliação por oportunidade
+
+| #   | Oportunidade (GitHub)      | Viável no GitLab?                       | Diferenças / Barreiras                                                                                                                                                                                                                                                                                                                                                                                  | Esforço |
+| --- | -------------------------- | --------------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | ------- |
+| 1   | **Duração via Jobs API**   | 🟡 **Sim, com ajustes**                 | GitLab's `/pipelines/:id/jobs` retorna `started_at` + `finished_at` por job, mas o `PipelineJob` atual não os captura. `CI_PIPELINE_ID` + `CI_JOB_TOKEN` disponíveis. **Action:** add `started_at`/`finished_at` a `PipelineJob`, mapear no `glGetPipelineJobs()`.                                                                                                                                      | 20min   |
+| 2   | **Coverage**               | 🟢 **Sim, mais fácil**                  | GitLab roda tudo no mesmo job — `coverage/coverage-summary.json` já está presente quando `pr-report-core.ts` executa. Só precisa do `vitest.config.ts` (add `json-summary` reporter). Zero mudança em workflow.                                                                                                                                                                                         | 5min    |
+| 3   | **Annotations**            | 🔴 **Não equivalente**                  | GitLab não tem "Check Runs". Alternativa: inline comments no MR ou Code Quality diff widget. MR comment já existe (pr-report-core posta). Annotations inline exigiriam API de discussions/note (`POST /merge_requests/:i/discussions`). **Requisito novo**, não espelha oportunidade original.                                                                                                          | Alto    |
+| 4   | **Security alerts**        | 🔴 **Significativamente mais complexo** | GitLab não tem API agregadora de security alerts como GitHub Code Scanning API. Security Scanning (SAST, Dependency Scanning, Secret Detection) são jobs CI separados que geram relatórios JSON em artefatos. Seria necessário: (a) configurar jobs de scan, (b) baixar artefatos, (c) parsear JSON reports. Multiplicidade de formatos. **Não é dado "já computado"** — requer esforço extra de infra. | Alto    |
+| 5   | **Step timing + timeline** | 🔴 **Limitado**                         | GitLab não tem conceito de "steps" dentro de jobs. O equivalente seria mostrar múltiplos jobs da pipeline, mas o template atual tem 1 job só (`qa-tools`). Duration por job é possível (item 1). **Timeline granular não existe.**                                                                                                                                                                      | N/A     |
+| 6   | **Workflow conclusion**    | 🟢 **Sim**                              | `glGetPipeline()` retorna `status` + `state`. `CI_PIPELINE_ID` disponível. **Action:** add ao `pr-report-core.ts` no bloco GitLab (já existe lógica de detecção `ci-detect.ts`).                                                                                                                                                                                                                        | 15min   |
+| 7   | **Security enablement**    | 🟡 **Parcial**                          | GitLab Project API (`GET /projects/:id`) retorna metadados, mas não há campo consolidado `security_and_analysis` como no GitHub. Existem flags separadas (`only_allow_merge_if_all_discussions_resolved`, etc.). Detection de SAST/Dependency Scanning requer verificar jobs no `.gitlab-ci.yml` (não via API). **Action:** factível parcialmente via Project API.                                      | 30min   |
+
+### Resumo executivo
+
+| Prioridade | Item                   | GitHub               | GitLab                              | Observação                               |
+| ---------- | ---------------------- | -------------------- | ----------------------------------- | ---------------------------------------- |
+| Alta       | 1. Duration via API    | ✅ Direto            | 🟡 Requer add timing fields         | Mesma API endpoint, interface incompleta |
+| Alta       | 2. Coverage            | ✅ **bug fix**       | 🟢 Mais fácil (mesmo job)           | Só vitest.config.ts                      |
+| Alta       | 3. Annotations         | ✅ Check Run API     | 🔴 MR discussion (novo)             | Não implementar agora                    |
+| Alta       | 4. Security alerts     | ✅ Code Scanning API | 🔴 CI artifacts parsing             | Não implementar agora                    |
+| Média      | 5. Step timeline       | ✅ Steps da Jobs API | 🔴 Não existe no GitLab             | Ignorar                                  |
+| Média      | 6. Conclusion          | ✅ Workflow Runs API | 🟢 Direto, endpoint já implementado | Só integrar                              |
+| Média      | 7. Security enablement | ✅ Repos API         | 🟡 Parcial via Project API          | Factível                                 |
+
+### Ações recomendadas para GitLab
+
+| Item    | Ação                                                                                                                     | Quando                  |
+| ------- | ------------------------------------------------------------------------------------------------------------------------ | ----------------------- |
+| 1+6     | Implementar junto com versão GitHub (GH-01 + GH-05) após `github-client.ts` — usar branch condicional via `ci-detect.ts` | Mesma sprint            |
+| 2       | Já incluso (GH-02a) — `vitest.config.ts` é compartilhado                                                                 | Mesma sprint            |
+| 3, 4, 5 | **Não implementar** — exigem esforço extra sem dado "já disponível"                                                      | Futuro (se requisitado) |
+| 7       | Adiar — baixo valor, parcial                                                                                             | Futuro                  |
+
+### Conclusão
+
+Das 7 oportunidades, **3 são aplicáveis ao GitLab** com esforço similar ao GitHub: **duraçao** (item 1), **coverage** (item 2), **workflow conclusion** (item 6). As demais (annotations, security alerts, step timeline, enablement check) ou não têm equivalente no GitLab ou exigem esforço extra de infra/parsing — contradizendo o princípio de "dado já computado sem esforço extra".
+
+---
+
+## Sprint — Ferramentas de Auditoria (Jun/2026)
+
+**Data:** 2026-06-20
+**Objetivo:** Instalar, diagnosticar e corrigir achados de 4 ferramentas de auditoria.
+
+### Instaladas
+
+- `madge` ✅
+- `eslint-plugin-security` ✅ (configurado no eslint.config.mjs)
+- `snyk` ✅ (pendente auth)
+- `sonarqube-scanner` ✅ (pendente setup)
+
+### Infraestrutura
+
+- Container SonarQube rodando em `http://localhost:9000` (admin/admin) ✅
+
+### Resultados do Diagnóstico (Pendente de Correção)
+
+#### ESLint Plugin Security — 821 warnings (0 errors)
+
+| Categoria                        | Count | Severidade | Ação                                            |
+| -------------------------------- | ----- | ---------- | ----------------------------------------------- |
+| `detect-object-injection`        | ~500  | Baixa      | Revisar — maioria falso positivo em mocks/tests |
+| `detect-non-literal-fs-filename` | ~200  | Média      | Revisar — muitos em e2e com fixtures dinâmicas  |
+| `detect-non-literal-regexp`      | ~80   | **Alta**   | Corrigir — risco de ReDoS + input injection     |
+| `detect-unsafe-regex`            | ~41   | **Alta**   | Corrigir — ReDoS potential                      |
+
+#### Madge — Circular Dependencies
+
+- ✅ Zero dependências circulares
+
+#### Snyk (Pendente)
+
+- [ ] Autenticar Snyk (`snyk auth` ou `export SNYK_TOKEN=...`)
+- [ ] Rodar `snyk test --all-projects`
+
+#### SonarQube Scanner (Pendente)
+
+- [ ] Acessar http://localhost:9000, criar projeto `qa_tools`
+- [ ] Gerar token de análise
+- [ ] Rodar `npx sonarqube-scanner`
+
+#### Correções (Pendente)
+
+- [ ] Corrigir RegExp não literais (80 warnings) — causa raiz
+- [ ] Corrigir unsafe regex (41 warnings) — ReDoS
+- [ ] Revisar non-literal-fs-filename (200 warnings) — separar reais de testes
+- [ ] Revisar object-injection (500 warnings) — separar reais de falso positivo
+- [ ] Adicionar `eslint-plugin-security` ao CI e hooks (só após código estável)
+- [ ] Adicionar `madge --circular` ao CI
+- [ ] Adicionar `snyk monitor` ao CI
+- [ ] Adicionar `sonarqube-scanner` ao CI

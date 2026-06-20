@@ -988,27 +988,28 @@ Features divergentes devem ser registradas no backlog para conformização.
 
 ## FILES & PATHS REFERENCE
 
-| Path                                      | Purpose                                                  |
-| ----------------------------------------- | -------------------------------------------------------- |
-| `~/.local/state/qa-tools/state.json`      | Persisted session state                                  |
-| `~/.qa-tools/`                            | Logs, cache, temporary files                             |
-| `.env`                                    | Environment config (project root)                        |
-| `config/projects.json`                    | Project ID mappings                                      |
-| `config/providers.json`                   | Git provider per project                                 |
-| `config/reviewers.json`                   | Reviewer user IDs                                        |
-| `config/features.json`                    | Feature toggles store (Zod-validated)                    |
-| `shared/feature-config.ts`                | Feature config accessor — PR-Report-specific             |
-| `shared/types/feature-config.ts`          | Zod schemas + TypeScript types for feature store         |
-| `shared/developer-profile.ts`             | Developer profile failure breakdown dashboard            |
-| `shared/suite-optimization.ts`            | Suite optimization advisor (duration/flakiness analysis) |
-| `shared/backlog-health.ts`                | Backlog health analysis (stale/unassigned/untested)      |
-| `shared/pipeline-cost.ts`                 | Pipeline cost analytics (cost/duration per run)          |
-| `shared/pr-report-core.ts`                | PR Report runtime (CLI entry point)                      |
-| `shared/report-html.ts`                   | HTML report generator (sections, charts, themes)         |
-| `shared/parseArgs()`                      | CLI parser (--help, --project, unknown flag warn)        |
-| `git_triggers/pr-report-setup-handler.ts` | Reconfig handler (via git_triggers menu)                 |
-| `.audit/`                                 | Generated audit reports (JSON + MD)                      |
-| `coverage/`                               | Coverage reports (generated)                             |
-| `data/`                                   | Data files                                               |
-| `tmp/`                                    | Temporary files                                          |
-| `.llm-cache/`                             | LLM response cache (disk)                                |
+| Path                                      | Purpose                                                            |
+| ----------------------------------------- | ------------------------------------------------------------------ |
+| `~/.local/state/qa-tools/state.json`      | Persisted session state                                            |
+| `~/.qa-tools/`                            | Logs, cache, temporary files                                       |
+| `.env`                                    | Environment config (project root)                                  |
+| `config/projects.json`                    | Project ID mappings                                                |
+| `config/providers.json`                   | Git provider per project                                           |
+| `config/reviewers.json`                   | Reviewer user IDs                                                  |
+| `config/features.json`                    | Feature toggles store (Zod-validated)                              |
+| `shared/feature-config.ts`                | Feature config accessor — PR-Report-specific                       |
+| `shared/types/feature-config.ts`          | Zod schemas + TypeScript types for feature store                   |
+| `shared/developer-profile.ts`             | Developer profile failure breakdown dashboard                      |
+| `shared/suite-optimization.ts`            | Suite optimization advisor (duration/flakiness analysis)           |
+| `shared/backlog-health.ts`                | Backlog health analysis (stale/unassigned/untested)                |
+| `shared/pipeline-cost.ts`                 | Pipeline cost analytics (cost/duration per run)                    |
+| `shared/requirement-score.ts`             | Requirement quality score (AI-generated test acceptance/retention) |
+| `shared/pr-report-core.ts`                | PR Report runtime (CLI entry point)                                |
+| `shared/report-html.ts`                   | HTML report generator (sections, charts, themes)                   |
+| `shared/parseArgs()`                      | CLI parser (--help, --project, unknown flag warn)                  |
+| `git_triggers/pr-report-setup-handler.ts` | Reconfig handler (via git_triggers menu)                           |
+| `.audit/`                                 | Generated audit reports (JSON + MD)                                |
+| `coverage/`                               | Coverage reports (generated)                                       |
+| `data/`                                   | Data files                                                         |
+| `tmp/`                                    | Temporary files                                                    |
+| `.llm-cache/`                             | LLM response cache (disk)                                          |

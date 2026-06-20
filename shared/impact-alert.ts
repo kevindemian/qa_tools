@@ -31,6 +31,12 @@ export interface ImpactAlertResult {
     timestamp: string;
 }
 
+const PASS_RATE_THRESHOLD_LOW = 70;
+const COVERAGE_THRESHOLD_LOW = 70;
+const PASS_RATE_THRESHOLD_HIGH = 80;
+const COVERAGE_THRESHOLD_HIGH = 80;
+const TOP_FAILURES_DISPLAY_LIMIT = 3;
+
 const DEFAULT_RESULT: ImpactAlertResult = {
     alerts: [
         {
@@ -88,18 +94,19 @@ export function analyzePipelineImpact(
 
     const alerts: ImpactAlert[] = [];
 
-    if (passRate < 70 && coveragePct < 70) {
+    if (passRate < PASS_RATE_THRESHOLD_LOW && coveragePct < COVERAGE_THRESHOLD_LOW) {
         alerts.push({
             severity: 'critical',
             title: 'Low pass rate in low-coverage area',
             message:
                 'Pipeline pass rate is below 70% and coverage is below 70%. Failures are occurring in areas with insufficient test coverage, increasing the risk of undetected regressions.',
-            affectedArea: topFailures.length > 0 ? topFailures.slice(0, 3).join(', ') : 'Unknown',
+            affectedArea:
+                topFailures.length > 0 ? topFailures.slice(0, TOP_FAILURES_DISPLAY_LIMIT).join(', ') : 'Unknown',
             recommendation: 'Increase test coverage in affected areas and investigate pipeline failures immediately.',
         });
     }
 
-    if (passRate < 70 && failingJobs > 0) {
+    if (passRate < PASS_RATE_THRESHOLD_LOW && failingJobs > 0) {
         alerts.push({
             severity: 'warning',
             title: 'Elevated failure rate',
@@ -107,7 +114,8 @@ export function analyzePipelineImpact(
                 'Pipeline pass rate is below 70% with ' +
                 String(failingJobs) +
                 ' failing job(s). Overall pipeline health is degraded.',
-            affectedArea: topFailures.length > 0 ? topFailures.slice(0, 3).join(', ') : 'Pipeline',
+            affectedArea:
+                topFailures.length > 0 ? topFailures.slice(0, TOP_FAILURES_DISPLAY_LIMIT).join(', ') : 'Pipeline',
             recommendation: 'Review failing jobs and stabilize the pipeline before merging new changes.',
         });
     }
@@ -128,7 +136,7 @@ export function analyzePipelineImpact(
         });
     }
 
-    if (coveragePct < 70) {
+    if (coveragePct < COVERAGE_THRESHOLD_LOW) {
         alerts.push({
             severity: 'warning',
             title: 'Coverage below threshold',
@@ -141,7 +149,7 @@ export function analyzePipelineImpact(
         });
     }
 
-    if (passRate >= 80 && coveragePct >= 80) {
+    if (passRate >= PASS_RATE_THRESHOLD_HIGH && coveragePct >= COVERAGE_THRESHOLD_HIGH) {
         alerts.push({
             severity: 'info',
             title: 'All clear',
@@ -199,7 +207,9 @@ function renderAlertCard(alert: ImpactAlert): string {
 export function generateImpactAlertHtml(result: ImpactAlertResult | null | undefined, title?: string): string {
     try {
         if (!result) {
-            rootLogger.error('Impact alert result is null or undefined');
+            rootLogger.error(
+                'Impact alert result is null or undefined. Verify pipeline metrics and coverage data are being collected.',
+            );
             return buildErrorPage('Error generating report', 'Impact Alert Report Error');
         }
 
@@ -243,7 +253,9 @@ export function generateImpactAlertHtml(result: ImpactAlertResult | null | undef
         });
     } catch (err) {
         const msg = err instanceof Error ? err.message : String(err);
-        rootLogger.error('Failed to generate impact alert HTML: ' + msg);
+        rootLogger.error(
+            'Failed to generate impact alert HTML: ' + msg + '. Check html-factory dependencies and try again.',
+        );
         return buildErrorPage('Error generating report', 'Impact Alert Report Error');
     }
 }
