@@ -170,6 +170,29 @@ describe('calculateReleaseScore', () => {
             const result = calculateReleaseScore(80, 80, 'pass', 80, 20);
             expect(result.timestamp).toMatch(/^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2}/);
         });
+
+        it('NaN flakyRate produces score 0, not NaN', () => {
+            const result = calculateReleaseScore(100, 100, 'pass', 100, NaN);
+            expect(Number.isFinite(result.score)).toBe(true);
+            expect(result.score).toBeGreaterThanOrEqual(0);
+        });
+
+        it('Infinity flakyRate produces score 0, not NaN', () => {
+            const result = calculateReleaseScore(100, 100, 'pass', 100, Infinity);
+            expect(Number.isFinite(result.score)).toBe(true);
+            expect(result.score).toBeGreaterThanOrEqual(0);
+        });
+
+        it('NaN tasksPct does not propagate to final score', () => {
+            const result = calculateReleaseScore(NaN, 100, 'pass', 100, 0);
+            expect(Number.isFinite(result.score)).toBe(true);
+        });
+
+        it('NaN in all inputs produces score 0', () => {
+            const result = calculateReleaseScore(NaN, NaN, 'pass', NaN, NaN);
+            expect(result.score).toBe(0);
+            expect(result.grade).toBe('critical');
+        });
     });
 
     describe('weighted average', () => {

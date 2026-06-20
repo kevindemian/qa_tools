@@ -2816,6 +2816,6 @@ Full suite: 374/376 files pass (2 skipped), 5731/5740 tests pass (9 skipped) —
 | FT-09 Health Score      |  ✅   | D8.1/D8.8 | NaN/Infinity guards em score functions + \_computeSuiteSpeed + \_computeExpWeighted + Math.round. 4 RED tests. |
 | FT-04 Metrics           |  ✅   |     0     | D8-D12: zero gaps. Modulo bem blindado (zod, instanceof, sync).                                                |
 | FT-10 Quality Gate      |  ✅   |     0     | D8-D12: zero gaps. Módulo bem isolado (divisões guardadas, sem Object.values, sem NaN path).                   |
-| FT-12 Quality Metrics   |  ⏳   |           |                                                                                                                |
+| FT-12 Quality Metrics   |  ✅   |     1     | D8.8: avgStructureScore sem Number.isFinite guard. Corrigido + 2 RED tests.                                    |
 | FT-14 Release Score     |  ⏳   |           |                                                                                                                |
 | FT-15 Benchmark Metrics |  ⏳   |           |                                                                                                                |
