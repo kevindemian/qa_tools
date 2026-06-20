@@ -941,6 +941,91 @@ describe('calculateHealthScore', () => {
         });
     });
 
+    describe('edge: NaN and Infinity (D8 regression prevention)', () => {
+        it('NaN coverageOverride produces 0 score, not NaN', () => {
+            const store = makeStore({
+                runs: [PASSING_RUN],
+                coverageHistory: [
+                    {
+                        timestamp: '2026-01-01T00:00:00.000Z',
+                        project: 'test',
+                        totalIssues: 10,
+                        mappedIssues: 9,
+                        coveragePct: 90,
+                    },
+                ],
+            });
+            const result = calculateHealthScore(store, { coverageOverride: NaN });
+            expect(Number.isFinite(result.dimensions.coverage.score)).toBe(true);
+            expect(result.dimensions.coverage.score).toBe(0);
+        });
+
+        it('NaN coveragePct in history produces 0 score, not NaN', () => {
+            const store = makeStore({
+                runs: [PASSING_RUN],
+                coverageHistory: [
+                    {
+                        timestamp: '2026-01-01T00:00:00.000Z',
+                        project: 'test',
+                        totalIssues: 10,
+                        mappedIssues: 9,
+                        coveragePct: NaN,
+                    },
+                ],
+            });
+            const result = calculateHealthScore(store);
+            expect(Number.isFinite(result.dimensions.coverage.score)).toBe(true);
+            expect(result.dimensions.coverage.score).toBe(0);
+        });
+
+        it('Infinity test duration does not crash or produce NaN', () => {
+            const store = makeStore({
+                runs: [
+                    run({
+                        total: 10,
+                        passed: 10,
+                        duration: 5000,
+                        tests: Array.from({ length: 3 }, (_, i) => testT(`T${i}`, 'passed', Infinity)),
+                    }),
+                ],
+                coverageHistory: [
+                    {
+                        timestamp: '2026-01-01T00:00:00.000Z',
+                        project: 'test',
+                        totalIssues: 10,
+                        mappedIssues: 9,
+                        coveragePct: 90,
+                    },
+                ],
+            });
+            const result = calculateHealthScore(store);
+            expect(Number.isFinite(result.dimensions.suiteSpeed.score)).toBe(true);
+            expect(result.dimensions.suiteSpeed.score).toBe(100);
+        });
+
+        it('overall is always finite even with degenerate inputs', () => {
+            const result = calculateHealthScore(
+                {
+                    runs: [
+                        {
+                            timestamp: '',
+                            project: '',
+                            total: 0,
+                            passed: 0,
+                            failed: 0,
+                            skipped: 0,
+                            duration: 0,
+                            tests: [],
+                        },
+                    ],
+                },
+                { coverageOverride: NaN },
+            );
+            expect(Number.isFinite(result.overall)).toBe(true);
+            expect(result.overall).toBeGreaterThanOrEqual(0);
+        });
+    });
+
     describe('flakyThreshold config', () => {
         it('flakyThreshold parameter affects flaky rate scoring (G-05)', () => {
             const store = makeStore({
