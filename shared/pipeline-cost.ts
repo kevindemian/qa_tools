@@ -52,12 +52,15 @@ export function calculatePipelineCost(
         };
     }
 
-    const costByRun: PipelineCostEntry[] = runs.map((r) => ({
-        timestamp: r.timestamp,
-        durationSec: r.duration,
-        cost: (r.duration / 60) * cpm,
-        status: r.failed > 0 ? 'failed' : r.passed === r.total ? 'passed' : 'partial',
-    }));
+    const costByRun: PipelineCostEntry[] = runs.map((r) => {
+        const safeDuration = Number.isFinite(r.duration) ? r.duration : 0;
+        return {
+            timestamp: r.timestamp,
+            durationSec: safeDuration,
+            cost: (safeDuration / 60) * cpm,
+            status: r.failed > 0 ? 'failed' : r.passed === r.total ? 'passed' : 'partial',
+        };
+    });
 
     costByRun.sort((a, b) => b.timestamp.localeCompare(a.timestamp));
 

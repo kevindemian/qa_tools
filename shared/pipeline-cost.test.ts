@@ -189,6 +189,15 @@ describe('calculatePipelineCost', () => {
         expect(result.totalDurationSec).toBe(7200);
         expect(nonNull(result.costByRun[0]).durationSec).toBe(7200);
     });
+
+    it('guards NaN duration from propagating to output', () => {
+        const runs = [makeRun({ duration: NaN })];
+        const result = calculatePipelineCost(runs);
+        expect(result.totalDurationSec).toBe(0);
+        expect(result.totalCost).toBe(0);
+        expect(result.avgCostPerRun).toBe(0);
+        expect(nonNull(result.costByRun[0]).cost).toBe(0);
+    });
 });
 
 describe('generatePipelineCostHtml', () => {
