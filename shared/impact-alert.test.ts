@@ -91,8 +91,16 @@ describe('analyzePipelineImpact', () => {
 
     it('produces valid timestamp', () => {
         const result = analyzePipelineImpact(95, 0, [], 90, []);
-        expect(() => new Date(result.timestamp)).not.toThrow();
-        expect(result.timestamp).toMatch(/^\d{4}-\d{2}-\d{2}T/);
+        const d = new Date(result.timestamp);
+        expect(d.toString()).not.toBe('Invalid Date');
+        expect(result.timestamp).toMatch(/^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2}/);
+    });
+
+    it('timestamp is a valid ISO date string', () => {
+        const result = analyzePipelineImpact(95, 0, [], 90, []);
+        const d = new Date(result.timestamp);
+        expect(d.toString()).not.toBe('Invalid Date');
+        expect(result.timestamp).toMatch(/^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2}/);
     });
 
     it('does not generate critical alert when only one condition is low', () => {

@@ -1,4 +1,4 @@
-# FUNCTIONAL-AUDIT-SOP — Executable Specification
+    # FUNCTIONAL-AUDIT-SOP — Executable Specification
 
 Checklist linear para auditar FT-xx. Cada seção = comando + critério binário + checkpoint. Regras de execução em AGENTS.md §22.
 
@@ -88,7 +88,89 @@ find . -path "*__tests__/${FEATURE_NAME}.property.test.ts" -not -path '*/node_mo
 | T8  | Estado compartilhado entre describes?                        | gap isolamento     |
 | T9  | beforeEach/afterEach limpam estado?                          | gap cleanup        |
 
-Registrar: `**Pre-scan (Phase 0.1):` com #, categoria, local, descrição no PROGRESS.md.
+### 0.1.3 — Integration test gap (criar se ausente)
+
+```
+if [ ! -f "${TEST_FILE_INTEGRATION}" ]; then
+  echo "INTEGRATION_TEST_AUSENTE: ${FEATURE_NAME}"
+fi
+```
+
+**Se ausente:** criar `${TEST_FILE_INTEGRATION}` com cobertura segura mínima:
+
+```typescript
+import { ${EXPORTS} } from '../${FEATURE_NAME}.js';
+
+describe('${FEATURE_NAME} — Integration', () => {
+    it('happy path — processa entrada válida', () => {
+        const result = ${EXPORT_FN}(VALID_INPUT);
+        expect(result).toBeDefined();
+        // assert shape do output
+    });
+
+    it('null/undefined — retorna fallback sem lançar', () => {
+        expect(${EXPORT_FN}(null as any)).toBeDefined();
+        expect(${EXPORT_FN}(undefined as any)).toBeDefined();
+    });
+
+    it('vazio — retorna fallback sem lançar', () => {
+        expect(${EXPORT_FN}([])).toBeDefined();
+    });
+
+    it('erro de I/O — trata sem propagar exceção', () => {
+        // simular cenário de falha externa
+    });
+});
+```
+
+Registrar gap T4 se integration não existia antes.
+
+### 0.1.4 — PBT gap (criar se módulo tem operações numéricas)
+
+Detectar se source tem divisão, `Math.*`, `reduce`, ou `Object.values` com numérico:
+
+```
+grep -qP '/ [a-zA-Z_]\w+|Math\.(floor|round|ceil|trunc)\(|\.reduce\(|Object\.values\(' ${SOURCE} \
+  && echo "PBT_REQUIRED: ${FEATURE_NAME}"
+if [ ! -f "${TEST_FILE_PBT}" ]; then
+  echo "PBT_AUSENTE: ${FEATURE_NAME}"
+fi
+```
+
+**Se ausente E requerido:** criar `${TEST_FILE_PBT}` com invariantes mandatórios:
+
+```typescript
+import fc from 'fast-check';
+import { ${EXPORTS} } from '../${FEATURE_NAME}.js';
+
+describe('${FEATURE_NAME} — PBT invariants', () => {
+    // D9.1: NaN/Infinity não propagam
+    it('NaN → 0', () => { expect(${EXPORT_FN}(NaN, ...)).toBe(0); });
+    it('Infinity → 0', () => { expect(${EXPORT_FN}(Infinity, ...)).toBe(0); });
+    it('-Infinity → 0', () => { expect(${EXPORT_FN}(-Infinity, ...)).toBe(0); });
+
+    // D8.8: output nunca é NaN para inputs finitos
+    it('nunca retorna NaN para entrada finita', () => {
+        fc.assert(fc.property(fc.integer(), fc.integer(),
+            (a, b) => expect(Number.isFinite(${EXPORT_FN}(a, b))).toBe(true)));
+    });
+
+    // D9.3: output está no domínio especificado
+    it('output ∈ [MIN, MAX]', () => {
+        fc.assert(fc.property(fc.integer(), fc.integer(),
+            (a, b) => { const r = ${EXPORT_FN}(a, b);
+                expect(r).toBeGreaterThanOrEqual(MIN);
+                expect(r).toBeLessThanOrEqual(MAX); }));
+    });
+
+    // D9.2: Object.values em objeto dinâmico não quebra
+    it('Object.values nunca recebe null/undefined', () => {
+        // se aplicável
+    });
+});
+```
+
+Registrar gap T4 se PBT não existia antes.
 `<!-- CHECKPOINT: Phase 0.1 complete -->`
 
 ## Phase 1 — Mapeamento
@@ -110,25 +192,39 @@ Para CADA export E: `grep -rl --include='*.ts' "(from ['\"]\\.\\.?/${FEATURE_NAM
 Para CADA CONSUMER: `npx vitest run $(basename $(dirname ${C})) --reporter=verbose | tail -5`
 `<!-- CHECKPOINT: Phase 1 complete -->`
 
-## Phase 2 — T1-T10
+## Phase 2 — T1-T20
 
-| ID  | Comando                                                                                                                                                                |          ✅          |       ❌       |
-| :-: | ---------------------------------------------------------------------------------------------------------------------------------------------------------------------- | :------------------: | :------------: |
-| T1  | `grep '^export function\|^export const\|^export class\|^export default' ${SOURCE}` — exports públicos                                                                  |       exports        |  sem exports   |
-| T2  | `grep -n 'process\.env' ${SOURCE}` — env var dependency                                                                                                                |       nenhuma        |  usa sem doc   |
-| T3  | `grep -n 'try\|catch\|fallback' ${SOURCE}` — safety mechanisms                                                                                                         |        ativos        |    ausentes    |
-| T4  | `npx vitest run ${FEATURE_NAME} --reporter=verbose \| grep -E 'Tests\|Test Files'` — test coverage                                                                     | unit+integration+PBT |    missing     |
-| T5  | `grep -oP '^function \K\w+' ${SOURCE} \| while read fn; do count=\$(grep -cP "\\\b\${fn}\\\b" ${SOURCE}); [ "\$count" -le 1 ] && echo "MORTO: \$fn"; done` — dead code |     zero mortos      |     mortos     |
-| T6  | Ver T14                                                                                                                                                                |          —           |       —        |
-| T7  | `grep -rl "${FEATURE_NAME}" --include='*.ts' . \| grep -v 'test\|node_modules' \| sort -u` — consumer consistency                                                      |    unidirecional     | inconsistente  |
-| T8  | `grep -n 'process\.env' ${SOURCE}` (idem T2)                                                                                                                           |          —           |       —        |
-| T9  | `grep -nP 'throw\s+(new\s+)?[A-Z]\w*(Error)?' ${SOURCE}` — error handling                                                                                              |    throw c/ Error    | throw genérico |
-| T10 | `grep -n "${FEATURE_NAME}" docs/TECHDOC.md` (idem 1.3)                                                                                                                 |       TECHDOC        |    ausente     |
+Referência completa das categorias: `FUNCTIONAL-AUDIT-INTEGRATED-PLAN.md §5`.
 
-T6: Executar T14 suppressions sub-checks (ver D6). Registrar tabela no PROGRESS.md (ID | comando | status | observação).
+Executar para CADA T. Se N/A: justificar. Se ❌: registrar gap.
+
+|  #  | Categoria                 | Comando                                                                                                                                                    |    ✅    |   ❌    |
+| :-: | ------------------------- | ---------------------------------------------------------------------------------------------------------------------------------------------------------- | :------: | :-----: |
+| T1  | Entry point               | `grep '^export function\|^export const\|^export class\|^export default' ${SOURCE}` — exports públicos                                                      | exports  |   sem   |
+| T2  | Config model              | `grep -P 'interface \w+\|type \w+ =' ${SOURCE}` — interfaces/tipos de config                                                                               |  schema  | ausente |
+| T3  | Config accessor           | `grep -nP 'get(ter)?\s+\w+\|^\s+static\s+get' ${SOURCE}` — getters tipados                                                                                 | getters  | ausente |
+| T4  | Runtime lê config         | `grep -nP 'readConfig\|readEnv\|loadConfig' ${SOURCE}` — runtime carrega config                                                                            | carrega  | ausente |
+| T5  | Wizard entry              | `grep -nP 'wizard\|setup.*feature' ${SOURCE} 2>/dev/null` — entrada de wizard                                                                              |  ✅ N/A  |   ❌    |
+| T6  | Wizard detection          | `grep -nP 'detect.*context\|auto.*detect' ${SOURCE} 2>/dev/null` — detecção automática                                                                     |  ✅ N/A  |   ❌    |
+| T7  | Wizard output             | `grep -nP 'write.*config\|generate.*file' ${SOURCE} 2>/dev/null` — geração de arquivos                                                                     |  ✅ N/A  |   ❌    |
+| T8  | Wizard prompts            | `grep -nP 'prompt\|question\|ask' ${SOURCE} 2>/dev/null` — perguntas claras                                                                                |  ✅ N/A  |   ❌    |
+| T9  | Reconfig handler          | `grep -nP 'reconfig\|re-?configure' ${SOURCE} 2>/dev/null` — handler de reconfig                                                                           |  ✅ N/A  |   ❌    |
+| T10 | CI integration            | `grep -rnP "${FEATURE_NAME}" .github/ --include='*.yml' --include='*.yaml' 2>/dev/null \| head -5` — workflows CI                                          |  ✅ N/A  |   ❌    |
+| T11 | CI safety                 | `grep -nP 'try\|catch\|fallback' ${SOURCE}` — safety mechanisms ativos                                                                                     |  ativos  | ausente |
+| T12 | Test coverage             | `ls ${TEST_FILE_UNIT} ${TEST_FILE_INTEGRATION} ${TEST_FILE_PBT} 2>/dev/null` — se ausente: criar via templates §0.1.3 e §0.1.4                             | 3 files  | missing |
+|     |                           | `npx vitest run ${FEATURE_NAME} --reporter=verbose \| grep -E 'Tests\|Test Files'` — rodar e verificar                                                     |          |         |
+| T13 | Dead code                 | `grep -oP '^function \K\w+' ${SOURCE} \| while read fn; do count=\$(grep -cP "\\\b\${fn}\\\b" ${SOURCE}); [ "\$count" -le 1 ] && echo "MORTO: \$fn"; done` | 0 mortos | mortos  |
+| T14 | Suppressions              | Executar 9 sub-checks T14a-i (ver D7 Deep Test Audit). Registrar tabela no PROGRESS.md.                                                                    |  0 hits  |   ❌    |
+| T15 | Bidirectional consistency | `grep -rl "${FEATURE_NAME}" --include='*.ts' . \| grep -v 'test\|node_modules' \| sort -u` — consumidores consistentes                                     |  unidir  |   ❌    |
+| T16 | CLI interface             | `grep -nP 'parseArgs\|command\|cli\|yargs\|commander' ${SOURCE} 2>/dev/null` — CLI presente? `--help`?                                                     |  ✅ N/A  |   ❌    |
+| T17 | Env var dependency        | `grep -nP 'process\.env\[' ${SOURCE}` — env vars validadas (schema) e documentadas (.env.example)                                                          |    0     |   ❌    |
+| T18 | Error handling            | `grep -nP 'throw\s+(new\s+)?[A-Z]\w*(Error)?' ${SOURCE}` — erros com contexto; `grep -A1P 'catch\s*\{' ${SOURCE}` — catches vazios                         |    ok    |   ❌    |
+| T19 | TECHDOC                   | `grep -n "${FEATURE_NAME}" docs/TECHDOC.md` (idem 1.3)                                                                                                     | presente | ausente |
+| T20 | CI/Config Contract        | `grep -nP "${FEATURE_NAME}" action.yml .github/ --include='*.yml' 2>/dev/null \| head -5` — contrato CI→runtime→config                                     |  ✅ N/A  |   ❌    |
+
 `<!-- CHECKPOINT: Phase 2 complete -->`
 
-## Phase 3 — D1-D12
+## Phase 3 — D1-D13
 
 ### D1: Isolamento de Testes
 
@@ -150,28 +246,71 @@ D3.1✅ SRP / D3.2✅ DepWall / D3.3✅ sem bypass / D3.4✅ sem duplicação / 
 `grep -n 'for\|while\|map\|filter\|reduce\|forEach' ${SOURCE} | head -20`
 D4.1✅ complexidade / D4.2✅ sem cópias desnecessárias / D4.3✅ sem constantes mágicas / D4.4✅ early returns / D4.5✅ sem dead code
 
-### D5: UX
+### D5: Métricas (Conformidade Normativa)
 
-```
-grep -nP '"(error|warn|info|Usage|Error|Warning):' ${SOURCE} | head -15
-grep -nP 'rootLogger\.(warn|error|info)' ${SOURCE} | head -15
-```
+Avaliar **qualidade das métricas** que a feature produz — conceituação, fórmula, conformidade normativa.
 
-D5.1✅ mensagens acionáveis (causa + ação) / D5.2✅ docs refletem comportamento / D5.3✅ terminologia consistente
+`grep -nP 'Math\.\|Number\.\|reduce\|\.score\|\.rate\|\.weight\|\.grade' ${SOURCE} | head -20`
 
-### D6: Deep Test Audit (D7)
+|  Sub  | Pergunta                                                      | ❌ gap               |
+| :---: | ------------------------------------------------------------- | -------------------- |
+| D5.1  | Cada métrica tem nome, descrição e unidade claros?            | métrica opaca        |
+| D5.2  | A métrica é útil para decisão (não vaidade)?                  | métrica vaidade      |
+| D5.3  | Método de coleta é adequado (censo vs amostragem)?            | coleta inadequada    |
+| D5.4  | Agregação correta para o tipo de dado?                        | agregação errada     |
+| D5.5  | Tratamento de outliers ativo?                                 | sem tratamento       |
+| D5.6  | Fórmula referenciada por gold standard (ISO/NIST/literatura)? | sem referência       |
+| D5.7  | Denominador tem guarda zero/NaN?                              | div/0                |
+| D5.8  | Saturação/clamp aplicado (ex: [0,100], [0,1])?                | sem clamp            |
+| D5.9  | Precisão numérica adequada (int vs float, rounding)?          | precisão errada      |
+| D5.10 | Thresholds têm fundamento normativo ou empírico?              | threshold arbitrário |
 
-`bash scripts/audit/d7-bad-testing.sh --feature ${FEATURE_NAME}` — 14 checks.
-✅ 14/14 pass / ❌ violações encontradas
+Referência completa: `FUNCTIONAL-AUDIT-INTEGRATED-PLAN.md §4 Dimensão 5`.
 
-### D7: Domain Adequacy (D8)
+### D6: UX
 
-#### D7.0 — Catalogar tipos de cálculo
+`grep -nP '"(error|warn|info|Usage|Error|Warning):' ${SOURCE} | head -15`
+`grep -nP 'rootLogger\.(warn|error|info)' ${SOURCE} | head -15`
+
+| Sub  | Pergunta                                                  | ❌ gap                     |
+| :--: | --------------------------------------------------------- | -------------------------- |
+| D6.1 | Mensagens de erro são acionáveis (causa + ação)?          | mensagem vaga              |
+| D6.2 | CLI `--help` e docs são claros, completos e consistentes? | doc inconsistente          |
+| D6.3 | Output de relatórios é legível (formatação, tabelas)?     | output ilegível            |
+| D6.4 | Feedback de progresso para operações longas?              | sem feedback               |
+| D6.5 | Confirmação antes de ações destrutivas?                   | sem confirmação            |
+| D6.6 | Terminologia consistente entre código, CLI e docs?        | terminologia inconsistente |
+| D6.7 | Docs refletem comportamento real da implementação?        | doc obsoleto               |
+
+Referência completa: `FUNCTIONAL-AUDIT-INTEGRATED-PLAN.md §4 Dimensão 6`.
+
+### D7: Deep Test Audit
+
+`bash scripts/audit/d7-bad-testing.sh --feature ${FEATURE_NAME}` — 12 checks automáticos.
+
+**Sub-checks manuais adicionais (complementam o script):**
+
+|  Sub  | Pergunta                                                    | ❌ gap               |
+| :---: | ----------------------------------------------------------- | -------------------- |
+| D7.13 | Testes de erro validam mensagem/causa (não só `toThrow()`)  | assert genérico      |
+| D7.14 | Test names descrevem comportamento, não implementação       | nome implementação   |
+| D7.15 | Testes são determinísticos (sem estado global não resetado) | não determinístico   |
+| D7.16 | Type suppressions em testes (`as any`, `!`, `nullAs()`)     | T14 test             |
+| D7.17 | Dual-implementation (teste replica fórmula do source)       | Oracle Problem       |
+| D7.18 | PBT obrigatório para lógica crítica foi omitido?            | PBT ausente          |
+| D7.19 | Test-first violado (código sem teste correspondente)?       | test-first violation |
+
+Referência completa: `FUNCTIONAL-AUDIT-INTEGRATED-PLAN.md §4 Dimensão 7`.
+✅ 12/12 automáticos + 7 manuais / ❌ violações encontradas
+
+### D8: Domain Adequacy
+
+#### D8.0 — Catalogar tipos de cálculo
 
 Identificar operações aritméticas/estatísticas com gold standard formal.
 Hierarquia: Legislação → Acreditação (ISO, NIST) → Literatura → Indústria.
 
-#### D7.1 — Verificar fórmula vs implementação (3 camadas)
+#### D8.1 — Verificar fórmula vs implementação (3 camadas)
 
 | Camada                      | Evidência         |
 | --------------------------- | ----------------- |
@@ -179,66 +318,78 @@ Hierarquia: Legislação → Acreditação (ISO, NIST) → Literatura → Indús
 | 2 — Núcleo da implementação | Código reduzido   |
 | 3 — Desvios estruturais     | Tabela de desvios |
 
-#### D7.2 — Aplicabilidade
+#### D8.2 — Aplicabilidade
 
 Verificar se aplicação da fórmula é apropriada para o domínio. Se não verificável: gap de requisito.
+
+#### D8.3 — Domínio de operações aninhadas (NaN propagation)
+
+`grep -nP 'Math\.(floor\|round\|ceil\|trunc)\(.*Math\.' SOURCE` — operações aninhadas sem `isFinite` em cada estágio.
+
+**Guidance:** NaN em estágio intermediário propaga silenciosamente. Cada estágio de cálculo aninhado deve ser guardado individualmente, não só o resultado final.
+
+#### D8.4 — Domínio de falsy coalescence (`|| 0`, `|| ""`)
+
+`grep -nP '\|\| 0\b\|\|\| ""\b\|\|\| -1\b' SOURCE` — inspecionar SEMÂNTICA vs DOMÍNIO.
+
+**Guidance:** `|| 0` é correto se 0 não é valor válido no domínio (ex: índice de array). É INCORRETO se 0 é valor legítimo (ex: score, rate, count). Preferir `??` (nullish coalescing) quando 0/"" é válido.
 
 Registrar no PROGRESS.md. Gaps seguem fluxo normal (Phase 4 → RED → GREEN).
 `<!-- CHECKPOINT: Phase 3 complete -->`
 
-### D8: Numeric Safety (NEW)
+### D9: Numeric Safety
 
 |   Sub    | Comando                                                                                        | ❌ gap            |
 | :------: | ---------------------------------------------------------------------------------------------- | ----------------- |
-| **D8.1** | `grep -nP '/ [a-zA-Z_]\w+' SOURCE` — inspecionar CADA `/ var`. Verificar guard `den > 0`       | guarda div/0      |
-| **D8.2** | `grep -nP 'Object\.(values\|keys\|entries)\(' SOURCE` — inspecionar `?? {}` adjacente          | nullish fallback  |
-| **D8.3** | Para cada função numérica com domínio [min,max]: verificar `Math.min/Math.max` no return       | range clamp       |
-| **D8.4** | `grep -nP '\|\| 0\b\|\|\| ""\b' SOURCE` — inspecionar se 0/"" é valor válido de domínio        | falsy fragility   |
-| **D8.5** | `grep -nP '\.reduce\([^,)]*\)' SOURCE` — reduce sem initial value                              | empty array crash |
-| **D8.6** | `grep -nP 'JSON\.parse\(JSON\.stringify\(' SOURCE` — roundtrip perde Date/Map/RegExp/undefined | serial loss       |
-| **D8.7** | `grep -nP 'for\s*\(.*\s+in\s+' SOURCE` — inspecionar se alvo é array                           | for...in array    |
-| **D8.8** | `grep -rnP 'Math\.(floor\|round\|ceil\|trunc)\(' SOURCE` — sem `isFinite` antes                | NaN math          |
+| **D9.1** | `grep -nP '/ [a-zA-Z_]\w+' SOURCE` — inspecionar CADA `/ var`. Verificar guard `den > 0`       | guarda div/0      |
+| **D9.2** | `grep -nP 'Object\.(values\|keys\|entries)\(' SOURCE` — inspecionar `?? {}` adjacente          | nullish fallback  |
+| **D9.3** | Para cada função numérica com domínio [min,max]: verificar `Math.min/Math.max` no return       | range clamp       |
+| **D9.4** | `grep -nP '\|\| 0\b\|\|\| ""\b' SOURCE` — inspecionar se 0/"" é valor válido de domínio        | falsy fragility   |
+| **D9.5** | `grep -nP '\.reduce\([^,)]*\)' SOURCE` — reduce sem initial value                              | empty array crash |
+| **D9.6** | `grep -nP 'JSON\.parse\(JSON\.stringify\(' SOURCE` — roundtrip perde Date/Map/RegExp/undefined | serial loss       |
+| **D9.7** | `grep -nP 'for\s*\(.*\s+in\s+' SOURCE` — inspecionar se alvo é array                           | for...in array    |
+| **D9.8** | `grep -rnP 'Math\.(floor\|round\|ceil\|trunc)\(' SOURCE` — sem `isFinite` antes                | NaN math          |
 
-### D9: Error & Async Integrity (NEW)
+### D10: Error & Async Integrity
 
-|   Sub    | Comando                                                                                                                           | ❌ gap               |
-| :------: | --------------------------------------------------------------------------------------------------------------------------------- | -------------------- |
-| **D9.1** | `grep -nP '} catch \(' SOURCE` — inspecionar se erro é DISCRIMINADO (`ENOENT` vs `EACCES`, `TypeError` vs `Error`)                | error discrimination |
-| **D9.2** | `grep -nP 'return await ' SOURCE` — verificar se `return await` está dentro de try (stack trace loss)                             | floating return      |
-| **D9.3** | `grep -nP 'Promise\.all\(' SOURCE` — inspecionar se `allSettled` seria mais seguro                                                | brittle Promise.all  |
-| **D9.4** | `grep -nP '^\s+\w+\(.*\)[^)]*\s*$' SOURCE \| grep -vP 'then\|catch\|await\|return\b\|typeof\|instanceof'` — fire-and-forget async | unhandled rejection  |
-| **D9.5** | `grep -nP 'instanceof' SOURCE` — inspecionar catch blocks                                                                         | instanceof vs as     |
+|    Sub    | Comando                                                                                                                           | ❌ gap               |
+| :-------: | --------------------------------------------------------------------------------------------------------------------------------- | -------------------- |
+| **D10.1** | `grep -nP '} catch \(' SOURCE` — inspecionar se erro é DISCRIMINADO (`ENOENT` vs `EACCES`, `TypeError` vs `Error`)                | error discrimination |
+| **D10.2** | `grep -nP 'return await ' SOURCE` — verificar se `return await` está dentro de try (stack trace loss)                             | floating return      |
+| **D10.3** | `grep -nP 'Promise\.all\(' SOURCE` — inspecionar se `allSettled` seria mais seguro                                                | brittle Promise.all  |
+| **D10.4** | `grep -nP '^\s+\w+\(.*\)[^)]*\s*$' SOURCE \| grep -vP 'then\|catch\|await\|return\b\|typeof\|instanceof'` — fire-and-forget async | unhandled rejection  |
+| **D10.5** | `grep -nP 'instanceof' SOURCE` — inspecionar catch blocks                                                                         | instanceof vs as     |
 
-### D10: Data & String Integrity (NEW)
+### D11: Data & String Integrity
 
 |    Sub    | Comando                                                                                          | ❌ gap          |
 | :-------: | ------------------------------------------------------------------------------------------------ | --------------- |
-| **D10.1** | `grep -nP 'new Date\(' SOURCE` — se argumento não é `new Date()`, verificar `isNaN(d.getTime())` | invalid date    |
-| **D10.2** | `grep -nP "typeof .* === 'object'" SOURCE` — verificar `&& x !== null`                           | typeof+null     |
-| **D10.3** | `grep -nP "typeof .* === 'object'" SOURCE` — verificar se `Array.isArray(x)` seria mais correto  | array check     |
-| **D10.4** | `grep -nP 'console\.(log\|warn\|error)' SOURCE \| grep -vP 'logger\.ts\|output\.ts'`             | console in prod |
-| **D10.5** | `grep -nP 'new RegExp\|\.match\(' SOURCE` — inspecionar ReDoS / input injection                  | regex safety    |
-| **D10.6** | `grep -nP '\.toLowerCase\(\)\|\.toUpperCase\(\)' SOURCE` — locale-dependent sem locale param     | locale          |
+| **D11.1** | `grep -nP 'new Date\(' SOURCE` — se argumento não é `new Date()`, verificar `isNaN(d.getTime())` | invalid date    |
+| **D11.2** | `grep -nP "typeof .* === 'object'" SOURCE` — verificar `&& x !== null`                           | typeof+null     |
+| **D11.3** | `grep -nP "typeof .* === 'object'" SOURCE` — verificar se `Array.isArray(x)` seria mais correto  | array check     |
+| **D11.4** | `grep -nP 'console\.(log\|warn\|error)' SOURCE \| grep -vP 'logger\.ts\|output\.ts'`             | console in prod |
+| **D11.5** | `grep -nP 'new RegExp\|\.match\(' SOURCE` — inspecionar ReDoS / input injection                  | regex safety    |
+| **D11.6** | `grep -nP '\.toLowerCase\(\)\|\.toUpperCase\(\)' SOURCE` — locale-dependent sem locale param     | locale          |
 
-### D11: Environment & Platform Safety (NEW)
+### D12: Environment & Platform Safety
 
 |    Sub    | Comando                                                                                     | ❌ gap         |
 | :-------: | ------------------------------------------------------------------------------------------- | -------------- |
-| **D11.1** | `npx madge --circular SOURCE 2>&1 \| grep -E '^[a-z]'`                                      | circular dep   |
-| **D11.2** | `grep -nP 'process\.env\[' SOURCE` — inspecionar se valor validado (não só `\|\| fallback`) | env validation |
-| **D11.3** | `grep -nP 'path\.(resolve\|join)\(' SOURCE` — inspecionar se input-dependente vs constante  | path traversal |
-| **D11.4** | `grep -nP "import\.meta\.(dirname\|url)" SOURCE` — compatibilidade cross-platform           | import meta    |
-| **D11.5** | `grep -nP 'os\.EOL\|\\\n' SOURCE` — hardcoded vs `os.EOL`                                   | platform EOL   |
+| **D12.1** | `npx madge --circular SOURCE 2>&1 \| grep -E '^[a-z]'`                                      | circular dep   |
+| **D12.2** | `grep -nP 'process\.env\[' SOURCE` — inspecionar se valor validado (não só `\|\| fallback`) | env validation |
+| **D12.3** | `grep -nP 'path\.(resolve\|join)\(' SOURCE` — inspecionar se input-dependente vs constante  | path traversal |
+| **D12.4** | `grep -nP "import\.meta\.(dirname\|url)" SOURCE` — compatibilidade cross-platform           | import meta    |
+| **D12.5** | `grep -nP 'os\.EOL\|\\\n' SOURCE` — hardcoded vs `os.EOL`                                   | platform EOL   |
 
-### D12: Parameter & State Integrity (NEW)
+### D13: Parameter & State Integrity
 
 |    Sub    | Comando                                                                                                                                              | ❌ gap         |
 | :-------: | ---------------------------------------------------------------------------------------------------------------------------------------------------- | -------------- |
-| **D12.1** | `grep -nP '^\s+\w+\s*=\s*[a-z_A-Z]' SOURCE \| grep -vP '^\s+(const\|let\|var\|this\.\|import\|type\|interface\|function)'` — parâmetros reatribuídos | param reassign |
-| **D12.2** | `grep -nP 'if \(.*\|\|.*=' SOURCE` — assignment dentro de condicional                                                                                | assign-in-if   |
-| **D12.3** | `grep -nP '^var ' SOURCE` — `var` em vez de `let`/`const`                                                                                            | var hoisting   |
+| **D13.1** | `grep -nP '^\s+\w+\s*=\s*[a-z_A-Z]' SOURCE \| grep -vP '^\s+(const\|let\|var\|this\.\|import\|type\|interface\|function)'` — parâmetros reatribuídos | param reassign |
+| **D13.2** | `grep -nP 'if \(.*\|\|.*=' SOURCE` — assignment dentro de condicional                                                                                | assign-in-if   |
+| **D13.3** | `grep -nP '^var ' SOURCE` — `var` em vez de `let`/`const`                                                                                            | var hoisting   |
 
-Registrar gaps de D8-D12 no PROGRESS.md. Cada ❌ vira gap na tabela da Phase 4.
+Registrar gaps de D5-D13 no PROGRESS.md. Cada ❌ vira gap na tabela da Phase 4.
 `<!-- CHECKPOINT: Phase 3 complete -->`
 
 ## Phase 4 — Registro de Gaps
@@ -256,7 +407,7 @@ Proibido: omitir gap, minimizar severidade, N/A sem evidência.
 
 ### 4.2 — Priorizar
 
-Ordem: T14 (suppressions) → tsc → T4 (testes) → D6 → D8-12 → demais
+Ordem: T14 (suppressions) → tsc → T12 (testes) → D7 (Deep Test) → D9-13 → D5 (Métricas) → demais
 `<!-- CHECKPOINT: Phase 4 complete -->`
 
 ## Phase 4.5 — Varredura de consistência
@@ -278,17 +429,33 @@ Para cada gap de cobertura (T4): criar test que FALHA contra código atual.
 - Expected values de REQUISITOS, NUNCA de output atual
 - Mock shape IDÊNTICO ao real
 
-**Template PBT para funções numéricas (obrigatório para D8 gap):**
+**Template PBT para funções numéricas (obrigatório para D8 gap; criar se ausente por §0.1.4):**
 
 ```typescript
+import fc from 'fast-check';
+
+// D9.1/D9.8: NaN/Infinity não propagam
 it('NaN → 0', () => { expect(fn(NaN, ...)).toBe(0); });
 it('Infinity → 0', () => { expect(fn(Infinity, ...)).toBe(0); });
-it('negative → 0', () => { expect(fn(-1, ...)).toBe(0); });
+it('-Infinity → 0', () => { expect(fn(-Infinity, ...)).toBe(0); });
+
+// D8.8: output nunca é NaN para inputs finitos
+it('nunca retorna NaN para entrada finita', () => {
+    fc.assert(fc.property(fc.integer(), fc.integer(),
+        (a, b) => expect(Number.isFinite(fn(a, b))).toBe(true)));
+});
+
+// D9.3: output está no domínio especificado
 it('output ∈ [MIN, MAX]', () => {
     fc.assert(fc.property(fc.integer(), fc.integer(),
         (a, b) => { const r = fn(a, b);
             expect(r).toBeGreaterThanOrEqual(MIN);
             expect(r).toBeLessThanOrEqual(MAX); }));
+});
+
+// D9.4: falsy guard (se || 0 for usado, 0 é válido?)
+it('falsy guard não mascara zero válido', () => {
+    // verificar edge cases do domínio
 });
 ```
 
@@ -316,7 +483,7 @@ Proibido: alterar expected values, workaround, bypass.
 
 ### 6.3 — Corrigir gaps não-testáveis
 
-Para gaps sem teste (D2, D5, D9-D12): aplicar correção diretamente. Proibido: ignorar, postergar.
+Para gaps sem teste (D2, D6, D8, D10-D13): aplicar correção diretamente. Proibido: ignorar, postergar.
 `<!-- CHECKPOINT: Phase 6 complete -->`
 
 ## Phase 7 — Integração
@@ -411,4 +578,62 @@ Inserir `✅ **Complete**` no PROGRESS.md.
 | F09 | Score por interpolação linear | ISO/IEC 25020:2019 Annex D  | v = m·x + b por faixa               | FT-09,10,14        |   ✅   |
 | F10 | Média ponderada               | NIST/SEMATECH §2.3.1        | μ = Σ(wᵢ·xᵢ) / Σwᵢ                  | FT-09,14           |   ✅   |
 
-**Protocolo de inclusão:** pesquisar gold standard na hierarquia. Se encontrado: preencher. Se não: "sem gold standard conhecido". Ao adicionar novo tipo, varrer features já auditadas retroativamente.
+**Protocolo de inclusão:**
+
+1. Pesquisar gold standard na hierarquia: Legislação → Acreditação (ISO, NIST) → Literatura → Indústria
+2. Se encontrado: preencher ID, tipo, fonte, fórmula, features aplicáveis, status
+3. Se não encontrado: registrar "sem gold standard conhecido" + justificativa
+4. Ao adicionar novo tipo: varrer features já auditadas retroativamente e atualizar status
+5. Se houver ambiguidade sobre qual fórmula se aplica ao domínio: registrar gap de requisito (não assumir)
+
+**Protocolo de aplicabilidade:**
+
+- F01-F10 cobrem padrões conhecidos. Se uma feature usa variação (ex: Média ponderada com pesos diferentes de Σwᵢ=1): registrar desvio em D8.1 camada 3
+- Se a feature implementa métrica sem correspondente no registry: considerar gap de rastreabilidade (D5.6)
+
+---
+
+## Appendix A — Comandos de Diagnóstico Rápido
+
+```bash
+# Verificar estrutura da feature
+ls -la shared/${FEATURE_NAME}.ts*
+ls -la shared/__tests__/${FEATURE_NAME}* 2>/dev/null
+ls -la shared/__tests__/integration/${FEATURE_NAME}* 2>/dev/null
+
+# Contar linhas
+wc -l ${SOURCE}
+wc -l ${TEST_FILE_UNIT} 2>/dev/null
+
+# Verificar tipo de retorno da função principal
+grep -P '^export function' ${SOURCE}
+
+# Verificar Zod schemas (se existem)
+grep -P 'z\.' ${SOURCE} | head -5
+
+# Verificar imports do módulo
+grep -P "^import" ${SOURCE}
+
+# Verificar suppressions no source (T14)
+grep -P 'as any|as unknown|@ts-(ignore|expect-error)|eslint-disable' ${SOURCE}
+grep -nP '[a-zA-Z0-9)\]>]\s*!\s*[);,}\]]' ${SOURCE}  # non-null assertion
+
+# Verificar suppressions nos testes
+grep -P 'as any|@ts-(ignore|expect-error)|nullAs\b' ${TEST_FILE_UNIT} 2>/dev/null
+```
+
+---
+
+## Appendix B — Critérios de Parada Obrigatória (STOP conditions)
+
+| Condição                                                     | Ação                                                                                                 |
+| ------------------------------------------------------------ | ---------------------------------------------------------------------------------------------------- |
+| Ambiguidade na especificação                                 | PARAR. Reportar qual especificação está ambígua.                                                     |
+| Contradição entre regras                                     | PARAR. Reportar quais regras conflitam.                                                              |
+| Dependência não mapeada                                      | PARAR. Reportar qual dependência não foi analisada.                                                  |
+| Teste falha e causa raiz não é óbvia                         | PARAR. Reportar o teste que falha e o que foi tentado.                                               |
+| Mudança de contrato necessária                               | PARAR. Reportar contrato, produtores e consumidores afetados.                                        |
+| **Mudança de comportamento observável** (ex: `--all`→`HEAD`) | PARAR. Reportar comportamento antigo, novo, e consumidores afetados. Aguardar autorização explícita. |
+| Workaround seria mais rápido que correção real               | PARAR. Reportar que workaround foi considerado e rejeitado.                                          |
+| Mecanismo de segurança precisa ser enfraquecido              | PARAR. Reportar qual mecanismo e por que não pode ser preservado.                                    |
+| Feature não se encaixa em nenhuma dimensão                   | PARAR. Reportar qual dimensão não se aplica e por quê.                                               |

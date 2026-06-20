@@ -2,10 +2,12 @@
 import eslint from '@eslint/js';
 import tseslint from 'typescript-eslint';
 import prettier from 'eslint-config-prettier';
+import security from 'eslint-plugin-security';
 
 export default tseslint.config(
     eslint.configs.recommended,
     ...tseslint.configs.recommendedTypeChecked,
+    security.configs.recommended,
     {
         languageOptions: {
             parserOptions: { project: './tsconfig.json' },
@@ -43,7 +45,6 @@ export default tseslint.config(
         },
     },
     // Layer restriction E5.1: shared/ must not import jira_management/ or git_triggers/
-    // allowTypeImports — type-only imports are erased at compile time, zero runtime coupling
     {
         files: ['shared/**/*.ts', 'shared/**/*.js'],
         rules: {
@@ -66,7 +67,6 @@ export default tseslint.config(
             ],
         },
     },
-    // Layer restriction E5.1: jira_management/ must not import git_triggers/
     {
         files: ['jira_management/**/*.ts', 'jira_management/**/*.js'],
         rules: {
@@ -88,9 +88,6 @@ export default tseslint.config(
             ],
         },
     },
-
-    // DepWall — must import through shared/deps, shared/palette, shared/validation,
-    // shared/env-loader, or shared/readline instead of direct npm packages
     {
         files: ['**/*.ts'],
         ignores: ['shared/**', '**/*.test.ts', '**/*.test.js', 'e2e/**'],
@@ -119,17 +116,14 @@ export default tseslint.config(
             ],
         },
     },
-    // shared/test-utils.test.ts tests console spy utilities intentionally
     {
         files: ['shared/test-utils.test.ts'],
         rules: { 'no-console': 'off' },
     },
-    // shared/logger.ts implements console-based logging — needs console
     {
         files: ['shared/logger.ts', 'shared/logger.test.ts'],
         rules: { 'no-console': 'off' },
     },
-
     {
         ignores: [
             'node_modules/',

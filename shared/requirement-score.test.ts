@@ -7,10 +7,15 @@ import { calculateRequirementScores, generateRequirementScoreHtml } from './requ
 import type { RequirementScoreResult } from './requirement-score.js';
 import type { AiGenerationRecord } from './types/llm.js';
 import { nullAs, undefinedAs } from './test-utils.js';
+import { rootLogger } from './logger.js';
 
 vi.mock('./logger', () => ({
     rootLogger: { error: vi.fn(), warn: vi.fn(), info: vi.fn(), child: vi.fn().mockReturnThis() },
 }));
+
+beforeEach(() => {
+    vi.restoreAllMocks();
+});
 
 function makeRecord(overrides?: Partial<AiGenerationRecord>): AiGenerationRecord {
     return {
@@ -124,7 +129,7 @@ describe('calculateRequirementScores', () => {
     it('assigns correct grade for score ranges', () => {
         const records = [makeRecord({ id: 'a', generatedTests: [{ title: 'T1', preConditions: [], stepCount: 1 }] })];
         const result = calculateRequirementScores(records);
-        expect(result.entries[0]?.scoreGrade).toBeDefined();
+        expect(['A', 'B', 'C', 'D', 'F']).toContain(result.entries[0]?.scoreGrade);
     });
 
     it('handles records without feedback', () => {
@@ -226,6 +231,12 @@ describe('generateRequirementScoreHtml', () => {
         expect(html).toContain('Requirement Score Report Error');
     });
 
+    it('logs actionable guidance when result is null', () => {
+        const errorSpy = vi.spyOn(rootLogger, 'error');
+        generateRequirementScoreHtml(nullAs<RequirementScoreResult>());
+        expect(errorSpy).toHaveBeenCalledWith(expect.stringContaining('Ensure a valid RequirementScoreResult object'));
+    });
+
     it('returns error page for undefined result', () => {
         const html = generateRequirementScoreHtml(undefinedAs<RequirementScoreResult>());
         expect(html).toContain('Requirement Score Report Error');
@@ -306,6 +317,22 @@ describe('generateRequirementScoreHtml', () => {
         try {
             const html = generateRequirementScoreHtml(makeResult({ entries: [] }));
             expect(html).toContain('Requirement Score Report Error');
+        } finally {
+            spy.mockRestore();
+        }
+    });
+
+    it('logs actionable guidance when HTML generation throws', () => {
+        const result = makeResult({ entries: [] });
+        const errorSpy = vi.spyOn(rootLogger, 'error');
+        const spy = vi.spyOn(reportStyles, 'buildCss').mockImplementation(() => {
+            throw new Error('CSS build failure');
+        });
+        try {
+            generateRequirementScoreHtml(result);
+            expect(errorSpy).toHaveBeenCalledWith(
+                expect.stringContaining('Verify that requirement data and html-factory module are working correctly.'),
+            );
         } finally {
             spy.mockRestore();
         }
