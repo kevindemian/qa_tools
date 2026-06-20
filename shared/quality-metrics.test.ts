@@ -186,6 +186,24 @@ describe('QualityMetricsCollector', () => {
         });
     });
 
+    describe('edge: NaN and Infinity (D8 regression prevention)', () => {
+        it('NaN structureScore produces fallback 0 avgStructureScore', () => {
+            const col = new QualityMetricsCollector();
+            col.recordStructureScore(NaN);
+            const snap = col.snapshot();
+            expect(Number.isFinite(snap.avgStructureScore)).toBe(true);
+            expect(snap.avgStructureScore).toBe(0);
+        });
+
+        it('Infinity structureScore produces fallback 0 avgStructureScore', () => {
+            const col = new QualityMetricsCollector();
+            col.recordStructureScore(Infinity);
+            const snap = col.snapshot();
+            expect(Number.isFinite(snap.avgStructureScore)).toBe(true);
+            expect(snap.avgStructureScore).toBe(0);
+        });
+    });
+
     describe('exported functions', () => {
         it('recordInvariantFire calls default collector', () => {
             recordInvariantFire('T-01');
