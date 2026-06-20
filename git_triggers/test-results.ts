@@ -27,7 +27,8 @@ function _resolveGlob(pattern: string): string | null {
         const matches = globSync(pattern);
         const m = matches[0];
         return m ? path.resolve(m) : null;
-    } catch {
+    } catch (err) {
+        warn('test-results: glob resolution failed: ' + (err instanceof Error ? err.message : String(err)));
         return null;
     }
 }

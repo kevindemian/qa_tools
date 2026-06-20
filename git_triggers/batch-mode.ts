@@ -182,8 +182,8 @@ async function _collectPipelineResults(
                     if (reportResult.htmlPath) {
                         success('PR report gerado: ' + reportResult.htmlPath);
                     }
-                } catch {
-                    /* PR report errors are non-fatal */
+                } catch (err) {
+                    warn('PR report generation failed: ' + (err instanceof Error ? err.message : String(err)));
                 }
             }
         }

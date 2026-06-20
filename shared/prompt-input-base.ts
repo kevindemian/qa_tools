@@ -31,7 +31,8 @@ export function prompt(label: string, options: PromptOptions = {}): string {
         let answer: string;
         try {
             answer = readlineSync.question(text + ': ', { defaultInput: def ?? '' }).trim();
-        } catch {
+        } catch (err) {
+            warn('Prompt input failed: ' + (err instanceof Error ? err.message : String(err)));
             return def ?? '';
         }
         const trimmed = answer.toLowerCase();
@@ -58,7 +59,8 @@ export function confirm(label: string, defaultYes = false): boolean {
                 .question(text + ': ', { defaultInput: def.toLowerCase() })
                 .trim()
                 .toLowerCase();
-        } catch {
+        } catch (err) {
+            warn('Confirm input failed: ' + (err instanceof Error ? err.message : String(err)));
             return defaultYes;
         }
         if (NAV_CMDS.includes(answer)) throw new CancelError(answer);

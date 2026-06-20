@@ -65,8 +65,10 @@ function _showAndPause(topic: string): void {
     divider();
     try {
         prompt('Pressione Enter para continuar');
-    } catch {
-        rootLogger.debug('User pressed Ctrl+C or non-TTY during help pause — continuing');
+    } catch (err) {
+        rootLogger.debug(
+            'User pressed Ctrl+C or non-TTY during help pause: ' + (err instanceof Error ? err.message : String(err)),
+        );
     }
 }
 export function showHelpLoop(): void {

@@ -25,6 +25,7 @@ import { discoverModels, assignTierHints } from '../shared/model-discovery.js';
 import { getAdapter } from '../shared/model-adapter.js';
 import type { RegistryModel } from '../shared/model-resolver.js';
 import type { LlmProvider } from '../shared/llm-provider-profiles.js';
+import { rootLogger } from '../shared/logger.js';
 
 export { diffModels, writeMarkdownReport, parseArgs, getProviderModels, enrichFromOpenRouter };
 
@@ -77,8 +78,10 @@ async function fetchOpenRouterContext(): Promise<Map<string, { context?: number;
             if (e.capabilities !== undefined && e.capabilities.length > 0) entry.capabilities = e.capabilities;
             map.set(e.id, entry);
         }
-    } catch {
-        // OpenRouter unavailable — proceed without enrichment
+    } catch (err) {
+        rootLogger.warn(
+            'probe-registry: OpenRouter unavailable: ' + (err instanceof Error ? err.message : String(err)),
+        );
     }
     return map;
 }

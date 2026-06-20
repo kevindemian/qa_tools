@@ -110,8 +110,9 @@ async function fetchTeList(
 ): Promise<TestExecutionSummary[]> {
     try {
         return await linkManager.listTestExecutions(project);
-    } catch {
-        warn('Não foi possível buscar Test Executions do projeto.');
+    } catch (err) {
+        warn('Não foi possível buscar Test Executions: ' + (err instanceof Error ? err.message : String(err)));
+        return [];
         return [];
     }
 }
@@ -222,7 +223,8 @@ export async function showResults(
     let summaries: Array<{ key: string; summary: string }>;
     try {
         summaries = await c.linkManager.getTestCaseSummaries(testKeys.slice(0, 20));
-    } catch {
+    } catch (err) {
+        warn('Failed to fetch test summaries: ' + (err instanceof Error ? err.message : String(err)));
         summaries = testKeys.map((k) => ({ key: k, summary: '' }));
     }
 

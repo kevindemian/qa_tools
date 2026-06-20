@@ -135,8 +135,11 @@ export async function resolveTestDataSource(
                     source: 'cache',
                 };
             }
-        } catch {
-            rootLogger.warn('resolveTestDataSource: corrupted cache entry, falling through');
+        } catch (err) {
+            rootLogger.warn(
+                'resolveTestDataSource: corrupted cache entry, falling through: ' +
+                    (err instanceof Error ? err.message : String(err)),
+            );
         }
     }
 

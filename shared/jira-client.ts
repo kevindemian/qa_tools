@@ -36,7 +36,8 @@ class JiraClient implements JiraResourceLike {
         try {
             const parsed = new URL(baseUrl);
             this.originUrl = parsed.origin;
-        } catch {
+        } catch (err) {
+            rootLogger.debug('Failed to parse Jira base URL: ' + (err instanceof Error ? err.message : String(err)));
             this.originUrl = '';
         }
         this.axiosInstance = createHttpClient({

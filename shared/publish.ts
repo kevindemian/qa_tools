@@ -37,7 +37,10 @@ function publishToGhPages(localPath: string, destination?: string): void {
             stdio: 'ignore',
             timeout: 120_000,
         });
-    } catch {
+    } catch (err) {
+        rootLogger.warn(
+            'publish: git worktree add failed, using tmp dir: ' + (err instanceof Error ? err.message : String(err)),
+        );
         mkdirSync(tmpDir, { recursive: true });
     }
     try {
@@ -57,7 +60,8 @@ function publishToGhPages(localPath: string, destination?: string): void {
 function getOriginUrl(): string {
     try {
         return execFileSync('git', ['remote', 'get-url', 'origin'], { encoding: 'utf8' }).trim();
-    } catch {
+    } catch (err) {
+        rootLogger.warn('publish: failed to get origin URL: ' + (err instanceof Error ? err.message : String(err)));
         return 'origin';
     }
 }

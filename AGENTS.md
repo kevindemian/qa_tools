@@ -608,11 +608,11 @@ Cost: always greater than doing it right once.
 
 ## 22. SOP PROTOCOL ENFORCEMENT
 
-The following rules bind this agent and any subagent or assistant executing FUNCTIONAL-AUDIT-SOP.
+The following rules bind this agent and any subagent or assistant executing audit/functional/SOP.md.
 
 ### 22.1 Command Header Requirement
 
-Before executing any phase prescribed by SOP, the agent MUST read the corresponding section from FUNCTIONAL-AUDIT-SOP.md (use line-range markers to read only the relevant section). Then execute the phase's commands, prefixing each with its SOP section reference:
+Before executing any phase prescribed by SOP, the agent MUST read the corresponding section from `audit/functional/SOP.md` (use line-range markers to read only the relevant section). Then execute the phase's commands, prefixing each with its SOP section reference:
 
 ```
 [SOP §X.Y] <ação descritiva>
@@ -627,7 +627,7 @@ Before executing any phase prescribed by SOP, the agent MUST read the correspond
 
 - Within a Phase, parallel execution is allowed (independent commands may run concurrently).
 - Between Phases, execution is **strictly sequential**.
-- A Phase is not complete until its checkpoint (`<!-- CHECKPOINT: Phase N complete -->`) is written to PROGRESS.md.
+- A Phase is not complete until its checkpoint (`<!-- CHECKPOINT: Phase N complete -->`) is written to `audit/functional/PROGRESS.md`.
 - Cycle: Phase N → checkpoint N → Phase N+1 → checkpoint N+1
 - If a checkpoint is missing → Phase is not considered complete. Resume from the last checkpoint.
 
@@ -658,8 +658,8 @@ Any violation of 22.1, 22.2, or 22.3 that is **substance** (per 22.3 table) rend
 
 No continuation, partial acceptance, or "let's proceed anyway" is permitted for substance violations.
 
-**Form violations** (per 22.3 table): report in PROGRESS.md, document the deviation, continue execution. Do NOT stop.
+**Form violations** (per 22.3 table): report in `audit/functional/PROGRESS.md`, document the deviation, continue execution. Do NOT stop.
 
 ### 22.5 Audit Trail in Output
 
-Each Phase result must be recorded in FUNCTIONAL-AUDIT-PROGRESS.md before the next Phase begins. The agent's output must contain the Phase header, each command result, and the final status for each item, so the user can verify compliance without reading files.\*\*
+Each Phase result must be recorded in `audit/functional/PROGRESS.md` before the next Phase begins. The agent's output must contain the Phase header, each command result, and the final status for each item, so the user can verify compliance without reading files.\*\*

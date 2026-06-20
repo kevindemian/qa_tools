@@ -29,7 +29,8 @@ const PROMPT_DIR = import.meta.dirname + '/prompts';
 function readPrompt(file: string): string {
     try {
         return fs.readFileSync(path.join(PROMPT_DIR, file), 'utf8');
-    } catch {
+    } catch (err) {
+        rootLogger.debug('llm-benchmark: failed to read prompt: ' + (err instanceof Error ? err.message : String(err)));
         return '';
     }
 }

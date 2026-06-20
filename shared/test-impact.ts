@@ -122,8 +122,8 @@ function getGitDiff(): string {
         return execFileSync('git', ['diff', '--name-only', 'HEAD~1'], {
             encoding: 'utf8',
         }).trim();
-    } catch {
-        rootLogger.error('Failed to get git diff');
+    } catch (err) {
+        rootLogger.error('Failed to get git diff: ' + (err instanceof Error ? err.message : String(err)));
         return '';
     }
 }

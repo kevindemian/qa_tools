@@ -736,8 +736,8 @@ async function _ensureProjectsConfigured(): Promise<boolean> {
                 clearProjectCache();
                 projs = getProjects();
             }
-        } catch {
-            // confirm cancelled — exit
+        } catch (err) {
+            rootLogger.debug('Project setup cancelled: ' + (err instanceof Error ? err.message : String(err)));
         }
         if (Object.keys(projs).length === 0) {
             warn('É necessário configurar ao menos um projeto. Configure projects.json ou execute o setup wizard.');
@@ -757,8 +757,8 @@ async function _initEnvironment(): Promise<void> {
         if (offerEnvSetup(envResult)) {
             try {
                 await _handleSetupWizard();
-            } catch {
-                // wizard failed — continue anyway
+            } catch (err) {
+                rootLogger.debug('Setup wizard failed: ' + (err instanceof Error ? err.message : String(err)));
             }
         }
     } catch (err) {
@@ -802,7 +802,10 @@ async function _selectProjectAndCreateManager(): Promise<{
                 } else {
                     return null;
                 }
-            } catch {
+            } catch (err) {
+                rootLogger.debug(
+                    'Create manager for project failed: ' + (err instanceof Error ? err.message : String(err)),
+                );
                 return null;
             }
         } else {

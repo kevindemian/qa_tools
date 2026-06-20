@@ -90,7 +90,10 @@ export function parseRawOnce(raw: string): Record<string, unknown> | null {
     try {
         const parsed: unknown = JSON.parse(raw);
         return RawRecordSchema.parse(parsed);
-    } catch {
+    } catch (err) {
+        rootLogger.debug(
+            'llm-fallback-http: failed to parse raw record: ' + (err instanceof Error ? err.message : String(err)),
+        );
         return null;
     }
 }

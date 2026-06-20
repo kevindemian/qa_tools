@@ -157,8 +157,8 @@ async function initializeSession() {
             Config.get('jiraProject') ||
             prompt('Nome do projeto Jira', { default: state.lastProject || default_project })
         ).toUpperCase();
-    } catch {
-        rootLogger.debug('Prompt de projeto falhou (SIGINT/erro TTY), usando fallback');
+    } catch (err) {
+        rootLogger.debug('Prompt de projeto falhou: ' + (err instanceof Error ? err.message : String(err)));
         warn('Não foi possível obter o nome do projeto. Usando o último projeto da sessão anterior.');
         ctx.project_name = (state.lastProject || default_project).toUpperCase();
     }
@@ -167,7 +167,8 @@ async function initializeSession() {
         const jql = 'project=' + ctx.project_name;
         try {
             await jiraResource.searchJiraIssues(jql, 1);
-        } catch {
+        } catch (err) {
+            rootLogger.debug('Jira project validation failed: ' + (err instanceof Error ? err.message : String(err)));
             warn('Projeto "' + ctx.project_name + '" não encontrado no Jira. Verifique se o nome está correto.');
         }
     }
@@ -325,8 +326,8 @@ async function main(): Promise<void> {
     }
     try {
         await maybeRunFirstRunWizard();
-    } catch {
-        // wizard failed — continue anyway
+    } catch (err) {
+        rootLogger.debug('Setup wizard failed: ' + (err instanceof Error ? err.message : String(err)));
     }
 
     // Early SIGINT handler: protege contra crash durante prompts síncronos

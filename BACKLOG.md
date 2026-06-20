@@ -132,7 +132,7 @@ github-client.ts (GH-00)
 ## 🎨 Sprint CSS Refactoring — Sistema de Design Unificado + Acessibilidade (FT-17)
 
 **Data:** 2026-06-19
-**Origem:** Auditoria funcional FT-17 (FUNCTIONAL-AUDIT-PROGRESS.md) + Sprint Score Fix. Relatórios HTML usam prefixos CSS inconsistentes (`ph-`, `tbl-`, `text-`, `empty-`), build de CSS monolítico (`buildAllStyles()`), emojis como ícones (renderização cross-platform imprevisível), e zero tratamento de acessibilidade.
+**Origem:** Auditoria funcional FT-17 (audit/functional/HISTORY.md) + Sprint Score Fix. Relatórios HTML usam prefixos CSS inconsistentes (`ph-`, `tbl-`, `text-`, `empty-`), build de CSS monolítico (`buildAllStyles()`), emojis como ícones (renderização cross-platform imprevisível), e zero tratamento de acessibilidade.
 **Estratégia:** 12 fases sequenciais — namespacing BEM `.qa-*`, build seletivo por página, substituição de emojis por SVG (Lucide), tokens de tipografia, acessibilidade (WCAG), variantes de layout, estados vazios/erro/loading.
 **Regra absoluta:** zero workarounds, 100% teste para código novo, deletar código obsoleto, nenhum débito deixado.
 

@@ -92,7 +92,11 @@ export function diskCacheGet(key: string): string | null {
             rootLogger.warn('LLM disk cache decrypt failed for key=' + key.slice(0, 12) + '… — removing');
             try {
                 fs.unlinkSync(file);
-            } catch {
+            } catch (err) {
+                rootLogger.debug(
+                    'LLM disk cache: failed to remove corrupted entry: ' +
+                        (err instanceof Error ? err.message : String(err)),
+                );
                 /* best effort */
             }
             return null;
@@ -105,8 +109,8 @@ export function diskCacheGet(key: string): string | null {
         }
         fs.unlinkSync(file);
         rootLogger.info('LLM disk cache expired for key=' + key.slice(0, 12) + '…');
-    } catch {
-        // miss or corrupt
+    } catch (err) {
+        rootLogger.debug('LLM disk cache: miss or corrupt: ' + (err instanceof Error ? err.message : String(err)));
     }
     return null;
 }

@@ -58,8 +58,8 @@ export async function maybeRunFirstRunWizard(): Promise<void> {
     if (choice === 'setup') {
         try {
             await setupMain();
-        } catch {
-            warn('Não foi possível iniciar o setup wizard.');
+        } catch (err) {
+            warn('Não foi possível iniciar o setup wizard: ' + (err instanceof Error ? err.message : String(err)));
         }
     } else if (choice === 'docs') {
         try {

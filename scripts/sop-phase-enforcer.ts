@@ -83,8 +83,8 @@ function getArg(arr: string[], i: number): string {
 function readProgress(): string {
     try {
         return readFileSync(PROGRESS_FILE, 'utf-8');
-    } catch {
-        err('Nao foi possivel ler ' + PROGRESS_FILE);
+    } catch (e) {
+        err('Nao foi possivel ler ' + PROGRESS_FILE + ': ' + (e instanceof Error ? e.message : String(e)));
         process.exit(1);
     }
 }
@@ -167,8 +167,8 @@ function verifyGitClean(): boolean {
             warn('Working directory has uncommitted changes:\n' + status);
         }
         return true;
-    } catch {
-        warn('Nao foi possivel verificar git status');
+    } catch (e) {
+        warn('Nao foi possivel verificar git status: ' + (e instanceof Error ? e.message : String(e)));
         return true;
     }
 }
@@ -178,8 +178,8 @@ function verifyTsc(): boolean {
     try {
         execFileSync('npx', ['tsc', '--noEmit'], { encoding: 'utf-8', timeout: 120_000, stdio: 'pipe' });
         return true;
-    } catch {
-        process.stderr.write('  L-- TSC FALHOU\n');
+    } catch (e) {
+        process.stderr.write('  L-- TSC FALHOU: ' + (e instanceof Error ? e.message : String(e)) + '\n');
         return false;
     }
 }

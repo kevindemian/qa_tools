@@ -1,4 +1,5 @@
 import { ReportValidator, type ValidationRule } from './report-validator.js';
+import { rootLogger } from './logger.js';
 
 interface JsonSchemaBody {
     tests?: unknown;
@@ -23,7 +24,10 @@ export function validateJsonSchema(body: string, minTests: number): string | nul
     let parsed: unknown;
     try {
         parsed = JSON.parse(body);
-    } catch {
+    } catch (err) {
+        rootLogger.warn(
+            'benchmark-validators: invalid JSON schema: ' + (err instanceof Error ? err.message : String(err)),
+        );
         return 'Invalid JSON';
     }
     const obj = parsed as JsonSchemaBody;
@@ -48,7 +52,10 @@ export function validateJsonArray(body: string, minItems: number): string | null
                 return 'item[' + i + '] invalid expectedResult';
         }
         return null;
-    } catch {
+    } catch (err) {
+        rootLogger.warn(
+            'benchmark-validators: invalid JSON array: ' + (err instanceof Error ? err.message : String(err)),
+        );
         return 'Invalid JSON';
     }
 }

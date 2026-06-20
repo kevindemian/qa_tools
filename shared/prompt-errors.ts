@@ -199,9 +199,9 @@ export function onError(
         let answer: string;
         try {
             answer = readlineSync.question('  Escolha: ').trim().toLowerCase();
-        } catch {
+        } catch (err) {
             /* stdin indisponível (ex: WSL sem /dev/tty) — aborta como fallback seguro */
-            error('Entrada padrão indisponível. Abortando.');
+            error('Entrada padrão indisponível. Abortando: ' + (err instanceof Error ? err.message : String(err)));
             return 'abort';
         }
         if (NAV_CMDS.includes(answer)) throw new CancelError(answer);
