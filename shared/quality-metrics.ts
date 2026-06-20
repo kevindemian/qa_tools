@@ -178,7 +178,7 @@ export class QualityMetricsCollector {
             layerAttempts: { ...this._layerAttempts },
             artifactTypeCounts: { ...this._artifactTypeCounts },
             avgStructureScore:
-                this._structureScoreCount > 0
+                this._structureScoreCount > 0 && Number.isFinite(this._structureScoreSum)
                     ? Math.round((this._structureScoreSum / this._structureScoreCount) * 100) / 100
                     : 0,
         };
