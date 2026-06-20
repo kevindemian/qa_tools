@@ -18,7 +18,7 @@ vi.mock('./state', () => ({
     updateTyped: mockUpdateTyped,
 }));
 
-import { checkQualitySignals } from './quality-suggester.js';
+import { checkQualitySignals, failureRate, severityFromLatency } from './quality-suggester.js';
 
 const defaultSnapshot = {
     totalRequests: 0,
@@ -146,5 +146,64 @@ describe('checkQualitySignals', () => {
         });
         const signals = checkQualitySignals();
         expect(signals).toHaveLength(1);
+    });
+
+    // ── RED tests: internal functions (G03, G04) ──
+
+    it('severityFromLatency returns info for sub-warning latency — G03', () => {
+        expect(severityFromLatency(0)).toBe('info');
+        expect(severityFromLatency(1000)).toBe('info');
+        expect(severityFromLatency(2999)).toBe('info');
+    });
+
+    it('severityFromLatency returns warning for 3000-7999 — G03', () => {
+        expect(severityFromLatency(3000)).toBe('warning');
+        expect(severityFromLatency(5000)).toBe('warning');
+        expect(severityFromLatency(7999)).toBe('warning');
+    });
+
+    it('severityFromLatency returns critical for >= 8000 — G03', () => {
+        expect(severityFromLatency(8000)).toBe('critical');
+        expect(severityFromLatency(10000)).toBe('critical');
+    });
+
+    it('failureRate returns 0 for total = 0 — G04', () => {
+        expect(failureRate(0, 0)).toBe(0);
+        expect(failureRate(100, 0)).toBe(0);
+    });
+
+    it('failureRate returns correct ratio for valid inputs — G04', () => {
+        expect(failureRate(0, 100)).toBe(0);
+        expect(failureRate(50, 100)).toBe(0.5);
+        expect(failureRate(100, 100)).toBe(1);
+    });
+
+    // ── RED tests: edge case (G02, G05) — will FAIL until source is fixed ──
+
+    it('failureRate normalizes NaN to 0 — G02', () => {
+        expect(failureRate(NaN, 100)).toBe(0);
+    });
+
+    it('failureRate normalizes negative failures to 0 — G02', () => {
+        expect(failureRate(-5, 100)).toBe(0);
+    });
+
+    it('failureRate normalizes Infinity to 0 — G02', () => {
+        expect(failureRate(Infinity, 100)).toBe(0);
+    });
+
+    it('failureRate normalizes negative total to 0 — G02', () => {
+        expect(failureRate(5, -100)).toBe(0);
+    });
+
+    it('handles failuresByTier undefined in snapshot — G05', () => {
+        mockSnapshot.mockReturnValue({
+            ...defaultSnapshot,
+            totalRequests: 100,
+            avgLatencyMs: 500,
+            failuresByTier: undefined,
+        });
+        const signals = checkQualitySignals();
+        expect(Array.isArray(signals)).toBe(true);
     });
 });

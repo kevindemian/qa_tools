@@ -23,7 +23,7 @@ export interface LlmMetricsSnapshot {
     adversarialRetryCount: number;
     avgConfidence: number;
     avgLatencyMs: number;
-    failuresByTier: Partial<Record<LlmTier, number>>;
+    failuresByTier?: Partial<Record<LlmTier, number>>;
     rejectionReasons: Record<string, number>;
     artifactApproved: number;
     artifactRejected: number;

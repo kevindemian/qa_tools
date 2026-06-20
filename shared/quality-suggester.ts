@@ -86,7 +86,7 @@ export function checkQualitySignals(benchmarkSignals?: QualitySignal[]): Quality
             }
 
             // Per-tier failure rate
-            const totalFailures = Object.values(snapshot.failuresByTier).reduce((a, b) => a + b, 0);
+            const totalFailures = Object.values(snapshot.failuresByTier ?? {}).reduce((a, b) => a + b, 0);
             const rate = failureRate(totalFailures, totalRequests);
             if (rate > FAILURE_RATE_WARNING) {
                 signals.push({

@@ -111,8 +111,8 @@ describe('LlmMetrics', () => {
         recordLlmFailure('fast');
 
         const snap = snapshotLlmMetrics();
-        expect(snap.failuresByTier['main']).toBe(2);
-        expect(snap.failuresByTier['fast']).toBe(1);
+        expect(snap.failuresByTier?.['main']).toBe(2);
+        expect(snap.failuresByTier?.['fast']).toBe(1);
     });
 
     it('clears accumulators', async () => {
