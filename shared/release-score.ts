@@ -35,6 +35,7 @@ function computeGrade(score: number): string {
 }
 
 function invertFlakiness(flakyRate: number): number {
+    if (!Number.isFinite(flakyRate)) return 0;
     return Math.max(0, Math.min(100, 100 - flakyRate));
 }
 
@@ -46,10 +47,10 @@ function buildBreakdown(
     flakyRate: number,
 ): Array<{ label: string; score: number; status: 'pass' | 'fail' }> {
     const flkScore = invertFlakiness(flakyRate);
-    const tasksRounded = Math.round(tasksPct);
-    const healthRounded = Math.round(healthScore);
-    const coverageRounded = Math.round(coveragePct);
-    const flkRounded = Math.round(flkScore);
+    const tasksRounded = Number.isFinite(tasksPct) ? Math.round(tasksPct) : 0;
+    const healthRounded = Number.isFinite(healthScore) ? Math.round(healthScore) : 0;
+    const coverageRounded = Number.isFinite(coveragePct) ? Math.round(coveragePct) : 0;
+    const flkRounded = Number.isFinite(flkScore) ? Math.round(flkScore) : 0;
     return [
         { label: 'Tasks', score: tasksRounded, status: tasksRounded >= THRESHOLD ? 'pass' : 'fail' },
         { label: 'Health', score: healthRounded, status: healthGate },
@@ -83,7 +84,7 @@ export function calculateReleaseScore(
 ): ReleaseScoreResult {
     const flkScore = invertFlakiness(flakyRate);
     const raw = tasksPct * TASKS_W + healthScore * HEALTH_W + coveragePct * COVERAGE_W + flkScore * FLAKINESS_W;
-    const score = Math.round(raw);
+    const score = Number.isFinite(raw) ? Math.round(raw) : 0;
     const grade = computeGrade(score);
     const breakdown = buildBreakdown(tasksPct, healthScore, healthGate, coveragePct, flakyRate);
     const recommendation = buildRecommendation(tasksPct, healthScore, healthGate, coveragePct, flakyRate);
