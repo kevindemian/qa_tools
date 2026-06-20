@@ -22,14 +22,15 @@ const LATENCY_CRITICAL_MS = 8000;
 const FAILURE_RATE_WARNING = 0.15;
 const FAILURE_RATE_CRITICAL = 0.35;
 
-function severityFromLatency(avgMs: number): QualitySignal['severity'] {
+export function severityFromLatency(avgMs: number): QualitySignal['severity'] {
     if (avgMs >= LATENCY_CRITICAL_MS) return 'critical';
     if (avgMs >= LATENCY_WARNING_MS) return 'warning';
     return 'info';
 }
 
-function failureRate(failures: number, total: number): number {
-    return total > 0 ? failures / total : 0;
+export function failureRate(failures: number, total: number): number {
+    if (total <= 0 || !Number.isFinite(failures) || failures < 0 || !Number.isFinite(total)) return 0;
+    return Math.min(failures / total, 1);
 }
 
 /** Run the full quality-signal pipeline and persist results to state.
