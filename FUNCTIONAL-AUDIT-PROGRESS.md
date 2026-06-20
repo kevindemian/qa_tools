@@ -2811,11 +2811,36 @@ Full suite: 374/376 files pass (2 skipped), 5731/5740 tests pass (9 skipped) —
 
 **Ordem:** FT-04 → FT-10 → FT-12 → FT-14 → FT-15 → FT-01..FT-03 → FT-05..FT-08 → FT-11 → FT-16..FT-32
 
-| Feature                 | Feito |   Gaps    | Resumo                                                                                                         |
-| ----------------------- | :---: | :-------: | -------------------------------------------------------------------------------------------------------------- |
-| FT-09 Health Score      |  ✅   | D8.1/D8.8 | NaN/Infinity guards em score functions + \_computeSuiteSpeed + \_computeExpWeighted + Math.round. 4 RED tests. |
-| FT-04 Metrics           |  ✅   |     0     | D8-D12: zero gaps. Modulo bem blindado (zod, instanceof, sync).                                                |
-| FT-10 Quality Gate      |  ✅   |     0     | D8-D12: zero gaps. Módulo bem isolado (divisões guardadas, sem Object.values, sem NaN path).                   |
-| FT-12 Quality Metrics   |  ✅   |     1     | D8.8: avgStructureScore sem Number.isFinite guard. Corrigido + 2 RED tests.                                    |
-| FT-14 Release Score     |  ⏳   |           |                                                                                                                |
-| FT-15 Benchmark Metrics |  ⏳   |           |                                                                                                                |
+| Feature                  | Feito |   Gaps    | Resumo                                                                                                         |
+| ------------------------ | :---: | :-------: | -------------------------------------------------------------------------------------------------------------- |
+| FT-09 Health Score       |  ✅   | D8.1/D8.8 | NaN/Infinity guards em score functions + \_computeSuiteSpeed + \_computeExpWeighted + Math.round. 4 RED tests. |
+| FT-04 Metrics            |  ✅   |     0     | D8-D12: zero gaps. Modulo bem blindado (zod, instanceof, sync).                                                |
+| FT-10 Quality Gate       |  ✅   |     0     | D8-D12: zero gaps. Módulo bem isolado (divisões guardadas, sem Object.values, sem NaN path).                   |
+| FT-12 Quality Metrics    |  ✅   |     1     | D8.8: avgStructureScore sem Number.isFinite guard. Corrigido + 2 RED tests.                                    |
+| FT-14 Release Score      |  ✅   |     1     | D8.3/D8.8: invertFlakiness e Math.round sem Number.isFinite. Corrigido + 4 RED tests.                          |
+| FT-15 Benchmark Metrics  |  ✅   |     0     | D8-D12: zero gaps. Módulo bem isolado (divisões guardadas, catch discriminado, typeof com null check).         |
+| FT-01 Config Accessor    |  ✅   |     0     | D8-D12: zero gaps.                                                                                             |
+| FT-02 Feature Config     |  ✅   |     0     | D8-D12: zero gaps.                                                                                             |
+| FT-03 Session State      |  ✅   |     0     | D8-D12: zero gaps.                                                                                             |
+| FT-05 Logger             |  ✅   |     0     | D8-D12: zero gaps.                                                                                             |
+| FT-06 Temp Dir           |  ✅   |     0     | D8-D12: zero gaps.                                                                                             |
+| FT-07 Store              |  ✅   |     0     | D8-D12: zero gaps.                                                                                             |
+| FT-08 Integration Help   |  ✅   |     0     | D8-D12: zero gaps.                                                                                             |
+| FT-11 Coverage Source    |  ✅   |     0     | D8-D12: zero gaps (path traversal pre-existente).                                                              |
+| FT-29 Pipeline Cost      |  ✅   |     1     | D8.1/D8.8: NaN propagation via r.duration → cost/durationSec. Guard com Number.isFinite + 1 RED test.          |
+| FT-16 PR Report Core     |  ✅   |     0     | D8-D12: zero gaps (passRate guardado, Math.round safe).                                                        |
+| FT-17 HTML Report        |  ✅   |     0     | D8-D12: zero gaps.                                                                                             |
+| FT-18 Coverage Gap HTML  |  ✅   |     0     | D8-D12: zero gaps.                                                                                             |
+| FT-19 Flakiness Dash     |  ✅   |     0     | D8-D12: zero gaps (Number.isFinite filter before Math.round).                                                  |
+| FT-20 Defect Trend       |  ✅   |     0     | D8-D12: zero gaps (sanitizeNumber + ?? {} guards).                                                             |
+| FT-21 Defect Seasonality |  ✅   |     0     | D8-D12: zero gaps.                                                                                             |
+| FT-22 Silent Regression  |  ✅   |     0     | D8-D12: zero gaps (todas divisões guardadas, for-in em array seguro).                                          |
+| FT-23 AI Effectiveness   |  ✅   |     0     | D8-D12: zero gaps (divisões ternary-guardadas).                                                                |
+| FT-24 AI Comparison      |  ✅   |     0     | D8-D12: zero gaps (divisões ternary-guardadas).                                                                |
+| FT-25 Cross-Squad Bench  |  ✅   |     0     | D8-D12: zero gaps.                                                                                             |
+| FT-26 Suite Optimization |  ✅   |     0     | D8-D12: zero gaps (toFinite em todos inputs).                                                                  |
+| FT-27 Developer Profile  |  ✅   |     0     | D8-D12: zero gaps (Object.entries em iteráveis seguros).                                                       |
+| FT-28 Backlog Health     |  ✅   |     0     | D8-D12: zero gaps (Math.round em weighted sum finita).                                                         |
+| FT-30 Impact Alert       |  ✅   |     0     | D8-D12: zero gaps (comparações agem como NaN guard implícito).                                                 |
+| FT-31 Incident Report    |  ✅   |     0     | D8-D12: zero gaps.                                                                                             |
+| FT-32 Requirement Score  |  ✅   |     0     | D8-D12: zero gaps (acceptanceRate computado localmente, sempre finito).                                        |
