@@ -1,6 +1,11 @@
 #!/bin/sh
 set -e
 
+# Clear stale COMMIT_EDITMSG from previous commit.
+# git runs pre-commit BEFORE preparing the commit message, so COMMIT_EDITMSG
+# always contains the previous commit's message — never the current one.
+rm -f "$(git rev-parse --show-toplevel)/.git/COMMIT_EDITMSG"
+
 echo "=== Running pre-commit checks (validation hook + vigilant + typecheck + lint) ==="
 
 # Validation hook test
@@ -10,7 +15,12 @@ if [ -f "$VALIDATION_HOOK" ]; then
     npx tsx "$VALIDATION_HOOK" --test
 
     echo "--- Validation hook (diff check) ---"
-    git diff --cached -- . ':!.config/validation_hook.ts' ':!BACKLOG.md' | grep '^[+]' | sed 's/^.//' | npx tsx "$VALIDATION_HOOK" --check
+    STAGED_DIFF=$(git diff --cached -- . ':!.config/validation_hook.ts' ':!BACKLOG.md')
+    if [ -n "$STAGED_DIFF" ]; then
+        echo "$STAGED_DIFF" | grep '^[+]' | sed 's/^.//' | npx tsx "$VALIDATION_HOOK" --check --no-cache
+    else
+        echo "  (no staged changes to validate)"
+    fi
 fi
 
 echo "--- Rule-vigilant scan (security configs) ---"
