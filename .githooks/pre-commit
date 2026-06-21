@@ -1,7 +1,7 @@
 #!/bin/sh
 set -e
 
-echo "=== Running pre-commit checks (validation hook + typecheck + lint) ==="
+echo "=== Running pre-commit checks (validation hook + vigilant + typecheck + lint) ==="
 
 # Validation hook test
 VALIDATION_HOOK="$HOME/.config/opencode/validation_hook.ts"
@@ -10,7 +10,17 @@ if [ -f "$VALIDATION_HOOK" ]; then
     npx tsx "$VALIDATION_HOOK" --test
 
     echo "--- Validation hook (diff check) ---"
-    git diff --cached -- . ':!.config/validation_hook.ts' ':!BACKLOG.md' | grep -v '^-[^-]' | npx tsx "$VALIDATION_HOOK" --check
+    git diff --cached -- . ':!.config/validation_hook.ts' ':!BACKLOG.md' | grep '^[+]' | sed 's/^.//' | npx tsx "$VALIDATION_HOOK" --check
+fi
+
+echo "--- Rule-vigilant scan (security configs) ---"
+VIGILANT="scripts/rule-vigilant.ts"
+if [ -f "$VIGILANT" ]; then
+    for f in eslint.config.mjs .dependency-cruiser.js .gitleaks.toml AGENTS.md scripts/quality-check.ts; do
+        if [ -f "$f" ]; then
+            npx tsx "$VIGILANT" --file "$f" --quiet || echo "  [vigilant] warnings em $f"
+        fi
+    done
 fi
 
 echo "--- Typecheck ---"

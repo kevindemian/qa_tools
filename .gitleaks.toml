@@ -1,0 +1,50 @@
+# QA Tools gitleaks configuration
+# Extends gitleaks default rules with project-specific patterns
+
+# ============================================
+# Custom rules for QA Tools domain
+# ============================================
+[[rules]]
+id = "qa-tools-jira-token"
+description = "Jira API token"
+regex = '''(?i)(jira|jira_api|jira_token|jira_key)[\s:=]+['"]([A-Za-z0-9+/=]{20,})['"]'''
+tags = ["jira", "api-token", "qa-tools"]
+
+[[rules]]
+id = "qa-tools-xray-token"
+description = "Xray API token/client ID/secret"
+regex = '''(?i)(xray|xray_client|xray_token|xray_secret|xray_api)[\s:=]+['"]([A-Za-z0-9+/=_-]{20,})['"]'''
+tags = ["xray", "api-token", "qa-tools"]
+
+[[rules]]
+id = "qa-tools-gitlab-token"
+description = "GitLab personal access token"
+regex = '''(?i)(gitlab|gitlab_token|gitlab_pat|gitlab_api)[\s:=]+['"](glpat-[A-Za-z0-9_-]{20,})['"]'''
+tags = ["gitlab", "api-token", "qa-tools"]
+
+[[rules]]
+id = "qa-tools-webhook-secret"
+description = "Webhook secret"
+regex = '''(?i)(webhook_secret|webhook_sig|hook_secret)[\s:=]+['"]([A-Za-z0-9+/=]{16,})['"]'''
+tags = ["webhook", "secret", "qa-tools"]
+
+[[rules]]
+id = "qa-tools-llm-api-key"
+description = "LLM API key"
+regex = '''(?i)(llm_api_key|llm_key|openai_key|anthropic_key|gemini_key|batch_api_key)[\s:=]+['"]([A-Za-z0-9_-]{20,})['"]'''
+tags = ["llm", "api-key", "qa-tools"]
+
+# ============================================
+# Allowlist
+# ============================================
+[allowlist]
+description = "QA Tools gitleaks allowlist"
+paths = [
+    "node_modules/",
+    ".git/",
+    "__snapshots__/",
+    "coverage/",
+    ".audit/",
+    ".llm-cache/",
+    ".qa-tools/",
+]

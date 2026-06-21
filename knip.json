@@ -1,0 +1,25 @@
+{
+    "$schema": "https://unpkg.com/knip@6/schema.json",
+    "entry": [
+        "jira_management/main.ts",
+        "git_triggers/main.ts",
+        "scripts/build.mjs",
+        "scripts/quality-check.ts",
+        "scripts/generate-env-example.ts",
+        "e2e/smoke-github.ts",
+        "e2e/smoke-llm.ts",
+        "e2e/smoke-pipeline.ts"
+    ],
+    "project": [
+        "setup/**/*.ts",
+        "shared/**/*.ts",
+        "jira_management/**/*.ts",
+        "git_triggers/**/*.ts",
+        "e2e/**/*.ts",
+        "scripts/**/*.ts"
+    ],
+    "ignoreDependencies": [],
+    "vitest": {
+        "config": "vitest.config.ts"
+    }
+}
