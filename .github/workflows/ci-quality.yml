@@ -1,0 +1,65 @@
+name: Quality Checks
+
+on:
+    push:
+        branches: [main]
+    pull_request:
+        branches: [main]
+
+jobs:
+    quality:
+        name: Quality
+        runs-on: ubuntu-latest
+        steps:
+            - name: Checkout
+              uses: actions/checkout@v4
+
+            - name: Setup Node
+              uses: actions/setup-node@v4
+              with:
+                  node-version-file: .node-version
+                  cache: npm
+
+            - name: Install
+              run: npm ci
+
+            - name: TypeScript
+              run: npm run typecheck
+
+            - name: Security vigilant scan
+              run: |
+                  VIGILANT="npx tsx scripts/rule-vigilant.ts"
+                  FAIL=0
+                  for f in eslint.config.mjs .dependency-cruiser.js .gitleaks.toml AGENTS.md scripts/quality-check.ts; do
+                    if [ -f "$f" ]; then
+                      COUNT=$($VIGILANT --file "$f" --json | npx tsx -e "import { readFileSync } from 'fs'; const d = JSON.parse(readFileSync(0,'utf-8')); process.stdout.write(String(d.length));")
+                      echo "  $f: $COUNT warning(s)"
+                      [ "$COUNT" -gt 0 ] && FAIL=1
+                    fi
+                  done
+                  [ "$FAIL" -eq 0 ] || exit 1
+
+            - name: Lint
+              run: npm run lint
+
+            - name: Unused exports
+              run: npm run unused-exports
+
+            - name: Dependency cruiser
+              run: npm run depcruise
+
+            - name: Type coverage
+              run: npm run type-coverage
+
+            - name: Leaks
+              run: npm run gitleaks
+
+            - name: OSV scan
+              run: npm run osv-scan
+
+            - name: Snyk test
+              if: env.SNYK_TOKEN != ''
+              run: npm run snyk-test
+
+            - name: Test
+              run: npm test

@@ -1,8 +1,5 @@
 {
     "$schema": "https://opencode.ai/config.json",
-    "plugin": [
-        "~/.config/opencode/plugin/validation_plugin.ts"
-    ],
     "model": "opencode/Big Pickle",
     "small_model": "google/gemini-2.0-flash",
     "instructions": [
@@ -103,16 +100,17 @@
         "grep": "allow",
         "edit": {
             "*": "allow",
+            "/PROJETOS/qa_tools/qa_tools/eslint.config.mjs": "deny",
             "/project/opencode.json": "deny",
             "/project/.opencode/validation.json": "deny",
             "/project/eslint.config.mjs": "deny",
             "/project/tsconfig.json": "deny",
-            "/project/AGENTS.md": "deny",
+            "/project/AGENTS.md": "ask",
             "/project/.opencode/opencode-warden.json": "deny",
             "/project/.opencode/guard/**": "deny",
             "/project/scripts/enforce-quality.ts": "deny",
             "/project/scripts/sync-hooks.sh": "deny",
-            "/project/.config/validation_hook.ts": "deny",
+            "/project/.config/validation_hook.ts": "ask",
             "**/.config/opencode/validation_hook.ts": "deny",
             "**/.config/opencode/plugin/**": "deny",
             "**/.config/opencode/opencode.jsonc": "deny",
