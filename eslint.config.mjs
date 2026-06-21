@@ -1,16 +1,168 @@
 // @ts-check
+import { fileURLToPath } from 'node:url';
+import { dirname } from 'node:path';
 import eslint from '@eslint/js';
 import tseslint from 'typescript-eslint';
 import prettier from 'eslint-config-prettier';
 import security from 'eslint-plugin-security';
+import promise from 'eslint-plugin-promise';
+import vitest from '@vitest/eslint-plugin';
+
+const tsconfigRootDir = dirname(fileURLToPath(import.meta.url));
 
 export default tseslint.config(
+    // Global: set tsconfigRootDir to avoid ambiguity with .opencode/guard/backups/tsconfig.json
+    {
+        languageOptions: {
+            parserOptions: {
+                tsconfigRootDir,
+            },
+        },
+    },
     eslint.configs.recommended,
     ...tseslint.configs.recommendedTypeChecked,
     security.configs.recommended,
+    promise.configs['flat/recommended'],
+    {
+        files: [
+            '**/*.test.ts',
+            '**/*.spec.ts',
+            '**/*.test.tsx',
+            '**/*.spec.tsx',
+            'tests/**/*.{ts,tsx}',
+            '__tests__/**/*.{ts,tsx}',
+        ],
+        plugins: { vitest },
+        languageOptions: {
+            globals: {
+                suite: 'readonly',
+                test: 'readonly',
+                describe: 'readonly',
+                it: 'readonly',
+                expect: 'readonly',
+                assert: 'readonly',
+                vi: 'readonly',
+                beforeAll: 'readonly',
+                afterAll: 'readonly',
+                beforeEach: 'readonly',
+                afterEach: 'readonly',
+                onTestFailed: 'readonly',
+                onTestFinished: 'readonly',
+            },
+        },
+        rules: {
+            'vitest/expect-expect': [
+                'error',
+                {
+                    assertFunctionNames: ['expect', 'testingLibrary.*.findBy*', 'supertest.*.expect'],
+                },
+            ],
+            'vitest/valid-expect': [
+                'error',
+                {
+                    alwaysAwait: true,
+                    asyncMatchers: ['resolves', 'rejects'],
+                    minArgs: 1,
+                    maxArgs: 1,
+                },
+            ],
+            'vitest/valid-title': [
+                'error',
+                {
+                    mustNotMatch: {
+                        it: ['^should', 'Evite começar com "should"'],
+                        test: ['^should', 'Evite começar com "should"'],
+                    },
+                    mustMatch: {
+                        describe: ['^[A-Z]', 'Describe deve começar com maiúscula'],
+                    },
+                },
+            ],
+            'vitest/no-focused-tests': 'error',
+            'vitest/no-disabled-tests': 'error',
+            'vitest/no-identical-title': 'error',
+            'vitest/no-standalone-expect': 'error',
+            'vitest/no-conditional-expect': 'error',
+            'vitest/no-conditional-tests': 'error',
+            'vitest/no-import-node-test': 'error',
+            'vitest/no-test-return-statement': 'error',
+            'vitest/no-test-prefixes': 'error',
+            'vitest/no-alias-methods': 'error',
+            'vitest/no-duplicate-hooks': 'error',
+            'vitest/require-to-throw-message': 'error',
+            'vitest/prefer-strict-equal': 'error',
+            'vitest/require-local-test-context-for-concurrent-snapshots': 'error',
+            'vitest/prefer-hooks-on-top': 'error',
+            'vitest/prefer-hooks-in-order': 'error',
+            'vitest/require-top-level-describe': 'error',
+            'vitest/prefer-lowercase-title': [
+                'error',
+                {
+                    ignore: ['describe'],
+                    allowedPrefixes: ['GET', 'POST', 'PUT', 'DELETE', 'PATCH'],
+                },
+            ],
+            'vitest/prefer-to-be': 'error',
+            'vitest/prefer-to-be-truthy': 'error',
+            'vitest/prefer-to-be-falsy': 'error',
+            'vitest/prefer-to-contain': 'error',
+            'vitest/prefer-to-have-length': 'error',
+            'vitest/prefer-comparison-matcher': 'error',
+            'vitest/prefer-equality-matcher': 'error',
+            'vitest/prefer-called-with': 'error',
+            'vitest/prefer-vi-mocked': 'error',
+            'vitest/prefer-mock-promise-shorthand': 'error',
+            'vitest/prefer-each': 'error',
+            'vitest/prefer-expect-assertions': [
+                'error',
+                {
+                    onlyFunctionsWithAsyncKeyword: true,
+                    onlyFunctionsWithExpectInLoop: true,
+                    onlyFunctionsWithExpectInCallback: true,
+                },
+            ],
+            'vitest/prefer-expect-resolves': 'error',
+            'vitest/prefer-todo': 'error',
+            'vitest/max-expects': ['error', { max: 8 }],
+            'vitest/max-nested-describe': ['error', { max: 3 }],
+            'vitest/no-large-snapshots': [
+                'error',
+                {
+                    maxSize: 50,
+                    inlineMaxSize: 20,
+                    allowedSnapshots: {},
+                },
+            ],
+            'vitest/prefer-snapshot-hint': ['error', 'always'],
+            'vitest/consistent-test-it': [
+                'error',
+                {
+                    fn: 'it',
+                    withinDescribe: 'it',
+                },
+            ],
+            'vitest/padding-around-all': 'error',
+            'vitest/no-restricted-matchers': [
+                'error',
+                {
+                    toMatchSnapshot: 'Use toMatchInlineSnapshot para revisão no PR',
+                    toThrowErrorMatchingSnapshot: 'Use versão inline',
+                },
+            ],
+            'vitest/no-restricted-vi-methods': [
+                'error',
+                {
+                    advanceTimersByTime: 'Use vi.advanceTimersByTimeAsync para async',
+                },
+            ],
+        },
+    },
     {
         languageOptions: {
-            parserOptions: { project: './tsconfig.json' },
+            parserOptions: {
+                project: './tsconfig.json',
+                tsconfigRootDir,
+            },
         },
         rules: {
             '@typescript-eslint/no-explicit-any': ['error', { fixToUnknown: true }],
