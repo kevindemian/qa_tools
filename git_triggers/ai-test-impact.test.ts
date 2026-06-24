@@ -19,7 +19,7 @@ describe('AssessTestImpact', () => {
         vi.clearAllMocks();
     });
 
-    it('should return early when diff is empty', async () => {expect.hasAssertions();
+    it('return early when diff is empty', async () => {expect.hasAssertions();
 
         vi.spyOn(mockProvider, 'getDiff').mockResolvedValue('');
         const result = await assessTestImpact(mockProvider, 'feature/a', 'main');
@@ -28,7 +28,7 @@ describe('AssessTestImpact', () => {
         expect(llmPrompt).not.toHaveBeenCalled();
     });
 
-    it('should call llmPrompt with diff and mapping titles', async () => {expect.hasAssertions();
+    it('call llmPrompt with diff and mapping titles', async () => {expect.hasAssertions();
 
         vi.spyOn(mockProvider, 'getDiff').mockResolvedValue('diff --git a/src/api.ts b/src/api.ts\n+new endpoint');
         vi.spyOn(fs, 'readFileSync').mockReturnValue(
@@ -52,7 +52,7 @@ describe('AssessTestImpact', () => {
         expect(result).toBe('**Risco:** BAIXO. Nenhum teste existente afetado.');
     });
 
-    it('should work without mapping path', async () => {expect.hasAssertions();
+    it('work without mapping path', async () => {expect.hasAssertions();
 
         vi.spyOn(mockProvider, 'getDiff').mockResolvedValue('some diff');
         vi.mocked(llmPrompt).mockResolvedValue('Nenhum teste existente afetado.');
@@ -63,7 +63,7 @@ describe('AssessTestImpact', () => {
         expect(result).toBe('Nenhum teste existente afetado.');
     });
 
-    it('should return empty on llm error', async () => {expect.hasAssertions();
+    it('return empty on llm error', async () => {expect.hasAssertions();
 
         vi.spyOn(mockProvider, 'getDiff').mockResolvedValue('some diff');
         vi.mocked(llmPrompt).mockRejectedValue(new Error('API error'));

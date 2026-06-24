@@ -365,7 +365,7 @@ describe('HTTP Client', () => {
             // to trigger stale entry deletion at t=900000
             await vi.advanceTimersByTimeAsync(900001);
 
-            expect(true).toBe(true);
+            expect(true).toBeTruthy();
         });
     });
 

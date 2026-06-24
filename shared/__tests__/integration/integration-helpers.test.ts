@@ -123,7 +123,7 @@ describe('CleanupTestDir', () => {
         vi.clearAllMocks();
     });
 
-    it('should warn on rmSync error (not silently swallow)', () => {
+    it('warn on rmSync error (not silently swallow)', () => {
         const warnSpy = vi.spyOn(process.stderr, 'write').mockImplementation(() => true);
         mockFs.existsSync.mockReturnValue(true);
         mockFs.rmSync.mockImplementation(() => {
@@ -154,7 +154,7 @@ describe('CleanupTestDir', () => {
         warnSpy.mockRestore();
     });
 
-    it('should silently continue on ENOENT', () => {
+    it('silently continue on ENOENT', () => {
         const warnSpy = vi.spyOn(process.stderr, 'write').mockImplementation(() => true);
         mockFs.existsSync.mockReturnValue(true);
         mockFs.rmSync.mockImplementation(() => {
@@ -205,7 +205,7 @@ describe('ReadFile', () => {
         vi.clearAllMocks();
     });
 
-    it('should return null on ENOENT (not log)', () => {
+    it('return null on ENOENT (not log)', () => {
         const warnSpy = vi.spyOn(process.stderr, 'write').mockImplementation(() => true);
         mockFs.readFileSync.mockImplementation(() => {
             throw Object.assign(new Error('not found'), { code: 'ENOENT' });
@@ -239,7 +239,7 @@ describe('ReadJsonFile', () => {
         vi.clearAllMocks();
     });
 
-    it('should return null on ENOENT (not log)', () => {
+    it('return null on ENOENT (not log)', () => {
         const warnSpy = vi.spyOn(process.stderr, 'write').mockImplementation(() => true);
         mockFs.readFileSync.mockImplementation(() => {
             throw Object.assign(new Error('not found'), { code: 'ENOENT' });
@@ -281,13 +281,13 @@ describe('FileExists', () => {
         vi.clearAllMocks();
     });
 
-    it('should return true when existsSync returns true', () => {
+    it('return true when existsSync returns true', () => {
         mockFs.existsSync.mockReturnValue(true);
 
         expect(fileExists('/tmp', 'file.txt')).toBeTruthy();
     });
 
-    it('should return false when existsSync returns false', () => {
+    it('return false when existsSync returns false', () => {
         mockFs.existsSync.mockReturnValue(false);
 
         expect(fileExists('/tmp', 'missing.txt')).toBeFalsy();
