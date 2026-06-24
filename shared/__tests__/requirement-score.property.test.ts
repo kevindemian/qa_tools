@@ -86,7 +86,8 @@ describe('calculateRequirementScores — property-based', () => {
         fc.assert(
             fc.property(fc.array(AiGenerationRecordArb, { minLength: 0, maxLength: 10 }), (records) => {
                 const result = calculateRequirementScores(records);
-                expect(result.entries.length).toBe(result.totalRequirements);
+
+                expect(result.entries).toHaveLength(result.totalRequirements);
             }),
             { numRuns: 50 },
         );
@@ -114,7 +115,8 @@ describe('calculateRequirementScores — property-based', () => {
                     const prev = result.entries[i - 1];
                     const curr = result.entries[i];
                     if (curr === undefined || prev === undefined) return;
-                    expect(prev.score >= curr.score).toBe(true);
+
+                    expect(prev.score).toBeGreaterThanOrEqual(curr.score);
                 }
             }),
             { numRuns: 50 },
@@ -160,8 +162,10 @@ describe('calculateRequirementScores — property-based', () => {
                     const expectedAvg = Math.round(
                         result.entries.reduce((s, e) => s + e.score, 0) / result.totalRequirements,
                     );
+
                     expect(result.overallScore).toBe(expectedAvg);
                 }
+
                 expect(ValidGrades).toContain(result.overallGrade);
             }),
             { numRuns: 50 },
@@ -172,6 +176,7 @@ describe('calculateRequirementScores — property-based', () => {
         fc.assert(
             fc.property(fc.array(AiGenerationRecordArb, { minLength: 0, maxLength: 10 }), (records) => {
                 const result = calculateRequirementScores(records);
+
                 expect(result.timestamp).toMatch(/^\d{4}-\d{2}-\d{2}T/);
             }),
             { numRuns: 50 },
@@ -180,16 +185,19 @@ describe('calculateRequirementScores — property-based', () => {
 
     it('null/undefined/empty returns empty result', () => {
         const empty = calculateRequirementScores([]);
+
         expect(empty.totalRequirements).toBe(0);
         expect(empty.overallScore).toBe(0);
         expect(empty.overallGrade).toBe('F');
         expect(empty.entries).toEqual([]);
 
         const nullResult = calculateRequirementScores(null);
+
         expect(nullResult.totalRequirements).toBe(0);
         expect(nullResult.overallScore).toBe(0);
 
         const undefinedResult = calculateRequirementScores(undefined);
+
         expect(undefinedResult.totalRequirements).toBe(0);
         expect(undefinedResult.overallScore).toBe(0);
     });
@@ -201,6 +209,7 @@ describe('generateRequirementScoreHtml — property-based', () => {
             fc.property(fc.array(AiGenerationRecordArb, { minLength: 0, maxLength: 8 }), (records) => {
                 const result = calculateRequirementScores(records);
                 const html = generateRequirementScoreHtml(result);
+
                 expect(html).toContain('<!DOCTYPE html>');
                 expect(html).toContain('</html>');
             }),

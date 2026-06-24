@@ -46,6 +46,7 @@ describe('Integration: Flakiness Dashboard (FT-19)', () => {
             const { generateFlakinessHtml } = await import('../../flakiness-dashboard.js');
             const entries = makeEntries();
             const html = generateFlakinessHtml(entries, 'Flakiness Report');
+
             expect(html).toContain('Flakiness Report');
             expect(html).toContain('Login test');
             expect(html).toContain('50%');
@@ -61,6 +62,7 @@ describe('Integration: Flakiness Dashboard (FT-19)', () => {
                 { title: 'Stable test', passCount: 99, failCount: 1, skipCount: 0, totalRuns: 100, rate: 0.01 },
             ];
             const html = generateFlakinessHtml(entries);
+
             expect(html).toContain('No tests exceed');
             expect(html).toContain('0');
         });
@@ -70,6 +72,7 @@ describe('Integration: Flakiness Dashboard (FT-19)', () => {
         it('renders custom title in heading', async () => {
             const { generateFlakinessHtml } = await import('../../flakiness-dashboard.js');
             const html = generateFlakinessHtml([], 'My Dashboard');
+
             expect(html).toContain('My Dashboard');
         });
     });
@@ -78,6 +81,7 @@ describe('Integration: Flakiness Dashboard (FT-19)', () => {
         it('includes theme toggle and dark mode CSS', async () => {
             const { generateFlakinessHtml } = await import('../../flakiness-dashboard.js');
             const html = generateFlakinessHtml([]);
+
             expect(html).toContain('qa-report-theme');
             expect(html).toContain('--color-surface-page');
             expect(html).toContain('html.dark');
@@ -94,6 +98,7 @@ describe('Integration: Flakiness Dashboard (FT-19)', () => {
             const { rootLogger } = await import('../../logger.js');
             const { generateFlakinessHtml } = await import('../../flakiness-dashboard.js');
             const html = generateFlakinessHtml([]);
+
             expect(html).toContain('Error generating dashboard');
             expect(rootLogger['error']).toHaveBeenCalled();
         });
@@ -108,6 +113,7 @@ describe('Integration: Flakiness Dashboard (FT-19)', () => {
                 { title: 'NegInf-test', passCount: 10, failCount: 0, skipCount: 0, totalRuns: 10, rate: -Infinity },
             ];
             const html = generateFlakinessHtml(entries);
+
             expect(html).toContain('<!DOCTYPE html>');
             expect(html).not.toContain('NaN');
             expect(html).not.toContain('Infinity');

@@ -3,6 +3,7 @@ import { createMockContext } from './context-factory.js';
 describe('createMockContext', () => {
     it('returns a mock with all required fields', () => {
         const ctx = createMockContext();
+
         expect(ctx.jiraResource).toBeDefined();
         expect(ctx.jiraResourceXray).toBeDefined();
         expect(ctx.linkManager).toBeDefined();
@@ -16,27 +17,31 @@ describe('createMockContext', () => {
 
     it('sub-resources are mocked with vi.fn()', () => {
         const ctx = createMockContext();
+
         expect(typeof ctx.jiraResource.getJiraResource).toBe('function');
         expect(typeof ctx.linkManager.linkIssues).toBe('function');
         expect(typeof ctx.csvResource.readCsvFromString).toBe('function');
     });
 
-    it('SessionContext has default values', () => {
+    it('sessionContext has default values', () => {
         const ctx = createMockContext();
+
         expect(ctx.ctx.project_name).toBe('TEST');
-        expect(ctx.ctx.isBusy).toBe(false);
+        expect(ctx.ctx.isBusy).toBeFalsy();
         expect(ctx.ctx.results).toEqual([]);
         expect(typeof ctx.ctx.pushHistory).toBe('function');
     });
 
     it('packageManager is undefined by default', () => {
         const ctx = createMockContext();
+
         expect(ctx.packageManager).toBeUndefined();
     });
 
     it('merges overrides correctly', () => {
         const customPush = vi.fn();
         const ctx = createMockContext({ pushHistory: customPush });
+
         expect(ctx.pushHistory).toBe(customPush);
     });
 
@@ -61,6 +66,7 @@ describe('createMockContext', () => {
                 buildContextLine: vi.fn(),
             },
         });
+
         expect(ctx.ctx.project_name).toBe('OVERRIDE');
     });
 });

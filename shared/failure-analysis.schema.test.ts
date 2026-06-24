@@ -42,6 +42,7 @@ describe('FailureAnalysisTestSchema', () => {
             severity: 'high',
             recommendation: 'Fix the assertion logic in the login component.',
         };
+
         expect(FailureAnalysisTestSchema.parse(data)).toEqual(data);
     });
 
@@ -79,6 +80,7 @@ describe('FailureAnalysisSchema', () => {
                 },
             ],
         };
+
         expect(FailureAnalysisSchema.parse(data)).toEqual(data);
     });
 
@@ -100,6 +102,7 @@ describe('FailureAnalysisSchema', () => {
             ],
         };
         const result = FailureAnalysisSchema.parse(data);
+
         expect(result.tests).toHaveLength(2);
     });
 

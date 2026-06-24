@@ -54,6 +54,7 @@ describe('LinkTypeManager', () => {
             mockJiraResource.getJiraResource.mockResolvedValue({ issueLinkTypes: fakeTypes });
             const first = await manager.getIssueLinkTypes();
             const second = await manager.getIssueLinkTypes();
+
             expect(first).toBe(fakeTypes);
             expect(second).toBe(fakeTypes);
             expect(mockJiraResource.getJiraResource).toHaveBeenCalledTimes(1);
@@ -63,6 +64,7 @@ describe('LinkTypeManager', () => {
             const fakeTypes = [{ id: '10200', name: 'Tested by' }];
             mockJiraResource.getJiraResource.mockResolvedValue({ issueLinkTypes: fakeTypes });
             await manager.getIssueLinkTypes();
+
             expect(fs.writeFileSync).toHaveBeenCalledWith(CACHE_PATH, JSON.stringify(fakeTypes), 'utf8');
         });
 
@@ -72,6 +74,7 @@ describe('LinkTypeManager', () => {
             vi.spyOn(fs, 'existsSync').mockReturnValue(true);
             vi.spyOn(fs, 'readFileSync').mockReturnValue(JSON.stringify(cachedTypes));
             const result = await manager.getIssueLinkTypes();
+
             expect(result).toEqual(cachedTypes);
         });
 
@@ -79,6 +82,7 @@ describe('LinkTypeManager', () => {
             mockJiraResource.getJiraResource.mockRejectedValue(new Error('API down'));
             vi.spyOn(fs, 'existsSync').mockReturnValue(false);
             const result = await manager.getIssueLinkTypes();
+
             expect(result).toHaveLength(3);
             expect(nonNull(result[0]).name).toBe('Relates');
         });
@@ -90,6 +94,7 @@ describe('LinkTypeManager', () => {
                 throw new Error('Disk full');
             });
             await manager.getIssueLinkTypes();
+
             expect(rootLoggerWarnSpy).toHaveBeenCalledWith(expect.stringContaining('Falha ao escrever cache'));
         });
 
@@ -98,6 +103,7 @@ describe('LinkTypeManager', () => {
             vi.spyOn(fs, 'existsSync').mockReturnValue(true);
             vi.spyOn(fs, 'readFileSync').mockReturnValue('invalid json');
             const result = await manager.getIssueLinkTypes();
+
             expect(rootLoggerWarnSpy).toHaveBeenCalledWith(expect.stringContaining('Falha ao ler cache'));
             expect(result).toHaveLength(3);
             expect(nonNull(result[0]).name).toBe('Relates');
@@ -115,31 +121,37 @@ describe('LinkTypeManager', () => {
 
         it('matches by name', async () => {
             const id = await manager.resolveLinkTypeId('Tests');
+
             expect(id).toBe('200');
         });
 
         it('matches by inward', async () => {
             const id = await manager.resolveLinkTypeId('is tested by');
+
             expect(id).toBe('200');
         });
 
         it('matches by outward', async () => {
             const id = await manager.resolveLinkTypeId('tests');
+
             expect(id).toBe('200');
         });
 
         it('is case insensitive', async () => {
             const id = await manager.resolveLinkTypeId('TESTS');
+
             expect(id).toBe('200');
         });
 
         it('trims whitespace', async () => {
             const id = await manager.resolveLinkTypeId('  Tests  ');
+
             expect(id).toBe('200');
         });
 
         it('falls back to 11701 when no match', async () => {
             const id = await manager.resolveLinkTypeId('nonexistent');
+
             expect(id).toBe('11701');
         });
     });

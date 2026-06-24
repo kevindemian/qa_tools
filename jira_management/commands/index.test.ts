@@ -31,23 +31,27 @@ const KNOWN_CASES = [
 describe('getHandler', () => {
     it('returns a handler function for known case numbers', () => {
         const handler = getHandler('1');
+
         expect(handler).toBeInstanceOf(Function);
     });
 
     it('returns a handler for each known case', () => {
         for (const num of KNOWN_CASES) {
             const h = getHandler(num);
+
             expect(h).toBeInstanceOf(Function);
         }
     });
 
     it('returns null for unknown case number', () => {
         const handler = getHandler('99');
+
         expect(handler).toBeNull();
     });
 
     it('returns null for empty string', () => {
         const handler = getHandler('');
+
         expect(handler).toBeNull();
     });
 });
@@ -59,7 +63,8 @@ describe('handler contract (bidirectional)', () => {
         for (const num of KNOWN_CASES) {
             const filename = `case${String(num).padStart(2, '0')}.ts`;
             const filePath = path.join(caseDir, filename);
-            expect(fs.existsSync(filePath)).toBe(true);
+
+            expect(fs.existsSync(filePath)).toBeTruthy();
         }
     });
 
@@ -68,6 +73,7 @@ describe('handler contract (bidirectional)', () => {
         for (const file of files) {
             const rawNum = file.match(/^case(\d+)\.ts$/)?.[1] || '';
             const handler = getHandler(rawNum) || getHandler(rawNum.replace(/^0+/, '') || '0');
+
             expect(handler).toBeInstanceOf(Function);
         }
     });
@@ -78,6 +84,7 @@ describe('handler contract (bidirectional)', () => {
             const mod = await vi.importActual<{ default: { handler: (...args: unknown[]) => unknown } }>(
                 `./case${padded}`,
             );
+
             expect(mod.default).toHaveProperty('handler');
             expect(mod.default.handler).toBeInstanceOf(Function);
         }

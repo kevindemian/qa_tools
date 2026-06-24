@@ -107,6 +107,7 @@ describe('_checkResumeCheckpoint', () => {
         vi.spyOn(STATE, 'load').mockReturnValue({ _checkpoint: makeCp() });
         vi.spyOn(PROMPT, 'confirm').mockReturnValue(true);
         const result = _checkResumeCheckpoint(tests, '/path/test.csv', 'csv', 'TESTPROJ');
+
         expect(result.resumeFrom).toBe(2);
         expect(result.inMemoryTasksId).toEqual(['T-1', 'T-2']);
         expect(result.inMemoryTasksText).toEqual(['Test 1', 'Test 2']);
@@ -116,6 +117,7 @@ describe('_checkResumeCheckpoint', () => {
         const oldTs = new Date(Date.now() - 25 * 60 * 60 * 1000).toISOString();
         vi.spyOn(STATE, 'load').mockReturnValue({ _checkpoint: makeCp({ ts: oldTs }) });
         const result = _checkResumeCheckpoint(tests, '/path/test.csv', 'csv', 'TESTPROJ');
+
         expect(result.resumeFrom).toBe(0);
         expect(result.inMemoryTasksId).toEqual([]);
     });
@@ -124,6 +126,7 @@ describe('_checkResumeCheckpoint', () => {
         vi.spyOn(STATE, 'load').mockReturnValue({ _checkpoint: makeCp() });
         vi.spyOn(PROMPT, 'confirm').mockReturnValue(false);
         const result = _checkResumeCheckpoint(tests, '/path/test.csv', 'csv', 'TESTPROJ');
+
         expect(result.resumeFrom).toBe(0);
         expect(result.inMemoryTasksId).toEqual([]);
     });
@@ -132,12 +135,14 @@ describe('_checkResumeCheckpoint', () => {
         const fullDone = Array.from({ length: 10 }, (_, i) => ({ key: `T-${i + 1}`, title: `Test ${i + 1}` }));
         vi.spyOn(STATE, 'load').mockReturnValue({ _checkpoint: makeCp({ done: fullDone }) });
         const result = _checkResumeCheckpoint(tests, '/path/test.csv', 'csv', 'TESTPROJ');
+
         expect(result.resumeFrom).toBe(0);
     });
 
     it('no matching checkpoint: sourcePath differs -> skip', () => {
         vi.spyOn(STATE, 'load').mockReturnValue({ _checkpoint: makeCp() });
         const result = _checkResumeCheckpoint(tests, '/different/path.csv', 'csv', 'TESTPROJ');
+
         expect(result.resumeFrom).toBe(0);
     });
 });
@@ -152,6 +157,7 @@ describe('filterTests', () => {
     it('no matches -> warn + null', () => {
         vi.spyOn(PROMPT, 'prompt').mockReturnValue('zzzzzz');
         const result = filterTests(tests);
+
         expect(result).toBeNull();
         expect(PROMPT.warn).toHaveBeenCalledWith(expect.stringContaining('Nenhum teste'));
     });
@@ -160,6 +166,7 @@ describe('filterTests', () => {
         vi.spyOn(PROMPT, 'prompt').mockReturnValue('Test');
         vi.spyOn(PROMPT, 'confirm').mockReturnValue(false);
         const result = filterTests(tests);
+
         expect(result).toBeNull();
         expect(PROMPT.warn).toHaveBeenCalledWith(expect.stringContaining('Operação cancelada'));
     });
@@ -168,6 +175,7 @@ describe('filterTests', () => {
         vi.spyOn(PROMPT, 'prompt').mockReturnValue('Test 1');
         vi.spyOn(PROMPT, 'confirm').mockReturnValue(true);
         const result = filterTests(tests);
+
         expect(result).toHaveLength(1);
         expect(nonNull(nonNull(result)[0]).title).toBe('Test 1');
     });
@@ -185,6 +193,7 @@ describe('validateImportBatch', () => {
             steps: [{ fields: { Action: '' } }],
         }));
         const result = validateImportBatch(testsWithWarnings, '/path.csv', 'csv', 'TESTPROJ');
+
         expect(result).toBeDefined();
         expect(nonNull(result).resumeFrom).toBe(0);
         expect(PROMPT.warn).toHaveBeenCalledWith(expect.stringContaining('Avisos'));
@@ -196,12 +205,14 @@ describe('validateImportBatch', () => {
             steps: [{ fields: { Action: '' } }],
         }));
         validateImportBatch(manyWarnings, '/path.csv', 'csv', 'TESTPROJ');
+
         expect(PROMPT.warn).toHaveBeenCalledWith(expect.stringContaining('e mais'));
     });
 
     it('errors displayed -> returns undefined', () => {
         const invalidTests = [{ title: '', steps: [{ fields: { Action: 'x' } }] }];
         const result = validateImportBatch(invalidTests, '/path.csv', 'csv', 'TESTPROJ');
+
         expect(result).toBeUndefined();
         expect(PROMPT.error).toHaveBeenCalledWith(expect.stringContaining('Erros'));
     });
@@ -231,6 +242,7 @@ describe('generatePreviewMarkdown', () => {
 
     it('renders test sections with headings', () => {
         const md = generatePreviewMarkdown(tests);
+
         expect(md).toContain('## Test 1 — Login test');
         expect(md).toContain('## Test 2 — Logout test');
         expect(md).toContain('---');
@@ -238,12 +250,14 @@ describe('generatePreviewMarkdown', () => {
 
     it('includes description', () => {
         const md = generatePreviewMarkdown(tests);
+
         expect(md).toContain('**Description:** Verifica login valido');
         expect(md).toContain('**Description:** —');
     });
 
     it('includes metadata (group, precondition, links)', () => {
         const md = generatePreviewMarkdown(tests);
+
         expect(md).toContain('**Group:** Auth');
         expect(md).toContain('**Pre-cond:** Usuario existe');
         expect(md).toContain('**Links:** US-123');
@@ -251,6 +265,7 @@ describe('generatePreviewMarkdown', () => {
 
     it('renders steps in Gira-like format (bullet per field)', () => {
         const md = generatePreviewMarkdown(tests);
+
         expect(md).toContain('### Steps');
         expect(md).toContain('**Step 1**');
         expect(md).toContain('- **Action:** a');
@@ -265,18 +280,21 @@ describe('generatePreviewMarkdown', () => {
 
     it('renders Data field only when present', () => {
         const md = generatePreviewMarkdown(tests);
+
         expect(md).not.toContain('- **Data:** \n');
     });
 
     it('shows fallback for empty descriptions', () => {
         const noDesc = [{ title: 'No desc', steps: [{ fields: { Action: 'a' } }] }];
         const md = generatePreviewMarkdown(noDesc);
+
         expect(md).toContain('**Description:** —');
     });
 
     it('shows "No steps defined" when steps array is empty', () => {
         const noSteps = [{ title: 'Empty', steps: [] }];
         const md = generatePreviewMarkdown(noSteps);
+
         expect(md).toContain('_No steps defined._');
     });
 
@@ -285,11 +303,13 @@ describe('generatePreviewMarkdown', () => {
 
         it('includes document title when provided', () => {
             const md = generatePreviewMarkdown(single, { documentTitle: 'My Doc' });
+
             expect(md).toMatch(/^# My Doc/);
         });
 
         it('includes timestamp when showTimestamp is true', () => {
             const md = generatePreviewMarkdown(single, { showTimestamp: true });
+
             expect(md).toContain('*Generated on ');
         });
 
@@ -299,12 +319,14 @@ describe('generatePreviewMarkdown', () => {
                 totalSteps: 1,
                 groupsCount: 0,
             });
+
             expect(md).toContain('1 teste(s), 1 step(s)');
             expect(md).toContain('**Labels:** smoke, regression');
         });
 
         it('includes keys in headings when provided', () => {
             const md = generatePreviewMarkdown(single, { keys: ['K-100'] });
+
             expect(md).toContain('## K-100 — TC1');
         });
     });
@@ -333,6 +355,7 @@ describe('parseJsonTests', () => {
 
         const warnSpy = vi.spyOn(rootLogger, 'warn');
         const result = parseJsonTests(tmp);
+
         expect(result).toHaveLength(2);
         expect(nonNull(nonNull(result[0]).steps[0]).fields['Expected Result']).toBe('Result1');
         expect(nonNull(nonNull(result[1]).steps[0]).fields['Expected Result']).toBe('Result2');
@@ -354,6 +377,7 @@ describe('parseJsonTests', () => {
         actualFs.writeFileSync(tmp, jsonContent, 'utf-8');
 
         const result = parseJsonTests(tmp);
+
         expect(nonNull(nonNull(result[0]).steps[0]).fields['Expected Result']).toBe('Canonical');
 
         actualFs.unlinkSync(tmp);
@@ -371,6 +395,7 @@ describe('parseJsonTests', () => {
         actualFs.writeFileSync(tmp, jsonContent, 'utf-8');
 
         const result = parseJsonTests(tmp);
+
         expect(nonNull(nonNull(result[0]).steps[0]).fields['Expected Result']).toBe('');
 
         actualFs.unlinkSync(tmp);
@@ -397,10 +422,13 @@ describe('showPreview', () => {
 
     it('prints title and generates MD files', async () => {
         await showPreview(tests, ['smoke'], 2, 1, mockOpen);
+
         expect(PROMPT.title).toHaveBeenCalledWith('Preview dos testes a serem criados');
         expect(mockMdToHtml).toHaveBeenCalledWith(expect.any(String), 'Preview — QA Tools');
         expect(FS.writeFileSync).toHaveBeenCalledTimes(2);
+
         const calls = vi.spyOn(FS, 'writeFileSync').mock.calls;
+
         expect(nonNull(calls[0])[0]).toContain('qa-preview.md');
         expect(nonNull(calls[1])[0]).toContain('qa-preview.html');
     });
@@ -408,6 +436,7 @@ describe('showPreview', () => {
     it('opens browser when available', async () => {
         mockOpen.mockResolvedValue(true);
         await showPreview(tests, ['smoke'], 2, 1, mockOpen);
+
         expect(mockOpen).toHaveBeenCalledTimes(1);
         expect(PROMPT.info).toHaveBeenCalledWith(expect.stringContaining('aberto no navegador'));
         expect(PROMPT.print).not.toHaveBeenCalled();
@@ -416,6 +445,7 @@ describe('showPreview', () => {
     it('falls back to terminal when browser unavailable', async () => {
         mockOpen.mockResolvedValue(false);
         await showPreview(tests, ['smoke'], 2, 1, mockOpen);
+
         expect(PROMPT.print).toHaveBeenCalled();
         expect(mockMd).toHaveBeenCalled();
         expect(PROMPT.divider).toHaveBeenCalled();
@@ -424,10 +454,13 @@ describe('showPreview', () => {
 
     it('saves both .md and .html files', async () => {
         await showPreview(tests, ['smoke'], 2, 1, mockOpen);
+
         expect(FS.writeFileSync).toHaveBeenCalledTimes(2);
+
         const calls = vi.spyOn(FS, 'writeFileSync').mock.calls.map((c) => c[0] as string);
-        expect(calls.some((p) => p.endsWith('.md'))).toBe(true);
-        expect(calls.some((p) => p.endsWith('.html'))).toBe(true);
+
+        expect(calls.some((p) => p.endsWith('.md'))).toBeTruthy();
+        expect(calls.some((p) => p.endsWith('.html'))).toBeTruthy();
     });
 });
 
@@ -485,6 +518,7 @@ describe('csv -> preview pipeline (e2e)', async () => {
         fs.writeFileSync(tmp, buildFixtureCsv(), 'utf-8');
 
         const tests = await csvResource.readBulkCsv(tmp);
+
         expect(tests).toHaveLength(2);
 
         const totalSteps = tests.reduce((s: number, t: { steps: unknown[] }) => s + t.steps.length, 0);
@@ -518,10 +552,12 @@ describe('csv -> preview pipeline (e2e)', async () => {
         fs.writeFileSync(tmp, buildGoldenCsv(), 'utf-8');
 
         const tests = await csvResource.readBulkCsv(tmp);
+
         expect(tests).toHaveLength(1);
         expect(nonNull(tests[0]).title).toBe('Golden test');
 
         const md = generatePreviewMarkdown(tests);
+
         expect(md).toContain('Golden test');
         expect(md).toContain('- **Expected Result:** result1');
         expect(loggerWarn).not.toHaveBeenCalledWith(expect.stringContaining('normalizada'));
@@ -535,6 +571,7 @@ describe('csv -> preview pipeline (e2e)', async () => {
         fs.writeFileSync(tmp, 'Title,Action,Data,Expected Result\nTC1,Step1,,Result1\n', 'utf-8');
 
         const tests = await csvResource.readBulkCsv(tmp);
+
         expect(tests).toHaveLength(0);
         expect(loggerWarn).toHaveBeenCalledWith(expect.stringContaining('formato flat'));
 

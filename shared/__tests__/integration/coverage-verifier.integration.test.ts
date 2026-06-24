@@ -61,12 +61,14 @@ describe('FT-38a: recalculateCoverage full pipeline', () => {
             { coverageTable: { coverage: 50 } },
             makeCtx('Acceptance Criteria:\n- Test'),
         );
+
         expect(result.realCoverage).toBe(0);
         expect(result.totalCriteria).toBeGreaterThan(0);
     });
 
     it('handles empty artifact object', () => {
         const result = recalculateCoverage({}, makeCtx('Acceptance Criteria:\n- Test'));
+
         expect(result.realCoverage).toBe(0);
         expect(result.declaredCoverage).toBeNull();
     });
@@ -76,6 +78,7 @@ describe('FT-38a: recalculateCoverage full pipeline', () => {
             { tests: [{ title: 'Test A' }], coverageTable: { coverage: 75 } },
             makeCtx('Acceptance Criteria:\n- Test'),
         );
+
         expect(result.declaredCoverage).toBe(75);
     });
 
@@ -84,6 +87,7 @@ describe('FT-38a: recalculateCoverage full pipeline', () => {
             { tests: [{ title: 'Test A' }], coverageTable: { coverage: NaN } },
             makeCtx('Acceptance Criteria:\n- Test'),
         );
+
         expect(result.declaredCoverage).toBeNull();
         expect(result.coverageDelta).toBe(0);
     });

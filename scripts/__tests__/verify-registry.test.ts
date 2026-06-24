@@ -60,6 +60,7 @@ describe('verify-registry', () => {
 
         const mod = await import('../verify-registry.js');
         const errors = mod.validateRegistry();
+
         expect(errors).toHaveLength(0);
     });
 
@@ -68,6 +69,7 @@ describe('verify-registry', () => {
 
         const mod = await import('../verify-registry.js');
         const errors = mod.validateRegistry();
+
         expect(errors.length).toBeGreaterThan(0);
         expect(errors[0]?.message).toContain('Invalid JSON');
     });
@@ -77,6 +79,7 @@ describe('verify-registry', () => {
 
         const mod = await import('../verify-registry.js');
         const errors = mod.validateRegistry();
+
         expect(errors.length).toBeGreaterThan(0);
     });
 
@@ -87,6 +90,7 @@ describe('verify-registry', () => {
 
         const mod = await import('../verify-registry.js');
         const errors = mod.validateRegistry();
+
         expect(errors.length).toBeGreaterThan(0);
     });
 
@@ -95,6 +99,7 @@ describe('verify-registry', () => {
 
         const mod = await import('../verify-registry.js');
         const errors = mod.validateRegistry();
+
         expect(errors.length).toBeGreaterThan(0);
     });
 
@@ -116,7 +121,8 @@ describe('verify-registry', () => {
 
         const mod = await import('../verify-registry.js');
         const errors = mod.validateRegistry();
-        expect(errors.some((e: { message: string }) => e.message.includes('Invalid tier'))).toBe(true);
+
+        expect(errors.some((e: { message: string }) => e.message.includes('Invalid tier'))).toBeTruthy();
     });
 
     it('reports error when capabilities is not an array', async () => {
@@ -138,7 +144,8 @@ describe('verify-registry', () => {
 
         const mod = await import('../verify-registry.js');
         const errors = mod.validateRegistry();
-        expect(errors.some((e: { message: string }) => e.message.includes('array of strings'))).toBe(true);
+
+        expect(errors.some((e: { message: string }) => e.message.includes('array of strings'))).toBeTruthy();
     });
 
     it('reports error when capabilities items are not strings', async () => {
@@ -160,7 +167,8 @@ describe('verify-registry', () => {
 
         const mod = await import('../verify-registry.js');
         const errors = mod.validateRegistry();
-        expect(errors.some((e: { message: string }) => e.message.includes('array of strings'))).toBe(true);
+
+        expect(errors.some((e: { message: string }) => e.message.includes('array of strings'))).toBeTruthy();
     });
 
     it('handles file read error gracefully', async () => {
@@ -170,7 +178,8 @@ describe('verify-registry', () => {
 
         const mod = await import('../verify-registry.js');
         const errors = mod.validateRegistry();
-        expect(errors.some((e: { message: string }) => e.message.includes('Cannot read'))).toBe(true);
+
+        expect(errors.some((e: { message: string }) => e.message.includes('Cannot read'))).toBeTruthy();
     });
 
     it('accepts empty capabilities array', async () => {
@@ -192,6 +201,7 @@ describe('verify-registry', () => {
 
         const mod = await import('../verify-registry.js');
         const errors = mod.validateRegistry();
+
         expect(errors).toHaveLength(0);
     });
 });

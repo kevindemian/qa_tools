@@ -71,6 +71,7 @@ const EMPTY_STRING = '';
 describe('generatePostProcessWorkflowYaml', () => {
     it('returns a valid YAML string', () => {
         const yaml = generatePostProcessWorkflowYaml({ projectName: 'my-project' });
+
         expect(yaml).toBeTypeOf('string');
         expect(yaml.length).toBeGreaterThan(100);
         expect(yaml).toContain('name: QA Post-Process');
@@ -80,11 +81,13 @@ describe('generatePostProcessWorkflowYaml', () => {
 
     it('includes the project name in inputs', () => {
         const yaml = generatePostProcessWorkflowYaml({ projectName: 'my-project' });
+
         expect(yaml).toContain('project-name:');
     });
 
     it('uses defaults for CTRF path, node version, install command', () => {
         const yaml = generatePostProcessWorkflowYaml({ projectName: 'p' });
+
         expect(yaml).toContain('reports/ctrf-report.json');
         expect(yaml).toContain('node-version: 22');
         expect(yaml).toContain('npm ci');
@@ -95,6 +98,7 @@ describe('generatePostProcessWorkflowYaml', () => {
             projectName: 'p',
             ctrfPath: 'custom/ctrf.json',
         });
+
         expect(yaml).toContain('custom/ctrf.json');
     });
 
@@ -103,6 +107,7 @@ describe('generatePostProcessWorkflowYaml', () => {
             projectName: 'p',
             nodeVersion: '20',
         });
+
         expect(yaml).toContain('node-version: 20');
     });
 
@@ -111,23 +116,27 @@ describe('generatePostProcessWorkflowYaml', () => {
             projectName: 'p',
             installCmd: 'pnpm install --frozen-lockfile',
         });
+
         expect(yaml).toContain('pnpm install --frozen-lockfile');
     });
 
     it('includes the CTRF existence check shell guard', () => {
         const yaml = generatePostProcessWorkflowYaml({ projectName: 'p' });
+
         expect(yaml).toContain('if [ ! -f "${{ inputs.ctrf-path }}" ]; then');
         expect(yaml).toContain('::warning::CTRF report not found');
     });
 
     it('includes artifact upload step', () => {
         const yaml = generatePostProcessWorkflowYaml({ projectName: 'p' });
+
         expect(yaml).toContain('actions/upload-artifact@v4');
         expect(yaml).toContain('pr-report-html');
     });
 
     it('references shared/pr-report-core.ts in run command', () => {
         const yaml = generatePostProcessWorkflowYaml({ projectName: 'p' });
+
         expect(yaml).toContain('shared/pr-report-core.ts');
         expect(yaml).toContain('--project ${{ inputs.project-name }}');
     });
@@ -154,6 +163,7 @@ describe('extractFirstJobName', () => {
 
     it('extracts name even with unusual job name', () => {
         const yml = 'name: CI\n\njobs:\n  qa-tools:\n    runs-on: ubuntu-latest\n';
+
         expect(extractFirstJobName(yml)).toBe('qa-tools');
     });
 });
@@ -163,6 +173,7 @@ describe('extractFirstJobName', () => {
 describe('injectPostProcessJob', () => {
     it('injects post-process job when not present', () => {
         const result = injectPostProcessJob(SIMPLE_CI_YML, 'my-project');
+
         expect(result).toContain('post-process:');
         expect(result).toContain('if: always()');
         expect(result).toContain('needs: [test]');
@@ -172,6 +183,7 @@ describe('injectPostProcessJob', () => {
 
     it('preserves all existing content', () => {
         const result = injectPostProcessJob(SIMPLE_CI_YML, 'my-project');
+
         expect(result).toContain('name: CI');
         expect(result).toContain('on: [push]');
         expect(result).toContain('test:');
@@ -180,22 +192,26 @@ describe('injectPostProcessJob', () => {
 
     it('is idempotent — does not inject when post-process already exists', () => {
         const result = injectPostProcessJob(CI_ALREADY_HAS_POST_PROCESS, 'my-project');
+
         expect(result).toBe(CI_ALREADY_HAS_POST_PROCESS);
     });
 
     it('uses first job name for needs: in multi-job setup', () => {
         const result = injectPostProcessJob(CI_WITH_MULTIPLE_JOBS, 'p');
+
         expect(result).toContain('needs: [lint]');
     });
 
     it('handles empty content gracefully', () => {
         const result = injectPostProcessJob('', 'p');
+
         expect(result).toBeTypeOf('string');
         expect(result).toContain('post-process:');
     });
 
     it('handles content without jobs section', () => {
         const result = injectPostProcessJob(NO_JOBS_CI_YML, 'p');
+
         expect(result).toContain('post-process:');
         expect(result).toContain('needs: [test]');
     });

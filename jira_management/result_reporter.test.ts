@@ -87,6 +87,7 @@ describe('matchResultsToTests', () => {
             { title: 'TC02 - Login invalido', state: 'failed' as const, duration: 200 },
         ];
         const result = matchResultsToTests(results, mappingPath);
+
         expect(result.matched).toHaveLength(2);
         expect(nonNull(result.matched[0]).key).toBe('TEST-1');
         expect(nonNull(result.matched[0]).status).toBe('passed');
@@ -98,6 +99,7 @@ describe('matchResultsToTests', () => {
     it('flags unmatched titles', () => {
         const results = [{ title: 'TC99 - Unknown', state: 'passed' as const, duration: 100 }];
         const result = matchResultsToTests(results, mappingPath);
+
         expect(result.matched).toHaveLength(0);
         expect(result.unmatched).toHaveLength(1);
         expect(nonNull(result.unmatched[0]).title).toBe('TC99 - Unknown');
@@ -110,6 +112,7 @@ describe('matchResultsToTests', () => {
             { title: 'Extra', state: 'passed' as const, duration: 100 },
         ];
         const result = matchResultsToTests(results, mappingPath);
+
         expect(result.stats.passed).toBe(1);
         expect(result.stats.failed).toBe(1);
         expect(result.stats.skipped).toBe(0);
@@ -118,12 +121,14 @@ describe('matchResultsToTests', () => {
 
     it('returns empty for missing mapping file', () => {
         const result = matchResultsToTests([], '/nonexistent.json');
+
         expect(result.matched).toEqual([]);
     });
 
     it('performs fuzzy match when title differs slightly', () => {
         const results = [{ title: 'Login valido', state: 'passed' as const, duration: 100 }];
         const result = matchResultsToTests(results, mappingPath);
+
         expect(result.matched).toHaveLength(1);
         expect(nonNull(result.matched[0]).key).toBe('TEST-1');
     });
@@ -133,6 +138,7 @@ describe('matchResultsToTests', () => {
         fs.writeFileSync(emptyMappingPath, JSON.stringify({ tests: [] }), 'utf8');
 
         const result = matchResultsToTests([], emptyMappingPath);
+
         expect(result.stats.total).toBe(0);
         expect(result.matched).toEqual([]);
         expect(rootLogger['warn']).toHaveBeenCalledWith('Mapping JSON vazio');
@@ -141,6 +147,7 @@ describe('matchResultsToTests', () => {
     it('returns null for empty/undefined title in _fuzzyMatch', () => {
         const results = [{ title: '', state: 'passed' as const, duration: 100 }];
         const result = matchResultsToTests(results, mappingPath);
+
         expect(result.unmatched).toHaveLength(1);
         expect(nonNull(result.unmatched[0]).title).toBe('');
     });
@@ -197,7 +204,9 @@ describe('createTestExecutionFromResults', () => {
         expect(result.passed).toBe(1);
         expect(result.failed).toBe(1);
         expect(jiraResource['postJiraResource']).toHaveBeenCalledWith('issue', expect.anything());
+
         const [, postArg] = nonNull(jiraResource.postJiraResource.mock.calls[0]);
+
         expect(postArg).toHaveProperty('fields.summary', expect.stringContaining('Results:'));
     });
 
@@ -226,9 +235,11 @@ describe('createTestExecutionFromResults', () => {
         expect(result.key).toBe('EXEC-2');
         expect(result.passed).toBe(1);
         expect(result.skipped).toBe(1);
+
         const linkCalls = linkJiraRes.postJiraResource.mock.calls.filter(
             (c): c is [string, { outwardIssue: { key: string } }] => c[0] === 'issueLink',
         );
+
         expect(linkCalls).toHaveLength(1);
         expect(nonNull(linkCalls[0])[1].outwardIssue.key).toBe('TEST-1');
     });
@@ -251,6 +262,7 @@ describe('createTestExecutionFromResults', () => {
             matchedResults: matched,
             csvName: 'test-csv',
         });
+
         expect(result.key).toBe('EXEC-3');
         expect(rootLogger['warn']).toHaveBeenCalledWith(expect.stringContaining('Falha ao linkar'));
     });
@@ -288,7 +300,9 @@ describe('createTestExecutionFromResults', () => {
         expect(result.passed).toBe(1);
         expect(result.failed).toBe(1);
         expect(jiraResource['putJiraResource']).toHaveBeenCalledWith('issue/' + teKey, expect.anything());
+
         const [, putArg] = nonNull(jiraResource.putJiraResource.mock.calls[0]);
+
         expect(putArg).toHaveProperty('fields.customfield_13715', expect.any(Array));
         expect(jiraResource['postJiraResource']).not.toHaveBeenCalledWith('issue', expect.anything());
     });

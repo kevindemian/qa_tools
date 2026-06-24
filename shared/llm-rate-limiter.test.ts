@@ -39,6 +39,7 @@ describe('jitter', () => {
     it('returns a value between 0 and waitMs', () => {
         for (let i = 0; i < 50; i++) {
             const result = jitter(1000);
+
             expect(result).toBeGreaterThanOrEqual(0);
             expect(result).toBeLessThanOrEqual(1000);
         }
@@ -46,13 +47,15 @@ describe('jitter', () => {
 
     it('returns an integer value', () => {
         const result = jitter(500);
-        expect(Number.isInteger(result)).toBe(true);
+
+        expect(Number.isInteger(result)).toBeTruthy();
     });
 });
 
 describe('checkRateLimit', () => {
     it('allows requests within limit', () => {
         Config.set('LLM_RATE_LIMIT', '5');
+
         expect(() => checkRateLimit('main')).not.toThrow();
         expect(() => checkRateLimit('main')).not.toThrow();
     });
@@ -62,6 +65,7 @@ describe('checkRateLimit', () => {
         resetRateLimiter();
         checkRateLimit('main');
         checkRateLimit('main');
+
         expect(() => checkRateLimit('main')).toThrow(LlmRateLimitError);
     });
 
@@ -69,6 +73,7 @@ describe('checkRateLimit', () => {
         for (let i = 0; i < 30; i++) {
             expect(() => checkRateLimit('main')).not.toThrow();
         }
+
         expect(() => checkRateLimit('main')).toThrow(LlmRateLimitError);
     });
 
@@ -77,9 +82,13 @@ describe('checkRateLimit', () => {
         Config.set('LLM_RATE_LIMIT', '1');
         resetRateLimiter();
         checkRateLimit('main');
+
         expect(() => checkRateLimit('main')).toThrow(LlmRateLimitError);
+
         vi.advanceTimersByTime(LLM_RATE_WINDOW_MS + 1000);
+
         expect(() => checkRateLimit('main')).not.toThrow();
+
         vi.useRealTimers();
     });
 
@@ -87,6 +96,7 @@ describe('checkRateLimit', () => {
         Config.set('LLM_RATE_LIMIT', '1');
         resetRateLimiter();
         checkRateLimit('main');
+
         expect(() => checkRateLimit('main')).toThrow(LlmRateLimitError);
         expect(() => checkRateLimit('fast')).not.toThrow();
     });
@@ -95,6 +105,7 @@ describe('checkRateLimit', () => {
         Config.set('LLM_RATE_LIMIT', '1');
         resetRateLimiter();
         checkRateLimit('reviewer');
+
         expect(() => checkRateLimit('reviewer')).toThrow(/tier.*reviewer/);
     });
 });
@@ -104,8 +115,11 @@ describe('resetRateLimiter', () => {
         Config.set('LLM_RATE_LIMIT', '1');
         resetRateLimiter();
         checkRateLimit('main');
+
         expect(() => checkRateLimit('main')).toThrow(LlmRateLimitError);
+
         resetRateLimiter();
+
         expect(() => checkRateLimit('main')).not.toThrow();
     });
 });

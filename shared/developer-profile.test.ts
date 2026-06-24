@@ -27,6 +27,7 @@ beforeEach(() => {
 describe('buildDeveloperProfile', () => {
     it('returns empty result for empty input', () => {
         const result = buildDeveloperProfile([]);
+
         expect(typeof result.timestamp).toBe('string');
         expect(result).toMatchObject({
             authors: [],
@@ -43,11 +44,13 @@ describe('buildDeveloperProfile', () => {
             { testTitle: 't2', category: 'api', timestamp: '2024-01-01', author: 'bob' },
             { testTitle: 't3', category: 'ui', timestamp: '2024-01-01', author: 'alice' },
         ]);
+
         expect(result.totalAuthors).toBe(2);
         expect(result.totalFailures).toBe(3);
         expect(result.authors).toHaveLength(2);
 
         const alice = result.authors.find((a) => a.author === 'alice');
+
         expect(alice).toBeDefined();
         expect(alice?.totalFailures).toBe(2);
         expect(alice?.categories).toEqual({ api: 1, ui: 1 });
@@ -56,6 +59,7 @@ describe('buildDeveloperProfile', () => {
         expect(alice?.topFailureCategory).toBe('api');
 
         const bob = result.authors.find((a) => a.author === 'bob');
+
         expect(bob).toBeDefined();
         expect(bob?.totalFailures).toBe(1);
         expect(bob?.categories).toEqual({ api: 1 });
@@ -68,6 +72,7 @@ describe('buildDeveloperProfile', () => {
             { testTitle: 't1', category: 'api', timestamp: '2024-01-01' },
             { testTitle: 't2', category: 'ui', timestamp: '2024-01-01' },
         ]);
+
         expect(result.totalAuthors).toBe(1);
         expect(result.authors[0]?.author).toBe('Unknown');
         expect(result.authors[0]?.totalFailures).toBe(2);
@@ -80,6 +85,7 @@ describe('buildDeveloperProfile', () => {
             { testTitle: 't1', category: 'api', timestamp: '2024-01-01', author: 'alice' },
             { testTitle: 't2', category: 'ui', timestamp: '2024-01-01', author: 'alice' },
         ]);
+
         expect(result.authors[0]?.totalFailures).toBe(3);
         expect(result.authors[0]?.testsTouched).toBe(2);
         expect(result.authors[0]?.failureRate).toBe(150);
@@ -90,6 +96,7 @@ describe('buildDeveloperProfile', () => {
             { testTitle: 't1', category: 'api', timestamp: '2024-01-01', author: 'alice' },
             { testTitle: 't1', category: 'api', timestamp: '2024-01-01', author: 'alice' },
         ]);
+
         expect(result.authors[0]?.totalFailures).toBe(2);
         expect(result.authors[0]?.testsTouched).toBe(1);
         expect(result.authors[0]?.failureRate).toBe(200);
@@ -106,12 +113,14 @@ describe('buildDeveloperProfile', () => {
             { testTitle: 't5', category: 'a', timestamp: '', author: 'charlie' },
             { testTitle: 't5', category: 'a', timestamp: '', author: 'charlie' },
         ]);
+
         expect(result.topContributor).toBe('alice');
         expect(result.topFailureAuthor).toBe('charlie');
     });
 
     it('handles single author', () => {
         const result = buildDeveloperProfile([{ testTitle: 't1', category: 'db', timestamp: '', author: 'alice' }]);
+
         expect(result.totalAuthors).toBe(1);
         expect(result.topContributor).toBe('alice');
         expect(result.topFailureAuthor).toBe('alice');
@@ -124,11 +133,13 @@ describe('buildDeveloperProfile', () => {
             { testTitle: 't3', category: 'ui', timestamp: '', author: 'alice' },
             { testTitle: 't4', category: 'db', timestamp: '', author: 'alice' },
         ]);
+
         expect(result.authors[0]?.topFailureCategory).toBe('api');
     });
 
     it('returns empty on null input', () => {
         const result = buildDeveloperProfile(null);
+
         expect(typeof result.timestamp).toBe('string');
         expect(result).toMatchObject({
             authors: [],
@@ -141,6 +152,7 @@ describe('buildDeveloperProfile', () => {
 
     it('returns empty for empty array', () => {
         const result = buildDeveloperProfile([]);
+
         expect(result.authors).toHaveLength(0);
         expect(result.totalFailures).toBe(0);
     });
@@ -167,10 +179,13 @@ describe('generateDeveloperProfileHtml', () => {
         };
 
         const html = generateDeveloperProfileHtml(result);
+
         expect(html).toBe('<html>mocked</html>');
         expect(mockBuildHtmlPage).toHaveBeenCalledTimes(1);
+
         const call = mockBuildHtmlPage.mock.calls[0]?.[0];
         if (!call) throw new Error('mock not called');
+
         expect(call.title).toBe('Developer Profile Dashboard');
         expect(call.theme).toBe('system');
         expect(call.styles).toContain(':root{}');
@@ -191,6 +206,7 @@ describe('generateDeveloperProfileHtml', () => {
             timestamp: '',
         };
         generateDeveloperProfileHtml(result, 'Custom Title');
+
         expect(mockBuildHtmlPage.mock.calls[0]?.[0]?.title).toBe('Custom Title');
     });
 
@@ -204,9 +220,12 @@ describe('generateDeveloperProfileHtml', () => {
             timestamp: '2024-01-01T00:00:00.000Z',
         };
         const html = generateDeveloperProfileHtml(result);
+
         expect(html).toBe('<html>mocked</html>');
+
         const call = mockBuildHtmlPage.mock.calls[0]?.[0];
         if (!call) throw new Error('mock not called');
+
         expect(call.bodyContent).toContain('No developer profile data available');
     });
 
@@ -220,6 +239,7 @@ describe('generateDeveloperProfileHtml', () => {
             timestamp: '',
         };
         const html = generateDeveloperProfileHtml(result);
+
         expect(html).toBe('<html>mocked</html>');
         expect(mockBuildHtmlPage).toHaveBeenCalledTimes(1);
     });
@@ -251,15 +271,19 @@ describe('generateDeveloperProfileHtml', () => {
             timestamp: '',
         };
         const html = generateDeveloperProfileHtml(result);
+
         expect(html).toBe('<html>mocked</html>');
+
         const call = mockBuildHtmlPage.mock.calls[0]?.[0];
         if (!call) throw new Error('mock not called');
+
         expect(call.bodyContent).toContain('alice');
         expect(call.bodyContent).toContain('bob');
     });
 
     it('logs error and returns error page on exception', () => {
         const html = generateDeveloperProfileHtml(null);
+
         expect(html).toBe('<html>error</html>');
         expect(mockRootLoggerError).toHaveBeenCalledWith(
             expect.stringContaining('Failed to generate developer profile HTML:'),
@@ -282,6 +306,7 @@ describe('generateDeveloperProfileHtml', () => {
         generateDeveloperProfileHtml(result);
         const call = mockBuildHtmlPage.mock.calls[0]?.[0];
         if (!call) throw new Error('mock not called');
+
         expect(call.bodyContent).toContain('\u2014');
     });
 });
@@ -306,9 +331,12 @@ describe('AuthorStat failure rate severity classes', () => {
             timestamp: '',
         };
         const html = generateDeveloperProfileHtml(result);
+
         expect(html).toBe('<html>mocked</html>');
+
         const call = mockBuildHtmlPage.mock.calls[0]?.[0];
         if (!call) throw new Error('mock not called');
+
         expect(call.bodyContent).toContain('severity-critical');
     });
 
@@ -333,6 +361,7 @@ describe('AuthorStat failure rate severity classes', () => {
         generateDeveloperProfileHtml(result);
         const call = mockBuildHtmlPage.mock.calls[0]?.[0];
         if (!call) throw new Error('mock not called');
+
         expect(call.bodyContent).toContain('severity-high');
     });
 
@@ -357,6 +386,7 @@ describe('AuthorStat failure rate severity classes', () => {
         generateDeveloperProfileHtml(result);
         const call = mockBuildHtmlPage.mock.calls[0]?.[0];
         if (!call) throw new Error('mock not called');
+
         expect(call.bodyContent).toContain('severity-medium');
     });
 
@@ -381,6 +411,7 @@ describe('AuthorStat failure rate severity classes', () => {
         generateDeveloperProfileHtml(result);
         const call = mockBuildHtmlPage.mock.calls[0]?.[0];
         if (!call) throw new Error('mock not called');
+
         expect(call.bodyContent).toContain('severity-low');
     });
 });
@@ -410,6 +441,7 @@ describe('generateDeveloperProfileHtml — category breakdown', () => {
         const body = call.bodyContent;
         const apiIdx = body.indexOf('api');
         const uiIdx = body.indexOf('ui');
+
         expect(apiIdx).toBeLessThan(uiIdx);
     });
 
@@ -434,6 +466,7 @@ describe('generateDeveloperProfileHtml — category breakdown', () => {
         generateDeveloperProfileHtml(result);
         const call = mockBuildHtmlPage.mock.calls[0]?.[0];
         if (!call) throw new Error('mock not called');
+
         expect(call.bodyContent).toContain('No categories');
     });
 });

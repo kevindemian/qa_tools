@@ -95,7 +95,7 @@ describe('case22 — Test Impact Analysis', () => {
         const mod = case22Module;
         const result = await mod.handler(makeMockCommandContext());
 
-        expect(result).toBe(false);
+        expect(result).toBeFalsy();
         expect(info).toHaveBeenCalledWith('Nenhuma alteração encontrada.');
     });
 
@@ -108,7 +108,7 @@ describe('case22 — Test Impact Analysis', () => {
         const mod = case22Module;
         const result = await mod.handler(makeMockCommandContext());
 
-        expect(result).toBe(false);
+        expect(result).toBeFalsy();
         expect(printError).toHaveBeenCalledWith(
             'Não foi possível obter o git diff. Verifique se o repositório tem commits suficientes no branch atual ou forneça um range manual diferente.',
             expect.any(Error),

@@ -41,6 +41,7 @@ describe('formatQualityGateJson — property-based', () => {
             fc.property(QualityGateResultArb, (result) => {
                 const json = formatQualityGateJson(result);
                 const parsed: unknown = JSON.parse(json);
+
                 expect(parsed).toHaveProperty('overall', result.overall);
                 expect(parsed).toHaveProperty('score', result.score);
             }),
@@ -56,6 +57,7 @@ describe('formatQualityGateText — property-based', () => {
         fc.assert(
             fc.property(QualityGateResultArb, (result) => {
                 const text = formatQualityGateText(result);
+
                 expect(text).toContain('Quality Gate');
             }),
             { numRuns: 100 },
@@ -104,6 +106,7 @@ describe('formatQualityGateText — property-based', () => {
         fc.assert(
             fc.property(QualityGateResultArb, (result) => {
                 const text = formatQualityGateText(result);
+
                 expect(text).toContain(String(result.score));
             }),
             { numRuns: 100 },

@@ -75,6 +75,7 @@ describe('formatPR', () => {
             base: { ref: 'main' },
         };
         const result = formatPR(data);
+
         expect(result).not.toBeNull();
         expect(nonNull(result).iid).toBe(1);
         expect(nonNull(result).number).toBe(1);
@@ -97,6 +98,7 @@ describe('formatPR', () => {
             base: { ref: 'm' },
         };
         const result = formatPR(data);
+
         expect(nonNull(result).state).toBe('merged');
     });
 
@@ -112,6 +114,7 @@ describe('formatPR', () => {
             base: { ref: 'm' },
         };
         const result = formatPR(data);
+
         expect(nonNull(result).state).toBe('closed');
     });
 
@@ -129,6 +132,7 @@ describe('formatPR', () => {
             merged: false,
         };
         const result = formatPR(data);
+
         expect(nonNull(result).source_branch).toBeUndefined();
         expect(nonNull(result).target_branch).toBeUndefined();
     });
@@ -158,6 +162,7 @@ describe('prCreateMergeRequest', () => {
         };
         mockApiPost.mockResolvedValue(mockData);
         const result = await prCreateMergeRequest(client, 'myorg', 'myrepo', 'feature', 'main', 'PR Title', 'PR Desc');
+
         expect(mockApiPost).toHaveBeenCalledWith(
             client,
             '/repos/myorg/myrepo/pulls',
@@ -197,6 +202,7 @@ describe('prCreateMergeRequest', () => {
         });
 
         const result = await prCreateMergeRequest(client, 'myorg', 'myrepo', 'feature', 'main', 'PR Title', 'PR Desc');
+
         expect(mockApiPatch).toHaveBeenCalledWith(
             client,
             '/repos/myorg/myrepo/pulls/5',
@@ -212,6 +218,7 @@ describe('prCreateMergeRequest', () => {
             response: { status: 422, data: { errors: [{ message: 'other error' }] } },
         });
         mockApiPost.mockRejectedValue(err);
+
         await expect(prCreateMergeRequest(client, 'myorg', 'myrepo', 'feature', 'main', 'Title')).rejects.toThrow(
             'Unprocessable',
         );
@@ -220,6 +227,7 @@ describe('prCreateMergeRequest', () => {
     it('throws on non-422 error', async () => {
         const err = Object.assign(new Error('Bad request'), { response: { status: 400 } });
         mockApiPost.mockRejectedValue(err);
+
         await expect(prCreateMergeRequest(client, 'myorg', 'myrepo', 'feature', 'main', 'Title')).rejects.toThrow(
             'Bad request',
         );
@@ -237,6 +245,7 @@ describe('prCreateMergeRequest', () => {
             base: { ref: 'm' },
         });
         const result = await prCreateMergeRequest(client, 'myorg', 'myrepo', 'feature', 'main', 'Title');
+
         expect(result).not.toBeNull();
         expect(mockApiPost).toHaveBeenCalledWith(
             client,
@@ -267,6 +276,7 @@ describe('prUpdateMergeRequest', () => {
             base: { ref: 'main' },
         });
         const result = await prUpdateMergeRequest(client, 'myorg', 'myrepo', 5, 'New Title', 'New Desc');
+
         expect(mockApiPatch).toHaveBeenCalledWith(
             client,
             '/repos/myorg/myrepo/pulls/5',
@@ -278,6 +288,7 @@ describe('prUpdateMergeRequest', () => {
 
     it('throws on API error', async () => {
         mockApiPatch.mockRejectedValue(new Error('Update failed'));
+
         await expect(prUpdateMergeRequest(client, 'myorg', 'myrepo', 5, '', '')).rejects.toThrow('Update failed');
     });
 });
@@ -302,6 +313,7 @@ describe('prGetMergeRequest', () => {
             base: { ref: 'm' },
         });
         const result = await prGetMergeRequest(client, 'myorg', 'myrepo', 5);
+
         expect(mockApiGet).toHaveBeenCalledWith(client, '/repos/myorg/myrepo/pulls/5', {
             operation: 'buscar PR',
             returnNull: true,
@@ -312,6 +324,7 @@ describe('prGetMergeRequest', () => {
     it('returns null when apiGet returns null', async () => {
         mockApiGet.mockResolvedValue(null);
         const result = await prGetMergeRequest(client, 'myorg', 'myrepo', 999);
+
         expect(result).toBeNull();
     });
 });
@@ -338,6 +351,7 @@ describe('prSearchMergeRequests', () => {
             },
         ]);
         const result = await prSearchMergeRequests(client, 'myorg', 'myrepo', 'dev', 'main', 'opened');
+
         expect(mockApiGet).toHaveBeenCalledWith(client, '/repos/myorg/myrepo/pulls', {
             operation: 'buscar PRs',
             params: { per_page: 100, head: 'myorg:dev', base: 'main', state: 'open' },
@@ -350,6 +364,7 @@ describe('prSearchMergeRequests', () => {
     it('maps opened status to open', async () => {
         mockApiGet.mockResolvedValue([]);
         await prSearchMergeRequests(client, 'myorg', 'myrepo', '', '', 'opened');
+
         expect(mockApiGet).toHaveBeenCalledWith(
             client,
             '/repos/myorg/myrepo/pulls',
@@ -362,12 +377,14 @@ describe('prSearchMergeRequests', () => {
     it('returns empty array when apiGet returns null', async () => {
         mockApiGet.mockResolvedValue(null);
         const result = await prSearchMergeRequests(client, 'myorg', 'myrepo', '', '', 'opened');
+
         expect(result).toEqual([]);
     });
 
     it('passes status directly when not opened', async () => {
         mockApiGet.mockResolvedValue([]);
         await prSearchMergeRequests(client, 'myorg', 'myrepo', '', '', 'closed');
+
         expect(mockApiGet).toHaveBeenCalledWith(
             client,
             '/repos/myorg/myrepo/pulls',
@@ -382,6 +399,7 @@ describe('prSearchMergeRequests', () => {
         await prSearchMergeRequests(client, 'myorg', 'myrepo', '', 'main', 'opened');
         const calledWith = nonNull(mockApiGet.mock.calls[0]);
         const params = nonNull(calledWith[2]).params as Record<string, unknown>;
+
         expect(params['head']).toBeUndefined();
         expect(params['base']).toBe('main');
     });
@@ -391,6 +409,7 @@ describe('prSearchMergeRequests', () => {
         await prSearchMergeRequests(client, 'myorg', 'myrepo', 'dev', '', 'opened');
         const calledWith = nonNull(mockApiGet.mock.calls[0]);
         const params = nonNull(calledWith[2]).params as Record<string, unknown>;
+
         expect(params['head']).toBe('myorg:dev');
         expect(params['base']).toBeUndefined();
     });
@@ -430,6 +449,7 @@ describe('prAcceptMergeRequest', () => {
         });
 
         const result = await prAcceptMergeRequest(client, 'myorg', 'myrepo', 5);
+
         expect(client['put']).toHaveBeenCalledWith('/repos/myorg/myrepo/pulls/5/merge', {
             delete_branch_on_merge: true,
         });
@@ -449,12 +469,14 @@ describe('prAcceptMergeRequest', () => {
         });
 
         const result = await prAcceptMergeRequest(client, 'myorg', 'myrepo', 5);
+
         expect(client['put']).not.toHaveBeenCalled();
         expect(nonNull(result).state).toBe('merged');
     });
 
     it('throws when PR not found', async () => {
         mockApiGet.mockResolvedValue(null);
+
         await expect(prAcceptMergeRequest(client, 'myorg', 'myrepo', 999)).rejects.toThrow('PR #999 not found');
     });
 
@@ -470,6 +492,7 @@ describe('prAcceptMergeRequest', () => {
             base: { ref: 'm' },
         });
         vi.mocked(client['put']).mockRejectedValue(new Error('Merge failed'));
+
         await expect(prAcceptMergeRequest(client, 'myorg', 'myrepo', 5)).rejects.toThrow('Merge failed');
     });
 
@@ -498,6 +521,7 @@ describe('prAcceptMergeRequest', () => {
         });
 
         await prAcceptMergeRequest(client, 'myorg', 'myrepo', 5, false);
+
         expect(client['put']).toHaveBeenCalledWith('/repos/myorg/myrepo/pulls/5/merge', {});
     });
 });
@@ -513,7 +537,8 @@ describe('prIsApproved', () => {
     it('returns true when at least one review is APPROVED', async () => {
         mockApiGet.mockResolvedValue([{ state: 'APPROVED' }]);
         const result = await prIsApproved(client, 'myorg', 'myrepo', 42);
-        expect(result).toBe(true);
+
+        expect(result).toBeTruthy();
         expect(mockApiGet).toHaveBeenCalledWith(client, '/repos/myorg/myrepo/pulls/42/reviews', {
             operation: 'verificar reviews',
             returnNull: true,
@@ -523,18 +548,21 @@ describe('prIsApproved', () => {
     it('returns false when no APPROVED review', async () => {
         mockApiGet.mockResolvedValue([{ state: 'COMMENTED' }, { state: 'CHANGES_REQUESTED' }]);
         const result = await prIsApproved(client, 'myorg', 'myrepo', 42);
-        expect(result).toBe(false);
+
+        expect(result).toBeFalsy();
     });
 
     it('returns false on empty reviews array', async () => {
         mockApiGet.mockResolvedValue([]);
         const result = await prIsApproved(client, 'myorg', 'myrepo', 42);
-        expect(result).toBe(false);
+
+        expect(result).toBeFalsy();
     });
 
     it('returns false when apiGet returns null', async () => {
         mockApiGet.mockResolvedValue(null);
         const result = await prIsApproved(client, 'myorg', 'myrepo', 42);
-        expect(result).toBe(false);
+
+        expect(result).toBeFalsy();
     });
 });

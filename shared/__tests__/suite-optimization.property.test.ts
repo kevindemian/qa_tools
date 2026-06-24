@@ -25,6 +25,7 @@ describe('analyzeSuiteOptimization — property-based', () => {
         fc.assert(
             fc.property(fc.array(testArb, { minLength: 0, maxLength: 15 }), (tests) => {
                 const result = analyzeSuiteOptimization(tests);
+
                 expect(result.totalTests).toBe(tests.length);
             }),
             { numRuns: 50 },
@@ -43,6 +44,7 @@ describe('analyzeSuiteOptimization — property-based', () => {
                             : 0),
                     0,
                 );
+
                 expect(result.totalDuration).toBeCloseTo(expected, 5);
             }),
             { numRuns: 50 },
@@ -62,7 +64,9 @@ describe('analyzeSuiteOptimization — property-based', () => {
                     const prev = impactOrder[prevEntry.impact];
                     const curr = impactOrder[currEntry.impact];
                     if (prev === undefined || curr === undefined) return;
+
                     expect(prev).toBeGreaterThanOrEqual(curr);
+
                     if (prev === curr) {
                         expect(prevEntry.duration).toBeGreaterThanOrEqual(currEntry.duration);
                     }
@@ -91,6 +95,7 @@ describe('analyzeSuiteOptimization — property-based', () => {
         fc.assert(
             fc.property(fc.array(testArb, { minLength: 0, maxLength: 15 }), (tests) => {
                 const result = analyzeSuiteOptimization(tests);
+
                 expect(result.potentialSavings).toBeGreaterThanOrEqual(0);
                 expect(result.potentialSavings).toBeLessThanOrEqual(result.totalDuration);
             }),
@@ -113,6 +118,7 @@ describe('analyzeSuiteOptimization — property-based', () => {
                     return dur <= DEFAULT_SLOW && flk <= DEFAULT_FLAKY;
                 });
                 const result = analyzeSuiteOptimization(filtered);
+
                 expect(result.potentialSavings).toBe(0);
             }),
             { numRuns: 50 },
@@ -132,6 +138,7 @@ describe('analyzeSuiteOptimization — property-based', () => {
                 ),
                 (tests) => {
                     const result = analyzeSuiteOptimization(tests);
+
                     expect(result.totalDuration).toBe(0);
                 },
             ),
@@ -146,6 +153,7 @@ describe('generateOptimizationHtml — property-based', () => {
             fc.property(fc.array(testArb, { minLength: 0, maxLength: 10 }), (tests) => {
                 const result = analyzeSuiteOptimization(tests);
                 const html = generateOptimizationHtml(result, 'PBT');
+
                 expect(html).toContain('<!DOCTYPE html>');
                 expect(html).toContain('</html>');
             }),
@@ -173,6 +181,7 @@ describe('generateOptimizationHtml — property-based', () => {
             fc.property(fc.array(testArb, { minLength: 0, maxLength: 10 }), (tests) => {
                 const result = analyzeSuiteOptimization(tests);
                 const html = generateOptimizationHtml(result);
+
                 expect(html).toContain('Total Tests');
                 expect(html).toContain(String(result.totalTests));
             }),

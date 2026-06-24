@@ -113,15 +113,17 @@ describe('filePathCompleter', () => {
 
     it('matches all entries with empty base', () => {
         const [matches] = filePathCompleter(testDir + '/');
+
         expect(matches).toContain(csvFile);
         expect(matches).toContain(jsonFile);
         expect(matches).toContain(txtFile);
         expect(matches).toContain(subDir + '/');
-        expect(matches.length).toBe(4);
+        expect(matches).toHaveLength(4);
     });
 
     it('filters by csv extension', () => {
         const [matches] = filePathCompleter(testDir + '/', ['.csv']);
+
         expect(matches).toContain(csvFile);
         expect(matches).not.toContain(jsonFile);
         expect(matches).not.toContain(txtFile);
@@ -130,6 +132,7 @@ describe('filePathCompleter', () => {
 
     it('filters by json and txt extensions', () => {
         const [matches] = filePathCompleter(testDir + '/', ['.json', '.txt']);
+
         expect(matches).toContain(jsonFile);
         expect(matches).toContain(txtFile);
         expect(matches).not.toContain(csvFile);
@@ -138,23 +141,27 @@ describe('filePathCompleter', () => {
 
     it('includes directories with trailing slash', () => {
         const [matches] = filePathCompleter(testDir + '/');
+
         expect(matches).toContain(subDir + '/');
     });
 
     it('returns original line as second element', () => {
         const prefix = testDir + '/test.';
         const [matches, line] = filePathCompleter(prefix);
-        expect(matches.length).toBe(3);
+
+        expect(matches).toHaveLength(3);
         expect(line).toBe(prefix);
     });
 
     it('returns empty on invalid dir', () => {
         const [matches] = filePathCompleter('/nonexistent_dir_xyz/foo');
+
         expect(matches).toEqual([]);
     });
 
     it('expands tilde', () => {
         const [matches] = filePathCompleter('~');
+
         expect(matches.length).toBeGreaterThan(0);
     });
 
@@ -164,6 +171,7 @@ describe('filePathCompleter', () => {
         fs.writeFileSync(dotfile, '');
         try {
             const [matches] = filePathCompleter(dir + '/');
+
             expect(matches).not.toContain(dotfile);
         } finally {
             fs.unlinkSync(dotfile);
@@ -176,6 +184,7 @@ describe('filePathCompleter', () => {
         fs.writeFileSync(dotfile, '');
         try {
             const [matches] = filePathCompleter(dir + '/.hid');
+
             expect(matches).toContain(dotfile);
         } finally {
             fs.unlinkSync(dotfile);
@@ -187,6 +196,7 @@ describe('filePathCompleter', () => {
         try {
             fs.symlinkSync('/nonexistent-target', path.join(dir, 'dangling.txt'));
             const [matches] = filePathCompleter(dir + '/', ['.txt']);
+
             expect(matches).toEqual([]);
         } finally {
             fs.rmSync(dir, { recursive: true, force: true });
@@ -198,6 +208,7 @@ describe('filePathCompleter', () => {
         try {
             fs.symlinkSync('/nonexistent-target', path.join(dir, 'dangling'));
             const [matches] = filePathCompleter(dir + '/');
+
             expect(matches).toContain('dangling');
         } finally {
             fs.rmSync(dir, { recursive: true, force: true });
@@ -206,7 +217,8 @@ describe('filePathCompleter', () => {
 
     it('defaults to current dir when line is empty', () => {
         const [matches] = filePathCompleter('');
-        expect(Array.isArray(matches)).toBe(true);
+
+        expect(Array.isArray(matches)).toBeTruthy();
     });
 });
 
@@ -214,6 +226,7 @@ describe('askFilePath', () => {
     it('falls back to prompt when no TTY', async () => {
         mockReadlineQuestion.mockReturnValue('/some/path');
         const result = await askFilePath('File:');
+
         expect(result).toBe('/some/path');
     });
 });
@@ -235,6 +248,7 @@ describe('askFilePath TTY mode', () => {
         const mockRl = _mockRl;
         mockRl.question.mockImplementation((_prompt: string, cb: (a: string) => void) => cb('user path'));
         const result = await askFilePath('File:');
+
         expect(result).toBe('user path');
         expect(mockRl.close).toHaveBeenCalled();
     });
@@ -242,6 +256,7 @@ describe('askFilePath TTY mode', () => {
     it('rejects on navigation command', async () => {
         const mockRl = _mockRl;
         mockRl.question.mockImplementation((_prompt: string, cb: (a: string) => void) => cb('/back'));
+
         await expect(askFilePath('File:')).rejects.toThrow(CancelError);
         expect(mockRl.close).toHaveBeenCalled();
     });
@@ -255,6 +270,7 @@ describe('askFilePath TTY mode', () => {
         });
         const promise = askFilePath('File:');
         sigintHandler();
+
         await expect(promise).rejects.toThrow('/exit');
         expect(mockRl.close).toHaveBeenCalled();
     });
@@ -263,6 +279,7 @@ describe('askFilePath TTY mode', () => {
         const mockRl = _mockRl;
         mockRl.question.mockImplementation((_prompt: string, cb: (a: string) => void) => cb(''));
         const result = await askFilePath('File:', { default: '/default/path' });
+
         expect(result).toBe('/default/path');
         expect(mockRl.close).toHaveBeenCalled();
     });
@@ -271,6 +288,7 @@ describe('askFilePath TTY mode', () => {
         const mockRl = _mockRl;
         mockRl.question.mockImplementation((_prompt: string, cb: (a: string) => void) => cb(''));
         const result = await askFilePath('File:');
+
         expect(result).toBe('');
         expect(mockRl.close).toHaveBeenCalled();
     });

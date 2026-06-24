@@ -55,11 +55,13 @@ describe('compareRuns', () => {
         mockLlmPrompt.mockResolvedValueOnce('Overall improvement in pass rate from 80% to 90%.');
 
         const result = await compareRuns(runA, runB);
+
         expect(result).toBe('Overall improvement in pass rate from 80% to 90%.');
     });
 
     it('23.15: returns appropriate message for empty data', async () => {
         const result = await compareRuns(null, null);
+
         expect(result).toContain('No run data provided');
     });
 
@@ -72,6 +74,7 @@ describe('compareRuns', () => {
 
         const callArgs = nonNull(mockLlmPrompt.mock.calls[0])[0];
         const userMsg = callArgs.user;
+
         expect(userMsg).not.toContain(secret);
     });
 
@@ -79,6 +82,7 @@ describe('compareRuns', () => {
         mockLlmPrompt.mockRejectedValueOnce(new Error('API error'));
 
         const result = await compareRuns(runA, runB);
+
         expect(result).toBe('');
     });
 
@@ -96,19 +100,24 @@ describe('compareRuns', () => {
         mockLlmPrompt.mockResolvedValueOnce('sanitized response');
         await compareRuns(runWithSecret, runA);
         const userArg = nonNull(mockLlmPrompt.mock.calls[0])[0].user;
+
         expect(typeof userArg).toBe('string');
+
         const sanitized = sanitizeForLlm(userArg);
+
         expect(sanitized).toBe(userArg);
     });
 
-    it('G-01 bug-fix: logs meaningful message when LLM rejects with non-Error', async () => {
+    it('g-01 bug-fix: logs meaningful message when LLM rejects with non-Error', async () => {
         mockLlmPrompt.mockRejectedValueOnce('API quota exceeded');
 
         const result = await compareRuns(runA, runB);
 
         expect(result).toBe('');
         expect(mockLoggerError).toHaveBeenCalled();
+
         const logMsg = String(mockLoggerError.mock.calls[0]?.[0] ?? '');
+
         expect(logMsg).not.toContain('undefined');
         expect(logMsg).toContain('API quota exceeded');
     });

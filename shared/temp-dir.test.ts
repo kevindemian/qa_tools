@@ -35,11 +35,13 @@ afterEach(() => {
 describe('reportsDir', () => {
     it('returns default reports path when no env var set', () => {
         const result = reportsDir();
+
         expect(result).toMatch(/reports$/);
     });
 
     it('uses QA_TOOLS_REPORTS_DIR env var when set', () => {
         process.env['QA_TOOLS_REPORTS_DIR'] = '/custom/reports';
+
         expect(reportsDir()).toBe('/custom/reports');
     });
 });
@@ -47,16 +49,19 @@ describe('reportsDir', () => {
 describe('logsDir', () => {
     it('returns default logs path when no env var set', () => {
         const result = logsDir();
+
         expect(result).toMatch(/logs$/);
     });
 
     it('uses QA_TOOLS_LOGS_DIR env var when set', () => {
         process.env['QA_TOOLS_LOGS_DIR'] = '/custom/logs';
+
         expect(logsDir()).toBe('/custom/logs');
     });
 
     it('uses LOG_DIR env var as fallback', () => {
         process.env['LOG_DIR'] = '/legacy/logs';
+
         expect(logsDir()).toBe('/legacy/logs');
     });
 });
@@ -64,11 +69,13 @@ describe('logsDir', () => {
 describe('tempDirPath', () => {
     it('returns default temp path when no env var set', () => {
         const result = tempDirPath();
+
         expect(result).toMatch(/temp$/);
     });
 
     it('uses QA_TOOLS_TEMP_DIR env var when set', () => {
         process.env['QA_TOOLS_TEMP_DIR'] = '/custom/temp';
+
         expect(tempDirPath()).toBe('/custom/temp');
     });
 });
@@ -77,6 +84,7 @@ describe('writeReport', () => {
     it('writes content to date-subfolder under reports directory', () => {
         process.env['QA_TOOLS_REPORTS_DIR'] = '/tmp/test-reports';
         const result = writeReport('test.json', '{}');
+
         expect(result).toMatch(/\/tmp\/test-reports\/\d{4}-\d{2}-\d{2}\/test\.json$/);
     });
 
@@ -86,6 +94,7 @@ describe('writeReport', () => {
         vi.mocked(fs.mkdirSync).mockImplementationOnce(() => {
             throw new Error('EACCES: permission denied');
         });
+
         expect(() => writeReport('test.json', '{}')).toThrow('EACCES');
         expect(warnSpy).toHaveBeenCalled();
     });
@@ -96,6 +105,7 @@ describe('writeReport', () => {
         vi.mocked(fs.writeFileSync).mockImplementationOnce(() => {
             throw new Error('ENOSPC: no space left');
         });
+
         expect(() => writeReport('test.json', '{}')).toThrow('ENOSPC');
         expect(warnSpy).toHaveBeenCalled();
     });
@@ -105,6 +115,7 @@ describe('writeEphemeral', () => {
     it('writes content to temp category directory', () => {
         process.env['QA_TOOLS_TEMP_DIR'] = '/tmp/test-temp';
         const result = writeEphemeral('previews', 'snap.html', '<html/>');
+
         expect(result).toBe('/tmp/test-temp/previews/snap.html');
     });
 
@@ -114,6 +125,7 @@ describe('writeEphemeral', () => {
         vi.mocked(fs.mkdirSync).mockImplementationOnce(() => {
             throw new Error('EACCES: permission denied');
         });
+
         expect(() => writeEphemeral('cache', 'data.json', '{}')).toThrow('EACCES');
         expect(warnSpy).toHaveBeenCalled();
     });
@@ -124,6 +136,7 @@ describe('writeEphemeral', () => {
         vi.mocked(fs.writeFileSync).mockImplementationOnce(() => {
             throw new Error('ENOSPC: no space left');
         });
+
         expect(() => writeEphemeral('cache', 'data.json', '{}')).toThrow('ENOSPC');
         expect(warnSpy).toHaveBeenCalled();
     });
@@ -135,6 +148,7 @@ describe('ensureDirs', () => {
         process.env['QA_TOOLS_LOGS_DIR'] = '/tmp/test-logs';
         process.env['QA_TOOLS_TEMP_DIR'] = '/tmp/test-temp';
         ensureDirs();
+
         expect(fs.mkdirSync).toHaveBeenCalledTimes(5);
     });
 
@@ -146,6 +160,7 @@ describe('ensureDirs', () => {
         vi.mocked(fs.mkdirSync).mockImplementation(() => {
             throw new Error('EACCES: permission denied');
         });
+
         expect(() => ensureDirs()).toThrow('EACCES');
         expect(warnSpy).toHaveBeenCalled();
     });
@@ -159,6 +174,7 @@ describe('registerCleanup', () => {
             return process;
         });
         registerCleanup();
+
         expect(handlers).not.toContain('SIGINT');
         expect(handlers).toContain('SIGTERM');
         expect(handlers).toContain('exit');
@@ -171,7 +187,9 @@ describe('registerCleanup', () => {
             return process;
         });
         registerCleanup();
+
         expect(registered.length).toBeGreaterThanOrEqual(2);
+
         for (const entry of registered) {
             expect(entry.fn.name).toBe('cleanupTempDirs');
         }
@@ -190,6 +208,7 @@ describe('registerCleanup', () => {
             throw new Error('fail');
         });
         registerCleanup();
+
         expect(() => handlerRef.current?.()).not.toThrow();
         expect(warnSpy).toHaveBeenCalled();
     });
@@ -205,6 +224,7 @@ describe('registerCleanup', () => {
         vi.spyOn(fs, 'existsSync').mockReturnValue(true);
         registerCleanup();
         handlerRef.current?.();
+
         expect(fs.rmSync).toHaveBeenCalledTimes(3);
     });
 
@@ -220,6 +240,7 @@ describe('registerCleanup', () => {
         vi.spyOn(fs, 'existsSync').mockReturnValue(false);
         registerCleanup();
         handlerRef.current?.();
+
         expect(fs.rmSync).not.toHaveBeenCalled();
         expect(warnSpy).not.toHaveBeenCalled();
     });

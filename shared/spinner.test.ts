@@ -38,18 +38,21 @@ describe('withSpinner', () => {
     it('calls fn directly when quiet', async () => {
         mockIsQuiet.mockReturnValue(true);
         const result = await withSpinner('loading', fn);
+
         expect(result).toBe(42);
     });
 
     it('calls fn directly when not TTY', async () => {
         mockIsTTY.mockReturnValue(false);
         const result = await withSpinner('loading', fn);
+
         expect(result).toBe(42);
     });
 
     it('calls fn directly when CI', async () => {
         mockIsCI.mockReturnValue(true);
         const result = await withSpinner('loading', fn);
+
         expect(result).toBe(42);
     });
 
@@ -59,6 +62,7 @@ describe('withSpinner', () => {
         __setOraDep(mockOra);
 
         const result = await withSpinner('loading', fn);
+
         expect(result).toBe(42);
         expect(mockOra).toHaveBeenCalledWith({ text: 'loading', color: 'cyan', spinner: 'dots' });
         expect(mockSpinner.start).toHaveBeenCalled();
@@ -83,12 +87,14 @@ describe('ProgressBar', () => {
     describe('constructor', () => {
         it('creates cli-progress bar when TTY enabled', () => {
             const bar = new ProgressBar(100);
+
             expect(bar.current).toBe(0);
         });
 
         it('does not create bar when not TTY', () => {
             mockIsTTY.mockReturnValue(false);
             const bar = new ProgressBar(100);
+
             expect(bar.current).toBe(0);
         });
     });
@@ -97,6 +103,7 @@ describe('ProgressBar', () => {
         it('delegates to bar.update when enabled', () => {
             const bar = new ProgressBar(100);
             bar.update(50);
+
             expect(bar.current).toBe(50);
             expect(mockSingleBar.update).toHaveBeenCalledWith(50);
         });
@@ -106,6 +113,7 @@ describe('ProgressBar', () => {
             const printSpy = vi.spyOn(defaultOutput, 'print');
             const bar = new ProgressBar(100);
             bar.update(50);
+
             expect(printSpy).toHaveBeenCalled();
         });
     });
@@ -114,12 +122,14 @@ describe('ProgressBar', () => {
         it('calls bar.stop when enabled', () => {
             const bar = new ProgressBar(100);
             bar.stop();
+
             expect(mockSingleBar.stop).toHaveBeenCalled();
         });
 
         it('no-ops when not TTY', () => {
             mockIsTTY.mockReturnValue(false);
             const bar = new ProgressBar(100);
+
             expect(() => bar.stop()).not.toThrow();
         });
     });

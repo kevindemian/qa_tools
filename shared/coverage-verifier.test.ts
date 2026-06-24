@@ -8,6 +8,7 @@ function makeCtx(input: string): ValidationContext {
 describe('recalculateCoverage', () => {
     it('returns 0 coverage when no criteria in input', () => {
         const result = recalculateCoverage({ tests: [{ title: 'Test A' }] }, makeCtx('Short text'));
+
         expect(result.totalCriteria).toBe(0);
     });
 
@@ -19,6 +20,7 @@ describe('recalculateCoverage', () => {
             },
             makeCtx('Given user can log in\nWhen payment works'),
         );
+
         expect(result.realCoverage).toBe(100);
         expect(result.coveredCriteria).toBe(2);
     });
@@ -31,6 +33,7 @@ describe('recalculateCoverage', () => {
             },
             makeCtx('Given user can log in\nWhen payment works'),
         );
+
         expect(result.declaredCoverage).toBeNull();
         expect(result.coverageDelta).toBe(0);
     });
@@ -43,6 +46,7 @@ describe('recalculateCoverage', () => {
             },
             makeCtx('Acceptance Criteria: User can log in, Payment works, Email notification'),
         );
+
         expect(result.gaps.length).toBeGreaterThan(0);
         expect(result.realCoverage).toBeLessThan(100);
     });
@@ -55,6 +59,7 @@ describe('recalculateCoverage', () => {
             },
             makeCtx('Acceptance Criteria: User can log in, Payment works'),
         );
+
         expect(result.coverageDelta).toBeLessThan(0);
     });
 
@@ -65,16 +70,19 @@ describe('recalculateCoverage', () => {
             },
             makeCtx('Given user is logged in\nWhen user clicks button\nThen system responds'),
         );
+
         expect(result.totalCriteria).toBeGreaterThan(0);
     });
 
     it('handles artifact with no tests array', () => {
         const result = recalculateCoverage({}, makeCtx('Acceptance Criteria: Test'));
+
         expect(result.realCoverage).toBe(0);
     });
 
     it('declaredCoverage is null when missing', () => {
         const result = recalculateCoverage({ tests: [] }, makeCtx('Acceptance Criteria: Test'));
+
         expect(result.declaredCoverage).toBeNull();
     });
 
@@ -83,6 +91,7 @@ describe('recalculateCoverage', () => {
             { tests: [], coverageTable: { coverage: 85 } },
             makeCtx('Acceptance Criteria: Test'),
         );
+
         expect(result.declaredCoverage).toBe(85);
     });
 });

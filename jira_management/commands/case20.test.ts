@@ -212,7 +212,9 @@ describe('case20 - Bug Report handler', () => {
         await case20.handler(ctx);
 
         expect(mockGenerateAi).toHaveBeenCalledTimes(1);
+
         const callArg = nonNull(nonNull(mockInteractiveBugReportFlow.mock.calls[0])[2]);
+
         expect(callArg.linkedIssues).toEqual([
             { key: 'PROJ-123', linkType: 'Relates' },
             { key: 'PROJ-456', linkType: 'Relates' },

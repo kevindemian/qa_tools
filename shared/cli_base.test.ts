@@ -77,7 +77,8 @@ describe('CLI Base', () => {
             delete process.env['TOKEN_B'];
             const validate = cliBase.createValidateEnv(configs);
             const result = validate();
-            expect(result.ok).toBe(false);
+
+            expect(result.ok).toBeFalsy();
             expect(result.missing).toContain('TOKEN_A');
             expect(MOCK_PROMPT.warn).toHaveBeenCalledWith(expect.stringContaining('Configurações incompletas'));
         });
@@ -87,6 +88,7 @@ describe('CLI Base', () => {
             process.env['TOKEN_B'] = 'another-real-credential-here-789';
             const validate = cliBase.createValidateEnv(configs);
             validate();
+
             expect(mockRootLogger.warn).toHaveBeenCalledWith(expect.stringContaining('VARIÁVEL COM CREDENCIAL REAL'));
         });
 
@@ -95,6 +97,7 @@ describe('CLI Base', () => {
             process.env['TOKEN_B'] = 'your-token-here';
             const validate = cliBase.createValidateEnv(configs);
             validate();
+
             expect(mockRootLogger.warn).not.toHaveBeenCalled();
         });
     });
@@ -145,6 +148,7 @@ describe('CLI Base', () => {
         it('registers SIGINT handler', () => {
             const processOnSpy = vi.spyOn(process, 'on').mockImplementation(() => process);
             cliBase.setupSigint(null, () => {});
+
             expect(processOnSpy).toHaveBeenCalledWith('SIGINT', expect.any(Function));
         });
 
@@ -155,8 +159,11 @@ describe('CLI Base', () => {
             });
             const onExit = vi.fn();
             cliBase.setupSigint(null, onExit);
+
             expect(createInterfaceSpy).toHaveBeenCalled();
+
             const questionSpy = vi.spyOn(mockRl, 'question');
+
             expect(questionSpy).toHaveBeenCalledWith('Deseja sair? (s/N) ', expect.any(Function));
         });
 
@@ -173,10 +180,14 @@ describe('CLI Base', () => {
             cliBase.setupSigint(null, onExit);
             const questionFn = nonNull(mockRl.question.mock.calls[0])[1] as (answer: string) => void;
             questionFn('s');
+
             expect(onExit).toHaveBeenCalled();
             expect(MOCK_PROMPT.info).toHaveBeenCalledWith('Até logo!');
+
             vi.advanceTimersByTime(2000);
+
             expect(exitSpy).toHaveBeenCalled();
+
             exitSpy.mockRestore();
             vi.useRealTimers();
         });
@@ -190,6 +201,7 @@ describe('CLI Base', () => {
             cliBase.setupSigint(null, onExit);
             const questionFn = nonNull(mockRl.question.mock.calls[0])[1] as (answer: string) => void;
             questionFn('n');
+
             expect(onExit).not.toHaveBeenCalled();
             expect(MOCK_PROMPT.info).toHaveBeenCalledWith('Continuando...');
         });
@@ -208,12 +220,18 @@ describe('CLI Base', () => {
             const questionSpy = vi.spyOn(mockRl, 'question');
             cliBase.setupSigint(null, onExit);
             capturedHandler();
+
             expect(questionSpy).toHaveBeenCalled();
+
             capturedHandler();
+
             expect(onExit).toHaveBeenCalled();
             expect(MOCK_PROMPT.info).toHaveBeenCalledWith('Até logo!');
+
             vi.advanceTimersByTime(2000);
+
             expect(exitSpy).toHaveBeenCalled();
+
             exitSpy.mockRestore();
             vi.useRealTimers();
         });
@@ -227,6 +245,7 @@ describe('CLI Base', () => {
             const onExit = vi.fn();
             cliBase.setupSigint(() => true, onExit);
             capturedHandler();
+
             expect(MOCK_PROMPT.info).toHaveBeenCalledWith(expect.stringContaining('Operação em andamento'));
             expect(onExit).not.toHaveBeenCalled();
         });
@@ -245,9 +264,13 @@ describe('CLI Base', () => {
             capturedHandler();
             const questionFn = nonNull(mockRl.question.mock.calls[0])[1] as (answer: string) => void;
             questionFn('s');
+
             expect(MOCK_PROMPT.info).toHaveBeenCalledWith('Até logo!');
+
             vi.advanceTimersByTime(2000);
+
             expect(exitSpy).toHaveBeenCalled();
+
             exitSpy.mockRestore();
             vi.useRealTimers();
         });
@@ -263,6 +286,7 @@ describe('CLI Base', () => {
             capturedHandler();
             const questionFn = nonNull(mockRl.question.mock.calls[0])[1] as (answer: string | undefined) => void;
             questionFn(undefined);
+
             expect(onExit).not.toHaveBeenCalled();
             expect(MOCK_PROMPT.info).toHaveBeenCalledWith('Continuando...');
         });
@@ -278,6 +302,7 @@ describe('CLI Base', () => {
             capturedHandler();
             const questionFn = nonNull(mockRl.question.mock.calls[0])[1] as (answer: string) => void;
             questionFn('');
+
             expect(onExit).not.toHaveBeenCalled();
             expect(MOCK_PROMPT.info).toHaveBeenCalledWith('Continuando...');
         });
@@ -308,6 +333,7 @@ describe('CLI Base', () => {
             process.emit('SIGINT');
             const questionFn = nonNull(mockRlInt['question']?.mock.calls[0]?.[1]) as (a: string | undefined) => void;
             questionFn(undefined);
+
             expect(onExit).not.toHaveBeenCalled();
             expect(MOCK_PROMPT.info).toHaveBeenCalledWith('Continuando...');
         });
@@ -317,6 +343,7 @@ describe('CLI Base', () => {
             process.emit('SIGINT');
             const questionFn = nonNull(mockRlInt['question']?.mock.calls[0]?.[1]) as (a: string) => void;
             questionFn('');
+
             expect(onExit).not.toHaveBeenCalled();
             expect(MOCK_PROMPT.info).toHaveBeenCalledWith('Continuando...');
         });
@@ -325,15 +352,18 @@ describe('CLI Base', () => {
     describe('offerEnvSetup', () => {
         it('returns false when validation ok', () => {
             const result = cliBase.offerEnvSetup({ ok: true, missing: [] });
-            expect(result).toBe(false);
+
+            expect(result).toBeFalsy();
             expect(MOCK_PROMPT.confirm).not.toHaveBeenCalled();
         });
 
         it('returns false and does not prompt in CI mode', () => {
             process.env['CI'] = 'true';
             const result = cliBase.offerEnvSetup({ ok: false, missing: ['TOKEN_A'] });
-            expect(result).toBe(false);
+
+            expect(result).toBeFalsy();
             expect(MOCK_PROMPT.confirm).not.toHaveBeenCalled();
+
             delete process.env['CI'];
         });
 
@@ -341,7 +371,8 @@ describe('CLI Base', () => {
             delete process.env['CI'];
             nonNull(MOCK_PROMPT.confirm).mockReturnValueOnce(false);
             const result = cliBase.offerEnvSetup({ ok: false, missing: ['TOKEN_A'] });
-            expect(result).toBe(false);
+
+            expect(result).toBeFalsy();
             expect(MOCK_PROMPT.confirm).toHaveBeenCalledWith(expect.stringContaining('configurar'));
         });
 
@@ -349,7 +380,8 @@ describe('CLI Base', () => {
             delete process.env['CI'];
             nonNull(MOCK_PROMPT.confirm).mockReturnValueOnce(true);
             const result = cliBase.offerEnvSetup({ ok: false, missing: ['TOKEN_A'] });
-            expect(result).toBe(true);
+
+            expect(result).toBeTruthy();
         });
 
         it('returns false when confirm throws (CancelError)', () => {
@@ -358,7 +390,8 @@ describe('CLI Base', () => {
                 throw new Error('cancel');
             });
             const result = cliBase.offerEnvSetup({ ok: false, missing: ['TOKEN_A'] });
-            expect(result).toBe(false);
+
+            expect(result).toBeFalsy();
         });
     });
 
@@ -389,6 +422,7 @@ describe('CLI Base', () => {
             process.env['TOKEN_A'] = 'este-eh-seu-token-aqui-amigo-12345678';
             const validate = cliBase.createValidateEnv(config);
             validate();
+
             expect(mockRootLogger.warn).not.toHaveBeenCalled();
         });
 
@@ -396,6 +430,7 @@ describe('CLI Base', () => {
             process.env['TOKEN_A'] = 'this-is-your-token-here-friend-1234567';
             const validate = cliBase.createValidateEnv(config);
             validate();
+
             expect(mockRootLogger.warn).not.toHaveBeenCalled();
         });
 
@@ -403,6 +438,7 @@ describe('CLI Base', () => {
             process.env['TOKEN_A'] = 'this-is-a-placeholder-value-for-test-123';
             const validate = cliBase.createValidateEnv(config);
             validate();
+
             expect(mockRootLogger.warn).not.toHaveBeenCalled();
         });
 
@@ -413,7 +449,9 @@ describe('CLI Base', () => {
                 .mockReturnValueOnce(undefined);
             const validate = cliBase.createValidateEnv(config);
             validate();
+
             expect(mockRootLogger.warn).not.toHaveBeenCalled();
+
             getSpy.mockRestore();
         });
     });
@@ -432,24 +470,28 @@ describe('CLI Base', () => {
 
         it('prints ok and error counts when both > 0', () => {
             cliBase.printSessionSummary([{ status: 'ok' }, { status: 'error' }], null);
+
             expect(MOCK_PROMPT.success).toHaveBeenCalledWith('1 operação(oes) concluída(s)');
             expect(MOCK_PROMPT.error).toHaveBeenCalledWith('1 operação(oes) com erro');
         });
 
         it('prints only ok when no errors', () => {
             cliBase.printSessionSummary([{ status: 'ok' }, { status: 'ok' }], null);
+
             expect(MOCK_PROMPT.success).toHaveBeenCalledWith('2 operação(oes) concluída(s)');
             expect(MOCK_PROMPT.error).not.toHaveBeenCalled();
         });
 
         it('prints only error when no oks', () => {
             cliBase.printSessionSummary([{ status: 'error' }, { status: 'error' }], null);
+
             expect(MOCK_PROMPT.error).toHaveBeenCalledWith('2 operação(oes) com erro');
             expect(MOCK_PROMPT.success).not.toHaveBeenCalled();
         });
 
         it('skips counters when both are zero', () => {
             cliBase.printSessionSummary([], null);
+
             expect(MOCK_PROMPT.success).not.toHaveBeenCalled();
             expect(MOCK_PROMPT.error).not.toHaveBeenCalled();
         });
@@ -460,6 +502,7 @@ describe('CLI Base', () => {
                 { status: 'error', op: 'build', detail: 'failed' },
             ];
             cliBase.printSessionSummary([], null, history);
+
             expect(MOCK_PROMPT.info).toHaveBeenCalledWith('Últimas operações:');
             expect(MOCK_PROMPT.print).toHaveBeenCalledTimes(3);
             expect(MOCK_PROMPT.print).toHaveBeenCalledWith(expect.stringContaining('test: passed'));
@@ -468,17 +511,20 @@ describe('CLI Base', () => {
 
         it('prints last operation when provided', () => {
             cliBase.printSessionSummary([], 'test-op');
+
             expect(MOCK_PROMPT.info).toHaveBeenCalledWith('Última operação: test-op');
         });
 
         it('prints log path when available', () => {
             mockRootLogger.filePath = '/tmp/test.log';
             cliBase.printSessionSummary([], null);
+
             expect(MOCK_PROMPT.info).toHaveBeenCalledWith('Log: /tmp/test.log');
         });
 
         it('does not print log path when undefined', () => {
             cliBase.printSessionSummary([], null);
+
             expect(MOCK_PROMPT.info).not.toHaveBeenCalledWith(expect.stringContaining('Log:'));
         });
     });

@@ -89,7 +89,8 @@ describe('buildTraceabilityMatrix — property-based', () => {
         fc.assert(
             fc.property(MetricsStoreArb, CoverageResultArb, (metrics, coverage) => {
                 const result = buildTraceabilityMatrix(metrics, coverage);
-                expect(result.nodes.length).toBe(result.totalEpics);
+
+                expect(result.nodes).toHaveLength(result.totalEpics);
             }),
             { numRuns: 50 },
         );
@@ -99,6 +100,7 @@ describe('buildTraceabilityMatrix — property-based', () => {
         fc.assert(
             fc.property(MetricsStoreArb, CoverageResultArb, (metrics, coverage) => {
                 const result = buildTraceabilityMatrix(metrics, coverage);
+
                 expect(result.overallCoverage).toBeGreaterThanOrEqual(0);
                 expect(result.overallCoverage).toBeLessThanOrEqual(100);
             }),
@@ -110,6 +112,7 @@ describe('buildTraceabilityMatrix — property-based', () => {
         fc.assert(
             fc.property(MetricsStoreArb, CoverageResultArb, (metrics, coverage) => {
                 const result = buildTraceabilityMatrix(metrics, coverage);
+
                 expect(result.totalTests).toBeGreaterThanOrEqual(0);
                 expect(result.totalEpics).toBeGreaterThanOrEqual(0);
             }),
@@ -128,7 +131,7 @@ describe('buildTraceabilityMatrix — property-based', () => {
                     expect(node.health).toBeGreaterThanOrEqual(0);
                     expect(node.health).toBeLessThanOrEqual(100);
                     expect(node.flakiness).toBeGreaterThanOrEqual(0);
-                    expect(Array.isArray(node.stories)).toBe(true);
+                    expect(Array.isArray(node.stories)).toBeTruthy();
                 }
             }),
             { numRuns: 50 },
@@ -139,6 +142,7 @@ describe('buildTraceabilityMatrix — property-based', () => {
         fc.assert(
             fc.property(MetricsStoreArb, CoverageResultArb, (metrics, coverage) => {
                 const result = buildTraceabilityMatrix(metrics, coverage);
+
                 expect(result.timestamp).toMatch(/^\d{4}-\d{2}-\d{2}T/);
             }),
             { numRuns: 50 },
@@ -148,6 +152,7 @@ describe('buildTraceabilityMatrix — property-based', () => {
     it('empty metrics returns empty result', () => {
         const empty: MetricsStore = { runs: [] };
         const result = buildTraceabilityMatrix(empty);
+
         expect(result.nodes).toEqual([]);
         expect(result.totalEpics).toBe(0);
         expect(result.totalTests).toBe(0);
@@ -161,6 +166,7 @@ describe('generateTraceabilityHtml — property-based', () => {
             fc.property(MetricsStoreArb, CoverageResultArb, (metrics, coverage) => {
                 const result = buildTraceabilityMatrix(metrics, coverage);
                 const html = generateTraceabilityHtml(result);
+
                 expect(html).toContain('<!DOCTYPE html>');
                 expect(html).toContain('</html>');
             }),
@@ -170,9 +176,11 @@ describe('generateTraceabilityHtml — property-based', () => {
 
     it('error page for null/undefined', () => {
         const nullHtml = generateTraceabilityHtml(null);
+
         expect(nullHtml).toContain('Error generating traceability matrix');
 
         const undefHtml = generateTraceabilityHtml(undefined);
+
         expect(undefHtml).toContain('Error generating traceability matrix');
     });
 });

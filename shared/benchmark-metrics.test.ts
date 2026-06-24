@@ -22,6 +22,7 @@ const ageFixture = {
 describe('computeCoverageMetrics', () => {
     it('returns zero metrics for invalid JSON body', () => {
         const result = computeCoverageMetrics('not json', ageFixture);
+
         expect(result.criteriaCoverage).toBe(0);
         expect(result.totalTests).toBe(0);
     });
@@ -49,6 +50,7 @@ describe('computeCoverageMetrics', () => {
         ]);
 
         const metrics = computeCoverageMetrics(body, ageFixture);
+
         expect(metrics.criteriaCoverage).toBe(1);
         expect(metrics.totalCriteria).toBe(3);
         expect(metrics.coveredCriteriaCount).toBe(3);
@@ -65,6 +67,7 @@ describe('computeCoverageMetrics', () => {
         ]);
 
         const metrics = computeCoverageMetrics(body, ageFixture);
+
         expect(metrics.criteriaCoverage).toBeCloseTo(1 / 3);
         expect(metrics.coveredCriteriaCount).toBe(1);
         expect(metrics.totalCriteria).toBe(3);
@@ -90,6 +93,7 @@ describe('computeCoverageMetrics', () => {
         ]);
 
         const metrics = computeCoverageMetrics(body, ageFixture);
+
         // 18, 17, 65 covered — missing 66 → 3/4
         expect(metrics.boundaryCoverage).toBe(0.75);
     });
@@ -112,6 +116,7 @@ describe('computeCoverageMetrics', () => {
         ]);
 
         const metrics = computeCoverageMetrics(body, noRangeFixture);
+
         expect(metrics.criteriaCoverage).toBe(1);
         expect(metrics.partitionCoverage).toBe(0);
         expect(metrics.boundaryCoverage).toBe(0);
@@ -119,6 +124,7 @@ describe('computeCoverageMetrics', () => {
 
     it('handles empty test array', () => {
         const metrics = computeCoverageMetrics('[]', ageFixture);
+
         expect(metrics.criteriaCoverage).toBe(0);
         expect(metrics.totalTests).toBe(0);
     });

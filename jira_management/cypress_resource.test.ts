@@ -25,12 +25,14 @@ describe('CypressResource', () => {
         it('returns data on success', async () => {
             mockClient.get.mockResolvedValue({ data: { items: [] } });
             const result = await cypress.getCypressResource('/report');
+
             expect(result).toEqual({ items: [] });
         });
 
         it('returns null on network error', async () => {
             mockClient.get.mockRejectedValue(new Error('ECONNREFUSED'));
             const result = await cypress.getCypressResource('/report');
+
             expect(result).toBeNull();
         });
     });
@@ -50,6 +52,7 @@ describe('CypressResource', () => {
                 startDate: '2024-01-01',
                 projects: ['PROJ'],
             });
+
             expect(reportResult).toBeUndefined();
         });
 
@@ -61,6 +64,7 @@ describe('CypressResource', () => {
                 startDate: '2024-01-01',
                 projects: ['PROJ'],
             });
+
             expect(invalidResult).toBeUndefined();
         });
 

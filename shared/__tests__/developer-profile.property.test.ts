@@ -48,6 +48,7 @@ describe('buildDeveloperProfile — property-based', () => {
             fc.property(fc.array(failureArb, { maxLength: 30 }), (failures) => {
                 const result = buildDeveloperProfile(failures);
                 const uniqueAuthors = new Set(failures.map((f) => f.author ?? 'Unknown'));
+
                 expect(result.totalAuthors).toBe(uniqueAuthors.size);
             }),
             { numRuns: 50 },
@@ -58,6 +59,7 @@ describe('buildDeveloperProfile — property-based', () => {
         fc.assert(
             fc.property(fc.array(failureArb, { maxLength: 30 }), (failures) => {
                 const result = buildDeveloperProfile(failures);
+
                 expect(result.totalFailures).toBe(failures.length);
             }),
             { numRuns: 50 },
@@ -69,6 +71,7 @@ describe('buildDeveloperProfile — property-based', () => {
             fc.property(fc.array(failureArb, { maxLength: 30 }), (failures) => {
                 const result = buildDeveloperProfile(failures);
                 const sum = result.authors.reduce((s, a) => s + a.totalFailures, 0);
+
                 expect(sum).toBe(result.totalFailures);
             }),
             { numRuns: 50 },
@@ -81,6 +84,7 @@ describe('buildDeveloperProfile — property-based', () => {
                 const result = buildDeveloperProfile(failures);
                 for (const author of result.authors) {
                     const expected = author.testsTouched > 0 ? (author.totalFailures / author.testsTouched) * 100 : 0;
+
                     expect(author.failureRate).toBeCloseTo(expected, 5);
                 }
             }),
@@ -99,6 +103,7 @@ describe('buildDeveloperProfile — property-based', () => {
                     } else {
                         const maxCount = Math.max(...entries.map(([, c]) => c));
                         const topCats = entries.filter(([, c]) => c === maxCount).map(([cat]) => cat);
+
                         expect(topCats).toContain(author.topFailureCategory);
                     }
                 }
@@ -111,6 +116,7 @@ describe('buildDeveloperProfile — property-based', () => {
         fc.assert(
             fc.property(fc.boolean(), () => {
                 const result = buildDeveloperProfile(null);
+
                 expect(result.authors).toEqual([]);
                 expect(result.totalAuthors).toBe(0);
                 expect(result.totalFailures).toBe(0);
@@ -123,6 +129,7 @@ describe('buildDeveloperProfile — property-based', () => {
         fc.assert(
             fc.property(fc.boolean(), () => {
                 const result = buildDeveloperProfile(undefined);
+
                 expect(result.authors).toEqual([]);
                 expect(result.totalAuthors).toBe(0);
                 expect(result.totalFailures).toBe(0);
@@ -141,6 +148,7 @@ describe('generateDeveloperProfileHtml — property-based', () => {
                 (failures, customTitle) => {
                     const result = buildDeveloperProfile(failures);
                     const html = generateDeveloperProfileHtml(result, customTitle ?? undefined);
+
                     expect(html).toContain('<!DOCTYPE html>');
                     expect(html).toContain('</html>');
                 },
@@ -154,6 +162,7 @@ describe('generateDeveloperProfileHtml — property-based', () => {
             fc.property(fc.array(failureArb, { maxLength: 10 }), (failures) => {
                 const result = buildDeveloperProfile(failures);
                 const html = generateDeveloperProfileHtml(result);
+
                 expect(html).toContain('Total Authors');
                 expect(html).toContain('Total Failures');
                 expect(html).toContain(String(result.totalAuthors));

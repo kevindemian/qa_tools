@@ -54,6 +54,7 @@ describe('generateDefectTrendHtml — property-based', () => {
             fc.property(fc.array(classArb, { minLength: 0, maxLength: 10 }), (classes) => {
                 const result = aggregateDefectTrends(classes);
                 const html = generateDefectTrendHtml(result);
+
                 expect(html).toContain('<!DOCTYPE html>');
                 expect(html).toContain('</html>');
             }),
@@ -94,6 +95,7 @@ describe('generateDefectTrendHtml — property-based', () => {
             fc.property(fc.array(classArb, { minLength: 0, maxLength: 0 }), (classes) => {
                 const result = aggregateDefectTrends(classes);
                 const html = generateDefectTrendHtml(result);
+
                 expect(html).toContain('No defect data available.');
             }),
             { numRuns: 50 },

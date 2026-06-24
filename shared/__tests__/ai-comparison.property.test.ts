@@ -30,6 +30,7 @@ describe('compareAiVsManual — property-based', () => {
                 const result = compareAiVsManual(records);
                 const aiCount = records.filter((r) => r.generatedBy === 'ai').length;
                 const manualCount = records.filter((r) => r.generatedBy === 'manual').length;
+
                 expect(result.aiTotal).toBe(aiCount);
                 expect(result.manualTotal).toBe(manualCount);
             }),
@@ -41,7 +42,9 @@ describe('compareAiVsManual — property-based', () => {
         fc.assert(
             fc.property(recordsArb, (records) => {
                 const result = compareAiVsManual(records);
+
                 expect(['pass_rate', 'flakiness', 'none']).toContain(result.aiAdvantage);
+
                 if (result.aiAdvantage === 'pass_rate') {
                     expect(result.aiPassRate).toBeGreaterThan(result.manualPassRate);
                 } else if (result.aiAdvantage === 'flakiness') {
@@ -58,6 +61,7 @@ describe('compareAiVsManual — property-based', () => {
                 const result = compareAiVsManual(records);
                 const sum = result.byVersion.reduce((s, v) => s + v.count, 0);
                 const expectedAi = records.filter((r) => r.generatedBy === 'ai').length;
+
                 expect(sum).toBe(expectedAi);
             }),
             { numRuns: 50 },
@@ -87,6 +91,7 @@ describe('compareAiVsManual — property-based', () => {
                 const aiRecords = records.filter((r) => r.generatedBy === 'ai');
                 const aiAccepted = aiRecords.filter((r) => r.accepted).length;
                 const expected = aiRecords.length > 0 ? aiAccepted / aiRecords.length : 0;
+
                 expect(result.aiAcceptanceRate).toBe(expected);
                 expect(result.manualAcceptanceRate).toBe(1);
             }),
@@ -98,6 +103,7 @@ describe('compareAiVsManual — property-based', () => {
         fc.assert(
             fc.property(recordsArb, (records) => {
                 const result = compareAiVsManual(records);
+
                 expect(result.timestamp).toMatch(/^\d{4}-\d{2}-\d{2}T/);
             }),
             { numRuns: 50 },
@@ -111,6 +117,7 @@ describe('generateAiComparisonHtml — property-based', () => {
             fc.property(fc.array(recordArb, { minLength: 0, maxLength: 10 }), fc.string(), (records, title) => {
                 const result = compareAiVsManual(records);
                 const html = generateAiComparisonHtml(result, title);
+
                 expect(html).toContain('<!DOCTYPE html>');
                 expect(html).toContain('<html');
                 expect(html).toContain('</html>');
@@ -145,6 +152,7 @@ describe('generateAiComparisonHtml — property-based', () => {
             fc.property(fc.array(recordArb, { minLength: 1, maxLength: 10 }), (records) => {
                 const result = compareAiVsManual(records);
                 const html = generateAiComparisonHtml(result);
+
                 expect(html).toContain(`${result.aiPassRate}%`);
                 expect(html).toContain(`${result.manualPassRate}%`);
             }),
@@ -157,6 +165,7 @@ describe('generateAiComparisonHtml — property-based', () => {
             fc.property(fc.array(recordArb, { minLength: 0, maxLength: 0 }), (records) => {
                 const result = compareAiVsManual(records);
                 const html = generateAiComparisonHtml(result);
+
                 expect(html).toContain('No comparison data available.');
                 expect(html).not.toContain('data-component="metric-card"');
             }),

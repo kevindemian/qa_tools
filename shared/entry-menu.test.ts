@@ -41,6 +41,7 @@ describe('runModule', () => {
         mockSpawnWithExit(0);
 
         const promise = entryMenu.runModule('jira');
+
         expect(mockSpawn).toHaveBeenCalledWith(
             'npx',
             ['tsx', expect.stringContaining('jira_management/main.ts')],
@@ -53,6 +54,7 @@ describe('runModule', () => {
         mockSpawnWithExit(0);
 
         const promise = entryMenu.runModule('git');
+
         expect(mockSpawn).toHaveBeenCalledWith(
             'npx',
             ['tsx', expect.stringContaining('git_triggers/main.ts')],
@@ -65,6 +67,7 @@ describe('runModule', () => {
         mockSpawnWithExit(1);
 
         const promise = entryMenu.runModule('jira');
+
         await expect(promise).rejects.toThrow('código 1');
     });
 
@@ -76,6 +79,7 @@ describe('runModule', () => {
         });
 
         const promise = entryMenu.runModule('jira');
+
         await expect(promise).rejects.toThrow('ENOENT');
     });
 });

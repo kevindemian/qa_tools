@@ -33,6 +33,7 @@ describe('analyzeFailuresWithReport', () => {
         const tests: FlatTest[] = [{ title: 'Pass', state: 'passed', duration: 100 }];
 
         const result = await analyzeFailuresWithReport(tests);
+
         expect(result.content).toBe('');
         expect(mockReviewWithLlm).not.toHaveBeenCalled();
     });
@@ -57,7 +58,9 @@ describe('analyzeFailuresWithReport', () => {
 
         expect(result.content).toBe('Root cause with context');
         expect(mockReviewWithLlm).toHaveBeenCalledTimes(1);
+
         const userMsg: string = (mockReviewWithLlm.mock.calls[0]?.[1] as string) || '';
+
         expect(userMsg).toContain('Recent Commits:');
         expect(userMsg).toContain('Pass Rate Trend:');
         expect(userMsg).toContain('Related Jira Issues:');
@@ -76,7 +79,8 @@ describe('analyzeFailuresWithReport', () => {
 
         // This should be caught and logged, not crash
         const result = await analyzeFailuresWithReport(tests);
-        expect(result.fallbackUsed).toBe(true);
+
+        expect(result.fallbackUsed).toBeTruthy();
     });
 
     it('23.10: HTML report output verified', async () => {
@@ -91,6 +95,7 @@ describe('analyzeFailuresWithReport', () => {
         const tests: FlatTest[] = [{ title: 'Login fails', state: 'failed', duration: 200 }];
 
         const result = await analyzeFailuresWithReport(tests);
+
         expect(result.content).toContain('Root cause: assertion error');
     });
 
@@ -102,6 +107,7 @@ describe('analyzeFailuresWithReport', () => {
         const tests: FlatTest[] = [{ title: 'Fail', state: 'failed', duration: 100 }];
 
         const result = await analyzeFailuresWithReport(tests);
+
         expect(result.content).toBe('');
     });
 
@@ -113,7 +119,8 @@ describe('analyzeFailuresWithReport', () => {
         const tests: FlatTest[] = [{ title: 'Fail', state: 'failed', duration: 100 }];
 
         const result = await analyzeFailuresWithReport(tests);
-        expect(result.fallbackUsed).toBe(true);
+
+        expect(result.fallbackUsed).toBeTruthy();
     });
 });
 
@@ -124,8 +131,11 @@ describe('classifyFailure', () => {
         mockLlmPrompt.mockResolvedValueOnce('ASSERTION: expected true but got false');
 
         const result = await classifyFailure('Login test', 'expected true, got false');
+
         expect(result).toBe('ASSERTION: expected true but got false');
+
         const [callOpts] = nonNull(mockLlmPrompt.mock.calls[0]);
+
         expect(callOpts).toHaveProperty('system', expect.any(String));
         expect(callOpts).toHaveProperty('user', expect.any(String));
         expect(callOpts).toHaveProperty('schema', expect.anything());
@@ -138,6 +148,7 @@ describe('classifyFailure', () => {
         mockLlmPrompt.mockResolvedValueOnce('ASSERTION: expected 200 got 500');
 
         const result = await classifyFailure('Login test', 'expected 200, got 500');
+
         expect(result).toBe('ASSERTION: expected 200 got 500');
     });
 
@@ -148,6 +159,7 @@ describe('classifyFailure', () => {
         mockLlmPrompt.mockRejectedValue(new Error('LLM response failed schema validation after retry'));
 
         const result = await classifyFailure('Login test', 'some error');
+
         expect(result).toBe('UNKNOWN: Could not classify failure after retry');
     });
 
@@ -156,6 +168,7 @@ describe('classifyFailure', () => {
             throw new Error('ENOENT');
         });
         const result = await classifyFailure('Login test', 'error');
+
         expect(result).toBe('UNKNOWN: Could not load prompt template');
     });
 });
@@ -164,38 +177,38 @@ describe('classifyRegex — edge case mutations', () => {
     const regex = /^(ASSERTION|TIMEOUT|ENVIRONMENT|FLAKY|APPLICATION|UNKNOWN):\s/;
 
     it('matches valid classification with explanation', () => {
-        expect(regex.test('ASSERTION: expected 200 got 500')).toBe(true);
+        expect(regex.test('ASSERTION: expected 200 got 500')).toBeTruthy();
     });
 
     it('matches TIMEOUT classification', () => {
-        expect(regex.test('TIMEOUT: test exceeded 30s limit')).toBe(true);
+        expect(regex.test('TIMEOUT: test exceeded 30s limit')).toBeTruthy();
     });
 
     it('rejects AGREEMENT (not a valid category)', () => {
-        expect(regex.test('AGREEMENT: some issue')).toBe(false);
+        expect(regex.test('AGREEMENT: some issue')).toBeFalsy();
     });
 
     it('rejects lowercase classification', () => {
-        expect(regex.test('assertion: expected 200')).toBe(false);
+        expect(regex.test('assertion: expected 200')).toBeFalsy();
     });
 
     it('rejects missing colon and space after category', () => {
-        expect(regex.test('ASSERTION expected 200')).toBe(false);
+        expect(regex.test('ASSERTION expected 200')).toBeFalsy();
     });
 
     it('matches first line of multi-line response', () => {
-        expect(regex.test('ASSERTION: expected 200\nsome extra text')).toBe(true);
+        expect(regex.test('ASSERTION: expected 200\nsome extra text')).toBeTruthy();
     });
 
     it('matches ENVIRONMENT classification', () => {
-        expect(regex.test('ENVIRONMENT: database connection failed')).toBe(true);
+        expect(regex.test('ENVIRONMENT: database connection failed')).toBeTruthy();
     });
 
     it('rejects empty string', () => {
-        expect(regex.test('')).toBe(false);
+        expect(regex.test('')).toBeFalsy();
     });
 
     it('rejects category-only without colon', () => {
-        expect(regex.test('ASSERTION')).toBe(false);
+        expect(regex.test('ASSERTION')).toBeFalsy();
     });
 });

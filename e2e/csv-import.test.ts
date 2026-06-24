@@ -71,6 +71,7 @@ describe('E2E: CSV Import', () => {
         };
 
         const result = nonNull(await createTestsFromCsv(state));
+
         expect(result.inMemoryTasksId).toEqual(['TEST-1', 'TEST-2']);
         expect(result.inMemoryTasksText).toEqual(['TC01 - Login valido', 'TC02 - Login invalido']);
         expect(result.status).toBe('ok');
@@ -79,6 +80,6 @@ describe('E2E: CSV Import', () => {
         expect(onBusy).toHaveBeenCalledWith(true);
         expect(onBusy).toHaveBeenCalledWith(false);
 
-        expect(nock.isDone()).toBe(true);
+        expect(nock.isDone()).toBeTruthy();
     });
 });

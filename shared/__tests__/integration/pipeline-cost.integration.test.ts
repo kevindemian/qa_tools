@@ -44,6 +44,7 @@ describe('Integration: Pipeline Cost (FT-29)', () => {
             const runs = [makeRun({ timestamp: '2026-06-16T00:00:00.000Z', duration: 120, failed: 1, passed: 9 })];
             const result = calculatePipelineCost(runs, 0.01);
             const html = generatePipelineCostHtml(result);
+
             expect(html).toContain('<!DOCTYPE html>');
             expect(html).toContain('Pipeline Cost Analytics');
             expect(html).toContain('Total Cost');
@@ -62,6 +63,7 @@ describe('Integration: Pipeline Cost (FT-29)', () => {
             const { calculatePipelineCost, generatePipelineCostHtml } = await import('../../pipeline-cost.js');
             const result = calculatePipelineCost([]);
             const html = generatePipelineCostHtml(result);
+
             expect(html).toContain('<!DOCTYPE html>');
             expect(html).toContain('No pipeline run data available');
             expect(html).toContain('$0.00');
@@ -74,6 +76,7 @@ describe('Integration: Pipeline Cost (FT-29)', () => {
             const { calculatePipelineCost, generatePipelineCostHtml } = await import('../../pipeline-cost.js');
             const result = calculatePipelineCost([]);
             const html = generatePipelineCostHtml(result, 'My Cost Report');
+
             expect(html).toContain('My Cost Report');
         });
     });

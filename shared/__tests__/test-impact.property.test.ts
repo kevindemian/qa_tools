@@ -108,7 +108,8 @@ describe('analyzeTestImpact — property-based', () => {
 
                 const keys = result.impactedTests.map((t) => t.testKey ?? t.title);
                 const uniqueKeys = new Set(keys);
-                expect(keys.length).toBe(uniqueKeys.size);
+
+                expect(keys).toHaveLength(uniqueKeys.size);
             }),
             { numRuns: 100 },
         );

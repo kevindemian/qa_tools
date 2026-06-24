@@ -51,7 +51,9 @@ describe('Store', () => {
             const meta = makeMeta('abc123');
             store.put('abc123', meta);
             const loaded = store.lookup('abc123');
+
             expect(loaded).not.toBeNull();
+
             if (loaded) {
                 expect(loaded.sha).toBe('abc123');
                 expect(loaded.project).toBe(project);
@@ -74,8 +76,10 @@ describe('Store', () => {
             store.put('sha2', makeMeta('sha2'));
             const s1 = store.lookup('sha1');
             const s2 = store.lookup('sha2');
+
             expect(s1).not.toBeNull();
             expect(s2).not.toBeNull();
+
             if (s1 && s2) expect(s1.sha).not.toBe(s2.sha);
         });
     });
@@ -83,6 +87,7 @@ describe('Store', () => {
     describe('listByProject', () => {
         it('returns empty for project with no entries', () => {
             const other = new Store(backend, 'other-proj');
+
             expect(other.listByProject()).toEqual([]);
         });
 
@@ -94,6 +99,7 @@ describe('Store', () => {
             newMeta.timestamp = 200;
             store.put('new-sha', newMeta);
             const list = store.listByProject();
+
             expect(list).toHaveLength(2);
             expect(list[0]?.sha).toBe('new-sha');
             expect(list[1]?.sha).toBe('old-sha');
@@ -103,6 +109,7 @@ describe('Store', () => {
             store.put('sha1', makeMeta('sha1'));
             const other = new Store(backend, 'other');
             other.put('sha2', makeMeta('sha2'));
+
             expect(store.listByProject()).toHaveLength(1);
             expect(other.listByProject()).toHaveLength(1);
         });
@@ -119,6 +126,7 @@ describe('Store', () => {
             store.appendBranch('main', entry1);
             store.appendBranch('main', entry2);
             const list = store.getBranch('main');
+
             expect(list).toHaveLength(2);
             expect(list[0]?.sha).toBe('def');
             expect(list[1]?.sha).toBe('abc');
@@ -127,6 +135,7 @@ describe('Store', () => {
         it('branches are isolated', () => {
             store.appendBranch('main', { sha: 'abc', timestamp: 1 });
             store.appendBranch('develop', { sha: 'def', timestamp: 2 });
+
             expect(store.getBranch('main')).toHaveLength(1);
             expect(store.getBranch('develop')).toHaveLength(1);
         });
@@ -144,7 +153,9 @@ describe('Store', () => {
             ];
             store.saveReport('abc123', tests);
             const loaded = store.loadReport('abc123');
+
             expect(loaded).not.toBeNull();
+
             if (loaded) {
                 expect(loaded.tests).toHaveLength(2);
                 expect(loaded.tests[0]?.title).toBe('t1');
@@ -173,7 +184,9 @@ describe('Store', () => {
             const data = { runs: [{ timestamp: '2026-01-01', passed: 5, failed: 1 }] };
             store.saveMetrics(data);
             const loaded = store.loadMetrics<typeof data>();
+
             expect(loaded).not.toBeNull();
+
             if (loaded) {
                 expect(loaded.runs).toHaveLength(1);
                 expect(loaded.runs[0]?.passed).toBe(5);
@@ -193,6 +206,7 @@ describe('Store', () => {
             const spy = vi.spyOn(mockBackend, 'flush');
             const s = new Store(mockBackend, project);
             s.flush('test message');
+
             expect(spy).toHaveBeenCalledWith('test message');
         });
     });
@@ -210,6 +224,7 @@ describe('Store', () => {
             };
             const store = new Store(failBackend, project);
             const warnSpy = vi.spyOn(rootLogger, 'warn');
+
             expect(() => store.put('sha1', makeMeta('sha1'))).toThrow('ENOSPC');
             expect(warnSpy).toHaveBeenCalled();
         });
@@ -226,6 +241,7 @@ describe('Store', () => {
             };
             const store = new Store(failBackend, project);
             const warnSpy = vi.spyOn(rootLogger, 'warn');
+
             expect(() => store.saveReport('sha1', [{ title: 't', state: 'passed', duration: 1 }])).toThrow('EACCES');
             expect(warnSpy).toHaveBeenCalled();
         });
@@ -242,6 +258,7 @@ describe('Store', () => {
             };
             const store = new Store(failBackend, project);
             const warnSpy = vi.spyOn(rootLogger, 'warn');
+
             expect(() => store.appendBranch('main', { sha: 'abc', timestamp: 1 })).toThrow('ENOSPC');
             expect(warnSpy).toHaveBeenCalled();
         });
@@ -258,13 +275,14 @@ describe('Store', () => {
             };
             const store = new Store(failBackend, project);
             const warnSpy = vi.spyOn(rootLogger, 'warn');
+
             expect(() => store.saveMetrics({ runs: [] })).toThrow('ENOSPC');
             expect(warnSpy).toHaveBeenCalled();
         });
     });
 
     describe('G1: readJson type safety', () => {
-        it('G1: lookup returns null when stored data is a string, not an object', () => {
+        it('g1: lookup returns null when stored data is a string, not an object', () => {
             const invalidBackend = {
                 init: () => {},
                 read: () => Buffer.from('"string-instead-of-object"', 'utf8'),
@@ -275,12 +293,14 @@ describe('Store', () => {
             const store = new Store(invalidBackend, project);
             const warnSpy = vi.spyOn(rootLogger, 'warn');
             const result = store.lookup('any-sha');
+
             expect(result).toBeNull();
             expect(warnSpy).toHaveBeenCalled();
+
             warnSpy.mockRestore();
         });
 
-        it('G1: loadReport returns null when stored data is a number, not an object', () => {
+        it('g1: loadReport returns null when stored data is a number, not an object', () => {
             const invalidBackend = {
                 init: () => {},
                 read: () => Buffer.from('42', 'utf8'),
@@ -289,12 +309,13 @@ describe('Store', () => {
                 flush: () => {},
             };
             const store = new Store(invalidBackend, project);
+
             expect(store.loadReport('any-sha')).toBeNull();
         });
     });
 
     describe('G2: readJson error handling', () => {
-        it('G2: logs warning when backend read throws', () => {
+        it('g2: logs warning when backend read throws', () => {
             const failBackend = {
                 init: () => {},
                 read: () => {
@@ -307,11 +328,13 @@ describe('Store', () => {
             const store = new Store(failBackend, project);
             const warnSpy = vi.spyOn(rootLogger, 'warn');
             store.lookup('any-sha');
+
             expect(warnSpy).toHaveBeenCalled();
+
             warnSpy.mockRestore();
         });
 
-        it('G2: logs warning when backend read throws in listByProject', () => {
+        it('g2: logs warning when backend read throws in listByProject', () => {
             const failBackend = {
                 init: () => {},
                 read: () => {
@@ -324,13 +347,15 @@ describe('Store', () => {
             const store = new Store(failBackend, project);
             const warnSpy = vi.spyOn(rootLogger, 'warn');
             store.listByProject();
+
             expect(warnSpy).toHaveBeenCalled();
+
             warnSpy.mockRestore();
         });
     });
 
     describe('G3: corrupt data in branch-index', () => {
-        it('G3: getBranch returns empty when branch data is an object, not an array', () => {
+        it('g3: getBranch returns empty when branch data is an object, not an array', () => {
             const corruptBackend = {
                 init: () => {},
                 read: () => Buffer.from('{"main": {"sha": "abc", "timestamp": 123}}', 'utf8'),
@@ -339,10 +364,11 @@ describe('Store', () => {
                 flush: () => {},
             };
             const store = new Store(corruptBackend, project);
+
             expect(store.getBranch('main')).toEqual([]);
         });
 
-        it('G3: appendBranch handles corrupt index gracefully', () => {
+        it('g3: appendBranch handles corrupt index gracefully', () => {
             const corruptBackend = {
                 init: () => {},
                 read: () => Buffer.from('{"main": "not-an-array"}', 'utf8'),
@@ -352,12 +378,13 @@ describe('Store', () => {
             };
             const store = new Store(corruptBackend, project);
             const entry: BranchEntry = { sha: 'abc', timestamp: 1 };
+
             expect(() => store.appendBranch('main', entry)).not.toThrow();
         });
     });
 
     describe('G4: UX — mensagens acionáveis', () => {
-        it('G4: readJson type mismatch warns with action guidance', () => {
+        it('g4: readJson type mismatch warns with action guidance', () => {
             const invalidBackend = {
                 init: () => {},
                 read: () => Buffer.from('"string"', 'utf8'),
@@ -369,11 +396,13 @@ describe('Store', () => {
             const warnSpy = vi.spyOn(rootLogger, 'warn');
             store.lookup('any-sha');
             const msg = warnSpy.mock.calls[0]?.[0];
+
             expect(msg).toMatch(/verifique|tente|ação|permissão|disco|execute|certifique/i);
+
             warnSpy.mockRestore();
         });
 
-        it('G4: writeJson failure warns with action guidance', () => {
+        it('g4: writeJson failure warns with action guidance', () => {
             const failBackend = {
                 init: () => {},
                 read: () => null,
@@ -385,9 +414,13 @@ describe('Store', () => {
             };
             const store = new Store(failBackend, project);
             const warnSpy = vi.spyOn(rootLogger, 'warn');
+
             expect(() => store.saveMetrics({ runs: [] })).toThrow();
+
             const msg = warnSpy.mock.calls[0]?.[0];
+
             expect(msg).toMatch(/verifique|tente|ação|permissão|disco|execute|certifique/i);
+
             warnSpy.mockRestore();
         });
     });
@@ -405,6 +438,7 @@ describe('Store', () => {
             };
             const store = new Store(failBackend, project);
             const warnSpy = vi.spyOn(rootLogger, 'warn');
+
             expect(() => store.saveMetrics({ runs: [] })).toThrow('EACCES');
             expect(warnSpy).toHaveBeenCalled();
         });

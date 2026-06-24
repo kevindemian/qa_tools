@@ -1,33 +1,38 @@
 import { LlmError, LlmRateLimitError, LlmProviderError, LlmTimeoutError, LlmAuthError } from './errors.js';
 
 describe('typed LLM errors', () => {
-    it('LlmError has the correct name', () => {
+    it('llmError has the correct name', () => {
         const err = new LlmError('generic');
+
         expect(err.name).toBe('LlmError');
         expect(err.message).toBe('generic');
         expect(err).toBeInstanceOf(Error);
     });
 
-    it('LlmRateLimitError is an instance of LlmError', () => {
+    it('llmRateLimitError is an instance of LlmError', () => {
         const err = new LlmRateLimitError('rate limited');
+
         expect(err).toBeInstanceOf(LlmError);
         expect(err.name).toBe('LlmRateLimitError');
     });
 
-    it('LlmProviderError is an instance of LlmError', () => {
+    it('llmProviderError is an instance of LlmError', () => {
         const err = new LlmProviderError('provider failed');
+
         expect(err).toBeInstanceOf(LlmError);
         expect(err.name).toBe('LlmProviderError');
     });
 
-    it('LlmTimeoutError is an instance of LlmError', () => {
+    it('llmTimeoutError is an instance of LlmError', () => {
         const err = new LlmTimeoutError('timed out');
+
         expect(err).toBeInstanceOf(LlmError);
         expect(err.name).toBe('LlmTimeoutError');
     });
 
-    it('LlmAuthError is an instance of LlmError', () => {
+    it('llmAuthError is an instance of LlmError', () => {
         const err = new LlmAuthError('auth failure');
+
         expect(err).toBeInstanceOf(LlmError);
         expect(err.name).toBe('LlmAuthError');
     });
@@ -36,6 +41,7 @@ describe('typed LLM errors', () => {
         const fn = (): never => {
             throw new LlmProviderError('fail');
         };
+
         expect(() => fn()).toThrow(LlmError);
     });
 
@@ -45,6 +51,7 @@ describe('typed LLM errors', () => {
             if (type === 'auth') throw new LlmAuthError('auth');
             throw new LlmProviderError('provider');
         };
+
         expect(() => fn('rate')).toThrow(LlmRateLimitError);
         expect(() => fn('auth')).toThrow(LlmAuthError);
         expect(() => fn('provider')).toThrow(LlmProviderError);

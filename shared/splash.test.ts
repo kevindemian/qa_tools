@@ -15,6 +15,7 @@ describe('buildSplashLines', () => {
     it('formats logo lines with help hint', () => {
         const lines = buildSplashLines('QA TOOLS\n======');
         const output = lines.join('\n');
+
         expect(output).toContain('QA TOOLS');
         expect(output).toContain('/help');
         expect(output).toContain('Gestão');
@@ -23,17 +24,20 @@ describe('buildSplashLines', () => {
     it('includes statePath when provided', () => {
         const lines = buildSplashLines('QA TOOLS', '/path/to/state.json');
         const output = lines.join('\n');
+
         expect(output).toContain('/path/to/state.json');
     });
 
     it('omits statePath when not provided', () => {
         const lines = buildSplashLines('QA TOOLS');
         const output = lines.join('\n');
+
         expect(output).not.toContain('State:');
     });
 
     it('handles empty logo gracefully', () => {
         const lines = buildSplashLines('');
+
         expect(lines.length).toBeGreaterThan(0);
         expect(lines[0]).toBe('');
     });
@@ -41,6 +45,7 @@ describe('buildSplashLines', () => {
     it('skips blank logo lines', () => {
         const lines = buildSplashLines('\n\n');
         const output = lines.join('\n');
+
         expect(output).toContain('Gestão');
     });
 
@@ -50,6 +55,7 @@ describe('buildSplashLines', () => {
             { label: 'Token', status: 'info', detail: 'não configurado' },
         ]);
         const output = lines.join('\n');
+
         expect(output).toContain('Jira API');
         expect(output).toContain('Token');
         expect(output).toContain('online');
@@ -60,6 +66,7 @@ describe('buildSplashLines', () => {
             { label: 'Jira API', status: 'error', detail: 'offline' },
         ]);
         const output = lines.join('\n');
+
         expect(output).toContain('Jira API');
         expect(output).toContain('offline');
     });
@@ -75,12 +82,14 @@ vi.mock('./output', () => ({
 describe('checkJiraStatus', () => {
     it('returns info when URL is empty', async () => {
         const result = await checkJiraStatus('', '');
+
         expect(result.status).toBe('info');
         expect(result.detail).toContain('não configurado');
     });
 
     it('returns info when token is empty', async () => {
         const result = await checkJiraStatus('https://jira.example.com', '');
+
         expect(result.status).toBe('info');
         expect(result.detail).toContain('não configurado');
     });
@@ -110,12 +119,14 @@ describe('checkJiraStatus', () => {
 
         it('returns ok when HTTP request succeeds', async () => {
             const result = await checkJiraStatus(`http://localhost:${port}`, 'valid-token');
+
             expect(result.status).toBe('ok');
             expect(result.detail).toContain('online');
         });
 
         it('returns error on connection failure', async () => {
             const result = await checkJiraStatus('http://localhost:49872', 'valid-token');
+
             expect(result.status).toBe('error');
         });
 
@@ -127,25 +138,30 @@ describe('checkJiraStatus', () => {
             });
             __setHttpDep({ get: vi.fn(() => mockReq) });
             const result = await checkJiraStatus('http://localhost:1', 'valid-token');
+
             expect(result.status).toBe('error');
             expect(mockReq.destroy).toHaveBeenCalled();
+
             __setHttpDep(http);
         });
 
         it('succeeds with explicit server mode', async () => {
             const result = await checkJiraStatus(`http://localhost:${port}`, 'valid-token', 'server');
+
             expect(result.status).toBe('ok');
             expect(result.detail).toContain('online');
         });
 
         it('succeeds with explicit cloud mode', async () => {
             const result = await checkJiraStatus(`http://localhost:${port}`, 'email:apiToken', 'cloud');
+
             expect(result.status).toBe('ok');
             expect(result.detail).toContain('online');
         });
 
         it('falls back to server mode when mode is not provided', async () => {
             const result = await checkJiraStatus(`http://localhost:${port}`, 'valid-token');
+
             expect(result.status).toBe('ok');
             expect(result.detail).toContain('online');
         });
@@ -153,14 +169,18 @@ describe('checkJiraStatus', () => {
         it('handles https dynamic import fallback failure', async () => {
             __setHttpsDep(undefined);
             const result = await checkJiraStatus('https://jira.example.com', 'valid-token');
+
             expect(result.status).toBe('error');
+
             __setHttpsDep(await import('https'));
         });
 
         it('handles http dynamic import fallback failure', async () => {
             __setHttpDep(undefined);
             const result = await checkJiraStatus('http://localhost:49873', 'valid-token');
+
             expect(result.status).toBe('error');
+
             __setHttpDep(http);
         });
     });
@@ -205,14 +225,18 @@ describe('showSplash', () => {
     it('includes statePath when provided', async () => {
         await expect(showSplash('/tmp/state.json')).resolves.not.toThrow();
         expect(outputMod.defaultOutput.box).toHaveBeenCalled();
+
         const outputLines = nonNull(outputMod.defaultOutput.box.mock.calls[0])[0];
+
         expect(outputLines.join('\n')).toContain('/tmp/state.json');
     });
 
     it('shows token status check without jiraBaseUrl', async () => {
         await expect(showSplash('/tmp/state.json')).resolves.not.toThrow();
         expect(outputMod.defaultOutput.box).toHaveBeenCalled();
+
         const outputLines = nonNull(outputMod.defaultOutput.box.mock.calls[0])[0];
+
         expect(outputLines.join('\n')).toContain('Token');
     });
 
@@ -220,6 +244,7 @@ describe('showSplash', () => {
         mockFiglet.textSync.mockImplementationOnce(() => {
             throw new Error('no TTY');
         });
+
         await expect(showSplash()).resolves.not.toThrow();
     });
 
@@ -227,11 +252,13 @@ describe('showSplash', () => {
         mockGradient.mockImplementationOnce(() => {
             throw new Error('fail');
         });
+
         await expect(showSplash()).resolves.not.toThrow();
     });
 
     it('prints plain text when not TTY', async () => {
         outputMod.Output.isTTY.mockReturnValue(false);
+
         await expect(showSplash('/tmp/state.json')).resolves.not.toThrow();
         expect(outputMod.defaultOutput.print).toHaveBeenCalledWith(expect.stringContaining('QA Tools'));
     });
@@ -239,12 +266,14 @@ describe('showSplash', () => {
     it('prints plain text in CI mode', async () => {
         outputMod.Output.isTTY.mockReturnValue(true);
         outputMod.Output.isCI.mockReturnValue(true);
+
         await expect(showSplash('/tmp/state.json')).resolves.not.toThrow();
         expect(outputMod.defaultOutput.print).toHaveBeenCalledWith(expect.stringContaining('QA Tools'));
     });
 
     it('uses plain text header when not TTY with jiraBaseUrl', async () => {
         outputMod.Output.isTTY.mockReturnValue(false);
+
         await expect(showSplash(undefined, 'https://jira.example.com', 'token123')).resolves.not.toThrow();
         expect(outputMod.defaultOutput.print).toHaveBeenCalledWith(expect.stringContaining('QA Tools'));
     });
@@ -253,18 +282,21 @@ describe('showSplash', () => {
         mockFiglet.textSync.mockImplementationOnce(() => {
             throw new Error('no TTY');
         });
+
         await expect(showSplash('/tmp/state.json')).resolves.not.toThrow();
         expect(outputMod.defaultOutput.print).toHaveBeenCalledWith(expect.stringContaining('/tmp/state.json'));
     });
 
     it('handles figlet dynamic import failure in ensureDeps', async () => {
         __setFigletDep(undefined);
+
         await expect(showSplash('/tmp/state.json')).resolves.not.toThrow();
         expect(outputMod.defaultOutput.print).toHaveBeenCalledWith(expect.stringContaining('QA Tools'));
     });
 
     it('handles gradient dynamic import failure in ensureDeps', async () => {
         __setGradientDep(undefined);
+
         await expect(showSplash('/tmp/state.json')).resolves.not.toThrow();
         expect(outputMod.defaultOutput.print).toHaveBeenCalledWith(expect.stringContaining('QA Tools'));
     });
@@ -272,7 +304,9 @@ describe('showSplash', () => {
     it('calls checkJiraStatus with fallback empty token', async () => {
         await expect(showSplash(undefined, 'https://jira.example.com')).resolves.not.toThrow();
         expect(outputMod.defaultOutput.box).toHaveBeenCalled();
+
         const outputLines = nonNull(outputMod.defaultOutput.box.mock.calls[0])[0];
+
         expect(outputLines.join('\n')).toContain('Token');
     });
 
@@ -280,9 +314,12 @@ describe('showSplash', () => {
         outputMod.Output.isTTY.mockReturnValue(true);
         __setFigletDep(mockFiglet);
         __setGradientDep({ default: mockGradient });
+
         await expect(showSplash(undefined, 'https://jira.example.com', 'token123', 'cloud')).resolves.not.toThrow();
         expect(outputMod.defaultOutput.box).toHaveBeenCalled();
+
         const outputLines = nonNull(outputMod.defaultOutput.box.mock.calls[0])[0];
+
         expect(outputLines.join('\n')).toContain('Jira API');
     });
 
@@ -290,9 +327,12 @@ describe('showSplash', () => {
         outputMod.Output.isTTY.mockReturnValue(true);
         __setFigletDep(mockFiglet);
         __setGradientDep({ default: mockGradient });
+
         await expect(showSplash(undefined, 'https://jira.example.com', 'token123')).resolves.not.toThrow();
         expect(outputMod.defaultOutput.box).toHaveBeenCalled();
+
         const outputLines = nonNull(outputMod.defaultOutput.box.mock.calls[0])[0];
+
         expect(outputLines.join('\n')).toContain('Jira API');
         expect(outputLines.join('\n')).toContain('Token');
     });

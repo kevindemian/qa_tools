@@ -55,7 +55,9 @@ describe('recordAiGeneration', () => {
         recordAiGeneration(record);
 
         expect(mockWriteFileSync).toHaveBeenCalledTimes(1);
+
         const written = JSON.parse(mockWriteFileSync.mock.calls[0]?.[1] as string) as { records: AiGenerationRecord[] };
+
         expect(written.records).toHaveLength(1);
         expect(nonNull(written.records[0]).id).toBe('rec-1');
     });
@@ -67,6 +69,7 @@ describe('recordAiGeneration', () => {
         recordAiGeneration(makeRecord('rec-2'));
 
         const written = JSON.parse(mockWriteFileSync.mock.calls[0]?.[1] as string) as { records: AiGenerationRecord[] };
+
         expect(written.records).toHaveLength(2);
     });
 
@@ -78,6 +81,7 @@ describe('recordAiGeneration', () => {
         recordAiGeneration(makeRecord('rec-200'));
 
         const written = JSON.parse(mockWriteFileSync.mock.calls[0]?.[1] as string) as { records: AiGenerationRecord[] };
+
         expect(written.records).toHaveLength(200);
         expect(nonNull(written.records[0]).id).toBe('rec-1');
     });
@@ -107,6 +111,7 @@ describe('recordAiModification', () => {
         mockReadFileSync.mockReturnValue(JSON.stringify({ records: [] }));
 
         const result = recordAiModification('unknown', { testKey: 'T-1', recordedAt: '', action: 'kept' });
+
         expect(result).toBeNull();
     });
 });
@@ -115,6 +120,7 @@ describe('getAiFeedbackSummary', () => {
     it('returns zeros for empty store', () => {
         mockExistsSync.mockReturnValue(false);
         const summary = getAiFeedbackSummary();
+
         expect(summary.totalRecords).toBe(0);
         expect(summary.acceptanceRate).toBe(0);
     });
@@ -137,6 +143,7 @@ describe('getAiFeedbackSummary', () => {
         mockReadFileSync.mockReturnValue(JSON.stringify({ records }));
 
         const summary = getAiFeedbackSummary();
+
         expect(summary.totalGenerated).toBe(3);
         expect(summary.totalModified).toBe(1);
         expect(summary.totalDeleted).toBe(0);
@@ -153,6 +160,7 @@ describe('getAiFeedbackSummary', () => {
         mockReadFileSync.mockReturnValue(JSON.stringify({ records }));
 
         const summary = getAiFeedbackSummary();
+
         expect(summary.topPromptVersion).toBe('v2');
     });
 });
@@ -168,6 +176,7 @@ describe('getRecentAiRecords', () => {
         mockReadFileSync.mockReturnValue(JSON.stringify({ records }));
 
         const recent = getRecentAiRecords(2);
+
         expect(recent).toHaveLength(2);
         expect(nonNull(recent[0]).id).toBe('r3');
         expect(nonNull(recent[1]).id).toBe('r2');

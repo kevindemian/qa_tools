@@ -24,6 +24,7 @@ describe('sanitizeHtml', () => {
     it('escapes all five characters together', () => {
         const input = `<a href="test" title='foo'>&</a>`;
         const expected = '&lt;a href=&quot;test&quot; title=&#39;foo&#39;&gt;&amp;&lt;/a&gt;';
+
         expect(sanitizeHtml(input)).toBe(expected);
     });
 

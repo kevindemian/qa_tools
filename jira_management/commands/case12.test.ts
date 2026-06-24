@@ -51,7 +51,8 @@ describe('case12 — diagnostic connection', () => {
 
     it('executes without error with basic context', async () => {
         const result = await case12.handler(mockContext);
-        expect(result === undefined || typeof result === 'boolean').toBe(true);
+
+        expect(result === undefined || typeof result === 'boolean').toBeTruthy();
     });
 
     it('shows health score warning when metrics and endpoints both fail', async () => {

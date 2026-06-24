@@ -57,6 +57,7 @@ describe('getProjectId', () => {
         mockGet.mockResolvedValue({ data: { id: '10000' } });
         const resource = buildResource();
         const result = await getProjectId(resource, 'TEST');
+
         expect(result).toBe('10000');
     });
 
@@ -64,6 +65,7 @@ describe('getProjectId', () => {
         mockGet.mockRejectedValue(new Error('Not found'));
         const resource = buildResource();
         const result = await getProjectId(resource, 'NOPE');
+
         expect(result).toBe('');
     });
 });
@@ -78,6 +80,7 @@ describe('getProjectVersions', () => {
         });
         const resource = buildResource();
         const versions = await getProjectVersions(resource, '10000');
+
         expect(versions).toHaveLength(2);
     });
 
@@ -85,6 +88,7 @@ describe('getProjectVersions', () => {
         mockGet.mockRejectedValue(new Error('Network error'));
         const resource = buildResource();
         const versions = await getProjectVersions(resource, '10000');
+
         expect(versions).toEqual([]);
     });
 });
@@ -95,6 +99,7 @@ describe('getVersionId', () => {
         vi.spyOn(resource, 'getProjectId').mockResolvedValue('10000');
         vi.spyOn(resource, 'getProjectVersions').mockResolvedValue([{ id: '99', name: 'v1.0' }]);
         const id = await getVersionId(resource, 'TEST', 'v1.0');
+
         expect(id).toBe('99');
     });
 
@@ -102,6 +107,7 @@ describe('getVersionId', () => {
         const resource = buildResource();
         vi.spyOn(resource, 'getProjectId').mockResolvedValue('');
         const id = await getVersionId(resource, 'TEST', 'v1.0');
+
         expect(id).toBeNull();
     });
 });
@@ -111,6 +117,7 @@ describe('getLatestReleases', () => {
         const resource = buildResource();
         vi.spyOn(resource, 'getProjectId').mockResolvedValue('');
         const result = await getLatestReleases(resource, 'NOPE', 3);
+
         expect(result.latestReleasedVersions).toEqual([]);
         expect(result.unreleasedVersions).toEqual([]);
     });

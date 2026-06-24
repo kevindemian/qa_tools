@@ -6,6 +6,7 @@ const DEFAULT_FLAKY = 0.3;
 describe('analyzeSuiteOptimization', () => {
     it('returns empty result for empty input', () => {
         const result = analyzeSuiteOptimization([]);
+
         expect(result.optimizations).toHaveLength(0);
         expect(result.totalTests).toBe(0);
         expect(result.totalDuration).toBe(0);
@@ -17,6 +18,7 @@ describe('analyzeSuiteOptimization', () => {
 
     it('returns none action for normal test within thresholds', () => {
         const result = analyzeSuiteOptimization([{ title: 'normal', duration: 3, flakiness: 0.05 }]);
+
         expect(result.optimizations[0]?.action).toBe('none');
         expect(result.optimizations[0]?.impact).toBe('low');
         expect(result.optimizations[0]?.reason).toBe('Within acceptable thresholds');
@@ -25,6 +27,7 @@ describe('analyzeSuiteOptimization', () => {
 
     it('detects quarantine for flaky test', () => {
         const result = analyzeSuiteOptimization([{ title: 'flaky_test', duration: 3, flakiness: 0.5 }]);
+
         expect(result.optimizations[0]?.action).toBe('quarantine');
         expect(result.optimizations[0]?.impact).toBe('high');
         expect(result.optimizations[0]?.reason).toContain('exceeds threshold');
@@ -32,6 +35,7 @@ describe('analyzeSuiteOptimization', () => {
 
     it('detects split for very slow test (>3x threshold)', () => {
         const result = analyzeSuiteOptimization([{ title: 'very_slow', duration: 16, flakiness: 0.05 }]);
+
         expect(result.optimizations[0]?.action).toBe('split');
         expect(result.optimizations[0]?.impact).toBe('high');
         expect(result.optimizations[0]?.reason).toContain('consider splitting');
@@ -39,6 +43,7 @@ describe('analyzeSuiteOptimization', () => {
 
     it('detects parallelize for moderately slow test (>2x threshold)', () => {
         const result = analyzeSuiteOptimization([{ title: 'mod_slow', duration: 11, flakiness: 0.05 }]);
+
         expect(result.optimizations[0]?.action).toBe('parallelize');
         expect(result.optimizations[0]?.impact).toBe('medium');
         expect(result.optimizations[0]?.reason).toContain('parallel execution');
@@ -46,6 +51,7 @@ describe('analyzeSuiteOptimization', () => {
 
     it('detects remove_wait for duration >1.5x with low flakiness', () => {
         const result = analyzeSuiteOptimization([{ title: 'waiting', duration: 8, flakiness: 0.05 }]);
+
         expect(result.optimizations[0]?.action).toBe('remove_wait');
         expect(result.optimizations[0]?.impact).toBe('medium');
         expect(result.optimizations[0]?.reason).toContain('unnecessary waits');
@@ -53,6 +59,7 @@ describe('analyzeSuiteOptimization', () => {
 
     it('detects speed_up for slightly slow test (>1x threshold)', () => {
         const result = analyzeSuiteOptimization([{ title: 'slightly_slow', duration: 6, flakiness: 0.05 }]);
+
         expect(result.optimizations[0]?.action).toBe('speed_up');
         expect(result.optimizations[0]?.impact).toBe('medium');
         expect(result.optimizations[0]?.reason).toContain('needs optimization');
@@ -60,40 +67,47 @@ describe('analyzeSuiteOptimization', () => {
 
     it('quarantine takes priority over duration actions', () => {
         const result = analyzeSuiteOptimization([{ title: 'flaky_and_slow', duration: 20, flakiness: 0.5 }]);
+
         expect(result.optimizations[0]?.action).toBe('quarantine');
         expect(result.optimizations[0]?.impact).toBe('high');
     });
 
     it('parallelize takes priority over remove_wait and speed_up', () => {
         const result = analyzeSuiteOptimization([{ title: 'parallel_priority', duration: 11, flakiness: 0.01 }]);
+
         expect(result.optimizations[0]?.action).toBe('parallelize');
     });
 
     it('remove_wait takes priority over speed_up', () => {
         const result = analyzeSuiteOptimization([{ title: 'remove_priority', duration: 8, flakiness: 0.05 }]);
+
         expect(result.optimizations[0]?.action).toBe('remove_wait');
     });
 
     it('handles NaN duration gracefully', () => {
         const result = analyzeSuiteOptimization([{ title: 'nan_dur', duration: NaN, flakiness: 0 }]);
+
         expect(result.optimizations[0]?.duration).toBe(0);
         expect(result.optimizations[0]?.action).toBe('none');
     });
 
     it('handles NaN flakiness gracefully', () => {
         const result = analyzeSuiteOptimization([{ title: 'nan_flaky', duration: 3, flakiness: NaN }]);
+
         expect(result.optimizations[0]?.flakiness).toBe(0);
         expect(result.optimizations[0]?.action).toBe('none');
     });
 
     it('handles negative duration gracefully', () => {
         const result = analyzeSuiteOptimization([{ title: 'neg', duration: -1, flakiness: 0 }]);
+
         expect(result.optimizations[0]?.duration).toBe(0);
         expect(result.optimizations[0]?.action).toBe('none');
     });
 
     it('handles zero duration', () => {
         const result = analyzeSuiteOptimization([{ title: 'zero', duration: 0, flakiness: 0 }]);
+
         expect(result.optimizations[0]?.action).toBe('none');
         expect(result.optimizations[0]?.duration).toBe(0);
     });
@@ -106,11 +120,13 @@ describe('analyzeSuiteOptimization', () => {
             { title: 'B_high_fast', duration: 6, flakiness: 0.5 },
         ]);
         const titles = result.optimizations.map((e) => e.testTitle);
+
         expect(titles).toEqual(['A_high', 'B_high_fast', 'C_med', 'D_low']);
     });
 
     it('uses custom thresholds', () => {
         const result = analyzeSuiteOptimization([{ title: 't', duration: 10, flakiness: 0.2 }], 8, 0.15);
+
         expect(result.slowThreshold).toBe(8);
         expect(result.flakyThreshold).toBe(0.15);
         expect(result.optimizations[0]?.action).toBe('quarantine');
@@ -118,6 +134,7 @@ describe('analyzeSuiteOptimization', () => {
 
     it('fallback to defaults when thresholds are NaN', () => {
         const result = analyzeSuiteOptimization([{ title: 't', duration: 6, flakiness: 0.31 }], NaN, NaN);
+
         expect(result.slowThreshold).toBe(DEFAULT_SLOW);
         expect(result.flakyThreshold).toBe(DEFAULT_FLAKY);
         expect(result.optimizations[0]?.action).toBe('quarantine');
@@ -125,6 +142,7 @@ describe('analyzeSuiteOptimization', () => {
 
     it('fallback to defaults when thresholds are negative', () => {
         const result = analyzeSuiteOptimization([{ title: 't', duration: 6, flakiness: 0.31 }], -1, -1);
+
         expect(result.slowThreshold).toBe(DEFAULT_SLOW);
         expect(result.flakyThreshold).toBe(DEFAULT_FLAKY);
     });
@@ -136,6 +154,7 @@ describe('analyzeSuiteOptimization', () => {
             { title: 'c', duration: 8, flakiness: 0.05 },
             { title: 'd', duration: 6, flakiness: 0 },
         ]);
+
         expect(result.potentialSavings).toBe(21);
     });
 
@@ -144,6 +163,7 @@ describe('analyzeSuiteOptimization', () => {
             { title: 'a', duration: 3, flakiness: 0 },
             { title: 'b', duration: 1, flakiness: 0 },
         ]);
+
         expect(result.potentialSavings).toBe(0);
     });
 
@@ -152,6 +172,7 @@ describe('analyzeSuiteOptimization', () => {
             { title: 'a', duration: 10, flakiness: 0 },
             { title: 'b', duration: 20, flakiness: 0 },
         ]);
+
         expect(result.totalDuration).toBe(30);
     });
 
@@ -161,11 +182,13 @@ describe('analyzeSuiteOptimization', () => {
             { title: 'b', duration: 2, flakiness: 0 },
             { title: 'c', duration: 3, flakiness: 0 },
         ]);
+
         expect(result.totalTests).toBe(3);
     });
 
     it('uses provided thresholds defaults when undefined', () => {
         const result = analyzeSuiteOptimization([{ title: 't', duration: 6, flakiness: 0.31 }]);
+
         expect(result.slowThreshold).toBe(DEFAULT_SLOW);
         expect(result.flakyThreshold).toBe(DEFAULT_FLAKY);
     });
@@ -175,6 +198,7 @@ describe('generateOptimizationHtml', () => {
     it('returns complete HTML page structure', () => {
         const result = analyzeSuiteOptimization([{ title: 'slow', duration: 10, flakiness: 0.05 }]);
         const html = generateOptimizationHtml(result);
+
         expect(html).toContain('<!DOCTYPE html>');
         expect(html).toContain('<html');
         expect(html).toContain('</html>');
@@ -183,6 +207,7 @@ describe('generateOptimizationHtml', () => {
     it('includes summary MetricGrid with MetricCards', () => {
         const result = analyzeSuiteOptimization([{ title: 'slow', duration: 10, flakiness: 0.05 }]);
         const html = generateOptimizationHtml(result);
+
         expect(html).toContain('data-component="metric-grid"');
         expect(html).toContain('data-component="metric-card"');
         expect(html).toContain('Total Tests');
@@ -193,6 +218,7 @@ describe('generateOptimizationHtml', () => {
     it('shows DataTable with optimization rows', () => {
         const result = analyzeSuiteOptimization([{ title: 'slow_test', duration: 10, flakiness: 0.2 }]);
         const html = generateOptimizationHtml(result);
+
         expect(html).toContain('data-component="data-table"');
         expect(html).toContain('slow_test');
         expect(html).toContain('speed up');
@@ -201,6 +227,7 @@ describe('generateOptimizationHtml', () => {
     it('displays action badge with underscore replaced by space', () => {
         const result = analyzeSuiteOptimization([{ title: 'waiting', duration: 8, flakiness: 0.05 }]);
         const html = generateOptimizationHtml(result);
+
         expect(html).toContain('data-component="badge"');
         expect(html).toContain('remove wait');
         expect(html).not.toContain('remove_wait');
@@ -209,12 +236,14 @@ describe('generateOptimizationHtml', () => {
     it('displays impact SeverityBadge', () => {
         const result = analyzeSuiteOptimization([{ title: 'slow', duration: 10, flakiness: 0.05 }]);
         const html = generateOptimizationHtml(result);
+
         expect(html).toContain('data-component="badge"');
     });
 
     it('shows clean state when no optimizations needed', () => {
         const result = analyzeSuiteOptimization([{ title: 'fast', duration: 2, flakiness: 0 }]);
         const html = generateOptimizationHtml(result);
+
         expect(html).toContain('clean-state');
         expect(html).toContain('no optimizations needed');
         expect(html).not.toContain('data-component="data-table"');
@@ -223,18 +252,21 @@ describe('generateOptimizationHtml', () => {
     it('shows clean state for empty result', () => {
         const result = analyzeSuiteOptimization([]);
         const html = generateOptimizationHtml(result);
+
         expect(html).toContain('clean-state');
     });
 
     it('includes default title when none provided', () => {
         const result = analyzeSuiteOptimization([]);
         const html = generateOptimizationHtml(result);
+
         expect(html).toContain('Suite Optimization Report');
     });
 
     it('includes custom title', () => {
         const result = analyzeSuiteOptimization([]);
         const html = generateOptimizationHtml(result, 'My Custom Report');
+
         expect(html).toContain('My Custom Report');
     });
 
@@ -243,6 +275,7 @@ describe('generateOptimizationHtml', () => {
             { title: '<script>alert(1)</script>', duration: 10, flakiness: 0.05 },
         ]);
         const html = generateOptimizationHtml(result);
+
         expect(html).not.toContain('<script>alert(1)</script>');
         expect(html).toContain('&lt;script&gt;alert(1)&lt;/script&gt;');
     });
@@ -253,6 +286,7 @@ describe('generateOptimizationHtml', () => {
             { title: 'med_impact', duration: 8, flakiness: 0.05 },
         ]);
         const html = generateOptimizationHtml(result);
+
         expect(html).toContain('class="impact-high"');
         expect(html).toContain('class="impact-medium"');
     });
@@ -260,6 +294,7 @@ describe('generateOptimizationHtml', () => {
     it('includes Container and Section wrappers', () => {
         const result = analyzeSuiteOptimization([{ title: 't', duration: 3, flakiness: 0 }]);
         const html = generateOptimizationHtml(result);
+
         expect(html).toContain('data-component="container"');
         expect(html).toContain('data-component="section"');
     });
@@ -275,6 +310,7 @@ describe('generateOptimizationHtml', () => {
             timestamp: '2026-01-01T00:00:00.000Z',
         };
         const html = generateOptimizationHtml(result);
+
         expect(html).toContain('42');
         expect(html).toContain('120.5s');
         expect(html).toContain('30.2s');
@@ -291,6 +327,7 @@ describe('generateOptimizationHtml', () => {
             timestamp: '2026-01-01T00:00:00.000Z',
         };
         const html = generateOptimizationHtml(result, 'Test');
+
         expect(html).toContain('10.0s');
     });
 
@@ -314,6 +351,7 @@ describe('generateOptimizationHtml', () => {
             timestamp: '2026-01-01T00:00:00.000Z',
         };
         const html = generateOptimizationHtml(result);
+
         expect(html).toContain('data-variant="default"');
     });
 
@@ -337,6 +375,7 @@ describe('generateOptimizationHtml', () => {
             timestamp: '2026-01-01T00:00:00.000Z',
         };
         const html = generateOptimizationHtml(result);
+
         expect(html).toContain('data-component="badge"');
         expect(html).toContain('custom action');
     });

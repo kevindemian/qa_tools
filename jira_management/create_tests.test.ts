@@ -266,6 +266,7 @@ describe('createTestExecution', () => {
             csvName: '',
             titleOverride: 'Custom Title',
         });
+
         expect(jiraResource.postJiraResource.mock.lastCall?.[1]).toHaveProperty('fields.summary', 'Custom Title');
         expect(nonNull(result).key).toBe('EXEC-3');
     });
@@ -349,6 +350,7 @@ describe('createTestExecutionWithLinks', () => {
         const linkCalls = linkJiraRes.postJiraResource.mock.calls.filter(
             (c): c is [string, { outwardIssue: { key: string } }] => c[0] === 'issueLink',
         );
+
         expect(linkCalls).toHaveLength(1);
         expect(nonNull(linkCalls[0])[1].outwardIssue.key).toBe('TEST-2');
     });
@@ -415,10 +417,11 @@ describe('generateMappingFiles', async () => {
         const jsonPath = tmpDir + '/test-csv-' + testIdx + '-jira-mapping.json';
         const mdPath = tmpDir + '/test-csv-' + testIdx + '-jira-mapping.md';
 
-        expect(realFs.existsSync(jsonPath)).toBe(true);
-        expect(realFs.existsSync(mdPath)).toBe(true);
+        expect(realFs.existsSync(jsonPath)).toBeTruthy();
+        expect(realFs.existsSync(mdPath)).toBeTruthy();
 
         const content = realFs.readFileSync(jsonPath, 'utf8');
+
         expect(content).toContain('"project": "PROJ"');
         expect(content).toContain('"title": "TC1"');
         expect(content).toContain('"key": "TEST-1"');
@@ -433,7 +436,9 @@ describe('generateMappingFiles', async () => {
         const base = nextBase();
         const testCases: TestCase[] = [{ title: 'TC', steps: [] }];
         generateMappingFiles(base + '.csv', 'PROJ', ['TEST-1'], testCases);
-        expect(realFs.existsSync(tmpDir + '/test-csv-' + testIdx + '-jira-mapping.json')).toBe(true);
+
+        expect(realFs.existsSync(tmpDir + '/test-csv-' + testIdx + '-jira-mapping.json')).toBeTruthy();
+
         process.env['CYPRESS_PROJECT_PATH'] = tmpDir;
     });
 
@@ -441,7 +446,9 @@ describe('generateMappingFiles', async () => {
         const capture = vi.fn<(...args: [...string[]]) => void>();
         vi.spyOn(console, 'log').mockImplementation(capture);
         generateMappingFiles(nextBase() + '.csv', 'PROJ', [], []);
+
         expect(capture).not.toHaveBeenCalled();
+
         vi.clearAllMocks();
         vi.restoreAllMocks();
     });
@@ -458,6 +465,7 @@ describe('generateMappingFiles', async () => {
         ];
         generateMappingFiles(base + '.csv', 'PROJ', ['TEST-3'], testCases);
         const content2 = realFs.readFileSync(tmpDir + '/test-csv-' + testIdx + '-jira-mapping.json', 'utf8');
+
         expect(content2).toContain('"precondition": "User must be logged in"');
         expect(content2).toContain('"Action": "Click login"');
     });
@@ -471,14 +479,17 @@ describe('generateMappingFiles', async () => {
         generateMappingFiles(base + '.csv', 'PROJ', ['TEST-1', 'TEST-2'], testCases);
         const md = realFs.readFileSync(tmpDir + '/test-csv-' + testIdx + '-jira-mapping.md', 'utf8');
         const mdLines = md.split('\n');
+
         expect(md).toContain('## TEST-1 — TC1');
         expect(md).toContain('**Description:** Descricao do TC1');
         expect(md).toContain('### Steps');
         expect(md).toContain('**Step 1**');
         expect(md).toContain('- **Action:** a1');
         expect(md).toContain('## TEST-2 — TC2');
+
         const tc2Section = mdLines.indexOf('## TEST-2 — TC2');
         const tc2Block = md.slice(md.indexOf('## TEST-2 — TC2'), md.indexOf('\n---\n\n', tc2Section));
+
         expect(tc2Block).not.toContain('**Description:**');
     });
 });
@@ -486,6 +497,7 @@ describe('generateMappingFiles', async () => {
 describe('validateCsvTests', () => {
     it('returns error for empty title', () => {
         const { errors } = validateCsvTests([{ title: '', steps: [{ fields: { Action: 'x' } }] }]);
+
         expect(errors[0]).toContain('Título é obrigatório');
     });
 
@@ -494,21 +506,25 @@ describe('validateCsvTests', () => {
             { title: 'TC1', steps: [{ fields: { Action: 'x' } }] },
             { title: 'TC1', steps: [{ fields: { Action: 'y' } }] },
         ]);
+
         expect(warnings).toContain('Teste 2: Titulo duplicado "TC1"');
     });
 
     it('returns error for no steps', () => {
         const { errors } = validateCsvTests([{ title: 'TC1', steps: [] }]);
+
         expect(errors[0]).toContain('Pelo menos um step');
     });
 
     it('returns warning for empty Action in step', () => {
         const { warnings } = validateCsvTests([{ title: 'TC1', steps: [{ fields: { Action: '' } }] }]);
+
         expect(warnings[0]).toContain('sem Action');
     });
 
     it('returns no errors for valid test', () => {
         const { errors, warnings } = validateCsvTests([{ title: 'TC1', steps: [{ fields: { Action: 'Click' } }] }]);
+
         expect(errors).toHaveLength(0);
         expect(warnings).toHaveLength(0);
     });
@@ -548,6 +564,7 @@ describe('createTestsFromJson', () => {
             onBusy: vi.fn<(...args: [boolean]) => void>(),
         } satisfies Parameters<typeof createTestsFromJson>[0];
     }
+
     afterEach(() => {
         delete process.env['JSON_PATH'];
         delete process.env['AUTO_CONFIRM'];
@@ -560,6 +577,7 @@ describe('createTestsFromJson', () => {
     it('cancela com caminho vazio', async () => {
         vi.spyOn(PROMPT, 'askFilePath').mockResolvedValueOnce('');
         const result = await createTestsFromJson(BASE_PARAMS());
+
         expect(result).toBeUndefined();
         expect(PROMPT.warn).toHaveBeenCalledWith(expect.stringContaining('vazio'));
     });
@@ -568,6 +586,7 @@ describe('createTestsFromJson', () => {
         vi.spyOn(PROMPT, 'ask').mockResolvedValue('/fake/path.json');
         FS.readFileSync.mockReturnValue('not json');
         const result = await createTestsFromJson(BASE_PARAMS());
+
         expect(result).toBeUndefined();
         expect(PROMPT.warn).toHaveBeenCalled();
     });
@@ -576,6 +595,7 @@ describe('createTestsFromJson', () => {
         vi.spyOn(PROMPT, 'ask').mockResolvedValue('/fake/path.json');
         FS.readFileSync.mockReturnValue('[]');
         const result = await createTestsFromJson(BASE_PARAMS());
+
         expect(result).toBeUndefined();
         expect(PROMPT.warn).toHaveBeenCalled();
     });
@@ -584,6 +604,7 @@ describe('createTestsFromJson', () => {
         vi.spyOn(PROMPT, 'ask').mockResolvedValue('/fake/path.json');
         FS.readFileSync.mockReturnValue(JSON.stringify([{}]));
         const result = await createTestsFromJson(BASE_PARAMS());
+
         expect(result).toBeUndefined();
         expect(PROMPT.warn).toHaveBeenCalled();
     });
@@ -599,6 +620,7 @@ describe('createTestsFromJson', () => {
             ]),
         );
         const result = await createTestsFromJson(BASE_PARAMS());
+
         expect(result).toBeDefined();
         expect(nonNull(result).summary).toContain('2');
         expect(nonNull(result).sourcePath).toBe('/fake/path.json');
@@ -612,6 +634,7 @@ describe('createTestsFromJson', () => {
             JSON.stringify([{ title: 'TC1', steps: [{ Action: 'Click' }], precondition: 'PREC-001' }]),
         );
         const result = await createTestsFromJson(BASE_PARAMS());
+
         expect(result).toBeDefined();
         expect(nonNull(result).summary).toContain('1');
     });
@@ -624,6 +647,7 @@ describe('createTestsFromJson', () => {
             JSON.stringify([{ title: 'TC1', steps: [{ Action: 'Click' }], linkedIssues: ['BUG-1', 'BUG-2'] }]),
         );
         const result = await createTestsFromJson(BASE_PARAMS());
+
         expect(result).toBeDefined();
         expect(nonNull(result).summary).toContain('1');
     });
@@ -638,6 +662,7 @@ describe('createTestsFromJson', () => {
             ]),
         );
         const result = await createTestsFromJson(BASE_PARAMS());
+
         expect(result).toBeDefined();
         expect(nonNull(result).summary).toContain('1');
     });
@@ -683,13 +708,15 @@ describe('readCsvTests (via createTestsFromCsv)', () => {
     it('empty CSV -> warn', async () => {
         csvResource.readBulkCsv.mockResolvedValue([]);
         const result = await createTestsFromCsv(makeCsvArgs({ csvPath: '/empty.csv' }));
+
         expect(result).toBeUndefined();
         expect(PROMPT.warn).toHaveBeenCalledWith(expect.stringContaining('Nenhum teste'));
     });
 
-    it('CSV read error -> printError', async () => {
+    it('cSV read error -> printError', async () => {
         csvResource.readBulkCsv.mockRejectedValue(new Error('file not found'));
         const result = await createTestsFromCsv(makeCsvArgs({ csvPath: '/bad.csv' }));
+
         expect(result).toBeUndefined();
         expect(PROMPT.printError).toHaveBeenCalledWith('Erro ao ler CSV', expect.any(Error));
     });
@@ -714,6 +741,7 @@ describe('updateCrossReferences', () => {
         };
         const tests: TestCase[] = [{ title: 'T1', steps: [], group: 'g1' }];
         await updateCrossReferences(linker, tests, ['T-1']);
+
         expect(updateCrossRefSpy).toHaveBeenCalledWith(tests, ['T-1']);
     });
 });
@@ -757,6 +785,7 @@ describe('createTestsFromCsv', () => {
         process.env['DRY_RUN'] = 'true';
         csvResource.readBulkCsv.mockResolvedValue([{ title: 'TC1', steps: [{ fields: { Action: 'Click' } }] }]);
         const result = await createTestsFromCsv(makeFullArgs());
+
         expect(result).toBeDefined();
         expect(nonNull(result).summary).toContain('1');
     });

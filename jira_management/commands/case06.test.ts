@@ -25,6 +25,7 @@ describe('case06 — check release status', () => {
 
     it('executes without error with basic context', async () => {
         const result = await case06.handler(mockContext);
+
         expect([undefined, true, false]).toContain(result);
     });
 });

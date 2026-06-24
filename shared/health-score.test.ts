@@ -82,6 +82,7 @@ describe('calculateHealthScore', () => {
         it('returns low overall for empty store', () => {
             const store = makeStore();
             const result = calculateHealthScore(store);
+
             expect(result.overall).toBeLessThan(50);
             expect(result.grade).toBe('critical');
             expect(result.runCount).toBe(0);
@@ -91,6 +92,7 @@ describe('calculateHealthScore', () => {
         it('handles store with only runs but no coverage history', () => {
             const store = makeStore({ runs: [PASSING_RUN] });
             const result = calculateHealthScore(store);
+
             expect(result.dimensions.coverage.score).toBe(0);
             expect(result.qualityGate).toBe('fail');
         });
@@ -111,6 +113,7 @@ describe('calculateHealthScore', () => {
                 ],
             });
             const result = calculateHealthScore(store);
+
             expect(result.overall).toBeGreaterThanOrEqual(90);
             expect(result.grade).toBe('excellent');
         });
@@ -131,6 +134,7 @@ describe('calculateHealthScore', () => {
                 ],
             });
             const result = calculateHealthScore(store, { passRateTarget: 95 });
+
             expect(result.dimensions.passRate.score).toBe(100);
         });
 
@@ -148,6 +152,7 @@ describe('calculateHealthScore', () => {
                 ],
             });
             const result = calculateHealthScore(store, { passRateTarget: 95 });
+
             expect(result.dimensions.passRate.score).toBe(0);
         });
 
@@ -165,6 +170,7 @@ describe('calculateHealthScore', () => {
                 ],
             });
             const result = calculateHealthScore(store, { passRateTarget: 95 });
+
             expect(result.dimensions.passRate.score).toBe(49);
         });
     });
@@ -187,6 +193,7 @@ describe('calculateHealthScore', () => {
                 ],
             });
             const result = calculateHealthScore(store, { minRuns: 2 });
+
             expect(result.dimensions.flakyRate.score).toBe(100);
         });
 
@@ -217,6 +224,7 @@ describe('calculateHealthScore', () => {
                 ],
             });
             const result = calculateHealthScore(store, { minRuns: 2 });
+
             expect(result.dimensions.flakyRate.score).toBeLessThanOrEqual(0);
         });
 
@@ -247,6 +255,7 @@ describe('calculateHealthScore', () => {
                 ],
             });
             const result = calculateHealthScore(store, { minRuns: 2 });
+
             expect(result.dimensions.flakyRate.score).toBe(0);
         });
     });
@@ -266,6 +275,7 @@ describe('calculateHealthScore', () => {
                 ],
             });
             const result = calculateHealthScore(store, { coverageTarget: 90 });
+
             expect(result.dimensions.coverage.score).toBe(100);
         });
 
@@ -283,6 +293,7 @@ describe('calculateHealthScore', () => {
                 ],
             });
             const result = calculateHealthScore(store, { coverageTarget: 90 });
+
             expect(result.dimensions.coverage.score).toBe(0);
         });
 
@@ -300,6 +311,7 @@ describe('calculateHealthScore', () => {
                 ],
             });
             const result = calculateHealthScore(store, { coverageTarget: 90 });
+
             expect(result.dimensions.coverage.score).toBe(50);
         });
     });
@@ -326,6 +338,7 @@ describe('calculateHealthScore', () => {
                 ],
             });
             const result = calculateHealthScore(store, { suiteSpeedTarget: 1000 });
+
             expect(result.dimensions.suiteSpeed.score).toBe(100);
         });
 
@@ -350,6 +363,7 @@ describe('calculateHealthScore', () => {
                 ],
             });
             const result = calculateHealthScore(store, { suiteSpeedTarget: 1000 });
+
             expect(result.dimensions.suiteSpeed.score).toBe(0);
         });
 
@@ -374,6 +388,7 @@ describe('calculateHealthScore', () => {
                 ],
             });
             const result = calculateHealthScore(store, { suiteSpeedTarget: 1000 });
+
             expect(result.dimensions.suiteSpeed.score).toBe(50);
         });
     });
@@ -393,6 +408,7 @@ describe('calculateHealthScore', () => {
                 ],
             });
             const result = calculateHealthScore(store);
+
             expect(result.overall).toBeGreaterThanOrEqual(90);
             expect(result.overall).toBeLessThanOrEqual(100);
         });
@@ -413,6 +429,7 @@ describe('calculateHealthScore', () => {
                 ],
             });
             const result = calculateHealthScore(store);
+
             expect(result.qualityGate).toBe('pass');
         });
 
@@ -430,6 +447,7 @@ describe('calculateHealthScore', () => {
                 ],
             });
             const result = calculateHealthScore(store);
+
             expect(result.qualityGate).toBe('fail');
             expect(result.dimensions.passRate.status).toBe('fail');
         });
@@ -461,6 +479,7 @@ describe('calculateHealthScore', () => {
                 ],
             });
             const result = calculateHealthScore(store, { minRuns: 2 });
+
             expect(result.qualityGate).toBe('fail');
             expect(result.dimensions.flakyRate.status).toBe('fail');
         });
@@ -479,6 +498,7 @@ describe('calculateHealthScore', () => {
                 ],
             });
             const result = calculateHealthScore(store);
+
             expect(result.qualityGate).toBe('fail');
             expect(result.dimensions.coverage.status).toBe('fail');
         });
@@ -504,6 +524,7 @@ describe('calculateHealthScore', () => {
                 ],
             });
             const result = calculateHealthScore(store);
+
             expect(result.qualityGate).toBe('fail');
             expect(result.dimensions.suiteSpeed.status).toBe('fail');
         });
@@ -524,6 +545,7 @@ describe('calculateHealthScore', () => {
                 ],
             });
             const result = calculateHealthScore(store);
+
             expect(result.dimensions.coverage.score).toBeLessThan(40);
             expect(result.overall).toBeLessThanOrEqual(60);
         });
@@ -544,6 +566,7 @@ describe('calculateHealthScore', () => {
                 ],
             });
             const result = calculateHealthScore(store);
+
             expect(result.overall).toBeGreaterThanOrEqual(90);
             expect(result.grade).toBe('excellent');
         });
@@ -562,6 +585,7 @@ describe('calculateHealthScore', () => {
                 ],
             });
             const result = calculateHealthScore(store);
+
             expect(result.grade).toBe('good');
         });
 
@@ -579,6 +603,7 @@ describe('calculateHealthScore', () => {
                 ],
             });
             const result = calculateHealthScore(store);
+
             expect(result.grade).toBe('poor');
         });
 
@@ -596,12 +621,14 @@ describe('calculateHealthScore', () => {
                 ],
             });
             const result = calculateHealthScore(store);
+
             expect(result.grade).toBe('poor');
         });
 
         it('grades critical below 60', () => {
             const store = makeStore();
             const result = calculateHealthScore(store);
+
             expect(result.overall).toBeLessThan(60);
             expect(result.grade).toBe('critical');
         });
@@ -623,6 +650,7 @@ describe('calculateHealthScore', () => {
                 weights: { passRate: 100, flakyRate: 0, coverage: 0, executionRate: 0, suiteSpeed: 0 },
                 passRateTarget: 95,
             });
+
             expect(r89.overall).toBeLessThan(90);
             expect(r89.grade).toBe('good');
 
@@ -642,6 +670,7 @@ describe('calculateHealthScore', () => {
                 weights: { passRate: 100, flakyRate: 0, coverage: 0, executionRate: 0, suiteSpeed: 0 },
                 passRateTarget: 95,
             });
+
             expect(r90.overall).toBeGreaterThanOrEqual(90);
             expect(r90.grade).toBe('excellent');
         });
@@ -654,6 +683,7 @@ describe('calculateHealthScore', () => {
                 weights: { passRate: 100, flakyRate: 0, coverage: 0, executionRate: 0, suiteSpeed: 0 },
                 passRateTarget: 95,
             });
+
             expect(r59.overall).toBeLessThan(60);
 
             const store60 = makeStore({
@@ -672,6 +702,7 @@ describe('calculateHealthScore', () => {
                 weights: { passRate: 100, flakyRate: 0, coverage: 0, executionRate: 0, suiteSpeed: 0 },
                 passRateTarget: 95,
             });
+
             expect(r60.overall).toBeGreaterThanOrEqual(60);
         });
     });
@@ -694,6 +725,7 @@ describe('calculateHealthScore', () => {
             const resultCustom = calculateHealthScore(store, {
                 weights: { passRate: 100, flakyRate: 0, coverage: 0, executionRate: 0, suiteSpeed: 0 },
             });
+
             expect(resultDefault.overall).not.toBe(resultCustom.overall);
         });
 
@@ -712,6 +744,7 @@ describe('calculateHealthScore', () => {
             });
             const defaultResult = calculateHealthScore(store);
             const lenientResult = calculateHealthScore(store, { passRateTarget: 80 });
+
             expect(lenientResult.dimensions.passRate.score).toBeGreaterThan(defaultResult.dimensions.passRate.score);
         });
     });
@@ -741,6 +774,7 @@ describe('calculateHealthScore', () => {
                 ],
             });
             const result = calculateHealthScore(store, { minRuns: 2 });
+
             expect(result.dimensions.passRate.score).toBe(100);
             expect(result.dimensions.flakyRate.score).toBe(100);
             expect(result.dimensions.coverage.score).toBe(100);
@@ -774,6 +808,7 @@ describe('calculateHealthScore', () => {
                 ],
             });
             const result = calculateHealthScore(store);
+
             expect(result.dimensions.passRate.score).toBe(0);
             expect(result.dimensions.flakyRate.score).toBe(0);
             expect(result.dimensions.coverage.score).toBe(0);
@@ -799,6 +834,7 @@ describe('calculateHealthScore', () => {
                 ],
             });
             const result = calculateHealthScore(store);
+
             expect(result.provenance?.length).toBe(5);
         });
 
@@ -841,7 +877,8 @@ describe('calculateHealthScore', () => {
             });
             const result = calculateHealthScore(store, { passRateTarget: 90 });
             const passRateEntry = result.provenance?.find((p) => p.dimension === 'passRate');
-            expect(passRateEntry?.overridden).toBe(true);
+
+            expect(passRateEntry?.overridden).toBeTruthy();
         });
 
         it('does not mark dimensions as overridden with default config', () => {
@@ -878,9 +915,10 @@ describe('calculateHealthScore', () => {
             });
             const result = calculateHealthScore(store);
             const passRateEntry = result.provenance?.find((p) => p.dimension === 'passRate');
+
             expect(passRateEntry?.source).toContain('DORA');
             expect(passRateEntry?.formula).toContain('passed/(passed+failed)');
-            expect(passRateEntry?.configurable).toBe(true);
+            expect(passRateEntry?.configurable).toBeTruthy();
         });
 
         it('includes dimension-specific provenance data for suiteSpeed', () => {
@@ -898,9 +936,10 @@ describe('calculateHealthScore', () => {
             });
             const result = calculateHealthScore(store);
             const speedEntry = result.provenance?.find((p) => p.dimension === 'suiteSpeed');
+
             expect(speedEntry?.source).toContain('Google SRE');
             expect(speedEntry?.formula).toContain('p95');
-            expect(speedEntry?.configurable).toBe(true);
+            expect(speedEntry?.configurable).toBeTruthy();
         });
 
         it('includes dimension-specific provenance data for flakyRate', () => {
@@ -918,8 +957,9 @@ describe('calculateHealthScore', () => {
             });
             const result = calculateHealthScore(store);
             const flakyEntry = result.provenance?.find((p) => p.dimension === 'flakyRate');
+
             expect(flakyEntry?.source).toContain('Kualitatem');
-            expect(flakyEntry?.configurable).toBe(false);
+            expect(flakyEntry?.configurable).toBeFalsy();
         });
 
         it('provenance thresholdBasis for suiteSpeed matches default maxSuiteSpeedGate (G-03)', () => {
@@ -937,12 +977,13 @@ describe('calculateHealthScore', () => {
             });
             const result = calculateHealthScore(store);
             const speedEntry = result.provenance?.find((p) => p.dimension === 'suiteSpeed');
+
             expect(speedEntry?.thresholdBasis).toContain('max 3000ms');
         });
     });
 
     describe('edge: NaN and Infinity (D8 regression prevention)', () => {
-        it('NaN coverageOverride produces 0 score, not NaN', () => {
+        it('naN coverageOverride produces 0 score, not NaN', () => {
             const store = makeStore({
                 runs: [PASSING_RUN],
                 coverageHistory: [
@@ -956,11 +997,12 @@ describe('calculateHealthScore', () => {
                 ],
             });
             const result = calculateHealthScore(store, { coverageOverride: NaN });
-            expect(Number.isFinite(result.dimensions.coverage.score)).toBe(true);
+
+            expect(Number.isFinite(result.dimensions.coverage.score)).toBeTruthy();
             expect(result.dimensions.coverage.score).toBe(0);
         });
 
-        it('NaN coveragePct in history produces 0 score, not NaN', () => {
+        it('naN coveragePct in history produces 0 score, not NaN', () => {
             const store = makeStore({
                 runs: [PASSING_RUN],
                 coverageHistory: [
@@ -974,11 +1016,12 @@ describe('calculateHealthScore', () => {
                 ],
             });
             const result = calculateHealthScore(store);
-            expect(Number.isFinite(result.dimensions.coverage.score)).toBe(true);
+
+            expect(Number.isFinite(result.dimensions.coverage.score)).toBeTruthy();
             expect(result.dimensions.coverage.score).toBe(0);
         });
 
-        it('Infinity test duration does not crash or produce NaN', () => {
+        it('infinity test duration does not crash or produce NaN', () => {
             const store = makeStore({
                 runs: [
                     run({
@@ -999,7 +1042,8 @@ describe('calculateHealthScore', () => {
                 ],
             });
             const result = calculateHealthScore(store);
-            expect(Number.isFinite(result.dimensions.suiteSpeed.score)).toBe(true);
+
+            expect(Number.isFinite(result.dimensions.suiteSpeed.score)).toBeTruthy();
             expect(result.dimensions.suiteSpeed.score).toBe(100);
         });
 
@@ -1021,7 +1065,8 @@ describe('calculateHealthScore', () => {
                 },
                 { coverageOverride: NaN },
             );
-            expect(Number.isFinite(result.overall)).toBe(true);
+
+            expect(Number.isFinite(result.overall)).toBeTruthy();
             expect(result.overall).toBeGreaterThanOrEqual(0);
         });
     });
@@ -1061,6 +1106,7 @@ describe('calculateHealthScore', () => {
                 maxFlakyGate: 50,
                 flakyThreshold: 30,
             });
+
             expect(resultWithThreshold.dimensions.flakyRate.score).toBe(100);
         });
     });

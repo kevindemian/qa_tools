@@ -72,6 +72,7 @@ describe('renderPipelineHealthHtml — property-based', () => {
                 (runs, jobs, errs, issues) => {
                     const health = aggregatePipelineHealth(runs, jobs, errs, issues);
                     const html = renderPipelineHealthHtml(health);
+
                     expect(html).toContain('<!DOCTYPE html>');
                     expect(html).toContain('</html>');
                 },
@@ -87,6 +88,7 @@ describe('renderPipelineHealthHtml — property-based', () => {
                 (title) => {
                     const health = aggregatePipelineHealth([], [], [], []);
                     const html = renderPipelineHealthHtml(health, title);
+
                     expect(html).toContain(title);
                 },
             ),
@@ -104,6 +106,7 @@ describe('renderPipelineHealthHtml — property-based', () => {
                 (runs, jobs, errs, issues) => {
                     const health = aggregatePipelineHealth(runs, jobs, errs, issues);
                     const html = renderPipelineHealthHtml(health);
+
                     expect(html).toContain('--color-surface-page');
                     expect(html).toContain('--color-text-primary');
                 },
@@ -117,6 +120,7 @@ describe('renderPipelineHealthHtml — property-based', () => {
             fc.property(fc.array(runArb, { minLength: 0, maxLength: 3 }), (runs) => {
                 const health = aggregatePipelineHealth(runs, [], [], []);
                 const html = renderPipelineHealthHtml(health);
+
                 expect(html).toContain('qa-report-theme');
             }),
             { numRuns: 10 },
@@ -128,6 +132,7 @@ describe('renderPipelineHealthHtml — property-based', () => {
             fc.property(fc.array(runArb, { minLength: 0, maxLength: 3 }), (runs) => {
                 const health = aggregatePipelineHealth(runs, [], [], []);
                 const html = renderPipelineHealthHtml(health);
+
                 expect(html).toContain('Pipeline Health Dashboard');
             }),
             { numRuns: 10 },
@@ -144,6 +149,7 @@ describe('renderPipelineHealthHtml — property-based', () => {
                 (runs, jobs, errs, issues) => {
                     const health = aggregatePipelineHealth(runs, jobs, errs, issues);
                     const html = renderPipelineHealthHtml(health);
+
                     expect(html).not.toContain('border="1"');
                     expect(html).not.toContain('cellpadding="6"');
                     expect(html).not.toContain('background:#f3f4f6');

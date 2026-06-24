@@ -66,6 +66,7 @@ describe('feature-config', () => {
         it('returns empty object when file does not exist', async () => {
             const { loadFeatureConfig } = await import('../feature-config.js');
             const result = loadFeatureConfig();
+
             expect(result).toEqual({});
         });
 
@@ -76,6 +77,7 @@ describe('feature-config', () => {
 
             const { loadFeatureConfig } = await import('../feature-config.js');
             const result = loadFeatureConfig();
+
             expect(result).toEqual(VALID_CONFIG);
         });
 
@@ -86,6 +88,7 @@ describe('feature-config', () => {
 
             const { loadFeatureConfig } = await import('../feature-config.js');
             const result = loadFeatureConfig();
+
             expect(result).toEqual({});
         });
 
@@ -96,6 +99,7 @@ describe('feature-config', () => {
 
             const { loadFeatureConfig } = await import('../feature-config.js');
             const result = loadFeatureConfig();
+
             expect(result).toEqual({});
         });
     });
@@ -106,6 +110,7 @@ describe('feature-config', () => {
             saveFeatureConfig(VALID_CONFIG);
 
             const saved = loadFeatureConfig();
+
             expect(saved).toEqual(VALID_CONFIG);
         });
 
@@ -114,8 +119,11 @@ describe('feature-config', () => {
             saveFeatureConfig(VALID_CONFIG);
 
             const configPath = path.join(TEST_DIR, 'config', 'features.json');
-            expect(fs.existsSync(path.dirname(configPath))).toBe(true);
+
+            expect(fs.existsSync(path.dirname(configPath))).toBeTruthy();
+
             const saved = loadFeatureConfig();
+
             expect(saved).toEqual(VALID_CONFIG);
         });
     });
@@ -126,9 +134,10 @@ describe('feature-config', () => {
             saveFeatureConfig(VALID_CONFIG);
 
             const result = getProjectFeatureConfig('my-project');
+
             expect(result).toBeDefined();
             expect(result?.gitProvider).toBe('github');
-            expect(result?.features.prReport?.enabled).toBe(true);
+            expect(result?.features.prReport?.enabled).toBeTruthy();
         });
 
         it('returns undefined for unknown project', async () => {
@@ -136,6 +145,7 @@ describe('feature-config', () => {
             saveFeatureConfig(VALID_CONFIG);
 
             const result = getProjectFeatureConfig('unknown-project');
+
             expect(result).toBeUndefined();
         });
     });
@@ -146,14 +156,16 @@ describe('feature-config', () => {
             saveFeatureConfig(VALID_CONFIG);
 
             const result = getPrReportConfig('my-project');
-            expect(result.enabled).toBe(true);
+
+            expect(result.enabled).toBeTruthy();
             expect(result.publishTarget).toBe('github-actions');
         });
 
         it('returns default disabled config when project has no feature config', async () => {
             const { getPrReportConfig } = await import('../feature-config.js');
             const result = getPrReportConfig('unknown-project');
-            expect(result.enabled).toBe(false);
+
+            expect(result.enabled).toBeFalsy();
             expect(result.publishTarget).toBe('github-actions');
         });
 
@@ -168,7 +180,8 @@ describe('feature-config', () => {
             saveFeatureConfig(configWithoutPr);
 
             const result = getPrReportConfig('my-project');
-            expect(result.enabled).toBe(false);
+
+            expect(result.enabled).toBeFalsy();
             expect(result.publishTarget).toBe('github-actions');
         });
     });
@@ -180,7 +193,8 @@ describe('feature-config', () => {
 
             setPrReportConfig('my-project', { enabled: false, publishTarget: 'github-actions' as const });
             const result = getPrReportConfig('my-project');
-            expect(result.enabled).toBe(false);
+
+            expect(result.enabled).toBeFalsy();
         });
 
         it('creates project entry and sets pr-report config for new project', async () => {
@@ -190,13 +204,15 @@ describe('feature-config', () => {
             setPrReportConfig('new-project', { enabled: true, publishTarget: 'gitlab-ci' as const, jiraKey: 'NEW' });
 
             const projectConfig = getProjectFeatureConfig('new-project');
+
             expect(projectConfig?.gitProvider).toBe('github');
-            expect(projectConfig?.features.prReport?.enabled).toBe(true);
+            expect(projectConfig?.features.prReport?.enabled).toBeTruthy();
             expect(projectConfig?.features.prReport?.publishTarget).toBe('gitlab-ci');
             expect(projectConfig?.features.prReport?.jiraKey).toBe('NEW');
 
             const prConfig = getPrReportConfig('new-project');
-            expect(prConfig.enabled).toBe(true);
+
+            expect(prConfig.enabled).toBeTruthy();
         });
     });
 
@@ -205,12 +221,13 @@ describe('feature-config', () => {
             const { saveFeatureConfig, isPrReportEnabled } = await import('../feature-config.js');
             saveFeatureConfig(VALID_CONFIG);
 
-            expect(isPrReportEnabled('my-project')).toBe(true);
+            expect(isPrReportEnabled('my-project')).toBeTruthy();
         });
 
         it('returns false when pr-report is not enabled', async () => {
             const { isPrReportEnabled } = await import('../feature-config.js');
-            expect(isPrReportEnabled('unknown-project')).toBe(false);
+
+            expect(isPrReportEnabled('unknown-project')).toBeFalsy();
         });
 
         it('returns false when pr-report is explicitly disabled', async () => {
@@ -218,7 +235,8 @@ describe('feature-config', () => {
             saveFeatureConfig(VALID_CONFIG);
 
             setPrReportConfig('my-project', { enabled: false, publishTarget: 'github-actions' as const });
-            expect(isPrReportEnabled('my-project')).toBe(false);
+
+            expect(isPrReportEnabled('my-project')).toBeFalsy();
         });
     });
 
@@ -228,6 +246,7 @@ describe('feature-config', () => {
             saveFeatureConfig(VALID_CONFIG);
 
             const result = resolvePublishTarget('my-project');
+
             expect(result).toBe('github-actions');
         });
 
@@ -236,18 +255,21 @@ describe('feature-config', () => {
             saveFeatureConfig(VALID_CONFIG_WITH_JIRA);
 
             const result = resolvePublishTarget('my-project');
+
             expect(result).toBe('gitlab-ci');
         });
 
         it('falls back to github-actions for unknown projects', async () => {
             const { resolvePublishTarget } = await import('../feature-config.js');
             const result = resolvePublishTarget('unknown-project');
+
             expect(result).toBe('github-actions');
         });
 
         it('uses explicit gitProvider hint when project has no config', async () => {
             const { resolvePublishTarget } = await import('../feature-config.js');
             const result = resolvePublishTarget('unknown-project', 'gitlab');
+
             expect(result).toBe('gitlab-ci');
         });
     });
@@ -255,7 +277,8 @@ describe('feature-config', () => {
     describe('isAiSkipped', () => {
         it('returns false when skipAi is not configured', async () => {
             const { isAiSkipped } = await import('../feature-config.js');
-            expect(isAiSkipped('unknown-project')).toBe(false);
+
+            expect(isAiSkipped('unknown-project')).toBeFalsy();
         });
 
         it('returns true when skipAi is explicitly true', async () => {
@@ -273,20 +296,23 @@ describe('feature-config', () => {
                 },
             };
             saveFeatureConfig(configWithSkip);
-            expect(isAiSkipped('my-project')).toBe(true);
+
+            expect(isAiSkipped('my-project')).toBeTruthy();
         });
 
         it('returns false when skipAi is explicitly false', async () => {
             const { saveFeatureConfig, isAiSkipped } = await import('../feature-config.js');
             saveFeatureConfig(VALID_CONFIG);
-            expect(isAiSkipped('my-project')).toBe(false);
+
+            expect(isAiSkipped('my-project')).toBeFalsy();
         });
     });
 
     describe('isQualitySkipped', () => {
         it('returns false when skipQuality is not configured', async () => {
             const { isQualitySkipped } = await import('../feature-config.js');
-            expect(isQualitySkipped('unknown-project')).toBe(false);
+
+            expect(isQualitySkipped('unknown-project')).toBeFalsy();
         });
 
         it('returns true when skipQuality is explicitly true', async () => {
@@ -304,20 +330,23 @@ describe('feature-config', () => {
                 },
             };
             saveFeatureConfig(configWithSkip);
-            expect(isQualitySkipped('my-project')).toBe(true);
+
+            expect(isQualitySkipped('my-project')).toBeTruthy();
         });
 
         it('returns false when skipQuality is explicitly false', async () => {
             const { saveFeatureConfig, isQualitySkipped } = await import('../feature-config.js');
             saveFeatureConfig(VALID_CONFIG);
-            expect(isQualitySkipped('my-project')).toBe(false);
+
+            expect(isQualitySkipped('my-project')).toBeFalsy();
         });
     });
 
     describe('isFlakySkipped', () => {
         it('returns false when skipFlaky is not configured', async () => {
             const { isFlakySkipped } = await import('../feature-config.js');
-            expect(isFlakySkipped('unknown-project')).toBe(false);
+
+            expect(isFlakySkipped('unknown-project')).toBeFalsy();
         });
 
         it('returns true when skipFlaky is explicitly true', async () => {
@@ -335,13 +364,15 @@ describe('feature-config', () => {
                 },
             };
             saveFeatureConfig(configWithSkip);
-            expect(isFlakySkipped('my-project')).toBe(true);
+
+            expect(isFlakySkipped('my-project')).toBeTruthy();
         });
 
         it('returns false when skipFlaky is explicitly false', async () => {
             const { saveFeatureConfig, isFlakySkipped } = await import('../feature-config.js');
             saveFeatureConfig(VALID_CONFIG);
-            expect(isFlakySkipped('my-project')).toBe(false);
+
+            expect(isFlakySkipped('my-project')).toBeFalsy();
         });
     });
 });

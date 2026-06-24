@@ -57,7 +57,8 @@ describe('computeCrossSquadBenchmark — property-based', () => {
                         const curr = result.benchmarks[i];
                         const prev = result.benchmarks[i - 1];
                         if (curr === undefined || prev === undefined) return;
-                        expect(curr.healthScore <= prev.healthScore).toBe(true);
+
+                        expect(curr.healthScore).toBeLessThanOrEqual(prev.healthScore);
                     }
                 },
             ),
@@ -73,6 +74,7 @@ describe('computeCrossSquadBenchmark — property-based', () => {
                     const result = computeCrossSquadBenchmark(projects);
                     const n = result.benchmarks.length;
                     const expectedAvg = n > 0 ? result.benchmarks.reduce((s, b) => s + b.healthScore, 0) / n : 0;
+
                     expect(result.averageScore).toBeCloseTo(expectedAvg, 10);
                 },
             ),
@@ -93,6 +95,7 @@ describe('computeCrossSquadBenchmark — property-based', () => {
                         const top = result.benchmarks[0];
                         const bottom = result.benchmarks[result.benchmarks.length - 1];
                         if (top === undefined || bottom === undefined) return;
+
                         expect(result.topSquad).toBe(top.project);
                         expect(result.bottomSquad).toBe(bottom.project);
                     }
@@ -106,6 +109,7 @@ describe('computeCrossSquadBenchmark — property-based', () => {
         fc.assert(
             fc.property(projectArb, (project) => {
                 const result = computeCrossSquadBenchmark([project]);
+
                 expect(result.stdDev).toBe(0);
             }),
             { numRuns: 50 },
@@ -118,6 +122,7 @@ describe('computeCrossSquadBenchmark — property-based', () => {
                 fc.uniqueArray(projectArb, { selector: (p) => p.name, minLength: 2, maxLength: 10 }),
                 (projects) => {
                     const result = computeCrossSquadBenchmark(projects);
+
                     expect(result.stdDev).toBeGreaterThanOrEqual(0);
                 },
             ),
@@ -134,6 +139,7 @@ describe('computeCrossSquadBenchmark — property-based', () => {
                 ),
                 (projects) => {
                     const result = computeCrossSquadBenchmark(projects);
+
                     expect(result.stdDev).toBe(0);
                 },
             ),
@@ -175,6 +181,7 @@ describe('generateBenchmarkHtml — property-based', () => {
                 (projects) => {
                     const result = computeCrossSquadBenchmark(projects);
                     const html = generateBenchmarkHtml(result, 'PBT');
+
                     expect(html).toContain('<!DOCTYPE html>');
                     expect(html).toContain('</html>');
                 },

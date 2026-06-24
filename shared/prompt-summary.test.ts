@@ -26,16 +26,19 @@ describe('printSummary', () => {
 
     it('prints success box when all pass', () => {
         printSummary([makeResult({ label: 'op1' }), makeResult({ label: 'op2' })]);
+
         expect(output['print']).toHaveBeenCalled();
     });
 
     it('prints failure box when some fail', () => {
         printSummary([makeResult({ label: 'op1' }), makeResult({ label: 'op2', status: 'error', message: 'boom' })]);
+
         expect(output['print']).toHaveBeenCalled();
     });
 
     it('prints no data when results is empty', () => {
         printSummary([]);
+
         expect(output['print']).toHaveBeenCalled();
     });
 
@@ -45,18 +48,21 @@ describe('printSummary', () => {
             .mocked(output['print'])
             .mock.calls.map((c: string[]) => c[0])
             .join(' ');
+
         expect(calls).toMatch(/Test Execution/);
     });
 
     it('renders quiet summary when isQuiet', () => {
         vi.mocked(isQuiet).mockReturnValue(true);
         printSummary([makeResult({})]);
+
         expect(output['print']).toHaveBeenCalled();
     });
 
     it('renders quiet summary with failures', () => {
         vi.mocked(isQuiet).mockReturnValue(true);
         printSummary([makeResult({ status: 'error', message: 'fail' })]);
+
         expect(output['print']).toHaveBeenCalled();
     });
 });

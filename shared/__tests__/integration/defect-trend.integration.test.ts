@@ -49,6 +49,7 @@ describe('Integration: Defect Trend (FT-20)', () => {
             const { generateDefectTrendHtml } = await import('../../defect-trend.js');
             const result = makeResult();
             const html = generateDefectTrendHtml(result, 'Defect Report');
+
             expect(html).toContain('Defect Report');
             expect(html).toContain('ASSERTION');
             expect(html).toContain('TIMEOUT');
@@ -64,6 +65,7 @@ describe('Integration: Defect Trend (FT-20)', () => {
             const { generateDefectTrendHtml } = await import('../../defect-trend.js');
             const result = makeResult({ trends: [], topCategories: [], period: { from: '', to: '' } });
             const html = generateDefectTrendHtml(result);
+
             expect(html).toContain('No defect data available.');
         });
     });
@@ -98,6 +100,7 @@ describe('Integration: Defect Trend (FT-20)', () => {
         it('includes theme toggle and dark mode CSS', async () => {
             const { generateDefectTrendHtml } = await import('../../defect-trend.js');
             const html = generateDefectTrendHtml(makeResult());
+
             expect(html).toContain('qa-report-theme');
             expect(html).toContain('--color-surface-page');
             expect(html).toContain('html.dark');

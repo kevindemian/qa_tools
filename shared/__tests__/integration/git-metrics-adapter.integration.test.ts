@@ -109,6 +109,7 @@ describe('FT-37d: returns empty array when git fails', () => {
         const fakeDir = fs.mkdtempSync('/tmp/fake-repo-');
         try {
             const runs = generateGitMetricsRuns({ repoPath: fakeDir });
+
             expect(runs).toEqual([]);
         } finally {
             fs.rmSync(fakeDir, { recursive: true, force: true });
@@ -124,6 +125,7 @@ describe('FT-37e: generateGitFailureClassifications for reverts only', () => {
         const result = generateGitFailureClassifications({ repoPath: TEST_DIR });
 
         expect(result.length).toBeGreaterThanOrEqual(1);
+
         result.forEach((c) => expect(c.category).toBe('REVERT'));
     });
 
@@ -146,6 +148,7 @@ describe('FT-37f: --all includes commits from all branches', () => {
         const runs = generateGitMetricsRuns({ repoPath: TEST_DIR });
 
         const allTitles = runs.flatMap((r) => r.tests.map((t) => t.title));
+
         expect(allTitles).toContain('initial commit');
         expect(allTitles).toContain('feature work');
     });
@@ -162,6 +165,7 @@ describe('FT-37g: branch option filters to single branch', () => {
         const runs = generateGitMetricsRuns({ repoPath: TEST_DIR, branch: 'master' });
 
         const allTitles = runs.flatMap((r) => r.tests.map((t) => t.title));
+
         expect(allTitles).toContain('main commit 1');
         expect(allTitles).toContain('main commit 2');
         expect(allTitles).not.toContain('feature commit');
@@ -174,6 +178,7 @@ describe('FT-37h: getLastGitLogError returns error for non-repo directory', () =
         try {
             generateGitMetricsRuns({ repoPath: fakeDir });
             const err = getLastGitLogError();
+
             expect(err).toBeTruthy();
             expect(err).toContain('not a git repository');
         } finally {

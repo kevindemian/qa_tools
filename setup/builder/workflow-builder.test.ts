@@ -4,6 +4,7 @@ describe('WorkflowBuilder', () => {
     it('builds an empty workflow for GitHub', () => {
         const b = new WorkflowBuilder('github', 'test');
         const yaml = b.toString();
+
         expect(yaml.trim()).toBe('{}');
     });
 
@@ -12,6 +13,7 @@ describe('WorkflowBuilder', () => {
         b.setWorkflowName('QA Pipeline');
         b.setOn(['push', 'pull_request']);
         const yaml = b.toString();
+
         expect(yaml).toContain('name: QA Pipeline');
         expect(yaml).toContain('on:');
         expect(yaml).toContain('push');
@@ -25,6 +27,7 @@ describe('WorkflowBuilder', () => {
             steps: [{ uses: 'actions/checkout@v4' }, { name: 'Run tests', run: 'npm test' }],
         });
         const yaml = b.toString();
+
         expect(yaml).toContain('qa:');
         expect(yaml).toContain('runs-on: ubuntu-latest');
         expect(yaml).toContain('actions/checkout@v4');
@@ -41,6 +44,7 @@ describe('WorkflowBuilder', () => {
             artifacts: { paths: ['reports/ctrf.json'] },
         });
         const yaml = b.toString();
+
         expect(yaml).toContain('qa:');
         expect(yaml).toContain('stage: test');
         expect(yaml).toContain('image: node:20');
@@ -62,7 +66,8 @@ jobs:
 `;
         const b = new WorkflowBuilder('github', 'test');
         b.parseExisting(existing);
-        expect(b.hasJob('lint')).toBe(true);
+
+        expect(b.hasJob('lint')).toBeTruthy();
         expect(b.jobNames()).toContain('lint');
         expect(b.jobNames()).not.toContain('qa');
 
@@ -71,8 +76,11 @@ jobs:
             needs: ['lint'],
             steps: [{ run: 'npm test' }],
         });
-        expect(b.hasJob('qa')).toBe(true);
+
+        expect(b.hasJob('qa')).toBeTruthy();
+
         const yaml = b.toString();
+
         expect(yaml).toContain('lint:');
         expect(yaml).toContain('qa:');
         expect(yaml).toContain('needs:');
@@ -82,9 +90,12 @@ jobs:
     it('removes a job', () => {
         const b = new WorkflowBuilder('github', 'test');
         b.addJob('qa', { runsOn: 'ubuntu-latest', steps: [{ run: 'echo hi' }] });
-        expect(b.hasJob('qa')).toBe(true);
+
+        expect(b.hasJob('qa')).toBeTruthy();
+
         b.removeJob('qa');
-        expect(b.hasJob('qa')).toBe(false);
+
+        expect(b.hasJob('qa')).toBeFalsy();
         expect(b.jobNames()).toEqual([]);
     });
 
@@ -95,6 +106,7 @@ jobs:
             steps: [{ run: 'echo $TOKEN', env: { TOKEN: '${{ secrets.TOKEN }}' } }],
         });
         const yaml = b.toString();
+
         expect(yaml).toContain('env:');
         expect(yaml).toContain('TOKEN');
     });
@@ -109,6 +121,7 @@ jobs:
             },
         });
         const yaml = b.toString();
+
         expect(yaml).toContain('services:');
         expect(yaml).toContain('postgres:');
         expect(yaml).toContain('image: postgres:16');
@@ -118,6 +131,7 @@ jobs:
         const b = new WorkflowBuilder('gitlab', 'test');
         b.setStages(['build', 'test', 'deploy']);
         const yaml = b.toString();
+
         expect(yaml).toContain('stages:');
         expect(yaml).toContain('test');
         expect(yaml).toContain('deploy');
@@ -128,6 +142,7 @@ jobs:
         b.addGlobalVariable('NODE_VERSION', '20');
         b.addGlobalVariable('CI', 'true');
         const yaml = b.toString();
+
         expect(yaml).toContain('NODE_VERSION');
         expect(yaml).toContain('CI');
     });
@@ -135,8 +150,11 @@ jobs:
     it('handles invalid YAML in parseExisting gracefully', () => {
         const b = new WorkflowBuilder('github', 'test');
         b.parseExisting('{{{ not valid yaml }}}');
+
         expect(b.jobNames()).toEqual([]);
+
         b.addJob('qa', { runsOn: 'ubuntu-latest', steps: [{ run: 'echo ok' }] });
-        expect(b.hasJob('qa')).toBe(true);
+
+        expect(b.hasJob('qa')).toBeTruthy();
     });
 });

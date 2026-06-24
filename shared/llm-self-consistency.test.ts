@@ -95,7 +95,7 @@ describe('consensusGenerate', () => {
         const result = await consensusGenerate({ tier: 'fast', system: '', user: '' }, validator, context, 2);
 
         expect(result.winner).toBeDefined();
-        expect(result.refined).toBe(false);
+        expect(result.refined).toBeFalsy();
     });
 
     it('auto-refines when divergence is high and refinement passes validation', async () => {
@@ -108,7 +108,7 @@ describe('consensusGenerate', () => {
 
         const result = await consensusGenerate({ tier: 'fast', system: '', user: '' }, makeValidator(), context, 2);
 
-        expect(result.refined).toBe(true);
+        expect(result.refined).toBeTruthy();
         expect(mockLlmPrompt).toHaveBeenCalledTimes(3);
     });
 
@@ -137,7 +137,7 @@ describe('consensusGenerate', () => {
 
         const result = await consensusGenerate({ tier: 'fast', system: '', user: '' }, validator, context, 2);
 
-        expect(result.refined).toBe(false);
+        expect(result.refined).toBeFalsy();
         expect(result.winner).toBeDefined();
     });
 
@@ -151,7 +151,7 @@ describe('consensusGenerate', () => {
 
         const result = await consensusGenerate({ tier: 'fast', system: '', user: '' }, makeValidator(), context, 2);
 
-        expect(result.refined).toBe(false);
+        expect(result.refined).toBeFalsy();
         expect(result.winner).toBeDefined();
     });
 
@@ -183,7 +183,7 @@ describe('consensusGenerate', () => {
 
         const result = await consensusGenerate({ tier: 'fast', system: '', user: '' }, validator, context, 2);
 
-        expect(result.refined).toBe(false);
+        expect(result.refined).toBeFalsy();
         expect(result.winner).toBeDefined();
     });
 });
@@ -211,8 +211,8 @@ describe('refineWithConsistency', () => {
             previousResult,
         );
 
-        expect(result.refined).toBe(true);
-        expect(result.candidates.length).toBe(1);
+        expect(result.refined).toBeTruthy();
+        expect(result.candidates).toHaveLength(1);
     });
 
     it('falls back to previous result when refined output fails validation', async () => {
@@ -240,7 +240,7 @@ describe('refineWithConsistency', () => {
             previousResult,
         );
 
-        expect(result.refined).toBe(false);
+        expect(result.refined).toBeFalsy();
         expect(result.winner).toEqual({ tests: [{ title: 'Original' }] });
     });
 
@@ -262,7 +262,7 @@ describe('refineWithConsistency', () => {
             previousResult,
         );
 
-        expect(result.refined).toBe(false);
+        expect(result.refined).toBeFalsy();
         expect(result).toBe(previousResult);
     });
 });

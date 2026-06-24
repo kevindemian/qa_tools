@@ -48,9 +48,9 @@ describe('Integration: Temp Dir', () => {
             expect(logsDir().length).toBeGreaterThan(0);
 
             // The directories should exist at the paths these functions report
-            expect(fs.existsSync(tempDirPath())).toBe(true);
-            expect(fs.existsSync(reportsDir())).toBe(true);
-            expect(fs.existsSync(logsDir())).toBe(true);
+            expect(fs.existsSync(tempDirPath())).toBeTruthy();
+            expect(fs.existsSync(reportsDir())).toBeTruthy();
+            expect(fs.existsSync(logsDir())).toBeTruthy();
         });
     });
 
@@ -61,7 +61,7 @@ describe('Integration: Temp Dir', () => {
 
             const filepath = writeReport('test-report.html', content);
 
-            expect(fs.existsSync(filepath)).toBe(true);
+            expect(fs.existsSync(filepath)).toBeTruthy();
             expect(fs.readFileSync(filepath, 'utf8')).toBe(content);
             expect(filepath).toContain('test-report.html');
             expect(filepath).toMatch(/\d{4}-\d{2}-\d{2}/); // dated directory
@@ -75,7 +75,7 @@ describe('Integration: Temp Dir', () => {
 
             const filepath = writeEphemeral('cache', 'data.json', content);
 
-            expect(fs.existsSync(filepath)).toBe(true);
+            expect(fs.existsSync(filepath)).toBeTruthy();
             expect(fs.readFileSync(filepath, 'utf8')).toBe(content);
             expect(filepath).toContain(path.join('cache', 'data.json'));
         });
@@ -90,9 +90,10 @@ describe('Integration: Temp Dir', () => {
             cleanupTempDirs();
 
             const tempBase = path.join(TEST_DIR, 'temp');
-            expect(fs.existsSync(path.join(tempBase, 'previews'))).toBe(false);
-            expect(fs.existsSync(path.join(tempBase, 'vars'))).toBe(false);
-            expect(fs.existsSync(path.join(tempBase, 'cache'))).toBe(false);
+
+            expect(fs.existsSync(path.join(tempBase, 'previews'))).toBeFalsy();
+            expect(fs.existsSync(path.join(tempBase, 'vars'))).toBeFalsy();
+            expect(fs.existsSync(path.join(tempBase, 'cache'))).toBeFalsy();
         });
     });
 
@@ -100,6 +101,7 @@ describe('Integration: Temp Dir', () => {
         it('returns configured reports directory', async () => {
             const { reportsDir } = await import('../../temp-dir.js');
             const dir = reportsDir();
+
             expect(dir).toContain('reports');
         });
     });
@@ -108,6 +110,7 @@ describe('Integration: Temp Dir', () => {
         it('returns configured temp directory', async () => {
             const { tempDirPath } = await import('../../temp-dir.js');
             const dir = tempDirPath();
+
             expect(dir).toContain('temp');
         });
     });

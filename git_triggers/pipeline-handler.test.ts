@@ -135,16 +135,16 @@ beforeEach(() => {
 
 describe('isComplete', () => {
     it('returns true for terminal statuses', () => {
-        expect(isComplete('success')).toBe(true);
-        expect(isComplete('failed')).toBe(true);
-        expect(isComplete('canceled')).toBe(true);
-        expect(isComplete('skipped')).toBe(true);
+        expect(isComplete('success')).toBeTruthy();
+        expect(isComplete('failed')).toBeTruthy();
+        expect(isComplete('canceled')).toBeTruthy();
+        expect(isComplete('skipped')).toBeTruthy();
     });
 
     it('returns false for pending statuses', () => {
-        expect(isComplete('pending')).toBe(false);
-        expect(isComplete('running')).toBe(false);
-        expect(isComplete('')).toBe(false);
+        expect(isComplete('pending')).toBeFalsy();
+        expect(isComplete('running')).toBeFalsy();
+        expect(isComplete('')).toBeFalsy();
     });
 });
 
@@ -153,6 +153,7 @@ describe('pollPipeline', () => {
         vi.spyOn(mockM, 'getPipeline').mockResolvedValue({ status: 'success', web_url: 'https://gitlab.com/pipe/1' });
 
         const result = await pollPipeline(mockM, '1', 100, 10000);
+
         expect(result).toEqual({ status: 'success', web_url: 'https://gitlab.com/pipe/1' });
     });
 
@@ -162,6 +163,7 @@ describe('pollPipeline', () => {
             .mockResolvedValueOnce({ status: 'success', web_url: 'https://gitlab.com/pipe/1' });
 
         const result = await pollPipeline(mockM, '1', 100, 10000);
+
         expect(result.status).toBe('success');
     });
 
@@ -169,6 +171,7 @@ describe('pollPipeline', () => {
         vi.spyOn(mockM, 'getPipeline').mockResolvedValue({ status: 'running', web_url: '' });
 
         const result = await pollPipeline(mockM, '1', 50, 0);
+
         expect(result).toEqual({ status: 'timeout', web_url: '' });
     });
 
@@ -181,6 +184,7 @@ describe('pollPipeline', () => {
             return { status: 'success', web_url: 'https://gitlab.com/pipe/1' };
         });
         const result = await pollPipeline(mockM, '1', 100, 10000);
+
         expect(result.status).toBe('success');
     });
 });
@@ -259,6 +263,7 @@ describe('handleTriggerPipeline', () => {
         });
 
         await handleTriggerPipeline(mockM, 'my-project');
+
         // icon uses '\u2717' branch since status !== 'success'
         // handleQuickMerge is called with pollStatus='failed' and returns early
         expect(mockPushHistory).not.toHaveBeenCalledWith(expect.stringContaining('quick-mr'));
@@ -276,6 +281,7 @@ describe('handleTriggerPipeline', () => {
         });
 
         await handleTriggerPipeline(mockM, 'my-project');
+
         expect(mockPrompt).not.toHaveBeenCalled();
     });
 
@@ -293,6 +299,7 @@ describe('handleTriggerPipeline', () => {
         });
 
         await handleTriggerPipeline(mockM, 'my-project');
+
         // pending.branch is undefined → branch = '' (covers L954)
         expect(mockInfo).toHaveBeenCalledWith(expect.stringContaining('Retomando'));
     });
@@ -367,6 +374,7 @@ describe('parseTestResults', () => {
             stats: { passed: 1, failed: 0, skipped: 0, total: 1, duration: 0 },
             tests: [],
         });
+
         expect(result).toEqual({ matched: [], unmatched: [], csvName: 'test' });
     });
 
@@ -377,6 +385,7 @@ describe('parseTestResults', () => {
             stats: { passed: 0, failed: 0, skipped: 0, total: 0, duration: 0 },
             tests: [],
         });
+
         expect(result).toBeNull();
     });
 });
@@ -389,6 +398,7 @@ describe('createTestExecution', () => {
         vi.spyOn(testResults, 'createTestExecution').mockResolvedValue(undefined);
         const jiraResource = {} as JiraClient;
         const linkManager = {} as JiraLinkManager;
+
         await expect(
             createTestExecution({
                 matched: [],
@@ -414,6 +424,7 @@ describe('downloadTestArtifacts', () => {
         const testResults = vi.mocked(testResultsModule);
         vi.spyOn(testResults, 'downloadTestArtifacts').mockResolvedValue(null);
         const result = await downloadTestArtifacts(mockM, '1');
+
         expect(result).toBeNull();
         expect(testResults.downloadTestArtifacts).toHaveBeenCalledWith(mockM, '1');
     });
@@ -432,6 +443,7 @@ describe('collectTestResults', () => {
             linkManager,
             jiraBaseUrl: '',
         });
+
         expect(result).toBeNull();
     });
 });
@@ -632,6 +644,7 @@ describe('triggerAndPollPipeline full flow', () => {
         await handleTriggerPipeline(mockM, 'my-project');
         // handleBugCreation called, but _jiraEnv returns null → early return
         const bugReport = vi.mocked(bugReportModule);
+
         expect(bugReport.fileToJira).not.toHaveBeenCalled();
     });
 
@@ -643,6 +656,7 @@ describe('triggerAndPollPipeline full flow', () => {
             .mockReturnValueOnce(true); // Aguardar conclusao?
 
         await handleTriggerPipeline(mockM, 'my-project');
+
         expect(mockInfo).toHaveBeenCalledWith(expect.stringContaining('✗'));
     });
 
@@ -653,6 +667,7 @@ describe('triggerAndPollPipeline full flow', () => {
             .mockReturnValueOnce(true); // Confirmar disparo?
 
         await handleTriggerPipeline(mockM, 'my-project');
+
         // pipelineResult is null → the if(pipelineResult) block skipped (L1026)
         // then !pipelineResult is true → early return
         expect(setIsBusy).not.toHaveBeenCalled();
@@ -673,6 +688,7 @@ describe('triggerAndPollPipeline full flow', () => {
         });
 
         await handleTriggerPipeline(mockM, 'my-project');
+
         // Mr is null → if(mr) else path (L885)
         expect(mockM.acceptMergeRequest).not.toHaveBeenCalled();
     });
@@ -688,6 +704,7 @@ describe('triggerAndPollPipeline full flow', () => {
             .mockReturnValueOnce(true); // Fazer merge agora?
 
         await handleTriggerPipeline(mockM, 'my-project');
+
         // mergeResult is null → if(mergeResult) else path (L902)
         expect(mockSuccess).not.toHaveBeenCalledWith(expect.stringContaining('Merge realizado'));
     });
@@ -703,6 +720,7 @@ describe('triggerAndPollPipeline full flow', () => {
         // All 6 Once values consumed, no leftover pollution
 
         await handleTriggerPipeline(mockM, 'my-project');
+
         // tryAcceptMerge called, confirm returns false → early return (L142)
         expect(mockM.acceptMergeRequest).not.toHaveBeenCalled();
     });

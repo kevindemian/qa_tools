@@ -98,6 +98,7 @@ describe('Integration: Coverage Gap (FT-18)', () => {
             const { generateCoverageGapHtml } = await import('../../generate-coverage-gap-html.js');
             const result = makeResult();
             const html = generateCoverageGapHtml(result, 'Gap Report');
+
             expect(html).toContain('Gap Report');
             expect(html).toContain('PROJ-2');
             expect(html).toContain('GAP');
@@ -128,6 +129,7 @@ describe('Integration: Coverage Gap (FT-18)', () => {
                 hierarchy: [],
             });
             const html = generateCoverageGapHtml(result);
+
             expect(html).toContain('No coverage gaps found');
             expect(html).toContain('All epics pass');
         });
@@ -143,6 +145,7 @@ describe('Integration: Coverage Gap (FT-18)', () => {
             const { rootLogger } = await import('../../logger.js');
             const { generateCoverageGapHtml } = await import('../../generate-coverage-gap-html.js');
             const result = generateCoverageGapHtml(makeResult());
+
             expect(result).toContain('Error generating coverage gap report');
             expect(rootLogger['error']).toHaveBeenCalled();
         });

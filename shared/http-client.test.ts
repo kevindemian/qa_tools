@@ -60,6 +60,7 @@ describe('HTTP Client', () => {
                 authHeader: { Authorization: 'Bearer token123' },
                 timeout: 5000,
             });
+
             expect(createSpy).toHaveBeenCalledWith(
                 expect.objectContaining({
                     baseURL: 'https://api.test.com',
@@ -70,26 +71,32 @@ describe('HTTP Client', () => {
                     },
                 }),
             );
+
             const axCfg = nonNull(createSpy.mock.calls[0])[0];
+
             expect(axCfg).toHaveProperty('httpsAgent');
         });
 
         it('registers response interceptor', () => {
             httpClient.createHttpClient({ baseUrl: 'https://api.test.com' });
+
             expect(mockInstance.interceptors.response.use).toHaveBeenCalled();
         });
 
         it('uses default timeout when not specified', () => {
             const createSpy2 = vi.spyOn(axios, 'create');
             httpClient.createHttpClient({ baseUrl: 'https://api.test.com' });
+
             expect(createSpy2).toHaveBeenCalledWith(expect.objectContaining({ timeout: 120000 }));
         });
 
         it('sleep uses default setTimeout when no test override is active', async () => {
             httpClient.setTestSleep(undefined);
             const promise = httpClient.sleep(1);
+
             // The promise resolves when setTimeout fires (mocked in beforeEach)
             await expect(promise).resolves.toBeUndefined();
+
             httpClient.setTestSleep(() => Promise.resolve());
         });
     });
@@ -126,6 +133,7 @@ describe('HTTP Client', () => {
             } catch {
                 /* expected */
             }
+
             expect(mockInstance).toHaveBeenCalledTimes(10);
         });
 
@@ -144,6 +152,7 @@ describe('HTTP Client', () => {
             } catch {
                 /* expected */
             }
+
             expect(mockInstance).toHaveBeenCalledTimes(10);
         });
 
@@ -156,6 +165,7 @@ describe('HTTP Client', () => {
             } catch {
                 /* expected */
             }
+
             expect(mockInstance).not.toHaveBeenCalled();
         });
 
@@ -174,6 +184,7 @@ describe('HTTP Client', () => {
             } catch {
                 /* expected */
             }
+
             expect(mockInstance).not.toHaveBeenCalled();
         });
 
@@ -184,6 +195,7 @@ describe('HTTP Client', () => {
                 data: 'ok',
             };
             const result = nonNull(successHandler)(response);
+
             expect(result).toBe(response);
         });
 
@@ -192,6 +204,7 @@ describe('HTTP Client', () => {
             const err = new Error('no config');
             try {
                 await nonNull(errorHandler)(err);
+
                 expect.unreachable('should have thrown');
             } catch (e) {
                 expect(e).toBe(err);
@@ -216,6 +229,7 @@ describe('HTTP Client', () => {
             } catch {
                 void 0;
             }
+
             expect(mockInstance).toHaveBeenCalled();
         });
 
@@ -232,6 +246,7 @@ describe('HTTP Client', () => {
             } catch {
                 /* expected */
             }
+
             expect(mockInstance).toHaveBeenCalledTimes(2);
         });
 
@@ -250,8 +265,10 @@ describe('HTTP Client', () => {
             } catch {
                 /* expected */
             }
+
             expect(debugSpy).toHaveBeenCalled();
             expect(warnSpy).not.toHaveBeenCalled();
+
             debugSpy.mockRestore();
             warnSpy.mockRestore();
         });
@@ -277,6 +294,7 @@ describe('HTTP Client', () => {
                 return Promise.resolve({ status: 200 });
             });
             const result = await nonNull(errorHandler)(err);
+
             expect(result).toEqual({ status: 200 });
             expect(callCount).toBe(2);
         });
@@ -300,6 +318,7 @@ describe('HTTP Client', () => {
                 return Promise.resolve({ status: 200 });
             });
             const result = await nonNull(errorHandler)(err);
+
             expect(result).toEqual({ status: 200 });
             expect(callCount).toBe(2);
         });
@@ -320,7 +339,7 @@ describe('HTTP Client', () => {
 
             // Create entry in retryCounts via a retry that resolves successfully
             // (entry persists because neither success nor error handler deletes it)
-            mockInstance.mockImplementation(() => Promise.resolve({ status: 200 }));
+            mockInstance.mockResolvedValue({ status: 200 });
             const err = {
                 message: 'Server error',
                 name: 'Error',
@@ -342,6 +361,7 @@ describe('HTTP Client', () => {
             const reqHandler = nonNull(mockInstance.interceptors.request.use.mock.calls[0])[0];
             const cfg: Record<string, unknown> = { url: ':::invalid', headers: {} };
             const result = await reqHandler(cfg);
+
             // Handler returns config unchanged; semaphore acquire is verified via the HostSemaphore integration
             expect(result).toBe(cfg);
         });
@@ -355,6 +375,7 @@ describe('HTTP Client', () => {
             await reqHandler(cfg1);
             const req2Promise = reqHandler(cfg2);
             respHandler({ config: cfg1, data: 'ok' });
+
             await expect(req2Promise).resolves.toBe(cfg2);
         });
 
@@ -362,6 +383,7 @@ describe('HTTP Client', () => {
             httpClient.createThrottledClient({ baseUrl: 'https://api.test.com', maxConcurrency: 3 });
             const errRespHandler = nonNull(mockInstance.interceptors.response.use.mock.calls[1])[1];
             const error = { config: {}, message: 'test', name: 'Error' };
+
             expect(() => errRespHandler(error)).toThrow(error);
         });
     });
@@ -374,10 +396,12 @@ describe('HTTP Client', () => {
 
             const p = sem.acquire('test-host');
             const race = Promise.race([p.then(() => 'resolved'), Promise.resolve('pending')]);
-            expect(await race).toBe('pending');
+
+            await expect(race).resolves.toBe('pending');
 
             sem.release('test-host');
-            expect(await p).toBeUndefined();
+
+            await expect(p).resolves.toBeUndefined();
         });
 
         it('release dispatches queued request and updates inflight', async () => {
@@ -389,11 +413,13 @@ describe('HTTP Client', () => {
             const p3 = sem.acquire('h1');
 
             sem.release('h1');
+
             await expect(p3).resolves.toBeUndefined();
         });
 
         it('release calls dispatchNext even when queue is empty', () => {
             const sem = new HostSemaphore(1);
+
             expect(() => sem.release('nonexistent')).not.toThrow();
         });
     });

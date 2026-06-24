@@ -10,6 +10,7 @@ import { nullAs, undefinedAs, nonNull } from './test-utils.js';
 describe('analyzePipelineImpact', () => {
     it('returns default result for null passRate', () => {
         const result = analyzePipelineImpact(nullAs<number>(), 0, [], 80, []);
+
         expect(result.alerts).toHaveLength(1);
         expect(nonNull(result.alerts[0]).title).toBe('Insufficient data');
         expect(result.criticalCount).toBe(0);
@@ -19,6 +20,7 @@ describe('analyzePipelineImpact', () => {
 
     it('returns default result for undefined passRate', () => {
         const result = analyzePipelineImpact(undefinedAs<number>(), 0, [], 80, []);
+
         expect(result.alerts).toHaveLength(1);
         expect(nonNull(result.alerts[0]).title).toBe('Insufficient data');
         expect(result.criticalCount).toBe(0);
@@ -28,47 +30,56 @@ describe('analyzePipelineImpact', () => {
 
     it('returns default result for null coveragePct', () => {
         const result = analyzePipelineImpact(90, 0, [], nullAs<number>(), []);
+
         expect(result.alerts).toHaveLength(1);
         expect(nonNull(result.alerts[0]).title).toBe('Insufficient data');
     });
 
     it('returns default result for undefined coveragePct', () => {
         const result = analyzePipelineImpact(90, 0, [], undefinedAs<number>(), []);
+
         expect(result.alerts).toHaveLength(1);
         expect(nonNull(result.alerts[0]).title).toBe('Insufficient data');
     });
 
     it('generates CRITICAL alert when passRate < 70 and coveragePct < 70', () => {
         const result = analyzePipelineImpact(50, 3, ['Login failure', 'DB timeout'], 45, ['Epic-1']);
+
         expect(result.criticalCount).toBe(1);
         expect(result.warningCount).toBeGreaterThanOrEqual(1);
-        expect(result.alerts.some((a) => a.severity === 'critical')).toBe(true);
+        expect(result.alerts.some((a) => a.severity === 'critical')).toBeTruthy();
+
         const critical = result.alerts.find((a) => a.severity === 'critical');
+
         expect(critical?.title).toBe('Low pass rate in low-coverage area');
     });
 
     it('generates WARNING alert for elevated failure rate', () => {
         const result = analyzePipelineImpact(50, 3, ['Login failure'], 80, []);
+
         expect(result.warningCount).toBeGreaterThanOrEqual(1);
-        expect(result.alerts.some((a) => a.title === 'Elevated failure rate')).toBe(true);
+        expect(result.alerts.some((a) => a.title === 'Elevated failure rate')).toBeTruthy();
     });
 
     it('generates WARNING alert for coverage below threshold', () => {
         const result = analyzePipelineImpact(90, 0, [], 50, []);
+
         expect(result.warningCount).toBeGreaterThanOrEqual(1);
-        expect(result.alerts.some((a) => a.title === 'Coverage below threshold')).toBe(true);
+        expect(result.alerts.some((a) => a.title === 'Coverage below threshold')).toBeTruthy();
     });
 
     it('generates WARNING for failures in uncovered epics', () => {
         const result = analyzePipelineImpact(90, 2, ['Timeout'], 80, ['Epic-X', 'Epic-Y']);
+
         expect(result.warningCount).toBeGreaterThanOrEqual(1);
-        expect(result.alerts.some((a) => a.title === 'Failures in uncovered epics')).toBe(true);
+        expect(result.alerts.some((a) => a.title === 'Failures in uncovered epics')).toBeTruthy();
     });
 
     it('generates INFO all-clear alert when passRate >= 80 and coveragePct >= 80', () => {
         const result = analyzePipelineImpact(95, 0, [], 90, []);
+
         expect(result.infoCount).toBeGreaterThanOrEqual(1);
-        expect(result.alerts.some((a) => a.title === 'All clear')).toBe(true);
+        expect(result.alerts.some((a) => a.title === 'All clear')).toBeTruthy();
         expect(result.criticalCount).toBe(0);
         expect(result.warningCount).toBe(0);
     });
@@ -76,6 +87,7 @@ describe('analyzePipelineImpact', () => {
     it('deduplicates alerts by title', () => {
         const result = analyzePipelineImpact(50, 3, ['Login failure'], 45, ['Epic-1']);
         const titles = result.alerts.map((a) => a.title);
+
         expect(new Set(titles).size).toBe(titles.length);
     });
 
@@ -84,6 +96,7 @@ describe('analyzePipelineImpact', () => {
         const actualCritical = result.alerts.filter((a) => a.severity === 'critical').length;
         const actualWarning = result.alerts.filter((a) => a.severity === 'warning').length;
         const actualInfo = result.alerts.filter((a) => a.severity === 'info').length;
+
         expect(result.criticalCount).toBe(actualCritical);
         expect(result.warningCount).toBe(actualWarning);
         expect(result.infoCount).toBe(actualInfo);
@@ -92,6 +105,7 @@ describe('analyzePipelineImpact', () => {
     it('produces valid timestamp', () => {
         const result = analyzePipelineImpact(95, 0, [], 90, []);
         const d = new Date(result.timestamp);
+
         expect(d.toString()).not.toBe('Invalid Date');
         expect(result.timestamp).toMatch(/^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2}/);
     });
@@ -99,22 +113,26 @@ describe('analyzePipelineImpact', () => {
     it('timestamp is a valid ISO date string', () => {
         const result = analyzePipelineImpact(95, 0, [], 90, []);
         const d = new Date(result.timestamp);
+
         expect(d.toString()).not.toBe('Invalid Date');
         expect(result.timestamp).toMatch(/^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2}/);
     });
 
     it('does not generate critical alert when only one condition is low', () => {
         const lowPass = analyzePipelineImpact(50, 0, [], 80, []);
+
         expect(lowPass.criticalCount).toBe(0);
-        expect(lowPass.alerts.some((a) => a.severity === 'critical')).toBe(false);
+        expect(lowPass.alerts.some((a) => a.severity === 'critical')).toBeFalsy();
 
         const lowCoverage = analyzePipelineImpact(90, 0, [], 45, []);
+
         expect(lowCoverage.criticalCount).toBe(0);
-        expect(lowCoverage.alerts.some((a) => a.severity === 'critical')).toBe(false);
+        expect(lowCoverage.alerts.some((a) => a.severity === 'critical')).toBeFalsy();
     });
 
     it('handles zero failing jobs and no uncovered epics', () => {
         const result = analyzePipelineImpact(95, 0, [], 90, []);
+
         expect(result.alerts.length).toBeGreaterThanOrEqual(1);
         expect(result.warningCount).toBe(0);
         expect(result.criticalCount).toBe(0);
@@ -163,6 +181,7 @@ describe('generateImpactAlertHtml', () => {
             infoCount: 1,
         });
         const html = generateImpactAlertHtml(result);
+
         expect(html).toContain('<!DOCTYPE html>');
         expect(html).toContain('</html>');
         expect(html).toContain('Low pass rate in low-coverage area');
@@ -186,6 +205,7 @@ describe('generateImpactAlertHtml', () => {
             infoCount: 3,
         });
         const html = generateImpactAlertHtml(result);
+
         expect(html).toContain('Total Alerts');
         expect(html).toContain('Critical');
         expect(html).toContain('Warning');
@@ -196,23 +216,27 @@ describe('generateImpactAlertHtml', () => {
 
     it('returns error page for null result', () => {
         const html = generateImpactAlertHtml(nullAs<ImpactAlertResult>());
+
         expect(html).toContain('Impact Alert Report Error');
     });
 
     it('returns error page for undefined result', () => {
         const html = generateImpactAlertHtml(undefinedAs<ImpactAlertResult>());
+
         expect(html).toContain('Impact Alert Report Error');
     });
 
     it('shows no-alerts message when alerts list is empty', () => {
         const result = makeResult();
         const html = generateImpactAlertHtml(result);
+
         expect(html).toContain('No alerts to display');
     });
 
     it('uses custom title', () => {
         const result = makeResult();
         const html = generateImpactAlertHtml(result, 'My Alert Report');
+
         expect(html).toContain('<title>My Alert Report</title>');
         expect(html).toContain('<h1>My Alert Report</h1>');
     });
@@ -220,6 +244,7 @@ describe('generateImpactAlertHtml', () => {
     it('defaults title to Impact-Aware Pipeline Alert', () => {
         const result = makeResult();
         const html = generateImpactAlertHtml(result);
+
         expect(html).toContain('<title>Impact-Aware Pipeline Alert</title>');
         expect(html).toContain('<h1>Impact-Aware Pipeline Alert</h1>');
     });
@@ -227,6 +252,7 @@ describe('generateImpactAlertHtml', () => {
     it('includes theme and dark mode support', () => {
         const result = makeResult();
         const html = generateImpactAlertHtml(result);
+
         expect(html).toContain('qa-report-theme');
         expect(html).toContain('prefers-color-scheme');
         expect(html).toContain('html.dark');
@@ -235,6 +261,7 @@ describe('generateImpactAlertHtml', () => {
     it('includes footer', () => {
         const result = makeResult();
         const html = generateImpactAlertHtml(result);
+
         expect(html).toContain('Impact-Aware Pipeline Alert');
     });
 
@@ -268,6 +295,7 @@ describe('generateImpactAlertHtml', () => {
             infoCount: 1,
         });
         const html = generateImpactAlertHtml(result);
+
         expect(html).toContain('data-component="card"');
         expect(html).toContain('Critical issue');
         expect(html).toContain('Warning issue');
@@ -296,6 +324,7 @@ describe('generateImpactAlertHtml', () => {
             warningCount: 1,
         });
         const html = generateImpactAlertHtml(result);
+
         expect(html).not.toContain('<script>alert("xss")</script>');
         expect(html).not.toContain('<img src=x onerror=alert(1)>');
         expect(html).not.toContain('<input>');
@@ -311,6 +340,7 @@ describe('generateImpactAlertHtml', () => {
         try {
             const result = makeResult();
             const html = generateImpactAlertHtml(result);
+
             expect(html).toContain('Impact Alert Report Error');
         } finally {
             spy.mockRestore();

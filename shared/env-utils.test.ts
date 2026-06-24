@@ -14,41 +14,44 @@ describe('envVal', () => {
 
     it('returns env var value when set', () => {
         process.env['TEST_VAL'] = 'hello';
+
         expect(envVal('TEST_VAL')).toBe('hello');
     });
 
     it('returns fallback when env var is not set', () => {
         delete process.env['TEST_MISSING'];
+
         expect(envVal('TEST_MISSING', 'default')).toBe('default');
     });
 
     it('returns empty string when no fallback', () => {
         delete process.env['TEST_EMPTY'];
+
         expect(envVal('TEST_EMPTY')).toBe('');
     });
 });
 
 describe('toBool', () => {
     it('returns true for "true" string', () => {
-        expect(toBool('true')).toBe(true);
+        expect(toBool('true')).toBeTruthy();
     });
 
     it('returns false for "false" string', () => {
-        expect(toBool('false')).toBe(false);
+        expect(toBool('false')).toBeFalsy();
     });
 
     it('returns false for undefined', () => {
-        expect(toBool(undefined)).toBe(false);
+        expect(toBool(undefined)).toBeFalsy();
     });
 
     it('returns boolean value as-is', () => {
-        expect(toBool(true)).toBe(true);
-        expect(toBool(false)).toBe(false);
+        expect(toBool(true)).toBeTruthy();
+        expect(toBool(false)).toBeFalsy();
     });
 
     it('returns false for any other string', () => {
-        expect(toBool('maybe')).toBe(false);
-        expect(toBool('')).toBe(false);
+        expect(toBool('maybe')).toBeFalsy();
+        expect(toBool('')).toBeFalsy();
     });
 });
 

@@ -56,6 +56,7 @@ describe('generateCoverageHtml — property-based', () => {
                     0,
                 );
                 const expectedPct = total > 0 ? ((closed / total) * 100).toFixed(1) + '%' : '0.0%';
+
                 expect(html).toContain(expectedPct);
             }),
             { numRuns: 50 },
@@ -69,6 +70,7 @@ describe('generateCoverageHtml — property-based', () => {
                 for (const e of epics) {
                     const closed = e.issues.filter((i) => i.status === 'Done' || i.status === 'Closed').length;
                     const expectedPct = e.issues.length > 0 ? ((closed / e.issues.length) * 100).toFixed(1) : '0.0';
+
                     expect(html).toContain(expectedPct);
                 }
             }),
@@ -104,6 +106,7 @@ describe('generateCoverageHtml — property-based', () => {
 
     it('coverage is 0.0 when no epics', () => {
         const html = generateCoverageHtml([]);
+
         expect(html).toContain('0.0');
     });
 });
@@ -125,6 +128,7 @@ describe('generateHtmlReport — property-based', () => {
         fc.assert(
             fc.property(fc.array(flatTestArb, { minLength: 0, maxLength: 10 }), (tests) => {
                 const html = generateHtmlReport(tests);
+
                 expect(html).toContain('<!DOCTYPE html>');
                 expect(html).toContain('<html');
                 expect(html).toContain('</html>');
@@ -139,6 +143,7 @@ describe('generateCoverageHtml — invariants (property-based)', () => {
         fc.assert(
             fc.property(fc.array(epicArb, { minLength: 0, maxLength: 5 }), (epics) => {
                 const html = generateCoverageHtml(epics);
+
                 expect(html).toContain('<!DOCTYPE html>');
                 expect(html).toContain('<html');
                 expect(html).toContain('</html>');

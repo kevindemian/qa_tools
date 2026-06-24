@@ -78,23 +78,27 @@ beforeEach(() => {
 });
 
 describe('DB constants', () => {
-    it('DB_DIR is derived from homedir and ends with share/opencode', async () => {
+    it('dB_DIR is derived from homedir and ends with share/opencode', async () => {
         const { DB_DIR: dir } = await loadModule();
+
         expect(dir).toContain('share/opencode');
         expect(dir).not.toBe('');
     });
 
-    it('DB_TIMEOUT_MS defaults to 300000 (5min) for large databases', async () => {
+    it('dB_TIMEOUT_MS defaults to 300000 (5min) for large databases', async () => {
         const { DB_TIMEOUT_MS } = await loadModule();
+
         expect(DB_TIMEOUT_MS).toBe(300_000);
     });
 
-    it('DB_TIMEOUT_MS may be overridden by OPENCODE_DB_TIMEOUT_MS env var', async () => {
+    it('dB_TIMEOUT_MS may be overridden by OPENCODE_DB_TIMEOUT_MS env var', async () => {
         const origEnv = process.env['OPENCODE_DB_TIMEOUT_MS'];
         process.env['OPENCODE_DB_TIMEOUT_MS'] = '60000';
         vi.resetModules();
         const { DB_TIMEOUT_MS } = await import('./opencode-db-maintenance.js');
+
         expect(DB_TIMEOUT_MS).toBe(60_000);
+
         delete process.env['OPENCODE_DB_TIMEOUT_MS'];
         if (origEnv !== undefined) {
             process.env['OPENCODE_DB_TIMEOUT_MS'] = origEnv;
@@ -108,7 +112,8 @@ describe('ensureDbDir', () => {
         mockMkdirSync.mockReturnValue(undefined);
         const { ensureDbDir, DB_DIR: dir } = await loadModule();
         const result = ensureDbDir();
-        expect(result).toBe(true);
+
+        expect(result).toBeTruthy();
         expect(mockMkdirSync).toHaveBeenCalledWith(dir, { recursive: true });
     });
 
@@ -118,7 +123,8 @@ describe('ensureDbDir', () => {
         });
         const { ensureDbDir } = await loadModule();
         const result = ensureDbDir();
-        expect(result).toBe(false);
+
+        expect(result).toBeFalsy();
     });
 });
 
@@ -126,6 +132,7 @@ describe('modeCheckOnly', () => {
     it('returns PASS when integrity and WAL checkpoint succeed', async () => {
         const { modeCheckOnly } = await loadModule();
         const result = modeCheckOnly(DB_PATH);
+
         expect(result.mode).toBe('check-only');
         expect(result.integrityCheck).toBe('ok');
         expect(result.walCheckpoint).toContain('0,0,0');
@@ -143,6 +150,7 @@ describe('modeCheckOnly', () => {
         });
         const { modeCheckOnly } = await loadModule();
         const result = modeCheckOnly(DB_PATH);
+
         expect(result.errors.length).toBeGreaterThan(0);
         expect(result.integrityCheck).toContain('ERROR');
     });
@@ -157,6 +165,7 @@ describe('modeCheckOnly', () => {
         });
         const { modeCheckOnly } = await loadModule();
         const result = modeCheckOnly(DB_PATH);
+
         expect(result.errors.length).toBeGreaterThan(0);
         expect(result.walCheckpoint).toContain('ERROR');
     });
@@ -166,8 +175,9 @@ describe('modeRepair', () => {
     it('does nothing when integrity already passes', async () => {
         const { modeRepair } = await loadModule();
         const result = modeRepair(DB_PATH);
+
         expect(result.mode).toBe('repair');
-        expect(result.repaired).toBe(false);
+        expect(result.repaired).toBeFalsy();
         expect(result.errors).toHaveLength(0);
     });
 
@@ -184,7 +194,8 @@ describe('modeRepair', () => {
         });
         const { modeRepair } = await loadModule();
         const result = modeRepair(DB_PATH);
-        expect(result.repaired).toBe(true);
+
+        expect(result.repaired).toBeTruthy();
         expect(result.errors).toHaveLength(0);
         expect(mockExecFileSync).toHaveBeenCalledWith(
             'sqlite3',
@@ -208,7 +219,8 @@ describe('modeRepair', () => {
         });
         const { modeRepair } = await loadModule();
         const result = modeRepair(DB_PATH);
-        expect(result.repaired).toBe(false);
+
+        expect(result.repaired).toBeFalsy();
         expect(result.errors.length).toBeGreaterThan(0);
     });
 });
@@ -217,8 +229,9 @@ describe('modeVacuum', () => {
     it('vacuums when integrity passes', async () => {
         const { modeVacuum } = await loadModule();
         const result = modeVacuum(DB_PATH);
+
         expect(result.mode).toBe('vacuum');
-        expect(result.vacuumed).toBe(true);
+        expect(result.vacuumed).toBeTruthy();
         expect(result.errors).toHaveLength(0);
         expect(mockExecFileSync).toHaveBeenCalledWith(
             'sqlite3',
@@ -237,7 +250,8 @@ describe('modeVacuum', () => {
         });
         const { modeVacuum } = await loadModule();
         const result = modeVacuum(DB_PATH);
-        expect(result.vacuumed).toBe(false);
+
+        expect(result.vacuumed).toBeFalsy();
         expect(result.errors.length).toBeGreaterThan(0);
     });
 });
@@ -246,6 +260,7 @@ describe('getDbSizeBytes', () => {
     it('returns file size when stat succeeds', async () => {
         const { getDbSizeBytes } = await loadModule();
         const size = getDbSizeBytes();
+
         expect(size).toBe(65536);
     });
 
@@ -256,6 +271,7 @@ describe('getDbSizeBytes', () => {
         });
         const { getDbSizeBytes } = await loadModule();
         const size = getDbSizeBytes();
+
         expect(size).toBe(0);
     });
 
@@ -263,6 +279,7 @@ describe('getDbSizeBytes', () => {
         mockExistsSync.mockReturnValue(false);
         const { getDbSizeBytes } = await loadModule();
         const size = getDbSizeBytes();
+
         expect(size).toBe(0);
         expect(mockExecFileSync).not.toHaveBeenCalledWith('stat', expect.anything(), expect.anything());
     });
@@ -273,6 +290,7 @@ describe('backupDb', () => {
         const { backupDb } = await loadModule();
         mockCopyFileSync.mockReturnValue(undefined);
         const result = backupDb('/tmp/test.db');
+
         expect(result).toBe('/tmp/test.db.pre-run');
         expect(mockCopyFileSync).toHaveBeenCalledWith('/tmp/test.db', '/tmp/test.db.pre-run');
     });
@@ -283,6 +301,7 @@ describe('backupDb', () => {
             throw new Error('EACCES');
         });
         const result = backupDb('/tmp/test.db');
+
         expect(result).toBeNull();
     });
 });
@@ -291,6 +310,7 @@ describe('ensureWalMode', () => {
     it('returns WAL journal mode string on success', async () => {
         const { ensureWalMode } = await loadModule();
         const result = ensureWalMode();
+
         expect(result).toBe('wal');
         expect(mockExecFileSync).toHaveBeenCalledWith(
             'sqlite3',
@@ -306,6 +326,7 @@ describe('ensureWalMode', () => {
         });
         const { ensureWalMode } = await loadModule();
         const result = ensureWalMode();
+
         expect(result).toBeNull();
     });
 });
@@ -315,6 +336,7 @@ describe('checkMountDevice', () => {
         mockStatSync.mockReturnValue({ dev: 1, isFile: () => true });
         const { checkMountDevice } = await loadModule();
         const result = checkMountDevice('/home/user/.local/share/opencode/opencode.db');
+
         expect(result).toContain('AVISO');
         expect(result).toContain('mesmo device');
     });
@@ -325,6 +347,7 @@ describe('checkMountDevice', () => {
             .mockReturnValueOnce({ dev: 2, isFile: () => true });
         const { checkMountDevice } = await loadModule();
         const result = checkMountDevice('/home/user/.local/share/opencode/opencode.db');
+
         expect(result).toBeNull();
     });
 
@@ -334,6 +357,7 @@ describe('checkMountDevice', () => {
         });
         const { checkMountDevice } = await loadModule();
         const result = checkMountDevice('/home/user/.local/share/opencode/opencode.db');
+
         expect(result).toBeNull();
     });
 });
@@ -352,7 +376,9 @@ describe('printResult', () => {
             vacuumed: false,
             errors: [],
         });
+
         expect(consoleSpy).toHaveBeenCalledWith(expect.stringContaining('PASS'));
+
         consoleSpy.mockRestore();
     });
 
@@ -369,8 +395,10 @@ describe('printResult', () => {
             vacuumed: false,
             errors: ['REINDEX failed to repair integrity'],
         });
+
         expect(consoleSpy).toHaveBeenCalledWith(expect.stringContaining('FAIL'));
         expect(consoleSpy).toHaveBeenCalledWith(expect.stringContaining('REINDEX failed'));
+
         consoleSpy.mockRestore();
     });
 });
@@ -382,7 +410,8 @@ describe('checkSqlite3', () => {
             return '';
         });
         const { checkSqlite3 } = await import('./opencode-db-maintenance.js');
-        expect(checkSqlite3()).toBe(true);
+
+        expect(checkSqlite3()).toBeTruthy();
     });
 
     it('returns false when sqlite3 throws', async () => {
@@ -391,7 +420,8 @@ describe('checkSqlite3', () => {
             return '';
         });
         const { checkSqlite3 } = await import('./opencode-db-maintenance.js');
-        expect(checkSqlite3()).toBe(false);
+
+        expect(checkSqlite3()).toBeFalsy();
     });
 });
 
@@ -421,7 +451,9 @@ describe('main', () => {
         const { main } = await import('./opencode-db-maintenance.js');
         const consoleSpy = vi.spyOn(console, 'error').mockImplementation(() => {});
         const result = main();
+
         expect(result).toBe(3);
+
         consoleSpy.mockRestore();
     });
 
@@ -430,9 +462,11 @@ describe('main', () => {
         const { main } = await import('./opencode-db-maintenance.js');
         const consoleSpy = vi.spyOn(console, 'log').mockImplementation(() => {});
         const result = main();
+
         expect(result).toBe(0);
         expect(mockMkdirSync).toHaveBeenCalled();
         expect(consoleSpy).toHaveBeenCalledWith(expect.stringContaining('creating directory'));
+
         consoleSpy.mockRestore();
     });
 
@@ -444,7 +478,9 @@ describe('main', () => {
         const { main } = await import('./opencode-db-maintenance.js');
         const consoleSpy = vi.spyOn(console, 'error').mockImplementation(() => {});
         const result = main();
+
         expect(result).toBe(1);
+
         consoleSpy.mockRestore();
     });
 
@@ -452,8 +488,10 @@ describe('main', () => {
         const { main } = await loadModule();
         const consoleSpy = vi.spyOn(console, 'log').mockImplementation(() => {});
         const result = main();
+
         expect(result).toBe(0);
         expect(consoleSpy).toHaveBeenCalledWith(expect.stringContaining('PASS'));
+
         consoleSpy.mockRestore();
     });
 
@@ -469,7 +507,9 @@ describe('main', () => {
         const { main } = await loadModule();
         const consoleSpy = vi.spyOn(console, 'log').mockImplementation(() => {});
         const result = main();
+
         expect(result).toBe(1);
+
         consoleSpy.mockRestore();
     });
 
@@ -484,7 +524,9 @@ describe('main', () => {
         Object.defineProperty(process, 'argv', { value: ['node', 'script', '--repair'], configurable: true });
         const consoleSpy = vi.spyOn(console, 'log').mockImplementation(() => {});
         const result = main();
+
         expect(result).toBe(0);
+
         consoleSpy.mockRestore();
         Object.defineProperty(process, 'argv', { value: origArgv, configurable: true });
     });
@@ -500,7 +542,9 @@ describe('main', () => {
         Object.defineProperty(process, 'argv', { value: ['node', 'script', '--vacuum'], configurable: true });
         const consoleSpy = vi.spyOn(console, 'log').mockImplementation(() => {});
         const result = main();
+
         expect(result).toBe(0);
+
         consoleSpy.mockRestore();
         Object.defineProperty(process, 'argv', { value: origArgv, configurable: true });
     });
@@ -520,6 +564,7 @@ describe('modeVacuum WAL error', () => {
         });
         const { modeVacuum } = await loadModule();
         const result = modeVacuum(DB_PATH);
+
         expect(result.errors.length).toBeGreaterThan(0);
         expect(result.walCheckpoint).toContain('ERROR');
     });
@@ -536,7 +581,9 @@ describe('runAsScript', () => {
         const exitSpy = vi.spyOn(process, 'exit').mockImplementation(() => undefined as never);
         const consoleSpy = vi.spyOn(console, 'log').mockImplementation(() => {});
         runAsScript();
+
         expect(exitSpy).toHaveBeenCalledWith(0);
+
         consoleSpy.mockRestore();
         exitSpy.mockRestore();
     });

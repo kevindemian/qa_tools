@@ -21,6 +21,7 @@ describe('case10 — set directory', () => {
 
     it('executes without error with basic context', async () => {
         const result = await case10.handler(mockContext);
-        expect(result === undefined || typeof result === 'boolean').toBe(true);
+
+        expect(result === undefined || typeof result === 'boolean').toBeTruthy();
     });
 });

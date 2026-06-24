@@ -15,6 +15,7 @@ describe('readline — readline-sync wrapper', () => {
             const { question } = await import('./readline.js');
             vi.spyOn(readlineSync.default, 'question').mockReturnValue('answer');
             const result = question('prompt> ', { defaultInput: 'yes' });
+
             expect(result).toBe('answer');
             expect(readlineSync.default.question).toHaveBeenCalledWith('prompt> ', { defaultInput: 'yes' });
         });
@@ -23,6 +24,7 @@ describe('readline — readline-sync wrapper', () => {
             const { question } = await import('./readline.js');
             vi.spyOn(readlineSync.default, 'question').mockReturnValue('yes');
             const result = question('ask: ');
+
             expect(result).toBe('yes');
             expect(readlineSync.default.question).toHaveBeenCalledWith('ask: ', undefined);
         });
@@ -33,7 +35,8 @@ describe('readline — readline-sync wrapper', () => {
             const { keyInYN } = await import('./readline.js');
             vi.spyOn(readlineSync.default, 'keyInYN').mockReturnValue(true);
             const result = keyInYN('Continue? ');
-            expect(result).toBe(true);
+
+            expect(result).toBeTruthy();
             expect(readlineSync.default.keyInYN).toHaveBeenCalledWith('Continue? ');
         });
     });
@@ -43,6 +46,7 @@ describe('readline — readline-sync wrapper', () => {
             const { password } = await import('./readline.js');
             vi.spyOn(readlineSync.default, 'question').mockReturnValue('secret');
             const result = password('Password: ');
+
             expect(result).toBe('secret');
             expect(readlineSync.default.question).toHaveBeenCalledWith('Password: ', { hideEchoBack: true });
         });
@@ -51,6 +55,7 @@ describe('readline — readline-sync wrapper', () => {
             const { password } = await import('./readline.js');
             vi.spyOn(readlineSync.default, 'question').mockReturnValue('pwd');
             const result = password('PIN: ', { mask: '*' });
+
             expect(result).toBe('pwd');
             expect(readlineSync.default.question).toHaveBeenCalledWith('PIN: ', { hideEchoBack: true, mask: '*' });
         });

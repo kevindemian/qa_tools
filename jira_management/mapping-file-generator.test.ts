@@ -42,6 +42,7 @@ describe('MappingFileGenerator', () => {
 
     it('returns early when tasksId is empty', () => {
         generator.generate('/f.csv', 'P', [], [{ title: '', steps: [] }]);
+
         expect(fs.readdirSync(tmpDir)).toHaveLength(0);
     });
 
@@ -64,8 +65,11 @@ describe('MappingFileGenerator', () => {
             ],
         );
         const files = fs.readdirSync(tmpDir).sort();
+
         expect(files).toEqual([base + '-jira-mapping.json', base + '-jira-mapping.md', base + '-summary.txt']);
+
         const json = JSON.parse(fs.readFileSync(path.join(tmpDir, base + '-jira-mapping.json'), 'utf8')) as MappingJson;
+
         expect(json.project).toBe('ECSPOL');
         expect(json.tests).toHaveLength(2);
         expect(nonNull(json.tests[0]).key).toBe('K-100');
@@ -74,10 +78,14 @@ describe('MappingFileGenerator', () => {
         expect(nonNull(nonNull(nonNull(json.tests[0]).steps)[0])['Action']).toBe('Type user');
         expect(nonNull(json.tests[1]).key).toBe('K-200');
         expect(nonNull(json.tests[1]).title).toBe('Logout test');
+
         const md = fs.readFileSync(path.join(tmpDir, base + '-jira-mapping.md'), 'utf8');
+
         expect(md).toContain('Login test');
         expect(md).toContain('Type user');
+
         const txt = fs.readFileSync(path.join(tmpDir, base + '-summary.txt'), 'utf8');
+
         expect(txt).toContain('K-100: Login test');
         expect(txt).toContain('K-200: Logout test');
     });
@@ -85,13 +93,15 @@ describe('MappingFileGenerator', () => {
     it('output directory is created when reportsDir does not exist', () => {
         mockReportsDir.mockReturnValue(tmpDir);
         generator.generate('/f.csv', 'P', ['K-1'], [{ title: 't', steps: [] }]);
-        expect(fs.existsSync(tmpDir)).toBe(true);
+
+        expect(fs.existsSync(tmpDir)).toBeTruthy();
         expect(fs.readdirSync(tmpDir)).toHaveLength(3);
     });
 
     it('test without steps still creates JSON, steps omitted from mapping', () => {
         generator.generate('/f.csv', 'P', ['K-1'], [{ title: 't', description: 'd', steps: [] }]);
         const json = JSON.parse(fs.readFileSync(path.join(tmpDir, 'f-jira-mapping.json'), 'utf8')) as MappingJson;
+
         expect(nonNull(json.tests[0]).steps).toBeUndefined();
     });
 
@@ -109,8 +119,11 @@ describe('MappingFileGenerator', () => {
             ],
         );
         const json = JSON.parse(fs.readFileSync(path.join(tmpDir, 'f-jira-mapping.json'), 'utf8')) as MappingJson;
+
         expect(nonNull(json.tests[0]).precondition).toBe('must login');
+
         const md = fs.readFileSync(path.join(tmpDir, 'f-jira-mapping.md'), 'utf8');
+
         expect(md).toContain('must login');
     });
 
@@ -119,23 +132,28 @@ describe('MappingFileGenerator', () => {
         const mockInfo = vi.spyOn(prompt, 'info');
         mockIsQuiet.mockReturnValue(false);
         generator.generate('/f.csv', 'P', ['K-1'], [{ title: 't', steps: [] }]);
+
         expect(mockInfo).toHaveBeenCalledTimes(2);
     });
 
     it('extra tasksId beyond tests produce empty-key entries', () => {
         generator.generate('/f.csv', 'P', ['KA', 'KB', 'KC'], [{ title: 'only', steps: [] }]);
         const json = JSON.parse(fs.readFileSync(path.join(tmpDir, 'f-jira-mapping.json'), 'utf8')) as MappingJson;
+
         expect(json.tests).toHaveLength(3);
         expect(nonNull(json.tests[0]).title).toBe('only');
         expect(nonNull(json.tests[1]).title).toBe('');
         expect(nonNull(json.tests[2]).title).toBe('');
+
         const txt = fs.readFileSync(path.join(tmpDir, 'f-summary.txt'), 'utf8');
+
         expect(txt).toContain('KB: (untitled)');
     });
 
     it('steps with empty fields default to empty string', () => {
         generator.generate('/f.csv', 'P', ['KE'], [{ title: 't', steps: [{ fields: {} }] }]);
         const json = JSON.parse(fs.readFileSync(path.join(tmpDir, 'f-jira-mapping.json'), 'utf8')) as MappingJson;
+
         expect(nonNull(nonNull(nonNull(json.tests[0]).steps)[0])['Action']).toBe('');
         expect(nonNull(nonNull(nonNull(json.tests[0]).steps)[0])['Data']).toBe('');
         expect(nonNull(nonNull(nonNull(json.tests[0]).steps)[0])['Expected Result']).toBe('');

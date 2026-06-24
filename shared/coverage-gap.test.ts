@@ -48,6 +48,7 @@ describe('analyzeCoverageGaps', () => {
             .mockResolvedValueOnce({ issues: [makeIssue('PROJ-1'), makeIssue('PROJ-2')], total: 2 })
             .mockResolvedValueOnce({ issues: [], total: 0 });
         const result = await analyzeCoverageGaps(mockJiraResource, 'PROJ');
+
         expect(result.totals.totalIssues).toBe(2);
         expect(result.totals.covered).toBe(0);
         expect(result.totals.gap).toBe(2);
@@ -70,8 +71,9 @@ describe('analyzeCoverageGaps', () => {
             })
             .mockResolvedValueOnce({ issues: [], total: 0 });
         const result = await analyzeCoverageGaps(mockJiraResource, 'PROJ');
+
         expect(result.totals.covered).toBe(1);
-        expect(nonNull(result.items[0]).hasTest).toBe(true);
+        expect(nonNull(result.items[0]).hasTest).toBeTruthy();
         expect(nonNull(result.items[0]).linkedTestKeys).toContain('TEST-1');
     });
 
@@ -98,6 +100,7 @@ describe('analyzeCoverageGaps', () => {
             })
             .mockResolvedValueOnce({ issues: [], total: 0 });
         const result = await analyzeCoverageGaps(mockJiraResource, 'PROJ');
+
         expect(nonNull(result.items[0]).coverageWeight).toBe(5);
         expect(nonNull(result.items[1]).coverageWeight).toBe(0.5);
         expect(nonNull(result.items[2]).coverageWeight).toBe(3);
@@ -111,7 +114,8 @@ describe('analyzeCoverageGaps', () => {
             .mockResolvedValueOnce({ issues: manyIssues, total: 30 })
             .mockResolvedValueOnce({ issues: [], total: 0 });
         const result = await analyzeCoverageGaps(mockJiraResource, 'PROJ', { maxIssues: 5000 });
-        expect(result.items.length).toBe(30);
+
+        expect(result.items).toHaveLength(30);
     });
 
     it('builds epic rollup with correct counts', async () => {
@@ -132,6 +136,7 @@ describe('analyzeCoverageGaps', () => {
             })
             .mockResolvedValueOnce({ issues: [], total: 0 });
         const result = await analyzeCoverageGaps(mockJiraResource, 'PROJ');
+
         expect(nonNull(result.byEpic['EPIC-1']).total).toBe(2);
         expect(nonNull(result.byEpic['EPIC-1']).covered).toBe(1);
         expect(nonNull(result.byEpic['EPIC-1']).rawPct).toBe(50);
@@ -154,8 +159,9 @@ describe('analyzeCoverageGaps', () => {
             })
             .mockResolvedValueOnce({ issues: [], total: 0 });
         const result = await analyzeCoverageGaps(mockJiraResource, 'PROJ', { minCoveragePct: 50 });
+
         expect(result.gateConfig.failingEpics).toEqual([]);
-        expect(nonNull(result.byEpic['EPIC-1']).gatePass).toBe(true);
+        expect(nonNull(result.byEpic['EPIC-1']).gatePass).toBeTruthy();
     });
 
     it('quality gate fails when epics below threshold', async () => {
@@ -170,8 +176,9 @@ describe('analyzeCoverageGaps', () => {
             })
             .mockResolvedValueOnce({ issues: [], total: 0 });
         const result = await analyzeCoverageGaps(mockJiraResource, 'PROJ', { minCoveragePct: 50 });
+
         expect(result.gateConfig.failingEpics).toContain('EPIC-1');
-        expect(nonNull(result.byEpic['EPIC-1']).gatePass).toBe(false);
+        expect(nonNull(result.byEpic['EPIC-1']).gatePass).toBeFalsy();
     });
 
     it('builds hierarchy tree with epics and children', async () => {
@@ -193,9 +200,10 @@ describe('analyzeCoverageGaps', () => {
             })
             .mockResolvedValueOnce({ issues: [], total: 0 });
         const result = await analyzeCoverageGaps(mockJiraResource, 'PROJ');
-        expect(result.hierarchy.length).toBe(1);
+
+        expect(result.hierarchy).toHaveLength(1);
         expect(nonNull(result.hierarchy[0]).key).toBe('EPIC-1');
-        expect(nonNull(result.hierarchy[0]).children.length).toBe(2);
+        expect(nonNull(result.hierarchy[0]).children).toHaveLength(2);
         expect(nonNull(result.hierarchy[0]).totalIssues).toBe(2);
         expect(nonNull(result.hierarchy[0]).coveredIssues).toBe(1);
     });
@@ -203,6 +211,7 @@ describe('analyzeCoverageGaps', () => {
     it('returns empty result for empty project', async () => {
         mockSearch.mockResolvedValueOnce({ issues: [], total: 0 });
         const result = await analyzeCoverageGaps(mockJiraResource, 'PROJ');
+
         expect(result.totals.totalIssues).toBe(0);
         expect(result.items).toEqual([]);
     });
@@ -227,6 +236,7 @@ describe('analyzeCoverageGaps', () => {
             })
             .mockResolvedValueOnce({ issues: [], total: 0 });
         const result = await analyzeCoverageGaps(mockJiraResource, 'PROJ');
+
         expect(result.totals.rawCoveragePct).toBe(100);
     });
 
@@ -236,12 +246,14 @@ describe('analyzeCoverageGaps', () => {
             .mockResolvedValueOnce({ issues: [makeIssue('PROJ-1'), makeIssue('PROJ-2')], total: 2 })
             .mockResolvedValueOnce({ issues: [], total: 0 });
         const result = await analyzeCoverageGaps(mockJiraResource, 'PROJ');
+
         expect(result.totals.rawCoveragePct).toBe(0);
     });
 
     it('handles searchJiraIssues throwing an error', async () => {
         mockSearch.mockRejectedValueOnce(new Error('API timeout'));
         const result = await analyzeCoverageGaps(mockJiraResource, 'PROJ');
+
         expect(result.totals.totalIssues).toBe(0);
         expect(result.items).toEqual([]);
     });
@@ -259,6 +271,7 @@ describe('analyzeCoverageGaps', () => {
             })
             .mockResolvedValueOnce({ issues: [], total: 0 });
         const result = await analyzeCoverageGaps(mockJiraResource, 'PROJ');
+
         expect(nonNull(result.items[0]).type).toBe('Bug');
         expect(nonNull(result.items[1]).type).toBe('Epic');
         expect(nonNull(result.items[2]).type).toBe('Task');
@@ -282,6 +295,7 @@ describe('analyzeCoverageGaps', () => {
             .mockResolvedValueOnce({ issues: [makeIssue('PROJ-1')], total: 1 })
             .mockResolvedValueOnce({ issues: [], total: 0 });
         const result = await analyzeCoverageGaps(mockJiraResource, 'PROJ');
+
         expect(result.trends).toHaveLength(1);
         expect(nonNull(result.trends[0]).coveragePct).toBe(50);
     });
@@ -292,6 +306,7 @@ describe('analyzeCoverageGaps', () => {
             .mockResolvedValueOnce({ issues: [makeIssue('PROJ-1')], total: 1 })
             .mockRejectedValueOnce(new Error('Linked tests fetch failed'));
         const result = await analyzeCoverageGaps(mockJiraResource, 'PROJ');
+
         expect(result.totals.totalIssues).toBe(1);
         expect(nonNull(result.items[0]).linkedTestKeys).toEqual([]);
     });
@@ -302,6 +317,7 @@ describe('analyzeCoverageGaps', () => {
             .mockResolvedValueOnce({ issues: [makeIssue('PROJ-1')], total: 1 })
             .mockResolvedValueOnce({ total: 0 });
         const result = await analyzeCoverageGaps(mockJiraResource, 'PROJ');
+
         expect(nonNull(result.items[0]).linkedTestKeys).toEqual([]);
     });
 
@@ -311,6 +327,7 @@ describe('analyzeCoverageGaps', () => {
             .mockResolvedValueOnce({ issues: [], total: 0 })
             .mockResolvedValueOnce({ issues: [], total: 0 });
         const result = await analyzeCoverageGaps(mockJiraResource, 'PROJ');
+
         expect(result.totals.totalIssues).toBe(0);
     });
 
@@ -332,6 +349,7 @@ describe('analyzeCoverageGaps', () => {
             })
             .mockResolvedValueOnce({ issues: [], total: 0 });
         const result = await analyzeCoverageGaps(mockJiraResource, 'PROJ');
+
         expect(result.totals.covered).toBe(2);
     });
 
@@ -340,6 +358,7 @@ describe('analyzeCoverageGaps', () => {
             .mockResolvedValueOnce({ issues: [], total: 1 })
             .mockRejectedValueOnce(new Error('collect pages error'));
         const result = await analyzeCoverageGaps(mockJiraResource, 'PROJ');
+
         expect(result.totals.totalIssues).toBe(0);
     });
 });

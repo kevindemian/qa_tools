@@ -84,6 +84,7 @@ describe('calculateHealthScore — property-based', () => {
         fc.assert(
             fc.property(MetricsStoreArb, (store) => {
                 const result = calculateHealthScore(store);
+
                 expect(result.overall).toBeGreaterThanOrEqual(0);
                 expect(result.overall).toBeLessThanOrEqual(100);
             }),
@@ -99,18 +100,23 @@ describe('calculateHealthScore — property-based', () => {
                 switch (result.grade) {
                     case 'excellent':
                         expect(score).toBeGreaterThanOrEqual(90);
+
                         break;
                     case 'good':
                         expect(score).toBeGreaterThanOrEqual(80);
+
                         break;
                     case 'needs_attention':
                         expect(score).toBeGreaterThanOrEqual(70);
+
                         break;
                     case 'poor':
                         expect(score).toBeGreaterThanOrEqual(60);
+
                         break;
                     case 'critical':
                         expect(score).toBeLessThan(60);
+
                         break;
                 }
             }),
@@ -122,6 +128,7 @@ describe('calculateHealthScore — property-based', () => {
         fc.assert(
             fc.property(MetricsStoreArb, (store) => {
                 const result = calculateHealthScore(store);
+
                 expect(result.dimensions).toBeDefined();
                 expect(result.dimensions.passRate).toBeDefined();
                 expect(result.dimensions.flakyRate).toBeDefined();
@@ -158,7 +165,9 @@ describe('calculateHealthScore — property-based', () => {
         fc.assert(
             fc.property(MetricsStoreArb, (store) => {
                 const result = calculateHealthScore(store);
+
                 expect(result.provenance).toHaveLength(5);
+
                 for (const p of result.provenance ?? []) {
                     expect(p.source.length).toBeGreaterThan(0);
                     expect(p.standard.length).toBeGreaterThan(0);
@@ -173,6 +182,7 @@ describe('calculateHealthScore — property-based', () => {
     it('empty store returns overall=0, grade=critical, qualityGate=fail', () => {
         const store: MetricsStore = { runs: [] };
         const result = calculateHealthScore(store);
+
         expect(result.overall).toBe(0);
         expect(result.grade).toBe('critical');
         expect(result.qualityGate).toBe('fail');
@@ -185,9 +195,11 @@ describe('calculateHealthScore — property-based', () => {
                 const options = useOverride ? { passRateTarget: Math.round(passRateTarget) } : {};
                 const result = calculateHealthScore(store, options);
                 const passRateProvenance = result.provenance?.find((p) => p.dimension === 'passRate');
+
                 expect(passRateProvenance).toBeDefined();
+
                 if (useOverride) {
-                    expect(passRateProvenance?.overridden).toBe(true);
+                    expect(passRateProvenance?.overridden).toBeTruthy();
                 }
             }),
             { numRuns: 50 },
@@ -216,18 +228,23 @@ describe('calculateHealthScore — property-based', () => {
                     switch (result.grade) {
                         case 'excellent':
                             expect(score).toBeGreaterThanOrEqual(boundaries.excellent);
+
                             break;
                         case 'good':
                             expect(score).toBeGreaterThanOrEqual(boundaries.good);
+
                             break;
                         case 'needs_attention':
                             expect(score).toBeGreaterThanOrEqual(boundaries.needs_attention);
+
                             break;
                         case 'poor':
                             expect(score).toBeGreaterThanOrEqual(boundaries.poor);
+
                             break;
                         case 'critical':
                             expect(score).toBeLessThan(boundaries.poor);
+
                             break;
                     }
                 },

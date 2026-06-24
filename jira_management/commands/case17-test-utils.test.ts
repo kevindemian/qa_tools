@@ -79,7 +79,9 @@ describe('fetchLatestTestRun', () => {
 
         const { fetchLatestTestRun } = await import('./case17-test-utils.js');
         const result = await fetchLatestTestRun();
+
         expect(result).not.toBeNull();
+
         if (result) {
             expect(result.tests).toHaveLength(2);
             expect(result.stats.passed).toBe(1);
@@ -96,6 +98,7 @@ describe('fetchLatestTestRun', () => {
 
         const { fetchLatestTestRun } = await import('./case17-test-utils.js');
         const result = await fetchLatestTestRun();
+
         expect(result).toBeNull();
     });
 
@@ -112,6 +115,7 @@ describe('fetchLatestTestRun', () => {
 
         const { fetchLatestTestRun } = await import('./case17-test-utils.js');
         const result = await fetchLatestTestRun();
+
         expect(result).toBeNull();
     });
 
@@ -124,6 +128,7 @@ describe('fetchLatestTestRun', () => {
 
         const { fetchLatestTestRun } = await import('./case17-test-utils.js');
         const result = await fetchLatestTestRun();
+
         expect(result).toBeNull();
     });
 });

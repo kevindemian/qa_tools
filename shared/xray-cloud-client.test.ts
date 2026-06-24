@@ -51,6 +51,7 @@ describe('XrayCloudClient', () => {
             mockPost.mockResolvedValue({ data: '"eyJ.token"' });
             const client = new XrayCloudClient();
             const result = await client.authenticate(CID, CSEC);
+
             expect(result).toBe('eyJ.token');
             expect(mockPost).toHaveBeenCalledWith('/api/v2/authenticate', {
                 client_id: CID,
@@ -62,6 +63,7 @@ describe('XrayCloudClient', () => {
             mockPost.mockResolvedValue({ data: '' });
             const client = new XrayCloudClient();
             const result = await client.authenticate(CID, CSEC);
+
             expect(result).toBeNull();
         });
 
@@ -69,6 +71,7 @@ describe('XrayCloudClient', () => {
             mockPost.mockRejectedValue(new Error('401 Unauthorized'));
             const client = new XrayCloudClient();
             const result = await client.authenticate(CID, CSEC);
+
             expect(result).toBeNull();
         });
 
@@ -77,6 +80,7 @@ describe('XrayCloudClient', () => {
             const client = new XrayCloudClient();
             await client.authenticate(CID, CSEC);
             await client.authenticate(CID, CSEC);
+
             expect(mockPost).toHaveBeenCalledTimes(1);
         });
     });
@@ -88,6 +92,7 @@ describe('XrayCloudClient', () => {
             });
             const client = new XrayCloudClient();
             const result = await client.graphql('query { ... }', { limit: 10 }, CID, CSEC);
+
             expect(result).toEqual({
                 getTestRuns: { results: [{ id: '1', status: { name: 'PASS' } }] },
             });
@@ -103,6 +108,7 @@ describe('XrayCloudClient', () => {
             mockPost.mockResolvedValueOnce({ data: '"eyJ.token"' }).mockResolvedValueOnce({ data: {} });
             const client = new XrayCloudClient();
             const result = await client.graphql('query { ... }', {}, CID, CSEC);
+
             expect(result).toBeNull();
         });
 
@@ -110,6 +116,7 @@ describe('XrayCloudClient', () => {
             mockPost.mockResolvedValueOnce({ data: '"eyJ.token"' }).mockRejectedValue(new Error('Network error'));
             const client = new XrayCloudClient();
             const result = await client.graphql('query { ... }', {}, CID, CSEC);
+
             expect(result).toBeNull();
         });
     });
@@ -120,6 +127,7 @@ describe('XrayCloudClient', () => {
                 .mockResolvedValueOnce({ data: '"eyJ.token"' })
                 .mockResolvedValueOnce({ data: { data: { addTestStep: { id: '123' } } } });
             const client = new XrayCloudClient();
+
             await expect(
                 client.graphqlMutation('mutation { ... }', { issueId: 'T-1' }, CID, CSEC),
             ).resolves.not.toThrow();
@@ -134,6 +142,7 @@ describe('XrayCloudClient', () => {
         it('throws on auth failure', async () => {
             mockPost.mockRejectedValue(new Error('Auth failed'));
             const client = new XrayCloudClient();
+
             await expect(client.graphqlMutation('mutation { ... }', {}, CID, CSEC)).rejects.toThrow(
                 'Xray Cloud authentication failed',
             );
@@ -142,6 +151,7 @@ describe('XrayCloudClient', () => {
         it('throws on mutation failure', async () => {
             mockPost.mockResolvedValueOnce({ data: '"eyJ.token"' }).mockRejectedValue(new Error('GraphQL error'));
             const client = new XrayCloudClient();
+
             await expect(client.graphqlMutation('mutation { ... }', {}, CID, CSEC)).rejects.toThrow(
                 'Xray Cloud GraphQL mutation failed',
             );

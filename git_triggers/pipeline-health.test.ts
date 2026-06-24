@@ -111,11 +111,13 @@ Error: Module not found: 'foo'
 Error: Module not found: 'foo'
 FATAL: OOMKilled`;
         const result = extractErrorMessages(log, 5);
+
         expect(result).toEqual(["Module not found: 'foo'", 'OOMKilled']);
     });
 
     it('respects maxEntries limit', () => {
         const log = `Error: A\nError: B\nError: C\nError: D`;
+
         expect(extractErrorMessages(log, 2)).toHaveLength(2);
     });
 
@@ -145,29 +147,37 @@ describe('aggregatePipelineHealth', () => {
 
     it('identifies top failing jobs', () => {
         expect(health.topFailingJobs.length).toBeGreaterThanOrEqual(2);
+
         const lint = health.topFailingJobs.find((j) => j.name === 'lint');
+
         expect(lint).toBeDefined();
         expect(nonNull(lint).failCount).toBe(1);
         expect(nonNull(lint).totalCount).toBe(5);
+
         /* test appears in 4 runs (not in run3) */
         const test = health.topFailingJobs.find((j) => j.name === 'test');
+
         expect(test).toBeDefined();
     });
 
     it('aggregates failure reasons', () => {
         expect(health.failureReasons.length).toBeGreaterThanOrEqual(3);
+
         const moduleNotFound = health.failureReasons.find((r) => r.message.includes('Module not found'));
+
         expect(moduleNotFound).toBeDefined();
         expect(nonNull(moduleNotFound).count).toBe(1);
     });
 
     it('breaks down by branch', () => {
         const main = health.branchBreakdown.find((b) => b.branch === 'main');
+
         expect(main).toBeDefined();
         expect(nonNull(main).count).toBe(4);
         expect(nonNull(main).passRate).toBe(75);
 
         const develop = health.branchBreakdown.find((b) => b.branch === 'develop');
+
         expect(develop).toBeDefined();
         expect(nonNull(develop).count).toBe(1);
         expect(nonNull(develop).passRate).toBe(0);
@@ -185,6 +195,7 @@ describe('aggregatePipelineHealth', () => {
 
     it('returns zero pass rate for empty runs', () => {
         const empty = aggregatePipelineHealth([], [], [], [], now);
+
         expect(empty.totalRuns).toBe(0);
         expect(empty.passRate).toBe(0);
     });
@@ -194,6 +205,7 @@ describe('aggregatePipelineHealth', () => {
             { id: 1, status: 'completed', conclusion: 'success', head_branch: 'main' },
         ];
         const h = aggregatePipelineHealth(noDurationRuns, [[]], [], [], now);
+
         expect(h.avgDurationSec).toBe(0);
         expect(h.passRate).toBe(100);
     });
@@ -274,6 +286,7 @@ describe('renderPipelineHealthHtml', () => {
 
     it('renders empty state gracefully', () => {
         const emptyHtml = renderPipelineHealthHtml(aggregatePipelineHealth([], [], [], [], now), 'Empty Report');
+
         expect(emptyHtml).toContain('Empty Report');
         expect(emptyHtml).toContain('0');
     });

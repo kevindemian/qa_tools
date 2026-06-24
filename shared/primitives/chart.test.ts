@@ -15,6 +15,7 @@ describe('chart primitives', () => {
                     { value: 5, color: '#ef4444', label: 'fail' },
                 ],
             });
+
             expect(html).toContain('data-component="bar-chart"');
             expect(html).toContain('<svg');
             expect(html).toContain('rect');
@@ -27,6 +28,7 @@ describe('chart primitives', () => {
                 width: 300,
                 height: 30,
             });
+
             expect(html).toContain('all');
         });
 
@@ -34,6 +36,7 @@ describe('chart primitives', () => {
             const html = BarChart({
                 segments: [{ value: 0, color: '#22c55e' }],
             });
+
             expect(html).toContain('<svg');
         });
     });
@@ -43,12 +46,14 @@ describe('chart primitives', () => {
             const html = TrendChart({
                 points: [{ passRate: 80 }, { passRate: 90 }, { passRate: 85 }],
             });
+
             expect(html).toContain('data-component="trend-chart"');
             expect(html).toContain('path');
         });
 
         it('returns empty for < 2 points', () => {
             const html = TrendChart({ points: [{ passRate: 80 }] });
+
             expect(html).toBe('');
         });
 
@@ -58,6 +63,7 @@ describe('chart primitives', () => {
                 refLine: 85,
                 refLabel: '85%',
             });
+
             expect(html).toContain('85%');
         });
     });
@@ -65,6 +71,7 @@ describe('chart primitives', () => {
     describe('Sparkline', () => {
         it('renders bar element', () => {
             const html = Sparkline({ value: 50 });
+
             expect(html).toContain('data-component="sparkline"');
             expect(html).toContain('role="img"');
             expect(html).toContain('width:100px');
@@ -73,6 +80,7 @@ describe('chart primitives', () => {
 
         it('uses high color for >= 50', () => {
             const html = Sparkline({ value: 75 });
+
             expect(html).toContain('#ef4444');
         });
     });
@@ -80,6 +88,7 @@ describe('chart primitives', () => {
     describe('ProgressBar', () => {
         it('renders progress element', () => {
             const html = ProgressBar({ value: 75 });
+
             expect(html).toContain('data-component="progress-bar"');
             expect(html).toContain('role="progressbar"');
             expect(html).toContain('aria-valuenow="75"');
@@ -88,11 +97,13 @@ describe('chart primitives', () => {
 
         it('renders with showLabel', () => {
             const html = ProgressBar({ value: 50, showLabel: true });
+
             expect(html).toContain('50%');
         });
 
         it('clamps value to max', () => {
             const html = ProgressBar({ value: 150, max: 100 });
+
             expect(html).toContain('width:100%');
         });
     });

@@ -26,8 +26,10 @@ function makeFC(dow: number, hour: number, cat: string): FailureClassification {
 describe('aggregateDefectSeasonality', () => {
     it('returns zero-filled structure for empty array', () => {
         const result = aggregateDefectSeasonality([]);
+
         expect(result.byDayOfWeek).toHaveLength(7);
         expect(result.byHour).toHaveLength(24);
+
         for (const d of result.byDayOfWeek) {
             expect(d.total).toBe(0);
             expect(d.categories).toEqual({});
@@ -36,6 +38,7 @@ describe('aggregateDefectSeasonality', () => {
             expect(h.total).toBe(0);
             expect(h.categories).toEqual({});
         }
+
         expect(result.peakDay).toBe('N/A');
         expect(result.peakHour).toBe(-1);
         expect(result.totalRecords).toBe(0);
@@ -45,6 +48,7 @@ describe('aggregateDefectSeasonality', () => {
 
     it('returns zero-filled structure for empty input', () => {
         const result = aggregateDefectSeasonality([]);
+
         expect(result.totalRecords).toBe(0);
         expect(result.peakDay).toBe('N/A');
         expect(result.peakHour).toBe(-1);
@@ -52,13 +56,16 @@ describe('aggregateDefectSeasonality', () => {
 
     it('groups single classification by day and hour', () => {
         const result = aggregateDefectSeasonality([sampleClass]);
+
         expect(result.totalRecords).toBe(1);
 
         const mon = nonNull(result.byDayOfWeek.find((d) => d.dayOfWeek === 'Mon'));
+
         expect(mon.total).toBe(1);
         expect(mon.categories).toEqual({ ASSERTION: 1 });
 
         const hour10 = nonNull(result.byHour.find((h) => h.hour === 10));
+
         expect(hour10.total).toBe(1);
         expect(hour10.categories).toEqual({ ASSERTION: 1 });
 
@@ -73,15 +80,19 @@ describe('aggregateDefectSeasonality', () => {
             makeFC(3, 12, 'ENV'), // Wed
         ];
         const result = aggregateDefectSeasonality(input);
+
         expect(result.totalRecords).toBe(3);
 
         const mon = nonNull(result.byDayOfWeek.find((d) => d.dayOfWeek === 'Mon'));
+
         expect(mon.total).toBe(1);
 
         const tue = nonNull(result.byDayOfWeek.find((d) => d.dayOfWeek === 'Tue'));
+
         expect(tue.total).toBe(1);
 
         const wed = nonNull(result.byDayOfWeek.find((d) => d.dayOfWeek === 'Wed'));
+
         expect(wed.total).toBe(1);
 
         expect(result.peakDay).toBe('Mon');
@@ -95,13 +106,16 @@ describe('aggregateDefectSeasonality', () => {
             { ...sampleClass, category: 'ASSERTION' },
         ];
         const result = aggregateDefectSeasonality(input);
+
         expect(result.totalRecords).toBe(3);
 
         const mon = nonNull(result.byDayOfWeek.find((d) => d.dayOfWeek === 'Mon'));
+
         expect(mon.total).toBe(3);
         expect(mon.categories).toEqual({ ASSERTION: 2, TIMEOUT: 1 });
 
         const hour10 = nonNull(result.byHour.find((h) => h.hour === 10));
+
         expect(hour10.total).toBe(3);
         expect(hour10.categories).toEqual({ ASSERTION: 2, TIMEOUT: 1 });
 
@@ -117,6 +131,7 @@ describe('aggregateDefectSeasonality', () => {
         ];
         const result = aggregateDefectSeasonality(input);
         const dayNames = result.byDayOfWeek.map((d) => d.dayOfWeek);
+
         expect(dayNames).toEqual(['Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat', 'Sun']);
     });
 
@@ -124,6 +139,7 @@ describe('aggregateDefectSeasonality', () => {
         const input: FailureClassification[] = [makeFC(1, 23, 'A'), makeFC(1, 0, 'B'), makeFC(1, 12, 'C')];
         const result = aggregateDefectSeasonality(input);
         const hours = result.byHour.map((h) => h.hour);
+
         expect(hours).toEqual(Array.from({ length: 24 }, (_, i) => i));
     });
 
@@ -137,6 +153,7 @@ describe('aggregateDefectSeasonality', () => {
             makeFC(3, 12, 'C'), // Wed
         ];
         const result = aggregateDefectSeasonality(input);
+
         expect(result.peakDay).toBe('Wed');
     });
 
@@ -149,6 +166,7 @@ describe('aggregateDefectSeasonality', () => {
             makeFC(1, 10, 'C'),
         ];
         const result = aggregateDefectSeasonality(input);
+
         expect(result.peakHour).toBe(8);
     });
 
@@ -158,6 +176,7 @@ describe('aggregateDefectSeasonality', () => {
             { ...sampleClass, timestamp: '2026-06-03T10:00:00Z' },
         ];
         const result = aggregateDefectSeasonality(input);
+
         expect(result.period).toEqual({ from: '2026-06-01', to: '2026-06-03' });
     });
 
@@ -169,15 +188,17 @@ describe('aggregateDefectSeasonality', () => {
             }
         }
         const result = aggregateDefectSeasonality(input);
+
         expect(result.totalRecords).toBe(7 * 24);
-        expect(result.byDayOfWeek.every((d) => d.total === 24)).toBe(true);
-        expect(result.byHour.every((h) => h.total === 7)).toBe(true);
+        expect(result.byDayOfWeek.every((d) => d.total === 24)).toBeTruthy();
+        expect(result.byHour.every((h) => h.total === 7)).toBeTruthy();
     });
 
     it('preserves categories per day when day is empty', () => {
         const input: FailureClassification[] = [makeFC(1, 10, 'ASSERTION')];
         const result = aggregateDefectSeasonality(input);
         const tue = nonNull(result.byDayOfWeek.find((d) => d.dayOfWeek === 'Tue'));
+
         expect(tue.total).toBe(0);
         expect(tue.categories).toEqual({});
     });
@@ -186,6 +207,7 @@ describe('aggregateDefectSeasonality', () => {
         const input: FailureClassification[] = [makeFC(1, 10, 'ASSERTION')];
         const result = aggregateDefectSeasonality(input);
         const hour0 = nonNull(result.byHour.find((h) => h.hour === 0));
+
         expect(hour0.total).toBe(0);
         expect(hour0.categories).toEqual({});
     });
@@ -193,6 +215,7 @@ describe('aggregateDefectSeasonality', () => {
     it('returns N/A peak when all totals are zero', () => {
         const input: FailureClassification[] = [];
         const result = aggregateDefectSeasonality(input);
+
         expect(result.peakDay).toBe('N/A');
         expect(result.peakHour).toBe(-1);
     });
@@ -202,22 +225,25 @@ describe('aggregateDefectSeasonality', () => {
             { timestamp: 'not-a-date', testTitle: 't1', category: 'ASSERTION', project: 'p' },
         ];
         const result = aggregateDefectSeasonality(input);
+
         expect(result.totalRecords).toBe(1);
         expect(result.peakDay).toBe('N/A');
         expect(result.peakHour).toBe(-1);
-        expect(result.byDayOfWeek.every((d) => d.total === 0)).toBe(true);
-        expect(result.byHour.every((h) => h.total === 0)).toBe(true);
+        expect(result.byDayOfWeek.every((d) => d.total === 0)).toBeTruthy();
+        expect(result.byHour.every((h) => h.total === 0)).toBeTruthy();
     });
 
     it('returns correct peak day when tied', () => {
         const input: FailureClassification[] = [makeFC(1, 10, 'A'), makeFC(2, 10, 'B')];
         const result = aggregateDefectSeasonality(input);
+
         expect(result.peakDay).toBe('Mon');
     });
 
     it('returns correct peak hour when tied', () => {
         const input: FailureClassification[] = [makeFC(1, 10, 'A'), makeFC(2, 11, 'B')];
         const result = aggregateDefectSeasonality(input);
+
         expect(result.peakHour).toBe(10);
     });
 });
@@ -226,6 +252,7 @@ describe('generateSeasonalityHtml', () => {
     it('shows no-data message for empty result', () => {
         const result = aggregateDefectSeasonality([]);
         const html = generateSeasonalityHtml(result);
+
         expect(html).toContain('<!DOCTYPE html>');
         expect(html).toContain('No defect data available.');
     });
@@ -233,6 +260,7 @@ describe('generateSeasonalityHtml', () => {
     it('shows no-data message for result with zero records', () => {
         const result = aggregateDefectSeasonality([]);
         const html = generateSeasonalityHtml(result);
+
         expect(html).toContain('No defect data available.');
     });
 
@@ -252,6 +280,7 @@ describe('generateSeasonalityHtml', () => {
     it('shows N/A for peak hour when no records', () => {
         const result = aggregateDefectSeasonality([]);
         const html = generateSeasonalityHtml(result);
+
         expect(html).toContain('No defect data available.');
     });
 
@@ -297,6 +326,7 @@ describe('generateSeasonalityHtml', () => {
     it('supports custom title', () => {
         const result = aggregateDefectSeasonality([]);
         const html = generateSeasonalityHtml(result, 'Sprint 11 Seasonality');
+
         expect(html).toContain('Sprint 11 Seasonality');
     });
 
@@ -331,6 +361,7 @@ describe('generateSeasonalityHtml', () => {
         const base = aggregateDefectSeasonality([sampleClass]);
         const result: SeasonalityResult = { ...base, peakHour: -1 };
         const html = generateSeasonalityHtml(result);
+
         expect(html).toContain('N/A');
     });
 
@@ -338,6 +369,7 @@ describe('generateSeasonalityHtml', () => {
         const base = aggregateDefectSeasonality([sampleClass]);
         const result: SeasonalityResult = { ...base, peakDay: 'N/A' };
         const html = generateSeasonalityHtml(result);
+
         expect(html).toContain('N/A');
     });
 
@@ -349,6 +381,7 @@ describe('generateSeasonalityHtml', () => {
         const html = generateSeasonalityHtml(result, 'Error Test');
 
         expect(html).toContain('Error generating dashboard');
+
         spy.mockRestore();
     });
 });

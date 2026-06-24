@@ -156,6 +156,7 @@ describe('handleListSchedules', () => {
         const sessionState = await import('../session-state.js');
         (sessionState as { currentProvider: string }).currentProvider = 'gitlab';
         await handleListSchedules(m as never);
+
         expect(m.getSchedules).toHaveBeenCalled();
         expect(vi.mocked(pushHistory)).toHaveBeenCalledWith('list-schedules', '2 schedules', 'ok');
     });
@@ -167,8 +168,10 @@ describe('handleListSchedules', () => {
         (sessionState as { currentProvider: string }).currentProvider = 'github';
         const { warn } = await import('../../shared/prompt.js');
         await handleListSchedules(m as never);
+
         expect(vi.mocked(warn)).toHaveBeenCalledWith('Opção não disponivel para GitHub.');
         expect(m.getSchedules).not.toHaveBeenCalled();
+
         (sessionState as { currentProvider: string }).currentProvider = 'gitlab';
     });
 
@@ -180,6 +183,7 @@ describe('handleListSchedules', () => {
         const sessionState = await import('../session-state.js');
         (sessionState as { currentProvider: string }).currentProvider = 'gitlab';
         await handleListSchedules(m as never);
+
         expect(vi.mocked(pushHistory)).toHaveBeenCalledWith('list-schedules', 'vazio', 'ok');
     });
 });
@@ -196,6 +200,7 @@ describe('handleRunSchedule', () => {
         const sessionState = await import('../session-state.js');
         (sessionState as { currentProvider: string }).currentProvider = 'gitlab';
         await handleRunSchedule(m as never);
+
         expect(m.runSchedule).toHaveBeenCalledWith('42');
         expect(vi.mocked(pushHistory)).toHaveBeenCalledWith('schedule-run', '42', 'ok');
     });
@@ -207,8 +212,10 @@ describe('handleRunSchedule', () => {
         (sessionState as { currentProvider: string }).currentProvider = 'github';
         const { warn } = await import('../../shared/prompt.js');
         await handleRunSchedule(m as never);
+
         expect(vi.mocked(warn)).toHaveBeenCalledWith('Opção não disponivel para GitHub.');
         expect(m.runSchedule).not.toHaveBeenCalled();
+
         (sessionState as { currentProvider: string }).currentProvider = 'gitlab';
     });
 });
@@ -230,6 +237,7 @@ describe('handleCreateMR', () => {
         const sessionState = await import('../session-state.js');
         (sessionState as { currentProvider: string }).currentProvider = 'gitlab';
         await handleCreateMR(m as never);
+
         expect(m.createMergeRequest).toHaveBeenCalledWith('feature-x', 'main', 'Fix stuff', 'Description');
         expect(vi.mocked(pushHistory)).toHaveBeenCalledWith('pr-create', 'feature-x->main', 'ok');
     });
@@ -247,6 +255,7 @@ describe('handleCreateMR', () => {
         vi.mocked(generatePrDescription).mockResolvedValue('AI generated description');
         const { handleCreateMR } = await import('../mr-handler.js');
         await handleCreateMR(m as never);
+
         expect(m.createMergeRequest).toHaveBeenCalledWith('feature-x', 'main', 'Title', 'AI generated description');
     });
 });
@@ -261,6 +270,7 @@ describe('handleListApprovedMRs', () => {
         const { handleListApprovedMRs } = await import('../mr-handler.js');
         const { pushHistory } = await import('../session-state.js');
         await handleListApprovedMRs(m as never);
+
         expect(m.searchMergeRequests).toHaveBeenCalled();
         expect(vi.mocked(pushHistory)).toHaveBeenCalledWith('prs-approved', '2 MRs', 'ok');
     });
@@ -273,6 +283,7 @@ describe('handleListApprovedMRs', () => {
         const { handleListApprovedMRs } = await import('../mr-handler.js');
         const { pushHistory } = await import('../session-state.js');
         await handleListApprovedMRs(m as never);
+
         expect(vi.mocked(pushHistory)).toHaveBeenCalledWith('prs-approved', 'vazio', 'ok');
     });
 });
@@ -287,6 +298,7 @@ describe('handleMergeMR', () => {
         const { handleMergeMR } = await import('../mr-handler.js');
         const { pushHistory } = await import('../session-state.js');
         await handleMergeMR(m as never);
+
         expect(m.acceptMergeRequest).toHaveBeenCalledWith('42');
         expect(vi.mocked(pushHistory)).toHaveBeenCalledWith('pr-merge', '42', 'ok');
     });
@@ -301,7 +313,9 @@ describe('handleFlakinessDashboard', () => {
         const { handleFlakinessDashboard } = await import('../schedule-handler.js');
         const { warn } = await import('../../shared/prompt.js');
         await handleFlakinessDashboard();
+
         expect(vi.mocked(warn)).toHaveBeenCalled();
+
         (sessionState as { currentProjectName: string }).currentProjectName = 'TEST';
     });
 });

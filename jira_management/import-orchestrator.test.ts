@@ -102,6 +102,7 @@ describe('prepareTestRun', () => {
             onBusy,
             warn,
         });
+
         expect(result).toBeUndefined();
         expect(warn).toHaveBeenCalledWith(expect.stringContaining('cancelada'));
     });
@@ -117,6 +118,7 @@ describe('prepareTestRun', () => {
             onBusy,
             warn,
         });
+
         expect(result).toBeUndefined();
     });
 
@@ -137,6 +139,7 @@ describe('prepareTestRun', () => {
             onBusy,
             warn,
         });
+
         expect(result).toEqual({
             inMemoryTasksId: [],
             inMemoryTasksText: [],
@@ -173,6 +176,7 @@ describe('finalizeTestCreation', () => {
             info: vi.fn(),
             printSummary: vi.fn(),
         });
+
         expect(result).toBeDefined();
         expect(result?.status).toBe('error');
         expect(result?.summary).toContain('1/2');
@@ -196,6 +200,7 @@ describe('postProcessCheckpoint', () => {
             linker,
             info: vi.fn(),
         });
+
         expect(STATE.update).toHaveBeenCalledWith(expect.any(Function));
         expect(updateFinalState).toHaveBeenCalled();
     });

@@ -38,32 +38,38 @@ const MOCK_CTX_WITH_FEATURES: SetupContext = {
 describe('generateGitLabCI', () => {
     it('returns YAML string with stage test', () => {
         const yaml = generateGitLabCI(MOCK_CTX_BASIC);
+
         expect(yaml).toContain('test');
     });
 
     it('includes node image with correct version', () => {
         const yaml = generateGitLabCI(MOCK_CTX_BASIC);
+
         expect(yaml).toContain('node:20');
     });
 
     it('includes install and test commands', () => {
         const yaml = generateGitLabCI(MOCK_CTX_BASIC);
+
         expect(yaml).toContain('npm ci');
         expect(yaml).toContain('npx jest --reporter ctrf');
     });
 
     it('includes artifact paths', () => {
         const yaml = generateGitLabCI(MOCK_CTX_BASIC);
+
         expect(yaml).toContain('reports/ctrf-report.json');
     });
 
     it('adds post-processing step when prReport enabled', () => {
         const yaml = generateGitLabCI(MOCK_CTX_WITH_FEATURES);
+
         expect(yaml).toContain('shared/pr-report-core.ts');
     });
 
     it('does not add post-processing when prReport disabled', () => {
         const yaml = generateGitLabCI(MOCK_CTX_BASIC);
+
         expect(yaml).not.toContain('shared/pr-report-core.ts');
     });
 
@@ -73,6 +79,7 @@ describe('generateGitLabCI', () => {
             features: { ...MOCK_CTX_WITH_FEATURES.features, aiFailureAnalysis: false },
         };
         const yaml = generateGitLabCI(ctx);
+
         expect(yaml).toContain('--no-ai');
     });
 
@@ -82,6 +89,7 @@ describe('generateGitLabCI', () => {
             features: { ...MOCK_CTX_WITH_FEATURES.features, flakinessDashboard: false },
         };
         const yaml = generateGitLabCI(ctx);
+
         expect(yaml).toContain('--no-flaky');
     });
 
@@ -91,27 +99,32 @@ describe('generateGitLabCI', () => {
             features: { ...MOCK_CTX_WITH_FEATURES.features, qualityGate: false },
         };
         const yaml = generateGitLabCI(ctx);
+
         expect(yaml).toContain('--no-quality');
     });
 
     it('includes --ctrf flag with correct path', () => {
         const yaml = generateGitLabCI(MOCK_CTX_WITH_FEATURES);
+
         expect(yaml).toContain('--ctrf');
         expect(yaml).toContain('reports/ctrf-report.json');
     });
 
     it('omits --no-ai when aiFailureAnalysis enabled', () => {
         const yaml = generateGitLabCI(MOCK_CTX_WITH_FEATURES);
+
         expect(yaml).not.toContain('--no-ai');
     });
 
     it('omits --no-flaky when flakinessDashboard enabled', () => {
         const yaml = generateGitLabCI(MOCK_CTX_WITH_FEATURES);
+
         expect(yaml).not.toContain('--no-flaky');
     });
 
     it('omits --no-quality when qualityGate enabled', () => {
         const yaml = generateGitLabCI(MOCK_CTX_WITH_FEATURES);
+
         expect(yaml).not.toContain('--no-quality');
     });
 });

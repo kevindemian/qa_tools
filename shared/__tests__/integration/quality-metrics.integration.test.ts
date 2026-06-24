@@ -33,6 +33,7 @@ describe('Integration: Quality Metrics', () => {
         it('returns 0 for unknown invariant', async () => {
             const { QualityMetricsCollector } = await import('../../quality-metrics.js');
             const collector = new QualityMetricsCollector();
+
             expect(collector.invariantFireRate('UNKNOWN')).toBe(0);
         });
     });
@@ -52,6 +53,7 @@ describe('Integration: Quality Metrics', () => {
         it('returns 1 when no attempts', async () => {
             const { QualityMetricsCollector } = await import('../../quality-metrics.js');
             const collector = new QualityMetricsCollector();
+
             expect(collector.layerPassRate('layer1')).toBe(1);
         });
     });
@@ -66,6 +68,7 @@ describe('Integration: Quality Metrics', () => {
             collector.recordArtifactType('bug-report');
 
             const snapshot = collector.snapshot();
+
             expect(snapshot.artifactTypeCounts['test-case']).toBe(2);
             expect(snapshot.artifactTypeCounts['bug-report']).toBe(1);
         });
@@ -83,6 +86,7 @@ describe('Integration: Quality Metrics', () => {
             collector.recordStructureScore(85);
 
             const snapshot = collector.snapshot();
+
             expect(snapshot.timestamp).toMatch(/^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2}/);
             expect(snapshot.invariantFireCount['T-01']).toBe(1);
             expect(snapshot.layerPassRates.layer1).toBe(1);
@@ -137,6 +141,7 @@ describe('Integration: Quality Metrics', () => {
             collector.recordInvariantFire('A-01');
 
             const alerts = collector.detectDrift(baseline);
+
             expect(alerts).toHaveLength(1);
             expect(alerts[0]).toContain('DRIFT');
             expect(alerts[0]).toContain('"A-02"');
@@ -148,6 +153,7 @@ describe('Integration: Quality Metrics', () => {
             collector.recordInvariantFire('A-01');
 
             const alerts = collector.detectDrift([]);
+
             expect(alerts).toEqual([]);
         });
     });

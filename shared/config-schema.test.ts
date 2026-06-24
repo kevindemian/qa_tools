@@ -26,54 +26,64 @@ describe('CONFIG_SCHEMA', () => {
 
     it('no duplicate keys', () => {
         const keys = CONFIG_SCHEMA.map((f) => f.key);
+
         expect(new Set(keys).size).toBe(keys.length);
     });
 
     it('no duplicate envVars', () => {
         const vars = CONFIG_SCHEMA.map((f) => f.envVar);
+
         expect(new Set(vars).size).toBe(vars.length);
     });
 
     it('jiraProject defaults to YOUR_PROJECT_KEY', () => {
         const f = CONFIG_SCHEMA.find((r) => r.key === 'jiraProject');
+
         expect(f?.defaultVal).toBe('YOUR_PROJECT_KEY');
     });
 
     it('xrayMode defaults to server', () => {
         const f = CONFIG_SCHEMA.find((r) => r.key === 'xrayMode');
+
         expect(f?.defaultVal).toBe('server');
     });
 
     it('jiraMode defaults to server', () => {
         const f = CONFIG_SCHEMA.find((r) => r.key === 'jiraMode');
+
         expect(f?.defaultVal).toBe('server');
     });
 
     it('jiraMode description mentions server|cloud', () => {
         const f = CONFIG_SCHEMA.find((r) => r.key === 'jiraMode');
+
         expect(f?.description).toMatch(/server.*cloud/i);
     });
 
     it('llmMaxTokens is a number with default 128000', () => {
         const f = nonNull(CONFIG_SCHEMA.find((r) => r.key === 'llmMaxTokens'));
+
         expect(f.type).toBe('number');
         expect(f.defaultVal).toBe(128000);
     });
 
     it('autoConfirm is boolean with default false', () => {
         const f = nonNull(CONFIG_SCHEMA.find((r) => r.key === 'autoConfirm'));
+
         expect(f.type).toBe('boolean');
-        expect(f.defaultVal).toBe(false);
+        expect(f.defaultVal).toBeFalsy();
     });
 
     it('logMaxSize is number with default 5242880', () => {
         const f = nonNull(CONFIG_SCHEMA.find((r) => r.key === 'logMaxSize'));
+
         expect(f.type).toBe('number');
         expect(f.defaultVal).toBe(5242880);
     });
 
     it('opencodeDbTimeoutMs is number with default 300000', () => {
         const f = nonNull(CONFIG_SCHEMA.find((r) => r.key === 'opencodeDbTimeoutMs'));
+
         expect(f.type).toBe('number');
         expect(f.defaultVal).toBe(300_000);
         expect(f.envVar).toBe('OPENCODE_DB_TIMEOUT_MS');
@@ -83,7 +93,7 @@ describe('CONFIG_SCHEMA', () => {
         for (const f of CONFIG_SCHEMA) {
             if (f.allowedValues) {
                 expect(f.type).toBe('string');
-                expect(Array.isArray(f.allowedValues)).toBe(true);
+                expect(Array.isArray(f.allowedValues)).toBeTruthy();
                 expect(f.allowedValues.length).toBeGreaterThanOrEqual(2);
             }
         }

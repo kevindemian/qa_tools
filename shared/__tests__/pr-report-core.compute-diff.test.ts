@@ -16,16 +16,19 @@ function getResult(current: FlatTest[], previous: FlatTest[]): DiffComparison {
 describe('computeDiffComparison', () => {
     it('returns undefined when previous is empty', () => {
         const result = computeDiffComparison([passed], []);
+
         expect(result).toBeUndefined();
     });
 
     it('returns undefined when both runs are identical', () => {
         const result = computeDiffComparison([passed, failed], [passed, failed]);
+
         expect(result).toBeUndefined();
     });
 
     it('detects new failures', () => {
         const result = getResult([failed], [passed]);
+
         expect(result.newFailures).toHaveLength(1);
         expect(result.newFailures[0]?.title).toBe('test-1');
         expect(result.newPasses).toHaveLength(0);
@@ -33,6 +36,7 @@ describe('computeDiffComparison', () => {
 
     it('detects new passes (fixes)', () => {
         const result = getResult([passed], [failed]);
+
         expect(result.newPasses).toHaveLength(1);
         expect(result.newPasses[0]?.title).toBe('test-1');
         expect(result.newFailures).toHaveLength(0);
@@ -40,6 +44,7 @@ describe('computeDiffComparison', () => {
 
     it('detects flaky tests (state changed between runs)', () => {
         const result = getResult([failed], [passed]);
+
         expect(result.flaky).toHaveLength(1);
     });
 
@@ -47,6 +52,7 @@ describe('computeDiffComparison', () => {
         const existing: FlatTest = { title: 'existing', state: 'passed', duration: 50 };
         const brandNew: FlatTest = { title: 'brand new', state: 'passed', duration: 50 };
         const result = computeDiffComparison([existing, brandNew], [existing]);
+
         expect(result).toBeUndefined();
     });
 
@@ -54,11 +60,13 @@ describe('computeDiffComparison', () => {
         const existing: FlatTest = { title: 'existing', state: 'passed', duration: 50 };
         const removed: FlatTest = { title: 'removed test', state: 'passed', duration: 50 };
         const result = computeDiffComparison([existing], [existing, removed]);
+
         expect(result).toBeUndefined();
     });
 
     it('treats skipped as not-failed for comparison', () => {
         const result = getResult([skipped], [failed]);
+
         expect(result.newPasses).toHaveLength(1);
         expect(result.newPasses[0]?.title).toBe('test-1');
         expect(result.newFailures).toHaveLength(0);
@@ -76,6 +84,7 @@ describe('computeDiffComparison', () => {
             { title: 'test-C', state: 'failed' as const, duration: 100 },
         ];
         const result = getResult(current, previous);
+
         expect(result.newFailures).toHaveLength(1);
         expect(result.newFailures[0]?.title).toBe('test-A');
         expect(result.newPasses).toHaveLength(1);
@@ -85,6 +94,7 @@ describe('computeDiffComparison', () => {
 
     it('handles empty current test list', () => {
         const result = computeDiffComparison([], [passed]);
+
         expect(result).toBeUndefined();
     });
 });

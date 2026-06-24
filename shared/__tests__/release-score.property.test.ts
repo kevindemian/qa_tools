@@ -34,6 +34,7 @@ describe('calculateReleaseScore — property-based', () => {
         fc.assert(
             fc.property(pctArb(), pctArb(), gateArb(), pctArb(), pctArb(), (tasks, health, gate, coverage, flaky) => {
                 const result = calculateReleaseScore(tasks, health, gate, coverage, flaky);
+
                 expect(result.score).toBeGreaterThanOrEqual(0);
                 expect(result.score).toBeLessThanOrEqual(100);
             }),
@@ -59,8 +60,10 @@ describe('calculateReleaseScore — property-based', () => {
         fc.assert(
             fc.property(pctArb(), pctArb(), gateArb(), pctArb(), pctArb(), (tasks, health, gate, coverage, flaky) => {
                 const result = calculateReleaseScore(tasks, health, gate, coverage, flaky);
+
                 expect(result.breakdown).toHaveLength(4);
                 expect(result.breakdown.map((d) => d.label)).toEqual(['Tasks', 'Health', 'Coverage', 'Flakiness']);
+
                 for (const d of result.breakdown) {
                     expect(d.score).toBeGreaterThanOrEqual(0);
                     expect(d.score).toBeLessThanOrEqual(100);
@@ -79,6 +82,7 @@ describe('calculateReleaseScore — property-based', () => {
                 fc.integer({ min: 0, max: 30 }),
                 (tasks, health, coverage, flaky) => {
                     const result = calculateReleaseScore(tasks, health, 'pass', coverage, flaky);
+
                     expect(result.recommendation).toContain('Ready');
                 },
             ),
@@ -96,6 +100,7 @@ describe('calculateReleaseScore — property-based', () => {
                 fc.integer({ min: 71, max: 100 }),
                 (tasks, health, gate, coverage, flaky) => {
                     const result = calculateReleaseScore(tasks, health, gate, coverage, flaky);
+
                     expect(result.recommendation).toContain('Improve');
                 },
             ),
@@ -110,6 +115,7 @@ describe('calculateReleaseScore — property-based', () => {
                 for (const d of result.breakdown) {
                     expect(d.score).toBeGreaterThanOrEqual(0);
                     expect(d.score).toBeLessThanOrEqual(100);
+
                     if (d.label === 'Health') {
                         expect(d.status).toBe(gate);
                     } else {
@@ -155,6 +161,7 @@ describe('calculateReleaseScore — property-based', () => {
                 (tasks, health, coverage, flaky) => {
                     const result = calculateReleaseScore(tasks, health, 'pass', coverage, flaky);
                     const higher = calculateReleaseScore(tasks + 1, health + 1, 'pass', coverage + 1, flaky);
+
                     expect(higher.score).toBeGreaterThanOrEqual(result.score);
                 },
             ),
@@ -164,8 +171,11 @@ describe('calculateReleaseScore — property-based', () => {
 
     it('score boundary cases: all-zero gives 0, all-max gives 100', () => {
         const zero = calculateReleaseScore(0, 0, 'pass', 0, 100);
+
         expect(zero.score).toBe(0);
+
         const full = calculateReleaseScore(100, 100, 'pass', 100, 0);
+
         expect(full.score).toBe(100);
     });
 
@@ -173,6 +183,7 @@ describe('calculateReleaseScore — property-based', () => {
         fc.assert(
             fc.property(pctArb(), pctArb(), gateArb(), pctArb(), pctArb(), (tasks, health, gate, coverage, flaky) => {
                 const result = calculateReleaseScore(tasks, health, gate, coverage, flaky);
+
                 expect(result.timestamp).toMatch(/^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2}/);
             }),
             { numRuns: 50 },

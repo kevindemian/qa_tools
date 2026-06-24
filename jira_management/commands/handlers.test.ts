@@ -178,6 +178,7 @@ describe('case02 — list versions', () => {
     it('calls getProjectId and getProjectVersions', async () => {
         const mod = case02;
         await mod.handler(baseContext);
+
         expect(mockJiraResource.getProjectId).toHaveBeenCalledWith('TEST');
     });
 });
@@ -188,6 +189,7 @@ describe('case03 — create version', () => {
         prompt.ask.mockResolvedValueOnce('');
         const mod = case03;
         await mod.handler(baseContext);
+
         expect(prompt.warn).toHaveBeenCalledWith('Nome da versão não pode ser vazio.');
     });
 
@@ -196,6 +198,7 @@ describe('case03 — create version', () => {
         prompt.ask.mockResolvedValueOnce('v2.0.0').mockResolvedValueOnce('descricao');
         const mod = case03;
         await mod.handler(baseContext);
+
         expect(mockJiraResource.createVersion).toHaveBeenCalledWith('TEST', 'v2.0.0', 'descricao');
     });
 
@@ -206,6 +209,7 @@ describe('case03 — create version', () => {
         mockJiraResource.createVersion.mockRejectedValueOnce(new Error('API error'));
         const mod = case03;
         await mod.handler(baseContext);
+
         expect(prompt.printError).toHaveBeenCalled();
         expect(logger.rootLogger.error).toHaveBeenCalled();
     });
@@ -217,7 +221,8 @@ describe('case04 — assign fixVersion', () => {
         prompt.askConfirm.mockResolvedValueOnce(true).mockResolvedValueOnce(false);
         const mod = case04;
         const result = await mod.handler(baseContext);
-        expect(result).toBe(true);
+
+        expect(result).toBeTruthy();
     });
 
     it('assigns fixVersion from in-memory tasks', async () => {
@@ -228,7 +233,8 @@ describe('case04 — assign fixVersion', () => {
         prompt.askConfirm.mockResolvedValueOnce(true).mockResolvedValueOnce(true).mockResolvedValueOnce(false);
         const mod = case04;
         const result = await mod.handler(baseContext);
-        expect(result).toBe(false);
+
+        expect(result).toBeFalsy();
         expect(mockJiraResource.updateFixVersions).toHaveBeenNthCalledWith(1, ['TEST-1'], 'TEST', 'v2.0.0');
         expect(mockJiraResource.updateFixVersions).toHaveBeenNthCalledWith(2, ['TEST-2'], 'TEST', 'v2.0.0');
         expect(mockJiraResource.updateFixVersions).toHaveBeenCalledTimes(2);
@@ -244,6 +250,7 @@ describe('case04 — assign fixVersion', () => {
         mockJiraResource.updateFixVersions.mockResolvedValueOnce({}).mockRejectedValueOnce(new Error('API error'));
         const mod = case04;
         await mod.handler(baseContext);
+
         expect(mockSessionContext.results).toContainEqual({ status: 'ok', label: 'TEST-1', message: '' });
         expect(mockSessionContext.results).toContainEqual({
             status: 'error',
@@ -264,6 +271,7 @@ describe('case04 — assign fixVersion', () => {
         prompt.ask.mockResolvedValueOnce('v2.0.0');
         const mod = case04;
         await mod.handler(baseContext);
+
         // updateFixVersions is called per-taskId, not with all IDs at once
         expect(mockJiraResource.updateFixVersions).toHaveBeenNthCalledWith(
             1,
@@ -292,6 +300,7 @@ describe('case04 — assign fixVersion', () => {
             .mockResolvedValueOnce(true); // add to sprint
         const mod = case04;
         await mod.handler(baseContext);
+
         expect(mockJiraResource.postJiraResource).toHaveBeenCalledWith('sprint/6991/issue', { issues: ['TEST-1'] });
     });
 
@@ -307,6 +316,7 @@ describe('case04 — assign fixVersion', () => {
             .mockResolvedValueOnce(true); // add to sprint
         const mod = case04;
         await mod.handler(baseContext);
+
         expect(prompt.warn).toHaveBeenCalledWith('Sprint ID vazio. Pulando...');
     });
 
@@ -323,6 +333,7 @@ describe('case04 — assign fixVersion', () => {
             .mockResolvedValueOnce(true); // add to sprint
         const mod = case04;
         await mod.handler(baseContext);
+
         expect(prompt.printError).toHaveBeenCalled();
     });
 });
@@ -335,6 +346,7 @@ describe('case05 — update package version', () => {
         prompt.ask.mockResolvedValueOnce('/some/dir').mockResolvedValueOnce('v2.0.0');
         const mod = case05;
         await mod.handler(baseContext);
+
         expect(prompt.success).toHaveBeenCalled();
     });
 
@@ -344,6 +356,7 @@ describe('case05 — update package version', () => {
         const prompt = vi.mocked(promptModule);
         const mod = case05;
         await mod.handler(baseContext);
+
         expect(prompt.warn).toHaveBeenCalledWith('Nenhuma tarefa encontrada para esta versão.');
     });
 
@@ -352,6 +365,7 @@ describe('case05 — update package version', () => {
         const prompt = vi.mocked(promptModule);
         const mod = case05;
         await mod.handler(baseContext);
+
         expect(prompt.printError).toHaveBeenCalled();
     });
 });
@@ -363,6 +377,7 @@ describe('case06 — check release status', () => {
         mockJiraResource.checkReleaseTasksStatus.mockResolvedValueOnce(undefined);
         const mod = case06;
         await mod.handler(baseContext);
+
         expect(mockJiraResource.checkReleaseTasksStatus).toHaveBeenCalledWith('TEST', 'v2.0.0');
     });
 
@@ -372,6 +387,7 @@ describe('case06 — check release status', () => {
         mockJiraResource.checkReleaseTasksStatus.mockRejectedValueOnce(new Error('API error'));
         const mod = case06;
         await mod.handler(baseContext);
+
         expect(prompt.printError).toHaveBeenCalled();
     });
 });
@@ -382,7 +398,8 @@ describe('case07 — close tasks', () => {
         prompt.askConfirm.mockResolvedValueOnce(false);
         const mod = case07;
         const result = await mod.handler(baseContext);
-        expect(result).toBe(true);
+
+        expect(result).toBeTruthy();
     });
 
     it('returns true when no tasks found', async () => {
@@ -391,7 +408,8 @@ describe('case07 — close tasks', () => {
         mockJiraResource.getReleaseTasks.mockResolvedValueOnce([]);
         const mod = case07;
         const result = await mod.handler(baseContext);
-        expect(result).toBe(true);
+
+        expect(result).toBeTruthy();
         expect(prompt.warn).toHaveBeenCalledWith('Nenhuma tarefa encontrada para esta versão.');
     });
 
@@ -402,6 +420,7 @@ describe('case07 — close tasks', () => {
         mockJiraResource.moveCardsToDone.mockRejectedValueOnce(new Error('API error'));
         const mod = case07;
         await mod.handler(baseContext);
+
         expect(prompt.printSummary).toHaveBeenCalled();
     });
 
@@ -412,7 +431,8 @@ describe('case07 — close tasks', () => {
         mockJiraResource.getReleaseTasks.mockResolvedValueOnce(['[TEST-1] Fix bug', '[TEST-42] Add feature']);
         const mod = case07;
         const result = await mod.handler(baseContext);
-        expect(result).toBe(false);
+
+        expect(result).toBeFalsy();
         expect(mockJiraResource.moveCardsToDone).toHaveBeenCalledWith(['TEST-1', 'TEST-42']);
         expect(prompt.printSummary).toHaveBeenCalledWith(
             expect.arrayContaining([
@@ -430,7 +450,8 @@ describe('case07 — close tasks', () => {
         mockJiraResource.getReleaseTasks.mockResolvedValueOnce(['TASK-1', 'TASK-2']);
         const mod = case07;
         const result = await mod.handler(baseContext);
-        expect(result).toBe(true);
+
+        expect(result).toBeTruthy();
         expect(prompt.warn).toHaveBeenCalledWith('Nenhuma tarefa encontrada.');
     });
 });
@@ -442,7 +463,8 @@ describe('case08 — release version', () => {
         prompt.askConfirm.mockResolvedValueOnce(false);
         const mod = case08;
         const result = await mod.handler(baseContext);
-        expect(result).toBe(true);
+
+        expect(result).toBeTruthy();
         expect(prompt.warn).toHaveBeenCalledWith('Operação cancelada.');
     });
 
@@ -452,8 +474,9 @@ describe('case08 — release version', () => {
         prompt.askConfirm.mockResolvedValueOnce(true);
         const mod = case08;
         const result = await mod.handler(baseContext);
+
         expect(mockJiraResource.releaseVersion).toHaveBeenCalledWith('TEST', 'v2.0.0');
-        expect(result).toBe(false);
+        expect(result).toBeFalsy();
     });
 
     it('handles API error', async () => {
@@ -463,8 +486,9 @@ describe('case08 — release version', () => {
         mockJiraResource.releaseVersion.mockRejectedValueOnce(new Error('API error'));
         const mod = case08;
         const result = await mod.handler(baseContext);
+
         expect(prompt.printError).toHaveBeenCalled();
-        expect(result).toBe(false);
+        expect(result).toBeFalsy();
     });
 });
 
@@ -474,6 +498,7 @@ describe('case09 — switch project', () => {
         prompt.ask.mockResolvedValueOnce('');
         const mod = case09;
         await mod.handler(baseContext);
+
         expect(prompt.warn).toHaveBeenCalledWith('Nome do projeto não pode ser vazio.');
     });
 
@@ -482,6 +507,7 @@ describe('case09 — switch project', () => {
         prompt.ask.mockResolvedValueOnce('NEWPROJ');
         const mod = case09;
         await mod.handler(baseContext);
+
         expect(mockSessionContext.project_name).toBe('NEWPROJ');
     });
 });
@@ -489,7 +515,8 @@ describe('case09 — switch project', () => {
 describe('case10 — show counters', () => {
     it('returns undefined', async () => {
         const mod = case10;
-        expect(await mod.handler(baseContext)).toBeUndefined();
+
+        await expect(mod.handler(baseContext)).resolves.toBeUndefined();
     });
 
     it('sets directory and creates package manager', async () => {
@@ -497,6 +524,7 @@ describe('case10 — show counters', () => {
         prompt.ask.mockResolvedValueOnce('/my/git/dir');
         const mod = case10;
         await mod.handler(baseContext);
+
         expect(mockSessionContext.createPackageManager).toHaveBeenCalledWith('/my/git/dir');
         expect(mockSessionContext.git_directory).toBe('/my/git/dir');
         expect(prompt.success).toHaveBeenCalledWith('Diretório alterado para: /my/git/dir');
@@ -508,6 +536,7 @@ describe('case10 — show counters', () => {
         prompt.ask.mockResolvedValueOnce('/some/dir');
         const mod = case10;
         await mod.handler(baseContext);
+
         expect(mockSessionContext.packageManager).toBeUndefined();
         expect(prompt.success).toHaveBeenCalledWith('Diretório alterado para: /some/dir');
     });
@@ -519,6 +548,7 @@ describe('case11 — generate template (CSV/JSON)', () => {
         prompt.ask.mockResolvedValueOnce('CSV').mockResolvedValueOnce('/tmp/test-template.csv');
         const mod = case11;
         await mod.handler(baseContext);
+
         expect(prompt.success).toHaveBeenCalledWith(
             expect.stringContaining('Template CSV gerado em: /tmp/test-template.csv'),
         );
@@ -529,6 +559,7 @@ describe('case11 — generate template (CSV/JSON)', () => {
         prompt.ask.mockResolvedValueOnce('JSON').mockResolvedValueOnce('/tmp/test-template.json');
         const mod = case11;
         await mod.handler(baseContext);
+
         expect(prompt.success).toHaveBeenCalledWith(
             expect.stringContaining('Template JSON gerado em: /tmp/test-template.json'),
         );
@@ -543,6 +574,7 @@ describe('case11 — generate template (CSV/JSON)', () => {
         });
         const mod = case11;
         await mod.handler(baseContext);
+
         expect(prompt.error).toHaveBeenCalledWith(expect.stringContaining('permission denied'));
     });
 
@@ -551,6 +583,7 @@ describe('case11 — generate template (CSV/JSON)', () => {
         prompt.ask.mockResolvedValueOnce('XML');
         const mod = case11;
         await mod.handler(baseContext);
+
         expect(prompt.error).toHaveBeenCalledWith('Formato inválido. Use CSV ou JSON.');
     });
 });
@@ -562,6 +595,7 @@ describe('case13 — create test execution', () => {
         prompt.askConfirm.mockResolvedValueOnce(true);
         const mod = case13;
         await mod.handler(baseContext);
+
         expect(prompt.info).toHaveBeenCalledWith('Testes da sessão atual: TEST-1, TEST-2');
     });
 
@@ -569,6 +603,7 @@ describe('case13 — create test execution', () => {
         const prompt = vi.mocked(promptModule);
         const mod = case13;
         await mod.handler(baseContext);
+
         expect(prompt.warn).toHaveBeenCalledWith('Nenhuma key informada.');
     });
 
@@ -579,6 +614,7 @@ describe('case13 — create test execution', () => {
         flow.offerTestExecutionAssociation.mockResolvedValueOnce({ associated: true, key: 'TE-1', mode: 'created' });
         const mod = case13;
         await mod.handler(baseContext);
+
         expect(flow.offerTestExecutionAssociation).toHaveBeenCalledWith(
             baseContext,
             ['TEST-3', 'TEST-4'],
@@ -599,6 +635,7 @@ describe('case13 — create test execution', () => {
         const flow = vi.mocked(flowModule);
         const mod = case13;
         await mod.handler(baseContext);
+
         expect(flow.offerTestExecutionAssociation).toHaveBeenCalledWith(
             baseContext,
             ['MANUAL-1', 'MANUAL-2'],
@@ -614,6 +651,7 @@ describe('case13 — create test execution', () => {
         const flow = vi.mocked(flowModule);
         const mod = case13;
         await mod.handler(baseContext);
+
         expect(flow.offerTestExecutionAssociation).toHaveBeenCalledWith(
             baseContext,
             ['TEST-1', 'TEST-2'],
@@ -628,6 +666,7 @@ describe('case14 — config Cypress directory', () => {
         prompt.ask.mockResolvedValueOnce('');
         const mod = case14;
         await mod.handler(baseContext);
+
         expect(prompt.warn).toHaveBeenCalledWith('Caminho vazio, ignorando.');
     });
 
@@ -637,6 +676,7 @@ describe('case14 — config Cypress directory', () => {
         prompt.ask.mockResolvedValueOnce('/cypress');
         const mod = case14;
         await mod.handler(baseContext);
+
         expect(state.update).toHaveBeenCalled();
     });
 });
@@ -647,6 +687,7 @@ describe('case15 — create tests from JSON', () => {
         prompt.ask.mockResolvedValueOnce('');
         const mod = case15;
         await mod.handler(baseContext);
+
         expect(prompt.warn).toHaveBeenCalledWith('Caminho do JSON vazio. Operação cancelada.');
     });
 
@@ -662,6 +703,7 @@ describe('case15 — create tests from JSON', () => {
         const prompt = vi.mocked(promptModule);
         const mod = case15;
         await mod.handler(baseContext);
+
         expect(mockCreateTests.createTestsFromJson).toHaveBeenCalledWith(
             expect.objectContaining({ jsonPath: '/fake/tests.json' }),
         );
@@ -674,7 +716,8 @@ describe('case15 — create tests from JSON', () => {
         mockConfigMod['jsonPath'] = '/fake/tests.json';
         mockCreateTests.createTestsFromJson.mockResolvedValueOnce(undefined);
         const mod = case15;
-        expect(await mod.handler(baseContext)).toBeUndefined();
+
+        await expect(mod.handler(baseContext)).resolves.toBeUndefined();
         expect(mockSessionContext.inMemoryTasksId).toEqual([]);
     });
 });
@@ -685,6 +728,7 @@ describe('case16 — config JSON directory', () => {
         prompt.ask.mockResolvedValueOnce('');
         const mod = case16;
         await mod.handler(baseContext);
+
         expect(prompt.warn).toHaveBeenCalledWith('Caminho vazio, ignorando.');
     });
 
@@ -705,6 +749,7 @@ describe('case12 — diagnostic connection', () => {
         const mod = case12;
         await mod.handler(baseContext);
         const prompt = vi.mocked(promptModule);
+
         expect(prompt.printSummary).toHaveBeenCalled();
         expect(baseContext.pushHistory).toHaveBeenCalledWith('diagnostico', expect.stringContaining('3/4'), 'ok');
     });
@@ -717,6 +762,7 @@ describe('case12 — diagnostic connection', () => {
         const mod = case12;
         await mod.handler(baseContext);
         const prompt = vi.mocked(promptModule);
+
         expect(prompt.printSummary).toHaveBeenCalled();
         expect(baseContext.pushHistory).toHaveBeenCalledWith('diagnostico', expect.stringContaining('2/4'), 'error');
     });
@@ -729,6 +775,7 @@ describe('case12 — diagnostic connection', () => {
         const mod = case12;
         await mod.handler(baseContext);
         const prompt = vi.mocked(promptModule);
+
         expect(prompt.printSummary).toHaveBeenCalled();
         expect(baseContext.pushHistory).toHaveBeenCalledWith('diagnostico', expect.stringContaining('2/4'), 'error');
     });
@@ -741,6 +788,7 @@ describe('case12 — diagnostic connection', () => {
         const mod = case12;
         await mod.handler(baseContext);
         const prompt = vi.mocked(promptModule);
+
         expect(prompt.printSummary).toHaveBeenCalled();
         expect(baseContext.pushHistory).toHaveBeenCalledWith('diagnostico', expect.stringContaining('2/4'), 'error');
     });
@@ -759,6 +807,7 @@ describe('case01 — create tests from CSV', () => {
         });
         const mod = case01;
         await mod.handler(baseContext);
+
         expect(mockCreateTests.createTestsFromCsv).toHaveBeenCalledWith(
             expect.objectContaining({ csvPath: '/fake/test.csv', jiraLabels: ['label1', 'label2'] }),
         );
@@ -783,7 +832,8 @@ describe('case01 — create tests from CSV', () => {
         });
         const mod = case01;
         await mod.handler(baseContext);
-        expect(mockSessionContext.isBusy).toBe(false);
+
+        expect(mockSessionContext.isBusy).toBeFalsy();
     });
 
     it('prompts to create test execution after CSV import', async () => {
@@ -805,6 +855,7 @@ describe('case01 — create tests from CSV', () => {
         flow.offerTestExecutionAssociation.mockResolvedValueOnce({ associated: true, key: 'TE-1', summary: 'test' });
         const mod = case01;
         await mod.handler(baseContext);
+
         expect(flow.offerTestExecutionAssociation).toHaveBeenCalledWith(baseContext, ['TEST-1', 'TEST-2'], 'test');
         expect(flow.showResults).toHaveBeenCalledWith(baseContext, ['TEST-1', 'TEST-2'], {
             associated: true,
@@ -829,7 +880,8 @@ describe('case01 — create tests from CSV', () => {
         state.load.mockReturnValue({});
         state.loadTypedState.mockReturnValue({});
         const mod = case01;
-        expect(await mod.handler(baseContext)).toBeUndefined();
+
+        await expect(mod.handler(baseContext)).resolves.toBeUndefined();
         expect(mockSessionContext.inMemoryTasksId).toEqual([]);
     });
 });

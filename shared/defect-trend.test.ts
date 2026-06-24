@@ -8,6 +8,7 @@ import type { FailureClassification } from './metrics.js';
 describe('aggregateDefectTrends', () => {
     it('returns empty result for empty array', () => {
         const result = aggregateDefectTrends([]);
+
         expect(result.trends).toEqual([]);
         expect(result.topCategories).toEqual([]);
         expect(result.period).toEqual({ from: '', to: '' });
@@ -21,21 +22,26 @@ describe('aggregateDefectTrends', () => {
         ];
         const result = aggregateDefectTrends(input);
         const topCats = result.topCategories.map((c) => c.category);
+
         expect(topCats).toContain(poison);
         expect(topCats).toContain('NORMAL');
         expect(result.trends).toHaveLength(1);
         expect(result.trends[0]).toBeDefined();
+
         const cats = result.trends[0]?.categories ?? {};
+
         expect(Object.keys(cats)).toContain(poison);
         expect(Object.keys(cats)).toContain('NORMAL');
     });
 
     it('returns empty result for null/undefined', () => {
         const r1 = aggregateDefectTrends(null);
+
         expect(r1.trends).toEqual([]);
         expect(r1.topCategories).toEqual([]);
 
         const r2 = aggregateDefectTrends(undefined);
+
         expect(r2.trends).toEqual([]);
     });
 
@@ -47,6 +53,7 @@ describe('aggregateDefectTrends', () => {
         ];
 
         const result = aggregateDefectTrends(input);
+
         expect(result.trends).toHaveLength(1);
         expect(result.trends[0]?.date).toBe('2026-06-01');
         expect(result.trends[0]?.categories).toEqual({ ASSERTION: 2, TIMEOUT: 1 });
@@ -63,6 +70,7 @@ describe('aggregateDefectTrends', () => {
         ];
 
         const result = aggregateDefectTrends(input);
+
         expect(result.trends).toHaveLength(3);
         expect(result.trends[0]?.date).toBe('2026-05-31');
         expect(result.trends[0]?.categories).toEqual({ ASSERTION: 1 });
@@ -83,6 +91,7 @@ describe('aggregateDefectTrends', () => {
         ];
 
         const result = aggregateDefectTrends(input);
+
         expect(result.trends.map((t) => t.date)).toEqual(['2026-06-01', '2026-06-02', '2026-06-03']);
     });
 
@@ -97,6 +106,7 @@ describe('aggregateDefectTrends', () => {
         ];
 
         const result = aggregateDefectTrends(input);
+
         expect(result.topCategories).toHaveLength(3);
         expect(result.topCategories[0]).toEqual({ category: 'ASSERTION', count: 3 });
         expect(result.topCategories[1]).toEqual({ category: 'TIMEOUT', count: 2 });
@@ -112,6 +122,7 @@ describe('sanitizeTrendResult', () => {
             period: { from: '2026-01-01', to: '2026-01-01' },
         };
         const result = sanitizeTrendResult(input);
+
         expect(result.trends[0]?.total).toBe(0);
         expect(result.trends[0]?.categories['A']).toBe(0);
         expect(result.topCategories[0]?.count).toBe(0);
@@ -126,6 +137,7 @@ describe('sanitizeTrendResult', () => {
             period: { from: '2026-01-01', to: '2026-01-01' },
         };
         const result = sanitizeTrendResult(input);
+
         expect(result.trends[0]?.total).toBe(0);
         expect(result.trends[0]?.categories['A']).toBe(0);
         expect(result.topCategories[0]?.count).toBe(0);
@@ -138,6 +150,7 @@ describe('sanitizeTrendResult', () => {
             period: { from: '2026-01-01', to: '2026-01-01' },
         };
         const result = sanitizeTrendResult(input);
+
         expect(result.trends[0]?.total).toBe(10);
         expect(result.trends[0]?.categories['A']).toBe(5);
         expect(result.topCategories[0]?.count).toBe(5);
@@ -150,6 +163,7 @@ describe('sanitizeTrendResult', () => {
             period: { from: '2026-01-01', to: '2026-01-10' },
         };
         const result = sanitizeTrendResult(input);
+
         expect(result.period).toEqual({ from: '2026-01-01', to: '2026-01-10' });
     });
 });
@@ -158,12 +172,14 @@ describe('generateDefectTrendHtml', () => {
     it('shows no-data message for empty trends', () => {
         const result = aggregateDefectTrends([]);
         const html = generateDefectTrendHtml(result);
+
         expect(html).toContain('<!DOCTYPE html>');
         expect(html).toContain('No defect data available.');
     });
 
     it('shows no-data message for null/undefined result trends', () => {
         const html = generateDefectTrendHtml({ trends: [], topCategories: [], period: { from: '', to: '' } });
+
         expect(html).toContain('No defect data available.');
     });
 
@@ -199,6 +215,7 @@ describe('generateDefectTrendHtml', () => {
     it('supports custom title', () => {
         const result = aggregateDefectTrends([]);
         const html = generateDefectTrendHtml(result, 'Sprint 10 Defects');
+
         expect(html).toContain('Sprint 10 Defects');
     });
 
@@ -208,6 +225,7 @@ describe('generateDefectTrendHtml', () => {
         ];
         const result = aggregateDefectTrends(input);
         const html = generateDefectTrendHtml(result);
+
         expect(html).toContain('&lt;script&gt;');
         expect(html).not.toContain('<script>alert');
     });
@@ -215,6 +233,7 @@ describe('generateDefectTrendHtml', () => {
     it('includes theme toggle script', () => {
         const result = aggregateDefectTrends([]);
         const html = generateDefectTrendHtml(result);
+
         expect(html).toContain('qa-report-theme');
         expect(html).toContain('prefers-color-scheme');
     });
@@ -222,6 +241,7 @@ describe('generateDefectTrendHtml', () => {
     it('includes CSS variables from design tokens', () => {
         const result = aggregateDefectTrends([]);
         const html = generateDefectTrendHtml(result);
+
         expect(html).toContain('--color-surface-page');
         expect(html).toContain('html.dark');
     });
@@ -233,6 +253,7 @@ describe('generateDefectTrendHtml', () => {
         ];
         const result = aggregateDefectTrends(input);
         const html = generateDefectTrendHtml(result);
+
         expect(html).toContain('2026-06-01');
         expect(html).toContain('2026-06-03');
     });
@@ -254,6 +275,7 @@ describe('generateDefectTrendHtml', () => {
             period: { from: '2026-06-01', to: '2026-06-01' },
         };
         const html = generateDefectTrendHtml(result);
+
         expect(html).not.toContain('NaN');
         expect(html).not.toContain('Infinity');
         expect(html).toContain('>0<');

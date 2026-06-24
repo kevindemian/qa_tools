@@ -136,8 +136,10 @@ describe('Integration: PR Report (FT-16)', () => {
             expect(result.healthScore.overall).toBeGreaterThanOrEqual(0);
             expect(result.healthScore.overall).toBeLessThanOrEqual(100);
             expect(result.passRate).toBe(100);
-            expect(fs.existsSync(htmlPath)).toBe(true);
+            expect(fs.existsSync(htmlPath)).toBeTruthy();
+
             const html = fs.readFileSync(htmlPath, 'utf8');
+
             expect(html).toContain('<!DOCTYPE html>');
             expect(html).toContain('</html>');
         });
@@ -175,8 +177,11 @@ describe('Integration: PR Report (FT-16)', () => {
             });
 
             const store = loadMetrics();
+
             expect(store.runs.length).toBeGreaterThanOrEqual(1);
+
             const lastRun = store.runs[store.runs.length - 1] as (typeof store.runs)[number];
+
             expect(lastRun.project).toBe('test-project');
             expect(lastRun.total).toBe(5);
             expect(lastRun.passed).toBe(5);
@@ -277,7 +282,9 @@ describe('Integration: PR Report (FT-16)', () => {
             expect(result.tests).toHaveLength(MIXED_TESTS.length);
             expect(result.stats.failed).toBe(2);
             expect(result.stats.passed).toBe(3);
+
             const failedTest = result.tests.find((t) => t.state === 'failed');
+
             expect(failedTest).not.toBeNull();
             expect(failedTest?.error).toBe('AssertionError: expected 1 to equal 2');
         });
@@ -289,6 +296,7 @@ describe('Integration: PR Report (FT-16)', () => {
             const htmlPath = path.join(TEST_DIR, 'pr-report.html');
 
             const parsed = parseTestResultsFile(ctrfPath);
+
             expect(parsed.error).toBeUndefined();
 
             const result = await generatePrReport({
@@ -302,7 +310,7 @@ describe('Integration: PR Report (FT-16)', () => {
             });
 
             expect(result.passRate).toBe(100);
-            expect(fs.existsSync(htmlPath)).toBe(true);
+            expect(fs.existsSync(htmlPath)).toBeTruthy();
         });
     });
 
@@ -375,6 +383,7 @@ describe('Integration: PR Report (FT-16)', () => {
 
             const diff = computeDiffComparison(curr, prev);
             if (!diff) throw new Error('Expected diff to be defined');
+
             expect(diff.newFailures).toHaveLength(1);
             expect(diff.newFailures[0]).toMatchObject({ title: 'Logout' });
             expect(diff.newPasses).toHaveLength(0);
@@ -389,6 +398,7 @@ describe('Integration: PR Report (FT-16)', () => {
             const { computeDiffComparison } = await import('../../pr-report-core.js');
 
             const diff = computeDiffComparison(tests, tests);
+
             expect(diff).toBeUndefined();
         });
 
@@ -424,6 +434,7 @@ describe('Integration: PR Report (FT-16)', () => {
             const diff = previousRun ? computeDiffComparison(secondTests, previousRun.tests) : undefined;
 
             if (!diff) throw new Error('Expected diff to be defined');
+
             expect(diff.newPasses).toHaveLength(1);
             expect(diff.newPasses[0]).toMatchObject({ title: 'T2' });
         });

@@ -91,7 +91,9 @@ describe('entry-menu to module spawn — full flow (CR-3c)', () => {
 
         const calls = vi.mocked(spawn).mock.calls;
         const callOpts = calls[0]?.[2];
+
         expect(callOpts).toBeDefined();
+
         if (callOpts) {
             expect(callOpts).toHaveProperty('stdio', 'inherit');
             expect(callOpts).toHaveProperty('cwd');

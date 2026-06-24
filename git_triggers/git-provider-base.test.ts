@@ -30,6 +30,7 @@ describe('GitProviderBase._get', () => {
         const provider = new TestProvider();
         vi.spyOn(provider.client, 'get').mockResolvedValue({ data: { id: 1 } });
         const result = await provider.publicGet('/test');
+
         expect(result).toEqual({ id: 1 });
     });
 
@@ -37,6 +38,7 @@ describe('GitProviderBase._get', () => {
         const provider = new TestProvider();
         const getSpy = vi.spyOn(provider.client, 'get').mockResolvedValue({ data: [] });
         await provider.publicGet('/test', { params: { page: 2 } });
+
         expect(getSpy).toHaveBeenCalledWith('/test', { params: { page: 2 } });
     });
 
@@ -44,6 +46,7 @@ describe('GitProviderBase._get', () => {
         const provider = new TestProvider();
         vi.spyOn(provider.client, 'get').mockRejectedValue(new Error('fail'));
         const result = await provider.publicGet('/test', { returnNull: true });
+
         expect(result).toBeNull();
     });
 });
@@ -53,6 +56,7 @@ describe('GitProviderBase._post', () => {
         const provider = new TestProvider();
         vi.spyOn(provider.client, 'post').mockResolvedValue({ data: { key: 1 } });
         const result = await provider.publicPost('/test', { name: 'foo' });
+
         expect(result).toEqual({ key: 1 });
     });
 
@@ -60,6 +64,7 @@ describe('GitProviderBase._post', () => {
         const provider = new TestProvider();
         const postSpy = vi.spyOn(provider.client, 'post').mockResolvedValue({ data: null });
         await provider.publicPost('/test');
+
         expect(postSpy).toHaveBeenCalledWith('/test');
     });
 });
@@ -72,6 +77,7 @@ describe('GitProviderBase._formatDiffResponse', () => {
             { filename: 'src/utils.ts', patch: '@@ -5 +5 @@\n-old\n+new', status: 'modified' },
         ];
         const result = provider.publicFormatDiffResponse(entries, 'patch', 'filename');
+
         expect(result).toBe(
             '--- a/src/index.ts\n+++ b/src/index.ts\n@@ -1 +1 @@\n-foo\n+bar\n--- a/src/utils.ts\n+++ b/src/utils.ts\n@@ -5 +5 @@\n-old\n+new',
         );
@@ -85,11 +91,13 @@ describe('GitProviderBase._formatDiffResponse', () => {
             { filename: 'c.ts', patch: 'more' },
         ];
         const result = provider.publicFormatDiffResponse(entries, 'patch', 'filename');
+
         expect(result).toBe('--- a/a.ts\n+++ b/a.ts\ncontent\n--- a/c.ts\n+++ b/c.ts\nmore');
     });
 
     it('returns empty string for null / undefined / non-array input', () => {
         const provider = new TestProvider();
+
         expect(provider.publicFormatDiffResponse(null, 'patch', 'filename')).toBe('');
         expect(provider.publicFormatDiffResponse(undefined, 'patch', 'filename')).toBe('');
         expect(provider.publicFormatDiffResponse({} as Array<Record<string, unknown>>, 'patch', 'filename')).toBe('');
@@ -97,6 +105,7 @@ describe('GitProviderBase._formatDiffResponse', () => {
 
     it('returns empty string for empty array', () => {
         const provider = new TestProvider();
+
         expect(provider.publicFormatDiffResponse([], 'patch', 'filename')).toBe('');
     });
 
@@ -104,15 +113,17 @@ describe('GitProviderBase._formatDiffResponse', () => {
         const provider = new TestProvider();
         const entries = [{ filename: 'big.ts', patch: 'a'.repeat(200) }];
         const result = provider.publicFormatDiffResponse(entries, 'patch', 'filename', 50);
+
         expect(result.length).toBeLessThanOrEqual(70);
-        expect(result.endsWith('\n... (truncated)')).toBe(true);
+        expect(result.endsWith('\n... (truncated)')).toBeTruthy();
     });
 
     it('does not truncate when result fits within trim', () => {
         const provider = new TestProvider();
         const entries = [{ filename: 'small.ts', patch: 'content' }];
         const result = provider.publicFormatDiffResponse(entries, 'patch', 'filename', 15000);
+
         expect(result).toBe('--- a/small.ts\n+++ b/small.ts\ncontent');
-        expect(result.endsWith('\n... (truncated)')).toBe(false);
+        expect(result.endsWith('\n... (truncated)')).toBeFalsy();
     });
 });

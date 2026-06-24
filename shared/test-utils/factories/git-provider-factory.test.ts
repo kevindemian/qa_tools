@@ -25,6 +25,7 @@ describe('createMockGitProvider', () => {
 
     it('defaults provider to gitlab', () => {
         const mock = createMockGitProvider();
+
         expect(mock.provider).toBe('gitlab');
     });
 
@@ -38,6 +39,7 @@ describe('createMockGitProvider', () => {
     it('each call produces independent vi.fn() instances', () => {
         const a = createMockGitProvider();
         const b = createMockGitProvider();
+
         expect(a.triggerPipeline).not.toBe(b.triggerPipeline);
     });
 });

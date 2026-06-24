@@ -136,6 +136,7 @@ beforeEach(() => {
 describe('_jiraEnv', () => {
     it('returns jira config when all vars are set', () => {
         const result = mod._jiraEnv();
+
         expect(result).toEqual({
             base: 'https://jira.example.com',
             token: 'token',
@@ -151,12 +152,14 @@ describe('_resolveGlob', () => {
     it('returns resolved path when glob matches', () => {
         mockGlobSync.mockReturnValueOnce(['/tmp/mapping.json']);
         const result = mod._resolveGlob('/tmp/*.json');
+
         expect(result).toBe('/tmp/mapping.json');
     });
 
     it('returns null when no match', () => {
         mockGlobSync.mockReturnValueOnce([]);
         const result = mod._resolveGlob('/nonexistent/*.json');
+
         expect(result).toBeNull();
     });
 
@@ -165,6 +168,7 @@ describe('_resolveGlob', () => {
             throw new Error('bad pattern');
         });
         const result = mod._resolveGlob('[');
+
         expect(result).toBeNull();
     });
 });

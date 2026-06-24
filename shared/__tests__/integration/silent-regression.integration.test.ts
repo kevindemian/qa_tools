@@ -23,6 +23,7 @@ describe('Integration: Silent Regression (FT-22)', () => {
                 'api test': [2.0, 2.1, 1.9, 2.0, 2.1],
             };
             const result = detectSilentRegression(histories);
+
             expect(result.regressions).toHaveLength(1);
             expect(result.totalTests).toBe(2);
             expect(result.regressions[0]?.title).toBe('auth test');
@@ -31,6 +32,7 @@ describe('Integration: Silent Regression (FT-22)', () => {
         it('returns empty when all within range', async () => {
             const { detectSilentRegression } = await import('../../silent-regression.js');
             const result = detectSilentRegression({ 'stable test': [1.0, 1.1, 0.9, 1.0, 1.05] });
+
             expect(result.regressions).toHaveLength(0);
         });
     });
@@ -39,6 +41,7 @@ describe('Integration: Silent Regression (FT-22)', () => {
         it('returns empty for empty object', async () => {
             const { detectSilentRegression } = await import('../../silent-regression.js');
             const result = detectSilentRegression({});
+
             expect(result.regressions).toEqual([]);
             expect(result.totalTests).toBe(0);
         });
@@ -46,6 +49,7 @@ describe('Integration: Silent Regression (FT-22)', () => {
         it('skips entries with fewer than 2 durations', async () => {
             const { detectSilentRegression } = await import('../../silent-regression.js');
             const result = detectSilentRegression({ single: [1.0], empty: [] });
+
             expect(result.totalTests).toBe(0);
         });
     });
@@ -55,6 +59,7 @@ describe('Integration: Silent Regression (FT-22)', () => {
             const { detectSilentRegression, generateSilentRegressionHtml } = await import('../../silent-regression.js');
             const result = detectSilentRegression({ 'auth test': [1.0, 1.1, 0.9, 1.0, 3.5] });
             const html = generateSilentRegressionHtml(result, 'Regression Report');
+
             expect(html).toContain('<!DOCTYPE html>');
             expect(html).toContain('Regression Report');
             expect(html).toContain('data-component="metric-card"');
@@ -70,6 +75,7 @@ describe('Integration: Silent Regression (FT-22)', () => {
                 timestamp: '2026-06-01T00:00:00Z',
             };
             const html = generateSilentRegressionHtml(emptyResult);
+
             expect(html).toContain('No silent regressions detected');
         });
     });
@@ -78,12 +84,14 @@ describe('Integration: Silent Regression (FT-22)', () => {
         it('returns error page when result is null', async () => {
             const { generateSilentRegressionHtml } = await import('../../silent-regression.js');
             const html = generateSilentRegressionHtml(null);
+
             expect(html).toContain('Error generating silent regression report');
         });
 
         it('returns error page when result is undefined', async () => {
             const { generateSilentRegressionHtml } = await import('../../silent-regression.js');
             const html = generateSilentRegressionHtml(undefined);
+
             expect(html).toContain('Error generating silent regression report');
         });
     });
@@ -96,7 +104,9 @@ describe('Integration: Silent Regression (FT-22)', () => {
             const { detectSilentRegression, generateSilentRegressionHtml } = await import('../../silent-regression.js');
             const result = detectSilentRegression({ test: [1.0, 2.0, 3.0, 10.0] });
             const html = generateSilentRegressionHtml(result);
+
             expect(html).toContain('Error generating silent regression report');
+
             spy.mockRestore();
         });
     });

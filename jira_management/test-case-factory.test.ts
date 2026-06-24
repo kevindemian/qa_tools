@@ -52,6 +52,7 @@ describe('TestCaseFactory', () => {
                 totalTests: 5,
                 opLog,
             });
+
             expect(result).toEqual({ key: 'TEST-123' });
             expect(mockJiraResource['postJiraResource']).toHaveBeenCalledWith('issue', testData);
             expect(opLog.info).toHaveBeenCalledWith('Issue criada', { key: 'TEST-123' });
@@ -61,6 +62,7 @@ describe('TestCaseFactory', () => {
             mockJiraResource.postJiraResource.mockResolvedValue({ key: 'TEST-123' });
             mockPrompt.isQuiet.mockReturnValue(false);
             await factory.createIssue({ testData, testTitle: 'Test Title', testIdx: 0, totalTests: 5, opLog });
+
             expect(mockPrompt.success).toHaveBeenCalledWith('Issue criada: TEST-123');
         });
 
@@ -74,6 +76,7 @@ describe('TestCaseFactory', () => {
                 totalTests: 5,
                 opLog,
             });
+
             expect(result).toEqual({ action: 'retry' });
         });
 
@@ -87,6 +90,7 @@ describe('TestCaseFactory', () => {
                 totalTests: 5,
                 opLog,
             });
+
             expect(result).toEqual({ action: 'abort' });
         });
     });
@@ -202,6 +206,7 @@ describe('TestCaseFactory', () => {
         it('returns null on all steps success', async () => {
             mockImporter.importStep.mockResolvedValue({});
             const result = await factory.postSteps(issueKey, test, opLog);
+
             expect(result).toBeNull();
             expect(mockImporter.importStep).toHaveBeenCalledTimes(2);
         });
@@ -215,6 +220,7 @@ describe('TestCaseFactory', () => {
             mockImporter.importStep.mockResolvedValue({});
             mockPrompt.isQuiet.mockReturnValue(false);
             await factory.postSteps(issueKey, test, opLog);
+
             expect(update).toHaveBeenCalledWith(1);
             expect(update).toHaveBeenCalledWith(2);
             expect(stop).toHaveBeenCalled();
@@ -224,6 +230,7 @@ describe('TestCaseFactory', () => {
             mockImporter.importStep.mockResolvedValueOnce({}).mockRejectedValueOnce(new Error('Step error'));
             mockPrompt.onError.mockReturnValue('abort');
             const result = await factory.postSteps(issueKey, test, opLog);
+
             expect(result).toEqual({ action: 'abort' });
             expect(mockImporter.importStep).toHaveBeenCalledTimes(2);
         });
@@ -243,6 +250,7 @@ describe('TestCaseFactory', () => {
                 .mockResolvedValueOnce({});
             mockPrompt.onError.mockReturnValue('continue');
             const result = await factory.postSteps(issueKey, test3, opLog);
+
             expect(result).toBeNull();
             expect(mockImporter.importStep).toHaveBeenCalledTimes(3);
         });

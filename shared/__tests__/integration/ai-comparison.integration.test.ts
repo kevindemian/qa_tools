@@ -39,8 +39,11 @@ describe('Integration: AI Comparison Dashboard (FT-24)', () => {
                 },
             ];
             const result = compareAiVsManual(records);
+
             expect(result.timestamp).toMatch(/^\d{4}-\d{2}-\d{2}T/);
+
             const html = generateAiComparisonHtml(result, 'FT-24 Test');
+
             expect(html).toContain('<!DOCTYPE html>');
             expect(html).toContain('</html>');
             expect(html).toContain('FT-24 Test');
@@ -54,6 +57,7 @@ describe('Integration: AI Comparison Dashboard (FT-24)', () => {
             const { compareAiVsManual, generateAiComparisonHtml } = await import('../../ai-comparison.js');
             const result = compareAiVsManual([]);
             const html = generateAiComparisonHtml(result);
+
             expect(html).toContain('No comparison data available.');
             expect(html).not.toContain('Comparison Overview');
         });
@@ -62,6 +66,7 @@ describe('Integration: AI Comparison Dashboard (FT-24)', () => {
             const { compareAiVsManual, generateAiComparisonHtml } = await import('../../ai-comparison.js');
             const result = compareAiVsManual([]);
             const html = generateAiComparisonHtml(result, 'Sprint 11 Analysis');
+
             expect(html).toContain('Sprint 11 Analysis');
             expect(html).not.toContain('AI vs Manual Test Comparison');
         });
@@ -100,11 +105,14 @@ describe('Integration: AI Comparison Dashboard (FT-24)', () => {
                 },
             ];
             const result = compareAiVsManual(records);
+
             expect(result.aiTotal).toBe(3);
             expect(result.manualTotal).toBe(0);
             expect(result.manualPassRate).toBe(0);
             expect(result.manualFlakinessAvg).toBe(0);
+
             const html = generateAiComparisonHtml(result);
+
             expect(html).toContain('N/A');
         });
 
@@ -131,6 +139,7 @@ describe('Integration: AI Comparison Dashboard (FT-24)', () => {
                 },
             ];
             const result = compareAiVsManual(records);
+
             expect(result.manualTotal).toBe(2);
             expect(result.aiTotal).toBe(0);
             expect(result.aiPassRate).toBe(0);
@@ -152,8 +161,11 @@ describe('Integration: AI Comparison Dashboard (FT-24)', () => {
                 });
             }
             const result = compareAiVsManual(records);
+
             expect(result.aiTotal + result.manualTotal).toBe(100);
+
             const html = generateAiComparisonHtml(result);
+
             expect(html).toContain('<!DOCTYPE html>');
         });
     });
@@ -183,6 +195,7 @@ describe('Integration: AI Comparison Dashboard (FT-24)', () => {
             ];
             const result = compareAiVsManual(records);
             const html = generateAiComparisonHtml(result);
+
             expect(html).toContain('<!DOCTYPE html>');
             expect(html).toContain('<html');
             expect(html).toContain('</html>');
@@ -201,6 +214,7 @@ describe('Integration: AI Comparison Dashboard (FT-24)', () => {
         it('handles null records without crashing', async () => {
             const { compareAiVsManual } = await import('../../ai-comparison.js');
             const result = compareAiVsManual(null);
+
             expect(result.aiTotal).toBe(0);
             expect(result.manualTotal).toBe(0);
         });
@@ -208,6 +222,7 @@ describe('Integration: AI Comparison Dashboard (FT-24)', () => {
         it('handles undefined records without crashing', async () => {
             const { compareAiVsManual } = await import('../../ai-comparison.js');
             const result = compareAiVsManual(undefined);
+
             expect(result.aiTotal).toBe(0);
             expect(result.manualTotal).toBe(0);
         });
@@ -215,6 +230,7 @@ describe('Integration: AI Comparison Dashboard (FT-24)', () => {
         it('handles null result in generateAiComparisonHtml without crashing', async () => {
             const { generateAiComparisonHtml } = await import('../../ai-comparison.js');
             const html = generateAiComparisonHtml(null);
+
             expect(html).toContain('Error generating dashboard');
         });
     });
@@ -239,7 +255,9 @@ describe('Integration: AI Comparison Dashboard (FT-24)', () => {
             ];
             const result = compareAiVsManual(records);
             const html = generateAiComparisonHtml(result);
+
             expect(html).toContain('Error generating dashboard');
+
             spy.mockRestore();
         });
     });

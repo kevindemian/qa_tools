@@ -36,22 +36,25 @@ describe('PBT: Temp Dir', () => {
         it('reportsDir always returns an absolute path', async () => {
             const { reportsDir } = await import('../temp-dir.js');
             const dir = reportsDir();
+
             expect(dir).toBeTruthy();
-            expect(path.isAbsolute(dir)).toBe(true);
+            expect(path.isAbsolute(dir)).toBeTruthy();
         });
 
         it('logsDir always returns an absolute path', async () => {
             const { logsDir } = await import('../temp-dir.js');
             const dir = logsDir();
+
             expect(dir).toBeTruthy();
-            expect(path.isAbsolute(dir)).toBe(true);
+            expect(path.isAbsolute(dir)).toBeTruthy();
         });
 
         it('tempDirPath always returns an absolute path', async () => {
             const { tempDirPath } = await import('../temp-dir.js');
             const dir = tempDirPath();
+
             expect(dir).toBeTruthy();
-            expect(path.isAbsolute(dir)).toBe(true);
+            expect(path.isAbsolute(dir)).toBeTruthy();
         });
     });
 
@@ -61,8 +64,9 @@ describe('PBT: Temp Dir', () => {
             fc.assert(
                 fc.property(FilenameArb, ContentArb, (filename, content) => {
                     const result = writeReport(filename, content);
-                    expect(path.isAbsolute(result)).toBe(true);
-                    expect(result.endsWith(filename)).toBe(true);
+
+                    expect(path.isAbsolute(result)).toBeTruthy();
+                    expect(result.endsWith(filename)).toBeTruthy();
                 }),
                 { numRuns: 50 },
             );
@@ -75,7 +79,8 @@ describe('PBT: Temp Dir', () => {
             fc.assert(
                 fc.property(CategoryArb, FilenameArb, ContentArb, (category, filename, content) => {
                     const result = writeEphemeral(category, filename, content);
-                    expect(path.isAbsolute(result)).toBe(true);
+
+                    expect(path.isAbsolute(result)).toBeTruthy();
                     expect(result).toContain(path.join(category, filename));
                 }),
                 { numRuns: 50 },

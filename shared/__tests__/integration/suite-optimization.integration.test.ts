@@ -23,6 +23,7 @@ describe('Integration: Suite Optimization (FT-26)', () => {
             ];
             const result = analyzeSuiteOptimization(tests);
             const html = generateOptimizationHtml(result, 'FT-26 Test');
+
             expect(html).toContain('<!DOCTYPE html>');
             expect(html).toContain('</html>');
             expect(html).toContain('FT-26 Test');
@@ -37,6 +38,7 @@ describe('Integration: Suite Optimization (FT-26)', () => {
             const tests = [{ title: 'Fast Test', duration: 2, flakiness: 0 }];
             const result = analyzeSuiteOptimization(tests);
             const html = generateOptimizationHtml(result);
+
             expect(html).toContain('no optimizations needed');
         });
 
@@ -44,6 +46,7 @@ describe('Integration: Suite Optimization (FT-26)', () => {
             const { analyzeSuiteOptimization, generateOptimizationHtml } = await import('../../suite-optimization.js');
             const result = analyzeSuiteOptimization([]);
             const html = generateOptimizationHtml(result);
+
             expect(html).toContain('clean-state');
         });
 
@@ -51,6 +54,7 @@ describe('Integration: Suite Optimization (FT-26)', () => {
             const { analyzeSuiteOptimization, generateOptimizationHtml } = await import('../../suite-optimization.js');
             const result = analyzeSuiteOptimization([]);
             const html = generateOptimizationHtml(result, 'My Custom Report');
+
             expect(html).toContain('My Custom Report');
             expect(html).not.toContain('Suite Optimization Report');
         });
@@ -66,7 +70,9 @@ describe('Integration: Suite Optimization (FT-26)', () => {
             const tests = [{ title: 't', duration: 10, flakiness: 0.05 }];
             const result = analyzeSuiteOptimization(tests);
             const html = generateOptimizationHtml(result);
+
             expect(html).toContain('Error generating');
+
             spy.mockRestore();
         });
     });

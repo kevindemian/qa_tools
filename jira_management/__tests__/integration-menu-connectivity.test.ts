@@ -127,6 +127,7 @@ describe('jira_management — getHandler registry', () => {
 
     it('returns handler for case01', () => {
         const handler = getHandler('1');
+
         expect(handler).toBeDefined();
         expect(typeof handler).toBe('function');
     });
@@ -163,17 +164,20 @@ describe('jira_management — getHandler registry', () => {
         ];
         for (const c of cases) {
             const handler = getHandler(c);
+
             expect(handler).toBeDefined();
         }
     });
 
     it('returns handler for caseD (dashboards)', () => {
         const handler = getHandler('d');
+
         expect(handler).toBeDefined();
     });
 
     it('returns null for unknown case', () => {
         const handler = getHandler('99');
+
         expect(handler).toBeNull();
     });
 
@@ -181,9 +185,12 @@ describe('jira_management — getHandler registry', () => {
         const cases = ['3', '5', '7', '9', '11', '13', '25', '26', '27'];
         for (const c of cases) {
             const handler = getHandler(c);
+
             expect(handler).not.toBeNull();
+
             const ctx = createMockContext();
             const fn = handler as (ctx: ReturnType<typeof createMockContext>) => Promise<boolean | void>;
+
             await expect(fn(ctx)).resolves.not.toThrow();
         }
     });
@@ -201,46 +208,59 @@ describe('jira_management — case handlers are connected', () => {
 
     it('case01 is registered and returns a handler', () => {
         const handler = getHandler('1');
+
         expect(handler).toBeDefined();
         expect(typeof handler).toBe('function');
     });
 
     it('case09 updates project name', async () => {
         const handler = getHandler('9');
+
         expect(handler).not.toBeNull();
+
         const ctx = createMockContext();
         const { ask } = await import('../../shared/prompt.js');
         vi.mocked(ask).mockResolvedValue('NEW_PROJ');
         await (handler as (ctx: ReturnType<typeof createMockContext>) => Promise<boolean | void>)(ctx);
+
         expect(ctx.ctx.project_name).toBe('NEW_PROJ');
     });
 
     it('case25 loads metrics and builds matrix', async () => {
         const handler = getHandler('25');
+
         expect(handler).not.toBeNull();
+
         const ctx = createMockContext();
         const { loadMetrics } = await import('../../shared/metrics.js');
         vi.mocked(loadMetrics).mockReturnValue({ runs: [] });
         await (handler as (ctx: ReturnType<typeof createMockContext>) => Promise<boolean | void>)(ctx);
+
         expect(vi.mocked(loadMetrics)).toHaveBeenCalled();
     });
 
     it('case26 calculates release score', async () => {
         const handler = getHandler('26');
+
         expect(handler).not.toBeNull();
+
         const ctx = createMockContext();
         const { loadMetrics } = await import('../../shared/metrics.js');
         vi.mocked(loadMetrics).mockReturnValue({ runs: [] });
         await (handler as (ctx: ReturnType<typeof createMockContext>) => Promise<boolean | void>)(ctx);
+
         expect(vi.mocked(loadMetrics)).toHaveBeenCalled();
     });
 
     it('case27 analyzes coverage gaps', async () => {
         const handler = getHandler('27');
+
         expect(handler).not.toBeNull();
+
         const ctx = createMockContext();
         const { analyzeCoverageGaps } = await import('../../shared/coverage-gap.js');
         await (handler as (ctx: ReturnType<typeof createMockContext>) => Promise<boolean | void>)(ctx);
+
         expect(vi.mocked(analyzeCoverageGaps)).toHaveBeenCalled();
     });
 });

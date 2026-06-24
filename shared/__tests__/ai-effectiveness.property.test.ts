@@ -36,6 +36,7 @@ describe('computeAiEffectiveness — property-based', () => {
                 const total = store.records.length;
                 const accepted = store.records.filter((r) => r.accepted).length;
                 const expectedRate = total > 0 ? Math.round((accepted / total) * 100) : 0;
+
                 expect(result.acceptanceRate).toBe(expectedRate);
             }),
             { numRuns: 50 },
@@ -46,6 +47,7 @@ describe('computeAiEffectiveness — property-based', () => {
         fc.assert(
             fc.property(storeArb, (store) => {
                 const result = computeAiEffectiveness(store);
+
                 expect(result.totalRecords).toBe(store.records.length);
                 expect(result.totalGenerated).toBe(store.records.length);
             }),
@@ -58,6 +60,7 @@ describe('computeAiEffectiveness — property-based', () => {
             fc.property(storeArb, (store) => {
                 const result = computeAiEffectiveness(store);
                 const sum = result.byVersion.reduce((s, v) => s + v.count, 0);
+
                 expect(sum).toBe(store.records.length);
             }),
             { numRuns: 50 },
@@ -69,6 +72,7 @@ describe('computeAiEffectiveness — property-based', () => {
             fc.property(storeArb, (store) => {
                 const result = computeAiEffectiveness(store);
                 const sum = result.trend.reduce((s, d) => s + d.generated, 0);
+
                 expect(sum).toBe(store.records.length);
             }),
             { numRuns: 50 },
@@ -83,6 +87,7 @@ describe('computeAiEffectiveness — property-based', () => {
                     const curr = result.trend[i];
                     const prev = result.trend[i - 1];
                     if (curr === undefined || prev === undefined) return;
+
                     expect(curr.date >= prev.date).toBe(true);
                 }
             }),
@@ -97,6 +102,7 @@ describe('generateAiEffectivenessHtml — property-based', () => {
             fc.property(storeArb, (store) => {
                 const result = computeAiEffectiveness(store);
                 const html = generateAiEffectivenessHtml(result, 'PBT');
+
                 expect(html).toContain('<!DOCTYPE html>');
                 expect(html).toContain('</html>');
             }),
@@ -109,6 +115,7 @@ describe('generateAiEffectivenessHtml — property-based', () => {
             fc.property(storeArb, (store) => {
                 const result = computeAiEffectiveness(store);
                 const html = generateAiEffectivenessHtml(result);
+
                 expect(html).toContain(`${result.acceptanceRate}%`);
             }),
             { numRuns: 50 },

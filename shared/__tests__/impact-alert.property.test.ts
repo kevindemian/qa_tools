@@ -78,6 +78,7 @@ describe('analyzePipelineImpact — property-based', () => {
                         uncoveredEpics,
                     );
                     const titles = result.alerts.map((a) => a.title);
+
                     expect(new Set(titles).size).toBe(titles.length);
                 },
             ),
@@ -101,7 +102,8 @@ describe('analyzePipelineImpact — property-based', () => {
                         coveragePct,
                         uncoveredEpics,
                     );
-                    expect(result.alerts.length).toBe(result.criticalCount + result.warningCount + result.infoCount);
+
+                    expect(result.alerts).toHaveLength(result.criticalCount + result.warningCount + result.infoCount);
                 },
             ),
             { numRuns: 50 },
@@ -126,9 +128,9 @@ describe('analyzePipelineImpact — property-based', () => {
                     );
                     const hasCritical = result.alerts.some((a) => a.severity === 'critical');
                     if (passRate < 70 && coveragePct < 70) {
-                        expect(hasCritical).toBe(true);
+                        expect(hasCritical).toBeTruthy();
                     } else {
-                        expect(hasCritical).toBe(false);
+                        expect(hasCritical).toBeFalsy();
                     }
                 },
             ),
@@ -136,7 +138,7 @@ describe('analyzePipelineImpact — property-based', () => {
         );
     });
 
-    it('All clear alert only when passRate >= 80 and coveragePct >= 80', () => {
+    it('all clear alert only when passRate >= 80 and coveragePct >= 80', () => {
         fc.assert(
             fc.property(
                 pctArb,
@@ -154,9 +156,9 @@ describe('analyzePipelineImpact — property-based', () => {
                     );
                     const hasAllClear = result.alerts.some((a) => a.title === 'All clear');
                     if (passRate >= 80 && coveragePct >= 80) {
-                        expect(hasAllClear).toBe(true);
+                        expect(hasAllClear).toBeTruthy();
                     } else {
-                        expect(hasAllClear).toBe(false);
+                        expect(hasAllClear).toBeFalsy();
                     }
                 },
             ),
@@ -173,6 +175,7 @@ describe('analyzePipelineImpact — property-based', () => {
                 epicListArb,
                 (failingJobs, topFailures, coveragePct, uncoveredEpics) => {
                     const result = analyzePipelineImpact(null, failingJobs, topFailures, coveragePct, uncoveredEpics);
+
                     expect(result.alerts).toHaveLength(1);
                     expect(result.alerts[0]?.title).toBe('Insufficient data');
                     expect(result.criticalCount).toBe(0);
@@ -188,6 +191,7 @@ describe('analyzePipelineImpact — property-based', () => {
         fc.assert(
             fc.property(pctArb, failingJobsArb, failureListArb, (passRate, failingJobs, topFailures) => {
                 const result = analyzePipelineImpact(passRate, failingJobs, topFailures, undefined, []);
+
                 expect(result.alerts).toHaveLength(1);
                 expect(result.alerts[0]?.title).toBe('Insufficient data');
             }),
@@ -211,8 +215,9 @@ describe('analyzePipelineImpact — property-based', () => {
                         coveragePct,
                         uncoveredEpics,
                     );
+
                     expect(result.warningCount).toBeGreaterThanOrEqual(1);
-                    expect(result.alerts.some((a) => a.title === 'Coverage below threshold')).toBe(true);
+                    expect(result.alerts.some((a) => a.title === 'Coverage below threshold')).toBeTruthy();
                 },
             ),
             { numRuns: 50 },
@@ -235,6 +240,7 @@ describe('analyzePipelineImpact — property-based', () => {
                         coveragePct,
                         uncoveredEpics,
                     );
+
                     expect(() => new Date(result.timestamp)).not.toThrow();
                     expect(result.timestamp).toMatch(/^\d{4}-\d{2}-\d{2}T/);
                 },
@@ -270,6 +276,7 @@ describe('generateImpactAlertHtml — property-based', () => {
                         timestamp: new Date().toISOString(),
                     } satisfies ImpactAlertResult;
                     const html = generateImpactAlertHtml(result, customTitle ?? undefined);
+
                     expect(html).toContain('<!DOCTYPE html>');
                     expect(html).toContain('</html>');
                 },
@@ -302,6 +309,7 @@ describe('generateImpactAlertHtml — property-based', () => {
                         timestamp: new Date().toISOString(),
                     } satisfies ImpactAlertResult;
                     const html = generateImpactAlertHtml(result);
+
                     expect(html).toContain('Total Alerts');
                     expect(html).toContain('Critical');
                     expect(html).toContain('Warning');
@@ -317,6 +325,7 @@ describe('generateImpactAlertHtml — property-based', () => {
         fc.assert(
             fc.property(fc.boolean(), () => {
                 const html = generateImpactAlertHtml(null);
+
                 expect(html).toContain('Impact Alert Report Error');
             }),
             { numRuns: 10 },

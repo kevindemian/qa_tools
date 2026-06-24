@@ -27,21 +27,24 @@ describe('ReportValidator', () => {
             tests: [{ title: 'Login fails', classification: 'ASSERTION', severity: 'high' }],
         };
         const result = validator.validate(data);
-        expect(result.valid).toBe(true);
+
+        expect(result.valid).toBeTruthy();
         expect(result.errors).toHaveLength(0);
     });
 
     it('returns error for missing required field', () => {
         const data = { tests: [] };
         const result = validator.validate(data);
-        expect(result.valid).toBe(false);
+
+        expect(result.valid).toBeFalsy();
         expect(result.errors).toContain('Campo obrigatório "title" ausente');
     });
 
     it('returns error for wrong type', () => {
         const data = { title: 123, tests: [] };
         const result = validator.validate(data);
-        expect(result.valid).toBe(false);
+
+        expect(result.valid).toBeFalsy();
         expect(result.errors).toContain('Campo "title" esperava string, recebeu number');
     });
 
@@ -51,7 +54,8 @@ describe('ReportValidator', () => {
             tests: [{ title: 'Login fails', classification: 'INVALID', severity: 'high' }],
         };
         const result = validator.validate(data);
-        expect(result.valid).toBe(false);
+
+        expect(result.valid).toBeFalsy();
         expect(result.errors).toContain('Campo "tests[0].classification" não corresponde ao padrão esperado');
     });
 
@@ -61,21 +65,24 @@ describe('ReportValidator', () => {
             tests: [{ title: 'Login fails', classification: 'ASSERTION', severity: 'high' }],
         };
         const result = validator.validate(data);
-        expect(result.valid).toBe(true);
+
+        expect(result.valid).toBeTruthy();
         expect(result.warnings).toContain('Campo "title" muito curto (2 < 3)');
     });
 
     it('returns errors for empty array with nested required fields', () => {
         const data = { title: 'Analysis', tests: [] };
         const result = validator.validate(data);
-        expect(result.valid).toBe(false);
+
+        expect(result.valid).toBeFalsy();
         expect(result.errors).toContain('Campo obrigatório "tests[0].title" ausente');
         expect(result.warnings).toContain('Campo "tests" muito pequeno (0 < 1)');
     });
 
     it('handles null input', () => {
         const result = validator.validate(null);
-        expect(result.valid).toBe(false);
+
+        expect(result.valid).toBeFalsy();
         expect(result.errors).toContain('Expected object, got object');
     });
 
@@ -85,7 +92,8 @@ describe('ReportValidator', () => {
             tests: [{ title: 'Login fails', classification: 'ASSERTION', severity: 'high' }],
         };
         const result = validator.validate(data);
-        expect(result.valid).toBe(true);
+
+        expect(result.valid).toBeTruthy();
     });
 
     it('resolves nested array field', () => {
@@ -97,7 +105,8 @@ describe('ReportValidator', () => {
             ],
         };
         const result = validator.validate(data);
-        expect(result.valid).toBe(true);
+
+        expect(result.valid).toBeTruthy();
     });
 });
 
@@ -115,7 +124,8 @@ describe('validateAll', () => {
 
     it('passes single test (no-op vs validate)', () => {
         const data = { tests: [{ title: 'Alpha', classification: 'A' }] };
-        expect(validator.validateAll(data).valid).toBe(true);
+
+        expect(validator.validateAll(data).valid).toBeTruthy();
     });
 
     it('validates all elements, not just [0]', () => {
@@ -127,7 +137,8 @@ describe('validateAll', () => {
             ],
         };
         const result = validator.validateAll(data);
-        expect(result.valid).toBe(true);
+
+        expect(result.valid).toBeTruthy();
     });
 
     it('rejects when second element fails pattern validation', () => {
@@ -139,20 +150,23 @@ describe('validateAll', () => {
             ],
         };
         const result = validator.validateAll(data);
-        expect(result.valid).toBe(false);
-        expect(result.errors.some((e) => e.includes('tests[1].classification'))).toBe(true);
+
+        expect(result.valid).toBeFalsy();
+        expect(result.errors.some((e) => e.includes('tests[1].classification'))).toBeTruthy();
     });
 
     it('returns base result on empty tests array', () => {
         const data = { tests: [] };
         const result = validator.validateAll(data);
-        expect(result.valid).toBe(false);
+
+        expect(result.valid).toBeFalsy();
     });
 
     it('early-returns base result for single-element array', () => {
         const data = { tests: [{ title: 'Alpha', classification: 'A' }] };
         const result = validator.validateAll(data);
-        expect(result.valid).toBe(true);
+
+        expect(result.valid).toBeTruthy();
         expect(result.errors).toHaveLength(0);
     });
 
@@ -160,7 +174,8 @@ describe('validateAll', () => {
         const noArrayRules = new ReportValidator([{ field: 'title', required: true, type: 'string' }]);
         const data = { title: 'test', tests: [{ x: 1 }, { x: 2 }] };
         const result = noArrayRules.validateAll(data);
-        expect(result.valid).toBe(true);
+
+        expect(result.valid).toBeTruthy();
     });
 });
 
@@ -182,8 +197,9 @@ describe('checkConsistency', () => {
             tests: [{ title: 'Test', severity: 'high', recommendation: 'Fix' }],
         };
         const result = validator.validate(data);
-        expect(result.valid).toBe(true);
-        expect(result.warnings.some((w) => w.includes('severity=high'))).toBe(true);
+
+        expect(result.valid).toBeTruthy();
+        expect(result.warnings.some((w) => w.includes('severity=high'))).toBeTruthy();
     });
 
     it('does not warn when high severity has long recommendation', () => {
@@ -197,7 +213,8 @@ describe('checkConsistency', () => {
             ],
         };
         const result = validator.validate(data);
-        expect(result.valid).toBe(true);
+
+        expect(result.valid).toBeTruthy();
         expect(result.warnings.filter((w) => w.includes('severity=high'))).toHaveLength(0);
     });
 });
@@ -213,13 +230,15 @@ describe('resolveField — deep nesting', () => {
     it('resolves 3-level path with array index', () => {
         const data = { metadata: { tests: [{ title: 'Deep test' }] } };
         const result = validator.validate(data);
-        expect(result.valid).toBe(true);
+
+        expect(result.valid).toBeTruthy();
     });
 
     it('reports missing deeply nested field', () => {
         const data = { metadata: { tests: [{}] } };
         const result = validator.validate(data);
-        expect(result.valid).toBe(false);
-        expect(result.errors.some((e) => e.includes('metadata.tests[0].title'))).toBe(true);
+
+        expect(result.valid).toBeFalsy();
+        expect(result.errors.some((e) => e.includes('metadata.tests[0].title'))).toBeTruthy();
     });
 });

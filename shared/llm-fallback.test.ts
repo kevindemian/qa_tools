@@ -125,6 +125,7 @@ describe('tierToConfig', () => {
         Config.set('llmModel', 'gpt-4');
         Config.set('llmBaseUrl', 'https://api.test.com/v1');
         const cfg = tierToConfig('main');
+
         expect(cfg.apiKey).toBe('sk-main');
         expect(cfg.model).toBe('gpt-4');
         expect(cfg.format).toBe('openai');
@@ -134,6 +135,7 @@ describe('tierToConfig', () => {
         Config.set('llmFastApiKey', 'gsk-fast');
         Config.set('llmFastModel', 'llama3');
         const cfg = tierToConfig('fast');
+
         expect(cfg.apiKey).toBe('gsk-fast');
         expect(cfg.model).toBe('llama3');
         expect(cfg.format).toBe('openai');
@@ -143,6 +145,7 @@ describe('tierToConfig', () => {
         Config.set('llmReviewApiKey', 'AIza-review');
         Config.set('llmReviewModel', 'gemini-2.0-flash-exp');
         const cfg = tierToConfig('reviewer');
+
         expect(cfg.apiKey).toBe('AIza-review');
         expect(cfg.model).toBe('gemini-2.0-flash-exp');
         expect(cfg.format).toBe('gemini');
@@ -152,6 +155,7 @@ describe('tierToConfig', () => {
         Config.set('llmApiKey', 'sk-report');
         Config.set('llmModel', 'gpt-4-report');
         const cfg = tierToConfig('report');
+
         expect(cfg.apiKey).toBe('sk-report');
         expect(cfg.responseFormat).toBe('json');
     });
@@ -159,6 +163,7 @@ describe('tierToConfig', () => {
     it('falls back to main when tier is unknown', () => {
         Config.set('llmApiKey', 'sk-main');
         const cfg = (tierToConfig as (tier: string) => ReturnType<typeof tierToConfig>)('nonexistent');
+
         expect(cfg.apiKey).toBe('sk-main');
     });
 });
@@ -166,16 +171,19 @@ describe('tierToConfig', () => {
 describe('parseRawOnce', () => {
     it('parses valid JSON string', () => {
         const result = parseRawOnce('{"key": "value"}');
+
         expect(result).toEqual({ key: 'value' });
     });
 
     it('returns null for invalid JSON', () => {
         const result = parseRawOnce('not json');
+
         expect(result).toBeNull();
     });
 
     it('returns null for empty string', () => {
         const result = parseRawOnce('');
+
         expect(result).toBeNull();
     });
 });
@@ -191,24 +199,28 @@ describe('parseRetryAfter', () => {
     it('parses seconds from Retry-After header', () => {
         const resp = mockResponseWithHeader('Retry-After', '30');
         const result = parseRetryAfter(resp, 2000);
+
         expect(result).toBe(10000);
     });
 
     it('returns default when no Retry-After header', () => {
         const resp = mockResponseWithHeader('Retry-After', null);
         const result = parseRetryAfter(resp, 2000);
+
         expect(result).toBe(2000);
     });
 
     it('returns default for invalid Retry-After value', () => {
         const resp = mockResponseWithHeader('Retry-After', 'invalid');
         const result = parseRetryAfter(resp, 2000);
+
         expect(result).toBe(2000);
     });
 
     it('caps at LLM_RETRY_MAX_WAIT_MS (10000)', () => {
         const resp = mockResponseWithHeader('Retry-After', '999');
         const result = parseRetryAfter(resp, 2000);
+
         expect(result).toBe(10000);
     });
 });
@@ -216,16 +228,19 @@ describe('parseRetryAfter', () => {
 describe('_estimateInputTokens', () => {
     it('estimates token count as ceil((sys + user) / 4)', () => {
         const result = _estimateInputTokens('abcd', 'efgh');
+
         expect(result).toBe(2);
     });
 
     it('returns 0 for empty strings', () => {
         const result = _estimateInputTokens('', '');
+
         expect(result).toBe(0);
     });
 
     it('rounds up fractional estimates', () => {
         const result = _estimateInputTokens('a', '');
+
         expect(result).toBe(1);
     });
 });
@@ -233,6 +248,7 @@ describe('_estimateInputTokens', () => {
 describe('getLlmClientMetrics / resetLlmClientMetrics', () => {
     it('returns initial zero metrics', () => {
         const metrics = getLlmClientMetrics();
+
         expect(metrics.cacheHits).toBe(0);
         expect(metrics.cacheMisses).toBe(0);
         expect(metrics.totalPromptTokens).toBe(0);
@@ -245,6 +261,7 @@ describe('getLlmClientMetrics / resetLlmClientMetrics', () => {
         metrics.cacheMisses = 5;
         resetLlmClientMetrics();
         const reset = getLlmClientMetrics();
+
         expect(reset.cacheHits).toBe(0);
         expect(reset.cacheMisses).toBe(0);
     });
@@ -271,6 +288,7 @@ describe('sendWithFallback', () => {
         );
 
         const result = await sendWithFallback('main', 'system', 'user');
+
         expect(result).toBe('success');
         expect(recordCircuitSuccess).toHaveBeenCalled();
     });
@@ -296,6 +314,7 @@ describe('sendWithFallback', () => {
             );
 
         const result = await sendWithFallback('main', 'system', 'user');
+
         expect(result).toBe('fallback ok');
         expect(recordCircuitFailure).toHaveBeenCalled();
     });
@@ -311,6 +330,7 @@ describe('sendWithFallback', () => {
 
     it('aggregates error when API key is missing for all providers', async () => {
         Config.set('llmApiKey', '');
+
         await expect(sendWithFallback('main', 'system', 'user')).rejects.toThrow('All LLM providers failed');
     });
 
@@ -322,9 +342,11 @@ describe('sendWithFallback', () => {
 
         try {
             await sendWithFallback('main', 'system', 'user');
+
             expect.unreachable('Expected error');
         } catch (err) {
             const msg = (err as Error).message;
+
             expect(msg).toContain('All LLM providers failed');
         }
     });
@@ -338,6 +360,7 @@ describe('sendWithFallback', () => {
         );
 
         const result = await sendWithFallback('main', 'system', 'user', 'json');
+
         expect(result).toBe('{"key":"val"}');
     });
 

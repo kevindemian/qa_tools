@@ -105,12 +105,14 @@ describe('main', () => {
     it('returns early when CTRF file does not exist', async () => {
         vi.mocked(fs.existsSync).mockReturnValue(false);
         await main();
+
         expect(mockPRComment.postPrComment).not.toHaveBeenCalled();
     });
 
     it('returns early when CTRF parsing fails', async () => {
         mockParseResult.mockReturnValue({ error: 'Invalid JSON' });
         await main();
+
         expect(mockPRComment.postPrComment).not.toHaveBeenCalled();
     });
 
@@ -123,6 +125,7 @@ describe('main', () => {
             skipFlaky: false,
         });
         await main();
+
         expect(mockPRComment.postPrComment).not.toHaveBeenCalled();
     });
 
@@ -141,6 +144,7 @@ describe('main', () => {
             html_url: 'https://github.com/owner/repo/pull/1#issuecomment-1',
         });
         await main();
+
         expect(mockPRComment.postPrComment).toHaveBeenCalled();
     });
 
@@ -157,6 +161,7 @@ describe('main', () => {
         });
         mockPRComment.postPrComment.mockResolvedValue({});
         await main();
+
         expect(mockPRComment.postPrComment).toHaveBeenCalled();
     });
 });

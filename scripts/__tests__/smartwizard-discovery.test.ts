@@ -40,6 +40,7 @@ describe('smartwizard-discovery', () => {
         }) as typeof process.exit);
 
         const mod = await import('../smartwizard-discovery.js');
+
         expect(mod).toBeDefined();
 
         vi.restoreAllMocks();

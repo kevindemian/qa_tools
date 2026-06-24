@@ -61,12 +61,14 @@ describe('Integration: Incident Investigation Report', () => {
         it('returns error page for null report', async () => {
             const { generateIncidentReportHtml } = await import('../../incident-report.js');
             const html = generateIncidentReportHtml(null);
+
             expect(html).toContain('Error generating incident investigation report');
         });
 
         it('returns error page for undefined report', async () => {
             const { generateIncidentReportHtml } = await import('../../incident-report.js');
             const html = generateIncidentReportHtml(undefined);
+
             expect(html).toContain('Error generating incident investigation report');
         });
     });

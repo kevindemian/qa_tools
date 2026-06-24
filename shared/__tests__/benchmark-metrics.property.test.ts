@@ -47,6 +47,7 @@ describe('computeCoverageMetrics — property-based', () => {
                     const body = JSON.stringify([{ title: bodyText, steps: ['test'] }]);
                     const fixture = makeFixture(criteria, [{ field: 'age', min: 0, max: 100 }]);
                     const result = computeCoverageMetrics(body, fixture);
+
                     expect(result.criteriaCoverage).toBeGreaterThanOrEqual(0);
                     expect(result.criteriaCoverage).toBeLessThanOrEqual(1);
                     expect(result.partitionCoverage).toBeGreaterThanOrEqual(0);
@@ -63,6 +64,7 @@ describe('computeCoverageMetrics — property-based', () => {
         fc.assert(
             fc.property(fc.string({ minLength: 1, maxLength: 50 }), (badBody) => {
                 const result = computeCoverageMetrics(badBody, makeFixture(['test'], []));
+
                 expect(result.totalTests).toBe(0);
                 expect(result.criteriaCoverage).toBe(0);
                 expect(result.partitionCoverage).toBe(0);
@@ -76,6 +78,7 @@ describe('computeCoverageMetrics — property-based', () => {
         fc.assert(
             fc.property(fc.constantFrom('{}', '{"key": "value"}', '"string"', 'null', 'true', 'false'), (body) => {
                 const result = computeCoverageMetrics(body, makeFixture(['test'], []));
+
                 expect(result.totalTests).toBe(0);
             }),
             { numRuns: 50 },
@@ -87,6 +90,7 @@ describe('computeCoverageMetrics — property-based', () => {
             fc.property(fc.array(fc.record({ title: fc.string() }), { minLength: 0, maxLength: 20 }), (tests) => {
                 const body = JSON.stringify(tests);
                 const result = computeCoverageMetrics(body, makeFixture(['test'], []));
+
                 expect(result.totalTests).toBe(tests.length);
             }),
             { numRuns: 100 },
@@ -102,6 +106,7 @@ describe('computeCoverageMetrics — property-based', () => {
                     const body = JSON.stringify(tests);
                     const fixture = makeFixture(criteria, []);
                     const result = computeCoverageMetrics(body, fixture);
+
                     expect(result.coveredCriteriaCount).toBeLessThanOrEqual(result.totalCriteria);
                     expect(result.totalCriteria).toBe(criteria.length);
                 },
@@ -119,6 +124,7 @@ describe('computeCoverageMetrics — property-based', () => {
                     const body = JSON.stringify(tests.map((t) => ({ ...t, title: randomTitle })));
                     const fixture = makeFixture(['unlikely criterion xyz123'], []);
                     const result = computeCoverageMetrics(body, fixture);
+
                     expect(result.criteriaCoverage).toBe(0);
                     expect(result.coveredCriteriaCount).toBe(0);
                 },

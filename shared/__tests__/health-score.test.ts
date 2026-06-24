@@ -32,6 +32,7 @@ describe('calculateHealthScore — pass rate consistency', () => {
             ],
         };
         const result = calculateHealthScore(store);
+
         // pass rate = 90/(90+5)*100 = 94.74%, score should be close to 100 (target 95%)
         expect(result.dimensions.passRate.score).toBeGreaterThanOrEqual(90);
     });
@@ -39,6 +40,7 @@ describe('calculateHealthScore — pass rate consistency', () => {
     it('coverage source is tracked as "override" when override provided', () => {
         const store: MetricsStore = { runs: [] };
         const result = calculateHealthScore(store, { coverageOverride: 85 });
+
         expect(result.dimensions.coverage.score).toBe(100);
     });
 
@@ -50,12 +52,14 @@ describe('calculateHealthScore — pass rate consistency', () => {
             ],
         };
         const result = calculateHealthScore(store);
+
         expect(result.dimensions.coverage.score).toBe(100);
     });
 
     it('coverage is 0 when no override and no history', () => {
         const store: MetricsStore = { runs: [] };
         const result = calculateHealthScore(store);
+
         expect(result.dimensions.coverage.score).toBe(0);
     });
 });
@@ -82,6 +86,7 @@ describe('calculateHealthScore — suite speed threshold', () => {
             ],
         };
         const result = calculateHealthScore(store);
+
         expect(result.dimensions.suiteSpeed.score).toBe(0);
     });
 
@@ -106,6 +111,7 @@ describe('calculateHealthScore — suite speed threshold', () => {
             ],
         };
         const result = calculateHealthScore(store);
+
         expect(result.dimensions.suiteSpeed.score).toBe(100);
     });
 });
@@ -131,6 +137,7 @@ describe('calculateHealthScore — quality gate unification', () => {
             ],
         };
         const result = calculateHealthScore(store);
+
         expect(result.qualityGate).toMatch(/^(pass|fail)$/);
     });
 });

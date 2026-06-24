@@ -8,6 +8,7 @@ import type { RegistryModel } from './model-resolver.js';
 describe('getRegistry', () => {
     it('returns a non-empty registry with version', () => {
         const reg = getRegistry();
+
         expect(reg.version).toBeGreaterThanOrEqual(1);
         expect(reg.updated).toBeTruthy();
     });
@@ -35,6 +36,7 @@ describe('getRegistry', () => {
         const reg = getRegistry();
         for (const [provider, models] of Object.entries(reg.providers)) {
             if (provider === 'custom') continue; // custom has no defaults
+
             expect(models.length).toBeGreaterThanOrEqual(1);
         }
     });
@@ -43,6 +45,7 @@ describe('getRegistry', () => {
 describe('resolveModel', () => {
     it('resolves main tier from registry', () => {
         const result = resolveModel('main', 'openai');
+
         expect(result.source).toBe('registry');
         expect(result.id).toBeTruthy();
         expect(result.context).toBeGreaterThan(0);
@@ -50,12 +53,14 @@ describe('resolveModel', () => {
 
     it('resolves fast tier from registry', () => {
         const result = resolveModel('fast', 'openai');
+
         expect(result.source).toBe('registry');
         expect(result.id).toContain('mini');
     });
 
     it('uses profile fallback when registry has no providers', () => {
         const result = resolveModel('main', 'custom', []);
+
         expect(result.source).toBe('profile');
     });
 
@@ -64,6 +69,7 @@ describe('resolveModel', () => {
             { id: 'test-model', context: 1000, costPer1kPrompt: 0, costPer1kCompletion: 0, tiers: ['main'] },
         ];
         const result = resolveModel('main', 'openai', models);
+
         expect(result.source).toBe('registry');
         expect(result.id).toBe('test-model');
     });
@@ -74,6 +80,7 @@ describe('resolveModel', () => {
             { id: 'large', context: 128000, costPer1kPrompt: 0.5, costPer1kCompletion: 1.0, tiers: ['main'] },
         ];
         const result = resolveModel('main', 'openai', models);
+
         expect(result.id).toBe('large');
         expect(result.context).toBe(128000);
     });
@@ -84,6 +91,7 @@ describe('resolveModel', () => {
             { id: 'expensive', context: 128000, costPer1kPrompt: 0.5, costPer1kCompletion: 1.0, tiers: ['main'] },
         ];
         const result = resolveModel('main', 'openai', models);
+
         expect(result.id).toBe('cheap');
     });
 
@@ -92,36 +100,42 @@ describe('resolveModel', () => {
             { id: 'any-tier', context: 64000, costPer1kPrompt: 0, costPer1kCompletion: 0, tiers: [] },
         ];
         const result = resolveModel('batch', 'openai', models);
+
         expect(result.source).toBe('registry');
         expect(result.id).toBe('any-tier');
     });
 
     it('returns empty id on unknown provider with no models', () => {
         const result = resolveModel('main', 'custom');
+
         expect(result.id).toBe('');
         expect(result.source).toBe('profile');
     });
 
     it('anthropic resolves main to sonnet', () => {
         const result = resolveModel('main', 'anthropic');
+
         expect(result.source).toBe('registry');
         expect(result.id).toContain('sonnet');
     });
 
     it('anthropic resolves fast to haiku', () => {
         const result = resolveModel('fast', 'anthropic');
+
         expect(result.source).toBe('registry');
         expect(result.id).toContain('haiku');
     });
 
     it('gemini resolves main to flash-exp', () => {
         const result = resolveModel('main', 'gemini');
+
         expect(result.source).toBe('registry');
         expect(result.id).toContain('flash');
     });
 
     it('opencode-go resolves fallback to kimi', () => {
         const result = resolveModel('fallback', 'opencode-go');
+
         expect(result.source).toBe('registry');
         expect(result.id).toContain('kimi');
     });
@@ -130,6 +144,7 @@ describe('resolveModel', () => {
         const tiers = ['main', 'fast', 'reviewer', 'report', 'fallback', 'batch'];
         for (const t of tiers) {
             const result = resolveModel(t, 'github-models');
+
             expect(result.source).toBe('registry');
             expect(result.id).toBe('gpt-4o-mini');
         }

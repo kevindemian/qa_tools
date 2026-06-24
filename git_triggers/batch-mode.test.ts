@@ -113,48 +113,56 @@ describe('parseBatchArgs', () => {
     it('parses --project long flag', () => {
         process.argv = ['node', 'script.js', '--project', 'my-proj'];
         const result = parseBatchArgs();
+
         expect(result.project).toBe('my-proj');
     });
 
     it('parses -p short flag', () => {
         process.argv = ['node', 'script.js', '-p', 'my-proj'];
         const result = parseBatchArgs();
+
         expect(result.project).toBe('my-proj');
     });
 
     it('parses --branch flag', () => {
         process.argv = ['node', 'script.js', '--branch', 'develop'];
         const result = parseBatchArgs();
+
         expect(result.branch).toBe('develop');
     });
 
     it('parses -b short flag', () => {
         process.argv = ['node', 'script.js', '-b', 'develop'];
         const result = parseBatchArgs();
+
         expect(result.branch).toBe('develop');
     });
 
     it('parses --auto flag', () => {
         process.argv = ['node', 'script.js', '--auto'];
         const result = parseBatchArgs();
-        expect(result.auto).toBe(true);
+
+        expect(result.auto).toBeTruthy();
     });
 
     it('parses --batch flag', () => {
         process.argv = ['node', 'script.js', '--batch'];
         const result = parseBatchArgs();
-        expect(result.auto).toBe(true);
+
+        expect(result.auto).toBeTruthy();
     });
 
     it('returns empty when no args', () => {
         process.argv = ['node', 'script.js'];
         const result = parseBatchArgs();
+
         expect(result).toEqual({});
     });
 
     it('parses --publish flag', () => {
         process.argv = ['node', 'script.js', '--publish', 's3'];
         const result = parseBatchArgs();
+
         expect(result.publish).toBe('s3');
     });
 });
@@ -163,7 +171,8 @@ describe('tryBatchMode', () => {
     it('returns false when no batch args', async () => {
         process.argv = ['node', 'script.js'];
         const result = await tryBatchMode();
-        expect(result).toBe(false);
+
+        expect(result).toBeFalsy();
     });
 
     it('errors when no projects configured', async () => {
@@ -172,7 +181,7 @@ describe('tryBatchMode', () => {
 
         const result = await tryBatchMode();
 
-        expect(result).toBe(true);
+        expect(result).toBeTruthy();
         expect(mockError).toHaveBeenCalledWith(expect.stringContaining('Nenhum projeto'));
     });
 
@@ -182,7 +191,7 @@ describe('tryBatchMode', () => {
 
         const result = await tryBatchMode();
 
-        expect(result).toBe(true);
+        expect(result).toBeTruthy();
         expect(mockError).toHaveBeenCalledWith(expect.stringContaining('unknown'));
     });
 
@@ -193,7 +202,7 @@ describe('tryBatchMode', () => {
 
         const result = await tryBatchMode();
 
-        expect(result).toBe(true);
+        expect(result).toBeTruthy();
         expect(mockError).toHaveBeenCalledWith(expect.stringContaining('bad'));
     });
 
@@ -209,7 +218,7 @@ describe('tryBatchMode', () => {
 
         const result = await tryBatchMode();
 
-        expect(result).toBe(true);
+        expect(result).toBeTruthy();
         expect(mockSuccess).toHaveBeenCalledWith(expect.stringContaining('https://gitlab.com/pipe/42'));
         expect(mockPushHistory).toHaveBeenCalledWith('batch-pipeline', 'main', 'ok');
         expect(mockPollPipeline).toHaveBeenCalledWith(mockManager, '42');
@@ -235,7 +244,7 @@ describe('tryBatchMode', () => {
 
         const result = await tryBatchMode();
 
-        expect(result).toBe(true);
+        expect(result).toBeTruthy();
         expect(mockPrintError).toHaveBeenCalled();
     });
 
@@ -247,7 +256,7 @@ describe('tryBatchMode', () => {
 
         const result = await tryBatchMode();
 
-        expect(result).toBe(true);
+        expect(result).toBeTruthy();
     });
 
     it('calls offerPipelineFailureAnalysis when results are collected', async () => {
@@ -261,7 +270,8 @@ describe('tryBatchMode', () => {
         mockPollPipeline.mockResolvedValue({ status: 'success', web_url: '' });
 
         const result = await tryBatchMode();
-        expect(result).toBe(true);
+
+        expect(result).toBeTruthy();
     });
 
     it('handles empty pipelineId', async () => {
@@ -272,7 +282,7 @@ describe('tryBatchMode', () => {
 
         const result = await tryBatchMode();
 
-        expect(result).toBe(true);
+        expect(result).toBeTruthy();
         expect(mockError).toHaveBeenCalledWith(expect.stringContaining('ID da pipeline'));
     });
 });

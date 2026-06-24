@@ -44,6 +44,7 @@ describe('Integration: Coverage Source', () => {
             );
 
             const result = readIstanbulCoverage(coveragePath);
+
             expect(result?.coveragePct).toBe(85);
             expect(result?.source).toBe('istanbul');
             expect(result?.detail).toContain('85.0%');
@@ -52,6 +53,7 @@ describe('Integration: Coverage Source', () => {
         it('returns undefined when file does not exist', async () => {
             const { readIstanbulCoverage } = await import('../../coverage-source.js');
             const result = readIstanbulCoverage(path.join(TEST_DIR, 'nonexistent.json'));
+
             expect(result).toBeUndefined();
         });
 
@@ -60,6 +62,7 @@ describe('Integration: Coverage Source', () => {
             const coveragePath = path.join(TEST_DIR, 'bad.json');
             fs.writeFileSync(coveragePath, 'not json');
             const result = readIstanbulCoverage(coveragePath);
+
             expect(result).toBeUndefined();
         });
 
@@ -68,6 +71,7 @@ describe('Integration: Coverage Source', () => {
             const coveragePath = path.join(TEST_DIR, 'no-total.json');
             fs.writeFileSync(coveragePath, JSON.stringify({ total: undefined }));
             const result = readIstanbulCoverage(coveragePath);
+
             expect(result).toBeUndefined();
         });
     });
@@ -84,6 +88,7 @@ describe('Integration: Coverage Source', () => {
             );
 
             const result = resolveCoverage({ istanbulPath: coveragePath, ctrfCoverage: 75 });
+
             expect(result?.source).toBe('istanbul');
             expect(result?.coveragePct).toBe(90);
         });
@@ -94,6 +99,7 @@ describe('Integration: Coverage Source', () => {
                 istanbulPath: path.join(TEST_DIR, 'nonexistent.json'),
                 ctrfCoverage: 75.5,
             });
+
             expect(result?.source).toBe('ctrf');
             expect(result?.coveragePct).toBe(75.5);
         });
@@ -103,6 +109,7 @@ describe('Integration: Coverage Source', () => {
             const result = resolveCoverage({
                 istanbulPath: path.join(TEST_DIR, 'nonexistent.json'),
             });
+
             expect(result).toBeUndefined();
         });
     });

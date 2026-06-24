@@ -13,6 +13,7 @@ afterAll(() => {
 describe('detectGitDir', () => {
     it('returns null when no .git in path', () => {
         const result = detectGitDir('/nonexistent');
+
         expect(result).toBeNull();
     });
 
@@ -21,6 +22,7 @@ describe('detectGitDir', () => {
         fs.mkdirSync(dir, { recursive: true });
         fs.mkdirSync(path.join(dir, '.git'));
         const result = detectGitDir(dir);
+
         expect(result).toBe(dir);
     });
 
@@ -30,11 +32,13 @@ describe('detectGitDir', () => {
         fs.mkdirSync(subDir, { recursive: true });
         fs.mkdirSync(path.join(gitDir, '.git'));
         const result = detectGitDir(subDir);
+
         expect(result).toBe(gitDir);
     });
 
     it('works with default (process.cwd)', () => {
         const result = detectGitDir();
+
         expect(result).not.toBeNull();
     });
 });
@@ -42,16 +46,19 @@ describe('detectGitDir', () => {
 describe('getHeadSha', () => {
     it('returns GITHUB_SHA env var', () => {
         const env = { GITHUB_SHA: 'gh-abc123' } as NodeJS.ProcessEnv;
+
         expect(getHeadSha(env)).toBe('gh-abc123');
     });
 
     it('returns CI_COMMIT_SHA env var', () => {
         const env = { CI_COMMIT_SHA: 'gl-def456' } as NodeJS.ProcessEnv;
+
         expect(getHeadSha(env)).toBe('gl-def456');
     });
 
     it('prefers GITHUB_SHA over CI_COMMIT_SHA', () => {
         const env = { GITHUB_SHA: 'gh-pickme', CI_COMMIT_SHA: 'gl-notme' } as NodeJS.ProcessEnv;
+
         expect(getHeadSha(env)).toBe('gh-pickme');
     });
 
@@ -65,6 +72,7 @@ describe('getHeadSha', () => {
         process.chdir(dir);
         try {
             const sha = getHeadSha({});
+
             expect(sha).toBe('abc123def');
         } finally {
             process.chdir(origCwd);
@@ -92,6 +100,7 @@ describe('getHeadSha', () => {
         process.chdir(dir);
         try {
             const sha = getHeadSha({});
+
             expect(sha).toBe('abc123def');
         } finally {
             process.chdir(origCwd);
@@ -106,6 +115,7 @@ describe('getHeadSha', () => {
         process.chdir(dir);
         try {
             const sha = getHeadSha({});
+
             expect(sha).toBe('abc123def');
         } finally {
             process.chdir(origCwd);
@@ -114,6 +124,7 @@ describe('getHeadSha', () => {
 
     it('uses BUILD_SOURCEVERSION env var', () => {
         const env = { BUILD_SOURCEVERSION: 'build-v999' } as NodeJS.ProcessEnv;
+
         expect(getHeadSha(env)).toBe('build-v999');
     });
 
@@ -124,6 +135,7 @@ describe('getHeadSha', () => {
         process.chdir(fakeDir);
         try {
             const result = getHeadSha({});
+
             expect(result).toBeNull();
         } finally {
             process.chdir(origCwd);
@@ -144,6 +156,7 @@ describe('getHeadSha', () => {
         process.chdir(fakeDir);
         try {
             const result = getHeadSha();
+
             expect(result).toBeNull();
         } finally {
             process.chdir(origCwd);
@@ -157,21 +170,25 @@ describe('getHeadSha', () => {
 describe('getCurrentBranch', () => {
     it('returns GITHUB_REF_NAME env var', () => {
         const env = { GITHUB_REF_NAME: 'feature/foo' } as NodeJS.ProcessEnv;
+
         expect(getCurrentBranch(env)).toBe('feature/foo');
     });
 
     it('returns CI_COMMIT_BRANCH env var', () => {
         const env = { CI_COMMIT_BRANCH: 'main' } as NodeJS.ProcessEnv;
+
         expect(getCurrentBranch(env)).toBe('main');
     });
 
     it('uses BUILD_SOURCEBRANCHNAME env var', () => {
         const env = { BUILD_SOURCEBRANCHNAME: 'azure-branch' } as NodeJS.ProcessEnv;
+
         expect(getCurrentBranch(env)).toBe('azure-branch');
     });
 
     it('prefers GITHUB_REF_NAME over CI_COMMIT_BRANCH', () => {
         const env = { GITHUB_REF_NAME: 'gh-branch', CI_COMMIT_BRANCH: 'ci-branch' } as NodeJS.ProcessEnv;
+
         expect(getCurrentBranch(env)).toBe('gh-branch');
     });
 
@@ -191,6 +208,7 @@ describe('getCurrentBranch', () => {
         process.chdir(fakeDir);
         try {
             const result = getCurrentBranch({});
+
             expect(result).toBeNull();
         } finally {
             process.chdir(origCwd);
@@ -205,6 +223,7 @@ describe('getCurrentBranch', () => {
         process.chdir(dir);
         try {
             const sha = getHeadSha({});
+
             expect(sha).toBeNull();
         } finally {
             process.chdir(origCwd);
@@ -223,6 +242,7 @@ describe('getCurrentBranch', () => {
         process.chdir(dir);
         try {
             const sha = getHeadSha({});
+
             /* Line without SHA prefix returns the ref itself, not null */
             expect(sha).toBe('refs/heads/main');
         } finally {
@@ -244,6 +264,7 @@ describe('getCurrentBranch', () => {
         process.chdir(fakeDir);
         try {
             const result = getCurrentBranch();
+
             expect(result).toBeNull();
         } finally {
             process.chdir(origCwd);

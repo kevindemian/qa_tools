@@ -25,8 +25,9 @@ describe('writeProjectsConfig', () => {
             repoName: 'myapp',
             repoOwner: 'myorg',
         });
-        expect(result.filesCreated.length).toBe(2);
-        expect(result.filesSkipped.length).toBe(0);
+
+        expect(result.filesCreated).toHaveLength(2);
+        expect(result.filesSkipped).toHaveLength(0);
         expect(MockFs.writeFileSync).toHaveBeenCalledTimes(2);
     });
 
@@ -40,9 +41,12 @@ describe('writeProjectsConfig', () => {
             repoName: 'newapp',
             repoOwner: 'myorg',
         });
-        expect(result.filesCreated.length).toBe(2);
+
+        expect(result.filesCreated).toHaveLength(2);
+
         const writeCalls = MockFs.writeFileSync.mock.calls;
         const lastProjectsWrite = (writeCalls[0]?.[1] ?? '') as string;
+
         expect(lastProjectsWrite).toContain('existing');
         expect(lastProjectsWrite).toContain('newapp');
     });
@@ -57,7 +61,8 @@ describe('writeProjectsConfig', () => {
             repoName: 'myapp',
             repoOwner: 'myorg',
         });
-        expect(result.filesSkipped.length).toBe(2);
+
+        expect(result.filesSkipped).toHaveLength(2);
     });
 
     it('handles corrupt existing file by overwriting', () => {
@@ -70,7 +75,8 @@ describe('writeProjectsConfig', () => {
             repoName: 'myapp',
             repoOwner: 'myorg',
         });
-        expect(result.filesCreated.length).toBe(2);
+
+        expect(result.filesCreated).toHaveLength(2);
     });
 });
 
@@ -83,16 +89,22 @@ describe('writeDotEnvExample', () => {
 
     it('creates .env.example with GitHub vars', () => {
         const result = writeDotEnvExample({ projectName: 'myapp', gitProvider: 'github' });
+
         expect(result.filesCreated).toContain(path.resolve(process.cwd(), '.env.example'));
+
         const content = (MockFs.writeFileSync.mock.calls[0]?.[1] ?? '') as string;
+
         expect(content).toContain('GITHUB_TOKEN');
         expect(content).not.toContain('GIT_TOKEN');
     });
 
     it('creates .env.example with GitLab vars', () => {
         const result = writeDotEnvExample({ projectName: 'myapp', gitProvider: 'gitlab' });
-        expect(result.filesCreated.length).toBe(1);
+
+        expect(result.filesCreated).toHaveLength(1);
+
         const content = (MockFs.writeFileSync.mock.calls[0]?.[1] ?? '') as string;
+
         expect(content).toContain('GIT_TOKEN');
         expect(content).toContain('GIT_BASE_URL');
     });
@@ -100,7 +112,8 @@ describe('writeDotEnvExample', () => {
     it('skips when .env.example already exists', () => {
         vi.spyOn(MockFs, 'existsSync').mockReturnValue(true);
         const result = writeDotEnvExample({ projectName: 'myapp', gitProvider: 'github' });
-        expect(result.filesSkipped.length).toBe(1);
+
+        expect(result.filesSkipped).toHaveLength(1);
         expect(MockFs.writeFileSync).not.toHaveBeenCalled();
     });
 });
@@ -125,6 +138,7 @@ describe('writeFeaturesConfig', () => {
         } as Parameters<typeof writeFeaturesConfig>[0];
 
         const result = writeFeaturesConfig(ctx);
+
         expect(result.filesCreated).toHaveLength(0);
         expect(result.filesSkipped).toHaveLength(0);
         expect(mockSetPrReportConfig).not.toHaveBeenCalled();
@@ -144,6 +158,7 @@ describe('writeFeaturesConfig', () => {
         } as Parameters<typeof writeFeaturesConfig>[0];
 
         const result = writeFeaturesConfig(ctx);
+
         expect(result.filesCreated).toContain('config/features.json');
         expect(mockSetPrReportConfig).toHaveBeenCalledWith('myapp', {
             enabled: true,
@@ -168,6 +183,7 @@ describe('writeFeaturesConfig', () => {
         } as Parameters<typeof writeFeaturesConfig>[0];
 
         writeFeaturesConfig(ctx);
+
         expect(mockSetPrReportConfig).toHaveBeenCalledWith('myapp', {
             enabled: true,
             publishTarget: 'gitlab-ci',
@@ -191,6 +207,7 @@ describe('writeFeaturesConfig', () => {
         } as Parameters<typeof writeFeaturesConfig>[0];
 
         writeFeaturesConfig(ctx);
+
         expect(mockSetPrReportConfig).toHaveBeenCalledWith('myapp', {
             enabled: true,
             publishTarget: 'github-actions',

@@ -54,6 +54,7 @@ describe('saveRunMetrics / loadMetrics', () => {
         saveRunMetrics(run, cfg);
 
         const loaded = loadMetrics(cfg);
+
         expect(loaded.runs).toHaveLength(1);
         expect(nonNull(loaded.runs[0]).project).toBe('test-project');
         expect(nonNull(loaded.runs[0]).passed).toBe(2);
@@ -63,6 +64,7 @@ describe('saveRunMetrics / loadMetrics', () => {
     it('returns empty store when no metrics file exists', () => {
         const cfg = makeConfig(path.join(TMP_DIR, 'nonexistent'));
         const store = loadMetrics(cfg);
+
         expect(store.runs).toEqual([]);
     });
 
@@ -73,6 +75,7 @@ describe('saveRunMetrics / loadMetrics', () => {
         const sp = path.join(dir, 'metrics.json');
         fs.writeFileSync(sp, 'not valid json{{{');
         const store = loadMetrics(cfg);
+
         expect(store.runs).toEqual([]);
     });
 
@@ -106,6 +109,7 @@ describe('saveRunMetrics / loadMetrics', () => {
         );
 
         const loaded = loadMetrics(cfg);
+
         expect(loaded.runs).toHaveLength(2);
     });
 });
@@ -129,6 +133,7 @@ describe('saveParseResult', () => {
         expect(run.tests).toHaveLength(2);
 
         const loaded = loadMetrics(cfg);
+
         expect(loaded.runs).toHaveLength(1);
     });
 });
@@ -136,6 +141,7 @@ describe('saveParseResult', () => {
 describe('calculateFlakiness', () => {
     it('returns empty when no runs', () => {
         const store: MetricsStore = { runs: [] };
+
         expect(calculateFlakiness(store)).toEqual([]);
     });
 
@@ -172,6 +178,7 @@ describe('calculateFlakiness', () => {
         };
 
         const flaky = calculateFlakiness(store);
+
         expect(flaky).toHaveLength(1);
         expect(nonNull(flaky[0]).title).toBe('FlakyLogin');
         expect(nonNull(flaky[0]).passCount).toBe(1);
@@ -195,6 +202,7 @@ describe('calculateFlakiness', () => {
             ],
         };
         const flaky = calculateFlakiness(store);
+
         expect(flaky).toHaveLength(0);
     });
 
@@ -224,6 +232,7 @@ describe('calculateFlakiness', () => {
             ],
         };
         const flaky = calculateFlakiness(store);
+
         expect(flaky).toHaveLength(1);
         expect(nonNull(flaky[0]).failCount).toBe(1);
         expect(nonNull(flaky[0]).passCount).toBe(1);
@@ -285,6 +294,7 @@ describe('calculateFlakiness', () => {
         };
 
         const flaky = calculateFlakiness(store);
+
         expect(flaky).toHaveLength(1);
         expect(nonNull(flaky[0]).title).toBe('FlakySkip');
         expect(nonNull(flaky[0]).rate).toBe(0.5);
@@ -305,6 +315,7 @@ describe('saveCoverageSnapshot', () => {
         saveCoverageSnapshot(snapshot, cfg);
 
         const loaded = loadMetrics(cfg);
+
         expect(loaded.coverageHistory).toHaveLength(1);
         expect(nonNull(nonNull(loaded.coverageHistory)[0]).coveragePct).toBe(75);
     });
@@ -338,6 +349,7 @@ describe('getTrends', () => {
         };
 
         const trends = getTrends(store);
+
         expect(trends).toHaveLength(2);
         expect(nonNull(trends[0]).passRate).toBe(100);
         expect(nonNull(trends[1]).passRate).toBe(0);
@@ -357,6 +369,7 @@ describe('getTrends', () => {
         const store: MetricsStore = { runs };
 
         const trends = getTrends(store, 5);
+
         expect(trends).toHaveLength(5);
     });
 });
@@ -369,6 +382,7 @@ describe('edge cases', () => {
         });
         try {
             const store = loadMetrics(cfg);
+
             expect(store.runs).toEqual([]);
         } finally {
             mkdirSpy.mockRestore();
@@ -391,6 +405,7 @@ describe('edge cases', () => {
                 duration: 100,
                 tests: [{ title: 'T1', state: 'passed', duration: 100 }],
             };
+
             expect(() => saveRunMetrics(run, cfg)).not.toThrow();
         } finally {
             writeSpy.mockRestore();
@@ -413,6 +428,7 @@ describe('edge cases', () => {
         saveRunMetrics(run, cfg);
         saveRunMetrics(run, cfg);
         const loaded = loadMetrics(cfg);
-        expect(loaded.runs.length).toBe(1);
+
+        expect(loaded.runs).toHaveLength(1);
     });
 });

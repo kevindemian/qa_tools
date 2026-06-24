@@ -113,7 +113,7 @@ describe('E2E: Result Processing Pipeline', () => {
         expect(result.failed).toBe(1);
         expect(result.skipped).toBe(0);
 
-        expect(nock.isDone()).toBe(true);
+        expect(nock.isDone()).toBeTruthy();
     });
 
     it('handles unmatched test gracefully', () => {
@@ -152,6 +152,7 @@ describe('E2E: Result Processing Pipeline', () => {
             [{ title: 'TC01', state: 'passed', duration: 100 }],
             '/tmp/nonexistent.json',
         );
+
         expect(result.matched).toHaveLength(0);
         expect(result.stats.total).toBe(0);
     });

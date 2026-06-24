@@ -43,8 +43,11 @@ describe('Integration: AI Effectiveness Dashboard (FT-23)', () => {
                 ],
             };
             const result = computeAiEffectiveness(store);
+
             expect(result.timestamp).toMatch(/^\d{4}-\d{2}-\d{2}T/);
+
             const html = generateAiEffectivenessHtml(result, 'FT-23 Test');
+
             expect(html).toContain('<!DOCTYPE html>');
             expect(html).toContain('</html>');
             expect(html).toContain('FT-23 Test');
@@ -57,6 +60,7 @@ describe('Integration: AI Effectiveness Dashboard (FT-23)', () => {
             const { computeAiEffectiveness, generateAiEffectivenessHtml } = await import('../../ai-effectiveness.js');
             const result = computeAiEffectiveness({ records: [] });
             const html = generateAiEffectivenessHtml(result);
+
             expect(html).toContain('No AI generation data available');
             expect(html).not.toContain('By Prompt Version');
             expect(html).not.toContain('Daily Trend');
@@ -69,6 +73,7 @@ describe('Integration: AI Effectiveness Dashboard (FT-23)', () => {
             };
             const result = computeAiEffectiveness(store);
             const html = generateAiEffectivenessHtml(result, 'Sprint 11 AI Report');
+
             expect(html).toContain('Sprint 11 AI Report');
             expect(html).not.toContain('AI Effectiveness Dashboard');
         });
@@ -85,10 +90,13 @@ describe('Integration: AI Effectiveness Dashboard (FT-23)', () => {
                 ],
             };
             const result = computeAiEffectiveness(store);
+
             expect(result.acceptanceRate).toBe(100);
             expect(result.totalModified).toBe(0);
             expect(result.totalDeleted).toBe(0);
+
             const html = generateAiEffectivenessHtml(result);
+
             expect(html).toContain('100%');
         });
 
@@ -113,6 +121,7 @@ describe('Integration: AI Effectiveness Dashboard (FT-23)', () => {
                 ],
             };
             const result = computeAiEffectiveness(store);
+
             expect(result.acceptanceRate).toBe(0);
             expect(result.totalModified).toBe(1);
             expect(result.totalDeleted).toBe(1);
@@ -131,9 +140,12 @@ describe('Integration: AI Effectiveness Dashboard (FT-23)', () => {
             }
             const store: AiFeedbackStore = { records };
             const result = computeAiEffectiveness(store);
+
             expect(result.totalRecords).toBe(100);
             expect(result.byVersion).toHaveLength(5);
+
             const html = generateAiEffectivenessHtml(result);
+
             expect(html).toContain('<!DOCTYPE html>');
         });
     });
@@ -146,6 +158,7 @@ describe('Integration: AI Effectiveness Dashboard (FT-23)', () => {
             };
             const result = computeAiEffectiveness(store);
             const html = generateAiEffectivenessHtml(result);
+
             expect(html).toContain('<!DOCTYPE html>');
             expect(html).toContain('<html');
             expect(html).toContain('</html>');
@@ -162,6 +175,7 @@ describe('Integration: AI Effectiveness Dashboard (FT-23)', () => {
         it('handles null store without crashing (returning empty result)', async () => {
             const { computeAiEffectiveness } = await import('../../ai-effectiveness.js');
             const result = computeAiEffectiveness(null);
+
             expect(result.acceptanceRate).toBe(0);
             expect(result.totalRecords).toBe(0);
             expect(result.totalGenerated).toBe(0);
@@ -170,6 +184,7 @@ describe('Integration: AI Effectiveness Dashboard (FT-23)', () => {
         it('handles undefined store without crashing', async () => {
             const { computeAiEffectiveness } = await import('../../ai-effectiveness.js');
             const result = computeAiEffectiveness(undefined);
+
             expect(result.acceptanceRate).toBe(0);
             expect(result.totalRecords).toBe(0);
         });
@@ -177,6 +192,7 @@ describe('Integration: AI Effectiveness Dashboard (FT-23)', () => {
         it('handles null result in generateAiEffectivenessHtml without crashing', async () => {
             const { generateAiEffectivenessHtml } = await import('../../ai-effectiveness.js');
             const html = generateAiEffectivenessHtml(null);
+
             expect(html).toContain('Error generating dashboard');
         });
     });
@@ -193,7 +209,9 @@ describe('Integration: AI Effectiveness Dashboard (FT-23)', () => {
             };
             const result = computeAiEffectiveness(store);
             const html = generateAiEffectivenessHtml(result);
+
             expect(html).toContain('Error generating dashboard');
+
             spy.mockRestore();
         });
     });

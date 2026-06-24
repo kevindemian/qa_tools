@@ -43,6 +43,7 @@ describe('parseGitLogOutput', () => {
 
     it('parses valid NUL-delimited lines', () => {
         const result = parseGitLogOutput('hash1\0date1\0subj1\0author1\0parent1');
+
         expect(result).toHaveLength(1);
         expect(result[0]?.hash).toBe('hash1');
         expect(result[0]?.date).toBe('date1');
@@ -53,12 +54,14 @@ describe('parseGitLogOutput', () => {
 
     it('skips malformed lines with fewer than 5 fields', () => {
         const result = parseGitLogOutput('hash1\0date1\0subj1');
+
         expect(result).toEqual([]);
     });
 
     it('skips only the malformed line, keeps valid ones', () => {
         const input = 'hash1\0date1\0subj1\0author1\0\nhash2\0date2\0subj2\nhash3\0date3\0subj3\0author3\0parent3';
         const result = parseGitLogOutput(input);
+
         expect(result).toHaveLength(2);
         expect(result[0]?.hash).toBe('hash1');
         expect(result[1]?.hash).toBe('hash3');
@@ -70,12 +73,14 @@ describe('parseGitLogOutput', () => {
 
     it('handles empty parents field', () => {
         const result = parseGitLogOutput('hash1\0date1\0subj1\0author1\0');
+
         expect(result).toHaveLength(1);
         expect(result[0]?.parents).toEqual([]);
     });
 
     it('handles multiple parent hashes', () => {
         const result = parseGitLogOutput('hash1\0date1\0subj1\0author1\0parent1 parent2 parent3');
+
         expect(result[0]?.parents).toEqual(['parent1', 'parent2', 'parent3']);
     });
 });
@@ -91,12 +96,14 @@ describe('getLastGitLogError', () => {
             throw new Error('fatal: not a git repository');
         });
         fetchGitLog();
+
         expect(getLastGitLogError()).toBe('fatal: not a git repository');
     });
 
     it('returns undefined after successful git command', () => {
         mockGitOutput(SAMPLE_GIT_LOG);
         fetchGitLog();
+
         expect(getLastGitLogError()).toBeUndefined();
     });
 
@@ -105,15 +112,18 @@ describe('getLastGitLogError', () => {
             throw new Error('first error');
         });
         fetchGitLog();
+
         expect(getLastGitLogError()).toBe('first error');
 
         mockGitOutput(SAMPLE_GIT_LOG);
         fetchGitLog();
+
         expect(getLastGitLogError()).toBeUndefined();
     });
 
     it('is undefined before any fetchGitLog call', () => {
         clearGitLogError();
+
         expect(getLastGitLogError()).toBeUndefined();
     });
 });
@@ -126,6 +136,7 @@ describe('fetchGitLog', () => {
     it('parses git log output correctly', () => {
         mockGitOutput(SAMPLE_GIT_LOG);
         const commits = fetchGitLog();
+
         expect(commits).toHaveLength(6);
         expect(commits[0]?.hash).toBe('abc123');
         expect(commits[0]?.subject).toBe('Initial commit');
@@ -136,6 +147,7 @@ describe('fetchGitLog', () => {
     it('parses merge commit parents correctly', () => {
         mockGitOutput(SAMPLE_GIT_LOG);
         const commits = fetchGitLog();
+
         expect(commits[4]?.subject).toBe('Merge branch feat');
         expect(commits[4]?.parents).toEqual(['jkl012', 'abc123']);
     });
@@ -145,18 +157,21 @@ describe('fetchGitLog', () => {
             throw new Error('git: command not found');
         });
         const commits = fetchGitLog();
+
         expect(commits).toEqual([]);
     });
 
     it('returns empty array for empty git log', () => {
         mockGitOutput('');
         const commits = fetchGitLog();
+
         expect(commits).toEqual([]);
     });
 
     it('uses repoPath option', () => {
         mockGitOutput(SAMPLE_GIT_LOG);
         fetchGitLog({ repoPath: '/custom/path' });
+
         expect(mockExecFileSync).toHaveBeenCalledWith(
             'git',
             expect.any(Array),
@@ -168,6 +183,7 @@ describe('fetchGitLog', () => {
         mockGitOutput(SAMPLE_GIT_LOG);
         fetchGitLog();
         const args = mockExecFileSync.mock.calls[0]?.[1] as string[];
+
         expect(args).toContain('--all');
         expect(args).not.toContain('HEAD');
     });
@@ -176,6 +192,7 @@ describe('fetchGitLog', () => {
         mockGitOutput(SAMPLE_GIT_LOG);
         fetchGitLog({ branch: 'main' });
         const args = mockExecFileSync.mock.calls[0]?.[1] as string[];
+
         expect(args).toContain('main');
         expect(args).not.toContain('--all');
     });
@@ -191,12 +208,14 @@ describe('generateGitMetricsRuns', () => {
             throw new Error('git error');
         });
         const runs = generateGitMetricsRuns();
+
         expect(runs).toEqual([]);
     });
 
     it('groups commits by day into separate runs', () => {
         mockGitOutput(SAMPLE_GIT_LOG);
         const runs = generateGitMetricsRuns();
+
         expect(runs).toHaveLength(3);
         expect(runs[0]?.timestamp).toContain('2026-06-01');
         expect(runs[1]?.timestamp).toContain('2026-06-02');
@@ -206,6 +225,7 @@ describe('generateGitMetricsRuns', () => {
     it('maps each commit to a FlatTest', () => {
         mockGitOutput(SAMPLE_GIT_LOG);
         const runs = generateGitMetricsRuns();
+
         expect(runs[0]?.tests).toHaveLength(2);
         expect(runs[0]?.tests[0]?.title).toBe('Initial commit');
         expect(runs[0]?.tests[1]?.title).toBe('Add feature X');
@@ -215,6 +235,7 @@ describe('generateGitMetricsRuns', () => {
         mockGitOutput(SAMPLE_GIT_LOG);
         const runs = generateGitMetricsRuns();
         const revertTest = runs[1]?.tests.find((t) => t.title.startsWith('Revert'));
+
         expect(revertTest?.state).toBe('failed');
         expect(revertTest?.error).toBe('Commit was reverted');
     });
@@ -223,6 +244,7 @@ describe('generateGitMetricsRuns', () => {
         mockGitOutput(SAMPLE_GIT_LOG);
         const runs = generateGitMetricsRuns();
         const mergeTest = runs[1]?.tests.find((t) => t.title.startsWith('Merge'));
+
         expect(mergeTest?.state).toBe('skipped');
     });
 
@@ -230,13 +252,16 @@ describe('generateGitMetricsRuns', () => {
         mockGitOutput(SAMPLE_GIT_LOG);
         const runs = generateGitMetricsRuns();
         const normalTests = runs.flatMap((r) => r.tests.filter((t) => t.state === 'passed'));
+
         expect(normalTests.length).toBeGreaterThan(0);
+
         normalTests.forEach((t) => expect(t.state).toBe('passed'));
     });
 
     it('calculates duration between commits', () => {
         mockGitOutput(SAMPLE_GIT_LOG);
         const runs = generateGitMetricsRuns();
+
         expect(runs[0]?.tests[1]?.duration).toBeGreaterThan(0);
         expect(runs[0]?.tests[0]?.duration).toBe(0);
     });
@@ -244,6 +269,7 @@ describe('generateGitMetricsRuns', () => {
     it('sets total/passed/failed/skipped counts per run', () => {
         mockGitOutput(SAMPLE_GIT_LOG);
         const runs = generateGitMetricsRuns();
+
         expect(runs[0]?.total).toBe(2);
         expect(runs[0]?.passed).toBe(2);
         expect(runs[0]?.failed).toBe(0);
@@ -256,18 +282,21 @@ describe('generateGitMetricsRuns', () => {
     it('respects maxDays option', () => {
         mockGitOutput(SAMPLE_GIT_LOG);
         const runs = generateGitMetricsRuns({ maxDays: 1 });
+
         expect(runs.length).toBeLessThanOrEqual(1);
     });
 
     it('uses custom project name', () => {
         mockGitOutput(SAMPLE_GIT_LOG);
         const runs = generateGitMetricsRuns({ projectName: 'my-project' });
+
         expect(runs[0]?.project).toBe('my-project');
     });
 
     it('defaults project to git', () => {
         mockGitOutput(SAMPLE_GIT_LOG);
         const runs = generateGitMetricsRuns();
+
         expect(runs[0]?.project).toBe('git');
     });
 
@@ -275,6 +304,7 @@ describe('generateGitMetricsRuns', () => {
         const line = 'abc123' + '\0' + '2026-06-01T10:00:00.000Z' + '\0' + 'Only commit' + '\0' + 'kdemian' + '\0';
         mockGitOutput(line);
         const runs = generateGitMetricsRuns();
+
         expect(runs).toHaveLength(1);
         expect(runs[0]?.total).toBe(1);
         expect(runs[0]?.duration).toBe(0);
@@ -291,13 +321,16 @@ describe('generateGitFailureClassifications', () => {
             throw new Error('git error');
         });
         const result = generateGitFailureClassifications();
+
         expect(result).toEqual([]);
     });
 
     it('creates classifications for revert commits only', () => {
         mockGitOutput(SAMPLE_GIT_LOG);
         const result = generateGitFailureClassifications();
+
         expect(result.length).toBeGreaterThanOrEqual(1);
+
         result.forEach((c) => expect(c.category).toBe('REVERT'));
     });
 
@@ -305,6 +338,7 @@ describe('generateGitFailureClassifications', () => {
         mockGitOutput(SAMPLE_GIT_LOG);
         const result = generateGitFailureClassifications();
         const revertClass = result.find((c) => c.testTitle.includes('Revert'));
+
         expect(revertClass?.category).toBe('REVERT');
         expect(revertClass?.project).toBe('git');
         expect(revertClass?.timestamp).toBeDefined();
@@ -313,6 +347,7 @@ describe('generateGitFailureClassifications', () => {
     it('respects maxDays option filtering out older commits', () => {
         mockGitOutput(SAMPLE_GIT_LOG);
         const result = generateGitFailureClassifications({ maxDays: 1 });
+
         expect(result.length).toBeLessThanOrEqual(1);
     });
 });

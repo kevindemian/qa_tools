@@ -22,6 +22,7 @@ describe('RunComparisonSchema', () => {
 
     it('accepts valid comparison', () => {
         const result = RunComparisonSchema.parse(valid);
+
         expect(result.meaningfulChanges).toHaveLength(1);
     });
 
@@ -31,6 +32,7 @@ describe('RunComparisonSchema', () => {
 
     it('rejects summary longer than 500 chars', () => {
         const longSummary = 'x'.repeat(501);
+
         expect(() => RunComparisonSchema.parse({ ...valid, summary: longSummary })).toThrow();
     });
 

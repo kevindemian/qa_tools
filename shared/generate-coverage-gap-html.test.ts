@@ -80,6 +80,7 @@ function makeFixture(): CoverageGapResult {
 describe('generateCoverageGapHtml', () => {
     it('produces valid HTML with summary cards', () => {
         const html = generateCoverageGapHtml(makeFixture());
+
         expect(html).toContain('<!DOCTYPE html>');
         expect(html).toContain('Coverage Gap Analysis');
         expect(html).toContain('PROJ-1');
@@ -88,6 +89,7 @@ describe('generateCoverageGapHtml', () => {
 
     it('includes total, covered, and gap counts in summary', () => {
         const html = generateCoverageGapHtml(makeFixture());
+
         expect(html).toContain('>2<');
         expect(html).toContain('>1<');
         expect(html).toContain('33%');
@@ -96,6 +98,7 @@ describe('generateCoverageGapHtml', () => {
 
     it('shows quality gate section with failing epics', () => {
         const html = generateCoverageGapHtml(makeFixture());
+
         expect(html).toContain('Quality Gate');
         expect(html).toContain('epic(s) below');
     });
@@ -109,11 +112,13 @@ describe('generateCoverageGapHtml', () => {
         fixture.totals.rawCoveragePct = 80;
         fixture.gateConfig.minCoveragePct = 50;
         const html = generateCoverageGapHtml(fixture);
+
         expect(html).toContain('All epics pass');
     });
 
     it('renders epic cards with progress bars', () => {
         const html = generateCoverageGapHtml(makeFixture());
+
         expect(html).toContain('Authentication Module');
         expect(html).toContain('data-component="progress-bar"');
         expect(html).toContain('1/2 covered');
@@ -121,12 +126,14 @@ describe('generateCoverageGapHtml', () => {
 
     it('renders hierarchy tree', () => {
         const html = generateCoverageGapHtml(makeFixture());
+
         expect(html).toContain('Hierarchy');
         expect(html).toContain('tree-node');
     });
 
     it('renders gaps table for uncovered items', () => {
         const html = generateCoverageGapHtml(makeFixture());
+
         expect(html).toContain('GAP');
         expect(html).toContain('PROJ-1');
     });
@@ -139,12 +146,14 @@ describe('generateCoverageGapHtml', () => {
         fixture.totals.rawCoveragePct = 100;
         fixture.totals.weightedCoveragePct = 100;
         const html = generateCoverageGapHtml(fixture);
+
         expect(html).toContain('No coverage gaps found');
         expect(html).not.toContain('GAP</span>');
     });
 
     it('uses custom title when provided', () => {
         const html = generateCoverageGapHtml(makeFixture(), 'My Report');
+
         expect(html).toContain('My Report');
         expect(html).not.toContain('Coverage Gap Analysis');
     });
@@ -155,23 +164,27 @@ describe('generateCoverageGapHtml', () => {
             throw new Error('mock error');
         });
         const result = generateCoverageGapHtml(makeFixture());
+
         expect(result).toContain('Error generating coverage gap report');
     });
 
     it('includes theme toggle script', () => {
         const html = generateCoverageGapHtml(makeFixture());
+
         expect(html).toContain('_toggleTheme');
         expect(html).toContain('dark');
     });
 
     it('includes filter script for gaps table', () => {
         const html = generateCoverageGapHtml(makeFixture());
+
         expect(html).toContain('function filterGaps()');
         expect(html).toContain('gapSearchInput');
     });
 
     it('includes collapsible tree toggle', () => {
         const html = generateCoverageGapHtml(makeFixture());
+
         expect(html).toContain('function toggleTree');
     });
 
@@ -179,6 +192,7 @@ describe('generateCoverageGapHtml', () => {
         const fixture = makeFixture();
         (fixture.items[0] as { summary: string }).summary = '<script>alert("xss")</script>';
         const html = generateCoverageGapHtml(fixture);
+
         expect(html).toContain('&lt;script&gt;alert');
         expect(html).not.toContain('<script>alert');
     });

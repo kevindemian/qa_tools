@@ -38,7 +38,7 @@ describe('case24 handler', () => {
         const result = await mockHandler(mockContext);
 
         expect(printError).toHaveBeenCalledWith(expect.stringContaining('wizard'), expect.any(Error));
-        expect(result).toBe(false);
+        expect(result).toBeFalsy();
         expect(mockContext.pushHistory).not.toHaveBeenCalled();
     });
 });

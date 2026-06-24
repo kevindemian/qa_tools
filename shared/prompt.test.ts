@@ -73,24 +73,28 @@ describe('Prompt', () => {
     describe('success', () => {
         it('logs with green OK prefix', () => {
             prompt.success('Operacao concluida');
+
             expect(mockLog).toHaveBeenCalledWith(expect.stringContaining('OK'));
         });
 
         it('does not log to console when QUIET=true', () => {
             prompt.__setConfig(Config.create({ quiet: true }));
             prompt.success('Silenciada');
+
             expect(mockLog).not.toHaveBeenCalled();
         });
 
         it('always logs via writeFileOnly even when quiet', () => {
             prompt.__setConfig(Config.create({ quiet: true }));
             prompt.success('Logada mesmo quiet');
+
             expect(mockRootLogger.writeFileOnly).toHaveBeenCalledWith('INFO', 'Logada mesmo quiet');
         });
 
         it('uses unicode icon when isTTY=true and not quiet', () => {
             process.stdout.isTTY = true;
             prompt.success('Unicode');
+
             expect(mockLog).toHaveBeenCalledWith(expect.stringContaining('\u2713'));
         });
     });
@@ -98,10 +102,13 @@ describe('Prompt', () => {
     describe('error', () => {
         it('logs with red ERR prefix', () => {
             prompt.error('Falha na operacao');
+
             expect(mockLog).toHaveBeenCalledWith(expect.stringContaining('ERR'));
         });
+
         it('also logs via writeFileOnly ERROR', () => {
             prompt.error('Algo deu errado');
+
             expect(mockRootLogger.writeFileOnly).toHaveBeenCalledWith('ERROR', 'Algo deu errado');
         });
     });
@@ -109,6 +116,7 @@ describe('Prompt', () => {
     describe('warn', () => {
         it('logs with yellow ! prefix', () => {
             prompt.warn('Aviso importante');
+
             expect(mockLog).toHaveBeenCalledWith(expect.stringContaining('!'));
         });
     });
@@ -116,18 +124,21 @@ describe('Prompt', () => {
     describe('info', () => {
         it('logs with cyan i prefix when not quiet', () => {
             prompt.info('Mensagem info');
+
             expect(mockLog).toHaveBeenCalledWith(expect.stringContaining('i'));
         });
 
         it('does not log to console when QUIET=true', () => {
             prompt.__setConfig(Config.create({ quiet: true }));
             prompt.info('Silenciada');
+
             expect(mockLog).not.toHaveBeenCalled();
         });
 
         it('always logs via writeFileOnly even when quiet', () => {
             prompt.__setConfig(Config.create({ quiet: true }));
             prompt.info('Logada mesmo quiet');
+
             expect(mockRootLogger.writeFileOnly).toHaveBeenCalledWith('INFO', 'Logada mesmo quiet');
         });
     });
@@ -136,29 +147,33 @@ describe('Prompt', () => {
         it('does not log to console when QUIET=true', () => {
             prompt.__setConfig(Config.create({ quiet: true }));
             prompt.helpLine('Ajuda');
+
             expect(mockLog).not.toHaveBeenCalled();
         });
 
         it('logs to console when not quiet', () => {
             prompt.helpLine('Ajuda');
+
             expect(mockLog).toHaveBeenCalledWith(expect.stringContaining('Ajuda'));
         });
 
         it('logs via writeFileOnly HELP even when quiet', () => {
             prompt.__setConfig(Config.create({ quiet: true }));
             prompt.helpLine('HELP text');
+
             expect(mockRootLogger.writeFileOnly).toHaveBeenCalledWith('HELP', 'HELP text');
         });
     });
 
     describe('isQuiet', () => {
         it('returns false when QUIET is not set', () => {
-            expect(prompt.isQuiet()).toBe(false);
+            expect(prompt.isQuiet()).toBeFalsy();
         });
 
         it('returns true when QUIET=true', () => {
             prompt.__setConfig(Config.create({ quiet: true }));
-            expect(prompt.isQuiet()).toBe(true);
+
+            expect(prompt.isQuiet()).toBeTruthy();
         });
     });
 
@@ -169,12 +184,14 @@ describe('Prompt', () => {
 
         it('logs bold text', () => {
             prompt.title('TITULO');
+
             expect(mockLog).toHaveBeenCalledWith(expect.stringContaining('TITULO'));
         });
 
         it('logs plain text when QUIET=true', () => {
             prompt.__setConfig(Config.create({ quiet: true }));
             prompt.title('Quieto');
+
             expect(mockLog).toHaveBeenCalledWith(expect.stringContaining('--- Quieto ---'));
         });
     });
@@ -182,6 +199,7 @@ describe('Prompt', () => {
     describe('divider', () => {
         it('logs a line of dashes', () => {
             prompt.divider();
+
             expect(mockLog).toHaveBeenCalledWith(expect.stringContaining('─'));
         });
     });
@@ -189,6 +207,7 @@ describe('Prompt', () => {
     describe('badge', () => {
         it('returns formatted ok badge', () => {
             const result = prompt.badge(5, 'passed', 'ok');
+
             expect(result).toContain('●');
             expect(result).toContain('5');
             expect(result).toContain('passed');
@@ -196,6 +215,7 @@ describe('Prompt', () => {
 
         it('returns formatted error badge', () => {
             const result = prompt.badge(1, 'failed', 'error');
+
             expect(result).toContain('●');
             expect(result).toContain('1');
             expect(result).toContain('failed');
@@ -203,6 +223,7 @@ describe('Prompt', () => {
 
         it('returns formatted info badge with open circle', () => {
             const result = prompt.badge(2, 'skipped', 'info');
+
             expect(result).toContain('○');
             expect(result).toContain('2');
             expect(result).toContain('skipped');
@@ -217,16 +238,19 @@ describe('Prompt', () => {
 
         it('shows success when all pass', () => {
             prompt.printSummary([{ status: 'ok', label: 't1', message: '' }]);
+
             expect(mockLog).toHaveBeenCalledWith(expect.stringContaining('TUDO CERTO!'));
         });
 
         it('shows pass rate percentage', () => {
             prompt.printSummary([{ status: 'ok', label: 't1', message: '' }]);
+
             expect(mockLog).toHaveBeenCalledWith(expect.stringContaining('100% pass rate'));
         });
 
         it('shows Test Execution link when provided', () => {
             prompt.printSummary([{ status: 'ok', label: 't1', message: '' }], 'TEST-130');
+
             expect(mockLog).toHaveBeenCalledWith(expect.stringContaining('Test Execution'));
             expect(mockLog).toHaveBeenCalledWith(expect.stringContaining('TEST-130'));
         });
@@ -236,6 +260,7 @@ describe('Prompt', () => {
                 { status: 'ok', label: 't1', message: '' },
                 { status: 'error', label: 't2', message: 'Falhou' },
             ]);
+
             expect(mockLog).toHaveBeenCalledWith(expect.stringContaining('Falhou'));
         });
 
@@ -244,18 +269,21 @@ describe('Prompt', () => {
                 { status: 'ok', label: 't1', message: '' },
                 { status: 'error', label: 't2', message: 'Falhou' },
             ]);
+
             expect(mockLog).toHaveBeenCalledWith(expect.stringContaining('50% pass rate'));
         });
 
         it('shows log path when filePath is set and some fail', () => {
             mockRootLogger.filePath = '/tmp/qa-tools.log';
             prompt.printSummary([{ status: 'error', label: 't1', message: 'erro' }]);
+
             expect(mockLog).toHaveBeenCalledWith(expect.stringContaining('Consulte o log'));
         });
 
         it('shows compact when QUIET=true and all pass', () => {
             prompt.__setConfig(Config.create({ quiet: true }));
             prompt.printSummary([{ status: 'ok', label: 't1', message: '' }]);
+
             expect(mockLog).toHaveBeenCalledWith(expect.stringContaining('TUDO CERTO!'));
         });
 
@@ -265,6 +293,7 @@ describe('Prompt', () => {
                 { status: 'ok', label: 't1', message: '' },
                 { status: 'error', label: 't2', message: 'Falhou' },
             ]);
+
             expect(mockLog).toHaveBeenCalledWith(expect.stringContaining('PARCIAL'));
             expect(mockLog).toHaveBeenCalledWith(expect.stringContaining('Falhou'));
         });
@@ -273,6 +302,7 @@ describe('Prompt', () => {
             prompt.__setConfig(Config.create({ quiet: true }));
             mockRootLogger.filePath = '/tmp/qa-tools.log';
             prompt.printSummary([{ status: 'error', label: 't1', message: 'erro' }]);
+
             expect(mockLog).toHaveBeenCalledWith(expect.stringContaining('Consulte o log'));
         });
     });
@@ -280,32 +310,39 @@ describe('Prompt', () => {
     describe('ProgressBar', () => {
         it('tracks current value', () => {
             const bar = new prompt.ProgressBar(10, { width: 5 });
+
             expect(bar.current).toBe(0);
+
             bar.update(3);
+
             expect(bar.current).toBe(3);
         });
 
         it('renders full bar in non-TTY output', () => {
             const bar = new prompt.ProgressBar(10, { width: 5 });
             bar.update(10);
+
             expect(mockLog).toHaveBeenCalledWith(expect.stringContaining('100%'));
         });
 
         it('renders empty bar in non-TTY output', () => {
             const bar = new prompt.ProgressBar(10, { width: 5 });
             bar.update(0);
+
             expect(mockLog).toHaveBeenCalledWith(expect.stringContaining('0%'));
         });
 
         it('renders partial bar in non-TTY output', () => {
             const bar = new prompt.ProgressBar(10, { width: 5 });
             bar.update(5);
+
             expect(mockLog).toHaveBeenCalledWith(expect.stringContaining('50%'));
         });
 
         it('stops with current at 0', () => {
             const bar = new prompt.ProgressBar(10, { width: 5 });
             bar.stop();
+
             expect(bar.current).toBe(0);
         });
 
@@ -320,6 +357,7 @@ describe('Prompt', () => {
             it('constructs SingleBar with format config', async () => {
                 new prompt.ProgressBar(100, { width: 30 });
                 const cliProgressMod = await import('cli-progress');
+
                 expect(vi.spyOn(cliProgressMod, 'SingleBar')).toHaveBeenCalledWith(
                     expect.objectContaining({ barsize: 30 }),
                     {},
@@ -330,12 +368,14 @@ describe('Prompt', () => {
             it('calls bar.update in TTY mode', () => {
                 const bar = new prompt.ProgressBar(100);
                 bar.update(50);
+
                 expect(mockSingleBar.update).toHaveBeenCalledWith(50);
             });
 
             it('calls bar.stop in TTY mode', () => {
                 const bar = new prompt.ProgressBar(100);
                 bar.stop();
+
                 expect(mockSingleBar.stop).toHaveBeenCalled();
             });
         });
@@ -353,17 +393,20 @@ describe('Prompt', () => {
         it('executes fn and returns result when QUIET=true', async () => {
             prompt.__setConfig(Config.create({ quiet: true }));
             const result = await prompt.withSpinner('label', () => Promise.resolve(42));
+
             expect(result).toBe(42);
         });
 
         it('executes fn and returns result when QUIET=false', async () => {
             const result = await prompt.withSpinner('label', () => Promise.resolve('ok'));
+
             expect(result).toBe('ok');
         });
 
         it('shows spinner when TTY mode', async () => {
             process.stdout.isTTY = true;
             const result = await prompt.withSpinner('loading...', () => Promise.resolve('done'));
+
             expect(result).toBe('done');
         });
     });
@@ -371,21 +414,25 @@ describe('Prompt', () => {
     describe('humanizeError', () => {
         it('returns known error for rate limit', () => {
             const result = nonNull(prompt.humanizeError('rate limit exceeded'));
+
             expect(result.msg).toContain('Rate limit');
         });
 
         it('returns known error for 403/permission', () => {
             const result = nonNull(prompt.humanizeError('permission denied'));
+
             expect(result.msg).toContain('Sem permissão');
         });
 
         it('returns known error for 401/unauthorized', () => {
             const result = nonNull(prompt.humanizeError('401 unauthorized'));
+
             expect(result.msg).toContain('Token inválido');
         });
 
         it('returns known error for connection issues', () => {
             const result = nonNull(prompt.humanizeError('ECONNREFUSED'));
+
             expect(result.msg).toContain('Erro de conexão');
         });
 
@@ -395,31 +442,37 @@ describe('Prompt', () => {
 
         it('returns unknown for null/empty', () => {
             const r = prompt.humanizeError('');
+
             expect(r && r.msg).toBe('Erro desconhecido');
         });
 
         it('returns known error for issue type not found', () => {
             const result = nonNull(prompt.humanizeError('Issue type not found'));
+
             expect(result.msg).toContain('Tipo de issue');
         });
 
         it('returns known error for field not found', () => {
             const result = nonNull(prompt.humanizeError('Field customfield_123 not found'));
+
             expect(result.msg).toContain('Campo não encontrado');
         });
 
         it('returns known error for project not found', () => {
             const result = nonNull(prompt.humanizeError('Project PROJ not found'));
+
             expect(result.msg).toContain('Projeto não encontrado');
         });
 
         it('returns known error for version not found', () => {
             const result = nonNull(prompt.humanizeError('version not found'));
+
             expect(result.msg).toContain('Versão não encontrada');
         });
 
         it('returns known error for already exists', () => {
             const result = nonNull(prompt.humanizeError('already exists'));
+
             expect(result.msg).toContain('Item ja existe');
         });
     });
@@ -427,6 +480,7 @@ describe('Prompt', () => {
     describe('extractErrorMessage', () => {
         it('extracts from axios error response', () => {
             const err = { response: { data: { errorMessages: ['Issue not found'] } } };
+
             expect(prompt.extractErrorMessage(err)).toBe('Issue not found');
         });
 
@@ -436,6 +490,7 @@ describe('Prompt', () => {
 
         it('extracts data when response.data is a string', () => {
             const err = { response: { data: 'rate limit exceeded' } };
+
             expect(prompt.extractErrorMessage(err)).toBe('rate limit exceeded');
         });
 
@@ -450,6 +505,7 @@ describe('Prompt', () => {
                     throw new Error('access error');
                 },
             });
+
             expect(prompt.extractErrorMessage(throwingErr)).toBe('Erro desconhecido');
         });
     });
@@ -485,6 +541,7 @@ describe('Prompt', () => {
                 { name: '2', value: '2' },
                 { name: '3', value: '3' },
             ]);
+
             expect(result).toBe('2');
             expect(spy).toHaveBeenCalled();
         });
@@ -496,6 +553,7 @@ describe('Prompt', () => {
                 { type: 'separator', line: '---' },
                 { name: '2', value: '2' },
             ]);
+
             expect(result).toBe('2');
             expect(spy).toHaveBeenCalled();
         });
@@ -506,6 +564,7 @@ describe('Prompt', () => {
                 { name: '1', value: '1' },
                 { name: '2', value: '2' },
             ]);
+
             expect(result).toBe('0');
         });
 
@@ -515,12 +574,14 @@ describe('Prompt', () => {
                 { name: 'One', value: '1v' },
                 { name: 'Two', value: '2v' },
             ]);
+
             expect(result).toBe('1v');
         });
 
         it('returns value from name when value is missing', async () => {
             vi.spyOn(readlineSync, 'question').mockReturnValue('1');
             const result = await prompt.showSelect('Test', [{ name: 'Alpha' }, { name: 'Beta' }]);
+
             expect(result).toBe('Alpha');
         });
 
@@ -530,12 +591,14 @@ describe('Prompt', () => {
                 { name: '1', value: '1' },
                 { name: '2', value: '2' },
             ]);
+
             expect(result).toBe('0');
         });
 
         it('returns raw value for non-numeric input', async () => {
             vi.spyOn(readlineSync, 'question').mockReturnValue('criar');
             const result = await prompt.showSelect('Test', [{ name: '1', value: '1' }]);
+
             expect(result).toBe('criar');
         });
     });
@@ -548,24 +611,28 @@ describe('Prompt', () => {
         it('returns answer on first prompt', () => {
             vi.spyOn(readlineSync, 'question').mockReturnValue('my-answer');
             const result = prompt.prompt('Enter value');
+
             expect(result).toBe('my-answer');
         });
 
         it('includes hint in prompt text when provided', () => {
             const spy = vi.spyOn(readlineSync, 'question').mockReturnValue('ok');
             prompt.prompt('Label', { hint: 'optional' });
+
             expect(spy).toHaveBeenCalledWith(expect.stringContaining('optional'), expect.any(Object));
         });
 
         it('includes default value in prompt text when provided', () => {
             const spy = vi.spyOn(readlineSync, 'question').mockReturnValue('ok');
             prompt.prompt('Label', { default: 'def' });
+
             expect(spy).toHaveBeenCalledWith(expect.stringContaining('def'), { defaultInput: 'def' });
         });
 
         it('retries when answer is shorter than minLength', () => {
             const spy = vi.spyOn(readlineSync, 'question').mockReturnValueOnce('ab').mockReturnValueOnce('abcdef');
             const result = prompt.prompt('Label', { minLength: 5 });
+
             expect(result).toBe('abcdef');
             expect(mockLog).toHaveBeenCalledWith(expect.stringContaining('Mínimo de'));
             expect(spy).toHaveBeenCalledTimes(2);
@@ -580,6 +647,7 @@ describe('Prompt', () => {
         it('returns value on first attempt', async () => {
             vi.spyOn(readlineSync, 'question').mockReturnValue('my-value');
             const result = await prompt.smartPrompt('Enter value');
+
             expect(result).toBe('my-value');
         });
 
@@ -587,6 +655,7 @@ describe('Prompt', () => {
             const helpCb = vi.fn();
             vi.spyOn(readlineSync, 'question').mockReturnValueOnce('/help').mockReturnValueOnce('final-value');
             const result = await prompt.smartPrompt('Enter', {}, helpCb);
+
             expect(helpCb).toHaveBeenCalledTimes(1);
             expect(result).toBe('final-value');
         });
@@ -594,21 +663,25 @@ describe('Prompt', () => {
         it('returns empty string after max retries with empty input', async () => {
             vi.spyOn(readlineSync, 'question').mockReturnValue('');
             const result = await prompt.smartPrompt('Enter', { maxRetries: 2 });
+
             expect(result).toBe('');
         });
 
         it('throws CancelError for /back navigation command', async () => {
             vi.spyOn(readlineSync, 'question').mockReturnValue('/back');
+
             await expect(prompt.smartPrompt('Enter')).rejects.toThrow(prompt.CancelError);
         });
 
         it('throws CancelError for /exit navigation command', async () => {
             vi.spyOn(readlineSync, 'question').mockReturnValue('/exit');
+
             await expect(prompt.smartPrompt('Enter')).rejects.toThrow(prompt.CancelError);
         });
 
         it('throws CancelError for /menu navigation command', async () => {
             vi.spyOn(readlineSync, 'question').mockReturnValue('/menu');
+
             await expect(prompt.smartPrompt('Enter')).rejects.toThrow(prompt.CancelError);
         });
 
@@ -620,6 +693,7 @@ describe('Prompt', () => {
                 .mockReturnValueOnce('/help')
                 .mockReturnValueOnce('final-value');
             const result = await prompt.smartPrompt('Enter', {}, helpCb);
+
             expect(result).toBe('final-value');
             expect(helpCb).toHaveBeenCalledTimes(3);
         });
@@ -632,7 +706,8 @@ describe('Prompt', () => {
 
         it('returns true for y input', () => {
             vi.spyOn(readlineSync, 'question').mockReturnValue('y');
-            expect(prompt.confirm('Continue?', true)).toBe(true);
+
+            expect(prompt.confirm('Continue?', true)).toBeTruthy();
         });
 
         it('accepts yes and sim as confirmation', () => {
@@ -641,20 +716,23 @@ describe('Prompt', () => {
                 .mockReturnValueOnce('sim')
                 .mockReturnValueOnce('Y')
                 .mockReturnValueOnce('s');
-            expect(prompt.confirm('?', false)).toBe(true);
-            expect(prompt.confirm('?', false)).toBe(true);
-            expect(prompt.confirm('?', false)).toBe(true);
-            expect(prompt.confirm('?', false)).toBe(true);
+
+            expect(prompt.confirm('?', false)).toBeTruthy();
+            expect(prompt.confirm('?', false)).toBeTruthy();
+            expect(prompt.confirm('?', false)).toBeTruthy();
+            expect(prompt.confirm('?', false)).toBeTruthy();
         });
 
         it('returns false for n input', () => {
             vi.spyOn(readlineSync, 'question').mockReturnValue('n');
-            expect(prompt.confirm('Continue?', false)).toBe(false);
+
+            expect(prompt.confirm('Continue?', false)).toBeFalsy();
         });
 
         it('loops on invalid input until valid', () => {
             const spy = vi.spyOn(readlineSync, 'question').mockReturnValueOnce('x').mockReturnValueOnce('y');
-            expect(prompt.confirm('Continue?', false)).toBe(true);
+
+            expect(prompt.confirm('Continue?', false)).toBeTruthy();
             expect(spy).toHaveBeenCalledTimes(2);
             expect(mockLog).toHaveBeenCalledWith(expect.stringContaining('Resposta inválida'));
         });
@@ -675,6 +753,7 @@ describe('Prompt', () => {
         it('uses inquirer when TTY mode', async () => {
             process.stdout.isTTY = true;
             const result = await promptModule.ask('Enter name', { default: 'John' });
+
             expect(result).toBe('input-value');
             expect(mockInput.default).toHaveBeenCalledWith(
                 expect.objectContaining({ message: 'Enter name', default: 'John' }),
@@ -686,12 +765,14 @@ describe('Prompt', () => {
             process.stdout.isTTY = true;
             mockInput.default.mockRejectedValueOnce(new Error('fail'));
             const result = await promptModule.ask('Label');
+
             expect(result).toBe('fallback');
         });
 
         it('uses readline-sync when not TTY', async () => {
             vi.spyOn(readlineSync, 'question').mockReturnValue('cli-value');
             const result = await promptModule.ask('Label');
+
             expect(result).toBe('cli-value');
         });
 
@@ -700,6 +781,7 @@ describe('Prompt', () => {
             process.stdout.isTTY = true;
             vi.spyOn(readlineSync, 'question').mockReturnValue('answer');
             const result = await promptModule.ask('Name');
+
             expect(result).toBe('answer');
         });
     });
@@ -719,7 +801,8 @@ describe('Prompt', () => {
         it('uses inquirer when TTY mode', async () => {
             process.stdout.isTTY = true;
             const result = await promptModule.askConfirm('Proceed?', true);
-            expect(result).toBe(true);
+
+            expect(result).toBeTruthy();
             expect(mockConfirm.default).toHaveBeenCalledWith(
                 expect.objectContaining({ message: 'Proceed?', default: true }),
             );
@@ -730,13 +813,15 @@ describe('Prompt', () => {
             process.stdout.isTTY = true;
             mockConfirm.default.mockRejectedValueOnce(new Error('fail'));
             const result = await promptModule.askConfirm('?');
-            expect(result).toBe(true);
+
+            expect(result).toBeTruthy();
         });
 
         it('uses readline-sync when not TTY', async () => {
             vi.spyOn(readlineSync, 'question').mockReturnValue('n');
             const result = await promptModule.askConfirm('?');
-            expect(result).toBe(false);
+
+            expect(result).toBeFalsy();
         });
 
         it('attempts import when _confirmMod is null with TTY', async () => {
@@ -744,7 +829,8 @@ describe('Prompt', () => {
             process.stdout.isTTY = true;
             vi.spyOn(readlineSync, 'question').mockReturnValue('y');
             const result = await promptModule.askConfirm('Proceed?');
-            expect(result).toBe(true);
+
+            expect(result).toBeTruthy();
         });
     });
 
@@ -752,30 +838,35 @@ describe('Prompt', () => {
         it('calls error with known humanized message', () => {
             const testErr = { response: { data: { errorMessages: ['rate limit exceeded'] } } };
             prompt.printError('Contexto', testErr);
+
             expect(mockLog).toHaveBeenCalledWith(expect.stringContaining('Rate limit'));
         });
 
         it('shows hint for known error', () => {
             const testErr = { response: { data: { errorMessages: ['rate limit exceeded'] } } };
             prompt.printError('Contexto', testErr);
+
             expect(mockLog).toHaveBeenCalledWith(expect.stringContaining('Aguarde'));
         });
 
         it('calls error with unknown fallback when error has no message', () => {
             const testErr = { response: { data: {} } };
             prompt.printError('Contexto', testErr);
+
             expect(mockLog).toHaveBeenCalledWith(expect.stringContaining('Erro desconhecido'));
         });
 
         it('calls error with raw error message when not humanized', () => {
             const testErr = new Error('something weird');
             prompt.printError('Contexto', testErr);
+
             expect(mockLog).toHaveBeenCalledWith(expect.stringContaining('something weird'));
         });
 
         it('uses quiet mode output when QUIET=true', () => {
             prompt.__setConfig(Config.create({ quiet: true }));
             prompt.printError('Contexto', new Error('fail'));
+
             expect(mockLog).toHaveBeenCalledWith(expect.stringContaining('ERR'));
             expect(mockLog).toHaveBeenCalledWith(expect.stringContaining('Contexto'));
         });
@@ -784,6 +875,7 @@ describe('Prompt', () => {
     describe('tableView', () => {
         it('prints table with all columns by default', () => {
             prompt.tableView([{ a: 1, b: 2 }]);
+
             expect(mockLog).toHaveBeenCalledWith(expect.stringContaining('a'));
             expect(mockLog).toHaveBeenCalledWith(expect.stringContaining('b'));
             expect(mockLog).toHaveBeenCalledWith(expect.stringContaining('1'));
@@ -793,6 +885,7 @@ describe('Prompt', () => {
         it('filters columns when specified', () => {
             prompt.tableView([{ a: 1, b: 2, c: 3 }], ['a', 'c']);
             const output = mockLog.mock.calls.map((c) => c[0] as string).join(' ');
+
             expect(output).toContain('a');
             expect(output).toContain('c');
             expect(output).not.toContain('b');
@@ -805,6 +898,7 @@ describe('Prompt', () => {
         it('uses custom border chars in table output', () => {
             prompt.tableView([{ x: 1, y: 2 }]);
             const output = mockLog.mock.calls.map((c) => c[0] as string).join(' ');
+
             expect(output).toContain('┌');
             expect(output).toContain('┐');
             expect(output).toContain('└');
@@ -825,6 +919,7 @@ describe('Prompt', () => {
                 'result',
             );
             const output = mockLog.mock.calls.map((c) => c[0] as string).join(' ');
+
             expect(output).toContain('pass');
             expect(output).toContain('fail');
             expect(output).toContain('skip');
@@ -844,30 +939,35 @@ describe('Prompt', () => {
         it('returns "skip" when autoConfirm and autoAction is skip', () => {
             prompt.__setConfig(Config.create({ autoConfirm: true, onError: 'skip' }));
             const result = prompt.onError('ctx', new Error('fail'), { retry: true });
+
             expect(result).toBe('skip');
         });
 
         it('returns "abort" when autoConfirm and autoAction is abort', () => {
             prompt.__setConfig(Config.create({ autoConfirm: true, onError: 'abort' }));
             const result = prompt.onError('ctx', new Error('fail'));
+
             expect(result).toBe('abort');
         });
 
         it('returns "abort" when user chooses A', () => {
             vi.spyOn(readlineSync, 'question').mockReturnValue('a');
             const result = prompt.onError('ctx', new Error('fail'));
+
             expect(result).toBe('abort');
         });
 
         it('returns "skip" when user chooses S', () => {
             vi.spyOn(readlineSync, 'question').mockReturnValue('s');
             const result = prompt.onError('ctx', new Error('fail'));
+
             expect(result).toBe('skip');
         });
 
         it('returns "retry" when user chooses R with canRetry', () => {
             vi.spyOn(readlineSync, 'question').mockReturnValue('r');
             const result = prompt.onError('ctx', new Error('fail'), { retry: true });
+
             expect(result).toBe('retry');
         });
 
@@ -878,6 +978,7 @@ describe('Prompt', () => {
                 message: 'bad request',
             };
             const result = prompt.onError('ctx', err, { details: true });
+
             expect(result).toBe('abort');
             expect(mockLog).toHaveBeenCalledWith(expect.stringContaining('400'));
         });
@@ -885,6 +986,7 @@ describe('Prompt', () => {
         it('shows error with stack details when err is Error', () => {
             vi.spyOn(readlineSync, 'question').mockReturnValueOnce('d').mockReturnValueOnce('a');
             const result = prompt.onError('ctx', new Error('detail-error'), { details: true });
+
             expect(result).toBe('abort');
             expect(mockLog).toHaveBeenCalledWith(expect.stringContaining('Stack'));
         });
@@ -892,6 +994,7 @@ describe('Prompt', () => {
         it('warns on invalid option and retries', () => {
             vi.spyOn(readlineSync, 'question').mockReturnValueOnce('x').mockReturnValueOnce('a');
             const result = prompt.onError('ctx', new Error('fail'));
+
             expect(result).toBe('abort');
             expect(mockLog).toHaveBeenCalledWith(expect.stringContaining('Opção inválida'));
         });
@@ -901,7 +1004,9 @@ describe('Prompt', () => {
         it('calls process.stdout.write with the message', () => {
             const spy = vi.spyOn(process.stdout, 'write').mockImplementation(() => true);
             prompt.print('Hello');
+
             expect(spy).toHaveBeenCalledWith(expect.stringContaining('Hello'));
+
             spy.mockRestore();
         });
     });

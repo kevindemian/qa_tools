@@ -18,18 +18,21 @@ describe('validateRequiredEnv', () => {
     it('throws when JIRA_BASE_URL is missing', () => {
         process.env['JIRA_PERSONAL_TOKEN'] = 'tok';
         process.env['XRAY_BASE_URL'] = 'url';
+
         expect(() => validateRequiredEnv()).toThrow(/Jira base URL/);
     });
 
     it('throws when JIRA_PERSONAL_TOKEN is missing', () => {
         process.env['JIRA_BASE_URL'] = 'url';
         process.env['XRAY_BASE_URL'] = 'url';
+
         expect(() => validateRequiredEnv()).toThrow(/Jira personal token/);
     });
 
     it('throws when XRAY_BASE_URL is missing', () => {
         process.env['JIRA_BASE_URL'] = 'url';
         process.env['JIRA_PERSONAL_TOKEN'] = 'tok';
+
         expect(() => validateRequiredEnv()).toThrow(/Xray base URL/);
     });
 
@@ -37,6 +40,7 @@ describe('validateRequiredEnv', () => {
         process.env['JIRA_BASE_URL'] = 'https://jira.example.com';
         process.env['JIRA_PERSONAL_TOKEN'] = 'tok-123';
         process.env['XRAY_BASE_URL'] = 'https://xray.example.com';
+
         expect(() => validateRequiredEnv()).not.toThrow();
     });
 });
@@ -66,6 +70,7 @@ describe('validateConfigValues', () => {
 
     it('returns no warnings when env vars are unset', () => {
         const warnings = validateConfigValues();
+
         expect(warnings).toEqual([]);
     });
 
@@ -73,12 +78,14 @@ describe('validateConfigValues', () => {
         process.env['AUTO_CONFIRM'] = 'true';
         process.env['DRY_RUN'] = 'false';
         const warnings = validateConfigValues();
+
         expect(warnings).toEqual([]);
     });
 
     it('warns on invalid boolean value', () => {
         process.env['AUTO_CONFIRM'] = 'notabool';
         const warnings = validateConfigValues();
+
         expect(warnings.length).toBeGreaterThanOrEqual(1);
         expect(warnings[0]).toContain('AUTO_CONFIRM');
         expect(warnings[0]).toContain('booleano');
@@ -87,12 +94,14 @@ describe('validateConfigValues', () => {
     it('returns no warnings for valid number values', () => {
         process.env['LLM_MAX_TOKENS_PER_OP'] = '64000';
         const warnings = validateConfigValues();
+
         expect(warnings).toEqual([]);
     });
 
     it('warns on invalid number value', () => {
         process.env['LLM_MAX_TOKENS_PER_OP'] = 'not-a-number';
         const warnings = validateConfigValues();
+
         expect(warnings.length).toBeGreaterThanOrEqual(1);
         expect(warnings[0]).toContain('LLM_MAX_TOKENS_PER_OP');
     });
@@ -100,12 +109,14 @@ describe('validateConfigValues', () => {
     it('returns no warnings for valid allowedValues', () => {
         process.env['JIRA_MODE'] = 'cloud';
         const warnings = validateConfigValues();
+
         expect(warnings).toEqual([]);
     });
 
     it('warns on invalid allowedValues', () => {
         process.env['JIRA_MODE'] = 'invalid-mode';
         const warnings = validateConfigValues();
+
         expect(warnings.length).toBeGreaterThanOrEqual(1);
         expect(warnings[0]).toContain('JIRA_MODE');
         expect(warnings[0]).toContain('invalid-mode');
@@ -116,6 +127,7 @@ describe('validateConfigValues', () => {
     it('skips allowedValues check when value is empty string', () => {
         process.env['QA_PUBLISH'] = '';
         const warnings = validateConfigValues();
+
         expect(warnings).toEqual([]);
     });
 
@@ -123,6 +135,7 @@ describe('validateConfigValues', () => {
         process.env['JIRA_MODE'] = 'bad';
         process.env['AUTO_CONFIRM'] = 'invalid-bool';
         const warnings = validateConfigValues();
+
         expect(warnings.length).toBeGreaterThanOrEqual(2);
     });
 });
@@ -143,12 +156,14 @@ describe('warnUnknownEnv', () => {
         process.env['HOME'] = '/home/user';
         process.env['PATH'] = '/usr/bin';
         const warnings = warnUnknownEnv();
+
         expect(warnings).toEqual([]);
     });
 
     it('warns on unknown QA_ prefixed var', () => {
         process.env['QA_UNKNOWN_TEST'] = 'value';
         const warnings = warnUnknownEnv();
+
         expect(warnings.length).toBeGreaterThanOrEqual(1);
         expect(warnings[0]).toContain('QA_UNKNOWN_TEST');
     });
@@ -156,6 +171,7 @@ describe('warnUnknownEnv', () => {
     it('warns on unknown LLM_ prefixed var', () => {
         process.env['LLM_MYSTERY_KEY'] = 'value';
         const warnings = warnUnknownEnv();
+
         expect(warnings.length).toBeGreaterThanOrEqual(1);
         expect(warnings[0]).toContain('LLM_MYSTERY_KEY');
     });
@@ -163,6 +179,7 @@ describe('warnUnknownEnv', () => {
     it('does not warn on vars not matching project prefixes', () => {
         process.env['MY_RANDOM_VAR'] = 'value';
         const warnings = warnUnknownEnv();
+
         expect(warnings).toEqual([]);
     });
 });
@@ -187,6 +204,7 @@ describe('validateAll', () => {
         process.env['XRAY_BASE_URL'] = 'https://xray.example.com';
         process.env['AUTO_CONFIRM'] = 'not-bool';
         const logged: string[] = [];
+
         expect(() => validateAll((m) => logged.push(m))).not.toThrow();
         expect(logged.length).toBeGreaterThanOrEqual(1);
         expect(logged[0]).toContain('AUTO_CONFIRM');
@@ -197,6 +215,7 @@ describe('validateAll', () => {
         process.env['JIRA_PERSONAL_TOKEN'] = 'tok';
         process.env['XRAY_BASE_URL'] = 'https://xray.example.com';
         const logged: string[] = [];
+
         expect(() => validateAll((m) => logged.push(m))).not.toThrow();
         expect(logged).toEqual([]);
     });
@@ -206,6 +225,7 @@ describe('validateAll', () => {
         process.env['JIRA_PERSONAL_TOKEN'] = 'tok';
         process.env['XRAY_BASE_URL'] = 'https://xray.example.com';
         process.env['AUTO_CONFIRM'] = 'not-bool';
+
         expect(() => validateAll()).not.toThrow();
     });
 });

@@ -32,6 +32,7 @@ describe('quality gate thresholds via health score', () => {
             ],
         };
         const result = calculateHealthScore(store);
+
         expect(result.qualityGate).toBe('pass');
     });
 
@@ -58,6 +59,7 @@ describe('quality gate thresholds via health score', () => {
             ],
         };
         const result = calculateHealthScore(store);
+
         expect(result.qualityGate).toBe('fail');
     });
 
@@ -84,6 +86,7 @@ describe('quality gate thresholds via health score', () => {
             ],
         };
         const result = calculateHealthScore(store);
+
         expect(result.qualityGate).toBe('fail');
     });
 
@@ -110,6 +113,7 @@ describe('quality gate thresholds via health score', () => {
             ],
         };
         const result = calculateHealthScore(store);
+
         expect(result.qualityGate).toBe('fail');
     });
 });

@@ -60,6 +60,7 @@ describe('palette', () => {
         ];
         for (const key of nonFactoryKeys) {
             const fn = applyPalette(key);
+
             expect(typeof fn).toBe('function');
             expect(typeof fn('text')).toBe('string');
         }
@@ -67,8 +68,11 @@ describe('palette', () => {
 
     it('hex factory returns a function', () => {
         const { palette } = paletteModule;
+
         expect(typeof palette.hex).toBe('function');
+
         const chalkFn = palette.hex('#ff6600');
+
         expect(typeof chalkFn).toBe('function');
         expect(chalkFn('text')).toContain('text');
     });
@@ -77,7 +81,9 @@ describe('palette', () => {
         const origLevel = chalk.level;
         chalk.level = 2;
         const p = paletteModule.palette;
+
         expect(p.fg('text')).toContain('text');
+
         chalk.level = origLevel;
     });
 
@@ -104,6 +110,7 @@ describe('palette', () => {
         for (const key of nonFactoryKeys) {
             const fn = applyPalette(key);
             const result = fn('hello');
+
             expect(typeof result).toBe('string');
             expect(result).toContain('hello');
         }
@@ -112,12 +119,15 @@ describe('palette', () => {
     it('disables chalk when NO_COLOR env is set', async () => {
         process.env['NO_COLOR'] = '1';
         const chalkMod: { level: number } = await vi.importActual('chalk');
+
         expect(chalkMod.level).toBe(0);
+
         delete process.env['NO_COLOR'];
     });
 
     it('getColorLevel returns current chalk level', () => {
         const level = paletteModule.getColorLevel();
+
         expect(typeof level).toBe('number');
     });
 });

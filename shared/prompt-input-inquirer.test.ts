@@ -106,6 +106,7 @@ describe('smartPrompt', () => {
     it('returns value on first try', async () => {
         mockReadlineQuestion.mockReturnValue('my value');
         const result = await smartPrompt('Label');
+
         expect(result).toBe('my value');
     });
 
@@ -113,12 +114,14 @@ describe('smartPrompt', () => {
         mockReadlineQuestion.mockReturnValueOnce('/help').mockReturnValueOnce('value');
         const helpCb = vi.fn();
         const result = await smartPrompt('Label', {}, helpCb);
+
         expect(result).toBe('value');
         expect(helpCb).toHaveBeenCalled();
     });
 
     it('throws CancelError on navigation', async () => {
         mockReadlineQuestion.mockReturnValue('/back');
+
         await expect(smartPrompt('Label')).rejects.toThrow(CancelError);
     });
 
@@ -126,12 +129,14 @@ describe('smartPrompt', () => {
         mockReadlineQuestion.mockReturnValueOnce('/help').mockReturnValueOnce('ok');
         const helpCb = vi.fn();
         const result = await smartPrompt('Label', {}, helpCb);
+
         expect(result).toBe('ok');
     });
 
     it('warns on max retries exceeded', async () => {
         mockReadlineQuestion.mockReturnValue('');
         const result = await smartPrompt('Label', { maxRetries: 2 });
+
         expect(result).toBe('');
         expect(mockWarn).toHaveBeenCalled();
     });
@@ -141,12 +146,14 @@ describe('smartPrompt', () => {
             throw new Error('readline error');
         });
         const result = await smartPrompt('Label', { default: 'fallback' });
+
         expect(result).toBe('fallback');
     });
 
     it('continues on /help CancelError without callback', async () => {
         mockReadlineQuestion.mockReturnValueOnce('/help').mockReturnValueOnce('ok');
         const result = await smartPrompt('Label');
+
         expect(result).toBe('ok');
     });
 });
@@ -155,17 +162,20 @@ describe('ask', () => {
     it('returns prompt result when no TTY', async () => {
         mockReadlineQuestion.mockReturnValue('user input');
         const result = await ask('Label');
+
         expect(result).toBe('user input');
     });
 
     it('throws CancelError on navigation command', async () => {
         mockReadlineQuestion.mockReturnValue('/back');
+
         await expect(ask('Label')).rejects.toThrow('/back');
     });
 
     it('falls back to prompt when no inquirer mod', async () => {
         mockReadlineQuestion.mockReturnValue('fallback');
         const result = await ask('Label');
+
         expect(result).toBe('fallback');
     });
 
@@ -173,11 +183,13 @@ describe('ask', () => {
         __setInputMod({ default: vi.fn().mockResolvedValue('injected') });
         mockReadlineQuestion.mockReturnValue('fallback value');
         const result = await ask('Label');
+
         expect(result).toBe('fallback value');
     });
 
     it('throws CancelError on navigation command in fallback', async () => {
         mockReadlineQuestion.mockReturnValue('/back');
+
         await expect(ask('Label')).rejects.toThrow('/back');
     });
 });
@@ -195,6 +207,7 @@ describe('ask with TTY and inquirer mod', () => {
         const mockMod = vi.fn().mockResolvedValue('inquirer answer');
         __setInputMod({ default: mockMod });
         const result = await ask('Label');
+
         expect(result).toBe('inquirer answer');
         expect(mockMod).toHaveBeenCalledWith(expect.objectContaining({ message: 'Label' }));
     });
@@ -204,6 +217,7 @@ describe('ask with TTY and inquirer mod', () => {
         __setInputMod({ default: mockMod });
         mockReadlineQuestion.mockReturnValue('backup result');
         const result = await ask('Label');
+
         expect(result).toBe('backup result');
     });
 
@@ -212,6 +226,7 @@ describe('ask with TTY and inquirer mod', () => {
         __setInputMod({ default: mockMod });
         mockReadlineQuestion.mockReturnValue('fallback answer');
         const result = await ask('Label');
+
         expect(result).toBe('fallback answer');
     });
 
@@ -219,6 +234,7 @@ describe('ask with TTY and inquirer mod', () => {
         __setInputMod(false);
         mockReadlineQuestion.mockReturnValue('fallback');
         const result = await ask('Label');
+
         expect(result).toBe('fallback');
     });
 
@@ -234,6 +250,7 @@ describe('ask with TTY and inquirer mod', () => {
             );
         __setInputMod({ default: mockMod });
         const result = await ask('Label');
+
         expect(result).toBe('result');
     });
 });
@@ -242,13 +259,15 @@ describe('askConfirm', () => {
     it('returns confirm result when no TTY', async () => {
         mockReadlineQuestion.mockReturnValue('s');
         const result = await askConfirm('Confirm?');
-        expect(result).toBe(true);
+
+        expect(result).toBeTruthy();
     });
 
     it('returns false for no response', async () => {
         mockReadlineQuestion.mockReturnValue('n');
         const result = await askConfirm('Confirm?');
-        expect(result).toBe(false);
+
+        expect(result).toBeFalsy();
     });
 
     it('returns inquirer result when askConfirm mod injected and TTY', async () => {
@@ -256,8 +275,10 @@ describe('askConfirm', () => {
         const mockConfirmMod = vi.fn().mockResolvedValue(true);
         __setConfirmMod({ default: mockConfirmMod });
         const result = await askConfirm('Confirm?');
-        expect(result).toBe(true);
+
+        expect(result).toBeTruthy();
         expect(mockConfirmMod).toHaveBeenCalledWith(expect.objectContaining({ message: 'Confirm?' }));
+
         Object.defineProperty(process.stdout, 'isTTY', { value: undefined, configurable: true });
     });
 
@@ -267,7 +288,9 @@ describe('askConfirm', () => {
         __setConfirmMod({ default: mockConfirmMod });
         mockReadlineQuestion.mockReturnValue('s');
         const result = await askConfirm('Confirm?');
-        expect(result).toBe(true);
+
+        expect(result).toBeTruthy();
+
         Object.defineProperty(process.stdout, 'isTTY', { value: undefined, configurable: true });
     });
 
@@ -276,7 +299,9 @@ describe('askConfirm', () => {
         __setConfirmMod(false);
         mockReadlineQuestion.mockReturnValue('s');
         const result = await askConfirm('Confirm?');
-        expect(result).toBe(true);
+
+        expect(result).toBeTruthy();
+
         Object.defineProperty(process.stdout, 'isTTY', { value: undefined, configurable: true });
     });
 });
@@ -290,29 +315,34 @@ describe('showSelect', () => {
     it('returns selected value by number', async () => {
         mockReadlineQuestion.mockReturnValue('1');
         const result = await showSelect('Choose', choices);
+
         expect(result).toBe('1');
     });
 
     it('returns 0 for second choice by number', async () => {
         mockReadlineQuestion.mockReturnValue('2');
         const result = await showSelect('Choose', choices);
+
         expect(result).toBe('2');
     });
 
     it('handles choice by alias', async () => {
         mockReadlineQuestion.mockReturnValue('Option 1');
         const result = await showSelect('Choose', choices);
+
         expect(result).toBe('Option 1');
     });
 
     it('throws CancelError on navigation command', async () => {
         mockReadlineQuestion.mockReturnValue('/help');
+
         await expect(showSelect('Choose', choices)).rejects.toThrow('/help');
     });
 
     it('returns 0 for exit choice', async () => {
         mockReadlineQuestion.mockReturnValue('0');
         const result = await showSelect('Choose', choices);
+
         expect(result).toBe('0');
     });
 
@@ -324,36 +354,42 @@ describe('showSelect', () => {
         ];
         mockReadlineQuestion.mockReturnValue('1');
         const result = await showSelect('Choose', sectionedChoices);
+
         expect(result).toBe('a');
     });
 
     it('shows description when provided', async () => {
         mockReadlineQuestion.mockReturnValue('1');
         const result = await showSelect('Choose', [{ name: 'Option 1', value: '1', description: 'desc' }]);
+
         expect(result).toBe('1');
     });
 
     it('uses name as value when value not provided', async () => {
         mockReadlineQuestion.mockReturnValue('1');
         const result = await showSelect('Choose', [{ name: 'Option A' }]);
+
         expect(result).toBe('Option A');
     });
 
     it('handles choices with no name resulting in empty rendered items', async () => {
         mockReadlineQuestion.mockReturnValue('0');
         const result = await showSelect('Choose', [{ value: 'a' }, { value: 'b' }]);
+
         expect(result).toBe('0');
     });
 
     it('returns default when empty answer and default provided', async () => {
         mockReadlineQuestion.mockReturnValue('');
         const result = await showSelect('Choose', [{ name: 'A', value: 'a' }], { default: 'def' });
+
         expect(result).toBe('def');
     });
 
     it('returns 0 when empty answer and no default', async () => {
         mockReadlineQuestion.mockReturnValue('');
         const result = await showSelect('Choose', [{ name: 'A', value: 'a' }]);
+
         expect(result).toBe('0');
     });
 });
@@ -362,6 +398,7 @@ describe('showSelect with menuMode', () => {
     it('forces fallback when menuMode is true', async () => {
         mockReadlineQuestion.mockReturnValue('1');
         const result = await showSelect('Choose', [{ name: 'Item A', value: 'a' }], { menuMode: true });
+
         expect(result).toBe('a');
     });
 
@@ -371,6 +408,7 @@ describe('showSelect with menuMode', () => {
             { type: 'separator' as const, line: '' },
             { name: 'Visible', value: 'v' },
         ]);
+
         expect(result).toBe('v');
     });
 });
@@ -391,6 +429,7 @@ describe('showSelect TTY path', () => {
             { name: 'Item A', value: 'a' },
             { name: 'Item B', value: 'b' },
         ]);
+
         expect(result).toBe('selected');
         expect(mockSelectMod).toHaveBeenCalledWith(expect.objectContaining({ message: 'Choose' }));
     });
@@ -403,6 +442,7 @@ describe('showSelect TTY path', () => {
             { value: 'no-name' },
             { name: 'Visible', value: 'val' },
         ]);
+
         expect(result).toBe('val');
     });
 
@@ -410,6 +450,7 @@ describe('showSelect TTY path', () => {
         const mockSelectMod = vi.fn().mockRejectedValue(new Error('select error'));
         __setSelectMod({ default: mockSelectMod });
         const result = await showSelect('Choose', [{ name: 'Item', value: 'x' }]);
+
         expect(result).toBe('__error__');
     });
 
@@ -422,6 +463,7 @@ describe('showSelect TTY path', () => {
             });
         __setSelectMod({ default: mockSelectMod });
         const result = await showSelect('Choose', [{ name: 'Item A', value: 'a' }]);
+
         expect(result).toBe('selected');
     });
 
@@ -429,6 +471,7 @@ describe('showSelect TTY path', () => {
         const mockSelectMod = vi.fn().mockResolvedValue('val');
         __setSelectMod({ default: mockSelectMod });
         const result = await showSelect('Choose', [{ type: 'separator' as const }, { name: 'Visible', value: 'val' }]);
+
         expect(result).toBe('val');
     });
 
@@ -436,6 +479,7 @@ describe('showSelect TTY path', () => {
         const mockSelectMod = vi.fn().mockResolvedValue('Visible');
         __setSelectMod({ default: mockSelectMod });
         const result = await showSelect('Choose', [{ name: 'Visible' }]);
+
         expect(result).toBe('Visible');
     });
 });
@@ -444,12 +488,14 @@ describe('showSelect fallback', () => {
     it('returns slash command directly when not in NAV_CMDS', async () => {
         mockReadlineQuestion.mockReturnValue('/custom-cmd');
         const result = await showSelect('Choose', [{ name: 'Item A', value: 'a' }]);
+
         expect(result).toBe('/custom-cmd');
     });
 
     it('handles choice with no name in fallback mode', async () => {
         mockReadlineQuestion.mockReturnValue('1');
         const result = await showSelect('Choose', [{ value: 'a' }, { name: 'Visible', value: 'v' }]);
+
         expect(result).toBe('v');
     });
 });

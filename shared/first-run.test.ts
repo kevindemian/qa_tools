@@ -56,49 +56,57 @@ describe('isFirstRun', () => {
     it('returns false when CI=true', async () => {
         process.env['CI'] = 'true';
         const { isFirstRun } = await loadModule();
-        expect(isFirstRun()).toBe(false);
+
+        expect(isFirstRun()).toBeFalsy();
     });
 
     it('returns false when AUTO_CONFIRM=true', async () => {
         process.env['AUTO_CONFIRM'] = 'true';
         const { isFirstRun } = await loadModule();
-        expect(isFirstRun()).toBe(false);
+
+        expect(isFirstRun()).toBeFalsy();
     });
 
     it('returns false when SKIP_FIRST_RUN=true', async () => {
         process.env['SKIP_FIRST_RUN'] = 'true';
         const { isFirstRun } = await loadModule();
-        expect(isFirstRun()).toBe(false);
+
+        expect(isFirstRun()).toBeFalsy();
     });
 
     it('returns false when --batch is in argv', async () => {
         process.argv.push('--batch');
         const { isFirstRun } = await loadModule();
-        expect(isFirstRun()).toBe(false);
+
+        expect(isFirstRun()).toBeFalsy();
     });
 
     it('returns false when --auto is in argv', async () => {
         process.argv.push('--auto');
         const { isFirstRun } = await loadModule();
-        expect(isFirstRun()).toBe(false);
+
+        expect(isFirstRun()).toBeFalsy();
     });
 
     it('returns false when firstRunDone flag exists in state', async () => {
         mockLoadTypedState.mockReturnValue({ _firstRunDone: true });
         const { isFirstRun } = await loadModule();
-        expect(isFirstRun()).toBe(false);
+
+        expect(isFirstRun()).toBeFalsy();
     });
 
     it('returns false when state has history', async () => {
         mockLoadTypedState.mockReturnValue({ history: [{ ts: '1', op: 'test', detail: '', status: 'ok' }] });
         const { isFirstRun } = await loadModule();
-        expect(isFirstRun()).toBe(false);
+
+        expect(isFirstRun()).toBeFalsy();
     });
 
     it('returns true for fresh state with no flags', async () => {
         mockLoadTypedState.mockReturnValue({});
         const { isFirstRun } = await loadModule();
-        expect(isFirstRun()).toBe(true);
+
+        expect(isFirstRun()).toBeTruthy();
     });
 });
 
@@ -106,13 +114,17 @@ describe('_markFirstRunDone', () => {
     it('calls updateState with callback that sets _firstRunDone', async () => {
         const { _markFirstRunDone } = await loadModule();
         _markFirstRunDone();
+
         expect(mockUpdateState).toHaveBeenCalledTimes(1);
 
         const cb = mockUpdateState.mock.calls[0]?.[0] as (s: Record<string, unknown>) => void;
+
         expect(typeof cb).toBe('function');
+
         const state: Record<string, unknown> = {};
         cb(state);
-        expect(state['_firstRunDone']).toBe(true);
+
+        expect(state['_firstRunDone']).toBeTruthy();
     });
 });
 
@@ -121,6 +133,7 @@ describe('maybeRunFirstRunWizard', () => {
         mockLoadTypedState.mockReturnValue({ _firstRunDone: true });
         const { maybeRunFirstRunWizard: f } = await loadModule();
         await f();
+
         expect(mockTitle).not.toHaveBeenCalled();
         expect(mockShowSelect).not.toHaveBeenCalled();
     });
@@ -130,6 +143,7 @@ describe('maybeRunFirstRunWizard', () => {
         mockShowSelect.mockResolvedValue('skip');
         const { maybeRunFirstRunWizard: f } = await loadModule();
         await f();
+
         expect(mockTitle).toHaveBeenCalledWith(expect.stringContaining('Bem-vindo'));
         expect(mockInfo).toHaveBeenCalled();
         expect(mockUpdateState).toHaveBeenCalledTimes(1);
@@ -139,6 +153,7 @@ describe('maybeRunFirstRunWizard', () => {
         mockLoadTypedState.mockReturnValue({});
         mockShowSelect.mockResolvedValue('setup');
         const { maybeRunFirstRunWizard: f } = await loadModule();
+
         await expect(f()).resolves.not.toThrow();
         expect(mockSetupMain).toHaveBeenCalledTimes(1);
         expect(mockUpdateState).toHaveBeenCalledTimes(1);
@@ -148,6 +163,7 @@ describe('maybeRunFirstRunWizard', () => {
         mockLoadTypedState.mockReturnValue({});
         mockShowSelect.mockResolvedValue('docs');
         const { maybeRunFirstRunWizard: f } = await loadModule();
+
         await expect(f()).resolves.not.toThrow();
         expect(mockUpdateState).toHaveBeenCalledTimes(1);
     });
@@ -157,6 +173,7 @@ describe('maybeRunFirstRunWizard', () => {
         mockShowSelect.mockResolvedValue('setup');
         mockSetupMain.mockRejectedValueOnce(new Error('Setup error'));
         const { maybeRunFirstRunWizard: f } = await loadModule();
+
         await expect(f()).resolves.not.toThrow();
         expect(mockWarn).toHaveBeenCalledWith(expect.stringContaining('Não foi possível iniciar'));
         expect(mockUpdateState).toHaveBeenCalledTimes(1);

@@ -78,10 +78,12 @@ describe('generatePipelineQuarantine — property-based', () => {
                 for (let i = 0; i < store.entries.length; i++) {
                     const entry = store.entries[i];
                     const item = pipeline.excluded[i];
+
                     expect(item?.test).toBe(entry?.testTitle);
                     expect(item?.reason).toBe(entry?.reason);
                     expect(item?.quarantinedBy).toBe(entry?.quarantinedBy);
                     expect(item?.reviewRequired).toBe(entry?.reviewRequired);
+
                     if (entry?.bugUrl) {
                         expect(item?.bugUrl).toBe(entry.bugUrl);
                     }
@@ -94,6 +96,7 @@ describe('generatePipelineQuarantine — property-based', () => {
     it('empty store produces empty excluded list and zero ratio', () => {
         const empty: QuarantineStore = { entries: [] };
         const pipeline = generatePipelineQuarantine(empty);
+
         expect(pipeline.excluded).toEqual([]);
         expect(pipeline.metadata.totalExcluded).toBe(0);
         expect(pipeline.metadata.ratio).toBe(0);
@@ -106,6 +109,7 @@ describe('loadQuarantine — property-based', () => {
         fc.assert(
             fc.property(fc.constant(undefined), () => {
                 const store = loadQuarantine();
+
                 expect(store.entries).toEqual([]);
             }),
             { numRuns: 5 },
@@ -139,8 +143,9 @@ describe('filterExpiredEntries — property-based', () => {
                     const expectedExpired = rawEntries.filter(
                         ([ttlOffset, permanent]) => !permanent && now + ttlOffset <= now,
                     ).length;
+
                     expect(expired).toBe(expectedExpired);
-                    expect(remaining.entries.length).toBe(rawEntries.length - expectedExpired);
+                    expect(remaining.entries).toHaveLength(rawEntries.length - expectedExpired);
                 },
             ),
             { numRuns: 100 },
@@ -170,7 +175,7 @@ describe('filterExpiredEntries — property-based', () => {
                     };
                     const { remaining } = filterExpiredEntries(store, now);
                     for (const entry of remaining.entries) {
-                        expect(entry.permanent || new Date(entry.expiresAt).getTime() > now).toBe(true);
+                        expect(entry.permanent || new Date(entry.expiresAt).getTime() > now).toBeTruthy();
                     }
                 },
             ),
@@ -197,6 +202,7 @@ describe('filterExpiredEntries — property-based', () => {
                         })),
                     };
                     const { expired, remaining } = filterExpiredEntries(store, now);
+
                     expect(expired).toBe(0);
                     expect(remaining.entries).toHaveLength(offsets.length);
                 },
@@ -224,6 +230,7 @@ describe('filterExpiredEntries — property-based', () => {
                         })),
                     };
                     const { expired } = filterExpiredEntries(store, now);
+
                     expect(expired).toBe(dates.length);
                 },
             ),
@@ -234,6 +241,7 @@ describe('filterExpiredEntries — property-based', () => {
     it('empty store returns zero expired and empty remaining', () => {
         const empty: QuarantineStore = { entries: [] };
         const { expired, remaining } = filterExpiredEntries(empty, 0);
+
         expect(expired).toBe(0);
         expect(remaining.entries).toEqual([]);
     });

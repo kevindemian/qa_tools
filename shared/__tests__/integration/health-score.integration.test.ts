@@ -147,12 +147,14 @@ describe('Integration: Health Score', () => {
                 createStore({ passed: 95, failed: 5, skipped: 0, flakyTests: 0, coveragePct: 80 }),
                 {},
             );
+
             expect(result.qualityGate).toBe('pass');
         });
 
         it('returns "fail" when coverage is below threshold', async () => {
             const { calculateHealthScore } = await import('../../health-score.js');
             const result = calculateHealthScore(createStore({ passed: 95, failed: 5, skipped: 0 }), {});
+
             expect(result.qualityGate).toBe('fail');
         });
     });
@@ -167,6 +169,7 @@ describe('Integration: Health Score', () => {
             const high = calculateHealthScore(store, {
                 gradeBoundaries: { excellent: 100, good: 100, needs_attention: 100, poor: 100, critical: 0 },
             });
+
             expect(low.grade).toBe('excellent');
             expect(high.grade).toBe('critical');
         });
@@ -177,6 +180,7 @@ describe('Integration: Health Score', () => {
             const { calculateHealthScore } = await import('../../health-score.js');
             const store = createStore({ totalRuns: 1, passed: 10, failed: 0, skipped: 0 });
             const result = calculateHealthScore(store, {});
+
             expect(result.overall).toBeGreaterThanOrEqual(0);
         });
 
@@ -184,6 +188,7 @@ describe('Integration: Health Score', () => {
             const { calculateHealthScore } = await import('../../health-score.js');
             const store: MetricsStore = { runs: [] };
             const result = calculateHealthScore(store, {});
+
             expect(result.overall).toBe(0);
             expect(result.grade).toBe('critical');
             expect(result.qualityGate).toBe('fail');
@@ -199,7 +204,8 @@ describe('Integration: Health Score', () => {
                 coverageHistory: [{ timestamp: '', project: '', totalIssues: 0, mappedIssues: 0 } as CoverageSnapshot],
             };
             const result = calculateHealthScore(store);
-            expect(Number.isNaN(result.dimensions.coverage.score)).toBe(false);
+
+            expect(Number.isNaN(result.dimensions.coverage.score)).toBeFalsy();
             expect(result.dimensions.coverage.score).toBe(0);
         });
     });

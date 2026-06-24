@@ -15,6 +15,7 @@ describe('BugReportValidator — createBugReportValidator', () => {
     it('creates validator with all invariants', () => {
         const v = createBugReportValidator();
         const invariants = v.listInvariants();
+
         expect(invariants).toContain('B-01');
         expect(invariants).toContain('B-02');
         expect(invariants).toContain('B-03');
@@ -40,6 +41,7 @@ describe('BugReportValidator — createBugReportValidator', () => {
             evidence: ['Request times out after 30s'],
         };
         const result = v.validate(report, makeCtx('Firefox browser times out'));
+
         expect(result.failed).toBe(0);
     });
 });
@@ -47,14 +49,16 @@ describe('BugReportValidator — createBugReportValidator', () => {
 describe('invariantMinSteps (B-01)', () => {
     it('passes with >= 3 steps', () => {
         const results = invariantMinSteps({ stepsToReproduce: ['Step 1', 'Step 2', 'Step 3'] }, makeCtx(''));
-        expect(results.some((r: { passed: boolean }) => r.passed)).toBe(true);
+
+        expect(results.some((r: { passed: boolean }) => r.passed)).toBeTruthy();
     });
 
     it('fails with < 3 steps', () => {
         const results = invariantMinSteps({ stepsToReproduce: ['Step 1'] }, makeCtx(''));
+
         expect(
             results.some((r: { passed: boolean; invariantId: string }) => !r.passed && r.invariantId === 'B-01'),
-        ).toBe(true);
+        ).toBeTruthy();
     });
 });
 
@@ -64,7 +68,8 @@ describe('invariantImperativeSteps (B-02)', () => {
             { stepsToReproduce: ['Click button', 'Type text', 'Navigate to page'] },
             makeCtx(''),
         );
-        expect(results.some((r: { passed: boolean }) => r.passed)).toBe(true);
+
+        expect(results.some((r: { passed: boolean }) => r.passed)).toBeTruthy();
     });
 
     it('warns on non-imperative steps', () => {
@@ -72,9 +77,10 @@ describe('invariantImperativeSteps (B-02)', () => {
             { stepsToReproduce: ['The user clicks', 'The system responds'] },
             makeCtx(''),
         );
+
         expect(
             results.some((r: { passed: boolean; invariantId: string }) => !r.passed && r.invariantId === 'B-02'),
-        ).toBe(true);
+        ).toBeTruthy();
     });
 });
 
@@ -84,7 +90,8 @@ describe('invariantSeverityConsistentWithDescription (B-03)', () => {
             { severity: 'critical', description: 'Long description '.repeat(10) },
             makeCtx(''),
         );
-        expect(results.some((r: { passed: boolean }) => r.passed)).toBe(true);
+
+        expect(results.some((r: { passed: boolean }) => r.passed)).toBeTruthy();
     });
 
     it('warns critical with short description', () => {
@@ -92,9 +99,10 @@ describe('invariantSeverityConsistentWithDescription (B-03)', () => {
             { severity: 'critical', description: 'Short' },
             makeCtx(''),
         );
+
         expect(
             results.some((r: { passed: boolean; invariantId: string }) => !r.passed && r.invariantId === 'B-03'),
-        ).toBe(true);
+        ).toBeTruthy();
     });
 });
 
@@ -104,7 +112,8 @@ describe('invariantNotSpecifiedJustified (B-04)', () => {
             { severity: 'major', summary: 'Test report' },
             makeCtx('Some input with details'),
         );
-        expect(results.some((r: { passed: boolean }) => r.passed)).toBe(true);
+
+        expect(results.some((r: { passed: boolean }) => r.passed)).toBeTruthy();
     });
 
     it('warns on "Not specified" fields when input may have info', () => {
@@ -112,8 +121,9 @@ describe('invariantNotSpecifiedJustified (B-04)', () => {
             { severity: 'major', component: 'Not specified' },
             makeCtx('component is the auth service'),
         );
+
         expect(
             results.some((r: { passed: boolean; invariantId: string }) => !r.passed && r.invariantId === 'B-04'),
-        ).toBe(true);
+        ).toBeTruthy();
     });
 });

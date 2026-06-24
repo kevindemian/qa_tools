@@ -10,18 +10,20 @@ const QA_SCRIPT = resolve(__dirname, 'qa.sh');
 describe('qa.sh — OpenCode container wrapper', () => {
     describe('file integrity', () => {
         it('exists', () => {
-            expect(existsSync(QA_SCRIPT)).toBe(true);
+            expect(existsSync(QA_SCRIPT)).toBeTruthy();
         });
 
         it('is executable', () => {
             const mode = statSync(QA_SCRIPT).mode;
+
             // Check owner execute bit (0o100) is set
             expect(mode & 0o100).toBeTruthy();
         });
 
         it('has shebang', () => {
             const content = readFileSync(QA_SCRIPT, 'utf-8');
-            expect(content.startsWith('#!/usr/bin/env bash')).toBe(true);
+
+            expect(content.startsWith('#!/usr/bin/env bash')).toBeTruthy();
         });
 
         it('passes bash syntax check', () => {
@@ -30,6 +32,7 @@ describe('qa.sh — OpenCode container wrapper', () => {
                 encoding: 'utf-8',
                 stdio: ['pipe', 'pipe', 'pipe'],
             });
+
             expect(result).toBe('');
         });
     });
@@ -131,11 +134,13 @@ describe('qa.sh — OpenCode container wrapper', () => {
     describe('edge cases', () => {
         it('handles set -euo pipefail for strict error handling', () => {
             const content = readFileSync(QA_SCRIPT, 'utf-8');
+
             expect(content).toContain('set -euo pipefail');
         });
 
         it('handles empty arguments (passthrough "$@"', () => {
             const content = readFileSync(QA_SCRIPT, 'utf-8');
+
             expect(content).toContain('"$@"');
         });
 
@@ -143,10 +148,13 @@ describe('qa.sh — OpenCode container wrapper', () => {
             const content = readFileSync(QA_SCRIPT, 'utf-8');
             // Find the exec command block (multi-line, ends with "$@")
             const execBlock = content.slice(content.lastIndexOf('exec podman run'));
+
             expect(execBlock).toContain('"$@"');
+
             // "$@" must be after the IMAGE reference
             const imagePos = execBlock.lastIndexOf('"${IMAGE}"');
             const argsPos = execBlock.lastIndexOf('"$@"');
+
             expect(argsPos).toBeGreaterThan(imagePos);
         });
     });

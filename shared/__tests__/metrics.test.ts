@@ -14,6 +14,7 @@ import type { MetricsStore } from '../metrics.js';
 describe('calculateFlakyRate — unified implementation', () => {
     it('returns 0 when no tests', () => {
         const store: MetricsStore = { runs: [] };
+
         expect(calculateFlakyRate(store)).toBe(0);
     });
 
@@ -42,6 +43,7 @@ describe('calculateFlakyRate — unified implementation', () => {
                 },
             ],
         };
+
         expect(calculateFlakyRate(store, 2)).toBe(0);
     });
 
@@ -70,6 +72,7 @@ describe('calculateFlakyRate — unified implementation', () => {
                 },
             ],
         };
+
         expect(calculateFlakyRate(store, 2)).toBe(100);
     });
 
@@ -106,6 +109,7 @@ describe('calculateFlakyRate — unified implementation', () => {
                 },
             ],
         };
+
         // 1 test (passer) has 2 appearances, 0 flaky → 0%
         expect(calculateFlakyRate(store, 2)).toBe(0);
     });
@@ -135,6 +139,7 @@ describe('calculateFlakyRate — unified implementation', () => {
                 },
             ],
         };
+
         // With minRuns=3, test with 2 appearances is excluded
         expect(calculateFlakyRate(store, 3)).toBe(0);
         // With minRuns=2, test is included
@@ -160,6 +165,7 @@ describe('calculateFlakyRate — unified implementation', () => {
                 },
             ],
         };
+
         expect(calculateFlakyRate(store, 2)).toBe(0);
     });
 
@@ -178,6 +184,7 @@ describe('calculateFlakyRate — unified implementation', () => {
                 },
             ],
         };
+
         expect(calculateFlakyRate(store, 2)).toBe(0);
     });
 
@@ -213,6 +220,7 @@ describe('calculateFlakyRate — unified implementation', () => {
                 },
             ],
         };
+
         expect(calculateFlakyRate(store, 2)).toBe(50);
     });
 
@@ -231,6 +239,7 @@ describe('calculateFlakyRate — unified implementation', () => {
                 },
             ],
         };
+
         // 1 test with 1 appearance, minRuns=2 → excluded
         expect(calculateFlakyRate(store, 2)).toBe(0);
     });
@@ -239,6 +248,7 @@ describe('calculateFlakyRate — unified implementation', () => {
 describe('getTrends — pass rate excludes skipped', () => {
     it('returns empty array for empty store', () => {
         const store: MetricsStore = { runs: [] };
+
         expect(getTrends(store)).toEqual([]);
     });
 
@@ -258,6 +268,7 @@ describe('getTrends — pass rate excludes skipped', () => {
             ],
         };
         const trends = getTrends(store);
+
         expect(trends[0]?.passRate).toBeCloseTo(88.89, 1); // 80/(80+10)*100
     });
 
@@ -277,6 +288,7 @@ describe('getTrends — pass rate excludes skipped', () => {
             ],
         };
         const trends = getTrends(store);
+
         expect(trends[0]?.passRate).toBe(0);
     });
 });
@@ -308,7 +320,8 @@ describe('calculateFlakiness — display function (kept for backward compat)', (
             ],
         };
         const entries = calculateFlakiness(store, 2);
-        expect(entries.length).toBe(1);
+
+        expect(entries).toHaveLength(1);
         expect(entries[0]?.rate).toBe(0.5); // 1 fail / 2 total
     });
 });

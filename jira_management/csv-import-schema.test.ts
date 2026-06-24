@@ -4,6 +4,7 @@ describe('CsvRowSchema', () => {
     it('accepts valid CSV row', () => {
         const data = { fields: { Action: 'Click login', Data: 'user@test.com', 'Expected Result': 'Dashboard' } };
         const result = CsvRowSchema.parse(data);
+
         expect(result.fields.Action).toBe('Click login');
     });
 
@@ -13,6 +14,7 @@ describe('CsvRowSchema', () => {
 
     it('defaults Data and Expected Result when missing', () => {
         const result = CsvRowSchema.parse({ fields: { Action: 'Click' } });
+
         expect(result.fields.Data).toBe('');
         expect(result.fields['Expected Result']).toBe('');
     });
@@ -24,6 +26,7 @@ describe('TestCaseSchema', () => {
             title: 'Login test',
             steps: [{ fields: { Action: 'Enter user', Data: 'admin', 'Expected Result': 'Logged in' } }],
         };
+
         expect(TestCaseSchema.parse(data)).toEqual(data);
     });
 
@@ -49,6 +52,7 @@ describe('TestCaseSchema', () => {
             linkedIssues: [{ key: 'PROJ-1', linkType: 'Tests' }],
         };
         const result = TestCaseSchema.parse(data);
+
         expect(result.precondition?.type).toBe('inline');
         expect(result.linkedIssues).toHaveLength(1);
     });
@@ -63,6 +67,7 @@ describe('ImportJsonSchema', () => {
             },
         ];
         const result = ImportJsonSchema.parse(data);
+
         expect(result).toHaveLength(1);
         expect(result[0]?.title).toBe('TC1');
         expect(result[0]?.steps).toHaveLength(1);
@@ -85,6 +90,7 @@ describe('ImportJsonSchema', () => {
             },
         ];
         const result = ImportJsonSchema.parse(data);
+
         expect(result[0]?.linkedIssues).toHaveLength(2);
     });
 });
@@ -99,6 +105,7 @@ describe('JiraPayloadSchema', () => {
                 issuetype: { name: 'Test' },
             },
         };
+
         expect(JiraPayloadSchema.parse(data)).toEqual(data);
     });
 
@@ -113,6 +120,7 @@ describe('JiraPayloadSchema', () => {
             },
         };
         const result = JiraPayloadSchema.parse(data);
+
         expect(result.fields.labels).toHaveLength(2);
     });
 

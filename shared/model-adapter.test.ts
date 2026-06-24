@@ -12,6 +12,7 @@ describe('model-adapter', () => {
     describe('getRegisteredAdapters', () => {
         it('returns all known providers', () => {
             const adapters = getRegisteredAdapters();
+
             expect(adapters).toContain('openai');
             expect(adapters).toContain('anthropic');
             expect(adapters).toContain('gemini');
@@ -30,6 +31,7 @@ describe('model-adapter', () => {
 
         it('returns adapter for openai', () => {
             const adapter = getAdapter('openai');
+
             expect(adapter).not.toBeNull();
             expect(adapter?.name).toBe('openai');
         });
@@ -45,10 +47,13 @@ describe('model-adapter', () => {
                     { id: 'gpt-4o-mini', object: 'model', created: 1694200000 },
                 ],
             });
+
             expect(result).toHaveLength(2);
+
             const [first, second] = [result[0], result[1]];
             assert(first !== undefined);
             assert(second !== undefined);
+
             expect(first.id).toBe('gpt-4o');
             expect(second.id).toBe('gpt-4o-mini');
             expect(first.context).toBeUndefined();
@@ -65,9 +70,12 @@ describe('model-adapter', () => {
             const result = adapter.parseListResponse({
                 data: [{ id: 'valid-model' }, { notId: 'broken' }, { id: 123 }],
             });
+
             expect(result).toHaveLength(1);
+
             const first = result[0];
             assert(first !== undefined);
+
             expect(first.id).toBe('valid-model');
         });
     });
@@ -90,9 +98,12 @@ describe('model-adapter', () => {
                     },
                 ],
             });
+
             expect(result).toHaveLength(1);
+
             const first = result[0];
             assert(first !== undefined);
+
             expect(first.id).toBe('claude-sonnet-4-20250514');
             expect(first.context).toBe(200000);
             expect(first.capabilities).toContain('function_calling');
@@ -112,6 +123,7 @@ describe('model-adapter', () => {
             });
             const first = result[0];
             assert(first !== undefined);
+
             expect(first.id).toBe('claude-opus-4-6');
             expect(first.context).toBe(500000);
             expect(first.capabilities).toBeUndefined();
@@ -123,6 +135,7 @@ describe('model-adapter', () => {
             });
             const first = result[0];
             assert(first !== undefined);
+
             expect(first.context).toBeUndefined();
         });
 
@@ -147,9 +160,12 @@ describe('model-adapter', () => {
                     },
                 ],
             });
+
             expect(result).toHaveLength(1);
+
             const first = result[0];
             assert(first !== undefined);
+
             expect(first.id).toBe('gemini-2.0-flash');
             expect(first.context).toBe(1048576);
             expect(first.capabilities).toContain('chat');
@@ -161,6 +177,7 @@ describe('model-adapter', () => {
             });
             const first = result[0];
             assert(first !== undefined);
+
             expect(first.id).toBe('gemini-pro');
         });
 
@@ -168,9 +185,12 @@ describe('model-adapter', () => {
             const result = adapter.parseListResponse({
                 models: [{ name: 'models/gemini-a', inputTokenLimit: 64000 }, { notName: true }],
             });
+
             expect(result).toHaveLength(1);
+
             const first = result[0];
             assert(first !== undefined);
+
             expect(first.id).toBe('gemini-a');
         });
 
@@ -195,9 +215,12 @@ describe('model-adapter', () => {
                     },
                 ],
             });
+
             expect(result).toHaveLength(1);
+
             const first = result[0];
             assert(first !== undefined);
+
             expect(first.id).toBe('gpt-4o');
             expect(first.context).toBe(128000);
             expect(first.capabilities).toContain('function_calling');
@@ -213,11 +236,14 @@ describe('model-adapter', () => {
                     { id: 'meta-llama/llama-3.1-8b' },
                 ],
             });
+
             expect(result).toHaveLength(3);
+
             const [first, second, third] = [result[0], result[1], result[2]];
             assert(first !== undefined);
             assert(second !== undefined);
             assert(third !== undefined);
+
             expect(first.id).toBe('gemini-2.0-flash');
             expect(second.id).toBe('claude-sonnet-4');
             expect(third.id).toBe('llama-3.1-8b');
@@ -229,6 +255,7 @@ describe('model-adapter', () => {
             });
             const first = result[0];
             assert(first !== undefined);
+
             expect(first.id).toBe('gpt-4o');
         });
 
@@ -247,9 +274,12 @@ describe('model-adapter', () => {
                     { id: 'mixtral-8x7b-32768', object: 'model' },
                 ],
             });
+
             expect(result).toHaveLength(2);
+
             const first = result[0];
             assert(first !== undefined);
+
             expect(first.id).toBe('llama-3.1-70b-versatile');
         });
 
@@ -265,6 +295,7 @@ describe('model-adapter', () => {
             const result = adapter.parseListResponse({
                 data: [{ id: 'gpt-4o' }, { id: 'gpt-4o-mini' }],
             });
+
             expect(result).toHaveLength(2);
         });
     });
@@ -276,9 +307,12 @@ describe('model-adapter', () => {
             const result = adapter.parseListResponse({
                 data: [{ id: 'meta/llama-3.1-8b-instruct' }],
             });
+
             expect(result).toHaveLength(1);
+
             const first = result[0];
             assert(first !== undefined);
+
             expect(first.id).toBe('meta/llama-3.1-8b-instruct');
         });
     });

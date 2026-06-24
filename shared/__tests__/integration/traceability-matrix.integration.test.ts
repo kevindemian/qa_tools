@@ -109,12 +109,14 @@ describe('Integration: Traceability Matrix', () => {
         it('returns error page for null result', async () => {
             const { generateTraceabilityHtml } = await import('../../traceability-matrix.js');
             const html = generateTraceabilityHtml(null);
+
             expect(html).toContain('Error generating traceability matrix');
         });
 
         it('returns error page for undefined result', async () => {
             const { generateTraceabilityHtml } = await import('../../traceability-matrix.js');
             const html = generateTraceabilityHtml(undefined);
+
             expect(html).toContain('Error generating traceability matrix');
         });
     });

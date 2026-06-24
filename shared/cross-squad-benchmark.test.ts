@@ -58,21 +58,25 @@ describe('computeCrossSquadBenchmark', () => {
     it('sorts squads by healthScore descending', () => {
         const result = computeCrossSquadBenchmark(makeSquads());
         const scores = result.benchmarks.map((b) => b.healthScore);
+
         expect(scores).toEqual([92, 78, 64, 45]);
     });
 
     it('identifies top squad', () => {
         const result = computeCrossSquadBenchmark(makeSquads());
+
         expect(result.topSquad).toBe('Squad Alpha');
     });
 
     it('identifies bottom squad', () => {
         const result = computeCrossSquadBenchmark(makeSquads());
+
         expect(result.bottomSquad).toBe('Squad Delta');
     });
 
     it('computes average score correctly', () => {
         const result = computeCrossSquadBenchmark(makeSquads());
+
         expect(result.averageScore).toBe(69.75);
     });
 
@@ -81,6 +85,7 @@ describe('computeCrossSquadBenchmark', () => {
         const expected = Math.sqrt(
             [(92 - 69.75) ** 2, (78 - 69.75) ** 2, (64 - 69.75) ** 2, (45 - 69.75) ** 2].reduce((a, b) => a + b) / 4,
         );
+
         expect(result.stdDev).toBeCloseTo(expected, 10);
     });
 
@@ -88,11 +93,13 @@ describe('computeCrossSquadBenchmark', () => {
         const result = computeCrossSquadBenchmark([
             { name: 'Solo', healthScore: 80, grade: 'B', passRate: 90, flakyRate: 5, coveragePct: 75, runCount: 50 },
         ]);
+
         expect(result.stdDev).toBe(0);
     });
 
     it('handles empty projects array', () => {
         const result = computeCrossSquadBenchmark([]);
+
         expect(result.benchmarks).toEqual([]);
         expect(result.topSquad).toBe('');
         expect(result.bottomSquad).toBe('');
@@ -106,6 +113,7 @@ describe('computeCrossSquadBenchmark', () => {
         const result = computeCrossSquadBenchmark([
             { name: 'Solo', healthScore: 75, grade: 'C', passRate: 80, flakyRate: 10, coveragePct: 65, runCount: 30 },
         ]);
+
         expect(result.benchmarks).toHaveLength(1);
         expect(result.topSquad).toBe('Solo');
         expect(result.bottomSquad).toBe('Solo');
@@ -125,6 +133,7 @@ describe('computeCrossSquadBenchmark', () => {
                 previousScore: 80,
             },
         ]);
+
         expect(result.benchmarks[0]?.trend).toBe('up');
     });
 
@@ -141,6 +150,7 @@ describe('computeCrossSquadBenchmark', () => {
                 previousScore: 85,
             },
         ]);
+
         expect(result.benchmarks[0]?.trend).toBe('down');
     });
 
@@ -156,6 +166,7 @@ describe('computeCrossSquadBenchmark', () => {
                 runCount: 60,
             },
         ]);
+
         expect(result.benchmarks[0]?.trend).toBe('stable');
     });
 
@@ -172,6 +183,7 @@ describe('computeCrossSquadBenchmark', () => {
                 previousScore: 80,
             },
         ]);
+
         expect(result.benchmarks[0]?.trend).toBe('stable');
     });
 
@@ -179,17 +191,20 @@ describe('computeCrossSquadBenchmark', () => {
         const input = makeSquads();
         const original = [...input];
         computeCrossSquadBenchmark(input);
+
         expect(input).toEqual(original);
     });
 
     it('includes timestamp in ISO format', () => {
         const result = computeCrossSquadBenchmark(makeSquads());
+
         expect(result.timestamp).toMatch(/^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2}/);
     });
 
     it('preserves all squad fields in benchmark output', () => {
         const result = computeCrossSquadBenchmark(makeSquads());
         const alpha = result.benchmarks.find((b) => b.project === 'Squad Alpha');
+
         expect(alpha).toBeDefined();
         expect(alpha?.healthScore).toBe(92);
         expect(alpha?.grade).toBe('A');
@@ -213,10 +228,11 @@ describe('computeCrossSquadBenchmark', () => {
             },
         ];
         const result = computeCrossSquadBenchmark(projects);
+
         expect(result.benchmarks).toHaveLength(4);
         expect(result.benchmarks.find((b) => b.project === 'NaN Squad')).toBeUndefined();
-        expect(Number.isNaN(result.averageScore)).toBe(false);
-        expect(Number.isNaN(result.stdDev)).toBe(false);
+        expect(Number.isNaN(result.averageScore)).toBeFalsy();
+        expect(Number.isNaN(result.stdDev)).toBeFalsy();
     });
 
     it('filters out squad with negative passRate (G-02)', () => {
@@ -233,11 +249,13 @@ describe('computeCrossSquadBenchmark', () => {
             },
         ];
         const result = computeCrossSquadBenchmark(projects);
+
         expect(result.benchmarks.find((b) => b.project === 'Invalid Squad')).toBeUndefined();
     });
 
     it('handles null projects gracefully (G-02)', () => {
         const result = computeCrossSquadBenchmark(null);
+
         expect(result.benchmarks).toEqual([]);
         expect(result.topSquad).toBe('');
         expect(result.bottomSquad).toBe('');
@@ -247,6 +265,7 @@ describe('computeCrossSquadBenchmark', () => {
 
     it('handles undefined projects gracefully (G-02)', () => {
         const result = computeCrossSquadBenchmark(undefined);
+
         expect(result.benchmarks).toEqual([]);
         expect(result.topSquad).toBe('');
         expect(result.bottomSquad).toBe('');
@@ -262,6 +281,7 @@ describe('generateBenchmarkHtml', () => {
 
     it('produces valid HTML document structure', () => {
         const html = generateBenchmarkHtml(makeResult());
+
         expect(html).toContain('<!DOCTYPE html>');
         expect(html).toContain('<html');
         expect(html).toContain('<head>');
@@ -271,45 +291,53 @@ describe('generateBenchmarkHtml', () => {
 
     it('renders default title', () => {
         const html = generateBenchmarkHtml(makeResult());
+
         expect(html).toContain('Cross-Squad Benchmark');
     });
 
     it('uses custom title when provided', () => {
         const html = generateBenchmarkHtml(makeResult(), 'Sprint 11 Review');
+
         expect(html).toContain('Sprint 11 Review');
         expect(html).not.toContain('Cross-Squad Benchmark');
     });
 
     it('renders summary cards with average score', () => {
         const html = generateBenchmarkHtml(makeResult());
+
         expect(html).toContain('Average Score');
         expect(html).toContain('69.8');
     });
 
     it('renders summary card with std deviation', () => {
         const html = generateBenchmarkHtml(makeResult());
+
         expect(html).toContain('Std Deviation');
     });
 
     it('renders summary card with top squad name', () => {
         const html = generateBenchmarkHtml(makeResult());
+
         expect(html).toContain('Top Squad');
         expect(html).toContain('Squad Alpha');
     });
 
     it('renders summary card with bottom squad name', () => {
         const html = generateBenchmarkHtml(makeResult());
+
         expect(html).toContain('Bottom Squad');
         expect(html).toContain('Squad Delta');
     });
 
     it('renders leaderboard heading', () => {
         const html = generateBenchmarkHtml(makeResult());
+
         expect(html).toContain('Leaderboard');
     });
 
     it('renders table with all squad rows', () => {
         const html = generateBenchmarkHtml(makeResult());
+
         expect(html).toContain('Squad Alpha');
         expect(html).toContain('Squad Beta');
         expect(html).toContain('Squad Gamma');
@@ -318,6 +346,7 @@ describe('generateBenchmarkHtml', () => {
 
     it('renders grade badges with correct variants', () => {
         const html = generateBenchmarkHtml(makeResult());
+
         expect(html).toContain('data-component="badge"');
         expect(html).toContain('data-variant="pass"');
         expect(html).toContain('data-variant="info"');
@@ -359,6 +388,7 @@ describe('generateBenchmarkHtml', () => {
             },
         ]);
         const html = generateBenchmarkHtml(result);
+
         expect(html).toContain('\u2191 Up');
         expect(html).toContain('\u2193 Down');
         expect(html).toContain('\u2192 Stable');
@@ -374,6 +404,7 @@ describe('generateBenchmarkHtml', () => {
             timestamp: new Date().toISOString(),
         };
         const html = generateBenchmarkHtml(empty);
+
         expect(html).toContain('No squad data available');
         expect(html).toContain('Average Score');
         expect(html).not.toContain('data-row="squad-0"');
@@ -389,11 +420,13 @@ describe('generateBenchmarkHtml', () => {
             timestamp: new Date().toISOString(),
         };
         const html = generateBenchmarkHtml(empty);
+
         expect(html).toContain('\u2014');
     });
 
     it('includes generated footer text', () => {
         const html = generateBenchmarkHtml(makeResult());
+
         expect(html).toContain('Generated by QA Tools');
     });
 
@@ -403,6 +436,7 @@ describe('generateBenchmarkHtml', () => {
         });
         const result = computeCrossSquadBenchmark(makeSquads());
         const html = generateBenchmarkHtml(result);
+
         expect(html).toContain('Error generating benchmark report');
     });
 
@@ -419,6 +453,7 @@ describe('generateBenchmarkHtml', () => {
             },
         ]);
         const html = generateBenchmarkHtml(result);
+
         expect(html).toContain('&lt;script&gt;alert');
         expect(html).not.toContain('<script>alert');
     });
@@ -436,17 +471,20 @@ describe('generateBenchmarkHtml', () => {
             },
         ]);
         const html = generateBenchmarkHtml(result);
+
         expect(html).toContain('data-variant="default"');
         expect(html).toContain('Squad X');
     });
 
     it('handles null result gracefully returning error page (G-03)', () => {
         const html = generateBenchmarkHtml(null);
+
         expect(html).toContain('Error generating benchmark report');
     });
 
     it('handles undefined result gracefully returning error page (G-03)', () => {
         const html = generateBenchmarkHtml(undefined);
+
         expect(html).toContain('Error generating benchmark report');
     });
 });

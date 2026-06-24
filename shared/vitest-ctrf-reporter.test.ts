@@ -179,9 +179,11 @@ describe('VitestCtrfReporter', () => {
         );
         reporter.onTestRunEnd();
 
-        expect(existsSync(resolve(TEST_OUTPUT_DIR, TEST_OUTPUT_FILE))).toBe(true);
+        expect(existsSync(resolve(TEST_OUTPUT_DIR, TEST_OUTPUT_FILE))).toBeTruthy();
+
         const data = readReport();
-        expect(isCtrfFormat(data)).toBe(true);
+
+        expect(isCtrfFormat(data)).toBeTruthy();
     });
 
     it('counts passed tests correctly', () => {
@@ -197,6 +199,7 @@ describe('VitestCtrfReporter', () => {
         reporter.onTestRunEnd();
 
         const data = readReport();
+
         expect(resultsOf(data).summary.passed).toBe(2);
         expect(resultsOf(data).summary.failed).toBe(1);
         expect(resultsOf(data).summary.skipped).toBe(0);
@@ -215,6 +218,7 @@ describe('VitestCtrfReporter', () => {
         reporter.onTestRunEnd();
 
         const data = readReport();
+
         expect(resultsOf(data).summary.skipped).toBe(1);
         expect(resultsOf(data).summary.passed).toBe(1);
     });
@@ -231,6 +235,7 @@ describe('VitestCtrfReporter', () => {
         reporter.onTestRunEnd();
 
         const data = readReport();
+
         expect(resultsOf(data).summary.tests).toBe(1);
         expect(resultsOf(data).summary.passed).toBe(1);
     });
@@ -256,6 +261,7 @@ describe('VitestCtrfReporter', () => {
 
         const data = readReport();
         const failedTest = resultsOf(data).tests.find((t) => t.name === 'fail-1');
+
         expect(failedTest).toBeDefined();
         expect(defined(failedTest).message).toBe('Expected 5 but got 4');
         expect(defined(failedTest).trace).toContain('Error: Expected 5 but got 4');
@@ -281,6 +287,7 @@ describe('VitestCtrfReporter', () => {
 
         const data = readReport();
         const test = resultsOf(data).tests.find((t) => t.name === 'test-in-suite');
+
         expect(test).toBeDefined();
         expect(defined(test).suite).toBe('Parent Suite');
     });
@@ -305,8 +312,9 @@ describe('VitestCtrfReporter', () => {
 
         const data = readReport();
         const test = resultsOf(data).tests.find((t) => t.name === 'flaky-test');
+
         expect(test).toBeDefined();
-        expect(defined(test).flaky).toBe(true);
+        expect(defined(test).flaky).toBeTruthy();
     });
 
     it('does not mark passed tests without retries as flaky', () => {
@@ -323,6 +331,7 @@ describe('VitestCtrfReporter', () => {
 
         const data = readReport();
         const test = resultsOf(data).tests.find((t) => t.name === 'stable-test');
+
         expect(defined(test).flaky).toBeUndefined();
     });
 
@@ -347,6 +356,7 @@ describe('VitestCtrfReporter', () => {
 
         const data = readReport();
         const test = resultsOf(data).tests.find((t) => t.name === 'located-test');
+
         expect(defined(test).filePath).toBe('src/example.test.ts:42');
     });
 
@@ -365,10 +375,13 @@ describe('VitestCtrfReporter', () => {
         reporter.onTestRunEnd();
 
         const data = readReport();
+
         expect(resultsOf(data).environment.appName).toBe('MyApp');
         expect(resultsOf(data).environment.buildName).toBe('build-001');
         expect(resultsOf(data).environment.buildNumber).toBe('42');
+
         const test = resultsOf(data).tests[0] as import('./result_parser.js').CtrfTest;
+
         expect(test.type).toBe('integration');
     });
 
@@ -394,6 +407,7 @@ describe('VitestCtrfReporter', () => {
 
         const data = readReport();
         const test = resultsOf(data).tests.find((t) => t.name === 'minimal-test');
+
         expect(defined(test).message).toBeUndefined();
         expect(defined(test).trace).toBeUndefined();
         expect(defined(test).suite).toBeUndefined();
@@ -416,6 +430,7 @@ describe('VitestCtrfReporter', () => {
 
         const data = readReport();
         const parsed = parseTestResults(data);
+
         expect(parsed.tests).toHaveLength(3);
         expect(parsed.stats.passed).toBe(1);
         expect(parsed.stats.failed).toBe(1);
@@ -432,11 +447,12 @@ describe('VitestCtrfReporter', () => {
         reporter.onTestRunEnd();
 
         const data = readReport();
+
         expect(resultsOf(data).tests).toHaveLength(0);
         expect(resultsOf(data).summary.tests).toBe(0);
         expect(resultsOf(data).summary.passed).toBe(0);
         expect(resultsOf(data).summary.failed).toBe(0);
-        expect(isCtrfFormat(data)).toBe(true);
+        expect(isCtrfFormat(data)).toBeTruthy();
     });
 
     it('uses environment variables as defaults', () => {
@@ -456,6 +472,7 @@ describe('VitestCtrfReporter', () => {
         reporter.onTestRunEnd();
 
         const data = readReport();
+
         expect(resultsOf(data).environment.appName).toBe('EnvApp');
         expect(resultsOf(data).environment.buildName).toBe('run-123');
         expect(resultsOf(data).environment.buildNumber).toBe('99');
@@ -476,8 +493,10 @@ describe('VitestCtrfReporter', () => {
         reporter.onTestCaseResult(asTestCase(createMockTestCase({ name: 'custom-path', state: 'passed' })));
         reporter.onTestRunEnd();
 
-        expect(existsSync(resolve(customDir, customFile))).toBe(true);
+        expect(existsSync(resolve(customDir, customFile))).toBeTruthy();
+
         const data = JSON.parse(readFileSync(resolve(customDir, customFile), 'utf8')) as CtrfData;
+
         expect(resultsOf(data).tests).toHaveLength(1);
 
         rmSync(customDir, { recursive: true, force: true });
@@ -494,6 +513,7 @@ describe('VitestCtrfReporter', () => {
         reporter.onTestRunEnd();
 
         const data = readReport();
+
         expect(resultsOf(data).summary.start).toBeGreaterThan(0);
         // stop must be >= start (same ms is possible for fast runs)
         expect(resultsOf(data).summary.stop).toBeGreaterThanOrEqual(resultsOf(data).summary.start);
@@ -516,10 +536,14 @@ describe('VitestCtrfReporter', () => {
             reporter.onTestRunEnd();
 
             const fileName = resolve('reports-env-override', 'env-ctrf.json');
-            expect(existsSync(fileName)).toBe(true);
+
+            expect(existsSync(fileName)).toBeTruthy();
+
             const data = JSON.parse(readFileSync(fileName, 'utf8')) as CtrfData;
+
             expect(resultsOf(data).tests).toHaveLength(1);
             expect(resultsOf(data).tests[0]?.name).toBe('env-override-test');
+
             rmSync('reports-env-override', { recursive: true, force: true });
         });
 
@@ -537,10 +561,13 @@ describe('VitestCtrfReporter', () => {
 
             // Should use TEST_OUTPUT_DIR/TEST_OUTPUT_FILE, not env var paths
             const fileName = resolve(TEST_OUTPUT_DIR, TEST_OUTPUT_FILE);
-            expect(existsSync(fileName)).toBe(true);
+
+            expect(existsSync(fileName)).toBeTruthy();
+
             const data = JSON.parse(readFileSync(fileName, 'utf8')) as CtrfData;
+
             expect(resultsOf(data).tests[0]?.name).toBe('precedence-test');
-            expect(existsSync('reports-env-should-not-exist')).toBe(false);
+            expect(existsSync('reports-env-should-not-exist')).toBeFalsy();
         });
     });
 });

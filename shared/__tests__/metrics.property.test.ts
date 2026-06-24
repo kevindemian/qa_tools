@@ -92,6 +92,7 @@ describe('calculateFlakyRate — property-based', () => {
                 (runs, minRuns) => {
                     const store: MetricsStore = { runs };
                     const rate = calculateFlakyRate(store, Math.max(1, minRuns));
+
                     expect(rate).toBeGreaterThanOrEqual(0);
                     expect(rate).toBeLessThanOrEqual(100);
                 },
@@ -102,6 +103,7 @@ describe('calculateFlakyRate — property-based', () => {
 
     it('returns 0 for empty store', () => {
         const store: MetricsStore = { runs: [] };
+
         expect(calculateFlakyRate(store)).toBe(0);
         expect(calculateFlakyRate(store, 1)).toBe(0);
         expect(calculateFlakyRate(store, 10)).toBe(0);
@@ -118,6 +120,7 @@ describe('calculateFlakyRate — property-based', () => {
                 }
                 const store: MetricsStore = { runs };
                 const rate = calculateFlakyRate(store, 2);
+
                 expect(rate).toBe(0);
             }),
             { numRuns: 50 },
@@ -155,6 +158,7 @@ describe('calculateFlakyRate — property-based', () => {
 
                     const store: MetricsStore = { runs };
                     const rate = calculateFlakyRate(store, 2);
+
                     expect(rate).toBe(100);
                 },
             ),
@@ -307,6 +311,7 @@ describe('getTrends — property-based', () => {
                 (runs, window) => {
                     const store: MetricsStore = { runs };
                     const trends = getTrends(store, Math.max(1, window));
+
                     expect(trends.length).toBeLessThanOrEqual(Math.max(1, window));
                 },
             ),
@@ -338,6 +343,7 @@ describe('getTrends — property-based', () => {
                     if (run) {
                         const denom = run.passed + run.failed;
                         const expectedRate = denom > 0 ? (run.passed / denom) * 100 : 0;
+
                         expect(t.passRate).toBeCloseTo(expectedRate, 5);
                     }
                 });
@@ -348,6 +354,7 @@ describe('getTrends — property-based', () => {
 
     it('returns empty array for empty store', () => {
         const store: MetricsStore = { runs: [] };
+
         expect(getTrends(store)).toEqual([]);
     });
 });

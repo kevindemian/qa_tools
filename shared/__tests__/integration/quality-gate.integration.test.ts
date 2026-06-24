@@ -50,9 +50,12 @@ describe('Integration: Quality Gate', () => {
             const { mockLoadMetrics, runQualityGate } = await loadMockedModules();
             mockLoadMetrics.mockReturnValue({ runs: [] });
             const result = runQualityGate();
+
             expect(result.overall).toBe('fail');
-            expect(result.checks.length).toBe(1);
+            expect(result.checks).toHaveLength(1);
+
             const firstCheck = result.checks[0];
+
             expect(firstCheck).toBeDefined();
             expect(firstCheck?.name).toBe('metrics-data');
         });
@@ -92,8 +95,9 @@ describe('Integration: Quality Gate', () => {
             mockCalcFlakiness.mockReturnValue([]);
 
             const result = runQualityGate({ project: 'test-project' });
+
             expect(result.overall).toBe('pass');
-            expect(result.checks.length).toBe(5);
+            expect(result.checks).toHaveLength(5);
             expect(result.score).toBeGreaterThan(0);
         });
     });
@@ -103,6 +107,7 @@ describe('Integration: Quality Gate', () => {
             const { formatQualityGateJson } = await loadMockedModules();
             const result = { overall: 'pass' as const, checks: [], score: 85 };
             const json = formatQualityGateJson(result);
+
             expect(JSON.parse(json)).toHaveProperty('overall', 'pass');
         });
     });
@@ -116,6 +121,7 @@ describe('Integration: Quality Gate', () => {
                 score: 85,
             };
             const text = formatQualityGateText(result);
+
             expect(text).toContain('Quality Gate');
             expect(text).toContain('PASS');
             expect(text).toContain('health-score');

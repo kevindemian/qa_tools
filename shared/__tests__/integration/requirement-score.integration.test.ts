@@ -119,12 +119,14 @@ describe('Integration: Requirement Quality Score', () => {
         it('returns error page for null result', async () => {
             const { generateRequirementScoreHtml } = await import('../../requirement-score.js');
             const html = generateRequirementScoreHtml(null);
+
             expect(html).toContain('Requirement Score Report Error');
         });
 
         it('returns error page for undefined result', async () => {
             const { generateRequirementScoreHtml } = await import('../../requirement-score.js');
             const html = generateRequirementScoreHtml(undefined);
+
             expect(html).toContain('Requirement Score Report Error');
         });
     });
