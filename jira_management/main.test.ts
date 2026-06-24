@@ -163,597 +163,659 @@ interface MainModule {
 }
 
 // ── Module load ────────────────────────────────────────────────────────────
-let mod: MainModule;
-let createValidateEnvCall: unknown;
-let getStatePathCalled = false;
-
-beforeAll(async () => {
-    if (!vi.isMockFunction(openModule.openWithFallback)) {
-        throw new Error('Guard FAILED: openWithFallback is NOT mocked. Browser would open!');
-    }
-    if (!vi.isMockFunction(cp.spawn)) {
-        throw new Error('Guard FAILED: child_process.spawn is NOT mocked. Browser would open!');
-    }
-
-    mod = await import('./main.js');
-    const imported = (await import('./main.js')) as MainModule;
-    mod = imported;
-    // Intentional: yield to microtask queue so main() (called at module scope) completes
-    await new Promise<void>((resolve) => setTimeout(resolve, 0));
-    createValidateEnvCall = vi.mocked(createValidateEnv).mock.calls[0]?.[0];
-    getStatePathCalled = vi.mocked(getStatePath).mock.calls.length > 0;
-});
-
-afterAll(() => {
-    process.removeAllListeners('unhandledRejection');
-});
-
-beforeEach(() => {
-    vi.clearAllMocks();
-});
-
-// ── Tests ──────────────────────────────────────────────────────────────────
-
-describe('ShowHelp', () => {
-    it('displays general help when no topic is given', () => {
-        mod.showHelp();
-
-        expect(title).toHaveBeenCalledWith(expect.stringContaining('HELP'));
-        expect(helpLine).toHaveBeenCalledWith(expect.stringContaining('Escolha uma opção'));
-    });
-
-    it('displays help for a known topic', () => {
-        mod.showHelp('csv');
-
-        expect(title).toHaveBeenCalledWith(expect.stringContaining('csv'));
-        expect(helpLine).toHaveBeenCalledWith(expect.stringContaining('Formato CSV'));
-    });
-
-    it('shows warning for unknown topic', () => {
-        mod.showHelp('nonexistent');
-
-        expect(warn).toHaveBeenCalledWith(expect.stringContaining('não encontrado'));
-    });
-
-    it('searches topics with search prefix', () => {
-        mod.showHelp('search csv');
-
-        expect(title).toHaveBeenCalledWith(expect.stringContaining('csv'));
-        expect(helpLine).toHaveBeenCalledWith(expect.stringContaining('Formato CSV'));
-    });
-
-    it('shows warning when search finds nothing', () => {
-        mod.showHelp('search xyzzy');
-
-        expect(warn).toHaveBeenCalledWith(expect.stringContaining('Nenhum'));
-    });
-
-    it('is case insensitive', () => {
-        mod.showHelp('CSV');
-
-        expect(title).toHaveBeenCalledWith(expect.stringContaining('csv'));
-    });
-});
-
-describe('ResolveAlias', () => {
-    it('maps known aliases to command numbers', () => {
-        expect(mod.resolveAlias('criar')).toBe('1');
-        expect(mod.resolveAlias('versoes')).toBe('2');
-        expect(mod.resolveAlias('fechar')).toBe('7');
-        expect(mod.resolveAlias('sair')).toBe('0');
-    });
-
-    it('is case insensitive', () => {
-        expect(mod.resolveAlias('CRIAR')).toBe('1');
-        expect(mod.resolveAlias('Criar')).toBe('1');
-    });
-
-    it('returns original input for unknown alias', () => {
-        expect(mod.resolveAlias('unknown')).toBe('unknown');
-        expect(mod.resolveAlias('42')).toBe('42');
-    });
-
-    it('handles empty string', () => {
-        expect(mod.resolveAlias('')).toBe('');
-    });
-});
-
-describe('BuildMenuChoices', () => {
-    const ctx = { git_directory: '/tmp/repo' };
-
-    it('returns array for main level categories', () => {
-        expect(Array.isArray(mod.buildMenuChoices('main', 'ECSPOL', ctx))).toBeTruthy();
-    });
-
-    it('returns array for sub-menu level', () => {
-        expect(Array.isArray(mod.buildMenuChoices('releases', 'ECSPOL', ctx))).toBeTruthy();
-    });
-
-    it('main level includes category IDs', () => {
-        const choices = mod.buildMenuChoices('main', 'ECSPOL', ctx);
-        const values = choices.filter((c) => c.value).map((c) => c.value);
-
-        expect(values).toContain('reports');
-        expect(values).toContain('releases');
-        expect(values).toContain('bugreport');
-    });
-
-    it('sub-menu level includes command IDs', () => {
-        const choices = mod.buildMenuChoices('releases', 'ECSPOL', ctx);
-        const values = choices.filter((c) => c.value).map((c) => c.value);
-
-        expect(values).toContain('2');
-        expect(values).toContain('8');
-        expect(values).toContain('0');
-    });
-
-    it('includes exit option with value 0 at main level', () => {
-        const choices = mod.buildMenuChoices('main', 'ECSPOL', ctx);
-
-        expect(choices.find((c) => c.value === '0')).toBeDefined();
-    });
-
-    it('sets project name as description for option 9 in config sub-menu', () => {
-        const choices = mod.buildMenuChoices('config', 'MYPROJ', ctx);
-
-        expect(choices.find((c) => c.value === '9')?.description).toContain('MYPROJ');
-    });
-
-    it('sets git dir as description for option 10 in config sub-menu', () => {
-        const choices = mod.buildMenuChoices('config', 'P', { git_directory: '/custom/git' });
-
-        expect(choices.find((c) => c.value === '10')?.description).toContain('/custom/git');
-    });
-
-    it('shows "não configurado" for unset cypress dir in config sub-menu', () => {
-        const choices = mod.buildMenuChoices('config', 'ECSPOL', ctx);
-
-        expect(choices.find((c) => c.value === '14')?.description).toContain('não configurado');
-    });
-
-    it('fallback to main categories when sub-menu not found', () => {
-        const choices = mod.buildMenuChoices('utilities', 'ECSPOL', ctx);
-        const values = choices.filter((c) => c.value).map((c) => c.value);
-
-        expect(values).toContain('0');
-        expect(values).toContain('reports');
-        expect(values).toContain('tests');
-        expect(values).toContain('config');
-    });
-
-    it('tests sub-menu includes template command', () => {
-        const choices = mod.buildMenuChoices('tests', 'ECSPOL', ctx);
-        const values = choices.filter((c) => c.value).map((c) => c.value);
-
-        expect(values).toContain('1');
-        expect(values).toContain('11');
-        expect(values).toContain('13');
-        expect(values).toContain('15');
-        expect(values).toContain('18');
-    });
-
-    it('config sub-menu includes diagnostic command', () => {
-        const choices = mod.buildMenuChoices('config', 'ECSPOL', ctx);
-        const values = choices.filter((c) => c.value).map((c) => c.value);
-
-        expect(values).toContain('9');
-        expect(values).toContain('10');
-        expect(values).toContain('12');
-        expect(values).toContain('14');
-        expect(values).toContain('16');
-    });
-});
-
-describe('HandleSpecialInput', () => {
-    beforeEach(() => {
-        // showHelpLoop uses prompt() to wait for input; return /back to exit loop immediately
-        vi.mocked(prompt).mockReturnValue('/back');
-    });
-
-    afterEach(() => {
-        vi.mocked(prompt).mockReturnValue('0');
-    });
-
-    it('returns true and shows help for /help', async () => {
-        await expect(mod.handleSpecialInput('/help')).resolves.toBeTruthy();
-        expect(title).toHaveBeenCalled();
-    });
-
-    it('handles /h shorthand', async () => {
-        await expect(mod.handleSpecialInput('/h')).resolves.toBeTruthy();
-        expect(title).toHaveBeenCalled();
-    });
-
-    it('returns false for /exit (handled by runMainLoop, not by handleSpecialInput)', async () => {
-        await expect(mod.handleSpecialInput('/exit')).resolves.toBeFalsy();
-    });
-
-    it('returns __exit__ for /back and /menu at main level', async () => {
-        await expect(mod.handleSpecialInput('/back', 'main')).resolves.toBe('__exit__');
-        await expect(mod.handleSpecialInput('/menu', 'main')).resolves.toBe('__exit__');
-    });
-
-    it('returns __back__ for /back and /menu at sub-menu level', async () => {
-        await expect(mod.handleSpecialInput('/back', 'releases')).resolves.toBe('__back__');
-        await expect(mod.handleSpecialInput('/menu', 'releases')).resolves.toBe('__back__');
-    });
-
-    it('handles /docs and /d', async () => {
-        await expect(mod.handleSpecialInput('/docs')).resolves.toBeTruthy();
-        await expect(mod.handleSpecialInput('/d')).resolves.toBeTruthy();
-    });
-
-    it('handles /history correctly', async () => {
-        await expect(mod.handleSpecialInput('/history')).resolves.toBeTruthy();
-        expect(title).toHaveBeenCalledWith(expect.stringContaining('Histórico'));
-    });
-
-    it('handles /home to show splash', async () => {
-        await expect(mod.handleSpecialInput('/home')).resolves.toBeTruthy();
-    });
-
-    it('returns false for regular input', async () => {
-        await expect(mod.handleSpecialInput('1')).resolves.toBeFalsy();
-        await expect(mod.handleSpecialInput('')).resolves.toBeFalsy();
-        await expect(mod.handleSpecialInput('texto livre')).resolves.toBeFalsy();
-    });
-});
-
-describe('_ConfigHint', () => {
-    const ctx = { git_directory: '/my/git' };
-
-    it('returns git directory for gitDir key', () => {
-        expect(mod._configHint('gitDir', ctx)).toBe('(atual: /my/git)');
-    });
-
-    it('returns "não configurado" when state has no cypress path', () => {
-        vi.mocked(loadTypedState).mockReturnValue({});
-
-        expect(mod._configHint('cypressDir', ctx)).toBe('(atual: não configurado)');
-    });
-
-    it('reads cypress path from state', () => {
-        vi.mocked(loadTypedState).mockReturnValue({ lastCypressPath: '/cy/path' });
-
-        expect(mod._configHint('cypressDir', ctx)).toBe('(atual: /cy/path)');
-    });
-
-    it('returns empty string for unknown key', () => {
-        expect(mod._configHint('unknown', ctx)).toBe('');
-    });
-});
-
-describe('Module integration', () => {
-    it('createValidateEnv was called with all required env vars', () => {
-        const args = createValidateEnvCall as Array<{ key: string; label: string; example: string }>;
-
-        expect(args).toBeDefined();
-
-        const keys = args.map((a) => a.key);
-
-        expect(keys).toContain('JIRA_BASE_URL');
-        expect(keys).toContain('JIRA_PERSONAL_TOKEN');
-        expect(keys).toContain('XRAY_BASE_URL');
-    });
-
-    it('createValidateEnv configs have key, label, and example', () => {
-        const args = createValidateEnvCall as Array<{ key: string; label: string; example: string }>;
-
-        expect(args).toBeDefined();
-
-        for (const cfg of args) {
-            expect(cfg).toHaveProperty('key');
-            expect(cfg).toHaveProperty('label');
-            expect(cfg).toHaveProperty('example');
+describe('Main.ts', () => {
+    let mod: MainModule;
+    let createValidateEnvCall: unknown;
+    let getStatePathCalled = false;
+
+    beforeAll(async () => {
+        if (!vi.isMockFunction(openModule.openWithFallback)) {
+            throw new Error('Guard FAILED: openWithFallback is NOT mocked. Browser would open!');
         }
-    });
+        if (!vi.isMockFunction(cp.spawn)) {
+            throw new Error('Guard FAILED: child_process.spawn is NOT mocked. Browser would open!');
+        }
 
-    it('getStatePath was called during initialization', () => {
-        expect(getStatePathCalled).toBeTruthy();
+        mod = await import('./main.js');
+        const imported = (await import('./main.js')) as MainModule;
+        mod = imported;
+        // Intentional: yield to microtask queue so main() (called at module scope) completes
+        await new Promise<void>((resolve) => setTimeout(resolve, 0));
+        createValidateEnvCall = vi.mocked(createValidateEnv).mock.calls[0]?.[0];
+        getStatePathCalled = vi.mocked(getStatePath).mock.calls.length > 0;
     });
-});
-
-describe('DispatchChoice', () => {
-    const minimalCtx = {
-        jiraResource: {},
-        jiraResourceXray: {},
-        linkManager: {},
-        linkManagerXray: {},
-        csvResource: {},
-        ctx: { project_name: 'test', git_directory: '/tmp', sessionCounters: [], results: [] },
-        pushHistory: vi.fn(),
-        printSessionSummary: vi.fn(),
-        base_url: '',
-        sessionLog: '',
-    };
 
     beforeEach(() => {
-        vi.spyOn(commandsModule, 'getHandler').mockReturnValue(null);
+        vi.clearAllMocks();
     });
 
-    it("returns 'continue' for choice '0' (handled by getAndResolveChoice now)", async () => {
-        const result = await mod.dispatchChoice('0', minimalCtx);
-
-        expect(result).toBe('continue');
-        expect(warn).toHaveBeenCalledWith(expect.stringContaining('inválida'));
+    afterAll(() => {
+        process.removeAllListeners('unhandledRejection');
     });
 
-    it("dispatches to handler and returns 'continue' for choice '1'", async () => {
-        const handler = vi.fn().mockResolvedValue(false);
-        vi.spyOn(commandsModule, 'getHandler').mockReturnValue(handler);
+    // ── Tests ──────────────────────────────────────────────────────────────────
 
-        const result = await mod.dispatchChoice('1', minimalCtx);
+    describe('ShowHelp', () => {
+        it('displays general help when no topic is given', () => {
+            mod.showHelp();
 
-        expect(result).toBe('continue');
-        expect(handler).toHaveBeenCalledWith(minimalCtx);
-    });
-
-    it("dispatches to handler and returns 'continue' for choice '7'", async () => {
-        const handler = vi.fn().mockResolvedValue(false);
-        vi.spyOn(commandsModule, 'getHandler').mockReturnValue(handler);
-
-        const result = await mod.dispatchChoice('7', minimalCtx);
-
-        expect(result).toBe('continue');
-        expect(handler).toHaveBeenCalledWith(minimalCtx);
-    });
-
-    it("shows docs and returns 'continue' for 'd'", async () => {
-        const result = await mod.dispatchChoice('d', minimalCtx);
-
-        expect(result).toBe('continue');
-    });
-
-    it("shows docs and returns 'continue' for 'docs'", async () => {
-        const result = await mod.dispatchChoice('docs', minimalCtx);
-
-        expect(result).toBe('continue');
-    });
-
-    it("returns 'continue' and warns for invalid choice '99'", async () => {
-        const result = await mod.dispatchChoice('99', minimalCtx);
-
-        expect(result).toBe('continue');
-        expect(warn).toHaveBeenCalledWith(expect.stringContaining('inválida'));
-    });
-
-    it('handler returning true triggers continue properly', async () => {
-        const handler = vi.fn().mockResolvedValue(true);
-        vi.spyOn(commandsModule, 'getHandler').mockReturnValue(handler);
-
-        const result = await mod.dispatchChoice('1', minimalCtx);
-
-        expect(result).toBe('continue');
-        expect(handler).toHaveBeenCalledWith(minimalCtx);
-    });
-
-    it("handler that throws CancelError returns 'continue'", async () => {
-        const handler = vi.fn().mockRejectedValue(new CancelError('canceled'));
-        vi.spyOn(commandsModule, 'getHandler').mockReturnValue(handler);
-
-        const result = await mod.dispatchChoice('1', minimalCtx);
-
-        expect(result).toBe('continue');
-    });
-
-    it("catches generic Error from handler and returns 'continue'", async () => {
-        const handler = vi.fn().mockRejectedValue(new Error('generic error'));
-        vi.spyOn(commandsModule, 'getHandler').mockReturnValue(handler);
-
-        const result = await mod.dispatchChoice('1', minimalCtx);
-
-        expect(result).toBe('continue');
-        expect(printError).toHaveBeenCalled();
-    });
-});
-
-describe('ShowDocs', () => {
-    it('generates all docs as HTML and opens browser', async () => {
-        (vi.mocked(fs.readdirSync)).mockReturnValueOnce(['01-test-doc.md', '02-guide.md']);
-        const readFileSpy = vi.spyOn(fs, 'readFileSync').mockReturnValue('# Test Content');
-        await mod.showDocs();
-
-        expect(openModule.openWithFallback).toHaveBeenCalledWith(
-            expect.stringContaining('index.html'),
-            'Documentação',
-            expect.any(Function),
-        );
-
-        readFileSpy.mockRestore();
-    });
-
-    it('handles missing docs directory', async () => {
-        (vi.mocked(fs.readdirSync)).mockImplementationOnce(() => {
-            throw new Error('ENOENT');
+            expect(title).toHaveBeenCalledWith(expect.stringContaining('HELP'));
+            expect(helpLine).toHaveBeenCalledWith(expect.stringContaining('Escolha uma opção'));
         });
-        await mod.showDocs();
 
-        expect(printError).toHaveBeenCalled();
+        it('displays help for a known topic', () => {
+            mod.showHelp('csv');
+
+            expect(title).toHaveBeenCalledWith(expect.stringContaining('csv'));
+            expect(helpLine).toHaveBeenCalledWith(expect.stringContaining('Formato CSV'));
+        });
+
+        it('shows warning for unknown topic', () => {
+            mod.showHelp('nonexistent');
+
+            expect(warn).toHaveBeenCalledWith(expect.stringContaining('não encontrado'));
+        });
+
+        it('searches topics with search prefix', () => {
+            mod.showHelp('search csv');
+
+            expect(title).toHaveBeenCalledWith(expect.stringContaining('csv'));
+            expect(helpLine).toHaveBeenCalledWith(expect.stringContaining('Formato CSV'));
+        });
+
+        it('shows warning when search finds nothing', () => {
+            mod.showHelp('search xyzzy');
+
+            expect(warn).toHaveBeenCalledWith(expect.stringContaining('Nenhum'));
+        });
+
+        it('is case insensitive', () => {
+            mod.showHelp('CSV');
+
+            expect(title).toHaveBeenCalledWith(expect.stringContaining('csv'));
+        });
     });
 
-    it('warns when no matching files found in docs', async () => {
-        (vi.mocked(fs.readdirSync)).mockReturnValueOnce(['readme.txt', 'notes.md']);
-        await mod.showDocs();
+    describe('ResolveAlias', () => {
+        it('maps known aliases to command numbers', () => {
+            expect(mod.resolveAlias('criar')).toBe('1');
+            expect(mod.resolveAlias('versoes')).toBe('2');
+            expect(mod.resolveAlias('fechar')).toBe('7');
+            expect(mod.resolveAlias('sair')).toBe('0');
+        });
 
-        expect(warn).toHaveBeenCalled();
-    });
-});
+        it('is case insensitive', () => {
+            expect(mod.resolveAlias('CRIAR')).toBe('1');
+            expect(mod.resolveAlias('Criar')).toBe('1');
+        });
 
-describe('ShowHelpLoop', () => {
-    beforeEach(() => {
-        vi.mocked(prompt).mockReturnValue('/back');
-    });
+        it('returns original input for unknown alias', () => {
+            expect(mod.resolveAlias('unknown')).toBe('unknown');
+            expect(mod.resolveAlias('42')).toBe('42');
+        });
 
-    afterEach(() => {
-        vi.mocked(prompt).mockReturnValue('0');
-    });
-
-    it('shows help topics then exits on /back', () => {
-        mod.showHelpLoop();
-
-        expect(title).toHaveBeenCalled();
-    });
-
-    it('handles specific topic then exits', () => {
-        vi.mocked(prompt).mockReturnValueOnce('csv').mockReturnValueOnce('/back');
-        mod.showHelpLoop();
-
-        expect(title).toHaveBeenCalled();
+        it('handles empty string', () => {
+            expect(mod.resolveAlias('')).toBe('');
+        });
     });
 
-    it('handles empty input by continuing loop', () => {
-        vi.mocked(prompt).mockReturnValueOnce('').mockReturnValueOnce('/back');
-        mod.showHelpLoop();
+    describe('BuildMenuChoices', () => {
+        const ctx = { git_directory: '/tmp/repo' };
 
-        expect(title).toHaveBeenCalled();
+        it('returns array for main level categories', () => {
+            expect(Array.isArray(mod.buildMenuChoices('main', 'ECSPOL', ctx))).toBeTruthy();
+        });
+
+        it('returns array for sub-menu level', () => {
+            expect(Array.isArray(mod.buildMenuChoices('releases', 'ECSPOL', ctx))).toBeTruthy();
+        });
+
+        it('main level includes category IDs', () => {
+            const choices = mod.buildMenuChoices('main', 'ECSPOL', ctx);
+            const values = choices.filter((c) => c.value).map((c) => c.value);
+
+            expect(values).toContain('reports');
+            expect(values).toContain('releases');
+            expect(values).toContain('bugreport');
+        });
+
+        it('sub-menu level includes command IDs', () => {
+            const choices = mod.buildMenuChoices('releases', 'ECSPOL', ctx);
+            const values = choices.filter((c) => c.value).map((c) => c.value);
+
+            expect(values).toContain('2');
+            expect(values).toContain('8');
+            expect(values).toContain('0');
+        });
+
+        it('includes exit option with value 0 at main level', () => {
+            const choices = mod.buildMenuChoices('main', 'ECSPOL', ctx);
+
+            expect(choices.find((c) => c.value === '0')).toBeDefined();
+        });
+
+        it('sets project name as description for option 9 in config sub-menu', () => {
+            const choices = mod.buildMenuChoices('config', 'MYPROJ', ctx);
+
+            expect(choices.find((c) => c.value === '9')?.description).toContain('MYPROJ');
+        });
+
+        it('sets git dir as description for option 10 in config sub-menu', () => {
+            const choices = mod.buildMenuChoices('config', 'P', { git_directory: '/custom/git' });
+
+            expect(choices.find((c) => c.value === '10')?.description).toContain('/custom/git');
+        });
+
+        it('shows "não configurado" for unset cypress dir in config sub-menu', () => {
+            const choices = mod.buildMenuChoices('config', 'ECSPOL', ctx);
+
+            expect(choices.find((c) => c.value === '14')?.description).toContain('não configurado');
+        });
+
+        it('fallback to main categories when sub-menu not found', () => {
+            const choices = mod.buildMenuChoices('utilities', 'ECSPOL', ctx);
+            const values = choices.filter((c) => c.value).map((c) => c.value);
+
+            expect(values).toContain('0');
+            expect(values).toContain('reports');
+            expect(values).toContain('tests');
+            expect(values).toContain('config');
+        });
+
+        it('tests sub-menu includes template command', () => {
+            const choices = mod.buildMenuChoices('tests', 'ECSPOL', ctx);
+            const values = choices.filter((c) => c.value).map((c) => c.value);
+
+            expect(values).toContain('1');
+            expect(values).toContain('11');
+            expect(values).toContain('13');
+            expect(values).toContain('15');
+            expect(values).toContain('18');
+        });
+
+        it('config sub-menu includes diagnostic command', () => {
+            const choices = mod.buildMenuChoices('config', 'ECSPOL', ctx);
+            const values = choices.filter((c) => c.value).map((c) => c.value);
+
+            expect(values).toContain('9');
+            expect(values).toContain('10');
+            expect(values).toContain('12');
+            expect(values).toContain('14');
+            expect(values).toContain('16');
+        });
     });
 
-    it('shows help on /help command and continues', () => {
-        vi.mocked(prompt).mockReturnValueOnce('/help').mockReturnValueOnce('/back');
-        mod.showHelpLoop();
+    describe('HandleSpecialInput', () => {
+        beforeEach(() => {
+            // showHelpLoop uses prompt() to wait for input; return /back to exit loop immediately
+            vi.mocked(prompt).mockReturnValue('/back');
+        });
 
-        expect(title).toHaveBeenCalled();
+        afterEach(() => {
+            vi.mocked(prompt).mockReturnValue('0');
+        });
+
+        it('returns true and shows help for /help', async () => {
+            expect.hasAssertions();
+
+            await expect(mod.handleSpecialInput('/help')).resolves.toBeTruthy();
+            expect(title).toHaveBeenCalledWith();
+        });
+
+        it('handles /h shorthand', async () => {
+            expect.hasAssertions();
+
+            await expect(mod.handleSpecialInput('/h')).resolves.toBeTruthy();
+            expect(title).toHaveBeenCalledWith();
+        });
+
+        it('returns false for /exit (handled by runMainLoop, not by handleSpecialInput)', async () => {
+            expect.hasAssertions();
+
+            await expect(mod.handleSpecialInput('/exit')).resolves.toBeFalsy();
+        });
+
+        it('returns __exit__ for /back and /menu at main level', async () => {
+            expect.hasAssertions();
+
+            await expect(mod.handleSpecialInput('/back', 'main')).resolves.toBe('__exit__');
+            await expect(mod.handleSpecialInput('/menu', 'main')).resolves.toBe('__exit__');
+        });
+
+        it('returns __back__ for /back and /menu at sub-menu level', async () => {
+            expect.hasAssertions();
+
+            await expect(mod.handleSpecialInput('/back', 'releases')).resolves.toBe('__back__');
+            await expect(mod.handleSpecialInput('/menu', 'releases')).resolves.toBe('__back__');
+        });
+
+        it('handles /docs and /d', async () => {
+            expect.hasAssertions();
+
+            await expect(mod.handleSpecialInput('/docs')).resolves.toBeTruthy();
+            await expect(mod.handleSpecialInput('/d')).resolves.toBeTruthy();
+        });
+
+        it('handles /history correctly', async () => {
+            expect.hasAssertions();
+
+            await expect(mod.handleSpecialInput('/history')).resolves.toBeTruthy();
+            expect(title).toHaveBeenCalledWith(expect.stringContaining('Histórico'));
+        });
+
+        it('handles /home to show splash', async () => {
+            expect.hasAssertions();
+
+            await expect(mod.handleSpecialInput('/home')).resolves.toBeTruthy();
+        });
+
+        it('returns false for regular input', async () => {
+            expect.hasAssertions();
+
+            await expect(mod.handleSpecialInput('1')).resolves.toBeFalsy();
+            await expect(mod.handleSpecialInput('')).resolves.toBeFalsy();
+            await expect(mod.handleSpecialInput('texto livre')).resolves.toBeFalsy();
+        });
     });
 
-    it('shows specific help topic on /help <topic>', () => {
-        vi.mocked(prompt).mockReturnValueOnce('/help csv').mockReturnValueOnce('/back');
-        mod.showHelpLoop();
+    describe('ConfigHint', () => {
+        const ctx = { git_directory: '/my/git' };
 
-        expect(helpLine).toHaveBeenCalled();
+        it('returns git directory for gitDir key', () => {
+            expect(mod._configHint('gitDir', ctx)).toBe('(atual: /my/git)');
+        });
+
+        it('returns "não configurado" when state has no cypress path', () => {
+            vi.mocked(loadTypedState).mockReturnValue({});
+
+            expect(mod._configHint('cypressDir', ctx)).toBe('(atual: não configurado)');
+        });
+
+        it('reads cypress path from state', () => {
+            vi.mocked(loadTypedState).mockReturnValue({ lastCypressPath: '/cy/path' });
+
+            expect(mod._configHint('cypressDir', ctx)).toBe('(atual: /cy/path)');
+        });
+
+        it('returns empty string for unknown key', () => {
+            expect(mod._configHint('unknown', ctx)).toBe('');
+        });
     });
 
-    it('shows multiple matching topics when input matches several', () => {
-        vi.mocked(prompt).mockReturnValueOnce('a').mockReturnValueOnce('/back');
-        mod.showHelpLoop();
+    describe('Module integration', () => {
+        it('createValidateEnv was called with all required env vars', () => {
+            const args = createValidateEnvCall as Array<{ key: string; label: string; example: string }>;
 
-        expect(title).toHaveBeenCalled();
+            expect(args).toBeDefined();
+
+            const keys = args.map((a) => a.key);
+
+            expect(keys).toContain('JIRA_BASE_URL');
+            expect(keys).toContain('JIRA_PERSONAL_TOKEN');
+            expect(keys).toContain('XRAY_BASE_URL');
+        });
+
+        it('createValidateEnv configs have key, label, and example', () => {
+            expect.hasAssertions();
+
+            const args = createValidateEnvCall as Array<{ key: string; label: string; example: string }>;
+
+            expect(args).toBeDefined();
+
+            for (const cfg of args) {
+                expect(cfg).toHaveProperty('key');
+                expect(cfg).toHaveProperty('label');
+                expect(cfg).toHaveProperty('example');
+            }
+        });
+
+        it('getStatePath was called during initialization', () => {
+            expect(getStatePathCalled).toBeTruthy();
+        });
     });
 
-    it('warns when topic is not found', () => {
-        vi.mocked(prompt).mockReturnValueOnce('nonexistent_topic_xyz').mockReturnValueOnce('/back');
-        mod.showHelpLoop();
-
-        expect(warn).toHaveBeenCalledWith(expect.stringContaining('não encontrado'));
-    });
-});
-
-describe('_IsJiraConfigured', () => {
-    it('returns false with default mock config (empty values)', () => {
-        expect(mod._isJiraConfigured()).toBeFalsy();
-    });
-});
-
-describe('ShowGapBadge', () => {
-    it('resolves without error when config has placeholder values (skips API)', async () => {
-        await expect(mod.showGapBadge({}, 'TESTPROJ')).resolves.toBeUndefined();
-    });
-});
-
-describe('Module-level main error handler', () => {
-    it('module exports main function', () => {
-        expect(typeof mod.main).toBe('function');
-    });
-});
-
-describe('DispatchAndHandleResult', () => {
-    const minimalCtx = {
-        jiraResource: {},
-        jiraResourceXray: {},
-        linkManager: {},
-        linkManagerXray: {},
-        csvResource: {},
-        ctx: { project_name: 'test', git_directory: '/tmp', sessionCounters: [], results: [] },
-        pushHistory: vi.fn(),
-        printSessionSummary: vi.fn(),
-        base_url: '',
-        sessionLog: '',
-    };
-
-    beforeEach(() => {
-        vi.spyOn(commandsModule, 'getHandler').mockReturnValue(vi.fn().mockResolvedValue(false));
-    });
-
-    it('calls prompt when autoConfirm off with long op and error results', async () => {
-        const ctxWithErrors = {
-            ...minimalCtx,
-            ctx: { ...minimalCtx.ctx, results: [{ status: 'error' }] },
+    describe('DispatchChoice', () => {
+        const minimalCtx = {
+            jiraResource: {},
+            jiraResourceXray: {},
+            linkManager: {},
+            linkManagerXray: {},
+            csvResource: {},
+            ctx: { project_name: 'test', git_directory: '/tmp', sessionCounters: [], results: [] },
+            pushHistory: vi.fn(),
+            printSessionSummary: vi.fn(),
+            base_url: '',
+            sessionLog: '',
         };
-        const result = await mod.dispatchAndHandleResult('1', ctxWithErrors, ctxWithErrors.ctx);
 
-        expect(result).toBe('continue');
-        expect(prompt).toHaveBeenCalledWith(expect.stringContaining('Enter'));
+        beforeEach(() => {
+            vi.spyOn(commandsModule, 'getHandler').mockReturnValue(null);
+        });
+
+        it("returns 'continue' for choice '0' (handled by getAndResolveChoice now)", async () => {
+            expect.hasAssertions();
+
+            const result = await mod.dispatchChoice('0', minimalCtx);
+
+            expect(result).toBe('continue');
+            expect(warn).toHaveBeenCalledWith(expect.stringContaining('inválida'));
+        });
+
+        it("dispatches to handler and returns 'continue' for choice '1'", async () => {
+            expect.hasAssertions();
+
+            const handler = vi.fn().mockResolvedValue(false);
+            vi.spyOn(commandsModule, 'getHandler').mockReturnValue(handler);
+
+            const result = await mod.dispatchChoice('1', minimalCtx);
+
+            expect(result).toBe('continue');
+            expect(handler).toHaveBeenCalledWith(minimalCtx);
+        });
+
+        it("dispatches to handler and returns 'continue' for choice '7'", async () => {
+            expect.hasAssertions();
+
+            const handler = vi.fn().mockResolvedValue(false);
+            vi.spyOn(commandsModule, 'getHandler').mockReturnValue(handler);
+
+            const result = await mod.dispatchChoice('7', minimalCtx);
+
+            expect(result).toBe('continue');
+            expect(handler).toHaveBeenCalledWith(minimalCtx);
+        });
+
+        it("shows docs and returns 'continue' for 'd'", async () => {
+            expect.hasAssertions();
+
+            const result = await mod.dispatchChoice('d', minimalCtx);
+
+            expect(result).toBe('continue');
+        });
+
+        it("shows docs and returns 'continue' for 'docs'", async () => {
+            expect.hasAssertions();
+
+            const result = await mod.dispatchChoice('docs', minimalCtx);
+
+            expect(result).toBe('continue');
+        });
+
+        it("returns 'continue' and warns for invalid choice '99'", async () => {
+            expect.hasAssertions();
+
+            const result = await mod.dispatchChoice('99', minimalCtx);
+
+            expect(result).toBe('continue');
+            expect(warn).toHaveBeenCalledWith(expect.stringContaining('inválida'));
+        });
+
+        it('handler returning true triggers continue properly', async () => {
+            expect.hasAssertions();
+
+            const handler = vi.fn().mockResolvedValue(true);
+            vi.spyOn(commandsModule, 'getHandler').mockReturnValue(handler);
+
+            const result = await mod.dispatchChoice('1', minimalCtx);
+
+            expect(result).toBe('continue');
+            expect(handler).toHaveBeenCalledWith(minimalCtx);
+        });
+
+        it("handler that throws CancelError returns 'continue'", async () => {
+            expect.hasAssertions();
+
+            const handler = vi.fn().mockRejectedValue(new CancelError('canceled'));
+            vi.spyOn(commandsModule, 'getHandler').mockReturnValue(handler);
+
+            const result = await mod.dispatchChoice('1', minimalCtx);
+
+            expect(result).toBe('continue');
+        });
+
+        it("catches generic Error from handler and returns 'continue'", async () => {
+            expect.hasAssertions();
+
+            const handler = vi.fn().mockRejectedValue(new Error('generic error'));
+            vi.spyOn(commandsModule, 'getHandler').mockReturnValue(handler);
+
+            const result = await mod.dispatchChoice('1', minimalCtx);
+
+            expect(result).toBe('continue');
+            expect(printError).toHaveBeenCalledWith();
+        });
     });
 
-    it('does not prompt for autoConfirm off with choice 0', async () => {
-        const ctxWithErrors = {
-            ...minimalCtx,
-            ctx: { ...minimalCtx.ctx, results: [{ status: 'error' }] },
+    describe('ShowDocs', () => {
+        it('generates all docs as HTML and opens browser', async () => {
+            expect.hasAssertions();
+
+            vi.mocked(fs.readdirSync).mockReturnValueOnce(['01-test-doc.md', '02-guide.md'] as never);
+            const readFileSpy = vi.spyOn(fs, 'readFileSync').mockReturnValue('# Test Content');
+            await mod.showDocs();
+
+            expect(openModule.openWithFallback).toHaveBeenCalledWith(
+                expect.stringContaining('index.html'),
+                'Documentação',
+                expect.any(Function),
+            );
+
+            readFileSpy.mockRestore();
+        });
+
+        it('handles missing docs directory', async () => {
+            expect.hasAssertions();
+
+            vi.mocked(fs.readdirSync).mockImplementationOnce(() => {
+                throw new Error('ENOENT');
+            });
+            await mod.showDocs();
+
+            expect(printError).toHaveBeenCalledWith();
+        });
+
+        it('warns when no matching files found in docs', async () => {
+            expect.hasAssertions();
+
+            vi.mocked(fs.readdirSync).mockReturnValueOnce(['readme.txt', 'notes.md'] as never);
+            await mod.showDocs();
+
+            expect(warn).toHaveBeenCalledWith();
+        });
+    });
+
+    describe('ShowHelpLoop', () => {
+        beforeEach(() => {
+            vi.mocked(prompt).mockReturnValue('/back');
+        });
+
+        afterEach(() => {
+            vi.mocked(prompt).mockReturnValue('0');
+        });
+
+        it('shows help topics then exits on /back', () => {
+            mod.showHelpLoop();
+
+            expect(title).toHaveBeenCalledWith();
+        });
+
+        it('handles specific topic then exits', () => {
+            vi.mocked(prompt).mockReturnValueOnce('csv').mockReturnValueOnce('/back');
+            mod.showHelpLoop();
+
+            expect(title).toHaveBeenCalledWith();
+        });
+
+        it('handles empty input by continuing loop', () => {
+            vi.mocked(prompt).mockReturnValueOnce('').mockReturnValueOnce('/back');
+            mod.showHelpLoop();
+
+            expect(title).toHaveBeenCalledWith();
+        });
+
+        it('shows help on /help command and continues', () => {
+            vi.mocked(prompt).mockReturnValueOnce('/help').mockReturnValueOnce('/back');
+            mod.showHelpLoop();
+
+            expect(title).toHaveBeenCalledWith();
+        });
+
+        it('shows specific help topic on /help <topic>', () => {
+            vi.mocked(prompt).mockReturnValueOnce('/help csv').mockReturnValueOnce('/back');
+            mod.showHelpLoop();
+
+            expect(helpLine).toHaveBeenCalledWith();
+        });
+
+        it('shows multiple matching topics when input matches several', () => {
+            vi.mocked(prompt).mockReturnValueOnce('a').mockReturnValueOnce('/back');
+            mod.showHelpLoop();
+
+            expect(title).toHaveBeenCalledWith();
+        });
+
+        it('warns when topic is not found', () => {
+            vi.mocked(prompt).mockReturnValueOnce('nonexistent_topic_xyz').mockReturnValueOnce('/back');
+            mod.showHelpLoop();
+
+            expect(warn).toHaveBeenCalledWith(expect.stringContaining('não encontrado'));
+        });
+    });
+
+    describe('IsJiraConfigured', () => {
+        it('returns false with default mock config (empty values)', () => {
+            expect(mod._isJiraConfigured()).toBeFalsy();
+        });
+    });
+
+    describe('ShowGapBadge', () => {
+        it('resolves without error when config has placeholder values (skips API)', async () => {
+            expect.hasAssertions();
+
+            await expect(mod.showGapBadge({}, 'TESTPROJ')).resolves.toBeUndefined();
+        });
+    });
+
+    describe('Module-level main error handler', () => {
+        it('module exports main function', () => {
+            expect(typeof mod.main).toBe('function');
+        });
+    });
+
+    describe('DispatchAndHandleResult', () => {
+        const minimalCtx = {
+            jiraResource: {},
+            jiraResourceXray: {},
+            linkManager: {},
+            linkManagerXray: {},
+            csvResource: {},
+            ctx: { project_name: 'test', git_directory: '/tmp', sessionCounters: [], results: [] },
+            pushHistory: vi.fn(),
+            printSessionSummary: vi.fn(),
+            base_url: '',
+            sessionLog: '',
         };
-        vi.mocked(prompt).mockClear();
-        const result = await mod.dispatchAndHandleResult('0', ctxWithErrors, ctxWithErrors.ctx);
 
-        expect(result).toBe('continue');
-        expect(prompt).not.toHaveBeenCalled();
+        beforeEach(() => {
+            vi.spyOn(commandsModule, 'getHandler').mockReturnValue(vi.fn().mockResolvedValue(false));
+        });
+
+        it('calls prompt when autoConfirm off with long op and error results', async () => {
+            expect.hasAssertions();
+
+            const ctxWithErrors = {
+                ...minimalCtx,
+                ctx: { ...minimalCtx.ctx, results: [{ status: 'error' }] },
+            };
+            const result = await mod.dispatchAndHandleResult('1', ctxWithErrors, ctxWithErrors.ctx);
+
+            expect(result).toBe('continue');
+            expect(prompt).toHaveBeenCalledWith(expect.stringContaining('Enter'));
+        });
+
+        it('does not prompt for autoConfirm off with choice 0', async () => {
+            expect.hasAssertions();
+
+            const ctxWithErrors = {
+                ...minimalCtx,
+                ctx: { ...minimalCtx.ctx, results: [{ status: 'error' }] },
+            };
+            vi.mocked(prompt).mockClear();
+            const result = await mod.dispatchAndHandleResult('0', ctxWithErrors, ctxWithErrors.ctx);
+
+            expect(result).toBe('continue');
+            expect(prompt).not.toHaveBeenCalled();
+        });
+
+        it('does not prompt for non-long-op choice', async () => {
+            expect.hasAssertions();
+
+            const ctxWithErrors = {
+                ...minimalCtx,
+                ctx: { ...minimalCtx.ctx, results: [{ status: 'error' }] },
+            };
+            vi.mocked(prompt).mockClear();
+            const result = await mod.dispatchAndHandleResult('2', ctxWithErrors, ctxWithErrors.ctx);
+
+            expect(result).toBe('continue');
+            expect(prompt).not.toHaveBeenCalled();
+        });
     });
 
-    it('does not prompt for non-long-op choice', async () => {
-        const ctxWithErrors = {
-            ...minimalCtx,
-            ctx: { ...minimalCtx.ctx, results: [{ status: 'error' }] },
-        };
-        vi.mocked(prompt).mockClear();
-        const result = await mod.dispatchAndHandleResult('2', ctxWithErrors, ctxWithErrors.ctx);
+    describe('Module-level debug logging', () => {
+        it('mask hides middle of token', () => {
+            expect(mask('secret1234567')).toBe('secr****');
+        });
 
-        expect(result).toBe('continue');
-        expect(prompt).not.toHaveBeenCalled();
-    });
-});
-
-describe('Module-level debug logging', () => {
-    it('mask hides middle of token', () => {
-        expect(mask('secret1234567')).toBe('secr****');
+        it('mask returns empty for falsy input', () => {
+            expect(mask('')).toBe('');
+            expect(mask('')).toBe('');
+        });
     });
 
-    it('mask returns empty for falsy input', () => {
-        expect(mask('')).toBe('');
-        expect(mask('')).toBe('');
+    describe('IsJiraConfigured with config', () => {
+        it('returns true when jiraBaseUrl and jiraPersonalToken have real values', async () => {
+            expect.hasAssertions();
+
+            const configMod = await import('../shared/config.js');
+            vi.spyOn(configMod.default, 'get').mockReturnValue('https://jira.example.com');
+
+            expect(mod._isJiraConfigured()).toBeTruthy();
+        });
+
+        it('returns false when jiraBaseUrl contains placeholder', async () => {
+            expect.hasAssertions();
+
+            const configMod = await import('../shared/config.js');
+            vi.spyOn(configMod.default, 'get').mockReturnValue('seu-jira-server');
+
+            expect(mod._isJiraConfigured()).toBeFalsy();
+        });
+
+        it('returns false when jiraPersonalToken is placeholder', async () => {
+            expect.hasAssertions();
+
+            const configMod = await import('../shared/config.js');
+            vi.spyOn(configMod.default, 'get')
+                .mockReturnValueOnce('https://jira.example.com')
+                .mockReturnValueOnce('seu-token-aqui');
+
+            expect(mod._isJiraConfigured()).toBeFalsy();
+        });
     });
-});
 
-describe('_IsJiraConfigured with config', () => {
-    it('returns true when jiraBaseUrl and jiraPersonalToken have real values', async () => {
-        const configMod = await import('../shared/config.js');
-        vi.spyOn(configMod.default, 'get').mockReturnValue('https://jira.example.com');
+    describe('ShowGapBadge with config', () => {
+        it('caches and displays badge after first call', async () => {
+            expect.hasAssertions();
 
-        expect(mod._isJiraConfigured()).toBeTruthy();
-    });
+            process.env['CI'] = 'false';
+            const configMod = await import('../shared/config.js');
+            vi.spyOn(configMod.default, 'get').mockReturnValue('https://jira.example.com');
 
-    it('returns false when jiraBaseUrl contains placeholder', async () => {
-        const configMod = await import('../shared/config.js');
-        vi.spyOn(configMod.default, 'get').mockReturnValue('seu-jira-server');
+            const mockJiraResource = { searchJiraIssues: vi.fn().mockResolvedValue({ total: 42 }) };
+            await mod.showGapBadge(mockJiraResource, 'TESTPROJ');
 
-        expect(mod._isJiraConfigured()).toBeFalsy();
-    });
-
-    it('returns false when jiraPersonalToken is placeholder', async () => {
-        const configMod = await import('../shared/config.js');
-        vi.spyOn(configMod.default, 'get')
-            .mockReturnValueOnce('https://jira.example.com')
-            .mockReturnValueOnce('seu-token-aqui');
-
-        expect(mod._isJiraConfigured()).toBeFalsy();
-    });
-});
-
-describe('ShowGapBadge with config', () => {
-    it('caches and displays badge after first call', async () => {
-        process.env['CI'] = 'false';
-        const configMod = await import('../shared/config.js');
-        vi.spyOn(configMod.default, 'get').mockReturnValue('https://jira.example.com');
-
-        const mockJiraResource = { searchJiraIssues: vi.fn().mockResolvedValue({ total: 42 }) };
-        await mod.showGapBadge(mockJiraResource, 'TESTPROJ');
-
-        expect(mockJiraResource.searchJiraIssues).toHaveBeenCalled();
+            expect(mockJiraResource.searchJiraIssues).toHaveBeenCalledWith();
+        });
     });
 });

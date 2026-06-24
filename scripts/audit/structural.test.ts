@@ -1,5 +1,9 @@
 import { execFileSync } from 'child_process';
 
+vi.mock('../../shared/logger.js', () => ({
+    rootLogger: { warn: vi.fn(), info: vi.fn(), debug: vi.fn() },
+}));
+
 vi.mock('child_process', () => ({
     execFileSync: vi.fn(),
 }));
@@ -14,13 +18,24 @@ interface Finding {
     recommendation?: string;
 }
 
-beforeEach(() => {
-    vi.clearAllMocks();
-});
+function assertFindingFields(f: Finding): void {
+    expect(f).toHaveProperty('pattern');
+    expect(f).toHaveProperty('severity');
+    expect(f).toHaveProperty('count');
+    expect(f).toHaveProperty('description');
+    expect(f).toHaveProperty('recommendation');
+}
 
 describe('Structural.ts — module loads and runs', () => {
+    beforeEach(() => {
+        vi.clearAllMocks();
+    });
+
     it('loads without error when rg succeeds and outputs 6 findings', async () => {
+        expect.hasAssertions();
+
         const spy = vi.spyOn(console, 'log').mockImplementation(() => {});
+
         mockExecFileSync.mockReturnValue(Buffer.from(''));
         await import('./structural.js');
         const output = String(spy.mock.calls[0]?.[0] ?? '[]');
@@ -37,16 +52,15 @@ describe('Structural.ts — module loads and runs', () => {
         expect(d5.pattern).toBe('Git provider method post-processing');
 
         for (const f of data) {
-            expect(f).toHaveProperty('pattern');
-            expect(f).toHaveProperty('severity');
-            expect(f).toHaveProperty('count');
-            expect(f).toHaveProperty('description');
-            expect(f).toHaveProperty('recommendation');
+            assertFindingFields(f);
         }
+
         spy.mockRestore();
     });
 
     it('loads without error when rg fails', async () => {
+        expect.hasAssertions();
+
         mockExecFileSync.mockImplementation(() => {
             throw new Error('rg missing');
         });
