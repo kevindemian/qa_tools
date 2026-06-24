@@ -964,7 +964,7 @@ describe('LlmPrompt', () => {
             expect(mockFetch).toHaveBeenCalledTimes(3);
         });
 
-        it('retries with schema hints when first response is invalid', async () => {
+        it('retries with schema hints when first response is invalid (llm-client)', async () => {
             const invalidBody = JSON.stringify({ choices: [{ message: { content: '{}' } }] });
             const validBody = JSON.stringify({ choices: [{ message: { content: '{"ok": true}' } }] });
             mockFetch
@@ -983,7 +983,7 @@ describe('LlmPrompt', () => {
             expect(mockFetch).toHaveBeenCalledTimes(2);
         });
 
-        it('throws when schema validation fails even after retry', async () => {
+        it('throws when schema validation fails even after retry (llm-client)', async () => {
             const body = JSON.stringify({ choices: [{ message: { content: '{}' } }] });
             mockFetch.mockResolvedValueOnce(mockOkResponse(body)).mockResolvedValueOnce(mockOkResponse(body));
 
@@ -999,7 +999,7 @@ describe('LlmPrompt', () => {
             ).rejects.toThrow('LLM response failed schema validation after progressive retry');
         });
 
-        it('returns validated data on cache hit with valid schema', async () => {
+        it('returns validated data on cache hit with valid schema (llm-client)', async () => {
             const body = JSON.stringify({ choices: [{ message: { content: '{"ok": true}' } }] });
             mockFetch.mockResolvedValueOnce(mockOkResponse(body));
             await llmPrompt({
@@ -1023,7 +1023,7 @@ describe('LlmPrompt', () => {
             expect(mockFetch).toHaveBeenCalledTimes(1);
         });
 
-        it('re-requests on cache hit when cached value fails schema validation', async () => {
+        it('re-requests on cache hit when cached value fails schema validation (llm-client)', async () => {
             const validBody = JSON.stringify({ choices: [{ message: { content: '{"ok": true}' } }] });
             mockFetch.mockResolvedValueOnce(mockOkResponse(validBody));
             await llmPrompt({
