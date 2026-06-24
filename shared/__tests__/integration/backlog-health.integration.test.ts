@@ -72,7 +72,8 @@ describe('Integration: Backlog Health (FT-28)', () => {
     });
 
     describe('FT-28a: analyze and render with flagged issues', () => {
-        it('produces dashboard with issue sections for each category', async () => {
+        it('produces dashboard with issue sections for each category', async () => {expect.hasAssertions();
+
             const { analyzeBacklogHealth, generateBacklogHealthHtml } = await import('../../backlog-health.js');
             const result = analyzeBacklogHealth(makeIssues());
             const html = generateBacklogHealthHtml(result);
@@ -90,7 +91,8 @@ describe('Integration: Backlog Health (FT-28)', () => {
     });
 
     describe('FT-28b: empty backlog', () => {
-        it('shows perfect score and no flagged sections', async () => {
+        it('shows perfect score and no flagged sections', async () => {expect.hasAssertions();
+
             const { analyzeBacklogHealth, generateBacklogHealthHtml } = await import('../../backlog-health.js');
             const result = analyzeBacklogHealth([]);
             const html = generateBacklogHealthHtml(result);
@@ -104,7 +106,8 @@ describe('Integration: Backlog Health (FT-28)', () => {
     });
 
     describe('FT-28c: maxIssues option limits scope', () => {
-        it('respects maxIssues when analyzing', async () => {
+        it('respects maxIssues when analyzing', async () => {expect.hasAssertions();
+
             const { analyzeBacklogHealth } = await import('../../backlog-health.js');
             const result = analyzeBacklogHealth(makeIssues(), { maxIssues: 2 });
 

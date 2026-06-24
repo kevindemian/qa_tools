@@ -112,7 +112,8 @@ function commonBeforeEach(): void {
 describe('OpenWithOsOrFallback', () => {
     beforeEach(commonBeforeEach);
 
-    it('calls fallback on spawn error', async () => {
+    it('calls fallback on spawn error', async () => {expect.hasAssertions();
+
         const child = makeMockChild();
         mockSpawn.mockReturnValue(child);
         const fallback = vi.fn();
@@ -124,7 +125,8 @@ describe('OpenWithOsOrFallback', () => {
         expect(fallback).toHaveBeenCalledTimes(1);
     });
 
-    it('calls fallback on non-zero exit code', async () => {
+    it('calls fallback on non-zero exit code', async () => {expect.hasAssertions();
+
         const child = makeMockChild();
         mockSpawn.mockReturnValue(child);
         const fallback = vi.fn();
@@ -136,7 +138,8 @@ describe('OpenWithOsOrFallback', () => {
         expect(fallback).toHaveBeenCalledTimes(1);
     });
 
-    it('returns true on successful open (exit 0)', async () => {
+    it('returns true on successful open (exit 0)', async () => {expect.hasAssertions();
+
         const child = makeMockChild();
         mockSpawn.mockReturnValue(child);
         const fallback = vi.fn();
@@ -148,7 +151,8 @@ describe('OpenWithOsOrFallback', () => {
         expect(fallback).not.toHaveBeenCalled();
     });
 
-    it('calls fallback when no handler is attached', async () => {
+    it('calls fallback when no handler is attached', async () => {expect.hasAssertions();
+
         const child = makeMockChild();
         mockSpawn.mockReturnValue(child);
         const fallback = vi.fn();
@@ -160,7 +164,8 @@ describe('OpenWithOsOrFallback', () => {
         expect(fallback).toHaveBeenCalledTimes(1);
     });
 
-    it('calls fallback when getOsOpenCommand returns null', async () => {
+    it('calls fallback when getOsOpenCommand returns null', async () => {expect.hasAssertions();
+
         mockPlatform.mockReturnValue('aix');
         mockReadFileSync.mockReturnValue('Linux version 5.15.0-generic');
         const fallback = vi.fn();
@@ -444,7 +449,8 @@ describe('OpenWithFallback', () => {
 
     beforeEach(commonBeforeEach);
 
-    it('logs browser success on exit 0', async () => {
+    it('logs browser success on exit 0', async () => {expect.hasAssertions();
+
         const logInfo = vi.fn();
         makeAutoSpawn([0]);
         await openWithFallback('/tmp/report.html', 'Relatório', logInfo);
@@ -452,7 +458,8 @@ describe('OpenWithFallback', () => {
         expect(logInfo).toHaveBeenCalledWith('Relatório aberto no navegador');
     });
 
-    it('opens directory when browser fails', async () => {
+    it('opens directory when browser fails', async () => {expect.hasAssertions();
+
         const logInfo = vi.fn();
         makeAutoSpawn([1, 0]);
         await openWithFallback('/tmp/report.html', 'Relatório', logInfo);
@@ -462,7 +469,8 @@ describe('OpenWithFallback', () => {
         );
     });
 
-    it('logs file path when both browser and directory fail', async () => {
+    it('logs file path when both browser and directory fail', async () => {expect.hasAssertions();
+
         const logInfo = vi.fn();
         makeAutoSpawn([1, 1]);
         await openWithFallback('/tmp/report.html', 'Relatório', logInfo);

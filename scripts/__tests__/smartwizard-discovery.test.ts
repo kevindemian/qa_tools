@@ -33,7 +33,8 @@ describe('Smartwizard-discovery', () => {
         vi.clearAllMocks();
     });
 
-    it('module loads without error', async () => {
+    it('module loads without error', async () => {expect.hasAssertions();
+
         // Prevent process.exit from being called during module import
         vi.spyOn(process, 'exit').mockImplementation((() => {
             // no-op

@@ -84,7 +84,8 @@ describe('Case15 — create tests from JSON', () => {
         expect(typeof case15.handler).toBe('function');
     });
 
-    it('warns and returns when no project is selected', async () => {
+    it('warns and returns when no project is selected', async () => {expect.hasAssertions();
+
         const ctx = makeMockCommandContext();
         ctx.ctx.project_name = '';
         const result = await case15.handler(ctx);
@@ -93,7 +94,8 @@ describe('Case15 — create tests from JSON', () => {
         expect(vi.mocked(resolveSessionContext)).not.toHaveBeenCalled();
     });
 
-    it('uses resolveTestDataSource when SHA is available and data is found', async () => {
+    it('uses resolveTestDataSource when SHA is available and data is found', async () => {expect.hasAssertions();
+
         const store = mockStore();
         vi.mocked(resolveSessionContext).mockReturnValue({
             sha: 'abc123def456',
@@ -120,10 +122,11 @@ describe('Case15 — create tests from JSON', () => {
             'main',
             store,
         );
-        expect(vi.spyOn(createTests, 'createTestsFromJson')).toHaveBeenCalled();
+        expect(vi.spyOn(createTests, 'createTestsFromJson')).toHaveBeenCalledWith();
     });
 
-    it('falls back to CI download when cache misses', async () => {
+    it('falls back to CI download when cache misses', async () => {expect.hasAssertions();
+
         vi.mocked(resolveTestDataSource).mockResolvedValue({
             result: {
                 tests: [{ title: 'CI Test', state: 'passed', duration: 50 }],
@@ -135,10 +138,11 @@ describe('Case15 — create tests from JSON', () => {
         const result = await case15.handler(mockContext);
 
         expect(typeof result === 'boolean' || result === undefined).toBeTruthy();
-        expect(vi.spyOn(createTests, 'createTestsFromJson')).toHaveBeenCalled();
+        expect(vi.spyOn(createTests, 'createTestsFromJson')).toHaveBeenCalledWith();
     });
 
-    it('falls back to manual path when resolveTestDataSource returns null', async () => {
+    it('falls back to manual path when resolveTestDataSource returns null', async () => {expect.hasAssertions();
+
         vi.mocked(resolveTestDataSource).mockResolvedValue(null);
 
         const { ask } = await import('../../shared/prompt.js');
@@ -147,10 +151,11 @@ describe('Case15 — create tests from JSON', () => {
         const result = await case15.handler(mockContext);
 
         expect(typeof result === 'boolean' || result === undefined).toBeTruthy();
-        expect(vi.spyOn(createTests, 'createTestsFromJson')).toHaveBeenCalled();
+        expect(vi.spyOn(createTests, 'createTestsFromJson')).toHaveBeenCalledWith();
     });
 
-    it('cancels when manual path is empty', async () => {
+    it('cancels when manual path is empty', async () => {expect.hasAssertions();
+
         vi.mocked(resolveTestDataSource).mockResolvedValue(null);
         const { ask, warn } = await import('../../shared/prompt.js');
         vi.mocked(ask).mockResolvedValue('');
@@ -159,10 +164,11 @@ describe('Case15 — create tests from JSON', () => {
 
         expect(result).toBeUndefined();
         expect(vi.spyOn(createTests, 'createTestsFromJson')).not.toHaveBeenCalled();
-        expect(warn).toHaveBeenCalled();
+        expect(warn).toHaveBeenCalledWith();
     });
 
-    it('does not call resolveTestDataSource when SHA is null', async () => {
+    it('does not call resolveTestDataSource when SHA is null', async () => {expect.hasAssertions();
+
         vi.mocked(resolveSessionContext).mockReturnValue({
             sha: null,
             branch: null,
@@ -176,10 +182,11 @@ describe('Case15 — create tests from JSON', () => {
 
         expect(typeof result === 'boolean' || result === undefined).toBeTruthy();
         expect(vi.mocked(resolveTestDataSource)).not.toHaveBeenCalled();
-        expect(vi.spyOn(createTests, 'createTestsFromJson')).toHaveBeenCalled();
+        expect(vi.spyOn(createTests, 'createTestsFromJson')).toHaveBeenCalledWith();
     });
 
-    it('displays results after successful import', async () => {
+    it('displays results after successful import', async () => {expect.hasAssertions();
+
         vi.mocked(resolveTestDataSource).mockResolvedValue({
             result: {
                 tests: [{ title: 'T1', state: 'passed', duration: 1 }],
@@ -190,7 +197,7 @@ describe('Case15 — create tests from JSON', () => {
 
         await case15.handler(mockContext);
 
-        expect(offerTestExecutionAssociation).toHaveBeenCalled();
-        expect(showResults).toHaveBeenCalled();
+        expect(offerTestExecutionAssociation).toHaveBeenCalledWith();
+        expect(showResults).toHaveBeenCalledWith();
     });
 });

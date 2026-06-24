@@ -20,7 +20,8 @@ describe('Case09 — switch project', () => {
         expect(typeof case09.handler).toBe('function');
     });
 
-    it('executes without error with basic context', async () => {
+    it('executes without error with basic context', async () => {expect.hasAssertions();
+
         const result = await case09.handler(mockContext);
 
         expect(result === undefined || typeof result === 'boolean').toBeTruthy();

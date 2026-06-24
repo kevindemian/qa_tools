@@ -80,7 +80,8 @@ const MetricsStoreArb: fc.Arbitrary<MetricsStore> = fc
  * ────────────────────────────────────────────────────────────── */
 
 describe('CalculateHealthScore — property-based', () => {
-    it('overall always in [0, 100]', () => {
+    it('overall always in [0, 100]', () => {expect.hasAssertions();
+
         fc.assert(
             fc.property(MetricsStoreArb, (store) => {
                 const result = calculateHealthScore(store);
@@ -92,7 +93,8 @@ describe('CalculateHealthScore — property-based', () => {
         );
     });
 
-    it('grade matches boundaries: excellent >= 90, good >= 80, needs_attention >= 70, poor >= 60, critical < 60', () => {
+    it('grade matches boundaries: excellent >= 90, good >= 80, needs_attention >= 70, poor >= 60, critical < 60', () => {expect.hasAssertions();
+
         fc.assert(
             fc.property(MetricsStoreArb, (store) => {
                 const result = calculateHealthScore(store);
@@ -124,7 +126,8 @@ describe('CalculateHealthScore — property-based', () => {
         );
     });
 
-    it('all 5 dimensions are present', () => {
+    it('all 5 dimensions are present', () => {expect.hasAssertions();
+
         fc.assert(
             fc.property(MetricsStoreArb, (store) => {
                 const result = calculateHealthScore(store);
@@ -140,7 +143,8 @@ describe('CalculateHealthScore — property-based', () => {
         );
     });
 
-    it('each dimension score is in [0, 100]', () => {
+    it('each dimension score is in [0, 100]', () => {expect.hasAssertions();
+
         fc.assert(
             fc.property(MetricsStoreArb, (store) => {
                 const result = calculateHealthScore(store);
@@ -161,7 +165,8 @@ describe('CalculateHealthScore — property-based', () => {
         );
     });
 
-    it('provenance has 5 entries with source, standard, and formula', () => {
+    it('provenance has 5 entries with source, standard, and formula', () => {expect.hasAssertions();
+
         fc.assert(
             fc.property(MetricsStoreArb, (store) => {
                 const result = calculateHealthScore(store);
@@ -189,7 +194,8 @@ describe('CalculateHealthScore — property-based', () => {
         expect(result.runCount).toBe(0);
     });
 
-    it('provenance tracks overridden thresholds correctly', () => {
+    it('provenance tracks overridden thresholds correctly', () => {expect.hasAssertions();
+
         fc.assert(
             fc.property(MetricsStoreArb, PercentageArb, fc.boolean(), (store, passRateTarget, useOverride) => {
                 const options = useOverride ? { passRateTarget: Math.round(passRateTarget) } : {};
@@ -206,7 +212,8 @@ describe('CalculateHealthScore — property-based', () => {
         );
     });
 
-    it('custom grade boundaries change grade accordingly', () => {
+    it('custom grade boundaries change grade accordingly', () => {expect.hasAssertions();
+
         fc.assert(
             fc.property(
                 MetricsStoreArb,

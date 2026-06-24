@@ -122,7 +122,8 @@ beforeAll(() => {
 });
 
 describe('Case17 — HTML report generator', () => {
-    it('generates report successfully', async () => {
+    it('generates report successfully', async () => {expect.hasAssertions();
+
         const prompt = vi.mocked(promptModule);
         const parser = vi.mocked(parserModule);
         const reportGen = vi.mocked(reportGenModule);
@@ -144,11 +145,12 @@ describe('Case17 — HTML report generator', () => {
         const mod = case17Module;
         await mod.handler(baseContext);
 
-        expect(mockGetJira).toHaveBeenCalled();
+        expect(mockGetJira).toHaveBeenCalledWith();
         expect(openModule.openWithFallback).toHaveBeenCalledWith(expect.any(String), 'Relatório', prompt.info);
     });
 
-    it('computes diff against last run and logs info', async () => {
+    it('computes diff against last run and logs info', async () => {expect.hasAssertions();
+
         const prompt = vi.mocked(promptModule);
         const reportGen = vi.mocked(reportGenModule);
         const gitDownloader = vi.mocked(gitArtifactDownloaderModule);
@@ -178,7 +180,8 @@ describe('Case17 — HTML report generator', () => {
         expect(prompt.info).toHaveBeenCalledWith(expect.stringContaining('Diff:'));
     });
 
-    it('skips AI analysis and prompts bug report when failures and user accepts', async () => {
+    it('skips AI analysis and prompts bug report when failures and user accepts', async () => {expect.hasAssertions();
+
         const prompt = vi.mocked(promptModule);
         const reportGen = vi.mocked(reportGenModule);
         const gitDownloader = vi.mocked(gitArtifactDownloaderModule);
@@ -213,7 +216,8 @@ describe('Case17 — HTML report generator', () => {
         expect(prompt.info).toHaveBeenCalledWith(expect.stringContaining('Jira bug auto-criado: BUG-42'));
     });
 
-    it('resolves mapping file and test history', async () => {
+    it('resolves mapping file and test history', async () => {expect.hasAssertions();
+
         const prompt = vi.mocked(promptModule);
         const parser = vi.mocked(parserModule);
         const reportGen = vi.mocked(reportGenModule);
@@ -253,7 +257,8 @@ describe('Case17 — HTML report generator', () => {
         );
     });
 
-    it('handles AI analysis with empty content returning html unchanged', async () => {
+    it('handles AI analysis with empty content returning html unchanged', async () => {expect.hasAssertions();
+
         const prompt = vi.mocked(promptModule);
         const parser = vi.mocked(parserModule);
         const reportGen = vi.mocked(reportGenModule);
@@ -275,10 +280,11 @@ describe('Case17 — HTML report generator', () => {
         const mod = case17Module;
         await mod.handler(baseContext);
 
-        expect(analysis.analyzeFailuresWithReport).toHaveBeenCalled();
+        expect(analysis.analyzeFailuresWithReport).toHaveBeenCalledWith();
     });
 
-    it('handles _fetchJiraContext when issues list is empty', async () => {
+    it('handles _fetchJiraContext when issues list is empty', async () => {expect.hasAssertions();
+
         const prompt = vi.mocked(promptModule);
         const parser = vi.mocked(parserModule);
         const reportGen = vi.mocked(reportGenModule);
@@ -300,11 +306,12 @@ describe('Case17 — HTML report generator', () => {
         const mod = case17Module;
         await mod.handler(baseContext);
 
-        expect(mockGetJira).toHaveBeenCalled();
+        expect(mockGetJira).toHaveBeenCalledWith();
         expect(openModule.openWithFallback).toHaveBeenCalledWith(expect.any(String), 'Relatório', prompt.info);
     });
 
-    it('handles fetchJiraContext with missing issues field', async () => {
+    it('handles fetchJiraContext with missing issues field', async () => {expect.hasAssertions();
+
         const prompt = vi.mocked(promptModule);
         const parser = vi.mocked(parserModule);
         const reportGen = vi.mocked(reportGenModule);
@@ -326,10 +333,11 @@ describe('Case17 — HTML report generator', () => {
         const mod = case17Module;
         await mod.handler(baseContext);
 
-        expect(mockGetJira).toHaveBeenCalled();
+        expect(mockGetJira).toHaveBeenCalledWith();
     });
 
-    it('handles computeDiff with missing tests field', async () => {
+    it('handles computeDiff with missing tests field', async () => {expect.hasAssertions();
+
         const prompt = vi.mocked(promptModule);
         const parser = vi.mocked(parserModule);
         const reportGen = vi.mocked(reportGenModule);
@@ -358,7 +366,8 @@ describe('Case17 — HTML report generator', () => {
         expect(openModule.openWithFallback).toHaveBeenCalledWith(expect.any(String), 'Relatório', prompt.info);
     });
 
-    it('resolves mapping with missing tests field', async () => {
+    it('resolves mapping with missing tests field', async () => {expect.hasAssertions();
+
         const prompt = vi.mocked(promptModule);
         const parser = vi.mocked(parserModule);
         const reportGen = vi.mocked(reportGenModule);
@@ -383,7 +392,8 @@ describe('Case17 — HTML report generator', () => {
         expect(openModule.openWithFallback).toHaveBeenCalledWith(expect.any(String), 'Relatório', prompt.info);
     });
 
-    it('handles parseCliExtra with invalid flags', async () => {
+    it('handles parseCliExtra with invalid flags', async () => {expect.hasAssertions();
+
         const prompt = vi.mocked(promptModule);
         const parser = vi.mocked(parserModule);
         const reportGen = vi.mocked(reportGenModule);
@@ -408,7 +418,8 @@ describe('Case17 — HTML report generator', () => {
         process.argv = origArgv;
     });
 
-    it('builds diff summary with failure that has no error message', async () => {
+    it('builds diff summary with failure that has no error message', async () => {expect.hasAssertions();
+
         const prompt = vi.mocked(promptModule);
         const parser = vi.mocked(parserModule);
         const reportGen = vi.mocked(reportGenModule);
@@ -440,7 +451,8 @@ describe('Case17 — HTML report generator', () => {
         expect(openModule.openWithFallback).toHaveBeenCalledWith(expect.any(String), 'Relatório', prompt.info);
     });
 
-    it('handles parseCliExtra with --run edge cases', async () => {
+    it('handles parseCliExtra with --run edge cases', async () => {expect.hasAssertions();
+
         const prompt = vi.mocked(promptModule);
         const parser = vi.mocked(parserModule);
         const reportGen = vi.mocked(reportGenModule);
@@ -465,7 +477,8 @@ describe('Case17 — HTML report generator', () => {
         process.argv = origArgv;
     });
 
-    it('injects AI analysis into html without bodyEnd', async () => {
+    it('injects AI analysis into html without bodyEnd', async () => {expect.hasAssertions();
+
         const prompt = vi.mocked(promptModule);
         const parser = vi.mocked(parserModule);
         const reportGen = vi.mocked(reportGenModule);
@@ -491,10 +504,11 @@ describe('Case17 — HTML report generator', () => {
         const mod = case17Module;
         await mod.handler(baseContext);
 
-        expect(analysis.analyzeFailuresWithReport).toHaveBeenCalled();
+        expect(analysis.analyzeFailuresWithReport).toHaveBeenCalledWith();
     });
 
-    it('handles empty filepath early return (line 166-167)', async () => {
+    it('handles empty filepath early return (line 166-167)', async () => {expect.hasAssertions();
+
         const prompt = vi.mocked(promptModule);
 
         prompt.ask.mockResolvedValueOnce('');
@@ -503,10 +517,11 @@ describe('Case17 — HTML report generator', () => {
         const result = await mod.handler(baseContext);
 
         expect(result).toBeUndefined();
-        expect(prompt.printError).toHaveBeenCalled();
+        expect(prompt.printError).toHaveBeenCalledWith();
     });
 
-    it('handles parse error in report file (line 175-176)', async () => {
+    it('handles parse error in report file (line 175-176)', async () => {expect.hasAssertions();
+
         const prompt = vi.mocked(promptModule);
         const parser = vi.mocked(parserModule);
 
@@ -525,7 +540,8 @@ describe('Case17 — HTML report generator', () => {
         expect(prompt.printError).toHaveBeenCalledWith('Erro ao ler relatório', expect.any(Error));
     });
 
-    it('handles extra runs via --run flag', async () => {
+    it('handles extra runs via --run flag', async () => {expect.hasAssertions();
+
         const prompt = vi.mocked(promptModule);
         const parser = vi.mocked(parserModule);
         const reportGen = vi.mocked(reportGenModule);
@@ -559,7 +575,8 @@ describe('Case17 — HTML report generator', () => {
         process.argv = origArgv;
     });
 
-    it('handles quality gate and publish target (lines 208-209, 263-264)', async () => {
+    it('handles quality gate and publish target (lines 208-209, 263-264)', async () => {expect.hasAssertions();
+
         const prompt = vi.mocked(promptModule);
         const parser = vi.mocked(parserModule);
         const reportGen = vi.mocked(reportGenModule);
@@ -586,7 +603,8 @@ describe('Case17 — HTML report generator', () => {
         process.env['QA_PUBLISH'] = undefined;
     });
 
-    it('fails quality gate when pass rate below threshold (lines 283-284)', async () => {
+    it('fails quality gate when pass rate below threshold (lines 283-284)', async () => {expect.hasAssertions();
+
         const prompt = vi.mocked(promptModule);
         const parser = vi.mocked(parserModule);
         const reportGen = vi.mocked(reportGenModule);
@@ -615,7 +633,8 @@ describe('Case17 — HTML report generator', () => {
         process.env['QA_FAIL_ON'] = undefined;
     });
 
-    it('writes to custom output path when user provides non-empty path (lines 84-87)', async () => {
+    it('writes to custom output path when user provides non-empty path (lines 84-87)', async () => {expect.hasAssertions();
+
         const prompt = vi.mocked(promptModule);
         const parser = vi.mocked(parserModule);
         const reportGen = vi.mocked(reportGenModule);
@@ -646,7 +665,8 @@ describe('Case17 — HTML report generator', () => {
         );
     });
 
-    it('handles extra run parse error (lines 190-191)', async () => {
+    it('handles extra run parse error (lines 190-191)', async () => {expect.hasAssertions();
+
         const prompt = vi.mocked(promptModule);
         const parser = vi.mocked(parserModule);
         const reportGen = vi.mocked(reportGenModule);

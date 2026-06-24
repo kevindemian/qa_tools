@@ -24,7 +24,8 @@ const recordArb = fc.record({
 const recordsArb = fc.array(recordArb, { minLength: 0, maxLength: 20 });
 
 describe('CompareAiVsManual — property-based', () => {
-    it('total counts match record filtering', () => {
+    it('total counts match record filtering', () => {expect.hasAssertions();
+
         fc.assert(
             fc.property(recordsArb, (records) => {
                 const result = compareAiVsManual(records);
@@ -38,7 +39,8 @@ describe('CompareAiVsManual — property-based', () => {
         );
     });
 
-    it('aiAdvantage postconditions hold for all inputs', () => {
+    it('aiAdvantage postconditions hold for all inputs', () => {expect.hasAssertions();
+
         fc.assert(
             fc.property(recordsArb, (records) => {
                 const result = compareAiVsManual(records);
@@ -55,7 +57,8 @@ describe('CompareAiVsManual — property-based', () => {
         );
     });
 
-    it('byVersion counts sum to aiTotal', () => {
+    it('byVersion counts sum to aiTotal', () => {expect.hasAssertions();
+
         fc.assert(
             fc.property(recordsArb, (records) => {
                 const result = compareAiVsManual(records);
@@ -68,7 +71,8 @@ describe('CompareAiVsManual — property-based', () => {
         );
     });
 
-    it('pass rate is 0 when no records in group', () => {
+    it('pass rate is 0 when no records in group', () => {expect.hasAssertions();
+
         fc.assert(
             fc.property(fc.array(recordArb, { minLength: 0, maxLength: 5 }), (records) => {
                 const result = compareAiVsManual(records);
@@ -84,7 +88,8 @@ describe('CompareAiVsManual — property-based', () => {
         );
     });
 
-    it('acceptance rate matches AI accepted / AI total', () => {
+    it('acceptance rate matches AI accepted / AI total', () => {expect.hasAssertions();
+
         fc.assert(
             fc.property(recordsArb, (records) => {
                 const result = compareAiVsManual(records);
@@ -99,7 +104,8 @@ describe('CompareAiVsManual — property-based', () => {
         );
     });
 
-    it('timestamp is valid ISO format', () => {
+    it('timestamp is valid ISO format', () => {expect.hasAssertions();
+
         fc.assert(
             fc.property(recordsArb, (records) => {
                 const result = compareAiVsManual(records);
@@ -112,7 +118,8 @@ describe('CompareAiVsManual — property-based', () => {
 });
 
 describe('GenerateAiComparisonHtml — property-based', () => {
-    it('structural HTML invariants for all valid inputs', () => {
+    it('structural HTML invariants for all valid inputs', () => {expect.hasAssertions();
+
         fc.assert(
             fc.property(fc.array(recordArb, { minLength: 0, maxLength: 10 }), fc.string(), (records, title) => {
                 const result = compareAiVsManual(records);
@@ -133,7 +140,8 @@ describe('GenerateAiComparisonHtml — property-based', () => {
         );
     });
 
-    it('contains metric-card and badge components for non-empty data', () => {
+    it('contains metric-card and badge components for non-empty data', () => {expect.hasAssertions();
+
         fc.assert(
             fc.property(fc.array(recordArb, { minLength: 1, maxLength: 10 }), (records) => {
                 const result = compareAiVsManual(records);
@@ -147,7 +155,8 @@ describe('GenerateAiComparisonHtml — property-based', () => {
         );
     });
 
-    it('contains pass rate values', () => {
+    it('contains pass rate values', () => {expect.hasAssertions();
+
         fc.assert(
             fc.property(fc.array(recordArb, { minLength: 1, maxLength: 10 }), (records) => {
                 const result = compareAiVsManual(records);
@@ -160,7 +169,8 @@ describe('GenerateAiComparisonHtml — property-based', () => {
         );
     });
 
-    it('shows no-data message when both groups empty', () => {
+    it('shows no-data message when both groups empty', () => {expect.hasAssertions();
+
         fc.assert(
             fc.property(fc.array(recordArb, { minLength: 0, maxLength: 0 }), (records) => {
                 const result = compareAiVsManual(records);

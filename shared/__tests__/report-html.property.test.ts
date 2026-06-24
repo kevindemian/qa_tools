@@ -46,7 +46,8 @@ const flatTestArb: fc.Arbitrary<FlatTest> = fc.record({
 });
 
 describe('GenerateCoverageHtml — property-based', () => {
-    it('coverage MetricCard matches global calculation', () => {
+    it('coverage MetricCard matches global calculation', () => {expect.hasAssertions();
+
         fc.assert(
             fc.property(fc.array(epicArb, { minLength: 0, maxLength: 5 }), (epics) => {
                 const html = generateCoverageHtml(epics);
@@ -63,7 +64,8 @@ describe('GenerateCoverageHtml — property-based', () => {
         );
     });
 
-    it('each epic badge shows its own close percentage', () => {
+    it('each epic badge shows its own close percentage', () => {expect.hasAssertions();
+
         fc.assert(
             fc.property(fc.array(epicArb, { minLength: 1, maxLength: 5 }), (epics) => {
                 const html = generateCoverageHtml(epics);
@@ -78,7 +80,8 @@ describe('GenerateCoverageHtml — property-based', () => {
         );
     });
 
-    it('every epic key appears in output', () => {
+    it('every epic key appears in output', () => {expect.hasAssertions();
+
         fc.assert(
             fc.property(fc.array(epicArb, { minLength: 0, maxLength: 5 }), (epics) => {
                 const html = generateCoverageHtml(epics);
@@ -90,7 +93,8 @@ describe('GenerateCoverageHtml — property-based', () => {
         );
     });
 
-    it('every issue key appears in output', () => {
+    it('every issue key appears in output', () => {expect.hasAssertions();
+
         fc.assert(
             fc.property(fc.array(epicArb, { minLength: 0, maxLength: 5 }), (epics) => {
                 const html = generateCoverageHtml(epics);
@@ -112,7 +116,8 @@ describe('GenerateCoverageHtml — property-based', () => {
 });
 
 describe('GenerateHtmlReport — property-based', () => {
-    it('contains all test titles', () => {
+    it('contains all test titles', () => {expect.hasAssertions();
+
         fc.assert(
             fc.property(fc.array(flatTestArb, { minLength: 0, maxLength: 10 }), (tests) => {
                 const html = generateHtmlReport(tests);
@@ -124,7 +129,8 @@ describe('GenerateHtmlReport — property-based', () => {
         );
     });
 
-    it('always produces valid HTML structure', () => {
+    it('always produces valid HTML structure', () => {expect.hasAssertions();
+
         fc.assert(
             fc.property(fc.array(flatTestArb, { minLength: 0, maxLength: 10 }), (tests) => {
                 const html = generateHtmlReport(tests);
@@ -139,7 +145,8 @@ describe('GenerateHtmlReport — property-based', () => {
 });
 
 describe('GenerateCoverageHtml — invariants (property-based)', () => {
-    it('always produces valid HTML structure', () => {
+    it('always produces valid HTML structure', () => {expect.hasAssertions();
+
         fc.assert(
             fc.property(fc.array(epicArb, { minLength: 0, maxLength: 5 }), (epics) => {
                 const html = generateCoverageHtml(epics);

@@ -266,7 +266,8 @@ describe('FetchWithRetry', () => {
         vi.restoreAllMocks();
     });
 
-    it('returns response on successful fetch', async () => {
+    it('returns response on successful fetch', async () => {expect.hasAssertions();
+
         mockFetch.mockResolvedValueOnce(mockOkResponse('ok'));
         const result = await fetchWithRetry('https://api.test.com', {});
 
@@ -277,7 +278,8 @@ describe('FetchWithRetry', () => {
         expect(text).toBe('ok');
     });
 
-    it('retries on network error and succeeds', async () => {
+    it('retries on network error and succeeds', async () => {expect.hasAssertions();
+
         mockFetch.mockRejectedValueOnce(new Error('network error')).mockResolvedValueOnce(mockOkResponse('ok'));
         const result = await fetchWithRetry('https://api.test.com', {}, 2);
 
@@ -285,7 +287,8 @@ describe('FetchWithRetry', () => {
         expect(mockFetch).toHaveBeenCalledTimes(2);
     });
 
-    it('retries on HTTP 429 and succeeds', async () => {
+    it('retries on HTTP 429 and succeeds', async () => {expect.hasAssertions();
+
         mockFetch.mockResolvedValueOnce(mockErrorResponse(429)).mockResolvedValueOnce(mockOkResponse('ok'));
         const result = await fetchWithRetry('https://api.test.com', {}, 2);
 
@@ -293,7 +296,8 @@ describe('FetchWithRetry', () => {
         expect(mockFetch).toHaveBeenCalledTimes(2);
     });
 
-    it('retries on HTTP 500 and succeeds', async () => {
+    it('retries on HTTP 500 and succeeds', async () => {expect.hasAssertions();
+
         mockFetch.mockResolvedValueOnce(mockErrorResponse(500)).mockResolvedValueOnce(mockOkResponse('ok'));
         const result = await fetchWithRetry('https://api.test.com', {}, 2);
 
@@ -301,13 +305,15 @@ describe('FetchWithRetry', () => {
         expect(mockFetch).toHaveBeenCalledTimes(2);
     });
 
-    it('throws after max retries exhausted', async () => {
+    it('throws after max retries exhausted', async () => {expect.hasAssertions();
+
         mockFetch.mockResolvedValue(mockErrorResponse(500));
 
         await expect(fetchWithRetry('https://api.test.com', {}, 1)).rejects.toThrow('LLM API error: HTTP 500');
     });
 
-    it('throws immediately on HTTP 400 (non-retryable)', async () => {
+    it('throws immediately on HTTP 400 (non-retryable)', async () => {expect.hasAssertions();
+
         mockFetch.mockResolvedValueOnce(mockErrorResponse(400));
 
         await expect(fetchWithRetry('https://api.test.com', {}, 3)).rejects.toThrow('LLM API error: HTTP 400');
@@ -327,7 +333,8 @@ describe('SendToProvider', () => {
         vi.restoreAllMocks();
     });
 
-    it('sends to OpenAI provider and returns content', async () => {
+    it('sends to OpenAI provider and returns content', async () => {expect.hasAssertions();
+
         mockFetch.mockResolvedValueOnce(
             mockOkResponse(JSON.stringify({ choices: [{ message: { content: 'success' } }] })),
         );
@@ -343,7 +350,8 @@ describe('SendToProvider', () => {
         expect(result).toBe('success');
     });
 
-    it('sends to Gemini provider and returns content', async () => {
+    it('sends to Gemini provider and returns content', async () => {expect.hasAssertions();
+
         mockFetch.mockResolvedValueOnce(
             mockOkResponse(
                 JSON.stringify({
@@ -363,7 +371,8 @@ describe('SendToProvider', () => {
         expect(result).toBe('gemini success');
     });
 
-    it('sends to Anthropic provider and returns content', async () => {
+    it('sends to Anthropic provider and returns content', async () => {expect.hasAssertions();
+
         mockFetch.mockResolvedValueOnce(
             mockOkResponse(
                 JSON.stringify({
@@ -383,7 +392,8 @@ describe('SendToProvider', () => {
         expect(result).toBe('anthropic response');
     });
 
-    it('throws LlmAuthError when API key is empty', async () => {
+    it('throws LlmAuthError when API key is empty', async () => {expect.hasAssertions();
+
         const cfg = {
             apiKey: '',
             model: 'gpt-4',
@@ -395,7 +405,8 @@ describe('SendToProvider', () => {
         await expect(sendToProvider(cfg, 'system', 'user')).rejects.toThrow(LlmAuthError);
     });
 
-    it('returns empty string for non-JSON 200 response', async () => {
+    it('returns empty string for non-JSON 200 response', async () => {expect.hasAssertions();
+
         mockFetch.mockResolvedValueOnce(mockOkResponse('not json'));
         const cfg = {
             apiKey: 'sk-test',
@@ -409,7 +420,8 @@ describe('SendToProvider', () => {
         expect(result).toBe('');
     });
 
-    it('throws on error payload in response', async () => {
+    it('throws on error payload in response', async () => {expect.hasAssertions();
+
         mockFetch.mockResolvedValueOnce(
             mockOkResponse(JSON.stringify({ error: { message: 'rate limited', type: 'rate_limit_error' } })),
         );
@@ -424,7 +436,8 @@ describe('SendToProvider', () => {
         await expect(sendToProvider(cfg, 'system', 'user')).rejects.toThrow('LLM API error: rate limited');
     });
 
-    it('throws on string error payload', async () => {
+    it('throws on string error payload', async () => {expect.hasAssertions();
+
         mockFetch.mockResolvedValueOnce(mockOkResponse(JSON.stringify({ error: 'internal server error' })));
         const cfg = {
             apiKey: 'sk-test',
@@ -437,7 +450,8 @@ describe('SendToProvider', () => {
         await expect(sendToProvider(cfg, 'system', 'user')).rejects.toThrow('LLM API error: internal server error');
     });
 
-    it('calls checkCircuitBreaker', async () => {
+    it('calls checkCircuitBreaker', async () => {expect.hasAssertions();
+
         mockFetch.mockResolvedValueOnce(mockOkResponse(JSON.stringify({ choices: [{ message: { content: 'ok' } }] })));
         const cfg = {
             apiKey: 'sk-test',
@@ -448,10 +462,11 @@ describe('SendToProvider', () => {
         };
         await sendToProvider(cfg, 'system', 'user');
 
-        expect(checkCircuitBreaker).toHaveBeenCalled();
+        expect(checkCircuitBreaker).toHaveBeenCalledWith();
     });
 
-    it('tracks usage metrics', async () => {
+    it('tracks usage metrics', async () => {expect.hasAssertions();
+
         mockFetch.mockResolvedValueOnce(
             mockOkResponse(
                 JSON.stringify({
@@ -474,7 +489,8 @@ describe('SendToProvider', () => {
         expect(metrics.totalCompletionTokens).toBe(5);
     });
 
-    it('records per-model latency via recordModelLatency', async () => {
+    it('records per-model latency via recordModelLatency', async () => {expect.hasAssertions();
+
         mockFetch.mockResolvedValueOnce(mockOkResponse(JSON.stringify({ choices: [{ message: { content: 'ok' } }] })));
 
         const { getDefaultMetrics } = await import('./llm-metrics.js');

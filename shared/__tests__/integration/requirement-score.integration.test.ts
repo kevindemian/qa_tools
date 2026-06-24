@@ -73,7 +73,8 @@ function makeRecords(): AiGenerationRecord[] {
 
 describe('Integration: Requirement Quality Score', () => {
     describe('FT-32a: basic HTML generation with entries', () => {
-        it('generates valid HTML from real score data', async () => {
+        it('generates valid HTML from real score data', async () => {expect.hasAssertions();
+
             const { calculateRequirementScores, generateRequirementScoreHtml } =
                 await import('../../requirement-score.js');
             const result = calculateRequirementScores(makeRecords());
@@ -89,7 +90,8 @@ describe('Integration: Requirement Quality Score', () => {
             expect(html).toContain('Dashboard view');
         });
 
-        it('shows correct summary card values', async () => {
+        it('shows correct summary card values', async () => {expect.hasAssertions();
+
             const { calculateRequirementScores, generateRequirementScoreHtml } =
                 await import('../../requirement-score.js');
             const result = calculateRequirementScores(makeRecords());
@@ -103,7 +105,8 @@ describe('Integration: Requirement Quality Score', () => {
     });
 
     describe('FT-32b: empty input shows no-data message', () => {
-        it('generates HTML with no-data message when entries are empty', async () => {
+        it('generates HTML with no-data message when entries are empty', async () => {expect.hasAssertions();
+
             const { calculateRequirementScores, generateRequirementScoreHtml } =
                 await import('../../requirement-score.js');
             const result = calculateRequirementScores([]);
@@ -116,14 +119,16 @@ describe('Integration: Requirement Quality Score', () => {
     });
 
     describe('FT-32c: null/undefined input returns error page', () => {
-        it('returns error page for null result', async () => {
+        it('returns error page for null result', async () => {expect.hasAssertions();
+
             const { generateRequirementScoreHtml } = await import('../../requirement-score.js');
             const html = generateRequirementScoreHtml(null);
 
             expect(html).toContain('Requirement Score Report Error');
         });
 
-        it('returns error page for undefined result', async () => {
+        it('returns error page for undefined result', async () => {expect.hasAssertions();
+
             const { generateRequirementScoreHtml } = await import('../../requirement-score.js');
             const html = generateRequirementScoreHtml(undefined);
 
@@ -132,7 +137,8 @@ describe('Integration: Requirement Quality Score', () => {
     });
 
     describe('FT-32d: custom title', () => {
-        it('uses custom title in HTML and page title', async () => {
+        it('uses custom title in HTML and page title', async () => {expect.hasAssertions();
+
             const { calculateRequirementScores, generateRequirementScoreHtml } =
                 await import('../../requirement-score.js');
             const result = calculateRequirementScores(makeRecords());
@@ -142,7 +148,8 @@ describe('Integration: Requirement Quality Score', () => {
             expect(html).toContain('<h1>Sprint Review Scores</h1>');
         });
 
-        it('defaults to Requirement Quality Score when no title given', async () => {
+        it('defaults to Requirement Quality Score when no title given', async () => {expect.hasAssertions();
+
             const { calculateRequirementScores, generateRequirementScoreHtml } =
                 await import('../../requirement-score.js');
             const result = calculateRequirementScores(makeRecords());

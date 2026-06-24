@@ -52,7 +52,8 @@ describe('WORKFLOW_MAP', () => {
 });
 
 describe('GetTransitionsForIssue', () => {
-    it('builds transition map from API response', async () => {
+    it('builds transition map from API response', async () => {expect.hasAssertions();
+
         mockGet.mockResolvedValue({
             data: {
                 transitions: [
@@ -68,7 +69,8 @@ describe('GetTransitionsForIssue', () => {
         expect(map['in progress']).toBe('21');
     });
 
-    it('returns empty object on API error', async () => {
+    it('returns empty object on API error', async () => {expect.hasAssertions();
+
         mockGet.mockRejectedValue(new Error('API error'));
         const resource = buildResource();
         const map = await getTransitionsForIssue(resource, 'TEST-1');
@@ -78,7 +80,8 @@ describe('GetTransitionsForIssue', () => {
 });
 
 describe('AddTasksToSprint', () => {
-    it('posts tasks to sprint and logs success', async () => {
+    it('posts tasks to sprint and logs success', async () => {expect.hasAssertions();
+
         mockPost.mockResolvedValue({ data: {} });
         const resource = buildResource();
         await addTasksToSprint(resource, ['T-1', 'T-2'], 'sprint-1');
@@ -86,7 +89,8 @@ describe('AddTasksToSprint', () => {
         expect(mockPost).toHaveBeenCalledWith('/sprint/sprint-1/issue', { issues: ['T-1', 'T-2'] });
     });
 
-    it('throws on API error', async () => {
+    it('throws on API error', async () => {expect.hasAssertions();
+
         mockPost.mockRejectedValue(new Error('Sprint error'));
         const resource = buildResource();
 
@@ -95,7 +99,8 @@ describe('AddTasksToSprint', () => {
 });
 
 describe('TransitionIssue', () => {
-    it('posts transition to issue', async () => {
+    it('posts transition to issue', async () => {expect.hasAssertions();
+
         mockPost.mockResolvedValue({ data: {} });
         const resource = buildResource();
         await transitionIssue(resource, 'T-1', '21');
@@ -103,7 +108,8 @@ describe('TransitionIssue', () => {
         expect(mockPost).toHaveBeenCalledWith('/issue/T-1/transitions', { transition: { id: '21' } });
     });
 
-    it('throws on API error', async () => {
+    it('throws on API error', async () => {expect.hasAssertions();
+
         mockPost.mockRejectedValue(new Error('Transition error'));
         const resource = buildResource();
 

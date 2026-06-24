@@ -95,7 +95,8 @@ const itemArb = fc
     }));
 
 describe('GenerateCoverageGapHtml — property-based', () => {
-    it('always produces valid HTML with structural elements', () => {
+    it('always produces valid HTML with structural elements', () => {expect.hasAssertions();
+
         fc.assert(
             fc.property(fc.array(itemArb, { minLength: 0, maxLength: 10 }), (items) => {
                 const html = generateCoverageGapHtml(makeResult(items));
@@ -109,7 +110,8 @@ describe('GenerateCoverageGapHtml — property-based', () => {
         );
     });
 
-    it('contains all gap issue keys in gaps table', () => {
+    it('contains all gap issue keys in gaps table', () => {expect.hasAssertions();
+
         fc.assert(
             fc.property(fc.array(itemArb, { minLength: 0, maxLength: 10 }), (items) => {
                 const html = generateCoverageGapHtml(makeResult(items));
@@ -122,7 +124,8 @@ describe('GenerateCoverageGapHtml — property-based', () => {
         );
     });
 
-    it('gap count in heading matches items without tests', () => {
+    it('gap count in heading matches items without tests', () => {expect.hasAssertions();
+
         fc.assert(
             fc.property(fc.array(itemArb, { minLength: 0, maxLength: 10 }), (items) => {
                 const html = generateCoverageGapHtml(makeResult(items));
@@ -134,7 +137,8 @@ describe('GenerateCoverageGapHtml — property-based', () => {
         );
     });
 
-    it('quality gate shows fail when gaps exist', () => {
+    it('quality gate shows fail when gaps exist', () => {expect.hasAssertions();
+
         fc.assert(
             fc.property(fc.array(itemArb, { minLength: 0, maxLength: 10 }), (items) => {
                 const html = generateCoverageGapHtml(makeResult(items));
@@ -149,7 +153,8 @@ describe('GenerateCoverageGapHtml — property-based', () => {
         );
     });
 
-    it('summary totals are consistent: covered + gap = totalIssues', () => {
+    it('summary totals are consistent: covered + gap = totalIssues', () => {expect.hasAssertions();
+
         fc.assert(
             fc.property(fc.array(itemArb, { minLength: 1, maxLength: 10 }), (items) => {
                 const result = makeResult(items);
@@ -160,7 +165,8 @@ describe('GenerateCoverageGapHtml — property-based', () => {
         );
     });
 
-    it('renders gap table rows with Badge for uncovered items', () => {
+    it('renders gap table rows with Badge for uncovered items', () => {expect.hasAssertions();
+
         fc.assert(
             fc.property(fc.array(itemArb, { minLength: 1, maxLength: 10 }), (items) => {
                 const gaps = items.filter((i) => !i.hasTest);

@@ -79,7 +79,8 @@ describe('RunBenchmark', () => {
         }
     });
 
-    it('prints skip message and returns early when BENCHMARK env var is not true', async () => {
+    it('prints skip message and returns early when BENCHMARK env var is not true', async () => {expect.hasAssertions();
+
         restoreEnv = withEnv({ BENCHMARK: 'false' });
 
         await runBenchmark();
@@ -87,7 +88,8 @@ describe('RunBenchmark', () => {
         expect(stdoutSpy).toHaveBeenCalledWith(expect.stringContaining('Skipping'));
     });
 
-    it('loads fixtures and executes all benchmark types when BENCHMARK is true', async () => {
+    it('loads fixtures and executes all benchmark types when BENCHMARK is true', async () => {expect.hasAssertions();
+
         restoreEnv = withEnv({ BENCHMARK: 'true' });
 
         const llmMock = vi.mocked(llmPrompt);
@@ -154,7 +156,8 @@ describe('RunBenchmark — error handling', () => {
         }
     });
 
-    it('reports failure when llmPrompt throws', async () => {
+    it('reports failure when llmPrompt throws', async () => {expect.hasAssertions();
+
         restoreEnv = withEnv({ BENCHMARK: 'true' });
 
         const llmMock = vi.mocked(llmPrompt);
@@ -166,7 +169,8 @@ describe('RunBenchmark — error handling', () => {
         expect(stdoutSpy).toHaveBeenCalledWith(expect.stringContaining('API timeout'));
     });
 
-    it('handles empty fixture lists gracefully', async () => {
+    it('handles empty fixture lists gracefully', async () => {expect.hasAssertions();
+
         restoreEnv = withEnv({ BENCHMARK: 'true' });
 
         const fixturesModule = await vi.importMock<{

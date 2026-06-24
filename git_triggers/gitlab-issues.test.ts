@@ -31,7 +31,8 @@ const ISSUE_FIXTURE = {
 };
 
 describe('GlGetOpenIssues', () => {
-    it('returns formatted issues from GET /issues', async () => {
+    it('returns formatted issues from GET /issues', async () => {expect.hasAssertions();
+
         vi.mocked(apiGet).mockResolvedValue([ISSUE_FIXTURE]);
         const result = await glGetOpenIssues(mockClient, 'owner', 'repo');
 
@@ -44,7 +45,8 @@ describe('GlGetOpenIssues', () => {
         });
     });
 
-    it('calls apiGet with correct params', async () => {
+    it('calls apiGet with correct params', async () => {expect.hasAssertions();
+
         vi.mocked(apiGet).mockResolvedValue([]);
         await glGetOpenIssues(mockClient, 'owner', 'repo');
 
@@ -56,35 +58,40 @@ describe('GlGetOpenIssues', () => {
         });
     });
 
-    it('returns [] when data is null', async () => {
+    it('returns [] when data is null', async () => {expect.hasAssertions();
+
         vi.mocked(apiGet).mockResolvedValue(null);
         const result = await glGetOpenIssues(mockClient, 'owner', 'repo');
 
         expect(result).toEqual([]);
     });
 
-    it('returns [] when data is not an array', async () => {
+    it('returns [] when data is not an array', async () => {expect.hasAssertions();
+
         vi.mocked(apiGet).mockResolvedValue({});
         const result = await glGetOpenIssues(mockClient, 'owner', 'repo');
 
         expect(result).toEqual([]);
     });
 
-    it('returns [] from empty array', async () => {
+    it('returns [] from empty array', async () => {expect.hasAssertions();
+
         vi.mocked(apiGet).mockResolvedValue([]);
         const result = await glGetOpenIssues(mockClient, 'owner', 'repo');
 
         expect(result).toEqual([]);
     });
 
-    it('maps labels as flat strings', async () => {
+    it('maps labels as flat strings', async () => {expect.hasAssertions();
+
         vi.mocked(apiGet).mockResolvedValue([{ ...ISSUE_FIXTURE, labels: ['bug', 'priority:high'] }]);
         const result = await glGetOpenIssues(mockClient, 'owner', 'repo');
 
         expect(nonNull(result[0]).labels).toEqual(['bug', 'priority:high']);
     });
 
-    it('handles missing optional fields gracefully', async () => {
+    it('handles missing optional fields gracefully', async () => {expect.hasAssertions();
+
         vi.mocked(apiGet).mockResolvedValue([{ iid: 1 }]);
         const result = await glGetOpenIssues(mockClient, 'owner', 'repo');
 
@@ -94,7 +101,8 @@ describe('GlGetOpenIssues', () => {
         expect(nonNull(result[0]).html_url).toBe('');
     });
 
-    it('filters out null items from array', async () => {
+    it('filters out null items from array', async () => {expect.hasAssertions();
+
         vi.mocked(apiGet).mockResolvedValue([null, ISSUE_FIXTURE]);
         const result = await glGetOpenIssues(mockClient, 'owner', 'repo');
 

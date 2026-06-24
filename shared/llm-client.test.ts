@@ -141,7 +141,8 @@ beforeEach(() => {
 });
 
 describe('LlmPrompt', () => {
-    it('sends prompt to main tier (OpenRouter) and returns parsed response', async () => {
+    it('sends prompt to main tier (OpenRouter) and returns parsed response', async () => {expect.hasAssertions();
+
         Config.set('llmApiKey', 'sk-test');
         Config.set('llmModel', 'google/gemini-2.0-flash-exp');
         Config.set('llmBaseUrl', 'https://openrouter.ai/api/v1');
@@ -164,7 +165,8 @@ describe('LlmPrompt', () => {
         expect(((callOpts?.headers ?? {}) as Record<string, string>)['Authorization']).toBe('Bearer sk-test');
     });
 
-    it('sends prompt to fast tier (Groq, OpenAI format)', async () => {
+    it('sends prompt to fast tier (Groq, OpenAI format)', async () => {expect.hasAssertions();
+
         Config.set('llmFastApiKey', 'gsk-test');
         Config.set('llmFastModel', 'llama3-8b-8192');
         Config.set('llmFastBaseUrl', 'https://api.groq.com/openai/v1');
@@ -180,7 +182,8 @@ describe('LlmPrompt', () => {
         expect(callUrl).toContain('groq.com');
     });
 
-    it('sends prompt to reviewer tier (Gemini format)', async () => {
+    it('sends prompt to reviewer tier (Gemini format)', async () => {expect.hasAssertions();
+
         Config.set('llmReviewApiKey', 'AIza-review');
         Config.set('llmReviewModel', 'gemini-2.0-flash-exp');
         Config.set('llmReviewBaseUrl', 'https://generativelanguage.googleapis.com/v1beta');
@@ -199,7 +202,8 @@ describe('LlmPrompt', () => {
         expect(callUrl).not.toContain('AIza-review');
     });
 
-    it('falls back to fallback tier when main fails', async () => {
+    it('falls back to fallback tier when main fails', async () => {expect.hasAssertions();
+
         Config.set('llmApiKey', 'sk-test');
         Config.set('llmModel', 'gpt-4');
         Config.set('llmBaseUrl', 'https://openrouter.ai/api/v1');
@@ -232,7 +236,8 @@ describe('LlmPrompt', () => {
         expect(mockFetch).toHaveBeenCalledTimes(7);
     });
 
-    it('returns cached response on repeated call with same inputs', async () => {
+    it('returns cached response on repeated call with same inputs', async () => {expect.hasAssertions();
+
         Config.set('llmApiKey', 'sk-test');
         Config.set('llmModel', 'google/gemini-2.0-flash-exp');
         const apiResponse = JSON.stringify({ choices: [{ message: { content: 'Cached result' } }] });
@@ -249,7 +254,8 @@ describe('LlmPrompt', () => {
         expect(mockFetch).toHaveBeenCalledTimes(1);
     });
 
-    it('retries on HTTP 429 and succeeds', async () => {
+    it('retries on HTTP 429 and succeeds', async () => {expect.hasAssertions();
+
         Config.set('llmApiKey', 'sk-test');
         Config.set('llmModel', 'google/gemini-2.0-flash-exp');
         mockFetch
@@ -267,13 +273,15 @@ describe('LlmPrompt', () => {
         expect(mockFetch).toHaveBeenCalledTimes(2);
     });
 
-    it('throws after exhausting all providers', async () => {
+    it('throws after exhausting all providers', async () => {expect.hasAssertions();
+
         Config.set('llmApiKey', '');
 
         await expect(llmPrompt({ tier: 'main', system: 'system', user: 'test' })).rejects.toThrow();
     });
 
-    it('sends responseFormat=json payload when param is passed', async () => {
+    it('sends responseFormat=json payload when param is passed', async () => {expect.hasAssertions();
+
         Config.set('llmApiKey', 'sk-test2');
         Config.set('llmModel', 'gpt-4');
         Config.set('llmBaseUrl', 'https://api.test.com/v1');
@@ -287,7 +295,8 @@ describe('LlmPrompt', () => {
         expect(body['response_format']).toEqual({ type: 'json_object' });
     });
 
-    it('different responseFormat produces different cache keys', async () => {
+    it('different responseFormat produces different cache keys', async () => {expect.hasAssertions();
+
         Config.set('llmApiKey', 'sk-test3');
         Config.set('llmModel', 'gpt-4');
         Config.set('llmBaseUrl', 'https://api.test.com/v1');
@@ -306,7 +315,8 @@ describe('LlmPrompt', () => {
         expect(mockFetch).toHaveBeenCalledTimes(2);
     });
 
-    it('sends Gemini system_instruction payload for reviewer tier', async () => {
+    it('sends Gemini system_instruction payload for reviewer tier', async () => {expect.hasAssertions();
+
         Config.set('llmReviewApiKey', 'AIza-gemini-test');
         Config.set('llmReviewModel', 'gemini-2.0-flash-exp');
         Config.set('llmReviewBaseUrl', 'https://generativelanguage.googleapis.com/v1beta');
@@ -325,7 +335,8 @@ describe('LlmPrompt', () => {
         );
     });
 
-    it('deduplicates same provider in fallback chain', async () => {
+    it('deduplicates same provider in fallback chain', async () => {expect.hasAssertions();
+
         Config.set('llmApiKey', 'sk-test');
         Config.set('llmModel', 'gpt-4');
         Config.set('llmBaseUrl', 'https://api.test.com/v1');
@@ -351,7 +362,8 @@ describe('LlmPrompt', () => {
         expect(mockFetch).toHaveBeenCalledTimes(6);
     });
 
-    it('handles network error with retry', async () => {
+    it('handles network error with retry', async () => {expect.hasAssertions();
+
         Config.set('llmApiKey', 'sk-test');
         Config.set('llmModel', 'google/gemini-2.0-flash-exp');
         mockFetch
@@ -371,7 +383,8 @@ describe('LlmPrompt', () => {
         expect(mockFetch).toHaveBeenCalledTimes(2);
     });
 
-    it('rejects unparseable response via validation hook', async () => {
+    it('rejects unparseable response via validation hook', async () => {expect.hasAssertions();
+
         Config.set('llmApiKey', 'sk-test');
         Config.set('llmModel', 'google/gemini-2.0-flash-exp');
         const warnSpy = vi.spyOn(rootLogger, 'warn').mockImplementation(() => {});
@@ -384,7 +397,8 @@ describe('LlmPrompt', () => {
     });
 
     describe('Rate limiter', () => {
-        it('allows requests within limit', async () => {
+        it('allows requests within limit', async () => {expect.hasAssertions();
+
             Config.set('LLM_RATE_LIMIT', '2');
             Config.set('llmApiKey', 'sk-test');
             Config.set('llmModel', 'gpt-4');
@@ -399,7 +413,8 @@ describe('LlmPrompt', () => {
             expect(mockFetch).toHaveBeenCalledTimes(2);
         });
 
-        it('rejects when rate limit exceeded', async () => {
+        it('rejects when rate limit exceeded', async () => {expect.hasAssertions();
+
             Config.set('LLM_RATE_LIMIT', '2');
             Config.set('llmApiKey', 'sk-test');
             Config.set('llmModel', 'gpt-4');
@@ -414,7 +429,8 @@ describe('LlmPrompt', () => {
             );
         });
 
-        it('recovers after rate limit window passes', async () => {
+        it('recovers after rate limit window passes', async () => {expect.hasAssertions();
+
             vi.useFakeTimers();
             Config.set('LLM_RATE_LIMIT', '2');
             Config.set('llmApiKey', 'sk-test');
@@ -446,14 +462,16 @@ describe('LlmPrompt', () => {
             }) as typeof global.setTimeout);
         });
 
-        it('opens after 5 consecutive call failures', async () => {
+        it('opens after 5 consecutive call failures', async () => {expect.hasAssertions();
+
             mockFetch.mockResolvedValue(mockErrorResponse(429));
             for (let i = 0; i < 5; i++) {
                 await expect(llmPrompt({ tier: 'main', system: 'system', user: 'test' + i })).rejects.toThrow();
             }
         });
 
-        it('blocks requests while circuit is open', async () => {
+        it('blocks requests while circuit is open', async () => {expect.hasAssertions();
+
             mockFetch.mockResolvedValue(mockErrorResponse(429));
             // Prime: 5 failures to open circuit
             for (let i = 0; i < 5; i++) {
@@ -468,7 +486,8 @@ describe('LlmPrompt', () => {
             expect(mockFetch.mock.calls).toHaveLength(fetchCount);
         });
 
-        it('recovers after circuit state is cleared', async () => {
+        it('recovers after circuit state is cleared', async () => {expect.hasAssertions();
+
             mockFetch.mockResolvedValue(mockErrorResponse(429));
             for (let i = 0; i < 5; i++) {
                 await expect(llmPrompt({ tier: 'main', system: 'system', user: 'prime' + i })).rejects.toThrow();
@@ -483,7 +502,8 @@ describe('LlmPrompt', () => {
             expect(result).toBe('recovered');
         });
 
-        it('resets counter on primary success', async () => {
+        it('resets counter on primary success', async () => {expect.hasAssertions();
+
             mockFetch.mockResolvedValue(mockErrorResponse(429));
             // 4 failures → counter at 4
             for (let i = 0; i < 4; i++) {
@@ -533,7 +553,8 @@ describe('LlmPrompt', () => {
     });
 
     describe('ResponseFormat parameter', () => {
-        it('passes responseFormat=json to provider config', async () => {
+        it('passes responseFormat=json to provider config', async () => {expect.hasAssertions();
+
             Config.set('llmApiKey', 'sk-rftest');
             Config.set('llmModel', 'gpt-4');
             Config.set('llmBaseUrl', 'https://api.test.com/v1');
@@ -547,7 +568,8 @@ describe('LlmPrompt', () => {
             expect(body['response_format']).toEqual({ type: 'json_object' });
         });
 
-        it('different responseFormat produces different cache keys (via metrics)', async () => {
+        it('different responseFormat produces different cache keys (via metrics)', async () => {expect.hasAssertions();
+
             Config.set('llmApiKey', 'sk-metrics');
             Config.set('llmModel', 'gpt-4');
             Config.set('llmBaseUrl', 'https://api.test.com/v1');
@@ -574,7 +596,8 @@ describe('LlmPrompt', () => {
     });
 
     describe('Gemini system_instruction payload', () => {
-        it('includes system_instruction for gemini format provider', async () => {
+        it('includes system_instruction for gemini format provider', async () => {expect.hasAssertions();
+
             Config.set('llmReviewApiKey', 'AIza-gemini-sys');
             Config.set('llmReviewModel', 'gemini-2.0-flash-exp');
             Config.set('llmReviewBaseUrl', 'https://generativelanguage.googleapis.com/v1beta');
@@ -592,7 +615,8 @@ describe('LlmPrompt', () => {
     });
 
     describe('Non-JSON 200 response', () => {
-        it('calls logger.warn when provider returns 200 with non-JSON body', async () => {
+        it('calls logger.warn when provider returns 200 with non-JSON body', async () => {expect.hasAssertions();
+
             const warnSpy = vi.spyOn(rootLogger, 'warn');
             Config.set('llmApiKey', 'sk-warn');
             Config.set('llmModel', 'gpt-4');
@@ -607,7 +631,8 @@ describe('LlmPrompt', () => {
     });
 
     describe('Tier fallback deduplication', () => {
-        it('deduplicates fallback when same config, batch still resolved from profile', async () => {
+        it('deduplicates fallback when same config, batch still resolved from profile', async () => {expect.hasAssertions();
+
             Config.set('llmApiKey', 'sk-dd');
             Config.set('llmModel', 'gpt-4');
             Config.set('llmBaseUrl', 'https://api.test.com/v1');
@@ -640,7 +665,8 @@ describe('LlmPrompt', () => {
     });
 
     describe('L23: Pending Tests', () => {
-        it('23.2: passes responseFormat to provider config', async () => {
+        it('23.2: passes responseFormat to provider config', async () => {expect.hasAssertions();
+
             Config.set('llmApiKey', 'sk-23-2');
             Config.set('llmModel', 'gpt-4');
             Config.set('llmBaseUrl', 'https://api.test.com/v1');
@@ -655,7 +681,8 @@ describe('LlmPrompt', () => {
             expect(body['response_format']).toEqual({ type: 'json_object' });
         });
 
-        it('23.3: uses different cache keys for different responseFormat', async () => {
+        it('23.3: uses different cache keys for different responseFormat', async () => {expect.hasAssertions();
+
             Config.set('llmApiKey', 'sk-23-3');
             Config.set('llmModel', 'gpt-4');
             Config.set('llmBaseUrl', 'https://api.test.com/v1');
@@ -667,7 +694,8 @@ describe('LlmPrompt', () => {
             expect(mockFetch).toHaveBeenCalledTimes(2);
         });
 
-        it('23.4: Gemini system_instruction payload test', async () => {
+        it('23.4: Gemini system_instruction payload test', async () => {expect.hasAssertions();
+
             Config.set('llmReviewApiKey', 'sk-gemini');
             Config.set('llmReviewModel', 'gemini-1.5-flash');
             Config.set('llmReviewBaseUrl', 'https://generativelanguage.googleapis.com/v1beta');
@@ -699,7 +727,8 @@ describe('LlmPrompt', () => {
             return r;
         }
 
-        it('does not warn when response is valid JSON (responseFormat=json)', async () => {
+        it('does not warn when response is valid JSON (responseFormat=json)', async () => {expect.hasAssertions();
+
             const warnSpy = vi.spyOn(rootLogger, 'warn').mockImplementation(() => {});
             mockFetch.mockResolvedValueOnce(openAiResponse(JSON.stringify({ ok: true })));
             await llmPrompt({
@@ -715,7 +744,8 @@ describe('LlmPrompt', () => {
             warnSpy.mockRestore();
         });
 
-        it('warns when responseFormat=json but extracted content is not valid JSON', async () => {
+        it('warns when responseFormat=json but extracted content is not valid JSON', async () => {expect.hasAssertions();
+
             const warnSpy = vi.spyOn(rootLogger, 'warn').mockImplementation(() => {});
             mockFetch.mockResolvedValueOnce(openAiResponse('not json'));
             await llmPrompt({
@@ -733,7 +763,8 @@ describe('LlmPrompt', () => {
             warnSpy.mockRestore();
         });
 
-        it('does not call _warnIfNotJson when responseFormat is not json', async () => {
+        it('does not call _warnIfNotJson when responseFormat is not json', async () => {expect.hasAssertions();
+
             const warnSpy = vi.spyOn(rootLogger, 'warn').mockImplementation(() => {});
             mockFetch.mockResolvedValueOnce(openAiResponse('не json, а plain text'));
             await llmPrompt({ tier: 'main', system: 'sys', user: 'user', callerId: 'test29.3-nojson' });
@@ -752,7 +783,8 @@ describe('LlmPrompt', () => {
             Config.set('llmApiKey', 'sk-test');
         });
 
-        it('throws when total tokens exceed limit after first call', async () => {
+        it('throws when total tokens exceed limit after first call', async () => {expect.hasAssertions();
+
             Config.set('llmMaxTotalTokens', '10');
             const body = JSON.stringify({
                 choices: [{ message: { content: 'ok' } }],
@@ -778,7 +810,8 @@ describe('LlmPrompt', () => {
             ).rejects.toThrow('Total token limit reached');
         });
 
-        it('does not throw when limit is 0 (unlimited)', async () => {
+        it('does not throw when limit is 0 (unlimited)', async () => {expect.hasAssertions();
+
             Config.set('llmMaxTotalTokens', '0');
             const body = JSON.stringify({
                 choices: [{ message: { content: 'ok' } }],
@@ -804,7 +837,8 @@ describe('LlmPrompt', () => {
             ).resolves.toBe('ok');
         });
 
-        it('does not throw when total tokens are under limit', async () => {
+        it('does not throw when total tokens are under limit', async () => {expect.hasAssertions();
+
             Config.set('llmMaxTotalTokens', '100');
             const body = JSON.stringify({
                 choices: [{ message: { content: 'ok' } }],
@@ -855,7 +889,8 @@ describe('LlmPrompt', () => {
             Config.set('llmFallbackBaseUrl', 'https://nv.api.com/v1');
         });
 
-        it('returns validated data on first response', async () => {
+        it('returns validated data on first response', async () => {expect.hasAssertions();
+
             const validResponse = JSON.stringify({ choices: [{ message: { content: '{"ok": true}' } }] });
             mockFetch.mockResolvedValueOnce(mockOkResponse(validResponse));
             const result = await llmPrompt({
@@ -870,7 +905,8 @@ describe('LlmPrompt', () => {
             expect(result).toEqual({ ok: true });
         });
 
-        it('retries with schema hints when first response is invalid', async () => {
+        it('retries with schema hints when first response is invalid', async () => {expect.hasAssertions();
+
             const invalidBody = JSON.stringify({ choices: [{ message: { content: '{}' } }] });
             const validBody = JSON.stringify({ choices: [{ message: { content: '{"ok": true}' } }] });
             mockFetch
@@ -889,7 +925,8 @@ describe('LlmPrompt', () => {
             expect(mockFetch).toHaveBeenCalledTimes(2);
         });
 
-        it('throws when schema validation fails even after retry', async () => {
+        it('throws when schema validation fails even after retry', async () => {expect.hasAssertions();
+
             const body = JSON.stringify({ choices: [{ message: { content: '{}' } }] });
             mockFetch.mockResolvedValueOnce(mockOkResponse(body)).mockResolvedValueOnce(mockOkResponse(body));
 
@@ -905,7 +942,8 @@ describe('LlmPrompt', () => {
             ).rejects.toThrow('LLM response failed schema validation after progressive retry');
         });
 
-        it('returns validated data on cache hit with valid schema', async () => {
+        it('returns validated data on cache hit with valid schema', async () => {expect.hasAssertions();
+
             const body = JSON.stringify({ choices: [{ message: { content: '{"ok": true}' } }] });
             mockFetch.mockResolvedValueOnce(mockOkResponse(body));
             await llmPrompt({
@@ -929,7 +967,8 @@ describe('LlmPrompt', () => {
             expect(mockFetch).toHaveBeenCalledTimes(1);
         });
 
-        it('re-requests on cache hit when cached value fails schema validation', async () => {
+        it('re-requests on cache hit when cached value fails schema validation', async () => {expect.hasAssertions();
+
             const validBody = JSON.stringify({ choices: [{ message: { content: '{"ok": true}' } }] });
             mockFetch.mockResolvedValueOnce(mockOkResponse(validBody));
             await llmPrompt({
@@ -964,7 +1003,8 @@ describe('LlmPrompt', () => {
             expect(mockFetch).toHaveBeenCalledTimes(3);
         });
 
-        it('retries with schema hints when first response is invalid (llm-client)', async () => {
+        it('retries with schema hints when first response is invalid (llm-client)', async () => {expect.hasAssertions();
+
             const invalidBody = JSON.stringify({ choices: [{ message: { content: '{}' } }] });
             const validBody = JSON.stringify({ choices: [{ message: { content: '{"ok": true}' } }] });
             mockFetch
@@ -983,7 +1023,8 @@ describe('LlmPrompt', () => {
             expect(mockFetch).toHaveBeenCalledTimes(2);
         });
 
-        it('throws when schema validation fails even after retry (llm-client)', async () => {
+        it('throws when schema validation fails even after retry (llm-client)', async () => {expect.hasAssertions();
+
             const body = JSON.stringify({ choices: [{ message: { content: '{}' } }] });
             mockFetch.mockResolvedValueOnce(mockOkResponse(body)).mockResolvedValueOnce(mockOkResponse(body));
 
@@ -999,7 +1040,8 @@ describe('LlmPrompt', () => {
             ).rejects.toThrow('LLM response failed schema validation after progressive retry');
         });
 
-        it('returns validated data on cache hit with valid schema (llm-client)', async () => {
+        it('returns validated data on cache hit with valid schema (llm-client)', async () => {expect.hasAssertions();
+
             const body = JSON.stringify({ choices: [{ message: { content: '{"ok": true}' } }] });
             mockFetch.mockResolvedValueOnce(mockOkResponse(body));
             await llmPrompt({
@@ -1023,7 +1065,8 @@ describe('LlmPrompt', () => {
             expect(mockFetch).toHaveBeenCalledTimes(1);
         });
 
-        it('re-requests on cache hit when cached value fails schema validation (llm-client)', async () => {
+        it('re-requests on cache hit when cached value fails schema validation (llm-client)', async () => {expect.hasAssertions();
+
             const validBody = JSON.stringify({ choices: [{ message: { content: '{"ok": true}' } }] });
             mockFetch.mockResolvedValueOnce(mockOkResponse(validBody));
             await llmPrompt({
@@ -1069,7 +1112,8 @@ describe('LlmPrompt', () => {
             Config.set('llmFallbackBaseUrl', 'https://nv.api.com/v1');
         });
 
-        it('falls back to next provider when API returns error payload in 200 response', async () => {
+        it('falls back to next provider when API returns error payload in 200 response', async () => {expect.hasAssertions();
+
             const errorBody = JSON.stringify({ error: { message: 'Rate limited by provider' } });
             const successBody = JSON.stringify({ choices: [{ message: { content: 'fallback worked' } }] });
             mockFetch
@@ -1082,7 +1126,8 @@ describe('LlmPrompt', () => {
     });
 
     describe('Gemini usageMetadata tracking', () => {
-        it('tracks prompt/completion tokens via usageMetadata (Gemini format)', async () => {
+        it('tracks prompt/completion tokens via usageMetadata (Gemini format)', async () => {expect.hasAssertions();
+
             Config.set('llmReviewApiKey', 'AIza-um-test');
             Config.set('llmReviewModel', 'gemini-2.0-flash-exp');
             Config.set('llmReviewBaseUrl', 'https://generativelanguage.googleapis.com/v1beta');
@@ -1102,7 +1147,8 @@ describe('LlmPrompt', () => {
     });
 
     describe('Cache expiry', () => {
-        it('re-requests when cached entry expires', async () => {
+        it('re-requests when cached entry expires', async () => {expect.hasAssertions();
+
             vi.useFakeTimers();
 
             Config.set('llmApiKey', 'sk-cache-expire');
@@ -1129,7 +1175,8 @@ describe('LlmPrompt', () => {
             expect(mockFetch).toHaveBeenCalledTimes(2);
         });
 
-        it('cache cleanup timed interval removes expired entries', async () => {
+        it('cache cleanup timed interval removes expired entries', async () => {expect.hasAssertions();
+
             Config.set('llmApiKey', 'sk-cache-cleanup');
             Config.set('llmModel', 'gpt-4');
             Config.set('llmBaseUrl', 'https://api.test.com/v1');
@@ -1166,7 +1213,8 @@ describe('LlmPrompt', () => {
     });
 
     describe('Report tier', () => {
-        it('uses report tier config and sends responseFormat=json', async () => {
+        it('uses report tier config and sends responseFormat=json', async () => {expect.hasAssertions();
+
             Config.set('llmApiKey', 'sk-report');
             Config.set('llmModel', 'gpt-4-report');
             Config.set('llmBaseUrl', 'https://api.test.com/v1');
@@ -1182,7 +1230,8 @@ describe('LlmPrompt', () => {
     });
 
     describe('Fetch retries exhausted', () => {
-        it('throws on network error after exhausting all retries', async () => {
+        it('throws on network error after exhausting all retries', async () => {expect.hasAssertions();
+
             Config.set('llmApiKey', 'sk-netfail');
             Config.set('llmModel', 'gpt-4');
             Config.set('llmBaseUrl', 'https://api.test.com/v1');
@@ -1198,7 +1247,8 @@ describe('LlmPrompt', () => {
             );
         });
 
-        it('throws LlmError after exhausting HTTP retries on 429', async () => {
+        it('throws LlmError after exhausting HTTP retries on 429', async () => {expect.hasAssertions();
+
             Config.set('llmApiKey', 'sk-httpex');
             Config.set('llmModel', 'gpt-4');
             Config.set('llmBaseUrl', 'https://api.test.com/v1');
@@ -1215,7 +1265,8 @@ describe('LlmPrompt', () => {
             );
         });
 
-        it('throws LlmError when fetch retries set to 0', async () => {
+        it('throws LlmError when fetch retries set to 0', async () => {expect.hasAssertions();
+
             Config.set('llmApiKey', 'sk-zero');
             Config.set('llmModel', 'gpt-4');
             Config.set('llmBaseUrl', 'https://api.test.com/v1');
@@ -1228,7 +1279,8 @@ describe('LlmPrompt', () => {
     });
 
     describe('Input token limit', () => {
-        it('throws when estimated tokens exceed LLM_MAX_TOKENS_PER_OP', async () => {
+        it('throws when estimated tokens exceed LLM_MAX_TOKENS_PER_OP', async () => {expect.hasAssertions();
+
             Config.set('llmApiKey', 'sk-tokenlim');
             Config.set('llmModel', 'gpt-4');
             Config.set('llmBaseUrl', 'https://api.test.com/v1');
@@ -1247,7 +1299,8 @@ describe('LlmPrompt', () => {
             Config.set('llmBaseUrl', 'https://api.test.com/v1');
         });
 
-        it('returns disk cached response without schema', async () => {
+        it('returns disk cached response without schema', async () => {expect.hasAssertions();
+
             vi.mocked(diskCacheGet).mockReturnValue('cached from disk');
 
             const result = await llmPrompt({ tier: 'main', system: 'sys', user: 'usr', callerId: 'disk-noschema' });
@@ -1256,7 +1309,8 @@ describe('LlmPrompt', () => {
             expect(mockFetch).not.toHaveBeenCalled();
         });
 
-        it('returns disk cached response with valid schema', async () => {
+        it('returns disk cached response with valid schema', async () => {expect.hasAssertions();
+
             vi.mocked(diskCacheGet).mockReturnValue('{"ok": true}');
 
             const result = await llmPrompt({
@@ -1272,7 +1326,8 @@ describe('LlmPrompt', () => {
             expect(mockFetch).not.toHaveBeenCalled();
         });
 
-        it('falls through to fetch when disk cache has schema-invalid content', async () => {
+        it('falls through to fetch when disk cache has schema-invalid content', async () => {expect.hasAssertions();
+
             const warnSpy = vi.spyOn(rootLogger, 'warn').mockImplementation(() => {});
             vi.mocked(diskCacheGet).mockReturnValue('{"not_ok": "string_value"}');
 

@@ -35,28 +35,32 @@ beforeEach(() => {
 describe('WithSpinner', () => {
     const fn = vi.fn().mockResolvedValue(42);
 
-    it('calls fn directly when quiet', async () => {
+    it('calls fn directly when quiet', async () => {expect.hasAssertions();
+
         mockIsQuiet.mockReturnValue(true);
         const result = await withSpinner('loading', fn);
 
         expect(result).toBe(42);
     });
 
-    it('calls fn directly when not TTY', async () => {
+    it('calls fn directly when not TTY', async () => {expect.hasAssertions();
+
         mockIsTTY.mockReturnValue(false);
         const result = await withSpinner('loading', fn);
 
         expect(result).toBe(42);
     });
 
-    it('calls fn directly when CI', async () => {
+    it('calls fn directly when CI', async () => {expect.hasAssertions();
+
         mockIsCI.mockReturnValue(true);
         const result = await withSpinner('loading', fn);
 
         expect(result).toBe(42);
     });
 
-    it('uses ora spinner when TTY and not quiet', async () => {
+    it('uses ora spinner when TTY and not quiet', async () => {expect.hasAssertions();
+
         const mockSpinner = { start: vi.fn().mockReturnThis(), succeed: vi.fn(), fail: vi.fn() };
         const mockOra = vi.fn(() => mockSpinner);
         __setOraDep(mockOra);
@@ -65,17 +69,18 @@ describe('WithSpinner', () => {
 
         expect(result).toBe(42);
         expect(mockOra).toHaveBeenCalledWith({ text: 'loading', color: 'cyan', spinner: 'dots' });
-        expect(mockSpinner.start).toHaveBeenCalled();
-        expect(mockSpinner.succeed).toHaveBeenCalled();
+        expect(mockSpinner.start).toHaveBeenCalledWith();
+        expect(mockSpinner.succeed).toHaveBeenCalledWith();
     });
 
-    it('calls spinner.fail on fn rejection', async () => {
+    it('calls spinner.fail on fn rejection', async () => {expect.hasAssertions();
+
         const mockSpinner = { start: vi.fn().mockReturnThis(), succeed: vi.fn(), fail: vi.fn() };
         __setOraDep(vi.fn(() => mockSpinner));
         const failingFn = vi.fn().mockRejectedValue(new Error('fail'));
 
         await expect(withSpinner('loading', failingFn)).rejects.toThrow('fail');
-        expect(mockSpinner.fail).toHaveBeenCalled();
+        expect(mockSpinner.fail).toHaveBeenCalledWith();
     });
 });
 
@@ -114,7 +119,7 @@ describe('ProgressBar', () => {
             const bar = new ProgressBar(100);
             bar.update(50);
 
-            expect(printSpy).toHaveBeenCalled();
+            expect(printSpy).toHaveBeenCalledWith();
         });
     });
 
@@ -123,7 +128,7 @@ describe('ProgressBar', () => {
             const bar = new ProgressBar(100);
             bar.stop();
 
-            expect(mockSingleBar.stop).toHaveBeenCalled();
+            expect(mockSingleBar.stop).toHaveBeenCalledWith();
         });
 
         it('no-ops when not TTY', () => {

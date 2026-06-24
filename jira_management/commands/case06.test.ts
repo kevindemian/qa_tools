@@ -23,7 +23,8 @@ describe('Case06 — check release status', () => {
         expect(typeof case06.handler).toBe('function');
     });
 
-    it('executes without error with basic context', async () => {
+    it('executes without error with basic context', async () => {expect.hasAssertions();
+
         const result = await case06.handler(mockContext);
 
         expect([undefined, true, false]).toContain(result);

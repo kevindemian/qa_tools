@@ -38,7 +38,8 @@ function makeFixture(criteria: string[], ranges: Array<{ field: string; min: num
 /* ── Tests ───────────────────────────────────────────────────── */
 
 describe('ComputeCoverageMetrics — property-based', () => {
-    it('criteriaCoverage, partitionCoverage, boundaryCoverage sempre em [0, 1]', () => {
+    it('criteriaCoverage, partitionCoverage, boundaryCoverage sempre em [0, 1]', () => {expect.hasAssertions();
+
         fc.assert(
             fc.property(
                 fc.string({ minLength: 1, maxLength: 100 }),
@@ -60,7 +61,8 @@ describe('ComputeCoverageMetrics — property-based', () => {
         );
     });
 
-    it('totalTests = 0 para body inválido', () => {
+    it('totalTests = 0 para body inválido', () => {expect.hasAssertions();
+
         fc.assert(
             fc.property(fc.string({ minLength: 1, maxLength: 50 }), (badBody) => {
                 const result = computeCoverageMetrics(badBody, makeFixture(['test'], []));
@@ -74,7 +76,8 @@ describe('ComputeCoverageMetrics — property-based', () => {
         );
     });
 
-    it('totalTests = 0 para JSON não-array', () => {
+    it('totalTests = 0 para JSON não-array', () => {expect.hasAssertions();
+
         fc.assert(
             fc.property(fc.constantFrom('{}', '{"key": "value"}', '"string"', 'null', 'true', 'false'), (body) => {
                 const result = computeCoverageMetrics(body, makeFixture(['test'], []));
@@ -85,7 +88,8 @@ describe('ComputeCoverageMetrics — property-based', () => {
         );
     });
 
-    it('totalTests = length do array', () => {
+    it('totalTests = length do array', () => {expect.hasAssertions();
+
         fc.assert(
             fc.property(fc.array(fc.record({ title: fc.string() }), { minLength: 0, maxLength: 20 }), (tests) => {
                 const body = JSON.stringify(tests);
@@ -97,7 +101,8 @@ describe('ComputeCoverageMetrics — property-based', () => {
         );
     });
 
-    it('coveredCriteriaCount ≤ totalCriteria', () => {
+    it('coveredCriteriaCount ≤ totalCriteria', () => {expect.hasAssertions();
+
         fc.assert(
             fc.property(
                 fc.array(randomCriterion(), { minLength: 1, maxLength: 5 }),
@@ -115,7 +120,8 @@ describe('ComputeCoverageMetrics — property-based', () => {
         );
     });
 
-    it('criteriaCoverage = 0 quando nenhum critério corresponde', () => {
+    it('criteriaCoverage = 0 quando nenhum critério corresponde', () => {expect.hasAssertions();
+
         fc.assert(
             fc.property(
                 fc.string({ minLength: 1, maxLength: 10 }).filter((s) => !s.toLowerCase().includes('criteria')),

@@ -47,7 +47,8 @@ function countBugsWithoutTests(issues: BacklogHealthIssue[]): number {
 /* ── Tests ───────────────────────────────────────────────────── */
 
 describe('AnalyzeBacklogHealth — property-based', () => {
-    it('unassigned count matches direct filter', () => {
+    it('unassigned count matches direct filter', () => {expect.hasAssertions();
+
         fc.assert(
             fc.property(fc.array(issueArb, { maxLength: 50 }), (issues) => {
                 const result = analyzeBacklogHealth(issues);
@@ -58,7 +59,8 @@ describe('AnalyzeBacklogHealth — property-based', () => {
         );
     });
 
-    it('unassigned count matches direct filter on input, not result', () => {
+    it('unassigned count matches direct filter on input, not result', () => {expect.hasAssertions();
+
         fc.assert(
             fc.property(fc.array(issueArb, { maxLength: 50 }), (issues) => {
                 const result = analyzeBacklogHealth(issues);
@@ -69,7 +71,8 @@ describe('AnalyzeBacklogHealth — property-based', () => {
         );
     });
 
-    it('analyzeUnassignedIssues matches filter for all issues', () => {
+    it('analyzeUnassignedIssues matches filter for all issues', () => {expect.hasAssertions();
+
         fc.assert(
             fc.property(fc.array(issueArb, { maxLength: 50 }), (issues) => {
                 const result = analyzeUnassignedIssues(issues);
@@ -81,7 +84,8 @@ describe('AnalyzeBacklogHealth — property-based', () => {
         );
     });
 
-    it('analyzeBugsWithoutTests filters Bug type with zero linked tests', () => {
+    it('analyzeBugsWithoutTests filters Bug type with zero linked tests', () => {expect.hasAssertions();
+
         fc.assert(
             fc.property(fc.array(issueArb, { maxLength: 50 }), (issues) => {
                 const result = analyzeBugsWithoutTests(issues);
@@ -94,7 +98,8 @@ describe('AnalyzeBacklogHealth — property-based', () => {
         );
     });
 
-    it('bugsWithoutTests count matches direct filter', () => {
+    it('bugsWithoutTests count matches direct filter', () => {expect.hasAssertions();
+
         fc.assert(
             fc.property(fc.array(issueArb, { maxLength: 50 }), (issues) => {
                 const result = analyzeBacklogHealth(issues);
@@ -106,7 +111,8 @@ describe('AnalyzeBacklogHealth — property-based', () => {
         );
     });
 
-    it('score is always in [0, 100]', () => {
+    it('score is always in [0, 100]', () => {expect.hasAssertions();
+
         fc.assert(
             fc.property(fc.array(issueArb, { maxLength: 50 }), (issues) => {
                 const result = analyzeBacklogHealth(issues);
@@ -118,7 +124,8 @@ describe('AnalyzeBacklogHealth — property-based', () => {
         );
     });
 
-    it('densityByEpic bugCount sums to total bugs in issues', () => {
+    it('densityByEpic bugCount sums to total bugs in issues', () => {expect.hasAssertions();
+
         fc.assert(
             fc.property(fc.array(issueArb, { minLength: 1, maxLength: 50 }), (issues) => {
                 const result = analyzeBacklogHealth(issues);
@@ -131,7 +138,8 @@ describe('AnalyzeBacklogHealth — property-based', () => {
         );
     });
 
-    it('stale issues filtered by staleDays threshold', () => {
+    it('stale issues filtered by staleDays threshold', () => {expect.hasAssertions();
+
         fc.assert(
             fc.property(fc.array(issueArb, { maxLength: 50 }), fc.integer({ min: 1, max: 90 }), (issues, staleDays) => {
                 const result = analyzeBacklogHealth(issues, { staleDays });
@@ -149,7 +157,8 @@ describe('AnalyzeBacklogHealth — property-based', () => {
 });
 
 describe('GenerateBacklogHealthHtml — property-based', () => {
-    it('always contains backlog-health id', () => {
+    it('always contains backlog-health id', () => {expect.hasAssertions();
+
         fc.assert(
             fc.property(fc.array(issueArb, { maxLength: 30 }), (issues) => {
                 const result = analyzeBacklogHealth(issues);
@@ -161,7 +170,8 @@ describe('GenerateBacklogHealthHtml — property-based', () => {
         );
     });
 
-    it('always contains Backlog Score', () => {
+    it('always contains Backlog Score', () => {expect.hasAssertions();
+
         fc.assert(
             fc.property(fc.array(issueArb, { maxLength: 30 }), (issues) => {
                 const result = analyzeBacklogHealth(issues);

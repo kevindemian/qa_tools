@@ -168,14 +168,16 @@ describe('ParseBatchArgs', () => {
 });
 
 describe('TryBatchMode', () => {
-    it('returns false when no batch args', async () => {
+    it('returns false when no batch args', async () => {expect.hasAssertions();
+
         process.argv = ['node', 'script.js'];
         const result = await tryBatchMode();
 
         expect(result).toBeFalsy();
     });
 
-    it('errors when no projects configured', async () => {
+    it('errors when no projects configured', async () => {expect.hasAssertions();
+
         process.argv = ['node', 'script.js', '--auto'];
         mockGetProjects.mockReturnValue({});
 
@@ -185,7 +187,8 @@ describe('TryBatchMode', () => {
         expect(mockError).toHaveBeenCalledWith(expect.stringContaining('Nenhum projeto'));
     });
 
-    it('errors when project not found', async () => {
+    it('errors when project not found', async () => {expect.hasAssertions();
+
         process.argv = ['node', 'script.js', '--project', 'unknown'];
         mockGetProjects.mockReturnValue({ existing: '1' });
 
@@ -195,7 +198,8 @@ describe('TryBatchMode', () => {
         expect(mockError).toHaveBeenCalledWith(expect.stringContaining('unknown'));
     });
 
-    it('errors when branch not found', async () => {
+    it('errors when branch not found', async () => {expect.hasAssertions();
+
         process.argv = ['node', 'script.js', '--project', 'proj1', '--branch', 'bad'];
         mockGetProjects.mockReturnValue({ proj1: '1' });
         vi.spyOn(mockManager, 'getBranch').mockResolvedValue(null);
@@ -206,7 +210,8 @@ describe('TryBatchMode', () => {
         expect(mockError).toHaveBeenCalledWith(expect.stringContaining('bad'));
     });
 
-    it('triggers pipeline and polls when batch mode', async () => {
+    it('triggers pipeline and polls when batch mode', async () => {expect.hasAssertions();
+
         process.argv = ['node', 'script.js', '--project', 'proj1', '--branch', 'main'];
         mockGetProjects.mockReturnValue({ proj1: '1' });
         vi.spyOn(mockManager, 'getBranch').mockResolvedValue({ name: 'main' });
@@ -224,7 +229,8 @@ describe('TryBatchMode', () => {
         expect(mockPollPipeline).toHaveBeenCalledWith(mockManager, '42');
     });
 
-    it('sets AUTO_CONFIRM when --auto flag passed', async () => {
+    it('sets AUTO_CONFIRM when --auto flag passed', async () => {expect.hasAssertions();
+
         process.argv = ['node', 'script.js', '--auto', '--project', 'proj1'];
         mockGetProjects.mockReturnValue({ proj1: '1' });
         vi.spyOn(mockManager, 'getBranch').mockResolvedValue({ name: 'main' });
@@ -236,7 +242,8 @@ describe('TryBatchMode', () => {
         expect(setAutoConfirmSpy).toHaveBeenCalledWith(true);
     });
 
-    it('handles pipeline trigger error', async () => {
+    it('handles pipeline trigger error', async () => {expect.hasAssertions();
+
         process.argv = ['node', 'script.js', '--project', 'proj1'];
         mockGetProjects.mockReturnValue({ proj1: '1' });
         vi.spyOn(mockManager, 'getBranch').mockResolvedValue({ name: 'main' });
@@ -245,10 +252,11 @@ describe('TryBatchMode', () => {
         const result = await tryBatchMode();
 
         expect(result).toBeTruthy();
-        expect(mockPrintError).toHaveBeenCalled();
+        expect(mockPrintError).toHaveBeenCalledWith();
     });
 
-    it('returns early when pipelineResult is undefined', async () => {
+    it('returns early when pipelineResult is undefined', async () => {expect.hasAssertions();
+
         process.argv = ['node', 'script.js', '--project', 'proj1'];
         mockGetProjects.mockReturnValue({ proj1: '1' });
         vi.spyOn(mockManager, 'getBranch').mockResolvedValue({ name: 'main' });
@@ -259,7 +267,8 @@ describe('TryBatchMode', () => {
         expect(result).toBeTruthy();
     });
 
-    it('calls offerPipelineFailureAnalysis when results are collected', async () => {
+    it('calls offerPipelineFailureAnalysis when results are collected', async () => {expect.hasAssertions();
+
         process.argv = ['node', 'script.js', '--project', 'proj1', '--branch', 'main'];
         mockGetProjects.mockReturnValue({ proj1: '1' });
         vi.spyOn(mockManager, 'getBranch').mockResolvedValue({ name: 'main' });
@@ -274,7 +283,8 @@ describe('TryBatchMode', () => {
         expect(result).toBeTruthy();
     });
 
-    it('handles empty pipelineId', async () => {
+    it('handles empty pipelineId', async () => {expect.hasAssertions();
+
         process.argv = ['node', 'script.js', '--project', 'proj1'];
         mockGetProjects.mockReturnValue({ proj1: '1' });
         vi.spyOn(mockManager, 'getBranch').mockResolvedValue({ name: 'main' });

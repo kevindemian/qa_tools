@@ -26,7 +26,8 @@ class TestProvider extends GitProviderBase {
 }
 
 describe('GitProviderBase._get', () => {
-    it('returns data on successful get', async () => {
+    it('returns data on successful get', async () => {expect.hasAssertions();
+
         const provider = new TestProvider();
         vi.spyOn(provider.client, 'get').mockResolvedValue({ data: { id: 1 } });
         const result = await provider.publicGet('/test');
@@ -34,7 +35,8 @@ describe('GitProviderBase._get', () => {
         expect(result).toEqual({ id: 1 });
     });
 
-    it('passes params to client.get', async () => {
+    it('passes params to client.get', async () => {expect.hasAssertions();
+
         const provider = new TestProvider();
         const getSpy = vi.spyOn(provider.client, 'get').mockResolvedValue({ data: [] });
         await provider.publicGet('/test', { params: { page: 2 } });
@@ -42,7 +44,8 @@ describe('GitProviderBase._get', () => {
         expect(getSpy).toHaveBeenCalledWith('/test', { params: { page: 2 } });
     });
 
-    it('returns null on error when returnNull is set', async () => {
+    it('returns null on error when returnNull is set', async () => {expect.hasAssertions();
+
         const provider = new TestProvider();
         vi.spyOn(provider.client, 'get').mockRejectedValue(new Error('fail'));
         const result = await provider.publicGet('/test', { returnNull: true });
@@ -52,7 +55,8 @@ describe('GitProviderBase._get', () => {
 });
 
 describe('GitProviderBase._post', () => {
-    it('returns data on successful post', async () => {
+    it('returns data on successful post', async () => {expect.hasAssertions();
+
         const provider = new TestProvider();
         vi.spyOn(provider.client, 'post').mockResolvedValue({ data: { key: 1 } });
         const result = await provider.publicPost('/test', { name: 'foo' });
@@ -60,7 +64,8 @@ describe('GitProviderBase._post', () => {
         expect(result).toEqual({ key: 1 });
     });
 
-    it('calls post without body when body is undefined', async () => {
+    it('calls post without body when body is undefined', async () => {expect.hasAssertions();
+
         const provider = new TestProvider();
         const postSpy = vi.spyOn(provider.client, 'post').mockResolvedValue({ data: null });
         await provider.publicPost('/test');

@@ -25,20 +25,22 @@ beforeEach(() => {
 });
 
 describe('HandleSetupWizard', () => {
-    it('calls setup main and records history on success', async () => {
+    it('calls setup main and records history on success', async () => {expect.hasAssertions();
+
         mockSetupModule.main.mockResolvedValue(undefined);
 
         const result = await handleSetupWizard();
 
         expect(title).toHaveBeenCalledWith('Setup Wizard');
         expect(info).toHaveBeenCalledWith('Iniciando wizard de configuração de CI/CD...');
-        expect(divider).toHaveBeenCalled();
-        expect(mockSetupModule.main).toHaveBeenCalled();
+        expect(divider).toHaveBeenCalledWith();
+        expect(mockSetupModule.main).toHaveBeenCalledWith();
         expect(pushHistory).toHaveBeenCalledWith('setup-wizard', 'wizard concluído', 'ok');
         expect(result).toBeFalsy();
     });
 
-    it('handles setup failure gracefully', async () => {
+    it('handles setup failure gracefully', async () => {expect.hasAssertions();
+
         mockSetupModule.main.mockRejectedValue(new Error('Setup error'));
 
         const result = await handleSetupWizard();

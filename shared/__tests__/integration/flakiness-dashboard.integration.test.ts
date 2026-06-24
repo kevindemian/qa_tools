@@ -42,7 +42,8 @@ describe('Integration: Flakiness Dashboard (FT-19)', () => {
     });
 
     describe('FT-19a: generateFlakinessHtml with high flakiness', () => {
-        it('produces complete HTML with summary and table', async () => {
+        it('produces complete HTML with summary and table', async () => {expect.hasAssertions();
+
             const { generateFlakinessHtml } = await import('../../flakiness-dashboard.js');
             const entries = makeEntries();
             const html = generateFlakinessHtml(entries, 'Flakiness Report');
@@ -56,7 +57,8 @@ describe('Integration: Flakiness Dashboard (FT-19)', () => {
     });
 
     describe('FT-19b: all below threshold', () => {
-        it('shows no-failure message when all entries below threshold', async () => {
+        it('shows no-failure message when all entries below threshold', async () => {expect.hasAssertions();
+
             const { generateFlakinessHtml } = await import('../../flakiness-dashboard.js');
             const entries: FlakinessEntry[] = [
                 { title: 'Stable test', passCount: 99, failCount: 1, skipCount: 0, totalRuns: 100, rate: 0.01 },
@@ -69,7 +71,8 @@ describe('Integration: Flakiness Dashboard (FT-19)', () => {
     });
 
     describe('FT-19c: custom title', () => {
-        it('renders custom title in heading', async () => {
+        it('renders custom title in heading', async () => {expect.hasAssertions();
+
             const { generateFlakinessHtml } = await import('../../flakiness-dashboard.js');
             const html = generateFlakinessHtml([], 'My Dashboard');
 
@@ -78,7 +81,8 @@ describe('Integration: Flakiness Dashboard (FT-19)', () => {
     });
 
     describe('FT-19e: dark mode', () => {
-        it('includes theme toggle and dark mode CSS', async () => {
+        it('includes theme toggle and dark mode CSS', async () => {expect.hasAssertions();
+
             const { generateFlakinessHtml } = await import('../../flakiness-dashboard.js');
             const html = generateFlakinessHtml([]);
 
@@ -89,7 +93,8 @@ describe('Integration: Flakiness Dashboard (FT-19)', () => {
     });
 
     describe('FT-19d: error fallback', () => {
-        it('returns error page when sanitizeHtml throws', async () => {
+        it('returns error page when sanitizeHtml throws', async () => {expect.hasAssertions();
+
             const { sanitizeHtml } = await import('../../escape.js');
             const sanitizeMock = vi.mocked(sanitizeHtml);
             sanitizeMock.mockImplementationOnce(() => {
@@ -100,12 +105,13 @@ describe('Integration: Flakiness Dashboard (FT-19)', () => {
             const html = generateFlakinessHtml([]);
 
             expect(html).toContain('Error generating dashboard');
-            expect(rootLogger['error']).toHaveBeenCalled();
+            expect(rootLogger['error']).toHaveBeenCalledWith();
         });
     });
 
     describe('FT-19f: entries with extreme rate values', () => {
-        it('handles NaN and Infinity rates without crashing', async () => {
+        it('handles NaN and Infinity rates without crashing', async () => {expect.hasAssertions();
+
             const { generateFlakinessHtml } = await import('../../flakiness-dashboard.js');
             const entries: FlakinessEntry[] = [
                 { title: 'NaN-test', passCount: 0, failCount: 0, skipCount: 0, totalRuns: 1, rate: NaN },

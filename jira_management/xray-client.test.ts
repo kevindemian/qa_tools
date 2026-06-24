@@ -18,7 +18,8 @@ vi.mock('../shared/xray-cloud-client', () => ({
 vi.mock('../shared/config');
 
 describe('ServerStepImporter', () => {
-    it('calls postJiraResource with correct endpoint and payload', async () => {
+    it('calls postJiraResource with correct endpoint and payload', async () => {expect.hasAssertions();
+
         const mockJira = createMockJiraResource();
         const postSpy = vi.spyOn(mockJira, 'postJiraResource');
         const importer = createStepImporter(mockJira, 'server');
@@ -32,7 +33,8 @@ describe('ServerStepImporter', () => {
         });
     });
 
-    it('sends step data in the POST payload', async () => {
+    it('sends step data in the POST payload', async () => {expect.hasAssertions();
+
         const mockJira = createMockJiraResource();
         const postSpy = vi.spyOn(mockJira, 'postJiraResource');
         const importer = createStepImporter(mockJira, 'server');
@@ -46,7 +48,8 @@ describe('ServerStepImporter', () => {
         });
     });
 
-    it('propagates post error', async () => {
+    it('propagates post error', async () => {expect.hasAssertions();
+
         const mockJira = createMockJiraResource();
         mockJira.postJiraResource.mockRejectedValue(new Error('Network error'));
         const importer = createStepImporter(mockJira, 'server');
@@ -70,7 +73,8 @@ describe('CloudStepImporter', () => {
         vi.spyOn(Config, 'getDefault').mockReturnValue(mockConfig);
     });
 
-    it('happy path — sends GraphQL mutation via XrayCloudClient', async () => {
+    it('happy path — sends GraphQL mutation via XrayCloudClient', async () => {expect.hasAssertions();
+
         mockGraphqlMutation.mockResolvedValue(undefined);
 
         const importer = createStepImporter({} as JiraResource, 'cloud');
@@ -88,7 +92,8 @@ describe('CloudStepImporter', () => {
         expect(callArgs[3]).toBe('test-client-secret');
     });
 
-    it('throws on missing credentials', async () => {
+    it('throws on missing credentials', async () => {expect.hasAssertions();
+
         const mockConfig = createMockConfigInstance();
         mockConfig.get = function <T = string>(key: string): T {
             const map: Record<string, string> = { xrayClientId: '', xrayClientSecret: '' };
@@ -104,7 +109,8 @@ describe('CloudStepImporter', () => {
         );
     });
 
-    it('propagates GraphQL mutation error', async () => {
+    it('propagates GraphQL mutation error', async () => {expect.hasAssertions();
+
         mockGraphqlMutation.mockRejectedValue(new Error('Xray Cloud GraphQL mutation failed: field not found'));
 
         const importer = createStepImporter({} as JiraResource, 'cloud');

@@ -33,7 +33,8 @@ const epicListArb = fc.array(fc.string({ minLength: 1, maxLength: 15 }), { maxLe
 /* ── Tests ───────────────────────────────────────────────────── */
 
 describe('AnalyzePipelineImpact — property-based', () => {
-    it('every alert has non-empty title, message, affectedArea and recommendation', () => {
+    it('every alert has non-empty title, message, affectedArea and recommendation', () => {expect.hasAssertions();
+
         fc.assert(
             fc.property(
                 pctArb,
@@ -61,7 +62,8 @@ describe('AnalyzePipelineImpact — property-based', () => {
         );
     });
 
-    it('no duplicate alert titles', () => {
+    it('no duplicate alert titles', () => {expect.hasAssertions();
+
         fc.assert(
             fc.property(
                 pctArb,
@@ -86,7 +88,8 @@ describe('AnalyzePipelineImpact — property-based', () => {
         );
     });
 
-    it('total alerts = criticalCount + warningCount + infoCount', () => {
+    it('total alerts = criticalCount + warningCount + infoCount', () => {expect.hasAssertions();
+
         fc.assert(
             fc.property(
                 pctArb,
@@ -110,7 +113,8 @@ describe('AnalyzePipelineImpact — property-based', () => {
         );
     });
 
-    it('critical alert only when both passRate < 70 and coveragePct < 70', () => {
+    it('critical alert only when both passRate < 70 and coveragePct < 70', () => {expect.hasAssertions();
+
         fc.assert(
             fc.property(
                 pctArb,
@@ -138,7 +142,8 @@ describe('AnalyzePipelineImpact — property-based', () => {
         );
     });
 
-    it('all clear alert only when passRate >= 80 and coveragePct >= 80', () => {
+    it('all clear alert only when passRate >= 80 and coveragePct >= 80', () => {expect.hasAssertions();
+
         fc.assert(
             fc.property(
                 pctArb,
@@ -166,7 +171,8 @@ describe('AnalyzePipelineImpact — property-based', () => {
         );
     });
 
-    it('returns DEFAULT_RESULT for null passRate', () => {
+    it('returns DEFAULT_RESULT for null passRate', () => {expect.hasAssertions();
+
         fc.assert(
             fc.property(
                 failingJobsArb,
@@ -187,7 +193,8 @@ describe('AnalyzePipelineImpact — property-based', () => {
         );
     });
 
-    it('returns DEFAULT_RESULT for undefined coveragePct', () => {
+    it('returns DEFAULT_RESULT for undefined coveragePct', () => {expect.hasAssertions();
+
         fc.assert(
             fc.property(pctArb, failingJobsArb, failureListArb, (passRate, failingJobs, topFailures) => {
                 const result = analyzePipelineImpact(passRate, failingJobs, topFailures, undefined, []);
@@ -199,7 +206,8 @@ describe('AnalyzePipelineImpact — property-based', () => {
         );
     });
 
-    it('warning count > 0 when coverage below 70', () => {
+    it('warning count > 0 when coverage below 70', () => {expect.hasAssertions();
+
         fc.assert(
             fc.property(
                 fc.integer({ min: 70, max: 100 }),
@@ -224,7 +232,8 @@ describe('AnalyzePipelineImpact — property-based', () => {
         );
     });
 
-    it('produces valid timestamp', () => {
+    it('produces valid timestamp', () => {expect.hasAssertions();
+
         fc.assert(
             fc.property(
                 pctArb,
@@ -251,7 +260,8 @@ describe('AnalyzePipelineImpact — property-based', () => {
 });
 
 describe('GenerateImpactAlertHtml — property-based', () => {
-    it('always produces valid HTML with DOCTYPE', () => {
+    it('always produces valid HTML with DOCTYPE', () => {expect.hasAssertions();
+
         fc.assert(
             fc.property(
                 fc.array(
@@ -285,7 +295,8 @@ describe('GenerateImpactAlertHtml — property-based', () => {
         );
     });
 
-    it('contains summary cards with alert counts', () => {
+    it('contains summary cards with alert counts', () => {expect.hasAssertions();
+
         fc.assert(
             fc.property(
                 fc.array(
@@ -321,7 +332,8 @@ describe('GenerateImpactAlertHtml — property-based', () => {
         );
     });
 
-    it('returns error page for null/undefined result', () => {
+    it('returns error page for null/undefined result', () => {expect.hasAssertions();
+
         fc.assert(
             fc.property(fc.boolean(), () => {
                 const html = generateImpactAlertHtml(null);

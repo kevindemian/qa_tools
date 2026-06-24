@@ -85,7 +85,7 @@ describe('PackageVersionManager', () => {
             });
             pkg.updateReleaseNotes('v2.0', ['TASK-1']);
 
-            expect(spy).toHaveBeenCalled();
+            expect(spy).toHaveBeenCalledWith();
 
             spy.mockRestore();
         });

@@ -140,7 +140,8 @@ afterAll(() => {
 });
 
 describe('GeneratePrReport', () => {
-    it('returns healthScore and passRate for basic test data', async () => {
+    it('returns healthScore and passRate for basic test data', async () => {expect.hasAssertions();
+
         const result = await generatePrReport({
             tests: [sampleTest, failedTest, skippedTest],
             stats: defaultStats,
@@ -150,7 +151,8 @@ describe('GeneratePrReport', () => {
         expect(result.passRate).toBeCloseTo(88.9, 1);
     });
 
-    it('generates HTML report at default path when no htmlOutputPath given', async () => {
+    it('generates HTML report at default path when no htmlOutputPath given', async () => {expect.hasAssertions();
+
         const result = await generatePrReport({
             tests: [sampleTest],
             stats: { passed: 1, failed: 0, skipped: 0, total: 1, duration: 100 },
@@ -160,7 +162,8 @@ describe('GeneratePrReport', () => {
         expect(result.htmlPath).toContain('reports/pr-report.html');
     });
 
-    it('uses custom htmlOutputPath when provided', async () => {
+    it('uses custom htmlOutputPath when provided', async () => {expect.hasAssertions();
+
         const result = await generatePrReport({
             tests: [sampleTest],
             stats: { passed: 1, failed: 0, skipped: 0, total: 1, duration: 100 },
@@ -170,7 +173,8 @@ describe('GeneratePrReport', () => {
         expect(result.htmlPath).toBe('/tmp/custom-report.html');
     });
 
-    it('includes coverage source in HTML options when coverage is resolved', async () => {
+    it('includes coverage source in HTML options when coverage is resolved', async () => {expect.hasAssertions();
+
         mockCoverage.resolveCoverage.mockReturnValue({
             source: 'istanbul',
             coveragePct: 85,
@@ -192,7 +196,8 @@ describe('GeneratePrReport', () => {
         expect(result.healthScore).toEqual(defaultHealthScore);
     });
 
-    it('passes diffComparison to HTML options when provided', async () => {
+    it('passes diffComparison to HTML options when provided', async () => {expect.hasAssertions();
+
         const diff = {
             newFailures: [failedTest],
             newPasses: [],
@@ -211,7 +216,8 @@ describe('GeneratePrReport', () => {
         );
     });
 
-    it('runs quality gate when not skipped', async () => {
+    it('runs quality gate when not skipped', async () => {expect.hasAssertions();
+
         const qgResult = {
             overall: 'pass' as const,
             score: 90,
@@ -225,7 +231,7 @@ describe('GeneratePrReport', () => {
             skipQuality: false,
         });
 
-        expect(mockQualityGate.runQualityGate).toHaveBeenCalled();
+        expect(mockQualityGate.runQualityGate).toHaveBeenCalledWith();
         expect(mockCheckRun.createCheckRun).toHaveBeenCalledWith(
             expect.objectContaining({
                 name: 'Quality Gate',
@@ -234,7 +240,8 @@ describe('GeneratePrReport', () => {
         );
     });
 
-    it('skips quality gate when skipQuality is true', async () => {
+    it('skips quality gate when skipQuality is true', async () => {expect.hasAssertions();
+
         await generatePrReport({
             tests: [sampleTest],
             stats: { passed: 1, failed: 0, skipped: 0, total: 1, duration: 100 },
@@ -245,7 +252,8 @@ describe('GeneratePrReport', () => {
         expect(mockCheckRun.createCheckRun).not.toHaveBeenCalled();
     });
 
-    it('skips AI section when skipAi is true', async () => {
+    it('skips AI section when skipAi is true', async () => {expect.hasAssertions();
+
         const result = await generatePrReport({
             tests: [sampleTest, failedTest],
             stats: defaultStats,
@@ -253,10 +261,11 @@ describe('GeneratePrReport', () => {
         });
 
         expect(result.healthScore.overall).toBeGreaterThanOrEqual(0);
-        expect(mockPRComment.postPrComment).toHaveBeenCalled();
+        expect(mockPRComment.postPrComment).toHaveBeenCalledWith();
     });
 
-    it('skips flaky section when skipFlaky is true', async () => {
+    it('skips flaky section when skipFlaky is true', async () => {expect.hasAssertions();
+
         mockMetrics.calculateFlakiness.mockReturnValue([
             { title: 'flaky test', rate: 0.5, passCount: 3, totalRuns: 6 },
         ]);
@@ -267,10 +276,11 @@ describe('GeneratePrReport', () => {
             skipFlaky: true,
         });
 
-        expect(mockPRComment.postPrComment).toHaveBeenCalled();
+        expect(mockPRComment.postPrComment).toHaveBeenCalledWith();
     });
 
-    it('survives empty test list', async () => {
+    it('survives empty test list', async () => {expect.hasAssertions();
+
         const result = await generatePrReport({
             tests: [],
             stats: { passed: 0, failed: 0, skipped: 0, total: 0, duration: 0 },
@@ -280,7 +290,8 @@ describe('GeneratePrReport', () => {
         expect(result.passRate).toBe(0);
     });
 
-    it('handles health score with coverage override', async () => {
+    it('handles health score with coverage override', async () => {expect.hasAssertions();
+
         mockCoverage.resolveCoverage.mockReturnValue({
             source: 'istanbul',
             coveragePct: 92,
@@ -301,7 +312,8 @@ describe('GeneratePrReport', () => {
         );
     });
 
-    it('includes provenance metadata in PR comment footer when health score has provenance', async () => {
+    it('includes provenance metadata in PR comment footer when health score has provenance', async () => {expect.hasAssertions();
+
         const healthWithProvenance = {
             ...defaultHealthScore,
             provenance: [
@@ -340,7 +352,8 @@ describe('GeneratePrReport', () => {
         expect(calledWith).toContain('DORA State of DevOps 2025');
     });
 
-    it('includes CI Context section when ciEnv.isCI is true', async () => {
+    it('includes CI Context section when ciEnv.isCI is true', async () => {expect.hasAssertions();
+
         await generatePrReport({
             tests: [sampleTest],
             stats: defaultStats,
@@ -362,7 +375,8 @@ describe('GeneratePrReport', () => {
         expect(commentBody).toContain('test execution results');
     });
 
-    it('does not include CI Context section when ciEnv.isCI is false', async () => {
+    it('does not include CI Context section when ciEnv.isCI is false', async () => {expect.hasAssertions();
+
         await generatePrReport({
             tests: [sampleTest],
             stats: defaultStats,
@@ -380,7 +394,8 @@ describe('GeneratePrReport', () => {
         expect(commentBody).not.toContain('CI Context');
     });
 
-    it('writes to GITHUB_STEP_SUMMARY when env var is set (VITEST guard bypassed)', async () => {
+    it('writes to GITHUB_STEP_SUMMARY when env var is set (VITEST guard bypassed)', async () => {expect.hasAssertions();
+
         const summaryPath = '/tmp/test-step-summary.md';
         const fs = await import('node:fs');
         const prevVitest = process.env['VITEST'];
@@ -415,7 +430,8 @@ describe('GeneratePrReport', () => {
         }
     });
 
-    it('does not write to job summary when VITEST is set', async () => {
+    it('does not write to job summary when VITEST is set', async () => {expect.hasAssertions();
+
         process.env['VITEST'] = 'true';
         const summaryPath = '/tmp/test-step-summary-guard.md';
         const fs = await import('node:fs');
@@ -445,7 +461,8 @@ describe('GeneratePrReport', () => {
         }
     });
 
-    it('does not write to job summary when GITHUB_STEP_SUMMARY is not set', async () => {
+    it('does not write to job summary when GITHUB_STEP_SUMMARY is not set', async () => {expect.hasAssertions();
+
         const original = process.env['GITHUB_STEP_SUMMARY'];
         delete process.env['GITHUB_STEP_SUMMARY'];
 

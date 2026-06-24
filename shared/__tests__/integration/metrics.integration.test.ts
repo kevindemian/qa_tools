@@ -42,7 +42,8 @@ describe('Integration: Metrics Store', () => {
     });
 
     describe('FT-04a: saveMetrics and loadMetrics round-trip', () => {
-        it('persists empty store and reloads', async () => {
+        it('persists empty store and reloads', async () => {expect.hasAssertions();
+
             const { saveMetrics, loadMetrics } = await import('../../metrics.js');
             const config = getConfig();
             const store = { runs: [] };
@@ -53,7 +54,8 @@ describe('Integration: Metrics Store', () => {
             expect(loaded.runs).toEqual([]);
         });
 
-        it('persists store with runs and reloads', async () => {
+        it('persists store with runs and reloads', async () => {expect.hasAssertions();
+
             const { saveMetrics, loadMetrics } = await import('../../metrics.js');
             const config = getConfig();
             const store = { runs: [createMetricsRunFixture()] };
@@ -73,7 +75,8 @@ describe('Integration: Metrics Store', () => {
             expect(firstRunData.total).toBe(100);
         });
 
-        it('returns empty store when no data saved', async () => {
+        it('returns empty store when no data saved', async () => {expect.hasAssertions();
+
             const { loadMetrics } = await import('../../metrics.js');
             const config = getConfig();
             const loaded = loadMetrics(config);
@@ -83,7 +86,8 @@ describe('Integration: Metrics Store', () => {
     });
 
     describe('FT-04b: saveParseResult creates MetricsRun', () => {
-        it('creates run from ParseResult and persists', async () => {
+        it('creates run from ParseResult and persists', async () => {expect.hasAssertions();
+
             const { saveParseResult, loadMetrics } = await import('../../metrics.js');
             const config = getConfig();
             const parseResult = {
@@ -113,7 +117,8 @@ describe('Integration: Metrics Store', () => {
     });
 
     describe('FT-04c: saveRunMetrics respects MAX_RUNS', () => {
-        it('trims oldest runs when exceeding limit', async () => {
+        it('trims oldest runs when exceeding limit', async () => {expect.hasAssertions();
+
             const { saveRunMetrics, loadMetrics } = await import('../../metrics.js');
             const config = getConfig();
 
@@ -132,7 +137,8 @@ describe('Integration: Metrics Store', () => {
     });
 
     describe('FT-04d: calculateFlakiness', () => {
-        it('identifies flaky tests across runs', async () => {
+        it('identifies flaky tests across runs', async () => {expect.hasAssertions();
+
             const { calculateFlakiness } = await import('../../metrics.js');
             const store = {
                 runs: [
@@ -169,7 +175,8 @@ describe('Integration: Metrics Store', () => {
     });
 
     describe('FT-04e: calculateFlakyRate', () => {
-        it('returns 0 when no flaky tests', async () => {
+        it('returns 0 when no flaky tests', async () => {expect.hasAssertions();
+
             const { calculateFlakyRate } = await import('../../metrics.js');
             const store = {
                 runs: [
@@ -182,7 +189,8 @@ describe('Integration: Metrics Store', () => {
             expect(calculateFlakyRate(store)).toBe(0);
         });
 
-        it('calculates percentage of flaky tests', async () => {
+        it('calculates percentage of flaky tests', async () => {expect.hasAssertions();
+
             const { calculateFlakyRate } = await import('../../metrics.js');
             const store = {
                 runs: [
@@ -209,7 +217,8 @@ describe('Integration: Metrics Store', () => {
     });
 
     describe('FT-04f: getTrends', () => {
-        it('returns pass rate trend data', async () => {
+        it('returns pass rate trend data', async () => {expect.hasAssertions();
+
             const { getTrends } = await import('../../metrics.js');
             const store = {
                 runs: [
@@ -234,7 +243,8 @@ describe('Integration: Metrics Store', () => {
     });
 
     describe('FT-04g: saveCoverageSnapshot', () => {
-        it('persists coverage snapshot to history', async () => {
+        it('persists coverage snapshot to history', async () => {expect.hasAssertions();
+
             const { saveCoverageSnapshot, loadMetrics } = await import('../../metrics.js');
             const config = getConfig();
 

@@ -5,14 +5,16 @@
 import { describe, it, expect } from 'vitest';
 
 describe('PROVIDER_PROFILES', () => {
-    it('contains all known providers', async () => {
+    it('contains all known providers', async () => {expect.hasAssertions();
+
         const { PROVIDER_PROFILES, KNOWN_PROVIDERS } = await import('./llm-provider-profiles.js');
         for (const p of KNOWN_PROVIDERS) {
             expect(PROVIDER_PROFILES[p]).toBeDefined();
         }
     });
 
-    it('each profile has required fields', async () => {
+    it('each profile has required fields', async () => {expect.hasAssertions();
+
         const { PROVIDER_PROFILES } = await import('./llm-provider-profiles.js');
         for (const [id, profile] of Object.entries(PROVIDER_PROFILES)) {
             expect(profile.displayName).toBeTruthy();
@@ -31,7 +33,8 @@ describe('PROVIDER_PROFILES', () => {
         }
     });
 
-    it('opencode-go is default (non-free)', async () => {
+    it('opencode-go is default (non-free)', async () => {expect.hasAssertions();
+
         const { PROVIDER_PROFILES } = await import('./llm-provider-profiles.js');
         const go = PROVIDER_PROFILES['opencode-go'];
 
@@ -39,7 +42,8 @@ describe('PROVIDER_PROFILES', () => {
         expect(go.baseUrl).toContain('opencode.ai/zen/go');
     });
 
-    it('free providers are marked', async () => {
+    it('free providers are marked', async () => {expect.hasAssertions();
+
         const { PROVIDER_PROFILES } = await import('./llm-provider-profiles.js');
 
         expect(PROVIDER_PROFILES['groq'].free).toBeTruthy();
@@ -47,7 +51,8 @@ describe('PROVIDER_PROFILES', () => {
         expect(PROVIDER_PROFILES['nvidia-nim'].free).toBeTruthy();
     });
 
-    it('custom provider has empty baseUrl and requiresBaseUrl', async () => {
+    it('custom provider has empty baseUrl and requiresBaseUrl', async () => {expect.hasAssertions();
+
         const { PROVIDER_PROFILES } = await import('./llm-provider-profiles.js');
         const c = PROVIDER_PROFILES['custom'];
 
@@ -57,7 +62,8 @@ describe('PROVIDER_PROFILES', () => {
 });
 
 describe('IsKnownProvider', () => {
-    it('returns true for known providers', async () => {
+    it('returns true for known providers', async () => {expect.hasAssertions();
+
         const { isKnownProvider } = await import('./llm-provider-profiles.js');
 
         expect(isKnownProvider('openrouter')).toBeTruthy();
@@ -65,7 +71,8 @@ describe('IsKnownProvider', () => {
         expect(isKnownProvider('anthropic')).toBeTruthy();
     });
 
-    it('returns false for unknown providers', async () => {
+    it('returns false for unknown providers', async () => {expect.hasAssertions();
+
         const { isKnownProvider } = await import('./llm-provider-profiles.js');
 
         expect(isKnownProvider('unknown')).toBeFalsy();
@@ -74,7 +81,8 @@ describe('IsKnownProvider', () => {
 });
 
 describe('GetProviderProfile', () => {
-    it('returns profile for known provider', async () => {
+    it('returns profile for known provider', async () => {expect.hasAssertions();
+
         const { getProviderProfile } = await import('./llm-provider-profiles.js');
         const p = getProviderProfile('openrouter');
 
@@ -82,7 +90,8 @@ describe('GetProviderProfile', () => {
         expect(p && p.displayName).toBe('OpenRouter');
     });
 
-    it('returns undefined for unknown provider', async () => {
+    it('returns undefined for unknown provider', async () => {expect.hasAssertions();
+
         const { getProviderProfile } = await import('./llm-provider-profiles.js');
 
         expect(getProviderProfile('nonexistent')).toBeUndefined();
@@ -90,43 +99,50 @@ describe('GetProviderProfile', () => {
 });
 
 describe('InferProviderFromKey', () => {
-    it('detects OpenRouter keys', async () => {
+    it('detects OpenRouter keys', async () => {expect.hasAssertions();
+
         const { inferProviderFromKey } = await import('./llm-provider-profiles.js');
 
         expect(inferProviderFromKey('sk-or-v1-abc123')).toBe('openrouter');
     });
 
-    it('detects Anthropic keys', async () => {
+    it('detects Anthropic keys', async () => {expect.hasAssertions();
+
         const { inferProviderFromKey } = await import('./llm-provider-profiles.js');
 
         expect(inferProviderFromKey('sk-ant-abc123')).toBe('anthropic');
     });
 
-    it('detects Groq keys', async () => {
+    it('detects Groq keys', async () => {expect.hasAssertions();
+
         const { inferProviderFromKey } = await import('./llm-provider-profiles.js');
 
         expect(inferProviderFromKey('gsk_abc123')).toBe('groq');
     });
 
-    it('detects Gemini keys', async () => {
+    it('detects Gemini keys', async () => {expect.hasAssertions();
+
         const { inferProviderFromKey } = await import('./llm-provider-profiles.js');
 
         expect(inferProviderFromKey('AIzaSyABC123')).toBe('gemini');
     });
 
-    it('detects NVIDIA NIM keys', async () => {
+    it('detects NVIDIA NIM keys', async () => {expect.hasAssertions();
+
         const { inferProviderFromKey } = await import('./llm-provider-profiles.js');
 
         expect(inferProviderFromKey('nvapi-abc123')).toBe('nvidia-nim');
     });
 
-    it('detects OpenAI keys', async () => {
+    it('detects OpenAI keys', async () => {expect.hasAssertions();
+
         const { inferProviderFromKey } = await import('./llm-provider-profiles.js');
 
         expect(inferProviderFromKey('sk-abc123')).toBe('openai');
     });
 
-    it('returns null for unknown key patterns', async () => {
+    it('returns null for unknown key patterns', async () => {expect.hasAssertions();
+
         const { inferProviderFromKey } = await import('./llm-provider-profiles.js');
 
         expect(inferProviderFromKey('unknown-key-format')).toBeNull();
@@ -135,7 +151,8 @@ describe('InferProviderFromKey', () => {
 });
 
 describe('FormatProviderList', () => {
-    it('returns a non-empty string with provider names', async () => {
+    it('returns a non-empty string with provider names', async () => {expect.hasAssertions();
+
         const { formatProviderList } = await import('./llm-provider-profiles.js');
         const list = formatProviderList();
 

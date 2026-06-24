@@ -30,7 +30,8 @@ describe('LlmMetrics', () => {
         }
     });
 
-    it('records requests and snapshots', async () => {
+    it('records requests and snapshots', async () => {expect.hasAssertions();
+
         const { recordLlmRequest, snapshotLlmMetrics, getLlmMetricsHistory } = await loadMod();
 
         recordLlmRequest('main', 500);
@@ -45,7 +46,8 @@ describe('LlmMetrics', () => {
         expect(history).toHaveLength(1);
     });
 
-    it('23.11: snapshotLlmMetrics round-trip persist', async () => {
+    it('23.11: snapshotLlmMetrics round-trip persist', async () => {expect.hasAssertions();
+
         const { recordLlmRequest, snapshotLlmMetrics } = await loadMod();
         recordLlmRequest('main', 100);
         snapshotLlmMetrics(); // Should persist to disk
@@ -58,7 +60,8 @@ describe('LlmMetrics', () => {
         expect(nonNull(history[0]).totalRequests).toBe(1);
     });
 
-    it('23.12: recordArtifactReview approved/rejected', async () => {
+    it('23.12: recordArtifactReview approved/rejected', async () => {expect.hasAssertions();
+
         const { recordArtifactReview, snapshotLlmMetrics } = await loadMod();
         recordArtifactReview(true); // approved
         recordArtifactReview(false); // rejected
@@ -70,7 +73,8 @@ describe('LlmMetrics', () => {
         expect(snap.artifactRejected).toBe(1);
     });
 
-    it('records validation rejections', async () => {
+    it('records validation rejections', async () => {expect.hasAssertions();
+
         const { recordValidationRejection, snapshotLlmMetrics } = await loadMod();
 
         recordValidationRejection('Campo obrigatório ausente');
@@ -84,7 +88,8 @@ describe('LlmMetrics', () => {
         expect(snap.rejectionReasons['Tipo inválido']).toBe(1);
     });
 
-    it('records retries', async () => {
+    it('records retries', async () => {expect.hasAssertions();
+
         const { recordRetry, snapshotLlmMetrics } = await loadMod();
 
         recordRetry();
@@ -96,7 +101,8 @@ describe('LlmMetrics', () => {
         expect(snap.retryCount).toBe(3);
     });
 
-    it('records confidence and averages', async () => {
+    it('records confidence and averages', async () => {expect.hasAssertions();
+
         const { recordConfidence, snapshotLlmMetrics } = await loadMod();
 
         recordConfidence('high');
@@ -108,7 +114,8 @@ describe('LlmMetrics', () => {
         expect(snap.avgConfidence).toBe(0.5);
     });
 
-    it('records failures by tier', async () => {
+    it('records failures by tier', async () => {expect.hasAssertions();
+
         const { recordLlmFailure, snapshotLlmMetrics } = await loadMod();
 
         recordLlmFailure('main');
@@ -121,7 +128,8 @@ describe('LlmMetrics', () => {
         expect(snap.failuresByTier?.['fast']).toBe(1);
     });
 
-    it('clears accumulators', async () => {
+    it('clears accumulators', async () => {expect.hasAssertions();
+
         const { recordLlmRequest, clearLlmMetrics, snapshotLlmMetrics } = await loadMod();
 
         recordLlmRequest('main', 100);
@@ -132,7 +140,8 @@ describe('LlmMetrics', () => {
         expect(snap.totalRequests).toBe(0);
     });
 
-    it('persists snapshot and retrieves via history', async () => {
+    it('persists snapshot and retrieves via history', async () => {expect.hasAssertions();
+
         const { recordLlmRequest, snapshotLlmMetrics, getLlmMetricsHistory } = await loadMod();
 
         recordLlmRequest('main', 500);
@@ -145,7 +154,8 @@ describe('LlmMetrics', () => {
         expect(nonNull(history[0]).avgLatencyMs).toBe(500);
     });
 
-    it('records artifact review counters', async () => {
+    it('records artifact review counters', async () => {expect.hasAssertions();
+
         const { recordArtifactReview, snapshotLlmMetrics } = await loadMod();
 
         recordArtifactReview(true);
@@ -158,7 +168,8 @@ describe('LlmMetrics', () => {
         expect(snap.artifactRejected).toBe(1);
     });
 
-    it('handles loadStore read failure gracefully', async () => {
+    it('handles loadStore read failure gracefully', async () => {expect.hasAssertions();
+
         const mod = await loadMod();
         mod.recordLlmRequest('main', 100);
         mod.snapshotLlmMetrics();
@@ -174,7 +185,8 @@ describe('LlmMetrics', () => {
         }
     });
 
-    it('records per-model latency', async () => {
+    it('records per-model latency', async () => {expect.hasAssertions();
+
         const { recordLlmRequest, snapshotLlmMetrics } = await loadMod();
 
         recordLlmRequest('main', 500, 'gpt-4o');
@@ -188,7 +200,8 @@ describe('LlmMetrics', () => {
         expect(snap.latencyByModel['gpt-4o-mini']).toEqual({ avgMs: 100, count: 1 });
     });
 
-    it('handles saveStore write failure gracefully', async () => {
+    it('handles saveStore write failure gracefully', async () => {expect.hasAssertions();
+
         const renameSpy = vi.spyOn(fs, 'renameSync').mockImplementation(() => {
             throw new Error('ENOSPC');
         });

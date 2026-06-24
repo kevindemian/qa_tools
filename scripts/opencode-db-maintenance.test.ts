@@ -78,20 +78,23 @@ beforeEach(() => {
 });
 
 describe('DB constants', () => {
-    it('dB_DIR is derived from homedir and ends with share/opencode', async () => {
+    it('dB_DIR is derived from homedir and ends with share/opencode', async () => {expect.hasAssertions();
+
         const { DB_DIR: dir } = await loadModule();
 
         expect(dir).toContain('share/opencode');
         expect(dir).not.toBe('');
     });
 
-    it('dB_TIMEOUT_MS defaults to 300000 (5min) for large databases', async () => {
+    it('dB_TIMEOUT_MS defaults to 300000 (5min) for large databases', async () => {expect.hasAssertions();
+
         const { DB_TIMEOUT_MS } = await loadModule();
 
         expect(DB_TIMEOUT_MS).toBe(300_000);
     });
 
-    it('dB_TIMEOUT_MS may be overridden by OPENCODE_DB_TIMEOUT_MS env var', async () => {
+    it('dB_TIMEOUT_MS may be overridden by OPENCODE_DB_TIMEOUT_MS env var', async () => {expect.hasAssertions();
+
         const origEnv = process.env['OPENCODE_DB_TIMEOUT_MS'];
         process.env['OPENCODE_DB_TIMEOUT_MS'] = '60000';
         vi.resetModules();
@@ -108,7 +111,8 @@ describe('DB constants', () => {
 });
 
 describe('EnsureDbDir', () => {
-    it('creates directory recursively and returns true on success', async () => {
+    it('creates directory recursively and returns true on success', async () => {expect.hasAssertions();
+
         mockMkdirSync.mockReturnValue(undefined);
         const { ensureDbDir, DB_DIR: dir } = await loadModule();
         const result = ensureDbDir();
@@ -117,7 +121,8 @@ describe('EnsureDbDir', () => {
         expect(mockMkdirSync).toHaveBeenCalledWith(dir, { recursive: true });
     });
 
-    it('returns false when mkdir throws', async () => {
+    it('returns false when mkdir throws', async () => {expect.hasAssertions();
+
         mockMkdirSync.mockImplementation(() => {
             throw new Error('EACCES');
         });
@@ -129,7 +134,8 @@ describe('EnsureDbDir', () => {
 });
 
 describe('ModeCheckOnly', () => {
-    it('returns PASS when integrity and WAL checkpoint succeed', async () => {
+    it('returns PASS when integrity and WAL checkpoint succeed', async () => {expect.hasAssertions();
+
         const { modeCheckOnly } = await loadModule();
         const result = modeCheckOnly(DB_PATH);
 
@@ -140,7 +146,8 @@ describe('ModeCheckOnly', () => {
         expect(result.dbSizeBytes).toBe(65536);
     });
 
-    it('reports integrity check errors', async () => {
+    it('reports integrity check errors', async () => {expect.hasAssertions();
+
         mockExecFileSync.mockImplementation((bin: string, args: string[]) => {
             if (bin === 'sqlite3' && args[1]?.includes('integrity_check')) {
                 throw new Error('database disk image is malformed');
@@ -155,7 +162,8 @@ describe('ModeCheckOnly', () => {
         expect(result.integrityCheck).toContain('ERROR');
     });
 
-    it('reports WAL checkpoint errors', async () => {
+    it('reports WAL checkpoint errors', async () => {expect.hasAssertions();
+
         mockExecFileSync.mockImplementation((bin: string, args: string[]) => {
             if (bin === 'sqlite3' && args[1]?.includes('wal_checkpoint')) {
                 throw new Error('checkpoint error');
@@ -172,7 +180,8 @@ describe('ModeCheckOnly', () => {
 });
 
 describe('ModeRepair', () => {
-    it('does nothing when integrity already passes', async () => {
+    it('does nothing when integrity already passes', async () => {expect.hasAssertions();
+
         const { modeRepair } = await loadModule();
         const result = modeRepair(DB_PATH);
 
@@ -181,7 +190,8 @@ describe('ModeRepair', () => {
         expect(result.errors).toHaveLength(0);
     });
 
-    it('repairs via REINDEX when integrity fails and recovers', async () => {
+    it('repairs via REINDEX when integrity fails and recovers', async () => {expect.hasAssertions();
+
         let callCount = 0;
         mockExecFileSync.mockImplementation((bin: string, args: string[]) => {
             if (bin === 'sqlite3' && args[1]?.includes('integrity_check')) {
@@ -209,7 +219,8 @@ describe('ModeRepair', () => {
         );
     });
 
-    it('reports when reindex fails to repair', async () => {
+    it('reports when reindex fails to repair', async () => {expect.hasAssertions();
+
         mockExecFileSync.mockImplementation((bin: string, args: string[]) => {
             if (bin === 'sqlite3' && args[1]?.includes('integrity_check')) {
                 throw new Error('malformed');
@@ -226,7 +237,8 @@ describe('ModeRepair', () => {
 });
 
 describe('ModeVacuum', () => {
-    it('vacuums when integrity passes', async () => {
+    it('vacuums when integrity passes', async () => {expect.hasAssertions();
+
         const { modeVacuum } = await loadModule();
         const result = modeVacuum(DB_PATH);
 
@@ -240,7 +252,8 @@ describe('ModeVacuum', () => {
         );
     });
 
-    it('skips vacuum when integrity fails', async () => {
+    it('skips vacuum when integrity fails', async () => {expect.hasAssertions();
+
         mockExecFileSync.mockImplementation((bin: string, args: string[]) => {
             if (bin === 'sqlite3' && args[1]?.includes('integrity_check')) {
                 throw new Error('malformed');
@@ -257,14 +270,16 @@ describe('ModeVacuum', () => {
 });
 
 describe('GetDbSizeBytes', () => {
-    it('returns file size when stat succeeds', async () => {
+    it('returns file size when stat succeeds', async () => {expect.hasAssertions();
+
         const { getDbSizeBytes } = await loadModule();
         const size = getDbSizeBytes();
 
         expect(size).toBe(65536);
     });
 
-    it('returns 0 when stat fails', async () => {
+    it('returns 0 when stat fails', async () => {expect.hasAssertions();
+
         mockExecFileSync.mockImplementation((bin: string) => {
             if (bin === 'stat') throw new Error('ENOENT');
             return '';
@@ -275,7 +290,8 @@ describe('GetDbSizeBytes', () => {
         expect(size).toBe(0);
     });
 
-    it('returns 0 when database file does not exist', async () => {
+    it('returns 0 when database file does not exist', async () => {expect.hasAssertions();
+
         mockExistsSync.mockReturnValue(false);
         const { getDbSizeBytes } = await loadModule();
         const size = getDbSizeBytes();
@@ -286,7 +302,8 @@ describe('GetDbSizeBytes', () => {
 });
 
 describe('BackupDb', () => {
-    it('copies database to .pre-run path and returns it', async () => {
+    it('copies database to .pre-run path and returns it', async () => {expect.hasAssertions();
+
         const { backupDb } = await loadModule();
         mockCopyFileSync.mockReturnValue(undefined);
         const result = backupDb('/tmp/test.db');
@@ -295,7 +312,8 @@ describe('BackupDb', () => {
         expect(mockCopyFileSync).toHaveBeenCalledWith('/tmp/test.db', '/tmp/test.db.pre-run');
     });
 
-    it('returns null when copy fails', async () => {
+    it('returns null when copy fails', async () => {expect.hasAssertions();
+
         const { backupDb } = await loadModule();
         mockCopyFileSync.mockImplementation(() => {
             throw new Error('EACCES');
@@ -307,7 +325,8 @@ describe('BackupDb', () => {
 });
 
 describe('EnsureWalMode', () => {
-    it('returns WAL journal mode string on success', async () => {
+    it('returns WAL journal mode string on success', async () => {expect.hasAssertions();
+
         const { ensureWalMode } = await loadModule();
         const result = ensureWalMode();
 
@@ -319,7 +338,8 @@ describe('EnsureWalMode', () => {
         );
     });
 
-    it('returns null when sqlite3 throws', async () => {
+    it('returns null when sqlite3 throws', async () => {expect.hasAssertions();
+
         mockExecFileSync.mockImplementation((bin: string) => {
             if (bin === 'sqlite3') throw new Error('ENOENT');
             return '';
@@ -332,7 +352,8 @@ describe('EnsureWalMode', () => {
 });
 
 describe('CheckMountDevice', () => {
-    it('returns warning when DB and ~/.local are on the same device', async () => {
+    it('returns warning when DB and ~/.local are on the same device', async () => {expect.hasAssertions();
+
         mockStatSync.mockReturnValue({ dev: 1, isFile: () => true });
         const { checkMountDevice } = await loadModule();
         const result = checkMountDevice('/home/user/.local/share/opencode/opencode.db');
@@ -341,7 +362,8 @@ describe('CheckMountDevice', () => {
         expect(result).toContain('mesmo device');
     });
 
-    it('returns null when DB and ~/.local are on different devices', async () => {
+    it('returns null when DB and ~/.local are on different devices', async () => {expect.hasAssertions();
+
         mockStatSync
             .mockReturnValueOnce({ dev: 1, isFile: () => true })
             .mockReturnValueOnce({ dev: 2, isFile: () => true });
@@ -351,7 +373,8 @@ describe('CheckMountDevice', () => {
         expect(result).toBeNull();
     });
 
-    it('returns null when stat fails', async () => {
+    it('returns null when stat fails', async () => {expect.hasAssertions();
+
         mockStatSync.mockImplementation(() => {
             throw new Error('ENOENT');
         });
@@ -363,7 +386,8 @@ describe('CheckMountDevice', () => {
 });
 
 describe('PrintResult', () => {
-    it('prints PASS when no errors', async () => {
+    it('prints PASS when no errors', async () => {expect.hasAssertions();
+
         const { printResult } = await loadModule();
         const consoleSpy = vi.spyOn(console, 'log').mockImplementation(() => {});
         printResult({
@@ -382,7 +406,8 @@ describe('PrintResult', () => {
         consoleSpy.mockRestore();
     });
 
-    it('prints FAIL with error details when errors exist', async () => {
+    it('prints FAIL with error details when errors exist', async () => {expect.hasAssertions();
+
         const { printResult } = await loadModule();
         const consoleSpy = vi.spyOn(console, 'log').mockImplementation(() => {});
         printResult({
@@ -404,7 +429,8 @@ describe('PrintResult', () => {
 });
 
 describe('CheckSqlite3', () => {
-    it('returns true when sqlite3 --version succeeds', async () => {
+    it('returns true when sqlite3 --version succeeds', async () => {expect.hasAssertions();
+
         mockExecFileSync.mockImplementation((bin: string) => {
             if (bin === 'sqlite3') return '3.40.0\n';
             return '';
@@ -414,7 +440,8 @@ describe('CheckSqlite3', () => {
         expect(checkSqlite3()).toBeTruthy();
     });
 
-    it('returns false when sqlite3 throws', async () => {
+    it('returns false when sqlite3 throws', async () => {expect.hasAssertions();
+
         mockExecFileSync.mockImplementation((bin: string) => {
             if (bin === 'sqlite3') throw new Error('ENOENT');
             return '';
@@ -443,7 +470,8 @@ describe('Main', () => {
         });
     });
 
-    it('returns 3 when sqlite3 not available', async () => {
+    it('returns 3 when sqlite3 not available', async () => {expect.hasAssertions();
+
         mockExecFileSync.mockImplementation((bin: string) => {
             if (bin === 'sqlite3') throw new Error('ENOENT');
             return '';
@@ -457,20 +485,22 @@ describe('Main', () => {
         consoleSpy.mockRestore();
     });
 
-    it('returns 0 when database not found — first run, creates directory', async () => {
+    it('returns 0 when database not found — first run, creates directory', async () => {expect.hasAssertions();
+
         mockExistsSync.mockReturnValue(false);
         const { main } = await import('./opencode-db-maintenance.js');
         const consoleSpy = vi.spyOn(console, 'log').mockImplementation(() => {});
         const result = main();
 
         expect(result).toBe(0);
-        expect(mockMkdirSync).toHaveBeenCalled();
+        expect(mockMkdirSync).toHaveBeenCalledWith();
         expect(consoleSpy).toHaveBeenCalledWith(expect.stringContaining('creating directory'));
 
         consoleSpy.mockRestore();
     });
 
-    it('returns 1 when database not found but mkdir fails', async () => {
+    it('returns 1 when database not found but mkdir fails', async () => {expect.hasAssertions();
+
         mockExistsSync.mockReturnValue(false);
         mockMkdirSync.mockImplementation(() => {
             throw new Error('EACCES');
@@ -484,7 +514,8 @@ describe('Main', () => {
         consoleSpy.mockRestore();
     });
 
-    it('returns 0 for check-only mode and prints result', async () => {
+    it('returns 0 for check-only mode and prints result', async () => {expect.hasAssertions();
+
         const { main } = await loadModule();
         const consoleSpy = vi.spyOn(console, 'log').mockImplementation(() => {});
         const result = main();
@@ -495,7 +526,8 @@ describe('Main', () => {
         consoleSpy.mockRestore();
     });
 
-    it('returns 1 when integrity check fails', async () => {
+    it('returns 1 when integrity check fails', async () => {expect.hasAssertions();
+
         mockExecFileSync.mockImplementation((bin: string, args: string[]) => {
             if (bin === 'sqlite3' && args[0] === '--version') return '3.40.0\n';
             if (bin === 'sqlite3' && args[1]?.includes('integrity_check')) {
@@ -513,7 +545,8 @@ describe('Main', () => {
         consoleSpy.mockRestore();
     });
 
-    it('returns 0 with --repair flag', async () => {
+    it('returns 0 with --repair flag', async () => {expect.hasAssertions();
+
         mockExecFileSync.mockImplementation((bin: string, args: string[]) => {
             if (bin === 'sqlite3' && args[0] === '--version') return '3.40.0\n';
             if (bin === 'stat') return '65536\n';
@@ -531,7 +564,8 @@ describe('Main', () => {
         Object.defineProperty(process, 'argv', { value: origArgv, configurable: true });
     });
 
-    it('returns 0 with --vacuum flag', async () => {
+    it('returns 0 with --vacuum flag', async () => {expect.hasAssertions();
+
         mockExecFileSync.mockImplementation((bin: string, args: string[]) => {
             if (bin === 'sqlite3' && args[0] === '--version') return '3.40.0\n';
             if (bin === 'stat') return '65536\n';
@@ -551,7 +585,8 @@ describe('Main', () => {
 });
 
 describe('ModeVacuum WAL error', () => {
-    it('reports WAL checkpoint error during vacuum', async () => {
+    it('reports WAL checkpoint error during vacuum', async () => {expect.hasAssertions();
+
         let callCount = 0;
         mockExecFileSync.mockImplementation((bin: string, args: string[]) => {
             if (bin === 'sqlite3' && args[1]?.includes('wal_checkpoint')) {
@@ -571,7 +606,8 @@ describe('ModeVacuum WAL error', () => {
 });
 
 describe('RunAsScript', () => {
-    it('calls main and exits with its return code', async () => {
+    it('calls main and exits with its return code', async () => {expect.hasAssertions();
+
         mockExecFileSync.mockImplementation((bin: string) => {
             if (bin === 'sqlite3') return '3.40.0\n';
             if (bin === 'stat') return '65536\n';

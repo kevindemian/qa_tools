@@ -53,7 +53,8 @@ beforeEach(() => {
 });
 
 describe('GetProjectId', () => {
-    it('returns project id on success', async () => {
+    it('returns project id on success', async () => {expect.hasAssertions();
+
         mockGet.mockResolvedValue({ data: { id: '10000' } });
         const resource = buildResource();
         const result = await getProjectId(resource, 'TEST');
@@ -61,7 +62,8 @@ describe('GetProjectId', () => {
         expect(result).toBe('10000');
     });
 
-    it('returns empty string on error', async () => {
+    it('returns empty string on error', async () => {expect.hasAssertions();
+
         mockGet.mockRejectedValue(new Error('Not found'));
         const resource = buildResource();
         const result = await getProjectId(resource, 'NOPE');
@@ -71,7 +73,8 @@ describe('GetProjectId', () => {
 });
 
 describe('GetProjectVersions', () => {
-    it('returns versions on success', async () => {
+    it('returns versions on success', async () => {expect.hasAssertions();
+
         mockGet.mockResolvedValue({
             data: [
                 { id: '1', name: 'v1' },
@@ -84,7 +87,8 @@ describe('GetProjectVersions', () => {
         expect(versions).toHaveLength(2);
     });
 
-    it('returns empty array on network error', async () => {
+    it('returns empty array on network error', async () => {expect.hasAssertions();
+
         mockGet.mockRejectedValue(new Error('Network error'));
         const resource = buildResource();
         const versions = await getProjectVersions(resource, '10000');
@@ -94,7 +98,8 @@ describe('GetProjectVersions', () => {
 });
 
 describe('GetVersionId', () => {
-    it('returns version id when found', async () => {
+    it('returns version id when found', async () => {expect.hasAssertions();
+
         const resource = buildResource();
         vi.spyOn(resource, 'getProjectId').mockResolvedValue('10000');
         vi.spyOn(resource, 'getProjectVersions').mockResolvedValue([{ id: '99', name: 'v1.0' }]);
@@ -103,7 +108,8 @@ describe('GetVersionId', () => {
         expect(id).toBe('99');
     });
 
-    it('returns null when no project', async () => {
+    it('returns null when no project', async () => {expect.hasAssertions();
+
         const resource = buildResource();
         vi.spyOn(resource, 'getProjectId').mockResolvedValue('');
         const id = await getVersionId(resource, 'TEST', 'v1.0');
@@ -113,7 +119,8 @@ describe('GetVersionId', () => {
 });
 
 describe('GetLatestReleases', () => {
-    it('returns empty when project not found', async () => {
+    it('returns empty when project not found', async () => {expect.hasAssertions();
+
         const resource = buildResource();
         vi.spyOn(resource, 'getProjectId').mockResolvedValue('');
         const result = await getLatestReleases(resource, 'NOPE', 3);

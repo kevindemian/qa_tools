@@ -29,7 +29,8 @@ describe('Case20 - Bug Report handler', () => {
         vi.clearAllMocks();
     });
 
-    it('catches collectManual error with printError', async () => {
+    it('catches collectManual error with printError', async () => {expect.hasAssertions();
+
         const pushHistory = vi.fn();
         const ctx = makeCtx({ pushHistory });
 
@@ -42,7 +43,8 @@ describe('Case20 - Bug Report handler', () => {
         expect(pushHistory).not.toHaveBeenCalled();
     });
 
-    it('calls collectManual and interactiveBugReportFlow, pushes history on success', async () => {
+    it('calls collectManual and interactiveBugReportFlow, pushes history on success', async () => {expect.hasAssertions();
+
         const pushHistory = vi.fn();
         const ctx = makeCtx({ pushHistory });
 
@@ -71,7 +73,8 @@ describe('Case20 - Bug Report handler', () => {
         expect(pushHistory).toHaveBeenCalledWith('bug-report', 'PROJ-1: Bug A', 'ok');
     });
 
-    it('does not push history when creation fails', async () => {
+    it('does not push history when creation fails', async () => {expect.hasAssertions();
+
         const pushHistory = vi.fn();
         const ctx = makeCtx({ pushHistory });
 
@@ -89,7 +92,8 @@ describe('Case20 - Bug Report handler', () => {
         expect(pushHistory).not.toHaveBeenCalled();
     });
 
-    it('passes linkManager to interactiveBugReportFlow', async () => {
+    it('passes linkManager to interactiveBugReportFlow', async () => {expect.hasAssertions();
+
         const pushHistory = vi.fn();
         const linkManager = createMockLinkManager();
         const ctx = makeCtx({ pushHistory, linkManager });
@@ -113,7 +117,8 @@ describe('Case20 - Bug Report handler', () => {
         );
     });
 
-    it('uses AI path when askConfirm returns true', async () => {
+    it('uses AI path when askConfirm returns true', async () => {expect.hasAssertions();
+
         const pushHistory = vi.fn();
         const ctx = makeCtx({ pushHistory });
 
@@ -144,7 +149,8 @@ describe('Case20 - Bug Report handler', () => {
         expect(pushHistory).toHaveBeenCalledWith('bug-report', 'PROJ-2: Login fails', 'ok');
     });
 
-    it('shows short description warning and cancels when user declines', async () => {
+    it('shows short description warning and cancels when user declines', async () => {expect.hasAssertions();
+
         const pushHistory = vi.fn();
         const ctx = makeCtx({ pushHistory });
 
@@ -157,7 +163,8 @@ describe('Case20 - Bug Report handler', () => {
         expect(pushHistory).not.toHaveBeenCalled();
     });
 
-    it('continues with AI generation after short description warning when user accepts', async () => {
+    it('continues with AI generation after short description warning when user accepts', async () => {expect.hasAssertions();
+
         const pushHistory = vi.fn();
         const ctx = makeCtx({ pushHistory });
 
@@ -185,7 +192,8 @@ describe('Case20 - Bug Report handler', () => {
         expect(pushHistory).toHaveBeenCalledWith('bug-report', 'PROJ-4: Short bug', 'ok');
     });
 
-    it('parses linked issues from AI path', async () => {
+    it('parses linked issues from AI path', async () => {expect.hasAssertions();
+
         const pushHistory = vi.fn();
         const ctx = makeCtx({ pushHistory });
 
@@ -222,7 +230,8 @@ describe('Case20 - Bug Report handler', () => {
         expect(pushHistory).toHaveBeenCalledWith('bug-report', 'PROJ-2: Login fails', 'ok');
     });
 
-    it('falls back to manual when AI generation returns null', async () => {
+    it('falls back to manual when AI generation returns null', async () => {expect.hasAssertions();
+
         const pushHistory = vi.fn();
         const ctx = makeCtx({ pushHistory });
 

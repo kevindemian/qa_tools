@@ -52,7 +52,8 @@ describe('GitLabManager', () => {
     });
 
     describe('TriggerPipeline', () => {
-        it('calls POST /pipeline, returns data', async () => {
+        it('calls POST /pipeline, returns data', async () => {expect.hasAssertions();
+
             mockClient.post.mockResolvedValue({ data: { id: 1, web_url: 'https://...' } });
             const result = await manager.triggerPipeline({ ref: 'main', variables: [] });
 
@@ -63,7 +64,8 @@ describe('GitLabManager', () => {
             expect(result).toEqual({ id: 1, web_url: 'https://...' });
         });
 
-        it('throws on API error (mutation)', async () => {
+        it('throws on API error (mutation)', async () => {expect.hasAssertions();
+
             mockClient.post.mockRejectedValue(new Error('API error'));
 
             await expect(manager.triggerPipeline({} as { ref: string; variables: never[] })).rejects.toThrow(
@@ -73,7 +75,8 @@ describe('GitLabManager', () => {
     });
 
     describe('GetSchedules', () => {
-        it('calls GET /pipeline_schedules with per_page=100', async () => {
+        it('calls GET /pipeline_schedules with per_page=100', async () => {expect.hasAssertions();
+
             mockClient.get.mockResolvedValue({ data: [{ id: 1, description: 'Daily' }] });
             const result = await manager.getSchedules();
 
@@ -83,7 +86,8 @@ describe('GitLabManager', () => {
             expect(result).toEqual([{ id: 1, description: 'Daily' }]);
         });
 
-        it('returns [] on API error (read)', async () => {
+        it('returns [] on API error (read)', async () => {expect.hasAssertions();
+
             mockClient.get.mockRejectedValue(new Error('API error'));
             const result = await manager.getSchedules();
 
@@ -92,7 +96,8 @@ describe('GitLabManager', () => {
     });
 
     describe('RunSchedule', () => {
-        it('calls POST /pipeline_schedules/{id}/play', async () => {
+        it('calls POST /pipeline_schedules/{id}/play', async () => {expect.hasAssertions();
+
             mockClient.post.mockResolvedValue({ data: { id: 42 } });
             const result = await manager.runSchedule('42');
 
@@ -100,7 +105,8 @@ describe('GitLabManager', () => {
             expect(result).toEqual({ id: 42 });
         });
 
-        it('throws on API error (mutation)', async () => {
+        it('throws on API error (mutation)', async () => {expect.hasAssertions();
+
             mockClient.post.mockRejectedValue(new Error('API error'));
 
             await expect(manager.runSchedule('42')).rejects.toThrow('API error');
@@ -110,7 +116,8 @@ describe('GitLabManager', () => {
     describe('CreateMergeRequest', () => {
         const args = ['feature', 'main', 'MR Title', 'MR Desc'] as const;
 
-        it('calls POST /merge_requests on success', async () => {
+        it('calls POST /merge_requests on success', async () => {expect.hasAssertions();
+
             mockClient.post.mockResolvedValue({ data: { iid: 10, web_url: 'https://...' } });
             const result = await manager.createMergeRequest(...args);
 
@@ -124,7 +131,8 @@ describe('GitLabManager', () => {
             expect(result).toMatchObject({ iid: 10, web_url: 'https://...' });
         });
 
-        it('handles 409 by searching and updating existing MR', async () => {
+        it('handles 409 by searching and updating existing MR', async () => {expect.hasAssertions();
+
             const err = Object.assign(new Error('Conflict'), { response: { status: 409 } });
             mockClient.post.mockRejectedValue(err);
             mockClient.get.mockResolvedValue({ data: [{ iid: 5 }] });
@@ -142,7 +150,8 @@ describe('GitLabManager', () => {
             expect(result).toMatchObject({ iid: 5 });
         });
 
-        it('re-throws on 409 when no existing MR found', async () => {
+        it('re-throws on 409 when no existing MR found', async () => {expect.hasAssertions();
+
             const err = Object.assign(new Error('Conflict'), { response: { status: 409 } });
             mockClient.post.mockRejectedValue(err);
             mockClient.get.mockResolvedValue({ data: [] });
@@ -150,7 +159,8 @@ describe('GitLabManager', () => {
             await expect(manager.createMergeRequest(...args)).rejects.toThrow('Conflict');
         });
 
-        it('re-throws on non-409 error', async () => {
+        it('re-throws on non-409 error', async () => {expect.hasAssertions();
+
             const err = Object.assign(new Error('Bad request'), { response: { status: 400 } });
             mockClient.post.mockRejectedValue(err);
 
@@ -159,7 +169,8 @@ describe('GitLabManager', () => {
     });
 
     describe('UpdateMergeRequest', () => {
-        it('calls PUT /merge_requests/{iid}', async () => {
+        it('calls PUT /merge_requests/{iid}', async () => {expect.hasAssertions();
+
             mockClient.put.mockResolvedValue({ data: { iid: 5 } });
             const result = await manager.updateMergeRequest('5', 'New Title', 'New Desc');
 
@@ -170,7 +181,8 @@ describe('GitLabManager', () => {
             expect(result).toMatchObject({ iid: 5 });
         });
 
-        it('throws on API error (mutation)', async () => {
+        it('throws on API error (mutation)', async () => {expect.hasAssertions();
+
             mockClient.put.mockRejectedValue(new Error('Update failed'));
 
             await expect(manager.updateMergeRequest('5', '', '')).rejects.toThrow('Update failed');
@@ -178,7 +190,8 @@ describe('GitLabManager', () => {
     });
 
     describe('GetMergeRequest', () => {
-        it('calls GET /merge_requests/{iid}', async () => {
+        it('calls GET /merge_requests/{iid}', async () => {expect.hasAssertions();
+
             mockClient.get.mockResolvedValue({ data: { iid: 5, state: 'opened' } });
             const result = await manager.getMergeRequest('5');
 
@@ -186,7 +199,8 @@ describe('GitLabManager', () => {
             expect(result).toMatchObject({ iid: 5, state: 'opened' });
         });
 
-        it('returns null on API error', async () => {
+        it('returns null on API error', async () => {expect.hasAssertions();
+
             mockClient.get.mockRejectedValue(new Error('Not found'));
             const result = await manager.getMergeRequest('999');
 
@@ -195,7 +209,8 @@ describe('GitLabManager', () => {
     });
 
     describe('SearchMergeRequests', () => {
-        it('calls GET /merge_requests with per_page=100', async () => {
+        it('calls GET /merge_requests with per_page=100', async () => {expect.hasAssertions();
+
             mockClient.get.mockResolvedValue({ data: [{ iid: 1 }, { iid: 2 }] });
             const result = await manager.searchMergeRequests('dev', 'main', 'opened');
 
@@ -207,7 +222,8 @@ describe('GitLabManager', () => {
             expect(result[1]).toMatchObject({ iid: 2 });
         });
 
-        it('returns [] on API error (read)', async () => {
+        it('returns [] on API error (read)', async () => {expect.hasAssertions();
+
             mockClient.get.mockRejectedValue(new Error('API error'));
             const result = await manager.searchMergeRequests('', '', 'opened');
 
@@ -216,7 +232,8 @@ describe('GitLabManager', () => {
     });
 
     describe('AcceptMergeRequest', () => {
-        it('calls GET then PUT /merge_requests/{iid}/merge when state is opened', async () => {
+        it('calls GET then PUT /merge_requests/{iid}/merge when state is opened', async () => {expect.hasAssertions();
+
             mockClient.get.mockResolvedValue({ data: { iid: 5, state: 'opened' } });
             mockClient.put.mockResolvedValue({ data: { web_url: 'https://merge' } });
 
@@ -229,7 +246,8 @@ describe('GitLabManager', () => {
             expect(result).toMatchObject({ web_url: 'https://merge' });
         });
 
-        it('returns early without PUT when already merged', async () => {
+        it('returns early without PUT when already merged', async () => {expect.hasAssertions();
+
             mockClient.get.mockResolvedValue({ data: { iid: 5, state: 'merged', web_url: 'https://...' } });
 
             const result = await manager.acceptMergeRequest('5');
@@ -238,20 +256,23 @@ describe('GitLabManager', () => {
             expect(result).toMatchObject({ iid: 5, state: 'merged', web_url: 'https://...' });
         });
 
-        it('throws when MR not found', async () => {
+        it('throws when MR not found', async () => {expect.hasAssertions();
+
             mockClient.get.mockRejectedValue(new Error('Not found'));
 
             await expect(manager.acceptMergeRequest('999')).rejects.toThrow('MR #999 not found');
         });
 
-        it('throws on merge API failure', async () => {
+        it('throws on merge API failure', async () => {expect.hasAssertions();
+
             mockClient.get.mockResolvedValue({ data: { iid: 5, state: 'opened' } });
             mockClient.put.mockRejectedValue(new Error('Merge failed'));
 
             await expect(manager.acceptMergeRequest('5')).rejects.toThrow('Merge failed');
         });
 
-        it('passes should_remove_source_branch=false when specified', async () => {
+        it('passes should_remove_source_branch=false when specified', async () => {expect.hasAssertions();
+
             mockClient.get.mockResolvedValue({ data: { iid: 5, state: 'opened' } });
             mockClient.put.mockResolvedValue({ data: {} });
 
@@ -264,7 +285,8 @@ describe('GitLabManager', () => {
     });
 
     describe('GetRecentPipelines', () => {
-        it('calls GET /pipelines with per_page and order_by', async () => {
+        it('calls GET /pipelines with per_page and order_by', async () => {expect.hasAssertions();
+
             mockClient.get.mockResolvedValue({ data: [{ id: 1, ref: 'main', status: 'success' }] });
             const result = await manager.getRecentPipelines(3);
 
@@ -274,7 +296,8 @@ describe('GitLabManager', () => {
             expect(result).toEqual([{ id: 1, ref: 'main', status: 'success' }]);
         });
 
-        it('defaults to count=5', async () => {
+        it('defaults to count=5', async () => {expect.hasAssertions();
+
             mockClient.get.mockResolvedValue({ data: [] });
             await manager.getRecentPipelines();
 
@@ -283,7 +306,8 @@ describe('GitLabManager', () => {
             });
         });
 
-        it('returns [] on API error', async () => {
+        it('returns [] on API error', async () => {expect.hasAssertions();
+
             mockClient.get.mockRejectedValue(new Error('API error'));
             const result = await manager.getRecentPipelines();
 
@@ -292,7 +316,8 @@ describe('GitLabManager', () => {
     });
 
     describe('GetPipeline', () => {
-        it('calls GET /pipelines/{id}', async () => {
+        it('calls GET /pipelines/{id}', async () => {expect.hasAssertions();
+
             mockClient.get.mockResolvedValue({ data: { id: 42, status: 'success', web_url: 'https://...' } });
             const result = await manager.getPipeline('42');
 
@@ -300,7 +325,8 @@ describe('GitLabManager', () => {
             expect(result).toEqual({ id: 42, status: 'success', web_url: 'https://...' });
         });
 
-        it('returns null on API error', async () => {
+        it('returns null on API error', async () => {expect.hasAssertions();
+
             mockClient.get.mockRejectedValue(new Error('Not found'));
             const result = await manager.getPipeline('999');
 
@@ -309,21 +335,24 @@ describe('GitLabManager', () => {
     });
 
     describe('GetBranch', () => {
-        it('returns { name } for valid branch', async () => {
+        it('returns { name } for valid branch', async () => {expect.hasAssertions();
+
             mockClient.get.mockResolvedValue({ data: { name: 'main' } });
             const result = await manager.getBranch('main');
 
             expect(result).toEqual({ name: 'main' });
         });
 
-        it('returns null when data is null', async () => {
+        it('returns null when data is null', async () => {expect.hasAssertions();
+
             mockClient.get.mockResolvedValue({ data: null });
             const result = await manager.getBranch('main');
 
             expect(result).toBeNull();
         });
 
-        it('returns null on API error', async () => {
+        it('returns null on API error', async () => {expect.hasAssertions();
+
             mockClient.get.mockRejectedValue(new Error('API error'));
             const result = await manager.getBranch('main');
 
@@ -332,7 +361,8 @@ describe('GitLabManager', () => {
     });
 
     describe('GetPipelineJobs', () => {
-        it('returns formatted jobs from /pipelines/{id}/jobs', async () => {
+        it('returns formatted jobs from /pipelines/{id}/jobs', async () => {expect.hasAssertions();
+
             mockClient.get.mockResolvedValue({
                 data: [
                     { id: 101, name: 'test', stage: 'test', status: 'success' },
@@ -348,7 +378,8 @@ describe('GitLabManager', () => {
             ]);
         });
 
-        it('returns [] on API error', async () => {
+        it('returns [] on API error', async () => {expect.hasAssertions();
+
             mockClient.get.mockRejectedValue(new Error('API error'));
             const result = await manager.getPipelineJobs('42');
 
@@ -357,7 +388,8 @@ describe('GitLabManager', () => {
     });
 
     describe('ListPipelineArtifacts', () => {
-        it('returns jobs with artifacts from pipeline jobs', async () => {
+        it('returns jobs with artifacts from pipeline jobs', async () => {expect.hasAssertions();
+
             mockClient.get.mockResolvedValue({
                 data: [
                     {
@@ -376,7 +408,8 @@ describe('GitLabManager', () => {
             expect(result).toEqual([{ id: 101, name: 'test' }]);
         });
 
-        it('returns [] on API error', async () => {
+        it('returns [] on API error', async () => {expect.hasAssertions();
+
             mockClient.get.mockRejectedValue(new Error('API error'));
             const result = await manager.listPipelineArtifacts('42');
 
@@ -385,7 +418,8 @@ describe('GitLabManager', () => {
     });
 
     describe('DownloadArtifact', () => {
-        it('returns buffer and filename from /jobs/{id}/artifacts', async () => {
+        it('returns buffer and filename from /jobs/{id}/artifacts', async () => {expect.hasAssertions();
+
             mockClient.get.mockResolvedValue({
                 data: Buffer.from('fake-zip-content'),
                 headers: { 'content-disposition': 'attachment; filename="artifacts.zip"' },
@@ -399,7 +433,8 @@ describe('GitLabManager', () => {
             expect(result.filename).toBe('artifacts.zip');
         });
 
-        it('falls back to artifacts.zip when no content-disposition', async () => {
+        it('falls back to artifacts.zip when no content-disposition', async () => {expect.hasAssertions();
+
             mockClient.get.mockResolvedValue({
                 data: Buffer.from('data'),
                 headers: {},
@@ -409,7 +444,8 @@ describe('GitLabManager', () => {
             expect(result.filename).toBe('artifacts.zip');
         });
 
-        it('throws on API error (mutation)', async () => {
+        it('throws on API error (mutation)', async () => {expect.hasAssertions();
+
             mockClient.get.mockRejectedValue(new Error('Download failed'));
 
             await expect(manager.downloadArtifact('999')).rejects.toThrow('Download failed');
@@ -417,7 +453,8 @@ describe('GitLabManager', () => {
     });
 
     describe('IsApproved', () => {
-        it('returns true when approved', async () => {
+        it('returns true when approved', async () => {expect.hasAssertions();
+
             mockClient.get.mockResolvedValue({ data: { approved: true } });
             const result = await manager.isApproved(42);
 
@@ -425,14 +462,16 @@ describe('GitLabManager', () => {
             expect(mockClient['get']).toHaveBeenCalledWith('/projects/project-123/merge_requests/42/approvals');
         });
 
-        it('returns false when not approved', async () => {
+        it('returns false when not approved', async () => {expect.hasAssertions();
+
             mockClient.get.mockResolvedValue({ data: { approved: false } });
             const result = await manager.isApproved(42);
 
             expect(result).toBeFalsy();
         });
 
-        it('returns false on API error', async () => {
+        it('returns false on API error', async () => {expect.hasAssertions();
+
             mockClient.get.mockRejectedValue(new Error('API error'));
             const result = await manager.isApproved(42);
 
@@ -441,7 +480,8 @@ describe('GitLabManager', () => {
     });
 
     describe('GetCICDVariables', () => {
-        it('calls GET /variables with per_page=100', async () => {
+        it('calls GET /variables with per_page=100', async () => {expect.hasAssertions();
+
             mockClient.get.mockResolvedValue({ data: [{ key: 'VAR1', value: 'val1' }] });
             const result = await manager.getCICDVariables();
 
@@ -451,7 +491,8 @@ describe('GitLabManager', () => {
             expect(result).toEqual([{ key: 'VAR1', value: 'val1' }]);
         });
 
-        it('returns [] on API error (read)', async () => {
+        it('returns [] on API error (read)', async () => {expect.hasAssertions();
+
             mockClient.get.mockRejectedValue(new Error('API error'));
             const result = await manager.getCICDVariables();
 
@@ -460,7 +501,8 @@ describe('GitLabManager', () => {
     });
 
     describe('GetDiff', () => {
-        it('return diff string for valid comparison', async () => {
+        it('return diff string for valid comparison', async () => {expect.hasAssertions();
+
             mockClient.get.mockResolvedValue({
                 data: { diffs: [{ diff: '+console.log("hi")', new_path: 'src/main.ts' }] },
             });
@@ -470,21 +512,24 @@ describe('GitLabManager', () => {
             expect(result).toContain('console.log');
         });
 
-        it('returns empty string when no diffs', async () => {
+        it('returns empty string when no diffs', async () => {expect.hasAssertions();
+
             mockClient.get.mockResolvedValue({ data: { diffs: [] } });
             const result = await manager.getDiff('feature', 'main');
 
             expect(result).toBe('');
         });
 
-        it('returns empty string when data is null', async () => {
+        it('returns empty string when data is null', async () => {expect.hasAssertions();
+
             mockClient.get.mockResolvedValue({ data: null });
             const result = await manager.getDiff('feature', 'main');
 
             expect(result).toBe('');
         });
 
-        it('handles missing diff property', async () => {
+        it('handles missing diff property', async () => {expect.hasAssertions();
+
             mockClient.get.mockResolvedValue({
                 data: { diffs: [{ new_path: 'readme.md' }] },
             });
@@ -505,7 +550,8 @@ describe('GitLabManager', () => {
             web_url: 'https://gitlab.test.com/project-123/-/issues/42',
         };
 
-        it('returns formatted issues from GET /issues', async () => {
+        it('returns formatted issues from GET /issues', async () => {expect.hasAssertions();
+
             mockClient.get.mockResolvedValue({ data: [ISSUE_FIXTURE] });
             const result = await manager.getOpenIssues();
 
@@ -520,21 +566,24 @@ describe('GitLabManager', () => {
             });
         });
 
-        it('returns [] on API error (read)', async () => {
+        it('returns [] on API error (read)', async () => {expect.hasAssertions();
+
             mockClient.get.mockRejectedValue(new Error('API error'));
             const result = await manager.getOpenIssues();
 
             expect(result).toEqual([]);
         });
 
-        it('returns [] when data is not an array', async () => {
+        it('returns [] when data is not an array', async () => {expect.hasAssertions();
+
             mockClient.get.mockResolvedValue({ data: null });
             const result = await manager.getOpenIssues();
 
             expect(result).toEqual([]);
         });
 
-        it('maps labels as flat strings', async () => {
+        it('maps labels as flat strings', async () => {expect.hasAssertions();
+
             const item = { ...ISSUE_FIXTURE, labels: ['bug', 'priority:high'] };
             mockClient.get.mockResolvedValue({ data: [item] });
             const result = await manager.getOpenIssues();
@@ -542,7 +591,8 @@ describe('GitLabManager', () => {
             expect(nonNull(result[0]).labels).toEqual(['bug', 'priority:high']);
         });
 
-        it('handles missing optional fields gracefully', async () => {
+        it('handles missing optional fields gracefully', async () => {expect.hasAssertions();
+
             mockClient.get.mockResolvedValue({ data: [{ iid: 1 }] });
             const result = await manager.getOpenIssues();
 
@@ -552,7 +602,8 @@ describe('GitLabManager', () => {
     });
 
     describe('GetJobLogs', () => {
-        it('returns truncated log text from GET /jobs/{id}/trace', async () => {
+        it('returns truncated log text from GET /jobs/{id}/trace', async () => {expect.hasAssertions();
+
             mockClient.get.mockResolvedValue({ data: 'line1\nline2\nline3\n' });
             const result = await manager.getJobLogs(101);
 
@@ -562,7 +613,8 @@ describe('GitLabManager', () => {
             expect(result).toBe('line1\nline2\nline3\n');
         });
 
-        it('truncates log to maxBytes', async () => {
+        it('truncates log to maxBytes', async () => {expect.hasAssertions();
+
             const longLog = 'a'.repeat(100);
             mockClient.get.mockResolvedValue({ data: longLog });
             const result = await manager.getJobLogs(101, 10);
@@ -570,7 +622,8 @@ describe('GitLabManager', () => {
             expect(result).toBe('a'.repeat(10));
         });
 
-        it('returns null on API error', async () => {
+        it('returns null on API error', async () => {expect.hasAssertions();
+
             mockClient.get.mockRejectedValue(new Error('Log not found'));
             const result = await manager.getJobLogs(999);
 

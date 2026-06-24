@@ -24,7 +24,8 @@ describe('Case03 — create version', () => {
         expect(typeof case03.handler).toBe('function');
     });
 
-    it('executes without error with basic context', async () => {
+    it('executes without error with basic context', async () => {expect.hasAssertions();
+
         const result = await case03.handler(mockContext);
 
         expect([undefined, true, false]).toContain(result);

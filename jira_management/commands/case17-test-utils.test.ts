@@ -63,7 +63,8 @@ describe('FetchLatestTestRun', () => {
         vi.clearAllMocks();
     });
 
-    it('resolves GitHub run with CTRF artifact and returns ParseResult', async () => {
+    it('resolves GitHub run with CTRF artifact and returns ParseResult', async () => {expect.hasAssertions();
+
         const mockGet = vi.fn();
         mockGet
             .mockResolvedValueOnce({
@@ -90,7 +91,8 @@ describe('FetchLatestTestRun', () => {
         }
     });
 
-    it('returns null when no runs found', async () => {
+    it('returns null when no runs found', async () => {expect.hasAssertions();
+
         const mockGet = vi.fn().mockResolvedValueOnce({
             data: { workflow_runs: [] },
         });
@@ -102,7 +104,8 @@ describe('FetchLatestTestRun', () => {
         expect(result).toBeNull();
     });
 
-    it('returns null when no CTRF artifact in latest run', async () => {
+    it('returns null when no CTRF artifact in latest run', async () => {expect.hasAssertions();
+
         const mockGet = vi
             .fn()
             .mockResolvedValueOnce({
@@ -119,7 +122,8 @@ describe('FetchLatestTestRun', () => {
         expect(result).toBeNull();
     });
 
-    it('returns null when CI returns no runs', async () => {
+    it('returns null when CI returns no runs', async () => {expect.hasAssertions();
+
         /* With tokens configured, if the API returns an empty runs list, result is null */
         const mockGet = vi.fn().mockResolvedValueOnce({
             data: { workflow_runs: [] },

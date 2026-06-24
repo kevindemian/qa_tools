@@ -34,7 +34,8 @@ describe('Integration: Temp Dir', () => {
     });
 
     describe('FT-06a: ensureDirs creates directories at default paths', () => {
-        it('creates temp subdirectories using default paths', async () => {
+        it('creates temp subdirectories using default paths', async () => {expect.hasAssertions();
+
             const { ensureDirs, tempDirPath, reportsDir, logsDir } = await import('../../temp-dir.js');
 
             ensureDirs();
@@ -55,7 +56,8 @@ describe('Integration: Temp Dir', () => {
     });
 
     describe('FT-06b: writeReport writes to dated subdirectory', () => {
-        it('creates report file with correct path', async () => {
+        it('creates report file with correct path', async () => {expect.hasAssertions();
+
             const { writeReport } = await import('../../temp-dir.js');
             const content = '<html><body>Report</body></html>';
 
@@ -69,7 +71,8 @@ describe('Integration: Temp Dir', () => {
     });
 
     describe('FT-06c: writeEphemeral writes to category subdirectory', () => {
-        it('creates file under temp/{category}/', async () => {
+        it('creates file under temp/{category}/', async () => {expect.hasAssertions();
+
             const { writeEphemeral } = await import('../../temp-dir.js');
             const content = 'ephemeral data';
 
@@ -82,7 +85,8 @@ describe('Integration: Temp Dir', () => {
     });
 
     describe('FT-06d: cleanupTempDirs removes subdirectories', () => {
-        it('removes previews, vars, cache but not reports or logs', async () => {
+        it('removes previews, vars, cache but not reports or logs', async () => {expect.hasAssertions();
+
             const { ensureDirs, cleanupTempDirs, writeReport } = await import('../../temp-dir.js');
             ensureDirs();
             writeReport('keep-me.html', 'content');
@@ -98,7 +102,8 @@ describe('Integration: Temp Dir', () => {
     });
 
     describe('FT-06e: reportsDir returns correct path', () => {
-        it('returns configured reports directory', async () => {
+        it('returns configured reports directory', async () => {expect.hasAssertions();
+
             const { reportsDir } = await import('../../temp-dir.js');
             const dir = reportsDir();
 
@@ -107,7 +112,8 @@ describe('Integration: Temp Dir', () => {
     });
 
     describe('FT-06f: tempDirPath returns correct path', () => {
-        it('returns configured temp directory', async () => {
+        it('returns configured temp directory', async () => {expect.hasAssertions();
+
             const { tempDirPath } = await import('../../temp-dir.js');
             const dir = tempDirPath();
 

@@ -72,7 +72,8 @@ beforeEach(() => {
 });
 
 describe('ShowDocs', () => {
-    it('converts docs to html and opens index in browser', async () => {
+    it('converts docs to html and opens index in browser', async () => {expect.hasAssertions();
+
         mockGetDocsOutputDir.mockReturnValue('/tmp/docs');
         mockReaddirSync.mockReturnValue(['01-intro.md', '02-setup.md', '03-advanced.md']);
         mockReadFileSync.mockImplementation((...args: unknown[]) => {
@@ -91,7 +92,8 @@ describe('ShowDocs', () => {
         expect(mockOpenWithFallback).toHaveBeenCalledWith('/tmp/docs/index.html', 'Documentação', mockInfo);
     });
 
-    it('prints error when docs dir not found', async () => {
+    it('prints error when docs dir not found', async () => {expect.hasAssertions();
+
         mockGetDocsOutputDir.mockReturnValue('/tmp/docs');
         mockReaddirSync.mockImplementation(() => {
             throw new Error('ENOENT');
@@ -105,7 +107,8 @@ describe('ShowDocs', () => {
         expect(mockOpenWithFallback).not.toHaveBeenCalled();
     });
 
-    it('warns and returns when no docs match pattern', async () => {
+    it('warns and returns when no docs match pattern', async () => {expect.hasAssertions();
+
         mockGetDocsOutputDir.mockReturnValue('/tmp/docs');
         mockReaddirSync.mockReturnValue(['readme.md', 'notes.txt']);
 
@@ -113,11 +116,12 @@ describe('ShowDocs', () => {
         await showDocs();
 
         expect(mockWarn).toHaveBeenCalledWith('Nenhum documento encontrado em docs/.');
-        expect(mockDivider).toHaveBeenCalled();
+        expect(mockDivider).toHaveBeenCalledWith();
         expect(mockOpenWithFallback).not.toHaveBeenCalled();
     });
 
-    it('skips files that fail to read and continues', async () => {
+    it('skips files that fail to read and continues', async () => {expect.hasAssertions();
+
         mockGetDocsOutputDir.mockReturnValue('/tmp/docs');
         mockReaddirSync.mockReturnValue(['01-good.md', '02-bad.md', '03-good.md']);
         mockReadFileSync.mockImplementation((...args: unknown[]) => {
@@ -135,7 +139,8 @@ describe('ShowDocs', () => {
         expect(mockWriteFileSync).toHaveBeenCalledTimes(3);
     });
 
-    it('prints error when getDocsOutputDir returns null', async () => {
+    it('prints error when getDocsOutputDir returns null', async () => {expect.hasAssertions();
+
         mockGetDocsOutputDir.mockReturnValue(null);
         mockReaddirSync.mockReturnValue(['01-intro.md']);
 

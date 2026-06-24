@@ -211,24 +211,24 @@ describe('HandleSpecialInput', () => {
         vi.mocked(prompt).mockReturnValue('0');
     });
 
-    it('returns true and shows help for /help', async () => {
+    it('returns true and shows help for /help', async () => {expect.hasAssertions();
         await expect(handleSpecialInput('/help')).resolves.toBeTruthy();
-        expect(title).toHaveBeenCalled();
+        expect(title).toHaveBeenCalledWith();
     });
 
-    it('returns false for /exit', async () => {
+    it('returns false for /exit', async () => {expect.hasAssertions();
         await expect(handleSpecialInput('/exit')).resolves.toBeFalsy();
     });
 
-    it('returns __exit__ for /back at main level', async () => {
+    it('returns __exit__ for /back at main level', async () => {expect.hasAssertions();
         await expect(handleSpecialInput('/back', 'main')).resolves.toBe('__exit__');
     });
 
-    it('returns __back__ for /back at sub-menu level', async () => {
+    it('returns __back__ for /back at sub-menu level', async () => {expect.hasAssertions();
         await expect(handleSpecialInput('/back', 'releases')).resolves.toBe('__back__');
     });
 
-    it('returns false for regular input', async () => {
+    it('returns false for regular input', async () => {expect.hasAssertions();
         await expect(handleSpecialInput('1')).resolves.toBeFalsy();
         await expect(handleSpecialInput('')).resolves.toBeFalsy();
     });
@@ -242,20 +242,23 @@ describe('DispatchChoice', () => {
         commands.getHandler.mockReturnValue(null);
     });
 
-    it("returns 'continue' for invalid choice", async () => {
+    it("returns 'continue' for invalid choice", async () => {expect.hasAssertions();
+
         const result = await dispatchChoice('99', minimalCtx);
 
         expect(result).toBe('continue');
         expect(warn).toHaveBeenCalledWith(expect.stringContaining('inválida'));
     });
 
-    it("returns 'continue' for docs choice", async () => {
+    it("returns 'continue' for docs choice", async () => {expect.hasAssertions();
+
         const result = await dispatchChoice('d', minimalCtx);
 
         expect(result).toBe('continue');
     });
 
-    it('dispatches to handler', async () => {
+    it('dispatches to handler', async () => {expect.hasAssertions();
+
         const handler = vi.fn().mockResolvedValue(false);
         const commands = vi.mocked(await vi.importMock<typeof import('./commands/index.js')>('./commands'));
         commands.getHandler.mockReturnValue(handler);
@@ -279,14 +282,14 @@ describe('ShowHelpLoop', () => {
     it('shows help and exits on /back', () => {
         showHelpLoop();
 
-        expect(title).toHaveBeenCalled();
+        expect(title).toHaveBeenCalledWith();
     });
 
     it('handles specific topic input', () => {
         vi.mocked(prompt).mockReturnValueOnce('csv').mockReturnValueOnce('/back');
         showHelpLoop();
 
-        expect(title).toHaveBeenCalled();
+        expect(title).toHaveBeenCalledWith();
     });
 
     it('warns for unknown topic', () => {
@@ -296,7 +299,8 @@ describe('ShowHelpLoop', () => {
         expect(warn).toHaveBeenCalledWith(expect.stringContaining('não encontrado'));
     });
 
-    it('handles CancelError in showHelpLoop (line 84-85)', async () => {
+    it('handles CancelError in showHelpLoop (line 84-85)', async () => {expect.hasAssertions();
+
         const { CancelError } = await vi.importMock<typeof import('../shared/prompt.js')>('../shared/prompt');
         vi.mocked(prompt).mockImplementationOnce(() => {
             throw new CancelError('/back');

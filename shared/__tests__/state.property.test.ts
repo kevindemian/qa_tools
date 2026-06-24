@@ -49,7 +49,8 @@ describe('State Persistence — property-based invariants', () => {
         }
     });
 
-    it('load ∘ save = identity para qualquer estado válido', () => {
+    it('load ∘ save = identity para qualquer estado válido', () => {expect.hasAssertions();
+
         fc.assert(
             fc.property(StateArb, (data) => {
                 const config = getConfig();
@@ -62,7 +63,8 @@ describe('State Persistence — property-based invariants', () => {
         );
     });
 
-    it('update preserva chaves existentes e adiciona/sobrescreve as novas', () => {
+    it('update preserva chaves existentes e adiciona/sobrescreve as novas', () => {expect.hasAssertions();
+
         fc.assert(
             fc.property(StateArb, StateArb, (initial, changes) => {
                 const config = getConfig();
@@ -89,7 +91,8 @@ describe('State Persistence — property-based invariants', () => {
         );
     });
 
-    it('update retorna deep copy (original não é mutado pelo callback)', () => {
+    it('update retorna deep copy (original não é mutado pelo callback)', () => {expect.hasAssertions();
+
         fc.assert(
             fc.property(StateArb, (data) => {
                 const config = getConfig();
@@ -116,7 +119,8 @@ describe('State Persistence — property-based invariants', () => {
         );
     });
 
-    it('load retorna {} para estado vazio/inexistente', () => {
+    it('load retorna {} para estado vazio/inexistente', () => {expect.hasAssertions();
+
         fc.assert(
             fc.property(
                 fc.oneof(fc.constant(undefined), fc.constant(null), fc.dictionary(KeyArb, ValueArb, { maxKeys: 0 })),
@@ -132,7 +136,8 @@ describe('State Persistence — property-based invariants', () => {
         );
     });
 
-    it('save cria state.json e state.json.bak', () => {
+    it('save cria state.json e state.json.bak', () => {expect.hasAssertions();
+
         fc.assert(
             fc.property(StateArb, (data) => {
                 const config = getConfig();

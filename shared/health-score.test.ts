@@ -838,7 +838,8 @@ describe('CalculateHealthScore', () => {
             expect(result.provenance?.length).toBe(5);
         });
 
-        it('each entry has required fields', () => {
+        it('each entry has required fields', () => {expect.hasAssertions();
+
             const store = makeStore({
                 runs: [PASSING_RUN],
                 coverageHistory: [
@@ -881,7 +882,8 @@ describe('CalculateHealthScore', () => {
             expect(passRateEntry?.overridden).toBeTruthy();
         });
 
-        it('does not mark dimensions as overridden with default config', () => {
+        it('does not mark dimensions as overridden with default config', () => {expect.hasAssertions();
+
             const store = makeStore({
                 runs: [PASSING_RUN],
                 coverageHistory: [

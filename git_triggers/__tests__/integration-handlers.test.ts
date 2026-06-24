@@ -149,7 +149,8 @@ function makeMockGitProvider() {
 describe('HandleListSchedules', () => {
     beforeEach(() => vi.clearAllMocks());
 
-    it('lists schedules for gitlab provider', async () => {
+    it('lists schedules for gitlab provider', async () => {expect.hasAssertions();
+
         const m = makeMockGitProvider();
         const { handleListSchedules } = await import('../schedule-handler.js');
         const { pushHistory } = await import('../session-state.js');
@@ -157,11 +158,12 @@ describe('HandleListSchedules', () => {
         (sessionState as { currentProvider: string }).currentProvider = 'gitlab';
         await handleListSchedules(m as never);
 
-        expect(m.getSchedules).toHaveBeenCalled();
+        expect(m.getSchedules).toHaveBeenCalledWith();
         expect(vi.mocked(pushHistory)).toHaveBeenCalledWith('list-schedules', '2 schedules', 'ok');
     });
 
-    it('warns for github provider', async () => {
+    it('warns for github provider', async () => {expect.hasAssertions();
+
         const m = makeMockGitProvider();
         const { handleListSchedules } = await import('../schedule-handler.js');
         const sessionState = await import('../session-state.js');
@@ -175,7 +177,8 @@ describe('HandleListSchedules', () => {
         (sessionState as { currentProvider: string }).currentProvider = 'gitlab';
     });
 
-    it('warns when no schedules found', async () => {
+    it('warns when no schedules found', async () => {expect.hasAssertions();
+
         const m = makeMockGitProvider();
         m.getSchedules.mockResolvedValue([]);
         const { handleListSchedules } = await import('../schedule-handler.js');
@@ -191,7 +194,8 @@ describe('HandleListSchedules', () => {
 describe('HandleRunSchedule', () => {
     beforeEach(() => vi.clearAllMocks());
 
-    it('runs schedule by ID', async () => {
+    it('runs schedule by ID', async () => {expect.hasAssertions();
+
         const m = makeMockGitProvider();
         const { prompt } = await import('../../shared/prompt.js');
         vi.mocked(prompt).mockReturnValue('42');
@@ -205,7 +209,8 @@ describe('HandleRunSchedule', () => {
         expect(vi.mocked(pushHistory)).toHaveBeenCalledWith('schedule-run', '42', 'ok');
     });
 
-    it('warns for github provider', async () => {
+    it('warns for github provider', async () => {expect.hasAssertions();
+
         const m = makeMockGitProvider();
         const { handleRunSchedule } = await import('../schedule-handler.js');
         const sessionState = await import('../session-state.js');
@@ -223,7 +228,8 @@ describe('HandleRunSchedule', () => {
 describe('HandleCreateMR', () => {
     beforeEach(() => vi.clearAllMocks());
 
-    it('creates MR with provided inputs', async () => {
+    it('creates MR with provided inputs', async () => {expect.hasAssertions();
+
         const m = makeMockGitProvider();
         const { prompt, confirm } = await import('../../shared/prompt.js');
         vi.mocked(prompt)
@@ -242,7 +248,8 @@ describe('HandleCreateMR', () => {
         expect(vi.mocked(pushHistory)).toHaveBeenCalledWith('pr-create', 'feature-x->main', 'ok');
     });
 
-    it('generates AI description when confirmed', async () => {
+    it('generates AI description when confirmed', async () => {expect.hasAssertions();
+
         const m = makeMockGitProvider();
         const { prompt, confirm } = await import('../../shared/prompt.js');
         vi.mocked(prompt)
@@ -263,7 +270,8 @@ describe('HandleCreateMR', () => {
 describe('HandleListApprovedMRs', () => {
     beforeEach(() => vi.clearAllMocks());
 
-    it('lists approved MRs', async () => {
+    it('lists approved MRs', async () => {expect.hasAssertions();
+
         const m = makeMockGitProvider();
         const { prompt } = await import('../../shared/prompt.js');
         vi.mocked(prompt).mockReturnValue('opened');
@@ -271,11 +279,12 @@ describe('HandleListApprovedMRs', () => {
         const { pushHistory } = await import('../session-state.js');
         await handleListApprovedMRs(m as never);
 
-        expect(m.searchMergeRequests).toHaveBeenCalled();
+        expect(m.searchMergeRequests).toHaveBeenCalledWith();
         expect(vi.mocked(pushHistory)).toHaveBeenCalledWith('prs-approved', '2 MRs', 'ok');
     });
 
-    it('warns when no approved MRs found', async () => {
+    it('warns when no approved MRs found', async () => {expect.hasAssertions();
+
         const m = makeMockGitProvider();
         m.searchMergeRequests.mockResolvedValue([]);
         const { prompt } = await import('../../shared/prompt.js');
@@ -291,7 +300,8 @@ describe('HandleListApprovedMRs', () => {
 describe('HandleMergeMR', () => {
     beforeEach(() => vi.clearAllMocks());
 
-    it('merges MR by IID', async () => {
+    it('merges MR by IID', async () => {expect.hasAssertions();
+
         const m = makeMockGitProvider();
         const { prompt } = await import('../../shared/prompt.js');
         vi.mocked(prompt).mockReturnValue('42');
@@ -307,14 +317,15 @@ describe('HandleMergeMR', () => {
 describe('HandleFlakinessDashboard', () => {
     beforeEach(() => vi.clearAllMocks());
 
-    it('warns when no project selected', async () => {
+    it('warns when no project selected', async () => {expect.hasAssertions();
+
         const sessionState = await import('../session-state.js');
         (sessionState as { currentProjectName: string }).currentProjectName = '';
         const { handleFlakinessDashboard } = await import('../schedule-handler.js');
         const { warn } = await import('../../shared/prompt.js');
         await handleFlakinessDashboard();
 
-        expect(vi.mocked(warn)).toHaveBeenCalled();
+        expect(vi.mocked(warn)).toHaveBeenCalledWith();
 
         (sessionState as { currentProjectName: string }).currentProjectName = 'TEST';
     });

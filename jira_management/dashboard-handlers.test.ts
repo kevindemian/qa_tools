@@ -151,7 +151,8 @@ const HTML_WITH_DOCTYPE = '<!DOCTYPE html><html><head><title>Test</title></head>
 describe('Case-d — dashboard menu', () => {
     beforeEach(() => vi.clearAllMocks());
 
-    it('returns early if no project name', async () => {
+    it('returns early if no project name', async () => {expect.hasAssertions();
+
         const ctx = createMockContext();
         ctx.ctx.project_name = '';
         const { default: caseD } = await import('./commands/case-d.js');
@@ -160,17 +161,19 @@ describe('Case-d — dashboard menu', () => {
         expect(result).toBeUndefined();
     });
 
-    it('shows dashboard menu when project is set', async () => {
+    it('shows dashboard menu when project is set', async () => {expect.hasAssertions();
+
         const { showSelect } = await import('../shared/prompt.js');
         vi.mocked(showSelect).mockResolvedValue('0');
         const ctx = createMockContext();
         const { default: caseD } = await import('./commands/case-d.js');
         await caseD.handler(ctx);
 
-        expect(showSelect).toHaveBeenCalled();
+        expect(showSelect).toHaveBeenCalledWith();
     });
 
-    it('executes case25 when user selects traceability', async () => {
+    it('executes case25 when user selects traceability', async () => {expect.hasAssertions();
+
         const { showSelect } = await import('../shared/prompt.js');
         vi.mocked(showSelect).mockResolvedValue('25');
         const { loadMetrics } = await import('../shared/metrics.js');
@@ -184,7 +187,8 @@ describe('Case-d — dashboard menu', () => {
         expect(ctx.pushHistory).toHaveBeenCalledWith('traceability-matrix', 'TEST', 'ok');
     });
 
-    it('executes case26 when user selects release score', async () => {
+    it('executes case26 when user selects release score', async () => {expect.hasAssertions();
+
         const { showSelect } = await import('../shared/prompt.js');
         vi.mocked(showSelect).mockResolvedValue('26');
         const { loadMetrics, calculateFlakiness } = await import('../shared/metrics.js');
@@ -213,7 +217,8 @@ describe('Case-d — dashboard menu', () => {
         expect(ctx.pushHistory).toHaveBeenCalledWith('release-score', 'TEST', 'ok');
     });
 
-    it('executes case27 when user selects coverage dashboard', async () => {
+    it('executes case27 when user selects coverage dashboard', async () => {expect.hasAssertions();
+
         const { showSelect } = await import('../shared/prompt.js');
         vi.mocked(showSelect).mockResolvedValue('27');
         const { analyzeCoverageGaps } = await import('../shared/coverage-gap.js');
@@ -233,7 +238,8 @@ describe('Case-d — dashboard menu', () => {
 describe('Case25 — Traceability Matrix', () => {
     beforeEach(() => vi.clearAllMocks());
 
-    it('warns and returns early if no project name', async () => {
+    it('warns and returns early if no project name', async () => {expect.hasAssertions();
+
         const ctx = createMockContext();
         ctx.ctx.project_name = '';
         const { default: case25 } = await import('./commands/case25.js');
@@ -246,7 +252,8 @@ describe('Case25 — Traceability Matrix', () => {
         expect(vi.mocked(warn)).toHaveBeenCalledWith('Nenhum projeto Jira selecionado.');
     });
 
-    it('loads metrics from store', async () => {
+    it('loads metrics from store', async () => {expect.hasAssertions();
+
         const { loadMetrics } = await import('../shared/metrics.js');
         const { buildTraceabilityMatrix, generateTraceabilityHtml } = await import('../shared/traceability-matrix.js');
         const { writeReport } = await import('../shared/temp-dir.js');
@@ -259,11 +266,12 @@ describe('Case25 — Traceability Matrix', () => {
         const { default: case25 } = await import('./commands/case25.js');
         await case25.handler(ctx);
 
-        expect(loadMetrics).toHaveBeenCalled();
+        expect(loadMetrics).toHaveBeenCalledWith();
         expect(buildTraceabilityMatrix).toHaveBeenCalledWith(store);
     });
 
-    it('generates HTML with project name in title', async () => {
+    it('generates HTML with project name in title', async () => {expect.hasAssertions();
+
         const { buildTraceabilityMatrix, generateTraceabilityHtml } = await import('../shared/traceability-matrix.js');
         const { writeReport } = await import('../shared/temp-dir.js');
         vi.mocked(buildTraceabilityMatrix).mockReturnValue(makeTraceabilityResult());
@@ -277,7 +285,8 @@ describe('Case25 — Traceability Matrix', () => {
         expect(generateTraceabilityHtml).toHaveBeenCalledWith(expect.anything(), 'Traceability Matrix — MY_PROJECT');
     });
 
-    it('writes report with correct filename pattern', async () => {
+    it('writes report with correct filename pattern', async () => {expect.hasAssertions();
+
         const { writeReport } = await import('../shared/temp-dir.js');
         vi.mocked(writeReport).mockReturnValue('/tmp/report.html');
         const ctx = createMockContext();
@@ -288,7 +297,8 @@ describe('Case25 — Traceability Matrix', () => {
         expect(writeReport).toHaveBeenCalledWith('traceability-matrix-PROJ-XYZ.html', HTML_WITH_DOCTYPE);
     });
 
-    it('opens report in browser', async () => {
+    it('opens report in browser', async () => {expect.hasAssertions();
+
         const { writeReport } = await import('../shared/temp-dir.js');
         const { openWithFallback } = await import('../shared/open.js');
         vi.mocked(writeReport).mockReturnValue('/tmp/traceability-matrix-TEST.html');
@@ -304,7 +314,8 @@ describe('Case25 — Traceability Matrix', () => {
         );
     });
 
-    it('pushes history with project name on success', async () => {
+    it('pushes history with project name on success', async () => {expect.hasAssertions();
+
         const { writeReport } = await import('../shared/temp-dir.js');
         vi.mocked(writeReport).mockReturnValue('/tmp/report.html');
         const ctx = createMockContext();
@@ -315,7 +326,8 @@ describe('Case25 — Traceability Matrix', () => {
         expect(ctx.pushHistory).toHaveBeenCalledWith('traceability-matrix', 'AUDIT-PROJ', 'ok');
     });
 
-    it('handles empty metrics store gracefully', async () => {
+    it('handles empty metrics store gracefully', async () => {expect.hasAssertions();
+
         const { loadMetrics } = await import('../shared/metrics.js');
         const { buildTraceabilityMatrix } = await import('../shared/traceability-matrix.js');
         const { writeReport } = await import('../shared/temp-dir.js');
@@ -331,7 +343,8 @@ describe('Case25 — Traceability Matrix', () => {
         expect(ctx.pushHistory).toHaveBeenCalledWith('traceability-matrix', 'TEST', 'ok');
     });
 
-    it('handles loadMetrics error gracefully', async () => {
+    it('handles loadMetrics error gracefully', async () => {expect.hasAssertions();
+
         const { loadMetrics } = await import('../shared/metrics.js');
         vi.mocked(loadMetrics).mockImplementation(() => {
             throw new Error('disk error');
@@ -343,10 +356,11 @@ describe('Case25 — Traceability Matrix', () => {
 
         const { printError } = await import('../shared/prompt.js');
 
-        expect(vi.mocked(printError)).toHaveBeenCalled();
+        expect(vi.mocked(printError)).toHaveBeenCalledWith();
     });
 
-    it('calls title with correct label', async () => {
+    it('calls title with correct label', async () => {expect.hasAssertions();
+
         const { writeReport } = await import('../shared/temp-dir.js');
         vi.mocked(writeReport).mockReturnValue('/tmp/report.html');
         const ctx = createMockContext();
@@ -361,7 +375,8 @@ describe('Case25 — Traceability Matrix', () => {
 describe('Case26 — Release Score', () => {
     beforeEach(() => vi.clearAllMocks());
 
-    it('warns and returns early if no project name', async () => {
+    it('warns and returns early if no project name', async () => {expect.hasAssertions();
+
         const ctx = createMockContext();
         ctx.ctx.project_name = '';
         const { default: case26 } = await import('./commands/case26.js');
@@ -370,7 +385,8 @@ describe('Case26 — Release Score', () => {
         expect(ctx.pushHistory).not.toHaveBeenCalled();
     });
 
-    it('filters runs by project name', async () => {
+    it('filters runs by project name', async () => {expect.hasAssertions();
+
         const { loadMetrics, calculateFlakiness } = await import('../shared/metrics.js');
         const { calculateHealthScore } = await import('../shared/health-score.js');
         const { calculateReleaseScore, generateReleaseScoreHtml } = await import('../shared/release-score.js');
@@ -401,7 +417,8 @@ describe('Case26 — Release Score', () => {
         expect(receivedStore.runs[1]?.project).toBe('TEST');
     });
 
-    it('passes correct parameters to calculateReleaseScore', async () => {
+    it('passes correct parameters to calculateReleaseScore', async () => {expect.hasAssertions();
+
         const { calculateHealthScore } = await import('../shared/health-score.js');
         const { calculateReleaseScore, generateReleaseScoreHtml } = await import('../shared/release-score.js');
         const { writeReport } = await import('../shared/temp-dir.js');
@@ -423,7 +440,8 @@ describe('Case26 — Release Score', () => {
         expect(calculateReleaseScore).toHaveBeenCalledWith(80, 85, 'pass', 70, expect.any(Number));
     });
 
-    it('generates HTML with correct title', async () => {
+    it('generates HTML with correct title', async () => {expect.hasAssertions();
+
         const { generateReleaseScoreHtml } = await import('../shared/release-score.js');
         const { writeReport } = await import('../shared/temp-dir.js');
         vi.mocked(generateReleaseScoreHtml).mockReturnValue(HTML_WITH_DOCTYPE);
@@ -437,7 +455,8 @@ describe('Case26 — Release Score', () => {
         expect(typeof receivedData.grade).toBe('string');
     });
 
-    it('writes report with correct filename pattern', async () => {
+    it('writes report with correct filename pattern', async () => {expect.hasAssertions();
+
         const { generateReleaseScoreHtml } = await import('../shared/release-score.js');
         const { writeReport } = await import('../shared/temp-dir.js');
         vi.mocked(generateReleaseScoreHtml).mockReturnValue(HTML_WITH_DOCTYPE);
@@ -450,7 +469,8 @@ describe('Case26 — Release Score', () => {
         expect(writeReport).toHaveBeenCalledWith('release-score-RELEASE-PROJ.html', HTML_WITH_DOCTYPE);
     });
 
-    it('opens report in browser', async () => {
+    it('opens report in browser', async () => {expect.hasAssertions();
+
         const { generateReleaseScoreHtml } = await import('../shared/release-score.js');
         const { writeReport } = await import('../shared/temp-dir.js');
         const { openWithFallback } = await import('../shared/open.js');
@@ -468,7 +488,8 @@ describe('Case26 — Release Score', () => {
         );
     });
 
-    it('pushes history with project name on success', async () => {
+    it('pushes history with project name on success', async () => {expect.hasAssertions();
+
         const { generateReleaseScoreHtml } = await import('../shared/release-score.js');
         const { writeReport } = await import('../shared/temp-dir.js');
         vi.mocked(generateReleaseScoreHtml).mockReturnValue(HTML_WITH_DOCTYPE);
@@ -481,7 +502,8 @@ describe('Case26 — Release Score', () => {
         expect(ctx.pushHistory).toHaveBeenCalledWith('release-score', 'QA-PROJECT', 'ok');
     });
 
-    it('handles loadMetrics error gracefully', async () => {
+    it('handles loadMetrics error gracefully', async () => {expect.hasAssertions();
+
         const { loadMetrics } = await import('../shared/metrics.js');
         vi.mocked(loadMetrics).mockImplementation(() => {
             throw new Error('IO error');
@@ -493,10 +515,11 @@ describe('Case26 — Release Score', () => {
 
         const { printError } = await import('../shared/prompt.js');
 
-        expect(vi.mocked(printError)).toHaveBeenCalled();
+        expect(vi.mocked(printError)).toHaveBeenCalledWith();
     });
 
-    it('calls title with correct label', async () => {
+    it('calls title with correct label', async () => {expect.hasAssertions();
+
         const { generateReleaseScoreHtml } = await import('../shared/release-score.js');
         const { writeReport } = await import('../shared/temp-dir.js');
         vi.mocked(generateReleaseScoreHtml).mockReturnValue(HTML_WITH_DOCTYPE);
@@ -509,7 +532,8 @@ describe('Case26 — Release Score', () => {
         expect(vi.mocked(title)).toHaveBeenCalledWith('Release Score');
     });
 
-    it('uses health gate pass when health >= 70', async () => {
+    it('uses health gate pass when health >= 70', async () => {expect.hasAssertions();
+
         const { loadMetrics, calculateFlakiness } = await import('../shared/metrics.js');
         const { calculateHealthScore } = await import('../shared/health-score.js');
         const { calculateReleaseScore, generateReleaseScoreHtml } = await import('../shared/release-score.js');
@@ -534,7 +558,8 @@ describe('Case26 — Release Score', () => {
         expect(calculateReleaseScore).toHaveBeenCalledWith(80, 75, 'pass', 70, expect.any(Number));
     });
 
-    it('uses health gate fail when health < 70', async () => {
+    it('uses health gate fail when health < 70', async () => {expect.hasAssertions();
+
         const { loadMetrics, calculateFlakiness } = await import('../shared/metrics.js');
         const { calculateHealthScore } = await import('../shared/health-score.js');
         const { calculateReleaseScore, generateReleaseScoreHtml } = await import('../shared/release-score.js');
@@ -563,7 +588,8 @@ describe('Case26 — Release Score', () => {
 describe('Case27 — Coverage Dashboard', () => {
     beforeEach(() => vi.clearAllMocks());
 
-    it('warns and returns early if no project name', async () => {
+    it('warns and returns early if no project name', async () => {expect.hasAssertions();
+
         const ctx = createMockContext();
         ctx.ctx.project_name = '';
         const { default: case27 } = await import('./commands/case27.js');
@@ -572,7 +598,8 @@ describe('Case27 — Coverage Dashboard', () => {
         expect(ctx.pushHistory).not.toHaveBeenCalled();
     });
 
-    it('calls analyzeCoverageGaps with jiraResource and project name', async () => {
+    it('calls analyzeCoverageGaps with jiraResource and project name', async () => {expect.hasAssertions();
+
         const { analyzeCoverageGaps } = await import('../shared/coverage-gap.js');
         const { generateCoverageGapHtml } = await import('../shared/generate-coverage-gap-html.js');
         const { writeReport } = await import('../shared/temp-dir.js');
@@ -586,7 +613,8 @@ describe('Case27 — Coverage Dashboard', () => {
         expect(analyzeCoverageGaps).toHaveBeenCalledWith(ctx.jiraResource, 'TEST');
     });
 
-    it('generates HTML with project name in title', async () => {
+    it('generates HTML with project name in title', async () => {expect.hasAssertions();
+
         const { analyzeCoverageGaps } = await import('../shared/coverage-gap.js');
         const { generateCoverageGapHtml } = await import('../shared/generate-coverage-gap-html.js');
         const { writeReport } = await import('../shared/temp-dir.js');
@@ -601,7 +629,8 @@ describe('Case27 — Coverage Dashboard', () => {
         expect(generateCoverageGapHtml).toHaveBeenCalledWith(expect.anything(), 'Coverage Dashboard — COV-PROJ');
     });
 
-    it('writes report with correct filename pattern', async () => {
+    it('writes report with correct filename pattern', async () => {expect.hasAssertions();
+
         const { analyzeCoverageGaps } = await import('../shared/coverage-gap.js');
         const { generateCoverageGapHtml } = await import('../shared/generate-coverage-gap-html.js');
         const { writeReport } = await import('../shared/temp-dir.js');
@@ -616,7 +645,8 @@ describe('Case27 — Coverage Dashboard', () => {
         expect(writeReport).toHaveBeenCalledWith('coverage-dashboard-DASH-XYZ.html', HTML_WITH_DOCTYPE);
     });
 
-    it('opens report in browser', async () => {
+    it('opens report in browser', async () => {expect.hasAssertions();
+
         const { analyzeCoverageGaps } = await import('../shared/coverage-gap.js');
         const { generateCoverageGapHtml } = await import('../shared/generate-coverage-gap-html.js');
         const { writeReport } = await import('../shared/temp-dir.js');
@@ -636,7 +666,8 @@ describe('Case27 — Coverage Dashboard', () => {
         );
     });
 
-    it('pushes history with coverage summary on success', async () => {
+    it('pushes history with coverage summary on success', async () => {expect.hasAssertions();
+
         const { analyzeCoverageGaps } = await import('../shared/coverage-gap.js');
         const { generateCoverageGapHtml } = await import('../shared/generate-coverage-gap-html.js');
         const { writeReport } = await import('../shared/temp-dir.js');
@@ -650,7 +681,8 @@ describe('Case27 — Coverage Dashboard', () => {
         expect(ctx.pushHistory).toHaveBeenCalledWith('coverage-dashboard', '75% coverage, 2 gaps', 'ok');
     });
 
-    it('returns false when analysis fails', async () => {
+    it('returns false when analysis fails', async () => {expect.hasAssertions();
+
         const { analyzeCoverageGaps } = await import('../shared/coverage-gap.js');
         vi.mocked(analyzeCoverageGaps).mockRejectedValue(new Error('Jira API down'));
         const ctx = createMockContext();
@@ -661,10 +693,11 @@ describe('Case27 — Coverage Dashboard', () => {
 
         const { printError } = await import('../shared/prompt.js');
 
-        expect(vi.mocked(printError)).toHaveBeenCalled();
+        expect(vi.mocked(printError)).toHaveBeenCalledWith();
     });
 
-    it('does not call writeReport when analysis fails', async () => {
+    it('does not call writeReport when analysis fails', async () => {expect.hasAssertions();
+
         const { analyzeCoverageGaps } = await import('../shared/coverage-gap.js');
         const { writeReport } = await import('../shared/temp-dir.js');
         vi.mocked(analyzeCoverageGaps).mockRejectedValue(new Error('timeout'));
@@ -675,7 +708,8 @@ describe('Case27 — Coverage Dashboard', () => {
         expect(writeReport).not.toHaveBeenCalled();
     });
 
-    it('handles openWithFallback error gracefully', async () => {
+    it('handles openWithFallback error gracefully', async () => {expect.hasAssertions();
+
         const { analyzeCoverageGaps } = await import('../shared/coverage-gap.js');
         const { generateCoverageGapHtml } = await import('../shared/generate-coverage-gap-html.js');
         const { writeReport } = await import('../shared/temp-dir.js');
@@ -690,7 +724,8 @@ describe('Case27 — Coverage Dashboard', () => {
         await expect(case27.handler(ctx)).resolves.not.toThrow();
     });
 
-    it('calls title with correct label', async () => {
+    it('calls title with correct label', async () => {expect.hasAssertions();
+
         const { analyzeCoverageGaps } = await import('../shared/coverage-gap.js');
         const { generateCoverageGapHtml } = await import('../shared/generate-coverage-gap-html.js');
         const { writeReport } = await import('../shared/temp-dir.js');
@@ -705,7 +740,8 @@ describe('Case27 — Coverage Dashboard', () => {
         expect(vi.mocked(title)).toHaveBeenCalledWith('Coverage Dashboard');
     });
 
-    it('uses withSpinner during analysis', async () => {
+    it('uses withSpinner during analysis', async () => {expect.hasAssertions();
+
         const { analyzeCoverageGaps } = await import('../shared/coverage-gap.js');
         const { generateCoverageGapHtml } = await import('../shared/generate-coverage-gap-html.js');
         const { writeReport } = await import('../shared/temp-dir.js');

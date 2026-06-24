@@ -55,7 +55,8 @@ describe('Verify-registry', () => {
         vi.clearAllMocks();
     });
 
-    it('passes for a valid registry with capabilities', async () => {
+    it('passes for a valid registry with capabilities', async () => {expect.hasAssertions();
+
         mockReadFile(VALID_REGISTRY);
 
         const mod = await import('../verify-registry.js');
@@ -64,7 +65,8 @@ describe('Verify-registry', () => {
         expect(errors).toHaveLength(0);
     });
 
-    it('reports error for invalid JSON', async () => {
+    it('reports error for invalid JSON', async () => {expect.hasAssertions();
+
         mockReadFileSync.mockReturnValue('not valid json');
 
         const mod = await import('../verify-registry.js');
@@ -74,7 +76,8 @@ describe('Verify-registry', () => {
         expect(errors[0]?.message).toContain('Invalid JSON');
     });
 
-    it('reports error when root is not an object', async () => {
+    it('reports error when root is not an object', async () => {expect.hasAssertions();
+
         mockReadFileSync.mockReturnValue(JSON.stringify('string'));
 
         const mod = await import('../verify-registry.js');
@@ -83,7 +86,8 @@ describe('Verify-registry', () => {
         expect(errors.length).toBeGreaterThan(0);
     });
 
-    it('reports error when version is missing', async () => {
+    it('reports error when version is missing', async () => {expect.hasAssertions();
+
         const noVersion: Record<string, unknown> = { ...VALID_REGISTRY };
         delete noVersion['version'];
         mockReadFile(noVersion);
@@ -94,7 +98,8 @@ describe('Verify-registry', () => {
         expect(errors.length).toBeGreaterThan(0);
     });
 
-    it('reports error when updated date is invalid', async () => {
+    it('reports error when updated date is invalid', async () => {expect.hasAssertions();
+
         mockReadFile({ ...VALID_REGISTRY, updated: 'invalid-date' });
 
         const mod = await import('../verify-registry.js');
@@ -103,7 +108,8 @@ describe('Verify-registry', () => {
         expect(errors.length).toBeGreaterThan(0);
     });
 
-    it('reports error for tier not in valid set', async () => {
+    it('reports error for tier not in valid set', async () => {expect.hasAssertions();
+
         mockReadFile({
             ...VALID_REGISTRY,
             providers: {
@@ -125,7 +131,8 @@ describe('Verify-registry', () => {
         expect(errors.some((e: { message: string }) => e.message.includes('Invalid tier'))).toBeTruthy();
     });
 
-    it('reports error when capabilities is not an array', async () => {
+    it('reports error when capabilities is not an array', async () => {expect.hasAssertions();
+
         mockReadFile({
             ...VALID_REGISTRY,
             providers: {
@@ -148,7 +155,8 @@ describe('Verify-registry', () => {
         expect(errors.some((e: { message: string }) => e.message.includes('array of strings'))).toBeTruthy();
     });
 
-    it('reports error when capabilities items are not strings', async () => {
+    it('reports error when capabilities items are not strings', async () => {expect.hasAssertions();
+
         mockReadFile({
             ...VALID_REGISTRY,
             providers: {
@@ -171,7 +179,8 @@ describe('Verify-registry', () => {
         expect(errors.some((e: { message: string }) => e.message.includes('array of strings'))).toBeTruthy();
     });
 
-    it('handles file read error gracefully', async () => {
+    it('handles file read error gracefully', async () => {expect.hasAssertions();
+
         mockReadFileSync.mockImplementation(() => {
             throw new Error('ENOENT');
         });
@@ -182,7 +191,8 @@ describe('Verify-registry', () => {
         expect(errors.some((e: { message: string }) => e.message.includes('Cannot read'))).toBeTruthy();
     });
 
-    it('accepts empty capabilities array', async () => {
+    it('accepts empty capabilities array', async () => {expect.hasAssertions();
+
         mockReadFile({
             ...VALID_REGISTRY,
             providers: {

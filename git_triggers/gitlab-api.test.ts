@@ -29,7 +29,8 @@ describe('ProjectPath', () => {
 });
 
 describe('ApiGet', () => {
-    it('returns data on successful get', async () => {
+    it('returns data on successful get', async () => {expect.hasAssertions();
+
         const client = mockClient();
         client.get.mockResolvedValue({ data: { id: 1 } });
         const result = await apiGet(client, '/test');
@@ -37,7 +38,8 @@ describe('ApiGet', () => {
         expect(result).toEqual({ id: 1 });
     });
 
-    it('passes params to client.get', async () => {
+    it('passes params to client.get', async () => {expect.hasAssertions();
+
         const client = mockClient();
         client.get.mockResolvedValue({ data: [] });
         await apiGet(client, '/test', { params: { page: 2 } });
@@ -45,7 +47,8 @@ describe('ApiGet', () => {
         expect(client['get']).toHaveBeenCalledWith('/test', { params: { page: 2 } });
     });
 
-    it('calls get without params when no opts provided', async () => {
+    it('calls get without params when no opts provided', async () => {expect.hasAssertions();
+
         const client = mockClient();
         client.get.mockResolvedValue({ data: 'ok' });
         await apiGet(client, '/test');
@@ -53,7 +56,8 @@ describe('ApiGet', () => {
         expect(client['get']).toHaveBeenCalledWith('/test');
     });
 
-    it('returns null on error when returnNull is true', async () => {
+    it('returns null on error when returnNull is true', async () => {expect.hasAssertions();
+
         const client = mockClient();
         client.get.mockRejectedValue(new Error('fail'));
         const result = await apiGet(client, '/test', { returnNull: true });
@@ -61,7 +65,8 @@ describe('ApiGet', () => {
         expect(result).toBeNull();
     });
 
-    it('re-throws on error when returnNull is not set', async () => {
+    it('re-throws on error when returnNull is not set', async () => {expect.hasAssertions();
+
         const client = mockClient();
         client.get.mockRejectedValue(new Error('fail'));
 
@@ -70,7 +75,8 @@ describe('ApiGet', () => {
 });
 
 describe('ApiPost', () => {
-    it('returns data on successful post with body', async () => {
+    it('returns data on successful post with body', async () => {expect.hasAssertions();
+
         const client = mockClient();
         client.post.mockResolvedValue({ data: { id: 1 } });
         const result = await apiPost(client, '/test', { name: 'foo' });
@@ -79,7 +85,8 @@ describe('ApiPost', () => {
         expect(client['post']).toHaveBeenCalledWith('/test', { name: 'foo' });
     });
 
-    it('calls post without body when body is undefined', async () => {
+    it('calls post without body when body is undefined', async () => {expect.hasAssertions();
+
         const client = mockClient();
         client.post.mockResolvedValue({ data: null });
         await apiPost(client, '/test');
@@ -87,7 +94,8 @@ describe('ApiPost', () => {
         expect(client['post']).toHaveBeenCalledWith('/test');
     });
 
-    it('calls post with explicit undefined body', async () => {
+    it('calls post with explicit undefined body', async () => {expect.hasAssertions();
+
         const client = mockClient();
         client.post.mockResolvedValue({ data: null });
         await apiPost(client, '/test', undefined);
@@ -95,7 +103,8 @@ describe('ApiPost', () => {
         expect(client['post']).toHaveBeenCalledWith('/test');
     });
 
-    it('calls post with null body', async () => {
+    it('calls post with null body', async () => {expect.hasAssertions();
+
         const client = mockClient();
         client.post.mockResolvedValue({ data: null });
         await apiPost(client, '/test', null);
@@ -103,7 +112,8 @@ describe('ApiPost', () => {
         expect(client['post']).toHaveBeenCalledWith('/test', null);
     });
 
-    it('re-throws on error', async () => {
+    it('re-throws on error', async () => {expect.hasAssertions();
+
         const client = mockClient();
         client.post.mockRejectedValue(new Error('fail'));
 
@@ -112,7 +122,8 @@ describe('ApiPost', () => {
 });
 
 describe('ApiPut', () => {
-    it('returns data on successful put with body', async () => {
+    it('returns data on successful put with body', async () => {expect.hasAssertions();
+
         const client = mockClient();
         client.put.mockResolvedValue({ data: { id: 1 }, status: 200 });
         const result = await apiPut(client, '/test', { name: 'foo' });
@@ -121,7 +132,8 @@ describe('ApiPut', () => {
         expect(client['put']).toHaveBeenCalledWith('/test', { name: 'foo' });
     });
 
-    it('returns null on 204 status', async () => {
+    it('returns null on 204 status', async () => {expect.hasAssertions();
+
         const client = mockClient();
         client.put.mockResolvedValue({ data: {}, status: 204 });
         const result = await apiPut(client, '/test');
@@ -129,7 +141,8 @@ describe('ApiPut', () => {
         expect(result).toBeNull();
     });
 
-    it('calls put without body when body is undefined', async () => {
+    it('calls put without body when body is undefined', async () => {expect.hasAssertions();
+
         const client = mockClient();
         client.put.mockResolvedValue({ data: null, status: 200 });
         await apiPut(client, '/test');
@@ -137,7 +150,8 @@ describe('ApiPut', () => {
         expect(client['put']).toHaveBeenCalledWith('/test');
     });
 
-    it('re-throws on error', async () => {
+    it('re-throws on error', async () => {expect.hasAssertions();
+
         const client = mockClient();
         client.put.mockRejectedValue(new Error('fail'));
 

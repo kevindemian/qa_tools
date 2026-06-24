@@ -118,7 +118,8 @@ describe('Friendly error paths (Sprint W)', () => {
     });
 
     describe('W3 — MissingTokenError', () => {
-        it('throws MissingTokenError for GitLab without token', async () => {
+        it('throws MissingTokenError for GitLab without token', async () => {expect.hasAssertions();
+
             const { createManagerForProject: createMaker } = await vi.importActual<
                 typeof import('../git_triggers/session-state.js')
             >('../git_triggers/session-state');
@@ -126,7 +127,8 @@ describe('Friendly error paths (Sprint W)', () => {
             expect(() => createMaker('qa_tools', '123')).toThrow('GIT_TOKEN');
         });
 
-        it('throws MissingTokenError for GitHub without token', async () => {
+        it('throws MissingTokenError for GitHub without token', async () => {expect.hasAssertions();
+
             const { createManagerForProject: createMaker } = await vi.importActual<
                 typeof import('../git_triggers/session-state.js')
             >('../git_triggers/session-state');

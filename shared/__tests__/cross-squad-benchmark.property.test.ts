@@ -47,7 +47,8 @@ const projectArb = fc
     );
 
 describe('ComputeCrossSquadBenchmark — property-based', () => {
-    it('sorts benchmarks by healthScore descending', () => {
+    it('sorts benchmarks by healthScore descending', () => {expect.hasAssertions();
+
         fc.assert(
             fc.property(
                 fc.uniqueArray(projectArb, { selector: (p) => p.name, minLength: 0, maxLength: 10 }),
@@ -66,7 +67,8 @@ describe('ComputeCrossSquadBenchmark — property-based', () => {
         );
     });
 
-    it('computes average score correctly', () => {
+    it('computes average score correctly', () => {expect.hasAssertions();
+
         fc.assert(
             fc.property(
                 fc.uniqueArray(projectArb, { selector: (p) => p.name, minLength: 0, maxLength: 10 }),
@@ -82,7 +84,8 @@ describe('ComputeCrossSquadBenchmark — property-based', () => {
         );
     });
 
-    it('identifies top and bottom squads', () => {
+    it('identifies top and bottom squads', () => {expect.hasAssertions();
+
         fc.assert(
             fc.property(
                 fc.uniqueArray(projectArb, { selector: (p) => p.name, minLength: 0, maxLength: 10 }),
@@ -105,7 +108,8 @@ describe('ComputeCrossSquadBenchmark — property-based', () => {
         );
     });
 
-    it('stdDev is 0 for single squad', () => {
+    it('stdDev is 0 for single squad', () => {expect.hasAssertions();
+
         fc.assert(
             fc.property(projectArb, (project) => {
                 const result = computeCrossSquadBenchmark([project]);
@@ -116,7 +120,8 @@ describe('ComputeCrossSquadBenchmark — property-based', () => {
         );
     });
 
-    it('stdDev is always >= 0 (G-03)', () => {
+    it('stdDev is always >= 0 (G-03)', () => {expect.hasAssertions();
+
         fc.assert(
             fc.property(
                 fc.uniqueArray(projectArb, { selector: (p) => p.name, minLength: 2, maxLength: 10 }),
@@ -130,7 +135,8 @@ describe('ComputeCrossSquadBenchmark — property-based', () => {
         );
     });
 
-    it('stdDev is 0 when all health scores are equal (G-03)', () => {
+    it('stdDev is 0 when all health scores are equal (G-03)', () => {expect.hasAssertions();
+
         fc.assert(
             fc.property(
                 fc.uniqueArray(
@@ -147,7 +153,8 @@ describe('ComputeCrossSquadBenchmark — property-based', () => {
         );
     });
 
-    it('trend matches healthScore comparison', () => {
+    it('trend matches healthScore comparison', () => {expect.hasAssertions();
+
         fc.assert(
             fc.property(
                 fc.uniqueArray(projectArb, { selector: (p) => p.name, minLength: 0, maxLength: 10 }),
@@ -174,7 +181,8 @@ describe('ComputeCrossSquadBenchmark — property-based', () => {
 });
 
 describe('GenerateBenchmarkHtml — property-based', () => {
-    it('always produces valid HTML', () => {
+    it('always produces valid HTML', () => {expect.hasAssertions();
+
         fc.assert(
             fc.property(
                 fc.uniqueArray(projectArb, { selector: (p) => p.name, minLength: 0, maxLength: 8 }),
@@ -190,7 +198,8 @@ describe('GenerateBenchmarkHtml — property-based', () => {
         );
     });
 
-    it('contains all project names', () => {
+    it('contains all project names', () => {expect.hasAssertions();
+
         fc.assert(
             fc.property(
                 fc.uniqueArray(projectArb, { selector: (p) => p.name, minLength: 0, maxLength: 8 }),

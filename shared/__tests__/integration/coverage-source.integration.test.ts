@@ -28,7 +28,8 @@ describe('Integration: Coverage Source', () => {
     });
 
     describe('FT-11a: readIstanbulCoverage', () => {
-        it('reads valid Istanbul coverage file', async () => {
+        it('reads valid Istanbul coverage file', async () => {expect.hasAssertions();
+
             const { readIstanbulCoverage } = await import('../../coverage-source.js');
             const coveragePath = path.join(TEST_DIR, 'coverage-summary.json');
             fs.writeFileSync(
@@ -50,14 +51,16 @@ describe('Integration: Coverage Source', () => {
             expect(result?.detail).toContain('85.0%');
         });
 
-        it('returns undefined when file does not exist', async () => {
+        it('returns undefined when file does not exist', async () => {expect.hasAssertions();
+
             const { readIstanbulCoverage } = await import('../../coverage-source.js');
             const result = readIstanbulCoverage(path.join(TEST_DIR, 'nonexistent.json'));
 
             expect(result).toBeUndefined();
         });
 
-        it('returns undefined on invalid JSON', async () => {
+        it('returns undefined on invalid JSON', async () => {expect.hasAssertions();
+
             const { readIstanbulCoverage } = await import('../../coverage-source.js');
             const coveragePath = path.join(TEST_DIR, 'bad.json');
             fs.writeFileSync(coveragePath, 'not json');
@@ -66,7 +69,8 @@ describe('Integration: Coverage Source', () => {
             expect(result).toBeUndefined();
         });
 
-        it('returns undefined when total is missing', async () => {
+        it('returns undefined when total is missing', async () => {expect.hasAssertions();
+
             const { readIstanbulCoverage } = await import('../../coverage-source.js');
             const coveragePath = path.join(TEST_DIR, 'no-total.json');
             fs.writeFileSync(coveragePath, JSON.stringify({ total: undefined }));
@@ -77,7 +81,8 @@ describe('Integration: Coverage Source', () => {
     });
 
     describe('FT-11b: resolveCoverage priority', () => {
-        it('prefers Istanbul over CTRF', async () => {
+        it('prefers Istanbul over CTRF', async () => {expect.hasAssertions();
+
             const { resolveCoverage } = await import('../../coverage-source.js');
             const coveragePath = path.join(TEST_DIR, 'coverage-summary.json');
             fs.writeFileSync(
@@ -93,7 +98,8 @@ describe('Integration: Coverage Source', () => {
             expect(result?.coveragePct).toBe(90);
         });
 
-        it('falls back to CTRF when Istanbul unavailable', async () => {
+        it('falls back to CTRF when Istanbul unavailable', async () => {expect.hasAssertions();
+
             const { resolveCoverage } = await import('../../coverage-source.js');
             const result = resolveCoverage({
                 istanbulPath: path.join(TEST_DIR, 'nonexistent.json'),
@@ -104,7 +110,8 @@ describe('Integration: Coverage Source', () => {
             expect(result?.coveragePct).toBe(75.5);
         });
 
-        it('returns undefined when no source available', async () => {
+        it('returns undefined when no source available', async () => {expect.hasAssertions();
+
             const { resolveCoverage } = await import('../../coverage-source.js');
             const result = resolveCoverage({
                 istanbulPath: path.join(TEST_DIR, 'nonexistent.json'),

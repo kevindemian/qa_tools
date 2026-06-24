@@ -15,7 +15,8 @@ import { describe, expect, it } from 'vitest';
 
 describe('Integration: Release Score', () => {
     describe('FT-14a: score calculation', () => {
-        it('returns score in 0-100 range', async () => {
+        it('returns score in 0-100 range', async () => {expect.hasAssertions();
+
             const { calculateReleaseScore } = await import('../../release-score.js');
             const result = calculateReleaseScore(80, 85, 'pass', 90, 5);
 
@@ -23,7 +24,8 @@ describe('Integration: Release Score', () => {
             expect(result.score).toBeLessThanOrEqual(100);
         });
 
-        it('weights: tasks=25%, health=30%, coverage=25%, flakiness=20%', async () => {
+        it('weights: tasks=25%, health=30%, coverage=25%, flakiness=20%', async () => {expect.hasAssertions();
+
             const { calculateReleaseScore } = await import('../../release-score.js');
             // All dimensions at 100 → score should be ~100
             const perfect = calculateReleaseScore(100, 100, 'pass', 100, 0);
@@ -32,7 +34,8 @@ describe('Integration: Release Score', () => {
             expect(perfect.grade).toBe('excellent');
         });
 
-        it('all zeros → score 0', async () => {
+        it('all zeros → score 0', async () => {expect.hasAssertions();
+
             const { calculateReleaseScore } = await import('../../release-score.js');
             const result = calculateReleaseScore(0, 0, 'fail', 0, 100);
 
@@ -42,21 +45,24 @@ describe('Integration: Release Score', () => {
     });
 
     describe('FT-14b: grade assignment', () => {
-        it('excellent ≥ 90', async () => {
+        it('excellent ≥ 90', async () => {expect.hasAssertions();
+
             const { calculateReleaseScore } = await import('../../release-score.js');
             const result = calculateReleaseScore(90, 95, 'pass', 90, 2);
 
             expect(result.grade).toBe('excellent');
         });
 
-        it('good ≥ 70', async () => {
+        it('good ≥ 70', async () => {expect.hasAssertions();
+
             const { calculateReleaseScore } = await import('../../release-score.js');
             const result = calculateReleaseScore(70, 75, 'pass', 70, 10);
 
             expect(result.grade).toBe('good');
         });
 
-        it('critical < 50', async () => {
+        it('critical < 50', async () => {expect.hasAssertions();
+
             const { calculateReleaseScore } = await import('../../release-score.js');
             const result = calculateReleaseScore(30, 30, 'fail', 30, 50);
 
@@ -65,7 +71,8 @@ describe('Integration: Release Score', () => {
     });
 
     describe('FT-14c: breakdown', () => {
-        it('has 4 dimension entries', async () => {
+        it('has 4 dimension entries', async () => {expect.hasAssertions();
+
             const { calculateReleaseScore } = await import('../../release-score.js');
             const result = calculateReleaseScore(80, 85, 'pass', 90, 5);
 
@@ -75,14 +82,16 @@ describe('Integration: Release Score', () => {
     });
 
     describe('FT-14d: recommendation', () => {
-        it('says ready when all dimensions pass', async () => {
+        it('says ready when all dimensions pass', async () => {expect.hasAssertions();
+
             const { calculateReleaseScore } = await import('../../release-score.js');
             const result = calculateReleaseScore(90, 95, 'pass', 90, 2);
 
             expect(result.recommendation).toContain('Ready');
         });
 
-        it('lists failing dimensions', async () => {
+        it('lists failing dimensions', async () => {expect.hasAssertions();
+
             const { calculateReleaseScore } = await import('../../release-score.js');
             const result = calculateReleaseScore(30, 50, 'fail', 40, 50);
 
@@ -91,7 +100,8 @@ describe('Integration: Release Score', () => {
     });
 
     describe('FT-14e: HTML generation', () => {
-        it('generates valid HTML', async () => {
+        it('generates valid HTML', async () => {expect.hasAssertions();
+
             const { calculateReleaseScore, generateReleaseScoreHtml } = await import('../../release-score.js');
             const result = calculateReleaseScore(80, 85, 'pass', 90, 5);
             const html = generateReleaseScoreHtml(result);

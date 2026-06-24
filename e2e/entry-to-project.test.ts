@@ -42,7 +42,8 @@ describe('Entry-menu to module spawn — full flow (CR-3c)', () => {
         vi.spyOn(console, 'clear').mockImplementation(() => {});
     });
 
-    it('launches git module on selection and spawns correct command', async () => {
+    it('launches git module on selection and spawns correct command', async () => {expect.hasAssertions();
+
         vi.mocked(Output).isTTY.mockReturnValue(true);
         vi.mocked(Output).isCI.mockReturnValue(false);
         vi.mocked(showSelect).mockResolvedValueOnce('git').mockResolvedValueOnce('exit');
@@ -50,7 +51,7 @@ describe('Entry-menu to module spawn — full flow (CR-3c)', () => {
 
         await entryMain();
 
-        expect(showSplash).toHaveBeenCalled();
+        expect(showSplash).toHaveBeenCalledWith();
         expect(showSelect).toHaveBeenNthCalledWith(
             1,
             expect.any(String),
@@ -66,7 +67,8 @@ describe('Entry-menu to module spawn — full flow (CR-3c)', () => {
         );
     });
 
-    it('launches jira module on selection and spawns correct command', async () => {
+    it('launches jira module on selection and spawns correct command', async () => {expect.hasAssertions();
+
         vi.mocked(Output).isTTY.mockReturnValue(true);
         vi.mocked(Output).isCI.mockReturnValue(false);
         vi.mocked(showSelect).mockResolvedValueOnce('jira').mockResolvedValueOnce('exit');
@@ -81,7 +83,8 @@ describe('Entry-menu to module spawn — full flow (CR-3c)', () => {
         );
     });
 
-    it('sets stdio inherit and cwd in spawned process', async () => {
+    it('sets stdio inherit and cwd in spawned process', async () => {expect.hasAssertions();
+
         vi.mocked(Output).isTTY.mockReturnValue(true);
         vi.mocked(Output).isCI.mockReturnValue(false);
         vi.mocked(showSelect).mockResolvedValueOnce('git').mockResolvedValueOnce('exit');
@@ -101,7 +104,8 @@ describe('Entry-menu to module spawn — full flow (CR-3c)', () => {
         }
     });
 
-    it('exits loop on non-zero exit from module', async () => {
+    it('exits loop on non-zero exit from module', async () => {expect.hasAssertions();
+
         vi.mocked(Output).isTTY.mockReturnValue(true);
         vi.mocked(Output).isCI.mockReturnValue(false);
         vi.mocked(showSelect).mockResolvedValueOnce('jira');

@@ -132,7 +132,8 @@ describe('Jira_management — getHandler registry', () => {
         expect(typeof handler).toBe('function');
     });
 
-    it('returns handler for all 27 cases', () => {
+    it('returns handler for all 27 cases', () => {expect.hasAssertions();
+
         const cases = [
             '1',
             '2',
@@ -181,7 +182,8 @@ describe('Jira_management — getHandler registry', () => {
         expect(handler).toBeNull();
     });
 
-    it('each handler is callable without throwing', async () => {
+    it('each handler is callable without throwing', async () => {expect.hasAssertions();
+
         const cases = ['3', '5', '7', '9', '11', '13', '25', '26', '27'];
         for (const c of cases) {
             const handler = getHandler(c);
@@ -213,7 +215,8 @@ describe('Jira_management — case handlers are connected', () => {
         expect(typeof handler).toBe('function');
     });
 
-    it('case09 updates project name', async () => {
+    it('case09 updates project name', async () => {expect.hasAssertions();
+
         const handler = getHandler('9');
 
         expect(handler).not.toBeNull();
@@ -226,7 +229,8 @@ describe('Jira_management — case handlers are connected', () => {
         expect(ctx.ctx.project_name).toBe('NEW_PROJ');
     });
 
-    it('case25 loads metrics and builds matrix', async () => {
+    it('case25 loads metrics and builds matrix', async () => {expect.hasAssertions();
+
         const handler = getHandler('25');
 
         expect(handler).not.toBeNull();
@@ -236,10 +240,11 @@ describe('Jira_management — case handlers are connected', () => {
         vi.mocked(loadMetrics).mockReturnValue({ runs: [] });
         await (handler as (ctx: ReturnType<typeof createMockContext>) => Promise<boolean | void>)(ctx);
 
-        expect(vi.mocked(loadMetrics)).toHaveBeenCalled();
+        expect(vi.mocked(loadMetrics)).toHaveBeenCalledWith();
     });
 
-    it('case26 calculates release score', async () => {
+    it('case26 calculates release score', async () => {expect.hasAssertions();
+
         const handler = getHandler('26');
 
         expect(handler).not.toBeNull();
@@ -249,10 +254,11 @@ describe('Jira_management — case handlers are connected', () => {
         vi.mocked(loadMetrics).mockReturnValue({ runs: [] });
         await (handler as (ctx: ReturnType<typeof createMockContext>) => Promise<boolean | void>)(ctx);
 
-        expect(vi.mocked(loadMetrics)).toHaveBeenCalled();
+        expect(vi.mocked(loadMetrics)).toHaveBeenCalledWith();
     });
 
-    it('case27 analyzes coverage gaps', async () => {
+    it('case27 analyzes coverage gaps', async () => {expect.hasAssertions();
+
         const handler = getHandler('27');
 
         expect(handler).not.toBeNull();
@@ -261,6 +267,6 @@ describe('Jira_management — case handlers are connected', () => {
         const { analyzeCoverageGaps } = await import('../../shared/coverage-gap.js');
         await (handler as (ctx: ReturnType<typeof createMockContext>) => Promise<boolean | void>)(ctx);
 
-        expect(vi.mocked(analyzeCoverageGaps)).toHaveBeenCalled();
+        expect(vi.mocked(analyzeCoverageGaps)).toHaveBeenCalledWith();
     });
 });

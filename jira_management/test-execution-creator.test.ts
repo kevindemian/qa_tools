@@ -76,14 +76,16 @@ describe('TestExecutionCreator', () => {
             mockJiraResource.postJiraResource.mockResolvedValue(defaultCreated);
         }
 
-        it('returns { key, summary } with correct structure', async () => {
+        it('returns { key, summary } with correct structure', async () => {expect.hasAssertions();
+
             setupHappyPath();
             const result = await creator.create(projectName, testKeys, csvName);
 
             expect(result).toEqual({ key: 'TE-1', summary: 'my_tests.csv - 23/05/2026 10:30' });
         });
 
-        it('posts with correct payload', async () => {
+        it('posts with correct payload', async () => {expect.hasAssertions();
+
             setupHappyPath();
             await creator.create(projectName, testKeys, csvName);
 
@@ -97,7 +99,8 @@ describe('TestExecutionCreator', () => {
             });
         });
 
-        it('returns null and logs error when issue type not found', async () => {
+        it('returns null and logs error when issue type not found', async () => {expect.hasAssertions();
+
             mockJiraResource.getJiraResource.mockResolvedValueOnce([
                 { id: '1', name: 'Bug' },
                 { id: '3', name: 'Story' },
@@ -109,7 +112,8 @@ describe('TestExecutionCreator', () => {
             expect(mockJiraResource['postJiraResource']).not.toHaveBeenCalled();
         });
 
-        it('returns null and logs error when custom field not found', async () => {
+        it('returns null and logs error when custom field not found', async () => {expect.hasAssertions();
+
             mockJiraResource.getJiraResource
                 .mockResolvedValueOnce(defaultIssueTypes)
                 .mockResolvedValueOnce([{ id: 'customfield_10100', name: 'Test', schema: { custom: 'some:other' } }]);
@@ -120,7 +124,8 @@ describe('TestExecutionCreator', () => {
             expect(mockJiraResource['postJiraResource']).not.toHaveBeenCalled();
         });
 
-        it('returns null and logs error when issuetype response is non-array', async () => {
+        it('returns null and logs error when issuetype response is non-array', async () => {expect.hasAssertions();
+
             mockJiraResource.getJiraResource.mockResolvedValueOnce({ id: '1' });
             const result = await creator.create(projectName, testKeys, csvName);
 
@@ -129,7 +134,8 @@ describe('TestExecutionCreator', () => {
             expect(mockJiraResource['postJiraResource']).not.toHaveBeenCalled();
         });
 
-        it('returns null and logs error when fields response is non-array', async () => {
+        it('returns null and logs error when fields response is non-array', async () => {expect.hasAssertions();
+
             mockJiraResource.getJiraResource
                 .mockResolvedValueOnce(defaultIssueTypes)
                 .mockResolvedValueOnce({ id: 'customfield_1' });
@@ -140,7 +146,8 @@ describe('TestExecutionCreator', () => {
             expect(mockJiraResource['postJiraResource']).not.toHaveBeenCalled();
         });
 
-        it('uses title override instead of csvName + timestamp', async () => {
+        it('uses title override instead of csvName + timestamp', async () => {expect.hasAssertions();
+
             setupHappyPath();
             await creator.create(projectName, testKeys, csvName, 'My Custom Title');
             const callArgs = mockJiraResource.postJiraResource.mock.calls[0];
@@ -149,7 +156,8 @@ describe('TestExecutionCreator', () => {
             expect(callArgs?.[1]).toHaveProperty('fields.summary', 'My Custom Title');
         });
 
-        it('uses "Automated Execution" when csvName is empty and no title override', async () => {
+        it('uses "Automated Execution" when csvName is empty and no title override', async () => {expect.hasAssertions();
+
             setupHappyPath();
             await creator.create(projectName, testKeys, '');
             const callArgs = mockJiraResource.postJiraResource.mock.calls[0];
@@ -170,7 +178,8 @@ describe('TestExecutionCreator', () => {
             });
         }
 
-        it('creates TE and links all tests', async () => {
+        it('creates TE and links all tests', async () => {expect.hasAssertions();
+
             setupCreate('TE-1');
             mockJiraResource.getJiraResource.mockResolvedValueOnce({ fields: { issuelinks: [] } });
             mockLinkManager.createIssueLink.mockResolvedValue({});
@@ -183,7 +192,8 @@ describe('TestExecutionCreator', () => {
             expect(mockLinkManager['createIssueLink']).toHaveBeenCalledWith('TEST-2', 'TE-1', 'Tests');
         });
 
-        it('skips already-linked tests', async () => {
+        it('skips already-linked tests', async () => {expect.hasAssertions();
+
             setupCreate('TE-1');
             mockJiraResource.getJiraResource.mockResolvedValueOnce({
                 fields: {
@@ -198,7 +208,8 @@ describe('TestExecutionCreator', () => {
             expect(mockLinkManager['createIssueLink']).toHaveBeenCalledWith('TEST-2', 'TE-1', 'Tests');
         });
 
-        it('links all unlinked tests when multiple provided', async () => {
+        it('links all unlinked tests when multiple provided', async () => {expect.hasAssertions();
+
             const manyTests = ['TEST-1', 'TEST-2', 'TEST-3', 'TEST-4', 'TEST-5'];
             setupCreate('TE-1');
             mockJiraResource.getJiraResource.mockResolvedValueOnce({
@@ -216,7 +227,8 @@ describe('TestExecutionCreator', () => {
             expect(mockLinkManager['createIssueLink']).toHaveBeenCalledWith('TEST-5', 'TE-1', 'Tests');
         });
 
-        it('logs warnings for failed links and continues', async () => {
+        it('logs warnings for failed links and continues', async () => {expect.hasAssertions();
+
             setupCreate('TE-1');
             mockJiraResource.getJiraResource.mockResolvedValueOnce({ fields: { issuelinks: [] } });
             mockLinkManager.createIssueLink.mockResolvedValueOnce({}).mockRejectedValueOnce(new Error('API error'));
@@ -226,7 +238,8 @@ describe('TestExecutionCreator', () => {
             expect(mockLinkManager['createIssueLink']).toHaveBeenCalledTimes(2);
         });
 
-        it('proceeds to try linking all when fetching existing links fails', async () => {
+        it('proceeds to try linking all when fetching existing links fails', async () => {expect.hasAssertions();
+
             setupCreate('TE-1');
             mockJiraResource.getJiraResource.mockRejectedValueOnce(new Error('Network error'));
             mockLinkManager.createIssueLink.mockResolvedValue({});
@@ -236,14 +249,16 @@ describe('TestExecutionCreator', () => {
             expect(mockLinkManager['createIssueLink']).toHaveBeenCalledTimes(2);
         });
 
-        it('creates TE without linking when testKeys is empty', async () => {
+        it('creates TE without linking when testKeys is empty', async () => {expect.hasAssertions();
+
             setupCreate('TE-1');
             await creator.createWithLinks(projectName, [], csvName);
 
             expect(mockLinkManager['createIssueLink']).not.toHaveBeenCalled();
         });
 
-        it('logs info when all tests are already linked (line 105)', async () => {
+        it('logs info when all tests are already linked (line 105)', async () => {expect.hasAssertions();
+
             setupCreate('TE-1');
             mockJiraResource.getJiraResource.mockResolvedValueOnce({
                 fields: {
@@ -256,7 +271,8 @@ describe('TestExecutionCreator', () => {
             expect(mockLinkManager['createIssueLink']).not.toHaveBeenCalled();
         });
 
-        it('logs error when outer linking block throws (line 121)', async () => {
+        it('logs error when outer linking block throws (line 121)', async () => {expect.hasAssertions();
+
             setupCreate('TE-1');
             mockJiraResource.getJiraResource.mockResolvedValueOnce({ fields: {} });
 
@@ -268,7 +284,8 @@ describe('TestExecutionCreator', () => {
             expect(rootLogger['error']).toHaveBeenCalledWith(expect.stringContaining('Erro ao vincular testes'));
         });
 
-        it('passes title override through to create()', async () => {
+        it('passes title override through to create()', async () => {expect.hasAssertions();
+
             setupCreate('TE-1');
             mockJiraResource.getJiraResource.mockResolvedValueOnce({ fields: {} });
 
@@ -296,7 +313,8 @@ describe('TestExecutionCreator', () => {
             mockLinkManager.createIssueLink.mockResolvedValue({});
         }
 
-        it('returns { key, summary } on success', async () => {
+        it('returns { key, summary } on success', async () => {expect.hasAssertions();
+
             setupHappy({ customfield_10200: [] });
             const result = await creator.addTestsToExistingExecution(teKey, testKeys);
 
@@ -306,7 +324,8 @@ describe('TestExecutionCreator', () => {
             });
         });
 
-        it('returns null and logs error when issue is not Test Execution type', async () => {
+        it('returns null and logs error when issue is not Test Execution type', async () => {expect.hasAssertions();
+
             mockJiraResource.getJiraResource.mockResolvedValueOnce({
                 key: 'BUG-1',
                 fields: { issuetype: { name: 'Bug' } },
@@ -317,7 +336,8 @@ describe('TestExecutionCreator', () => {
             expect(rootLogger['error']).toHaveBeenCalledWith(expect.stringContaining('não é uma Test Execution'));
         });
 
-        it('returns null when TE has unknown issuetype', async () => {
+        it('returns null when TE has unknown issuetype', async () => {expect.hasAssertions();
+
             mockJiraResource.getJiraResource.mockResolvedValueOnce({
                 key: 'X-1',
                 fields: {},
@@ -328,7 +348,8 @@ describe('TestExecutionCreator', () => {
             expect(rootLogger['error']).toHaveBeenCalledWith(expect.stringContaining('não é uma Test Execution'));
         });
 
-        it('returns null when fields response is non-array', async () => {
+        it('returns null when fields response is non-array', async () => {expect.hasAssertions();
+
             mockJiraResource.getJiraResource.mockResolvedValueOnce(teIssue).mockResolvedValueOnce({ not: 'array' });
             const result = await creator.addTestsToExistingExecution(teKey, testKeys);
 
@@ -336,7 +357,8 @@ describe('TestExecutionCreator', () => {
             expect(rootLogger['error']).toHaveBeenCalledWith(expect.stringContaining('campos customizados'));
         });
 
-        it('returns null when custom field not found', async () => {
+        it('returns null when custom field not found', async () => {expect.hasAssertions();
+
             mockJiraResource.getJiraResource
                 .mockResolvedValueOnce(teIssue)
                 .mockResolvedValueOnce([{ id: 'cf1', name: 'Other', schema: { custom: 'other:type' } }]);
@@ -346,7 +368,8 @@ describe('TestExecutionCreator', () => {
             expect(rootLogger['error']).toHaveBeenCalledWith(expect.stringContaining('Tests association'));
         });
 
-        it('merges existing tests with new ones, deduplicating', async () => {
+        it('merges existing tests with new ones, deduplicating', async () => {expect.hasAssertions();
+
             setupHappy({ customfield_10200: ['EXISTING-1', 'TEST-1'] });
             await creator.addTestsToExistingExecution(teKey, testKeys);
 
@@ -355,7 +378,8 @@ describe('TestExecutionCreator', () => {
             });
         });
 
-        it('handles when TE has no current tests in custom field', async () => {
+        it('handles when TE has no current tests in custom field', async () => {expect.hasAssertions();
+
             setupHappy({});
             await creator.addTestsToExistingExecution(teKey, testKeys);
 
@@ -364,7 +388,8 @@ describe('TestExecutionCreator', () => {
             });
         });
 
-        it('reports failed links alongside linked count', async () => {
+        it('reports failed links alongside linked count', async () => {expect.hasAssertions();
+
             mockJiraResource.getJiraResource
                 .mockResolvedValueOnce({ ...teIssue, fields: { ...teIssue.fields, customfield_10200: [] } })
                 .mockResolvedValueOnce(defaultFields)
@@ -376,7 +401,8 @@ describe('TestExecutionCreator', () => {
             expect(mockLinkManager['createIssueLink']).toHaveBeenCalledTimes(2);
         });
 
-        it('uses teKey as summary when TE issue has no summary field', async () => {
+        it('uses teKey as summary when TE issue has no summary field', async () => {expect.hasAssertions();
+
             mockJiraResource.getJiraResource.mockResolvedValueOnce({
                 key: 'TE-1',
                 fields: { issuetype: { name: 'Test Execution' } },

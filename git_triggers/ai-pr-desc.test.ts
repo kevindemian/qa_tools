@@ -13,7 +13,8 @@ describe('GeneratePrDescription', () => {
         vi.clearAllMocks();
     });
 
-    it('Should return empty when diff is empty', async () => {
+    it('should return empty when diff is empty', async () => {expect.hasAssertions();
+
         vi.spyOn(mockProvider, 'getDiff').mockResolvedValue('');
         const result = await generatePrDescription(mockProvider, 'feature/a', 'main');
 
@@ -21,7 +22,8 @@ describe('GeneratePrDescription', () => {
         expect(llmPrompt).not.toHaveBeenCalled();
     });
 
-    it('Should call llmPrompt with diff content', async () => {
+    it('should call llmPrompt with diff content', async () => {expect.hasAssertions();
+
         vi.spyOn(mockProvider, 'getDiff').mockResolvedValue('diff --git a/src/test.ts b/src/test.ts\n+new test');
         vi.mocked(llmPrompt).mockResolvedValue('Resumo: adicionado novo teste.');
 
@@ -38,7 +40,8 @@ describe('GeneratePrDescription', () => {
         expect(result).toBe('Resumo: adicionado novo teste.');
     });
 
-    it('Should return empty on llm error', async () => {
+    it('should return empty on llm error', async () => {expect.hasAssertions();
+
         vi.spyOn(mockProvider, 'getDiff').mockResolvedValue('some diff');
         vi.mocked(llmPrompt).mockRejectedValue(new Error('API error'));
 

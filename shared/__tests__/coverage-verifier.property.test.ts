@@ -21,7 +21,8 @@ function makeCtx(input: string) {
 }
 
 describe('Coverage invariants (PBT)', () => {
-    it('realCoverage is always between 0 and 100', () => {
+    it('realCoverage is always between 0 and 100', () => {expect.hasAssertions();
+
         fc.assert(
             fc.property(
                 fc.string(),
@@ -41,7 +42,8 @@ describe('Coverage invariants (PBT)', () => {
         );
     });
 
-    it('totalCriteria >= coveredCriteria', () => {
+    it('totalCriteria >= coveredCriteria', () => {expect.hasAssertions();
+
         fc.assert(
             fc.property(fc.string(), (input) => {
                 const artifact = {
@@ -54,7 +56,8 @@ describe('Coverage invariants (PBT)', () => {
         );
     });
 
-    it('coveredCriteria + gaps.length === totalCriteria when criteria exist', () => {
+    it('coveredCriteria + gaps.length === totalCriteria when criteria exist', () => {expect.hasAssertions();
+
         fc.assert(
             fc.property(fc.string({ minLength: 1 }), (input) => {
                 const artifact = {
@@ -68,7 +71,8 @@ describe('Coverage invariants (PBT)', () => {
         );
     });
 
-    it('coverageDelta is 0 when declaredCoverage is null', () => {
+    it('coverageDelta is 0 when declaredCoverage is null', () => {expect.hasAssertions();
+
         fc.assert(
             fc.property(fc.string(), (input) => {
                 const artifact = {
@@ -82,7 +86,8 @@ describe('Coverage invariants (PBT)', () => {
         );
     });
 
-    it('coverageDelta = realCoverage - declaredCoverage when declared is not null', () => {
+    it('coverageDelta = realCoverage - declaredCoverage when declared is not null', () => {expect.hasAssertions();
+
         fc.assert(
             fc.property(fc.integer({ min: 0, max: 100 }), (declared) => {
                 const artifact = {
@@ -109,7 +114,8 @@ describe('Coverage invariants (PBT)', () => {
         expect(result.coverageDelta).toBe(0);
     });
 
-    it('gaps entries have criterion truncated to 120 chars', () => {
+    it('gaps entries have criterion truncated to 120 chars', () => {expect.hasAssertions();
+
         fc.assert(
             fc.property(fc.string({ minLength: 1 }), (input) => {
                 const artifact = {

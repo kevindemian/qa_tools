@@ -96,7 +96,7 @@ describe('WriteReport', () => {
         });
 
         expect(() => writeReport('test.json', '{}')).toThrow('EACCES');
-        expect(warnSpy).toHaveBeenCalled();
+        expect(warnSpy).toHaveBeenCalledWith();
     });
 
     it('logs and re-throws when writeFileSync fails (G1 bug-fix)', () => {
@@ -107,7 +107,7 @@ describe('WriteReport', () => {
         });
 
         expect(() => writeReport('test.json', '{}')).toThrow('ENOSPC');
-        expect(warnSpy).toHaveBeenCalled();
+        expect(warnSpy).toHaveBeenCalledWith();
     });
 });
 
@@ -127,7 +127,7 @@ describe('WriteEphemeral', () => {
         });
 
         expect(() => writeEphemeral('cache', 'data.json', '{}')).toThrow('EACCES');
-        expect(warnSpy).toHaveBeenCalled();
+        expect(warnSpy).toHaveBeenCalledWith();
     });
 
     it('logs and re-throws when writeFileSync fails (G1 bug-fix)', () => {
@@ -138,7 +138,7 @@ describe('WriteEphemeral', () => {
         });
 
         expect(() => writeEphemeral('cache', 'data.json', '{}')).toThrow('ENOSPC');
-        expect(warnSpy).toHaveBeenCalled();
+        expect(warnSpy).toHaveBeenCalledWith();
     });
 });
 
@@ -162,7 +162,7 @@ describe('EnsureDirs', () => {
         });
 
         expect(() => ensureDirs()).toThrow('EACCES');
-        expect(warnSpy).toHaveBeenCalled();
+        expect(warnSpy).toHaveBeenCalledWith();
     });
 });
 
@@ -180,7 +180,8 @@ describe('RegisterCleanup', () => {
         expect(handlers).toContain('exit');
     });
 
-    it('registers cleanupTempDirs as the callback handler', () => {
+    it('registers cleanupTempDirs as the callback handler', () => {expect.hasAssertions();
+
         const registered: Array<{ event: string | symbol; fn: (...args: unknown[]) => void }> = [];
         vi.spyOn(process, 'on').mockImplementation((event: string | symbol, listener: (...args: unknown[]) => void) => {
             registered.push({ event, fn: listener });
@@ -210,7 +211,7 @@ describe('RegisterCleanup', () => {
         registerCleanup();
 
         expect(() => handlerRef.current?.()).not.toThrow();
-        expect(warnSpy).toHaveBeenCalled();
+        expect(warnSpy).toHaveBeenCalledWith();
     });
 
     it('removes all 3 temp subdirectories during cleanup when they exist (G6)', () => {

@@ -82,7 +82,8 @@ const AiGenerationRecordArb = fc
 const ValidGrades = ['A', 'B', 'C', 'D', 'F'] as const;
 
 describe('CalculateRequirementScores — property-based', () => {
-    it('entries.length equals totalRequirements', () => {
+    it('entries.length equals totalRequirements', () => {expect.hasAssertions();
+
         fc.assert(
             fc.property(fc.array(AiGenerationRecordArb, { minLength: 0, maxLength: 10 }), (records) => {
                 const result = calculateRequirementScores(records);
@@ -93,7 +94,8 @@ describe('CalculateRequirementScores — property-based', () => {
         );
     });
 
-    it('each score is non-negative and grade is valid', () => {
+    it('each score is non-negative and grade is valid', () => {expect.hasAssertions();
+
         fc.assert(
             fc.property(fc.array(AiGenerationRecordArb, { minLength: 0, maxLength: 10 }), (records) => {
                 const result = calculateRequirementScores(records);
@@ -107,7 +109,8 @@ describe('CalculateRequirementScores — property-based', () => {
         );
     });
 
-    it('entries are sorted by score descending', () => {
+    it('entries are sorted by score descending', () => {expect.hasAssertions();
+
         fc.assert(
             fc.property(fc.array(AiGenerationRecordArb, { minLength: 0, maxLength: 10 }), (records) => {
                 const result = calculateRequirementScores(records);
@@ -123,7 +126,8 @@ describe('CalculateRequirementScores — property-based', () => {
         );
     });
 
-    it('acceptanceRate is in [0, 100]', () => {
+    it('acceptanceRate is in [0, 100]', () => {expect.hasAssertions();
+
         fc.assert(
             fc.property(fc.array(AiGenerationRecordArb, { minLength: 0, maxLength: 10 }), (records) => {
                 const result = calculateRequirementScores(records);
@@ -136,7 +140,8 @@ describe('CalculateRequirementScores — property-based', () => {
         );
     });
 
-    it('aggregate counts match sum of entries', () => {
+    it('aggregate counts match sum of entries', () => {expect.hasAssertions();
+
         fc.assert(
             fc.property(fc.array(AiGenerationRecordArb, { minLength: 0, maxLength: 10 }), (records) => {
                 const result = calculateRequirementScores(records);
@@ -154,7 +159,8 @@ describe('CalculateRequirementScores — property-based', () => {
         );
     });
 
-    it('overallScore matches average of entry scores', () => {
+    it('overallScore matches average of entry scores', () => {expect.hasAssertions();
+
         fc.assert(
             fc.property(fc.array(AiGenerationRecordArb, { minLength: 0, maxLength: 10 }), (records) => {
                 const result = calculateRequirementScores(records);
@@ -172,7 +178,8 @@ describe('CalculateRequirementScores — property-based', () => {
         );
     });
 
-    it('timestamp is valid ISO string', () => {
+    it('timestamp is valid ISO string', () => {expect.hasAssertions();
+
         fc.assert(
             fc.property(fc.array(AiGenerationRecordArb, { minLength: 0, maxLength: 10 }), (records) => {
                 const result = calculateRequirementScores(records);
@@ -204,7 +211,8 @@ describe('CalculateRequirementScores — property-based', () => {
 });
 
 describe('GenerateRequirementScoreHtml — property-based', () => {
-    it('always produces valid HTML with DOCTYPE', () => {
+    it('always produces valid HTML with DOCTYPE', () => {expect.hasAssertions();
+
         fc.assert(
             fc.property(fc.array(AiGenerationRecordArb, { minLength: 0, maxLength: 8 }), (records) => {
                 const result = calculateRequirementScores(records);

@@ -102,21 +102,24 @@ beforeEach(() => {
 });
 
 describe('Main', () => {
-    it('returns early when CTRF file does not exist', async () => {
+    it('returns early when CTRF file does not exist', async () => {expect.hasAssertions();
+
         vi.mocked(fs.existsSync).mockReturnValue(false);
         await main();
 
         expect(mockPRComment.postPrComment).not.toHaveBeenCalled();
     });
 
-    it('returns early when CTRF parsing fails', async () => {
+    it('returns early when CTRF parsing fails', async () => {expect.hasAssertions();
+
         mockParseResult.mockReturnValue({ error: 'Invalid JSON' });
         await main();
 
         expect(mockPRComment.postPrComment).not.toHaveBeenCalled();
     });
 
-    it('returns early when feature is disabled in config', async () => {
+    it('returns early when feature is disabled in config', async () => {expect.hasAssertions();
+
         mockGetConfig.mockReturnValue({
             enabled: false,
             publishTarget: 'github-ci',
@@ -129,7 +132,8 @@ describe('Main', () => {
         expect(mockPRComment.postPrComment).not.toHaveBeenCalled();
     });
 
-    it('calls generatePrReport and posts comment on success', async () => {
+    it('calls generatePrReport and posts comment on success', async () => {expect.hasAssertions();
+
         mockParseResult.mockReturnValue({
             tests: [{ title: 'test-1', state: 'passed', duration: 100 }],
             stats: { passed: 1, failed: 0, skipped: 0, total: 1, duration: 100 },
@@ -145,10 +149,11 @@ describe('Main', () => {
         });
         await main();
 
-        expect(mockPRComment.postPrComment).toHaveBeenCalled();
+        expect(mockPRComment.postPrComment).toHaveBeenCalledWith();
     });
 
-    it('handles no comment URL gracefully', async () => {
+    it('handles no comment URL gracefully', async () => {expect.hasAssertions();
+
         mockParseResult.mockReturnValue({
             tests: [{ title: 'test-1', state: 'passed', duration: 100 }],
             stats: { passed: 1, failed: 0, skipped: 0, total: 1, duration: 100 },
@@ -162,6 +167,6 @@ describe('Main', () => {
         mockPRComment.postPrComment.mockResolvedValue({});
         await main();
 
-        expect(mockPRComment.postPrComment).toHaveBeenCalled();
+        expect(mockPRComment.postPrComment).toHaveBeenCalledWith();
     });
 });

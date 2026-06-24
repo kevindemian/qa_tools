@@ -35,28 +35,31 @@ beforeEach(() => {
 });
 
 describe('SafeJiraCall', () => {
-    it('calls fn, pushes ok history on success', async () => {
+    it('calls fn, pushes ok history on success', async () => {expect.hasAssertions();
+
         const fn = vi.fn().mockResolvedValue(undefined);
         const ctx = makeCtx() as Parameters<typeof safeJiraCall>[0];
         const result = await safeJiraCall(ctx, 'test-op', 'v1', fn);
 
         expect(result).toBeTruthy();
-        expect(fn).toHaveBeenCalled();
+        expect(fn).toHaveBeenCalledWith();
         expect(mockPushHistory).toHaveBeenCalledWith('test-op', 'v1', 'ok');
     });
 
-    it('logs error, pushes error history on failure', async () => {
+    it('logs error, pushes error history on failure', async () => {expect.hasAssertions();
+
         const fn = vi.fn().mockRejectedValue(new Error('API error'));
         const ctx = makeCtx() as Parameters<typeof safeJiraCall>[0];
         const result = await safeJiraCall(ctx, 'test-op', 'v1', fn);
 
         expect(result).toBeFalsy();
-        expect(mockPrintError).toHaveBeenCalled();
-        expect(mockRootLoggerError).toHaveBeenCalled();
+        expect(mockPrintError).toHaveBeenCalledWith();
+        expect(mockRootLoggerError).toHaveBeenCalledWith();
         expect(mockPushHistory).toHaveBeenCalledWith('test-op', 'v1', 'error');
     });
 
-    it('extracts HTTP status from error response', async () => {
+    it('extracts HTTP status from error response', async () => {expect.hasAssertions();
+
         const fn = vi.fn().mockRejectedValue({ response: { status: 401 } });
         const ctx = makeCtx() as Parameters<typeof safeJiraCall>[0];
         await safeJiraCall(ctx, 'test-op', 'v1', fn);

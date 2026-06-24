@@ -73,7 +73,8 @@ beforeAll(() => {
 });
 
 describe('Case21 — Gap Analysis', () => {
-    it('displays coverage gap summary', async () => {
+    it('displays coverage gap summary', async () => {expect.hasAssertions();
+
         const coverageGap = vi.mocked(coverageGapModule);
         coverageGap.analyzeCoverageGaps.mockResolvedValueOnce(mockGapResult);
 
@@ -84,7 +85,8 @@ describe('Case21 — Gap Analysis', () => {
         expect(baseContext.pushHistory).toHaveBeenCalledWith('coverage-gap-analysis', '60% coverage, 2 gaps', 'ok');
     });
 
-    it('handles error from analyzeCoverageGaps', async () => {
+    it('handles error from analyzeCoverageGaps', async () => {expect.hasAssertions();
+
         const prompt = vi.mocked(promptModule);
         const coverageGap = vi.mocked(coverageGapModule);
         coverageGap.analyzeCoverageGaps.mockRejectedValueOnce(new Error('API error'));
@@ -95,7 +97,8 @@ describe('Case21 — Gap Analysis', () => {
         expect(prompt.printError).toHaveBeenCalledWith('Erro ao analisar gaps de cobertura', expect.any(Error));
     });
 
-    it('shows failing epics when quality gate fails', async () => {
+    it('shows failing epics when quality gate fails', async () => {expect.hasAssertions();
+
         const prompt = vi.mocked(promptModule);
         const coverageGap = vi.mocked(coverageGapModule);
         const resultWithFailures = {
@@ -122,7 +125,8 @@ describe('Case21 — Gap Analysis', () => {
         expect(prompt.info).toHaveBeenCalledWith(expect.stringContaining('EPIC-1'));
     });
 
-    it('delegates to case18 when user confirms AI gen', async () => {
+    it('delegates to case18 when user confirms AI gen', async () => {expect.hasAssertions();
+
         const prompt = vi.mocked(promptModule);
         const coverageGap = vi.mocked(coverageGapModule);
         const case18 = vi.mocked(case18Module);
@@ -141,7 +145,8 @@ describe('Case21 — Gap Analysis', () => {
         expect(case18.handler).toHaveBeenCalledWith(baseContext);
     });
 
-    it('generates HTML report when user confirms', async () => {
+    it('generates HTML report when user confirms', async () => {expect.hasAssertions();
+
         const prompt = vi.mocked(promptModule);
         const coverageGap = vi.mocked(coverageGapModule);
         const case18 = vi.mocked(case18Module);
@@ -157,7 +162,7 @@ describe('Case21 — Gap Analysis', () => {
         const mod = case21Module;
         await mod.handler(baseContext);
 
-        expect(vi.mocked(htmlModule).generateCoverageGapHtml).toHaveBeenCalled();
+        expect(vi.mocked(htmlModule).generateCoverageGapHtml).toHaveBeenCalledWith();
         expect(vi.mocked(openModule).openWithFallback).toHaveBeenCalledWith(
             expect.stringContaining('coverage-gap-report.html'),
             'Relatório de cobertura',
@@ -165,7 +170,8 @@ describe('Case21 — Gap Analysis', () => {
         );
     });
 
-    it('handles HTML generation error gracefully', async () => {
+    it('handles HTML generation error gracefully', async () => {expect.hasAssertions();
+
         const prompt = vi.mocked(promptModule);
         const coverageGap = vi.mocked(coverageGapModule);
 
@@ -185,7 +191,8 @@ describe('Case21 — Gap Analysis', () => {
         expect(prompt.printError).toHaveBeenCalledWith('Erro ao gerar relatório HTML', expect.any(Error));
     });
 
-    it('handles create tests confirmation', async () => {
+    it('handles create tests confirmation', async () => {expect.hasAssertions();
+
         const prompt = vi.mocked(promptModule);
         const coverageGap = vi.mocked(coverageGapModule);
 
@@ -202,7 +209,8 @@ describe('Case21 — Gap Analysis', () => {
         expect(prompt.info).toHaveBeenCalledWith('Funcionalidade de criação de testes será implementada em breve.');
     });
 
-    it('handles AI gen with more than 5 gaps', async () => {
+    it('handles AI gen with more than 5 gaps', async () => {expect.hasAssertions();
+
         const prompt = vi.mocked(promptModule);
         const coverageGap = vi.mocked(coverageGapModule);
         const case18 = vi.mocked(case18Module);

@@ -146,7 +146,8 @@ describe('Integration: Session State', () => {
     });
 
     describe('FT-03f: backup recovery on corruption', () => {
-        it('recovers from backup when state.json is corrupted', async () => {
+        it('recovers from backup when state.json is corrupted', async () => {expect.hasAssertions();
+
             const config = getConfig();
             const stateDir = path.join(TEST_DIR, 'qa-tools');
             const statePath = path.join(stateDir, 'state.json');
@@ -168,7 +169,8 @@ describe('Integration: Session State', () => {
             expect(recovered).toEqual({ lastProject: 'ORIGINAL', counter: 42 });
         });
 
-        it('returns empty object when both state and backup are corrupted', async () => {
+        it('returns empty object when both state and backup are corrupted', async () => {expect.hasAssertions();
+
             const config = getConfig();
             const stateDir = path.join(TEST_DIR, 'qa-tools');
             const statePath = path.join(stateDir, 'state.json');

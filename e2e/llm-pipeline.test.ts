@@ -62,7 +62,8 @@ beforeEach(() => {
 });
 
 describe('LLM Pipeline E2E', () => {
-    it('happy path: report → validation → review → metrics', async () => {
+    it('happy path: report → validation → review → metrics', async () => {expect.hasAssertions();
+
         mockLlmPrompt.mockResolvedValueOnce(validParsedReport).mockResolvedValueOnce('AGREE - Good analysis.');
 
         const result = await reviewWithLlm('System prompt', 'User request');
@@ -76,7 +77,8 @@ describe('LLM Pipeline E2E', () => {
         expect(metrics.cacheHits).toBe(0);
     });
 
-    it('retry loop: invalid report → retry → success with adversarial retry', async () => {
+    it('retry loop: invalid report → retry → success with adversarial retry', async () => {expect.hasAssertions();
+
         mockLlmPrompt
             .mockResolvedValueOnce(invalidParsedReport)
             .mockResolvedValueOnce(validParsedReport)
@@ -95,7 +97,8 @@ describe('LLM Pipeline E2E', () => {
         expect(mockLlmPrompt).toHaveBeenCalledTimes(9);
     });
 
-    it('all providers fail: throws error', async () => {
+    it('all providers fail: throws error', async () => {expect.hasAssertions();
+
         mockLlmPrompt.mockRejectedValue(new Error('API failure'));
 
         await expect(reviewWithLlm('System prompt', 'User request')).rejects.toThrow(
@@ -103,7 +106,8 @@ describe('LLM Pipeline E2E', () => {
         );
     });
 
-    it('validates all elements with multi-element array', async () => {
+    it('validates all elements with multi-element array', async () => {expect.hasAssertions();
+
         mockLlmPrompt
             .mockResolvedValueOnce(multiElementParsedReport)
             .mockResolvedValueOnce('AGREE - Both tests look good.');
@@ -115,7 +119,8 @@ describe('LLM Pipeline E2E', () => {
         expect(result.reviewed).toBeTruthy();
     });
 
-    it('circuit breaker opens during pipeline and triggers fallback', async () => {
+    it('circuit breaker opens during pipeline and triggers fallback', async () => {expect.hasAssertions();
+
         mockLlmPrompt.mockRejectedValue(new Error('HTTP 429 Too Many Requests'));
 
         await expect(reviewWithLlm('System prompt', 'User request')).rejects.toThrow(

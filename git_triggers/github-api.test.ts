@@ -24,41 +24,47 @@ describe('ApiGet', () => {
         client = createMockAxiosInstance();
     });
 
-    it('returns data on successful GET', async () => {
+    it('returns data on successful GET', async () => {expect.hasAssertions();
+
         vi.spyOn(client, 'get').mockResolvedValue({ data: { id: 1, name: 'test' } });
         const result = await apiGet(client, '/test');
 
         expect(result).toEqual({ id: 1, name: 'test' });
     });
 
-    it('passes params to client.get when provided', async () => {
+    it('passes params to client.get when provided', async () => {expect.hasAssertions();
+
         const getSpy = vi.spyOn(client, 'get').mockResolvedValue({ data: [] });
         await apiGet(client, '/test', { params: { page: 2, per_page: 10 } });
 
         expect(getSpy).toHaveBeenCalledWith('/test', { params: { page: 2, per_page: 10 } });
     });
 
-    it('calls get without params when params not provided', async () => {
+    it('calls get without params when params not provided', async () => {expect.hasAssertions();
+
         const getSpy2 = vi.spyOn(client, 'get').mockResolvedValue({ data: 'ok' });
         await apiGet(client, '/test');
 
         expect(getSpy2).toHaveBeenCalledWith('/test');
     });
 
-    it('returns null on error when returnNull is set', async () => {
+    it('returns null on error when returnNull is set', async () => {expect.hasAssertions();
+
         vi.spyOn(client, 'get').mockRejectedValue(new Error('fail'));
         const result = await apiGet(client, '/test', { returnNull: true });
 
         expect(result).toBeNull();
     });
 
-    it('throws on error when returnNull is not set', async () => {
+    it('throws on error when returnNull is not set', async () => {expect.hasAssertions();
+
         vi.spyOn(client, 'get').mockRejectedValue(new Error('fail'));
 
         await expect(apiGet(client, '/test')).rejects.toThrow('fail');
     });
 
-    it('uses operation string in error context when provided', async () => {
+    it('uses operation string in error context when provided', async () => {expect.hasAssertions();
+
         vi.spyOn(client, 'get').mockRejectedValue(new Error('fail'));
 
         await expect(apiGet(client, '/test', { operation: 'my operation' })).rejects.toThrow('fail');
@@ -72,7 +78,8 @@ describe('ApiPost', () => {
         client = createMockAxiosInstance();
     });
 
-    it('returns data on successful POST with body', async () => {
+    it('returns data on successful POST with body', async () => {expect.hasAssertions();
+
         const postSpy = vi.spyOn(client, 'post').mockResolvedValue({ data: { id: 42 } });
         const result = await apiPost(client, '/test', { name: 'foo' });
 
@@ -80,14 +87,16 @@ describe('ApiPost', () => {
         expect(postSpy).toHaveBeenCalledWith('/test', { name: 'foo' });
     });
 
-    it('calls POST without body when body is undefined', async () => {
+    it('calls POST without body when body is undefined', async () => {expect.hasAssertions();
+
         const postSpy2 = vi.spyOn(client, 'post').mockResolvedValue({ data: null });
         await apiPost(client, '/test');
 
         expect(postSpy2).toHaveBeenCalledWith('/test');
     });
 
-    it('throws on error', async () => {
+    it('throws on error', async () => {expect.hasAssertions();
+
         vi.spyOn(client, 'post').mockRejectedValue(new Error('post fail'));
 
         await expect(apiPost(client, '/test', {})).rejects.toThrow('post fail');
@@ -101,7 +110,8 @@ describe('ApiPatch', () => {
         client = createMockAxiosInstance();
     });
 
-    it('returns data on successful PATCH with body', async () => {
+    it('returns data on successful PATCH with body', async () => {expect.hasAssertions();
+
         const patchSpy = vi.spyOn(client, 'patch').mockResolvedValue({ data: { updated: true } });
         const result = await apiPatch(client, '/test', { title: 'new' });
 
@@ -109,14 +119,16 @@ describe('ApiPatch', () => {
         expect(patchSpy).toHaveBeenCalledWith('/test', { title: 'new' });
     });
 
-    it('calls PATCH without body when body is undefined', async () => {
+    it('calls PATCH without body when body is undefined', async () => {expect.hasAssertions();
+
         const patchSpy2 = vi.spyOn(client, 'patch').mockResolvedValue({ data: {} });
         await apiPatch(client, '/test');
 
         expect(patchSpy2).toHaveBeenCalledWith('/test');
     });
 
-    it('throws on error', async () => {
+    it('throws on error', async () => {expect.hasAssertions();
+
         vi.spyOn(client, 'patch').mockRejectedValue(new Error('patch fail'));
 
         await expect(apiPatch(client, '/test', {})).rejects.toThrow('patch fail');
