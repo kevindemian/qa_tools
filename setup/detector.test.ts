@@ -17,7 +17,7 @@ beforeEach(() => {
     vi.clearAllMocks();
 });
 
-describe('DetectFramework', () => {
+describe('DetectFrameworkCtrf', () => {
     it('detects cypress from devDependencies', () => {
         mockFsReadFileSync.mockReturnValueOnce(
             JSON.stringify({
@@ -174,7 +174,7 @@ import VitestCtrfReporter from './shared/vitest-ctrf-reporter.js';`,
     });
 });
 
-describe('DetectFramework', () => {
+describe('DetectFrameworkCtrf', () => {
     it('returns ctrfSource=cli-flag for cypress', () => {
         mockFsReadFileSync.mockReturnValueOnce(JSON.stringify({ devDependencies: { cypress: '^13.0' } }));
         const result = detectFramework('/fake/package.json');

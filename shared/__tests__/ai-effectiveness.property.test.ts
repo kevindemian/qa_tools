@@ -88,7 +88,7 @@ describe('ComputeAiEffectiveness — property-based', () => {
                     const prev = result.trend[i - 1];
                     if (curr === undefined || prev === undefined) return;
 
-                    expect(curr.date >= prev.date).toBe(true);
+                    expect(new Date(curr.date).getTime()).toBeGreaterThanOrEqual(new Date(prev.date).getTime());
                 }
             }),
             { numRuns: 50 },
