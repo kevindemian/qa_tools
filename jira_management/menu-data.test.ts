@@ -208,7 +208,7 @@ describe('ID_TO_ALIASES', () => {
     });
 });
 
-describe('_configHint', () => {
+describe('_ConfigHint', () => {
     it('returns empty string for unknown key', () => {
         expect(_configHint('unknown', { git_directory: '/tmp' })).toBe('');
     });

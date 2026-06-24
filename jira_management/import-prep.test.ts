@@ -96,7 +96,7 @@ const makeCp = (overrides: Record<string, unknown> = {}) => ({
     ...overrides,
 });
 
-describe('_checkResumeCheckpoint', () => {
+describe('_CheckResumeCheckpoint', () => {
     const tests = makeTestCases(10);
 
     beforeEach(() => {

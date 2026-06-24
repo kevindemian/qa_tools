@@ -573,7 +573,7 @@ describe('GitHubManager', () => {
         });
     });
 
-    describe('_formatPR', () => {
+    describe('FormatPR', () => {
         it('formats open PR', () => {
             const raw = {
                 number: 1,

@@ -401,7 +401,7 @@ describe('HandleSpecialInput', () => {
     });
 });
 
-describe('_configHint', () => {
+describe('_ConfigHint', () => {
     const ctx = { git_directory: '/my/git' };
 
     it('returns git directory for gitDir key', () => {
@@ -639,7 +639,7 @@ describe('ShowHelpLoop', () => {
     });
 });
 
-describe('_isJiraConfigured', () => {
+describe('_IsJiraConfigured', () => {
     it('returns false with default mock config (empty values)', () => {
         expect(mod._isJiraConfigured()).toBeFalsy();
     });
@@ -722,7 +722,7 @@ describe('Module-level debug logging', () => {
     });
 });
 
-describe('_isJiraConfigured with config', () => {
+describe('_IsJiraConfigured with config', () => {
     it('returns true when jiraBaseUrl and jiraPersonalToken have real values', async () => {
         const configMod = await import('../shared/config.js');
         vi.spyOn(configMod.default, 'get').mockReturnValue('https://jira.example.com');

@@ -684,7 +684,7 @@ describe('LlmPrompt', () => {
         });
     });
 
-    describe('_warnIfNotJson (29.3)', () => {
+    describe('_WarnIfNotJson (29.3)', () => {
         beforeEach(() => {
             Config.set('llmApiKey', 'sk-test29');
             Config.set('llmModel', 'google/gemini-2.0-flash-exp');

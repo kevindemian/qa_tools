@@ -458,7 +458,7 @@ describe('CsvResource', () => {
         });
     });
 
-    describe('_processBulkCsvBlock flat CSV warning', () => {
+    describe('_ProcessBulkCsvBlock flat CSV warning', () => {
         it('warns with diagnostic for flat CSV (Title,Action,... header)', async () => {
             const warnSpy = vi.spyOn(rootLogger, 'warn').mockImplementation(() => {});
             // Flat CSV format: header row with Title,Action,Data,Expected Result (no ---, no Title:)

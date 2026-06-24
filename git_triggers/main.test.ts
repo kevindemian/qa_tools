@@ -278,7 +278,7 @@ describe('BuildActionChoices', () => {
 
 // ---------- _jiraEnv ----------
 
-describe('_jiraEnv', () => {
+describe('_JiraEnv', () => {
     it('returns jira config when all vars set', () => {
         const result = mainModule._jiraEnv();
 
@@ -293,7 +293,7 @@ describe('_jiraEnv', () => {
 
 // ---------- _resolveGlob ----------
 
-describe('_resolveGlob', () => {
+describe('_ResolveGlob', () => {
     it('returns resolved path when glob matches', () => {
         globSyncMock.mockReturnValueOnce(['/tmp/mapping.json']);
         const result = mainModule._resolveGlob('/tmp/*.json');
@@ -849,7 +849,7 @@ describe('ParseBatchArgs', () => {
 
 // ---------- _ensureProjectsConfigured ----------
 
-describe('_ensureProjectsConfigured', () => {
+describe('_EnsureProjectsConfigured', () => {
     const mockConfirm = vi.spyOn(prompt, 'confirm');
 
     afterEach(() => {
@@ -886,7 +886,7 @@ describe('_ensureProjectsConfigured', () => {
 
 // ---------- _selectProjectAndCreateManager ----------
 
-describe('_selectProjectAndCreateManager', () => {
+describe('_SelectProjectAndCreateManager', () => {
     it('returns null when _selectProject returns null projectName', async () => {
         vi.spyOn(prompt, 'prompt').mockReturnValueOnce('99');
         const result = await mainModule._selectProjectAndCreateManager();
@@ -930,7 +930,7 @@ describe('WithErrorHandling', () => {
 
 // ---------- _handleExit ----------
 
-describe('_handleExit', () => {
+describe('_HandleExit', () => {
     it('prints goodbye and returns true', async () => {
         const breadcrumbs: typeof import('../shared/breadcrumbs.js') = await import('../shared/breadcrumbs.js');
         const result = mainModule._handleExit();
@@ -956,7 +956,7 @@ describe('_handleExit', () => {
 
 // ---------- _dispatchAction ----------
 
-describe('_dispatchAction', () => {
+describe('_DispatchAction', () => {
     const mockM = createMockGitProvider();
     const pn = 'proj-a';
     const ns = ['proj-a', 'proj-b'];
@@ -1038,7 +1038,7 @@ describe('_dispatchAction', () => {
 
 // ---------- _selectProject ----------
 
-describe('_selectProject', () => {
+describe('_SelectProject', () => {
     const PROJ_DATA: Record<string, string> = { 'proj-a': '111', 'proj-b': '222' };
     let gpSpy: { mockRestore: () => void };
 
@@ -1084,7 +1084,7 @@ describe('_selectProject', () => {
 
 // ---------- _promptChoice ----------
 
-describe('_promptChoice', () => {
+describe('_PromptChoice', () => {
     it('returns prompt choice in non-TTY mode', async () => {
         vi.spyOn(prompt, 'prompt').mockReturnValueOnce('/exit');
         const result = await mainModule._promptChoice('0-9');
@@ -1112,7 +1112,7 @@ describe('_promptChoice', () => {
 
 // ---------- _promptChoice TTY mode ----------
 
-describe('_promptChoice TTY mode', () => {
+describe('_PromptChoice TTY mode', () => {
     const _origIsTTY = process.stdout.isTTY;
 
     beforeAll(() => {
