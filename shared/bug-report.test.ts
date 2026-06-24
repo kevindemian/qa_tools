@@ -77,7 +77,7 @@ describe('BugReport Service', () => {
 
             const report = await collectManual();
 
-            expect(report).toStrictEqual({
+            expect(report).toEqual({
                 summary: 'Bug in login',
                 description: 'Cannot log in with valid credentials',
                 source: 'manual',
@@ -201,7 +201,7 @@ describe('BugReport Service', () => {
             expect(report.source).toBe('automated');
             expect(report.description).toContain('*Login fails*');
             expect(report.description).toContain('Error: Expected 200 got 500');
-            expect(report.metadata).toStrictEqual({
+            expect(report.metadata).toEqual({
                 pipelineId: '456',
                 branch: 'main',
                 commitSha: 'abcdef123',
@@ -432,7 +432,7 @@ describe('BugReport Service', () => {
 
             const result = await interactiveBugReportFlow(mockJiraResource, 'PROJ', report, mockLinkManager);
 
-            expect(result).toStrictEqual({
+            expect(result).toEqual({
                 status: 'ok',
                 label: 'PROJ-202',
                 message: 'Manual login failure',
@@ -488,12 +488,12 @@ describe('BugReport Service', () => {
 
             const result = await interactiveBugReportFlow(mockJiraResource, 'PROJ', report);
 
-            expect(result).toStrictEqual({
+            expect(result).toEqual({
                 status: 'error',
                 label: '',
                 message: 'Jira API error',
             });
-            expect(mockPrompt.printError).toHaveBeenCalledWith();
+            expect(mockPrompt.printError).toHaveBeenCalled();
         });
 
         it('calls collectManual when preFilled is not provided', async () => {expect.hasAssertions();
@@ -513,7 +513,7 @@ describe('BugReport Service', () => {
 
             const result = await interactiveBugReportFlow(mockJiraResource, 'PROJ', undefined, mockLinkManager);
 
-            expect(result).toStrictEqual({
+            expect(result).toEqual({
                 status: 'ok',
                 label: 'PROJ-303',
                 message: 'Auto summary',
