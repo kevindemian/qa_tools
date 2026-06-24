@@ -68,7 +68,8 @@ describe('AnalyzeTestImpact — property-based', () => {
         vi.clearAllMocks();
     });
 
-    it('confidence is low when nothing matches and jest unavailable', () => {
+    it('confidence is low when nothing matches and jest unavailable', () => {expect.hasAssertions();
+
         fc.assert(
             fc.property(changedFilesArb, nonMatchingTitleArb, (files, title) => {
                 vi.clearAllMocks();
@@ -84,7 +85,8 @@ describe('AnalyzeTestImpact — property-based', () => {
         );
     });
 
-    it('empty diff returns empty result with low confidence', () => {
+    it('empty diff returns empty result with low confidence', () => {expect.hasAssertions();
+
         fc.assert(
             fc.property(fc.constant(undefined), () => {
                 const result = analyzeTestImpact('');
@@ -97,7 +99,8 @@ describe('AnalyzeTestImpact — property-based', () => {
         );
     });
 
-    it('impactedTests has no duplicate test keys', () => {
+    it('impactedTests has no duplicate test keys', () => {expect.hasAssertions();
+
         fc.assert(
             fc.property(changedFilesArb, testTitlesArb, (files, titles) => {
                 vi.clearAllMocks();
@@ -115,7 +118,8 @@ describe('AnalyzeTestImpact — property-based', () => {
         );
     });
 
-    it('changedFiles preserves order and content of diff', () => {
+    it('changedFiles preserves order and content of diff', () => {expect.hasAssertions();
+
         fc.assert(
             fc.property(changedFilesArb, (files) => {
                 vi.clearAllMocks();
@@ -130,7 +134,8 @@ describe('AnalyzeTestImpact — property-based', () => {
         );
     });
 
-    it('confidence is never undefined or invalid', () => {
+    it('confidence is never undefined or invalid', () => {expect.hasAssertions();
+
         fc.assert(
             fc.property(changedFilesArb, testTitlesArb, (files, titles) => {
                 vi.clearAllMocks();
@@ -147,7 +152,8 @@ describe('AnalyzeTestImpact — property-based', () => {
 });
 
 describe('GenerateTestSelectionJson — property-based', () => {
-    it('round-trips through JSON serialization', () => {
+    it('round-trips through JSON serialization', () => {expect.hasAssertions();
+
         fc.assert(
             fc.property(
                 fc.array(changedFileArb, { minLength: 0, maxLength: 5 }),
@@ -181,7 +187,8 @@ describe('GenerateTestSelectionJson — property-based', () => {
         );
     });
 
-    it('preserves all impactedTest fields through serialization', () => {
+    it('preserves all impactedTest fields through serialization', () => {expect.hasAssertions();
+
         fc.assert(
             fc.property(changedFileArb, (file) => {
                 const test: ImpactedTest = {

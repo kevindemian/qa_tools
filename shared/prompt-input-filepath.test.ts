@@ -223,7 +223,8 @@ describe('FilePathCompleter', () => {
 });
 
 describe('AskFilePath', () => {
-    it('falls back to prompt when no TTY', async () => {
+    it('falls back to prompt when no TTY', async () => {expect.hasAssertions();
+
         mockReadlineQuestion.mockReturnValue('/some/path');
         const result = await askFilePath('File:');
 
@@ -244,24 +245,27 @@ describe('AskFilePath TTY mode', () => {
         Object.defineProperty(process.stdout, 'isTTY', { value: undefined, configurable: true });
     });
 
-    it('resolves with user input', async () => {
+    it('resolves with user input', async () => {expect.hasAssertions();
+
         const mockRl = _mockRl;
         mockRl.question.mockImplementation((_prompt: string, cb: (a: string) => void) => cb('user path'));
         const result = await askFilePath('File:');
 
         expect(result).toBe('user path');
-        expect(mockRl.close).toHaveBeenCalled();
+        expect(mockRl.close).toHaveBeenCalledWith();
     });
 
-    it('rejects on navigation command', async () => {
+    it('rejects on navigation command', async () => {expect.hasAssertions();
+
         const mockRl = _mockRl;
         mockRl.question.mockImplementation((_prompt: string, cb: (a: string) => void) => cb('/back'));
 
         await expect(askFilePath('File:')).rejects.toThrow(CancelError);
-        expect(mockRl.close).toHaveBeenCalled();
+        expect(mockRl.close).toHaveBeenCalledWith();
     });
 
-    it('rejects on SIGINT', async () => {
+    it('rejects on SIGINT', async () => {expect.hasAssertions();
+
         const mockRl = _mockRl;
         mockRl.question.mockImplementation(() => {});
         let sigintHandler: () => void = () => {};
@@ -272,24 +276,26 @@ describe('AskFilePath TTY mode', () => {
         sigintHandler();
 
         await expect(promise).rejects.toThrow('/exit');
-        expect(mockRl.close).toHaveBeenCalled();
+        expect(mockRl.close).toHaveBeenCalledWith();
     });
 
-    it('resolves with default when empty answer', async () => {
+    it('resolves with default when empty answer', async () => {expect.hasAssertions();
+
         const mockRl = _mockRl;
         mockRl.question.mockImplementation((_prompt: string, cb: (a: string) => void) => cb(''));
         const result = await askFilePath('File:', { default: '/default/path' });
 
         expect(result).toBe('/default/path');
-        expect(mockRl.close).toHaveBeenCalled();
+        expect(mockRl.close).toHaveBeenCalledWith();
     });
 
-    it('resolves with empty string when no default and empty answer', async () => {
+    it('resolves with empty string when no default and empty answer', async () => {expect.hasAssertions();
+
         const mockRl = _mockRl;
         mockRl.question.mockImplementation((_prompt: string, cb: (a: string) => void) => cb(''));
         const result = await askFilePath('File:');
 
         expect(result).toBe('');
-        expect(mockRl.close).toHaveBeenCalled();
+        expect(mockRl.close).toHaveBeenCalledWith();
     });
 });

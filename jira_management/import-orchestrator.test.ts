@@ -91,7 +91,8 @@ beforeEach(() => {
 });
 
 describe('PrepareTestRun', () => {
-    it('user cancels via confirmOrCancel', async () => {
+    it('user cancels via confirmOrCancel', async () => {expect.hasAssertions();
+
         vi.mocked(confirmOrCancel).mockReturnValue(false);
         const result = await prepareTestRun({
             tests: makeTestCases(2),
@@ -107,7 +108,8 @@ describe('PrepareTestRun', () => {
         expect(warn).toHaveBeenCalledWith(expect.stringContaining('cancelada'));
     });
 
-    it('filterTests returns null', async () => {
+    it('filterTests returns null', async () => {expect.hasAssertions();
+
         vi.mocked(filterTests).mockReturnValue(null);
         const result = await prepareTestRun({
             tests: makeTestCases(2),
@@ -122,7 +124,8 @@ describe('PrepareTestRun', () => {
         expect(result).toBeUndefined();
     });
 
-    it('dry-run returns early', async () => {
+    it('dry-run returns early', async () => {expect.hasAssertions();
+
         vi.mocked(handleDryRun).mockReturnValue({
             inMemoryTasksId: [],
             inMemoryTasksText: [],
@@ -151,7 +154,8 @@ describe('PrepareTestRun', () => {
 });
 
 describe('FinalizeTestCreation', () => {
-    it('with errors', async () => {
+    it('with errors', async () => {expect.hasAssertions();
+
         const results = [
             { status: 'ok' as const, label: 'Test 1', message: '' },
             { status: 'error' as const, label: 'Test 2', message: 'fail' },
@@ -184,7 +188,8 @@ describe('FinalizeTestCreation', () => {
 });
 
 describe('PostProcessCheckpoint', () => {
-    it('deletes checkpoint and updates xrefs', async () => {
+    it('deletes checkpoint and updates xrefs', async () => {expect.hasAssertions();
+
         const linker = linkerMock({
             updateCrossReferences: vi.fn().mockResolvedValue(undefined),
         });
@@ -202,6 +207,6 @@ describe('PostProcessCheckpoint', () => {
         });
 
         expect(STATE.update).toHaveBeenCalledWith(expect.any(Function));
-        expect(updateFinalState).toHaveBeenCalled();
+        expect(updateFinalState).toHaveBeenCalledWith();
     });
 });

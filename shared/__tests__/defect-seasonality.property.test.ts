@@ -42,7 +42,8 @@ const classArb: fc.Arbitrary<FailureClassification> = fc
     }));
 
 describe('AggregateDefectSeasonality — property-based', () => {
-    it('totalRecords matches classification count', () => {
+    it('totalRecords matches classification count', () => {expect.hasAssertions();
+
         fc.assert(
             fc.property(fc.array(classArb, { minLength: 0, maxLength: 20 }), (classes) => {
                 const result = aggregateDefectSeasonality(classes);
@@ -53,7 +54,8 @@ describe('AggregateDefectSeasonality — property-based', () => {
         );
     });
 
-    it('always returns 7 days and 24 hours', () => {
+    it('always returns 7 days and 24 hours', () => {expect.hasAssertions();
+
         fc.assert(
             fc.property(fc.array(classArb, { minLength: 0, maxLength: 20 }), (classes) => {
                 const result = aggregateDefectSeasonality(classes);
@@ -65,7 +67,8 @@ describe('AggregateDefectSeasonality — property-based', () => {
         );
     });
 
-    it('day totals sum to totalRecords', () => {
+    it('day totals sum to totalRecords', () => {expect.hasAssertions();
+
         fc.assert(
             fc.property(fc.array(classArb, { minLength: 0, maxLength: 20 }), (classes) => {
                 const result = aggregateDefectSeasonality(classes);
@@ -77,7 +80,8 @@ describe('AggregateDefectSeasonality — property-based', () => {
         );
     });
 
-    it('hour totals sum to totalRecords', () => {
+    it('hour totals sum to totalRecords', () => {expect.hasAssertions();
+
         fc.assert(
             fc.property(fc.array(classArb, { minLength: 0, maxLength: 20 }), (classes) => {
                 const result = aggregateDefectSeasonality(classes);
@@ -89,7 +93,8 @@ describe('AggregateDefectSeasonality — property-based', () => {
         );
     });
 
-    it('peakDay matches the day with highest total', () => {
+    it('peakDay matches the day with highest total', () => {expect.hasAssertions();
+
         fc.assert(
             fc.property(fc.array(classArb, { minLength: 1, maxLength: 20 }), (classes) => {
                 const result = aggregateDefectSeasonality(classes);
@@ -105,7 +110,8 @@ describe('AggregateDefectSeasonality — property-based', () => {
         );
     });
 
-    it('peakHour matches the hour with highest total', () => {
+    it('peakHour matches the hour with highest total', () => {expect.hasAssertions();
+
         fc.assert(
             fc.property(fc.array(classArb, { minLength: 1, maxLength: 20 }), (classes) => {
                 const result = aggregateDefectSeasonality(classes);
@@ -121,7 +127,8 @@ describe('AggregateDefectSeasonality — property-based', () => {
         );
     });
 
-    it('generateSeasonalityHtml produces valid HTML', () => {
+    it('generateSeasonalityHtml produces valid HTML', () => {expect.hasAssertions();
+
         fc.assert(
             fc.property(fc.array(classArb, { minLength: 0, maxLength: 10 }), (classes) => {
                 const result = aggregateDefectSeasonality(classes);

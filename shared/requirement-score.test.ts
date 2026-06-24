@@ -125,7 +125,8 @@ describe('CalculateRequirementScores', () => {
         expect(result.overallScore).toBeLessThanOrEqual(100);
     });
 
-    it('sorts entries by score descending', () => {
+    it('sorts entries by score descending', () => {expect.hasAssertions();
+
         const result = calculateRequirementScores(makeRecords());
         for (let i = 1; i < result.entries.length; i++) {
             expect(result.entries[i]?.score).toBeLessThanOrEqual(result.entries[i - 1]?.score ?? 100);

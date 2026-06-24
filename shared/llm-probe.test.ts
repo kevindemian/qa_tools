@@ -69,7 +69,8 @@ describe('ProbeApiKey', () => {
         vi.clearAllMocks();
     });
 
-    it('returns valid for OpenAI probe (sk-... → 200)', async () => {
+    it('returns valid for OpenAI probe (sk-... → 200)', async () => {expect.hasAssertions();
+
         mockFetch.mockResolvedValueOnce(okResponse());
         const result = await probeApiKey('sk-test', 'openai');
 
@@ -82,14 +83,16 @@ describe('ProbeApiKey', () => {
         expect(url).toContain('/models');
     });
 
-    it('returns invalid for OpenAI probe (401)', async () => {
+    it('returns invalid for OpenAI probe (401)', async () => {expect.hasAssertions();
+
         mockFetch.mockResolvedValueOnce(errorResponse(401));
         const result = await probeApiKey('sk-bad', 'openai');
 
         expect(result.valid).toBeFalsy();
     });
 
-    it('returns valid for Gemini probe (200)', async () => {
+    it('returns valid for Gemini probe (200)', async () => {expect.hasAssertions();
+
         mockFetch.mockResolvedValueOnce(okResponse());
         const result = await probeApiKey('AIza-test', 'gemini');
 
@@ -101,14 +104,16 @@ describe('ProbeApiKey', () => {
         expect(url).toContain('?key=');
     });
 
-    it('returns invalid for Gemini probe (403)', async () => {
+    it('returns invalid for Gemini probe (403)', async () => {expect.hasAssertions();
+
         mockFetch.mockResolvedValueOnce(errorResponse(403));
         const result = await probeApiKey('AIza-bad', 'gemini');
 
         expect(result.valid).toBeFalsy();
     });
 
-    it('validates Anthropic key via POST /v1/messages', async () => {
+    it('validates Anthropic key via POST /v1/messages', async () => {expect.hasAssertions();
+
         mockFetch.mockResolvedValueOnce(okResponse());
         const result = await probeApiKey('sk-ant-test', 'anthropic');
 
@@ -124,14 +129,16 @@ describe('ProbeApiKey', () => {
         expect(headers?.['x-api-key']).toBe('sk-ant-test');
     });
 
-    it('returns error for custom provider without baseUrl', async () => {
+    it('returns error for custom provider without baseUrl', async () => {expect.hasAssertions();
+
         const result = await probeApiKey('custom-key', 'custom');
 
         expect(result.valid).toBeFalsy();
         expect(result.error).toContain('Unsupported provider');
     });
 
-    it('handles network errors', async () => {
+    it('handles network errors', async () => {expect.hasAssertions();
+
         mockFetch.mockRejectedValueOnce(new Error('Network failure'));
         const result = await probeApiKey('sk-test', 'openai');
 
@@ -139,7 +146,8 @@ describe('ProbeApiKey', () => {
         expect(result.error).toBe('Network failure');
     });
 
-    it('handles fetch abort (timeout)', async () => {
+    it('handles fetch abort (timeout)', async () => {expect.hasAssertions();
+
         const abortError = new DOMException('The operation was aborted', 'AbortError');
         mockFetch.mockRejectedValueOnce(abortError);
         const result = await probeApiKey('sk-test', 'openai');
@@ -147,14 +155,16 @@ describe('ProbeApiKey', () => {
         expect(result.valid).toBeFalsy();
     });
 
-    it('returns valid on 404 (endpoint not found but key may be valid)', async () => {
+    it('returns valid on 404 (endpoint not found but key may be valid)', async () => {expect.hasAssertions();
+
         mockFetch.mockResolvedValueOnce(errorResponse(404));
         const result = await probeApiKey('sk-test', 'openai');
 
         expect(result.valid).toBeTruthy();
     });
 
-    it('records latency via recordLlmRequest on successful probe', async () => {
+    it('records latency via recordLlmRequest on successful probe', async () => {expect.hasAssertions();
+
         mockFetch.mockResolvedValueOnce(okResponse());
 
         const { getDefaultMetrics } = await import('./llm-metrics.js');
@@ -176,7 +186,8 @@ describe('DiscoverProvider', () => {
         vi.clearAllMocks();
     });
 
-    it('returns valid when pattern match + probe succeed', async () => {
+    it('returns valid when pattern match + probe succeed', async () => {expect.hasAssertions();
+
         mockFetch.mockResolvedValueOnce(okResponse());
         const result = await discoverProvider('sk-test');
 
@@ -184,7 +195,8 @@ describe('DiscoverProvider', () => {
         expect(result.provider).toBe('openai');
     });
 
-    it('falls through to other providers when pattern match fails probe', async () => {
+    it('falls through to other providers when pattern match fails probe', async () => {expect.hasAssertions();
+
         // First probe (openai) fails with 401
         mockFetch
             .mockResolvedValueOnce(errorResponse(401)) // openai
@@ -195,7 +207,8 @@ describe('DiscoverProvider', () => {
         expect(mockFetch).toHaveBeenCalledTimes(2);
     });
 
-    it('returns failure when no provider accepts the key', async () => {
+    it('returns failure when no provider accepts the key', async () => {expect.hasAssertions();
+
         mockFetch.mockResolvedValue(errorResponse(401));
         const result = await discoverProvider('sk-test');
 
@@ -203,7 +216,8 @@ describe('DiscoverProvider', () => {
         expect(result.provider).toBe('openai');
     });
 
-    it('skips custom provider during discovery', async () => {
+    it('skips custom provider during discovery', async () => {expect.hasAssertions();
+
         mockFetch.mockResolvedValue(errorResponse(401));
         const result = await discoverProvider('unknown-key');
 
@@ -217,7 +231,8 @@ describe('DiscoverProvider', () => {
         }
     });
 
-    it('continues probing after a timeout', async () => {
+    it('continues probing after a timeout', async () => {expect.hasAssertions();
+
         const abortError = new DOMException('aborted', 'AbortError');
         mockFetch
             .mockRejectedValueOnce(abortError) // first provider times out

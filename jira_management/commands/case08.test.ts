@@ -19,7 +19,8 @@ describe('Case08 — release version', () => {
         expect(typeof case08.handler).toBe('function');
     });
 
-    it('executes without error with basic context', async () => {
+    it('executes without error with basic context', async () => {expect.hasAssertions();
+
         const result = await case08.handler(mockContext);
 
         expect([undefined, true, false]).toContain(result);

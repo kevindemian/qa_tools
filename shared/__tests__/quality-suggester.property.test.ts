@@ -22,7 +22,8 @@ vi.mock('../state', () => ({
 import { checkQualitySignals, severityFromLatency, failureRate } from '../quality-suggester.js';
 
 describe('SeverityFromLatency — property-based', () => {
-    it('severidade é monotônica: latência maior → severidade maior ou igual', () => {
+    it('severidade é monotônica: latência maior → severidade maior ou igual', () => {expect.hasAssertions();
+
         fc.assert(
             fc.property(fc.integer({ min: 0, max: 20000 }), fc.integer({ min: 0, max: 20000 }), (a, b) => {
                 const order = (s: string): number => (s === 'info' ? 0 : s === 'warning' ? 1 : 2);
@@ -34,7 +35,8 @@ describe('SeverityFromLatency — property-based', () => {
         );
     });
 
-    it('latência 0..2999 → info', () => {
+    it('latência 0..2999 → info', () => {expect.hasAssertions();
+
         fc.assert(
             fc.property(fc.integer({ min: 0, max: 2999 }), (ms) => {
                 expect(severityFromLatency(ms)).toBe('info');
@@ -43,7 +45,8 @@ describe('SeverityFromLatency — property-based', () => {
         );
     });
 
-    it('latência 3000..7999 → warning', () => {
+    it('latência 3000..7999 → warning', () => {expect.hasAssertions();
+
         fc.assert(
             fc.property(fc.integer({ min: 3000, max: 7999 }), (ms) => {
                 expect(severityFromLatency(ms)).toBe('warning');
@@ -52,7 +55,8 @@ describe('SeverityFromLatency — property-based', () => {
         );
     });
 
-    it('latência ≥ 8000 → critical', () => {
+    it('latência ≥ 8000 → critical', () => {expect.hasAssertions();
+
         fc.assert(
             fc.property(fc.integer({ min: 8000, max: 100000 }), (ms) => {
                 expect(severityFromLatency(ms)).toBe('critical');
@@ -63,7 +67,8 @@ describe('SeverityFromLatency — property-based', () => {
 });
 
 describe('FailureRate — property-based', () => {
-    it('rate sempre ≥ 0 para qualquer entrada', () => {
+    it('rate sempre ≥ 0 para qualquer entrada', () => {expect.hasAssertions();
+
         fc.assert(
             fc.property(
                 fc.integer({ min: -1000, max: 1000 }),
@@ -76,7 +81,8 @@ describe('FailureRate — property-based', () => {
         );
     });
 
-    it('rate ≤ 1 para entradas válidas não-negativas', () => {
+    it('rate ≤ 1 para entradas válidas não-negativas', () => {expect.hasAssertions();
+
         fc.assert(
             fc.property(fc.nat({ max: 1000 }), fc.nat({ max: 1000 }), (failures, total) => {
                 expect(failureRate(failures, total)).toBeLessThanOrEqual(1);
@@ -85,7 +91,8 @@ describe('FailureRate — property-based', () => {
         );
     });
 
-    it('total = 0 → rate = 0 (evita divisão por zero)', () => {
+    it('total = 0 → rate = 0 (evita divisão por zero)', () => {expect.hasAssertions();
+
         fc.assert(
             fc.property(fc.nat({ max: 1000 }), (failures) => {
                 expect(failureRate(failures, 0)).toBe(0);
@@ -131,7 +138,8 @@ describe('CheckQualitySignals — property-based', () => {
         });
     });
 
-    it('sempre retorna um array', () => {
+    it('sempre retorna um array', () => {expect.hasAssertions();
+
         fc.assert(
             fc.property(fc.constantFrom(undefined), () => {
                 const result = checkQualitySignals();

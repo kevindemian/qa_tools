@@ -22,14 +22,16 @@ describe('CypressResource', () => {
     });
 
     describe('GetCypressResource', () => {
-        it('returns data on success', async () => {
+        it('returns data on success', async () => {expect.hasAssertions();
+
             mockClient.get.mockResolvedValue({ data: { items: [] } });
             const result = await cypress.getCypressResource('/report');
 
             expect(result).toEqual({ items: [] });
         });
 
-        it('returns null on network error', async () => {
+        it('returns null on network error', async () => {expect.hasAssertions();
+
             mockClient.get.mockRejectedValue(new Error('ECONNREFUSED'));
             const result = await cypress.getCypressResource('/report');
 
@@ -38,7 +40,8 @@ describe('CypressResource', () => {
     });
 
     describe('FetchReport', () => {
-        it('calculates percentages correctly', async () => {
+        it('calculates percentages correctly', async () => {expect.hasAssertions();
+
             mockClient.get.mockResolvedValue({
                 data: [
                     { status: 'passed', test_run_count: 80 },
@@ -56,7 +59,8 @@ describe('CypressResource', () => {
             expect(reportResult).toBeUndefined();
         });
 
-        it('handles invalid response (non-array)', async () => {
+        it('handles invalid response (non-array)', async () => {expect.hasAssertions();
+
             mockClient.get.mockResolvedValue({ data: { error: 'bad' } });
             const invalidResult = await cypress.fetchReport({
                 cypressUrl: 'http://cypress',
@@ -68,7 +72,8 @@ describe('CypressResource', () => {
             expect(invalidResult).toBeUndefined();
         });
 
-        it('handles all-passed report (no failed items)', async () => {
+        it('handles all-passed report (no failed items)', async () => {expect.hasAssertions();
+
             mockClient.get.mockResolvedValue({
                 data: [
                     { status: 'passed', test_run_count: 100 },
@@ -84,7 +89,8 @@ describe('CypressResource', () => {
             });
         });
 
-        it('handles all-failed report (no passed items)', async () => {
+        it('handles all-failed report (no passed items)', async () => {expect.hasAssertions();
+
             mockClient.get.mockResolvedValue({
                 data: [
                     { status: 'failed', test_run_count: 30 },

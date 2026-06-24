@@ -164,14 +164,16 @@ describe('DetectSilentRegression', () => {
         expect(result.timestamp).toMatch(/^\d{4}-\d{2}-\d{2}T/);
     });
 
-    it('handles Infinity durations without producing NaN z-score', () => {
+    it('handles Infinity durations without producing NaN z-score', () => {expect.hasAssertions();
+
         const result = detectSilentRegression({ 'inf test': [Infinity, Infinity, Infinity, 100] });
         for (const reg of result.regressions) {
             expect(Number.isFinite(reg.zScore)).toBeTruthy();
         }
     });
 
-    it('handles NaN durations without propagating NaN', () => {
+    it('handles NaN durations without propagating NaN', () => {expect.hasAssertions();
+
         const result = detectSilentRegression({ 'nan test': [NaN, NaN, NaN, 100] });
         for (const reg of result.regressions) {
             expect(Number.isFinite(reg.zScore)).toBeTruthy();
@@ -240,7 +242,8 @@ describe('GenerateSilentRegressionHtml', () => {
         expect(html).toContain('critical');
     });
 
-    it('shows no-regressions message when empty', () => {
+    it('shows no-regressions message when empty', () => {expect.hasAssertions();
+
         const result = makeResult({ regressions: [] });
         const html = generateSilentRegressionHtml(result);
 

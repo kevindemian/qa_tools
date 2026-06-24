@@ -26,7 +26,8 @@ describe('NivelarBranches', () => {
         pushHistory = vi.fn();
     });
 
-    it('cria dois MRs e chama pushHistory com ok', async () => {
+    it('cria dois MRs e chama pushHistory com ok', async () => {expect.hasAssertions();
+
         vi.spyOn(prompt, 'ask')
             .mockResolvedValueOnce('main')
             .mockResolvedValueOnce('rel_cand')
@@ -43,7 +44,8 @@ describe('NivelarBranches', () => {
         expect(pushHistory).toHaveBeenCalledWith('nivelamento', expect.stringContaining('main->rel_cand:ok'), 'ok');
     });
 
-    it('continua para segundo MR quando primeiro falha', async () => {
+    it('continua para segundo MR quando primeiro falha', async () => {expect.hasAssertions();
+
         vi.spyOn(prompt, 'ask')
             .mockResolvedValueOnce('main')
             .mockResolvedValueOnce('rel_cand')
@@ -60,7 +62,8 @@ describe('NivelarBranches', () => {
         expect(pushHistory).toHaveBeenCalledWith('nivelamento', expect.stringContaining(':error'), 'error');
     });
 
-    it('registra erro quando ambos falham', async () => {
+    it('registra erro quando ambos falham', async () => {expect.hasAssertions();
+
         vi.spyOn(prompt, 'ask')
             .mockResolvedValueOnce('main')
             .mockResolvedValueOnce('rel_cand')
@@ -76,7 +79,8 @@ describe('NivelarBranches', () => {
         expect(pushHistory).toHaveBeenCalledWith('nivelamento', expect.stringContaining(':error'), 'error');
     });
 
-    it('aborta quando branch não existe', async () => {
+    it('aborta quando branch não existe', async () => {expect.hasAssertions();
+
         vi.spyOn(prompt, 'ask')
             .mockResolvedValueOnce('main')
             .mockResolvedValueOnce('inexistente')
@@ -92,7 +96,8 @@ describe('NivelarBranches', () => {
         expect(vi.spyOn(prompt, 'warn')).toHaveBeenCalledWith(expect.stringContaining('inexistente'));
     });
 
-    it('warn quando branches são iguais', async () => {
+    it('warn quando branches são iguais', async () => {expect.hasAssertions();
+
         vi.spyOn(prompt, 'ask')
             .mockResolvedValueOnce('main')
             .mockResolvedValueOnce('main')
@@ -104,7 +109,8 @@ describe('NivelarBranches', () => {
         expect(mockGitlab.createMergeRequest).not.toHaveBeenCalled();
     });
 
-    it('warn quando branches são vazios', async () => {
+    it('warn quando branches são vazios', async () => {expect.hasAssertions();
+
         vi.spyOn(prompt, 'ask')
             .mockResolvedValueOnce('')
             .mockResolvedValueOnce('rel_cand')
@@ -116,7 +122,8 @@ describe('NivelarBranches', () => {
         expect(mockGitlab.createMergeRequest).not.toHaveBeenCalled();
     });
 
-    it('warn quando todas as branches são inexistentes', async () => {
+    it('warn quando todas as branches são inexistentes', async () => {expect.hasAssertions();
+
         vi.spyOn(prompt, 'ask')
             .mockResolvedValueOnce('main')
             .mockResolvedValueOnce('rel_cand')
@@ -129,7 +136,8 @@ describe('NivelarBranches', () => {
         expect(vi.spyOn(prompt, 'warn')).toHaveBeenCalledWith('Branch(es) não encontrada(s): main, rel_cand, dev');
     });
 
-    it('passa parametros corretos para createMergeRequest', async () => {
+    it('passa parametros corretos para createMergeRequest', async () => {expect.hasAssertions();
+
         vi.spyOn(prompt, 'ask')
             .mockResolvedValueOnce('feature-x')
             .mockResolvedValueOnce('staging')

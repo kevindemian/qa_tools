@@ -56,7 +56,8 @@ describe('OfferPipelineFailureAnalysis', () => {
         vi.clearAllMocks();
     });
 
-    it('Should skip analysis when no failed tests', async () => {
+    it('should skip analysis when no failed tests', async () => {expect.hasAssertions();
+
         const parsed = {
             stats: { passed: 10, failed: 0, skipped: 0, total: 10, duration: 500 },
             tests: [{ title: 'test A', state: 'passed' as const, duration: 100 }],
@@ -67,7 +68,8 @@ describe('OfferPipelineFailureAnalysis', () => {
         expect(mockConfirm).not.toHaveBeenCalled();
     });
 
-    it('Should skip analysis when user declines', async () => {
+    it('should skip analysis when user declines', async () => {expect.hasAssertions();
+
         mockConfirm.mockReturnValue(false);
         await offerPipelineFailureAnalysis(baseParsed);
 
@@ -75,7 +77,8 @@ describe('OfferPipelineFailureAnalysis', () => {
         expect(mockAnalyzeFailures).not.toHaveBeenCalled();
     });
 
-    it('Should call analyzeFailuresWithReport and print success on analysis', async () => {
+    it('should call analyzeFailuresWithReport and print success on analysis', async () => {expect.hasAssertions();
+
         mockConfirm.mockReturnValue(true);
         mockAnalyzeFailures.mockResolvedValue(mockReport);
 
@@ -85,16 +88,18 @@ describe('OfferPipelineFailureAnalysis', () => {
         expect(mockSuccess).toHaveBeenCalledWith('Análise de falhas (IA):');
     });
 
-    it('Should handle empty analysis response', async () => {
+    it('should handle empty analysis response', async () => {expect.hasAssertions();
+
         mockConfirm.mockReturnValue(true);
         mockAnalyzeFailures.mockResolvedValue({ ...mockReport, content: '' });
 
         await offerPipelineFailureAnalysis(baseParsed);
 
-        expect(mockAnalyzeFailures).toHaveBeenCalled();
+        expect(mockAnalyzeFailures).toHaveBeenCalledWith();
     });
 
-    it('Should handle analyzeFailuresWithReport throwing', async () => {
+    it('should handle analyzeFailuresWithReport throwing', async () => {expect.hasAssertions();
+
         mockConfirm.mockReturnValue(true);
         mockAnalyzeFailures.mockRejectedValue(new Error('API error'));
 

@@ -15,7 +15,8 @@ describe('Integration: Suite Optimization (FT-26)', () => {
     });
 
     describe('FT-26a: generateOptimizationHtml', () => {
-        it('returns complete HTML document with data', async () => {
+        it('returns complete HTML document with data', async () => {expect.hasAssertions();
+
             const { analyzeSuiteOptimization, generateOptimizationHtml } = await import('../../suite-optimization.js');
             const tests = [
                 { title: 'Slow Test', duration: 10, flakiness: 0.05 },
@@ -33,7 +34,8 @@ describe('Integration: Suite Optimization (FT-26)', () => {
             expect(html).toContain('Slow Test');
         });
 
-        it('shows clean state when no optimizations needed', async () => {
+        it('shows clean state when no optimizations needed', async () => {expect.hasAssertions();
+
             const { analyzeSuiteOptimization, generateOptimizationHtml } = await import('../../suite-optimization.js');
             const tests = [{ title: 'Fast Test', duration: 2, flakiness: 0 }];
             const result = analyzeSuiteOptimization(tests);
@@ -42,7 +44,8 @@ describe('Integration: Suite Optimization (FT-26)', () => {
             expect(html).toContain('no optimizations needed');
         });
 
-        it('shows clean state for empty input', async () => {
+        it('shows clean state for empty input', async () => {expect.hasAssertions();
+
             const { analyzeSuiteOptimization, generateOptimizationHtml } = await import('../../suite-optimization.js');
             const result = analyzeSuiteOptimization([]);
             const html = generateOptimizationHtml(result);
@@ -50,7 +53,8 @@ describe('Integration: Suite Optimization (FT-26)', () => {
             expect(html).toContain('clean-state');
         });
 
-        it('uses custom title', async () => {
+        it('uses custom title', async () => {expect.hasAssertions();
+
             const { analyzeSuiteOptimization, generateOptimizationHtml } = await import('../../suite-optimization.js');
             const result = analyzeSuiteOptimization([]);
             const html = generateOptimizationHtml(result, 'My Custom Report');
@@ -61,7 +65,8 @@ describe('Integration: Suite Optimization (FT-26)', () => {
     });
 
     describe('FT-26b: error fallback', () => {
-        it('returns error page when buildHtmlPage throws', async () => {
+        it('returns error page when buildHtmlPage throws', async () => {expect.hasAssertions();
+
             const { analyzeSuiteOptimization, generateOptimizationHtml } = await import('../../suite-optimization.js');
             const htmlFactory = await import('../../html-factory.js');
             const spy = vi.spyOn(htmlFactory, 'buildHtmlPage').mockImplementation(() => {

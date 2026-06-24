@@ -149,7 +149,8 @@ describe('PrCreateMergeRequest', () => {
         vi.spyOn(prompt, 'info').mockClear();
     });
 
-    it('calls POST /pulls and returns formatted PR on success', async () => {
+    it('calls POST /pulls and returns formatted PR on success', async () => {expect.hasAssertions();
+
         const mockData = {
             number: 10,
             title: 'PR Title',
@@ -173,7 +174,8 @@ describe('PrCreateMergeRequest', () => {
         expect(nonNull(result).title).toBe('PR Title');
     });
 
-    it('handles 422 (already exists) by searching and updating existing PR', async () => {
+    it('handles 422 (already exists) by searching and updating existing PR', async () => {expect.hasAssertions();
+
         const err = Object.assign(new Error('Unprocessable'), {
             response: { status: 422, data: { errors: [{ message: 'already exists' }] } },
         });
@@ -213,7 +215,8 @@ describe('PrCreateMergeRequest', () => {
         expect(vi.spyOn(prompt, 'info')).toHaveBeenCalledWith('PR already exists. Searching for existing...');
     });
 
-    it('throws on 422 without already_exists error', async () => {
+    it('throws on 422 without already_exists error', async () => {expect.hasAssertions();
+
         const err = Object.assign(new Error('Unprocessable'), {
             response: { status: 422, data: { errors: [{ message: 'other error' }] } },
         });
@@ -224,7 +227,8 @@ describe('PrCreateMergeRequest', () => {
         );
     });
 
-    it('throws on non-422 error', async () => {
+    it('throws on non-422 error', async () => {expect.hasAssertions();
+
         const err = Object.assign(new Error('Bad request'), { response: { status: 400 } });
         mockApiPost.mockRejectedValue(err);
 
@@ -233,7 +237,8 @@ describe('PrCreateMergeRequest', () => {
         );
     });
 
-    it('calls prCreateMergeRequest without optional description', async () => {
+    it('calls prCreateMergeRequest without optional description', async () => {expect.hasAssertions();
+
         mockApiPost.mockResolvedValue({
             number: 1,
             title: 'Title',
@@ -264,7 +269,8 @@ describe('PrUpdateMergeRequest', () => {
         mockApiPatch.mockClear();
     });
 
-    it('calls PATCH /pulls/{iid} and returns formatted PR', async () => {
+    it('calls PATCH /pulls/{iid} and returns formatted PR', async () => {expect.hasAssertions();
+
         mockApiPatch.mockResolvedValue({
             number: 5,
             title: 'New Title',
@@ -286,7 +292,8 @@ describe('PrUpdateMergeRequest', () => {
         expect(nonNull(result).iid).toBe(5);
     });
 
-    it('throws on API error', async () => {
+    it('throws on API error', async () => {expect.hasAssertions();
+
         mockApiPatch.mockRejectedValue(new Error('Update failed'));
 
         await expect(prUpdateMergeRequest(client, 'myorg', 'myrepo', 5, '', '')).rejects.toThrow('Update failed');
@@ -301,7 +308,8 @@ describe('PrGetMergeRequest', () => {
         mockApiGet.mockClear();
     });
 
-    it('calls GET /pulls/{iid} and returns formatted PR', async () => {
+    it('calls GET /pulls/{iid} and returns formatted PR', async () => {expect.hasAssertions();
+
         mockApiGet.mockResolvedValue({
             number: 5,
             state: 'open',
@@ -321,7 +329,8 @@ describe('PrGetMergeRequest', () => {
         expect(nonNull(result).iid).toBe(5);
     });
 
-    it('returns null when apiGet returns null', async () => {
+    it('returns null when apiGet returns null', async () => {expect.hasAssertions();
+
         mockApiGet.mockResolvedValue(null);
         const result = await prGetMergeRequest(client, 'myorg', 'myrepo', 999);
 
@@ -337,7 +346,8 @@ describe('PrSearchMergeRequests', () => {
         mockApiGet.mockClear();
     });
 
-    it('calls GET /pulls with correct params', async () => {
+    it('calls GET /pulls with correct params', async () => {expect.hasAssertions();
+
         mockApiGet.mockResolvedValue([
             {
                 number: 1,
@@ -361,7 +371,8 @@ describe('PrSearchMergeRequests', () => {
         expect(nonNull(result[0]).iid).toBe(1);
     });
 
-    it('maps opened status to open', async () => {
+    it('maps opened status to open', async () => {expect.hasAssertions();
+
         mockApiGet.mockResolvedValue([]);
         await prSearchMergeRequests(client, 'myorg', 'myrepo', '', '', 'opened');
 
@@ -374,14 +385,16 @@ describe('PrSearchMergeRequests', () => {
         );
     });
 
-    it('returns empty array when apiGet returns null', async () => {
+    it('returns empty array when apiGet returns null', async () => {expect.hasAssertions();
+
         mockApiGet.mockResolvedValue(null);
         const result = await prSearchMergeRequests(client, 'myorg', 'myrepo', '', '', 'opened');
 
         expect(result).toEqual([]);
     });
 
-    it('passes status directly when not opened', async () => {
+    it('passes status directly when not opened', async () => {expect.hasAssertions();
+
         mockApiGet.mockResolvedValue([]);
         await prSearchMergeRequests(client, 'myorg', 'myrepo', '', '', 'closed');
 
@@ -394,7 +407,8 @@ describe('PrSearchMergeRequests', () => {
         );
     });
 
-    it('omits head param when sourceBranch is empty', async () => {
+    it('omits head param when sourceBranch is empty', async () => {expect.hasAssertions();
+
         mockApiGet.mockResolvedValue([]);
         await prSearchMergeRequests(client, 'myorg', 'myrepo', '', 'main', 'opened');
         const calledWith = nonNull(mockApiGet.mock.calls[0]);
@@ -404,7 +418,8 @@ describe('PrSearchMergeRequests', () => {
         expect(params['base']).toBe('main');
     });
 
-    it('omits base param when targetBranch is empty', async () => {
+    it('omits base param when targetBranch is empty', async () => {expect.hasAssertions();
+
         mockApiGet.mockResolvedValue([]);
         await prSearchMergeRequests(client, 'myorg', 'myrepo', 'dev', '', 'opened');
         const calledWith = nonNull(mockApiGet.mock.calls[0]);
@@ -424,7 +439,8 @@ describe('PrAcceptMergeRequest', () => {
         vi.clearAllMocks();
     });
 
-    it('calls GET then PUT /pulls/{iid}/merge when PR is open', async () => {
+    it('calls GET then PUT /pulls/{iid}/merge when PR is open', async () => {expect.hasAssertions();
+
         mockApiGet.mockResolvedValue({
             number: 5,
             state: 'open',
@@ -456,7 +472,8 @@ describe('PrAcceptMergeRequest', () => {
         expect(nonNull(result).web_url).toBe('https://merge');
     });
 
-    it('returns early without PUT when already merged', async () => {
+    it('returns early without PUT when already merged', async () => {expect.hasAssertions();
+
         mockApiGet.mockResolvedValue({
             number: 5,
             state: 'closed',
@@ -474,13 +491,15 @@ describe('PrAcceptMergeRequest', () => {
         expect(nonNull(result).state).toBe('merged');
     });
 
-    it('throws when PR not found', async () => {
+    it('throws when PR not found', async () => {expect.hasAssertions();
+
         mockApiGet.mockResolvedValue(null);
 
         await expect(prAcceptMergeRequest(client, 'myorg', 'myrepo', 999)).rejects.toThrow('PR #999 not found');
     });
 
-    it('throws on merge API failure', async () => {
+    it('throws on merge API failure', async () => {expect.hasAssertions();
+
         mockApiGet.mockResolvedValue({
             number: 5,
             state: 'open',
@@ -496,7 +515,8 @@ describe('PrAcceptMergeRequest', () => {
         await expect(prAcceptMergeRequest(client, 'myorg', 'myrepo', 5)).rejects.toThrow('Merge failed');
     });
 
-    it('omits delete_branch_on_merge when shouldRemoveSourceBranch is false', async () => {
+    it('omits delete_branch_on_merge when shouldRemoveSourceBranch is false', async () => {expect.hasAssertions();
+
         mockApiGet.mockResolvedValue({
             number: 5,
             state: 'open',
@@ -534,7 +554,8 @@ describe('PrIsApproved', () => {
         mockApiGet.mockClear();
     });
 
-    it('returns true when at least one review is APPROVED', async () => {
+    it('returns true when at least one review is APPROVED', async () => {expect.hasAssertions();
+
         mockApiGet.mockResolvedValue([{ state: 'APPROVED' }]);
         const result = await prIsApproved(client, 'myorg', 'myrepo', 42);
 
@@ -545,21 +566,24 @@ describe('PrIsApproved', () => {
         });
     });
 
-    it('returns false when no APPROVED review', async () => {
+    it('returns false when no APPROVED review', async () => {expect.hasAssertions();
+
         mockApiGet.mockResolvedValue([{ state: 'COMMENTED' }, { state: 'CHANGES_REQUESTED' }]);
         const result = await prIsApproved(client, 'myorg', 'myrepo', 42);
 
         expect(result).toBeFalsy();
     });
 
-    it('returns false on empty reviews array', async () => {
+    it('returns false on empty reviews array', async () => {expect.hasAssertions();
+
         mockApiGet.mockResolvedValue([]);
         const result = await prIsApproved(client, 'myorg', 'myrepo', 42);
 
         expect(result).toBeFalsy();
     });
 
-    it('returns false when apiGet returns null', async () => {
+    it('returns false when apiGet returns null', async () => {expect.hasAssertions();
+
         mockApiGet.mockResolvedValue(null);
         const result = await prIsApproved(client, 'myorg', 'myrepo', 42);
 

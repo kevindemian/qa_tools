@@ -62,7 +62,8 @@ describe('RenderPipelineHealthHtml — property-based', () => {
         vi.restoreAllMocks();
     });
 
-    it('always produces valid HTML', () => {
+    it('always produces valid HTML', () => {expect.hasAssertions();
+
         fc.assert(
             fc.property(
                 fc.array(runArb, { minLength: 0, maxLength: 5 }),
@@ -81,7 +82,8 @@ describe('RenderPipelineHealthHtml — property-based', () => {
         );
     });
 
-    it('contains title in output', () => {
+    it('contains title in output', () => {expect.hasAssertions();
+
         fc.assert(
             fc.property(
                 fc.string({ minLength: 1, maxLength: 20 }).map((s) => s.replace(/[^a-zA-Z0-9 _-]/g, '')),
@@ -96,7 +98,8 @@ describe('RenderPipelineHealthHtml — property-based', () => {
         );
     });
 
-    it('uses buildCss design tokens', () => {
+    it('uses buildCss design tokens', () => {expect.hasAssertions();
+
         fc.assert(
             fc.property(
                 fc.array(runArb, { minLength: 0, maxLength: 5 }),
@@ -115,7 +118,8 @@ describe('RenderPipelineHealthHtml — property-based', () => {
         );
     });
 
-    it('has theme toggle script', () => {
+    it('has theme toggle script', () => {expect.hasAssertions();
+
         fc.assert(
             fc.property(fc.array(runArb, { minLength: 0, maxLength: 3 }), (runs) => {
                 const health = aggregatePipelineHealth(runs, [], [], []);
@@ -127,7 +131,8 @@ describe('RenderPipelineHealthHtml — property-based', () => {
         );
     });
 
-    it('has footer', () => {
+    it('has footer', () => {expect.hasAssertions();
+
         fc.assert(
             fc.property(fc.array(runArb, { minLength: 0, maxLength: 3 }), (runs) => {
                 const health = aggregatePipelineHealth(runs, [], [], []);
@@ -139,7 +144,8 @@ describe('RenderPipelineHealthHtml — property-based', () => {
         );
     });
 
-    it('has no legacy inline styles', () => {
+    it('has no legacy inline styles', () => {expect.hasAssertions();
+
         fc.assert(
             fc.property(
                 fc.array(runArb, { minLength: 0, maxLength: 5 }),

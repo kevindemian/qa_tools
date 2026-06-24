@@ -47,7 +47,8 @@ describe('Gen-report-complete', () => {
         process.argv = originalArgv;
     });
 
-    it('skips fetchXrayHistory when --skip-jira is set', async () => {
+    it('skips fetchXrayHistory when --skip-jira is set', async () => {expect.hasAssertions();
+
         process.argv = ['node', 'gen-report-complete.ts', '--ctrf=e2e/fixtures/ctrf-report.json', '--skip-jira'];
 
         const mod = await import('./gen-report-complete.js');
@@ -55,7 +56,8 @@ describe('Gen-report-complete', () => {
         await expect(mod.main()).resolves.toBeUndefined();
     });
 
-    it('renders report without --skip-jira flag (no Jira fetch if no token)', async () => {
+    it('renders report without --skip-jira flag (no Jira fetch if no token)', async () => {expect.hasAssertions();
+
         process.argv = ['node', 'gen-report-complete.ts', '--ctrf=e2e/fixtures/ctrf-report.json'];
         const penv = process.env as Record<string, string | undefined>;
         delete penv['JIRA_PERSONAL_TOKEN'];
@@ -69,7 +71,8 @@ describe('Gen-report-complete', () => {
         await expect(mod.main()).resolves.toBeUndefined();
     });
 
-    it('generates HTML output via writeReport', async () => {
+    it('generates HTML output via writeReport', async () => {expect.hasAssertions();
+
         process.argv = ['node', 'gen-report-complete.ts', '--ctrf=e2e/fixtures/ctrf-report.json', '--skip-jira'];
 
         const { writeReport } = await import('../shared/temp-dir.js');

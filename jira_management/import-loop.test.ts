@@ -89,7 +89,8 @@ beforeEach(() => {
 });
 
 describe('LinkTestRelations', () => {
-    it('associatePrecondition abort -> abort/errored', async () => {
+    it('associatePrecondition abort -> abort/errored', async () => {expect.hasAssertions();
+
         const linker = makeLinker();
         const factory = makeFactory();
         linker.associatePrecondition.mockResolvedValue({ action: 'abort' });
@@ -109,7 +110,8 @@ describe('LinkTestRelations', () => {
         expect(nonNull(resultSink[0]).message).toContain('pre-condition');
     });
 
-    it('linkIssues abort -> abort/errored', async () => {
+    it('linkIssues abort -> abort/errored', async () => {expect.hasAssertions();
+
         const linker = makeLinker();
         const factory = makeFactory();
         linker.associatePrecondition.mockResolvedValue(null);
@@ -195,7 +197,8 @@ describe('SaveCheckpoint', () => {
 });
 
 describe('CreateIssueForTest', () => {
-    it('abort branch', async () => {
+    it('abort branch', async () => {expect.hasAssertions();
+
         const factory = makeFactory();
         factory.createIssue.mockResolvedValue({ action: 'abort' });
         const result = await createIssueForTest({
@@ -213,7 +216,8 @@ describe('CreateIssueForTest', () => {
         expect(result).toBe('abort');
     });
 
-    it('retry branch returns null', async () => {
+    it('retry branch returns null', async () => {expect.hasAssertions();
+
         const factory = makeFactory();
         factory.createIssue.mockResolvedValue({ action: 'retry' });
         const result = await createIssueForTest({
@@ -231,7 +235,8 @@ describe('CreateIssueForTest', () => {
         expect(result).toBeNull();
     });
 
-    it('continue branch', async () => {
+    it('continue branch', async () => {expect.hasAssertions();
+
         const factory = makeFactory();
         factory.createIssue.mockResolvedValue({ action: 'skip' });
         const result = await createIssueForTest({
@@ -249,7 +254,8 @@ describe('CreateIssueForTest', () => {
         expect(result).toBe('continue');
     });
 
-    it('success returns key', async () => {
+    it('success returns key', async () => {expect.hasAssertions();
+
         const factory = makeFactory();
         factory.createIssue.mockResolvedValue({ key: 'TEST-100' });
         const result = await createIssueForTest({
@@ -269,7 +275,8 @@ describe('CreateIssueForTest', () => {
 });
 
 describe('ExecuteTestCreationLoop', () => {
-    it('main loop flow with one test', async () => {
+    it('main loop flow with one test', async () => {expect.hasAssertions();
+
         const factory = makeFactory();
         const linker = makeLinker();
         factory.createIssue.mockResolvedValue({ key: 'T-NEW' });

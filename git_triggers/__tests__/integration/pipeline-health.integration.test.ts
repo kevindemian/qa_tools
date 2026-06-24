@@ -45,7 +45,8 @@ describe('Integration: Pipeline Health', () => {
     });
 
     describe('PH-01: renderPipelineHealthHtml with data', () => {
-        it('produces complete HTML with summary cards, tables, and sections', async () => {
+        it('produces complete HTML with summary cards, tables, and sections', async () => {expect.hasAssertions();
+
             const { renderPipelineHealthHtml } = await import('../../pipeline-health.js');
             const health = makeHealth();
             const html = renderPipelineHealthHtml(health, 'Pipeline Report');
@@ -65,7 +66,8 @@ describe('Integration: Pipeline Health', () => {
     });
 
     describe('PH-02: empty pipeline health', () => {
-        it('shows zeros and no-failure messages', async () => {
+        it('shows zeros and no-failure messages', async () => {expect.hasAssertions();
+
             const { aggregatePipelineHealth, renderPipelineHealthHtml } = await import('../../pipeline-health.js');
             const health = aggregatePipelineHealth([], [], [], []);
             const html = renderPipelineHealthHtml(health, 'Empty Report');
@@ -77,7 +79,8 @@ describe('Integration: Pipeline Health', () => {
     });
 
     describe('PH-03: theme and dark mode', () => {
-        it('includes theme toggle script and dark mode CSS', async () => {
+        it('includes theme toggle script and dark mode CSS', async () => {expect.hasAssertions();
+
             const { renderPipelineHealthHtml } = await import('../../pipeline-health.js');
             const html = renderPipelineHealthHtml(makeHealth());
 
@@ -87,7 +90,8 @@ describe('Integration: Pipeline Health', () => {
     });
 
     describe('PH-04: design tokens', () => {
-        it('uses CSS custom properties for colors', async () => {
+        it('uses CSS custom properties for colors', async () => {expect.hasAssertions();
+
             const { renderPipelineHealthHtml } = await import('../../pipeline-health.js');
             const html = renderPipelineHealthHtml(makeHealth());
 
@@ -98,7 +102,8 @@ describe('Integration: Pipeline Health', () => {
     });
 
     describe('PH-05: footer present', () => {
-        it('contains footer with module name', async () => {
+        it('contains footer with module name', async () => {expect.hasAssertions();
+
             const { renderPipelineHealthHtml } = await import('../../pipeline-health.js');
             const html = renderPipelineHealthHtml(makeHealth());
 
@@ -107,7 +112,8 @@ describe('Integration: Pipeline Health', () => {
     });
 
     describe('PH-06: no legacy HTML4 table attributes', () => {
-        it('does not use border="1" or cellpadding="6"', async () => {
+        it('does not use border="1" or cellpadding="6"', async () => {expect.hasAssertions();
+
             const { renderPipelineHealthHtml } = await import('../../pipeline-health.js');
             const html = renderPipelineHealthHtml(makeHealth());
 

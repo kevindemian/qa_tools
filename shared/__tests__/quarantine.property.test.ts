@@ -54,7 +54,8 @@ const storeArb: fc.Arbitrary<QuarantineStore> = fc
     .map((entries) => ({ entries }));
 
 describe('GeneratePipelineQuarantine — property-based', () => {
-    it('metadata matches store entries when store is provided', () => {
+    it('metadata matches store entries when store is provided', () => {expect.hasAssertions();
+
         fc.assert(
             fc.property(storeArb, fc.nat({ max: 1000 }), (store, total) => {
                 const totalTests = total + 1;
@@ -69,7 +70,8 @@ describe('GeneratePipelineQuarantine — property-based', () => {
         );
     });
 
-    it('excluded items preserve entry fields', () => {
+    it('excluded items preserve entry fields', () => {expect.hasAssertions();
+
         fc.assert(
             fc.property(storeArb, fc.nat({ max: 1000 }), (store, total) => {
                 const totalTests = total + 1;
@@ -105,7 +107,8 @@ describe('GeneratePipelineQuarantine — property-based', () => {
 });
 
 describe('LoadQuarantine — property-based', () => {
-    it('returns empty store for missing file', () => {
+    it('returns empty store for missing file', () => {expect.hasAssertions();
+
         fc.assert(
             fc.property(fc.constant(undefined), () => {
                 const store = loadQuarantine();
@@ -118,7 +121,8 @@ describe('LoadQuarantine — property-based', () => {
 });
 
 describe('FilterExpiredEntries — property-based', () => {
-    it('expired count matches entries that are neither permanent nor future-dated', () => {
+    it('expired count matches entries that are neither permanent nor future-dated', () => {expect.hasAssertions();
+
         fc.assert(
             fc.property(
                 fc.array(fc.tuple(fc.integer({ min: -86400000, max: 86400000 }), fc.boolean()), {
@@ -152,7 +156,8 @@ describe('FilterExpiredEntries — property-based', () => {
         );
     });
 
-    it('all remaining entries are permanent or have future expiresAt', () => {
+    it('all remaining entries are permanent or have future expiresAt', () => {expect.hasAssertions();
+
         fc.assert(
             fc.property(
                 fc.array(fc.tuple(fc.integer({ min: -86400000, max: 86400000 }), fc.boolean()), {
@@ -183,7 +188,8 @@ describe('FilterExpiredEntries — property-based', () => {
         );
     });
 
-    it('never expires permanent entries regardless of expiresAt', () => {
+    it('never expires permanent entries regardless of expiresAt', () => {expect.hasAssertions();
+
         fc.assert(
             fc.property(
                 fc.array(fc.integer({ min: -86400000, max: 86400000 }), { minLength: 1, maxLength: 10 }),
@@ -211,7 +217,8 @@ describe('FilterExpiredEntries — property-based', () => {
         );
     });
 
-    it('entries with malformed expiresAt are treated as expired', () => {
+    it('entries with malformed expiresAt are treated as expired', () => {expect.hasAssertions();
+
         fc.assert(
             fc.property(
                 fc.array(fc.constantFrom('not-a-date', '', 'invalid-date'), { minLength: 1, maxLength: 10 }),

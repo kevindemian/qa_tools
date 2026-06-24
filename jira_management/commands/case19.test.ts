@@ -44,7 +44,8 @@ beforeEach(() => {
 });
 
 describe('Case19 — History & Coverage', () => {
-    it('displays history when option a is selected', async () => {
+    it('displays history when option a is selected', async () => {expect.hasAssertions();
+
         const prompt = vi.mocked(promptModule);
         const metrics = vi.mocked(metricsModule);
 
@@ -74,11 +75,12 @@ describe('Case19 — History & Coverage', () => {
         const mod = case19Module;
         await mod.handler(baseContext);
 
-        expect(prompt.tableView).toHaveBeenCalled();
+        expect(prompt.tableView).toHaveBeenCalledWith();
         expect(prompt.title).toHaveBeenCalledWith('Histórico de execuções');
     });
 
-    it('displays coverage when option b is selected', async () => {
+    it('displays coverage when option b is selected', async () => {expect.hasAssertions();
+
         const prompt = vi.mocked(promptModule);
         const coverage = vi.mocked(coverageModule);
         const metrics = vi.mocked(metricsModule);
@@ -105,11 +107,12 @@ describe('Case19 — History & Coverage', () => {
             mappedIssues: 6,
             coveragePct: 60,
         });
-        expect(prompt.tableView).toHaveBeenCalled();
+        expect(prompt.tableView).toHaveBeenCalledWith();
         expect(baseContext.pushHistory).toHaveBeenCalledWith('coverage-analysis', '60% coverage', 'ok');
     });
 
-    it('handles empty metrics gracefully', async () => {
+    it('handles empty metrics gracefully', async () => {expect.hasAssertions();
+
         const prompt = vi.mocked(promptModule);
         const metrics = vi.mocked(metricsModule);
 
@@ -123,7 +126,8 @@ describe('Case19 — History & Coverage', () => {
         expect(prompt.warn).toHaveBeenCalledWith('Nenhuma execução registrada.');
     });
 
-    it('returns when user selects voltar', async () => {
+    it('returns when user selects voltar', async () => {expect.hasAssertions();
+
         const prompt = vi.mocked(promptModule);
         prompt.showSelect.mockResolvedValueOnce('0');
 
@@ -133,7 +137,8 @@ describe('Case19 — History & Coverage', () => {
         expect(prompt.tableView).not.toHaveBeenCalled();
     });
 
-    it('displays history comparison, flaky tests and trends when multiple runs exist', async () => {
+    it('displays history comparison, flaky tests and trends when multiple runs exist', async () => {expect.hasAssertions();
+
         const prompt = vi.mocked(promptModule);
         const metrics = vi.mocked(metricsModule);
         const comparison = vi.mocked(comparisonModule);
@@ -175,12 +180,13 @@ describe('Case19 — History & Coverage', () => {
         const mod = case19Module;
         await mod.handler(baseContext);
 
-        expect(comparison.compareRuns).toHaveBeenCalled();
+        expect(comparison.compareRuns).toHaveBeenCalledWith();
         expect(prompt.title).toHaveBeenCalledWith('Testes com flakiness');
         expect(prompt.title).toHaveBeenCalledWith('Tendência');
     });
 
-    it('handles coverage analysis error', async () => {
+    it('handles coverage analysis error', async () => {expect.hasAssertions();
+
         const prompt = vi.mocked(promptModule);
         const coverage = vi.mocked(coverageModule);
 
@@ -193,7 +199,8 @@ describe('Case19 — History & Coverage', () => {
         expect(prompt.printError).toHaveBeenCalledWith('Erro ao analisar cobertura', expect.any(Error));
     });
 
-    it('handles compareRuns returning null (falsy analysis)', async () => {
+    it('handles compareRuns returning null (falsy analysis)', async () => {expect.hasAssertions();
+
         const prompt = vi.mocked(promptModule);
         const metrics = vi.mocked(metricsModule);
         const comparison = vi.mocked(comparisonModule);
@@ -232,11 +239,12 @@ describe('Case19 — History & Coverage', () => {
         const mod = case19Module;
         await mod.handler(baseContext);
 
-        expect(comparison.compareRuns).toHaveBeenCalled();
+        expect(comparison.compareRuns).toHaveBeenCalledWith();
         expect(prompt.info).not.toHaveBeenCalledWith(expect.stringContaining('Análise comparativa'));
     });
 
-    it('shows coverage without unmapped steps or gaps', async () => {
+    it('shows coverage without unmapped steps or gaps', async () => {expect.hasAssertions();
+
         const prompt = vi.mocked(promptModule);
         const coverage = vi.mocked(coverageModule);
 
@@ -258,7 +266,8 @@ describe('Case19 — History & Coverage', () => {
         expect(prompt.title).not.toHaveBeenCalledWith('Gaps por épico');
     });
 
-    it('shows health score when enough runs exist', async () => {
+    it('shows health score when enough runs exist', async () => {expect.hasAssertions();
+
         const prompt = vi.mocked(promptModule);
         const metrics = vi.mocked(metricsModule);
         const healthScore = vi.mocked(healthScoreModule);
@@ -300,14 +309,15 @@ describe('Case19 — History & Coverage', () => {
         const mod = case19Module;
         await mod.handler(baseContext);
 
-        expect(healthScore.calculateHealthScore).toHaveBeenCalled();
+        expect(healthScore.calculateHealthScore).toHaveBeenCalledWith();
         expect(prompt.tableView).toHaveBeenCalledWith(
             expect.arrayContaining([expect.objectContaining({ Dimensão: 'Pass Rate', Score: 90 })]),
             expect.any(Array),
         );
     });
 
-    it('shows history without flaky or trends data', async () => {
+    it('shows history without flaky or trends data', async () => {expect.hasAssertions();
+
         const prompt = vi.mocked(promptModule);
         const metrics = vi.mocked(metricsModule);
         const comparison = vi.mocked(comparisonModule);
@@ -345,10 +355,11 @@ describe('Case19 — History & Coverage', () => {
         const mod = case19Module;
         await mod.handler(baseContext);
 
-        expect(prompt.tableView).toHaveBeenCalled();
+        expect(prompt.tableView).toHaveBeenCalledWith();
     });
 
-    it('handles run with total=0 to cover Rate branch', async () => {
+    it('handles run with total=0 to cover Rate branch', async () => {expect.hasAssertions();
+
         const prompt = vi.mocked(promptModule);
         const metrics = vi.mocked(metricsModule);
         const comparison = vi.mocked(comparisonModule);
@@ -376,10 +387,11 @@ describe('Case19 — History & Coverage', () => {
         const mod = case19Module;
         await mod.handler(baseContext);
 
-        expect(prompt.tableView).toHaveBeenCalled();
+        expect(prompt.tableView).toHaveBeenCalledWith();
     });
 
-    it('shows health score section when 5+ runs exist', async () => {
+    it('shows health score section when 5+ runs exist', async () => {expect.hasAssertions();
+
         const prompt = vi.mocked(promptModule);
         const metrics = vi.mocked(metricsModule);
         const healthScore = vi.mocked(healthScoreModule);
@@ -420,11 +432,12 @@ describe('Case19 — History & Coverage', () => {
         const mod = case19Module;
         await mod.handler(baseContext);
 
-        expect(healthScore.calculateHealthScore).toHaveBeenCalled();
+        expect(healthScore.calculateHealthScore).toHaveBeenCalledWith();
         expect(prompt.title).toHaveBeenCalledWith(expect.stringContaining('Test Suite Health'));
     });
 
-    it('shows coverage with gapsByEpic data', async () => {
+    it('shows coverage with gapsByEpic data', async () => {expect.hasAssertions();
+
         const prompt = vi.mocked(promptModule);
         const coverage = vi.mocked(coverageModule);
 

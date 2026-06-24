@@ -27,7 +27,8 @@ describe('GenerateWithRetry', () => {
         vi.clearAllMocks();
     });
 
-    it('returns data when all layers pass on first try', async () => {
+    it('returns data when all layers pass on first try', async () => {expect.hasAssertions();
+
         mockLlmPrompt.mockResolvedValue('{"tests":[]}');
         mockSchema.safeParse.mockReturnValue({ success: true, data: { tests: [] } });
         mockLayer2Validator.validate.mockReturnValue({ allPassed: true, results: [] });
@@ -51,7 +52,8 @@ describe('GenerateWithRetry', () => {
         expect(result.finalErrors).toHaveLength(0);
     });
 
-    it('returns null when layer 1 fails all retries', async () => {
+    it('returns null when layer 1 fails all retries', async () => {expect.hasAssertions();
+
         mockLlmPrompt.mockRejectedValue(new Error('API error'));
         mockSchema.safeParse.mockReturnValue({ success: false, error: { issues: [] } });
 
@@ -73,7 +75,8 @@ describe('GenerateWithRetry', () => {
         expect(result.layerFailures['layer1']).toBeGreaterThan(0);
     });
 
-    it('retries layer 2 when invariants fail', async () => {
+    it('retries layer 2 when invariants fail', async () => {expect.hasAssertions();
+
         mockLlmPrompt.mockResolvedValue('{"tests":[]}');
         mockSchema.safeParse.mockReturnValue({ success: true, data: { tests: [] } });
         mockLayer2Validator.validate
@@ -104,7 +107,8 @@ describe('GenerateWithRetry', () => {
         expect(result.layerFailures['layer2']).toBe(1);
     });
 
-    it('retries layer 3 when semantic validation fails', async () => {
+    it('retries layer 3 when semantic validation fails', async () => {expect.hasAssertions();
+
         mockLlmPrompt.mockResolvedValue('{"tests":[]}');
         mockSchema.safeParse.mockReturnValue({ success: true, data: { tests: [] } });
         mockLayer2Validator.validate.mockReturnValue({ allPassed: true, results: [] });
@@ -141,7 +145,8 @@ describe('GenerateWithRetry', () => {
         expect(result.layerFailures['layer3']).toBe(1);
     });
 
-    it('accumulates final errors when validation persists after all retries', async () => {
+    it('accumulates final errors when validation persists after all retries', async () => {expect.hasAssertions();
+
         mockLlmPrompt.mockResolvedValue('{"tests":[]}');
         mockSchema.safeParse.mockReturnValue({ success: true, data: { tests: [] } });
         mockLayer2Validator.validate.mockReturnValue({
@@ -176,7 +181,8 @@ describe('GenerateWithRetry', () => {
         expect(result.layerFailures['layer3']).toBe(1);
     });
 
-    it('builds schema error hints when schema validation fails', async () => {
+    it('builds schema error hints when schema validation fails', async () => {expect.hasAssertions();
+
         mockLlmPrompt.mockResolvedValue('{"tests":[]}');
         mockSchema.safeParse
             .mockReturnValueOnce({
@@ -205,7 +211,8 @@ describe('GenerateWithRetry', () => {
         expect(result.layerFailures['layer1']).toBe(1);
     });
 
-    it('returns null when layer3 retry returns null and final validation fails', async () => {
+    it('returns null when layer3 retry returns null and final validation fails', async () => {expect.hasAssertions();
+
         mockLlmPrompt.mockResolvedValueOnce('{"tests":[]}').mockResolvedValueOnce(null);
         mockSchema.safeParse.mockReturnValue({ success: true, data: { tests: [] } });
         mockLayer2Validator.validate.mockReturnValueOnce({ allPassed: true, results: [] }).mockReturnValueOnce({

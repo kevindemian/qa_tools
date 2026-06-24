@@ -79,7 +79,8 @@ describe('E2E: Result Processing Pipeline', () => {
         nock.cleanAll();
     });
 
-    it('flows end-to-end: mochawesome → match → TE creation', async () => {
+    it('flows end-to-end: mochawesome → match → TE creation', async () => {expect.hasAssertions();
+
         const mochaPath = path.join(FIXTURES, 'mochawesome.json');
         const raw = fs.readFileSync(mochaPath, 'utf8');
         const parsed = parseTestResults(JSON.parse(raw));

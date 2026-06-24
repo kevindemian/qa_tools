@@ -12,7 +12,8 @@ import * as paletteModule from './palette.js';
 import chalk from 'chalk';
 
 describe('Palette', () => {
-    it('has all expected palette keys', () => {
+    it('has all expected palette keys', () => {expect.hasAssertions();
+
         const { palette } = paletteModule;
         const expected = [
             'fg',
@@ -38,7 +39,8 @@ describe('Palette', () => {
         }
     });
 
-    it('applyPalette returns a chalk function for each ChalkInstance key', () => {
+    it('applyPalette returns a chalk function for each ChalkInstance key', () => {expect.hasAssertions();
+
         const { applyPalette } = paletteModule;
         const nonFactoryKeys: Array<paletteModule.ChalkKey> = [
             'fg',
@@ -87,7 +89,8 @@ describe('Palette', () => {
         chalk.level = origLevel;
     });
 
-    it('palette colors render text', () => {
+    it('palette colors render text', () => {expect.hasAssertions();
+
         const { applyPalette } = paletteModule;
         const nonFactoryKeys: Array<paletteModule.ChalkKey> = [
             'fg',
@@ -116,7 +119,8 @@ describe('Palette', () => {
         }
     });
 
-    it('disables chalk when NO_COLOR env is set', async () => {
+    it('disables chalk when NO_COLOR env is set', async () => {expect.hasAssertions();
+
         process.env['NO_COLOR'] = '1';
         const chalkMod: { level: number } = await vi.importActual('chalk');
 

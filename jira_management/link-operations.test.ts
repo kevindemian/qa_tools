@@ -34,7 +34,8 @@ describe('LinkOperations', () => {
     });
 
     describe('LinkIssues', () => {
-        it('creates links for each linked issue', async () => {
+        it('creates links for each linked issue', async () => {expect.hasAssertions();
+
             mockJiraResource.getJiraResource.mockResolvedValue({
                 issueLinkTypes: [{ id: '10200', name: 'Tests', inward: 'is tested by', outward: 'tests' }],
             });
@@ -58,7 +59,8 @@ describe('LinkOperations', () => {
             });
         });
 
-        it('handles empty linked issues list', async () => {
+        it('handles empty linked issues list', async () => {expect.hasAssertions();
+
             await operations.linkIssues('TEST-1', []);
 
             expect(mockJiraResource.postJiraResource).not.toHaveBeenCalled();
@@ -66,7 +68,8 @@ describe('LinkOperations', () => {
     });
 
     describe('CreateIssueLink', () => {
-        it('creates a single issue link with resolved type', async () => {
+        it('creates a single issue link with resolved type', async () => {expect.hasAssertions();
+
             mockJiraResource.getJiraResource.mockResolvedValue({
                 issueLinkTypes: [{ id: '10200', name: 'Tests', inward: 'is tested by', outward: 'tests' }],
             });

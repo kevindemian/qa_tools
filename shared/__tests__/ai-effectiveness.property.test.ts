@@ -29,7 +29,8 @@ const storeArb = fc.record({
 });
 
 describe('ComputeAiEffectiveness — property-based', () => {
-    it('acceptance rate matches the math', () => {
+    it('acceptance rate matches the math', () => {expect.hasAssertions();
+
         fc.assert(
             fc.property(storeArb, (store) => {
                 const result = computeAiEffectiveness(store);
@@ -43,7 +44,8 @@ describe('ComputeAiEffectiveness — property-based', () => {
         );
     });
 
-    it('totalRecords matches store size', () => {
+    it('totalRecords matches store size', () => {expect.hasAssertions();
+
         fc.assert(
             fc.property(storeArb, (store) => {
                 const result = computeAiEffectiveness(store);
@@ -55,7 +57,8 @@ describe('ComputeAiEffectiveness — property-based', () => {
         );
     });
 
-    it('byVersion counts sum to total', () => {
+    it('byVersion counts sum to total', () => {expect.hasAssertions();
+
         fc.assert(
             fc.property(storeArb, (store) => {
                 const result = computeAiEffectiveness(store);
@@ -67,7 +70,8 @@ describe('ComputeAiEffectiveness — property-based', () => {
         );
     });
 
-    it('trend generated sum matches total', () => {
+    it('trend generated sum matches total', () => {expect.hasAssertions();
+
         fc.assert(
             fc.property(storeArb, (store) => {
                 const result = computeAiEffectiveness(store);
@@ -79,7 +83,8 @@ describe('ComputeAiEffectiveness — property-based', () => {
         );
     });
 
-    it('trend is sorted by date', () => {
+    it('trend is sorted by date', () => {expect.hasAssertions();
+
         fc.assert(
             fc.property(storeArb, (store) => {
                 const result = computeAiEffectiveness(store);
@@ -97,7 +102,8 @@ describe('ComputeAiEffectiveness — property-based', () => {
 });
 
 describe('GenerateAiEffectivenessHtml — property-based', () => {
-    it('always produces valid HTML', () => {
+    it('always produces valid HTML', () => {expect.hasAssertions();
+
         fc.assert(
             fc.property(storeArb, (store) => {
                 const result = computeAiEffectiveness(store);
@@ -110,7 +116,8 @@ describe('GenerateAiEffectivenessHtml — property-based', () => {
         );
     });
 
-    it('contains the acceptance rate percentage', () => {
+    it('contains the acceptance rate percentage', () => {expect.hasAssertions();
+
         fc.assert(
             fc.property(storeArb, (store) => {
                 const result = computeAiEffectiveness(store);
@@ -122,7 +129,8 @@ describe('GenerateAiEffectivenessHtml — property-based', () => {
         );
     });
 
-    it('contains version names in byVersion table', () => {
+    it('contains version names in byVersion table', () => {expect.hasAssertions();
+
         fc.assert(
             fc.property(storeArb, (store) => {
                 const result = computeAiEffectiveness(store);

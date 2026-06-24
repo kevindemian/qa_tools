@@ -120,7 +120,8 @@ describe('ServerHistoryProvider', () => {
         provider = createHistoryProvider(jira, 'server');
     });
 
-    it('returns parsed runs on successful API call', async () => {
+    it('returns parsed runs on successful API call', async () => {expect.hasAssertions();
+
         mockOriginGet.mockResolvedValue([
             { status: 'PASS', testExecKey: 'TE-1', startedOn: '2024-01-01' },
             { status: 'FAIL', testExecKey: 'TE-2', startedOn: '2024-01-02' },
@@ -143,21 +144,24 @@ describe('ServerHistoryProvider', () => {
         expect(mockOriginGet).toHaveBeenCalledWith('rest/raven/1.0/api/test/TEST-123/testruns');
     });
 
-    it('returns empty array on API error', async () => {
+    it('returns empty array on API error', async () => {expect.hasAssertions();
+
         mockOriginGet.mockRejectedValue(new Error('Network error'));
         const result = await provider.getHistory('TEST-123');
 
         expect(result).toEqual([]);
     });
 
-    it('returns empty array when response is not an array', async () => {
+    it('returns empty array when response is not an array', async () => {expect.hasAssertions();
+
         mockOriginGet.mockResolvedValue({ status: 'error' });
         const result = await provider.getHistory('TEST-123');
 
         expect(result).toEqual([]);
     });
 
-    it('limits to MAX_RUNS items', async () => {
+    it('limits to MAX_RUNS items', async () => {expect.hasAssertions();
+
         const manyRuns = Array.from({ length: 50 }, (_, i) => ({
             status: 'PASS',
             testExecKey: 'TE-' + (i + 1),
@@ -168,7 +172,8 @@ describe('ServerHistoryProvider', () => {
         expect(result).toHaveLength(20);
     });
 
-    it('handles unknown status gracefully', async () => {
+    it('handles unknown status gracefully', async () => {expect.hasAssertions();
+
         mockOriginGet.mockResolvedValue([{ testExecKey: 'TE-1' }]);
         const result = await provider.getHistory('TEST-123');
 
@@ -198,14 +203,16 @@ describe('CloudHistoryProvider', () => {
         provider = createHistoryProvider(jira, 'cloud');
     });
 
-    it('returns empty array when issueId resolution fails', async () => {
+    it('returns empty array when issueId resolution fails', async () => {expect.hasAssertions();
+
         mockIssueGet.mockRejectedValue(new Error('Not found'));
         const result = await provider.getHistory('TEST-999');
 
         expect(result).toEqual([]);
     });
 
-    it('returns empty array when credentials are missing', async () => {
+    it('returns empty array when credentials are missing', async () => {expect.hasAssertions();
+
         mockIssueGet.mockResolvedValue({ id: '12345' });
         const missingCredsConfig = createMockConfigInstance();
         missingCredsConfig.get = function <T = string>(key: string): T {
@@ -218,7 +225,8 @@ describe('CloudHistoryProvider', () => {
         expect(result).toEqual([]);
     });
 
-    it('returns empty array when GraphQL returns no results', async () => {
+    it('returns empty array when GraphQL returns no results', async () => {expect.hasAssertions();
+
         mockIssueGet.mockResolvedValue({ id: '12345' });
         mockGraphql.mockResolvedValue(null);
         const result = await provider.getHistory('TEST-123');
@@ -226,7 +234,8 @@ describe('CloudHistoryProvider', () => {
         expect(result).toEqual([]);
     });
 
-    it('returns parsed runs on successful GraphQL call', async () => {
+    it('returns parsed runs on successful GraphQL call', async () => {expect.hasAssertions();
+
         mockIssueGet.mockResolvedValue({ id: '12345' });
         mockGraphql.mockResolvedValue({
             getTestRuns: {
@@ -264,7 +273,8 @@ describe('CloudHistoryProvider', () => {
         expect(result[1]?.testExecKey).toBe('TE-2');
     });
 
-    it('returns empty array on GraphQL error', async () => {
+    it('returns empty array on GraphQL error', async () => {expect.hasAssertions();
+
         mockIssueGet.mockResolvedValue({ id: '12345' });
         mockGraphql.mockRejectedValue(new Error('GraphQL error'));
         const result = await provider.getHistory('TEST-123');
@@ -272,7 +282,8 @@ describe('CloudHistoryProvider', () => {
         expect(result).toEqual([]);
     });
 
-    it('caches issueId resolution for same testKey', async () => {
+    it('caches issueId resolution for same testKey', async () => {expect.hasAssertions();
+
         mockIssueGet.mockResolvedValue({ id: '12345' });
         mockGraphql.mockResolvedValue(null);
         await provider.getHistory('TEST-123');
@@ -281,7 +292,8 @@ describe('CloudHistoryProvider', () => {
         expect(mockIssueGet).toHaveBeenCalledTimes(1);
     });
 
-    it('passes correct query to cloudClient.graphql', async () => {
+    it('passes correct query to cloudClient.graphql', async () => {expect.hasAssertions();
+
         mockIssueGet.mockResolvedValue({ id: '12345' });
         mockGraphql.mockResolvedValue({ getTestRuns: { results: [] } });
 
@@ -297,7 +309,8 @@ describe('CloudHistoryProvider', () => {
         expect(callArgs[3]).toBe('secret-456');
     });
 
-    it('falls back to issue id when search does not return exec key', async () => {
+    it('falls back to issue id when search does not return exec key', async () => {expect.hasAssertions();
+
         mockIssueGet.mockResolvedValue({ id: '12345' });
         mockGraphql.mockResolvedValue({
             getTestRuns: {
@@ -318,7 +331,8 @@ describe('CloudHistoryProvider', () => {
         expect(result[0]?.testExecKey).toBe('111');
     });
 
-    it('returns results with fallback keys when exec key search fails', async () => {
+    it('returns results with fallback keys when exec key search fails', async () => {expect.hasAssertions();
+
         mockIssueGet.mockResolvedValue({ id: '12345' });
         mockGraphql.mockResolvedValue({
             getTestRuns: {
@@ -339,7 +353,8 @@ describe('CloudHistoryProvider', () => {
         expect(result[0]?.testExecKey).toBe('111');
     });
 
-    it('caches exec keys and avoids re-fetching', async () => {
+    it('caches exec keys and avoids re-fetching', async () => {expect.hasAssertions();
+
         mockIssueGet.mockResolvedValue({ id: '12345' });
         mockGraphql.mockResolvedValue({
             getTestRuns: {

@@ -28,7 +28,8 @@ describe('Integration: AI Effectiveness Dashboard (FT-23)', () => {
     });
 
     describe('FT-23a: generateAiEffectivenessHtml', () => {
-        it('returns complete HTML document with data', async () => {
+        it('returns complete HTML document with data', async () => {expect.hasAssertions();
+
             const { computeAiEffectiveness, generateAiEffectivenessHtml } = await import('../../ai-effectiveness.js');
             const store: AiFeedbackStore = {
                 records: [
@@ -56,7 +57,8 @@ describe('Integration: AI Effectiveness Dashboard (FT-23)', () => {
             expect(html).toContain('By Prompt Version');
         });
 
-        it('shows no data message for empty store', async () => {
+        it('shows no data message for empty store', async () => {expect.hasAssertions();
+
             const { computeAiEffectiveness, generateAiEffectivenessHtml } = await import('../../ai-effectiveness.js');
             const result = computeAiEffectiveness({ records: [] });
             const html = generateAiEffectivenessHtml(result);
@@ -66,7 +68,8 @@ describe('Integration: AI Effectiveness Dashboard (FT-23)', () => {
             expect(html).not.toContain('Daily Trend');
         });
 
-        it('uses custom title', async () => {
+        it('uses custom title', async () => {expect.hasAssertions();
+
             const { computeAiEffectiveness, generateAiEffectivenessHtml } = await import('../../ai-effectiveness.js');
             const store: AiFeedbackStore = {
                 records: [{ timestamp: '2026-06-01T10:00:00Z', promptVersion: 'v1', testTitle: 't1', accepted: true }],
@@ -80,7 +83,8 @@ describe('Integration: AI Effectiveness Dashboard (FT-23)', () => {
     });
 
     describe('FT-23b: edge cases', () => {
-        it('handles all accepted records', async () => {
+        it('handles all accepted records', async () => {expect.hasAssertions();
+
             const { computeAiEffectiveness, generateAiEffectivenessHtml } = await import('../../ai-effectiveness.js');
             const store: AiFeedbackStore = {
                 records: [
@@ -100,7 +104,8 @@ describe('Integration: AI Effectiveness Dashboard (FT-23)', () => {
             expect(html).toContain('100%');
         });
 
-        it('handles all rejected records', async () => {
+        it('handles all rejected records', async () => {expect.hasAssertions();
+
             const { computeAiEffectiveness } = await import('../../ai-effectiveness.js');
             const store: AiFeedbackStore = {
                 records: [
@@ -127,7 +132,8 @@ describe('Integration: AI Effectiveness Dashboard (FT-23)', () => {
             expect(result.totalDeleted).toBe(1);
         });
 
-        it('handles 100 records without error', async () => {
+        it('handles 100 records without error', async () => {expect.hasAssertions();
+
             const { computeAiEffectiveness, generateAiEffectivenessHtml } = await import('../../ai-effectiveness.js');
             const records: AiFeedbackRecord[] = [];
             for (let i = 0; i < 100; i++) {
@@ -151,7 +157,8 @@ describe('Integration: AI Effectiveness Dashboard (FT-23)', () => {
     });
 
     describe('FT-23c: HTML structural validation', () => {
-        it('contains proper HTML structure', async () => {
+        it('contains proper HTML structure', async () => {expect.hasAssertions();
+
             const { computeAiEffectiveness, generateAiEffectivenessHtml } = await import('../../ai-effectiveness.js');
             const store: AiFeedbackStore = {
                 records: [{ timestamp: '2026-06-01T10:00:00Z', promptVersion: 'v1', testTitle: 't1', accepted: true }],
@@ -172,7 +179,8 @@ describe('Integration: AI Effectiveness Dashboard (FT-23)', () => {
     });
 
     describe('FT-23d: null handling', () => {
-        it('handles null store without crashing (returning empty result)', async () => {
+        it('handles null store without crashing (returning empty result)', async () => {expect.hasAssertions();
+
             const { computeAiEffectiveness } = await import('../../ai-effectiveness.js');
             const result = computeAiEffectiveness(null);
 
@@ -181,7 +189,8 @@ describe('Integration: AI Effectiveness Dashboard (FT-23)', () => {
             expect(result.totalGenerated).toBe(0);
         });
 
-        it('handles undefined store without crashing', async () => {
+        it('handles undefined store without crashing', async () => {expect.hasAssertions();
+
             const { computeAiEffectiveness } = await import('../../ai-effectiveness.js');
             const result = computeAiEffectiveness(undefined);
 
@@ -189,7 +198,8 @@ describe('Integration: AI Effectiveness Dashboard (FT-23)', () => {
             expect(result.totalRecords).toBe(0);
         });
 
-        it('handles null result in generateAiEffectivenessHtml without crashing', async () => {
+        it('handles null result in generateAiEffectivenessHtml without crashing', async () => {expect.hasAssertions();
+
             const { generateAiEffectivenessHtml } = await import('../../ai-effectiveness.js');
             const html = generateAiEffectivenessHtml(null);
 
@@ -198,7 +208,8 @@ describe('Integration: AI Effectiveness Dashboard (FT-23)', () => {
     });
 
     describe('FT-23e: error fallback', () => {
-        it('returns error page when buildHtmlPage throws', async () => {
+        it('returns error page when buildHtmlPage throws', async () => {expect.hasAssertions();
+
             const { computeAiEffectiveness, generateAiEffectivenessHtml } = await import('../../ai-effectiveness.js');
             const htmlFactory = await import('../../html-factory.js');
             const spy = vi.spyOn(htmlFactory, 'buildHtmlPage').mockImplementation(() => {

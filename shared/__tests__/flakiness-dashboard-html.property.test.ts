@@ -82,7 +82,8 @@ describe('GenerateFlakinessHtml — property-based', () => {
         vi.restoreAllMocks();
     });
 
-    it('always produces valid HTML with structural elements', () => {
+    it('always produces valid HTML with structural elements', () => {expect.hasAssertions();
+
         fc.assert(
             fc.property(fc.array(flakyEntryArb, { minLength: 0, maxLength: 10 }), (entries) => {
                 const html = generateFlakinessHtml(entries);
@@ -96,7 +97,8 @@ describe('GenerateFlakinessHtml — property-based', () => {
         );
     });
 
-    it('contains all high-flakiness entry titles', () => {
+    it('contains all high-flakiness entry titles', () => {expect.hasAssertions();
+
         fc.assert(
             fc.property(fc.array(flakyEntryArb, { minLength: 0, maxLength: 10 }), (entries) => {
                 const html = generateFlakinessHtml(entries);
@@ -109,7 +111,8 @@ describe('GenerateFlakinessHtml — property-based', () => {
         );
     });
 
-    it('summary count matches filterHighFlakiness length', () => {
+    it('summary count matches filterHighFlakiness length', () => {expect.hasAssertions();
+
         fc.assert(
             fc.property(fc.array(flakyEntryArb, { minLength: 0, maxLength: 10 }), (entries) => {
                 const html = generateFlakinessHtml(entries);
@@ -122,7 +125,8 @@ describe('GenerateFlakinessHtml — property-based', () => {
         );
     });
 
-    it('shows error severity when >5 high-flakiness entries', () => {
+    it('shows error severity when >5 high-flakiness entries', () => {expect.hasAssertions();
+
         fc.assert(
             fc.property(fc.array(flakyEntryArb, { minLength: 0, maxLength: 10 }), (entries) => {
                 const html = generateFlakinessHtml(entries);
@@ -135,7 +139,8 @@ describe('GenerateFlakinessHtml — property-based', () => {
         );
     });
 
-    it('shows no-threshold message when empty or all below threshold', () => {
+    it('shows no-threshold message when empty or all below threshold', () => {expect.hasAssertions();
+
         fc.assert(
             fc.property(fc.array(flakyEntryArb, { minLength: 0, maxLength: 10 }), (entries) => {
                 const html = generateFlakinessHtml(entries);
@@ -148,7 +153,8 @@ describe('GenerateFlakinessHtml — property-based', () => {
         );
     });
 
-    it('never outputs NaN or Infinity in HTML', () => {
+    it('never outputs NaN or Infinity in HTML', () => {expect.hasAssertions();
+
         fc.assert(
             fc.property(
                 fc.array(fc.oneof(flakyEntryArb, extremeEntryArb), { minLength: 0, maxLength: 10 }),
@@ -163,7 +169,8 @@ describe('GenerateFlakinessHtml — property-based', () => {
         );
     });
 
-    it('always shows summary cards with threshold and all-candidates count', () => {
+    it('always shows summary cards with threshold and all-candidates count', () => {expect.hasAssertions();
+
         fc.assert(
             fc.property(fc.array(flakyEntryArb, { minLength: 0, maxLength: 10 }), (entries) => {
                 const html = generateFlakinessHtml(entries);

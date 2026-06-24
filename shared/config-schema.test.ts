@@ -6,7 +6,8 @@ describe('CONFIG_SCHEMA', () => {
         expect(CONFIG_SCHEMA.length).toBeGreaterThanOrEqual(86);
     });
 
-    it('every entry has key, envVar, type, description', () => {
+    it('every entry has key, envVar, type, description', () => {expect.hasAssertions();
+
         for (const f of CONFIG_SCHEMA) {
             expect(f.key).toBeTruthy();
             expect(f.envVar).toBeTruthy();
@@ -15,7 +16,8 @@ describe('CONFIG_SCHEMA', () => {
         }
     });
 
-    it('every entry with defaultVal matches its type', () => {
+    it('every entry with defaultVal matches its type', () => {expect.hasAssertions();
+
         for (const f of CONFIG_SCHEMA) {
             if (f.defaultVal === undefined) continue;
             if (f.type === 'string') expect(typeof f.defaultVal).toBe('string');
@@ -89,7 +91,8 @@ describe('CONFIG_SCHEMA', () => {
         expect(f.envVar).toBe('OPENCODE_DB_TIMEOUT_MS');
     });
 
-    it('entries with allowedValues have matching type', () => {
+    it('entries with allowedValues have matching type', () => {expect.hasAssertions();
+
         for (const f of CONFIG_SCHEMA) {
             if (f.allowedValues) {
                 expect(f.type).toBe('string');
@@ -99,7 +102,8 @@ describe('CONFIG_SCHEMA', () => {
         }
     });
 
-    it('entries with category are properly grouped', () => {
+    it('entries with category are properly grouped', () => {expect.hasAssertions();
+
         for (const f of CONFIG_SCHEMA) {
             if (f.category) {
                 expect(typeof f.category).toBe('string');
@@ -108,7 +112,8 @@ describe('CONFIG_SCHEMA', () => {
         }
     });
 
-    it('all keys defined in alphabetical order within groups', () => {
+    it('all keys defined in alphabetical order within groups', () => {expect.hasAssertions();
+
         const firstGroupKeys = [
             'jiraBaseUrl',
             'jiraPersonalToken',

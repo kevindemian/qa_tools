@@ -28,7 +28,8 @@ afterAll(() => {
 });
 
 describe('Config.get boolean coercion — property-based', () => {
-    it('aUTO_CONFIRM returns boolean for any env value', () => {
+    it('aUTO_CONFIRM returns boolean for any env value', () => {expect.hasAssertions();
+
         fc.assert(
             fc.property(fc.string({ minLength: 0, maxLength: 20 }), (val) => {
                 process.env['AUTO_CONFIRM'] = val;
@@ -42,7 +43,8 @@ describe('Config.get boolean coercion — property-based', () => {
 });
 
 describe('Config.get number coercion — property-based', () => {
-    it('lOG_MAX_SIZE returns number for any env value', () => {
+    it('lOG_MAX_SIZE returns number for any env value', () => {expect.hasAssertions();
+
         fc.assert(
             fc.property(fc.string({ minLength: 0, maxLength: 20 }), (val) => {
                 process.env['LOG_MAX_SIZE'] = val;
@@ -56,7 +58,8 @@ describe('Config.get number coercion — property-based', () => {
 });
 
 describe('Config.get override precedence — property-based', () => {
-    it('override always beats env var', () => {
+    it('override always beats env var', () => {expect.hasAssertions();
+
         fc.assert(
             fc.property(
                 fc.string({ minLength: 1, maxLength: 50 }),
@@ -72,7 +75,8 @@ describe('Config.get override precedence — property-based', () => {
         );
     });
 
-    it('config.create isolated instance does not affect default', () => {
+    it('config.create isolated instance does not affect default', () => {expect.hasAssertions();
+
         fc.assert(
             fc.property(fc.boolean(), (customVal) => {
                 const before = Config.get<boolean>('autoConfirm');
@@ -93,7 +97,8 @@ describe('Config.getAllPrefixed — property-based', () => {
         process.env['OTHER_VAR'] = 'other';
     });
 
-    it('returns only env vars matching prefix', () => {
+    it('returns only env vars matching prefix', () => {expect.hasAssertions();
+
         fc.assert(
             fc.property(fc.boolean(), fc.boolean(), () => {
                 const result = Config.getAllPrefixed('TEST_PREFIX_');
@@ -108,7 +113,8 @@ describe('Config.getAllPrefixed — property-based', () => {
 });
 
 describe('Config.validateRequiredEnv — property-based', () => {
-    it('does not throw when all required env vars are present', () => {
+    it('does not throw when all required env vars are present', () => {expect.hasAssertions();
+
         fc.assert(
             fc.property(
                 fc.string({ minLength: 1, maxLength: 50 }),

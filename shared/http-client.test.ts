@@ -80,7 +80,7 @@ describe('HTTP Client', () => {
         it('registers response interceptor', () => {
             httpClient.createHttpClient({ baseUrl: 'https://api.test.com' });
 
-            expect(mockInstance.interceptors.response.use).toHaveBeenCalled();
+            expect(mockInstance.interceptors.response.use).toHaveBeenCalledWith();
         });
 
         it('uses default timeout when not specified', () => {
@@ -90,7 +90,8 @@ describe('HTTP Client', () => {
             expect(createSpy2).toHaveBeenCalledWith(expect.objectContaining({ timeout: 120000 }));
         });
 
-        it('sleep uses default setTimeout when no test override is active', async () => {
+        it('sleep uses default setTimeout when no test override is active', async () => {expect.hasAssertions();
+
             httpClient.setTestSleep(undefined);
             const promise = httpClient.sleep(1);
 
@@ -118,7 +119,8 @@ describe('HTTP Client', () => {
             code: undefined,
         });
 
-        it('retries GET up to HTTP_MAX_RETRIES (10) times', async () => {
+        it('retries GET up to HTTP_MAX_RETRIES (10) times', async () => {expect.hasAssertions();
+
             httpClient.createHttpClient({ baseUrl: 'https://api.test.com' });
             const err = makeError('get', 500, 0);
             mockInstance.mockImplementation((cfg: object) => {
@@ -137,7 +139,8 @@ describe('HTTP Client', () => {
             expect(mockInstance).toHaveBeenCalledTimes(10);
         });
 
-        it('retries PUT up to HTTP_MAX_RETRIES (10) times', async () => {
+        it('retries PUT up to HTTP_MAX_RETRIES (10) times', async () => {expect.hasAssertions();
+
             httpClient.createHttpClient({ baseUrl: 'https://api.test.com' });
             const err = makeError('put', 500, 0);
             mockInstance.mockImplementation((cfg: object) => {
@@ -156,7 +159,8 @@ describe('HTTP Client', () => {
             expect(mockInstance).toHaveBeenCalledTimes(10);
         });
 
-        it('does not retry POST', async () => {
+        it('does not retry POST', async () => {expect.hasAssertions();
+
             httpClient.createHttpClient({ baseUrl: 'https://api.test.com' });
             const err = makeError('post', 500, 0);
             // erro é esperado (POST não retry); catch vazio é intencional
@@ -169,7 +173,8 @@ describe('HTTP Client', () => {
             expect(mockInstance).not.toHaveBeenCalled();
         });
 
-        it('does not retry non-retryable errors (4xx)', async () => {
+        it('does not retry non-retryable errors (4xx)', async () => {expect.hasAssertions();
+
             httpClient.createHttpClient({ baseUrl: 'https://api.test.com' });
             const err: RetryError = {
                 message: 'Bad request',
@@ -199,7 +204,8 @@ describe('HTTP Client', () => {
             expect(result).toBe(response);
         });
 
-        it('re-throws error without config property', async () => {
+        it('re-throws error without config property', async () => {expect.hasAssertions();
+
             httpClient.createHttpClient({ baseUrl: 'https://api.test.com' });
             const err = new Error('no config');
             try {
@@ -211,7 +217,8 @@ describe('HTTP Client', () => {
             }
         });
 
-        it('defaults method to get when config.method is missing', async () => {
+        it('defaults method to get when config.method is missing', async () => {expect.hasAssertions();
+
             httpClient.createHttpClient({ baseUrl: 'https://api.test.com' });
             const err = Object.assign(new Error('no method'), {
                 config: { url: '/test' },
@@ -230,10 +237,11 @@ describe('HTTP Client', () => {
                 void 0;
             }
 
-            expect(mockInstance).toHaveBeenCalled();
+            expect(mockInstance).toHaveBeenCalledWith();
         });
 
-        it('retries GET up to custom maxRetries (2) and stops', async () => {
+        it('retries GET up to custom maxRetries (2) and stops', async () => {expect.hasAssertions();
+
             httpClient.createHttpClient({ baseUrl: 'https://api.test.com', maxRetries: 2 });
             const err = makeError('get', 500, 0);
             mockInstance.mockImplementation((cfg: object) => {
@@ -250,7 +258,8 @@ describe('HTTP Client', () => {
             expect(mockInstance).toHaveBeenCalledTimes(2);
         });
 
-        it('logs retry attempts at debug level, not warn', async () => {
+        it('logs retry attempts at debug level, not warn', async () => {expect.hasAssertions();
+
             const debugSpy = vi.spyOn(rootLogger, 'debug');
             const warnSpy = vi.spyOn(rootLogger, 'warn');
             httpClient.createHttpClient({ baseUrl: 'https://api.test.com' });
@@ -266,7 +275,7 @@ describe('HTTP Client', () => {
                 /* expected */
             }
 
-            expect(debugSpy).toHaveBeenCalled();
+            expect(debugSpy).toHaveBeenCalledWith();
             expect(warnSpy).not.toHaveBeenCalled();
 
             debugSpy.mockRestore();
@@ -275,7 +284,8 @@ describe('HTTP Client', () => {
     });
 
     describe('429 retry-after header (lines 128-129)', () => {
-        it('uses Retry-After value for wait time when header is a valid number', async () => {
+        it('uses Retry-After value for wait time when header is a valid number', async () => {expect.hasAssertions();
+
             httpClient.createHttpClient({ baseUrl: 'https://api.test.com' });
             const err = {
                 message: 'Rate limited',
@@ -299,7 +309,8 @@ describe('HTTP Client', () => {
             expect(callCount).toBe(2);
         });
 
-        it('falls back to exponential backoff when Retry-After header is not a number', async () => {
+        it('falls back to exponential backoff when Retry-After header is not a number', async () => {expect.hasAssertions();
+
             httpClient.createHttpClient({ baseUrl: 'https://api.test.com' });
             const err = {
                 message: 'Rate limited',
@@ -356,7 +367,8 @@ describe('HTTP Client', () => {
     });
 
     describe('CreateThrottledClient (branch coverage)', () => {
-        it('extractHost returns unknown for invalid URL', async () => {
+        it('extractHost returns unknown for invalid URL', async () => {expect.hasAssertions();
+
             httpClient.createThrottledClient({ baseUrl: 'https://api.test.com', maxConcurrency: 3 });
             const reqHandler = nonNull(mockInstance.interceptors.request.use.mock.calls[0])[0];
             const cfg: Record<string, unknown> = { url: ':::invalid', headers: {} };
@@ -366,7 +378,8 @@ describe('HTTP Client', () => {
             expect(result).toBe(cfg);
         });
 
-        it('acquire queues second request when concurrency is maxed out', async () => {
+        it('acquire queues second request when concurrency is maxed out', async () => {expect.hasAssertions();
+
             httpClient.createThrottledClient({ baseUrl: 'https://api.test.com', maxConcurrency: 1 });
             const reqHandler = nonNull(mockInstance.interceptors.request.use.mock.calls[0])[0];
             const respHandler = nonNull(mockInstance.interceptors.response.use.mock.calls[1])[0];
@@ -389,7 +402,8 @@ describe('HTTP Client', () => {
     });
 
     describe('HostSemaphore (direct)', () => {
-        it('acquire blocks when maxConcurrency reached and releases when slot frees', async () => {
+        it('acquire blocks when maxConcurrency reached and releases when slot frees', async () => {expect.hasAssertions();
+
             const sem = new HostSemaphore(1);
 
             await sem.acquire('test-host');
@@ -404,7 +418,8 @@ describe('HTTP Client', () => {
             await expect(p).resolves.toBeUndefined();
         });
 
-        it('release dispatches queued request and updates inflight', async () => {
+        it('release dispatches queued request and updates inflight', async () => {expect.hasAssertions();
+
             const sem = new HostSemaphore(2);
 
             await sem.acquire('h1');

@@ -85,7 +85,8 @@ const CoverageResultArb = fc
     });
 
 describe('BuildTraceabilityMatrix — property-based', () => {
-    it('nodes.length equals totalEpics', () => {
+    it('nodes.length equals totalEpics', () => {expect.hasAssertions();
+
         fc.assert(
             fc.property(MetricsStoreArb, CoverageResultArb, (metrics, coverage) => {
                 const result = buildTraceabilityMatrix(metrics, coverage);
@@ -96,7 +97,8 @@ describe('BuildTraceabilityMatrix — property-based', () => {
         );
     });
 
-    it('overallCoverage is in [0, 100]', () => {
+    it('overallCoverage is in [0, 100]', () => {expect.hasAssertions();
+
         fc.assert(
             fc.property(MetricsStoreArb, CoverageResultArb, (metrics, coverage) => {
                 const result = buildTraceabilityMatrix(metrics, coverage);
@@ -108,7 +110,8 @@ describe('BuildTraceabilityMatrix — property-based', () => {
         );
     });
 
-    it('totalTests and totalEpics are non-negative', () => {
+    it('totalTests and totalEpics are non-negative', () => {expect.hasAssertions();
+
         fc.assert(
             fc.property(MetricsStoreArb, CoverageResultArb, (metrics, coverage) => {
                 const result = buildTraceabilityMatrix(metrics, coverage);
@@ -120,7 +123,8 @@ describe('BuildTraceabilityMatrix — property-based', () => {
         );
     });
 
-    it('each node has required fields', () => {
+    it('each node has required fields', () => {expect.hasAssertions();
+
         fc.assert(
             fc.property(MetricsStoreArb, CoverageResultArb, (metrics, coverage) => {
                 const result = buildTraceabilityMatrix(metrics, coverage);
@@ -138,7 +142,8 @@ describe('BuildTraceabilityMatrix — property-based', () => {
         );
     });
 
-    it('timestamp is valid ISO string', () => {
+    it('timestamp is valid ISO string', () => {expect.hasAssertions();
+
         fc.assert(
             fc.property(MetricsStoreArb, CoverageResultArb, (metrics, coverage) => {
                 const result = buildTraceabilityMatrix(metrics, coverage);
@@ -161,7 +166,8 @@ describe('BuildTraceabilityMatrix — property-based', () => {
 });
 
 describe('GenerateTraceabilityHtml — property-based', () => {
-    it('always produces valid HTML with DOCTYPE', () => {
+    it('always produces valid HTML with DOCTYPE', () => {expect.hasAssertions();
+
         fc.assert(
             fc.property(MetricsStoreArb, CoverageResultArb, (metrics, coverage) => {
                 const result = buildTraceabilityMatrix(metrics, coverage);

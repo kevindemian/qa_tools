@@ -60,7 +60,8 @@ const metricsRunArb = fc
 /* ── Tests ───────────────────────────────────────────────────── */
 
 describe('CalculatePipelineCost — property-based', () => {
-    it('cost per run = (durationSec / 60) * costPerMinute', () => {
+    it('cost per run = (durationSec / 60) * costPerMinute', () => {expect.hasAssertions();
+
         fc.assert(
             fc.property(fc.array(metricsRunArb, { minLength: 1, maxLength: 20 }), costPerMinuteArb, (runs, cpm) => {
                 const result = calculatePipelineCost(runs, cpm);
@@ -74,7 +75,8 @@ describe('CalculatePipelineCost — property-based', () => {
         );
     });
 
-    it('totalCost = sum of all entry costs', () => {
+    it('totalCost = sum of all entry costs', () => {expect.hasAssertions();
+
         fc.assert(
             fc.property(fc.array(metricsRunArb, { minLength: 1, maxLength: 20 }), costPerMinuteArb, (runs, cpm) => {
                 const result = calculatePipelineCost(runs, cpm);
@@ -86,7 +88,8 @@ describe('CalculatePipelineCost — property-based', () => {
         );
     });
 
-    it('totalDurationSec = sum of all durations', () => {
+    it('totalDurationSec = sum of all durations', () => {expect.hasAssertions();
+
         fc.assert(
             fc.property(fc.array(metricsRunArb, { minLength: 1, maxLength: 20 }), costPerMinuteArb, (runs, cpm) => {
                 const result = calculatePipelineCost(runs, cpm);
@@ -98,7 +101,8 @@ describe('CalculatePipelineCost — property-based', () => {
         );
     });
 
-    it('avgCostPerRun = totalCost / runCount', () => {
+    it('avgCostPerRun = totalCost / runCount', () => {expect.hasAssertions();
+
         fc.assert(
             fc.property(fc.array(metricsRunArb, { minLength: 1, maxLength: 20 }), costPerMinuteArb, (runs, cpm) => {
                 const result = calculatePipelineCost(runs, cpm);
@@ -110,7 +114,8 @@ describe('CalculatePipelineCost — property-based', () => {
         );
     });
 
-    it('status: failed > 0 → failed, passed === total → passed, else partial', () => {
+    it('status: failed > 0 → failed, passed === total → passed, else partial', () => {expect.hasAssertions();
+
         fc.assert(
             fc.property(fc.array(metricsRunArb, { minLength: 1, maxLength: 20 }), costPerMinuteArb, (runs, cpm) => {
                 const result = calculatePipelineCost(runs, cpm);
@@ -132,7 +137,8 @@ describe('CalculatePipelineCost — property-based', () => {
         );
     });
 
-    it('entries sorted by timestamp descending', () => {
+    it('entries sorted by timestamp descending', () => {expect.hasAssertions();
+
         fc.assert(
             fc.property(fc.array(metricsRunArb, { minLength: 1, maxLength: 20 }), costPerMinuteArb, (runs, cpm) => {
                 const result = calculatePipelineCost(runs, cpm);
@@ -148,7 +154,8 @@ describe('CalculatePipelineCost — property-based', () => {
         );
     });
 
-    it('period.from is earliest, period.to is latest', () => {
+    it('period.from is earliest, period.to is latest', () => {expect.hasAssertions();
+
         fc.assert(
             fc.property(fc.array(metricsRunArb, { minLength: 1, maxLength: 20 }), costPerMinuteArb, (runs, cpm) => {
                 const result = calculatePipelineCost(runs, cpm);
@@ -161,7 +168,8 @@ describe('CalculatePipelineCost — property-based', () => {
         );
     });
 
-    it('returns zeroed result for null input', () => {
+    it('returns zeroed result for null input', () => {expect.hasAssertions();
+
         fc.assert(
             fc.property(fc.boolean(), () => {
                 const result = calculatePipelineCost(null);
@@ -175,7 +183,8 @@ describe('CalculatePipelineCost — property-based', () => {
         );
     });
 
-    it('returns zeroed result for undefined input', () => {
+    it('returns zeroed result for undefined input', () => {expect.hasAssertions();
+
         fc.assert(
             fc.property(fc.boolean(), () => {
                 const result = calculatePipelineCost(undefined);
@@ -189,7 +198,8 @@ describe('CalculatePipelineCost — property-based', () => {
         );
     });
 
-    it('returns zeroed result for empty array', () => {
+    it('returns zeroed result for empty array', () => {expect.hasAssertions();
+
         fc.assert(
             fc.property(fc.boolean(), () => {
                 const result = calculatePipelineCost([]);
@@ -203,7 +213,8 @@ describe('CalculatePipelineCost — property-based', () => {
         );
     });
 
-    it('uses default cost per minute of 0.01', () => {
+    it('uses default cost per minute of 0.01', () => {expect.hasAssertions();
+
         fc.assert(
             fc.property(fc.array(metricsRunArb, { minLength: 1, maxLength: 10 }), (runs) => {
                 const result = calculatePipelineCost(runs);
@@ -216,7 +227,8 @@ describe('CalculatePipelineCost — property-based', () => {
 });
 
 describe('GeneratePipelineCostHtml — property-based', () => {
-    it('always produces valid HTML with DOCTYPE', () => {
+    it('always produces valid HTML with DOCTYPE', () => {expect.hasAssertions();
+
         fc.assert(
             fc.property(
                 fc.array(metricsRunArb, { maxLength: 10 }),
@@ -234,7 +246,8 @@ describe('GeneratePipelineCostHtml — property-based', () => {
         );
     });
 
-    it('contains summary cards', () => {
+    it('contains summary cards', () => {expect.hasAssertions();
+
         fc.assert(
             fc.property(fc.array(metricsRunArb, { maxLength: 10 }), costPerMinuteArb, (runs, cpm) => {
                 const result = calculatePipelineCost(runs, cpm);
@@ -249,7 +262,8 @@ describe('GeneratePipelineCostHtml — property-based', () => {
         );
     });
 
-    it('returns error page for null/undefined result', () => {
+    it('returns error page for null/undefined result', () => {expect.hasAssertions();
+
         fc.assert(
             fc.property(fc.boolean(), () => {
                 const html = generatePipelineCostHtml(null);

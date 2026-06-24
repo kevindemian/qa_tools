@@ -28,7 +28,8 @@ beforeEach(() => {
 });
 
 describe('Case23 — AI Feedback', () => {
-    it('shows warning when no feedback records exist', async () => {
+    it('shows warning when no feedback records exist', async () => {expect.hasAssertions();
+
         mockShowSelect.mockResolvedValueOnce('a').mockResolvedValueOnce('0');
         mockGetSummary.mockReturnValue({
             totalRecords: 0,
@@ -45,7 +46,8 @@ describe('Case23 — AI Feedback', () => {
         expect(tableView).not.toHaveBeenCalled();
     });
 
-    it('displays summary when records exist', async () => {
+    it('displays summary when records exist', async () => {expect.hasAssertions();
+
         mockShowSelect.mockResolvedValueOnce('a').mockResolvedValueOnce('0');
         mockGetSummary.mockReturnValue({
             totalRecords: 5,
@@ -64,7 +66,8 @@ describe('Case23 — AI Feedback', () => {
         );
     });
 
-    it('displays recent records', async () => {
+    it('displays recent records', async () => {expect.hasAssertions();
+
         mockShowSelect.mockResolvedValueOnce('b').mockResolvedValueOnce('0');
         mockGetRecent.mockReturnValue([
             {
@@ -80,10 +83,11 @@ describe('Case23 — AI Feedback', () => {
 
         await case23Handler.handler(makeMockCommandContext());
 
-        expect(tableView).toHaveBeenCalled();
+        expect(tableView).toHaveBeenCalledWith();
     });
 
-    it('warns when no recent records', async () => {
+    it('warns when no recent records', async () => {expect.hasAssertions();
+
         mockShowSelect.mockResolvedValueOnce('b').mockResolvedValueOnce('0');
         mockGetRecent.mockReturnValue([]);
 

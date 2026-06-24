@@ -77,7 +77,8 @@ beforeEach(() => {
 });
 
 describe('GeneratePrReport — passRate invariants (property-based)', () => {
-    it('passRate is always in [0, 100]', async () => {
+    it('passRate is always in [0, 100]', async () => {expect.hasAssertions();
+
         await fc.assert(
             fc.asyncProperty(
                 fc.array(FlatTestArb, { minLength: 1, maxLength: 5 }),
@@ -103,7 +104,8 @@ describe('GeneratePrReport — passRate invariants (property-based)', () => {
         );
     });
 
-    it('passRate is 100 when failed is 0 and passed > 0', async () => {
+    it('passRate is 100 when failed is 0 and passed > 0', async () => {expect.hasAssertions();
+
         await fc.assert(
             fc.asyncProperty(
                 fc.array(FlatTestArb, { minLength: 1, maxLength: 5 }),
@@ -124,7 +126,8 @@ describe('GeneratePrReport — passRate invariants (property-based)', () => {
         );
     });
 
-    it('passRate is 0 when passed is 0 and failed > 0', async () => {
+    it('passRate is 0 when passed is 0 and failed > 0', async () => {expect.hasAssertions();
+
         await fc.assert(
             fc.asyncProperty(
                 fc.array(FlatTestArb, { minLength: 1, maxLength: 5 }),
@@ -145,7 +148,8 @@ describe('GeneratePrReport — passRate invariants (property-based)', () => {
         );
     });
 
-    it('passRate is 50 when passed === failed > 0', async () => {
+    it('passRate is 50 when passed === failed > 0', async () => {expect.hasAssertions();
+
         await fc.assert(
             fc.asyncProperty(
                 fc.array(FlatTestArb, { minLength: 1, maxLength: 5 }),
@@ -177,7 +181,8 @@ describe('ComputeDiffComparison — invariants (property-based)', () => {
         { requiredKeys: ['title', 'state', 'duration'] },
     );
 
-    it('returns undefined when previous is empty', () => {
+    it('returns undefined when previous is empty', () => {expect.hasAssertions();
+
         fc.assert(
             fc.property(fc.array(FlatTestArbForDiff, { minLength: 1, maxLength: 10 }), (current) => {
                 const result = computeDiffComparison(current, []);
@@ -188,7 +193,8 @@ describe('ComputeDiffComparison — invariants (property-based)', () => {
         );
     });
 
-    it('returns undefined when current and previous are identical', () => {
+    it('returns undefined when current and previous are identical', () => {expect.hasAssertions();
+
         fc.assert(
             fc.property(fc.array(FlatTestArbForDiff, { minLength: 1, maxLength: 10 }), (tests) => {
                 const result = computeDiffComparison(tests, tests);
@@ -199,7 +205,8 @@ describe('ComputeDiffComparison — invariants (property-based)', () => {
         );
     });
 
-    it('newFailures only contains tests that failed in current but passed in previous', () => {
+    it('newFailures only contains tests that failed in current but passed in previous', () => {expect.hasAssertions();
+
         fc.assert(
             fc.property(
                 fc.array(FlatTestArbForDiff, { minLength: 1, maxLength: 10 }),
@@ -220,7 +227,8 @@ describe('ComputeDiffComparison — invariants (property-based)', () => {
         );
     });
 
-    it('newPasses only contains tests that passed in current but failed in previous', () => {
+    it('newPasses only contains tests that passed in current but failed in previous', () => {expect.hasAssertions();
+
         fc.assert(
             fc.property(
                 fc.array(FlatTestArbForDiff, { minLength: 1, maxLength: 10 }),
@@ -241,7 +249,8 @@ describe('ComputeDiffComparison — invariants (property-based)', () => {
         );
     });
 
-    it('flaky contains tests whose state changed between runs', () => {
+    it('flaky contains tests whose state changed between runs', () => {expect.hasAssertions();
+
         fc.assert(
             fc.property(
                 fc.array(FlatTestArbForDiff, { minLength: 1, maxLength: 10 }),
@@ -263,7 +272,8 @@ describe('ComputeDiffComparison — invariants (property-based)', () => {
         );
     });
 
-    it('newFailures and newPasses are disjoint', () => {
+    it('newFailures and newPasses are disjoint', () => {expect.hasAssertions();
+
         fc.assert(
             fc.property(
                 fc.array(FlatTestArbForDiff, { minLength: 1, maxLength: 10 }),
@@ -282,7 +292,8 @@ describe('ComputeDiffComparison — invariants (property-based)', () => {
         );
     });
 
-    it('all returned tests exist in current run', () => {
+    it('all returned tests exist in current run', () => {expect.hasAssertions();
+
         fc.assert(
             fc.property(
                 fc.array(FlatTestArbForDiff, { minLength: 1, maxLength: 10 }),

@@ -43,14 +43,16 @@ describe('IssueLinker', () => {
     describe('AssociatePrecondition', () => {
         const opLog = { info: vi.fn() };
 
-        it('returns null when no precondition', async () => {
+        it('returns null when no precondition', async () => {expect.hasAssertions();
+
             const result = await linker.associatePrecondition({ title: 'Test', steps: [] }, 'TEST-1', opLog);
 
             expect(result).toBeNull();
             expect(mockLinkManager['associatePrecondition']).not.toHaveBeenCalled();
         });
 
-        it('returns null on success', async () => {
+        it('returns null on success', async () => {expect.hasAssertions();
+
             mockLinkManager.associatePrecondition.mockResolvedValue(null);
             const test: TestCase = { title: 'Test', steps: [], precondition: { type: 'reference', value: 'PREC-001' } };
             const result = await linker.associatePrecondition(test, 'TEST-1', opLog);
@@ -59,7 +61,8 @@ describe('IssueLinker', () => {
             expect(mockLinkManager['associatePrecondition']).toHaveBeenCalledWith('TEST-1', 'PREC-001');
         });
 
-        it('calls success when not quiet', async () => {
+        it('calls success when not quiet', async () => {expect.hasAssertions();
+
             mockLinkManager.associatePrecondition.mockResolvedValue(null);
             mockPrompt.isQuiet.mockReturnValue(false);
             const test: TestCase = { title: 'Test', steps: [], precondition: { type: 'reference', value: 'PREC-001' } };
@@ -68,7 +71,8 @@ describe('IssueLinker', () => {
             expect(mockPrompt.success).toHaveBeenCalledWith('  Pre-condition PREC-001 associada');
         });
 
-        it('returns abort action on error', async () => {
+        it('returns abort action on error', async () => {expect.hasAssertions();
+
             mockLinkManager.associatePrecondition.mockRejectedValue(new Error('API error'));
             mockPrompt.onError.mockReturnValue('abort');
             const test: TestCase = { title: 'Test', steps: [], precondition: { type: 'reference', value: 'PREC-001' } };
@@ -79,20 +83,23 @@ describe('IssueLinker', () => {
     });
 
     describe('LinkIssues', () => {
-        it('returns null when no linkedIssues', async () => {
+        it('returns null when no linkedIssues', async () => {expect.hasAssertions();
+
             const result = await linker.linkIssues('TEST-1', { title: 'Test', steps: [] });
 
             expect(result).toBeNull();
             expect(mockLinkManager['linkIssues']).not.toHaveBeenCalled();
         });
 
-        it('returns null when linkedIssues is empty array', async () => {
+        it('returns null when linkedIssues is empty array', async () => {expect.hasAssertions();
+
             const result = await linker.linkIssues('TEST-1', { title: 'Test', steps: [], linkedIssues: [] });
 
             expect(result).toBeNull();
         });
 
-        it('returns null on success', async () => {
+        it('returns null on success', async () => {expect.hasAssertions();
+
             mockLinkManager.linkIssues.mockResolvedValue(undefined);
             const test: TestCase = {
                 title: 'Test',
@@ -105,7 +112,8 @@ describe('IssueLinker', () => {
             expect(mockLinkManager['linkIssues']).toHaveBeenCalledWith('TEST-1', test.linkedIssues);
         });
 
-        it('calls success when not quiet', async () => {
+        it('calls success when not quiet', async () => {expect.hasAssertions();
+
             mockLinkManager.linkIssues.mockResolvedValue(undefined);
             mockPrompt.isQuiet.mockReturnValue(false);
             const test: TestCase = {
@@ -118,7 +126,8 @@ describe('IssueLinker', () => {
             expect(mockPrompt.success).toHaveBeenCalledWith('  1 linked issue(s) criados');
         });
 
-        it('returns action on error', async () => {
+        it('returns action on error', async () => {expect.hasAssertions();
+
             mockLinkManager.linkIssues.mockRejectedValue(new Error('API error'));
             mockPrompt.onError.mockReturnValue('retry');
             const test: TestCase = {
@@ -133,27 +142,31 @@ describe('IssueLinker', () => {
     });
 
     describe('UpdateCrossReferences', () => {
-        it('does nothing when tests array is empty', async () => {
+        it('does nothing when tests array is empty', async () => {expect.hasAssertions();
+
             await linker.updateCrossReferences([], []);
 
             expect(mockJiraResource['getJiraResource']).not.toHaveBeenCalled();
         });
 
-        it('skips tests without id or group', async () => {
+        it('skips tests without id or group', async () => {expect.hasAssertions();
+
             const tests: TestCase[] = [{ title: 'Test', steps: [], group: '' }];
             await linker.updateCrossReferences(tests, ['']);
 
             expect(mockJiraResource['getJiraResource']).not.toHaveBeenCalled();
         });
 
-        it('skips groups with fewer than 2 members', async () => {
+        it('skips groups with fewer than 2 members', async () => {expect.hasAssertions();
+
             const tests: TestCase[] = [{ title: 'Test', steps: [], group: 'G1' }];
             await linker.updateCrossReferences(tests, ['TEST-1']);
 
             expect(mockJiraResource['getJiraResource']).not.toHaveBeenCalled();
         });
 
-        it('updates descriptions for all group members', async () => {
+        it('updates descriptions for all group members', async () => {expect.hasAssertions();
+
             mockJiraResource.getJiraResource
                 .mockResolvedValueOnce({ fields: { description: 'Old desc' } })
                 .mockResolvedValueOnce({ fields: { description: '' } });
@@ -170,7 +183,8 @@ describe('IssueLinker', () => {
             expect(mockJiraResource['putJiraResource']).toHaveBeenCalledWith('issue/TEST-2', expect.any(Object));
         });
 
-        it('skips already updated issues', async () => {
+        it('skips already updated issues', async () => {expect.hasAssertions();
+
             mockJiraResource.getJiraResource.mockResolvedValue({
                 fields: { description: 'This test case is part of the set Grupo X: TEST-2' },
             });
@@ -183,7 +197,8 @@ describe('IssueLinker', () => {
             expect(mockJiraResource['putJiraResource']).not.toHaveBeenCalled();
         });
 
-        it('handles getJiraResource error', async () => {
+        it('handles getJiraResource error', async () => {expect.hasAssertions();
+
             mockJiraResource.getJiraResource.mockRejectedValue({ response: { status: 404 } });
             const tests: TestCase[] = [
                 { title: 'Test1', group: 'G1', steps: [] },
@@ -194,7 +209,8 @@ describe('IssueLinker', () => {
             expect(mockJiraResource['putJiraResource']).not.toHaveBeenCalled();
         });
 
-        it('handles putJiraResource error', async () => {
+        it('handles putJiraResource error', async () => {expect.hasAssertions();
+
             mockJiraResource.getJiraResource
                 .mockResolvedValueOnce({ fields: { description: 'Old' } })
                 .mockResolvedValueOnce({ fields: { description: 'Old' } });
@@ -208,7 +224,8 @@ describe('IssueLinker', () => {
             expect(mockJiraResource['putJiraResource']).toHaveBeenCalledTimes(2);
         });
 
-        it('writes green char on success when not quiet', async () => {
+        it('writes green char on success when not quiet', async () => {expect.hasAssertions();
+
             mockPrompt.isQuiet.mockReturnValue(false);
             mockJiraResource.getJiraResource
                 .mockResolvedValueOnce({ fields: { description: 'Old' } })
@@ -223,7 +240,8 @@ describe('IssueLinker', () => {
             expect(mockPrompt.print).toHaveBeenCalledWith(expect.stringContaining('+'));
         });
 
-        it('writes red char on error when not quiet', async () => {
+        it('writes red char on error when not quiet', async () => {expect.hasAssertions();
+
             mockPrompt.isQuiet.mockReturnValue(false);
             mockJiraResource.getJiraResource
                 .mockResolvedValueOnce({ fields: { description: 'Old' } })

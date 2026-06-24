@@ -75,7 +75,8 @@ beforeEach(() => {
 });
 
 describe('HandleBugCreation', () => {
-    it('creates bug successfully when jira env is configured and user confirms', async () => {
+    it('creates bug successfully when jira env is configured and user confirms', async () => {expect.hasAssertions();
+
         vi.mocked(_jiraEnv).mockReturnValue({
             base: 'https://jira.example.com',
             token: 'tok',
@@ -102,7 +103,8 @@ describe('HandleBugCreation', () => {
         expect(pushHistory).toHaveBeenCalledWith('create-jira-issue', 'ECSPOL-123', 'ok');
     });
 
-    it('prints error when Config.get("jiraProject") is not set', async () => {
+    it('prints error when Config.get("jiraProject") is not set', async () => {expect.hasAssertions();
+
         vi.mocked(_jiraEnv).mockReturnValue({
             base: 'https://jira.example.com',
             token: 'tok',
@@ -122,7 +124,8 @@ describe('HandleBugCreation', () => {
         Config.set('jiraProject', 'ECSPOL');
     });
 
-    it('returns early when jira env is not configured', async () => {
+    it('returns early when jira env is not configured', async () => {expect.hasAssertions();
+
         vi.mocked(_jiraEnv).mockReturnValue(null);
 
         await handleBugCreation(mockParseResult, 42, 'main', mockAnalysisReport, mockJiraResource, testBackend);
@@ -133,7 +136,8 @@ describe('HandleBugCreation', () => {
         expect(pushHistory).not.toHaveBeenCalled();
     });
 
-    it('returns early when user declines confirmation', async () => {
+    it('returns early when user declines confirmation', async () => {expect.hasAssertions();
+
         vi.mocked(_jiraEnv).mockReturnValue({
             base: 'https://jira.example.com',
             token: 'tok',
@@ -149,7 +153,8 @@ describe('HandleBugCreation', () => {
         expect(pushHistory).not.toHaveBeenCalled();
     });
 
-    it('handles jira API failure gracefully', async () => {
+    it('handles jira API failure gracefully', async () => {expect.hasAssertions();
+
         vi.mocked(_jiraEnv).mockReturnValue({
             base: 'https://jira.example.com',
             token: 'tok',
@@ -167,7 +172,8 @@ describe('HandleBugCreation', () => {
         expect(pushHistory).toHaveBeenCalledWith('create-jira-issue', '42', 'error');
     });
 
-    it('assigns bugReport description from analysisReport content', async () => {
+    it('assigns bugReport description from analysisReport content', async () => {expect.hasAssertions();
+
         vi.mocked(_jiraEnv).mockReturnValue({
             base: 'https://jira.example.com',
             token: 'tok',
@@ -187,7 +193,8 @@ describe('HandleBugCreation', () => {
         );
     });
 
-    it('passes pipelineId as string regardless of input type', async () => {
+    it('passes pipelineId as string regardless of input type', async () => {expect.hasAssertions();
+
         vi.mocked(_jiraEnv).mockReturnValue({
             base: 'https://jira.example.com',
             token: 'tok',

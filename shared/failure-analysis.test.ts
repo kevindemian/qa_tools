@@ -29,7 +29,8 @@ beforeEach(() => {
 });
 
 describe('AnalyzeFailuresWithReport', () => {
-    it('returns empty content when no failed tests', async () => {
+    it('returns empty content when no failed tests', async () => {expect.hasAssertions();
+
         const tests: FlatTest[] = [{ title: 'Pass', state: 'passed', duration: 100 }];
 
         const result = await analyzeFailuresWithReport(tests);
@@ -38,7 +39,8 @@ describe('AnalyzeFailuresWithReport', () => {
         expect(mockReviewWithLlm).not.toHaveBeenCalled();
     });
 
-    it('passes LlmContext to reviewWithLlm when provided', async () => {
+    it('passes LlmContext to reviewWithLlm when provided', async () => {expect.hasAssertions();
+
         const promptContent = 'Analyze these failures:\n{{FAILED_TESTS}}';
         vi.spyOn(fs, 'readFileSync').mockReturnValue(promptContent);
         mockReviewWithLlm.mockResolvedValueOnce({
@@ -67,7 +69,8 @@ describe('AnalyzeFailuresWithReport', () => {
         expect(userMsg).toContain('Login fails');
     });
 
-    it('23.9: analyzeFailuresWithReport HTML exception path', async () => {
+    it('23.9: analyzeFailuresWithReport HTML exception path', async () => {expect.hasAssertions();
+
         // Mock to trigger exception during HTML report generation
         const promptContent = 'Analyze these failures:\n{{FAILED_TESTS}}';
         vi.spyOn(fs, 'readFileSync').mockReturnValue(promptContent);
@@ -83,7 +86,8 @@ describe('AnalyzeFailuresWithReport', () => {
         expect(result.fallbackUsed).toBeTruthy();
     });
 
-    it('23.10: HTML report output verified', async () => {
+    it('23.10: HTML report output verified', async () => {expect.hasAssertions();
+
         const promptContent = 'Analyze these failures:\n{{FAILED_TESTS}}';
         vi.spyOn(fs, 'readFileSync').mockReturnValue(promptContent);
         mockReviewWithLlm.mockResolvedValueOnce({
@@ -99,7 +103,8 @@ describe('AnalyzeFailuresWithReport', () => {
         expect(result.content).toContain('Root cause: assertion error');
     });
 
-    it('handles missing prompt template gracefully', async () => {
+    it('handles missing prompt template gracefully', async () => {expect.hasAssertions();
+
         vi.spyOn(fs, 'readFileSync').mockImplementation(() => {
             throw new Error('ENOENT');
         });
@@ -111,7 +116,8 @@ describe('AnalyzeFailuresWithReport', () => {
         expect(result.content).toBe('');
     });
 
-    it('returns fallback=true when template is missing', async () => {
+    it('returns fallback=true when template is missing', async () => {expect.hasAssertions();
+
         vi.spyOn(fs, 'readFileSync').mockImplementation(() => {
             throw new Error('ENOENT');
         });
@@ -125,7 +131,8 @@ describe('AnalyzeFailuresWithReport', () => {
 });
 
 describe('ClassifyFailure', () => {
-    it('calls llmPrompt (fast tier) with test title and Zod schema', async () => {
+    it('calls llmPrompt (fast tier) with test title and Zod schema', async () => {expect.hasAssertions();
+
         const promptContent = 'Classify: ';
         vi.spyOn(fs, 'readFileSync').mockReturnValue(promptContent);
         mockLlmPrompt.mockResolvedValueOnce('ASSERTION: expected true but got false');
@@ -142,7 +149,8 @@ describe('ClassifyFailure', () => {
         expect(mockLlmPrompt).toHaveBeenCalledWith(expect.objectContaining({ tier: 'fast', callerId: 'classify' }));
     });
 
-    it('returns valid classification when llmPrompt returns matching format', async () => {
+    it('returns valid classification when llmPrompt returns matching format', async () => {expect.hasAssertions();
+
         const promptContent = 'Classify: ';
         vi.spyOn(fs, 'readFileSync').mockReturnValue(promptContent);
         mockLlmPrompt.mockResolvedValueOnce('ASSERTION: expected 200 got 500');
@@ -152,7 +160,8 @@ describe('ClassifyFailure', () => {
         expect(result).toBe('ASSERTION: expected 200 got 500');
     });
 
-    it('falls back to UNKNOWN when llmPrompt throws (Zod validation failed after retry)', async () => {
+    it('falls back to UNKNOWN when llmPrompt throws (Zod validation failed after retry)', async () => {expect.hasAssertions();
+
         const promptContent = 'Classify: ';
         vi.spyOn(fs, 'readFileSync').mockReturnValue(promptContent);
         // Self-consistency calls llmPrompt 3×; fallback calls it 1× more
@@ -163,7 +172,8 @@ describe('ClassifyFailure', () => {
         expect(result).toBe('UNKNOWN: Could not classify failure after retry');
     });
 
-    it('returns UNKNOWN when classify.md cannot be read', async () => {
+    it('returns UNKNOWN when classify.md cannot be read', async () => {expect.hasAssertions();
+
         vi.spyOn(fs, 'readFileSync').mockImplementation(() => {
             throw new Error('ENOENT');
         });

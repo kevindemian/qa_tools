@@ -27,27 +27,31 @@ describe('DiscoverModels', () => {
         vi.restoreAllMocks();
     });
 
-    it('returns empty array for unknown provider', async () => {
+    it('returns empty array for unknown provider', async () => {expect.hasAssertions();
+
         const result = await discoverModels('custom', 'test-key');
 
         expect(result).toEqual([]);
     });
 
-    it('returns empty array when fetch fails', async () => {
+    it('returns empty array when fetch fails', async () => {expect.hasAssertions();
+
         mockFetchReject(new Error('network error'));
         const result = await discoverModels('openai', 'sk-test');
 
         expect(result).toEqual([]);
     });
 
-    it('returns empty array on non-ok response', async () => {
+    it('returns empty array on non-ok response', async () => {expect.hasAssertions();
+
         mockFetchError(401, { error: 'unauthorized' });
         const result = await discoverModels('openai', 'sk-test');
 
         expect(result).toEqual([]);
     });
 
-    it('returns models from OpenAI adapter response', async () => {
+    it('returns models from OpenAI adapter response', async () => {expect.hasAssertions();
+
         mockFetch({
             data: [
                 { id: 'gpt-4o', object: 'model' },
@@ -61,7 +65,8 @@ describe('DiscoverModels', () => {
         expect(result[0]?.context).toBe(0);
     });
 
-    it('returns models with context from Gemini adapter', async () => {
+    it('returns models with context from Gemini adapter', async () => {expect.hasAssertions();
+
         mockFetch({
             models: [{ name: 'models/gemini-2.0-flash', inputTokenLimit: 1048576 }],
         });
@@ -72,7 +77,8 @@ describe('DiscoverModels', () => {
         expect(result[0]?.context).toBe(1048576);
     });
 
-    it('returns models with capabilities from Anthropic adapter', async () => {
+    it('returns models with capabilities from Anthropic adapter', async () => {expect.hasAssertions();
+
         mockFetch({
             data: [
                 {
@@ -93,7 +99,8 @@ describe('DiscoverModels', () => {
         expect(result[0]?.context).toBe(200000);
     });
 
-    it('returns empty for unknown adapter (no buildProbeRequest)', async () => {
+    it('returns empty for unknown adapter (no buildProbeRequest)', async () => {expect.hasAssertions();
+
         const result = await discoverModels('opencode-go', 'test');
 
         expect(result).toEqual([]);
@@ -124,7 +131,8 @@ describe('AssignTierHints', () => {
         expect(model.tiers).toContain('batch');
     });
 
-    it('assigns tiers respecting per-tier uniqueness', () => {
+    it('assigns tiers respecting per-tier uniqueness', () => {expect.hasAssertions();
+
         const models: RegistryModel[] = [
             { id: 'gpt-4o', context: 128000, costPer1kPrompt: 0, costPer1kCompletion: 0, tiers: [] },
             { id: 'gpt-4o-mini', context: 128000, costPer1kPrompt: 0, costPer1kCompletion: 0, tiers: [] },
@@ -138,7 +146,8 @@ describe('AssignTierHints', () => {
         }
     });
 
-    it('does not assign the same model to the same tier twice', () => {
+    it('does not assign the same model to the same tier twice', () => {expect.hasAssertions();
+
         const models: RegistryModel[] = [
             { id: 'model-a', context: 64000, costPer1kPrompt: 0, costPer1kCompletion: 0, tiers: [] },
             { id: 'model-b', context: 32000, costPer1kPrompt: 0, costPer1kCompletion: 0, tiers: [] },

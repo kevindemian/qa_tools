@@ -59,7 +59,8 @@ beforeEach(() => {
 });
 
 describe('ReviewWithLlm', () => {
-    it('returns high confidence when reviewer agrees', async () => {
+    it('returns high confidence when reviewer agrees', async () => {expect.hasAssertions();
+
         mockLlmPrompt
             .mockResolvedValueOnce(validParsedReport)
             .mockResolvedValueOnce('AGREE - The analysis is accurate and complete.');
@@ -72,7 +73,8 @@ describe('ReviewWithLlm', () => {
         expect(result.adversarialRetried).toBeUndefined();
     });
 
-    it('returns medium confidence with reviewer notes when adversarial retry fails', async () => {
+    it('returns medium confidence with reviewer notes when adversarial retry fails', async () => {expect.hasAssertions();
+
         mockLlmPrompt
             .mockResolvedValueOnce(validParsedReport)
             .mockResolvedValueOnce('PARTIAL - Missing details on timeout threshold.')
@@ -87,7 +89,8 @@ describe('ReviewWithLlm', () => {
         expect(result.confidence).toBe('medium');
     });
 
-    it('triggers adversarial retry when reviewerNotes have medium confidence', async () => {
+    it('triggers adversarial retry when reviewerNotes have medium confidence', async () => {expect.hasAssertions();
+
         mockLlmPrompt
             .mockResolvedValueOnce(validParsedReport)
             .mockResolvedValueOnce('PARTIAL - ok')
@@ -102,7 +105,8 @@ describe('ReviewWithLlm', () => {
         expect(result.content).toContain('ASSERTION');
     });
 
-    it('retries when validation fails and eventually succeeds', async () => {
+    it('retries when validation fails and eventually succeeds', async () => {expect.hasAssertions();
+
         mockLlmPrompt
             .mockResolvedValueOnce(invalidParsedReport)
             .mockResolvedValueOnce(validParsedReport)
@@ -115,7 +119,8 @@ describe('ReviewWithLlm', () => {
         expect(mockLlmPrompt).toHaveBeenCalledTimes(3);
     });
 
-    it('falls back to main when report returns non-object (null from attemptPrimary)', async () => {
+    it('falls back to main when report returns non-object (null from attemptPrimary)', async () => {expect.hasAssertions();
+
         mockLlmPrompt
             .mockRejectedValueOnce(new Error('Zod validation failed'))
             .mockResolvedValueOnce('fallback content');
@@ -128,7 +133,8 @@ describe('ReviewWithLlm', () => {
         expect(result.fallbackUsed).toBeTruthy();
     });
 
-    it('falls back to main when all retries fail validation', async () => {
+    it('falls back to main when all retries fail validation', async () => {expect.hasAssertions();
+
         mockLlmPrompt
             .mockResolvedValueOnce(invalidParsedReport)
             .mockResolvedValueOnce(invalidParsedReport)
@@ -144,7 +150,8 @@ describe('ReviewWithLlm', () => {
         expect(mockLlmPrompt).toHaveBeenCalledTimes(5);
     });
 
-    it('buildRetryPrompt includes validation errors and invalid response', async () => {
+    it('buildRetryPrompt includes validation errors and invalid response', async () => {expect.hasAssertions();
+
         mockLlmPrompt
             .mockResolvedValueOnce(invalidParsedReport)
             .mockResolvedValueOnce(validParsedReport)
@@ -157,7 +164,8 @@ describe('ReviewWithLlm', () => {
         expect(retrySystemArg).toContain(JSON.stringify(invalidParsedReport));
     });
 
-    it('returns fallback when report is non-object and main fails', async () => {
+    it('returns fallback when report is non-object and main fails', async () => {expect.hasAssertions();
+
         mockLlmPrompt.mockRejectedValueOnce(new Error('Zod failed')).mockRejectedValueOnce(new Error('Main API error'));
 
         const result = await reviewWithLlm('system prompt', 'user prompt');
@@ -167,7 +175,8 @@ describe('ReviewWithLlm', () => {
         expect(result.reviewed).toBeFalsy();
     });
 
-    it('exhausts MAX_RETRIES=3 before falling back', async () => {
+    it('exhausts MAX_RETRIES=3 before falling back', async () => {expect.hasAssertions();
+
         mockLlmPrompt
             .mockResolvedValueOnce(invalidParsedReport)
             .mockResolvedValueOnce(invalidParsedReport)

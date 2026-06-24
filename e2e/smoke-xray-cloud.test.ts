@@ -28,7 +28,8 @@ describe('Smoke-xray-cloud', () => {
         expect(Config.get('xrayMode')).toBe('cloud');
     });
 
-    it.runIf(process.env['XRAY_MODE'] === 'cloud')('default XrayClient instantiates from JiraResource', async () => {
+    it.runIf(process.env['XRAY_MODE'] === 'cloud')('default XrayClient instantiates from JiraResource', async () => {expect.hasAssertions();
+
         const mod = await import('../jira_management/xray-client.js');
 
         expect(mod).toBeDefined();

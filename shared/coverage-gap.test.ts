@@ -42,7 +42,8 @@ beforeEach(() => {
 });
 
 describe('AnalyzeCoverageGaps', () => {
-    it('returns metrics for uncovered issues', async () => {
+    it('returns metrics for uncovered issues', async () => {expect.hasAssertions();
+
         mockSearch
             .mockResolvedValueOnce({ issues: [], total: 2 })
             .mockResolvedValueOnce({ issues: [makeIssue('PROJ-1'), makeIssue('PROJ-2')], total: 2 })
@@ -55,7 +56,8 @@ describe('AnalyzeCoverageGaps', () => {
         expect(result.totals.rawCoveragePct).toBe(0);
     });
 
-    it('detects linked tests via issuelinks', async () => {
+    it('detects linked tests via issuelinks', async () => {expect.hasAssertions();
+
         mockSearch
             .mockResolvedValueOnce({ issues: [], total: 2 })
             .mockResolvedValueOnce({
@@ -77,7 +79,8 @@ describe('AnalyzeCoverageGaps', () => {
         expect(nonNull(result.items[0]).linkedTestKeys).toContain('TEST-1');
     });
 
-    it('calculates weighted coverage by priority', async () => {
+    it('calculates weighted coverage by priority', async () => {expect.hasAssertions();
+
         mockSearch
             .mockResolvedValueOnce({ issues: [], total: 3 })
             .mockResolvedValueOnce({
@@ -107,7 +110,8 @@ describe('AnalyzeCoverageGaps', () => {
         expect(result.totals.weightedCoveragePct).toBeGreaterThan(0);
     });
 
-    it('handles >5000 issues by fetching recent/active only', async () => {
+    it('handles >5000 issues by fetching recent/active only', async () => {expect.hasAssertions();
+
         const manyIssues = Array.from({ length: 30 }, (_, i) => makeIssue('PROJ-' + (i + 1)));
         mockSearch
             .mockResolvedValueOnce({ issues: [], total: 6000 })
@@ -118,7 +122,8 @@ describe('AnalyzeCoverageGaps', () => {
         expect(result.items).toHaveLength(30);
     });
 
-    it('builds epic rollup with correct counts', async () => {
+    it('builds epic rollup with correct counts', async () => {expect.hasAssertions();
+
         mockSearch
             .mockResolvedValueOnce({ issues: [], total: 3 })
             .mockResolvedValueOnce({
@@ -142,7 +147,8 @@ describe('AnalyzeCoverageGaps', () => {
         expect(nonNull(result.byEpic['EPIC-1']).rawPct).toBe(50);
     });
 
-    it('quality gate passes when all epics meet threshold', async () => {
+    it('quality gate passes when all epics meet threshold', async () => {expect.hasAssertions();
+
         mockSearch
             .mockResolvedValueOnce({ issues: [], total: 2 })
             .mockResolvedValueOnce({
@@ -164,7 +170,8 @@ describe('AnalyzeCoverageGaps', () => {
         expect(nonNull(result.byEpic['EPIC-1']).gatePass).toBeTruthy();
     });
 
-    it('quality gate fails when epics below threshold', async () => {
+    it('quality gate fails when epics below threshold', async () => {expect.hasAssertions();
+
         mockSearch
             .mockResolvedValueOnce({ issues: [], total: 2 })
             .mockResolvedValueOnce({
@@ -181,7 +188,8 @@ describe('AnalyzeCoverageGaps', () => {
         expect(nonNull(result.byEpic['EPIC-1']).gatePass).toBeFalsy();
     });
 
-    it('builds hierarchy tree with epics and children', async () => {
+    it('builds hierarchy tree with epics and children', async () => {expect.hasAssertions();
+
         mockSearch
             .mockResolvedValueOnce({ issues: [], total: 3 })
             .mockResolvedValueOnce({
@@ -208,7 +216,8 @@ describe('AnalyzeCoverageGaps', () => {
         expect(nonNull(result.hierarchy[0]).coveredIssues).toBe(1);
     });
 
-    it('returns empty result for empty project', async () => {
+    it('returns empty result for empty project', async () => {expect.hasAssertions();
+
         mockSearch.mockResolvedValueOnce({ issues: [], total: 0 });
         const result = await analyzeCoverageGaps(mockJiraResource, 'PROJ');
 
@@ -216,7 +225,8 @@ describe('AnalyzeCoverageGaps', () => {
         expect(result.items).toEqual([]);
     });
 
-    it('returns 100% coverage when all issues have tests', async () => {
+    it('returns 100% coverage when all issues have tests', async () => {expect.hasAssertions();
+
         mockSearch
             .mockResolvedValueOnce({ issues: [], total: 2 })
             .mockResolvedValueOnce({
@@ -240,7 +250,8 @@ describe('AnalyzeCoverageGaps', () => {
         expect(result.totals.rawCoveragePct).toBe(100);
     });
 
-    it('returns 0% coverage when no issues have tests', async () => {
+    it('returns 0% coverage when no issues have tests', async () => {expect.hasAssertions();
+
         mockSearch
             .mockResolvedValueOnce({ issues: [], total: 2 })
             .mockResolvedValueOnce({ issues: [makeIssue('PROJ-1'), makeIssue('PROJ-2')], total: 2 })
@@ -250,7 +261,8 @@ describe('AnalyzeCoverageGaps', () => {
         expect(result.totals.rawCoveragePct).toBe(0);
     });
 
-    it('handles searchJiraIssues throwing an error', async () => {
+    it('handles searchJiraIssues throwing an error', async () => {expect.hasAssertions();
+
         mockSearch.mockRejectedValueOnce(new Error('API timeout'));
         const result = await analyzeCoverageGaps(mockJiraResource, 'PROJ');
 
@@ -258,7 +270,8 @@ describe('AnalyzeCoverageGaps', () => {
         expect(result.items).toEqual([]);
     });
 
-    it('correctly identifies issue types', async () => {
+    it('correctly identifies issue types', async () => {expect.hasAssertions();
+
         mockSearch
             .mockResolvedValueOnce({ issues: [], total: 3 })
             .mockResolvedValueOnce({
@@ -277,7 +290,8 @@ describe('AnalyzeCoverageGaps', () => {
         expect(nonNull(result.items[2]).type).toBe('Task');
     });
 
-    it('loads trends from metrics store', async () => {
+    it('loads trends from metrics store', async () => {expect.hasAssertions();
+
         mockLoadMetrics.mockReturnValue({
             runs: [],
             coverageHistory: [
@@ -300,7 +314,8 @@ describe('AnalyzeCoverageGaps', () => {
         expect(nonNull(result.trends[0]).coveragePct).toBe(50);
     });
 
-    it('handles fetchLinkedTestsBatch error (lines 84-85)', async () => {
+    it('handles fetchLinkedTestsBatch error (lines 84-85)', async () => {expect.hasAssertions();
+
         mockSearch
             .mockResolvedValueOnce({ issues: [], total: 1 })
             .mockResolvedValueOnce({ issues: [makeIssue('PROJ-1')], total: 1 })
@@ -311,7 +326,8 @@ describe('AnalyzeCoverageGaps', () => {
         expect(nonNull(result.items[0]).linkedTestKeys).toEqual([]);
     });
 
-    it('handles fetchLinkedTestsBatch empty response (line 68)', async () => {
+    it('handles fetchLinkedTestsBatch empty response (line 68)', async () => {expect.hasAssertions();
+
         mockSearch
             .mockResolvedValueOnce({ issues: [], total: 1 })
             .mockResolvedValueOnce({ issues: [makeIssue('PROJ-1')], total: 1 })
@@ -321,7 +337,8 @@ describe('AnalyzeCoverageGaps', () => {
         expect(nonNull(result.items[0]).linkedTestKeys).toEqual([]);
     });
 
-    it('handles collectAllPages with empty issues batch (line 43)', async () => {
+    it('handles collectAllPages with empty issues batch (line 43)', async () => {expect.hasAssertions();
+
         mockSearch
             .mockResolvedValueOnce({ issues: [], total: 0 })
             .mockResolvedValueOnce({ issues: [], total: 0 })
@@ -331,7 +348,8 @@ describe('AnalyzeCoverageGaps', () => {
         expect(result.totals.totalIssues).toBe(0);
     });
 
-    it('handles linked tests with issuelinks on issue (lines 70-83)', async () => {
+    it('handles linked tests with issuelinks on issue (lines 70-83)', async () => {expect.hasAssertions();
+
         mockSearch
             .mockResolvedValueOnce({ issues: [], total: 2 })
             .mockResolvedValueOnce({
@@ -353,7 +371,8 @@ describe('AnalyzeCoverageGaps', () => {
         expect(result.totals.covered).toBe(2);
     });
 
-    it('handles collectAllPages catch error (lines 53-54)', async () => {
+    it('handles collectAllPages catch error (lines 53-54)', async () => {expect.hasAssertions();
+
         mockSearch
             .mockResolvedValueOnce({ issues: [], total: 1 })
             .mockRejectedValueOnce(new Error('collect pages error'));

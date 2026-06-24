@@ -34,7 +34,8 @@ const ProjectFeatureConfigArb = fc.record({
 const ProjectKeyArb = fc.string({ minLength: 1, maxLength: 30 }).filter((s) => s !== '__proto__');
 
 describe('FeatureConfigStoreSchema — property-based', () => {
-    it('aceita qualquer Record<string, ProjectFeatureConfig> válido', () => {
+    it('aceita qualquer Record<string, ProjectFeatureConfig> válido', () => {expect.hasAssertions();
+
         fc.assert(
             fc.property(fc.dictionary(ProjectKeyArb, ProjectFeatureConfigArb), (store) => {
                 const result = FeatureConfigStoreSchema.safeParse(store);
@@ -45,7 +46,8 @@ describe('FeatureConfigStoreSchema — property-based', () => {
         );
     });
 
-    it('rejeita não-objetos (string, number, null, array)', () => {
+    it('rejeita não-objetos (string, number, null, array)', () => {expect.hasAssertions();
+
         fc.assert(
             fc.property(
                 fc.oneof(fc.string(), fc.integer(), fc.boolean(), fc.constant(null), fc.array(fc.anything())),
@@ -59,7 +61,8 @@ describe('FeatureConfigStoreSchema — property-based', () => {
         );
     });
 
-    it('rejeita valores com publishTarget inválido', () => {
+    it('rejeita valores com publishTarget inválido', () => {expect.hasAssertions();
+
         fc.assert(
             fc.property(
                 fc
@@ -85,7 +88,8 @@ describe('FeatureConfigStoreSchema — property-based', () => {
         );
     });
 
-    it('prReportFeatureConfig skip flags aceitam boolean ou undefined', () => {
+    it('prReportFeatureConfig skip flags aceitam boolean ou undefined', () => {expect.hasAssertions();
+
         fc.assert(
             fc.property(
                 fc.option(fc.boolean(), { nil: undefined }),
@@ -142,7 +146,8 @@ function resolvePublishTargetPure(
 }
 
 describe('ResolvePublishTarget — property-based invariants', () => {
-    it('retorna publishTarget configurado quando enabled=true', () => {
+    it('retorna publishTarget configurado quando enabled=true', () => {expect.hasAssertions();
+
         fc.assert(
             fc.property(
                 fc.constantFrom(...ValidTargets),
@@ -158,7 +163,8 @@ describe('ResolvePublishTarget — property-based invariants', () => {
         );
     });
 
-    it('retorna gitlab-ci quando enabled=false e gitProvider é gitlab (qualquer origem)', () => {
+    it('retorna gitlab-ci quando enabled=false e gitProvider é gitlab (qualquer origem)', () => {expect.hasAssertions();
+
         fc.assert(
             fc.property(fc.constantFrom(...ValidTargets), (target) => {
                 // Se gitProvider='gitlab' explícito
@@ -170,7 +176,8 @@ describe('ResolvePublishTarget — property-based invariants', () => {
         );
     });
 
-    it('retorna github-actions quando enabled=false e sem gitProvider gitlab', () => {
+    it('retorna github-actions quando enabled=false e sem gitProvider gitlab', () => {expect.hasAssertions();
+
         fc.assert(
             fc.property(
                 fc.constantFrom(...ValidTargets),
@@ -187,7 +194,8 @@ describe('ResolvePublishTarget — property-based invariants', () => {
         );
     });
 
-    it('retorno é sempre um PublishTarget válido', () => {
+    it('retorno é sempre um PublishTarget válido', () => {expect.hasAssertions();
+
         fc.assert(
             fc.property(
                 fc.boolean(),
@@ -204,7 +212,8 @@ describe('ResolvePublishTarget — property-based invariants', () => {
         );
     });
 
-    it('explicitGitProvider tem precedência sobre storedGitProvider', () => {
+    it('explicitGitProvider tem precedência sobre storedGitProvider', () => {expect.hasAssertions();
+
         fc.assert(
             fc.property(fc.constantFrom(...ValidTargets), (target) => {
                 // stored=gitlab, explicit=github => github-actions (precedência do explicit)

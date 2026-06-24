@@ -39,7 +39,8 @@ beforeEach(() => {
 });
 
 describe('FT-41a: reads config and prompts for CSV path', () => {
-    it('uses Config.get csvPath when set', async () => {
+    it('uses Config.get csvPath when set', async () => {expect.hasAssertions();
+
         mockConfigGet.mockImplementation((key: string) => {
             if (key === 'csvPath') return '/custom/path.csv';
             if (key === 'csvDefaultPath') return '/default/path.csv';
@@ -57,7 +58,8 @@ describe('FT-41a: reads config and prompts for CSV path', () => {
         expect(mockCreateTestsFromCsv).toHaveBeenCalledWith(expect.objectContaining({ csvPath: '/custom/path.csv' }));
     });
 
-    it('falls back to askFilePath when csvPath is not set', async () => {
+    it('falls back to askFilePath when csvPath is not set', async () => {expect.hasAssertions();
+
         mockConfigGet.mockReturnValue(undefined);
         mockCreateTestsFromCsv.mockResolvedValue({
             inMemoryTasksId: [],
@@ -68,7 +70,7 @@ describe('FT-41a: reads config and prompts for CSV path', () => {
 
         await case01.handler(makeContext());
 
-        expect(mockCreateTestsFromCsv).toHaveBeenCalled();
+        expect(mockCreateTestsFromCsv).toHaveBeenCalledWith();
 
         const csvPath = mockCreateTestsFromCsv.mock.calls[0]?.[0]?.csvPath;
 
@@ -77,7 +79,8 @@ describe('FT-41a: reads config and prompts for CSV path', () => {
 });
 
 describe('FT-41b: parses Jira labels correctly', () => {
-    it('splits comma-separated labels into trimmed array', async () => {
+    it('splits comma-separated labels into trimmed array', async () => {expect.hasAssertions();
+
         mockConfigGet.mockImplementation((key: string) => {
             if (key === 'csvLabels') return ' label1 , label2 , label3 ';
             return undefined;
@@ -96,7 +99,8 @@ describe('FT-41b: parses Jira labels correctly', () => {
         );
     });
 
-    it('passes empty array when labels input is empty', async () => {
+    it('passes empty array when labels input is empty', async () => {expect.hasAssertions();
+
         mockConfigGet.mockReturnValue(undefined);
         mockCreateTestsFromCsv.mockResolvedValue({
             inMemoryTasksId: [],
@@ -112,7 +116,8 @@ describe('FT-41b: parses Jira labels correctly', () => {
 });
 
 describe('FT-41c: stores in-memory tasks when result is truthy', () => {
-    it('sets ctx inMemoryTasksId and inMemoryTasksText', async () => {
+    it('sets ctx inMemoryTasksId and inMemoryTasksText', async () => {expect.hasAssertions();
+
         mockConfigGet.mockReturnValue(undefined);
         mockCreateTestsFromCsv.mockResolvedValue({
             inMemoryTasksId: ['TEST-1', 'TEST-2'],
@@ -130,7 +135,8 @@ describe('FT-41c: stores in-memory tasks when result is truthy', () => {
         expect(ctx.pushHistory).toHaveBeenCalledWith('csv-import', '2 tests imported', 'OK');
     });
 
-    it('does not call offerTestExecution when inMemoryTasksId is empty', async () => {
+    it('does not call offerTestExecution when inMemoryTasksId is empty', async () => {expect.hasAssertions();
+
         mockConfigGet.mockReturnValue(undefined);
         mockCreateTestsFromCsv.mockResolvedValue({
             inMemoryTasksId: [],
@@ -144,7 +150,8 @@ describe('FT-41c: stores in-memory tasks when result is truthy', () => {
         expect(mockOfferTE).not.toHaveBeenCalled();
     });
 
-    it('calls offerTestExecution when inMemoryTasksId is non-empty', async () => {
+    it('calls offerTestExecution when inMemoryTasksId is non-empty', async () => {expect.hasAssertions();
+
         mockConfigGet.mockReturnValue(undefined);
         mockCreateTestsFromCsv.mockResolvedValue({
             inMemoryTasksId: ['TEST-1'],
@@ -161,14 +168,16 @@ describe('FT-41c: stores in-memory tasks when result is truthy', () => {
 });
 
 describe('FT-41d: handles null/undefined result from createTestsFromCsv', () => {
-    it('does not throw when createTestsFromCsv returns undefined', async () => {
+    it('does not throw when createTestsFromCsv returns undefined', async () => {expect.hasAssertions();
+
         mockConfigGet.mockReturnValue(undefined);
         mockCreateTestsFromCsv.mockResolvedValue(undefined);
 
         await expect(case01.handler(makeContext())).resolves.toBeUndefined();
     });
 
-    it('does not throw when createTestsFromCsv throws', async () => {
+    it('does not throw when createTestsFromCsv throws', async () => {expect.hasAssertions();
+
         mockConfigGet.mockReturnValue(undefined);
         mockCreateTestsFromCsv.mockRejectedValue(new Error('Jira API error'));
 

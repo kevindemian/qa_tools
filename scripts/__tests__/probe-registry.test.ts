@@ -42,7 +42,8 @@ describe('Probe-registry', () => {
     });
 
     describe('DiffModels', () => {
-        it('detects added models', async () => {
+        it('detects added models', async () => {expect.hasAssertions();
+
             mockRegistryFetch();
             const mod = await import('../probe-registry.js');
             const discovered = [
@@ -60,7 +61,8 @@ describe('Probe-registry', () => {
             expect(diff.added[0]?.model).toBe('gpt-5');
         });
 
-        it('detects removed models', async () => {
+        it('detects removed models', async () => {expect.hasAssertions();
+
             mockRegistryFetch();
             const mod = await import('../probe-registry.js');
             const discovered = [
@@ -76,7 +78,8 @@ describe('Probe-registry', () => {
             expect(diff.removed[0]?.model).toBe('gpt-3.5-turbo');
         });
 
-        it('detects context changes', async () => {
+        it('detects context changes', async () => {expect.hasAssertions();
+
             mockRegistryFetch();
             const mod = await import('../probe-registry.js');
             const discovered = [
@@ -93,7 +96,8 @@ describe('Probe-registry', () => {
             expect(diff.changed[0]?.new).toBe(256000);
         });
 
-        it('detects cost changes', async () => {
+        it('detects cost changes', async () => {expect.hasAssertions();
+
             mockRegistryFetch();
             const mod = await import('../probe-registry.js');
             const discovered = [
@@ -110,7 +114,8 @@ describe('Probe-registry', () => {
             expect(costChanges[0]?.new).toBe(0.003);
         });
 
-        it('returns empty diff when nothing changed', async () => {
+        it('returns empty diff when nothing changed', async () => {expect.hasAssertions();
+
             mockRegistryFetch();
             const mod = await import('../probe-registry.js');
             const models = [
@@ -125,7 +130,8 @@ describe('Probe-registry', () => {
     });
 
     describe('WriteMarkdownReport', () => {
-        it('writes summary with changes', async () => {
+        it('writes summary with changes', async () => {expect.hasAssertions();
+
             mockRegistryFetch();
             const mod = await import('../probe-registry.js');
             const reports = [
@@ -144,7 +150,8 @@ describe('Probe-registry', () => {
             expect(report).toContain('gpt-4o');
         });
 
-        it('writes no changes summary', async () => {
+        it('writes no changes summary', async () => {expect.hasAssertions();
+
             mockRegistryFetch();
             const mod = await import('../probe-registry.js');
             const reports = [] as Array<{
@@ -160,7 +167,8 @@ describe('Probe-registry', () => {
     });
 
     describe('ParseArgs', () => {
-        it('parses --provider flag', async () => {
+        it('parses --provider flag', async () => {expect.hasAssertions();
+
             mockRegistryFetch();
             vi.stubGlobal('process', {
                 argv: ['node', 'probe-registry.ts', '--provider', 'openai'],
@@ -173,7 +181,8 @@ describe('Probe-registry', () => {
             expect(args.createPr).toBeFalsy();
         });
 
-        it('parses --dry-run flag', async () => {
+        it('parses --dry-run flag', async () => {expect.hasAssertions();
+
             mockRegistryFetch();
             vi.stubGlobal('process', {
                 argv: ['node', 'probe-registry.ts', '--dry-run'],
@@ -185,7 +194,8 @@ describe('Probe-registry', () => {
             expect(args.dryRun).toBeTruthy();
         });
 
-        it('parses --pr flag', async () => {
+        it('parses --pr flag', async () => {expect.hasAssertions();
+
             mockRegistryFetch();
             vi.stubGlobal('process', {
                 argv: ['node', 'probe-registry.ts', '--pr'],
@@ -196,7 +206,8 @@ describe('Probe-registry', () => {
             expect(args.createPr).toBeTruthy();
         });
 
-        it('returns defaults for no flags', async () => {
+        it('returns defaults for no flags', async () => {expect.hasAssertions();
+
             mockRegistryFetch();
             vi.stubGlobal('process', {
                 argv: ['node', 'probe-registry.ts'],
@@ -211,7 +222,8 @@ describe('Probe-registry', () => {
     });
 
     describe('GetProviderModels', () => {
-        it('returns models for known provider', async () => {
+        it('returns models for known provider', async () => {expect.hasAssertions();
+
             mockRegistryFetch();
             const mod = await import('../probe-registry.js');
             const registry = JSON.parse(JSON.stringify(VALID_REGISTRY)) as Record<string, unknown>;
@@ -221,7 +233,8 @@ describe('Probe-registry', () => {
             expect(models[0]?.id).toBe('gpt-4o');
         });
 
-        it('returns empty for unknown provider', async () => {
+        it('returns empty for unknown provider', async () => {expect.hasAssertions();
+
             mockRegistryFetch();
             const mod = await import('../probe-registry.js');
             const registry = JSON.parse(JSON.stringify(VALID_REGISTRY)) as Record<string, unknown>;
@@ -230,7 +243,8 @@ describe('Probe-registry', () => {
             expect(models).toEqual([]);
         });
 
-        it('returns empty when providers key is missing', async () => {
+        it('returns empty when providers key is missing', async () => {expect.hasAssertions();
+
             mockRegistryFetch();
             const mod = await import('../probe-registry.js');
             const models = mod.getProviderModels({}, 'openai');
@@ -240,7 +254,8 @@ describe('Probe-registry', () => {
     });
 
     describe('EnrichFromOpenRouter', () => {
-        it('enriches models with context and capabilities', async () => {
+        it('enriches models with context and capabilities', async () => {expect.hasAssertions();
+
             mockRegistryFetch();
             const mod = await import('../probe-registry.js');
             const models = [{ id: 'gpt-4o', context: 0, costPer1kPrompt: 0, costPer1kCompletion: 0, tiers: [] }];
@@ -251,7 +266,8 @@ describe('Probe-registry', () => {
             expect((models[0] as Record<string, unknown>)['capabilities']).toEqual(['vision']);
         });
 
-        it('skips models not in OpenRouter map', async () => {
+        it('skips models not in OpenRouter map', async () => {expect.hasAssertions();
+
             mockRegistryFetch();
             const mod = await import('../probe-registry.js');
             const models = [{ id: 'unknown-model', context: 0, costPer1kPrompt: 0, costPer1kCompletion: 0, tiers: [] }];
@@ -261,7 +277,8 @@ describe('Probe-registry', () => {
             expect(models[0]?.context).toBe(0);
         });
 
-        it('does not override higher context with OpenRouter zero context', async () => {
+        it('does not override higher context with OpenRouter zero context', async () => {expect.hasAssertions();
+
             mockRegistryFetch();
             const mod = await import('../probe-registry.js');
             const models = [{ id: 'gpt-4o', context: 128000, costPer1kPrompt: 0, costPer1kCompletion: 0, tiers: [] }];

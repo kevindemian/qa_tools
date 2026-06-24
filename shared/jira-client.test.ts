@@ -83,7 +83,8 @@ describe('JiraClient', () => {
     });
 
     describe('GetJiraResource', () => {
-        it('returns data on successful GET', async () => {
+        it('returns data on successful GET', async () => {expect.hasAssertions();
+
             const data = { id: '123', key: 'TEST-1' };
             mockGet.mockResolvedValue({ data });
             const client = new JiraClient(TOKEN, BASE_URL);
@@ -93,7 +94,8 @@ describe('JiraClient', () => {
             expect(mockGet).toHaveBeenCalledWith('/issue/TEST-1');
         });
 
-        it('throws on GET error', async () => {
+        it('throws on GET error', async () => {expect.hasAssertions();
+
             mockGet.mockRejectedValue(new Error('Network error'));
             const client = new JiraClient(TOKEN, BASE_URL);
 
@@ -102,7 +104,8 @@ describe('JiraClient', () => {
     });
 
     describe('PostJiraResource', () => {
-        it('returns data on successful POST', async () => {
+        it('returns data on successful POST', async () => {expect.hasAssertions();
+
             const payload = { fields: { summary: 'Test' } };
             const data = { id: '456', key: 'TEST-2' };
             mockPost.mockResolvedValue({ data });
@@ -113,7 +116,8 @@ describe('JiraClient', () => {
             expect(mockPost).toHaveBeenCalledWith('/issue', payload);
         });
 
-        it('throws on POST error', async () => {
+        it('throws on POST error', async () => {expect.hasAssertions();
+
             mockPost.mockRejectedValue(new Error('Conflict'));
             const client = new JiraClient(TOKEN, BASE_URL);
 
@@ -122,7 +126,8 @@ describe('JiraClient', () => {
     });
 
     describe('PutJiraResource', () => {
-        it('returns null on 204 response', async () => {
+        it('returns null on 204 response', async () => {expect.hasAssertions();
+
             mockPut.mockResolvedValue({ status: 204 });
             const client = new JiraClient(TOKEN, BASE_URL);
             const result = await client.putJiraResource('issue/TEST-1', {});
@@ -130,7 +135,8 @@ describe('JiraClient', () => {
             expect(result).toBeNull();
         });
 
-        it('returns data on non-204 PUT', async () => {
+        it('returns data on non-204 PUT', async () => {expect.hasAssertions();
+
             const data = { key: 'TEST-1' };
             mockPut.mockResolvedValue({ status: 200, data });
             const client = new JiraClient(TOKEN, BASE_URL);
@@ -139,7 +145,8 @@ describe('JiraClient', () => {
             expect(result).toEqual(data);
         });
 
-        it('throws on PUT error', async () => {
+        it('throws on PUT error', async () => {expect.hasAssertions();
+
             mockPut.mockRejectedValue(new Error('Forbidden'));
             const client = new JiraClient(TOKEN, BASE_URL);
 
@@ -148,7 +155,8 @@ describe('JiraClient', () => {
     });
 
     describe('GetFromOriginPath', () => {
-        it('builds full URL from origin and path', async () => {
+        it('builds full URL from origin and path', async () => {expect.hasAssertions();
+
             const data = { content: 'data' };
             mockGet.mockResolvedValue({ data });
             const client = new JiraClient(TOKEN, BASE_URL);
@@ -158,7 +166,8 @@ describe('JiraClient', () => {
             expect(mockGet).toHaveBeenCalledWith('https://instance.atlassian.net/secure/attachment/1');
         });
 
-        it('strips leading slash from path', async () => {
+        it('strips leading slash from path', async () => {expect.hasAssertions();
+
             const data = { content: 'test' };
             mockGet.mockResolvedValue({ data });
             const client = new JiraClient(TOKEN, BASE_URL);
@@ -169,7 +178,8 @@ describe('JiraClient', () => {
     });
 
     describe('SearchJiraIssues', () => {
-        it('calls search with encoded JQL', async () => {
+        it('calls search with encoded JQL', async () => {expect.hasAssertions();
+
             const response = { total: 1, issues: [{ key: 'TEST-1' }] };
             mockGet.mockResolvedValue({ data: response });
             const client = new JiraClient(TOKEN, BASE_URL);
@@ -181,7 +191,8 @@ describe('JiraClient', () => {
     });
 
     describe('GetTransitionsForIssue', () => {
-        it('returns transitions as name→id map', async () => {
+        it('returns transitions as name→id map', async () => {expect.hasAssertions();
+
             const data = {
                 transitions: [
                     { id: '11', name: 'To Do' },
@@ -196,7 +207,8 @@ describe('JiraClient', () => {
             expect(result).toEqual({ 'To Do': '11', 'In Progress': '21', Done: '31' });
         });
 
-        it('returns empty map when no transitions', async () => {
+        it('returns empty map when no transitions', async () => {expect.hasAssertions();
+
             mockGet.mockResolvedValue({ data: {} });
             const client = new JiraClient(TOKEN, BASE_URL);
             const result = await client.getTransitionsForIssue('TEST-1');
@@ -206,7 +218,8 @@ describe('JiraClient', () => {
     });
 
     describe('TransitionIssue', () => {
-        it('posts transition payload', async () => {
+        it('posts transition payload', async () => {expect.hasAssertions();
+
             mockPost.mockResolvedValue({ data: {} });
             const client = new JiraClient(TOKEN, BASE_URL);
             await client.transitionIssue('TEST-1', '21');

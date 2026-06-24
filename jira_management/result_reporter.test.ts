@@ -177,7 +177,8 @@ describe('CreateTestExecutionFromResults', () => {
         linkManager = new JiraLinkManager(linkJiraRes);
     });
 
-    it('creates TE with matched results and links', async () => {
+    it('creates TE with matched results and links', async () => {expect.hasAssertions();
+
         jiraResource.getJiraResource.mockImplementation((url: string) => {
             if (url === 'issuetype') return Promise.resolve(MOCK_ISSUE_TYPES);
             if (url === 'field') return Promise.resolve(MOCK_FIELDS);
@@ -210,7 +211,8 @@ describe('CreateTestExecutionFromResults', () => {
         expect(postArg).toHaveProperty('fields.summary', expect.stringContaining('Results:'));
     });
 
-    it('skips linking for skipped tests', async () => {
+    it('skips linking for skipped tests', async () => {expect.hasAssertions();
+
         jiraResource.getJiraResource.mockImplementation((url: string) => {
             if (url === 'issuetype') return Promise.resolve(MOCK_ISSUE_TYPES);
             if (url === 'field') return Promise.resolve(MOCK_FIELDS);
@@ -244,7 +246,8 @@ describe('CreateTestExecutionFromResults', () => {
         expect(nonNull(linkCalls[0])[1].outwardIssue.key).toBe('TEST-1');
     });
 
-    it('logs warning when createIssueLink throws, but execution is still created', async () => {
+    it('logs warning when createIssueLink throws, but execution is still created', async () => {expect.hasAssertions();
+
         jiraResource.getJiraResource.mockImplementation((url: string) => {
             if (url === 'issuetype') return Promise.resolve(MOCK_ISSUE_TYPES);
             if (url === 'field') return Promise.resolve(MOCK_FIELDS);
@@ -267,7 +270,8 @@ describe('CreateTestExecutionFromResults', () => {
         expect(rootLogger['warn']).toHaveBeenCalledWith(expect.stringContaining('Falha ao linkar'));
     });
 
-    it('uses existingTeKey to add tests to existing TE instead of creating new', async () => {
+    it('uses existingTeKey to add tests to existing TE instead of creating new', async () => {expect.hasAssertions();
+
         const teKey = 'EXEC-EXISTING-1';
         jiraResource.getJiraResource.mockImplementation((url: string) => {
             if (url === 'issue/' + teKey) {

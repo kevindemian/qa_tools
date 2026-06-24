@@ -158,7 +158,8 @@ describe('GenerateCoverageGapHtml', () => {
         expect(html).not.toContain('Coverage Gap Analysis');
     });
 
-    it('returns error HTML when date formatting fails', async () => {
+    it('returns error HTML when date formatting fails', async () => {expect.hasAssertions();
+
         const { formatDateISO } = await import('./date-utils.js');
         vi.mocked(formatDateISO).mockImplementationOnce(() => {
             throw new Error('mock error');

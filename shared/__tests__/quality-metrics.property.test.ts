@@ -37,7 +37,8 @@ function snapshotBase(): QualityMetricsSnapshot {
 /* ── Tests ───────────────────────────────────────────────────── */
 
 describe('QualityMetricsCollector — property-based', () => {
-    it('invariantFireRate: sum of all rates = 1 (or 0 when none)', () => {
+    it('invariantFireRate: sum of all rates = 1 (or 0 when none)', () => {expect.hasAssertions();
+
         fc.assert(
             fc.property(fc.array(fc.record({ id: invariantArb() }), { minLength: 0, maxLength: 50 }), (fires) => {
                 const collector = new QualityMetricsCollector();
@@ -56,7 +57,8 @@ describe('QualityMetricsCollector — property-based', () => {
         );
     });
 
-    it('invariantFireRate: each rate in [0, 1]', () => {
+    it('invariantFireRate: each rate in [0, 1]', () => {expect.hasAssertions();
+
         fc.assert(
             fc.property(fc.array(invariantArb(), { minLength: 0, maxLength: 50 }), (fires) => {
                 const collector = new QualityMetricsCollector();
@@ -77,7 +79,8 @@ describe('QualityMetricsCollector — property-based', () => {
         );
     });
 
-    it('layerPassRate: em [0, 1], default 1 sem attempts', () => {
+    it('layerPassRate: em [0, 1], default 1 sem attempts', () => {expect.hasAssertions();
+
         fc.assert(
             fc.property(
                 fc.array(layerArb(), { minLength: 0, maxLength: 30 }),
@@ -99,7 +102,8 @@ describe('QualityMetricsCollector — property-based', () => {
         );
     });
 
-    it('snapshot: avgStructureScore consistente', () => {
+    it('snapshot: avgStructureScore consistente', () => {expect.hasAssertions();
+
         fc.assert(
             fc.property(
                 fc.array(fc.float({ min: 0, max: 100, noNaN: true }), { minLength: 0, maxLength: 20 }),
@@ -121,7 +125,8 @@ describe('QualityMetricsCollector — property-based', () => {
         );
     });
 
-    it('clear: reseta todos os acumuladores', () => {
+    it('clear: reseta todos os acumuladores', () => {expect.hasAssertions();
+
         fc.assert(
             fc.property(
                 fc.array(invariantArb(), { minLength: 1, maxLength: 20 }),
@@ -147,7 +152,8 @@ describe('QualityMetricsCollector — property-based', () => {
         );
     });
 
-    it('detectDrift: < 2 snapshots → []', () => {
+    it('detectDrift: < 2 snapshots → []', () => {expect.hasAssertions();
+
         fc.assert(
             fc.property(fc.array(invariantArb(), { minLength: 0, maxLength: 10 }), (fires) => {
                 const collector = new QualityMetricsCollector();
@@ -160,7 +166,8 @@ describe('QualityMetricsCollector — property-based', () => {
         );
     });
 
-    it('detectDrift: invariante sem baseline suficiente é ignorado', () => {
+    it('detectDrift: invariante sem baseline suficiente é ignorado', () => {expect.hasAssertions();
+
         fc.assert(
             fc.property(
                 fc.array(invariantArb(), { minLength: 1, maxLength: 5 }),
@@ -186,7 +193,8 @@ describe('QualityMetricsCollector — property-based', () => {
         );
     });
 
-    it('detectDrift: drift detectado quando ratio atual > 2σ', () => {
+    it('detectDrift: drift detectado quando ratio atual > 2σ', () => {expect.hasAssertions();
+
         fc.assert(
             fc.property(fc.integer({ min: 40, max: 49 }), fc.integer({ min: 60, max: 70 }), (lowCount, highCount) => {
                 const targetId = 'TARGET';

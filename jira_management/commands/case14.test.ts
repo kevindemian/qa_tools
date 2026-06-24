@@ -20,7 +20,8 @@ describe('Case14 — config Cypress directory', () => {
         expect(typeof case14.handler).toBe('function');
     });
 
-    it('executes without error with basic context', async () => {
+    it('executes without error with basic context', async () => {expect.hasAssertions();
+
         const result = await case14.handler(mockContext);
 
         expect(result === undefined || typeof result === 'boolean').toBeTruthy();

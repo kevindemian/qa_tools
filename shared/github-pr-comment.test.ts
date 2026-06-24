@@ -36,7 +36,8 @@ describe('PostPrComment', () => {
         process.env = { ...originalEnv };
     });
 
-    it('posts comment to correct GitHub API URL', async () => {
+    it('posts comment to correct GitHub API URL', async () => {expect.hasAssertions();
+
         mockPost.mockResolvedValueOnce({
             data: { id: 123, html_url: 'https://github.com/owner/repo/pull/42#issuecomment-123' },
         });
@@ -56,7 +57,8 @@ describe('PostPrComment', () => {
         });
     });
 
-    it('returns null when GITHUB_TOKEN is missing', async () => {
+    it('returns null when GITHUB_TOKEN is missing', async () => {expect.hasAssertions();
+
         delete penv['GITHUB_TOKEN'];
 
         const result = await postPrComment('body');
@@ -65,7 +67,8 @@ describe('PostPrComment', () => {
         expect(result).toBeNull();
     });
 
-    it('returns null when GITHUB_REPOSITORY is missing', async () => {
+    it('returns null when GITHUB_REPOSITORY is missing', async () => {expect.hasAssertions();
+
         delete penv['GITHUB_REPOSITORY'];
 
         const result = await postPrComment('body');
@@ -74,7 +77,8 @@ describe('PostPrComment', () => {
         expect(result).toBeNull();
     });
 
-    it('returns null when PR number is missing', async () => {
+    it('returns null when PR number is missing', async () => {expect.hasAssertions();
+
         delete penv['GITHUB_PR_NUMBER'];
 
         const result = await postPrComment('body');
@@ -83,7 +87,8 @@ describe('PostPrComment', () => {
         expect(result).toBeNull();
     });
 
-    it('uses explicit config over env vars', async () => {
+    it('uses explicit config over env vars', async () => {expect.hasAssertions();
+
         mockPost.mockResolvedValueOnce({
             data: { id: 456, html_url: 'https://github.com/custom/repo/pull/99#issuecomment-456' },
         });
@@ -107,7 +112,8 @@ describe('PostPrComment', () => {
         });
     });
 
-    it('handles API error gracefully', async () => {
+    it('handles API error gracefully', async () => {expect.hasAssertions();
+
         mockPost.mockRejectedValueOnce({
             response: { status: 403 },
             message: 'Forbidden',
@@ -118,7 +124,8 @@ describe('PostPrComment', () => {
         expect(result).toBeNull();
     });
 
-    it('handles network error without response', async () => {
+    it('handles network error without response', async () => {expect.hasAssertions();
+
         mockPost.mockRejectedValueOnce(new Error('Network error'));
 
         const result = await postPrComment('body');
@@ -126,7 +133,8 @@ describe('PostPrComment', () => {
         expect(result).toBeNull();
     });
 
-    it('uses CI_PR_NUMBER fallback', async () => {
+    it('uses CI_PR_NUMBER fallback', async () => {expect.hasAssertions();
+
         delete penv['GITHUB_PR_NUMBER'];
         penv['CI_PR_NUMBER'] = '77';
 
@@ -144,7 +152,8 @@ describe('PostPrComment', () => {
         expect(result?.id).toBe(789);
     });
 
-    it('parses PR number from GITHUB_REF (github-actions fallback)', async () => {
+    it('parses PR number from GITHUB_REF (github-actions fallback)', async () => {expect.hasAssertions();
+
         delete penv['GITHUB_PR_NUMBER'];
         delete penv['CI_PR_NUMBER'];
         penv['GITHUB_REF'] = 'refs/pull/123/merge';
@@ -163,7 +172,8 @@ describe('PostPrComment', () => {
         expect(result?.id).toBe(999);
     });
 
-    it('does not parse non-PR GITHUB_REF as number', async () => {
+    it('does not parse non-PR GITHUB_REF as number', async () => {expect.hasAssertions();
+
         delete penv['GITHUB_PR_NUMBER'];
         delete penv['CI_PR_NUMBER'];
         penv['GITHUB_REF'] = 'refs/heads/main';
@@ -174,7 +184,8 @@ describe('PostPrComment', () => {
         expect(result).toBeNull();
     });
 
-    it('uses custom apiBaseUrl when provided', async () => {
+    it('uses custom apiBaseUrl when provided', async () => {expect.hasAssertions();
+
         mockPost.mockResolvedValueOnce({
             data: { id: 111, html_url: 'https://ghe.example.com/repos/owner/repo/issues/42#issuecomment-111' },
         });

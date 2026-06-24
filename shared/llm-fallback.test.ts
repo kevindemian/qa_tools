@@ -279,7 +279,8 @@ describe('SendWithFallback', () => {
         vi.restoreAllMocks();
     });
 
-    it('sends to primary provider and returns response', async () => {
+    it('sends to primary provider and returns response', async () => {expect.hasAssertions();
+
         Config.set('llmApiKey', 'sk-test');
         Config.set('llmModel', 'gpt-4');
         Config.set('llmBaseUrl', 'https://api.test.com/v1');
@@ -290,10 +291,11 @@ describe('SendWithFallback', () => {
         const result = await sendWithFallback('main', 'system', 'user');
 
         expect(result).toBe('success');
-        expect(recordCircuitSuccess).toHaveBeenCalled();
+        expect(recordCircuitSuccess).toHaveBeenCalledWith();
     });
 
-    it('falls back to next provider when primary fails', async () => {
+    it('falls back to next provider when primary fails', async () => {expect.hasAssertions();
+
         Config.set('llmApiKey', 'sk-test');
         Config.set('llmModel', 'gpt-4');
         Config.set('llmBaseUrl', 'https://api.test.com/v1');
@@ -316,10 +318,11 @@ describe('SendWithFallback', () => {
         const result = await sendWithFallback('main', 'system', 'user');
 
         expect(result).toBe('fallback ok');
-        expect(recordCircuitFailure).toHaveBeenCalled();
+        expect(recordCircuitFailure).toHaveBeenCalledWith();
     });
 
-    it('throws when all providers are exhausted', async () => {
+    it('throws when all providers are exhausted', async () => {expect.hasAssertions();
+
         Config.set('llmApiKey', 'sk-test');
         Config.set('llmModel', 'gpt-4');
         Config.set('llmBaseUrl', 'https://api.test.com/v1');
@@ -328,13 +331,15 @@ describe('SendWithFallback', () => {
         await expect(sendWithFallback('main', 'system', 'user')).rejects.toThrow('All LLM providers failed');
     });
 
-    it('aggregates error when API key is missing for all providers', async () => {
+    it('aggregates error when API key is missing for all providers', async () => {expect.hasAssertions();
+
         Config.set('llmApiKey', '');
 
         await expect(sendWithFallback('main', 'system', 'user')).rejects.toThrow('All LLM providers failed');
     });
 
-    it('aggregates error messages from all providers', async () => {
+    it('aggregates error messages from all providers', async () => {expect.hasAssertions();
+
         Config.set('llmApiKey', 'sk-test');
         Config.set('llmModel', 'gpt-4');
         Config.set('llmBaseUrl', 'https://api.test.com/v1');
@@ -351,7 +356,8 @@ describe('SendWithFallback', () => {
         }
     });
 
-    it('applies responseFormat to all candidates', async () => {
+    it('applies responseFormat to all candidates', async () => {expect.hasAssertions();
+
         Config.set('llmApiKey', 'sk-test');
         Config.set('llmModel', 'gpt-4');
         Config.set('llmBaseUrl', 'https://api.test.com/v1');
@@ -364,7 +370,8 @@ describe('SendWithFallback', () => {
         expect(result).toBe('{"key":"val"}');
     });
 
-    it('deduplicates fallback provider with same config key as primary', async () => {
+    it('deduplicates fallback provider with same config key as primary', async () => {expect.hasAssertions();
+
         Config.set('llmApiKey', 'sk-test');
         Config.set('llmModel', 'gpt-4');
         Config.set('llmBaseUrl', 'https://api.test.com/v1');

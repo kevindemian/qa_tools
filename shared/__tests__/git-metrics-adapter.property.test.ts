@@ -53,7 +53,8 @@ const logLineArb: fc.Arbitrary<string> = fc
     .map(([hash, date, subject, author, parentField]) => `${hash}\0${date}\0${subject}\0${author}\0${parentField}`);
 
 describe('ParseGitLogOutput invariants (PBT)', () => {
-    it('every entry has non-empty hash, date and subject', () => {
+    it('every entry has non-empty hash, date and subject', () => {expect.hasAssertions();
+
         fc.assert(
             fc.property(fc.array(logLineArb, { minLength: 1, maxLength: 20 }), (lines) => {
                 const result = parseGitLogOutput(lines.join('\n'));
@@ -72,7 +73,8 @@ describe('ParseGitLogOutput invariants (PBT)', () => {
         expect(result).toEqual([]);
     });
 
-    it('handles single line input', () => {
+    it('handles single line input', () => {expect.hasAssertions();
+
         fc.assert(
             fc.property(logLineArb, (line) => {
                 const result = parseGitLogOutput(line);
@@ -98,7 +100,8 @@ describe('GenerateGitMetricsRuns invariants (PBT)', () => {
         vi.clearAllMocks();
     });
 
-    it('all runs have well-formed MetricsRun shape', () => {
+    it('all runs have well-formed MetricsRun shape', () => {expect.hasAssertions();
+
         mockExecFileSync.mockReturnValue(sampleLog);
         const runs = generateGitMetricsRuns();
         runs.forEach((run) => {
@@ -113,7 +116,8 @@ describe('GenerateGitMetricsRuns invariants (PBT)', () => {
         });
     });
 
-    it('all tests have valid state (passed/failed/skipped)', () => {
+    it('all tests have valid state (passed/failed/skipped)', () => {expect.hasAssertions();
+
         mockExecFileSync.mockReturnValue(sampleLog);
         const runs = generateGitMetricsRuns();
         const validStates: string[] = ['passed', 'failed', 'skipped'];
@@ -122,7 +126,8 @@ describe('GenerateGitMetricsRuns invariants (PBT)', () => {
         });
     });
 
-    it('revert commits produce failed + error field', () => {
+    it('revert commits produce failed + error field', () => {expect.hasAssertions();
+
         mockExecFileSync.mockReturnValue(sampleLog);
         const runs = generateGitMetricsRuns();
         const revertTests = runs.flatMap((r) => r.tests.filter((t) => t.title.startsWith('Revert')));
@@ -132,7 +137,8 @@ describe('GenerateGitMetricsRuns invariants (PBT)', () => {
         });
     });
 
-    it('merge commits produce skipped state', () => {
+    it('merge commits produce skipped state', () => {expect.hasAssertions();
+
         mockExecFileSync.mockReturnValue(sampleLog);
         const runs = generateGitMetricsRuns();
         const mergeTests = runs.flatMap((r) => r.tests.filter((t) => t.title.startsWith('Merge')));
@@ -148,7 +154,8 @@ describe('GenerateGitMetricsRuns invariants (PBT)', () => {
         expect(runs).toEqual([]);
     });
 
-    it('total equals passed + failed + skipped for each run', () => {
+    it('total equals passed + failed + skipped for each run', () => {expect.hasAssertions();
+
         mockExecFileSync.mockReturnValue(sampleLog);
         const runs = generateGitMetricsRuns();
         runs.forEach((run) => {
@@ -169,7 +176,8 @@ describe('GenerateGitFailureClassifications invariants (PBT)', () => {
         vi.clearAllMocks();
     });
 
-    it('all classifications have category REVERT', () => {
+    it('all classifications have category REVERT', () => {expect.hasAssertions();
+
         mockExecFileSync.mockReturnValue(sampleLog);
         const result = generateGitFailureClassifications();
         result.forEach((c) => {
@@ -199,7 +207,8 @@ describe('ExtractDate', () => {
 });
 
 describe('ParseGitLogOutput malformed line invariants (PBT)', () => {
-    it('never throws on any input string', () => {
+    it('never throws on any input string', () => {expect.hasAssertions();
+
         fc.assert(
             fc.property(fc.string({ minLength: 0, maxLength: 200 }), (input) => {
                 expect(() => parseGitLogOutput(input)).not.toThrow();
@@ -207,7 +216,8 @@ describe('ParseGitLogOutput malformed line invariants (PBT)', () => {
         );
     });
 
-    it('filters out lines with fewer than 5 NUL-delimited fields', () => {
+    it('filters out lines with fewer than 5 NUL-delimited fields', () => {expect.hasAssertions();
+
         fc.assert(
             fc.property(
                 fc.array(fc.string({ minLength: 0, maxLength: 50 }), { minLength: 1, maxLength: 10 }),
@@ -231,7 +241,8 @@ describe('GetLastGitLogError invariants (PBT)', () => {
         vi.clearAllMocks();
     });
 
-    it('is undefined when execFileSync succeeds', () => {
+    it('is undefined when execFileSync succeeds', () => {expect.hasAssertions();
+
         fc.assert(
             fc.property(fc.string({ minLength: 1, maxLength: 100 }), (hash) => {
                 const line = hash + '\0' + '2026-06-01T10:00:00.000Z' + '\0' + 'msg' + '\0' + 'author' + '\0';

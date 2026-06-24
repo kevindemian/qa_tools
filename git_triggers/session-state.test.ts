@@ -153,7 +153,7 @@ describe('Session-state', () => {
             sessionState.pushHistory('test-op', 'detail', 'ok');
 
             expect(pushHistorySpy).toHaveBeenCalledWith('test-op', 'detail', 'ok');
-            expect(stateUpdate).toHaveBeenCalled();
+            expect(stateUpdate).toHaveBeenCalledWith();
         });
     });
 
@@ -170,7 +170,7 @@ describe('Session-state', () => {
             sessionState.displayProjects();
 
             expect(prompt.title).toHaveBeenCalledWith('Projetos');
-            expect(prompt.print).toHaveBeenCalled();
+            expect(prompt.print).toHaveBeenCalledWith();
         });
     });
 
@@ -184,7 +184,8 @@ describe('Session-state', () => {
     });
 
     describe('DisplayRecentPipelines flakiness', () => {
-        it('warns about high flakiness tests', async () => {
+        it('warns about high flakiness tests', async () => {expect.hasAssertions();
+
             vi.mocked(_loadMetrics).mockReturnValueOnce({
                 runs: [
                     {

@@ -15,13 +15,15 @@ describe('ExtractHost', () => {
 });
 
 describe('HostSemaphore', () => {
-    it('acquire succeeds when below maxConcurrency', async () => {
+    it('acquire succeeds when below maxConcurrency', async () => {expect.hasAssertions();
+
         const sem = new HostSemaphore(2);
 
         await expect(sem.acquire('host1')).resolves.toBeUndefined();
     });
 
-    it('acquire blocks when maxConcurrency reached and releases when slot frees', async () => {
+    it('acquire blocks when maxConcurrency reached and releases when slot frees', async () => {expect.hasAssertions();
+
         const sem = new HostSemaphore(1);
 
         await sem.acquire('test-host');
@@ -36,7 +38,8 @@ describe('HostSemaphore', () => {
         await expect(p).resolves.toBeUndefined();
     });
 
-    it('release dispatches queued request and updates inflight', async () => {
+    it('release dispatches queued request and updates inflight', async () => {expect.hasAssertions();
+
         const sem = new HostSemaphore(2);
 
         await sem.acquire('h1');
@@ -55,7 +58,8 @@ describe('HostSemaphore', () => {
         expect(() => sem.release('nonexistent')).not.toThrow();
     });
 
-    it('acquire returns immediately when slot is available after release', async () => {
+    it('acquire returns immediately when slot is available after release', async () => {expect.hasAssertions();
+
         const sem = new HostSemaphore(1);
 
         await sem.acquire('host');
@@ -64,13 +68,15 @@ describe('HostSemaphore', () => {
         await expect(sem.acquire('host')).resolves.toBeUndefined();
     });
 
-    it('rateLimitWait returns immediately when no releases recorded', async () => {
+    it('rateLimitWait returns immediately when no releases recorded', async () => {expect.hasAssertions();
+
         const sem = new HostSemaphore(1);
 
         await expect(sem.acquire('fresh-host')).resolves.toBeUndefined();
     });
 
-    it('rateLimitWait delays when releases are recent', async () => {
+    it('rateLimitWait delays when releases are recent', async () => {expect.hasAssertions();
+
         vi.useFakeTimers();
         const sem = new HostSemaphore(1);
 

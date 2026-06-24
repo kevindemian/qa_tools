@@ -16,7 +16,8 @@ describe('Integration: AI Comparison Dashboard (FT-24)', () => {
     });
 
     describe('FT-24a: generateAiComparisonHtml', () => {
-        it('returns complete HTML document with data', async () => {
+        it('returns complete HTML document with data', async () => {expect.hasAssertions();
+
             const { compareAiVsManual, generateAiComparisonHtml } = await import('../../ai-comparison.js');
             const records: AiComparisonRecord[] = [
                 {
@@ -53,7 +54,8 @@ describe('Integration: AI Comparison Dashboard (FT-24)', () => {
             expect(html).toContain('Manual Pass Rate');
         });
 
-        it('shows no data message for empty records', async () => {
+        it('shows no data message for empty records', async () => {expect.hasAssertions();
+
             const { compareAiVsManual, generateAiComparisonHtml } = await import('../../ai-comparison.js');
             const result = compareAiVsManual([]);
             const html = generateAiComparisonHtml(result);
@@ -62,7 +64,8 @@ describe('Integration: AI Comparison Dashboard (FT-24)', () => {
             expect(html).not.toContain('Comparison Overview');
         });
 
-        it('uses custom title', async () => {
+        it('uses custom title', async () => {expect.hasAssertions();
+
             const { compareAiVsManual, generateAiComparisonHtml } = await import('../../ai-comparison.js');
             const result = compareAiVsManual([]);
             const html = generateAiComparisonHtml(result, 'Sprint 11 Analysis');
@@ -73,7 +76,8 @@ describe('Integration: AI Comparison Dashboard (FT-24)', () => {
     });
 
     describe('FT-24b: edge cases', () => {
-        it('handles all AI records', async () => {
+        it('handles all AI records', async () => {expect.hasAssertions();
+
             const { compareAiVsManual, generateAiComparisonHtml } = await import('../../ai-comparison.js');
             const records: AiComparisonRecord[] = [
                 {
@@ -116,7 +120,8 @@ describe('Integration: AI Comparison Dashboard (FT-24)', () => {
             expect(html).toContain('N/A');
         });
 
-        it('handles all manual records', async () => {
+        it('handles all manual records', async () => {expect.hasAssertions();
+
             const { compareAiVsManual } = await import('../../ai-comparison.js');
             const records: AiComparisonRecord[] = [
                 {
@@ -146,7 +151,8 @@ describe('Integration: AI Comparison Dashboard (FT-24)', () => {
             expect(result.aiAdvantage).toBe('none');
         });
 
-        it('handles 100 records without error', async () => {
+        it('handles 100 records without error', async () => {expect.hasAssertions();
+
             const { compareAiVsManual, generateAiComparisonHtml } = await import('../../ai-comparison.js');
             const records: AiComparisonRecord[] = [];
             for (let i = 0; i < 100; i++) {
@@ -171,7 +177,8 @@ describe('Integration: AI Comparison Dashboard (FT-24)', () => {
     });
 
     describe('FT-24c: HTML structural validation', () => {
-        it('contains proper HTML structure', async () => {
+        it('contains proper HTML structure', async () => {expect.hasAssertions();
+
             const { compareAiVsManual, generateAiComparisonHtml } = await import('../../ai-comparison.js');
             const records: AiComparisonRecord[] = [
                 {
@@ -211,7 +218,8 @@ describe('Integration: AI Comparison Dashboard (FT-24)', () => {
     });
 
     describe('FT-24d: null handling', () => {
-        it('handles null records without crashing', async () => {
+        it('handles null records without crashing', async () => {expect.hasAssertions();
+
             const { compareAiVsManual } = await import('../../ai-comparison.js');
             const result = compareAiVsManual(null);
 
@@ -219,7 +227,8 @@ describe('Integration: AI Comparison Dashboard (FT-24)', () => {
             expect(result.manualTotal).toBe(0);
         });
 
-        it('handles undefined records without crashing', async () => {
+        it('handles undefined records without crashing', async () => {expect.hasAssertions();
+
             const { compareAiVsManual } = await import('../../ai-comparison.js');
             const result = compareAiVsManual(undefined);
 
@@ -227,7 +236,8 @@ describe('Integration: AI Comparison Dashboard (FT-24)', () => {
             expect(result.manualTotal).toBe(0);
         });
 
-        it('handles null result in generateAiComparisonHtml without crashing', async () => {
+        it('handles null result in generateAiComparisonHtml without crashing', async () => {expect.hasAssertions();
+
             const { generateAiComparisonHtml } = await import('../../ai-comparison.js');
             const html = generateAiComparisonHtml(null);
 
@@ -236,7 +246,8 @@ describe('Integration: AI Comparison Dashboard (FT-24)', () => {
     });
 
     describe('FT-24e: error fallback', () => {
-        it('returns error page when buildHtmlPage throws', async () => {
+        it('returns error page when buildHtmlPage throws', async () => {expect.hasAssertions();
+
             const { compareAiVsManual, generateAiComparisonHtml } = await import('../../ai-comparison.js');
             const htmlFactory = await import('../../html-factory.js');
             const spy = vi.spyOn(htmlFactory, 'buildHtmlPage').mockImplementation(() => {

@@ -175,7 +175,8 @@ beforeEach(() => {
 });
 
 describe('Case02 — list versions', () => {
-    it('calls getProjectId and getProjectVersions', async () => {
+    it('calls getProjectId and getProjectVersions', async () => {expect.hasAssertions();
+
         const mod = case02;
         await mod.handler(baseContext);
 
@@ -184,7 +185,8 @@ describe('Case02 — list versions', () => {
 });
 
 describe('Case03 — create version', () => {
-    it('returns early when name is empty', async () => {
+    it('returns early when name is empty', async () => {expect.hasAssertions();
+
         const prompt = vi.mocked(promptModule);
         prompt.ask.mockResolvedValueOnce('');
         const mod = case03;
@@ -193,7 +195,8 @@ describe('Case03 — create version', () => {
         expect(prompt.warn).toHaveBeenCalledWith('Nome da versão não pode ser vazio.');
     });
 
-    it('creates version successfully', async () => {
+    it('creates version successfully', async () => {expect.hasAssertions();
+
         const prompt = vi.mocked(promptModule);
         prompt.ask.mockResolvedValueOnce('v2.0.0').mockResolvedValueOnce('descricao');
         const mod = case03;
@@ -202,7 +205,8 @@ describe('Case03 — create version', () => {
         expect(mockJiraResource.createVersion).toHaveBeenCalledWith('TEST', 'v2.0.0', 'descricao');
     });
 
-    it('handles API error', async () => {
+    it('handles API error', async () => {expect.hasAssertions();
+
         const prompt = vi.mocked(promptModule);
         const logger = mockedSafe(vi.mocked(loggerModule));
         prompt.ask.mockResolvedValueOnce('v2.0.0').mockResolvedValueOnce('');
@@ -210,13 +214,14 @@ describe('Case03 — create version', () => {
         const mod = case03;
         await mod.handler(baseContext);
 
-        expect(prompt.printError).toHaveBeenCalled();
-        expect(logger.rootLogger.error).toHaveBeenCalled();
+        expect(prompt.printError).toHaveBeenCalledWith();
+        expect(logger.rootLogger.error).toHaveBeenCalledWith();
     });
 });
 
 describe('Case04 — assign fixVersion', () => {
-    it('returns true when cancelled', async () => {
+    it('returns true when cancelled', async () => {expect.hasAssertions();
+
         const prompt = vi.mocked(promptModule);
         prompt.askConfirm.mockResolvedValueOnce(true).mockResolvedValueOnce(false);
         const mod = case04;
@@ -225,7 +230,8 @@ describe('Case04 — assign fixVersion', () => {
         expect(result).toBeTruthy();
     });
 
-    it('assigns fixVersion from in-memory tasks', async () => {
+    it('assigns fixVersion from in-memory tasks', async () => {expect.hasAssertions();
+
         mockSessionContext.inMemoryTasksId = ['TEST-1', 'TEST-2'];
         mockSessionContext.inMemoryTasksText = ['Task one', 'Task two'];
         const prompt = vi.mocked(promptModule);
@@ -241,7 +247,8 @@ describe('Case04 — assign fixVersion', () => {
         expect(baseContext.pushHistory).toHaveBeenCalledWith('atribuir-fixversion', '2/2 tarefas atualizadas', 'ok');
     });
 
-    it('handles partial error on updateFixVersions', async () => {
+    it('handles partial error on updateFixVersions', async () => {expect.hasAssertions();
+
         mockSessionContext.inMemoryTasksId = ['TEST-1', 'TEST-2'];
         mockSessionContext.inMemoryTasksText = ['Task one', 'Task two'];
         const prompt = vi.mocked(promptModule);
@@ -259,7 +266,8 @@ describe('Case04 — assign fixVersion', () => {
         });
     });
 
-    it('accepts manual task entry when not using in-memory tasks', async () => {
+    it('accepts manual task entry when not using in-memory tasks', async () => {expect.hasAssertions();
+
         mockSessionContext.inMemoryTasksId = ['TEST-1'];
         mockSessionContext.inMemoryTasksText = ['Existing task'];
         const prompt = vi.mocked(promptModule);
@@ -287,7 +295,8 @@ describe('Case04 — assign fixVersion', () => {
         );
     });
 
-    it('adds tasks to sprint when confirmed', async () => {
+    it('adds tasks to sprint when confirmed', async () => {expect.hasAssertions();
+
         mockSessionContext.inMemoryTasksId = ['TEST-1'];
         mockSessionContext.inMemoryTasksText = ['Task one'];
         mockJiraResource.postJiraResource = vi.fn().mockResolvedValueOnce({});
@@ -304,7 +313,8 @@ describe('Case04 — assign fixVersion', () => {
         expect(mockJiraResource.postJiraResource).toHaveBeenCalledWith('sprint/6991/issue', { issues: ['TEST-1'] });
     });
 
-    it('warns when sprint ID is empty after confirming add to sprint', async () => {
+    it('warns when sprint ID is empty after confirming add to sprint', async () => {expect.hasAssertions();
+
         mockSessionContext.inMemoryTasksId = ['TEST-1'];
         mockSessionContext.inMemoryTasksText = ['Task one'];
         const prompt = vi.mocked(promptModule);
@@ -320,7 +330,8 @@ describe('Case04 — assign fixVersion', () => {
         expect(prompt.warn).toHaveBeenCalledWith('Sprint ID vazio. Pulando...');
     });
 
-    it('handles error when adding tasks to sprint fails', async () => {
+    it('handles error when adding tasks to sprint fails', async () => {expect.hasAssertions();
+
         mockSessionContext.inMemoryTasksId = ['TEST-1'];
         mockSessionContext.inMemoryTasksText = ['Task one'];
         mockJiraResource.postJiraResource = vi.fn().mockRejectedValueOnce(new Error('Sprint API error'));
@@ -334,12 +345,13 @@ describe('Case04 — assign fixVersion', () => {
         const mod = case04;
         await mod.handler(baseContext);
 
-        expect(prompt.printError).toHaveBeenCalled();
+        expect(prompt.printError).toHaveBeenCalledWith();
     });
 });
 
 describe('Case05 — update package version', () => {
-    it('handles missing packageManager by prompting dir', async () => {
+    it('handles missing packageManager by prompting dir', async () => {expect.hasAssertions();
+
         mockSessionContext.packageManager = undefined;
         mockJiraResource.getReleaseTasks.mockResolvedValueOnce(['TASK-1']);
         const prompt = vi.mocked(promptModule);
@@ -347,10 +359,11 @@ describe('Case05 — update package version', () => {
         const mod = case05;
         await mod.handler(baseContext);
 
-        expect(prompt.success).toHaveBeenCalled();
+        expect(prompt.success).toHaveBeenCalledWith();
     });
 
-    it('handles no tasks for version', async () => {
+    it('handles no tasks for version', async () => {expect.hasAssertions();
+
         mockSessionContext.packageManager = { updateReleaseNotes: vi.fn(), updateVersion: vi.fn() };
         mockJiraResource.getReleaseTasks.mockResolvedValueOnce(null);
         const prompt = vi.mocked(promptModule);
@@ -360,18 +373,20 @@ describe('Case05 — update package version', () => {
         expect(prompt.warn).toHaveBeenCalledWith('Nenhuma tarefa encontrada para esta versão.');
     });
 
-    it('handles API error', async () => {
+    it('handles API error', async () => {expect.hasAssertions();
+
         mockJiraResource.getReleaseTasks.mockRejectedValueOnce(new Error('API error'));
         const prompt = vi.mocked(promptModule);
         const mod = case05;
         await mod.handler(baseContext);
 
-        expect(prompt.printError).toHaveBeenCalled();
+        expect(prompt.printError).toHaveBeenCalledWith();
     });
 });
 
 describe('Case06 — check release status', () => {
-    it('checks status successfully', async () => {
+    it('checks status successfully', async () => {expect.hasAssertions();
+
         const prompt = vi.mocked(promptModule);
         prompt.ask.mockResolvedValueOnce('v2.0.0');
         mockJiraResource.checkReleaseTasksStatus.mockResolvedValueOnce(undefined);
@@ -381,19 +396,21 @@ describe('Case06 — check release status', () => {
         expect(mockJiraResource.checkReleaseTasksStatus).toHaveBeenCalledWith('TEST', 'v2.0.0');
     });
 
-    it('handles API error', async () => {
+    it('handles API error', async () => {expect.hasAssertions();
+
         const prompt = vi.mocked(promptModule);
         prompt.ask.mockResolvedValueOnce('v2.0.0');
         mockJiraResource.checkReleaseTasksStatus.mockRejectedValueOnce(new Error('API error'));
         const mod = case06;
         await mod.handler(baseContext);
 
-        expect(prompt.printError).toHaveBeenCalled();
+        expect(prompt.printError).toHaveBeenCalledWith();
     });
 });
 
 describe('Case07 — close tasks', () => {
-    it('returns true when cancelled', async () => {
+    it('returns true when cancelled', async () => {expect.hasAssertions();
+
         const prompt = vi.mocked(promptModule);
         prompt.askConfirm.mockResolvedValueOnce(false);
         const mod = case07;
@@ -402,7 +419,8 @@ describe('Case07 — close tasks', () => {
         expect(result).toBeTruthy();
     });
 
-    it('returns true when no tasks found', async () => {
+    it('returns true when no tasks found', async () => {expect.hasAssertions();
+
         const prompt = vi.mocked(promptModule);
         prompt.askConfirm.mockResolvedValueOnce(true);
         mockJiraResource.getReleaseTasks.mockResolvedValueOnce([]);
@@ -413,7 +431,8 @@ describe('Case07 — close tasks', () => {
         expect(prompt.warn).toHaveBeenCalledWith('Nenhuma tarefa encontrada para esta versão.');
     });
 
-    it('handles moveCardsToDone error', async () => {
+    it('handles moveCardsToDone error', async () => {expect.hasAssertions();
+
         const prompt = vi.mocked(promptModule);
         prompt.askConfirm.mockResolvedValueOnce(true);
         mockJiraResource.getReleaseTasks.mockResolvedValueOnce(['[TEST-1] task']);
@@ -421,10 +440,11 @@ describe('Case07 — close tasks', () => {
         const mod = case07;
         await mod.handler(baseContext);
 
-        expect(prompt.printSummary).toHaveBeenCalled();
+        expect(prompt.printSummary).toHaveBeenCalledWith();
     });
 
-    it('moves tasks to done successfully', async () => {
+    it('moves tasks to done successfully', async () => {expect.hasAssertions();
+
         const prompt = vi.mocked(promptModule);
         prompt.ask.mockResolvedValueOnce('v2.0.0');
         prompt.askConfirm.mockResolvedValueOnce(true);
@@ -443,7 +463,8 @@ describe('Case07 — close tasks', () => {
         expect(baseContext.pushHistory).toHaveBeenCalledWith('fechar-tarefas', '2 tarefa(s)', 'ok');
     });
 
-    it('warns when task IDs cannot be extracted', async () => {
+    it('warns when task IDs cannot be extracted', async () => {expect.hasAssertions();
+
         const prompt = vi.mocked(promptModule);
         prompt.ask.mockResolvedValueOnce('v2.0.0');
         prompt.askConfirm.mockResolvedValueOnce(true);
@@ -457,7 +478,8 @@ describe('Case07 — close tasks', () => {
 });
 
 describe('Case08 — release version', () => {
-    it('returns true when cancelled', async () => {
+    it('returns true when cancelled', async () => {expect.hasAssertions();
+
         const prompt = vi.mocked(promptModule);
         prompt.ask.mockResolvedValueOnce('');
         prompt.askConfirm.mockResolvedValueOnce(false);
@@ -468,7 +490,8 @@ describe('Case08 — release version', () => {
         expect(prompt.warn).toHaveBeenCalledWith('Operação cancelada.');
     });
 
-    it('releases version successfully', async () => {
+    it('releases version successfully', async () => {expect.hasAssertions();
+
         const prompt = vi.mocked(promptModule);
         prompt.ask.mockResolvedValueOnce('v2.0.0');
         prompt.askConfirm.mockResolvedValueOnce(true);
@@ -479,7 +502,8 @@ describe('Case08 — release version', () => {
         expect(result).toBeFalsy();
     });
 
-    it('handles API error', async () => {
+    it('handles API error', async () => {expect.hasAssertions();
+
         const prompt = vi.mocked(promptModule);
         prompt.ask.mockResolvedValueOnce('v2.0.0');
         prompt.askConfirm.mockResolvedValueOnce(true);
@@ -487,13 +511,14 @@ describe('Case08 — release version', () => {
         const mod = case08;
         const result = await mod.handler(baseContext);
 
-        expect(prompt.printError).toHaveBeenCalled();
+        expect(prompt.printError).toHaveBeenCalledWith();
         expect(result).toBeFalsy();
     });
 });
 
 describe('Case09 — switch project', () => {
-    it('returns early when name is empty', async () => {
+    it('returns early when name is empty', async () => {expect.hasAssertions();
+
         const prompt = vi.mocked(promptModule);
         prompt.ask.mockResolvedValueOnce('');
         const mod = case09;
@@ -502,7 +527,8 @@ describe('Case09 — switch project', () => {
         expect(prompt.warn).toHaveBeenCalledWith('Nome do projeto não pode ser vazio.');
     });
 
-    it('updates project name', async () => {
+    it('updates project name', async () => {expect.hasAssertions();
+
         const prompt = vi.mocked(promptModule);
         prompt.ask.mockResolvedValueOnce('NEWPROJ');
         const mod = case09;
@@ -513,13 +539,15 @@ describe('Case09 — switch project', () => {
 });
 
 describe('Case10 — show counters', () => {
-    it('returns undefined', async () => {
+    it('returns undefined', async () => {expect.hasAssertions();
+
         const mod = case10;
 
         await expect(mod.handler(baseContext)).resolves.toBeUndefined();
     });
 
-    it('sets directory and creates package manager', async () => {
+    it('sets directory and creates package manager', async () => {expect.hasAssertions();
+
         const prompt = vi.mocked(promptModule);
         prompt.ask.mockResolvedValueOnce('/my/git/dir');
         const mod = case10;
@@ -530,7 +558,8 @@ describe('Case10 — show counters', () => {
         expect(prompt.success).toHaveBeenCalledWith('Diretório alterado para: /my/git/dir');
     });
 
-    it('handles missing createPackageManager', async () => {
+    it('handles missing createPackageManager', async () => {expect.hasAssertions();
+
         delete mockSessionContext.createPackageManager;
         const prompt = vi.mocked(promptModule);
         prompt.ask.mockResolvedValueOnce('/some/dir');
@@ -543,7 +572,8 @@ describe('Case10 — show counters', () => {
 });
 
 describe('Case11 — generate template (CSV/JSON)', () => {
-    it('generates CSV template', async () => {
+    it('generates CSV template', async () => {expect.hasAssertions();
+
         const prompt = vi.mocked(promptModule);
         prompt.ask.mockResolvedValueOnce('CSV').mockResolvedValueOnce('/tmp/test-template.csv');
         const mod = case11;
@@ -554,7 +584,8 @@ describe('Case11 — generate template (CSV/JSON)', () => {
         );
     });
 
-    it('generates JSON template', async () => {
+    it('generates JSON template', async () => {expect.hasAssertions();
+
         const prompt = vi.mocked(promptModule);
         prompt.ask.mockResolvedValueOnce('JSON').mockResolvedValueOnce('/tmp/test-template.json');
         const mod = case11;
@@ -565,7 +596,8 @@ describe('Case11 — generate template (CSV/JSON)', () => {
         );
     });
 
-    it('handles copy error', async () => {
+    it('handles copy error', async () => {expect.hasAssertions();
+
         const prompt = vi.mocked(promptModule);
         prompt.ask.mockResolvedValueOnce('CSV').mockResolvedValueOnce('/tmp/test-template.csv');
 
@@ -578,7 +610,8 @@ describe('Case11 — generate template (CSV/JSON)', () => {
         expect(prompt.error).toHaveBeenCalledWith(expect.stringContaining('permission denied'));
     });
 
-    it('rejects invalid format', async () => {
+    it('rejects invalid format', async () => {expect.hasAssertions();
+
         const prompt = vi.mocked(promptModule);
         prompt.ask.mockResolvedValueOnce('XML');
         const mod = case11;
@@ -589,7 +622,8 @@ describe('Case11 — generate template (CSV/JSON)', () => {
 });
 
 describe('Case13 — create test execution', () => {
-    it('creates from in-memory tasks', async () => {
+    it('creates from in-memory tasks', async () => {expect.hasAssertions();
+
         mockSessionContext.inMemoryTasksId = ['TEST-1', 'TEST-2'];
         const prompt = vi.mocked(promptModule);
         prompt.askConfirm.mockResolvedValueOnce(true);
@@ -599,7 +633,8 @@ describe('Case13 — create test execution', () => {
         expect(prompt.info).toHaveBeenCalledWith('Testes da sessão atual: TEST-1, TEST-2');
     });
 
-    it('returns early when no keys', async () => {
+    it('returns early when no keys', async () => {expect.hasAssertions();
+
         const prompt = vi.mocked(promptModule);
         const mod = case13;
         await mod.handler(baseContext);
@@ -607,7 +642,8 @@ describe('Case13 — create test execution', () => {
         expect(prompt.warn).toHaveBeenCalledWith('Nenhuma key informada.');
     });
 
-    it('creates test execution with manual key entry', async () => {
+    it('creates test execution with manual key entry', async () => {expect.hasAssertions();
+
         const prompt = vi.mocked(promptModule);
         prompt.ask.mockResolvedValueOnce('TEST-3 TEST-4');
         const flow = vi.mocked(flowModule);
@@ -627,7 +663,8 @@ describe('Case13 — create test execution', () => {
         });
     });
 
-    it('falls back to manual key entry when user declines in-memory tasks', async () => {
+    it('falls back to manual key entry when user declines in-memory tasks', async () => {expect.hasAssertions();
+
         mockSessionContext.inMemoryTasksId = ['TEST-1', 'TEST-2'];
         const prompt = vi.mocked(promptModule);
         prompt.askConfirm.mockResolvedValueOnce(false);
@@ -643,7 +680,8 @@ describe('Case13 — create test execution', () => {
         );
     });
 
-    it('creates test execution from in-memory tasks with full flow', async () => {
+    it('creates test execution from in-memory tasks with full flow', async () => {expect.hasAssertions();
+
         mockSessionContext.inMemoryTasksId = ['TEST-1', 'TEST-2'];
         mockSessionContext.inMemoryTasksText = ['Test one', 'Test two'];
         const prompt = vi.mocked(promptModule);
@@ -661,7 +699,8 @@ describe('Case13 — create test execution', () => {
 });
 
 describe('Case14 — config Cypress directory', () => {
-    it('returns early when dir is empty', async () => {
+    it('returns early when dir is empty', async () => {expect.hasAssertions();
+
         const prompt = vi.mocked(promptModule);
         prompt.ask.mockResolvedValueOnce('');
         const mod = case14;
@@ -670,19 +709,21 @@ describe('Case14 — config Cypress directory', () => {
         expect(prompt.warn).toHaveBeenCalledWith('Caminho vazio, ignorando.');
     });
 
-    it('configures Cypress directory', async () => {
+    it('configures Cypress directory', async () => {expect.hasAssertions();
+
         const prompt = vi.mocked(promptModule);
         const state = vi.mocked(stateModule);
         prompt.ask.mockResolvedValueOnce('/cypress');
         const mod = case14;
         await mod.handler(baseContext);
 
-        expect(state.update).toHaveBeenCalled();
+        expect(state.update).toHaveBeenCalledWith();
     });
 });
 
 describe('Case15 — create tests from JSON', () => {
-    it('returns when jsonPath is empty', async () => {
+    it('returns when jsonPath is empty', async () => {expect.hasAssertions();
+
         const prompt = vi.mocked(promptModule);
         prompt.ask.mockResolvedValueOnce('');
         const mod = case15;
@@ -691,7 +732,8 @@ describe('Case15 — create tests from JSON', () => {
         expect(prompt.warn).toHaveBeenCalledWith('Caminho do JSON vazio. Operação cancelada.');
     });
 
-    it('imports tests from JSON successfully', async () => {
+    it('imports tests from JSON successfully', async () => {expect.hasAssertions();
+
         mockConfigMod['jsonPath'] = '/fake/tests.json';
         mockCreateTests.createTestsFromJson.mockResolvedValueOnce({
             inMemoryTasksId: ['TEST-10', 'TEST-11'],
@@ -712,7 +754,8 @@ describe('Case15 — create tests from JSON', () => {
         expect(baseContext.pushHistory).toHaveBeenCalledWith('importar-json', '2 testes', 'ok');
     });
 
-    it('handles null result from createTestsFromJson', async () => {
+    it('handles null result from createTestsFromJson', async () => {expect.hasAssertions();
+
         mockConfigMod['jsonPath'] = '/fake/tests.json';
         mockCreateTests.createTestsFromJson.mockResolvedValueOnce(undefined);
         const mod = case15;
@@ -723,7 +766,8 @@ describe('Case15 — create tests from JSON', () => {
 });
 
 describe('Case16 — config JSON directory', () => {
-    it('returns early when dir is empty', async () => {
+    it('returns early when dir is empty', async () => {expect.hasAssertions();
+
         const prompt = vi.mocked(promptModule);
         prompt.ask.mockResolvedValueOnce('');
         const mod = case16;
@@ -732,7 +776,8 @@ describe('Case16 — config JSON directory', () => {
         expect(prompt.warn).toHaveBeenCalledWith('Caminho vazio, ignorando.');
     });
 
-    it('configures JSON directory', async () => {
+    it('configures JSON directory', async () => {expect.hasAssertions();
+
         const prompt = vi.mocked(promptModule);
         prompt.ask.mockResolvedValueOnce('/json');
         const mod = case16;
@@ -741,7 +786,8 @@ describe('Case16 — config JSON directory', () => {
 });
 
 describe('Case12 — diagnostic connection', () => {
-    it('reports all endpoints as ok', async () => {
+    it('reports all endpoints as ok', async () => {expect.hasAssertions();
+
         mockJiraResource.axiosInstance.get
             .mockResolvedValueOnce({ status: 200 })
             .mockResolvedValueOnce({ status: 200 })
@@ -750,11 +796,12 @@ describe('Case12 — diagnostic connection', () => {
         await mod.handler(baseContext);
         const prompt = vi.mocked(promptModule);
 
-        expect(prompt.printSummary).toHaveBeenCalled();
+        expect(prompt.printSummary).toHaveBeenCalledWith();
         expect(baseContext.pushHistory).toHaveBeenCalledWith('diagnostico', expect.stringContaining('3/4'), 'ok');
     });
 
-    it('records error when one endpoint fails', async () => {
+    it('records error when one endpoint fails', async () => {expect.hasAssertions();
+
         mockJiraResource.axiosInstance.get
             .mockResolvedValueOnce({ status: 200 })
             .mockRejectedValueOnce({ response: { status: 401 } })
@@ -763,11 +810,12 @@ describe('Case12 — diagnostic connection', () => {
         await mod.handler(baseContext);
         const prompt = vi.mocked(promptModule);
 
-        expect(prompt.printSummary).toHaveBeenCalled();
+        expect(prompt.printSummary).toHaveBeenCalledWith();
         expect(baseContext.pushHistory).toHaveBeenCalledWith('diagnostico', expect.stringContaining('2/4'), 'error');
     });
 
-    it('marks error as connection failure for non-auth HTTP errors', async () => {
+    it('marks error as connection failure for non-auth HTTP errors', async () => {expect.hasAssertions();
+
         mockJiraResource.axiosInstance.get
             .mockResolvedValueOnce({ status: 200 })
             .mockRejectedValueOnce({ response: { status: 500 } })
@@ -776,11 +824,12 @@ describe('Case12 — diagnostic connection', () => {
         await mod.handler(baseContext);
         const prompt = vi.mocked(promptModule);
 
-        expect(prompt.printSummary).toHaveBeenCalled();
+        expect(prompt.printSummary).toHaveBeenCalledWith();
         expect(baseContext.pushHistory).toHaveBeenCalledWith('diagnostico', expect.stringContaining('2/4'), 'error');
     });
 
-    it('handles network error with no response object', async () => {
+    it('handles network error with no response object', async () => {expect.hasAssertions();
+
         mockJiraResource.axiosInstance.get
             .mockResolvedValueOnce({ status: 200 })
             .mockRejectedValueOnce(new Error('Network error'))
@@ -789,13 +838,14 @@ describe('Case12 — diagnostic connection', () => {
         await mod.handler(baseContext);
         const prompt = vi.mocked(promptModule);
 
-        expect(prompt.printSummary).toHaveBeenCalled();
+        expect(prompt.printSummary).toHaveBeenCalledWith();
         expect(baseContext.pushHistory).toHaveBeenCalledWith('diagnostico', expect.stringContaining('2/4'), 'error');
     });
 });
 
 describe('Case01 — create tests from CSV', () => {
-    it('creates tests with Config csvPath and stores in-memory tasks', async () => {
+    it('creates tests with Config csvPath and stores in-memory tasks', async () => {expect.hasAssertions();
+
         mockConfigMod['csvPath'] = '/fake/test.csv';
         mockConfigMod['csvLabels'] = 'label1, label2';
         mockCreateTests.createTestsFromCsv.mockResolvedValueOnce({
@@ -815,7 +865,8 @@ describe('Case01 — create tests from CSV', () => {
         expect(baseContext.pushHistory).toHaveBeenCalledWith('csv-import', '2 tests created from CSV', 'ok');
     });
 
-    it('invokes onBusy callback during CSV import', async () => {
+    it('invokes onBusy callback during CSV import', async () => {expect.hasAssertions();
+
         mockConfigMod['csvPath'] = '/fake/test.csv';
         mockConfigMod['csvLabels'] = 'label1';
         mockCreateTests.createTestsFromCsv.mockImplementationOnce(async (_opts: { onBusy: (v: boolean) => void }) => {
@@ -836,7 +887,8 @@ describe('Case01 — create tests from CSV', () => {
         expect(mockSessionContext.isBusy).toBeFalsy();
     });
 
-    it('prompts to create test execution after CSV import', async () => {
+    it('prompts to create test execution after CSV import', async () => {expect.hasAssertions();
+
         mockConfigMod['csvPath'] = '/fake/test.csv';
         mockConfigMod['csvLabels'] = 'label1';
         mockSessionContext.inMemoryTasksId = ['TEST-1', 'TEST-2'];
@@ -864,7 +916,8 @@ describe('Case01 — create tests from CSV', () => {
         });
     });
 
-    it('handles null result from createTestsFromCsv gracefully', async () => {
+    it('handles null result from createTestsFromCsv gracefully', async () => {expect.hasAssertions();
+
         mockConfigMod['csvPath'] = '/fake/test.csv';
         mockConfigMod['csvLabels'] = '';
         mockCreateTests.createTestsFromJson.mockResolvedValueOnce({

@@ -39,14 +39,16 @@ describe('BugReport Service', () => {
     });
 
     describe('CollectManual', () => {
-        it('throws if summary is empty after 3 attempts', async () => {
+        it('throws if summary is empty after 3 attempts', async () => {expect.hasAssertions();
+
             mockPrompt.ask.mockResolvedValue('');
 
             await expect(collectManual()).rejects.toThrow('é obrigatório');
             expect(mockPrompt.warn).toHaveBeenCalledTimes(3);
         });
 
-        it('succeeds on second attempt after empty first', async () => {
+        it('succeeds on second attempt after empty first', async () => {expect.hasAssertions();
+
             mockPrompt.ask
                 .mockResolvedValueOnce('') // 1st try
                 .mockResolvedValueOnce('Bug title') // 2nd try
@@ -58,7 +60,8 @@ describe('BugReport Service', () => {
             expect(mockPrompt.warn).toHaveBeenCalledTimes(1);
         });
 
-        it('collects fields and returns BugReport without LLM', async () => {
+        it('collects fields and returns BugReport without LLM', async () => {expect.hasAssertions();
+
             mockPrompt.ask
                 .mockResolvedValueOnce('Bug in login') // summary
                 .mockResolvedValueOnce('Cannot log in with valid credentials') // description
@@ -92,7 +95,8 @@ describe('BugReport Service', () => {
             });
         });
 
-        it('collects fields and enriches with LLM classification if approved', async () => {
+        it('collects fields and enriches with LLM classification if approved', async () => {expect.hasAssertions();
+
             mockPrompt.ask
                 .mockResolvedValueOnce('Bug in login') // summary
                 .mockResolvedValueOnce('Cannot log in') // description
@@ -114,7 +118,8 @@ describe('BugReport Service', () => {
             expect(mockPrompt.info).toHaveBeenCalledWith(expect.stringContaining('AUTHENTICATION_ERROR'));
         });
 
-        it('handles LLM enrichment failure gracefully', async () => {
+        it('handles LLM enrichment failure gracefully', async () => {expect.hasAssertions();
+
             mockPrompt.ask
                 .mockResolvedValueOnce('Bug title')
                 .mockResolvedValueOnce('Description')
@@ -133,7 +138,8 @@ describe('BugReport Service', () => {
             expect(report.llmEnrichment).toBeUndefined();
         });
 
-        it('defaults to minor severity when invalid severity entered', async () => {
+        it('defaults to minor severity when invalid severity entered', async () => {expect.hasAssertions();
+
             mockPrompt.ask
                 .mockResolvedValueOnce('Bug title')
                 .mockResolvedValueOnce('')
@@ -151,7 +157,8 @@ describe('BugReport Service', () => {
             expect(report.severity).toBe('minor');
         });
 
-        it('uses fallback message when LLM returns empty rootCause', async () => {
+        it('uses fallback message when LLM returns empty rootCause', async () => {expect.hasAssertions();
+
             mockPrompt.ask
                 .mockResolvedValueOnce('Bug title')
                 .mockResolvedValueOnce('Description')
@@ -342,7 +349,8 @@ describe('BugReport Service', () => {
             };
         });
 
-        it('files bug to Jira and returns key', async () => {
+        it('files bug to Jira and returns key', async () => {expect.hasAssertions();
+
             const report: BugReport = {
                 summary: 'Login issue',
                 description: 'Desc',
@@ -369,7 +377,8 @@ describe('BugReport Service', () => {
             });
         });
 
-        it('throws when project key is missing', async () => {
+        it('throws when project key is missing', async () => {expect.hasAssertions();
+
             const report: BugReport = {
                 summary: 'Bug',
                 description: '',
@@ -408,7 +417,8 @@ describe('BugReport Service', () => {
             mockLinkManager = { linkIssues: vi.fn() };
         });
 
-        it('calls collectManual, creates and links issues if confirmed', async () => {
+        it('calls collectManual, creates and links issues if confirmed', async () => {expect.hasAssertions();
+
             const report: BugReport = {
                 summary: 'Manual login failure',
                 description: 'Steps: click button',
@@ -430,7 +440,8 @@ describe('BugReport Service', () => {
             expect(mockLinkManager.linkIssues).toHaveBeenCalledWith('PROJ-202', report.linkedIssues);
         });
 
-        it('does not link issues when no linkedIssues', async () => {
+        it('does not link issues when no linkedIssues', async () => {expect.hasAssertions();
+
             const report: BugReport = {
                 summary: 'Manual login failure',
                 description: 'Steps: click button',
@@ -446,7 +457,8 @@ describe('BugReport Service', () => {
             expect(mockLinkManager.linkIssues).not.toHaveBeenCalled();
         });
 
-        it('returns null if cancelled by user', async () => {
+        it('returns null if cancelled by user', async () => {expect.hasAssertions();
+
             const report: BugReport = {
                 summary: 'Manual login failure',
                 description: 'Steps: click button',
@@ -462,7 +474,8 @@ describe('BugReport Service', () => {
             expect(mockPrompt.info).toHaveBeenCalledWith('Bug report cancelado.');
         });
 
-        it('returns error status when fileToJira throws', async () => {
+        it('returns error status when fileToJira throws', async () => {expect.hasAssertions();
+
             const report: BugReport = {
                 summary: 'Bug title',
                 description: 'Desc',
@@ -480,10 +493,11 @@ describe('BugReport Service', () => {
                 label: '',
                 message: 'Jira API error',
             });
-            expect(mockPrompt.printError).toHaveBeenCalled();
+            expect(mockPrompt.printError).toHaveBeenCalledWith();
         });
 
-        it('calls collectManual when preFilled is not provided', async () => {
+        it('calls collectManual when preFilled is not provided', async () => {expect.hasAssertions();
+
             mockPrompt.ask
                 .mockResolvedValueOnce('Auto summary')
                 .mockResolvedValueOnce('')
@@ -534,7 +548,8 @@ describe('GenerateBugReportFromDescription', () => {
         mockLlmPrompt.mockReset();
     });
 
-    it('returns BugReport when LLM succeeds with valid schema', async () => {
+    it('returns BugReport when LLM succeeds with valid schema', async () => {expect.hasAssertions();
+
         mockLlmPrompt.mockResolvedValue({
             summary: 'Login fails on Firefox',
             description: 'Request times out after 30s',
@@ -556,7 +571,8 @@ describe('GenerateBugReportFromDescription', () => {
         expect(nonNull(nonNull(result).llmEnrichment).model).toBe('fast');
     });
 
-    it('returns BugReport without optional fields when LLM omits them', async () => {
+    it('returns BugReport without optional fields when LLM omits them', async () => {expect.hasAssertions();
+
         mockLlmPrompt.mockResolvedValue({
             summary: 'Button not visible',
             description: 'Submit button hidden on mobile viewport',
@@ -573,14 +589,16 @@ describe('GenerateBugReportFromDescription', () => {
         expect(nonNull(result).component).toBeUndefined();
     });
 
-    it('returns null when LLM throws', async () => {
+    it('returns null when LLM throws', async () => {expect.hasAssertions();
+
         mockLlmPrompt.mockRejectedValue(new Error('LLM API error'));
         const result = await generateBugReportFromDescription('something broke');
 
         expect(result).toBeNull();
     });
 
-    it('returns null when prompt template file cannot be read', async () => {
+    it('returns null when prompt template file cannot be read', async () => {expect.hasAssertions();
+
         const fs = await import('fs');
         const readMock = vi.spyOn(fs, 'readFileSync');
         readMock.mockImplementationOnce(() => {

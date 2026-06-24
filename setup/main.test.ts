@@ -107,14 +107,15 @@ describe('Setup main', () => {
         MockGenHook.mockReturnValue('#!/bin/sh\necho "running"\n');
     });
 
-    it('generates GitHub workflow when repo has owner', async () => {
+    it('generates GitHub workflow when repo has owner', async () => {expect.hasAssertions();
+
         MockExtract.mockReturnValue({ owner: 'myorg', repo: 'my-repo' });
         mockGitHubDetect();
         mockAskForTests(false);
 
         await main();
 
-        expect(MockGenGithub).toHaveBeenCalled();
+        expect(MockGenGithub).toHaveBeenCalledWith();
         expect(MockFs.writeFileSync).toHaveBeenCalledWith(
             expect.stringContaining('.github/workflows/ci.yml'),
             expect.any(String),
@@ -122,7 +123,8 @@ describe('Setup main', () => {
         );
     });
 
-    it('generates GitLab CI when user picks gitlab', async () => {
+    it('generates GitLab CI when user picks gitlab', async () => {expect.hasAssertions();
+
         MockExtract.mockReturnValue({ owner: '', repo: '' });
         MockAsk.mockResolvedValueOnce('myapp')
             .mockResolvedValueOnce('gitlab')
@@ -142,31 +144,34 @@ describe('Setup main', () => {
 
         await main();
 
-        expect(MockGenGitlab).toHaveBeenCalled();
+        expect(MockGenGitlab).toHaveBeenCalledWith();
     });
 
-    it('writes .env.example via config-writer', async () => {
+    it('writes .env.example via config-writer', async () => {expect.hasAssertions();
+
         MockExtract.mockReturnValue({ owner: 'myorg', repo: 'my-repo' });
         mockGitHubDetect();
         mockAskForTests(false);
 
         await main();
 
-        expect(MockWriteEnv).toHaveBeenCalled();
+        expect(MockWriteEnv).toHaveBeenCalledWith();
     });
 
-    it('creates pre-push hook when feature is enabled', async () => {
+    it('creates pre-push hook when feature is enabled', async () => {expect.hasAssertions();
+
         MockExtract.mockReturnValue({ owner: 'myorg', repo: 'my-repo' });
         mockGitHubDetect();
         mockAskForTests(true);
 
         await main();
 
-        expect(MockGenHook).toHaveBeenCalled();
-        expect(MockWriteHook).toHaveBeenCalled();
+        expect(MockGenHook).toHaveBeenCalledWith();
+        expect(MockWriteHook).toHaveBeenCalledWith();
     });
 
-    it('does not create pre-push hook when feature is disabled', async () => {
+    it('does not create pre-push hook when feature is disabled', async () => {expect.hasAssertions();
+
         MockExtract.mockReturnValue({ owner: 'myorg', repo: 'my-repo' });
         mockGitHubDetect();
         mockAskForTests(false);
@@ -176,7 +181,8 @@ describe('Setup main', () => {
         expect(MockGenHook).not.toHaveBeenCalled();
     });
 
-    it('asks to configure LLM and does so when accepted', async () => {
+    it('asks to configure LLM and does so when accepted', async () => {expect.hasAssertions();
+
         MockExtract.mockReturnValue({ owner: 'myorg', repo: 'my-repo' });
         mockGitHubDetect();
         MockAsk.mockResolvedValueOnce('myapp')
@@ -195,10 +201,11 @@ describe('Setup main', () => {
 
         await main();
 
-        expect(MockConfigureLlm).toHaveBeenCalled();
+        expect(MockConfigureLlm).toHaveBeenCalledWith();
     });
 
-    it('skips LLM config when user declines', async () => {
+    it('skips LLM config when user declines', async () => {expect.hasAssertions();
+
         MockExtract.mockReturnValue({ owner: 'myorg', repo: 'my-repo' });
         mockGitHubDetect();
         MockAsk.mockResolvedValueOnce('myapp')
@@ -220,7 +227,8 @@ describe('Setup main', () => {
         expect(MockConfigureLlm).not.toHaveBeenCalled();
     });
 
-    it('skips existing GitLab pipeline file', async () => {
+    it('skips existing GitLab pipeline file', async () => {expect.hasAssertions();
+
         MockExtract.mockReturnValue({ owner: '', repo: '' });
         MockAsk.mockResolvedValueOnce('myapp')
             .mockResolvedValueOnce('gitlab')
@@ -243,7 +251,7 @@ describe('Setup main', () => {
 
         await main();
 
-        expect(MockGenGitlab).toHaveBeenCalled();
+        expect(MockGenGitlab).toHaveBeenCalledWith();
         expect(MockFs.writeFileSync).not.toHaveBeenCalledWith(
             expect.stringContaining('.gitlab-ci.yml'),
             expect.any(String),

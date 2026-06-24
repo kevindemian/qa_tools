@@ -45,7 +45,8 @@ describe('Integration: Defect Trend (FT-20)', () => {
     });
 
     describe('FT-20a: generateDefectTrendHtml with data', () => {
-        it('produces complete HTML with table and summary cards', async () => {
+        it('produces complete HTML with table and summary cards', async () => {expect.hasAssertions();
+
             const { generateDefectTrendHtml } = await import('../../defect-trend.js');
             const result = makeResult();
             const html = generateDefectTrendHtml(result, 'Defect Report');
@@ -61,7 +62,8 @@ describe('Integration: Defect Trend (FT-20)', () => {
     });
 
     describe('FT-20b: empty trends', () => {
-        it('shows no-data message', async () => {
+        it('shows no-data message', async () => {expect.hasAssertions();
+
             const { generateDefectTrendHtml } = await import('../../defect-trend.js');
             const result = makeResult({ trends: [], topCategories: [], period: { from: '', to: '' } });
             const html = generateDefectTrendHtml(result);
@@ -71,7 +73,8 @@ describe('Integration: Defect Trend (FT-20)', () => {
     });
 
     describe('FT-20c: error fallback', () => {
-        it('returns buildErrorPage when buildHtmlPage throws', async () => {
+        it('returns buildErrorPage when buildHtmlPage throws', async () => {expect.hasAssertions();
+
             const { generateDefectTrendHtml } = await import('../../defect-trend.js');
             const { buildHtmlPage } = await import('../../html-factory.js');
             const { rootLogger } = await import('../../logger.js');
@@ -97,7 +100,8 @@ describe('Integration: Defect Trend (FT-20)', () => {
     });
 
     describe('FT-20d: dark mode', () => {
-        it('includes theme toggle and dark mode CSS', async () => {
+        it('includes theme toggle and dark mode CSS', async () => {expect.hasAssertions();
+
             const { generateDefectTrendHtml } = await import('../../defect-trend.js');
             const html = generateDefectTrendHtml(makeResult());
 

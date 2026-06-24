@@ -40,7 +40,8 @@ beforeEach(() => {
 });
 
 describe('CompareRuns PBT invariants', () => {
-    it('pass rate is always 0-100 regardless of input values', async () => {
+    it('pass rate is always 0-100 regardless of input values', async () => {expect.hasAssertions();
+
         await fc.assert(
             fc.asyncProperty(MetricsRunArb, MetricsRunArb, async (runA, runB) => {
                 mockLlmPrompt.mockResolvedValue('analysis');
@@ -51,7 +52,8 @@ describe('CompareRuns PBT invariants', () => {
         );
     });
 
-    it('lLM prompt includes run summary with date, project, and metrics', async () => {
+    it('lLM prompt includes run summary with date, project, and metrics', async () => {expect.hasAssertions();
+
         await fc.assert(
             fc.asyncProperty(MetricsRunArb, MetricsRunArb, async (runA, runB) => {
                 mockLlmPrompt.mockClear();
@@ -69,7 +71,8 @@ describe('CompareRuns PBT invariants', () => {
         );
     });
 
-    it('lLM prompt includes pass rate for both runs', async () => {
+    it('lLM prompt includes pass rate for both runs', async () => {expect.hasAssertions();
+
         await fc.assert(
             fc.asyncProperty(MetricsRunArb, MetricsRunArb, async (runA, runB) => {
                 mockLlmPrompt.mockClear();
@@ -92,7 +95,8 @@ describe('CompareRuns PBT invariants', () => {
         );
     });
 
-    it('null run returns early message without calling LLM', async () => {
+    it('null run returns early message without calling LLM', async () => {expect.hasAssertions();
+
         await fc.assert(
             fc.asyncProperty(MetricsRunArb, async (runA) => {
                 mockLlmPrompt.mockClear();
@@ -104,7 +108,8 @@ describe('CompareRuns PBT invariants', () => {
         );
     });
 
-    it('pass rate is 0 when all tests fail', async () => {
+    it('pass rate is 0 when all tests fail', async () => {expect.hasAssertions();
+
         const failingRun: MetricsRun = {
             timestamp: '2026-01-01T00:00:00.000Z',
             project: 'test',
@@ -126,7 +131,8 @@ describe('CompareRuns PBT invariants', () => {
         expect(callArg.user).toContain('Pass rate: 0%');
     });
 
-    it('pass rate is 100 when all tests pass', async () => {
+    it('pass rate is 100 when all tests pass', async () => {expect.hasAssertions();
+
         const passingRun: MetricsRun = {
             timestamp: '2026-01-01T00:00:00.000Z',
             project: 'test',
@@ -148,7 +154,8 @@ describe('CompareRuns PBT invariants', () => {
         expect(callArg.user).toContain('Pass rate: 100%');
     });
 
-    it('pass rate is 0 when no tests executed', async () => {
+    it('pass rate is 0 when no tests executed', async () => {expect.hasAssertions();
+
         const noExecRun: MetricsRun = {
             timestamp: '2026-01-01T00:00:00.000Z',
             project: 'test',

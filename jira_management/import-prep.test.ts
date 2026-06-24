@@ -337,7 +337,8 @@ describe('ParseJsonTests', () => {
         vi.clearAllMocks();
     });
 
-    it('accepts ExpectedResult alias and warns once', async () => {
+    it('accepts ExpectedResult alias and warns once', async () => {expect.hasAssertions();
+
         const jsonContent = JSON.stringify([
             {
                 title: 'TC1',
@@ -365,7 +366,8 @@ describe('ParseJsonTests', () => {
         actualFs.unlinkSync(tmp);
     });
 
-    it('prefers canonical Expected Result over alias', async () => {
+    it('prefers canonical Expected Result over alias', async () => {expect.hasAssertions();
+
         const jsonContent = JSON.stringify([
             {
                 title: 'TC1',
@@ -383,7 +385,8 @@ describe('ParseJsonTests', () => {
         actualFs.unlinkSync(tmp);
     });
 
-    it('handles missing both Expected Result and ExpectedResult', async () => {
+    it('handles missing both Expected Result and ExpectedResult', async () => {expect.hasAssertions();
+
         const jsonContent = JSON.stringify([
             {
                 title: 'TC1',
@@ -420,7 +423,8 @@ describe('ShowPreview', () => {
         mockOpen.mockResolvedValue(true);
     });
 
-    it('prints title and generates MD files', async () => {
+    it('prints title and generates MD files', async () => {expect.hasAssertions();
+
         await showPreview(tests, ['smoke'], 2, 1, mockOpen);
 
         expect(PROMPT.title).toHaveBeenCalledWith('Preview dos testes a serem criados');
@@ -433,7 +437,8 @@ describe('ShowPreview', () => {
         expect(nonNull(calls[1])[0]).toContain('qa-preview.html');
     });
 
-    it('opens browser when available', async () => {
+    it('opens browser when available', async () => {expect.hasAssertions();
+
         mockOpen.mockResolvedValue(true);
         await showPreview(tests, ['smoke'], 2, 1, mockOpen);
 
@@ -442,17 +447,19 @@ describe('ShowPreview', () => {
         expect(PROMPT.print).not.toHaveBeenCalled();
     });
 
-    it('falls back to terminal when browser unavailable', async () => {
+    it('falls back to terminal when browser unavailable', async () => {expect.hasAssertions();
+
         mockOpen.mockResolvedValue(false);
         await showPreview(tests, ['smoke'], 2, 1, mockOpen);
 
-        expect(PROMPT.print).toHaveBeenCalled();
-        expect(mockMd).toHaveBeenCalled();
-        expect(PROMPT.divider).toHaveBeenCalled();
+        expect(PROMPT.print).toHaveBeenCalledWith();
+        expect(mockMd).toHaveBeenCalledWith();
+        expect(PROMPT.divider).toHaveBeenCalledWith();
         expect(PROMPT.info).toHaveBeenCalledWith(expect.stringContaining('Nao foi possivel abrir'));
     });
 
-    it('saves both .md and .html files', async () => {
+    it('saves both .md and .html files', async () => {expect.hasAssertions();
+
         await showPreview(tests, ['smoke'], 2, 1, mockOpen);
 
         expect(FS.writeFileSync).toHaveBeenCalledTimes(2);
@@ -513,7 +520,8 @@ describe('Csv -> preview pipeline (e2e)', async () => {
         loggerWarn.mockRestore();
     });
 
-    it('parses all-quirks CSV and renders preview with correct content', async () => {
+    it('parses all-quirks CSV and renders preview with correct content', async () => {expect.hasAssertions();
+
         const tmp = '/tmp/csv-e2e-quirks.csv';
         fs.writeFileSync(tmp, buildFixtureCsv(), 'utf-8');
 
@@ -546,7 +554,8 @@ describe('Csv -> preview pipeline (e2e)', async () => {
         fs.unlinkSync(tmp);
     });
 
-    it('golden-path CSV (LF, comma, correct header) produces clean preview without normalization warning', async () => {
+    it('golden-path CSV (LF, comma, correct header) produces clean preview without normalization warning', async () => {expect.hasAssertions();
+
         loggerWarn.mockClear();
         const tmp = '/tmp/csv-e2e-golden.csv';
         fs.writeFileSync(tmp, buildGoldenCsv(), 'utf-8');
@@ -565,7 +574,8 @@ describe('Csv -> preview pipeline (e2e)', async () => {
         fs.unlinkSync(tmp);
     });
 
-    it('flat CSV (no Title:) yields 0 results with diagnostic warning', async () => {
+    it('flat CSV (no Title:) yields 0 results with diagnostic warning', async () => {expect.hasAssertions();
+
         loggerWarn.mockClear();
         const tmp = '/tmp/csv-e2e-flat.csv';
         fs.writeFileSync(tmp, 'Title,Action,Data,Expected Result\nTC1,Step1,,Result1\n', 'utf-8');

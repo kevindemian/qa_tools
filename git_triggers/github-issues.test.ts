@@ -29,7 +29,8 @@ describe('GetOpenIssues', () => {
         mockApiGet.mockClear();
     });
 
-    it('returns issues filtering out pull requests', async () => {
+    it('returns issues filtering out pull requests', async () => {expect.hasAssertions();
+
         mockApiGet.mockResolvedValue([
             {
                 number: 1,
@@ -74,28 +75,32 @@ describe('GetOpenIssues', () => {
         });
     });
 
-    it('returns empty array when data is not an array', async () => {
+    it('returns empty array when data is not an array', async () => {expect.hasAssertions();
+
         mockApiGet.mockResolvedValue({ message: 'error', something: true });
         const result = await getOpenIssues(client, 'myorg', 'myrepo');
 
         expect(result).toEqual([]);
     });
 
-    it('returns empty array when apiGet returns null', async () => {
+    it('returns empty array when apiGet returns null', async () => {expect.hasAssertions();
+
         mockApiGet.mockResolvedValue(null);
         const result = await getOpenIssues(client, 'myorg', 'myrepo');
 
         expect(result).toEqual([]);
     });
 
-    it('returns empty array when data is empty array', async () => {
+    it('returns empty array when data is empty array', async () => {expect.hasAssertions();
+
         mockApiGet.mockResolvedValue([]);
         const result = await getOpenIssues(client, 'myorg', 'myrepo');
 
         expect(result).toEqual([]);
     });
 
-    it('handles items with missing optional fields gracefully', async () => {
+    it('handles items with missing optional fields gracefully', async () => {expect.hasAssertions();
+
         mockApiGet.mockResolvedValue([{ number: 1, title: 'Minimal', state: 'open', labels: null, html_url: null }]);
         const result = await getOpenIssues(client, 'myorg', 'myrepo');
 
@@ -106,7 +111,8 @@ describe('GetOpenIssues', () => {
         expect(nonNull(result[0]).html_url).toBe('');
     });
 
-    it('maps label names correctly filtering out non-object labels', async () => {
+    it('maps label names correctly filtering out non-object labels', async () => {expect.hasAssertions();
+
         mockApiGet.mockResolvedValue([
             {
                 number: 1,

@@ -66,13 +66,15 @@ describe('ResolveCsvPath', () => {
         vi.spyOn(STATE, 'load').mockReturnValue({});
     });
 
-    it('returns input when provided', async () => {
+    it('returns input when provided', async () => {expect.hasAssertions();
+
         const result = await resolveCsvPath('/my/path.csv');
 
         expect(result).toBe('/my/path.csv');
     });
 
-    it('reads from config when no input', async () => {
+    it('reads from config when no input', async () => {expect.hasAssertions();
+
         vi.spyOn(CONFIG.default, 'get').mockImplementation((key: string) => {
             if (key === 'csvPath') return '/config/path.csv';
             return undefined;
@@ -82,7 +84,8 @@ describe('ResolveCsvPath', () => {
         expect(result).toBe('/config/path.csv');
     });
 
-    it('prompts user when no input and no config', async () => {
+    it('prompts user when no input and no config', async () => {expect.hasAssertions();
+
         vi.spyOn(CONFIG.default, 'get').mockReturnValue(undefined);
         vi.spyOn(PROMPT, 'askFilePath').mockResolvedValue('/user/path.csv');
         const result = await resolveCsvPath(undefined);
@@ -136,13 +139,15 @@ describe('ResolveJsonPath', () => {
         vi.spyOn(CONFIG.default, 'get').mockReturnValue(undefined);
     });
 
-    it('returns input when provided', async () => {
+    it('returns input when provided', async () => {expect.hasAssertions();
+
         const result = await resolveJsonPath('/my/tests.json');
 
         expect(result).toBe('/my/tests.json');
     });
 
-    it('reads from config when no input', async () => {
+    it('reads from config when no input', async () => {expect.hasAssertions();
+
         vi.spyOn(CONFIG.default, 'get').mockImplementation((key: string) => {
             if (key === 'jsonPath') return '/config/tests.json';
             return undefined;
@@ -152,14 +157,16 @@ describe('ResolveJsonPath', () => {
         expect(result).toBe('/config/tests.json');
     });
 
-    it('prompts user when no input and no config', async () => {
+    it('prompts user when no input and no config', async () => {expect.hasAssertions();
+
         vi.spyOn(PROMPT, 'askFilePath').mockResolvedValue('/user/tests.json');
         const result = await resolveJsonPath(undefined);
 
         expect(result).toBe('/user/tests.json');
     });
 
-    it('returns undefined for empty path', async () => {
+    it('returns undefined for empty path', async () => {expect.hasAssertions();
+
         vi.spyOn(PROMPT, 'askFilePath').mockResolvedValue('');
         const result = await resolveJsonPath(undefined);
 

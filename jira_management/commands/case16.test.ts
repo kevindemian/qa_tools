@@ -20,7 +20,8 @@ describe('Case16 — config JSON directory', () => {
         expect(typeof case16.handler).toBe('function');
     });
 
-    it('executes without error with basic context', async () => {
+    it('executes without error with basic context', async () => {expect.hasAssertions();
+
         const result = await case16.handler(mockContext);
 
         expect(result === undefined || typeof result === 'boolean').toBeTruthy();

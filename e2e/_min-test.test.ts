@@ -41,7 +41,8 @@ describe('Case04', () => {
         nock.restore();
     });
 
-    it('happy path', async () => {
+    it('happy path', async () => {expect.hasAssertions();
+
         const { default: JiraResource } = await vi.importActual<typeof import('../jira_management/jira_resource.js')>(
             '../jira_management/jira_resource',
         );
@@ -81,7 +82,7 @@ describe('Case04', () => {
         ).default;
         await mod.handler(c);
 
-        expect(c.pushHistory).toHaveBeenCalled();
+        expect(c.pushHistory).toHaveBeenCalledWith();
         expect(nock.isDone()).toBeTruthy();
     }, 15000);
 });

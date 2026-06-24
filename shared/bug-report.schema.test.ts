@@ -64,7 +64,8 @@ describe('AiBugReportSchema', () => {
         expect(() => AiBugReportSchema.parse(invalid)).toThrow();
     });
 
-    it('accepts all severity values', () => {
+    it('accepts all severity values', () => {expect.hasAssertions();
+
         for (const severity of ['trivial', 'minor', 'major', 'critical'] as const) {
             const result = AiBugReportSchema.parse({ ...validReport, severity });
 

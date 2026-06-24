@@ -49,7 +49,8 @@ describe('LinkTypeManager', () => {
     });
 
     describe('GetIssueLinkTypes', () => {
-        it('returns cached value on second call', async () => {
+        it('returns cached value on second call', async () => {expect.hasAssertions();
+
             const fakeTypes = [{ id: '1', name: 'Test' }];
             mockJiraResource.getJiraResource.mockResolvedValue({ issueLinkTypes: fakeTypes });
             const first = await manager.getIssueLinkTypes();
@@ -60,7 +61,8 @@ describe('LinkTypeManager', () => {
             expect(mockJiraResource.getJiraResource).toHaveBeenCalledTimes(1);
         });
 
-        it('fetches from API and caches to disk', async () => {
+        it('fetches from API and caches to disk', async () => {expect.hasAssertions();
+
             const fakeTypes = [{ id: '10200', name: 'Tested by' }];
             mockJiraResource.getJiraResource.mockResolvedValue({ issueLinkTypes: fakeTypes });
             await manager.getIssueLinkTypes();
@@ -68,7 +70,8 @@ describe('LinkTypeManager', () => {
             expect(fs.writeFileSync).toHaveBeenCalledWith(CACHE_PATH, JSON.stringify(fakeTypes), 'utf8');
         });
 
-        it('falls back to local cache when API fails', async () => {
+        it('falls back to local cache when API fails', async () => {expect.hasAssertions();
+
             const cachedTypes = [{ id: '99', name: 'Cached' }];
             mockJiraResource.getJiraResource.mockRejectedValue(new Error('API down'));
             vi.spyOn(fs, 'existsSync').mockReturnValue(true);
@@ -78,7 +81,8 @@ describe('LinkTypeManager', () => {
             expect(result).toEqual(cachedTypes);
         });
 
-        it('falls back to hardcoded types when API and cache fail', async () => {
+        it('falls back to hardcoded types when API and cache fail', async () => {expect.hasAssertions();
+
             mockJiraResource.getJiraResource.mockRejectedValue(new Error('API down'));
             vi.spyOn(fs, 'existsSync').mockReturnValue(false);
             const result = await manager.getIssueLinkTypes();
@@ -87,7 +91,8 @@ describe('LinkTypeManager', () => {
             expect(nonNull(result[0]).name).toBe('Relates');
         });
 
-        it('logs warning when cache write throws', async () => {
+        it('logs warning when cache write throws', async () => {expect.hasAssertions();
+
             const fakeTypes = [{ id: '10200', name: 'Tested by' }];
             mockJiraResource.getJiraResource.mockResolvedValue({ issueLinkTypes: fakeTypes });
             vi.spyOn(fs, 'writeFileSync').mockImplementation(() => {
@@ -98,7 +103,8 @@ describe('LinkTypeManager', () => {
             expect(rootLoggerWarnSpy).toHaveBeenCalledWith(expect.stringContaining('Falha ao escrever cache'));
         });
 
-        it('logs warning when cache read has invalid JSON', async () => {
+        it('logs warning when cache read has invalid JSON', async () => {expect.hasAssertions();
+
             mockJiraResource.getJiraResource.mockRejectedValue(new Error('API down'));
             vi.spyOn(fs, 'existsSync').mockReturnValue(true);
             vi.spyOn(fs, 'readFileSync').mockReturnValue('invalid json');
@@ -119,37 +125,43 @@ describe('LinkTypeManager', () => {
             mockJiraResource.getJiraResource.mockResolvedValue({ issueLinkTypes: fakeTypes });
         });
 
-        it('matches by name', async () => {
+        it('matches by name', async () => {expect.hasAssertions();
+
             const id = await manager.resolveLinkTypeId('Tests');
 
             expect(id).toBe('200');
         });
 
-        it('matches by inward', async () => {
+        it('matches by inward', async () => {expect.hasAssertions();
+
             const id = await manager.resolveLinkTypeId('is tested by');
 
             expect(id).toBe('200');
         });
 
-        it('matches by outward', async () => {
+        it('matches by outward', async () => {expect.hasAssertions();
+
             const id = await manager.resolveLinkTypeId('tests');
 
             expect(id).toBe('200');
         });
 
-        it('is case insensitive', async () => {
+        it('is case insensitive', async () => {expect.hasAssertions();
+
             const id = await manager.resolveLinkTypeId('TESTS');
 
             expect(id).toBe('200');
         });
 
-        it('trims whitespace', async () => {
+        it('trims whitespace', async () => {expect.hasAssertions();
+
             const id = await manager.resolveLinkTypeId('  Tests  ');
 
             expect(id).toBe('200');
         });
 
-        it('falls back to 11701 when no match', async () => {
+        it('falls back to 11701 when no match', async () => {expect.hasAssertions();
+
             const id = await manager.resolveLinkTypeId('nonexistent');
 
             expect(id).toBe('11701');

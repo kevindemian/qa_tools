@@ -143,7 +143,8 @@ describe('CreateTestExecution', () => {
         testExecutionCreator = new TestExecutionCreator(jiraResource, linkManager);
     });
 
-    it('creates a Test Execution with given keys', async () => {
+    it('creates a Test Execution with given keys', async () => {expect.hasAssertions();
+
         jiraResource.getJiraResource.mockImplementation((url: string) => {
             if (url === 'issuetype') return Promise.resolve(MOCK_ISSUE_TYPES);
             if (url === 'field') return Promise.resolve(MOCK_FIELDS);
@@ -161,7 +162,7 @@ describe('CreateTestExecution', () => {
         expect(nonNull(result).key).toBe('EXEC-1');
         expect(getJiraResourceSpy).toHaveBeenCalledWith('issuetype');
         expect(getJiraResourceSpy).toHaveBeenCalledWith('field');
-        expect(postJiraResourceSpy).toHaveBeenCalled();
+        expect(postJiraResourceSpy).toHaveBeenCalledWith();
         expect(jiraResource.postJiraResource.mock.lastCall?.[1]).toHaveProperty('fields.project', { key: PROJECT });
         expect(jiraResource.postJiraResource.mock.lastCall?.[1]).toHaveProperty('fields.issuetype', { id: '11802' });
         expect(jiraResource.postJiraResource.mock.lastCall?.[1]).toHaveProperty('fields.customfield_13715', [
@@ -174,7 +175,8 @@ describe('CreateTestExecution', () => {
         );
     });
 
-    it('uses default name when csvName is empty', async () => {
+    it('uses default name when csvName is empty', async () => {expect.hasAssertions();
+
         jiraResource.getJiraResource.mockImplementation((url: string) => {
             if (url === 'issuetype') return Promise.resolve(MOCK_ISSUE_TYPES);
             if (url === 'field') return Promise.resolve(MOCK_FIELDS);
@@ -190,7 +192,7 @@ describe('CreateTestExecution', () => {
         });
 
         expect(nonNull(result).key).toBe('EXEC-2');
-        expect(postJiraResourceSpy).toHaveBeenCalled();
+        expect(postJiraResourceSpy).toHaveBeenCalledWith();
         expect(jiraResource.postJiraResource.mock.lastCall?.[1]).toHaveProperty('fields.project', { key: PROJECT });
         expect(jiraResource.postJiraResource.mock.lastCall?.[1]).toHaveProperty('fields.issuetype', { id: '11802' });
         expect(jiraResource.postJiraResource.mock.lastCall?.[1]).toHaveProperty('fields.customfield_13715', ['TEST-3']);
@@ -200,7 +202,8 @@ describe('CreateTestExecution', () => {
         );
     });
 
-    it('returns null when issuetype not found', async () => {
+    it('returns null when issuetype not found', async () => {expect.hasAssertions();
+
         jiraResource.getJiraResource.mockResolvedValue([
             { id: '11200', name: 'Epic' },
             { id: '11800', name: 'Test' },
@@ -211,7 +214,8 @@ describe('CreateTestExecution', () => {
         ).resolves.toBeNull();
     });
 
-    it('returns null when custom field not found', async () => {
+    it('returns null when custom field not found', async () => {expect.hasAssertions();
+
         jiraResource.getJiraResource.mockImplementation((url: string) => {
             if (url === 'issuetype') return Promise.resolve(MOCK_ISSUE_TYPES);
             if (url === 'field') return Promise.resolve([]);
@@ -223,7 +227,8 @@ describe('CreateTestExecution', () => {
         ).resolves.toBeNull();
     });
 
-    it('throws when issuetype API fails', async () => {
+    it('throws when issuetype API fails', async () => {expect.hasAssertions();
+
         jiraResource.getJiraResource.mockRejectedValue(new Error('API error'));
 
         await expect(
@@ -231,7 +236,8 @@ describe('CreateTestExecution', () => {
         ).rejects.toThrow();
     });
 
-    it('returns null when field API returns non-array', async () => {
+    it('returns null when field API returns non-array', async () => {expect.hasAssertions();
+
         jiraResource.getJiraResource.mockImplementation((url: string) => {
             if (url === 'issuetype') return Promise.resolve(MOCK_ISSUE_TYPES);
             if (url === 'field') return Promise.resolve(null);
@@ -243,7 +249,8 @@ describe('CreateTestExecution', () => {
         ).resolves.toBeNull();
     });
 
-    it('returns null when issuetype API returns non-array', async () => {
+    it('returns null when issuetype API returns non-array', async () => {expect.hasAssertions();
+
         jiraResource.getJiraResource.mockResolvedValue(null);
 
         await expect(
@@ -251,7 +258,8 @@ describe('CreateTestExecution', () => {
         ).resolves.toBeNull();
     });
 
-    it('accepts titleOverride as 5th param', async () => {
+    it('accepts titleOverride as 5th param', async () => {expect.hasAssertions();
+
         jiraResource.getJiraResource.mockImplementation((url: string) => {
             if (url === 'issuetype') return Promise.resolve(MOCK_ISSUE_TYPES);
             if (url === 'field') return Promise.resolve(MOCK_FIELDS);
@@ -298,7 +306,8 @@ describe('CreateTestExecutionWithLinks', () => {
         testExecutionCreator = new TestExecutionCreator(jiraResource, linkManager);
     });
 
-    it('creates TE and links all test keys', async () => {
+    it('creates TE and links all test keys', async () => {expect.hasAssertions();
+
         jiraResource.getJiraResource.mockImplementation((url: string) => {
             if (url === 'issuetype') return Promise.resolve(MOCK_ISSUE_TYPES);
             if (url === 'field') return Promise.resolve(MOCK_FIELDS);
@@ -324,7 +333,8 @@ describe('CreateTestExecutionWithLinks', () => {
         });
     });
 
-    it('skips already linked test keys', async () => {
+    it('skips already linked test keys', async () => {expect.hasAssertions();
+
         jiraResource.getJiraResource.mockImplementation((url: string) => {
             if (url === 'issuetype') return Promise.resolve(MOCK_ISSUE_TYPES);
             if (url === 'field') return Promise.resolve(MOCK_FIELDS);
@@ -355,7 +365,8 @@ describe('CreateTestExecutionWithLinks', () => {
         expect(nonNull(linkCalls[0])[1].outwardIssue.key).toBe('TEST-2');
     });
 
-    it('handles link API failure gracefully', async () => {
+    it('handles link API failure gracefully', async () => {expect.hasAssertions();
+
         jiraResource.getJiraResource.mockImplementation((url: string) => {
             if (url === 'issuetype') return Promise.resolve(MOCK_ISSUE_TYPES);
             if (url === 'field') return Promise.resolve(MOCK_FIELDS);
@@ -574,7 +585,8 @@ describe('CreateTestsFromJson', () => {
         vi.restoreAllMocks();
     });
 
-    it('cancela com caminho vazio', async () => {
+    it('cancela com caminho vazio', async () => {expect.hasAssertions();
+
         vi.spyOn(PROMPT, 'askFilePath').mockResolvedValueOnce('');
         const result = await createTestsFromJson(BASE_PARAMS());
 
@@ -582,34 +594,38 @@ describe('CreateTestsFromJson', () => {
         expect(PROMPT.warn).toHaveBeenCalledWith(expect.stringContaining('vazio'));
     });
 
-    it('cancela com JSON invalido', async () => {
+    it('cancela com JSON invalido', async () => {expect.hasAssertions();
+
         vi.spyOn(PROMPT, 'ask').mockResolvedValue('/fake/path.json');
         FS.readFileSync.mockReturnValue('not json');
         const result = await createTestsFromJson(BASE_PARAMS());
 
         expect(result).toBeUndefined();
-        expect(PROMPT.warn).toHaveBeenCalled();
+        expect(PROMPT.warn).toHaveBeenCalledWith();
     });
 
-    it('cancela com array vazio', async () => {
+    it('cancela com array vazio', async () => {expect.hasAssertions();
+
         vi.spyOn(PROMPT, 'ask').mockResolvedValue('/fake/path.json');
         FS.readFileSync.mockReturnValue('[]');
         const result = await createTestsFromJson(BASE_PARAMS());
 
         expect(result).toBeUndefined();
-        expect(PROMPT.warn).toHaveBeenCalled();
+        expect(PROMPT.warn).toHaveBeenCalledWith();
     });
 
-    it('cancela com item sem title/steps', async () => {
+    it('cancela com item sem title/steps', async () => {expect.hasAssertions();
+
         vi.spyOn(PROMPT, 'ask').mockResolvedValue('/fake/path.json');
         FS.readFileSync.mockReturnValue(JSON.stringify([{}]));
         const result = await createTestsFromJson(BASE_PARAMS());
 
         expect(result).toBeUndefined();
-        expect(PROMPT.warn).toHaveBeenCalled();
+        expect(PROMPT.warn).toHaveBeenCalledWith();
     });
 
-    it('executa dry-run com JSON valido', async () => {
+    it('executa dry-run com JSON valido', async () => {expect.hasAssertions();
+
         process.env['AUTO_CONFIRM'] = 'true';
         process.env['DRY_RUN'] = 'true';
         vi.spyOn(PROMPT, 'ask').mockResolvedValue('/fake/path.json');
@@ -626,7 +642,8 @@ describe('CreateTestsFromJson', () => {
         expect(nonNull(result).sourcePath).toBe('/fake/path.json');
     });
 
-    it('parseia precondition como reference (formato ABC-123)', async () => {
+    it('parseia precondition como reference (formato ABC-123)', async () => {expect.hasAssertions();
+
         process.env['AUTO_CONFIRM'] = 'true';
         process.env['DRY_RUN'] = 'true';
         vi.spyOn(PROMPT, 'ask').mockResolvedValue('/fake/path.json');
@@ -639,7 +656,8 @@ describe('CreateTestsFromJson', () => {
         expect(nonNull(result).summary).toContain('1');
     });
 
-    it('parseia linkedIssues como strings', async () => {
+    it('parseia linkedIssues como strings', async () => {expect.hasAssertions();
+
         process.env['AUTO_CONFIRM'] = 'true';
         process.env['DRY_RUN'] = 'true';
         vi.spyOn(PROMPT, 'ask').mockResolvedValue('/fake/path.json');
@@ -652,7 +670,8 @@ describe('CreateTestsFromJson', () => {
         expect(nonNull(result).summary).toContain('1');
     });
 
-    it('parseia linkedIssues como objetos', async () => {
+    it('parseia linkedIssues como objetos', async () => {expect.hasAssertions();
+
         process.env['AUTO_CONFIRM'] = 'true';
         process.env['DRY_RUN'] = 'true';
         vi.spyOn(PROMPT, 'ask').mockResolvedValue('/fake/path.json');
@@ -705,7 +724,8 @@ describe('ReadCsvTests (via createTestsFromCsv)', () => {
         vi.spyOn(csvResource, 'readBulkCsv');
     });
 
-    it('empty CSV -> warn', async () => {
+    it('empty CSV -> warn', async () => {expect.hasAssertions();
+
         csvResource.readBulkCsv.mockResolvedValue([]);
         const result = await createTestsFromCsv(makeCsvArgs({ csvPath: '/empty.csv' }));
 
@@ -713,7 +733,8 @@ describe('ReadCsvTests (via createTestsFromCsv)', () => {
         expect(PROMPT.warn).toHaveBeenCalledWith(expect.stringContaining('Nenhum teste'));
     });
 
-    it('cSV read error -> printError', async () => {
+    it('cSV read error -> printError', async () => {expect.hasAssertions();
+
         csvResource.readBulkCsv.mockRejectedValue(new Error('file not found'));
         const result = await createTestsFromCsv(makeCsvArgs({ csvPath: '/bad.csv' }));
 
@@ -723,7 +744,8 @@ describe('ReadCsvTests (via createTestsFromCsv)', () => {
 });
 
 describe('UpdateCrossReferences', () => {
-    it('delegates to linker', async () => {
+    it('delegates to linker', async () => {expect.hasAssertions();
+
         const updateCrossRefSpy = vi
             .fn<(...args: [tests: TestCase[], keys: string[]]) => Promise<void>>()
             .mockResolvedValue(undefined);
@@ -778,7 +800,8 @@ describe('CreateTestsFromCsv', () => {
         vi.spyOn(csvResource, 'readBulkCsv');
     });
 
-    it('success path with valid CSV -> creates tests', async () => {
+    it('success path with valid CSV -> creates tests', async () => {expect.hasAssertions();
+
         vi.spyOn(PROMPT, 'smartPrompt').mockResolvedValue('/test.csv');
         vi.spyOn(PROMPT, 'prompt').mockReturnValue('');
         process.env['AUTO_CONFIRM'] = 'true';

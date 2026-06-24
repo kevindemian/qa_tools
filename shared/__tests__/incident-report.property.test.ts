@@ -40,7 +40,8 @@ const UncoveredEpicsArb = fc.array(
 );
 
 describe('BuildIncidentReport — property-based', () => {
-    it('eventCount always matches events.length', () => {
+    it('eventCount always matches events.length', () => {expect.hasAssertions();
+
         fc.assert(
             fc.property(
                 FailRateArb,
@@ -64,7 +65,8 @@ describe('BuildIncidentReport — property-based', () => {
         );
     });
 
-    it('severity counts are non-negative and within bounds', () => {
+    it('severity counts are non-negative and within bounds', () => {expect.hasAssertions();
+
         fc.assert(
             fc.property(
                 FailRateArb,
@@ -93,7 +95,8 @@ describe('BuildIncidentReport — property-based', () => {
         );
     });
 
-    it('severity count sum matches eventCount', () => {
+    it('severity count sum matches eventCount', () => {expect.hasAssertions();
+
         fc.assert(
             fc.property(
                 FailRateArb,
@@ -117,7 +120,8 @@ describe('BuildIncidentReport — property-based', () => {
         );
     });
 
-    it('overallSeverity is consistent with severity counts', () => {
+    it('overallSeverity is consistent with severity counts', () => {expect.hasAssertions();
+
         fc.assert(
             fc.property(
                 FailRateArb,
@@ -149,7 +153,8 @@ describe('BuildIncidentReport — property-based', () => {
         );
     });
 
-    it('timestamp is valid ISO string', () => {
+    it('timestamp is valid ISO string', () => {expect.hasAssertions();
+
         fc.assert(
             fc.property(
                 FailRateArb,
@@ -173,7 +178,8 @@ describe('BuildIncidentReport — property-based', () => {
         );
     });
 
-    it('each event has required fields', () => {
+    it('each event has required fields', () => {expect.hasAssertions();
+
         fc.assert(
             fc.property(
                 FailRateArb,
@@ -205,7 +211,8 @@ describe('BuildIncidentReport — property-based', () => {
         );
     });
 
-    it('high severity events precede medium which precede low', () => {
+    it('high severity events precede medium which precede low', () => {expect.hasAssertions();
+
         fc.assert(
             fc.property(
                 FailRateArb,
@@ -243,7 +250,8 @@ describe('BuildIncidentReport — property-based', () => {
 });
 
 describe('GenerateIncidentReportHtml — property-based', () => {
-    it('always produces valid HTML with DOCTYPE', () => {
+    it('always produces valid HTML with DOCTYPE', () => {expect.hasAssertions();
+
         fc.assert(
             fc.property(
                 FailRateArb,
@@ -269,7 +277,8 @@ describe('GenerateIncidentReportHtml — property-based', () => {
         );
     });
 
-    it('contains severity badge and summary', () => {
+    it('contains severity badge and summary', () => {expect.hasAssertions();
+
         fc.assert(
             fc.property(
                 FailRateArb,

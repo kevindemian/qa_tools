@@ -8,7 +8,8 @@ beforeEach(() => {
 });
 
 describe('AnalyzeCoverage', () => {
-    it('returns coverage result with some mapped and some unmapped', async () => {
+    it('returns coverage result with some mapped and some unmapped', async () => {expect.hasAssertions();
+
         mockJiraResource.searchJiraIssues.mockResolvedValueOnce({
             issues: [
                 { key: 'TEST-1', fields: { summary: 'With steps', steps: [{ action: 'Step 1' }] } },
@@ -31,7 +32,8 @@ describe('AnalyzeCoverage', () => {
         expect(result.coveragePct).toBe(50);
     });
 
-    it('handles empty response', async () => {
+    it('handles empty response', async () => {expect.hasAssertions();
+
         mockJiraResource.searchJiraIssues.mockResolvedValueOnce({ issues: [], total: 0 });
 
         const result = await analyzeCoverage(mockJiraResource, 'TEST');
@@ -42,7 +44,8 @@ describe('AnalyzeCoverage', () => {
         expect(result.unmappedSteps).toEqual([]);
     });
 
-    it('handles network error and returns zero coverage', async () => {
+    it('handles network error and returns zero coverage', async () => {expect.hasAssertions();
+
         mockJiraResource.searchJiraIssues.mockRejectedValueOnce(new Error('Network error'));
 
         const result = await analyzeCoverage(mockJiraResource, 'TEST');
@@ -51,7 +54,8 @@ describe('AnalyzeCoverage', () => {
         expect(result.coveragePct).toBe(0);
     });
 
-    it('groups gaps by epic when epic field is present', async () => {
+    it('groups gaps by epic when epic field is present', async () => {expect.hasAssertions();
+
         const mockEpic1 = { key: 'EPIC-1' };
         const mockEpic2 = { key: 'EPIC-2' };
         mockJiraResource.searchJiraIssues.mockResolvedValueOnce({
@@ -70,7 +74,8 @@ describe('AnalyzeCoverage', () => {
         expect(result.gapsByEpic['EPIC-2']).toEqual(['TEST-2', 'TEST-3']);
     });
 
-    it('handles epic as object without key property', async () => {
+    it('handles epic as object without key property', async () => {expect.hasAssertions();
+
         mockJiraResource.searchJiraIssues.mockResolvedValueOnce({
             issues: [
                 { key: 'TEST-1', fields: { summary: 'No steps', customfield_10014: { value: 'something' } } },

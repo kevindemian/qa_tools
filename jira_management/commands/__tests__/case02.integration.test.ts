@@ -26,7 +26,8 @@ beforeEach(() => {
 });
 
 describe('FT-42a: empty version list', () => {
-    it('shows info when no versions exist', async () => {
+    it('shows info when no versions exist', async () => {expect.hasAssertions();
+
         const jira = makeMockJiraResource();
         jira.getProjectVersions.mockResolvedValue([]);
         const ctx = makeContext(jira);
@@ -36,7 +37,8 @@ describe('FT-42a: empty version list', () => {
         expect(mockDivider).not.toHaveBeenCalled();
     });
 
-    it('shows info when versions is null', async () => {
+    it('shows info when versions is null', async () => {expect.hasAssertions();
+
         const jira = makeMockJiraResource();
         jira.getProjectVersions.mockResolvedValue(null);
         const ctx = makeContext(jira);
@@ -47,7 +49,8 @@ describe('FT-42a: empty version list', () => {
 });
 
 describe('FT-42b: version display formatting', () => {
-    it('marks released versions', async () => {
+    it('marks released versions', async () => {expect.hasAssertions();
+
         const jira = makeMockJiraResource();
         jira.getProjectVersions.mockResolvedValue([{ name: 'v1.0', description: 'First', released: true }]);
         const ctx = makeContext(jira);
@@ -56,7 +59,8 @@ describe('FT-42b: version display formatting', () => {
         expect(mockInfo).toHaveBeenCalledWith(expect.stringContaining('(RELEASED)'));
     });
 
-    it('shows placeholder when description is empty', async () => {
+    it('shows placeholder when description is empty', async () => {expect.hasAssertions();
+
         const jira = makeMockJiraResource();
         jira.getProjectVersions.mockResolvedValue([{ name: 'v2.0', description: '', released: false }]);
         const ctx = makeContext(jira);
@@ -65,7 +69,8 @@ describe('FT-42b: version display formatting', () => {
         expect(mockInfo).toHaveBeenCalledWith(expect.stringContaining('sem descrição'));
     });
 
-    it('does not mark unreleased future version as overdue', async () => {
+    it('does not mark unreleased future version as overdue', async () => {expect.hasAssertions();
+
         const futureDate = new Date(Date.now() + 86400000 * 30).toISOString().slice(0, 10);
         const jira = makeMockJiraResource();
         jira.getProjectVersions.mockResolvedValue([
@@ -77,7 +82,8 @@ describe('FT-42b: version display formatting', () => {
         expect(mockInfo).not.toHaveBeenCalledWith(expect.stringContaining('ATRASADA'));
     });
 
-    it('marks unreleased past version as overdue', async () => {
+    it('marks unreleased past version as overdue', async () => {expect.hasAssertions();
+
         const pastDate = new Date(Date.now() - 86400000).toISOString().slice(0, 10);
         const jira = makeMockJiraResource();
         jira.getProjectVersions.mockResolvedValue([
@@ -91,7 +97,8 @@ describe('FT-42b: version display formatting', () => {
 });
 
 describe('FT-42c: pushHistory on success', () => {
-    it('calls pushHistory with version count', async () => {
+    it('calls pushHistory with version count', async () => {expect.hasAssertions();
+
         const jira = makeMockJiraResource();
         jira.getProjectVersions.mockResolvedValue([
             { name: 'v1', description: 'A', released: true },
@@ -105,22 +112,24 @@ describe('FT-42c: pushHistory on success', () => {
 });
 
 describe('FT-42d: error handling', () => {
-    it('catches getProjectId failure and calls printError', async () => {
+    it('catches getProjectId failure and calls printError', async () => {expect.hasAssertions();
+
         const jira = makeMockJiraResource();
         jira.getProjectId.mockRejectedValue(new Error('API error'));
         const ctx = makeContext(jira);
 
         await expect(case02.handler(ctx)).resolves.toBeUndefined();
-        expect(mockPrintError).toHaveBeenCalled();
+        expect(mockPrintError).toHaveBeenCalledWith();
     });
 
-    it('catches getProjectVersions failure and calls printError', async () => {
+    it('catches getProjectVersions failure and calls printError', async () => {expect.hasAssertions();
+
         const jira = makeMockJiraResource();
         jira.getProjectId.mockResolvedValue('123');
         jira.getProjectVersions.mockRejectedValue(new Error('List error'));
         const ctx = makeContext(jira);
 
         await expect(case02.handler(ctx)).resolves.toBeUndefined();
-        expect(mockPrintError).toHaveBeenCalled();
+        expect(mockPrintError).toHaveBeenCalledWith();
     });
 });

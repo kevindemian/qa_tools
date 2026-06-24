@@ -39,7 +39,8 @@ describe('Integration: Pipeline Cost (FT-29)', () => {
     });
 
     describe('FT-29a: calculate and render pipeline cost', () => {
-        it('produces complete HTML with summary and data table', async () => {
+        it('produces complete HTML with summary and data table', async () => {expect.hasAssertions();
+
             const { calculatePipelineCost, generatePipelineCostHtml } = await import('../../pipeline-cost.js');
             const runs = [makeRun({ timestamp: '2026-06-16T00:00:00.000Z', duration: 120, failed: 1, passed: 9 })];
             const result = calculatePipelineCost(runs, 0.01);
@@ -59,7 +60,8 @@ describe('Integration: Pipeline Cost (FT-29)', () => {
     });
 
     describe('FT-29b: empty runs', () => {
-        it('shows no-data message and zeroed metrics', async () => {
+        it('shows no-data message and zeroed metrics', async () => {expect.hasAssertions();
+
             const { calculatePipelineCost, generatePipelineCostHtml } = await import('../../pipeline-cost.js');
             const result = calculatePipelineCost([]);
             const html = generatePipelineCostHtml(result);
@@ -72,7 +74,8 @@ describe('Integration: Pipeline Cost (FT-29)', () => {
     });
 
     describe('FT-29d: custom title', () => {
-        it('uses custom title in HTML page', async () => {
+        it('uses custom title in HTML page', async () => {expect.hasAssertions();
+
             const { calculatePipelineCost, generatePipelineCostHtml } = await import('../../pipeline-cost.js');
             const result = calculatePipelineCost([]);
             const html = generatePipelineCostHtml(result, 'My Cost Report');

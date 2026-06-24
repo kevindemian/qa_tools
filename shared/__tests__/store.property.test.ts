@@ -63,7 +63,8 @@ const BranchEntryArb = fc
  * ────────────────────────────────────────────────────────────── */
 
 describe('Store — property-based', () => {
-    it('put + lookup round-trip preserves all fields', () => {
+    it('put + lookup round-trip preserves all fields', () => {expect.hasAssertions();
+
         fc.assert(
             fc.property(ReportMetaArb, (meta) => {
                 const { store, dir } = createFreshStore(meta.project);
@@ -92,7 +93,8 @@ describe('Store — property-based', () => {
         );
     });
 
-    it('lookup returns null for unknown sha', () => {
+    it('lookup returns null for unknown sha', () => {expect.hasAssertions();
+
         fc.assert(
             fc.property(
                 fc.string({ minLength: 8, maxLength: 64 }),
@@ -110,7 +112,8 @@ describe('Store — property-based', () => {
         );
     });
 
-    it('multiple puts → listByProject returns sorted by timestamp descending', () => {
+    it('multiple puts → listByProject returns sorted by timestamp descending', () => {expect.hasAssertions();
+
         fc.assert(
             fc.property(fc.array(ReportMetaArb, { minLength: 1, maxLength: 20 }), (metas) => {
                 fc.pre(metas.length > 0);
@@ -141,7 +144,8 @@ describe('Store — property-based', () => {
         );
     });
 
-    it('listByProject returns only entries for the project', () => {
+    it('listByProject returns only entries for the project', () => {expect.hasAssertions();
+
         fc.assert(
             fc.property(
                 fc.uniqueArray(ReportMetaArb, { selector: (m) => m.sha, minLength: 1, maxLength: 10 }),
@@ -165,7 +169,8 @@ describe('Store — property-based', () => {
         );
     });
 
-    it('appendBranch + getBranch round-trip preserves entries in LIFO order', () => {
+    it('appendBranch + getBranch round-trip preserves entries in LIFO order', () => {expect.hasAssertions();
+
         fc.assert(
             fc.property(
                 fc.string({ minLength: 1, maxLength: 20 }),
@@ -197,7 +202,8 @@ describe('Store — property-based', () => {
         );
     });
 
-    it('getBranch returns empty array for unknown branch', () => {
+    it('getBranch returns empty array for unknown branch', () => {expect.hasAssertions();
+
         fc.assert(
             fc.property(fc.string({ minLength: 1, maxLength: 20 }), (branch) => {
                 const { store, dir } = createFreshStore('test-project');
@@ -211,7 +217,8 @@ describe('Store — property-based', () => {
         );
     });
 
-    it('saveReport + loadReport round-trip preserves test data', () => {
+    it('saveReport + loadReport round-trip preserves test data', () => {expect.hasAssertions();
+
         fc.assert(
             fc.property(
                 fc.string({ minLength: 8, maxLength: 64 }),
