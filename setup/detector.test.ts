@@ -17,7 +17,7 @@ beforeEach(() => {
     vi.clearAllMocks();
 });
 
-describe('DetectFrameworkCtrf', () => {
+describe('DetectFramework', () => {
     it('detects cypress from devDependencies', () => {
         mockFsReadFileSync.mockReturnValueOnce(
             JSON.stringify({

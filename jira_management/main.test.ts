@@ -167,16 +167,14 @@ let mod: MainModule;
 let createValidateEnvCall: unknown;
 let getStatePathCalled = false;
 
-beforeAll(() => {
+beforeAll(async () => {
     if (!vi.isMockFunction(openModule.openWithFallback)) {
         throw new Error('Guard FAILED: openWithFallback is NOT mocked. Browser would open!');
     }
     if (!vi.isMockFunction(cp.spawn)) {
         throw new Error('Guard FAILED: child_process.spawn is NOT mocked. Browser would open!');
     }
-});
 
-beforeAll(async () => {
     mod = await import('./main.js');
     const imported = (await import('./main.js')) as MainModule;
     mod = imported;
