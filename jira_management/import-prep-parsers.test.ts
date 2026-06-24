@@ -104,7 +104,7 @@ describe('ResolveLabels', () => {
     it('returns input array when provided', () => {
         const result = resolveLabels(['smoke', 'regression'], 'csvLabels');
 
-        expect(result).toEqual(['smoke', 'regression']);
+        expect(result).toStrictEqual(['smoke', 'regression']);
     });
 
     it('reads from config when no input', () => {
@@ -114,21 +114,21 @@ describe('ResolveLabels', () => {
         });
         const result = resolveLabels(undefined, 'csvLabels');
 
-        expect(result).toEqual(['config-label']);
+        expect(result).toStrictEqual(['config-label']);
     });
 
     it('prompts user and splits by comma', () => {
         vi.spyOn(PROMPT, 'prompt').mockReturnValue('a, b, c');
         const result = resolveLabels(undefined, 'csvLabels');
 
-        expect(result).toEqual(['a', 'b', 'c']);
+        expect(result).toStrictEqual(['a', 'b', 'c']);
     });
 
     it('returns empty array for empty prompt', () => {
         vi.spyOn(PROMPT, 'prompt').mockReturnValue('');
         const result = resolveLabels(undefined, 'csvLabels');
 
-        expect(result).toEqual([]);
+        expect(result).toStrictEqual([]);
     });
 });
 

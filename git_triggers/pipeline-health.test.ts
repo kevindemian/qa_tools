@@ -112,7 +112,7 @@ Error: Module not found: 'foo'
 FATAL: OOMKilled`;
         const result = extractErrorMessages(log, 5);
 
-        expect(result).toEqual(["Module not found: 'foo'", 'OOMKilled']);
+        expect(result).toStrictEqual(["Module not found: 'foo'", 'OOMKilled']);
     });
 
     it('respects maxEntries limit', () => {
@@ -122,11 +122,11 @@ FATAL: OOMKilled`;
     });
 
     it('returns empty array for clean log', () => {
-        expect(extractErrorMessages('All tests passed!', 5)).toEqual([]);
+        expect(extractErrorMessages('All tests passed!', 5)).toStrictEqual([]);
     });
 
     it('handles empty string', () => {
-        expect(extractErrorMessages('', 5)).toEqual([]);
+        expect(extractErrorMessages('', 5)).toStrictEqual([]);
     });
 });
 

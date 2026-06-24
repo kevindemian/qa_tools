@@ -129,8 +129,8 @@ describe('FT-41c: stores in-memory tasks when result is truthy', () => {
         const ctx = makeContext();
         await case01.handler(ctx);
 
-        expect(ctx.ctx.inMemoryTasksId).toEqual(['TEST-1', 'TEST-2']);
-        expect(ctx.ctx.inMemoryTasksText).toEqual(['test 1', 'test 2']);
+        expect(ctx.ctx.inMemoryTasksId).toStrictEqual(['TEST-1', 'TEST-2']);
+        expect(ctx.ctx.inMemoryTasksText).toStrictEqual(['test 1', 'test 2']);
         expect(ctx.ctx.lastOperation).toBe('2 tests imported');
         expect(ctx.pushHistory).toHaveBeenCalledWith('csv-import', '2 tests imported', 'OK');
     });

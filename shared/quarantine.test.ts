@@ -227,12 +227,12 @@ describe('LoadQuarantine', () => {
         fs.writeFileSync(quarantineStorePath(), 'not-json', 'utf8');
         const store = loadQuarantine();
 
-        expect(store.entries).toEqual([]);
+        expect(store.entries).toStrictEqual([]);
     });
 
     it('returns empty store for missing file', () => {
         const store = loadQuarantine();
 
-        expect(store.entries).toEqual([]);
+        expect(store.entries).toStrictEqual([]);
     });
 });

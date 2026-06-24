@@ -179,7 +179,7 @@ describe('LlmMetrics', () => {
         try {
             const history = mod.getLlmMetricsHistory();
 
-            expect(history).toEqual([]);
+            expect(history).toStrictEqual([]);
         } finally {
             readSpy.mockRestore();
         }
@@ -196,8 +196,8 @@ describe('LlmMetrics', () => {
         const snap = snapshotLlmMetrics();
 
         expect(snap.totalRequests).toBe(3);
-        expect(snap.latencyByModel['gpt-4o']).toEqual({ avgMs: 400, count: 2 });
-        expect(snap.latencyByModel['gpt-4o-mini']).toEqual({ avgMs: 100, count: 1 });
+        expect(snap.latencyByModel['gpt-4o']).toStrictEqual({ avgMs: 400, count: 2 });
+        expect(snap.latencyByModel['gpt-4o-mini']).toStrictEqual({ avgMs: 100, count: 1 });
     });
 
     it('handles saveStore write failure gracefully', async () => {expect.hasAssertions();

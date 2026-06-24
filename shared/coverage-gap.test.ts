@@ -166,7 +166,7 @@ describe('AnalyzeCoverageGaps', () => {
             .mockResolvedValueOnce({ issues: [], total: 0 });
         const result = await analyzeCoverageGaps(mockJiraResource, 'PROJ', { minCoveragePct: 50 });
 
-        expect(result.gateConfig.failingEpics).toEqual([]);
+        expect(result.gateConfig.failingEpics).toStrictEqual([]);
         expect(nonNull(result.byEpic['EPIC-1']).gatePass).toBeTruthy();
     });
 
@@ -222,7 +222,7 @@ describe('AnalyzeCoverageGaps', () => {
         const result = await analyzeCoverageGaps(mockJiraResource, 'PROJ');
 
         expect(result.totals.totalIssues).toBe(0);
-        expect(result.items).toEqual([]);
+        expect(result.items).toStrictEqual([]);
     });
 
     it('returns 100% coverage when all issues have tests', async () => {expect.hasAssertions();
@@ -267,7 +267,7 @@ describe('AnalyzeCoverageGaps', () => {
         const result = await analyzeCoverageGaps(mockJiraResource, 'PROJ');
 
         expect(result.totals.totalIssues).toBe(0);
-        expect(result.items).toEqual([]);
+        expect(result.items).toStrictEqual([]);
     });
 
     it('correctly identifies issue types', async () => {expect.hasAssertions();
@@ -323,7 +323,7 @@ describe('AnalyzeCoverageGaps', () => {
         const result = await analyzeCoverageGaps(mockJiraResource, 'PROJ');
 
         expect(result.totals.totalIssues).toBe(1);
-        expect(nonNull(result.items[0]).linkedTestKeys).toEqual([]);
+        expect(nonNull(result.items[0]).linkedTestKeys).toStrictEqual([]);
     });
 
     it('handles fetchLinkedTestsBatch empty response (line 68)', async () => {expect.hasAssertions();
@@ -334,7 +334,7 @@ describe('AnalyzeCoverageGaps', () => {
             .mockResolvedValueOnce({ total: 0 });
         const result = await analyzeCoverageGaps(mockJiraResource, 'PROJ');
 
-        expect(nonNull(result.items[0]).linkedTestKeys).toEqual([]);
+        expect(nonNull(result.items[0]).linkedTestKeys).toStrictEqual([]);
     });
 
     it('handles collectAllPages with empty issues batch (line 43)', async () => {expect.hasAssertions();

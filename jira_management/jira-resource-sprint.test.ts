@@ -75,7 +75,7 @@ describe('GetTransitionsForIssue', () => {
         const resource = buildResource();
         const map = await getTransitionsForIssue(resource, 'TEST-1');
 
-        expect(map).toEqual({});
+        expect(map).toStrictEqual({});
     });
 });
 

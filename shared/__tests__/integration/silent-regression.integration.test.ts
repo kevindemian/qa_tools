@@ -45,7 +45,7 @@ describe('Integration: Silent Regression (FT-22)', () => {
             const { detectSilentRegression } = await import('../../silent-regression.js');
             const result = detectSilentRegression({});
 
-            expect(result.regressions).toEqual([]);
+            expect(result.regressions).toStrictEqual([]);
             expect(result.totalTests).toBe(0);
         });
 

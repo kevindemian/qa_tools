@@ -79,7 +79,7 @@ describe('AnalyzeTestImpact — property-based', () => {
                 const result = analyzeTestImpact(diff, { testTitles: [title] });
 
                 expect(result.confidence).toBe('low');
-                expect(result.impactedTests).toEqual([]);
+                expect(result.impactedTests).toStrictEqual([]);
             }),
             { numRuns: 100 },
         );
@@ -91,8 +91,8 @@ describe('AnalyzeTestImpact — property-based', () => {
             fc.property(fc.constant(undefined), () => {
                 const result = analyzeTestImpact('');
 
-                expect(result.changedFiles).toEqual([]);
-                expect(result.impactedTests).toEqual([]);
+                expect(result.changedFiles).toStrictEqual([]);
+                expect(result.impactedTests).toStrictEqual([]);
                 expect(result.confidence).toBe('low');
             }),
             { numRuns: 10 },
@@ -128,7 +128,7 @@ describe('AnalyzeTestImpact — property-based', () => {
                 const diff = files.join('\n');
                 const result = analyzeTestImpact(diff);
 
-                expect(result.changedFiles).toEqual(files);
+                expect(result.changedFiles).toStrictEqual(files);
             }),
             { numRuns: 100 },
         );
@@ -177,9 +177,9 @@ describe('GenerateTestSelectionJson — property-based', () => {
 
                     const json = generateTestSelectionJson(result, { conservative, smokeTests });
 
-                    expect(JSON.parse(JSON.stringify(json))).toEqual(json);
+                    expect(JSON.parse(JSON.stringify(json))).toStrictEqual(json);
                     expect(json.conservative).toBe(conservative);
-                    expect(json.smokeTests).toEqual(smokeTests);
+                    expect(json.smokeTests).toStrictEqual(smokeTests);
                     expect(json.generatedAt).toBeTruthy();
                 },
             ),

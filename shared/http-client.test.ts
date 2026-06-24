@@ -305,7 +305,7 @@ describe('HTTP Client', () => {
             });
             const result = await nonNull(errorHandler)(err);
 
-            expect(result).toEqual({ status: 200 });
+            expect(result).toStrictEqual({ status: 200 });
             expect(callCount).toBe(2);
         });
 
@@ -330,7 +330,7 @@ describe('HTTP Client', () => {
             });
             const result = await nonNull(errorHandler)(err);
 
-            expect(result).toEqual({ status: 200 });
+            expect(result).toStrictEqual({ status: 200 });
             expect(callCount).toBe(2);
         });
     });

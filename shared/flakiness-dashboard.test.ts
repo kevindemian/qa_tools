@@ -25,11 +25,11 @@ describe('FilterHighFlakiness', () => {
             { title: 'Stable', passCount: 9, failCount: 1, skipCount: 0, totalRuns: 10, rate: 0.1 },
         ];
 
-        expect(filterHighFlakiness(entries, 30)).toEqual([]);
+        expect(filterHighFlakiness(entries, 30)).toStrictEqual([]);
     });
 
     it('returns empty array for empty input', () => {
-        expect(filterHighFlakiness([], 30)).toEqual([]);
+        expect(filterHighFlakiness([], 30)).toStrictEqual([]);
     });
 });
 

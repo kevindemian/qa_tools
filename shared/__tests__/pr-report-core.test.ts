@@ -147,7 +147,7 @@ describe('GeneratePrReport', () => {
             stats: defaultStats,
         });
 
-        expect(result.healthScore).toEqual(defaultHealthScore);
+        expect(result.healthScore).toStrictEqual(defaultHealthScore);
         expect(result.passRate).toBeCloseTo(88.9, 1);
     });
 
@@ -193,7 +193,7 @@ describe('GeneratePrReport', () => {
             expect.any(Array),
             expect.objectContaining({ coverageSource: 'istanbul' }),
         );
-        expect(result.healthScore).toEqual(defaultHealthScore);
+        expect(result.healthScore).toStrictEqual(defaultHealthScore);
     });
 
     it('passes diffComparison to HTML options when provided', async () => {expect.hasAssertions();
@@ -286,7 +286,7 @@ describe('GeneratePrReport', () => {
             stats: { passed: 0, failed: 0, skipped: 0, total: 0, duration: 0 },
         });
 
-        expect(result.healthScore).toEqual(defaultHealthScore);
+        expect(result.healthScore).toStrictEqual(defaultHealthScore);
         expect(result.passRate).toBe(0);
     });
 

@@ -45,7 +45,7 @@ describe('Integration: Session State', () => {
             const config = getConfig();
             const state = stateModule.load(config);
 
-            expect(state).toEqual({});
+            expect(state).toStrictEqual({});
         });
     });
 
@@ -57,7 +57,7 @@ describe('Integration: Session State', () => {
             stateModule.save(data, config);
             const loaded = stateModule.load(config);
 
-            expect(loaded).toEqual(data);
+            expect(loaded).toStrictEqual(data);
         });
 
         it('creates backup file alongside main state', () => {
@@ -132,7 +132,7 @@ describe('Integration: Session State', () => {
                 unknown
             >;
 
-            expect(main).toEqual(bak);
+            expect(main).toStrictEqual(bak);
         });
     });
 
@@ -156,7 +156,7 @@ describe('Integration: Session State', () => {
             stateModule.save({ lastProject: 'ORIGINAL', counter: 42 }, config);
             const beforeCorruption = stateModule.load(config);
 
-            expect(beforeCorruption).toEqual({ lastProject: 'ORIGINAL', counter: 42 });
+            expect(beforeCorruption).toStrictEqual({ lastProject: 'ORIGINAL', counter: 42 });
 
             fs.writeFileSync(statePath, '{corrupted json!!!', 'utf8');
 
@@ -166,7 +166,7 @@ describe('Integration: Session State', () => {
             const freshModule = await import('../../state.js');
             const recovered = freshModule.load(config);
 
-            expect(recovered).toEqual({ lastProject: 'ORIGINAL', counter: 42 });
+            expect(recovered).toStrictEqual({ lastProject: 'ORIGINAL', counter: 42 });
         });
 
         it('returns empty object when both state and backup are corrupted', async () => {expect.hasAssertions();
@@ -185,7 +185,7 @@ describe('Integration: Session State', () => {
             const freshModule = await import('../../state.js');
             const result = freshModule.load(config);
 
-            expect(result).toEqual({});
+            expect(result).toStrictEqual({});
         });
     });
 });

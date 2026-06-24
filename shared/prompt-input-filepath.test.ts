@@ -156,7 +156,7 @@ describe('FilePathCompleter', () => {
     it('returns empty on invalid dir', () => {
         const [matches] = filePathCompleter('/nonexistent_dir_xyz/foo');
 
-        expect(matches).toEqual([]);
+        expect(matches).toStrictEqual([]);
     });
 
     it('expands tilde', () => {
@@ -197,7 +197,7 @@ describe('FilePathCompleter', () => {
             fs.symlinkSync('/nonexistent-target', path.join(dir, 'dangling.txt'));
             const [matches] = filePathCompleter(dir + '/', ['.txt']);
 
-            expect(matches).toEqual([]);
+            expect(matches).toStrictEqual([]);
         } finally {
             fs.rmSync(dir, { recursive: true, force: true });
         }

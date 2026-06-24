@@ -143,7 +143,7 @@ describe('PrepareTestRun', () => {
             warn,
         });
 
-        expect(result).toEqual({
+        expect(result).toStrictEqual({
             inMemoryTasksId: [],
             inMemoryTasksText: [],
             summary: 'DRY-RUN simulado',

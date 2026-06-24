@@ -88,7 +88,7 @@ describe('Store', () => {
         it('returns empty for project with no entries', () => {
             const other = new Store(backend, 'other-proj');
 
-            expect(other.listByProject()).toEqual([]);
+            expect(other.listByProject()).toStrictEqual([]);
         });
 
         it('returns entries sorted by timestamp descending', () => {
@@ -117,7 +117,7 @@ describe('Store', () => {
 
     describe('Branch index', () => {
         it('getBranch returns empty for unknown branch', () => {
-            expect(store.getBranch('nonexistent')).toEqual([]);
+            expect(store.getBranch('nonexistent')).toStrictEqual([]);
         });
 
         it('appendBranch adds entry to the front', () => {
@@ -365,7 +365,7 @@ describe('Store', () => {
             };
             const store = new Store(corruptBackend, project);
 
-            expect(store.getBranch('main')).toEqual([]);
+            expect(store.getBranch('main')).toStrictEqual([]);
         });
 
         it('g3: appendBranch handles corrupt index gracefully', () => {

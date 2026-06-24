@@ -109,8 +109,8 @@ describe('_CheckResumeCheckpoint', () => {
         const result = _checkResumeCheckpoint(tests, '/path/test.csv', 'csv', 'TESTPROJ');
 
         expect(result.resumeFrom).toBe(2);
-        expect(result.inMemoryTasksId).toEqual(['T-1', 'T-2']);
-        expect(result.inMemoryTasksText).toEqual(['Test 1', 'Test 2']);
+        expect(result.inMemoryTasksId).toStrictEqual(['T-1', 'T-2']);
+        expect(result.inMemoryTasksText).toStrictEqual(['Test 1', 'Test 2']);
     });
 
     it('expired checkpoint: age > 24h -> skip', () => {
@@ -119,7 +119,7 @@ describe('_CheckResumeCheckpoint', () => {
         const result = _checkResumeCheckpoint(tests, '/path/test.csv', 'csv', 'TESTPROJ');
 
         expect(result.resumeFrom).toBe(0);
-        expect(result.inMemoryTasksId).toEqual([]);
+        expect(result.inMemoryTasksId).toStrictEqual([]);
     });
 
     it('user declines: confirm false -> skip', () => {
@@ -128,7 +128,7 @@ describe('_CheckResumeCheckpoint', () => {
         const result = _checkResumeCheckpoint(tests, '/path/test.csv', 'csv', 'TESTPROJ');
 
         expect(result.resumeFrom).toBe(0);
-        expect(result.inMemoryTasksId).toEqual([]);
+        expect(result.inMemoryTasksId).toStrictEqual([]);
     });
 
     it('full checkpoint: done.length >= tests.length -> skip', () => {

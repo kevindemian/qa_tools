@@ -72,7 +72,7 @@ describe('OfferTestExecutionAssociation', () => {
             const c = createMockContext();
             const result = await offerTestExecutionAssociation(c, ['TEST-1'], 'src');
 
-            expect(result).toEqual({
+            expect(result).toStrictEqual({
                 associated: true,
                 key: 'TEST-TE-1',
                 summary: 'Test Execution 1',
@@ -118,7 +118,7 @@ describe('OfferTestExecutionAssociation', () => {
             });
             const result = await offerTestExecutionAssociation(c, ['TEST-1'], 'src');
 
-            expect(result).toEqual({
+            expect(result).toStrictEqual({
                 associated: true,
                 key: 'TEST-TE-1',
                 summary: 'TE 1',

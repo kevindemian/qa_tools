@@ -23,7 +23,7 @@ describe('Jira-resource-types', () => {
     it('searchResponse has the correct shape', () => {
         const resp: SearchResponse = { issues: [], total: 0 };
 
-        expect(resp.issues).toEqual([]);
+        expect(resp.issues).toStrictEqual([]);
         expect(resp.total).toBe(0);
     });
 

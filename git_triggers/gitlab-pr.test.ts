@@ -212,7 +212,7 @@ describe('GlSearchMergeRequests', () => {
         vi.mocked(apiGet).mockResolvedValue(null);
         const result = await glSearchMergeRequests(mockClient, 'owner', 'repo', 'feature', 'main', 'opened');
 
-        expect(result).toEqual([]);
+        expect(result).toStrictEqual([]);
     });
 
     it('returns [] when apiGet returns empty array', async () => {expect.hasAssertions();
@@ -220,7 +220,7 @@ describe('GlSearchMergeRequests', () => {
         vi.mocked(apiGet).mockResolvedValue([]);
         const result = await glSearchMergeRequests(mockClient, 'owner', 'repo', 'feature', 'main', 'opened');
 
-        expect(result).toEqual([]);
+        expect(result).toStrictEqual([]);
     });
 
     it('passes correct query params', async () => {expect.hasAssertions();

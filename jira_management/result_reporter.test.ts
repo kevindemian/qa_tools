@@ -122,7 +122,7 @@ describe('MatchResultsToTests', () => {
     it('returns empty for missing mapping file', () => {
         const result = matchResultsToTests([], '/nonexistent.json');
 
-        expect(result.matched).toEqual([]);
+        expect(result.matched).toStrictEqual([]);
     });
 
     it('performs fuzzy match when title differs slightly', () => {
@@ -140,7 +140,7 @@ describe('MatchResultsToTests', () => {
         const result = matchResultsToTests([], emptyMappingPath);
 
         expect(result.stats.total).toBe(0);
-        expect(result.matched).toEqual([]);
+        expect(result.matched).toStrictEqual([]);
         expect(rootLogger['warn']).toHaveBeenCalledWith('Mapping JSON vazio');
     });
 

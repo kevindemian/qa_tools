@@ -54,7 +54,7 @@ describe('TestCaseFactory', () => {
                 opLog,
             });
 
-            expect(result).toEqual({ key: 'TEST-123' });
+            expect(result).toStrictEqual({ key: 'TEST-123' });
             expect(mockJiraResource['postJiraResource']).toHaveBeenCalledWith('issue', testData);
             expect(opLog.info).toHaveBeenCalledWith('Issue criada', { key: 'TEST-123' });
         });
@@ -80,7 +80,7 @@ describe('TestCaseFactory', () => {
                 opLog,
             });
 
-            expect(result).toEqual({ action: 'retry' });
+            expect(result).toStrictEqual({ action: 'retry' });
         });
 
         it('returns abort action on error with onError returning abort', async () => {expect.hasAssertions();
@@ -95,7 +95,7 @@ describe('TestCaseFactory', () => {
                 opLog,
             });
 
-            expect(result).toEqual({ action: 'abort' });
+            expect(result).toStrictEqual({ action: 'abort' });
         });
     });
 
@@ -119,7 +119,7 @@ describe('TestCaseFactory', () => {
                 skipExisting: true,
             });
 
-            expect(result).toEqual({ key: 'TEST-42', skipped: true });
+            expect(result).toStrictEqual({ key: 'TEST-42', skipped: true });
             expect(mockJiraResource['postJiraResource']).not.toHaveBeenCalled();
             expect(opLog.info).toHaveBeenCalledWith('Issue pulada (já existe)', {
                 key: 'TEST-42',
@@ -144,7 +144,7 @@ describe('TestCaseFactory', () => {
                 skipExisting: true,
             });
 
-            expect(result).toEqual({ key: 'TEST-43' });
+            expect(result).toStrictEqual({ key: 'TEST-43' });
             expect(mockJiraResource['postJiraResource']).toHaveBeenCalledWith('issue', testData);
         });
 
@@ -162,7 +162,7 @@ describe('TestCaseFactory', () => {
                 skipExisting: true,
             });
 
-            expect(result).toEqual({ key: 'TEST-44' });
+            expect(result).toStrictEqual({ key: 'TEST-44' });
             expect(mockJiraResource['postJiraResource']).toHaveBeenCalledWith();
         });
 
@@ -243,7 +243,7 @@ describe('TestCaseFactory', () => {
             mockPrompt.onError.mockReturnValue('abort');
             const result = await factory.postSteps(issueKey, test, opLog);
 
-            expect(result).toEqual({ action: 'abort' });
+            expect(result).toStrictEqual({ action: 'abort' });
             expect(mockImporter.importStep).toHaveBeenCalledTimes(2);
         });
 

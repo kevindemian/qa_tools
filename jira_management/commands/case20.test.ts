@@ -223,7 +223,7 @@ describe('Case20 - Bug Report handler', () => {
 
         const callArg = nonNull(nonNull(mockInteractiveBugReportFlow.mock.calls[0])[2]);
 
-        expect(callArg.linkedIssues).toEqual([
+        expect(callArg.linkedIssues).toStrictEqual([
             { key: 'PROJ-123', linkType: 'Relates' },
             { key: 'PROJ-456', linkType: 'Relates' },
         ]);

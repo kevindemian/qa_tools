@@ -32,7 +32,7 @@ describe('GitProviderBase._get', () => {
         vi.spyOn(provider.client, 'get').mockResolvedValue({ data: { id: 1 } });
         const result = await provider.publicGet('/test');
 
-        expect(result).toEqual({ id: 1 });
+        expect(result).toStrictEqual({ id: 1 });
     });
 
     it('passes params to client.get', async () => {expect.hasAssertions();
@@ -61,7 +61,7 @@ describe('GitProviderBase._post', () => {
         vi.spyOn(provider.client, 'post').mockResolvedValue({ data: { key: 1 } });
         const result = await provider.publicPost('/test', { name: 'foo' });
 
-        expect(result).toEqual({ key: 1 });
+        expect(result).toStrictEqual({ key: 1 });
     });
 
     it('calls post without body when body is undefined', async () => {expect.hasAssertions();

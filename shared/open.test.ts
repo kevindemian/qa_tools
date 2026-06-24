@@ -188,7 +188,7 @@ describe('GetOsOpenCommand (platform detection)', () => {
         mockSpawnSync.mockReturnValue({ stdout: 'C:\\Users\\file.html\n', status: 0 } as never);
         const result = getOsOpenCommand('/home/user/file.html');
 
-        expect(result).toEqual({
+        expect(result).toStrictEqual({
             cmd: 'cmd.exe',
             args: ['/c', 'start', '', 'C:\\Users\\file.html'],
         });
@@ -199,7 +199,7 @@ describe('GetOsOpenCommand (platform detection)', () => {
         mockReadFileSync.mockReturnValue('Linux version 5.15.0-generic');
         const result = getOsOpenCommand('/home/user/file.html');
 
-        expect(result).toEqual({ cmd: 'xdg-open', args: ['/home/user/file.html'] });
+        expect(result).toStrictEqual({ cmd: 'xdg-open', args: ['/home/user/file.html'] });
     });
 
     it('returns open for macOS', () => {
@@ -207,7 +207,7 @@ describe('GetOsOpenCommand (platform detection)', () => {
         mockReadFileSync.mockReturnValue('Linux version 5.15.0-generic');
         const result = getOsOpenCommand('/some/file');
 
-        expect(result).toEqual({ cmd: 'open', args: ['/some/file'] });
+        expect(result).toStrictEqual({ cmd: 'open', args: ['/some/file'] });
     });
 
     it('returns cmd for Windows', () => {
@@ -215,7 +215,7 @@ describe('GetOsOpenCommand (platform detection)', () => {
         mockReadFileSync.mockReturnValue('Linux version 5.15.0-generic');
         const result = getOsOpenCommand('C:\\file.html');
 
-        expect(result).toEqual({ cmd: 'cmd', args: ['/c', 'start', '', 'C:\\file.html'] });
+        expect(result).toStrictEqual({ cmd: 'cmd', args: ['/c', 'start', '', 'C:\\file.html'] });
     });
 
     it('falls back to xdg-open for WSL when toWinPath returns null', () => {
@@ -227,7 +227,7 @@ describe('GetOsOpenCommand (platform detection)', () => {
         });
         const result = getOsOpenCommand('/home/user/file.html');
 
-        expect(result).toEqual({ cmd: 'xdg-open', args: ['/home/user/file.html'] });
+        expect(result).toStrictEqual({ cmd: 'xdg-open', args: ['/home/user/file.html'] });
     });
 
     it('toWinPath fallback: copies file and converts via wslpath', () => {
@@ -244,7 +244,7 @@ describe('GetOsOpenCommand (platform detection)', () => {
         mockExecFileSync.mockReturnValue('C:\\Users\\Test\\Temp\n');
         const result = getOsOpenCommand('/home/user/file.html');
 
-        expect(result).toEqual({
+        expect(result).toStrictEqual({
             cmd: 'cmd.exe',
             args: ['/c', 'start', '', 'C:\\Users\\Test\\Temp\\qa_tools_docs\\file.html'],
         });
@@ -265,7 +265,7 @@ describe('GetOsOpenCommand (platform detection)', () => {
         mockExecFileSync.mockReturnValue('C:\\Users\\Test\\Temp\n');
         const result = getOsOpenCommand('/home/user/file.html');
 
-        expect(result).toEqual({ cmd: 'xdg-open', args: ['/home/user/file.html'] });
+        expect(result).toStrictEqual({ cmd: 'xdg-open', args: ['/home/user/file.html'] });
     });
 
     it('toWinPath fallback: returns null when wslpath output is invalid', () => {
@@ -279,7 +279,7 @@ describe('GetOsOpenCommand (platform detection)', () => {
         mockExecFileSync.mockReturnValue('C:\\Users\\Test\\Temp\n');
         const result = getOsOpenCommand('/home/user/file.html');
 
-        expect(result).toEqual({ cmd: 'xdg-open', args: ['/home/user/file.html'] });
+        expect(result).toStrictEqual({ cmd: 'xdg-open', args: ['/home/user/file.html'] });
     });
 
     it('toWinPath: falls through when first wslpath output is not a Windows path', () => {
@@ -294,7 +294,7 @@ describe('GetOsOpenCommand (platform detection)', () => {
         mockExecFileSync.mockReturnValue('C:\\Users\\Test\\Temp\n');
         const result = getOsOpenCommand('/home/user/file.html');
 
-        expect(result).toEqual({
+        expect(result).toStrictEqual({
             cmd: 'cmd.exe',
             args: ['/c', 'start', '', 'C:\\Users\\Test\\Temp\\qa_tools_docs\\file.html'],
         });
@@ -315,7 +315,7 @@ describe('GetOsOpenCommand (platform detection)', () => {
         });
         const result = getOsOpenCommand('/home/user/file.html');
 
-        expect(result).toEqual({ cmd: 'xdg-open', args: ['/home/user/file.html'] });
+        expect(result).toStrictEqual({ cmd: 'xdg-open', args: ['/home/user/file.html'] });
     });
 });
 

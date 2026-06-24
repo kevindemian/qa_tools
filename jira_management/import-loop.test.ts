@@ -106,7 +106,7 @@ describe('LinkTestRelations', () => {
             results: resultSink,
         });
 
-        expect(result).toEqual({ abort: true, errored: true });
+        expect(result).toStrictEqual({ abort: true, errored: true });
         expect(nonNull(resultSink[0]).message).toContain('pre-condition');
     });
 
@@ -131,7 +131,7 @@ describe('LinkTestRelations', () => {
             results: resultSink,
         });
 
-        expect(result).toEqual({ abort: true, errored: true });
+        expect(result).toStrictEqual({ abort: true, errored: true });
     });
 });
 
@@ -146,14 +146,14 @@ describe('BuildTestData', () => {
             description: 'desc',
             issuetype: { name: 'Test' },
         });
-        expect((result.fields as Record<string, unknown>)['labels']).toEqual([]);
+        expect((result.fields as Record<string, unknown>)['labels']).toStrictEqual([]);
     });
 
     it('with jiraLabels', () => {
         const test: TestCase = { ...testBase, description: 'desc' };
         const result = buildTestData(test, 'PROJ', ['label1', 'label2']);
 
-        expect((result.fields as Record<string, unknown>)['labels']).toEqual(['label1', 'label2']);
+        expect((result.fields as Record<string, unknown>)['labels']).toStrictEqual(['label1', 'label2']);
     });
 
     it('inline precondition appended to description', () => {
@@ -270,7 +270,7 @@ describe('CreateIssueForTest', () => {
             results: resultSink,
         });
 
-        expect(result).toEqual({ key: 'TEST-100', skipped: false });
+        expect(result).toStrictEqual({ key: 'TEST-100', skipped: false });
     });
 });
 
@@ -306,7 +306,7 @@ describe('ExecuteTestCreationLoop', () => {
             reportPrint: vi.fn(),
         });
 
-        expect(inMemoryTasksId).toEqual(['T-NEW']);
+        expect(inMemoryTasksId).toStrictEqual(['T-NEW']);
         expect(resultSink).toHaveLength(1);
         expect(nonNull(resultSink[0]).status).toBe('ok');
     });

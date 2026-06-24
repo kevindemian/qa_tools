@@ -158,7 +158,7 @@ describe('BuildTraceabilityMatrix — property-based', () => {
         const empty: MetricsStore = { runs: [] };
         const result = buildTraceabilityMatrix(empty);
 
-        expect(result.nodes).toEqual([]);
+        expect(result.nodes).toStrictEqual([]);
         expect(result.totalEpics).toBe(0);
         expect(result.totalTests).toBe(0);
         expect(result.overallCoverage).toBe(0);

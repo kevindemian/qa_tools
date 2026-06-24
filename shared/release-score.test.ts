@@ -117,7 +117,7 @@ describe('CalculateReleaseScore', () => {
             const result = calculateReleaseScore(80, 80, 'pass', 80, 20);
             const labels = result.breakdown.map((d) => d.label);
 
-            expect(labels).toEqual(['Tasks', 'Health', 'Coverage', 'Flakiness']);
+            expect(labels).toStrictEqual(['Tasks', 'Health', 'Coverage', 'Flakiness']);
         });
     });
 

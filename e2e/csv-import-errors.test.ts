@@ -113,8 +113,8 @@ describe('E2E: CSV Import - Error Paths', () => {
 
         const result = nonNull(await createTestsFromCsv(makeState()));
 
-        expect(result.inMemoryTasksId).toEqual(['TEST-2']);
-        expect(result.inMemoryTasksText).toEqual(['TC01', 'TC02']);
+        expect(result.inMemoryTasksId).toStrictEqual(['TEST-2']);
+        expect(result.inMemoryTasksText).toStrictEqual(['TC01', 'TC02']);
         expect(result.status).toBe('error');
         expect(result.summary).toBe('1/2 testes criados');
         expect(nock.isDone()).toBeTruthy();
@@ -141,8 +141,8 @@ describe('E2E: CSV Import - Error Paths', () => {
 
         const result = nonNull(await createTestsFromCsv(makeState()));
 
-        expect(result.inMemoryTasksId).toEqual([]);
-        expect(result.inMemoryTasksText).toEqual(['TC01']);
+        expect(result.inMemoryTasksId).toStrictEqual([]);
+        expect(result.inMemoryTasksText).toStrictEqual(['TC01']);
         expect(result.status).toBe('error');
         expect(result.summary).toBe('0/2 testes criados');
         expect(nock.isDone()).toBeTruthy();
@@ -182,8 +182,8 @@ describe('E2E: CSV Import - Error Paths', () => {
 
         const result = nonNull(await createTestsFromCsv(makeState()));
 
-        expect(result.inMemoryTasksId).toEqual(['TEST-1', 'TEST-2']);
-        expect(result.inMemoryTasksText).toEqual(['TC01', 'TC02']);
+        expect(result.inMemoryTasksId).toStrictEqual(['TEST-1', 'TEST-2']);
+        expect(result.inMemoryTasksText).toStrictEqual(['TC01', 'TC02']);
         expect(result.status).toBe('ok');
         expect(result.summary).toBe('2/2 testes criados');
         expect(nock.isDone()).toBeTruthy();
@@ -221,8 +221,8 @@ describe('E2E: CSV Import - Error Paths', () => {
 
         const result = nonNull(await createTestsFromCsv(makeState()));
 
-        expect(result.inMemoryTasksId).toEqual(['TEST-1', 'TEST-2']);
-        expect(result.inMemoryTasksText).toEqual(['TC01', 'TC02']);
+        expect(result.inMemoryTasksId).toStrictEqual(['TEST-1', 'TEST-2']);
+        expect(result.inMemoryTasksText).toStrictEqual(['TC01', 'TC02']);
         expect(result.status).toBe('ok');
         expect(result.summary).toBe('2/2 testes criados');
         expect(nock.isDone()).toBeTruthy();
@@ -251,8 +251,8 @@ describe('E2E: CSV Import - Error Paths', () => {
 
         const result = nonNull(await createTestsFromCsv(makeState()));
 
-        expect(result.inMemoryTasksId).toEqual(['TEST-1']);
-        expect(result.inMemoryTasksText).toEqual(['TC01']);
+        expect(result.inMemoryTasksId).toStrictEqual(['TEST-1']);
+        expect(result.inMemoryTasksText).toStrictEqual(['TC01']);
         expect(result.status).toBe('error');
         expect(result.summary).toBe('0/1 testes criados');
         expect(nock.isDone()).toBeTruthy();
@@ -293,8 +293,8 @@ describe('E2E: CSV Import - Error Paths', () => {
 
         const result = nonNull(await createTestsFromCsv(makeState()));
 
-        expect(result.inMemoryTasksId).toEqual(['TEST-1', 'TEST-2']);
-        expect(result.inMemoryTasksText).toEqual(['TC01', 'TC02']);
+        expect(result.inMemoryTasksId).toStrictEqual(['TEST-1', 'TEST-2']);
+        expect(result.inMemoryTasksText).toStrictEqual(['TC01', 'TC02']);
         expect(result.status).toBe('ok');
         expect(result.summary).toBe('2/2 testes criados');
         expect(nock.isDone()).toBeTruthy();
@@ -315,8 +315,8 @@ describe('E2E: CSV Import - Error Paths', () => {
 
         const result = nonNull(await createTestsFromCsv(makeState()));
 
-        expect(result.inMemoryTasksId).toEqual(['TEST-1']);
-        expect(result.inMemoryTasksText).toEqual(['TC01']);
+        expect(result.inMemoryTasksId).toStrictEqual(['TEST-1']);
+        expect(result.inMemoryTasksText).toStrictEqual(['TC01']);
         expect(result.status).toBe('error');
         expect(result.summary).toBe('0/1 testes criados');
         expect(nock.isDone()).toBeTruthy();
@@ -334,7 +334,7 @@ describe('E2E: CSV Import - Error Paths', () => {
 
         expect(result.status).toBe('ok');
         expect(result.summary).toContain('DRY-RUN');
-        expect(result.inMemoryTasksId).toEqual([]);
+        expect(result.inMemoryTasksId).toStrictEqual([]);
         expect(nock.isDone()).toBeTruthy();
 
         delete process.env['DRY_RUN'];

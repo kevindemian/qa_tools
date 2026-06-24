@@ -81,7 +81,7 @@ describe('LinkOperations', () => {
                 inwardIssue: { key: 'TEST-2' },
                 outwardIssue: { key: 'TEST-1' },
             });
-            expect(result).toEqual({ id: 'new-link' });
+            expect(result).toStrictEqual({ id: 'new-link' });
         });
     });
 });

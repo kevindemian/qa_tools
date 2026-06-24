@@ -194,7 +194,7 @@ describe('Pr-report entry point — CTRF parsing', () => {
         const result = parseTestResultsFile(TEST_CTRF_PATH);
 
         expect(result.error).toBeDefined();
-        expect(result.tests).toEqual([]);
+        expect(result.tests).toStrictEqual([]);
     });
 
     it('builds correct suite hierarchy from test data', () => {
@@ -535,7 +535,7 @@ describe('Pr-report entry point — HTML report generation', () => {
         expect(opts0?.['title']).toContain('PR Report');
         expect(opts0?.['branch']).toBe('feature-branch');
         expect(opts0?.['healthScore']).toBeDefined();
-        expect(opts0?.['trends']).toEqual([]);
+        expect(opts0?.['trends']).toStrictEqual([]);
         expect(opts0?.['includeChart']).toBeTruthy();
 
         exitSpy.mockRestore();

@@ -163,7 +163,7 @@ describe('Integration: Quality Metrics', () => {
 
             const alerts = collector.detectDrift([]);
 
-            expect(alerts).toEqual([]);
+            expect(alerts).toStrictEqual([]);
         });
     });
 });

@@ -6,21 +6,21 @@ describe('SafeParseJson', () => {
     it('parses valid JSON and returns typed result', () => {
         const result = safeParseJson<{ name: string }>('{"name":"hello"}', { name: '' });
 
-        expect(result).toEqual({ name: 'hello' });
+        expect(result).toStrictEqual({ name: 'hello' });
     });
 
     it('returns fallback on malformed JSON', () => {
         const fallback = { name: 'default' };
         const result = safeParseJson<{ name: string }>('not json', fallback);
 
-        expect(result).toEqual(fallback);
+        expect(result).toStrictEqual(fallback);
     });
 
     it('returns fallback on empty string', () => {
         const fallback = { count: 0 };
         const result = safeParseJson<{ count: number }>('', fallback);
 
-        expect(result).toEqual(fallback);
+        expect(result).toStrictEqual(fallback);
     });
 
     it('returns fallback on undefined input', () => {

@@ -374,7 +374,7 @@ describe('FetchGitHistory', () => {
         const { fetchGitHistory } = await import('./git-artifact-downloader.js');
         const result = await fetchGitHistory();
 
-        expect(result).toEqual({ commits: '', runs: [], flakyTests: '' });
+        expect(result).toStrictEqual({ commits: '', runs: [], flakyTests: '' });
     });
 
     it('returns history with runs and flaky tests for GitHub', async () => {expect.hasAssertions();
@@ -461,7 +461,7 @@ describe('FetchGitHistory', () => {
         const { fetchGitHistory } = await import('./git-artifact-downloader.js');
         const result = await fetchGitHistory();
 
-        expect(result).toEqual({ commits: '', runs: [], flakyTests: '' });
+        expect(result).toStrictEqual({ commits: '', runs: [], flakyTests: '' });
     });
 
     it('handles runs without head_commit in buildCommitsFromRuns', async () => {expect.hasAssertions();
@@ -637,7 +637,7 @@ describe('FetchGitHistory', () => {
         const { fetchGitHistory } = await import('./git-artifact-downloader.js');
         const result = await fetchGitHistory();
 
-        expect(result.runs).toEqual([]);
+        expect(result.runs).toStrictEqual([]);
     });
 });
 

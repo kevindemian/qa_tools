@@ -57,7 +57,7 @@ describe('State Persistence — property-based invariants', () => {
                 stateModule.save(data, config);
                 const loaded = stateModule.load(config);
 
-                expect(loaded).toEqual(data);
+                expect(loaded).toStrictEqual(data);
             }),
             { numRuns: 50 },
         );
@@ -78,12 +78,12 @@ describe('State Persistence — property-based invariants', () => {
 
                 // Todas as chaves de changes estão no resultado com o novo valor
                 for (const [k, v] of Object.entries(changes)) {
-                    expect(result[k]).toEqual(v);
+                    expect(result[k]).toStrictEqual(v);
                 }
                 // Chaves de initial que não foram sobrescritas permanecem
                 for (const [k, v] of Object.entries(initial)) {
                     if (!(k in changes)) {
-                        expect(result[k]).toEqual(v);
+                        expect(result[k]).toStrictEqual(v);
                     }
                 }
             }),
@@ -113,7 +113,7 @@ describe('State Persistence — property-based invariants', () => {
                 const reloaded = stateModule.load(config);
 
                 expect(reloaded).toHaveProperty('_pbt_mutated');
-                expect(reloaded).toEqual(result);
+                expect(reloaded).toStrictEqual(result);
             }),
             { numRuns: 30 },
         );
@@ -129,7 +129,7 @@ describe('State Persistence — property-based invariants', () => {
                     const config = getConfig();
                     const result = stateModule.load(config);
 
-                    expect(result).toEqual({});
+                    expect(result).toStrictEqual({});
                 },
             ),
             { numRuns: 10 },

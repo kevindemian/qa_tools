@@ -156,7 +156,7 @@ describe('ParseBatchArgs', () => {
         process.argv = ['node', 'script.js'];
         const result = parseBatchArgs();
 
-        expect(result).toEqual({});
+        expect(result).toStrictEqual({});
     });
 
     it('parses --publish flag', () => {

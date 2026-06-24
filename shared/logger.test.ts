@@ -31,7 +31,7 @@ describe('Logger', () => {
         });
 
         it('has empty context', () => {
-            expect(rootLogger.context).toEqual({});
+            expect(rootLogger.context).toStrictEqual({});
         });
     });
 
@@ -39,21 +39,21 @@ describe('Logger', () => {
         it('creates a child with merged context', () => {
             const child = rootLogger.child({ operation: 'test', resource: 'Jira' });
 
-            expect(child.context).toEqual({ operation: 'test', resource: 'Jira' });
+            expect(child.context).toStrictEqual({ operation: 'test', resource: 'Jira' });
         });
 
         it('child inherits parent context and adds new keys', () => {
             const parent = rootLogger.child({ session: 'jira' });
             const child = parent.child({ operation: 'csv-import' });
 
-            expect(child.context).toEqual({ session: 'jira', operation: 'csv-import' });
+            expect(child.context).toStrictEqual({ session: 'jira', operation: 'csv-import' });
         });
 
         it('child does not mutate parent context', () => {
             const parent = rootLogger.child({ session: 'jira' });
             parent.child({ operation: 'csv-import' });
 
-            expect(parent.context).toEqual({ session: 'jira' });
+            expect(parent.context).toStrictEqual({ session: 'jira' });
             expect(Object.keys(parent.context)).not.toContain('operation');
         });
     });

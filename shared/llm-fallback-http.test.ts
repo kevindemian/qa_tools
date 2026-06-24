@@ -97,7 +97,7 @@ describe('ParseRawOnce', () => {
     it('parses valid JSON string', () => {
         const result = parseRawOnce('{"key": "value"}');
 
-        expect(result).toEqual({ key: 'value' });
+        expect(result).toStrictEqual({ key: 'value' });
     });
 
     it('returns null for invalid JSON', () => {
@@ -182,7 +182,7 @@ describe('BuildOpenAiPayload', () => {
         const result = buildOpenAiPayload('sys', 'usr', 'gpt-4', 0.3, 'json');
         const parsed = JSON.parse(result) as OpenAiPayload;
 
-        expect(parsed.response_format).toEqual({ type: 'json_object' });
+        expect(parsed.response_format).toStrictEqual({ type: 'json_object' });
     });
 
     it('omits response_format when format is not json', () => {
@@ -250,7 +250,7 @@ describe('BuildAnthropicPayload', () => {
         const result = buildAnthropicPayload('sys', 'usr', 'claude-sonnet-4-20250514', 0.3, 'json');
         const parsed = JSON.parse(result) as AnthropicPayload;
 
-        expect(parsed.metadata).toEqual({ response_format: 'json' });
+        expect(parsed.metadata).toStrictEqual({ response_format: 'json' });
     });
 });
 

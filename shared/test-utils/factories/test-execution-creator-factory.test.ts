@@ -16,19 +16,19 @@ describe('CreateMockTestExecutionCreator', () => {
         const mock = createMockTestExecutionCreator();
         const linkResult = mock._linkTestsToExecution('TE-1', ['T-1']);
 
-        expect(linkResult).toEqual({ linked: 0, failed: 0 });
+        expect(linkResult).toStrictEqual({ linked: 0, failed: 0 });
 
         const addResult = mock.addTestsToExistingExecution('TE-1', ['T-1']);
 
-        expect(addResult).toEqual({ key: 'MOCK-TE', summary: 'Mock Test Execution' });
+        expect(addResult).toStrictEqual({ key: 'MOCK-TE', summary: 'Mock Test Execution' });
 
         const createResult = mock.create('PROJ', ['T-1'], 'test.csv');
 
-        expect(createResult).toEqual({ key: 'MOCK-TE', summary: 'Mock Test Execution' });
+        expect(createResult).toStrictEqual({ key: 'MOCK-TE', summary: 'Mock Test Execution' });
 
         const createWithLinksResult = mock.createWithLinks('PROJ', ['T-1'], 'test.csv');
 
-        expect(createWithLinksResult).toEqual({ key: 'MOCK-TE', summary: 'Mock Test Execution' });
+        expect(createWithLinksResult).toStrictEqual({ key: 'MOCK-TE', summary: 'Mock Test Execution' });
     });
 
     it('merges overrides correctly', () => {
@@ -39,7 +39,7 @@ describe('CreateMockTestExecutionCreator', () => {
 
         const result = mock.create('PROJ', ['T-1'], 'test.csv');
 
-        expect(result).toEqual({ key: 'CUSTOM', summary: 'Custom' });
+        expect(result).toStrictEqual({ key: 'CUSTOM', summary: 'Custom' });
     });
 
     it('each call produces independent mock instances', () => {

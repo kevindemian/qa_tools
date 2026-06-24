@@ -155,7 +155,7 @@ describe('PollPipeline', () => {
 
         const result = await pollPipeline(mockM, '1', 100, 10000);
 
-        expect(result).toEqual({ status: 'success', web_url: 'https://gitlab.com/pipe/1' });
+        expect(result).toStrictEqual({ status: 'success', web_url: 'https://gitlab.com/pipe/1' });
     });
 
     it('continues polling when pipeline returns null', async () => {expect.hasAssertions();
@@ -175,7 +175,7 @@ describe('PollPipeline', () => {
 
         const result = await pollPipeline(mockM, '1', 50, 0);
 
-        expect(result).toEqual({ status: 'timeout', web_url: '' });
+        expect(result).toStrictEqual({ status: 'timeout', web_url: '' });
     });
 
     it('handles missing status/state and web_url', async () => {expect.hasAssertions();
@@ -392,7 +392,7 @@ describe('ParseTestResults', () => {
             tests: [],
         });
 
-        expect(result).toEqual({ matched: [], unmatched: [], csvName: 'test' });
+        expect(result).toStrictEqual({ matched: [], unmatched: [], csvName: 'test' });
     });
 
     it('returns null when delegate returns null', async () => {expect.hasAssertions();

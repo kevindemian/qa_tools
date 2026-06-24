@@ -4,7 +4,7 @@ describe('CreateMockResponse', () => {
     it('returns an object with data property', () => {
         const result = createMockResponse({ key: 'TEST-123' });
 
-        expect(result).toEqual({ data: { key: 'TEST-123' } });
+        expect(result).toStrictEqual({ data: { key: 'TEST-123' } });
     });
 
     it('preserves the data type', () => {
@@ -22,7 +22,7 @@ describe('CreateMockResponse', () => {
     it('works with array data', () => {
         const result = createMockResponse([1, 2, 3]);
 
-        expect(result.data).toEqual([1, 2, 3]);
+        expect(result.data).toStrictEqual([1, 2, 3]);
     });
 
     it('works with null data', () => {

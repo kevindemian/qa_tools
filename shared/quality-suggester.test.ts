@@ -137,7 +137,7 @@ describe('CheckQualitySignals', () => {
         const suggestions: unknown = mockState['_llmConfigSuggestions'];
 
         expect(suggestions).toBeDefined();
-        expect(suggestions).toEqual(expect.objectContaining({ pending: true }));
+        expect(suggestions).toStrictEqual(expect.objectContaining({ pending: true }));
     });
 
     // ── RED tests (Phase 5) ──

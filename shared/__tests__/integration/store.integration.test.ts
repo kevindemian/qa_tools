@@ -114,7 +114,7 @@ describe('Integration: Store', () => {
         it('returns empty array when no entries exist', () => {
             const store = new Store(backend, 'empty-project');
 
-            expect(store.listByProject()).toEqual([]);
+            expect(store.listByProject()).toStrictEqual([]);
         });
     });
 
@@ -140,7 +140,7 @@ describe('Integration: Store', () => {
         it('returns empty array for unknown branch', () => {
             const store = new Store(backend, 'test-project');
 
-            expect(store.getBranch('nonexistent')).toEqual([]);
+            expect(store.getBranch('nonexistent')).toStrictEqual([]);
         });
 
         it('multiple entries are ordered newest first', () => {

@@ -78,7 +78,7 @@ describe('IssueLinker', () => {
             const test: TestCase = { title: 'Test', steps: [], precondition: { type: 'reference', value: 'PREC-001' } };
             const result = await linker.associatePrecondition(test, 'TEST-1', opLog);
 
-            expect(result).toEqual({ action: 'abort' });
+            expect(result).toStrictEqual({ action: 'abort' });
         });
     });
 
@@ -137,7 +137,7 @@ describe('IssueLinker', () => {
             };
             const result = await linker.linkIssues('TEST-1', test);
 
-            expect(result).toEqual({ action: 'retry' });
+            expect(result).toStrictEqual({ action: 'retry' });
         });
     });
 

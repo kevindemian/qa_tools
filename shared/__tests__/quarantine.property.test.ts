@@ -99,7 +99,7 @@ describe('GeneratePipelineQuarantine — property-based', () => {
         const empty: QuarantineStore = { entries: [] };
         const pipeline = generatePipelineQuarantine(empty);
 
-        expect(pipeline.excluded).toEqual([]);
+        expect(pipeline.excluded).toStrictEqual([]);
         expect(pipeline.metadata.totalExcluded).toBe(0);
         expect(pipeline.metadata.ratio).toBe(0);
         expect(pipeline.metadata.warning).toBe('');
@@ -113,7 +113,7 @@ describe('LoadQuarantine — property-based', () => {
             fc.property(fc.constant(undefined), () => {
                 const store = loadQuarantine();
 
-                expect(store.entries).toEqual([]);
+                expect(store.entries).toStrictEqual([]);
             }),
             { numRuns: 5 },
         );
@@ -250,6 +250,6 @@ describe('FilterExpiredEntries — property-based', () => {
         const { expired, remaining } = filterExpiredEntries(empty, 0);
 
         expect(expired).toBe(0);
-        expect(remaining.entries).toEqual([]);
+        expect(remaining.entries).toStrictEqual([]);
     });
 });

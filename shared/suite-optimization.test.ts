@@ -121,7 +121,7 @@ describe('AnalyzeSuiteOptimization', () => {
         ]);
         const titles = result.optimizations.map((e) => e.testTitle);
 
-        expect(titles).toEqual(['A_high', 'B_high_fast', 'C_med', 'D_low']);
+        expect(titles).toStrictEqual(['A_high', 'B_high_fast', 'C_med', 'D_low']);
     });
 
     it('uses custom thresholds', () => {

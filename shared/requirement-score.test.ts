@@ -84,7 +84,7 @@ describe('CalculateRequirementScores', () => {
         expect(result.totalRequirements).toBe(0);
         expect(result.overallScore).toBe(0);
         expect(result.overallGrade).toBe('F');
-        expect(result.entries).toEqual([]);
+        expect(result.entries).toStrictEqual([]);
     });
 
     it('returns empty result for undefined input', () => {
@@ -92,7 +92,7 @@ describe('CalculateRequirementScores', () => {
 
         expect(result.totalRequirements).toBe(0);
         expect(result.overallScore).toBe(0);
-        expect(result.entries).toEqual([]);
+        expect(result.entries).toStrictEqual([]);
     });
 
     it('returns empty result for empty array', () => {
@@ -100,7 +100,7 @@ describe('CalculateRequirementScores', () => {
 
         expect(result.totalRequirements).toBe(0);
         expect(result.overallScore).toBe(0);
-        expect(result.entries).toEqual([]);
+        expect(result.entries).toStrictEqual([]);
     });
 
     it('calculates scores for multiple records', () => {

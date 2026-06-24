@@ -78,7 +78,7 @@ describe('LinkTypeManager', () => {
             vi.spyOn(fs, 'readFileSync').mockReturnValue(JSON.stringify(cachedTypes));
             const result = await manager.getIssueLinkTypes();
 
-            expect(result).toEqual(cachedTypes);
+            expect(result).toStrictEqual(cachedTypes);
         });
 
         it('falls back to hardcoded types when API and cache fail', async () => {expect.hasAssertions();

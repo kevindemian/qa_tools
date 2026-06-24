@@ -177,7 +177,7 @@ describe('CalculatePipelineCost — property-based', () => {
                 expect(result.totalCost).toBe(0);
                 expect(result.runCount).toBe(0);
                 expect(result.totalDurationSec).toBe(0);
-                expect(result.costByRun).toEqual([]);
+                expect(result.costByRun).toStrictEqual([]);
             }),
             { numRuns: 10 },
         );
@@ -192,7 +192,7 @@ describe('CalculatePipelineCost — property-based', () => {
                 expect(result.totalCost).toBe(0);
                 expect(result.runCount).toBe(0);
                 expect(result.totalDurationSec).toBe(0);
-                expect(result.costByRun).toEqual([]);
+                expect(result.costByRun).toStrictEqual([]);
             }),
             { numRuns: 10 },
         );
@@ -207,7 +207,7 @@ describe('CalculatePipelineCost — property-based', () => {
                 expect(result.totalCost).toBe(0);
                 expect(result.runCount).toBe(0);
                 expect(result.totalDurationSec).toBe(0);
-                expect(result.costByRun).toEqual([]);
+                expect(result.costByRun).toStrictEqual([]);
             }),
             { numRuns: 10 },
         );

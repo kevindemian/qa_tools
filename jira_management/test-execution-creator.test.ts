@@ -81,7 +81,7 @@ describe('TestExecutionCreator', () => {
             setupHappyPath();
             const result = await creator.create(projectName, testKeys, csvName);
 
-            expect(result).toEqual({ key: 'TE-1', summary: 'my_tests.csv - 23/05/2026 10:30' });
+            expect(result).toStrictEqual({ key: 'TE-1', summary: 'my_tests.csv - 23/05/2026 10:30' });
         });
 
         it('posts with correct payload', async () => {expect.hasAssertions();
@@ -186,7 +186,7 @@ describe('TestExecutionCreator', () => {
 
             const result = await creator.createWithLinks(projectName, testKeys, csvName);
 
-            expect(result).toEqual({ key: 'TE-1', summary: 'my_tests.csv - 23/05/2026 10:30' });
+            expect(result).toStrictEqual({ key: 'TE-1', summary: 'my_tests.csv - 23/05/2026 10:30' });
             expect(mockLinkManager['createIssueLink']).toHaveBeenCalledTimes(2);
             expect(mockLinkManager['createIssueLink']).toHaveBeenCalledWith('TEST-1', 'TE-1', 'Tests');
             expect(mockLinkManager['createIssueLink']).toHaveBeenCalledWith('TEST-2', 'TE-1', 'Tests');
@@ -318,7 +318,7 @@ describe('TestExecutionCreator', () => {
             setupHappy({ customfield_10200: [] });
             const result = await creator.addTestsToExistingExecution(teKey, testKeys);
 
-            expect(result).toEqual({ key: 'TE-1', summary: 'My TE' });
+            expect(result).toStrictEqual({ key: 'TE-1', summary: 'My TE' });
             expect(mockJiraResource['putJiraResource']).toHaveBeenCalledWith('issue/TE-1', {
                 fields: { customfield_10200: ['TEST-1', 'TEST-2'] },
             });
@@ -397,7 +397,7 @@ describe('TestExecutionCreator', () => {
             mockLinkManager.createIssueLink.mockResolvedValueOnce({}).mockRejectedValueOnce(new Error('Link error'));
             const result = await creator.addTestsToExistingExecution(teKey, testKeys);
 
-            expect(result).toEqual({ key: 'TE-1', summary: 'My TE' });
+            expect(result).toStrictEqual({ key: 'TE-1', summary: 'My TE' });
             expect(mockLinkManager['createIssueLink']).toHaveBeenCalledTimes(2);
         });
 
@@ -412,7 +412,7 @@ describe('TestExecutionCreator', () => {
             mockLinkManager.createIssueLink.mockResolvedValue({});
             const result = await creator.addTestsToExistingExecution(teKey, testKeys);
 
-            expect(result).toEqual({ key: 'TE-1', summary: 'TE-1' });
+            expect(result).toStrictEqual({ key: 'TE-1', summary: 'TE-1' });
         });
     });
 });

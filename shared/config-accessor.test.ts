@@ -189,7 +189,7 @@ describe('Config (accessor)', () => {
             delete process.env['LLM_API_KEY'];
             delete process.env['LLM_MODEL'];
 
-            expect(Config.getAllPrefixed('NONEXIST_')).toEqual({});
+            expect(Config.getAllPrefixed('NONEXIST_')).toStrictEqual({});
         });
     });
 

@@ -230,7 +230,7 @@ describe('ParseCliExtra', () => {
         const result = parseCliExtra();
 
         expect(result.extraRuns).toHaveLength(1);
-        expect(result.extraRuns[0]).toEqual({ name: 'chrome', file: 'results.json' });
+        expect(result.extraRuns[0]).toStrictEqual({ name: 'chrome', file: 'results.json' });
     });
 
     it('skips empty --publish value', () => {

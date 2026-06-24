@@ -43,7 +43,7 @@ describe('FailureAnalysisTestSchema', () => {
             recommendation: 'Fix the assertion logic in the login component.',
         };
 
-        expect(FailureAnalysisTestSchema.parse(data)).toEqual(data);
+        expect(FailureAnalysisTestSchema.parse(data)).toStrictEqual(data);
     });
 
     it('rejects test with short recommendation', () => {
@@ -81,7 +81,7 @@ describe('FailureAnalysisSchema', () => {
             ],
         };
 
-        expect(FailureAnalysisSchema.parse(data)).toEqual(data);
+        expect(FailureAnalysisSchema.parse(data)).toStrictEqual(data);
     });
 
     it('accepts multi-test report', () => {

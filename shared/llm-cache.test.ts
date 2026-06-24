@@ -138,7 +138,7 @@ describe('CheckMemoryCache', () => {
         const result = checkMemoryCache('schema-key', 'main', 'caller', testSchema, 'json');
 
         expect(result.hit).toBeTruthy();
-        expect(result.data).toEqual({ ok: true });
+        expect(result.data).toStrictEqual({ ok: true });
     });
 
     it('returns miss and deletes entry when schema validation fails', () => {
@@ -198,7 +198,7 @@ describe('CheckDiskCache', () => {
         const result = checkDiskCache('disk-schema', testSchema, 'json');
 
         expect(result.hit).toBeTruthy();
-        expect(result.data).toEqual({ ok: true });
+        expect(result.data).toStrictEqual({ ok: true });
 
         const memHit = checkMemoryCache('disk-schema', 'main', undefined, undefined, undefined);
 
@@ -265,7 +265,7 @@ describe('CheckSchema', () => {
     it('returns validated data when schema matches', () => {
         const result = checkSchema('{"ok": true}', testSchema);
 
-        expect(result).toEqual({ ok: true });
+        expect(result).toStrictEqual({ ok: true });
     });
 
     it('returns null when raw string is not valid JSON', () => {

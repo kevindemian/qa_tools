@@ -66,7 +66,7 @@ describe('MappingFileGenerator', () => {
         );
         const files = fs.readdirSync(tmpDir).sort();
 
-        expect(files).toEqual([base + '-jira-mapping.json', base + '-jira-mapping.md', base + '-summary.txt']);
+        expect(files).toStrictEqual([base + '-jira-mapping.json', base + '-jira-mapping.md', base + '-summary.txt']);
 
         const json = JSON.parse(fs.readFileSync(path.join(tmpDir, base + '-jira-mapping.json'), 'utf8')) as MappingJson;
 

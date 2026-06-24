@@ -49,13 +49,13 @@ describe('ParseGitLogOutput', () => {
         expect(result[0]?.date).toBe('date1');
         expect(result[0]?.subject).toBe('subj1');
         expect(result[0]?.author).toBe('author1');
-        expect(result[0]?.parents).toEqual(['parent1']);
+        expect(result[0]?.parents).toStrictEqual(['parent1']);
     });
 
     it('skips malformed lines with fewer than 5 fields', () => {
         const result = parseGitLogOutput('hash1\0date1\0subj1');
 
-        expect(result).toEqual([]);
+        expect(result).toStrictEqual([]);
     });
 
     it('skips only the malformed line, keeps valid ones', () => {
@@ -68,20 +68,20 @@ describe('ParseGitLogOutput', () => {
     });
 
     it('handles empty input', () => {
-        expect(parseGitLogOutput('')).toEqual([]);
+        expect(parseGitLogOutput('')).toStrictEqual([]);
     });
 
     it('handles empty parents field', () => {
         const result = parseGitLogOutput('hash1\0date1\0subj1\0author1\0');
 
         expect(result).toHaveLength(1);
-        expect(result[0]?.parents).toEqual([]);
+        expect(result[0]?.parents).toStrictEqual([]);
     });
 
     it('handles multiple parent hashes', () => {
         const result = parseGitLogOutput('hash1\0date1\0subj1\0author1\0parent1 parent2 parent3');
 
-        expect(result[0]?.parents).toEqual(['parent1', 'parent2', 'parent3']);
+        expect(result[0]?.parents).toStrictEqual(['parent1', 'parent2', 'parent3']);
     });
 });
 
@@ -141,7 +141,7 @@ describe('FetchGitLog', () => {
         expect(commits[0]?.hash).toBe('abc123');
         expect(commits[0]?.subject).toBe('Initial commit');
         expect(commits[0]?.author).toBe('kdemian');
-        expect(commits[0]?.parents).toEqual([]);
+        expect(commits[0]?.parents).toStrictEqual([]);
     });
 
     it('parses merge commit parents correctly', () => {
@@ -149,7 +149,7 @@ describe('FetchGitLog', () => {
         const commits = fetchGitLog();
 
         expect(commits[4]?.subject).toBe('Merge branch feat');
-        expect(commits[4]?.parents).toEqual(['jkl012', 'abc123']);
+        expect(commits[4]?.parents).toStrictEqual(['jkl012', 'abc123']);
     });
 
     it('returns empty array when git command fails', () => {
@@ -158,14 +158,14 @@ describe('FetchGitLog', () => {
         });
         const commits = fetchGitLog();
 
-        expect(commits).toEqual([]);
+        expect(commits).toStrictEqual([]);
     });
 
     it('returns empty array for empty git log', () => {
         mockGitOutput('');
         const commits = fetchGitLog();
 
-        expect(commits).toEqual([]);
+        expect(commits).toStrictEqual([]);
     });
 
     it('uses repoPath option', () => {
@@ -209,7 +209,7 @@ describe('GenerateGitMetricsRuns', () => {
         });
         const runs = generateGitMetricsRuns();
 
-        expect(runs).toEqual([]);
+        expect(runs).toStrictEqual([]);
     });
 
     it('groups commits by day into separate runs', () => {
@@ -323,7 +323,7 @@ describe('GenerateGitFailureClassifications', () => {
         });
         const result = generateGitFailureClassifications();
 
-        expect(result).toEqual([]);
+        expect(result).toStrictEqual([]);
     });
 
     it('creates classifications for revert commits only', () => {expect.hasAssertions();

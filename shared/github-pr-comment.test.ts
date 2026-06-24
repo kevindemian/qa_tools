@@ -51,7 +51,7 @@ describe('PostPrComment', () => {
                 headers: expect.objectContaining({ Authorization: 'Bearer test-token' }) as Record<string, unknown>,
             }),
         );
-        expect(result).toEqual({
+        expect(result).toStrictEqual({
             id: 123,
             html_url: 'https://github.com/owner/repo/pull/42#issuecomment-123',
         });
@@ -106,7 +106,7 @@ describe('PostPrComment', () => {
                 headers: expect.objectContaining({ Authorization: 'Bearer custom-token' }) as Record<string, unknown>,
             }),
         );
-        expect(result).toEqual({
+        expect(result).toStrictEqual({
             id: 456,
             html_url: 'https://github.com/custom/repo/pull/99#issuecomment-456',
         });

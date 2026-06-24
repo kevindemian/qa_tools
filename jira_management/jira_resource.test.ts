@@ -89,7 +89,7 @@ describe('GetJiraResource', () => {
         const result = await jiraResource.getJiraResource('project/TEST');
 
         expect(mockClient['get']).toHaveBeenCalledWith('/project/TEST');
-        expect(result).toEqual(expected);
+        expect(result).toStrictEqual(expected);
     });
 
     it('throws on network error', async () => {expect.hasAssertions();
@@ -123,7 +123,7 @@ describe('PostJiraResource', () => {
         const result = await jiraResource.postJiraResource('version', payload);
 
         expect(mockClient['post']).toHaveBeenCalledWith('/version', payload);
-        expect(result).toEqual(expected);
+        expect(result).toStrictEqual(expected);
     });
 
     it('throws on API error', async () => {expect.hasAssertions();
@@ -157,7 +157,7 @@ describe('PutJiraResource', () => {
         const result = await jiraResource.putJiraResource('version/10001', payload);
 
         expect(mockClient['put']).toHaveBeenCalledWith('/version/10001', payload);
-        expect(result).toEqual(expected);
+        expect(result).toStrictEqual(expected);
     });
 
     it('returns null when status is 204', async () => {expect.hasAssertions();
@@ -236,7 +236,7 @@ describe('GetProjectVersions', () => {
         const result = await jiraResource.getProjectVersions('12345');
 
         expect(mockClient['get']).toHaveBeenCalledWith('/project/12345/versions');
-        expect(result).toEqual(versions);
+        expect(result).toStrictEqual(versions);
     });
 
     it('returns empty array on API error', async () => {expect.hasAssertions();
@@ -245,7 +245,7 @@ describe('GetProjectVersions', () => {
 
         const result = await jiraResource.getProjectVersions('999');
 
-        expect(result).toEqual([]);
+        expect(result).toStrictEqual([]);
     });
 
     it('returns whatever data shape comes from API', async () => {expect.hasAssertions();
@@ -255,7 +255,7 @@ describe('GetProjectVersions', () => {
 
         const result = await jiraResource.getProjectVersions('12345');
 
-        expect(result).toEqual(data);
+        expect(result).toStrictEqual(data);
     });
 });
 
@@ -277,7 +277,7 @@ describe('GetTransitionsForIssue', () => {
 
         const result = await jiraResource.getTransitionsForIssue('TEST-1');
 
-        expect(result).toEqual({ approve: '31', 'use test case': '41' });
+        expect(result).toStrictEqual({ approve: '31', 'use test case': '41' });
     });
 
     it('returns empty object when no transitions', async () => {expect.hasAssertions();
@@ -286,7 +286,7 @@ describe('GetTransitionsForIssue', () => {
 
         const result = await jiraResource.getTransitionsForIssue('TEST-1');
 
-        expect(result).toEqual({});
+        expect(result).toStrictEqual({});
     });
 
     it('returns empty when transitions is empty array', async () => {expect.hasAssertions();
@@ -295,7 +295,7 @@ describe('GetTransitionsForIssue', () => {
 
         const result = await jiraResource.getTransitionsForIssue('TEST-1');
 
-        expect(result).toEqual({});
+        expect(result).toStrictEqual({});
     });
 
     it('handles transitions without target name', async () => {expect.hasAssertions();
@@ -312,7 +312,7 @@ describe('GetTransitionsForIssue', () => {
 
         const result = await jiraResource.getTransitionsForIssue('TEST-1');
 
-        expect(result).toEqual({ approve: '31', done: '41' });
+        expect(result).toStrictEqual({ approve: '31', done: '41' });
     });
 
     it('returns empty object on API error (catch block)', async () => {expect.hasAssertions();
@@ -321,7 +321,7 @@ describe('GetTransitionsForIssue', () => {
 
         const result = await jiraResource.getTransitionsForIssue('TEST-1');
 
-        expect(result).toEqual({});
+        expect(result).toStrictEqual({});
     });
 });
 
@@ -337,7 +337,7 @@ describe('SearchJiraIssues', () => {
 
         const result = await jiraResource.searchJiraIssues('project = TEST');
 
-        expect(result.issues).toEqual(issues);
+        expect(result.issues).toStrictEqual(issues);
         expect(result.total).toBe(1);
     });
 
@@ -349,7 +349,7 @@ describe('SearchJiraIssues', () => {
 
         const result = await jiraResource.searchJiraIssues('project = TEST');
 
-        expect(result.issues).toEqual([]);
+        expect(result.issues).toStrictEqual([]);
         expect(result.total).toBe(0);
     });
 
@@ -375,7 +375,7 @@ describe('SearchJiraIssues', () => {
 
         const result = await jiraResource.searchJiraIssues('project = TEST');
 
-        expect(result).toEqual({ issues: [], total: 0 });
+        expect(result).toStrictEqual({ issues: [], total: 0 });
     });
 
     it('handles empty issues in response', async () => {expect.hasAssertions();
@@ -386,7 +386,7 @@ describe('SearchJiraIssues', () => {
 
         const result = await jiraResource.searchJiraIssues('project = TEST');
 
-        expect(result.issues).toEqual([]);
+        expect(result.issues).toStrictEqual([]);
         expect(result.total).toBe(0);
     });
 });
@@ -481,7 +481,7 @@ describe('CreateVersion', () => {
             project: 'TEST',
             released: false,
         });
-        expect(result).toEqual(created);
+        expect(result).toStrictEqual(created);
     });
 
     it('returns null when version already exists', async () => {expect.hasAssertions();
@@ -505,7 +505,7 @@ describe('CreateVersion', () => {
             '/version',
             expect.objectContaining({ description: undefined }),
         );
-        expect(result).toEqual({ id: '1', name: 'v1.0' });
+        expect(result).toStrictEqual({ id: '1', name: 'v1.0' });
     });
 
     it('handles post failure gracefully', async () => {expect.hasAssertions();
@@ -612,7 +612,7 @@ describe('GetReleaseTasks', () => {
 
         const result = await jiraResource.getReleaseTasks('TEST', 'v1.0');
 
-        expect(result).toEqual(['[TASK-1] - Implement feature', '[TASK-2] - Fix bug']);
+        expect(result).toStrictEqual(['[TASK-1] - Implement feature', '[TASK-2] - Fix bug']);
     });
 
     it('returns empty array when no issues found', async () => {expect.hasAssertions();
@@ -625,7 +625,7 @@ describe('GetReleaseTasks', () => {
 
         const result = await jiraResource.getReleaseTasks('TEST', 'v1.0');
 
-        expect(result).toEqual([]);
+        expect(result).toStrictEqual([]);
     });
 
     it('filters by type when testOnly=true', async () => {expect.hasAssertions();
@@ -656,14 +656,14 @@ describe('GetReleaseTasks', () => {
 
         const result = await jiraResource.getReleaseTasks('TEST', 'v1.0');
 
-        expect(result).toEqual([]);
+        expect(result).toStrictEqual([]);
     });
 
     it('returns empty array when versionName is empty (sanitizeJqlValue throws)', async () => {expect.hasAssertions();
 
         const result = await jiraResource.getReleaseTasks('TEST', '');
 
-        expect(result).toEqual([]);
+        expect(result).toStrictEqual([]);
     });
 });
 
@@ -696,8 +696,8 @@ describe('GetLatestReleases', () => {
 
         const result = await jiraResource.getLatestReleases('UNKNOWN', 5);
 
-        expect(result.latestReleasedVersions).toEqual([]);
-        expect(result.unreleasedVersions).toEqual([]);
+        expect(result.latestReleasedVersions).toStrictEqual([]);
+        expect(result.unreleasedVersions).toStrictEqual([]);
     });
 
     it('returns empty arrays when versions fetch fails', async () => {expect.hasAssertions();
@@ -708,8 +708,8 @@ describe('GetLatestReleases', () => {
 
         const result = await jiraResource.getLatestReleases('TEST', 5);
 
-        expect(result.latestReleasedVersions).toEqual([]);
-        expect(result.unreleasedVersions).toEqual([]);
+        expect(result.latestReleasedVersions).toStrictEqual([]);
+        expect(result.unreleasedVersions).toStrictEqual([]);
     });
 
     it('returns empty arrays when versions is not an array', async () => {expect.hasAssertions();
@@ -720,8 +720,8 @@ describe('GetLatestReleases', () => {
 
         const result = await jiraResource.getLatestReleases('TEST', 5);
 
-        expect(result.latestReleasedVersions).toEqual([]);
-        expect(result.unreleasedVersions).toEqual([]);
+        expect(result.latestReleasedVersions).toStrictEqual([]);
+        expect(result.unreleasedVersions).toStrictEqual([]);
     });
 
     it('returns multiple released versions sorted by date descending', async () => {expect.hasAssertions();
@@ -1077,7 +1077,7 @@ describe('GetFromOriginPath', () => {
         const result = await jiraResource.getFromOriginPath('rest/raven/1.0/api/test/TEST-1/testruns');
 
         expect(mockClient['get']).toHaveBeenCalledWith('http://test-jira.com/rest/raven/1.0/api/test/TEST-1/testruns');
-        expect(result).toEqual(expected);
+        expect(result).toStrictEqual(expected);
     });
 
     it('strips leading slash from path', async () => {expect.hasAssertions();
@@ -1087,7 +1087,7 @@ describe('GetFromOriginPath', () => {
         const result = await jiraResource.getFromOriginPath('/rest/raven/1.0/api/test/TEST-1/testruns');
 
         expect(mockClient['get']).toHaveBeenCalledWith('http://test-jira.com/rest/raven/1.0/api/test/TEST-1/testruns');
-        expect(result).toEqual({ key: 'TEST-1' });
+        expect(result).toStrictEqual({ key: 'TEST-1' });
     });
 
     it('throws on network error', async () => {expect.hasAssertions();

@@ -35,7 +35,7 @@ describe('GetBranch', () => {
         mockApiGet.mockResolvedValue({ name: 'main', commit: { sha: 'abc' } });
         const result = await getBranch(client, 'myorg', 'myrepo', 'main');
 
-        expect(result).toEqual({ name: 'main' });
+        expect(result).toStrictEqual({ name: 'main' });
         expect(mockApiGet).toHaveBeenCalledWith(client, '/repos/myorg/myrepo/branches/main', { returnNull: true });
     });
 

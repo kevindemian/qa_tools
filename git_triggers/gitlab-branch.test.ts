@@ -39,7 +39,7 @@ describe('GlGetBranch', () => {
         vi.mocked(apiGet).mockResolvedValue({ name: 'main' });
         const result = await glGetBranch(mockClient, 'owner', 'repo', 'main');
 
-        expect(result).toEqual({ name: 'main' });
+        expect(result).toStrictEqual({ name: 'main' });
     });
 
     it('returns null when apiGet returns null', async () => {expect.hasAssertions();

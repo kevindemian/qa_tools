@@ -68,7 +68,7 @@ describe('Feature-config', () => {
             const { loadFeatureConfig } = await import('../feature-config.js');
             const result = loadFeatureConfig();
 
-            expect(result).toEqual({});
+            expect(result).toStrictEqual({});
         });
 
         it('returns parsed config when file exists with valid schema', async () => {expect.hasAssertions();
@@ -80,7 +80,7 @@ describe('Feature-config', () => {
             const { loadFeatureConfig } = await import('../feature-config.js');
             const result = loadFeatureConfig();
 
-            expect(result).toEqual(VALID_CONFIG);
+            expect(result).toStrictEqual(VALID_CONFIG);
         });
 
         it('returns empty object when file has invalid JSON', async () => {expect.hasAssertions();
@@ -92,7 +92,7 @@ describe('Feature-config', () => {
             const { loadFeatureConfig } = await import('../feature-config.js');
             const result = loadFeatureConfig();
 
-            expect(result).toEqual({});
+            expect(result).toStrictEqual({});
         });
 
         it('returns empty object when file has invalid schema', async () => {expect.hasAssertions();
@@ -104,7 +104,7 @@ describe('Feature-config', () => {
             const { loadFeatureConfig } = await import('../feature-config.js');
             const result = loadFeatureConfig();
 
-            expect(result).toEqual({});
+            expect(result).toStrictEqual({});
         });
     });
 
@@ -116,7 +116,7 @@ describe('Feature-config', () => {
 
             const saved = loadFeatureConfig();
 
-            expect(saved).toEqual(VALID_CONFIG);
+            expect(saved).toStrictEqual(VALID_CONFIG);
         });
 
         it('creates directory if missing', async () => {expect.hasAssertions();
@@ -130,7 +130,7 @@ describe('Feature-config', () => {
 
             const saved = loadFeatureConfig();
 
-            expect(saved).toEqual(VALID_CONFIG);
+            expect(saved).toStrictEqual(VALID_CONFIG);
         });
     });
 

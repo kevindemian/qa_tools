@@ -29,7 +29,7 @@ describe('ApiGet', () => {
         vi.spyOn(client, 'get').mockResolvedValue({ data: { id: 1, name: 'test' } });
         const result = await apiGet(client, '/test');
 
-        expect(result).toEqual({ id: 1, name: 'test' });
+        expect(result).toStrictEqual({ id: 1, name: 'test' });
     });
 
     it('passes params to client.get when provided', async () => {expect.hasAssertions();
@@ -83,7 +83,7 @@ describe('ApiPost', () => {
         const postSpy = vi.spyOn(client, 'post').mockResolvedValue({ data: { id: 42 } });
         const result = await apiPost(client, '/test', { name: 'foo' });
 
-        expect(result).toEqual({ id: 42 });
+        expect(result).toStrictEqual({ id: 42 });
         expect(postSpy).toHaveBeenCalledWith('/test', { name: 'foo' });
     });
 
@@ -115,7 +115,7 @@ describe('ApiPatch', () => {
         const patchSpy = vi.spyOn(client, 'patch').mockResolvedValue({ data: { updated: true } });
         const result = await apiPatch(client, '/test', { title: 'new' });
 
-        expect(result).toEqual({ updated: true });
+        expect(result).toStrictEqual({ updated: true });
         expect(patchSpy).toHaveBeenCalledWith('/test', { title: 'new' });
     });
 

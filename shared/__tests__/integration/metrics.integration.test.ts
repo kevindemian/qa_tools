@@ -51,7 +51,7 @@ describe('Integration: Metrics Store', () => {
             saveMetrics(store, config);
             const loaded = loadMetrics(config);
 
-            expect(loaded.runs).toEqual([]);
+            expect(loaded.runs).toStrictEqual([]);
         });
 
         it('persists store with runs and reloads', async () => {expect.hasAssertions();
@@ -81,7 +81,7 @@ describe('Integration: Metrics Store', () => {
             const config = getConfig();
             const loaded = loadMetrics(config);
 
-            expect(loaded.runs).toEqual([]);
+            expect(loaded.runs).toStrictEqual([]);
         });
     });
 

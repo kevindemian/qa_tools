@@ -18,7 +18,7 @@ describe('PrecomputeCategories', () => {
     it('returns empty map when no failures', () => {
         const tests: FlatTest[] = [{ title: 'pass', state: 'passed' } as FlatTest];
 
-        expect(precomputeCategories(tests)).toEqual({});
+        expect(precomputeCategories(tests)).toStrictEqual({});
     });
 
     it('categorizes failed tests', () => {
@@ -31,7 +31,7 @@ describe('PrecomputeCategories', () => {
     it('skips failed tests without error', () => {
         const tests: FlatTest[] = [{ title: 'fail', state: 'failed' } as FlatTest];
 
-        expect(precomputeCategories(tests)).toEqual({});
+        expect(precomputeCategories(tests)).toStrictEqual({});
     });
 });
 

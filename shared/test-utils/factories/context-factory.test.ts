@@ -28,7 +28,7 @@ describe('CreateMockContext', () => {
 
         expect(ctx.ctx.project_name).toBe('TEST');
         expect(ctx.ctx.isBusy).toBeFalsy();
-        expect(ctx.ctx.results).toEqual([]);
+        expect(ctx.ctx.results).toStrictEqual([]);
         expect(typeof ctx.ctx.pushHistory).toBe('function');
     });
 

@@ -27,7 +27,7 @@ describe('CypressResource', () => {
             mockClient.get.mockResolvedValue({ data: { items: [] } });
             const result = await cypress.getCypressResource('/report');
 
-            expect(result).toEqual({ items: [] });
+            expect(result).toStrictEqual({ items: [] });
         });
 
         it('returns null on network error', async () => {expect.hasAssertions();

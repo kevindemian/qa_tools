@@ -87,7 +87,7 @@ describe('Integration: Test Impact (FT-35)', () => {
             });
 
             expect(result.confidence).toBe('high');
-            expect(result.changedFiles).toEqual(['src/login.ts']);
+            expect(result.changedFiles).toStrictEqual(['src/login.ts']);
 
             const loginTest = result.impactedTests.find((t) => t.testKey === 'LOGIN-001');
 
@@ -120,14 +120,14 @@ describe('Integration: Test Impact (FT-35)', () => {
             });
 
             expect(result.confidence).toBe('low');
-            expect(result.impactedTests).toEqual([]);
+            expect(result.impactedTests).toStrictEqual([]);
         });
 
         it('returns empty result for empty diff', () => {
             const result = analyzeTestImpact('');
 
-            expect(result.changedFiles).toEqual([]);
-            expect(result.impactedTests).toEqual([]);
+            expect(result.changedFiles).toStrictEqual([]);
+            expect(result.impactedTests).toStrictEqual([]);
             expect(result.confidence).toBe('low');
         });
     });
@@ -152,14 +152,14 @@ describe('Integration: Test Impact (FT-35)', () => {
 
             const json = generateTestSelectionJson(result);
 
-            expect(json.changedFiles).toEqual(['src/login.ts']);
+            expect(json.changedFiles).toStrictEqual(['src/login.ts']);
             expect(json.impactedTests).toHaveLength(1);
             expect(json.impactedTests[0]?.title).toBe('Login test');
             expect(json.impactedTests[0]?.testKey).toBe('LOGIN-001');
             expect(json.confidence).toBe('high');
             expect(json.conservative).toBeFalsy();
             expect(json.generatedAt).toBeTruthy();
-            expect(JSON.parse(JSON.stringify(json))).toEqual(json);
+            expect(JSON.parse(JSON.stringify(json))).toStrictEqual(json);
         });
     });
 

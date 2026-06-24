@@ -70,7 +70,7 @@ describe('ParseGitLogOutput invariants (PBT)', () => {
     it('handles empty input', () => {
         const result = parseGitLogOutput('');
 
-        expect(result).toEqual([]);
+        expect(result).toStrictEqual([]);
     });
 
     it('handles single line input', () => {expect.hasAssertions();
@@ -151,7 +151,7 @@ describe('GenerateGitMetricsRuns invariants (PBT)', () => {
         mockExecFileSync.mockReturnValue('');
         const runs = generateGitMetricsRuns();
 
-        expect(runs).toEqual([]);
+        expect(runs).toStrictEqual([]);
     });
 
     it('total equals passed + failed + skipped for each run', () => {expect.hasAssertions();
