@@ -56,7 +56,7 @@ describe('OfferPipelineFailureAnalysis', () => {
         vi.clearAllMocks();
     });
 
-    it('should skip analysis when no failed tests', async () => {
+    it('Should skip analysis when no failed tests', async () => {
         const parsed = {
             stats: { passed: 10, failed: 0, skipped: 0, total: 10, duration: 500 },
             tests: [{ title: 'test A', state: 'passed' as const, duration: 100 }],
@@ -67,7 +67,7 @@ describe('OfferPipelineFailureAnalysis', () => {
         expect(mockConfirm).not.toHaveBeenCalled();
     });
 
-    it('should skip analysis when user declines', async () => {
+    it('Should skip analysis when user declines', async () => {
         mockConfirm.mockReturnValue(false);
         await offerPipelineFailureAnalysis(baseParsed);
 
@@ -75,7 +75,7 @@ describe('OfferPipelineFailureAnalysis', () => {
         expect(mockAnalyzeFailures).not.toHaveBeenCalled();
     });
 
-    it('should call analyzeFailuresWithReport and print success on analysis', async () => {
+    it('Should call analyzeFailuresWithReport and print success on analysis', async () => {
         mockConfirm.mockReturnValue(true);
         mockAnalyzeFailures.mockResolvedValue(mockReport);
 
@@ -85,7 +85,7 @@ describe('OfferPipelineFailureAnalysis', () => {
         expect(mockSuccess).toHaveBeenCalledWith('Análise de falhas (IA):');
     });
 
-    it('should handle empty analysis response', async () => {
+    it('Should handle empty analysis response', async () => {
         mockConfirm.mockReturnValue(true);
         mockAnalyzeFailures.mockResolvedValue({ ...mockReport, content: '' });
 
@@ -94,7 +94,7 @@ describe('OfferPipelineFailureAnalysis', () => {
         expect(mockAnalyzeFailures).toHaveBeenCalled();
     });
 
-    it('should handle analyzeFailuresWithReport throwing', async () => {
+    it('Should handle analyzeFailuresWithReport throwing', async () => {
         mockConfirm.mockReturnValue(true);
         mockAnalyzeFailures.mockRejectedValue(new Error('API error'));
 
