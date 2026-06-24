@@ -46,7 +46,6 @@ vi.mock('../shared/state', () => ({
 }));
 
 import { createMockRootLogger } from '../shared/test-utils.js';
-import type { Mock } from 'vitest';
 
 const mockRootLogger = {
     ...createMockRootLogger(),
