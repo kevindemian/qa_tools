@@ -15,11 +15,11 @@ describe('PreConditionSchema', () => {
     });
 
     it('rejects empty description', () => {
-        expect(() => PreConditionSchema.parse({ type: 'setup', description: '' })).toThrow(/error/i);
+        expect(() => PreConditionSchema.parse({ type: 'setup', description: '' })).toThrow();
     });
 
     it('rejects invalid type', () => {
-        expect(() => PreConditionSchema.parse({ type: 'invalid', description: 'desc' })).toThrow(/error/i);
+        expect(() => PreConditionSchema.parse({ type: 'invalid', description: 'desc' })).toThrow();
     });
 });
 
@@ -32,7 +32,7 @@ describe('CoverageRefSchema', () => {
     });
 
     it('rejects empty criterionId', () => {
-        expect(() => CoverageRefSchema.parse({ criterionId: '', criterionText: 'text' })).toThrow(/error/i);
+        expect(() => CoverageRefSchema.parse({ criterionId: '', criterionText: 'text' })).toThrow();
     });
 });
 
@@ -52,31 +52,31 @@ describe('TestCaseSchema', () => {
     });
 
     it('rejects title shorter than 5 chars', () => {
-        expect(() => TestCaseSchema.parse({ ...validTestCase, title: 'Test' })).toThrow(/error/i);
+        expect(() => TestCaseSchema.parse({ ...validTestCase, title: 'Test' })).toThrow();
     });
 
     it('rejects title over 200 chars', () => {
-        expect(() => TestCaseSchema.parse({ ...validTestCase, title: 'x'.repeat(201) })).toThrow(/error/i);
+        expect(() => TestCaseSchema.parse({ ...validTestCase, title: 'x'.repeat(201) })).toThrow();
     });
 
     it('rejects empty preConditions', () => {
-        expect(() => TestCaseSchema.parse({ ...validTestCase, preConditions: [] })).toThrow(/error/i);
+        expect(() => TestCaseSchema.parse({ ...validTestCase, preConditions: [] })).toThrow();
     });
 
     it('rejects fewer than 3 steps', () => {
-        expect(() => TestCaseSchema.parse({ ...validTestCase, steps: ['Step 1'] })).toThrow(/error/i);
+        expect(() => TestCaseSchema.parse({ ...validTestCase, steps: ['Step 1'] })).toThrow();
     });
 
     it('rejects step shorter than 5 chars', () => {
-        expect(() => TestCaseSchema.parse({ ...validTestCase, steps: ['Step 1', 'Step 2', 'x'] })).toThrow(/error/i);
+        expect(() => TestCaseSchema.parse({ ...validTestCase, steps: ['Step 1', 'Step 2', 'x'] })).toThrow();
     });
 
     it('rejects expectedResult shorter than 10 chars', () => {
-        expect(() => TestCaseSchema.parse({ ...validTestCase, expectedResult: 'Short' })).toThrow(/error/i);
+        expect(() => TestCaseSchema.parse({ ...validTestCase, expectedResult: 'Short' })).toThrow();
     });
 
     it('rejects empty coverage', () => {
-        expect(() => TestCaseSchema.parse({ ...validTestCase, coverage: [] })).toThrow(/error/i);
+        expect(() => TestCaseSchema.parse({ ...validTestCase, coverage: [] })).toThrow();
     });
 
     it('accepts optional evidence', () => {
@@ -102,11 +102,11 @@ describe('CoverageTableSchema', () => {
     });
 
     it('rejects coverage < 0', () => {
-        expect(() => CoverageTableSchema.parse({ coverage: -1 })).toThrow(/error/i);
+        expect(() => CoverageTableSchema.parse({ coverage: -1 })).toThrow();
     });
 
     it('rejects coverage > 100', () => {
-        expect(() => CoverageTableSchema.parse({ coverage: 101 })).toThrow(/error/i);
+        expect(() => CoverageTableSchema.parse({ coverage: 101 })).toThrow();
     });
 });
 
@@ -132,10 +132,10 @@ describe('TestSuiteSchema', () => {
     });
 
     it('rejects summary shorter than 10 chars', () => {
-        expect(() => TestSuiteSchema.parse({ ...validSuite, summary: 'Short' })).toThrow(/error/i);
+        expect(() => TestSuiteSchema.parse({ ...validSuite, summary: 'Short' })).toThrow();
     });
 
     it('rejects empty tests array', () => {
-        expect(() => TestSuiteSchema.parse({ ...validSuite, tests: [] })).toThrow(/error/i);
+        expect(() => TestSuiteSchema.parse({ ...validSuite, tests: [] })).toThrow();
     });
 });

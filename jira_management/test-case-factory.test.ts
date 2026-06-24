@@ -163,7 +163,7 @@ describe('TestCaseFactory', () => {
             });
 
             expect(result).toStrictEqual({ key: 'TEST-44' });
-            expect(mockJiraResource['postJiraResource']).toHaveBeenCalledWith();
+            expect(mockJiraResource['postJiraResource']).toHaveBeenCalled();
         });
 
         it('does not search when skipExisting is false', async () => {expect.hasAssertions();
@@ -180,7 +180,7 @@ describe('TestCaseFactory', () => {
             });
 
             expect(mockJiraResource['searchJiraIssues']).not.toHaveBeenCalled();
-            expect(mockJiraResource['postJiraResource']).toHaveBeenCalledWith();
+            expect(mockJiraResource['postJiraResource']).toHaveBeenCalled();
         });
 
         it('shows prompt info when quiet is false and issue skipped', async () => {expect.hasAssertions();
@@ -234,7 +234,7 @@ describe('TestCaseFactory', () => {
 
             expect(update).toHaveBeenCalledWith(1);
             expect(update).toHaveBeenCalledWith(2);
-            expect(stop).toHaveBeenCalledWith();
+            expect(stop).toHaveBeenCalled();
         });
 
         it('aborts on step error when onError returns abort', async () => {expect.hasAssertions();

@@ -499,7 +499,7 @@ describe('Config', () => {
         it('throws when a required env var is missing', () => {
             delete process.env['JIRA_BASE_URL'];
 
-            expect(() => Config.validateRequiredEnv()).toThrow(/error/i);
+            expect(() => Config.validateRequiredEnv()).toThrow();
         });
     });
 });

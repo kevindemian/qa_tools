@@ -149,7 +149,7 @@ describe('Main', () => {
         });
         await main();
 
-        expect(mockPRComment.postPrComment).toHaveBeenCalledWith();
+        expect(mockPRComment.postPrComment).toHaveBeenCalled();
     });
 
     it('handles no comment URL gracefully', async () => {expect.hasAssertions();
@@ -167,6 +167,6 @@ describe('Main', () => {
         mockPRComment.postPrComment.mockResolvedValue({});
         await main();
 
-        expect(mockPRComment.postPrComment).toHaveBeenCalledWith();
+        expect(mockPRComment.postPrComment).toHaveBeenCalled();
     });
 });

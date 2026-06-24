@@ -176,7 +176,7 @@ describe('Success', () => {
     it('prints green OK message', () => {
         success('done');
 
-        expect(mockPrint).toHaveBeenCalledWith();
+        expect(mockPrint).toHaveBeenCalled();
     });
 
     it('does not print when quiet', () => {
@@ -191,14 +191,14 @@ describe('Error', () => {
     it('prints red error message', () => {
         error('failed');
 
-        expect(mockPrint).toHaveBeenCalledWith();
+        expect(mockPrint).toHaveBeenCalled();
     });
 
     it('prints even when quiet', () => {
         __setConfig(makeConfig({ quiet: true }));
         error('failed');
 
-        expect(mockPrint).toHaveBeenCalledWith();
+        expect(mockPrint).toHaveBeenCalled();
     });
 });
 
@@ -206,7 +206,7 @@ describe('Warn', () => {
     it('prints yellow warn message', () => {
         warn('caution');
 
-        expect(mockPrint).toHaveBeenCalledWith();
+        expect(mockPrint).toHaveBeenCalled();
     });
 });
 
@@ -214,7 +214,7 @@ describe('Info', () => {
     it('prints cyan info message', () => {
         info('info');
 
-        expect(mockPrint).toHaveBeenCalledWith();
+        expect(mockPrint).toHaveBeenCalled();
     });
 
     it('does not print when quiet', () => {
@@ -229,7 +229,7 @@ describe('HelpLine', () => {
     it('prints info line', () => {
         helpLine('help');
 
-        expect(mockPrint).toHaveBeenCalledWith();
+        expect(mockPrint).toHaveBeenCalled();
     });
 });
 
@@ -245,7 +245,7 @@ describe('Title', () => {
     it('uses box with border when not quiet', () => {
         title('Section');
 
-        expect(mockPrint).toHaveBeenCalledWith();
+        expect(mockPrint).toHaveBeenCalled();
     });
 
     it('uses plain dashes when quiet', () => {
@@ -267,7 +267,7 @@ describe('Title', () => {
         mockGetBreadcrumbPath.mockReturnValue('TESTS');
         title('Criar teste');
 
-        expect(mockPrint).toHaveBeenCalledWith();
+        expect(mockPrint).toHaveBeenCalled();
     });
 });
 
@@ -394,20 +394,20 @@ describe('PrintError', () => {
         __setConfig(makeConfig({ quiet: false }));
         printError('Context', { response: { data: { errorMessages: ['Rate limit atingido'] } } });
 
-        expect(mockPrint).toHaveBeenCalledWith();
+        expect(mockPrint).toHaveBeenCalled();
     });
 
     it('prints compact error when quiet', () => {
         __setConfig(makeConfig({ quiet: true }));
         printError('Context', { response: { data: { errorMessages: ['Rate limit atingido'] } } });
 
-        expect(mockPrint).toHaveBeenCalledWith();
+        expect(mockPrint).toHaveBeenCalled();
     });
 
     it('prints unexpected error when unknown', () => {
         printError('Test', 'something broke');
 
-        expect(mockPrint).toHaveBeenCalledWith();
+        expect(mockPrint).toHaveBeenCalled();
     });
 });
 
@@ -424,32 +424,32 @@ describe('PrintSummary', () => {
     it('prints all-pass summary', () => {
         printSummary(okResults);
 
-        expect(mockPrint).toHaveBeenCalledWith();
+        expect(mockPrint).toHaveBeenCalled();
     });
 
     it('prints all-pass summary with testExecution', () => {
         printSummary(okResults, 'EXEC-1');
 
-        expect(mockPrint).toHaveBeenCalledWith();
+        expect(mockPrint).toHaveBeenCalled();
     });
 
     it('prints mixed summary with errors', () => {
         printSummary(mixedResults);
 
-        expect(mockPrint).toHaveBeenCalledWith();
+        expect(mockPrint).toHaveBeenCalled();
     });
 
     it('prints compact summary when quiet', () => {
         __setConfig(makeConfig({ quiet: true }));
         printSummary(mixedResults);
 
-        expect(mockPrint).toHaveBeenCalledWith();
+        expect(mockPrint).toHaveBeenCalled();
     });
 
     it('handles empty results', () => {
         printSummary([]);
 
-        expect(mockPrint).toHaveBeenCalledWith();
+        expect(mockPrint).toHaveBeenCalled();
     });
 });
 
@@ -491,13 +491,13 @@ describe('TableView', () => {
     it('warns on null data', () => {
         tableView(null);
 
-        expect(mockPrint).toHaveBeenCalledWith();
+        expect(mockPrint).toHaveBeenCalled();
     });
 
     it('warns on empty data', () => {
         tableView([]);
 
-        expect(mockPrint).toHaveBeenCalledWith();
+        expect(mockPrint).toHaveBeenCalled();
     });
 
     it('renders table with data', () => {
@@ -507,20 +507,20 @@ describe('TableView', () => {
         ];
         tableView(data);
 
-        expect(mockPrint).toHaveBeenCalledWith();
+        expect(mockPrint).toHaveBeenCalled();
     });
 
     it('renders table with specific columns', () => {
         const data = [{ name: 'test1', status: 'pass', extra: 'x' }];
         tableView(data, ['name', 'status']);
 
-        expect(mockPrint).toHaveBeenCalledWith();
+        expect(mockPrint).toHaveBeenCalled();
     });
 
     it('colors status column', () => {
         const data = [{ name: 'test1', status: 'pass' }];
         tableView(data, ['name', 'status'], 'status');
 
-        expect(mockPrint).toHaveBeenCalledWith();
+        expect(mockPrint).toHaveBeenCalled();
     });
 });

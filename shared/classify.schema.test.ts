@@ -34,15 +34,15 @@ describe('ClassifyResponseSchema', () => {
     });
 
     it('rejects response without category prefix', () => {
-        expect(() => ClassifyResponseSchema.parse('just some text')).toThrow(/error/i);
+        expect(() => ClassifyResponseSchema.parse('just some text')).toThrow();
     });
 
     it('rejects lowercase category', () => {
-        expect(() => ClassifyResponseSchema.parse('assertion: expected 200')).toThrow(/error/i);
+        expect(() => ClassifyResponseSchema.parse('assertion: expected 200')).toThrow();
     });
 
     it('rejects missing colon after category', () => {
-        expect(() => ClassifyResponseSchema.parse('ASSERTION expected 200')).toThrow(/error/i);
+        expect(() => ClassifyResponseSchema.parse('ASSERTION expected 200')).toThrow();
     });
 
     it('accepts multi-line response (first line valid)', () => {

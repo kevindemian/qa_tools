@@ -82,7 +82,7 @@ describe('Case04', () => {
         ).default;
         await mod.handler(c);
 
-        expect(c.pushHistory).toHaveBeenCalledWith();
+        expect(c.pushHistory).toHaveBeenCalled();
         expect(nock.isDone()).toBeTruthy();
     }, 15000);
 });

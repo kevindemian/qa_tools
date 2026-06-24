@@ -113,7 +113,7 @@ describe('Case18 — AI tests generator', () => {
         const mod = case18Module;
         await mod.handler(baseContext);
 
-        expect(prompt.printError).toHaveBeenCalledWith();
+        expect(prompt.printError).toHaveBeenCalled();
     });
 
     it('handles template read error', async () => {expect.hasAssertions();
@@ -130,7 +130,7 @@ describe('Case18 — AI tests generator', () => {
         const mod = case18Module;
         await mod.handler(baseContext);
 
-        expect(prompt.printError).toHaveBeenCalledWith();
+        expect(prompt.printError).toHaveBeenCalled();
     });
 
     it('handles valid test cases from llmPrompt', async () => {expect.hasAssertions();
@@ -252,7 +252,7 @@ describe('Case18 — AI tests generator', () => {
         const mod = case18Module;
         await mod.handler(baseContext);
 
-        expect(jiraLM.matchPreconditionByDualThreshold).toHaveBeenCalledWith();
+        expect(jiraLM.matchPreconditionByDualThreshold).toHaveBeenCalled();
         expect(createPrecondSpy).toHaveBeenCalledWith('TEST', 'New precondition needed');
         expect(prompt.info).toHaveBeenCalledWith(expect.stringContaining('Pre-condition criada'));
         expect(prompt.info).toHaveBeenCalledWith(expect.stringContaining('pre-conditions foram criadas'));

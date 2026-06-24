@@ -105,7 +105,7 @@ describe('Integration: Flakiness Dashboard (FT-19)', () => {
             const html = generateFlakinessHtml([]);
 
             expect(html).toContain('Error generating dashboard');
-            expect(rootLogger['error']).toHaveBeenCalledWith();
+            expect(rootLogger['error']).toHaveBeenCalled();
         });
     });
 

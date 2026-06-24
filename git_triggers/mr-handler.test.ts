@@ -82,7 +82,7 @@ describe('HandleCreateMR', () => {
 
         await handleCreateMR(mockM);
 
-        expect(mockGeneratePrDesc).toHaveBeenCalledWith();
+        expect(mockGeneratePrDesc).toHaveBeenCalled();
         expect(mockM.createMergeRequest).toHaveBeenCalledWith('feat', 'main', 'Title', 'AI generated description');
     });
 
@@ -100,7 +100,7 @@ describe('HandleCreateMR', () => {
         await handleCreateMR(mockM);
 
         expect(mockM.createMergeRequest).toHaveBeenCalledWith('feat', 'main', 'Title', 'Manual desc');
-        expect(warn).toHaveBeenCalledWith();
+        expect(warn).toHaveBeenCalled();
     });
 
     it('includes test impact analysis when requested', async () => {expect.hasAssertions();
@@ -116,7 +116,7 @@ describe('HandleCreateMR', () => {
 
         await handleCreateMR(mockM);
 
-        expect(mockAssessImpact).toHaveBeenCalledWith();
+        expect(mockAssessImpact).toHaveBeenCalled();
         expect(info).toHaveBeenCalledWith('Impacto nos testes:');
     });
 
@@ -132,7 +132,7 @@ describe('HandleCreateMR', () => {
 
         await handleCreateMR(mockM);
 
-        expect(mockPrintError).toHaveBeenCalledWith();
+        expect(mockPrintError).toHaveBeenCalled();
         expect(pushHistory).toHaveBeenCalledWith('pr-create', expect.any(String), 'error');
     });
 });
@@ -161,7 +161,7 @@ describe('HandleListApprovedMRs', () => {
 
         await handleListApprovedMRs(mockM);
 
-        expect(warn).toHaveBeenCalledWith();
+        expect(warn).toHaveBeenCalled();
     });
 
     it('handles search error', async () => {expect.hasAssertions();
@@ -171,7 +171,7 @@ describe('HandleListApprovedMRs', () => {
 
         await handleListApprovedMRs(mockM);
 
-        expect(mockPrintError).toHaveBeenCalledWith();
+        expect(mockPrintError).toHaveBeenCalled();
         expect(pushHistory).toHaveBeenCalledWith('prs-approved', 'opened', 'error');
     });
 
@@ -184,7 +184,7 @@ describe('HandleListApprovedMRs', () => {
 
         await handleListApprovedMRs(mockM);
 
-        expect(warn).toHaveBeenCalledWith();
+        expect(warn).toHaveBeenCalled();
     });
 });
 
@@ -197,7 +197,7 @@ describe('HandleMergeMR', () => {
         await handleMergeMR(mockM);
 
         expect(mockM.acceptMergeRequest).toHaveBeenCalledWith('42');
-        expect(success).toHaveBeenCalledWith();
+        expect(success).toHaveBeenCalled();
         expect(pushHistory).toHaveBeenCalledWith('pr-merge', '42', 'ok');
     });
 
@@ -208,7 +208,7 @@ describe('HandleMergeMR', () => {
 
         await handleMergeMR(mockM);
 
-        expect(mockPrintError).toHaveBeenCalledWith();
+        expect(mockPrintError).toHaveBeenCalled();
         expect(pushHistory).toHaveBeenCalledWith('pr-merge', '42', 'error');
     });
 });

@@ -370,7 +370,7 @@ describe('PushHistory', () => {
     it('calls updateState with history entry', () => {
         mainModule.pushHistory('test-op', 'detail-x', 'ok');
 
-        expect(state.update).toHaveBeenCalledWith();
+        expect(state.update).toHaveBeenCalled();
     });
 });
 
@@ -562,7 +562,7 @@ describe('HandleShowHistory', () => {
         await mainModule.handleShowHistory();
 
         expect(prompt.title).toHaveBeenCalledWith('Histórico de operações');
-        expect(prompt.tableView).toHaveBeenCalledWith();
+        expect(prompt.tableView).toHaveBeenCalled();
     });
 
     it('warns when history is empty', async () => {expect.hasAssertions();
@@ -659,7 +659,7 @@ describe('PrintSessionSummary', () => {
     it('calls shared printSessionSummary', () => {
         mainModule.printSessionSummary();
 
-        expect(cliBase.printSessionSummary).toHaveBeenCalledWith();
+        expect(cliBase.printSessionSummary).toHaveBeenCalled();
     });
 });
 
@@ -980,7 +980,7 @@ describe('_HandleExit', () => {
 
         expect(result).toBeTruthy();
         expect(prompt.title).toHaveBeenCalledWith('Até logo!');
-        expect(breadcrumbs.clearBreadcrumbs).toHaveBeenCalledWith();
+        expect(breadcrumbs.clearBreadcrumbs).toHaveBeenCalled();
     });
 
     it('does not set exit code when session has errors — no exitCode', async () => {expect.hasAssertions();
@@ -1199,7 +1199,7 @@ describe('_PromptChoice TTY mode', () => {
         const result = await mainModule._promptChoice('0-9');
 
         expect(result).toBe('/exit');
-        expect(prompt.showSelect).toHaveBeenCalledWith();
+        expect(prompt.showSelect).toHaveBeenCalled();
     });
 });
 

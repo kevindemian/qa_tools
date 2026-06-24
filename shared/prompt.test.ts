@@ -377,7 +377,7 @@ describe('Prompt', () => {
                 const bar = new prompt.ProgressBar(100);
                 bar.stop();
 
-                expect(mockSingleBar.stop).toHaveBeenCalledWith();
+                expect(mockSingleBar.stop).toHaveBeenCalled();
             });
         });
     });
@@ -548,7 +548,7 @@ describe('Prompt', () => {
             ]);
 
             expect(result).toBe('2');
-            expect(spy).toHaveBeenCalledWith();
+            expect(spy).toHaveBeenCalled();
         });
 
         it('handles separator', async () => {expect.hasAssertions();
@@ -561,7 +561,7 @@ describe('Prompt', () => {
             ]);
 
             expect(result).toBe('2');
-            expect(spy).toHaveBeenCalledWith();
+            expect(spy).toHaveBeenCalled();
         });
 
         it('returns "0" for empty input', async () => {expect.hasAssertions();

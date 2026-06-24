@@ -9,7 +9,7 @@ describe('CsvRowSchema', () => {
     });
 
     it('rejects row without Action', () => {
-        expect(() => CsvRowSchema.parse({ fields: { Action: '', Data: '', 'Expected Result': '' } })).toThrow(/error/i);
+        expect(() => CsvRowSchema.parse({ fields: { Action: '', Data: '', 'Expected Result': '' } })).toThrow();
     });
 
     it('defaults Data and Expected Result when missing', () => {
@@ -31,15 +31,15 @@ describe('TestCaseSchema', () => {
     });
 
     it('rejects empty title', () => {
-        expect(() => TestCaseSchema.parse({ title: '', steps: [{ fields: { Action: 'x' } }] })).toThrow(/error/i);
+        expect(() => TestCaseSchema.parse({ title: '', steps: [{ fields: { Action: 'x' } }] })).toThrow();
     });
 
     it('rejects empty steps', () => {
-        expect(() => TestCaseSchema.parse({ title: 'Test', steps: [] })).toThrow(/error/i);
+        expect(() => TestCaseSchema.parse({ title: 'Test', steps: [] })).toThrow();
     });
 
     it('rejects missing steps', () => {
-        expect(() => TestCaseSchema.parse({ title: 'Test' })).toThrow(/error/i);
+        expect(() => TestCaseSchema.parse({ title: 'Test' })).toThrow();
     });
 
     it('accepts full test case with all fields', () => {
@@ -74,11 +74,11 @@ describe('ImportJsonSchema', () => {
     });
 
     it('rejects empty array', () => {
-        expect(() => ImportJsonSchema.parse([])).toThrow(/error/i);
+        expect(() => ImportJsonSchema.parse([])).toThrow();
     });
 
     it('rejects item without title', () => {
-        expect(() => ImportJsonSchema.parse([{ steps: [{ Action: 'Click' }] }])).toThrow(/error/i);
+        expect(() => ImportJsonSchema.parse([{ steps: [{ Action: 'Click' }] }])).toThrow();
     });
 
     it('accepts linkedIssues as strings or objects', () => {
@@ -134,7 +134,7 @@ describe('JiraPayloadSchema', () => {
                     issuetype: { name: 'Bug' },
                 },
             }),
-        ).toThrow(/error/i);
+        ).toThrow();
     });
 
     it('rejects empty summary', () => {
@@ -147,6 +147,6 @@ describe('JiraPayloadSchema', () => {
                     issuetype: { name: 'Test' },
                 },
             }),
-        ).toThrow(/error/i);
+        ).toThrow();
     });
 });

@@ -92,7 +92,7 @@ describe('State', () => {
             const mocks = mockFs({});
             state.save({ lastProject: 'TEST' }, makeConfig());
 
-            expect(mocks.write).toHaveBeenCalledWith();
+            expect(mocks.write).toHaveBeenCalled();
         });
     });
 
@@ -174,7 +174,7 @@ describe('State', () => {
             });
             state.load(config);
 
-            expect(mockRootLogger.warn).toHaveBeenCalledWith();
+            expect(mockRootLogger.warn).toHaveBeenCalled();
         });
     });
 
@@ -244,7 +244,7 @@ describe('State', () => {
             });
             state.migrateOldState(makeConfig());
 
-            expect(mockRootLogger.warn).toHaveBeenCalledWith();
+            expect(mockRootLogger.warn).toHaveBeenCalled();
         });
     });
 

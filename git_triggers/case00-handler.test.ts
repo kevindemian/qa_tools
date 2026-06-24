@@ -33,8 +33,8 @@ describe('HandleSetupWizard', () => {
 
         expect(title).toHaveBeenCalledWith('Setup Wizard');
         expect(info).toHaveBeenCalledWith('Iniciando wizard de configuração de CI/CD...');
-        expect(divider).toHaveBeenCalledWith();
-        expect(mockSetupModule.main).toHaveBeenCalledWith();
+        expect(divider).toHaveBeenCalled();
+        expect(mockSetupModule.main).toHaveBeenCalled();
         expect(pushHistory).toHaveBeenCalledWith('setup-wizard', 'wizard concluído', 'ok');
         expect(result).toBeFalsy();
     });

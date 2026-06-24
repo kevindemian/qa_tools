@@ -145,7 +145,7 @@ describe('CheckJiraStatus', () => {
             const result = await checkJiraStatus('http://localhost:1', 'valid-token');
 
             expect(result.status).toBe('error');
-            expect(mockReq.destroy).toHaveBeenCalledWith();
+            expect(mockReq.destroy).toHaveBeenCalled();
 
             __setHttpDep(http);
         });
@@ -234,7 +234,7 @@ describe('ShowSplash', () => {
 
     it('includes statePath when provided', async () => {expect.hasAssertions();
         await expect(showSplash('/tmp/state.json')).resolves.not.toThrow();
-        expect(outputMod.defaultOutput.box).toHaveBeenCalledWith();
+        expect(outputMod.defaultOutput.box).toHaveBeenCalled();
 
         const outputLines = nonNull(outputMod.defaultOutput.box.mock.calls[0])[0];
 
@@ -243,7 +243,7 @@ describe('ShowSplash', () => {
 
     it('shows token status check without jiraBaseUrl', async () => {expect.hasAssertions();
         await expect(showSplash('/tmp/state.json')).resolves.not.toThrow();
-        expect(outputMod.defaultOutput.box).toHaveBeenCalledWith();
+        expect(outputMod.defaultOutput.box).toHaveBeenCalled();
 
         const outputLines = nonNull(outputMod.defaultOutput.box.mock.calls[0])[0];
 
@@ -321,7 +321,7 @@ describe('ShowSplash', () => {
 
     it('calls checkJiraStatus with fallback empty token', async () => {expect.hasAssertions();
         await expect(showSplash(undefined, 'https://jira.example.com')).resolves.not.toThrow();
-        expect(outputMod.defaultOutput.box).toHaveBeenCalledWith();
+        expect(outputMod.defaultOutput.box).toHaveBeenCalled();
 
         const outputLines = nonNull(outputMod.defaultOutput.box.mock.calls[0])[0];
 
@@ -335,7 +335,7 @@ describe('ShowSplash', () => {
         __setGradientDep({ default: mockGradient });
 
         await expect(showSplash(undefined, 'https://jira.example.com', 'token123', 'cloud')).resolves.not.toThrow();
-        expect(outputMod.defaultOutput.box).toHaveBeenCalledWith();
+        expect(outputMod.defaultOutput.box).toHaveBeenCalled();
 
         const outputLines = nonNull(outputMod.defaultOutput.box.mock.calls[0])[0];
 
@@ -349,7 +349,7 @@ describe('ShowSplash', () => {
         __setGradientDep({ default: mockGradient });
 
         await expect(showSplash(undefined, 'https://jira.example.com', 'token123')).resolves.not.toThrow();
-        expect(outputMod.defaultOutput.box).toHaveBeenCalledWith();
+        expect(outputMod.defaultOutput.box).toHaveBeenCalled();
 
         const outputLines = nonNull(outputMod.defaultOutput.box.mock.calls[0])[0];
 

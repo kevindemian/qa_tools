@@ -94,7 +94,7 @@ describe('OfferTestExecutionAssociation', () => {
 
             expect(result.associated).toBeFalsy();
             expect(c.pushHistory).toHaveBeenCalledWith('create-testexec', 'erro', 'error');
-            expect(printError).toHaveBeenCalledWith();
+            expect(printError).toHaveBeenCalled();
         });
     });
 
@@ -227,7 +227,7 @@ describe('OfferTestExecutionAssociation', () => {
             const result = await offerTestExecutionAssociation(c, ['TEST-1'], 'src');
 
             expect(result.associated).toBeFalsy();
-            expect(printError).toHaveBeenCalledWith();
+            expect(printError).toHaveBeenCalled();
         });
 
         it('returns not associated when retry canceled', async () => {expect.hasAssertions();

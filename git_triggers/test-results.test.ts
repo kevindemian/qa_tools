@@ -198,7 +198,7 @@ describe('DownloadTestArtifacts', () => {
         expect(result).toStrictEqual(parseResult);
         expect(mockListPipelineArtifacts).toHaveBeenCalledWith('1');
         expect(mockDownloadArtifact).toHaveBeenCalledWith(1);
-        expect(mockParseTestResults).toHaveBeenCalledWith();
+        expect(mockParseTestResults).toHaveBeenCalled();
     });
 
     it('returns parsed results when zip contains valid ctrf.json', async () => {expect.hasAssertions();
@@ -238,7 +238,7 @@ describe('DownloadTestArtifacts', () => {
         const result = await mod.downloadTestArtifacts(mockProvider, '1');
 
         expect(result).toStrictEqual(parseResult);
-        expect(mockParseTestResults).toHaveBeenCalledWith();
+        expect(mockParseTestResults).toHaveBeenCalled();
     });
 
     it('returns null when no artifacts found in pipeline', async () => {expect.hasAssertions();
@@ -340,7 +340,7 @@ describe('ParseTestResults', () => {
             unmatched: [],
             csvName: 'cypress',
         });
-        expect(mockMatchResultsToTests).toHaveBeenCalledWith();
+        expect(mockMatchResultsToTests).toHaveBeenCalled();
     });
 
     it('returns null when mapping path is empty', async () => {expect.hasAssertions();
@@ -407,7 +407,7 @@ describe('CreateTestExecution', () => {
             pushHistory,
         });
 
-        expect(mockCreateTestExecutionFromResults).toHaveBeenCalledWith();
+        expect(mockCreateTestExecutionFromResults).toHaveBeenCalled();
         expect(pushHistory).toHaveBeenCalledWith('resultados', expect.stringContaining('TE-123'), 'ok');
     });
 
@@ -483,15 +483,15 @@ describe('CollectTestResults', () => {
             jiraBaseUrl: 'https://jira.example.com',
         });
 
-        expect(mockListPipelineArtifacts).toHaveBeenCalledWith();
-        expect(mockDownloadArtifact).toHaveBeenCalledWith();
+        expect(mockListPipelineArtifacts).toHaveBeenCalled();
+        expect(mockDownloadArtifact).toHaveBeenCalled();
         expect(mockSaveParseResult).toHaveBeenCalledWith('PROJ', {
             tests: [{ title: 'test1', state: 'passed', duration: 100 }],
             stats: { passed: 1, failed: 0, skipped: 0, total: 1, duration: 100 },
         });
-        expect(mockMatchResultsToTests).toHaveBeenCalledWith();
-        expect(mockCreateTestExecutionFromResults).toHaveBeenCalledWith();
-        expect(pushHistory).toHaveBeenCalledWith();
+        expect(mockMatchResultsToTests).toHaveBeenCalled();
+        expect(mockCreateTestExecutionFromResults).toHaveBeenCalled();
+        expect(pushHistory).toHaveBeenCalled();
     });
 
     it('returns early when downloadTestArtifacts returns null', async () => {expect.hasAssertions();

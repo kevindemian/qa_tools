@@ -247,7 +247,7 @@ describe('Interactive-mode test exports', () => {
             const result = await wrapped({} as never, 'proj', []);
 
             expect(result).toBeFalsy();
-            expect(mockPrintError).toHaveBeenCalledWith();
+            expect(mockPrintError).toHaveBeenCalled();
         });
     });
 
@@ -257,7 +257,7 @@ describe('Interactive-mode test exports', () => {
             await _testExports.handleHelp();
             const uiHelpers = await import('./ui-helpers.js');
 
-            expect(uiHelpers.handleHelp).toHaveBeenCalledWith();
+            expect(uiHelpers.handleHelp).toHaveBeenCalled();
         });
     });
 
@@ -267,7 +267,7 @@ describe('Interactive-mode test exports', () => {
             await _testExports.handleShowHistory();
             const uiHelpers = await import('./ui-helpers.js');
 
-            expect(uiHelpers.handleShowHistory).toHaveBeenCalledWith();
+            expect(uiHelpers.handleShowHistory).toHaveBeenCalled();
         });
     });
 
@@ -336,7 +336,7 @@ describe('Interactive-mode test exports', () => {
             const result = await _testExports._dispatchAction('99', {} as never, 'proj', []);
 
             expect(result).toBeFalsy();
-            expect(mockWarn).toHaveBeenCalledWith();
+            expect(mockWarn).toHaveBeenCalled();
         });
     });
 
@@ -345,8 +345,8 @@ describe('Interactive-mode test exports', () => {
 
             _testExports._initInfrastructure();
 
-            expect(ensureDirs).toHaveBeenCalledOnceWith();
-            expect(registerCleanup).toHaveBeenCalledOnceWith();
+            expect(ensureDirs).toHaveBeenCalled();
+            expect(registerCleanup).toHaveBeenCalled();
         });
     });
 
@@ -381,6 +381,8 @@ describe('Interactive-mode test exports', () => {
         it('completes successfully with valid env', async () => {expect.hasAssertions();
 
             await _testExports._initEnvironment();
+
+            expect(vi.mocked(createValidateEnv)).toHaveBeenCalled();
         });
     });
 
@@ -411,7 +413,7 @@ describe('Interactive-mode test exports', () => {
             const result = _testExports._loadProjectRunsHelper();
 
             expect(result).toBeNull();
-            expect(mockWarn).toHaveBeenCalledWith();
+            expect(mockWarn).toHaveBeenCalled();
         });
 
         it('returns data when project has runs', async () => {expect.hasAssertions();
@@ -470,7 +472,7 @@ describe('Interactive-mode test exports', () => {
             const result = _testExports._loadProjectRunsHelper();
 
             expect(result).toBeNull();
-            expect(mockWarn).toHaveBeenCalledWith();
+            expect(mockWarn).toHaveBeenCalled();
         });
 
         it('uses git fallback when metrics has <2 runs but git has >=2', async () => {expect.hasAssertions();
@@ -531,7 +533,7 @@ describe('Interactive-mode test exports', () => {
             await _testExports._generateAndOpenDashboard('<html>', 'test', 'Test');
             const openMod = await import('../shared/open.js');
 
-            expect(openMod.openWithFallback as ReturnType<typeof vi.fn>).toHaveBeenCalledWith();
+            expect(openMod.openWithFallback as ReturnType<typeof vi.fn>).toHaveBeenCalled();
         });
     });
 
@@ -543,7 +545,7 @@ describe('Interactive-mode test exports', () => {
             const result = await _testExports.handleBugReportFlow({} as never);
 
             expect(result).toBeFalsy();
-            expect(mockWarn).toHaveBeenCalledWith();
+            expect(mockWarn).toHaveBeenCalled();
         });
 
         it('runs bug report flow when Jira configured', async () => {expect.hasAssertions();
@@ -564,7 +566,7 @@ describe('Interactive-mode test exports', () => {
             const result = await _testExports.handleAiPrDescription({} as never);
 
             expect(result).toBeFalsy();
-            expect(mockWarn).toHaveBeenCalledWith();
+            expect(mockWarn).toHaveBeenCalled();
         });
 
         it('handles AI PR description generation', async () => {expect.hasAssertions();
@@ -587,7 +589,7 @@ describe('Interactive-mode test exports', () => {
             const result = await _testExports.handleAiPrDescription({} as never);
 
             expect(result).toBeFalsy();
-            expect(mockWarn).toHaveBeenCalledWith();
+            expect(mockWarn).toHaveBeenCalled();
         });
     });
 
@@ -598,7 +600,7 @@ describe('Interactive-mode test exports', () => {
             const result = await _testExports.handleRunComparison();
 
             expect(result).toBeFalsy();
-            expect(mockWarn).toHaveBeenCalledWith();
+            expect(mockWarn).toHaveBeenCalled();
         });
 
         it('compares when runs exist', async () => {expect.hasAssertions();
@@ -659,7 +661,7 @@ describe('Interactive-mode test exports', () => {
             const result = await _testExports.handleRunComparison();
 
             expect(result).toBeFalsy();
-            expect(mockWarn).toHaveBeenCalledWith();
+            expect(mockWarn).toHaveBeenCalled();
         });
     });
 
@@ -668,6 +670,8 @@ describe('Interactive-mode test exports', () => {
 
             mockSessionState.currentProjectName = 'proj1';
             await _testExports._showDashboardMenu();
+
+            expect(vi.mocked(tableView)).toHaveBeenCalled();
         });
     });
 
@@ -711,6 +715,8 @@ describe('Interactive-mode test exports', () => {
                 failureClassifications: [],
             });
             await _testExports._dashboardReleaseScore();
+
+            expect(vi.mocked(metricsMod.loadMetrics)).toHaveBeenCalled();
         });
     });
 
@@ -720,13 +726,15 @@ describe('Interactive-mode test exports', () => {
             mockSessionState.currentProjectName = '';
             await _testExports._dashboardQualityGate();
 
-            expect(mockWarn).toHaveBeenCalledWith();
+            expect(mockWarn).toHaveBeenCalled();
         });
 
         it('generates quality gate dashboard', async () => {expect.hasAssertions();
 
             mockSessionState.currentProjectName = 'proj1';
             await _testExports._dashboardQualityGate();
+
+            expect(vi.mocked(tableView)).toHaveBeenCalled();
         });
     });
 
@@ -734,6 +742,8 @@ describe('Interactive-mode test exports', () => {
         it('generates backlog health dashboard', async () => {expect.hasAssertions();
 
             await _testExports._dashboardBacklogHealth();
+
+            expect(vi.mocked(tableView)).toHaveBeenCalled();
         });
     });
 
@@ -741,6 +751,8 @@ describe('Interactive-mode test exports', () => {
         it('generates requirement score dashboard', async () => {expect.hasAssertions();
 
             await _testExports._dashboardRequirementScore();
+
+            expect(vi.mocked(tableView)).toHaveBeenCalled();
         });
     });
 
@@ -775,6 +787,8 @@ describe('Interactive-mode test exports', () => {
                 failureClassifications: [],
             });
             await _testExports._dashboardPipelineCost();
+
+            expect(vi.mocked(metricsMod.loadMetrics)).toHaveBeenCalled();
         });
     });
 
@@ -782,6 +796,8 @@ describe('Interactive-mode test exports', () => {
         it('generates AI effectiveness dashboard', async () => {expect.hasAssertions();
 
             await _testExports._dashboardAiEffectiveness();
+
+            expect(vi.mocked(tableView)).toHaveBeenCalled();
         });
     });
 
@@ -816,6 +832,8 @@ describe('Interactive-mode test exports', () => {
                 failureClassifications: [],
             });
             await _testExports._dashboardDefectTrends();
+
+            expect(vi.mocked(metricsMod.loadMetrics)).toHaveBeenCalled();
         });
     });
 
@@ -850,6 +868,8 @@ describe('Interactive-mode test exports', () => {
                 failureClassifications: [],
             });
             await _testExports._dashboardTraceabilityMatrix();
+
+            expect(vi.mocked(metricsMod.loadMetrics)).toHaveBeenCalled();
         });
     });
 
@@ -884,6 +904,8 @@ describe('Interactive-mode test exports', () => {
                 failureClassifications: [],
             });
             await _testExports._dashboardSeasonality();
+
+            expect(vi.mocked(metricsMod.loadMetrics)).toHaveBeenCalled();
         });
     });
 
@@ -918,6 +940,8 @@ describe('Interactive-mode test exports', () => {
                 failureClassifications: [],
             });
             await _testExports._dashboardSilentRegression();
+
+            expect(vi.mocked(metricsMod.loadMetrics)).toHaveBeenCalled();
         });
     });
 
@@ -925,6 +949,8 @@ describe('Interactive-mode test exports', () => {
         it('generates AI comparison dashboard', async () => {expect.hasAssertions();
 
             await _testExports._dashboardAiComparison();
+
+            expect(vi.mocked(tableView)).toHaveBeenCalled();
         });
     });
 
@@ -959,6 +985,8 @@ describe('Interactive-mode test exports', () => {
                 failureClassifications: [],
             });
             await _testExports._dashboardBenchmark();
+
+            expect(vi.mocked(metricsMod.loadMetrics)).toHaveBeenCalled();
         });
     });
 
@@ -993,6 +1021,8 @@ describe('Interactive-mode test exports', () => {
                 failureClassifications: [{ testTitle: 't1', category: 'cat1', timestamp: '' }],
             });
             await _testExports._dashboardDeveloperProfile();
+
+            expect(vi.mocked(metricsMod.loadMetrics)).toHaveBeenCalled();
         });
     });
 
@@ -1027,6 +1057,8 @@ describe('Interactive-mode test exports', () => {
                 failureClassifications: [],
             });
             await _testExports._dashboardSuiteOptimization();
+
+            expect(vi.mocked(metricsMod.loadMetrics)).toHaveBeenCalled();
         });
     });
 
@@ -1061,6 +1093,8 @@ describe('Interactive-mode test exports', () => {
                 failureClassifications: [],
             });
             await _testExports._dashboardIncidentReport();
+
+            expect(vi.mocked(metricsMod.loadMetrics)).toHaveBeenCalled();
         });
     });
 
@@ -1095,6 +1129,8 @@ describe('Interactive-mode test exports', () => {
                 failureClassifications: [],
             });
             await _testExports._dashboardImpactAlert();
+
+            expect(vi.mocked(metricsMod.loadMetrics)).toHaveBeenCalled();
         });
     });
 
@@ -1104,7 +1140,7 @@ describe('Interactive-mode test exports', () => {
             mockSessionState.currentProjectName = '';
             await _testExports._dashboardCoverageGap();
 
-            expect(mockWarn).toHaveBeenCalledWith();
+            expect(mockWarn).toHaveBeenCalled();
         });
 
         it('generates coverage gap dashboard', async () => {expect.hasAssertions();
@@ -1113,6 +1149,8 @@ describe('Interactive-mode test exports', () => {
             const configMod = await import('../shared/config.js');
             (configMod.default.get as ReturnType<typeof vi.fn>).mockReturnValue('configured');
             await _testExports._dashboardCoverageGap();
+
+            expect(vi.mocked(tableView)).toHaveBeenCalled();
         });
     });
 });

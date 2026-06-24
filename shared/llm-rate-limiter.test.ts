@@ -79,7 +79,7 @@ describe('CheckRateLimit', () => {
         expect(() => checkRateLimit('main')).toThrow(LlmRateLimitError);
     });
 
-    it('recovers after rate limit window passes', () => {
+    it('recovers after rate limit window passes', async () => {
         vi.useFakeTimers();
         Config.set('LLM_RATE_LIMIT', '1');
         resetRateLimiter();
@@ -87,7 +87,7 @@ describe('CheckRateLimit', () => {
 
         expect(() => checkRateLimit('main')).toThrow(LlmRateLimitError);
 
-        vi.advanceTimersByTimeAsync(LLM_RATE_WINDOW_MS + 1000);
+        await vi.advanceTimersByTimeAsync(LLM_RATE_WINDOW_MS + 1000);
 
         expect(() => checkRateLimit('main')).not.toThrow();
 

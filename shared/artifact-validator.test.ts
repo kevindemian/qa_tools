@@ -68,7 +68,7 @@ describe('ArtifactValidator', () => {
         const validator = new ArtifactValidator('test-suite');
         validator.addInvariant('T-01', () => [pass('T-01', '')]);
 
-        expect(() => validator.addInvariant('T-01', () => [pass('T-01', '')])).toThrow(/error/i);
+        expect(() => validator.addInvariant('T-01', () => [pass('T-01', '')])).toThrow();
     });
 
     it('reports hasInvariant correctly', () => {

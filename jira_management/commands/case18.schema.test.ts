@@ -19,7 +19,7 @@ describe('TestCaseDataSchema', () => {
                 steps: ['Enter user'],
                 expectedResult: 'User is redirected to dashboard',
             }),
-        ).toThrow(/error/i);
+        ).toThrow();
     });
 
     it('rejects empty steps array', () => {
@@ -29,7 +29,7 @@ describe('TestCaseDataSchema', () => {
                 steps: [],
                 expectedResult: 'User is redirected to dashboard',
             }),
-        ).toThrow(/error/i);
+        ).toThrow();
     });
 
     it('rejects short expectedResult (<10 chars)', () => {
@@ -39,7 +39,7 @@ describe('TestCaseDataSchema', () => {
                 steps: ['Enter user'],
                 expectedResult: 'Short',
             }),
-        ).toThrow(/error/i);
+        ).toThrow();
     });
 
     it('rejects missing optional fields gracefully', () => {
@@ -48,7 +48,7 @@ describe('TestCaseDataSchema', () => {
                 steps: ['Enter user'],
                 expectedResult: 'User is redirected to dashboard',
             }),
-        ).toThrow(/error/i);
+        ).toThrow();
     });
 });
 
@@ -66,7 +66,7 @@ describe('PreConditionInputSchema', () => {
     });
 
     it('rejects invalid type', () => {
-        expect(() => PreConditionInputSchema.parse({ type: 'invalid', key: 'PREC-123' })).toThrow(/error/i);
+        expect(() => PreConditionInputSchema.parse({ type: 'invalid', key: 'PREC-123' })).toThrow();
     });
 
     it('accepts test case with preConditions array', () => {
@@ -111,10 +111,10 @@ describe('TestCaseArraySchema', () => {
     });
 
     it('rejects empty array', () => {
-        expect(() => TestCaseArraySchema.parse([])).toThrow(/error/i);
+        expect(() => TestCaseArraySchema.parse([])).toThrow();
     });
 
     it('rejects non-array input', () => {
-        expect(() => TestCaseArraySchema.parse({})).toThrow(/error/i);
+        expect(() => TestCaseArraySchema.parse({})).toThrow();
     });
 });

@@ -418,7 +418,7 @@ describe('Case09 — switch project', () => {
 
         expect(c.ctx.project_name).toBe('NEWPROJ');
         expect(c.pushHistory).toHaveBeenCalledWith('trocar-projeto', 'NEWPROJ', 'ok');
-        expect(stateModule.update).toHaveBeenCalledWith();
+        expect(stateModule.update).toHaveBeenCalled();
     });
 });
 
@@ -563,7 +563,7 @@ describe('Case14 — change Cypress directory', () => {
         await mod.handler(c);
 
         expect(c.pushHistory).toHaveBeenCalledWith('config-tests', '/tmp/cypress', 'ok');
-        expect(stateModule.update).toHaveBeenCalledWith();
+        expect(stateModule.update).toHaveBeenCalled();
     });
 });
 

@@ -121,10 +121,10 @@ describe('CheckMemoryCache', () => {
         expect(result.data).toBe('cached response');
     });
 
-    it('returns miss when cached entry has expired', () => {
+    it('returns miss when cached entry has expired', async () => {
         setMemoryCache('expired-key', 'stale');
         vi.useFakeTimers();
-        vi.advanceTimersByTimeAsync(CACHE_TTL_MS + 1000);
+        await vi.advanceTimersByTimeAsync(CACHE_TTL_MS + 1000);
         const result = checkMemoryCache('expired-key', 'main', undefined, undefined, undefined);
 
         expect(result.hit).toBeFalsy();

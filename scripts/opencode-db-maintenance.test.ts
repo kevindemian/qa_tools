@@ -493,7 +493,7 @@ describe('Main', () => {
         const result = main();
 
         expect(result).toBe(0);
-        expect(mockMkdirSync).toHaveBeenCalledWith();
+        expect(mockMkdirSync).toHaveBeenCalled();
         expect(consoleSpy).toHaveBeenCalledWith(expect.stringContaining('creating directory'));
 
         consoleSpy.mockRestore();

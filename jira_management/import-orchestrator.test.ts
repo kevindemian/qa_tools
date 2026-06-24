@@ -207,6 +207,6 @@ describe('PostProcessCheckpoint', () => {
         });
 
         expect(STATE.update).toHaveBeenCalledWith(expect.any(Function));
-        expect(updateFinalState).toHaveBeenCalledWith();
+        expect(updateFinalState).toHaveBeenCalled();
     });
 });

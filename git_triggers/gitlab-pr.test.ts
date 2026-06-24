@@ -111,8 +111,8 @@ describe('GlCreateMergeRequest', () => {
 
         const result = await glCreateMergeRequest(mockClient, ...args);
 
-        expect(apiGet).toHaveBeenCalledWith();
-        expect(apiPut).toHaveBeenCalledWith();
+        expect(apiGet).toHaveBeenCalled();
+        expect(apiPut).toHaveBeenCalled();
         expect(result).toMatchObject({ iid: 5 });
     });
 

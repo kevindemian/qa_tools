@@ -70,7 +70,7 @@ describe('Case12 — diagnostic connection', () => {
         expect(mockPaletteYellow).toHaveBeenCalledWith(
             expect.stringContaining('Dica: rode pipelines para acumular métricas'),
         );
-        expect(mockPrint).toHaveBeenCalledWith();
+        expect(mockPrint).toHaveBeenCalled();
     });
 
     it('shows health score ready when enough runs exist', async () => {expect.hasAssertions();

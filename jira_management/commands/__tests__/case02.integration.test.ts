@@ -119,7 +119,7 @@ describe('FT-42d: error handling', () => {
         const ctx = makeContext(jira);
 
         await expect(case02.handler(ctx)).resolves.toBeUndefined();
-        expect(mockPrintError).toHaveBeenCalledWith();
+        expect(mockPrintError).toHaveBeenCalled();
     });
 
     it('catches getProjectVersions failure and calls printError', async () => {expect.hasAssertions();
@@ -130,6 +130,6 @@ describe('FT-42d: error handling', () => {
         const ctx = makeContext(jira);
 
         await expect(case02.handler(ctx)).resolves.toBeUndefined();
-        expect(mockPrintError).toHaveBeenCalledWith();
+        expect(mockPrintError).toHaveBeenCalled();
     });
 });

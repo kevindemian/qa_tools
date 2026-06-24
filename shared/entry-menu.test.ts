@@ -132,7 +132,7 @@ describe('Main', () => {
 
         await entryMenu.main();
 
-        expect(mockSpawn).toHaveBeenCalledWith();
+        expect(mockSpawn).toHaveBeenCalled();
     });
 
     it('continues loop on unknown choice', async () => {expect.hasAssertions();

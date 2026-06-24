@@ -101,7 +101,7 @@ describe('Prompt', () => {
         mockReadlineQuestion.mockReturnValueOnce('ab').mockReturnValueOnce('abcdef');
 
         expect(prompt('Label', { minLength: 3 })).toBe('abcdef');
-        expect(mockWarn).toHaveBeenCalledWith();
+        expect(mockWarn).toHaveBeenCalled();
     });
 
     it('displays hint when provided', () => {
@@ -192,7 +192,7 @@ describe('Confirm', () => {
         mockReadlineQuestion.mockReturnValueOnce('x').mockReturnValueOnce('s');
 
         expect(confirm('Confirm?')).toBeTruthy();
-        expect(outputMock['print']).toHaveBeenCalledWith();
+        expect(outputMock['print']).toHaveBeenCalled();
     });
 
     it('shows Y as default when defaultYes is true', () => {

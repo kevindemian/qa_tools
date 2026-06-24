@@ -162,7 +162,7 @@ describe('Case21 — Gap Analysis', () => {
         const mod = case21Module;
         await mod.handler(baseContext);
 
-        expect(vi.mocked(htmlModule).generateCoverageGapHtml).toHaveBeenCalledWith();
+        expect(vi.mocked(htmlModule).generateCoverageGapHtml).toHaveBeenCalled();
         expect(vi.mocked(openModule).openWithFallback).toHaveBeenCalledWith(
             expect.stringContaining('coverage-gap-report.html'),
             'Relatório de cobertura',

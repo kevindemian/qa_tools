@@ -84,11 +84,11 @@ describe('HostSemaphore', () => {
         sem.release('h');
 
         const p = sem.acquire('h');
-        vi.advanceTimersByTimeAsync(100);
+        await vi.advanceTimersByTimeAsync(100);
 
         await expect(Promise.race([p.then(() => 'done'), Promise.resolve('waiting')])).resolves.toBe('waiting');
 
-        vi.advanceTimersByTimeAsync(100);
+        await vi.advanceTimersByTimeAsync(100);
 
         await expect(p).resolves.toBeUndefined();
 

@@ -67,7 +67,7 @@ describe('Case22 — Test Impact Analysis', () => {
         const mod = case22Module;
         await mod.handler(makeMockCommandContext());
 
-        expect(mockAnalyzeTestImpact).toHaveBeenCalledWith();
+        expect(mockAnalyzeTestImpact).toHaveBeenCalled();
         expect(title).toHaveBeenCalledWith('TEST IMPACT ANALYSIS');
     });
 

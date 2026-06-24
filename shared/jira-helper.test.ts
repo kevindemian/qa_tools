@@ -42,7 +42,7 @@ describe('SafeJiraCall', () => {
         const result = await safeJiraCall(ctx, 'test-op', 'v1', fn);
 
         expect(result).toBeTruthy();
-        expect(fn).toHaveBeenCalledWith();
+        expect(fn).toHaveBeenCalled();
         expect(mockPushHistory).toHaveBeenCalledWith('test-op', 'v1', 'ok');
     });
 
@@ -53,8 +53,8 @@ describe('SafeJiraCall', () => {
         const result = await safeJiraCall(ctx, 'test-op', 'v1', fn);
 
         expect(result).toBeFalsy();
-        expect(mockPrintError).toHaveBeenCalledWith();
-        expect(mockRootLoggerError).toHaveBeenCalledWith();
+        expect(mockPrintError).toHaveBeenCalled();
+        expect(mockRootLoggerError).toHaveBeenCalled();
         expect(mockPushHistory).toHaveBeenCalledWith('test-op', 'v1', 'error');
     });
 

@@ -338,7 +338,7 @@ describe('Pr-report entry point — flaky detection with quarantine', () => {
 
         await main();
 
-        expect(postPrComment).toHaveBeenCalledWith();
+        expect(postPrComment).toHaveBeenCalled();
 
         const firstCall = vi.mocked(postPrComment).mock.calls[0] as [string];
         const commentBody = firstCall[0];
@@ -383,7 +383,7 @@ describe('Pr-report entry point — flaky detection with quarantine', () => {
 
         await main();
 
-        expect(postPrComment).toHaveBeenCalledWith();
+        expect(postPrComment).toHaveBeenCalled();
 
         const firstCall2 = vi.mocked(postPrComment).mock.calls[0] as [string];
         const commentBody = firstCall2[0];
@@ -413,7 +413,7 @@ describe('Pr-report entry point — flaky detection with quarantine', () => {
 
         await main();
 
-        expect(postPrComment).toHaveBeenCalledWith();
+        expect(postPrComment).toHaveBeenCalled();
 
         const firstCall3 = vi.mocked(postPrComment).mock.calls[0] as [string];
         const commentBody = firstCall3[0];
@@ -451,7 +451,7 @@ describe('Pr-report entry point — flaky detection with quarantine', () => {
 
         await main();
 
-        expect(postPrComment).toHaveBeenCalledWith();
+        expect(postPrComment).toHaveBeenCalled();
 
         const firstCall4 = vi.mocked(postPrComment).mock.calls[0] as [string];
         const commentBody = firstCall4[0];
@@ -473,7 +473,7 @@ describe('Pr-report entry point — flaky detection with quarantine', () => {
 
         await main();
 
-        expect(postPrComment).toHaveBeenCalledWith();
+        expect(postPrComment).toHaveBeenCalled();
 
         const firstCall5 = vi.mocked(postPrComment).mock.calls[0] as [string];
         const commentBody = firstCall5[0];

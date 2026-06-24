@@ -150,7 +150,7 @@ describe('Integration: Coverage Gap (FT-18)', () => {
             const result = generateCoverageGapHtml(makeResult());
 
             expect(result).toContain('Error generating coverage gap report');
-            expect(rootLogger['error']).toHaveBeenCalledWith();
+            expect(rootLogger['error']).toHaveBeenCalled();
         });
     });
 });

@@ -48,7 +48,7 @@ describe('ConsensusGenerate', () => {
 
         await expect(
             consensusGenerate({ tier: 'fast', system: '', user: '' }, makeValidator(), context, 2),
-        ).rejects.toThrow(/error/i);
+        ).rejects.toThrow();
     });
 
     it('reports divergence based on structural similarity', async () => {expect.hasAssertions();

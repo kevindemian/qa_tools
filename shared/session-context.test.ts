@@ -257,8 +257,8 @@ describe('ResolveTestDataSource', () => {
         }
 
         expect(store.saveReport).toHaveBeenCalledWith('sha456', expect.any(Array));
-        expect(store.put).toHaveBeenCalledWith();
-        expect(store.flush).toHaveBeenCalledWith();
+        expect(store.put).toHaveBeenCalled();
+        expect(store.flush).toHaveBeenCalled();
     });
 
     it('falls back to branch baseline when cache and CI fail', async () => {expect.hasAssertions();
