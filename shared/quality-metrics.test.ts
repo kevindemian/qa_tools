@@ -106,7 +106,7 @@ describe('QualityMetricsCollector', () => {
             const snapshot = collector.snapshot();
 
             expect(Object.keys(snapshot.invariantFireCount)).toHaveLength(0);
-            expect(snapshot.artifactTypeCounts).toEqual({});
+            expect(snapshot.artifactTypeCounts).toStrictEqual({});
         });
     });
 
@@ -193,7 +193,7 @@ describe('QualityMetricsCollector', () => {
         it('returns empty array when file does not exist', () => {
             const history = collector.getHistory();
 
-            expect(history).toEqual([]);
+            expect(history).toStrictEqual([]);
         });
     });
 

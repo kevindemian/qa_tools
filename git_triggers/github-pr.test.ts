@@ -390,7 +390,7 @@ describe('PrSearchMergeRequests', () => {
         mockApiGet.mockResolvedValue(null);
         const result = await prSearchMergeRequests(client, 'myorg', 'myrepo', '', '', 'opened');
 
-        expect(result).toEqual([]);
+        expect(result).toStrictEqual([]);
     });
 
     it('passes status directly when not opened', async () => {expect.hasAssertions();

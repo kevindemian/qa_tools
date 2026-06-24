@@ -47,7 +47,7 @@ describe('Integration: Feature Config', () => {
             const { loadFeatureConfig } = await import('../../feature-config.js');
             const result = loadFeatureConfig();
 
-            expect(result).toEqual(fixture);
+            expect(result).toStrictEqual(fixture);
             expect(result['test-project']?.gitProvider).toBe('github');
             expect(result['gitlab-project']?.gitProvider).toBe('gitlab');
         });
@@ -57,7 +57,7 @@ describe('Integration: Feature Config', () => {
             const { loadFeatureConfig } = await import('../../feature-config.js');
             const result = loadFeatureConfig();
 
-            expect(result).toEqual({});
+            expect(result).toStrictEqual({});
         });
 
         it('returns empty store on invalid JSON', async () => {expect.hasAssertions();
@@ -69,7 +69,7 @@ describe('Integration: Feature Config', () => {
             const { loadFeatureConfig } = await import('../../feature-config.js');
             const result = loadFeatureConfig();
 
-            expect(result).toEqual({});
+            expect(result).toStrictEqual({});
         });
 
         it('returns empty store on schema violation', async () => {expect.hasAssertions();
@@ -81,7 +81,7 @@ describe('Integration: Feature Config', () => {
             const { loadFeatureConfig } = await import('../../feature-config.js');
             const result = loadFeatureConfig();
 
-            expect(result).toEqual({});
+            expect(result).toStrictEqual({});
         });
     });
 
@@ -94,7 +94,7 @@ describe('Integration: Feature Config', () => {
 
             const reloaded = loadFeatureConfig();
 
-            expect(reloaded).toEqual(fixture);
+            expect(reloaded).toStrictEqual(fixture);
         });
 
         it('creates config directory if missing', async () => {expect.hasAssertions();

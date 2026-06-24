@@ -246,6 +246,6 @@ describe('IsTTY', () => {
 
 describe('NAV_CMDS', () => {
     it('contains expected navigation commands', () => {
-        expect(NAV_CMDS).toEqual(['/back', '/menu', '/exit', '/sair', '/quit', '/help']);
+        expect(NAV_CMDS).toStrictEqual(['/back', '/menu', '/exit', '/sair', '/quit', '/help']);
     });
 });

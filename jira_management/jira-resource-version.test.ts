@@ -93,7 +93,7 @@ describe('GetProjectVersions', () => {
         const resource = buildResource();
         const versions = await getProjectVersions(resource, '10000');
 
-        expect(versions).toEqual([]);
+        expect(versions).toStrictEqual([]);
     });
 });
 
@@ -125,7 +125,7 @@ describe('GetLatestReleases', () => {
         vi.spyOn(resource, 'getProjectId').mockResolvedValue('');
         const result = await getLatestReleases(resource, 'NOPE', 3);
 
-        expect(result.latestReleasedVersions).toEqual([]);
-        expect(result.unreleasedVersions).toEqual([]);
+        expect(result.latestReleasedVersions).toStrictEqual([]);
+        expect(result.unreleasedVersions).toStrictEqual([]);
     });
 });

@@ -90,7 +90,7 @@ describe('JiraClient', () => {
             const client = new JiraClient(TOKEN, BASE_URL);
             const result = await client.getJiraResource('issue/TEST-1');
 
-            expect(result).toEqual(data);
+            expect(result).toStrictEqual(data);
             expect(mockGet).toHaveBeenCalledWith('/issue/TEST-1');
         });
 
@@ -112,7 +112,7 @@ describe('JiraClient', () => {
             const client = new JiraClient(TOKEN, BASE_URL);
             const result = await client.postJiraResource('issue', payload);
 
-            expect(result).toEqual(data);
+            expect(result).toStrictEqual(data);
             expect(mockPost).toHaveBeenCalledWith('/issue', payload);
         });
 
@@ -142,7 +142,7 @@ describe('JiraClient', () => {
             const client = new JiraClient(TOKEN, BASE_URL);
             const result = await client.putJiraResource('issue/TEST-1', {});
 
-            expect(result).toEqual(data);
+            expect(result).toStrictEqual(data);
         });
 
         it('throws on PUT error', async () => {expect.hasAssertions();
@@ -162,7 +162,7 @@ describe('JiraClient', () => {
             const client = new JiraClient(TOKEN, BASE_URL);
             const result = await client.getFromOriginPath('secure/attachment/1');
 
-            expect(result).toEqual(data);
+            expect(result).toStrictEqual(data);
             expect(mockGet).toHaveBeenCalledWith('https://instance.atlassian.net/secure/attachment/1');
         });
 
@@ -185,7 +185,7 @@ describe('JiraClient', () => {
             const client = new JiraClient(TOKEN, BASE_URL);
             const result = await client.searchJiraIssues('project = TEST', 50);
 
-            expect(result).toEqual(response);
+            expect(result).toStrictEqual(response);
             expect(mockGet).toHaveBeenCalledWith('/search?jql=project%20%3D%20TEST&maxResults=50');
         });
     });
@@ -204,7 +204,7 @@ describe('JiraClient', () => {
             const client = new JiraClient(TOKEN, BASE_URL);
             const result = await client.getTransitionsForIssue('TEST-1');
 
-            expect(result).toEqual({ 'To Do': '11', 'In Progress': '21', Done: '31' });
+            expect(result).toStrictEqual({ 'To Do': '11', 'In Progress': '21', Done: '31' });
         });
 
         it('returns empty map when no transitions', async () => {expect.hasAssertions();
@@ -213,7 +213,7 @@ describe('JiraClient', () => {
             const client = new JiraClient(TOKEN, BASE_URL);
             const result = await client.getTransitionsForIssue('TEST-1');
 
-            expect(result).toEqual({});
+            expect(result).toStrictEqual({});
         });
     });
 

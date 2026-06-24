@@ -98,7 +98,7 @@ describe('XrayCloudClient', () => {
             const client = new XrayCloudClient();
             const result = await client.graphql('query { ... }', { limit: 10 }, CID, CSEC);
 
-            expect(result).toEqual({
+            expect(result).toStrictEqual({
                 getTestRuns: { results: [{ id: '1', status: { name: 'PASS' } }] },
             });
             expect(mockPost).toHaveBeenNthCalledWith(

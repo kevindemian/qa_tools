@@ -31,7 +31,7 @@ describe('CompareAiVsManual', () => {
         expect(result.manualFlakinessAvg).toBe(0);
         expect(result.manualAcceptanceRate).toBe(1);
         expect(result.aiAdvantage).toBe('none');
-        expect(result.byVersion).toEqual([]);
+        expect(result.byVersion).toStrictEqual([]);
         expect(result.timestamp).toMatch(/^\d{4}-\d{2}-\d{2}T/);
     });
 
@@ -135,7 +135,7 @@ describe('CompareAiVsManual', () => {
         const result = compareAiVsManual(records);
 
         expect(result.byVersion).toHaveLength(1);
-        expect(result.byVersion[0]).toEqual({ version: 'unknown', count: 2, passRate: 50 });
+        expect(result.byVersion[0]).toStrictEqual({ version: 'unknown', count: 2, passRate: 50 });
     });
 
     it('handles all-pass and all-fail edge cases', () => {

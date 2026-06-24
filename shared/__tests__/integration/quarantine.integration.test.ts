@@ -195,13 +195,13 @@ describe('FT-36e — Corrupt store recovery', () => {
         fs.writeFileSync(storePath(), 'not-valid-json', 'utf8');
         const store = loadQuarantine();
 
-        expect(store.entries).toEqual([]);
+        expect(store.entries).toStrictEqual([]);
     });
 
     it('returns empty store when file missing', () => {
         const store = loadQuarantine();
 
-        expect(store.entries).toEqual([]);
+        expect(store.entries).toStrictEqual([]);
     });
 });
 

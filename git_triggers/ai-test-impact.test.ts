@@ -48,7 +48,7 @@ describe('AssessTestImpact', () => {
                 callerId: 'test-impact',
             }),
         );
-        expect(nonNull(vi.mocked(llmPrompt).mock.calls[0])[0].user).toEqual(expect.stringContaining('Test login'));
+        expect(nonNull(vi.mocked(llmPrompt).mock.calls[0])[0].user).toStrictEqual(expect.stringContaining('Test login'));
         expect(result).toBe('**Risco:** BAIXO. Nenhum teste existente afetado.');
     });
 

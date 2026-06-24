@@ -100,7 +100,7 @@ describe('Case01 — Import CSV', () => {
         const { default: case01 } = await import('../commands/case01.js');
         await case01.handler(ctx);
 
-        expect(ctx.ctx.inMemoryTasksId).toEqual(['TEST-1', 'TEST-2']);
+        expect(ctx.ctx.inMemoryTasksId).toStrictEqual(['TEST-1', 'TEST-2']);
     });
 
     it('pushes history on success', async () => {expect.hasAssertions();

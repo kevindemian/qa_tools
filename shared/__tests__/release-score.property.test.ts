@@ -65,7 +65,7 @@ describe('CalculateReleaseScore — property-based', () => {
                 const result = calculateReleaseScore(tasks, health, gate, coverage, flaky);
 
                 expect(result.breakdown).toHaveLength(4);
-                expect(result.breakdown.map((d) => d.label)).toEqual(['Tasks', 'Health', 'Coverage', 'Flakiness']);
+                expect(result.breakdown.map((d) => d.label)).toStrictEqual(['Tasks', 'Health', 'Coverage', 'Flakiness']);
 
                 for (const d of result.breakdown) {
                     expect(d.score).toBeGreaterThanOrEqual(0);

@@ -253,7 +253,7 @@ describe('RefineWithConsistency', () => {
         );
 
         expect(result.refined).toBeFalsy();
-        expect(result.winner).toEqual({ tests: [{ title: 'Original' }] });
+        expect(result.winner).toStrictEqual({ tests: [{ title: 'Original' }] });
     });
 
     it('falls back to previous result when LLM throws', async () => {expect.hasAssertions();

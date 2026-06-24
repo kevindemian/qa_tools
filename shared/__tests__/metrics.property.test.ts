@@ -366,6 +366,6 @@ describe('GetTrends — property-based', () => {
     it('returns empty array for empty store', () => {
         const store: MetricsStore = { runs: [] };
 
-        expect(getTrends(store)).toEqual([]);
+        expect(getTrends(store)).toStrictEqual([]);
     });
 });

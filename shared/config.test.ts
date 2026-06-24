@@ -321,7 +321,7 @@ describe('Config', () => {
             process.env['OTHER'] = 'ignored';
             const result = Config.getAllPrefixed('QA_TOOLS_');
 
-            expect(result).toEqual({ QA_TOOLS_FOO: 'bar', QA_TOOLS_BAZ: 'qux' });
+            expect(result).toStrictEqual({ QA_TOOLS_FOO: 'bar', QA_TOOLS_BAZ: 'qux' });
         });
     });
 

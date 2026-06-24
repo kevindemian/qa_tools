@@ -34,7 +34,7 @@ describe('BuildTraceabilityMatrix', () => {
     it('returns empty result for empty metrics', () => {
         const result = buildTraceabilityMatrix(emptyMetrics());
 
-        expect(result.nodes).toEqual([]);
+        expect(result.nodes).toStrictEqual([]);
         expect(result.totalEpics).toBe(0);
         expect(result.totalTests).toBe(0);
         expect(result.overallCoverage).toBe(0);
@@ -45,7 +45,7 @@ describe('BuildTraceabilityMatrix', () => {
         const metrics = singleRunMetrics([{ title: 'Test A', state: 'passed', duration: 100 }]);
         const result = buildTraceabilityMatrix(metrics);
 
-        expect(result.nodes).toEqual([]);
+        expect(result.nodes).toStrictEqual([]);
         expect(result.totalEpics).toBe(0);
     });
 
@@ -266,7 +266,7 @@ describe('BuildTraceabilityMatrix', () => {
         vi.spyOn(rootLogger, 'error').mockImplementation(() => {});
         const result = buildTraceabilityMatrix({} as MetricsStore);
 
-        expect(result.nodes).toEqual([]);
+        expect(result.nodes).toStrictEqual([]);
         expect(result.totalEpics).toBe(0);
 
         vi.restoreAllMocks();

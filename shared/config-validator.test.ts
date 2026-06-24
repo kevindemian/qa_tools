@@ -71,7 +71,7 @@ describe('ValidateConfigValues', () => {
     it('returns no warnings when env vars are unset', () => {
         const warnings = validateConfigValues();
 
-        expect(warnings).toEqual([]);
+        expect(warnings).toStrictEqual([]);
     });
 
     it('returns no warnings for valid boolean values', () => {
@@ -79,7 +79,7 @@ describe('ValidateConfigValues', () => {
         process.env['DRY_RUN'] = 'false';
         const warnings = validateConfigValues();
 
-        expect(warnings).toEqual([]);
+        expect(warnings).toStrictEqual([]);
     });
 
     it('warns on invalid boolean value', () => {
@@ -95,7 +95,7 @@ describe('ValidateConfigValues', () => {
         process.env['LLM_MAX_TOKENS_PER_OP'] = '64000';
         const warnings = validateConfigValues();
 
-        expect(warnings).toEqual([]);
+        expect(warnings).toStrictEqual([]);
     });
 
     it('warns on invalid number value', () => {
@@ -110,7 +110,7 @@ describe('ValidateConfigValues', () => {
         process.env['JIRA_MODE'] = 'cloud';
         const warnings = validateConfigValues();
 
-        expect(warnings).toEqual([]);
+        expect(warnings).toStrictEqual([]);
     });
 
     it('warns on invalid allowedValues', () => {
@@ -128,7 +128,7 @@ describe('ValidateConfigValues', () => {
         process.env['QA_PUBLISH'] = '';
         const warnings = validateConfigValues();
 
-        expect(warnings).toEqual([]);
+        expect(warnings).toStrictEqual([]);
     });
 
     it('validates multiple values and returns multiple warnings', () => {
@@ -157,7 +157,7 @@ describe('WarnUnknownEnv', () => {
         process.env['PATH'] = '/usr/bin';
         const warnings = warnUnknownEnv();
 
-        expect(warnings).toEqual([]);
+        expect(warnings).toStrictEqual([]);
     });
 
     it('warns on unknown QA_ prefixed var', () => {
@@ -180,7 +180,7 @@ describe('WarnUnknownEnv', () => {
         process.env['MY_RANDOM_VAR'] = 'value';
         const warnings = warnUnknownEnv();
 
-        expect(warnings).toEqual([]);
+        expect(warnings).toStrictEqual([]);
     });
 });
 
@@ -217,7 +217,7 @@ describe('ValidateAll', () => {
         const logged: string[] = [];
 
         expect(() => validateAll((m) => logged.push(m))).not.toThrow();
-        expect(logged).toEqual([]);
+        expect(logged).toStrictEqual([]);
     });
 
     it('does not throw when logFn is not provided', () => {

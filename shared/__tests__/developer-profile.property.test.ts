@@ -123,7 +123,7 @@ describe('BuildDeveloperProfile — property-based', () => {
             fc.property(fc.boolean(), () => {
                 const result = buildDeveloperProfile(null);
 
-                expect(result.authors).toEqual([]);
+                expect(result.authors).toStrictEqual([]);
                 expect(result.totalAuthors).toBe(0);
                 expect(result.totalFailures).toBe(0);
             }),
@@ -137,7 +137,7 @@ describe('BuildDeveloperProfile — property-based', () => {
             fc.property(fc.boolean(), () => {
                 const result = buildDeveloperProfile(undefined);
 
-                expect(result.authors).toEqual([]);
+                expect(result.authors).toStrictEqual([]);
                 expect(result.totalAuthors).toBe(0);
                 expect(result.totalFailures).toBe(0);
             }),

@@ -35,7 +35,7 @@ describe('ApiGet', () => {
         client.get.mockResolvedValue({ data: { id: 1 } });
         const result = await apiGet(client, '/test');
 
-        expect(result).toEqual({ id: 1 });
+        expect(result).toStrictEqual({ id: 1 });
     });
 
     it('passes params to client.get', async () => {expect.hasAssertions();
@@ -81,7 +81,7 @@ describe('ApiPost', () => {
         client.post.mockResolvedValue({ data: { id: 1 } });
         const result = await apiPost(client, '/test', { name: 'foo' });
 
-        expect(result).toEqual({ id: 1 });
+        expect(result).toStrictEqual({ id: 1 });
         expect(client['post']).toHaveBeenCalledWith('/test', { name: 'foo' });
     });
 
@@ -128,7 +128,7 @@ describe('ApiPut', () => {
         client.put.mockResolvedValue({ data: { id: 1 }, status: 200 });
         const result = await apiPut(client, '/test', { name: 'foo' });
 
-        expect(result).toEqual({ id: 1 });
+        expect(result).toStrictEqual({ id: 1 });
         expect(client['put']).toHaveBeenCalledWith('/test', { name: 'foo' });
     });
 

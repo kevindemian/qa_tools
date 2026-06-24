@@ -100,7 +100,7 @@ describe('Entry-menu to module spawn — full flow (CR-3c)', () => {
         if (callOpts) {
             expect(callOpts).toHaveProperty('stdio', 'inherit');
             expect(callOpts).toHaveProperty('cwd');
-            expect(callOpts.cwd).toEqual(expect.any(String));
+            expect(callOpts.cwd).toStrictEqual(expect.any(String));
         }
     });
 

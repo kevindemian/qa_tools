@@ -80,7 +80,7 @@ describe('AiBugReportSchema', () => {
         };
         const result = AiBugReportSchema.parse(withEvidence);
 
-        expect(result.evidence).toEqual(['Request times out with 504 Gateway Timeout', 'Firefox 120, staging']);
+        expect(result.evidence).toStrictEqual(['Request times out with 504 Gateway Timeout', 'Firefox 120, staging']);
     });
 
     it('accepts report without evidence (optional)', () => {

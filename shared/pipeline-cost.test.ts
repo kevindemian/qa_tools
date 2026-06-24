@@ -58,9 +58,9 @@ describe('CalculatePipelineCost', () => {
         expect(result.totalCost).toBe(0);
         expect(result.avgCostPerRun).toBe(0);
         expect(result.totalDurationSec).toBe(0);
-        expect(result.costByRun).toEqual([]);
+        expect(result.costByRun).toStrictEqual([]);
         expect(result.runCount).toBe(0);
-        expect(result.period).toEqual({ from: '', to: '' });
+        expect(result.period).toStrictEqual({ from: '', to: '' });
         expect(result.costPerMinute).toBe(0.01);
     });
 
@@ -70,7 +70,7 @@ describe('CalculatePipelineCost', () => {
         expect(result.totalCost).toBe(0);
         expect(result.avgCostPerRun).toBe(0);
         expect(result.totalDurationSec).toBe(0);
-        expect(result.costByRun).toEqual([]);
+        expect(result.costByRun).toStrictEqual([]);
         expect(result.runCount).toBe(0);
     });
 
@@ -80,7 +80,7 @@ describe('CalculatePipelineCost', () => {
         expect(result.totalCost).toBe(0);
         expect(result.avgCostPerRun).toBe(0);
         expect(result.totalDurationSec).toBe(0);
-        expect(result.costByRun).toEqual([]);
+        expect(result.costByRun).toStrictEqual([]);
         expect(result.runCount).toBe(0);
     });
 

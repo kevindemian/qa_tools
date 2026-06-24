@@ -154,6 +154,6 @@ describe('CheckQualitySignals — property-based', () => {
         const sig = [{ severity: 'warning' as const, source: 'test', message: 'x', suggestedAction: 'y' }];
         const result = checkQualitySignals(sig);
 
-        expect(result).toEqual(expect.arrayContaining(sig));
+        expect(result).toStrictEqual(expect.arrayContaining(sig));
     });
 });

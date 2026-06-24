@@ -65,7 +65,7 @@ describe('SaveRunMetrics / loadMetrics', () => {
         const cfg = makeConfig(path.join(TMP_DIR, 'nonexistent'));
         const store = loadMetrics(cfg);
 
-        expect(store.runs).toEqual([]);
+        expect(store.runs).toStrictEqual([]);
     });
 
     it('returns empty store on corrupted JSON', () => {
@@ -76,7 +76,7 @@ describe('SaveRunMetrics / loadMetrics', () => {
         fs.writeFileSync(sp, 'not valid json{{{');
         const store = loadMetrics(cfg);
 
-        expect(store.runs).toEqual([]);
+        expect(store.runs).toStrictEqual([]);
     });
 
     it('persists multiple runs', () => {
@@ -142,7 +142,7 @@ describe('CalculateFlakiness', () => {
     it('returns empty when no runs', () => {
         const store: MetricsStore = { runs: [] };
 
-        expect(calculateFlakiness(store)).toEqual([]);
+        expect(calculateFlakiness(store)).toStrictEqual([]);
     });
 
     it('detects flaky tests across runs', () => {
@@ -254,7 +254,7 @@ describe('CalculateFlakiness', () => {
             ],
         };
 
-        expect(calculateFlakiness(store, 2)).toEqual([]);
+        expect(calculateFlakiness(store, 2)).toStrictEqual([]);
     });
 
     it('computes flakiness rate excluding skipped runs (D8-01)', () => {
@@ -383,7 +383,7 @@ describe('Edge cases', () => {
         try {
             const store = loadMetrics(cfg);
 
-            expect(store.runs).toEqual([]);
+            expect(store.runs).toStrictEqual([]);
         } finally {
             mkdirSpy.mockRestore();
         }

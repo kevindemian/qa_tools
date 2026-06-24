@@ -39,7 +39,7 @@ describe('DetectSilentRegression', () => {
     it('returns empty result for empty input', () => {
         const result = detectSilentRegression({});
 
-        expect(result.regressions).toEqual([]);
+        expect(result.regressions).toStrictEqual([]);
         expect(result.totalTests).toBe(0);
     });
 
@@ -51,7 +51,7 @@ describe('DetectSilentRegression', () => {
 
         const result = detectSilentRegression(histories);
 
-        expect(result.regressions).toEqual([]);
+        expect(result.regressions).toStrictEqual([]);
         expect(result.totalTests).toBe(0);
     });
 
@@ -154,7 +154,7 @@ describe('DetectSilentRegression', () => {
         const result = detectSilentRegression(histories);
         const reg = nonNull(result.regressions[0]);
 
-        expect(reg.previousDurations).toEqual([1.0, 2.0, 3.0]);
+        expect(reg.previousDurations).toStrictEqual([1.0, 2.0, 3.0]);
     });
 
     it('sets timestamp to valid ISO string', () => {

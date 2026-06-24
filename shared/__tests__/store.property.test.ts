@@ -208,7 +208,7 @@ describe('Store — property-based', () => {
             fc.property(fc.string({ minLength: 1, maxLength: 20 }), (branch) => {
                 const { store, dir } = createFreshStore('test-project');
                 try {
-                    expect(store.getBranch(branch)).toEqual([]);
+                    expect(store.getBranch(branch)).toStrictEqual([]);
                 } finally {
                     cleanupDir(dir);
                 }

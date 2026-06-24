@@ -28,7 +28,7 @@ describe('AnalyzeCoverage', () => {
         expect(result.totalIssues).toBe(4);
         expect(result.mappedIssues).toBe(2);
         expect(result.totalSteps).toBe(3);
-        expect(result.unmappedSteps).toEqual(['TEST-3', 'TEST-4']);
+        expect(result.unmappedSteps).toStrictEqual(['TEST-3', 'TEST-4']);
         expect(result.coveragePct).toBe(50);
     });
 
@@ -41,7 +41,7 @@ describe('AnalyzeCoverage', () => {
         expect(result.totalIssues).toBe(0);
         expect(result.mappedIssues).toBe(0);
         expect(result.coveragePct).toBe(0);
-        expect(result.unmappedSteps).toEqual([]);
+        expect(result.unmappedSteps).toStrictEqual([]);
     });
 
     it('handles network error and returns zero coverage', async () => {expect.hasAssertions();
@@ -70,8 +70,8 @@ describe('AnalyzeCoverage', () => {
 
         const result = await analyzeCoverage(mockJiraResource, 'TEST');
 
-        expect(result.gapsByEpic['EPIC-1']).toEqual(['TEST-1']);
-        expect(result.gapsByEpic['EPIC-2']).toEqual(['TEST-2', 'TEST-3']);
+        expect(result.gapsByEpic['EPIC-1']).toStrictEqual(['TEST-1']);
+        expect(result.gapsByEpic['EPIC-2']).toStrictEqual(['TEST-2', 'TEST-3']);
     });
 
     it('handles epic as object without key property', async () => {expect.hasAssertions();
@@ -85,6 +85,6 @@ describe('AnalyzeCoverage', () => {
         });
         const result = await analyzeCoverage(mockJiraResource, 'TEST');
 
-        expect(result.gapsByEpic).toEqual({});
+        expect(result.gapsByEpic).toStrictEqual({});
     });
 });

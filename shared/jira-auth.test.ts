@@ -9,7 +9,7 @@ describe('CreateJiraAuthHeader', () => {
         it('returns Bearer auth header', () => {
             const result = createJiraAuthHeader(SERVER_TOKEN, 'server');
 
-            expect(result).toEqual({ Authorization: `Bearer ${SERVER_TOKEN}` });
+            expect(result).toStrictEqual({ Authorization: `Bearer ${SERVER_TOKEN}` });
         });
 
         it('preserves the token as-is in the header', () => {
@@ -23,7 +23,7 @@ describe('CreateJiraAuthHeader', () => {
         it('returns Basic auth header with base64-encoded credentials', () => {
             const result = createJiraAuthHeader(CLOUD_CRED, 'cloud');
 
-            expect(result).toEqual({ Authorization: `Basic ${CLOUD_BASE64}` });
+            expect(result).toStrictEqual({ Authorization: `Basic ${CLOUD_BASE64}` });
         });
 
         it('produces a valid base64 string', () => {
@@ -38,7 +38,7 @@ describe('CreateJiraAuthHeader', () => {
         it('defaults to server mode when called without mode', () => {
             const result = createJiraAuthHeader(SERVER_TOKEN);
 
-            expect(result).toEqual({ Authorization: `Bearer ${SERVER_TOKEN}` });
+            expect(result).toStrictEqual({ Authorization: `Bearer ${SERVER_TOKEN}` });
         });
 
         it('produces distinct headers for server vs cloud with same token', () => {

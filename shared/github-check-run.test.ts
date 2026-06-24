@@ -57,7 +57,7 @@ describe('CreateCheckRun', () => {
                 headers: expect.objectContaining({ Authorization: 'Bearer test-token' }) as Record<string, unknown>,
             }),
         );
-        expect(result).toEqual({ id: 1, html_url: 'https://github.com/owner/repo/checks/1' });
+        expect(result).toStrictEqual({ id: 1, html_url: 'https://github.com/owner/repo/checks/1' });
     });
 
     it('includes output when provided', async () => {expect.hasAssertions();

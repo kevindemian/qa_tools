@@ -61,9 +61,9 @@ describe('Model-adapter', () => {
         });
 
         it('returns empty for missing data', () => {
-            expect(adapter.parseListResponse({})).toEqual([]);
-            expect(adapter.parseListResponse({ data: null })).toEqual([]);
-            expect(adapter.parseListResponse({ data: 'not-array' })).toEqual([]);
+            expect(adapter.parseListResponse({})).toStrictEqual([]);
+            expect(adapter.parseListResponse({ data: null })).toStrictEqual([]);
+            expect(adapter.parseListResponse({ data: 'not-array' })).toStrictEqual([]);
         });
 
         it('filters out entries without id', () => {
@@ -140,7 +140,7 @@ describe('Model-adapter', () => {
         });
 
         it('returns empty for missing data', () => {
-            expect(adapter.parseListResponse({})).toEqual([]);
+            expect(adapter.parseListResponse({})).toStrictEqual([]);
         });
     });
 
@@ -195,8 +195,8 @@ describe('Model-adapter', () => {
         });
 
         it('returns empty for missing models key', () => {
-            expect(adapter.parseListResponse({})).toEqual([]);
-            expect(adapter.parseListResponse({ data: [] })).toEqual([]);
+            expect(adapter.parseListResponse({})).toStrictEqual([]);
+            expect(adapter.parseListResponse({ data: [] })).toStrictEqual([]);
         });
     });
 
@@ -260,7 +260,7 @@ describe('Model-adapter', () => {
         });
 
         it('returns empty for missing data', () => {
-            expect(adapter.parseListResponse({})).toEqual([]);
+            expect(adapter.parseListResponse({})).toStrictEqual([]);
         });
     });
 
@@ -284,7 +284,7 @@ describe('Model-adapter', () => {
         });
 
         it('returns empty for missing data', () => {
-            expect(adapter.parseListResponse({})).toEqual([]);
+            expect(adapter.parseListResponse({})).toStrictEqual([]);
         });
     });
 
@@ -322,13 +322,13 @@ describe('Model-adapter', () => {
 
         it('parses OpenAI-compatible response', () => {
             expect(adapter.name).toBe('custom');
-            expect(adapter.parseListResponse({ data: [{ id: 'test' }] })).toEqual([{ id: 'test' }]);
-            expect(adapter.parseListResponse({ data: [{ id: 'test', extra: true }] })).toEqual([{ id: 'test' }]);
-            expect(adapter.parseListResponse({ data: [{ id: 'a' }, { id: 'b' }] })).toEqual([{ id: 'a' }, { id: 'b' }]);
-            expect(adapter.parseListResponse({ data: 'invalid' })).toEqual([]);
-            expect(adapter.parseListResponse({})).toEqual([]);
-            expect(adapter.parseListResponse(null)).toEqual([]);
-            expect(adapter.parseListResponse(undefined)).toEqual([]);
+            expect(adapter.parseListResponse({ data: [{ id: 'test' }] })).toStrictEqual([{ id: 'test' }]);
+            expect(adapter.parseListResponse({ data: [{ id: 'test', extra: true }] })).toStrictEqual([{ id: 'test' }]);
+            expect(adapter.parseListResponse({ data: [{ id: 'a' }, { id: 'b' }] })).toStrictEqual([{ id: 'a' }, { id: 'b' }]);
+            expect(adapter.parseListResponse({ data: 'invalid' })).toStrictEqual([]);
+            expect(adapter.parseListResponse({})).toStrictEqual([]);
+            expect(adapter.parseListResponse(null)).toStrictEqual([]);
+            expect(adapter.parseListResponse(undefined)).toStrictEqual([]);
         });
     });
 });

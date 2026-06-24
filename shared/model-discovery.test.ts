@@ -31,7 +31,7 @@ describe('DiscoverModels', () => {
 
         const result = await discoverModels('custom', 'test-key');
 
-        expect(result).toEqual([]);
+        expect(result).toStrictEqual([]);
     });
 
     it('returns empty array when fetch fails', async () => {expect.hasAssertions();
@@ -39,7 +39,7 @@ describe('DiscoverModels', () => {
         mockFetchReject(new Error('network error'));
         const result = await discoverModels('openai', 'sk-test');
 
-        expect(result).toEqual([]);
+        expect(result).toStrictEqual([]);
     });
 
     it('returns empty array on non-ok response', async () => {expect.hasAssertions();
@@ -47,7 +47,7 @@ describe('DiscoverModels', () => {
         mockFetchError(401, { error: 'unauthorized' });
         const result = await discoverModels('openai', 'sk-test');
 
-        expect(result).toEqual([]);
+        expect(result).toStrictEqual([]);
     });
 
     it('returns models from OpenAI adapter response', async () => {expect.hasAssertions();
@@ -103,13 +103,13 @@ describe('DiscoverModels', () => {
 
         const result = await discoverModels('opencode-go', 'test');
 
-        expect(result).toEqual([]);
+        expect(result).toStrictEqual([]);
     });
 });
 
 describe('AssignTierHints', () => {
     it('returns empty for empty input', () => {
-        expect(assignTierHints([])).toEqual([]);
+        expect(assignTierHints([])).toStrictEqual([]);
     });
 
     it('assigns all tiers to a single model', () => {

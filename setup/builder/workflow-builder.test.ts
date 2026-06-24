@@ -96,7 +96,7 @@ jobs:
         b.removeJob('qa');
 
         expect(b.hasJob('qa')).toBeFalsy();
-        expect(b.jobNames()).toEqual([]);
+        expect(b.jobNames()).toStrictEqual([]);
     });
 
     it('supports env vars in GitHub steps', () => {
@@ -151,7 +151,7 @@ jobs:
         const b = new WorkflowBuilder('github', 'test');
         b.parseExisting('{{{ not valid yaml }}}');
 
-        expect(b.jobNames()).toEqual([]);
+        expect(b.jobNames()).toStrictEqual([]);
 
         b.addJob('qa', { runsOn: 'ubuntu-latest', steps: [{ run: 'echo ok' }] });
 

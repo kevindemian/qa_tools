@@ -77,7 +77,7 @@ describe('BugReport Service', () => {
 
             const report = await collectManual();
 
-            expect(report).toEqual({
+            expect(report).toStrictEqual({
                 summary: 'Bug in login',
                 description: 'Cannot log in with valid credentials',
                 source: 'manual',
@@ -201,7 +201,7 @@ describe('BugReport Service', () => {
             expect(report.source).toBe('automated');
             expect(report.description).toContain('*Login fails*');
             expect(report.description).toContain('Error: Expected 200 got 500');
-            expect(report.metadata).toEqual({
+            expect(report.metadata).toStrictEqual({
                 pipelineId: '456',
                 branch: 'main',
                 commitSha: 'abcdef123',
@@ -432,7 +432,7 @@ describe('BugReport Service', () => {
 
             const result = await interactiveBugReportFlow(mockJiraResource, 'PROJ', report, mockLinkManager);
 
-            expect(result).toEqual({
+            expect(result).toStrictEqual({
                 status: 'ok',
                 label: 'PROJ-202',
                 message: 'Manual login failure',
@@ -488,7 +488,7 @@ describe('BugReport Service', () => {
 
             const result = await interactiveBugReportFlow(mockJiraResource, 'PROJ', report);
 
-            expect(result).toEqual({
+            expect(result).toStrictEqual({
                 status: 'error',
                 label: '',
                 message: 'Jira API error',
@@ -513,7 +513,7 @@ describe('BugReport Service', () => {
 
             const result = await interactiveBugReportFlow(mockJiraResource, 'PROJ', undefined, mockLinkManager);
 
-            expect(result).toEqual({
+            expect(result).toStrictEqual({
                 status: 'ok',
                 label: 'PROJ-303',
                 message: 'Auto summary',

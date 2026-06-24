@@ -33,17 +33,17 @@ describe('AggregateDefectSeasonality', () => {
 
         for (const d of result.byDayOfWeek) {
             expect(d.total).toBe(0);
-            expect(d.categories).toEqual({});
+            expect(d.categories).toStrictEqual({});
         }
         for (const h of result.byHour) {
             expect(h.total).toBe(0);
-            expect(h.categories).toEqual({});
+            expect(h.categories).toStrictEqual({});
         }
 
         expect(result.peakDay).toBe('N/A');
         expect(result.peakHour).toBe(-1);
         expect(result.totalRecords).toBe(0);
-        expect(result.period).toEqual({ from: '', to: '' });
+        expect(result.period).toStrictEqual({ from: '', to: '' });
         expect(result.timestamp).toBeTruthy();
     });
 
@@ -63,12 +63,12 @@ describe('AggregateDefectSeasonality', () => {
         const mon = nonNull(result.byDayOfWeek.find((d) => d.dayOfWeek === 'Mon'));
 
         expect(mon.total).toBe(1);
-        expect(mon.categories).toEqual({ ASSERTION: 1 });
+        expect(mon.categories).toStrictEqual({ ASSERTION: 1 });
 
         const hour10 = nonNull(result.byHour.find((h) => h.hour === 10));
 
         expect(hour10.total).toBe(1);
-        expect(hour10.categories).toEqual({ ASSERTION: 1 });
+        expect(hour10.categories).toStrictEqual({ ASSERTION: 1 });
 
         expect(result.peakDay).toBe('Mon');
         expect(result.peakHour).toBe(10);
@@ -113,12 +113,12 @@ describe('AggregateDefectSeasonality', () => {
         const mon = nonNull(result.byDayOfWeek.find((d) => d.dayOfWeek === 'Mon'));
 
         expect(mon.total).toBe(3);
-        expect(mon.categories).toEqual({ ASSERTION: 2, TIMEOUT: 1 });
+        expect(mon.categories).toStrictEqual({ ASSERTION: 2, TIMEOUT: 1 });
 
         const hour10 = nonNull(result.byHour.find((h) => h.hour === 10));
 
         expect(hour10.total).toBe(3);
-        expect(hour10.categories).toEqual({ ASSERTION: 2, TIMEOUT: 1 });
+        expect(hour10.categories).toStrictEqual({ ASSERTION: 2, TIMEOUT: 1 });
 
         expect(result.peakDay).toBe('Mon');
         expect(result.peakHour).toBe(10);
@@ -133,7 +133,7 @@ describe('AggregateDefectSeasonality', () => {
         const result = aggregateDefectSeasonality(input);
         const dayNames = result.byDayOfWeek.map((d) => d.dayOfWeek);
 
-        expect(dayNames).toEqual(['Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat', 'Sun']);
+        expect(dayNames).toStrictEqual(['Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat', 'Sun']);
     });
 
     it('sorts hours 0-23', () => {
@@ -141,7 +141,7 @@ describe('AggregateDefectSeasonality', () => {
         const result = aggregateDefectSeasonality(input);
         const hours = result.byHour.map((h) => h.hour);
 
-        expect(hours).toEqual(Array.from({ length: 24 }, (_, i) => i));
+        expect(hours).toStrictEqual(Array.from({ length: 24 }, (_, i) => i));
     });
 
     it('computes peak day correctly when multiple days have records', () => {
@@ -178,7 +178,7 @@ describe('AggregateDefectSeasonality', () => {
         ];
         const result = aggregateDefectSeasonality(input);
 
-        expect(result.period).toEqual({ from: '2026-06-01', to: '2026-06-03' });
+        expect(result.period).toStrictEqual({ from: '2026-06-01', to: '2026-06-03' });
     });
 
     it('handles all days of week', () => {
@@ -201,7 +201,7 @@ describe('AggregateDefectSeasonality', () => {
         const tue = nonNull(result.byDayOfWeek.find((d) => d.dayOfWeek === 'Tue'));
 
         expect(tue.total).toBe(0);
-        expect(tue.categories).toEqual({});
+        expect(tue.categories).toStrictEqual({});
     });
 
     it('preserves categories per hour when hour is empty', () => {
@@ -210,7 +210,7 @@ describe('AggregateDefectSeasonality', () => {
         const hour0 = nonNull(result.byHour.find((h) => h.hour === 0));
 
         expect(hour0.total).toBe(0);
-        expect(hour0.categories).toEqual({});
+        expect(hour0.categories).toStrictEqual({});
     });
 
     it('returns N/A peak when all totals are zero', () => {

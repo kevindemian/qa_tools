@@ -749,7 +749,7 @@ describe('Case15 — create tests from JSON', () => {
         expect(mockCreateTests.createTestsFromJson).toHaveBeenCalledWith(
             expect.objectContaining({ jsonPath: '/fake/tests.json' }),
         );
-        expect(mockSessionContext.inMemoryTasksId).toEqual(['TEST-10', 'TEST-11']);
+        expect(mockSessionContext.inMemoryTasksId).toStrictEqual(['TEST-10', 'TEST-11']);
         expect(prompt.success).toHaveBeenCalledWith('Importacao JSON concluída: 2 testes');
         expect(baseContext.pushHistory).toHaveBeenCalledWith('importar-json', '2 testes', 'ok');
     });
@@ -761,7 +761,7 @@ describe('Case15 — create tests from JSON', () => {
         const mod = case15;
 
         await expect(mod.handler(baseContext)).resolves.toBeUndefined();
-        expect(mockSessionContext.inMemoryTasksId).toEqual([]);
+        expect(mockSessionContext.inMemoryTasksId).toStrictEqual([]);
     });
 });
 
@@ -861,7 +861,7 @@ describe('Case01 — create tests from CSV', () => {
         expect(mockCreateTests.createTestsFromCsv).toHaveBeenCalledWith(
             expect.objectContaining({ csvPath: '/fake/test.csv', jiraLabels: ['label1', 'label2'] }),
         );
-        expect(mockSessionContext.inMemoryTasksId).toEqual(['TEST-1', 'TEST-2']);
+        expect(mockSessionContext.inMemoryTasksId).toStrictEqual(['TEST-1', 'TEST-2']);
         expect(baseContext.pushHistory).toHaveBeenCalledWith('csv-import', '2 tests created from CSV', 'ok');
     });
 
@@ -935,6 +935,6 @@ describe('Case01 — create tests from CSV', () => {
         const mod = case01;
 
         await expect(mod.handler(baseContext)).resolves.toBeUndefined();
-        expect(mockSessionContext.inMemoryTasksId).toEqual([]);
+        expect(mockSessionContext.inMemoryTasksId).toStrictEqual([]);
     });
 });

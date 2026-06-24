@@ -59,7 +59,7 @@ describe('ComputeCrossSquadBenchmark', () => {
         const result = computeCrossSquadBenchmark(makeSquads());
         const scores = result.benchmarks.map((b) => b.healthScore);
 
-        expect(scores).toEqual([92, 78, 64, 45]);
+        expect(scores).toStrictEqual([92, 78, 64, 45]);
     });
 
     it('identifies top squad', () => {
@@ -100,7 +100,7 @@ describe('ComputeCrossSquadBenchmark', () => {
     it('handles empty projects array', () => {
         const result = computeCrossSquadBenchmark([]);
 
-        expect(result.benchmarks).toEqual([]);
+        expect(result.benchmarks).toStrictEqual([]);
         expect(result.topSquad).toBe('');
         expect(result.bottomSquad).toBe('');
         expect(result.averageScore).toBe(0);
@@ -192,7 +192,7 @@ describe('ComputeCrossSquadBenchmark', () => {
         const original = [...input];
         computeCrossSquadBenchmark(input);
 
-        expect(input).toEqual(original);
+        expect(input).toStrictEqual(original);
     });
 
     it('includes timestamp in ISO format', () => {
@@ -256,7 +256,7 @@ describe('ComputeCrossSquadBenchmark', () => {
     it('handles null projects gracefully (G-02)', () => {
         const result = computeCrossSquadBenchmark(null);
 
-        expect(result.benchmarks).toEqual([]);
+        expect(result.benchmarks).toStrictEqual([]);
         expect(result.topSquad).toBe('');
         expect(result.bottomSquad).toBe('');
         expect(result.averageScore).toBe(0);
@@ -266,7 +266,7 @@ describe('ComputeCrossSquadBenchmark', () => {
     it('handles undefined projects gracefully (G-02)', () => {
         const result = computeCrossSquadBenchmark(undefined);
 
-        expect(result.benchmarks).toEqual([]);
+        expect(result.benchmarks).toStrictEqual([]);
         expect(result.topSquad).toBe('');
         expect(result.bottomSquad).toBe('');
         expect(result.averageScore).toBe(0);

@@ -282,7 +282,7 @@ describe('_JiraEnv', () => {
     it('returns jira config when all vars set', () => {
         const result = mainModule._jiraEnv();
 
-        expect(result).toEqual({
+        expect(result).toStrictEqual({
             base: 'https://jira.example.com',
             token: 'token',
             xray: 'https://xray.example.com',
@@ -333,7 +333,7 @@ describe('PollPipeline', () => {
         const m = createMockGitProvider({ getPipeline: mockGetPipeline });
         const result = await mainModule.pollPipeline(m, '1', 1, 1000);
 
-        expect(result).toEqual({ status: 'success', web_url: 'https://pipe/1' });
+        expect(result).toStrictEqual({ status: 'success', web_url: 'https://pipe/1' });
     });
 
     it('returns timeout when pipeline never completes', async () => {expect.hasAssertions();
@@ -342,7 +342,7 @@ describe('PollPipeline', () => {
         const m = createMockGitProvider({ getPipeline: mockGetPipeline });
         const result = await mainModule.pollPipeline(m, '1', 1, 50);
 
-        expect(result).toEqual({ status: 'timeout', web_url: '' });
+        expect(result).toStrictEqual({ status: 'timeout', web_url: '' });
     });
 
     it('reads state field when status is absent', async () => {expect.hasAssertions();
@@ -351,7 +351,7 @@ describe('PollPipeline', () => {
         const m = createMockGitProvider({ getPipeline: mockGetPipeline });
         const result = await mainModule.pollPipeline(m, '2', 1, 1000);
 
-        expect(result).toEqual({ status: 'success', web_url: 'https://pipe/2' });
+        expect(result).toStrictEqual({ status: 'success', web_url: 'https://pipe/2' });
     });
 
     it('handles null getPipeline response', async () => {expect.hasAssertions();
@@ -360,7 +360,7 @@ describe('PollPipeline', () => {
         const m = createMockGitProvider({ getPipeline: mockGetPipeline });
         const result = await mainModule.pollPipeline(m, '3', 1, 50);
 
-        expect(result).toEqual({ status: 'timeout', web_url: '' });
+        expect(result).toStrictEqual({ status: 'timeout', web_url: '' });
     });
 });
 
@@ -858,28 +858,28 @@ describe('ParseBatchArgs', () => {
         process.argv = ['node', 'main.ts', '--project', 'my-proj', '--branch', 'feature/x'];
         const result = mainModule.parseBatchArgs();
 
-        expect(result).toEqual({ project: 'my-proj', branch: 'feature/x' });
+        expect(result).toStrictEqual({ project: 'my-proj', branch: 'feature/x' });
     });
 
     it('parses --auto flag', () => {
         process.argv = ['node', 'main.ts', '--auto'];
         const result = mainModule.parseBatchArgs();
 
-        expect(result).toEqual({ auto: true });
+        expect(result).toStrictEqual({ auto: true });
     });
 
     it('parses -p and -b short flags', () => {
         process.argv = ['node', 'main.ts', '-p', 'proj', '-b', 'dev'];
         const result = mainModule.parseBatchArgs();
 
-        expect(result).toEqual({ project: 'proj', branch: 'dev' });
+        expect(result).toStrictEqual({ project: 'proj', branch: 'dev' });
     });
 
     it('returns empty object when no args', () => {
         process.argv = ['node', 'main.ts'];
         const result = mainModule.parseBatchArgs();
 
-        expect(result).toEqual({});
+        expect(result).toStrictEqual({});
     });
 });
 
@@ -1132,7 +1132,7 @@ describe('_SelectProject', () => {
         const result = mainModule._selectProject();
 
         expect(result.projectName).toBeNull();
-        expect(result.names).toEqual([]);
+        expect(result.names).toStrictEqual([]);
 
         spy2.mockRestore();
     });

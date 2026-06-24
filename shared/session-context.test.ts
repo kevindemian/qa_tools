@@ -52,20 +52,20 @@ describe('SessionContext', () => {
     it('initializes with defaults', () => {
         expect(ctx.isBusy).toBeFalsy();
         expect(ctx.lastOperation).toBe('');
-        expect(ctx.sessionCounters).toEqual([]);
+        expect(ctx.sessionCounters).toStrictEqual([]);
         expect(ctx.packageManager).toBeUndefined();
         expect(ctx.git_directory).toBe('no_dir_selected');
-        expect(ctx.inMemoryTasksId).toEqual([]);
-        expect(ctx.inMemoryTasksText).toEqual([]);
+        expect(ctx.inMemoryTasksId).toStrictEqual([]);
+        expect(ctx.inMemoryTasksText).toStrictEqual([]);
         expect(ctx.project_name).toBe('');
-        expect(ctx.results).toEqual([]);
+        expect(ctx.results).toStrictEqual([]);
     });
 
     it('resetResults clears results array', () => {
         ctx.results.push({ status: 'ok', label: 'T1', message: '' });
         ctx.resetResults();
 
-        expect(ctx.results).toEqual([]);
+        expect(ctx.results).toStrictEqual([]);
     });
 
     it('withBusy sets isBusy during execution', async () => {expect.hasAssertions();
@@ -104,7 +104,7 @@ describe('SessionContext', () => {
     it('pushHistory appends to sessionCounters', () => {
         ctx.pushHistory('test-op', 'detail-1', 'ok');
 
-        expect(ctx.sessionCounters).toEqual([{ op: 'test-op', detail: 'detail-1', status: 'ok' }]);
+        expect(ctx.sessionCounters).toStrictEqual([{ op: 'test-op', detail: 'detail-1', status: 'ok' }]);
     });
 
     it('pushHistory appends multiple entries', () => {

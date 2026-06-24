@@ -87,7 +87,7 @@ describe('JiraLinkManager', () => {
             vi.spyOn(fs, 'readFileSync').mockReturnValue(JSON.stringify(cachedTypes));
             const result = await manager.getIssueLinkTypes();
 
-            expect(result).toEqual(cachedTypes);
+            expect(result).toStrictEqual(cachedTypes);
         });
 
         it('falls back to hardcoded types when API and cache fail', async () => {expect.hasAssertions();
@@ -239,7 +239,7 @@ describe('JiraLinkManager', () => {
                 inwardIssue: { key: 'TEST-2' },
                 outwardIssue: { key: 'TEST-1' },
             });
-            expect(result).toEqual({ id: 'new-link' });
+            expect(result).toStrictEqual({ id: 'new-link' });
         });
     });
 
@@ -323,8 +323,8 @@ describe('JiraLinkManager', () => {
             const result = await manager.listPreconditions('ECSPOL');
 
             expect(result).toHaveLength(2);
-            expect(result[0]).toEqual({ key: 'PREC-1', summary: 'User must be logged in' });
-            expect(result[1]).toEqual({ key: 'PREC-2', summary: 'Database must be seeded' });
+            expect(result[0]).toStrictEqual({ key: 'PREC-1', summary: 'User must be logged in' });
+            expect(result[1]).toStrictEqual({ key: 'PREC-2', summary: 'Database must be seeded' });
         });
 
         it('returns empty array when no preconditions found', async () => {expect.hasAssertions();
@@ -332,7 +332,7 @@ describe('JiraLinkManager', () => {
             mockJiraResource.searchJiraIssues.mockResolvedValue({ issues: [], total: 0, startAt: 0, maxResults: 200 });
             const result = await manager.listPreconditions('EMPTY');
 
-            expect(result).toEqual([]);
+            expect(result).toStrictEqual([]);
         });
     });
 
@@ -376,13 +376,13 @@ describe('JiraLinkManager', () => {
             const result = await manager.listTestExecutions('PROJ', 20);
 
             expect(result).toHaveLength(2);
-            expect(result[0]).toEqual({
+            expect(result[0]).toStrictEqual({
                 key: 'TE-1',
                 summary: 'Execution 1',
                 status: 'Done',
                 created: '2026-01-01',
             });
-            expect(result[1]).toEqual({
+            expect(result[1]).toStrictEqual({
                 key: 'TE-2',
                 summary: 'Execution 2',
                 status: 'In Progress',
@@ -426,7 +426,7 @@ describe('JiraLinkManager', () => {
                 .mockRejectedValueOnce(new Error('Not found'));
             const result = await manager.getTestCaseSummaries(['TEST-1', 'TEST-2']);
 
-            expect(result).toEqual([
+            expect(result).toStrictEqual([
                 { key: 'TEST-1', summary: 'Works' },
                 { key: 'TEST-2', summary: '(key not found)' },
             ]);
@@ -436,7 +436,7 @@ describe('JiraLinkManager', () => {
 
             const result = await manager.getTestCaseSummaries([]);
 
-            expect(result).toEqual([]);
+            expect(result).toStrictEqual([]);
         });
     });
 });

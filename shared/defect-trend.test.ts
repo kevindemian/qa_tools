@@ -9,9 +9,9 @@ describe('AggregateDefectTrends', () => {
     it('returns empty result for empty array', () => {
         const result = aggregateDefectTrends([]);
 
-        expect(result.trends).toEqual([]);
-        expect(result.topCategories).toEqual([]);
-        expect(result.period).toEqual({ from: '', to: '' });
+        expect(result.trends).toStrictEqual([]);
+        expect(result.topCategories).toStrictEqual([]);
+        expect(result.period).toStrictEqual({ from: '', to: '' });
     });
 
     it('preserves prototype-polluting category name', () => {
@@ -37,12 +37,12 @@ describe('AggregateDefectTrends', () => {
     it('returns empty result for null/undefined', () => {
         const r1 = aggregateDefectTrends(null);
 
-        expect(r1.trends).toEqual([]);
-        expect(r1.topCategories).toEqual([]);
+        expect(r1.trends).toStrictEqual([]);
+        expect(r1.topCategories).toStrictEqual([]);
 
         const r2 = aggregateDefectTrends(undefined);
 
-        expect(r2.trends).toEqual([]);
+        expect(r2.trends).toStrictEqual([]);
     });
 
     it('groups single day with multiple categories', () => {
@@ -56,9 +56,9 @@ describe('AggregateDefectTrends', () => {
 
         expect(result.trends).toHaveLength(1);
         expect(result.trends[0]?.date).toBe('2026-06-01');
-        expect(result.trends[0]?.categories).toEqual({ ASSERTION: 2, TIMEOUT: 1 });
+        expect(result.trends[0]?.categories).toStrictEqual({ ASSERTION: 2, TIMEOUT: 1 });
         expect(result.trends[0]?.total).toBe(3);
-        expect(result.period).toEqual({ from: '2026-06-01', to: '2026-06-01' });
+        expect(result.period).toStrictEqual({ from: '2026-06-01', to: '2026-06-01' });
     });
 
     it('handles multiple days with same category', () => {
@@ -73,13 +73,13 @@ describe('AggregateDefectTrends', () => {
 
         expect(result.trends).toHaveLength(3);
         expect(result.trends[0]?.date).toBe('2026-05-31');
-        expect(result.trends[0]?.categories).toEqual({ ASSERTION: 1 });
+        expect(result.trends[0]?.categories).toStrictEqual({ ASSERTION: 1 });
         expect(result.trends[0]?.total).toBe(1);
         expect(result.trends[1]?.date).toBe('2026-06-01');
-        expect(result.trends[1]?.categories).toEqual({ ASSERTION: 2 });
+        expect(result.trends[1]?.categories).toStrictEqual({ ASSERTION: 2 });
         expect(result.trends[1]?.total).toBe(2);
         expect(result.trends[2]?.date).toBe('2026-06-02');
-        expect(result.trends[2]?.categories).toEqual({ TIMEOUT: 1 });
+        expect(result.trends[2]?.categories).toStrictEqual({ TIMEOUT: 1 });
         expect(result.trends[2]?.total).toBe(1);
     });
 
@@ -92,7 +92,7 @@ describe('AggregateDefectTrends', () => {
 
         const result = aggregateDefectTrends(input);
 
-        expect(result.trends.map((t) => t.date)).toEqual(['2026-06-01', '2026-06-02', '2026-06-03']);
+        expect(result.trends.map((t) => t.date)).toStrictEqual(['2026-06-01', '2026-06-02', '2026-06-03']);
     });
 
     it('computes topCategories sorted by count descending', () => {
@@ -108,9 +108,9 @@ describe('AggregateDefectTrends', () => {
         const result = aggregateDefectTrends(input);
 
         expect(result.topCategories).toHaveLength(3);
-        expect(result.topCategories[0]).toEqual({ category: 'ASSERTION', count: 3 });
-        expect(result.topCategories[1]).toEqual({ category: 'TIMEOUT', count: 2 });
-        expect(result.topCategories[2]).toEqual({ category: 'ENV', count: 1 });
+        expect(result.topCategories[0]).toStrictEqual({ category: 'ASSERTION', count: 3 });
+        expect(result.topCategories[1]).toStrictEqual({ category: 'TIMEOUT', count: 2 });
+        expect(result.topCategories[2]).toStrictEqual({ category: 'ENV', count: 1 });
     });
 });
 
@@ -164,7 +164,7 @@ describe('SanitizeTrendResult', () => {
         };
         const result = sanitizeTrendResult(input);
 
-        expect(result.period).toEqual({ from: '2026-01-01', to: '2026-01-10' });
+        expect(result.period).toStrictEqual({ from: '2026-01-01', to: '2026-01-10' });
     });
 });
 

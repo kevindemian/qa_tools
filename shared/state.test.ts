@@ -72,18 +72,18 @@ describe('State', () => {
             mockFs({});
             const result = state.load(makeConfig());
 
-            expect(result).toEqual({});
+            expect(result).toStrictEqual({});
         });
 
         it('returns parsed state when file exists', () => {
             mockFs({ [STATE_PATH]: JSON.stringify({ lastProject: 'ECSPOL' }) });
             const result = state.load(makeConfig());
 
-            expect(result).toEqual({ lastProject: 'ECSPOL' });
+            expect(result).toStrictEqual({ lastProject: 'ECSPOL' });
 
             const typed = state.loadTypedState(makeConfig());
 
-            expect(typed).toEqual({ lastProject: 'ECSPOL' });
+            expect(typed).toStrictEqual({ lastProject: 'ECSPOL' });
         });
     });
 
@@ -125,7 +125,7 @@ describe('State', () => {
             });
             const result = state.load(makeConfig());
 
-            expect(result).toEqual({ lastProject: 'RECOVERED' });
+            expect(result).toStrictEqual({ lastProject: 'RECOVERED' });
         });
     });
 
@@ -140,7 +140,7 @@ describe('State', () => {
             state.migrateOldState(config);
 
             expect(mocks.rename).toHaveBeenCalledWith(STATE_PATH + '.tmp', STATE_PATH);
-            expect(state.load(config)).toEqual({ lastProject: 'MIGRATED' });
+            expect(state.load(config)).toStrictEqual({ lastProject: 'MIGRATED' });
         });
 
         it('does not migrate when new state file already exists', () => {
@@ -152,7 +152,7 @@ describe('State', () => {
             state.migrateOldState(config);
 
             expect(mocks.rename).not.toHaveBeenCalled();
-            expect(state.load(config)).toEqual({ lastProject: 'NEW' });
+            expect(state.load(config)).toStrictEqual({ lastProject: 'NEW' });
         });
     });
 
@@ -164,7 +164,7 @@ describe('State', () => {
             });
             const result = state.load(config);
 
-            expect(result).toEqual({});
+            expect(result).toStrictEqual({});
         });
 
         it('calls rootLogger.warn when state file is corrupted', () => {
@@ -188,7 +188,7 @@ describe('State', () => {
             });
             const result = state.load(config);
 
-            expect(result).toEqual({});
+            expect(result).toStrictEqual({});
             expect(mockRootLogger.error).toHaveBeenCalledWith(expect.stringContaining('Falha ao recuperar backup'));
         });
 
@@ -202,7 +202,7 @@ describe('State', () => {
             });
             const result = state.load(config);
 
-            expect(result).toEqual({});
+            expect(result).toStrictEqual({});
             expect(mockRootLogger.error).toHaveBeenCalledWith(expect.stringContaining('Falha ao salvar backup'));
         });
     });
@@ -229,7 +229,7 @@ describe('State', () => {
             });
             const result = state.load(config);
 
-            expect(result).toEqual({});
+            expect(result).toStrictEqual({});
         });
     });
 

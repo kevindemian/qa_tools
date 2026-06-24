@@ -240,7 +240,7 @@ describe('Probe-registry', () => {
             const registry = JSON.parse(JSON.stringify(VALID_REGISTRY)) as Record<string, unknown>;
             const models = mod.getProviderModels(registry, 'unknown');
 
-            expect(models).toEqual([]);
+            expect(models).toStrictEqual([]);
         });
 
         it('returns empty when providers key is missing', async () => {expect.hasAssertions();
@@ -249,7 +249,7 @@ describe('Probe-registry', () => {
             const mod = await import('../probe-registry.js');
             const models = mod.getProviderModels({}, 'openai');
 
-            expect(models).toEqual([]);
+            expect(models).toStrictEqual([]);
         });
     });
 
@@ -263,7 +263,7 @@ describe('Probe-registry', () => {
             mod.enrichFromOpenRouter(models, orMap);
 
             expect(models[0]?.context).toBe(128000);
-            expect((models[0] as Record<string, unknown>)['capabilities']).toEqual(['vision']);
+            expect((models[0] as Record<string, unknown>)['capabilities']).toStrictEqual(['vision']);
         });
 
         it('skips models not in OpenRouter map', async () => {expect.hasAssertions();

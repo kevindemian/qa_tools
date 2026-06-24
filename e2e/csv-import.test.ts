@@ -73,8 +73,8 @@ describe('E2E: CSV Import', () => {
 
         const result = nonNull(await createTestsFromCsv(state));
 
-        expect(result.inMemoryTasksId).toEqual(['TEST-1', 'TEST-2']);
-        expect(result.inMemoryTasksText).toEqual(['TC01 - Login valido', 'TC02 - Login invalido']);
+        expect(result.inMemoryTasksId).toStrictEqual(['TEST-1', 'TEST-2']);
+        expect(result.inMemoryTasksText).toStrictEqual(['TC01 - Login valido', 'TC02 - Login invalido']);
         expect(result.status).toBe('ok');
         expect(result.summary).toMatch(/2\/2/);
 

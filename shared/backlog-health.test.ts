@@ -102,7 +102,7 @@ describe('AnalyzeStaleIssues', () => {
         const result = analyzeStaleIssues(sampleIssues);
 
         expect(result).toHaveLength(2);
-        expect(result.map((i) => i.key)).toEqual(['PROJ-3', 'PROJ-4']);
+        expect(result.map((i) => i.key)).toStrictEqual(['PROJ-3', 'PROJ-4']);
     });
 
     it('respects custom staleDays option', () => {
@@ -121,7 +121,7 @@ describe('AnalyzeBugsWithoutTests', () => {
         const result = analyzeBugsWithoutTests(sampleIssues);
 
         expect(result).toHaveLength(2);
-        expect(result.map((i) => i.key)).toEqual(['PROJ-2', 'PROJ-4']);
+        expect(result.map((i) => i.key)).toStrictEqual(['PROJ-2', 'PROJ-4']);
     });
 
     it('excludes bugs that have linked tests', () => {

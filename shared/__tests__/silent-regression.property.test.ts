@@ -119,7 +119,7 @@ describe('DetectSilentRegression — property-based invariants', () => {
                     const inputDurations = histories[reg.title];
                     if (inputDurations === undefined) continue;
 
-                    expect(reg.previousDurations).toEqual(inputDurations.slice(0, -1));
+                    expect(reg.previousDurations).toStrictEqual(inputDurations.slice(0, -1));
                 }
             }),
             { numRuns: 50 },

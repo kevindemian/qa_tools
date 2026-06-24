@@ -36,7 +36,7 @@ describe('GeneratePrDescription', () => {
                 callerId: 'pr-description',
             }),
         );
-        expect(nonNull(vi.mocked(llmPrompt).mock.calls[0])[0].user).toEqual(expect.stringContaining('diff --git'));
+        expect(nonNull(vi.mocked(llmPrompt).mock.calls[0])[0].user).toStrictEqual(expect.stringContaining('diff --git'));
         expect(result).toBe('Resumo: adicionado novo teste.');
     });
 

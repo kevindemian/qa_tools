@@ -77,7 +77,7 @@ describe('Integration: Release Score', () => {
             const result = calculateReleaseScore(80, 85, 'pass', 90, 5);
 
             expect(result.breakdown).toHaveLength(4);
-            expect(result.breakdown.map((b) => b.label)).toEqual(['Tasks', 'Health', 'Coverage', 'Flakiness']);
+            expect(result.breakdown.map((b) => b.label)).toStrictEqual(['Tasks', 'Health', 'Coverage', 'Flakiness']);
         });
     });
 

@@ -196,7 +196,7 @@ describe('CalculateRequirementScores — property-based', () => {
         expect(empty.totalRequirements).toBe(0);
         expect(empty.overallScore).toBe(0);
         expect(empty.overallGrade).toBe('F');
-        expect(empty.entries).toEqual([]);
+        expect(empty.entries).toStrictEqual([]);
 
         const nullResult = calculateRequirementScores(null);
 

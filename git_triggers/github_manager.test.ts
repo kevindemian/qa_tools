@@ -128,7 +128,7 @@ describe('GitHubManager', () => {
 
             const result = await manager.getSchedules();
 
-            expect(result).toEqual([]);
+            expect(result).toStrictEqual([]);
         });
     });
 
@@ -343,7 +343,7 @@ describe('GitHubManager', () => {
             mockClient.get.mockRejectedValue(new Error('API error'));
             const result = await manager.searchMergeRequests('', '', 'opened');
 
-            expect(result).toEqual([]);
+            expect(result).toStrictEqual([]);
         });
     });
 
@@ -505,7 +505,7 @@ describe('GitHubManager', () => {
             mockClient.get.mockRejectedValue(new Error('API error'));
             const result = await manager.getPipelineJobs('42');
 
-            expect(result).toEqual([]);
+            expect(result).toStrictEqual([]);
         });
     });
 
@@ -520,7 +520,7 @@ describe('GitHubManager', () => {
             const result = await manager.listPipelineArtifacts('42');
 
             expect(mockClient['get']).toHaveBeenCalledWith('/repos/myorg/myrepo/actions/runs/42/artifacts');
-            expect(result).toEqual([{ id: 301, name: 'mochawesome-report' }]);
+            expect(result).toStrictEqual([{ id: 301, name: 'mochawesome-report' }]);
         });
 
         it('returns [] on API error', async () => {expect.hasAssertions();
@@ -528,7 +528,7 @@ describe('GitHubManager', () => {
             mockClient.get.mockRejectedValue(new Error('API error'));
             const result = await manager.listPipelineArtifacts('42');
 
-            expect(result).toEqual([]);
+            expect(result).toStrictEqual([]);
         });
     });
 
@@ -566,7 +566,7 @@ describe('GitHubManager', () => {
             expect(mockClient['get']).toHaveBeenCalledWith('/repos/myorg/myrepo/actions/variables', {
                 params: { per_page: 100 },
             });
-            expect(result).toEqual([{ key: 'MY_VAR', value: 'myval', type: 'variable' }]);
+            expect(result).toStrictEqual([{ key: 'MY_VAR', value: 'myval', type: 'variable' }]);
         });
 
         it('returns [] on API error', async () => {expect.hasAssertions();
@@ -574,7 +574,7 @@ describe('GitHubManager', () => {
             mockClient.get.mockRejectedValue(new Error('API error'));
             const result = await manager.getCICDVariables();
 
-            expect(result).toEqual([]);
+            expect(result).toStrictEqual([]);
         });
     });
 
@@ -681,7 +681,7 @@ describe('GitHubManager', () => {
             mockClient.get.mockRejectedValue(new Error('API error'));
             const result = await manager.getRecentPipelines();
 
-            expect(result).toEqual([]);
+            expect(result).toStrictEqual([]);
         });
     });
 
@@ -691,7 +691,7 @@ describe('GitHubManager', () => {
             mockClient.get.mockResolvedValue({ data: { name: 'main' } });
             const result = await manager.getBranch('main');
 
-            expect(result).toEqual({ name: 'main' });
+            expect(result).toStrictEqual({ name: 'main' });
         });
 
         it('returns null on API error', async () => {expect.hasAssertions();
@@ -718,7 +718,7 @@ describe('GitHubManager', () => {
             const result = await manager.getPipeline('42');
 
             expect(mockClient['get']).toHaveBeenCalledWith('/repos/myorg/myrepo/actions/runs/42');
-            expect(result).toEqual({ id: 42, status: 'completed', conclusion: 'success' });
+            expect(result).toStrictEqual({ id: 42, status: 'completed', conclusion: 'success' });
         });
 
         it('returns null on API error', async () => {expect.hasAssertions();
@@ -809,7 +809,7 @@ describe('GitHubManager', () => {
             expect(result).toHaveLength(2);
             expect(nonNull(result[0]).number).toBe(1);
             expect(nonNull(result[1]).number).toBe(3);
-            expect(nonNull(result[1]).labels).toEqual(['bug']);
+            expect(nonNull(result[1]).labels).toStrictEqual(['bug']);
         });
 
         it('returns empty array when data is not an array', async () => {expect.hasAssertions();
@@ -817,7 +817,7 @@ describe('GitHubManager', () => {
             mockClient.get.mockResolvedValue({ data: { message: 'not an array', something: true } });
             const result = await manager.getOpenIssues();
 
-            expect(result).toEqual([]);
+            expect(result).toStrictEqual([]);
         });
     });
 

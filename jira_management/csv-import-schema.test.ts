@@ -27,7 +27,7 @@ describe('TestCaseSchema', () => {
             steps: [{ fields: { Action: 'Enter user', Data: 'admin', 'Expected Result': 'Logged in' } }],
         };
 
-        expect(TestCaseSchema.parse(data)).toEqual(data);
+        expect(TestCaseSchema.parse(data)).toStrictEqual(data);
     });
 
     it('rejects empty title', () => {
@@ -106,7 +106,7 @@ describe('JiraPayloadSchema', () => {
             },
         };
 
-        expect(JiraPayloadSchema.parse(data)).toEqual(data);
+        expect(JiraPayloadSchema.parse(data)).toStrictEqual(data);
     });
 
     it('accepts payload with labels', () => {

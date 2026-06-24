@@ -99,7 +99,7 @@ describe('Integration: Cross-Squad Benchmark (FT-25)', () => {
             const { computeCrossSquadBenchmark } = await import('../../cross-squad-benchmark.js');
             const result = computeCrossSquadBenchmark(null);
 
-            expect(result.benchmarks).toEqual([]);
+            expect(result.benchmarks).toStrictEqual([]);
             expect(result.averageScore).toBe(0);
         });
 
@@ -108,7 +108,7 @@ describe('Integration: Cross-Squad Benchmark (FT-25)', () => {
             const { computeCrossSquadBenchmark } = await import('../../cross-squad-benchmark.js');
             const result = computeCrossSquadBenchmark(undefined);
 
-            expect(result.benchmarks).toEqual([]);
+            expect(result.benchmarks).toStrictEqual([]);
             expect(result.averageScore).toBe(0);
         });
     });

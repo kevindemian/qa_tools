@@ -137,7 +137,7 @@ describe('_JiraEnv', () => {
     it('returns jira config when all vars are set', () => {
         const result = mod._jiraEnv();
 
-        expect(result).toEqual({
+        expect(result).toStrictEqual({
             base: 'https://jira.example.com',
             token: 'token',
             xray: 'https://xray.example.com',
@@ -195,7 +195,7 @@ describe('DownloadTestArtifacts', () => {
 
         const result = await mod.downloadTestArtifacts(mockProvider, '1');
 
-        expect(result).toEqual(parseResult);
+        expect(result).toStrictEqual(parseResult);
         expect(mockListPipelineArtifacts).toHaveBeenCalledWith('1');
         expect(mockDownloadArtifact).toHaveBeenCalledWith(1);
         expect(mockParseTestResults).toHaveBeenCalledWith();
@@ -237,7 +237,7 @@ describe('DownloadTestArtifacts', () => {
 
         const result = await mod.downloadTestArtifacts(mockProvider, '1');
 
-        expect(result).toEqual(parseResult);
+        expect(result).toStrictEqual(parseResult);
         expect(mockParseTestResults).toHaveBeenCalledWith();
     });
 
@@ -335,7 +335,7 @@ describe('ParseTestResults', () => {
 
         const result = await mod.parseTestResults(parsed);
 
-        expect(result).toEqual({
+        expect(result).toStrictEqual({
             matched: [{ key: 'TEST-1', title: 'test1', status: 'passed', duration: 100 }],
             unmatched: [],
             csvName: 'cypress',

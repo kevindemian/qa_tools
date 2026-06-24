@@ -28,7 +28,7 @@ describe('StatsFromTests', () => {
     it('returns zeroes for empty array', () => {
         const stats = statsFromTests([]);
 
-        expect(stats).toEqual({ passed: 0, failed: 0, skipped: 0, total: 0, duration: 0 });
+        expect(stats).toStrictEqual({ passed: 0, failed: 0, skipped: 0, total: 0, duration: 0 });
     });
 
     it('handles all-passed tests', () => {

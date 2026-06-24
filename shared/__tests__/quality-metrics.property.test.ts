@@ -159,8 +159,8 @@ describe('QualityMetricsCollector — property-based', () => {
                 const collector = new QualityMetricsCollector();
                 for (const id of fires) collector.recordInvariantFire(id);
 
-                expect(collector.detectDrift([])).toEqual([]);
-                expect(collector.detectDrift([snapshotBase()])).toEqual([]);
+                expect(collector.detectDrift([])).toStrictEqual([]);
+                expect(collector.detectDrift([snapshotBase()])).toStrictEqual([]);
             }),
             { numRuns: 50 },
         );
@@ -186,7 +186,7 @@ describe('QualityMetricsCollector — property-based', () => {
                     // Only 1 snapshot → should be empty
                     const alerts = collector.detectDrift(snapshots);
 
-                    expect(alerts).toEqual([]);
+                    expect(alerts).toStrictEqual([]);
                 },
             ),
             { numRuns: 50 },

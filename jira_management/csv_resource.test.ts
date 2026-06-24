@@ -32,14 +32,14 @@ describe('CsvResource', () => {
 
     describe('ParsePrecondition', () => {
         it('detects reference type for Jira keys', () => {
-            expect(csvResource.parsePrecondition('ECSPOL-PRE-42')).toEqual({
+            expect(csvResource.parsePrecondition('ECSPOL-PRE-42')).toStrictEqual({
                 type: 'reference',
                 value: 'ECSPOL-PRE-42',
             });
         });
 
         it('detects inline type for plain text', () => {
-            expect(csvResource.parsePrecondition('User must be logged in')).toEqual({
+            expect(csvResource.parsePrecondition('User must be logged in')).toStrictEqual({
                 type: 'inline',
                 value: 'User must be logged in',
             });
@@ -53,21 +53,21 @@ describe('CsvResource', () => {
         });
 
         it('extracts key from KEY-100 (descricao)', () => {
-            expect(csvResource.parsePrecondition('ECSPOL-PRE-42 (descricao do pre-cond)')).toEqual({
+            expect(csvResource.parsePrecondition('ECSPOL-PRE-42 (descricao do pre-cond)')).toStrictEqual({
                 type: 'reference',
                 value: 'ECSPOL-PRE-42',
             });
         });
 
         it('extracts key from KEY-100 (with extra parenthetical info)', () => {
-            expect(csvResource.parsePrecondition('ABC-123 (some context here)')).toEqual({
+            expect(csvResource.parsePrecondition('ABC-123 (some context here)')).toStrictEqual({
                 type: 'reference',
                 value: 'ABC-123',
             });
         });
 
         it('returns inline for multi-line text (already extracted)', () => {
-            expect(csvResource.parsePrecondition('User must be logged in\nwith admin privileges')).toEqual({
+            expect(csvResource.parsePrecondition('User must be logged in\nwith admin privileges')).toStrictEqual({
                 type: 'inline',
                 value: 'User must be logged in\nwith admin privileges',
             });
@@ -93,7 +93,7 @@ describe('CsvResource', () => {
             );
             const results = await csvResource.readBulkCsv(tmp);
 
-            expect(nonNull(results[0]).precondition).toEqual({
+            expect(nonNull(results[0]).precondition).toStrictEqual({
                 type: 'inline',
                 value: 'User must be logged in\nwith admin privileges\nand valid SSL cert',
             });
@@ -118,7 +118,7 @@ describe('CsvResource', () => {
             );
             const results = await csvResource.readBulkCsv(tmp);
 
-            expect(nonNull(results[0]).precondition).toEqual({
+            expect(nonNull(results[0]).precondition).toStrictEqual({
                 type: 'inline',
                 value: 'User must be logged in',
             });
@@ -142,7 +142,7 @@ describe('CsvResource', () => {
             );
             const results = await csvResource.readBulkCsv(tmp);
 
-            expect(nonNull(results[0]).precondition).toEqual({
+            expect(nonNull(results[0]).precondition).toStrictEqual({
                 type: 'inline',
                 value: 'User must be logged in',
             });
@@ -175,13 +175,13 @@ describe('CsvResource', () => {
         it('parses single linked issue', () => {
             const lines = ['Title: Test', 'Linked Issues: ECSPOL-100 (is tested by)', 'Action,Data,Expected'];
 
-            expect(csvResource.parseLinkedIssues(lines)).toEqual([{ key: 'ECSPOL-100', linkType: 'is tested by' }]);
+            expect(csvResource.parseLinkedIssues(lines)).toStrictEqual([{ key: 'ECSPOL-100', linkType: 'is tested by' }]);
         });
 
         it('parses multiple linked issues', () => {
             const lines = ['Title: Test', 'Linked Issues: ECSPOL-100 (is tested by), ECSPOL-200 (relates to)'];
 
-            expect(csvResource.parseLinkedIssues(lines)).toEqual([
+            expect(csvResource.parseLinkedIssues(lines)).toStrictEqual([
                 { key: 'ECSPOL-100', linkType: 'is tested by' },
                 { key: 'ECSPOL-200', linkType: 'relates to' },
             ]);
@@ -190,7 +190,7 @@ describe('CsvResource', () => {
         it('returns empty array when no Linked Issues header', () => {
             const lines = ['Title: Test', 'Action,Data,Expected'];
 
-            expect(csvResource.parseLinkedIssues(lines)).toEqual([]);
+            expect(csvResource.parseLinkedIssues(lines)).toStrictEqual([]);
         });
     });
 
@@ -357,7 +357,7 @@ describe('CsvResource', () => {
         it('returns empty array when Linked Issues value is empty', () => {
             const lines = ['Title: Test', 'Linked Issues:   ', 'Action,Data,Expected'];
 
-            expect(csvResource.parseLinkedIssues(lines)).toEqual([]);
+            expect(csvResource.parseLinkedIssues(lines)).toStrictEqual([]);
         });
     });
 

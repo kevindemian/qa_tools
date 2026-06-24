@@ -40,7 +40,7 @@ describe('CypressTest', () => {
 
             const result = await cypressTest.parseResults('/fake/path');
 
-            expect(result).toEqual({ avgPassed: 0, avgFailed: 0, percentPassed: 0 });
+            expect(result).toStrictEqual({ avgPassed: 0, avgFailed: 0, percentPassed: 0 });
         });
 
         it('averages correctly across multiple blocks', async () => {expect.hasAssertions();
@@ -90,7 +90,7 @@ describe('CypressTest', () => {
             const result = await cypressTest.parseResults('/fake/path');
 
             expect(rootLogger['warn']).toHaveBeenCalledWith('Skipping block 1: not enough numeric lines');
-            expect(result).toEqual({ avgPassed: 0, avgFailed: 0, percentPassed: 0 });
+            expect(result).toStrictEqual({ avgPassed: 0, avgFailed: 0, percentPassed: 0 });
         });
 
         it('returns zero percent when total tests is zero', async () => {expect.hasAssertions();

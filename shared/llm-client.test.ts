@@ -292,7 +292,7 @@ describe('LlmPrompt', () => {
         await llmPrompt({ tier: 'main', system: 'system', user: 'json test', responseFormat: 'json' });
         const body = safeParseJson<Record<string, unknown>>(mockFetch.mock.calls[0]?.[1]?.body as string, {});
 
-        expect(body['response_format']).toEqual({ type: 'json_object' });
+        expect(body['response_format']).toStrictEqual({ type: 'json_object' });
     });
 
     it('different responseFormat produces different cache keys', async () => {expect.hasAssertions();
@@ -565,7 +565,7 @@ describe('LlmPrompt', () => {
             await llmPrompt({ tier: 'main', system: 'system', user: 'json test', responseFormat: 'json' });
             const body = safeParseJson<Record<string, unknown>>(mockFetch.mock.calls[0]?.[1]?.body as string, {});
 
-            expect(body['response_format']).toEqual({ type: 'json_object' });
+            expect(body['response_format']).toStrictEqual({ type: 'json_object' });
         });
 
         it('different responseFormat produces different cache keys (via metrics)', async () => {expect.hasAssertions();
@@ -678,7 +678,7 @@ describe('LlmPrompt', () => {
 
             const body = safeParseJson<Record<string, unknown>>(mockFetch.mock.calls[0]?.[1]?.body as string, {});
 
-            expect(body['response_format']).toEqual({ type: 'json_object' });
+            expect(body['response_format']).toStrictEqual({ type: 'json_object' });
         });
 
         it('23.3: uses different cache keys for different responseFormat', async () => {expect.hasAssertions();
@@ -902,7 +902,7 @@ describe('LlmPrompt', () => {
                 schema: okBooleanSchema,
             });
 
-            expect(result).toEqual({ ok: true });
+            expect(result).toStrictEqual({ ok: true });
         });
 
         it('retries with schema hints when first response is invalid', async () => {expect.hasAssertions();
@@ -921,7 +921,7 @@ describe('LlmPrompt', () => {
                 schema: okBooleanSchema,
             });
 
-            expect(result).toEqual({ ok: true });
+            expect(result).toStrictEqual({ ok: true });
             expect(mockFetch).toHaveBeenCalledTimes(2);
         });
 
@@ -963,7 +963,7 @@ describe('LlmPrompt', () => {
                 schema: okBooleanSchema,
             });
 
-            expect(result).toEqual({ ok: true });
+            expect(result).toStrictEqual({ ok: true });
             expect(mockFetch).toHaveBeenCalledTimes(1);
         });
 
@@ -999,7 +999,7 @@ describe('LlmPrompt', () => {
                 schema: okBooleanSchema,
             });
 
-            expect(result).toEqual({ ok: true });
+            expect(result).toStrictEqual({ ok: true });
             expect(mockFetch).toHaveBeenCalledTimes(3);
         });
 
@@ -1019,7 +1019,7 @@ describe('LlmPrompt', () => {
                 schema: okBooleanSchema,
             });
 
-            expect(result).toEqual({ ok: true });
+            expect(result).toStrictEqual({ ok: true });
             expect(mockFetch).toHaveBeenCalledTimes(2);
         });
 
@@ -1061,7 +1061,7 @@ describe('LlmPrompt', () => {
                 schema: okBooleanSchema,
             });
 
-            expect(result).toEqual({ ok: true });
+            expect(result).toStrictEqual({ ok: true });
             expect(mockFetch).toHaveBeenCalledTimes(1);
         });
 
@@ -1097,7 +1097,7 @@ describe('LlmPrompt', () => {
                 schema: okBooleanSchema,
             });
 
-            expect(result).toEqual({ ok: true });
+            expect(result).toStrictEqual({ ok: true });
             expect(mockFetch).toHaveBeenCalledTimes(3);
         });
     });
@@ -1225,7 +1225,7 @@ describe('LlmPrompt', () => {
             await llmPrompt({ tier: 'report', system: 'system', user: 'report test', responseFormat: 'json' });
             const body = safeParseJson<Record<string, unknown>>(mockFetch.mock.calls[0]?.[1]?.body as string, {});
 
-            expect(body['response_format']).toEqual({ type: 'json_object' });
+            expect(body['response_format']).toStrictEqual({ type: 'json_object' });
         });
     });
 
@@ -1322,7 +1322,7 @@ describe('LlmPrompt', () => {
                 schema: okBooleanSchema,
             });
 
-            expect(result).toEqual({ ok: true });
+            expect(result).toStrictEqual({ ok: true });
             expect(mockFetch).not.toHaveBeenCalled();
         });
 
@@ -1344,7 +1344,7 @@ describe('LlmPrompt', () => {
                 schema: okBooleanSchema,
             });
 
-            expect(result).toEqual({ ok: true });
+            expect(result).toStrictEqual({ ok: true });
             expect(warnSpy).toHaveBeenCalledWith(expect.stringContaining('LLM disk cache hit but schema invalid'));
             expect(mockFetch).toHaveBeenCalledTimes(1);
 

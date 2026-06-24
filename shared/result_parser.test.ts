@@ -70,14 +70,14 @@ describe('ParseMochawesome', () => {
     it('returns empty for null input', () => {
         const result = parseMochawesome(nullAs<MochawesomeData>());
 
-        expect(result.tests).toEqual([]);
+        expect(result.tests).toStrictEqual([]);
         expect(result.stats.total).toBe(0);
     });
 
     it('returns empty for input without results', () => {
         const result = parseMochawesome({});
 
-        expect(result.tests).toEqual([]);
+        expect(result.tests).toStrictEqual([]);
     });
 
     it('maps pending state to skipped', () => {
@@ -137,7 +137,7 @@ describe('ParseMochawesome', () => {
         };
         const result = parseMochawesome(input);
 
-        expect(result.tests).toEqual([]);
+        expect(result.tests).toStrictEqual([]);
         expect(result.stats.total).toBe(0);
     });
 });
@@ -169,7 +169,7 @@ describe('ParseCypressResults', () => {
 
         expect(result.error).toContain('Arquivo não encontrado');
         expect(result.stats.total).toBe(0);
-        expect(result.tests).toEqual([]);
+        expect(result.tests).toStrictEqual([]);
     });
 
     it('returns error for invalid JSON content', () => {
@@ -254,7 +254,7 @@ describe('ParseCtrfResults', () => {
     it('returns empty for missing tests array', () => {
         const result = parseCtrfResults(CTRF_EMPTY);
 
-        expect(result.tests).toEqual([]);
+        expect(result.tests).toStrictEqual([]);
     });
 
     it('maps pending/other status to skipped', () => {
@@ -324,19 +324,19 @@ describe('ParseTestResults (dispatch)', () => {
     it('returns empty for unknown format', () => {
         const result = parseTestResults({ unexpected: true });
 
-        expect(result.tests).toEqual([]);
+        expect(result.tests).toStrictEqual([]);
     });
 
     it('returns empty for null input', () => {
-        expect(parseTestResults(null).tests).toEqual([]);
+        expect(parseTestResults(null).tests).toStrictEqual([]);
     });
 
     it('returns empty for undefined input', () => {
-        expect(parseTestResults(undefined).tests).toEqual([]);
+        expect(parseTestResults(undefined).tests).toStrictEqual([]);
     });
 
     it('returns empty for empty object', () => {
-        expect(parseTestResults({}).tests).toEqual([]);
+        expect(parseTestResults({}).tests).toStrictEqual([]);
     });
 });
 

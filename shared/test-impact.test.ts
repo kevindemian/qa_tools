@@ -65,7 +65,7 @@ describe('AnalyzeTestImpact', () => {
             expect(result.confidence).toBe('high');
             expect(result.impactedTests).toHaveLength(2);
             expect(nonNull(result.impactedTests[0]).matchMode).toBe('jest_find_related');
-            expect(result.changedFiles).toEqual(['src/login.ts', 'src/auth.ts']);
+            expect(result.changedFiles).toStrictEqual(['src/login.ts', 'src/auth.ts']);
         });
 
         it('generates suggested command when jest is available', () => {
@@ -204,8 +204,8 @@ describe('AnalyzeTestImpact', () => {
         it('returns empty impact for empty diff', () => {
             const result = analyzeTestImpact('');
 
-            expect(result.changedFiles).toEqual([]);
-            expect(result.impactedTests).toEqual([]);
+            expect(result.changedFiles).toStrictEqual([]);
+            expect(result.impactedTests).toStrictEqual([]);
             expect(result.confidence).toBe('low');
         });
 
@@ -217,7 +217,7 @@ describe('AnalyzeTestImpact', () => {
 
             const result = analyzeTestImpact();
 
-            expect(result.changedFiles).toEqual([]);
+            expect(result.changedFiles).toStrictEqual([]);
             expect(result.confidence).toBe('low');
         });
 
@@ -225,7 +225,7 @@ describe('AnalyzeTestImpact', () => {
             mockPackageJson(false);
             const result = analyzeTestImpact('src/unrelated.ts');
 
-            expect(result.impactedTests).toEqual([]);
+            expect(result.impactedTests).toStrictEqual([]);
             expect(result.confidence).toBe('low');
         });
 
@@ -240,7 +240,7 @@ describe('AnalyzeTestImpact', () => {
 
             const result = analyzeTestImpact('src/login.ts');
 
-            expect(result.impactedTests).toEqual([]);
+            expect(result.impactedTests).toStrictEqual([]);
             expect(result.confidence).toBe('low');
         });
     });
@@ -252,7 +252,7 @@ describe('AnalyzeTestImpact', () => {
 
             const result = analyzeTestImpact();
 
-            expect(result.changedFiles).toEqual(['src/file1.ts', 'src/file2.ts']);
+            expect(result.changedFiles).toStrictEqual(['src/file1.ts', 'src/file2.ts']);
         });
     });
 
@@ -336,7 +336,7 @@ describe('GenerateTestSelectionJson', () => {
 
         const json = generateTestSelectionJson(result);
 
-        expect(json.changedFiles).toEqual(['src/login.ts']);
+        expect(json.changedFiles).toStrictEqual(['src/login.ts']);
         expect(json.impactedTests).toHaveLength(1);
         expect(nonNull(json.impactedTests[0]).title).toBe('Login test');
         expect(nonNull(json.impactedTests[0]).testKey).toBe('PROJ-42');
@@ -344,7 +344,7 @@ describe('GenerateTestSelectionJson', () => {
         expect(json.suggestedCommand).toBe('npx jest --findRelatedTests src/login.ts');
         expect(json.confidence).toBe('high');
         expect(json.conservative).toBeFalsy();
-        expect(json.smokeTests).toEqual([]);
+        expect(json.smokeTests).toStrictEqual([]);
         expect(json.generatedAt).toBeTruthy();
     });
 
@@ -362,7 +362,7 @@ describe('GenerateTestSelectionJson', () => {
         });
 
         expect(json.conservative).toBeTruthy();
-        expect(json.smokeTests).toEqual(['smoke-health', 'smoke-auth']);
+        expect(json.smokeTests).toStrictEqual(['smoke-health', 'smoke-auth']);
     });
 
     it('handles empty impact gracefully', () => {
@@ -374,8 +374,8 @@ describe('GenerateTestSelectionJson', () => {
         };
         const json = generateTestSelectionJson(result);
 
-        expect(json.changedFiles).toEqual([]);
-        expect(json.impactedTests).toEqual([]);
+        expect(json.changedFiles).toStrictEqual([]);
+        expect(json.impactedTests).toStrictEqual([]);
         expect(json.confidence).toBe('low');
     });
 

@@ -172,7 +172,7 @@ describe('ParseRawOnce', () => {
     it('parses valid JSON string', () => {
         const result = parseRawOnce('{"key": "value"}');
 
-        expect(result).toEqual({ key: 'value' });
+        expect(result).toStrictEqual({ key: 'value' });
     });
 
     it('returns null for invalid JSON', () => {

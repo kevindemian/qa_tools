@@ -57,7 +57,7 @@ describe('CreateMockConfig', () => {
     it('createMockConfigInstance getAllPrefixed returns empty object when called', () => {
         const instance = createMockConfigInstance();
 
-        expect(instance.getAllPrefixed('test')).toEqual({});
+        expect(instance.getAllPrefixed('test')).toStrictEqual({});
     });
 
     it('createMockConfigInstance merges overrides', () => {

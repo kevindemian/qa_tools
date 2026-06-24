@@ -67,7 +67,7 @@ describe('GetOpenIssues', () => {
         expect(nonNull(result[0]).number).toBe(1);
         expect(nonNull(result[0]).title).toBe('Bug fix');
         expect(nonNull(result[1]).number).toBe(3);
-        expect(nonNull(result[1]).labels).toEqual(['enhancement']);
+        expect(nonNull(result[1]).labels).toStrictEqual(['enhancement']);
         expect(mockApiGet).toHaveBeenCalledWith(client, '/repos/myorg/myrepo/issues', {
             operation: 'buscar issues',
             params: { state: 'open', per_page: 30 },
@@ -80,7 +80,7 @@ describe('GetOpenIssues', () => {
         mockApiGet.mockResolvedValue({ message: 'error', something: true });
         const result = await getOpenIssues(client, 'myorg', 'myrepo');
 
-        expect(result).toEqual([]);
+        expect(result).toStrictEqual([]);
     });
 
     it('returns empty array when apiGet returns null', async () => {expect.hasAssertions();
@@ -88,7 +88,7 @@ describe('GetOpenIssues', () => {
         mockApiGet.mockResolvedValue(null);
         const result = await getOpenIssues(client, 'myorg', 'myrepo');
 
-        expect(result).toEqual([]);
+        expect(result).toStrictEqual([]);
     });
 
     it('returns empty array when data is empty array', async () => {expect.hasAssertions();
@@ -96,7 +96,7 @@ describe('GetOpenIssues', () => {
         mockApiGet.mockResolvedValue([]);
         const result = await getOpenIssues(client, 'myorg', 'myrepo');
 
-        expect(result).toEqual([]);
+        expect(result).toStrictEqual([]);
     });
 
     it('handles items with missing optional fields gracefully', async () => {expect.hasAssertions();
@@ -107,7 +107,7 @@ describe('GetOpenIssues', () => {
         expect(result).toHaveLength(1);
         expect(nonNull(result[0]).number).toBe(1);
         expect(nonNull(result[0]).title).toBe('Minimal');
-        expect(nonNull(result[0]).labels).toEqual([]);
+        expect(nonNull(result[0]).labels).toStrictEqual([]);
         expect(nonNull(result[0]).html_url).toBe('');
     });
 
@@ -126,6 +126,6 @@ describe('GetOpenIssues', () => {
         ]);
         const result = await getOpenIssues(client, 'myorg', 'myrepo');
 
-        expect(nonNull(result[0]).labels).toEqual(['bug', 'critical']);
+        expect(nonNull(result[0]).labels).toStrictEqual(['bug', 'critical']);
     });
 });

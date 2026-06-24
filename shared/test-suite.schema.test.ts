@@ -8,7 +8,7 @@ import {
 
 describe('PreConditionSchema', () => {
     it('accepts valid preconditions', () => {
-        expect(PreConditionSchema.parse({ type: 'setup', description: 'User must be logged in' })).toEqual({
+        expect(PreConditionSchema.parse({ type: 'setup', description: 'User must be logged in' })).toStrictEqual({
             type: 'setup',
             description: 'User must be logged in',
         });
@@ -25,7 +25,7 @@ describe('PreConditionSchema', () => {
 
 describe('CoverageRefSchema', () => {
     it('accepts valid coverage ref', () => {
-        expect(CoverageRefSchema.parse({ criterionId: 'C-1', criterionText: 'User can log in' })).toEqual({
+        expect(CoverageRefSchema.parse({ criterionId: 'C-1', criterionText: 'User can log in' })).toStrictEqual({
             criterionId: 'C-1',
             criterionText: 'User can log in',
         });
@@ -83,13 +83,13 @@ describe('TestCaseSchema', () => {
         const withEvidence = { ...validTestCase, evidence: ['Criterion C-1: User can log in'] };
         const result = TestCaseSchema.parse(withEvidence);
 
-        expect(result.evidence).toEqual(['Criterion C-1: User can log in']);
+        expect(result.evidence).toStrictEqual(['Criterion C-1: User can log in']);
     });
 });
 
 describe('CoverageTableSchema', () => {
     it('accepts valid coverage table', () => {
-        expect(CoverageTableSchema.parse({ coverage: 95 })).toEqual({ coverage: 95 });
+        expect(CoverageTableSchema.parse({ coverage: 95 })).toStrictEqual({ coverage: 95 });
     });
 
     it('accepts coverage table with gaps', () => {
@@ -98,7 +98,7 @@ describe('CoverageTableSchema', () => {
             gaps: [{ criterion: 'Edge case X', reason: 'Not applicable to this feature' }],
         };
 
-        expect(CoverageTableSchema.parse(data)).toEqual(data);
+        expect(CoverageTableSchema.parse(data)).toStrictEqual(data);
     });
 
     it('rejects coverage < 0', () => {

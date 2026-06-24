@@ -29,8 +29,8 @@ describe('ComputeAiEffectiveness', () => {
         expect(result.totalModified).toBe(0);
         expect(result.totalDeleted).toBe(0);
         expect(result.topPromptVersion).toBe('');
-        expect(result.byVersion).toEqual([]);
-        expect(result.trend).toEqual([]);
+        expect(result.byVersion).toStrictEqual([]);
+        expect(result.trend).toStrictEqual([]);
         expect(result.timestamp).toBeTruthy();
     });
 
@@ -64,7 +64,7 @@ describe('ComputeAiEffectiveness', () => {
         expect(result.totalDeleted).toBe(1);
         expect(result.topPromptVersion).toBe('v1');
         expect(result.byVersion).toHaveLength(1);
-        expect(result.byVersion[0]).toEqual({ version: 'v1', count: 4, acceptanceRate: 50 });
+        expect(result.byVersion[0]).toStrictEqual({ version: 'v1', count: 4, acceptanceRate: 50 });
     });
 
     it('handles multiple versions', () => {

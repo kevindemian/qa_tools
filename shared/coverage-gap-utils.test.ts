@@ -83,11 +83,11 @@ describe('ExtractLinkedTestKeys', () => {
             issuelinks: [{ type: { name: 'Blocks' }, inwardIssue: { key: 'BUG-1' }, outwardIssue: { key: 'PROJ-1' } }],
         };
 
-        expect(extractLinkedTestKeys(fields)).toEqual([]);
+        expect(extractLinkedTestKeys(fields)).toStrictEqual([]);
     });
 
     it('returns empty array when no issuelinks', () => {
-        expect(extractLinkedTestKeys({})).toEqual([]);
+        expect(extractLinkedTestKeys({})).toStrictEqual([]);
     });
 });
 
@@ -174,13 +174,13 @@ describe('CheckQualityGate', () => {
         const byEpic: Record<string, EpicCoverage> = { __no_epic__: makeEpic(10) };
         const result = checkQualityGate(byEpic, 50);
 
-        expect(result.failingEpics).toEqual([]);
+        expect(result.failingEpics).toStrictEqual([]);
     });
 });
 
 describe('GetCoverageGateDefaults', () => {
     it('returns default minCoveragePct of 50', () => {
-        expect(getCoverageGateDefaults()).toEqual({ minCoveragePct: 50 });
+        expect(getCoverageGateDefaults()).toStrictEqual({ minCoveragePct: 50 });
     });
 });
 

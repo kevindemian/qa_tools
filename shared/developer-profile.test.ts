@@ -53,7 +53,7 @@ describe('BuildDeveloperProfile', () => {
 
         expect(alice).toBeDefined();
         expect(alice?.totalFailures).toBe(2);
-        expect(alice?.categories).toEqual({ api: 1, ui: 1 });
+        expect(alice?.categories).toStrictEqual({ api: 1, ui: 1 });
         expect(alice?.testsTouched).toBe(2);
         expect(alice?.failureRate).toBe(100);
         expect(alice?.topFailureCategory).toBe('api');
@@ -62,7 +62,7 @@ describe('BuildDeveloperProfile', () => {
 
         expect(bob).toBeDefined();
         expect(bob?.totalFailures).toBe(1);
-        expect(bob?.categories).toEqual({ api: 1 });
+        expect(bob?.categories).toStrictEqual({ api: 1 });
         expect(bob?.testsTouched).toBe(1);
         expect(bob?.failureRate).toBe(100);
     });

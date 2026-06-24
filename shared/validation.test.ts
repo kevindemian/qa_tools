@@ -6,7 +6,7 @@ describe('Validation — zod wrapper', () => {
             const schema = z.object({ name: z.string() });
             const result = parseOrThrow(schema, { name: 'test' });
 
-            expect(result).toEqual({ name: 'test' });
+            expect(result).toStrictEqual({ name: 'test' });
         });
 
         it('throws on invalid data', () => {
