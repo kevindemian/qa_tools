@@ -151,6 +151,7 @@ describe('pr-report entry point — CTRF parsing', () => {
         ]);
 
         const result = parseTestResultsFile(TEST_CTRF_PATH);
+
         expect(result.tests).toHaveLength(3);
         expect(result.stats.passed).toBe(1);
         expect(result.stats.failed).toBe(1);
@@ -161,6 +162,7 @@ describe('pr-report entry point — CTRF parsing', () => {
         createCtrfFixture([]);
 
         const result = parseTestResultsFile(TEST_CTRF_PATH);
+
         expect(result.tests).toHaveLength(0);
         expect(result.stats.total).toBe(0);
     });
@@ -172,6 +174,7 @@ describe('pr-report entry point — CTRF parsing', () => {
         ]);
 
         const result = parseTestResultsFile(TEST_CTRF_PATH);
+
         expect(result.stats.failed).toBe(2);
         expect(result.stats.passed).toBe(0);
     });
@@ -181,12 +184,15 @@ describe('pr-report entry point — CTRF parsing', () => {
 
         const result = parseTestResultsFile(TEST_CTRF_PATH);
         const test = result.tests[0] as import('../result_parser.js').FlatTest;
+
         expect(test.error).toBe('AssertionError: expected 1 to equal 2');
     });
 
     it('handles missing CTRF file gracefully', () => {
-        expect(fs.existsSync(TEST_CTRF_PATH)).toBe(false);
+        expect(fs.existsSync(TEST_CTRF_PATH)).toBeFalsy();
+
         const result = parseTestResultsFile(TEST_CTRF_PATH);
+
         expect(result.error).toBeDefined();
         expect(result.tests).toEqual([]);
     });
@@ -196,6 +202,7 @@ describe('pr-report entry point — CTRF parsing', () => {
 
         const result = parseTestResultsFile(TEST_CTRF_PATH);
         const test = result.tests[0] as (typeof result.tests)[number];
+
         expect(test.fullTitle).toBe('Root > Level1 > Level2 > deep-test');
     });
 
@@ -209,6 +216,7 @@ describe('pr-report entry point — CTRF parsing', () => {
         ]);
 
         const result = parseTestResultsFile(TEST_CTRF_PATH);
+
         expect(result.stats.passed).toBe(3);
         expect(result.stats.failed).toBe(1);
         expect(result.stats.skipped).toBe(1);
@@ -328,8 +336,10 @@ describe('pr-report entry point — flaky detection with quarantine', () => {
         await main();
 
         expect(postPrComment).toHaveBeenCalled();
+
         const firstCall = vi.mocked(postPrComment).mock.calls[0] as [string];
         const commentBody = firstCall[0];
+
         expect(commentBody).toContain('Quarantine');
         expect(commentBody).toContain('⚠️ New');
         expect(commentBody).toContain('flaky-test-1');
@@ -370,8 +380,10 @@ describe('pr-report entry point — flaky detection with quarantine', () => {
         await main();
 
         expect(postPrComment).toHaveBeenCalled();
+
         const firstCall2 = vi.mocked(postPrComment).mock.calls[0] as [string];
         const commentBody = firstCall2[0];
+
         expect(commentBody).toContain('🔒 Quarantined');
         expect(commentBody).not.toContain('⚠️ New');
 
@@ -397,8 +409,10 @@ describe('pr-report entry point — flaky detection with quarantine', () => {
         await main();
 
         expect(postPrComment).toHaveBeenCalled();
+
         const firstCall3 = vi.mocked(postPrComment).mock.calls[0] as [string];
         const commentBody = firstCall3[0];
+
         expect(commentBody).toContain('2 flaky test(s) not yet quarantined');
         expect(commentBody).toContain('Consider adding them to quarantine');
 
@@ -432,8 +446,10 @@ describe('pr-report entry point — flaky detection with quarantine', () => {
         await main();
 
         expect(postPrComment).toHaveBeenCalled();
+
         const firstCall4 = vi.mocked(postPrComment).mock.calls[0] as [string];
         const commentBody = firstCall4[0];
+
         expect(commentBody).not.toContain('not yet quarantined');
 
         exitSpy.mockRestore();
@@ -451,8 +467,10 @@ describe('pr-report entry point — flaky detection with quarantine', () => {
         await main();
 
         expect(postPrComment).toHaveBeenCalled();
+
         const firstCall5 = vi.mocked(postPrComment).mock.calls[0] as [string];
         const commentBody = firstCall5[0];
+
         expect(commentBody).not.toContain('⚠️ Flaky Tests');
 
         exitSpy.mockRestore();
@@ -494,19 +512,23 @@ describe('pr-report entry point — HTML report generation', () => {
 
         await main();
 
-        expect(fs.existsSync(TEST_HTML_PATH)).toBe(true);
+        expect(fs.existsSync(TEST_HTML_PATH)).toBeTruthy();
+
         const content = fs.readFileSync(TEST_HTML_PATH, 'utf8');
+
         expect(content).toBe('<html><body>Mock HTML Report</body></html>');
 
         expect(mockGenerateHtmlReport).toHaveBeenCalledTimes(1);
+
         const genCall0 = mockGenerateHtmlReport.mock.calls[0];
         const opts0 = genCall0?.[1] as Record<string, unknown> | undefined;
+
         expect(opts0).toBeDefined();
         expect(opts0?.['title']).toContain('PR Report');
         expect(opts0?.['branch']).toBe('feature-branch');
         expect(opts0?.['healthScore']).toBeDefined();
         expect(opts0?.['trends']).toEqual([]);
-        expect(opts0?.['includeChart']).toBe(true);
+        expect(opts0?.['includeChart']).toBeTruthy();
 
         exitSpy.mockRestore();
     });
@@ -536,9 +558,11 @@ describe('pr-report entry point — HTML report generation', () => {
         await main();
 
         expect(mockGenerateHtmlReport).toHaveBeenCalledTimes(1);
+
         const genCall2 = mockGenerateHtmlReport.mock.calls[0];
         const opts2 = genCall2?.[1] as Record<string, unknown> | undefined;
         const hs = opts2?.['healthScore'] as Record<string, unknown> | undefined;
+
         expect(hs?.['overall']).toBe(75);
         expect(hs?.['grade']).toBe('needs_attention');
 
@@ -576,11 +600,13 @@ describe('pr-report entry point — HTML report generation', () => {
         await main();
 
         expect(mockGenerateHtmlReport).toHaveBeenCalledTimes(1);
+
         const genCall3 = mockGenerateHtmlReport.mock.calls[0];
         const opts3 = genCall3?.[1] as Record<string, unknown> | undefined;
         const diff = opts3?.['diffComparison'] as Record<string, unknown> | undefined;
+
         expect(diff).toBeDefined();
-        expect(((diff?.['newFailures'] ?? []) as unknown[]).length).toBe(1);
+        expect(((diff?.['newFailures'] ?? []) as unknown[])).toHaveLength(1);
         expect((diff?.['newFailures'] as Array<{ title: string }> | undefined)?.[0]?.title).toBe('regression-test');
 
         exitSpy.mockRestore();
@@ -595,8 +621,10 @@ describe('pr-report entry point — HTML report generation', () => {
         await main();
 
         expect(mockGenerateHtmlReport).toHaveBeenCalledTimes(1);
+
         const genCall4 = mockGenerateHtmlReport.mock.calls[0];
         const opts4 = genCall4?.[1] as Record<string, unknown> | undefined;
+
         expect(opts4?.['diffComparison']).toBeUndefined();
 
         exitSpy.mockRestore();
@@ -617,9 +645,11 @@ describe('pr-report entry point — HTML report generation', () => {
         await main();
 
         expect(mockGenerateHtmlReport).toHaveBeenCalledTimes(1);
+
         const genFirstCall = mockGenerateHtmlReport.mock.calls[0];
         const options = genFirstCall?.[1] as Record<string, unknown> | undefined;
         const trends = options?.['trends'] as Array<{ label: string; passRate: number }> | undefined;
+
         expect(trends).toHaveLength(2);
         expect(trends?.[0]?.label).toBe('2026-06-11');
         expect(trends?.[1]?.passRate).toBe(95);
@@ -645,9 +675,11 @@ describe('pr-report entry point — HTML report generation', () => {
 
         const crFirstArg = mockCreateCheckRun.mock.calls[0]?.[0] as Record<string, unknown> | undefined;
         const crOutput = crFirstArg?.['output'] as Record<string, unknown> | undefined;
+
         expect(crOutput?.['title'] as string).toContain('Grade: GOOD');
 
         const summary = crOutput?.['summary'] as string | undefined;
+
         expect(summary).toContain('Download HTML report');
         expect(summary).toContain('https://github.com/owner/repo/actions/runs/run-123?pr=1#artifacts');
         expect(summary).not.toContain('](#artifacts)');
@@ -670,9 +702,11 @@ describe('pr-report entry point — HTML report generation', () => {
         await main();
 
         expect(mockGenerateHtmlReport).toHaveBeenCalledTimes(1);
+
         const genFirstCall = mockGenerateHtmlReport.mock.calls[0];
         const options = genFirstCall?.[1] as Record<string, unknown> | undefined;
         const flakinessMap = options?.['flakinessMap'] as Record<string, number> | undefined;
+
         expect(flakinessMap).toBeDefined();
         expect(flakinessMap?.['flaky-1']).toBe(0.5);
         expect(flakinessMap?.['flaky-2']).toBe(0.33);
@@ -689,8 +723,10 @@ describe('pr-report entry point — HTML report generation', () => {
         await main();
 
         expect(mockGenerateHtmlReport).toHaveBeenCalledTimes(1);
+
         const genCall = mockGenerateHtmlReport.mock.calls[0];
         const opts = genCall?.[1] as Record<string, unknown> | undefined;
+
         expect(opts?.['coverageSource']).toBe('none');
 
         exitSpy.mockRestore();
@@ -708,8 +744,10 @@ describe('pr-report entry point — HTML report generation', () => {
         await main();
 
         expect(mockGenerateHtmlReport).toHaveBeenCalledTimes(1);
+
         const genFirstCall = mockGenerateHtmlReport.mock.calls[0];
         const opts = genFirstCall?.[1] as Record<string, unknown> | undefined;
+
         expect((opts?.['title'] ?? '') as string).not.toContain('(');
         expect(opts?.['ciUrl']).toBeUndefined();
         expect(opts?.['branch']).toBeUndefined();

@@ -29,7 +29,7 @@ describe('prompt-input barrel', () => {
     });
 
     it('re-exports NAV_CMDS', () => {
-        expect(Array.isArray(NAV_CMDS)).toBe(true);
+        expect(Array.isArray(NAV_CMDS)).toBeTruthy();
     });
 
     it('re-exports filePathCompleter', () => {

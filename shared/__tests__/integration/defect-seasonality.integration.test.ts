@@ -30,11 +30,12 @@ describe('Integration: Defect Seasonality (FT-21)', () => {
         it('groups by day and hour', async () => {
             const { aggregateDefectSeasonality } = await import('../../defect-seasonality.js');
             const result = aggregateDefectSeasonality(makeClassifications());
+
             expect(result.totalRecords).toBe(4);
             expect(result.peakDay).toBe('Mon');
             expect(result.peakHour).toBe(10);
-            expect(result.byDayOfWeek.length).toBe(7);
-            expect(result.byHour.length).toBe(24);
+            expect(result.byDayOfWeek).toHaveLength(7);
+            expect(result.byHour).toHaveLength(24);
         });
 
         it('returns correct day distribution', async () => {
@@ -42,9 +43,12 @@ describe('Integration: Defect Seasonality (FT-21)', () => {
             const result = aggregateDefectSeasonality(makeClassifications());
             const monday = result.byDayOfWeek.find((d) => d.dayOfWeek === 'Mon');
             if (monday === undefined) throw new Error('Monday not found');
+
             expect(monday.total).toBe(3);
+
             const tuesday = result.byDayOfWeek.find((d) => d.dayOfWeek === 'Tue');
             if (tuesday === undefined) throw new Error('Tuesday not found');
+
             expect(tuesday.total).toBe(1);
         });
     });
@@ -53,22 +57,25 @@ describe('Integration: Defect Seasonality (FT-21)', () => {
         it('returns zero-filled result for empty array', async () => {
             const { aggregateDefectSeasonality } = await import('../../defect-seasonality.js');
             const result = aggregateDefectSeasonality([]);
+
             expect(result.totalRecords).toBe(0);
             expect(result.peakDay).toBe('N/A');
             expect(result.peakHour).toBe(-1);
-            expect(result.byDayOfWeek.every((d) => d.total === 0)).toBe(true);
-            expect(result.byHour.every((h) => h.total === 0)).toBe(true);
+            expect(result.byDayOfWeek.every((d) => d.total === 0)).toBeTruthy();
+            expect(result.byHour.every((h) => h.total === 0)).toBeTruthy();
         });
 
         it('returns zero-filled result for null', async () => {
             const { aggregateDefectSeasonality } = await import('../../defect-seasonality.js');
             const result = aggregateDefectSeasonality(null);
+
             expect(result.totalRecords).toBe(0);
         });
 
         it('returns zero-filled result for undefined', async () => {
             const { aggregateDefectSeasonality } = await import('../../defect-seasonality.js');
             const result = aggregateDefectSeasonality(undefined);
+
             expect(result.totalRecords).toBe(0);
         });
     });
@@ -78,6 +85,7 @@ describe('Integration: Defect Seasonality (FT-21)', () => {
             const { aggregateDefectSeasonality, generateSeasonalityHtml } = await import('../../defect-seasonality.js');
             const result = aggregateDefectSeasonality(makeClassifications());
             const html = generateSeasonalityHtml(result, 'Seasonality Report');
+
             expect(html).toContain('<!DOCTYPE html>');
             expect(html).toContain('Seasonality Report');
             expect(html).toContain('Mon');
@@ -97,6 +105,7 @@ describe('Integration: Defect Seasonality (FT-21)', () => {
                 timestamp: '2026-06-01T00:00:00Z',
             };
             const html = generateSeasonalityHtml(emptyResult);
+
             expect(html).toContain('No defect data available.');
         });
     });
@@ -105,6 +114,7 @@ describe('Integration: Defect Seasonality (FT-21)', () => {
         it('returns zero-filled result when aggregation receives null', async () => {
             const { aggregateDefectSeasonality } = await import('../../defect-seasonality.js');
             const result = aggregateDefectSeasonality(null);
+
             expect(result.byDayOfWeek).toHaveLength(7);
             expect(result.byHour).toHaveLength(24);
             expect(result.totalRecords).toBe(0);
@@ -124,7 +134,9 @@ describe('Integration: Defect Seasonality (FT-21)', () => {
             ];
             const result = aggregateDefectSeasonality(input);
             const html = generateSeasonalityHtml(result);
+
             expect(html).toContain('Error generating dashboard');
+
             spy.mockRestore();
         });
     });

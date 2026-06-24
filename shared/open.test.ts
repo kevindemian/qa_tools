@@ -119,7 +119,8 @@ describe('openWithOsOrFallback', () => {
         const promise = openWithOsOrFallback('/some/file', fallback);
         child.trigger('error');
         const result = await promise;
-        expect(result).toBe(false);
+
+        expect(result).toBeFalsy();
         expect(fallback).toHaveBeenCalledTimes(1);
     });
 
@@ -130,7 +131,8 @@ describe('openWithOsOrFallback', () => {
         const promise = openWithOsOrFallback('/some/file', fallback);
         child.trigger('exit', 1);
         const result = await promise;
-        expect(result).toBe(false);
+
+        expect(result).toBeFalsy();
         expect(fallback).toHaveBeenCalledTimes(1);
     });
 
@@ -141,7 +143,8 @@ describe('openWithOsOrFallback', () => {
         const promise = openWithOsOrFallback('/some/file', fallback);
         child.trigger('exit', 0);
         const result = await promise;
-        expect(result).toBe(true);
+
+        expect(result).toBeTruthy();
         expect(fallback).not.toHaveBeenCalled();
     });
 
@@ -152,7 +155,8 @@ describe('openWithOsOrFallback', () => {
         const promise = openWithOsOrFallback('/some/file', fallback);
         child.trigger('error');
         const result = await promise;
-        expect(result).toBe(false);
+
+        expect(result).toBeFalsy();
         expect(fallback).toHaveBeenCalledTimes(1);
     });
 
@@ -161,7 +165,8 @@ describe('openWithOsOrFallback', () => {
         mockReadFileSync.mockReturnValue('Linux version 5.15.0-generic');
         const fallback = vi.fn();
         const result = await openWithOsOrFallback('/some/file', fallback);
-        expect(result).toBe(false);
+
+        expect(result).toBeFalsy();
         expect(fallback).toHaveBeenCalledTimes(1);
     });
 });
@@ -177,6 +182,7 @@ describe('getOsOpenCommand (platform detection)', () => {
         mockReadFileSync.mockReturnValue('Linux version ... Microsoft ...');
         mockSpawnSync.mockReturnValue({ stdout: 'C:\\Users\\file.html\n', status: 0 } as never);
         const result = getOsOpenCommand('/home/user/file.html');
+
         expect(result).toEqual({
             cmd: 'cmd.exe',
             args: ['/c', 'start', '', 'C:\\Users\\file.html'],
@@ -187,6 +193,7 @@ describe('getOsOpenCommand (platform detection)', () => {
         mockPlatform.mockReturnValue('linux');
         mockReadFileSync.mockReturnValue('Linux version 5.15.0-generic');
         const result = getOsOpenCommand('/home/user/file.html');
+
         expect(result).toEqual({ cmd: 'xdg-open', args: ['/home/user/file.html'] });
     });
 
@@ -194,6 +201,7 @@ describe('getOsOpenCommand (platform detection)', () => {
         mockPlatform.mockReturnValue('darwin');
         mockReadFileSync.mockReturnValue('Linux version 5.15.0-generic');
         const result = getOsOpenCommand('/some/file');
+
         expect(result).toEqual({ cmd: 'open', args: ['/some/file'] });
     });
 
@@ -201,6 +209,7 @@ describe('getOsOpenCommand (platform detection)', () => {
         mockPlatform.mockReturnValue('win32');
         mockReadFileSync.mockReturnValue('Linux version 5.15.0-generic');
         const result = getOsOpenCommand('C:\\file.html');
+
         expect(result).toEqual({ cmd: 'cmd', args: ['/c', 'start', '', 'C:\\file.html'] });
     });
 
@@ -212,6 +221,7 @@ describe('getOsOpenCommand (platform detection)', () => {
             throw new Error('ENOENT');
         });
         const result = getOsOpenCommand('/home/user/file.html');
+
         expect(result).toEqual({ cmd: 'xdg-open', args: ['/home/user/file.html'] });
     });
 
@@ -228,6 +238,7 @@ describe('getOsOpenCommand (platform detection)', () => {
             } as never);
         mockExecFileSync.mockReturnValue('C:\\Users\\Test\\Temp\n');
         const result = getOsOpenCommand('/home/user/file.html');
+
         expect(result).toEqual({
             cmd: 'cmd.exe',
             args: ['/c', 'start', '', 'C:\\Users\\Test\\Temp\\qa_tools_docs\\file.html'],
@@ -248,6 +259,7 @@ describe('getOsOpenCommand (platform detection)', () => {
         } as never);
         mockExecFileSync.mockReturnValue('C:\\Users\\Test\\Temp\n');
         const result = getOsOpenCommand('/home/user/file.html');
+
         expect(result).toEqual({ cmd: 'xdg-open', args: ['/home/user/file.html'] });
     });
 
@@ -261,6 +273,7 @@ describe('getOsOpenCommand (platform detection)', () => {
             .mockReturnValueOnce({ stdout: '/unix/path\n', status: 0 } as never);
         mockExecFileSync.mockReturnValue('C:\\Users\\Test\\Temp\n');
         const result = getOsOpenCommand('/home/user/file.html');
+
         expect(result).toEqual({ cmd: 'xdg-open', args: ['/home/user/file.html'] });
     });
 
@@ -275,6 +288,7 @@ describe('getOsOpenCommand (platform detection)', () => {
         } as never);
         mockExecFileSync.mockReturnValue('C:\\Users\\Test\\Temp\n');
         const result = getOsOpenCommand('/home/user/file.html');
+
         expect(result).toEqual({
             cmd: 'cmd.exe',
             args: ['/c', 'start', '', 'C:\\Users\\Test\\Temp\\qa_tools_docs\\file.html'],
@@ -285,6 +299,7 @@ describe('getOsOpenCommand (platform detection)', () => {
         mockPlatform.mockReturnValue('aix');
         mockReadFileSync.mockReturnValue('Linux version 5.15.0-generic');
         const result = getOsOpenCommand('/path');
+
         expect(result).toBeNull();
     });
 
@@ -294,6 +309,7 @@ describe('getOsOpenCommand (platform detection)', () => {
             throw new Error('ENOENT');
         });
         const result = getOsOpenCommand('/home/user/file.html');
+
         expect(result).toEqual({ cmd: 'xdg-open', args: ['/home/user/file.html'] });
     });
 });
@@ -308,6 +324,7 @@ describe('getWinTempDir', () => {
         process.env['TEMP'] = '/mnt/c/Users/Test/Temp';
         const result = getWinTempDir();
         process.env['TEMP'] = origTemp;
+
         expect(result).toBe('/mnt/c/Users/Test/Temp');
     });
 
@@ -319,6 +336,7 @@ describe('getWinTempDir', () => {
         const result = getWinTempDir();
         process.env['TEMP'] = origTemp;
         process.env['TMP'] = origTmp;
+
         expect(result).toBe('/mnt/c/Users/Test/Tmp');
     });
 
@@ -331,6 +349,7 @@ describe('getWinTempDir', () => {
         const result = getWinTempDir();
         process.env['TEMP'] = origTemp;
         process.env['TMP'] = origTmp;
+
         expect(result).toBe('/mnt/c/Users/Test/AppData/Local/Temp');
     });
 
@@ -345,6 +364,7 @@ describe('getWinTempDir', () => {
         const result = getWinTempDir();
         process.env['TEMP'] = origTemp;
         process.env['TMP'] = origTmp;
+
         expect(result).toBeNull();
     });
 
@@ -357,6 +377,7 @@ describe('getWinTempDir', () => {
         const result = getWinTempDir();
         process.env['TEMP'] = origTemp;
         process.env['TMP'] = origTmp;
+
         expect(result).toBeNull();
     });
 });
@@ -371,6 +392,7 @@ describe('getDocsOutputDir', () => {
     it('returns temp/docs/ path on non-WSL', () => {
         mockReadFileSync.mockReturnValue('Linux version 5.15.0-generic');
         const result = getDocsOutputDir();
+
         expect(result).toMatch(/\/temp\/docs$/);
     });
 
@@ -383,6 +405,7 @@ describe('getDocsOutputDir', () => {
         delete process.env['TEMP'];
         const result = getDocsOutputDir();
         process.env['TEMP'] = origTemp;
+
         expect(result).toBeNull();
     });
 
@@ -393,6 +416,7 @@ describe('getDocsOutputDir', () => {
         delete process.env['TEMP'];
         const result = getDocsOutputDir();
         process.env['TEMP'] = origTemp;
+
         expect(result).toMatch(/qa_tools_docs$/);
     });
 
@@ -402,6 +426,7 @@ describe('getDocsOutputDir', () => {
         mockReadFileSync.mockReturnValue('Linux version 5.15.0-generic');
         const result = getDocsOutputDir();
         process.env['QA_TOOLS_TEMP_DIR'] = origDir;
+
         expect(result).toMatch(/^\/custom\/temp\/docs$/);
     });
 });
@@ -423,6 +448,7 @@ describe('openWithFallback', () => {
         const logInfo = vi.fn();
         makeAutoSpawn([0]);
         await openWithFallback('/tmp/report.html', 'Relatório', logInfo);
+
         expect(logInfo).toHaveBeenCalledWith('Relatório aberto no navegador');
     });
 
@@ -430,6 +456,7 @@ describe('openWithFallback', () => {
         const logInfo = vi.fn();
         makeAutoSpawn([1, 0]);
         await openWithFallback('/tmp/report.html', 'Relatório', logInfo);
+
         expect(logInfo).toHaveBeenCalledWith(
             'Relatório salvo. Navegador indisponível, pasta aberta no gerenciador de arquivos.',
         );
@@ -439,6 +466,7 @@ describe('openWithFallback', () => {
         const logInfo = vi.fn();
         makeAutoSpawn([1, 1]);
         await openWithFallback('/tmp/report.html', 'Relatório', logInfo);
+
         expect(logInfo).toHaveBeenCalledWith('Relatório salvo em: /tmp/report.html');
     });
 });

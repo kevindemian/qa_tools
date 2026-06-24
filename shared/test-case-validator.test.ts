@@ -24,6 +24,7 @@ describe('TestCaseValidator — createTestCaseValidator', () => {
     it('creates validator with all invariants registered', () => {
         const v = createTestCaseValidator();
         const invariants = v.listInvariants();
+
         expect(invariants).toContain('T-01');
         expect(invariants).toContain('T-02');
         expect(invariants).toContain('T-03');
@@ -60,6 +61,7 @@ describe('TestCaseValidator — createTestCaseValidator', () => {
         };
         const ctx = makeCtx('Acceptance Criteria: User can log in');
         const result = v.validate(suite, ctx);
+
         // Should pass or only have warnings
         expect(result.failed).toBe(0);
     });
@@ -71,7 +73,8 @@ describe('invariantCoverageComplete (T-01)', () => {
             { tests: [{ title: 'Test login', coverage: [{ criterionId: 'C-1', criterionText: 'User can log in' }] }] },
             makeCtx('Acceptance Criteria: User can log in'),
         );
-        expect(results.some((r) => r.passed)).toBe(true);
+
+        expect(results.some((r) => r.passed)).toBeTruthy();
     });
 
     it('fails when criteria uncovered', () => {
@@ -79,21 +82,24 @@ describe('invariantCoverageComplete (T-01)', () => {
             { tests: [{ title: 'Test login', coverage: [{ criterionId: 'C-1', criterionText: 'User can log in' }] }] },
             makeCtx('Given user can log in\nWhen payment works'),
         );
+
         expect(
             results.some((r: { passed: boolean; invariantId: string }) => !r.passed && r.invariantId === 'T-01'),
-        ).toBe(true);
+        ).toBeTruthy();
     });
 });
 
 describe('invariantCoverageThreshold (T-02)', () => {
     it('passes when coverage >= 90', () => {
         const results = invariantCoverageThreshold({ coverageTable: { coverage: 95 } }, makeCtx(''));
-        expect(results.some((r) => r.passed)).toBe(true);
+
+        expect(results.some((r) => r.passed)).toBeTruthy();
     });
 
     it('fails when coverage < 90 and no gaps', () => {
         const results = invariantCoverageThreshold({ coverageTable: { coverage: 75 } }, makeCtx(''));
-        expect(results.some((r) => !r.passed && r.invariantId === 'T-02')).toBe(true);
+
+        expect(results.some((r) => !r.passed && r.invariantId === 'T-02')).toBeTruthy();
     });
 });
 
@@ -103,7 +109,8 @@ describe('invariantConcreteSteps (T-04)', () => {
             { tests: [{ steps: ['Click button', 'Enter text', 'Submit form', 'Verify result'] }] },
             makeCtx(''),
         );
-        expect(results.some((r) => r.passed)).toBe(true);
+
+        expect(results.some((r) => r.passed)).toBeTruthy();
     });
 
     it('fails on passive steps', () => {
@@ -111,7 +118,8 @@ describe('invariantConcreteSteps (T-04)', () => {
             { tests: [{ steps: ['validate that form works', 'check if button exists'] }] },
             makeCtx(''),
         );
-        expect(results.some((r) => !r.passed && r.invariantId === 'T-04')).toBe(true);
+
+        expect(results.some((r) => !r.passed && r.invariantId === 'T-04')).toBeTruthy();
     });
 });
 
@@ -121,7 +129,8 @@ describe('invariantVerifiableResult (T-05)', () => {
             { tests: [{ expectedResult: 'User is redirected to dashboard page with 200 status' }] },
             makeCtx(''),
         );
-        expect(results.some((r) => r.passed)).toBe(true);
+
+        expect(results.some((r) => r.passed)).toBeTruthy();
     });
 
     it('fails on vague result', () => {
@@ -129,14 +138,16 @@ describe('invariantVerifiableResult (T-05)', () => {
             { tests: [{ expectedResult: 'should work correctly' }] },
             makeCtx(''),
         );
-        expect(results.some((r) => !r.passed && r.invariantId === 'T-05')).toBe(true);
+
+        expect(results.some((r) => !r.passed && r.invariantId === 'T-05')).toBeTruthy();
     });
 });
 
 describe('invariantUniqueTitles (T-06)', () => {
     it('passes unique titles', () => {
         const results = invariantUniqueTitles({ tests: [{ title: 'Test A' }, { title: 'Test B' }] }, makeCtx(''));
-        expect(results.some((r) => r.passed)).toBe(true);
+
+        expect(results.some((r) => r.passed)).toBeTruthy();
     });
 
     it('fails on duplicate titles', () => {
@@ -144,7 +155,8 @@ describe('invariantUniqueTitles (T-06)', () => {
             { tests: [{ title: 'Same Title' }, { title: 'Same Title' }] },
             makeCtx(''),
         );
-        expect(results.some((r) => !r.passed && r.invariantId === 'T-06')).toBe(true);
+
+        expect(results.some((r) => !r.passed && r.invariantId === 'T-06')).toBeTruthy();
     });
 });
 
@@ -154,12 +166,14 @@ describe('invariantPreconditionsExist (T-07)', () => {
             { tests: [{ preConditions: [{ type: 'setup', description: 'd' }] }] },
             makeCtx(''),
         );
-        expect(results.some((r) => r.passed)).toBe(true);
+
+        expect(results.some((r) => r.passed)).toBeTruthy();
     });
 
     it('fails without preconditions', () => {
         const results = invariantPreconditionsExist({ tests: [{ preConditions: [] }] }, makeCtx(''));
-        expect(results.some((r) => !r.passed && r.invariantId === 'T-07')).toBe(true);
+
+        expect(results.some((r) => !r.passed && r.invariantId === 'T-07')).toBeTruthy();
     });
 });
 
@@ -169,7 +183,8 @@ describe('invariantResultMatchesAction (T-08)', () => {
             { tests: [{ steps: ['Create user', 'Submit form'], expectedResult: 'User created successfully' }] },
             makeCtx(''),
         );
-        expect(results.some((r) => r.passed && r.invariantId === 'T-08')).toBe(true);
+
+        expect(results.some((r) => r.passed && r.invariantId === 'T-08')).toBeTruthy();
     });
 
     it('warns when expectedResult does not match create action', () => {
@@ -178,6 +193,7 @@ describe('invariantResultMatchesAction (T-08)', () => {
             makeCtx(''),
         );
         const warnings = results.filter((r) => !r.passed && r.invariantId === 'T-08');
+
         expect(warnings.length).toBeGreaterThan(0);
     });
 
@@ -186,7 +202,8 @@ describe('invariantResultMatchesAction (T-08)', () => {
             { tests: [{ steps: ['Edit profile', 'Save changes'], expectedResult: 'Profile updated successfully' }] },
             makeCtx(''),
         );
-        expect(results.some((r) => r.passed && r.invariantId === 'T-08')).toBe(true);
+
+        expect(results.some((r) => r.passed && r.invariantId === 'T-08')).toBeTruthy();
     });
 
     it('warns when expectedResult does not match delete action', () => {
@@ -195,6 +212,7 @@ describe('invariantResultMatchesAction (T-08)', () => {
             makeCtx(''),
         );
         const warnings = results.filter((r) => !r.passed && r.invariantId === 'T-08');
+
         expect(warnings.length).toBeGreaterThan(0);
     });
 
@@ -203,12 +221,14 @@ describe('invariantResultMatchesAction (T-08)', () => {
             { tests: [{ steps: ['View page', 'Read info'], expectedResult: 'Info displayed' }] },
             makeCtx(''),
         );
-        expect(results.some((r) => r.passed)).toBe(true);
+
+        expect(results.some((r) => r.passed)).toBeTruthy();
     });
 
     it('fails when no tests exist', () => {
         const results = invariantResultMatchesAction({ tests: [] }, makeCtx(''));
-        expect(results.some((r) => !r.passed && r.invariantId === 'T-08')).toBe(true);
+
+        expect(results.some((r) => !r.passed && r.invariantId === 'T-08')).toBeTruthy();
     });
 });
 
@@ -218,7 +238,8 @@ describe('invariantNoDuplicateTests (T-10)', () => {
             { tests: [{ steps: ['Step one', 'Step two'] }, { steps: ['Different steps', 'Other actions'] }] },
             makeCtx(''),
         );
-        expect(results.some((r) => r.passed)).toBe(true);
+
+        expect(results.some((r) => r.passed)).toBeTruthy();
     });
 });
 
@@ -228,19 +249,22 @@ describe('invariantStateMutation (T-03)', () => {
             { tests: [{ steps: ['View page', 'Read data'] }] },
             makeCtx('Just viewing content'),
         );
-        expect(results.some((r) => r.passed)).toBe(true);
+
+        expect(results.some((r) => r.passed)).toBeTruthy();
     });
 });
 
 describe('invariantNumericConsistency (T-09)', () => {
     it('passes consistent numbers', () => {
         const results = invariantNumericConsistency({ item_count: 3, items: [1, 2, 3] }, makeCtx(''));
-        expect(results.some((r) => r.passed)).toBe(true);
+
+        expect(results.some((r) => r.passed)).toBeTruthy();
     });
 
     it('fails inconsistent numbers', () => {
         const results = invariantNumericConsistency({ item_count: 5, items: [1, 2, 3] }, makeCtx(''));
-        expect(results.some((r) => !r.passed && r.invariantId === 'T-09')).toBe(true);
+
+        expect(results.some((r) => !r.passed && r.invariantId === 'T-09')).toBeTruthy();
     });
 });
 
@@ -268,7 +292,8 @@ describe('invariantPartitionCoverage (T-11)', () => {
             },
             makeCtx('ages between 18 and 65'),
         );
-        expect(results.some((r) => r.passed && r.invariantId === 'T-11')).toBe(true);
+
+        expect(results.some((r) => r.passed && r.invariantId === 'T-11')).toBeTruthy();
     });
 
     it('passes when no numeric range is present (skipped)', () => {
@@ -276,7 +301,8 @@ describe('invariantPartitionCoverage (T-11)', () => {
             { tests: [{ title: 'Test', steps: ['Step'], expectedResult: 'OK' }] },
             makeCtx('No numbers here'),
         );
-        expect(results.some((r) => r.passed && r.invariantId === 'T-11')).toBe(true);
+
+        expect(results.some((r) => r.passed && r.invariantId === 'T-11')).toBeTruthy();
     });
 
     it('warns when below-min partition is missing', () => {
@@ -298,6 +324,7 @@ describe('invariantPartitionCoverage (T-11)', () => {
             makeCtx('ages between 18 and 65'),
         );
         const warnings = results.filter((r) => !r.passed && r.invariantId === 'T-11');
+
         expect(warnings.length).toBeGreaterThan(0);
         expect(warnings[0]?.message.toLowerCase()).toContain('below');
     });
@@ -321,13 +348,15 @@ describe('invariantPartitionCoverage (T-11)', () => {
             makeCtx('ages between 18 and 65'),
         );
         const warnings = results.filter((r) => !r.passed && r.invariantId === 'T-11');
+
         expect(warnings.length).toBeGreaterThan(0);
         expect(warnings[0]?.message.toLowerCase()).toContain('above');
     });
 
     it('fails when no tests exist', () => {
         const results = invariantPartitionCoverage({ tests: [] }, makeCtx('ages between 18 and 65'));
-        expect(results.some((r) => !r.passed && r.invariantId === 'T-11')).toBe(true);
+
+        expect(results.some((r) => !r.passed && r.invariantId === 'T-11')).toBeTruthy();
     });
 });
 
@@ -360,7 +389,8 @@ describe('invariantBoundaryCoverage (T-12)', () => {
             },
             makeCtx('ages between 18 and 65'),
         );
-        expect(results.some((r) => r.passed && r.invariantId === 'T-12')).toBe(true);
+
+        expect(results.some((r) => r.passed && r.invariantId === 'T-12')).toBeTruthy();
     });
 
     it('passes when no numeric range is present (skipped)', () => {
@@ -368,7 +398,8 @@ describe('invariantBoundaryCoverage (T-12)', () => {
             { tests: [{ title: 'Test', steps: ['Step'], expectedResult: 'OK' }] },
             makeCtx('No numbers here'),
         );
-        expect(results.some((r) => r.passed && r.invariantId === 'T-12')).toBe(true);
+
+        expect(results.some((r) => r.passed && r.invariantId === 'T-12')).toBeTruthy();
     });
 
     it('warns when some boundaries are missing', () => {
@@ -390,6 +421,7 @@ describe('invariantBoundaryCoverage (T-12)', () => {
             makeCtx('ages between 18 and 65'),
         );
         const warnings = results.filter((r) => !r.passed && r.invariantId === 'T-12');
+
         expect(warnings.length).toBeGreaterThan(0);
         // 18 and 65 covered but 17 and 66 missing
         expect(warnings[0]?.message).toContain('Missing');
@@ -397,7 +429,8 @@ describe('invariantBoundaryCoverage (T-12)', () => {
 
     it('fails when no tests exist', () => {
         const results = invariantBoundaryCoverage({ tests: [] }, makeCtx('ages between 18 and 65'));
-        expect(results.some((r) => !r.passed && r.invariantId === 'T-12')).toBe(true);
+
+        expect(results.some((r) => !r.passed && r.invariantId === 'T-12')).toBeTruthy();
     });
 });
 
@@ -407,7 +440,8 @@ describe('invariantRedundancyCoupling (T-13)', () => {
             { tests: [{ title: 'Only test', steps: ['Do something'] }] },
             makeCtx(''),
         );
-        expect(results.some((r) => r.passed && r.invariantId === 'T-13')).toBe(true);
+
+        expect(results.some((r) => r.passed && r.invariantId === 'T-13')).toBeTruthy();
     });
 
     it('passes with completely different tests', () => {
@@ -428,7 +462,8 @@ describe('invariantRedundancyCoupling (T-13)', () => {
             ],
         };
         const results = invariantRedundancyCoupling(artifact, makeCtx(''));
-        expect(results.some((r) => r.passed && r.invariantId === 'T-13')).toBe(true);
+
+        expect(results.some((r) => r.passed && r.invariantId === 'T-13')).toBeTruthy();
     });
 
     it('fails when steps are identical and title+result are similar (A + D → error)', () => {
@@ -450,6 +485,7 @@ describe('invariantRedundancyCoupling (T-13)', () => {
             makeCtx(''),
         );
         const errors = results.filter((r) => !r.passed && r.severity === 'error' && r.invariantId === 'T-13');
+
         expect(errors.length).toBeGreaterThan(0);
         expect(errors[0]?.message).toContain('identical');
     });
@@ -473,6 +509,7 @@ describe('invariantRedundancyCoupling (T-13)', () => {
             makeCtx(''),
         );
         const warnings = results.filter((r) => !r.passed && r.severity === 'warning' && r.invariantId === 'T-13');
+
         expect(warnings.length).toBeGreaterThan(0);
         expect(warnings[0]?.message).toContain('similar');
     });
@@ -508,6 +545,7 @@ describe('invariantRedundancyCoupling (T-13)', () => {
         );
         const warnings = results.filter((r) => !r.passed && r.severity === 'warning' && r.invariantId === 'T-13');
         const coverageWarnings = warnings.filter((w) => w.message.includes('coverage'));
+
         expect(coverageWarnings.length).toBeGreaterThan(0);
     });
 
@@ -529,6 +567,7 @@ describe('invariantRedundancyCoupling (T-13)', () => {
         const results = invariantRedundancyCoupling(artifact, makeCtx(''));
         const warnings = results.filter((r) => !r.passed && r.severity === 'warning' && r.invariantId === 'T-13');
         const couplingWarnings = warnings.filter((w) => w.message.includes('coupled'));
+
         expect(couplingWarnings.length).toBeGreaterThan(0);
     });
 
@@ -556,7 +595,8 @@ describe('invariantRedundancyCoupling (T-13)', () => {
         // But title+result: "age 18 boundary minimum valid registration accepted minimum boundary" vs "age 65 boundary maximum valid registration accepted maximum boundary"
         // Different enough → titleResultDupe should be false → no error
         const errors = results.filter((r) => !r.passed && r.severity === 'error' && r.invariantId === 'T-13');
-        expect(errors.length).toBe(0);
+
+        expect(errors).toHaveLength(0);
     });
 
     it('passes when coverage sets are completely different', () => {
@@ -577,7 +617,8 @@ describe('invariantRedundancyCoupling (T-13)', () => {
             ],
         };
         const results = invariantRedundancyCoupling(artifact, makeCtx(''));
-        expect(results.some((r) => r.passed && r.invariantId === 'T-13')).toBe(true);
+
+        expect(results.some((r) => r.passed && r.invariantId === 'T-13')).toBeTruthy();
     });
 
     it('warns on Portuguese resource coupling', () => {
@@ -600,6 +641,7 @@ describe('invariantRedundancyCoupling (T-13)', () => {
         );
         const warnings = results.filter((r) => !r.passed && r.severity === 'warning' && r.invariantId === 'T-13');
         const couplingWarnings = warnings.filter((w) => w.message.includes('coupled'));
+
         expect(couplingWarnings.length).toBeGreaterThan(0);
     });
 
@@ -621,8 +663,9 @@ describe('invariantRedundancyCoupling (T-13)', () => {
             },
             makeCtx(''),
         );
+
         // Different resource names → no coupling
-        expect(results.some((r) => r.passed && r.invariantId === 'T-13')).toBe(true);
+        expect(results.some((r) => r.passed && r.invariantId === 'T-13')).toBeTruthy();
     });
 
     it('detects both error and warning in the same test set', () => {
@@ -659,8 +702,11 @@ describe('invariantRedundancyCoupling (T-13)', () => {
         );
         const errors = results.filter((r) => !r.passed && r.severity === 'error' && r.invariantId === 'T-13');
         const warnings = results.filter((r) => !r.passed && r.severity === 'warning' && r.invariantId === 'T-13');
+
         expect(errors.length).toBeGreaterThan(0);
+
         const couplingWarnings = warnings.filter((w) => w.message.includes('coupled'));
+
         expect(couplingWarnings.length).toBeGreaterThan(0);
     });
 });
@@ -668,19 +714,22 @@ describe('invariantRedundancyCoupling (T-13)', () => {
 describe('T-01 edge cases', () => {
     it('fails when no tests exist', () => {
         const results = invariantCoverageComplete({ tests: [] }, makeCtx('Acceptance Criteria: User can log in'));
-        expect(results.some((r) => !r.passed && r.invariantId === 'T-01')).toBe(true);
+
+        expect(results.some((r) => !r.passed && r.invariantId === 'T-01')).toBeTruthy();
     });
 });
 
 describe('T-02 edge cases', () => {
     it('handles non-object artifact', () => {
         const results = invariantCoverageThreshold('string', makeCtx(''));
-        expect(results.some((r) => !r.passed && r.invariantId === 'T-02')).toBe(true);
+
+        expect(results.some((r) => !r.passed && r.invariantId === 'T-02')).toBeTruthy();
     });
 
     it('handles invalid coverage value', () => {
         const results = invariantCoverageThreshold({ coverageTable: { coverage: -1 } }, makeCtx(''));
-        expect(results.some((r) => !r.passed && r.invariantId === 'T-02')).toBe(true);
+
+        expect(results.some((r) => !r.passed && r.invariantId === 'T-02')).toBeTruthy();
     });
 
     it('passes when coverage < 90% with justified gaps', () => {
@@ -688,7 +737,8 @@ describe('T-02 edge cases', () => {
             { coverageTable: { coverage: 80, gaps: [{ reason: 'Not implemented yet' }] } },
             makeCtx(''),
         );
-        expect(results.some((r) => r.passed && r.invariantId === 'T-02')).toBe(true);
+
+        expect(results.some((r) => r.passed && r.invariantId === 'T-02')).toBeTruthy();
     });
 
     it('fails when gaps are missing reasons', () => {
@@ -696,7 +746,8 @@ describe('T-02 edge cases', () => {
             { coverageTable: { coverage: 80, gaps: [{ reason: '' }] } },
             makeCtx(''),
         );
-        expect(results.some((r) => !r.passed && r.invariantId === 'T-02')).toBe(true);
+
+        expect(results.some((r) => !r.passed && r.invariantId === 'T-02')).toBeTruthy();
     });
 });
 
@@ -706,54 +757,62 @@ describe('T-03 edge cases', () => {
             { tests: [{ title: 'Test', steps: ['Create user'], expectedResult: 'OK' }] },
             makeCtx('user can create and delete records'),
         );
-        expect(results.some((r) => !r.passed && r.invariantId === 'T-03')).toBe(true);
+
+        expect(results.some((r) => !r.passed && r.invariantId === 'T-03')).toBeTruthy();
     });
 });
 
 describe('T-04 edge cases', () => {
     it('fails when no tests exist', () => {
         const results = invariantConcreteSteps({ tests: [] }, makeCtx(''));
-        expect(results.some((r) => !r.passed && r.invariantId === 'T-04')).toBe(true);
+
+        expect(results.some((r) => !r.passed && r.invariantId === 'T-04')).toBeTruthy();
     });
 });
 
 describe('T-05 edge cases', () => {
     it('fails when no tests exist', () => {
         const results = invariantVerifiableResult({ tests: [] }, makeCtx(''));
-        expect(results.some((r) => !r.passed && r.invariantId === 'T-05')).toBe(true);
+
+        expect(results.some((r) => !r.passed && r.invariantId === 'T-05')).toBeTruthy();
     });
 });
 
 describe('T-06 edge cases', () => {
     it('fails when no tests exist', () => {
         const results = invariantUniqueTitles({ tests: [] }, makeCtx(''));
-        expect(results.some((r) => !r.passed && r.invariantId === 'T-06')).toBe(true);
+
+        expect(results.some((r) => !r.passed && r.invariantId === 'T-06')).toBeTruthy();
     });
 });
 
 describe('T-07 edge cases', () => {
     it('fails when no tests exist', () => {
         const results = invariantPreconditionsExist({ tests: [] }, makeCtx(''));
-        expect(results.some((r) => !r.passed && r.invariantId === 'T-07')).toBe(true);
+
+        expect(results.some((r) => !r.passed && r.invariantId === 'T-07')).toBeTruthy();
     });
 });
 
 describe('T-09 edge cases', () => {
     it('passes for non-object artifact', () => {
         const results = invariantNumericConsistency('string', makeCtx(''));
-        expect(results.some((r) => r.passed && r.invariantId === 'T-09')).toBe(true);
+
+        expect(results.some((r) => r.passed && r.invariantId === 'T-09')).toBeTruthy();
     });
 
     it('passes for array artifact', () => {
         const results = invariantNumericConsistency([1, 2, 3], makeCtx(''));
-        expect(results.some((r) => r.passed && r.invariantId === 'T-09')).toBe(true);
+
+        expect(results.some((r) => r.passed && r.invariantId === 'T-09')).toBeTruthy();
     });
 });
 
 describe('T-10 edge cases', () => {
     it('passes for fewer than 2 tests', () => {
         const results = invariantNoDuplicateTests({ tests: [{ title: 'Only test' }] }, makeCtx(''));
-        expect(results.some((r) => r.passed && r.invariantId === 'T-10')).toBe(true);
+
+        expect(results.some((r) => r.passed && r.invariantId === 'T-10')).toBeTruthy();
     });
 
     it('warns on similar test steps', () => {
@@ -766,14 +825,16 @@ describe('T-10 edge cases', () => {
             },
             makeCtx(''),
         );
-        expect(results.some((r) => !r.passed && r.invariantId === 'T-10')).toBe(true);
+
+        expect(results.some((r) => !r.passed && r.invariantId === 'T-10')).toBeTruthy();
     });
 });
 
 describe('T-11 edge cases', () => {
     it('fails when no tests exist', () => {
         const results = invariantPartitionCoverage({ tests: [] }, makeCtx('ages between 18 and 65'));
-        expect(results.some((r) => !r.passed && r.invariantId === 'T-11')).toBe(true);
+
+        expect(results.some((r) => !r.passed && r.invariantId === 'T-11')).toBeTruthy();
     });
 });
 
@@ -783,13 +844,15 @@ describe('T-01 more edge cases', () => {
             { tests: [{ title: 'User can log in to dashboard' }] },
             makeCtx('Acceptance Criteria: User can log in'),
         );
-        expect(results.some((r) => r.passed && r.invariantId === 'T-01')).toBe(true);
+
+        expect(results.some((r) => r.passed && r.invariantId === 'T-01')).toBeTruthy();
     });
 });
 
 describe('T-09 more edge cases', () => {
     it('skips non-numeric count values', () => {
         const results = invariantNumericConsistency({ item_count: 'N/A', items: [1, 2] }, makeCtx(''));
-        expect(results.some((r) => r.passed && r.invariantId === 'T-09')).toBe(true);
+
+        expect(results.some((r) => r.passed && r.invariantId === 'T-09')).toBeTruthy();
     });
 });

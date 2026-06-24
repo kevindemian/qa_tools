@@ -45,6 +45,7 @@ describe('IssueLinker', () => {
 
         it('returns null when no precondition', async () => {
             const result = await linker.associatePrecondition({ title: 'Test', steps: [] }, 'TEST-1', opLog);
+
             expect(result).toBeNull();
             expect(mockLinkManager['associatePrecondition']).not.toHaveBeenCalled();
         });
@@ -53,6 +54,7 @@ describe('IssueLinker', () => {
             mockLinkManager.associatePrecondition.mockResolvedValue(null);
             const test: TestCase = { title: 'Test', steps: [], precondition: { type: 'reference', value: 'PREC-001' } };
             const result = await linker.associatePrecondition(test, 'TEST-1', opLog);
+
             expect(result).toBeNull();
             expect(mockLinkManager['associatePrecondition']).toHaveBeenCalledWith('TEST-1', 'PREC-001');
         });
@@ -62,6 +64,7 @@ describe('IssueLinker', () => {
             mockPrompt.isQuiet.mockReturnValue(false);
             const test: TestCase = { title: 'Test', steps: [], precondition: { type: 'reference', value: 'PREC-001' } };
             await linker.associatePrecondition(test, 'TEST-1', opLog);
+
             expect(mockPrompt.success).toHaveBeenCalledWith('  Pre-condition PREC-001 associada');
         });
 
@@ -70,6 +73,7 @@ describe('IssueLinker', () => {
             mockPrompt.onError.mockReturnValue('abort');
             const test: TestCase = { title: 'Test', steps: [], precondition: { type: 'reference', value: 'PREC-001' } };
             const result = await linker.associatePrecondition(test, 'TEST-1', opLog);
+
             expect(result).toEqual({ action: 'abort' });
         });
     });
@@ -77,12 +81,14 @@ describe('IssueLinker', () => {
     describe('linkIssues', () => {
         it('returns null when no linkedIssues', async () => {
             const result = await linker.linkIssues('TEST-1', { title: 'Test', steps: [] });
+
             expect(result).toBeNull();
             expect(mockLinkManager['linkIssues']).not.toHaveBeenCalled();
         });
 
         it('returns null when linkedIssues is empty array', async () => {
             const result = await linker.linkIssues('TEST-1', { title: 'Test', steps: [], linkedIssues: [] });
+
             expect(result).toBeNull();
         });
 
@@ -94,6 +100,7 @@ describe('IssueLinker', () => {
                 linkedIssues: [{ key: 'BUG-1', linkType: 'is tested by' }],
             };
             const result = await linker.linkIssues('TEST-1', test);
+
             expect(result).toBeNull();
             expect(mockLinkManager['linkIssues']).toHaveBeenCalledWith('TEST-1', test.linkedIssues);
         });
@@ -107,6 +114,7 @@ describe('IssueLinker', () => {
                 linkedIssues: [{ key: 'BUG-1', linkType: 'is tested by' }],
             };
             await linker.linkIssues('TEST-1', test);
+
             expect(mockPrompt.success).toHaveBeenCalledWith('  1 linked issue(s) criados');
         });
 
@@ -119,6 +127,7 @@ describe('IssueLinker', () => {
                 linkedIssues: [{ key: 'BUG-1', linkType: 'is tested by' }],
             };
             const result = await linker.linkIssues('TEST-1', test);
+
             expect(result).toEqual({ action: 'retry' });
         });
     });
@@ -126,18 +135,21 @@ describe('IssueLinker', () => {
     describe('updateCrossReferences', () => {
         it('does nothing when tests array is empty', async () => {
             await linker.updateCrossReferences([], []);
+
             expect(mockJiraResource['getJiraResource']).not.toHaveBeenCalled();
         });
 
         it('skips tests without id or group', async () => {
             const tests: TestCase[] = [{ title: 'Test', steps: [], group: '' }];
             await linker.updateCrossReferences(tests, ['']);
+
             expect(mockJiraResource['getJiraResource']).not.toHaveBeenCalled();
         });
 
         it('skips groups with fewer than 2 members', async () => {
             const tests: TestCase[] = [{ title: 'Test', steps: [], group: 'G1' }];
             await linker.updateCrossReferences(tests, ['TEST-1']);
+
             expect(mockJiraResource['getJiraResource']).not.toHaveBeenCalled();
         });
 
@@ -151,6 +163,7 @@ describe('IssueLinker', () => {
                 { title: 'Test2', group: 'G1', description: 'Second', steps: [] },
             ];
             await linker.updateCrossReferences(tests, ['TEST-1', 'TEST-2']);
+
             expect(mockJiraResource['getJiraResource']).toHaveBeenCalledTimes(2);
             expect(mockJiraResource['putJiraResource']).toHaveBeenCalledTimes(2);
             expect(mockJiraResource['putJiraResource']).toHaveBeenCalledWith('issue/TEST-1', expect.any(Object));
@@ -166,6 +179,7 @@ describe('IssueLinker', () => {
                 { title: 'Test2', group: 'G1', steps: [] },
             ];
             await linker.updateCrossReferences(tests, ['TEST-1', 'TEST-2']);
+
             expect(mockJiraResource['putJiraResource']).not.toHaveBeenCalled();
         });
 
@@ -176,6 +190,7 @@ describe('IssueLinker', () => {
                 { title: 'Test2', group: 'G1', steps: [] },
             ];
             await linker.updateCrossReferences(tests, ['TEST-1', 'TEST-2']);
+
             expect(mockJiraResource['putJiraResource']).not.toHaveBeenCalled();
         });
 
@@ -189,6 +204,7 @@ describe('IssueLinker', () => {
                 { title: 'Test2', group: 'G1', steps: [] },
             ];
             await linker.updateCrossReferences(tests, ['TEST-1', 'TEST-2']);
+
             expect(mockJiraResource['putJiraResource']).toHaveBeenCalledTimes(2);
         });
 
@@ -203,6 +219,7 @@ describe('IssueLinker', () => {
                 { title: 'Test2', group: 'G1', steps: [] },
             ];
             await linker.updateCrossReferences(tests, ['TEST-1', 'TEST-2']);
+
             expect(mockPrompt.print).toHaveBeenCalledWith(expect.stringContaining('+'));
         });
 
@@ -217,6 +234,7 @@ describe('IssueLinker', () => {
                 { title: 'Test2', group: 'G1', steps: [] },
             ];
             await linker.updateCrossReferences(tests, ['TEST-1', 'TEST-2']);
+
             expect(mockPrompt.print).toHaveBeenCalledWith(expect.stringContaining('x'));
         });
     });

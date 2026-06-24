@@ -30,6 +30,7 @@ describe('smoke-xray-cloud', () => {
 
     it.runIf(process.env['XRAY_MODE'] === 'cloud')('default XrayClient instantiates from JiraResource', async () => {
         const mod = await import('../jira_management/xray-client.js');
+
         expect(mod).toBeDefined();
         expect(typeof (mod as Record<string, unknown>)['default']).toBe('undefined');
     });
@@ -41,8 +42,9 @@ describe('smoke-xray-cloud', () => {
         expect(importer).toBeDefined();
     });
 
-    it.runIf(process.env['XRAY_MODE'] === 'cloud')('JiraResource with cloud base URL is valid', () => {
+    it.runIf(process.env['XRAY_MODE'] === 'cloud')('jiraResource with cloud base URL is valid', () => {
         const jira = new JiraResource('test', 'https://example.atlassian.net');
+
         expect(jira.baseUrl).toContain('atlassian.net');
         expect(jira.baseUrl).toMatch(/^https/);
     });

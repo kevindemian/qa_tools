@@ -51,11 +51,13 @@ describe('TestHistoryCache', () => {
         const cache = new TestHistoryCache(60_000);
         const runs: TestRun[] = [{ status: 'PASSED', testExecKey: 'TE-1', startedOn: '2024-01-01' }];
         cache.set('TEST-123', runs);
+
         expect(cache.get('TEST-123')).toEqual(runs);
     });
 
     it('returns undefined for missing key', () => {
         const cache = new TestHistoryCache(60_000);
+
         expect(cache.get('TEST-999')).toBeUndefined();
     });
 
@@ -64,7 +66,9 @@ describe('TestHistoryCache', () => {
         const cache = new TestHistoryCache(5000);
         cache.set('TEST-123', [{ status: 'PASSED', testExecKey: 'TE-1' }]);
         vi.advanceTimersByTime(6000);
+
         expect(cache.get('TEST-123')).toBeUndefined();
+
         vi.useRealTimers();
     });
 
@@ -72,6 +76,7 @@ describe('TestHistoryCache', () => {
         const cache = new TestHistoryCache(60_000);
         cache.set('TEST-123', [{ status: 'PASSED', testExecKey: 'TE-1' }]);
         cache.clear();
+
         expect(cache.get('TEST-123')).toBeUndefined();
     });
 });
@@ -82,6 +87,7 @@ describe('createHistoryProvider', () => {
     it('returns ServerHistoryProvider when mode=server', () => {
         const jira = mockJiraResource();
         const provider = createHistoryProvider(jira, 'server');
+
         expect(provider).toBeDefined();
         expect(typeof provider.getHistory).toBe('function');
     });
@@ -89,6 +95,7 @@ describe('createHistoryProvider', () => {
     it('returns CloudHistoryProvider when mode=cloud', () => {
         const jira = mockJiraResource();
         const provider = createHistoryProvider(jira, 'cloud');
+
         expect(provider).toBeDefined();
         expect(typeof provider.getHistory).toBe('function');
     });
@@ -96,6 +103,7 @@ describe('createHistoryProvider', () => {
     it('uses Config default when mode is not specified', () => {
         const jira = mockJiraResource();
         const provider = createHistoryProvider(jira);
+
         expect(provider).toBeDefined();
         expect(typeof provider.getHistory).toBe('function');
     });
@@ -118,6 +126,7 @@ describe('ServerHistoryProvider', () => {
             { status: 'FAIL', testExecKey: 'TE-2', startedOn: '2024-01-02' },
         ]);
         const result = await provider.getHistory('TEST-123');
+
         expect(result).toHaveLength(2);
         expect(result[0]).toEqual({
             status: 'PASS',
@@ -137,12 +146,14 @@ describe('ServerHistoryProvider', () => {
     it('returns empty array on API error', async () => {
         mockOriginGet.mockRejectedValue(new Error('Network error'));
         const result = await provider.getHistory('TEST-123');
+
         expect(result).toEqual([]);
     });
 
     it('returns empty array when response is not an array', async () => {
         mockOriginGet.mockResolvedValue({ status: 'error' });
         const result = await provider.getHistory('TEST-123');
+
         expect(result).toEqual([]);
     });
 
@@ -153,12 +164,14 @@ describe('ServerHistoryProvider', () => {
         }));
         mockOriginGet.mockResolvedValue(manyRuns);
         const result = await provider.getHistory('TEST-123');
+
         expect(result).toHaveLength(20);
     });
 
     it('handles unknown status gracefully', async () => {
         mockOriginGet.mockResolvedValue([{ testExecKey: 'TE-1' }]);
         const result = await provider.getHistory('TEST-123');
+
         expect(result[0]?.status).toBe('UNKNOWN');
     });
 });
@@ -188,6 +201,7 @@ describe('CloudHistoryProvider', () => {
     it('returns empty array when issueId resolution fails', async () => {
         mockIssueGet.mockRejectedValue(new Error('Not found'));
         const result = await provider.getHistory('TEST-999');
+
         expect(result).toEqual([]);
     });
 
@@ -200,6 +214,7 @@ describe('CloudHistoryProvider', () => {
         };
         vi.spyOn(Config, 'getDefault').mockReturnValue(missingCredsConfig);
         const result = await provider.getHistory('TEST-123');
+
         expect(result).toEqual([]);
     });
 
@@ -207,6 +222,7 @@ describe('CloudHistoryProvider', () => {
         mockIssueGet.mockResolvedValue({ id: '12345' });
         mockGraphql.mockResolvedValue(null);
         const result = await provider.getHistory('TEST-123');
+
         expect(result).toEqual([]);
     });
 
@@ -240,6 +256,7 @@ describe('CloudHistoryProvider', () => {
         });
 
         const result = await provider.getHistory('TEST-123');
+
         expect(result).toHaveLength(2);
         expect(result[0]?.status).toBe('PASSED');
         expect(result[1]?.status).toBe('FAILED');
@@ -251,6 +268,7 @@ describe('CloudHistoryProvider', () => {
         mockIssueGet.mockResolvedValue({ id: '12345' });
         mockGraphql.mockRejectedValue(new Error('GraphQL error'));
         const result = await provider.getHistory('TEST-123');
+
         expect(result).toEqual([]);
     });
 
@@ -259,6 +277,7 @@ describe('CloudHistoryProvider', () => {
         mockGraphql.mockResolvedValue(null);
         await provider.getHistory('TEST-123');
         await provider.getHistory('TEST-123');
+
         expect(mockIssueGet).toHaveBeenCalledTimes(1);
     });
 
@@ -269,7 +288,9 @@ describe('CloudHistoryProvider', () => {
         await provider.getHistory('TEST-123');
 
         expect(mockGraphql).toHaveBeenCalledTimes(1);
+
         const callArgs = mockGraphql.mock.calls[0] as unknown[];
+
         expect(callArgs[0] as string).toContain('getTestRuns');
         expect((callArgs[1] as Record<string, unknown>)['testIssueIds']).toEqual(['12345']);
         expect(callArgs[2]).toBe('client-123');
@@ -292,6 +313,7 @@ describe('CloudHistoryProvider', () => {
         });
         mockSearchGet.mockResolvedValue({ issues: [], total: 0 });
         const result = await provider.getHistory('TEST-123');
+
         expect(result).toHaveLength(1);
         expect(result[0]?.testExecKey).toBe('111');
     });
@@ -312,6 +334,7 @@ describe('CloudHistoryProvider', () => {
         });
         mockSearchGet.mockRejectedValue(new Error('Search failed'));
         const result = await provider.getHistory('TEST-123');
+
         expect(result).toHaveLength(1);
         expect(result[0]?.testExecKey).toBe('111');
     });
@@ -336,6 +359,7 @@ describe('CloudHistoryProvider', () => {
             total: 1,
         });
         await provider.getHistory('TEST-123');
+
         expect(mockSearchGet).toHaveBeenCalledTimes(1);
 
         mockGraphql.mockResolvedValue({
@@ -351,6 +375,7 @@ describe('CloudHistoryProvider', () => {
             },
         });
         const result = await provider.getHistory('TEST-123');
+
         expect(result).toHaveLength(1);
         expect(result[0]?.testExecKey).toBe('TE-1');
         expect(mockSearchGet).toHaveBeenCalledTimes(1);

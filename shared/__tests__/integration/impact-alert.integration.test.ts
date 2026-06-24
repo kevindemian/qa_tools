@@ -55,6 +55,7 @@ describe('Integration: Impact Alert (FT-30)', () => {
             const { generateImpactAlertHtml } = await import('../../impact-alert.js');
             const result = makeResult();
             const html = generateImpactAlertHtml(result, 'Alert Report');
+
             expect(html).toContain('<!DOCTYPE html>');
             expect(html).toContain('Alert Report');
             expect(html).toContain('Low pass rate in low-coverage area');
@@ -72,6 +73,7 @@ describe('Integration: Impact Alert (FT-30)', () => {
             const { generateImpactAlertHtml } = await import('../../impact-alert.js');
             const result = makeResult({ alerts: [], criticalCount: 0, warningCount: 0, infoCount: 0 });
             const html = generateImpactAlertHtml(result);
+
             expect(html).toContain('<!DOCTYPE html>');
             expect(html).toContain('No alerts to display');
         });
@@ -82,6 +84,7 @@ describe('Integration: Impact Alert (FT-30)', () => {
             const { generateImpactAlertHtml } = await import('../../impact-alert.js');
             const result = makeResult({ alerts: [], criticalCount: 0, warningCount: 0, infoCount: 0 });
             const html = generateImpactAlertHtml(result, 'Custom Alert');
+
             expect(html).toContain('Custom Alert');
         });
     });

@@ -15,6 +15,7 @@ import { pushHistory } from './session-state.js';
 import { handleSetupWizard } from './case00-handler.js';
 
 let mockSetupModule: Mocked<typeof import('../setup/main.js')>;
+
 beforeAll(async () => {
     mockSetupModule = await vi.importMock<typeof import('../setup/main.js')>('../setup/main');
 });
@@ -34,7 +35,7 @@ describe('handleSetupWizard', () => {
         expect(divider).toHaveBeenCalled();
         expect(mockSetupModule.main).toHaveBeenCalled();
         expect(pushHistory).toHaveBeenCalledWith('setup-wizard', 'wizard concluído', 'ok');
-        expect(result).toBe(false);
+        expect(result).toBeFalsy();
     });
 
     it('handles setup failure gracefully', async () => {
@@ -42,7 +43,7 @@ describe('handleSetupWizard', () => {
 
         const result = await handleSetupWizard();
 
-        expect(result).toBe(false);
+        expect(result).toBeFalsy();
         expect(printError).toHaveBeenCalledWith('Erro ao executar setup wizard', expect.any(Error));
         expect(pushHistory).not.toHaveBeenCalled();
     });

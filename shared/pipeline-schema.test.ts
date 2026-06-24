@@ -23,6 +23,7 @@ describe('PipelineClassificationSchema', () => {
 
     it('accepts valid classification', () => {
         const result = PipelineClassificationSchema.parse(valid);
+
         expect(result.category).toBe('infrastructure');
         expect(result.confidence).toBe(0.85);
     });
@@ -30,6 +31,7 @@ describe('PipelineClassificationSchema', () => {
     it('accepts classification without recommendation', () => {
         const noRec = (({ recommendation: _rec, ...rest }) => rest)(valid);
         const result = PipelineClassificationSchema.parse(noRec);
+
         expect(result.recommendation).toBeUndefined();
     });
 

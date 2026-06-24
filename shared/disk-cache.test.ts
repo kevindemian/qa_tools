@@ -34,6 +34,7 @@ describe('diskCacheGet / diskCacheSet', () => {
 
     it('stores and retrieves a value', () => {
         diskCacheSet('abc123', 'hello world');
+
         expect(diskCacheGet('abc123')).toBe('hello world');
     });
 
@@ -42,25 +43,29 @@ describe('diskCacheGet / diskCacheSet', () => {
         const expired = JSON.stringify({ response: 'stale', createdAt: Date.now() - 60 * 60 * 1000 - 1 });
         fs.mkdirSync(cacheDir, { recursive: true });
         fs.writeFileSync(file, expired, 'utf-8');
+
         expect(diskCacheGet('exp-key')).toBeNull();
-        expect(fs.existsSync(file)).toBe(false);
+        expect(fs.existsSync(file)).toBeFalsy();
     });
 
     it('overwrites existing key', () => {
         diskCacheSet('key', 'first');
         diskCacheSet('key', 'second');
+
         expect(diskCacheGet('key')).toBe('second');
     });
 
     it('stores and retrieves encrypted content when LLM_CACHE_KEY is set', () => {
         process.env['LLM_CACHE_KEY'] = 'test-secret-key-32bytes!';
         diskCacheSet('enc-key', 'encrypted-value');
+
         expect(diskCacheGet('enc-key')).toBe('encrypted-value');
     });
 
     it('returns null for corrupt JSON data', () => {
         const file = path.join(cacheDir, 'corrupt.json');
         fs.writeFileSync(file, 'not-json', 'utf-8');
+
         expect(diskCacheGet('corrupt')).toBeNull();
     });
 
@@ -69,34 +74,41 @@ describe('diskCacheGet / diskCacheSet', () => {
         const file = path.join(cacheDir, 'bad-enc.json');
         const bad = JSON.stringify({ e: 'base64', iv: 'base64' });
         fs.writeFileSync(file, bad, 'utf-8');
+
         expect(diskCacheGet('bad-enc')).toBeNull();
-        expect(fs.existsSync(file)).toBe(false);
+        expect(fs.existsSync(file)).toBeFalsy();
     });
 
     it('returns null when decrypt fails on non-JSON with cache key set', () => {
         process.env['LLM_CACHE_KEY'] = 'test-secret-key-32bytes!';
         const file = path.join(cacheDir, 'corrupt-enc.json');
         fs.writeFileSync(file, 'not-json', 'utf-8');
+
         expect(diskCacheGet('corrupt-enc')).toBeNull();
     });
 
     it('handles write failure gracefully (readonly dir)', () => {
         fs.chmodSync(cacheDir, 0o444);
+
         expect(() => diskCacheSet('fail-key', 'value')).not.toThrow();
     });
 
     it('uses fallback cache dir when env not set', () => {
         delete process.env['LLM_DISK_CACHE_DIR'];
         diskCacheSet('fallback-key', 'val');
+
         expect(diskCacheGet('fallback-key')).toBe('val');
     });
 
     it('creates cache dir if it does not exist', () => {
         const newDir = '/tmp/llm-cache-new-' + Date.now();
         process.env['LLM_DISK_CACHE_DIR'] = newDir;
-        expect(fs.existsSync(newDir)).toBe(false);
+
+        expect(fs.existsSync(newDir)).toBeFalsy();
+
         diskCacheSet('new-dir-key', 'val');
-        expect(fs.existsSync(newDir)).toBe(true);
+
+        expect(fs.existsSync(newDir)).toBeTruthy();
         expect(diskCacheGet('new-dir-key')).toBe('val');
     });
 
@@ -104,6 +116,7 @@ describe('diskCacheGet / diskCacheSet', () => {
         fs.mkdirSync('/dev', { recursive: true });
         fs.writeFileSync('/dev/null', '');
         process.env['LLM_DISK_CACHE_DIR'] = '/dev/null/cache';
+
         expect(() => diskCacheSet('fail-init', 'val')).not.toThrow();
         expect(diskCacheGet('fail-init')).toBeNull();
     });
@@ -114,6 +127,7 @@ describe('clearDiskCache', () => {
         diskCacheSet('a', '1');
         diskCacheSet('b', '2');
         clearDiskCache();
+
         expect(diskCacheGet('a')).toBeNull();
         expect(diskCacheGet('b')).toBeNull();
     });
@@ -121,6 +135,7 @@ describe('clearDiskCache', () => {
     it('handles non-existent directory gracefully', () => {
         const fakeDir = '/tmp/nonexistent-cache-' + Date.now();
         process.env['LLM_DISK_CACHE_DIR'] = fakeDir;
+
         expect(() => clearDiskCache()).not.toThrow();
     });
 
@@ -128,7 +143,9 @@ describe('clearDiskCache', () => {
         const fileDir = '/tmp/llm-cache-file-' + Date.now();
         fs.writeFileSync(fileDir, '');
         process.env['LLM_DISK_CACHE_DIR'] = fileDir;
+
         expect(() => clearDiskCache()).not.toThrow();
+
         fs.unlinkSync(fileDir);
     });
 });

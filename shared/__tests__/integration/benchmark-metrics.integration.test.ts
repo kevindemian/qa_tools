@@ -55,12 +55,14 @@ describe('Integration: Benchmark Metrics', () => {
         it('returns zeros for invalid JSON', async () => {
             const { computeCoverageMetrics } = await import('../../benchmark-metrics.js');
             const result = computeCoverageMetrics('not json', createFixture());
+
             expect(result.totalTests).toBe(0);
         });
 
         it('returns zeros for non-array JSON', async () => {
             const { computeCoverageMetrics } = await import('../../benchmark-metrics.js');
             const result = computeCoverageMetrics('{"key": "value"}', createFixture());
+
             expect(result.totalTests).toBe(0);
         });
 
@@ -89,6 +91,7 @@ describe('RED: G1 — catch vazio sem log', () => {
         const warnSpy = vi.spyOn(rootLogger, 'warn');
         const { computeCoverageMetrics } = await import('../../benchmark-metrics.js');
         const result = computeCoverageMetrics('not json', createFixture());
+
         expect(warnSpy).toHaveBeenCalled();
         expect(result.totalTests).toBe(0);
     });

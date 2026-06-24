@@ -24,6 +24,7 @@ describe('CircuitBreaker', () => {
         for (let i = 0; i < CIRCUIT_BREAK_THRESHOLD; i++) {
             recordCircuitFailure(CFG_KEY);
         }
+
         expect(getCircuitState(CFG_KEY)).toBe('OPEN');
     });
 
@@ -31,6 +32,7 @@ describe('CircuitBreaker', () => {
         for (let i = 0; i < CIRCUIT_BREAK_THRESHOLD; i++) {
             recordCircuitFailure(CFG_KEY);
         }
+
         expect(() => checkCircuitBreaker(CFG_KEY)).toThrow('Circuit breaker open');
     });
 
@@ -41,7 +43,9 @@ describe('CircuitBreaker', () => {
         // Simulate cooldown expiry
         vi.useFakeTimers();
         vi.setSystemTime(Date.now() + CIRCUIT_BREAK_MS + 1000);
+
         expect(getCircuitState(CFG_KEY)).toBe('HALF_OPEN');
+
         vi.useRealTimers();
     });
 
@@ -51,10 +55,14 @@ describe('CircuitBreaker', () => {
         }
         vi.useFakeTimers();
         vi.setSystemTime(Date.now() + CIRCUIT_BREAK_MS + 1000);
+
         // First call should allow probe (no recent probe)
         expect(() => checkCircuitBreaker(CFG_KEY)).not.toThrow();
+
         recordCircuitSuccess(CFG_KEY);
+
         expect(getCircuitState(CFG_KEY)).toBe('CLOSED');
+
         vi.useRealTimers();
     });
 
@@ -65,7 +73,9 @@ describe('CircuitBreaker', () => {
         vi.useFakeTimers();
         vi.setSystemTime(Date.now() + CIRCUIT_BREAK_MS + 1000);
         checkCircuitBreaker(CFG_KEY); // first probe allowed
+
         expect(() => checkCircuitBreaker(CFG_KEY)).toThrow('half-open');
+
         vi.useRealTimers();
     });
 
@@ -77,7 +87,9 @@ describe('CircuitBreaker', () => {
         vi.setSystemTime(Date.now() + CIRCUIT_BREAK_MS + 1000);
         checkCircuitBreaker(CFG_KEY); // probe allowed
         recordCircuitFailure(CFG_KEY); // probe fails
+
         expect(getCircuitState(CFG_KEY)).toBe('OPEN');
+
         vi.useRealTimers();
     });
 
@@ -89,13 +101,16 @@ describe('CircuitBreaker', () => {
         vi.setSystemTime(Date.now() + CIRCUIT_BREAK_MS + 1000);
         checkCircuitBreaker(CFG_KEY); // first probe
         vi.setSystemTime(Date.now() + HALF_OPEN_PROBE_INTERVAL_MS + 1000);
+
         expect(() => checkCircuitBreaker(CFG_KEY)).not.toThrow(); // second probe
+
         vi.useRealTimers();
     });
 
     it('resets to CLOSED after success', () => {
         recordCircuitFailure(CFG_KEY);
         recordCircuitSuccess(CFG_KEY);
+
         expect(getCircuitState(CFG_KEY)).toBe('CLOSED');
     });
 
@@ -103,6 +118,7 @@ describe('CircuitBreaker', () => {
         for (let i = 0; i < CIRCUIT_BREAK_THRESHOLD - 1; i++) {
             recordCircuitFailure(CFG_KEY);
         }
+
         expect(getCircuitState(CFG_KEY)).toBe('CLOSED');
     });
 });

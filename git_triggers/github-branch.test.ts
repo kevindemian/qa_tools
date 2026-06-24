@@ -17,6 +17,7 @@ vi.mock('../shared/logger', () => ({
 
 let mockApiGet: Mock;
 import * as apiModule from './github-api.js';
+
 beforeAll(() => {
     mockApiGet = vi.spyOn(apiModule, 'apiGet');
 });
@@ -32,6 +33,7 @@ describe('getBranch', () => {
     it('returns { name } for valid branch', async () => {
         mockApiGet.mockResolvedValue({ name: 'main', commit: { sha: 'abc' } });
         const result = await getBranch(client, 'myorg', 'myrepo', 'main');
+
         expect(result).toEqual({ name: 'main' });
         expect(mockApiGet).toHaveBeenCalledWith(client, '/repos/myorg/myrepo/branches/main', { returnNull: true });
     });
@@ -39,6 +41,7 @@ describe('getBranch', () => {
     it('encodes branch name in URL', async () => {
         mockApiGet.mockResolvedValue({ name: 'feature/test' });
         await getBranch(client, 'myorg', 'myrepo', 'feature/test');
+
         expect(mockApiGet).toHaveBeenCalledWith(client, '/repos/myorg/myrepo/branches/feature%2Ftest', {
             returnNull: true,
         });
@@ -47,12 +50,14 @@ describe('getBranch', () => {
     it('returns null when data has no name', async () => {
         mockApiGet.mockResolvedValue({ commit: { sha: 'abc' } });
         const result = await getBranch(client, 'myorg', 'myrepo', 'main');
+
         expect(result).toBeNull();
     });
 
     it('returns null when apiGet returns null', async () => {
         mockApiGet.mockResolvedValue(null);
         const result = await getBranch(client, 'myorg', 'myrepo', 'missing');
+
         expect(result).toBeNull();
     });
 });
@@ -73,6 +78,7 @@ describe('getDiff', () => {
             ],
         });
         const result = await getDiff(client, 'myorg', 'myrepo', 'feature', 'main');
+
         expect(result).toContain('src/main.ts');
         expect(result).toContain('console.log');
         expect(result).toContain('src/utils.ts');
@@ -86,12 +92,14 @@ describe('getDiff', () => {
     it('returns empty string when data is null', async () => {
         mockApiGet.mockResolvedValue(null);
         const result = await getDiff(client, 'myorg', 'myrepo', 'feature', 'main');
+
         expect(result).toBe('');
     });
 
     it('returns empty string when data.files is empty', async () => {
         mockApiGet.mockResolvedValue({ files: [] });
         const result = await getDiff(client, 'myorg', 'myrepo', 'feature', 'main');
+
         expect(result).toBe('');
     });
 
@@ -100,12 +108,14 @@ describe('getDiff', () => {
             files: [{ filename: 'readme.md', status: 'modified' }],
         });
         const result = await getDiff(client, 'myorg', 'myrepo', 'feature', 'main');
+
         expect(result).toBe('');
     });
 
     it('encodes branch names in compare URL', async () => {
         mockApiGet.mockResolvedValue({ files: [] });
         await getDiff(client, 'myorg', 'myrepo', 'feat/source', 'fix/target');
+
         expect(mockApiGet).toHaveBeenCalledWith(
             client,
             '/repos/myorg/myrepo/compare/fix%2Ftarget...feat%2Fsource',

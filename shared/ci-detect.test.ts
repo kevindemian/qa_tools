@@ -21,7 +21,8 @@ describe('isGitHubCi', () => {
         });
 
         const { isGitHubCi } = await import('./ci-detect.js');
-        expect(isGitHubCi()).toBe(true);
+
+        expect(isGitHubCi()).toBeTruthy();
     });
 
     it('returns false when githubToken is missing', async () => {
@@ -31,7 +32,8 @@ describe('isGitHubCi', () => {
         });
 
         const { isGitHubCi } = await import('./ci-detect.js');
-        expect(isGitHubCi()).toBe(false);
+
+        expect(isGitHubCi()).toBeFalsy();
     });
 
     it('returns false when GITHUB_REPOSITORY is missing', async () => {
@@ -41,14 +43,16 @@ describe('isGitHubCi', () => {
         });
 
         const { isGitHubCi } = await import('./ci-detect.js');
-        expect(isGitHubCi()).toBe(false);
+
+        expect(isGitHubCi()).toBeFalsy();
     });
 
     it('returns false when both are missing', async () => {
         vi.spyOn(config, 'get').mockReturnValue(undefined);
 
         const { isGitHubCi } = await import('./ci-detect.js');
-        expect(isGitHubCi()).toBe(false);
+
+        expect(isGitHubCi()).toBeFalsy();
     });
 });
 
@@ -65,7 +69,8 @@ describe('isGitLabCi', () => {
         });
 
         const { isGitLabCi } = await import('./ci-detect.js');
-        expect(isGitLabCi()).toBe(true);
+
+        expect(isGitLabCi()).toBeTruthy();
     });
 
     it('returns false when CI_JOB_TOKEN is missing', async () => {
@@ -75,7 +80,8 @@ describe('isGitLabCi', () => {
         });
 
         const { isGitLabCi } = await import('./ci-detect.js');
-        expect(isGitLabCi()).toBe(false);
+
+        expect(isGitLabCi()).toBeFalsy();
     });
 
     it('returns false when CI_PROJECT_ID is missing', async () => {
@@ -85,20 +91,23 @@ describe('isGitLabCi', () => {
         });
 
         const { isGitLabCi } = await import('./ci-detect.js');
-        expect(isGitLabCi()).toBe(false);
+
+        expect(isGitLabCi()).toBeFalsy();
     });
 
     it('returns false when both are missing', async () => {
         vi.spyOn(config, 'get').mockReturnValue(undefined);
 
         const { isGitLabCi } = await import('./ci-detect.js');
-        expect(isGitLabCi()).toBe(false);
+
+        expect(isGitLabCi()).toBeFalsy();
     });
 });
 
 describe('constants', () => {
     it('exports GIT_HISTORY_RUNS', async () => {
         const { GIT_HISTORY_RUNS } = await import('./ci-detect.js');
+
         expect(GIT_HISTORY_RUNS).toBe(5);
     });
 });

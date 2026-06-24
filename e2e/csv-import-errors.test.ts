@@ -90,7 +90,7 @@ describe('E2E: CSV Import - Error Paths', () => {
 
     /** "skip on error" phrasing is intentional: ON_ERROR=skip causes error-triggered skip.
      *  Avoids validation-hook false-positive pattern `skip\s+(?:the\s+)?(?:check|validation|verification|test)`. */
-    it('C1: POST /issue 500 + ON_ERROR=skip — skip on error, continue next', async () => {
+    it('c1: POST /issue 500 + ON_ERROR=skip — skip on error, continue next', async () => {
         process.env['CSV_PATH'] = writeCsv(
             'c1',
             [
@@ -111,14 +111,15 @@ describe('E2E: CSV Import - Error Paths', () => {
         xray.post('/test/TEST-2/steps').reply(201);
 
         const result = nonNull(await createTestsFromCsv(makeState()));
+
         expect(result.inMemoryTasksId).toEqual(['TEST-2']);
         expect(result.inMemoryTasksText).toEqual(['TC01', 'TC02']);
         expect(result.status).toBe('error');
         expect(result.summary).toBe('1/2 testes criados');
-        expect(nock.isDone()).toBe(true);
+        expect(nock.isDone()).toBeTruthy();
     });
 
-    it('C2: POST /issue 500 + ON_ERROR=abort — stop on first failure', async () => {
+    it('c2: POST /issue 500 + ON_ERROR=abort — stop on first failure', async () => {
         process.env['ON_ERROR'] = 'abort';
         process.env['CSV_PATH'] = writeCsv(
             'c2',
@@ -137,14 +138,15 @@ describe('E2E: CSV Import - Error Paths', () => {
         jira.post('/issue').reply(500, { errorMessages: ['Internal error'] });
 
         const result = nonNull(await createTestsFromCsv(makeState()));
+
         expect(result.inMemoryTasksId).toEqual([]);
         expect(result.inMemoryTasksText).toEqual(['TC01']);
         expect(result.status).toBe('error');
         expect(result.summary).toBe('0/2 testes criados');
-        expect(nock.isDone()).toBe(true);
+        expect(nock.isDone()).toBeTruthy();
     });
 
-    it('C3: POST /issueLink 403 — 4xx sem retry, erro nao bloqueante', async () => {
+    it('c3: POST /issueLink 403 — 4xx sem retry, erro nao bloqueante', async () => {
         process.env['CSV_PATH'] = writeCsv(
             'c3',
             [
@@ -176,14 +178,15 @@ describe('E2E: CSV Import - Error Paths', () => {
         xray.post('/test/TEST-2/steps').reply(201);
 
         const result = nonNull(await createTestsFromCsv(makeState()));
+
         expect(result.inMemoryTasksId).toEqual(['TEST-1', 'TEST-2']);
         expect(result.inMemoryTasksText).toEqual(['TC01', 'TC02']);
         expect(result.status).toBe('ok');
         expect(result.summary).toBe('2/2 testes criados');
-        expect(nock.isDone()).toBe(true);
+        expect(nock.isDone()).toBeTruthy();
     });
 
-    it('C4: GET /issueLinkType 404 — fallback para FALLBACK_LINK_TYPES', async () => {
+    it('c4: GET /issueLinkType 404 — fallback para FALLBACK_LINK_TYPES', async () => {
         process.env['CSV_PATH'] = writeCsv(
             'c4',
             [
@@ -213,14 +216,15 @@ describe('E2E: CSV Import - Error Paths', () => {
         xray.post('/test/TEST-2/steps').reply(201);
 
         const result = nonNull(await createTestsFromCsv(makeState()));
+
         expect(result.inMemoryTasksId).toEqual(['TEST-1', 'TEST-2']);
         expect(result.inMemoryTasksText).toEqual(['TC01', 'TC02']);
         expect(result.status).toBe('ok');
         expect(result.summary).toBe('2/2 testes criados');
-        expect(nock.isDone()).toBe(true);
+        expect(nock.isDone()).toBeTruthy();
     });
 
-    it('C5: Precondition PUT 500 — erro pos-criacao, testErrors path', async () => {
+    it('c5: Precondition PUT 500 — erro pos-criacao, testErrors path', async () => {
         process.env['CSV_PATH'] = writeCsv(
             'c5',
             ['Title: TC01', 'Pre-condition: KEY-100', 'Action,Data,Expected Result', 'Step1,,R1'].join('\n'),
@@ -241,14 +245,15 @@ describe('E2E: CSV Import - Error Paths', () => {
         xray.post('/test/TEST-1/steps').reply(201);
 
         const result = nonNull(await createTestsFromCsv(makeState()));
+
         expect(result.inMemoryTasksId).toEqual(['TEST-1']);
         expect(result.inMemoryTasksText).toEqual(['TC01']);
         expect(result.status).toBe('error');
         expect(result.summary).toBe('0/1 testes criados');
-        expect(nock.isDone()).toBe(true);
+        expect(nock.isDone()).toBeTruthy();
     }, 120000);
 
-    it('C6: Cross-ref PUT 403 — erro nao propaga para o caller', async () => {
+    it('c6: Cross-ref PUT 403 — erro nao propaga para o caller', async () => {
         process.env['CSV_PATH'] = writeCsv(
             'c6',
             [
@@ -281,14 +286,15 @@ describe('E2E: CSV Import - Error Paths', () => {
         xray.post('/test/TEST-2/steps').reply(201);
 
         const result = nonNull(await createTestsFromCsv(makeState()));
+
         expect(result.inMemoryTasksId).toEqual(['TEST-1', 'TEST-2']);
         expect(result.inMemoryTasksText).toEqual(['TC01', 'TC02']);
         expect(result.status).toBe('ok');
         expect(result.summary).toBe('2/2 testes criados');
-        expect(nock.isDone()).toBe(true);
+        expect(nock.isDone()).toBeTruthy();
     });
 
-    it('C7: Steps fail + ON_ERROR=abort — abortSteps flag, break outer', async () => {
+    it('c7: Steps fail + ON_ERROR=abort — abortSteps flag, break outer', async () => {
         process.env['ON_ERROR'] = 'abort';
         process.env['CSV_PATH'] = writeCsv(
             'c7',
@@ -301,14 +307,15 @@ describe('E2E: CSV Import - Error Paths', () => {
         xray.post('/test/TEST-1/steps').reply(500);
 
         const result = nonNull(await createTestsFromCsv(makeState()));
+
         expect(result.inMemoryTasksId).toEqual(['TEST-1']);
         expect(result.inMemoryTasksText).toEqual(['TC01']);
         expect(result.status).toBe('error');
         expect(result.summary).toBe('0/1 testes criados');
-        expect(nock.isDone()).toBe(true);
+        expect(nock.isDone()).toBeTruthy();
     });
 
-    it('C8: DRY_RUN=true — simulates without API calls', async () => {
+    it('c8: DRY_RUN=true — simulates without API calls', async () => {
         process.env['DRY_RUN'] = 'true';
         process.env['CSV_PATH'] = writeCsv(
             'c8',
@@ -320,7 +327,8 @@ describe('E2E: CSV Import - Error Paths', () => {
         expect(result.status).toBe('ok');
         expect(result.summary).toContain('DRY-RUN');
         expect(result.inMemoryTasksId).toEqual([]);
-        expect(nock.isDone()).toBe(true);
+        expect(nock.isDone()).toBeTruthy();
+
         delete process.env['DRY_RUN'];
     });
 });

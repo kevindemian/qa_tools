@@ -56,6 +56,7 @@ describe('buildIncidentReport — property-based', () => {
                         uncoveredEpics,
                         passRate,
                     );
+
                     expect(result.eventCount).toBe(result.events.length);
                 },
             ),
@@ -79,6 +80,7 @@ describe('buildIncidentReport — property-based', () => {
                         uncoveredEpics,
                         passRate,
                     );
+
                     expect(result.highCount).toBeGreaterThanOrEqual(0);
                     expect(result.mediumCount).toBeGreaterThanOrEqual(0);
                     expect(result.lowCount).toBeGreaterThanOrEqual(0);
@@ -107,6 +109,7 @@ describe('buildIncidentReport — property-based', () => {
                         uncoveredEpics,
                         passRate,
                     );
+
                     expect(result.highCount + result.mediumCount + result.lowCount).toBe(result.eventCount);
                 },
             ),
@@ -162,6 +165,7 @@ describe('buildIncidentReport — property-based', () => {
                         uncoveredEpics,
                         passRate,
                     );
+
                     expect(result.timestamp).toMatch(/^\d{4}-\d{2}-\d{2}T/);
                 },
             ),
@@ -222,12 +226,13 @@ describe('buildIncidentReport — property-based', () => {
                     for (const event of result.events) {
                         if (event.severity === 'low') sawLow = true;
                         if (event.severity === 'medium') {
-                            expect(sawLow).toBe(false);
+                            expect(sawLow).toBeFalsy();
+
                             sawMedium = true;
                         }
                         if (event.severity === 'high') {
-                            expect(sawMedium).toBe(false);
-                            expect(sawLow).toBe(false);
+                            expect(sawMedium).toBeFalsy();
+                            expect(sawLow).toBeFalsy();
                         }
                     }
                 },
@@ -255,6 +260,7 @@ describe('generateIncidentReportHtml — property-based', () => {
                         passRate,
                     );
                     const html = generateIncidentReportHtml(report);
+
                     expect(html).toContain('<!DOCTYPE html>');
                     expect(html).toContain('</html>');
                 },
@@ -280,6 +286,7 @@ describe('generateIncidentReportHtml — property-based', () => {
                         passRate,
                     );
                     const html = generateIncidentReportHtml(report);
+
                     expect(html).toContain('Overall Severity');
                     expect(html).toContain(report.summary);
                 },

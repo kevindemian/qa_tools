@@ -54,6 +54,7 @@ describe('formatPR', () => {
             approved: true,
         };
         const result = formatPR(data);
+
         expect(result).toMatchObject({
             iid: 5,
             number: 5,
@@ -74,7 +75,8 @@ describe('formatPR', () => {
     it('coerces approved to boolean false', () => {
         const data = { iid: 1, approved: false };
         const result = formatPR(data);
-        expect(nonNull(result).approved).toBe(false);
+
+        expect(nonNull(result).approved).toBeFalsy();
     });
 });
 
@@ -84,6 +86,7 @@ describe('glCreateMergeRequest', () => {
     it('calls apiPost and returns formatted MR', async () => {
         vi.mocked(apiPost).mockResolvedValue({ iid: 10, web_url: 'https://...' });
         const result = await glCreateMergeRequest(mockClient, ...args);
+
         expect(result).toMatchObject({ iid: 10, number: 10 });
         expect(apiPost).toHaveBeenCalledWith(
             mockClient,
@@ -105,6 +108,7 @@ describe('glCreateMergeRequest', () => {
         vi.mocked(apiPut).mockResolvedValue({ iid: 5 });
 
         const result = await glCreateMergeRequest(mockClient, ...args);
+
         expect(apiGet).toHaveBeenCalled();
         expect(apiPut).toHaveBeenCalled();
         expect(result).toMatchObject({ iid: 5 });
@@ -126,6 +130,7 @@ describe('glCreateMergeRequest', () => {
     it('works without description', async () => {
         vi.mocked(apiPost).mockResolvedValue({ iid: 11 });
         const result = await glCreateMergeRequest(mockClient, 'o', 'r', 'feature', 'main', 'Title');
+
         expect(result).toMatchObject({ iid: 11 });
     });
 });
@@ -134,6 +139,7 @@ describe('glUpdateMergeRequest', () => {
     it('calls apiPut and returns formatted MR', async () => {
         vi.mocked(apiPut).mockResolvedValue({ iid: 5, title: 'Updated' });
         const result = await glUpdateMergeRequest(mockClient, 'owner', 'repo', 5, 'Updated', 'New desc');
+
         expect(result).toMatchObject({ iid: 5, title: 'Updated' });
         expect(apiPut).toHaveBeenCalledWith(
             mockClient,
@@ -146,6 +152,7 @@ describe('glUpdateMergeRequest', () => {
     it('works with string IID', async () => {
         vi.mocked(apiPut).mockResolvedValue({ iid: 5 });
         const result = await glUpdateMergeRequest(mockClient, 'owner', 'repo', '5', 'Title');
+
         expect(result).toMatchObject({ iid: 5 });
     });
 });
@@ -154,18 +161,21 @@ describe('glGetMergeRequest', () => {
     it('returns formatted MR on success', async () => {
         vi.mocked(apiGet).mockResolvedValue({ iid: 5, state: 'opened' });
         const result = await glGetMergeRequest(mockClient, 'owner', 'repo', 5);
+
         expect(result).toMatchObject({ iid: 5, state: 'opened' });
     });
 
     it('returns null when apiGet returns null', async () => {
         vi.mocked(apiGet).mockResolvedValue(null);
         const result = await glGetMergeRequest(mockClient, 'owner', 'repo', 5);
+
         expect(result).toBeNull();
     });
 
     it('passes returnNull: true to apiGet', async () => {
         vi.mocked(apiGet).mockResolvedValue(null);
         await glGetMergeRequest(mockClient, 'owner', 'repo', 5);
+
         expect(apiGet).toHaveBeenCalledWith(mockClient, expect.stringContaining('/merge_requests/5'), {
             operation: 'buscar MR',
             returnNull: true,
@@ -180,6 +190,7 @@ describe('glSearchMergeRequests', () => {
             { iid: 2, title: 'Second' },
         ]);
         const result = await glSearchMergeRequests(mockClient, 'owner', 'repo', 'feature', 'main', 'opened');
+
         expect(result).toHaveLength(2);
         expect(result[0]).toMatchObject({ iid: 1 });
         expect(result[1]).toMatchObject({ iid: 2 });
@@ -188,18 +199,21 @@ describe('glSearchMergeRequests', () => {
     it('returns [] when apiGet returns null', async () => {
         vi.mocked(apiGet).mockResolvedValue(null);
         const result = await glSearchMergeRequests(mockClient, 'owner', 'repo', 'feature', 'main', 'opened');
+
         expect(result).toEqual([]);
     });
 
     it('returns [] when apiGet returns empty array', async () => {
         vi.mocked(apiGet).mockResolvedValue([]);
         const result = await glSearchMergeRequests(mockClient, 'owner', 'repo', 'feature', 'main', 'opened');
+
         expect(result).toEqual([]);
     });
 
     it('passes correct query params', async () => {
         vi.mocked(apiGet).mockResolvedValue([]);
         await glSearchMergeRequests(mockClient, 'owner', 'repo', 'feature', 'main', 'opened');
+
         expect(apiGet).toHaveBeenCalledWith(
             mockClient,
             expect.stringContaining('/merge_requests'),
@@ -216,6 +230,7 @@ describe('glAcceptMergeRequest', () => {
         vi.mocked(apiPut).mockResolvedValue({ web_url: 'https://merge' });
 
         const result = await glAcceptMergeRequest(mockClient, 'owner', 'repo', 5);
+
         expect(apiPut).toHaveBeenCalledWith(
             mockClient,
             expect.stringContaining('/merge_requests/5/merge'),
@@ -229,6 +244,7 @@ describe('glAcceptMergeRequest', () => {
         vi.mocked(apiGet).mockResolvedValue({ iid: 5, state: 'merged', web_url: 'https://...' });
 
         const result = await glAcceptMergeRequest(mockClient, 'owner', 'repo', 5);
+
         expect(apiPut).not.toHaveBeenCalled();
         expect(result).toMatchObject({ iid: 5, state: 'merged' });
     });
@@ -251,6 +267,7 @@ describe('glAcceptMergeRequest', () => {
         vi.mocked(apiPut).mockResolvedValue({});
 
         await glAcceptMergeRequest(mockClient, 'owner', 'repo', 5, false);
+
         expect(apiPut).toHaveBeenCalledWith(
             mockClient,
             expect.stringContaining('/merge_requests/5/merge'),
@@ -264,7 +281,8 @@ describe('glIsApproved', () => {
     it('returns true when approved', async () => {
         vi.mocked(apiGet).mockResolvedValue({ approved: true });
         const result = await glIsApproved(mockClient, 'owner', 'repo', 42);
-        expect(result).toBe(true);
+
+        expect(result).toBeTruthy();
         expect(apiGet).toHaveBeenCalledWith(mockClient, expect.stringContaining('/merge_requests/42/approvals'), {
             operation: 'verificar aprovação',
             returnNull: true,
@@ -274,12 +292,14 @@ describe('glIsApproved', () => {
     it('returns false when not approved', async () => {
         vi.mocked(apiGet).mockResolvedValue({ approved: false });
         const result = await glIsApproved(mockClient, 'owner', 'repo', 42);
-        expect(result).toBe(false);
+
+        expect(result).toBeFalsy();
     });
 
     it('returns false when apiGet returns null', async () => {
         vi.mocked(apiGet).mockResolvedValue(null);
         const result = await glIsApproved(mockClient, 'owner', 'repo', 42);
-        expect(result).toBe(false);
+
+        expect(result).toBeFalsy();
     });
 });

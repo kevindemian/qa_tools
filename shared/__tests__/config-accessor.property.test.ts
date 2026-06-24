@@ -28,11 +28,12 @@ afterAll(() => {
 });
 
 describe('Config.get boolean coercion — property-based', () => {
-    it('AUTO_CONFIRM returns boolean for any env value', () => {
+    it('aUTO_CONFIRM returns boolean for any env value', () => {
         fc.assert(
             fc.property(fc.string({ minLength: 0, maxLength: 20 }), (val) => {
                 process.env['AUTO_CONFIRM'] = val;
                 const result = Config.get<boolean>('autoConfirm');
+
                 expect(typeof result).toBe('boolean');
             }),
             { numRuns: 100 },
@@ -41,11 +42,12 @@ describe('Config.get boolean coercion — property-based', () => {
 });
 
 describe('Config.get number coercion — property-based', () => {
-    it('LOG_MAX_SIZE returns number for any env value', () => {
+    it('lOG_MAX_SIZE returns number for any env value', () => {
         fc.assert(
             fc.property(fc.string({ minLength: 0, maxLength: 20 }), (val) => {
                 process.env['LOG_MAX_SIZE'] = val;
                 const result = Config.get<number>('logMaxSize');
+
                 expect(typeof result).toBe('number');
             }),
             { numRuns: 100 },
@@ -62,6 +64,7 @@ describe('Config.get override precedence — property-based', () => {
                 (envVal, overrideVal) => {
                     process.env['JIRA_BASE_URL'] = envVal;
                     Config.set('jiraBaseUrl', overrideVal);
+
                     expect(Config.get('jiraBaseUrl')).toBe(overrideVal);
                 },
             ),
@@ -69,11 +72,12 @@ describe('Config.get override precedence — property-based', () => {
         );
     });
 
-    it('Config.create isolated instance does not affect default', () => {
+    it('config.create isolated instance does not affect default', () => {
         fc.assert(
             fc.property(fc.boolean(), (customVal) => {
                 const before = Config.get<boolean>('autoConfirm');
                 const cfg = Config.create({ autoConfirm: customVal });
+
                 expect(cfg.get<boolean>('autoConfirm')).toBe(customVal);
                 expect(Config.get<boolean>('autoConfirm')).toBe(before);
             }),
@@ -93,6 +97,7 @@ describe('Config.getAllPrefixed — property-based', () => {
         fc.assert(
             fc.property(fc.boolean(), fc.boolean(), () => {
                 const result = Config.getAllPrefixed('TEST_PREFIX_');
+
                 expect(result['TEST_PREFIX_QA_KEY']).toBe('qa-value');
                 expect(result['TEST_PREFIX_MODEL']).toBe('gpt-4');
                 expect(result['OTHER_VAR']).toBeUndefined();
@@ -113,6 +118,7 @@ describe('Config.validateRequiredEnv — property-based', () => {
                     process.env['JIRA_BASE_URL'] = baseUrl;
                     process.env['JIRA_PERSONAL_TOKEN'] = token;
                     process.env['XRAY_BASE_URL'] = xrayUrl;
+
                     expect(() => Config.validateRequiredEnv()).not.toThrow();
                 },
             ),

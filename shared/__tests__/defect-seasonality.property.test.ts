@@ -46,6 +46,7 @@ describe('aggregateDefectSeasonality — property-based', () => {
         fc.assert(
             fc.property(fc.array(classArb, { minLength: 0, maxLength: 20 }), (classes) => {
                 const result = aggregateDefectSeasonality(classes);
+
                 expect(result.totalRecords).toBe(classes.length);
             }),
             { numRuns: 50 },
@@ -56,6 +57,7 @@ describe('aggregateDefectSeasonality — property-based', () => {
         fc.assert(
             fc.property(fc.array(classArb, { minLength: 0, maxLength: 20 }), (classes) => {
                 const result = aggregateDefectSeasonality(classes);
+
                 expect(result.byDayOfWeek).toHaveLength(7);
                 expect(result.byHour).toHaveLength(24);
             }),
@@ -68,6 +70,7 @@ describe('aggregateDefectSeasonality — property-based', () => {
             fc.property(fc.array(classArb, { minLength: 0, maxLength: 20 }), (classes) => {
                 const result = aggregateDefectSeasonality(classes);
                 const daySum = result.byDayOfWeek.reduce((s, d) => s + d.total, 0);
+
                 expect(daySum).toBe(result.totalRecords);
             }),
             { numRuns: 50 },
@@ -79,6 +82,7 @@ describe('aggregateDefectSeasonality — property-based', () => {
             fc.property(fc.array(classArb, { minLength: 0, maxLength: 20 }), (classes) => {
                 const result = aggregateDefectSeasonality(classes);
                 const hourSum = result.byHour.reduce((s, h) => s + h.total, 0);
+
                 expect(hourSum).toBe(result.totalRecords);
             }),
             { numRuns: 50 },
@@ -93,6 +97,7 @@ describe('aggregateDefectSeasonality — property-based', () => {
                 const peakDayEntry = result.byDayOfWeek.find((d) => d.total === maxTotal);
                 if (result.totalRecords > 0) {
                     if (peakDayEntry === undefined) return;
+
                     expect(result.peakDay).toBe(peakDayEntry.dayOfWeek);
                 }
             }),
@@ -108,6 +113,7 @@ describe('aggregateDefectSeasonality — property-based', () => {
                 const peakHourEntry = result.byHour.find((h) => h.total === maxTotal);
                 if (result.totalRecords > 0) {
                     if (peakHourEntry === undefined) return;
+
                     expect(result.peakHour).toBe(peakHourEntry.hour);
                 }
             }),
@@ -120,6 +126,7 @@ describe('aggregateDefectSeasonality — property-based', () => {
             fc.property(fc.array(classArb, { minLength: 0, maxLength: 10 }), (classes) => {
                 const result = aggregateDefectSeasonality(classes);
                 const html = generateSeasonalityHtml(result);
+
                 expect(html).toContain('<!DOCTYPE html>');
                 expect(html).toContain('</html>');
             }),

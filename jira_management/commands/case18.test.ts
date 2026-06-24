@@ -182,6 +182,7 @@ describe('case18 — AI tests generator', () => {
         await mod.handler(baseContext);
 
         expect(prompt.warn).toHaveBeenCalledWith('Projeto vazio. Operação cancelada.');
+
         baseContext.ctx.project_name = origProjectName;
     });
 

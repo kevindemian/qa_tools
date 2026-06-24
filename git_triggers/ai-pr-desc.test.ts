@@ -16,6 +16,7 @@ describe('generatePrDescription', () => {
     it('should return empty when diff is empty', async () => {
         vi.spyOn(mockProvider, 'getDiff').mockResolvedValue('');
         const result = await generatePrDescription(mockProvider, 'feature/a', 'main');
+
         expect(result).toBe('');
         expect(llmPrompt).not.toHaveBeenCalled();
     });
@@ -25,6 +26,7 @@ describe('generatePrDescription', () => {
         vi.mocked(llmPrompt).mockResolvedValue('Resumo: adicionado novo teste.');
 
         const result = await generatePrDescription(mockProvider, 'feature/a', 'main');
+
         expect(mockProvider.getDiff).toHaveBeenCalledWith('feature/a', 'main');
         expect(llmPrompt).toHaveBeenCalledWith(
             expect.objectContaining({
@@ -41,6 +43,7 @@ describe('generatePrDescription', () => {
         vi.mocked(llmPrompt).mockRejectedValue(new Error('API error'));
 
         const result = await generatePrDescription(mockProvider, 'feature/a', 'main');
+
         expect(result).toBe('');
     });
 });

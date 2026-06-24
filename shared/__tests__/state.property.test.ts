@@ -55,6 +55,7 @@ describe('State Persistence — property-based invariants', () => {
                 const config = getConfig();
                 stateModule.save(data, config);
                 const loaded = stateModule.load(config);
+
                 expect(loaded).toEqual(data);
             }),
             { numRuns: 50 },
@@ -104,8 +105,10 @@ describe('State Persistence — property-based invariants', () => {
                 expect(original).not.toHaveProperty('_pbt_mutated');
                 // Result deve ter a chave
                 expect(result).toHaveProperty('_pbt_mutated');
+
                 // O estado persistido após update contém a mutação
                 const reloaded = stateModule.load(config);
+
                 expect(reloaded).toHaveProperty('_pbt_mutated');
                 expect(reloaded).toEqual(result);
             }),
@@ -121,6 +124,7 @@ describe('State Persistence — property-based invariants', () => {
                     // Sempre retorna {} quando não há arquivo
                     const config = getConfig();
                     const result = stateModule.load(config);
+
                     expect(result).toEqual({});
                 },
             ),
@@ -135,8 +139,9 @@ describe('State Persistence — property-based invariants', () => {
                 stateModule.save(data, config);
 
                 const stateDir = path.join(TEST_DIR, 'qa-tools');
-                expect(fs.existsSync(path.join(stateDir, 'state.json'))).toBe(true);
-                expect(fs.existsSync(path.join(stateDir, 'state.json.bak'))).toBe(true);
+
+                expect(fs.existsSync(path.join(stateDir, 'state.json'))).toBeTruthy();
+                expect(fs.existsSync(path.join(stateDir, 'state.json.bak'))).toBeTruthy();
             }),
             { numRuns: 20 },
         );

@@ -94,6 +94,7 @@ describe('generatePrReport — passRate invariants (property-based)', () => {
                         skipQuality: true,
                         skipFlaky: true,
                     });
+
                     expect(result.passRate).toBeGreaterThanOrEqual(0);
                     expect(result.passRate).toBeLessThanOrEqual(100);
                 },
@@ -115,6 +116,7 @@ describe('generatePrReport — passRate invariants (property-based)', () => {
                         skipQuality: true,
                         skipFlaky: true,
                     });
+
                     expect(result.passRate).toBe(100);
                 },
             ),
@@ -135,6 +137,7 @@ describe('generatePrReport — passRate invariants (property-based)', () => {
                         skipQuality: true,
                         skipFlaky: true,
                     });
+
                     expect(result.passRate).toBe(0);
                 },
             ),
@@ -155,6 +158,7 @@ describe('generatePrReport — passRate invariants (property-based)', () => {
                         skipQuality: true,
                         skipFlaky: true,
                     });
+
                     expect(result.passRate).toBe(50);
                 },
             ),
@@ -177,6 +181,7 @@ describe('computeDiffComparison — invariants (property-based)', () => {
         fc.assert(
             fc.property(fc.array(FlatTestArbForDiff, { minLength: 1, maxLength: 10 }), (current) => {
                 const result = computeDiffComparison(current, []);
+
                 expect(result).toBeUndefined();
             }),
             { numRuns: 100 },
@@ -187,6 +192,7 @@ describe('computeDiffComparison — invariants (property-based)', () => {
         fc.assert(
             fc.property(fc.array(FlatTestArbForDiff, { minLength: 1, maxLength: 10 }), (tests) => {
                 const result = computeDiffComparison(tests, tests);
+
                 expect(result).toBeUndefined();
             }),
             { numRuns: 100 },
@@ -204,6 +210,7 @@ describe('computeDiffComparison — invariants (property-based)', () => {
                     for (const nf of result.newFailures) {
                         const prev = previous.find((p) => p.title === nf.title);
                         if (!prev) throw new Error('prev must exist in newFailures');
+
                         expect(nf.state).toBe('failed');
                         expect(prev.state).not.toBe('failed');
                     }
@@ -224,6 +231,7 @@ describe('computeDiffComparison — invariants (property-based)', () => {
                     for (const np of result.newPasses) {
                         const prev = previous.find((p) => p.title === np.title);
                         if (!prev) throw new Error('prev must exist in newPasses');
+
                         expect(np.state).not.toBe('failed');
                         expect(prev.state).toBe('failed');
                     }
@@ -246,6 +254,7 @@ describe('computeDiffComparison — invariants (property-based)', () => {
                         const curr = current.find((c) => c.title === f.title);
                         if (!prev) throw new Error('prev must exist in flaky');
                         if (!curr) throw new Error('curr must exist in flaky');
+
                         expect(f.state).not.toBe(prev.state);
                     }
                 },
@@ -265,7 +274,7 @@ describe('computeDiffComparison — invariants (property-based)', () => {
                     const failureTitles = new Set(result.newFailures.map((f) => f.title));
                     const passTitles = new Set(result.newPasses.map((p) => p.title));
                     for (const title of failureTitles) {
-                        expect(passTitles.has(title)).toBe(false);
+                        expect(passTitles.has(title)).toBeFalsy();
                     }
                 },
             ),
@@ -283,13 +292,13 @@ describe('computeDiffComparison — invariants (property-based)', () => {
                     if (result === undefined) return;
                     const currentTitles = new Set(current.map((t) => t.title));
                     for (const f of result.newFailures) {
-                        expect(currentTitles.has(f.title)).toBe(true);
+                        expect(currentTitles.has(f.title)).toBeTruthy();
                     }
                     for (const p of result.newPasses) {
-                        expect(currentTitles.has(p.title)).toBe(true);
+                        expect(currentTitles.has(p.title)).toBeTruthy();
                     }
                     for (const f of result.flaky) {
-                        expect(currentTitles.has(f.title)).toBe(true);
+                        expect(currentTitles.has(f.title)).toBeTruthy();
                     }
                 },
             ),

@@ -17,6 +17,7 @@ describe('extractHost', () => {
 describe('HostSemaphore', () => {
     it('acquire succeeds when below maxConcurrency', async () => {
         const sem = new HostSemaphore(2);
+
         await expect(sem.acquire('host1')).resolves.toBeUndefined();
     });
 
@@ -27,9 +28,11 @@ describe('HostSemaphore', () => {
 
         const p = sem.acquire('test-host');
         const race = Promise.race([p.then(() => 'resolved'), Promise.resolve('pending')]);
-        expect(await race).toBe('pending');
+
+        await expect(race).resolves.toBe('pending');
 
         sem.release('test-host');
+
         await expect(p).resolves.toBeUndefined();
     });
 
@@ -42,11 +45,13 @@ describe('HostSemaphore', () => {
         const p3 = sem.acquire('h1');
 
         sem.release('h1');
+
         await expect(p3).resolves.toBeUndefined();
     });
 
     it('release handles nonexistent host without throwing', () => {
         const sem = new HostSemaphore(1);
+
         expect(() => sem.release('nonexistent')).not.toThrow();
     });
 
@@ -61,6 +66,7 @@ describe('HostSemaphore', () => {
 
     it('rateLimitWait returns immediately when no releases recorded', async () => {
         const sem = new HostSemaphore(1);
+
         await expect(sem.acquire('fresh-host')).resolves.toBeUndefined();
     });
 
@@ -73,10 +79,13 @@ describe('HostSemaphore', () => {
 
         const p = sem.acquire('h');
         vi.advanceTimersByTime(100);
-        expect(await Promise.race([p.then(() => 'done'), Promise.resolve('waiting')])).toBe('waiting');
+
+        await expect(Promise.race([p.then(() => 'done'), Promise.resolve('waiting')])).resolves.toBe('waiting');
 
         vi.advanceTimersByTime(100);
+
         await expect(p).resolves.toBeUndefined();
+
         vi.useRealTimers();
     });
 });

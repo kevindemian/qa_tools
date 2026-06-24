@@ -88,8 +88,11 @@ describe('Integration: Test Impact (FT-35)', () => {
 
             expect(result.confidence).toBe('high');
             expect(result.changedFiles).toEqual(['src/login.ts']);
+
             const loginTest = result.impactedTests.find((t) => t.testKey === 'LOGIN-001');
-            expect(loginTest).not.toBeUndefined();
+
+            expect(loginTest).toBeDefined();
+
             if (loginTest) {
                 expect(loginTest.matchMode).toBe('mapping');
             }
@@ -105,7 +108,7 @@ describe('Integration: Test Impact (FT-35)', () => {
 
             expect(result.confidence).toBe('medium');
             expect(result.impactedTests.length).toBeGreaterThanOrEqual(1);
-            expect(result.impactedTests.every((t) => t.matchMode === 'keyword')).toBe(true);
+            expect(result.impactedTests.every((t) => t.matchMode === 'keyword')).toBeTruthy();
         });
 
         it('returns low confidence when nothing matches', () => {
@@ -154,7 +157,7 @@ describe('Integration: Test Impact (FT-35)', () => {
             expect(json.impactedTests[0]?.title).toBe('Login test');
             expect(json.impactedTests[0]?.testKey).toBe('LOGIN-001');
             expect(json.confidence).toBe('high');
-            expect(json.conservative).toBe(false);
+            expect(json.conservative).toBeFalsy();
             expect(json.generatedAt).toBeTruthy();
             expect(JSON.parse(JSON.stringify(json))).toEqual(json);
         });
@@ -178,19 +181,24 @@ describe('Integration: Test Impact (FT-35)', () => {
             expect(result.confidence).toBe('high');
 
             const loginTest = result.impactedTests.find((t) => t.testKey === 'LOGIN-001');
-            expect(loginTest).not.toBeUndefined();
+
+            expect(loginTest).toBeDefined();
+
             if (loginTest) {
                 expect(loginTest.matchMode).toBe('mapping');
             }
 
             const loginMappingEntry = result.impactedTests.find((t) => t.testKey === 'LOGIN-001');
-            expect(loginMappingEntry).not.toBeUndefined();
+
+            expect(loginMappingEntry).toBeDefined();
+
             if (loginMappingEntry) {
                 expect(loginMappingEntry.matchMode).toBe('mapping');
             }
 
             const loginTestEntries = result.impactedTests.filter((t) => t.title === 'Login test');
-            expect(loginTestEntries.length).toBe(1);
+
+            expect(loginTestEntries).toHaveLength(1);
             expect(loginTestEntries[0]?.matchMode).toBe('keyword');
         });
     });

@@ -57,6 +57,7 @@ describe('readIstanbulCoverage — property-based', () => {
     beforeEach(() => {
         TEST_DIR = fs.mkdtempSync(path.join(os.tmpdir(), 'pbt-istanbul-'));
     });
+
     afterEach(() => {
         if (TEST_DIR) {
             fs.rmSync(TEST_DIR, { recursive: true, force: true });
@@ -103,6 +104,7 @@ describe('readIstanbulCoverage — property-based', () => {
                 };
                 const coveragePath = writeFixture(fixture);
                 const result = readIstanbulCoverage(coveragePath);
+
                 expect(result?.coveragePct).toBe(coveredLines);
             }),
             { numRuns: 50 },
@@ -120,6 +122,7 @@ describe('readIstanbulCoverage — property-based', () => {
                 };
                 const coveragePath = writeFixture(fixture);
                 const result = readIstanbulCoverage(coveragePath);
+
                 expect(result?.coveragePct).toBe(covered);
             }),
             { numRuns: 50 },
@@ -151,6 +154,7 @@ describe('resolveCoverage — property-based', () => {
     beforeEach(() => {
         TEST_DIR = fs.mkdtempSync(path.join(os.tmpdir(), 'pbt-resolve-'));
     });
+
     afterEach(() => {
         if (TEST_DIR) {
             fs.rmSync(TEST_DIR, { recursive: true, force: true });
@@ -166,6 +170,7 @@ describe('resolveCoverage — property-based', () => {
                 };
                 const coveragePath = writeFixture(fixture);
                 const result = resolveCoverage({ istanbulPath: coveragePath, ctrfCoverage: ctrfPct });
+
                 expect(result?.source).toBe('istanbul');
                 expect(result?.coveragePct).toBe(covered);
             }),
@@ -180,6 +185,7 @@ describe('resolveCoverage — property-based', () => {
                     istanbulPath: path.join(TEST_DIR, 'nonexistent.json'),
                     ctrfCoverage: ctrfPct,
                 });
+
                 expect(result?.source).toBe('ctrf');
                 expect(result?.coveragePct).toBe(ctrfPct);
             }),
@@ -194,6 +200,7 @@ describe('resolveCoverage — property-based', () => {
                 if (hasIstanbul) options.istanbulPath = path.join(TEST_DIR, 'nonexistent.json');
                 if (hasCtrf) options.ctrfCoverage = -1;
                 const result = resolveCoverage(Object.keys(options).length > 0 ? options : undefined);
+
                 expect(result).toBeUndefined();
             }),
             { numRuns: 50 },

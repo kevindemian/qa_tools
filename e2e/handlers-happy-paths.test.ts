@@ -155,8 +155,9 @@ describe('case02 — list versions', () => {
         const c = buildContext();
         const mod = case02;
         await mod.handler(c);
+
         expect(c.pushHistory).toHaveBeenCalledWith('listar-versoes', '2 versão(oes)', 'ok');
-        expect(nock.isDone()).toBe(true);
+        expect(nock.isDone()).toBeTruthy();
     });
 
     it('no versions found — empty array', async () => {
@@ -166,9 +167,10 @@ describe('case02 — list versions', () => {
         const c = buildContext();
         const mod = case02;
         await mod.handler(c);
+
         // pushHistory é chamado apenas quando há versões (results.length > 0)
         expect(c.pushHistory).not.toHaveBeenCalled();
-        expect(nock.isDone()).toBe(true);
+        expect(nock.isDone()).toBeTruthy();
     });
 
     it('project not found — returns early without pushHistory', async () => {
@@ -177,8 +179,9 @@ describe('case02 — list versions', () => {
         const c = buildContext();
         const mod = case02;
         await mod.handler(c);
+
         expect(c.pushHistory).not.toHaveBeenCalled();
-        expect(nock.isDone()).toBe(true);
+        expect(nock.isDone()).toBeTruthy();
     });
 });
 
@@ -197,8 +200,9 @@ describe('case03 — create version', () => {
         const c = buildContext();
         const mod = case03;
         await mod.handler(c);
+
         expect(c.pushHistory).toHaveBeenCalledWith('criar-versão', 'v2.0.0', 'ok');
-        expect(nock.isDone()).toBe(true);
+        expect(nock.isDone()).toBeTruthy();
     });
 
     it('empty name — returns early without history', async () => {
@@ -206,6 +210,7 @@ describe('case03 — create version', () => {
         const c = buildContext();
         const mod = case03;
         await mod.handler(c);
+
         expect(c.pushHistory).not.toHaveBeenCalled();
     });
 });
@@ -233,9 +238,10 @@ describe('case04 — assign fixVersion', () => {
         const c = buildContext();
         const mod = case04;
         await mod.handler(c);
+
         expect(c.pushHistory).toHaveBeenCalledWith('atribuir-fixversion', expect.stringContaining('2/2'), 'ok');
         expect(c.ctx.results.filter((r: { status: string }) => r.status === 'ok')).toHaveLength(2);
-        expect(nock.isDone()).toBe(true);
+        expect(nock.isDone()).toBeTruthy();
     });
 });
 
@@ -270,7 +276,7 @@ describe('case05 — update package + release notes', () => {
         expect(rn).toContain('TEST-1');
         expect(rn).toContain('TEST-2');
         expect(c.pushHistory).toHaveBeenCalledWith('atualizar-package', expect.stringContaining('2.0.0'), 'ok');
-        expect(nock.isDone()).toBe(true);
+        expect(nock.isDone()).toBeTruthy();
     });
 });
 
@@ -291,8 +297,9 @@ describe('case06 — check task status', () => {
         const c = buildContext();
         const mod = case06;
         await mod.handler(c);
+
         expect(c.pushHistory).toHaveBeenCalledWith('verificar-status', 'v2.0.0', 'ok');
-        expect(nock.isDone()).toBe(true);
+        expect(nock.isDone()).toBeTruthy();
     });
 });
 
@@ -337,8 +344,9 @@ describe('case07 — close tasks', () => {
         const c = buildContext();
         const mod = case07;
         await mod.handler(c);
+
         expect(c.pushHistory).toHaveBeenCalledWith('fechar-tarefas', '2 tarefa(s)', 'ok');
-        expect(nock.isDone()).toBe(true);
+        expect(nock.isDone()).toBeTruthy();
     });
 
     it('no tasks found — returns early', async () => {
@@ -350,8 +358,9 @@ describe('case07 — close tasks', () => {
         const c = buildContext();
         const mod = case07;
         await mod.handler(c);
+
         expect(c.pushHistory).not.toHaveBeenCalled();
-        expect(nock.isDone()).toBe(true);
+        expect(nock.isDone()).toBeTruthy();
     });
 });
 
@@ -379,8 +388,9 @@ describe('case08 — publish version', () => {
         const c = buildContext();
         const mod = case08;
         await mod.handler(c);
+
         expect(c.pushHistory).toHaveBeenCalledWith('publicar-versão', 'v2.0.0', 'ok');
-        expect(nock.isDone()).toBe(true);
+        expect(nock.isDone()).toBeTruthy();
     });
 });
 
@@ -393,6 +403,7 @@ describe('case09 — switch project', () => {
         const c = buildContext();
         const mod = case09;
         await mod.handler(c);
+
         expect(c.ctx.project_name).toBe('NEWPROJ');
         expect(c.pushHistory).toHaveBeenCalledWith('trocar-projeto', 'NEWPROJ', 'ok');
         expect(stateModule.update).toHaveBeenCalled();
@@ -408,6 +419,7 @@ describe('case10 — change git directory', () => {
         const c = buildContext();
         const mod = case10;
         await mod.handler(c);
+
         expect(c.ctx.git_directory).toBe(tmpGitDir);
         expect(c.ctx.packageManager).toBeDefined();
     });
@@ -423,7 +435,8 @@ describe('case11 — generate CSV/JSON template', () => {
         const c = buildContext();
         const mod = case11;
         await mod.handler(c);
-        expect(fs.existsSync(dest)).toBe(true);
+
+        expect(fs.existsSync(dest)).toBeTruthy();
         expect(c.pushHistory).toHaveBeenCalledWith('gerar-template', 'CSV: ' + dest, 'ok');
     });
 
@@ -433,7 +446,8 @@ describe('case11 — generate CSV/JSON template', () => {
         const c = buildContext();
         const mod = case11;
         await mod.handler(c);
-        expect(fs.existsSync(dest)).toBe(true);
+
+        expect(fs.existsSync(dest)).toBeTruthy();
         expect(c.pushHistory).toHaveBeenCalledWith('gerar-template', 'JSON: ' + dest, 'ok');
     });
 });
@@ -450,8 +464,9 @@ describe('case12 — diagnose connection', () => {
         const c = buildContext();
         const mod = case12;
         await mod.handler(c);
+
         expect(c.pushHistory).toHaveBeenCalledWith('diagnostico', expect.stringContaining('3/4'), 'ok');
-        expect(nock.isDone()).toBe(true);
+        expect(nock.isDone()).toBeTruthy();
     });
 
     it('one endpoint fails with 401', async () => {
@@ -462,8 +477,9 @@ describe('case12 — diagnose connection', () => {
         const c = buildContext();
         const mod = case12;
         await mod.handler(c);
+
         expect(c.pushHistory).toHaveBeenCalledWith('diagnostico', expect.stringContaining('2/4'), 'error');
-        expect(nock.isDone()).toBe(true);
+        expect(nock.isDone()).toBeTruthy();
     });
 });
 
@@ -511,8 +527,9 @@ describe('case13 — create Test Execution', () => {
         const c = buildContext();
         const mod = case13;
         await mod.handler(c);
+
         expect(c.pushHistory).toHaveBeenCalledWith('create-testexec', 'EXEC-1', 'ok');
-        expect(nock.isDone()).toBe(true);
+        expect(nock.isDone()).toBeTruthy();
     });
 });
 
@@ -525,6 +542,7 @@ describe('case14 — change Cypress directory', () => {
         const c = buildContext();
         const mod = case14;
         await mod.handler(c);
+
         expect(c.pushHistory).toHaveBeenCalledWith('config-tests', '/tmp/cypress', 'ok');
         expect(stateModule.update).toHaveBeenCalled();
     });
@@ -579,9 +597,10 @@ describe('case15 — import JSON tests', () => {
         c.ctx.packageManager = undefined;
         const mod = case15;
         await mod.handler(c);
+
         expect(c.pushHistory).toHaveBeenCalledWith('importar-json', '1 testes', 'ok');
         expect(c.pushHistory).toHaveBeenCalledWith('create-testexec', 'EXEC-1', 'ok');
-        expect(nock.isDone()).toBe(true);
+        expect(nock.isDone()).toBeTruthy();
     }, 15000);
 });
 
@@ -594,6 +613,7 @@ describe('case16 — change JSON directory', () => {
         const c = buildContext();
         const mod = case16;
         await mod.handler(c);
+
         expect(c.pushHistory).toHaveBeenCalledWith('config-json-dir', '/tmp/json', 'ok');
     });
 });

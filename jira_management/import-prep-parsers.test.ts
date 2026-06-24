@@ -43,6 +43,7 @@ describe('handleDryRun', () => {
     it('returns null when dryRun is disabled', () => {
         vi.spyOn(CONFIG.default, 'get').mockReturnValue(false);
         const result = handleDryRun([{ title: 'TC1', steps: [] }], onBusy, '/path.csv');
+
         expect(result).toBeNull();
     });
 
@@ -50,6 +51,7 @@ describe('handleDryRun', () => {
         vi.spyOn(CONFIG.default, 'get').mockReturnValue(true);
         const tests = [{ title: 'TC1', steps: [] }];
         const result = handleDryRun(tests, onBusy, '/path.csv');
+
         expect(result).not.toBeNull();
         expect(nonNull(result).summary).toContain('DRY-RUN');
         expect(nonNull(result).status).toBe('ok');
@@ -66,6 +68,7 @@ describe('resolveCsvPath', () => {
 
     it('returns input when provided', async () => {
         const result = await resolveCsvPath('/my/path.csv');
+
         expect(result).toBe('/my/path.csv');
     });
 
@@ -75,6 +78,7 @@ describe('resolveCsvPath', () => {
             return undefined;
         });
         const result = await resolveCsvPath(undefined);
+
         expect(result).toBe('/config/path.csv');
     });
 
@@ -82,6 +86,7 @@ describe('resolveCsvPath', () => {
         vi.spyOn(CONFIG.default, 'get').mockReturnValue(undefined);
         vi.spyOn(PROMPT, 'askFilePath').mockResolvedValue('/user/path.csv');
         const result = await resolveCsvPath(undefined);
+
         expect(result).toBe('/user/path.csv');
     });
 });
@@ -95,6 +100,7 @@ describe('resolveLabels', () => {
 
     it('returns input array when provided', () => {
         const result = resolveLabels(['smoke', 'regression'], 'csvLabels');
+
         expect(result).toEqual(['smoke', 'regression']);
     });
 
@@ -104,18 +110,21 @@ describe('resolveLabels', () => {
             return undefined;
         });
         const result = resolveLabels(undefined, 'csvLabels');
+
         expect(result).toEqual(['config-label']);
     });
 
     it('prompts user and splits by comma', () => {
         vi.spyOn(PROMPT, 'prompt').mockReturnValue('a, b, c');
         const result = resolveLabels(undefined, 'csvLabels');
+
         expect(result).toEqual(['a', 'b', 'c']);
     });
 
     it('returns empty array for empty prompt', () => {
         vi.spyOn(PROMPT, 'prompt').mockReturnValue('');
         const result = resolveLabels(undefined, 'csvLabels');
+
         expect(result).toEqual([]);
     });
 });
@@ -129,6 +138,7 @@ describe('resolveJsonPath', () => {
 
     it('returns input when provided', async () => {
         const result = await resolveJsonPath('/my/tests.json');
+
         expect(result).toBe('/my/tests.json');
     });
 
@@ -138,18 +148,21 @@ describe('resolveJsonPath', () => {
             return undefined;
         });
         const result = await resolveJsonPath(undefined);
+
         expect(result).toBe('/config/tests.json');
     });
 
     it('prompts user when no input and no config', async () => {
         vi.spyOn(PROMPT, 'askFilePath').mockResolvedValue('/user/tests.json');
         const result = await resolveJsonPath(undefined);
+
         expect(result).toBe('/user/tests.json');
     });
 
     it('returns undefined for empty path', async () => {
         vi.spyOn(PROMPT, 'askFilePath').mockResolvedValue('');
         const result = await resolveJsonPath(undefined);
+
         expect(result).toBeUndefined();
         expect(PROMPT.warn).toHaveBeenCalledWith(expect.stringContaining('vazio'));
     });

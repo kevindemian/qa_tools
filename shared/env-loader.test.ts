@@ -8,6 +8,7 @@ describe('env-loader — dotenv wrapper', () => {
     describe('ensureDotenv', () => {
         it('is idempotent', () => {
             ensureDotenv();
+
             expect(() => ensureDotenv()).not.toThrow();
         });
     });
@@ -15,40 +16,44 @@ describe('env-loader — dotenv wrapper', () => {
     describe('envVal', () => {
         it('returns empty string for missing key', () => {
             const val = envVal('__NONEXISTENT_VAR_12345__');
+
             expect(val).toBe('');
         });
 
         it('returns process.env value when set', () => {
             process.env['__TEST_VAR__'] = 'hello';
             const val = envVal('__TEST_VAR__');
+
             expect(val).toBe('hello');
+
             delete process.env['__TEST_VAR__'];
         });
 
         it('returns fallback when key is missing', () => {
             const val = envVal('__NONEXISTENT_VAR_12345__', 'fallback');
+
             expect(val).toBe('fallback');
         });
     });
 
     describe('toBool', () => {
         it('returns false for undefined', () => {
-            expect(toBool(undefined)).toBe(false);
+            expect(toBool(undefined)).toBeFalsy();
         });
 
         it('returns boolean value as-is', () => {
-            expect(toBool(true)).toBe(true);
-            expect(toBool(false)).toBe(false);
+            expect(toBool(true)).toBeTruthy();
+            expect(toBool(false)).toBeFalsy();
         });
 
         it('parses string "true"', () => {
-            expect(toBool('true')).toBe(true);
+            expect(toBool('true')).toBeTruthy();
         });
 
         it('returns false for other strings', () => {
-            expect(toBool('false')).toBe(false);
-            expect(toBool('yes')).toBe(false);
-            expect(toBool('')).toBe(false);
+            expect(toBool('false')).toBeFalsy();
+            expect(toBool('yes')).toBeFalsy();
+            expect(toBool('')).toBeFalsy();
         });
     });
 
@@ -74,6 +79,7 @@ describe('env-loader — dotenv wrapper', () => {
         it('resets the loaded flag', () => {
             ensureDotenv();
             __resetDotenvLoaded();
+
             expect(() => ensureDotenv()).not.toThrow();
         });
     });

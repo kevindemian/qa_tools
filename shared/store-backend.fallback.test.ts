@@ -26,6 +26,7 @@ describe('detectStoreBackend fallback', () => {
         });
 
         const backend = detectStoreBackend();
+
         expect(backend).toBeInstanceOf(FsStoreBackend);
     });
 });

@@ -70,8 +70,11 @@ describe('Store — property-based', () => {
                 try {
                     store.put(meta.sha, meta);
                     const loaded = store.lookup(meta.sha);
+
                     expect(loaded).not.toBeNull();
+
                     if (!loaded) throw new Error('lookup returned null');
+
                     expect(loaded.sha).toBe(meta.sha);
                     expect(loaded.project).toBe(meta.project);
                     expect(loaded.tool).toBe(meta.tool);
@@ -120,11 +123,14 @@ describe('Store — property-based', () => {
                         store.put(m.sha, m);
                     }
                     const list = store.listByProject();
+
                     expect(list.length).toBeGreaterThanOrEqual(1);
+
                     for (let i = 1; i < list.length; i++) {
                         const prev = list[i - 1];
                         const curr = list[i];
                         if (!prev || !curr) throw new Error('expected entries');
+
                         expect(prev.timestamp).toBeGreaterThanOrEqual(curr.timestamp);
                     }
                 } finally {
@@ -171,11 +177,14 @@ describe('Store — property-based', () => {
                             store.appendBranch(branch, e);
                         }
                         const loaded = store.getBranch(branch);
+
                         expect(loaded).toHaveLength(entries.length);
+
                         for (let i = 0; i < entries.length; i++) {
                             const loadedEntry = loaded[entries.length - 1 - i];
                             const entry = entries[i];
                             if (!loadedEntry || !entry) throw new Error('expected entries');
+
                             expect(loadedEntry.sha).toBe(entry.sha);
                             expect(loadedEntry.timestamp).toBe(entry.timestamp);
                         }
@@ -219,13 +228,18 @@ describe('Store — property-based', () => {
                     try {
                         store.saveReport(sha, tests);
                         const loaded = store.loadReport(sha);
+
                         expect(loaded).not.toBeNull();
+
                         if (!loaded) throw new Error('loadReport returned null');
+
                         expect(loaded.tests).toHaveLength(tests.length);
+
                         if (tests.length > 0) {
                             const firstLoaded = loaded.tests[0];
                             const firstTest = tests[0];
                             if (!firstLoaded || !firstTest) throw new Error('expected tests');
+
                             expect(firstLoaded.title).toBe(firstTest.title);
                         }
                     } finally {

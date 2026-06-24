@@ -62,9 +62,13 @@ describe('Integration: Metrics Store', () => {
             const loaded = loadMetrics(config);
 
             expect(loaded.runs).toHaveLength(1);
+
             const firstRun = loaded.runs[0];
+
             expect(firstRun).toBeDefined();
+
             const firstRunData = firstRun as { project: string; total: number; tests: unknown[] };
+
             expect(firstRunData.project).toBe('test-project');
             expect(firstRunData.total).toBe(100);
         });
@@ -73,6 +77,7 @@ describe('Integration: Metrics Store', () => {
             const { loadMetrics } = await import('../../metrics.js');
             const config = getConfig();
             const loaded = loadMetrics(config);
+
             expect(loaded.runs).toEqual([]);
         });
     });
@@ -97,8 +102,11 @@ describe('Integration: Metrics Store', () => {
             expect(run.failed).toBe(3);
 
             const loaded = loadMetrics(config);
+
             expect(loaded.runs).toHaveLength(1);
+
             const firstRun = loaded.runs[0];
+
             expect(firstRun).toBeDefined();
             expect((firstRun as { tests: unknown[] }).tests).toHaveLength(2);
         });
@@ -117,6 +125,7 @@ describe('Integration: Metrics Store', () => {
             }
 
             const loaded = loadMetrics(config);
+
             expect(loaded.runs.length).toBeLessThanOrEqual(50);
             expect(loaded.runs.length).toBeGreaterThan(0);
         });
@@ -169,6 +178,7 @@ describe('Integration: Metrics Store', () => {
                     }),
                 ],
             };
+
             expect(calculateFlakyRate(store)).toBe(0);
         });
 
@@ -193,6 +203,7 @@ describe('Integration: Metrics Store', () => {
                 ],
             };
             const rate = calculateFlakyRate(store, 2);
+
             expect(rate).toBeGreaterThan(0);
         });
     });
@@ -208,9 +219,12 @@ describe('Integration: Metrics Store', () => {
             };
 
             const trends = getTrends(store, 10);
+
             expect(trends).toHaveLength(2);
+
             const firstTrend = trends[0];
             const secondTrend = trends[1];
+
             expect(firstTrend).toBeDefined();
             expect(secondTrend).toBeDefined();
             expect((firstTrend as { passRate: number; failed: number }).passRate).toBeCloseTo(80);
@@ -228,11 +242,14 @@ describe('Integration: Metrics Store', () => {
             saveCoverageSnapshot(createCoverageSnapshotFixture({ coveragePct: 92 }), config);
 
             const loaded = loadMetrics(config);
+
             expect(loaded.coverageHistory).toBeDefined();
             expect(loaded.coverageHistory).toHaveLength(2);
+
             const coverageHistory = loaded.coverageHistory as Array<{ coveragePct: number }>;
             const first = coverageHistory[0] as { coveragePct: number };
             const second = coverageHistory[1] as { coveragePct: number };
+
             expect(first.coveragePct).toBe(85);
             expect(second.coveragePct).toBe(92);
         });

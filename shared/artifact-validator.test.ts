@@ -10,7 +10,8 @@ describe('ArtifactValidator', () => {
     it('validates with no invariants (empty)', () => {
         const validator = new ArtifactValidator('test-suite');
         const result = validator.validate({}, ctx);
-        expect(result.allPassed).toBe(true);
+
+        expect(result.allPassed).toBeTruthy();
         expect(result.totalInvariants).toBe(0);
     });
 
@@ -18,7 +19,8 @@ describe('ArtifactValidator', () => {
         const validator = new ArtifactValidator('test-suite');
         validator.addInvariant('T-01', () => [pass('T-01', 'OK')]);
         const result = validator.validate({}, ctx);
-        expect(result.allPassed).toBe(true);
+
+        expect(result.allPassed).toBeTruthy();
         expect(result.passed).toBe(1);
     });
 
@@ -26,7 +28,8 @@ describe('ArtifactValidator', () => {
         const validator = new ArtifactValidator('test-suite');
         validator.addInvariant('T-01', () => [fail('T-01', 'Failed')]);
         const result = validator.validate({}, ctx);
-        expect(result.allPassed).toBe(false);
+
+        expect(result.allPassed).toBeFalsy();
         expect(result.failed).toBe(1);
     });
 
@@ -34,7 +37,8 @@ describe('ArtifactValidator', () => {
         const validator = new ArtifactValidator('test-suite');
         validator.addInvariant('T-01', () => [warn('T-01', 'Warning')]);
         const result = validator.validate({}, ctx);
-        expect(result.allPassed).toBe(true);
+
+        expect(result.allPassed).toBeTruthy();
         expect(result.warnings).toBe(1);
     });
 
@@ -43,7 +47,8 @@ describe('ArtifactValidator', () => {
         validator.addInvariant('T-01', () => [pass('T-01', 'Pass')]);
         validator.addInvariant('T-02', () => [fail('T-02', 'Fail')]);
         const result = validator.validate({}, ctx);
-        expect(result.allPassed).toBe(false);
+
+        expect(result.allPassed).toBeFalsy();
         expect(result.passed).toBe(1);
         expect(result.failed).toBe(1);
     });
@@ -54,21 +59,24 @@ describe('ArtifactValidator', () => {
             throw new Error('Unexpected error');
         });
         const result = validator.validate({}, ctx);
-        expect(result.allPassed).toBe(false);
+
+        expect(result.allPassed).toBeFalsy();
         expect(result.failed).toBe(1);
     });
 
     it('prevents duplicate invariant registration', () => {
         const validator = new ArtifactValidator('test-suite');
         validator.addInvariant('T-01', () => [pass('T-01', '')]);
+
         expect(() => validator.addInvariant('T-01', () => [pass('T-01', '')])).toThrow();
     });
 
     it('reports hasInvariant correctly', () => {
         const validator = new ArtifactValidator('test-suite');
         validator.addInvariant('T-01', () => [pass('T-01', '')]);
-        expect(validator.hasInvariant('T-01')).toBe(true);
-        expect(validator.hasInvariant('T-02')).toBe(false);
+
+        expect(validator.hasInvariant('T-01')).toBeTruthy();
+        expect(validator.hasInvariant('T-02')).toBeFalsy();
     });
 
     it('lists registered invariants', () => {
@@ -76,6 +84,7 @@ describe('ArtifactValidator', () => {
         validator.addInvariant('T-01', () => [pass('T-01', '')]);
         validator.addInvariant('T-02', () => [pass('T-02', '')]);
         const names = validator.listInvariants();
+
         expect(names).toContain('T-01');
         expect(names).toContain('T-02');
         expect(names).toHaveLength(2);
@@ -96,7 +105,8 @@ describe('ArtifactValidator', () => {
             return [pass('cross-field', 'OK')];
         });
         const result = validator.validate({ items_count: 5, items: [1, 2, 3] }, ctx);
-        expect(result.allPassed).toBe(false);
+
+        expect(result.allPassed).toBeFalsy();
     });
 
     it('catches cross-field check exceptions', () => {
@@ -105,8 +115,9 @@ describe('ArtifactValidator', () => {
             throw new Error('check error');
         });
         const result = validator.validate({}, ctx);
-        expect(result.allPassed).toBe(false);
-        expect(result.results.some((r) => r.message.toLowerCase().includes('cross-field'))).toBe(true);
+
+        expect(result.allPassed).toBeFalsy();
+        expect(result.results.some((r) => r.message.toLowerCase().includes('cross-field'))).toBeTruthy();
     });
 
     it('validates with artifactType context', () => {
@@ -117,28 +128,32 @@ describe('ArtifactValidator', () => {
         });
         const bugCtx = { ...ctx, artifactType: 'bug-report' as const };
         const result = validator.validate({}, bugCtx);
-        expect(result.allPassed).toBe(true);
+
+        expect(result.allPassed).toBeTruthy();
     });
 });
 
 describe('factory functions', () => {
     it('pass builds passing result', () => {
         const r = pass('I-01', 'OK');
-        expect(r.passed).toBe(true);
+
+        expect(r.passed).toBeTruthy();
         expect(r.invariantId).toBe('I-01');
         expect(r.severity).toBe('error');
     });
 
     it('fail builds failing result', () => {
         const r = fail('T-01', 'Error', 'path');
-        expect(r.passed).toBe(false);
+
+        expect(r.passed).toBeFalsy();
         expect(r.severity).toBe('error');
         expect(r.artifactPath).toBe('path');
     });
 
     it('warn builds warning result', () => {
         const r = warn('T-02', 'Warning');
-        expect(r.passed).toBe(false);
+
+        expect(r.passed).toBeFalsy();
         expect(r.severity).toBe('warning');
     });
 });

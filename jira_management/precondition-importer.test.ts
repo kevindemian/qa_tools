@@ -42,6 +42,7 @@ describe('PreconditionHandler', () => {
             mockJiraResource.getJiraResource.mockResolvedValue(fields);
             const first = await handler._getPreconditionFieldId();
             const second = await handler._getPreconditionFieldId();
+
             expect(first).toBe('custom_123');
             expect(second).toBe('custom_123');
             expect(mockJiraResource.getJiraResource).toHaveBeenCalledTimes(1);
@@ -50,12 +51,14 @@ describe('PreconditionHandler', () => {
         it('falls back to customfield_13708 when API fails', async () => {
             mockJiraResource.getJiraResource.mockRejectedValue(new Error('API error'));
             const result = await handler._getPreconditionFieldId();
+
             expect(result).toBe('customfield_13708');
         });
 
         it('falls back to customfield_13708 when no matching field', async () => {
             mockJiraResource.getJiraResource.mockResolvedValue([{ id: 'other', schema: { custom: 'other' } }]);
             const result = await handler._getPreconditionFieldId();
+
             expect(result).toBe('customfield_13708');
         });
     });
@@ -70,6 +73,7 @@ describe('PreconditionHandler', () => {
                 .mockResolvedValueOnce({ key: 'TEST-1', fields: { custom_99: ['PRE-1'] } });
             mockJiraResource.putJiraResource.mockResolvedValue({});
             await handler.associatePrecondition('TEST-1', 'PRE-2');
+
             expect(mockJiraResource.putJiraResource).toHaveBeenCalledWith('issue/TEST-1', {
                 fields: { custom_99: ['PRE-1', 'PRE-2'] },
             });
@@ -84,6 +88,7 @@ describe('PreconditionHandler', () => {
                 .mockResolvedValueOnce({ key: 'TEST-1', fields: { custom_99: ['PRE-1', 'PRE-2'] } });
             mockJiraResource.putJiraResource.mockResolvedValue({});
             await handler.associatePrecondition('TEST-1', 'PRE-2');
+
             expect(mockJiraResource.putJiraResource).toHaveBeenCalledWith('issue/TEST-1', {
                 fields: { custom_99: ['PRE-1', 'PRE-2'] },
             });
@@ -97,6 +102,7 @@ describe('PreconditionHandler', () => {
                 { id: '11802', name: 'Test Execution' },
             ]);
             const result = await handler._resolvePreconditionIssueTypeId();
+
             expect(result).toBe('11801');
         });
 
@@ -104,11 +110,13 @@ describe('PreconditionHandler', () => {
             mockJiraResource.getJiraResource.mockResolvedValue([{ id: '11801', name: 'Pre-condition' }]);
             await handler._resolvePreconditionIssueTypeId();
             await handler._resolvePreconditionIssueTypeId();
+
             expect(mockJiraResource.getJiraResource).toHaveBeenCalledTimes(1);
         });
 
         it('throws when no Pre-condition issue type exists', async () => {
             mockJiraResource.getJiraResource.mockResolvedValue([{ id: '100', name: 'Bug' }]);
+
             await expect(handler._resolvePreconditionIssueTypeId()).rejects.toThrow(
                 'Issue type "Pre-condition" não encontrado no Jira',
             );
@@ -127,6 +135,7 @@ describe('PreconditionHandler', () => {
                 maxResults: 200,
             });
             const result = await handler.listPreconditions('ECSPOL');
+
             expect(result).toHaveLength(2);
             expect(result[0]).toEqual({ key: 'PREC-1', summary: 'User must be logged in' });
             expect(result[1]).toEqual({ key: 'PREC-2', summary: 'Database must be seeded' });
@@ -135,6 +144,7 @@ describe('PreconditionHandler', () => {
         it('returns empty array when no preconditions found', async () => {
             mockJiraResource.searchJiraIssues.mockResolvedValue({ issues: [], total: 0, startAt: 0, maxResults: 200 });
             const result = await handler.listPreconditions('EMPTY');
+
             expect(result).toEqual([]);
         });
     });
@@ -148,12 +158,14 @@ describe('PreconditionHandler', () => {
                 maxResults: 5,
             });
             const key = await handler.findExistingPrecondition('ECSPOL', 'User must be logged in');
+
             expect(key).toBe('PREC-1');
         });
 
         it('returns null when no JQL match', async () => {
             mockJiraResource.searchJiraIssues.mockResolvedValue({ issues: [], total: 0, startAt: 0, maxResults: 5 });
             const key = await handler.findExistingPrecondition('ECSPOL', 'Nonexistent');
+
             expect(key).toBeNull();
         });
 
@@ -165,12 +177,14 @@ describe('PreconditionHandler', () => {
                 maxResults: 5,
             });
             const key = await handler.findExistingPrecondition('ECSPOL', 'User must be logged in');
+
             expect(key).toBeNull();
         });
 
         it('escapes single quotes in summary for JQL safety', async () => {
             mockJiraResource.searchJiraIssues.mockResolvedValue({ issues: [], total: 0, startAt: 0, maxResults: 5 });
             await handler.findExistingPrecondition('PROJ', "user's precondition");
+
             expect(mockJiraResource.searchJiraIssues).toHaveBeenCalledWith(
                 expect.stringContaining("user\\\\'s"),
                 expect.any(Number),
@@ -184,6 +198,7 @@ describe('PreconditionHandler', () => {
             mockJiraResource.getJiraResource.mockResolvedValue([{ id: '11801', name: 'Pre-condition' }]);
             mockJiraResource.postJiraResource.mockResolvedValue({ key: 'ECSPOL-NEW-1' });
             const key = await handler.createPrecondition('ECSPOL', 'User must be admin');
+
             expect(mockJiraResource.postJiraResource).toHaveBeenCalledWith('issue', {
                 fields: {
                     project: { key: 'ECSPOL' },
@@ -202,6 +217,7 @@ describe('PreconditionHandler', () => {
                 maxResults: 5,
             });
             const key = await handler.createPrecondition('ECSPOL', 'User must be admin');
+
             expect(key).toBe('PREC-EXISTING');
             expect(mockJiraResource.postJiraResource).not.toHaveBeenCalled();
         });

@@ -29,18 +29,21 @@ describe('discoverModels', () => {
 
     it('returns empty array for unknown provider', async () => {
         const result = await discoverModels('custom', 'test-key');
+
         expect(result).toEqual([]);
     });
 
     it('returns empty array when fetch fails', async () => {
         mockFetchReject(new Error('network error'));
         const result = await discoverModels('openai', 'sk-test');
+
         expect(result).toEqual([]);
     });
 
     it('returns empty array on non-ok response', async () => {
         mockFetchError(401, { error: 'unauthorized' });
         const result = await discoverModels('openai', 'sk-test');
+
         expect(result).toEqual([]);
     });
 
@@ -52,7 +55,8 @@ describe('discoverModels', () => {
             ],
         });
         const result = await discoverModels('openai', 'sk-test');
-        expect(result.length).toBe(2);
+
+        expect(result).toHaveLength(2);
         expect(result[0]?.id).toBe('gpt-4o');
         expect(result[0]?.context).toBe(0);
     });
@@ -62,7 +66,8 @@ describe('discoverModels', () => {
             models: [{ name: 'models/gemini-2.0-flash', inputTokenLimit: 1048576 }],
         });
         const result = await discoverModels('gemini', 'AIza-test');
-        expect(result.length).toBe(1);
+
+        expect(result).toHaveLength(1);
         expect(result[0]?.id).toBe('gemini-2.0-flash');
         expect(result[0]?.context).toBe(1048576);
     });
@@ -82,13 +87,15 @@ describe('discoverModels', () => {
             ],
         });
         const result = await discoverModels('anthropic', 'sk-ant-test');
-        expect(result.length).toBe(1);
+
+        expect(result).toHaveLength(1);
         expect(result[0]?.id).toBe('claude-sonnet-4-20250514');
         expect(result[0]?.context).toBe(200000);
     });
 
     it('returns empty for unknown adapter (no buildProbeRequest)', async () => {
         const result = await discoverModels('opencode-go', 'test');
+
         expect(result).toEqual([]);
     });
 });
@@ -103,9 +110,12 @@ describe('assignTierHints', () => {
             { id: 'single-model', context: 64000, costPer1kPrompt: 0, costPer1kCompletion: 0, tiers: [] },
         ];
         const result = assignTierHints(models);
-        expect(result.length).toBe(1);
+
+        expect(result).toHaveLength(1);
+
         const model = result[0] as RegistryModel;
-        expect(model.tiers.length).toBe(6);
+
+        expect(model.tiers).toHaveLength(6);
         expect(model.tiers).toContain('main');
         expect(model.tiers).toContain('fast');
         expect(model.tiers).toContain('reviewer');
@@ -120,9 +130,11 @@ describe('assignTierHints', () => {
             { id: 'gpt-4o-mini', context: 128000, costPer1kPrompt: 0, costPer1kCompletion: 0, tiers: [] },
         ];
         const result = assignTierHints(models);
+
         expect(result).toHaveLength(2);
+
         for (const m of result) {
-            expect(m.tiers.length).toBe(6);
+            expect(m.tiers).toHaveLength(6);
         }
     });
 
@@ -151,9 +163,12 @@ describe('assignTierHints', () => {
         const result = assignTierHints(models);
         const large = result.find((m) => m.id === 'large-ctx');
         const small = result.find((m) => m.id === 'small-ctx');
+
         expect(large).toBeDefined();
         expect(small).toBeDefined();
+
         if (!large || !small) return;
+
         expect(large.tiers).toContain('main');
         expect(small.tiers).not.toContain('main');
     });

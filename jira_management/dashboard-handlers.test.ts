@@ -156,6 +156,7 @@ describe('case-d — dashboard menu', () => {
         ctx.ctx.project_name = '';
         const { default: caseD } = await import('./commands/case-d.js');
         const result = await caseD.handler(ctx);
+
         expect(result).toBeUndefined();
     });
 
@@ -165,6 +166,7 @@ describe('case-d — dashboard menu', () => {
         const ctx = createMockContext();
         const { default: caseD } = await import('./commands/case-d.js');
         await caseD.handler(ctx);
+
         expect(showSelect).toHaveBeenCalled();
     });
 
@@ -178,6 +180,7 @@ describe('case-d — dashboard menu', () => {
         const ctx = createMockContext();
         const { default: caseD } = await import('./commands/case-d.js');
         await caseD.handler(ctx);
+
         expect(ctx.pushHistory).toHaveBeenCalledWith('traceability-matrix', 'TEST', 'ok');
     });
 
@@ -206,6 +209,7 @@ describe('case-d — dashboard menu', () => {
         const ctx = createMockContext();
         const { default: caseD } = await import('./commands/case-d.js');
         await caseD.handler(ctx);
+
         expect(ctx.pushHistory).toHaveBeenCalledWith('release-score', 'TEST', 'ok');
     });
 
@@ -221,6 +225,7 @@ describe('case-d — dashboard menu', () => {
         const ctx = createMockContext();
         const { default: caseD } = await import('./commands/case-d.js');
         await caseD.handler(ctx);
+
         expect(ctx.pushHistory).toHaveBeenCalledWith('coverage-dashboard', '75% coverage, 2 gaps', 'ok');
     });
 });
@@ -233,8 +238,11 @@ describe('case25 — Traceability Matrix', () => {
         ctx.ctx.project_name = '';
         const { default: case25 } = await import('./commands/case25.js');
         await case25.handler(ctx);
+
         expect(ctx.pushHistory).not.toHaveBeenCalled();
+
         const { warn } = await import('../shared/prompt.js');
+
         expect(vi.mocked(warn)).toHaveBeenCalledWith('Nenhum projeto Jira selecionado.');
     });
 
@@ -250,6 +258,7 @@ describe('case25 — Traceability Matrix', () => {
         const ctx = createMockContext();
         const { default: case25 } = await import('./commands/case25.js');
         await case25.handler(ctx);
+
         expect(loadMetrics).toHaveBeenCalled();
         expect(buildTraceabilityMatrix).toHaveBeenCalledWith(store);
     });
@@ -264,6 +273,7 @@ describe('case25 — Traceability Matrix', () => {
         ctx.ctx.project_name = 'MY_PROJECT';
         const { default: case25 } = await import('./commands/case25.js');
         await case25.handler(ctx);
+
         expect(generateTraceabilityHtml).toHaveBeenCalledWith(expect.anything(), 'Traceability Matrix — MY_PROJECT');
     });
 
@@ -274,6 +284,7 @@ describe('case25 — Traceability Matrix', () => {
         ctx.ctx.project_name = 'PROJ-XYZ';
         const { default: case25 } = await import('./commands/case25.js');
         await case25.handler(ctx);
+
         expect(writeReport).toHaveBeenCalledWith('traceability-matrix-PROJ-XYZ.html', HTML_WITH_DOCTYPE);
     });
 
@@ -285,6 +296,7 @@ describe('case25 — Traceability Matrix', () => {
         const ctx = createMockContext();
         const { default: case25 } = await import('./commands/case25.js');
         await case25.handler(ctx);
+
         expect(openWithFallback).toHaveBeenCalledWith(
             '/tmp/traceability-matrix-TEST.html',
             'Traceability Matrix',
@@ -299,6 +311,7 @@ describe('case25 — Traceability Matrix', () => {
         ctx.ctx.project_name = 'AUDIT-PROJ';
         const { default: case25 } = await import('./commands/case25.js');
         await case25.handler(ctx);
+
         expect(ctx.pushHistory).toHaveBeenCalledWith('traceability-matrix', 'AUDIT-PROJ', 'ok');
     });
 
@@ -313,6 +326,7 @@ describe('case25 — Traceability Matrix', () => {
         vi.mocked(writeReport).mockReturnValue('/tmp/report.html');
         const ctx = createMockContext();
         const { default: case25 } = await import('./commands/case25.js');
+
         await expect(case25.handler(ctx)).resolves.not.toThrow();
         expect(ctx.pushHistory).toHaveBeenCalledWith('traceability-matrix', 'TEST', 'ok');
     });
@@ -324,8 +338,11 @@ describe('case25 — Traceability Matrix', () => {
         });
         const ctx = createMockContext();
         const { default: case25 } = await import('./commands/case25.js');
+
         await expect(case25.handler(ctx)).resolves.not.toThrow();
+
         const { printError } = await import('../shared/prompt.js');
+
         expect(vi.mocked(printError)).toHaveBeenCalled();
     });
 
@@ -336,6 +353,7 @@ describe('case25 — Traceability Matrix', () => {
         const { default: case25 } = await import('./commands/case25.js');
         await case25.handler(ctx);
         const { title } = await import('../shared/prompt.js');
+
         expect(vi.mocked(title)).toHaveBeenCalledWith('Traceability Matrix');
     });
 });
@@ -348,6 +366,7 @@ describe('case26 — Release Score', () => {
         ctx.ctx.project_name = '';
         const { default: case26 } = await import('./commands/case26.js');
         await case26.handler(ctx);
+
         expect(ctx.pushHistory).not.toHaveBeenCalled();
     });
 
@@ -376,6 +395,7 @@ describe('case26 — Release Score', () => {
         const { default: case26 } = await import('./commands/case26.js');
         await case26.handler(ctx);
         const receivedStore = vi.mocked(calculateFlakiness).mock.calls[0]?.[0] as MetricsStore;
+
         expect(receivedStore.runs).toHaveLength(2);
         expect(receivedStore.runs[0]?.project).toBe('TEST');
         expect(receivedStore.runs[1]?.project).toBe('TEST');
@@ -399,6 +419,7 @@ describe('case26 — Release Score', () => {
         const ctx = createMockContext();
         const { default: case26 } = await import('./commands/case26.js');
         await case26.handler(ctx);
+
         expect(calculateReleaseScore).toHaveBeenCalledWith(80, 85, 'pass', 70, expect.any(Number));
     });
 
@@ -411,6 +432,7 @@ describe('case26 — Release Score', () => {
         const { default: case26 } = await import('./commands/case26.js');
         await case26.handler(ctx);
         const receivedData = vi.mocked(generateReleaseScoreHtml).mock.calls[0]?.[0] as { score: number; grade: string };
+
         expect(typeof receivedData.score).toBe('number');
         expect(typeof receivedData.grade).toBe('string');
     });
@@ -424,6 +446,7 @@ describe('case26 — Release Score', () => {
         ctx.ctx.project_name = 'RELEASE-PROJ';
         const { default: case26 } = await import('./commands/case26.js');
         await case26.handler(ctx);
+
         expect(writeReport).toHaveBeenCalledWith('release-score-RELEASE-PROJ.html', HTML_WITH_DOCTYPE);
     });
 
@@ -437,6 +460,7 @@ describe('case26 — Release Score', () => {
         const ctx = createMockContext();
         const { default: case26 } = await import('./commands/case26.js');
         await case26.handler(ctx);
+
         expect(openWithFallback).toHaveBeenCalledWith(
             '/tmp/release-score-TEST.html',
             'Release Score',
@@ -453,6 +477,7 @@ describe('case26 — Release Score', () => {
         ctx.ctx.project_name = 'QA-PROJECT';
         const { default: case26 } = await import('./commands/case26.js');
         await case26.handler(ctx);
+
         expect(ctx.pushHistory).toHaveBeenCalledWith('release-score', 'QA-PROJECT', 'ok');
     });
 
@@ -463,8 +488,11 @@ describe('case26 — Release Score', () => {
         });
         const ctx = createMockContext();
         const { default: case26 } = await import('./commands/case26.js');
+
         await expect(case26.handler(ctx)).resolves.not.toThrow();
+
         const { printError } = await import('../shared/prompt.js');
+
         expect(vi.mocked(printError)).toHaveBeenCalled();
     });
 
@@ -477,6 +505,7 @@ describe('case26 — Release Score', () => {
         const { default: case26 } = await import('./commands/case26.js');
         await case26.handler(ctx);
         const { title } = await import('../shared/prompt.js');
+
         expect(vi.mocked(title)).toHaveBeenCalledWith('Release Score');
     });
 
@@ -501,6 +530,7 @@ describe('case26 — Release Score', () => {
         const ctx = createMockContext();
         const { default: case26 } = await import('./commands/case26.js');
         await case26.handler(ctx);
+
         expect(calculateReleaseScore).toHaveBeenCalledWith(80, 75, 'pass', 70, expect.any(Number));
     });
 
@@ -525,6 +555,7 @@ describe('case26 — Release Score', () => {
         const ctx = createMockContext();
         const { default: case26 } = await import('./commands/case26.js');
         await case26.handler(ctx);
+
         expect(calculateReleaseScore).toHaveBeenCalledWith(80, 55, 'fail', 70, expect.any(Number));
     });
 });
@@ -537,6 +568,7 @@ describe('case27 — Coverage Dashboard', () => {
         ctx.ctx.project_name = '';
         const { default: case27 } = await import('./commands/case27.js');
         await case27.handler(ctx);
+
         expect(ctx.pushHistory).not.toHaveBeenCalled();
     });
 
@@ -550,6 +582,7 @@ describe('case27 — Coverage Dashboard', () => {
         const ctx = createMockContext();
         const { default: case27 } = await import('./commands/case27.js');
         await case27.handler(ctx);
+
         expect(analyzeCoverageGaps).toHaveBeenCalledWith(ctx.jiraResource, 'TEST');
     });
 
@@ -564,6 +597,7 @@ describe('case27 — Coverage Dashboard', () => {
         ctx.ctx.project_name = 'COV-PROJ';
         const { default: case27 } = await import('./commands/case27.js');
         await case27.handler(ctx);
+
         expect(generateCoverageGapHtml).toHaveBeenCalledWith(expect.anything(), 'Coverage Dashboard — COV-PROJ');
     });
 
@@ -578,6 +612,7 @@ describe('case27 — Coverage Dashboard', () => {
         ctx.ctx.project_name = 'DASH-XYZ';
         const { default: case27 } = await import('./commands/case27.js');
         await case27.handler(ctx);
+
         expect(writeReport).toHaveBeenCalledWith('coverage-dashboard-DASH-XYZ.html', HTML_WITH_DOCTYPE);
     });
 
@@ -593,6 +628,7 @@ describe('case27 — Coverage Dashboard', () => {
         const ctx = createMockContext();
         const { default: case27 } = await import('./commands/case27.js');
         await case27.handler(ctx);
+
         expect(openWithFallback).toHaveBeenCalledWith(
             '/tmp/coverage-dashboard-TEST.html',
             'Coverage Dashboard',
@@ -610,6 +646,7 @@ describe('case27 — Coverage Dashboard', () => {
         const ctx = createMockContext();
         const { default: case27 } = await import('./commands/case27.js');
         await case27.handler(ctx);
+
         expect(ctx.pushHistory).toHaveBeenCalledWith('coverage-dashboard', '75% coverage, 2 gaps', 'ok');
     });
 
@@ -619,8 +656,11 @@ describe('case27 — Coverage Dashboard', () => {
         const ctx = createMockContext();
         const { default: case27 } = await import('./commands/case27.js');
         const result = await case27.handler(ctx);
-        expect(result).toBe(false);
+
+        expect(result).toBeFalsy();
+
         const { printError } = await import('../shared/prompt.js');
+
         expect(vi.mocked(printError)).toHaveBeenCalled();
     });
 
@@ -631,6 +671,7 @@ describe('case27 — Coverage Dashboard', () => {
         const ctx = createMockContext();
         const { default: case27 } = await import('./commands/case27.js');
         await case27.handler(ctx);
+
         expect(writeReport).not.toHaveBeenCalled();
     });
 
@@ -645,6 +686,7 @@ describe('case27 — Coverage Dashboard', () => {
         vi.mocked(openWithFallback).mockRejectedValue(new Error('no browser'));
         const ctx = createMockContext();
         const { default: case27 } = await import('./commands/case27.js');
+
         await expect(case27.handler(ctx)).resolves.not.toThrow();
     });
 
@@ -659,6 +701,7 @@ describe('case27 — Coverage Dashboard', () => {
         const { default: case27 } = await import('./commands/case27.js');
         await case27.handler(ctx);
         const { title } = await import('../shared/prompt.js');
+
         expect(vi.mocked(title)).toHaveBeenCalledWith('Coverage Dashboard');
     });
 
@@ -673,6 +716,7 @@ describe('case27 — Coverage Dashboard', () => {
         const { default: case27 } = await import('./commands/case27.js');
         await case27.handler(ctx);
         const { withSpinner } = await import('../shared/prompt.js');
+
         expect(vi.mocked(withSpinner)).toHaveBeenCalledWith('Analisando cobertura...', expect.any(Function));
     });
 });

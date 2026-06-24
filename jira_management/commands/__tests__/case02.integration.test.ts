@@ -31,6 +31,7 @@ describe('FT-42a: empty version list', () => {
         jira.getProjectVersions.mockResolvedValue([]);
         const ctx = makeContext(jira);
         await case02.handler(ctx);
+
         expect(mockInfo).toHaveBeenCalledWith('Nenhuma versão encontrada para esse projeto.');
         expect(mockDivider).not.toHaveBeenCalled();
     });
@@ -40,6 +41,7 @@ describe('FT-42a: empty version list', () => {
         jira.getProjectVersions.mockResolvedValue(null);
         const ctx = makeContext(jira);
         await case02.handler(ctx);
+
         expect(mockInfo).toHaveBeenCalledWith('Nenhuma versão encontrada para esse projeto.');
     });
 });
@@ -50,6 +52,7 @@ describe('FT-42b: version display formatting', () => {
         jira.getProjectVersions.mockResolvedValue([{ name: 'v1.0', description: 'First', released: true }]);
         const ctx = makeContext(jira);
         await case02.handler(ctx);
+
         expect(mockInfo).toHaveBeenCalledWith(expect.stringContaining('(RELEASED)'));
     });
 
@@ -58,6 +61,7 @@ describe('FT-42b: version display formatting', () => {
         jira.getProjectVersions.mockResolvedValue([{ name: 'v2.0', description: '', released: false }]);
         const ctx = makeContext(jira);
         await case02.handler(ctx);
+
         expect(mockInfo).toHaveBeenCalledWith(expect.stringContaining('sem descrição'));
     });
 
@@ -69,6 +73,7 @@ describe('FT-42b: version display formatting', () => {
         ]);
         const ctx = makeContext(jira);
         await case02.handler(ctx);
+
         expect(mockInfo).not.toHaveBeenCalledWith(expect.stringContaining('ATRASADA'));
     });
 
@@ -80,6 +85,7 @@ describe('FT-42b: version display formatting', () => {
         ]);
         const ctx = makeContext(jira);
         await case02.handler(ctx);
+
         expect(mockInfo).toHaveBeenCalledWith(expect.stringContaining('ATRASADA'));
     });
 });
@@ -93,6 +99,7 @@ describe('FT-42c: pushHistory on success', () => {
         ]);
         const ctx = makeContext(jira);
         await case02.handler(ctx);
+
         expect(ctx.pushHistory).toHaveBeenCalledWith('listar-versoes', '2 versão(oes)', 'ok');
     });
 });
@@ -102,6 +109,7 @@ describe('FT-42d: error handling', () => {
         const jira = makeMockJiraResource();
         jira.getProjectId.mockRejectedValue(new Error('API error'));
         const ctx = makeContext(jira);
+
         await expect(case02.handler(ctx)).resolves.toBeUndefined();
         expect(mockPrintError).toHaveBeenCalled();
     });
@@ -111,6 +119,7 @@ describe('FT-42d: error handling', () => {
         jira.getProjectId.mockResolvedValue('123');
         jira.getProjectVersions.mockRejectedValue(new Error('List error'));
         const ctx = makeContext(jira);
+
         await expect(case02.handler(ctx)).resolves.toBeUndefined();
         expect(mockPrintError).toHaveBeenCalled();
     });

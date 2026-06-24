@@ -72,55 +72,70 @@ describe('probeApiKey', () => {
     it('returns valid for OpenAI probe (sk-... → 200)', async () => {
         mockFetch.mockResolvedValueOnce(okResponse());
         const result = await probeApiKey('sk-test', 'openai');
-        expect(result.valid).toBe(true);
+
+        expect(result.valid).toBeTruthy();
         expect(result.provider).toBe('openai');
         expect(mockFetch).toHaveBeenCalledTimes(1);
+
         const url = mockFetch.mock.calls[0]?.[0] as string;
+
         expect(url).toContain('/models');
     });
 
     it('returns invalid for OpenAI probe (401)', async () => {
         mockFetch.mockResolvedValueOnce(errorResponse(401));
         const result = await probeApiKey('sk-bad', 'openai');
-        expect(result.valid).toBe(false);
+
+        expect(result.valid).toBeFalsy();
     });
 
     it('returns valid for Gemini probe (200)', async () => {
         mockFetch.mockResolvedValueOnce(okResponse());
         const result = await probeApiKey('AIza-test', 'gemini');
-        expect(result.valid).toBe(true);
+
+        expect(result.valid).toBeTruthy();
         expect(result.provider).toBe('gemini');
+
         const url = mockFetch.mock.calls[0]?.[0] as string;
+
         expect(url).toContain('?key=');
     });
 
     it('returns invalid for Gemini probe (403)', async () => {
         mockFetch.mockResolvedValueOnce(errorResponse(403));
         const result = await probeApiKey('AIza-bad', 'gemini');
-        expect(result.valid).toBe(false);
+
+        expect(result.valid).toBeFalsy();
     });
 
     it('validates Anthropic key via POST /v1/messages', async () => {
         mockFetch.mockResolvedValueOnce(okResponse());
         const result = await probeApiKey('sk-ant-test', 'anthropic');
-        expect(result.valid).toBe(true);
+
+        expect(result.valid).toBeTruthy();
+
         const url = mockFetch.mock.calls[0]?.[0] as string;
+
         expect(url).toContain('/messages');
+
         const init = mockFetch.mock.calls[0]?.[1] as RequestInit;
         const headers = init.headers as Record<string, string> | undefined;
+
         expect(headers?.['x-api-key']).toBe('sk-ant-test');
     });
 
     it('returns error for custom provider without baseUrl', async () => {
         const result = await probeApiKey('custom-key', 'custom');
-        expect(result.valid).toBe(false);
+
+        expect(result.valid).toBeFalsy();
         expect(result.error).toContain('Unsupported provider');
     });
 
     it('handles network errors', async () => {
         mockFetch.mockRejectedValueOnce(new Error('Network failure'));
         const result = await probeApiKey('sk-test', 'openai');
-        expect(result.valid).toBe(false);
+
+        expect(result.valid).toBeFalsy();
         expect(result.error).toBe('Network failure');
     });
 
@@ -128,13 +143,15 @@ describe('probeApiKey', () => {
         const abortError = new DOMException('The operation was aborted', 'AbortError');
         mockFetch.mockRejectedValueOnce(abortError);
         const result = await probeApiKey('sk-test', 'openai');
-        expect(result.valid).toBe(false);
+
+        expect(result.valid).toBeFalsy();
     });
 
     it('returns valid on 404 (endpoint not found but key may be valid)', async () => {
         mockFetch.mockResolvedValueOnce(errorResponse(404));
         const result = await probeApiKey('sk-test', 'openai');
-        expect(result.valid).toBe(true);
+
+        expect(result.valid).toBeTruthy();
     });
 
     it('records latency via recordLlmRequest on successful probe', async () => {
@@ -144,7 +161,8 @@ describe('probeApiKey', () => {
         const recordSpy = vi.spyOn(getDefaultMetrics(), 'recordLlmRequest');
 
         const result = await probeApiKey('sk-test', 'openai');
-        expect(result.valid).toBe(true);
+
+        expect(result.valid).toBeTruthy();
 
         expect(recordSpy).toHaveBeenCalledTimes(1);
         expect(recordSpy).toHaveBeenCalledWith('probe', expect.any(Number), 'probe:openai');
@@ -161,7 +179,8 @@ describe('discoverProvider', () => {
     it('returns valid when pattern match + probe succeed', async () => {
         mockFetch.mockResolvedValueOnce(okResponse());
         const result = await discoverProvider('sk-test');
-        expect(result.valid).toBe(true);
+
+        expect(result.valid).toBeTruthy();
         expect(result.provider).toBe('openai');
     });
 
@@ -171,24 +190,29 @@ describe('discoverProvider', () => {
             .mockResolvedValueOnce(errorResponse(401)) // openai
             .mockResolvedValueOnce(okResponse()); // next provider succeeds
         const result = await discoverProvider('sk-test');
-        expect(result.valid).toBe(true);
+
+        expect(result.valid).toBeTruthy();
         expect(mockFetch).toHaveBeenCalledTimes(2);
     });
 
     it('returns failure when no provider accepts the key', async () => {
         mockFetch.mockResolvedValue(errorResponse(401));
         const result = await discoverProvider('sk-test');
-        expect(result.valid).toBe(false);
+
+        expect(result.valid).toBeFalsy();
         expect(result.provider).toBe('openai');
     });
 
     it('skips custom provider during discovery', async () => {
         mockFetch.mockResolvedValue(errorResponse(401));
         const result = await discoverProvider('unknown-key');
-        expect(result.valid).toBe(false);
+
+        expect(result.valid).toBeFalsy();
+
         // 'custom' should not be probed
         for (const call of mockFetch.mock.calls) {
             const url = call[0] as string;
+
             expect(url).not.toContain('/custom');
         }
     });
@@ -199,13 +223,15 @@ describe('discoverProvider', () => {
             .mockRejectedValueOnce(abortError) // first provider times out
             .mockRejectedValueOnce(errorResponse(401)); // subsequent failure
         const result = await discoverProvider('sk-test');
-        expect(result.valid).toBe(false);
+
+        expect(result.valid).toBeFalsy();
     });
 });
 
 describe('autoAssignTiers', () => {
     it('returns tier mapping for OpenAI', () => {
         const result = autoAssignTiers('openai');
+
         expect(result.provider).toBe('openai');
         expect(result.tiers.main).toBe('gpt-4o');
         expect(result.tiers.fast).toBe('gpt-4o-mini');
@@ -217,6 +243,7 @@ describe('autoAssignTiers', () => {
 
     it('returns tier mapping for Groq', () => {
         const result = autoAssignTiers('groq');
+
         expect(result.provider).toBe('groq');
         expect(result.tiers.main).toBe('llama-3.3-70b-versatile');
         expect(result.tiers.fast).toBe('llama-3.1-8b-instant');
@@ -229,6 +256,7 @@ describe('autoAssignTiers', () => {
     it('returns a shallow copy of the profile tiers each call', () => {
         const result1 = autoAssignTiers('groq');
         const result2 = autoAssignTiers('groq');
+
         expect(result1.tiers).not.toBe(result2.tiers);
         expect(result1.tiers.fast).toBe('llama-3.1-8b-instant');
         expect(result2.tiers.fast).toBe('llama-3.1-8b-instant');

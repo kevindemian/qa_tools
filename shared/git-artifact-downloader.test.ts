@@ -72,7 +72,9 @@ describe('fetchLatestTestRun', () => {
 
         const { fetchLatestTestRun } = await import('./git-artifact-downloader.js');
         const result = await fetchLatestTestRun();
+
         expect(result).not.toBeNull();
+
         if (result) {
             expect(result.tests).toHaveLength(2);
             expect(result.stats.passed).toBe(1);
@@ -89,6 +91,7 @@ describe('fetchLatestTestRun', () => {
 
         const { fetchLatestTestRun } = await import('./git-artifact-downloader.js');
         const result = await fetchLatestTestRun();
+
         expect(result).toBeNull();
     });
 
@@ -105,6 +108,7 @@ describe('fetchLatestTestRun', () => {
 
         const { fetchLatestTestRun } = await import('./git-artifact-downloader.js');
         const result = await fetchLatestTestRun();
+
         expect(result).toBeNull();
     });
 
@@ -116,6 +120,7 @@ describe('fetchLatestTestRun', () => {
 
         const { fetchLatestTestRun } = await import('./git-artifact-downloader.js');
         const result = await fetchLatestTestRun();
+
         expect(result).toBeNull();
     });
 });
@@ -143,7 +148,9 @@ describe('fetchLatestTestRun — GitLab', () => {
 
         const { fetchLatestTestRun } = await import('./git-artifact-downloader.js');
         const result = await fetchLatestTestRun();
+
         expect(result).not.toBeNull();
+
         if (result) {
             expect(result.tests).toHaveLength(2);
             expect(result.stats.passed).toBe(1);
@@ -167,6 +174,7 @@ describe('fetchLatestTestRun — GitLab', () => {
 
         const { fetchLatestTestRun } = await import('./git-artifact-downloader.js');
         const result = await fetchLatestTestRun();
+
         expect(result).toBeNull();
     });
 
@@ -183,6 +191,7 @@ describe('fetchLatestTestRun — GitLab', () => {
 
         const { fetchLatestTestRun } = await import('./git-artifact-downloader.js');
         const result = await fetchLatestTestRun();
+
         expect(result).toBeNull();
     });
 
@@ -199,6 +208,7 @@ describe('fetchLatestTestRun — GitLab', () => {
 
         const { fetchLatestTestRun } = await import('./git-artifact-downloader.js');
         const result = await fetchLatestTestRun();
+
         expect(result).toBeNull();
     });
 });
@@ -217,6 +227,7 @@ describe('fetchLatestTestRun — no CI', () => {
 
         const { fetchLatestTestRun } = await import('./git-artifact-downloader.js');
         const result = await fetchLatestTestRun();
+
         expect(result).toBeNull();
     });
 
@@ -253,6 +264,7 @@ describe('fetchLatestTestRun — no CI', () => {
 
         const { fetchLatestTestRun } = await import('./git-artifact-downloader.js');
         const result = await fetchLatestTestRun();
+
         expect(result).toBeNull();
     });
 
@@ -283,6 +295,7 @@ describe('fetchLatestTestRun — no CI', () => {
 
         const { fetchLatestTestRun } = await import('./git-artifact-downloader.js');
         const result = await fetchLatestTestRun();
+
         expect(result).toBeNull();
     });
 
@@ -310,6 +323,7 @@ describe('fetchLatestTestRun — no CI', () => {
 
         const { fetchLatestTestRun } = await import('./git-artifact-downloader.js');
         const result = await fetchLatestTestRun();
+
         expect(result).toBeNull();
     });
 
@@ -330,6 +344,7 @@ describe('fetchLatestTestRun — no CI', () => {
 
         const { fetchLatestTestRun } = await import('./git-artifact-downloader.js');
         const result = await fetchLatestTestRun();
+
         expect(result).toBeNull();
     });
 });
@@ -344,6 +359,7 @@ describe('fetchGitHistory', () => {
 
         const { fetchGitHistory } = await import('./git-artifact-downloader.js');
         const result = await fetchGitHistory();
+
         expect(result).toEqual({ commits: '', runs: [], flakyTests: '' });
     });
 
@@ -415,6 +431,7 @@ describe('fetchGitHistory', () => {
 
         const { fetchGitHistory } = await import('./git-artifact-downloader.js');
         const result = await fetchGitHistory();
+
         expect(result.commits).toContain('Fix test');
         expect(result.commits).toContain('Add feature');
         expect(result.runs.length).toBeGreaterThanOrEqual(1);
@@ -427,6 +444,7 @@ describe('fetchGitHistory', () => {
 
         const { fetchGitHistory } = await import('./git-artifact-downloader.js');
         const result = await fetchGitHistory();
+
         expect(result).toEqual({ commits: '', runs: [], flakyTests: '' });
     });
 
@@ -464,6 +482,7 @@ describe('fetchGitHistory', () => {
 
         const { fetchGitHistory } = await import('./git-artifact-downloader.js');
         const result = await fetchGitHistory();
+
         expect(result.commits).toBe('');
     });
 
@@ -526,7 +545,8 @@ describe('fetchGitHistory', () => {
 
         const { fetchGitHistory } = await import('./git-artifact-downloader.js');
         const result = await fetchGitHistory();
-        expect(result.runs.length).toBe(1);
+
+        expect(result.runs).toHaveLength(1);
     });
 
     it('returns GitLab history via fetchGitHistory', async () => {
@@ -573,7 +593,8 @@ describe('fetchGitHistory', () => {
 
         const { fetchGitHistory } = await import('./git-artifact-downloader.js');
         const result = await fetchGitHistory();
-        expect(result.runs.length).toBe(2);
+
+        expect(result.runs).toHaveLength(2);
     });
 
     it('handles GitLab pipeline processing error in fetchGitHistory', async () => {
@@ -595,6 +616,7 @@ describe('fetchGitHistory', () => {
 
         const { fetchGitHistory } = await import('./git-artifact-downloader.js');
         const result = await fetchGitHistory();
+
         expect(result.runs).toEqual([]);
     });
 });
@@ -602,12 +624,14 @@ describe('fetchGitHistory', () => {
 describe('ci helpers', () => {
     it('exports isGitHubCi and isGitLabCi from ci-detect', async () => {
         const mod = await import('./git-artifact-downloader.js');
+
         expect(mod.isGitHubCi).toBeDefined();
         expect(mod.isGitLabCi).toBeDefined();
     });
 
     it('exports GIT_HISTORY_RUNS constant', async () => {
         const mod = await import('./git-artifact-downloader.js');
+
         expect(mod.GIT_HISTORY_RUNS).toBe(5);
     });
 });

@@ -50,7 +50,7 @@ describe('SessionContext', () => {
     });
 
     it('initializes with defaults', () => {
-        expect(ctx.isBusy).toBe(false);
+        expect(ctx.isBusy).toBeFalsy();
         expect(ctx.lastOperation).toBe('');
         expect(ctx.sessionCounters).toEqual([]);
         expect(ctx.packageManager).toBeUndefined();
@@ -64,20 +64,23 @@ describe('SessionContext', () => {
     it('resetResults clears results array', () => {
         ctx.results.push({ status: 'ok', label: 'T1', message: '' });
         ctx.resetResults();
+
         expect(ctx.results).toEqual([]);
     });
 
     it('withBusy sets isBusy during execution', async () => {
-        expect(ctx.isBusy).toBe(false);
+        expect(ctx.isBusy).toBeFalsy();
 
         const result = await ctx.withBusy(async () => {
             await Promise.resolve();
-            expect(ctx.isBusy).toBe(true);
+
+            expect(ctx.isBusy).toBeTruthy();
+
             return 42;
         });
 
         expect(result).toBe(42);
-        expect(ctx.isBusy).toBe(false);
+        expect(ctx.isBusy).toBeFalsy();
     });
 
     it('withBusy ensures isBusy is false on error', async () => {
@@ -87,24 +90,27 @@ describe('SessionContext', () => {
             }),
         ).rejects.toThrow('fail');
 
-        expect(ctx.isBusy).toBe(false);
+        expect(ctx.isBusy).toBeFalsy();
     });
 
     it('withBusy passes label to spinner', async () => {
         const result = await ctx.withBusy(() => Promise.resolve('labelled'), 'working');
+
         expect(result).toBe('labelled');
-        expect(ctx.isBusy).toBe(false);
+        expect(ctx.isBusy).toBeFalsy();
     });
 
     it('pushHistory appends to sessionCounters', () => {
         ctx.pushHistory('test-op', 'detail-1', 'ok');
+
         expect(ctx.sessionCounters).toEqual([{ op: 'test-op', detail: 'detail-1', status: 'ok' }]);
     });
 
     it('pushHistory appends multiple entries', () => {
         ctx.pushHistory('op1', 'd1', 'ok');
         ctx.pushHistory('op2', 'd2', 'error');
-        expect(ctx.sessionCounters.length).toBe(2);
+
+        expect(ctx.sessionCounters).toHaveLength(2);
         expect(ctx.sessionCounters[0]?.op).toBe('op1');
         expect(ctx.sessionCounters[1]?.op).toBe('op2');
     });
@@ -118,6 +124,7 @@ describe('SessionContext', () => {
             ctx.pushHistory('op1', 'd1', 'ok');
             ctx.pushHistory('op2', 'd2', 'error');
             const line = ctx.buildContextLine('PROJ');
+
             expect(line).toContain('PROJ');
             expect(line).toContain('1 ok');
             expect(line).toContain('1 erro');
@@ -126,11 +133,13 @@ describe('SessionContext', () => {
         it('includes lastOperation when set', () => {
             ctx.pushHistory('test-op', 'detail-1', 'ok');
             const line = ctx.buildContextLine('PROJ');
+
             expect(line).toContain('test-op');
         });
 
         it('returns empty string when projectName is empty', () => {
             const line = ctx.buildContextLine('');
+
             expect(line).toBe('');
         });
     });
@@ -199,12 +208,14 @@ describe('resolveTestDataSource', () => {
         const result = await resolveTestDataSource('project', 'sha123', 'main', store as never);
 
         expect(result).not.toBeNull();
+
         if (result) {
             expect(result.source).toBe('cache');
             expect(result.result.tests).toHaveLength(2);
             expect(result.result.stats.passed).toBe(1);
             expect(result.result.stats.failed).toBe(1);
         }
+
         expect(store.loadReport).toHaveBeenCalledWith('sha123');
     });
 
@@ -234,9 +245,11 @@ describe('resolveTestDataSource', () => {
         const result = await resolveTestDataSource('project', 'sha456', 'main', store as never);
 
         expect(result).not.toBeNull();
+
         if (result) {
             expect(result.source).toBe('ci');
         }
+
         expect(store.saveReport).toHaveBeenCalledWith('sha456', expect.any(Array));
         expect(store.put).toHaveBeenCalled();
         expect(store.flush).toHaveBeenCalled();
@@ -257,6 +270,7 @@ describe('resolveTestDataSource', () => {
         const result = await resolveTestDataSource('project', 'sha789', 'main', store as never);
 
         expect(result).not.toBeNull();
+
         if (result) {
             expect(result.source).toBe('cache');
             expect(result.result.tests).toHaveLength(1);
@@ -328,9 +342,11 @@ describe('resolveTestDataSource', () => {
         const result = await resolveTestDataSource('project', null, null, store as never);
 
         expect(result).not.toBeNull();
+
         if (result) {
             expect(result.source).toBe('ci');
         }
+
         expect(store.saveReport).not.toHaveBeenCalled();
     });
 

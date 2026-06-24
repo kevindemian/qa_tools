@@ -63,12 +63,14 @@ describe('offerPipelineFailureAnalysis', () => {
         };
 
         await offerPipelineFailureAnalysis(parsed);
+
         expect(mockConfirm).not.toHaveBeenCalled();
     });
 
     it('should skip analysis when user declines', async () => {
         mockConfirm.mockReturnValue(false);
         await offerPipelineFailureAnalysis(baseParsed);
+
         expect(mockConfirm).toHaveBeenCalledWith('Analisar 2 falha(s) com IA?', false);
         expect(mockAnalyzeFailures).not.toHaveBeenCalled();
     });
@@ -78,6 +80,7 @@ describe('offerPipelineFailureAnalysis', () => {
         mockAnalyzeFailures.mockResolvedValue(mockReport);
 
         await offerPipelineFailureAnalysis(baseParsed);
+
         expect(mockAnalyzeFailures).toHaveBeenCalledWith(baseParsed.tests);
         expect(mockSuccess).toHaveBeenCalledWith('Análise de falhas (IA):');
     });
@@ -87,6 +90,7 @@ describe('offerPipelineFailureAnalysis', () => {
         mockAnalyzeFailures.mockResolvedValue({ ...mockReport, content: '' });
 
         await offerPipelineFailureAnalysis(baseParsed);
+
         expect(mockAnalyzeFailures).toHaveBeenCalled();
     });
 

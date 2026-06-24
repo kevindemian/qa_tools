@@ -86,6 +86,7 @@ describe('generateFlakinessHtml — property-based', () => {
         fc.assert(
             fc.property(fc.array(flakyEntryArb, { minLength: 0, maxLength: 10 }), (entries) => {
                 const html = generateFlakinessHtml(entries);
+
                 expect(html).toContain('<!DOCTYPE html>');
                 expect(html).toContain('</html>');
                 expect(html).toContain('data-component="metric-card"');
@@ -153,6 +154,7 @@ describe('generateFlakinessHtml — property-based', () => {
                 fc.array(fc.oneof(flakyEntryArb, extremeEntryArb), { minLength: 0, maxLength: 10 }),
                 (entries) => {
                     const html = generateFlakinessHtml(entries);
+
                     expect(html).not.toContain('NaN');
                     expect(html).not.toContain('Infinity');
                 },
@@ -165,6 +167,7 @@ describe('generateFlakinessHtml — property-based', () => {
         fc.assert(
             fc.property(fc.array(flakyEntryArb, { minLength: 0, maxLength: 10 }), (entries) => {
                 const html = generateFlakinessHtml(entries);
+
                 expect(html).toContain('Threshold');
                 expect(html).toContain('All Candidates');
                 expect(html).toContain(String(entries.length));

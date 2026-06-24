@@ -36,6 +36,7 @@ describe('PackageVersionManager', () => {
             writePackage('1.0.0');
             pkg.updateVersion('2.0.0');
             const json = JSON.parse(fs.readFileSync(path.join(tmpDir, 'package.json'), 'utf8')) as { version: string };
+
             expect(json.version).toBe('2.0.0');
         });
 
@@ -47,8 +48,11 @@ describe('PackageVersionManager', () => {
             writePackage('1.0.0');
             const extraUpdate = vi.fn();
             pkg._updateJsonFile(path.join(tmpDir, 'package.json'), '3.0.0', extraUpdate);
+
             expect(extraUpdate).toHaveBeenCalledTimes(1);
+
             const json = JSON.parse(fs.readFileSync(path.join(tmpDir, 'package.json'), 'utf8')) as { version: string };
+
             expect(json.version).toBe('3.0.0');
         });
     });
@@ -58,6 +62,7 @@ describe('PackageVersionManager', () => {
             writeReleaseNotes();
             pkg.updateReleaseNotes('v2.0', ['TASK-1 Fix bug', 'TASK-2 Add feature']);
             const content = fs.readFileSync(path.join(tmpDir, 'release_notes', 'ReleaseNotes.txt'), 'utf8');
+
             expect(content).toContain('Release v2.0');
             expect(content).toContain('TASK-1 Fix bug');
             expect(content).toContain('Old content');
@@ -69,6 +74,7 @@ describe('PackageVersionManager', () => {
 
         it('handles non-array tasks', () => {
             writeReleaseNotes();
+
             expect(pkg.updateReleaseNotes('v2.0', 'task')).toBeUndefined();
         });
 
@@ -78,7 +84,9 @@ describe('PackageVersionManager', () => {
                 throw new Error('Write error');
             });
             pkg.updateReleaseNotes('v2.0', ['TASK-1']);
+
             expect(spy).toHaveBeenCalled();
+
             spy.mockRestore();
         });
     });

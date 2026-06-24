@@ -43,6 +43,7 @@ describe('_runValidationRules', () => {
             { title: 'TC2', steps: [{ fields: { Action: 'Step2' } }] },
         ];
         const { errors, warnings } = _runValidationRules(tests);
+
         expect(errors).toHaveLength(0);
         expect(warnings).toHaveLength(0);
     });
@@ -53,6 +54,7 @@ describe('_runValidationRules', () => {
             { title: 'Duplicated', steps: [{ fields: { Action: 'Step2' } }] },
         ];
         const { warnings } = _runValidationRules(tests);
+
         expect(warnings).toHaveLength(1);
         expect(warnings[0]).toContain('Titulo duplicado');
     });
@@ -60,6 +62,7 @@ describe('_runValidationRules', () => {
     it('warns on step without Action', () => {
         const tests = [{ title: 'TC1', steps: [{ fields: { Action: '' } }] }];
         const { warnings } = _runValidationRules(tests);
+
         expect(warnings).toHaveLength(1);
         expect(warnings[0]).toContain('sem Action');
     });
@@ -67,6 +70,7 @@ describe('_runValidationRules', () => {
     it('reports schema errors on invalid test', () => {
         const tests = [{ title: 123, steps: 'invalid' }];
         const { errors } = _runValidationRules(tests);
+
         expect(errors.length).toBeGreaterThan(0);
     });
 });
@@ -78,6 +82,7 @@ describe('_printValidationMessages', () => {
 
     it('prints warnings up to MAX_WARNINGS_TO_SHOW', () => {
         _printValidationMessages([], ['warn1', 'warn2']);
+
         expect(mockWarn).toHaveBeenCalledWith(expect.stringContaining('Avisos'));
         expect(mockWarn).toHaveBeenCalledWith(expect.stringContaining('warn1'));
     });
@@ -85,11 +90,13 @@ describe('_printValidationMessages', () => {
     it('prints truncated message when warnings exceed limit', () => {
         const warnings = Array.from({ length: 10 }, (_, i) => 'warn' + i);
         _printValidationMessages([], warnings);
+
         expect(mockWarn).toHaveBeenCalledWith(expect.stringContaining('e mais'));
     });
 
     it('prints errors and advice', () => {
         _printValidationMessages(['err1'], []);
+
         expect(mockError).toHaveBeenCalledWith(expect.stringContaining('Erros'));
         expect(mockError).toHaveBeenCalledWith(expect.stringContaining('err1'));
         expect(mockWarn).toHaveBeenCalledWith(expect.stringContaining('Corrija'));
@@ -97,6 +104,7 @@ describe('_printValidationMessages', () => {
 
     it('handles empty warnings and errors', () => {
         _printValidationMessages([], []);
+
         expect(mockWarn).not.toHaveBeenCalledWith(expect.stringContaining('Avisos'));
         expect(mockError).not.toHaveBeenCalledWith(expect.stringContaining('Erros'));
     });

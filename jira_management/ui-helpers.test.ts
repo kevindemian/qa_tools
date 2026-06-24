@@ -129,29 +129,34 @@ beforeEach(() => {
 describe('showHelp', () => {
     it('displays general help when no topic given', () => {
         showHelp();
+
         expect(title).toHaveBeenCalledWith(expect.stringContaining('HELP'));
         expect(helpLine).toHaveBeenCalledWith(expect.stringContaining('Escolha uma opção'));
     });
 
     it('displays help for known topic', () => {
         showHelp('csv');
+
         expect(title).toHaveBeenCalledWith(expect.stringContaining('csv'));
         expect(helpLine).toHaveBeenCalledWith(expect.stringContaining('Formato CSV'));
     });
 
     it('warns for unknown topic', () => {
         showHelp('nonexistent');
+
         expect(warn).toHaveBeenCalledWith(expect.stringContaining('não encontrado'));
     });
 
     it('searches topics with search prefix', () => {
         showHelp('search csv');
+
         expect(title).toHaveBeenCalledWith(expect.stringContaining('csv'));
         expect(helpLine).toHaveBeenCalledWith(expect.stringContaining('Formato CSV'));
     });
 
     it('is case insensitive', () => {
         showHelp('CSV');
+
         expect(title).toHaveBeenCalledWith(expect.stringContaining('csv'));
     });
 });
@@ -172,16 +177,17 @@ describe('buildMenuChoices', () => {
     const ctx = { git_directory: '/tmp/repo' };
 
     it('returns array for main level', () => {
-        expect(Array.isArray(buildMenuChoices('main', 'ECSPOL', ctx))).toBe(true);
+        expect(Array.isArray(buildMenuChoices('main', 'ECSPOL', ctx))).toBeTruthy();
     });
 
     it('returns array for sub-menu level', () => {
-        expect(Array.isArray(buildMenuChoices('releases', 'ECSPOL', ctx))).toBe(true);
+        expect(Array.isArray(buildMenuChoices('releases', 'ECSPOL', ctx))).toBeTruthy();
     });
 
     it('main level includes category IDs', () => {
         const choices = buildMenuChoices('main', 'ECSPOL', ctx);
         const values = choices.filter((c: MenuChoice) => c.value).map((c: MenuChoice) => c.value);
+
         expect(values).toContain('reports');
         expect(values).toContain('releases');
     });
@@ -189,6 +195,7 @@ describe('buildMenuChoices', () => {
     it('sub-menu includes command IDs', () => {
         const choices = buildMenuChoices('releases', 'ECSPOL', ctx);
         const values = choices.filter((c: MenuChoice) => c.value).map((c: MenuChoice) => c.value);
+
         expect(values).toContain('2');
         expect(values).toContain('8');
         expect(values).toContain('0');
@@ -205,25 +212,25 @@ describe('handleSpecialInput', () => {
     });
 
     it('returns true and shows help for /help', async () => {
-        expect(await handleSpecialInput('/help')).toBe(true);
+        await expect(handleSpecialInput('/help')).resolves.toBeTruthy();
         expect(title).toHaveBeenCalled();
     });
 
     it('returns false for /exit', async () => {
-        expect(await handleSpecialInput('/exit')).toBe(false);
+        await expect(handleSpecialInput('/exit')).resolves.toBeFalsy();
     });
 
     it('returns __exit__ for /back at main level', async () => {
-        expect(await handleSpecialInput('/back', 'main')).toBe('__exit__');
+        await expect(handleSpecialInput('/back', 'main')).resolves.toBe('__exit__');
     });
 
     it('returns __back__ for /back at sub-menu level', async () => {
-        expect(await handleSpecialInput('/back', 'releases')).toBe('__back__');
+        await expect(handleSpecialInput('/back', 'releases')).resolves.toBe('__back__');
     });
 
     it('returns false for regular input', async () => {
-        expect(await handleSpecialInput('1')).toBe(false);
-        expect(await handleSpecialInput('')).toBe(false);
+        await expect(handleSpecialInput('1')).resolves.toBeFalsy();
+        await expect(handleSpecialInput('')).resolves.toBeFalsy();
     });
 });
 
@@ -237,12 +244,14 @@ describe('dispatchChoice', () => {
 
     it("returns 'continue' for invalid choice", async () => {
         const result = await dispatchChoice('99', minimalCtx);
+
         expect(result).toBe('continue');
         expect(warn).toHaveBeenCalledWith(expect.stringContaining('inválida'));
     });
 
     it("returns 'continue' for docs choice", async () => {
         const result = await dispatchChoice('d', minimalCtx);
+
         expect(result).toBe('continue');
     });
 
@@ -252,6 +261,7 @@ describe('dispatchChoice', () => {
         commands.getHandler.mockReturnValue(handler);
 
         const result = await dispatchChoice('1', minimalCtx);
+
         expect(result).toBe('continue');
         expect(handler).toHaveBeenCalledWith(minimalCtx);
     });
@@ -268,18 +278,21 @@ describe('showHelpLoop', () => {
 
     it('shows help and exits on /back', () => {
         showHelpLoop();
+
         expect(title).toHaveBeenCalled();
     });
 
     it('handles specific topic input', () => {
         vi.mocked(prompt).mockReturnValueOnce('csv').mockReturnValueOnce('/back');
         showHelpLoop();
+
         expect(title).toHaveBeenCalled();
     });
 
     it('warns for unknown topic', () => {
         vi.mocked(prompt).mockReturnValueOnce('nonexistent_topic_xyz').mockReturnValueOnce('/back');
         showHelpLoop();
+
         expect(warn).toHaveBeenCalledWith(expect.stringContaining('não encontrado'));
     });
 
@@ -288,6 +301,7 @@ describe('showHelpLoop', () => {
         vi.mocked(prompt).mockImplementationOnce(() => {
             throw new CancelError('/back');
         });
+
         // Should not throw, just return
         expect(() => showHelpLoop()).not.toThrow();
     });
@@ -295,6 +309,7 @@ describe('showHelpLoop', () => {
     it('handles /help and /h prefix commands', () => {
         vi.mocked(prompt).mockReturnValueOnce('/help csv').mockReturnValueOnce('/back');
         showHelpLoop();
+
         expect(title).toHaveBeenCalledWith(expect.stringContaining('csv'));
     });
 });

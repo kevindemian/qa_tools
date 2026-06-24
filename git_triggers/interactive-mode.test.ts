@@ -223,6 +223,7 @@ describe('interactive-mode test exports', () => {
     describe('buildContextLine', () => {
         it('returns a formatted context line', () => {
             const line = _testExports.buildContextLine();
+
             expect(typeof line).toBe('string');
         });
     });
@@ -232,7 +233,8 @@ describe('interactive-mode test exports', () => {
             const handler = vi.fn().mockResolvedValue('ok');
             const wrapped = _testExports.withErrorHandling(handler);
             const result = await wrapped({} as never, 'proj', []);
-            expect(result).toBe(false);
+
+            expect(result).toBeFalsy();
             expect(handler).toHaveBeenCalledWith({}, 'proj', []);
         });
 
@@ -240,7 +242,8 @@ describe('interactive-mode test exports', () => {
             const handler = vi.fn().mockRejectedValue(new Error('fail'));
             const wrapped = _testExports.withErrorHandling(handler);
             const result = await wrapped({} as never, 'proj', []);
-            expect(result).toBe(false);
+
+            expect(result).toBeFalsy();
             expect(mockPrintError).toHaveBeenCalled();
         });
     });
@@ -249,6 +252,7 @@ describe('interactive-mode test exports', () => {
         it('calls ui-helpers handleHelp', async () => {
             await _testExports.handleHelp();
             const uiHelpers = await import('./ui-helpers.js');
+
             expect(uiHelpers.handleHelp).toHaveBeenCalled();
         });
     });
@@ -257,6 +261,7 @@ describe('interactive-mode test exports', () => {
         it('calls ui-helpers handleShowHistory', async () => {
             await _testExports.handleShowHistory();
             const uiHelpers = await import('./ui-helpers.js');
+
             expect(uiHelpers.handleShowHistory).toHaveBeenCalled();
         });
     });
@@ -265,6 +270,7 @@ describe('interactive-mode test exports', () => {
         it('returns null project when prompt returns invalid index', () => {
             mockLoad.mockReturnValue({ lastProject: '' });
             const result = _testExports._selectProject();
+
             expect(result.projectName).toBeNull();
         });
     });
@@ -272,44 +278,52 @@ describe('interactive-mode test exports', () => {
     describe('_handleExit', () => {
         it('returns true', () => {
             const result = _testExports._handleExit();
-            expect(result).toBe(true);
+
+            expect(result).toBeTruthy();
         });
     });
 
     describe('_dispatchAction', () => {
         it('handles /help command', async () => {
             const result = await _testExports._dispatchAction('/help', {} as never, 'proj', []);
-            expect(result).toBe(false);
+
+            expect(result).toBeFalsy();
         });
 
         it('handles /history command', async () => {
             const result = await _testExports._dispatchAction('/history', {} as never, 'proj', []);
-            expect(result).toBe(false);
+
+            expect(result).toBeFalsy();
         });
 
         it('handles /docs command', async () => {
             const result = await _testExports._dispatchAction('/docs', {} as never, 'proj', []);
-            expect(result).toBe(false);
+
+            expect(result).toBeFalsy();
         });
 
         it('handles /back command', async () => {
             const result = await _testExports._dispatchAction('/back', {} as never, 'proj', []);
-            expect(result).toBe(false);
+
+            expect(result).toBeFalsy();
         });
 
         it('handles exit command 0', async () => {
             const result = await _testExports._dispatchAction('0', {} as never, 'proj', []);
-            expect(result).toBe(true);
+
+            expect(result).toBeTruthy();
         });
 
         it('handles /exit command', async () => {
             const result = await _testExports._dispatchAction('/exit', {} as never, 'proj', []);
-            expect(result).toBe(true);
+
+            expect(result).toBeTruthy();
         });
 
         it('warns on invalid option', async () => {
             const result = await _testExports._dispatchAction('99', {} as never, 'proj', []);
-            expect(result).toBe(false);
+
+            expect(result).toBeFalsy();
             expect(mockWarn).toHaveBeenCalled();
         });
     });
@@ -325,14 +339,16 @@ describe('interactive-mode test exports', () => {
             const sessionState = await import('./session-state.js');
             (sessionState.getProjects as ReturnType<typeof vi.fn>).mockReturnValue({ proj1: '1' });
             const result = await _testExports._ensureProjectsConfigured();
-            expect(result).toBe(true);
+
+            expect(result).toBeTruthy();
         });
 
         it('warns when no projects configured', async () => {
             const sessionState = await import('./session-state.js');
             (sessionState.getProjects as ReturnType<typeof vi.fn>).mockReturnValue({});
             const result = await _testExports._ensureProjectsConfigured();
-            expect(result).toBe(false);
+
+            expect(result).toBeFalsy();
         });
     });
 
@@ -352,6 +368,7 @@ describe('interactive-mode test exports', () => {
     describe('_promptChoice', () => {
         it('returns a choice string', async () => {
             const result = await _testExports._promptChoice('test');
+
             expect(typeof result).toBe('string');
         });
     });
@@ -362,6 +379,7 @@ describe('interactive-mode test exports', () => {
             (sessionState.getProjects as ReturnType<typeof vi.fn>).mockReturnValue({});
             mockSessionState.currentProjectName = '';
             const result = await _testExports._selectProjectAndCreateManager();
+
             expect(result).toBeNull();
         });
     });
@@ -370,6 +388,7 @@ describe('interactive-mode test exports', () => {
         it('returns null when no project selected', () => {
             mockSessionState.currentProjectName = '';
             const result = _testExports._loadProjectRunsHelper();
+
             expect(result).toBeNull();
             expect(mockWarn).toHaveBeenCalled();
         });
@@ -403,6 +422,7 @@ describe('interactive-mode test exports', () => {
                 failureClassifications: [],
             });
             const result = _testExports._loadProjectRunsHelper();
+
             expect(result && result.projectRuns.length).toBe(2);
         });
 
@@ -425,6 +445,7 @@ describe('interactive-mode test exports', () => {
                 failureClassifications: [],
             });
             const result = _testExports._loadProjectRunsHelper();
+
             expect(result).toBeNull();
             expect(mockWarn).toHaveBeenCalled();
         });
@@ -474,7 +495,8 @@ describe('interactive-mode test exports', () => {
                 { testTitle: 't1', category: 'cat1', timestamp: '' },
             ]);
             const result = _testExports._loadProjectRunsHelper();
-            expect(result && result.usingGitFallback).toBe(true);
+
+            expect(result && result.usingGitFallback).toBeTruthy();
         });
     });
 
@@ -483,6 +505,7 @@ describe('interactive-mode test exports', () => {
             mockSessionState.currentProjectName = 'proj1';
             await _testExports._generateAndOpenDashboard('<html>', 'test', 'Test');
             const openMod = await import('../shared/open.js');
+
             expect(openMod.openWithFallback as ReturnType<typeof vi.fn>).toHaveBeenCalled();
         });
     });
@@ -492,7 +515,8 @@ describe('interactive-mode test exports', () => {
             const configMod = await import('../shared/config.js');
             (configMod.default.get as ReturnType<typeof vi.fn>).mockReturnValue('');
             const result = await _testExports.handleBugReportFlow({} as never);
-            expect(result).toBe(false);
+
+            expect(result).toBeFalsy();
             expect(mockWarn).toHaveBeenCalled();
         });
 
@@ -500,7 +524,8 @@ describe('interactive-mode test exports', () => {
             const configMod = await import('../shared/config.js');
             (configMod.default.get as ReturnType<typeof vi.fn>).mockReturnValue('configured');
             const result = await _testExports.handleBugReportFlow({} as never);
-            expect(result).toBe(false);
+
+            expect(result).toBeFalsy();
         });
     });
 
@@ -509,7 +534,8 @@ describe('interactive-mode test exports', () => {
             const promptMod = await import('../shared/prompt.js');
             (promptMod.prompt as ReturnType<typeof vi.fn>).mockReturnValue('');
             const result = await _testExports.handleAiPrDescription({} as never);
-            expect(result).toBe(false);
+
+            expect(result).toBeFalsy();
             expect(mockWarn).toHaveBeenCalled();
         });
 
@@ -519,7 +545,8 @@ describe('interactive-mode test exports', () => {
             const aiMod = await import('./ai-pr-desc.js');
             (aiMod.generatePrDescription as ReturnType<typeof vi.fn>).mockResolvedValue('Generated PR description');
             const result = await _testExports.handleAiPrDescription({} as never);
-            expect(result).toBe(false);
+
+            expect(result).toBeFalsy();
         });
 
         it('warns when AI PR description fails', async () => {
@@ -528,7 +555,8 @@ describe('interactive-mode test exports', () => {
             const aiMod = await import('./ai-pr-desc.js');
             (aiMod.generatePrDescription as ReturnType<typeof vi.fn>).mockResolvedValue('');
             const result = await _testExports.handleAiPrDescription({} as never);
-            expect(result).toBe(false);
+
+            expect(result).toBeFalsy();
             expect(mockWarn).toHaveBeenCalled();
         });
     });
@@ -537,7 +565,8 @@ describe('interactive-mode test exports', () => {
         it('warns when no project selected', async () => {
             mockSessionState.currentProjectName = '';
             const result = await _testExports.handleRunComparison();
-            expect(result).toBe(false);
+
+            expect(result).toBeFalsy();
             expect(mockWarn).toHaveBeenCalled();
         });
 
@@ -572,7 +601,8 @@ describe('interactive-mode test exports', () => {
             const runCompMod = await import('../shared/run-comparison.js');
             (runCompMod.compareRuns as ReturnType<typeof vi.fn>).mockReturnValue('comparison');
             const result = await _testExports.handleRunComparison();
-            expect(result).toBe(false);
+
+            expect(result).toBeFalsy();
         });
 
         it('warns when <2 runs exist', async () => {
@@ -594,7 +624,8 @@ describe('interactive-mode test exports', () => {
                 failureClassifications: [],
             });
             const result = await _testExports.handleRunComparison();
-            expect(result).toBe(false);
+
+            expect(result).toBeFalsy();
             expect(mockWarn).toHaveBeenCalled();
         });
     });
@@ -609,7 +640,8 @@ describe('interactive-mode test exports', () => {
     describe('handlePipelineHealthWrapper', () => {
         it('calls handlePipelineHealth and returns false', async () => {
             const result = await _testExports.handlePipelineHealthWrapper({} as never);
-            expect(result).toBe(false);
+
+            expect(result).toBeFalsy();
         });
     });
 
@@ -650,6 +682,7 @@ describe('interactive-mode test exports', () => {
         it('warns when no project selected', async () => {
             mockSessionState.currentProjectName = '';
             await _testExports._dashboardQualityGate();
+
             expect(mockWarn).toHaveBeenCalled();
         });
 
@@ -1017,6 +1050,7 @@ describe('interactive-mode test exports', () => {
         it('warns when no project selected', async () => {
             mockSessionState.currentProjectName = '';
             await _testExports._dashboardCoverageGap();
+
             expect(mockWarn).toHaveBeenCalled();
         });
 

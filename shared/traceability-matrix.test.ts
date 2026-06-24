@@ -33,6 +33,7 @@ function singleRunMetrics(
 describe('buildTraceabilityMatrix', () => {
     it('returns empty result for empty metrics', () => {
         const result = buildTraceabilityMatrix(emptyMetrics());
+
         expect(result.nodes).toEqual([]);
         expect(result.totalEpics).toBe(0);
         expect(result.totalTests).toBe(0);
@@ -43,6 +44,7 @@ describe('buildTraceabilityMatrix', () => {
     it('returns empty result when no coverage data provided', () => {
         const metrics = singleRunMetrics([{ title: 'Test A', state: 'passed', duration: 100 }]);
         const result = buildTraceabilityMatrix(metrics);
+
         expect(result.nodes).toEqual([]);
         expect(result.totalEpics).toBe(0);
     });
@@ -59,7 +61,9 @@ describe('buildTraceabilityMatrix', () => {
         });
 
         expect(result.nodes).toHaveLength(1);
+
         const node = nonNull(result.nodes[0]);
+
         expect(node.epic).toBe('EPIC-1');
         expect(node.coverage).toBe(100);
         expect(node.health).toBe(100);
@@ -82,6 +86,7 @@ describe('buildTraceabilityMatrix', () => {
         });
 
         const node = nonNull(result.nodes[0]);
+
         expect(node.health).toBe(67);
         expect(result.totalTests).toBe(3);
         expect(result.overallCoverage).toBe(67);
@@ -99,6 +104,7 @@ describe('buildTraceabilityMatrix', () => {
         });
 
         const node = nonNull(result.nodes[0]);
+
         expect(node.health).toBe(50);
         expect(nonNull(node.stories[0]).tests).toHaveLength(2);
         expect(nonNull(node.stories[0]).tests[1]?.status).toBe('skipped');
@@ -128,6 +134,7 @@ describe('buildTraceabilityMatrix', () => {
 
         const epicA = nonNull(result.nodes.find((n) => n.epic === 'EPIC-A'));
         const epicB = nonNull(result.nodes.find((n) => n.epic === 'EPIC-B'));
+
         expect(epicA.health).toBe(100);
         expect(epicB.health).toBe(0);
         expect(result.overallCoverage).toBe(67);
@@ -142,6 +149,7 @@ describe('buildTraceabilityMatrix', () => {
         });
 
         const node = nonNull(result.nodes[0]);
+
         expect(node.coverage).toBe(0);
         expect(node.stories).toHaveLength(0);
         expect(node.health).toBe(0);
@@ -193,6 +201,7 @@ describe('buildTraceabilityMatrix', () => {
             totals: { total: 1, covered: 1 },
             byEpic: { 'EPIC-1': { total: 1, covered: 1, rawPct: 100 } },
         });
+
         expect(result.nodes).toHaveLength(1);
         expect(nonNull(nonNull(result.nodes[0]).stories[0]).tests).toHaveLength(1);
         expect(nonNull(nonNull(result.nodes[0]).stories[0]).tests[0]?.status).toBe('passed');
@@ -212,6 +221,7 @@ describe('buildTraceabilityMatrix', () => {
             byEpic: { 'EPIC-1': { total: 2, covered: 2, rawPct: 100 } },
         });
         const node = nonNull(result.nodes[0]);
+
         expect(node.stories).toHaveLength(2);
         expect(node.health).toBe(50);
     });
@@ -224,6 +234,7 @@ describe('buildTraceabilityMatrix', () => {
             byEpic: { 'EPIC-1': { total: 1, covered: 0, rawPct: 0 } },
         });
         const story = nonNull(nonNull(result.nodes[0]).stories[0]);
+
         expect(story.coverage).toBe(0);
         expect(story.tests).toHaveLength(1);
     });
@@ -235,6 +246,7 @@ describe('buildTraceabilityMatrix', () => {
             totals: { total: 1, covered: 1 },
             byEpic: { 'EPIC-1': { total: 1, covered: 1, rawPct: 100 } },
         });
+
         expect(nonNull(result.nodes[0]).stories).toHaveLength(0);
     });
 
@@ -246,14 +258,17 @@ describe('buildTraceabilityMatrix', () => {
             byEpic: { 'EPIC-1': { total: 1, covered: 1, rawPct: 100 } },
         });
         const story = nonNull(nonNull(result.nodes[0]).stories[0]);
+
         expect(story.key).toBe('EPIC-1');
     });
 
     it('handles error gracefully when metrics store is malformed', () => {
         vi.spyOn(rootLogger, 'error').mockImplementation(() => {});
         const result = buildTraceabilityMatrix({} as MetricsStore);
+
         expect(result.nodes).toEqual([]);
         expect(result.totalEpics).toBe(0);
+
         vi.restoreAllMocks();
     });
 
@@ -289,6 +304,7 @@ describe('buildTraceabilityMatrix', () => {
         });
 
         const firstTest = nonNull(nonNull(result.nodes[0]).stories[0]).tests[0];
+
         expect(firstTest?.flakiness).toBe(0.5);
         expect(firstTest?.status).toBe('passed');
     });
@@ -302,6 +318,7 @@ describe('generateTraceabilityHtml', () => {
             totals: { total: 1, covered: 1 },
         });
         const html = generateTraceabilityHtml(result);
+
         expect(html).toContain('<!DOCTYPE html>');
         expect(html).toContain('data-component="metric-card"');
         expect(html).toContain('Total Epics');
@@ -317,6 +334,7 @@ describe('generateTraceabilityHtml', () => {
             byEpic: { 'EPIC-1': { total: 1, covered: 1, rawPct: 100 } },
         });
         const html = generateTraceabilityHtml(result);
+
         expect(html).toContain('epic-node');
         expect(html).toContain('story-node');
         expect(html).toContain('test-row');
@@ -344,6 +362,7 @@ describe('generateTraceabilityHtml', () => {
             byEpic: { 'EPIC-1': { total: 1, covered: 1, rawPct: 100 } },
         });
         const html = generateTraceabilityHtml(result);
+
         expect(html).toContain('test-passed');
         expect(html).toContain('test-failed');
         expect(html).toContain('test-skipped');
@@ -355,6 +374,7 @@ describe('generateTraceabilityHtml', () => {
     it('shows empty state when no nodes', () => {
         const result = buildTraceabilityMatrix(emptyMetrics());
         const html = generateTraceabilityHtml(result);
+
         expect(html).toContain('No traceability data available');
         expect(html).not.toContain('class="epic-node"');
     });
@@ -362,6 +382,7 @@ describe('generateTraceabilityHtml', () => {
     it('uses custom title', () => {
         const result = buildTraceabilityMatrix(emptyMetrics());
         const html = generateTraceabilityHtml(result, 'My Traceability');
+
         expect(html).toContain('My Traceability');
         expect(html).toContain('<title>My Traceability</title>');
     });
@@ -369,6 +390,7 @@ describe('generateTraceabilityHtml', () => {
     it('includes theme script and footer', () => {
         const result = buildTraceabilityMatrix(emptyMetrics());
         const html = generateTraceabilityHtml(result);
+
         expect(html).toContain('qa-report-theme');
         expect(html).toContain('Generated by QA Tools');
         expect(html).toContain('prefers-color-scheme');
@@ -391,6 +413,7 @@ describe('generateTraceabilityHtml', () => {
             timestamp: '2026-01-01T00:00:00.000Z',
         };
         const html = generateTraceabilityHtml(result);
+
         expect(html).toContain('&lt;script&gt;');
         expect(html).not.toContain('<script>alert');
     });
@@ -398,7 +421,9 @@ describe('generateTraceabilityHtml', () => {
     it('handles error gracefully when result is null', () => {
         vi.spyOn(rootLogger, 'error').mockImplementation(() => {});
         const html = generateTraceabilityHtml(null);
+
         expect(html).toContain('Error generating traceability matrix');
+
         vi.restoreAllMocks();
     });
 
@@ -411,6 +436,7 @@ describe('generateTraceabilityHtml', () => {
             timestamp: '2026-01-01T00:00:00.000Z',
         };
         const html = generateTraceabilityHtml(result);
+
         expect(html).toContain('data-severity="error"');
     });
 
@@ -423,6 +449,7 @@ describe('generateTraceabilityHtml', () => {
             timestamp: '2026-01-01T00:00:00.000Z',
         };
         const html = generateTraceabilityHtml(result);
+
         expect(html).toContain('data-severity="warn"');
     });
 
@@ -435,6 +462,7 @@ describe('generateTraceabilityHtml', () => {
             timestamp: '2026-01-01T00:00:00.000Z',
         };
         const html = generateTraceabilityHtml(result);
+
         expect(html).toContain('data-severity="success"');
     });
 
@@ -446,6 +474,7 @@ describe('generateTraceabilityHtml', () => {
             byEpic: { 'EPIC-1': { total: 1, covered: 1, rawPct: 100 } },
         });
         const html = generateTraceabilityHtml(result);
+
         expect(html).toContain('health-bar');
         expect(html).toContain('health-fill');
     });
@@ -460,8 +489,11 @@ describe('generateTraceabilityHtml', () => {
             totals: { total: 1, covered: 1 },
             byEpic: { 'EPIC-1': { total: 1, covered: 1, rawPct: 100 } },
         });
+
         expect(nonNull(result.nodes[0]).health).toBe(50);
+
         const html = generateTraceabilityHtml(result);
+
         expect(html).toContain('health-bar');
     });
 });

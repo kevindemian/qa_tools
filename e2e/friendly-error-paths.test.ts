@@ -81,34 +81,39 @@ describe('friendly error paths (Sprint W)', () => {
     describe('W1 — offerEnvSetup integration', () => {
         it('prompts user when env vars are missing and user declines', () => {
             const result = offerEnvSetup({ ok: false, missing: ['JIRA_BASE_URL'] });
-            expect(result).toBe(false);
+
+            expect(result).toBeFalsy();
             expect(mockConfirm).toHaveBeenCalledWith(expect.stringContaining('configurar'));
         });
 
         it('does not prompt when all vars are present', () => {
             const result = offerEnvSetup({ ok: true, missing: [] });
-            expect(result).toBe(false);
+
+            expect(result).toBeFalsy();
             expect(mockConfirm).not.toHaveBeenCalled();
         });
 
         it('skips prompt in CI mode', () => {
             process.env['CI'] = 'true';
             const result = offerEnvSetup({ ok: false, missing: ['GIT_TOKEN'] });
-            expect(result).toBe(false);
+
+            expect(result).toBeFalsy();
             expect(mockConfirm).not.toHaveBeenCalled();
         });
 
         it('returns true when user accepts setup', () => {
             mockConfirm.mockReturnValueOnce(true);
             const result = offerEnvSetup({ ok: false, missing: ['TOKEN'] });
-            expect(result).toBe(true);
+
+            expect(result).toBeTruthy();
         });
     });
 
     describe('W2 — empty projects flow', () => {
         it('getProjects returns empty when file is empty JSON', () => {
             const projects = Object.keys(getProjects());
-            expect(Array.isArray(projects)).toBe(true);
+
+            expect(Array.isArray(projects)).toBeTruthy();
         });
     });
 
@@ -117,6 +122,7 @@ describe('friendly error paths (Sprint W)', () => {
             const { createManagerForProject: createMaker } = await vi.importActual<
                 typeof import('../git_triggers/session-state.js')
             >('../git_triggers/session-state');
+
             expect(() => createMaker('qa_tools', '123')).toThrow('GIT_TOKEN');
         });
 
@@ -124,6 +130,7 @@ describe('friendly error paths (Sprint W)', () => {
             const { createManagerForProject: createMaker } = await vi.importActual<
                 typeof import('../git_triggers/session-state.js')
             >('../git_triggers/session-state');
+
             expect(() => createMaker('qa_tools_e2e', '456')).toThrow('GITHUB_TOKEN');
         });
     });
@@ -142,9 +149,13 @@ describe('friendly error paths (Sprint W)', () => {
             breadcrumbs.__resetBreadcrumbs();
             breadcrumbs.pushBreadcrumb('GERAÇÃO DE RELATÓRIOS');
             breadcrumbs.pushBreadcrumb('Gerar relatório HTML');
+
             expect(breadcrumbs.getBreadcrumbPath()).toBe('GERAÇÃO DE RELATÓRIOS > Gerar relatório HTML');
+
             breadcrumbs.popBreadcrumb();
+
             expect(breadcrumbs.getBreadcrumbPath()).toBe('GERAÇÃO DE RELATÓRIOS');
+
             breadcrumbs.__resetBreadcrumbs();
         });
     });

@@ -61,16 +61,22 @@ describe('Integration: Quality Suggester', () => {
     describe('FT-13a: checkQualitySignals', () => {
         it('returns array of QualitySignal', () => {
             const signals = checkQualitySignals();
-            expect(Array.isArray(signals)).toBe(true);
+
+            expect(Array.isArray(signals)).toBeTruthy();
         });
 
         it('produces drift signal with source quality-metrics', () => {
             mockDetectDrift.mockReturnValue(['drift alert']);
             const signals = checkQualitySignals();
+
             expect(signals.length).toBeGreaterThanOrEqual(1);
+
             const driftSignal = signals.find((s) => s.source === 'quality-metrics');
+
             expect(driftSignal).toBeDefined();
+
             assert(driftSignal !== undefined);
+
             expect(driftSignal.source).toBe('quality-metrics');
         });
 
@@ -79,6 +85,7 @@ describe('Integration: Quality Suggester', () => {
             const signals = checkQualitySignals();
             const driftSignal = signals.find((s) => s.source === 'quality-metrics');
             assert(driftSignal !== undefined);
+
             expect(driftSignal.severity).toBe('warning');
         });
 
@@ -87,6 +94,7 @@ describe('Integration: Quality Suggester', () => {
             const signals = checkQualitySignals();
             const driftSignal = signals.find((s) => s.source === 'quality-metrics');
             assert(driftSignal !== undefined);
+
             expect(driftSignal.message).toBe('drift alert');
         });
 
@@ -95,6 +103,7 @@ describe('Integration: Quality Suggester', () => {
             const signals = checkQualitySignals();
             const driftSignal = signals.find((s) => s.source === 'quality-metrics');
             assert(driftSignal !== undefined);
+
             expect(typeof driftSignal.suggestedAction).toBe('string');
             expect(driftSignal.suggestedAction.length).toBeGreaterThan(0);
         });
@@ -112,8 +121,11 @@ describe('Integration: Quality Suggester', () => {
             ];
             const signals = checkQualitySignals(benchmarkSignals);
             const benchmarkSignal = signals.find((s) => s.source === 'benchmark');
+
             expect(benchmarkSignal).toBeDefined();
+
             assert(benchmarkSignal !== undefined);
+
             expect(benchmarkSignal.message).toBe('regression detected');
         });
     });

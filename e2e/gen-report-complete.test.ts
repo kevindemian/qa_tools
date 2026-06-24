@@ -51,6 +51,7 @@ describe('gen-report-complete', () => {
         process.argv = ['node', 'gen-report-complete.ts', '--ctrf=e2e/fixtures/ctrf-report.json', '--skip-jira'];
 
         const mod = await import('./gen-report-complete.js');
+
         await expect(mod.main()).resolves.toBeUndefined();
     });
 

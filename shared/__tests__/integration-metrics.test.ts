@@ -34,6 +34,7 @@ describe('Integration: metrics → health-score → quality-gate', () => {
         };
 
         const healthScore = calculateHealthScore(store);
+
         expect(healthScore.overall).toBeGreaterThanOrEqual(70);
         expect(healthScore.grade).not.toBe('critical');
         expect(healthScore.qualityGate).toBe('pass');
@@ -61,6 +62,7 @@ describe('Integration: metrics → health-score → quality-gate', () => {
         };
 
         const healthScore = calculateHealthScore(store);
+
         expect(healthScore.overall).toBeLessThan(70);
         expect(healthScore.qualityGate).toBe('fail');
     });
@@ -94,6 +96,7 @@ describe('Integration: metrics → health-score → quality-gate', () => {
         // All modules should report the same flaky rate
         const metricsFlaky = calculateFlakyRate(store, 2);
         const healthScore = calculateHealthScore(store, { minRuns: 2 });
+
         // health-score uses calculateFlakyRate internally
         expect(metricsFlaky).toBe(100);
         expect(healthScore.dimensions.flakyRate.score).toBe(0); // 100% flaky → score 0

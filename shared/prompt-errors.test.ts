@@ -35,26 +35,31 @@ describe('humanizeError', () => {
 
     it('returns known error for rate limit', () => {
         const r = humanizeError('rate limit exceeded');
+
         expect(r?.msg).toBe('Rate limit atingido');
     });
 
     it('returns known error for project not found', () => {
         const r = humanizeError('project "FOO" not found');
+
         expect(r?.msg).toBe('Projeto não encontrado');
     });
 
     it('returns known error for unauthorized', () => {
         const r = humanizeError('401 Unauthorized');
+
         expect(r?.msg).toBe('Token inválido ou expirado');
     });
 
     it('returns known error for connection reset', () => {
         const r = humanizeError('ECONNRESET');
+
         expect(r?.msg).toBe('Erro de conexão');
     });
 
     it('returns null for unknown error', () => {
         const r = humanizeError('some random error');
+
         expect(r).toBeNull();
     });
 });
@@ -66,6 +71,7 @@ describe('extractErrorMessage', () => {
 
     it('extracts axios error message', () => {
         const err = { response: { data: { errorMessages: ['Something broke'] } } };
+
         expect(extractErrorMessage(err)).toMatch(/Something broke/);
     });
 
@@ -79,6 +85,7 @@ describe('extractErrorMessage', () => {
             config: { url: 'https://jira.example.com' },
         };
         const msg = extractErrorMessage(err);
+
         expect(msg).toMatch(/Not Found/);
         expect(msg).toMatch(/HTTP 404/);
     });
@@ -91,12 +98,14 @@ describe('printError', () => {
 
     it('prints error box with context and message', () => {
         printError('contexto', new Error('something failed'));
+
         expect(output['print']).toHaveBeenCalled();
     });
 
     it('prints single line when quiet', () => {
         vi.mocked(isQuiet).mockReturnValue(true);
         printError('ctx', new Error('err'));
+
         expect(output['print']).toHaveBeenCalledWith(expect.stringMatching(/ctx/));
     });
 });
@@ -104,6 +113,7 @@ describe('printError', () => {
 describe('CancelError', () => {
     it('stores command name', () => {
         const e = new CancelError('/exit');
+
         expect(e.cmd).toBe('/exit');
         expect(e.message).toMatch('/exit');
         expect(e.name).toBe('CancelError');
@@ -123,6 +133,7 @@ describe('onError', () => {
         };
         vi.mocked(getConfig).mockReturnValue(mockConfig);
         const r = onError('ctx', new Error('fail'));
+
         expect(r).toBe('abort');
     });
 
@@ -133,6 +144,7 @@ describe('onError', () => {
         };
         vi.mocked(getConfig).mockReturnValue(mockConfig);
         const r = onError('ctx', new Error('fail'));
+
         expect(r).toBe('skip');
     });
 });

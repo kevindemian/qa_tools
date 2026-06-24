@@ -25,13 +25,17 @@ describe('structural.ts — module loads and runs', () => {
         await import('./structural.js');
         const output = String(spy.mock.calls[0]?.[0] ?? '[]');
         const data: Finding[] = JSON.parse(output) as Finding[];
+
         expect(data).toHaveLength(6);
+
         const d0 = data[0] as Finding;
         const d5 = data[5] as Finding;
+
         expect(d0.pattern).toBe('Config getter pattern');
         expect(d0.severity).toMatch(/^high|medium|low$/);
         expect(typeof d0.count).toBe('number');
         expect(d5.pattern).toBe('Git provider method post-processing');
+
         for (const f of data) {
             expect(f).toHaveProperty('pattern');
             expect(f).toHaveProperty('severity');
@@ -46,6 +50,7 @@ describe('structural.ts — module loads and runs', () => {
         mockExecFileSync.mockImplementation(() => {
             throw new Error('rg missing');
         });
+
         await expect(import('./structural.js')).resolves.toBeDefined();
     });
 });

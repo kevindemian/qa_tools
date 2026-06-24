@@ -51,6 +51,7 @@ describe('checkQualitySignals', () => {
 
     it('returns empty signals when no issues detected', () => {
         const signals = checkQualitySignals();
+
         expect(signals).toHaveLength(0);
         expect(mockUpdateTyped).toHaveBeenCalledWith(expect.any(Function));
     });
@@ -58,9 +59,12 @@ describe('checkQualitySignals', () => {
     it('returns drift signals when detectDrift reports alerts', () => {
         mockDetectDrift.mockReturnValue(['DRIFT: invariant "T-01" fire rate 50% exceeds baseline']);
         const signals = checkQualitySignals();
+
         expect(signals).toHaveLength(1);
+
         const signal = signals[0];
         assert(signal !== undefined);
+
         expect(signal.source).toBe('quality-metrics');
         expect(signal.severity).toBe('warning');
     });
@@ -72,7 +76,8 @@ describe('checkQualitySignals', () => {
             avgLatencyMs: 5000,
         });
         const signals = checkQualitySignals();
-        expect(signals.some((s) => s.source === 'llm-metrics' && s.message.includes('Latência'))).toBe(true);
+
+        expect(signals.some((s) => s.source === 'llm-metrics' && s.message.includes('Latência'))).toBeTruthy();
     });
 
     it('returns failure signal when failure rate exceeds threshold', () => {
@@ -83,7 +88,8 @@ describe('checkQualitySignals', () => {
             failuresByTier: { main: 20 },
         });
         const signals = checkQualitySignals();
-        expect(signals.some((s) => s.source === 'llm-metrics' && s.message.includes('Taxa de falha'))).toBe(true);
+
+        expect(signals.some((s) => s.source === 'llm-metrics' && s.message.includes('Taxa de falha'))).toBeTruthy();
     });
 
     it('passes benchmark signals to state', () => {
@@ -96,9 +102,12 @@ describe('checkQualitySignals', () => {
             },
         ];
         const signals = checkQualitySignals(benchmarkSignals);
+
         expect(signals).toHaveLength(1);
+
         const signal = signals[0];
         assert(signal !== undefined);
+
         expect(signal.source).toBe('benchmark');
     });
 
@@ -113,6 +122,7 @@ describe('checkQualitySignals', () => {
             },
         ];
         const signals = checkQualitySignals(benchmarkSignals);
+
         expect(signals).toHaveLength(2);
     });
 
@@ -125,6 +135,7 @@ describe('checkQualitySignals', () => {
         const mockState: Record<string, unknown> = {};
         updateFn(mockState);
         const suggestions: unknown = mockState['_llmConfigSuggestions'];
+
         expect(suggestions).toBeDefined();
         expect(suggestions).toEqual(expect.objectContaining({ pending: true }));
     });
@@ -136,7 +147,8 @@ describe('checkQualitySignals', () => {
             throw new Error('drift error');
         });
         const signals = checkQualitySignals();
-        expect(Array.isArray(signals)).toBe(true);
+
+        expect(Array.isArray(signals)).toBeTruthy();
     });
 
     it('returns signals even when updateTyped fails — G02', () => {
@@ -145,6 +157,7 @@ describe('checkQualitySignals', () => {
             throw new Error('persist error');
         });
         const signals = checkQualitySignals();
+
         expect(signals).toHaveLength(1);
     });
 
@@ -204,6 +217,7 @@ describe('checkQualitySignals', () => {
             failuresByTier: undefined,
         });
         const signals = checkQualitySignals();
-        expect(Array.isArray(signals)).toBe(true);
+
+        expect(Array.isArray(signals)).toBeTruthy();
     });
 });

@@ -96,16 +96,19 @@ beforeEach(() => {
 describe('parseRawOnce', () => {
     it('parses valid JSON string', () => {
         const result = parseRawOnce('{"key": "value"}');
+
         expect(result).toEqual({ key: 'value' });
     });
 
     it('returns null for invalid JSON', () => {
         const result = parseRawOnce('not json');
+
         expect(result).toBeNull();
     });
 
     it('returns null for empty string', () => {
         const result = parseRawOnce('');
+
         expect(result).toBeNull();
     });
 });
@@ -121,24 +124,28 @@ describe('parseRetryAfter', () => {
     it('parses seconds from Retry-After header', () => {
         const resp = mockResponseWithHeader('Retry-After', '30');
         const result = parseRetryAfter(resp, 2000);
+
         expect(result).toBe(10000);
     });
 
     it('returns default when no Retry-After header', () => {
         const resp = mockResponseWithHeader('Retry-After', null);
         const result = parseRetryAfter(resp, 2000);
+
         expect(result).toBe(2000);
     });
 
     it('returns default for invalid Retry-After value', () => {
         const resp = mockResponseWithHeader('Retry-After', 'invalid');
         const result = parseRetryAfter(resp, 2000);
+
         expect(result).toBe(2000);
     });
 
     it('caps at 10000ms', () => {
         const resp = mockResponseWithHeader('Retry-After', '999');
         const result = parseRetryAfter(resp, 2000);
+
         expect(result).toBe(10000);
     });
 });
@@ -154,6 +161,7 @@ describe('buildOpenAiPayload', () => {
     it('builds a valid JSON payload', () => {
         const result = buildOpenAiPayload('sys', 'usr', 'gpt-4', 0.5);
         const parsed = JSON.parse(result) as OpenAiPayload;
+
         expect(parsed.model).toBe('gpt-4');
         expect(parsed.temperature).toBe(0.5);
         expect(parsed.messages).toHaveLength(2);
@@ -166,18 +174,21 @@ describe('buildOpenAiPayload', () => {
     it('uses default temperature when not provided', () => {
         const result = buildOpenAiPayload('sys', 'usr', 'gpt-4');
         const parsed = JSON.parse(result) as OpenAiPayload;
+
         expect(parsed.temperature).toBe(0.3);
     });
 
     it('includes response_format when format is json', () => {
         const result = buildOpenAiPayload('sys', 'usr', 'gpt-4', 0.3, 'json');
         const parsed = JSON.parse(result) as OpenAiPayload;
+
         expect(parsed.response_format).toEqual({ type: 'json_object' });
     });
 
     it('omits response_format when format is not json', () => {
         const result = buildOpenAiPayload('sys', 'usr', 'gpt-4', 0.3, 'text');
         const parsed = JSON.parse(result) as OpenAiPayload;
+
         expect(parsed.response_format).toBeUndefined();
     });
 });
@@ -191,6 +202,7 @@ describe('buildGeminiPayload', () => {
     it('builds a valid Gemini JSON payload', () => {
         const result = buildGeminiPayload('sys', 'usr');
         const parsed = JSON.parse(result) as GeminiPayload;
+
         expect(parsed.system_instruction.parts[0]?.text).toBe('sys');
         expect(parsed.contents[0]?.role).toBe('user');
         expect(parsed.contents[0]?.parts[0]?.text).toBe('usr');
@@ -210,6 +222,7 @@ describe('buildAnthropicPayload', () => {
     it('builds a valid Anthropic JSON payload', () => {
         const result = buildAnthropicPayload('sys', 'usr', 'claude-sonnet-4-20250514', 0.5);
         const parsed = JSON.parse(result) as AnthropicPayload;
+
         expect(parsed.model).toBe('claude-sonnet-4-20250514');
         expect(parsed.max_tokens).toBe(4096);
         expect(parsed.temperature).toBe(0.5);
@@ -222,18 +235,21 @@ describe('buildAnthropicPayload', () => {
     it('omits system field when system is empty', () => {
         const result = buildAnthropicPayload('', 'usr', 'claude-haiku-3-5-20241022');
         const parsed = JSON.parse(result) as AnthropicPayload;
+
         expect(parsed.system).toBeUndefined();
     });
 
     it('uses default temperature when not provided', () => {
         const result = buildAnthropicPayload('sys', 'usr', 'claude-sonnet-4-20250514');
         const parsed = JSON.parse(result) as AnthropicPayload;
+
         expect(parsed.temperature).toBe(0.3);
     });
 
     it('includes metadata for json responseFormat', () => {
         const result = buildAnthropicPayload('sys', 'usr', 'claude-sonnet-4-20250514', 0.3, 'json');
         const parsed = JSON.parse(result) as AnthropicPayload;
+
         expect(parsed.metadata).toEqual({ response_format: 'json' });
     });
 });
@@ -253,39 +269,47 @@ describe('fetchWithRetry', () => {
     it('returns response on successful fetch', async () => {
         mockFetch.mockResolvedValueOnce(mockOkResponse('ok'));
         const result = await fetchWithRetry('https://api.test.com', {});
-        expect(result.ok).toBe(true);
+
+        expect(result.ok).toBeTruthy();
+
         const text = await result.text();
+
         expect(text).toBe('ok');
     });
 
     it('retries on network error and succeeds', async () => {
         mockFetch.mockRejectedValueOnce(new Error('network error')).mockResolvedValueOnce(mockOkResponse('ok'));
         const result = await fetchWithRetry('https://api.test.com', {}, 2);
-        expect(result.ok).toBe(true);
+
+        expect(result.ok).toBeTruthy();
         expect(mockFetch).toHaveBeenCalledTimes(2);
     });
 
     it('retries on HTTP 429 and succeeds', async () => {
         mockFetch.mockResolvedValueOnce(mockErrorResponse(429)).mockResolvedValueOnce(mockOkResponse('ok'));
         const result = await fetchWithRetry('https://api.test.com', {}, 2);
-        expect(result.ok).toBe(true);
+
+        expect(result.ok).toBeTruthy();
         expect(mockFetch).toHaveBeenCalledTimes(2);
     });
 
     it('retries on HTTP 500 and succeeds', async () => {
         mockFetch.mockResolvedValueOnce(mockErrorResponse(500)).mockResolvedValueOnce(mockOkResponse('ok'));
         const result = await fetchWithRetry('https://api.test.com', {}, 2);
-        expect(result.ok).toBe(true);
+
+        expect(result.ok).toBeTruthy();
         expect(mockFetch).toHaveBeenCalledTimes(2);
     });
 
     it('throws after max retries exhausted', async () => {
         mockFetch.mockResolvedValue(mockErrorResponse(500));
+
         await expect(fetchWithRetry('https://api.test.com', {}, 1)).rejects.toThrow('LLM API error: HTTP 500');
     });
 
     it('throws immediately on HTTP 400 (non-retryable)', async () => {
         mockFetch.mockResolvedValueOnce(mockErrorResponse(400));
+
         await expect(fetchWithRetry('https://api.test.com', {}, 3)).rejects.toThrow('LLM API error: HTTP 400');
         expect(mockFetch).toHaveBeenCalledTimes(1);
     });
@@ -315,6 +339,7 @@ describe('sendToProvider', () => {
             temperature: 0.3,
         };
         const result = await sendToProvider(cfg, 'system', 'user');
+
         expect(result).toBe('success');
     });
 
@@ -334,6 +359,7 @@ describe('sendToProvider', () => {
             temperature: 0.2,
         };
         const result = await sendToProvider(cfg, 'system', 'user');
+
         expect(result).toBe('gemini success');
     });
 
@@ -353,6 +379,7 @@ describe('sendToProvider', () => {
             temperature: 0.3,
         };
         const result = await sendToProvider(cfg, 'system', 'user');
+
         expect(result).toBe('anthropic response');
     });
 
@@ -364,6 +391,7 @@ describe('sendToProvider', () => {
             format: 'openai' as const,
             temperature: 0.3,
         };
+
         await expect(sendToProvider(cfg, 'system', 'user')).rejects.toThrow(LlmAuthError);
     });
 
@@ -377,6 +405,7 @@ describe('sendToProvider', () => {
             temperature: 0.3,
         };
         const result = await sendToProvider(cfg, 'system', 'user');
+
         expect(result).toBe('');
     });
 
@@ -391,6 +420,7 @@ describe('sendToProvider', () => {
             format: 'openai' as const,
             temperature: 0.3,
         };
+
         await expect(sendToProvider(cfg, 'system', 'user')).rejects.toThrow('LLM API error: rate limited');
     });
 
@@ -403,6 +433,7 @@ describe('sendToProvider', () => {
             format: 'openai' as const,
             temperature: 0.3,
         };
+
         await expect(sendToProvider(cfg, 'system', 'user')).rejects.toThrow('LLM API error: internal server error');
     });
 
@@ -416,6 +447,7 @@ describe('sendToProvider', () => {
             temperature: 0.3,
         };
         await sendToProvider(cfg, 'system', 'user');
+
         expect(checkCircuitBreaker).toHaveBeenCalled();
     });
 
@@ -437,6 +469,7 @@ describe('sendToProvider', () => {
         };
         await sendToProvider(cfg, 'system', 'user');
         const metrics = getLlmClientMetrics();
+
         expect(metrics.totalPromptTokens).toBe(10);
         expect(metrics.totalCompletionTokens).toBe(5);
     });

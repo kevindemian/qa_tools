@@ -44,6 +44,7 @@ describe('Integration: Session State', () => {
         it('returns empty object for fresh state directory', () => {
             const config = getConfig();
             const state = stateModule.load(config);
+
             expect(state).toEqual({});
         });
     });
@@ -67,8 +68,8 @@ describe('Integration: Session State', () => {
             const statePath = path.join(stateDir, 'state.json');
             const bakPath = path.join(stateDir, 'state.json.bak');
 
-            expect(fs.existsSync(statePath)).toBe(true);
-            expect(fs.existsSync(bakPath)).toBe(true);
+            expect(fs.existsSync(statePath)).toBeTruthy();
+            expect(fs.existsSync(bakPath)).toBeTruthy();
         });
     });
 
@@ -86,6 +87,7 @@ describe('Integration: Session State', () => {
             expect(result['newKey']).toBe('newValue');
 
             const reloaded = stateModule.load(config);
+
             expect(reloaded['count']).toBe(5);
             expect(reloaded['newKey']).toBe('newValue');
         });
@@ -112,7 +114,8 @@ describe('Integration: Session State', () => {
             const stateDir = path.join(TEST_DIR, 'qa-tools');
             const raw = fs.readFileSync(path.join(stateDir, 'state.json'), 'utf8');
             const parsed = JSON.parse(raw) as Record<string, unknown>;
-            expect(parsed['test']).toBe(true);
+
+            expect(parsed['test']).toBeTruthy();
         });
 
         it('backup matches main file content', () => {
@@ -128,6 +131,7 @@ describe('Integration: Session State', () => {
                 string,
                 unknown
             >;
+
             expect(main).toEqual(bak);
         });
     });
@@ -136,6 +140,7 @@ describe('Integration: Session State', () => {
         it('returns path containing state.json', () => {
             const config = getConfig();
             const sp = stateModule.getStatePath(config);
+
             expect(sp).toContain('state.json');
         });
     });
@@ -149,10 +154,12 @@ describe('Integration: Session State', () => {
 
             stateModule.save({ lastProject: 'ORIGINAL', counter: 42 }, config);
             const beforeCorruption = stateModule.load(config);
+
             expect(beforeCorruption).toEqual({ lastProject: 'ORIGINAL', counter: 42 });
 
             fs.writeFileSync(statePath, '{corrupted json!!!', 'utf8');
-            expect(fs.existsSync(bakPath)).toBe(true);
+
+            expect(fs.existsSync(bakPath)).toBeTruthy();
 
             vi.resetModules();
             const freshModule = await import('../../state.js');

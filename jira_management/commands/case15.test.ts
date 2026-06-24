@@ -88,6 +88,7 @@ describe('case15 — create tests from JSON', () => {
         const ctx = makeMockCommandContext();
         ctx.ctx.project_name = '';
         const result = await case15.handler(ctx);
+
         expect(result).toBeUndefined();
         expect(vi.mocked(resolveSessionContext)).not.toHaveBeenCalled();
     });
@@ -111,7 +112,8 @@ describe('case15 — create tests from JSON', () => {
         });
 
         const result = await case15.handler(mockContext);
-        expect(typeof result === 'boolean' || result === undefined).toBe(true);
+
+        expect(typeof result === 'boolean' || result === undefined).toBeTruthy();
         expect(vi.mocked(resolveTestDataSource)).toHaveBeenCalledWith(
             mockContext.ctx.project_name,
             'abc123def456',
@@ -131,7 +133,8 @@ describe('case15 — create tests from JSON', () => {
         });
 
         const result = await case15.handler(mockContext);
-        expect(typeof result === 'boolean' || result === undefined).toBe(true);
+
+        expect(typeof result === 'boolean' || result === undefined).toBeTruthy();
         expect(vi.spyOn(createTests, 'createTestsFromJson')).toHaveBeenCalled();
     });
 
@@ -142,7 +145,8 @@ describe('case15 — create tests from JSON', () => {
         vi.mocked(ask).mockResolvedValue('/manual/path.json');
 
         const result = await case15.handler(mockContext);
-        expect(typeof result === 'boolean' || result === undefined).toBe(true);
+
+        expect(typeof result === 'boolean' || result === undefined).toBeTruthy();
         expect(vi.spyOn(createTests, 'createTestsFromJson')).toHaveBeenCalled();
     });
 
@@ -152,6 +156,7 @@ describe('case15 — create tests from JSON', () => {
         vi.mocked(ask).mockResolvedValue('');
 
         const result = await case15.handler(mockContext);
+
         expect(result).toBeUndefined();
         expect(vi.spyOn(createTests, 'createTestsFromJson')).not.toHaveBeenCalled();
         expect(warn).toHaveBeenCalled();
@@ -168,7 +173,8 @@ describe('case15 — create tests from JSON', () => {
         vi.mocked(ask).mockResolvedValue('/manual/path.json');
 
         const result = await case15.handler(mockContext);
-        expect(typeof result === 'boolean' || result === undefined).toBe(true);
+
+        expect(typeof result === 'boolean' || result === undefined).toBeTruthy();
         expect(vi.mocked(resolveTestDataSource)).not.toHaveBeenCalled();
         expect(vi.spyOn(createTests, 'createTestsFromJson')).toHaveBeenCalled();
     });
@@ -183,6 +189,7 @@ describe('case15 — create tests from JSON', () => {
         });
 
         await case15.handler(mockContext);
+
         expect(offerTestExecutionAssociation).toHaveBeenCalled();
         expect(showResults).toHaveBeenCalled();
     });

@@ -39,7 +39,8 @@ describe('safeJiraCall', () => {
         const fn = vi.fn().mockResolvedValue(undefined);
         const ctx = makeCtx() as Parameters<typeof safeJiraCall>[0];
         const result = await safeJiraCall(ctx, 'test-op', 'v1', fn);
-        expect(result).toBe(true);
+
+        expect(result).toBeTruthy();
         expect(fn).toHaveBeenCalled();
         expect(mockPushHistory).toHaveBeenCalledWith('test-op', 'v1', 'ok');
     });
@@ -48,7 +49,8 @@ describe('safeJiraCall', () => {
         const fn = vi.fn().mockRejectedValue(new Error('API error'));
         const ctx = makeCtx() as Parameters<typeof safeJiraCall>[0];
         const result = await safeJiraCall(ctx, 'test-op', 'v1', fn);
-        expect(result).toBe(false);
+
+        expect(result).toBeFalsy();
         expect(mockPrintError).toHaveBeenCalled();
         expect(mockRootLoggerError).toHaveBeenCalled();
         expect(mockPushHistory).toHaveBeenCalledWith('test-op', 'v1', 'error');
@@ -58,6 +60,7 @@ describe('safeJiraCall', () => {
         const fn = vi.fn().mockRejectedValue({ response: { status: 401 } });
         const ctx = makeCtx() as Parameters<typeof safeJiraCall>[0];
         await safeJiraCall(ctx, 'test-op', 'v1', fn);
+
         expect(mockRootLoggerError).toHaveBeenCalledWith(
             expect.stringContaining('Erro ao'),
             expect.objectContaining({ status: 401 }),

@@ -11,6 +11,7 @@ import {
 describe('nullAs', () => {
     it('returns null typed as T', () => {
         const v = nullAs<{ x: number }>();
+
         expect(v).toBeNull();
     });
 });
@@ -18,6 +19,7 @@ describe('nullAs', () => {
 describe('undefinedAs', () => {
     it('returns undefined typed as T', () => {
         const v = undefinedAs<{ x: number }>();
+
         expect(v).toBeUndefined();
     });
 });
@@ -25,6 +27,7 @@ describe('undefinedAs', () => {
 describe('makeMockCommandContext', () => {
     it('returns a context with all standard fields', () => {
         const ctx = makeMockCommandContext();
+
         expect(ctx).toHaveProperty('jiraResource');
         expect(ctx).toHaveProperty('jiraResourceXray');
         expect(ctx).toHaveProperty('linkManager');
@@ -39,27 +42,32 @@ describe('makeMockCommandContext', () => {
 
     it('returns correct type assignable to CommandContext', () => {
         const ctx = makeMockCommandContext();
+
         expect(ctx.base_url).toBe('https://jira.test.com');
     });
 
     it('creates fresh jest mock functions each call', () => {
         const a = makeMockCommandContext();
         const b = makeMockCommandContext();
+
         expect(a.pushHistory).not.toBe(b.pushHistory);
     });
 
     it('overrides top-level fields', () => {
         const ctx = makeMockCommandContext({ base_url: 'https://custom.test.com' });
+
         expect(ctx.base_url).toBe('https://custom.test.com');
     });
 
     it('shallow-merges ctx overrides with default ctx', () => {
         const ctx = makeMockCommandContext({ ctx: { project_name: 'OVERWRITE' } });
+
         expect(ctx.ctx.project_name).toBe('OVERWRITE');
     });
 
     it('ctx override replaces default field with same key', () => {
         const ctx = makeMockCommandContext({ ctx: { project_name: 'OVERRIDE' } });
+
         expect(ctx.ctx.project_name).toBe('OVERRIDE');
     });
 });
@@ -92,19 +100,22 @@ describe('nonNull', () => {
     it('narrows the type for subsequent access', () => {
         const x: string | null = 'hello';
         const result = nonNull(x);
-        expect(result.length).toBe(5);
+
+        expect(result).toHaveLength(5);
     });
 });
 
 describe('createConsoleSpies', () => {
     it('creates spy objects for log, error, warn', () => {
         const spies = createConsoleSpies();
+
         expect(spies).toHaveProperty('log');
         expect(spies).toHaveProperty('error');
         expect(spies).toHaveProperty('warn');
         expect(typeof spies.log).toBe('function');
         expect(typeof spies.error).toBe('function');
         expect(typeof spies.warn).toBe('function');
+
         spies.log.mockRestore();
         spies.error.mockRestore();
         spies.warn.mockRestore();
@@ -113,21 +124,27 @@ describe('createConsoleSpies', () => {
     it('mocks console.log so it does not output', () => {
         const spies = createConsoleSpies();
         console.log('should not appear');
+
         expect(spies.log).toHaveBeenCalledWith('should not appear');
+
         restoreConsoleSpies(spies);
     });
 
     it('mocks console.error so it does not output', () => {
         const spies = createConsoleSpies();
         console.error('error msg');
+
         expect(spies.error).toHaveBeenCalledWith('error msg');
+
         restoreConsoleSpies(spies);
     });
 
     it('mocks console.warn so it does not output', () => {
         const spies = createConsoleSpies();
         console.warn('warn msg');
+
         expect(spies.warn).toHaveBeenCalledWith('warn msg');
+
         restoreConsoleSpies(spies);
     });
 });
@@ -139,11 +156,13 @@ describe('restoreConsoleSpies', () => {
         const originalWarn = console.warn;
 
         const spies = createConsoleSpies();
+
         expect(console.log).not.toBe(originalLog);
         expect(console.error).not.toBe(originalError);
         expect(console.warn).not.toBe(originalWarn);
 
         restoreConsoleSpies(spies);
+
         expect(console.log).toBe(originalLog);
         expect(console.error).toBe(originalError);
         expect(console.warn).toBe(originalWarn);
@@ -156,9 +175,11 @@ describe('withEnv', () => {
         delete process.env[key];
 
         const cleanup = withEnv({ [key]: 'hello' });
+
         expect(process.env[key]).toBe('hello');
 
         cleanup();
+
         expect(process.env[key]).toBeUndefined();
     });
 
@@ -167,10 +188,13 @@ describe('withEnv', () => {
         process.env[key] = 'temp';
 
         const cleanup = withEnv({ [key]: undefined });
+
         expect(process.env[key]).toBeUndefined();
 
         cleanup();
+
         expect(process.env[key]).toBe('temp');
+
         delete process.env[key];
     });
 
@@ -179,10 +203,13 @@ describe('withEnv', () => {
         process.env[key] = 'original';
 
         const cleanup = withEnv({ [key]: 'modified' });
+
         expect(process.env[key]).toBe('modified');
 
         cleanup();
+
         expect(process.env[key]).toBe('original');
+
         delete process.env[key];
     });
 });
@@ -197,11 +224,13 @@ describe('integration: createConsoleSpies + restoreConsoleSpies', () => {
         console.log('a');
         console.error('b');
         console.warn('c');
+
         expect(spies.log).toHaveBeenCalledWith('a');
         expect(spies.error).toHaveBeenCalledWith('b');
         expect(spies.warn).toHaveBeenCalledWith('c');
 
         restoreConsoleSpies(spies);
+
         expect(console.log).toBe(originalLog);
         expect(console.error).toBe(originalError);
         expect(console.warn).toBe(originalWarn);

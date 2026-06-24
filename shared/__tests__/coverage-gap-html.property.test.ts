@@ -99,6 +99,7 @@ describe('generateCoverageGapHtml — property-based', () => {
         fc.assert(
             fc.property(fc.array(itemArb, { minLength: 0, maxLength: 10 }), (items) => {
                 const html = generateCoverageGapHtml(makeResult(items));
+
                 expect(html).toContain('<!DOCTYPE html>');
                 expect(html).toContain('</html>');
                 expect(html).toContain('data-component="metric-card"');
@@ -126,6 +127,7 @@ describe('generateCoverageGapHtml — property-based', () => {
             fc.property(fc.array(itemArb, { minLength: 0, maxLength: 10 }), (items) => {
                 const html = generateCoverageGapHtml(makeResult(items));
                 const gap = items.filter((i) => !i.hasTest).length;
+
                 expect(html).toContain(`Coverage Gaps (${gap})`);
             }),
             { numRuns: 50 },
@@ -151,6 +153,7 @@ describe('generateCoverageGapHtml — property-based', () => {
         fc.assert(
             fc.property(fc.array(itemArb, { minLength: 1, maxLength: 10 }), (items) => {
                 const result = makeResult(items);
+
                 expect(result.totals.covered + result.totals.gap).toBe(result.totals.totalIssues);
             }),
             { numRuns: 50 },

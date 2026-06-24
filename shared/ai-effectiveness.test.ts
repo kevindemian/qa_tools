@@ -22,6 +22,7 @@ describe('computeAiEffectiveness', () => {
     it('returns zeroed result for empty store', () => {
         const store: AiFeedbackStore = { records: [] };
         const result = computeAiEffectiveness(store);
+
         expect(result.acceptanceRate).toBe(0);
         expect(result.totalRecords).toBe(0);
         expect(result.totalGenerated).toBe(0);
@@ -55,6 +56,7 @@ describe('computeAiEffectiveness', () => {
             ],
         };
         const result = computeAiEffectiveness(store);
+
         expect(result.acceptanceRate).toBe(50);
         expect(result.totalRecords).toBe(4);
         expect(result.totalGenerated).toBe(4);
@@ -89,6 +91,7 @@ describe('computeAiEffectiveness', () => {
             ],
         };
         const result = computeAiEffectiveness(store);
+
         expect(result.totalRecords).toBe(6);
         expect(result.acceptanceRate).toBe(67);
         expect(result.topPromptVersion).toBe('v2');
@@ -121,6 +124,7 @@ describe('computeAiEffectiveness', () => {
             ],
         };
         const result = computeAiEffectiveness(store);
+
         expect(result.trend).toHaveLength(3);
         expect(result.trend[0]?.date).toBe('2026-06-01');
         expect(result.trend[0]?.generated).toBe(2);
@@ -141,6 +145,7 @@ describe('computeAiEffectiveness', () => {
             ],
         };
         const result = computeAiEffectiveness(store);
+
         expect(result.acceptanceRate).toBe(100);
         expect(result.totalModified).toBe(0);
         expect(result.totalDeleted).toBe(0);
@@ -166,6 +171,7 @@ describe('computeAiEffectiveness', () => {
             ],
         };
         const result = computeAiEffectiveness(store);
+
         expect(result.acceptanceRate).toBe(0);
         expect(result.totalModified).toBe(1);
         expect(result.totalDeleted).toBe(1);
@@ -187,6 +193,7 @@ describe('generateAiEffectivenessHtml', () => {
             ],
         });
         const html = generateAiEffectivenessHtml(result);
+
         expect(html).toContain('<!DOCTYPE html>');
         expect(html).toContain('50%');
         expect(html).toContain('AI Effectiveness Dashboard');
@@ -207,6 +214,7 @@ describe('generateAiEffectivenessHtml', () => {
             ],
         });
         const html = generateAiEffectivenessHtml(result);
+
         expect(html).toContain('By Prompt Version');
         expect(html).toContain('v1');
         expect(html).toContain('v2');
@@ -228,6 +236,7 @@ describe('generateAiEffectivenessHtml', () => {
             ],
         });
         const html = generateAiEffectivenessHtml(result);
+
         expect(html).toContain('Daily Trend');
         expect(html).toContain('2026-06-01');
         expect(html).toContain('2026-06-02');
@@ -236,6 +245,7 @@ describe('generateAiEffectivenessHtml', () => {
     it('shows empty message when no data', () => {
         const result = computeAiEffectiveness({ records: [] });
         const html = generateAiEffectivenessHtml(result);
+
         expect(html).toContain('No AI generation data available');
         expect(html).not.toContain('By Prompt Version');
         expect(html).not.toContain('Daily Trend');
@@ -246,6 +256,7 @@ describe('generateAiEffectivenessHtml', () => {
             records: [{ timestamp: '2026-06-01T10:00:00Z', promptVersion: 'v1', testTitle: 't1', accepted: true }],
         });
         const html = generateAiEffectivenessHtml(result, 'My AI Report');
+
         expect(html).toContain('My AI Report');
         expect(html).not.toContain('AI Effectiveness Dashboard');
     });
@@ -255,6 +266,7 @@ describe('generateAiEffectivenessHtml', () => {
             records: [{ timestamp: '2026-06-01T10:00:00Z', promptVersion: 'v1', testTitle: 't1', accepted: true }],
         });
         const html = generateAiEffectivenessHtml(result);
+
         expect(html).toContain('prefers-color-scheme');
         expect(html).toContain('--color-surface-page');
         expect(html).toContain('html.dark');
@@ -272,6 +284,7 @@ describe('generateAiEffectivenessHtml', () => {
             ],
         });
         const html = generateAiEffectivenessHtml(result);
+
         expect(html).toContain('&lt;script&gt;evil&lt;/script&gt;');
         expect(html).not.toContain('<script>evil</script>');
     });
@@ -284,7 +297,9 @@ describe('generateAiEffectivenessHtml', () => {
             records: [{ timestamp: '2026-06-01T10:00:00Z', promptVersion: 'v1', testTitle: 't1', accepted: true }],
         });
         const html = generateAiEffectivenessHtml(result);
+
         expect(html).toContain('Error generating dashboard');
+
         spy.mockRestore();
     });
 });

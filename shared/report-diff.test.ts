@@ -4,6 +4,7 @@ import type { FlatTest } from './result_parser.js';
 describe('buildDiffComparisonSection', () => {
     it('returns empty when no changes', () => {
         const html = buildDiffComparisonSection({ newFailures: [], newPasses: [], flaky: [] });
+
         expect(html).toBe('');
     });
 
@@ -14,6 +15,7 @@ describe('buildDiffComparisonSection', () => {
             flaky: [],
         };
         const html = buildDiffComparisonSection(diff);
+
         expect(html).toContain('Run Comparison');
         expect(html).toContain('Login test');
         expect(html).toContain('Timeout');
@@ -26,6 +28,7 @@ describe('buildDiffComparisonSection', () => {
             flaky: [],
         };
         const html = buildDiffComparisonSection(diff);
+
         expect(html).toContain('Fixed');
         expect(html).toContain('API test');
     });
@@ -37,6 +40,7 @@ describe('buildDiffComparisonSection', () => {
             flaky: [{ title: 'Flaky test', state: 'passed', duration: 100 } as FlatTest],
         };
         const html = buildDiffComparisonSection(diff);
+
         expect(html).toContain('Flaky');
         expect(html).toContain('Flaky test');
     });
@@ -48,6 +52,7 @@ describe('buildDiffComparisonSection', () => {
             flaky: [{ title: 'K1', state: 'passed', duration: 75 } as FlatTest],
         };
         const html = buildDiffComparisonSection(diff);
+
         expect(html).toContain('new failures');
         expect(html).toContain('fixed');
         expect(html).toContain('flaky');

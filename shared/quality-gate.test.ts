@@ -22,6 +22,7 @@ describe('runQualityGate', () => {
     it('returns fail when no metrics data exists', () => {
         mockLoadMetrics.mockReturnValue({ runs: [] });
         const result = runQualityGate();
+
         expect(result.overall).toBe('fail');
         expect(result.checks).toHaveLength(1);
         expect(result.checks[0]?.name).toBe('metrics-data');
@@ -58,9 +59,12 @@ describe('runQualityGate', () => {
         });
         mockCalcFlakiness.mockReturnValue([]);
         const result = runQualityGate();
+
         expect(result.overall).toBe('pass');
         expect(result.checks.length).toBeGreaterThan(1);
+
         const failChecks = result.checks.filter((c) => c.status === 'fail');
+
         expect(failChecks).toHaveLength(0);
     });
 
@@ -93,8 +97,11 @@ describe('runQualityGate', () => {
         });
         mockCalcFlakiness.mockReturnValue([]);
         const result = runQualityGate();
+
         expect(result.overall).toBe('fail');
+
         const passRateCheck = result.checks.find((c) => c.name === 'pass-rate');
+
         expect(passRateCheck?.status).toBe('fail');
     });
 
@@ -115,6 +122,7 @@ describe('runQualityGate', () => {
         });
         mockCalcFlakiness.mockReturnValue([]);
         const result = runQualityGate({ project: 'nonexistent' });
+
         expect(result.checks.length).toBeGreaterThanOrEqual(1);
     });
 
@@ -167,6 +175,7 @@ describe('runQualityGate', () => {
         ]);
         const result = runQualityGate();
         const flakyCheck = result.checks.find((c) => c.name === 'flaky-rate');
+
         expect(flakyCheck).toBeDefined();
         // 1 flaky test out of 2 considered (both appear in 2+ runs) = 50% flaky
         expect(flakyCheck?.status).toBe('fail');
@@ -220,6 +229,7 @@ describe('runQualityGate', () => {
         mockCalcFlakiness.mockReturnValue([]);
         const result = runQualityGate();
         const flakyCheck = result.checks.find((c) => c.name === 'flaky-rate');
+
         expect(flakyCheck).toBeDefined();
         expect(flakyCheck?.status).toBe('pass');
     });
@@ -229,6 +239,7 @@ describe('runQualityGate', () => {
             throw new Error('simulated error');
         });
         const result = runQualityGate();
+
         expect(result.overall).toBe('fail');
         expect(result.checks[0]?.name).toBe('error');
     });
@@ -262,6 +273,7 @@ describe('runQualityGate', () => {
         });
         mockCalcFlakiness.mockReturnValue([]);
         const result = runQualityGate();
+
         expect(result.score).toBeGreaterThanOrEqual(0);
         expect(result.score).toBeLessThanOrEqual(100);
     });
@@ -275,6 +287,7 @@ describe('formatQualityGateJson', () => {
             score: 100,
         };
         const json = formatQualityGateJson(result);
+
         expect(JSON.parse(json)).toHaveProperty('overall', 'pass');
         expect(JSON.parse(json)).toHaveProperty('score', 100);
     });
@@ -288,6 +301,7 @@ describe('formatQualityGateText', () => {
             score: 100,
         };
         const text = formatQualityGateText(result);
+
         expect(text).toContain('PASS');
         expect(text).toContain('test');
     });
@@ -299,6 +313,7 @@ describe('formatQualityGateText', () => {
             score: 30,
         };
         const text = formatQualityGateText(result);
+
         expect(text).toContain('FAIL');
         expect(text).toContain('broken');
     });
@@ -306,6 +321,7 @@ describe('formatQualityGateText', () => {
     it('handles empty checks array', () => {
         const result = { overall: 'pass' as const, checks: [], score: 0 };
         const text = formatQualityGateText(result);
+
         expect(text).toContain('PASS');
     });
 });

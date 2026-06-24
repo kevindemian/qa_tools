@@ -49,6 +49,7 @@ describe('Integration: Pipeline Health', () => {
             const { renderPipelineHealthHtml } = await import('../../pipeline-health.js');
             const health = makeHealth();
             const html = renderPipelineHealthHtml(health, 'Pipeline Report');
+
             expect(html).toContain('Pipeline Report');
             expect(html).toContain('Total Runs');
             expect(html).toContain('Passed');
@@ -68,6 +69,7 @@ describe('Integration: Pipeline Health', () => {
             const { aggregatePipelineHealth, renderPipelineHealthHtml } = await import('../../pipeline-health.js');
             const health = aggregatePipelineHealth([], [], [], []);
             const html = renderPipelineHealthHtml(health, 'Empty Report');
+
             expect(html).toContain('Empty Report');
             expect(html).toContain('0');
             expect(html).toContain('No failing jobs');
@@ -78,6 +80,7 @@ describe('Integration: Pipeline Health', () => {
         it('includes theme toggle script and dark mode CSS', async () => {
             const { renderPipelineHealthHtml } = await import('../../pipeline-health.js');
             const html = renderPipelineHealthHtml(makeHealth());
+
             expect(html).toContain('qa-report-theme');
             expect(html).toContain('html.dark');
         });
@@ -87,6 +90,7 @@ describe('Integration: Pipeline Health', () => {
         it('uses CSS custom properties for colors', async () => {
             const { renderPipelineHealthHtml } = await import('../../pipeline-health.js');
             const html = renderPipelineHealthHtml(makeHealth());
+
             expect(html).toContain('var(--color-surface-card)');
             expect(html).toContain('var(--color-border-default)');
             expect(html).toContain('var(--color-text-muted)');
@@ -97,6 +101,7 @@ describe('Integration: Pipeline Health', () => {
         it('contains footer with module name', async () => {
             const { renderPipelineHealthHtml } = await import('../../pipeline-health.js');
             const html = renderPipelineHealthHtml(makeHealth());
+
             expect(html).toContain('Pipeline Health Dashboard');
         });
     });
@@ -105,6 +110,7 @@ describe('Integration: Pipeline Health', () => {
         it('does not use border="1" or cellpadding="6"', async () => {
             const { renderPipelineHealthHtml } = await import('../../pipeline-health.js');
             const html = renderPipelineHealthHtml(makeHealth());
+
             expect(html).not.toContain('border="1"');
             expect(html).not.toContain('cellpadding="6"');
             expect(html).not.toContain('background:#f3f4f6');

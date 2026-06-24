@@ -66,11 +66,12 @@ describe('quarantineTest / isQuarantined', () => {
     it('adds and retrieves a quarantine entry', () => {
         quarantineTest({ testTitle: TEST_TITLE, reason: 'flaky', quarantinedBy: 'test', flakyRate: 0.7 });
         const entry = isQuarantined(TEST_TITLE);
+
         expect(entry).toBeDefined();
         expect(nonNull(entry).testTitle).toBe(TEST_TITLE);
         expect(nonNull(entry).flakyRate).toBe(0.7);
-        expect(nonNull(entry).reviewRequired).toBe(true);
-        expect(nonNull(entry).permanent).toBe(false);
+        expect(nonNull(entry).reviewRequired).toBeTruthy();
+        expect(nonNull(entry).permanent).toBeFalsy();
     });
 
     it('returns undefined for non-quarantined test', () => {
@@ -81,6 +82,7 @@ describe('quarantineTest / isQuarantined', () => {
         quarantineTest({ testTitle: TEST_TITLE, reason: 'first', quarantinedBy: 'test', flakyRate: 0.5 });
         quarantineTest({ testTitle: TEST_TITLE, reason: 'updated', quarantinedBy: 'test', flakyRate: 0.8 });
         const entry = isQuarantined(TEST_TITLE);
+
         expect(nonNull(entry).reason).toBe('updated');
         expect(nonNull(entry).flakyRate).toBe(0.8);
     });
@@ -89,12 +91,13 @@ describe('quarantineTest / isQuarantined', () => {
 describe('removeQuarantine', () => {
     it('removes an existing entry', () => {
         quarantineTest({ testTitle: TEST_TITLE, reason: 'flaky', quarantinedBy: 'test', flakyRate: 0.5 });
-        expect(removeQuarantine(TEST_TITLE)).toBe(true);
+
+        expect(removeQuarantine(TEST_TITLE)).toBeTruthy();
         expect(isQuarantined(TEST_TITLE)).toBeUndefined();
     });
 
     it('returns false for non-existent entry', () => {
-        expect(removeQuarantine('nonexistent')).toBe(false);
+        expect(removeQuarantine('nonexistent')).toBeFalsy();
     });
 });
 
@@ -104,8 +107,10 @@ describe('expireQuarantine', () => {
         quarantineTest({ testTitle: TEST_TITLE, reason: 'flaky', quarantinedBy: 'test', flakyRate: 0.5, ttlDays: 0 });
         vi.advanceTimersByTime(1000);
         const expired = expireQuarantine();
+
         expect(expired).toBe(1);
         expect(isQuarantined(TEST_TITLE)).toBeUndefined();
+
         vi.useRealTimers();
     });
 
@@ -115,10 +120,14 @@ describe('expireQuarantine', () => {
         vi.useFakeTimers();
         vi.advanceTimersByTime(400 * 24 * 60 * 60 * 1000);
         const expired = expireQuarantine();
+
         expect(expired).toBe(0);
+
         const entry = isQuarantined('perm-test');
+
         expect(entry).toBeDefined();
-        expect(nonNull(entry).permanent).toBe(true);
+        expect(nonNull(entry).permanent).toBeTruthy();
+
         vi.useRealTimers();
     });
 });
@@ -128,7 +137,8 @@ describe('listQuarantined', () => {
         quarantineTest({ testTitle: 'test-1', reason: 'flaky', quarantinedBy: 'test', flakyRate: 0.5 });
         quarantineTest({ testTitle: 'test-2', reason: 'flaky', quarantinedBy: 'test', flakyRate: 0.6 });
         const list = listQuarantined();
-        expect(list.length).toBe(2);
+
+        expect(list).toHaveLength(2);
     });
 });
 
@@ -137,6 +147,7 @@ describe('quarantineRatio', () => {
         quarantineTest({ testTitle: 't1', reason: 'flaky', quarantinedBy: 'test', flakyRate: 0.5 });
         quarantineTest({ testTitle: 't2', reason: 'flaky', quarantinedBy: 'test', flakyRate: 0.5 });
         const meta = quarantineRatio(10);
+
         expect(meta.count).toBe(2);
         expect(meta.ratio).toBe(0.2);
         expect(meta.warning).toContain('exceed 5%');
@@ -145,6 +156,7 @@ describe('quarantineRatio', () => {
     it('returns empty warning below 5%', () => {
         quarantineTest({ testTitle: 't1', reason: 'flaky', quarantinedBy: 'test', flakyRate: 0.5 });
         const meta = quarantineRatio(100);
+
         expect(meta.ratio).toBe(0.01);
         expect(meta.warning).toBe('');
     });
@@ -180,6 +192,7 @@ describe('generatePipelineQuarantine', () => {
         });
 
         const pipeline = generatePipelineQuarantine(undefined, 10);
+
         expect(pipeline.metadata.warning).toContain('exceed 5%');
         expect(pipeline.metadata.totalExcluded).toBe(1);
         expect(pipeline.metadata.totalTests).toBe(10);
@@ -187,6 +200,7 @@ describe('generatePipelineQuarantine', () => {
 
     it('generates empty list when no entries', () => {
         const pipeline = generatePipelineQuarantine();
+
         expect(pipeline.excluded).toHaveLength(0);
     });
 });
@@ -194,13 +208,16 @@ describe('generatePipelineQuarantine', () => {
 describe('markPermanent', () => {
     it('marks entry as permanent', () => {
         quarantineTest({ testTitle: TEST_TITLE, reason: 'flaky', quarantinedBy: 'test', flakyRate: 0.5 });
-        expect(markPermanent(TEST_TITLE)).toBe(true);
+
+        expect(markPermanent(TEST_TITLE)).toBeTruthy();
+
         const entry = isQuarantined(TEST_TITLE);
-        expect(nonNull(entry).permanent).toBe(true);
+
+        expect(nonNull(entry).permanent).toBeTruthy();
     });
 
     it('returns false for non-existent entry', () => {
-        expect(markPermanent('nonexistent')).toBe(false);
+        expect(markPermanent('nonexistent')).toBeFalsy();
     });
 });
 
@@ -209,11 +226,13 @@ describe('loadQuarantine', () => {
         fs.mkdirSync(path.dirname(quarantineStorePath()), { recursive: true });
         fs.writeFileSync(quarantineStorePath(), 'not-json', 'utf8');
         const store = loadQuarantine();
+
         expect(store.entries).toEqual([]);
     });
 
     it('returns empty store for missing file', () => {
         const store = loadQuarantine();
+
         expect(store.entries).toEqual([]);
     });
 });

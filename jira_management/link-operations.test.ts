@@ -44,6 +44,7 @@ describe('LinkOperations', () => {
                 { key: 'TEST-3', linkType: 'Tests' },
             ];
             await operations.linkIssues('TEST-1', linked);
+
             expect(mockJiraResource.postJiraResource).toHaveBeenCalledTimes(2);
             expect(mockJiraResource.postJiraResource).toHaveBeenNthCalledWith(1, 'issueLink', {
                 type: { id: '10200' },
@@ -59,6 +60,7 @@ describe('LinkOperations', () => {
 
         it('handles empty linked issues list', async () => {
             await operations.linkIssues('TEST-1', []);
+
             expect(mockJiraResource.postJiraResource).not.toHaveBeenCalled();
         });
     });
@@ -70,6 +72,7 @@ describe('LinkOperations', () => {
             });
             mockJiraResource.postJiraResource.mockResolvedValue({ id: 'new-link' });
             const result = await operations.createIssueLink('TEST-1', 'TEST-2', 'Tests');
+
             expect(mockJiraResource.postJiraResource).toHaveBeenCalledWith('issueLink', {
                 type: { id: '10200' },
                 inwardIssue: { key: 'TEST-2' },

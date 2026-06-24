@@ -76,6 +76,7 @@ describe('Integration: Backlog Health (FT-28)', () => {
             const { analyzeBacklogHealth, generateBacklogHealthHtml } = await import('../../backlog-health.js');
             const result = analyzeBacklogHealth(makeIssues());
             const html = generateBacklogHealthHtml(result);
+
             expect(html).toContain('backlog-health');
             expect(html).toContain('Backlog Score');
             expect(html).toMatch(/Unassigned Issues\s*\(2\)/);
@@ -93,6 +94,7 @@ describe('Integration: Backlog Health (FT-28)', () => {
             const { analyzeBacklogHealth, generateBacklogHealthHtml } = await import('../../backlog-health.js');
             const result = analyzeBacklogHealth([]);
             const html = generateBacklogHealthHtml(result);
+
             expect(html).toContain('backlog-health');
             expect(html).toContain('100%');
             expect(html).not.toContain('Unassigned Issues (');
@@ -105,6 +107,7 @@ describe('Integration: Backlog Health (FT-28)', () => {
         it('respects maxIssues when analyzing', async () => {
             const { analyzeBacklogHealth } = await import('../../backlog-health.js');
             const result = analyzeBacklogHealth(makeIssues(), { maxIssues: 2 });
+
             expect(result.unassignedIssues.length + result.staleIssues.length).toBeLessThanOrEqual(2);
         });
     });

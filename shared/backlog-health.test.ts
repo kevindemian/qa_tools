@@ -80,6 +80,7 @@ const emptyResult: BacklogHealthResult = {
 describe('analyzeUnassignedIssues', () => {
     it('filters issues with null or empty assignee', () => {
         const result = analyzeUnassignedIssues(sampleIssues);
+
         expect(result).toHaveLength(2);
         expect(nonNull(result[0]).key).toBe('PROJ-2');
         expect(nonNull(result[1]).key).toBe('PROJ-4');
@@ -87,6 +88,7 @@ describe('analyzeUnassignedIssues', () => {
 
     it('returns empty array when all issues are assigned', () => {
         const assigned = sampleIssues.filter((i) => i.assignee !== null);
+
         expect(analyzeUnassignedIssues(assigned)).toHaveLength(0);
     });
 
@@ -98,12 +100,14 @@ describe('analyzeUnassignedIssues', () => {
 describe('analyzeStaleIssues', () => {
     it('detects issues older than default 30 days', () => {
         const result = analyzeStaleIssues(sampleIssues);
+
         expect(result).toHaveLength(2);
         expect(result.map((i) => i.key)).toEqual(['PROJ-3', 'PROJ-4']);
     });
 
     it('respects custom staleDays option', () => {
         const result = analyzeStaleIssues(sampleIssues, { staleDays: 7 });
+
         expect(result).toHaveLength(3);
     });
 
@@ -115,17 +119,20 @@ describe('analyzeStaleIssues', () => {
 describe('analyzeBugsWithoutTests', () => {
     it('filters Bug type with linkedTestCount === 0', () => {
         const result = analyzeBugsWithoutTests(sampleIssues);
+
         expect(result).toHaveLength(2);
         expect(result.map((i) => i.key)).toEqual(['PROJ-2', 'PROJ-4']);
     });
 
     it('excludes bugs that have linked tests', () => {
         const result = analyzeBugsWithoutTests(sampleIssues);
+
         expect(result.find((i) => i.key === 'PROJ-1')).toBeUndefined();
     });
 
     it('excludes non-Bug types even with zero linked tests', () => {
         const result = analyzeBugsWithoutTests(sampleIssues);
+
         expect(result.find((i) => i.key === 'PROJ-3')).toBeUndefined();
     });
 
@@ -149,6 +156,7 @@ describe('calculateBacklogScore', () => {
             timestamp: new Date().toISOString(),
         };
         const score = calculateBacklogScore(poor);
+
         expect(score).toBeGreaterThanOrEqual(0);
         expect(score).toBeLessThan(100);
     });
@@ -163,6 +171,7 @@ describe('calculateBacklogScore', () => {
             timestamp: new Date().toISOString(),
         };
         const score = calculateBacklogScore(poor);
+
         // totalFlagged=3, totalIssues=3, effective=3
         // unassignScore = 100 - (1/3)*100 = 66.67
         // staleScore = 100 - (2/3)*100 = 33.33
@@ -175,6 +184,7 @@ describe('calculateBacklogScore', () => {
 describe('analyzeBacklogHealth', () => {
     it('returns complete result with all categories', () => {
         const result = analyzeBacklogHealth(sampleIssues);
+
         expect(result.unassignedIssues).toHaveLength(2);
         expect(result.staleIssues).toHaveLength(2);
         expect(result.bugsWithoutTests).toHaveLength(2);
@@ -186,6 +196,7 @@ describe('analyzeBacklogHealth', () => {
 
     it('handles empty input', () => {
         const result = analyzeBacklogHealth([]);
+
         expect(result.unassignedIssues).toHaveLength(0);
         expect(result.staleIssues).toHaveLength(0);
         expect(result.bugsWithoutTests).toHaveLength(0);
@@ -194,6 +205,7 @@ describe('analyzeBacklogHealth', () => {
 
     it('respects maxIssues option', () => {
         const result = analyzeBacklogHealth(sampleIssues, { maxIssues: 2 });
+
         expect(result.staleIssues.length).toBeLessThanOrEqual(2);
     });
 });
@@ -201,12 +213,14 @@ describe('analyzeBacklogHealth', () => {
 describe('generateBacklogHealthHtml', () => {
     it('returns non-empty string', () => {
         const html = generateBacklogHealthHtml(emptyResult);
+
         expect(html).toBeTruthy();
         expect(html.length).toBeGreaterThan(0);
     });
 
     it('contains key markers', () => {
         const html = generateBacklogHealthHtml(emptyResult);
+
         expect(html).toContain('backlog-health');
         expect(html).toContain('Backlog Score');
         expect(html).toContain('100%');
@@ -215,6 +229,7 @@ describe('generateBacklogHealthHtml', () => {
     it('renders issue lists when present', () => {
         const result = analyzeBacklogHealth(sampleIssues);
         const html = generateBacklogHealthHtml(result);
+
         expect(html).toContain('PROJ-2');
         expect(html).toContain('PROJ-3');
         expect(html).toContain('PROJ-4');

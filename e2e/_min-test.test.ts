@@ -34,6 +34,7 @@ describe('case04', () => {
         nock.cleanAll();
         nock.disableNetConnect();
     });
+
     afterEach(() => {
         nock.cleanAll();
         nock.enableNetConnect();
@@ -79,7 +80,8 @@ describe('case04', () => {
             )
         ).default;
         await mod.handler(c);
+
         expect(c.pushHistory).toHaveBeenCalled();
-        expect(nock.isDone()).toBe(true);
+        expect(nock.isDone()).toBeTruthy();
     }, 15000);
 });

@@ -266,6 +266,7 @@ describe('handleChangeProject', () => {
             setProjectId: (id: string) => void;
             setManager: (v: GitProvider | null) => void;
         } = await import('./session-state.js');
+
         expect(setCurrentProjectName).toHaveBeenCalledWith('proj1');
         expect(setProjectId).toHaveBeenCalledWith('1');
         expect(setManager).toHaveBeenCalled();
@@ -279,6 +280,7 @@ describe('handleChangeProject', () => {
 
         expect(mockWarn).toHaveBeenCalledWith(expect.stringContaining('inválida'));
     });
+
     it('warns on NaN', async () => {
         mockPrompt.mockReturnValue('abc');
 
@@ -338,9 +340,11 @@ describe('handleFlakinessDashboard', () => {
         await handleFlakinessDashboard();
 
         expect(mockGenerateHtml).toHaveBeenCalled();
+
         const { openWithFallback } = (await import('../shared/open.js')) as {
             openWithFallback: (...args: unknown[]) => unknown;
         };
+
         expect(openWithFallback).toHaveBeenCalledWith(expect.stringContaining('flakiness'), 'Dashboard de flaky', info);
     });
 });
@@ -349,6 +353,7 @@ describe('generateWeeklyQualityReport', () => {
     it('warns when no project selected', () => {
         mockState.currentProjectName = '';
         generateWeeklyQualityReport();
+
         expect(mockWarn).toHaveBeenCalledWith(expect.stringContaining('Nenhum projeto'));
     });
 
@@ -361,6 +366,7 @@ describe('generateWeeklyQualityReport', () => {
             failureClassifications: [],
         });
         generateWeeklyQualityReport();
+
         expect(mockWarn).toHaveBeenCalledWith(expect.stringContaining('Menos de 2'));
     });
 });

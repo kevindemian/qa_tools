@@ -38,18 +38,21 @@ describe('Logger', () => {
     describe('child()', () => {
         it('creates a child with merged context', () => {
             const child = rootLogger.child({ operation: 'test', resource: 'Jira' });
+
             expect(child.context).toEqual({ operation: 'test', resource: 'Jira' });
         });
 
         it('child inherits parent context and adds new keys', () => {
             const parent = rootLogger.child({ session: 'jira' });
             const child = parent.child({ operation: 'csv-import' });
+
             expect(child.context).toEqual({ session: 'jira', operation: 'csv-import' });
         });
 
         it('child does not mutate parent context', () => {
             const parent = rootLogger.child({ session: 'jira' });
             parent.child({ operation: 'csv-import' });
+
             expect(parent.context).toEqual({ session: 'jira' });
             expect(Object.keys(parent.context)).not.toContain('operation');
         });
@@ -88,12 +91,14 @@ describe('Logger', () => {
 
         it('creates the log file when LOG_FILE=true', () => {
             const result = writeAndCheck('info', 'test');
-            expect(result.fileFound).toBe(true);
+
+            expect(result.fileFound).toBeTruthy();
         });
 
         it('writes a log line with INFO level and context', () => {
             const result = writeAndCheck('info', 'Mensagem de teste');
-            expect(result.fileFound).toBe(true);
+
+            expect(result.fileFound).toBeTruthy();
             expect(result.lastLine).toContain('[INFO]');
             expect(result.lastLine).toContain('[write]');
             expect(result.lastLine).toContain('Mensagem de teste');
@@ -101,26 +106,30 @@ describe('Logger', () => {
 
         it('writes a log line with WARN level and context', () => {
             const result = writeAndCheck('warn', 'Aviso contextualizado');
-            expect(result.fileFound).toBe(true);
+
+            expect(result.fileFound).toBeTruthy();
             expect(result.lastLine).toContain('[WARN]');
             expect(result.lastLine).toContain('Aviso contextualizado');
         });
 
         it('writes data param as JSON in the log line', () => {
             const result = writeAndCheck('warn', 'Com dados', { status: 429, attempt: 3 });
-            expect(result.fileFound).toBe(true);
+
+            expect(result.fileFound).toBeTruthy();
             expect(result.lastLine).toContain('{"status":429,"attempt":3}');
         });
 
         it('has no ANSI escape codes in the log file', () => {
             const result = writeAndCheck('info', 'Sem ANSI no arquivo');
-            expect(result.fileFound).toBe(true);
+
+            expect(result.fileFound).toBeTruthy();
             expect(result.lastLine).not.toMatch(new RegExp(String.fromCharCode(0x1b) + '\\['));
         });
 
         it('writes ERROR level correctly', () => {
             const result = writeAndCheck('error', 'Erro grave');
-            expect(result.fileFound).toBe(true);
+
+            expect(result.fileFound).toBeTruthy();
             expect(result.lastLine).toContain('[ERROR]');
             expect(result.lastLine).toContain('Erro grave');
         });
@@ -139,8 +148,10 @@ describe('Logger', () => {
             const base = path.basename(nonNull(firstFile), ext);
             const rotated = path.join(dir, `${base}.1${ext}`);
 
-            expect(fs.existsSync(rotated)).toBe(true);
+            expect(fs.existsSync(rotated)).toBeTruthy();
+
             const rotatedContent = fs.readFileSync(rotated, 'utf8');
+
             expect(rotatedContent).toContain('[INFO]');
         });
     });
@@ -156,12 +167,14 @@ describe('Logger', () => {
         it('returns false when _fileError is already set', () => {
             const logger = new Logger();
             logger._fileError = true;
-            expect(logger._ensureDir()).toBe(false);
+
+            expect(logger._ensureDir()).toBeFalsy();
         });
 
         it('returns false when LOG_FILE is not true', () => {
             const logger = new Logger({}, Config.create({ logFile: false }));
-            expect(logger._ensureDir()).toBe(false);
+
+            expect(logger._ensureDir()).toBeFalsy();
         });
 
         it('sets _fileError and console.error on mkdir failure', () => {
@@ -174,8 +187,9 @@ describe('Logger', () => {
                 throw new Error('permission denied');
             });
             const result = logger._ensureDir();
-            expect(result).toBe(false);
-            expect(logger._fileError).toBe(true);
+
+            expect(result).toBeFalsy();
+            expect(logger._fileError).toBeTruthy();
             expect(spyError).toHaveBeenCalledWith(expect.stringContaining('Falha ao criar diretório'));
         });
 
@@ -187,7 +201,8 @@ describe('Logger', () => {
             fs.writeFileSync(logFile, 'existing content\n');
             const logger = new Logger({}, cfg);
             const result = logger._ensureDir();
-            expect(result).toBe(true);
+
+            expect(result).toBeTruthy();
             expect(logger._bytesWritten).toBeGreaterThan(0);
         });
     });
@@ -208,7 +223,8 @@ describe('Logger', () => {
             logger._filePathCached = logFile;
             logger._bytesWritten = 100;
             logger._rotateIfNeeded();
-            expect(fs.existsSync(path.join(testDirPath, `qa-tools-${date}.2.log`))).toBe(true);
+
+            expect(fs.existsSync(path.join(testDirPath, `qa-tools-${date}.2.log`))).toBeTruthy();
         });
 
         it('logs error on rename failure during rotation', () => {
@@ -225,7 +241,9 @@ describe('Logger', () => {
                 throw new Error('rename failed');
             });
             logger._rotateIfNeeded();
+
             expect(spyError).toHaveBeenCalledWith(expect.stringContaining('Falha ao rotacionar log'));
+
             spyError.mockRestore();
         });
     });
@@ -247,6 +265,7 @@ describe('Logger', () => {
             const logFile = logger.filePath;
             if (logFile && fs.existsSync(logFile)) {
                 const content = fs.readFileSync(logFile, 'utf8');
+
                 expect(content).toContain('[data serialization error]');
             }
         });
@@ -259,7 +278,8 @@ describe('Logger', () => {
                 throw new Error('permission denied');
             });
             logger._writeFile('INFO', 'test');
-            expect(logger._fileError).toBe(true);
+
+            expect(logger._fileError).toBeTruthy();
             expect(spyError).toHaveBeenCalledWith(expect.stringContaining('Falha ao escrever no arquivo'));
         });
     });
@@ -267,6 +287,7 @@ describe('Logger', () => {
     describe('filePath getter', () => {
         it('returns null when LOG_FILE is not true', () => {
             const logger = new Logger({}, Config.create({ logFile: false }));
+
             expect(logger.filePath).toBeNull();
         });
 
@@ -275,6 +296,7 @@ describe('Logger', () => {
             const logger = new Logger({ test: 'path' }, Config.create({ logFile: true, logDir: testDirPath }));
             logger.info('ativando filePath');
             const fp = logger.filePath;
+
             expect(fp).not.toBeNull();
             expect(fp).toContain('qa-tools-');
             expect(fp).toContain('.log');
@@ -284,6 +306,7 @@ describe('Logger', () => {
     describe('maskDeep', () => {
         it('masks values for keys matching token/secret/key', () => {
             const result = maskDeep({ token: 'abcdefghij', name: 'public', secret: 'my-secret-value!' });
+
             expect(JSON.stringify(result)).toBe(
                 JSON.stringify({ token: 'abcd****', name: 'public', secret: 'my-s****' }),
             );
@@ -291,6 +314,7 @@ describe('Logger', () => {
 
         it('does not mutate the original object', () => {
             const input = { token: 'abcdefghij' };
+
             expect(JSON.stringify(maskDeep(input))).toBe(JSON.stringify({ token: 'abcd****' }));
             expect(JSON.stringify(input)).toBe(JSON.stringify({ token: 'abcdefghij' }));
         });
@@ -308,12 +332,14 @@ describe('Logger', () => {
         it('recursively masks nested arrays', () => {
             const input = { items: [{ token: 'abcdefghij' }, { name: 'public' }] };
             const expected = { items: [{ token: 'abcd****' }, { name: 'public' }] };
+
             expect(JSON.stringify(maskDeep(input))).toBe(JSON.stringify(expected));
         });
 
         it('masks keys matching password/authorization patterns', () => {
             const input = { password: 'supersecret!', authorization: 'Bearer tok12345' };
             const expected = { password: 'supe****', authorization: 'Bear****' };
+
             expect(JSON.stringify(maskDeep(input))).toBe(JSON.stringify(expected));
         });
 
@@ -331,7 +357,9 @@ describe('Logger', () => {
             const spyError = vi.spyOn(console, 'error').mockImplementation(() => {});
             const logger = new Logger();
             logger._writeConsole('ERROR', 'fail', { code: 500 });
+
             expect(spyError).toHaveBeenCalledWith(expect.stringContaining('{"code":500}'));
+
             spyError.mockRestore();
         });
 
@@ -341,7 +369,9 @@ describe('Logger', () => {
             const bigData = { big: 'x'.repeat(200) };
             logger._writeConsole('ERROR', 'fail', bigData);
             const text = String(nonNull(spyError.mock.calls[0])[0]);
+
             expect(text.length).toBeLessThan(400);
+
             spyError.mockRestore();
         });
 
@@ -349,8 +379,10 @@ describe('Logger', () => {
             const spyLog = vi.spyOn(console, 'log').mockImplementation(() => {});
             const logger = new Logger();
             logger._writeConsole('TRACE', 'fallback test');
+
             expect(spyLog).toHaveBeenCalledWith(expect.stringContaining('?'));
             expect(spyLog).toHaveBeenCalledWith(expect.stringContaining('fallback test'));
+
             spyLog.mockRestore();
         });
     });
@@ -365,10 +397,13 @@ describe('Logger', () => {
             const logger = new Logger({ test: 'wfo' }, Config.create({ logFile: true, logDir: testDirPath }));
             const spyLog = vi.spyOn(console, 'log').mockImplementation(() => {});
             logger.writeFileOnly('INFO', 'file-only message');
+
             expect(spyLog).not.toHaveBeenCalled();
+
             const logFile = logger.filePath;
             if (logFile && fs.existsSync(logFile)) {
                 const content = fs.readFileSync(logFile, 'utf8');
+
                 expect(content).toContain('file-only message');
             }
             spyLog.mockRestore();
@@ -389,6 +424,7 @@ describe('Logger', () => {
             expect(console.error).not.toHaveBeenCalled();
 
             logger.error('error msg');
+
             expect(console.log).not.toHaveBeenCalled();
             expect(console.error).toHaveBeenCalledTimes(1);
 

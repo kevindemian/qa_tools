@@ -38,7 +38,8 @@ describe('FeatureConfigStoreSchema — property-based', () => {
         fc.assert(
             fc.property(fc.dictionary(ProjectKeyArb, ProjectFeatureConfigArb), (store) => {
                 const result = FeatureConfigStoreSchema.safeParse(store);
-                expect(result.success).toBe(true);
+
+                expect(result.success).toBeTruthy();
             }),
             { numRuns: 50 },
         );
@@ -50,7 +51,8 @@ describe('FeatureConfigStoreSchema — property-based', () => {
                 fc.oneof(fc.string(), fc.integer(), fc.boolean(), fc.constant(null), fc.array(fc.anything())),
                 (invalid) => {
                     const result = FeatureConfigStoreSchema.safeParse(invalid);
-                    expect(result.success).toBe(false);
+
+                    expect(result.success).toBeFalsy();
                 },
             ),
             { numRuns: 30 },
@@ -75,14 +77,15 @@ describe('FeatureConfigStoreSchema — property-based', () => {
                         },
                     };
                     const result = FeatureConfigStoreSchema.safeParse(store);
-                    expect(result.success).toBe(false);
+
+                    expect(result.success).toBeFalsy();
                 },
             ),
             { numRuns: 30 },
         );
     });
 
-    it('PrReportFeatureConfig skip flags aceitam boolean ou undefined', () => {
+    it('prReportFeatureConfig skip flags aceitam boolean ou undefined', () => {
         fc.assert(
             fc.property(
                 fc.option(fc.boolean(), { nil: undefined }),
@@ -104,7 +107,8 @@ describe('FeatureConfigStoreSchema — property-based', () => {
                         },
                     };
                     const result = FeatureConfigStoreSchema.safeParse(store);
-                    expect(result.success).toBe(true);
+
+                    expect(result.success).toBeTruthy();
                 },
             ),
             { numRuns: 30 },
@@ -146,6 +150,7 @@ describe('resolvePublishTarget — property-based invariants', () => {
                 fc.constantFrom('github', 'gitlab', undefined),
                 (target, storedGitProvider, explicitGitProvider) => {
                     const result = resolvePublishTargetPure(true, target, storedGitProvider, explicitGitProvider);
+
                     expect(result).toBe(target);
                 },
             ),
@@ -174,6 +179,7 @@ describe('resolvePublishTarget — property-based invariants', () => {
                 (target, storedGitProvider, explicitGitProvider) => {
                     fc.pre(storedGitProvider !== 'gitlab' && explicitGitProvider !== 'gitlab');
                     const result = resolvePublishTargetPure(false, target, storedGitProvider, explicitGitProvider);
+
                     expect(result).toBe('github-actions');
                 },
             ),
@@ -190,6 +196,7 @@ describe('resolvePublishTarget — property-based invariants', () => {
                 fc.constantFrom('github', 'gitlab', undefined),
                 (enabled, target, stored, explicit) => {
                     const result = resolvePublishTargetPure(enabled, target, stored, explicit);
+
                     expect(ValidTargets).toContain(result as ValidTarget);
                 },
             ),

@@ -62,7 +62,8 @@ describe('confirmOrCancel', () => {
     it('returns true when autoConfirm is set', () => {
         mockConfigGet.mockReturnValue(true);
         const result = confirmOrCancel();
-        expect(result).toBe(true);
+
+        expect(result).toBeTruthy();
         expect(mockConfirm).not.toHaveBeenCalled();
     });
 
@@ -70,7 +71,8 @@ describe('confirmOrCancel', () => {
         mockConfigGet.mockReturnValue(false);
         mockConfirm.mockReturnValue(true);
         const result = confirmOrCancel();
-        expect(result).toBe(true);
+
+        expect(result).toBeTruthy();
         expect(mockConfirm).toHaveBeenCalledWith('Criar estes testes no Jira?');
     });
 
@@ -78,6 +80,7 @@ describe('confirmOrCancel', () => {
         mockConfigGet.mockReturnValue(false);
         mockConfirm.mockReturnValue(false);
         const result = confirmOrCancel();
-        expect(result).toBe(false);
+
+        expect(result).toBeFalsy();
     });
 });

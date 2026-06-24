@@ -24,6 +24,7 @@ describe('CypressTest', () => {
             });
 
             const result = await cypressTest.parseResults('/fake/path');
+
             expect(result.avgPassed).toBe(30);
             expect(result.avgFailed).toBe(40);
             expect(result.percentPassed).toBe(42.86);
@@ -36,6 +37,7 @@ describe('CypressTest', () => {
             });
 
             const result = await cypressTest.parseResults('/fake/path');
+
             expect(result).toEqual({ avgPassed: 0, avgFailed: 0, percentPassed: 0 });
         });
 
@@ -58,6 +60,7 @@ describe('CypressTest', () => {
             });
 
             const result = await cypressTest.parseResults('/fake/path');
+
             expect(result.avgPassed).toBe(50);
             expect(result.avgFailed).toBe(60);
             expect(result.percentPassed).toBe(45.45);
@@ -80,6 +83,7 @@ describe('CypressTest', () => {
             });
 
             const result = await cypressTest.parseResults('/fake/path');
+
             expect(rootLogger['warn']).toHaveBeenCalledWith('Skipping block 1: not enough numeric lines');
             expect(result).toEqual({ avgPassed: 0, avgFailed: 0, percentPassed: 0 });
         });
@@ -92,6 +96,7 @@ describe('CypressTest', () => {
             });
 
             const result = await cypressTest.parseResults('/fake/path');
+
             expect(result.avgPassed).toBe(0);
             expect(result.avgFailed).toBe(0);
             expect(result.percentPassed).toBe(0);

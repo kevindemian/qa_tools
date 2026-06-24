@@ -81,16 +81,17 @@ describe('FT-36a — Create quarantine', () => {
         });
 
         const entry = isQuarantined('login.spec.ts');
+
         expect(entry).toBeDefined();
         expect(nonNull(entry).testTitle).toBe('login.spec.ts');
         expect(nonNull(entry).reason).toBe('flaky rate > 5%');
         expect(nonNull(entry).flakyRate).toBe(0.7);
         expect(nonNull(entry).bugUrl).toBe('https://jira/PROJ-42');
-        expect(nonNull(entry).reviewRequired).toBe(true);
-        expect(nonNull(entry).permanent).toBe(false);
+        expect(nonNull(entry).reviewRequired).toBeTruthy();
+        expect(nonNull(entry).permanent).toBeFalsy();
 
-        expect(fs.existsSync(storePath())).toBe(true);
-        expect(fs.existsSync(pipelineFilePath())).toBe(true);
+        expect(fs.existsSync(storePath())).toBeTruthy();
+        expect(fs.existsSync(pipelineFilePath())).toBeTruthy();
     });
 });
 
@@ -108,11 +109,14 @@ describe('FT-36b — Expire entry', () => {
         vi.advanceTimersByTime(1000);
 
         const expired = expireQuarantine();
+
         expect(expired).toBe(1);
         expect(isQuarantined('expirable.spec.ts')).toBeUndefined();
 
         const store = loadQuarantine();
+
         expect(store.entries).toHaveLength(0);
+
         vi.useRealTimers();
     });
 });
@@ -133,10 +137,14 @@ describe('FT-36c — Permanent entry survives expiry', () => {
         vi.advanceTimersByTime(1000);
 
         const expired = expireQuarantine();
+
         expect(expired).toBe(0);
+
         const permanentEntry = isQuarantined('permanent.spec.ts');
+
         expect(permanentEntry).toBeDefined();
-        expect(nonNull(permanentEntry).permanent).toBe(true);
+        expect(nonNull(permanentEntry).permanent).toBeTruthy();
+
         vi.useRealTimers();
     });
 });
@@ -157,6 +165,7 @@ describe('FT-36d — Pipeline quarantine with ratio', () => {
         });
 
         const pipeline = generatePipelineQuarantine(undefined, 20);
+
         expect(pipeline.excluded).toHaveLength(2);
         expect(pipeline.metadata.totalExcluded).toBe(2);
         expect(pipeline.metadata.totalTests).toBe(20);
@@ -173,6 +182,7 @@ describe('FT-36d — Pipeline quarantine with ratio', () => {
         });
 
         const pipeline = generatePipelineQuarantine(undefined, 100);
+
         expect(pipeline.metadata.ratio).toBe(0.01);
         expect(pipeline.metadata.warning).toBe('');
     });
@@ -184,11 +194,13 @@ describe('FT-36e — Corrupt store recovery', () => {
         fs.mkdirSync(dir, { recursive: true });
         fs.writeFileSync(storePath(), 'not-valid-json', 'utf8');
         const store = loadQuarantine();
+
         expect(store.entries).toEqual([]);
     });
 
     it('returns empty store when file missing', () => {
         const store = loadQuarantine();
+
         expect(store.entries).toEqual([]);
     });
 });
@@ -196,6 +208,7 @@ describe('FT-36e — Corrupt store recovery', () => {
 describe('quarantineRatio — pure calculation', () => {
     it('returns count=0 ratio=0 when no entries', () => {
         const meta = quarantineRatio(100);
+
         expect(meta.count).toBe(0);
         expect(meta.ratio).toBe(0);
         expect(meta.warning).toBe('');

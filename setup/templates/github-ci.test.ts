@@ -38,6 +38,7 @@ const MOCK_CTX_FULL: SetupContext = {
 describe('generateCIWorkflow', () => {
     it('returns YAML string with workflow name', () => {
         const yaml = generateCIWorkflow(MOCK_CTX_BASIC);
+
         expect(yaml).toContain('name: CI');
         expect(yaml).toContain('push');
         expect(yaml).toContain('pull_request');
@@ -45,29 +46,34 @@ describe('generateCIWorkflow', () => {
 
     it('includes test steps', () => {
         const yaml = generateCIWorkflow(MOCK_CTX_BASIC);
+
         expect(yaml).toContain('npm ci');
         expect(yaml).toContain('npx cypress run');
     });
 
     it('adds post-processing job via reusable workflow when prReport enabled', () => {
         const yaml = generateCIWorkflow(MOCK_CTX_FULL);
+
         expect(yaml).toContain('post-process:');
         expect(yaml).toContain('./.github/workflows/qa-post-process.yml');
     });
 
     it('does not add post-processing when prReport disabled', () => {
         const yaml = generateCIWorkflow(MOCK_CTX_BASIC);
+
         expect(yaml).not.toContain('post-process:');
     });
 
     it('includes upload-artifact step when prReport enabled', () => {
         const yaml = generateCIWorkflow(MOCK_CTX_FULL);
+
         expect(yaml).toContain('actions/upload-artifact@v4');
         expect(yaml).toContain('ctrf-report');
     });
 
     it('includes setup-node with correct version', () => {
         const yaml = generateCIWorkflow(MOCK_CTX_BASIC);
+
         expect(yaml).toContain('node-version: "20"');
     });
 
@@ -80,6 +86,7 @@ describe('generateCIWorkflow', () => {
             },
         };
         const yaml = generateCIWorkflow(ctx);
+
         expect(yaml).toContain('post-process:');
         expect(yaml).toContain('./.github/workflows/qa-post-process.yml');
         // Sub-features are consumed by the runtime (pr-report-core), not by the template
@@ -91,6 +98,7 @@ describe('generateCIWorkflow', () => {
 describe('generateQaPostProcessAction', () => {
     it('returns composite action YAML', () => {
         const yaml = generateQaPostProcessAction();
+
         expect(yaml).toContain('name: QA Tools Post-Process');
         expect(yaml).toContain('using: composite');
         expect(yaml).toContain('shared/pr-report-core.ts');
@@ -99,18 +107,21 @@ describe('generateQaPostProcessAction', () => {
 
     it('includes ctrf-path input with default', () => {
         const yaml = generateQaPostProcessAction();
+
         expect(yaml).toContain('ctrf-path');
         expect(yaml).toContain('reports/ctrf-report.json');
     });
 
     it('includes project-name input (required)', () => {
         const yaml = generateQaPostProcessAction();
+
         expect(yaml).toContain('project-name');
         expect(yaml).toContain('required: true');
     });
 
     it('passes --project ${{ inputs.project-name }} in run command', () => {
         const yaml = generateQaPostProcessAction();
+
         expect(yaml).toContain('--project ${{ inputs.project-name }}');
     });
 });
@@ -118,11 +129,13 @@ describe('generateQaPostProcessAction', () => {
 describe('generateCIWorkflow — with: project-name', () => {
     it('includes with: block with project-name when prReport enabled', () => {
         const yaml = generateCIWorkflow(MOCK_CTX_FULL);
+
         expect(yaml).toContain('project-name: test-proj');
     });
 
     it('does not include project-name when prReport disabled', () => {
         const yaml = generateCIWorkflow(MOCK_CTX_BASIC);
+
         expect(yaml).not.toContain('project-name:');
     });
 });
@@ -130,6 +143,7 @@ describe('generateCIWorkflow — with: project-name', () => {
 describe('generateQaPostProcessAction — HTML upload', () => {
     it('does NOT include upload-artifact (invalid in composite action)', () => {
         const yaml = generateQaPostProcessAction();
+
         expect(yaml).not.toContain('actions/upload-artifact');
         expect(yaml).not.toContain('Upload PR Report HTML');
         expect(yaml).not.toContain('pr-report-html');
@@ -137,6 +151,7 @@ describe('generateQaPostProcessAction — HTML upload', () => {
 
     it('has no if: always in composite action (only run step)', () => {
         const yaml = generateQaPostProcessAction();
+
         expect(yaml).not.toContain('if: always()');
     });
 });

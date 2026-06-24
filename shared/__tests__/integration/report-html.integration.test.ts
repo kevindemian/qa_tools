@@ -36,6 +36,7 @@ describe('Integration: HTML Report (FT-17)', () => {
                 { title: 'Fail Test', state: 'failed' as const, duration: 0.5, fullTitle: 'Auth > Fail' },
             ];
             const html = generateHtmlReport(tests, { title: 'FT-17 Test Report' });
+
             expect(html).toContain('<!DOCTYPE html>');
             expect(html).toContain('</html>');
             expect(html).toContain('FT-17 Test Report');
@@ -47,6 +48,7 @@ describe('Integration: HTML Report (FT-17)', () => {
         it('handles empty test array gracefully', async () => {
             const { generateHtmlReport } = await import('../../report-html.js');
             const html = generateHtmlReport([], { title: 'Empty' });
+
             expect(html).toContain('<!DOCTYPE html>');
             expect(html).toContain('Empty');
             expect(html).not.toContain('Error generating report');
@@ -70,6 +72,7 @@ describe('Integration: HTML Report (FT-17)', () => {
                 },
             };
             const html = generateHtmlReport(tests, { title: 'Health', healthScore });
+
             expect(html).toContain('Test Suite Health');
             expect(html).toContain('Quality Gate: Pass');
         });
@@ -81,6 +84,7 @@ describe('Integration: HTML Report (FT-17)', () => {
                 { title: 'Fail', state: 'failed' as const, duration: 2 },
             ];
             const html = generateHtmlReport(tests, { title: 'QG', qualityGate: 99 });
+
             expect(html).toContain('Quality Gate');
         });
 
@@ -95,6 +99,7 @@ describe('Integration: HTML Report (FT-17)', () => {
                     { name: 'Firefox', tests: firefoxTests },
                 ],
             });
+
             expect(html).toContain('Chrome');
             expect(html).toContain('Firefox');
             expect(html).toContain('switchTab');
@@ -115,6 +120,7 @@ describe('Integration: HTML Report (FT-17)', () => {
                 },
             ];
             const html = generateCoverageHtml(epics, 'Coverage Test');
+
             expect(html).toContain('Coverage Test');
             expect(html).toContain('EPIC-1');
             expect(html).toContain('T-1');
@@ -139,6 +145,7 @@ describe('Integration: HTML Report (FT-17)', () => {
                 },
             ];
             const html = generateCoverageHtml(epics);
+
             expect(html).toContain('50.0');
             expect(html).toContain('0.0');
         });
@@ -169,6 +176,7 @@ describe('Integration: HTML Report (FT-17)', () => {
         it('handles empty epics gracefully', async () => {
             const { generateCoverageHtml } = await import('../../report-html.js');
             const html = generateCoverageHtml([]);
+
             expect(html).toContain('<!DOCTYPE html>');
             expect(html).not.toContain('Error generating coverage report');
         });

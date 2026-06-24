@@ -22,6 +22,7 @@ describe('assessTestImpact', () => {
     it('should return early when diff is empty', async () => {
         vi.spyOn(mockProvider, 'getDiff').mockResolvedValue('');
         const result = await assessTestImpact(mockProvider, 'feature/a', 'main');
+
         expect(result).toBe('Diff vazio — nenhuma alteração para analisar.');
         expect(llmPrompt).not.toHaveBeenCalled();
     });
@@ -37,6 +38,7 @@ describe('assessTestImpact', () => {
         vi.mocked(llmPrompt).mockResolvedValue('**Risco:** BAIXO. Nenhum teste existente afetado.');
 
         const result = await assessTestImpact(mockProvider, 'feature/a', 'main', '/path/mapping.json');
+
         expect(mockProvider.getDiff).toHaveBeenCalledWith('feature/a', 'main');
         expect(llmPrompt).toHaveBeenCalledWith(
             expect.objectContaining({
@@ -53,6 +55,7 @@ describe('assessTestImpact', () => {
         vi.mocked(llmPrompt).mockResolvedValue('Nenhum teste existente afetado.');
 
         const result = await assessTestImpact(mockProvider, 'feature/a', 'main');
+
         expect(llmPrompt).toHaveBeenCalled();
         expect(result).toBe('Nenhum teste existente afetado.');
     });
@@ -62,6 +65,7 @@ describe('assessTestImpact', () => {
         vi.mocked(llmPrompt).mockRejectedValue(new Error('API error'));
 
         const result = await assessTestImpact(mockProvider, 'feature/a', 'main');
+
         expect(result).toBe('');
     });
 });

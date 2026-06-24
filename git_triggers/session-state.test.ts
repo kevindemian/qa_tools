@@ -109,7 +109,7 @@ describe('session-state', () => {
         it('has default values', () => {
             expect(sessionState.currentProjectName).toBe('');
             expect(sessionState.currentProvider).toBe('gitlab');
-            expect(sessionState.isBusy).toBe(false);
+            expect(sessionState.isBusy).toBeFalsy();
             expect(sessionState.manager).toBeNull();
             expect(sessionState.MSG_OPERATION_CANCELED).toBe('Operação cancelada.');
         });
@@ -118,27 +118,32 @@ describe('session-state', () => {
     describe('setters', () => {
         it('setCurrentProvider updates value', () => {
             sessionState.setCurrentProvider('github');
+
             expect(sessionState.currentProvider).toBe('github');
         });
 
         it('setCurrentProjectName updates value', () => {
             sessionState.setCurrentProjectName('my-project');
+
             expect(sessionState.currentProjectName).toBe('my-project');
         });
 
         it('setProjectId updates value', () => {
             sessionState.setProjectId('123');
+
             expect(sessionState.projectId).toBe('123');
         });
 
         it('setIsBusy updates value', () => {
             sessionState.setIsBusy(true);
-            expect(sessionState.isBusy).toBe(true);
+
+            expect(sessionState.isBusy).toBeTruthy();
         });
 
         it('setManager updates value', () => {
             const m = createMockGitProvider();
             sessionState.setManager(m);
+
             expect(sessionState.manager).toBe(m);
         });
     });
@@ -146,6 +151,7 @@ describe('session-state', () => {
     describe('pushHistory', () => {
         it('calls sessionContext.pushHistory and updateState', () => {
             sessionState.pushHistory('test-op', 'detail', 'ok');
+
             expect(pushHistorySpy).toHaveBeenCalledWith('test-op', 'detail', 'ok');
             expect(stateUpdate).toHaveBeenCalled();
         });
@@ -154,6 +160,7 @@ describe('session-state', () => {
     describe('providerLabel', () => {
         it('delegates to ui-helpers', () => {
             const result = sessionState.providerLabel();
+
             expect(result).toBe('GitLab');
         });
     });
@@ -161,6 +168,7 @@ describe('session-state', () => {
     describe('displayProjects', () => {
         it('displays projects from real projects.json', () => {
             sessionState.displayProjects();
+
             expect(prompt.title).toHaveBeenCalledWith('Projetos');
             expect(prompt.print).toHaveBeenCalled();
         });
@@ -169,6 +177,7 @@ describe('session-state', () => {
     describe('createManagerForProject', () => {
         it('creates GitLabManager when provider is gitlab', () => {
             const mgr = sessionState.createManagerForProject('qa_ibabs', '47849962');
+
             expect(mgr).toBeTruthy();
             expect(typeof mgr.getRecentPipelines).toBe('function');
         });
@@ -208,6 +217,7 @@ describe('session-state', () => {
             const m = createMockGitProvider();
             vi.spyOn(m, 'getRecentPipelines').mockResolvedValue([]);
             await sessionState.displayRecentPipelines(m);
+
             expect(prompt.warn).toHaveBeenCalledWith(expect.stringContaining('flakiness'));
 
             sessionState.setCurrentProjectName('');

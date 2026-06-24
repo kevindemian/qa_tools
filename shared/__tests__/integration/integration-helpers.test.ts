@@ -46,6 +46,7 @@ import {
 describe('fixture factories', () => {
     it('createMetricsRunFixture returns correct shape', () => {
         const result = createMetricsRunFixture();
+
         expect(result).toHaveProperty('timestamp');
         expect(result).toHaveProperty('project');
         expect(result).toHaveProperty('total', 100);
@@ -61,6 +62,7 @@ describe('fixture factories', () => {
 
     it('createMetricsRunFixture merges overrides', () => {
         const result = createMetricsRunFixture({ total: 200, project: 'custom' });
+
         expect(result.total).toBe(200);
         expect(result.project).toBe('custom');
         expect(result.passed).toBe(90);
@@ -68,6 +70,7 @@ describe('fixture factories', () => {
 
     it('createCoverageSnapshotFixture returns correct shape', () => {
         const result = createCoverageSnapshotFixture();
+
         expect(result).toHaveProperty('timestamp');
         expect(result).toHaveProperty('project', 'test-project');
         expect(result).toHaveProperty('totalIssues', 500);
@@ -77,12 +80,14 @@ describe('fixture factories', () => {
 
     it('createCoverageSnapshotFixture merges overrides', () => {
         const result = createCoverageSnapshotFixture({ totalIssues: 1000 });
+
         expect(result.totalIssues).toBe(1000);
         expect(result.mappedIssues).toBe(450);
     });
 
     it('createFailureClassificationFixture returns correct shape', () => {
         const result = createFailureClassificationFixture();
+
         expect(result).toHaveProperty('timestamp');
         expect(result).toHaveProperty('testTitle', 'test should work');
         expect(result).toHaveProperty('category', 'ASSERTION');
@@ -93,6 +98,7 @@ describe('fixture factories', () => {
         const result = createFeaturesJsonFixture();
         const testProject = result['test-project'];
         const gitlabProject = result['gitlab-project'];
+
         expect(testProject).toBeDefined();
         expect(testProject?.gitProvider).toBe('github');
         expect(gitlabProject).toBeDefined();
@@ -101,6 +107,7 @@ describe('fixture factories', () => {
 
     it('createFlatTestArrayFixture returns correct shape', () => {
         const result = createFlatTestArrayFixture();
+
         expect(result).toHaveLength(5);
         expect(result[0]).toHaveProperty('state', 'passed');
         expect(result[3]).toHaveProperty('state', 'failed');
@@ -126,10 +133,11 @@ describe('cleanupTestDir', () => {
         cleanupTestDir('/tmp/test');
 
         expect(warnSpy).toHaveBeenCalled();
+
         warnSpy.mockRestore();
     });
 
-    it('G3: should warn with actionable message on rmSync error', () => {
+    it('g3: should warn with actionable message on rmSync error', () => {
         const warnSpy = vi.spyOn(process.stderr, 'write').mockImplementation(() => true);
         mockFs.existsSync.mockReturnValue(true);
         mockFs.rmSync.mockImplementation(() => {
@@ -139,8 +147,10 @@ describe('cleanupTestDir', () => {
         cleanupTestDir('/tmp/test');
 
         const message = String(warnSpy.mock.calls[0]?.[0]);
+
         expect(message).toContain('cleanupTestDir');
         expect(message).toMatch(/verifique|verificar|tente|tentar|ação|permissão|disco|execute/);
+
         warnSpy.mockRestore();
     });
 
@@ -154,6 +164,7 @@ describe('cleanupTestDir', () => {
         cleanupTestDir('/tmp/test');
 
         expect(warnSpy).not.toHaveBeenCalled();
+
         warnSpy.mockRestore();
     });
 });
@@ -163,7 +174,7 @@ describe('createTestDir', () => {
         vi.clearAllMocks();
     });
 
-    it('G2: should throw descriptive error on mkdtempSync failure', () => {
+    it('g2: should throw descriptive error on mkdtempSync failure', () => {
         const fsError = Object.assign(new Error('disk full'), { code: 'ENOSPC' });
         mockFs.mkdtempSync.mockImplementation(() => {
             throw fsError;
@@ -178,7 +189,7 @@ describe('createFile', () => {
         vi.clearAllMocks();
     });
 
-    it('G3: should throw descriptive error on writeFileSync failure', () => {
+    it('g3: should throw descriptive error on writeFileSync failure', () => {
         mockFs.mkdirSync.mockReturnValue(undefined);
         const fsError = Object.assign(new Error('permission denied'), { code: 'EACCES' });
         mockFs.writeFileSync.mockImplementation(() => {
@@ -204,10 +215,11 @@ describe('readFile', () => {
 
         expect(result).toBeNull();
         expect(warnSpy).not.toHaveBeenCalled();
+
         warnSpy.mockRestore();
     });
 
-    it('G4: should warn on non-ENOENT error then return null', () => {
+    it('g4: should warn on non-ENOENT error then return null', () => {
         const warnSpy = vi.spyOn(process.stderr, 'write').mockImplementation(() => true);
         mockFs.readFileSync.mockImplementation(() => {
             throw Object.assign(new Error('permission denied'), { code: 'EACCES' });
@@ -217,6 +229,7 @@ describe('readFile', () => {
 
         expect(result).toBeNull();
         expect(warnSpy).toHaveBeenCalled();
+
         warnSpy.mockRestore();
     });
 });
@@ -236,10 +249,11 @@ describe('readJsonFile', () => {
 
         expect(result).toBeNull();
         expect(warnSpy).not.toHaveBeenCalled();
+
         warnSpy.mockRestore();
     });
 
-    it('G5/G12: should return null on invalid JSON (not crash)', () => {
+    it('g5/G12: should return null on invalid JSON (not crash)', () => {
         mockFs.readFileSync.mockReturnValue('{ invalid json }');
 
         const result = readJsonFile('/tmp/base', 'bad.json');
@@ -247,7 +261,7 @@ describe('readJsonFile', () => {
         expect(result).toBeNull();
     });
 
-    it('G6: should warn on non-ENOENT error then return null', () => {
+    it('g6: should warn on non-ENOENT error then return null', () => {
         const warnSpy = vi.spyOn(process.stderr, 'write').mockImplementation(() => true);
         mockFs.readFileSync.mockImplementation(() => {
             throw Object.assign(new Error('permission denied'), { code: 'EACCES' });
@@ -257,6 +271,7 @@ describe('readJsonFile', () => {
 
         expect(result).toBeNull();
         expect(warnSpy).toHaveBeenCalled();
+
         warnSpy.mockRestore();
     });
 });
@@ -268,19 +283,22 @@ describe('fileExists', () => {
 
     it('should return true when existsSync returns true', () => {
         mockFs.existsSync.mockReturnValue(true);
-        expect(fileExists('/tmp', 'file.txt')).toBe(true);
+
+        expect(fileExists('/tmp', 'file.txt')).toBeTruthy();
     });
 
     it('should return false when existsSync returns false', () => {
         mockFs.existsSync.mockReturnValue(false);
-        expect(fileExists('/tmp', 'missing.txt')).toBe(false);
+
+        expect(fileExists('/tmp', 'missing.txt')).toBeFalsy();
     });
 
-    it('G2: should return false on existsSync error (not crash)', () => {
+    it('g2: should return false on existsSync error (not crash)', () => {
         mockFs.existsSync.mockImplementation(() => {
             throw new Error('permission denied');
         });
         const result = fileExists('/tmp', 'restricted.txt');
-        expect(result).toBe(false);
+
+        expect(result).toBeFalsy();
     });
 });

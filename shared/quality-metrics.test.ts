@@ -39,6 +39,7 @@ describe('QualityMetricsCollector', () => {
             collector.recordInvariantFire('T-01');
             collector.recordInvariantFire('T-02');
             const snapshot = collector.snapshot();
+
             expect(snapshot.invariantFireCount['T-01']).toBe(2);
             expect(snapshot.invariantFireCount['T-02']).toBe(1);
         });
@@ -48,6 +49,7 @@ describe('QualityMetricsCollector', () => {
             collector.recordInvariantFire('T-02');
             collector.recordInvariantFire('T-02');
             const rate = collector.invariantFireRate('T-02');
+
             expect(rate).toBeCloseTo(2 / 3);
         });
 
@@ -73,6 +75,7 @@ describe('QualityMetricsCollector', () => {
             collector.recordArtifactType('test-suite');
             collector.recordArtifactType('analysis');
             const snapshot = collector.snapshot();
+
             expect(snapshot.artifactTypeCounts['test-suite']).toBe(2);
             expect(snapshot.artifactTypeCounts['analysis']).toBe(1);
         });
@@ -83,11 +86,13 @@ describe('QualityMetricsCollector', () => {
             collector.recordStructureScore(0.8);
             collector.recordStructureScore(1.0);
             const snapshot = collector.snapshot();
+
             expect(snapshot.avgStructureScore).toBe(0.9);
         });
 
         it('returns 0 when no scores recorded', () => {
             const snapshot = collector.snapshot();
+
             expect(snapshot.avgStructureScore).toBe(0);
         });
     });
@@ -99,6 +104,7 @@ describe('QualityMetricsCollector', () => {
             collector.recordArtifactType('test-suite');
             collector.clear();
             const snapshot = collector.snapshot();
+
             expect(Object.keys(snapshot.invariantFireCount)).toHaveLength(0);
             expect(snapshot.artifactTypeCounts).toEqual({});
         });
@@ -107,6 +113,7 @@ describe('QualityMetricsCollector', () => {
     describe('drift detection', () => {
         it('returns empty alerts with insufficient history', () => {
             const alerts = collector.detectDrift([]);
+
             expect(alerts).toHaveLength(0);
         });
 
@@ -122,6 +129,7 @@ describe('QualityMetricsCollector', () => {
                 },
             ];
             const alerts = collector.detectDrift(snapshots);
+
             expect(alerts).toHaveLength(0);
         });
 
@@ -149,7 +157,8 @@ describe('QualityMetricsCollector', () => {
             ];
 
             const alerts = collector.detectDrift(snapshots);
-            expect(Array.isArray(alerts)).toBe(true);
+
+            expect(Array.isArray(alerts)).toBeTruthy();
         });
 
         it('skips invariants with fewer than 2 baseline occurrences', () => {
@@ -175,6 +184,7 @@ describe('QualityMetricsCollector', () => {
             ];
 
             const alerts = collector.detectDrift(snapshots);
+
             expect(alerts).toHaveLength(0);
         });
     });
@@ -182,24 +192,27 @@ describe('QualityMetricsCollector', () => {
     describe('getHistory', () => {
         it('returns empty array when file does not exist', () => {
             const history = collector.getHistory();
+
             expect(history).toEqual([]);
         });
     });
 
     describe('edge: NaN and Infinity (D8 regression prevention)', () => {
-        it('NaN structureScore produces fallback 0 avgStructureScore', () => {
+        it('naN structureScore produces fallback 0 avgStructureScore', () => {
             const col = new QualityMetricsCollector();
             col.recordStructureScore(NaN);
             const snap = col.snapshot();
-            expect(Number.isFinite(snap.avgStructureScore)).toBe(true);
+
+            expect(Number.isFinite(snap.avgStructureScore)).toBeTruthy();
             expect(snap.avgStructureScore).toBe(0);
         });
 
-        it('Infinity structureScore produces fallback 0 avgStructureScore', () => {
+        it('infinity structureScore produces fallback 0 avgStructureScore', () => {
             const col = new QualityMetricsCollector();
             col.recordStructureScore(Infinity);
             const snap = col.snapshot();
-            expect(Number.isFinite(snap.avgStructureScore)).toBe(true);
+
+            expect(Number.isFinite(snap.avgStructureScore)).toBeTruthy();
             expect(snap.avgStructureScore).toBe(0);
         });
     });
@@ -211,12 +224,14 @@ describe('QualityMetricsCollector', () => {
 
         it('detectDrift returns array', () => {
             const alerts = detectDrift();
-            expect(Array.isArray(alerts)).toBe(true);
+
+            expect(Array.isArray(alerts)).toBeTruthy();
         });
 
         it('snapshotQualityMetrics returns snapshot', () => {
             recordInvariantFire('T-01');
             const snapshot = snapshotQualityMetrics();
+
             expect(snapshot.invariantFireCount['T-01']).toBe(1);
         });
     });

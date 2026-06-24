@@ -43,14 +43,16 @@ describe('offerTestExecutionAssociation', () => {
     it('returns not associated when testKeys is empty', async () => {
         const c = createMockContext();
         const result = await offerTestExecutionAssociation(c, [], 'src');
-        expect(result.associated).toBe(false);
+
+        expect(result.associated).toBeFalsy();
     });
 
     it('returns not associated when project_name is missing', async () => {
         const c = createMockContext();
         c.ctx.project_name = '';
         const result = await offerTestExecutionAssociation(c, ['TEST-1'], 'src');
-        expect(result.associated).toBe(false);
+
+        expect(result.associated).toBeFalsy();
     });
 
     describe('option 1 — create new', () => {
@@ -66,6 +68,7 @@ describe('offerTestExecutionAssociation', () => {
             });
             const c = createMockContext();
             const result = await offerTestExecutionAssociation(c, ['TEST-1'], 'src');
+
             expect(result).toEqual({
                 associated: true,
                 key: 'TEST-TE-1',
@@ -84,7 +87,8 @@ describe('offerTestExecutionAssociation', () => {
             mockCreateTestExecutionWithLinks.mockRejectedValue(new Error('API error'));
             const c = createMockContext();
             const result = await offerTestExecutionAssociation(c, ['TEST-1'], 'src');
-            expect(result.associated).toBe(false);
+
+            expect(result.associated).toBeFalsy();
             expect(c.pushHistory).toHaveBeenCalledWith('create-testexec', 'erro', 'error');
             expect(printError).toHaveBeenCalled();
         });
@@ -108,6 +112,7 @@ describe('offerTestExecutionAssociation', () => {
                 });
             });
             const result = await offerTestExecutionAssociation(c, ['TEST-1'], 'src');
+
             expect(result).toEqual({
                 associated: true,
                 key: 'TEST-TE-1',
@@ -132,7 +137,8 @@ describe('offerTestExecutionAssociation', () => {
                 });
             });
             const result = await offerTestExecutionAssociation(c, ['TEST-1'], 'src');
-            expect(result.associated).toBe(true);
+
+            expect(result.associated).toBeTruthy();
             expect(result.key).toBe('TEST-TE-999');
         });
 
@@ -145,7 +151,8 @@ describe('offerTestExecutionAssociation', () => {
                 getTestCaseSummaries: vi.fn(),
             });
             const result = await offerTestExecutionAssociation(c, ['TEST-1'], 'src');
-            expect(result.associated).toBe(false);
+
+            expect(result.associated).toBeFalsy();
         });
 
         it('returns not associated when invalid index format entered for list', async () => {
@@ -159,7 +166,8 @@ describe('offerTestExecutionAssociation', () => {
                 getTestCaseSummaries: vi.fn(),
             });
             const result = await offerTestExecutionAssociation(c, ['TEST-1'], 'src');
-            expect(result.associated).toBe(false);
+
+            expect(result.associated).toBeFalsy();
         });
 
         it('validates key and retries on failure', async () => {
@@ -184,7 +192,8 @@ describe('offerTestExecutionAssociation', () => {
                 return createMockTestExecutionCreator({ addTestsToExistingExecution: addTestsMock });
             });
             const result = await offerTestExecutionAssociation(c, ['TEST-1'], 'src');
-            expect(result.associated).toBe(true);
+
+            expect(result.associated).toBeTruthy();
             expect(result.key).toBe('TEST-TE-2');
         });
 
@@ -206,7 +215,8 @@ describe('offerTestExecutionAssociation', () => {
                 getTestCaseSummaries: vi.fn(),
             });
             const result = await offerTestExecutionAssociation(c, ['TEST-1'], 'src');
-            expect(result.associated).toBe(false);
+
+            expect(result.associated).toBeFalsy();
             expect(printError).toHaveBeenCalled();
         });
 
@@ -221,7 +231,8 @@ describe('offerTestExecutionAssociation', () => {
                 getTestCaseSummaries: vi.fn(),
             });
             const result = await offerTestExecutionAssociation(c, ['TEST-1'], 'src');
-            expect(result.associated).toBe(false);
+
+            expect(result.associated).toBeFalsy();
         });
 
         it('handles listTestExecutions failure gracefully', async () => {
@@ -237,7 +248,8 @@ describe('offerTestExecutionAssociation', () => {
                 return createMockTestExecutionCreator({ addTestsToExistingExecution: addTestsMock });
             });
             const result = await offerTestExecutionAssociation(c, ['TEST-1'], 'src');
-            expect(result.associated).toBe(true);
+
+            expect(result.associated).toBeTruthy();
             expect(result.key).toBe('TEST-TE-1');
         });
 
@@ -256,7 +268,8 @@ describe('offerTestExecutionAssociation', () => {
                 return createMockTestExecutionCreator({ addTestsToExistingExecution: addTestsMock });
             });
             const result = await offerTestExecutionAssociation(c, ['TEST-1'], 'src');
-            expect(result.associated).toBe(false);
+
+            expect(result.associated).toBeFalsy();
             expect(c.pushHistory).toHaveBeenCalledWith('associate-testexec', 'erro', 'error');
         });
     });
@@ -266,7 +279,8 @@ describe('offerTestExecutionAssociation', () => {
             vi.mocked(ask).mockResolvedValueOnce('');
             const c = createMockContext();
             const result = await offerTestExecutionAssociation(c, ['TEST-1'], 'src');
-            expect(result.associated).toBe(false);
+
+            expect(result.associated).toBeFalsy();
         });
     });
 });
@@ -281,6 +295,7 @@ describe('showResults', () => {
             ]),
         });
         await showResults(c, ['TEST-1', 'TEST-2']);
+
         expect(c.linkManager['getTestCaseSummaries']).toHaveBeenCalledWith(['TEST-1', 'TEST-2']);
     });
 
@@ -322,6 +337,7 @@ describe('showResults', () => {
                 .mockResolvedValue(keys.slice(0, 20).map((k: string) => ({ key: k, summary: 'Test ' + k }))),
         });
         await showResults(c, keys);
+
         expect(c.linkManager['getTestCaseSummaries']).toHaveBeenCalledWith(keys.slice(0, 20));
     });
 });

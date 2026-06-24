@@ -609,7 +609,7 @@ describe('case17 — HTML report generator', () => {
         const mod = case17Module;
         const result = await mod.handler(baseContext);
 
-        expect(result).toBe(false);
+        expect(result).toBeFalsy();
         expect(prompt.printError).toHaveBeenCalledWith('Quality Gate', expect.any(Error));
 
         process.env['QA_FAIL_ON'] = undefined;

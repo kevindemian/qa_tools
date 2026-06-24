@@ -65,9 +65,11 @@ describe('QualityMetricsCollector — property-based', () => {
                 const ids = [...new Set(fires)];
                 for (const id of ids) {
                     const rate = collector.invariantFireRate(id);
+
                     expect(rate).toBeGreaterThanOrEqual(0);
                     expect(rate).toBeLessThanOrEqual(1);
                 }
+
                 // Unknown invariant → 0
                 expect(collector.invariantFireRate('UNKNOWN')).toBe(0);
             }),
@@ -87,6 +89,7 @@ describe('QualityMetricsCollector — property-based', () => {
 
                     for (const layer of ['layer1', 'layer2', 'layer3'] as const) {
                         const rate = collector.layerPassRate(layer);
+
                         expect(rate).toBeGreaterThanOrEqual(0);
                         expect(rate).toBeLessThanOrEqual(1);
                     }
@@ -109,6 +112,7 @@ describe('QualityMetricsCollector — property-based', () => {
                         expect(snapshot.avgStructureScore).toBe(0);
                     } else {
                         const expected = Math.round((scores.reduce((a, b) => a + b, 0) / scores.length) * 100) / 100;
+
                         expect(snapshot.avgStructureScore).toBe(expected);
                     }
                 },
@@ -133,6 +137,7 @@ describe('QualityMetricsCollector — property-based', () => {
                     for (const id of [...new Set(invariants)]) {
                         expect(collector.invariantFireRate(id)).toBe(0);
                     }
+
                     expect(collector.layerPassRate('layer1')).toBe(1);
                     expect(collector.layerPassRate('layer2')).toBe(1);
                     expect(collector.layerPassRate('layer3')).toBe(1);
@@ -173,6 +178,7 @@ describe('QualityMetricsCollector — property-based', () => {
 
                     // Only 1 snapshot → should be empty
                     const alerts = collector.detectDrift(snapshots);
+
                     expect(alerts).toEqual([]);
                 },
             ),
@@ -209,6 +215,7 @@ describe('QualityMetricsCollector — property-based', () => {
                 collector.recordInvariantFire(otherId);
 
                 const alerts = collector.detectDrift(snapshots);
+
                 expect(alerts.length).toBeGreaterThanOrEqual(1);
             }),
             { numRuns: 50 },

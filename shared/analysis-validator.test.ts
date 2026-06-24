@@ -16,6 +16,7 @@ describe('AnalysisValidator — createAnalysisValidator', () => {
     it('creates validator with all invariants registered', () => {
         const v = createAnalysisValidator();
         const invariants = v.listInvariants();
+
         expect(invariants).toContain('A-01');
         expect(invariants).toContain('A-02');
         expect(invariants).toContain('A-03');
@@ -42,6 +43,7 @@ describe('AnalysisValidator — createAnalysisValidator', () => {
         };
         const ctx = makeCtx('1. [failed] Login fails with invalid credentials (42ms)\nerror: expected 200 got 401');
         const result = v.validate(analysis, ctx);
+
         expect(result.failed).toBe(0);
     });
 });
@@ -52,7 +54,8 @@ describe('invariantTestTitleExists (A-01)', () => {
             { tests: [{ title: 'Login fails' }] },
             makeCtx('1. [failed] Login fails (100ms)'),
         );
-        expect(results.some((r) => r.passed)).toBe(true);
+
+        expect(results.some((r) => r.passed)).toBeTruthy();
     });
 
     it('fails when title not in input', () => {
@@ -60,7 +63,8 @@ describe('invariantTestTitleExists (A-01)', () => {
             { tests: [{ title: 'Missing test' }] },
             makeCtx('1. [failed] Login fails (100ms)'),
         );
-        expect(results.some((r) => !r.passed && r.invariantId === 'A-01')).toBe(true);
+
+        expect(results.some((r) => !r.passed && r.invariantId === 'A-01')).toBeTruthy();
     });
 });
 
@@ -78,7 +82,8 @@ describe('invariantUnknownHasReason (A-04)', () => {
             },
             makeCtx(''),
         );
-        expect(results.some((r) => r.passed)).toBe(true);
+
+        expect(results.some((r) => r.passed)).toBeTruthy();
     });
 
     it('fails UNKNOWN with short recommendation', () => {
@@ -86,7 +91,8 @@ describe('invariantUnknownHasReason (A-04)', () => {
             { tests: [{ classification: 'UNKNOWN', recommendation: 'Not sure' }] },
             makeCtx(''),
         );
-        expect(results.some((r) => !r.passed && r.invariantId === 'A-04')).toBe(true);
+
+        expect(results.some((r) => !r.passed && r.invariantId === 'A-04')).toBeTruthy();
     });
 });
 
@@ -103,7 +109,8 @@ describe('invariantHighSeverityRecommendation (A-05)', () => {
             },
             makeCtx(''),
         );
-        expect(results.some((r) => r.passed)).toBe(true);
+
+        expect(results.some((r) => r.passed)).toBeTruthy();
     });
 
     it('fails when high severity has short recommendation', () => {
@@ -111,7 +118,8 @@ describe('invariantHighSeverityRecommendation (A-05)', () => {
             { tests: [{ severity: 'high', recommendation: 'Fix it' }] },
             makeCtx(''),
         );
-        expect(results.some((r) => !r.passed && r.invariantId === 'A-05')).toBe(true);
+
+        expect(results.some((r) => !r.passed && r.invariantId === 'A-05')).toBeTruthy();
     });
 });
 
@@ -121,7 +129,8 @@ describe('invariantSeverityConsistent (A-03)', () => {
             { tests: [{ classification: 'ASSERTION', severity: 'high' }] },
             makeCtx(''),
         );
-        expect(results.some((r) => r.passed)).toBe(true);
+
+        expect(results.some((r) => r.passed)).toBeTruthy();
     });
 
     it('warns on ASSERTION low severity', () => {
@@ -129,7 +138,8 @@ describe('invariantSeverityConsistent (A-03)', () => {
             { tests: [{ classification: 'ASSERTION', severity: 'low' }] },
             makeCtx(''),
         );
-        expect(results.some((r) => !r.passed && r.invariantId === 'A-03')).toBe(true);
+
+        expect(results.some((r) => !r.passed && r.invariantId === 'A-03')).toBeTruthy();
     });
 });
 
@@ -139,6 +149,7 @@ describe('invariantRecommendationReferencesError (A-02)', () => {
             { tests: [{ title: 'Test', recommendation: 'Fix assertion error in login module' }] },
             makeCtx('error: assertion failed in login module\nexception: timeout'),
         );
-        expect(results.some((r) => r.passed)).toBe(true);
+
+        expect(results.some((r) => r.passed)).toBeTruthy();
     });
 });

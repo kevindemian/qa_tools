@@ -79,6 +79,7 @@ describe('analyzeCoverage', () => {
             total: 2,
         });
         const result = await analyzeCoverage(mockJiraResource, 'TEST');
+
         expect(result.gapsByEpic).toEqual({});
     });
 });

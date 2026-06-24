@@ -16,6 +16,7 @@ vi.mock('../shared/logger', () => ({
 }));
 
 let mockApiGet: Mock;
+
 beforeAll(async () => {
     mockApiGet = vi.mocked((await vi.importMock<typeof import('./github-api.js')>('./github-api')).apiGet);
 });
@@ -60,6 +61,7 @@ describe('getOpenIssues', () => {
             },
         ]);
         const result = await getOpenIssues(client, 'myorg', 'myrepo');
+
         expect(result).toHaveLength(2);
         expect(nonNull(result[0]).number).toBe(1);
         expect(nonNull(result[0]).title).toBe('Bug fix');
@@ -75,24 +77,28 @@ describe('getOpenIssues', () => {
     it('returns empty array when data is not an array', async () => {
         mockApiGet.mockResolvedValue({ message: 'error', something: true });
         const result = await getOpenIssues(client, 'myorg', 'myrepo');
+
         expect(result).toEqual([]);
     });
 
     it('returns empty array when apiGet returns null', async () => {
         mockApiGet.mockResolvedValue(null);
         const result = await getOpenIssues(client, 'myorg', 'myrepo');
+
         expect(result).toEqual([]);
     });
 
     it('returns empty array when data is empty array', async () => {
         mockApiGet.mockResolvedValue([]);
         const result = await getOpenIssues(client, 'myorg', 'myrepo');
+
         expect(result).toEqual([]);
     });
 
     it('handles items with missing optional fields gracefully', async () => {
         mockApiGet.mockResolvedValue([{ number: 1, title: 'Minimal', state: 'open', labels: null, html_url: null }]);
         const result = await getOpenIssues(client, 'myorg', 'myrepo');
+
         expect(result).toHaveLength(1);
         expect(nonNull(result[0]).number).toBe(1);
         expect(nonNull(result[0]).title).toBe('Minimal');
@@ -113,6 +119,7 @@ describe('getOpenIssues', () => {
             },
         ]);
         const result = await getOpenIssues(client, 'myorg', 'myrepo');
+
         expect(nonNull(result[0]).labels).toEqual(['bug', 'critical']);
     });
 });

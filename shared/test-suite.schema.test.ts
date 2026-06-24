@@ -47,6 +47,7 @@ describe('TestCaseSchema', () => {
 
     it('accepts valid test case', () => {
         const result = TestCaseSchema.parse(validTestCase);
+
         expect(result.title).toBe(validTestCase.title);
     });
 
@@ -81,6 +82,7 @@ describe('TestCaseSchema', () => {
     it('accepts optional evidence', () => {
         const withEvidence = { ...validTestCase, evidence: ['Criterion C-1: User can log in'] };
         const result = TestCaseSchema.parse(withEvidence);
+
         expect(result.evidence).toEqual(['Criterion C-1: User can log in']);
     });
 });
@@ -95,6 +97,7 @@ describe('CoverageTableSchema', () => {
             coverage: 75,
             gaps: [{ criterion: 'Edge case X', reason: 'Not applicable to this feature' }],
         };
+
         expect(CoverageTableSchema.parse(data)).toEqual(data);
     });
 
@@ -124,6 +127,7 @@ describe('TestSuiteSchema', () => {
 
     it('accepts valid test suite', () => {
         const result = TestSuiteSchema.parse(validSuite);
+
         expect(result.tests).toHaveLength(1);
     });
 

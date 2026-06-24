@@ -14,6 +14,7 @@ describe('filterHighFlakiness', () => {
         ];
 
         const result = filterHighFlakiness(entries, 30);
+
         expect(result).toHaveLength(2);
         expect(result[0]?.title).toBe('Very Flaky');
         expect(result[1]?.title).toBe('Borderline');
@@ -39,6 +40,7 @@ describe('generateFlakinessHtml', () => {
         ];
 
         const html = generateFlakinessHtml(entries);
+
         expect(html).toContain('<!DOCTYPE html>');
         expect(html).toContain('Login Flaky');
         expect(html).toContain('50%');
@@ -51,6 +53,7 @@ describe('generateFlakinessHtml', () => {
         ];
 
         const html = generateFlakinessHtml(entries);
+
         expect(html).toContain('Mild');
         expect(html).toContain('30%');
         expect(html).toContain('data-component="badge"');
@@ -67,6 +70,7 @@ describe('generateFlakinessHtml', () => {
         }));
 
         const html = generateFlakinessHtml(entries);
+
         expect(html).toContain('data-severity="error"');
         expect(html).toContain('7');
     });
@@ -77,11 +81,13 @@ describe('generateFlakinessHtml', () => {
         ];
 
         const html = generateFlakinessHtml(entries);
+
         expect(html).toContain('No tests exceed');
     });
 
     it('uses custom title', () => {
         const html = generateFlakinessHtml([], 'My Dashboard');
+
         expect(html).toContain('My Dashboard');
     });
 
@@ -91,6 +97,7 @@ describe('generateFlakinessHtml', () => {
         ];
 
         const html = generateFlakinessHtml(entries);
+
         expect(html).toContain('&lt;script&gt;');
         expect(html).not.toContain('<script>alert');
     });
@@ -100,12 +107,14 @@ describe('generateFlakinessHtml', () => {
             { title: 'Test', passCount: 5, failCount: 5, skipCount: 0, totalRuns: 10, rate: 0.5 },
         ];
         const html = generateFlakinessHtml(entries);
+
         expect(html).toContain('qa-report-theme');
         expect(html).toContain('prefers-color-scheme');
     });
 
     it('includes dark mode CSS selectors', () => {
         const html = generateFlakinessHtml([]);
+
         expect(html).toContain('--color-surface-page');
         expect(html).toContain('html.dark');
     });

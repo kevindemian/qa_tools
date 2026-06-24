@@ -41,6 +41,7 @@ describe('BugReport Service', () => {
     describe('collectManual', () => {
         it('throws if summary is empty after 3 attempts', async () => {
             mockPrompt.ask.mockResolvedValue('');
+
             await expect(collectManual()).rejects.toThrow('é obrigatório');
             expect(mockPrompt.warn).toHaveBeenCalledTimes(3);
         });
@@ -52,6 +53,7 @@ describe('BugReport Service', () => {
                 .mockResolvedValue(''); // remaining fields
             mockPrompt.askConfirm.mockResolvedValue(false); // skip LLM
             const report = await collectManual();
+
             expect(report.summary).toBe('Bug title');
             expect(mockPrompt.warn).toHaveBeenCalledTimes(1);
         });
@@ -127,6 +129,7 @@ describe('BugReport Service', () => {
             mockFailureAnalysis.classifyFailure.mockRejectedValueOnce(new Error('API timeout'));
 
             const report = await collectManual();
+
             expect(report.llmEnrichment).toBeUndefined();
         });
 
@@ -144,6 +147,7 @@ describe('BugReport Service', () => {
             mockPrompt.askConfirm.mockResolvedValueOnce(false);
 
             const report = await collectManual();
+
             expect(report.severity).toBe('minor');
         });
 
@@ -162,6 +166,7 @@ describe('BugReport Service', () => {
             mockFailureAnalysis.classifyFailure.mockResolvedValueOnce('');
 
             const report = await collectManual();
+
             expect(report.llmEnrichment).toBeDefined();
             expect(nonNull(report.llmEnrichment).rootCause).toBe('');
             expect(mockPrompt.info).toHaveBeenCalledWith(expect.stringContaining('não disponível'));
@@ -203,6 +208,7 @@ describe('BugReport Service', () => {
                 stats: { passed: 1, failed: 0, skipped: 0, total: 1, duration: 50 },
             };
             const report = collectAutomated(mockResult);
+
             expect(report.description).toBe('No details available.');
         });
 
@@ -211,6 +217,7 @@ describe('BugReport Service', () => {
                 tests: [],
                 stats: { passed: 0, failed: 0, skipped: 0, total: 0, duration: 0 },
             });
+
             expect(report.summary).toBe('0/0 tests failed');
             expect(report.description).toBe('No details available.');
         });
@@ -221,6 +228,7 @@ describe('BugReport Service', () => {
                 stats: { passed: 0, failed: 1, skipped: 0, total: 1, duration: 50 },
             };
             const report = collectAutomated(mockResult);
+
             expect(report.description).toContain('*Fails silently*');
             expect(report.description).not.toContain('Error:');
         });
@@ -246,6 +254,7 @@ describe('BugReport Service', () => {
             };
 
             const composed = compose(report);
+
             expect(composed).toContain('**Summary:** Login issue');
             expect(composed).toContain('**Severity:** major');
             expect(composed).toContain('**Description:**\nDescription text');
@@ -272,6 +281,7 @@ describe('BugReport Service', () => {
                 },
             };
             const composed = compose(report);
+
             expect(composed).toContain('**Pipeline:** 12345');
             expect(composed).toContain('**Branch:** develop');
             expect(composed).toContain('**Commit:** abc123def');
@@ -288,6 +298,7 @@ describe('BugReport Service', () => {
                 },
             };
             const composed = compose(report);
+
             expect(composed).toContain('**Pipeline:** p1');
             expect(composed).not.toContain('**Branch:**');
             expect(composed).not.toContain('**Commit:**');
@@ -301,6 +312,7 @@ describe('BugReport Service', () => {
                 severity: 'major',
             };
             const composed = compose(report);
+
             expect(composed).toContain('**Summary:** Minimal');
             expect(composed).toContain('**Severity:** major');
             expect(composed).not.toContain('**Description:**');
@@ -364,6 +376,7 @@ describe('BugReport Service', () => {
                 source: 'manual',
                 severity: 'minor',
             };
+
             await expect(fileToJira(mockJiraResource, report, undefined, { confirm: false })).rejects.toThrow(
                 'Project key is required',
             );
@@ -461,6 +474,7 @@ describe('BugReport Service', () => {
             mockJiraResource.postJiraResource.mockRejectedValueOnce(new Error('Jira API error'));
 
             const result = await interactiveBugReportFlow(mockJiraResource, 'PROJ', report);
+
             expect(result).toEqual({
                 status: 'error',
                 label: '',
@@ -484,6 +498,7 @@ describe('BugReport Service', () => {
             mockJiraResource.postJiraResource.mockResolvedValueOnce({ key: 'PROJ-303' });
 
             const result = await interactiveBugReportFlow(mockJiraResource, 'PROJ', undefined, mockLinkManager);
+
             expect(result).toEqual({
                 status: 'ok',
                 label: 'PROJ-303',
@@ -532,6 +547,7 @@ describe('generateBugReportFromDescription', () => {
         });
 
         const result = await generateBugReportFromDescription('login fails on firefox');
+
         expect(result).not.toBeNull();
         expect(nonNull(result).summary).toBe('Login fails on Firefox');
         expect(nonNull(result).severity).toBe('major');
@@ -551,6 +567,7 @@ describe('generateBugReportFromDescription', () => {
         });
 
         const result = await generateBugReportFromDescription('button not visible');
+
         expect(result).not.toBeNull();
         expect(nonNull(result).environment).toBeUndefined();
         expect(nonNull(result).component).toBeUndefined();
@@ -559,6 +576,7 @@ describe('generateBugReportFromDescription', () => {
     it('returns null when LLM throws', async () => {
         mockLlmPrompt.mockRejectedValue(new Error('LLM API error'));
         const result = await generateBugReportFromDescription('something broke');
+
         expect(result).toBeNull();
     });
 
@@ -570,6 +588,7 @@ describe('generateBugReportFromDescription', () => {
         });
 
         const result = await generateBugReportFromDescription('test');
+
         expect(result).toBeNull();
     });
 });

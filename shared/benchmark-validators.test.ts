@@ -20,17 +20,20 @@ const VALID_ARRAY_ITEM = {
 describe('validateJsonSchema', () => {
     it('returns null for valid JSON with 2 test cases', () => {
         const body = JSON.stringify({ tests: [VALID_SCHEMA_ITEM, VALID_SCHEMA_ITEM] });
+
         expect(validateJsonSchema(body, 1)).toBeNull();
     });
 
     it('returns error for malformed JSON (parse error)', () => {
         const result = validateJsonSchema('{ broken json', 1);
+
         expect(result).toBe('Invalid JSON');
     });
 
     it('returns error when tests array is empty', () => {
         const body = JSON.stringify({ tests: [] });
         const result = validateJsonSchema(body, 1);
+
         expect(result).toContain('Too few tests');
     });
 
@@ -41,6 +44,7 @@ describe('validateJsonSchema', () => {
             ],
         });
         const result = validateJsonSchema(body, 1);
+
         expect(result).not.toBeNull();
         expect(result).toContain('title');
     });
@@ -52,6 +56,7 @@ describe('validateJsonSchema', () => {
             ],
         });
         const result = validateJsonSchema(body, 1);
+
         expect(result).not.toBeNull();
         expect(result).toContain('severity');
     });
@@ -64,12 +69,14 @@ describe('validateJsonSchema', () => {
 describe('validateJsonArray', () => {
     it('returns null for valid JSON array', () => {
         const body = JSON.stringify([VALID_ARRAY_ITEM]);
+
         expect(validateJsonArray(body, 1)).toBeNull();
     });
 
     it('returns error when array is empty', () => {
         const body = JSON.stringify([]);
         const result = validateJsonArray(body, 1);
+
         expect(result).toContain('Too few items');
     });
 
@@ -81,18 +88,21 @@ describe('validateJsonArray', () => {
             },
         ]);
         const result = validateJsonArray(body, 1);
+
         expect(result).toContain('invalid steps');
     });
 
     it('returns error when expectedResult is shorter than 10 characters', () => {
         const body = JSON.stringify([{ title: 'Login form displays', steps: ['Step 1'], expectedResult: 'Short' }]);
         const result = validateJsonArray(body, 1);
+
         expect(result).toContain('invalid expectedResult');
     });
 
     it('returns error when body is an object instead of an array', () => {
         const body = JSON.stringify({ title: 'not an array' });
         const result = validateJsonArray(body, 1);
+
         expect(result).toBe('Not an array');
     });
 });
@@ -108,6 +118,7 @@ describe('validateClassify', () => {
 
     it('returns error when body contains a different category', () => {
         const result = validateClassify('TIMEOUT: request timed out after 30s', 'ASSERTION');
+
         expect(result).toContain('Wrong category');
         expect(result).toContain('ASSERTION');
         expect(result).toContain('TIMEOUT');
@@ -115,6 +126,7 @@ describe('validateClassify', () => {
 
     it('returns error for empty body', () => {
         const result = validateClassify('', 'ASSERTION');
+
         expect(result).toContain('Invalid format');
     });
 });
@@ -126,17 +138,20 @@ describe('validateClassify', () => {
 describe('validateJsonSchema — edge cases', () => {
     it('returns error when tests field is not an array', () => {
         const body = JSON.stringify({ tests: 'not-an-array' });
+
         expect(validateJsonSchema(body, 1)).toBe('Missing tests array');
     });
 
     it('returns error when tests field is null', () => {
         const body = JSON.stringify({ tests: null });
+
         expect(validateJsonSchema(body, 1)).toBe('Missing tests array');
     });
 
     it('returns error when minTests is higher than available test count', () => {
         const body = JSON.stringify({ tests: [VALID_SCHEMA_ITEM] });
         const result = validateJsonSchema(body, 10);
+
         expect(result).toContain('Too few tests');
     });
 });
@@ -151,12 +166,14 @@ describe('validateJsonArray — edge cases', () => {
             { title: 'AB', steps: ['Step 1'], expectedResult: 'Long enough expected result text here' },
         ]);
         const result = validateJsonArray(body, 1);
+
         expect(result).toContain('invalid title');
     });
 
     it('returns error when title field is missing', () => {
         const body = JSON.stringify([{ steps: ['Step 1'], expectedResult: 'Long enough expected result text here' }]);
         const result = validateJsonArray(body, 1);
+
         expect(result).toContain('invalid title');
     });
 
@@ -165,6 +182,7 @@ describe('validateJsonArray — edge cases', () => {
             { title: 'Valid title', steps: 'not-an-array', expectedResult: 'Long enough expected result text here' },
         ]);
         const result = validateJsonArray(body, 1);
+
         expect(result).toContain('invalid steps');
     });
 });
@@ -184,11 +202,13 @@ describe('validateClassify — edge cases', () => {
 
     it('returns error when body has no colon separator', () => {
         const result = validateClassify('ASSERTION without colon', 'ASSERTION');
+
         expect(result).toContain('Invalid format');
     });
 
     it('returns error when body contains only whitespace', () => {
         const result = validateClassify('   ', 'ASSERTION');
+
         expect(result).toContain('Invalid format');
     });
 });

@@ -53,6 +53,7 @@ describe('Integration: Logger', () => {
             logger.debug('debug message');
 
             const content = readLog(logger);
+
             expect(content).toContain('[DEBUG]');
             expect(content).toContain('debug message');
         });
@@ -64,6 +65,7 @@ describe('Integration: Logger', () => {
             logger.info('info message');
 
             const content = readLog(logger);
+
             expect(content).toContain('[INFO]');
             expect(content).toContain('info message');
         });
@@ -75,6 +77,7 @@ describe('Integration: Logger', () => {
             logger.warn('warning message');
 
             const content = readLog(logger);
+
             expect(content).toContain('[WARN]');
             expect(content).toContain('warning message');
         });
@@ -86,6 +89,7 @@ describe('Integration: Logger', () => {
             logger.error('error message');
 
             const content = readLog(logger);
+
             expect(content).toContain('[ERROR]');
             expect(content).toContain('error message');
         });
@@ -99,6 +103,7 @@ describe('Integration: Logger', () => {
             logger.info('import started');
 
             const content = readLog(logger);
+
             expect(content).toContain('jira');
             expect(content).toContain('import');
         });
@@ -113,6 +118,7 @@ describe('Integration: Logger', () => {
             child.info('validating');
 
             const content = readLog(parent);
+
             expect(content).toContain('test');
             expect(content).toContain('validation');
         });
@@ -143,8 +149,8 @@ describe('Integration: Logger', () => {
         });
 
         it('preserves non-object values', () => {
-            expect(maskDeep(null)).toBe(null);
-            expect(maskDeep(undefined)).toBe(undefined);
+            expect(maskDeep(null)).toBeNull();
+            expect(maskDeep(undefined)).toBeUndefined();
             expect(maskDeep('string')).toBe('string');
             expect(maskDeep(42)).toBe(42);
         });
@@ -153,6 +159,7 @@ describe('Integration: Logger', () => {
     describe('FT-05e: log file path', () => {
         it('returns null when logFile is disabled', () => {
             const logger = new Logger({}, Config.create({ logFile: '', logLevel: 'debug' }));
+
             expect(logger.filePath).toBeNull();
         });
     });
@@ -166,6 +173,7 @@ describe('Integration: Logger', () => {
 
             const content = readLog(logger);
             const line = content.trim();
+
             expect(line).toMatch(/\[\d{4}-\d{2}-\d{2}T/);
             expect(line).toContain('[INFO]');
             expect(line).toContain('test format');

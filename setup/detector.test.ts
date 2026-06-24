@@ -25,6 +25,7 @@ describe('detectFramework', () => {
             }),
         );
         const result = detectFramework('/fake/package.json');
+
         expect(result.framework).toBe('cypress');
         expect(result.testCmd).toContain('cypress');
     });
@@ -36,6 +37,7 @@ describe('detectFramework', () => {
             }),
         );
         const result = detectFramework('/fake/package.json');
+
         expect(result.framework).toBe('playwright');
     });
 
@@ -46,6 +48,7 @@ describe('detectFramework', () => {
             }),
         );
         const result = detectFramework('/fake/package.json');
+
         expect(result.framework).toBe('jest');
     });
 
@@ -56,6 +59,7 @@ describe('detectFramework', () => {
             }),
         );
         const result = detectFramework('/fake/package.json');
+
         expect(result.framework).toBe('vitest');
     });
 
@@ -66,6 +70,7 @@ describe('detectFramework', () => {
             }),
         );
         const result = detectFramework('/fake/package.json');
+
         expect(result.framework).toBe('generic');
     });
 
@@ -74,6 +79,7 @@ describe('detectFramework', () => {
             throw new Error('ENOENT');
         });
         const result = detectFramework('/nonexistent/package.json');
+
         expect(result.framework).toBe('generic');
     });
 });
@@ -99,7 +105,8 @@ describe('detectConfigCtrf', () => {
 reporters: ['default', new VitestCtrfReporter()]`,
             ),
         );
-        expect(detectConfigCtrf('/fake/project')).toBe(true);
+
+        expect(detectConfigCtrf('/fake/project')).toBeTruthy();
     });
 
     it('returns true when vite.config.ts contains ctrf reporter import', () => {
@@ -111,7 +118,8 @@ reporters: ['default', new VitestCtrfReporter()]`,
 import VitestCtrfReporter from './shared/vitest-ctrf-reporter.js';`,
             ),
         );
-        expect(detectConfigCtrf('/fake/project')).toBe(true);
+
+        expect(detectConfigCtrf('/fake/project')).toBeTruthy();
     });
 
     it('returns true for @d2t/vitest-ctrf-json-reporter in config', () => {
@@ -119,7 +127,8 @@ import VitestCtrfReporter from './shared/vitest-ctrf-reporter.js';`,
         mockFsReadFileSync.mockImplementation(
             mockReadFileWith('vitest.config.ts', `reporters: [['@d2t/vitest-ctrf-json-reporter', {}]]`),
         );
-        expect(detectConfigCtrf('/fake/project')).toBe(true);
+
+        expect(detectConfigCtrf('/fake/project')).toBeTruthy();
     });
 
     it('returns true for vitest-ctrf-json-reporter in config', () => {
@@ -127,12 +136,14 @@ import VitestCtrfReporter from './shared/vitest-ctrf-reporter.js';`,
         mockFsReadFileSync.mockImplementation(
             mockReadFileWith('vitest.config.ts', `reporters: ['vitest-ctrf-json-reporter']`),
         );
-        expect(detectConfigCtrf('/fake/project')).toBe(true);
+
+        expect(detectConfigCtrf('/fake/project')).toBeTruthy();
     });
 
     it('returns false when no config file exists', () => {
         mockFsExistsSync.mockReturnValue(false);
-        expect(detectConfigCtrf('/fake/project')).toBe(false);
+
+        expect(detectConfigCtrf('/fake/project')).toBeFalsy();
     });
 
     it('returns false when config file exists but no CTRF reporter', () => {
@@ -140,7 +151,8 @@ import VitestCtrfReporter from './shared/vitest-ctrf-reporter.js';`,
         mockFsReadFileSync.mockImplementation(
             mockReadFileWith('vitest.config.ts', `export default defineConfig({ test: { reporters: ['default'] } })`),
         );
-        expect(detectConfigCtrf('/fake/project')).toBe(false);
+
+        expect(detectConfigCtrf('/fake/project')).toBeFalsy();
     });
 
     it('returns false when config file read fails', () => {
@@ -148,7 +160,8 @@ import VitestCtrfReporter from './shared/vitest-ctrf-reporter.js';`,
         mockFsReadFileSync.mockImplementation(() => {
             throw new Error('ENOENT');
         });
-        expect(detectConfigCtrf('/fake/project')).toBe(false);
+
+        expect(detectConfigCtrf('/fake/project')).toBeFalsy();
     });
 
     it('returns true for ctrf-json-reporter in config', () => {
@@ -156,7 +169,8 @@ import VitestCtrfReporter from './shared/vitest-ctrf-reporter.js';`,
         mockFsReadFileSync.mockImplementation(
             mockReadFileWith('vitest.config.ts', `reporters: ['ctrf-json-reporter']`),
         );
-        expect(detectConfigCtrf('/fake/project')).toBe(true);
+
+        expect(detectConfigCtrf('/fake/project')).toBeTruthy();
     });
 });
 
@@ -164,18 +178,21 @@ describe('detectFramework', () => {
     it('returns ctrfSource=cli-flag for cypress', () => {
         mockFsReadFileSync.mockReturnValueOnce(JSON.stringify({ devDependencies: { cypress: '^13.0' } }));
         const result = detectFramework('/fake/package.json');
+
         expect(result.ctrfSource).toBe('cli-flag');
     });
 
     it('returns ctrfSource=cli-flag for playwright', () => {
         mockFsReadFileSync.mockReturnValueOnce(JSON.stringify({ devDependencies: { '@playwright/test': '^1.40' } }));
         const result = detectFramework('/fake/package.json');
+
         expect(result.ctrfSource).toBe('cli-flag');
     });
 
     it('returns ctrfSource=cli-flag for jest', () => {
         mockFsReadFileSync.mockReturnValueOnce(JSON.stringify({ devDependencies: { jest: '^29.0' } }));
         const result = detectFramework('/fake/package.json');
+
         expect(result.ctrfSource).toBe('cli-flag');
     });
 
@@ -189,6 +206,7 @@ describe('detectFramework', () => {
             return '';
         });
         const result = detectFramework('/fake/package.json');
+
         expect(result.ctrfSource).toBe('config-file');
     });
 
@@ -196,6 +214,7 @@ describe('detectFramework', () => {
         mockFsReadFileSync.mockReturnValueOnce(JSON.stringify({ devDependencies: { vitest: '^1.0' } }));
         mockFsExistsSync.mockReturnValue(false);
         const result = detectFramework('/fake/package.json');
+
         expect(result.ctrfSource).toBe('missing');
     });
 
@@ -203,6 +222,7 @@ describe('detectFramework', () => {
         mockFsReadFileSync.mockReturnValueOnce(JSON.stringify({ devDependencies: { vitest: '^1.0' } }));
         mockFsExistsSync.mockReturnValue(false);
         const result = detectFramework('/fake/package.json');
+
         expect(result.testCmd).not.toContain('--reporter ctrf');
         expect(result.testCmd).toBe('npx vitest run');
     });
@@ -215,6 +235,7 @@ describe('extractRepoFromGit', () => {
 \tfetch = +refs/heads/*:refs/remotes/origin/*
 `);
         const result = extractRepoFromGit();
+
         expect(result.owner).toBe('myorg');
         expect(result.repo).toBe('my-repo');
     });
@@ -225,6 +246,7 @@ describe('extractRepoFromGit', () => {
 \tfetch = +refs/heads/*:refs/remotes/origin/*
 `);
         const result = extractRepoFromGit();
+
         expect(result.owner).toBe('myorg');
         expect(result.repo).toBe('my-repo');
     });
@@ -234,6 +256,7 @@ describe('extractRepoFromGit', () => {
             throw new Error('ENOENT');
         });
         const result = extractRepoFromGit();
+
         expect(result.owner).toBe('');
         expect(result.repo).toBe('');
     });

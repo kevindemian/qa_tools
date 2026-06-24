@@ -66,6 +66,7 @@ describe('wfTriggerPipeline', () => {
             variables: [{ key: 'VAR', value: 'val' }],
             workflow_id: '123',
         });
+
         expect(mockApiPost).toHaveBeenCalledWith(
             client,
             '/repos/myorg/myrepo/actions/workflows/123/dispatches',
@@ -82,6 +83,7 @@ describe('wfTriggerPipeline', () => {
             ref: 'dev',
             variables: [],
         });
+
         expect(mockApiGet).toHaveBeenCalledWith(client, '/repos/myorg/myrepo/actions/workflows', {
             operation: 'listar workflows',
             params: { per_page: 10 },
@@ -102,6 +104,7 @@ describe('wfTriggerPipeline', () => {
             ref: 'main',
             variables: [],
         });
+
         expect(result).toBeUndefined();
     });
 
@@ -111,11 +114,13 @@ describe('wfTriggerPipeline', () => {
             ref: 'main',
             variables: [],
         });
+
         expect(result).toBeUndefined();
     });
 
     it('throws on API error', async () => {
         mockApiPost.mockRejectedValue(new Error('API error'));
+
         await expect(
             wfTriggerPipeline(client, 'myorg', 'myrepo', 'https://api.github.com', {
                 ref: 'main',
@@ -141,6 +146,7 @@ describe('wfGetRecentPipelines', () => {
         ];
         mockApiGet.mockResolvedValue({ workflow_runs: runs });
         const result = await wfGetRecentPipelines(client, 'myorg', 'myrepo', 2);
+
         expect(mockApiGet).toHaveBeenCalledWith(client, '/repos/myorg/myrepo/actions/runs', {
             operation: 'buscar runs',
             params: { per_page: 2 },
@@ -152,6 +158,7 @@ describe('wfGetRecentPipelines', () => {
     it('defaults to count=5 when not specified', async () => {
         mockApiGet.mockResolvedValue({ workflow_runs: [] });
         await wfGetRecentPipelines(client, 'myorg', 'myrepo');
+
         expect(mockApiGet).toHaveBeenCalledWith(client, '/repos/myorg/myrepo/actions/runs', {
             operation: 'buscar runs',
             params: { per_page: 5 },
@@ -162,6 +169,7 @@ describe('wfGetRecentPipelines', () => {
     it('returns empty array when apiGet returns null', async () => {
         mockApiGet.mockResolvedValue(null);
         const result = await wfGetRecentPipelines(client, 'myorg', 'myrepo');
+
         expect(result).toEqual([]);
     });
 });
@@ -177,6 +185,7 @@ describe('wfGetPipeline', () => {
     it('returns pipeline info for valid run ID', async () => {
         mockApiGet.mockResolvedValue({ id: 42, status: 'completed', conclusion: 'success' });
         const result = await wfGetPipeline(client, 'myorg', 'myrepo', 42);
+
         expect(mockApiGet).toHaveBeenCalledWith(client, '/repos/myorg/myrepo/actions/runs/42', {
             operation: 'buscar run',
             returnNull: true,
@@ -187,6 +196,7 @@ describe('wfGetPipeline', () => {
     it('returns null when apiGet returns null', async () => {
         mockApiGet.mockResolvedValue(null);
         const result = await wfGetPipeline(client, 'myorg', 'myrepo', 999);
+
         expect(result).toBeNull();
     });
 });
@@ -207,6 +217,7 @@ describe('wfGetPipelineJobs', () => {
             ],
         });
         const result = await wfGetPipelineJobs(client, 'myorg', 'myrepo', 42);
+
         expect(mockApiGet).toHaveBeenCalledWith(client, '/repos/myorg/myrepo/actions/runs/42/jobs', {
             operation: 'listar jobs',
             returnNull: true,
@@ -221,12 +232,14 @@ describe('wfGetPipelineJobs', () => {
     it('returns empty array when apiGet returns null', async () => {
         mockApiGet.mockResolvedValue(null);
         const result = await wfGetPipelineJobs(client, 'myorg', 'myrepo', 42);
+
         expect(result).toEqual([]);
     });
 
     it('returns empty array when data has no jobs', async () => {
         mockApiGet.mockResolvedValue({});
         const result = await wfGetPipelineJobs(client, 'myorg', 'myrepo', 42);
+
         expect(result).toEqual([]);
     });
 
@@ -235,6 +248,7 @@ describe('wfGetPipelineJobs', () => {
             jobs: [{ id: 1, name: 'job1', runner_group_name: '', status: 'in_progress' }],
         });
         const result = await wfGetPipelineJobs(client, 'myorg', 'myrepo', 42);
+
         expect(nonNull(result[0]).status).toBe('in_progress');
     });
 });
@@ -255,6 +269,7 @@ describe('wfListPipelineArtifacts', () => {
             ],
         });
         const result = await wfListPipelineArtifacts(client, 'myorg', 'myrepo', 42);
+
         expect(mockApiGet).toHaveBeenCalledWith(client, '/repos/myorg/myrepo/actions/runs/42/artifacts', {
             operation: 'listar artifacts',
             returnNull: true,
@@ -268,6 +283,7 @@ describe('wfListPipelineArtifacts', () => {
     it('returns empty array when apiGet returns null', async () => {
         mockApiGet.mockResolvedValue(null);
         const result = await wfListPipelineArtifacts(client, 'myorg', 'myrepo', 42);
+
         expect(result).toEqual([]);
     });
 });
@@ -282,17 +298,19 @@ describe('wfDownloadArtifact', () => {
     it('returns buffer and filename from artifact zip', async () => {
         const getSpy = vi.spyOn(client, 'get').mockResolvedValue({ data: Buffer.from('zip-data') });
         const result = await wfDownloadArtifact(client, 'myorg', 'myrepo', '301');
+
         expect(getSpy).toHaveBeenCalledWith('/repos/myorg/myrepo/actions/artifacts/301/zip', {
             responseType: 'arraybuffer',
             maxRedirects: 5,
         });
-        expect(Buffer.isBuffer(result.buffer)).toBe(true);
+        expect(Buffer.isBuffer(result.buffer)).toBeTruthy();
         expect(result.buffer).toEqual(Buffer.from('zip-data'));
         expect(result.filename).toBe('artifact.zip');
     });
 
     it('throws on API error', async () => {
         vi.spyOn(client, 'get').mockRejectedValue(new Error('Download failed'));
+
         await expect(wfDownloadArtifact(client, 'myorg', 'myrepo', '999')).rejects.toThrow('Download failed');
     });
 });
@@ -307,6 +325,7 @@ describe('wfGetJobLogs', () => {
     it('returns truncated log text on success', async () => {
         const getSpy2 = vi.spyOn(client, 'get').mockResolvedValue({ data: 'line1\nline2\nline3\n' });
         const result = await wfGetJobLogs(client, 'myorg', 'myrepo', 42, 100);
+
         expect(getSpy2).toHaveBeenCalledWith('/repos/myorg/myrepo/actions/jobs/42/logs', {
             responseType: 'text' as const,
             maxRedirects: 5,
@@ -317,18 +336,21 @@ describe('wfGetJobLogs', () => {
     it('truncates log when exceeding maxBytes', async () => {
         vi.spyOn(client, 'get').mockResolvedValue({ data: 'a'.repeat(100) });
         const result = await wfGetJobLogs(client, 'myorg', 'myrepo', 42, 10);
+
         expect(result).toBe('a'.repeat(10));
-        expect(nonNull(result).length).toBe(10);
+        expect(nonNull(result)).toHaveLength(10);
     });
 
     it('handles non-string response data', async () => {
         vi.spyOn(client, 'get').mockResolvedValue({ data: Buffer.from('text-data') });
         const result = await wfGetJobLogs(client, 'myorg', 'myrepo', 42, 100);
+
         expect(result).toBe('text-data');
     });
 
     it('throws on API error', async () => {
         vi.spyOn(client, 'get').mockRejectedValue(new Error('Log fetch error'));
+
         await expect(wfGetJobLogs(client, 'myorg', 'myrepo', 42)).rejects.toThrow('Log fetch error');
     });
 });
@@ -349,6 +371,7 @@ describe('wfGetCICDVariables', () => {
             ],
         });
         const result = await wfGetCICDVariables(client, 'myorg', 'myrepo');
+
         expect(mockApiGet).toHaveBeenCalledWith(client, '/repos/myorg/myrepo/actions/variables', {
             operation: 'buscar variáveis',
             params: { per_page: 100 },
@@ -363,12 +386,14 @@ describe('wfGetCICDVariables', () => {
     it('returns empty array when apiGet returns null', async () => {
         mockApiGet.mockResolvedValue(null);
         const result = await wfGetCICDVariables(client, 'myorg', 'myrepo');
+
         expect(result).toEqual([]);
     });
 
     it('returns empty array when variables field is missing', async () => {
         mockApiGet.mockResolvedValue({});
         const result = await wfGetCICDVariables(client, 'myorg', 'myrepo');
+
         expect(result).toEqual([]);
     });
 });
@@ -376,6 +401,7 @@ describe('wfGetCICDVariables', () => {
 describe('wfGetSchedules', () => {
     it('returns empty array', async () => {
         const result = await wfGetSchedules();
+
         expect(result).toEqual([]);
     });
 });

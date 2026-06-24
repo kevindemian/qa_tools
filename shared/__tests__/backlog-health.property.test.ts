@@ -51,7 +51,8 @@ describe('analyzeBacklogHealth — property-based', () => {
         fc.assert(
             fc.property(fc.array(issueArb, { maxLength: 50 }), (issues) => {
                 const result = analyzeBacklogHealth(issues);
-                expect(result.unassignedIssues.length).toBe(countUnassigned(result.unassignedIssues));
+
+                expect(result.unassignedIssues).toHaveLength(countUnassigned(result.unassignedIssues));
             }),
             { numRuns: 50 },
         );
@@ -61,7 +62,8 @@ describe('analyzeBacklogHealth — property-based', () => {
         fc.assert(
             fc.property(fc.array(issueArb, { maxLength: 50 }), (issues) => {
                 const result = analyzeBacklogHealth(issues);
-                expect(result.unassignedIssues.length).toBe(countUnassigned(issues));
+
+                expect(result.unassignedIssues).toHaveLength(countUnassigned(issues));
             }),
             { numRuns: 50 },
         );
@@ -72,7 +74,7 @@ describe('analyzeBacklogHealth — property-based', () => {
             fc.property(fc.array(issueArb, { maxLength: 50 }), (issues) => {
                 const result = analyzeUnassignedIssues(issues);
                 for (const issue of result) {
-                    expect(issue.assignee === null || issue.assignee === '').toBe(true);
+                    expect(issue.assignee === null || issue.assignee === '').toBeTruthy();
                 }
             }),
             { numRuns: 50 },
@@ -97,7 +99,8 @@ describe('analyzeBacklogHealth — property-based', () => {
             fc.property(fc.array(issueArb, { maxLength: 50 }), (issues) => {
                 const result = analyzeBacklogHealth(issues);
                 const expected = countBugsWithoutTests(issues);
-                expect(result.bugsWithoutTests.length).toBe(expected);
+
+                expect(result.bugsWithoutTests).toHaveLength(expected);
             }),
             { numRuns: 50 },
         );
@@ -107,6 +110,7 @@ describe('analyzeBacklogHealth — property-based', () => {
         fc.assert(
             fc.property(fc.array(issueArb, { maxLength: 50 }), (issues) => {
                 const result = analyzeBacklogHealth(issues);
+
                 expect(result.score).toBeGreaterThanOrEqual(0);
                 expect(result.score).toBeLessThanOrEqual(100);
             }),
@@ -120,6 +124,7 @@ describe('analyzeBacklogHealth — property-based', () => {
                 const result = analyzeBacklogHealth(issues);
                 const totalBugsFromDensity = result.densityByEpic.reduce((s, e) => s + e.bugCount, 0);
                 const totalBugsFromIssues = issues.filter((i) => i.type === 'Bug').length;
+
                 expect(totalBugsFromDensity).toBe(totalBugsFromIssues);
             }),
             { numRuns: 50 },
@@ -134,6 +139,7 @@ describe('analyzeBacklogHealth — property-based', () => {
                     const days = Math.floor(
                         (now.getTime() - new Date(issue.updated).getTime()) / (1000 * 60 * 60 * 24),
                     );
+
                     expect(days).toBeGreaterThan(staleDays);
                 }
             }),
@@ -148,6 +154,7 @@ describe('generateBacklogHealthHtml — property-based', () => {
             fc.property(fc.array(issueArb, { maxLength: 30 }), (issues) => {
                 const result = analyzeBacklogHealth(issues);
                 const html = generateBacklogHealthHtml(result);
+
                 expect(html).toContain('backlog-health');
             }),
             { numRuns: 50 },
@@ -159,6 +166,7 @@ describe('generateBacklogHealthHtml — property-based', () => {
             fc.property(fc.array(issueArb, { maxLength: 30 }), (issues) => {
                 const result = analyzeBacklogHealth(issues);
                 const html = generateBacklogHealthHtml(result);
+
                 expect(html).toContain('Backlog Score');
                 expect(html).toContain(String(result.score) + '%');
             }),

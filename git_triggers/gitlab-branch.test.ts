@@ -37,18 +37,21 @@ describe('glGetBranch', () => {
     it('returns { name } on success', async () => {
         vi.mocked(apiGet).mockResolvedValue({ name: 'main' });
         const result = await glGetBranch(mockClient, 'owner', 'repo', 'main');
+
         expect(result).toEqual({ name: 'main' });
     });
 
     it('returns null when apiGet returns null', async () => {
         vi.mocked(apiGet).mockResolvedValue(null);
         const result = await glGetBranch(mockClient, 'owner', 'repo', 'main');
+
         expect(result).toBeNull();
     });
 
     it('calls apiGet with correct URL encoding branch name', async () => {
         vi.mocked(apiGet).mockResolvedValue(null);
         await glGetBranch(mockClient, 'my-group', 'my-project', 'feature/x');
+
         expect(projectPath).toHaveBeenCalledWith('my-group', 'my-project');
         expect(apiGet).toHaveBeenCalledWith(mockClient, expect.stringContaining('/repository/branches/feature%2Fx'), {
             operation: 'buscar branch',
@@ -63,6 +66,7 @@ describe('glGetDiff', () => {
             diffs: [{ diff: '+console.log("hi")', new_path: 'src/main.ts' }],
         });
         const result = await glGetDiff(mockClient, 'owner', 'repo', 'feature', 'main');
+
         expect(result).toContain('src/main.ts');
         expect(result).toContain('console.log');
     });
@@ -70,18 +74,21 @@ describe('glGetDiff', () => {
     it('returns empty string when no diffs', async () => {
         vi.mocked(apiGet).mockResolvedValue({ diffs: [] });
         const result = await glGetDiff(mockClient, 'owner', 'repo', 'feature', 'main');
+
         expect(result).toBe('');
     });
 
     it('returns empty string when apiGet returns null', async () => {
         vi.mocked(apiGet).mockResolvedValue(null);
         const result = await glGetDiff(mockClient, 'owner', 'repo', 'feature', 'main');
+
         expect(result).toBe('');
     });
 
     it('calls apiGet with compare endpoint and params', async () => {
         vi.mocked(apiGet).mockResolvedValue(null);
         await glGetDiff(mockClient, 'owner', 'repo', 'source', 'target');
+
         expect(apiGet).toHaveBeenCalledWith(mockClient, expect.stringContaining('/repository/compare'), {
             operation: 'comparar branches',
             params: { from: 'source', to: 'target' },

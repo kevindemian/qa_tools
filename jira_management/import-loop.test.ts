@@ -104,6 +104,7 @@ describe('linkTestRelations', () => {
             testTitle: 'My Test',
             results: resultSink,
         });
+
         expect(result).toEqual({ abort: true, errored: true });
         expect(nonNull(resultSink[0]).message).toContain('pre-condition');
     });
@@ -127,6 +128,7 @@ describe('linkTestRelations', () => {
             testTitle: 'My Test',
             results: resultSink,
         });
+
         expect(result).toEqual({ abort: true, errored: true });
     });
 });
@@ -135,6 +137,7 @@ describe('buildTestData', () => {
     it('without jiraLabels', () => {
         const test: TestCase = { ...testBase, description: 'desc' };
         const result = buildTestData(test, 'PROJ', []);
+
         expect(result.fields).toMatchObject({
             project: { key: 'PROJ' },
             summary: 'My Test',
@@ -147,12 +150,14 @@ describe('buildTestData', () => {
     it('with jiraLabels', () => {
         const test: TestCase = { ...testBase, description: 'desc' };
         const result = buildTestData(test, 'PROJ', ['label1', 'label2']);
+
         expect((result.fields as Record<string, unknown>)['labels']).toEqual(['label1', 'label2']);
     });
 
     it('inline precondition appended to description', () => {
         const test: TestCase = { ...testBase, precondition: { type: 'inline', value: 'must login' } };
         const result = buildTestData(test, 'PROJ', []);
+
         expect((result.fields as Record<string, unknown>)['description']).toContain('Pre-condition: must login');
     });
 });
@@ -167,6 +172,7 @@ describe('saveCheckpoint', () => {
             inMemoryTasksId: ['T-1'],
             inMemoryTasksText: ['My Test'],
         });
+
         expect(updateState).toHaveBeenCalledWith(expect.any(Function));
     });
 
@@ -174,6 +180,7 @@ describe('saveCheckpoint', () => {
         vi.mocked(updateState).mockImplementationOnce(() => {
             throw new Error('write failed');
         });
+
         expect(() =>
             saveCheckpoint({
                 sourcePath: '/path.csv',
@@ -202,6 +209,7 @@ describe('createIssueForTest', () => {
             opLog,
             results: resultSink,
         });
+
         expect(result).toBe('abort');
     });
 
@@ -219,6 +227,7 @@ describe('createIssueForTest', () => {
             opLog,
             results: resultSink,
         });
+
         expect(result).toBeNull();
     });
 
@@ -236,6 +245,7 @@ describe('createIssueForTest', () => {
             opLog,
             results: resultSink,
         });
+
         expect(result).toBe('continue');
     });
 
@@ -253,6 +263,7 @@ describe('createIssueForTest', () => {
             opLog,
             results: resultSink,
         });
+
         expect(result).toEqual({ key: 'TEST-100', skipped: false });
     });
 });

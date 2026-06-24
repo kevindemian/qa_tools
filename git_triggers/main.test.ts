@@ -209,28 +209,35 @@ beforeEach(() => {
 
 describe('isComplete', () => {
     it('returns true for success', () => {
-        expect(mainModule.isComplete('success')).toBe(true);
+        expect(mainModule.isComplete('success')).toBeTruthy();
     });
+
     it('returns true for failed', () => {
-        expect(mainModule.isComplete('failed')).toBe(true);
+        expect(mainModule.isComplete('failed')).toBeTruthy();
     });
+
     it('returns true for canceled', () => {
-        expect(mainModule.isComplete('canceled')).toBe(true);
+        expect(mainModule.isComplete('canceled')).toBeTruthy();
     });
+
     it('returns true for skipped', () => {
-        expect(mainModule.isComplete('skipped')).toBe(true);
+        expect(mainModule.isComplete('skipped')).toBeTruthy();
     });
+
     it('returns false for running', () => {
-        expect(mainModule.isComplete('running')).toBe(false);
+        expect(mainModule.isComplete('running')).toBeFalsy();
     });
+
     it('returns false for pending', () => {
-        expect(mainModule.isComplete('pending')).toBe(false);
+        expect(mainModule.isComplete('pending')).toBeFalsy();
     });
+
     it('returns false for empty string', () => {
-        expect(mainModule.isComplete('')).toBe(false);
+        expect(mainModule.isComplete('')).toBeFalsy();
     });
+
     it('returns false for timeout', () => {
-        expect(mainModule.isComplete('timeout')).toBe(false);
+        expect(mainModule.isComplete('timeout')).toBeFalsy();
     });
 });
 
@@ -263,8 +270,9 @@ describe('getProviderForProject', () => {
 describe('buildActionChoices', () => {
     it('includes schedule options when provider is gitlab', () => {
         const choices = mainModule.buildActionChoices();
-        expect(choices.some((c) => c['value'] === '2')).toBe(true);
-        expect(choices.some((c) => c['value'] === '3')).toBe(true);
+
+        expect(choices.some((c) => c['value'] === '2')).toBeTruthy();
+        expect(choices.some((c) => c['value'] === '3')).toBeTruthy();
     });
 });
 
@@ -273,6 +281,7 @@ describe('buildActionChoices', () => {
 describe('_jiraEnv', () => {
     it('returns jira config when all vars set', () => {
         const result = mainModule._jiraEnv();
+
         expect(result).toEqual({
             base: 'https://jira.example.com',
             token: 'token',
@@ -288,12 +297,14 @@ describe('_resolveGlob', () => {
     it('returns resolved path when glob matches', () => {
         globSyncMock.mockReturnValueOnce(['/tmp/mapping.json']);
         const result = mainModule._resolveGlob('/tmp/*.json');
+
         expect(result).toBe('/tmp/mapping.json');
     });
 
     it('returns null when no match', () => {
         globSyncMock.mockReturnValueOnce([]);
         const result = mainModule._resolveGlob('/nonexistent/*.json');
+
         expect(result).toBeNull();
     });
 
@@ -302,6 +313,7 @@ describe('_resolveGlob', () => {
             throw new Error('bad pattern');
         });
         const result = mainModule._resolveGlob('[');
+
         expect(result).toBeNull();
     });
 });
@@ -319,6 +331,7 @@ describe('pollPipeline', () => {
         mockGetPipeline.mockResolvedValue({ status: 'success', web_url: 'https://pipe/1' });
         const m = createMockGitProvider({ getPipeline: mockGetPipeline });
         const result = await mainModule.pollPipeline(m, '1', 1, 1000);
+
         expect(result).toEqual({ status: 'success', web_url: 'https://pipe/1' });
     });
 
@@ -326,6 +339,7 @@ describe('pollPipeline', () => {
         mockGetPipeline.mockResolvedValue({ status: 'running' });
         const m = createMockGitProvider({ getPipeline: mockGetPipeline });
         const result = await mainModule.pollPipeline(m, '1', 1, 50);
+
         expect(result).toEqual({ status: 'timeout', web_url: '' });
     });
 
@@ -333,6 +347,7 @@ describe('pollPipeline', () => {
         mockGetPipeline.mockResolvedValue({ state: 'success', web_url: 'https://pipe/2' });
         const m = createMockGitProvider({ getPipeline: mockGetPipeline });
         const result = await mainModule.pollPipeline(m, '2', 1, 1000);
+
         expect(result).toEqual({ status: 'success', web_url: 'https://pipe/2' });
     });
 
@@ -340,6 +355,7 @@ describe('pollPipeline', () => {
         mockGetPipeline.mockResolvedValue(null);
         const m = createMockGitProvider({ getPipeline: mockGetPipeline });
         const result = await mainModule.pollPipeline(m, '3', 1, 50);
+
         expect(result).toEqual({ status: 'timeout', web_url: '' });
     });
 });
@@ -349,6 +365,7 @@ describe('pollPipeline', () => {
 describe('pushHistory', () => {
     it('calls updateState with history entry', () => {
         mainModule.pushHistory('test-op', 'detail-x', 'ok');
+
         expect(state.update).toHaveBeenCalled();
     });
 });
@@ -509,6 +526,7 @@ describe('handleHelp', () => {
     it('prints help box and prompts to continue', async () => {
         vi.spyOn(process.stdout, 'write').mockImplementationOnce(() => true);
         await mainModule.handleHelp();
+
         expect(process.stdout['write']).toHaveBeenCalledWith(expect.stringContaining('Ajuda'));
         expect(prompt.ask).toHaveBeenCalledWith('Pressione Enter para continuar');
     });
@@ -543,6 +561,7 @@ describe('nivelarBranchesWrapper', () => {
     it('calls nivelarBranches with provider and pushHistory', async () => {
         const gitlab = createMockGitProvider();
         await mainModule.nivelarBranchesWrapper(gitlab);
+
         expect(nivelar.nivelarBranches).toHaveBeenCalledWith(
             gitlab,
             expect.objectContaining({ pushHistory: expect.any(Function) as (...args: unknown[]) => void }),
@@ -556,6 +575,7 @@ describe('downloadTestArtifacts', () => {
     it('returns null when no artifacts found', async () => {
         mockProvider.listPipelineArtifacts.mockResolvedValue([]);
         const result = await mainModule.downloadTestArtifacts(mockProvider, '1');
+
         expect(result).toBeNull();
     });
 });
@@ -571,6 +591,7 @@ describe('collectTestResults', () => {
             linkManager,
             jiraBaseUrl: '',
         });
+
         expect(result).toBeNull();
     });
 });
@@ -600,6 +621,7 @@ describe('handleChangeProject', () => {
 describe('displayProjects', () => {
     it('prints project list with provider tags', () => {
         mainModule.displayProjects();
+
         expect(prompt.title).toHaveBeenCalledWith('Projetos');
         expect(prompt.print).toHaveBeenCalledWith(expect.stringContaining('[GH]'));
         expect(prompt.print).toHaveBeenCalledWith(expect.stringContaining('[GL]'));
@@ -611,6 +633,7 @@ describe('displayProjects', () => {
 describe('printSessionSummary', () => {
     it('calls shared printSessionSummary', () => {
         mainModule.printSessionSummary();
+
         expect(cliBase.printSessionSummary).toHaveBeenCalled();
     });
 });
@@ -676,6 +699,7 @@ describe('handleExportVariables - extended', () => {
         await mainModule.handleExportVariables(mockProvider);
 
         expect(prompt.print).toHaveBeenCalledWith('MY_VAR="foo=bar"');
+
         writeSpy.mockRestore();
         unlinkSpy.mockRestore();
     });
@@ -689,7 +713,8 @@ describe('pushHistory - trim', () => {
         const callback = nonNull(vi.spyOn(state, 'update').mock.calls[0])[0];
         const testState = { history: Array(51).fill({}) };
         callback(testState);
-        expect((testState.history as Array<unknown>).length).toBe(50);
+
+        expect((testState.history as Array<unknown>)).toHaveLength(50);
     });
 });
 
@@ -779,6 +804,7 @@ describe('handleTriggerPipeline', () => {
 describe('handleFlakinessDashboard', () => {
     it('warns when fewer than 2 runs exist for current project', () => {
         void mainModule.handleFlakinessDashboard();
+
         expect(prompt.warn).toHaveBeenCalledWith(expect.stringContaining('Menos de 2 execuções registradas'));
     });
 });
@@ -795,24 +821,28 @@ describe('parseBatchArgs', () => {
     it('parses --project and --branch', () => {
         process.argv = ['node', 'main.ts', '--project', 'my-proj', '--branch', 'feature/x'];
         const result = mainModule.parseBatchArgs();
+
         expect(result).toEqual({ project: 'my-proj', branch: 'feature/x' });
     });
 
     it('parses --auto flag', () => {
         process.argv = ['node', 'main.ts', '--auto'];
         const result = mainModule.parseBatchArgs();
+
         expect(result).toEqual({ auto: true });
     });
 
     it('parses -p and -b short flags', () => {
         process.argv = ['node', 'main.ts', '-p', 'proj', '-b', 'dev'];
         const result = mainModule.parseBatchArgs();
+
         expect(result).toEqual({ project: 'proj', branch: 'dev' });
     });
 
     it('returns empty object when no args', () => {
         process.argv = ['node', 'main.ts'];
         const result = mainModule.parseBatchArgs();
+
         expect(result).toEqual({});
     });
 });
@@ -830,7 +860,8 @@ describe('_ensureProjectsConfigured', () => {
         const ss: typeof import('./session-state.js') = await import('./session-state.js');
         vi.spyOn(ss, 'getProjects').mockReturnValueOnce({ proj: '123' });
         const result = await mainModule._ensureProjectsConfigured();
-        expect(result).toBe(true);
+
+        expect(result).toBeTruthy();
     });
 
     it('warns and prompts when no projects exist, returns false on user decline', async () => {
@@ -838,8 +869,9 @@ describe('_ensureProjectsConfigured', () => {
         vi.spyOn(ss, 'getProjects').mockReturnValue({});
         mockConfirm.mockReturnValue(false);
         const result = await mainModule._ensureProjectsConfigured();
+
         expect(prompt.warn).toHaveBeenCalledWith('Nenhum projeto configurado.');
-        expect(result).toBe(false);
+        expect(result).toBeFalsy();
     });
 
     it('returns false when setup wizard is cancelled', async () => {
@@ -847,7 +879,8 @@ describe('_ensureProjectsConfigured', () => {
         vi.spyOn(ss, 'getProjects').mockReturnValue({});
         mockConfirm.mockReturnValue(true);
         const result = await mainModule._ensureProjectsConfigured();
-        expect(result).toBe(false);
+
+        expect(result).toBeFalsy();
     });
 });
 
@@ -857,6 +890,7 @@ describe('_selectProjectAndCreateManager', () => {
     it('returns null when _selectProject returns null projectName', async () => {
         vi.spyOn(prompt, 'prompt').mockReturnValueOnce('99');
         const result = await mainModule._selectProjectAndCreateManager();
+
         expect(result).toBeNull();
     });
 });
@@ -866,6 +900,7 @@ describe('_selectProjectAndCreateManager', () => {
 describe('buildContextLine', () => {
     it('returns provider TOOLS with session context', () => {
         const result = mainModule.buildContextLine();
+
         expect(result).toMatch(/TOOLS$/);
     });
 });
@@ -887,7 +922,8 @@ describe('withErrorHandling', () => {
             .mockRejectedValue(new Error('fail'));
         const wrapped = mainModule.withErrorHandling(handler);
         const result = await wrapped(createMockGitProvider(), 'p', ['p']);
-        expect(result).toBe(false);
+
+        expect(result).toBeFalsy();
         expect(prompt.printError).toHaveBeenCalledWith('Handler error', expect.any(Error));
     });
 });
@@ -898,7 +934,8 @@ describe('_handleExit', () => {
     it('prints goodbye and returns true', async () => {
         const breadcrumbs: typeof import('../shared/breadcrumbs.js') = await import('../shared/breadcrumbs.js');
         const result = mainModule._handleExit();
-        expect(result).toBe(true);
+
+        expect(result).toBeTruthy();
         expect(prompt.title).toHaveBeenCalledWith('Até logo!');
         expect(breadcrumbs.clearBreadcrumbs).toHaveBeenCalled();
     });
@@ -909,6 +946,7 @@ describe('_handleExit', () => {
         ss.sessionContext.sessionCounters = [{ op: '', detail: '', status: 'error' }];
         try {
             mainModule._handleExit();
+
             expect(process.exitCode).toBeUndefined();
         } finally {
             ss.sessionContext.sessionCounters = orig;
@@ -930,59 +968,70 @@ describe('_dispatchAction', () => {
 
     it('handles /help and returns false', async () => {
         const result = await mainModule._dispatchAction('/help', mockM, pn, ns);
-        expect(result).toBe(false);
+
+        expect(result).toBeFalsy();
     });
 
     it('handles /history and returns false', async () => {
         const result = await mainModule._dispatchAction('/history', mockM, pn, ns);
-        expect(result).toBe(false);
+
+        expect(result).toBeFalsy();
     });
 
     it('handles /docs and returns false', async () => {
         const result = await mainModule._dispatchAction('/docs', mockM, pn, ns);
-        expect(result).toBe(false);
+
+        expect(result).toBeFalsy();
         expect(prompt.warn).not.toHaveBeenCalledWith('Documentação disponível apenas no módulo Jira.');
     });
 
     it('handles /d and returns false', async () => {
         const result = await mainModule._dispatchAction('/d', mockM, pn, ns);
-        expect(result).toBe(false);
+
+        expect(result).toBeFalsy();
         expect(prompt.warn).not.toHaveBeenCalledWith('Documentação disponível apenas no módulo Jira.');
     });
 
     it('handles /back and returns false', async () => {
         const result = await mainModule._dispatchAction('/back', mockM, pn, ns);
-        expect(result).toBe(false);
+
+        expect(result).toBeFalsy();
     });
 
     it('handles /menu and returns false', async () => {
         const result = await mainModule._dispatchAction('/menu', mockM, pn, ns);
-        expect(result).toBe(false);
+
+        expect(result).toBeFalsy();
     });
 
     it('handles /exit and returns true via _handleExit', async () => {
         const result = await mainModule._dispatchAction('/exit', mockM, pn, ns);
-        expect(result).toBe(true);
+
+        expect(result).toBeTruthy();
     });
 
     it('handles /sair and returns true via _handleExit', async () => {
         const result = await mainModule._dispatchAction('/sair', mockM, pn, ns);
-        expect(result).toBe(true);
+
+        expect(result).toBeTruthy();
     });
 
     it('handles option 0 and returns true via _handleExit', async () => {
         const result = await mainModule._dispatchAction('0', mockM, pn, ns);
-        expect(result).toBe(true);
+
+        expect(result).toBeTruthy();
     });
 
     it('dispatches to action handler and returns false', async () => {
         const result = await mainModule._dispatchAction('1', mockM, pn, ns);
-        expect(result).toBe(false);
+
+        expect(result).toBeFalsy();
     });
 
     it('warns for invalid option', async () => {
         const result = await mainModule._dispatchAction('zzz', mockM, pn, ns);
-        expect(result).toBe(false);
+
+        expect(result).toBeFalsy();
         expect(prompt.warn).toHaveBeenCalledWith('Opção inválida.');
     });
 });
@@ -1005,6 +1054,7 @@ describe('_selectProject', () => {
     it('selects first project by index 1', () => {
         vi.spyOn(prompt, 'prompt').mockReturnValueOnce('1');
         const result = mainModule._selectProject();
+
         expect(result.projectName).toBe('proj-a');
         expect(result.names).toContain('proj-a');
         expect(prompt.success).toHaveBeenCalledWith(expect.stringContaining('Projeto selecionado'));
@@ -1013,6 +1063,7 @@ describe('_selectProject', () => {
     it('returns null projectName for invalid project index', () => {
         vi.spyOn(prompt, 'prompt').mockReturnValueOnce('99');
         const result = mainModule._selectProject();
+
         expect(result.projectName).toBeNull();
         expect(prompt.warn).toHaveBeenCalledWith('Projeto inválido.');
     });
@@ -1023,8 +1074,10 @@ describe('_selectProject', () => {
         const spy2 = vi.spyOn(ss, 'getProjects').mockReturnValue({});
         vi.spyOn(prompt, 'prompt').mockReturnValueOnce('');
         const result = mainModule._selectProject();
+
         expect(result.projectName).toBeNull();
         expect(result.names).toEqual([]);
+
         spy2.mockRestore();
     });
 });
@@ -1035,6 +1088,7 @@ describe('_promptChoice', () => {
     it('returns prompt choice in non-TTY mode', async () => {
         vi.spyOn(prompt, 'prompt').mockReturnValueOnce('/exit');
         const result = await mainModule._promptChoice('0-9');
+
         expect(result).toBe('/exit');
     });
 
@@ -1042,6 +1096,7 @@ describe('_promptChoice', () => {
         vi.spyOn(prompt, 'prompt').mockReturnValueOnce('');
         vi.spyOn(state, 'load').mockReturnValue({ lastChoice: '3' });
         const result = await mainModule._promptChoice('0-9');
+
         expect(result).toBe('3');
         expect(prompt.info).toHaveBeenCalledWith(expect.stringContaining('Repetindo última opção'));
     });
@@ -1050,6 +1105,7 @@ describe('_promptChoice', () => {
         vi.spyOn(prompt, 'prompt').mockReturnValueOnce('');
         vi.spyOn(state, 'load').mockReturnValue({ lastChoice: '0' });
         const result = await mainModule._promptChoice('0-9');
+
         expect(result).toBe('');
     });
 });
@@ -1081,6 +1137,7 @@ describe('_promptChoice TTY mode', () => {
         ];
         vi.spyOn(prompt, 'showSelect').mockResolvedValue('/exit');
         const result = await mainModule._promptChoice('0-9');
+
         expect(result).toBe('/exit');
         expect(prompt.showSelect).toHaveBeenCalled();
     });
@@ -1105,21 +1162,25 @@ describe('ACTION_HANDLERS', () => {
 
     it('handler 9 calls handleChangeProject', async () => {
         const result = await mainModule._dispatchAction('9', mockProvider, pn, ns);
-        expect(result).toBe(false);
+
+        expect(result).toBeFalsy();
     });
 
     it('handler a calls handleFlakinessDashboard (void)', async () => {
         const result = await mainModule._dispatchAction('a', mockProvider, pn, ns);
-        expect(result).toBe(false);
+
+        expect(result).toBeFalsy();
     });
 
     it('handler 00 calls handleSetupWizard', async () => {
         const result = await mainModule._dispatchAction('00', mockProvider, pn, ns);
-        expect(result).toBe(false);
+
+        expect(result).toBeFalsy();
     });
 
     it('has handler keys for all new menu entries', () => {
         const keys = Object.keys(mainModule.ACTION_HANDLERS);
+
         expect(keys).toContain('c');
         expect(keys).toContain('d');
         expect(keys).toContain('e');

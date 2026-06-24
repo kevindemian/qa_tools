@@ -47,6 +47,7 @@ const SAMPLE_MOCHAWESOME = {
 describe('parseMochawesome', () => {
     it('extracts all tests flat from nested suites', () => {
         const result = parseMochawesome(SAMPLE_MOCHAWESOME);
+
         expect(result.tests).toHaveLength(4);
         expect(nonNull(result.tests[0]).title).toBe('TC01 - Login valido');
         expect(nonNull(result.tests[0]).fullTitle).toContain('Login Tests > TC01 - Login valido');
@@ -58,6 +59,7 @@ describe('parseMochawesome', () => {
 
     it('returns correct stats', () => {
         const result = parseMochawesome(SAMPLE_MOCHAWESOME);
+
         expect(result.stats.passed).toBe(2);
         expect(result.stats.failed).toBe(1);
         expect(result.stats.skipped).toBe(1);
@@ -67,12 +69,14 @@ describe('parseMochawesome', () => {
 
     it('returns empty for null input', () => {
         const result = parseMochawesome(nullAs<MochawesomeData>());
+
         expect(result.tests).toEqual([]);
         expect(result.stats.total).toBe(0);
     });
 
     it('returns empty for input without results', () => {
         const result = parseMochawesome({});
+
         expect(result.tests).toEqual([]);
     });
 
@@ -81,6 +85,7 @@ describe('parseMochawesome', () => {
             results: [{ suites: [{ tests: [{ title: 'X', state: 'pending', duration: 0 }] }] }],
         };
         const result = parseMochawesome(input);
+
         expect(nonNull(result.tests[0]).state).toBe('skipped');
     });
 
@@ -102,6 +107,7 @@ describe('parseMochawesome', () => {
             ],
         };
         const result = parseMochawesome(input);
+
         expect(result.tests).toHaveLength(1);
         expect(nonNull(result.tests[0]).title).toBe('TC01');
     });
@@ -111,6 +117,7 @@ describe('parseMochawesome', () => {
             results: [{ suites: [{ tests: [{ title: 'TC01' }] }] }],
         };
         const result = parseMochawesome(input);
+
         expect(nonNull(result.tests[0]).state).toBe('skipped');
     });
 
@@ -119,6 +126,7 @@ describe('parseMochawesome', () => {
             results: [{ suites: [{ tests: [{ state: 'passed' }] }] }],
         };
         const result = parseMochawesome(input);
+
         expect(nonNull(result.tests[0]).title).toBe('');
         expect(nonNull(result.tests[0]).duration).toBe(0);
     });
@@ -128,6 +136,7 @@ describe('parseMochawesome', () => {
             results: [{}],
         };
         const result = parseMochawesome(input);
+
         expect(result.tests).toEqual([]);
         expect(result.stats.total).toBe(0);
     });
@@ -150,12 +159,14 @@ describe('parseCypressResults', () => {
 
     it('reads JSON file and parses it', () => {
         const result = parseCypressResults(tmpFile);
+
         expect(result.tests).toHaveLength(4);
         expect(result.stats.passed).toBe(2);
     });
 
     it('returns error object for nonexistent file', () => {
         const result = parseCypressResults('/nonexistent-' + Date.now() + '.json');
+
         expect(result.error).toContain('Arquivo não encontrado');
         expect(result.stats.total).toBe(0);
         expect(result.tests).toEqual([]);
@@ -165,7 +176,9 @@ describe('parseCypressResults', () => {
         const invalidFile = tmpFile + '-invalid.json';
         fs.writeFileSync(invalidFile, 'not json', 'utf8');
         const result = parseCypressResults(invalidFile);
+
         expect(result.error).toContain('Erro ao ler/parsear');
+
         try {
             fs.unlinkSync(invalidFile);
         } catch {
@@ -196,26 +209,27 @@ const CTRF_EMPTY = {
 
 describe('isCtrfFormat', () => {
     it('detects CTRF format by results.tests + results.summary', () => {
-        expect(isCtrfFormat(CTRF_SAMPLE)).toBe(true);
+        expect(isCtrfFormat(CTRF_SAMPLE)).toBeTruthy();
     });
 
     it('rejects null/undefined', () => {
-        expect(isCtrfFormat(null)).toBe(false);
-        expect(isCtrfFormat(undefined)).toBe(false);
+        expect(isCtrfFormat(null)).toBeFalsy();
+        expect(isCtrfFormat(undefined)).toBeFalsy();
     });
 
     it('rejects plain object without results.tests', () => {
-        expect(isCtrfFormat({})).toBe(false);
+        expect(isCtrfFormat({})).toBeFalsy();
     });
 
     it('rejects results.summary === null (typeof null === object)', () => {
-        expect(isCtrfFormat({ results: { tests: [], summary: null } })).toBe(false);
+        expect(isCtrfFormat({ results: { tests: [], summary: null } })).toBeFalsy();
     });
 });
 
 describe('parseCtrfResults', () => {
     it('extracts all tests from CTRF format', () => {
         const result = parseCtrfResults(CTRF_SAMPLE);
+
         expect(result.tests).toHaveLength(3);
         expect(nonNull(result.tests[0]).title).toBe('Login');
         expect(nonNull(result.tests[0]).state).toBe('passed');
@@ -224,11 +238,13 @@ describe('parseCtrfResults', () => {
 
     it('captures error message from CTRF format', () => {
         const result = parseCtrfResults(CTRF_SAMPLE);
+
         expect(nonNull(result.tests[1]).error).toBe('Assertion failed');
     });
 
     it('uses CTRF summary stats when available', () => {
         const result = parseCtrfResults(CTRF_SAMPLE);
+
         expect(result.stats.passed).toBe(2);
         expect(result.stats.failed).toBe(1);
         expect(result.stats.skipped).toBe(0);
@@ -237,6 +253,7 @@ describe('parseCtrfResults', () => {
 
     it('returns empty for missing tests array', () => {
         const result = parseCtrfResults(CTRF_EMPTY);
+
         expect(result.tests).toEqual([]);
     });
 
@@ -251,7 +268,8 @@ describe('parseCtrfResults', () => {
             },
         };
         const result = parseCtrfResults(input);
-        expect(result.tests.every((t: { state: string }) => t.state === 'skipped')).toBe(true);
+
+        expect(result.tests.every((t: { state: string }) => t.state === 'skipped')).toBeTruthy();
     });
 
     it('maps explicit skipped status correctly', () => {
@@ -262,6 +280,7 @@ describe('parseCtrfResults', () => {
             },
         };
         const result = parseCtrfResults(input);
+
         expect(nonNull(result.tests[0]).state).toBe('skipped');
     });
 
@@ -276,6 +295,7 @@ describe('parseCtrfResults', () => {
             },
         };
         const result = parseCtrfResults(input);
+
         expect(result.stats.passed).toBe(1);
         expect(result.stats.failed).toBe(1);
         expect(result.stats.total).toBe(2);
@@ -285,6 +305,7 @@ describe('parseCtrfResults', () => {
 describe('parseTestResults (dispatch)', () => {
     it('routes CTRF format to parseCtrfResults', () => {
         const result = parseTestResults(CTRF_SAMPLE);
+
         expect(result.tests).toHaveLength(3);
         expect(result.stats.passed).toBe(2);
     });
@@ -295,12 +316,14 @@ describe('parseTestResults (dispatch)', () => {
             results: [{ suites: [{ tests: [{ title: 'Mocha Test', state: 'passed', duration: 100 }] }] }],
         };
         const result = parseTestResults(mochaInput);
+
         expect(result.tests).toHaveLength(1);
         expect(nonNull(result.tests[0]).title).toBe('Mocha Test');
     });
 
     it('returns empty for unknown format', () => {
         const result = parseTestResults({ unexpected: true });
+
         expect(result.tests).toEqual([]);
     });
 
@@ -321,6 +344,7 @@ describe('parseTestResultsFile', () => {
     it('reads CTRF file and parses it', () => {
         const fixtures = path.join(import.meta.dirname, '../e2e/fixtures');
         const result = parseTestResultsFile(path.join(fixtures, 'ctrf-report.json'));
+
         expect(result.tests).toHaveLength(4);
         expect(result.stats.passed).toBe(2);
         expect(result.stats.failed).toBe(1);
@@ -329,12 +353,14 @@ describe('parseTestResultsFile', () => {
     it('reads Mochawesome file via dispatch', () => {
         const fixtures = path.join(import.meta.dirname, '../e2e/fixtures');
         const result = parseTestResultsFile(path.join(fixtures, 'mochawesome.json'));
+
         expect(result.tests).toHaveLength(3);
         expect(result.stats.passed).toBe(2);
     });
 
     it('returns error for nonexistent file', () => {
         const result = parseTestResultsFile('/nonexistent-' + Date.now() + '.json');
+
         expect(result.error).toContain('Arquivo não encontrado');
     });
 });

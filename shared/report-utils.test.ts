@@ -12,6 +12,7 @@ describe('statsFromTests', () => {
 
     it('counts passed/failed/skipped correctly', () => {
         const stats = statsFromTests(tests);
+
         expect(stats.passed).toBe(2);
         expect(stats.failed).toBe(1);
         expect(stats.skipped).toBe(1);
@@ -20,11 +21,13 @@ describe('statsFromTests', () => {
 
     it('sums total duration', () => {
         const stats = statsFromTests(tests);
+
         expect(stats.duration).toBe(450);
     });
 
     it('returns zeroes for empty array', () => {
         const stats = statsFromTests([]);
+
         expect(stats).toEqual({ passed: 0, failed: 0, skipped: 0, total: 0, duration: 0 });
     });
 
@@ -34,6 +37,7 @@ describe('statsFromTests', () => {
             { title: 'Y', state: 'passed', duration: 75 },
         ];
         const stats = statsFromTests(allPassed);
+
         expect(stats.passed).toBe(2);
         expect(stats.failed).toBe(0);
         expect(stats.skipped).toBe(0);
@@ -108,6 +112,7 @@ describe('pct', () => {
 describe('pctSub', () => {
     it('returns HTML span with percentage', () => {
         const result = pctSub(5, 10);
+
         expect(result).toContain('50.0%');
         expect(result).toContain('span');
     });
@@ -118,6 +123,7 @@ describe('pctSub', () => {
 
     it('handles zero value', () => {
         const result = pctSub(0, 10);
+
         expect(result).toContain('0.0%');
     });
 });

@@ -9,19 +9,19 @@ import {
 import type { FlatTest } from './result_parser.js';
 
 describe('report-types constants', () => {
-    it('DEFAULT_TITLE is defined', () => {
+    it('dEFAULT_TITLE is defined', () => {
         expect(DEFAULT_TITLE).toBe('QA Tools — Test Report');
     });
 
-    it('PASS_RATE_GOOD_THRESHOLD is 90', () => {
+    it('pASS_RATE_GOOD_THRESHOLD is 90', () => {
         expect(PASS_RATE_GOOD_THRESHOLD).toBe(90);
     });
 
-    it('PASS_RATE_WARN_THRESHOLD is 70', () => {
+    it('pASS_RATE_WARN_THRESHOLD is 70', () => {
         expect(PASS_RATE_WARN_THRESHOLD).toBe(70);
     });
 
-    it('CATEGORY_COLORS has all expected keys', () => {
+    it('cATEGORY_COLORS has all expected keys', () => {
         expect(CATEGORY_COLORS['ASSERTION']).toBe('#6366f1');
         expect(CATEGORY_COLORS['TIMEOUT']).toBe('#f59e0b');
         expect(CATEGORY_COLORS['ENVIRONMENT']).toBe('#10b981');
@@ -70,11 +70,13 @@ describe('categorizeFailure', () => {
 describe('extractSuite', () => {
     it('extracts suite from fullTitle with > separator', () => {
         const t: FlatTest = { title: 'Login', state: 'passed', duration: 100, fullTitle: 'Auth > Login' };
+
         expect(extractSuite(t)).toBe('Auth');
     });
 
     it('returns empty string for tests without fullTitle', () => {
         const t: FlatTest = { title: 'Login', state: 'passed', duration: 100 };
+
         expect(extractSuite(t)).toBe('');
     });
 
@@ -85,11 +87,13 @@ describe('extractSuite', () => {
             duration: 100,
             fullTitle: 'Root > Auth > Login > Subtest',
         };
+
         expect(extractSuite(t)).toBe('Root > Auth > Login');
     });
 
     it('returns empty string when fullTitle has no separator', () => {
         const t: FlatTest = { title: 'Login', state: 'passed', duration: 100, fullTitle: 'Login' };
+
         expect(extractSuite(t)).toBe('');
     });
 });

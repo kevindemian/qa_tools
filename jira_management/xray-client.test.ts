@@ -79,7 +79,9 @@ describe('CloudStepImporter', () => {
         await importer.importStep('TEST-1', 0, step);
 
         expect(mockGraphqlMutation).toHaveBeenCalledTimes(1);
+
         const callArgs = mockGraphqlMutation.mock.calls[0] as [string, Record<string, unknown>, string, string];
+
         expect(callArgs[0]).toContain('addTestStep');
         expect(callArgs[1]).toMatchObject({ issueId: 'TEST-1', index: 0 });
         expect(callArgs[2]).toBe('test-client-id');

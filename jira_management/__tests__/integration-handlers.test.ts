@@ -80,6 +80,7 @@ describe('case01 — Import CSV', () => {
         const { default: case01 } = await import('../commands/case01.js');
         await case01.handler(ctx);
         const createTests = (await import('../create_tests.js')).default;
+
         expect(vi.mocked(createTests.createTestsFromCsv)).toHaveBeenCalledWith(
             expect.objectContaining({
                 csvPath: '/tmp/test.csv',
@@ -96,6 +97,7 @@ describe('case01 — Import CSV', () => {
         const ctx = createMockContext();
         const { default: case01 } = await import('../commands/case01.js');
         await case01.handler(ctx);
+
         expect(ctx.ctx.inMemoryTasksId).toEqual(['TEST-1', 'TEST-2']);
     });
 
@@ -106,6 +108,7 @@ describe('case01 — Import CSV', () => {
         const ctx = createMockContext();
         const { default: case01 } = await import('../commands/case01.js');
         await case01.handler(ctx);
+
         expect(ctx.pushHistory).toHaveBeenCalledWith('csv-import', '2 testes importados', 'ok');
     });
 });
@@ -120,6 +123,7 @@ describe('case03 — Create Version', () => {
         const spy = vi.spyOn(ctx.jiraResource, 'createVersion');
         const { default: case03 } = await import('../commands/case03.js');
         await case03.handler(ctx);
+
         expect(spy).toHaveBeenCalledWith('TEST', 'v3.0.0', 'release notes');
     });
 
@@ -129,6 +133,7 @@ describe('case03 — Create Version', () => {
         const ctx = createMockContext();
         const { default: case03 } = await import('../commands/case03.js');
         await case03.handler(ctx);
+
         expect(vi.mocked(warn)).toHaveBeenCalledWith('Nome da versão não pode ser vazio.');
     });
 
@@ -139,6 +144,7 @@ describe('case03 — Create Version', () => {
         const ctx = createMockContext();
         const { default: case03 } = await import('../commands/case03.js');
         await case03.handler(ctx);
+
         expect(safeJiraCall).toHaveBeenCalled();
     });
 });
@@ -159,6 +165,7 @@ describe('case04 — Add Sprint Tasks', () => {
         const spy = vi.spyOn(ctx.jiraResource, 'updateFixVersions');
         const { default: case04 } = await import('../commands/case04.js');
         await case04.handler(ctx);
+
         expect(spy).toHaveBeenCalled();
     });
 
@@ -174,6 +181,7 @@ describe('case04 — Add Sprint Tasks', () => {
         const spy = vi.spyOn(ctx.jiraResource, 'updateFixVersions');
         const { default: case04 } = await import('../commands/case04.js');
         await case04.handler(ctx);
+
         expect(spy).toHaveBeenCalled();
     });
 
@@ -186,6 +194,7 @@ describe('case04 — Add Sprint Tasks', () => {
         ctx.ctx.inMemoryTasksText = ['t1'];
         const { default: case04 } = await import('../commands/case04.js');
         await case04.handler(ctx);
+
         expect(ctx.pushHistory).toHaveBeenCalledWith(
             'atribuir-fixversion',
             expect.any(String),
@@ -202,7 +211,8 @@ describe('case04 — Add Sprint Tasks', () => {
         ctx.ctx.inMemoryTasksText = ['t1'];
         const { default: case04 } = await import('../commands/case04.js');
         const result = await case04.handler(ctx);
-        expect(result).toBe(false);
+
+        expect(result).toBeFalsy();
     });
 });
 
@@ -220,6 +230,7 @@ describe('case05 — Update Package Version', () => {
         const spy = vi.spyOn(ctx.jiraResource, 'getReleaseTasks');
         const { default: case05 } = await import('../commands/case05.js');
         await case05.handler(ctx);
+
         expect(spy).toHaveBeenCalledWith('TEST', 'v2.7.0', true);
     });
 
@@ -232,6 +243,7 @@ describe('case05 — Update Package Version', () => {
         vi.spyOn(ctx.jiraResource, 'getReleaseTasks').mockResolvedValue(['[TASK-1] desc']);
         const { default: case05 } = await import('../commands/case05.js');
         await case05.handler(ctx);
+
         expect(mockPm.updateReleaseNotes).toHaveBeenCalled();
         expect(mockPm.updateVersion).toHaveBeenCalled();
     });
@@ -247,6 +259,7 @@ describe('case05 — Update Package Version', () => {
         vi.spyOn(ctx.jiraResource, 'getReleaseTasks').mockResolvedValue(['[TASK-1] desc']);
         const { default: case05 } = await import('../commands/case05.js');
         await case05.handler(ctx);
+
         expect(ctx.pushHistory).toHaveBeenCalledWith('atualizar-package', expect.stringContaining('v'), 'ok');
     });
 });
@@ -261,6 +274,7 @@ describe('case06 — Check Release Task Status', () => {
         const ctx = createMockContext();
         const { default: case06 } = await import('../commands/case06.js');
         await case06.handler(ctx);
+
         expect(safeJiraCall).toHaveBeenCalled();
     });
 
@@ -270,6 +284,7 @@ describe('case06 — Check Release Task Status', () => {
         const ctx = createMockContext();
         const { default: case06 } = await import('../commands/case06.js');
         await case06.handler(ctx);
+
         expect(ctx.pushHistory).toHaveBeenCalledWith(
             'verificar-status',
             'v2.8.0',
@@ -295,6 +310,7 @@ describe('case07 — Close Tasks', () => {
         }) as never;
         const { default: case07 } = await import('../commands/case07.js');
         await case07.handler(ctx);
+
         expect(getSpy).toHaveBeenCalledWith('TEST', 'v2.0');
         expect(doneSpy).toHaveBeenCalledWith(['TASK-1', 'TASK-2']);
     });
@@ -308,6 +324,7 @@ describe('case07 — Close Tasks', () => {
         const doneSpy = vi.spyOn(ctx.jiraResource, 'moveCardsToDone');
         const { default: case07 } = await import('../commands/case07.js');
         await case07.handler(ctx);
+
         expect(vi.mocked(warn)).toHaveBeenCalled();
         expect(doneSpy).not.toHaveBeenCalled();
     });
@@ -320,7 +337,8 @@ describe('case07 — Close Tasks', () => {
         const doneSpy = vi.spyOn(ctx.jiraResource, 'moveCardsToDone');
         const { default: case07 } = await import('../commands/case07.js');
         const result = await case07.handler(ctx);
-        expect(result).toBe(true);
+
+        expect(result).toBeTruthy();
         expect(doneSpy).not.toHaveBeenCalled();
     });
 });
@@ -336,6 +354,7 @@ describe('case08 — Publish Version', () => {
         const spy = vi.spyOn(ctx.jiraResource, 'releaseVersion');
         const { default: case08 } = await import('../commands/case08.js');
         await case08.handler(ctx);
+
         expect(spy).toHaveBeenCalledWith('TEST', 'v3.0');
     });
 
@@ -346,6 +365,7 @@ describe('case08 — Publish Version', () => {
         const ctx = createMockContext();
         const { default: case08 } = await import('../commands/case08.js');
         await case08.handler(ctx);
+
         expect(ctx.pushHistory).toHaveBeenCalledWith('publicar-versão', 'v3.0', 'ok');
     });
 
@@ -356,7 +376,8 @@ describe('case08 — Publish Version', () => {
         const ctx = createMockContext();
         const { default: case08 } = await import('../commands/case08.js');
         const result = await case08.handler(ctx);
-        expect(result).toBe(false);
+
+        expect(result).toBeFalsy();
     });
 });
 
@@ -369,6 +390,7 @@ describe('case09 — Change Project', () => {
         const ctx = createMockContext();
         const { default: case09 } = await import('../commands/case09.js');
         await case09.handler(ctx);
+
         expect(ctx.ctx.project_name).toBe('NEW_PROJECT');
     });
 
@@ -379,6 +401,7 @@ describe('case09 — Change Project', () => {
         const ctx = createMockContext();
         const { default: case09 } = await import('../commands/case09.js');
         await case09.handler(ctx);
+
         expect(vi.mocked(update)).toHaveBeenCalled();
     });
 
@@ -388,6 +411,7 @@ describe('case09 — Change Project', () => {
         const ctx = createMockContext();
         const { default: case09 } = await import('../commands/case09.js');
         await case09.handler(ctx);
+
         expect(ctx.pushHistory).toHaveBeenCalledWith('trocar-projeto', 'PROJ', 'ok');
     });
 });
@@ -401,6 +425,7 @@ describe('case10 — Set Git Directory', () => {
         const ctx = createMockContext();
         const { default: case10 } = await import('../commands/case10.js');
         await case10.handler(ctx);
+
         expect(ctx.ctx.git_directory).toBe('/path/to/repo');
     });
 
@@ -411,6 +436,7 @@ describe('case10 — Set Git Directory', () => {
         ctx.ctx.createPackageManager = vi.fn().mockReturnValue({}) as never;
         const { default: case10 } = await import('../commands/case10.js');
         await case10.handler(ctx);
+
         expect(ctx.ctx.createPackageManager).toHaveBeenCalledWith('/path/to/repo');
     });
 
@@ -420,6 +446,7 @@ describe('case10 — Set Git Directory', () => {
         const ctx = createMockContext();
         const { default: case10 } = await import('../commands/case10.js');
         await case10.handler(ctx);
+
         expect(vi.mocked(success)).toHaveBeenCalledWith('Diretório alterado para: /path/to/repo');
     });
 });
@@ -442,7 +469,8 @@ describe('case11 — Generate Template', () => {
         const ctx = createMockContext();
         const { default: case11 } = await import('../commands/case11.js');
         await case11.handler(ctx);
-        expect(fs.existsSync(path.join(tmpDir, 'output.csv'))).toBe(true);
+
+        expect(fs.existsSync(path.join(tmpDir, 'output.csv'))).toBeTruthy();
     });
 
     it('pushes history after generating template', async () => {
@@ -451,6 +479,7 @@ describe('case11 — Generate Template', () => {
         const ctx = createMockContext();
         const { default: case11 } = await import('../commands/case11.js');
         await case11.handler(ctx);
+
         expect(ctx.pushHistory).toHaveBeenCalledWith('gerar-template', expect.any(String), 'ok');
     });
 });
@@ -466,6 +495,7 @@ describe('case13 — Create Test Execution', () => {
         const { default: case13 } = await import('../commands/case13.js');
         await case13.handler(ctx);
         const { offerTestExecutionAssociation } = await import('../commands/test-execution-flow.js');
+
         expect(vi.mocked(offerTestExecutionAssociation)).toHaveBeenCalledWith(
             ctx,
             ['TASK-1', 'TASK-2'],
@@ -481,6 +511,7 @@ describe('case13 — Create Test Execution', () => {
         const { default: case13 } = await import('../commands/case13.js');
         await case13.handler(ctx);
         const { offerTestExecutionAssociation } = await import('../commands/test-execution-flow.js');
+
         expect(vi.mocked(offerTestExecutionAssociation)).toHaveBeenCalled();
     });
 
@@ -492,6 +523,7 @@ describe('case13 — Create Test Execution', () => {
         const { default: case13 } = await import('../commands/case13.js');
         await case13.handler(ctx);
         const { showResults } = await import('../commands/test-execution-flow.js');
+
         expect(vi.mocked(showResults)).toHaveBeenCalled();
     });
 });
@@ -505,6 +537,7 @@ describe('case14 — Set Cypress Directory', () => {
         const ctx = createMockContext();
         const { default: case14 } = await import('../commands/case14.js');
         await case14.handler(ctx);
+
         expect(ctx.pushHistory).toHaveBeenCalledWith('config-tests', '/tmp/cypress-results', 'ok');
     });
 });
@@ -518,6 +551,7 @@ describe('case16 — Set JSON Directory', () => {
         const ctx = createMockContext();
         const { default: case16 } = await import('../commands/case16.js');
         await case16.handler(ctx);
+
         expect(ctx.pushHistory).toHaveBeenCalledWith('config-json-dir', '/tmp/json-results', 'ok');
     });
 });
@@ -530,6 +564,7 @@ describe('case24 — Setup Wizard', () => {
         const ctx = createMockContext();
         const { default: case24 } = await import('../commands/case24.js');
         await case24.handler(ctx);
+
         expect(vi.mocked(maybeRunFirstRunWizard)).toHaveBeenCalled();
     });
 
@@ -537,6 +572,7 @@ describe('case24 — Setup Wizard', () => {
         const ctx = createMockContext();
         const { default: case24 } = await import('../commands/case24.js');
         await case24.handler(ctx);
+
         expect(ctx.pushHistory).toHaveBeenCalledWith('setup-wizard', 'wizard concluído', 'ok');
     });
 });

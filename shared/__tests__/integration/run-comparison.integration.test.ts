@@ -55,7 +55,9 @@ describe('Integration: Run Comparison (FT-39)', () => {
 
             expect(result).toBe('Improved pass rate from 80% to 90%');
             expect(mockLlmPrompt).toHaveBeenCalledTimes(1);
+
             const callArg = nonNull(mockLlmPrompt.mock.calls[0])[0];
+
             expect(callArg.tier).toBe('fast');
             expect(callArg.callerId).toBe('compare-runs');
             expect(callArg.system).toContain('QA analyst');
@@ -71,7 +73,9 @@ describe('Integration: Run Comparison (FT-39)', () => {
             await compareRuns(runA, runB);
 
             expect(mockLlmPrompt).toHaveBeenCalledTimes(1);
+
             const callArg = nonNull(mockLlmPrompt.mock.calls[0])[0];
+
             expect(callArg.user).toContain('Pass rate: 80%');
             expect(callArg.user).toContain('Pass rate: 90%');
         });
@@ -82,7 +86,9 @@ describe('Integration: Run Comparison (FT-39)', () => {
             await compareRuns(runA, runB);
 
             expect(mockLlmPrompt).toHaveBeenCalledTimes(1);
+
             const callArg = nonNull(mockLlmPrompt.mock.calls[0])[0];
+
             expect(callArg.user).toMatch(/Total: 10[\s\S]*Passed: 8[\s\S]*Failed: 2[\s\S]*Duration: 5000ms/);
         });
     });
@@ -90,18 +96,21 @@ describe('Integration: Run Comparison (FT-39)', () => {
     describe('FT-39b: compareRuns null handling', () => {
         it('returns early message when first run is null', async () => {
             const result = await compareRuns(null, runB);
+
             expect(result).toBe('No run data provided');
             expect(mockLlmPrompt).not.toHaveBeenCalled();
         });
 
         it('returns early message when second run is null', async () => {
             const result = await compareRuns(runA, null);
+
             expect(result).toBe('No run data provided');
             expect(mockLlmPrompt).not.toHaveBeenCalled();
         });
 
         it('returns early message when both runs are null', async () => {
             const result = await compareRuns(null, null);
+
             expect(result).toBe('No run data provided');
             expect(mockLlmPrompt).not.toHaveBeenCalled();
         });
@@ -130,6 +139,7 @@ describe('Integration: Run Comparison (FT-39)', () => {
             mockLlmPrompt.mockResolvedValue('analysis of empty run');
 
             const result = await compareRuns(empty, empty);
+
             expect(result).toBe('analysis of empty run');
         });
     });
@@ -143,7 +153,9 @@ describe('Integration: Run Comparison (FT-39)', () => {
             await compareRuns(runWithSecret, runB);
 
             expect(mockLlmPrompt).toHaveBeenCalledTimes(1);
+
             const callArg = nonNull(mockLlmPrompt.mock.calls[0])[0];
+
             expect(callArg.user).not.toContain(secret);
         });
 
@@ -152,9 +164,12 @@ describe('Integration: Run Comparison (FT-39)', () => {
             mockLlmPrompt.mockResolvedValue('sanitized analysis');
 
             await compareRuns(runA, runB);
+
             expect(mockLlmPrompt).toHaveBeenCalledTimes(1);
+
             const callArg = nonNull(mockLlmPrompt.mock.calls[0])[0];
             const sanitized = sanitizeForLlm(callArg.user);
+
             expect(sanitized).toBe(callArg.user);
         });
     });

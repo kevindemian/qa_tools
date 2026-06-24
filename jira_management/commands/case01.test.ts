@@ -47,6 +47,7 @@ describe('case01 — create tests from CSV', () => {
 
     it('runs full CSV import flow with mocked dependencies without throwing', async () => {
         const result = await case01.handler(mockContext);
+
         expect([undefined, true, false]).toContain(result);
     });
 });

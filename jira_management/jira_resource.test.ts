@@ -86,6 +86,7 @@ describe('getJiraResource', () => {
         mockClient.get.mockResolvedValue({ data: expected });
 
         const result = await jiraResource.getJiraResource('project/TEST');
+
         expect(mockClient['get']).toHaveBeenCalledWith('/project/TEST');
         expect(result).toEqual(expected);
     });
@@ -116,6 +117,7 @@ describe('postJiraResource', () => {
         mockClient.post.mockResolvedValue({ data: expected });
 
         const result = await jiraResource.postJiraResource('version', payload);
+
         expect(mockClient['post']).toHaveBeenCalledWith('/version', payload);
         expect(result).toEqual(expected);
     });
@@ -146,6 +148,7 @@ describe('putJiraResource', () => {
         mockClient.put.mockResolvedValue({ data: expected, status: 200 });
 
         const result = await jiraResource.putJiraResource('version/10001', payload);
+
         expect(mockClient['put']).toHaveBeenCalledWith('/version/10001', payload);
         expect(result).toEqual(expected);
     });
@@ -154,6 +157,7 @@ describe('putJiraResource', () => {
         mockClient.put.mockResolvedValue({ data: {}, status: 204 });
 
         const result = await jiraResource.putJiraResource('issue/TEST-1', {});
+
         expect(result).toBeNull();
     });
 
@@ -181,6 +185,7 @@ describe('getProjectId', () => {
         mockClient.get.mockResolvedValue({ data: { id: '12345' } });
 
         const result = await jiraResource.getProjectId('TEST');
+
         expect(mockClient['get']).toHaveBeenCalledWith('/project/TEST');
         expect(result).toBe('12345');
     });
@@ -189,6 +194,7 @@ describe('getProjectId', () => {
         mockClient.get.mockRejectedValue(new Error('Project not found'));
 
         const result = await jiraResource.getProjectId('UNKNOWN');
+
         expect(result).toBe('');
     });
 
@@ -196,6 +202,7 @@ describe('getProjectId', () => {
         mockClient.get.mockRejectedValue(new Error('ECONNREFUSED'));
 
         const result = await jiraResource.getProjectId('TEST');
+
         expect(result).toBe('');
     });
 });
@@ -213,6 +220,7 @@ describe('getProjectVersions', () => {
         mockClient.get.mockResolvedValue({ data: versions });
 
         const result = await jiraResource.getProjectVersions('12345');
+
         expect(mockClient['get']).toHaveBeenCalledWith('/project/12345/versions');
         expect(result).toEqual(versions);
     });
@@ -221,6 +229,7 @@ describe('getProjectVersions', () => {
         mockClient.get.mockRejectedValue(new Error('Not found'));
 
         const result = await jiraResource.getProjectVersions('999');
+
         expect(result).toEqual([]);
     });
 
@@ -229,6 +238,7 @@ describe('getProjectVersions', () => {
         mockClient.get.mockResolvedValue({ data });
 
         const result = await jiraResource.getProjectVersions('12345');
+
         expect(result).toEqual(data);
     });
 });
@@ -249,6 +259,7 @@ describe('getTransitionsForIssue', () => {
         });
 
         const result = await jiraResource.getTransitionsForIssue('TEST-1');
+
         expect(result).toEqual({ approve: '31', 'use test case': '41' });
     });
 
@@ -256,6 +267,7 @@ describe('getTransitionsForIssue', () => {
         mockClient.get.mockResolvedValue({ data: {} });
 
         const result = await jiraResource.getTransitionsForIssue('TEST-1');
+
         expect(result).toEqual({});
     });
 
@@ -263,6 +275,7 @@ describe('getTransitionsForIssue', () => {
         mockClient.get.mockResolvedValue({ data: { transitions: [] } });
 
         const result = await jiraResource.getTransitionsForIssue('TEST-1');
+
         expect(result).toEqual({});
     });
 
@@ -278,6 +291,7 @@ describe('getTransitionsForIssue', () => {
         });
 
         const result = await jiraResource.getTransitionsForIssue('TEST-1');
+
         expect(result).toEqual({ approve: '31', done: '41' });
     });
 
@@ -285,6 +299,7 @@ describe('getTransitionsForIssue', () => {
         mockClient.get.mockRejectedValue(new Error('API error'));
 
         const result = await jiraResource.getTransitionsForIssue('TEST-1');
+
         expect(result).toEqual({});
     });
 });
@@ -299,6 +314,7 @@ describe('searchJiraIssues', () => {
         mockClient.get.mockResolvedValue({ data: { issues, total: 1 } });
 
         const result = await jiraResource.searchJiraIssues('project = TEST');
+
         expect(result.issues).toEqual(issues);
         expect(result.total).toBe(1);
     });
@@ -309,6 +325,7 @@ describe('searchJiraIssues', () => {
         });
 
         const result = await jiraResource.searchJiraIssues('project = TEST');
+
         expect(result.issues).toEqual([]);
         expect(result.total).toBe(0);
     });
@@ -321,6 +338,7 @@ describe('searchJiraIssues', () => {
             .mockResolvedValueOnce({ data: { issues: page2, total: 2 } });
 
         const result = await jiraResource.searchJiraIssues('project = TEST', 1);
+
         expect(result.issues).toHaveLength(2);
         expect(nonNull(result.issues[0]).key).toBe('TEST-1');
         expect(nonNull(result.issues[1]).key).toBe('TEST-2');
@@ -331,6 +349,7 @@ describe('searchJiraIssues', () => {
         mockClient.get.mockRejectedValue(new Error('Search failed'));
 
         const result = await jiraResource.searchJiraIssues('project = TEST');
+
         expect(result).toEqual({ issues: [], total: 0 });
     });
 
@@ -340,6 +359,7 @@ describe('searchJiraIssues', () => {
         });
 
         const result = await jiraResource.searchJiraIssues('project = TEST');
+
         expect(result.issues).toEqual([]);
         expect(result.total).toBe(0);
     });
@@ -359,6 +379,7 @@ describe('getVersionId', () => {
         });
 
         const result = await jiraResource.getVersionId('TEST', 'v2.0');
+
         expect(result).toBe('2');
     });
 
@@ -366,6 +387,7 @@ describe('getVersionId', () => {
         mockClient.get.mockRejectedValue(new Error('Project not found'));
 
         const result = await jiraResource.getVersionId('UNKNOWN', 'v1.0');
+
         expect(result).toBeNull();
     });
 
@@ -373,6 +395,7 @@ describe('getVersionId', () => {
         mockClient.get.mockResolvedValueOnce({ data: { id: '10000' } }).mockRejectedValue(new Error('Versions error'));
 
         const result = await jiraResource.getVersionId('TEST', 'v1.0');
+
         expect(result).toBeNull();
     });
 
@@ -382,6 +405,7 @@ describe('getVersionId', () => {
             .mockResolvedValueOnce({ data: { versions: [] } });
 
         const result = await jiraResource.getVersionId('TEST', 'v1.0');
+
         expect(result).toBeNull();
     });
 
@@ -391,6 +415,7 @@ describe('getVersionId', () => {
             .mockResolvedValueOnce({ data: [{ id: '1', name: 'v1.0' }] });
 
         const result = await jiraResource.getVersionId('TEST', 'v3.0');
+
         expect(result).toBeNull();
     });
 
@@ -400,6 +425,7 @@ describe('getVersionId', () => {
         });
 
         const result = await jiraResource.getVersionId('TEST', 'v2.0-rc1');
+
         expect(result).toBe('1');
     });
 });
@@ -415,6 +441,7 @@ describe('createVersion', () => {
         mockClient.post.mockResolvedValue({ data: created });
 
         const result = await jiraResource.createVersion('TEST', 'v1.0', 'First release');
+
         expect(mockClient['post']).toHaveBeenCalledWith('/version', {
             description: 'First release',
             name: 'v1.0',
@@ -428,6 +455,7 @@ describe('createVersion', () => {
         vi.spyOn(jiraResource, 'getVersionId').mockResolvedValueOnce('existing-id');
 
         const result = await jiraResource.createVersion('TEST', 'v1.0');
+
         expect(result).toBeNull();
         expect(mockClient['post']).not.toHaveBeenCalled();
     });
@@ -437,6 +465,7 @@ describe('createVersion', () => {
         mockClient.post.mockResolvedValue({ data: { id: '1', name: 'v1.0' } });
 
         const result = await jiraResource.createVersion('TEST', 'v1.0');
+
         expect(mockClient['post']).toHaveBeenCalledWith(
             '/version',
             expect.objectContaining({ description: undefined }),
@@ -456,6 +485,7 @@ describe('createVersion', () => {
         mockClient.post.mockResolvedValue({ data: null });
 
         const result = await jiraResource.createVersion('TEST', 'v1.0');
+
         expect(result).toBeNull();
     });
 });
@@ -476,7 +506,8 @@ describe('checkReleaseTasksStatus', () => {
         });
 
         const result = await jiraResource.checkReleaseTasksStatus('TEST', 'v1.0');
-        expect(result).toBe(true);
+
+        expect(result).toBeTruthy();
     });
 
     it('returns false when some tasks are not done', async () => {
@@ -490,7 +521,8 @@ describe('checkReleaseTasksStatus', () => {
         });
 
         const result = await jiraResource.checkReleaseTasksStatus('TEST', 'v1.0');
-        expect(result).toBe(false);
+
+        expect(result).toBeFalsy();
     });
 
     it('returns false when no issues found', async () => {
@@ -501,19 +533,22 @@ describe('checkReleaseTasksStatus', () => {
         });
 
         const result = await jiraResource.checkReleaseTasksStatus('TEST', 'v1.0');
-        expect(result).toBe(false);
+
+        expect(result).toBeFalsy();
     });
 
     it('returns false on error from getProjectId', async () => {
         vi.spyOn(jiraResource, 'getProjectId').mockRejectedValueOnce(new Error('Project error'));
 
         const result = await jiraResource.checkReleaseTasksStatus('TEST', 'v1.0');
-        expect(result).toBe(false);
+
+        expect(result).toBeFalsy();
     });
 
     it('returns false when versionName is empty (sanitizeJqlValue throws)', async () => {
         const result = await jiraResource.checkReleaseTasksStatus('TEST', '');
-        expect(result).toBe(false);
+
+        expect(result).toBeFalsy();
     });
 });
 
@@ -533,6 +568,7 @@ describe('getReleaseTasks', () => {
         });
 
         const result = await jiraResource.getReleaseTasks('TEST', 'v1.0');
+
         expect(result).toEqual(['[TASK-1] - Implement feature', '[TASK-2] - Fix bug']);
     });
 
@@ -544,6 +580,7 @@ describe('getReleaseTasks', () => {
         });
 
         const result = await jiraResource.getReleaseTasks('TEST', 'v1.0');
+
         expect(result).toEqual([]);
     });
 
@@ -553,6 +590,7 @@ describe('getReleaseTasks', () => {
 
         await jiraResource.getReleaseTasks('TEST', 'v1.0', true);
         const jql = nonNull(searchSpy.mock.calls[0])[0];
+
         expect(jql).toContain('AND type = "Test"');
     });
 
@@ -562,6 +600,7 @@ describe('getReleaseTasks', () => {
 
         await jiraResource.getReleaseTasks('TEST', 'v1.0', false);
         const jql = nonNull(searchSpy.mock.calls[0])[0];
+
         expect(jql).not.toContain('AND type = "Test"');
     });
 
@@ -569,11 +608,13 @@ describe('getReleaseTasks', () => {
         vi.spyOn(jiraResource, 'getProjectId').mockRejectedValueOnce(new Error('Project error'));
 
         const result = await jiraResource.getReleaseTasks('TEST', 'v1.0');
+
         expect(result).toEqual([]);
     });
 
     it('returns empty array when versionName is empty (sanitizeJqlValue throws)', async () => {
         const result = await jiraResource.getReleaseTasks('TEST', '');
+
         expect(result).toEqual([]);
     });
 });
@@ -593,6 +634,7 @@ describe('getLatestReleases', () => {
         });
 
         const result = await jiraResource.getLatestReleases('TEST', 1);
+
         expect(result.latestReleasedVersions).toHaveLength(1);
         expect(nonNull(result.latestReleasedVersions[0]).name).toBe('v1.1');
         expect(result.unreleasedVersions).toHaveLength(1);
@@ -603,6 +645,7 @@ describe('getLatestReleases', () => {
         mockClient.get.mockRejectedValueOnce(new Error('Project error'));
 
         const result = await jiraResource.getLatestReleases('UNKNOWN', 5);
+
         expect(result.latestReleasedVersions).toEqual([]);
         expect(result.unreleasedVersions).toEqual([]);
     });
@@ -613,6 +656,7 @@ describe('getLatestReleases', () => {
             .mockRejectedValueOnce(new Error('Versions error'));
 
         const result = await jiraResource.getLatestReleases('TEST', 5);
+
         expect(result.latestReleasedVersions).toEqual([]);
         expect(result.unreleasedVersions).toEqual([]);
     });
@@ -623,6 +667,7 @@ describe('getLatestReleases', () => {
             .mockResolvedValueOnce({ data: { version: [] } });
 
         const result = await jiraResource.getLatestReleases('TEST', 5);
+
         expect(result.latestReleasedVersions).toEqual([]);
         expect(result.unreleasedVersions).toEqual([]);
     });
@@ -637,6 +682,7 @@ describe('getLatestReleases', () => {
         });
 
         const result = await jiraResource.getLatestReleases('TEST', 2);
+
         expect(result.latestReleasedVersions).toHaveLength(2);
         expect(nonNull(result.latestReleasedVersions[0]).name).toBe('v2.0');
         expect(nonNull(result.latestReleasedVersions[1]).name).toBe('v3.0');
@@ -651,6 +697,7 @@ describe('getLatestReleases', () => {
         });
 
         const result = await jiraResource.getLatestReleases('TEST', 5);
+
         expect(result.latestReleasedVersions).toHaveLength(1);
         expect(nonNull(result.latestReleasedVersions[0]).name).toBe('v1.0');
         expect(result.unreleasedVersions).toHaveLength(0);
@@ -666,6 +713,7 @@ describe('addTasksToSprint', () => {
         mockClient.post.mockResolvedValue({ data: {} });
 
         await jiraResource.addTasksToSprint(['TASK-1', 'TASK-2'], 'sprint-1');
+
         expect(mockClient['post']).toHaveBeenCalledWith('/sprint/sprint-1/issue', {
             issues: ['TASK-1', 'TASK-2'],
         });
@@ -681,6 +729,7 @@ describe('addTasksToSprint', () => {
         mockClient.post.mockResolvedValue({ data: {} });
 
         await jiraResource.addTasksToSprint([], 'sprint-1');
+
         expect(mockClient['post']).toHaveBeenCalledWith('/sprint/sprint-1/issue', {
             issues: [],
         });
@@ -697,6 +746,7 @@ describe('updateFixVersions', () => {
         mockClient.put.mockResolvedValue({ data: {}, status: 200 });
 
         await jiraResource.updateFixVersions(['TASK-1', 'TASK-2'], 'TEST', 'v1.0');
+
         expect(mockClient['put']).toHaveBeenCalledTimes(2);
         expect(mockClient['put']).toHaveBeenNthCalledWith(1, '/issue/TASK-1', {
             update: { fixVersions: [{ set: [{ id: 'v-1' }] }] },
@@ -710,6 +760,7 @@ describe('updateFixVersions', () => {
         vi.spyOn(jiraResource, 'getVersionId').mockResolvedValueOnce(null);
 
         await jiraResource.updateFixVersions(['TASK-1'], 'TEST', 'v1.0');
+
         expect(mockClient['put']).not.toHaveBeenCalled();
     });
 
@@ -718,6 +769,7 @@ describe('updateFixVersions', () => {
         mockClient.put.mockResolvedValue({ data: {}, status: 200 });
 
         await jiraResource.updateFixVersions(['TASK-1'], 'TEST', 'v1.0');
+
         expect(mockClient['put']).toHaveBeenCalledTimes(1);
     });
 
@@ -740,6 +792,7 @@ describe('releaseVersion', () => {
         mockClient.put.mockResolvedValue({ data: {}, status: 200 });
 
         await jiraResource.releaseVersion('TEST', 'v1.0');
+
         expect(mockClient['put']).toHaveBeenCalledWith('/version/v-1', expect.objectContaining({ released: true }));
     });
 
@@ -747,6 +800,7 @@ describe('releaseVersion', () => {
         vi.spyOn(jiraResource, 'getVersionId').mockResolvedValueOnce(null);
 
         await jiraResource.releaseVersion('TEST', 'v1.0');
+
         expect(mockClient['put']).not.toHaveBeenCalled();
     });
 
@@ -755,6 +809,7 @@ describe('releaseVersion', () => {
         vi.spyOn(jiraResource, 'checkReleaseTasksStatus').mockResolvedValueOnce(false);
 
         await jiraResource.releaseVersion('TEST', 'v1.0');
+
         expect(mockClient['put']).not.toHaveBeenCalled();
     });
 
@@ -765,6 +820,7 @@ describe('releaseVersion', () => {
         const today = formatDateISO();
 
         await jiraResource.releaseVersion('TEST', 'v1.0');
+
         expect(mockClient['put']).toHaveBeenCalledWith('/version/v-1', {
             releaseDate: today,
             released: true,
@@ -802,6 +858,7 @@ describe('moveCardsToDone', () => {
         });
 
         await jiraResource.moveCardsToDone(['TASK-1']);
+
         expect(transitionSpy).toHaveBeenCalledTimes(2);
         expect(transitionSpy).toHaveBeenNthCalledWith(1, 'TASK-1', '31');
         expect(transitionSpy).toHaveBeenNthCalledWith(2, 'TASK-1', '41');
@@ -822,6 +879,7 @@ describe('moveCardsToDone', () => {
             });
 
         await jiraResource.moveCardsToDone(['TASK-1']);
+
         expect(transitionSpy).toHaveBeenCalledTimes(2);
         expect(transitionSpy).toHaveBeenNthCalledWith(1, 'TASK-1', '51');
         expect(transitionSpy).toHaveBeenNthCalledWith(2, 'TASK-1', '61');
@@ -831,6 +889,7 @@ describe('moveCardsToDone', () => {
         mockClient.get.mockRejectedValue(new Error('Not found'));
 
         await jiraResource.moveCardsToDone(['TASK-1']);
+
         expect(transitionSpy).not.toHaveBeenCalled();
     });
 
@@ -838,6 +897,7 @@ describe('moveCardsToDone', () => {
         mockClient.get.mockResolvedValueOnce({ data: {} });
 
         await jiraResource.moveCardsToDone(['TASK-1']);
+
         expect(transitionSpy).not.toHaveBeenCalled();
     });
 
@@ -849,6 +909,7 @@ describe('moveCardsToDone', () => {
             .mockResolvedValueOnce({ data: {} });
 
         await jiraResource.moveCardsToDone(['TASK-1']);
+
         expect(transitionSpy).not.toHaveBeenCalled();
     });
 
@@ -860,6 +921,7 @@ describe('moveCardsToDone', () => {
             });
 
         await jiraResource.moveCardsToDone(['TASK-1']);
+
         expect(transitionSpy).not.toHaveBeenCalled();
     });
 
@@ -871,6 +933,7 @@ describe('moveCardsToDone', () => {
         });
 
         await jiraResource.moveCardsToDone(['TASK-1']);
+
         // approve exists, use test case does not — only one transition call
         expect(transitionSpy).toHaveBeenCalledTimes(1);
         expect(transitionSpy).toHaveBeenCalledWith('TASK-1', '31');
@@ -882,6 +945,7 @@ describe('moveCardsToDone', () => {
             .mockResolvedValueOnce({ data: { transitions: [] } });
 
         await jiraResource.moveCardsToDone(['TASK-1']);
+
         expect(transitionSpy).not.toHaveBeenCalled();
     });
 
@@ -905,6 +969,7 @@ describe('moveCardsToDone', () => {
             });
 
         await jiraResource.moveCardsToDone(['TASK-1', 'TASK-2', 'TASK-3']);
+
         expect(transitionSpy).toHaveBeenCalledTimes(2);
         expect(transitionSpy).toHaveBeenNthCalledWith(1, 'TASK-1', '31');
         expect(transitionSpy).toHaveBeenNthCalledWith(2, 'TASK-3', '71');
@@ -917,6 +982,7 @@ describe('moveCardsToDone', () => {
         transitionSpy.mockRejectedValue(new Error('API error'));
 
         const moveResult = await jiraResource.moveCardsToDone(['TASK-1']);
+
         expect(moveResult).toBeUndefined();
         expect(transitionSpy).toHaveBeenCalledTimes(1);
     });
@@ -932,6 +998,7 @@ describe('getFromOriginPath', () => {
         mockClient.get.mockResolvedValue({ data: expected });
 
         const result = await jiraResource.getFromOriginPath('rest/raven/1.0/api/test/TEST-1/testruns');
+
         expect(mockClient['get']).toHaveBeenCalledWith('http://test-jira.com/rest/raven/1.0/api/test/TEST-1/testruns');
         expect(result).toEqual(expected);
     });
@@ -940,6 +1007,7 @@ describe('getFromOriginPath', () => {
         mockClient.get.mockResolvedValue({ data: { key: 'TEST-1' } });
 
         const result = await jiraResource.getFromOriginPath('/rest/raven/1.0/api/test/TEST-1/testruns');
+
         expect(mockClient['get']).toHaveBeenCalledWith('http://test-jira.com/rest/raven/1.0/api/test/TEST-1/testruns');
         expect(result).toEqual({ key: 'TEST-1' });
     });
@@ -968,6 +1036,7 @@ describe('transitionIssue', () => {
         mockClient.post.mockResolvedValue({ data: {} });
 
         await jiraResource.transitionIssue('TASK-1', '31');
+
         expect(mockClient['post']).toHaveBeenCalledWith('/issue/TASK-1/transitions', { transition: { id: '31' } });
     });
 
@@ -981,6 +1050,7 @@ describe('transitionIssue', () => {
         mockClient.post.mockResolvedValue({ data: {} });
 
         await jiraResource.transitionIssue('TASK-1', '999');
+
         expect(mockClient['post']).toHaveBeenCalledWith('/issue/TASK-1/transitions', { transition: { id: '999' } });
     });
 });

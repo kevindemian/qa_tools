@@ -41,6 +41,7 @@ describe('LlmMetrics', () => {
         expect(snap.avgLatencyMs).toBe(325);
 
         const history = getLlmMetricsHistory();
+
         expect(history).toHaveLength(1);
     });
 
@@ -64,6 +65,7 @@ describe('LlmMetrics', () => {
         recordArtifactReview(true); // approved
 
         const snap = snapshotLlmMetrics();
+
         expect(snap.artifactApproved).toBe(2);
         expect(snap.artifactRejected).toBe(1);
     });
@@ -76,6 +78,7 @@ describe('LlmMetrics', () => {
         recordValidationRejection('Tipo inválido');
 
         const snap = snapshotLlmMetrics();
+
         expect(snap.rejectedByValidator).toBe(3);
         expect(snap.rejectionReasons['Campo obrigatório ausente']).toBe(2);
         expect(snap.rejectionReasons['Tipo inválido']).toBe(1);
@@ -89,6 +92,7 @@ describe('LlmMetrics', () => {
         recordRetry();
 
         const snap = snapshotLlmMetrics();
+
         expect(snap.retryCount).toBe(3);
     });
 
@@ -100,6 +104,7 @@ describe('LlmMetrics', () => {
         recordConfidence('low');
 
         const snap = snapshotLlmMetrics();
+
         expect(snap.avgConfidence).toBe(0.5);
     });
 
@@ -111,6 +116,7 @@ describe('LlmMetrics', () => {
         recordLlmFailure('fast');
 
         const snap = snapshotLlmMetrics();
+
         expect(snap.failuresByTier?.['main']).toBe(2);
         expect(snap.failuresByTier?.['fast']).toBe(1);
     });
@@ -122,6 +128,7 @@ describe('LlmMetrics', () => {
         clearLlmMetrics();
 
         const snap = snapshotLlmMetrics();
+
         expect(snap.totalRequests).toBe(0);
     });
 
@@ -132,6 +139,7 @@ describe('LlmMetrics', () => {
         snapshotLlmMetrics();
 
         const history = getLlmMetricsHistory();
+
         expect(history).toHaveLength(1);
         expect(nonNull(history[0]).totalRequests).toBe(1);
         expect(nonNull(history[0]).avgLatencyMs).toBe(500);
@@ -145,6 +153,7 @@ describe('LlmMetrics', () => {
         recordArtifactReview(false);
 
         const snap = snapshotLlmMetrics();
+
         expect(snap.artifactApproved).toBe(2);
         expect(snap.artifactRejected).toBe(1);
     });
@@ -158,6 +167,7 @@ describe('LlmMetrics', () => {
         });
         try {
             const history = mod.getLlmMetricsHistory();
+
             expect(history).toEqual([]);
         } finally {
             readSpy.mockRestore();
@@ -172,6 +182,7 @@ describe('LlmMetrics', () => {
         recordLlmRequest('fast', 100, 'gpt-4o-mini');
 
         const snap = snapshotLlmMetrics();
+
         expect(snap.totalRequests).toBe(3);
         expect(snap.latencyByModel['gpt-4o']).toEqual({ avgMs: 400, count: 2 });
         expect(snap.latencyByModel['gpt-4o-mini']).toEqual({ avgMs: 100, count: 1 });
@@ -184,6 +195,7 @@ describe('LlmMetrics', () => {
         try {
             const mod = await loadMod();
             mod.recordLlmRequest('main', 100);
+
             expect(() => mod.snapshotLlmMetrics()).toThrow('Failed to persist LLM metrics');
         } finally {
             renameSpy.mockRestore();

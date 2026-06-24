@@ -68,6 +68,7 @@ describe('parseGitLogOutput invariants (PBT)', () => {
 
     it('handles empty input', () => {
         const result = parseGitLogOutput('');
+
         expect(result).toEqual([]);
     });
 
@@ -75,6 +76,7 @@ describe('parseGitLogOutput invariants (PBT)', () => {
         fc.assert(
             fc.property(logLineArb, (line) => {
                 const result = parseGitLogOutput(line);
+
                 expect(result).toHaveLength(1);
                 expect(result[0]?.hash).toBeTruthy();
             }),
@@ -105,7 +107,7 @@ describe('generateGitMetricsRuns invariants (PBT)', () => {
             expect(typeof run.passed).toBe('number');
             expect(typeof run.failed).toBe('number');
             expect(typeof run.skipped).toBe('number');
-            expect(Array.isArray(run.tests)).toBe(true);
+            expect(Array.isArray(run.tests)).toBeTruthy();
             expect(run.total).toBe(run.tests.length);
             expect(run.passed + run.failed + run.skipped).toBe(run.total);
         });
@@ -142,6 +144,7 @@ describe('generateGitMetricsRuns invariants (PBT)', () => {
     it('empty git log returns empty array', () => {
         mockExecFileSync.mockReturnValue('');
         const runs = generateGitMetricsRuns();
+
         expect(runs).toEqual([]);
     });
 
@@ -180,6 +183,7 @@ describe('generateGitFailureClassifications invariants (PBT)', () => {
         const N = '\0';
         mockExecFileSync.mockReturnValue('abc123' + N + '2026-06-01T10:00:00.000Z' + N + 'Normal' + N + 'user' + N);
         const result = generateGitFailureClassifications();
+
         expect(result.filter((c) => c.category === 'REVERT')).toHaveLength(0);
     });
 });
@@ -189,6 +193,7 @@ describe('extractDate', () => {
         const log = 'h1' + '\0' + '2026-06-15T10:00:00.000Z' + '\0' + 'msg' + '\0' + 'author' + '\0';
         mockExecFileSync.mockReturnValue(log);
         const runs = generateGitMetricsRuns();
+
         expect(runs[0]?.timestamp).toContain('2026-06-15');
     });
 });
@@ -232,6 +237,7 @@ describe('getLastGitLogError invariants (PBT)', () => {
                 const line = hash + '\0' + '2026-06-01T10:00:00.000Z' + '\0' + 'msg' + '\0' + 'author' + '\0';
                 mockExecFileSync.mockReturnValue(line);
                 generateGitMetricsRuns();
+
                 expect(getLastGitLogError()).toBeUndefined();
             }),
         );

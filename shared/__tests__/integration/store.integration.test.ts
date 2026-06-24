@@ -63,6 +63,7 @@ describe('Integration: Store', () => {
 
         it('returns null for unknown SHA', () => {
             const store = new Store(backend, 'test-project');
+
             expect(store.lookup('nonexistent')).toBeNull();
         });
     });
@@ -95,18 +96,24 @@ describe('Integration: Store', () => {
             });
 
             const list = store.listByProject();
+
             expect(list).toHaveLength(2);
+
             const first = list[0];
             const second = list[1];
+
             expect(first).toBeDefined();
             expect(second).toBeDefined();
+
             if (!first || !second) throw new Error('expected two entries');
+
             expect(first.sha).toBe('sha2'); // newer first
             expect(second.sha).toBe('sha1');
         });
 
         it('returns empty array when no entries exist', () => {
             const store = new Store(backend, 'empty-project');
+
             expect(store.listByProject()).toEqual([]);
         });
     });
@@ -120,14 +127,19 @@ describe('Integration: Store', () => {
             const entries = store.getBranch('feature-x');
 
             expect(entries).toHaveLength(1);
+
             const firstEntry = entries[0];
+
             expect(firstEntry).toBeDefined();
+
             if (!firstEntry) throw new Error('expected entry');
+
             expect(firstEntry.sha).toBe('branch-sha');
         });
 
         it('returns empty array for unknown branch', () => {
             const store = new Store(backend, 'test-project');
+
             expect(store.getBranch('nonexistent')).toEqual([]);
         });
 
@@ -139,9 +151,12 @@ describe('Integration: Store', () => {
             const entries = store.getBranch('main');
             const firstEntry = entries[0];
             const secondEntry = entries[1];
+
             expect(firstEntry).toBeDefined();
             expect(secondEntry).toBeDefined();
+
             if (!firstEntry || !secondEntry) throw new Error('expected two entries');
+
             expect(firstEntry.sha).toBe('new');
             expect(secondEntry.sha).toBe('old');
         });
@@ -157,13 +172,16 @@ describe('Integration: Store', () => {
 
             expect(loaded).not.toBeNull();
             expect(loaded?.tests).toHaveLength(5);
+
             const firstTest = loaded?.tests[0];
+
             expect(firstTest).toBeDefined();
             expect(firstTest?.title).toBe('login should succeed with valid credentials');
         });
 
         it('returns null for non-existent report', () => {
             const store = new Store(backend, 'test-project');
+
             expect(store.loadReport('nonexistent')).toBeNull();
         });
     });
@@ -199,11 +217,15 @@ describe('Integration: Store', () => {
             // listByProject is per-project
             expect(store1.listByProject()).toHaveLength(1);
             expect(store2.listByProject()).toHaveLength(1);
+
             const first1 = store1.listByProject()[0];
             const first2 = store2.listByProject()[0];
+
             expect(first1).toBeDefined();
             expect(first2).toBeDefined();
+
             if (!first1 || !first2) throw new Error('expected entries');
+
             expect(first1.project).toBe('project-a');
             expect(first2.project).toBe('project-b');
         });
@@ -258,8 +280,9 @@ describe('Integration: Store', () => {
 
             const indexPath = path.join(TEST_DIR, 'reports', 'index.json');
             const projIndexPath = path.join(TEST_DIR, 'reports', 'test-project', 'index.json');
-            expect(fs.existsSync(indexPath)).toBe(true);
-            expect(fs.existsSync(projIndexPath)).toBe(true);
+
+            expect(fs.existsSync(indexPath)).toBeTruthy();
+            expect(fs.existsSync(projIndexPath)).toBeTruthy();
         });
     });
 });

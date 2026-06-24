@@ -53,6 +53,7 @@ describe('probe-registry', () => {
                 { id: 'gpt-4o', context: 128000, costPer1kPrompt: 0.0025, costPer1kCompletion: 0.01, tiers: [] },
             ];
             const diff = mod.diffModels(discovered, existing, 'openai');
+
             expect(diff.provider).toBe('openai');
             expect(diff.added).toHaveLength(1);
             expect(diff.removed).toHaveLength(0);
@@ -70,6 +71,7 @@ describe('probe-registry', () => {
                 { id: 'gpt-3.5-turbo', context: 16385, costPer1kPrompt: 0.001, costPer1kCompletion: 0.002, tiers: [] },
             ];
             const diff = mod.diffModels(discovered, existing, 'openai');
+
             expect(diff.removed).toHaveLength(1);
             expect(diff.removed[0]?.model).toBe('gpt-3.5-turbo');
         });
@@ -84,6 +86,7 @@ describe('probe-registry', () => {
                 { id: 'gpt-4o', context: 128000, costPer1kPrompt: 0.0025, costPer1kCompletion: 0.01, tiers: [] },
             ];
             const diff = mod.diffModels(discovered, existing, 'openai');
+
             expect(diff.changed).toHaveLength(1);
             expect(diff.changed[0]?.field).toBe('context');
             expect(diff.changed[0]?.old).toBe(128000);
@@ -101,6 +104,7 @@ describe('probe-registry', () => {
             ];
             const diff = mod.diffModels(discovered, existing, 'openai');
             const costChanges = diff.changed.filter((c: { field: string }) => c.field === 'costPer1kPrompt');
+
             expect(costChanges).toHaveLength(1);
             expect(costChanges[0]?.old).toBe(0.0025);
             expect(costChanges[0]?.new).toBe(0.003);
@@ -113,6 +117,7 @@ describe('probe-registry', () => {
                 { id: 'gpt-4o', context: 128000, costPer1kPrompt: 0.0025, costPer1kCompletion: 0.01, tiers: [] },
             ];
             const diff = mod.diffModels(models, models, 'openai');
+
             expect(diff.added).toHaveLength(0);
             expect(diff.removed).toHaveLength(0);
             expect(diff.changed).toHaveLength(0);
@@ -132,6 +137,7 @@ describe('probe-registry', () => {
                 },
             ];
             const report = mod.writeMarkdownReport(reports, '2026-06-12');
+
             expect(report).toContain('+1 / -1 / ~1');
             expect(report).toContain('gpt-5');
             expect(report).toContain('gpt-3.5-turbo');
@@ -148,6 +154,7 @@ describe('probe-registry', () => {
                 changed: Array<{ model: string; field: string; old: unknown; new: unknown }>;
             }>;
             const report = mod.writeMarkdownReport(reports, '2026-06-12');
+
             expect(report).toContain('No changes detected');
         });
     });
@@ -160,9 +167,10 @@ describe('probe-registry', () => {
             });
             const mod = await import('../probe-registry.js');
             const args = mod.parseArgs();
+
             expect(args.provider).toBe('openai');
-            expect(args.dryRun).toBe(false);
-            expect(args.createPr).toBe(false);
+            expect(args.dryRun).toBeFalsy();
+            expect(args.createPr).toBeFalsy();
         });
 
         it('parses --dry-run flag', async () => {
@@ -172,8 +180,9 @@ describe('probe-registry', () => {
             });
             const mod = await import('../probe-registry.js');
             const args = mod.parseArgs();
+
             expect(args.provider).toBeNull();
-            expect(args.dryRun).toBe(true);
+            expect(args.dryRun).toBeTruthy();
         });
 
         it('parses --pr flag', async () => {
@@ -183,7 +192,8 @@ describe('probe-registry', () => {
             });
             const mod = await import('../probe-registry.js');
             const args = mod.parseArgs();
-            expect(args.createPr).toBe(true);
+
+            expect(args.createPr).toBeTruthy();
         });
 
         it('returns defaults for no flags', async () => {
@@ -193,9 +203,10 @@ describe('probe-registry', () => {
             });
             const mod = await import('../probe-registry.js');
             const args = mod.parseArgs();
+
             expect(args.provider).toBeNull();
-            expect(args.dryRun).toBe(false);
-            expect(args.createPr).toBe(false);
+            expect(args.dryRun).toBeFalsy();
+            expect(args.createPr).toBeFalsy();
         });
     });
 
@@ -205,6 +216,7 @@ describe('probe-registry', () => {
             const mod = await import('../probe-registry.js');
             const registry = JSON.parse(JSON.stringify(VALID_REGISTRY)) as Record<string, unknown>;
             const models = mod.getProviderModels(registry, 'openai');
+
             expect(models).toHaveLength(2);
             expect(models[0]?.id).toBe('gpt-4o');
         });
@@ -214,6 +226,7 @@ describe('probe-registry', () => {
             const mod = await import('../probe-registry.js');
             const registry = JSON.parse(JSON.stringify(VALID_REGISTRY)) as Record<string, unknown>;
             const models = mod.getProviderModels(registry, 'unknown');
+
             expect(models).toEqual([]);
         });
 
@@ -221,6 +234,7 @@ describe('probe-registry', () => {
             mockRegistryFetch();
             const mod = await import('../probe-registry.js');
             const models = mod.getProviderModels({}, 'openai');
+
             expect(models).toEqual([]);
         });
     });
@@ -232,6 +246,7 @@ describe('probe-registry', () => {
             const models = [{ id: 'gpt-4o', context: 0, costPer1kPrompt: 0, costPer1kCompletion: 0, tiers: [] }];
             const orMap = new Map([['gpt-4o', { context: 128000, capabilities: ['vision'] }]]);
             mod.enrichFromOpenRouter(models, orMap);
+
             expect(models[0]?.context).toBe(128000);
             expect((models[0] as Record<string, unknown>)['capabilities']).toEqual(['vision']);
         });
@@ -242,6 +257,7 @@ describe('probe-registry', () => {
             const models = [{ id: 'unknown-model', context: 0, costPer1kPrompt: 0, costPer1kCompletion: 0, tiers: [] }];
             const orMap = new Map([['gpt-4o', { context: 128000 }]]);
             mod.enrichFromOpenRouter(models, orMap);
+
             expect(models[0]?.context).toBe(0);
         });
 
@@ -251,6 +267,7 @@ describe('probe-registry', () => {
             const models = [{ id: 'gpt-4o', context: 128000, costPer1kPrompt: 0, costPer1kCompletion: 0, tiers: [] }];
             const orMap = new Map([['gpt-4o', { context: 0, capabilities: [] }]]);
             mod.enrichFromOpenRouter(models, orMap);
+
             expect(models[0]?.context).toBe(128000);
         });
     });

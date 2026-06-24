@@ -26,6 +26,7 @@ describe('readIstanbulCoverage', () => {
             },
         });
         const result = readIstanbulCoverage(TEST_PATH);
+
         expect(result?.coveragePct).toBe(80.0);
         expect(result?.source).toBe('istanbul');
         expect(result?.detail).toContain('80.0%');
@@ -38,6 +39,7 @@ describe('readIstanbulCoverage', () => {
             },
         });
         const result = readIstanbulCoverage(TEST_PATH);
+
         expect(result?.coveragePct).toBe(50.0);
         expect(result?.source).toBe('istanbul');
     });
@@ -45,11 +47,13 @@ describe('readIstanbulCoverage', () => {
     it('returns undefined when total is missing', () => {
         writeIstanbulFixture({});
         const result = readIstanbulCoverage(TEST_PATH);
+
         expect(result).toBeUndefined();
     });
 
     it('returns undefined when file does not exist', () => {
         const result = readIstanbulCoverage('/nonexistent/path.json');
+
         expect(result).toBeUndefined();
     });
 
@@ -60,6 +64,7 @@ describe('readIstanbulCoverage', () => {
             },
         });
         const result = readIstanbulCoverage(TEST_PATH);
+
         expect(result).toBeUndefined();
     });
 
@@ -67,6 +72,7 @@ describe('readIstanbulCoverage', () => {
         fs.mkdirSync(TEST_DIR, { recursive: true });
         fs.writeFileSync(TEST_PATH, 'not valid json', 'utf8');
         const result = readIstanbulCoverage(TEST_PATH);
+
         expect(result).toBeUndefined();
     });
 
@@ -79,6 +85,7 @@ describe('readIstanbulCoverage', () => {
                 'utf8',
             );
             const result = readIstanbulCoverage(customPath);
+
             expect(result?.coveragePct).toBe(90.0);
         } finally {
             fs.rmSync(customPath, { force: true });
@@ -98,23 +105,27 @@ describe('resolveCoverage', () => {
             },
         });
         const result = resolveCoverage({ istanbulPath: TEST_PATH, ctrfCoverage: 70 });
+
         expect(result?.source).toBe('istanbul');
         expect(result?.coveragePct).toBe(85.0);
     });
 
     it('falls back to ctrf when istanbul not available', () => {
         const result = resolveCoverage({ ctrfCoverage: 65.5 });
+
         expect(result?.source).toBe('ctrf');
         expect(result?.coveragePct).toBe(65.5);
     });
 
     it('returns undefined when no source has data', () => {
         const result = resolveCoverage();
+
         expect(result).toBeUndefined();
     });
 
     it('returns undefined when ctrf coverage is negative', () => {
         const result = resolveCoverage({ ctrfCoverage: -1 });
+
         expect(result).toBeUndefined();
     });
 });

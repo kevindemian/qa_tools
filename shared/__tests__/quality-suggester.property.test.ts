@@ -94,7 +94,7 @@ describe('failureRate — property-based', () => {
         );
     });
 
-    it('NaN e valores negativos são normalizados para 0', () => {
+    it('naN e valores negativos são normalizados para 0', () => {
         expect(failureRate(NaN, 100)).toBe(0);
         expect(failureRate(-5, 100)).toBe(0);
         expect(failureRate(5, NaN)).toBe(0);
@@ -135,7 +135,8 @@ describe('checkQualitySignals — property-based', () => {
         fc.assert(
             fc.property(fc.constantFrom(undefined), () => {
                 const result = checkQualitySignals();
-                expect(Array.isArray(result)).toBe(true);
+
+                expect(Array.isArray(result)).toBeTruthy();
             }),
             { numRuns: 10 },
         );
@@ -144,6 +145,7 @@ describe('checkQualitySignals — property-based', () => {
     it('benchmarkSignals não mutation do array original', () => {
         const sig = [{ severity: 'warning' as const, source: 'test', message: 'x', suggestedAction: 'y' }];
         const result = checkQualitySignals(sig);
+
         expect(result).toEqual(expect.arrayContaining(sig));
     });
 });

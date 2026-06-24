@@ -44,6 +44,7 @@ describe('smoke-startup', () => {
         if (result.code !== null) {
             expect(result.code).toBe(0);
         }
+
         expect(output).toContain('QA Tools');
         expect(output).not.toContain('Erro inesperado');
     }, 20000);
@@ -85,6 +86,7 @@ describe('smoke-startup', () => {
         if (result.code !== null) {
             expect(result.code).toBe(0);
         }
+
         expect(output).not.toContain('Erro inesperado');
     }, 20000);
 });

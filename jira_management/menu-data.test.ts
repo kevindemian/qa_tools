@@ -28,6 +28,7 @@ describe('HELP_TOPICS', () => {
     it('each topic is a non-empty string', () => {
         for (const entry of Object.entries(HELP_TOPICS)) {
             const [, value] = entry;
+
             expect(value.length).toBeGreaterThan(0);
         }
     });
@@ -45,6 +46,7 @@ describe('ALIASES', () => {
     it('every alias resolves to a string value', () => {
         for (const entry of Object.entries(ALIASES)) {
             const [alias, value] = entry;
+
             expect(alias.length).toBeGreaterThan(0);
             expect(typeof value).toBe('string');
         }
@@ -83,6 +85,7 @@ describe('CATEGORIES', () => {
 
     it('includes main category IDs', () => {
         const ids = CATEGORIES.map((c) => c.id);
+
         expect(ids).toContain('reports');
         expect(ids).toContain('tests');
         expect(ids).toContain('releases');
@@ -108,9 +111,12 @@ describe('SUB_MENUS', () => {
     it('each sub-menu has items with id and label', () => {
         for (const entry of Object.entries(SUB_MENUS)) {
             const [, items] = entry;
+
             expect(items.length).toBeGreaterThan(0);
+
             for (const item of items) {
                 if (item.section) continue;
+
                 expect(item.id).toBeTruthy();
                 expect(item.label).toBeTruthy();
             }
@@ -120,6 +126,7 @@ describe('SUB_MENUS', () => {
     it('releases sub-menu contains version commands', () => {
         const releases = nonNull(SUB_MENUS['releases']);
         const ids = releases.map((i) => i.id);
+
         expect(ids).toContain('2');
         expect(ids).toContain('3');
         expect(ids).toContain('7');
@@ -129,6 +136,7 @@ describe('SUB_MENUS', () => {
     it('reports sub-menu has dashboards entry via d', () => {
         const reports = nonNull(SUB_MENUS['reports']);
         const ids = reports.map((i) => i.id);
+
         expect(ids).toContain('d');
         expect(ids).toContain('17');
         expect(ids).not.toContain('25');
@@ -139,18 +147,21 @@ describe('SUB_MENUS', () => {
     it('config sub-menu has configKey on directory items', () => {
         const configMenu = nonNull(SUB_MENUS['config']);
         const gitItem = configMenu.find((i) => i.id === '10');
+
         expect(gitItem?.configKey).toBe('gitDir');
+
         const cypressItem = configMenu.find((i) => i.id === '14');
+
         expect(cypressItem?.configKey).toBe('cypressDir');
     });
 });
 
 describe('CATEGORY_IDS', () => {
     it('is a Set with all sub-menu keys', () => {
-        expect(CATEGORY_IDS.has('reports')).toBe(true);
-        expect(CATEGORY_IDS.has('tests')).toBe(true);
-        expect(CATEGORY_IDS.has('releases')).toBe(true);
-        expect(CATEGORY_IDS.has('nonexistent')).toBe(false);
+        expect(CATEGORY_IDS.has('reports')).toBeTruthy();
+        expect(CATEGORY_IDS.has('tests')).toBeTruthy();
+        expect(CATEGORY_IDS.has('releases')).toBeTruthy();
+        expect(CATEGORY_IDS.has('nonexistent')).toBeFalsy();
     });
 
     it('is frozen from Object.keys', () => {
@@ -181,6 +192,7 @@ describe('ID_TO_ALIASES', () => {
 
     it('includes all variants for each ID', () => {
         const criarAliases = ID_TO_ALIASES['1'];
+
         expect(criarAliases).toContain('criar');
         expect(criarAliases).toContain('criar-teste');
         expect(criarAliases).toContain('criar-testes');
@@ -190,6 +202,7 @@ describe('ID_TO_ALIASES', () => {
         for (const entry of Object.entries(ALIASES)) {
             const [, value] = entry;
             if (value.startsWith('/')) continue;
+
             expect(ID_TO_ALIASES[value]).toBeDefined();
         }
     });
@@ -203,6 +216,6 @@ describe('_configHint', () => {
 
 describe('buildMenuChoices', () => {
     it('returns array for main level', () => {
-        expect(Array.isArray(buildMenuChoices('main', 'ECSPOL', { git_directory: '/tmp' }))).toBe(true);
+        expect(Array.isArray(buildMenuChoices('main', 'ECSPOL', { git_directory: '/tmp' }))).toBeTruthy();
     });
 });

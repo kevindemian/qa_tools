@@ -79,12 +79,14 @@ describe('TestExecutionCreator', () => {
         it('returns { key, summary } with correct structure', async () => {
             setupHappyPath();
             const result = await creator.create(projectName, testKeys, csvName);
+
             expect(result).toEqual({ key: 'TE-1', summary: 'my_tests.csv - 23/05/2026 10:30' });
         });
 
         it('posts with correct payload', async () => {
             setupHappyPath();
             await creator.create(projectName, testKeys, csvName);
+
             expect(mockJiraResource['postJiraResource']).toHaveBeenCalledWith('issue', {
                 fields: {
                     project: { key: projectName },
@@ -101,6 +103,7 @@ describe('TestExecutionCreator', () => {
                 { id: '3', name: 'Story' },
             ]);
             const result = await creator.create(projectName, testKeys, csvName);
+
             expect(result).toBeNull();
             expect(rootLogger['error']).toHaveBeenCalledWith(expect.stringContaining('Issue type'));
             expect(mockJiraResource['postJiraResource']).not.toHaveBeenCalled();
@@ -111,6 +114,7 @@ describe('TestExecutionCreator', () => {
                 .mockResolvedValueOnce(defaultIssueTypes)
                 .mockResolvedValueOnce([{ id: 'customfield_10100', name: 'Test', schema: { custom: 'some:other' } }]);
             const result = await creator.create(projectName, testKeys, csvName);
+
             expect(result).toBeNull();
             expect(rootLogger['error']).toHaveBeenCalledWith(expect.stringContaining('Tests association'));
             expect(mockJiraResource['postJiraResource']).not.toHaveBeenCalled();
@@ -119,6 +123,7 @@ describe('TestExecutionCreator', () => {
         it('returns null and logs error when issuetype response is non-array', async () => {
             mockJiraResource.getJiraResource.mockResolvedValueOnce({ id: '1' });
             const result = await creator.create(projectName, testKeys, csvName);
+
             expect(result).toBeNull();
             expect(rootLogger['error']).toHaveBeenCalledWith(expect.stringContaining('tipos de issue'));
             expect(mockJiraResource['postJiraResource']).not.toHaveBeenCalled();
@@ -129,6 +134,7 @@ describe('TestExecutionCreator', () => {
                 .mockResolvedValueOnce(defaultIssueTypes)
                 .mockResolvedValueOnce({ id: 'customfield_1' });
             const result = await creator.create(projectName, testKeys, csvName);
+
             expect(result).toBeNull();
             expect(rootLogger['error']).toHaveBeenCalledWith(expect.stringContaining('campos customizados'));
             expect(mockJiraResource['postJiraResource']).not.toHaveBeenCalled();
@@ -138,6 +144,7 @@ describe('TestExecutionCreator', () => {
             setupHappyPath();
             await creator.create(projectName, testKeys, csvName, 'My Custom Title');
             const callArgs = mockJiraResource.postJiraResource.mock.calls[0];
+
             expect(callArgs?.[0]).toBe('issue');
             expect(callArgs?.[1]).toHaveProperty('fields.summary', 'My Custom Title');
         });
@@ -146,6 +153,7 @@ describe('TestExecutionCreator', () => {
             setupHappyPath();
             await creator.create(projectName, testKeys, '');
             const callArgs = mockJiraResource.postJiraResource.mock.calls[0];
+
             expect(callArgs?.[0]).toBe('issue');
             expect(callArgs?.[1]).toHaveProperty('fields.summary', 'Automated Execution - 23/05/2026 10:30');
         });
@@ -231,6 +239,7 @@ describe('TestExecutionCreator', () => {
         it('creates TE without linking when testKeys is empty', async () => {
             setupCreate('TE-1');
             await creator.createWithLinks(projectName, [], csvName);
+
             expect(mockLinkManager['createIssueLink']).not.toHaveBeenCalled();
         });
 
@@ -243,6 +252,7 @@ describe('TestExecutionCreator', () => {
             });
 
             await creator.createWithLinks(projectName, testKeys, csvName);
+
             expect(mockLinkManager['createIssueLink']).not.toHaveBeenCalled();
         });
 
@@ -254,6 +264,7 @@ describe('TestExecutionCreator', () => {
             prompt.withSpinner.mockRejectedValueOnce(new Error('Spinner error'));
 
             await creator.createWithLinks(projectName, testKeys, csvName);
+
             expect(rootLogger['error']).toHaveBeenCalledWith(expect.stringContaining('Erro ao vincular testes'));
         });
 
@@ -264,6 +275,7 @@ describe('TestExecutionCreator', () => {
             await creator.createWithLinks(projectName, testKeys, csvName, { title: 'Custom Title' });
 
             const callArgs = mockJiraResource.postJiraResource.mock.calls[0];
+
             expect(callArgs?.[0]).toBe('issue');
             expect(callArgs?.[1]).toHaveProperty('fields.summary', 'Custom Title');
         });
@@ -287,6 +299,7 @@ describe('TestExecutionCreator', () => {
         it('returns { key, summary } on success', async () => {
             setupHappy({ customfield_10200: [] });
             const result = await creator.addTestsToExistingExecution(teKey, testKeys);
+
             expect(result).toEqual({ key: 'TE-1', summary: 'My TE' });
             expect(mockJiraResource['putJiraResource']).toHaveBeenCalledWith('issue/TE-1', {
                 fields: { customfield_10200: ['TEST-1', 'TEST-2'] },
@@ -299,6 +312,7 @@ describe('TestExecutionCreator', () => {
                 fields: { issuetype: { name: 'Bug' } },
             });
             const result = await creator.addTestsToExistingExecution('BUG-1', testKeys);
+
             expect(result).toBeNull();
             expect(rootLogger['error']).toHaveBeenCalledWith(expect.stringContaining('não é uma Test Execution'));
         });
@@ -309,6 +323,7 @@ describe('TestExecutionCreator', () => {
                 fields: {},
             });
             const result = await creator.addTestsToExistingExecution('X-1', testKeys);
+
             expect(result).toBeNull();
             expect(rootLogger['error']).toHaveBeenCalledWith(expect.stringContaining('não é uma Test Execution'));
         });
@@ -316,6 +331,7 @@ describe('TestExecutionCreator', () => {
         it('returns null when fields response is non-array', async () => {
             mockJiraResource.getJiraResource.mockResolvedValueOnce(teIssue).mockResolvedValueOnce({ not: 'array' });
             const result = await creator.addTestsToExistingExecution(teKey, testKeys);
+
             expect(result).toBeNull();
             expect(rootLogger['error']).toHaveBeenCalledWith(expect.stringContaining('campos customizados'));
         });
@@ -325,6 +341,7 @@ describe('TestExecutionCreator', () => {
                 .mockResolvedValueOnce(teIssue)
                 .mockResolvedValueOnce([{ id: 'cf1', name: 'Other', schema: { custom: 'other:type' } }]);
             const result = await creator.addTestsToExistingExecution(teKey, testKeys);
+
             expect(result).toBeNull();
             expect(rootLogger['error']).toHaveBeenCalledWith(expect.stringContaining('Tests association'));
         });
@@ -332,6 +349,7 @@ describe('TestExecutionCreator', () => {
         it('merges existing tests with new ones, deduplicating', async () => {
             setupHappy({ customfield_10200: ['EXISTING-1', 'TEST-1'] });
             await creator.addTestsToExistingExecution(teKey, testKeys);
+
             expect(mockJiraResource['putJiraResource']).toHaveBeenCalledWith('issue/TE-1', {
                 fields: { customfield_10200: ['EXISTING-1', 'TEST-1', 'TEST-2'] },
             });
@@ -340,6 +358,7 @@ describe('TestExecutionCreator', () => {
         it('handles when TE has no current tests in custom field', async () => {
             setupHappy({});
             await creator.addTestsToExistingExecution(teKey, testKeys);
+
             expect(mockJiraResource['putJiraResource']).toHaveBeenCalledWith('issue/TE-1', {
                 fields: { customfield_10200: ['TEST-1', 'TEST-2'] },
             });
@@ -352,6 +371,7 @@ describe('TestExecutionCreator', () => {
                 .mockResolvedValueOnce({ fields: { issuelinks: [] } });
             mockLinkManager.createIssueLink.mockResolvedValueOnce({}).mockRejectedValueOnce(new Error('Link error'));
             const result = await creator.addTestsToExistingExecution(teKey, testKeys);
+
             expect(result).toEqual({ key: 'TE-1', summary: 'My TE' });
             expect(mockLinkManager['createIssueLink']).toHaveBeenCalledTimes(2);
         });
@@ -365,6 +385,7 @@ describe('TestExecutionCreator', () => {
             mockJiraResource.getJiraResource.mockResolvedValueOnce({ fields: { issuelinks: [] } });
             mockLinkManager.createIssueLink.mockResolvedValue({});
             const result = await creator.addTestsToExistingExecution(teKey, testKeys);
+
             expect(result).toEqual({ key: 'TE-1', summary: 'TE-1' });
         });
     });

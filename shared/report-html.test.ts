@@ -59,22 +59,26 @@ const HEALTH_SCORE: import('./types.js').HealthScoreResult = {
 describe('generateHtmlReport', () => {
     it('returns valid HTML for basic test list', () => {
         const html = generateHtmlReport(MOCK_TESTS);
+
         expect(html).toContain('Login Test');
         expect(html).toContain('Logout Test');
     });
 
     it('includes quality gate when provided', () => {
         const html = generateHtmlReport(MOCK_TESTS, { title: 'Report', qualityGate: 80 });
+
         expect(html).toContain('Quality Gate');
     });
 
     it('handles empty test list', () => {
         const html = generateHtmlReport([], { title: 'Empty' });
+
         expect(html).toContain('Empty');
     });
 
     it('includes health score section when provided', () => {
         const html = generateHtmlReport(MOCK_TESTS, { title: 'Health', healthScore: HEALTH_SCORE });
+
         expect(html).toContain('Test Suite Health');
         expect(html).toContain('Quality Gate: Pass');
     });
@@ -85,6 +89,7 @@ describe('generateHtmlReport', () => {
             flakinessDashboardUrl: 'https://dash.example.com',
             flakinessMap: { 'Test 1': 3 },
         });
+
         expect(html).toContain('Flakiness Dashboard');
     });
 
@@ -94,12 +99,14 @@ describe('generateHtmlReport', () => {
             branch: 'feature/test',
             ciUrl: 'https://ci.example.com/123',
         });
+
         expect(html).toContain('feature/test');
         expect(html).toContain('href');
     });
 
     it('includes branch text without link when no ciUrl', () => {
         const html = generateHtmlReport(MOCK_TESTS, { title: 'Branch', branch: 'feature/x' });
+
         expect(html).toContain('feature/x');
     });
 
@@ -109,6 +116,7 @@ describe('generateHtmlReport', () => {
             { name: 'Firefox', tests: [nonNull(MOCK_TESTS[0])] },
         ];
         const html = generateHtmlReport(MOCK_TESTS, { title: 'Multi', runs });
+
         expect(html).toContain('Chrome');
         expect(html).toContain('Firefox');
         expect(html).toContain('switchTab');
@@ -120,6 +128,7 @@ describe('generateHtmlReport', () => {
             { title: 'T2', state: 'failed', duration: 20, fullTitle: 'Other > T2' },
         ];
         const html = generateHtmlReport(testsWithHierarchy, { title: 'Hierarchy' });
+
         expect(html).toContain('Suite');
         expect(html).toContain('Other');
     });
@@ -132,6 +141,7 @@ describe('generateHtmlReport', () => {
                 { label: 'Tue', passRate: 85, total: 10, failed: 2 },
             ],
         });
+
         expect(html).toContain('Pass Rate Trend');
     });
 
@@ -142,6 +152,7 @@ describe('generateHtmlReport', () => {
             flaky: [] satisfies FlatTest[],
         };
         const html = generateHtmlReport(MOCK_TESTS, { title: 'Diff', diffComparison });
+
         expect(html).toContain('Diff');
     });
 });
@@ -150,6 +161,7 @@ describe('generateReportWithFallback', () => {
     it('returns error page when generation fails', () => {
         const badTests = nullAs<FlatTest[]>();
         const html = generateReportWithFallback(badTests, { title: 'Fail' });
+
         expect(html).toContain('Error generating report');
     });
 });
@@ -157,6 +169,7 @@ describe('generateReportWithFallback', () => {
 describe('generateCoverageHtml', () => {
     it('returns valid HTML for epics', () => {
         const html = generateCoverageHtml(MOCK_EPICS, 'Coverage Report');
+
         expect(html).toContain('Coverage Report');
         expect(html).toContain('EPIC-1');
         expect(html).toContain('ISSUE-2');
@@ -165,11 +178,13 @@ describe('generateCoverageHtml', () => {
 
     it('shows correct close percentage', () => {
         const html = generateCoverageHtml(MOCK_EPICS);
+
         expect(html).toContain('33.3');
     });
 
     it('shows 0.0 when no epics', () => {
         const html = generateCoverageHtml([], 'Empty Report');
+
         expect(html).toContain('0.0');
     });
 
@@ -186,6 +201,7 @@ describe('generateCoverageHtml', () => {
             },
         ];
         const html = generateCoverageHtml(epics);
+
         expect(html).toContain('66.7');
     });
 
@@ -198,6 +214,7 @@ describe('generateCoverageHtml', () => {
             },
         ];
         const html = generateCoverageHtml(epics);
+
         expect(html).toContain('In Progress');
         expect(html).toContain('data-component="badge"');
     });
@@ -205,6 +222,7 @@ describe('generateCoverageHtml', () => {
     it('returns error page on failure', () => {
         const badEpics = nullAs<CoverageEpic[]>();
         const html = generateCoverageHtml(badEpics);
+
         expect(html).toContain('Error generating coverage report');
     });
 });

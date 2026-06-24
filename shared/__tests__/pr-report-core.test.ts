@@ -333,6 +333,7 @@ describe('generatePrReport', () => {
         });
 
         const calledWith = String(mockPRComment.postPrComment.mock.calls[0]?.[0]);
+
         expect(typeof calledWith).toBe('string');
         expect(calledWith).toContain('Methodology & References');
         expect(calledWith).toContain('passed/(passed+failed)×100');
@@ -353,6 +354,7 @@ describe('generatePrReport', () => {
         });
 
         const commentBody = String(mockPRComment.postPrComment.mock.calls[0]?.[0]);
+
         expect(commentBody).toContain('CI Context');
         expect(commentBody).toContain('Run #123');
         expect(commentBody).toContain('feature/test');
@@ -374,6 +376,7 @@ describe('generatePrReport', () => {
         });
 
         const commentBody = String(mockPRComment.postPrComment.mock.calls[0]?.[0]);
+
         expect(commentBody).not.toContain('CI Context');
     });
 
@@ -401,6 +404,7 @@ describe('generatePrReport', () => {
             const summaryCall = writeCalls.find((call) => String(call[0]) === summaryPath);
             if (!summaryCall) throw new Error('Expected summaryCall to be defined');
             const content = typeof summaryCall[1] === 'string' ? summaryCall[1] : '';
+
             expect(content).toContain('QA Tools — PR Report');
             expect(content).toContain('| ✅ Passed | ❌ Failed | ⏭ Skipped |');
             expect(content).toContain('| 8 | 1 | 1 | 10 |');
@@ -432,6 +436,7 @@ describe('generatePrReport', () => {
             });
 
             const summaryContent = fs.readFileSync(summaryPath, 'utf8');
+
             expect(summaryContent).toBe('');
         } finally {
             delete process.env['GITHUB_STEP_SUMMARY'];

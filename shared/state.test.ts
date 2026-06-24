@@ -71,14 +71,18 @@ describe('State', () => {
         it('returns empty object when no state file', () => {
             mockFs({});
             const result = state.load(makeConfig());
+
             expect(result).toEqual({});
         });
 
         it('returns parsed state when file exists', () => {
             mockFs({ [STATE_PATH]: JSON.stringify({ lastProject: 'ECSPOL' }) });
             const result = state.load(makeConfig());
+
             expect(result).toEqual({ lastProject: 'ECSPOL' });
+
             const typed = state.loadTypedState(makeConfig());
+
             expect(typed).toEqual({ lastProject: 'ECSPOL' });
         });
     });
@@ -87,6 +91,7 @@ describe('State', () => {
         it('writes state to backup and main paths', () => {
             const mocks = mockFs({});
             state.save({ lastProject: 'TEST' }, makeConfig());
+
             expect(mocks.write).toHaveBeenCalled();
         });
     });
@@ -97,6 +102,7 @@ describe('State', () => {
             const result = state.update((s) => {
                 s['lastProject'] = 'NEW';
             }, makeConfig());
+
             expect(result['lastProject']).toBe('NEW');
         });
 
@@ -105,6 +111,7 @@ describe('State', () => {
             const result = state.update((s) => {
                 s['lastProject'] = 'NEW';
             }, makeConfig());
+
             expect(result['lastProject']).toBe('NEW');
         });
     });
@@ -117,6 +124,7 @@ describe('State', () => {
                 [bakPath]: JSON.stringify({ lastProject: 'RECOVERED' }),
             });
             const result = state.load(makeConfig());
+
             expect(result).toEqual({ lastProject: 'RECOVERED' });
         });
     });
@@ -130,6 +138,7 @@ describe('State', () => {
             });
             const config = makeConfig();
             state.migrateOldState(config);
+
             expect(mocks.rename).toHaveBeenCalledWith(STATE_PATH + '.tmp', STATE_PATH);
             expect(state.load(config)).toEqual({ lastProject: 'MIGRATED' });
         });
@@ -141,6 +150,7 @@ describe('State', () => {
             });
             const config = makeConfig();
             state.migrateOldState(config);
+
             expect(mocks.rename).not.toHaveBeenCalled();
             expect(state.load(config)).toEqual({ lastProject: 'NEW' });
         });
@@ -153,6 +163,7 @@ describe('State', () => {
                 [STATE_PATH]: 'corrupted{json',
             });
             const result = state.load(config);
+
             expect(result).toEqual({});
         });
 
@@ -162,6 +173,7 @@ describe('State', () => {
                 [STATE_PATH]: 'corrupted{json',
             });
             state.load(config);
+
             expect(mockRootLogger.warn).toHaveBeenCalled();
         });
     });
@@ -175,6 +187,7 @@ describe('State', () => {
                 [bakPath]: 'also-bad{json',
             });
             const result = state.load(config);
+
             expect(result).toEqual({});
             expect(mockRootLogger.error).toHaveBeenCalledWith(expect.stringContaining('Falha ao recuperar backup'));
         });
@@ -188,6 +201,7 @@ describe('State', () => {
                 throw new Error('rename denied');
             });
             const result = state.load(config);
+
             expect(result).toEqual({});
             expect(mockRootLogger.error).toHaveBeenCalledWith(expect.stringContaining('Falha ao salvar backup'));
         });
@@ -201,6 +215,7 @@ describe('State', () => {
                 throw new Error('disk full');
             });
             state.save({ key: 'value' }, config);
+
             expect(mockRootLogger.error).toHaveBeenCalledWith(expect.stringContaining('Falha ao salvar estado'));
         });
     });
@@ -213,6 +228,7 @@ describe('State', () => {
                 throw new Error('permission denied');
             });
             const result = state.load(config);
+
             expect(result).toEqual({});
         });
     });
@@ -227,6 +243,7 @@ describe('State', () => {
                 throw new Error('read error');
             });
             state.migrateOldState(makeConfig());
+
             expect(mockRootLogger.warn).toHaveBeenCalled();
         });
     });
@@ -234,7 +251,8 @@ describe('State', () => {
     describe('getStatePath', () => {
         it('returns path ending in state.json', () => {
             const result = state.getStatePath(makeConfig());
-            expect(result.endsWith('state.json')).toBe(true);
+
+            expect(result.endsWith('state.json')).toBeTruthy();
         });
     });
 
@@ -243,10 +261,13 @@ describe('State', () => {
             const s = state.updateTyped((st) => {
                 st._llmConfigured = true;
             }, makeConfig());
-            expect(s._llmConfigured).toBe(true);
+
+            expect(s._llmConfigured).toBeTruthy();
+
             // Verify persisted
             const loaded = state.loadTypedState(makeConfig());
-            expect(loaded._llmConfigured).toBe(true);
+
+            expect(loaded._llmConfigured).toBeTruthy();
         });
 
         it('deletes field via typed callback', () => {
@@ -260,7 +281,8 @@ describe('State', () => {
                 delete st._llmConfigAttempts;
             }, makeConfig());
             const loaded = state.loadTypedState(makeConfig());
-            expect(loaded._llmConfigured).toBe(true);
+
+            expect(loaded._llmConfigured).toBeTruthy();
             expect(loaded._llmConfigAttempts).toBeUndefined();
         });
     });

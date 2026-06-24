@@ -8,6 +8,7 @@ describe('TestCaseDataSchema', () => {
             steps: ['Enter user', 'Enter password', 'Click login'],
             expectedResult: 'User is redirected to dashboard',
         };
+
         expect(TestCaseDataSchema.parse(data)).toEqual(data);
     });
 
@@ -54,11 +55,13 @@ describe('TestCaseDataSchema', () => {
 describe('PreConditionInputSchema', () => {
     it('accepts reference type with key', () => {
         const data = { type: 'reference', key: 'PREC-123' };
+
         expect(PreConditionInputSchema.parse(data)).toEqual(data);
     });
 
     it('accepts create type with summary', () => {
         const data = { type: 'create', summary: 'User must be logged in' };
+
         expect(PreConditionInputSchema.parse(data)).toEqual(data);
     });
 
@@ -77,6 +80,7 @@ describe('PreConditionInputSchema', () => {
             ],
         };
         const parsed = TestCaseDataSchema.parse(data);
+
         expect(parsed.preConditions).toBeDefined();
         expect(nonNull(parsed.preConditions)).toHaveLength(2);
         expect(nonNull(parsed.preConditions)[0]).toEqual({ type: 'reference', key: 'PREC-123' });
@@ -88,6 +92,7 @@ describe('PreConditionInputSchema', () => {
             steps: ['Enter user', 'Enter password'],
             expectedResult: 'User is redirected to dashboard',
         };
+
         expect(TestCaseDataSchema.parse(data).preConditions).toBeUndefined();
     });
 });
@@ -101,6 +106,7 @@ describe('TestCaseArraySchema', () => {
                 expectedResult: 'User is redirected to dashboard',
             },
         ];
+
         expect(TestCaseArraySchema.parse(data)).toEqual(data);
     });
 

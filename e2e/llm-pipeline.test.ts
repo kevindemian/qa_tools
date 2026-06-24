@@ -68,10 +68,11 @@ describe('LLM Pipeline E2E', () => {
         const result = await reviewWithLlm('System prompt', 'User request');
 
         expect(result.content).toContain('ASSERTION');
-        expect(result.reviewed).toBe(true);
+        expect(result.reviewed).toBeTruthy();
         expect(result.confidence).toBe('high');
 
         const metrics = snapshotLlmMetrics();
+
         expect(metrics.cacheHits).toBe(0);
     });
 
@@ -89,7 +90,7 @@ describe('LLM Pipeline E2E', () => {
 
         const result = await reviewWithLlm('System prompt', 'User request');
 
-        expect(result.reviewed).toBe(true);
+        expect(result.reviewed).toBeTruthy();
         expect(result.confidence).toBe('high');
         expect(mockLlmPrompt).toHaveBeenCalledTimes(9);
     });
@@ -108,9 +109,10 @@ describe('LLM Pipeline E2E', () => {
             .mockResolvedValueOnce('AGREE - Both tests look good.');
 
         const result = await reviewWithLlm('System prompt', 'User request');
+
         expect(result.content).toContain('Login fails');
         expect(result.content).toContain('Logout fails');
-        expect(result.reviewed).toBe(true);
+        expect(result.reviewed).toBeTruthy();
     });
 
     it('circuit breaker opens during pipeline and triggers fallback', async () => {

@@ -33,6 +33,7 @@ describe('coverage invariants (PBT)', () => {
                         coverageTable: declared !== null ? { coverage: declared } : undefined,
                     };
                     const result = recalculateCoverage(artifact, makeCtx(input));
+
                     expect(result.realCoverage).toBeGreaterThanOrEqual(0);
                     expect(result.realCoverage).toBeLessThanOrEqual(100);
                 },
@@ -47,6 +48,7 @@ describe('coverage invariants (PBT)', () => {
                     tests: [{ title: 'login' }, { title: 'payment' }, { title: 'email' }],
                 };
                 const result = recalculateCoverage(artifact, makeCtx(input));
+
                 expect(result.totalCriteria).toBeGreaterThanOrEqual(result.coveredCriteria);
             }),
         );
@@ -60,6 +62,7 @@ describe('coverage invariants (PBT)', () => {
                 };
                 const result = recalculateCoverage(artifact, makeCtx(input));
                 if (result.totalCriteria === 0) return;
+
                 expect(result.coveredCriteria + result.gaps.length).toBe(result.totalCriteria);
             }),
         );
@@ -94,14 +97,15 @@ describe('coverage invariants (PBT)', () => {
         );
     });
 
-    it('NaN in coverageTable yields null declaredCoverage', () => {
+    it('naN in coverageTable yields null declaredCoverage', () => {
         const artifact = {
             tests: [{ title: 'login' }],
             coverageTable: { coverage: NaN },
         };
         const result = recalculateCoverage(artifact, makeCtx('Given login'));
+
         expect(result.declaredCoverage).toBeNull();
-        expect(Number.isNaN(result.coverageDelta)).toBe(false);
+        expect(Number.isNaN(result.coverageDelta)).toBeFalsy();
         expect(result.coverageDelta).toBe(0);
     });
 

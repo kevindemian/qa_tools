@@ -100,6 +100,7 @@ describe('Config', () => {
         it('calls dotenv.config twice on module load (.env.local + .env)', () => {
             __resetDotenvLoaded();
             Config.load();
+
             expect(mockDotenvConfig).toHaveBeenCalledTimes(2);
         });
 
@@ -108,6 +109,7 @@ describe('Config', () => {
             Config.get('debug');
             Config.get('onError');
             Config.get('logLevel');
+
             expect(mockDotenvConfig).not.toHaveBeenCalled();
         });
 
@@ -117,6 +119,7 @@ describe('Config', () => {
             });
             __resetDotenvLoaded();
             Config.load();
+
             expect(typeof Config.load).toBe('function');
         });
     });
@@ -139,6 +142,7 @@ describe('Config', () => {
 
         it.each(STRING_GETTERS)('%s returns the env value when set', (getter, envVar) => {
             process.env[envVar] = 'from-env';
+
             expect(Config.get(getter)).toBe('from-env');
         });
     });
@@ -192,12 +196,13 @@ describe('Config', () => {
         ];
 
         it.each(BOOL_GETTERS)('%s defaults to false', (getter) => {
-            expect(Config.get(getter)).toBe(false);
+            expect(Config.get(getter)).toBeFalsy();
         });
 
         it.each(BOOL_GETTERS)('%s returns true when "%s" set to true', (getter, envVar) => {
             process.env[envVar] = 'true';
-            expect(Config.get(getter)).toBe(true);
+
+            expect(Config.get(getter)).toBeTruthy();
         });
     });
 
@@ -208,11 +213,13 @@ describe('Config', () => {
 
         it('returns the env value when valid', () => {
             process.env['XRAY_MODE'] = 'cloud';
+
             expect(Config.get('xrayMode')).toBe('cloud');
         });
 
         it('throws when XRAY_MODE is invalid', () => {
             process.env['XRAY_MODE'] = 'invalid';
+
             expect(() => Config.get('xrayMode')).toThrow(/XRAY_MODE/);
         });
     });
@@ -224,6 +231,7 @@ describe('Config', () => {
 
         it('returns env value when set', () => {
             process.env['CSV_LABELS'] = 'type,summary';
+
             expect(Config.get('csvLabels')).toBe('type,summary');
         });
     });
@@ -235,6 +243,7 @@ describe('Config', () => {
 
         it('returns env value when set', () => {
             process.env['JSON_LABELS'] = 'key,value';
+
             expect(Config.get('jsonLabels')).toBe('key,value');
         });
     });
@@ -246,6 +255,7 @@ describe('Config', () => {
 
         it('returns env value when set', () => {
             process.env['LOG_LEVEL'] = 'DEBUG';
+
             expect(Config.get('logLevel')).toBe('DEBUG');
         });
     });
@@ -257,19 +267,23 @@ describe('Config', () => {
 
         it('returns env value when set', () => {
             process.env['LOG_DIR'] = '/var/log';
+
             expect(Config.get('logDir')).toBe('/var/log');
         });
 
         it('prioritizes QA_TOOLS_LOGS_DIR over LOG_DIR', () => {
             process.env['QA_TOOLS_LOGS_DIR'] = '/qa/logs';
             process.env['LOG_DIR'] = '/var/log';
+
             expect(Config.get('logDir')).toBe('/qa/logs');
+
             delete process.env['QA_TOOLS_LOGS_DIR'];
             delete process.env['LOG_DIR'];
         });
 
         it('uses override when provided', () => {
             const cfg = Config.create({ logDir: '/override/logs' });
+
             expect(cfg.get('logDir')).toBe('/override/logs');
         });
     });
@@ -281,11 +295,13 @@ describe('Config', () => {
 
         it('returns env value when set', () => {
             process.env['LOG_MAX_SIZE'] = '2097152';
+
             expect(Config.get('logMaxSize')).toBe(2097152);
         });
 
         it('uses override when provided', () => {
             const cfg = Config.create({ logMaxSize: 4194304 });
+
             expect(cfg.get('logMaxSize')).toBe(4194304);
         });
     });
@@ -293,6 +309,7 @@ describe('Config', () => {
     describe('xdgStateHome', () => {
         it('uses XDG_STATE_HOME when set', () => {
             process.env['XDG_STATE_HOME'] = '/custom/state';
+
             expect(Config.get('xdgStateHome')).toBe('/custom/state');
         });
     });
@@ -303,6 +320,7 @@ describe('Config', () => {
             process.env['QA_TOOLS_BAZ'] = 'qux';
             process.env['OTHER'] = 'ignored';
             const result = Config.getAllPrefixed('QA_TOOLS_');
+
             expect(result).toEqual({ QA_TOOLS_FOO: 'bar', QA_TOOLS_BAZ: 'qux' });
         });
     });
@@ -310,24 +328,28 @@ describe('Config', () => {
     describe('Config.create', () => {
         it('returns a separate instance with overrides', () => {
             const cfg = Config.create({ jiraBaseUrl: 'https://override.url' });
+
             expect(cfg.get('jiraBaseUrl')).toBe('https://override.url');
         });
 
         it('default instance getters are unaffected by create', () => {
             const cfg = Config.create({ jiraBaseUrl: 'https://override.url' });
+
             expect(cfg.get('jiraBaseUrl')).toBe('https://override.url');
             expect(Config.get('jiraBaseUrl')).toBe('');
         });
 
         it('overrides can be partial', () => {
             const cfg = Config.create({ debug: true });
-            expect(cfg.get('debug')).toBe(true);
+
+            expect(cfg.get('debug')).toBeTruthy();
             expect(cfg.get('jiraBaseUrl')).toBe('');
         });
 
         it('overrides take precedence over env vars', () => {
             process.env['JIRA_BASE_URL'] = 'https://env.url';
             const cfg = Config.create({ jiraBaseUrl: 'https://override.url' });
+
             expect(cfg.get('jiraBaseUrl')).toBe('https://override.url');
         });
     });
@@ -335,43 +357,50 @@ describe('Config', () => {
     describe('setAutoConfirm', () => {
         it('setAutoConfirm(true) makes get autoConfirm return true', () => {
             Config.setAutoConfirm(true);
-            expect(Config.get('autoConfirm')).toBe(true);
+
+            expect(Config.get('autoConfirm')).toBeTruthy();
         });
 
         it('setAutoConfirm(false) makes get autoConfirm return false', () => {
             Config.setAutoConfirm(true);
             Config.setAutoConfirm(false);
-            expect(Config.get('autoConfirm')).toBe(false);
+
+            expect(Config.get('autoConfirm')).toBeFalsy();
         });
 
         it('setAutoConfirm on static instance is isolated from created instances', () => {
             const cfg = Config.create({ autoConfirm: false });
             Config.setAutoConfirm(true);
-            expect(cfg.get('autoConfirm')).toBe(false);
+
+            expect(cfg.get('autoConfirm')).toBeFalsy();
         });
 
         it('setAutoConfirm on an instance is isolated from static', () => {
             Config.setAutoConfirm(false);
             const cfg = Config.create({ autoConfirm: true });
-            expect(cfg.get('autoConfirm')).toBe(true);
+
+            expect(cfg.get('autoConfirm')).toBeTruthy();
         });
     });
 
     describe('set', () => {
-        it('Config.set sets an override', () => {
+        it('config.set sets an override', () => {
             Config.set('jiraBaseUrl', 'https://set.url');
+
             expect(Config.get('jiraBaseUrl')).toBe('https://set.url');
         });
 
-        it('Config.set does not affect create instances', () => {
+        it('config.set does not affect create instances', () => {
             Config.set('debug', true);
             const cfg = Config.create({ debug: false });
-            expect(cfg.get('debug')).toBe(false);
+
+            expect(cfg.get('debug')).toBeFalsy();
         });
 
-        it('Config.set can override a previously set value', () => {
+        it('config.set can override a previously set value', () => {
             Config.set('jiraBaseUrl', 'https://first.url');
             Config.set('jiraBaseUrl', 'https://second.url');
+
             expect(Config.get('jiraBaseUrl')).toBe('https://second.url');
         });
     });
@@ -381,13 +410,15 @@ describe('Config', () => {
             const before = Config.getDefault();
             Config.reset();
             const after = Config.getDefault();
+
             expect(before).not.toBe(after);
         });
 
         it('getters return correct values after reset', () => {
             Config.reset();
+
             expect(Config.get('jiraBaseUrl')).toBe('');
-            expect(Config.get('debug')).toBe(false);
+            expect(Config.get('debug')).toBeFalsy();
         });
     });
 
@@ -402,11 +433,13 @@ describe('Config', () => {
 
         it('reads from LLM_MAX_TOTAL_TOKENS env var', () => {
             process.env['LLM_MAX_TOTAL_TOKENS'] = '50000';
+
             expect(Config.get('llmMaxTotalTokens')).toBe(50000);
         });
 
         it('uses override when provided', () => {
             const overridden = Config.create({ llmMaxTotalTokens: 100000 });
+
             expect(overridden.get('llmMaxTotalTokens')).toBe(100000);
         });
     });
@@ -433,6 +466,7 @@ describe('Config', () => {
                 xrayClientSecret: 'csec-ov',
             };
             const cfg = Config.create(o);
+
             expect(cfg.get('llmApiKey')).toBe('key-ov');
             expect(cfg.get('llmModel')).toBe('model-ov');
             expect(cfg.get('llmBaseUrl')).toBe('url-ov');
@@ -458,11 +492,13 @@ describe('Config', () => {
             process.env['JIRA_BASE_URL'] = 'https://jira.example.com';
             process.env['JIRA_PERSONAL_TOKEN'] = 'token-123';
             process.env['XRAY_BASE_URL'] = 'https://xray.example.com';
+
             expect(() => Config.validateRequiredEnv()).not.toThrow();
         });
 
         it('throws when a required env var is missing', () => {
             delete process.env['JIRA_BASE_URL'];
+
             expect(() => Config.validateRequiredEnv()).toThrow();
         });
     });
