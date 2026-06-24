@@ -34,7 +34,7 @@ describe('PreconditionHandler', () => {
         handler = new PreconditionHandler(mockJiraResource);
     });
 
-    describe('_getPreconditionFieldId', () => {
+    describe('_GetPreconditionFieldId', () => {
         it('returns cached value on second call', async () => {
             const fields = [
                 { id: 'custom_123', schema: { custom: 'com.xpandit.plugins.xray:test-precondition-custom-field' } },
@@ -95,7 +95,7 @@ describe('PreconditionHandler', () => {
         });
     });
 
-    describe('_resolvePreconditionIssueTypeId', () => {
+    describe('_ResolvePreconditionIssueTypeId', () => {
         it('returns the issue type id for Pre-condition', async () => {
             mockJiraResource.getJiraResource.mockResolvedValue([
                 { id: '11801', name: 'Pre-condition' },

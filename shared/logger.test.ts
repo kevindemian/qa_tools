@@ -58,7 +58,7 @@ describe('Logger', () => {
         });
     });
 
-    describe('_writeFile', () => {
+    describe('_WriteFile', () => {
         function writeAndCheck(
             level: keyof Logger,
             msg: string,
@@ -156,7 +156,7 @@ describe('Logger', () => {
         });
     });
 
-    describe('_ensureDir error paths', () => {
+    describe('_EnsureDir error paths', () => {
         let spyError: MockInstance | undefined;
 
         afterEach(() => {
@@ -207,7 +207,7 @@ describe('Logger', () => {
         });
     });
 
-    describe('_rotateIfNeeded error paths', () => {
+    describe('_RotateIfNeeded error paths', () => {
         afterEach(() => {
             vi.restoreAllMocks();
         });
@@ -248,7 +248,7 @@ describe('Logger', () => {
         });
     });
 
-    describe('_writeFile error paths', () => {
+    describe('_WriteFile error paths', () => {
         let spyError: MockInstance | undefined;
 
         afterEach(() => {
@@ -352,7 +352,7 @@ describe('Logger', () => {
         });
     });
 
-    describe('_writeConsole error with data', () => {
+    describe('_WriteConsole error with data', () => {
         it('appends short JSON data to ERROR console output', () => {
             const spyError = vi.spyOn(console, 'error').mockImplementation(() => {});
             const logger = new Logger();

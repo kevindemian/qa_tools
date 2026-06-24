@@ -110,7 +110,7 @@ describe('IsFirstRun', () => {
     });
 });
 
-describe('_markFirstRunDone', () => {
+describe('_MarkFirstRunDone', () => {
     it('calls updateState with callback that sets _firstRunDone', async () => {
         const { _markFirstRunDone } = await loadModule();
         _markFirstRunDone();

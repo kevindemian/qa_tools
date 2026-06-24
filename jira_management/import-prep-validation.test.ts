@@ -32,7 +32,7 @@ vi.mock('../shared/config', () => ({
     get: vi.fn(),
 }));
 
-describe('_runValidationRules', () => {
+describe('_RunValidationRules', () => {
     beforeEach(() => {
         vi.clearAllMocks();
     });
@@ -75,7 +75,7 @@ describe('_runValidationRules', () => {
     });
 });
 
-describe('_printValidationMessages', () => {
+describe('_PrintValidationMessages', () => {
     beforeEach(() => {
         vi.clearAllMocks();
     });

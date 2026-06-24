@@ -266,7 +266,7 @@ describe('Interactive-mode test exports', () => {
         });
     });
 
-    describe('_selectProject', () => {
+    describe('SelectProject', () => {
         it('returns null project when prompt returns invalid index', () => {
             mockLoad.mockReturnValue({ lastProject: '' });
             const result = _testExports._selectProject();
@@ -275,7 +275,7 @@ describe('Interactive-mode test exports', () => {
         });
     });
 
-    describe('_handleExit', () => {
+    describe('HandleExit', () => {
         it('returns true', () => {
             const result = _testExports._handleExit();
 
@@ -283,7 +283,7 @@ describe('Interactive-mode test exports', () => {
         });
     });
 
-    describe('_dispatchAction', () => {
+    describe('_DispatchAction', () => {
         it('handles /help command', async () => {
             const result = await _testExports._dispatchAction('/help', {} as never, 'proj', []);
 
@@ -328,13 +328,13 @@ describe('Interactive-mode test exports', () => {
         });
     });
 
-    describe('_initInfrastructure', () => {
+    describe('_InitInfrastructure', () => {
         it('calls ensureDirs and registerCleanup', () => {
             _testExports._initInfrastructure();
         });
     });
 
-    describe('_ensureProjectsConfigured', () => {
+    describe('_EnsureProjectsConfigured', () => {
         it('returns true when projects exist', async () => {
             const sessionState = await import('./session-state.js');
             (sessionState.getProjects as ReturnType<typeof vi.fn>).mockReturnValue({ proj1: '1' });
@@ -359,13 +359,13 @@ describe('Interactive-mode test exports', () => {
         });
     });
 
-    describe('_initEnvironment', () => {
+    describe('_InitEnvironment', () => {
         it('completes successfully with valid env', async () => {
             await _testExports._initEnvironment();
         });
     });
 
-    describe('_promptChoice', () => {
+    describe('_PromptChoice', () => {
         it('returns a choice string', async () => {
             const result = await _testExports._promptChoice('test');
 
@@ -373,7 +373,7 @@ describe('Interactive-mode test exports', () => {
         });
     });
 
-    describe('_selectProjectAndCreateManager', () => {
+    describe('_SelectProjectAndCreateManager', () => {
         it('returns null when no projects exist', async () => {
             const sessionState = await import('./session-state.js');
             (sessionState.getProjects as ReturnType<typeof vi.fn>).mockReturnValue({});
@@ -384,7 +384,7 @@ describe('Interactive-mode test exports', () => {
         });
     });
 
-    describe('_loadProjectRunsHelper', () => {
+    describe('_LoadProjectRunsHelper', () => {
         it('returns null when no project selected', () => {
             mockSessionState.currentProjectName = '';
             const result = _testExports._loadProjectRunsHelper();
@@ -500,7 +500,7 @@ describe('Interactive-mode test exports', () => {
         });
     });
 
-    describe('_generateAndOpenDashboard', () => {
+    describe('_GenerateAndOpenDashboard', () => {
         it('writes report and opens browser', async () => {
             mockSessionState.currentProjectName = 'proj1';
             await _testExports._generateAndOpenDashboard('<html>', 'test', 'Test');
@@ -630,7 +630,7 @@ describe('Interactive-mode test exports', () => {
         });
     });
 
-    describe('_showDashboardMenu', () => {
+    describe('_ShowDashboardMenu', () => {
         it('shows dashboard menu', async () => {
             mockSessionState.currentProjectName = 'proj1';
             await _testExports._showDashboardMenu();
@@ -645,7 +645,7 @@ describe('Interactive-mode test exports', () => {
         });
     });
 
-    describe('_dashboardReleaseScore', () => {
+    describe('_DashboardReleaseScore', () => {
         it('generates release score dashboard', async () => {
             mockSessionState.currentProjectName = 'proj1';
             const metricsMod = await import('../shared/metrics.js');
@@ -678,7 +678,7 @@ describe('Interactive-mode test exports', () => {
         });
     });
 
-    describe('_dashboardQualityGate', () => {
+    describe('_DashboardQualityGate', () => {
         it('warns when no project selected', async () => {
             mockSessionState.currentProjectName = '';
             await _testExports._dashboardQualityGate();
@@ -692,19 +692,19 @@ describe('Interactive-mode test exports', () => {
         });
     });
 
-    describe('_dashboardBacklogHealth', () => {
+    describe('_DashboardBacklogHealth', () => {
         it('generates backlog health dashboard', async () => {
             await _testExports._dashboardBacklogHealth();
         });
     });
 
-    describe('_dashboardRequirementScore', () => {
+    describe('_DashboardRequirementScore', () => {
         it('generates requirement score dashboard', async () => {
             await _testExports._dashboardRequirementScore();
         });
     });
 
-    describe('_dashboardPipelineCost', () => {
+    describe('_DashboardPipelineCost', () => {
         it('generates pipeline cost dashboard', async () => {
             mockSessionState.currentProjectName = 'proj1';
             const metricsMod = await import('../shared/metrics.js');
@@ -737,13 +737,13 @@ describe('Interactive-mode test exports', () => {
         });
     });
 
-    describe('_dashboardAiEffectiveness', () => {
+    describe('_DashboardAiEffectiveness', () => {
         it('generates AI effectiveness dashboard', async () => {
             await _testExports._dashboardAiEffectiveness();
         });
     });
 
-    describe('_dashboardDefectTrends', () => {
+    describe('_DashboardDefectTrends', () => {
         it('generates defect trends dashboard', async () => {
             mockSessionState.currentProjectName = 'proj1';
             const metricsMod = await import('../shared/metrics.js');
@@ -776,7 +776,7 @@ describe('Interactive-mode test exports', () => {
         });
     });
 
-    describe('_dashboardTraceabilityMatrix', () => {
+    describe('_DashboardTraceabilityMatrix', () => {
         it('generates traceability matrix dashboard', async () => {
             mockSessionState.currentProjectName = 'proj1';
             const metricsMod = await import('../shared/metrics.js');
@@ -809,7 +809,7 @@ describe('Interactive-mode test exports', () => {
         });
     });
 
-    describe('_dashboardSeasonality', () => {
+    describe('_DashboardSeasonality', () => {
         it('generates seasonality dashboard', async () => {
             mockSessionState.currentProjectName = 'proj1';
             const metricsMod = await import('../shared/metrics.js');
@@ -842,7 +842,7 @@ describe('Interactive-mode test exports', () => {
         });
     });
 
-    describe('_dashboardSilentRegression', () => {
+    describe('_DashboardSilentRegression', () => {
         it('generates silent regression dashboard', async () => {
             mockSessionState.currentProjectName = 'proj1';
             const metricsMod = await import('../shared/metrics.js');
@@ -875,13 +875,13 @@ describe('Interactive-mode test exports', () => {
         });
     });
 
-    describe('_dashboardAiComparison', () => {
+    describe('_DashboardAiComparison', () => {
         it('generates AI comparison dashboard', async () => {
             await _testExports._dashboardAiComparison();
         });
     });
 
-    describe('_dashboardBenchmark', () => {
+    describe('_DashboardBenchmark', () => {
         it('generates benchmark dashboard', async () => {
             mockSessionState.currentProjectName = 'proj1';
             const metricsMod = await import('../shared/metrics.js');
@@ -914,7 +914,7 @@ describe('Interactive-mode test exports', () => {
         });
     });
 
-    describe('_dashboardDeveloperProfile', () => {
+    describe('_DashboardDeveloperProfile', () => {
         it('generates developer profile dashboard', async () => {
             mockSessionState.currentProjectName = 'proj1';
             const metricsMod = await import('../shared/metrics.js');
@@ -947,7 +947,7 @@ describe('Interactive-mode test exports', () => {
         });
     });
 
-    describe('_dashboardSuiteOptimization', () => {
+    describe('_DashboardSuiteOptimization', () => {
         it('generates suite optimization dashboard', async () => {
             mockSessionState.currentProjectName = 'proj1';
             const metricsMod = await import('../shared/metrics.js');
@@ -980,7 +980,7 @@ describe('Interactive-mode test exports', () => {
         });
     });
 
-    describe('_dashboardIncidentReport', () => {
+    describe('_DashboardIncidentReport', () => {
         it('generates incident report dashboard', async () => {
             mockSessionState.currentProjectName = 'proj1';
             const metricsMod = await import('../shared/metrics.js');
@@ -1013,7 +1013,7 @@ describe('Interactive-mode test exports', () => {
         });
     });
 
-    describe('_dashboardImpactAlert', () => {
+    describe('_DashboardImpactAlert', () => {
         it('generates impact alert dashboard', async () => {
             mockSessionState.currentProjectName = 'proj1';
             const metricsMod = await import('../shared/metrics.js');
@@ -1046,7 +1046,7 @@ describe('Interactive-mode test exports', () => {
         });
     });
 
-    describe('_dashboardCoverageGap', () => {
+    describe('_DashboardCoverageGap', () => {
         it('warns when no project selected', async () => {
             mockSessionState.currentProjectName = '';
             await _testExports._dashboardCoverageGap();

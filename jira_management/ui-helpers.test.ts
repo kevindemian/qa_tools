@@ -161,7 +161,7 @@ describe('ShowHelp', () => {
     });
 });
 
-describe('_configHint', () => {
+describe('_ConfigHint', () => {
     const ctx = { git_directory: '/my/git' };
 
     it('returns git directory for gitDir key', () => {
