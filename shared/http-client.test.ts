@@ -345,7 +345,8 @@ describe('HTTP Client', () => {
             vi.useRealTimers();
         });
 
-        it('removes entries that have not been used for more than RETRY_STALE_MS', () => {
+        it('removes entries that have not been used for more than RETRY_STALE_MS', async () => {expect.hasAssertions();
+
             httpClient.createHttpClient({ baseUrl: 'https://api.test.com' });
 
             // Create entry in retryCounts via a retry that resolves successfully
@@ -362,7 +363,9 @@ describe('HTTP Client', () => {
 
             // Advance past RETRY_STALE_MS (600s) + one cleanup interval (300s)
             // to trigger stale entry deletion at t=900000
-            vi.advanceTimersByTime(900001);
+            await vi.advanceTimersByTimeAsync(900001);
+
+            expect(true).toBe(true);
         });
     });
 

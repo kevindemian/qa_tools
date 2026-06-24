@@ -218,8 +218,12 @@ describe('QualityMetricsCollector', () => {
     });
 
     describe('Exported functions', () => {
-        it('recordInvariantFire calls default collector', () => {
+        it('recordInvariantFire calls default collector', () => {expect.hasAssertions();
+
             recordInvariantFire('T-01');
+            const snapshot = snapshotQualityMetrics();
+
+            expect(snapshot.invariantFireCount['T-01']).toBe(1);
         });
 
         it('detectDrift returns array', () => {

@@ -233,7 +233,7 @@ describe('CreateTestExecution', () => {
 
         await expect(
             createTestExecution({ testExecutionCreator, projectName: PROJECT, testKeys: ['TEST-1'], csvName: '' }),
-        ).rejects.toThrow();
+        ).rejects.toThrow(/error/i);
     });
 
     it('returns null when field API returns non-array', async () => {expect.hasAssertions();

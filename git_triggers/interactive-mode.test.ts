@@ -210,6 +210,7 @@ vi.mock('../shared/flakiness-dashboard', () => ({ generateFlakinessHtml: vi.fn((
 import { _testExports } from './interactive-mode.js';
 import { warn, printError } from '../shared/prompt.js';
 import { load } from '../shared/state.js';
+import { ensureDirs, registerCleanup } from '../shared/temp-dir.js';
 
 const mockWarn = vi.mocked(warn);
 const mockPrintError = vi.mocked(printError);
@@ -340,8 +341,12 @@ describe('Interactive-mode test exports', () => {
     });
 
     describe('_InitInfrastructure', () => {
-        it('calls ensureDirs and registerCleanup', () => {
+        it('calls ensureDirs and registerCleanup', () => {expect.hasAssertions();
+
             _testExports._initInfrastructure();
+
+            expect(ensureDirs).toHaveBeenCalledOnce();
+            expect(registerCleanup).toHaveBeenCalledOnce();
         });
     });
 

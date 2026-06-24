@@ -65,7 +65,7 @@ describe('TestHistoryCache', () => {
         vi.useFakeTimers();
         const cache = new TestHistoryCache(5000);
         cache.set('TEST-123', [{ status: 'PASSED', testExecKey: 'TE-1' }]);
-        vi.advanceTimersByTime(6000);
+        vi.advanceTimersByTimeAsync(6000);
 
         expect(cache.get('TEST-123')).toBeUndefined();
 

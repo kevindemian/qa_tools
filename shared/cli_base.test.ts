@@ -184,7 +184,7 @@ describe('CLI Base', () => {
             expect(onExit).toHaveBeenCalledWith();
             expect(MOCK_PROMPT.info).toHaveBeenCalledWith('Até logo!');
 
-            vi.advanceTimersByTime(2000);
+            vi.advanceTimersByTimeAsync(2000);
 
             expect(exitSpy).toHaveBeenCalledWith();
 
@@ -228,7 +228,7 @@ describe('CLI Base', () => {
             expect(onExit).toHaveBeenCalledWith();
             expect(MOCK_PROMPT.info).toHaveBeenCalledWith('Até logo!');
 
-            vi.advanceTimersByTime(2000);
+            vi.advanceTimersByTimeAsync(2000);
 
             expect(exitSpy).toHaveBeenCalledWith();
 
@@ -267,7 +267,7 @@ describe('CLI Base', () => {
 
             expect(MOCK_PROMPT.info).toHaveBeenCalledWith('Até logo!');
 
-            vi.advanceTimersByTime(2000);
+            vi.advanceTimersByTimeAsync(2000);
 
             expect(exitSpy).toHaveBeenCalledWith();
 
