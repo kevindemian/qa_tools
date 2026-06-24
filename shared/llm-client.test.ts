@@ -277,7 +277,7 @@ describe('LlmPrompt', () => {
 
         Config.set('llmApiKey', '');
 
-        await expect(llmPrompt({ tier: 'main', system: 'system', user: 'test' })).rejects.toThrow();
+        await expect(llmPrompt({ tier: 'main', system: 'system', user: 'test' })).rejects.toThrow(/error/i);
     });
 
     it('sends responseFormat=json payload when param is passed', async () => {expect.hasAssertions();
@@ -466,7 +466,7 @@ describe('LlmPrompt', () => {
 
             mockFetch.mockResolvedValue(mockErrorResponse(429));
             for (let i = 0; i < 5; i++) {
-                await expect(llmPrompt({ tier: 'main', system: 'system', user: 'test' + i })).rejects.toThrow();
+                await expect(llmPrompt({ tier: 'main', system: 'system', user: 'test' + i })).rejects.toThrow(/error/i);
             }
         });
 
@@ -475,7 +475,7 @@ describe('LlmPrompt', () => {
             mockFetch.mockResolvedValue(mockErrorResponse(429));
             // Prime: 5 failures to open circuit
             for (let i = 0; i < 5; i++) {
-                await expect(llmPrompt({ tier: 'main', system: 'system', user: 'prime' + i })).rejects.toThrow();
+                await expect(llmPrompt({ tier: 'main', system: 'system', user: 'prime' + i })).rejects.toThrow(/error/i);
             }
             const fetchCount = mockFetch.mock.calls.length;
 
@@ -490,7 +490,7 @@ describe('LlmPrompt', () => {
 
             mockFetch.mockResolvedValue(mockErrorResponse(429));
             for (let i = 0; i < 5; i++) {
-                await expect(llmPrompt({ tier: 'main', system: 'system', user: 'prime' + i })).rejects.toThrow();
+                await expect(llmPrompt({ tier: 'main', system: 'system', user: 'prime' + i })).rejects.toThrow(/error/i);
             }
             resetCircuitState();
             mockFetch.mockReset();
@@ -507,7 +507,7 @@ describe('LlmPrompt', () => {
             mockFetch.mockResolvedValue(mockErrorResponse(429));
             // 4 failures → counter at 4
             for (let i = 0; i < 4; i++) {
-                await expect(llmPrompt({ tier: 'main', system: 'system', user: 'fail' + i })).rejects.toThrow();
+                await expect(llmPrompt({ tier: 'main', system: 'system', user: 'fail' + i })).rejects.toThrow(/error/i);
             }
             // Next call: mock switches to success
             mockFetch.mockReset();
@@ -1164,7 +1164,7 @@ describe('LlmPrompt', () => {
             expect(r1).toBe('first');
             expect(mockFetch).toHaveBeenCalledTimes(1);
 
-            vi.advanceTimersByTime(5 * 60 * 1000 + 1000);
+            vi.advanceTimersByTimeAsync(5 * 60 * 1000 + 1000);
 
             mockFetch.mockResolvedValue(
                 mockOkResponse(JSON.stringify({ choices: [{ message: { content: 'second' } }] })),
@@ -1199,7 +1199,7 @@ describe('LlmPrompt', () => {
             expect(r1).toBe('to-clean');
             expect(mockFetch).toHaveBeenCalledTimes(1);
 
-            vi.advanceTimersByTime(600 * 1000);
+            vi.advanceTimersByTimeAsync(600 * 1000);
             const r2 = await llmPrompt({
                 tier: 'main',
                 system: 'system',

@@ -105,7 +105,7 @@ describe('ExpireQuarantine', () => {
     it('expires entries past their TTL', () => {
         vi.useFakeTimers();
         quarantineTest({ testTitle: TEST_TITLE, reason: 'flaky', quarantinedBy: 'test', flakyRate: 0.5, ttlDays: 0 });
-        vi.advanceTimersByTime(1000);
+        vi.advanceTimersByTimeAsync(1000);
         const expired = expireQuarantine();
 
         expect(expired).toBe(1);
@@ -118,7 +118,7 @@ describe('ExpireQuarantine', () => {
         quarantineTest({ testTitle: 'perm-test', reason: 'flaky', quarantinedBy: 'test', flakyRate: 0.5 });
         markPermanent('perm-test');
         vi.useFakeTimers();
-        vi.advanceTimersByTime(400 * 24 * 60 * 60 * 1000);
+        vi.advanceTimersByTimeAsync(400 * 24 * 60 * 60 * 1000);
         const expired = expireQuarantine();
 
         expect(expired).toBe(0);

@@ -415,7 +415,7 @@ describe('Store', () => {
             const store = new Store(failBackend, project);
             const warnSpy = vi.spyOn(rootLogger, 'warn');
 
-            expect(() => store.saveMetrics({ runs: [] })).toThrow();
+            expect(() => store.saveMetrics({ runs: [] })).toThrow(/error/i);
 
             const msg = warnSpy.mock.calls[0]?.[0];
 

@@ -124,7 +124,7 @@ describe('CheckMemoryCache', () => {
     it('returns miss when cached entry has expired', () => {
         setMemoryCache('expired-key', 'stale');
         vi.useFakeTimers();
-        vi.advanceTimersByTime(CACHE_TTL_MS + 1000);
+        vi.advanceTimersByTimeAsync(CACHE_TTL_MS + 1000);
         const result = checkMemoryCache('expired-key', 'main', undefined, undefined, undefined);
 
         expect(result.hit).toBeFalsy();

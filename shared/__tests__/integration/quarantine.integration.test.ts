@@ -106,7 +106,7 @@ describe('FT-36b — Expire entry', () => {
             ttlDays: 0,
         });
 
-        vi.advanceTimersByTime(1000);
+        vi.advanceTimersByTimeAsync(1000);
 
         const expired = expireQuarantine();
 
@@ -134,7 +134,7 @@ describe('FT-36c — Permanent entry survives expiry', () => {
         markPermanent('permanent.spec.ts');
 
         vi.useFakeTimers();
-        vi.advanceTimersByTime(1000);
+        vi.advanceTimersByTimeAsync(1000);
 
         const expired = expireQuarantine();
 

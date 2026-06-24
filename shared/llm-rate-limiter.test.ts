@@ -87,7 +87,7 @@ describe('CheckRateLimit', () => {
 
         expect(() => checkRateLimit('main')).toThrow(LlmRateLimitError);
 
-        vi.advanceTimersByTime(LLM_RATE_WINDOW_MS + 1000);
+        vi.advanceTimersByTimeAsync(LLM_RATE_WINDOW_MS + 1000);
 
         expect(() => checkRateLimit('main')).not.toThrow();
 
