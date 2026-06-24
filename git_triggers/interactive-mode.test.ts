@@ -345,8 +345,8 @@ describe('Interactive-mode test exports', () => {
 
             _testExports._initInfrastructure();
 
-            expect(ensureDirs).toHaveBeenCalledOnce();
-            expect(registerCleanup).toHaveBeenCalledOnce();
+            expect(ensureDirs).toHaveBeenCalledOnceWith();
+            expect(registerCleanup).toHaveBeenCalledOnceWith();
         });
     });
 
