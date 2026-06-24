@@ -83,7 +83,7 @@ function runsWithSharedTestNames(
  * Properties — calculateFlakyRate
  * ────────────────────────────────────────────────────────────── */
 
-describe('calculateFlakyRate — property-based', () => {
+describe('CalculateFlakyRate — property-based', () => {
     it('always returns a value in [0, 100]', () => {
         fc.assert(
             fc.property(
@@ -225,7 +225,7 @@ describe('calculateFlakyRate — property-based', () => {
  * Properties — calculateFlakiness
  * ────────────────────────────────────────────────────────────── */
 
-describe('calculateFlakiness — property-based', () => {
+describe('CalculateFlakiness — property-based', () => {
     it('each entry has consistent counts: pass + fail + skip = totalRuns', () => {
         fc.assert(
             fc.property(
@@ -302,7 +302,7 @@ describe('calculateFlakiness — property-based', () => {
  * Properties — getTrends
  * ────────────────────────────────────────────────────────────── */
 
-describe('getTrends — property-based', () => {
+describe('GetTrends — property-based', () => {
     it('always returns at most `window` entries', () => {
         fc.assert(
             fc.property(

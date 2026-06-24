@@ -12,7 +12,7 @@ import { describe, it, expect } from 'vitest';
 import { calculateHealthScore } from '../health-score.js';
 import type { MetricsStore } from '../metrics.js';
 
-describe('calculateHealthScore — pass rate consistency', () => {
+describe('CalculateHealthScore — pass rate consistency', () => {
     it('pass rate excludes skipped tests from denominator', () => {
         const store: MetricsStore = {
             runs: [
@@ -64,7 +64,7 @@ describe('calculateHealthScore — pass rate consistency', () => {
     });
 });
 
-describe('calculateHealthScore — suite speed threshold', () => {
+describe('CalculateHealthScore — suite speed threshold', () => {
     it('suite speed score is 0 when p95 > 3000ms', () => {
         const tests = Array.from({ length: 20 }, (_, i) => ({
             title: `t${i}`,
@@ -116,7 +116,7 @@ describe('calculateHealthScore — suite speed threshold', () => {
     });
 });
 
-describe('calculateHealthScore — quality gate unification', () => {
+describe('CalculateHealthScore — quality gate unification', () => {
     it('qualityGate field reflects runQualityGate result', () => {
         const store: MetricsStore = {
             runs: [

@@ -3,7 +3,7 @@ import { analyzeSuiteOptimization, generateOptimizationHtml } from './suite-opti
 const DEFAULT_SLOW = 5;
 const DEFAULT_FLAKY = 0.3;
 
-describe('analyzeSuiteOptimization', () => {
+describe('AnalyzeSuiteOptimization', () => {
     it('returns empty result for empty input', () => {
         const result = analyzeSuiteOptimization([]);
 
@@ -194,7 +194,7 @@ describe('analyzeSuiteOptimization', () => {
     });
 });
 
-describe('generateOptimizationHtml', () => {
+describe('GenerateOptimizationHtml', () => {
     it('returns complete HTML page structure', () => {
         const result = analyzeSuiteOptimization([{ title: 'slow', duration: 10, flakiness: 0.05 }]);
         const html = generateOptimizationHtml(result);

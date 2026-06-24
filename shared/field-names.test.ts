@@ -1,6 +1,6 @@
 import { normalizeFieldName, sanitizeCellValue } from './field-names.js';
 
-describe('normalizeFieldName', () => {
+describe('NormalizeFieldName', () => {
     it('preserves canonical Action', () => {
         expect(normalizeFieldName('Action')).toBe('Action');
     });
@@ -66,7 +66,7 @@ describe('normalizeFieldName', () => {
     });
 });
 
-describe('sanitizeCellValue', () => {
+describe('SanitizeCellValue', () => {
     it('preserves normal value without \\r', () => {
         expect(sanitizeCellValue('hello world')).toBe('hello world');
     });

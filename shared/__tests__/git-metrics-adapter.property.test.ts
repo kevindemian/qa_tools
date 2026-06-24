@@ -52,7 +52,7 @@ const logLineArb: fc.Arbitrary<string> = fc
     )
     .map(([hash, date, subject, author, parentField]) => `${hash}\0${date}\0${subject}\0${author}\0${parentField}`);
 
-describe('parseGitLogOutput invariants (PBT)', () => {
+describe('ParseGitLogOutput invariants (PBT)', () => {
     it('every entry has non-empty hash, date and subject', () => {
         fc.assert(
             fc.property(fc.array(logLineArb, { minLength: 1, maxLength: 20 }), (lines) => {
@@ -84,7 +84,7 @@ describe('parseGitLogOutput invariants (PBT)', () => {
     });
 });
 
-describe('generateGitMetricsRuns invariants (PBT)', () => {
+describe('GenerateGitMetricsRuns invariants (PBT)', () => {
     const N = '\0';
     const sampleLog = [
         'abc123' + N + '2026-06-01T10:00:00.000Z' + N + 'Initial commit' + N + 'user' + N,
@@ -157,7 +157,7 @@ describe('generateGitMetricsRuns invariants (PBT)', () => {
     });
 });
 
-describe('generateGitFailureClassifications invariants (PBT)', () => {
+describe('GenerateGitFailureClassifications invariants (PBT)', () => {
     const N = '\0';
     const sampleLog = [
         'abc123' + N + '2026-06-01T10:00:00.000Z' + N + 'Initial' + N + 'user' + N,
@@ -188,7 +188,7 @@ describe('generateGitFailureClassifications invariants (PBT)', () => {
     });
 });
 
-describe('extractDate', () => {
+describe('ExtractDate', () => {
     it('returns YYYY-MM-DD for valid ISO date', () => {
         const log = 'h1' + '\0' + '2026-06-15T10:00:00.000Z' + '\0' + 'msg' + '\0' + 'author' + '\0';
         mockExecFileSync.mockReturnValue(log);
@@ -198,7 +198,7 @@ describe('extractDate', () => {
     });
 });
 
-describe('parseGitLogOutput malformed line invariants (PBT)', () => {
+describe('ParseGitLogOutput malformed line invariants (PBT)', () => {
     it('never throws on any input string', () => {
         fc.assert(
             fc.property(fc.string({ minLength: 0, maxLength: 200 }), (input) => {
@@ -226,7 +226,7 @@ describe('parseGitLogOutput malformed line invariants (PBT)', () => {
     });
 });
 
-describe('getLastGitLogError invariants (PBT)', () => {
+describe('GetLastGitLogError invariants (PBT)', () => {
     beforeEach(() => {
         vi.clearAllMocks();
     });

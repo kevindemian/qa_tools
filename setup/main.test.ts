@@ -81,7 +81,7 @@ function mockAskForTests(prePush: boolean) {
         .mockResolvedValueOnce(false); // configureLlm
 }
 
-describe('setup main', () => {
+describe('Setup main', () => {
     beforeEach(() => {
         vi.clearAllMocks();
         vi.spyOn(MockFs, 'existsSync').mockReturnValue(false);

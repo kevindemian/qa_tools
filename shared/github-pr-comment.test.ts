@@ -20,7 +20,7 @@ vi.mock('./deps.js', async () => {
     };
 });
 
-describe('postPrComment', () => {
+describe('PostPrComment', () => {
     const originalEnv = { ...process.env };
     let penv = process.env as Record<string, string | undefined>;
 

@@ -40,7 +40,7 @@ describe('IssueLinker', () => {
         vi.clearAllMocks();
     });
 
-    describe('associatePrecondition', () => {
+    describe('AssociatePrecondition', () => {
         const opLog = { info: vi.fn() };
 
         it('returns null when no precondition', async () => {
@@ -78,7 +78,7 @@ describe('IssueLinker', () => {
         });
     });
 
-    describe('linkIssues', () => {
+    describe('LinkIssues', () => {
         it('returns null when no linkedIssues', async () => {
             const result = await linker.linkIssues('TEST-1', { title: 'Test', steps: [] });
 
@@ -132,7 +132,7 @@ describe('IssueLinker', () => {
         });
     });
 
-    describe('updateCrossReferences', () => {
+    describe('UpdateCrossReferences', () => {
         it('does nothing when tests array is empty', async () => {
             await linker.updateCrossReferences([], []);
 

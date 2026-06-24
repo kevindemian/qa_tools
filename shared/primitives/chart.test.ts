@@ -6,7 +6,7 @@
 
 import { BarChart, TrendChart, Sparkline, ProgressBar } from './chart.js';
 
-describe('chart primitives', () => {
+describe('Chart primitives', () => {
     describe('BarChart', () => {
         it('renders SVG with segments', () => {
             const html = BarChart({

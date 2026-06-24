@@ -67,7 +67,7 @@ describe('TestCaseValidator — createTestCaseValidator', () => {
     });
 });
 
-describe('invariantCoverageComplete (T-01)', () => {
+describe('InvariantCoverageComplete (T-01)', () => {
     it('passes when all criteria covered', () => {
         const results = invariantCoverageComplete(
             { tests: [{ title: 'Test login', coverage: [{ criterionId: 'C-1', criterionText: 'User can log in' }] }] },
@@ -89,7 +89,7 @@ describe('invariantCoverageComplete (T-01)', () => {
     });
 });
 
-describe('invariantCoverageThreshold (T-02)', () => {
+describe('InvariantCoverageThreshold (T-02)', () => {
     it('passes when coverage >= 90', () => {
         const results = invariantCoverageThreshold({ coverageTable: { coverage: 95 } }, makeCtx(''));
 
@@ -103,7 +103,7 @@ describe('invariantCoverageThreshold (T-02)', () => {
     });
 });
 
-describe('invariantConcreteSteps (T-04)', () => {
+describe('InvariantConcreteSteps (T-04)', () => {
     it('passes concrete steps', () => {
         const results = invariantConcreteSteps(
             { tests: [{ steps: ['Click button', 'Enter text', 'Submit form', 'Verify result'] }] },
@@ -123,7 +123,7 @@ describe('invariantConcreteSteps (T-04)', () => {
     });
 });
 
-describe('invariantVerifiableResult (T-05)', () => {
+describe('InvariantVerifiableResult (T-05)', () => {
     it('passes verifiable result', () => {
         const results = invariantVerifiableResult(
             { tests: [{ expectedResult: 'User is redirected to dashboard page with 200 status' }] },
@@ -143,7 +143,7 @@ describe('invariantVerifiableResult (T-05)', () => {
     });
 });
 
-describe('invariantUniqueTitles (T-06)', () => {
+describe('InvariantUniqueTitles (T-06)', () => {
     it('passes unique titles', () => {
         const results = invariantUniqueTitles({ tests: [{ title: 'Test A' }, { title: 'Test B' }] }, makeCtx(''));
 
@@ -160,7 +160,7 @@ describe('invariantUniqueTitles (T-06)', () => {
     });
 });
 
-describe('invariantPreconditionsExist (T-07)', () => {
+describe('InvariantPreconditionsExist (T-07)', () => {
     it('passes with preconditions', () => {
         const results = invariantPreconditionsExist(
             { tests: [{ preConditions: [{ type: 'setup', description: 'd' }] }] },
@@ -177,7 +177,7 @@ describe('invariantPreconditionsExist (T-07)', () => {
     });
 });
 
-describe('invariantResultMatchesAction (T-08)', () => {
+describe('InvariantResultMatchesAction (T-08)', () => {
     it('passes when expectedResult matches create action', () => {
         const results = invariantResultMatchesAction(
             { tests: [{ steps: ['Create user', 'Submit form'], expectedResult: 'User created successfully' }] },
@@ -232,7 +232,7 @@ describe('invariantResultMatchesAction (T-08)', () => {
     });
 });
 
-describe('invariantNoDuplicateTests (T-10)', () => {
+describe('InvariantNoDuplicateTests (T-10)', () => {
     it('passes unique test steps', () => {
         const results = invariantNoDuplicateTests(
             { tests: [{ steps: ['Step one', 'Step two'] }, { steps: ['Different steps', 'Other actions'] }] },
@@ -243,7 +243,7 @@ describe('invariantNoDuplicateTests (T-10)', () => {
     });
 });
 
-describe('invariantStateMutation (T-03)', () => {
+describe('InvariantStateMutation (T-03)', () => {
     it('passes when no mutation keywords', () => {
         const results = invariantStateMutation(
             { tests: [{ steps: ['View page', 'Read data'] }] },
@@ -254,7 +254,7 @@ describe('invariantStateMutation (T-03)', () => {
     });
 });
 
-describe('invariantNumericConsistency (T-09)', () => {
+describe('InvariantNumericConsistency (T-09)', () => {
     it('passes consistent numbers', () => {
         const results = invariantNumericConsistency({ item_count: 3, items: [1, 2, 3] }, makeCtx(''));
 
@@ -268,7 +268,7 @@ describe('invariantNumericConsistency (T-09)', () => {
     });
 });
 
-describe('invariantPartitionCoverage (T-11)', () => {
+describe('InvariantPartitionCoverage (T-11)', () => {
     it('passes when all partitions are covered', () => {
         const results = invariantPartitionCoverage(
             {
@@ -360,7 +360,7 @@ describe('invariantPartitionCoverage (T-11)', () => {
     });
 });
 
-describe('invariantBoundaryCoverage (T-12)', () => {
+describe('InvariantBoundaryCoverage (T-12)', () => {
     it('passes when all boundaries are covered (2-value BVA)', () => {
         const results = invariantBoundaryCoverage(
             {
@@ -434,7 +434,7 @@ describe('invariantBoundaryCoverage (T-12)', () => {
     });
 });
 
-describe('invariantRedundancyCoupling (T-13)', () => {
+describe('InvariantRedundancyCoupling (T-13)', () => {
     it('passes with fewer than 2 tests', () => {
         const results = invariantRedundancyCoupling(
             { tests: [{ title: 'Only test', steps: ['Do something'] }] },

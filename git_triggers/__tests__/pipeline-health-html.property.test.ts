@@ -57,7 +57,7 @@ const issueArb = fc
     })
     .map((i) => i);
 
-describe('renderPipelineHealthHtml — property-based', () => {
+describe('RenderPipelineHealthHtml — property-based', () => {
     beforeEach(() => {
         vi.restoreAllMocks();
     });

@@ -46,7 +46,7 @@ beforeEach(() => {
 });
 
 describe('XrayCloudClient', () => {
-    describe('authenticate', () => {
+    describe('Authenticate', () => {
         it('returns token on success', async () => {
             mockPost.mockResolvedValue({ data: '"eyJ.token"' });
             const client = new XrayCloudClient();
@@ -85,7 +85,7 @@ describe('XrayCloudClient', () => {
         });
     });
 
-    describe('graphql', () => {
+    describe('Graphql', () => {
         it('authenticates and sends query', async () => {
             mockPost.mockResolvedValueOnce({ data: '"eyJ.token"' }).mockResolvedValueOnce({
                 data: { data: { getTestRuns: { results: [{ id: '1', status: { name: 'PASS' } }] } } },
@@ -121,7 +121,7 @@ describe('XrayCloudClient', () => {
         });
     });
 
-    describe('graphqlMutation', () => {
+    describe('GraphqlMutation', () => {
         it('authenticates and executes mutation', async () => {
             mockPost
                 .mockResolvedValueOnce({ data: '"eyJ.token"' })

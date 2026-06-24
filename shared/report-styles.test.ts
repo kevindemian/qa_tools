@@ -4,8 +4,8 @@
 
 import { buildCss, buildCssVars, buildDarkVars } from './report-styles.js';
 
-describe('report-styles', () => {
-    describe('buildCssVars', () => {
+describe('Report-styles', () => {
+    describe('BuildCssVars', () => {
         it('generates :root with CSS custom properties', () => {
             const vars = buildCssVars();
 
@@ -25,7 +25,7 @@ describe('report-styles', () => {
         });
     });
 
-    describe('buildDarkVars', () => {
+    describe('BuildDarkVars', () => {
         it('generates html.dark with CSS custom properties', () => {
             const vars = buildDarkVars();
 
@@ -44,7 +44,7 @@ describe('report-styles', () => {
         });
     });
 
-    describe('buildCss', () => {
+    describe('BuildCss', () => {
         it('returns a non-empty CSS string', () => {
             const css = buildCss();
 

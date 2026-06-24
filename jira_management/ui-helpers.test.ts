@@ -126,7 +126,7 @@ beforeEach(() => {
     vi.clearAllMocks();
 });
 
-describe('showHelp', () => {
+describe('ShowHelp', () => {
     it('displays general help when no topic given', () => {
         showHelp();
 
@@ -173,7 +173,7 @@ describe('_configHint', () => {
     });
 });
 
-describe('buildMenuChoices', () => {
+describe('BuildMenuChoices', () => {
     const ctx = { git_directory: '/tmp/repo' };
 
     it('returns array for main level', () => {
@@ -202,7 +202,7 @@ describe('buildMenuChoices', () => {
     });
 });
 
-describe('handleSpecialInput', () => {
+describe('HandleSpecialInput', () => {
     beforeEach(() => {
         vi.mocked(prompt).mockReturnValue('/back');
     });
@@ -234,7 +234,7 @@ describe('handleSpecialInput', () => {
     });
 });
 
-describe('dispatchChoice', () => {
+describe('DispatchChoice', () => {
     const minimalCtx = createMockContext();
 
     beforeEach(async () => {
@@ -267,7 +267,7 @@ describe('dispatchChoice', () => {
     });
 });
 
-describe('showHelpLoop', () => {
+describe('ShowHelpLoop', () => {
     beforeEach(() => {
         vi.mocked(prompt).mockReturnValue('/back');
     });

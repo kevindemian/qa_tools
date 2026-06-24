@@ -39,7 +39,7 @@ describe('TestCaseFactory', () => {
         vi.resetAllMocks();
     });
 
-    describe('createIssue', () => {
+    describe('CreateIssue', () => {
         const testData = { fields: { summary: 'Test' } };
         const opLog = { info: vi.fn() };
 
@@ -95,7 +95,7 @@ describe('TestCaseFactory', () => {
         });
     });
 
-    describe('createIssue with skipExisting', () => {
+    describe('CreateIssue with skipExisting', () => {
         const testData = { project: 'TEST', fields: { summary: 'Login Test' } };
         const opLog = { info: vi.fn() };
 
@@ -195,7 +195,7 @@ describe('TestCaseFactory', () => {
         });
     });
 
-    describe('postSteps', () => {
+    describe('PostSteps', () => {
         const issueKey = 'TEST-123';
         const test = {
             title: 'Test',

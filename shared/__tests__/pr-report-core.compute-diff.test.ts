@@ -13,7 +13,7 @@ function getResult(current: FlatTest[], previous: FlatTest[]): DiffComparison {
     return result;
 }
 
-describe('computeDiffComparison', () => {
+describe('ComputeDiffComparison', () => {
     it('returns undefined when previous is empty', () => {
         const result = computeDiffComparison([passed], []);
 

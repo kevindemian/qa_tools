@@ -69,7 +69,7 @@ vi.mock('../commands/test-execution-flow.js', () => ({
     showResults: vi.fn().mockResolvedValue(undefined),
 }));
 
-describe('case01 — Import CSV', () => {
+describe('Case01 — Import CSV', () => {
     beforeEach(() => vi.clearAllMocks());
 
     it('calls createTestsFromCsv with correct args', async () => {
@@ -113,7 +113,7 @@ describe('case01 — Import CSV', () => {
     });
 });
 
-describe('case03 — Create Version', () => {
+describe('Case03 — Create Version', () => {
     beforeEach(() => vi.clearAllMocks());
 
     it('calls jiraResource.createVersion with correct args', async () => {
@@ -149,7 +149,7 @@ describe('case03 — Create Version', () => {
     });
 });
 
-describe('case04 — Add Sprint Tasks', () => {
+describe('Case04 — Add Sprint Tasks', () => {
     beforeEach(() => vi.clearAllMocks());
 
     it('uses in-memory tasks when confirmed and calls updateFixVersions', async () => {
@@ -216,7 +216,7 @@ describe('case04 — Add Sprint Tasks', () => {
     });
 });
 
-describe('case05 — Update Package Version', () => {
+describe('Case05 — Update Package Version', () => {
     beforeEach(() => vi.clearAllMocks());
 
     it('calls getReleaseTasks with correct project and version', async () => {
@@ -264,7 +264,7 @@ describe('case05 — Update Package Version', () => {
     });
 });
 
-describe('case06 — Check Release Task Status', () => {
+describe('Case06 — Check Release Task Status', () => {
     beforeEach(() => vi.clearAllMocks());
 
     it('calls checkReleaseTasksStatus via safeJiraCall', async () => {
@@ -293,7 +293,7 @@ describe('case06 — Check Release Task Status', () => {
     });
 });
 
-describe('case07 — Close Tasks', () => {
+describe('Case07 — Close Tasks', () => {
     beforeEach(() => vi.clearAllMocks());
 
     it('fetches release tasks and calls moveCardsToDone', async () => {
@@ -343,7 +343,7 @@ describe('case07 — Close Tasks', () => {
     });
 });
 
-describe('case08 — Publish Version', () => {
+describe('Case08 — Publish Version', () => {
     beforeEach(() => vi.clearAllMocks());
 
     it('calls releaseVersion with correct version', async () => {
@@ -381,7 +381,7 @@ describe('case08 — Publish Version', () => {
     });
 });
 
-describe('case09 — Change Project', () => {
+describe('Case09 — Change Project', () => {
     beforeEach(() => vi.clearAllMocks());
 
     it('updates project name in context', async () => {
@@ -416,7 +416,7 @@ describe('case09 — Change Project', () => {
     });
 });
 
-describe('case10 — Set Git Directory', () => {
+describe('Case10 — Set Git Directory', () => {
     beforeEach(() => vi.clearAllMocks());
 
     it('sets ctx.git_directory to provided path', async () => {
@@ -451,7 +451,7 @@ describe('case10 — Set Git Directory', () => {
     });
 });
 
-describe('case11 — Generate Template', () => {
+describe('Case11 — Generate Template', () => {
     let tmpDir: string;
 
     beforeEach(() => {
@@ -484,7 +484,7 @@ describe('case11 — Generate Template', () => {
     });
 });
 
-describe('case13 — Create Test Execution', () => {
+describe('Case13 — Create Test Execution', () => {
     beforeEach(() => vi.clearAllMocks());
 
     it('uses inMemoryTasksId when available', async () => {
@@ -528,7 +528,7 @@ describe('case13 — Create Test Execution', () => {
     });
 });
 
-describe('case14 — Set Cypress Directory', () => {
+describe('Case14 — Set Cypress Directory', () => {
     beforeEach(() => vi.clearAllMocks());
 
     it('pushes history with config-tests', async () => {
@@ -542,7 +542,7 @@ describe('case14 — Set Cypress Directory', () => {
     });
 });
 
-describe('case16 — Set JSON Directory', () => {
+describe('Case16 — Set JSON Directory', () => {
     beforeEach(() => vi.clearAllMocks());
 
     it('pushes history with config-json-dir', async () => {
@@ -556,7 +556,7 @@ describe('case16 — Set JSON Directory', () => {
     });
 });
 
-describe('case24 — Setup Wizard', () => {
+describe('Case24 — Setup Wizard', () => {
     beforeEach(() => vi.clearAllMocks());
 
     it('calls maybeRunFirstRunWizard', async () => {

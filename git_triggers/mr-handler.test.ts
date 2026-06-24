@@ -47,7 +47,7 @@ beforeEach(() => {
     mockConfirm.mockReturnValue(false);
 });
 
-describe('nivelarBranchesWrapper', () => {
+describe('NivelarBranchesWrapper', () => {
     it('delegates to nivelarBranches', async () => {
         await nivelarBranchesWrapper(mockM);
 
@@ -55,7 +55,7 @@ describe('nivelarBranchesWrapper', () => {
     });
 });
 
-describe('handleCreateMR', () => {
+describe('HandleCreateMR', () => {
     it('creates MR with manual description', async () => {
         mockConfirm.mockReturnValueOnce(false);
         mockPrompt
@@ -131,7 +131,7 @@ describe('handleCreateMR', () => {
     });
 });
 
-describe('handleListApprovedMRs', () => {
+describe('HandleListApprovedMRs', () => {
     it('lists approved MRs', async () => {
         mockPrompt.mockReturnValue('opened');
         const mrs = [
@@ -178,7 +178,7 @@ describe('handleListApprovedMRs', () => {
     });
 });
 
-describe('handleMergeMR', () => {
+describe('HandleMergeMR', () => {
     it('merges MR successfully', async () => {
         mockPrompt.mockReturnValue('42');
         vi.spyOn(mockM, 'acceptMergeRequest').mockResolvedValue({ web_url: 'https://gitlab.com/merge/42' });

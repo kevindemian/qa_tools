@@ -11,7 +11,7 @@ function writeIstanbulFixture(data: unknown): void {
     fs.writeFileSync(TEST_PATH, JSON.stringify(data, null, 2), 'utf8');
 }
 
-describe('readIstanbulCoverage', () => {
+describe('ReadIstanbulCoverage', () => {
     afterEach(() => {
         fs.rmSync(TEST_DIR, { recursive: true, force: true });
     });
@@ -93,7 +93,7 @@ describe('readIstanbulCoverage', () => {
     });
 });
 
-describe('resolveCoverage', () => {
+describe('ResolveCoverage', () => {
     afterEach(() => {
         fs.rmSync(TEST_DIR, { recursive: true, force: true });
     });

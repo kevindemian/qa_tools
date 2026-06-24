@@ -147,7 +147,7 @@ describe('_checkResumeCheckpoint', () => {
     });
 });
 
-describe('filterTests', () => {
+describe('FilterTests', () => {
     const tests = makeTestCases(5);
 
     beforeEach(() => {
@@ -181,7 +181,7 @@ describe('filterTests', () => {
     });
 });
 
-describe('validateImportBatch', () => {
+describe('ValidateImportBatch', () => {
     beforeEach(() => {
         vi.clearAllMocks();
         vi.spyOn(STATE, 'load').mockReturnValue({});
@@ -218,7 +218,7 @@ describe('validateImportBatch', () => {
     });
 });
 
-describe('generatePreviewMarkdown', () => {
+describe('GeneratePreviewMarkdown', () => {
     const tests = [
         {
             title: 'Login test',
@@ -298,7 +298,7 @@ describe('generatePreviewMarkdown', () => {
         expect(md).toContain('_No steps defined._');
     });
 
-    describe('with options', () => {
+    describe('With options', () => {
         const single = [{ title: 'TC1', steps: [{ fields: { Action: 'a', Data: '', 'Expected Result': 'r' } }] }];
 
         it('includes document title when provided', () => {
@@ -332,7 +332,7 @@ describe('generatePreviewMarkdown', () => {
     });
 });
 
-describe('parseJsonTests', () => {
+describe('ParseJsonTests', () => {
     beforeEach(() => {
         vi.clearAllMocks();
     });
@@ -402,7 +402,7 @@ describe('parseJsonTests', () => {
     });
 });
 
-describe('showPreview', () => {
+describe('ShowPreview', () => {
     const tests = [
         {
             title: 'Login test',
@@ -464,7 +464,7 @@ describe('showPreview', () => {
     });
 });
 
-describe('csv -> preview pipeline (e2e)', async () => {
+describe('Csv -> preview pipeline (e2e)', async () => {
     const fs = await vi.importActual<typeof import('fs')>('fs');
     // CsvResource is imported at top level — no requireActual needed
 

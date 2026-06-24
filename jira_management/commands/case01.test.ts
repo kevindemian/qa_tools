@@ -39,7 +39,7 @@ beforeEach(() => {
     vi.clearAllMocks();
 });
 
-describe('case01 — create tests from CSV', () => {
+describe('Case01 — create tests from CSV', () => {
     it('exports a handler function for menu registration', () => {
         expect(case01).toBeDefined();
         expect(typeof case01.handler).toBe('function');

@@ -84,7 +84,7 @@ const CoverageResultArb = fc
         };
     });
 
-describe('buildTraceabilityMatrix — property-based', () => {
+describe('BuildTraceabilityMatrix — property-based', () => {
     it('nodes.length equals totalEpics', () => {
         fc.assert(
             fc.property(MetricsStoreArb, CoverageResultArb, (metrics, coverage) => {
@@ -160,7 +160,7 @@ describe('buildTraceabilityMatrix — property-based', () => {
     });
 });
 
-describe('generateTraceabilityHtml — property-based', () => {
+describe('GenerateTraceabilityHtml — property-based', () => {
     it('always produces valid HTML with DOCTYPE', () => {
         fc.assert(
             fc.property(MetricsStoreArb, CoverageResultArb, (metrics, coverage) => {

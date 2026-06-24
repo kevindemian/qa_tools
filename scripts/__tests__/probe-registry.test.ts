@@ -35,13 +35,13 @@ function mockRegistryFetch(): void {
     mockReadFileSync.mockReturnValue(JSON.stringify(VALID_REGISTRY));
 }
 
-describe('probe-registry', () => {
+describe('Probe-registry', () => {
     beforeEach(() => {
         vi.clearAllMocks();
         vi.stubGlobal('fetch', vi.fn());
     });
 
-    describe('diffModels', () => {
+    describe('DiffModels', () => {
         it('detects added models', async () => {
             mockRegistryFetch();
             const mod = await import('../probe-registry.js');
@@ -124,7 +124,7 @@ describe('probe-registry', () => {
         });
     });
 
-    describe('writeMarkdownReport', () => {
+    describe('WriteMarkdownReport', () => {
         it('writes summary with changes', async () => {
             mockRegistryFetch();
             const mod = await import('../probe-registry.js');
@@ -159,7 +159,7 @@ describe('probe-registry', () => {
         });
     });
 
-    describe('parseArgs', () => {
+    describe('ParseArgs', () => {
         it('parses --provider flag', async () => {
             mockRegistryFetch();
             vi.stubGlobal('process', {
@@ -210,7 +210,7 @@ describe('probe-registry', () => {
         });
     });
 
-    describe('getProviderModels', () => {
+    describe('GetProviderModels', () => {
         it('returns models for known provider', async () => {
             mockRegistryFetch();
             const mod = await import('../probe-registry.js');
@@ -239,7 +239,7 @@ describe('probe-registry', () => {
         });
     });
 
-    describe('enrichFromOpenRouter', () => {
+    describe('EnrichFromOpenRouter', () => {
         it('enriches models with context and capabilities', async () => {
             mockRegistryFetch();
             const mod = await import('../probe-registry.js');

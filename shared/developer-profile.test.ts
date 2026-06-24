@@ -24,7 +24,7 @@ beforeEach(() => {
     mockBuildErrorPage.mockReturnValue('<html>error</html>');
 });
 
-describe('buildDeveloperProfile', () => {
+describe('BuildDeveloperProfile', () => {
     it('returns empty result for empty input', () => {
         const result = buildDeveloperProfile([]);
 
@@ -158,7 +158,7 @@ describe('buildDeveloperProfile', () => {
     });
 });
 
-describe('generateDeveloperProfileHtml', () => {
+describe('GenerateDeveloperProfileHtml', () => {
     it('renders summary cards for populated result', () => {
         const result = {
             authors: [
@@ -416,7 +416,7 @@ describe('AuthorStat failure rate severity classes', () => {
     });
 });
 
-describe('generateDeveloperProfileHtml — category breakdown', () => {
+describe('GenerateDeveloperProfileHtml — category breakdown', () => {
     it('shows category table with entries sorted by count descending', () => {
         const result = {
             authors: [

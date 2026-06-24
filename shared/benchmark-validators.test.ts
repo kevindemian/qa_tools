@@ -17,7 +17,7 @@ const VALID_ARRAY_ITEM = {
 // validateJsonSchema
 // ---------------------------------------------------------------------------
 
-describe('validateJsonSchema', () => {
+describe('ValidateJsonSchema', () => {
     it('returns null for valid JSON with 2 test cases', () => {
         const body = JSON.stringify({ tests: [VALID_SCHEMA_ITEM, VALID_SCHEMA_ITEM] });
 
@@ -66,7 +66,7 @@ describe('validateJsonSchema', () => {
 // validateJsonArray
 // ---------------------------------------------------------------------------
 
-describe('validateJsonArray', () => {
+describe('ValidateJsonArray', () => {
     it('returns null for valid JSON array', () => {
         const body = JSON.stringify([VALID_ARRAY_ITEM]);
 
@@ -111,7 +111,7 @@ describe('validateJsonArray', () => {
 // validateClassify
 // ---------------------------------------------------------------------------
 
-describe('validateClassify', () => {
+describe('ValidateClassify', () => {
     it('returns null when body contains the expected category', () => {
         expect(validateClassify('ASSERTION: expected true got false', 'ASSERTION')).toBeNull();
     });
@@ -135,7 +135,7 @@ describe('validateClassify', () => {
 // Edge cases for validateJsonSchema
 // ---------------------------------------------------------------------------
 
-describe('validateJsonSchema — edge cases', () => {
+describe('ValidateJsonSchema — edge cases', () => {
     it('returns error when tests field is not an array', () => {
         const body = JSON.stringify({ tests: 'not-an-array' });
 
@@ -160,7 +160,7 @@ describe('validateJsonSchema — edge cases', () => {
 // Edge cases for validateJsonArray
 // ---------------------------------------------------------------------------
 
-describe('validateJsonArray — edge cases', () => {
+describe('ValidateJsonArray — edge cases', () => {
     it('returns error when title is shorter than 5 characters', () => {
         const body = JSON.stringify([
             { title: 'AB', steps: ['Step 1'], expectedResult: 'Long enough expected result text here' },
@@ -191,7 +191,7 @@ describe('validateJsonArray — edge cases', () => {
 // Edge cases for validateClassify
 // ---------------------------------------------------------------------------
 
-describe('validateClassify — edge cases', () => {
+describe('ValidateClassify — edge cases', () => {
     it('accepts any of the valid category prefixes', () => {
         expect(validateClassify('TIMEOUT: connection dropped', 'TIMEOUT')).toBeNull();
         expect(validateClassify('ENVIRONMENT: missing env var', 'ENVIRONMENT')).toBeNull();

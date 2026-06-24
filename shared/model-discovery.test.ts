@@ -22,7 +22,7 @@ function mockFetchError(status: number, body: unknown) {
     });
 }
 
-describe('discoverModels', () => {
+describe('DiscoverModels', () => {
     beforeEach(() => {
         vi.restoreAllMocks();
     });
@@ -100,7 +100,7 @@ describe('discoverModels', () => {
     });
 });
 
-describe('assignTierHints', () => {
+describe('AssignTierHints', () => {
     it('returns empty for empty input', () => {
         expect(assignTierHints([])).toEqual([]);
     });

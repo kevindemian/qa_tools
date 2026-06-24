@@ -59,7 +59,7 @@ const metricsRunArb = fc
 
 /* ── Tests ───────────────────────────────────────────────────── */
 
-describe('calculatePipelineCost — property-based', () => {
+describe('CalculatePipelineCost — property-based', () => {
     it('cost per run = (durationSec / 60) * costPerMinute', () => {
         fc.assert(
             fc.property(fc.array(metricsRunArb, { minLength: 1, maxLength: 20 }), costPerMinuteArb, (runs, cpm) => {
@@ -215,7 +215,7 @@ describe('calculatePipelineCost — property-based', () => {
     });
 });
 
-describe('generatePipelineCostHtml — property-based', () => {
+describe('GeneratePipelineCostHtml — property-based', () => {
     it('always produces valid HTML with DOCTYPE', () => {
         fc.assert(
             fc.property(

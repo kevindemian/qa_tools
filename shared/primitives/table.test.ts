@@ -6,7 +6,7 @@
 
 import { DataTable, THead, TBody, Tr, Td, Th } from './table.js';
 
-describe('table primitives', () => {
+describe('Table primitives', () => {
     describe('DataTable', () => {
         const columns = [
             { key: 'name', label: 'Name' },

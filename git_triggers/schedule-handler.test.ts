@@ -176,7 +176,7 @@ beforeAll(async () => {
     }
 });
 
-describe('handleListSchedules', () => {
+describe('HandleListSchedules', () => {
     it('lists schedules for gitlab', async () => {
         const schedules = [
             { id: '1', description: 'Nightly', next_run_at: '2026-01-01' },
@@ -217,7 +217,7 @@ describe('handleListSchedules', () => {
     });
 });
 
-describe('handleRunSchedule', () => {
+describe('HandleRunSchedule', () => {
     it('runs schedule for gitlab', async () => {
         mockPrompt.mockReturnValue('schedule-1');
         vi.spyOn(mockManager, 'runSchedule').mockResolvedValue({ status: 'success' });
@@ -248,7 +248,7 @@ describe('handleRunSchedule', () => {
     });
 });
 
-describe('handleChangeProject', () => {
+describe('HandleChangeProject', () => {
     const names = ['proj1', 'proj2'];
 
     it('changes to valid project', async () => {
@@ -290,7 +290,7 @@ describe('handleChangeProject', () => {
     });
 });
 
-describe('handleFlakinessDashboard', () => {
+describe('HandleFlakinessDashboard', () => {
     it('warns when no project selected', () => {
         void handleFlakinessDashboard();
 
@@ -349,7 +349,7 @@ describe('handleFlakinessDashboard', () => {
     });
 });
 
-describe('generateWeeklyQualityReport', () => {
+describe('GenerateWeeklyQualityReport', () => {
     it('warns when no project selected', () => {
         mockState.currentProjectName = '';
         generateWeeklyQualityReport();

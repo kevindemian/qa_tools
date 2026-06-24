@@ -37,7 +37,7 @@ function makeFixture(criteria: string[], ranges: Array<{ field: string; min: num
 
 /* ── Tests ───────────────────────────────────────────────────── */
 
-describe('computeCoverageMetrics — property-based', () => {
+describe('ComputeCoverageMetrics — property-based', () => {
     it('criteriaCoverage, partitionCoverage, boundaryCoverage sempre em [0, 1]', () => {
         fc.assert(
             fc.property(

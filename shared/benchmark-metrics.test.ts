@@ -19,7 +19,7 @@ const ageFixture = {
 // computeCoverageMetrics
 // ---------------------------------------------------------------------------
 
-describe('computeCoverageMetrics', () => {
+describe('ComputeCoverageMetrics', () => {
     it('returns zero metrics for invalid JSON body', () => {
         const result = computeCoverageMetrics('not json', ageFixture);
 

@@ -2,7 +2,7 @@ import { parseCliArgs } from './cli-args.js';
 
 const ORIG_ARGV = process.argv;
 
-describe('parseCliArgs', () => {
+describe('ParseCliArgs', () => {
     beforeEach(() => {
         process.argv = ['node', 'main.ts'];
     });

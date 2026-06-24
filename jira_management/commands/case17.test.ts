@@ -121,7 +121,7 @@ beforeAll(() => {
     }
 });
 
-describe('case17 — HTML report generator', () => {
+describe('Case17 — HTML report generator', () => {
     it('generates report successfully', async () => {
         const prompt = vi.mocked(promptModule);
         const parser = vi.mocked(parserModule);

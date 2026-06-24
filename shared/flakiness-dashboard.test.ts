@@ -5,7 +5,7 @@
 import { filterHighFlakiness, generateFlakinessHtml } from './flakiness-dashboard.js';
 import type { FlakinessEntry } from './metrics.js';
 
-describe('filterHighFlakiness', () => {
+describe('FilterHighFlakiness', () => {
     it('filters entries above threshold', () => {
         const entries: FlakinessEntry[] = [
             { title: 'Very Flaky', passCount: 1, failCount: 9, skipCount: 0, totalRuns: 10, rate: 0.9 },
@@ -33,7 +33,7 @@ describe('filterHighFlakiness', () => {
     });
 });
 
-describe('generateFlakinessHtml', () => {
+describe('GenerateFlakinessHtml', () => {
     it('generates HTML with flaky test table', () => {
         const entries: FlakinessEntry[] = [
             { title: 'Login Flaky', passCount: 5, failCount: 5, skipCount: 0, totalRuns: 10, rate: 0.5 },

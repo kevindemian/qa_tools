@@ -5,7 +5,7 @@
 import { aggregateDefectTrends, generateDefectTrendHtml, sanitizeTrendResult } from './defect-trend.js';
 import type { FailureClassification } from './metrics.js';
 
-describe('aggregateDefectTrends', () => {
+describe('AggregateDefectTrends', () => {
     it('returns empty result for empty array', () => {
         const result = aggregateDefectTrends([]);
 
@@ -114,7 +114,7 @@ describe('aggregateDefectTrends', () => {
     });
 });
 
-describe('sanitizeTrendResult', () => {
+describe('SanitizeTrendResult', () => {
     it('converts NaN to zero', () => {
         const input = {
             trends: [{ date: '2026-01-01', categories: { A: NaN }, total: NaN }],
@@ -168,7 +168,7 @@ describe('sanitizeTrendResult', () => {
     });
 });
 
-describe('generateDefectTrendHtml', () => {
+describe('GenerateDefectTrendHtml', () => {
     it('shows no-data message for empty trends', () => {
         const result = aggregateDefectTrends([]);
         const html = generateDefectTrendHtml(result);

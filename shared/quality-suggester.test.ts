@@ -42,7 +42,7 @@ const defaultSnapshot = {
     latencyByModel: {},
 };
 
-describe('checkQualitySignals', () => {
+describe('CheckQualitySignals', () => {
     beforeEach(() => {
         vi.clearAllMocks();
         mockDetectDrift.mockReturnValue([]);

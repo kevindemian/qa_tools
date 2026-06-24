@@ -6,7 +6,7 @@
 
 import { FilterBar, SearchInput, Button, ButtonGroup, Label } from './form.js';
 
-describe('form primitives', () => {
+describe('Form primitives', () => {
     describe('FilterBar', () => {
         it('renders toolbar container', () => {
             const html = FilterBar({ children: 'controls' });

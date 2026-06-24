@@ -31,7 +31,7 @@ const sampleTests: FlatTest[] = [
 
 const sampleStats: ReportStats = { passed: 1, failed: 1, skipped: 1, total: 3, duration: 300 };
 
-describe('buildTabs', () => {
+describe('BuildTabs', () => {
     it('returns empty string for single run', () => {
         expect(buildTabs([{ name: 'Default', tests: sampleTests }])).toBe('');
     });
@@ -63,7 +63,7 @@ describe('buildTabs', () => {
     });
 });
 
-describe('buildTabContents', () => {
+describe('BuildTabContents', () => {
     it('returns empty string for single run', () => {
         expect(buildTabContents([{ name: 'Default', tests: sampleTests }])).toBe('');
     });
@@ -85,7 +85,7 @@ describe('buildTabContents', () => {
     });
 });
 
-describe('buildHierarchySidebar', () => {
+describe('BuildHierarchySidebar', () => {
     it('returns empty string for tests without suite info', () => {
         const html = buildHierarchySidebar(sampleTests);
 
@@ -123,7 +123,7 @@ describe('buildHierarchySidebar', () => {
     });
 });
 
-describe('buildTimeline', () => {
+describe('BuildTimeline', () => {
     it('returns empty string for empty tests', () => {
         expect(buildTimeline([])).toBe('');
     });
@@ -161,7 +161,7 @@ describe('buildTimeline', () => {
     });
 });
 
-describe('buildSummaryCards', () => {
+describe('BuildSummaryCards', () => {
     it('builds cards for each stat', () => {
         const html = buildSummaryCards(sampleStats, 33.3);
 
@@ -194,7 +194,7 @@ describe('buildSummaryCards', () => {
     });
 });
 
-describe('buildLlmSection', () => {
+describe('BuildLlmSection', () => {
     it('returns empty string when no llmAnalysis', () => {
         const opts: ReportOptions = {};
 
@@ -225,7 +225,7 @@ describe('buildLlmSection', () => {
     });
 });
 
-describe('buildQualityGate', () => {
+describe('BuildQualityGate', () => {
     it('returns empty string when pass rate meets threshold', () => {
         expect(buildQualityGate(95, 90)).toBe('');
     });
@@ -250,7 +250,7 @@ describe('buildQualityGate', () => {
     });
 });
 
-describe('buildFilterBar', () => {
+describe('BuildFilterBar', () => {
     it('returns filter bar HTML', () => {
         const html = buildFilterBar();
 
@@ -261,7 +261,7 @@ describe('buildFilterBar', () => {
     });
 });
 
-describe('buildFailedSummary', () => {
+describe('BuildFailedSummary', () => {
     it('returns empty string when no failures', () => {
         const allPassed: ReportStats = { passed: 5, failed: 0, skipped: 0, total: 5, duration: 500 };
 
@@ -298,7 +298,7 @@ describe('buildFailedSummary', () => {
     });
 });
 
-describe('buildReleaseSection', () => {
+describe('BuildReleaseSection', () => {
     it('renders score number', () => {
         const html = buildReleaseSection(85, 'good', [], 'All clear');
 
@@ -353,7 +353,7 @@ describe('buildReleaseSection', () => {
     });
 });
 
-describe('buildHealthSection', () => {
+describe('BuildHealthSection', () => {
     const passingHealth = {
         overall: 95,
         grade: 'excellent' as const,

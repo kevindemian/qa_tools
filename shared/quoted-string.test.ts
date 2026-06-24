@@ -1,6 +1,6 @@
 import { parseQuotedValue, isPreconditionKey, extractPreconditionKey } from './quoted-string.js';
 
-describe('parseQuotedValue', () => {
+describe('ParseQuotedValue', () => {
     it('returns unquoted value as-is', () => {
         const result = parseQuotedValue('hello', ['hello'], 0);
 
@@ -52,7 +52,7 @@ describe('parseQuotedValue', () => {
     });
 });
 
-describe('isPreconditionKey', () => {
+describe('IsPreconditionKey', () => {
     it('returns true for valid project keys', () => {
         expect(isPreconditionKey('ABC-123')).toBeTruthy();
         expect(isPreconditionKey('PREC-001')).toBeTruthy();
@@ -69,7 +69,7 @@ describe('isPreconditionKey', () => {
     });
 });
 
-describe('extractPreconditionKey', () => {
+describe('ExtractPreconditionKey', () => {
     it('extracts key from the beginning of a string', () => {
         expect(extractPreconditionKey('ECSPOL-PRE-42 (descricao)')).toBe('ECSPOL-PRE-42');
         expect(extractPreconditionKey('ABC-123: something')).toBe('ABC-123');

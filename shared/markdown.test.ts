@@ -1,6 +1,6 @@
 import { md, mdBox, mdToHtml, __setLexer } from './markdown.js';
 
-describe('md', () => {
+describe('Md', () => {
     afterEach(() => {
         __setLexer(null);
     });
@@ -108,7 +108,7 @@ describe('md', () => {
     });
 });
 
-describe('renderPipeTable edge cases', () => {
+describe('RenderPipeTable edge cases', () => {
     it('handles long cell content with word wrapping', () => {
         const result = md('| a | b |\n|---|---|\n| ' + 'x'.repeat(50) + ' | short |');
 
@@ -123,7 +123,7 @@ describe('renderPipeTable edge cases', () => {
     });
 });
 
-describe('mdBox', () => {
+describe('MdBox', () => {
     it('renders box with markdown content', () => {
         const result = mdBox('# Title', { title: 'Doc', border: 'round' });
 
@@ -161,7 +161,7 @@ describe('__setLexer token injection', () => {
     });
 });
 
-describe('wrapCell extended edge cases', () => {
+describe('WrapCell extended edge cases', () => {
     afterEach(() => {
         __setLexer(null);
     });
@@ -206,7 +206,7 @@ describe('wrapCell extended edge cases', () => {
     });
 });
 
-describe('renderTokens additional types', () => {
+describe('RenderTokens additional types', () => {
     afterEach(() => {
         __setLexer(null);
     });
@@ -233,7 +233,7 @@ describe('renderTokens additional types', () => {
     });
 });
 
-describe('renderInline additional types', () => {
+describe('RenderInline additional types', () => {
     afterEach(() => {
         __setLexer(null);
     });
@@ -282,7 +282,7 @@ describe('renderInline additional types', () => {
     });
 });
 
-describe('mdToHtml', () => {
+describe('MdToHtml', () => {
     it('wraps output in full HTML document', () => {
         const result = mdToHtml('# Hello');
 

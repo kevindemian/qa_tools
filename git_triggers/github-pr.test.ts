@@ -62,7 +62,7 @@ const mockApiGet = vi.spyOn(githubApi, 'apiGet');
 const mockApiPost = vi.spyOn(githubApi, 'apiPost');
 const mockApiPatch = vi.spyOn(githubApi, 'apiPatch');
 
-describe('formatPR', () => {
+describe('FormatPR', () => {
     it('returns MergeRequestInfo for open PR', () => {
         const data = {
             number: 1,
@@ -138,7 +138,7 @@ describe('formatPR', () => {
     });
 });
 
-describe('prCreateMergeRequest', () => {
+describe('PrCreateMergeRequest', () => {
     let client: Mocked<AxiosInstance>;
 
     beforeEach(() => {
@@ -256,7 +256,7 @@ describe('prCreateMergeRequest', () => {
     });
 });
 
-describe('prUpdateMergeRequest', () => {
+describe('PrUpdateMergeRequest', () => {
     let client: Mocked<AxiosInstance>;
 
     beforeEach(() => {
@@ -293,7 +293,7 @@ describe('prUpdateMergeRequest', () => {
     });
 });
 
-describe('prGetMergeRequest', () => {
+describe('PrGetMergeRequest', () => {
     let client: Mocked<AxiosInstance>;
 
     beforeEach(() => {
@@ -329,7 +329,7 @@ describe('prGetMergeRequest', () => {
     });
 });
 
-describe('prSearchMergeRequests', () => {
+describe('PrSearchMergeRequests', () => {
     let client: Mocked<AxiosInstance>;
 
     beforeEach(() => {
@@ -415,7 +415,7 @@ describe('prSearchMergeRequests', () => {
     });
 });
 
-describe('prAcceptMergeRequest', () => {
+describe('PrAcceptMergeRequest', () => {
     let client: Mocked<AxiosInstance>;
 
     beforeEach(() => {
@@ -526,7 +526,7 @@ describe('prAcceptMergeRequest', () => {
     });
 });
 
-describe('prIsApproved', () => {
+describe('PrIsApproved', () => {
     let client: Mocked<AxiosInstance>;
 
     beforeEach(() => {

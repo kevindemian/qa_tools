@@ -61,7 +61,7 @@ vi.mock('../shared/config', () => ({
     },
 }));
 
-describe('friendly error paths (Sprint W)', () => {
+describe('Friendly error paths (Sprint W)', () => {
     beforeEach(() => {
         vi.clearAllMocks();
         nock.cleanAll();

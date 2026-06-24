@@ -34,7 +34,7 @@ beforeEach(() => {
     vi.clearAllMocks();
 });
 
-describe('safeJiraCall', () => {
+describe('SafeJiraCall', () => {
     it('calls fn, pushes ok history on success', async () => {
         const fn = vi.fn().mockResolvedValue(undefined);
         const ctx = makeCtx() as Parameters<typeof safeJiraCall>[0];

@@ -17,7 +17,7 @@ vi.mock('./deps.js', async () => {
     };
 });
 
-describe('createCheckRun', () => {
+describe('CreateCheckRun', () => {
     const originalEnv = { ...process.env };
     let penv = process.env as Record<string, string | undefined>;
 

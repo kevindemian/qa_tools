@@ -55,7 +55,7 @@ const MOCK_FIELDS = [
     },
 ];
 
-describe('matchResultsToTests', () => {
+describe('MatchResultsToTests', () => {
     const tmpDir = os.tmpdir() + '/qa-test-reporter-' + Date.now();
     const mappingPath = tmpDir + '/mapping.json';
 
@@ -153,7 +153,7 @@ describe('matchResultsToTests', () => {
     });
 });
 
-describe('createTestExecutionFromResults', () => {
+describe('CreateTestExecutionFromResults', () => {
     let jiraResource: Mocked<JiraResource>;
     let linkJiraRes: Mocked<JiraResource>;
     let linkManager: JiraLinkManager;

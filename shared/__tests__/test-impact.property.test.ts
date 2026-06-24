@@ -63,7 +63,7 @@ const testTitlesArb: fc.Arbitrary<string[]> = fc.uniqueArray(testTitleArb, { min
 
 /* ── Tests ───────────────────────────────────────────────────── */
 
-describe('analyzeTestImpact — property-based', () => {
+describe('AnalyzeTestImpact — property-based', () => {
     beforeEach(() => {
         vi.clearAllMocks();
     });
@@ -146,7 +146,7 @@ describe('analyzeTestImpact — property-based', () => {
     });
 });
 
-describe('generateTestSelectionJson — property-based', () => {
+describe('GenerateTestSelectionJson — property-based', () => {
     it('round-trips through JSON serialization', () => {
         fc.assert(
             fc.property(

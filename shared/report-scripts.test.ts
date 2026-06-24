@@ -1,7 +1,7 @@
 /** Tests for report-scripts — embedded JS functions for HTML reports. */
 import { buildToggleScript } from './report-scripts.js';
 
-describe('buildToggleScript', () => {
+describe('BuildToggleScript', () => {
     it('returns a non-empty script string', () => {
         const script = buildToggleScript();
 

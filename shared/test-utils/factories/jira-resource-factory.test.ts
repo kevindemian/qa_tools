@@ -1,6 +1,6 @@
 import { createMockJiraResource } from './jira-resource-factory.js';
 
-describe('createMockJiraResource', () => {
+describe('CreateMockJiraResource', () => {
     it('returns a mock with all methods as vi.fn()', () => {
         const mock = createMockJiraResource();
 

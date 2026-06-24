@@ -23,7 +23,7 @@ const recordArb = fc.record({
 
 const recordsArb = fc.array(recordArb, { minLength: 0, maxLength: 20 });
 
-describe('compareAiVsManual — property-based', () => {
+describe('CompareAiVsManual — property-based', () => {
     it('total counts match record filtering', () => {
         fc.assert(
             fc.property(recordsArb, (records) => {
@@ -111,7 +111,7 @@ describe('compareAiVsManual — property-based', () => {
     });
 });
 
-describe('generateAiComparisonHtml — property-based', () => {
+describe('GenerateAiComparisonHtml — property-based', () => {
     it('structural HTML invariants for all valid inputs', () => {
         fc.assert(
             fc.property(fc.array(recordArb, { minLength: 0, maxLength: 10 }), fc.string(), (records, title) => {

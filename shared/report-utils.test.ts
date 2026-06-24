@@ -2,7 +2,7 @@
 import type { FlatTest } from './result_parser.js';
 import { statsFromTests, fmtDuration, pctClass, pct, pctSub } from './report-utils.js';
 
-describe('statsFromTests', () => {
+describe('StatsFromTests', () => {
     const tests: FlatTest[] = [
         { title: 'T1', state: 'passed', duration: 100 },
         { title: 'T2', state: 'failed', duration: 200 },
@@ -44,7 +44,7 @@ describe('statsFromTests', () => {
     });
 });
 
-describe('fmtDuration', () => {
+describe('FmtDuration', () => {
     it('formats seconds only', () => {
         expect(fmtDuration(3000)).toBe('3s');
     });
@@ -66,7 +66,7 @@ describe('fmtDuration', () => {
     });
 });
 
-describe('pctClass', () => {
+describe('PctClass', () => {
     it('returns rate-good for 90%+', () => {
         expect(pctClass(95)).toBe('rate-good');
         expect(pctClass(90)).toBe('rate-good');
@@ -87,7 +87,7 @@ describe('pctClass', () => {
     });
 });
 
-describe('pct', () => {
+describe('Pct', () => {
     it('calculates percentage', () => {
         expect(pct(5, 10)).toBe('50.0');
     });
@@ -109,7 +109,7 @@ describe('pct', () => {
     });
 });
 
-describe('pctSub', () => {
+describe('PctSub', () => {
     it('returns HTML span with percentage', () => {
         const result = pctSub(5, 10);
 

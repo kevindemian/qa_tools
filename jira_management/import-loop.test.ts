@@ -88,7 +88,7 @@ beforeEach(() => {
     resultSink.length = 0;
 });
 
-describe('linkTestRelations', () => {
+describe('LinkTestRelations', () => {
     it('associatePrecondition abort -> abort/errored', async () => {
         const linker = makeLinker();
         const factory = makeFactory();
@@ -133,7 +133,7 @@ describe('linkTestRelations', () => {
     });
 });
 
-describe('buildTestData', () => {
+describe('BuildTestData', () => {
     it('without jiraLabels', () => {
         const test: TestCase = { ...testBase, description: 'desc' };
         const result = buildTestData(test, 'PROJ', []);
@@ -162,7 +162,7 @@ describe('buildTestData', () => {
     });
 });
 
-describe('saveCheckpoint', () => {
+describe('SaveCheckpoint', () => {
     it('happy path', () => {
         saveCheckpoint({
             sourcePath: '/path.csv',
@@ -194,7 +194,7 @@ describe('saveCheckpoint', () => {
     });
 });
 
-describe('createIssueForTest', () => {
+describe('CreateIssueForTest', () => {
     it('abort branch', async () => {
         const factory = makeFactory();
         factory.createIssue.mockResolvedValue({ action: 'abort' });
@@ -268,7 +268,7 @@ describe('createIssueForTest', () => {
     });
 });
 
-describe('executeTestCreationLoop', () => {
+describe('ExecuteTestCreationLoop', () => {
     it('main loop flow with one test', async () => {
         const factory = makeFactory();
         const linker = makeLinker();

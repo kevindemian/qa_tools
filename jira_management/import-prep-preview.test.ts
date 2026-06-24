@@ -54,7 +54,7 @@ vi.mock('fs', async () => {
     return { ...actual, writeFileSync: vi.fn() };
 });
 
-describe('confirmOrCancel', () => {
+describe('ConfirmOrCancel', () => {
     beforeEach(() => {
         vi.clearAllMocks();
     });

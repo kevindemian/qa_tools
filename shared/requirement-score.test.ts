@@ -77,7 +77,7 @@ function makeRecords(): AiGenerationRecord[] {
     ];
 }
 
-describe('calculateRequirementScores', () => {
+describe('CalculateRequirementScores', () => {
     it('returns empty result for null input', () => {
         const result = calculateRequirementScores(nullAs<AiGenerationRecord[]>());
 
@@ -190,7 +190,7 @@ describe('calculateRequirementScores', () => {
     });
 });
 
-describe('generateRequirementScoreHtml', () => {
+describe('GenerateRequirementScoreHtml', () => {
     function makeResult(overrides?: Partial<RequirementScoreResult>): RequirementScoreResult {
         return {
             entries: [

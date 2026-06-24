@@ -1,6 +1,6 @@
 import { box, divider, card } from './box.js';
 
-describe('box', () => {
+describe('Box', () => {
     it('renders single border box with content', () => {
         const result = box(['hello', 'world'], { width: 30 });
 
@@ -72,7 +72,7 @@ describe('box', () => {
     });
 });
 
-describe('divider', () => {
+describe('Divider', () => {
     it('returns a line with border color', () => {
         const result = divider(40);
 
@@ -80,7 +80,7 @@ describe('divider', () => {
     });
 });
 
-describe('card', () => {
+describe('Card', () => {
     it('renders a card with title and content', () => {
         const result = card('Status', ['Line 1', 'Line 2']);
 

@@ -50,7 +50,7 @@ vi.mock('../shared/git-provider-error', () => ({
 const mockApiGet = vi.mocked(apiGet);
 const mockApiPost = vi.mocked(apiPost);
 
-describe('wfTriggerPipeline', () => {
+describe('WfTriggerPipeline', () => {
     let client: Mocked<AxiosInstance>;
 
     beforeEach(() => {
@@ -131,7 +131,7 @@ describe('wfTriggerPipeline', () => {
     });
 });
 
-describe('wfGetRecentPipelines', () => {
+describe('WfGetRecentPipelines', () => {
     let client: Mocked<AxiosInstance>;
 
     beforeEach(() => {
@@ -174,7 +174,7 @@ describe('wfGetRecentPipelines', () => {
     });
 });
 
-describe('wfGetPipeline', () => {
+describe('WfGetPipeline', () => {
     let client: Mocked<AxiosInstance>;
 
     beforeEach(() => {
@@ -201,7 +201,7 @@ describe('wfGetPipeline', () => {
     });
 });
 
-describe('wfGetPipelineJobs', () => {
+describe('WfGetPipelineJobs', () => {
     let client: Mocked<AxiosInstance>;
 
     beforeEach(() => {
@@ -253,7 +253,7 @@ describe('wfGetPipelineJobs', () => {
     });
 });
 
-describe('wfListPipelineArtifacts', () => {
+describe('WfListPipelineArtifacts', () => {
     let client: Mocked<AxiosInstance>;
 
     beforeEach(() => {
@@ -288,7 +288,7 @@ describe('wfListPipelineArtifacts', () => {
     });
 });
 
-describe('wfDownloadArtifact', () => {
+describe('WfDownloadArtifact', () => {
     let client: Mocked<AxiosInstance>;
 
     beforeEach(() => {
@@ -315,7 +315,7 @@ describe('wfDownloadArtifact', () => {
     });
 });
 
-describe('wfGetJobLogs', () => {
+describe('WfGetJobLogs', () => {
     let client: Mocked<AxiosInstance>;
 
     beforeEach(() => {
@@ -355,7 +355,7 @@ describe('wfGetJobLogs', () => {
     });
 });
 
-describe('wfGetCICDVariables', () => {
+describe('WfGetCICDVariables', () => {
     let client: Mocked<AxiosInstance>;
 
     beforeEach(() => {
@@ -398,7 +398,7 @@ describe('wfGetCICDVariables', () => {
     });
 });
 
-describe('wfGetSchedules', () => {
+describe('WfGetSchedules', () => {
     it('returns empty array', async () => {
         const result = await wfGetSchedules();
 
@@ -406,7 +406,7 @@ describe('wfGetSchedules', () => {
     });
 });
 
-describe('wfRunSchedule', () => {
+describe('WfRunSchedule', () => {
     it('throws not-implemented error', () => {
         expect(() => wfRunSchedule('1')).toThrow('not available via REST API');
     });

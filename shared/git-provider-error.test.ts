@@ -2,7 +2,7 @@ import { handleError } from './git-provider-error.js';
 
 vi.mock('./logger', () => ({ rootLogger: { error: vi.fn() } }));
 
-describe('handleError', () => {
+describe('HandleError', () => {
     it('throws the error by default', () => {
         const err = new Error('connection failed');
 

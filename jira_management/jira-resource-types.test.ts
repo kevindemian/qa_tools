@@ -2,7 +2,7 @@ import type { VersionData, JiraIssue, SearchResponse, JiraResourceLike } from '.
 import { nullAs } from '../shared/test-utils.js';
 import { createMockJiraResource } from '../shared/test-utils/factories/jira-resource-factory.js';
 
-describe('jira-resource-types', () => {
+describe('Jira-resource-types', () => {
     it('versionData has the correct shape', () => {
         const v: VersionData = { id: '1', name: 'v1' };
 

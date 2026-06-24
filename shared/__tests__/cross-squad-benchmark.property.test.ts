@@ -46,7 +46,7 @@ const projectArb = fc
         }),
     );
 
-describe('computeCrossSquadBenchmark — property-based', () => {
+describe('ComputeCrossSquadBenchmark — property-based', () => {
     it('sorts benchmarks by healthScore descending', () => {
         fc.assert(
             fc.property(
@@ -173,7 +173,7 @@ describe('computeCrossSquadBenchmark — property-based', () => {
     });
 });
 
-describe('generateBenchmarkHtml — property-based', () => {
+describe('GenerateBenchmarkHtml — property-based', () => {
     it('always produces valid HTML', () => {
         fc.assert(
             fc.property(

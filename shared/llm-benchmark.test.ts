@@ -63,7 +63,7 @@ import { withEnv } from './test-utils.js';
 // runBenchmark
 // ---------------------------------------------------------------------------
 
-describe('runBenchmark', () => {
+describe('RunBenchmark', () => {
     let stdoutSpy: Mock;
     let restoreEnv: (() => void) | null = null;
 
@@ -138,7 +138,7 @@ describe('runBenchmark', () => {
 // runBenchmark — error handling
 // ---------------------------------------------------------------------------
 
-describe('runBenchmark — error handling', () => {
+describe('RunBenchmark — error handling', () => {
     let stdoutSpy: Mock;
     let restoreEnv: (() => void) | null = null;
 

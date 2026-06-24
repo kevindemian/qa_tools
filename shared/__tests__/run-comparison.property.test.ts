@@ -39,7 +39,7 @@ beforeEach(() => {
     mockLlmPrompt.mockResolvedValue('analysis');
 });
 
-describe('compareRuns PBT invariants', () => {
+describe('CompareRuns PBT invariants', () => {
     it('pass rate is always 0-100 regardless of input values', async () => {
         await fc.assert(
             fc.asyncProperty(MetricsRunArb, MetricsRunArb, async (runA, runB) => {

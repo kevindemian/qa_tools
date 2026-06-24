@@ -56,7 +56,7 @@ const HEALTH_SCORE: import('./types.js').HealthScoreResult = {
     },
 };
 
-describe('generateHtmlReport', () => {
+describe('GenerateHtmlReport', () => {
     it('returns valid HTML for basic test list', () => {
         const html = generateHtmlReport(MOCK_TESTS);
 
@@ -157,7 +157,7 @@ describe('generateHtmlReport', () => {
     });
 });
 
-describe('generateReportWithFallback', () => {
+describe('GenerateReportWithFallback', () => {
     it('returns error page when generation fails', () => {
         const badTests = nullAs<FlatTest[]>();
         const html = generateReportWithFallback(badTests, { title: 'Fail' });
@@ -166,7 +166,7 @@ describe('generateReportWithFallback', () => {
     });
 });
 
-describe('generateCoverageHtml', () => {
+describe('GenerateCoverageHtml', () => {
     it('returns valid HTML for epics', () => {
         const html = generateCoverageHtml(MOCK_EPICS, 'Coverage Report');
 

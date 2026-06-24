@@ -22,7 +22,7 @@ beforeEach(() => {
 });
 
 describe('JiraClient', () => {
-    describe('constructor — auth mode', () => {
+    describe('Constructor — auth mode', () => {
         it('stores baseUrl and personalToken', () => {
             const client = new JiraClient(TOKEN, BASE_URL);
 
@@ -82,7 +82,7 @@ describe('JiraClient', () => {
         });
     });
 
-    describe('getJiraResource', () => {
+    describe('GetJiraResource', () => {
         it('returns data on successful GET', async () => {
             const data = { id: '123', key: 'TEST-1' };
             mockGet.mockResolvedValue({ data });
@@ -101,7 +101,7 @@ describe('JiraClient', () => {
         });
     });
 
-    describe('postJiraResource', () => {
+    describe('PostJiraResource', () => {
         it('returns data on successful POST', async () => {
             const payload = { fields: { summary: 'Test' } };
             const data = { id: '456', key: 'TEST-2' };
@@ -121,7 +121,7 @@ describe('JiraClient', () => {
         });
     });
 
-    describe('putJiraResource', () => {
+    describe('PutJiraResource', () => {
         it('returns null on 204 response', async () => {
             mockPut.mockResolvedValue({ status: 204 });
             const client = new JiraClient(TOKEN, BASE_URL);
@@ -147,7 +147,7 @@ describe('JiraClient', () => {
         });
     });
 
-    describe('getFromOriginPath', () => {
+    describe('GetFromOriginPath', () => {
         it('builds full URL from origin and path', async () => {
             const data = { content: 'data' };
             mockGet.mockResolvedValue({ data });
@@ -168,7 +168,7 @@ describe('JiraClient', () => {
         });
     });
 
-    describe('searchJiraIssues', () => {
+    describe('SearchJiraIssues', () => {
         it('calls search with encoded JQL', async () => {
             const response = { total: 1, issues: [{ key: 'TEST-1' }] };
             mockGet.mockResolvedValue({ data: response });
@@ -180,7 +180,7 @@ describe('JiraClient', () => {
         });
     });
 
-    describe('getTransitionsForIssue', () => {
+    describe('GetTransitionsForIssue', () => {
         it('returns transitions as name→id map', async () => {
             const data = {
                 transitions: [
@@ -205,7 +205,7 @@ describe('JiraClient', () => {
         });
     });
 
-    describe('transitionIssue', () => {
+    describe('TransitionIssue', () => {
         it('posts transition payload', async () => {
             mockPost.mockResolvedValue({ data: {} });
             const client = new JiraClient(TOKEN, BASE_URL);

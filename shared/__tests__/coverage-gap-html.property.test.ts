@@ -94,7 +94,7 @@ const itemArb = fc
         hasTest: i.hasTest,
     }));
 
-describe('generateCoverageGapHtml — property-based', () => {
+describe('GenerateCoverageGapHtml — property-based', () => {
     it('always produces valid HTML with structural elements', () => {
         fc.assert(
             fc.property(fc.array(itemArb, { minLength: 0, maxLength: 10 }), (items) => {

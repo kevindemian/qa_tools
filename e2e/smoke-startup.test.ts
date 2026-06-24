@@ -6,7 +6,7 @@ const __dirname = path.dirname(fileURLToPath(import.meta.url));
 const ROOT = path.resolve(__dirname, '..');
 const STARTUP_TIMEOUT = 12000;
 
-describe('smoke-startup', () => {
+describe('Smoke-startup', () => {
     it('jira_management não crasha com JIRA/XRAY vars vazias', async () => {
         const child = spawn('npx', ['tsx', 'jira_management/main.ts'], {
             cwd: ROOT,

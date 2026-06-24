@@ -28,7 +28,7 @@ vi.mock('../../shared/state', () => ({
     })),
 }));
 
-describe('smartwizard-discovery', () => {
+describe('Smartwizard-discovery', () => {
     beforeEach(() => {
         vi.clearAllMocks();
     });

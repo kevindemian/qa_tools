@@ -53,7 +53,7 @@ describe('ALIASES', () => {
     });
 });
 
-describe('resolveAlias', () => {
+describe('ResolveAlias', () => {
     it('returns mapped value for known alias', () => {
         expect(resolveAlias('criar')).toBe('1');
         expect(resolveAlias('versoes')).toBe('2');
@@ -214,7 +214,7 @@ describe('_configHint', () => {
     });
 });
 
-describe('buildMenuChoices', () => {
+describe('BuildMenuChoices', () => {
     it('returns array for main level', () => {
         expect(Array.isArray(buildMenuChoices('main', 'ECSPOL', { git_directory: '/tmp' }))).toBeTruthy();
     });

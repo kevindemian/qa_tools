@@ -15,7 +15,7 @@ beforeEach(() => {
     vi.clearAllMocks();
 });
 
-describe('case04 — assign fixVersion', () => {
+describe('Case04 — assign fixVersion', () => {
     it('exports a handler function', () => {
         expect(case04).toBeDefined();
         expect(typeof case04.handler).toBe('function');

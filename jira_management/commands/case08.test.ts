@@ -13,7 +13,7 @@ beforeEach(() => {
     vi.clearAllMocks();
 });
 
-describe('case08 — release version', () => {
+describe('Case08 — release version', () => {
     it('exports a handler function', () => {
         expect(case08).toBeDefined();
         expect(typeof case08.handler).toBe('function');

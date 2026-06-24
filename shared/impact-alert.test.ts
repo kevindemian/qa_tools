@@ -7,7 +7,7 @@ import { analyzePipelineImpact, generateImpactAlertHtml } from './impact-alert.j
 import type { ImpactAlertResult } from './impact-alert.js';
 import { nullAs, undefinedAs, nonNull } from './test-utils.js';
 
-describe('analyzePipelineImpact', () => {
+describe('AnalyzePipelineImpact', () => {
     it('returns default result for null passRate', () => {
         const result = analyzePipelineImpact(nullAs<number>(), 0, [], 80, []);
 
@@ -139,7 +139,7 @@ describe('analyzePipelineImpact', () => {
     });
 });
 
-describe('generateImpactAlertHtml', () => {
+describe('GenerateImpactAlertHtml', () => {
     function makeResult(overrides?: Partial<ImpactAlertResult>): ImpactAlertResult {
         return {
             alerts: [],

@@ -96,7 +96,7 @@ describe('Config', () => {
         Config.reset();
     });
 
-    describe('ensureDotenv', () => {
+    describe('EnsureDotenv', () => {
         it('calls dotenv.config twice on module load (.env.local + .env)', () => {
             __resetDotenvLoaded();
             Config.load();
@@ -124,7 +124,7 @@ describe('Config', () => {
         });
     });
 
-    describe('string getters — value from env', () => {
+    describe('String getters — value from env', () => {
         const STRING_GETTERS: Array<[string, string]> = [
             ['jiraBaseUrl', 'JIRA_BASE_URL'],
             ['jiraPersonalToken', 'JIRA_PERSONAL_TOKEN'],
@@ -147,7 +147,7 @@ describe('Config', () => {
         });
     });
 
-    describe('string getters — fallback defaults', () => {
+    describe('String getters — fallback defaults', () => {
         const STRING_DEFAULTS: Array<[string, string]> = [
             ['jiraBaseUrl', ''],
             ['jiraPersonalToken', ''],
@@ -186,7 +186,7 @@ describe('Config', () => {
         });
     });
 
-    describe('boolean getters', () => {
+    describe('Boolean getters', () => {
         const BOOL_GETTERS: Array<[string, string]> = [
             ['autoConfirm', 'AUTO_CONFIRM'],
             ['dryRun', 'DRY_RUN'],
@@ -206,7 +206,7 @@ describe('Config', () => {
         });
     });
 
-    describe('xrayMode', () => {
+    describe('XrayMode', () => {
         it('defaults to "server"', () => {
             expect(Config.get('xrayMode')).toBe('server');
         });
@@ -224,7 +224,7 @@ describe('Config', () => {
         });
     });
 
-    describe('csvLabels', () => {
+    describe('CsvLabels', () => {
         it('defaults to empty string', () => {
             expect(Config.get('csvLabels')).toBe('');
         });
@@ -236,7 +236,7 @@ describe('Config', () => {
         });
     });
 
-    describe('jsonLabels', () => {
+    describe('JsonLabels', () => {
         it('defaults to empty string', () => {
             expect(Config.get('jsonLabels')).toBe('');
         });
@@ -248,7 +248,7 @@ describe('Config', () => {
         });
     });
 
-    describe('logLevel', () => {
+    describe('LogLevel', () => {
         it('defaults to INFO', () => {
             expect(Config.get('logLevel')).toBe('INFO');
         });
@@ -260,7 +260,7 @@ describe('Config', () => {
         });
     });
 
-    describe('logDir', () => {
+    describe('LogDir', () => {
         it('returns logs by default', () => {
             expect(Config.get('logDir')).toBe('logs');
         });
@@ -288,7 +288,7 @@ describe('Config', () => {
         });
     });
 
-    describe('logMaxSize', () => {
+    describe('LogMaxSize', () => {
         it('defaults to 5242880', () => {
             expect(Config.get('logMaxSize')).toBe(5242880);
         });
@@ -306,7 +306,7 @@ describe('Config', () => {
         });
     });
 
-    describe('xdgStateHome', () => {
+    describe('XdgStateHome', () => {
         it('uses XDG_STATE_HOME when set', () => {
             process.env['XDG_STATE_HOME'] = '/custom/state';
 
@@ -314,7 +314,7 @@ describe('Config', () => {
         });
     });
 
-    describe('getAllPrefixed', () => {
+    describe('GetAllPrefixed', () => {
         it('returns matching env vars', () => {
             process.env['QA_TOOLS_FOO'] = 'bar';
             process.env['QA_TOOLS_BAZ'] = 'qux';
@@ -354,7 +354,7 @@ describe('Config', () => {
         });
     });
 
-    describe('setAutoConfirm', () => {
+    describe('SetAutoConfirm', () => {
         it('setAutoConfirm(true) makes get autoConfirm return true', () => {
             Config.setAutoConfirm(true);
 
@@ -383,7 +383,7 @@ describe('Config', () => {
         });
     });
 
-    describe('set', () => {
+    describe('Set', () => {
         it('config.set sets an override', () => {
             Config.set('jiraBaseUrl', 'https://set.url');
 
@@ -405,7 +405,7 @@ describe('Config', () => {
         });
     });
 
-    describe('reset', () => {
+    describe('Reset', () => {
         it('returns a new default instance', () => {
             const before = Config.getDefault();
             Config.reset();
@@ -422,7 +422,7 @@ describe('Config', () => {
         });
     });
 
-    describe('llmMaxTotalTokens', () => {
+    describe('LlmMaxTotalTokens', () => {
         beforeEach(() => {
             delete process.env['LLM_MAX_TOTAL_TOKENS'];
         });
@@ -487,7 +487,7 @@ describe('Config', () => {
         });
     });
 
-    describe('validateRequiredEnv', () => {
+    describe('ValidateRequiredEnv', () => {
         it('does not throw when a required env var is present', () => {
             process.env['JIRA_BASE_URL'] = 'https://jira.example.com';
             process.env['JIRA_PERSONAL_TOKEN'] = 'token-123';

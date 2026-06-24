@@ -31,7 +31,7 @@ beforeEach(() => {
     resetRateLimiter();
 });
 
-describe('jitter', () => {
+describe('Jitter', () => {
     it('returns 0 when waitMs is 0', () => {
         expect(jitter(0)).toBe(0);
     });
@@ -52,7 +52,7 @@ describe('jitter', () => {
     });
 });
 
-describe('checkRateLimit', () => {
+describe('CheckRateLimit', () => {
     it('allows requests within limit', () => {
         Config.set('LLM_RATE_LIMIT', '5');
 
@@ -110,7 +110,7 @@ describe('checkRateLimit', () => {
     });
 });
 
-describe('resetRateLimiter', () => {
+describe('ResetRateLimiter', () => {
     it('resets the rate limiter state', () => {
         Config.set('LLM_RATE_LIMIT', '1');
         resetRateLimiter();

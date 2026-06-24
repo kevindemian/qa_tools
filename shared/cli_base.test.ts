@@ -52,7 +52,7 @@ describe('CLI Base', () => {
         process.env = { ...ENV_BACKUP };
     });
 
-    describe('mask', () => {
+    describe('Mask', () => {
         it('returns first 4 chars plus asterisks', () => {
             expect(cliBase.mask('abcdefgh')).toBe('abcd****');
         });
@@ -66,7 +66,7 @@ describe('CLI Base', () => {
         });
     });
 
-    describe('createValidateEnv', () => {
+    describe('CreateValidateEnv', () => {
         const configs = [
             { key: 'TOKEN_A', label: 'Token A', example: 'TOKEN_A=abc' },
             { key: 'TOKEN_B', label: 'Token B', example: 'TOKEN_B=def' },
@@ -102,7 +102,7 @@ describe('CLI Base', () => {
         });
     });
 
-    describe('setupSigint', () => {
+    describe('SetupSigint', () => {
         let mockRl: Mocked<readline.Interface>;
         let createInterfaceSpy: ReturnType<typeof vi.spyOn>;
 
@@ -313,7 +313,7 @@ describe('CLI Base', () => {
     // Uses real process.emit('SIGINT') instead of capturing the handler
     // ---------------------------------------------------------------------------
 
-    describe('setupSigint — integration SIGINT (CR-3a)', () => {
+    describe('SetupSigint — integration SIGINT (CR-3a)', () => {
         let mockRlInt: Record<string, ReturnType<typeof vi.fn>>;
         let onExit: () => void;
 
@@ -349,7 +349,7 @@ describe('CLI Base', () => {
         });
     });
 
-    describe('offerEnvSetup', () => {
+    describe('OfferEnvSetup', () => {
         it('returns false when validation ok', () => {
             const result = cliBase.offerEnvSetup({ ok: true, missing: [] });
 
@@ -395,7 +395,7 @@ describe('CLI Base', () => {
         });
     });
 
-    describe('sanitizeUrl', () => {
+    describe('SanitizeUrl', () => {
         it('masks token in URL', () => {
             expect(cliBase.sanitizeUrl('http://example.com?token=abc123&other=1')).toBe(
                 'http://example.com?token=****&other=1',
@@ -415,7 +415,7 @@ describe('CLI Base', () => {
         });
     });
 
-    describe('createValidateEnv edge cases', () => {
+    describe('CreateValidateEnv edge cases', () => {
         const config = [{ key: 'TOKEN_A', label: 'Token A', example: 'TOKEN_A=abc' }];
 
         it('does not warn when long value contains "seu-"', () => {
@@ -456,7 +456,7 @@ describe('CLI Base', () => {
         });
     });
 
-    describe('printSessionSummary', () => {
+    describe('PrintSessionSummary', () => {
         beforeAll(() => {
             MOCK_PROMPT.print = vi.fn();
             MOCK_PROMPT.success = vi.fn();

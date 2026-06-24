@@ -49,7 +49,7 @@ beforeEach(() => {
     mockRenameSync.mockImplementation(() => undefined);
 });
 
-describe('recordAiGeneration', () => {
+describe('RecordAiGeneration', () => {
     it('saves a new record', () => {
         const record = makeRecord('rec-1');
         recordAiGeneration(record);
@@ -87,7 +87,7 @@ describe('recordAiGeneration', () => {
     });
 });
 
-describe('recordAiModification', () => {
+describe('RecordAiModification', () => {
     it('adds feedback to existing record', () => {
         const record = makeRecord('rec-1');
         mockExistsSync.mockReturnValue(true);
@@ -116,7 +116,7 @@ describe('recordAiModification', () => {
     });
 });
 
-describe('getAiFeedbackSummary', () => {
+describe('GetAiFeedbackSummary', () => {
     it('returns zeros for empty store', () => {
         mockExistsSync.mockReturnValue(false);
         const summary = getAiFeedbackSummary();
@@ -165,7 +165,7 @@ describe('getAiFeedbackSummary', () => {
     });
 });
 
-describe('getRecentAiRecords', () => {
+describe('GetRecentAiRecords', () => {
     it('returns most recent records in reverse order', () => {
         const records = [
             makeRecord('r1', { generatedAt: '2026-01-01T00:00:00.000Z' }),

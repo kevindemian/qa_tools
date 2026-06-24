@@ -24,7 +24,7 @@ const historyArb: fc.Arbitrary<Record<string, number[]>> = fc
         return obj;
     });
 
-describe('detectSilentRegression — property-based invariants', () => {
+describe('DetectSilentRegression — property-based invariants', () => {
     it('totalTests equals number of histories with >= 2 durations', () => {
         fc.assert(
             fc.property(historyArb, (histories) => {

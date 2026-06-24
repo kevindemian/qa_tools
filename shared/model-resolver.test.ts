@@ -5,7 +5,7 @@ import { describe, it, expect } from 'vitest';
 import { resolveModel, getRegistry } from './model-resolver.js';
 import type { RegistryModel } from './model-resolver.js';
 
-describe('getRegistry', () => {
+describe('GetRegistry', () => {
     it('returns a non-empty registry with version', () => {
         const reg = getRegistry();
 
@@ -42,7 +42,7 @@ describe('getRegistry', () => {
     });
 });
 
-describe('resolveModel', () => {
+describe('ResolveModel', () => {
     it('resolves main tier from registry', () => {
         const result = resolveModel('main', 'openai');
 

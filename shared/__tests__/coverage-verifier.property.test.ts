@@ -20,7 +20,7 @@ function makeCtx(input: string) {
     return { inputRaw: input, outputRaw: {}, artifactType: 'test-suite' as const };
 }
 
-describe('coverage invariants (PBT)', () => {
+describe('Coverage invariants (PBT)', () => {
     it('realCoverage is always between 0 and 100', () => {
         fc.assert(
             fc.property(

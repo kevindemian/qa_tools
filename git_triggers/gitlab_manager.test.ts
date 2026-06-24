@@ -37,7 +37,7 @@ describe('GitLabManager', () => {
         manager = new GitLabManager('project-123', 'test-token', 'https://gitlab.test.com');
     });
 
-    describe('constructor', () => {
+    describe('Constructor', () => {
         it('throws when apiToken is empty string', () => {
             expect(() => new GitLabManager('project-123', '', 'https://gitlab.test.com')).toThrow(
                 'apiToken é obrigatório',
@@ -51,7 +51,7 @@ describe('GitLabManager', () => {
         });
     });
 
-    describe('triggerPipeline', () => {
+    describe('TriggerPipeline', () => {
         it('calls POST /pipeline, returns data', async () => {
             mockClient.post.mockResolvedValue({ data: { id: 1, web_url: 'https://...' } });
             const result = await manager.triggerPipeline({ ref: 'main', variables: [] });
@@ -72,7 +72,7 @@ describe('GitLabManager', () => {
         });
     });
 
-    describe('getSchedules', () => {
+    describe('GetSchedules', () => {
         it('calls GET /pipeline_schedules with per_page=100', async () => {
             mockClient.get.mockResolvedValue({ data: [{ id: 1, description: 'Daily' }] });
             const result = await manager.getSchedules();
@@ -91,7 +91,7 @@ describe('GitLabManager', () => {
         });
     });
 
-    describe('runSchedule', () => {
+    describe('RunSchedule', () => {
         it('calls POST /pipeline_schedules/{id}/play', async () => {
             mockClient.post.mockResolvedValue({ data: { id: 42 } });
             const result = await manager.runSchedule('42');
@@ -107,7 +107,7 @@ describe('GitLabManager', () => {
         });
     });
 
-    describe('createMergeRequest', () => {
+    describe('CreateMergeRequest', () => {
         const args = ['feature', 'main', 'MR Title', 'MR Desc'] as const;
 
         it('calls POST /merge_requests on success', async () => {
@@ -158,7 +158,7 @@ describe('GitLabManager', () => {
         });
     });
 
-    describe('updateMergeRequest', () => {
+    describe('UpdateMergeRequest', () => {
         it('calls PUT /merge_requests/{iid}', async () => {
             mockClient.put.mockResolvedValue({ data: { iid: 5 } });
             const result = await manager.updateMergeRequest('5', 'New Title', 'New Desc');
@@ -177,7 +177,7 @@ describe('GitLabManager', () => {
         });
     });
 
-    describe('getMergeRequest', () => {
+    describe('GetMergeRequest', () => {
         it('calls GET /merge_requests/{iid}', async () => {
             mockClient.get.mockResolvedValue({ data: { iid: 5, state: 'opened' } });
             const result = await manager.getMergeRequest('5');
@@ -194,7 +194,7 @@ describe('GitLabManager', () => {
         });
     });
 
-    describe('searchMergeRequests', () => {
+    describe('SearchMergeRequests', () => {
         it('calls GET /merge_requests with per_page=100', async () => {
             mockClient.get.mockResolvedValue({ data: [{ iid: 1 }, { iid: 2 }] });
             const result = await manager.searchMergeRequests('dev', 'main', 'opened');
@@ -215,7 +215,7 @@ describe('GitLabManager', () => {
         });
     });
 
-    describe('acceptMergeRequest', () => {
+    describe('AcceptMergeRequest', () => {
         it('calls GET then PUT /merge_requests/{iid}/merge when state is opened', async () => {
             mockClient.get.mockResolvedValue({ data: { iid: 5, state: 'opened' } });
             mockClient.put.mockResolvedValue({ data: { web_url: 'https://merge' } });
@@ -263,7 +263,7 @@ describe('GitLabManager', () => {
         });
     });
 
-    describe('getRecentPipelines', () => {
+    describe('GetRecentPipelines', () => {
         it('calls GET /pipelines with per_page and order_by', async () => {
             mockClient.get.mockResolvedValue({ data: [{ id: 1, ref: 'main', status: 'success' }] });
             const result = await manager.getRecentPipelines(3);
@@ -291,7 +291,7 @@ describe('GitLabManager', () => {
         });
     });
 
-    describe('getPipeline', () => {
+    describe('GetPipeline', () => {
         it('calls GET /pipelines/{id}', async () => {
             mockClient.get.mockResolvedValue({ data: { id: 42, status: 'success', web_url: 'https://...' } });
             const result = await manager.getPipeline('42');
@@ -308,7 +308,7 @@ describe('GitLabManager', () => {
         });
     });
 
-    describe('getBranch', () => {
+    describe('GetBranch', () => {
         it('returns { name } for valid branch', async () => {
             mockClient.get.mockResolvedValue({ data: { name: 'main' } });
             const result = await manager.getBranch('main');
@@ -331,7 +331,7 @@ describe('GitLabManager', () => {
         });
     });
 
-    describe('getPipelineJobs', () => {
+    describe('GetPipelineJobs', () => {
         it('returns formatted jobs from /pipelines/{id}/jobs', async () => {
             mockClient.get.mockResolvedValue({
                 data: [
@@ -356,7 +356,7 @@ describe('GitLabManager', () => {
         });
     });
 
-    describe('listPipelineArtifacts', () => {
+    describe('ListPipelineArtifacts', () => {
         it('returns jobs with artifacts from pipeline jobs', async () => {
             mockClient.get.mockResolvedValue({
                 data: [
@@ -384,7 +384,7 @@ describe('GitLabManager', () => {
         });
     });
 
-    describe('downloadArtifact', () => {
+    describe('DownloadArtifact', () => {
         it('returns buffer and filename from /jobs/{id}/artifacts', async () => {
             mockClient.get.mockResolvedValue({
                 data: Buffer.from('fake-zip-content'),
@@ -416,7 +416,7 @@ describe('GitLabManager', () => {
         });
     });
 
-    describe('isApproved', () => {
+    describe('IsApproved', () => {
         it('returns true when approved', async () => {
             mockClient.get.mockResolvedValue({ data: { approved: true } });
             const result = await manager.isApproved(42);
@@ -440,7 +440,7 @@ describe('GitLabManager', () => {
         });
     });
 
-    describe('getCICDVariables', () => {
+    describe('GetCICDVariables', () => {
         it('calls GET /variables with per_page=100', async () => {
             mockClient.get.mockResolvedValue({ data: [{ key: 'VAR1', value: 'val1' }] });
             const result = await manager.getCICDVariables();
@@ -459,7 +459,7 @@ describe('GitLabManager', () => {
         });
     });
 
-    describe('getDiff', () => {
+    describe('GetDiff', () => {
         it('return diff string for valid comparison', async () => {
             mockClient.get.mockResolvedValue({
                 data: { diffs: [{ diff: '+console.log("hi")', new_path: 'src/main.ts' }] },
@@ -494,7 +494,7 @@ describe('GitLabManager', () => {
         });
     });
 
-    describe('getOpenIssues', () => {
+    describe('GetOpenIssues', () => {
         const ISSUE_FIXTURE = {
             iid: 42,
             title: 'Test bug',
@@ -551,7 +551,7 @@ describe('GitLabManager', () => {
         });
     });
 
-    describe('getJobLogs', () => {
+    describe('GetJobLogs', () => {
         it('returns truncated log text from GET /jobs/{id}/trace', async () => {
             mockClient.get.mockResolvedValue({ data: 'line1\nline2\nline3\n' });
             const result = await manager.getJobLogs(101);

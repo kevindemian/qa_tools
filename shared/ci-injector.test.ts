@@ -68,7 +68,7 @@ const EMPTY_STRING = '';
 
 /* ── generatePostProcessWorkflowYaml ──────────────────────────────────── */
 
-describe('generatePostProcessWorkflowYaml', () => {
+describe('GeneratePostProcessWorkflowYaml', () => {
     it('returns a valid YAML string', () => {
         const yaml = generatePostProcessWorkflowYaml({ projectName: 'my-project' });
 
@@ -144,7 +144,7 @@ describe('generatePostProcessWorkflowYaml', () => {
 
 /* ── extractFirstJobName ───────────────────────────────────────────────── */
 
-describe('extractFirstJobName', () => {
+describe('ExtractFirstJobName', () => {
     it('extracts first job name from simple ci.yml', () => {
         expect(extractFirstJobName(SIMPLE_CI_YML)).toBe('test');
     });
@@ -170,7 +170,7 @@ describe('extractFirstJobName', () => {
 
 /* ── injectPostProcessJob ──────────────────────────────────────────────── */
 
-describe('injectPostProcessJob', () => {
+describe('InjectPostProcessJob', () => {
     it('injects post-process job when not present', () => {
         const result = injectPostProcessJob(SIMPLE_CI_YML, 'my-project');
 

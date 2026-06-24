@@ -46,7 +46,7 @@ function countBugsWithoutTests(issues: BacklogHealthIssue[]): number {
 
 /* ── Tests ───────────────────────────────────────────────────── */
 
-describe('analyzeBacklogHealth — property-based', () => {
+describe('AnalyzeBacklogHealth — property-based', () => {
     it('unassigned count matches direct filter', () => {
         fc.assert(
             fc.property(fc.array(issueArb, { maxLength: 50 }), (issues) => {
@@ -148,7 +148,7 @@ describe('analyzeBacklogHealth — property-based', () => {
     });
 });
 
-describe('generateBacklogHealthHtml — property-based', () => {
+describe('GenerateBacklogHealthHtml — property-based', () => {
     it('always contains backlog-health id', () => {
         fc.assert(
             fc.property(fc.array(issueArb, { maxLength: 30 }), (issues) => {

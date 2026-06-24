@@ -1,8 +1,8 @@
 import { calculateReleaseScore, generateReleaseScoreHtml } from './release-score.js';
 import type { ReleaseScoreResult } from './release-score.js';
 
-describe('calculateReleaseScore', () => {
-    describe('grade boundaries', () => {
+describe('CalculateReleaseScore', () => {
+    describe('Grade boundaries', () => {
         it('grades excellent at score >= 90', () => {
             const result = calculateReleaseScore(100, 100, 'pass', 100, 0);
 
@@ -68,7 +68,7 @@ describe('calculateReleaseScore', () => {
         });
     });
 
-    describe('flakiness inversion', () => {
+    describe('Flakiness inversion', () => {
         it('inverts flakyRate 0 to score contribution 100', () => {
             const result = calculateReleaseScore(100, 100, 'pass', 100, 0);
 
@@ -88,7 +88,7 @@ describe('calculateReleaseScore', () => {
         });
     });
 
-    describe('breakdown', () => {
+    describe('Breakdown', () => {
         it('reports pass status when all dimensions meet threshold', () => {
             const result = calculateReleaseScore(100, 100, 'pass', 100, 0);
             for (const item of result.breakdown) {
@@ -119,7 +119,7 @@ describe('calculateReleaseScore', () => {
         });
     });
 
-    describe('recommendation', () => {
+    describe('Recommendation', () => {
         it('returns ready message when all dimensions pass', () => {
             const result = calculateReleaseScore(100, 100, 'pass', 100, 0);
 
@@ -153,7 +153,7 @@ describe('calculateReleaseScore', () => {
         });
     });
 
-    describe('edge cases', () => {
+    describe('Edge cases', () => {
         it('handles all zeros', () => {
             const result = calculateReleaseScore(0, 0, 'fail', 0, 100);
 
@@ -227,7 +227,7 @@ describe('calculateReleaseScore', () => {
         });
     });
 
-    describe('weighted average', () => {
+    describe('Weighted average', () => {
         it('computes tasks at 25% weight', () => {
             const result = calculateReleaseScore(100, 0, 'fail', 0, 100);
 
@@ -254,7 +254,7 @@ describe('calculateReleaseScore', () => {
     });
 });
 
-describe('generateReleaseScoreHtml', () => {
+describe('GenerateReleaseScoreHtml', () => {
     const result: ReleaseScoreResult = {
         score: 85,
         grade: 'good',

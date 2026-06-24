@@ -1,6 +1,6 @@
 import { formatBranch } from './ui-helpers.js';
 
-describe('formatBranch', () => {
+describe('FormatBranch', () => {
     it('strips ANSI escape sequences from branch name', () => {
         const input = '\u001b[32mmain\u001b[0m';
         const result = formatBranch(input);

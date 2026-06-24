@@ -139,7 +139,7 @@ afterAll(() => {
     delete process.env['GITHUB_STEP_SUMMARY'];
 });
 
-describe('generatePrReport', () => {
+describe('GeneratePrReport', () => {
     it('returns healthScore and passRate for basic test data', async () => {
         const result = await generatePrReport({
             tests: [sampleTest, failedTest, skippedTest],

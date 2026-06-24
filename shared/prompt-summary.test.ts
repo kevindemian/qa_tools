@@ -19,7 +19,7 @@ function makeResult(overrides: Partial<TestResult>): TestResult {
     return { label: 't', status: 'ok', message: '', ...overrides };
 }
 
-describe('printSummary', () => {
+describe('PrintSummary', () => {
     beforeEach(() => {
         vi.clearAllMocks();
     });

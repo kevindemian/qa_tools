@@ -23,7 +23,7 @@ function makeFC(dow: number, hour: number, cat: string): FailureClassification {
     return { timestamp: iso, testTitle: `t_${cat}`, category: cat, project: 'p' };
 }
 
-describe('aggregateDefectSeasonality', () => {
+describe('AggregateDefectSeasonality', () => {
     it('returns zero-filled structure for empty array', () => {
         const result = aggregateDefectSeasonality([]);
 
@@ -248,7 +248,7 @@ describe('aggregateDefectSeasonality', () => {
     });
 });
 
-describe('generateSeasonalityHtml', () => {
+describe('GenerateSeasonalityHtml', () => {
     it('shows no-data message for empty result', () => {
         const result = aggregateDefectSeasonality([]);
         const html = generateSeasonalityHtml(result);

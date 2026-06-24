@@ -109,7 +109,7 @@ afterEach(() => {
     }
 });
 
-describe('parseBatchArgs', () => {
+describe('ParseBatchArgs', () => {
     it('parses --project long flag', () => {
         process.argv = ['node', 'script.js', '--project', 'my-proj'];
         const result = parseBatchArgs();
@@ -167,7 +167,7 @@ describe('parseBatchArgs', () => {
     });
 });
 
-describe('tryBatchMode', () => {
+describe('TryBatchMode', () => {
     it('returns false when no batch args', async () => {
         process.argv = ['node', 'script.js'];
         const result = await tryBatchMode();

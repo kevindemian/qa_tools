@@ -63,7 +63,7 @@ describe('PreconditionHandler', () => {
         });
     });
 
-    describe('associatePrecondition', () => {
+    describe('AssociatePrecondition', () => {
         it('adds precondition to test issue fields', async () => {
             const fields = [
                 { id: 'custom_99', schema: { custom: 'com.xpandit.plugins.xray:test-precondition-custom-field' } },
@@ -123,7 +123,7 @@ describe('PreconditionHandler', () => {
         });
     });
 
-    describe('listPreconditions', () => {
+    describe('ListPreconditions', () => {
         it('returns mapped preconditions from JQL search', async () => {
             mockJiraResource.searchJiraIssues.mockResolvedValue({
                 issues: [
@@ -149,7 +149,7 @@ describe('PreconditionHandler', () => {
         });
     });
 
-    describe('findExistingPrecondition', () => {
+    describe('FindExistingPrecondition', () => {
         it('returns key when exact summary match found via JQL', async () => {
             mockJiraResource.searchJiraIssues.mockResolvedValue({
                 issues: [{ key: 'PREC-1', fields: { summary: 'User must be logged in' } }],
@@ -192,7 +192,7 @@ describe('PreconditionHandler', () => {
         });
     });
 
-    describe('createPrecondition', () => {
+    describe('CreatePrecondition', () => {
         it('creates a new precondition and returns its key', async () => {
             mockJiraResource.searchJiraIssues.mockResolvedValue({ issues: [], total: 0, startAt: 0, maxResults: 5 });
             mockJiraResource.getJiraResource.mockResolvedValue([{ id: '11801', name: 'Pre-condition' }]);

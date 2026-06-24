@@ -15,7 +15,7 @@ beforeEach(() => {
     vi.clearAllMocks();
 });
 
-describe('case07 — close tasks', () => {
+describe('Case07 — close tasks', () => {
     it('exports a handler function', () => {
         expect(case07).toBeDefined();
         expect(typeof case07.handler).toBe('function');

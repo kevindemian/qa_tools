@@ -8,7 +8,7 @@ import { describe, it, expect } from 'vitest';
 import { calculateHealthScore } from '../health-score.js';
 import type { MetricsStore } from '../metrics.js';
 
-describe('quality gate thresholds via health score', () => {
+describe('Quality gate thresholds via health score', () => {
     it('quality gate passes with good metrics', () => {
         const store: MetricsStore = {
             runs: [

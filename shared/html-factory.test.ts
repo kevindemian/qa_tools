@@ -1,7 +1,7 @@
 import { buildHtmlPage, buildThemeScript, buildErrorPage } from './html-factory.js';
 import { sanitizeHtml } from './escape.js';
 
-describe('buildHtmlPage', () => {
+describe('BuildHtmlPage', () => {
     const defaults = {
         title: 'Test Report',
         styles: 'body { color: red; }',
@@ -95,7 +95,7 @@ describe('buildHtmlPage', () => {
     });
 });
 
-describe('buildThemeScript', () => {
+describe('BuildThemeScript', () => {
     it('generates script with localStorage key respecting storageKey parameter', () => {
         const script = buildThemeScript('dark', 'custom-key');
 
@@ -129,7 +129,7 @@ describe('buildThemeScript', () => {
     });
 });
 
-describe('buildErrorPage', () => {
+describe('BuildErrorPage', () => {
     it('returns minimal error HTML with given label', () => {
         const html = buildErrorPage('Error', 'Something went wrong');
 

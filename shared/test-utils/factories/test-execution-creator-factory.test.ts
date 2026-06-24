@@ -1,6 +1,6 @@
 import { createMockTestExecutionCreator } from './test-execution-creator-factory.js';
 
-describe('createMockTestExecutionCreator', () => {
+describe('CreateMockTestExecutionCreator', () => {
     it('returns a mock with all required fields', () => {
         const mock = createMockTestExecutionCreator();
 

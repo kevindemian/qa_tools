@@ -22,7 +22,7 @@ function errorResponse(status: number): Response {
 
 import { detectProvider, probeApiKey, discoverProvider, autoAssignTiers } from './llm-probe.js';
 
-describe('detectProvider', () => {
+describe('DetectProvider', () => {
     it('returns null for empty key', () => {
         expect(detectProvider('')).toBeNull();
     });
@@ -64,7 +64,7 @@ describe('detectProvider', () => {
     });
 });
 
-describe('probeApiKey', () => {
+describe('ProbeApiKey', () => {
     beforeEach(() => {
         vi.clearAllMocks();
     });
@@ -171,7 +171,7 @@ describe('probeApiKey', () => {
     });
 });
 
-describe('discoverProvider', () => {
+describe('DiscoverProvider', () => {
     beforeEach(() => {
         vi.clearAllMocks();
     });
@@ -228,7 +228,7 @@ describe('discoverProvider', () => {
     });
 });
 
-describe('autoAssignTiers', () => {
+describe('AutoAssignTiers', () => {
     it('returns tier mapping for OpenAI', () => {
         const result = autoAssignTiers('openai');
 

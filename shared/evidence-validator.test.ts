@@ -5,7 +5,7 @@ function makeCtx(input: string): ValidationContext {
     return { inputRaw: input, outputRaw: {}, artifactType: 'test-suite' };
 }
 
-describe('verifyEvidence', () => {
+describe('VerifyEvidence', () => {
     it('returns zero citations for artifact without evidence', () => {
         const result = verifyEvidence({ title: 'No evidence' }, makeCtx('anything'));
 
@@ -48,7 +48,7 @@ describe('verifyEvidence', () => {
     });
 });
 
-describe('evidenceValidationResult', () => {
+describe('EvidenceValidationResult', () => {
     it('returns passed result when no citations', () => {
         const results = evidenceValidationResult({}, makeCtx('anything'));
 

@@ -24,7 +24,7 @@ import { getConfig, isQuiet } from './prompt-format.js';
 import { defaultOutput as output } from './output.js';
 import { createMockConfigInstance } from './test-utils/factories/index.js';
 
-describe('humanizeError', () => {
+describe('HumanizeError', () => {
     it('returns unknown error for null input', () => {
         expect(humanizeError(null)?.msg).toBe('Erro desconhecido');
     });
@@ -64,7 +64,7 @@ describe('humanizeError', () => {
     });
 });
 
-describe('extractErrorMessage', () => {
+describe('ExtractErrorMessage', () => {
     it('returns unknown for null', () => {
         expect(extractErrorMessage(null)).toBeTruthy();
     });
@@ -91,7 +91,7 @@ describe('extractErrorMessage', () => {
     });
 });
 
-describe('printError', () => {
+describe('PrintError', () => {
     beforeEach(() => {
         vi.clearAllMocks();
     });
@@ -120,7 +120,7 @@ describe('CancelError', () => {
     });
 });
 
-describe('onError', () => {
+describe('OnError', () => {
     beforeEach(() => {
         vi.clearAllMocks();
         vi.mocked(getConfig).mockReturnValue(createMockConfigInstance());

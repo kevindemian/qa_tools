@@ -7,8 +7,8 @@ import { fileURLToPath } from 'node:url';
 const __dirname = dirname(fileURLToPath(import.meta.url));
 const QA_SCRIPT = resolve(__dirname, 'qa.sh');
 
-describe('qa.sh — OpenCode container wrapper', () => {
-    describe('file integrity', () => {
+describe('Qa.sh — OpenCode container wrapper', () => {
+    describe('File integrity', () => {
         it('exists', () => {
             expect(existsSync(QA_SCRIPT)).toBeTruthy();
         });
@@ -37,7 +37,7 @@ describe('qa.sh — OpenCode container wrapper', () => {
         });
     });
 
-    describe('podman command structure', () => {
+    describe('Podman command structure', () => {
         let content: string;
 
         beforeAll(() => {
@@ -131,7 +131,7 @@ describe('qa.sh — OpenCode container wrapper', () => {
         });
     });
 
-    describe('edge cases', () => {
+    describe('Edge cases', () => {
         it('handles set -euo pipefail for strict error handling', () => {
             const content = readFileSync(QA_SCRIPT, 'utf-8');
 

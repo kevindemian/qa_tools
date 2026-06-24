@@ -21,7 +21,7 @@ describe('CypressResource', () => {
         cypress = new CypressResource('http://cypress', 'token');
     });
 
-    describe('getCypressResource', () => {
+    describe('GetCypressResource', () => {
         it('returns data on success', async () => {
             mockClient.get.mockResolvedValue({ data: { items: [] } });
             const result = await cypress.getCypressResource('/report');
@@ -37,7 +37,7 @@ describe('CypressResource', () => {
         });
     });
 
-    describe('fetchReport', () => {
+    describe('FetchReport', () => {
         it('calculates percentages correctly', async () => {
             mockClient.get.mockResolvedValue({
                 data: [

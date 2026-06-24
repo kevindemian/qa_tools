@@ -49,7 +49,7 @@ describe('JiraLinkManager', () => {
         manager = new JiraLinkManager(mockJiraResource);
     });
 
-    describe('constructor', () => {
+    describe('Constructor', () => {
         it('stores jiraResource and sets defaults', () => {
             expect(manager.jiraResource).toBe(mockJiraResource);
             expect(manager.linkTypesCache).toBeNull();
@@ -57,7 +57,7 @@ describe('JiraLinkManager', () => {
         });
     });
 
-    describe('getIssueLinkTypes', () => {
+    describe('GetIssueLinkTypes', () => {
         it('returns cached value on second call', async () => {
             const fakeTypes = [{ id: '1', name: 'Test' }];
             mockJiraResource.getJiraResource.mockResolvedValue({ issueLinkTypes: fakeTypes });
@@ -109,7 +109,7 @@ describe('JiraLinkManager', () => {
         });
     });
 
-    describe('resolveLinkTypeId', () => {
+    describe('ResolveLinkTypeId', () => {
         beforeEach(() => {
             const fakeTypes = [
                 { id: '100', name: 'Relates', inward: 'relates to', outward: 'relates to' },
@@ -155,7 +155,7 @@ describe('JiraLinkManager', () => {
         });
     });
 
-    describe('linkIssues', () => {
+    describe('LinkIssues', () => {
         it('creates links for each linked issue', async () => {
             mockJiraResource.getJiraResource.mockResolvedValue({
                 issueLinkTypes: [{ id: '10200', name: 'Tests', inward: 'is tested by', outward: 'tests' }],
@@ -210,7 +210,7 @@ describe('JiraLinkManager', () => {
         });
     });
 
-    describe('createIssueLink', () => {
+    describe('CreateIssueLink', () => {
         it('creates a single issue link with resolved type', async () => {
             mockJiraResource.getJiraResource.mockResolvedValue({
                 issueLinkTypes: [{ id: '10200', name: 'Tests', inward: 'is tested by', outward: 'tests' }],
@@ -227,7 +227,7 @@ describe('JiraLinkManager', () => {
         });
     });
 
-    describe('associatePrecondition', () => {
+    describe('AssociatePrecondition', () => {
         it('adds precondition to test issue fields', async () => {
             const fields = [
                 { id: 'custom_99', schema: { custom: 'com.xpandit.plugins.xray:test-precondition-custom-field' } },
@@ -287,7 +287,7 @@ describe('JiraLinkManager', () => {
         });
     });
 
-    describe('listPreconditions', () => {
+    describe('ListPreconditions', () => {
         it('returns mapped preconditions from JQL search', async () => {
             mockJiraResource.searchJiraIssues.mockResolvedValue({
                 issues: [
@@ -313,7 +313,7 @@ describe('JiraLinkManager', () => {
         });
     });
 
-    describe('createPrecondition', () => {
+    describe('CreatePrecondition', () => {
         it('creates a new precondition and returns its key', async () => {
             mockJiraResource.searchJiraIssues.mockResolvedValue({ issues: [], total: 0, startAt: 0, maxResults: 5 });
             mockJiraResource.getJiraResource.mockResolvedValue([{ id: '11801', name: 'Pre-condition' }]);
@@ -331,7 +331,7 @@ describe('JiraLinkManager', () => {
         });
     });
 
-    describe('listTestExecutions', () => {
+    describe('ListTestExecutions', () => {
         it('returns mapped test execution summaries', async () => {
             mockJiraResource.searchJiraIssues.mockResolvedValue({
                 issues: [
@@ -366,7 +366,7 @@ describe('JiraLinkManager', () => {
         });
     });
 
-    describe('validateTestExecutionKey', () => {
+    describe('ValidateTestExecutionKey', () => {
         it('passes when issue is a Test Execution', async () => {
             mockJiraResource.getJiraResource.mockResolvedValue({
                 fields: { issuetype: { name: 'Test Execution' } },
@@ -390,7 +390,7 @@ describe('JiraLinkManager', () => {
         });
     });
 
-    describe('getTestCaseSummaries', () => {
+    describe('GetTestCaseSummaries', () => {
         it('returns (key not found) for keys that fail to fetch', async () => {
             mockJiraResource.getJiraResource
                 .mockResolvedValueOnce({ key: 'TEST-1', fields: { summary: 'Works' } })
@@ -411,7 +411,7 @@ describe('JiraLinkManager', () => {
     });
 });
 
-describe('matchPreconditionByTokenOverlap', () => {
+describe('MatchPreconditionByTokenOverlap', () => {
     const candidates = [
         { key: 'PREC-1', summary: 'User must be logged in' },
         { key: 'PREC-2', summary: 'Database must be seeded' },
@@ -500,7 +500,7 @@ describe('matchPreconditionByTokenOverlap', () => {
     });
 });
 
-describe('matchPreconditionByDualThreshold', () => {
+describe('MatchPreconditionByDualThreshold', () => {
     const candidates = [
         { key: 'PREC-1', summary: 'User must be logged in' },
         { key: 'PREC-2', summary: 'Admin role required' },

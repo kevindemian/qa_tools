@@ -11,7 +11,7 @@ vi.mock('./config', () => ({
 import * as paletteModule from './palette.js';
 import chalk from 'chalk';
 
-describe('palette', () => {
+describe('Palette', () => {
     it('has all expected palette keys', () => {
         const { palette } = paletteModule;
         const expected = [

@@ -1,6 +1,6 @@
 import { matchPreconditionByTokenOverlap, matchPreconditionByDualThreshold } from './precondition-matcher.js';
 
-describe('matchPreconditionByTokenOverlap', () => {
+describe('MatchPreconditionByTokenOverlap', () => {
     const candidates = [
         { key: 'PREC-1', summary: 'User must be logged in' },
         { key: 'PREC-2', summary: 'Database must be seeded' },
@@ -89,7 +89,7 @@ describe('matchPreconditionByTokenOverlap', () => {
     });
 });
 
-describe('matchPreconditionByDualThreshold', () => {
+describe('MatchPreconditionByDualThreshold', () => {
     const candidates = [
         { key: 'PREC-1', summary: 'User must be logged in' },
         { key: 'PREC-2', summary: 'Admin role required' },

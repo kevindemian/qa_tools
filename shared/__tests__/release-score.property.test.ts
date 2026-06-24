@@ -29,7 +29,7 @@ function gateArb(): fc.Arbitrary<'pass' | 'fail'> {
 
 /* ── Tests ───────────────────────────────────────────────────── */
 
-describe('calculateReleaseScore — property-based', () => {
+describe('CalculateReleaseScore — property-based', () => {
     it('score sempre em [0, 100]', () => {
         fc.assert(
             fc.property(pctArb(), pctArb(), gateArb(), pctArb(), pctArb(), (tasks, health, gate, coverage, flaky) => {

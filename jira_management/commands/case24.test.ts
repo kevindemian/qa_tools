@@ -14,7 +14,7 @@ import handlerModule from './case24.js';
 
 const mockHandler = handlerModule.handler;
 
-describe('case24 handler', () => {
+describe('Case24 handler', () => {
     const mockContext = createMockContext();
 
     beforeEach(() => {

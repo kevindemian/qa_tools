@@ -1,6 +1,6 @@
 import { sanitizeForLlm, truncateStacktrace, sanitizeHtml, sanitizeTerminal } from './sanitize.js';
 
-describe('sanitizeForLlm', () => {
+describe('SanitizeForLlm', () => {
     it('sanitizes Bearer tokens', () => {
         expect(sanitizeForLlm('Authorization: Bearer sk-abc123def456')).toContain('[...sanitized]');
     });
@@ -63,7 +63,7 @@ describe('sanitizeForLlm', () => {
     });
 });
 
-describe('truncateStacktrace', () => {
+describe('TruncateStacktrace', () => {
     it('does not truncate short stacks', () => {
         const stack = 'Error\n  at line 1\n  at line 2';
 
@@ -80,7 +80,7 @@ describe('truncateStacktrace', () => {
     });
 });
 
-describe('sanitizeForLlm with truncation', () => {
+describe('SanitizeForLlm with truncation', () => {
     it('truncates long stack traces when maxStackLines is set', () => {
         const lines = Array.from({ length: 30 }, (_, i) => '  at line ' + (i + 1));
         const input = 'Error\n' + lines.join('\n');
@@ -107,7 +107,7 @@ describe('sanitizeForLlm with truncation', () => {
     });
 });
 
-describe('sanitizeForLlm — realistic scenarios', () => {
+describe('SanitizeForLlm — realistic scenarios', () => {
     it('sanitizes user story containing an API key (case18 scenario)', () => {
         const userStory = 'As a user I want to login. My API key is sk-' + 'a'.repeat(30) + ' and it should be hidden.';
         const result = sanitizeForLlm(userStory);
@@ -144,7 +144,7 @@ describe('sanitizeForLlm — realistic scenarios', () => {
     });
 });
 
-describe('sanitizeHtml', () => {
+describe('SanitizeHtml', () => {
     it('escapes HTML special characters', () => {
         const input = '<script>alert("xss")</script>';
         const result = sanitizeHtml(input);
@@ -168,7 +168,7 @@ describe('sanitizeHtml', () => {
     });
 });
 
-describe('sanitizeTerminal', () => {
+describe('SanitizeTerminal', () => {
     it('removes ANSI escape sequences', () => {
         const input = '\x1B[31mred\x1B[0m';
 

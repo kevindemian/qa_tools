@@ -1,11 +1,11 @@
 import { ensureDotenv, envVal, toBool, toInt, __resetDotenvLoaded } from './env-loader.js';
 
-describe('env-loader — dotenv wrapper', () => {
+describe('Env-loader — dotenv wrapper', () => {
     beforeEach(() => {
         __resetDotenvLoaded();
     });
 
-    describe('ensureDotenv', () => {
+    describe('EnsureDotenv', () => {
         it('is idempotent', () => {
             ensureDotenv();
 
@@ -13,7 +13,7 @@ describe('env-loader — dotenv wrapper', () => {
         });
     });
 
-    describe('envVal', () => {
+    describe('EnvVal', () => {
         it('returns empty string for missing key', () => {
             const val = envVal('__NONEXISTENT_VAR_12345__');
 
@@ -36,7 +36,7 @@ describe('env-loader — dotenv wrapper', () => {
         });
     });
 
-    describe('toBool', () => {
+    describe('ToBool', () => {
         it('returns false for undefined', () => {
             expect(toBool(undefined)).toBeFalsy();
         });
@@ -57,7 +57,7 @@ describe('env-loader — dotenv wrapper', () => {
         });
     });
 
-    describe('toInt', () => {
+    describe('ToInt', () => {
         it('returns fallback for undefined', () => {
             expect(toInt(undefined, 10)).toBe(10);
         });

@@ -8,7 +8,7 @@ import {
 } from './report-types.js';
 import type { FlatTest } from './result_parser.js';
 
-describe('report-types constants', () => {
+describe('Report-types constants', () => {
     it('dEFAULT_TITLE is defined', () => {
         expect(DEFAULT_TITLE).toBe('QA Tools — Test Report');
     });
@@ -31,7 +31,7 @@ describe('report-types constants', () => {
     });
 });
 
-describe('categorizeFailure', () => {
+describe('CategorizeFailure', () => {
     it('returns TIMEOUT for timeout errors', () => {
         expect(categorizeFailure('Request timed out after 30s')).toBe('TIMEOUT');
         expect(categorizeFailure('TIMED OUT')).toBe('TIMEOUT');
@@ -67,7 +67,7 @@ describe('categorizeFailure', () => {
     });
 });
 
-describe('extractSuite', () => {
+describe('ExtractSuite', () => {
     it('extracts suite from fullTitle with > separator', () => {
         const t: FlatTest = { title: 'Login', state: 'passed', duration: 100, fullTitle: 'Auth > Login' };
 

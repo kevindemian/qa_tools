@@ -115,7 +115,7 @@ async function getCommandsIndex(): Promise<{ getHandler: (id: string) => unknown
     return import('../commands/index.js');
 }
 
-describe('jira_management — getHandler registry', () => {
+describe('Jira_management — getHandler registry', () => {
     let getHandler: (id: string) => unknown;
 
     beforeAll(async () => {
@@ -196,7 +196,7 @@ describe('jira_management — getHandler registry', () => {
     });
 });
 
-describe('jira_management — case handlers are connected', () => {
+describe('Jira_management — case handlers are connected', () => {
     let getHandler: (id: string) => unknown;
 
     beforeAll(async () => {

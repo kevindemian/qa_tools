@@ -33,7 +33,7 @@ beforeEach(() => {
     );
 });
 
-describe('glGetBranch', () => {
+describe('GlGetBranch', () => {
     it('returns { name } on success', async () => {
         vi.mocked(apiGet).mockResolvedValue({ name: 'main' });
         const result = await glGetBranch(mockClient, 'owner', 'repo', 'main');
@@ -60,7 +60,7 @@ describe('glGetBranch', () => {
     });
 });
 
-describe('glGetDiff', () => {
+describe('GlGetDiff', () => {
     it('returns formatted diff string', async () => {
         vi.mocked(apiGet).mockResolvedValue({
             diffs: [{ diff: '+console.log("hi")', new_path: 'src/main.ts' }],

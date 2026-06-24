@@ -93,7 +93,7 @@ beforeEach(() => {
     vi.mocked(checkCircuitBreaker).mockImplementation(() => {});
 });
 
-describe('parseRawOnce', () => {
+describe('ParseRawOnce', () => {
     it('parses valid JSON string', () => {
         const result = parseRawOnce('{"key": "value"}');
 
@@ -113,7 +113,7 @@ describe('parseRawOnce', () => {
     });
 });
 
-describe('parseRetryAfter', () => {
+describe('ParseRetryAfter', () => {
     function mockResponseWithHeader(key: string, value: string | null): Response {
         const r = new Response('', { status: 429 });
         vi.spyOn(r, 'text').mockResolvedValue('');
@@ -157,7 +157,7 @@ interface OpenAiPayload {
     response_format?: { type: string };
 }
 
-describe('buildOpenAiPayload', () => {
+describe('BuildOpenAiPayload', () => {
     it('builds a valid JSON payload', () => {
         const result = buildOpenAiPayload('sys', 'usr', 'gpt-4', 0.5);
         const parsed = JSON.parse(result) as OpenAiPayload;
@@ -198,7 +198,7 @@ interface GeminiPayload {
     contents: Array<{ role: string; parts: Array<{ text: string }> }>;
 }
 
-describe('buildGeminiPayload', () => {
+describe('BuildGeminiPayload', () => {
     it('builds a valid Gemini JSON payload', () => {
         const result = buildGeminiPayload('sys', 'usr');
         const parsed = JSON.parse(result) as GeminiPayload;
@@ -218,7 +218,7 @@ interface AnthropicPayload {
     metadata?: Record<string, unknown>;
 }
 
-describe('buildAnthropicPayload', () => {
+describe('BuildAnthropicPayload', () => {
     it('builds a valid Anthropic JSON payload', () => {
         const result = buildAnthropicPayload('sys', 'usr', 'claude-sonnet-4-20250514', 0.5);
         const parsed = JSON.parse(result) as AnthropicPayload;
@@ -254,7 +254,7 @@ describe('buildAnthropicPayload', () => {
     });
 });
 
-describe('fetchWithRetry', () => {
+describe('FetchWithRetry', () => {
     beforeEach(() => {
         vi.spyOn(global, 'setTimeout').mockImplementation(((cb: (...args: unknown[]) => void) => {
             cb();
@@ -315,7 +315,7 @@ describe('fetchWithRetry', () => {
     });
 });
 
-describe('sendToProvider', () => {
+describe('SendToProvider', () => {
     beforeEach(() => {
         vi.spyOn(global, 'setTimeout').mockImplementation(((cb: (...args: unknown[]) => void) => {
             cb();

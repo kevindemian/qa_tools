@@ -6,7 +6,7 @@
 
 import { Badge, StatusBadge, SeverityBadge } from './badge.js';
 
-describe('badge primitives', () => {
+describe('Badge primitives', () => {
     describe('Badge', () => {
         it('renders with text', () => {
             const html = Badge({ children: 'PASS' });

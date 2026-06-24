@@ -31,7 +31,7 @@ describe('PackageVersionManager', () => {
         fs.writeFileSync(path.join(dir, 'ReleaseNotes.txt'), 'Header\n----\nOld content');
     }
 
-    describe('updateVersion', () => {
+    describe('UpdateVersion', () => {
         it('updates version in package.json', () => {
             writePackage('1.0.0');
             pkg.updateVersion('2.0.0');
@@ -57,7 +57,7 @@ describe('PackageVersionManager', () => {
         });
     });
 
-    describe('updateReleaseNotes', () => {
+    describe('UpdateReleaseNotes', () => {
         it('prepends new release notes', () => {
             writeReleaseNotes();
             pkg.updateReleaseNotes('v2.0', ['TASK-1 Fix bug', 'TASK-2 Add feature']);

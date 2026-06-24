@@ -25,7 +25,7 @@ function testDir(label: string): string {
 }
 
 describe('Logger', () => {
-    describe('rootLogger', () => {
+    describe('RootLogger', () => {
         it('is a Logger instance', () => {
             expect(rootLogger).toBeInstanceOf(Logger);
         });
@@ -35,7 +35,7 @@ describe('Logger', () => {
         });
     });
 
-    describe('child()', () => {
+    describe('Child()', () => {
         it('creates a child with merged context', () => {
             const child = rootLogger.child({ operation: 'test', resource: 'Jira' });
 
@@ -284,7 +284,7 @@ describe('Logger', () => {
         });
     });
 
-    describe('filePath getter', () => {
+    describe('FilePath getter', () => {
         it('returns null when LOG_FILE is not true', () => {
             const logger = new Logger({}, Config.create({ logFile: false }));
 
@@ -303,7 +303,7 @@ describe('Logger', () => {
         });
     });
 
-    describe('maskDeep', () => {
+    describe('MaskDeep', () => {
         it('masks values for keys matching token/secret/key', () => {
             const result = maskDeep({ token: 'abcdefghij', name: 'public', secret: 'my-secret-value!' });
 
@@ -387,7 +387,7 @@ describe('Logger', () => {
         });
     });
 
-    describe('writeFileOnly', () => {
+    describe('WriteFileOnly', () => {
         afterEach(() => {
             vi.restoreAllMocks();
         });
@@ -410,7 +410,7 @@ describe('Logger', () => {
         });
     });
 
-    describe('level filtering', () => {
+    describe('Level filtering', () => {
         it('does not call console.log for levels below LOG_LEVEL', () => {
             const spyLog = vi.spyOn(console, 'log').mockImplementation(() => {});
             const spyError = vi.spyOn(console, 'error').mockImplementation(() => {});
@@ -438,7 +438,7 @@ import fc from 'fast-check';
 
 const PBT_SECRET_RE = /token|secret|key|password|authorization/i;
 
-describe('maskDeep (PBT)', () => {
+describe('MaskDeep (PBT)', () => {
     it('primitives and null return input unchanged', () => {
         fc.assert(
             fc.property(fc.constantFrom(null, undefined, 42, 'hello', true, false), (input) =>

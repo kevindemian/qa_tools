@@ -36,7 +36,7 @@ function mockSpawnWithExit(code: number): void {
     });
 }
 
-describe('entry-menu to module spawn — full flow (CR-3c)', () => {
+describe('Entry-menu to module spawn — full flow (CR-3c)', () => {
     beforeEach(() => {
         vi.clearAllMocks();
         vi.spyOn(console, 'clear').mockImplementation(() => {});

@@ -71,7 +71,7 @@ beforeEach(() => {
     vi.clearAllMocks();
 });
 
-describe('showDocs', () => {
+describe('ShowDocs', () => {
     it('converts docs to html and opens index in browser', async () => {
         mockGetDocsOutputDir.mockReturnValue('/tmp/docs');
         mockReaddirSync.mockReturnValue(['01-intro.md', '02-setup.md', '03-advanced.md']);

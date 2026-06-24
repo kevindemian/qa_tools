@@ -41,7 +41,7 @@ const classArb: fc.Arbitrary<FailureClassification> = fc
         project: r.project,
     }));
 
-describe('aggregateDefectSeasonality — property-based', () => {
+describe('AggregateDefectSeasonality — property-based', () => {
     it('totalRecords matches classification count', () => {
         fc.assert(
             fc.property(fc.array(classArb, { minLength: 0, maxLength: 20 }), (classes) => {

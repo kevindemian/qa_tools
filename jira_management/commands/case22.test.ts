@@ -51,7 +51,7 @@ beforeEach(() => {
     mockCalcFlaky.mockReturnValue([]);
 });
 
-describe('case22 — Test Impact Analysis', () => {
+describe('Case22 — Test Impact Analysis', () => {
     it('analyzes test impact from git diff', async () => {
         mockAsk.mockResolvedValue('HEAD~1');
         mockExecFileSync.mockReturnValue('src/login.ts\nsrc/auth.ts\n');

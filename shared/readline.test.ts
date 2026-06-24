@@ -9,8 +9,8 @@ vi.mock('readline-sync', () => ({
 
 const readlineSync = await import('readline-sync');
 
-describe('readline — readline-sync wrapper', () => {
-    describe('question', () => {
+describe('Readline — readline-sync wrapper', () => {
+    describe('Question', () => {
         it('calls readlineSync.question with query and options', async () => {
             const { question } = await import('./readline.js');
             vi.spyOn(readlineSync.default, 'question').mockReturnValue('answer');
@@ -30,7 +30,7 @@ describe('readline — readline-sync wrapper', () => {
         });
     });
 
-    describe('keyInYN', () => {
+    describe('KeyInYN', () => {
         it('calls readlineSync.keyInYN and returns result', async () => {
             const { keyInYN } = await import('./readline.js');
             vi.spyOn(readlineSync.default, 'keyInYN').mockReturnValue(true);
@@ -41,7 +41,7 @@ describe('readline — readline-sync wrapper', () => {
         });
     });
 
-    describe('password', () => {
+    describe('Password', () => {
         it('calls readlineSync.question with hideEchoBack', async () => {
             const { password } = await import('./readline.js');
             vi.spyOn(readlineSync.default, 'question').mockReturnValue('secret');

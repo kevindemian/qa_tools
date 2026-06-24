@@ -33,7 +33,7 @@ import * as CONFIG from '../shared/config.js';
 import * as PROMPT from '../shared/prompt.js';
 import * as STATE from '../shared/state.js';
 
-describe('handleDryRun', () => {
+describe('HandleDryRun', () => {
     const onBusy = vi.fn();
 
     beforeEach(() => {
@@ -60,7 +60,7 @@ describe('handleDryRun', () => {
     });
 });
 
-describe('resolveCsvPath', () => {
+describe('ResolveCsvPath', () => {
     beforeEach(() => {
         vi.clearAllMocks();
         vi.spyOn(STATE, 'load').mockReturnValue({});
@@ -91,7 +91,7 @@ describe('resolveCsvPath', () => {
     });
 });
 
-describe('resolveLabels', () => {
+describe('ResolveLabels', () => {
     beforeEach(() => {
         vi.clearAllMocks();
         vi.spyOn(STATE, 'load').mockReturnValue({});
@@ -129,7 +129,7 @@ describe('resolveLabels', () => {
     });
 });
 
-describe('resolveJsonPath', () => {
+describe('ResolveJsonPath', () => {
     beforeEach(() => {
         vi.clearAllMocks();
         vi.spyOn(STATE, 'load').mockReturnValue({});

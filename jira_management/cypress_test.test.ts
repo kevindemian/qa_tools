@@ -15,7 +15,7 @@ describe('CypressTest', () => {
         vi.restoreAllMocks();
     });
 
-    describe('parseResults', () => {
+    describe('ParseResults', () => {
         it('parses a single block correctly', async () => {
             const content = '10\n20\n30\n40';
             vi.spyOn(fs, 'readFile').mockImplementation((...args: unknown[]) => {

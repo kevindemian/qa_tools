@@ -11,7 +11,7 @@ import {
     __setHttpDep,
 } from './splash.js';
 
-describe('buildSplashLines', () => {
+describe('BuildSplashLines', () => {
     it('formats logo lines with help hint', () => {
         const lines = buildSplashLines('QA TOOLS\n======');
         const output = lines.join('\n');
@@ -79,7 +79,7 @@ vi.mock('./output', () => ({
     defaultOutput: { box: vi.fn(), print: vi.fn() },
 }));
 
-describe('checkJiraStatus', () => {
+describe('CheckJiraStatus', () => {
     it('returns info when URL is empty', async () => {
         const result = await checkJiraStatus('', '');
 
@@ -186,7 +186,7 @@ describe('checkJiraStatus', () => {
     });
 });
 
-describe('showSplash', () => {
+describe('ShowSplash', () => {
     const mockFiglet = { textSync: vi.fn().mockReturnValue('QA TOOLS\n======') };
     const mockGradientColor = vi.fn((text: string) => text);
     const mockGradient = vi.fn(() => mockGradientColor);

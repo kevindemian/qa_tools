@@ -10,7 +10,7 @@ beforeEach(() => {
     __resetBreadcrumbs();
 });
 
-describe('breadcrumbs', () => {
+describe('Breadcrumbs', () => {
     it('returns empty string when no breadcrumbs', () => {
         expect(getBreadcrumbPath()).toBe('');
     });

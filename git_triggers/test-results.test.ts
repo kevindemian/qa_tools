@@ -175,7 +175,7 @@ describe('_resolveGlob', () => {
 
 // ── downloadTestArtifacts ────────────────────────────────────────────────
 
-describe('downloadTestArtifacts', () => {
+describe('DownloadTestArtifacts', () => {
     it('returns parsed results when zip contains valid mochawesome.json', async () => {
         mockListPipelineArtifacts.mockResolvedValue([{ id: 1, name: 'mochawesome-report' }]);
         mockDownloadArtifact.mockResolvedValue({ buffer: Buffer.from(''), filename: 'artifact.zip' });
@@ -312,7 +312,7 @@ describe('downloadTestArtifacts', () => {
 
 // ── parseTestResults ─────────────────────────────────────────────────────
 
-describe('parseTestResults', () => {
+describe('ParseTestResults', () => {
     it('returns matched results with csvName when mapping is valid', async () => {
         mockMatchResultsToTests.mockReturnValue({
             matched: [{ key: 'TEST-1', title: 'test1', status: 'passed', duration: 100 }],
@@ -370,7 +370,7 @@ describe('parseTestResults', () => {
 
 // ── createTestExecution ─────────────────────────────────────────────────
 
-describe('createTestExecution', () => {
+describe('CreateTestExecution', () => {
     it('creates test execution and pushes success history', async () => {
         mockCreateTestExecutionFromResults.mockResolvedValue({
             key: 'TE-123',
@@ -425,7 +425,7 @@ describe('createTestExecution', () => {
 
 // ── collectTestResults ──────────────────────────────────────────────────
 
-describe('collectTestResults', () => {
+describe('CollectTestResults', () => {
     it('downloads, parses, and creates test execution on full success', async () => {
         mockListPipelineArtifacts.mockResolvedValue([{ id: 1, name: 'mochawesome-report' }]);
         mockDownloadArtifact.mockResolvedValue({ buffer: Buffer.from(''), filename: 'artifact.zip' });

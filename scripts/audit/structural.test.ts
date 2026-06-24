@@ -18,7 +18,7 @@ beforeEach(() => {
     vi.clearAllMocks();
 });
 
-describe('structural.ts — module loads and runs', () => {
+describe('Structural.ts — module loads and runs', () => {
     it('loads without error when rg succeeds and outputs 6 findings', async () => {
         const spy = vi.spyOn(console, 'log').mockImplementation(() => {});
         mockExecFileSync.mockReturnValue(Buffer.from(''));

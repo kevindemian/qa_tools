@@ -50,7 +50,7 @@ beforeEach(() => {
     vi.clearAllMocks();
 });
 
-describe('compareRuns', () => {
+describe('CompareRuns', () => {
     it('calls LLM with formatted run data and returns analysis', async () => {
         mockLlmPrompt.mockResolvedValueOnce('Overall improvement in pass rate from 80% to 90%.');
 

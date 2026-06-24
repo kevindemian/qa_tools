@@ -37,7 +37,7 @@ describe('GitHubManager', () => {
         manager = new GitHubManager('myorg/myrepo', 'ghp_test', 'https://api.github.com');
     });
 
-    describe('constructor', () => {
+    describe('Constructor', () => {
         it('parses owner/repo from full name', () => {
             expect(manager.owner).toBe('myorg');
             expect(manager.repo).toBe('myrepo');
@@ -69,7 +69,7 @@ describe('GitHubManager', () => {
         });
     });
 
-    describe('triggerPipeline', () => {
+    describe('TriggerPipeline', () => {
         it('calls workflow dispatch with workflow_id', async () => {
             mockClient.post.mockResolvedValue({ data: {} });
             const result: Record<string, unknown> = (await manager.triggerPipeline({
@@ -119,7 +119,7 @@ describe('GitHubManager', () => {
         });
     });
 
-    describe('getSchedules', () => {
+    describe('GetSchedules', () => {
         it('returns empty array', async () => {
             const result = await manager.getSchedules();
 
@@ -127,13 +127,13 @@ describe('GitHubManager', () => {
         });
     });
 
-    describe('runSchedule', () => {
+    describe('RunSchedule', () => {
         it('throws not-implemented error', async () => {
             await expect(manager.runSchedule('1')).rejects.toThrow('not available via REST API');
         });
     });
 
-    describe('createMergeRequest (PR)', () => {
+    describe('CreateMergeRequest (PR)', () => {
         const args = ['feature', 'main', 'PR Title', 'PR Desc'] as const;
         const mockPR = {
             number: 10,
@@ -215,7 +215,7 @@ describe('GitHubManager', () => {
         });
     });
 
-    describe('updateMergeRequest', () => {
+    describe('UpdateMergeRequest', () => {
         it('calls PATCH /pulls/{iid}', async () => {
             mockClient.patch.mockResolvedValue({
                 data: {
@@ -250,7 +250,7 @@ describe('GitHubManager', () => {
         });
     });
 
-    describe('getMergeRequest', () => {
+    describe('GetMergeRequest', () => {
         it('calls GET /pulls/{iid}', async () => {
             mockClient.get.mockResolvedValue({
                 data: {
@@ -279,7 +279,7 @@ describe('GitHubManager', () => {
         });
     });
 
-    describe('searchMergeRequests', () => {
+    describe('SearchMergeRequests', () => {
         it('calls GET /pulls with head:owner prefix', async () => {
             const mockPRs = [
                 {
@@ -331,7 +331,7 @@ describe('GitHubManager', () => {
         });
     });
 
-    describe('acceptMergeRequest', () => {
+    describe('AcceptMergeRequest', () => {
         it('calls GET then PUT /pulls/{iid}/merge when open', async () => {
             mockClient.get.mockResolvedValue({
                 data: {
@@ -448,7 +448,7 @@ describe('GitHubManager', () => {
         });
     });
 
-    describe('getPipelineJobs', () => {
+    describe('GetPipelineJobs', () => {
         it('returns jobs from /actions/runs/{id}/jobs', async () => {
             mockClient.get.mockResolvedValue({
                 data: {
@@ -486,7 +486,7 @@ describe('GitHubManager', () => {
         });
     });
 
-    describe('listPipelineArtifacts', () => {
+    describe('ListPipelineArtifacts', () => {
         it('returns artifacts from /actions/runs/{id}/artifacts', async () => {
             mockClient.get.mockResolvedValue({
                 data: {
@@ -507,7 +507,7 @@ describe('GitHubManager', () => {
         });
     });
 
-    describe('downloadArtifact', () => {
+    describe('DownloadArtifact', () => {
         it('returns buffer from /actions/artifacts/{id}/zip', async () => {
             mockClient.get.mockResolvedValue({
                 data: Buffer.from('zip-data'),
@@ -530,7 +530,7 @@ describe('GitHubManager', () => {
         });
     });
 
-    describe('getCICDVariables', () => {
+    describe('GetCICDVariables', () => {
         it('calls GET /actions/variables', async () => {
             mockClient.get.mockResolvedValue({ data: { variables: [{ name: 'MY_VAR', value: 'myval' }] } });
             const result = await manager.getCICDVariables();
@@ -549,7 +549,7 @@ describe('GitHubManager', () => {
         });
     });
 
-    describe('isApproved', () => {
+    describe('IsApproved', () => {
         it('returns true when review is APPROVED', async () => {
             mockClient.get.mockResolvedValue({ data: [{ state: 'APPROVED' }] });
             const result = await manager.isApproved(42);
@@ -616,7 +616,7 @@ describe('GitHubManager', () => {
         });
     });
 
-    describe('getRecentPipelines', () => {
+    describe('GetRecentPipelines', () => {
         it('calls GET /actions/runs with per_page', async () => {
             mockClient.get.mockResolvedValue({
                 data: {
@@ -650,7 +650,7 @@ describe('GitHubManager', () => {
         });
     });
 
-    describe('getBranch', () => {
+    describe('GetBranch', () => {
         it('returns { name } for valid branch', async () => {
             mockClient.get.mockResolvedValue({ data: { name: 'main' } });
             const result = await manager.getBranch('main');
@@ -673,7 +673,7 @@ describe('GitHubManager', () => {
         });
     });
 
-    describe('getPipeline', () => {
+    describe('GetPipeline', () => {
         it('calls GET /actions/runs/{id}', async () => {
             mockClient.get.mockResolvedValue({ data: { id: 42, status: 'completed', conclusion: 'success' } });
             const result = await manager.getPipeline('42');
@@ -690,7 +690,7 @@ describe('GitHubManager', () => {
         });
     });
 
-    describe('getDiff', () => {
+    describe('GetDiff', () => {
         it('return diff string for valid comparison', async () => {
             mockClient.get.mockResolvedValue({
                 data: { files: [{ filename: 'src/main.ts', patch: '+console.log("hi")', status: 'modified' }] },
@@ -725,7 +725,7 @@ describe('GitHubManager', () => {
         });
     });
 
-    describe('getOpenIssues', () => {
+    describe('GetOpenIssues', () => {
         it('filters out pull requests from results', async () => {
             mockClient.get.mockResolvedValue({
                 data: [
@@ -775,7 +775,7 @@ describe('GitHubManager', () => {
         });
     });
 
-    describe('getJobLogs', () => {
+    describe('GetJobLogs', () => {
         it('returns truncated log text on success', async () => {
             mockClient.get.mockResolvedValue({ data: 'line1\nline2\n' });
             const result = await manager.getJobLogs(42, 100);

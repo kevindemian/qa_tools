@@ -110,7 +110,7 @@ describe('ReportValidator', () => {
     });
 });
 
-describe('validateAll', () => {
+describe('ValidateAll', () => {
     let validator: ReportValidator;
     const allSchema: ValidationRule[] = [
         { field: 'tests', required: true, type: 'array', minLength: 1 },
@@ -179,7 +179,7 @@ describe('validateAll', () => {
     });
 });
 
-describe('checkConsistency', () => {
+describe('CheckConsistency', () => {
     let validator: ReportValidator;
 
     beforeEach(() => {
@@ -219,7 +219,7 @@ describe('checkConsistency', () => {
     });
 });
 
-describe('resolveField — deep nesting', () => {
+describe('ResolveField — deep nesting', () => {
     let validator: ReportValidator;
 
     beforeEach(() => {

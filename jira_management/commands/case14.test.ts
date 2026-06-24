@@ -14,7 +14,7 @@ beforeEach(() => {
     vi.clearAllMocks();
 });
 
-describe('case14 — config Cypress directory', () => {
+describe('Case14 — config Cypress directory', () => {
     it('exports a handler function', () => {
         expect(case14).toBeDefined();
         expect(typeof case14.handler).toBe('function');

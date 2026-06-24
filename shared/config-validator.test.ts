@@ -4,7 +4,7 @@ import { CONFIG_SCHEMA } from './config-schema.js';
 // Import functions under test - need dynamic import to avoid module-level side effects
 import { validateRequiredEnv, validateConfigValues, warnUnknownEnv, validateAll } from './config-validator.js';
 
-describe('validateRequiredEnv', () => {
+describe('ValidateRequiredEnv', () => {
     const REQUIRED = ['JIRA_BASE_URL', 'JIRA_PERSONAL_TOKEN', 'XRAY_BASE_URL'];
 
     beforeEach(() => {
@@ -45,7 +45,7 @@ describe('validateRequiredEnv', () => {
     });
 });
 
-describe('validateConfigValues', () => {
+describe('ValidateConfigValues', () => {
     const STASH: Record<string, string | undefined> = {};
 
     beforeAll(() => {
@@ -140,7 +140,7 @@ describe('validateConfigValues', () => {
     });
 });
 
-describe('warnUnknownEnv', () => {
+describe('WarnUnknownEnv', () => {
     const UNKNOWN_PREFIX =
         /^QA_|^LLM_|^JIRA_|^XRAY_|^GIT|^GITHUB_|^CYPRESS_|^CSV_|^DRY_|^DEBUG|^QUIET|^ON_|^LOG_|^AUTO_|^KNOWN_|^REPORT_|^METRICS_|^SKIP_|^NO_|^OPENCODE_|^BENCHMARK|^AWS_|^CI_/i;
 
@@ -184,7 +184,7 @@ describe('warnUnknownEnv', () => {
     });
 });
 
-describe('validateAll', () => {
+describe('ValidateAll', () => {
     const REQUIRED = ['JIRA_BASE_URL', 'JIRA_PERSONAL_TOKEN', 'XRAY_BASE_URL'];
 
     beforeEach(() => {

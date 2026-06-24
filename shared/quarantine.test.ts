@@ -62,7 +62,7 @@ afterEach(() => {
     }
 });
 
-describe('quarantineTest / isQuarantined', () => {
+describe('QuarantineTest / isQuarantined', () => {
     it('adds and retrieves a quarantine entry', () => {
         quarantineTest({ testTitle: TEST_TITLE, reason: 'flaky', quarantinedBy: 'test', flakyRate: 0.7 });
         const entry = isQuarantined(TEST_TITLE);
@@ -88,7 +88,7 @@ describe('quarantineTest / isQuarantined', () => {
     });
 });
 
-describe('removeQuarantine', () => {
+describe('RemoveQuarantine', () => {
     it('removes an existing entry', () => {
         quarantineTest({ testTitle: TEST_TITLE, reason: 'flaky', quarantinedBy: 'test', flakyRate: 0.5 });
 
@@ -101,7 +101,7 @@ describe('removeQuarantine', () => {
     });
 });
 
-describe('expireQuarantine', () => {
+describe('ExpireQuarantine', () => {
     it('expires entries past their TTL', () => {
         vi.useFakeTimers();
         quarantineTest({ testTitle: TEST_TITLE, reason: 'flaky', quarantinedBy: 'test', flakyRate: 0.5, ttlDays: 0 });
@@ -132,7 +132,7 @@ describe('expireQuarantine', () => {
     });
 });
 
-describe('listQuarantined', () => {
+describe('ListQuarantined', () => {
     it('returns all non-expired entries', () => {
         quarantineTest({ testTitle: 'test-1', reason: 'flaky', quarantinedBy: 'test', flakyRate: 0.5 });
         quarantineTest({ testTitle: 'test-2', reason: 'flaky', quarantinedBy: 'test', flakyRate: 0.6 });
@@ -142,7 +142,7 @@ describe('listQuarantined', () => {
     });
 });
 
-describe('quarantineRatio', () => {
+describe('QuarantineRatio', () => {
     it('calculates ratio and warns above 5%', () => {
         quarantineTest({ testTitle: 't1', reason: 'flaky', quarantinedBy: 'test', flakyRate: 0.5 });
         quarantineTest({ testTitle: 't2', reason: 'flaky', quarantinedBy: 'test', flakyRate: 0.5 });
@@ -162,7 +162,7 @@ describe('quarantineRatio', () => {
     });
 });
 
-describe('generatePipelineQuarantine', () => {
+describe('GeneratePipelineQuarantine', () => {
     it('generates valid pipeline JSON without totalTests — no warning', () => {
         quarantineTest({
             testTitle: TEST_TITLE,
@@ -205,7 +205,7 @@ describe('generatePipelineQuarantine', () => {
     });
 });
 
-describe('markPermanent', () => {
+describe('MarkPermanent', () => {
     it('marks entry as permanent', () => {
         quarantineTest({ testTitle: TEST_TITLE, reason: 'flaky', quarantinedBy: 'test', flakyRate: 0.5 });
 
@@ -221,7 +221,7 @@ describe('markPermanent', () => {
     });
 });
 
-describe('loadQuarantine', () => {
+describe('LoadQuarantine', () => {
     it('returns empty store for corrupt data', () => {
         fs.mkdirSync(path.dirname(quarantineStorePath()), { recursive: true });
         fs.writeFileSync(quarantineStorePath(), 'not-json', 'utf8');

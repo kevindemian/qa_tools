@@ -77,7 +77,7 @@ const emptyResult: BacklogHealthResult = {
     timestamp: new Date().toISOString(),
 };
 
-describe('analyzeUnassignedIssues', () => {
+describe('AnalyzeUnassignedIssues', () => {
     it('filters issues with null or empty assignee', () => {
         const result = analyzeUnassignedIssues(sampleIssues);
 
@@ -97,7 +97,7 @@ describe('analyzeUnassignedIssues', () => {
     });
 });
 
-describe('analyzeStaleIssues', () => {
+describe('AnalyzeStaleIssues', () => {
     it('detects issues older than default 30 days', () => {
         const result = analyzeStaleIssues(sampleIssues);
 
@@ -116,7 +116,7 @@ describe('analyzeStaleIssues', () => {
     });
 });
 
-describe('analyzeBugsWithoutTests', () => {
+describe('AnalyzeBugsWithoutTests', () => {
     it('filters Bug type with linkedTestCount === 0', () => {
         const result = analyzeBugsWithoutTests(sampleIssues);
 
@@ -141,7 +141,7 @@ describe('analyzeBugsWithoutTests', () => {
     });
 });
 
-describe('calculateBacklogScore', () => {
+describe('CalculateBacklogScore', () => {
     it('returns 100 for perfect result with no flagged issues', () => {
         expect(calculateBacklogScore(emptyResult)).toBe(100);
     });
@@ -181,7 +181,7 @@ describe('calculateBacklogScore', () => {
     });
 });
 
-describe('analyzeBacklogHealth', () => {
+describe('AnalyzeBacklogHealth', () => {
     it('returns complete result with all categories', () => {
         const result = analyzeBacklogHealth(sampleIssues);
 
@@ -210,7 +210,7 @@ describe('analyzeBacklogHealth', () => {
     });
 });
 
-describe('generateBacklogHealthHtml', () => {
+describe('GenerateBacklogHealthHtml', () => {
     it('returns non-empty string', () => {
         const html = generateBacklogHealthHtml(emptyResult);
 

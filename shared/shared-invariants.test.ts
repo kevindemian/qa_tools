@@ -11,7 +11,7 @@ function makeCtx(input = ''): ValidationContext {
     return { inputRaw: input, outputRaw: {}, artifactType: 'test-suite' };
 }
 
-describe('invariantNoPlaceholder (I-01)', () => {
+describe('InvariantNoPlaceholder (I-01)', () => {
     it('passes clean content', () => {
         const results = invariantNoPlaceholder({ text: 'Clean content' }, makeCtx());
 
@@ -51,7 +51,7 @@ describe('invariantNoPlaceholder (I-01)', () => {
     });
 });
 
-describe('invariantNoMarkdown (I-02)', () => {
+describe('InvariantNoMarkdown (I-02)', () => {
     it('passes clean content', () => {
         const results = invariantNoMarkdown({ text: 'Clean text without marks' }, makeCtx());
 
@@ -71,7 +71,7 @@ describe('invariantNoMarkdown (I-02)', () => {
     });
 });
 
-describe('invariantEvidenceExists (I-03)', () => {
+describe('InvariantEvidenceExists (I-03)', () => {
     it('passes when evidence matches input', () => {
         const results = invariantEvidenceExists(
             { evidence: ['Valid reason for failure'] },
@@ -91,7 +91,7 @@ describe('invariantEvidenceExists (I-03)', () => {
     });
 });
 
-describe('invariantNoEmptyStrings (I-04)', () => {
+describe('InvariantNoEmptyStrings (I-04)', () => {
     it('passes with no empty strings', () => {
         const results = invariantNoEmptyStrings({ text: 'content' }, makeCtx());
 
@@ -111,7 +111,7 @@ describe('invariantNoEmptyStrings (I-04)', () => {
     });
 });
 
-describe('invariantConclusionHasEvidence (I-05)', () => {
+describe('InvariantConclusionHasEvidence (I-05)', () => {
     it('passes when evidence array exists', () => {
         const results = invariantConclusionHasEvidence({ summary: 'Some conclusion', evidence: ['source'] }, makeCtx());
 

@@ -14,7 +14,7 @@ function mockClient(): Mocked<AxiosInstance> {
     return createMockAxiosInstance();
 }
 
-describe('projectPath', () => {
+describe('ProjectPath', () => {
     it('encodes owner/repo pair', () => {
         expect(projectPath('my-group', 'my-project')).toBe('/projects/my-group%2Fmy-project');
     });
@@ -28,7 +28,7 @@ describe('projectPath', () => {
     });
 });
 
-describe('apiGet', () => {
+describe('ApiGet', () => {
     it('returns data on successful get', async () => {
         const client = mockClient();
         client.get.mockResolvedValue({ data: { id: 1 } });
@@ -69,7 +69,7 @@ describe('apiGet', () => {
     });
 });
 
-describe('apiPost', () => {
+describe('ApiPost', () => {
     it('returns data on successful post with body', async () => {
         const client = mockClient();
         client.post.mockResolvedValue({ data: { id: 1 } });
@@ -111,7 +111,7 @@ describe('apiPost', () => {
     });
 });
 
-describe('apiPut', () => {
+describe('ApiPut', () => {
     it('returns data on successful put with body', async () => {
         const client = mockClient();
         client.put.mockResolvedValue({ data: { id: 1 }, status: 200 });
@@ -145,7 +145,7 @@ describe('apiPut', () => {
     });
 });
 
-describe('formatDiffResponse', () => {
+describe('FormatDiffResponse', () => {
     it('formats entries with patch content', () => {
         const entries = [
             { new_path: 'src/index.ts', diff: '@@ -1 +1 @@\n-foo\n+bar' },

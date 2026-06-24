@@ -197,7 +197,7 @@ beforeEach(() => {
 
 // ── Tests ──────────────────────────────────────────────────────────────────
 
-describe('showHelp', () => {
+describe('ShowHelp', () => {
     it('displays general help when no topic is given', () => {
         mod.showHelp();
 
@@ -238,7 +238,7 @@ describe('showHelp', () => {
     });
 });
 
-describe('resolveAlias', () => {
+describe('ResolveAlias', () => {
     it('maps known aliases to command numbers', () => {
         expect(mod.resolveAlias('criar')).toBe('1');
         expect(mod.resolveAlias('versoes')).toBe('2');
@@ -261,7 +261,7 @@ describe('resolveAlias', () => {
     });
 });
 
-describe('buildMenuChoices', () => {
+describe('BuildMenuChoices', () => {
     const ctx = { git_directory: '/tmp/repo' };
 
     it('returns array for main level categories', () => {
@@ -347,7 +347,7 @@ describe('buildMenuChoices', () => {
     });
 });
 
-describe('handleSpecialInput', () => {
+describe('HandleSpecialInput', () => {
     beforeEach(() => {
         // showHelpLoop uses prompt() to wait for input; return /back to exit loop immediately
         vi.mocked(prompt).mockReturnValue('/back');
@@ -426,7 +426,7 @@ describe('_configHint', () => {
     });
 });
 
-describe('module integration', () => {
+describe('Module integration', () => {
     it('createValidateEnv was called with all required env vars', () => {
         const args = createValidateEnvCall as Array<{ key: string; label: string; example: string }>;
 
@@ -456,7 +456,7 @@ describe('module integration', () => {
     });
 });
 
-describe('dispatchChoice', () => {
+describe('DispatchChoice', () => {
     const minimalCtx = {
         jiraResource: {},
         jiraResourceXray: {},
@@ -550,7 +550,7 @@ describe('dispatchChoice', () => {
     });
 });
 
-describe('showDocs', () => {
+describe('ShowDocs', () => {
     it('generates all docs as HTML and opens browser', async () => {
         (vi.mocked(fs.readdirSync)).mockReturnValueOnce(['01-test-doc.md', '02-guide.md']);
         const readFileSpy = vi.spyOn(fs, 'readFileSync').mockReturnValue('# Test Content');
@@ -582,7 +582,7 @@ describe('showDocs', () => {
     });
 });
 
-describe('showHelpLoop', () => {
+describe('ShowHelpLoop', () => {
     beforeEach(() => {
         vi.mocked(prompt).mockReturnValue('/back');
     });
@@ -646,19 +646,19 @@ describe('_isJiraConfigured', () => {
     });
 });
 
-describe('showGapBadge', () => {
+describe('ShowGapBadge', () => {
     it('resolves without error when config has placeholder values (skips API)', async () => {
         await expect(mod.showGapBadge({}, 'TESTPROJ')).resolves.toBeUndefined();
     });
 });
 
-describe('module-level main error handler', () => {
+describe('Module-level main error handler', () => {
     it('module exports main function', () => {
         expect(typeof mod.main).toBe('function');
     });
 });
 
-describe('dispatchAndHandleResult', () => {
+describe('DispatchAndHandleResult', () => {
     const minimalCtx = {
         jiraResource: {},
         jiraResourceXray: {},
@@ -712,7 +712,7 @@ describe('dispatchAndHandleResult', () => {
     });
 });
 
-describe('module-level debug logging', () => {
+describe('Module-level debug logging', () => {
     it('mask hides middle of token', () => {
         expect(mask('secret1234567')).toBe('secr****');
     });
@@ -748,7 +748,7 @@ describe('_isJiraConfigured with config', () => {
     });
 });
 
-describe('showGapBadge with config', () => {
+describe('ShowGapBadge with config', () => {
     it('caches and displays badge after first call', async () => {
         process.env['CI'] = 'false';
         const configMod = await import('../shared/config.js');

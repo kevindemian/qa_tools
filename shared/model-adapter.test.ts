@@ -8,8 +8,8 @@ function expectAdapter(provider: LlmProvider): ModelAdapter {
     return adapter;
 }
 
-describe('model-adapter', () => {
-    describe('getRegisteredAdapters', () => {
+describe('Model-adapter', () => {
+    describe('GetRegisteredAdapters', () => {
         it('returns all known providers', () => {
             const adapters = getRegisteredAdapters();
 
@@ -24,7 +24,7 @@ describe('model-adapter', () => {
         });
     });
 
-    describe('getAdapter', () => {
+    describe('GetAdapter', () => {
         it('returns null for unknown provider', () => {
             expect(getAdapter('unknown' as never)).toBeNull();
         });
@@ -37,7 +37,7 @@ describe('model-adapter', () => {
         });
     });
 
-    describe('openai adapter', () => {
+    describe('Openai adapter', () => {
         const adapter = expectAdapter('openai');
 
         it('parses standard OpenAI response', () => {
@@ -80,7 +80,7 @@ describe('model-adapter', () => {
         });
     });
 
-    describe('anthropic adapter', () => {
+    describe('Anthropic adapter', () => {
         const adapter = expectAdapter('anthropic');
 
         it('parses Anthropic response with context and capabilities', () => {
@@ -144,7 +144,7 @@ describe('model-adapter', () => {
         });
     });
 
-    describe('gemini adapter', () => {
+    describe('Gemini adapter', () => {
         const adapter = expectAdapter('gemini');
 
         it('parses Gemini response with inputTokenLimit', () => {
@@ -200,7 +200,7 @@ describe('model-adapter', () => {
         });
     });
 
-    describe('openrouter adapter', () => {
+    describe('Openrouter adapter', () => {
         const adapter = expectAdapter('openrouter');
 
         it('parses OpenRouter response with context and capabilities', () => {
@@ -264,7 +264,7 @@ describe('model-adapter', () => {
         });
     });
 
-    describe('groq adapter', () => {
+    describe('Groq adapter', () => {
         const adapter = expectAdapter('groq');
 
         it('parses OpenAI-compatible response', () => {
@@ -288,7 +288,7 @@ describe('model-adapter', () => {
         });
     });
 
-    describe('github-models adapter', () => {
+    describe('Github-models adapter', () => {
         const adapter = expectAdapter('github-models');
 
         it('parses OpenAI-compatible response', () => {
@@ -300,7 +300,7 @@ describe('model-adapter', () => {
         });
     });
 
-    describe('nvidia-nim adapter', () => {
+    describe('Nvidia-nim adapter', () => {
         const adapter = expectAdapter('nvidia-nim');
 
         it('parses OpenAI-compatible response', () => {
@@ -317,7 +317,7 @@ describe('model-adapter', () => {
         });
     });
 
-    describe('custom adapter', () => {
+    describe('Custom adapter', () => {
         const adapter = expectAdapter('custom');
 
         it('parses OpenAI-compatible response', () => {

@@ -38,7 +38,7 @@ describe('BugReport Service', () => {
         vi.clearAllMocks();
     });
 
-    describe('collectManual', () => {
+    describe('CollectManual', () => {
         it('throws if summary is empty after 3 attempts', async () => {
             mockPrompt.ask.mockResolvedValue('');
 
@@ -173,7 +173,7 @@ describe('BugReport Service', () => {
         });
     });
 
-    describe('collectAutomated', () => {
+    describe('CollectAutomated', () => {
         it('builds BugReport from ParseResult', () => {
             const mockResult: ParseResult = {
                 tests: [
@@ -234,7 +234,7 @@ describe('BugReport Service', () => {
         });
     });
 
-    describe('compose', () => {
+    describe('Compose', () => {
         it('composes beautiful markdown text for manual bug', () => {
             const report: BugReport = {
                 summary: 'Login issue',
@@ -321,7 +321,7 @@ describe('BugReport Service', () => {
         });
     });
 
-    describe('fileToJira', () => {
+    describe('FileToJira', () => {
         let mockJiraResource: {
             getJiraResource: Mock;
             postJiraResource: Mock;
@@ -383,7 +383,7 @@ describe('BugReport Service', () => {
         });
     });
 
-    describe('interactiveBugReportFlow', () => {
+    describe('InteractiveBugReportFlow', () => {
         let mockJiraResource: {
             postJiraResource: Mock;
             getJiraResource: Mock;
@@ -529,7 +529,7 @@ beforeAll(async () => {
     mockLlmPrompt = vi.spyOn(llmClient, 'llmPrompt');
 });
 
-describe('generateBugReportFromDescription', () => {
+describe('GenerateBugReportFromDescription', () => {
     beforeEach(() => {
         mockLlmPrompt.mockReset();
     });
