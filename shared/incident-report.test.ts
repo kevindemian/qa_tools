@@ -13,7 +13,7 @@ beforeEach(() => {
     vi.restoreAllMocks();
 });
 
-describe('buildIncidentReport', () => {
+describe('BuildIncidentReport', () => {
     it('returns default result for null inputs', () => {
         const result = buildIncidentReport(null, 0, 'N/A', [], null);
 
@@ -93,7 +93,7 @@ describe('buildIncidentReport', () => {
     });
 });
 
-describe('generateIncidentReportHtml', () => {
+describe('GenerateIncidentReportHtml', () => {
     it('returns valid HTML for real events', () => {
         const report = buildIncidentReport(45, 3, 'December Peak', ['EPIC-1'], 50);
         const html = generateIncidentReportHtml(report);

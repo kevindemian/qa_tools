@@ -146,7 +146,7 @@ function makeMockGitProvider() {
     };
 }
 
-describe('handleListSchedules', () => {
+describe('HandleListSchedules', () => {
     beforeEach(() => vi.clearAllMocks());
 
     it('lists schedules for gitlab provider', async () => {
@@ -188,7 +188,7 @@ describe('handleListSchedules', () => {
     });
 });
 
-describe('handleRunSchedule', () => {
+describe('HandleRunSchedule', () => {
     beforeEach(() => vi.clearAllMocks());
 
     it('runs schedule by ID', async () => {
@@ -220,7 +220,7 @@ describe('handleRunSchedule', () => {
     });
 });
 
-describe('handleCreateMR', () => {
+describe('HandleCreateMR', () => {
     beforeEach(() => vi.clearAllMocks());
 
     it('creates MR with provided inputs', async () => {
@@ -260,7 +260,7 @@ describe('handleCreateMR', () => {
     });
 });
 
-describe('handleListApprovedMRs', () => {
+describe('HandleListApprovedMRs', () => {
     beforeEach(() => vi.clearAllMocks());
 
     it('lists approved MRs', async () => {
@@ -288,7 +288,7 @@ describe('handleListApprovedMRs', () => {
     });
 });
 
-describe('handleMergeMR', () => {
+describe('HandleMergeMR', () => {
     beforeEach(() => vi.clearAllMocks());
 
     it('merges MR by IID', async () => {
@@ -304,7 +304,7 @@ describe('handleMergeMR', () => {
     });
 });
 
-describe('handleFlakinessDashboard', () => {
+describe('HandleFlakinessDashboard', () => {
     beforeEach(() => vi.clearAllMocks());
 
     it('warns when no project selected', async () => {

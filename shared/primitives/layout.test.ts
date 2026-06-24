@@ -6,7 +6,7 @@
 
 import { Container, Section, Grid, FlexRow, Separator } from './layout.js';
 
-describe('layout primitives', () => {
+describe('Layout primitives', () => {
     describe('Container', () => {
         it('renders with default props', () => {
             const html = Container({ children: 'content' });

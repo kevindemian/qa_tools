@@ -141,7 +141,7 @@ function resolvePublishTargetPure(
     return 'github-actions';
 }
 
-describe('resolvePublishTarget — property-based invariants', () => {
+describe('ResolvePublishTarget — property-based invariants', () => {
     it('retorna publishTarget configurado quando enabled=true', () => {
         fc.assert(
             fc.property(

@@ -6,7 +6,7 @@ import { detectSilentRegression, generateSilentRegressionHtml } from './silent-r
 import type { RegressionResult } from './silent-regression.js';
 import { nonNull } from './test-utils.js';
 
-describe('detectSilentRegression', () => {
+describe('DetectSilentRegression', () => {
     it('detects regressions above default threshold', () => {
         const histories: Record<string, number[]> = {
             'auth test': [1.0, 1.1, 0.9, 1.0, 3.5],
@@ -185,7 +185,7 @@ describe('detectSilentRegression', () => {
     });
 });
 
-describe('generateSilentRegressionHtml', () => {
+describe('GenerateSilentRegressionHtml', () => {
     function makeResult(overrides?: Partial<RegressionResult>): RegressionResult {
         return {
             regressions: [

@@ -20,7 +20,7 @@ const testArb = fc.record({
 const DEFAULT_SLOW = 5;
 const DEFAULT_FLAKY = 0.3;
 
-describe('analyzeSuiteOptimization — property-based', () => {
+describe('AnalyzeSuiteOptimization — property-based', () => {
     it('totalTests matches input length', () => {
         fc.assert(
             fc.property(fc.array(testArb, { minLength: 0, maxLength: 15 }), (tests) => {
@@ -147,7 +147,7 @@ describe('analyzeSuiteOptimization — property-based', () => {
     });
 });
 
-describe('generateOptimizationHtml — property-based', () => {
+describe('GenerateOptimizationHtml — property-based', () => {
     it('always produces valid HTML', () => {
         fc.assert(
             fc.property(fc.array(testArb, { minLength: 0, maxLength: 10 }), (tests) => {

@@ -1,6 +1,6 @@
 import { createMockContext } from './context-factory.js';
 
-describe('createMockContext', () => {
+describe('CreateMockContext', () => {
     it('returns a mock with all required fields', () => {
         const ctx = createMockContext();
 

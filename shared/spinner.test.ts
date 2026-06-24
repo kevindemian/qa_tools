@@ -32,7 +32,7 @@ beforeEach(() => {
     mockIsCI.mockReturnValue(false);
 });
 
-describe('withSpinner', () => {
+describe('WithSpinner', () => {
     const fn = vi.fn().mockResolvedValue(42);
 
     it('calls fn directly when quiet', async () => {
@@ -84,7 +84,7 @@ describe('ProgressBar', () => {
         mockIsTTY.mockReturnValue(true);
     });
 
-    describe('constructor', () => {
+    describe('Constructor', () => {
         it('creates cli-progress bar when TTY enabled', () => {
             const bar = new ProgressBar(100);
 
@@ -99,7 +99,7 @@ describe('ProgressBar', () => {
         });
     });
 
-    describe('update', () => {
+    describe('Update', () => {
         it('delegates to bar.update when enabled', () => {
             const bar = new ProgressBar(100);
             bar.update(50);
@@ -118,7 +118,7 @@ describe('ProgressBar', () => {
         });
     });
 
-    describe('stop', () => {
+    describe('Stop', () => {
         it('calls bar.stop when enabled', () => {
             const bar = new ProgressBar(100);
             bar.stop();

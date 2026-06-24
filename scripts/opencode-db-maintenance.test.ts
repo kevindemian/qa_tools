@@ -107,7 +107,7 @@ describe('DB constants', () => {
     });
 });
 
-describe('ensureDbDir', () => {
+describe('EnsureDbDir', () => {
     it('creates directory recursively and returns true on success', async () => {
         mockMkdirSync.mockReturnValue(undefined);
         const { ensureDbDir, DB_DIR: dir } = await loadModule();
@@ -128,7 +128,7 @@ describe('ensureDbDir', () => {
     });
 });
 
-describe('modeCheckOnly', () => {
+describe('ModeCheckOnly', () => {
     it('returns PASS when integrity and WAL checkpoint succeed', async () => {
         const { modeCheckOnly } = await loadModule();
         const result = modeCheckOnly(DB_PATH);
@@ -171,7 +171,7 @@ describe('modeCheckOnly', () => {
     });
 });
 
-describe('modeRepair', () => {
+describe('ModeRepair', () => {
     it('does nothing when integrity already passes', async () => {
         const { modeRepair } = await loadModule();
         const result = modeRepair(DB_PATH);
@@ -225,7 +225,7 @@ describe('modeRepair', () => {
     });
 });
 
-describe('modeVacuum', () => {
+describe('ModeVacuum', () => {
     it('vacuums when integrity passes', async () => {
         const { modeVacuum } = await loadModule();
         const result = modeVacuum(DB_PATH);
@@ -256,7 +256,7 @@ describe('modeVacuum', () => {
     });
 });
 
-describe('getDbSizeBytes', () => {
+describe('GetDbSizeBytes', () => {
     it('returns file size when stat succeeds', async () => {
         const { getDbSizeBytes } = await loadModule();
         const size = getDbSizeBytes();
@@ -285,7 +285,7 @@ describe('getDbSizeBytes', () => {
     });
 });
 
-describe('backupDb', () => {
+describe('BackupDb', () => {
     it('copies database to .pre-run path and returns it', async () => {
         const { backupDb } = await loadModule();
         mockCopyFileSync.mockReturnValue(undefined);
@@ -306,7 +306,7 @@ describe('backupDb', () => {
     });
 });
 
-describe('ensureWalMode', () => {
+describe('EnsureWalMode', () => {
     it('returns WAL journal mode string on success', async () => {
         const { ensureWalMode } = await loadModule();
         const result = ensureWalMode();
@@ -331,7 +331,7 @@ describe('ensureWalMode', () => {
     });
 });
 
-describe('checkMountDevice', () => {
+describe('CheckMountDevice', () => {
     it('returns warning when DB and ~/.local are on the same device', async () => {
         mockStatSync.mockReturnValue({ dev: 1, isFile: () => true });
         const { checkMountDevice } = await loadModule();
@@ -362,7 +362,7 @@ describe('checkMountDevice', () => {
     });
 });
 
-describe('printResult', () => {
+describe('PrintResult', () => {
     it('prints PASS when no errors', async () => {
         const { printResult } = await loadModule();
         const consoleSpy = vi.spyOn(console, 'log').mockImplementation(() => {});
@@ -403,7 +403,7 @@ describe('printResult', () => {
     });
 });
 
-describe('checkSqlite3', () => {
+describe('CheckSqlite3', () => {
     it('returns true when sqlite3 --version succeeds', async () => {
         mockExecFileSync.mockImplementation((bin: string) => {
             if (bin === 'sqlite3') return '3.40.0\n';
@@ -425,7 +425,7 @@ describe('checkSqlite3', () => {
     });
 });
 
-describe('main', () => {
+describe('Main', () => {
     beforeEach(async () => {
         const mod = await import('./opencode-db-maintenance.js');
         DB_PATH = mod.DB_PATH;
@@ -550,7 +550,7 @@ describe('main', () => {
     });
 });
 
-describe('modeVacuum WAL error', () => {
+describe('ModeVacuum WAL error', () => {
     it('reports WAL checkpoint error during vacuum', async () => {
         let callCount = 0;
         mockExecFileSync.mockImplementation((bin: string, args: string[]) => {
@@ -570,7 +570,7 @@ describe('modeVacuum WAL error', () => {
     });
 });
 
-describe('runAsScript', () => {
+describe('RunAsScript', () => {
     it('calls main and exits with its return code', async () => {
         mockExecFileSync.mockImplementation((bin: string) => {
             if (bin === 'sqlite3') return '3.40.0\n';

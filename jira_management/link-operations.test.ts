@@ -33,7 +33,7 @@ describe('LinkOperations', () => {
         operations = new LinkOperations(mockJiraResource, linkTypeManager);
     });
 
-    describe('linkIssues', () => {
+    describe('LinkIssues', () => {
         it('creates links for each linked issue', async () => {
             mockJiraResource.getJiraResource.mockResolvedValue({
                 issueLinkTypes: [{ id: '10200', name: 'Tests', inward: 'is tested by', outward: 'tests' }],
@@ -65,7 +65,7 @@ describe('LinkOperations', () => {
         });
     });
 
-    describe('createIssueLink', () => {
+    describe('CreateIssueLink', () => {
         it('creates a single issue link with resolved type', async () => {
             mockJiraResource.getJiraResource.mockResolvedValue({
                 issueLinkTypes: [{ id: '10200', name: 'Tests', inward: 'is tested by', outward: 'tests' }],

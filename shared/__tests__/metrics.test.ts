@@ -11,7 +11,7 @@ import { describe, it, expect } from 'vitest';
 import { calculateFlakiness, calculateFlakyRate, getTrends } from '../metrics.js';
 import type { MetricsStore } from '../metrics.js';
 
-describe('calculateFlakyRate — unified implementation', () => {
+describe('CalculateFlakyRate — unified implementation', () => {
     it('returns 0 when no tests', () => {
         const store: MetricsStore = { runs: [] };
 
@@ -245,7 +245,7 @@ describe('calculateFlakyRate — unified implementation', () => {
     });
 });
 
-describe('getTrends — pass rate excludes skipped', () => {
+describe('GetTrends — pass rate excludes skipped', () => {
     it('returns empty array for empty store', () => {
         const store: MetricsStore = { runs: [] };
 
@@ -293,7 +293,7 @@ describe('getTrends — pass rate excludes skipped', () => {
     });
 });
 
-describe('calculateFlakiness — display function (kept for backward compat)', () => {
+describe('CalculateFlakiness — display function (kept for backward compat)', () => {
     it('returns entries with rate >= threshold', () => {
         const store: MetricsStore = {
             runs: [

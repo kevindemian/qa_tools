@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest';
 
-describe('deps — dependency wall', () => {
+describe('Deps — dependency wall', () => {
     it('exports expected dependencies', async () => {
         const deps = await import('./deps.js');
 

@@ -18,7 +18,7 @@ describe('Config (accessor)', () => {
         process.env = _origEnv;
     });
 
-    describe('get — static', () => {
+    describe('Get — static', () => {
         it('returns env var value when key matches CONFIG_SCHEMA envVar', () => {
             process.env['JIRA_BASE_URL'] = 'https://jira.test.com';
 
@@ -103,7 +103,7 @@ describe('Config (accessor)', () => {
         });
     });
 
-    describe('get — instance', () => {
+    describe('Get — instance', () => {
         it('returns value from instance with custom overrides', () => {
             const cfg = Config.create({ jiraBaseUrl: 'https://instance.test.com' });
 
@@ -118,7 +118,7 @@ describe('Config (accessor)', () => {
         });
     });
 
-    describe('set', () => {
+    describe('Set', () => {
         it('stores override values', () => {
             Config.set('testKey', 'testValue');
 
@@ -133,7 +133,7 @@ describe('Config (accessor)', () => {
         });
     });
 
-    describe('reset', () => {
+    describe('Reset', () => {
         it('clears overrides and restores fresh instance', () => {
             Config.set('jiraBaseUrl', 'https://override.test.com');
             delete process.env['JIRA_BASE_URL'];
@@ -143,7 +143,7 @@ describe('Config (accessor)', () => {
         });
     });
 
-    describe('create', () => {
+    describe('Create', () => {
         it('creates isolated instance with given overrides', () => {
             const cfg = Config.create({ dryRun: true });
 
@@ -158,7 +158,7 @@ describe('Config (accessor)', () => {
         });
     });
 
-    describe('setAutoConfirm', () => {
+    describe('SetAutoConfirm', () => {
         it('sets autoConfirm override on default instance', () => {
             Config.setAutoConfirm(true);
 
@@ -173,7 +173,7 @@ describe('Config (accessor)', () => {
         });
     });
 
-    describe('getAllPrefixed', () => {
+    describe('GetAllPrefixed', () => {
         it('returns all env vars matching prefix', () => {
             process.env['LLM_API_KEY'] = 'sk-test';
             process.env['LLM_MODEL'] = 'test-model';
@@ -193,7 +193,7 @@ describe('Config (accessor)', () => {
         });
     });
 
-    describe('validateRequiredEnv', () => {
+    describe('ValidateRequiredEnv', () => {
         it('throws when required env vars are missing', () => {
             delete process.env['JIRA_BASE_URL'];
             delete process.env['JIRA_PERSONAL_TOKEN'];

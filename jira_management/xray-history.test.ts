@@ -83,7 +83,7 @@ describe('TestHistoryCache', () => {
 
 // ─── createHistoryProvider ───────────────────────────────────────────────────
 
-describe('createHistoryProvider', () => {
+describe('CreateHistoryProvider', () => {
     it('returns ServerHistoryProvider when mode=server', () => {
         const jira = mockJiraResource();
         const provider = createHistoryProvider(jira, 'server');

@@ -125,7 +125,7 @@ function createCtrfFixture(
     fs.writeFileSync(TEST_CTRF_PATH, JSON.stringify(data, null, 2), 'utf8');
 }
 
-describe('pr-report entry point — CTRF parsing', () => {
+describe('Pr-report entry point — CTRF parsing', () => {
     const originalEnv = { ...process.env };
     const penv = process.env as Record<string, string | undefined>;
 
@@ -225,7 +225,7 @@ describe('pr-report entry point — CTRF parsing', () => {
     });
 });
 
-describe('pr-report entry point — quality gate check run', () => {
+describe('Pr-report entry point — quality gate check run', () => {
     const originalEnv = { ...process.env };
     const originalArgv = process.argv;
     let penv = process.env as Record<string, string | undefined>;
@@ -299,7 +299,7 @@ describe('pr-report entry point — quality gate check run', () => {
     });
 });
 
-describe('pr-report entry point — flaky detection with quarantine', () => {
+describe('Pr-report entry point — flaky detection with quarantine', () => {
     const originalEnv = { ...process.env };
     const originalArgv = process.argv;
     let penv = process.env as Record<string, string | undefined>;
@@ -477,7 +477,7 @@ describe('pr-report entry point — flaky detection with quarantine', () => {
     });
 });
 
-describe('pr-report entry point — HTML report generation', () => {
+describe('Pr-report entry point — HTML report generation', () => {
     const originalEnv = { ...process.env };
     const originalArgv = process.argv;
     let penv = process.env as Record<string, string | undefined>;

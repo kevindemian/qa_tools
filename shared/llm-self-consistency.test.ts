@@ -18,7 +18,7 @@ function makeValidator(): ArtifactValidator<unknown> {
 
 const context = { inputRaw: '', outputRaw: {}, artifactType: 'test-suite' as const };
 
-describe('consensusGenerate', () => {
+describe('ConsensusGenerate', () => {
     beforeEach(() => {
         vi.clearAllMocks();
     });
@@ -188,7 +188,7 @@ describe('consensusGenerate', () => {
     });
 });
 
-describe('refineWithConsistency', () => {
+describe('RefineWithConsistency', () => {
     beforeEach(() => {
         vi.clearAllMocks();
     });

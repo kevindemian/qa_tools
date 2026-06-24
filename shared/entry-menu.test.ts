@@ -32,7 +32,7 @@ function mockSpawnWithExit(code: number): void {
     });
 }
 
-describe('runModule', () => {
+describe('RunModule', () => {
     beforeEach(() => {
         vi.clearAllMocks();
     });
@@ -84,7 +84,7 @@ describe('runModule', () => {
     });
 });
 
-describe('main', () => {
+describe('Main', () => {
     let printSpy: ReturnType<typeof vi.spyOn>;
 
     beforeEach(() => {

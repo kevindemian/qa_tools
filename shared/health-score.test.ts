@@ -51,7 +51,7 @@ const PASSING_RUN = run({
     ],
 });
 
-describe('evaluateQualityGate', () => {
+describe('EvaluateQualityGate', () => {
     it('returns pass when all dimensions meet thresholds', () => {
         expect(evaluateQualityGate(95, 0, 90, 100, 2)).toBe('pass');
     });
@@ -77,8 +77,8 @@ describe('evaluateQualityGate', () => {
     });
 });
 
-describe('calculateHealthScore', () => {
-    describe('empty store', () => {
+describe('CalculateHealthScore', () => {
+    describe('Empty store', () => {
         it('returns low overall for empty store', () => {
             const store = makeStore();
             const result = calculateHealthScore(store);
@@ -98,7 +98,7 @@ describe('calculateHealthScore', () => {
         });
     });
 
-    describe('single run in store', () => {
+    describe('Single run in store', () => {
         it('scores well with a perfect run and good coverage', () => {
             const store = makeStore({
                 runs: [PASSING_RUN],
@@ -119,7 +119,7 @@ describe('calculateHealthScore', () => {
         });
     });
 
-    describe('pass rate dimension', () => {
+    describe('Pass rate dimension', () => {
         it('scores 100 when pass rate meets target', () => {
             const store = makeStore({
                 runs: [run({ total: 100, passed: 95, failed: 5, duration: 10000 })],
@@ -175,7 +175,7 @@ describe('calculateHealthScore', () => {
         });
     });
 
-    describe('flaky rate dimension', () => {
+    describe('Flaky rate dimension', () => {
         it('scores 100 when no flaky tests exist', () => {
             const store = makeStore({
                 runs: [
@@ -260,7 +260,7 @@ describe('calculateHealthScore', () => {
         });
     });
 
-    describe('coverage dimension', () => {
+    describe('Coverage dimension', () => {
         it('scores 100 when coverage meets target', () => {
             const store = makeStore({
                 runs: [PASSING_RUN],
@@ -316,7 +316,7 @@ describe('calculateHealthScore', () => {
         });
     });
 
-    describe('suite speed dimension', () => {
+    describe('Suite speed dimension', () => {
         it('scores 100 when speed is within target', () => {
             const store = makeStore({
                 runs: [
@@ -393,7 +393,7 @@ describe('calculateHealthScore', () => {
         });
     });
 
-    describe('overall score with default weights', () => {
+    describe('Overall score with default weights', () => {
         it('computes weighted average correctly', () => {
             const store = makeStore({
                 runs: [PASSING_RUN],
@@ -414,7 +414,7 @@ describe('calculateHealthScore', () => {
         });
     });
 
-    describe('quality gate', () => {
+    describe('Quality gate', () => {
         it('passes when all dimensions are healthy', () => {
             const store = makeStore({
                 runs: [PASSING_RUN],
@@ -530,7 +530,7 @@ describe('calculateHealthScore', () => {
         });
     });
 
-    describe('penalty', () => {
+    describe('Penalty', () => {
         it('caps overall at 60 when any dimension < 40', () => {
             const store = makeStore({
                 runs: [PASSING_RUN],
@@ -551,7 +551,7 @@ describe('calculateHealthScore', () => {
         });
     });
 
-    describe('grade boundaries', () => {
+    describe('Grade boundaries', () => {
         it('grades excellent at 90+', () => {
             const store = makeStore({
                 runs: [PASSING_RUN],
@@ -707,7 +707,7 @@ describe('calculateHealthScore', () => {
         });
     });
 
-    describe('config override', () => {
+    describe('Config override', () => {
         it('accepts custom weights', () => {
             const store = makeStore({
                 runs: [run({ total: 10, passed: 8, failed: 2, duration: 5000 })],
@@ -749,7 +749,7 @@ describe('calculateHealthScore', () => {
         });
     });
 
-    describe('edge: all passing with 0% flaky', () => {
+    describe('Edge: all passing with 0% flaky', () => {
         it('scores 100 in every dimension with ideal metrics', () => {
             const runs = Array.from({ length: 20 }, (_, i) =>
                 run({
@@ -785,7 +785,7 @@ describe('calculateHealthScore', () => {
         });
     });
 
-    describe('edge: everything failing', () => {
+    describe('Edge: everything failing', () => {
         it('scores 0 and quality gate fails', () => {
             const store = makeStore({
                 runs: [
@@ -819,7 +819,7 @@ describe('calculateHealthScore', () => {
         });
     });
 
-    describe('provenance', () => {
+    describe('Provenance', () => {
         it('returns 5 provenance entries for a default calculation', () => {
             const store = makeStore({
                 runs: [PASSING_RUN],
@@ -982,7 +982,7 @@ describe('calculateHealthScore', () => {
         });
     });
 
-    describe('edge: NaN and Infinity (D8 regression prevention)', () => {
+    describe('Edge: NaN and Infinity (D8 regression prevention)', () => {
         it('naN coverageOverride produces 0 score, not NaN', () => {
             const store = makeStore({
                 runs: [PASSING_RUN],
@@ -1071,7 +1071,7 @@ describe('calculateHealthScore', () => {
         });
     });
 
-    describe('flakyThreshold config', () => {
+    describe('FlakyThreshold config', () => {
         it('flakyThreshold parameter affects flaky rate scoring (G-05)', () => {
             const store = makeStore({
                 runs: [

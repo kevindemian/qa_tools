@@ -34,7 +34,7 @@ describe('ComparisonValidator — createComparisonValidator', () => {
     });
 });
 
-describe('invariantChangesNonEmpty (C-01)', () => {
+describe('InvariantChangesNonEmpty (C-01)', () => {
     it('passes with changes', () => {
         const results = invariantChangesNonEmpty(
             { meaningfulChanges: [{ metric: 'Rate', before: 95, after: 82, impact: 'negative' }] },
@@ -53,7 +53,7 @@ describe('invariantChangesNonEmpty (C-01)', () => {
     });
 });
 
-describe('invariantSummaryLength (C-03)', () => {
+describe('InvariantSummaryLength (C-03)', () => {
     it('passes short summary', () => {
         const results = invariantSummaryLength({ summary: 'Simple change.' }, makeCtx(''));
 
@@ -75,7 +75,7 @@ describe('invariantSummaryLength (C-03)', () => {
     });
 });
 
-describe('invariantNumbersMatchInput (C-02)', () => {
+describe('InvariantNumbersMatchInput (C-02)', () => {
     it('passes when numbers match input', () => {
         const results = invariantNumbersMatchInput(
             { meaningfulChanges: [{ metric: 'Pass rate', before: '95%', after: '82%', impact: 'negative' }] },

@@ -17,7 +17,7 @@ beforeEach(() => {
     vi.clearAllMocks();
 });
 
-describe('detectFramework', () => {
+describe('DetectFramework', () => {
     it('detects cypress from devDependencies', () => {
         mockFsReadFileSync.mockReturnValueOnce(
             JSON.stringify({
@@ -84,7 +84,7 @@ describe('detectFramework', () => {
     });
 });
 
-describe('detectConfigCtrf', () => {
+describe('DetectConfigCtrf', () => {
     function mockPathEndsWith(suffix: string): (p: fs.PathLike) => boolean {
         return (p: fs.PathLike) => String(p).endsWith(suffix);
     }
@@ -174,7 +174,7 @@ import VitestCtrfReporter from './shared/vitest-ctrf-reporter.js';`,
     });
 });
 
-describe('detectFramework', () => {
+describe('DetectFramework', () => {
     it('returns ctrfSource=cli-flag for cypress', () => {
         mockFsReadFileSync.mockReturnValueOnce(JSON.stringify({ devDependencies: { cypress: '^13.0' } }));
         const result = detectFramework('/fake/package.json');
@@ -228,7 +228,7 @@ describe('detectFramework', () => {
     });
 });
 
-describe('extractRepoFromGit', () => {
+describe('ExtractRepoFromGit', () => {
     it('extracts GitHub owner and repo from git config', () => {
         mockFsReadFileSync.mockReturnValueOnce(`[remote "origin"]
 \turl = git@github.com:myorg/my-repo.git

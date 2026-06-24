@@ -32,7 +32,7 @@ const epicListArb = fc.array(fc.string({ minLength: 1, maxLength: 15 }), { maxLe
 
 /* ── Tests ───────────────────────────────────────────────────── */
 
-describe('analyzePipelineImpact — property-based', () => {
+describe('AnalyzePipelineImpact — property-based', () => {
     it('every alert has non-empty title, message, affectedArea and recommendation', () => {
         fc.assert(
             fc.property(
@@ -250,7 +250,7 @@ describe('analyzePipelineImpact — property-based', () => {
     });
 });
 
-describe('generateImpactAlertHtml — property-based', () => {
+describe('GenerateImpactAlertHtml — property-based', () => {
     it('always produces valid HTML with DOCTYPE', () => {
         fc.assert(
             fc.property(

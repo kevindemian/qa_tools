@@ -27,7 +27,7 @@ afterEach(() => {
     process.env = { ...origEnv };
 });
 
-describe('diskCacheGet / diskCacheSet', () => {
+describe('DiskCacheGet / diskCacheSet', () => {
     it('returns null for missing key', () => {
         expect(diskCacheGet('nonexistent')).toBeNull();
     });
@@ -122,7 +122,7 @@ describe('diskCacheGet / diskCacheSet', () => {
     });
 });
 
-describe('clearDiskCache', () => {
+describe('ClearDiskCache', () => {
     it('removes all cached files', () => {
         diskCacheSet('a', '1');
         diskCacheSet('b', '2');

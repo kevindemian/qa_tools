@@ -1,7 +1,7 @@
 import { z, parseOrThrow } from './validation.js';
 
-describe('validation — zod wrapper', () => {
-    describe('parseOrThrow', () => {
+describe('Validation — zod wrapper', () => {
+    describe('ParseOrThrow', () => {
         it('parses valid data', () => {
             const schema = z.object({ name: z.string() });
             const result = parseOrThrow(schema, { name: 'test' });
@@ -23,7 +23,7 @@ describe('validation — zod wrapper', () => {
         });
     });
 
-    describe('z re-export', () => {
+    describe('Z re-export', () => {
         it('provides full zod API', () => {
             expect(typeof z.string).toBe('function');
             expect(typeof z.number).toBe('function');

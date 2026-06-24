@@ -67,7 +67,7 @@ beforeEach(() => {
     mocks.mockCurrentProjectName = 'test-project';
 });
 
-describe('handlePrReportReconfig', () => {
+describe('HandlePrReportReconfig', () => {
     it('shows warning when no project is selected', () => {
         mocks.mockCurrentProjectName = '';
 

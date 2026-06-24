@@ -52,7 +52,7 @@ describe('HTTP Client', () => {
         vi.restoreAllMocks();
     });
 
-    describe('createHttpClient', () => {
+    describe('CreateHttpClient', () => {
         it('creates axios instance with provided config', () => {
             const createSpy = vi.spyOn(axios, 'create');
             httpClient.createHttpClient({
@@ -101,7 +101,7 @@ describe('HTTP Client', () => {
         });
     });
 
-    describe('retry interceptor', () => {
+    describe('Retry interceptor', () => {
         interface RetryError {
             message: string;
             name: string;
@@ -324,7 +324,7 @@ describe('HTTP Client', () => {
         });
     });
 
-    describe('stale retry entry cleanup (lines 70-72)', () => {
+    describe('Stale retry entry cleanup (lines 70-72)', () => {
         beforeEach(() => {
             vi.useFakeTimers();
             httpClient._resetRetryCleanup();
@@ -355,7 +355,7 @@ describe('HTTP Client', () => {
         });
     });
 
-    describe('createThrottledClient (branch coverage)', () => {
+    describe('CreateThrottledClient (branch coverage)', () => {
         it('extractHost returns unknown for invalid URL', async () => {
             httpClient.createThrottledClient({ baseUrl: 'https://api.test.com', maxConcurrency: 3 });
             const reqHandler = nonNull(mockInstance.interceptors.request.use.mock.calls[0])[0];

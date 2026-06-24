@@ -52,7 +52,7 @@ beforeEach(() => {
     vi.clearAllMocks();
 });
 
-describe('getProjectId', () => {
+describe('GetProjectId', () => {
     it('returns project id on success', async () => {
         mockGet.mockResolvedValue({ data: { id: '10000' } });
         const resource = buildResource();
@@ -70,7 +70,7 @@ describe('getProjectId', () => {
     });
 });
 
-describe('getProjectVersions', () => {
+describe('GetProjectVersions', () => {
     it('returns versions on success', async () => {
         mockGet.mockResolvedValue({
             data: [
@@ -93,7 +93,7 @@ describe('getProjectVersions', () => {
     });
 });
 
-describe('getVersionId', () => {
+describe('GetVersionId', () => {
     it('returns version id when found', async () => {
         const resource = buildResource();
         vi.spyOn(resource, 'getProjectId').mockResolvedValue('10000');
@@ -112,7 +112,7 @@ describe('getVersionId', () => {
     });
 });
 
-describe('getLatestReleases', () => {
+describe('GetLatestReleases', () => {
     it('returns empty when project not found', async () => {
         const resource = buildResource();
         vi.spyOn(resource, 'getProjectId').mockResolvedValue('');

@@ -51,7 +51,7 @@ const CTRF_SAMPLE = {
     },
 };
 
-describe('fetchLatestTestRun', () => {
+describe('FetchLatestTestRun', () => {
     beforeEach(() => {
         vi.clearAllMocks();
     });
@@ -125,7 +125,7 @@ describe('fetchLatestTestRun', () => {
     });
 });
 
-describe('fetchLatestTestRun — GitLab', () => {
+describe('FetchLatestTestRun — GitLab', () => {
     beforeEach(() => {
         vi.clearAllMocks();
     });
@@ -213,7 +213,7 @@ describe('fetchLatestTestRun — GitLab', () => {
     });
 });
 
-describe('fetchLatestTestRun — no CI', () => {
+describe('FetchLatestTestRun — no CI', () => {
     beforeEach(() => {
         vi.clearAllMocks();
     });
@@ -349,7 +349,7 @@ describe('fetchLatestTestRun — no CI', () => {
     });
 });
 
-describe('fetchGitHistory', () => {
+describe('FetchGitHistory', () => {
     beforeEach(() => {
         vi.clearAllMocks();
     });
@@ -621,7 +621,7 @@ describe('fetchGitHistory', () => {
     });
 });
 
-describe('ci helpers', () => {
+describe('Ci helpers', () => {
     it('exports isGitHubCi and isGitLabCi from ci-detect', async () => {
         const mod = await import('./git-artifact-downloader.js');
 

@@ -78,7 +78,7 @@ beforeEach(() => {
     });
 });
 
-describe('case15 — create tests from JSON', () => {
+describe('Case15 — create tests from JSON', () => {
     it('exports a handler function', () => {
         expect(case15).toBeDefined();
         expect(typeof case15.handler).toBe('function');

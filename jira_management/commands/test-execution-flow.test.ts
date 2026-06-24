@@ -39,7 +39,7 @@ beforeEach(() => {
     vi.clearAllMocks();
 });
 
-describe('offerTestExecutionAssociation', () => {
+describe('OfferTestExecutionAssociation', () => {
     it('returns not associated when testKeys is empty', async () => {
         const c = createMockContext();
         const result = await offerTestExecutionAssociation(c, [], 'src');
@@ -55,7 +55,7 @@ describe('offerTestExecutionAssociation', () => {
         expect(result.associated).toBeFalsy();
     });
 
-    describe('option 1 — create new', () => {
+    describe('Option 1 — create new', () => {
         it('creates a Test Execution successfully', async () => {
             vi.mocked(ask)
                 .mockResolvedValueOnce('1')
@@ -94,7 +94,7 @@ describe('offerTestExecutionAssociation', () => {
         });
     });
 
-    describe('option 2 — use existing', () => {
+    describe('Option 2 — use existing', () => {
         it('uses TE from list by numeric index', async () => {
             vi.mocked(ask).mockResolvedValueOnce('2').mockResolvedValueOnce('1');
             const c = createMockContext();
@@ -274,7 +274,7 @@ describe('offerTestExecutionAssociation', () => {
         });
     });
 
-    describe('option skip', () => {
+    describe('Option skip', () => {
         it('returns not associated when user skips (empty choice)', async () => {
             vi.mocked(ask).mockResolvedValueOnce('');
             const c = createMockContext();
@@ -285,7 +285,7 @@ describe('offerTestExecutionAssociation', () => {
     });
 });
 
-describe('showResults', () => {
+describe('ShowResults', () => {
     it('shows summaries when getTestCaseSummaries succeeds', async () => {
         const c = createMockContext();
         c.linkManager = createMockLinkManager({

@@ -41,7 +41,7 @@ beforeEach(() => {
     mockLoadMetrics.mockReturnValue({ runs: [], coverageHistory: [] });
 });
 
-describe('analyzeCoverageGaps', () => {
+describe('AnalyzeCoverageGaps', () => {
     it('returns metrics for uncovered issues', async () => {
         mockSearch
             .mockResolvedValueOnce({ issues: [], total: 2 })

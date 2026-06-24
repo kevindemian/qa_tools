@@ -43,7 +43,7 @@ const VALID_CONFIG_WITH_JIRA = {
     },
 };
 
-describe('feature-config', () => {
+describe('Feature-config', () => {
     beforeEach(() => {
         vi.restoreAllMocks();
         vi.resetModules();
@@ -62,7 +62,7 @@ describe('feature-config', () => {
         }
     });
 
-    describe('loadFeatureConfig', () => {
+    describe('LoadFeatureConfig', () => {
         it('returns empty object when file does not exist', async () => {
             const { loadFeatureConfig } = await import('../feature-config.js');
             const result = loadFeatureConfig();
@@ -104,7 +104,7 @@ describe('feature-config', () => {
         });
     });
 
-    describe('saveFeatureConfig', () => {
+    describe('SaveFeatureConfig', () => {
         it('writes config to disk', async () => {
             const { saveFeatureConfig, loadFeatureConfig } = await import('../feature-config.js');
             saveFeatureConfig(VALID_CONFIG);
@@ -128,7 +128,7 @@ describe('feature-config', () => {
         });
     });
 
-    describe('getProjectFeatureConfig', () => {
+    describe('GetProjectFeatureConfig', () => {
         it('returns config for existing project', async () => {
             const { saveFeatureConfig, getProjectFeatureConfig } = await import('../feature-config.js');
             saveFeatureConfig(VALID_CONFIG);
@@ -150,7 +150,7 @@ describe('feature-config', () => {
         });
     });
 
-    describe('getPrReportConfig', () => {
+    describe('GetPrReportConfig', () => {
         it('returns configured pr-report config when present', async () => {
             const { saveFeatureConfig, getPrReportConfig } = await import('../feature-config.js');
             saveFeatureConfig(VALID_CONFIG);
@@ -186,7 +186,7 @@ describe('feature-config', () => {
         });
     });
 
-    describe('setPrReportConfig', () => {
+    describe('SetPrReportConfig', () => {
         it('sets pr-report config for existing project', async () => {
             const { saveFeatureConfig, setPrReportConfig, getPrReportConfig } = await import('../feature-config.js');
             saveFeatureConfig(VALID_CONFIG);
@@ -216,7 +216,7 @@ describe('feature-config', () => {
         });
     });
 
-    describe('isPrReportEnabled', () => {
+    describe('IsPrReportEnabled', () => {
         it('returns true when pr-report is enabled', async () => {
             const { saveFeatureConfig, isPrReportEnabled } = await import('../feature-config.js');
             saveFeatureConfig(VALID_CONFIG);
@@ -240,7 +240,7 @@ describe('feature-config', () => {
         });
     });
 
-    describe('resolvePublishTarget', () => {
+    describe('ResolvePublishTarget', () => {
         it('returns configured publish target when enabled', async () => {
             const { saveFeatureConfig, resolvePublishTarget } = await import('../feature-config.js');
             saveFeatureConfig(VALID_CONFIG);
@@ -274,7 +274,7 @@ describe('feature-config', () => {
         });
     });
 
-    describe('isAiSkipped', () => {
+    describe('IsAiSkipped', () => {
         it('returns false when skipAi is not configured', async () => {
             const { isAiSkipped } = await import('../feature-config.js');
 
@@ -308,7 +308,7 @@ describe('feature-config', () => {
         });
     });
 
-    describe('isQualitySkipped', () => {
+    describe('IsQualitySkipped', () => {
         it('returns false when skipQuality is not configured', async () => {
             const { isQualitySkipped } = await import('../feature-config.js');
 
@@ -342,7 +342,7 @@ describe('feature-config', () => {
         });
     });
 
-    describe('isFlakySkipped', () => {
+    describe('IsFlakySkipped', () => {
         it('returns false when skipFlaky is not configured', async () => {
             const { isFlakySkipped } = await import('../feature-config.js');
 

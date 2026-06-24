@@ -74,7 +74,7 @@ beforeEach(() => {
     testBackend.init();
 });
 
-describe('handleBugCreation', () => {
+describe('HandleBugCreation', () => {
     it('creates bug successfully when jira env is configured and user confirms', async () => {
         vi.mocked(_jiraEnv).mockReturnValue({
             base: 'https://jira.example.com',

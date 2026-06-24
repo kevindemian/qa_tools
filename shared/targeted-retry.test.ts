@@ -6,7 +6,7 @@ import { generateWithRetry } from './targeted-retry.js';
 
 const mockLlmPrompt = vi.fn();
 
-describe('generateWithRetry', () => {
+describe('GenerateWithRetry', () => {
     const mockSchema = {
         safeParse: vi.fn(),
     };

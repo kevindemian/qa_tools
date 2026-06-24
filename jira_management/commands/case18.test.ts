@@ -55,7 +55,7 @@ beforeEach(() => {
     vi.clearAllMocks();
 });
 
-describe('case18 — AI tests generator', () => {
+describe('Case18 — AI tests generator', () => {
     it('generates tests with AI successfully', async () => {
         const prompt = vi.mocked(promptModule);
         const llm = vi.mocked(llmClientModule);

@@ -24,7 +24,7 @@ function makeCtx(overrides: Partial<CommandContext> = {}): CommandContext {
     return { ...createMockContext({ base_url: '' }), ...overrides };
 }
 
-describe('case20 - Bug Report handler', () => {
+describe('Case20 - Bug Report handler', () => {
     beforeEach(() => {
         vi.clearAllMocks();
     });

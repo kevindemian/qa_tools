@@ -51,7 +51,7 @@ describe('WORKFLOW_MAP', () => {
     });
 });
 
-describe('getTransitionsForIssue', () => {
+describe('GetTransitionsForIssue', () => {
     it('builds transition map from API response', async () => {
         mockGet.mockResolvedValue({
             data: {
@@ -77,7 +77,7 @@ describe('getTransitionsForIssue', () => {
     });
 });
 
-describe('addTasksToSprint', () => {
+describe('AddTasksToSprint', () => {
     it('posts tasks to sprint and logs success', async () => {
         mockPost.mockResolvedValue({ data: {} });
         const resource = buildResource();
@@ -94,7 +94,7 @@ describe('addTasksToSprint', () => {
     });
 });
 
-describe('transitionIssue', () => {
+describe('TransitionIssue', () => {
     it('posts transition to issue', async () => {
         mockPost.mockResolvedValue({ data: {} });
         const resource = buildResource();

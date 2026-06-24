@@ -119,7 +119,7 @@ beforeEach(() => {
     vi.mocked(checkCircuitBreaker).mockImplementation(() => {});
 });
 
-describe('tierToConfig', () => {
+describe('TierToConfig', () => {
     it('returns main config for main tier', () => {
         Config.set('llmApiKey', 'sk-main');
         Config.set('llmModel', 'gpt-4');
@@ -168,7 +168,7 @@ describe('tierToConfig', () => {
     });
 });
 
-describe('parseRawOnce', () => {
+describe('ParseRawOnce', () => {
     it('parses valid JSON string', () => {
         const result = parseRawOnce('{"key": "value"}');
 
@@ -188,7 +188,7 @@ describe('parseRawOnce', () => {
     });
 });
 
-describe('parseRetryAfter', () => {
+describe('ParseRetryAfter', () => {
     function mockResponseWithHeader(key: string, value: string | null): Response {
         const r = new Response('', { status: 429 });
         vi.spyOn(r, 'text').mockResolvedValue('');
@@ -245,7 +245,7 @@ describe('_estimateInputTokens', () => {
     });
 });
 
-describe('getLlmClientMetrics / resetLlmClientMetrics', () => {
+describe('GetLlmClientMetrics / resetLlmClientMetrics', () => {
     it('returns initial zero metrics', () => {
         const metrics = getLlmClientMetrics();
 
@@ -267,7 +267,7 @@ describe('getLlmClientMetrics / resetLlmClientMetrics', () => {
     });
 });
 
-describe('sendWithFallback', () => {
+describe('SendWithFallback', () => {
     beforeEach(() => {
         vi.spyOn(global, 'setTimeout').mockImplementation(((cb: (...args: unknown[]) => void) => {
             cb();

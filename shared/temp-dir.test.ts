@@ -32,7 +32,7 @@ afterEach(() => {
     vi.restoreAllMocks();
 });
 
-describe('reportsDir', () => {
+describe('ReportsDir', () => {
     it('returns default reports path when no env var set', () => {
         const result = reportsDir();
 
@@ -46,7 +46,7 @@ describe('reportsDir', () => {
     });
 });
 
-describe('logsDir', () => {
+describe('LogsDir', () => {
     it('returns default logs path when no env var set', () => {
         const result = logsDir();
 
@@ -66,7 +66,7 @@ describe('logsDir', () => {
     });
 });
 
-describe('tempDirPath', () => {
+describe('TempDirPath', () => {
     it('returns default temp path when no env var set', () => {
         const result = tempDirPath();
 
@@ -80,7 +80,7 @@ describe('tempDirPath', () => {
     });
 });
 
-describe('writeReport', () => {
+describe('WriteReport', () => {
     it('writes content to date-subfolder under reports directory', () => {
         process.env['QA_TOOLS_REPORTS_DIR'] = '/tmp/test-reports';
         const result = writeReport('test.json', '{}');
@@ -111,7 +111,7 @@ describe('writeReport', () => {
     });
 });
 
-describe('writeEphemeral', () => {
+describe('WriteEphemeral', () => {
     it('writes content to temp category directory', () => {
         process.env['QA_TOOLS_TEMP_DIR'] = '/tmp/test-temp';
         const result = writeEphemeral('previews', 'snap.html', '<html/>');
@@ -142,7 +142,7 @@ describe('writeEphemeral', () => {
     });
 });
 
-describe('ensureDirs', () => {
+describe('EnsureDirs', () => {
     it('creates all required directories', () => {
         process.env['QA_TOOLS_REPORTS_DIR'] = '/tmp/test-reports';
         process.env['QA_TOOLS_LOGS_DIR'] = '/tmp/test-logs';
@@ -166,7 +166,7 @@ describe('ensureDirs', () => {
     });
 });
 
-describe('registerCleanup', () => {
+describe('RegisterCleanup', () => {
     it('registers SIGTERM and exit handlers, NOT SIGINT', () => {
         const handlers: Array<string | symbol> = [];
         vi.spyOn(process, 'on').mockImplementation((event: string | symbol) => {

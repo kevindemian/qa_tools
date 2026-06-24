@@ -14,7 +14,7 @@ beforeEach(() => {
     vi.clearAllMocks();
 });
 
-describe('case16 — config JSON directory', () => {
+describe('Case16 — config JSON directory', () => {
     it('exports a handler function', () => {
         expect(case16).toBeDefined();
         expect(typeof case16.handler).toBe('function');

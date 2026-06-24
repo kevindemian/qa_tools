@@ -18,7 +18,7 @@ function makeRecord(overrides: Partial<AiComparisonRecord> & { generatedBy: 'ai'
     };
 }
 
-describe('compareAiVsManual', () => {
+describe('CompareAiVsManual', () => {
     it('returns zeroed result for empty array', () => {
         const result = compareAiVsManual([]);
 
@@ -169,7 +169,7 @@ describe('compareAiVsManual', () => {
     });
 });
 
-describe('generateAiComparisonHtml', () => {
+describe('GenerateAiComparisonHtml', () => {
     function sampleResult(overrides?: Partial<AiComparisonResult>): AiComparisonResult {
         return {
             aiTotal: 4,

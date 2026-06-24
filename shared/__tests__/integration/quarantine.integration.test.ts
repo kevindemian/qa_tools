@@ -205,7 +205,7 @@ describe('FT-36e — Corrupt store recovery', () => {
     });
 });
 
-describe('quarantineRatio — pure calculation', () => {
+describe('QuarantineRatio — pure calculation', () => {
     it('returns count=0 ratio=0 when no entries', () => {
         const meta = quarantineRatio(100);
 

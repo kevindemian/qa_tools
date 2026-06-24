@@ -148,7 +148,7 @@ function makeCoverageResult() {
 
 const HTML_WITH_DOCTYPE = '<!DOCTYPE html><html><head><title>Test</title></head><body>content</body></html>';
 
-describe('case-d — dashboard menu', () => {
+describe('Case-d — dashboard menu', () => {
     beforeEach(() => vi.clearAllMocks());
 
     it('returns early if no project name', async () => {
@@ -230,7 +230,7 @@ describe('case-d — dashboard menu', () => {
     });
 });
 
-describe('case25 — Traceability Matrix', () => {
+describe('Case25 — Traceability Matrix', () => {
     beforeEach(() => vi.clearAllMocks());
 
     it('warns and returns early if no project name', async () => {
@@ -358,7 +358,7 @@ describe('case25 — Traceability Matrix', () => {
     });
 });
 
-describe('case26 — Release Score', () => {
+describe('Case26 — Release Score', () => {
     beforeEach(() => vi.clearAllMocks());
 
     it('warns and returns early if no project name', async () => {
@@ -560,7 +560,7 @@ describe('case26 — Release Score', () => {
     });
 });
 
-describe('case27 — Coverage Dashboard', () => {
+describe('Case27 — Coverage Dashboard', () => {
     beforeEach(() => vi.clearAllMocks());
 
     it('warns and returns early if no project name', async () => {

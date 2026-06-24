@@ -23,7 +23,7 @@ const MOCK_CTX: SetupContext = {
     },
 };
 
-describe('generatePrePushHook', () => {
+describe('GeneratePrePushHook', () => {
     it('returns shell script with project name', () => {
         const script = generatePrePushHook(MOCK_CTX);
 

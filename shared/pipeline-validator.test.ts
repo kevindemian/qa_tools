@@ -38,7 +38,7 @@ describe('PipelineValidator — createPipelineValidator', () => {
     });
 });
 
-describe('invariantMinConfidence (P-01)', () => {
+describe('InvariantMinConfidence (P-01)', () => {
     it('passes when confidence >= 0.6', () => {
         const results = invariantMinConfidence({ confidence: 0.75 }, makeCtx(''));
 
@@ -62,7 +62,7 @@ describe('invariantMinConfidence (P-01)', () => {
     });
 });
 
-describe('invariantEvidenceNonEmpty (P-02)', () => {
+describe('InvariantEvidenceNonEmpty (P-02)', () => {
     it('passes with evidence', () => {
         const results = invariantEvidenceNonEmpty({ evidence: ['Line 42: error'] }, makeCtx(''));
 
@@ -78,7 +78,7 @@ describe('invariantEvidenceNonEmpty (P-02)', () => {
     });
 });
 
-describe('invariantCategoryHasRecommendation (P-03)', () => {
+describe('InvariantCategoryHasRecommendation (P-03)', () => {
     it('passes when code has recommendation', () => {
         const results = invariantCategoryHasRecommendation(
             { category: 'code', recommendation: 'Fix compilation error in main.ts' },

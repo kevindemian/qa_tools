@@ -53,7 +53,7 @@ function writeFixture(fixture: unknown, name = 'coverage-summary.json'): string 
 
 /* ── Tests ───────────────────────────────────────────────────── */
 
-describe('readIstanbulCoverage — property-based', () => {
+describe('ReadIstanbulCoverage — property-based', () => {
     beforeEach(() => {
         TEST_DIR = fs.mkdtempSync(path.join(os.tmpdir(), 'pbt-istanbul-'));
     });
@@ -150,7 +150,7 @@ describe('readIstanbulCoverage — property-based', () => {
     });
 });
 
-describe('resolveCoverage — property-based', () => {
+describe('ResolveCoverage — property-based', () => {
     beforeEach(() => {
         TEST_DIR = fs.mkdtempSync(path.join(os.tmpdir(), 'pbt-resolve-'));
     });

@@ -5,7 +5,7 @@ function makeCtx(input: string): ValidationContext {
     return { inputRaw: input, outputRaw: {}, artifactType: 'test-suite' };
 }
 
-describe('recalculateCoverage', () => {
+describe('RecalculateCoverage', () => {
     it('returns 0 coverage when no criteria in input', () => {
         const result = recalculateCoverage({ tests: [{ title: 'Test A' }] }, makeCtx('Short text'));
 

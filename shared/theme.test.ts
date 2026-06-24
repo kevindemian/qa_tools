@@ -4,7 +4,7 @@
 
 import { getTheme, defaultTheme } from './theme.js';
 
-describe('theme', () => {
+describe('Theme', () => {
     it('getTheme returns defaultTheme', () => {
         expect(getTheme()).toBe(defaultTheme);
     });

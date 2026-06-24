@@ -298,7 +298,7 @@ describe('FsStoreBackend additional coverage', () => {
     });
 });
 
-describe('detectProjectGitDir', () => {
+describe('DetectProjectGitDir', () => {
     it('returns null when no .git found', () => {
         expect(detectProjectGitDir('/nonexistent-path-xyz')).toBeNull();
     });
@@ -332,7 +332,7 @@ describe('detectProjectGitDir', () => {
     });
 });
 
-describe('detectStoreBackend', () => {
+describe('DetectStoreBackend', () => {
     const origXdg = process.env['XDG_STATE_HOME'];
     const origHome = process.env['HOME'];
 

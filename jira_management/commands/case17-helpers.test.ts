@@ -9,7 +9,7 @@ import {
     parseCliExtra,
 } from './case17-helpers.js';
 
-describe('isGitHubCi', () => {
+describe('IsGitHubCi', () => {
     const OGT = process.env['GITHUB_TOKEN'];
     const OGR = process.env['GITHUB_REPOSITORY'];
 
@@ -40,7 +40,7 @@ describe('isGitHubCi', () => {
     });
 });
 
-describe('isGitLabCi', () => {
+describe('IsGitLabCi', () => {
     const OGT = process.env['CI_JOB_TOKEN'];
     const OGP = process.env['CI_PROJECT_ID'];
 
@@ -71,7 +71,7 @@ describe('isGitLabCi', () => {
     });
 });
 
-describe('buildGitTrendHtml', () => {
+describe('BuildGitTrendHtml', () => {
     it('returns empty string when CI context is empty', () => {
         expect(buildGitTrendHtml({ commits: '', runs: [], flakyTests: '' })).toBe('');
     });
@@ -120,7 +120,7 @@ describe('buildGitTrendHtml', () => {
     });
 });
 
-describe('buildJiraContextHtml', () => {
+describe('BuildJiraContextHtml', () => {
     it('returns empty string for empty context', () => {
         expect(buildJiraContextHtml('')).toBe('');
     });
@@ -133,7 +133,7 @@ describe('buildJiraContextHtml', () => {
     });
 });
 
-describe('injectAnalysisSection', () => {
+describe('InjectAnalysisSection', () => {
     it('injects analysis before </body>', () => {
         const result = injectAnalysisSection('<html><body>content</body></html>', 'Analysis text');
 
@@ -149,7 +149,7 @@ describe('injectAnalysisSection', () => {
     });
 });
 
-describe('buildDiffSummary', () => {
+describe('BuildDiffSummary', () => {
     it('returns empty string when no changes', () => {
         expect(buildDiffSummary({ newFailures: [], newPasses: [], flaky: [] })).toBe('');
     });
@@ -188,7 +188,7 @@ describe('buildDiffSummary', () => {
     });
 });
 
-describe('isValidCtrfData', () => {
+describe('IsValidCtrfData', () => {
     it('returns true for valid data', () => {
         const data = { results: { tests: [{ name: 'T1', status: 'passed' }] } };
 
@@ -212,7 +212,7 @@ describe('isValidCtrfData', () => {
     });
 });
 
-describe('parseCliExtra', () => {
+describe('ParseCliExtra', () => {
     const origArgv = process.argv;
 
     afterEach(() => {

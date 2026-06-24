@@ -112,7 +112,7 @@ describe('__setConfig / getConfig / isQuiet', () => {
     });
 });
 
-describe('badge', () => {
+describe('Badge', () => {
     it('returns colored string for ok status', () => {
         const result = badge(3, 'passed', 'ok');
 
@@ -144,7 +144,7 @@ describe('badge', () => {
     });
 });
 
-describe('icon', () => {
+describe('Icon', () => {
     it('returns unicode check when TTY', () => {
         mockIsTTY.mockReturnValue(true);
         __setConfig(makeConfig({ quiet: false }));
@@ -172,7 +172,7 @@ describe('icon', () => {
     });
 });
 
-describe('success', () => {
+describe('Success', () => {
     it('prints green OK message', () => {
         success('done');
 
@@ -187,7 +187,7 @@ describe('success', () => {
     });
 });
 
-describe('error', () => {
+describe('Error', () => {
     it('prints red error message', () => {
         error('failed');
 
@@ -202,7 +202,7 @@ describe('error', () => {
     });
 });
 
-describe('warn', () => {
+describe('Warn', () => {
     it('prints yellow warn message', () => {
         warn('caution');
 
@@ -210,7 +210,7 @@ describe('warn', () => {
     });
 });
 
-describe('info', () => {
+describe('Info', () => {
     it('prints cyan info message', () => {
         info('info');
 
@@ -225,7 +225,7 @@ describe('info', () => {
     });
 });
 
-describe('helpLine', () => {
+describe('HelpLine', () => {
     it('prints info line', () => {
         helpLine('help');
 
@@ -233,7 +233,7 @@ describe('helpLine', () => {
     });
 });
 
-describe('print', () => {
+describe('Print', () => {
     it('delegates to output.print', () => {
         print('hello');
 
@@ -241,7 +241,7 @@ describe('print', () => {
     });
 });
 
-describe('title', () => {
+describe('Title', () => {
     it('uses box with border when not quiet', () => {
         title('Section');
 
@@ -271,7 +271,7 @@ describe('title', () => {
     });
 });
 
-describe('divider', () => {
+describe('Divider', () => {
     it('prints a divider', () => {
         divider();
 
@@ -279,7 +279,7 @@ describe('divider', () => {
     });
 });
 
-describe('humanizeError', () => {
+describe('HumanizeError', () => {
     it('returns known error for rate limit', () => {
         const result = humanizeError('Rate limit exceeded');
 
@@ -317,7 +317,7 @@ describe('humanizeError', () => {
     });
 });
 
-describe('extractErrorMessage', () => {
+describe('ExtractErrorMessage', () => {
     it('extracts from axios errorMessages', () => {
         const err = { response: { data: { errorMessages: ['Issue type not found'] } } };
 
@@ -389,7 +389,7 @@ describe('extractErrorMessage', () => {
     });
 });
 
-describe('printError', () => {
+describe('PrintError', () => {
     it('prints known error with hint box when not quiet', () => {
         __setConfig(makeConfig({ quiet: false }));
         printError('Context', { response: { data: { errorMessages: ['Rate limit atingido'] } } });
@@ -411,7 +411,7 @@ describe('printError', () => {
     });
 });
 
-describe('printSummary', () => {
+describe('PrintSummary', () => {
     const okResults = [
         { status: 'ok' as const, label: 'test1', message: '' },
         { status: 'ok' as const, label: 'test2', message: '' },
@@ -463,7 +463,7 @@ describe('CancelError', () => {
     });
 });
 
-describe('onError', () => {
+describe('OnError', () => {
     it('returns auto action when autoConfirm is true', () => {
         __setConfig(makeConfig({ autoConfirm: true, onError: 'skip' }));
         const result = onError('ctx', new Error('fail'));
@@ -487,7 +487,7 @@ describe('onError', () => {
     });
 });
 
-describe('tableView', () => {
+describe('TableView', () => {
     it('warns on null data', () => {
         tableView(null);
 

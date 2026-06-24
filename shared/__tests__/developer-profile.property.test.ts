@@ -42,7 +42,7 @@ const failureArb = fc
 
 /* ── Tests ───────────────────────────────────────────────────── */
 
-describe('buildDeveloperProfile — property-based', () => {
+describe('BuildDeveloperProfile — property-based', () => {
     it('totalAuthors equals number of unique authors (Unknown for missing)', () => {
         fc.assert(
             fc.property(fc.array(failureArb, { maxLength: 30 }), (failures) => {
@@ -139,7 +139,7 @@ describe('buildDeveloperProfile — property-based', () => {
     });
 });
 
-describe('generateDeveloperProfileHtml — property-based', () => {
+describe('GenerateDeveloperProfileHtml — property-based', () => {
     it('always produces valid HTML with DOCTYPE', () => {
         fc.assert(
             fc.property(

@@ -78,7 +78,7 @@ beforeEach(() => {
     mockGetConfig.mockReturnValue(cfg);
 });
 
-describe('prompt', () => {
+describe('Prompt', () => {
     it('returns the user input', () => {
         mockReadlineQuestion.mockReturnValue('my value');
 
@@ -133,7 +133,7 @@ describe('prompt', () => {
     });
 });
 
-describe('confirm', () => {
+describe('Confirm', () => {
     it('returns true for yes answer', () => {
         mockReadlineQuestion.mockReturnValue('s');
 
@@ -217,7 +217,7 @@ describe('confirm', () => {
     });
 });
 
-describe('isTTY', () => {
+describe('IsTTY', () => {
     afterEach(() => {
         Object.defineProperty(process.stdout, 'isTTY', { value: undefined, configurable: true });
     });

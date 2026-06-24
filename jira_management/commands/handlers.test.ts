@@ -174,7 +174,7 @@ beforeEach(() => {
     mockConfigMod['jsonLabels'] = undefined;
 });
 
-describe('case02 — list versions', () => {
+describe('Case02 — list versions', () => {
     it('calls getProjectId and getProjectVersions', async () => {
         const mod = case02;
         await mod.handler(baseContext);
@@ -183,7 +183,7 @@ describe('case02 — list versions', () => {
     });
 });
 
-describe('case03 — create version', () => {
+describe('Case03 — create version', () => {
     it('returns early when name is empty', async () => {
         const prompt = vi.mocked(promptModule);
         prompt.ask.mockResolvedValueOnce('');
@@ -215,7 +215,7 @@ describe('case03 — create version', () => {
     });
 });
 
-describe('case04 — assign fixVersion', () => {
+describe('Case04 — assign fixVersion', () => {
     it('returns true when cancelled', async () => {
         const prompt = vi.mocked(promptModule);
         prompt.askConfirm.mockResolvedValueOnce(true).mockResolvedValueOnce(false);
@@ -338,7 +338,7 @@ describe('case04 — assign fixVersion', () => {
     });
 });
 
-describe('case05 — update package version', () => {
+describe('Case05 — update package version', () => {
     it('handles missing packageManager by prompting dir', async () => {
         mockSessionContext.packageManager = undefined;
         mockJiraResource.getReleaseTasks.mockResolvedValueOnce(['TASK-1']);
@@ -370,7 +370,7 @@ describe('case05 — update package version', () => {
     });
 });
 
-describe('case06 — check release status', () => {
+describe('Case06 — check release status', () => {
     it('checks status successfully', async () => {
         const prompt = vi.mocked(promptModule);
         prompt.ask.mockResolvedValueOnce('v2.0.0');
@@ -392,7 +392,7 @@ describe('case06 — check release status', () => {
     });
 });
 
-describe('case07 — close tasks', () => {
+describe('Case07 — close tasks', () => {
     it('returns true when cancelled', async () => {
         const prompt = vi.mocked(promptModule);
         prompt.askConfirm.mockResolvedValueOnce(false);
@@ -456,7 +456,7 @@ describe('case07 — close tasks', () => {
     });
 });
 
-describe('case08 — release version', () => {
+describe('Case08 — release version', () => {
     it('returns true when cancelled', async () => {
         const prompt = vi.mocked(promptModule);
         prompt.ask.mockResolvedValueOnce('');
@@ -492,7 +492,7 @@ describe('case08 — release version', () => {
     });
 });
 
-describe('case09 — switch project', () => {
+describe('Case09 — switch project', () => {
     it('returns early when name is empty', async () => {
         const prompt = vi.mocked(promptModule);
         prompt.ask.mockResolvedValueOnce('');
@@ -512,7 +512,7 @@ describe('case09 — switch project', () => {
     });
 });
 
-describe('case10 — show counters', () => {
+describe('Case10 — show counters', () => {
     it('returns undefined', async () => {
         const mod = case10;
 
@@ -542,7 +542,7 @@ describe('case10 — show counters', () => {
     });
 });
 
-describe('case11 — generate template (CSV/JSON)', () => {
+describe('Case11 — generate template (CSV/JSON)', () => {
     it('generates CSV template', async () => {
         const prompt = vi.mocked(promptModule);
         prompt.ask.mockResolvedValueOnce('CSV').mockResolvedValueOnce('/tmp/test-template.csv');
@@ -588,7 +588,7 @@ describe('case11 — generate template (CSV/JSON)', () => {
     });
 });
 
-describe('case13 — create test execution', () => {
+describe('Case13 — create test execution', () => {
     it('creates from in-memory tasks', async () => {
         mockSessionContext.inMemoryTasksId = ['TEST-1', 'TEST-2'];
         const prompt = vi.mocked(promptModule);
@@ -660,7 +660,7 @@ describe('case13 — create test execution', () => {
     });
 });
 
-describe('case14 — config Cypress directory', () => {
+describe('Case14 — config Cypress directory', () => {
     it('returns early when dir is empty', async () => {
         const prompt = vi.mocked(promptModule);
         prompt.ask.mockResolvedValueOnce('');
@@ -681,7 +681,7 @@ describe('case14 — config Cypress directory', () => {
     });
 });
 
-describe('case15 — create tests from JSON', () => {
+describe('Case15 — create tests from JSON', () => {
     it('returns when jsonPath is empty', async () => {
         const prompt = vi.mocked(promptModule);
         prompt.ask.mockResolvedValueOnce('');
@@ -722,7 +722,7 @@ describe('case15 — create tests from JSON', () => {
     });
 });
 
-describe('case16 — config JSON directory', () => {
+describe('Case16 — config JSON directory', () => {
     it('returns early when dir is empty', async () => {
         const prompt = vi.mocked(promptModule);
         prompt.ask.mockResolvedValueOnce('');
@@ -740,7 +740,7 @@ describe('case16 — config JSON directory', () => {
     });
 });
 
-describe('case12 — diagnostic connection', () => {
+describe('Case12 — diagnostic connection', () => {
     it('reports all endpoints as ok', async () => {
         mockJiraResource.axiosInstance.get
             .mockResolvedValueOnce({ status: 200 })
@@ -794,7 +794,7 @@ describe('case12 — diagnostic connection', () => {
     });
 });
 
-describe('case01 — create tests from CSV', () => {
+describe('Case01 — create tests from CSV', () => {
     it('creates tests with Config csvPath and stores in-memory tasks', async () => {
         mockConfigMod['csvPath'] = '/fake/test.csv';
         mockConfigMod['csvLabels'] = 'label1, label2';

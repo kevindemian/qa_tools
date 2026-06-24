@@ -30,7 +30,7 @@ const ISSUE_FIXTURE = {
     web_url: 'https://gitlab.test.com/project/-/issues/42',
 };
 
-describe('glGetOpenIssues', () => {
+describe('GlGetOpenIssues', () => {
     it('returns formatted issues from GET /issues', async () => {
         vi.mocked(apiGet).mockResolvedValue([ISSUE_FIXTURE]);
         const result = await glGetOpenIssues(mockClient, 'owner', 'repo');

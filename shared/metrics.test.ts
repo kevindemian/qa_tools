@@ -33,7 +33,7 @@ function makeConfig(tmpDir: string): Config {
     return Config.create({ xdgStateHome: tmpDir });
 }
 
-describe('saveRunMetrics / loadMetrics', () => {
+describe('SaveRunMetrics / loadMetrics', () => {
     it('saves and loads a metrics run', () => {
         const cfg = makeConfig(TMP_DIR);
         const run: MetricsRun = {
@@ -114,7 +114,7 @@ describe('saveRunMetrics / loadMetrics', () => {
     });
 });
 
-describe('saveParseResult', () => {
+describe('SaveParseResult', () => {
     it('creates a MetricsRun from a ParseResult and saves it', () => {
         const cfg = makeConfig(TMP_DIR);
         const parseResult: ParseResult = {
@@ -138,7 +138,7 @@ describe('saveParseResult', () => {
     });
 });
 
-describe('calculateFlakiness', () => {
+describe('CalculateFlakiness', () => {
     it('returns empty when no runs', () => {
         const store: MetricsStore = { runs: [] };
 
@@ -301,7 +301,7 @@ describe('calculateFlakiness', () => {
     });
 });
 
-describe('saveCoverageSnapshot', () => {
+describe('SaveCoverageSnapshot', () => {
     it('saves and loads coverage snapshots', () => {
         const cfg = makeConfig(TMP_DIR);
         const snapshot: CoverageSnapshot = {
@@ -321,7 +321,7 @@ describe('saveCoverageSnapshot', () => {
     });
 });
 
-describe('getTrends', () => {
+describe('GetTrends', () => {
     it('returns pass rate trend for recent runs', () => {
         const store: MetricsStore = {
             runs: [
@@ -374,7 +374,7 @@ describe('getTrends', () => {
     });
 });
 
-describe('edge cases', () => {
+describe('Edge cases', () => {
     it('handles ensureDir mkdir failure gracefully', () => {
         const cfg = makeConfig(TMP_DIR);
         const mkdirSpy = vi.spyOn(fs, 'mkdirSync').mockImplementation(() => {

@@ -28,7 +28,7 @@ const storeArb = fc.record({
     records: fc.array(recordArb, { minLength: 0, maxLength: 20 }),
 });
 
-describe('computeAiEffectiveness — property-based', () => {
+describe('ComputeAiEffectiveness — property-based', () => {
     it('acceptance rate matches the math', () => {
         fc.assert(
             fc.property(storeArb, (store) => {
@@ -96,7 +96,7 @@ describe('computeAiEffectiveness — property-based', () => {
     });
 });
 
-describe('generateAiEffectivenessHtml — property-based', () => {
+describe('GenerateAiEffectivenessHtml — property-based', () => {
     it('always produces valid HTML', () => {
         fc.assert(
             fc.property(storeArb, (store) => {

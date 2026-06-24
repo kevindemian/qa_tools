@@ -1,7 +1,7 @@
 import { exportTestsCsv, exportTestsJson } from './report-export.js';
 import type { FlatTest } from './result_parser.js';
 
-describe('exportTestsCsv', () => {
+describe('ExportTestsCsv', () => {
     it('returns header row for empty test list', () => {
         const csv = exportTestsCsv([]);
 
@@ -62,7 +62,7 @@ describe('exportTestsCsv', () => {
     });
 });
 
-describe('exportTestsJson', () => {
+describe('ExportTestsJson', () => {
     it('returns valid JSON for test list', () => {
         const tests: FlatTest[] = [{ title: 'Test', state: 'passed', duration: 100 }];
         const json = exportTestsJson(tests);

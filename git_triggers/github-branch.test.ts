@@ -22,7 +22,7 @@ beforeAll(() => {
     mockApiGet = vi.spyOn(apiModule, 'apiGet');
 });
 
-describe('getBranch', () => {
+describe('GetBranch', () => {
     let client: Mocked<AxiosInstance>;
 
     beforeEach(() => {
@@ -62,7 +62,7 @@ describe('getBranch', () => {
     });
 });
 
-describe('getDiff', () => {
+describe('GetDiff', () => {
     let client: Mocked<AxiosInstance>;
 
     beforeEach(() => {

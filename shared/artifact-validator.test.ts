@@ -133,7 +133,7 @@ describe('ArtifactValidator', () => {
     });
 });
 
-describe('factory functions', () => {
+describe('Factory functions', () => {
     it('pass builds passing result', () => {
         const r = pass('I-01', 'OK');
 

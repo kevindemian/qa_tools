@@ -56,7 +56,7 @@ describe('PROVIDER_PROFILES', () => {
     });
 });
 
-describe('isKnownProvider', () => {
+describe('IsKnownProvider', () => {
     it('returns true for known providers', async () => {
         const { isKnownProvider } = await import('./llm-provider-profiles.js');
 
@@ -73,7 +73,7 @@ describe('isKnownProvider', () => {
     });
 });
 
-describe('getProviderProfile', () => {
+describe('GetProviderProfile', () => {
     it('returns profile for known provider', async () => {
         const { getProviderProfile } = await import('./llm-provider-profiles.js');
         const p = getProviderProfile('openrouter');
@@ -89,7 +89,7 @@ describe('getProviderProfile', () => {
     });
 });
 
-describe('inferProviderFromKey', () => {
+describe('InferProviderFromKey', () => {
     it('detects OpenRouter keys', async () => {
         const { inferProviderFromKey } = await import('./llm-provider-profiles.js');
 
@@ -134,7 +134,7 @@ describe('inferProviderFromKey', () => {
     });
 });
 
-describe('formatProviderList', () => {
+describe('FormatProviderList', () => {
     it('returns a non-empty string with provider names', async () => {
         const { formatProviderList } = await import('./llm-provider-profiles.js');
         const list = formatProviderList();

@@ -2,7 +2,7 @@
 import { undefinedAs } from './test-utils.js';
 import { safeParseJson } from './safe-json.js';
 
-describe('safeParseJson', () => {
+describe('SafeParseJson', () => {
     it('parses valid JSON and returns typed result', () => {
         const result = safeParseJson<{ name: string }>('{"name":"hello"}', { name: '' });
 

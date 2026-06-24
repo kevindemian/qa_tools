@@ -101,7 +101,7 @@ beforeEach(() => {
     vi.mocked(fs.existsSync).mockReturnValue(true);
 });
 
-describe('main', () => {
+describe('Main', () => {
     it('returns early when CTRF file does not exist', async () => {
         vi.mocked(fs.existsSync).mockReturnValue(false);
         await main();

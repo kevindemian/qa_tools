@@ -51,7 +51,7 @@ function makeRuns(): MetricsRun[] {
     ];
 }
 
-describe('calculatePipelineCost', () => {
+describe('CalculatePipelineCost', () => {
     it('returns zeroed result for null input', () => {
         const result = calculatePipelineCost(nullAs<MetricsRun[]>());
 
@@ -211,7 +211,7 @@ describe('calculatePipelineCost', () => {
     });
 });
 
-describe('generatePipelineCostHtml', () => {
+describe('GeneratePipelineCostHtml', () => {
     function makeResult(overrides?: Partial<PipelineCostResult>): PipelineCostResult {
         return {
             totalCost: 0.08,

@@ -7,7 +7,7 @@ beforeEach(() => {
     mockJiraResource = createMockJiraResource();
 });
 
-describe('analyzeCoverage', () => {
+describe('AnalyzeCoverage', () => {
     it('returns coverage result with some mapped and some unmapped', async () => {
         mockJiraResource.searchJiraIssues.mockResolvedValueOnce({
             issues: [

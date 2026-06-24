@@ -35,7 +35,7 @@ beforeEach(() => {
     );
 });
 
-describe('glTriggerPipeline', () => {
+describe('GlTriggerPipeline', () => {
     it('calls apiPost and returns result', async () => {
         vi.mocked(apiPost).mockResolvedValue({ id: 1, web_url: 'https://...' });
         const payload = { ref: 'main', variables: [{ key: 'VAR', value: 'val' }] };
@@ -55,7 +55,7 @@ describe('glTriggerPipeline', () => {
     });
 });
 
-describe('glGetSchedules', () => {
+describe('GlGetSchedules', () => {
     it('calls apiGet and returns schedules', async () => {
         vi.mocked(apiGet).mockResolvedValue([{ id: 1, description: 'Daily' }]);
         const result = await glGetSchedules(mockClient, 'owner', 'repo');
@@ -76,7 +76,7 @@ describe('glGetSchedules', () => {
     });
 });
 
-describe('glRunSchedule', () => {
+describe('GlRunSchedule', () => {
     it('calls apiPost and returns result', async () => {
         vi.mocked(apiPost).mockResolvedValue({ id: 42 });
         const result = await glRunSchedule(mockClient, 'owner', 'repo', 42);
@@ -104,7 +104,7 @@ describe('glRunSchedule', () => {
     });
 });
 
-describe('glGetRecentPipelines', () => {
+describe('GlGetRecentPipelines', () => {
     it('calls apiGet and returns pipelines', async () => {
         vi.mocked(apiGet).mockResolvedValue([{ id: 1, ref: 'main', status: 'success' }]);
         const result = await glGetRecentPipelines(mockClient, 'owner', 'repo', 3);
@@ -136,7 +136,7 @@ describe('glGetRecentPipelines', () => {
     });
 });
 
-describe('glGetPipeline', () => {
+describe('GlGetPipeline', () => {
     it('calls apiGet and returns pipeline', async () => {
         vi.mocked(apiGet).mockResolvedValue({ id: 42, status: 'success', web_url: 'https://...' });
         const result = await glGetPipeline(mockClient, 'owner', 'repo', 42);
@@ -156,7 +156,7 @@ describe('glGetPipeline', () => {
     });
 });
 
-describe('glGetPipelineJobs', () => {
+describe('GlGetPipelineJobs', () => {
     it('returns formatted jobs', async () => {
         vi.mocked(apiGet).mockResolvedValue([
             { id: 101, name: 'test', stage: 'test', status: 'success' },
@@ -182,7 +182,7 @@ describe('glGetPipelineJobs', () => {
     });
 });
 
-describe('glListPipelineArtifacts', () => {
+describe('GlListPipelineArtifacts', () => {
     it('returns jobs with artifacts_file', async () => {
         vi.mocked(apiGet).mockResolvedValue([
             { id: 101, name: 'test', artifacts_file: { filename: 'results.zip' } },
@@ -209,7 +209,7 @@ describe('glListPipelineArtifacts', () => {
     });
 });
 
-describe('glGetCICDVariables', () => {
+describe('GlGetCICDVariables', () => {
     it('calls apiGet and returns variables', async () => {
         vi.mocked(apiGet).mockResolvedValue([{ key: 'VAR1', value: 'val1' }]);
         const result = await glGetCICDVariables(mockClient, 'owner', 'repo');
@@ -230,7 +230,7 @@ describe('glGetCICDVariables', () => {
     });
 });
 
-describe('glDownloadArtifact', () => {
+describe('GlDownloadArtifact', () => {
     it('returns buffer and filename from /jobs/{id}/artifacts', async () => {
         mockClient.get.mockResolvedValue({
             data: Buffer.from('fake-zip-content'),
@@ -262,7 +262,7 @@ describe('glDownloadArtifact', () => {
     });
 });
 
-describe('glGetJobLogs', () => {
+describe('GlGetJobLogs', () => {
     it('returns truncated log text from GET /jobs/{id}/trace', async () => {
         mockClient.get.mockResolvedValue({ data: 'line1\nline2\nline3\n' });
         const result = await glGetJobLogs(mockClient, 'owner', 'repo', 101);

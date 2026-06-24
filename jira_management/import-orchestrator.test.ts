@@ -90,7 +90,7 @@ beforeEach(() => {
     vi.mocked(confirmOrCancel).mockReturnValue(true);
 });
 
-describe('prepareTestRun', () => {
+describe('PrepareTestRun', () => {
     it('user cancels via confirmOrCancel', async () => {
         vi.mocked(confirmOrCancel).mockReturnValue(false);
         const result = await prepareTestRun({
@@ -150,7 +150,7 @@ describe('prepareTestRun', () => {
     });
 });
 
-describe('finalizeTestCreation', () => {
+describe('FinalizeTestCreation', () => {
     it('with errors', async () => {
         const results = [
             { status: 'ok' as const, label: 'Test 1', message: '' },
@@ -183,7 +183,7 @@ describe('finalizeTestCreation', () => {
     });
 });
 
-describe('postProcessCheckpoint', () => {
+describe('PostProcessCheckpoint', () => {
     it('deletes checkpoint and updates xrefs', async () => {
         const linker = linkerMock({
             updateCrossReferences: vi.fn().mockResolvedValue(undefined),

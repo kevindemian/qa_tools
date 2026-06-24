@@ -80,7 +80,7 @@ beforeEach(() => {
 // getJiraResource
 // =====================================================================
 
-describe('getJiraResource', () => {
+describe('GetJiraResource', () => {
     it('returns data on success', async () => {
         const expected = { id: '10000', name: 'TEST' };
         mockClient.get.mockResolvedValue({ data: expected });
@@ -110,7 +110,7 @@ describe('getJiraResource', () => {
 // postJiraResource
 // =====================================================================
 
-describe('postJiraResource', () => {
+describe('PostJiraResource', () => {
     it('returns data on success', async () => {
         const payload = { name: 'v1.0', project: 'TEST' };
         const expected = { id: '10001', name: 'v1.0' };
@@ -141,7 +141,7 @@ describe('postJiraResource', () => {
 // putJiraResource
 // =====================================================================
 
-describe('putJiraResource', () => {
+describe('PutJiraResource', () => {
     it('returns data on success', async () => {
         const payload = { released: true };
         const expected = { id: '10001', released: true };
@@ -180,7 +180,7 @@ describe('putJiraResource', () => {
 // getProjectId
 // =====================================================================
 
-describe('getProjectId', () => {
+describe('GetProjectId', () => {
     it('returns project id from API', async () => {
         mockClient.get.mockResolvedValue({ data: { id: '12345' } });
 
@@ -211,7 +211,7 @@ describe('getProjectId', () => {
 // getProjectVersions
 // =====================================================================
 
-describe('getProjectVersions', () => {
+describe('GetProjectVersions', () => {
     it('returns versions array', async () => {
         const versions = [
             { id: '1', name: 'v1.0', released: true, releaseDate: '2024-01-01' },
@@ -247,7 +247,7 @@ describe('getProjectVersions', () => {
 // getTransitionsForIssue
 // =====================================================================
 
-describe('getTransitionsForIssue', () => {
+describe('GetTransitionsForIssue', () => {
     it('returns transition map by target name', async () => {
         mockClient.get.mockResolvedValue({
             data: {
@@ -308,7 +308,7 @@ describe('getTransitionsForIssue', () => {
 // searchJiraIssues
 // =====================================================================
 
-describe('searchJiraIssues', () => {
+describe('SearchJiraIssues', () => {
     it('returns issues from a single page', async () => {
         const issues = [{ key: 'TEST-1', fields: { summary: 'First issue' } }];
         mockClient.get.mockResolvedValue({ data: { issues, total: 1 } });
@@ -369,7 +369,7 @@ describe('searchJiraIssues', () => {
 // getVersionId
 // =====================================================================
 
-describe('getVersionId', () => {
+describe('GetVersionId', () => {
     it('returns version id when found', async () => {
         mockClient.get.mockResolvedValueOnce({ data: { id: '10000' } }).mockResolvedValueOnce({
             data: [
@@ -434,7 +434,7 @@ describe('getVersionId', () => {
 // createVersion
 // =====================================================================
 
-describe('createVersion', () => {
+describe('CreateVersion', () => {
     it('creates version when it does not exist', async () => {
         vi.spyOn(jiraResource, 'getVersionId').mockResolvedValueOnce(null);
         const created = { id: '10001', name: 'v1.0', project: 'TEST' };
@@ -494,7 +494,7 @@ describe('createVersion', () => {
 // checkReleaseTasksStatus
 // =====================================================================
 
-describe('checkReleaseTasksStatus', () => {
+describe('CheckReleaseTasksStatus', () => {
     it('returns true when all tasks are done', async () => {
         vi.spyOn(jiraResource, 'getProjectId').mockResolvedValueOnce('10000');
         vi.spyOn(jiraResource, 'searchJiraIssues').mockResolvedValueOnce({
@@ -556,7 +556,7 @@ describe('checkReleaseTasksStatus', () => {
 // getReleaseTasks
 // =====================================================================
 
-describe('getReleaseTasks', () => {
+describe('GetReleaseTasks', () => {
     it('returns formatted task list', async () => {
         vi.spyOn(jiraResource, 'getProjectId').mockResolvedValueOnce('10000');
         vi.spyOn(jiraResource, 'searchJiraIssues').mockResolvedValueOnce({
@@ -623,7 +623,7 @@ describe('getReleaseTasks', () => {
 // getLatestReleases
 // =====================================================================
 
-describe('getLatestReleases', () => {
+describe('GetLatestReleases', () => {
     it('returns latest released and unreleased versions', async () => {
         mockClient.get.mockResolvedValueOnce({ data: { id: '10000' } }).mockResolvedValueOnce({
             data: [
@@ -708,7 +708,7 @@ describe('getLatestReleases', () => {
 // addTasksToSprint
 // =====================================================================
 
-describe('addTasksToSprint', () => {
+describe('AddTasksToSprint', () => {
     it('posts tasks to sprint successfully', async () => {
         mockClient.post.mockResolvedValue({ data: {} });
 
@@ -740,7 +740,7 @@ describe('addTasksToSprint', () => {
 // updateFixVersions
 // =====================================================================
 
-describe('updateFixVersions', () => {
+describe('UpdateFixVersions', () => {
     it('updates all task fix versions', async () => {
         vi.spyOn(jiraResource, 'getVersionId').mockResolvedValueOnce('v-1');
         mockClient.put.mockResolvedValue({ data: {}, status: 200 });
@@ -785,7 +785,7 @@ describe('updateFixVersions', () => {
 // releaseVersion
 // =====================================================================
 
-describe('releaseVersion', () => {
+describe('ReleaseVersion', () => {
     it('releases version successfully', async () => {
         vi.spyOn(jiraResource, 'getVersionId').mockResolvedValueOnce('v-1');
         vi.spyOn(jiraResource, 'checkReleaseTasksStatus').mockResolvedValueOnce(true);
@@ -840,7 +840,7 @@ describe('releaseVersion', () => {
 // moveCardsToDone
 // =====================================================================
 
-describe('moveCardsToDone', () => {
+describe('MoveCardsToDone', () => {
     let transitionSpy: Mock;
 
     beforeEach(() => {
@@ -992,7 +992,7 @@ describe('moveCardsToDone', () => {
 // getFromOriginPath
 // =====================================================================
 
-describe('getFromOriginPath', () => {
+describe('GetFromOriginPath', () => {
     it('returns data on success', async () => {
         const expected = { id: '10000', name: 'TEST' };
         mockClient.get.mockResolvedValue({ data: expected });
@@ -1031,7 +1031,7 @@ describe('getFromOriginPath', () => {
 // transitionIssue
 // =====================================================================
 
-describe('transitionIssue', () => {
+describe('TransitionIssue', () => {
     it('posts transition successfully', async () => {
         mockClient.post.mockResolvedValue({ data: {} });
 

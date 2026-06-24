@@ -46,7 +46,7 @@ describe('BugReportValidator — createBugReportValidator', () => {
     });
 });
 
-describe('invariantMinSteps (B-01)', () => {
+describe('InvariantMinSteps (B-01)', () => {
     it('passes with >= 3 steps', () => {
         const results = invariantMinSteps({ stepsToReproduce: ['Step 1', 'Step 2', 'Step 3'] }, makeCtx(''));
 
@@ -62,7 +62,7 @@ describe('invariantMinSteps (B-01)', () => {
     });
 });
 
-describe('invariantImperativeSteps (B-02)', () => {
+describe('InvariantImperativeSteps (B-02)', () => {
     it('passes with imperative verbs', () => {
         const results = invariantImperativeSteps(
             { stepsToReproduce: ['Click button', 'Type text', 'Navigate to page'] },
@@ -84,7 +84,7 @@ describe('invariantImperativeSteps (B-02)', () => {
     });
 });
 
-describe('invariantSeverityConsistentWithDescription (B-03)', () => {
+describe('InvariantSeverityConsistentWithDescription (B-03)', () => {
     it('passes critical with long description', () => {
         const results = invariantSeverityConsistentWithDescription(
             { severity: 'critical', description: 'Long description '.repeat(10) },
@@ -106,7 +106,7 @@ describe('invariantSeverityConsistentWithDescription (B-03)', () => {
     });
 });
 
-describe('invariantNotSpecifiedJustified (B-04)', () => {
+describe('InvariantNotSpecifiedJustified (B-04)', () => {
     it('passes without "Not specified" fields', () => {
         const results = invariantNotSpecifiedJustified(
             { severity: 'major', summary: 'Test report' },

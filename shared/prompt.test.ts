@@ -70,7 +70,7 @@ describe('Prompt', () => {
         Object.defineProperty(process.stdin, 'isTTY', { value: undefined, configurable: true });
     });
 
-    describe('success', () => {
+    describe('Success', () => {
         it('logs with green OK prefix', () => {
             prompt.success('Operacao concluida');
 
@@ -99,7 +99,7 @@ describe('Prompt', () => {
         });
     });
 
-    describe('error', () => {
+    describe('Error', () => {
         it('logs with red ERR prefix', () => {
             prompt.error('Falha na operacao');
 
@@ -113,7 +113,7 @@ describe('Prompt', () => {
         });
     });
 
-    describe('warn', () => {
+    describe('Warn', () => {
         it('logs with yellow ! prefix', () => {
             prompt.warn('Aviso importante');
 
@@ -121,7 +121,7 @@ describe('Prompt', () => {
         });
     });
 
-    describe('info', () => {
+    describe('Info', () => {
         it('logs with cyan i prefix when not quiet', () => {
             prompt.info('Mensagem info');
 
@@ -143,7 +143,7 @@ describe('Prompt', () => {
         });
     });
 
-    describe('helpLine', () => {
+    describe('HelpLine', () => {
         it('does not log to console when QUIET=true', () => {
             prompt.__setConfig(Config.create({ quiet: true }));
             prompt.helpLine('Ajuda');
@@ -165,7 +165,7 @@ describe('Prompt', () => {
         });
     });
 
-    describe('isQuiet', () => {
+    describe('IsQuiet', () => {
         it('returns false when QUIET is not set', () => {
             expect(prompt.isQuiet()).toBeFalsy();
         });
@@ -177,7 +177,7 @@ describe('Prompt', () => {
         });
     });
 
-    describe('title', () => {
+    describe('Title', () => {
         beforeEach(() => {
             prompt.__setConfig(Config.create({}));
         });
@@ -196,7 +196,7 @@ describe('Prompt', () => {
         });
     });
 
-    describe('divider', () => {
+    describe('Divider', () => {
         it('logs a line of dashes', () => {
             prompt.divider();
 
@@ -204,7 +204,7 @@ describe('Prompt', () => {
         });
     });
 
-    describe('badge', () => {
+    describe('Badge', () => {
         it('returns formatted ok badge', () => {
             const result = prompt.badge(5, 'passed', 'ok');
 
@@ -230,7 +230,7 @@ describe('Prompt', () => {
         });
     });
 
-    describe('printSummary', () => {
+    describe('PrintSummary', () => {
         beforeEach(() => {
             prompt.__setConfig(Config.create({}));
             mockRootLogger.filePath = undefined;
@@ -381,7 +381,7 @@ describe('Prompt', () => {
         });
     });
 
-    describe('withSpinner', () => {
+    describe('WithSpinner', () => {
         beforeEach(() => {
             injectOraMock();
         });
@@ -411,7 +411,7 @@ describe('Prompt', () => {
         });
     });
 
-    describe('humanizeError', () => {
+    describe('HumanizeError', () => {
         it('returns known error for rate limit', () => {
             const result = nonNull(prompt.humanizeError('rate limit exceeded'));
 
@@ -477,7 +477,7 @@ describe('Prompt', () => {
         });
     });
 
-    describe('extractErrorMessage', () => {
+    describe('ExtractErrorMessage', () => {
         it('extracts from axios error response', () => {
             const err = { response: { data: { errorMessages: ['Issue not found'] } } };
 
@@ -529,7 +529,7 @@ describe('Prompt', () => {
         return inst;
     }
 
-    describe('showSelect', () => {
+    describe('ShowSelect', () => {
         afterEach(() => {
             vi.restoreAllMocks();
         });
@@ -603,7 +603,7 @@ describe('Prompt', () => {
         });
     });
 
-    describe('prompt', () => {
+    describe('Prompt', () => {
         afterEach(() => {
             vi.restoreAllMocks();
         });
@@ -639,7 +639,7 @@ describe('Prompt', () => {
         });
     });
 
-    describe('smartPrompt', () => {
+    describe('SmartPrompt', () => {
         afterEach(() => {
             vi.restoreAllMocks();
         });
@@ -699,7 +699,7 @@ describe('Prompt', () => {
         });
     });
 
-    describe('confirm', () => {
+    describe('Confirm', () => {
         afterEach(() => {
             vi.restoreAllMocks();
         });
@@ -738,7 +738,7 @@ describe('Prompt', () => {
         });
     });
 
-    describe('ask', () => {
+    describe('Ask', () => {
         let mockInput: ReturnType<typeof injectInputMock>;
 
         beforeEach(() => {
@@ -786,7 +786,7 @@ describe('Prompt', () => {
         });
     });
 
-    describe('askConfirm', () => {
+    describe('AskConfirm', () => {
         let mockConfirm: ReturnType<typeof injectConfirmMock>;
 
         beforeEach(() => {
@@ -834,7 +834,7 @@ describe('Prompt', () => {
         });
     });
 
-    describe('printError', () => {
+    describe('PrintError', () => {
         it('calls error with known humanized message', () => {
             const testErr = { response: { data: { errorMessages: ['rate limit exceeded'] } } };
             prompt.printError('Contexto', testErr);
@@ -872,7 +872,7 @@ describe('Prompt', () => {
         });
     });
 
-    describe('tableView', () => {
+    describe('TableView', () => {
         it('prints table with all columns by default', () => {
             prompt.tableView([{ a: 1, b: 2 }]);
 
@@ -930,7 +930,7 @@ describe('Prompt', () => {
         });
     });
 
-    describe('onError', () => {
+    describe('OnError', () => {
         afterEach(() => {
             vi.restoreAllMocks();
             prompt.__setConfig(Config.create({}));
@@ -1000,7 +1000,7 @@ describe('Prompt', () => {
         });
     });
 
-    describe('print', () => {
+    describe('Print', () => {
         it('calls process.stdout.write with the message', () => {
             const spy = vi.spyOn(process.stdout, 'write').mockImplementation(() => true);
             prompt.print('Hello');

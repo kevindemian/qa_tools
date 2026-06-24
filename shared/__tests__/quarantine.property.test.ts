@@ -53,7 +53,7 @@ const storeArb: fc.Arbitrary<QuarantineStore> = fc
     .array(entryArb, { minLength: 0, maxLength: 10 })
     .map((entries) => ({ entries }));
 
-describe('generatePipelineQuarantine — property-based', () => {
+describe('GeneratePipelineQuarantine — property-based', () => {
     it('metadata matches store entries when store is provided', () => {
         fc.assert(
             fc.property(storeArb, fc.nat({ max: 1000 }), (store, total) => {
@@ -104,7 +104,7 @@ describe('generatePipelineQuarantine — property-based', () => {
     });
 });
 
-describe('loadQuarantine — property-based', () => {
+describe('LoadQuarantine — property-based', () => {
     it('returns empty store for missing file', () => {
         fc.assert(
             fc.property(fc.constant(undefined), () => {
@@ -117,7 +117,7 @@ describe('loadQuarantine — property-based', () => {
     });
 });
 
-describe('filterExpiredEntries — property-based', () => {
+describe('FilterExpiredEntries — property-based', () => {
     it('expired count matches entries that are neither permanent nor future-dated', () => {
         fc.assert(
             fc.property(

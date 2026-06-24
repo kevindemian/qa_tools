@@ -1,11 +1,11 @@
 import { createJiraAuthHeader } from './jira-auth.js';
 
-describe('createJiraAuthHeader', () => {
+describe('CreateJiraAuthHeader', () => {
     const SERVER_TOKEN = 'pat-12345';
     const CLOUD_CRED = 'user@example.com:APITOKEN123';
     const CLOUD_BASE64 = Buffer.from(CLOUD_CRED).toString('base64');
 
-    describe('server mode', () => {
+    describe('Server mode', () => {
         it('returns Bearer auth header', () => {
             const result = createJiraAuthHeader(SERVER_TOKEN, 'server');
 
@@ -19,7 +19,7 @@ describe('createJiraAuthHeader', () => {
         });
     });
 
-    describe('cloud mode', () => {
+    describe('Cloud mode', () => {
         it('returns Basic auth header with base64-encoded credentials', () => {
             const result = createJiraAuthHeader(CLOUD_CRED, 'cloud');
 
@@ -34,7 +34,7 @@ describe('createJiraAuthHeader', () => {
         });
     });
 
-    describe('default behavior', () => {
+    describe('Default behavior', () => {
         it('defaults to server mode when called without mode', () => {
             const result = createJiraAuthHeader(SERVER_TOKEN);
 

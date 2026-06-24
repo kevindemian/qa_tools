@@ -14,7 +14,7 @@ import { loadMetrics, calculateFlakiness } from './metrics.js';
 const mockLoadMetrics = vi.mocked(loadMetrics);
 const mockCalcFlakiness = vi.mocked(calculateFlakiness);
 
-describe('runQualityGate', () => {
+describe('RunQualityGate', () => {
     beforeEach(() => {
         vi.clearAllMocks();
     });
@@ -279,7 +279,7 @@ describe('runQualityGate', () => {
     });
 });
 
-describe('formatQualityGateJson', () => {
+describe('FormatQualityGateJson', () => {
     it('formats result as JSON string', () => {
         const result = {
             overall: 'pass' as const,
@@ -293,7 +293,7 @@ describe('formatQualityGateJson', () => {
     });
 });
 
-describe('formatQualityGateText', () => {
+describe('FormatQualityGateText', () => {
     it('formats result as human-readable text', () => {
         const result = {
             overall: 'pass' as const,

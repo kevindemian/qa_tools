@@ -1,6 +1,6 @@
 import { createMockResponse, createMockAxiosInstance } from './response-factory.js';
 
-describe('createMockResponse', () => {
+describe('CreateMockResponse', () => {
     it('returns an object with data property', () => {
         const result = createMockResponse({ key: 'TEST-123' });
 
@@ -38,7 +38,7 @@ describe('createMockResponse', () => {
     });
 });
 
-describe('createMockAxiosInstance', () => {
+describe('CreateMockAxiosInstance', () => {
     it('returns a mock with all axios methods', () => {
         const mock = createMockAxiosInstance();
 

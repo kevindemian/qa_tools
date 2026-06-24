@@ -18,7 +18,7 @@ interface AiFeedbackStore {
     records: AiFeedbackRecord[];
 }
 
-describe('computeAiEffectiveness', () => {
+describe('ComputeAiEffectiveness', () => {
     it('returns zeroed result for empty store', () => {
         const store: AiFeedbackStore = { records: [] };
         const result = computeAiEffectiveness(store);
@@ -178,7 +178,7 @@ describe('computeAiEffectiveness', () => {
     });
 });
 
-describe('generateAiEffectivenessHtml', () => {
+describe('GenerateAiEffectivenessHtml', () => {
     it('generates HTML with acceptance rate metric', () => {
         const result = computeAiEffectiveness({
             records: [

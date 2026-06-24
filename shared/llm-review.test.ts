@@ -58,7 +58,7 @@ beforeEach(() => {
     vi.clearAllMocks();
 });
 
-describe('reviewWithLlm', () => {
+describe('ReviewWithLlm', () => {
     it('returns high confidence when reviewer agrees', async () => {
         mockLlmPrompt
             .mockResolvedValueOnce(validParsedReport)
@@ -192,7 +192,7 @@ const mockReviewResult = (content: string, confidence: 'high' | 'medium' | 'low'
     ...(notes !== undefined ? { reviewerNotes: notes } : {}),
 });
 
-describe('detectHedging', () => {
+describe('DetectHedging', () => {
     it('detects Portuguese hedging patterns', () => {
         const text = 'Parece que isso pode ser um problema. Talvez nao tenha certeza.';
 
@@ -212,7 +212,7 @@ describe('detectHedging', () => {
     });
 });
 
-describe('detectContradictions', () => {
+describe('DetectContradictions', () => {
     it('detects positive + negative markers in same paragraph', () => {
         const text = 'Resultado correto com erro grave.';
 
@@ -232,7 +232,7 @@ describe('detectContradictions', () => {
     });
 });
 
-describe('shouldSkipAdversarialReview', () => {
+describe('ShouldSkipAdversarialReview', () => {
     beforeEach(() => {
         Config.reset();
     });

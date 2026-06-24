@@ -1,7 +1,7 @@
 import { statusNotMapped } from './constants.js';
 
-describe('constants', () => {
-    describe('statusNotMapped', () => {
+describe('Constants', () => {
+    describe('StatusNotMapped', () => {
         it('returns formatted string', () => {
             const result = statusNotMapped('TASK-42', 'In Progress');
 

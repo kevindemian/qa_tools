@@ -72,7 +72,7 @@ beforeAll(() => {
     }
 });
 
-describe('case21 — Gap Analysis', () => {
+describe('Case21 — Gap Analysis', () => {
     it('displays coverage gap summary', async () => {
         const coverageGap = vi.mocked(coverageGapModule);
         coverageGap.analyzeCoverageGaps.mockResolvedValueOnce(mockGapResult);

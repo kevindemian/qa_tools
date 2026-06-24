@@ -21,7 +21,7 @@ vi.mock('../state', () => ({
 
 import { checkQualitySignals, severityFromLatency, failureRate } from '../quality-suggester.js';
 
-describe('severityFromLatency — property-based', () => {
+describe('SeverityFromLatency — property-based', () => {
     it('severidade é monotônica: latência maior → severidade maior ou igual', () => {
         fc.assert(
             fc.property(fc.integer({ min: 0, max: 20000 }), fc.integer({ min: 0, max: 20000 }), (a, b) => {
@@ -62,7 +62,7 @@ describe('severityFromLatency — property-based', () => {
     });
 });
 
-describe('failureRate — property-based', () => {
+describe('FailureRate — property-based', () => {
     it('rate sempre ≥ 0 para qualquer entrada', () => {
         fc.assert(
             fc.property(
@@ -104,7 +104,7 @@ describe('failureRate — property-based', () => {
     });
 });
 
-describe('checkQualitySignals — property-based', () => {
+describe('CheckQualitySignals — property-based', () => {
     beforeEach(() => {
         vi.clearAllMocks();
         mockDetectDrift.mockReturnValue([]);

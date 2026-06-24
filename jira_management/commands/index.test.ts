@@ -28,7 +28,7 @@ const KNOWN_CASES = [
     '23',
 ];
 
-describe('getHandler', () => {
+describe('GetHandler', () => {
     it('returns a handler function for known case numbers', () => {
         const handler = getHandler('1');
 
@@ -56,7 +56,7 @@ describe('getHandler', () => {
     });
 });
 
-describe('handler contract (bidirectional)', () => {
+describe('Handler contract (bidirectional)', () => {
     const caseDir = import.meta.dirname;
 
     it('every registered handler has a corresponding file on disk', () => {

@@ -1,6 +1,6 @@
 import { createMockConfig, createMockConfigInstance } from './config-factory.js';
 
-describe('createMockConfig', () => {
+describe('CreateMockConfig', () => {
     it('returns static methods as vi.fn()', () => {
         const mock = createMockConfig();
 

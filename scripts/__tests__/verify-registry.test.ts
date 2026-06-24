@@ -50,7 +50,7 @@ function mockReadFile(data: unknown): void {
     mockReadFileSync.mockReturnValue(JSON.stringify(data));
 }
 
-describe('verify-registry', () => {
+describe('Verify-registry', () => {
     beforeEach(() => {
         vi.clearAllMocks();
     });

@@ -8,7 +8,7 @@ vi.mock('./config.js', () => ({
 
 const { default: config } = await import('./config.js');
 
-describe('isGitHubCi', () => {
+describe('IsGitHubCi', () => {
     beforeEach(() => {
         vi.clearAllMocks();
     });
@@ -56,7 +56,7 @@ describe('isGitHubCi', () => {
     });
 });
 
-describe('isGitLabCi', () => {
+describe('IsGitLabCi', () => {
     beforeEach(() => {
         vi.clearAllMocks();
     });
@@ -104,7 +104,7 @@ describe('isGitLabCi', () => {
     });
 });
 
-describe('constants', () => {
+describe('Constants', () => {
     it('exports GIT_HISTORY_RUNS', async () => {
         const { GIT_HISTORY_RUNS } = await import('./ci-detect.js');
 

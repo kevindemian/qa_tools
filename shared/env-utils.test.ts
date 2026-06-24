@@ -1,6 +1,6 @@
 import { envVal, toBool, toInt } from './env-utils.js';
 
-describe('envVal', () => {
+describe('EnvVal', () => {
     const _origEnv = process.env;
 
     beforeEach(() => {
@@ -31,7 +31,7 @@ describe('envVal', () => {
     });
 });
 
-describe('toBool', () => {
+describe('ToBool', () => {
     it('returns true for "true" string', () => {
         expect(toBool('true')).toBeTruthy();
     });
@@ -55,7 +55,7 @@ describe('toBool', () => {
     });
 });
 
-describe('toInt', () => {
+describe('ToInt', () => {
     it('parses a valid integer string', () => {
         expect(toInt('42', 0)).toBe(42);
     });

@@ -46,7 +46,7 @@ beforeEach(() => {
     vi.useRealTimers();
 });
 
-describe('configUniqueKey', () => {
+describe('ConfigUniqueKey', () => {
     it('generates a unique key from provider config', () => {
         const key = configUniqueKey(makeCfg());
 
@@ -75,7 +75,7 @@ describe('configUniqueKey', () => {
     });
 });
 
-describe('cacheKey', () => {
+describe('CacheKey', () => {
     it('generates a deterministic 64-char hex string', () => {
         const key = cacheKey('main', 'cfgKey', 'system prompt', 'user message');
 
@@ -105,7 +105,7 @@ describe('cacheKey', () => {
     });
 });
 
-describe('checkMemoryCache', () => {
+describe('CheckMemoryCache', () => {
     it('returns miss when key is not in cache', () => {
         const result = checkMemoryCache('nonexistent', 'main', undefined, undefined, undefined);
 
@@ -176,7 +176,7 @@ describe('checkMemoryCache', () => {
     });
 });
 
-describe('checkDiskCache', () => {
+describe('CheckDiskCache', () => {
     it('returns miss when disk cache returns null', () => {
         vi.mocked(diskCacheGet).mockReturnValue(null);
         const result = checkDiskCache('missing', undefined, undefined);
@@ -228,7 +228,7 @@ describe('checkDiskCache', () => {
     });
 });
 
-describe('setMemoryCache / setDiskCache', () => {
+describe('SetMemoryCache / setDiskCache', () => {
     it('setMemoryCache stores and can be retrieved', () => {
         setMemoryCache('store-key', 'stored value');
         const result = checkMemoryCache('store-key', 'main', undefined, undefined, undefined);
@@ -244,7 +244,7 @@ describe('setMemoryCache / setDiskCache', () => {
     });
 });
 
-describe('clearCache', () => {
+describe('ClearCache', () => {
     it('clears memory cache', () => {
         setMemoryCache('clear-key', 'value');
         clearCache();
@@ -261,7 +261,7 @@ describe('clearCache', () => {
     });
 });
 
-describe('checkSchema', () => {
+describe('CheckSchema', () => {
     it('returns validated data when schema matches', () => {
         const result = checkSchema('{"ok": true}', testSchema);
 
@@ -281,7 +281,7 @@ describe('checkSchema', () => {
     });
 });
 
-describe('warnIfNotJson', () => {
+describe('WarnIfNotJson', () => {
     it('does not warn when response is valid JSON', () => {
         const warnSpy = vi.spyOn(rootLogger, 'warn').mockImplementation(() => {});
         warnIfNotJson('{"valid": true}');

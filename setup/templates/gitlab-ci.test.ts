@@ -35,7 +35,7 @@ const MOCK_CTX_WITH_FEATURES: SetupContext = {
     },
 };
 
-describe('generateGitLabCI', () => {
+describe('GenerateGitLabCI', () => {
     it('returns YAML string with stage test', () => {
         const yaml = generateGitLabCI(MOCK_CTX_BASIC);
 

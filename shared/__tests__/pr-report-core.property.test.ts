@@ -76,7 +76,7 @@ beforeEach(() => {
     mockCoverage.resolveCoverage.mockReturnValue(undefined);
 });
 
-describe('generatePrReport — passRate invariants (property-based)', () => {
+describe('GeneratePrReport — passRate invariants (property-based)', () => {
     it('passRate is always in [0, 100]', async () => {
         await fc.assert(
             fc.asyncProperty(
@@ -167,7 +167,7 @@ describe('generatePrReport — passRate invariants (property-based)', () => {
     });
 });
 
-describe('computeDiffComparison — invariants (property-based)', () => {
+describe('ComputeDiffComparison — invariants (property-based)', () => {
     const FlatTestArbForDiff: fc.Arbitrary<FlatTest> = fc.record(
         {
             title: fc.string({ minLength: 1, maxLength: 20 }),

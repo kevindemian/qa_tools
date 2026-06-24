@@ -54,7 +54,7 @@ function makeSquads() {
     ];
 }
 
-describe('computeCrossSquadBenchmark', () => {
+describe('ComputeCrossSquadBenchmark', () => {
     it('sorts squads by healthScore descending', () => {
         const result = computeCrossSquadBenchmark(makeSquads());
         const scores = result.benchmarks.map((b) => b.healthScore);
@@ -274,7 +274,7 @@ describe('computeCrossSquadBenchmark', () => {
     });
 });
 
-describe('generateBenchmarkHtml', () => {
+describe('GenerateBenchmarkHtml', () => {
     function makeResult(): CrossSquadResult {
         return computeCrossSquadBenchmark(makeSquads());
     }

@@ -15,7 +15,7 @@ import {
     __setConfirmMod,
 } from './prompt-input.js';
 
-describe('prompt-input barrel', () => {
+describe('Prompt-input barrel', () => {
     it('re-exports prompt', () => {
         expect(typeof prompt).toBe('function');
     });

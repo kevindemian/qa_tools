@@ -1,6 +1,6 @@
 import { createMockGitProvider } from './git-provider-factory.js';
 
-describe('createMockGitProvider', () => {
+describe('CreateMockGitProvider', () => {
     it('returns a Mocked<GitProvider> with all methods as vi.fn()', () => {
         const mock = createMockGitProvider();
 

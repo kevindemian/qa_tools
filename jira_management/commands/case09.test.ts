@@ -14,7 +14,7 @@ beforeEach(() => {
     vi.clearAllMocks();
 });
 
-describe('case09 — switch project', () => {
+describe('Case09 — switch project', () => {
     it('exports a handler function', () => {
         expect(case09).toBeDefined();
         expect(typeof case09.handler).toBe('function');

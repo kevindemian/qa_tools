@@ -14,7 +14,7 @@ vi.mock('../shared/prompt', () => ({
     withSpinner: vi.fn().mockImplementation((_label: string, fn: () => Promise<void>) => fn()),
 }));
 
-describe('nivelarBranches', () => {
+describe('NivelarBranches', () => {
     let mockGitlab: Mocked<GitProvider>;
     let pushHistory: Mock;
 

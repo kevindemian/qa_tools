@@ -24,7 +24,7 @@ beforeEach(() => {
     vi.clearAllMocks();
 });
 
-describe('handleSetupWizard', () => {
+describe('HandleSetupWizard', () => {
     it('calls setup main and records history on success', async () => {
         mockSetupModule.main.mockResolvedValue(undefined);
 

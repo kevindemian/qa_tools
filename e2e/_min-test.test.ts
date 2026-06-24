@@ -27,7 +27,7 @@ import { createMockLinkManager } from '../shared/test-utils/factories/link-manag
 import CsvResource from '../jira_management/csv_resource.js';
 import { createMockLogger } from '../shared/test-utils.js';
 
-describe('case04', () => {
+describe('Case04', () => {
     beforeEach(() => {
         vi.clearAllMocks();
         vi.restoreAllMocks();

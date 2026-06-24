@@ -35,7 +35,7 @@ const QualityGateResultArb: fc.Arbitrary<QualityGateResult> = fc.record({
 
 /* ── Properties — formatQualityGateJson ──────────────────────── */
 
-describe('formatQualityGateJson — property-based', () => {
+describe('FormatQualityGateJson — property-based', () => {
     it('produces valid JSON and round-trips', () => {
         fc.assert(
             fc.property(QualityGateResultArb, (result) => {
@@ -52,7 +52,7 @@ describe('formatQualityGateJson — property-based', () => {
 
 /* ── Properties — formatQualityGateText ──────────────────────── */
 
-describe('formatQualityGateText — property-based', () => {
+describe('FormatQualityGateText — property-based', () => {
     it('always contains Quality Gate header', () => {
         fc.assert(
             fc.property(QualityGateResultArb, (result) => {

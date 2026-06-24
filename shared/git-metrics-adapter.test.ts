@@ -36,7 +36,7 @@ const SAMPLE_GIT_LOG = [
     'pqr678\0' + new Date('2026-06-03T14:00:00Z').toISOString() + '\0Refactor module\0kevindemian\0mno345',
 ].join('\n');
 
-describe('parseGitLogOutput', () => {
+describe('ParseGitLogOutput', () => {
     beforeEach(() => {
         vi.clearAllMocks();
     });
@@ -85,7 +85,7 @@ describe('parseGitLogOutput', () => {
     });
 });
 
-describe('getLastGitLogError', () => {
+describe('GetLastGitLogError', () => {
     beforeEach(() => {
         vi.clearAllMocks();
         clearGitLogError();
@@ -128,7 +128,7 @@ describe('getLastGitLogError', () => {
     });
 });
 
-describe('fetchGitLog', () => {
+describe('FetchGitLog', () => {
     beforeEach(() => {
         vi.clearAllMocks();
     });
@@ -198,7 +198,7 @@ describe('fetchGitLog', () => {
     });
 });
 
-describe('generateGitMetricsRuns', () => {
+describe('GenerateGitMetricsRuns', () => {
     beforeEach(() => {
         vi.clearAllMocks();
     });
@@ -311,7 +311,7 @@ describe('generateGitMetricsRuns', () => {
     });
 });
 
-describe('generateGitFailureClassifications', () => {
+describe('GenerateGitFailureClassifications', () => {
     beforeEach(() => {
         vi.clearAllMocks();
     });

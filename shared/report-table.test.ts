@@ -14,7 +14,7 @@ import {
 import type { FlatTest } from './result_parser.js';
 import type { TestHistoryRun } from './report-types.js';
 
-describe('precomputeCategories', () => {
+describe('PrecomputeCategories', () => {
     it('returns empty map when no failures', () => {
         const tests: FlatTest[] = [{ title: 'pass', state: 'passed' } as FlatTest];
 
@@ -35,7 +35,7 @@ describe('precomputeCategories', () => {
     });
 });
 
-describe('buildDetailRow', () => {
+describe('BuildDetailRow', () => {
     it('returns empty for test without steps/screenshots/logs', () => {
         const t = { title: 'test', state: 'passed' } as FlatTest;
 
@@ -69,7 +69,7 @@ describe('buildDetailRow', () => {
     });
 });
 
-describe('buildErrorCell', () => {
+describe('BuildErrorCell', () => {
     it('returns empty for non-failed test', () => {
         const t = { title: 'pass', state: 'passed' } as FlatTest;
 
@@ -94,7 +94,7 @@ describe('buildErrorCell', () => {
     });
 });
 
-describe('buildHistoryCell', () => {
+describe('BuildHistoryCell', () => {
     it('returns placeholder for empty history', () => {
         expect(buildHistoryCell([])).toContain('—');
     });
@@ -111,7 +111,7 @@ describe('buildHistoryCell', () => {
     });
 });
 
-describe('buildCategoryBadge', () => {
+describe('BuildCategoryBadge', () => {
     it('renders badge with category text', () => {
         const html = buildCategoryBadge('ASSERTION');
 
@@ -125,7 +125,7 @@ describe('buildCategoryBadge', () => {
     });
 });
 
-describe('buildFlakinessBadge', () => {
+describe('BuildFlakinessBadge', () => {
     it('renders alta for >=50%', () => {
         const html = buildFlakinessBadge(0.5);
 
@@ -145,7 +145,7 @@ describe('buildFlakinessBadge', () => {
     });
 });
 
-describe('buildTestTable', () => {
+describe('BuildTestTable', () => {
     it('returns table with test rows', () => {
         const tests: FlatTest[] = [
             { title: 'Test 1', state: 'passed', duration: 100 },

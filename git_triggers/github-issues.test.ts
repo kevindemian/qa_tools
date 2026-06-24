@@ -21,7 +21,7 @@ beforeAll(async () => {
     mockApiGet = vi.mocked((await vi.importMock<typeof import('./github-api.js')>('./github-api')).apiGet);
 });
 
-describe('getOpenIssues', () => {
+describe('GetOpenIssues', () => {
     let client: Mocked<AxiosInstance>;
 
     beforeEach(() => {

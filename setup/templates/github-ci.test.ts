@@ -35,7 +35,7 @@ const MOCK_CTX_FULL: SetupContext = {
     },
 };
 
-describe('generateCIWorkflow', () => {
+describe('GenerateCIWorkflow', () => {
     it('returns YAML string with workflow name', () => {
         const yaml = generateCIWorkflow(MOCK_CTX_BASIC);
 
@@ -95,7 +95,7 @@ describe('generateCIWorkflow', () => {
     });
 });
 
-describe('generateQaPostProcessAction', () => {
+describe('GenerateQaPostProcessAction', () => {
     it('returns composite action YAML', () => {
         const yaml = generateQaPostProcessAction();
 
@@ -126,7 +126,7 @@ describe('generateQaPostProcessAction', () => {
     });
 });
 
-describe('generateCIWorkflow — with: project-name', () => {
+describe('GenerateCIWorkflow — with: project-name', () => {
     it('includes with: block with project-name when prReport enabled', () => {
         const yaml = generateCIWorkflow(MOCK_CTX_FULL);
 
@@ -140,7 +140,7 @@ describe('generateCIWorkflow — with: project-name', () => {
     });
 });
 
-describe('generateQaPostProcessAction — HTML upload', () => {
+describe('GenerateQaPostProcessAction — HTML upload', () => {
     it('does NOT include upload-artifact (invalid in composite action)', () => {
         const yaml = generateQaPostProcessAction();
 

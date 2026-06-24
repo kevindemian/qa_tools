@@ -40,7 +40,7 @@ describe('LinkTypeManager', () => {
         manager = new LinkTypeManager(mockJiraResource);
     });
 
-    describe('constructor', () => {
+    describe('Constructor', () => {
         it('stores jiraResource and sets defaults', () => {
             expect(manager.jiraResource).toBe(mockJiraResource);
             expect(manager.linkTypesCache).toBeNull();
@@ -48,7 +48,7 @@ describe('LinkTypeManager', () => {
         });
     });
 
-    describe('getIssueLinkTypes', () => {
+    describe('GetIssueLinkTypes', () => {
         it('returns cached value on second call', async () => {
             const fakeTypes = [{ id: '1', name: 'Test' }];
             mockJiraResource.getJiraResource.mockResolvedValue({ issueLinkTypes: fakeTypes });
@@ -110,7 +110,7 @@ describe('LinkTypeManager', () => {
         });
     });
 
-    describe('resolveLinkTypeId', () => {
+    describe('ResolveLinkTypeId', () => {
         beforeEach(() => {
             const fakeTypes = [
                 { id: '100', name: 'Relates', inward: 'relates to', outward: 'relates to' },

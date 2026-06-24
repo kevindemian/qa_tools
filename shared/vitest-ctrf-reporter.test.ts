@@ -519,7 +519,7 @@ describe('VitestCtrfReporter', () => {
         expect(resultsOf(data).summary.stop).toBeGreaterThanOrEqual(resultsOf(data).summary.start);
     });
 
-    describe('env var override (CI-01)', () => {
+    describe('Env var override (CI-01)', () => {
         const originalEnv = { ...process.env };
 
         afterEach(() => {

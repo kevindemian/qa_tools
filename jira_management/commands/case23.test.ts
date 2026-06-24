@@ -27,7 +27,7 @@ beforeEach(() => {
     mockShowSelect.mockResolvedValue('0');
 });
 
-describe('case23 — AI Feedback', () => {
+describe('Case23 — AI Feedback', () => {
     it('shows warning when no feedback records exist', async () => {
         mockShowSelect.mockResolvedValueOnce('a').mockResolvedValueOnce('0');
         mockGetSummary.mockReturnValue({

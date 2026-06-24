@@ -39,7 +39,7 @@ const UncoveredEpicsArb = fc.array(
     },
 );
 
-describe('buildIncidentReport — property-based', () => {
+describe('BuildIncidentReport — property-based', () => {
     it('eventCount always matches events.length', () => {
         fc.assert(
             fc.property(
@@ -242,7 +242,7 @@ describe('buildIncidentReport — property-based', () => {
     });
 });
 
-describe('generateIncidentReportHtml — property-based', () => {
+describe('GenerateIncidentReportHtml — property-based', () => {
     it('always produces valid HTML with DOCTYPE', () => {
         fc.assert(
             fc.property(

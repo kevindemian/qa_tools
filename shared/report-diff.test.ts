@@ -1,7 +1,7 @@
 import { buildDiffComparisonSection } from './report-diff.js';
 import type { FlatTest } from './result_parser.js';
 
-describe('buildDiffComparisonSection', () => {
+describe('BuildDiffComparisonSection', () => {
     it('returns empty when no changes', () => {
         const html = buildDiffComparisonSection({ newFailures: [], newPasses: [], flaky: [] });
 

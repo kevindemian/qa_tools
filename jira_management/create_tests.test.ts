@@ -129,7 +129,7 @@ const MOCK_FIELDS = [
 
 const PROJECT = 'TESTPROJ';
 
-describe('createTestExecution', () => {
+describe('CreateTestExecution', () => {
     let jiraResource: Mocked<JiraResource>;
     let testExecutionCreator: TestExecutionCreator;
     let getJiraResourceSpy: Mock;
@@ -272,7 +272,7 @@ describe('createTestExecution', () => {
     });
 });
 
-describe('createTestExecutionWithLinks', () => {
+describe('CreateTestExecutionWithLinks', () => {
     let jiraResource: Mocked<JiraResource>;
     let linkJiraRes: Mocked<JiraResource>;
     let testExecutionCreator: TestExecutionCreator;
@@ -377,7 +377,7 @@ describe('createTestExecutionWithLinks', () => {
     });
 });
 
-describe('generateMappingFiles', async () => {
+describe('GenerateMappingFiles', async () => {
     const realFs = await vi.importActual<typeof import('fs')>('fs');
     const tmpDir = '/tmp/qa-tools-test-mapping-' + Date.now();
     const csvPath = '/tmp/test-csv.csv';
@@ -494,7 +494,7 @@ describe('generateMappingFiles', async () => {
     });
 });
 
-describe('validateCsvTests', () => {
+describe('ValidateCsvTests', () => {
     it('returns error for empty title', () => {
         const { errors } = validateCsvTests([{ title: '', steps: [{ fields: { Action: 'x' } }] }]);
 
@@ -530,7 +530,7 @@ describe('validateCsvTests', () => {
     });
 });
 
-describe('createTestsFromJson', () => {
+describe('CreateTestsFromJson', () => {
     const FS = vi.mocked({ ...fs, ...mockFsMod } as typeof fs);
 
     function makeJiraResource(): Mocked<JiraResource> {
@@ -668,7 +668,7 @@ describe('createTestsFromJson', () => {
     });
 });
 
-describe('readCsvTests (via createTestsFromCsv)', () => {
+describe('ReadCsvTests (via createTestsFromCsv)', () => {
     let csvResource: Mocked<CsvResource>;
 
     function makeJiraResForCsv(): Mocked<JiraResource> {
@@ -722,7 +722,7 @@ describe('readCsvTests (via createTestsFromCsv)', () => {
     });
 });
 
-describe('updateCrossReferences', () => {
+describe('UpdateCrossReferences', () => {
     it('delegates to linker', async () => {
         const updateCrossRefSpy = vi
             .fn<(...args: [tests: TestCase[], keys: string[]]) => Promise<void>>()
@@ -746,7 +746,7 @@ describe('updateCrossReferences', () => {
     });
 });
 
-describe('createTestsFromCsv', () => {
+describe('CreateTestsFromCsv', () => {
     let csvResource: Mocked<CsvResource>;
 
     function makeJiraResCSV(): Mocked<JiraResource> {

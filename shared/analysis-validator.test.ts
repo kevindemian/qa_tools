@@ -48,7 +48,7 @@ describe('AnalysisValidator — createAnalysisValidator', () => {
     });
 });
 
-describe('invariantTestTitleExists (A-01)', () => {
+describe('InvariantTestTitleExists (A-01)', () => {
     it('passes when titles match input', () => {
         const results = invariantTestTitleExists(
             { tests: [{ title: 'Login fails' }] },
@@ -68,7 +68,7 @@ describe('invariantTestTitleExists (A-01)', () => {
     });
 });
 
-describe('invariantUnknownHasReason (A-04)', () => {
+describe('InvariantUnknownHasReason (A-04)', () => {
     it('passes UNKNOWN with reason', () => {
         const results = invariantUnknownHasReason(
             {
@@ -96,7 +96,7 @@ describe('invariantUnknownHasReason (A-04)', () => {
     });
 });
 
-describe('invariantHighSeverityRecommendation (A-05)', () => {
+describe('InvariantHighSeverityRecommendation (A-05)', () => {
     it('passes when high severity has long recommendation', () => {
         const results = invariantHighSeverityRecommendation(
             {
@@ -123,7 +123,7 @@ describe('invariantHighSeverityRecommendation (A-05)', () => {
     });
 });
 
-describe('invariantSeverityConsistent (A-03)', () => {
+describe('InvariantSeverityConsistent (A-03)', () => {
     it('passes consistent severity', () => {
         const results = invariantSeverityConsistent(
             { tests: [{ classification: 'ASSERTION', severity: 'high' }] },
@@ -143,7 +143,7 @@ describe('invariantSeverityConsistent (A-03)', () => {
     });
 });
 
-describe('invariantRecommendationReferencesError (A-02)', () => {
+describe('InvariantRecommendationReferencesError (A-02)', () => {
     it('passes when recommendation references error', () => {
         const results = invariantRecommendationReferencesError(
             { tests: [{ title: 'Test', recommendation: 'Fix assertion error in login module' }] },

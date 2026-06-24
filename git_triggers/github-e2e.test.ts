@@ -65,7 +65,7 @@ describeGh('GitHub e2e — real API', () => {
         }
     }, 300000);
 
-    describe('data fetching', () => {
+    describe('Data fetching', () => {
         it('fetches recent workflow runs with correct structure', () => {
             expect(Array.isArray(runs)).toBeTruthy();
 
@@ -121,7 +121,7 @@ describeGh('GitHub e2e — real API', () => {
         });
     });
 
-    describe('data aggregation', () => {
+    describe('Data aggregation', () => {
         let health: ReturnType<typeof aggregatePipelineHealth>;
 
         beforeAll(() => {

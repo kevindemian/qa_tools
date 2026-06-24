@@ -49,7 +49,7 @@ beforeEach(() => {
     vi.clearAllMocks();
 });
 
-describe('analyzeTestImpact', () => {
+describe('AnalyzeTestImpact', () => {
     describe('Tier 1 — jest --findRelatedTests', () => {
         it('returns high confidence when jest finds tests', () => {
             mockPackageJson(true);
@@ -134,7 +134,7 @@ describe('analyzeTestImpact', () => {
         });
     });
 
-    describe('all 3 tiers combined', () => {
+    describe('All 3 tiers combined', () => {
         it('deduplicates tests across tiers with priority mapping > jest > keyword', () => {
             mockPackageJson(true);
             mockExistsSync.mockImplementation((p: PathLike) => {
@@ -200,7 +200,7 @@ describe('analyzeTestImpact', () => {
         });
     });
 
-    describe('edge cases', () => {
+    describe('Edge cases', () => {
         it('returns empty impact for empty diff', () => {
             const result = analyzeTestImpact('');
 
@@ -245,7 +245,7 @@ describe('analyzeTestImpact', () => {
         });
     });
 
-    describe('git diff parsing', () => {
+    describe('Git diff parsing', () => {
         it('runs git diff when no diff argument provided', () => {
             mockPackageJson(false);
             mockExecFileSync.mockReturnValue('src/file1.ts\nsrc/file2.ts\n');
@@ -256,7 +256,7 @@ describe('analyzeTestImpact', () => {
         });
     });
 
-    describe('confidence labeling', () => {
+    describe('Confidence labeling', () => {
         it('sets high when jest found tests', () => {
             mockPackageJson(true);
             mockExecFileSync.mockImplementation((_cmd: string, args?: readonly string[]) => {
@@ -316,7 +316,7 @@ describe('analyzeTestImpact', () => {
     });
 });
 
-describe('generateTestSelectionJson', () => {
+describe('GenerateTestSelectionJson', () => {
     it('returns serialisable JSON from a TestImpactResult', () => {
         const result = {
             changedFiles: ['src/login.ts'],

@@ -109,7 +109,7 @@ function commonBeforeEach(): void {
     mockSpawn.mockReturnValue(defaultChild);
 }
 
-describe('openWithOsOrFallback', () => {
+describe('OpenWithOsOrFallback', () => {
     beforeEach(commonBeforeEach);
 
     it('calls fallback on spawn error', async () => {
@@ -171,7 +171,7 @@ describe('openWithOsOrFallback', () => {
     });
 });
 
-describe('getOsOpenCommand (platform detection)', () => {
+describe('GetOsOpenCommand (platform detection)', () => {
     beforeEach(() => {
         vi.resetAllMocks();
         __resetWslCache();
@@ -314,7 +314,7 @@ describe('getOsOpenCommand (platform detection)', () => {
     });
 });
 
-describe('getWinTempDir', () => {
+describe('GetWinTempDir', () => {
     beforeEach(() => {
         vi.resetAllMocks();
     });
@@ -382,7 +382,7 @@ describe('getWinTempDir', () => {
     });
 });
 
-describe('getDocsOutputDir', () => {
+describe('GetDocsOutputDir', () => {
     beforeEach(() => {
         vi.resetAllMocks();
         mockConfigGet.mockImplementation((key: string) => process.env[key] || undefined);
@@ -431,7 +431,7 @@ describe('getDocsOutputDir', () => {
     });
 });
 
-describe('openWithFallback', () => {
+describe('OpenWithFallback', () => {
     function makeAutoSpawn(exitCodes: number[]) {
         let idx = 0;
         mockSpawn.mockImplementation(() => {

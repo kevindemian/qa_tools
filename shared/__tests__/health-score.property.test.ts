@@ -79,7 +79,7 @@ const MetricsStoreArb: fc.Arbitrary<MetricsStore> = fc
  * Properties
  * ────────────────────────────────────────────────────────────── */
 
-describe('calculateHealthScore — property-based', () => {
+describe('CalculateHealthScore — property-based', () => {
     it('overall always in [0, 100]', () => {
         fc.assert(
             fc.property(MetricsStoreArb, (store) => {

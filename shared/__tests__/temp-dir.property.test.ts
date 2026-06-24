@@ -58,7 +58,7 @@ describe('PBT: Temp Dir', () => {
         });
     });
 
-    describe('writeReport invariants', () => {
+    describe('WriteReport invariants', () => {
         it('returns absolute path ending with original filename for any valid filename', async () => {
             const { writeReport } = await import('../temp-dir.js');
             fc.assert(
@@ -73,7 +73,7 @@ describe('PBT: Temp Dir', () => {
         });
     });
 
-    describe('writeEphemeral invariants', () => {
+    describe('WriteEphemeral invariants', () => {
         it('returns path containing category for any valid category and filename', async () => {
             const { writeEphemeral } = await import('../temp-dir.js');
             fc.assert(

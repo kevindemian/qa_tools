@@ -30,7 +30,7 @@ function singleRunMetrics(
     };
 }
 
-describe('buildTraceabilityMatrix', () => {
+describe('BuildTraceabilityMatrix', () => {
     it('returns empty result for empty metrics', () => {
         const result = buildTraceabilityMatrix(emptyMetrics());
 
@@ -310,7 +310,7 @@ describe('buildTraceabilityMatrix', () => {
     });
 });
 
-describe('generateTraceabilityHtml', () => {
+describe('GenerateTraceabilityHtml', () => {
     it('generates valid HTML with summary cards', () => {
         const result = buildTraceabilityMatrix(emptyMetrics(), {
             byEpic: { 'EPIC-1': { total: 1, covered: 1, rawPct: 100 } },

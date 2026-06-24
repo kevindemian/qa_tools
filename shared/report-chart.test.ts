@@ -4,7 +4,7 @@
 
 import { buildChartSvg, buildMiniTrendChart, buildTrendSection, buildChartSection } from './report-chart.js';
 
-describe('buildChartSvg', () => {
+describe('BuildChartSvg', () => {
     it('returns SVG string with passed/failed/skipped sections', () => {
         const svg = buildChartSvg({ passed: 10, failed: 3, skipped: 2, total: 15, duration: 5000 });
 
@@ -21,7 +21,7 @@ describe('buildChartSvg', () => {
     });
 });
 
-describe('buildMiniTrendChart', () => {
+describe('BuildMiniTrendChart', () => {
     it('returns SVG string with data points', () => {
         const svg = buildMiniTrendChart([
             { label: 'Mon', passRate: 90, total: 10, failed: 1 },
@@ -42,7 +42,7 @@ describe('buildMiniTrendChart', () => {
     });
 });
 
-describe('buildTrendSection', () => {
+describe('BuildTrendSection', () => {
     it('returns empty for <2 points', () => {
         const html = buildTrendSection([{ label: 'Mon', passRate: 90, total: 10, failed: 1 }]);
 
@@ -60,7 +60,7 @@ describe('buildTrendSection', () => {
     });
 });
 
-describe('buildChartSection', () => {
+describe('BuildChartSection', () => {
     it('returns empty when wantChart is false', () => {
         const html = buildChartSection({ passed: 5, failed: 1, skipped: 0, total: 6, duration: 100 }, false);
 

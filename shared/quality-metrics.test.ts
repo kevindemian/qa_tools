@@ -33,7 +33,7 @@ describe('QualityMetricsCollector', () => {
         collector = new QualityMetricsCollector();
     });
 
-    describe('invariant fire tracking', () => {
+    describe('Invariant fire tracking', () => {
         it('records invariant fires', () => {
             collector.recordInvariantFire('T-01');
             collector.recordInvariantFire('T-01');
@@ -58,7 +58,7 @@ describe('QualityMetricsCollector', () => {
         });
     });
 
-    describe('layer tracking', () => {
+    describe('Layer tracking', () => {
         it('tracks layer attempts and passes', () => {
             collector.recordLayerAttempt('layer1');
             collector.recordLayerPass('layer1');
@@ -69,7 +69,7 @@ describe('QualityMetricsCollector', () => {
         });
     });
 
-    describe('artifact type tracking', () => {
+    describe('Artifact type tracking', () => {
         it('records artifact types', () => {
             collector.recordArtifactType('test-suite');
             collector.recordArtifactType('test-suite');
@@ -81,7 +81,7 @@ describe('QualityMetricsCollector', () => {
         });
     });
 
-    describe('structure score', () => {
+    describe('Structure score', () => {
         it('averages structure scores', () => {
             collector.recordStructureScore(0.8);
             collector.recordStructureScore(1.0);
@@ -97,7 +97,7 @@ describe('QualityMetricsCollector', () => {
         });
     });
 
-    describe('clear', () => {
+    describe('Clear', () => {
         it('resets all counters', () => {
             collector.recordInvariantFire('T-01');
             collector.recordLayerAttempt('layer1');
@@ -110,7 +110,7 @@ describe('QualityMetricsCollector', () => {
         });
     });
 
-    describe('drift detection', () => {
+    describe('Drift detection', () => {
         it('returns empty alerts with insufficient history', () => {
             const alerts = collector.detectDrift([]);
 
@@ -189,7 +189,7 @@ describe('QualityMetricsCollector', () => {
         });
     });
 
-    describe('getHistory', () => {
+    describe('GetHistory', () => {
         it('returns empty array when file does not exist', () => {
             const history = collector.getHistory();
 
@@ -197,7 +197,7 @@ describe('QualityMetricsCollector', () => {
         });
     });
 
-    describe('edge: NaN and Infinity (D8 regression prevention)', () => {
+    describe('Edge: NaN and Infinity (D8 regression prevention)', () => {
         it('naN structureScore produces fallback 0 avgStructureScore', () => {
             const col = new QualityMetricsCollector();
             col.recordStructureScore(NaN);
@@ -217,7 +217,7 @@ describe('QualityMetricsCollector', () => {
         });
     });
 
-    describe('exported functions', () => {
+    describe('Exported functions', () => {
         it('recordInvariantFire calls default collector', () => {
             recordInvariantFire('T-01');
         });

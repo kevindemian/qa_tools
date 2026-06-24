@@ -29,8 +29,8 @@ beforeEach(() => {
     vi.clearAllMocks();
 });
 
-describe('publishReport', () => {
-    it('should call aws s3 cp for s3 target', () => {
+describe('PublishReport', () => {
+    it('Should call aws s3 cp for s3 target', () => {
         process.env['AWS_S3_BUCKET'] = 's3://my-bucket';
         publishReport({ target: 's3', filePath: './report.html' });
 
@@ -41,7 +41,7 @@ describe('publishReport', () => {
         );
     });
 
-    it('should use explicit destination for s3 target', () => {
+    it('Should use explicit destination for s3 target', () => {
         publishReport({ target: 's3', filePath: './report.html', destination: 's3://other' });
 
         expect(mockExecFileSync).toHaveBeenCalledWith(
@@ -51,7 +51,7 @@ describe('publishReport', () => {
         );
     });
 
-    it('should not execute shell when path contains injection characters', () => {
+    it('Should not execute shell when path contains injection characters', () => {
         process.env['AWS_S3_BUCKET'] = 's3://bucket';
         const maliciousPath = './report; rm -rf /; .html';
         publishReport({ target: 's3', filePath: maliciousPath });
@@ -64,7 +64,7 @@ describe('publishReport', () => {
         expect(mockLoggerError).not.toHaveBeenCalled();
     });
 
-    it('should log error when s3 dest is missing', () => {
+    it('Should log error when s3 dest is missing', () => {
         delete process.env['AWS_S3_BUCKET'];
         publishReport({ target: 's3', filePath: './report.html' });
 
@@ -72,7 +72,7 @@ describe('publishReport', () => {
         expect(mockLoggerError).toHaveBeenCalledWith('S3 publish requires either --dest or AWS_S3_BUCKET env var');
     });
 
-    it('should log error when s3 publish fails', () => {
+    it('Should log error when s3 publish fails', () => {
         process.env['AWS_S3_BUCKET'] = 's3://bucket';
         mockExecFileSync.mockImplementationOnce(() => {
             throw new Error('aws failed');
@@ -82,13 +82,13 @@ describe('publishReport', () => {
         expect(mockLoggerError).toHaveBeenCalledWith(expect.stringContaining('S3 publish failed'));
     });
 
-    it('should log info about target and file path', () => {
+    it('Should log info about target and file path', () => {
         publishReport({ target: 's3', filePath: './report.html', destination: 's3://b' });
 
         expect(mockLoggerInfo).toHaveBeenCalledWith('Publishing report to s3: ./report.html');
     });
 
-    it('should handle missing origin url gracefully', () => {
+    it('Should handle missing origin url gracefully', () => {
         mockExecFileSync
             .mockImplementationOnce(() => {
                 throw new Error('no remote');
@@ -101,7 +101,7 @@ describe('publishReport', () => {
         expect(mockLoggerError).not.toHaveBeenCalled();
     });
 
-    it('should handle unsupported target gracefully', () => {
+    it('Should handle unsupported target gracefully', () => {
         publishReport({ target: 'ftp' as PublishTarget, filePath: './x.html' });
 
         expect(mockLoggerError).toHaveBeenCalledWith(expect.stringContaining('Unknown publish target'));

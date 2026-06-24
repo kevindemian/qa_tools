@@ -93,7 +93,7 @@ afterEach(() => {
     Object.defineProperty(process.stdin, 'isTTY', { value: undefined, configurable: true });
 });
 
-describe('filePathCompleter', () => {
+describe('FilePathCompleter', () => {
     const testDir = path.join(import.meta.dirname, '__test_fixtures__');
     const csvFile = path.join(testDir, 'test.csv');
     const jsonFile = path.join(testDir, 'test.json');
@@ -222,7 +222,7 @@ describe('filePathCompleter', () => {
     });
 });
 
-describe('askFilePath', () => {
+describe('AskFilePath', () => {
     it('falls back to prompt when no TTY', async () => {
         mockReadlineQuestion.mockReturnValue('/some/path');
         const result = await askFilePath('File:');
@@ -231,7 +231,7 @@ describe('askFilePath', () => {
     });
 });
 
-describe('askFilePath TTY mode', () => {
+describe('AskFilePath TTY mode', () => {
     beforeEach(() => {
         Object.defineProperty(process.stdout, 'isTTY', { value: true, configurable: true });
         const mockRl = _mockRl;

@@ -10,7 +10,7 @@ describe('CsvResource', () => {
         csvResource = new CsvResource();
     });
 
-    describe('parseDescription', () => {
+    describe('ParseDescription', () => {
         it('extracts description from Description: header', () => {
             const lines = ['Title: Test', 'Description: Verifica feature Y', 'Action,Data,Expected'];
 
@@ -30,7 +30,7 @@ describe('CsvResource', () => {
         });
     });
 
-    describe('parsePrecondition', () => {
+    describe('ParsePrecondition', () => {
         it('detects reference type for Jira keys', () => {
             expect(csvResource.parsePrecondition('ECSPOL-PRE-42')).toEqual({
                 type: 'reference',
@@ -74,7 +74,7 @@ describe('CsvResource', () => {
         });
     });
 
-    describe('readBulkCsv with quoted Pre-condition', () => {
+    describe('ReadBulkCsv with quoted Pre-condition', () => {
         it('parses multi-line quoted Pre-condition', async () => {
             const tmp = '/tmp/test-pre-quoted.csv';
             writeFileSync(
@@ -148,7 +148,7 @@ describe('CsvResource', () => {
         });
     });
 
-    describe('parseGroup', () => {
+    describe('ParseGroup', () => {
         it('extracts group from Group: header', () => {
             const lines = ['Title: Test', 'Group: LOGIN-FLOW', 'Action,Data,Expected'];
 
@@ -168,7 +168,7 @@ describe('CsvResource', () => {
         });
     });
 
-    describe('parseLinkedIssues', () => {
+    describe('ParseLinkedIssues', () => {
         it('parses single linked issue', () => {
             const lines = ['Title: Test', 'Linked Issues: ECSPOL-100 (is tested by)', 'Action,Data,Expected'];
 
@@ -191,7 +191,7 @@ describe('CsvResource', () => {
         });
     });
 
-    describe('readBulkCsv edge cases', () => {
+    describe('ReadBulkCsv edge cases', () => {
         it('skips block without Title and warns', async () => {
             const warnSpy = vi.spyOn(rootLogger, 'warn').mockImplementation(() => {});
             const tmp = '/tmp/test-no-title.csv';
@@ -341,7 +341,7 @@ describe('CsvResource', () => {
         });
     });
 
-    describe('parseLinkedIssues edge cases', () => {
+    describe('ParseLinkedIssues edge cases', () => {
         it('returns empty array when Linked Issues value is empty', () => {
             const lines = ['Title: Test', 'Linked Issues:   ', 'Action,Data,Expected'];
 
@@ -349,7 +349,7 @@ describe('CsvResource', () => {
         });
     });
 
-    describe('detectSeparator', () => {
+    describe('DetectSeparator', () => {
         it('returns comma for normal CSV', () => {
             expect(CsvResource.detectSeparator('Action,Data,Expected Result')).toBe(',');
         });
@@ -367,7 +367,7 @@ describe('CsvResource', () => {
         });
     });
 
-    describe('readCsvFromString', () => {
+    describe('ReadCsvFromString', () => {
         it('skips CSV row with empty Action field', async () => {
             const csvString = 'Action,Data,Expected Result\n,y,z';
             const result = await csvResource.readCsvFromString(csvString);
@@ -488,7 +488,7 @@ describe('CsvResource', () => {
         });
     });
 
-    describe('readBulkCsv — CRLF normalization', () => {
+    describe('ReadBulkCsv — CRLF normalization', () => {
         it('splits blocks correctly with CRLF line endings', async () => {
             const tmp = '/tmp/test-crlf-bulk.csv';
             const crlf = '\r\n';

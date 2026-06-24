@@ -8,7 +8,7 @@ import {
     undefinedAs,
 } from './test-utils.js';
 
-describe('nullAs', () => {
+describe('NullAs', () => {
     it('returns null typed as T', () => {
         const v = nullAs<{ x: number }>();
 
@@ -16,7 +16,7 @@ describe('nullAs', () => {
     });
 });
 
-describe('undefinedAs', () => {
+describe('UndefinedAs', () => {
     it('returns undefined typed as T', () => {
         const v = undefinedAs<{ x: number }>();
 
@@ -24,7 +24,7 @@ describe('undefinedAs', () => {
     });
 });
 
-describe('makeMockCommandContext', () => {
+describe('MakeMockCommandContext', () => {
     it('returns a context with all standard fields', () => {
         const ctx = makeMockCommandContext();
 
@@ -72,7 +72,7 @@ describe('makeMockCommandContext', () => {
     });
 });
 
-describe('nonNull', () => {
+describe('NonNull', () => {
     it('returns the value when non-null', () => {
         expect(nonNull(42)).toBe(42);
     });
@@ -105,7 +105,7 @@ describe('nonNull', () => {
     });
 });
 
-describe('createConsoleSpies', () => {
+describe('CreateConsoleSpies', () => {
     it('creates spy objects for log, error, warn', () => {
         const spies = createConsoleSpies();
 
@@ -149,7 +149,7 @@ describe('createConsoleSpies', () => {
     });
 });
 
-describe('restoreConsoleSpies', () => {
+describe('RestoreConsoleSpies', () => {
     it('restores console methods', () => {
         const originalLog = console.log;
         const originalError = console.error;
@@ -169,7 +169,7 @@ describe('restoreConsoleSpies', () => {
     });
 });
 
-describe('withEnv', () => {
+describe('WithEnv', () => {
     it('sets env vars and returns cleanup function', () => {
         const key = 'TEST_ENV_VAR_123';
         delete process.env[key];
@@ -214,7 +214,7 @@ describe('withEnv', () => {
     });
 });
 
-describe('integration: createConsoleSpies + restoreConsoleSpies', () => {
+describe('Integration: createConsoleSpies + restoreConsoleSpies', () => {
     it('verifies console methods are mocked then restored', () => {
         const originalLog = console.log;
         const originalError = console.error;

@@ -1,6 +1,6 @@
 import { createMockLinkManager } from './link-manager-factory.js';
 
-describe('createMockLinkManager', () => {
+describe('CreateMockLinkManager', () => {
     it('returns a mock with all methods as vi.fn()', () => {
         const mock = createMockLinkManager();
 

@@ -1,6 +1,6 @@
 import { extractHost, HostSemaphore } from './host-semaphore.js';
 
-describe('extractHost', () => {
+describe('ExtractHost', () => {
     it('returns hostname for valid URL', () => {
         expect(extractHost('https://api.github.com/resource')).toBe('api.github.com');
     });

@@ -18,7 +18,7 @@ vi.mock('../shared/prompt', async () => {
     };
 });
 
-describe('smoke-xray-cloud', () => {
+describe('Smoke-xray-cloud', () => {
     beforeEach(() => {
         vi.clearAllMocks();
         vi.restoreAllMocks();

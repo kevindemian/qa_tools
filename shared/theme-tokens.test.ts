@@ -6,8 +6,8 @@
 
 import { tokens, getToken } from './theme-tokens.js';
 
-describe('theme-tokens', () => {
-    describe('color.semantic', () => {
+describe('Theme-tokens', () => {
+    describe('Color.semantic', () => {
         it('has all four semantic colors', () => {
             expect(tokens.color.semantic.success.light).toBe('#22c55e');
             expect(tokens.color.semantic.error.light).toBe('#ef4444');
@@ -23,7 +23,7 @@ describe('theme-tokens', () => {
         });
     });
 
-    describe('color.surface', () => {
+    describe('Color.surface', () => {
         it('has page, card, elevated, input', () => {
             expect(tokens.color.surface.page.light).toBe('#f9fafb');
             expect(tokens.color.surface.card.light).toBe('#ffffff');
@@ -39,7 +39,7 @@ describe('theme-tokens', () => {
         });
     });
 
-    describe('color.text', () => {
+    describe('Color.text', () => {
         it('has primary, secondary, muted', () => {
             expect(tokens.color.text.primary.light).toBe('#111827');
             expect(tokens.color.text.secondary.light).toBe('#4b5563');
@@ -47,7 +47,7 @@ describe('theme-tokens', () => {
         });
     });
 
-    describe('color.badge', () => {
+    describe('Color.badge', () => {
         it('has pass, fail, skip with bg and text', () => {
             expect(tokens.color.badge.pass.bg.light).toBe('#dcfce7');
             expect(tokens.color.badge.pass.text.light).toBe('#166534');
@@ -63,7 +63,7 @@ describe('theme-tokens', () => {
         });
     });
 
-    describe('color.chart', () => {
+    describe('Color.chart', () => {
         it('has chart colors', () => {
             expect(tokens.color.chart.pass).toBe('#22c55e');
             expect(tokens.color.chart.fail).toBe('#ef4444');
@@ -73,7 +73,7 @@ describe('theme-tokens', () => {
         });
     });
 
-    describe('spacing', () => {
+    describe('Spacing', () => {
         it('has xs through xxxl', () => {
             expect(tokens.spacing.xs).toBe(4);
             expect(tokens.spacing.sm).toBe(8);
@@ -85,7 +85,7 @@ describe('theme-tokens', () => {
         });
     });
 
-    describe('borderRadius', () => {
+    describe('BorderRadius', () => {
         it('has sm, md, lg, pill', () => {
             expect(tokens.borderRadius.sm).toBe(4);
             expect(tokens.borderRadius.md).toBe(6);
@@ -94,35 +94,35 @@ describe('theme-tokens', () => {
         });
     });
 
-    describe('fontSize', () => {
+    describe('FontSize', () => {
         it('has xs through 2xl', () => {
             expect(tokens.fontSize.xs).toBe('0.7rem');
             expect(tokens.fontSize['2xl']).toBe('1.5rem');
         });
     });
 
-    describe('fontWeight', () => {
+    describe('FontWeight', () => {
         it('has normal through bold', () => {
             expect(tokens.fontWeight.normal).toBe(400);
             expect(tokens.fontWeight.bold).toBe(700);
         });
     });
 
-    describe('fontFamily', () => {
+    describe('FontFamily', () => {
         it('is a string', () => {
             expect(typeof tokens.fontFamily).toBe('string');
             expect(tokens.fontFamily.length).toBeGreaterThan(10);
         });
     });
 
-    describe('shadow', () => {
+    describe('Shadow', () => {
         it('has card and elevated', () => {
             expect(tokens.shadow.card).toContain('rgba');
             expect(tokens.shadow.elevated).toContain('rgba');
         });
     });
 
-    describe('breakpoint', () => {
+    describe('Breakpoint', () => {
         it('has sm, md, lg, xl', () => {
             expect(tokens.breakpoint.sm).toBe(640);
             expect(tokens.breakpoint.md).toBe(768);
@@ -131,7 +131,7 @@ describe('theme-tokens', () => {
         });
     });
 
-    describe('getToken', () => {
+    describe('GetToken', () => {
         it('retrieves nested tokens by dot path', () => {
             expect(getToken('color.semantic.success.light')).toBe('#22c55e');
             expect(getToken('spacing.lg')).toBe(16);

@@ -1,6 +1,6 @@
 import { sanitizeHtml } from './escape.js';
 
-describe('sanitizeHtml', () => {
+describe('SanitizeHtml', () => {
     it('escapes ampersand', () => {
         expect(sanitizeHtml('a & b')).toBe('a &amp; b');
     });

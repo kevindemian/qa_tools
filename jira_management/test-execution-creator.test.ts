@@ -68,7 +68,7 @@ describe('TestExecutionCreator', () => {
         dateSpy.mockRestore();
     });
 
-    describe('create()', () => {
+    describe('Create()', () => {
         function setupHappyPath() {
             mockJiraResource.getJiraResource
                 .mockResolvedValueOnce(defaultIssueTypes)
@@ -159,7 +159,7 @@ describe('TestExecutionCreator', () => {
         });
     });
 
-    describe('createWithLinks()', () => {
+    describe('CreateWithLinks()', () => {
         function setupCreate(resultKey = 'TE-1') {
             mockJiraResource.getJiraResource
                 .mockResolvedValueOnce(defaultIssueTypes)
@@ -281,7 +281,7 @@ describe('TestExecutionCreator', () => {
         });
     });
 
-    describe('addTestsToExistingExecution', () => {
+    describe('AddTestsToExistingExecution', () => {
         const teKey = 'TE-1';
         const teIssue = {
             key: 'TE-1',

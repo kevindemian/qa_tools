@@ -44,7 +44,7 @@ const SAMPLE_MOCHAWESOME = {
     ],
 };
 
-describe('parseMochawesome', () => {
+describe('ParseMochawesome', () => {
     it('extracts all tests flat from nested suites', () => {
         const result = parseMochawesome(SAMPLE_MOCHAWESOME);
 
@@ -142,7 +142,7 @@ describe('parseMochawesome', () => {
     });
 });
 
-describe('parseCypressResults', () => {
+describe('ParseCypressResults', () => {
     const tmpFile = path.join(os.tmpdir(), 'qa-test-mochawesome-' + Date.now() + '.json');
 
     beforeEach(() => {
@@ -207,7 +207,7 @@ const CTRF_EMPTY = {
     },
 };
 
-describe('isCtrfFormat', () => {
+describe('IsCtrfFormat', () => {
     it('detects CTRF format by results.tests + results.summary', () => {
         expect(isCtrfFormat(CTRF_SAMPLE)).toBeTruthy();
     });
@@ -226,7 +226,7 @@ describe('isCtrfFormat', () => {
     });
 });
 
-describe('parseCtrfResults', () => {
+describe('ParseCtrfResults', () => {
     it('extracts all tests from CTRF format', () => {
         const result = parseCtrfResults(CTRF_SAMPLE);
 
@@ -302,7 +302,7 @@ describe('parseCtrfResults', () => {
     });
 });
 
-describe('parseTestResults (dispatch)', () => {
+describe('ParseTestResults (dispatch)', () => {
     it('routes CTRF format to parseCtrfResults', () => {
         const result = parseTestResults(CTRF_SAMPLE);
 
@@ -340,7 +340,7 @@ describe('parseTestResults (dispatch)', () => {
     });
 });
 
-describe('parseTestResultsFile', () => {
+describe('ParseTestResultsFile', () => {
     it('reads CTRF file and parses it', () => {
         const fixtures = path.join(import.meta.dirname, '../e2e/fixtures');
         const result = parseTestResultsFile(path.join(fixtures, 'ctrf-report.json'));

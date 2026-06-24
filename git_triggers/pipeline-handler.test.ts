@@ -133,7 +133,7 @@ beforeEach(() => {
     vi.clearAllMocks();
 });
 
-describe('isComplete', () => {
+describe('IsComplete', () => {
     it('returns true for terminal statuses', () => {
         expect(isComplete('success')).toBeTruthy();
         expect(isComplete('failed')).toBeTruthy();
@@ -148,7 +148,7 @@ describe('isComplete', () => {
     });
 });
 
-describe('pollPipeline', () => {
+describe('PollPipeline', () => {
     it('returns completed status when pipeline finishes', async () => {
         vi.spyOn(mockM, 'getPipeline').mockResolvedValue({ status: 'success', web_url: 'https://gitlab.com/pipe/1' });
 
@@ -189,7 +189,7 @@ describe('pollPipeline', () => {
     });
 });
 
-describe('handleTriggerPipeline', () => {
+describe('HandleTriggerPipeline', () => {
     it('prompts for branch and triggers pipeline', async () => {
         mockConfirm
             .mockReturnValueOnce(false) // Adicionar variáveis?
@@ -305,7 +305,7 @@ describe('handleTriggerPipeline', () => {
     });
 });
 
-describe('handleExportVariables', () => {
+describe('HandleExportVariables', () => {
     it('exports variables when confirmed', async () => {
         mockConfirm.mockReturnValue(true);
         vi.spyOn(mockM, 'getCICDVariables').mockResolvedValue([
@@ -362,7 +362,7 @@ describe('handleExportVariables', () => {
 
 // ---------- parseTestResults delegation ----------
 
-describe('parseTestResults', () => {
+describe('ParseTestResults', () => {
     it('delegates to test-results parseTestResults', async () => {
         const testResults = vi.mocked(testResultsModule);
         vi.spyOn(testResults, 'parseTestResults').mockResolvedValue({
@@ -392,7 +392,7 @@ describe('parseTestResults', () => {
 
 // ---------- createTestExecution delegation ----------
 
-describe('createTestExecution', () => {
+describe('CreateTestExecution', () => {
     it('delegates to test-results createTestExecution', async () => {
         const testResults = vi.mocked(testResultsModule);
         vi.spyOn(testResults, 'createTestExecution').mockResolvedValue(undefined);
@@ -419,7 +419,7 @@ describe('createTestExecution', () => {
 
 // ---------- downloadTestArtifacts delegation ----------
 
-describe('downloadTestArtifacts', () => {
+describe('DownloadTestArtifacts', () => {
     it('delegates to test-results downloadTestArtifacts', async () => {
         const testResults = vi.mocked(testResultsModule);
         vi.spyOn(testResults, 'downloadTestArtifacts').mockResolvedValue(null);
@@ -432,7 +432,7 @@ describe('downloadTestArtifacts', () => {
 
 // ---------- collectTestResults delegation ----------
 
-describe('collectTestResults', () => {
+describe('CollectTestResults', () => {
     it('delegates to test-results collectTestResults', async () => {
         const testResults = vi.mocked(testResultsModule);
         vi.spyOn(testResults, 'collectTestResults').mockResolvedValue(null);
@@ -450,7 +450,7 @@ describe('collectTestResults', () => {
 
 // ---------- buildPipelinePayload cancel ----------
 
-describe('buildPipelinePayload cancel', () => {
+describe('BuildPipelinePayload cancel', () => {
     it('cancels when user declines trigger confirmation', async () => {
         mockPrompt.mockReturnValue('main');
         vi.spyOn(mockM, 'getBranch').mockResolvedValue({ name: 'main' });
@@ -466,7 +466,7 @@ describe('buildPipelinePayload cancel', () => {
 
 // ---------- triggerAndPollPipeline with full flow ----------
 
-describe('triggerAndPollPipeline full flow', () => {
+describe('TriggerAndPollPipeline full flow', () => {
     beforeEach(() => {
         vi.clearAllMocks();
         mockPrompt.mockReturnValue('main');
@@ -728,7 +728,7 @@ describe('triggerAndPollPipeline full flow', () => {
 
 // ---------- triggerPipeline with missing ID ----------
 
-describe('triggerPipeline missing id', () => {
+describe('TriggerPipeline missing id', () => {
     it('returns early when pipeline result has no id', async () => {
         mockPrompt.mockReturnValue('main');
         vi.spyOn(mockM, 'getBranch').mockResolvedValue({ name: 'main' });
@@ -749,7 +749,7 @@ describe('triggerPipeline missing id', () => {
 
 // ---------- resume pipeline decline ----------
 
-describe('resumePendingPipeline decline', () => {
+describe('ResumePendingPipeline decline', () => {
     it('deletes pending state when user declines resume', async () => {
         const state = vi.mocked(stateModule);
         vi.spyOn(state, 'load').mockReturnValueOnce({

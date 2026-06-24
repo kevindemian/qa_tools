@@ -10,7 +10,7 @@ vi.mock('../shared/feature-config.js', () => ({
     setPrReportConfig: mockSetPrReportConfig,
 }));
 
-describe('writeProjectsConfig', () => {
+describe('WriteProjectsConfig', () => {
     beforeEach(() => {
         vi.clearAllMocks();
         vi.spyOn(MockFs, 'existsSync').mockReturnValue(false);
@@ -80,7 +80,7 @@ describe('writeProjectsConfig', () => {
     });
 });
 
-describe('writeDotEnvExample', () => {
+describe('WriteDotEnvExample', () => {
     beforeEach(() => {
         vi.clearAllMocks();
         vi.spyOn(MockFs, 'existsSync').mockReturnValue(false);
@@ -118,7 +118,7 @@ describe('writeDotEnvExample', () => {
     });
 });
 
-describe('writeFeaturesConfig', () => {
+describe('WriteFeaturesConfig', () => {
     beforeEach(() => {
         vi.clearAllMocks();
         mockSetPrReportConfig.mockClear();

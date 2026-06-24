@@ -38,7 +38,7 @@ beforeAll(async () => {
     JiraClient = (await vi.importActual<typeof import('../shared/jira-client.js')>('../shared/jira-client')).default;
 });
 
-describe('smoke-jira-cloud', () => {
+describe('Smoke-jira-cloud', () => {
     beforeEach(() => {
         vi.clearAllMocks();
     });

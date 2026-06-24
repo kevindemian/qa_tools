@@ -1,7 +1,7 @@
 import https from 'https';
 import { createAgent } from './tls.js';
 
-describe('createAgent', () => {
+describe('CreateAgent', () => {
     it('returns an https.Agent with keepAlive true', () => {
         const agent = createAgent();
 

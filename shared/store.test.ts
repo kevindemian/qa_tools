@@ -42,7 +42,7 @@ function makeMeta(sha: string): ReportMeta {
 describe('Store', () => {
     const store = new Store(backend, project);
 
-    describe('index (lookup / put)', () => {
+    describe('Index (lookup / put)', () => {
         it('lookup returns null for unknown sha', () => {
             expect(store.lookup('unknown-sha')).toBeNull();
         });
@@ -84,7 +84,7 @@ describe('Store', () => {
         });
     });
 
-    describe('listByProject', () => {
+    describe('ListByProject', () => {
         it('returns empty for project with no entries', () => {
             const other = new Store(backend, 'other-proj');
 
@@ -115,7 +115,7 @@ describe('Store', () => {
         });
     });
 
-    describe('branch index', () => {
+    describe('Branch index', () => {
         it('getBranch returns empty for unknown branch', () => {
             expect(store.getBranch('nonexistent')).toEqual([]);
         });
@@ -141,7 +141,7 @@ describe('Store', () => {
         });
     });
 
-    describe('reports (saveReport / loadReport)', () => {
+    describe('Reports (saveReport / loadReport)', () => {
         it('loadReport returns null for missing sha', () => {
             expect(store.loadReport('missing')).toBeNull();
         });
@@ -175,7 +175,7 @@ describe('Store', () => {
         });
     });
 
-    describe('metrics', () => {
+    describe('Metrics', () => {
         it('loadMetrics returns null when no metrics file', () => {
             expect(store.loadMetrics()).toBeNull();
         });
@@ -194,7 +194,7 @@ describe('Store', () => {
         });
     });
 
-    describe('flush', () => {
+    describe('Flush', () => {
         it('delegates to backend flush', () => {
             const mockBackend = {
                 flush: (msg: string) => msg,
@@ -211,7 +211,7 @@ describe('Store', () => {
         });
     });
 
-    describe('error handling (G2 regression)', () => {
+    describe('Error handling (G2 regression)', () => {
         it('logs warning when backend write fails in put', () => {
             const failBackend = {
                 init: () => {},
@@ -425,7 +425,7 @@ describe('Store', () => {
         });
     });
 
-    describe('error handling (G3 regression)', () => {
+    describe('Error handling (G3 regression)', () => {
         it('logs warning when backend init fails', () => {
             const failBackend = {
                 init: () => {

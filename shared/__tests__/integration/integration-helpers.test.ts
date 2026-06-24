@@ -43,7 +43,7 @@ import {
 
 /* ────────── Fixture factory tests (should pass now) ────────── */
 
-describe('fixture factories', () => {
+describe('Fixture factories', () => {
     it('createMetricsRunFixture returns correct shape', () => {
         const result = createMetricsRunFixture();
 
@@ -118,12 +118,12 @@ describe('fixture factories', () => {
 
 /* ────────── I/O helper tests (RED — will fail with current code) ────────── */
 
-describe('cleanupTestDir', () => {
+describe('CleanupTestDir', () => {
     beforeEach(() => {
         vi.clearAllMocks();
     });
 
-    it('should warn on rmSync error (not silently swallow)', () => {
+    it('Should warn on rmSync error (not silently swallow)', () => {
         const warnSpy = vi.spyOn(process.stderr, 'write').mockImplementation(() => true);
         mockFs.existsSync.mockReturnValue(true);
         mockFs.rmSync.mockImplementation(() => {
@@ -154,7 +154,7 @@ describe('cleanupTestDir', () => {
         warnSpy.mockRestore();
     });
 
-    it('should silently continue on ENOENT', () => {
+    it('Should silently continue on ENOENT', () => {
         const warnSpy = vi.spyOn(process.stderr, 'write').mockImplementation(() => true);
         mockFs.existsSync.mockReturnValue(true);
         mockFs.rmSync.mockImplementation(() => {
@@ -169,7 +169,7 @@ describe('cleanupTestDir', () => {
     });
 });
 
-describe('createTestDir', () => {
+describe('CreateTestDir', () => {
     beforeEach(() => {
         vi.clearAllMocks();
     });
@@ -184,7 +184,7 @@ describe('createTestDir', () => {
     });
 });
 
-describe('createFile', () => {
+describe('CreateFile', () => {
     beforeEach(() => {
         vi.clearAllMocks();
     });
@@ -200,12 +200,12 @@ describe('createFile', () => {
     });
 });
 
-describe('readFile', () => {
+describe('ReadFile', () => {
     beforeEach(() => {
         vi.clearAllMocks();
     });
 
-    it('should return null on ENOENT (not log)', () => {
+    it('Should return null on ENOENT (not log)', () => {
         const warnSpy = vi.spyOn(process.stderr, 'write').mockImplementation(() => true);
         mockFs.readFileSync.mockImplementation(() => {
             throw Object.assign(new Error('not found'), { code: 'ENOENT' });
@@ -234,12 +234,12 @@ describe('readFile', () => {
     });
 });
 
-describe('readJsonFile', () => {
+describe('ReadJsonFile', () => {
     beforeEach(() => {
         vi.clearAllMocks();
     });
 
-    it('should return null on ENOENT (not log)', () => {
+    it('Should return null on ENOENT (not log)', () => {
         const warnSpy = vi.spyOn(process.stderr, 'write').mockImplementation(() => true);
         mockFs.readFileSync.mockImplementation(() => {
             throw Object.assign(new Error('not found'), { code: 'ENOENT' });
@@ -276,18 +276,18 @@ describe('readJsonFile', () => {
     });
 });
 
-describe('fileExists', () => {
+describe('FileExists', () => {
     beforeEach(() => {
         vi.clearAllMocks();
     });
 
-    it('should return true when existsSync returns true', () => {
+    it('Should return true when existsSync returns true', () => {
         mockFs.existsSync.mockReturnValue(true);
 
         expect(fileExists('/tmp', 'file.txt')).toBeTruthy();
     });
 
-    it('should return false when existsSync returns false', () => {
+    it('Should return false when existsSync returns false', () => {
         mockFs.existsSync.mockReturnValue(false);
 
         expect(fileExists('/tmp', 'missing.txt')).toBeFalsy();

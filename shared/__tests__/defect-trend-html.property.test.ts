@@ -44,7 +44,7 @@ const classArb: fc.Arbitrary<FailureClassification> = fc
         project: r.project,
     }));
 
-describe('generateDefectTrendHtml — property-based', () => {
+describe('GenerateDefectTrendHtml — property-based', () => {
     beforeEach(() => {
         vi.restoreAllMocks();
     });

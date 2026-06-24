@@ -17,7 +17,7 @@ vi.mock('../shared/git-provider-error', () => ({
     }),
 }));
 
-describe('apiGet', () => {
+describe('ApiGet', () => {
     let client: Mocked<AxiosInstance>;
 
     beforeEach(() => {
@@ -65,7 +65,7 @@ describe('apiGet', () => {
     });
 });
 
-describe('apiPost', () => {
+describe('ApiPost', () => {
     let client: Mocked<AxiosInstance>;
 
     beforeEach(() => {
@@ -94,7 +94,7 @@ describe('apiPost', () => {
     });
 });
 
-describe('apiPatch', () => {
+describe('ApiPatch', () => {
     let client: Mocked<AxiosInstance>;
 
     beforeEach(() => {
@@ -123,7 +123,7 @@ describe('apiPatch', () => {
     });
 });
 
-describe('formatDiffResponse', () => {
+describe('FormatDiffResponse', () => {
     it('formats entries with patch content', () => {
         const entries = [
             { filename: 'src/index.ts', patch: '@@ -1 +1 @@\n-foo\n+bar' },

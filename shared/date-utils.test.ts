@@ -1,6 +1,6 @@
 import { formatDateISO } from './date-utils.js';
 
-describe('formatDateISO', () => {
+describe('FormatDateISO', () => {
     it('formats a known date as YYYY-MM-DD', () => {
         const d = new Date(2026, 4, 30); // May 30 2026
 

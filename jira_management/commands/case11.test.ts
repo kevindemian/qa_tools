@@ -14,7 +14,7 @@ beforeEach(() => {
     vi.clearAllMocks();
 });
 
-describe('case11 — generate template', () => {
+describe('Case11 — generate template', () => {
     it('exports a handler function', () => {
         expect(case11).toBeDefined();
         expect(typeof case11.handler).toBe('function');

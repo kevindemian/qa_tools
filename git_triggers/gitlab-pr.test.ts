@@ -41,7 +41,7 @@ beforeEach(() => {
     );
 });
 
-describe('formatPR', () => {
+describe('FormatPR', () => {
     it('formats a complete MR object', () => {
         const data = {
             iid: 5,
@@ -80,7 +80,7 @@ describe('formatPR', () => {
     });
 });
 
-describe('glCreateMergeRequest', () => {
+describe('GlCreateMergeRequest', () => {
     const args = ['owner', 'repo', 'feature', 'main', 'MR Title', 'MR Desc'] as const;
 
     it('calls apiPost and returns formatted MR', async () => {
@@ -135,7 +135,7 @@ describe('glCreateMergeRequest', () => {
     });
 });
 
-describe('glUpdateMergeRequest', () => {
+describe('GlUpdateMergeRequest', () => {
     it('calls apiPut and returns formatted MR', async () => {
         vi.mocked(apiPut).mockResolvedValue({ iid: 5, title: 'Updated' });
         const result = await glUpdateMergeRequest(mockClient, 'owner', 'repo', 5, 'Updated', 'New desc');
@@ -157,7 +157,7 @@ describe('glUpdateMergeRequest', () => {
     });
 });
 
-describe('glGetMergeRequest', () => {
+describe('GlGetMergeRequest', () => {
     it('returns formatted MR on success', async () => {
         vi.mocked(apiGet).mockResolvedValue({ iid: 5, state: 'opened' });
         const result = await glGetMergeRequest(mockClient, 'owner', 'repo', 5);
@@ -183,7 +183,7 @@ describe('glGetMergeRequest', () => {
     });
 });
 
-describe('glSearchMergeRequests', () => {
+describe('GlSearchMergeRequests', () => {
     it('returns formatted MRs from apiGet', async () => {
         vi.mocked(apiGet).mockResolvedValue([
             { iid: 1, title: 'First' },
@@ -224,7 +224,7 @@ describe('glSearchMergeRequests', () => {
     });
 });
 
-describe('glAcceptMergeRequest', () => {
+describe('GlAcceptMergeRequest', () => {
     it('calls glGetMergeRequest then merge when opened', async () => {
         vi.mocked(apiGet).mockResolvedValue({ iid: 5, state: 'opened' });
         vi.mocked(apiPut).mockResolvedValue({ web_url: 'https://merge' });
@@ -277,7 +277,7 @@ describe('glAcceptMergeRequest', () => {
     });
 });
 
-describe('glIsApproved', () => {
+describe('GlIsApproved', () => {
     it('returns true when approved', async () => {
         vi.mocked(apiGet).mockResolvedValue({ approved: true });
         const result = await glIsApproved(mockClient, 'owner', 'repo', 42);

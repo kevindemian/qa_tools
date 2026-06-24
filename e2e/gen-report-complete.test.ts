@@ -40,7 +40,7 @@ vi.mock('../shared/cli_base.js', () => ({
     gracefulExit: vi.fn(),
 }));
 
-describe('gen-report-complete', () => {
+describe('Gen-report-complete', () => {
     const originalArgv = process.argv;
 
     afterEach(() => {

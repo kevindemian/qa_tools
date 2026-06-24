@@ -45,7 +45,7 @@ const flatTestArb: fc.Arbitrary<FlatTest> = fc.record({
     duration: fc.integer({ min: 0, max: 60000 }),
 });
 
-describe('generateCoverageHtml — property-based', () => {
+describe('GenerateCoverageHtml — property-based', () => {
     it('coverage MetricCard matches global calculation', () => {
         fc.assert(
             fc.property(fc.array(epicArb, { minLength: 0, maxLength: 5 }), (epics) => {
@@ -111,7 +111,7 @@ describe('generateCoverageHtml — property-based', () => {
     });
 });
 
-describe('generateHtmlReport — property-based', () => {
+describe('GenerateHtmlReport — property-based', () => {
     it('contains all test titles', () => {
         fc.assert(
             fc.property(fc.array(flatTestArb, { minLength: 0, maxLength: 10 }), (tests) => {
@@ -138,7 +138,7 @@ describe('generateHtmlReport — property-based', () => {
     });
 });
 
-describe('generateCoverageHtml — invariants (property-based)', () => {
+describe('GenerateCoverageHtml — invariants (property-based)', () => {
     it('always produces valid HTML structure', () => {
         fc.assert(
             fc.property(fc.array(epicArb, { minLength: 0, maxLength: 5 }), (epics) => {

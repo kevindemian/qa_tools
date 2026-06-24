@@ -77,7 +77,7 @@ function makeFixture(): CoverageGapResult {
     };
 }
 
-describe('generateCoverageGapHtml', () => {
+describe('GenerateCoverageGapHtml', () => {
     it('produces valid HTML with summary cards', () => {
         const html = generateCoverageGapHtml(makeFixture());
 

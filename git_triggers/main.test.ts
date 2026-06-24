@@ -207,7 +207,7 @@ beforeEach(() => {
 
 // ---------- isComplete ----------
 
-describe('isComplete', () => {
+describe('IsComplete', () => {
     it('returns true for success', () => {
         expect(mainModule.isComplete('success')).toBeTruthy();
     });
@@ -243,7 +243,7 @@ describe('isComplete', () => {
 
 // ---------- providerLabel ----------
 
-describe('providerLabel', () => {
+describe('ProviderLabel', () => {
     it('returns GitLab by default', () => {
         expect(mainModule.providerLabel()).toBe('GitLab');
     });
@@ -251,7 +251,7 @@ describe('providerLabel', () => {
 
 // ---------- getProviderForProject ----------
 
-describe('getProviderForProject', () => {
+describe('GetProviderForProject', () => {
     it('returns github for project configured with github provider', () => {
         expect(mainModule.getProviderForProject('proj-a')).toBe('github');
     });
@@ -267,7 +267,7 @@ describe('getProviderForProject', () => {
 
 // ---------- buildActionChoices ----------
 
-describe('buildActionChoices', () => {
+describe('BuildActionChoices', () => {
     it('includes schedule options when provider is gitlab', () => {
         const choices = mainModule.buildActionChoices();
 
@@ -320,7 +320,7 @@ describe('_resolveGlob', () => {
 
 // ---------- pollPipeline ----------
 
-describe('pollPipeline', () => {
+describe('PollPipeline', () => {
     const mockGetPipeline = vi.fn<(id: string | number) => Promise<PipelineInfo | null>>();
 
     beforeEach(() => {
@@ -362,7 +362,7 @@ describe('pollPipeline', () => {
 
 // ---------- pushHistory ----------
 
-describe('pushHistory', () => {
+describe('PushHistory', () => {
     it('calls updateState with history entry', () => {
         mainModule.pushHistory('test-op', 'detail-x', 'ok');
 
@@ -372,7 +372,7 @@ describe('pushHistory', () => {
 
 // ---------- handleCreateMR ----------
 
-describe('handleCreateMR', () => {
+describe('HandleCreateMR', () => {
     it('creates MR and shows success', async () => {
         vi.spyOn(prompt, 'prompt')
             .mockReturnValueOnce('feature-x')
@@ -403,7 +403,7 @@ describe('handleCreateMR', () => {
 
 // ---------- handleMergeMR ----------
 
-describe('handleMergeMR', () => {
+describe('HandleMergeMR', () => {
     it('merges MR and shows success', async () => {
         vi.spyOn(prompt, 'prompt').mockReturnValueOnce('42');
         mockProvider.acceptMergeRequest.mockResolvedValue({ web_url: 'https://gitlab/mr/42' });
@@ -426,7 +426,7 @@ describe('handleMergeMR', () => {
 
 // ---------- handleListSchedules ----------
 
-describe('handleListSchedules', () => {
+describe('HandleListSchedules', () => {
     it('lists schedules when found', async () => {
         mockProvider.getSchedules.mockResolvedValue([{ id: '5', description: 'Nightly', next_run_at: '2026-01-01' }]);
 
@@ -454,7 +454,7 @@ describe('handleListSchedules', () => {
 
 // ---------- handleRunSchedule ----------
 
-describe('handleRunSchedule', () => {
+describe('HandleRunSchedule', () => {
     it('runs schedule on success', async () => {
         vi.spyOn(prompt, 'prompt').mockReturnValueOnce('10');
         mockProvider.runSchedule.mockResolvedValue({ id: '10' });
@@ -477,7 +477,7 @@ describe('handleRunSchedule', () => {
 
 // ---------- handleListApprovedMRs ----------
 
-describe('handleListApprovedMRs', () => {
+describe('HandleListApprovedMRs', () => {
     it('lists approved MRs', async () => {
         vi.spyOn(prompt, 'prompt').mockReturnValueOnce('opened');
         mockProvider.searchMergeRequests.mockResolvedValue([{ iid: '1', title: 'Fix' }]);
@@ -501,7 +501,7 @@ describe('handleListApprovedMRs', () => {
 
 // ---------- handleExportVariables ----------
 
-describe('handleExportVariables', () => {
+describe('HandleExportVariables', () => {
     it('exports variables when confirmed', async () => {
         mockProvider.getCICDVariables.mockResolvedValue([{ key: 'MY_VAR', value: 'my_value' }]);
 
@@ -522,7 +522,7 @@ describe('handleExportVariables', () => {
 
 // ---------- handleHelp ----------
 
-describe('handleHelp', () => {
+describe('HandleHelp', () => {
     it('prints help box and prompts to continue', async () => {
         vi.spyOn(process.stdout, 'write').mockImplementationOnce(() => true);
         await mainModule.handleHelp();
@@ -534,7 +534,7 @@ describe('handleHelp', () => {
 
 // ---------- handleShowHistory ----------
 
-describe('handleShowHistory', () => {
+describe('HandleShowHistory', () => {
     it('shows history table when entries exist', async () => {
         vi.spyOn(state, 'load').mockReturnValueOnce({
             history: [{ op: 'pipeline', detail: 'main', status: 'ok', ts: '2026-01-01T00:00:00Z' }],
@@ -557,7 +557,7 @@ describe('handleShowHistory', () => {
 
 // ---------- nivelarBranchesWrapper ----------
 
-describe('nivelarBranchesWrapper', () => {
+describe('NivelarBranchesWrapper', () => {
     it('calls nivelarBranches with provider and pushHistory', async () => {
         const gitlab = createMockGitProvider();
         await mainModule.nivelarBranchesWrapper(gitlab);
@@ -571,7 +571,7 @@ describe('nivelarBranchesWrapper', () => {
 
 // ---------- downloadTestArtifacts ----------
 
-describe('downloadTestArtifacts', () => {
+describe('DownloadTestArtifacts', () => {
     it('returns null when no artifacts found', async () => {
         mockProvider.listPipelineArtifacts.mockResolvedValue([]);
         const result = await mainModule.downloadTestArtifacts(mockProvider, '1');
@@ -582,7 +582,7 @@ describe('downloadTestArtifacts', () => {
 
 // ---------- collectTestResults ----------
 
-describe('collectTestResults', () => {
+describe('CollectTestResults', () => {
     it('returns early when jira env vars are missing', async () => {
         const jiraResource = {} as JiraClient;
         const linkManager = {} as JiraLinkManager;
@@ -598,7 +598,7 @@ describe('collectTestResults', () => {
 
 // ---------- handleChangeProject ----------
 
-describe('handleChangeProject', () => {
+describe('HandleChangeProject', () => {
     it('switches to valid project', async () => {
         vi.spyOn(prompt, 'prompt').mockReturnValueOnce('1');
 
@@ -618,7 +618,7 @@ describe('handleChangeProject', () => {
 
 // ---------- displayProjects ----------
 
-describe('displayProjects', () => {
+describe('DisplayProjects', () => {
     it('prints project list with provider tags', () => {
         mainModule.displayProjects();
 
@@ -630,7 +630,7 @@ describe('displayProjects', () => {
 
 // ---------- printSessionSummary ----------
 
-describe('printSessionSummary', () => {
+describe('PrintSessionSummary', () => {
     it('calls shared printSessionSummary', () => {
         mainModule.printSessionSummary();
 
@@ -640,7 +640,7 @@ describe('printSessionSummary', () => {
 
 // ---------- displayRecentPipelines ----------
 
-describe('displayRecentPipelines', () => {
+describe('DisplayRecentPipelines', () => {
     it('prints pipelines when results exist', async () => {
         mockProvider.getRecentPipelines.mockResolvedValue([
             { id: '1', ref: 'main', status: 'success' },
@@ -669,7 +669,7 @@ describe('displayRecentPipelines', () => {
 
 // ---------- handleListApprovedMRs - error ----------
 
-describe('handleListApprovedMRs - error', () => {
+describe('HandleListApprovedMRs - error', () => {
     it('calls printError when searchMergeRequests throws', async () => {
         vi.spyOn(prompt, 'prompt').mockReturnValueOnce('opened');
         mockProvider.searchMergeRequests.mockRejectedValue(new Error('API fail'));
@@ -682,7 +682,7 @@ describe('handleListApprovedMRs - error', () => {
 
 // ---------- handleExportVariables - extended ----------
 
-describe('handleExportVariables - extended', () => {
+describe('HandleExportVariables - extended', () => {
     it('calls printError when getCICDVariables throws', async () => {
         mockProvider.getCICDVariables.mockRejectedValue(new Error('API fail'));
 
@@ -707,7 +707,7 @@ describe('handleExportVariables - extended', () => {
 
 // ---------- pushHistory - trim ----------
 
-describe('pushHistory - trim', () => {
+describe('PushHistory - trim', () => {
     it('trims state history to last 50 entries', () => {
         mainModule.pushHistory('op', 'd', 'ok');
         const callback = nonNull(vi.spyOn(state, 'update').mock.calls[0])[0];
@@ -720,7 +720,7 @@ describe('pushHistory - trim', () => {
 
 // ---------- handleTriggerPipeline ----------
 
-describe('handleTriggerPipeline', () => {
+describe('HandleTriggerPipeline', () => {
     it('warns when branch is not found', async () => {
         vi.spyOn(prompt, 'prompt').mockReturnValueOnce('bad-branch');
         mockProvider.getBranch.mockResolvedValue(null);
@@ -801,7 +801,7 @@ describe('handleTriggerPipeline', () => {
 
 // ---------- handleFlakinessDashboard ----------
 
-describe('handleFlakinessDashboard', () => {
+describe('HandleFlakinessDashboard', () => {
     it('warns when fewer than 2 runs exist for current project', () => {
         void mainModule.handleFlakinessDashboard();
 
@@ -811,7 +811,7 @@ describe('handleFlakinessDashboard', () => {
 
 // ---------- parseBatchArgs / tryBatchMode ----------
 
-describe('parseBatchArgs', () => {
+describe('ParseBatchArgs', () => {
     const origArgv = process.argv;
 
     afterEach(() => {
@@ -897,7 +897,7 @@ describe('_selectProjectAndCreateManager', () => {
 
 // ---------- buildContextLine ----------
 
-describe('buildContextLine', () => {
+describe('BuildContextLine', () => {
     it('returns provider TOOLS with session context', () => {
         const result = mainModule.buildContextLine();
 
@@ -907,7 +907,7 @@ describe('buildContextLine', () => {
 
 // ---------- withErrorHandling ----------
 
-describe('withErrorHandling', () => {
+describe('WithErrorHandling', () => {
     it('returns false when handler resolves', async () => {
         const handler: (m: GitProvider, pn: string, ns: string[]) => Promise<object> = vi
             .fn<(m: GitProvider, pn: string, ns: string[]) => Promise<object>>()

@@ -3,7 +3,7 @@ import { generateHtmlReport, generateCoverageHtml } from './report-generator.js'
 import type { FlatTest } from './result_parser.js';
 import type { CoverageEpic, TestRunTab } from './report-generator.js';
 
-describe('generateHtmlReport', () => {
+describe('GenerateHtmlReport', () => {
     it('generates a complete HTML document with summary cards', () => {
         const tests: FlatTest[] = [
             { title: 'Login works', state: 'passed', duration: 1200 },

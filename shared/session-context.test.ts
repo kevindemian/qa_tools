@@ -115,7 +115,7 @@ describe('SessionContext', () => {
         expect(ctx.sessionCounters[1]?.op).toBe('op2');
     });
 
-    describe('buildContextLine', () => {
+    describe('BuildContextLine', () => {
         it('returns project name when no operations', () => {
             expect(ctx.buildContextLine('PROJ')).toBe('PROJ');
         });
@@ -145,7 +145,7 @@ describe('SessionContext', () => {
     });
 });
 
-describe('resolveSessionContext', () => {
+describe('ResolveSessionContext', () => {
     beforeEach(() => {
         vi.clearAllMocks();
     });
@@ -190,7 +190,7 @@ describe('resolveSessionContext', () => {
     });
 });
 
-describe('resolveTestDataSource', () => {
+describe('ResolveTestDataSource', () => {
     beforeEach(() => {
         vi.clearAllMocks();
     });

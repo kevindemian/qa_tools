@@ -103,7 +103,7 @@ const sampleIssues: Array<{ labels: string[]; updated_at: string; created_at: st
 /*  Tests                                                              */
 /* ------------------------------------------------------------------ */
 
-describe('extractErrorMessages', () => {
+describe('ExtractErrorMessages', () => {
     it('extracts unique error messages from log text', () => {
         const log = `[INFO] Starting build
 Error: Module not found: 'foo'
@@ -130,7 +130,7 @@ FATAL: OOMKilled`;
     });
 });
 
-describe('aggregatePipelineHealth', () => {
+describe('AggregatePipelineHealth', () => {
     const now = new Date('2026-05-29T00:00:00Z');
     const health = aggregatePipelineHealth(sampleRuns, sampleJobs, sampleErrors, sampleIssues, now);
 
@@ -211,7 +211,7 @@ describe('aggregatePipelineHealth', () => {
     });
 });
 
-describe('renderPipelineHealthHtml', () => {
+describe('RenderPipelineHealthHtml', () => {
     const now = new Date('2026-05-29T00:00:00Z');
     const health = aggregatePipelineHealth(sampleRuns, sampleJobs, sampleErrors, sampleIssues, now);
     const html = renderPipelineHealthHtml(health, 'Test Report');

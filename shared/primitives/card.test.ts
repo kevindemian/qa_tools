@@ -6,7 +6,7 @@
 
 import { Card, MetricCard, CardGrid, MetricGrid } from './card.js';
 
-describe('card primitives', () => {
+describe('Card primitives', () => {
     describe('Card', () => {
         it('renders with children', () => {
             const html = Card({ children: 'hello' });

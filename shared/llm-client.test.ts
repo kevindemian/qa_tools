@@ -140,7 +140,7 @@ beforeEach(() => {
     vi.mocked(diskCacheGet).mockReturnValue(null);
 });
 
-describe('llmPrompt', () => {
+describe('LlmPrompt', () => {
     it('sends prompt to main tier (OpenRouter) and returns parsed response', async () => {
         Config.set('llmApiKey', 'sk-test');
         Config.set('llmModel', 'google/gemini-2.0-flash-exp');
@@ -383,7 +383,7 @@ describe('llmPrompt', () => {
         warnSpy.mockRestore();
     });
 
-    describe('rate limiter', () => {
+    describe('Rate limiter', () => {
         it('allows requests within limit', async () => {
             Config.set('LLM_RATE_LIMIT', '2');
             Config.set('llmApiKey', 'sk-test');
@@ -435,7 +435,7 @@ describe('llmPrompt', () => {
         });
     });
 
-    describe('circuit breaker', () => {
+    describe('Circuit breaker', () => {
         beforeEach(() => {
             Config.set('llmApiKey', 'sk-test');
             Config.set('llmModel', 'gpt-4');
@@ -500,7 +500,7 @@ describe('llmPrompt', () => {
         });
     });
 
-    describe('parseRetryAfter', () => {
+    describe('ParseRetryAfter', () => {
         it('parses seconds from Retry-After header', () => {
             const resp = mockResponseWithHeader(429, 'Retry-After', '30');
             const result = parseRetryAfter(resp, 2000);
@@ -532,7 +532,7 @@ describe('llmPrompt', () => {
         });
     });
 
-    describe('responseFormat parameter', () => {
+    describe('ResponseFormat parameter', () => {
         it('passes responseFormat=json to provider config', async () => {
             Config.set('llmApiKey', 'sk-rftest');
             Config.set('llmModel', 'gpt-4');
@@ -591,7 +591,7 @@ describe('llmPrompt', () => {
         });
     });
 
-    describe('non-JSON 200 response', () => {
+    describe('Non-JSON 200 response', () => {
         it('calls logger.warn when provider returns 200 with non-JSON body', async () => {
             const warnSpy = vi.spyOn(rootLogger, 'warn');
             Config.set('llmApiKey', 'sk-warn');
@@ -606,7 +606,7 @@ describe('llmPrompt', () => {
         });
     });
 
-    describe('tier fallback deduplication', () => {
+    describe('Tier fallback deduplication', () => {
         it('deduplicates fallback when same config, batch still resolved from profile', async () => {
             Config.set('llmApiKey', 'sk-dd');
             Config.set('llmModel', 'gpt-4');
@@ -746,7 +746,7 @@ describe('llmPrompt', () => {
         });
     });
 
-    describe('total token limit', () => {
+    describe('Total token limit', () => {
         beforeEach(() => {
             resetLlmClientMetrics();
             Config.set('llmApiKey', 'sk-test');
@@ -844,7 +844,7 @@ describe('llmPrompt', () => {
         }),
     };
 
-    describe('schema validation', () => {
+    describe('Schema validation', () => {
         beforeEach(() => {
             vi.useRealTimers();
             Config.set('llmApiKey', 'sk-schema');
@@ -1059,7 +1059,7 @@ describe('llmPrompt', () => {
         });
     });
 
-    describe('sendToProvider error payload', () => {
+    describe('SendToProvider error payload', () => {
         beforeEach(() => {
             Config.set('llmApiKey', 'sk-err');
             Config.set('llmModel', 'gpt-4');
@@ -1101,7 +1101,7 @@ describe('llmPrompt', () => {
         });
     });
 
-    describe('cache expiry', () => {
+    describe('Cache expiry', () => {
         it('re-requests when cached entry expires', async () => {
             vi.useFakeTimers();
 
@@ -1165,7 +1165,7 @@ describe('llmPrompt', () => {
         });
     });
 
-    describe('report tier', () => {
+    describe('Report tier', () => {
         it('uses report tier config and sends responseFormat=json', async () => {
             Config.set('llmApiKey', 'sk-report');
             Config.set('llmModel', 'gpt-4-report');
@@ -1181,7 +1181,7 @@ describe('llmPrompt', () => {
         });
     });
 
-    describe('fetch retries exhausted', () => {
+    describe('Fetch retries exhausted', () => {
         it('throws on network error after exhausting all retries', async () => {
             Config.set('llmApiKey', 'sk-netfail');
             Config.set('llmModel', 'gpt-4');
@@ -1227,7 +1227,7 @@ describe('llmPrompt', () => {
         });
     });
 
-    describe('input token limit', () => {
+    describe('Input token limit', () => {
         it('throws when estimated tokens exceed LLM_MAX_TOKENS_PER_OP', async () => {
             Config.set('llmApiKey', 'sk-tokenlim');
             Config.set('llmModel', 'gpt-4');
@@ -1240,7 +1240,7 @@ describe('llmPrompt', () => {
         });
     });
 
-    describe('disk cache', () => {
+    describe('Disk cache', () => {
         beforeEach(() => {
             Config.set('llmApiKey', 'sk-disk');
             Config.set('llmModel', 'gpt-4');

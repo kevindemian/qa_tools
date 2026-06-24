@@ -12,7 +12,7 @@ import {
 import type { CoverageGapItem, EpicCoverage } from './types.js';
 import { nonNull } from './test-utils.js';
 
-describe('getCoverageWeight', () => {
+describe('GetCoverageWeight', () => {
     it('returns correct weight for known priorities', () => {
         expect(getCoverageWeight('Blocker')).toBe(5);
         expect(getCoverageWeight('High')).toBe(3);
@@ -27,7 +27,7 @@ describe('getCoverageWeight', () => {
     });
 });
 
-describe('normalizeType', () => {
+describe('NormalizeType', () => {
     it('maps known types correctly', () => {
         expect(normalizeType('Story')).toBe('Story');
         expect(normalizeType('Bug')).toBe('Bug');
@@ -46,7 +46,7 @@ describe('normalizeType', () => {
     });
 });
 
-describe('extractEpicKey', () => {
+describe('ExtractEpicKey', () => {
     it('extracts from customfield_10014 object', () => {
         expect(extractEpicKey({ customfield_10014: { key: 'EPIC-1' } })).toBe('EPIC-1');
     });
@@ -64,7 +64,7 @@ describe('extractEpicKey', () => {
     });
 });
 
-describe('extractLinkedTestKeys', () => {
+describe('ExtractLinkedTestKeys', () => {
     it('extracts linked test keys from issuelinks', () => {
         const fields = {
             issuelinks: [
@@ -91,7 +91,7 @@ describe('extractLinkedTestKeys', () => {
     });
 });
 
-describe('buildCoverageItems', () => {
+describe('BuildCoverageItems', () => {
     it('builds items with correct hasTest flag', () => {
         const issues = [
             {
@@ -130,7 +130,7 @@ describe('buildCoverageItems', () => {
     });
 });
 
-describe('calculateTotals', () => {
+describe('CalculateTotals', () => {
     it('computes totals correctly', () => {
         const items = [
             { issueKey: 'P-1', hasTest: true, coverageWeight: 5 } as CoverageGapItem,
@@ -154,7 +154,7 @@ describe('calculateTotals', () => {
     });
 });
 
-describe('checkQualityGate', () => {
+describe('CheckQualityGate', () => {
     function makeEpic(rawPct: number): EpicCoverage {
         return { epicSummary: '', total: 0, covered: 0, weightedPct: 0, rawPct, gatePass: true, issues: [] };
     }
@@ -178,13 +178,13 @@ describe('checkQualityGate', () => {
     });
 });
 
-describe('getCoverageGateDefaults', () => {
+describe('GetCoverageGateDefaults', () => {
     it('returns default minCoveragePct of 50', () => {
         expect(getCoverageGateDefaults()).toEqual({ minCoveragePct: 50 });
     });
 });
 
-describe('loadEpicSummaries', () => {
+describe('LoadEpicSummaries', () => {
     it('extracts epic summaries', () => {
         const issues = [
             { key: 'EPIC-1', fields: { issuetype: { name: 'Epic' }, summary: 'Big Epic' } },

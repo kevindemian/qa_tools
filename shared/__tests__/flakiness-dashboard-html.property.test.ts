@@ -77,7 +77,7 @@ const flakyEntryArb: fc.Arbitrary<FlakinessEntry> = fc
         };
     });
 
-describe('generateFlakinessHtml — property-based', () => {
+describe('GenerateFlakinessHtml — property-based', () => {
     beforeEach(() => {
         vi.restoreAllMocks();
     });

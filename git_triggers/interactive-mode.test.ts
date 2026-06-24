@@ -215,12 +215,12 @@ const mockWarn = vi.mocked(warn);
 const mockPrintError = vi.mocked(printError);
 const mockLoad = vi.mocked(load);
 
-describe('interactive-mode test exports', () => {
+describe('Interactive-mode test exports', () => {
     beforeEach(() => {
         vi.clearAllMocks();
     });
 
-    describe('buildContextLine', () => {
+    describe('BuildContextLine', () => {
         it('returns a formatted context line', () => {
             const line = _testExports.buildContextLine();
 
@@ -228,7 +228,7 @@ describe('interactive-mode test exports', () => {
         });
     });
 
-    describe('withErrorHandling', () => {
+    describe('WithErrorHandling', () => {
         it('wraps handler and returns false on success', async () => {
             const handler = vi.fn().mockResolvedValue('ok');
             const wrapped = _testExports.withErrorHandling(handler);
@@ -248,7 +248,7 @@ describe('interactive-mode test exports', () => {
         });
     });
 
-    describe('handleHelp', () => {
+    describe('HandleHelp', () => {
         it('calls ui-helpers handleHelp', async () => {
             await _testExports.handleHelp();
             const uiHelpers = await import('./ui-helpers.js');
@@ -257,7 +257,7 @@ describe('interactive-mode test exports', () => {
         });
     });
 
-    describe('handleShowHistory', () => {
+    describe('HandleShowHistory', () => {
         it('calls ui-helpers handleShowHistory', async () => {
             await _testExports.handleShowHistory();
             const uiHelpers = await import('./ui-helpers.js');
@@ -510,7 +510,7 @@ describe('interactive-mode test exports', () => {
         });
     });
 
-    describe('handleBugReportFlow', () => {
+    describe('HandleBugReportFlow', () => {
         it('warns when Jira not configured', async () => {
             const configMod = await import('../shared/config.js');
             (configMod.default.get as ReturnType<typeof vi.fn>).mockReturnValue('');
@@ -529,7 +529,7 @@ describe('interactive-mode test exports', () => {
         });
     });
 
-    describe('handleAiPrDescription', () => {
+    describe('HandleAiPrDescription', () => {
         it('warns when source branch empty', async () => {
             const promptMod = await import('../shared/prompt.js');
             (promptMod.prompt as ReturnType<typeof vi.fn>).mockReturnValue('');
@@ -561,7 +561,7 @@ describe('interactive-mode test exports', () => {
         });
     });
 
-    describe('handleRunComparison', () => {
+    describe('HandleRunComparison', () => {
         it('warns when no project selected', async () => {
             mockSessionState.currentProjectName = '';
             const result = await _testExports.handleRunComparison();
@@ -637,7 +637,7 @@ describe('interactive-mode test exports', () => {
         });
     });
 
-    describe('handlePipelineHealthWrapper', () => {
+    describe('HandlePipelineHealthWrapper', () => {
         it('calls handlePipelineHealth and returns false', async () => {
             const result = await _testExports.handlePipelineHealthWrapper({} as never);
 

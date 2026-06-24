@@ -90,7 +90,7 @@ beforeEach(() => {
     resetLlmClientMetrics();
 });
 
-describe('tierToConfig', () => {
+describe('TierToConfig', () => {
     it('returns main config for main tier (explicit)', () => {
         Config.set('llmApiKey', 'sk-main');
         Config.set('llmModel', 'gpt-4');
@@ -165,7 +165,7 @@ describe('tierToConfig', () => {
     });
 });
 
-describe('getLlmClientMetrics / resetLlmClientMetrics', () => {
+describe('GetLlmClientMetrics / resetLlmClientMetrics', () => {
     it('returns initial zero metrics', () => {
         const metrics = getLlmClientMetrics();
 
@@ -186,7 +186,7 @@ describe('getLlmClientMetrics / resetLlmClientMetrics', () => {
     });
 });
 
-describe('getFetchRetries', () => {
+describe('GetFetchRetries', () => {
     it('returns default 3 when not configured', () => {
         const result = getFetchRetries();
 
@@ -251,7 +251,7 @@ describe('_trackUsage', () => {
     });
 });
 
-describe('extractContent', () => {
+describe('ExtractContent', () => {
     it('extracts text from OpenAI-style response', () => {
         const data = {
             choices: [{ message: { content: 'hello world' } }],
@@ -313,7 +313,7 @@ describe('extractContent', () => {
     });
 });
 
-describe('constants', () => {
+describe('Constants', () => {
     it('exports LLM_TEMP_DEFAULT', () => {
         expect(LLM_TEMP_DEFAULT).toBe(0.3);
     });
@@ -344,7 +344,7 @@ describe('LlmErrorPayloadSchema', () => {
     });
 });
 
-describe('estimateCostUSD', () => {
+describe('EstimateCostUSD', () => {
     it('calculates cost for known model', () => {
         const cost = estimateCostUSD('google/gemini-2.0-flash-exp', 1000, 500);
 

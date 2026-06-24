@@ -28,7 +28,7 @@ beforeEach(() => {
     vi.clearAllMocks();
 });
 
-describe('analyzeFailuresWithReport', () => {
+describe('AnalyzeFailuresWithReport', () => {
     it('returns empty content when no failed tests', async () => {
         const tests: FlatTest[] = [{ title: 'Pass', state: 'passed', duration: 100 }];
 
@@ -124,7 +124,7 @@ describe('analyzeFailuresWithReport', () => {
     });
 });
 
-describe('classifyFailure', () => {
+describe('ClassifyFailure', () => {
     it('calls llmPrompt (fast tier) with test title and Zod schema', async () => {
         const promptContent = 'Classify: ';
         vi.spyOn(fs, 'readFileSync').mockReturnValue(promptContent);
@@ -173,7 +173,7 @@ describe('classifyFailure', () => {
     });
 });
 
-describe('classifyRegex — edge case mutations', () => {
+describe('ClassifyRegex — edge case mutations', () => {
     const regex = /^(ASSERTION|TIMEOUT|ENVIRONMENT|FLAKY|APPLICATION|UNKNOWN):\s/;
 
     it('matches valid classification with explanation', () => {

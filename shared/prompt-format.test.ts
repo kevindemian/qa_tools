@@ -32,7 +32,7 @@ import { defaultOutput as output } from './output.js';
 import { getBreadcrumbPath } from './breadcrumbs.js';
 import ConfigAccessor from './config-accessor.js';
 
-describe('badge', () => {
+describe('Badge', () => {
     it('formats ok badge', () => {
         const result = badge(5, 'passed', 'ok');
 
@@ -48,7 +48,7 @@ describe('badge', () => {
     });
 });
 
-describe('icon', () => {
+describe('Icon', () => {
     it('returns unicode checkmark', () => {
         expect(icon('ok')).toBe('\u2713');
     });
@@ -58,7 +58,7 @@ describe('icon', () => {
     });
 });
 
-describe('success/error/warn/info', () => {
+describe('Success/error/warn/info', () => {
     beforeEach(() => {
         vi.clearAllMocks();
     });
@@ -88,7 +88,7 @@ describe('success/error/warn/info', () => {
     });
 });
 
-describe('title', () => {
+describe('Title', () => {
     it('prints title with breadcrumbs', () => {
         vi.mocked(getBreadcrumbPath).mockReturnValue('main');
         title('My Title');
@@ -97,7 +97,7 @@ describe('title', () => {
     });
 });
 
-describe('divider', () => {
+describe('Divider', () => {
     it('prints divider', () => {
         divider();
 
@@ -105,7 +105,7 @@ describe('divider', () => {
     });
 });
 
-describe('tableView', () => {
+describe('TableView', () => {
     beforeEach(() => {
         vi.clearAllMocks();
     });
@@ -135,7 +135,7 @@ describe('tableView', () => {
     });
 });
 
-describe('getConfig / __setConfig', () => {
+describe('GetConfig / __setConfig', () => {
     it('returns default config when none set', () => {
         const c = getConfig();
 

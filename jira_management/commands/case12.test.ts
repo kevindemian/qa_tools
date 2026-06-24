@@ -43,7 +43,7 @@ beforeEach(() => {
     vi.clearAllMocks();
 });
 
-describe('case12 — diagnostic connection', () => {
+describe('Case12 — diagnostic connection', () => {
     it('exports a handler function', () => {
         expect(case12).toBeDefined();
         expect(typeof case12.handler).toBe('function');

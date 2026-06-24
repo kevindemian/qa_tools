@@ -67,7 +67,7 @@ describe('State', () => {
         vi.restoreAllMocks();
     });
 
-    describe('load', () => {
+    describe('Load', () => {
         it('returns empty object when no state file', () => {
             mockFs({});
             const result = state.load(makeConfig());
@@ -87,7 +87,7 @@ describe('State', () => {
         });
     });
 
-    describe('save', () => {
+    describe('Save', () => {
         it('writes state to backup and main paths', () => {
             const mocks = mockFs({});
             state.save({ lastProject: 'TEST' }, makeConfig());
@@ -96,7 +96,7 @@ describe('State', () => {
         });
     });
 
-    describe('update', () => {
+    describe('Update', () => {
         it('applies mutation and persists', () => {
             mockFs({ [STATE_PATH]: JSON.stringify({ lastProject: 'OLD' }) });
             const result = state.update((s) => {
@@ -116,7 +116,7 @@ describe('State', () => {
         });
     });
 
-    describe('backup recovery', () => {
+    describe('Backup recovery', () => {
         it('recovers from backup when main file is corrupted', () => {
             const bakPath = STATE_PATH + '.bak';
             mockFs({
@@ -129,7 +129,7 @@ describe('State', () => {
         });
     });
 
-    describe('state migration from old path', () => {
+    describe('State migration from old path', () => {
         const OLD_STATE_PATH = path.join(os.homedir(), '.qa_tools_state.json');
 
         it('copies old state to new path when old exists and new does not', () => {
@@ -156,7 +156,7 @@ describe('State', () => {
         });
     });
 
-    describe('corrupted state without backup', () => {
+    describe('Corrupted state without backup', () => {
         it('returns empty object when main file corrupted and no backup exists', () => {
             const config = makeConfig();
             mockFs({
@@ -178,7 +178,7 @@ describe('State', () => {
         });
     });
 
-    describe('load error branches', () => {
+    describe('Load error branches', () => {
         it('warns when backup recovery fails (backup also corrupted)', () => {
             const config = makeConfig();
             const bakPath = STATE_PATH + '.bak';
@@ -207,7 +207,7 @@ describe('State', () => {
         });
     });
 
-    describe('save error handling', () => {
+    describe('Save error handling', () => {
         it('warns and logs error when save write fails', () => {
             const config = makeConfig();
             mockFs({});
@@ -220,7 +220,7 @@ describe('State', () => {
         });
     });
 
-    describe('ensureStateDir', () => {
+    describe('EnsureStateDir', () => {
         it('returns false when mkdirSync throws (tested via load)', () => {
             const config = makeConfig();
             mockFs({});
@@ -233,7 +233,7 @@ describe('State', () => {
         });
     });
 
-    describe('migrateOldState catch', () => {
+    describe('MigrateOldState catch', () => {
         it('logs warn when readFileSync throws during migration', () => {
             const OLD_STATE_PATH = path.join(os.homedir(), '.qa_tools_state.json');
             mockFs({
@@ -248,7 +248,7 @@ describe('State', () => {
         });
     });
 
-    describe('getStatePath', () => {
+    describe('GetStatePath', () => {
         it('returns path ending in state.json', () => {
             const result = state.getStatePath(makeConfig());
 
@@ -256,7 +256,7 @@ describe('State', () => {
         });
     });
 
-    describe('updateTyped', () => {
+    describe('UpdateTyped', () => {
         it('sets _llmConfigured via typed callback', () => {
             const s = state.updateTyped((st) => {
                 st._llmConfigured = true;

@@ -58,7 +58,7 @@ const CTRF_SAMPLE = {
     },
 };
 
-describe('fetchLatestTestRun', () => {
+describe('FetchLatestTestRun', () => {
     beforeEach(() => {
         vi.clearAllMocks();
     });

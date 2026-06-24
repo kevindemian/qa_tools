@@ -43,7 +43,7 @@ beforeEach(() => {
     vi.clearAllMocks();
 });
 
-describe('case19 — History & Coverage', () => {
+describe('Case19 — History & Coverage', () => {
     it('displays history when option a is selected', async () => {
         const prompt = vi.mocked(promptModule);
         const metrics = vi.mocked(metricsModule);

@@ -102,7 +102,7 @@ afterEach(() => {
     Object.defineProperty(process.stdin, 'isTTY', { value: undefined, configurable: true });
 });
 
-describe('smartPrompt', () => {
+describe('SmartPrompt', () => {
     it('returns value on first try', async () => {
         mockReadlineQuestion.mockReturnValue('my value');
         const result = await smartPrompt('Label');
@@ -158,7 +158,7 @@ describe('smartPrompt', () => {
     });
 });
 
-describe('ask', () => {
+describe('Ask', () => {
     it('returns prompt result when no TTY', async () => {
         mockReadlineQuestion.mockReturnValue('user input');
         const result = await ask('Label');
@@ -194,7 +194,7 @@ describe('ask', () => {
     });
 });
 
-describe('ask with TTY and inquirer mod', () => {
+describe('Ask with TTY and inquirer mod', () => {
     beforeEach(() => {
         Object.defineProperty(process.stdout, 'isTTY', { value: true, configurable: true });
     });
@@ -255,7 +255,7 @@ describe('ask with TTY and inquirer mod', () => {
     });
 });
 
-describe('askConfirm', () => {
+describe('AskConfirm', () => {
     it('returns confirm result when no TTY', async () => {
         mockReadlineQuestion.mockReturnValue('s');
         const result = await askConfirm('Confirm?');
@@ -306,7 +306,7 @@ describe('askConfirm', () => {
     });
 });
 
-describe('showSelect', () => {
+describe('ShowSelect', () => {
     const choices = [
         { name: 'Option 1', value: '1' },
         { name: 'Option 2', value: '2' },
@@ -394,7 +394,7 @@ describe('showSelect', () => {
     });
 });
 
-describe('showSelect with menuMode', () => {
+describe('ShowSelect with menuMode', () => {
     it('forces fallback when menuMode is true', async () => {
         mockReadlineQuestion.mockReturnValue('1');
         const result = await showSelect('Choose', [{ name: 'Item A', value: 'a' }], { menuMode: true });
@@ -413,7 +413,7 @@ describe('showSelect with menuMode', () => {
     });
 });
 
-describe('showSelect TTY path', () => {
+describe('ShowSelect TTY path', () => {
     beforeEach(() => {
         Object.defineProperty(process.stdout, 'isTTY', { value: true, configurable: true });
     });
@@ -484,7 +484,7 @@ describe('showSelect TTY path', () => {
     });
 });
 
-describe('showSelect fallback', () => {
+describe('ShowSelect fallback', () => {
     it('returns slash command directly when not in NAV_CMDS', async () => {
         mockReadlineQuestion.mockReturnValue('/custom-cmd');
         const result = await showSelect('Choose', [{ name: 'Item A', value: 'a' }]);

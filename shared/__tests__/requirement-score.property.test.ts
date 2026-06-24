@@ -81,7 +81,7 @@ const AiGenerationRecordArb = fc
 
 const ValidGrades = ['A', 'B', 'C', 'D', 'F'] as const;
 
-describe('calculateRequirementScores — property-based', () => {
+describe('CalculateRequirementScores — property-based', () => {
     it('entries.length equals totalRequirements', () => {
         fc.assert(
             fc.property(fc.array(AiGenerationRecordArb, { minLength: 0, maxLength: 10 }), (records) => {
@@ -203,7 +203,7 @@ describe('calculateRequirementScores — property-based', () => {
     });
 });
 
-describe('generateRequirementScoreHtml — property-based', () => {
+describe('GenerateRequirementScoreHtml — property-based', () => {
     it('always produces valid HTML with DOCTYPE', () => {
         fc.assert(
             fc.property(fc.array(AiGenerationRecordArb, { minLength: 0, maxLength: 8 }), (records) => {

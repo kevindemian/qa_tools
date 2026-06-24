@@ -1,6 +1,6 @@
 import { LlmError, LlmRateLimitError, LlmProviderError, LlmTimeoutError, LlmAuthError } from './errors.js';
 
-describe('typed LLM errors', () => {
+describe('Typed LLM errors', () => {
     it('llmError has the correct name', () => {
         const err = new LlmError('generic');
 

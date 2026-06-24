@@ -100,12 +100,12 @@ import { createMockGitProvider } from '../shared/test-utils/factories/index.js';
 import { update as stateUpdate } from '../shared/state.js';
 const pushHistorySpy = vi.spyOn(sessionState.sessionContext, 'pushHistory');
 
-describe('session-state', () => {
+describe('Session-state', () => {
     beforeEach(() => {
         vi.clearAllMocks();
     });
 
-    describe('module-level exports', () => {
+    describe('Module-level exports', () => {
         it('has default values', () => {
             expect(sessionState.currentProjectName).toBe('');
             expect(sessionState.currentProvider).toBe('gitlab');
@@ -115,7 +115,7 @@ describe('session-state', () => {
         });
     });
 
-    describe('setters', () => {
+    describe('Setters', () => {
         it('setCurrentProvider updates value', () => {
             sessionState.setCurrentProvider('github');
 
@@ -148,7 +148,7 @@ describe('session-state', () => {
         });
     });
 
-    describe('pushHistory', () => {
+    describe('PushHistory', () => {
         it('calls sessionContext.pushHistory and updateState', () => {
             sessionState.pushHistory('test-op', 'detail', 'ok');
 
@@ -157,7 +157,7 @@ describe('session-state', () => {
         });
     });
 
-    describe('providerLabel', () => {
+    describe('ProviderLabel', () => {
         it('delegates to ui-helpers', () => {
             const result = sessionState.providerLabel();
 
@@ -165,7 +165,7 @@ describe('session-state', () => {
         });
     });
 
-    describe('displayProjects', () => {
+    describe('DisplayProjects', () => {
         it('displays projects from real projects.json', () => {
             sessionState.displayProjects();
 
@@ -174,7 +174,7 @@ describe('session-state', () => {
         });
     });
 
-    describe('createManagerForProject', () => {
+    describe('CreateManagerForProject', () => {
         it('creates GitLabManager when provider is gitlab', () => {
             const mgr = sessionState.createManagerForProject('qa_ibabs', '47849962');
 
@@ -183,7 +183,7 @@ describe('session-state', () => {
         });
     });
 
-    describe('displayRecentPipelines flakiness', () => {
+    describe('DisplayRecentPipelines flakiness', () => {
         it('warns about high flakiness tests', async () => {
             vi.mocked(_loadMetrics).mockReturnValueOnce({
                 runs: [

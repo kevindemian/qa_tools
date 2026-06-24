@@ -52,7 +52,7 @@ afterEach(() => {
     process.argv = [...OLD_ARGV];
 });
 
-describe('isFirstRun', () => {
+describe('IsFirstRun', () => {
     it('returns false when CI=true', async () => {
         process.env['CI'] = 'true';
         const { isFirstRun } = await loadModule();
@@ -128,7 +128,7 @@ describe('_markFirstRunDone', () => {
     });
 });
 
-describe('maybeRunFirstRunWizard', () => {
+describe('MaybeRunFirstRunWizard', () => {
     it('returns immediately when not first run', async () => {
         mockLoadTypedState.mockReturnValue({ _firstRunDone: true });
         const { maybeRunFirstRunWizard: f } = await loadModule();

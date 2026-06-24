@@ -10,7 +10,7 @@ afterAll(() => {
     fs.rmSync(tmpDir, { recursive: true, force: true });
 });
 
-describe('detectGitDir', () => {
+describe('DetectGitDir', () => {
     it('returns null when no .git in path', () => {
         const result = detectGitDir('/nonexistent');
 
@@ -43,7 +43,7 @@ describe('detectGitDir', () => {
     });
 });
 
-describe('getHeadSha', () => {
+describe('GetHeadSha', () => {
     it('returns GITHUB_SHA env var', () => {
         const env = { GITHUB_SHA: 'gh-abc123' } as NodeJS.ProcessEnv;
 
@@ -167,7 +167,7 @@ describe('getHeadSha', () => {
     });
 });
 
-describe('getCurrentBranch', () => {
+describe('GetCurrentBranch', () => {
     it('returns GITHUB_REF_NAME env var', () => {
         const env = { GITHUB_REF_NAME: 'feature/foo' } as NodeJS.ProcessEnv;
 
