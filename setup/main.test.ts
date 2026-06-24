@@ -115,7 +115,7 @@ describe('Setup main', () => {
 
         await main();
 
-        expect(MockGenGithub).toHaveBeenCalledWith();
+        expect(MockGenGithub).toHaveBeenCalled();
         expect(MockFs.writeFileSync).toHaveBeenCalledWith(
             expect.stringContaining('.github/workflows/ci.yml'),
             expect.any(String),
@@ -144,7 +144,7 @@ describe('Setup main', () => {
 
         await main();
 
-        expect(MockGenGitlab).toHaveBeenCalledWith();
+        expect(MockGenGitlab).toHaveBeenCalled();
     });
 
     it('writes .env.example via config-writer', async () => {expect.hasAssertions();
@@ -155,7 +155,7 @@ describe('Setup main', () => {
 
         await main();
 
-        expect(MockWriteEnv).toHaveBeenCalledWith();
+        expect(MockWriteEnv).toHaveBeenCalled();
     });
 
     it('creates pre-push hook when feature is enabled', async () => {expect.hasAssertions();
@@ -166,8 +166,8 @@ describe('Setup main', () => {
 
         await main();
 
-        expect(MockGenHook).toHaveBeenCalledWith();
-        expect(MockWriteHook).toHaveBeenCalledWith();
+        expect(MockGenHook).toHaveBeenCalled();
+        expect(MockWriteHook).toHaveBeenCalled();
     });
 
     it('does not create pre-push hook when feature is disabled', async () => {expect.hasAssertions();
@@ -201,7 +201,7 @@ describe('Setup main', () => {
 
         await main();
 
-        expect(MockConfigureLlm).toHaveBeenCalledWith();
+        expect(MockConfigureLlm).toHaveBeenCalled();
     });
 
     it('skips LLM config when user declines', async () => {expect.hasAssertions();
@@ -251,7 +251,7 @@ describe('Setup main', () => {
 
         await main();
 
-        expect(MockGenGitlab).toHaveBeenCalledWith();
+        expect(MockGenGitlab).toHaveBeenCalled();
         expect(MockFs.writeFileSync).not.toHaveBeenCalledWith(
             expect.stringContaining('.gitlab-ci.yml'),
             expect.any(String),

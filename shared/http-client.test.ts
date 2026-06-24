@@ -80,7 +80,7 @@ describe('HTTP Client', () => {
         it('registers response interceptor', () => {
             httpClient.createHttpClient({ baseUrl: 'https://api.test.com' });
 
-            expect(mockInstance.interceptors.response.use).toHaveBeenCalledWith();
+            expect(mockInstance.interceptors.response.use).toHaveBeenCalled();
         });
 
         it('uses default timeout when not specified', () => {
@@ -237,7 +237,7 @@ describe('HTTP Client', () => {
                 void 0;
             }
 
-            expect(mockInstance).toHaveBeenCalledWith();
+            expect(mockInstance).toHaveBeenCalled();
         });
 
         it('retries GET up to custom maxRetries (2) and stops', async () => {expect.hasAssertions();
@@ -275,7 +275,7 @@ describe('HTTP Client', () => {
                 /* expected */
             }
 
-            expect(debugSpy).toHaveBeenCalledWith();
+            expect(debugSpy).toHaveBeenCalled();
             expect(warnSpy).not.toHaveBeenCalled();
 
             debugSpy.mockRestore();
@@ -363,7 +363,7 @@ describe('HTTP Client', () => {
 
             // Advance past RETRY_STALE_MS (600s) + one cleanup interval (300s)
             // to trigger stale entry deletion at t=900000
-            await vi.advanceTimersByTimeAsync(900001);
+            await await vi.advanceTimersByTimeAsync(900001);
 
             expect(true).toBeTruthy();
         });

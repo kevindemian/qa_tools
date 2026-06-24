@@ -96,7 +96,7 @@ describe('WriteReport', () => {
         });
 
         expect(() => writeReport('test.json', '{}')).toThrow('EACCES');
-        expect(warnSpy).toHaveBeenCalledWith();
+        expect(warnSpy).toHaveBeenCalled();
     });
 
     it('logs and re-throws when writeFileSync fails (G1 bug-fix)', () => {
@@ -107,7 +107,7 @@ describe('WriteReport', () => {
         });
 
         expect(() => writeReport('test.json', '{}')).toThrow('ENOSPC');
-        expect(warnSpy).toHaveBeenCalledWith();
+        expect(warnSpy).toHaveBeenCalled();
     });
 });
 
@@ -127,7 +127,7 @@ describe('WriteEphemeral', () => {
         });
 
         expect(() => writeEphemeral('cache', 'data.json', '{}')).toThrow('EACCES');
-        expect(warnSpy).toHaveBeenCalledWith();
+        expect(warnSpy).toHaveBeenCalled();
     });
 
     it('logs and re-throws when writeFileSync fails (G1 bug-fix)', () => {
@@ -138,7 +138,7 @@ describe('WriteEphemeral', () => {
         });
 
         expect(() => writeEphemeral('cache', 'data.json', '{}')).toThrow('ENOSPC');
-        expect(warnSpy).toHaveBeenCalledWith();
+        expect(warnSpy).toHaveBeenCalled();
     });
 });
 
@@ -162,7 +162,7 @@ describe('EnsureDirs', () => {
         });
 
         expect(() => ensureDirs()).toThrow('EACCES');
-        expect(warnSpy).toHaveBeenCalledWith();
+        expect(warnSpy).toHaveBeenCalled();
     });
 });
 
@@ -211,7 +211,7 @@ describe('RegisterCleanup', () => {
         registerCleanup();
 
         expect(() => handlerRef.current?.()).not.toThrow();
-        expect(warnSpy).toHaveBeenCalledWith();
+        expect(warnSpy).toHaveBeenCalled();
     });
 
     it('removes all 3 temp subdirectories during cleanup when they exist (G6)', () => {

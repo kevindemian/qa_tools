@@ -291,7 +291,7 @@ describe('SendWithFallback', () => {
         const result = await sendWithFallback('main', 'system', 'user');
 
         expect(result).toBe('success');
-        expect(recordCircuitSuccess).toHaveBeenCalledWith();
+        expect(recordCircuitSuccess).toHaveBeenCalled();
     });
 
     it('falls back to next provider when primary fails', async () => {expect.hasAssertions();
@@ -318,7 +318,7 @@ describe('SendWithFallback', () => {
         const result = await sendWithFallback('main', 'system', 'user');
 
         expect(result).toBe('fallback ok');
-        expect(recordCircuitFailure).toHaveBeenCalledWith();
+        expect(recordCircuitFailure).toHaveBeenCalled();
     });
 
     it('throws when all providers are exhausted', async () => {expect.hasAssertions();

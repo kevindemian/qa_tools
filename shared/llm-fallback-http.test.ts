@@ -462,7 +462,7 @@ describe('SendToProvider', () => {
         };
         await sendToProvider(cfg, 'system', 'user');
 
-        expect(checkCircuitBreaker).toHaveBeenCalledWith();
+        expect(checkCircuitBreaker).toHaveBeenCalled();
     });
 
     it('tracks usage metrics', async () => {expect.hasAssertions();

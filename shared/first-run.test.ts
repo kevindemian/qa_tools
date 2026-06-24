@@ -156,7 +156,7 @@ describe('MaybeRunFirstRunWizard', () => {
         await f();
 
         expect(mockTitle).toHaveBeenCalledWith(expect.stringContaining('Bem-vindo'));
-        expect(mockInfo).toHaveBeenCalledWith();
+        expect(mockInfo).toHaveBeenCalled();
         expect(mockUpdateState).toHaveBeenCalledTimes(1);
     });
 

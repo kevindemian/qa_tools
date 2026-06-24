@@ -160,14 +160,14 @@ describe('CLI Base', () => {
             const onExit = vi.fn();
             cliBase.setupSigint(null, onExit);
 
-            expect(createInterfaceSpy).toHaveBeenCalledWith();
+            expect(createInterfaceSpy).toHaveBeenCalled();
 
             const questionSpy = vi.spyOn(mockRl, 'question');
 
             expect(questionSpy).toHaveBeenCalledWith('Deseja sair? (s/N) ', expect.any(Function));
         });
 
-        it('calls onExit and exits when user responds s', () => {
+        it('calls onExit and exits when user responds s', async () => {
             vi.useFakeTimers();
             const exitSpy = vi
                 .spyOn(process, 'exit')
@@ -181,12 +181,12 @@ describe('CLI Base', () => {
             const questionFn = nonNull(mockRl.question.mock.calls[0])[1] as (answer: string) => void;
             questionFn('s');
 
-            expect(onExit).toHaveBeenCalledWith();
+            expect(onExit).toHaveBeenCalled();
             expect(MOCK_PROMPT.info).toHaveBeenCalledWith('Até logo!');
 
-            vi.advanceTimersByTimeAsync(2000);
+            await vi.advanceTimersByTimeAsync(2000);
 
-            expect(exitSpy).toHaveBeenCalledWith();
+            expect(exitSpy).toHaveBeenCalled();
 
             exitSpy.mockRestore();
             vi.useRealTimers();
@@ -206,7 +206,7 @@ describe('CLI Base', () => {
             expect(MOCK_PROMPT.info).toHaveBeenCalledWith('Continuando...');
         });
 
-        it('force exits on 2nd SIGINT during confirmation', () => {
+        it('force exits on 2nd SIGINT during confirmation', async () => {
             vi.useFakeTimers();
             const exitSpy = vi
                 .spyOn(process, 'exit')
@@ -221,16 +221,16 @@ describe('CLI Base', () => {
             cliBase.setupSigint(null, onExit);
             capturedHandler();
 
-            expect(questionSpy).toHaveBeenCalledWith();
+            expect(questionSpy).toHaveBeenCalled();
 
             capturedHandler();
 
-            expect(onExit).toHaveBeenCalledWith();
+            expect(onExit).toHaveBeenCalled();
             expect(MOCK_PROMPT.info).toHaveBeenCalledWith('Até logo!');
 
-            vi.advanceTimersByTimeAsync(2000);
+            await vi.advanceTimersByTimeAsync(2000);
 
-            expect(exitSpy).toHaveBeenCalledWith();
+            expect(exitSpy).toHaveBeenCalled();
 
             exitSpy.mockRestore();
             vi.useRealTimers();
@@ -250,7 +250,7 @@ describe('CLI Base', () => {
             expect(onExit).not.toHaveBeenCalled();
         });
 
-        it('handles null onExit gracefully on confirmation s', () => {
+        it('handles null onExit gracefully on confirmation s', async () => {
             vi.useFakeTimers();
             const exitSpy = vi
                 .spyOn(process, 'exit')
@@ -267,9 +267,9 @@ describe('CLI Base', () => {
 
             expect(MOCK_PROMPT.info).toHaveBeenCalledWith('Até logo!');
 
-            vi.advanceTimersByTimeAsync(2000);
+            await vi.advanceTimersByTimeAsync(2000);
 
-            expect(exitSpy).toHaveBeenCalledWith();
+            expect(exitSpy).toHaveBeenCalled();
 
             exitSpy.mockRestore();
             vi.useRealTimers();

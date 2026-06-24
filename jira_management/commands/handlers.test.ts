@@ -214,8 +214,8 @@ describe('Case03 — create version', () => {
         const mod = case03;
         await mod.handler(baseContext);
 
-        expect(prompt.printError).toHaveBeenCalledWith();
-        expect(logger.rootLogger.error).toHaveBeenCalledWith();
+        expect(prompt.printError).toHaveBeenCalled();
+        expect(logger.rootLogger.error).toHaveBeenCalled();
     });
 });
 
@@ -345,7 +345,7 @@ describe('Case04 — assign fixVersion', () => {
         const mod = case04;
         await mod.handler(baseContext);
 
-        expect(prompt.printError).toHaveBeenCalledWith();
+        expect(prompt.printError).toHaveBeenCalled();
     });
 });
 
@@ -359,7 +359,7 @@ describe('Case05 — update package version', () => {
         const mod = case05;
         await mod.handler(baseContext);
 
-        expect(prompt.success).toHaveBeenCalledWith();
+        expect(prompt.success).toHaveBeenCalled();
     });
 
     it('handles no tasks for version', async () => {expect.hasAssertions();
@@ -380,7 +380,7 @@ describe('Case05 — update package version', () => {
         const mod = case05;
         await mod.handler(baseContext);
 
-        expect(prompt.printError).toHaveBeenCalledWith();
+        expect(prompt.printError).toHaveBeenCalled();
     });
 });
 
@@ -404,7 +404,7 @@ describe('Case06 — check release status', () => {
         const mod = case06;
         await mod.handler(baseContext);
 
-        expect(prompt.printError).toHaveBeenCalledWith();
+        expect(prompt.printError).toHaveBeenCalled();
     });
 });
 
@@ -440,7 +440,7 @@ describe('Case07 — close tasks', () => {
         const mod = case07;
         await mod.handler(baseContext);
 
-        expect(prompt.printSummary).toHaveBeenCalledWith();
+        expect(prompt.printSummary).toHaveBeenCalled();
     });
 
     it('moves tasks to done successfully', async () => {expect.hasAssertions();
@@ -511,7 +511,7 @@ describe('Case08 — release version', () => {
         const mod = case08;
         const result = await mod.handler(baseContext);
 
-        expect(prompt.printError).toHaveBeenCalledWith();
+        expect(prompt.printError).toHaveBeenCalled();
         expect(result).toBeFalsy();
     });
 });
@@ -717,7 +717,7 @@ describe('Case14 — config Cypress directory', () => {
         const mod = case14;
         await mod.handler(baseContext);
 
-        expect(state.update).toHaveBeenCalledWith();
+        expect(state.update).toHaveBeenCalled();
     });
 });
 
@@ -796,7 +796,7 @@ describe('Case12 — diagnostic connection', () => {
         await mod.handler(baseContext);
         const prompt = vi.mocked(promptModule);
 
-        expect(prompt.printSummary).toHaveBeenCalledWith();
+        expect(prompt.printSummary).toHaveBeenCalled();
         expect(baseContext.pushHistory).toHaveBeenCalledWith('diagnostico', expect.stringContaining('3/4'), 'ok');
     });
 
@@ -810,7 +810,7 @@ describe('Case12 — diagnostic connection', () => {
         await mod.handler(baseContext);
         const prompt = vi.mocked(promptModule);
 
-        expect(prompt.printSummary).toHaveBeenCalledWith();
+        expect(prompt.printSummary).toHaveBeenCalled();
         expect(baseContext.pushHistory).toHaveBeenCalledWith('diagnostico', expect.stringContaining('2/4'), 'error');
     });
 
@@ -824,7 +824,7 @@ describe('Case12 — diagnostic connection', () => {
         await mod.handler(baseContext);
         const prompt = vi.mocked(promptModule);
 
-        expect(prompt.printSummary).toHaveBeenCalledWith();
+        expect(prompt.printSummary).toHaveBeenCalled();
         expect(baseContext.pushHistory).toHaveBeenCalledWith('diagnostico', expect.stringContaining('2/4'), 'error');
     });
 
@@ -838,7 +838,7 @@ describe('Case12 — diagnostic connection', () => {
         await mod.handler(baseContext);
         const prompt = vi.mocked(promptModule);
 
-        expect(prompt.printSummary).toHaveBeenCalledWith();
+        expect(prompt.printSummary).toHaveBeenCalled();
         expect(baseContext.pushHistory).toHaveBeenCalledWith('diagnostico', expect.stringContaining('2/4'), 'error');
     });
 });

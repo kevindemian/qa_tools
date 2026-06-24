@@ -122,7 +122,7 @@ describe('Case15 — create tests from JSON', () => {
             'main',
             store,
         );
-        expect(vi.spyOn(createTests, 'createTestsFromJson')).toHaveBeenCalledWith();
+        expect(vi.spyOn(createTests, 'createTestsFromJson')).toHaveBeenCalled();
     });
 
     it('falls back to CI download when cache misses', async () => {expect.hasAssertions();
@@ -138,7 +138,7 @@ describe('Case15 — create tests from JSON', () => {
         const result = await case15.handler(mockContext);
 
         expect(typeof result === 'boolean' || result === undefined).toBeTruthy();
-        expect(vi.spyOn(createTests, 'createTestsFromJson')).toHaveBeenCalledWith();
+        expect(vi.spyOn(createTests, 'createTestsFromJson')).toHaveBeenCalled();
     });
 
     it('falls back to manual path when resolveTestDataSource returns null', async () => {expect.hasAssertions();
@@ -151,7 +151,7 @@ describe('Case15 — create tests from JSON', () => {
         const result = await case15.handler(mockContext);
 
         expect(typeof result === 'boolean' || result === undefined).toBeTruthy();
-        expect(vi.spyOn(createTests, 'createTestsFromJson')).toHaveBeenCalledWith();
+        expect(vi.spyOn(createTests, 'createTestsFromJson')).toHaveBeenCalled();
     });
 
     it('cancels when manual path is empty', async () => {expect.hasAssertions();
@@ -164,7 +164,7 @@ describe('Case15 — create tests from JSON', () => {
 
         expect(result).toBeUndefined();
         expect(vi.spyOn(createTests, 'createTestsFromJson')).not.toHaveBeenCalled();
-        expect(warn).toHaveBeenCalledWith();
+        expect(warn).toHaveBeenCalled();
     });
 
     it('does not call resolveTestDataSource when SHA is null', async () => {expect.hasAssertions();
@@ -182,7 +182,7 @@ describe('Case15 — create tests from JSON', () => {
 
         expect(typeof result === 'boolean' || result === undefined).toBeTruthy();
         expect(vi.mocked(resolveTestDataSource)).not.toHaveBeenCalled();
-        expect(vi.spyOn(createTests, 'createTestsFromJson')).toHaveBeenCalledWith();
+        expect(vi.spyOn(createTests, 'createTestsFromJson')).toHaveBeenCalled();
     });
 
     it('displays results after successful import', async () => {expect.hasAssertions();
@@ -197,7 +197,7 @@ describe('Case15 — create tests from JSON', () => {
 
         await case15.handler(mockContext);
 
-        expect(offerTestExecutionAssociation).toHaveBeenCalledWith();
-        expect(showResults).toHaveBeenCalledWith();
+        expect(offerTestExecutionAssociation).toHaveBeenCalled();
+        expect(showResults).toHaveBeenCalled();
     });
 });

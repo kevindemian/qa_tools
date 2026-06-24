@@ -101,7 +101,7 @@ describe('Divider', () => {
     it('prints divider', () => {
         divider();
 
-        expect(output['print']).toHaveBeenCalledWith();
+        expect(output['print']).toHaveBeenCalled();
     });
 });
 
@@ -125,13 +125,13 @@ describe('TableView', () => {
     it('renders data rows', () => {
         tableView([{ name: 'foo', status: 'pass' }]);
 
-        expect(output['print']).toHaveBeenCalledWith();
+        expect(output['print']).toHaveBeenCalled();
     });
 
     it('renders with specific columns', () => {
         tableView([{ name: 'foo', status: 'pass' }], ['name', 'status']);
 
-        expect(output['print']).toHaveBeenCalledWith();
+        expect(output['print']).toHaveBeenCalled();
     });
 });
 

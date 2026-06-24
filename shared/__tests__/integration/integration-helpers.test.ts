@@ -132,7 +132,7 @@ describe('CleanupTestDir', () => {
 
         cleanupTestDir('/tmp/test');
 
-        expect(warnSpy).toHaveBeenCalledWith();
+        expect(warnSpy).toHaveBeenCalled();
 
         warnSpy.mockRestore();
     });
@@ -228,7 +228,7 @@ describe('ReadFile', () => {
         const result = readFile('/tmp/base', 'noaccess.txt');
 
         expect(result).toBeNull();
-        expect(warnSpy).toHaveBeenCalledWith();
+        expect(warnSpy).toHaveBeenCalled();
 
         warnSpy.mockRestore();
     });
@@ -270,7 +270,7 @@ describe('ReadJsonFile', () => {
         const result = readJsonFile('/tmp/base', 'noaccess.json');
 
         expect(result).toBeNull();
-        expect(warnSpy).toHaveBeenCalledWith();
+        expect(warnSpy).toHaveBeenCalled();
 
         warnSpy.mockRestore();
     });

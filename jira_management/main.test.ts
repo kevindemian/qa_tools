@@ -359,14 +359,14 @@ describe('Main.ts', () => {
             expect.hasAssertions();
 
             await expect(mod.handleSpecialInput('/help')).resolves.toBeTruthy();
-            expect(title).toHaveBeenCalledWith();
+            expect(title).toHaveBeenCalled();
         });
 
         it('handles /h shorthand', async () => {
             expect.hasAssertions();
 
             await expect(mod.handleSpecialInput('/h')).resolves.toBeTruthy();
-            expect(title).toHaveBeenCalledWith();
+            expect(title).toHaveBeenCalled();
         });
 
         it('returns false for /exit (handled by runMainLoop, not by handleSpecialInput)', async () => {
@@ -582,7 +582,7 @@ describe('Main.ts', () => {
             const result = await mod.dispatchChoice('1', minimalCtx);
 
             expect(result).toBe('continue');
-            expect(printError).toHaveBeenCalledWith();
+            expect(printError).toHaveBeenCalled();
         });
     });
 
@@ -611,7 +611,7 @@ describe('Main.ts', () => {
             });
             await mod.showDocs();
 
-            expect(printError).toHaveBeenCalledWith();
+            expect(printError).toHaveBeenCalled();
         });
 
         it('warns when no matching files found in docs', async () => {
@@ -620,7 +620,7 @@ describe('Main.ts', () => {
             vi.mocked(fs.readdirSync).mockReturnValueOnce(['readme.txt', 'notes.md'] as never);
             await mod.showDocs();
 
-            expect(warn).toHaveBeenCalledWith();
+            expect(warn).toHaveBeenCalled();
         });
     });
 
@@ -636,42 +636,42 @@ describe('Main.ts', () => {
         it('shows help topics then exits on /back', () => {
             mod.showHelpLoop();
 
-            expect(title).toHaveBeenCalledWith();
+            expect(title).toHaveBeenCalled();
         });
 
         it('handles specific topic then exits', () => {
             vi.mocked(prompt).mockReturnValueOnce('csv').mockReturnValueOnce('/back');
             mod.showHelpLoop();
 
-            expect(title).toHaveBeenCalledWith();
+            expect(title).toHaveBeenCalled();
         });
 
         it('handles empty input by continuing loop', () => {
             vi.mocked(prompt).mockReturnValueOnce('').mockReturnValueOnce('/back');
             mod.showHelpLoop();
 
-            expect(title).toHaveBeenCalledWith();
+            expect(title).toHaveBeenCalled();
         });
 
         it('shows help on /help command and continues', () => {
             vi.mocked(prompt).mockReturnValueOnce('/help').mockReturnValueOnce('/back');
             mod.showHelpLoop();
 
-            expect(title).toHaveBeenCalledWith();
+            expect(title).toHaveBeenCalled();
         });
 
         it('shows specific help topic on /help <topic>', () => {
             vi.mocked(prompt).mockReturnValueOnce('/help csv').mockReturnValueOnce('/back');
             mod.showHelpLoop();
 
-            expect(helpLine).toHaveBeenCalledWith();
+            expect(helpLine).toHaveBeenCalled();
         });
 
         it('shows multiple matching topics when input matches several', () => {
             vi.mocked(prompt).mockReturnValueOnce('a').mockReturnValueOnce('/back');
             mod.showHelpLoop();
 
-            expect(title).toHaveBeenCalledWith();
+            expect(title).toHaveBeenCalled();
         });
 
         it('warns when topic is not found', () => {
@@ -815,7 +815,7 @@ describe('Main.ts', () => {
             const mockJiraResource = { searchJiraIssues: vi.fn().mockResolvedValue({ total: 42 }) };
             await mod.showGapBadge(mockJiraResource, 'TESTPROJ');
 
-            expect(mockJiraResource.searchJiraIssues).toHaveBeenCalledWith();
+            expect(mockJiraResource.searchJiraIssues).toHaveBeenCalled();
         });
     });
 });

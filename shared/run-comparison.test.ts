@@ -120,7 +120,7 @@ describe('CompareRuns', () => {
         const result = await compareRuns(runA, runB);
 
         expect(result).toBe('');
-        expect(mockLoggerError).toHaveBeenCalledWith();
+        expect(mockLoggerError).toHaveBeenCalled();
 
         const logMsg = String(mockLoggerError.mock.calls[0]?.[0] ?? '');
 

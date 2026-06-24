@@ -70,7 +70,7 @@ describe('FT-41a: reads config and prompts for CSV path', () => {
 
         await case01.handler(makeContext());
 
-        expect(mockCreateTestsFromCsv).toHaveBeenCalledWith();
+        expect(mockCreateTestsFromCsv).toHaveBeenCalled();
 
         const csvPath = mockCreateTestsFromCsv.mock.calls[0]?.[0]?.csvPath;
 

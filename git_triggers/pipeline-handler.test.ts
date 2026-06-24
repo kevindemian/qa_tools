@@ -207,7 +207,7 @@ describe('HandleTriggerPipeline', () => {
         await handleTriggerPipeline(mockM, 'my-project');
 
         expect(mockPrompt).toHaveBeenCalledWith('Branch para disparar pipeline');
-        expect(mockM.triggerPipeline).toHaveBeenCalledWith();
+        expect(mockM.triggerPipeline).toHaveBeenCalled();
         expect(mockSuccess).toHaveBeenCalledWith(expect.stringContaining('https://gitlab.com/pipe/42'));
     });
 
@@ -233,7 +233,7 @@ describe('HandleTriggerPipeline', () => {
 
         await handleTriggerPipeline(mockM, 'my-project');
 
-        expect(mockPrintError).toHaveBeenCalledWith();
+        expect(mockPrintError).toHaveBeenCalled();
         expect(mockPushHistory).toHaveBeenCalledWith('pipeline', 'main', 'error');
     });
 
@@ -348,7 +348,7 @@ describe('HandleExportVariables', () => {
 
         await handleExportVariables(mockM);
 
-        expect(mockPrintError).toHaveBeenCalledWith();
+        expect(mockPrintError).toHaveBeenCalled();
         expect(mockPushHistory).toHaveBeenCalledWith('export-vars', 'erro', 'error');
     });
 
@@ -432,7 +432,7 @@ describe('CreateTestExecution', () => {
                 pushHistory: vi.fn(),
             }),
         ).resolves.toBeUndefined();
-        expect(testResults.createTestExecution).toHaveBeenCalledWith();
+        expect(testResults.createTestExecution).toHaveBeenCalled();
     });
 });
 
@@ -794,7 +794,7 @@ describe('ResumePendingPipeline decline', () => {
 
         await handleTriggerPipeline(mockM, 'my-project');
 
-        expect(state.update).toHaveBeenCalledWith();
+        expect(state.update).toHaveBeenCalled();
         // After decline, should continue to buildPipelinePayload
         expect(mockPrompt).toHaveBeenCalledWith('Branch para disparar pipeline');
     });

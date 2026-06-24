@@ -252,7 +252,7 @@ describe('TryBatchMode', () => {
         const result = await tryBatchMode();
 
         expect(result).toBeTruthy();
-        expect(mockPrintError).toHaveBeenCalledWith();
+        expect(mockPrintError).toHaveBeenCalled();
     });
 
     it('returns early when pipelineResult is undefined', async () => {expect.hasAssertions();

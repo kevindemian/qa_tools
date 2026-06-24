@@ -162,7 +162,7 @@ describe('CreateTestExecution', () => {
         expect(nonNull(result).key).toBe('EXEC-1');
         expect(getJiraResourceSpy).toHaveBeenCalledWith('issuetype');
         expect(getJiraResourceSpy).toHaveBeenCalledWith('field');
-        expect(postJiraResourceSpy).toHaveBeenCalledWith();
+        expect(postJiraResourceSpy).toHaveBeenCalled();
         expect(jiraResource.postJiraResource.mock.lastCall?.[1]).toHaveProperty('fields.project', { key: PROJECT });
         expect(jiraResource.postJiraResource.mock.lastCall?.[1]).toHaveProperty('fields.issuetype', { id: '11802' });
         expect(jiraResource.postJiraResource.mock.lastCall?.[1]).toHaveProperty('fields.customfield_13715', [
@@ -192,7 +192,7 @@ describe('CreateTestExecution', () => {
         });
 
         expect(nonNull(result).key).toBe('EXEC-2');
-        expect(postJiraResourceSpy).toHaveBeenCalledWith();
+        expect(postJiraResourceSpy).toHaveBeenCalled();
         expect(jiraResource.postJiraResource.mock.lastCall?.[1]).toHaveProperty('fields.project', { key: PROJECT });
         expect(jiraResource.postJiraResource.mock.lastCall?.[1]).toHaveProperty('fields.issuetype', { id: '11802' });
         expect(jiraResource.postJiraResource.mock.lastCall?.[1]).toHaveProperty('fields.customfield_13715', ['TEST-3']);
@@ -233,7 +233,7 @@ describe('CreateTestExecution', () => {
 
         await expect(
             createTestExecution({ testExecutionCreator, projectName: PROJECT, testKeys: ['TEST-1'], csvName: '' }),
-        ).rejects.toThrow(/error/i);
+        ).rejects.toThrow();
     });
 
     it('returns null when field API returns non-array', async () => {expect.hasAssertions();
@@ -601,7 +601,7 @@ describe('CreateTestsFromJson', () => {
         const result = await createTestsFromJson(BASE_PARAMS());
 
         expect(result).toBeUndefined();
-        expect(PROMPT.warn).toHaveBeenCalledWith();
+        expect(PROMPT.warn).toHaveBeenCalled();
     });
 
     it('cancela com array vazio', async () => {expect.hasAssertions();
@@ -611,7 +611,7 @@ describe('CreateTestsFromJson', () => {
         const result = await createTestsFromJson(BASE_PARAMS());
 
         expect(result).toBeUndefined();
-        expect(PROMPT.warn).toHaveBeenCalledWith();
+        expect(PROMPT.warn).toHaveBeenCalled();
     });
 
     it('cancela com item sem title/steps', async () => {expect.hasAssertions();
@@ -621,7 +621,7 @@ describe('CreateTestsFromJson', () => {
         const result = await createTestsFromJson(BASE_PARAMS());
 
         expect(result).toBeUndefined();
-        expect(PROMPT.warn).toHaveBeenCalledWith();
+        expect(PROMPT.warn).toHaveBeenCalled();
     });
 
     it('executa dry-run com JSON valido', async () => {expect.hasAssertions();

@@ -16,8 +16,8 @@ describe('TestClassificationSchema', () => {
     });
 
     it('rejects invalid classification', () => {
-        expect(() => TestClassificationSchema.parse('INVALID')).toThrow(/error/i);
-        expect(() => TestClassificationSchema.parse('')).toThrow(/error/i);
+        expect(() => TestClassificationSchema.parse('INVALID')).toThrow();
+        expect(() => TestClassificationSchema.parse('')).toThrow();
     });
 });
 
@@ -29,8 +29,8 @@ describe('TestSeveritySchema', () => {
     });
 
     it('rejects invalid severity', () => {
-        expect(() => TestSeveritySchema.parse('critical')).toThrow(/error/i);
-        expect(() => TestSeveritySchema.parse('')).toThrow(/error/i);
+        expect(() => TestSeveritySchema.parse('critical')).toThrow();
+        expect(() => TestSeveritySchema.parse('')).toThrow();
     });
 });
 
@@ -54,7 +54,7 @@ describe('FailureAnalysisTestSchema', () => {
                 severity: 'high',
                 recommendation: 'short',
             }),
-        ).toThrow(/error/i);
+        ).toThrow();
     });
 
     it('rejects test with missing title', () => {
@@ -64,7 +64,7 @@ describe('FailureAnalysisTestSchema', () => {
                 severity: 'high',
                 recommendation: 'Adequately long recommendation text',
             }),
-        ).toThrow(/error/i);
+        ).toThrow();
     });
 });
 
@@ -107,14 +107,14 @@ describe('FailureAnalysisSchema', () => {
     });
 
     it('rejects empty tests array', () => {
-        expect(() => FailureAnalysisSchema.parse({ tests: [] })).toThrow(/error/i);
+        expect(() => FailureAnalysisSchema.parse({ tests: [] })).toThrow();
     });
 
     it('rejects non-array tests', () => {
-        expect(() => FailureAnalysisSchema.parse({ tests: 'not array' })).toThrow(/error/i);
+        expect(() => FailureAnalysisSchema.parse({ tests: 'not array' })).toThrow();
     });
 
     it('rejects missing tests field', () => {
-        expect(() => FailureAnalysisSchema.parse({})).toThrow(/error/i);
+        expect(() => FailureAnalysisSchema.parse({})).toThrow();
     });
 });

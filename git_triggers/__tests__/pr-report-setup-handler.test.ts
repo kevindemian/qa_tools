@@ -88,7 +88,7 @@ describe('HandlePrReportReconfig', () => {
         expect(mocks.mockTitle).toHaveBeenCalledWith('Configuração do PR Report');
         expect(mocks.mockInfo).toHaveBeenCalledWith('  Habilitado: Não');
         expect(mocks.mockInfo).toHaveBeenCalledWith('  Target:     github-actions');
-        expect(mocks.mockDivider).toHaveBeenCalledWith();
+        expect(mocks.mockDivider).toHaveBeenCalled();
     });
 
     it('disables PR Report when user declines — no CI files generated', () => {

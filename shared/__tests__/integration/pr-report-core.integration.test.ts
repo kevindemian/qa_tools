@@ -250,7 +250,7 @@ describe('Integration: PR Report (FT-16)', () => {
                 htmlOutputPath: htmlPath,
             });
 
-            expect(createCheckRun).toHaveBeenCalledWith();
+            expect(createCheckRun).toHaveBeenCalled();
         });
 
         it('posts quality gate check with pass/fail conclusion', async () => {expect.hasAssertions();

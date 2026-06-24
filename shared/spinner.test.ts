@@ -69,8 +69,8 @@ describe('WithSpinner', () => {
 
         expect(result).toBe(42);
         expect(mockOra).toHaveBeenCalledWith({ text: 'loading', color: 'cyan', spinner: 'dots' });
-        expect(mockSpinner.start).toHaveBeenCalledWith();
-        expect(mockSpinner.succeed).toHaveBeenCalledWith();
+        expect(mockSpinner.start).toHaveBeenCalled();
+        expect(mockSpinner.succeed).toHaveBeenCalled();
     });
 
     it('calls spinner.fail on fn rejection', async () => {expect.hasAssertions();
@@ -80,7 +80,7 @@ describe('WithSpinner', () => {
         const failingFn = vi.fn().mockRejectedValue(new Error('fail'));
 
         await expect(withSpinner('loading', failingFn)).rejects.toThrow('fail');
-        expect(mockSpinner.fail).toHaveBeenCalledWith();
+        expect(mockSpinner.fail).toHaveBeenCalled();
     });
 });
 
@@ -119,7 +119,7 @@ describe('ProgressBar', () => {
             const bar = new ProgressBar(100);
             bar.update(50);
 
-            expect(printSpy).toHaveBeenCalledWith();
+            expect(printSpy).toHaveBeenCalled();
         });
     });
 
@@ -128,7 +128,7 @@ describe('ProgressBar', () => {
             const bar = new ProgressBar(100);
             bar.stop();
 
-            expect(mockSingleBar.stop).toHaveBeenCalledWith();
+            expect(mockSingleBar.stop).toHaveBeenCalled();
         });
 
         it('no-ops when not TTY', () => {

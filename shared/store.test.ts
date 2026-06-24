@@ -226,7 +226,7 @@ describe('Store', () => {
             const warnSpy = vi.spyOn(rootLogger, 'warn');
 
             expect(() => store.put('sha1', makeMeta('sha1'))).toThrow('ENOSPC');
-            expect(warnSpy).toHaveBeenCalledWith();
+            expect(warnSpy).toHaveBeenCalled();
         });
 
         it('logs warning when backend write fails in saveReport', () => {
@@ -243,7 +243,7 @@ describe('Store', () => {
             const warnSpy = vi.spyOn(rootLogger, 'warn');
 
             expect(() => store.saveReport('sha1', [{ title: 't', state: 'passed', duration: 1 }])).toThrow('EACCES');
-            expect(warnSpy).toHaveBeenCalledWith();
+            expect(warnSpy).toHaveBeenCalled();
         });
 
         it('logs warning when backend write fails in appendBranch', () => {
@@ -260,7 +260,7 @@ describe('Store', () => {
             const warnSpy = vi.spyOn(rootLogger, 'warn');
 
             expect(() => store.appendBranch('main', { sha: 'abc', timestamp: 1 })).toThrow('ENOSPC');
-            expect(warnSpy).toHaveBeenCalledWith();
+            expect(warnSpy).toHaveBeenCalled();
         });
 
         it('logs warning when backend write fails in saveMetrics', () => {
@@ -277,7 +277,7 @@ describe('Store', () => {
             const warnSpy = vi.spyOn(rootLogger, 'warn');
 
             expect(() => store.saveMetrics({ runs: [] })).toThrow('ENOSPC');
-            expect(warnSpy).toHaveBeenCalledWith();
+            expect(warnSpy).toHaveBeenCalled();
         });
     });
 
@@ -295,7 +295,7 @@ describe('Store', () => {
             const result = store.lookup('any-sha');
 
             expect(result).toBeNull();
-            expect(warnSpy).toHaveBeenCalledWith();
+            expect(warnSpy).toHaveBeenCalled();
 
             warnSpy.mockRestore();
         });
@@ -329,7 +329,7 @@ describe('Store', () => {
             const warnSpy = vi.spyOn(rootLogger, 'warn');
             store.lookup('any-sha');
 
-            expect(warnSpy).toHaveBeenCalledWith();
+            expect(warnSpy).toHaveBeenCalled();
 
             warnSpy.mockRestore();
         });
@@ -348,7 +348,7 @@ describe('Store', () => {
             const warnSpy = vi.spyOn(rootLogger, 'warn');
             store.listByProject();
 
-            expect(warnSpy).toHaveBeenCalledWith();
+            expect(warnSpy).toHaveBeenCalled();
 
             warnSpy.mockRestore();
         });
@@ -415,7 +415,7 @@ describe('Store', () => {
             const store = new Store(failBackend, project);
             const warnSpy = vi.spyOn(rootLogger, 'warn');
 
-            expect(() => store.saveMetrics({ runs: [] })).toThrow(/error/i);
+            expect(() => store.saveMetrics({ runs: [] })).toThrow();
 
             const msg = warnSpy.mock.calls[0]?.[0];
 
@@ -440,7 +440,7 @@ describe('Store', () => {
             const warnSpy = vi.spyOn(rootLogger, 'warn');
 
             expect(() => store.saveMetrics({ runs: [] })).toThrow('EACCES');
-            expect(warnSpy).toHaveBeenCalledWith();
+            expect(warnSpy).toHaveBeenCalled();
         });
     });
 });

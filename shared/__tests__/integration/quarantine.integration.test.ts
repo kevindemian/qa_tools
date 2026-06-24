@@ -96,7 +96,7 @@ describe('FT-36a — Create quarantine', () => {
 });
 
 describe('FT-36b — Expire entry', () => {
-    it('removes entry past TTL', () => {
+    it('removes entry past TTL', async () => {
         vi.useFakeTimers();
         quarantineTest({
             testTitle: 'expirable.spec.ts',
@@ -106,7 +106,7 @@ describe('FT-36b — Expire entry', () => {
             ttlDays: 0,
         });
 
-        vi.advanceTimersByTimeAsync(1000);
+        await vi.advanceTimersByTimeAsync(1000);
 
         const expired = expireQuarantine();
 
@@ -122,7 +122,7 @@ describe('FT-36b — Expire entry', () => {
 });
 
 describe('FT-36c — Permanent entry survives expiry', () => {
-    it('keeps permanent entry after expiry runs', () => {
+    it('keeps permanent entry after expiry runs', async () => {
         quarantineTest({
             testTitle: 'permanent.spec.ts',
             reason: 'known flaky',
@@ -134,7 +134,7 @@ describe('FT-36c — Permanent entry survives expiry', () => {
         markPermanent('permanent.spec.ts');
 
         vi.useFakeTimers();
-        vi.advanceTimersByTimeAsync(1000);
+        await vi.advanceTimersByTimeAsync(1000);
 
         const expired = expireQuarantine();
 

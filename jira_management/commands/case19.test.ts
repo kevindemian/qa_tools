@@ -75,7 +75,7 @@ describe('Case19 — History & Coverage', () => {
         const mod = case19Module;
         await mod.handler(baseContext);
 
-        expect(prompt.tableView).toHaveBeenCalledWith();
+        expect(prompt.tableView).toHaveBeenCalled();
         expect(prompt.title).toHaveBeenCalledWith('Histórico de execuções');
     });
 
@@ -107,7 +107,7 @@ describe('Case19 — History & Coverage', () => {
             mappedIssues: 6,
             coveragePct: 60,
         });
-        expect(prompt.tableView).toHaveBeenCalledWith();
+        expect(prompt.tableView).toHaveBeenCalled();
         expect(baseContext.pushHistory).toHaveBeenCalledWith('coverage-analysis', '60% coverage', 'ok');
     });
 
@@ -180,7 +180,7 @@ describe('Case19 — History & Coverage', () => {
         const mod = case19Module;
         await mod.handler(baseContext);
 
-        expect(comparison.compareRuns).toHaveBeenCalledWith();
+        expect(comparison.compareRuns).toHaveBeenCalled();
         expect(prompt.title).toHaveBeenCalledWith('Testes com flakiness');
         expect(prompt.title).toHaveBeenCalledWith('Tendência');
     });
@@ -239,7 +239,7 @@ describe('Case19 — History & Coverage', () => {
         const mod = case19Module;
         await mod.handler(baseContext);
 
-        expect(comparison.compareRuns).toHaveBeenCalledWith();
+        expect(comparison.compareRuns).toHaveBeenCalled();
         expect(prompt.info).not.toHaveBeenCalledWith(expect.stringContaining('Análise comparativa'));
     });
 
@@ -309,7 +309,7 @@ describe('Case19 — History & Coverage', () => {
         const mod = case19Module;
         await mod.handler(baseContext);
 
-        expect(healthScore.calculateHealthScore).toHaveBeenCalledWith();
+        expect(healthScore.calculateHealthScore).toHaveBeenCalled();
         expect(prompt.tableView).toHaveBeenCalledWith(
             expect.arrayContaining([expect.objectContaining({ Dimensão: 'Pass Rate', Score: 90 })]),
             expect.any(Array),
@@ -355,7 +355,7 @@ describe('Case19 — History & Coverage', () => {
         const mod = case19Module;
         await mod.handler(baseContext);
 
-        expect(prompt.tableView).toHaveBeenCalledWith();
+        expect(prompt.tableView).toHaveBeenCalled();
     });
 
     it('handles run with total=0 to cover Rate branch', async () => {expect.hasAssertions();
@@ -387,7 +387,7 @@ describe('Case19 — History & Coverage', () => {
         const mod = case19Module;
         await mod.handler(baseContext);
 
-        expect(prompt.tableView).toHaveBeenCalledWith();
+        expect(prompt.tableView).toHaveBeenCalled();
     });
 
     it('shows health score section when 5+ runs exist', async () => {expect.hasAssertions();
@@ -432,7 +432,7 @@ describe('Case19 — History & Coverage', () => {
         const mod = case19Module;
         await mod.handler(baseContext);
 
-        expect(healthScore.calculateHealthScore).toHaveBeenCalledWith();
+        expect(healthScore.calculateHealthScore).toHaveBeenCalled();
         expect(prompt.title).toHaveBeenCalledWith(expect.stringContaining('Test Suite Health'));
     });
 

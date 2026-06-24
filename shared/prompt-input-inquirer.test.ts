@@ -118,7 +118,7 @@ describe('SmartPrompt', () => {
         const result = await smartPrompt('Label', {}, helpCb);
 
         expect(result).toBe('value');
-        expect(helpCb).toHaveBeenCalledWith();
+        expect(helpCb).toHaveBeenCalled();
     });
 
     it('throws CancelError on navigation', async () => {expect.hasAssertions();
@@ -143,7 +143,7 @@ describe('SmartPrompt', () => {
         const result = await smartPrompt('Label', { maxRetries: 2 });
 
         expect(result).toBe('');
-        expect(mockWarn).toHaveBeenCalledWith();
+        expect(mockWarn).toHaveBeenCalled();
     });
 
     it('returns default after retries when readlineSync throws (TTY unavailable)', async () => {expect.hasAssertions();

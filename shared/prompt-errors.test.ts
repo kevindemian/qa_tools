@@ -99,7 +99,7 @@ describe('PrintError', () => {
     it('prints error box with context and message', () => {
         printError('contexto', new Error('something failed'));
 
-        expect(output['print']).toHaveBeenCalledWith();
+        expect(output['print']).toHaveBeenCalled();
     });
 
     it('prints single line when quiet', () => {

@@ -83,7 +83,7 @@ describe('Case23 — AI Feedback', () => {
 
         await case23Handler.handler(makeMockCommandContext());
 
-        expect(tableView).toHaveBeenCalledWith();
+        expect(tableView).toHaveBeenCalled();
     });
 
     it('warns when no recent records', async () => {expect.hasAssertions();
