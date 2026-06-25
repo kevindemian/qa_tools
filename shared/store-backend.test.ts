@@ -8,15 +8,15 @@ import { FsStoreBackend, GitStoreBackend, detectStoreBackend, detectProjectGitDi
 const tmpDir = fs.mkdtempSync(path.join(os.tmpdir(), 'qa-store-backend-test-'));
 
 describe('Store Backend', () => {
-    afterAll(() => {
-        fs.rmSync(tmpDir, { recursive: true, force: true });
-    });
-
     beforeEach(() => {
         for (const f of fs.readdirSync(tmpDir)) {
             const fp = path.join(tmpDir, f);
             fs.rmSync(fp, { recursive: true, force: true });
         }
+    });
+
+    afterAll(() => {
+        fs.rmSync(tmpDir, { recursive: true, force: true });
     });
 
     describe('FsStoreBackend', () => {

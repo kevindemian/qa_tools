@@ -96,10 +96,6 @@ function writeCtrfFixture(tests: FlatTest[]): string {
 }
 
 describe('Pr Report Core.Integration', () => {
-    afterAll(() => {
-        delete process.env['GITHUB_STEP_SUMMARY'];
-    });
-
     beforeEach(() => {
         vi.restoreAllMocks();
         vi.resetModules();
@@ -114,6 +110,10 @@ describe('Pr Report Core.Integration', () => {
         } catch {
             /* best effort */
         }
+    });
+
+    afterAll(() => {
+        delete process.env['GITHUB_STEP_SUMMARY'];
     });
 
     // ── Tests ─────────────────────────────────────────────────────────────────

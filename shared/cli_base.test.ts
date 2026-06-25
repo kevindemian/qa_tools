@@ -171,6 +171,7 @@ describe('CLI Base', () => {
 
         it('calls onExit and exits when user responds s', async () => {
             expect.hasAssertions();
+
             vi.useFakeTimers();
             const exitSpy = vi
                 .spyOn(process, 'exit')
@@ -211,6 +212,7 @@ describe('CLI Base', () => {
 
         it('force exits on 2nd SIGINT during confirmation', async () => {
             expect.hasAssertions();
+
             vi.useFakeTimers();
             const exitSpy = vi
                 .spyOn(process, 'exit')
@@ -259,6 +261,7 @@ describe('CLI Base', () => {
 
         it('handles null onExit gracefully on confirmation s', async () => {
             expect.hasAssertions();
+
             vi.useFakeTimers();
             const exitSpy = vi
                 .spyOn(process, 'exit')

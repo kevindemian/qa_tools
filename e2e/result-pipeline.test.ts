@@ -58,15 +58,6 @@ describe('E2E: Result Processing Pipeline', () => {
         setupJiraMocks('http://localhost:1997/jira');
     });
 
-    afterAll(() => {
-        nock.cleanAll();
-        nock.enableNetConnect();
-        nock.restore();
-        if (fs.existsSync(tmpHome)) {
-            fs.rmSync(tmpHome, { recursive: true, force: true });
-        }
-    });
-
     beforeEach(() => {
         vi.spyOn(console, 'log').mockImplementation(() => {});
         vi.spyOn(process.stdout, 'write').mockImplementation(() => true);
@@ -77,6 +68,15 @@ describe('E2E: Result Processing Pipeline', () => {
     afterEach(() => {
         vi.restoreAllMocks();
         nock.cleanAll();
+    });
+
+    afterAll(() => {
+        nock.cleanAll();
+        nock.enableNetConnect();
+        nock.restore();
+        if (fs.existsSync(tmpHome)) {
+            fs.rmSync(tmpHome, { recursive: true, force: true });
+        }
     });
 
     it('flows end-to-end: mochawesome → match → TE creation', async () => {expect.hasAssertions();

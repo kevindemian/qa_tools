@@ -36,10 +36,6 @@ describe('HTTP Client', () => {
         httpClient.setTestSleep(() => Promise.resolve());
     });
 
-    afterAll(() => {
-        httpClient.setTestSleep(undefined);
-    });
-
     beforeEach(() => {
         vi.clearAllMocks();
         vi.spyOn(global, 'setTimeout').mockImplementation(((cb: (...args: unknown[]) => void) => {
@@ -50,6 +46,10 @@ describe('HTTP Client', () => {
 
     afterEach(() => {
         vi.restoreAllMocks();
+    });
+
+    afterAll(() => {
+        httpClient.setTestSleep(undefined);
     });
 
     describe('CreateHttpClient', () => {

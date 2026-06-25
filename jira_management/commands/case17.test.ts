@@ -109,17 +109,17 @@ import { createMockContext } from '../../shared/test-utils/factories/context-fac
 const baseContext = createMockContext();
 
 describe('Case17', () => {
+    beforeAll(() => {
+        if (!vi.isMockFunction(openModule.openWithFallback)) {
+            throw new Error('Guard FAILED: openWithFallback is NOT mocked. Browser would open!');
+        }
+    });
+
     beforeEach(() => {
         vi.clearAllMocks();
         loadMetricsValue = null;
         // Ensure withSpinner invokes the callback (auto-mock returns undefined otherwise)
         vi.mocked(promptModule).withSpinner.mockImplementation(async (_label: string, fn: () => Promise<unknown>) => fn());
-    });
-
-    beforeAll(() => {
-        if (!vi.isMockFunction(openModule.openWithFallback)) {
-            throw new Error('Guard FAILED: openWithFallback is NOT mocked. Browser would open!');
-        }
     });
 
     describe('Case17 — HTML report generator', () => {

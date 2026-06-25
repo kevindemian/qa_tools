@@ -59,10 +59,6 @@ const defaultHealthScore = {
 };
 
 describe('Pr Report Core.Property', () => {
-    afterAll(() => {
-        delete process.env['GITHUB_STEP_SUMMARY'];
-    });
-
     beforeEach(() => {
         vi.clearAllMocks();
         delete process.env['GITHUB_STEP_SUMMARY'];
@@ -75,6 +71,10 @@ describe('Pr Report Core.Property', () => {
         mockPRComment.postPrComment.mockResolvedValue(undefined);
         mockHtml.generateHtmlReport.mockReturnValue('<html>mock</html>');
         mockCoverage.resolveCoverage.mockReturnValue(undefined);
+    });
+
+    afterAll(() => {
+        delete process.env['GITHUB_STEP_SUMMARY'];
     });
 
     describe('GeneratePrReport — passRate invariants (property-based)', () => {
@@ -223,6 +223,7 @@ describe('Pr Report Core.Property', () => {
                         const result = computeDiffComparison(current, previous);
                         if (result === undefined) {
                             expect(computeDiffComparison(current, previous)).toBeUndefined();
+
                             return;
                         }
                         for (const nf of result.newFailures) {
@@ -249,6 +250,7 @@ describe('Pr Report Core.Property', () => {
                         const result = computeDiffComparison(current, previous);
                         if (result === undefined) {
                             expect(computeDiffComparison(current, previous)).toBeUndefined();
+
                             return;
                         }
                         for (const np of result.newPasses) {
@@ -275,6 +277,7 @@ describe('Pr Report Core.Property', () => {
                         const result = computeDiffComparison(current, previous);
                         if (result === undefined) {
                             expect(computeDiffComparison(current, previous)).toBeUndefined();
+
                             return;
                         }
                         for (const f of result.flaky) {
@@ -302,6 +305,7 @@ describe('Pr Report Core.Property', () => {
                         const result = computeDiffComparison(current, previous);
                         if (result === undefined) {
                             expect(computeDiffComparison(current, previous)).toBeUndefined();
+
                             return;
                         }
                         const failureTitles = new Set(result.newFailures.map((f) => f.title));
@@ -326,6 +330,7 @@ describe('Pr Report Core.Property', () => {
                         const result = computeDiffComparison(current, previous);
                         if (result === undefined) {
                             expect(computeDiffComparison(current, previous)).toBeUndefined();
+
                             return;
                         }
                         const currentTitles = new Set(current.map((t) => t.title));

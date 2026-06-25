@@ -63,6 +63,7 @@ describe('TestHistoryCache', () => {
 
     it('expires entries after TTL', async () => {
         expect.hasAssertions();
+
         vi.useFakeTimers();
         const cache = new TestHistoryCache(5000);
         cache.set('TEST-123', [{ status: 'PASSED', testExecKey: 'TE-1' }]);

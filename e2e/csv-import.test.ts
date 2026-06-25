@@ -33,14 +33,6 @@ describe('E2E: CSV Import', () => {
         setupHandlers();
     });
 
-    afterAll(() => {
-        resetHandlers();
-        nock.restore();
-        if (fs.existsSync(tmpHome)) {
-            fs.rmSync(tmpHome, { recursive: true, force: true });
-        }
-    });
-
     beforeEach(() => {
         vi.spyOn(console, 'log').mockImplementation(() => {});
         vi.spyOn(process.stdout, 'write').mockImplementation(() => true);
@@ -48,6 +40,14 @@ describe('E2E: CSV Import', () => {
 
     afterEach(() => {
         vi.restoreAllMocks();
+    });
+
+    afterAll(() => {
+        resetHandlers();
+        nock.restore();
+        if (fs.existsSync(tmpHome)) {
+            fs.rmSync(tmpHome, { recursive: true, force: true });
+        }
     });
 
     it('cria 2 issues, preconditions, steps, linked issue, e cross-ref', async () => {expect.hasAssertions();

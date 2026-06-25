@@ -84,6 +84,7 @@ describe('Llm Rate Limiter', () => {
 
         it('recovers after rate limit window passes', async () => {
             expect.hasAssertions();
+
             vi.useFakeTimers();
             Config.set('LLM_RATE_LIMIT', '1');
             resetRateLimiter();

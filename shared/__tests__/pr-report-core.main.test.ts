@@ -68,10 +68,6 @@ const defaultHealthScore = {
 };
 
 describe('Pr Report Core.Main', () => {
-    afterAll(() => {
-        delete process.env['GITHUB_STEP_SUMMARY'];
-    });
-
     beforeEach(() => {
         vi.clearAllMocks();
         delete process.env['GITHUB_STEP_SUMMARY'];
@@ -100,6 +96,10 @@ describe('Pr Report Core.Main', () => {
             error: undefined,
         });
         vi.mocked(fs.existsSync).mockReturnValue(true);
+    });
+
+    afterAll(() => {
+        delete process.env['GITHUB_STEP_SUMMARY'];
     });
 
     describe('Main', () => {

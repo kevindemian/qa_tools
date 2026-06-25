@@ -13,10 +13,6 @@ const backend = new FsStoreBackend(tmpDir);
 const project = 'test-proj';
 
 describe('Store', () => {
-    afterAll(() => {
-        fs.rmSync(tmpDir, { recursive: true, force: true });
-    });
-
     beforeEach(() => {
         /* Clean all files in tmpDir */
         for (const f of fs.readdirSync(tmpDir)) {
@@ -24,6 +20,10 @@ describe('Store', () => {
             fs.rmSync(fp, { recursive: true, force: true });
         }
         backend.init();
+    });
+
+    afterAll(() => {
+        fs.rmSync(tmpDir, { recursive: true, force: true });
     });
 
     function makeMeta(sha: string): ReportMeta {
