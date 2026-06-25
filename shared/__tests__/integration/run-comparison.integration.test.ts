@@ -42,145 +42,148 @@ const runB: MetricsRun = {
     tests: [],
 };
 
-beforeEach(() => {
-    vi.clearAllMocks();
-});
+describe('Run Comparison.Integration', () => {
+    beforeEach(() => {
+        vi.clearAllMocks();
+    });
 
-describe('Integration: Run Comparison (FT-39)', () => {
-    describe('FT-39a: compareRuns data formatting', () => {
-        it('formats run summary with correct structure', async () => {expect.hasAssertions();
+    describe('Integration: Run Comparison (FT-39)', () => {
+        describe('FT-39a: compareRuns data formatting', () => {
+            it('formats run summary with correct structure', async () => {expect.hasAssertions();
 
-            mockLlmPrompt.mockResolvedValue('Improved pass rate from 80% to 90%');
+                mockLlmPrompt.mockResolvedValue('Improved pass rate from 80% to 90%');
 
-            const result = await compareRuns(runA, runB);
+                const result = await compareRuns(runA, runB);
 
-            expect(result).toBe('Improved pass rate from 80% to 90%');
-            expect(mockLlmPrompt).toHaveBeenCalledTimes(1);
+                expect(result).toBe('Improved pass rate from 80% to 90%');
+                expect(mockLlmPrompt).toHaveBeenCalledTimes(1);
 
-            const callArg = nonNull(mockLlmPrompt.mock.calls[0])[0];
+                const callArg = nonNull(mockLlmPrompt.mock.calls[0])[0];
 
-            expect(callArg.tier).toBe('fast');
-            expect(callArg.callerId).toBe('compare-runs');
-            expect(callArg.system).toContain('QA analyst');
-            expect(callArg.user).toContain('=== RUN A (older) ===');
-            expect(callArg.user).toContain('=== RUN B (newer) ===');
-            expect(callArg.user).toContain('Date: 2026-01-01');
-            expect(callArg.user).toContain('Date: 2026-01-02');
+                expect(callArg.tier).toBe('fast');
+                expect(callArg.callerId).toBe('compare-runs');
+                expect(callArg.system).toContain('QA analyst');
+                expect(callArg.user).toContain('=== RUN A (older) ===');
+                expect(callArg.user).toContain('=== RUN B (newer) ===');
+                expect(callArg.user).toContain('Date: 2026-01-01');
+                expect(callArg.user).toContain('Date: 2026-01-02');
+            });
+
+            it('includes pass rate percentage in formatted data', async () => {expect.hasAssertions();
+
+                mockLlmPrompt.mockResolvedValue('analysis');
+
+                await compareRuns(runA, runB);
+
+                expect(mockLlmPrompt).toHaveBeenCalledTimes(1);
+
+                const callArg = nonNull(mockLlmPrompt.mock.calls[0])[0];
+
+                expect(callArg.user).toContain('Pass rate: 80%');
+                expect(callArg.user).toContain('Pass rate: 90%');
+            });
+
+            it('includes detailed metrics in formatted data', async () => {expect.hasAssertions();
+
+                mockLlmPrompt.mockResolvedValue('analysis');
+
+                await compareRuns(runA, runB);
+
+                expect(mockLlmPrompt).toHaveBeenCalledTimes(1);
+
+                const callArg = nonNull(mockLlmPrompt.mock.calls[0])[0];
+
+                expect(callArg.user).toMatch(/Total: 10[\s\S]*Passed: 8[\s\S]*Failed: 2[\s\S]*Duration: 5000ms/);
+            });
         });
 
-        it('includes pass rate percentage in formatted data', async () => {expect.hasAssertions();
+        describe('FT-39b: compareRuns null handling', () => {
+            it('returns early message when first run is null', async () => {expect.hasAssertions();
 
-            mockLlmPrompt.mockResolvedValue('analysis');
+                const result = await compareRuns(null, runB);
 
-            await compareRuns(runA, runB);
+                expect(result).toBe('No run data provided');
+                expect(mockLlmPrompt).not.toHaveBeenCalled();
+            });
 
-            expect(mockLlmPrompt).toHaveBeenCalledTimes(1);
+            it('returns early message when second run is null', async () => {expect.hasAssertions();
 
-            const callArg = nonNull(mockLlmPrompt.mock.calls[0])[0];
+                const result = await compareRuns(runA, null);
 
-            expect(callArg.user).toContain('Pass rate: 80%');
-            expect(callArg.user).toContain('Pass rate: 90%');
+                expect(result).toBe('No run data provided');
+                expect(mockLlmPrompt).not.toHaveBeenCalled();
+            });
+
+            it('returns early message when both runs are null', async () => {expect.hasAssertions();
+
+                const result = await compareRuns(null, null);
+
+                expect(result).toBe('No run data provided');
+                expect(mockLlmPrompt).not.toHaveBeenCalled();
+            });
         });
 
-        it('includes detailed metrics in formatted data', async () => {expect.hasAssertions();
+        describe('FT-39c: compareRuns error handling', () => {
+            it('returns empty string when LLM call fails', async () => {expect.hasAssertions();
 
-            mockLlmPrompt.mockResolvedValue('analysis');
+                mockLlmPrompt.mockRejectedValue(new Error('API rate limit exceeded'));
 
-            await compareRuns(runA, runB);
+                const result = await compareRuns(runA, runB);
 
-            expect(mockLlmPrompt).toHaveBeenCalledTimes(1);
+                expect(result).toBe('');
+            });
 
-            const callArg = nonNull(mockLlmPrompt.mock.calls[0])[0];
+            it('handles empty run data without error', async () => {expect.hasAssertions();
 
-            expect(callArg.user).toMatch(/Total: 10[\s\S]*Passed: 8[\s\S]*Failed: 2[\s\S]*Duration: 5000ms/);
+                const empty: MetricsRun = {
+                    timestamp: '2026-01-01T00:00:00.000Z',
+                    project: '',
+                    total: 0,
+                    passed: 0,
+                    failed: 0,
+                    skipped: 0,
+                    duration: 0,
+                    tests: [],
+                };
+                mockLlmPrompt.mockResolvedValue('analysis of empty run');
+
+                const result = await compareRuns(empty, empty);
+
+                expect(result).toBe('analysis of empty run');
+            });
+        });
+
+        describe('FT-39d: sanitization integration', () => {
+            it('sanitizes secrets from project name before LLM call', async () => {expect.hasAssertions();
+
+                const secret = 'sk-12345678901234567890';
+                const runWithSecret = { ...runA, project: `proj-${secret}` };
+                mockLlmPrompt.mockResolvedValue('sanitized analysis');
+
+                await compareRuns(runWithSecret, runB);
+
+                expect(mockLlmPrompt).toHaveBeenCalledTimes(1);
+
+                const callArg = nonNull(mockLlmPrompt.mock.calls[0])[0];
+
+                expect(callArg.user).not.toContain(secret);
+            });
+
+            it('passes sanitized string to LLM without modification', async () => {expect.hasAssertions();
+
+                const { sanitizeForLlm } = await import('../../sanitize.js');
+                mockLlmPrompt.mockResolvedValue('sanitized analysis');
+
+                await compareRuns(runA, runB);
+
+                expect(mockLlmPrompt).toHaveBeenCalledTimes(1);
+
+                const callArg = nonNull(mockLlmPrompt.mock.calls[0])[0];
+                const sanitized = sanitizeForLlm(callArg.user);
+
+                expect(sanitized).toBe(callArg.user);
+            });
         });
     });
 
-    describe('FT-39b: compareRuns null handling', () => {
-        it('returns early message when first run is null', async () => {expect.hasAssertions();
-
-            const result = await compareRuns(null, runB);
-
-            expect(result).toBe('No run data provided');
-            expect(mockLlmPrompt).not.toHaveBeenCalled();
-        });
-
-        it('returns early message when second run is null', async () => {expect.hasAssertions();
-
-            const result = await compareRuns(runA, null);
-
-            expect(result).toBe('No run data provided');
-            expect(mockLlmPrompt).not.toHaveBeenCalled();
-        });
-
-        it('returns early message when both runs are null', async () => {expect.hasAssertions();
-
-            const result = await compareRuns(null, null);
-
-            expect(result).toBe('No run data provided');
-            expect(mockLlmPrompt).not.toHaveBeenCalled();
-        });
-    });
-
-    describe('FT-39c: compareRuns error handling', () => {
-        it('returns empty string when LLM call fails', async () => {expect.hasAssertions();
-
-            mockLlmPrompt.mockRejectedValue(new Error('API rate limit exceeded'));
-
-            const result = await compareRuns(runA, runB);
-
-            expect(result).toBe('');
-        });
-
-        it('handles empty run data without error', async () => {expect.hasAssertions();
-
-            const empty: MetricsRun = {
-                timestamp: '2026-01-01T00:00:00.000Z',
-                project: '',
-                total: 0,
-                passed: 0,
-                failed: 0,
-                skipped: 0,
-                duration: 0,
-                tests: [],
-            };
-            mockLlmPrompt.mockResolvedValue('analysis of empty run');
-
-            const result = await compareRuns(empty, empty);
-
-            expect(result).toBe('analysis of empty run');
-        });
-    });
-
-    describe('FT-39d: sanitization integration', () => {
-        it('sanitizes secrets from project name before LLM call', async () => {expect.hasAssertions();
-
-            const secret = 'sk-12345678901234567890';
-            const runWithSecret = { ...runA, project: `proj-${secret}` };
-            mockLlmPrompt.mockResolvedValue('sanitized analysis');
-
-            await compareRuns(runWithSecret, runB);
-
-            expect(mockLlmPrompt).toHaveBeenCalledTimes(1);
-
-            const callArg = nonNull(mockLlmPrompt.mock.calls[0])[0];
-
-            expect(callArg.user).not.toContain(secret);
-        });
-
-        it('passes sanitized string to LLM without modification', async () => {expect.hasAssertions();
-
-            const { sanitizeForLlm } = await import('../../sanitize.js');
-            mockLlmPrompt.mockResolvedValue('sanitized analysis');
-
-            await compareRuns(runA, runB);
-
-            expect(mockLlmPrompt).toHaveBeenCalledTimes(1);
-
-            const callArg = nonNull(mockLlmPrompt.mock.calls[0])[0];
-            const sanitized = sanitizeForLlm(callArg.user);
-
-            expect(sanitized).toBe(callArg.user);
-        });
-    });
 });

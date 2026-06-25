@@ -16,37 +16,40 @@ import { handleSetupWizard } from './case00-handler.js';
 
 let mockSetupModule: Mocked<typeof import('../setup/main.js')>;
 
-beforeAll(async () => {
-    mockSetupModule = await vi.importMock<typeof import('../setup/main.js')>('../setup/main');
-});
-
-beforeEach(() => {
-    vi.clearAllMocks();
-});
-
-describe('HandleSetupWizard', () => {
-    it('calls setup main and records history on success', async () => {expect.hasAssertions();
-
-        mockSetupModule.main.mockResolvedValue(undefined);
-
-        const result = await handleSetupWizard();
-
-        expect(title).toHaveBeenCalledWith('Setup Wizard');
-        expect(info).toHaveBeenCalledWith('Iniciando wizard de configuração de CI/CD...');
-        expect(divider).toHaveBeenCalled();
-        expect(mockSetupModule.main).toHaveBeenCalled();
-        expect(pushHistory).toHaveBeenCalledWith('setup-wizard', 'wizard concluído', 'ok');
-        expect(result).toBeFalsy();
+describe('Case00 Handler', () => {
+    beforeAll(async () => {
+        mockSetupModule = await vi.importMock<typeof import('../setup/main.js')>('../setup/main');
     });
 
-    it('handles setup failure gracefully', async () => {expect.hasAssertions();
-
-        mockSetupModule.main.mockRejectedValue(new Error('Setup error'));
-
-        const result = await handleSetupWizard();
-
-        expect(result).toBeFalsy();
-        expect(printError).toHaveBeenCalledWith('Erro ao executar setup wizard', expect.any(Error));
-        expect(pushHistory).not.toHaveBeenCalled();
+    beforeEach(() => {
+        vi.clearAllMocks();
     });
+
+    describe('HandleSetupWizard', () => {
+        it('calls setup main and records history on success', async () => {expect.hasAssertions();
+
+            mockSetupModule.main.mockResolvedValue(undefined);
+
+            const result = await handleSetupWizard();
+
+            expect(title).toHaveBeenCalledWith('Setup Wizard');
+            expect(info).toHaveBeenCalledWith('Iniciando wizard de configuração de CI/CD...');
+            expect(divider).toHaveBeenCalled();
+            expect(mockSetupModule.main).toHaveBeenCalled();
+            expect(pushHistory).toHaveBeenCalledWith('setup-wizard', 'wizard concluído', 'ok');
+            expect(result).toBeFalsy();
+        });
+
+        it('handles setup failure gracefully', async () => {expect.hasAssertions();
+
+            mockSetupModule.main.mockRejectedValue(new Error('Setup error'));
+
+            const result = await handleSetupWizard();
+
+            expect(result).toBeFalsy();
+            expect(printError).toHaveBeenCalledWith('Erro ao executar setup wizard', expect.any(Error));
+            expect(pushHistory).not.toHaveBeenCalled();
+        });
+    });
+
 });

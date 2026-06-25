@@ -67,88 +67,91 @@ async function loadModule() {
     return import('./show-docs.js');
 }
 
-beforeEach(() => {
-    vi.clearAllMocks();
-});
+describe('Show Docs', () => {
+    beforeEach(() => {
+        vi.clearAllMocks();
+    });
 
-describe('ShowDocs', () => {
-    it('converts docs to html and opens index in browser', async () => {expect.hasAssertions();
+    describe('ShowDocs', () => {
+        it('converts docs to html and opens index in browser', async () => {expect.hasAssertions();
 
-        mockGetDocsOutputDir.mockReturnValue('/tmp/docs');
-        mockReaddirSync.mockReturnValue(['01-intro.md', '02-setup.md', '03-advanced.md']);
-        mockReadFileSync.mockImplementation((...args: unknown[]) => {
-            const filePath = args[0] as string;
-            if (filePath.includes('01-intro')) return '# Intro';
-            if (filePath.includes('02-setup')) return '# Setup';
-            if (filePath.includes('03-advanced')) return '# Advanced';
-            return '';
+            mockGetDocsOutputDir.mockReturnValue('/tmp/docs');
+            mockReaddirSync.mockReturnValue(['01-intro.md', '02-setup.md', '03-advanced.md']);
+            mockReadFileSync.mockImplementation((...args: unknown[]) => {
+                const filePath = args[0] as string;
+                if (filePath.includes('01-intro')) return '# Intro';
+                if (filePath.includes('02-setup')) return '# Setup';
+                if (filePath.includes('03-advanced')) return '# Advanced';
+                return '';
+            });
+
+            const { showDocs } = await loadModule();
+            await showDocs();
+
+            expect(mockMkdirSync).toHaveBeenCalledWith('/tmp/docs', { recursive: true });
+            expect(mockWriteFileSync).toHaveBeenCalledTimes(4);
+            expect(mockOpenWithFallback).toHaveBeenCalledWith('/tmp/docs/index.html', 'Documentação', mockInfo);
         });
 
-        const { showDocs } = await loadModule();
-        await showDocs();
+        it('prints error when docs dir not found', async () => {expect.hasAssertions();
 
-        expect(mockMkdirSync).toHaveBeenCalledWith('/tmp/docs', { recursive: true });
-        expect(mockWriteFileSync).toHaveBeenCalledTimes(4);
-        expect(mockOpenWithFallback).toHaveBeenCalledWith('/tmp/docs/index.html', 'Documentação', mockInfo);
-    });
+            mockGetDocsOutputDir.mockReturnValue('/tmp/docs');
+            mockReaddirSync.mockImplementation(() => {
+                throw new Error('ENOENT');
+            });
 
-    it('prints error when docs dir not found', async () => {expect.hasAssertions();
+            const { showDocs } = await loadModule();
+            await showDocs();
 
-        mockGetDocsOutputDir.mockReturnValue('/tmp/docs');
-        mockReaddirSync.mockImplementation(() => {
-            throw new Error('ENOENT');
+            expect(mockPrintError).toHaveBeenCalledWith('Documentação', expect.any(Error));
+            expect(nonNull(mockPrintError.mock.calls[0])[1].message).toContain('Diretório docs/ não encontrado');
+            expect(mockOpenWithFallback).not.toHaveBeenCalled();
         });
 
-        const { showDocs } = await loadModule();
-        await showDocs();
+        it('warns and returns when no docs match pattern', async () => {expect.hasAssertions();
 
-        expect(mockPrintError).toHaveBeenCalledWith('Documentação', expect.any(Error));
-        expect(nonNull(mockPrintError.mock.calls[0])[1].message).toContain('Diretório docs/ não encontrado');
-        expect(mockOpenWithFallback).not.toHaveBeenCalled();
-    });
+            mockGetDocsOutputDir.mockReturnValue('/tmp/docs');
+            mockReaddirSync.mockReturnValue(['readme.md', 'notes.txt']);
 
-    it('warns and returns when no docs match pattern', async () => {expect.hasAssertions();
+            const { showDocs } = await loadModule();
+            await showDocs();
 
-        mockGetDocsOutputDir.mockReturnValue('/tmp/docs');
-        mockReaddirSync.mockReturnValue(['readme.md', 'notes.txt']);
-
-        const { showDocs } = await loadModule();
-        await showDocs();
-
-        expect(mockWarn).toHaveBeenCalledWith('Nenhum documento encontrado em docs/.');
-        expect(mockDivider).toHaveBeenCalled();
-        expect(mockOpenWithFallback).not.toHaveBeenCalled();
-    });
-
-    it('skips files that fail to read and continues', async () => {expect.hasAssertions();
-
-        mockGetDocsOutputDir.mockReturnValue('/tmp/docs');
-        mockReaddirSync.mockReturnValue(['01-good.md', '02-bad.md', '03-good.md']);
-        mockReadFileSync.mockImplementation((...args: unknown[]) => {
-            const filePath = args[0] as string;
-            if (filePath.includes('02-bad')) throw new Error('Read error');
-            if (filePath.includes('01-good')) return '# Good 1';
-            if (filePath.includes('03-good')) return '# Good 3';
-            return '';
+            expect(mockWarn).toHaveBeenCalledWith('Nenhum documento encontrado em docs/.');
+            expect(mockDivider).toHaveBeenCalled();
+            expect(mockOpenWithFallback).not.toHaveBeenCalled();
         });
 
-        const { showDocs } = await loadModule();
-        await showDocs();
+        it('skips files that fail to read and continues', async () => {expect.hasAssertions();
 
-        expect(mockPrintError).toHaveBeenCalledWith('Erro ao ler 02-bad.md', expect.any(Error));
-        expect(mockWriteFileSync).toHaveBeenCalledTimes(3);
+            mockGetDocsOutputDir.mockReturnValue('/tmp/docs');
+            mockReaddirSync.mockReturnValue(['01-good.md', '02-bad.md', '03-good.md']);
+            mockReadFileSync.mockImplementation((...args: unknown[]) => {
+                const filePath = args[0] as string;
+                if (filePath.includes('02-bad')) throw new Error('Read error');
+                if (filePath.includes('01-good')) return '# Good 1';
+                if (filePath.includes('03-good')) return '# Good 3';
+                return '';
+            });
+
+            const { showDocs } = await loadModule();
+            await showDocs();
+
+            expect(mockPrintError).toHaveBeenCalledWith('Erro ao ler 02-bad.md', expect.any(Error));
+            expect(mockWriteFileSync).toHaveBeenCalledTimes(3);
+        });
+
+        it('prints error when getDocsOutputDir returns null', async () => {expect.hasAssertions();
+
+            mockGetDocsOutputDir.mockReturnValue(null);
+            mockReaddirSync.mockReturnValue(['01-intro.md']);
+
+            const { showDocs } = await loadModule();
+            await showDocs();
+
+            expect(mockPrintError).toHaveBeenCalledWith('Documentação', expect.any(Error));
+            expect(nonNull(mockPrintError.mock.calls[0])[1].message).toContain('Não foi possível determinar');
+            expect(mockOpenWithFallback).not.toHaveBeenCalled();
+        });
     });
 
-    it('prints error when getDocsOutputDir returns null', async () => {expect.hasAssertions();
-
-        mockGetDocsOutputDir.mockReturnValue(null);
-        mockReaddirSync.mockReturnValue(['01-intro.md']);
-
-        const { showDocs } = await loadModule();
-        await showDocs();
-
-        expect(mockPrintError).toHaveBeenCalledWith('Documentação', expect.any(Error));
-        expect(nonNull(mockPrintError.mock.calls[0])[1].message).toContain('Não foi possível determinar');
-        expect(mockOpenWithFallback).not.toHaveBeenCalled();
-    });
 });

@@ -14,10 +14,6 @@ import { formatDateISO } from './date-utils.js';
 import { Logger, rootLogger, maskDeep } from './logger.js';
 import { nonNull } from './test-utils.js';
 
-beforeAll(() => {
-    fs.mkdirSync('/tmp', { recursive: true });
-});
-
 function testDir(label: string): string {
     const dir = `/tmp/qa-tools-logger-${label}-${Math.random().toString(36).slice(2, 10)}`;
     fs.mkdirSync(dir, { recursive: true });
@@ -25,6 +21,9 @@ function testDir(label: string): string {
 }
 
 describe('Logger', () => {
+    beforeAll(() => {
+        fs.mkdirSync('/tmp', { recursive: true });
+    });
     describe('RootLogger', () => {
         it('is a Logger instance', () => {
             expect(rootLogger).toBeInstanceOf(Logger);
@@ -442,9 +441,10 @@ describe('MaskDeep (PBT)', () => {
     it('primitives and null return input unchanged', () => {
 
         fc.assert(
-            fc.property(fc.constantFrom(null, undefined, 42, 'hello', true, false), (input) =>
-                Object.is(maskDeep(input), input),
-            ),
+            fc.property(fc.constantFrom(null, undefined, 42, 'hello', true, false), (input) => {
+                expect(maskDeep(input)).toStrictEqual(input);
+                return true;
+            }),
         );
     });
 
@@ -454,7 +454,9 @@ describe('MaskDeep (PBT)', () => {
             fc.property(fc.dictionary(fc.string(), fc.oneof(fc.string(), fc.integer(), fc.boolean())), (original) => {
                 const snapshot = JSON.stringify(original);
                 maskDeep(original);
-                return JSON.stringify(original) === snapshot;
+
+                expect(JSON.stringify(original)).toStrictEqual(snapshot);
+                return true;
             }),
         );
     });
@@ -470,8 +472,12 @@ describe('MaskDeep (PBT)', () => {
                 ),
                 (input) => {
                     const result = maskDeep(input);
-                    if (typeof result !== 'object' || result === null) return false;
-                    return Object.values(result).every((v) => typeof v !== 'string' || v.includes('****'));
+                    if (typeof result !== 'object' || result === null) return true;
+                    const sensitiveValues = Object.values(result).filter((v) => typeof v === 'string');
+                    for (const v of sensitiveValues) {
+                        expect(v).toContain('****');
+                    }
+                    return true;
                 },
             ),
         );
@@ -486,13 +492,16 @@ describe('MaskDeep (PBT)', () => {
                 }),
                 (input) => {
                     const result = maskDeep(input);
-                    if (typeof result !== 'object' || result === null) return false;
+                    if (typeof result !== 'object' || result === null) return true;
                     const pairs = Object.entries(result);
                     const origPairs = Object.entries(input);
-                    return pairs.every(([key, val]) => {
+
+                    for (const [key, val] of pairs) {
                         const match = origPairs.find(([k]) => k === key);
-                        return match !== undefined && match[1] === val;
-                    });
+                        expect(match).toBeDefined();
+                        expect(match?.[1]).toBe(val);
+                    }
+                    return true;
                 },
             ),
         );
@@ -510,16 +519,19 @@ describe('MaskDeep (PBT)', () => {
                     { maxKeys: 2 },
                 ),
                 (input) => {
-                    const check = (obj: unknown): boolean => {
-                        if (!obj || typeof obj !== 'object') return true;
-                        return Object.entries(obj).every(([key, val]) => {
+                    const check = (obj: unknown): void => {
+                        if (!obj || typeof obj !== 'object') return;
+                        for (const [key, val] of Object.entries(obj)) {
                             if (PBT_SECRET_RE.test(key)) {
-                                if (typeof val === 'string') return val.includes('****');
+                                if (typeof val === 'string') {
+                                    expect(val).toContain('****');
+                                }
                             }
-                            return typeof val !== 'object' || val === null || check(val);
-                        });
+                            if (typeof val === 'object' && val !== null) check(val);
+                        }
                     };
-                    return check(maskDeep(input));
+                    check(maskDeep(input));
+                    return true;
                 },
             ),
         );
@@ -538,7 +550,10 @@ describe('MaskDeep (PBT)', () => {
                 ),
                 (input) => {
                     const result = maskDeep(input);
-                    return Array.isArray(result) && JSON.stringify(result).includes('****');
+
+                    expect(Array.isArray(result)).toBe(true);
+                    expect(JSON.stringify(result)).toContain('****');
+                    return true;
                 },
             ),
         );
@@ -553,8 +568,11 @@ describe('MaskDeep (PBT)', () => {
                 }),
                 (input) => {
                     const result = maskDeep(input);
-                    if (typeof result !== 'object' || result === null) return false;
-                    return Object.values(result).every((v) => v === '****');
+                    if (typeof result !== 'object' || result === null) return true;
+                    for (const v of Object.values(result)) {
+                        expect(v).toBe('****');
+                    }
+                    return true;
                 },
             ),
         );

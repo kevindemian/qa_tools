@@ -46,85 +46,88 @@ const runB: MetricsRun = {
     tests: [],
 };
 
-beforeEach(() => {
-    vi.clearAllMocks();
-});
-
-describe('CompareRuns', () => {
-    it('calls LLM with formatted run data and returns analysis', async () => {expect.hasAssertions();
-
-        mockLlmPrompt.mockResolvedValueOnce('Overall improvement in pass rate from 80% to 90%.');
-
-        const result = await compareRuns(runA, runB);
-
-        expect(result).toBe('Overall improvement in pass rate from 80% to 90%.');
+describe('Run Comparison', () => {
+    beforeEach(() => {
+        vi.clearAllMocks();
     });
 
-    it('23.15: returns appropriate message for empty data', async () => {expect.hasAssertions();
+    describe('CompareRuns', () => {
+        it('calls LLM with formatted run data and returns analysis', async () => {expect.hasAssertions();
 
-        const result = await compareRuns(null, null);
+            mockLlmPrompt.mockResolvedValueOnce('Overall improvement in pass rate from 80% to 90%.');
 
-        expect(result).toContain('No run data provided');
+            const result = await compareRuns(runA, runB);
+
+            expect(result).toBe('Overall improvement in pass rate from 80% to 90%.');
+        });
+
+        it('23.15: returns appropriate message for empty data', async () => {expect.hasAssertions();
+
+            const result = await compareRuns(null, null);
+
+            expect(result).toContain('No run data provided');
+        });
+
+        it('23.16: verify sanitization of run data', async () => {expect.hasAssertions();
+
+            const secret = 'sk-12345678901234567890';
+            const runAWithSecrets = { ...runA, project: 'proj-with-secret-' + secret };
+            mockLlmPrompt.mockResolvedValueOnce('Analysis');
+
+            await compareRuns(runAWithSecrets, runB);
+
+            const callArgs = nonNull(mockLlmPrompt.mock.calls[0])[0];
+            const userMsg = callArgs.user;
+
+            expect(userMsg).not.toContain(secret);
+        });
+
+        it('returns empty string on LLM error', async () => {expect.hasAssertions();
+
+            mockLlmPrompt.mockRejectedValueOnce(new Error('API error'));
+
+            const result = await compareRuns(runA, runB);
+
+            expect(result).toBe('');
+        });
+
+        it('sanitizes run data before sending to LLM', async () => {expect.hasAssertions();
+
+            const runWithSecret: MetricsRun = {
+                timestamp: '2026-05-01T00:00:00.000Z',
+                project: 'test',
+                total: 5,
+                passed: 3,
+                failed: 2,
+                skipped: 0,
+                duration: 1000,
+                tests: [],
+            };
+            mockLlmPrompt.mockResolvedValueOnce('sanitized response');
+            await compareRuns(runWithSecret, runA);
+            const userArg = nonNull(mockLlmPrompt.mock.calls[0])[0].user;
+
+            expect(typeof userArg).toBe('string');
+
+            const sanitized = sanitizeForLlm(userArg);
+
+            expect(sanitized).toBe(userArg);
+        });
+
+        it('g-01 bug-fix: logs meaningful message when LLM rejects with non-Error', async () => {expect.hasAssertions();
+
+            mockLlmPrompt.mockRejectedValueOnce('API quota exceeded');
+
+            const result = await compareRuns(runA, runB);
+
+            expect(result).toBe('');
+            expect(mockLoggerError).toHaveBeenCalled();
+
+            const logMsg = String(mockLoggerError.mock.calls[0]?.[0] ?? '');
+
+            expect(logMsg).not.toContain('undefined');
+            expect(logMsg).toContain('API quota exceeded');
+        });
     });
 
-    it('23.16: verify sanitization of run data', async () => {expect.hasAssertions();
-
-        const secret = 'sk-12345678901234567890';
-        const runAWithSecrets = { ...runA, project: 'proj-with-secret-' + secret };
-        mockLlmPrompt.mockResolvedValueOnce('Analysis');
-
-        await compareRuns(runAWithSecrets, runB);
-
-        const callArgs = nonNull(mockLlmPrompt.mock.calls[0])[0];
-        const userMsg = callArgs.user;
-
-        expect(userMsg).not.toContain(secret);
-    });
-
-    it('returns empty string on LLM error', async () => {expect.hasAssertions();
-
-        mockLlmPrompt.mockRejectedValueOnce(new Error('API error'));
-
-        const result = await compareRuns(runA, runB);
-
-        expect(result).toBe('');
-    });
-
-    it('sanitizes run data before sending to LLM', async () => {expect.hasAssertions();
-
-        const runWithSecret: MetricsRun = {
-            timestamp: '2026-05-01T00:00:00.000Z',
-            project: 'test',
-            total: 5,
-            passed: 3,
-            failed: 2,
-            skipped: 0,
-            duration: 1000,
-            tests: [],
-        };
-        mockLlmPrompt.mockResolvedValueOnce('sanitized response');
-        await compareRuns(runWithSecret, runA);
-        const userArg = nonNull(mockLlmPrompt.mock.calls[0])[0].user;
-
-        expect(typeof userArg).toBe('string');
-
-        const sanitized = sanitizeForLlm(userArg);
-
-        expect(sanitized).toBe(userArg);
-    });
-
-    it('g-01 bug-fix: logs meaningful message when LLM rejects with non-Error', async () => {expect.hasAssertions();
-
-        mockLlmPrompt.mockRejectedValueOnce('API quota exceeded');
-
-        const result = await compareRuns(runA, runB);
-
-        expect(result).toBe('');
-        expect(mockLoggerError).toHaveBeenCalled();
-
-        const logMsg = String(mockLoggerError.mock.calls[0]?.[0] ?? '');
-
-        expect(logMsg).not.toContain('undefined');
-        expect(logMsg).toContain('API quota exceeded');
-    });
 });

@@ -35,11 +35,11 @@ describe('Structural.ts — module loads and runs', () => {
         expect.hasAssertions();
 
         let captured = '';
-        const originalWrite = process.stdout.write;
+        const originalWrite = process.stdout.write.bind(process.stdout);
         process.stdout.write = vi.fn((chunk: string | Uint8Array) => {
             captured += typeof chunk === 'string' ? chunk : new TextDecoder().decode(chunk);
             return true;
-        }) as unknown as typeof process.stdout.write;
+        });
 
         mockExecFileSync.mockReturnValue(Buffer.from(''));
         await import('./structural.js');

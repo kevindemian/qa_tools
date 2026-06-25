@@ -8,7 +8,7 @@ describe('ChangeImpactSchema', () => {
     });
 
     it('rejects invalid impact', () => {
-        expect(() => ChangeImpactSchema.parse('unknown')).toThrow();
+        expect(() => ChangeImpactSchema.parse('unknown')).toThrow(/./i);
     });
 });
 
@@ -27,24 +27,24 @@ describe('RunComparisonSchema', () => {
     });
 
     it('rejects summary shorter than 20 chars', () => {
-        expect(() => RunComparisonSchema.parse({ ...valid, summary: 'Short summary' })).toThrow();
+        expect(() => RunComparisonSchema.parse({ ...valid, summary: 'Short summary' })).toThrow(/./i);
     });
 
     it('rejects summary longer than 500 chars', () => {
         const longSummary = 'x'.repeat(501);
 
-        expect(() => RunComparisonSchema.parse({ ...valid, summary: longSummary })).toThrow();
+        expect(() => RunComparisonSchema.parse({ ...valid, summary: longSummary })).toThrow(/./i);
     });
 
     it('rejects empty meaningfulChanges', () => {
-        expect(() => RunComparisonSchema.parse({ ...valid, meaningfulChanges: [] })).toThrow();
+        expect(() => RunComparisonSchema.parse({ ...valid, meaningfulChanges: [] })).toThrow(/./i);
     });
 
     it('rejects empty evidence', () => {
-        expect(() => RunComparisonSchema.parse({ ...valid, evidence: [] })).toThrow();
+        expect(() => RunComparisonSchema.parse({ ...valid, evidence: [] })).toThrow(/./i);
     });
 
     it('rejects confidence < 0', () => {
-        expect(() => RunComparisonSchema.parse({ ...valid, confidence: -0.5 })).toThrow();
+        expect(() => RunComparisonSchema.parse({ ...valid, confidence: -0.5 })).toThrow(/./i);
     });
 });

@@ -22,77 +22,80 @@ const mockShowSelect = vi.mocked(showSelect);
 import { makeMockCommandContext } from '../../shared/test-utils.js';
 import case23Handler from './case23.js';
 
-beforeEach(() => {
-    vi.clearAllMocks();
-    mockShowSelect.mockResolvedValue('0');
-});
+describe('Case23', () => {
+    beforeEach(() => {
+        vi.clearAllMocks();
+        mockShowSelect.mockResolvedValue('0');
+    });
 
-describe('Case23 — AI Feedback', () => {
-    it('shows warning when no feedback records exist', async () => {expect.hasAssertions();
+    describe('Case23 — AI Feedback', () => {
+        it('shows warning when no feedback records exist', async () => {expect.hasAssertions();
 
-        mockShowSelect.mockResolvedValueOnce('a').mockResolvedValueOnce('0');
-        mockGetSummary.mockReturnValue({
-            totalRecords: 0,
-            totalGenerated: 0,
-            totalModified: 0,
-            totalDeleted: 0,
-            acceptanceRate: 0,
-            topPromptVersion: '',
+            mockShowSelect.mockResolvedValueOnce('a').mockResolvedValueOnce('0');
+            mockGetSummary.mockReturnValue({
+                totalRecords: 0,
+                totalGenerated: 0,
+                totalModified: 0,
+                totalDeleted: 0,
+                acceptanceRate: 0,
+                topPromptVersion: '',
+            });
+
+            await case23Handler.handler(makeMockCommandContext());
+
+            expect(warn).toHaveBeenCalledWith('Nenhum registro de feedback de IA encontrado.');
+            expect(tableView).not.toHaveBeenCalled();
         });
 
-        await case23Handler.handler(makeMockCommandContext());
+        it('displays summary when records exist', async () => {expect.hasAssertions();
 
-        expect(warn).toHaveBeenCalledWith('Nenhum registro de feedback de IA encontrado.');
-        expect(tableView).not.toHaveBeenCalled();
-    });
+            mockShowSelect.mockResolvedValueOnce('a').mockResolvedValueOnce('0');
+            mockGetSummary.mockReturnValue({
+                totalRecords: 5,
+                totalGenerated: 20,
+                totalModified: 2,
+                totalDeleted: 1,
+                acceptanceRate: 85,
+                topPromptVersion: 'v2',
+            });
 
-    it('displays summary when records exist', async () => {expect.hasAssertions();
+            await case23Handler.handler(makeMockCommandContext());
 
-        mockShowSelect.mockResolvedValueOnce('a').mockResolvedValueOnce('0');
-        mockGetSummary.mockReturnValue({
-            totalRecords: 5,
-            totalGenerated: 20,
-            totalModified: 2,
-            totalDeleted: 1,
-            acceptanceRate: 85,
-            topPromptVersion: 'v2',
+            expect(tableView).toHaveBeenCalledWith(
+                expect.arrayContaining([expect.objectContaining({ Métrica: 'Total de registros', Valor: 5 })]),
+                expect.any(Array),
+            );
         });
 
-        await case23Handler.handler(makeMockCommandContext());
+        it('displays recent records', async () => {expect.hasAssertions();
 
-        expect(tableView).toHaveBeenCalledWith(
-            expect.arrayContaining([expect.objectContaining({ Métrica: 'Total de registros', Valor: 5 })]),
-            expect.any(Array),
-        );
+            mockShowSelect.mockResolvedValueOnce('b').mockResolvedValueOnce('0');
+            mockGetRecent.mockReturnValue([
+                {
+                    id: 'rec-1',
+                    generatedAt: '2026-05-29T00:00:00.000Z',
+                    promptVersion: 'v2',
+                    generatedTests: [{ title: 'T1', preConditions: [], stepCount: 1 }],
+                    userStory: 'As a user',
+                    acceptanceCriteria: 'some criteria',
+                    preconditionMatches: [],
+                },
+            ]);
+
+            await case23Handler.handler(makeMockCommandContext());
+
+            expect(tableView).toHaveBeenCalled();
+        });
+
+        it('warns when no recent records', async () => {expect.hasAssertions();
+
+            mockShowSelect.mockResolvedValueOnce('b').mockResolvedValueOnce('0');
+            mockGetRecent.mockReturnValue([]);
+
+            await case23Handler.handler(makeMockCommandContext());
+
+            expect(warn).toHaveBeenCalledWith('Nenhum registro recente.');
+        });
     });
 
-    it('displays recent records', async () => {expect.hasAssertions();
-
-        mockShowSelect.mockResolvedValueOnce('b').mockResolvedValueOnce('0');
-        mockGetRecent.mockReturnValue([
-            {
-                id: 'rec-1',
-                generatedAt: '2026-05-29T00:00:00.000Z',
-                promptVersion: 'v2',
-                generatedTests: [{ title: 'T1', preConditions: [], stepCount: 1 }],
-                userStory: 'As a user',
-                acceptanceCriteria: 'some criteria',
-                preconditionMatches: [],
-            },
-        ]);
-
-        await case23Handler.handler(makeMockCommandContext());
-
-        expect(tableView).toHaveBeenCalled();
-    });
-
-    it('warns when no recent records', async () => {expect.hasAssertions();
-
-        mockShowSelect.mockResolvedValueOnce('b').mockResolvedValueOnce('0');
-        mockGetRecent.mockReturnValue([]);
-
-        await case23Handler.handler(makeMockCommandContext());
-
-        expect(warn).toHaveBeenCalledWith('Nenhum registro recente.');
-    });
 });

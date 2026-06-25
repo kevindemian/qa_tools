@@ -163,221 +163,224 @@ const mockGenerateHtml = vi.mocked(generateFlakinessHtml);
 
 const mockManager = createMockGitProvider();
 
-beforeEach(() => {
-    vi.clearAllMocks();
-    mockState.currentProvider = 'gitlab';
-    mockState.currentProjectName = '';
-});
-
-beforeAll(async () => {
-    const openModule = (await import('../shared/open.js')) as { openWithFallback: (...args: unknown[]) => unknown };
-    if (!vi.isMockFunction(openModule.openWithFallback)) {
-        throw new Error('Guard FAILED: openWithFallback is NOT mocked. Browser would open!');
-    }
-});
-
-describe('HandleListSchedules', () => {
-    it('lists schedules for gitlab', async () => {expect.hasAssertions();
-
-        const schedules = [
-            { id: '1', description: 'Nightly', next_run_at: '2026-01-01' },
-            { id: '2', description: '' },
-        ];
-        vi.spyOn(mockManager, 'getSchedules').mockResolvedValue(schedules);
-
-        await handleListSchedules(mockManager);
-
-        expect(info).toHaveBeenCalledWith(expect.stringContaining('Schedules'));
-        expect(print).toHaveBeenCalledTimes(2);
-        expect(mockPushHistory).toHaveBeenCalledWith('list-schedules', '2 schedules', 'ok');
-    });
-
-    it('warns on empty schedules', async () => {expect.hasAssertions();
-
-        vi.spyOn(mockManager, 'getSchedules').mockResolvedValue([]);
-
-        await handleListSchedules(mockManager);
-
-        expect(mockWarn).toHaveBeenCalledWith(expect.stringContaining('Nenhum schedule'));
-    });
-
-    it('warns for github provider', async () => {expect.hasAssertions();
-
-        mockState.currentProvider = 'github';
-
-        await handleListSchedules(mockManager);
-
-        expect(mockWarn).toHaveBeenCalledWith(expect.stringContaining('GitHub'));
-        expect(mockManager.getSchedules).not.toHaveBeenCalled();
-    });
-
-    it('handles error', async () => {expect.hasAssertions();
-
-        vi.spyOn(mockManager, 'getSchedules').mockRejectedValue(new Error('API error'));
-
-        await handleListSchedules(mockManager);
-
-        expect(mockPrintError).toHaveBeenCalled();
-    });
-});
-
-describe('HandleRunSchedule', () => {
-    it('runs schedule for gitlab', async () => {expect.hasAssertions();
-
-        mockPrompt.mockReturnValue('schedule-1');
-        vi.spyOn(mockManager, 'runSchedule').mockResolvedValue({ status: 'success' });
-
-        await handleRunSchedule(mockManager);
-
-        expect(mockManager.runSchedule).toHaveBeenCalledWith('schedule-1');
-        expect(success).toHaveBeenCalled();
-        expect(mockPushHistory).toHaveBeenCalledWith('schedule-run', 'schedule-1', 'ok');
-    });
-
-    it('warns for github provider', async () => {expect.hasAssertions();
-
-        mockState.currentProvider = 'github';
-
-        await handleRunSchedule(mockManager);
-
-        expect(mockWarn).toHaveBeenCalledWith(expect.stringContaining('GitHub'));
-        expect(mockManager.runSchedule).not.toHaveBeenCalled();
-    });
-
-    it('handles error', async () => {expect.hasAssertions();
-
-        mockPrompt.mockReturnValue('sched-1');
-        vi.spyOn(mockManager, 'runSchedule').mockRejectedValue(new Error('fail'));
-
-        await handleRunSchedule(mockManager);
-
-        expect(mockPrintError).toHaveBeenCalled();
-    });
-});
-
-describe('HandleChangeProject', () => {
-    const names = ['proj1', 'proj2'];
-
-    it('changes to valid project', async () => {expect.hasAssertions();
-
-        mockPrompt.mockReturnValue('1');
-        vi.mocked(getProjects).mockReturnValue({ proj1: '1', proj2: '2' });
-
-        await handleChangeProject(names);
-
-        const {
-            setCurrentProjectName,
-            setProjectId,
-            setManager,
-        }: {
-            setCurrentProjectName: (name: string) => void;
-            setProjectId: (id: string) => void;
-            setManager: (v: GitProvider | null) => void;
-        } = await import('./session-state.js');
-
-        expect(setCurrentProjectName).toHaveBeenCalledWith('proj1');
-        expect(setProjectId).toHaveBeenCalledWith('1');
-        expect(setManager).toHaveBeenCalled();
-        expect(success).toHaveBeenCalledWith(expect.stringContaining('proj1'));
-    });
-
-    it('warns on invalid index', async () => {expect.hasAssertions();
-
-        mockPrompt.mockReturnValue('99');
-
-        await handleChangeProject(names);
-
-        expect(mockWarn).toHaveBeenCalledWith(expect.stringContaining('inválida'));
-    });
-
-    it('warns on NaN', async () => {expect.hasAssertions();
-
-        mockPrompt.mockReturnValue('abc');
-
-        await handleChangeProject(names);
-
-        expect(mockWarn).toHaveBeenCalledWith(expect.stringContaining('inválida'));
-    });
-});
-
-describe('HandleFlakinessDashboard', () => {
-    it('warns when no project selected', () => {
-        void handleFlakinessDashboard();
-
-        expect(mockWarn).toHaveBeenCalledWith(expect.stringContaining('Nenhum projeto'));
-    });
-
-    it('warns when less than 2 runs', () => {
-        mockState.currentProjectName = 'proj1';
-        mockLoadMetrics.mockReturnValue({
-            runs: [
-                { project: 'proj1', timestamp: '', total: 0, passed: 0, failed: 0, skipped: 0, duration: 0, tests: [] },
-            ],
-        });
-
-        void handleFlakinessDashboard();
-
-        expect(mockWarn).toHaveBeenCalledWith(expect.stringContaining('Menos de 2'));
-    });
-
-    it('informs when no flaky tests', () => {
-        mockState.currentProjectName = 'proj1';
-        mockLoadMetrics.mockReturnValue({
-            runs: [
-                { project: 'proj1', timestamp: '', total: 0, passed: 0, failed: 0, skipped: 0, duration: 0, tests: [] },
-                { project: 'proj1', timestamp: '', total: 0, passed: 0, failed: 0, skipped: 0, duration: 0, tests: [] },
-            ],
-        });
-        mockCalculateFlakiness.mockReturnValue([]);
-
-        void handleFlakinessDashboard();
-
-        expect(mockInfo).toHaveBeenCalledWith(expect.stringContaining('Nenhum teste flaky'));
-    });
-
-    it('generates dashboard HTML and opens browser', async () => {expect.hasAssertions();
-
-        mockState.currentProjectName = 'proj1';
-        mockLoadMetrics.mockReturnValue({
-            runs: [
-                { project: 'proj1', timestamp: '', total: 0, passed: 0, failed: 0, skipped: 0, duration: 0, tests: [] },
-                { project: 'proj1', timestamp: '', total: 0, passed: 0, failed: 0, skipped: 0, duration: 0, tests: [] },
-            ],
-        });
-        mockCalculateFlakiness.mockReturnValue([
-            { title: 't1', rate: 0.5, passCount: 1, failCount: 0, skipCount: 0, totalRuns: 1 },
-        ]);
-
-        await handleFlakinessDashboard();
-
-        expect(mockGenerateHtml).toHaveBeenCalled();
-
-        const { openWithFallback } = (await import('../shared/open.js')) as {
-            openWithFallback: (...args: unknown[]) => unknown;
-        };
-
-        expect(openWithFallback).toHaveBeenCalledWith(expect.stringContaining('flakiness'), 'Dashboard de flaky', info);
-    });
-});
-
-describe('GenerateWeeklyQualityReport', () => {
-    it('warns when no project selected', () => {
+describe('Schedule Handler', () => {
+    beforeEach(() => {
+        vi.clearAllMocks();
+        mockState.currentProvider = 'gitlab';
         mockState.currentProjectName = '';
-        generateWeeklyQualityReport();
-
-        expect(mockWarn).toHaveBeenCalledWith(expect.stringContaining('Nenhum projeto'));
     });
 
-    it('warns when less than 2 runs and git fallback fails', () => {
-        mockState.currentProjectName = 'proj1';
-        mockLoadMetrics.mockReturnValue({
-            runs: [
-                { project: 'proj1', timestamp: '', total: 0, passed: 0, failed: 0, skipped: 0, duration: 0, tests: [] },
-            ],
-            failureClassifications: [],
+    beforeAll(async () => {
+        const openModule = (await import('../shared/open.js')) as { openWithFallback: (...args: unknown[]) => unknown };
+        if (!vi.isMockFunction(openModule.openWithFallback)) {
+            throw new Error('Guard FAILED: openWithFallback is NOT mocked. Browser would open!');
+        }
+    });
+
+    describe('HandleListSchedules', () => {
+        it('lists schedules for gitlab', async () => {expect.hasAssertions();
+
+            const schedules = [
+                { id: '1', description: 'Nightly', next_run_at: '2026-01-01' },
+                { id: '2', description: '' },
+            ];
+            vi.spyOn(mockManager, 'getSchedules').mockResolvedValue(schedules);
+
+            await handleListSchedules(mockManager);
+
+            expect(info).toHaveBeenCalledWith(expect.stringContaining('Schedules'));
+            expect(print).toHaveBeenCalledTimes(2);
+            expect(mockPushHistory).toHaveBeenCalledWith('list-schedules', '2 schedules', 'ok');
         });
-        generateWeeklyQualityReport();
 
-        expect(mockWarn).toHaveBeenCalledWith(expect.stringContaining('Menos de 2'));
+        it('warns on empty schedules', async () => {expect.hasAssertions();
+
+            vi.spyOn(mockManager, 'getSchedules').mockResolvedValue([]);
+
+            await handleListSchedules(mockManager);
+
+            expect(mockWarn).toHaveBeenCalledWith(expect.stringContaining('Nenhum schedule'));
+        });
+
+        it('warns for github provider', async () => {expect.hasAssertions();
+
+            mockState.currentProvider = 'github';
+
+            await handleListSchedules(mockManager);
+
+            expect(mockWarn).toHaveBeenCalledWith(expect.stringContaining('GitHub'));
+            expect(mockManager.getSchedules).not.toHaveBeenCalled();
+        });
+
+        it('handles error', async () => {expect.hasAssertions();
+
+            vi.spyOn(mockManager, 'getSchedules').mockRejectedValue(new Error('API error'));
+
+            await handleListSchedules(mockManager);
+
+            expect(mockPrintError).toHaveBeenCalled();
+        });
     });
+
+    describe('HandleRunSchedule', () => {
+        it('runs schedule for gitlab', async () => {expect.hasAssertions();
+
+            mockPrompt.mockReturnValue('schedule-1');
+            vi.spyOn(mockManager, 'runSchedule').mockResolvedValue({ status: 'success' });
+
+            await handleRunSchedule(mockManager);
+
+            expect(mockManager.runSchedule).toHaveBeenCalledWith('schedule-1');
+            expect(success).toHaveBeenCalled();
+            expect(mockPushHistory).toHaveBeenCalledWith('schedule-run', 'schedule-1', 'ok');
+        });
+
+        it('warns for github provider', async () => {expect.hasAssertions();
+
+            mockState.currentProvider = 'github';
+
+            await handleRunSchedule(mockManager);
+
+            expect(mockWarn).toHaveBeenCalledWith(expect.stringContaining('GitHub'));
+            expect(mockManager.runSchedule).not.toHaveBeenCalled();
+        });
+
+        it('handles error', async () => {expect.hasAssertions();
+
+            mockPrompt.mockReturnValue('sched-1');
+            vi.spyOn(mockManager, 'runSchedule').mockRejectedValue(new Error('fail'));
+
+            await handleRunSchedule(mockManager);
+
+            expect(mockPrintError).toHaveBeenCalled();
+        });
+    });
+
+    describe('HandleChangeProject', () => {
+        const names = ['proj1', 'proj2'];
+
+        it('changes to valid project', async () => {expect.hasAssertions();
+
+            mockPrompt.mockReturnValue('1');
+            vi.mocked(getProjects).mockReturnValue({ proj1: '1', proj2: '2' });
+
+            await handleChangeProject(names);
+
+            const {
+                setCurrentProjectName,
+                setProjectId,
+                setManager,
+            }: {
+                setCurrentProjectName: (name: string) => void;
+                setProjectId: (id: string) => void;
+                setManager: (v: GitProvider | null) => void;
+            } = await import('./session-state.js');
+
+            expect(setCurrentProjectName).toHaveBeenCalledWith('proj1');
+            expect(setProjectId).toHaveBeenCalledWith('1');
+            expect(setManager).toHaveBeenCalled();
+            expect(success).toHaveBeenCalledWith(expect.stringContaining('proj1'));
+        });
+
+        it('warns on invalid index', async () => {expect.hasAssertions();
+
+            mockPrompt.mockReturnValue('99');
+
+            await handleChangeProject(names);
+
+            expect(mockWarn).toHaveBeenCalledWith(expect.stringContaining('inválida'));
+        });
+
+        it('warns on NaN', async () => {expect.hasAssertions();
+
+            mockPrompt.mockReturnValue('abc');
+
+            await handleChangeProject(names);
+
+            expect(mockWarn).toHaveBeenCalledWith(expect.stringContaining('inválida'));
+        });
+    });
+
+    describe('HandleFlakinessDashboard', () => {
+        it('warns when no project selected', () => {
+            void handleFlakinessDashboard();
+
+            expect(mockWarn).toHaveBeenCalledWith(expect.stringContaining('Nenhum projeto'));
+        });
+
+        it('warns when less than 2 runs', () => {
+            mockState.currentProjectName = 'proj1';
+            mockLoadMetrics.mockReturnValue({
+                runs: [
+                    { project: 'proj1', timestamp: '', total: 0, passed: 0, failed: 0, skipped: 0, duration: 0, tests: [] },
+                ],
+            });
+
+            void handleFlakinessDashboard();
+
+            expect(mockWarn).toHaveBeenCalledWith(expect.stringContaining('Menos de 2'));
+        });
+
+        it('informs when no flaky tests', () => {
+            mockState.currentProjectName = 'proj1';
+            mockLoadMetrics.mockReturnValue({
+                runs: [
+                    { project: 'proj1', timestamp: '', total: 0, passed: 0, failed: 0, skipped: 0, duration: 0, tests: [] },
+                    { project: 'proj1', timestamp: '', total: 0, passed: 0, failed: 0, skipped: 0, duration: 0, tests: [] },
+                ],
+            });
+            mockCalculateFlakiness.mockReturnValue([]);
+
+            void handleFlakinessDashboard();
+
+            expect(mockInfo).toHaveBeenCalledWith(expect.stringContaining('Nenhum teste flaky'));
+        });
+
+        it('generates dashboard HTML and opens browser', async () => {expect.hasAssertions();
+
+            mockState.currentProjectName = 'proj1';
+            mockLoadMetrics.mockReturnValue({
+                runs: [
+                    { project: 'proj1', timestamp: '', total: 0, passed: 0, failed: 0, skipped: 0, duration: 0, tests: [] },
+                    { project: 'proj1', timestamp: '', total: 0, passed: 0, failed: 0, skipped: 0, duration: 0, tests: [] },
+                ],
+            });
+            mockCalculateFlakiness.mockReturnValue([
+                { title: 't1', rate: 0.5, passCount: 1, failCount: 0, skipCount: 0, totalRuns: 1 },
+            ]);
+
+            await handleFlakinessDashboard();
+
+            expect(mockGenerateHtml).toHaveBeenCalled();
+
+            const { openWithFallback } = (await import('../shared/open.js')) as {
+                openWithFallback: (...args: unknown[]) => unknown;
+            };
+
+            expect(openWithFallback).toHaveBeenCalledWith(expect.stringContaining('flakiness'), 'Dashboard de flaky', info);
+        });
+    });
+
+    describe('GenerateWeeklyQualityReport', () => {
+        it('warns when no project selected', () => {
+            mockState.currentProjectName = '';
+            generateWeeklyQualityReport();
+
+            expect(mockWarn).toHaveBeenCalledWith(expect.stringContaining('Nenhum projeto'));
+        });
+
+        it('warns when less than 2 runs and git fallback fails', () => {
+            mockState.currentProjectName = 'proj1';
+            mockLoadMetrics.mockReturnValue({
+                runs: [
+                    { project: 'proj1', timestamp: '', total: 0, passed: 0, failed: 0, skipped: 0, duration: 0, tests: [] },
+                ],
+                failureClassifications: [],
+            });
+            generateWeeklyQualityReport();
+
+            expect(mockWarn).toHaveBeenCalledWith(expect.stringContaining('Menos de 2'));
+        });
+    });
+
 });

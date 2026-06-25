@@ -38,158 +38,161 @@ async function loadModule() {
     return import('./first-run.js');
 }
 
-beforeEach(() => {
-    vi.clearAllMocks();
-    process.env = { ...OLD_ENV };
-    process.argv = [...OLD_ARGV];
-    delete process.env['CI'];
-    delete process.env['AUTO_CONFIRM'];
-    delete process.env['SKIP_FIRST_RUN'];
-});
-
-afterEach(() => {
-    process.env = { ...OLD_ENV };
-    process.argv = [...OLD_ARGV];
-});
-
-describe('IsFirstRun', () => {
-    it('returns false when CI=true', async () => {expect.hasAssertions();
-
-        process.env['CI'] = 'true';
-        const { isFirstRun } = await loadModule();
-
-        expect(isFirstRun()).toBeFalsy();
+describe('First Run', () => {
+    beforeEach(() => {
+        vi.clearAllMocks();
+        process.env = { ...OLD_ENV };
+        process.argv = [...OLD_ARGV];
+        delete process.env['CI'];
+        delete process.env['AUTO_CONFIRM'];
+        delete process.env['SKIP_FIRST_RUN'];
     });
 
-    it('returns false when AUTO_CONFIRM=true', async () => {expect.hasAssertions();
-
-        process.env['AUTO_CONFIRM'] = 'true';
-        const { isFirstRun } = await loadModule();
-
-        expect(isFirstRun()).toBeFalsy();
+    afterEach(() => {
+        process.env = { ...OLD_ENV };
+        process.argv = [...OLD_ARGV];
     });
 
-    it('returns false when SKIP_FIRST_RUN=true', async () => {expect.hasAssertions();
+    describe('IsFirstRun', () => {
+        it('returns false when CI=true', async () => {expect.hasAssertions();
 
-        process.env['SKIP_FIRST_RUN'] = 'true';
-        const { isFirstRun } = await loadModule();
+            process.env['CI'] = 'true';
+            const { isFirstRun } = await loadModule();
 
-        expect(isFirstRun()).toBeFalsy();
+            expect(isFirstRun()).toBeFalsy();
+        });
+
+        it('returns false when AUTO_CONFIRM=true', async () => {expect.hasAssertions();
+
+            process.env['AUTO_CONFIRM'] = 'true';
+            const { isFirstRun } = await loadModule();
+
+            expect(isFirstRun()).toBeFalsy();
+        });
+
+        it('returns false when SKIP_FIRST_RUN=true', async () => {expect.hasAssertions();
+
+            process.env['SKIP_FIRST_RUN'] = 'true';
+            const { isFirstRun } = await loadModule();
+
+            expect(isFirstRun()).toBeFalsy();
+        });
+
+        it('returns false when --batch is in argv', async () => {expect.hasAssertions();
+
+            process.argv.push('--batch');
+            const { isFirstRun } = await loadModule();
+
+            expect(isFirstRun()).toBeFalsy();
+        });
+
+        it('returns false when --auto is in argv', async () => {expect.hasAssertions();
+
+            process.argv.push('--auto');
+            const { isFirstRun } = await loadModule();
+
+            expect(isFirstRun()).toBeFalsy();
+        });
+
+        it('returns false when firstRunDone flag exists in state', async () => {expect.hasAssertions();
+
+            mockLoadTypedState.mockReturnValue({ _firstRunDone: true });
+            const { isFirstRun } = await loadModule();
+
+            expect(isFirstRun()).toBeFalsy();
+        });
+
+        it('returns false when state has history', async () => {expect.hasAssertions();
+
+            mockLoadTypedState.mockReturnValue({ history: [{ ts: '1', op: 'test', detail: '', status: 'ok' }] });
+            const { isFirstRun } = await loadModule();
+
+            expect(isFirstRun()).toBeFalsy();
+        });
+
+        it('returns true for fresh state with no flags', async () => {expect.hasAssertions();
+
+            mockLoadTypedState.mockReturnValue({});
+            const { isFirstRun } = await loadModule();
+
+            expect(isFirstRun()).toBeTruthy();
+        });
     });
 
-    it('returns false when --batch is in argv', async () => {expect.hasAssertions();
+    describe('MarkFirstRunDone', () => {
+        it('calls updateState with callback that sets _firstRunDone', async () => {expect.hasAssertions();
 
-        process.argv.push('--batch');
-        const { isFirstRun } = await loadModule();
+            const { _markFirstRunDone } = await loadModule();
+            _markFirstRunDone();
 
-        expect(isFirstRun()).toBeFalsy();
+            expect(mockUpdateState).toHaveBeenCalledTimes(1);
+
+            const cb = mockUpdateState.mock.calls[0]?.[0] as (s: Record<string, unknown>) => void;
+
+            expect(typeof cb).toBe('function');
+
+            const state: Record<string, unknown> = {};
+            cb(state);
+
+            expect(state['_firstRunDone']).toBeTruthy();
+        });
     });
 
-    it('returns false when --auto is in argv', async () => {expect.hasAssertions();
+    describe('MaybeRunFirstRunWizard', () => {
+        it('returns immediately when not first run', async () => {expect.hasAssertions();
 
-        process.argv.push('--auto');
-        const { isFirstRun } = await loadModule();
+            mockLoadTypedState.mockReturnValue({ _firstRunDone: true });
+            const { maybeRunFirstRunWizard: f } = await loadModule();
+            await f();
 
-        expect(isFirstRun()).toBeFalsy();
+            expect(mockTitle).not.toHaveBeenCalled();
+            expect(mockShowSelect).not.toHaveBeenCalled();
+        });
+
+        it('shows welcome and skips when user picks skip', async () => {expect.hasAssertions();
+
+            mockLoadTypedState.mockReturnValue({});
+            mockShowSelect.mockResolvedValue('skip');
+            const { maybeRunFirstRunWizard: f } = await loadModule();
+            await f();
+
+            expect(mockTitle).toHaveBeenCalledWith(expect.stringContaining('Bem-vindo'));
+            expect(mockInfo).toHaveBeenCalled();
+            expect(mockUpdateState).toHaveBeenCalledTimes(1);
+        });
+
+        it('tries to launch setup when user picks setup', async () => {expect.hasAssertions();
+
+            mockLoadTypedState.mockReturnValue({});
+            mockShowSelect.mockResolvedValue('setup');
+            const { maybeRunFirstRunWizard: f } = await loadModule();
+
+            await expect(f()).resolves.not.toThrow();
+            expect(mockSetupMain).toHaveBeenCalledTimes(1);
+            expect(mockUpdateState).toHaveBeenCalledTimes(1);
+        });
+
+        it('tries to open docs when user picks docs', async () => {expect.hasAssertions();
+
+            mockLoadTypedState.mockReturnValue({});
+            mockShowSelect.mockResolvedValue('docs');
+            const { maybeRunFirstRunWizard: f } = await loadModule();
+
+            await expect(f()).resolves.not.toThrow();
+            expect(mockUpdateState).toHaveBeenCalledTimes(1);
+        });
+
+        it('does not crash when setupMain() throws', async () => {expect.hasAssertions();
+
+            mockLoadTypedState.mockReturnValue({});
+            mockShowSelect.mockResolvedValue('setup');
+            mockSetupMain.mockRejectedValueOnce(new Error('Setup error'));
+            const { maybeRunFirstRunWizard: f } = await loadModule();
+
+            await expect(f()).resolves.not.toThrow();
+            expect(mockWarn).toHaveBeenCalledWith(expect.stringContaining('Não foi possível iniciar'));
+            expect(mockUpdateState).toHaveBeenCalledTimes(1);
+        });
     });
 
-    it('returns false when firstRunDone flag exists in state', async () => {expect.hasAssertions();
-
-        mockLoadTypedState.mockReturnValue({ _firstRunDone: true });
-        const { isFirstRun } = await loadModule();
-
-        expect(isFirstRun()).toBeFalsy();
-    });
-
-    it('returns false when state has history', async () => {expect.hasAssertions();
-
-        mockLoadTypedState.mockReturnValue({ history: [{ ts: '1', op: 'test', detail: '', status: 'ok' }] });
-        const { isFirstRun } = await loadModule();
-
-        expect(isFirstRun()).toBeFalsy();
-    });
-
-    it('returns true for fresh state with no flags', async () => {expect.hasAssertions();
-
-        mockLoadTypedState.mockReturnValue({});
-        const { isFirstRun } = await loadModule();
-
-        expect(isFirstRun()).toBeTruthy();
-    });
-});
-
-describe('MarkFirstRunDone', () => {
-    it('calls updateState with callback that sets _firstRunDone', async () => {expect.hasAssertions();
-
-        const { _markFirstRunDone } = await loadModule();
-        _markFirstRunDone();
-
-        expect(mockUpdateState).toHaveBeenCalledTimes(1);
-
-        const cb = mockUpdateState.mock.calls[0]?.[0] as (s: Record<string, unknown>) => void;
-
-        expect(typeof cb).toBe('function');
-
-        const state: Record<string, unknown> = {};
-        cb(state);
-
-        expect(state['_firstRunDone']).toBeTruthy();
-    });
-});
-
-describe('MaybeRunFirstRunWizard', () => {
-    it('returns immediately when not first run', async () => {expect.hasAssertions();
-
-        mockLoadTypedState.mockReturnValue({ _firstRunDone: true });
-        const { maybeRunFirstRunWizard: f } = await loadModule();
-        await f();
-
-        expect(mockTitle).not.toHaveBeenCalled();
-        expect(mockShowSelect).not.toHaveBeenCalled();
-    });
-
-    it('shows welcome and skips when user picks skip', async () => {expect.hasAssertions();
-
-        mockLoadTypedState.mockReturnValue({});
-        mockShowSelect.mockResolvedValue('skip');
-        const { maybeRunFirstRunWizard: f } = await loadModule();
-        await f();
-
-        expect(mockTitle).toHaveBeenCalledWith(expect.stringContaining('Bem-vindo'));
-        expect(mockInfo).toHaveBeenCalled();
-        expect(mockUpdateState).toHaveBeenCalledTimes(1);
-    });
-
-    it('tries to launch setup when user picks setup', async () => {expect.hasAssertions();
-
-        mockLoadTypedState.mockReturnValue({});
-        mockShowSelect.mockResolvedValue('setup');
-        const { maybeRunFirstRunWizard: f } = await loadModule();
-
-        await expect(f()).resolves.not.toThrow();
-        expect(mockSetupMain).toHaveBeenCalledTimes(1);
-        expect(mockUpdateState).toHaveBeenCalledTimes(1);
-    });
-
-    it('tries to open docs when user picks docs', async () => {expect.hasAssertions();
-
-        mockLoadTypedState.mockReturnValue({});
-        mockShowSelect.mockResolvedValue('docs');
-        const { maybeRunFirstRunWizard: f } = await loadModule();
-
-        await expect(f()).resolves.not.toThrow();
-        expect(mockUpdateState).toHaveBeenCalledTimes(1);
-    });
-
-    it('does not crash when setupMain() throws', async () => {expect.hasAssertions();
-
-        mockLoadTypedState.mockReturnValue({});
-        mockShowSelect.mockResolvedValue('setup');
-        mockSetupMain.mockRejectedValueOnce(new Error('Setup error'));
-        const { maybeRunFirstRunWizard: f } = await loadModule();
-
-        await expect(f()).resolves.not.toThrow();
-        expect(mockWarn).toHaveBeenCalledWith(expect.stringContaining('Não foi possível iniciar'));
-        expect(mockUpdateState).toHaveBeenCalledTimes(1);
-    });
 });

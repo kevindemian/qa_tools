@@ -40,79 +40,82 @@ function buildResource(): JiraResource {
     return new JiraResource('test-token', 'http://test-jira.com');
 }
 
-beforeEach(() => {
-    vi.clearAllMocks();
-});
-
-describe('WORKFLOW_MAP', () => {
-    it('defines expected transitions', () => {
-        expect(WORKFLOW_MAP['new']).toContain('approve');
-        expect(WORKFLOW_MAP['coding in progress']).toContain('coding done');
+describe('Jira Resource Sprint', () => {
+    beforeEach(() => {
+        vi.clearAllMocks();
     });
-});
 
-describe('GetTransitionsForIssue', () => {
-    it('builds transition map from API response', async () => {expect.hasAssertions();
-
-        mockGet.mockResolvedValue({
-            data: {
-                transitions: [
-                    { id: '11', to: { name: 'Done' } },
-                    { id: '21', to: { name: 'In Progress' } },
-                ],
-            },
+    describe('WORKFLOW_MAP', () => {
+        it('defines expected transitions', () => {
+            expect(WORKFLOW_MAP['new']).toContain('approve');
+            expect(WORKFLOW_MAP['coding in progress']).toContain('coding done');
         });
-        const resource = buildResource();
-        const map = await getTransitionsForIssue(resource, 'TEST-1');
-
-        expect(map['done']).toBe('11');
-        expect(map['in progress']).toBe('21');
     });
 
-    it('returns empty object on API error', async () => {expect.hasAssertions();
+    describe('GetTransitionsForIssue', () => {
+        it('builds transition map from API response', async () => {expect.hasAssertions();
 
-        mockGet.mockRejectedValue(new Error('API error'));
-        const resource = buildResource();
-        const map = await getTransitionsForIssue(resource, 'TEST-1');
+            mockGet.mockResolvedValue({
+                data: {
+                    transitions: [
+                        { id: '11', to: { name: 'Done' } },
+                        { id: '21', to: { name: 'In Progress' } },
+                    ],
+                },
+            });
+            const resource = buildResource();
+            const map = await getTransitionsForIssue(resource, 'TEST-1');
 
-        expect(map).toStrictEqual({});
-    });
-});
+            expect(map['done']).toBe('11');
+            expect(map['in progress']).toBe('21');
+        });
 
-describe('AddTasksToSprint', () => {
-    it('posts tasks to sprint and logs success', async () => {expect.hasAssertions();
+        it('returns empty object on API error', async () => {expect.hasAssertions();
 
-        mockPost.mockResolvedValue({ data: {} });
-        const resource = buildResource();
-        await addTasksToSprint(resource, ['T-1', 'T-2'], 'sprint-1');
+            mockGet.mockRejectedValue(new Error('API error'));
+            const resource = buildResource();
+            const map = await getTransitionsForIssue(resource, 'TEST-1');
 
-        expect(mockPost).toHaveBeenCalledWith('/sprint/sprint-1/issue', { issues: ['T-1', 'T-2'] });
-    });
-
-    it('throws on API error', async () => {expect.hasAssertions();
-
-        mockPost.mockRejectedValue(new Error('Sprint error'));
-        const resource = buildResource();
-
-        await expect(addTasksToSprint(resource, ['T-1'], 'sprint-1')).rejects.toThrow('Sprint error');
-    });
-});
-
-describe('TransitionIssue', () => {
-    it('posts transition to issue', async () => {expect.hasAssertions();
-
-        mockPost.mockResolvedValue({ data: {} });
-        const resource = buildResource();
-        await transitionIssue(resource, 'T-1', '21');
-
-        expect(mockPost).toHaveBeenCalledWith('/issue/T-1/transitions', { transition: { id: '21' } });
+            expect(map).toStrictEqual({});
+        });
     });
 
-    it('throws on API error', async () => {expect.hasAssertions();
+    describe('AddTasksToSprint', () => {
+        it('posts tasks to sprint and logs success', async () => {expect.hasAssertions();
 
-        mockPost.mockRejectedValue(new Error('Transition error'));
-        const resource = buildResource();
+            mockPost.mockResolvedValue({ data: {} });
+            const resource = buildResource();
+            await addTasksToSprint(resource, ['T-1', 'T-2'], 'sprint-1');
 
-        await expect(transitionIssue(resource, 'T-1', '21')).rejects.toThrow('Transition error');
+            expect(mockPost).toHaveBeenCalledWith('/sprint/sprint-1/issue', { issues: ['T-1', 'T-2'] });
+        });
+
+        it('throws on API error', async () => {expect.hasAssertions();
+
+            mockPost.mockRejectedValue(new Error('Sprint error'));
+            const resource = buildResource();
+
+            await expect(addTasksToSprint(resource, ['T-1'], 'sprint-1')).rejects.toThrow('Sprint error');
+        });
     });
+
+    describe('TransitionIssue', () => {
+        it('posts transition to issue', async () => {expect.hasAssertions();
+
+            mockPost.mockResolvedValue({ data: {} });
+            const resource = buildResource();
+            await transitionIssue(resource, 'T-1', '21');
+
+            expect(mockPost).toHaveBeenCalledWith('/issue/T-1/transitions', { transition: { id: '21' } });
+        });
+
+        it('throws on API error', async () => {expect.hasAssertions();
+
+            mockPost.mockRejectedValue(new Error('Transition error'));
+            const resource = buildResource();
+
+            await expect(transitionIssue(resource, 'T-1', '21')).rejects.toThrow('Transition error');
+        });
+    });
+
 });

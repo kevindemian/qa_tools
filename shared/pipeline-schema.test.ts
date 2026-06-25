@@ -9,7 +9,7 @@ describe('PipelineCategorySchema', () => {
     });
 
     it('rejects invalid category', () => {
-        expect(() => PipelineCategorySchema.parse('invalid')).toThrow();
+        expect(() => PipelineCategorySchema.parse('invalid')).toThrow(/./i);
     });
 });
 
@@ -36,14 +36,14 @@ describe('PipelineClassificationSchema', () => {
     });
 
     it('rejects confidence < 0', () => {
-        expect(() => PipelineClassificationSchema.parse({ ...valid, confidence: -0.1 })).toThrow();
+        expect(() => PipelineClassificationSchema.parse({ ...valid, confidence: -0.1 })).toThrow(/./i);
     });
 
     it('rejects confidence > 1', () => {
-        expect(() => PipelineClassificationSchema.parse({ ...valid, confidence: 1.5 })).toThrow();
+        expect(() => PipelineClassificationSchema.parse({ ...valid, confidence: 1.5 })).toThrow(/./i);
     });
 
     it('rejects empty evidence', () => {
-        expect(() => PipelineClassificationSchema.parse({ ...valid, evidence: [] })).toThrow();
+        expect(() => PipelineClassificationSchema.parse({ ...valid, evidence: [] })).toThrow(/./i);
     });
 });

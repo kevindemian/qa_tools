@@ -9,20 +9,23 @@ const mockJiraResource = {
 
 const mockContext = makeMockCommandContext({ jiraResource: mockJiraResource });
 
-beforeEach(() => {
-    vi.clearAllMocks();
-});
-
-describe('Case08 — release version', () => {
-    it('exports a handler function', () => {
-        expect(case08).toBeDefined();
-        expect(typeof case08.handler).toBe('function');
+describe('Case08', () => {
+    beforeEach(() => {
+        vi.clearAllMocks();
     });
 
-    it('executes without error with basic context', async () => {expect.hasAssertions();
+    describe('Case08 — release version', () => {
+        it('exports a handler function', () => {
+            expect(case08).toBeDefined();
+            expect(typeof case08.handler).toBe('function');
+        });
 
-        const result = await case08.handler(mockContext);
+        it('executes without error with basic context', async () => {expect.hasAssertions();
 
-        expect([undefined, true, false]).toContain(result);
+            const result = await case08.handler(mockContext);
+
+            expect([undefined, true, false]).toContain(result);
+        });
     });
+
 });

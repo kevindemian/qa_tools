@@ -48,84 +48,87 @@ function buildResource(): JiraResource {
     return new JiraResource('test-token', 'http://test-jira.com');
 }
 
-beforeEach(() => {
-    vi.clearAllMocks();
-});
-
-describe('GetProjectId', () => {
-    it('returns project id on success', async () => {expect.hasAssertions();
-
-        mockGet.mockResolvedValue({ data: { id: '10000' } });
-        const resource = buildResource();
-        const result = await getProjectId(resource, 'TEST');
-
-        expect(result).toBe('10000');
+describe('Jira Resource Version', () => {
+    beforeEach(() => {
+        vi.clearAllMocks();
     });
 
-    it('returns empty string on error', async () => {expect.hasAssertions();
+    describe('GetProjectId', () => {
+        it('returns project id on success', async () => {expect.hasAssertions();
 
-        mockGet.mockRejectedValue(new Error('Not found'));
-        const resource = buildResource();
-        const result = await getProjectId(resource, 'NOPE');
+            mockGet.mockResolvedValue({ data: { id: '10000' } });
+            const resource = buildResource();
+            const result = await getProjectId(resource, 'TEST');
 
-        expect(result).toBe('');
-    });
-});
-
-describe('GetProjectVersions', () => {
-    it('returns versions on success', async () => {expect.hasAssertions();
-
-        mockGet.mockResolvedValue({
-            data: [
-                { id: '1', name: 'v1' },
-                { id: '2', name: 'v2' },
-            ],
+            expect(result).toBe('10000');
         });
-        const resource = buildResource();
-        const versions = await getProjectVersions(resource, '10000');
 
-        expect(versions).toHaveLength(2);
+        it('returns empty string on error', async () => {expect.hasAssertions();
+
+            mockGet.mockRejectedValue(new Error('Not found'));
+            const resource = buildResource();
+            const result = await getProjectId(resource, 'NOPE');
+
+            expect(result).toBe('');
+        });
     });
 
-    it('returns empty array on network error', async () => {expect.hasAssertions();
+    describe('GetProjectVersions', () => {
+        it('returns versions on success', async () => {expect.hasAssertions();
 
-        mockGet.mockRejectedValue(new Error('Network error'));
-        const resource = buildResource();
-        const versions = await getProjectVersions(resource, '10000');
+            mockGet.mockResolvedValue({
+                data: [
+                    { id: '1', name: 'v1' },
+                    { id: '2', name: 'v2' },
+                ],
+            });
+            const resource = buildResource();
+            const versions = await getProjectVersions(resource, '10000');
 
-        expect(versions).toStrictEqual([]);
+            expect(versions).toHaveLength(2);
+        });
+
+        it('returns empty array on network error', async () => {expect.hasAssertions();
+
+            mockGet.mockRejectedValue(new Error('Network error'));
+            const resource = buildResource();
+            const versions = await getProjectVersions(resource, '10000');
+
+            expect(versions).toStrictEqual([]);
+        });
     });
-});
 
-describe('GetVersionId', () => {
-    it('returns version id when found', async () => {expect.hasAssertions();
+    describe('GetVersionId', () => {
+        it('returns version id when found', async () => {expect.hasAssertions();
 
-        const resource = buildResource();
-        vi.spyOn(resource, 'getProjectId').mockResolvedValue('10000');
-        vi.spyOn(resource, 'getProjectVersions').mockResolvedValue([{ id: '99', name: 'v1.0' }]);
-        const id = await getVersionId(resource, 'TEST', 'v1.0');
+            const resource = buildResource();
+            vi.spyOn(resource, 'getProjectId').mockResolvedValue('10000');
+            vi.spyOn(resource, 'getProjectVersions').mockResolvedValue([{ id: '99', name: 'v1.0' }]);
+            const id = await getVersionId(resource, 'TEST', 'v1.0');
 
-        expect(id).toBe('99');
+            expect(id).toBe('99');
+        });
+
+        it('returns null when no project', async () => {expect.hasAssertions();
+
+            const resource = buildResource();
+            vi.spyOn(resource, 'getProjectId').mockResolvedValue('');
+            const id = await getVersionId(resource, 'TEST', 'v1.0');
+
+            expect(id).toBeNull();
+        });
     });
 
-    it('returns null when no project', async () => {expect.hasAssertions();
+    describe('GetLatestReleases', () => {
+        it('returns empty when project not found', async () => {expect.hasAssertions();
 
-        const resource = buildResource();
-        vi.spyOn(resource, 'getProjectId').mockResolvedValue('');
-        const id = await getVersionId(resource, 'TEST', 'v1.0');
+            const resource = buildResource();
+            vi.spyOn(resource, 'getProjectId').mockResolvedValue('');
+            const result = await getLatestReleases(resource, 'NOPE', 3);
 
-        expect(id).toBeNull();
+            expect(result.latestReleasedVersions).toStrictEqual([]);
+            expect(result.unreleasedVersions).toStrictEqual([]);
+        });
     });
-});
 
-describe('GetLatestReleases', () => {
-    it('returns empty when project not found', async () => {expect.hasAssertions();
-
-        const resource = buildResource();
-        vi.spyOn(resource, 'getProjectId').mockResolvedValue('');
-        const result = await getLatestReleases(resource, 'NOPE', 3);
-
-        expect(result.latestReleasedVersions).toStrictEqual([]);
-        expect(result.unreleasedVersions).toStrictEqual([]);
-    });
 });

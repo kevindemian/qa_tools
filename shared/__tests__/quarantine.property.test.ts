@@ -23,233 +23,236 @@ vi.mock('../config', () => ({
     },
 }));
 
-afterEach(() => {
-    try {
-        fs.rmSync('/tmp/qa-tools-quarantine-pbt', { recursive: true, force: true });
-    } catch {
-        /* ok */
-    }
-    try {
-        fs.unlinkSync(path.join(process.cwd(), 'qa-quarantine.json'));
-    } catch {
-        /* ok */
-    }
-});
-
-const entryArb: fc.Arbitrary<QuarantineEntry> = fc
-    .tuple(fc.string({ minLength: 1, maxLength: 20 }), fc.nat({ max: 100 }), fc.boolean())
-    .map(([title, flakyInt, permanent]) => ({
-        testTitle: title,
-        reason: 'flaky',
-        quarantinedBy: 'test',
-        date: new Date().toISOString(),
-        expiresAt: new Date(Date.now() + 7 * 24 * 60 * 60 * 1000).toISOString(),
-        flakyRate: flakyInt / 100,
-        reviewRequired: true,
-        permanent,
-    }));
-
-const storeArb: fc.Arbitrary<QuarantineStore> = fc
-    .array(entryArb, { minLength: 0, maxLength: 10 })
-    .map((entries) => ({ entries }));
-
-describe('GeneratePipelineQuarantine — property-based', () => {
-    it('metadata matches store entries when store is provided', () => {expect.hasAssertions();
-
-        fc.assert(
-            fc.property(storeArb, fc.nat({ max: 1000 }), (store, total) => {
-                const totalTests = total + 1;
-                const pipeline = generatePipelineQuarantine(store, totalTests);
-
-                expect(pipeline.excluded).toHaveLength(store.entries.length);
-                expect(pipeline.metadata.totalExcluded).toBe(store.entries.length);
-                expect(pipeline.metadata.totalTests).toBe(totalTests);
-                expect(pipeline.metadata.ratio).toBe(store.entries.length / totalTests);
-            }),
-            { numRuns: 50 },
-        );
+describe('Quarantine.Property', () => {
+    afterEach(() => {
+        try {
+            fs.rmSync('/tmp/qa-tools-quarantine-pbt', { recursive: true, force: true });
+        } catch {
+            /* ok */
+        }
+        try {
+            fs.unlinkSync(path.join(process.cwd(), 'qa-quarantine.json'));
+        } catch {
+            /* ok */
+        }
     });
 
-    it('excluded items preserve entry fields', () => {expect.hasAssertions();
+    const entryArb: fc.Arbitrary<QuarantineEntry> = fc
+        .tuple(fc.string({ minLength: 1, maxLength: 20 }), fc.nat({ max: 100 }), fc.boolean())
+        .map(([title, flakyInt, permanent]) => ({
+            testTitle: title,
+            reason: 'flaky',
+            quarantinedBy: 'test',
+            date: new Date().toISOString(),
+            expiresAt: new Date(Date.now() + 7 * 24 * 60 * 60 * 1000).toISOString(),
+            flakyRate: flakyInt / 100,
+            reviewRequired: true,
+            permanent,
+        }));
 
-        fc.assert(
-            fc.property(storeArb, fc.nat({ max: 1000 }), (store, total) => {
-                const totalTests = total + 1;
-                const pipeline = generatePipelineQuarantine(store, totalTests);
+    const storeArb: fc.Arbitrary<QuarantineStore> = fc
+        .array(entryArb, { minLength: 0, maxLength: 10 })
+        .map((entries) => ({ entries }));
 
-                for (let i = 0; i < store.entries.length; i++) {
-                    const entry = store.entries[i];
-                    const item = pipeline.excluded[i];
+    describe('GeneratePipelineQuarantine — property-based', () => {
+        it('metadata matches store entries when store is provided', () => {expect.hasAssertions();
 
-                    expect(item?.test).toBe(entry?.testTitle);
-                    expect(item?.reason).toBe(entry?.reason);
-                    expect(item?.quarantinedBy).toBe(entry?.quarantinedBy);
-                    expect(item?.reviewRequired).toBe(entry?.reviewRequired);
+            fc.assert(
+                fc.property(storeArb, fc.nat({ max: 1000 }), (store, total) => {
+                    const totalTests = total + 1;
+                    const pipeline = generatePipelineQuarantine(store, totalTests);
 
-                    if (entry?.bugUrl) {
-                        expect(item?.bugUrl).toBe(entry.bugUrl);
-                    }
-                }
-            }),
-            { numRuns: 50 },
-        );
-    });
-
-    it('empty store produces empty excluded list and zero ratio', () => {
-        const empty: QuarantineStore = { entries: [] };
-        const pipeline = generatePipelineQuarantine(empty);
-
-        expect(pipeline.excluded).toStrictEqual([]);
-        expect(pipeline.metadata.totalExcluded).toBe(0);
-        expect(pipeline.metadata.ratio).toBe(0);
-        expect(pipeline.metadata.warning).toBe('');
-    });
-});
-
-describe('LoadQuarantine — property-based', () => {
-    it('returns empty store for missing file', () => {expect.hasAssertions();
-
-        fc.assert(
-            fc.property(fc.constant(undefined), () => {
-                const store = loadQuarantine();
-
-                expect(store.entries).toStrictEqual([]);
-            }),
-            { numRuns: 5 },
-        );
-    });
-});
-
-describe('FilterExpiredEntries — property-based', () => {
-    it('expired count matches entries that are neither permanent nor future-dated', () => {expect.hasAssertions();
-
-        fc.assert(
-            fc.property(
-                fc.array(fc.tuple(fc.integer({ min: -86400000, max: 86400000 }), fc.boolean()), {
-                    minLength: 0,
-                    maxLength: 20,
+                    expect(pipeline.excluded).toHaveLength(store.entries.length);
+                    expect(pipeline.metadata.totalExcluded).toBe(store.entries.length);
+                    expect(pipeline.metadata.totalTests).toBe(totalTests);
+                    expect(pipeline.metadata.ratio).toBe(store.entries.length / totalTests);
                 }),
-                fc.integer({ min: 0, max: 1e12 }),
-                (rawEntries, now) => {
-                    const store: QuarantineStore = {
-                        entries: rawEntries.map(([ttlOffset, permanent]) => ({
-                            testTitle: 't',
-                            reason: 'r',
-                            quarantinedBy: 'q',
-                            date: new Date(now).toISOString(),
-                            expiresAt: new Date(now + ttlOffset).toISOString(),
-                            flakyRate: 0.5,
-                            reviewRequired: true,
-                            permanent,
-                        })),
-                    };
-                    const { expired, remaining } = filterExpiredEntries(store, now);
-                    const expectedExpired = rawEntries.filter(
-                        ([ttlOffset, permanent]) => !permanent && now + ttlOffset <= now,
-                    ).length;
+                { numRuns: 50 },
+            );
+        });
 
-                    expect(expired).toBe(expectedExpired);
-                    expect(remaining.entries).toHaveLength(rawEntries.length - expectedExpired);
-                },
-            ),
-            { numRuns: 100 },
-        );
-    });
+        it('excluded items preserve entry fields', () => {expect.hasAssertions();
 
-    it('all remaining entries are permanent or have future expiresAt', () => {expect.hasAssertions();
+            fc.assert(
+                fc.property(storeArb, fc.nat({ max: 1000 }), (store, total) => {
+                    const totalTests = total + 1;
+                    const pipeline = generatePipelineQuarantine(store, totalTests);
 
-        fc.assert(
-            fc.property(
-                fc.array(fc.tuple(fc.integer({ min: -86400000, max: 86400000 }), fc.boolean()), {
-                    minLength: 0,
-                    maxLength: 20,
-                }),
-                fc.integer({ min: 0, max: 1e12 }),
-                (rawEntries, now) => {
-                    const store: QuarantineStore = {
-                        entries: rawEntries.map(([ttlOffset, permanent]) => ({
-                            testTitle: 't',
-                            reason: 'r',
-                            quarantinedBy: 'q',
-                            date: new Date(now).toISOString(),
-                            expiresAt: new Date(now + ttlOffset).toISOString(),
-                            flakyRate: 0.5,
-                            reviewRequired: true,
-                            permanent,
-                        })),
-                    };
-                    const { remaining } = filterExpiredEntries(store, now);
-                    for (const entry of remaining.entries) {
-                        expect(entry.permanent || new Date(entry.expiresAt).getTime() > now).toBeTruthy();
+                    for (let i = 0; i < store.entries.length; i++) {
+                        const entry = store.entries[i];
+                        const item = pipeline.excluded[i];
+
+                        expect(item?.test).toBe(entry?.testTitle);
+                        expect(item?.reason).toBe(entry?.reason);
+                        expect(item?.quarantinedBy).toBe(entry?.quarantinedBy);
+                        expect(item?.reviewRequired).toBe(entry?.reviewRequired);
+
+                        if (entry?.bugUrl) {
+                            expect(item?.bugUrl).toBe(entry.bugUrl);
+                        }
                     }
-                },
-            ),
-            { numRuns: 100 },
-        );
+                }),
+                { numRuns: 50 },
+            );
+        });
+
+        it('empty store produces empty excluded list and zero ratio', () => {
+            const empty: QuarantineStore = { entries: [] };
+            const pipeline = generatePipelineQuarantine(empty);
+
+            expect(pipeline.excluded).toStrictEqual([]);
+            expect(pipeline.metadata.totalExcluded).toBe(0);
+            expect(pipeline.metadata.ratio).toBe(0);
+            expect(pipeline.metadata.warning).toBe('');
+        });
     });
 
-    it('never expires permanent entries regardless of expiresAt', () => {expect.hasAssertions();
+    describe('LoadQuarantine — property-based', () => {
+        it('returns empty store for missing file', () => {expect.hasAssertions();
 
-        fc.assert(
-            fc.property(
-                fc.array(fc.integer({ min: -86400000, max: 86400000 }), { minLength: 1, maxLength: 10 }),
-                fc.integer({ min: 0, max: 1e12 }),
-                (offsets, now) => {
-                    const store: QuarantineStore = {
-                        entries: offsets.map((ttlOffset) => ({
-                            testTitle: 't',
-                            reason: 'r',
-                            quarantinedBy: 'q',
-                            date: new Date(now).toISOString(),
-                            expiresAt: new Date(now + ttlOffset).toISOString(),
-                            flakyRate: 0.5,
-                            reviewRequired: true,
-                            permanent: true,
-                        })),
-                    };
-                    const { expired, remaining } = filterExpiredEntries(store, now);
+            fc.assert(
+                fc.property(fc.constant(undefined), () => {
+                    const store = loadQuarantine();
 
-                    expect(expired).toBe(0);
-                    expect(remaining.entries).toHaveLength(offsets.length);
-                },
-            ),
-            { numRuns: 100 },
-        );
+                    expect(store.entries).toStrictEqual([]);
+                }),
+                { numRuns: 5 },
+            );
+        });
     });
 
-    it('entries with malformed expiresAt are treated as expired', () => {expect.hasAssertions();
+    describe('FilterExpiredEntries — property-based', () => {
+        it('expired count matches entries that are neither permanent nor future-dated', () => {expect.hasAssertions();
 
-        fc.assert(
-            fc.property(
-                fc.array(fc.constantFrom('not-a-date', '', 'invalid-date'), { minLength: 1, maxLength: 10 }),
-                fc.integer({ min: 0, max: 1e12 }),
-                (dates, now) => {
-                    const store: QuarantineStore = {
-                        entries: dates.map((d) => ({
-                            testTitle: 't',
-                            reason: 'r',
-                            quarantinedBy: 'q',
-                            date: d,
-                            expiresAt: d,
-                            flakyRate: 0.5,
-                            reviewRequired: true,
-                            permanent: false,
-                        })),
-                    };
-                    const { expired } = filterExpiredEntries(store, now);
+            fc.assert(
+                fc.property(
+                    fc.array(fc.tuple(fc.integer({ min: -86400000, max: 86400000 }), fc.boolean()), {
+                        minLength: 0,
+                        maxLength: 20,
+                    }),
+                    fc.integer({ min: 0, max: 1e12 }),
+                    (rawEntries, now) => {
+                        const store: QuarantineStore = {
+                            entries: rawEntries.map(([ttlOffset, permanent]) => ({
+                                testTitle: 't',
+                                reason: 'r',
+                                quarantinedBy: 'q',
+                                date: new Date(now).toISOString(),
+                                expiresAt: new Date(now + ttlOffset).toISOString(),
+                                flakyRate: 0.5,
+                                reviewRequired: true,
+                                permanent,
+                            })),
+                        };
+                        const { expired, remaining } = filterExpiredEntries(store, now);
+                        const expectedExpired = rawEntries.filter(
+                            ([ttlOffset, permanent]) => !permanent && now + ttlOffset <= now,
+                        ).length;
 
-                    expect(expired).toBe(dates.length);
-                },
-            ),
-            { numRuns: 50 },
-        );
+                        expect(expired).toBe(expectedExpired);
+                        expect(remaining.entries).toHaveLength(rawEntries.length - expectedExpired);
+                    },
+                ),
+                { numRuns: 100 },
+            );
+        });
+
+        it('all remaining entries are permanent or have future expiresAt', () => {expect.hasAssertions();
+
+            fc.assert(
+                fc.property(
+                    fc.array(fc.tuple(fc.integer({ min: -86400000, max: 86400000 }), fc.boolean()), {
+                        minLength: 0,
+                        maxLength: 20,
+                    }),
+                    fc.integer({ min: 0, max: 1e12 }),
+                    (rawEntries, now) => {
+                        const store: QuarantineStore = {
+                            entries: rawEntries.map(([ttlOffset, permanent]) => ({
+                                testTitle: 't',
+                                reason: 'r',
+                                quarantinedBy: 'q',
+                                date: new Date(now).toISOString(),
+                                expiresAt: new Date(now + ttlOffset).toISOString(),
+                                flakyRate: 0.5,
+                                reviewRequired: true,
+                                permanent,
+                            })),
+                        };
+                        const { remaining } = filterExpiredEntries(store, now);
+                        for (const entry of remaining.entries) {
+                            expect(entry.permanent || new Date(entry.expiresAt).getTime() > now).toBeTruthy();
+                        }
+                    },
+                ),
+                { numRuns: 100 },
+            );
+        });
+
+        it('never expires permanent entries regardless of expiresAt', () => {expect.hasAssertions();
+
+            fc.assert(
+                fc.property(
+                    fc.array(fc.integer({ min: -86400000, max: 86400000 }), { minLength: 1, maxLength: 10 }),
+                    fc.integer({ min: 0, max: 1e12 }),
+                    (offsets, now) => {
+                        const store: QuarantineStore = {
+                            entries: offsets.map((ttlOffset) => ({
+                                testTitle: 't',
+                                reason: 'r',
+                                quarantinedBy: 'q',
+                                date: new Date(now).toISOString(),
+                                expiresAt: new Date(now + ttlOffset).toISOString(),
+                                flakyRate: 0.5,
+                                reviewRequired: true,
+                                permanent: true,
+                            })),
+                        };
+                        const { expired, remaining } = filterExpiredEntries(store, now);
+
+                        expect(expired).toBe(0);
+                        expect(remaining.entries).toHaveLength(offsets.length);
+                    },
+                ),
+                { numRuns: 100 },
+            );
+        });
+
+        it('entries with malformed expiresAt are treated as expired', () => {expect.hasAssertions();
+
+            fc.assert(
+                fc.property(
+                    fc.array(fc.constantFrom('not-a-date', '', 'invalid-date'), { minLength: 1, maxLength: 10 }),
+                    fc.integer({ min: 0, max: 1e12 }),
+                    (dates, now) => {
+                        const store: QuarantineStore = {
+                            entries: dates.map((d) => ({
+                                testTitle: 't',
+                                reason: 'r',
+                                quarantinedBy: 'q',
+                                date: d,
+                                expiresAt: d,
+                                flakyRate: 0.5,
+                                reviewRequired: true,
+                                permanent: false,
+                            })),
+                        };
+                        const { expired } = filterExpiredEntries(store, now);
+
+                        expect(expired).toBe(dates.length);
+                    },
+                ),
+                { numRuns: 50 },
+            );
+        });
+
+        it('empty store returns zero expired and empty remaining', () => {
+            const empty: QuarantineStore = { entries: [] };
+            const { expired, remaining } = filterExpiredEntries(empty, 0);
+
+            expect(expired).toBe(0);
+            expect(remaining.entries).toStrictEqual([]);
+        });
     });
 
-    it('empty store returns zero expired and empty remaining', () => {
-        const empty: QuarantineStore = { entries: [] };
-        const { expired, remaining } = filterExpiredEntries(empty, 0);
-
-        expect(expired).toBe(0);
-        expect(remaining.entries).toStrictEqual([]);
-    });
 });

@@ -41,174 +41,177 @@ const mockNivelar = vi.mocked(nivelarBranches);
 
 const mockM = createMockGitProvider();
 
-beforeEach(() => {
-    vi.clearAllMocks();
-    mockPrompt.mockReturnValue('test-branch');
-    mockConfirm.mockReturnValue(false);
-});
-
-describe('NivelarBranchesWrapper', () => {
-    it('delegates to nivelarBranches', async () => {expect.hasAssertions();
-
-        await nivelarBranchesWrapper(mockM);
-
-        expect(mockNivelar).toHaveBeenCalledWith(mockM, expect.any(Object));
-    });
-});
-
-describe('HandleCreateMR', () => {
-    it('creates MR with manual description', async () => {expect.hasAssertions();
-
-        mockConfirm.mockReturnValueOnce(false);
-        mockPrompt
-            .mockReturnValueOnce('feat')
-            .mockReturnValueOnce('main')
-            .mockReturnValueOnce('Title')
-            .mockReturnValueOnce('Manual desc');
-        vi.spyOn(mockM, 'createMergeRequest').mockResolvedValue({ web_url: 'https://gitlab.com/merge/1' });
-
-        await handleCreateMR(mockM);
-
-        expect(mockM.createMergeRequest).toHaveBeenCalledWith('feat', 'main', 'Title', 'Manual desc');
-        expect(success).toHaveBeenCalledWith(expect.stringContaining('https://gitlab.com/merge/1'));
+describe('Mr Handler', () => {
+    beforeEach(() => {
+        vi.clearAllMocks();
+        mockPrompt.mockReturnValue('test-branch');
+        mockConfirm.mockReturnValue(false);
     });
 
-    it('uses AI description when available', async () => {expect.hasAssertions();
+    describe('NivelarBranchesWrapper', () => {
+        it('delegates to nivelarBranches', async () => {expect.hasAssertions();
 
-        mockConfirm.mockReturnValueOnce(true).mockReturnValueOnce(false);
-        mockGeneratePrDesc.mockResolvedValue('AI generated description');
-        mockPrompt.mockReturnValueOnce('feat').mockReturnValueOnce('main').mockReturnValueOnce('Title');
-        vi.spyOn(mockM, 'createMergeRequest').mockResolvedValue({ web_url: 'https://gitlab.com/merge/1' });
+            await nivelarBranchesWrapper(mockM);
 
-        await handleCreateMR(mockM);
-
-        expect(mockGeneratePrDesc).toHaveBeenCalled();
-        expect(mockM.createMergeRequest).toHaveBeenCalledWith('feat', 'main', 'Title', 'AI generated description');
+            expect(mockNivelar).toHaveBeenCalledWith(mockM, expect.any(Object));
+        });
     });
 
-    it('falls back to manual when AI returns empty', async () => {expect.hasAssertions();
+    describe('HandleCreateMR', () => {
+        it('creates MR with manual description', async () => {expect.hasAssertions();
 
-        mockConfirm.mockReturnValueOnce(true).mockReturnValueOnce(false);
-        mockGeneratePrDesc.mockResolvedValue('');
-        mockPrompt
-            .mockReturnValueOnce('feat')
-            .mockReturnValueOnce('main')
-            .mockReturnValueOnce('Title')
-            .mockReturnValueOnce('Manual desc');
-        vi.spyOn(mockM, 'createMergeRequest').mockResolvedValue({ web_url: 'https://gitlab.com/merge/1' });
+            mockConfirm.mockReturnValueOnce(false);
+            mockPrompt
+                .mockReturnValueOnce('feat')
+                .mockReturnValueOnce('main')
+                .mockReturnValueOnce('Title')
+                .mockReturnValueOnce('Manual desc');
+            vi.spyOn(mockM, 'createMergeRequest').mockResolvedValue({ web_url: 'https://gitlab.com/merge/1' });
 
-        await handleCreateMR(mockM);
+            await handleCreateMR(mockM);
 
-        expect(mockM.createMergeRequest).toHaveBeenCalledWith('feat', 'main', 'Title', 'Manual desc');
-        expect(warn).toHaveBeenCalled();
+            expect(mockM.createMergeRequest).toHaveBeenCalledWith('feat', 'main', 'Title', 'Manual desc');
+            expect(success).toHaveBeenCalledWith(expect.stringContaining('https://gitlab.com/merge/1'));
+        });
+
+        it('uses AI description when available', async () => {expect.hasAssertions();
+
+            mockConfirm.mockReturnValueOnce(true).mockReturnValueOnce(false);
+            mockGeneratePrDesc.mockResolvedValue('AI generated description');
+            mockPrompt.mockReturnValueOnce('feat').mockReturnValueOnce('main').mockReturnValueOnce('Title');
+            vi.spyOn(mockM, 'createMergeRequest').mockResolvedValue({ web_url: 'https://gitlab.com/merge/1' });
+
+            await handleCreateMR(mockM);
+
+            expect(mockGeneratePrDesc).toHaveBeenCalled();
+            expect(mockM.createMergeRequest).toHaveBeenCalledWith('feat', 'main', 'Title', 'AI generated description');
+        });
+
+        it('falls back to manual when AI returns empty', async () => {expect.hasAssertions();
+
+            mockConfirm.mockReturnValueOnce(true).mockReturnValueOnce(false);
+            mockGeneratePrDesc.mockResolvedValue('');
+            mockPrompt
+                .mockReturnValueOnce('feat')
+                .mockReturnValueOnce('main')
+                .mockReturnValueOnce('Title')
+                .mockReturnValueOnce('Manual desc');
+            vi.spyOn(mockM, 'createMergeRequest').mockResolvedValue({ web_url: 'https://gitlab.com/merge/1' });
+
+            await handleCreateMR(mockM);
+
+            expect(mockM.createMergeRequest).toHaveBeenCalledWith('feat', 'main', 'Title', 'Manual desc');
+            expect(warn).toHaveBeenCalled();
+        });
+
+        it('includes test impact analysis when requested', async () => {expect.hasAssertions();
+
+            mockConfirm.mockReturnValueOnce(false).mockReturnValueOnce(true);
+            mockAssessImpact.mockResolvedValue('Impact: tests affected');
+            mockPrompt
+                .mockReturnValueOnce('feat')
+                .mockReturnValueOnce('main')
+                .mockReturnValueOnce('Title')
+                .mockReturnValueOnce('Desc');
+            vi.spyOn(mockM, 'createMergeRequest').mockResolvedValue({ web_url: 'https://gitlab.com/merge/1' });
+
+            await handleCreateMR(mockM);
+
+            expect(mockAssessImpact).toHaveBeenCalled();
+            expect(info).toHaveBeenCalledWith('Impacto nos testes:');
+        });
+
+        it('handles create error', async () => {expect.hasAssertions();
+
+            mockConfirm.mockReturnValueOnce(false);
+            mockPrompt
+                .mockReturnValueOnce('feat')
+                .mockReturnValueOnce('main')
+                .mockReturnValueOnce('Title')
+                .mockReturnValueOnce('Desc');
+            vi.spyOn(mockM, 'createMergeRequest').mockRejectedValue(new Error('API error'));
+
+            await handleCreateMR(mockM);
+
+            expect(mockPrintError).toHaveBeenCalled();
+            expect(pushHistory).toHaveBeenCalledWith('pr-create', expect.any(String), 'error');
+        });
     });
 
-    it('includes test impact analysis when requested', async () => {expect.hasAssertions();
+    describe('HandleListApprovedMRs', () => {
+        it('lists approved MRs', async () => {expect.hasAssertions();
 
-        mockConfirm.mockReturnValueOnce(false).mockReturnValueOnce(true);
-        mockAssessImpact.mockResolvedValue('Impact: tests affected');
-        mockPrompt
-            .mockReturnValueOnce('feat')
-            .mockReturnValueOnce('main')
-            .mockReturnValueOnce('Title')
-            .mockReturnValueOnce('Desc');
-        vi.spyOn(mockM, 'createMergeRequest').mockResolvedValue({ web_url: 'https://gitlab.com/merge/1' });
+            mockPrompt.mockReturnValue('opened');
+            const mrs = [
+                { iid: 1, title: 'MR 1' },
+                { iid: 2, title: 'MR 2' },
+            ] as MergeRequestInfo[];
+            vi.spyOn(mockM, 'searchMergeRequests').mockResolvedValue(mrs);
+            vi.spyOn(mockM, 'isApproved').mockResolvedValue(true);
 
-        await handleCreateMR(mockM);
+            await handleListApprovedMRs(mockM);
 
-        expect(mockAssessImpact).toHaveBeenCalled();
-        expect(info).toHaveBeenCalledWith('Impacto nos testes:');
+            expect(info).toHaveBeenCalledWith(expect.stringContaining('aprovados'));
+            expect(pushHistory).toHaveBeenCalledWith('prs-approved', expect.stringContaining('2'), 'ok');
+        });
+
+        it('warns when no approved MRs', async () => {expect.hasAssertions();
+
+            mockPrompt.mockReturnValue('opened');
+            vi.spyOn(mockM, 'searchMergeRequests').mockResolvedValue([]);
+
+            await handleListApprovedMRs(mockM);
+
+            expect(warn).toHaveBeenCalled();
+        });
+
+        it('handles search error', async () => {expect.hasAssertions();
+
+            mockPrompt.mockReturnValue('opened');
+            vi.spyOn(mockM, 'searchMergeRequests').mockRejectedValue(new Error('search fail'));
+
+            await handleListApprovedMRs(mockM);
+
+            expect(mockPrintError).toHaveBeenCalled();
+            expect(pushHistory).toHaveBeenCalledWith('prs-approved', 'opened', 'error');
+        });
+
+        it('handles provider without isApproved', async () => {expect.hasAssertions();
+
+            mockPrompt.mockReturnValue('opened');
+            const mrs = [{ iid: 1, title: 'MR 1' }] as MergeRequestInfo[];
+            vi.spyOn(mockM, 'searchMergeRequests').mockResolvedValue(mrs);
+            Object.defineProperty(mockM, 'isApproved', { value: undefined, writable: true });
+
+            await handleListApprovedMRs(mockM);
+
+            expect(warn).toHaveBeenCalled();
+        });
     });
 
-    it('handles create error', async () => {expect.hasAssertions();
+    describe('HandleMergeMR', () => {
+        it('merges MR successfully', async () => {expect.hasAssertions();
 
-        mockConfirm.mockReturnValueOnce(false);
-        mockPrompt
-            .mockReturnValueOnce('feat')
-            .mockReturnValueOnce('main')
-            .mockReturnValueOnce('Title')
-            .mockReturnValueOnce('Desc');
-        vi.spyOn(mockM, 'createMergeRequest').mockRejectedValue(new Error('API error'));
+            mockPrompt.mockReturnValue('42');
+            vi.spyOn(mockM, 'acceptMergeRequest').mockResolvedValue({ web_url: 'https://gitlab.com/merge/42' });
 
-        await handleCreateMR(mockM);
+            await handleMergeMR(mockM);
 
-        expect(mockPrintError).toHaveBeenCalled();
-        expect(pushHistory).toHaveBeenCalledWith('pr-create', expect.any(String), 'error');
-    });
-});
+            expect(mockM.acceptMergeRequest).toHaveBeenCalledWith('42');
+            expect(success).toHaveBeenCalled();
+            expect(pushHistory).toHaveBeenCalledWith('pr-merge', '42', 'ok');
+        });
 
-describe('HandleListApprovedMRs', () => {
-    it('lists approved MRs', async () => {expect.hasAssertions();
+        it('handles merge error', async () => {expect.hasAssertions();
 
-        mockPrompt.mockReturnValue('opened');
-        const mrs = [
-            { iid: 1, title: 'MR 1' },
-            { iid: 2, title: 'MR 2' },
-        ] as MergeRequestInfo[];
-        vi.spyOn(mockM, 'searchMergeRequests').mockResolvedValue(mrs);
-        vi.spyOn(mockM, 'isApproved').mockResolvedValue(true);
+            mockPrompt.mockReturnValue('42');
+            vi.spyOn(mockM, 'acceptMergeRequest').mockRejectedValue(new Error('merge fail'));
 
-        await handleListApprovedMRs(mockM);
+            await handleMergeMR(mockM);
 
-        expect(info).toHaveBeenCalledWith(expect.stringContaining('aprovados'));
-        expect(pushHistory).toHaveBeenCalledWith('prs-approved', expect.stringContaining('2'), 'ok');
+            expect(mockPrintError).toHaveBeenCalled();
+            expect(pushHistory).toHaveBeenCalledWith('pr-merge', '42', 'error');
+        });
     });
 
-    it('warns when no approved MRs', async () => {expect.hasAssertions();
-
-        mockPrompt.mockReturnValue('opened');
-        vi.spyOn(mockM, 'searchMergeRequests').mockResolvedValue([]);
-
-        await handleListApprovedMRs(mockM);
-
-        expect(warn).toHaveBeenCalled();
-    });
-
-    it('handles search error', async () => {expect.hasAssertions();
-
-        mockPrompt.mockReturnValue('opened');
-        vi.spyOn(mockM, 'searchMergeRequests').mockRejectedValue(new Error('search fail'));
-
-        await handleListApprovedMRs(mockM);
-
-        expect(mockPrintError).toHaveBeenCalled();
-        expect(pushHistory).toHaveBeenCalledWith('prs-approved', 'opened', 'error');
-    });
-
-    it('handles provider without isApproved', async () => {expect.hasAssertions();
-
-        mockPrompt.mockReturnValue('opened');
-        const mrs = [{ iid: 1, title: 'MR 1' }] as MergeRequestInfo[];
-        vi.spyOn(mockM, 'searchMergeRequests').mockResolvedValue(mrs);
-        Object.defineProperty(mockM, 'isApproved', { value: undefined, writable: true });
-
-        await handleListApprovedMRs(mockM);
-
-        expect(warn).toHaveBeenCalled();
-    });
-});
-
-describe('HandleMergeMR', () => {
-    it('merges MR successfully', async () => {expect.hasAssertions();
-
-        mockPrompt.mockReturnValue('42');
-        vi.spyOn(mockM, 'acceptMergeRequest').mockResolvedValue({ web_url: 'https://gitlab.com/merge/42' });
-
-        await handleMergeMR(mockM);
-
-        expect(mockM.acceptMergeRequest).toHaveBeenCalledWith('42');
-        expect(success).toHaveBeenCalled();
-        expect(pushHistory).toHaveBeenCalledWith('pr-merge', '42', 'ok');
-    });
-
-    it('handles merge error', async () => {expect.hasAssertions();
-
-        mockPrompt.mockReturnValue('42');
-        vi.spyOn(mockM, 'acceptMergeRequest').mockRejectedValue(new Error('merge fail'));
-
-        await handleMergeMR(mockM);
-
-        expect(mockPrintError).toHaveBeenCalled();
-        expect(pushHistory).toHaveBeenCalledWith('pr-merge', '42', 'error');
-    });
 });

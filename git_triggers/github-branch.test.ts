@@ -18,117 +18,120 @@ vi.mock('../shared/logger', () => ({
 let mockApiGet: Mock;
 import * as apiModule from './github-api.js';
 
-beforeAll(() => {
-    mockApiGet = vi.spyOn(apiModule, 'apiGet');
-});
-
-describe('GetBranch', () => {
-    let client: Mocked<AxiosInstance>;
-
-    beforeEach(() => {
-        client = createMockAxiosInstance();
-        mockApiGet.mockClear();
+describe('Github Branch', () => {
+    beforeAll(() => {
+        mockApiGet = vi.spyOn(apiModule, 'apiGet');
     });
 
-    it('returns { name } for valid branch', async () => {expect.hasAssertions();
+    describe('GetBranch', () => {
+        let client: Mocked<AxiosInstance>;
 
-        mockApiGet.mockResolvedValue({ name: 'main', commit: { sha: 'abc' } });
-        const result = await getBranch(client, 'myorg', 'myrepo', 'main');
+        beforeEach(() => {
+            client = createMockAxiosInstance();
+            mockApiGet.mockClear();
+        });
 
-        expect(result).toStrictEqual({ name: 'main' });
-        expect(mockApiGet).toHaveBeenCalledWith(client, '/repos/myorg/myrepo/branches/main', { returnNull: true });
-    });
+        it('returns { name } for valid branch', async () => {expect.hasAssertions();
 
-    it('encodes branch name in URL', async () => {expect.hasAssertions();
+            mockApiGet.mockResolvedValue({ name: 'main', commit: { sha: 'abc' } });
+            const result = await getBranch(client, 'myorg', 'myrepo', 'main');
 
-        mockApiGet.mockResolvedValue({ name: 'feature/test' });
-        await getBranch(client, 'myorg', 'myrepo', 'feature/test');
+            expect(result).toStrictEqual({ name: 'main' });
+            expect(mockApiGet).toHaveBeenCalledWith(client, '/repos/myorg/myrepo/branches/main', { returnNull: true });
+        });
 
-        expect(mockApiGet).toHaveBeenCalledWith(client, '/repos/myorg/myrepo/branches/feature%2Ftest', {
-            returnNull: true,
+        it('encodes branch name in URL', async () => {expect.hasAssertions();
+
+            mockApiGet.mockResolvedValue({ name: 'feature/test' });
+            await getBranch(client, 'myorg', 'myrepo', 'feature/test');
+
+            expect(mockApiGet).toHaveBeenCalledWith(client, '/repos/myorg/myrepo/branches/feature%2Ftest', {
+                returnNull: true,
+            });
+        });
+
+        it('returns null when data has no name', async () => {expect.hasAssertions();
+
+            mockApiGet.mockResolvedValue({ commit: { sha: 'abc' } });
+            const result = await getBranch(client, 'myorg', 'myrepo', 'main');
+
+            expect(result).toBeNull();
+        });
+
+        it('returns null when apiGet returns null', async () => {expect.hasAssertions();
+
+            mockApiGet.mockResolvedValue(null);
+            const result = await getBranch(client, 'myorg', 'myrepo', 'missing');
+
+            expect(result).toBeNull();
         });
     });
 
-    it('returns null when data has no name', async () => {expect.hasAssertions();
+    describe('GetDiff', () => {
+        let client: Mocked<AxiosInstance>;
 
-        mockApiGet.mockResolvedValue({ commit: { sha: 'abc' } });
-        const result = await getBranch(client, 'myorg', 'myrepo', 'main');
-
-        expect(result).toBeNull();
-    });
-
-    it('returns null when apiGet returns null', async () => {expect.hasAssertions();
-
-        mockApiGet.mockResolvedValue(null);
-        const result = await getBranch(client, 'myorg', 'myrepo', 'missing');
-
-        expect(result).toBeNull();
-    });
-});
-
-describe('GetDiff', () => {
-    let client: Mocked<AxiosInstance>;
-
-    beforeEach(() => {
-        client = createMockAxiosInstance();
-        mockApiGet.mockClear();
-    });
-
-    it('returns formatted diff string for valid comparison', async () => {expect.hasAssertions();
-
-        mockApiGet.mockResolvedValue({
-            files: [
-                { filename: 'src/main.ts', patch: '+console.log("hi")', status: 'modified' },
-                { filename: 'src/utils.ts', patch: '-old\n+new', status: 'modified' },
-            ],
+        beforeEach(() => {
+            client = createMockAxiosInstance();
+            mockApiGet.mockClear();
         });
-        const result = await getDiff(client, 'myorg', 'myrepo', 'feature', 'main');
 
-        expect(result).toContain('src/main.ts');
-        expect(result).toContain('console.log');
-        expect(result).toContain('src/utils.ts');
-        expect(mockApiGet).toHaveBeenCalledWith(client, '/repos/myorg/myrepo/compare/main...feature', {
-            operation: 'comparar branches',
-            params: { per_page: 100 },
-            returnNull: true,
+        it('returns formatted diff string for valid comparison', async () => {expect.hasAssertions();
+
+            mockApiGet.mockResolvedValue({
+                files: [
+                    { filename: 'src/main.ts', patch: '+console.log("hi")', status: 'modified' },
+                    { filename: 'src/utils.ts', patch: '-old\n+new', status: 'modified' },
+                ],
+            });
+            const result = await getDiff(client, 'myorg', 'myrepo', 'feature', 'main');
+
+            expect(result).toContain('src/main.ts');
+            expect(result).toContain('console.log');
+            expect(result).toContain('src/utils.ts');
+            expect(mockApiGet).toHaveBeenCalledWith(client, '/repos/myorg/myrepo/compare/main...feature', {
+                operation: 'comparar branches',
+                params: { per_page: 100 },
+                returnNull: true,
+            });
+        });
+
+        it('returns empty string when data is null', async () => {expect.hasAssertions();
+
+            mockApiGet.mockResolvedValue(null);
+            const result = await getDiff(client, 'myorg', 'myrepo', 'feature', 'main');
+
+            expect(result).toBe('');
+        });
+
+        it('returns empty string when data.files is empty', async () => {expect.hasAssertions();
+
+            mockApiGet.mockResolvedValue({ files: [] });
+            const result = await getDiff(client, 'myorg', 'myrepo', 'feature', 'main');
+
+            expect(result).toBe('');
+        });
+
+        it('handles missing patch property in files', async () => {expect.hasAssertions();
+
+            mockApiGet.mockResolvedValue({
+                files: [{ filename: 'readme.md', status: 'modified' }],
+            });
+            const result = await getDiff(client, 'myorg', 'myrepo', 'feature', 'main');
+
+            expect(result).toBe('');
+        });
+
+        it('encodes branch names in compare URL', async () => {expect.hasAssertions();
+
+            mockApiGet.mockResolvedValue({ files: [] });
+            await getDiff(client, 'myorg', 'myrepo', 'feat/source', 'fix/target');
+
+            expect(mockApiGet).toHaveBeenCalledWith(
+                client,
+                '/repos/myorg/myrepo/compare/fix%2Ftarget...feat%2Fsource',
+                expect.any(Object),
+            );
         });
     });
 
-    it('returns empty string when data is null', async () => {expect.hasAssertions();
-
-        mockApiGet.mockResolvedValue(null);
-        const result = await getDiff(client, 'myorg', 'myrepo', 'feature', 'main');
-
-        expect(result).toBe('');
-    });
-
-    it('returns empty string when data.files is empty', async () => {expect.hasAssertions();
-
-        mockApiGet.mockResolvedValue({ files: [] });
-        const result = await getDiff(client, 'myorg', 'myrepo', 'feature', 'main');
-
-        expect(result).toBe('');
-    });
-
-    it('handles missing patch property in files', async () => {expect.hasAssertions();
-
-        mockApiGet.mockResolvedValue({
-            files: [{ filename: 'readme.md', status: 'modified' }],
-        });
-        const result = await getDiff(client, 'myorg', 'myrepo', 'feature', 'main');
-
-        expect(result).toBe('');
-    });
-
-    it('encodes branch names in compare URL', async () => {expect.hasAssertions();
-
-        mockApiGet.mockResolvedValue({ files: [] });
-        await getDiff(client, 'myorg', 'myrepo', 'feat/source', 'fix/target');
-
-        expect(mockApiGet).toHaveBeenCalledWith(
-            client,
-            '/repos/myorg/myrepo/compare/fix%2Ftarget...feat%2Fsource',
-            expect.any(Object),
-        );
-    });
 });

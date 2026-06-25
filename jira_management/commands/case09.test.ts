@@ -10,20 +10,23 @@ import { makeMockCommandContext } from '../../shared/test-utils.js';
 
 const mockContext = makeMockCommandContext();
 
-beforeEach(() => {
-    vi.clearAllMocks();
-});
-
-describe('Case09 — switch project', () => {
-    it('exports a handler function', () => {
-        expect(case09).toBeDefined();
-        expect(typeof case09.handler).toBe('function');
+describe('Case09', () => {
+    beforeEach(() => {
+        vi.clearAllMocks();
     });
 
-    it('executes without error with basic context', async () => {expect.hasAssertions();
+    describe('Case09 — switch project', () => {
+        it('exports a handler function', () => {
+            expect(case09).toBeDefined();
+            expect(typeof case09.handler).toBe('function');
+        });
 
-        const result = await case09.handler(mockContext);
+        it('executes without error with basic context', async () => {expect.hasAssertions();
 
-        expect(result === undefined || typeof result === 'boolean').toBeTruthy();
+            const result = await case09.handler(mockContext);
+
+            expect(result === undefined || typeof result === 'boolean').toBeTruthy();
+        });
     });
+
 });

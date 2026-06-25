@@ -9,20 +9,23 @@ const mockContext = makeMockCommandContext({
     },
 });
 
-beforeEach(() => {
-    vi.clearAllMocks();
-});
-
-describe('Case10 — set directory', () => {
-    it('exports a handler function', () => {
-        expect(case10).toBeDefined();
-        expect(typeof case10.handler).toBe('function');
+describe('Case10', () => {
+    beforeEach(() => {
+        vi.clearAllMocks();
     });
 
-    it('executes without error with basic context', async () => {expect.hasAssertions();
+    describe('Case10 — set directory', () => {
+        it('exports a handler function', () => {
+            expect(case10).toBeDefined();
+            expect(typeof case10.handler).toBe('function');
+        });
 
-        const result = await case10.handler(mockContext);
+        it('executes without error with basic context', async () => {expect.hasAssertions();
 
-        expect(result === undefined || typeof result === 'boolean').toBeTruthy();
+            const result = await case10.handler(mockContext);
+
+            expect(result === undefined || typeof result === 'boolean').toBeTruthy();
+        });
     });
+
 });

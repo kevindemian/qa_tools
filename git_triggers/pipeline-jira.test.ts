@@ -68,149 +68,152 @@ const mockJiraResource = {} as JiraClient;
 
 let testBackend: FsStoreBackend;
 
-beforeEach(() => {
-    vi.clearAllMocks();
-    testBackend = new FsStoreBackend('/tmp/qa-tools-test-jira');
-    testBackend.init();
-});
-
-describe('HandleBugCreation', () => {
-    it('creates bug successfully when jira env is configured and user confirms', async () => {expect.hasAssertions();
-
-        vi.mocked(_jiraEnv).mockReturnValue({
-            base: 'https://jira.example.com',
-            token: 'tok',
-            xray: 'xray',
-            mode: 'server',
-        });
-        vi.mocked(confirm).mockReturnValue(true);
-        vi.mocked(collectAutomated).mockReturnValue(mockBugReport);
-        vi.mocked(fileToJira).mockResolvedValue('ECSPOL-123');
-
-        await handleBugCreation(mockParseResult, 42, 'main', mockAnalysisReport, mockJiraResource, testBackend);
-
-        expect(collectAutomated).toHaveBeenCalledWith(mockParseResult, {
-            pipelineId: '42',
-            branch: 'main',
-            provider: currentProvider,
-        });
-        expect(fileToJira).toHaveBeenCalledWith(
-            mockJiraResource,
-            { ...mockBugReport, description: mockAnalysisReport.content },
-            'ECSPOL',
-        );
-        expect(success).toHaveBeenCalledWith('Bug criado: https://jira.example.com/browse/ECSPOL-123');
-        expect(pushHistory).toHaveBeenCalledWith('create-jira-issue', 'ECSPOL-123', 'ok');
+describe('Pipeline Jira', () => {
+    beforeEach(() => {
+        vi.clearAllMocks();
+        testBackend = new FsStoreBackend('/tmp/qa-tools-test-jira');
+        testBackend.init();
     });
 
-    it('prints error when Config.get("jiraProject") is not set', async () => {expect.hasAssertions();
+    describe('HandleBugCreation', () => {
+        it('creates bug successfully when jira env is configured and user confirms', async () => {expect.hasAssertions();
 
-        vi.mocked(_jiraEnv).mockReturnValue({
-            base: 'https://jira.example.com',
-            token: 'tok',
-            xray: 'xray',
-            mode: 'server',
+            vi.mocked(_jiraEnv).mockReturnValue({
+                base: 'https://jira.example.com',
+                token: 'tok',
+                xray: 'xray',
+                mode: 'server',
+            });
+            vi.mocked(confirm).mockReturnValue(true);
+            vi.mocked(collectAutomated).mockReturnValue(mockBugReport);
+            vi.mocked(fileToJira).mockResolvedValue('ECSPOL-123');
+
+            await handleBugCreation(mockParseResult, 42, 'main', mockAnalysisReport, mockJiraResource, testBackend);
+
+            expect(collectAutomated).toHaveBeenCalledWith(mockParseResult, {
+                pipelineId: '42',
+                branch: 'main',
+                provider: currentProvider,
+            });
+            expect(fileToJira).toHaveBeenCalledWith(
+                mockJiraResource,
+                { ...mockBugReport, description: mockAnalysisReport.content },
+                'ECSPOL',
+            );
+            expect(success).toHaveBeenCalledWith('Bug criado: https://jira.example.com/browse/ECSPOL-123');
+            expect(pushHistory).toHaveBeenCalledWith('create-jira-issue', 'ECSPOL-123', 'ok');
         });
-        vi.mocked(confirm).mockReturnValue(true);
-        vi.mocked(collectAutomated).mockReturnValue(mockBugReport);
-        vi.mocked(fileToJira).mockRejectedValue(new Error('Project key is required'));
-        Config.set('jiraProject', '');
 
-        await handleBugCreation(mockParseResult, '99', 'develop', mockAnalysisReport, mockJiraResource, testBackend);
+        it('prints error when Config.get("jiraProject") is not set', async () => {expect.hasAssertions();
 
-        expect(printError).toHaveBeenCalledWith('Falha ao criar bug no Jira', expect.any(Error));
-        expect(pushHistory).toHaveBeenCalledWith('create-jira-issue', '99', 'error');
+            vi.mocked(_jiraEnv).mockReturnValue({
+                base: 'https://jira.example.com',
+                token: 'tok',
+                xray: 'xray',
+                mode: 'server',
+            });
+            vi.mocked(confirm).mockReturnValue(true);
+            vi.mocked(collectAutomated).mockReturnValue(mockBugReport);
+            vi.mocked(fileToJira).mockRejectedValue(new Error('Project key is required'));
+            Config.set('jiraProject', '');
 
-        Config.set('jiraProject', 'ECSPOL');
+            await handleBugCreation(mockParseResult, '99', 'develop', mockAnalysisReport, mockJiraResource, testBackend);
+
+            expect(printError).toHaveBeenCalledWith('Falha ao criar bug no Jira', expect.any(Error));
+            expect(pushHistory).toHaveBeenCalledWith('create-jira-issue', '99', 'error');
+
+            Config.set('jiraProject', 'ECSPOL');
+        });
+
+        it('returns early when jira env is not configured', async () => {expect.hasAssertions();
+
+            vi.mocked(_jiraEnv).mockReturnValue(null);
+
+            await handleBugCreation(mockParseResult, 42, 'main', mockAnalysisReport, mockJiraResource, testBackend);
+
+            expect(confirm).not.toHaveBeenCalled();
+            expect(collectAutomated).not.toHaveBeenCalled();
+            expect(fileToJira).not.toHaveBeenCalled();
+            expect(pushHistory).not.toHaveBeenCalled();
+        });
+
+        it('returns early when user declines confirmation', async () => {expect.hasAssertions();
+
+            vi.mocked(_jiraEnv).mockReturnValue({
+                base: 'https://jira.example.com',
+                token: 'tok',
+                xray: 'xray',
+                mode: 'server',
+            });
+            vi.mocked(confirm).mockReturnValue(false);
+
+            await handleBugCreation(mockParseResult, 42, 'main', mockAnalysisReport, mockJiraResource, testBackend);
+
+            expect(collectAutomated).not.toHaveBeenCalled();
+            expect(fileToJira).not.toHaveBeenCalled();
+            expect(pushHistory).not.toHaveBeenCalled();
+        });
+
+        it('handles jira API failure gracefully', async () => {expect.hasAssertions();
+
+            vi.mocked(_jiraEnv).mockReturnValue({
+                base: 'https://jira.example.com',
+                token: 'tok',
+                xray: 'xray',
+                mode: 'server',
+            });
+            vi.mocked(confirm).mockReturnValue(true);
+            vi.mocked(collectAutomated).mockReturnValue(mockBugReport);
+            const apiError = new Error('Network timeout');
+            vi.mocked(fileToJira).mockRejectedValue(apiError);
+
+            await handleBugCreation(mockParseResult, 42, 'main', mockAnalysisReport, mockJiraResource, testBackend);
+
+            expect(printError).toHaveBeenCalledWith('Falha ao criar bug no Jira', apiError);
+            expect(pushHistory).toHaveBeenCalledWith('create-jira-issue', '42', 'error');
+        });
+
+        it('assigns bugReport description from analysisReport content', async () => {expect.hasAssertions();
+
+            vi.mocked(_jiraEnv).mockReturnValue({
+                base: 'https://jira.example.com',
+                token: 'tok',
+                xray: 'xray',
+                mode: 'server',
+            });
+            vi.mocked(confirm).mockReturnValue(true);
+            vi.mocked(collectAutomated).mockReturnValue({ ...mockBugReport, description: '' });
+            vi.mocked(fileToJira).mockResolvedValue('ECSPOL-789');
+
+            await handleBugCreation(mockParseResult, 42, 'main', mockAnalysisReport, mockJiraResource, testBackend);
+
+            expect(fileToJira).toHaveBeenCalledWith(
+                mockJiraResource,
+                expect.objectContaining({ description: 'Root cause: assertion mismatch in test foo' }),
+                expect.any(String),
+            );
+        });
+
+        it('passes pipelineId as string regardless of input type', async () => {expect.hasAssertions();
+
+            vi.mocked(_jiraEnv).mockReturnValue({
+                base: 'https://jira.example.com',
+                token: 'tok',
+                xray: 'xray',
+                mode: 'server',
+            });
+            vi.mocked(confirm).mockReturnValue(true);
+            vi.mocked(collectAutomated).mockReturnValue(mockBugReport);
+            vi.mocked(fileToJira).mockResolvedValue('ECSPOL-ABC');
+
+            await handleBugCreation(mockParseResult, 7, 'bugfix', mockAnalysisReport, mockJiraResource, testBackend);
+
+            expect(collectAutomated).toHaveBeenCalledWith(mockParseResult, {
+                pipelineId: '7',
+                branch: 'bugfix',
+                provider: currentProvider,
+            });
+        });
     });
 
-    it('returns early when jira env is not configured', async () => {expect.hasAssertions();
-
-        vi.mocked(_jiraEnv).mockReturnValue(null);
-
-        await handleBugCreation(mockParseResult, 42, 'main', mockAnalysisReport, mockJiraResource, testBackend);
-
-        expect(confirm).not.toHaveBeenCalled();
-        expect(collectAutomated).not.toHaveBeenCalled();
-        expect(fileToJira).not.toHaveBeenCalled();
-        expect(pushHistory).not.toHaveBeenCalled();
-    });
-
-    it('returns early when user declines confirmation', async () => {expect.hasAssertions();
-
-        vi.mocked(_jiraEnv).mockReturnValue({
-            base: 'https://jira.example.com',
-            token: 'tok',
-            xray: 'xray',
-            mode: 'server',
-        });
-        vi.mocked(confirm).mockReturnValue(false);
-
-        await handleBugCreation(mockParseResult, 42, 'main', mockAnalysisReport, mockJiraResource, testBackend);
-
-        expect(collectAutomated).not.toHaveBeenCalled();
-        expect(fileToJira).not.toHaveBeenCalled();
-        expect(pushHistory).not.toHaveBeenCalled();
-    });
-
-    it('handles jira API failure gracefully', async () => {expect.hasAssertions();
-
-        vi.mocked(_jiraEnv).mockReturnValue({
-            base: 'https://jira.example.com',
-            token: 'tok',
-            xray: 'xray',
-            mode: 'server',
-        });
-        vi.mocked(confirm).mockReturnValue(true);
-        vi.mocked(collectAutomated).mockReturnValue(mockBugReport);
-        const apiError = new Error('Network timeout');
-        vi.mocked(fileToJira).mockRejectedValue(apiError);
-
-        await handleBugCreation(mockParseResult, 42, 'main', mockAnalysisReport, mockJiraResource, testBackend);
-
-        expect(printError).toHaveBeenCalledWith('Falha ao criar bug no Jira', apiError);
-        expect(pushHistory).toHaveBeenCalledWith('create-jira-issue', '42', 'error');
-    });
-
-    it('assigns bugReport description from analysisReport content', async () => {expect.hasAssertions();
-
-        vi.mocked(_jiraEnv).mockReturnValue({
-            base: 'https://jira.example.com',
-            token: 'tok',
-            xray: 'xray',
-            mode: 'server',
-        });
-        vi.mocked(confirm).mockReturnValue(true);
-        vi.mocked(collectAutomated).mockReturnValue({ ...mockBugReport, description: '' });
-        vi.mocked(fileToJira).mockResolvedValue('ECSPOL-789');
-
-        await handleBugCreation(mockParseResult, 42, 'main', mockAnalysisReport, mockJiraResource, testBackend);
-
-        expect(fileToJira).toHaveBeenCalledWith(
-            mockJiraResource,
-            expect.objectContaining({ description: 'Root cause: assertion mismatch in test foo' }),
-            expect.any(String),
-        );
-    });
-
-    it('passes pipelineId as string regardless of input type', async () => {expect.hasAssertions();
-
-        vi.mocked(_jiraEnv).mockReturnValue({
-            base: 'https://jira.example.com',
-            token: 'tok',
-            xray: 'xray',
-            mode: 'server',
-        });
-        vi.mocked(confirm).mockReturnValue(true);
-        vi.mocked(collectAutomated).mockReturnValue(mockBugReport);
-        vi.mocked(fileToJira).mockResolvedValue('ECSPOL-ABC');
-
-        await handleBugCreation(mockParseResult, 7, 'bugfix', mockAnalysisReport, mockJiraResource, testBackend);
-
-        expect(collectAutomated).toHaveBeenCalledWith(mockParseResult, {
-            pipelineId: '7',
-            branch: 'bugfix',
-            provider: currentProvider,
-        });
-    });
 });

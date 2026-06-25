@@ -88,7 +88,7 @@ describe('CypressResource', () => {
                 projects: ['PROJ'],
             });
 
-            expect(vi.mocked(mockClient).get).toHaveBeenCalled();
+            expect(mockClient.get.mock.calls.length).toBeGreaterThan(0);
         });
 
         it('handles all-failed report (no passed items)', async () => {expect.hasAssertions();
@@ -107,7 +107,7 @@ describe('CypressResource', () => {
                 projects: ['PROJ'],
             });
 
-            expect(vi.mocked(mockClient).get).toHaveBeenCalled();
+            expect(mockClient.get.mock.calls.length).toBeGreaterThan(0);
         });
     });
 });

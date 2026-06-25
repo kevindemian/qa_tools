@@ -54,11 +54,11 @@ const validParsedReport = {
 
 const invalidParsedReport = { tests: [{ title: 'Bad' }] };
 
-beforeEach(() => {
-    vi.clearAllMocks();
-});
-
 describe('ReviewWithLlm', () => {
+    beforeEach(() => {
+        vi.clearAllMocks();
+    });
+
     it('returns high confidence when reviewer agrees', async () => {expect.hasAssertions();
 
         mockLlmPrompt

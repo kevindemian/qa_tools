@@ -35,20 +35,23 @@ import { makeMockCommandContext } from '../../shared/test-utils.js';
 
 const mockContext = makeMockCommandContext();
 
-beforeEach(() => {
-    vi.clearAllMocks();
-});
-
-describe('Case01 — create tests from CSV', () => {
-    it('exports a handler function for menu registration', () => {
-        expect(case01).toBeDefined();
-        expect(typeof case01.handler).toBe('function');
+describe('Case01', () => {
+    beforeEach(() => {
+        vi.clearAllMocks();
     });
 
-    it('runs full CSV import flow with mocked dependencies without throwing', async () => {expect.hasAssertions();
+    describe('Case01 — create tests from CSV', () => {
+        it('exports a handler function for menu registration', () => {
+            expect(case01).toBeDefined();
+            expect(typeof case01.handler).toBe('function');
+        });
 
-        const result = await case01.handler(mockContext);
+        it('runs full CSV import flow with mocked dependencies without throwing', async () => {expect.hasAssertions();
 
-        expect([undefined, true, false]).toContain(result);
+            const result = await case01.handler(mockContext);
+
+            expect([undefined, true, false]).toContain(result);
+        });
     });
+
 });
