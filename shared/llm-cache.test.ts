@@ -123,6 +123,7 @@ describe('Llm Cache', () => {
         });
 
         it('returns miss when cached entry has expired', async () => {
+            expect.hasAssertions();
             setMemoryCache('expired-key', 'stale');
             vi.useFakeTimers();
             await vi.advanceTimersByTimeAsync(CACHE_TTL_MS + 1000);

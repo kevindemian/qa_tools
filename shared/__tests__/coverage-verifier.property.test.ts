@@ -22,6 +22,7 @@ function makeCtx(input: string) {
 
 describe('Coverage invariants (PBT)', () => {
     it('realCoverage is always between 0 and 100', () => {
+        expect.hasAssertions();
 
         fc.assert(
             fc.property(
@@ -43,6 +44,7 @@ describe('Coverage invariants (PBT)', () => {
     });
 
     it('totalCriteria >= coveredCriteria', () => {
+        expect.hasAssertions();
 
         fc.assert(
             fc.property(fc.string(), (input) => {
@@ -57,6 +59,7 @@ describe('Coverage invariants (PBT)', () => {
     });
 
     it('coveredCriteria + gaps.length === totalCriteria when criteria exist', () => {
+        expect.hasAssertions();
 
         fc.assert(
             fc.property(fc.string({ minLength: 1 }), (input) => {
@@ -64,6 +67,7 @@ describe('Coverage invariants (PBT)', () => {
                     tests: [{ title: 'login' }, { title: 'payment' }],
                 };
                 const result = recalculateCoverage(artifact, makeCtx(input));
+                expect(result).toBeDefined();
                 if (result.totalCriteria === 0) return;
 
                 expect(result.coveredCriteria + result.gaps.length).toBe(result.totalCriteria);
@@ -72,6 +76,7 @@ describe('Coverage invariants (PBT)', () => {
     });
 
     it('coverageDelta is 0 when declaredCoverage is null', () => {
+        expect.hasAssertions();
 
         fc.assert(
             fc.property(fc.string(), (input) => {
@@ -87,6 +92,7 @@ describe('Coverage invariants (PBT)', () => {
     });
 
     it('coverageDelta = realCoverage - declaredCoverage when declared is not null', () => {
+        expect.hasAssertions();
 
         fc.assert(
             fc.property(fc.integer({ min: 0, max: 100 }), (declared) => {
@@ -103,6 +109,7 @@ describe('Coverage invariants (PBT)', () => {
     });
 
     it('naN in coverageTable yields null declaredCoverage', () => {
+        expect.hasAssertions();
         const artifact = {
             tests: [{ title: 'login' }],
             coverageTable: { coverage: NaN },
@@ -115,6 +122,7 @@ describe('Coverage invariants (PBT)', () => {
     });
 
     it('gaps entries have criterion truncated to 120 chars', () => {
+        expect.hasAssertions();
 
         fc.assert(
             fc.property(fc.string({ minLength: 1 }), (input) => {
@@ -122,9 +130,7 @@ describe('Coverage invariants (PBT)', () => {
                     tests: [{ title: 'x' }],
                 };
                 const result = recalculateCoverage(artifact, makeCtx(input));
-                for (const gap of result.gaps) {
-                    expect(gap.criterion.length).toBeLessThanOrEqual(120);
-                }
+                expect(result.gaps.every((g) => g.criterion.length <= 120)).toBe(true);
             }),
         );
     });
