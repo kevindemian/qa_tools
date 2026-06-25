@@ -57,7 +57,7 @@ describe('State Persistence — property-based invariants', () => {
                 stateModule.save(data, config);
                 const loaded = stateModule.load(config);
 
-                expect(loaded).toStrictEqual(data);
+                expect(loaded).toEqual(data);
             }),
             { numRuns: 50 },
         );

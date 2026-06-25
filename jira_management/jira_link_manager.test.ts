@@ -193,7 +193,7 @@ describe('JiraLinkManager', () => {
         });
     });
 
-    describe('_GetPreconditionFieldId', () => {
+    describe('GetPreconditionFieldId', () => {
         it('returns cached value on second call', async () => {expect.hasAssertions();
 
             const fields = [
@@ -277,7 +277,7 @@ describe('JiraLinkManager', () => {
         });
     });
 
-    describe('_ResolvePreconditionIssueTypeId', () => {
+    describe('ResolvePreconditionIssueTypeId', () => {
         it('returns the issue type id for Pre-condition', async () => {expect.hasAssertions();
 
             mockJiraResource.getJiraResource.mockResolvedValue([

@@ -201,7 +201,7 @@ describe('GetFetchRetries', () => {
     });
 });
 
-describe('_TrackUsage', () => {
+describe('TrackUsage', () => {
     beforeEach(() => {
         resetLlmClientMetrics();
     });

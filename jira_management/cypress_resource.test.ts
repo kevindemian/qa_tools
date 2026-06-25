@@ -87,6 +87,8 @@ describe('CypressResource', () => {
                 startDate: '2024-01-01',
                 projects: ['PROJ'],
             });
+
+            expect(mockClient.get).toHaveBeenCalled();
         });
 
         it('handles all-failed report (no passed items)', async () => {expect.hasAssertions();
@@ -104,6 +106,8 @@ describe('CypressResource', () => {
                 startDate: '2024-01-01',
                 projects: ['PROJ'],
             });
+
+            expect(mockClient.get).toHaveBeenCalled();
         });
     });
 });

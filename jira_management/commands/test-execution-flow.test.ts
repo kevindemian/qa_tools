@@ -321,6 +321,10 @@ describe('ShowResults', () => {
             getTestCaseSummaries: vi.fn().mockRejectedValue(new Error('API error')),
         });
         await showResults(c, ['TEST-1']);
+
+        const prompt = await import('../../shared/prompt.js');
+
+        expect(prompt.info).toHaveBeenCalled();
     });
 
     it('includes TE association info when provided', async () => {expect.hasAssertions();
@@ -335,6 +339,10 @@ describe('ShowResults', () => {
             summary: 'My TE',
             mode: 'created',
         });
+
+        const prompt = await import('../../shared/prompt.js');
+
+        expect(prompt.info).toHaveBeenCalled();
     });
 
     it('omits TE info when not associated', async () => {expect.hasAssertions();
@@ -344,6 +352,10 @@ describe('ShowResults', () => {
             getTestCaseSummaries: vi.fn().mockResolvedValue([]),
         });
         await showResults(c, ['TEST-1'], { associated: false });
+
+        const prompt = await import('../../shared/prompt.js');
+
+        expect(prompt.info).toHaveBeenCalled();
     });
 
     it('limits summaries to 20 test keys', async () => {expect.hasAssertions();

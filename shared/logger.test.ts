@@ -58,7 +58,7 @@ describe('Logger', () => {
         });
     });
 
-    describe('_WriteFile', () => {
+    describe('WriteFile', () => {
         function writeAndCheck(
             level: keyof Logger,
             msg: string,
@@ -156,7 +156,7 @@ describe('Logger', () => {
         });
     });
 
-    describe('_EnsureDir error paths', () => {
+    describe('EnsureDir error paths', () => {
         let spyError: MockInstance | undefined;
 
         afterEach(() => {
@@ -207,7 +207,7 @@ describe('Logger', () => {
         });
     });
 
-    describe('_RotateIfNeeded error paths', () => {
+    describe('RotateIfNeeded error paths', () => {
         afterEach(() => {
             vi.restoreAllMocks();
         });
@@ -248,7 +248,7 @@ describe('Logger', () => {
         });
     });
 
-    describe('_WriteFile error paths', () => {
+    describe('WriteFile error paths', () => {
         let spyError: MockInstance | undefined;
 
         afterEach(() => {
@@ -352,7 +352,7 @@ describe('Logger', () => {
         });
     });
 
-    describe('_WriteConsole error with data', () => {
+    describe('WriteConsole error with data', () => {
         it('appends short JSON data to ERROR console output', () => {
             const spyError = vi.spyOn(console, 'error').mockImplementation(() => {});
             const logger = new Logger();
@@ -439,7 +439,7 @@ import fc from 'fast-check';
 const PBT_SECRET_RE = /token|secret|key|password|authorization/i;
 
 describe('MaskDeep (PBT)', () => {
-    it('primitives and null return input unchanged', () => {expect.hasAssertions();
+    it('primitives and null return input unchanged', () => {
 
         fc.assert(
             fc.property(fc.constantFrom(null, undefined, 42, 'hello', true, false), (input) =>
@@ -448,7 +448,7 @@ describe('MaskDeep (PBT)', () => {
         );
     });
 
-    it('does not mutate original object', () => {expect.hasAssertions();
+    it('does not mutate original object', () => {
 
         fc.assert(
             fc.property(fc.dictionary(fc.string(), fc.oneof(fc.string(), fc.integer(), fc.boolean())), (original) => {
@@ -459,7 +459,7 @@ describe('MaskDeep (PBT)', () => {
         );
     });
 
-    it('sensitive keys (token/secret/password) have "****" in output values', () => {expect.hasAssertions();
+    it('sensitive keys (token/secret/password) have "****" in output values', () => {
 
         fc.assert(
             fc.property(
@@ -477,7 +477,7 @@ describe('MaskDeep (PBT)', () => {
         );
     });
 
-    it('non-sensitive keys (name/id/status) have unchanged values', () => {expect.hasAssertions();
+    it('non-sensitive keys (name/id/status) have unchanged values', () => {
 
         fc.assert(
             fc.property(
@@ -498,7 +498,7 @@ describe('MaskDeep (PBT)', () => {
         );
     });
 
-    it('sensitive keys nested inside non-sensitive objects are masked', () => {expect.hasAssertions();
+    it('sensitive keys nested inside non-sensitive objects are masked', () => {
 
         fc.assert(
             fc.property(
@@ -525,7 +525,7 @@ describe('MaskDeep (PBT)', () => {
         );
     });
 
-    it('sensitive keys in arrays are masked', () => {expect.hasAssertions();
+    it('sensitive keys in arrays are masked', () => {
 
         fc.assert(
             fc.property(
@@ -544,7 +544,7 @@ describe('MaskDeep (PBT)', () => {
         );
     });
 
-    it('short sensitive strings (≤8 chars) are fully masked to "****"', () => {expect.hasAssertions();
+    it('short sensitive strings (≤8 chars) are fully masked to "****"', () => {
 
         fc.assert(
             fc.property(

@@ -479,7 +479,7 @@ describe('CsvResource', () => {
         });
     });
 
-    describe('_ProcessBulkCsvBlock flat CSV warning', () => {
+    describe('ProcessBulkCsvBlock flat CSV warning', () => {
         it('warns with diagnostic for flat CSV (Title,Action,... header)', async () => {expect.hasAssertions();
 
             const warnSpy = vi.spyOn(rootLogger, 'warn').mockImplementation(() => {});

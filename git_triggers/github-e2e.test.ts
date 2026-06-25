@@ -19,9 +19,7 @@ const GITHUB_TOKEN = process.env['GITHUB_TOKEN'];
 const REPO = 'kevindemian/qa_tools';
 const RUNS_TO_FETCH = 30;
 
-const describeGh = GITHUB_TOKEN ? describe : describe.skip;
-
-describeGh('GitHub e2e — real API', () => {
+describe('GitHub e2e — real API', () => {
     let manager: GitHubManager;
     let runs: PipelineRun[];
     let prs: unknown[];

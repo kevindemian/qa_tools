@@ -147,7 +147,7 @@ describe('MdBox', () => {
     });
 });
 
-describe('__setLexer token injection', () => {
+describe('Set lexer token injection', () => {
     afterEach(() => {
         __setLexer(null);
     });

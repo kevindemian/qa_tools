@@ -209,14 +209,18 @@ vi.mock('../shared/flakiness-dashboard', () => ({ generateFlakinessHtml: vi.fn((
 
 import { _testExports } from './interactive-mode.js';
 import { warn, printError } from '../shared/prompt.js';
+import { setupSigint } from '../shared/cli_base.js';
 import { load } from '../shared/state.js';
 import { ensureDirs, registerCleanup } from '../shared/temp-dir.js';
 import { openWithFallback } from '../shared/open.js';
+import { showDashboardMenu } from '../shared/dashboard-menu.js';
 
 const mockWarn = vi.mocked(warn);
 const mockPrintError = vi.mocked(printError);
 const mockLoad = vi.mocked(load);
 const mockOpenWithFallback = vi.mocked(openWithFallback);
+const mockSetupSigint = vi.mocked(setupSigint);
+const mockShowDashboardMenu = vi.mocked(showDashboardMenu);
 
 describe('Interactive-mode test exports', () => {
     beforeEach(() => {
@@ -290,7 +294,7 @@ describe('Interactive-mode test exports', () => {
         });
     });
 
-    describe('_DispatchAction', () => {
+    describe('DispatchAction', () => {
         it('handles /help command', async () => {expect.hasAssertions();
 
             const result = await _testExports._dispatchAction('/help', {} as never, 'proj', []);
@@ -342,7 +346,7 @@ describe('Interactive-mode test exports', () => {
         });
     });
 
-    describe('_InitInfrastructure', () => {
+    describe('InitInfrastructure', () => {
         it('calls ensureDirs and registerCleanup', () => {expect.hasAssertions();
 
             _testExports._initInfrastructure();
@@ -352,7 +356,7 @@ describe('Interactive-mode test exports', () => {
         });
     });
 
-    describe('_EnsureProjectsConfigured', () => {
+    describe('EnsureProjectsConfigured', () => {
         it('returns true when projects exist', async () => {expect.hasAssertions();
 
             const sessionState = await import('./session-state.js');
@@ -379,14 +383,16 @@ describe('Interactive-mode test exports', () => {
         });
     });
 
-    describe('_InitEnvironment', () => {
+    describe('InitEnvironment', () => {
         it('completes successfully with valid env', async () => {expect.hasAssertions();
 
             await _testExports._initEnvironment();
+
+            expect(mockSetupSigint).toHaveBeenCalled();
         });
     });
 
-    describe('_PromptChoice', () => {
+    describe('PromptChoice', () => {
         it('returns a choice string', async () => {expect.hasAssertions();
 
             const result = await _testExports._promptChoice('test');
@@ -395,7 +401,7 @@ describe('Interactive-mode test exports', () => {
         });
     });
 
-    describe('_SelectProjectAndCreateManager', () => {
+    describe('SelectProjectAndCreateManager', () => {
         it('returns null when no projects exist', async () => {expect.hasAssertions();
 
             const sessionState = await import('./session-state.js');
@@ -407,7 +413,7 @@ describe('Interactive-mode test exports', () => {
         });
     });
 
-    describe('_LoadProjectRunsHelper', () => {
+    describe('LoadProjectRunsHelper', () => {
         it('returns null when no project selected', () => {
             mockSessionState.currentProjectName = '';
             const result = _testExports._loadProjectRunsHelper();
@@ -526,7 +532,7 @@ describe('Interactive-mode test exports', () => {
         });
     });
 
-    describe('_GenerateAndOpenDashboard', () => {
+    describe('GenerateAndOpenDashboard', () => {
         it('writes report and opens browser', async () => {expect.hasAssertions();
 
             mockSessionState.currentProjectName = 'proj1';
@@ -665,11 +671,13 @@ describe('Interactive-mode test exports', () => {
         });
     });
 
-    describe('_ShowDashboardMenu', () => {
+    describe('ShowDashboardMenu', () => {
         it('shows dashboard menu', async () => {expect.hasAssertions();
 
             mockSessionState.currentProjectName = 'proj1';
             await _testExports._showDashboardMenu();
+
+            expect(mockShowDashboardMenu).toHaveBeenCalled();
         });
     });
 
@@ -682,9 +690,8 @@ describe('Interactive-mode test exports', () => {
         });
     });
 
-    describe('_DashboardReleaseScore', () => {
+    describe('DashboardReleaseScore', () => {
         it('generates release score dashboard', async () => {expect.hasAssertions();
-            expect(mockOpenWithFallback).toHaveBeenCalled();
 
             mockSessionState.currentProjectName = 'proj1';
             const metricsMod = await import('../shared/metrics.js');
@@ -714,10 +721,12 @@ describe('Interactive-mode test exports', () => {
                 failureClassifications: [],
             });
             await _testExports._dashboardReleaseScore();
+
+            expect(mockOpenWithFallback).toHaveBeenCalled();
         });
     });
 
-    describe('_DashboardQualityGate', () => {
+    describe('DashboardQualityGate', () => {
         it('warns when no project selected', async () => {expect.hasAssertions();
 
             mockSessionState.currentProjectName = '';
@@ -727,32 +736,34 @@ describe('Interactive-mode test exports', () => {
         });
 
         it('generates quality gate dashboard', async () => {expect.hasAssertions();
-            expect(mockOpenWithFallback).toHaveBeenCalled();
 
             mockSessionState.currentProjectName = 'proj1';
             await _testExports._dashboardQualityGate();
+
+            expect(mockOpenWithFallback).toHaveBeenCalled();
         });
     });
 
-    describe('_DashboardBacklogHealth', () => {
+    describe('DashboardBacklogHealth', () => {
         it('generates backlog health dashboard', async () => {expect.hasAssertions();
-            expect(mockOpenWithFallback).toHaveBeenCalled();
 
             await _testExports._dashboardBacklogHealth();
+
+            expect(mockOpenWithFallback).toHaveBeenCalled();
         });
     });
 
-    describe('_DashboardRequirementScore', () => {
+    describe('DashboardRequirementScore', () => {
         it('generates requirement score dashboard', async () => {expect.hasAssertions();
-            expect(mockOpenWithFallback).toHaveBeenCalled();
 
             await _testExports._dashboardRequirementScore();
+
+            expect(mockOpenWithFallback).toHaveBeenCalled();
         });
     });
 
-    describe('_DashboardPipelineCost', () => {
+    describe('DashboardPipelineCost', () => {
         it('generates pipeline cost dashboard', async () => {expect.hasAssertions();
-            expect(mockOpenWithFallback).toHaveBeenCalled();
 
             mockSessionState.currentProjectName = 'proj1';
             const metricsMod = await import('../shared/metrics.js');
@@ -782,20 +793,22 @@ describe('Interactive-mode test exports', () => {
                 failureClassifications: [],
             });
             await _testExports._dashboardPipelineCost();
+
+            expect(mockOpenWithFallback).toHaveBeenCalled();
         });
     });
 
-    describe('_DashboardAiEffectiveness', () => {
+    describe('DashboardAiEffectiveness', () => {
         it('generates AI effectiveness dashboard', async () => {expect.hasAssertions();
-            expect(mockOpenWithFallback).toHaveBeenCalled();
 
             await _testExports._dashboardAiEffectiveness();
+
+            expect(mockOpenWithFallback).toHaveBeenCalled();
         });
     });
 
-    describe('_DashboardDefectTrends', () => {
+    describe('DashboardDefectTrends', () => {
         it('generates defect trends dashboard', async () => {expect.hasAssertions();
-            expect(mockOpenWithFallback).toHaveBeenCalled();
 
             mockSessionState.currentProjectName = 'proj1';
             const metricsMod = await import('../shared/metrics.js');
@@ -825,12 +838,13 @@ describe('Interactive-mode test exports', () => {
                 failureClassifications: [],
             });
             await _testExports._dashboardDefectTrends();
+
+            expect(mockOpenWithFallback).toHaveBeenCalled();
         });
     });
 
-    describe('_DashboardTraceabilityMatrix', () => {
+    describe('DashboardTraceabilityMatrix', () => {
         it('generates traceability matrix dashboard', async () => {expect.hasAssertions();
-            expect(mockOpenWithFallback).toHaveBeenCalled();
 
             mockSessionState.currentProjectName = 'proj1';
             const metricsMod = await import('../shared/metrics.js');
@@ -860,12 +874,13 @@ describe('Interactive-mode test exports', () => {
                 failureClassifications: [],
             });
             await _testExports._dashboardTraceabilityMatrix();
+
+            expect(mockOpenWithFallback).toHaveBeenCalled();
         });
     });
 
-    describe('_DashboardSeasonality', () => {
+    describe('DashboardSeasonality', () => {
         it('generates seasonality dashboard', async () => {expect.hasAssertions();
-            expect(mockOpenWithFallback).toHaveBeenCalled();
 
             mockSessionState.currentProjectName = 'proj1';
             const metricsMod = await import('../shared/metrics.js');
@@ -895,12 +910,13 @@ describe('Interactive-mode test exports', () => {
                 failureClassifications: [],
             });
             await _testExports._dashboardSeasonality();
+
+            expect(mockOpenWithFallback).toHaveBeenCalled();
         });
     });
 
-    describe('_DashboardSilentRegression', () => {
+    describe('DashboardSilentRegression', () => {
         it('generates silent regression dashboard', async () => {expect.hasAssertions();
-            expect(mockOpenWithFallback).toHaveBeenCalled();
 
             mockSessionState.currentProjectName = 'proj1';
             const metricsMod = await import('../shared/metrics.js');
@@ -930,20 +946,22 @@ describe('Interactive-mode test exports', () => {
                 failureClassifications: [],
             });
             await _testExports._dashboardSilentRegression();
+
+            expect(mockOpenWithFallback).toHaveBeenCalled();
         });
     });
 
-    describe('_DashboardAiComparison', () => {
+    describe('DashboardAiComparison', () => {
         it('generates AI comparison dashboard', async () => {expect.hasAssertions();
-            expect(mockOpenWithFallback).toHaveBeenCalled();
 
             await _testExports._dashboardAiComparison();
+
+            expect(mockOpenWithFallback).toHaveBeenCalled();
         });
     });
 
-    describe('_DashboardBenchmark', () => {
+    describe('DashboardBenchmark', () => {
         it('generates benchmark dashboard', async () => {expect.hasAssertions();
-            expect(mockOpenWithFallback).toHaveBeenCalled();
 
             mockSessionState.currentProjectName = 'proj1';
             const metricsMod = await import('../shared/metrics.js');
@@ -973,12 +991,13 @@ describe('Interactive-mode test exports', () => {
                 failureClassifications: [],
             });
             await _testExports._dashboardBenchmark();
+
+            expect(mockOpenWithFallback).toHaveBeenCalled();
         });
     });
 
-    describe('_DashboardDeveloperProfile', () => {
+    describe('DashboardDeveloperProfile', () => {
         it('generates developer profile dashboard', async () => {expect.hasAssertions();
-            expect(mockOpenWithFallback).toHaveBeenCalled();
 
             mockSessionState.currentProjectName = 'proj1';
             const metricsMod = await import('../shared/metrics.js');
@@ -1008,12 +1027,13 @@ describe('Interactive-mode test exports', () => {
                 failureClassifications: [{ testTitle: 't1', category: 'cat1', timestamp: '' }],
             });
             await _testExports._dashboardDeveloperProfile();
+
+            expect(mockOpenWithFallback).toHaveBeenCalled();
         });
     });
 
-    describe('_DashboardSuiteOptimization', () => {
+    describe('DashboardSuiteOptimization', () => {
         it('generates suite optimization dashboard', async () => {expect.hasAssertions();
-            expect(mockOpenWithFallback).toHaveBeenCalled();
 
             mockSessionState.currentProjectName = 'proj1';
             const metricsMod = await import('../shared/metrics.js');
@@ -1043,12 +1063,13 @@ describe('Interactive-mode test exports', () => {
                 failureClassifications: [],
             });
             await _testExports._dashboardSuiteOptimization();
+
+            expect(mockOpenWithFallback).toHaveBeenCalled();
         });
     });
 
-    describe('_DashboardIncidentReport', () => {
+    describe('DashboardIncidentReport', () => {
         it('generates incident report dashboard', async () => {expect.hasAssertions();
-            expect(mockOpenWithFallback).toHaveBeenCalled();
 
             mockSessionState.currentProjectName = 'proj1';
             const metricsMod = await import('../shared/metrics.js');
@@ -1078,12 +1099,13 @@ describe('Interactive-mode test exports', () => {
                 failureClassifications: [],
             });
             await _testExports._dashboardIncidentReport();
+
+            expect(mockOpenWithFallback).toHaveBeenCalled();
         });
     });
 
-    describe('_DashboardImpactAlert', () => {
+    describe('DashboardImpactAlert', () => {
         it('generates impact alert dashboard', async () => {expect.hasAssertions();
-            expect(mockOpenWithFallback).toHaveBeenCalled();
 
             mockSessionState.currentProjectName = 'proj1';
             const metricsMod = await import('../shared/metrics.js');
@@ -1113,10 +1135,12 @@ describe('Interactive-mode test exports', () => {
                 failureClassifications: [],
             });
             await _testExports._dashboardImpactAlert();
+
+            expect(mockOpenWithFallback).toHaveBeenCalled();
         });
     });
 
-    describe('_DashboardCoverageGap', () => {
+    describe('DashboardCoverageGap', () => {
         it('warns when no project selected', async () => {expect.hasAssertions();
 
             mockSessionState.currentProjectName = '';
@@ -1126,12 +1150,13 @@ describe('Interactive-mode test exports', () => {
         });
 
         it('generates coverage gap dashboard', async () => {expect.hasAssertions();
-            expect(mockOpenWithFallback).toHaveBeenCalled();
 
             mockSessionState.currentProjectName = 'proj1';
             const configMod = await import('../shared/config.js');
             (configMod.default.get as ReturnType<typeof vi.fn>).mockReturnValue('configured');
             await _testExports._dashboardCoverageGap();
+
+            expect(mockOpenWithFallback).toHaveBeenCalled();
         });
     });
 });

@@ -191,17 +191,13 @@ function run(): void {
             };
         }
     });
-    // eslint-disable-next-line no-console -- CLI audit script output
     console.log(JSON.stringify(findings, null, 2));
 
     const high = findings.filter((f) => f.severity === 'high');
     if (high.length > 0) {
-        // eslint-disable-next-line no-console -- CLI audit script output
         console.log(`\n\u26a0\ufe0f  ${high.length} HIGH severity finding(s) require attention:`);
         for (const f of high) {
-            // eslint-disable-next-line no-console -- CLI audit script output
             console.log(`  - ${f.pattern}: ${f.description}`);
-            // eslint-disable-next-line no-console -- CLI audit script output
             console.log(`    \u2192 ${f.recommendation}`);
         }
     }

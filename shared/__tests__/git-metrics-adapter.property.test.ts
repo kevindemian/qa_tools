@@ -53,7 +53,7 @@ const logLineArb: fc.Arbitrary<string> = fc
     .map(([hash, date, subject, author, parentField]) => `${hash}\0${date}\0${subject}\0${author}\0${parentField}`);
 
 describe('ParseGitLogOutput invariants (PBT)', () => {
-    it('every entry has non-empty hash, date and subject', () => {expect.hasAssertions();
+    it('every entry has non-empty hash, date and subject', () => {
 
         fc.assert(
             fc.property(fc.array(logLineArb, { minLength: 1, maxLength: 20 }), (lines) => {
@@ -73,7 +73,7 @@ describe('ParseGitLogOutput invariants (PBT)', () => {
         expect(result).toStrictEqual([]);
     });
 
-    it('handles single line input', () => {expect.hasAssertions();
+    it('handles single line input', () => {
 
         fc.assert(
             fc.property(logLineArb, (line) => {
@@ -100,7 +100,7 @@ describe('GenerateGitMetricsRuns invariants (PBT)', () => {
         vi.clearAllMocks();
     });
 
-    it('all runs have well-formed MetricsRun shape', () => {expect.hasAssertions();
+    it('all runs have well-formed MetricsRun shape', () => {
 
         mockExecFileSync.mockReturnValue(sampleLog);
         const runs = generateGitMetricsRuns();
@@ -116,7 +116,7 @@ describe('GenerateGitMetricsRuns invariants (PBT)', () => {
         });
     });
 
-    it('all tests have valid state (passed/failed/skipped)', () => {expect.hasAssertions();
+    it('all tests have valid state (passed/failed/skipped)', () => {
 
         mockExecFileSync.mockReturnValue(sampleLog);
         const runs = generateGitMetricsRuns();
@@ -126,7 +126,7 @@ describe('GenerateGitMetricsRuns invariants (PBT)', () => {
         });
     });
 
-    it('revert commits produce failed + error field', () => {expect.hasAssertions();
+    it('revert commits produce failed + error field', () => {
 
         mockExecFileSync.mockReturnValue(sampleLog);
         const runs = generateGitMetricsRuns();
@@ -137,7 +137,7 @@ describe('GenerateGitMetricsRuns invariants (PBT)', () => {
         });
     });
 
-    it('merge commits produce skipped state', () => {expect.hasAssertions();
+    it('merge commits produce skipped state', () => {
 
         mockExecFileSync.mockReturnValue(sampleLog);
         const runs = generateGitMetricsRuns();
@@ -154,7 +154,7 @@ describe('GenerateGitMetricsRuns invariants (PBT)', () => {
         expect(runs).toStrictEqual([]);
     });
 
-    it('total equals passed + failed + skipped for each run', () => {expect.hasAssertions();
+    it('total equals passed + failed + skipped for each run', () => {
 
         mockExecFileSync.mockReturnValue(sampleLog);
         const runs = generateGitMetricsRuns();
@@ -176,7 +176,7 @@ describe('GenerateGitFailureClassifications invariants (PBT)', () => {
         vi.clearAllMocks();
     });
 
-    it('all classifications have category REVERT', () => {expect.hasAssertions();
+    it('all classifications have category REVERT', () => {
 
         mockExecFileSync.mockReturnValue(sampleLog);
         const result = generateGitFailureClassifications();
@@ -207,7 +207,7 @@ describe('ExtractDate', () => {
 });
 
 describe('ParseGitLogOutput malformed line invariants (PBT)', () => {
-    it('never throws on any input string', () => {expect.hasAssertions();
+    it('never throws on any input string', () => {
 
         fc.assert(
             fc.property(fc.string({ minLength: 0, maxLength: 200 }), (input) => {
@@ -216,7 +216,7 @@ describe('ParseGitLogOutput malformed line invariants (PBT)', () => {
         );
     });
 
-    it('filters out lines with fewer than 5 NUL-delimited fields', () => {expect.hasAssertions();
+    it('filters out lines with fewer than 5 NUL-delimited fields', () => {
 
         fc.assert(
             fc.property(
@@ -241,7 +241,7 @@ describe('GetLastGitLogError invariants (PBT)', () => {
         vi.clearAllMocks();
     });
 
-    it('is undefined when execFileSync succeeds', () => {expect.hasAssertions();
+    it('is undefined when execFileSync succeeds', () => {
 
         fc.assert(
             fc.property(fc.string({ minLength: 1, maxLength: 100 }), (hash) => {

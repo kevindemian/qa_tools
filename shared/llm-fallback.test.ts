@@ -225,7 +225,7 @@ describe('ParseRetryAfter', () => {
     });
 });
 
-describe('_EstimateInputTokens', () => {
+describe('EstimateInputTokens', () => {
     it('estimates token count as ceil((sys + user) / 4)', () => {
         const result = _estimateInputTokens('abcd', 'efgh');
 

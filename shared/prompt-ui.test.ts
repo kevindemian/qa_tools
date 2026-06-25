@@ -91,7 +91,7 @@ beforeEach(() => {
     mockGetBreadcrumbPath.mockReturnValue('');
 });
 
-describe('__setConfig / getConfig / isQuiet', () => {
+describe('Set config / get config / is quiet', () => {
     it('getConfig returns set config', () => {
         const c = makeConfig();
         __setConfig(c);

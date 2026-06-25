@@ -84,7 +84,7 @@ function runsWithSharedTestNames(
  * ────────────────────────────────────────────────────────────── */
 
 describe('CalculateFlakyRate — property-based', () => {
-    it('always returns a value in [0, 100]', () => {expect.hasAssertions();
+    it('always returns a value in [0, 100]', () => {
 
         fc.assert(
             fc.property(
@@ -110,7 +110,7 @@ describe('CalculateFlakyRate — property-based', () => {
         expect(calculateFlakyRate(store, 10)).toBe(0);
     });
 
-    it('returns 0 when no test ever fails', () => {expect.hasAssertions();
+    it('returns 0 when no test ever fails', () => {
 
         fc.assert(
             fc.property(runsWithSharedTestNames(5, 10, ['t1', 't2', 't3']), (runs) => {
@@ -129,7 +129,7 @@ describe('CalculateFlakyRate — property-based', () => {
         );
     });
 
-    it('returns 100 when every test is flaky in every run above minRuns', () => {expect.hasAssertions();
+    it('returns 100 when every test is flaky in every run above minRuns', () => {
 
         fc.assert(
             fc.property(
@@ -169,7 +169,7 @@ describe('CalculateFlakyRate — property-based', () => {
         );
     });
 
-    it('denominator excludes tests with fewer appearances than minRuns', () => {expect.hasAssertions();
+    it('denominator excludes tests with fewer appearances than minRuns', () => {
 
         fc.assert(
             fc.property(
@@ -230,7 +230,7 @@ describe('CalculateFlakyRate — property-based', () => {
  * ────────────────────────────────────────────────────────────── */
 
 describe('CalculateFlakiness — property-based', () => {
-    it('each entry has consistent counts: pass + fail + skip = totalRuns', () => {expect.hasAssertions();
+    it('each entry has consistent counts: pass + fail + skip = totalRuns', () => {
 
         fc.assert(
             fc.property(
@@ -248,7 +248,7 @@ describe('CalculateFlakiness — property-based', () => {
         );
     });
 
-    it('each entry has rate = failCount / totalRuns in [0, 1]', () => {expect.hasAssertions();
+    it('each entry has rate = failCount / totalRuns in [0, 1]', () => {
 
         fc.assert(
             fc.property(
@@ -268,7 +268,7 @@ describe('CalculateFlakiness — property-based', () => {
         );
     });
 
-    it('only returns entries where fail > 0 and pass > 0', () => {expect.hasAssertions();
+    it('only returns entries where fail > 0 and pass > 0', () => {
 
         fc.assert(
             fc.property(
@@ -287,7 +287,7 @@ describe('CalculateFlakiness — property-based', () => {
         );
     });
 
-    it('only returns entries where totalRuns >= minRuns', () => {expect.hasAssertions();
+    it('only returns entries where totalRuns >= minRuns', () => {
 
         fc.assert(
             fc.property(
@@ -311,7 +311,7 @@ describe('CalculateFlakiness — property-based', () => {
  * ────────────────────────────────────────────────────────────── */
 
 describe('GetTrends — property-based', () => {
-    it('always returns at most `window` entries', () => {expect.hasAssertions();
+    it('always returns at most `window` entries', () => {
 
         fc.assert(
             fc.property(
@@ -328,7 +328,7 @@ describe('GetTrends — property-based', () => {
         );
     });
 
-    it('each passRate is in [0, 100]', () => {expect.hasAssertions();
+    it('each passRate is in [0, 100]', () => {
 
         fc.assert(
             fc.property(fc.array(MetricsRunArb, { minLength: 0, maxLength: 10 }), (runs) => {
@@ -343,7 +343,7 @@ describe('GetTrends — property-based', () => {
         );
     });
 
-    it('passRate = passed/(passed+failed)*100, or 0 when no executed tests', () => {expect.hasAssertions();
+    it('passRate = passed/(passed+failed)*100, or 0 when no executed tests', () => {
 
         fc.assert(
             fc.property(fc.array(MetricsRunArb, { minLength: 0, maxLength: 10 }), (runs) => {
