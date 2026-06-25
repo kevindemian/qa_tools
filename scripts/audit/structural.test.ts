@@ -34,12 +34,17 @@ describe('Structural.ts — module loads and runs', () => {
     it('loads without error when rg succeeds and outputs 6 findings', async () => {
         expect.hasAssertions();
 
-        const spy = vi.spyOn(console, 'log').mockImplementation(() => {});
+        let captured = '';
+        const originalWrite = process.stdout.write;
+        process.stdout.write = vi.fn((chunk: string | Uint8Array) => {
+            captured += typeof chunk === 'string' ? chunk : new TextDecoder().decode(chunk);
+            return true;
+        }) as unknown as typeof process.stdout.write;
 
         mockExecFileSync.mockReturnValue(Buffer.from(''));
         await import('./structural.js');
-        const output = String(spy.mock.calls[0]?.[0] ?? '[]');
-        const data: Finding[] = JSON.parse(output) as Finding[];
+        process.stdout.write = originalWrite;
+        const data: Finding[] = JSON.parse(captured) as Finding[];
 
         expect(data).toHaveLength(6);
 
@@ -54,8 +59,6 @@ describe('Structural.ts — module loads and runs', () => {
         for (const f of data) {
             assertFindingFields(f);
         }
-
-        spy.mockRestore();
     });
 
     it('loads without error when rg fails', async () => {
