@@ -85,6 +85,7 @@ function runsWithSharedTestNames(
 
 describe('CalculateFlakyRate — property-based', () => {
     it('always returns a value in [0, 100]', () => {
+        expect.hasAssertions();
 
         fc.assert(
             fc.property(
@@ -103,6 +104,7 @@ describe('CalculateFlakyRate — property-based', () => {
     });
 
     it('returns 0 for empty store', () => {
+        expect.hasAssertions();
         const store: MetricsStore = { runs: [] };
 
         expect(calculateFlakyRate(store)).toBe(0);
@@ -111,6 +113,7 @@ describe('CalculateFlakyRate — property-based', () => {
     });
 
     it('returns 0 when no test ever fails', () => {
+        expect.hasAssertions();
 
         fc.assert(
             fc.property(runsWithSharedTestNames(5, 10, ['t1', 't2', 't3']), (runs) => {
@@ -130,6 +133,7 @@ describe('CalculateFlakyRate — property-based', () => {
     });
 
     it('returns 100 when every test is flaky in every run above minRuns', () => {
+        expect.hasAssertions();
 
         fc.assert(
             fc.property(
@@ -170,6 +174,7 @@ describe('CalculateFlakyRate — property-based', () => {
     });
 
     it('denominator excludes tests with fewer appearances than minRuns', () => {
+        expect.hasAssertions();
 
         fc.assert(
             fc.property(
@@ -231,6 +236,7 @@ describe('CalculateFlakyRate — property-based', () => {
 
 describe('CalculateFlakiness — property-based', () => {
     it('each entry has consistent counts: pass + fail + skip = totalRuns', () => {
+        expect.hasAssertions();
 
         fc.assert(
             fc.property(
@@ -239,6 +245,7 @@ describe('CalculateFlakiness — property-based', () => {
                 (runs, minRuns) => {
                     const store: MetricsStore = { runs };
                     const entries = calculateFlakiness(store, Math.max(1, minRuns));
+                    expect(Array.isArray(entries)).toBe(true);
                     for (const entry of entries) {
                         expect(entry.passCount + entry.failCount + entry.skipCount).toBe(entry.totalRuns);
                     }
@@ -249,6 +256,7 @@ describe('CalculateFlakiness — property-based', () => {
     });
 
     it('each entry has rate = failCount / totalRuns in [0, 1]', () => {
+        expect.hasAssertions();
 
         fc.assert(
             fc.property(
@@ -257,6 +265,7 @@ describe('CalculateFlakiness — property-based', () => {
                 (runs, minRuns) => {
                     const store: MetricsStore = { runs };
                     const entries = calculateFlakiness(store, Math.max(1, minRuns));
+                    expect(Array.isArray(entries)).toBe(true);
                     for (const entry of entries) {
                         expect(entry.rate).toBe(entry.failCount / entry.totalRuns);
                         expect(entry.rate).toBeGreaterThanOrEqual(0);
@@ -269,6 +278,7 @@ describe('CalculateFlakiness — property-based', () => {
     });
 
     it('only returns entries where fail > 0 and pass > 0', () => {
+        expect.hasAssertions();
 
         fc.assert(
             fc.property(
@@ -277,6 +287,7 @@ describe('CalculateFlakiness — property-based', () => {
                 (runs, minRuns) => {
                     const store: MetricsStore = { runs };
                     const entries = calculateFlakiness(store, Math.max(1, minRuns));
+                    expect(Array.isArray(entries)).toBe(true);
                     for (const entry of entries) {
                         expect(entry.failCount).toBeGreaterThan(0);
                         expect(entry.passCount).toBeGreaterThan(0);
@@ -288,6 +299,7 @@ describe('CalculateFlakiness — property-based', () => {
     });
 
     it('only returns entries where totalRuns >= minRuns', () => {
+        expect.hasAssertions();
 
         fc.assert(
             fc.property(
@@ -296,6 +308,7 @@ describe('CalculateFlakiness — property-based', () => {
                 (runs, minRuns) => {
                     const store: MetricsStore = { runs };
                     const entries = calculateFlakiness(store, Math.max(1, minRuns));
+                    expect(Array.isArray(entries)).toBe(true);
                     for (const entry of entries) {
                         expect(entry.totalRuns).toBeGreaterThanOrEqual(Math.max(1, minRuns));
                     }
@@ -312,6 +325,7 @@ describe('CalculateFlakiness — property-based', () => {
 
 describe('GetTrends — property-based', () => {
     it('always returns at most `window` entries', () => {
+        expect.hasAssertions();
 
         fc.assert(
             fc.property(
@@ -329,6 +343,7 @@ describe('GetTrends — property-based', () => {
     });
 
     it('each passRate is in [0, 100]', () => {
+        expect.hasAssertions();
 
         fc.assert(
             fc.property(fc.array(MetricsRunArb, { minLength: 0, maxLength: 10 }), (runs) => {
@@ -344,6 +359,7 @@ describe('GetTrends — property-based', () => {
     });
 
     it('passRate = passed/(passed+failed)*100, or 0 when no executed tests', () => {
+        expect.hasAssertions();
 
         fc.assert(
             fc.property(fc.array(MetricsRunArb, { minLength: 0, maxLength: 10 }), (runs) => {
@@ -364,6 +380,7 @@ describe('GetTrends — property-based', () => {
     });
 
     it('returns empty array for empty store', () => {
+        expect.hasAssertions();
         const store: MetricsStore = { runs: [] };
 
         expect(getTrends(store)).toStrictEqual([]);

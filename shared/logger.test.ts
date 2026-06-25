@@ -439,6 +439,7 @@ const PBT_SECRET_RE = /token|secret|key|password|authorization/i;
 
 describe('MaskDeep (PBT)', () => {
     it('primitives and null return input unchanged', () => {
+        expect.hasAssertions();
 
         fc.assert(
             fc.property(fc.constantFrom(null, undefined, 42, 'hello', true, false), (input) => {
@@ -449,6 +450,7 @@ describe('MaskDeep (PBT)', () => {
     });
 
     it('does not mutate original object', () => {
+        expect.hasAssertions();
 
         fc.assert(
             fc.property(fc.dictionary(fc.string(), fc.oneof(fc.string(), fc.integer(), fc.boolean())), (original) => {
@@ -462,6 +464,7 @@ describe('MaskDeep (PBT)', () => {
     });
 
     it('sensitive keys (token/secret/password) have "****" in output values', () => {
+        expect.hasAssertions();
 
         fc.assert(
             fc.property(
@@ -484,6 +487,7 @@ describe('MaskDeep (PBT)', () => {
     });
 
     it('non-sensitive keys (name/id/status) have unchanged values', () => {
+        expect.hasAssertions();
 
         fc.assert(
             fc.property(
@@ -508,6 +512,7 @@ describe('MaskDeep (PBT)', () => {
     });
 
     it('sensitive keys nested inside non-sensitive objects are masked', () => {
+        expect.hasAssertions();
 
         fc.assert(
             fc.property(
@@ -538,6 +543,7 @@ describe('MaskDeep (PBT)', () => {
     });
 
     it('sensitive keys in arrays are masked', () => {
+        expect.hasAssertions();
 
         fc.assert(
             fc.property(
@@ -560,6 +566,7 @@ describe('MaskDeep (PBT)', () => {
     });
 
     it('short sensitive strings (≤8 chars) are fully masked to "****"', () => {
+        expect.hasAssertions();
 
         fc.assert(
             fc.property(

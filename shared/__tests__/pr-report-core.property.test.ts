@@ -79,6 +79,7 @@ describe('Pr Report Core.Property', () => {
 
     describe('GeneratePrReport — passRate invariants (property-based)', () => {
         it('passRate is always in [0, 100]', async () => {
+            expect.hasAssertions();
 
             await fc.assert(
                 fc.asyncProperty(
@@ -106,6 +107,7 @@ describe('Pr Report Core.Property', () => {
         });
 
         it('passRate is 100 when failed is 0 and passed > 0', async () => {
+            expect.hasAssertions();
 
             await fc.assert(
                 fc.asyncProperty(
@@ -128,6 +130,7 @@ describe('Pr Report Core.Property', () => {
         });
 
         it('passRate is 0 when passed is 0 and failed > 0', async () => {
+            expect.hasAssertions();
 
             await fc.assert(
                 fc.asyncProperty(
@@ -150,6 +153,7 @@ describe('Pr Report Core.Property', () => {
         });
 
         it('passRate is 50 when passed === failed > 0', async () => {
+            expect.hasAssertions();
 
             await fc.assert(
                 fc.asyncProperty(
@@ -183,6 +187,7 @@ describe('Pr Report Core.Property', () => {
         );
 
         it('returns undefined when previous is empty', () => {
+            expect.hasAssertions();
 
             fc.assert(
                 fc.property(fc.array(FlatTestArbForDiff, { minLength: 1, maxLength: 10 }), (current) => {
@@ -195,6 +200,7 @@ describe('Pr Report Core.Property', () => {
         });
 
         it('returns undefined when current and previous are identical', () => {
+            expect.hasAssertions();
 
             fc.assert(
                 fc.property(fc.array(FlatTestArbForDiff, { minLength: 1, maxLength: 10 }), (tests) => {
@@ -207,6 +213,7 @@ describe('Pr Report Core.Property', () => {
         });
 
         it('newFailures only contains tests that failed in current but passed in previous', () => {
+            expect.hasAssertions();
 
             fc.assert(
                 fc.property(
@@ -214,7 +221,10 @@ describe('Pr Report Core.Property', () => {
                     fc.array(FlatTestArbForDiff, { minLength: 1, maxLength: 10 }),
                     (current, previous) => {
                         const result = computeDiffComparison(current, previous);
-                        if (result === undefined) return;
+                        if (result === undefined) {
+                            expect(computeDiffComparison(current, previous)).toBeUndefined();
+                            return;
+                        }
                         for (const nf of result.newFailures) {
                             const prev = previous.find((p) => p.title === nf.title);
                             if (!prev) throw new Error('prev must exist in newFailures');
@@ -229,6 +239,7 @@ describe('Pr Report Core.Property', () => {
         });
 
         it('newPasses only contains tests that passed in current but failed in previous', () => {
+            expect.hasAssertions();
 
             fc.assert(
                 fc.property(
@@ -236,7 +247,10 @@ describe('Pr Report Core.Property', () => {
                     fc.array(FlatTestArbForDiff, { minLength: 1, maxLength: 10 }),
                     (current, previous) => {
                         const result = computeDiffComparison(current, previous);
-                        if (result === undefined) return;
+                        if (result === undefined) {
+                            expect(computeDiffComparison(current, previous)).toBeUndefined();
+                            return;
+                        }
                         for (const np of result.newPasses) {
                             const prev = previous.find((p) => p.title === np.title);
                             if (!prev) throw new Error('prev must exist in newPasses');
@@ -251,6 +265,7 @@ describe('Pr Report Core.Property', () => {
         });
 
         it('flaky contains tests whose state changed between runs', () => {
+            expect.hasAssertions();
 
             fc.assert(
                 fc.property(
@@ -258,7 +273,10 @@ describe('Pr Report Core.Property', () => {
                     fc.array(FlatTestArbForDiff, { minLength: 1, maxLength: 10 }),
                     (current, previous) => {
                         const result = computeDiffComparison(current, previous);
-                        if (result === undefined) return;
+                        if (result === undefined) {
+                            expect(computeDiffComparison(current, previous)).toBeUndefined();
+                            return;
+                        }
                         for (const f of result.flaky) {
                             const prev = previous.find((p) => p.title === f.title);
                             const curr = current.find((c) => c.title === f.title);
@@ -274,6 +292,7 @@ describe('Pr Report Core.Property', () => {
         });
 
         it('newFailures and newPasses are disjoint', () => {
+            expect.hasAssertions();
 
             fc.assert(
                 fc.property(
@@ -281,7 +300,10 @@ describe('Pr Report Core.Property', () => {
                     fc.array(FlatTestArbForDiff, { minLength: 1, maxLength: 10 }),
                     (current, previous) => {
                         const result = computeDiffComparison(current, previous);
-                        if (result === undefined) return;
+                        if (result === undefined) {
+                            expect(computeDiffComparison(current, previous)).toBeUndefined();
+                            return;
+                        }
                         const failureTitles = new Set(result.newFailures.map((f) => f.title));
                         const passTitles = new Set(result.newPasses.map((p) => p.title));
                         for (const title of failureTitles) {
@@ -294,6 +316,7 @@ describe('Pr Report Core.Property', () => {
         });
 
         it('all returned tests exist in current run', () => {
+            expect.hasAssertions();
 
             fc.assert(
                 fc.property(
@@ -301,7 +324,10 @@ describe('Pr Report Core.Property', () => {
                     fc.array(FlatTestArbForDiff, { minLength: 1, maxLength: 10 }),
                     (current, previous) => {
                         const result = computeDiffComparison(current, previous);
-                        if (result === undefined) return;
+                        if (result === undefined) {
+                            expect(computeDiffComparison(current, previous)).toBeUndefined();
+                            return;
+                        }
                         const currentTitles = new Set(current.map((t) => t.title));
                         for (const f of result.newFailures) {
                             expect(currentTitles.has(f.title)).toBeTruthy();

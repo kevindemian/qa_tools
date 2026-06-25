@@ -34,6 +34,7 @@ const ContentArb = fc.string({ minLength: 0, maxLength: 200 });
 describe('PBT: Temp Dir', () => {
     describe('Path resolution invariants', () => {
         it('reportsDir always returns an absolute path', async () => {
+            expect.hasAssertions();
 
             const { reportsDir } = await import('../temp-dir.js');
             const dir = reportsDir();
@@ -43,6 +44,7 @@ describe('PBT: Temp Dir', () => {
         });
 
         it('logsDir always returns an absolute path', async () => {
+            expect.hasAssertions();
 
             const { logsDir } = await import('../temp-dir.js');
             const dir = logsDir();
@@ -52,6 +54,7 @@ describe('PBT: Temp Dir', () => {
         });
 
         it('tempDirPath always returns an absolute path', async () => {
+            expect.hasAssertions();
 
             const { tempDirPath } = await import('../temp-dir.js');
             const dir = tempDirPath();
@@ -63,6 +66,7 @@ describe('PBT: Temp Dir', () => {
 
     describe('WriteReport invariants', () => {
         it('returns absolute path ending with original filename for any valid filename', async () => {
+            expect.hasAssertions();
 
             const { writeReport } = await import('../temp-dir.js');
             fc.assert(
@@ -79,6 +83,7 @@ describe('PBT: Temp Dir', () => {
 
     describe('WriteEphemeral invariants', () => {
         it('returns path containing category for any valid category and filename', async () => {
+            expect.hasAssertions();
 
             const { writeEphemeral } = await import('../temp-dir.js');
             fc.assert(
