@@ -538,12 +538,12 @@ import { generateBugReportFromDescription } from './bug-report.js';
 
 let mockLlmPrompt: Mock;
 
-beforeAll(async () => {
-    const llmClient = await vi.importMock<typeof import('./llm-client.js')>('./llm-client');
-    mockLlmPrompt = vi.spyOn(llmClient, 'llmPrompt');
-});
-
 describe('GenerateBugReportFromDescription', () => {
+    beforeAll(async () => {
+        const llmClient = await vi.importMock<typeof import('./llm-client.js')>('./llm-client');
+        mockLlmPrompt = vi.spyOn(llmClient, 'llmPrompt');
+    });
+
     beforeEach(() => {
         mockLlmPrompt.mockReset();
     });

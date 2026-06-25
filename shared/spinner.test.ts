@@ -25,117 +25,120 @@ const mockIsQuiet = vi.mocked(isQuiet);
 const mockIsTTY = vi.spyOn(Output, 'isTTY');
 const mockIsCI = vi.spyOn(Output, 'isCI');
 
-beforeEach(() => {
-    vi.clearAllMocks();
-    mockIsQuiet.mockReturnValue(false);
-    mockIsTTY.mockReturnValue(true);
-    mockIsCI.mockReturnValue(false);
-});
-
-describe('WithSpinner', () => {
-    const fn = vi.fn().mockResolvedValue(42);
-
-    it('calls fn directly when quiet', async () => {expect.hasAssertions();
-
-        mockIsQuiet.mockReturnValue(true);
-        const result = await withSpinner('loading', fn);
-
-        expect(result).toBe(42);
-    });
-
-    it('calls fn directly when not TTY', async () => {expect.hasAssertions();
-
-        mockIsTTY.mockReturnValue(false);
-        const result = await withSpinner('loading', fn);
-
-        expect(result).toBe(42);
-    });
-
-    it('calls fn directly when CI', async () => {expect.hasAssertions();
-
-        mockIsCI.mockReturnValue(true);
-        const result = await withSpinner('loading', fn);
-
-        expect(result).toBe(42);
-    });
-
-    it('uses ora spinner when TTY and not quiet', async () => {expect.hasAssertions();
-
-        const mockSpinner = { start: vi.fn().mockReturnThis(), succeed: vi.fn(), fail: vi.fn() };
-        const mockOra = vi.fn(() => mockSpinner);
-        __setOraDep(mockOra);
-
-        const result = await withSpinner('loading', fn);
-
-        expect(result).toBe(42);
-        expect(mockOra).toHaveBeenCalledWith({ text: 'loading', color: 'cyan', spinner: 'dots' });
-        expect(mockSpinner.start).toHaveBeenCalled();
-        expect(mockSpinner.succeed).toHaveBeenCalled();
-    });
-
-    it('calls spinner.fail on fn rejection', async () => {expect.hasAssertions();
-
-        const mockSpinner = { start: vi.fn().mockReturnThis(), succeed: vi.fn(), fail: vi.fn() };
-        __setOraDep(vi.fn(() => mockSpinner));
-        const failingFn = vi.fn().mockRejectedValue(new Error('fail'));
-
-        await expect(withSpinner('loading', failingFn)).rejects.toThrow('fail');
-        expect(mockSpinner.fail).toHaveBeenCalled();
-    });
-});
-
-describe('ProgressBar', () => {
+describe('Spinner', () => {
     beforeEach(() => {
+        vi.clearAllMocks();
+        mockIsQuiet.mockReturnValue(false);
         mockIsTTY.mockReturnValue(true);
+        mockIsCI.mockReturnValue(false);
     });
 
-    describe('Constructor', () => {
-        it('creates cli-progress bar when TTY enabled', () => {
-            const bar = new ProgressBar(100);
+    describe('WithSpinner', () => {
+        const fn = vi.fn().mockResolvedValue(42);
 
-            expect(bar.current).toBe(0);
+        it('calls fn directly when quiet', async () => {expect.hasAssertions();
+
+            mockIsQuiet.mockReturnValue(true);
+            const result = await withSpinner('loading', fn);
+
+            expect(result).toBe(42);
         });
 
-        it('does not create bar when not TTY', () => {
+        it('calls fn directly when not TTY', async () => {expect.hasAssertions();
+
             mockIsTTY.mockReturnValue(false);
-            const bar = new ProgressBar(100);
+            const result = await withSpinner('loading', fn);
 
-            expect(bar.current).toBe(0);
+            expect(result).toBe(42);
+        });
+
+        it('calls fn directly when CI', async () => {expect.hasAssertions();
+
+            mockIsCI.mockReturnValue(true);
+            const result = await withSpinner('loading', fn);
+
+            expect(result).toBe(42);
+        });
+
+        it('uses ora spinner when TTY and not quiet', async () => {expect.hasAssertions();
+
+            const mockSpinner = { start: vi.fn().mockReturnThis(), succeed: vi.fn(), fail: vi.fn() };
+            const mockOra = vi.fn(() => mockSpinner);
+            __setOraDep(mockOra);
+
+            const result = await withSpinner('loading', fn);
+
+            expect(result).toBe(42);
+            expect(mockOra).toHaveBeenCalledWith({ text: 'loading', color: 'cyan', spinner: 'dots' });
+            expect(mockSpinner.start).toHaveBeenCalled();
+            expect(mockSpinner.succeed).toHaveBeenCalled();
+        });
+
+        it('calls spinner.fail on fn rejection', async () => {expect.hasAssertions();
+
+            const mockSpinner = { start: vi.fn().mockReturnThis(), succeed: vi.fn(), fail: vi.fn() };
+            __setOraDep(vi.fn(() => mockSpinner));
+            const failingFn = vi.fn().mockRejectedValue(new Error('fail'));
+
+            await expect(withSpinner('loading', failingFn)).rejects.toThrow('fail');
+            expect(mockSpinner.fail).toHaveBeenCalled();
         });
     });
 
-    describe('Update', () => {
-        it('delegates to bar.update when enabled', () => {
-            const bar = new ProgressBar(100);
-            bar.update(50);
-
-            expect(bar.current).toBe(50);
-            expect(mockSingleBar.update).toHaveBeenCalledWith(50);
+    describe('ProgressBar', () => {
+        beforeEach(() => {
+            mockIsTTY.mockReturnValue(true);
         });
 
-        it('falls back to output.print when not TTY', () => {
-            mockIsTTY.mockReturnValue(false);
-            const printSpy = vi.spyOn(defaultOutput, 'print');
-            const bar = new ProgressBar(100);
-            bar.update(50);
+        describe('Constructor', () => {
+            it('creates cli-progress bar when TTY enabled', () => {
+                const bar = new ProgressBar(100);
 
-            expect(printSpy).toHaveBeenCalled();
+                expect(bar.current).toBe(0);
+            });
+
+            it('does not create bar when not TTY', () => {
+                mockIsTTY.mockReturnValue(false);
+                const bar = new ProgressBar(100);
+
+                expect(bar.current).toBe(0);
+            });
+        });
+
+        describe('Update', () => {
+            it('delegates to bar.update when enabled', () => {
+                const bar = new ProgressBar(100);
+                bar.update(50);
+
+                expect(bar.current).toBe(50);
+                expect(mockSingleBar.update).toHaveBeenCalledWith(50);
+            });
+
+            it('falls back to output.print when not TTY', () => {
+                mockIsTTY.mockReturnValue(false);
+                const printSpy = vi.spyOn(defaultOutput, 'print');
+                const bar = new ProgressBar(100);
+                bar.update(50);
+
+                expect(printSpy).toHaveBeenCalled();
+            });
+        });
+
+        describe('Stop', () => {
+            it('calls bar.stop when enabled', () => {
+                const bar = new ProgressBar(100);
+                bar.stop();
+
+                expect(mockSingleBar.stop).toHaveBeenCalled();
+            });
+
+            it('no-ops when not TTY', () => {
+                mockIsTTY.mockReturnValue(false);
+                const bar = new ProgressBar(100);
+
+                expect(() => bar.stop()).not.toThrow();
+            });
         });
     });
 
-    describe('Stop', () => {
-        it('calls bar.stop when enabled', () => {
-            const bar = new ProgressBar(100);
-            bar.stop();
-
-            expect(mockSingleBar.stop).toHaveBeenCalled();
-        });
-
-        it('no-ops when not TTY', () => {
-            mockIsTTY.mockReturnValue(false);
-            const bar = new ProgressBar(100);
-
-            expect(() => bar.stop()).not.toThrow();
-        });
-    });
 });

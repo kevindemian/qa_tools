@@ -83,107 +83,90 @@ const opLog = vi.mocked({
 });
 const resultSink: TestResult[] = [];
 
-beforeEach(() => {
-    vi.clearAllMocks();
-    resultSink.length = 0;
-});
+describe('Import Loop', () => {
+    beforeEach(() => {
+        vi.clearAllMocks();
+        resultSink.length = 0;
+    });
 
-describe('LinkTestRelations', () => {
-    it('associatePrecondition abort -> abort/errored', async () => {expect.hasAssertions();
+    describe('LinkTestRelations', () => {
+        it('associatePrecondition abort -> abort/errored', async () => {expect.hasAssertions();
 
-        const linker = makeLinker();
-        const factory = makeFactory();
-        linker.associatePrecondition.mockResolvedValue({ action: 'abort' });
-        factory.postSteps.mockResolvedValue(null);
-        const test: TestCase = { ...testBase, precondition: { type: 'reference', value: 'PREC-1' } };
-        const result = await linkTestRelations({
-            linker,
-            test,
-            createdTestIssue: { key: 'T-1' },
-            factory,
-            opLog,
-            testTitle: 'My Test',
-            results: resultSink,
+            const linker = makeLinker();
+            const factory = makeFactory();
+            linker.associatePrecondition.mockResolvedValue({ action: 'abort' });
+            factory.postSteps.mockResolvedValue(null);
+            const test: TestCase = { ...testBase, precondition: { type: 'reference', value: 'PREC-1' } };
+            const result = await linkTestRelations({
+                linker,
+                test,
+                createdTestIssue: { key: 'T-1' },
+                factory,
+                opLog,
+                testTitle: 'My Test',
+                results: resultSink,
+            });
+
+            expect(result).toStrictEqual({ abort: true, errored: true });
+            expect(nonNull(resultSink[0]).message).toContain('pre-condition');
         });
 
-        expect(result).toStrictEqual({ abort: true, errored: true });
-        expect(nonNull(resultSink[0]).message).toContain('pre-condition');
+        it('linkIssues abort -> abort/errored', async () => {expect.hasAssertions();
+
+            const linker = makeLinker();
+            const factory = makeFactory();
+            linker.associatePrecondition.mockResolvedValue(null);
+            factory.postSteps.mockResolvedValue(null);
+            linker.linkIssues.mockResolvedValue({ action: 'abort' });
+            const test: TestCase = {
+                ...testBase,
+                linkedIssues: [{ key: 'BUG-1', linkType: 'Tests' }],
+            };
+            const result = await linkTestRelations({
+                linker,
+                test,
+                createdTestIssue: { key: 'T-1' },
+                factory,
+                opLog,
+                testTitle: 'My Test',
+                results: resultSink,
+            });
+
+            expect(result).toStrictEqual({ abort: true, errored: true });
+        });
     });
 
-    it('linkIssues abort -> abort/errored', async () => {expect.hasAssertions();
+    describe('BuildTestData', () => {
+        it('without jiraLabels', () => {
+            const test: TestCase = { ...testBase, description: 'desc' };
+            const result = buildTestData(test, 'PROJ', []);
 
-        const linker = makeLinker();
-        const factory = makeFactory();
-        linker.associatePrecondition.mockResolvedValue(null);
-        factory.postSteps.mockResolvedValue(null);
-        linker.linkIssues.mockResolvedValue({ action: 'abort' });
-        const test: TestCase = {
-            ...testBase,
-            linkedIssues: [{ key: 'BUG-1', linkType: 'Tests' }],
-        };
-        const result = await linkTestRelations({
-            linker,
-            test,
-            createdTestIssue: { key: 'T-1' },
-            factory,
-            opLog,
-            testTitle: 'My Test',
-            results: resultSink,
+            expect(result.fields).toMatchObject({
+                project: { key: 'PROJ' },
+                summary: 'My Test',
+                description: 'desc',
+                issuetype: { name: 'Test' },
+            });
+            expect((result.fields as Record<string, unknown>)['labels']).toStrictEqual([]);
         });
 
-        expect(result).toStrictEqual({ abort: true, errored: true });
-    });
-});
+        it('with jiraLabels', () => {
+            const test: TestCase = { ...testBase, description: 'desc' };
+            const result = buildTestData(test, 'PROJ', ['label1', 'label2']);
 
-describe('BuildTestData', () => {
-    it('without jiraLabels', () => {
-        const test: TestCase = { ...testBase, description: 'desc' };
-        const result = buildTestData(test, 'PROJ', []);
-
-        expect(result.fields).toMatchObject({
-            project: { key: 'PROJ' },
-            summary: 'My Test',
-            description: 'desc',
-            issuetype: { name: 'Test' },
-        });
-        expect((result.fields as Record<string, unknown>)['labels']).toStrictEqual([]);
-    });
-
-    it('with jiraLabels', () => {
-        const test: TestCase = { ...testBase, description: 'desc' };
-        const result = buildTestData(test, 'PROJ', ['label1', 'label2']);
-
-        expect((result.fields as Record<string, unknown>)['labels']).toStrictEqual(['label1', 'label2']);
-    });
-
-    it('inline precondition appended to description', () => {
-        const test: TestCase = { ...testBase, precondition: { type: 'inline', value: 'must login' } };
-        const result = buildTestData(test, 'PROJ', []);
-
-        expect((result.fields as Record<string, unknown>)['description']).toContain('Pre-condition: must login');
-    });
-});
-
-describe('SaveCheckpoint', () => {
-    it('happy path', () => {
-        saveCheckpoint({
-            sourcePath: '/path.csv',
-            sourceType: 'csv',
-            projectName: 'PROJ',
-            tests: [testBase],
-            inMemoryTasksId: ['T-1'],
-            inMemoryTasksText: ['My Test'],
+            expect((result.fields as Record<string, unknown>)['labels']).toStrictEqual(['label1', 'label2']);
         });
 
-        expect(updateState).toHaveBeenCalledWith(expect.any(Function));
+        it('inline precondition appended to description', () => {
+            const test: TestCase = { ...testBase, precondition: { type: 'inline', value: 'must login' } };
+            const result = buildTestData(test, 'PROJ', []);
+
+            expect((result.fields as Record<string, unknown>)['description']).toContain('Pre-condition: must login');
+        });
     });
 
-    it('file error propagates', () => {
-        vi.mocked(updateState).mockImplementationOnce(() => {
-            throw new Error('write failed');
-        });
-
-        expect(() =>
+    describe('SaveCheckpoint', () => {
+        it('happy path', () => {
             saveCheckpoint({
                 sourcePath: '/path.csv',
                 sourceType: 'csv',
@@ -191,123 +174,143 @@ describe('SaveCheckpoint', () => {
                 tests: [testBase],
                 inMemoryTasksId: ['T-1'],
                 inMemoryTasksText: ['My Test'],
-            }),
-        ).toThrow('write failed');
-    });
-});
+            });
 
-describe('CreateIssueForTest', () => {
-    it('abort branch', async () => {expect.hasAssertions();
-
-        const factory = makeFactory();
-        factory.createIssue.mockResolvedValue({ action: 'abort' });
-        const result = await createIssueForTest({
-            factory,
-            test: testBase,
-            testTitle: 'My Test',
-            projectName: 'PROJ',
-            jiraLabels: [],
-            t: 0,
-            total: 3,
-            opLog,
-            results: resultSink,
+            expect(updateState).toHaveBeenCalledWith(expect.any(Function));
         });
 
-        expect(result).toBe('abort');
+        it('file error propagates', () => {
+            vi.mocked(updateState).mockImplementationOnce(() => {
+                throw new Error('write failed');
+            });
+
+            expect(() =>
+                saveCheckpoint({
+                    sourcePath: '/path.csv',
+                    sourceType: 'csv',
+                    projectName: 'PROJ',
+                    tests: [testBase],
+                    inMemoryTasksId: ['T-1'],
+                    inMemoryTasksText: ['My Test'],
+                }),
+            ).toThrow('write failed');
+        });
     });
 
-    it('retry branch returns null', async () => {expect.hasAssertions();
+    describe('CreateIssueForTest', () => {
+        it('abort branch', async () => {expect.hasAssertions();
 
-        const factory = makeFactory();
-        factory.createIssue.mockResolvedValue({ action: 'retry' });
-        const result = await createIssueForTest({
-            factory,
-            test: testBase,
-            testTitle: 'My Test',
-            projectName: 'PROJ',
-            jiraLabels: [],
-            t: 0,
-            total: 3,
-            opLog,
-            results: resultSink,
+            const factory = makeFactory();
+            factory.createIssue.mockResolvedValue({ action: 'abort' });
+            const result = await createIssueForTest({
+                factory,
+                test: testBase,
+                testTitle: 'My Test',
+                projectName: 'PROJ',
+                jiraLabels: [],
+                t: 0,
+                total: 3,
+                opLog,
+                results: resultSink,
+            });
+
+            expect(result).toBe('abort');
         });
 
-        expect(result).toBeNull();
-    });
+        it('retry branch returns null', async () => {expect.hasAssertions();
 
-    it('continue branch', async () => {expect.hasAssertions();
+            const factory = makeFactory();
+            factory.createIssue.mockResolvedValue({ action: 'retry' });
+            const result = await createIssueForTest({
+                factory,
+                test: testBase,
+                testTitle: 'My Test',
+                projectName: 'PROJ',
+                jiraLabels: [],
+                t: 0,
+                total: 3,
+                opLog,
+                results: resultSink,
+            });
 
-        const factory = makeFactory();
-        factory.createIssue.mockResolvedValue({ action: 'skip' });
-        const result = await createIssueForTest({
-            factory,
-            test: testBase,
-            testTitle: 'My Test',
-            projectName: 'PROJ',
-            jiraLabels: [],
-            t: 0,
-            total: 3,
-            opLog,
-            results: resultSink,
+            expect(result).toBeNull();
         });
 
-        expect(result).toBe('continue');
-    });
+        it('continue branch', async () => {expect.hasAssertions();
 
-    it('success returns key', async () => {expect.hasAssertions();
+            const factory = makeFactory();
+            factory.createIssue.mockResolvedValue({ action: 'skip' });
+            const result = await createIssueForTest({
+                factory,
+                test: testBase,
+                testTitle: 'My Test',
+                projectName: 'PROJ',
+                jiraLabels: [],
+                t: 0,
+                total: 3,
+                opLog,
+                results: resultSink,
+            });
 
-        const factory = makeFactory();
-        factory.createIssue.mockResolvedValue({ key: 'TEST-100' });
-        const result = await createIssueForTest({
-            factory,
-            test: testBase,
-            testTitle: 'My Test',
-            projectName: 'PROJ',
-            jiraLabels: [],
-            t: 0,
-            total: 3,
-            opLog,
-            results: resultSink,
+            expect(result).toBe('continue');
         });
 
-        expect(result).toStrictEqual({ key: 'TEST-100', skipped: false });
-    });
-});
+        it('success returns key', async () => {expect.hasAssertions();
 
-describe('ExecuteTestCreationLoop', () => {
-    it('main loop flow with one test', async () => {expect.hasAssertions();
+            const factory = makeFactory();
+            factory.createIssue.mockResolvedValue({ key: 'TEST-100' });
+            const result = await createIssueForTest({
+                factory,
+                test: testBase,
+                testTitle: 'My Test',
+                projectName: 'PROJ',
+                jiraLabels: [],
+                t: 0,
+                total: 3,
+                opLog,
+                results: resultSink,
+            });
 
-        const factory = makeFactory();
-        const linker = makeLinker();
-        factory.createIssue.mockResolvedValue({ key: 'T-NEW' });
-        linker.associatePrecondition.mockResolvedValue(null);
-        factory.postSteps.mockResolvedValue(null);
-
-        const tests = [testBase];
-        const inMemoryTasksId: string[] = [];
-        const inMemoryTasksText: string[] = [];
-
-        await executeTestCreationLoop({
-            tests,
-            factory,
-            linker,
-            projectName: 'PROJ',
-            jiraLabels: [],
-            baseUrl: 'http://jira',
-            opLog,
-            sourcePath: '/path.csv',
-            sourceType: 'csv',
-            inMemoryTasksId,
-            inMemoryTasksText,
-            results: resultSink,
-            resumeFrom: 0,
-            isQuiet: () => true,
-            reportInfo: vi.fn(),
-            reportPrint: vi.fn(),
+            expect(result).toStrictEqual({ key: 'TEST-100', skipped: false });
         });
-
-        expect(inMemoryTasksId).toStrictEqual(['T-NEW']);
-        expect(resultSink).toHaveLength(1);
-        expect(nonNull(resultSink[0]).status).toBe('ok');
     });
+
+    describe('ExecuteTestCreationLoop', () => {
+        it('main loop flow with one test', async () => {expect.hasAssertions();
+
+            const factory = makeFactory();
+            const linker = makeLinker();
+            factory.createIssue.mockResolvedValue({ key: 'T-NEW' });
+            linker.associatePrecondition.mockResolvedValue(null);
+            factory.postSteps.mockResolvedValue(null);
+
+            const tests = [testBase];
+            const inMemoryTasksId: string[] = [];
+            const inMemoryTasksText: string[] = [];
+
+            await executeTestCreationLoop({
+                tests,
+                factory,
+                linker,
+                projectName: 'PROJ',
+                jiraLabels: [],
+                baseUrl: 'http://jira',
+                opLog,
+                sourcePath: '/path.csv',
+                sourceType: 'csv',
+                inMemoryTasksId,
+                inMemoryTasksText,
+                results: resultSink,
+                resumeFrom: 0,
+                isQuiet: () => true,
+                reportInfo: vi.fn(),
+                reportPrint: vi.fn(),
+            });
+
+            expect(inMemoryTasksId).toStrictEqual(['T-NEW']);
+            expect(resultSink).toHaveLength(1);
+            expect(nonNull(resultSink[0]).status).toBe('ok');
+        });
+    });
+
 });

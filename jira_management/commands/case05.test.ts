@@ -12,20 +12,23 @@ const mockContext = makeMockCommandContext({
     ctx: { packageManager: { updateReleaseNotes: vi.fn(), updateVersion: vi.fn() } },
 });
 
-beforeEach(() => {
-    vi.clearAllMocks();
-});
-
-describe('Case05 — update package version', () => {
-    it('exports a handler function', () => {
-        expect(case05).toBeDefined();
-        expect(typeof case05.handler).toBe('function');
+describe('Case05', () => {
+    beforeEach(() => {
+        vi.clearAllMocks();
     });
 
-    it('executes without error with basic context', async () => {expect.hasAssertions();
+    describe('Case05 — update package version', () => {
+        it('exports a handler function', () => {
+            expect(case05).toBeDefined();
+            expect(typeof case05.handler).toBe('function');
+        });
 
-        const result = await case05.handler(mockContext);
+        it('executes without error with basic context', async () => {expect.hasAssertions();
 
-        expect([undefined, true, false]).toContain(result);
+            const result = await case05.handler(mockContext);
+
+            expect([undefined, true, false]).toContain(result);
+        });
     });
+
 });

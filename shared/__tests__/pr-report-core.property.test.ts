@@ -58,262 +58,265 @@ const defaultHealthScore = {
     },
 };
 
-afterAll(() => {
-    delete process.env['GITHUB_STEP_SUMMARY'];
-});
-
-beforeEach(() => {
-    vi.clearAllMocks();
-    delete process.env['GITHUB_STEP_SUMMARY'];
-    mockMetrics.loadMetrics.mockReturnValue({ runs: [] });
-    mockMetrics.calculateFlakiness.mockReturnValue([]);
-    mockMetrics.getTrends.mockReturnValue({ direction: 'stable' as const, change: 0 });
-    mockHealthScore.calculateHealthScore.mockReturnValue(defaultHealthScore);
-    mockQualityGate.runQualityGate.mockReturnValue(null);
-    mockCheckRun.createCheckRun.mockResolvedValue(undefined);
-    mockPRComment.postPrComment.mockResolvedValue(undefined);
-    mockHtml.generateHtmlReport.mockReturnValue('<html>mock</html>');
-    mockCoverage.resolveCoverage.mockReturnValue(undefined);
-});
-
-describe('GeneratePrReport — passRate invariants (property-based)', () => {
-    it('passRate is always in [0, 100]', async () => {
-
-        await fc.assert(
-            fc.asyncProperty(
-                fc.array(FlatTestArb, { minLength: 1, maxLength: 5 }),
-                fc.nat({ max: 100 }),
-                fc.nat({ max: 100 }),
-                fc.nat({ max: 100 }),
-                async (tests, passed, failed, skipped) => {
-                    const total = passed + failed + skipped;
-                    if (total === 0) return;
-                    const result = await generatePrReport({
-                        tests,
-                        stats: { passed, failed, skipped, total, duration: 1000 },
-                        skipAi: true,
-                        skipQuality: true,
-                        skipFlaky: true,
-                    });
-
-                    expect(result.passRate).toBeGreaterThanOrEqual(0);
-                    expect(result.passRate).toBeLessThanOrEqual(100);
-                },
-            ),
-            { numRuns: 100 },
-        );
+describe('Pr Report Core.Property', () => {
+    afterAll(() => {
+        delete process.env['GITHUB_STEP_SUMMARY'];
     });
 
-    it('passRate is 100 when failed is 0 and passed > 0', async () => {
-
-        await fc.assert(
-            fc.asyncProperty(
-                fc.array(FlatTestArb, { minLength: 1, maxLength: 5 }),
-                fc.integer({ min: 1, max: 100 }),
-                async (tests, passed) => {
-                    const result = await generatePrReport({
-                        tests,
-                        stats: { passed, failed: 0, skipped: 0, total: passed, duration: 1000 },
-                        skipAi: true,
-                        skipQuality: true,
-                        skipFlaky: true,
-                    });
-
-                    expect(result.passRate).toBe(100);
-                },
-            ),
-            { numRuns: 100 },
-        );
+    beforeEach(() => {
+        vi.clearAllMocks();
+        delete process.env['GITHUB_STEP_SUMMARY'];
+        mockMetrics.loadMetrics.mockReturnValue({ runs: [] });
+        mockMetrics.calculateFlakiness.mockReturnValue([]);
+        mockMetrics.getTrends.mockReturnValue({ direction: 'stable' as const, change: 0 });
+        mockHealthScore.calculateHealthScore.mockReturnValue(defaultHealthScore);
+        mockQualityGate.runQualityGate.mockReturnValue(null);
+        mockCheckRun.createCheckRun.mockResolvedValue(undefined);
+        mockPRComment.postPrComment.mockResolvedValue(undefined);
+        mockHtml.generateHtmlReport.mockReturnValue('<html>mock</html>');
+        mockCoverage.resolveCoverage.mockReturnValue(undefined);
     });
 
-    it('passRate is 0 when passed is 0 and failed > 0', async () => {
+    describe('GeneratePrReport — passRate invariants (property-based)', () => {
+        it('passRate is always in [0, 100]', async () => {
 
-        await fc.assert(
-            fc.asyncProperty(
-                fc.array(FlatTestArb, { minLength: 1, maxLength: 5 }),
-                fc.integer({ min: 1, max: 100 }),
-                async (tests, failed) => {
-                    const result = await generatePrReport({
-                        tests,
-                        stats: { passed: 0, failed, skipped: 0, total: failed, duration: 1000 },
-                        skipAi: true,
-                        skipQuality: true,
-                        skipFlaky: true,
-                    });
+            await fc.assert(
+                fc.asyncProperty(
+                    fc.array(FlatTestArb, { minLength: 1, maxLength: 5 }),
+                    fc.nat({ max: 100 }),
+                    fc.nat({ max: 100 }),
+                    fc.nat({ max: 100 }),
+                    async (tests, passed, failed, skipped) => {
+                        const total = passed + failed + skipped;
+                        if (total === 0) return;
+                        const result = await generatePrReport({
+                            tests,
+                            stats: { passed, failed, skipped, total, duration: 1000 },
+                            skipAi: true,
+                            skipQuality: true,
+                            skipFlaky: true,
+                        });
 
-                    expect(result.passRate).toBe(0);
-                },
-            ),
-            { numRuns: 100 },
-        );
+                        expect(result.passRate).toBeGreaterThanOrEqual(0);
+                        expect(result.passRate).toBeLessThanOrEqual(100);
+                    },
+                ),
+                { numRuns: 100 },
+            );
+        });
+
+        it('passRate is 100 when failed is 0 and passed > 0', async () => {
+
+            await fc.assert(
+                fc.asyncProperty(
+                    fc.array(FlatTestArb, { minLength: 1, maxLength: 5 }),
+                    fc.integer({ min: 1, max: 100 }),
+                    async (tests, passed) => {
+                        const result = await generatePrReport({
+                            tests,
+                            stats: { passed, failed: 0, skipped: 0, total: passed, duration: 1000 },
+                            skipAi: true,
+                            skipQuality: true,
+                            skipFlaky: true,
+                        });
+
+                        expect(result.passRate).toBe(100);
+                    },
+                ),
+                { numRuns: 100 },
+            );
+        });
+
+        it('passRate is 0 when passed is 0 and failed > 0', async () => {
+
+            await fc.assert(
+                fc.asyncProperty(
+                    fc.array(FlatTestArb, { minLength: 1, maxLength: 5 }),
+                    fc.integer({ min: 1, max: 100 }),
+                    async (tests, failed) => {
+                        const result = await generatePrReport({
+                            tests,
+                            stats: { passed: 0, failed, skipped: 0, total: failed, duration: 1000 },
+                            skipAi: true,
+                            skipQuality: true,
+                            skipFlaky: true,
+                        });
+
+                        expect(result.passRate).toBe(0);
+                    },
+                ),
+                { numRuns: 100 },
+            );
+        });
+
+        it('passRate is 50 when passed === failed > 0', async () => {
+
+            await fc.assert(
+                fc.asyncProperty(
+                    fc.array(FlatTestArb, { minLength: 1, maxLength: 5 }),
+                    fc.integer({ min: 1, max: 50 }),
+                    async (tests, n) => {
+                        const result = await generatePrReport({
+                            tests,
+                            stats: { passed: n, failed: n, skipped: 0, total: n * 2, duration: 1000 },
+                            skipAi: true,
+                            skipQuality: true,
+                            skipFlaky: true,
+                        });
+
+                        expect(result.passRate).toBe(50);
+                    },
+                ),
+                { numRuns: 100 },
+            );
+        });
     });
 
-    it('passRate is 50 when passed === failed > 0', async () => {
-
-        await fc.assert(
-            fc.asyncProperty(
-                fc.array(FlatTestArb, { minLength: 1, maxLength: 5 }),
-                fc.integer({ min: 1, max: 50 }),
-                async (tests, n) => {
-                    const result = await generatePrReport({
-                        tests,
-                        stats: { passed: n, failed: n, skipped: 0, total: n * 2, duration: 1000 },
-                        skipAi: true,
-                        skipQuality: true,
-                        skipFlaky: true,
-                    });
-
-                    expect(result.passRate).toBe(50);
-                },
-            ),
-            { numRuns: 100 },
+    describe('ComputeDiffComparison — invariants (property-based)', () => {
+        const FlatTestArbForDiff: fc.Arbitrary<FlatTest> = fc.record(
+            {
+                title: fc.string({ minLength: 1, maxLength: 20 }),
+                state: fc.constantFrom('passed' as const, 'failed' as const, 'skipped' as const),
+                duration: fc.nat({ max: 60000 }),
+            },
+            { requiredKeys: ['title', 'state', 'duration'] },
         );
+
+        it('returns undefined when previous is empty', () => {
+
+            fc.assert(
+                fc.property(fc.array(FlatTestArbForDiff, { minLength: 1, maxLength: 10 }), (current) => {
+                    const result = computeDiffComparison(current, []);
+
+                    expect(result).toBeUndefined();
+                }),
+                { numRuns: 100 },
+            );
+        });
+
+        it('returns undefined when current and previous are identical', () => {
+
+            fc.assert(
+                fc.property(fc.array(FlatTestArbForDiff, { minLength: 1, maxLength: 10 }), (tests) => {
+                    const result = computeDiffComparison(tests, tests);
+
+                    expect(result).toBeUndefined();
+                }),
+                { numRuns: 100 },
+            );
+        });
+
+        it('newFailures only contains tests that failed in current but passed in previous', () => {
+
+            fc.assert(
+                fc.property(
+                    fc.array(FlatTestArbForDiff, { minLength: 1, maxLength: 10 }),
+                    fc.array(FlatTestArbForDiff, { minLength: 1, maxLength: 10 }),
+                    (current, previous) => {
+                        const result = computeDiffComparison(current, previous);
+                        if (result === undefined) return;
+                        for (const nf of result.newFailures) {
+                            const prev = previous.find((p) => p.title === nf.title);
+                            if (!prev) throw new Error('prev must exist in newFailures');
+
+                            expect(nf.state).toBe('failed');
+                            expect(prev.state).not.toBe('failed');
+                        }
+                    },
+                ),
+                { numRuns: 100 },
+            );
+        });
+
+        it('newPasses only contains tests that passed in current but failed in previous', () => {
+
+            fc.assert(
+                fc.property(
+                    fc.array(FlatTestArbForDiff, { minLength: 1, maxLength: 10 }),
+                    fc.array(FlatTestArbForDiff, { minLength: 1, maxLength: 10 }),
+                    (current, previous) => {
+                        const result = computeDiffComparison(current, previous);
+                        if (result === undefined) return;
+                        for (const np of result.newPasses) {
+                            const prev = previous.find((p) => p.title === np.title);
+                            if (!prev) throw new Error('prev must exist in newPasses');
+
+                            expect(np.state).not.toBe('failed');
+                            expect(prev.state).toBe('failed');
+                        }
+                    },
+                ),
+                { numRuns: 100 },
+            );
+        });
+
+        it('flaky contains tests whose state changed between runs', () => {
+
+            fc.assert(
+                fc.property(
+                    fc.array(FlatTestArbForDiff, { minLength: 1, maxLength: 10 }),
+                    fc.array(FlatTestArbForDiff, { minLength: 1, maxLength: 10 }),
+                    (current, previous) => {
+                        const result = computeDiffComparison(current, previous);
+                        if (result === undefined) return;
+                        for (const f of result.flaky) {
+                            const prev = previous.find((p) => p.title === f.title);
+                            const curr = current.find((c) => c.title === f.title);
+                            if (!prev) throw new Error('prev must exist in flaky');
+                            if (!curr) throw new Error('curr must exist in flaky');
+
+                            expect(f.state).not.toBe(prev.state);
+                        }
+                    },
+                ),
+                { numRuns: 100 },
+            );
+        });
+
+        it('newFailures and newPasses are disjoint', () => {
+
+            fc.assert(
+                fc.property(
+                    fc.array(FlatTestArbForDiff, { minLength: 1, maxLength: 10 }),
+                    fc.array(FlatTestArbForDiff, { minLength: 1, maxLength: 10 }),
+                    (current, previous) => {
+                        const result = computeDiffComparison(current, previous);
+                        if (result === undefined) return;
+                        const failureTitles = new Set(result.newFailures.map((f) => f.title));
+                        const passTitles = new Set(result.newPasses.map((p) => p.title));
+                        for (const title of failureTitles) {
+                            expect(passTitles.has(title)).toBeFalsy();
+                        }
+                    },
+                ),
+                { numRuns: 100 },
+            );
+        });
+
+        it('all returned tests exist in current run', () => {
+
+            fc.assert(
+                fc.property(
+                    fc.array(FlatTestArbForDiff, { minLength: 1, maxLength: 10 }),
+                    fc.array(FlatTestArbForDiff, { minLength: 1, maxLength: 10 }),
+                    (current, previous) => {
+                        const result = computeDiffComparison(current, previous);
+                        if (result === undefined) return;
+                        const currentTitles = new Set(current.map((t) => t.title));
+                        for (const f of result.newFailures) {
+                            expect(currentTitles.has(f.title)).toBeTruthy();
+                        }
+                        for (const p of result.newPasses) {
+                            expect(currentTitles.has(p.title)).toBeTruthy();
+                        }
+                        for (const f of result.flaky) {
+                            expect(currentTitles.has(f.title)).toBeTruthy();
+                        }
+                    },
+                ),
+                { numRuns: 100 },
+            );
+        });
     });
-});
 
-describe('ComputeDiffComparison — invariants (property-based)', () => {
-    const FlatTestArbForDiff: fc.Arbitrary<FlatTest> = fc.record(
-        {
-            title: fc.string({ minLength: 1, maxLength: 20 }),
-            state: fc.constantFrom('passed' as const, 'failed' as const, 'skipped' as const),
-            duration: fc.nat({ max: 60000 }),
-        },
-        { requiredKeys: ['title', 'state', 'duration'] },
-    );
-
-    it('returns undefined when previous is empty', () => {
-
-        fc.assert(
-            fc.property(fc.array(FlatTestArbForDiff, { minLength: 1, maxLength: 10 }), (current) => {
-                const result = computeDiffComparison(current, []);
-
-                expect(result).toBeUndefined();
-            }),
-            { numRuns: 100 },
-        );
-    });
-
-    it('returns undefined when current and previous are identical', () => {
-
-        fc.assert(
-            fc.property(fc.array(FlatTestArbForDiff, { minLength: 1, maxLength: 10 }), (tests) => {
-                const result = computeDiffComparison(tests, tests);
-
-                expect(result).toBeUndefined();
-            }),
-            { numRuns: 100 },
-        );
-    });
-
-    it('newFailures only contains tests that failed in current but passed in previous', () => {
-
-        fc.assert(
-            fc.property(
-                fc.array(FlatTestArbForDiff, { minLength: 1, maxLength: 10 }),
-                fc.array(FlatTestArbForDiff, { minLength: 1, maxLength: 10 }),
-                (current, previous) => {
-                    const result = computeDiffComparison(current, previous);
-                    if (result === undefined) return;
-                    for (const nf of result.newFailures) {
-                        const prev = previous.find((p) => p.title === nf.title);
-                        if (!prev) throw new Error('prev must exist in newFailures');
-
-                        expect(nf.state).toBe('failed');
-                        expect(prev.state).not.toBe('failed');
-                    }
-                },
-            ),
-            { numRuns: 100 },
-        );
-    });
-
-    it('newPasses only contains tests that passed in current but failed in previous', () => {
-
-        fc.assert(
-            fc.property(
-                fc.array(FlatTestArbForDiff, { minLength: 1, maxLength: 10 }),
-                fc.array(FlatTestArbForDiff, { minLength: 1, maxLength: 10 }),
-                (current, previous) => {
-                    const result = computeDiffComparison(current, previous);
-                    if (result === undefined) return;
-                    for (const np of result.newPasses) {
-                        const prev = previous.find((p) => p.title === np.title);
-                        if (!prev) throw new Error('prev must exist in newPasses');
-
-                        expect(np.state).not.toBe('failed');
-                        expect(prev.state).toBe('failed');
-                    }
-                },
-            ),
-            { numRuns: 100 },
-        );
-    });
-
-    it('flaky contains tests whose state changed between runs', () => {
-
-        fc.assert(
-            fc.property(
-                fc.array(FlatTestArbForDiff, { minLength: 1, maxLength: 10 }),
-                fc.array(FlatTestArbForDiff, { minLength: 1, maxLength: 10 }),
-                (current, previous) => {
-                    const result = computeDiffComparison(current, previous);
-                    if (result === undefined) return;
-                    for (const f of result.flaky) {
-                        const prev = previous.find((p) => p.title === f.title);
-                        const curr = current.find((c) => c.title === f.title);
-                        if (!prev) throw new Error('prev must exist in flaky');
-                        if (!curr) throw new Error('curr must exist in flaky');
-
-                        expect(f.state).not.toBe(prev.state);
-                    }
-                },
-            ),
-            { numRuns: 100 },
-        );
-    });
-
-    it('newFailures and newPasses are disjoint', () => {
-
-        fc.assert(
-            fc.property(
-                fc.array(FlatTestArbForDiff, { minLength: 1, maxLength: 10 }),
-                fc.array(FlatTestArbForDiff, { minLength: 1, maxLength: 10 }),
-                (current, previous) => {
-                    const result = computeDiffComparison(current, previous);
-                    if (result === undefined) return;
-                    const failureTitles = new Set(result.newFailures.map((f) => f.title));
-                    const passTitles = new Set(result.newPasses.map((p) => p.title));
-                    for (const title of failureTitles) {
-                        expect(passTitles.has(title)).toBeFalsy();
-                    }
-                },
-            ),
-            { numRuns: 100 },
-        );
-    });
-
-    it('all returned tests exist in current run', () => {
-
-        fc.assert(
-            fc.property(
-                fc.array(FlatTestArbForDiff, { minLength: 1, maxLength: 10 }),
-                fc.array(FlatTestArbForDiff, { minLength: 1, maxLength: 10 }),
-                (current, previous) => {
-                    const result = computeDiffComparison(current, previous);
-                    if (result === undefined) return;
-                    const currentTitles = new Set(current.map((t) => t.title));
-                    for (const f of result.newFailures) {
-                        expect(currentTitles.has(f.title)).toBeTruthy();
-                    }
-                    for (const p of result.newPasses) {
-                        expect(currentTitles.has(p.title)).toBeTruthy();
-                    }
-                    for (const f of result.flaky) {
-                        expect(currentTitles.has(f.title)).toBeTruthy();
-                    }
-                },
-            ),
-            { numRuns: 100 },
-        );
-    });
 });

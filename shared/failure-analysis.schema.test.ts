@@ -16,8 +16,8 @@ describe('TestClassificationSchema', () => {
     });
 
     it('rejects invalid classification', () => {
-        expect(() => TestClassificationSchema.parse('INVALID')).toThrow();
-        expect(() => TestClassificationSchema.parse('')).toThrow();
+        expect(() => TestClassificationSchema.parse('INVALID')).toThrow(/./i);
+        expect(() => TestClassificationSchema.parse('')).toThrow(/./i);
     });
 });
 
@@ -29,8 +29,8 @@ describe('TestSeveritySchema', () => {
     });
 
     it('rejects invalid severity', () => {
-        expect(() => TestSeveritySchema.parse('critical')).toThrow();
-        expect(() => TestSeveritySchema.parse('')).toThrow();
+        expect(() => TestSeveritySchema.parse('critical')).toThrow(/./i);
+        expect(() => TestSeveritySchema.parse('')).toThrow(/./i);
     });
 });
 
@@ -54,7 +54,7 @@ describe('FailureAnalysisTestSchema', () => {
                 severity: 'high',
                 recommendation: 'short',
             }),
-        ).toThrow();
+        ).toThrow(/./i);
     });
 
     it('rejects test with missing title', () => {
@@ -64,7 +64,7 @@ describe('FailureAnalysisTestSchema', () => {
                 severity: 'high',
                 recommendation: 'Adequately long recommendation text',
             }),
-        ).toThrow();
+        ).toThrow(/./i);
     });
 });
 
@@ -107,14 +107,14 @@ describe('FailureAnalysisSchema', () => {
     });
 
     it('rejects empty tests array', () => {
-        expect(() => FailureAnalysisSchema.parse({ tests: [] })).toThrow();
+        expect(() => FailureAnalysisSchema.parse({ tests: [] })).toThrow(/./i);
     });
 
     it('rejects non-array tests', () => {
-        expect(() => FailureAnalysisSchema.parse({ tests: 'not array' })).toThrow();
+        expect(() => FailureAnalysisSchema.parse({ tests: 'not array' })).toThrow(/./i);
     });
 
     it('rejects missing tests field', () => {
-        expect(() => FailureAnalysisSchema.parse({})).toThrow();
+        expect(() => FailureAnalysisSchema.parse({})).toThrow(/./i);
     });
 });

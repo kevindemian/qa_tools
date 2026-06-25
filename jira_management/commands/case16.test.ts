@@ -10,20 +10,23 @@ import { makeMockCommandContext } from '../../shared/test-utils.js';
 
 const mockContext = makeMockCommandContext();
 
-beforeEach(() => {
-    vi.clearAllMocks();
-});
-
-describe('Case16 — config JSON directory', () => {
-    it('exports a handler function', () => {
-        expect(case16).toBeDefined();
-        expect(typeof case16.handler).toBe('function');
+describe('Case16', () => {
+    beforeEach(() => {
+        vi.clearAllMocks();
     });
 
-    it('executes without error with basic context', async () => {expect.hasAssertions();
+    describe('Case16 — config JSON directory', () => {
+        it('exports a handler function', () => {
+            expect(case16).toBeDefined();
+            expect(typeof case16.handler).toBe('function');
+        });
 
-        const result = await case16.handler(mockContext);
+        it('executes without error with basic context', async () => {expect.hasAssertions();
 
-        expect(result === undefined || typeof result === 'boolean').toBeTruthy();
+            const result = await case16.handler(mockContext);
+
+            expect(result === undefined || typeof result === 'boolean').toBeTruthy();
+        });
     });
+
 });

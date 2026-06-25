@@ -34,19 +34,19 @@ function mockJiraResource(): JiraResource {
     return mock;
 }
 
-beforeEach(() => {
-    vi.clearAllMocks();
-    const mockConfig = createMockConfigInstance();
-    mockConfig.get = function <T = string>(key: string): T {
-        const map: Record<string, string> = { xrayMode: 'server', xrayClientId: '', xrayClientSecret: '' };
-        return (map[key] ?? '') as T;
-    };
-    vi.spyOn(Config, 'getDefault').mockReturnValue(mockConfig);
-});
-
 // ─── TestHistoryCache ────────────────────────────────────────────────────────
 
 describe('TestHistoryCache', () => {
+    beforeEach(() => {
+        vi.clearAllMocks();
+        const mockConfig = createMockConfigInstance();
+        mockConfig.get = function <T = string>(key: string): T {
+            const map: Record<string, string> = { xrayMode: 'server', xrayClientId: '', xrayClientSecret: '' };
+            return (map[key] ?? '') as T;
+        };
+        vi.spyOn(Config, 'getDefault').mockReturnValue(mockConfig);
+    });
+
     it('stores and retrieves runs by key', () => {
         const cache = new TestHistoryCache(60_000);
         const runs: TestRun[] = [{ status: 'PASSED', testExecKey: 'TE-1', startedOn: '2024-01-01' }];

@@ -30,43 +30,46 @@ function makeCtx(overrides?: Record<string, unknown>) {
     } as ReturnType<typeof safeJiraCall extends (c: infer C, ...rest: unknown[]) => unknown ? C : never>;
 }
 
-beforeEach(() => {
-    vi.clearAllMocks();
-});
-
-describe('SafeJiraCall', () => {
-    it('calls fn, pushes ok history on success', async () => {expect.hasAssertions();
-
-        const fn = vi.fn().mockResolvedValue(undefined);
-        const ctx = makeCtx() as Parameters<typeof safeJiraCall>[0];
-        const result = await safeJiraCall(ctx, 'test-op', 'v1', fn);
-
-        expect(result).toBeTruthy();
-        expect(fn).toHaveBeenCalled();
-        expect(mockPushHistory).toHaveBeenCalledWith('test-op', 'v1', 'ok');
+describe('Jira Helper', () => {
+    beforeEach(() => {
+        vi.clearAllMocks();
     });
 
-    it('logs error, pushes error history on failure', async () => {expect.hasAssertions();
+    describe('SafeJiraCall', () => {
+        it('calls fn, pushes ok history on success', async () => {expect.hasAssertions();
 
-        const fn = vi.fn().mockRejectedValue(new Error('API error'));
-        const ctx = makeCtx() as Parameters<typeof safeJiraCall>[0];
-        const result = await safeJiraCall(ctx, 'test-op', 'v1', fn);
+            const fn = vi.fn().mockResolvedValue(undefined);
+            const ctx = makeCtx() as Parameters<typeof safeJiraCall>[0];
+            const result = await safeJiraCall(ctx, 'test-op', 'v1', fn);
 
-        expect(result).toBeFalsy();
-        expect(mockPrintError).toHaveBeenCalled();
-        expect(mockRootLoggerError).toHaveBeenCalled();
-        expect(mockPushHistory).toHaveBeenCalledWith('test-op', 'v1', 'error');
+            expect(result).toBeTruthy();
+            expect(fn).toHaveBeenCalled();
+            expect(mockPushHistory).toHaveBeenCalledWith('test-op', 'v1', 'ok');
+        });
+
+        it('logs error, pushes error history on failure', async () => {expect.hasAssertions();
+
+            const fn = vi.fn().mockRejectedValue(new Error('API error'));
+            const ctx = makeCtx() as Parameters<typeof safeJiraCall>[0];
+            const result = await safeJiraCall(ctx, 'test-op', 'v1', fn);
+
+            expect(result).toBeFalsy();
+            expect(mockPrintError).toHaveBeenCalled();
+            expect(mockRootLoggerError).toHaveBeenCalled();
+            expect(mockPushHistory).toHaveBeenCalledWith('test-op', 'v1', 'error');
+        });
+
+        it('extracts HTTP status from error response', async () => {expect.hasAssertions();
+
+            const fn = vi.fn().mockRejectedValue({ response: { status: 401 } });
+            const ctx = makeCtx() as Parameters<typeof safeJiraCall>[0];
+            await safeJiraCall(ctx, 'test-op', 'v1', fn);
+
+            expect(mockRootLoggerError).toHaveBeenCalledWith(
+                expect.stringContaining('Erro ao'),
+                expect.objectContaining({ status: 401 }),
+            );
+        });
     });
 
-    it('extracts HTTP status from error response', async () => {expect.hasAssertions();
-
-        const fn = vi.fn().mockRejectedValue({ response: { status: 401 } });
-        const ctx = makeCtx() as Parameters<typeof safeJiraCall>[0];
-        await safeJiraCall(ctx, 'test-op', 'v1', fn);
-
-        expect(mockRootLoggerError).toHaveBeenCalledWith(
-            expect.stringContaining('Erro ao'),
-            expect.objectContaining({ status: 401 }),
-        );
-    });
 });

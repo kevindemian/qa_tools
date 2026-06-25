@@ -80,222 +80,225 @@ const _mockRl = mockRlForReadline;
 const mockReadlineQuestion = vi.spyOn(readlineSync, 'question').mockImplementation(() => '');
 const mockGetConfig = vi.mocked(getConfig);
 
-beforeEach(() => {
-    vi.clearAllMocks();
-    mockReadlineQuestion.mockReturnValue('');
-    Object.defineProperty(process.stdin, 'isTTY', { value: true, configurable: true });
-    const cfg = ConfigAccessor.create();
-    cfg.get = <T>(k: string) => ({ quiet: false, autoConfirm: false })[k] as T;
-    mockGetConfig.mockReturnValue(cfg);
-});
-
-afterEach(() => {
-    Object.defineProperty(process.stdin, 'isTTY', { value: undefined, configurable: true });
-});
-
-describe('FilePathCompleter', () => {
-    const testDir = path.join(import.meta.dirname, '__test_fixtures__');
-    const csvFile = path.join(testDir, 'test.csv');
-    const jsonFile = path.join(testDir, 'test.json');
-    const txtFile = path.join(testDir, 'test.txt');
-    const subDir = path.join(testDir, 'subdir');
-
-    beforeAll(() => {
-        fs.mkdirSync(subDir, { recursive: true });
-        fs.writeFileSync(csvFile, '');
-        fs.writeFileSync(jsonFile, '');
-        fs.writeFileSync(txtFile, '');
-    });
-
-    afterAll(() => {
-        fs.rmSync(testDir, { recursive: true, force: true });
-    });
-
-    it('matches all entries with empty base', () => {
-        const [matches] = filePathCompleter(testDir + '/');
-
-        expect(matches).toContain(csvFile);
-        expect(matches).toContain(jsonFile);
-        expect(matches).toContain(txtFile);
-        expect(matches).toContain(subDir + '/');
-        expect(matches).toHaveLength(4);
-    });
-
-    it('filters by csv extension', () => {
-        const [matches] = filePathCompleter(testDir + '/', ['.csv']);
-
-        expect(matches).toContain(csvFile);
-        expect(matches).not.toContain(jsonFile);
-        expect(matches).not.toContain(txtFile);
-        expect(matches).toContain(subDir + '/');
-    });
-
-    it('filters by json and txt extensions', () => {
-        const [matches] = filePathCompleter(testDir + '/', ['.json', '.txt']);
-
-        expect(matches).toContain(jsonFile);
-        expect(matches).toContain(txtFile);
-        expect(matches).not.toContain(csvFile);
-        expect(matches).toContain(subDir + '/');
-    });
-
-    it('includes directories with trailing slash', () => {
-        const [matches] = filePathCompleter(testDir + '/');
-
-        expect(matches).toContain(subDir + '/');
-    });
-
-    it('returns original line as second element', () => {
-        const prefix = testDir + '/test.';
-        const [matches, line] = filePathCompleter(prefix);
-
-        expect(matches).toHaveLength(3);
-        expect(line).toBe(prefix);
-    });
-
-    it('returns empty on invalid dir', () => {
-        const [matches] = filePathCompleter('/nonexistent_dir_xyz/foo');
-
-        expect(matches).toStrictEqual([]);
-    });
-
-    it('expands tilde', () => {
-        const [matches] = filePathCompleter('~');
-
-        expect(matches.length).toBeGreaterThan(0);
-    });
-
-    it('filters out dotfiles when base does not start with dot', () => {
-        const dir = path.join(import.meta.dirname, '__test_fixtures__');
-        const dotfile = path.join(dir, '.hidden');
-        fs.writeFileSync(dotfile, '');
-        try {
-            const [matches] = filePathCompleter(dir + '/');
-
-            expect(matches).not.toContain(dotfile);
-        } finally {
-            fs.unlinkSync(dotfile);
-        }
-    });
-
-    it('includes dotfiles when base starts with dot', () => {
-        const dir = path.join(import.meta.dirname, '__test_fixtures__');
-        const dotfile = path.join(dir, '.hidden');
-        fs.writeFileSync(dotfile, '');
-        try {
-            const [matches] = filePathCompleter(dir + '/.hid');
-
-            expect(matches).toContain(dotfile);
-        } finally {
-            fs.unlinkSync(dotfile);
-        }
-    });
-
-    it('handles statSync error in filter callback', () => {
-        const dir = fs.mkdtempSync(path.join(os.tmpdir(), 'stat-err-'));
-        try {
-            fs.symlinkSync('/nonexistent-target', path.join(dir, 'dangling.txt'));
-            const [matches] = filePathCompleter(dir + '/', ['.txt']);
-
-            expect(matches).toStrictEqual([]);
-        } finally {
-            fs.rmSync(dir, { recursive: true, force: true });
-        }
-    });
-
-    it('handles stat error in map callback (broken symlink, no ext filter)', () => {
-        const dir = fs.mkdtempSync(path.join(os.tmpdir(), 'stat-map-err-'));
-        try {
-            fs.symlinkSync('/nonexistent-target', path.join(dir, 'dangling'));
-            const [matches] = filePathCompleter(dir + '/');
-
-            expect(matches).toContain('dangling');
-        } finally {
-            fs.rmSync(dir, { recursive: true, force: true });
-        }
-    });
-
-    it('defaults to current dir when line is empty', () => {
-        const [matches] = filePathCompleter('');
-
-        expect(Array.isArray(matches)).toBeTruthy();
-    });
-});
-
-describe('AskFilePath', () => {
-    it('falls back to prompt when no TTY', async () => {expect.hasAssertions();
-
-        mockReadlineQuestion.mockReturnValue('/some/path');
-        const result = await askFilePath('File:');
-
-        expect(result).toBe('/some/path');
-    });
-});
-
-describe('AskFilePath TTY mode', () => {
+describe('Prompt Input Filepath', () => {
     beforeEach(() => {
-        Object.defineProperty(process.stdout, 'isTTY', { value: true, configurable: true });
-        const mockRl = _mockRl;
-        mockRl.question.mockReset();
-        mockRl.on.mockReset();
-        mockRl.close.mockReset();
+        vi.clearAllMocks();
+        mockReadlineQuestion.mockReturnValue('');
+        Object.defineProperty(process.stdin, 'isTTY', { value: true, configurable: true });
+        const cfg = ConfigAccessor.create();
+        cfg.get = <T>(k: string) => ({ quiet: false, autoConfirm: false })[k] as T;
+        mockGetConfig.mockReturnValue(cfg);
     });
 
     afterEach(() => {
-        Object.defineProperty(process.stdout, 'isTTY', { value: undefined, configurable: true });
+        Object.defineProperty(process.stdin, 'isTTY', { value: undefined, configurable: true });
     });
 
-    it('resolves with user input', async () => {expect.hasAssertions();
+    describe('FilePathCompleter', () => {
+        const testDir = path.join(import.meta.dirname, '__test_fixtures__');
+        const csvFile = path.join(testDir, 'test.csv');
+        const jsonFile = path.join(testDir, 'test.json');
+        const txtFile = path.join(testDir, 'test.txt');
+        const subDir = path.join(testDir, 'subdir');
 
-        const mockRl = _mockRl;
-        mockRl.question.mockImplementation((_prompt: string, cb: (a: string) => void) => cb('user path'));
-        const result = await askFilePath('File:');
-
-        expect(result).toBe('user path');
-        expect(mockRl.close).toHaveBeenCalled();
-    });
-
-    it('rejects on navigation command', async () => {expect.hasAssertions();
-
-        const mockRl = _mockRl;
-        mockRl.question.mockImplementation((_prompt: string, cb: (a: string) => void) => cb('/back'));
-
-        await expect(askFilePath('File:')).rejects.toThrow(CancelError);
-        expect(mockRl.close).toHaveBeenCalled();
-    });
-
-    it('rejects on SIGINT', async () => {expect.hasAssertions();
-
-        const mockRl = _mockRl;
-        mockRl.question.mockImplementation(() => {});
-        let sigintHandler: () => void = () => {};
-        mockRl.on.mockImplementation((event: string, handler: () => void) => {
-            if (event === 'SIGINT') sigintHandler = handler;
+        beforeAll(() => {
+            fs.mkdirSync(subDir, { recursive: true });
+            fs.writeFileSync(csvFile, '');
+            fs.writeFileSync(jsonFile, '');
+            fs.writeFileSync(txtFile, '');
         });
-        const promise = askFilePath('File:');
-        sigintHandler();
 
-        await expect(promise).rejects.toThrow('/exit');
-        expect(mockRl.close).toHaveBeenCalled();
+        afterAll(() => {
+            fs.rmSync(testDir, { recursive: true, force: true });
+        });
+
+        it('matches all entries with empty base', () => {
+            const [matches] = filePathCompleter(testDir + '/');
+
+            expect(matches).toContain(csvFile);
+            expect(matches).toContain(jsonFile);
+            expect(matches).toContain(txtFile);
+            expect(matches).toContain(subDir + '/');
+            expect(matches).toHaveLength(4);
+        });
+
+        it('filters by csv extension', () => {
+            const [matches] = filePathCompleter(testDir + '/', ['.csv']);
+
+            expect(matches).toContain(csvFile);
+            expect(matches).not.toContain(jsonFile);
+            expect(matches).not.toContain(txtFile);
+            expect(matches).toContain(subDir + '/');
+        });
+
+        it('filters by json and txt extensions', () => {
+            const [matches] = filePathCompleter(testDir + '/', ['.json', '.txt']);
+
+            expect(matches).toContain(jsonFile);
+            expect(matches).toContain(txtFile);
+            expect(matches).not.toContain(csvFile);
+            expect(matches).toContain(subDir + '/');
+        });
+
+        it('includes directories with trailing slash', () => {
+            const [matches] = filePathCompleter(testDir + '/');
+
+            expect(matches).toContain(subDir + '/');
+        });
+
+        it('returns original line as second element', () => {
+            const prefix = testDir + '/test.';
+            const [matches, line] = filePathCompleter(prefix);
+
+            expect(matches).toHaveLength(3);
+            expect(line).toBe(prefix);
+        });
+
+        it('returns empty on invalid dir', () => {
+            const [matches] = filePathCompleter('/nonexistent_dir_xyz/foo');
+
+            expect(matches).toStrictEqual([]);
+        });
+
+        it('expands tilde', () => {
+            const [matches] = filePathCompleter('~');
+
+            expect(matches.length).toBeGreaterThan(0);
+        });
+
+        it('filters out dotfiles when base does not start with dot', () => {
+            const dir = path.join(import.meta.dirname, '__test_fixtures__');
+            const dotfile = path.join(dir, '.hidden');
+            fs.writeFileSync(dotfile, '');
+            try {
+                const [matches] = filePathCompleter(dir + '/');
+
+                expect(matches).not.toContain(dotfile);
+            } finally {
+                fs.unlinkSync(dotfile);
+            }
+        });
+
+        it('includes dotfiles when base starts with dot', () => {
+            const dir = path.join(import.meta.dirname, '__test_fixtures__');
+            const dotfile = path.join(dir, '.hidden');
+            fs.writeFileSync(dotfile, '');
+            try {
+                const [matches] = filePathCompleter(dir + '/.hid');
+
+                expect(matches).toContain(dotfile);
+            } finally {
+                fs.unlinkSync(dotfile);
+            }
+        });
+
+        it('handles statSync error in filter callback', () => {
+            const dir = fs.mkdtempSync(path.join(os.tmpdir(), 'stat-err-'));
+            try {
+                fs.symlinkSync('/nonexistent-target', path.join(dir, 'dangling.txt'));
+                const [matches] = filePathCompleter(dir + '/', ['.txt']);
+
+                expect(matches).toStrictEqual([]);
+            } finally {
+                fs.rmSync(dir, { recursive: true, force: true });
+            }
+        });
+
+        it('handles stat error in map callback (broken symlink, no ext filter)', () => {
+            const dir = fs.mkdtempSync(path.join(os.tmpdir(), 'stat-map-err-'));
+            try {
+                fs.symlinkSync('/nonexistent-target', path.join(dir, 'dangling'));
+                const [matches] = filePathCompleter(dir + '/');
+
+                expect(matches).toContain('dangling');
+            } finally {
+                fs.rmSync(dir, { recursive: true, force: true });
+            }
+        });
+
+        it('defaults to current dir when line is empty', () => {
+            const [matches] = filePathCompleter('');
+
+            expect(Array.isArray(matches)).toBeTruthy();
+        });
     });
 
-    it('resolves with default when empty answer', async () => {expect.hasAssertions();
+    describe('AskFilePath', () => {
+        it('falls back to prompt when no TTY', async () => {expect.hasAssertions();
 
-        const mockRl = _mockRl;
-        mockRl.question.mockImplementation((_prompt: string, cb: (a: string) => void) => cb(''));
-        const result = await askFilePath('File:', { default: '/default/path' });
+            mockReadlineQuestion.mockReturnValue('/some/path');
+            const result = await askFilePath('File:');
 
-        expect(result).toBe('/default/path');
-        expect(mockRl.close).toHaveBeenCalled();
+            expect(result).toBe('/some/path');
+        });
     });
 
-    it('resolves with empty string when no default and empty answer', async () => {expect.hasAssertions();
+    describe('AskFilePath TTY mode', () => {
+        beforeEach(() => {
+            Object.defineProperty(process.stdout, 'isTTY', { value: true, configurable: true });
+            const mockRl = _mockRl;
+            mockRl.question.mockReset();
+            mockRl.on.mockReset();
+            mockRl.close.mockReset();
+        });
 
-        const mockRl = _mockRl;
-        mockRl.question.mockImplementation((_prompt: string, cb: (a: string) => void) => cb(''));
-        const result = await askFilePath('File:');
+        afterEach(() => {
+            Object.defineProperty(process.stdout, 'isTTY', { value: undefined, configurable: true });
+        });
 
-        expect(result).toBe('');
-        expect(mockRl.close).toHaveBeenCalled();
+        it('resolves with user input', async () => {expect.hasAssertions();
+
+            const mockRl = _mockRl;
+            mockRl.question.mockImplementation((_prompt: string, cb: (a: string) => void) => cb('user path'));
+            const result = await askFilePath('File:');
+
+            expect(result).toBe('user path');
+            expect(mockRl.close).toHaveBeenCalled();
+        });
+
+        it('rejects on navigation command', async () => {expect.hasAssertions();
+
+            const mockRl = _mockRl;
+            mockRl.question.mockImplementation((_prompt: string, cb: (a: string) => void) => cb('/back'));
+
+            await expect(askFilePath('File:')).rejects.toThrow(CancelError);
+            expect(mockRl.close).toHaveBeenCalled();
+        });
+
+        it('rejects on SIGINT', async () => {expect.hasAssertions();
+
+            const mockRl = _mockRl;
+            mockRl.question.mockImplementation(() => {});
+            let sigintHandler: () => void = () => {};
+            mockRl.on.mockImplementation((event: string, handler: () => void) => {
+                if (event === 'SIGINT') sigintHandler = handler;
+            });
+            const promise = askFilePath('File:');
+            sigintHandler();
+
+            await expect(promise).rejects.toThrow('/exit');
+            expect(mockRl.close).toHaveBeenCalled();
+        });
+
+        it('resolves with default when empty answer', async () => {expect.hasAssertions();
+
+            const mockRl = _mockRl;
+            mockRl.question.mockImplementation((_prompt: string, cb: (a: string) => void) => cb(''));
+            const result = await askFilePath('File:', { default: '/default/path' });
+
+            expect(result).toBe('/default/path');
+            expect(mockRl.close).toHaveBeenCalled();
+        });
+
+        it('resolves with empty string when no default and empty answer', async () => {expect.hasAssertions();
+
+            const mockRl = _mockRl;
+            mockRl.question.mockImplementation((_prompt: string, cb: (a: string) => void) => cb(''));
+            const result = await askFilePath('File:');
+
+            expect(result).toBe('');
+            expect(mockRl.close).toHaveBeenCalled();
+        });
     });
+
 });

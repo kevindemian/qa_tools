@@ -67,106 +67,109 @@ const defaultHealthScore = {
     },
 };
 
-afterAll(() => {
-    delete process.env['GITHUB_STEP_SUMMARY'];
-});
-
-beforeEach(() => {
-    vi.clearAllMocks();
-    delete process.env['GITHUB_STEP_SUMMARY'];
-    mockMetrics.loadMetrics.mockReturnValue({ runs: [] });
-    mockMetrics.calculateFlakiness.mockReturnValue([]);
-    mockMetrics.getTrends.mockReturnValue({ direction: 'stable' as const, change: 0 });
-    mockHealthScore.calculateHealthScore.mockReturnValue(defaultHealthScore);
-    mockQualityGate.runQualityGate.mockReturnValue(null);
-    mockCheckRun.createCheckRun.mockResolvedValue(undefined);
-    mockPRComment.postPrComment.mockResolvedValue(undefined);
-    mockHtml.generateHtmlReport.mockReturnValue('<html>mock</html>');
-    mockCoverage.resolveCoverage.mockReturnValue(undefined);
-    mockGetConfig.mockReturnValue({
-        enabled: true,
-        publishTarget: 'github-ci',
-        skipAi: false,
-        skipQuality: false,
-        skipFlaky: false,
-    });
-    mockFeatureConfig.isAiSkipped.mockReturnValue(false);
-    mockFeatureConfig.isQualitySkipped.mockReturnValue(false);
-    mockFeatureConfig.isFlakySkipped.mockReturnValue(false);
-    mockParseResult.mockReturnValue({
-        tests: [] satisfies FlatTest[],
-        stats: { passed: 0, failed: 0, skipped: 0, total: 0, duration: 0 },
-        error: undefined,
-    });
-    vi.mocked(fs.existsSync).mockReturnValue(true);
-});
-
-describe('Main', () => {
-    it('returns early when CTRF file does not exist', async () => {expect.hasAssertions();
-
-        vi.mocked(fs.existsSync).mockReturnValue(false);
-        await main();
-
-        expect(mockPRComment.postPrComment).not.toHaveBeenCalled();
+describe('Pr Report Core.Main', () => {
+    afterAll(() => {
+        delete process.env['GITHUB_STEP_SUMMARY'];
     });
 
-    it('returns early when CTRF parsing fails', async () => {expect.hasAssertions();
-
-        mockParseResult.mockReturnValue({ error: 'Invalid JSON' });
-        await main();
-
-        expect(mockPRComment.postPrComment).not.toHaveBeenCalled();
-    });
-
-    it('returns early when feature is disabled in config', async () => {expect.hasAssertions();
-
+    beforeEach(() => {
+        vi.clearAllMocks();
+        delete process.env['GITHUB_STEP_SUMMARY'];
+        mockMetrics.loadMetrics.mockReturnValue({ runs: [] });
+        mockMetrics.calculateFlakiness.mockReturnValue([]);
+        mockMetrics.getTrends.mockReturnValue({ direction: 'stable' as const, change: 0 });
+        mockHealthScore.calculateHealthScore.mockReturnValue(defaultHealthScore);
+        mockQualityGate.runQualityGate.mockReturnValue(null);
+        mockCheckRun.createCheckRun.mockResolvedValue(undefined);
+        mockPRComment.postPrComment.mockResolvedValue(undefined);
+        mockHtml.generateHtmlReport.mockReturnValue('<html>mock</html>');
+        mockCoverage.resolveCoverage.mockReturnValue(undefined);
         mockGetConfig.mockReturnValue({
-            enabled: false,
+            enabled: true,
             publishTarget: 'github-ci',
             skipAi: false,
             skipQuality: false,
             skipFlaky: false,
         });
-        await main();
-
-        expect(mockPRComment.postPrComment).not.toHaveBeenCalled();
-    });
-
-    it('calls generatePrReport and posts comment on success', async () => {expect.hasAssertions();
-
+        mockFeatureConfig.isAiSkipped.mockReturnValue(false);
+        mockFeatureConfig.isQualitySkipped.mockReturnValue(false);
+        mockFeatureConfig.isFlakySkipped.mockReturnValue(false);
         mockParseResult.mockReturnValue({
-            tests: [{ title: 'test-1', state: 'passed', duration: 100 }],
-            stats: { passed: 1, failed: 0, skipped: 0, total: 1, duration: 100 },
+            tests: [] satisfies FlatTest[],
+            stats: { passed: 0, failed: 0, skipped: 0, total: 0, duration: 0 },
             error: undefined,
         });
-        mockQualityGate.runQualityGate.mockReturnValue({
-            overall: 'pass' as const,
-            score: 100,
-            checks: [{ name: 'Pass Rate', status: 'pass' as const, score: 100, threshold: 80 }],
-        });
-        mockPRComment.postPrComment.mockResolvedValue({
-            html_url: 'https://github.com/owner/repo/pull/1#issuecomment-1',
-        });
-        await main();
-
-        expect(mockPRComment.postPrComment).toHaveBeenCalled();
+        vi.mocked(fs.existsSync).mockReturnValue(true);
     });
 
-    it('handles no comment URL gracefully', async () => {expect.hasAssertions();
+    describe('Main', () => {
+        it('returns early when CTRF file does not exist', async () => {expect.hasAssertions();
 
-        mockParseResult.mockReturnValue({
-            tests: [{ title: 'test-1', state: 'passed', duration: 100 }],
-            stats: { passed: 1, failed: 0, skipped: 0, total: 1, duration: 100 },
-            error: undefined,
-        });
-        mockQualityGate.runQualityGate.mockReturnValue({
-            overall: 'pass' as const,
-            score: 100,
-            checks: [{ name: 'Pass Rate', status: 'pass' as const, score: 100, threshold: 80 }],
-        });
-        mockPRComment.postPrComment.mockResolvedValue({});
-        await main();
+            vi.mocked(fs.existsSync).mockReturnValue(false);
+            await main();
 
-        expect(mockPRComment.postPrComment).toHaveBeenCalled();
+            expect(mockPRComment.postPrComment).not.toHaveBeenCalled();
+        });
+
+        it('returns early when CTRF parsing fails', async () => {expect.hasAssertions();
+
+            mockParseResult.mockReturnValue({ error: 'Invalid JSON' });
+            await main();
+
+            expect(mockPRComment.postPrComment).not.toHaveBeenCalled();
+        });
+
+        it('returns early when feature is disabled in config', async () => {expect.hasAssertions();
+
+            mockGetConfig.mockReturnValue({
+                enabled: false,
+                publishTarget: 'github-ci',
+                skipAi: false,
+                skipQuality: false,
+                skipFlaky: false,
+            });
+            await main();
+
+            expect(mockPRComment.postPrComment).not.toHaveBeenCalled();
+        });
+
+        it('calls generatePrReport and posts comment on success', async () => {expect.hasAssertions();
+
+            mockParseResult.mockReturnValue({
+                tests: [{ title: 'test-1', state: 'passed', duration: 100 }],
+                stats: { passed: 1, failed: 0, skipped: 0, total: 1, duration: 100 },
+                error: undefined,
+            });
+            mockQualityGate.runQualityGate.mockReturnValue({
+                overall: 'pass' as const,
+                score: 100,
+                checks: [{ name: 'Pass Rate', status: 'pass' as const, score: 100, threshold: 80 }],
+            });
+            mockPRComment.postPrComment.mockResolvedValue({
+                html_url: 'https://github.com/owner/repo/pull/1#issuecomment-1',
+            });
+            await main();
+
+            expect(mockPRComment.postPrComment).toHaveBeenCalled();
+        });
+
+        it('handles no comment URL gracefully', async () => {expect.hasAssertions();
+
+            mockParseResult.mockReturnValue({
+                tests: [{ title: 'test-1', state: 'passed', duration: 100 }],
+                stats: { passed: 1, failed: 0, skipped: 0, total: 1, duration: 100 },
+                error: undefined,
+            });
+            mockQualityGate.runQualityGate.mockReturnValue({
+                overall: 'pass' as const,
+                score: 100,
+                checks: [{ name: 'Pass Rate', status: 'pass' as const, score: 100, threshold: 80 }],
+            });
+            mockPRComment.postPrComment.mockResolvedValue({});
+            await main();
+
+            expect(mockPRComment.postPrComment).toHaveBeenCalled();
+        });
     });
+
 });

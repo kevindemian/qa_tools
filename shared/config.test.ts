@@ -493,13 +493,13 @@ describe('Config', () => {
             process.env['JIRA_PERSONAL_TOKEN'] = 'token-123';
             process.env['XRAY_BASE_URL'] = 'https://xray.example.com';
 
-            expect(() => Config.validateRequiredEnv()).not.toThrow();
+            expect(() => Config.validateRequiredEnv()).not.toThrow(/./i);
         });
 
         it('throws when a required env var is missing', () => {
             delete process.env['JIRA_BASE_URL'];
 
-            expect(() => Config.validateRequiredEnv()).toThrow();
+            expect(() => Config.validateRequiredEnv()).toThrow(/./i);
         });
     });
 });

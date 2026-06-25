@@ -31,37 +31,37 @@ describe('AiBugReportSchema', () => {
     it('rejects empty summary', () => {
         const invalid = { ...validReport, summary: '' };
 
-        expect(() => AiBugReportSchema.parse(invalid)).toThrow();
+        expect(() => AiBugReportSchema.parse(invalid)).toThrow(/./i);
     });
 
     it('rejects summary exceeding 80 chars', () => {
         const invalid = { ...validReport, summary: 'x'.repeat(81) };
 
-        expect(() => AiBugReportSchema.parse(invalid)).toThrow();
+        expect(() => AiBugReportSchema.parse(invalid)).toThrow(/./i);
     });
 
     it('rejects invalid severity', () => {
         const invalid = { ...validReport, severity: 'invalid' };
 
-        expect(() => AiBugReportSchema.parse(invalid)).toThrow();
+        expect(() => AiBugReportSchema.parse(invalid)).toThrow(/./i);
     });
 
     it('rejects empty steps array', () => {
         const invalid = { ...validReport, stepsToReproduce: [] };
 
-        expect(() => AiBugReportSchema.parse(invalid)).toThrow();
+        expect(() => AiBugReportSchema.parse(invalid)).toThrow(/./i);
     });
 
     it('rejects missing expectedResult', () => {
         const invalid = (({ expectedResult: _er, ...rest }) => rest)(validReport);
 
-        expect(() => AiBugReportSchema.parse(invalid)).toThrow();
+        expect(() => AiBugReportSchema.parse(invalid)).toThrow(/./i);
     });
 
     it('rejects missing actualResult', () => {
         const invalid = (({ actualResult: _ar, ...rest }) => rest)(validReport);
 
-        expect(() => AiBugReportSchema.parse(invalid)).toThrow();
+        expect(() => AiBugReportSchema.parse(invalid)).toThrow(/./i);
     });
 
     it('accepts all severity values', () => {expect.hasAssertions();

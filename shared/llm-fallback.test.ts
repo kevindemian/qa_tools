@@ -110,281 +110,284 @@ function mockErrorResponse(status: number): Response {
     return r;
 }
 
-beforeEach(() => {
-    vi.clearAllMocks();
-    mockFetch.mockReset();
-    Config.reset();
-    resetLlmClientMetrics();
-    vi.mocked(checkRateLimit).mockImplementation(() => {});
-    vi.mocked(checkCircuitBreaker).mockImplementation(() => {});
-});
-
-describe('TierToConfig', () => {
-    it('returns main config for main tier', () => {
-        Config.set('llmApiKey', 'sk-main');
-        Config.set('llmModel', 'gpt-4');
-        Config.set('llmBaseUrl', 'https://api.test.com/v1');
-        const cfg = tierToConfig('main');
-
-        expect(cfg.apiKey).toBe('sk-main');
-        expect(cfg.model).toBe('gpt-4');
-        expect(cfg.format).toBe('openai');
-    });
-
-    it('returns fast tier config', () => {
-        Config.set('llmFastApiKey', 'gsk-fast');
-        Config.set('llmFastModel', 'llama3');
-        const cfg = tierToConfig('fast');
-
-        expect(cfg.apiKey).toBe('gsk-fast');
-        expect(cfg.model).toBe('llama3');
-        expect(cfg.format).toBe('openai');
-    });
-
-    it('returns reviewer tier config with gemini format', () => {
-        Config.set('llmReviewApiKey', 'AIza-review');
-        Config.set('llmReviewModel', 'gemini-2.0-flash-exp');
-        const cfg = tierToConfig('reviewer');
-
-        expect(cfg.apiKey).toBe('AIza-review');
-        expect(cfg.model).toBe('gemini-2.0-flash-exp');
-        expect(cfg.format).toBe('gemini');
-    });
-
-    it('returns report tier config with json responseFormat', () => {
-        Config.set('llmApiKey', 'sk-report');
-        Config.set('llmModel', 'gpt-4-report');
-        const cfg = tierToConfig('report');
-
-        expect(cfg.apiKey).toBe('sk-report');
-        expect(cfg.responseFormat).toBe('json');
-    });
-
-    it('falls back to main when tier is unknown', () => {
-        Config.set('llmApiKey', 'sk-main');
-        const cfg = (tierToConfig as (tier: string) => ReturnType<typeof tierToConfig>)('nonexistent');
-
-        expect(cfg.apiKey).toBe('sk-main');
-    });
-});
-
-describe('ParseRawOnce', () => {
-    it('parses valid JSON string', () => {
-        const result = parseRawOnce('{"key": "value"}');
-
-        expect(result).toStrictEqual({ key: 'value' });
-    });
-
-    it('returns null for invalid JSON', () => {
-        const result = parseRawOnce('not json');
-
-        expect(result).toBeNull();
-    });
-
-    it('returns null for empty string', () => {
-        const result = parseRawOnce('');
-
-        expect(result).toBeNull();
-    });
-});
-
-describe('ParseRetryAfter', () => {
-    function mockResponseWithHeader(key: string, value: string | null): Response {
-        const r = new Response('', { status: 429 });
-        vi.spyOn(r, 'text').mockResolvedValue('');
-        vi.spyOn(r.headers, 'get').mockImplementation((k: string) => (k === key ? value : null));
-        return r;
-    }
-
-    it('parses seconds from Retry-After header', () => {
-        const resp = mockResponseWithHeader('Retry-After', '30');
-        const result = parseRetryAfter(resp, 2000);
-
-        expect(result).toBe(10000);
-    });
-
-    it('returns default when no Retry-After header', () => {
-        const resp = mockResponseWithHeader('Retry-After', null);
-        const result = parseRetryAfter(resp, 2000);
-
-        expect(result).toBe(2000);
-    });
-
-    it('returns default for invalid Retry-After value', () => {
-        const resp = mockResponseWithHeader('Retry-After', 'invalid');
-        const result = parseRetryAfter(resp, 2000);
-
-        expect(result).toBe(2000);
-    });
-
-    it('caps at LLM_RETRY_MAX_WAIT_MS (10000)', () => {
-        const resp = mockResponseWithHeader('Retry-After', '999');
-        const result = parseRetryAfter(resp, 2000);
-
-        expect(result).toBe(10000);
-    });
-});
-
-describe('EstimateInputTokens', () => {
-    it('estimates token count as ceil((sys + user) / 4)', () => {
-        const result = _estimateInputTokens('abcd', 'efgh');
-
-        expect(result).toBe(2);
-    });
-
-    it('returns 0 for empty strings', () => {
-        const result = _estimateInputTokens('', '');
-
-        expect(result).toBe(0);
-    });
-
-    it('rounds up fractional estimates', () => {
-        const result = _estimateInputTokens('a', '');
-
-        expect(result).toBe(1);
-    });
-});
-
-describe('GetLlmClientMetrics / resetLlmClientMetrics', () => {
-    it('returns initial zero metrics', () => {
-        const metrics = getLlmClientMetrics();
-
-        expect(metrics.cacheHits).toBe(0);
-        expect(metrics.cacheMisses).toBe(0);
-        expect(metrics.totalPromptTokens).toBe(0);
-        expect(metrics.totalCompletionTokens).toBe(0);
-    });
-
-    it('resets metrics to zero', () => {
-        const metrics = getLlmClientMetrics();
-        metrics.cacheHits = 10;
-        metrics.cacheMisses = 5;
-        resetLlmClientMetrics();
-        const reset = getLlmClientMetrics();
-
-        expect(reset.cacheHits).toBe(0);
-        expect(reset.cacheMisses).toBe(0);
-    });
-});
-
-describe('SendWithFallback', () => {
+describe('Llm Fallback', () => {
     beforeEach(() => {
-        vi.spyOn(global, 'setTimeout').mockImplementation(((cb: (...args: unknown[]) => void) => {
-            cb();
-            return {} as NodeJS.Timeout;
-        }) as typeof global.setTimeout);
+        vi.clearAllMocks();
+        mockFetch.mockReset();
+        Config.reset();
+        resetLlmClientMetrics();
+        vi.mocked(checkRateLimit).mockImplementation(() => {});
+        vi.mocked(checkCircuitBreaker).mockImplementation(() => {});
     });
 
-    afterEach(() => {
-        vi.restoreAllMocks();
+    describe('TierToConfig', () => {
+        it('returns main config for main tier', () => {
+            Config.set('llmApiKey', 'sk-main');
+            Config.set('llmModel', 'gpt-4');
+            Config.set('llmBaseUrl', 'https://api.test.com/v1');
+            const cfg = tierToConfig('main');
+
+            expect(cfg.apiKey).toBe('sk-main');
+            expect(cfg.model).toBe('gpt-4');
+            expect(cfg.format).toBe('openai');
+        });
+
+        it('returns fast tier config', () => {
+            Config.set('llmFastApiKey', 'gsk-fast');
+            Config.set('llmFastModel', 'llama3');
+            const cfg = tierToConfig('fast');
+
+            expect(cfg.apiKey).toBe('gsk-fast');
+            expect(cfg.model).toBe('llama3');
+            expect(cfg.format).toBe('openai');
+        });
+
+        it('returns reviewer tier config with gemini format', () => {
+            Config.set('llmReviewApiKey', 'AIza-review');
+            Config.set('llmReviewModel', 'gemini-2.0-flash-exp');
+            const cfg = tierToConfig('reviewer');
+
+            expect(cfg.apiKey).toBe('AIza-review');
+            expect(cfg.model).toBe('gemini-2.0-flash-exp');
+            expect(cfg.format).toBe('gemini');
+        });
+
+        it('returns report tier config with json responseFormat', () => {
+            Config.set('llmApiKey', 'sk-report');
+            Config.set('llmModel', 'gpt-4-report');
+            const cfg = tierToConfig('report');
+
+            expect(cfg.apiKey).toBe('sk-report');
+            expect(cfg.responseFormat).toBe('json');
+        });
+
+        it('falls back to main when tier is unknown', () => {
+            Config.set('llmApiKey', 'sk-main');
+            const cfg = (tierToConfig as (tier: string) => ReturnType<typeof tierToConfig>)('nonexistent');
+
+            expect(cfg.apiKey).toBe('sk-main');
+        });
     });
 
-    it('sends to primary provider and returns response', async () => {expect.hasAssertions();
+    describe('ParseRawOnce', () => {
+        it('parses valid JSON string', () => {
+            const result = parseRawOnce('{"key": "value"}');
 
-        Config.set('llmApiKey', 'sk-test');
-        Config.set('llmModel', 'gpt-4');
-        Config.set('llmBaseUrl', 'https://api.test.com/v1');
-        mockFetch.mockResolvedValueOnce(
-            mockOkResponse(JSON.stringify({ choices: [{ message: { content: 'success' } }] })),
-        );
+            expect(result).toStrictEqual({ key: 'value' });
+        });
 
-        const result = await sendWithFallback('main', 'system', 'user');
+        it('returns null for invalid JSON', () => {
+            const result = parseRawOnce('not json');
 
-        expect(result).toBe('success');
-        expect(recordCircuitSuccess).toHaveBeenCalled();
+            expect(result).toBeNull();
+        });
+
+        it('returns null for empty string', () => {
+            const result = parseRawOnce('');
+
+            expect(result).toBeNull();
+        });
     });
 
-    it('falls back to next provider when primary fails', async () => {expect.hasAssertions();
+    describe('ParseRetryAfter', () => {
+        function mockResponseWithHeader(key: string, value: string | null): Response {
+            const r = new Response('', { status: 429 });
+            vi.spyOn(r, 'text').mockResolvedValue('');
+            vi.spyOn(r.headers, 'get').mockImplementation((k: string) => (k === key ? value : null));
+            return r;
+        }
 
-        Config.set('llmApiKey', 'sk-test');
-        Config.set('llmModel', 'gpt-4');
-        Config.set('llmBaseUrl', 'https://api.test.com/v1');
-        Config.set('llmFallbackApiKey', 'nv-test');
-        Config.set('llmFallbackModel', 'llama3');
-        Config.set('llmFallbackBaseUrl', 'https://nv.api.com/v1');
-        Config.set('llmBatchApiKey', 'gh-test');
-        Config.set('llmBatchModel', 'gpt4o-mini');
-        Config.set('llmBatchBaseUrl', 'https://models.inference.ai.azure.com');
+        it('parses seconds from Retry-After header', () => {
+            const resp = mockResponseWithHeader('Retry-After', '30');
+            const result = parseRetryAfter(resp, 2000);
 
-        mockFetch
-            .mockResolvedValueOnce(mockErrorResponse(500))
-            .mockResolvedValueOnce(mockErrorResponse(500))
-            .mockResolvedValueOnce(mockErrorResponse(500))
-            .mockResolvedValueOnce(mockErrorResponse(500))
-            .mockResolvedValueOnce(
-                mockOkResponse(JSON.stringify({ choices: [{ message: { content: 'fallback ok' } }] })),
+            expect(result).toBe(10000);
+        });
+
+        it('returns default when no Retry-After header', () => {
+            const resp = mockResponseWithHeader('Retry-After', null);
+            const result = parseRetryAfter(resp, 2000);
+
+            expect(result).toBe(2000);
+        });
+
+        it('returns default for invalid Retry-After value', () => {
+            const resp = mockResponseWithHeader('Retry-After', 'invalid');
+            const result = parseRetryAfter(resp, 2000);
+
+            expect(result).toBe(2000);
+        });
+
+        it('caps at LLM_RETRY_MAX_WAIT_MS (10000)', () => {
+            const resp = mockResponseWithHeader('Retry-After', '999');
+            const result = parseRetryAfter(resp, 2000);
+
+            expect(result).toBe(10000);
+        });
+    });
+
+    describe('EstimateInputTokens', () => {
+        it('estimates token count as ceil((sys + user) / 4)', () => {
+            const result = _estimateInputTokens('abcd', 'efgh');
+
+            expect(result).toBe(2);
+        });
+
+        it('returns 0 for empty strings', () => {
+            const result = _estimateInputTokens('', '');
+
+            expect(result).toBe(0);
+        });
+
+        it('rounds up fractional estimates', () => {
+            const result = _estimateInputTokens('a', '');
+
+            expect(result).toBe(1);
+        });
+    });
+
+    describe('GetLlmClientMetrics / resetLlmClientMetrics', () => {
+        it('returns initial zero metrics', () => {
+            const metrics = getLlmClientMetrics();
+
+            expect(metrics.cacheHits).toBe(0);
+            expect(metrics.cacheMisses).toBe(0);
+            expect(metrics.totalPromptTokens).toBe(0);
+            expect(metrics.totalCompletionTokens).toBe(0);
+        });
+
+        it('resets metrics to zero', () => {
+            const metrics = getLlmClientMetrics();
+            metrics.cacheHits = 10;
+            metrics.cacheMisses = 5;
+            resetLlmClientMetrics();
+            const reset = getLlmClientMetrics();
+
+            expect(reset.cacheHits).toBe(0);
+            expect(reset.cacheMisses).toBe(0);
+        });
+    });
+
+    describe('SendWithFallback', () => {
+        beforeEach(() => {
+            vi.spyOn(global, 'setTimeout').mockImplementation(((cb: (...args: unknown[]) => void) => {
+                cb();
+                return {} as NodeJS.Timeout;
+            }) as typeof global.setTimeout);
+        });
+
+        afterEach(() => {
+            vi.restoreAllMocks();
+        });
+
+        it('sends to primary provider and returns response', async () => {expect.hasAssertions();
+
+            Config.set('llmApiKey', 'sk-test');
+            Config.set('llmModel', 'gpt-4');
+            Config.set('llmBaseUrl', 'https://api.test.com/v1');
+            mockFetch.mockResolvedValueOnce(
+                mockOkResponse(JSON.stringify({ choices: [{ message: { content: 'success' } }] })),
             );
 
-        const result = await sendWithFallback('main', 'system', 'user');
+            const result = await sendWithFallback('main', 'system', 'user');
 
-        expect(result).toBe('fallback ok');
-        expect(recordCircuitFailure).toHaveBeenCalled();
+            expect(result).toBe('success');
+            expect(recordCircuitSuccess).toHaveBeenCalled();
+        });
+
+        it('falls back to next provider when primary fails', async () => {expect.hasAssertions();
+
+            Config.set('llmApiKey', 'sk-test');
+            Config.set('llmModel', 'gpt-4');
+            Config.set('llmBaseUrl', 'https://api.test.com/v1');
+            Config.set('llmFallbackApiKey', 'nv-test');
+            Config.set('llmFallbackModel', 'llama3');
+            Config.set('llmFallbackBaseUrl', 'https://nv.api.com/v1');
+            Config.set('llmBatchApiKey', 'gh-test');
+            Config.set('llmBatchModel', 'gpt4o-mini');
+            Config.set('llmBatchBaseUrl', 'https://models.inference.ai.azure.com');
+
+            mockFetch
+                .mockResolvedValueOnce(mockErrorResponse(500))
+                .mockResolvedValueOnce(mockErrorResponse(500))
+                .mockResolvedValueOnce(mockErrorResponse(500))
+                .mockResolvedValueOnce(mockErrorResponse(500))
+                .mockResolvedValueOnce(
+                    mockOkResponse(JSON.stringify({ choices: [{ message: { content: 'fallback ok' } }] })),
+                );
+
+            const result = await sendWithFallback('main', 'system', 'user');
+
+            expect(result).toBe('fallback ok');
+            expect(recordCircuitFailure).toHaveBeenCalled();
+        });
+
+        it('throws when all providers are exhausted', async () => {expect.hasAssertions();
+
+            Config.set('llmApiKey', 'sk-test');
+            Config.set('llmModel', 'gpt-4');
+            Config.set('llmBaseUrl', 'https://api.test.com/v1');
+            mockFetch.mockResolvedValue(mockErrorResponse(500));
+
+            await expect(sendWithFallback('main', 'system', 'user')).rejects.toThrow('All LLM providers failed');
+        });
+
+        it('aggregates error when API key is missing for all providers', async () => {expect.hasAssertions();
+
+            Config.set('llmApiKey', '');
+
+            await expect(sendWithFallback('main', 'system', 'user')).rejects.toThrow('All LLM providers failed');
+        });
+
+        it('aggregates error messages from all providers', async () => {expect.hasAssertions();
+
+            Config.set('llmApiKey', 'sk-test');
+            Config.set('llmModel', 'gpt-4');
+            Config.set('llmBaseUrl', 'https://api.test.com/v1');
+            mockFetch.mockResolvedValue(mockErrorResponse(500));
+
+            try {
+                await sendWithFallback('main', 'system', 'user');
+
+                expect.unreachable('Expected error');
+            } catch (err) {
+                const msg = (err as Error).message;
+
+                expect(msg).toContain('All LLM providers failed');
+            }
+        });
+
+        it('applies responseFormat to all candidates', async () => {expect.hasAssertions();
+
+            Config.set('llmApiKey', 'sk-test');
+            Config.set('llmModel', 'gpt-4');
+            Config.set('llmBaseUrl', 'https://api.test.com/v1');
+            mockFetch.mockResolvedValueOnce(
+                mockOkResponse(JSON.stringify({ choices: [{ message: { content: '{"key":"val"}' } }] })),
+            );
+
+            const result = await sendWithFallback('main', 'system', 'user', 'json');
+
+            expect(result).toBe('{"key":"val"}');
+        });
+
+        it('deduplicates fallback provider with same config key as primary', async () => {expect.hasAssertions();
+
+            Config.set('llmApiKey', 'sk-test');
+            Config.set('llmModel', 'gpt-4');
+            Config.set('llmBaseUrl', 'https://api.test.com/v1');
+            Config.set('llmFallbackApiKey', 'sk-test');
+            Config.set('llmFallbackModel', 'gpt-4');
+            Config.set('llmFallbackBaseUrl', 'https://api.test.com/v1');
+            Config.set('llmBatchApiKey', 'sk-test');
+            Config.set('llmBatchModel', 'gpt-4');
+            Config.set('llmBatchBaseUrl', 'https://api.test.com/v1');
+
+            mockFetch.mockResolvedValue(mockErrorResponse(500));
+
+            await expect(sendWithFallback('main', 'system', 'user')).rejects.toThrow('All LLM providers failed');
+            expect(mockFetch).toHaveBeenCalledTimes(6);
+        });
     });
 
-    it('throws when all providers are exhausted', async () => {expect.hasAssertions();
-
-        Config.set('llmApiKey', 'sk-test');
-        Config.set('llmModel', 'gpt-4');
-        Config.set('llmBaseUrl', 'https://api.test.com/v1');
-        mockFetch.mockResolvedValue(mockErrorResponse(500));
-
-        await expect(sendWithFallback('main', 'system', 'user')).rejects.toThrow('All LLM providers failed');
-    });
-
-    it('aggregates error when API key is missing for all providers', async () => {expect.hasAssertions();
-
-        Config.set('llmApiKey', '');
-
-        await expect(sendWithFallback('main', 'system', 'user')).rejects.toThrow('All LLM providers failed');
-    });
-
-    it('aggregates error messages from all providers', async () => {expect.hasAssertions();
-
-        Config.set('llmApiKey', 'sk-test');
-        Config.set('llmModel', 'gpt-4');
-        Config.set('llmBaseUrl', 'https://api.test.com/v1');
-        mockFetch.mockResolvedValue(mockErrorResponse(500));
-
-        try {
-            await sendWithFallback('main', 'system', 'user');
-
-            expect.unreachable('Expected error');
-        } catch (err) {
-            const msg = (err as Error).message;
-
-            expect(msg).toContain('All LLM providers failed');
-        }
-    });
-
-    it('applies responseFormat to all candidates', async () => {expect.hasAssertions();
-
-        Config.set('llmApiKey', 'sk-test');
-        Config.set('llmModel', 'gpt-4');
-        Config.set('llmBaseUrl', 'https://api.test.com/v1');
-        mockFetch.mockResolvedValueOnce(
-            mockOkResponse(JSON.stringify({ choices: [{ message: { content: '{"key":"val"}' } }] })),
-        );
-
-        const result = await sendWithFallback('main', 'system', 'user', 'json');
-
-        expect(result).toBe('{"key":"val"}');
-    });
-
-    it('deduplicates fallback provider with same config key as primary', async () => {expect.hasAssertions();
-
-        Config.set('llmApiKey', 'sk-test');
-        Config.set('llmModel', 'gpt-4');
-        Config.set('llmBaseUrl', 'https://api.test.com/v1');
-        Config.set('llmFallbackApiKey', 'sk-test');
-        Config.set('llmFallbackModel', 'gpt-4');
-        Config.set('llmFallbackBaseUrl', 'https://api.test.com/v1');
-        Config.set('llmBatchApiKey', 'sk-test');
-        Config.set('llmBatchModel', 'gpt-4');
-        Config.set('llmBatchBaseUrl', 'https://api.test.com/v1');
-
-        mockFetch.mockResolvedValue(mockErrorResponse(500));
-
-        await expect(sendWithFallback('main', 'system', 'user')).rejects.toThrow('All LLM providers failed');
-        expect(mockFetch).toHaveBeenCalledTimes(6);
-    });
 });
