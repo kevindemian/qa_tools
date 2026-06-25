@@ -191,14 +191,14 @@ function run(): void {
             };
         }
     });
-    console.log(JSON.stringify(findings, null, 2));
+    process.stdout.write(JSON.stringify(findings, null, 2) + '\n');
 
     const high = findings.filter((f) => f.severity === 'high');
     if (high.length > 0) {
-        console.log(`\n\u26a0\ufe0f  ${high.length} HIGH severity finding(s) require attention:`);
+        process.stdout.write(`\n\u26a0\ufe0f  ${high.length} HIGH severity finding(s) require attention:\n`);
         for (const f of high) {
-            console.log(`  - ${f.pattern}: ${f.description}`);
-            console.log(`    \u2192 ${f.recommendation}`);
+            process.stdout.write(`  - ${f.pattern}: ${f.description}\n`);
+            process.stdout.write(`    \u2192 ${f.recommendation}\n`);
         }
     }
 }

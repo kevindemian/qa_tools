@@ -363,7 +363,7 @@ describe('HTTP Client', () => {
 
             // Advance past RETRY_STALE_MS (600s) + one cleanup interval (300s)
             // to trigger stale entry deletion at t=900000
-            await await vi.advanceTimersByTimeAsync(900001);
+            await vi.advanceTimersByTimeAsync(900001);
 
             expect(true).toBeTruthy();
         });
