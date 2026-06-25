@@ -24,6 +24,7 @@ describe('Logger', () => {
     beforeAll(() => {
         fs.mkdirSync('/tmp', { recursive: true });
     });
+
     describe('RootLogger', () => {
         it('is a Logger instance', () => {
             expect(rootLogger).toBeInstanceOf(Logger);
@@ -33,6 +34,7 @@ describe('Logger', () => {
             expect(rootLogger.context).toStrictEqual({});
         });
     });
+
 
     describe('Child()', () => {
         it('creates a child with merged context', () => {
@@ -56,6 +58,7 @@ describe('Logger', () => {
             expect(Object.keys(parent.context)).not.toContain('operation');
         });
     });
+
 
     describe('WriteFile', () => {
         function writeAndCheck(
@@ -155,6 +158,7 @@ describe('Logger', () => {
         });
     });
 
+
     describe('EnsureDir error paths', () => {
         let spyError: MockInstance | undefined;
 
@@ -206,6 +210,7 @@ describe('Logger', () => {
         });
     });
 
+
     describe('RotateIfNeeded error paths', () => {
         afterEach(() => {
             vi.restoreAllMocks();
@@ -247,6 +252,7 @@ describe('Logger', () => {
         });
     });
 
+
     describe('WriteFile error paths', () => {
         let spyError: MockInstance | undefined;
 
@@ -283,6 +289,7 @@ describe('Logger', () => {
         });
     });
 
+
     describe('FilePath getter', () => {
         it('returns null when LOG_FILE is not true', () => {
             const logger = new Logger({}, Config.create({ logFile: false }));
@@ -301,6 +308,7 @@ describe('Logger', () => {
             expect(fp).toContain('.log');
         });
     });
+
 
     describe('MaskDeep', () => {
         it('masks values for keys matching token/secret/key', () => {
@@ -351,6 +359,7 @@ describe('Logger', () => {
         });
     });
 
+
     describe('WriteConsole error with data', () => {
         it('appends short JSON data to ERROR console output', () => {
             const spyError = vi.spyOn(console, 'error').mockImplementation(() => {});
@@ -386,6 +395,7 @@ describe('Logger', () => {
         });
     });
 
+
     describe('WriteFileOnly', () => {
         afterEach(() => {
             vi.restoreAllMocks();
@@ -408,6 +418,7 @@ describe('Logger', () => {
             spyLog.mockRestore();
         });
     });
+
 
     describe('Level filtering', () => {
         it('does not call console.log for levels below LOG_LEVEL', () => {
@@ -443,7 +454,9 @@ describe('MaskDeep (PBT)', () => {
 
         fc.assert(
             fc.property(fc.constantFrom(null, undefined, 42, 'hello', true, false), (input) => {
+
                 expect(maskDeep(input)).toStrictEqual(input);
+
                 return true;
             }),
         );
@@ -458,6 +471,7 @@ describe('MaskDeep (PBT)', () => {
                 maskDeep(original);
 
                 expect(JSON.stringify(original)).toStrictEqual(snapshot);
+
                 return true;
             }),
         );
@@ -502,7 +516,9 @@ describe('MaskDeep (PBT)', () => {
 
                     for (const [key, val] of pairs) {
                         const match = origPairs.find(([k]) => k === key);
+
                         expect(match).toBeDefined();
+
                         expect(match?.[1]).toBe(val);
                     }
                     return true;
@@ -557,8 +573,9 @@ describe('MaskDeep (PBT)', () => {
                 (input) => {
                     const result = maskDeep(input);
 
-                    expect(Array.isArray(result)).toBe(true);
+                    expect(Array.isArray(result)).toBeTruthy();
                     expect(JSON.stringify(result)).toContain('****');
+
                     return true;
                 },
             ),

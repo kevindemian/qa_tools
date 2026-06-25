@@ -73,19 +73,6 @@ describe('Handlers Happy Paths', () => {
         nock.disableNetConnect();
     });
 
-    afterAll(() => {
-        nock.cleanAll();
-        nock.enableNetConnect();
-        nock.restore();
-        [tmpHome, tmpGitDir].forEach((d) => {
-            try {
-                fs.rmSync(d, { recursive: true, force: true });
-            } catch {
-                /* ignore */
-            }
-        });
-    });
-
     beforeEach(() => {
         vi.clearAllMocks();
         vi.restoreAllMocks();
@@ -109,6 +96,19 @@ describe('Handlers Happy Paths', () => {
         vi.restoreAllMocks();
         nock.cleanAll();
         nock.enableNetConnect();
+    });
+
+    afterAll(() => {
+        nock.cleanAll();
+        nock.enableNetConnect();
+        nock.restore();
+        [tmpHome, tmpGitDir].forEach((d) => {
+            try {
+                fs.rmSync(d, { recursive: true, force: true });
+            } catch {
+                /* ignore */
+            }
+        });
     });
 
     function buildContext() {

@@ -54,17 +54,17 @@ describe('ValidateConfigValues', () => {
         }
     });
 
-    afterAll(() => {
-        for (const f of CONFIG_SCHEMA) {
-            if (STASH[f.envVar] === undefined) delete process.env[f.envVar];
-            else process.env[f.envVar] = STASH[f.envVar];
-        }
-    });
-
     beforeEach(() => {
         // Clear all schema env vars before each test
         for (const f of CONFIG_SCHEMA) {
             delete process.env[f.envVar];
+        }
+    });
+
+    afterAll(() => {
+        for (const f of CONFIG_SCHEMA) {
+            if (STASH[f.envVar] === undefined) delete process.env[f.envVar];
+            else process.env[f.envVar] = STASH[f.envVar];
         }
     });
 

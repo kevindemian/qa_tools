@@ -68,13 +68,6 @@ describe('E2E: CSV Import - Error Paths', () => {
         }
     });
 
-    afterAll(() => {
-        nock.cleanAll();
-        nock.enableNetConnect();
-        nock.restore();
-        setTestSleep(undefined);
-    });
-
     beforeEach(() => {
         vi.spyOn(console, 'log').mockImplementation(() => {});
         nock.cleanAll();
@@ -86,6 +79,13 @@ describe('E2E: CSV Import - Error Paths', () => {
         nock.cleanAll();
         nock.enableNetConnect();
         process.env['ON_ERROR'] = 'skip';
+    });
+
+    afterAll(() => {
+        nock.cleanAll();
+        nock.enableNetConnect();
+        nock.restore();
+        setTestSleep(undefined);
     });
 
     /** "skip on error" phrasing is intentional: ON_ERROR=skip causes error-triggered skip.

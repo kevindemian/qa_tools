@@ -99,6 +99,7 @@ describe('Quarantine.Integration', () => {
     describe('FT-36b — Expire entry', () => {
         it('removes entry past TTL', async () => {
             expect.hasAssertions();
+
             vi.useFakeTimers();
             quarantineTest({
                 testTitle: 'expirable.spec.ts',
@@ -126,6 +127,7 @@ describe('Quarantine.Integration', () => {
     describe('FT-36c — Permanent entry survives expiry', () => {
         it('keeps permanent entry after expiry runs', async () => {
             expect.hasAssertions();
+
             quarantineTest({
                 testTitle: 'permanent.spec.ts',
                 reason: 'known flaky',

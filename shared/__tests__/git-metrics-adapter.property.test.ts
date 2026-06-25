@@ -70,6 +70,7 @@ describe('ParseGitLogOutput invariants (PBT)', () => {
 
     it('handles empty input', () => {
         expect.hasAssertions();
+
         const result = parseGitLogOutput('');
 
         expect(result).toStrictEqual([]);
@@ -156,6 +157,7 @@ describe('GenerateGitMetricsRuns invariants (PBT)', () => {
 
     it('empty git log returns empty array', () => {
         expect.hasAssertions();
+
         mockExecFileSync.mockReturnValue('');
         const runs = generateGitMetricsRuns();
 
@@ -199,6 +201,7 @@ describe('GenerateGitFailureClassifications invariants (PBT)', () => {
 
     it('no reverts returns empty array', () => {
         expect.hasAssertions();
+
         const N = '\0';
         mockExecFileSync.mockReturnValue('abc123' + N + '2026-06-01T10:00:00.000Z' + N + 'Normal' + N + 'user' + N);
         const result = generateGitFailureClassifications();
@@ -210,6 +213,7 @@ describe('GenerateGitFailureClassifications invariants (PBT)', () => {
 describe('ExtractDate', () => {
     it('returns YYYY-MM-DD for valid ISO date', () => {
         expect.hasAssertions();
+
         const log = 'h1' + '\0' + '2026-06-15T10:00:00.000Z' + '\0' + 'msg' + '\0' + 'author' + '\0';
         mockExecFileSync.mockReturnValue(log);
         const runs = generateGitMetricsRuns();
@@ -238,7 +242,9 @@ describe('ParseGitLogOutput malformed line invariants (PBT)', () => {
                 (rawLines) => {
                     const output = rawLines.join('\n');
                     const result = parseGitLogOutput(output);
+
                     expect(result).toBeDefined();
+
                     result.forEach((entry) => {
                         expect(entry.hash).toBeTruthy();
                         expect(entry.date).toBeTruthy();

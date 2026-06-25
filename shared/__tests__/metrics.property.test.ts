@@ -105,6 +105,7 @@ describe('CalculateFlakyRate — property-based', () => {
 
     it('returns 0 for empty store', () => {
         expect.hasAssertions();
+
         const store: MetricsStore = { runs: [] };
 
         expect(calculateFlakyRate(store)).toBe(0);
@@ -245,7 +246,9 @@ describe('CalculateFlakiness — property-based', () => {
                 (runs, minRuns) => {
                     const store: MetricsStore = { runs };
                     const entries = calculateFlakiness(store, Math.max(1, minRuns));
-                    expect(Array.isArray(entries)).toBe(true);
+
+                    expect(Array.isArray(entries)).toBeTruthy();
+
                     for (const entry of entries) {
                         expect(entry.passCount + entry.failCount + entry.skipCount).toBe(entry.totalRuns);
                     }
@@ -265,7 +268,9 @@ describe('CalculateFlakiness — property-based', () => {
                 (runs, minRuns) => {
                     const store: MetricsStore = { runs };
                     const entries = calculateFlakiness(store, Math.max(1, minRuns));
-                    expect(Array.isArray(entries)).toBe(true);
+
+                    expect(Array.isArray(entries)).toBeTruthy();
+
                     for (const entry of entries) {
                         expect(entry.rate).toBe(entry.failCount / entry.totalRuns);
                         expect(entry.rate).toBeGreaterThanOrEqual(0);
@@ -287,7 +292,9 @@ describe('CalculateFlakiness — property-based', () => {
                 (runs, minRuns) => {
                     const store: MetricsStore = { runs };
                     const entries = calculateFlakiness(store, Math.max(1, minRuns));
-                    expect(Array.isArray(entries)).toBe(true);
+
+                    expect(Array.isArray(entries)).toBeTruthy();
+
                     for (const entry of entries) {
                         expect(entry.failCount).toBeGreaterThan(0);
                         expect(entry.passCount).toBeGreaterThan(0);
@@ -308,7 +315,9 @@ describe('CalculateFlakiness — property-based', () => {
                 (runs, minRuns) => {
                     const store: MetricsStore = { runs };
                     const entries = calculateFlakiness(store, Math.max(1, minRuns));
-                    expect(Array.isArray(entries)).toBe(true);
+
+                    expect(Array.isArray(entries)).toBeTruthy();
+
                     for (const entry of entries) {
                         expect(entry.totalRuns).toBeGreaterThanOrEqual(Math.max(1, minRuns));
                     }
@@ -381,6 +390,7 @@ describe('GetTrends — property-based', () => {
 
     it('returns empty array for empty store', () => {
         expect.hasAssertions();
+
         const store: MetricsStore = { runs: [] };
 
         expect(getTrends(store)).toStrictEqual([]);

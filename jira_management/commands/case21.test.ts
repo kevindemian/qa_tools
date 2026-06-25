@@ -63,14 +63,14 @@ const mockGapResult: CoverageGapResult = {
 };
 
 describe('Case21', () => {
-    beforeEach(() => {
-        vi.clearAllMocks();
-    });
-
     beforeAll(() => {
         if (!vi.isMockFunction(openModule.openWithFallback)) {
             throw new Error('Guard FAILED: openWithFallback is NOT mocked. Browser would open!');
         }
+    });
+
+    beforeEach(() => {
+        vi.clearAllMocks();
     });
 
     describe('Case21 — Gap Analysis', () => {

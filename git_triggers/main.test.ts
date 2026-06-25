@@ -196,14 +196,14 @@ describe('Main', () => {
         mainModule = interactiveMode._testExports;
     }, 30_000);
 
-    afterAll(() => {
-        vi.clearAllMocks();
-    });
-
     beforeEach(() => {
         vi.clearAllMocks();
         vi.spyOn(prompt, 'prompt').mockReturnValue('0');
         vi.spyOn(prompt, 'confirm').mockReturnValue(false);
+    });
+
+    afterAll(() => {
+        vi.clearAllMocks();
     });
 
     // ---------- isComplete ----------
@@ -1181,13 +1181,13 @@ describe('Main', () => {
             process.stdout.isTTY = true;
         });
 
-        afterAll(() => {
-            process.stdout.isTTY = _origIsTTY;
-        });
-
         beforeEach(() => {
             vi.clearAllMocks();
             vi.spyOn(state, 'load').mockReturnValue({ lastChoice: undefined });
+        });
+
+        afterAll(() => {
+            process.stdout.isTTY = _origIsTTY;
         });
 
         it('shows box with session counters when TTY and not quiet', async () => {expect.hasAssertions();

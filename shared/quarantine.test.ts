@@ -105,6 +105,7 @@ describe('Quarantine', () => {
     describe('ExpireQuarantine', () => {
         it('expires entries past their TTL', async () => {
             expect.hasAssertions();
+
             vi.useFakeTimers();
             quarantineTest({ testTitle: TEST_TITLE, reason: 'flaky', quarantinedBy: 'test', flakyRate: 0.5, ttlDays: 0 });
             await vi.advanceTimersByTimeAsync(1000);
@@ -118,6 +119,7 @@ describe('Quarantine', () => {
 
         it('does not expire permanent entries', async () => {
             expect.hasAssertions();
+
             quarantineTest({ testTitle: 'perm-test', reason: 'flaky', quarantinedBy: 'test', flakyRate: 0.5 });
             markPermanent('perm-test');
             vi.useFakeTimers();

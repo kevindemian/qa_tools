@@ -164,17 +164,17 @@ const mockGenerateHtml = vi.mocked(generateFlakinessHtml);
 const mockManager = createMockGitProvider();
 
 describe('Schedule Handler', () => {
-    beforeEach(() => {
-        vi.clearAllMocks();
-        mockState.currentProvider = 'gitlab';
-        mockState.currentProjectName = '';
-    });
-
     beforeAll(async () => {
         const openModule = (await import('../shared/open.js')) as { openWithFallback: (...args: unknown[]) => unknown };
         if (!vi.isMockFunction(openModule.openWithFallback)) {
             throw new Error('Guard FAILED: openWithFallback is NOT mocked. Browser would open!');
         }
+    });
+
+    beforeEach(() => {
+        vi.clearAllMocks();
+        mockState.currentProvider = 'gitlab';
+        mockState.currentProjectName = '';
     });
 
     describe('HandleListSchedules', () => {

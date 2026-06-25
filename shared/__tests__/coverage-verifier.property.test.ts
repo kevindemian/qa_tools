@@ -67,7 +67,9 @@ describe('Coverage invariants (PBT)', () => {
                     tests: [{ title: 'login' }, { title: 'payment' }],
                 };
                 const result = recalculateCoverage(artifact, makeCtx(input));
+
                 expect(result).toBeDefined();
+
                 if (result.totalCriteria === 0) return;
 
                 expect(result.coveredCriteria + result.gaps.length).toBe(result.totalCriteria);
@@ -110,6 +112,7 @@ describe('Coverage invariants (PBT)', () => {
 
     it('naN in coverageTable yields null declaredCoverage', () => {
         expect.hasAssertions();
+
         const artifact = {
             tests: [{ title: 'login' }],
             coverageTable: { coverage: NaN },
@@ -130,7 +133,8 @@ describe('Coverage invariants (PBT)', () => {
                     tests: [{ title: 'x' }],
                 };
                 const result = recalculateCoverage(artifact, makeCtx(input));
-                expect(result.gaps.every((g) => g.criterion.length <= 120)).toBe(true);
+
+                expect(result.gaps.every((g) => g.criterion.length <= 120)).toBeTruthy();
             }),
         );
     });
