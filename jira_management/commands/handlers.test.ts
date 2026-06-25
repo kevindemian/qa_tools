@@ -53,14 +53,6 @@ interface CreateTestsResult {
     sourcePath: string;
 }
 
-interface CreateTestsMock {
-    createTestsFromCsv: Mock<(opts: { onBusy: (v: boolean) => void }) => Promise<CreateTestsResult | undefined>>;
-
-    createTestsFromJson: Mock<(params: object) => Promise<CreateTestsResult | undefined>>;
-
-    createTestExecutionWithLinks: Mock<(params: object) => Promise<{ key: string; summary: string } | null>>;
-}
-
 const mockCreateTests = vi.hoisted(() => {
     return {
         createTestsFromCsv: vi.fn<(opts: { onBusy: (v: boolean) => void }) => Promise<CreateTestsResult | undefined>>(),

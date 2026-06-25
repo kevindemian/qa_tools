@@ -66,7 +66,7 @@ export class HostSemaphore {
         if (last === undefined) return;
         const elapsed = Date.now() - last;
         if (elapsed < this.minIntervalMs) {
-            await new Promise((r) => setTimeout(r, this.minIntervalMs - elapsed));
+            await new Promise((resolve) => setTimeout(resolve, this.minIntervalMs - elapsed));
         }
     }
 }
