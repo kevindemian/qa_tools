@@ -494,7 +494,7 @@ describe('Opencode Db Maintenance', () => {
             const result = main();
 
             expect(result).toBe(0);
-            expect(mockMkdirSync).toHaveBeenCalled();
+            expect(mockMkdirSync).toHaveBeenCalledWith(expect.any(String), { recursive: true });
             expect(consoleSpy).toHaveBeenCalledWith(expect.stringContaining('creating directory'));
 
             consoleSpy.mockRestore();

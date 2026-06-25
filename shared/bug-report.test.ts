@@ -493,7 +493,7 @@ describe('BugReport Service', () => {
                 label: '',
                 message: 'Jira API error',
             });
-            expect(mockPrompt.printError).toHaveBeenCalled();
+            expect(mockPrompt.printError).toHaveBeenCalledWith(expect.any(String), expect.any(Error));
         });
 
         it('calls collectManual when preFilled is not provided', async () => {expect.hasAssertions();

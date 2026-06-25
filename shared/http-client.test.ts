@@ -80,7 +80,10 @@ describe('HTTP Client', () => {
         it('registers response interceptor', () => {
             httpClient.createHttpClient({ baseUrl: 'https://api.test.com' });
 
-            expect(mockInstance.interceptors.response.use).toHaveBeenCalled();
+            expect(mockInstance.interceptors.response.use).toHaveBeenCalledWith(
+                expect.any(Function),
+                expect.any(Function),
+            );
         });
 
         it('uses default timeout when not specified', () => {
@@ -237,7 +240,7 @@ describe('HTTP Client', () => {
                 void 0;
             }
 
-            expect(mockInstance).toHaveBeenCalled();
+            expect(mockInstance).toHaveBeenCalledWith(expect.anything());
         });
 
         it('retries GET up to custom maxRetries (2) and stops', async () => {expect.hasAssertions();
@@ -275,7 +278,7 @@ describe('HTTP Client', () => {
                 /* expected */
             }
 
-            expect(debugSpy).toHaveBeenCalled();
+            expect(debugSpy).toHaveBeenCalledWith(expect.stringContaining('Retry'));
             expect(warnSpy).not.toHaveBeenCalled();
 
             debugSpy.mockRestore();

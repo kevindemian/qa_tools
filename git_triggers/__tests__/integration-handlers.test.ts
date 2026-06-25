@@ -158,7 +158,7 @@ describe('HandleListSchedules', () => {
         (sessionState as { currentProvider: string }).currentProvider = 'gitlab';
         await handleListSchedules(m as never);
 
-        expect(m.getSchedules).toHaveBeenCalled();
+        expect(m.getSchedules).toHaveBeenCalledTimes(1);
         expect(vi.mocked(pushHistory)).toHaveBeenCalledWith('list-schedules', '2 schedules', 'ok');
     });
 
@@ -279,7 +279,7 @@ describe('HandleListApprovedMRs', () => {
         const { pushHistory } = await import('../session-state.js');
         await handleListApprovedMRs(m as never);
 
-        expect(m.searchMergeRequests).toHaveBeenCalled();
+        expect(m.searchMergeRequests).toHaveBeenCalledTimes(1);
         expect(vi.mocked(pushHistory)).toHaveBeenCalledWith('prs-approved', '2 MRs', 'ok');
     });
 
@@ -325,7 +325,7 @@ describe('HandleFlakinessDashboard', () => {
         const { warn } = await import('../../shared/prompt.js');
         await handleFlakinessDashboard();
 
-        expect(vi.mocked(warn)).toHaveBeenCalled();
+        expect(vi.mocked(warn)).toHaveBeenCalledTimes(1);
 
         (sessionState as { currentProjectName: string }).currentProjectName = 'TEST';
     });

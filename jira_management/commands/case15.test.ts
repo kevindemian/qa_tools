@@ -123,7 +123,7 @@ describe('Case15', () => {
                 'main',
                 store,
             );
-            expect(vi.spyOn(createTests, 'createTestsFromJson')).toHaveBeenCalled();
+            expect(vi.spyOn(createTests, 'createTestsFromJson')).toHaveBeenCalledTimes(1);
         });
 
         it('falls back to CI download when cache misses', async () => {expect.hasAssertions();
@@ -139,7 +139,7 @@ describe('Case15', () => {
             const result = await case15.handler(mockContext);
 
             expect(typeof result === 'boolean' || result === undefined).toBeTruthy();
-            expect(vi.spyOn(createTests, 'createTestsFromJson')).toHaveBeenCalled();
+            expect(vi.spyOn(createTests, 'createTestsFromJson')).toHaveBeenCalledTimes(1);
         });
 
         it('falls back to manual path when resolveTestDataSource returns null', async () => {expect.hasAssertions();
@@ -152,7 +152,7 @@ describe('Case15', () => {
             const result = await case15.handler(mockContext);
 
             expect(typeof result === 'boolean' || result === undefined).toBeTruthy();
-            expect(vi.spyOn(createTests, 'createTestsFromJson')).toHaveBeenCalled();
+            expect(vi.spyOn(createTests, 'createTestsFromJson')).toHaveBeenCalledTimes(1);
         });
 
         it('cancels when manual path is empty', async () => {expect.hasAssertions();
@@ -165,7 +165,7 @@ describe('Case15', () => {
 
             expect(result).toBeUndefined();
             expect(vi.spyOn(createTests, 'createTestsFromJson')).not.toHaveBeenCalled();
-            expect(warn).toHaveBeenCalled();
+            expect(warn).toHaveBeenCalledWith('Caminho do JSON vazio. Operação cancelada.');
         });
 
         it('does not call resolveTestDataSource when SHA is null', async () => {expect.hasAssertions();
@@ -183,7 +183,7 @@ describe('Case15', () => {
 
             expect(typeof result === 'boolean' || result === undefined).toBeTruthy();
             expect(vi.mocked(resolveTestDataSource)).not.toHaveBeenCalled();
-            expect(vi.spyOn(createTests, 'createTestsFromJson')).toHaveBeenCalled();
+            expect(vi.spyOn(createTests, 'createTestsFromJson')).toHaveBeenCalledTimes(1);
         });
 
         it('displays results after successful import', async () => {expect.hasAssertions();
@@ -198,8 +198,8 @@ describe('Case15', () => {
 
             await case15.handler(mockContext);
 
-            expect(offerTestExecutionAssociation).toHaveBeenCalled();
-            expect(showResults).toHaveBeenCalled();
+            expect(offerTestExecutionAssociation).toHaveBeenCalledWith(mockContext, ['TEST-1', 'TEST-2'], 'resolve-abc123-12345');
+            expect(showResults).toHaveBeenCalledWith(mockContext, ['TEST-1', 'TEST-2'], { associated: false });
         });
     });
 

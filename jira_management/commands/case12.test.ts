@@ -71,7 +71,7 @@ describe('Case12', () => {
             expect(mockPaletteYellow).toHaveBeenCalledWith(
                 expect.stringContaining('Dica: rode pipelines para acumular métricas'),
             );
-            expect(mockPrint).toHaveBeenCalled();
+            expect(mockPrint).toHaveBeenCalledWith(expect.any(String));
         });
 
         it('shows health score ready when enough runs exist', async () => {expect.hasAssertions();

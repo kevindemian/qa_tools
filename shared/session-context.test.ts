@@ -257,8 +257,8 @@ describe('ResolveTestDataSource', () => {
         }
 
         expect(store.saveReport).toHaveBeenCalledWith('sha456', expect.any(Array));
-        expect(store.put).toHaveBeenCalled();
-        expect(store.flush).toHaveBeenCalled();
+        expect(store.put).toHaveBeenCalledWith('sha456', expect.objectContaining({ project: 'project', branch: 'main' }));
+        expect(store.flush).toHaveBeenCalledWith(expect.stringContaining('sha456'));
     });
 
     it('falls back to branch baseline when cache and CI fail', async () => {expect.hasAssertions();

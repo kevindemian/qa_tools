@@ -169,7 +169,7 @@ describe('Case-d — dashboard menu', () => {
         const { default: caseD } = await import('./commands/case-d.js');
         await caseD.handler(ctx);
 
-        expect(showSelect).toHaveBeenCalled();
+        expect(showSelect).toHaveBeenCalledTimes(1);
     });
 
     it('executes case25 when user selects traceability', async () => {expect.hasAssertions();
@@ -266,7 +266,7 @@ describe('Case25 — Traceability Matrix', () => {
         const { default: case25 } = await import('./commands/case25.js');
         await case25.handler(ctx);
 
-        expect(loadMetrics).toHaveBeenCalled();
+        expect(loadMetrics).toHaveBeenCalledTimes(1);
         expect(buildTraceabilityMatrix).toHaveBeenCalledWith(store);
     });
 
@@ -356,7 +356,7 @@ describe('Case25 — Traceability Matrix', () => {
 
         const { printError } = await import('../shared/prompt.js');
 
-        expect(vi.mocked(printError)).toHaveBeenCalled();
+        expect(vi.mocked(printError)).toHaveBeenCalledTimes(1);
     });
 
     it('calls title with correct label', async () => {expect.hasAssertions();
@@ -515,7 +515,7 @@ describe('Case26 — Release Score', () => {
 
         const { printError } = await import('../shared/prompt.js');
 
-        expect(vi.mocked(printError)).toHaveBeenCalled();
+        expect(vi.mocked(printError)).toHaveBeenCalledTimes(1);
     });
 
     it('calls title with correct label', async () => {expect.hasAssertions();
@@ -693,7 +693,7 @@ describe('Case27 — Coverage Dashboard', () => {
 
         const { printError } = await import('../shared/prompt.js');
 
-        expect(vi.mocked(printError)).toHaveBeenCalled();
+        expect(vi.mocked(printError)).toHaveBeenCalledTimes(1);
     });
 
     it('does not call writeReport when analysis fails', async () => {expect.hasAssertions();

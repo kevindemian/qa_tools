@@ -371,7 +371,7 @@ describe('Main', () => {
         it('calls updateState with history entry', () => {
             mainModule.pushHistory('test-op', 'detail-x', 'ok');
 
-            expect(state.update).toHaveBeenCalled();
+            expect(state.update).toHaveBeenCalledTimes(1);
         });
     });
 
@@ -563,7 +563,7 @@ describe('Main', () => {
             await mainModule.handleShowHistory();
 
             expect(prompt.title).toHaveBeenCalledWith('Histórico de operações');
-            expect(prompt.tableView).toHaveBeenCalled();
+            expect(prompt.tableView).toHaveBeenCalledTimes(1);
         });
 
         it('warns when history is empty', async () => {expect.hasAssertions();
@@ -660,7 +660,7 @@ describe('Main', () => {
         it('calls shared printSessionSummary', () => {
             mainModule.printSessionSummary();
 
-            expect(cliBase.printSessionSummary).toHaveBeenCalled();
+            expect(cliBase.printSessionSummary).toHaveBeenCalledTimes(1);
         });
     });
 
@@ -983,7 +983,7 @@ describe('Main', () => {
 
             expect(result).toBeTruthy();
             expect(prompt.title).toHaveBeenCalledWith('Até logo!');
-            expect(breadcrumbs.clearBreadcrumbs).toHaveBeenCalled();
+            expect(breadcrumbs.clearBreadcrumbs).toHaveBeenCalledTimes(1);
         });
 
         it('does not set exit code when session has errors — no exitCode', async () => {expect.hasAssertions();
@@ -1202,7 +1202,7 @@ describe('Main', () => {
             const result = await mainModule._promptChoice('0-9');
 
             expect(result).toBe('/exit');
-            expect(prompt.showSelect).toHaveBeenCalled();
+            expect(prompt.showSelect).toHaveBeenCalledTimes(1);
         });
     });
 

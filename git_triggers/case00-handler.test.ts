@@ -34,8 +34,8 @@ describe('Case00 Handler', () => {
 
             expect(title).toHaveBeenCalledWith('Setup Wizard');
             expect(info).toHaveBeenCalledWith('Iniciando wizard de configuração de CI/CD...');
-            expect(divider).toHaveBeenCalled();
-            expect(mockSetupModule.main).toHaveBeenCalled();
+            expect(divider).toHaveBeenCalledWith();
+            expect(mockSetupModule.main).toHaveBeenCalledWith();
             expect(pushHistory).toHaveBeenCalledWith('setup-wizard', 'wizard concluído', 'ok');
             expect(result).toBeFalsy();
         });

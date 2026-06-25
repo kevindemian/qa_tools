@@ -227,7 +227,7 @@ describe('Store', () => {
                 const warnSpy = vi.spyOn(rootLogger, 'warn');
 
                 expect(() => store.put('sha1', makeMeta('sha1'))).toThrow('ENOSPC');
-                expect(warnSpy).toHaveBeenCalled();
+                expect(warnSpy).toHaveBeenCalledWith(expect.stringContaining('store:'));
             });
 
             it('logs warning when backend write fails in saveReport', () => {
@@ -244,7 +244,7 @@ describe('Store', () => {
                 const warnSpy = vi.spyOn(rootLogger, 'warn');
 
                 expect(() => store.saveReport('sha1', [{ title: 't', state: 'passed', duration: 1 }])).toThrow('EACCES');
-                expect(warnSpy).toHaveBeenCalled();
+                expect(warnSpy).toHaveBeenCalledWith(expect.stringContaining('store:'));
             });
 
             it('logs warning when backend write fails in appendBranch', () => {
@@ -261,7 +261,7 @@ describe('Store', () => {
                 const warnSpy = vi.spyOn(rootLogger, 'warn');
 
                 expect(() => store.appendBranch('main', { sha: 'abc', timestamp: 1 })).toThrow('ENOSPC');
-                expect(warnSpy).toHaveBeenCalled();
+                expect(warnSpy).toHaveBeenCalledWith(expect.stringContaining('store:'));
             });
 
             it('logs warning when backend write fails in saveMetrics', () => {
@@ -278,7 +278,7 @@ describe('Store', () => {
                 const warnSpy = vi.spyOn(rootLogger, 'warn');
 
                 expect(() => store.saveMetrics({ runs: [] })).toThrow('ENOSPC');
-                expect(warnSpy).toHaveBeenCalled();
+                expect(warnSpy).toHaveBeenCalledWith(expect.stringContaining('store:'));
             });
         });
 
@@ -296,7 +296,7 @@ describe('Store', () => {
                 const result = store.lookup('any-sha');
 
                 expect(result).toBeNull();
-                expect(warnSpy).toHaveBeenCalled();
+                expect(warnSpy).toHaveBeenCalledWith(expect.stringContaining('store:'));
 
                 warnSpy.mockRestore();
             });
@@ -330,7 +330,7 @@ describe('Store', () => {
                 const warnSpy = vi.spyOn(rootLogger, 'warn');
                 store.lookup('any-sha');
 
-                expect(warnSpy).toHaveBeenCalled();
+                expect(warnSpy).toHaveBeenCalledWith(expect.stringContaining('store:'));
 
                 warnSpy.mockRestore();
             });
@@ -349,7 +349,7 @@ describe('Store', () => {
                 const warnSpy = vi.spyOn(rootLogger, 'warn');
                 store.listByProject();
 
-                expect(warnSpy).toHaveBeenCalled();
+                expect(warnSpy).toHaveBeenCalledWith(expect.stringContaining('store:'));
 
                 warnSpy.mockRestore();
             });
@@ -441,7 +441,7 @@ describe('Store', () => {
                 const warnSpy = vi.spyOn(rootLogger, 'warn');
 
                 expect(() => store.saveMetrics({ runs: [] })).toThrow('EACCES');
-                expect(warnSpy).toHaveBeenCalled();
+                expect(warnSpy).toHaveBeenCalledWith(expect.stringContaining('store:'));
             });
         });
     });

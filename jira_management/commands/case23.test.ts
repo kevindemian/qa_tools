@@ -84,7 +84,7 @@ describe('Case23', () => {
 
             await case23Handler.handler(makeMockCommandContext());
 
-            expect(tableView).toHaveBeenCalled();
+            expect(tableView).toHaveBeenCalledWith(expect.any(Array), expect.arrayContaining(['ID']));
         });
 
         it('warns when no recent records', async () => {expect.hasAssertions();

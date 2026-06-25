@@ -207,8 +207,8 @@ describe('Handlers', () => {
             const mod = case03;
             await mod.handler(baseContext);
 
-            expect(prompt.printError).toHaveBeenCalled();
-            expect(logger.rootLogger.error).toHaveBeenCalled();
+            expect(prompt.printError).toHaveBeenCalledTimes(1);
+            expect(logger.rootLogger.error).toHaveBeenCalledTimes(1);
         });
     });
 
@@ -338,7 +338,7 @@ describe('Handlers', () => {
             const mod = case04;
             await mod.handler(baseContext);
 
-            expect(prompt.printError).toHaveBeenCalled();
+            expect(prompt.printError).toHaveBeenCalledTimes(1);
         });
     });
 
@@ -352,7 +352,7 @@ describe('Handlers', () => {
             const mod = case05;
             await mod.handler(baseContext);
 
-            expect(prompt.success).toHaveBeenCalled();
+            expect(prompt.success).toHaveBeenCalledTimes(1);
         });
 
         it('handles no tasks for version', async () => {expect.hasAssertions();
@@ -373,7 +373,7 @@ describe('Handlers', () => {
             const mod = case05;
             await mod.handler(baseContext);
 
-            expect(prompt.printError).toHaveBeenCalled();
+            expect(prompt.printError).toHaveBeenCalledTimes(1);
         });
     });
 
@@ -397,7 +397,7 @@ describe('Handlers', () => {
             const mod = case06;
             await mod.handler(baseContext);
 
-            expect(prompt.printError).toHaveBeenCalled();
+            expect(prompt.printError).toHaveBeenCalledTimes(1);
         });
     });
 
@@ -433,7 +433,7 @@ describe('Handlers', () => {
             const mod = case07;
             await mod.handler(baseContext);
 
-            expect(prompt.printSummary).toHaveBeenCalled();
+            expect(prompt.printSummary).toHaveBeenCalledTimes(1);
         });
 
         it('moves tasks to done successfully', async () => {expect.hasAssertions();
@@ -504,7 +504,7 @@ describe('Handlers', () => {
             const mod = case08;
             const result = await mod.handler(baseContext);
 
-            expect(prompt.printError).toHaveBeenCalled();
+            expect(prompt.printError).toHaveBeenCalledTimes(1);
             expect(result).toBeFalsy();
         });
     });
@@ -710,7 +710,7 @@ describe('Handlers', () => {
             const mod = case14;
             await mod.handler(baseContext);
 
-            expect(state.update).toHaveBeenCalled();
+            expect(state.update).toHaveBeenCalledTimes(1);
         });
     });
 
@@ -791,7 +791,7 @@ describe('Handlers', () => {
             await mod.handler(baseContext);
             const prompt = vi.mocked(promptModule);
 
-            expect(prompt.printSummary).toHaveBeenCalled();
+            expect(prompt.printSummary).toHaveBeenCalledTimes(1);
             expect(baseContext.pushHistory).toHaveBeenCalledWith('diagnostico', expect.stringContaining('3/4'), 'ok');
         });
 
@@ -805,7 +805,7 @@ describe('Handlers', () => {
             await mod.handler(baseContext);
             const prompt = vi.mocked(promptModule);
 
-            expect(prompt.printSummary).toHaveBeenCalled();
+            expect(prompt.printSummary).toHaveBeenCalledTimes(1);
             expect(baseContext.pushHistory).toHaveBeenCalledWith('diagnostico', expect.stringContaining('2/4'), 'error');
         });
 
@@ -819,7 +819,7 @@ describe('Handlers', () => {
             await mod.handler(baseContext);
             const prompt = vi.mocked(promptModule);
 
-            expect(prompt.printSummary).toHaveBeenCalled();
+            expect(prompt.printSummary).toHaveBeenCalledTimes(1);
             expect(baseContext.pushHistory).toHaveBeenCalledWith('diagnostico', expect.stringContaining('2/4'), 'error');
         });
 
@@ -833,7 +833,7 @@ describe('Handlers', () => {
             await mod.handler(baseContext);
             const prompt = vi.mocked(promptModule);
 
-            expect(prompt.printSummary).toHaveBeenCalled();
+            expect(prompt.printSummary).toHaveBeenCalledTimes(1);
             expect(baseContext.pushHistory).toHaveBeenCalledWith('diagnostico', expect.stringContaining('2/4'), 'error');
         });
     });

@@ -208,7 +208,7 @@ describe('Import Orchestrator', () => {
             });
 
             expect(STATE.update).toHaveBeenCalledWith(expect.any(Function));
-            expect(updateFinalState).toHaveBeenCalled();
+            expect(updateFinalState).toHaveBeenCalledWith(expect.any(String), expect.any(String), expect.any(String), expect.any(Array));
         });
     });
 

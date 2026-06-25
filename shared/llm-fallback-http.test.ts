@@ -463,7 +463,7 @@ describe('Llm Fallback Http', () => {
             };
             await sendToProvider(cfg, 'system', 'user');
 
-            expect(checkCircuitBreaker).toHaveBeenCalled();
+            expect(checkCircuitBreaker).toHaveBeenCalledWith('sk-test@gpt-4@https://api.test.com/v1');
         });
 
         it('tracks usage metrics', async () => {expect.hasAssertions();

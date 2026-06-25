@@ -177,7 +177,7 @@ describe('Prompt Ui', () => {
         it('prints green OK message', () => {
             success('done');
 
-            expect(mockPrint).toHaveBeenCalled();
+            expect(mockPrint).toHaveBeenCalledWith(expect.stringContaining('done'));
         });
 
         it('does not print when quiet', () => {
@@ -192,14 +192,14 @@ describe('Prompt Ui', () => {
         it('prints red error message', () => {
             error('failed');
 
-            expect(mockPrint).toHaveBeenCalled();
+            expect(mockPrint).toHaveBeenCalledWith(expect.stringContaining('failed'));
         });
 
         it('prints even when quiet', () => {
             __setConfig(makeConfig({ quiet: true }));
             error('failed');
 
-            expect(mockPrint).toHaveBeenCalled();
+            expect(mockPrint).toHaveBeenCalledWith(expect.stringContaining('failed'));
         });
     });
 
@@ -207,7 +207,7 @@ describe('Prompt Ui', () => {
         it('prints yellow warn message', () => {
             warn('caution');
 
-            expect(mockPrint).toHaveBeenCalled();
+            expect(mockPrint).toHaveBeenCalledWith(expect.stringContaining('caution'));
         });
     });
 
@@ -215,7 +215,7 @@ describe('Prompt Ui', () => {
         it('prints cyan info message', () => {
             info('info');
 
-            expect(mockPrint).toHaveBeenCalled();
+            expect(mockPrint).toHaveBeenCalledWith(expect.stringContaining('info'));
         });
 
         it('does not print when quiet', () => {
@@ -230,7 +230,7 @@ describe('Prompt Ui', () => {
         it('prints info line', () => {
             helpLine('help');
 
-            expect(mockPrint).toHaveBeenCalled();
+            expect(mockPrint).toHaveBeenCalledWith(expect.stringContaining('help'));
         });
     });
 
@@ -246,7 +246,7 @@ describe('Prompt Ui', () => {
         it('uses box with border when not quiet', () => {
             title('Section');
 
-            expect(mockPrint).toHaveBeenCalled();
+            expect(mockPrint).toHaveBeenCalledWith(expect.stringContaining('Section'));
         });
 
         it('uses plain dashes when quiet', () => {
@@ -268,7 +268,7 @@ describe('Prompt Ui', () => {
             mockGetBreadcrumbPath.mockReturnValue('TESTS');
             title('Criar teste');
 
-            expect(mockPrint).toHaveBeenCalled();
+            expect(mockPrint).toHaveBeenCalledWith(expect.stringContaining('TESTS'));
         });
     });
 
@@ -395,20 +395,20 @@ describe('Prompt Ui', () => {
             __setConfig(makeConfig({ quiet: false }));
             printError('Context', { response: { data: { errorMessages: ['Rate limit atingido'] } } });
 
-            expect(mockPrint).toHaveBeenCalled();
+            expect(mockPrint).toHaveBeenCalledWith(expect.any(String));
         });
 
         it('prints compact error when quiet', () => {
             __setConfig(makeConfig({ quiet: true }));
             printError('Context', { response: { data: { errorMessages: ['Rate limit atingido'] } } });
 
-            expect(mockPrint).toHaveBeenCalled();
+            expect(mockPrint).toHaveBeenCalledWith(expect.any(String));
         });
 
         it('prints unexpected error when unknown', () => {
             printError('Test', 'something broke');
 
-            expect(mockPrint).toHaveBeenCalled();
+            expect(mockPrint).toHaveBeenCalledWith(expect.any(String));
         });
     });
 
@@ -425,32 +425,32 @@ describe('Prompt Ui', () => {
         it('prints all-pass summary', () => {
             printSummary(okResults);
 
-            expect(mockPrint).toHaveBeenCalled();
+            expect(mockPrint).toHaveBeenCalledWith(expect.any(String));
         });
 
         it('prints all-pass summary with testExecution', () => {
             printSummary(okResults, 'EXEC-1');
 
-            expect(mockPrint).toHaveBeenCalled();
+            expect(mockPrint).toHaveBeenCalledWith(expect.any(String));
         });
 
         it('prints mixed summary with errors', () => {
             printSummary(mixedResults);
 
-            expect(mockPrint).toHaveBeenCalled();
+            expect(mockPrint).toHaveBeenCalledWith(expect.any(String));
         });
 
         it('prints compact summary when quiet', () => {
             __setConfig(makeConfig({ quiet: true }));
             printSummary(mixedResults);
 
-            expect(mockPrint).toHaveBeenCalled();
+            expect(mockPrint).toHaveBeenCalledWith(expect.any(String));
         });
 
         it('handles empty results', () => {
             printSummary([]);
 
-            expect(mockPrint).toHaveBeenCalled();
+            expect(mockPrint).toHaveBeenCalledWith(expect.any(String));
         });
     });
 
@@ -492,13 +492,13 @@ describe('Prompt Ui', () => {
         it('warns on null data', () => {
             tableView(null);
 
-            expect(mockPrint).toHaveBeenCalled();
+            expect(mockPrint).toHaveBeenCalledWith(expect.stringContaining('Nenhum dado'));
         });
 
         it('warns on empty data', () => {
             tableView([]);
 
-            expect(mockPrint).toHaveBeenCalled();
+            expect(mockPrint).toHaveBeenCalledWith(expect.stringContaining('Nenhum dado'));
         });
 
         it('renders table with data', () => {
@@ -508,21 +508,21 @@ describe('Prompt Ui', () => {
             ];
             tableView(data);
 
-            expect(mockPrint).toHaveBeenCalled();
+            expect(mockPrint).toHaveBeenCalledWith(expect.any(String));
         });
 
         it('renders table with specific columns', () => {
             const data = [{ name: 'test1', status: 'pass', extra: 'x' }];
             tableView(data, ['name', 'status']);
 
-            expect(mockPrint).toHaveBeenCalled();
+            expect(mockPrint).toHaveBeenCalledWith(expect.any(String));
         });
 
         it('colors status column', () => {
             const data = [{ name: 'test1', status: 'pass' }];
             tableView(data, ['name', 'status'], 'status');
 
-            expect(mockPrint).toHaveBeenCalled();
+            expect(mockPrint).toHaveBeenCalledWith(expect.any(String));
         });
     });
 

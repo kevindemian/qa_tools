@@ -112,8 +112,8 @@ describe('Gitlab Pr', () => {
 
             const result = await glCreateMergeRequest(mockClient, ...args);
 
-            expect(apiGet).toHaveBeenCalled();
-            expect(apiPut).toHaveBeenCalled();
+            expect(apiGet).toHaveBeenCalledWith(mockClient, expect.stringContaining('/merge_requests'), expect.objectContaining({ operation: 'buscar MRs' }));
+            expect(apiPut).toHaveBeenCalledWith(mockClient, expect.stringContaining('/merge_requests/5'), expect.objectContaining({ title: 'MR Title', description: 'MR Desc' }), { operation: 'atualizar MR' });
             expect(result).toMatchObject({ iid: 5 });
         });
 

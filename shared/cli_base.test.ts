@@ -160,7 +160,9 @@ describe('CLI Base', () => {
             const onExit = vi.fn();
             cliBase.setupSigint(null, onExit);
 
-            expect(createInterfaceSpy).toHaveBeenCalled();
+            expect(createInterfaceSpy).toHaveBeenCalledWith(
+                expect.objectContaining({ input: process.stdin, output: process.stdout }),
+            );
 
             const questionSpy = vi.spyOn(mockRl, 'question');
 
@@ -181,12 +183,12 @@ describe('CLI Base', () => {
             const questionFn = nonNull(mockRl.question.mock.calls[0])[1] as (answer: string) => void;
             questionFn('s');
 
-            expect(onExit).toHaveBeenCalled();
+            expect(onExit).toHaveBeenCalledWith();
             expect(MOCK_PROMPT.info).toHaveBeenCalledWith('Até logo!');
 
             await vi.advanceTimersByTimeAsync(2000);
 
-            expect(exitSpy).toHaveBeenCalled();
+            expect(exitSpy).toHaveBeenCalledWith(expect.any(Number));
 
             exitSpy.mockRestore();
             vi.useRealTimers();
@@ -221,16 +223,19 @@ describe('CLI Base', () => {
             cliBase.setupSigint(null, onExit);
             capturedHandler();
 
-            expect(questionSpy).toHaveBeenCalled();
+            expect(questionSpy).toHaveBeenCalledWith(
+                expect.any(String),
+                expect.any(Function),
+            );
 
             capturedHandler();
 
-            expect(onExit).toHaveBeenCalled();
+            expect(onExit).toHaveBeenCalledWith();
             expect(MOCK_PROMPT.info).toHaveBeenCalledWith('Até logo!');
 
             await vi.advanceTimersByTimeAsync(2000);
 
-            expect(exitSpy).toHaveBeenCalled();
+            expect(exitSpy).toHaveBeenCalledWith(expect.any(Number));
 
             exitSpy.mockRestore();
             vi.useRealTimers();
@@ -269,7 +274,7 @@ describe('CLI Base', () => {
 
             await vi.advanceTimersByTimeAsync(2000);
 
-            expect(exitSpy).toHaveBeenCalled();
+            expect(exitSpy).toHaveBeenCalledWith(expect.any(Number));
 
             exitSpy.mockRestore();
             vi.useRealTimers();

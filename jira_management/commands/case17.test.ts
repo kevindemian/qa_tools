@@ -146,7 +146,7 @@ describe('Case17', () => {
             const mod = case17Module;
             await mod.handler(baseContext);
 
-            expect(mockGetJira).toHaveBeenCalled();
+            expect(mockGetJira).toHaveBeenCalledTimes(1);
             expect(openModule.openWithFallback).toHaveBeenCalledWith(expect.any(String), 'Relatório', prompt.info);
         });
 
@@ -281,7 +281,7 @@ describe('Case17', () => {
             const mod = case17Module;
             await mod.handler(baseContext);
 
-            expect(analysis.analyzeFailuresWithReport).toHaveBeenCalled();
+            expect(analysis.analyzeFailuresWithReport).toHaveBeenCalledTimes(1);
         });
 
         it('handles _fetchJiraContext when issues list is empty', async () => {expect.hasAssertions();
@@ -307,7 +307,7 @@ describe('Case17', () => {
             const mod = case17Module;
             await mod.handler(baseContext);
 
-            expect(mockGetJira).toHaveBeenCalled();
+            expect(mockGetJira).toHaveBeenCalledTimes(1);
             expect(openModule.openWithFallback).toHaveBeenCalledWith(expect.any(String), 'Relatório', prompt.info);
         });
 
@@ -334,7 +334,7 @@ describe('Case17', () => {
             const mod = case17Module;
             await mod.handler(baseContext);
 
-            expect(mockGetJira).toHaveBeenCalled();
+            expect(mockGetJira).toHaveBeenCalledTimes(1);
         });
 
         it('handles computeDiff with missing tests field', async () => {expect.hasAssertions();
@@ -505,7 +505,7 @@ describe('Case17', () => {
             const mod = case17Module;
             await mod.handler(baseContext);
 
-            expect(analysis.analyzeFailuresWithReport).toHaveBeenCalled();
+            expect(analysis.analyzeFailuresWithReport).toHaveBeenCalledTimes(1);
         });
 
         it('handles empty filepath early return (line 166-167)', async () => {expect.hasAssertions();
@@ -518,7 +518,7 @@ describe('Case17', () => {
             const result = await mod.handler(baseContext);
 
             expect(result).toBeUndefined();
-            expect(prompt.printError).toHaveBeenCalled();
+            expect(prompt.printError).toHaveBeenCalledTimes(1);
         });
 
         it('handles parse error in report file (line 175-176)', async () => {expect.hasAssertions();

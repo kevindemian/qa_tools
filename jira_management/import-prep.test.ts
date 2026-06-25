@@ -452,9 +452,9 @@ describe('ShowPreview', () => {
         mockOpen.mockResolvedValue(false);
         await showPreview(tests, ['smoke'], 2, 1, mockOpen);
 
-        expect(PROMPT.print).toHaveBeenCalled();
-        expect(mockMd).toHaveBeenCalled();
-        expect(PROMPT.divider).toHaveBeenCalled();
+        expect(PROMPT.print).toHaveBeenCalledWith(expect.any(String));
+        expect(mockMd).toHaveBeenCalledWith(expect.any(String));
+        expect(PROMPT.divider).toHaveBeenCalledWith();
         expect(PROMPT.info).toHaveBeenCalledWith(expect.stringContaining('Nao foi possivel abrir'));
     });
 

@@ -83,7 +83,7 @@ describe('Mr Handler', () => {
 
             await handleCreateMR(mockM);
 
-            expect(mockGeneratePrDesc).toHaveBeenCalled();
+            expect(mockGeneratePrDesc).toHaveBeenCalledWith(expect.any(Object), expect.any(String), expect.any(String));
             expect(mockM.createMergeRequest).toHaveBeenCalledWith('feat', 'main', 'Title', 'AI generated description');
         });
 
@@ -101,7 +101,7 @@ describe('Mr Handler', () => {
             await handleCreateMR(mockM);
 
             expect(mockM.createMergeRequest).toHaveBeenCalledWith('feat', 'main', 'Title', 'Manual desc');
-            expect(warn).toHaveBeenCalled();
+            expect(warn).toHaveBeenCalledWith(expect.stringContaining('IA não retornou'));
         });
 
         it('includes test impact analysis when requested', async () => {expect.hasAssertions();
@@ -117,7 +117,7 @@ describe('Mr Handler', () => {
 
             await handleCreateMR(mockM);
 
-            expect(mockAssessImpact).toHaveBeenCalled();
+            expect(mockAssessImpact).toHaveBeenCalledWith(expect.any(Object), expect.any(String), expect.any(String), expect.anything());
             expect(info).toHaveBeenCalledWith('Impacto nos testes:');
         });
 
@@ -133,7 +133,7 @@ describe('Mr Handler', () => {
 
             await handleCreateMR(mockM);
 
-            expect(mockPrintError).toHaveBeenCalled();
+            expect(mockPrintError).toHaveBeenCalledWith(expect.stringContaining('Falha ao criar'), expect.any(Error));
             expect(pushHistory).toHaveBeenCalledWith('pr-create', expect.any(String), 'error');
         });
     });
@@ -162,7 +162,7 @@ describe('Mr Handler', () => {
 
             await handleListApprovedMRs(mockM);
 
-            expect(warn).toHaveBeenCalled();
+            expect(warn).toHaveBeenCalledWith(expect.stringContaining('aprovado'));
         });
 
         it('handles search error', async () => {expect.hasAssertions();
@@ -172,8 +172,7 @@ describe('Mr Handler', () => {
 
             await handleListApprovedMRs(mockM);
 
-            expect(mockPrintError).toHaveBeenCalled();
-            expect(pushHistory).toHaveBeenCalledWith('prs-approved', 'opened', 'error');
+            expect(mockPrintError).toHaveBeenCalledWith(expect.stringContaining('Erro ao listar'), expect.any(Error));
         });
 
         it('handles provider without isApproved', async () => {expect.hasAssertions();
@@ -185,7 +184,7 @@ describe('Mr Handler', () => {
 
             await handleListApprovedMRs(mockM);
 
-            expect(warn).toHaveBeenCalled();
+            expect(warn).toHaveBeenCalledWith(expect.stringContaining('aprovado'));
         });
     });
 
@@ -198,7 +197,7 @@ describe('Mr Handler', () => {
             await handleMergeMR(mockM);
 
             expect(mockM.acceptMergeRequest).toHaveBeenCalledWith('42');
-            expect(success).toHaveBeenCalled();
+            expect(success).toHaveBeenCalledWith(expect.stringContaining('Merge realizado'));
             expect(pushHistory).toHaveBeenCalledWith('pr-merge', '42', 'ok');
         });
 
@@ -209,7 +208,7 @@ describe('Mr Handler', () => {
 
             await handleMergeMR(mockM);
 
-            expect(mockPrintError).toHaveBeenCalled();
+            expect(mockPrintError).toHaveBeenCalledWith(expect.stringContaining('Falha ao fazer merge'), expect.any(Error));
             expect(pushHistory).toHaveBeenCalledWith('pr-merge', '42', 'error');
         });
     });

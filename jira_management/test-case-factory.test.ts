@@ -120,7 +120,7 @@ describe('TestCaseFactory', () => {
             });
 
             expect(result).toStrictEqual({ key: 'TEST-42', skipped: true });
-            expect(mockJiraResource['postJiraResource']).not.toHaveBeenCalled();
+            expect(mockJiraResource['postJiraResource']).not.toHaveBeenCalledWith();
             expect(opLog.info).toHaveBeenCalledWith('Issue pulada (já existe)', {
                 key: 'TEST-42',
                 title: 'Login Test',
@@ -163,7 +163,7 @@ describe('TestCaseFactory', () => {
             });
 
             expect(result).toStrictEqual({ key: 'TEST-44' });
-            expect(mockJiraResource['postJiraResource']).toHaveBeenCalled();
+            expect(mockJiraResource['postJiraResource']).toHaveBeenCalledWith('issue', testData);
         });
 
         it('does not search when skipExisting is false', async () => {expect.hasAssertions();
@@ -179,8 +179,8 @@ describe('TestCaseFactory', () => {
                 skipExisting: false,
             });
 
-            expect(mockJiraResource['searchJiraIssues']).not.toHaveBeenCalled();
-            expect(mockJiraResource['postJiraResource']).toHaveBeenCalled();
+            expect(mockJiraResource['searchJiraIssues']).not.toHaveBeenCalledWith();
+            expect(mockJiraResource['postJiraResource']).toHaveBeenCalledWith('issue', testData);
         });
 
         it('shows prompt info when quiet is false and issue skipped', async () => {expect.hasAssertions();
@@ -234,7 +234,7 @@ describe('TestCaseFactory', () => {
 
             expect(update).toHaveBeenCalledWith(1);
             expect(update).toHaveBeenCalledWith(2);
-            expect(stop).toHaveBeenCalled();
+            expect(stop).toHaveBeenCalledWith();
         });
 
         it('aborts on step error when onError returns abort', async () => {expect.hasAssertions();

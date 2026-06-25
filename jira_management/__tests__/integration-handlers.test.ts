@@ -151,7 +151,7 @@ describe('Case03 — Create Version', () => {
         const { default: case03 } = await import('../commands/case03.js');
         await case03.handler(ctx);
 
-        expect(safeJiraCall).toHaveBeenCalled();
+        expect(safeJiraCall).toHaveBeenCalledWith(ctx, 'criar-versão', 'v1.0', expect.any(Function));
     });
 });
 
@@ -173,7 +173,7 @@ describe('Case04 — Add Sprint Tasks', () => {
         const { default: case04 } = await import('../commands/case04.js');
         await case04.handler(ctx);
 
-        expect(spy).toHaveBeenCalled();
+        expect(spy).toHaveBeenCalledWith(['TASK-1'], 'TEST', 'v2.0');
     });
 
     it('prompts for manual input when no in-memory tasks', async () => {expect.hasAssertions();
@@ -190,7 +190,7 @@ describe('Case04 — Add Sprint Tasks', () => {
         const { default: case04 } = await import('../commands/case04.js');
         await case04.handler(ctx);
 
-        expect(spy).toHaveBeenCalled();
+        expect(spy).toHaveBeenCalledWith(['KEY-1'], 'TEST', expect.any(String));
     });
 
     it('pushes history with operation result', async () => {expect.hasAssertions();
@@ -256,8 +256,8 @@ describe('Case05 — Update Package Version', () => {
         const { default: case05 } = await import('../commands/case05.js');
         await case05.handler(ctx);
 
-        expect(mockPm.updateReleaseNotes).toHaveBeenCalled();
-        expect(mockPm.updateVersion).toHaveBeenCalled();
+        expect(mockPm.updateReleaseNotes).toHaveBeenCalledWith('v2.7.0', ['[TASK-1] desc']);
+        expect(mockPm.updateVersion).toHaveBeenCalledWith('2.7.0');
     });
 
     it('pushes history on success', async () => {expect.hasAssertions();
@@ -289,7 +289,7 @@ describe('Case06 — Check Release Task Status', () => {
         const { default: case06 } = await import('../commands/case06.js');
         await case06.handler(ctx);
 
-        expect(safeJiraCall).toHaveBeenCalled();
+        expect(safeJiraCall).toHaveBeenCalledWith(ctx, 'verificar-status', 'v2.8.0', expect.any(Function));
     });
 
     it('pushes history with version name', async () => {expect.hasAssertions();
@@ -342,7 +342,7 @@ describe('Case07 — Close Tasks', () => {
         const { default: case07 } = await import('../commands/case07.js');
         await case07.handler(ctx);
 
-        expect(vi.mocked(warn)).toHaveBeenCalled();
+        expect(vi.mocked(warn)).toHaveBeenCalledWith('Nenhuma tarefa encontrada para esta versão.');
         expect(doneSpy).not.toHaveBeenCalled();
     });
 
@@ -425,7 +425,7 @@ describe('Case09 — Change Project', () => {
         const { default: case09 } = await import('../commands/case09.js');
         await case09.handler(ctx);
 
-        expect(vi.mocked(update)).toHaveBeenCalled();
+        expect(vi.mocked(update)).toHaveBeenCalledWith(expect.any(Function));
     });
 
     it('pushes history', async () => {expect.hasAssertions();
@@ -543,7 +543,7 @@ describe('Case13 — Create Test Execution', () => {
         await case13.handler(ctx);
         const { offerTestExecutionAssociation } = await import('../commands/test-execution-flow.js');
 
-        expect(vi.mocked(offerTestExecutionAssociation)).toHaveBeenCalled();
+        expect(vi.mocked(offerTestExecutionAssociation)).toHaveBeenCalledWith(ctx, ['KEY-1', 'KEY-2'], 'standalone');
     });
 
     it('calls showResults', async () => {expect.hasAssertions();
@@ -556,7 +556,7 @@ describe('Case13 — Create Test Execution', () => {
         await case13.handler(ctx);
         const { showResults } = await import('../commands/test-execution-flow.js');
 
-        expect(vi.mocked(showResults)).toHaveBeenCalled();
+        expect(vi.mocked(showResults)).toHaveBeenCalledWith(ctx, ['TASK-1'], { associated: false });
     });
 });
 
@@ -600,7 +600,7 @@ describe('Case24 — Setup Wizard', () => {
         const { default: case24 } = await import('../commands/case24.js');
         await case24.handler(ctx);
 
-        expect(vi.mocked(maybeRunFirstRunWizard)).toHaveBeenCalled();
+        expect(vi.mocked(maybeRunFirstRunWizard)).toHaveBeenCalledWith();
     });
 
     it('pushes history on success', async () => {expect.hasAssertions();

@@ -117,7 +117,7 @@ describe('Show Docs', () => {
             await showDocs();
 
             expect(mockWarn).toHaveBeenCalledWith('Nenhum documento encontrado em docs/.');
-            expect(mockDivider).toHaveBeenCalled();
+            expect(mockDivider).toHaveBeenCalledWith();
             expect(mockOpenWithFallback).not.toHaveBeenCalled();
         });
 

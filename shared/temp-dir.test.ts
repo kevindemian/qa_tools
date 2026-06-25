@@ -97,7 +97,7 @@ describe('Temp Dir', () => {
             });
 
             expect(() => writeReport('test.json', '{}')).toThrow('EACCES');
-            expect(warnSpy).toHaveBeenCalled();
+            expect(warnSpy).toHaveBeenCalledWith(expect.stringContaining('writeReport'));
         });
 
         it('logs and re-throws when writeFileSync fails (G1 bug-fix)', () => {
@@ -108,7 +108,7 @@ describe('Temp Dir', () => {
             });
 
             expect(() => writeReport('test.json', '{}')).toThrow('ENOSPC');
-            expect(warnSpy).toHaveBeenCalled();
+            expect(warnSpy).toHaveBeenCalledWith(expect.stringContaining('writeReport'));
         });
     });
 
@@ -128,7 +128,7 @@ describe('Temp Dir', () => {
             });
 
             expect(() => writeEphemeral('cache', 'data.json', '{}')).toThrow('EACCES');
-            expect(warnSpy).toHaveBeenCalled();
+            expect(warnSpy).toHaveBeenCalledWith(expect.stringContaining('writeEphemeral'));
         });
 
         it('logs and re-throws when writeFileSync fails (G1 bug-fix)', () => {
@@ -139,7 +139,7 @@ describe('Temp Dir', () => {
             });
 
             expect(() => writeEphemeral('cache', 'data.json', '{}')).toThrow('ENOSPC');
-            expect(warnSpy).toHaveBeenCalled();
+            expect(warnSpy).toHaveBeenCalledWith(expect.stringContaining('writeEphemeral'));
         });
     });
 
@@ -163,7 +163,7 @@ describe('Temp Dir', () => {
             });
 
             expect(() => ensureDirs()).toThrow('EACCES');
-            expect(warnSpy).toHaveBeenCalled();
+            expect(warnSpy).toHaveBeenCalledWith(expect.stringContaining('ensureDirs'));
         });
     });
 
@@ -212,7 +212,7 @@ describe('Temp Dir', () => {
             registerCleanup();
 
             expect(() => handlerRef.current?.()).not.toThrow();
-            expect(warnSpy).toHaveBeenCalled();
+            expect(warnSpy).toHaveBeenCalledWith(expect.stringContaining('cleanupTempDirs'));
         });
 
         it('removes all 3 temp subdirectories during cleanup when they exist (G6)', () => {

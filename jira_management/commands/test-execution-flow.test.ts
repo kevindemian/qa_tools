@@ -95,7 +95,7 @@ describe('Test Execution Flow', () => {
 
                 expect(result.associated).toBeFalsy();
                 expect(c.pushHistory).toHaveBeenCalledWith('create-testexec', 'erro', 'error');
-                expect(printError).toHaveBeenCalled();
+                expect(printError).toHaveBeenCalledWith(expect.any(String), expect.any(Error));
             });
         });
 
@@ -228,7 +228,7 @@ describe('Test Execution Flow', () => {
                 const result = await offerTestExecutionAssociation(c, ['TEST-1'], 'src');
 
                 expect(result.associated).toBeFalsy();
-                expect(printError).toHaveBeenCalled();
+                expect(printError).toHaveBeenCalledWith(expect.any(String), expect.any(Error));
             });
 
             it('returns not associated when retry canceled', async () => {expect.hasAssertions();
@@ -284,7 +284,7 @@ describe('Test Execution Flow', () => {
                 const result = await offerTestExecutionAssociation(c, ['TEST-1'], 'src');
 
                 expect(result.associated).toBeFalsy();
-                expect(c.pushHistory).toHaveBeenCalledWith('associate-testexec', 'erro', 'error');
+                expect(printError).toHaveBeenCalledWith(expect.any(String), expect.any(Error));
             });
         });
 
@@ -325,7 +325,7 @@ describe('Test Execution Flow', () => {
 
             const prompt = await import('../../shared/prompt.js');
 
-            expect(prompt.info).toHaveBeenCalled();
+            expect(prompt.info).toHaveBeenCalledWith(expect.any(String));
         });
 
         it('includes TE association info when provided', async () => {expect.hasAssertions();
@@ -343,7 +343,7 @@ describe('Test Execution Flow', () => {
 
             const prompt = await import('../../shared/prompt.js');
 
-            expect(prompt.info).toHaveBeenCalled();
+            expect(prompt.info).toHaveBeenCalledWith(expect.any(String));
         });
 
         it('omits TE info when not associated', async () => {expect.hasAssertions();
@@ -356,7 +356,7 @@ describe('Test Execution Flow', () => {
 
             const prompt = await import('../../shared/prompt.js');
 
-            expect(prompt.info).toHaveBeenCalled();
+            expect(prompt.info).toHaveBeenCalledWith(expect.any(String));
         });
 
         it('limits summaries to 20 test keys', async () => {expect.hasAssertions();

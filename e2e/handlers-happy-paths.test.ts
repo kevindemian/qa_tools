@@ -419,7 +419,7 @@ describe('Handlers Happy Paths', () => {
 
             expect(c.ctx.project_name).toBe('NEWPROJ');
             expect(c.pushHistory).toHaveBeenCalledWith('trocar-projeto', 'NEWPROJ', 'ok');
-            expect(stateModule.update).toHaveBeenCalled();
+            expect(stateModule.update).toHaveBeenCalledWith(expect.any(Function));
         });
     });
 
@@ -564,7 +564,7 @@ describe('Handlers Happy Paths', () => {
             await mod.handler(c);
 
             expect(c.pushHistory).toHaveBeenCalledWith('config-tests', '/tmp/cypress', 'ok');
-            expect(stateModule.update).toHaveBeenCalled();
+            expect(stateModule.update).toHaveBeenCalledWith(expect.any(Function));
         });
     });
 

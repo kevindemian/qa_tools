@@ -114,7 +114,7 @@ describe('Case18', () => {
             const mod = case18Module;
             await mod.handler(baseContext);
 
-            expect(prompt.printError).toHaveBeenCalled();
+            expect(prompt.printError).toHaveBeenCalledWith('Falha ao gerar casos de teste com IA', expect.any(Error));
         });
 
         it('handles template read error', async () => {expect.hasAssertions();
@@ -131,7 +131,7 @@ describe('Case18', () => {
             const mod = case18Module;
             await mod.handler(baseContext);
 
-            expect(prompt.printError).toHaveBeenCalled();
+            expect(prompt.printError).toHaveBeenCalledWith('Erro ao ler template de prompt', expect.any(Error));
         });
 
         it('handles valid test cases from llmPrompt', async () => {expect.hasAssertions();
@@ -253,7 +253,10 @@ describe('Case18', () => {
             const mod = case18Module;
             await mod.handler(baseContext);
 
-            expect(jiraLM.matchPreconditionByDualThreshold).toHaveBeenCalled();
+            expect(jiraLM.matchPreconditionByDualThreshold).toHaveBeenCalledWith(
+                'New precondition needed',
+                expect.any(Array),
+            );
             expect(createPrecondSpy).toHaveBeenCalledWith('TEST', 'New precondition needed');
             expect(prompt.info).toHaveBeenCalledWith(expect.stringContaining('Pre-condition criada'));
             expect(prompt.info).toHaveBeenCalledWith(expect.stringContaining('pre-conditions foram criadas'));
