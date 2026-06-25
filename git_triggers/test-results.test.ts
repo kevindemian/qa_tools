@@ -133,7 +133,7 @@ beforeEach(() => {
 
 // ── _jiraEnv ─────────────────────────────────────────────────────────────
 
-describe('_JiraEnv', () => {
+describe('JiraEnv', () => {
     it('returns jira config when all vars are set', () => {
         const result = mod._jiraEnv();
 
@@ -148,7 +148,7 @@ describe('_JiraEnv', () => {
 
 // ── _resolveGlob ─────────────────────────────────────────────────────────
 
-describe('_ResolveGlob', () => {
+describe('ResolveGlob', () => {
     it('returns resolved path when glob matches', () => {
         mockGlobSync.mockReturnValueOnce(['/tmp/mapping.json']);
         const result = mod._resolveGlob('/tmp/*.json');

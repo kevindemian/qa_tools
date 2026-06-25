@@ -283,7 +283,7 @@ describe('HTTP Client', () => {
         });
     });
 
-    describe('429 retry-after header (lines 128-129)', () => {
+    describe('HTTP 429 retry-after header', () => {
         it('uses Retry-After value for wait time when header is a valid number', async () => {expect.hasAssertions();
 
             httpClient.createHttpClient({ baseUrl: 'https://api.test.com' });

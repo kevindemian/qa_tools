@@ -34,11 +34,11 @@ import JiraLinkManager from '../jira_link_manager.js';
 import CsvResource from '../csv_resource.js';
 import { SessionContext } from '../../shared/session-context.js';
 
-// eslint-disable-next-line no-var
-var mockConfigMod: Record<string, unknown>;
+const mockConfigMod = vi.hoisted(() => {
+    return {};
+});
 
 vi.mock('../../shared/config', () => {
-    mockConfigMod = {};
     const get = vi.fn((key: string) => mockConfigMod[key] as string);
     mockConfigMod['get'] = get;
     mockConfigMod['getInstance'] = vi.fn(() => ({ get }));
@@ -61,15 +61,15 @@ interface CreateTestsMock {
     createTestExecutionWithLinks: Mock<(params: object) => Promise<{ key: string; summary: string } | null>>;
 }
 
-// eslint-disable-next-line no-var
-var mockCreateTests: CreateTestsMock;
-
-vi.mock('../create_tests', () => {
-    mockCreateTests = {
+const mockCreateTests = vi.hoisted(() => {
+    return {
         createTestsFromCsv: vi.fn<(opts: { onBusy: (v: boolean) => void }) => Promise<CreateTestsResult | undefined>>(),
         createTestsFromJson: vi.fn<(params: object) => Promise<CreateTestsResult | undefined>>(),
         createTestExecutionWithLinks: vi.fn<(params: object) => Promise<{ key: string; summary: string } | null>>(),
     };
+});
+
+vi.mock('../create_tests', () => {
     return { default: mockCreateTests };
 });
 
@@ -782,6 +782,8 @@ describe('Case16 — config JSON directory', () => {
         prompt.ask.mockResolvedValueOnce('/json');
         const mod = case16;
         await mod.handler(baseContext);
+
+        expect(prompt.success).toHaveBeenCalledWith(expect.stringContaining('/json'));
     });
 });
 

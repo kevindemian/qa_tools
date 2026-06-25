@@ -38,7 +38,7 @@ describe('PreconditionHandler', () => {
         handler = new PreconditionHandler(mockJiraResource);
     });
 
-    describe('_GetPreconditionFieldId', () => {
+    describe('GetPreconditionFieldId', () => {
         it('returns cached value on second call', async () => {expect.hasAssertions();
 
             const fields = [
@@ -104,7 +104,7 @@ describe('PreconditionHandler', () => {
         });
     });
 
-    describe('_ResolvePreconditionIssueTypeId', () => {
+    describe('ResolvePreconditionIssueTypeId', () => {
         it('returns the issue type id for Pre-condition', async () => {expect.hasAssertions();
 
             mockJiraResource.getJiraResource.mockResolvedValue([

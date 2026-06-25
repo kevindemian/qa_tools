@@ -118,7 +118,7 @@ describe('IsFirstRun', () => {
     });
 });
 
-describe('_MarkFirstRunDone', () => {
+describe('MarkFirstRunDone', () => {
     it('calls updateState with callback that sets _firstRunDone', async () => {expect.hasAssertions();
 
         const { _markFirstRunDone } = await loadModule();

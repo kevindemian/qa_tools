@@ -21,7 +21,7 @@ function makeCtx(input: string) {
 }
 
 describe('Coverage invariants (PBT)', () => {
-    it('realCoverage is always between 0 and 100', () => {expect.hasAssertions();
+    it('realCoverage is always between 0 and 100', () => {
 
         fc.assert(
             fc.property(
@@ -42,7 +42,7 @@ describe('Coverage invariants (PBT)', () => {
         );
     });
 
-    it('totalCriteria >= coveredCriteria', () => {expect.hasAssertions();
+    it('totalCriteria >= coveredCriteria', () => {
 
         fc.assert(
             fc.property(fc.string(), (input) => {
@@ -56,7 +56,7 @@ describe('Coverage invariants (PBT)', () => {
         );
     });
 
-    it('coveredCriteria + gaps.length === totalCriteria when criteria exist', () => {expect.hasAssertions();
+    it('coveredCriteria + gaps.length === totalCriteria when criteria exist', () => {
 
         fc.assert(
             fc.property(fc.string({ minLength: 1 }), (input) => {
@@ -71,7 +71,7 @@ describe('Coverage invariants (PBT)', () => {
         );
     });
 
-    it('coverageDelta is 0 when declaredCoverage is null', () => {expect.hasAssertions();
+    it('coverageDelta is 0 when declaredCoverage is null', () => {
 
         fc.assert(
             fc.property(fc.string(), (input) => {
@@ -86,7 +86,7 @@ describe('Coverage invariants (PBT)', () => {
         );
     });
 
-    it('coverageDelta = realCoverage - declaredCoverage when declared is not null', () => {expect.hasAssertions();
+    it('coverageDelta = realCoverage - declaredCoverage when declared is not null', () => {
 
         fc.assert(
             fc.property(fc.integer({ min: 0, max: 100 }), (declared) => {
@@ -114,7 +114,7 @@ describe('Coverage invariants (PBT)', () => {
         expect(result.coverageDelta).toBe(0);
     });
 
-    it('gaps entries have criterion truncated to 120 chars', () => {expect.hasAssertions();
+    it('gaps entries have criterion truncated to 120 chars', () => {
 
         fc.assert(
             fc.property(fc.string({ minLength: 1 }), (input) => {

@@ -75,7 +75,7 @@ describe('Env-loader — dotenv wrapper', () => {
         });
     });
 
-    describe('__resetDotenvLoaded', () => {
+    describe('Reset dotenv loaded', () => {
         it('resets the loaded flag', () => {
             ensureDotenv();
             __resetDotenvLoaded();

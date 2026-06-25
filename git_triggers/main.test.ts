@@ -278,7 +278,7 @@ describe('BuildActionChoices', () => {
 
 // ---------- _jiraEnv ----------
 
-describe('_JiraEnv', () => {
+describe('JiraEnv', () => {
     it('returns jira config when all vars set', () => {
         const result = mainModule._jiraEnv();
 
@@ -293,7 +293,7 @@ describe('_JiraEnv', () => {
 
 // ---------- _resolveGlob ----------
 
-describe('_ResolveGlob', () => {
+describe('ResolveGlob', () => {
     it('returns resolved path when glob matches', () => {
         globSyncMock.mockReturnValueOnce(['/tmp/mapping.json']);
         const result = mainModule._resolveGlob('/tmp/*.json');
@@ -885,7 +885,7 @@ describe('ParseBatchArgs', () => {
 
 // ---------- _ensureProjectsConfigured ----------
 
-describe('_EnsureProjectsConfigured', () => {
+describe('EnsureProjectsConfigured', () => {
     const mockConfirm = vi.spyOn(prompt, 'confirm');
 
     afterEach(() => {
@@ -925,7 +925,7 @@ describe('_EnsureProjectsConfigured', () => {
 
 // ---------- _selectProjectAndCreateManager ----------
 
-describe('_SelectProjectAndCreateManager', () => {
+describe('SelectProjectAndCreateManager', () => {
     it('returns null when _selectProject returns null projectName', async () => {expect.hasAssertions();
 
         vi.spyOn(prompt, 'prompt').mockReturnValueOnce('99');
@@ -954,7 +954,9 @@ describe('WithErrorHandling', () => {
             .fn<(m: GitProvider, pn: string, ns: string[]) => Promise<object>>()
             .mockResolvedValue({ ok: true as const });
         const wrapped = mainModule.withErrorHandling(handler);
-        await wrapped(createMockGitProvider(), 'p', ['p']);
+        const result = await wrapped(createMockGitProvider(), 'p', ['p']);
+
+        expect(result).toBeFalsy();
     });
 
     it('calls printError when handler rejects and returns false', async () => {expect.hasAssertions();
@@ -972,7 +974,7 @@ describe('WithErrorHandling', () => {
 
 // ---------- _handleExit ----------
 
-describe('_HandleExit', () => {
+describe('HandleExit', () => {
     it('prints goodbye and returns true', async () => {expect.hasAssertions();
 
         const breadcrumbs: typeof import('../shared/breadcrumbs.js') = await import('../shared/breadcrumbs.js');
@@ -1000,7 +1002,7 @@ describe('_HandleExit', () => {
 
 // ---------- _dispatchAction ----------
 
-describe('_DispatchAction', () => {
+describe('DispatchAction', () => {
     const mockM = createMockGitProvider();
     const pn = 'proj-a';
     const ns = ['proj-a', 'proj-b'];
@@ -1093,7 +1095,7 @@ describe('_DispatchAction', () => {
 
 // ---------- _selectProject ----------
 
-describe('_SelectProject', () => {
+describe('SelectProject', () => {
     const PROJ_DATA: Record<string, string> = { 'proj-a': '111', 'proj-b': '222' };
     let gpSpy: { mockRestore: () => void };
 
@@ -1140,7 +1142,7 @@ describe('_SelectProject', () => {
 
 // ---------- _promptChoice ----------
 
-describe('_PromptChoice', () => {
+describe('PromptChoice', () => {
     it('returns prompt choice in non-TTY mode', async () => {expect.hasAssertions();
 
         vi.spyOn(prompt, 'prompt').mockReturnValueOnce('/exit');
@@ -1171,7 +1173,7 @@ describe('_PromptChoice', () => {
 
 // ---------- _promptChoice TTY mode ----------
 
-describe('_PromptChoice TTY mode', () => {
+describe('PromptChoice TTY mode', () => {
     const _origIsTTY = process.stdout.isTTY;
 
     beforeAll(() => {
