@@ -27,19 +27,19 @@ describe('PrintSummary', () => {
     it('prints success box when all pass', () => {
         printSummary([makeResult({ label: 'op1' }), makeResult({ label: 'op2' })]);
 
-        expect(output['print']).toHaveBeenCalled();
+        expect(output['print']).toHaveBeenCalledWith(expect.any(String));
     });
 
     it('prints failure box when some fail', () => {
         printSummary([makeResult({ label: 'op1' }), makeResult({ label: 'op2', status: 'error', message: 'boom' })]);
 
-        expect(output['print']).toHaveBeenCalled();
+        expect(output['print']).toHaveBeenCalledWith(expect.any(String));
     });
 
     it('prints no data when results is empty', () => {
         printSummary([]);
 
-        expect(output['print']).toHaveBeenCalled();
+        expect(output['print']).toHaveBeenCalledWith(expect.any(String));
     });
 
     it('includes test execution link when provided', () => {
@@ -56,13 +56,13 @@ describe('PrintSummary', () => {
         vi.mocked(isQuiet).mockReturnValue(true);
         printSummary([makeResult({})]);
 
-        expect(output['print']).toHaveBeenCalled();
+        expect(output['print']).toHaveBeenCalledWith(expect.any(String));
     });
 
     it('renders quiet summary with failures', () => {
         vi.mocked(isQuiet).mockReturnValue(true);
         printSummary([makeResult({ status: 'error', message: 'fail' })]);
 
-        expect(output['print']).toHaveBeenCalled();
+        expect(output['print']).toHaveBeenCalledWith(expect.any(String));
     });
 });

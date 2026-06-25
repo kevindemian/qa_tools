@@ -95,7 +95,7 @@ describe('OfferPipelineFailureAnalysis', () => {
 
         await offerPipelineFailureAnalysis(baseParsed);
 
-        expect(mockAnalyzeFailures).toHaveBeenCalled();
+        expect(mockAnalyzeFailures).toHaveBeenCalledWith(baseParsed.tests);
     });
 
     it('handle analyzeFailuresWithReport throwing', async () => {expect.hasAssertions();

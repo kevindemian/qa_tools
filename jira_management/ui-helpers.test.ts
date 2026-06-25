@@ -214,7 +214,7 @@ describe('Ui Helpers', () => {
 
         it('returns true and shows help for /help', async () => {expect.hasAssertions();
             await expect(handleSpecialInput('/help')).resolves.toBeTruthy();
-            expect(title).toHaveBeenCalled();
+            expect(title).toHaveBeenCalledWith(expect.stringContaining('HELP'));
         });
 
         it('returns false for /exit', async () => {expect.hasAssertions();
@@ -283,14 +283,14 @@ describe('Ui Helpers', () => {
         it('shows help and exits on /back', () => {
             showHelpLoop();
 
-            expect(title).toHaveBeenCalled();
+            expect(title).toHaveBeenCalledWith(expect.stringContaining('HELP'));
         });
 
         it('handles specific topic input', () => {
             vi.mocked(prompt).mockReturnValueOnce('csv').mockReturnValueOnce('/back');
             showHelpLoop();
 
-            expect(title).toHaveBeenCalled();
+            expect(title).toHaveBeenCalledWith(expect.stringContaining('HELP'));
         });
 
         it('warns for unknown topic', () => {

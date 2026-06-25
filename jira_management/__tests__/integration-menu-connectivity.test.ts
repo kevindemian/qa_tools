@@ -240,7 +240,7 @@ describe('Jira_management — case handlers are connected', () => {
         vi.mocked(loadMetrics).mockReturnValue({ runs: [] });
         await (handler as (ctx: ReturnType<typeof createMockContext>) => Promise<boolean | void>)(ctx);
 
-        expect(vi.mocked(loadMetrics)).toHaveBeenCalled();
+        expect(vi.mocked(loadMetrics)).toHaveBeenCalledWith();
     });
 
     it('case26 calculates release score', async () => {expect.hasAssertions();
@@ -254,7 +254,7 @@ describe('Jira_management — case handlers are connected', () => {
         vi.mocked(loadMetrics).mockReturnValue({ runs: [] });
         await (handler as (ctx: ReturnType<typeof createMockContext>) => Promise<boolean | void>)(ctx);
 
-        expect(vi.mocked(loadMetrics)).toHaveBeenCalled();
+        expect(vi.mocked(loadMetrics)).toHaveBeenCalledWith();
     });
 
     it('case27 analyzes coverage gaps', async () => {expect.hasAssertions();
@@ -267,6 +267,6 @@ describe('Jira_management — case handlers are connected', () => {
         const { analyzeCoverageGaps } = await import('../../shared/coverage-gap.js');
         await (handler as (ctx: ReturnType<typeof createMockContext>) => Promise<boolean | void>)(ctx);
 
-        expect(vi.mocked(analyzeCoverageGaps)).toHaveBeenCalled();
+        expect(vi.mocked(analyzeCoverageGaps)).toHaveBeenCalledWith(expect.anything(), expect.any(String));
     });
 });

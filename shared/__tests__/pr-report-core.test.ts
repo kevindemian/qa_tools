@@ -232,7 +232,7 @@ describe('Pr Report Core', () => {
                 skipQuality: false,
             });
 
-            expect(mockQualityGate.runQualityGate).toHaveBeenCalled();
+            expect(mockQualityGate.runQualityGate).toHaveBeenCalledWith();
             expect(mockCheckRun.createCheckRun).toHaveBeenCalledWith(
                 expect.objectContaining({
                     name: 'Quality Gate',
@@ -262,7 +262,7 @@ describe('Pr Report Core', () => {
             });
 
             expect(result.healthScore.overall).toBeGreaterThanOrEqual(0);
-            expect(mockPRComment.postPrComment).toHaveBeenCalled();
+            expect(mockPRComment.postPrComment).toHaveBeenCalledWith(expect.any(String));
         });
 
         it('skips flaky section when skipFlaky is true', async () => {expect.hasAssertions();
@@ -277,7 +277,7 @@ describe('Pr Report Core', () => {
                 skipFlaky: true,
             });
 
-            expect(mockPRComment.postPrComment).toHaveBeenCalled();
+            expect(mockPRComment.postPrComment).toHaveBeenCalledWith(expect.any(String));
         });
 
         it('survives empty test list', async () => {expect.hasAssertions();

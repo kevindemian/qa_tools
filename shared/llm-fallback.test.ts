@@ -292,7 +292,7 @@ describe('Llm Fallback', () => {
             const result = await sendWithFallback('main', 'system', 'user');
 
             expect(result).toBe('success');
-            expect(recordCircuitSuccess).toHaveBeenCalled();
+            expect(recordCircuitSuccess).toHaveBeenCalledWith(expect.any(String));
         });
 
         it('falls back to next provider when primary fails', async () => {expect.hasAssertions();
@@ -319,7 +319,7 @@ describe('Llm Fallback', () => {
             const result = await sendWithFallback('main', 'system', 'user');
 
             expect(result).toBe('fallback ok');
-            expect(recordCircuitFailure).toHaveBeenCalled();
+            expect(recordCircuitFailure).toHaveBeenCalledWith(expect.any(String));
         });
 
         it('throws when all providers are exhausted', async () => {expect.hasAssertions();

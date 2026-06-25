@@ -76,7 +76,7 @@ describe('Case19', () => {
             const mod = case19Module;
             await mod.handler(baseContext);
 
-            expect(prompt.tableView).toHaveBeenCalled();
+            expect(prompt.tableView).toHaveBeenCalledWith(expect.any(Array), expect.any(Array));
             expect(prompt.title).toHaveBeenCalledWith('Histórico de execuções');
         });
 
@@ -108,7 +108,7 @@ describe('Case19', () => {
                 mappedIssues: 6,
                 coveragePct: 60,
             });
-            expect(prompt.tableView).toHaveBeenCalled();
+            expect(prompt.tableView).toHaveBeenCalledWith(expect.any(Array), expect.any(Array));
             expect(baseContext.pushHistory).toHaveBeenCalledWith('coverage-analysis', '60% coverage', 'ok');
         });
 
@@ -181,7 +181,7 @@ describe('Case19', () => {
             const mod = case19Module;
             await mod.handler(baseContext);
 
-            expect(comparison.compareRuns).toHaveBeenCalled();
+            expect(comparison.compareRuns).toHaveBeenCalledWith(expect.any(Object), expect.any(Object));
             expect(prompt.title).toHaveBeenCalledWith('Testes com flakiness');
             expect(prompt.title).toHaveBeenCalledWith('Tendência');
         });
@@ -240,7 +240,7 @@ describe('Case19', () => {
             const mod = case19Module;
             await mod.handler(baseContext);
 
-            expect(comparison.compareRuns).toHaveBeenCalled();
+            expect(comparison.compareRuns).toHaveBeenCalledWith(expect.any(Object), expect.any(Object));
             expect(prompt.info).not.toHaveBeenCalledWith(expect.stringContaining('Análise comparativa'));
         });
 
@@ -310,7 +310,7 @@ describe('Case19', () => {
             const mod = case19Module;
             await mod.handler(baseContext);
 
-            expect(healthScore.calculateHealthScore).toHaveBeenCalled();
+            expect(healthScore.calculateHealthScore).toHaveBeenCalledWith(expect.any(Object));
             expect(prompt.tableView).toHaveBeenCalledWith(
                 expect.arrayContaining([expect.objectContaining({ Dimensão: 'Pass Rate', Score: 90 })]),
                 expect.any(Array),
@@ -356,7 +356,7 @@ describe('Case19', () => {
             const mod = case19Module;
             await mod.handler(baseContext);
 
-            expect(prompt.tableView).toHaveBeenCalled();
+            expect(prompt.tableView).toHaveBeenCalledWith(expect.any(Array), expect.any(Array));
         });
 
         it('handles run with total=0 to cover Rate branch', async () => {expect.hasAssertions();
@@ -388,7 +388,7 @@ describe('Case19', () => {
             const mod = case19Module;
             await mod.handler(baseContext);
 
-            expect(prompt.tableView).toHaveBeenCalled();
+            expect(prompt.tableView).toHaveBeenCalledWith(expect.any(Array), expect.any(Array));
         });
 
         it('shows health score section when 5+ runs exist', async () => {expect.hasAssertions();
@@ -433,7 +433,7 @@ describe('Case19', () => {
             const mod = case19Module;
             await mod.handler(baseContext);
 
-            expect(healthScore.calculateHealthScore).toHaveBeenCalled();
+            expect(healthScore.calculateHealthScore).toHaveBeenCalledWith(expect.any(Object));
             expect(prompt.title).toHaveBeenCalledWith(expect.stringContaining('Test Suite Health'));
         });
 

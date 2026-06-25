@@ -132,7 +132,7 @@ describe('Main', () => {
 
         await entryMenu.main();
 
-        expect(mockSpawn).toHaveBeenCalled();
+        expect(mockSpawn).toHaveBeenCalledWith('npx', expect.arrayContaining(['tsx']), expect.objectContaining({ stdio: 'inherit' }));
     });
 
     it('continues loop on unknown choice', async () => {expect.hasAssertions();

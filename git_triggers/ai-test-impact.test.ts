@@ -59,7 +59,7 @@ describe('AssessTestImpact', () => {
 
         const result = await assessTestImpact(mockProvider, 'feature/a', 'main');
 
-        expect(llmPrompt).toHaveBeenCalled();
+        expect(llmPrompt).toHaveBeenCalledWith(expect.objectContaining({ tier: 'fast', callerId: 'test-impact' }));
         expect(result).toBe('Nenhum teste existente afetado.');
     });
 

@@ -251,7 +251,12 @@ describe('Pr Report Core.Integration', () => {
                     htmlOutputPath: htmlPath,
                 });
 
-                expect(createCheckRun).toHaveBeenCalled();
+                expect(createCheckRun).toHaveBeenCalledWith(
+                    expect.objectContaining({
+                        name: 'Quality Gate',
+                        status: 'completed',
+                    }),
+                );
             });
 
             it('posts quality gate check with pass/fail conclusion', async () => {expect.hasAssertions();

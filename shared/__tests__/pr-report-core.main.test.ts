@@ -150,7 +150,7 @@ describe('Pr Report Core.Main', () => {
             });
             await main();
 
-            expect(mockPRComment.postPrComment).toHaveBeenCalled();
+            expect(mockPRComment.postPrComment).toHaveBeenCalledWith(expect.any(String));
         });
 
         it('handles no comment URL gracefully', async () => {expect.hasAssertions();
@@ -168,7 +168,7 @@ describe('Pr Report Core.Main', () => {
             mockPRComment.postPrComment.mockResolvedValue({});
             await main();
 
-            expect(mockPRComment.postPrComment).toHaveBeenCalled();
+            expect(mockPRComment.postPrComment).toHaveBeenCalledWith(expect.any(String));
         });
     });
 

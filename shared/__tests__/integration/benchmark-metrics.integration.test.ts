@@ -98,7 +98,7 @@ describe('RED: G1 — catch vazio sem log', () => {
         const { computeCoverageMetrics } = await import('../../benchmark-metrics.js');
         const result = computeCoverageMetrics('not json', createFixture());
 
-        expect(warnSpy).toHaveBeenCalled();
+        expect(warnSpy).toHaveBeenCalledWith(expect.stringContaining('Failed to compute benchmark metrics'));
         expect(result.totalTests).toBe(0);
     });
 });

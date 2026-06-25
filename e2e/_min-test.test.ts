@@ -82,7 +82,7 @@ describe('Case04', () => {
         ).default;
         await mod.handler(c);
 
-        expect(c.pushHistory).toHaveBeenCalled();
+        expect(c.pushHistory).toHaveBeenCalledWith('atribuir-fixversion', expect.any(String), expect.any(String));
         expect(nock.isDone()).toBeTruthy();
     }, 15000);
 });

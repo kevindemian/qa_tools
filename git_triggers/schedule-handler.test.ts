@@ -218,7 +218,7 @@ describe('Schedule Handler', () => {
 
             await handleListSchedules(mockManager);
 
-            expect(mockPrintError).toHaveBeenCalled();
+            expect(mockPrintError).toHaveBeenCalledWith(expect.any(String), expect.any(Error));
         });
     });
 
@@ -231,7 +231,7 @@ describe('Schedule Handler', () => {
             await handleRunSchedule(mockManager);
 
             expect(mockManager.runSchedule).toHaveBeenCalledWith('schedule-1');
-            expect(success).toHaveBeenCalled();
+            expect(success).toHaveBeenCalledWith(expect.stringContaining('Schedule'));
             expect(mockPushHistory).toHaveBeenCalledWith('schedule-run', 'schedule-1', 'ok');
         });
 
@@ -252,7 +252,7 @@ describe('Schedule Handler', () => {
 
             await handleRunSchedule(mockManager);
 
-            expect(mockPrintError).toHaveBeenCalled();
+            expect(mockPrintError).toHaveBeenCalledWith(expect.any(String), expect.any(Error));
         });
     });
 
@@ -278,7 +278,7 @@ describe('Schedule Handler', () => {
 
             expect(setCurrentProjectName).toHaveBeenCalledWith('proj1');
             expect(setProjectId).toHaveBeenCalledWith('1');
-            expect(setManager).toHaveBeenCalled();
+            expect(setManager).toHaveBeenCalledWith(expect.anything());
             expect(success).toHaveBeenCalledWith(expect.stringContaining('proj1'));
         });
 
@@ -351,7 +351,7 @@ describe('Schedule Handler', () => {
 
             await handleFlakinessDashboard();
 
-            expect(mockGenerateHtml).toHaveBeenCalled();
+            expect(mockGenerateHtml).toHaveBeenCalledWith(expect.any(Array), expect.any(String));
 
             const { openWithFallback } = (await import('../shared/open.js')) as {
                 openWithFallback: (...args: unknown[]) => unknown;

@@ -51,7 +51,7 @@ describe('Entry-menu to module spawn — full flow (CR-3c)', () => {
 
         await entryMain();
 
-        expect(showSplash).toHaveBeenCalled();
+        expect(showSplash).toHaveBeenCalledWith();
         expect(showSelect).toHaveBeenNthCalledWith(
             1,
             expect.any(String),

@@ -120,7 +120,7 @@ describe('Case02.Integration', () => {
             const ctx = makeContext(jira);
 
             await expect(case02.handler(ctx)).resolves.toBeUndefined();
-            expect(mockPrintError).toHaveBeenCalled();
+            expect(mockPrintError).toHaveBeenCalledWith('Erro ao listar versões', expect.any(Error));
         });
 
         it('catches getProjectVersions failure and calls printError', async () => {expect.hasAssertions();
@@ -131,7 +131,7 @@ describe('Case02.Integration', () => {
             const ctx = makeContext(jira);
 
             await expect(case02.handler(ctx)).resolves.toBeUndefined();
-            expect(mockPrintError).toHaveBeenCalled();
+            expect(mockPrintError).toHaveBeenCalledWith('Erro ao listar versões', expect.any(Error));
         });
     });
 

@@ -71,7 +71,7 @@ describe('Case01.Integration', () => {
 
             await case01.handler(makeContext());
 
-            expect(mockCreateTestsFromCsv).toHaveBeenCalled();
+            expect(mockCreateTestsFromCsv).toHaveBeenCalledWith(expect.objectContaining({}));
 
             const csvPath = mockCreateTestsFromCsv.mock.calls[0]?.[0]?.csvPath;
 

@@ -92,7 +92,11 @@ describe('State', () => {
             const mocks = mockFs({});
             state.save({ lastProject: 'TEST' }, makeConfig());
 
-            expect(mocks.write).toHaveBeenCalled();
+            expect(mocks.write).toHaveBeenCalledWith(
+                expect.stringContaining('state.json'),
+                expect.any(String),
+                expect.any(String),
+            );
         });
     });
 
@@ -174,7 +178,10 @@ describe('State', () => {
             });
             state.load(config);
 
-            expect(mockRootLogger.warn).toHaveBeenCalled();
+            expect(mockRootLogger.warn).toHaveBeenCalledWith(
+                expect.stringContaining('corrompido'),
+                expect.anything(),
+            );
         });
     });
 
@@ -244,7 +251,10 @@ describe('State', () => {
             });
             state.migrateOldState(makeConfig());
 
-            expect(mockRootLogger.warn).toHaveBeenCalled();
+            expect(mockRootLogger.warn).toHaveBeenCalledWith(
+                expect.stringContaining('Falha na migração de estado'),
+                expect.anything(),
+            );
         });
     });
 

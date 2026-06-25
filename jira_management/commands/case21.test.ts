@@ -163,7 +163,7 @@ describe('Case21', () => {
             const mod = case21Module;
             await mod.handler(baseContext);
 
-            expect(vi.mocked(htmlModule).generateCoverageGapHtml).toHaveBeenCalled();
+            expect(vi.mocked(htmlModule).generateCoverageGapHtml).toHaveBeenCalledWith(expect.anything(), expect.any(String));
             expect(vi.mocked(openModule).openWithFallback).toHaveBeenCalledWith(
                 expect.stringContaining('coverage-gap-report.html'),
                 'Relatório de cobertura',

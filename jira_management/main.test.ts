@@ -359,14 +359,14 @@ describe('Main.ts', () => {
             expect.hasAssertions();
 
             await expect(mod.handleSpecialInput('/help')).resolves.toBeTruthy();
-            expect(title).toHaveBeenCalled();
+            expect(title).toHaveBeenCalledWith(expect.stringContaining('HELP'));
         });
 
         it('handles /h shorthand', async () => {
             expect.hasAssertions();
 
             await expect(mod.handleSpecialInput('/h')).resolves.toBeTruthy();
-            expect(title).toHaveBeenCalled();
+            expect(title).toHaveBeenCalledWith(expect.stringContaining('HELP'));
         });
 
         it('returns false for /exit (handled by runMainLoop, not by handleSpecialInput)', async () => {
@@ -582,7 +582,7 @@ describe('Main.ts', () => {
             const result = await mod.dispatchChoice('1', minimalCtx);
 
             expect(result).toBe('continue');
-            expect(printError).toHaveBeenCalled();
+            expect(printError).toHaveBeenCalledWith('Erro no handler', expect.any(Error));
         });
     });
 
@@ -611,7 +611,7 @@ describe('Main.ts', () => {
             });
             await mod.showDocs();
 
-            expect(printError).toHaveBeenCalled();
+            expect(printError).toHaveBeenCalledWith('Documentação', expect.any(Error));
         });
 
         it('warns when no matching files found in docs', async () => {
@@ -620,7 +620,7 @@ describe('Main.ts', () => {
             vi.mocked(fs.readdirSync).mockReturnValueOnce(['readme.txt', 'notes.md'] as never);
             await mod.showDocs();
 
-            expect(warn).toHaveBeenCalled();
+            expect(warn).toHaveBeenCalledWith('Nenhum documento encontrado em docs/.');
         });
     });
 
@@ -636,42 +636,42 @@ describe('Main.ts', () => {
         it('shows help topics then exits on /back', () => {
             mod.showHelpLoop();
 
-            expect(title).toHaveBeenCalled();
+            expect(title).toHaveBeenCalledWith(expect.stringContaining('HELP'));
         });
 
         it('handles specific topic then exits', () => {
             vi.mocked(prompt).mockReturnValueOnce('csv').mockReturnValueOnce('/back');
             mod.showHelpLoop();
 
-            expect(title).toHaveBeenCalled();
+            expect(title).toHaveBeenCalledWith(expect.stringContaining('HELP'));
         });
 
         it('handles empty input by continuing loop', () => {
             vi.mocked(prompt).mockReturnValueOnce('').mockReturnValueOnce('/back');
             mod.showHelpLoop();
 
-            expect(title).toHaveBeenCalled();
+            expect(title).toHaveBeenCalledWith(expect.stringContaining('HELP'));
         });
 
         it('shows help on /help command and continues', () => {
             vi.mocked(prompt).mockReturnValueOnce('/help').mockReturnValueOnce('/back');
             mod.showHelpLoop();
 
-            expect(title).toHaveBeenCalled();
+            expect(title).toHaveBeenCalledWith(expect.stringContaining('HELP'));
         });
 
         it('shows specific help topic on /help <topic>', () => {
             vi.mocked(prompt).mockReturnValueOnce('/help csv').mockReturnValueOnce('/back');
             mod.showHelpLoop();
 
-            expect(helpLine).toHaveBeenCalled();
+            expect(helpLine).toHaveBeenCalledWith(expect.stringContaining('Escolha'));
         });
 
         it('shows multiple matching topics when input matches several', () => {
             vi.mocked(prompt).mockReturnValueOnce('a').mockReturnValueOnce('/back');
             mod.showHelpLoop();
 
-            expect(title).toHaveBeenCalled();
+            expect(title).toHaveBeenCalledWith(expect.stringContaining('HELP'));
         });
 
         it('warns when topic is not found', () => {
@@ -815,7 +815,10 @@ describe('Main.ts', () => {
             const mockJiraResource = { searchJiraIssues: vi.fn().mockResolvedValue({ total: 42 }) };
             await mod.showGapBadge(mockJiraResource, 'TESTPROJ');
 
-            expect(mockJiraResource.searchJiraIssues).toHaveBeenCalled();
+            expect(mockJiraResource.searchJiraIssues).toHaveBeenCalledWith(
+                expect.stringContaining('TESTPROJ'),
+                0,
+            );
         });
     });
 });

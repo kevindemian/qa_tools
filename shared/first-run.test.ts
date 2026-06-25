@@ -157,7 +157,7 @@ describe('First Run', () => {
             await f();
 
             expect(mockTitle).toHaveBeenCalledWith(expect.stringContaining('Bem-vindo'));
-            expect(mockInfo).toHaveBeenCalled();
+            expect(mockInfo).toHaveBeenCalledWith(expect.any(String));
             expect(mockUpdateState).toHaveBeenCalledTimes(1);
         });
 

@@ -121,7 +121,7 @@ describe('Run Comparison', () => {
             const result = await compareRuns(runA, runB);
 
             expect(result).toBe('');
-            expect(mockLoggerError).toHaveBeenCalled();
+            expect(mockLoggerError).toHaveBeenCalledWith(expect.stringContaining('Failed to compare runs'));
 
             const logMsg = String(mockLoggerError.mock.calls[0]?.[0] ?? '');
 

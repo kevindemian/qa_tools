@@ -153,7 +153,7 @@ describe('Session-state', () => {
             sessionState.pushHistory('test-op', 'detail', 'ok');
 
             expect(pushHistorySpy).toHaveBeenCalledWith('test-op', 'detail', 'ok');
-            expect(stateUpdate).toHaveBeenCalled();
+            expect(stateUpdate).toHaveBeenCalledWith(expect.any(Function));
         });
     });
 
@@ -170,7 +170,7 @@ describe('Session-state', () => {
             sessionState.displayProjects();
 
             expect(prompt.title).toHaveBeenCalledWith('Projetos');
-            expect(prompt.print).toHaveBeenCalled();
+            expect(prompt.print).toHaveBeenCalledWith(expect.any(String));
         });
     });
 

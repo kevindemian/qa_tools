@@ -119,7 +119,7 @@ describe('Prompt Input Inquirer', () => {
             const result = await smartPrompt('Label', {}, helpCb);
 
             expect(result).toBe('value');
-            expect(helpCb).toHaveBeenCalled();
+            expect(helpCb).toHaveBeenCalledWith();
         });
 
         it('throws CancelError on navigation', async () => {expect.hasAssertions();
@@ -144,7 +144,7 @@ describe('Prompt Input Inquirer', () => {
             const result = await smartPrompt('Label', { maxRetries: 2 });
 
             expect(result).toBe('');
-            expect(mockWarn).toHaveBeenCalled();
+            expect(mockWarn).toHaveBeenCalledWith(expect.stringContaining('máximo'));
         });
 
         it('returns default after retries when readlineSync throws (TTY unavailable)', async () => {expect.hasAssertions();
