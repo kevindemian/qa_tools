@@ -97,12 +97,13 @@ function explicitMapping(changedFiles: string[], mappingPath: string): ImpactedT
                 if (!matched) continue;
                 const keys = mapping.testKeys;
                 const titles = mapping.testTitles;
-                for (let i = 0; i < keys.length; i++) {
-                    const key = keys[i];
+                const keysMap = new Map(keys.map((k, idx) => [idx, k]));
+                const titlesMap = new Map(titles.map((t, idx) => [idx, t]));
+                for (const [i, key] of keysMap.entries()) {
                     if (!key) continue;
                     impacted.push({
                         testKey: key,
-                        title: titles[i] ?? key,
+                        title: titlesMap.get(i) ?? key,
                         reason: `Explicit mapping: file "${file}" matches pattern`,
                         matchMode: 'mapping',
                         filePattern: file,
@@ -143,10 +144,11 @@ function dedupImpactedTests(
     };
     for (const t of mappingTests) add(t);
     if (jestResult) {
-        for (let i = 0; i < jestResult.testFiles.length; i++) {
-            const file = jestResult.testFiles[i];
+        const filesMap = new Map(jestResult.testFiles.map((f, idx) => [idx, f]));
+        const titlesMap = new Map(jestResult.testTitles.map((t, idx) => [idx, t]));
+        for (const [i, file] of filesMap.entries()) {
             if (!file) continue;
-            const title = jestResult.testTitles[i] ?? file;
+            const title = titlesMap.get(i) ?? file;
             add({
                 title,
                 reason: `Jest --findRelatedTests: ${file}`,
