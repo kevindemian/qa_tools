@@ -24,7 +24,7 @@ export interface BugReport {
     /** Affected component or module. */
     component?: string;
     /** LLM enrichment data, if requested. */
-    llmEnrichment?: LLMEnrichment;
+    llmEnrichment?: LLMEnrichment | undefined;
     /** Jira issues linked to this bug report. */
     linkedIssues?: Array<{
         key: string;

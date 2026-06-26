@@ -445,45 +445,30 @@ describe('Config', () => {
     });
 
     describe('Config.create with LLM overrides', () => {
-        it('uses override values for all LLM getters', () => {
-            const o = {
-                llmApiKey: 'key-ov',
-                llmModel: 'model-ov',
-                llmBaseUrl: 'url-ov',
-                llmFastApiKey: 'fast-key',
-                llmFastModel: 'fast-model-ov',
-                llmFastBaseUrl: 'fast-url-ov',
-                llmReviewApiKey: 'rev-key',
-                llmReviewModel: 'rev-model-ov',
-                llmReviewBaseUrl: 'rev-url-ov',
-                llmFallbackApiKey: 'fb-key',
-                llmFallbackModel: 'fb-model-ov',
-                llmFallbackBaseUrl: 'fb-url-ov',
-                llmBatchApiKey: 'batch-key',
-                llmBatchModel: 'batch-model-ov',
-                llmBatchBaseUrl: 'batch-url-ov',
-                xrayClientId: 'cid-ov',
-                xrayClientSecret: 'csec-ov',
-            };
-            const cfg = Config.create(o);
+        const LLM_OVERRIDES = {
+            llmApiKey: 'key-ov',
+            llmModel: 'model-ov',
+            llmBaseUrl: 'url-ov',
+            llmFastApiKey: 'fast-key',
+            llmFastModel: 'fast-model-ov',
+            llmFastBaseUrl: 'fast-url-ov',
+            llmReviewApiKey: 'rev-key',
+            llmReviewModel: 'rev-model-ov',
+            llmReviewBaseUrl: 'rev-url-ov',
+            llmFallbackApiKey: 'fb-key',
+            llmFallbackModel: 'fb-model-ov',
+            llmFallbackBaseUrl: 'fb-url-ov',
+            llmBatchApiKey: 'batch-key',
+            llmBatchModel: 'batch-model-ov',
+            llmBatchBaseUrl: 'batch-url-ov',
+            xrayClientId: 'cid-ov',
+            xrayClientSecret: 'csec-ov',
+        };
 
-            expect(cfg.get('llmApiKey')).toBe('key-ov');
-            expect(cfg.get('llmModel')).toBe('model-ov');
-            expect(cfg.get('llmBaseUrl')).toBe('url-ov');
-            expect(cfg.get('llmFastApiKey')).toBe('fast-key');
-            expect(cfg.get('llmFastModel')).toBe('fast-model-ov');
-            expect(cfg.get('llmFastBaseUrl')).toBe('fast-url-ov');
-            expect(cfg.get('llmReviewApiKey')).toBe('rev-key');
-            expect(cfg.get('llmReviewModel')).toBe('rev-model-ov');
-            expect(cfg.get('llmReviewBaseUrl')).toBe('rev-url-ov');
-            expect(cfg.get('llmFallbackApiKey')).toBe('fb-key');
-            expect(cfg.get('llmFallbackModel')).toBe('fb-model-ov');
-            expect(cfg.get('llmFallbackBaseUrl')).toBe('fb-url-ov');
-            expect(cfg.get('llmBatchApiKey')).toBe('batch-key');
-            expect(cfg.get('llmBatchModel')).toBe('batch-model-ov');
-            expect(cfg.get('llmBatchBaseUrl')).toBe('batch-url-ov');
-            expect(cfg.get('xrayClientId')).toBe('cid-ov');
-            expect(cfg.get('xrayClientSecret')).toBe('csec-ov');
+        it('uses override values for all LLM getters', () => {
+            const cfg = Config.create(LLM_OVERRIDES);
+
+            expect(Object.keys(LLM_OVERRIDES).every((key) => cfg.get(key) === LLM_OVERRIDES[key as keyof typeof LLM_OVERRIDES])).toBeTruthy();
         });
     });
 

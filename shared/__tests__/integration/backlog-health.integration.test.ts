@@ -86,6 +86,14 @@ describe('Integration: Backlog Health (FT-28)', () => {
             expect(html).toContain('PROJ-2');
             expect(html).toContain('PROJ-3');
             expect(html).toContain('PROJ-4');
+        });
+
+        it('includes Density by Epic section', async () => {expect.hasAssertions();
+
+            const { analyzeBacklogHealth, generateBacklogHealthHtml } = await import('../../backlog-health.js');
+            const result = analyzeBacklogHealth(makeIssues());
+            const html = generateBacklogHealthHtml(result);
+
             expect(html).toContain('Density by Epic');
         });
     });

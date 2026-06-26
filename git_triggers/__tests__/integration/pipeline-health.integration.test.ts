@@ -59,6 +59,14 @@ describe('Integration: Pipeline Health', () => {
             expect(html).toContain('Avg Duration');
             expect(html).toContain('lint');
             expect(html).toContain('Module not found');
+        });
+
+        it('shows branch and category breakdown in HTML', async () => {expect.hasAssertions();
+
+            const { renderPipelineHealthHtml } = await import('../../pipeline-health.js');
+            const health = makeHealth();
+            const html = renderPipelineHealthHtml(health, 'Pipeline Report');
+
             expect(html).toContain('main');
             expect(html).toContain('develop');
             expect(html).toContain('bug');

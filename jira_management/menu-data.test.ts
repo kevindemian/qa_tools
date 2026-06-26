@@ -14,15 +14,9 @@ import {
 
 describe('HELP_TOPICS', () => {
     it('contains expected topics', () => {
-        expect(HELP_TOPICS).toHaveProperty('csv');
-        expect(HELP_TOPICS).toHaveProperty('labels');
-        expect(HELP_TOPICS).toHaveProperty('group');
-        expect(HELP_TOPICS).toHaveProperty('precondition');
-        expect(HELP_TOPICS).toHaveProperty('project');
-        expect(HELP_TOPICS).toHaveProperty('version');
-        expect(HELP_TOPICS).toHaveProperty('transitions');
-        expect(HELP_TOPICS).toHaveProperty('template');
-        expect(HELP_TOPICS).toHaveProperty('diagnostics');
+        const topics = ['csv', 'labels', 'group', 'precondition', 'project', 'version', 'transitions', 'template', 'diagnostics'];
+
+        expect(topics.every(t => Object.prototype.hasOwnProperty.call(HELP_TOPICS, t))).toBeTruthy();
     });
 
     it('each topic is a non-empty string', () => {expect.hasAssertions();

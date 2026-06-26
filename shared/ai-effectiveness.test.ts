@@ -31,6 +31,12 @@ describe('ComputeAiEffectiveness', () => {
         expect(result.topPromptVersion).toBe('');
         expect(result.byVersion).toStrictEqual([]);
         expect(result.trend).toStrictEqual([]);
+    });
+
+    it('has valid timestamp for empty store', () => {
+        const store: AiFeedbackStore = { records: [] };
+        const result = computeAiEffectiveness(store);
+
         expect(result.timestamp).toBeTruthy();
     });
 
@@ -132,6 +138,32 @@ describe('ComputeAiEffectiveness', () => {
         expect(result.trend[1]?.date).toBe('2026-06-02');
         expect(result.trend[1]?.generated).toBe(2);
         expect(result.trend[1]?.acceptanceRate).toBe(100);
+    });
+
+    it('includes third day in trend', () => {
+        const store: AiFeedbackStore = {
+            records: [
+                { timestamp: '2026-06-01T10:00:00Z', promptVersion: 'v1', testTitle: 't1', accepted: true },
+                {
+                    timestamp: '2026-06-01T11:00:00Z',
+                    promptVersion: 'v1',
+                    testTitle: 't2',
+                    accepted: false,
+                    modificationReason: 'modified',
+                },
+                { timestamp: '2026-06-02T10:00:00Z', promptVersion: 'v1', testTitle: 't3', accepted: true },
+                { timestamp: '2026-06-02T11:00:00Z', promptVersion: 'v1', testTitle: 't4', accepted: true },
+                {
+                    timestamp: '2026-06-03T10:00:00Z',
+                    promptVersion: 'v1',
+                    testTitle: 't5',
+                    accepted: false,
+                    modificationReason: 'deleted',
+                },
+            ],
+        };
+        const result = computeAiEffectiveness(store);
+
         expect(result.trend[2]?.date).toBe('2026-06-03');
         expect(result.trend[2]?.generated).toBe(1);
         expect(result.trend[2]?.acceptanceRate).toBe(0);

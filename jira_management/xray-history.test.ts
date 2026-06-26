@@ -132,13 +132,13 @@ describe('ServerHistoryProvider', () => {
         const result = await provider.getHistory('TEST-123');
 
         expect(result).toHaveLength(2);
-        expect(result[0]).toEqual({
+        expect(result[0]).toStrictEqual({
             status: 'PASS',
             testExecKey: 'TE-1',
             startedOn: '2024-01-01',
             finishedOn: undefined,
         });
-        expect(result[1]).toEqual({
+        expect(result[1]).toStrictEqual({
             status: 'FAIL',
             testExecKey: 'TE-2',
             startedOn: '2024-01-02',

@@ -22,6 +22,18 @@ describe('GenerateHtmlReport', () => {
         expect(html).toContain('data-variant="pass"');
         expect(html).toContain('data-variant="fail"');
         expect(html).toContain('data-variant="skip"');
+    });
+
+    it('summary cards show pass rate and duration', () => {
+        const tests: FlatTest[] = [
+            { title: 'Login works', state: 'passed', duration: 1200 },
+            { title: 'Logout works', state: 'passed', duration: 800 },
+            { title: 'Error handling', state: 'failed', duration: 300 },
+            { title: 'Pending feature', state: 'skipped', duration: 0 },
+        ];
+
+        const html = generateHtmlReport(tests);
+
         expect(html).toContain('passed');
         expect(html).toContain('failed');
         expect(html).toContain('skipped');
@@ -612,6 +624,7 @@ describe('GenerateHtmlReport', () => {
         expect(html).toContain('AUTH-1');
         expect(html).toContain('AUTH-2');
         expect(html).toContain('EPIC-2');
+
         expect(html).toContain('DASH-1');
         expect(html).toContain('Authentication');
         expect(html).toContain('Dashboard');

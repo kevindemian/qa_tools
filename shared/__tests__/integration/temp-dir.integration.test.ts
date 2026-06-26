@@ -51,6 +51,14 @@ describe('Integration: Temp Dir', () => {
             // The directories should exist at the paths these functions report
             expect(fs.existsSync(tempDirPath())).toBeTruthy();
             expect(fs.existsSync(reportsDir())).toBeTruthy();
+        });
+
+        it('logsDir exists after ensureDirs', async () => {expect.hasAssertions();
+
+            const { ensureDirs, logsDir } = await import('../../temp-dir.js');
+
+            ensureDirs();
+
             expect(fs.existsSync(logsDir())).toBeTruthy();
         });
     });

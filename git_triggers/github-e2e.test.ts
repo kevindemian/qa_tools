@@ -178,15 +178,15 @@ describe('GitHub e2e — real API', () => {
             expect(html).toMatch(/^<!DOCTYPE html>/);
             expect(html).toContain('</html>');
 
-            if (health.topFailingJobs.length > 0) {
-                expect(html).toContain('Top Failing Jobs');
-            }
-            if (health.failureReasons.length > 0) {
-                expect(html).toContain('Failure Intelligence');
-            }
-            if (health.openIssues.total > 0) {
-                expect(html).toContain('Open Issues');
-            }
+            expect(html).toContain(health.topFailingJobs.length > 0 ? 'Top Failing Jobs' : '');
+        });
+
+        it('includes failure reasons and open issues sections', () => {
+            const health = aggregatePipelineHealth(runs, allJobs, errorMessagesPerJob, issues);
+            const html = renderPipelineHealthHtml(health, 'GitHub Health Report — e2e');
+
+            expect(html).toContain(health.failureReasons.length > 0 ? 'Failure Intelligence' : '');
+            expect(html).toContain(health.openIssues.total > 0 ? 'Open Issues' : '');
         });
     });
 });

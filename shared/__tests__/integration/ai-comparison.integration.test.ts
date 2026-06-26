@@ -203,17 +203,9 @@ describe('Integration: AI Comparison Dashboard (FT-24)', () => {
             const result = compareAiVsManual(records);
             const html = generateAiComparisonHtml(result);
 
-            expect(html).toContain('<!DOCTYPE html>');
-            expect(html).toContain('<html');
-            expect(html).toContain('</html>');
-            expect(html).toContain('<head>');
-            expect(html).toContain('</head>');
-            expect(html).toContain('<body>');
-            expect(html).toContain('</body>');
-            expect(html).toContain('--color-surface-page');
-            expect(html).toContain('prefers-color-scheme');
-            expect(html).toContain('data-component="metric-card"');
-            expect(html).toContain('data-component="badge"');
+            const htmlParts = ['<!DOCTYPE html>', '<html', '</html>', '<head>', '</head>', '<body>', '</body>', '--color-surface-page', 'prefers-color-scheme', 'data-component="metric-card"', 'data-component="badge"'];
+
+            expect(htmlParts.every(p => html.includes(p))).toBeTruthy();
         });
     });
 

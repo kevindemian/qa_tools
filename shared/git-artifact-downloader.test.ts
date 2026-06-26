@@ -76,12 +76,12 @@ describe('FetchLatestTestRun', () => {
 
         expect(result).not.toBeNull();
 
-        if (result) {
-            expect(result.tests).toHaveLength(2);
-            expect(result.stats.passed).toBe(1);
-            expect(result.stats.failed).toBe(1);
-            expect(result.stats.total).toBe(2);
-        }
+        if (!result) throw new Error('expected non-null result');
+
+        expect(result.tests).toHaveLength(2);
+        expect(result.stats.passed).toBe(1);
+        expect(result.stats.failed).toBe(1);
+        expect(result.stats.total).toBe(2);
     });
 
     it('returns null when no runs found', async () => {expect.hasAssertions();
@@ -156,11 +156,11 @@ describe('FetchLatestTestRun — GitLab', () => {
 
         expect(result).not.toBeNull();
 
-        if (result) {
-            expect(result.tests).toHaveLength(2);
-            expect(result.stats.passed).toBe(1);
-            expect(result.stats.failed).toBe(1);
-        }
+        if (!result) throw new Error('expected non-null result');
+
+        expect(result.tests).toHaveLength(2);
+        expect(result.stats.passed).toBe(1);
+        expect(result.stats.failed).toBe(1);
     });
 
     it('returns null when GitLab pipeline has no jobs', async () => {expect.hasAssertions();

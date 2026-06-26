@@ -103,14 +103,10 @@ describe('BuildDeveloperProfile — property-based', () => {
                 const result = buildDeveloperProfile(failures);
                 for (const author of result.authors) {
                     const entries = Object.entries(author.categories);
-                    if (entries.length === 0) {
-                        expect(author.topFailureCategory).toBe('');
-                    } else {
-                        const maxCount = Math.max(...entries.map(([, c]) => c));
-                        const topCats = entries.filter(([, c]) => c === maxCount).map(([cat]) => cat);
+                    const maxCount = entries.length > 0 ? Math.max(...entries.map(([, c]) => c)) : 0;
+                    const topCats = entries.length > 0 ? entries.filter(([, c]) => c === maxCount).map(([cat]) => cat) : [''];
 
-                        expect(topCats).toContain(author.topFailureCategory);
-                    }
+                    expect(topCats).toContain(author.topFailureCategory);
                 }
             }),
             { numRuns: 50 },

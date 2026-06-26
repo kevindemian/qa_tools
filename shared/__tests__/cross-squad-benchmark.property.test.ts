@@ -91,17 +91,12 @@ describe('ComputeCrossSquadBenchmark — property-based', () => {
                 fc.uniqueArray(projectArb, { selector: (p) => p.name, minLength: 0, maxLength: 10 }),
                 (projects) => {
                     const result = computeCrossSquadBenchmark(projects);
-                    if (result.benchmarks.length === 0) {
-                        expect(result.topSquad).toBe('');
-                        expect(result.bottomSquad).toBe('');
-                    } else {
-                        const top = result.benchmarks[0];
-                        const bottom = result.benchmarks[result.benchmarks.length - 1];
-                        if (top === undefined || bottom === undefined) return;
+                    const top = result.benchmarks[0];
+                    const bottom = result.benchmarks[result.benchmarks.length - 1];
+                    if (top === undefined || bottom === undefined) return;
 
-                        expect(result.topSquad).toBe(top.project);
-                        expect(result.bottomSquad).toBe(bottom.project);
-                    }
+                    expect(result.topSquad).toBe(result.benchmarks.length === 0 ? '' : top.project);
+                    expect(result.bottomSquad).toBe(result.benchmarks.length === 0 ? '' : bottom.project);
                 },
             ),
             { numRuns: 50 },
@@ -163,15 +158,9 @@ describe('ComputeCrossSquadBenchmark — property-based', () => {
                     for (const project of projects) {
                         const bench = result.benchmarks.find((b) => b.project === project.name);
                         if (bench === undefined) return;
-                        if (project.previousScore === undefined) {
-                            expect(bench.trend).toBe('stable');
-                        } else if (project.healthScore > project.previousScore) {
-                            expect(bench.trend).toBe('up');
-                        } else if (project.healthScore < project.previousScore) {
-                            expect(bench.trend).toBe('down');
-                        } else {
-                            expect(bench.trend).toBe('stable');
-                        }
+                        const expectedTrend = project.previousScore === undefined ? 'stable' : project.healthScore > project.previousScore ? 'up' : project.healthScore < project.previousScore ? 'down' : 'stable';
+                        
+                        expect(bench.trend).toBe(expectedTrend);
                     }
                 },
             ),
@@ -207,6 +196,7 @@ describe('GenerateBenchmarkHtml — property-based', () => {
                     const result = computeCrossSquadBenchmark(projects);
                     const html = generateBenchmarkHtml(result);
                     for (const p of projects) {
+                        
                         expect(html).toContain(p.name);
                     }
                 },

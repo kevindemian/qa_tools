@@ -4,16 +4,20 @@ describe('CreateMockLinkManager', () => {
     it('returns a mock with all methods as vi.fn()', () => {
         const mock = createMockLinkManager();
 
-        expect(typeof mock.getIssueLinkTypes).toBe('function');
-        expect(typeof mock.resolveLinkTypeId).toBe('function');
-        expect(typeof mock.linkIssues).toBe('function');
-        expect(typeof mock.createIssueLink).toBe('function');
-        expect(typeof mock.associatePrecondition).toBe('function');
-        expect(typeof mock.listPreconditions).toBe('function');
-        expect(typeof mock.createPrecondition).toBe('function');
-        expect(typeof mock.listTestExecutions).toBe('function');
-        expect(typeof mock.validateTestExecutionKey).toBe('function');
-        expect(typeof mock.getTestCaseSummaries).toBe('function');
+        const methods = [
+            'getIssueLinkTypes',
+            'resolveLinkTypeId',
+            'linkIssues',
+            'createIssueLink',
+            'associatePrecondition',
+            'listPreconditions',
+            'createPrecondition',
+            'listTestExecutions',
+            'validateTestExecutionKey',
+            'getTestCaseSummaries',
+        ] as const;
+
+        expect(methods.every((m) => m in mock)).toBeTruthy();
     });
 
     it('returns null for cache properties by default', () => {

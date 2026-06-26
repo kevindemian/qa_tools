@@ -345,6 +345,27 @@ describe('Test Impact', () => {
             expect(json.suggestedCommand).toBe('npx jest --findRelatedTests src/login.ts');
             expect(json.confidence).toBe('high');
             expect(json.conservative).toBeFalsy();
+        });
+
+        it('includes smokeTests and generatedAt', () => {
+            const result = {
+                changedFiles: ['src/login.ts'],
+                impactedTests: [
+                    {
+                        title: 'Login test',
+                        testKey: 'PROJ-42',
+                        reason: 'Jest --findRelatedTests: login.test.ts',
+                        matchMode: 'jest_find_related' as const,
+                        filePattern: 'login.test.ts',
+                    },
+                ],
+                unaffected: { total: 0, skippedDueTo: [] },
+                suggestedCommand: 'npx jest --findRelatedTests src/login.ts',
+                confidence: 'high' as const,
+            };
+
+            const json = generateTestSelectionJson(result);
+
             expect(json.smokeTests).toStrictEqual([]);
             expect(json.generatedAt).toBeTruthy();
         });

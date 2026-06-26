@@ -51,6 +51,7 @@ describe('AnalyzePipelineImpact — property-based', () => {
                         uncoveredEpics,
                     );
                     for (const alert of result.alerts) {
+                        
                         expect(alert.title.length).toBeGreaterThan(0);
                         expect(alert.message.length).toBeGreaterThan(0);
                         expect(alert.affectedArea.length).toBeGreaterThan(0);
@@ -131,11 +132,8 @@ describe('AnalyzePipelineImpact — property-based', () => {
                         uncoveredEpics,
                     );
                     const hasCritical = result.alerts.some((a) => a.severity === 'critical');
-                    if (passRate < 70 && coveragePct < 70) {
-                        expect(hasCritical).toBeTruthy();
-                    } else {
-                        expect(hasCritical).toBeFalsy();
-                    }
+                    
+                    expect(hasCritical).toBe(passRate < 70 && coveragePct < 70);
                 },
             ),
             { numRuns: 50 },
@@ -160,11 +158,8 @@ describe('AnalyzePipelineImpact — property-based', () => {
                         uncoveredEpics,
                     );
                     const hasAllClear = result.alerts.some((a) => a.title === 'All clear');
-                    if (passRate >= 80 && coveragePct >= 80) {
-                        expect(hasAllClear).toBeTruthy();
-                    } else {
-                        expect(hasAllClear).toBeFalsy();
-                    }
+                    
+                    expect(hasAllClear).toBe(passRate >= 80 && coveragePct >= 80);
                 },
             ),
             { numRuns: 50 },

@@ -70,9 +70,8 @@ describe('ReadIstanbulCoverage — property-based', () => {
             fc.property(istanbulFixtureArb, (fixture) => {
                 const coveragePath = writeFixture(fixture);
                 const result = readIstanbulCoverage(coveragePath);
-                if (result) {
-                    expect(result.source).toBe('istanbul');
-                }
+                
+                expect(result === undefined || result.source === 'istanbul').toBeTruthy();
             }),
             { numRuns: 50 },
         );
@@ -84,10 +83,8 @@ describe('ReadIstanbulCoverage — property-based', () => {
             fc.property(istanbulFixtureArb, (fixture) => {
                 const coveragePath = writeFixture(fixture);
                 const result = readIstanbulCoverage(coveragePath);
-                if (result) {
-                    expect(result.coveragePct).toBeGreaterThanOrEqual(0);
-                    expect(result.coveragePct).toBeLessThanOrEqual(100);
-                }
+                
+                expect(result === undefined || (result.coveragePct >= 0 && result.coveragePct <= 100)).toBeTruthy();
             }),
             { numRuns: 50 },
         );
@@ -144,11 +141,9 @@ describe('ReadIstanbulCoverage — property-based', () => {
                     : { total: { statements: { total: 100, covered: coveredStmts, pct: coveredStmts } } };
                 const coveragePath = writeFixture(fixture);
                 const result = readIstanbulCoverage(coveragePath);
-                if (useLines) {
-                    expect(result?.detail).toMatch(/^lines /);
-                } else {
-                    expect(result?.detail).toMatch(/^statements /);
-                }
+                const expectedDetail = useLines ? /^lines / : /^statements /;
+                
+                expect(result?.detail).toMatch(expectedDetail);
             }),
             { numRuns: 50 },
         );

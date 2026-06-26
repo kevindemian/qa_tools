@@ -117,6 +117,7 @@ describe('GenerateCoverageGapHtml — property-based', () => {
                 const html = generateCoverageGapHtml(makeResult(items));
                 const gaps = items.filter((i) => !i.hasTest);
                 for (const item of gaps) {
+                    
                     expect(html).toContain(item.issueKey);
                 }
             }),
@@ -143,11 +144,8 @@ describe('GenerateCoverageGapHtml — property-based', () => {
             fc.property(fc.array(itemArb, { minLength: 0, maxLength: 10 }), (items) => {
                 const html = generateCoverageGapHtml(makeResult(items));
                 const hasGap = items.some((i) => !i.hasTest);
-                if (hasGap) {
-                    expect(html).toContain('below');
-                } else {
-                    expect(html).toContain('All epics pass');
-                }
+                
+                expect(html).toContain(hasGap ? 'below' : 'All epics pass');
             }),
             { numRuns: 50 },
         );
@@ -173,6 +171,7 @@ describe('GenerateCoverageGapHtml — property-based', () => {
                 if (gaps.length === 0) return;
                 const html = generateCoverageGapHtml(makeResult(items));
                 for (const gap of gaps) {
+                    
                     expect(html).toContain(gap.issueKey);
                     expect(html).toContain('GAP');
                 }

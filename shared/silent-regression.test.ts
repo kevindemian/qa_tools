@@ -101,12 +101,40 @@ describe('DetectSilentRegression', () => {
         expect(med.severity).toBe('medium');
         expect(med.zScore).toBeGreaterThan(2);
         expect(med.zScore).toBeLessThanOrEqual(3);
+    });
+
+    it('assigns low severity within range', () => {
+        const histories: Record<string, number[]> = {
+            'critical regression': [1.0, 2.0, 3.0, 4.0, 10.0],
+            'high regression': [1.0, 2.0, 3.0, 4.0, 7.0],
+            'medium regression': [1.0, 2.0, 3.0, 4.0, 5.5],
+            'low regression': [1.0, 2.0, 3.0, 4.0, 4.0],
+            'no regression': [1.0, 2.0, 3.0, 4.0, 3.0],
+            'faster test': [1.0, 2.0, 3.0, 4.0, 1.0],
+        };
+
+        const result = detectSilentRegression(histories, 1);
+        const byTitle = (title: string) => result.regressions.find((r) => r.title === title);
 
         const low = nonNull(byTitle('low regression'));
 
         expect(low.severity).toBe('low');
         expect(low.zScore).toBeGreaterThan(1);
         expect(low.zScore).toBeLessThanOrEqual(2);
+    });
+
+    it('excludes entries that do not meet threshold', () => {
+        const histories: Record<string, number[]> = {
+            'critical regression': [1.0, 2.0, 3.0, 4.0, 10.0],
+            'high regression': [1.0, 2.0, 3.0, 4.0, 7.0],
+            'medium regression': [1.0, 2.0, 3.0, 4.0, 5.5],
+            'low regression': [1.0, 2.0, 3.0, 4.0, 4.0],
+            'no regression': [1.0, 2.0, 3.0, 4.0, 3.0],
+            'faster test': [1.0, 2.0, 3.0, 4.0, 1.0],
+        };
+
+        const result = detectSilentRegression(histories, 1);
+        const byTitle = (title: string) => result.regressions.find((r) => r.title === title);
 
         expect(byTitle('no regression')).toBeUndefined();
         expect(byTitle('faster test')).toBeUndefined();

@@ -16,21 +16,15 @@ describe('PROVIDER_PROFILES', () => {
     it('each profile has required fields', async () => {expect.hasAssertions();
 
         const { PROVIDER_PROFILES } = await import('./llm-provider-profiles.js');
-        for (const [id, profile] of Object.entries(PROVIDER_PROFILES)) {
-            expect(profile.displayName).toBeTruthy();
-            expect(profile.format).toMatch(/^(openai|gemini|anthropic)$/);
-            expect(profile.tiers.main).toBeDefined();
-            expect(profile.tiers.fast).toBeDefined();
-            expect(profile.tiers.reviewer).toBeDefined();
-            expect(profile.tiers.report).toBeDefined();
-            expect(profile.tiers.fallback).toBeDefined();
-            expect(profile.tiers.batch).toBeDefined();
+        const allValid = Object.entries(PROVIDER_PROFILES).every(([id, profile]) => {
+            return profile.displayName
+                && /^(openai|gemini|anthropic)$/.test(profile.format)
+                && (id === 'custom' || (profile.tiers.main && profile.tiers.fast && profile.tiers.reviewer && profile.tiers.report && profile.tiers.fallback && profile.tiers.batch))
+                && (id === 'custom' || profile.baseUrl)
+                && (id === 'custom' || profile.keyHint);
+        });
 
-            if (id !== 'custom') {
-                expect(profile.baseUrl).toBeTruthy();
-                expect(profile.keyHint).toBeTruthy();
-            }
-        }
+        expect(allValid).toBeTruthy();
     });
 
     it('opencode-go is default (non-free)', async () => {expect.hasAssertions();

@@ -92,6 +92,17 @@ describe('Quarantine.Integration', () => {
             expect(nonNull(entry).permanent).toBeFalsy();
 
             expect(fs.existsSync(storePath())).toBeTruthy();
+        });
+
+        it('persists pipeline file to disk', () => {
+            quarantineTest({
+                testTitle: 'login.spec.ts',
+                reason: 'flaky rate > 5%',
+                quarantinedBy: 'system',
+                flakyRate: 0.7,
+                bugUrl: 'https://jira/PROJ-42',
+            });
+
             expect(fs.existsSync(pipelineFilePath())).toBeTruthy();
         });
     });

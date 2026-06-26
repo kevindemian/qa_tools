@@ -55,12 +55,10 @@ describe('Store', () => {
 
                 expect(loaded).not.toBeNull();
 
-                if (loaded) {
-                    expect(loaded.sha).toBe('abc123');
-                    expect(loaded.project).toBe(project);
-                    expect(loaded.passed).toBe(8);
-                    expect(loaded.failed).toBe(1);
-                }
+                expect(loaded?.sha).toBe('abc123');
+                expect(loaded?.project).toBe(project);
+                expect(loaded?.passed).toBe(8);
+                expect(loaded?.failed).toBe(1);
             });
 
             it('put overwrites existing entry', () => {
@@ -69,7 +67,9 @@ describe('Store', () => {
                 updated.passed = 10;
                 store.put('abc123', updated);
                 const loaded = store.lookup('abc123');
-                if (loaded) expect(loaded.passed).toBe(10);
+
+                expect(loaded).not.toBeNull();
+                expect(loaded?.passed).toBe(10);
             });
 
             it('multiple entries are independent', () => {
@@ -81,7 +81,7 @@ describe('Store', () => {
                 expect(s1).not.toBeNull();
                 expect(s2).not.toBeNull();
 
-                if (s1 && s2) expect(s1.sha).not.toBe(s2.sha);
+                expect(s1?.sha).not.toBe(s2?.sha);
             });
         });
 
@@ -157,11 +157,9 @@ describe('Store', () => {
 
                 expect(loaded).not.toBeNull();
 
-                if (loaded) {
-                    expect(loaded.tests).toHaveLength(2);
-                    expect(loaded.tests[0]?.title).toBe('t1');
-                    expect(loaded.tests[1]?.state).toBe('failed');
-                }
+                expect(loaded?.tests).toHaveLength(2);
+                expect(loaded?.tests[0]?.title).toBe('t1');
+                expect(loaded?.tests[1]?.state).toBe('failed');
             });
 
             it('report files are isolated by sha', () => {
@@ -169,10 +167,11 @@ describe('Store', () => {
                 store.saveReport('sha2', [{ title: 'b', state: 'failed', duration: 2 }]);
                 const r1 = store.loadReport('sha1');
                 const r2 = store.loadReport('sha2');
-                if (r1 && r2) {
-                    expect(r1.tests[0]?.title).toBe('a');
-                    expect(r2.tests[0]?.title).toBe('b');
-                }
+
+                expect(r1).not.toBeNull();
+                expect(r2).not.toBeNull();
+                expect(r1?.tests[0]?.title).toBe('a');
+                expect(r2?.tests[0]?.title).toBe('b');
             });
         });
 
@@ -188,10 +187,8 @@ describe('Store', () => {
 
                 expect(loaded).not.toBeNull();
 
-                if (loaded) {
-                    expect(loaded.runs).toHaveLength(1);
-                    expect(loaded.runs[0]?.passed).toBe(5);
-                }
+                expect(loaded?.runs).toHaveLength(1);
+                expect(loaded?.runs[0]?.passed).toBe(5);
             });
         });
 

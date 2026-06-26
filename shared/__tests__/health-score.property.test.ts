@@ -99,28 +99,9 @@ describe('CalculateHealthScore — property-based', () => {
             fc.property(MetricsStoreArb, (store) => {
                 const result = calculateHealthScore(store);
                 const score = result.overall;
-                switch (result.grade) {
-                    case 'excellent':
-                        expect(score).toBeGreaterThanOrEqual(90);
-
-                        break;
-                    case 'good':
-                        expect(score).toBeGreaterThanOrEqual(80);
-
-                        break;
-                    case 'needs_attention':
-                        expect(score).toBeGreaterThanOrEqual(70);
-
-                        break;
-                    case 'poor':
-                        expect(score).toBeGreaterThanOrEqual(60);
-
-                        break;
-                    case 'critical':
-                        expect(score).toBeLessThan(60);
-
-                        break;
-                }
+                const expectedGrade = score >= 90 ? 'excellent' : score >= 80 ? 'good' : score >= 70 ? 'needs_attention' : score >= 60 ? 'poor' : 'critical';
+                
+                expect(result.grade).toBe(expectedGrade);
             }),
             { numRuns: 50 },
         );
@@ -157,6 +138,7 @@ describe('CalculateHealthScore — property-based', () => {
                     dims.suiteSpeed.score,
                 ];
                 for (const score of dimScores) {
+                    
                     expect(score).toBeGreaterThanOrEqual(0);
                     expect(score).toBeLessThanOrEqual(100);
                 }
@@ -174,6 +156,7 @@ describe('CalculateHealthScore — property-based', () => {
                 expect(result.provenance).toHaveLength(5);
 
                 for (const p of result.provenance ?? []) {
+                    
                     expect(p.source.length).toBeGreaterThan(0);
                     expect(p.standard.length).toBeGreaterThan(0);
                     expect(p.formula.length).toBeGreaterThan(0);
@@ -204,9 +187,7 @@ describe('CalculateHealthScore — property-based', () => {
 
                 expect(passRateProvenance).toBeDefined();
 
-                if (useOverride) {
-                    expect(passRateProvenance?.overridden).toBeTruthy();
-                }
+                expect(!useOverride || passRateProvenance?.overridden).toBeTruthy();
             }),
             { numRuns: 50 },
         );
@@ -232,28 +213,9 @@ describe('CalculateHealthScore — property-based', () => {
                     };
                     const result = calculateHealthScore(store, { gradeBoundaries: boundaries });
                     const score = result.overall;
-                    switch (result.grade) {
-                        case 'excellent':
-                            expect(score).toBeGreaterThanOrEqual(boundaries.excellent);
-
-                            break;
-                        case 'good':
-                            expect(score).toBeGreaterThanOrEqual(boundaries.good);
-
-                            break;
-                        case 'needs_attention':
-                            expect(score).toBeGreaterThanOrEqual(boundaries.needs_attention);
-
-                            break;
-                        case 'poor':
-                            expect(score).toBeGreaterThanOrEqual(boundaries.poor);
-
-                            break;
-                        case 'critical':
-                            expect(score).toBeLessThan(boundaries.poor);
-
-                            break;
-                    }
+                    const expectedGrade = score >= boundaries.excellent ? 'excellent' : score >= boundaries.good ? 'good' : score >= boundaries.needs_attention ? 'needs_attention' : score >= boundaries.poor ? 'poor' : 'critical';
+                    
+                    expect(result.grade).toBe(expectedGrade);
                 },
             ),
             { numRuns: 50 },

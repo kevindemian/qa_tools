@@ -1,26 +1,18 @@
 import { createMockGitProvider } from './git-provider-factory.js';
 
+const GIT_PROVIDER_METHODS = [
+    'triggerPipeline', 'getSchedules', 'runSchedule', 'createMergeRequest',
+    'updateMergeRequest', 'getMergeRequest', 'searchMergeRequests', 'acceptMergeRequest',
+    'isApproved', 'getCICDVariables', 'getRecentPipelines', 'getBranch',
+    'getPipeline', 'getPipelineJobs', 'listPipelineArtifacts', 'downloadArtifact',
+    'getDiff',
+];
+
 describe('CreateMockGitProvider', () => {
     it('returns a Mocked<GitProvider> with all methods as vi.fn()', () => {
         const mock = createMockGitProvider();
 
-        expect(typeof mock.triggerPipeline).toBe('function');
-        expect(typeof mock.getSchedules).toBe('function');
-        expect(typeof mock.runSchedule).toBe('function');
-        expect(typeof mock.createMergeRequest).toBe('function');
-        expect(typeof mock.updateMergeRequest).toBe('function');
-        expect(typeof mock.getMergeRequest).toBe('function');
-        expect(typeof mock.searchMergeRequests).toBe('function');
-        expect(typeof mock.acceptMergeRequest).toBe('function');
-        expect(typeof mock.isApproved).toBe('function');
-        expect(typeof mock.getCICDVariables).toBe('function');
-        expect(typeof mock.getRecentPipelines).toBe('function');
-        expect(typeof mock.getBranch).toBe('function');
-        expect(typeof mock.getPipeline).toBe('function');
-        expect(typeof mock.getPipelineJobs).toBe('function');
-        expect(typeof mock.listPipelineArtifacts).toBe('function');
-        expect(typeof mock.downloadArtifact).toBe('function');
-        expect(typeof mock.getDiff).toBe('function');
+        expect(GIT_PROVIDER_METHODS.every((m) => typeof mock[m as keyof typeof mock] === 'function')).toBeTruthy();
     });
 
     it('defaults provider to gitlab', () => {

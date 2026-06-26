@@ -17,16 +17,9 @@ describe('AnalysisValidator — createAnalysisValidator', () => {
         const v = createAnalysisValidator();
         const invariants = v.listInvariants();
 
-        expect(invariants).toContain('A-01');
-        expect(invariants).toContain('A-02');
-        expect(invariants).toContain('A-03');
-        expect(invariants).toContain('A-04');
-        expect(invariants).toContain('A-05');
-        expect(invariants).toContain('I-01');
-        expect(invariants).toContain('I-02');
-        expect(invariants).toContain('I-03');
-        expect(invariants).toContain('I-04');
-        expect(invariants).toContain('I-05');
+        const ids = ['A-01', 'A-02', 'A-03', 'A-04', 'A-05', 'I-01', 'I-02', 'I-03', 'I-04', 'I-05'];
+
+        expect(ids.every((id) => invariants.includes(id))).toBeTruthy();
     });
 
     it('passes a well-formed analysis', () => {

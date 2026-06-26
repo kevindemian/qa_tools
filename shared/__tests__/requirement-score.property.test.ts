@@ -165,13 +165,11 @@ describe('Requirement Score.Property', () => {
             fc.assert(
                 fc.property(fc.array(AiGenerationRecordArb, { minLength: 0, maxLength: 10 }), (records) => {
                     const result = calculateRequirementScores(records);
-                    if (result.totalRequirements > 0) {
-                        const expectedAvg = Math.round(
-                            result.entries.reduce((s, e) => s + e.score, 0) / result.totalRequirements,
-                        );
+                    const expectedAvg = result.totalRequirements > 0
+                        ? Math.round(result.entries.reduce((s, e) => s + e.score, 0) / result.totalRequirements)
+                        : result.overallScore;
 
-                        expect(result.overallScore).toBe(expectedAvg);
-                    }
+                    expect(result.overallScore).toBe(expectedAvg);
 
                     expect(ValidGrades).toContain(result.overallGrade);
                 }),

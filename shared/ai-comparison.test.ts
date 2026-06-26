@@ -22,16 +22,18 @@ describe('CompareAiVsManual', () => {
     it('returns zeroed result for empty array', () => {
         const result = compareAiVsManual([]);
 
-        expect(result.aiTotal).toBe(0);
-        expect(result.aiPassRate).toBe(0);
-        expect(result.aiFlakinessAvg).toBe(0);
-        expect(result.aiAcceptanceRate).toBe(0);
-        expect(result.manualTotal).toBe(0);
-        expect(result.manualPassRate).toBe(0);
-        expect(result.manualFlakinessAvg).toBe(0);
-        expect(result.manualAcceptanceRate).toBe(1);
-        expect(result.aiAdvantage).toBe('none');
-        expect(result.byVersion).toStrictEqual([]);
+        expect(result).toMatchObject({
+            aiTotal: 0,
+            aiPassRate: 0,
+            aiFlakinessAvg: 0,
+            aiAcceptanceRate: 0,
+            manualTotal: 0,
+            manualPassRate: 0,
+            manualFlakinessAvg: 0,
+            manualAcceptanceRate: 1,
+            aiAdvantage: 'none',
+            byVersion: [],
+        });
         expect(result.timestamp).toMatch(/^\d{4}-\d{2}-\d{2}T/);
     });
 
@@ -51,6 +53,16 @@ describe('CompareAiVsManual', () => {
         expect(result.manualPassRate).toBe(0);
         expect(result.manualFlakinessAvg).toBe(0);
         expect(result.manualAcceptanceRate).toBe(1);
+    });
+
+    it('computes AI-only advantage as none when no manual records', () => {
+        const records: AiComparisonRecord[] = [
+            makeRecord({ generatedBy: 'ai', passed: true, flakiness: 0.1, accepted: true }),
+            makeRecord({ generatedBy: 'ai', passed: false, flakiness: 0.3, accepted: false }),
+            makeRecord({ generatedBy: 'ai', passed: true, flakiness: 0.05, accepted: true }),
+        ];
+        const result = compareAiVsManual(records);
+
         expect(result.aiAdvantage).toBe('none');
     });
 
@@ -236,6 +248,11 @@ describe('GenerateAiComparisonHtml', () => {
         expect(html).toContain('AI Acceptance');
         expect(html).toContain('Manual Acceptance');
         expect(html).toContain('75%');
+    });
+
+    it('renders metric values with correct percentages', () => {
+        const html = generateAiComparisonHtml(sampleResult());
+
         expect(html).toContain('67%');
     });
 

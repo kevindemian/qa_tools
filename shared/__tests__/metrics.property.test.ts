@@ -376,12 +376,10 @@ describe('GetTrends — property-based', () => {
                 const trends = getTrends(store);
                 trends.forEach((t, i) => {
                     const run = store.runs[store.runs.length - trends.length + i];
-                    if (run) {
-                        const denom = run.passed + run.failed;
-                        const expectedRate = denom > 0 ? (run.passed / denom) * 100 : 0;
+                    const denom = (run?.passed ?? 0) + (run?.failed ?? 0);
+                    const expectedRate = denom > 0 ? ((run?.passed ?? 0) / denom) * 100 : 0;
 
-                        expect(t.passRate).toBeCloseTo(expectedRate, 5);
-                    }
+                    expect(t.passRate).toBeCloseTo(expectedRate, 5);
                 });
             }),
             { numRuns: 100 },

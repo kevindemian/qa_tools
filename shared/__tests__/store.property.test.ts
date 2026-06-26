@@ -76,15 +76,19 @@ describe('Store — property-based', () => {
 
                     if (!loaded) throw new Error('lookup returned null');
 
-                    expect(loaded.sha).toBe(meta.sha);
-                    expect(loaded.project).toBe(meta.project);
-                    expect(loaded.tool).toBe(meta.tool);
-                    expect(loaded.branch).toBe(meta.branch);
-                    expect(loaded.total).toBe(meta.total);
-                    expect(loaded.passed).toBe(meta.passed);
-                    expect(loaded.failed).toBe(meta.failed);
-                    expect(loaded.skipped).toBe(meta.skipped);
-                    expect(loaded.timestamp).toBe(meta.timestamp);
+                    const fields: [keyof typeof loaded, unknown][] = [
+                        ['sha', meta.sha],
+                        ['project', meta.project],
+                        ['tool', meta.tool],
+                        ['branch', meta.branch],
+                        ['total', meta.total],
+                        ['passed', meta.passed],
+                        ['failed', meta.failed],
+                        ['skipped', meta.skipped],
+                        ['timestamp', meta.timestamp],
+                    ];
+
+                    expect(fields.every(([k, v]) => loaded[k] === v)).toBeTruthy();
                 } finally {
                     cleanupDir(dir);
                 }
@@ -242,13 +246,7 @@ describe('Store — property-based', () => {
 
                         expect(loaded.tests).toHaveLength(tests.length);
 
-                        if (tests.length > 0) {
-                            const firstLoaded = loaded.tests[0];
-                            const firstTest = tests[0];
-                            if (!firstLoaded || !firstTest) throw new Error('expected tests');
-
-                            expect(firstLoaded.title).toBe(firstTest.title);
-                        }
+                        expect(loaded.tests[0]?.title).toBe(tests[0]?.title);
                     } finally {
                         cleanupDir(dir);
                     }

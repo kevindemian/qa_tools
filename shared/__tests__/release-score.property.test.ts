@@ -49,10 +49,9 @@ describe('CalculateReleaseScore — property-based', () => {
             fc.property(pctArb(), pctArb(), gateArb(), pctArb(), pctArb(), (tasks, health, gate, coverage, flaky) => {
                 const result = calculateReleaseScore(tasks, health, gate, coverage, flaky);
                 const s = result.score;
-                if (s >= 90) expect(result.grade).toBe('excellent');
-                else if (s >= 70) expect(result.grade).toBe('good');
-                else if (s >= 50) expect(result.grade).toBe('needs_attention');
-                else expect(result.grade).toBe('critical');
+                const expectedGrade = s >= 90 ? 'excellent' : s >= 70 ? 'good' : s >= 50 ? 'needs_attention' : 'critical';
+                
+                expect(result.grade).toBe(expectedGrade);
             }),
             { numRuns: 100 },
         );
@@ -68,6 +67,7 @@ describe('CalculateReleaseScore — property-based', () => {
                 expect(result.breakdown.map((d) => d.label)).toStrictEqual(['Tasks', 'Health', 'Coverage', 'Flakiness']);
 
                 for (const d of result.breakdown) {
+                    
                     expect(d.score).toBeGreaterThanOrEqual(0);
                     expect(d.score).toBeLessThanOrEqual(100);
                 }
@@ -119,14 +119,13 @@ describe('CalculateReleaseScore — property-based', () => {
             fc.property(pctArb(), pctArb(), gateArb(), pctArb(), pctArb(), (tasks, health, gate, coverage, flaky) => {
                 const result = calculateReleaseScore(tasks, health, gate, coverage, flaky);
                 for (const d of result.breakdown) {
+                    
                     expect(d.score).toBeGreaterThanOrEqual(0);
                     expect(d.score).toBeLessThanOrEqual(100);
 
-                    if (d.label === 'Health') {
-                        expect(d.status).toBe(gate);
-                    } else {
-                        expect(d.status).toBe(d.score >= 70 ? 'pass' : 'fail');
-                    }
+                    const expectedStatus = d.label === 'Health' ? gate : (d.score >= 70 ? 'pass' : 'fail');
+                    
+                    expect(d.status).toBe(expectedStatus);
                 }
             }),
             { numRuns: 100 },
@@ -146,13 +145,9 @@ describe('CalculateReleaseScore — property-based', () => {
                 }
                 const flkA = flkAEntry.score;
                 const flkB = flkBEntry.score;
-                if (a > b) {
-                    expect(flkA).toBeLessThanOrEqual(flkB);
-                } else if (a < b) {
-                    expect(flkA).toBeGreaterThanOrEqual(flkB);
-                } else {
-                    expect(flkA).toBe(flkB);
-                }
+                const isMonotonic = a > b ? flkA <= flkB : a < b ? flkA >= flkB : flkA === flkB;
+                
+                expect(isMonotonic).toBeTruthy();
             }),
             { numRuns: 100 },
         );

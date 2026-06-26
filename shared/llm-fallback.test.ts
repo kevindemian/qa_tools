@@ -346,15 +346,15 @@ describe('Llm Fallback', () => {
             Config.set('llmBaseUrl', 'https://api.test.com/v1');
             mockFetch.mockResolvedValue(mockErrorResponse(500));
 
+            let caughtError: unknown;
             try {
                 await sendWithFallback('main', 'system', 'user');
-
-                expect.unreachable('Expected error');
-            } catch (err) {
-                const msg = (err as Error).message;
-
-                expect(msg).toContain('All LLM providers failed');
+            } catch (e) {
+                caughtError = e;
             }
+            const msg = (caughtError as Error).message;
+
+            expect(msg).toContain('All LLM providers failed');
         });
 
         it('applies responseFormat to all candidates', async () => {expect.hasAssertions();

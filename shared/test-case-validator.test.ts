@@ -21,27 +21,16 @@ function makeCtx(input: string): ValidationContext {
 }
 
 describe('TestCaseValidator — createTestCaseValidator', () => {
+    const EXPECTED_INVARIANT_IDS = [
+        'T-01', 'T-02', 'T-03', 'T-04', 'T-05', 'T-06', 'T-07', 'T-08', 'T-09', 'T-10', 'T-11', 'T-12',
+        'I-01', 'I-02', 'I-03', 'I-04', 'I-05',
+    ];
+
     it('creates validator with all invariants registered', () => {
         const v = createTestCaseValidator();
         const invariants = v.listInvariants();
 
-        expect(invariants).toContain('T-01');
-        expect(invariants).toContain('T-02');
-        expect(invariants).toContain('T-03');
-        expect(invariants).toContain('T-04');
-        expect(invariants).toContain('T-05');
-        expect(invariants).toContain('T-06');
-        expect(invariants).toContain('T-07');
-        expect(invariants).toContain('T-08');
-        expect(invariants).toContain('T-09');
-        expect(invariants).toContain('T-10');
-        expect(invariants).toContain('T-11');
-        expect(invariants).toContain('T-12');
-        expect(invariants).toContain('I-01');
-        expect(invariants).toContain('I-02');
-        expect(invariants).toContain('I-03');
-        expect(invariants).toContain('I-04');
-        expect(invariants).toContain('I-05');
+        expect(EXPECTED_INVARIANT_IDS.every((id) => invariants.includes(id))).toBeTruthy();
     });
 
     it('passes a well-formed test suite', () => {

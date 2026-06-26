@@ -166,15 +166,9 @@ describe('Integration: AI Effectiveness Dashboard (FT-23)', () => {
             const result = computeAiEffectiveness(store);
             const html = generateAiEffectivenessHtml(result);
 
-            expect(html).toContain('<!DOCTYPE html>');
-            expect(html).toContain('<html');
-            expect(html).toContain('</html>');
-            expect(html).toContain('<head>');
-            expect(html).toContain('</head>');
-            expect(html).toContain('<body>');
-            expect(html).toContain('</body>');
-            expect(html).toContain('--color-surface-page');
-            expect(html).toContain('prefers-color-scheme');
+            const parts = ['<!DOCTYPE html>', '<html', '</html>', '<head>', '</head>', '<body>', '</body>', '--color-surface-page', 'prefers-color-scheme'];
+
+            expect(parts.every(p => html.includes(p))).toBeTruthy();
         });
     });
 

@@ -124,13 +124,9 @@ describe('CalculatePipelineCost — property-based', () => {
                     const entry = result.costByRun[i];
                     const run = sortedRuns[i];
                     if (!entry || !run) continue;
-                    if (run.failed > 0) {
-                        expect(entry.status).toBe('failed');
-                    } else if (run.passed === run.total) {
-                        expect(entry.status).toBe('passed');
-                    } else {
-                        expect(entry.status).toBe('partial');
-                    }
+                    const expectedStatus = run.failed > 0 ? 'failed' : run.passed === run.total ? 'passed' : 'partial';
+                    
+                    expect(entry.status).toBe(expectedStatus);
                 }
             }),
             { numRuns: 50 },

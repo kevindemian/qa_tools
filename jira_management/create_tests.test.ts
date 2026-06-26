@@ -439,6 +439,17 @@ describe('GenerateMappingFiles', async () => {
         expect(content).toContain('"description": "Descricao do TC1"');
         expect(content).toContain('"title": "TC2"');
         expect(content).toContain('"Action": "a1"');
+    });
+
+    it('includes second action in mapping', () => {
+        const base = nextBase();
+        const testCases: TestCase[] = [
+            { title: 'TC1', description: 'Descricao do TC1', steps: makeSteps('a1', 'a2') },
+        ];
+        generateMappingFiles(base + '.csv', 'PROJ', ['TEST-1'], testCases);
+
+        const content = realFs.readFileSync(tmpDir + '/test-csv-' + testIdx + '-jira-mapping.json', 'utf8');
+
         expect(content).toContain('"Action": "a2"');
     });
 

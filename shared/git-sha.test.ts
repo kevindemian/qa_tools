@@ -83,10 +83,9 @@ describe('Git Sha', () => {
         it('falls back to git rev-parse when no env vars set', () => {
             const env = {} as NodeJS.ProcessEnv;
             const result = getHeadSha(env);
-            if (result !== null) {
-                expect(typeof result).toBe('string');
-                expect(result.length).toBeGreaterThanOrEqual(40);
-            }
+            
+            expect(typeof result).toBe(result !== null ? 'string' : 'object');
+            expect(result?.length ?? 0).toBeGreaterThanOrEqual(result !== null ? 40 : 0);
         });
 
         it('reads from packed-refs when ref file is missing', () => {
@@ -196,10 +195,9 @@ describe('Git Sha', () => {
         it('falls back to git rev-parse when no env vars set', () => {
             const env = {} as NodeJS.ProcessEnv;
             const result = getCurrentBranch(env);
-            if (result !== null) {
-                expect(typeof result).toBe('string');
-                expect(result.length).toBeGreaterThan(0);
-            }
+            
+            expect(typeof result).toBe(result !== null ? 'string' : 'object');
+            expect(result?.length ?? 0).toBeGreaterThan(result !== null ? 0 : -1);
         });
 
         it('returns null when git rev-parse fails', () => {
@@ -245,6 +243,7 @@ describe('Git Sha', () => {
                 const sha = getHeadSha({});
 
                 /* Line without SHA prefix returns the ref itself, not null */
+                
                 expect(sha).toBe('refs/heads/main');
             } finally {
                 process.chdir(origCwd);

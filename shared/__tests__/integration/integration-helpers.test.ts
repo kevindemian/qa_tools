@@ -55,6 +55,11 @@ describe('Fixture factories', () => {
         expect(result).toHaveProperty('skipped', 2);
         expect(result).toHaveProperty('duration', 15000);
         expect(result.tests).toHaveLength(3);
+    });
+
+    it('createMetricsRunFixture test states are correct', () => {
+        const result = createMetricsRunFixture();
+
         expect(result.tests[0]).toHaveProperty('state', 'passed');
         expect(result.tests[1]).toHaveProperty('state', 'failed');
         expect(result.tests[2]).toHaveProperty('state', 'skipped');
