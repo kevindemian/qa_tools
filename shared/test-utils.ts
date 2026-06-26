@@ -110,19 +110,19 @@ export function withEnv(env: Record<string, string | undefined>): () => void {
     const prev = new Map<string, string | undefined>();
     const envEntries = Object.entries(env);
     for (const [key, value] of envEntries) {
-        prev.set(key, process.env[key]);
+        prev.set(key, Reflect.get(process.env, key));
         if (value === undefined) {
-            delete process.env[key];
+            Reflect.deleteProperty(process.env, key);
         } else {
-            process.env[key] = value;
+            Reflect.set(process.env, key, value);
         }
     }
     return () => {
         for (const [key] of envEntries) {
             if (prev.get(key) === undefined) {
-                delete process.env[key];
+                Reflect.deleteProperty(process.env, key);
             } else {
-                process.env[key] = prev.get(key);
+                Reflect.set(process.env, key, prev.get(key));
             }
         }
     };
