@@ -67,13 +67,13 @@ function buildDayTable(days: SeasonalityDay[]): string {
     ];
 
     const rows: TableRow[] = days.map((d) => {
-        const cells: Record<string, string> = {
-            day: d.dayOfWeek,
-            total: String(d.total),
-        };
-        for (const c of cats) {
-            cells[sanitizeHtml(c)] = String(d.categories[c] ?? 0);
-        }
+        const baseCells: [string, string][] = [
+            ['day', d.dayOfWeek],
+            ['total', String(d.total)],
+        ];
+        const catEntries = Object.entries(d.categories);
+        const catCells: [string, string][] = catEntries.map(([k, v]) => [sanitizeHtml(k), String(v)]);
+        const cells: Record<string, string> = Object.fromEntries([...baseCells, ...catCells]);
         return { key: d.dayOfWeek, cells };
     });
 
@@ -96,13 +96,13 @@ function buildHourTable(hours: SeasonalityHour[]): string {
     ];
 
     const rows: TableRow[] = hours.map((h) => {
-        const cells: Record<string, string> = {
-            hour: `${h.hour}:00`,
-            total: String(h.total),
-        };
-        for (const c of cats) {
-            cells[sanitizeHtml(c)] = String(h.categories[c] ?? 0);
-        }
+        const baseCells: [string, string][] = [
+            ['hour', `${h.hour}:00`],
+            ['total', String(h.total)],
+        ];
+        const catEntries = Object.entries(h.categories);
+        const catCells: [string, string][] = catEntries.map(([k, v]) => [sanitizeHtml(k), String(v)]);
+        const cells: Record<string, string> = Object.fromEntries([...baseCells, ...catCells]);
         return { key: String(h.hour), cells };
     });
 
@@ -134,8 +134,8 @@ export function aggregateDefectSeasonality(
         };
     }
 
-    const dayAcc: Record<string, { total: number; categories: Record<string, number> }> = {};
-    const hourAcc: Record<number, { total: number; categories: Record<string, number> }> = {};
+    const dayAcc = new Map<string, { total: number; categories: Map<string, number> }>();
+    const hourAcc = new Map<number, { total: number; categories: Map<string, number> }>();
     let minDate = '';
     let maxDate = '';
 
@@ -144,14 +144,16 @@ export function aggregateDefectSeasonality(
         const hour = getHour(fc.timestamp);
         const cat = fc.category;
 
-        if (!dayAcc[dayName]) dayAcc[dayName] = { total: 0, categories: {} };
-        dayAcc[dayName].total++;
-        dayAcc[dayName].categories[cat] = (dayAcc[dayName].categories[cat] ?? 0) + 1;
+        if (!dayAcc.has(dayName)) dayAcc.set(dayName, { total: 0, categories: new Map() });
+        const dayEntry = dayAcc.get(dayName)!;
+        dayEntry.total++;
+        dayEntry.categories.set(cat, (dayEntry.categories.get(cat) ?? 0) + 1);
 
         if (!isNaN(hour)) {
-            if (!hourAcc[hour]) hourAcc[hour] = { total: 0, categories: {} };
-            hourAcc[hour].total++;
-            hourAcc[hour].categories[cat] = (hourAcc[hour].categories[cat] ?? 0) + 1;
+            if (!hourAcc.has(hour)) hourAcc.set(hour, { total: 0, categories: new Map() });
+            const hourEntry = hourAcc.get(hour)!;
+            hourEntry.total++;
+            hourEntry.categories.set(cat, (hourEntry.categories.get(cat) ?? 0) + 1);
         }
 
         const date = extractDate(fc.timestamp);
@@ -161,14 +163,14 @@ export function aggregateDefectSeasonality(
 
     const byDayOfWeek: SeasonalityDay[] = DAY_SORT_ORDER.map((d) => ({
         dayOfWeek: d,
-        total: dayAcc[d]?.total ?? 0,
-        categories: { ...(dayAcc[d]?.categories ?? {}) },
+        total: dayAcc.get(d)?.total ?? 0,
+        categories: Object.fromEntries(dayAcc.get(d)?.categories ?? []),
     }));
 
     const byHour: SeasonalityHour[] = Array.from({ length: HOUR_COUNT }, (_, i) => ({
         hour: i,
-        total: hourAcc[i]?.total ?? 0,
-        categories: { ...(hourAcc[i]?.categories ?? {}) },
+        total: hourAcc.get(i)?.total ?? 0,
+        categories: Object.fromEntries(hourAcc.get(i)?.categories ?? []),
     }));
 
     const peakDayEntry =
