@@ -587,8 +587,8 @@ function parseArgs(args: string[]): CliOptions {
         skipFlaky: false,
         projectName: process.env['GITHUB_REPOSITORY'] ?? 'unknown',
     };
-    for (let i = 0; i < args.length; i++) {
-        switch (args[i]) {
+    for (const [i, arg] of args.entries()) {
+        switch (arg) {
             case '--help':
             case '-h':
                 rootLogger.info(
@@ -629,7 +629,7 @@ function parseArgs(args: string[]): CliOptions {
                 opts.skipFlaky = true;
                 break;
             default:
-                rootLogger.warn(`Flag desconhecida ignorada: ${args[i]}`);
+                rootLogger.warn(`Flag desconhecida ignorada: ${arg}`);
         }
     }
     return opts;

@@ -44,8 +44,9 @@ export abstract class GitProviderBase {
         if (!entries || !Array.isArray(entries)) return '';
         const lines: string[] = [];
         for (const entry of entries) {
-            const patch = entry[patchField];
-            const name = entry[nameField];
+            const entryMap = new Map(Object.entries(entry));
+            const patch = entryMap.get(patchField);
+            const name = entryMap.get(nameField);
             if (patch && typeof patch === 'string') {
                 lines.push('--- a/' + (typeof name === 'string' ? name : ''));
                 lines.push('+++ b/' + (typeof name === 'string' ? name : ''));

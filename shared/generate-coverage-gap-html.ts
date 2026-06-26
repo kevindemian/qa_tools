@@ -63,7 +63,7 @@ function buildQualityGateSection(result: CoverageGapResult): string {
         children:
             `<div class="label" style="color:var(--color-badge-fail-text);margin-bottom:4px">Quality Gate</div>` +
             `<div style="font-size:1rem;font-weight:600;color:var(--color-badge-fail-text)">${gc.failingEpics.length} epic(s) below ${gc.minCoveragePct}% threshold</div>` +
-            `<ul style="margin:8px 0 0;font-size:0.85rem">${gc.failingEpics.map((k) => '<li style="color:var(--color-badge-fail-text)">' + sanitizeHtml(k) + ' (' + sanitizeHtml(result.byEpic[k]?.rawPct + '%' || '') + ')</li>').join('')}</ul>`,
+            `<ul style="margin:8px 0 0;font-size:0.85rem">${gc.failingEpics.map((k) => '<li style="color:var(--color-badge-fail-text)">' + sanitizeHtml(k) + ' (' + sanitizeHtml((Object.entries(result.byEpic).find(([ek]) => ek === k)?.[1]?.rawPct ?? '') + '%' || '') + ')</li>').join('')}</ul>`,
     });
 }
 
@@ -74,7 +74,7 @@ function buildEpicCards(result: CoverageGapResult): string {
     const epicKeys = Object.keys(byEpic);
     for (const key of epicKeys) {
         if (key === '__no_epic__') continue;
-        const epic = byEpic[key];
+        const epic = Object.entries(byEpic).find(([ek]) => ek === key)?.[1];
         if (!epic) continue;
         const color = epic.weightedPct >= 50 ? tokens.color.chart.pass : tokens.color.chart.fail;
         const badge = epic.gatePass
