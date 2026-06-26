@@ -305,14 +305,14 @@ export function checkArtifactValidators(): CheckResult {
             continue;
         }
         const content = readFileSync(req.file, 'utf-8');
-        const reexportPattern = new RegExp(`export\\s*\\{[^}]*\\b${req.export}\\b`);
-        if (
-            !content.includes('export ' + req.export) &&
-            !content.includes('export function ' + req.export) &&
-            !content.includes('export class ' + req.export) &&
-            !content.includes('export async function ' + req.export) &&
-            !reexportPattern.test(content)
-        ) {
+        const hasDirectExport =
+            content.includes('export ' + req.export) ||
+            content.includes('export function ' + req.export) ||
+            content.includes('export class ' + req.export) ||
+            content.includes('export async function ' + req.export);
+        const hasReexport =
+            content.includes('export {') && content.includes(req.export);
+        if (!hasDirectExport && !hasReexport) {
             violations.push({ file: req.file, line: 1, content: `Missing export: ${req.export}` });
         }
     }

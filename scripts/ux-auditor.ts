@@ -274,8 +274,10 @@ function detectDeadUtilities(importGraph: ImportGraph): AuditFinding[] {
             /* 2. Check if the export is called at module-level within its own file.
              *    Module-level calls are not inside a function body — they execute at import time. */
             if (prodCalls === 0) {
-                const selfCallRe = new RegExp(`^\\s*${exp.name}\\s*\\(`, 'm');
-                if (selfCallRe.test(src)) {
+                const selfCallPattern = exp.name + '(';
+                const selfCallIdx = src.indexOf(selfCallPattern);
+                const selfCallRe = selfCallIdx >= 0 && /^\s*\S/.test(src.slice(selfCallIdx));
+                if (selfCallRe) {
                     prodCalls++;
                 }
             }
@@ -283,11 +285,16 @@ function detectDeadUtilities(importGraph: ImportGraph): AuditFinding[] {
             /* 3. If still zero prod usage but called from tests, flag as dead utility */
             if (prodCalls === 0) {
                 let testCalls = 0;
-                const testCallRe = new RegExp(`\\b${exp.name}\\s*\\(`, 'g');
                 for (const tf of allTestFiles) {
                     const tfSrc = readSource(tf);
-                    const matches = tfSrc.match(testCallRe);
-                    if (matches) testCalls += matches.length;
+                    if (!tfSrc) continue;
+                    const callPattern = exp.name + '(';
+                    let idx = 0;
+                    while ((idx = tfSrc.indexOf(callPattern, idx)) !== -1) {
+                        const prev = idx > 0 ? tfSrc[idx - 1] : undefined;
+                        if (idx === 0 || (prev !== undefined && /\s/.test(prev))) testCalls++;
+                        idx++;
+                    }
                 }
 
                 if (testCalls > 0) {

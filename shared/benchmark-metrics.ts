@@ -48,12 +48,10 @@ function countCoveredPartitions(tests: TestCaseShape[], min: number, max: number
     let partitions = 0;
     const stepsTexts = tests.map((t) => (t.steps || []).join(' ').toLowerCase());
     const allText = stepsTexts.join(' ');
-    const belowMinRe = new RegExp('\\b' + (min - 1) + '\\b', 'i');
-    const aboveMaxRe = new RegExp('\\b' + (max + 1) + '\\b', 'i');
-    const validRe = new RegExp('\\b(?:' + (min + 1) + '|' + min + '|' + max + '|' + (max - 1) + ')\\b', 'i');
-    if (validRe.test(allText)) partitions++;
-    if (belowMinRe.test(allText) || /below|less than|under/i.test(allText)) partitions++;
-    if (aboveMaxRe.test(allText) || /above|greater than|over|exceed/i.test(allText)) partitions++;
+    const words = new Set(allText.split(/\s+/));
+    if (words.has(String(min + 1)) || words.has(String(min)) || words.has(String(max)) || words.has(String(max - 1))) partitions++;
+    if (words.has(String(min - 1)) || /below|less than|under/i.test(allText)) partitions++;
+    if (words.has(String(max + 1)) || /above|greater than|over|exceed/i.test(allText)) partitions++;
     return Math.min(partitions, MAX_PARTITION_TYPES);
 }
 
@@ -68,9 +66,9 @@ function countCoveredBoundaries(tests: TestCaseShape[], min: number, max: number
         })
         .join(' ');
     const boundariesToCheck = [min, max, min - 1, max + 1];
+    const words = new Set(allText.split(/\s+/));
     for (const b of boundariesToCheck) {
-        const re = new RegExp('\\b' + b + '\\b');
-        if (re.test(allText)) boundaries++;
+        if (words.has(String(b))) boundaries++;
     }
     return boundaries;
 }

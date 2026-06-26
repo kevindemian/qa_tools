@@ -47,9 +47,22 @@ export function truncateStacktrace(input: string, maxLines: number = 20): string
 export { sanitizeHtml } from './escape.js';
 
 const ESC = String.fromCharCode(27);
-const ANSI_ESCAPE_RE = new RegExp(ESC + '\\[[0-9;]*[a-zA-Z]', 'g');
 
 /** Strip ANSI escape sequences from a string. */
 export function sanitizeTerminal(text: string): string {
-    return text.replace(ANSI_ESCAPE_RE, '');
+    let result = '';
+    let i = 0;
+    while (i < text.length) {
+        const ch = text.charAt(i);
+        const next = text.charAt(i + 1);
+        if (ch === ESC && next === '[') {
+            i += 2;
+            while (i < text.length && text.charAt(i) >= '0' && text.charAt(i) <= ';') i++;
+            if (i < text.length && text.charAt(i) >= 'A' && text.charAt(i) <= 'z') i++;
+        } else {
+            result += ch;
+            i++;
+        }
+    }
+    return result;
 }
