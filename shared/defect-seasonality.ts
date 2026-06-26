@@ -145,15 +145,19 @@ export function aggregateDefectSeasonality(
         const cat = fc.category;
 
         if (!dayAcc.has(dayName)) dayAcc.set(dayName, { total: 0, categories: new Map() });
-        const dayEntry = dayAcc.get(dayName)!;
-        dayEntry.total++;
-        dayEntry.categories.set(cat, (dayEntry.categories.get(cat) ?? 0) + 1);
+        const dayEntry = dayAcc.get(dayName);
+        if (dayEntry) {
+            dayEntry.total++;
+            dayEntry.categories.set(cat, (dayEntry.categories.get(cat) ?? 0) + 1);
+        }
 
         if (!isNaN(hour)) {
             if (!hourAcc.has(hour)) hourAcc.set(hour, { total: 0, categories: new Map() });
-            const hourEntry = hourAcc.get(hour)!;
-            hourEntry.total++;
-            hourEntry.categories.set(cat, (hourEntry.categories.get(cat) ?? 0) + 1);
+            const hourEntry = hourAcc.get(hour);
+            if (hourEntry) {
+                hourEntry.total++;
+                hourEntry.categories.set(cat, (hourEntry.categories.get(cat) ?? 0) + 1);
+            }
         }
 
         const date = extractDate(fc.timestamp);
