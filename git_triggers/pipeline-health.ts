@@ -158,15 +158,15 @@ function _calcOpenIssues(
     now: Date,
 ): { total: number; byLabel: Record<string, number>; staleCount: number } {
     const staleThreshold = new Date(now.getTime() - 30 * 24 * 60 * 60 * 1000);
-    const byLabel: Record<string, number> = {};
+    const byLabel = new Map<string, number>();
     let staleCount = 0;
     for (const issue of issues) {
         for (const label of issue.labels) {
-            byLabel[label] = (byLabel[label] ?? 0) + 1;
+            byLabel.set(label, (byLabel.get(label) ?? 0) + 1);
         }
         if (new Date(issue.updated_at) < staleThreshold) staleCount++;
     }
-    return { total: issues.length, byLabel, staleCount };
+    return { total: issues.length, byLabel: Object.fromEntries(byLabel), staleCount };
 }
 
 /* ------------------------------------------------------------------ */
@@ -258,13 +258,20 @@ function _renderCategoriesSection(health: PipelineHealth): string {
         flaky: 'var(--color-info)',
         unknown: 'var(--color-text-muted)',
     };
-    const catEmoji: Record<string, string> = { infrastructure: '🏗️', code: '🧪', flaky: '🔄', unknown: '❓' };
+    const catEmoji = new Map([['infrastructure', '🏗️'], ['code', '🧪'], ['flaky', '🔄'], ['unknown', '❓']]);
+    const catColorEntries = Object.entries(catColors);
     let html = '<div style="display:flex;flex-wrap:wrap;gap:0.75rem">';
     for (const key of catKeys) {
+        const emoji = catEmoji.get(key) ?? '📋';
+        const colorEntry = catColorEntries.find(([k]) => k === key);
+        const color = colorEntry?.[1] ?? 'var(--color-text-primary)';
+        const failureEntries = Object.entries(health.failureByCategory);
+        const failEntry = failureEntries.find(([k]) => k === key);
+        const failCount = failEntry?.[1] ?? 0;
         html +=
             `<div style="flex:1;min-width:140px;background:var(--color-surface-card);border:1px solid var(--color-border-default);border-radius:8px;padding:0.75rem">` +
-            `<div style="font-size:1.2rem">${catEmoji[key] ?? '📋'} <strong>${key}</strong></div>` +
-            `<div style="font-size:1.5rem;font-weight:700;color:${catColors[key] ?? 'var(--color-text-primary)'}">${health.failureByCategory[key]}</div></div>`;
+            `<div style="font-size:1.2rem">${emoji} <strong>${key}</strong></div>` +
+            `<div style="font-size:1.5rem;font-weight:700;color:${color}">${failCount}</div></div>`;
     }
     html += '</div>';
     return html;
