@@ -121,8 +121,7 @@ export class ReportValidator {
         const testsEntry = dataEntries.find(([k]) => k === 'tests');
         const tests = testsEntry?.[1];
         if (!Array.isArray(tests)) return;
-        for (let i = 0; i < tests.length; i++) {
-            const t: unknown = tests[i];
+        for (const [, t] of (tests as unknown[]).entries()) {
             if (typeof t !== 'object' || t === null) continue;
             const tc = t as TestCaseShape;
             if (tc.severity === 'high' && typeof tc.recommendation === 'string' && tc.recommendation.length < 20) {
@@ -153,7 +152,7 @@ export class ReportValidator {
                 const arrEntry = objEntries.find(([k]) => k === key);
                 const arr = arrEntry?.[1];
                 if (!Array.isArray(arr)) return undefined;
-                current = arr[idx];
+                current = new Map(arr.map((v, i) => [i, v])).get(idx);
             } else {
                 if (typeof current !== 'object' || current === null) return undefined;
                 const objEntries = Object.entries(current as Record<string, unknown>);

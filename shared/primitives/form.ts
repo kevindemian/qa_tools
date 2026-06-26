@@ -64,16 +64,16 @@ export interface ButtonProps {
 }
 
 export function Button(props: ButtonProps): string {
-    const bg: Record<string, string> = {
-        default: 'var(--color-surface-input)',
-        primary: 'var(--color-info)',
-        ghost: 'transparent',
-    };
-    const textColor: Record<string, string> = {
-        default: 'var(--color-text-primary)',
-        primary: '#ffffff',
-        ghost: 'var(--color-text-primary)',
-    };
+    const bg = new Map<string, string>([
+        ['default', 'var(--color-surface-input)'],
+        ['primary', 'var(--color-info)'],
+        ['ghost', 'transparent'],
+    ]);
+    const textColor = new Map<string, string>([
+        ['default', 'var(--color-text-primary)'],
+        ['primary', '#ffffff'],
+        ['ghost', 'var(--color-text-primary)'],
+    ]);
     const v = props.variant || 'default';
     return `<button data-component="button" data-variant="${v}"
         type="button"
@@ -85,8 +85,8 @@ export function Button(props: ButtonProps): string {
         ${props.disabled ? 'disabled' : ''}
         style="padding:${tokens.spacing.xs}px ${tokens.spacing.md}px;
                border:${v === 'ghost' ? 'none' : `1px solid var(--color-border-default)`};
-               background:${bg[v]};
-               color:${textColor[v]};
+               background:${bg.get(v) ?? ''};
+               color:${textColor.get(v) ?? ''};
                border-radius:${tokens.borderRadius.md}px;
                cursor:${props.disabled ? 'default' : 'pointer'};
                font-size:${tokens.fontSize.md};

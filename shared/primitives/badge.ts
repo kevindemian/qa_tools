@@ -27,7 +27,7 @@ const _badgeStyles: Record<string, { bg: string; text: string }> = {
 
 export function Badge(props: BadgeProps): string {
     const v = props.variant || 'default';
-    const style = _badgeStyles[v] as { bg: string; text: string };
+    const style = Object.entries(_badgeStyles).find(([k]) => k === v)?.[1] as { bg: string; text: string };
     return `<span data-component="badge" data-variant="${v}"
         role="${props.role || 'status'}"
         ${props.ariaLabel ? `aria-label="${props.ariaLabel}"` : ''}
@@ -59,7 +59,7 @@ const _statusToVariant: Record<string, 'pass' | 'fail' | 'skip' | 'warn'> = {
 
 export function StatusBadge(props: StatusBadgeProps): string {
     const st = props.status.toLowerCase();
-    const variant = _statusToVariant[st] || 'default';
+    const variant = Object.entries(_statusToVariant).find(([k]) => k === st)?.[1] || 'default';
     return Badge({
         variant,
         children: props.children || props.status,
