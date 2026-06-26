@@ -21,7 +21,7 @@ class Config {
         this.overrides['autoConfirm'] = v;
     }
     static set(key: string, value: string | boolean | number): void {
-        Config.defaultInstance.overrides[key] = value;
+        Reflect.set(Config.defaultInstance.overrides, key, value);
     }
     static validateRequiredEnv(): void {
         validateRequiredEnv();
@@ -61,7 +61,7 @@ class Config {
     }
 
     set(key: string, value: string | boolean | number): void {
-        this.overrides[key] = value;
+        Reflect.set(this.overrides, key, value);
     }
 
     getAllPrefixed(prefix: string): Record<string, string> {
