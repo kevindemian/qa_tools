@@ -35,11 +35,8 @@ function readJson<T>(backend: StoreBackend, relPath: string): T | null {
             return null;
         }
         const source = parsed as { [key: string]: unknown };
-        const safe = Object.create(null) as { [key: string]: unknown };
-        for (const key of Object.keys(source)) {
-            safe[key] = source[key];
-        }
-        return safe as T;
+        const entries = Object.entries(source);
+        return Object.fromEntries(entries) as T;
     } catch (err: unknown) {
         rootLogger.warn(
             `store: falha ao ler ${relPath} — ${err instanceof Error ? err.message : String(err)}. Verifique permissões e espaço em disco.`,
@@ -81,21 +78,25 @@ export class Store {
 
     lookup(sha: string): ReportMeta | null {
         const index = readJson<Record<string, ReportMeta>>(this.backend, 'reports/index.json');
-        return index?.[sha] ?? null;
+        const entries = index ? Object.entries(index) : [];
+        const entry = entries.find(([k]) => k === sha);
+        return entry?.[1] ?? null;
     }
 
     put(sha: string, meta: ReportMeta): void {
         this.ensure();
         const globalIndex =
             readJson<Record<string, ReportMeta>>(this.backend, 'reports/index.json') ?? emptyRecord<ReportMeta>();
-        globalIndex[sha] = meta;
-        writeJson(this.backend, 'reports/index.json', globalIndex);
+        const globalEntries = Object.entries(globalIndex).filter(([k]) => k !== sha);
+        globalEntries.push([sha, meta]);
+        writeJson(this.backend, 'reports/index.json', Object.fromEntries(globalEntries));
 
         const projIndex =
             readJson<Record<string, ReportMeta>>(this.backend, `reports/${this.project}/index.json`) ??
             emptyRecord<ReportMeta>();
-        projIndex[sha] = meta;
-        writeJson(this.backend, `reports/${this.project}/index.json`, projIndex);
+        const projEntries = Object.entries(projIndex).filter(([k]) => k !== sha);
+        projEntries.push([sha, meta]);
+        writeJson(this.backend, `reports/${this.project}/index.json`, Object.fromEntries(projEntries));
     }
 
     listByProject(): ReportMeta[] {
@@ -110,18 +111,25 @@ export class Store {
         const raw =
             readJson<Record<string, unknown>>(this.backend, `reports/${this.project}/branch-index.json`) ??
             emptyRecord<unknown>();
-        if (!Object.prototype.hasOwnProperty.call(raw, branch) || !Array.isArray(raw[branch])) {
-            raw[branch] = [];
+        const rawEntries = Object.entries(raw);
+        const existingEntry = rawEntries.find(([k]) => k === branch);
+        const existing = existingEntry?.[1];
+        const filtered = rawEntries.filter(([k]) => k !== branch);
+        const newBranch: BranchEntry[] = [entry];
+        if (Array.isArray(existing)) {
+            for (const item of existing) newBranch.push(item as BranchEntry);
         }
-        (raw[branch] as BranchEntry[]).unshift(entry);
-        writeJson(this.backend, `reports/${this.project}/branch-index.json`, raw);
+        filtered.push([branch, newBranch]);
+        writeJson(this.backend, `reports/${this.project}/branch-index.json`, Object.fromEntries(filtered));
     }
 
     getBranch(branch: string): BranchEntry[] {
         const raw =
             readJson<Record<string, unknown>>(this.backend, `reports/${this.project}/branch-index.json`) ??
             emptyRecord<unknown>();
-        const val = raw[branch];
+        const rawEntries = Object.entries(raw);
+        const entry = rawEntries.find(([k]) => k === branch);
+        const val = entry?.[1];
         return Array.isArray(val) ? (val as BranchEntry[]) : [];
     }
 
