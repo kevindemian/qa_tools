@@ -80,27 +80,35 @@ function saveStore(store: StoredQualityMetrics): void {
 }
 
 export class QualityMetricsCollector {
-    private readonly _invariantFireCount: Record<string, number> = {};
+    private readonly _invariantFireCount = new Map<string, number>();
     private _layerAttempts = { layer1: 0, layer2: 0, layer3: 0 };
     private _layerPasses = { layer1: 0, layer2: 0, layer3: 0 };
-    private readonly _artifactTypeCounts: Record<string, number> = {};
+    private readonly _artifactTypeCounts = new Map<string, number>();
     private _structureScoreSum = 0;
     private _structureScoreCount = 0;
 
     recordInvariantFire(invariantId: string): void {
-        this._invariantFireCount[invariantId] = (this._invariantFireCount[invariantId] || 0) + 1;
+        this._invariantFireCount.set(invariantId, (this._invariantFireCount.get(invariantId) ?? 0) + 1);
     }
 
     recordLayerAttempt(layer: 'layer1' | 'layer2' | 'layer3'): void {
-        this._layerAttempts[layer]++;
+        switch (layer) {
+            case 'layer1': this._layerAttempts.layer1++; break;
+            case 'layer2': this._layerAttempts.layer2++; break;
+            case 'layer3': this._layerAttempts.layer3++; break;
+        }
     }
 
     recordLayerPass(layer: 'layer1' | 'layer2' | 'layer3'): void {
-        this._layerPasses[layer]++;
+        switch (layer) {
+            case 'layer1': this._layerPasses.layer1++; break;
+            case 'layer2': this._layerPasses.layer2++; break;
+            case 'layer3': this._layerPasses.layer3++; break;
+        }
     }
 
     recordArtifactType(type: string): void {
-        this._artifactTypeCounts[type] = (this._artifactTypeCounts[type] || 0) + 1;
+        this._artifactTypeCounts.set(type, (this._artifactTypeCounts.get(type) ?? 0) + 1);
     }
 
     recordStructureScore(score: number): void {
@@ -109,15 +117,21 @@ export class QualityMetricsCollector {
     }
 
     invariantFireRate(invariantId: string): number {
-        const total = Object.values(this._invariantFireCount).reduce((a, b) => a + b, 0);
+        const total = Array.from(this._invariantFireCount.values()).reduce((a, b) => a + b, 0);
         if (total === 0) return 0;
-        return (this._invariantFireCount[invariantId] || 0) / total;
+        return (this._invariantFireCount.get(invariantId) ?? 0) / total;
     }
 
     layerPassRate(layer: 'layer1' | 'layer2' | 'layer3'): number {
-        const attempts = this._layerAttempts[layer];
+        let attempts: number;
+        let passes: number;
+        switch (layer) {
+            case 'layer1': attempts = this._layerAttempts.layer1; passes = this._layerPasses.layer1; break;
+            case 'layer2': attempts = this._layerAttempts.layer2; passes = this._layerPasses.layer2; break;
+            case 'layer3': attempts = this._layerAttempts.layer3; passes = this._layerPasses.layer3; break;
+        }
         if (attempts === 0) return 1;
-        return Math.min(this._layerPasses[layer] / attempts, MAX_PASS_RATE);
+        return Math.min(passes / attempts, MAX_PASS_RATE);
     }
 
     /** Detect drift: if any invariant's fire rate is >2σ from baseline. */
@@ -126,21 +140,23 @@ export class QualityMetricsCollector {
 
         const alerts: string[] = [];
 
-        for (const [invariantId, currentRate] of Object.entries(this._invariantFireCount)) {
+        for (const [invariantId, currentRate] of this._invariantFireCount.entries()) {
             const baselineTotals = baselineSnapshots.map((s) =>
                 Object.values(s.invariantFireCount).reduce((a, b) => a + b, 0),
             );
             const ratios = baselineSnapshots
                 .map((s, i) => {
-                    const total = baselineTotals[i] ?? 0;
-                    const rate = s.invariantFireCount[invariantId] ?? 0;
+                    const total = i < baselineTotals.length ? (baselineTotals[i] ?? 0) : 0;
+                    const entries = Object.entries(s.invariantFireCount);
+                    const entry = entries.find(([k]) => k === invariantId);
+                    const rate = entry?.[1] ?? 0;
                     return total > 0 ? rate / total : 0;
                 })
                 .filter((r) => r > 0);
 
             if (ratios.length < 2) continue;
 
-            const totalCurrent = Object.values(this._invariantFireCount).reduce((a, b) => a + b, 0);
+            const totalCurrent = Array.from(this._invariantFireCount.values()).reduce((a, b) => a + b, 0);
             const currentRatio = totalCurrent > 0 ? currentRate / totalCurrent : 0;
 
             const mean = ratios.reduce((a, b) => a + b, 0) / ratios.length;
@@ -169,14 +185,14 @@ export class QualityMetricsCollector {
     snapshot(): QualityMetricsSnapshot {
         const snapshot: QualityMetricsSnapshot = {
             timestamp: new Date().toISOString(),
-            invariantFireCount: { ...this._invariantFireCount },
+            invariantFireCount: Object.fromEntries(this._invariantFireCount),
             layerPassRates: {
                 layer1: this.layerPassRate('layer1'),
                 layer2: this.layerPassRate('layer2'),
                 layer3: this.layerPassRate('layer3'),
             },
             layerAttempts: { ...this._layerAttempts },
-            artifactTypeCounts: { ...this._artifactTypeCounts },
+            artifactTypeCounts: Object.fromEntries(this._artifactTypeCounts),
             avgStructureScore:
                 this._structureScoreCount > 0 && Number.isFinite(this._structureScoreSum)
                     ? Math.round((this._structureScoreSum / this._structureScoreCount) * 100) / 100
@@ -195,10 +211,10 @@ export class QualityMetricsCollector {
     }
 
     clear(): void {
-        for (const key of Object.keys(this._invariantFireCount)) delete this._invariantFireCount[key];
+        this._invariantFireCount.clear();
         this._layerAttempts = { layer1: 0, layer2: 0, layer3: 0 };
         this._layerPasses = { layer1: 0, layer2: 0, layer3: 0 };
-        for (const key of Object.keys(this._artifactTypeCounts)) delete this._artifactTypeCounts[key];
+        this._artifactTypeCounts.clear();
         this._structureScoreSum = 0;
         this._structureScoreCount = 0;
     }
