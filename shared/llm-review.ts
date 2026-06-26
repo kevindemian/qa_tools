@@ -310,10 +310,10 @@ async function reReviewParallel(
 
     if (valid.length === 0) return { confidence: 'medium', tier: 'fallback' };
 
-    const counts = { high: 0, medium: 0, low: 0 };
-    for (const v of valid) counts[v.confidence]++;
-    const sorted = (Object.keys(counts) as Array<'high' | 'medium' | 'low'>).sort((a, b) => counts[b] - counts[a]);
-    const winner: 'high' | 'medium' | 'low' = sorted[0] || 'medium';
+    const counts = new Map<string, number>([['high', 0], ['medium', 0], ['low', 0]]);
+    for (const v of valid) counts.set(v.confidence, (counts.get(v.confidence) ?? 0) + 1);
+    const sorted = (Array.from(counts.entries()) as Array<['high' | 'medium' | 'low', number]>).sort((a, b) => b[1] - a[1]);
+    const winner: 'high' | 'medium' | 'low' = sorted[0]?.[0] || 'medium';
     const winnerTier = valid.find((v) => v.confidence === winner)?.tier ?? 'reviewer';
     return { confidence: winner, tier: winnerTier };
 }
