@@ -21,8 +21,10 @@ const TEST_FILES = globSync('**/*.test.ts', {
 // (EXPR as Mock)  →  vi.mocked(EXPR)
 // EXPR may contain string literals like './foo' but no nested parens at top level.
 function replaceParenCast(content: string): string {
-    const re = /\(((?:[^()'"]|'[^']*'|"[^"]*")+)\s+as jest\.Mock\s*\)/g;
-    return content.replace(re, (_, expr: string) => `vi.mocked(${expr.trim()})`);
+    return content.replace(/\([^()]+\)\s+as jest\.Mock\s*\)/g, (match) => {
+        const inner = match.slice(1, match.lastIndexOf(') as jest.Mock'));
+        return `vi.mocked(${inner.trim()})`;
+    });
 }
 
 // SIMPLE_EXPR as Mocked<Type>   →   vi.mocked(SIMPLE_EXPR)
@@ -30,9 +32,12 @@ function replaceParenCast(content: string): string {
 // SIMPLE_EXPR must be a simple identifier/member chain (no spaces, no parens).
 // Excludes the keyword "unknown" to avoid matching `} as unknown as Mocked<T>`.
 function replaceAssignCast(content: string): string {
-    const re =
-        /\b(?!(?:unknown|any|never|void|undefined|null|boolean|string|number)\b)(\w+(?:\.\w+)*)\s+as jest\.(?:Mocked|MockedFunction)<[^>]+>/g;
-    return content.replace(re, (_, expr: string) => `vi.mocked(${expr.trim()})`);
+    const reserved = new Set(['unknown', 'any', 'never', 'void', 'undefined', 'null', 'boolean', 'string', 'number']);
+    return content.replace(/(\w[\w.]*)\s+as jest\.(?:Mocked|MockedFunction)<[^>]+>/g, (match, expr: string) => {
+        const first = expr.split('.')[0] ?? '';
+        if (reserved.has(first)) return match;
+        return `vi.mocked(${expr.trim()})`;
+    });
 }
 
 let totalFiles = 0;
