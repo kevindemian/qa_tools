@@ -110,7 +110,9 @@ function loadRegistry(): Record<string, unknown> {
 function getProviderModels(registry: Record<string, unknown>, provider: string): RegistryModel[] {
     const providers = registry['providers'] as Record<string, unknown> | undefined;
     if (!providers) return [];
-    const models = providers[provider];
+    const providerEntries = Object.entries(providers);
+    const providerEntry = providerEntries.find(([k]) => k === provider);
+    const models = providerEntry?.[1];
     if (!Array.isArray(models)) return [];
     return models as RegistryModel[];
 }
@@ -231,14 +233,14 @@ function parseArgs(): { provider: string | null; dryRun: boolean; createPr: bool
 }
 
 function envVarForProvider(provider: string): string | null {
-    const vars: Record<string, string> = {
-        openai: 'OPENAI_API_KEY',
-        anthropic: 'ANTHROPIC_API_KEY',
-        openrouter: 'OPENROUTER_API_KEY',
-        groq: 'GROQ_API_KEY',
-        gemini: 'GEMINI_API_KEY',
-    };
-    const envName = vars[provider];
+    const vars = new Map([
+        ['openai', 'OPENAI_API_KEY'],
+        ['anthropic', 'ANTHROPIC_API_KEY'],
+        ['openrouter', 'OPENROUTER_API_KEY'],
+        ['groq', 'GROQ_API_KEY'],
+        ['gemini', 'GEMINI_API_KEY'],
+    ]);
+    const envName = vars.get(provider);
     if (envName) return process.env[envName] ?? null;
     return process.env['LLM_API_KEY'] ?? null;
 }
