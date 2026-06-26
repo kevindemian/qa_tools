@@ -107,7 +107,9 @@ export const ALIASES: Record<string, string> = {
 
 export function resolveAlias(choice: string): string {
     const trimmed = choice.trim().toLowerCase();
-    return ALIASES[trimmed] || choice;
+    const aliasEntries = Object.entries(ALIASES);
+    const entry = aliasEntries.find(([k]) => k === trimmed);
+    return entry?.[1] ?? choice;
 }
 
 export const CATEGORIES: MenuItem[] = [
@@ -178,12 +180,16 @@ export const CATEGORY_TITLES: Record<string, string> = {
 };
 
 function _buildAliasMap(): Record<string, string[]> {
-    const map: Record<string, string[]> = {};
+    const map = new Map<string, string[]>();
     for (const [alias, id] of Object.entries(ALIASES)) {
-        if (!map[id]) map[id] = [];
-        map[id].push(alias);
+        const existing = map.get(id);
+        if (existing) {
+            existing.push(alias);
+        } else {
+            map.set(id, [alias]);
+        }
     }
-    return map;
+    return Object.fromEntries(map);
 }
 
 export const ID_TO_ALIASES = _buildAliasMap();
@@ -198,7 +204,9 @@ export function _configHint(key: string, ctx: { git_directory: string }): string
 }
 
 export function buildMenuChoices(level: string, proj: string, ctx: { git_directory: string }): MenuChoice[] {
-    const items = level === 'main' ? CATEGORIES : SUB_MENUS[level] || CATEGORIES;
+    const subMenuEntries = Object.entries(SUB_MENUS);
+    const subMenuEntry = subMenuEntries.find(([k]) => k === level);
+    const items = level === 'main' ? CATEGORIES : subMenuEntry?.[1] ?? CATEGORIES;
     const choices: MenuChoice[] = [];
     for (const item of items) {
         if (item.section) {
