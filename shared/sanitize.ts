@@ -1,14 +1,14 @@
 /** Input sanitisation: LLM-safe redaction, HTML escaping, and ANSI stripping. */
 const SECRET_PATTERNS: RegExp[] = [
     /bearer\s+[a-zA-Z0-9\-._~+/]+/gi,
-    /-----BEGIN\s?(RSA\s?)?PRIVATE\s?KEY-----[\s\S]*?-----END\s?(RSA\s?)?PRIVATE\s?KEY-----/gi,
+    /-----BEGIN\s?RSA\s?PRIVATE\s?KEY-----[\s\S]*?-----END\s?RSA\s?PRIVATE\s?KEY-----/gi,
+    /-----BEGIN\s?PRIVATE\s?KEY-----[\s\S]*?-----END\s?PRIVATE\s?KEY-----/gi,
     /-----BEGIN\s?CERTIFICATE-----[\s\S]*?-----END\s?CERTIFICATE-----/gi,
     /sk-[a-zA-Z0-9]{20,}/g,
     /ghp_[a-zA-Z0-9]{36,}/g,
     /gho_[a-zA-Z0-9]{36,}/g,
     /github_pat_[a-zA-Z0-9]{22,}/g,
     /AIza[0-9A-Za-z_-]{35,}/g,
-    /(?:https?:\/\/)?[^@\s]+:[^@\s]+@/g,
     /hf_[a-zA-Z0-9]{20,}/g,
     /npm_[a-zA-Z0-9]{36,}/g,
     /xox[abp]-[a-zA-Z0-9-]{20,}/g,
@@ -31,8 +31,35 @@ export function sanitizeForLlm(input: string, maxStackLines?: number): string {
             return match.slice(0, 4) + '[...sanitized]';
         });
     }
+    result = redactUrlsWithCredentials(result);
     if (maxStackLines !== undefined) {
         result = truncateStacktrace(result, maxStackLines);
+    }
+    return result;
+}
+
+function redactUrlsWithCredentials(text: string): string {
+    let result = '';
+    let i = 0;
+    while (i < text.length) {
+        const atIdx = text.indexOf('@', i);
+        if (atIdx === -1) {
+            result += text.slice(i);
+            break;
+        }
+        const colonIdx = text.lastIndexOf(':', atIdx);
+        if (colonIdx > i && colonIdx < atIdx) {
+            const prefix = text.lastIndexOf(' ', colonIdx);
+            const start = prefix === -1 ? i : prefix + 1;
+            if (start < colonIdx) {
+                result += text.slice(i, start);
+                result += text.slice(start, colonIdx + 1) + '[...sanitized]';
+                i = atIdx + 1;
+                continue;
+            }
+        }
+        result += text[i];
+        i++;
     }
     return result;
 }

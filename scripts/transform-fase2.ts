@@ -27,7 +27,7 @@ for (const file of TEST_FILES) {
     // Step 1: expr as Mock<(...args: Args) => Type>  →  vi.mocked(expr)  (preserve surrounding parens if any)
     // Handle: expr as Mock (no generics)
     const step1Before = content;
-    content = content.replace(/(\w+(?:\.\w+)*)\s+as jest\.Mock\b(?:<[^>]+>)?/g, (match, expr: string) => {
+    content = content.replace(/(\w[\w.]*)\s+as jest\.Mock\b[^>]*/g, (match, expr: string) => {
         // Skip if already wrapped in vi.mocked()
         const lineStart = Math.max(0, content.indexOf(match) - 20);
         const prefix = content.slice(lineStart, content.indexOf(match));
@@ -45,14 +45,17 @@ for (const file of TEST_FILES) {
 
     // Step 2: (expr as Mock)  →  vi.mocked(expr)  (parenthesized form, from original script)
     content = content.replace(
-        /\((\w+(?:\.\w+)*)\s+as jest\.Mock\b(?:<[^>]+>)?\s*\)/g,
+        /\((\w[\w.]*)\s+as jest\.Mock\b[^>]*\)/g,
         (_, expr: string) => `vi.mocked(${expr.trim()})`,
     );
 
     // Step 3: expr as Mocked<Type>  →  vi.mocked(expr)  (NO AxiosInstance)
     content = content.replace(
-        /(\w+(?:\.\w+)*)\s+as jest\.Mocked<((?!AxiosInstance)[^>]+)>/g,
-        (_, expr: string) => `vi.mocked(${expr.trim()})`,
+        /(\w[\w.]*)\s+as jest\.Mocked<[^>]+>/g,
+        (match, expr: string) => {
+            if (match.includes('AxiosInstance')) return match;
+            return `vi.mocked(${expr.trim()})`;
+        },
     );
 
     // Step 4: new Class(args) as Mocked<Class>  →  vi.mocked(new Class(args))
@@ -63,21 +66,24 @@ for (const file of TEST_FILES) {
 
     // Step 5: expr as Mocked<typeof fn>  →  vi.mocked(fn)
     content = content.replace(
-        /(\w+(?:\.\w+)*)\s+as jest\.MockedFunction<typeof\s+(\w+)>/g,
+        /(\w[\w.]*)\s+as jest\.MockedFunction<typeof\s+(\w+)>/g,
         (_, _expr: string, fn: string) => `vi.mocked(${fn})`,
     );
 
     // Step 6: expr as unknown as Mock  →  vi.mocked(expr)
     // But NOT expr as unknown as Mocked<AxiosInstance> (will be factory in Fase 3)
     content = content.replace(
-        /(\w+(?:\.\w+)*)\s+as unknown as jest\.Mock\b(?:<[^>]+>)?/g,
+        /(\w[\w.]*)\s+as unknown as jest\.Mock\b[^>]*/g,
         (_, expr: string) => `vi.mocked(${expr.trim()})`,
     );
 
     // Step 7: expr as unknown as Mocked<Type>  →  vi.mocked(expr)  (NO AxiosInstance)
     content = content.replace(
-        /(\w+(?:\.\w+)*)\s+as unknown as jest\.Mocked<((?!AxiosInstance)[^>]+)>/g,
-        (_, expr: string) => `vi.mocked(${expr.trim()})`,
+        /(\w[\w.]*)\s+as unknown as jest\.Mocked<[^>]+>/g,
+        (match, expr: string) => {
+            if (match.includes('AxiosInstance')) return match;
+            return `vi.mocked(${expr.trim()})`;
+        },
     );
 
     // Step 8: fs as Mocked<typeof fs>  →  vi.mocked(fs)

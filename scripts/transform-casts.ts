@@ -42,7 +42,7 @@ for (const file of TEST_FILES) {
 
     // Step 2: (expr as Mock)  →  vi.mocked(expr)
     content = content.replace(
-        /\((\w+(?:\.\w+)*)\s+as jest\.Mock\s*\)/g,
+        /\((\w[\w.]*)\s+as jest\.Mock\s*\)/g,
         (_, expr: string) => `vi.mocked(${expr.trim()})`,
     );
 
