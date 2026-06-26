@@ -38,9 +38,11 @@ export function showHelp(topic?: string): void {
         return;
     }
     const lower = topic.toLowerCase().trim();
-    if (HELP_TOPICS[lower]) {
+    const helpEntries = Object.entries(HELP_TOPICS);
+    const helpEntry = helpEntries.find(([k]) => k === lower);
+    if (helpEntry) {
         title('HELP — ' + lower);
-        helpLine(HELP_TOPICS[lower]);
+        helpLine(helpEntry[1]);
         return;
     }
     if (!lower.startsWith('search ')) {
@@ -189,10 +191,13 @@ export async function getUserChoice(level: string, proj: string, ctx: SessionCon
             `   ${palette.muted(ctx.sessionCounters.length + ' operações')}  ·  ${palette.green('' + ok + ' ✓')}${err > 0 ? '  ' + palette.red('' + err + ' ✗') : ''}`,
         );
     const contextLine = ctx.buildContextLine(proj);
+    const catEntries = Object.entries(CATEGORY_TITLES);
+    const catEntry = catEntries.find(([k]) => k === level);
+    const catTitle = catEntry?.[1] ?? level;
     const pathLine =
         level === 'main'
             ? `   ${proj}${contextLine ? ' | ' + contextLine : ''}`
-            : `   ${proj} > ${CATEGORY_TITLES[level] || level}${contextLine ? ' | ' + contextLine : ''}`;
+            : `   ${proj} > ${catTitle}${contextLine ? ' | ' + contextLine : ''}`;
     const displayPath = pathLine.length > 74 ? pathLine.slice(0, 73) + '…' : pathLine;
     defaultOutput.box(headerLines.length > 0 ? [displayPath, '', ...headerLines] : [displayPath], {
         border: 'double',
@@ -203,7 +208,7 @@ export async function getUserChoice(level: string, proj: string, ctx: SessionCon
     return showSelect(
         level === 'main'
             ? '      Selecione uma seção'
-            : `      ${CATEGORY_TITLES[level] || level} — Selecione uma opção`,
+            : `      ${catTitle} — Selecione uma opção`,
         choices,
         { pageSize: (process.stdout.rows || 24) - 4, menuMode: true },
     );

@@ -26,14 +26,18 @@ interface CrossRefGroup {
 
 function buildCrossRefGroups(tests: TestCase[], ids: string[]): Record<string, CrossRefGroup> {
     const valid = tests.map((t, i) => ({ test: t, id: ids[i] })).filter((x) => x.id && x.test.group);
-    const groups: Record<string, CrossRefGroup> = {};
+    const groups = new Map<string, CrossRefGroup>();
     for (const { test, id } of valid) {
         const groupName = test.group as string;
         const key = groupName.toUpperCase();
-        if (!groups[key]) groups[key] = { name: groupName, members: [] };
-        groups[key].members.push({ id: id as string, description: test.description || '' });
+        let entry = groups.get(key);
+        if (!entry) {
+            entry = { name: groupName, members: [] };
+            groups.set(key, entry);
+        }
+        entry.members.push({ id: id as string, description: test.description || '' });
     }
-    return groups;
+    return Object.fromEntries(groups);
 }
 
 async function updateGroupLinks(
