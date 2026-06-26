@@ -37,7 +37,9 @@ class Config {
     }
 
     private _resolve<T = string>(key: string): T {
-        const ov = (this.overrides as Record<string, unknown>)[key];
+        const overrideEntries = Object.entries(this.overrides);
+        const ovEntry = overrideEntries.find(([k]) => k === key);
+        const ov = ovEntry?.[1];
         if (ov !== undefined) return ov as T;
         const f = CONFIG_SCHEMA.find((r) => r.key === key);
         if (!f) return envVal(key) as T;
@@ -59,14 +61,20 @@ class Config {
     }
 
     set(key: string, value: string | boolean | number): void {
-        this.overrides[key] = value;
+        const entries = Object.entries(this.overrides);
+        const existing = entries.find(([k]) => k === key);
+        if (existing) {
+            existing[1] = value;
+        } else {
+            entries.push([key, value]);
+        }
     }
 
     getAllPrefixed(prefix: string): Record<string, string> {
         ensureDotenv();
-        const r: Record<string, string> = {};
-        for (const [k, v] of Object.entries(process.env)) if (k.startsWith(prefix) && v) r[k] = v;
-        return r;
+        const entries: [string, string][] = [];
+        for (const [k, v] of Object.entries(process.env)) if (k.startsWith(prefix) && v) entries.push([k, v]);
+        return Object.fromEntries(entries);
     }
     static getAllPrefixed(prefix: string): Record<string, string> {
         return Config.defaultInstance.getAllPrefixed(prefix);

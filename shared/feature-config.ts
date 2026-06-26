@@ -65,7 +65,9 @@ export function saveFeatureConfig(store: FeatureConfigStore): void {
 /** Get feature config for a specific project. Returns default config when missing. */
 export function getProjectFeatureConfig(projectName: string): ProjectFeatureConfig | undefined {
     const store = loadFeatureConfig();
-    return store[projectName];
+    const entries = Object.entries(store);
+    const entry = entries.find(([k]) => k === projectName);
+    return entry?.[1];
 }
 
 /** Get PR Report config for a project. Returns default (disabled) when not configured. */
@@ -77,14 +79,19 @@ export function getPrReportConfig(projectName: string): PrReportFeatureConfig {
 /** Set PR Report config for a project. Creates project entry if it doesn't exist. */
 export function setPrReportConfig(projectName: string, config: PrReportFeatureConfig): void {
     const store = loadFeatureConfig();
-    if (!store[projectName]) {
-        store[projectName] = {
+    const entries = Object.entries(store);
+    const existing = entries.find(([k]) => k === projectName);
+    if (!existing) {
+        entries.push([projectName, {
             gitProvider: 'github',
             features: {},
-        };
+        }]);
     }
-    store[projectName].features.prReport = config;
-    saveFeatureConfig(store);
+    const projectEntry = entries.find(([k]) => k === projectName);
+    if (projectEntry) {
+        projectEntry[1].features.prReport = config;
+    }
+    saveFeatureConfig(Object.fromEntries(entries));
 }
 
 /** Check if PR Report is enabled for a given project. */

@@ -43,12 +43,14 @@ const CATEGORY_LABELS: Record<string, string> = {
     opencode: 'Opencode',
 };
 
-const groups: Record<string, CategoryGroup> = {};
+const groups = new Map<string, CategoryGroup>();
 
 for (const f of CONFIG_SCHEMA) {
     const cat = f.category || 'other';
-    if (!groups[cat]) {
-        groups[cat] = { label: CATEGORY_LABELS[cat] || cat, lines: [] };
+    if (!groups.has(cat)) {
+        const labelEntries = Object.entries(CATEGORY_LABELS);
+        const labelEntry = labelEntries.find(([k]) => k === cat);
+        groups.set(cat, { label: labelEntry?.[1] ?? cat, lines: [] });
     }
     let line = f.envVar + '=';
     if (f.defaultVal !== undefined) {
@@ -57,7 +59,7 @@ for (const f of CONFIG_SCHEMA) {
     if (f.description) {
         line += '  # ' + f.description;
     }
-    groups[cat].lines.push(line);
+    groups.get(cat)?.lines.push(line);
 }
 
 const categoryOrder = [
@@ -78,7 +80,7 @@ const categoryOrder = [
 let output = HEADER;
 
 for (const cat of categoryOrder) {
-    const g = groups[cat];
+    const g = groups.get(cat);
     if (!g || g.lines.length === 0) continue;
     output += `# ── ${g.label} ──────────────────────────────────────────────\n`;
     output += g.lines.join('\n') + '\n\n';
