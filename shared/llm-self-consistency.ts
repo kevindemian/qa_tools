@@ -34,7 +34,11 @@ function structuralHash(obj: unknown): string {
     }
     if (typeof obj === 'object') {
         const keys = Object.keys(obj).sort();
-        return `o:{${keys.map((k) => `${k}:${structuralHash((obj as Record<string, unknown>)[k])}`).join(',')}}`;
+        const entries = Object.entries(obj);
+        return `o:{${keys.map((k) => {
+            const entry = entries.find(([ek]) => ek === k);
+            return `${k}:${structuralHash(entry ? entry[1] : undefined)}`;
+        }).join(',')}}`;
     }
     if (typeof obj === 'bigint') return `big:${obj}`;
     if (typeof obj === 'symbol') return `sym:${obj.description ?? ''}`;
@@ -140,16 +144,20 @@ export async function consensusGenerate<T>(
     }
 
     const hashes = candidates.map((c) => structuralHash(c));
-    const voteCounts: Record<string, number[]> = {};
+    const voteCounts = new Map<string, number[]>();
     for (let i = 0; i < hashes.length; i++) {
         const h = hashes[i] as string;
-        if (!voteCounts[h]) voteCounts[h] = [];
-        voteCounts[h].push(i);
+        const existing = voteCounts.get(h);
+        if (existing) {
+            existing.push(i);
+        } else {
+            voteCounts.set(h, [i]);
+        }
     }
 
-    const sorted = Object.entries(voteCounts).sort((a, b) => b[1].length - a[1].length);
-    const winnerHash = (sorted[0] as [string, number[]])[0];
-    const winnerIndex = (voteCounts[winnerHash] as number[])[0] as number;
+    const sorted = Array.from(voteCounts.entries()).sort((a, b) => b[1].length - a[1].length);
+    const winnerHash = sorted[0]?.[0] ?? '';
+    const winnerIndex = voteCounts.get(winnerHash)?.[0] ?? 0;
     const winner = candidates[winnerIndex] as T;
 
     const similarityPairs: number[] = [];
@@ -170,7 +178,8 @@ export async function consensusGenerate<T>(
 
     const votes: Record<number, number> = {};
     for (let i = 0; i < candidates.length; i++) {
-        votes[i] = voteCounts[hashes[i] as string]?.length ?? 1;
+        const h = hashes[i];
+        votes[i] = h !== undefined ? (voteCounts.get(h)?.length ?? 1) : 1;
     }
 
     const preliminary: ConsistencyResult<T> = {
