@@ -37,12 +37,12 @@ export async function sendWithFallback(
 
     const candidates: ProviderConfig[] = [primary];
 
-    const fallbackMap: Partial<Record<LlmTier, LlmTier[]>> = {
-        main: ['fallback', 'batch'],
-        fast: ['main', 'fallback', 'batch'],
-        report: ['fallback', 'batch'],
-    };
-    const fallbacks = fallbackMap[tier] || [];
+    const fallbackMap = new Map<string, LlmTier[]>([
+        ['main', ['fallback', 'batch']],
+        ['fast', ['main', 'fallback', 'batch']],
+        ['report', ['fallback', 'batch']],
+    ]);
+    const fallbacks = fallbackMap.get(tier) || [];
     const seenKeys = new Set<string>();
     seenKeys.add(configUniqueKey(primary));
     for (const t of fallbacks) {
@@ -58,9 +58,7 @@ export async function sendWithFallback(
         for (const cfg of candidates) cfg.responseFormat = responseFormat;
     }
 
-    for (let i = 0; i < candidates.length; i++) {
-        const cfg = candidates[i];
-        if (!cfg) continue;
+    for (const [, cfg] of candidates.entries()) {
         const cfgKey = configUniqueKey(cfg);
         try {
             const result = await sendToProvider(cfg, system, user, tier);

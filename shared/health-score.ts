@@ -132,9 +132,8 @@ function _computeFlakyRate(runs: MetricsRun[], config: HealthScoreConfig): numbe
 function _computeExpWeighted(runs: MetricsRun[], n: number, getValue: (run: MetricsRun) => number): number {
     let weightedSum = 0;
     let weightTotal = 0;
-    for (let i = 0; i < n; i++) {
-        const run = runs[i];
-        if (!run) continue;
+    const runsSlice = runs.slice(0, n);
+    for (const [i, run] of runsSlice.entries()) {
         const raw = getValue(run);
         const value = Number.isFinite(raw) ? raw : 0;
         const weight = Math.exp((i - n + 1) / Math.max(n / 2, 1));
@@ -154,7 +153,7 @@ function _computeSuiteSpeed(runs: MetricsRun[]): number {
     if (allDurations.length === 0) return 0;
     allDurations.sort((a, b) => a - b);
     const idx = Math.max(0, Math.ceil(allDurations.length * 0.95) - 1);
-    return allDurations[idx] ?? 0;
+    return new Map(allDurations.map((v, i) => [i, v])).get(idx) ?? 0;
 }
 
 function computeActualMetrics(store: MetricsStore, config: HealthScoreConfig): ActualMetrics {

@@ -98,11 +98,11 @@ export function getRegistry(): RegistryData {
     const base = loadRegistry();
     const map = _enriched;
     if (!map || map.size === 0) return base;
-    const providers: Record<string, RegistryModel[]> = {};
+    const providers = new Map<string, RegistryModel[]>();
     for (const [provider, models] of Object.entries(base.providers)) {
-        providers[provider] = applyEnrichment(models);
+        providers.set(provider, applyEnrichment(models));
     }
-    return { ...base, providers };
+    return { ...base, providers: Object.fromEntries(providers) };
 }
 
 /**
@@ -192,7 +192,7 @@ export function resolveModel(
     modelList: RegistryModel[] | null = null,
 ): ResolveResult {
     const registry = loadRegistry();
-    const baseModels = modelList ?? registry.providers[provider] ?? [];
+    const baseModels = modelList ?? (Object.entries(registry.providers).find(([k]) => k === provider)?.[1] ?? []);
     const models = applyEnrichment(baseModels);
 
     if (models.length > 0) {

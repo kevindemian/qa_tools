@@ -25,7 +25,7 @@ function _isBatchOrCI(): boolean {
 export function isFirstRun(): boolean {
     if (_isBatchOrCI()) return false;
     const state = loadTypedState();
-    if ((state as Record<string, unknown>)[FIRST_RUN_FLAG]) return false;
+    if (Reflect.get(state as Record<string, unknown>, FIRST_RUN_FLAG)) return false;
     if (state.history && state.history.length > 0) return false;
     return true;
 }
@@ -33,7 +33,7 @@ export function isFirstRun(): boolean {
 /** Mark first-run as acknowledged so it never reappears. */
 export function _markFirstRunDone(): void {
     updateState((s) => {
-        s[FIRST_RUN_FLAG] = true;
+        Reflect.set(s, FIRST_RUN_FLAG, true);
     });
 }
 
