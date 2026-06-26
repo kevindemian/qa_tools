@@ -180,10 +180,10 @@ class CsvResource {
     }
 
     private _normalizeCsvRow(data: Record<string, string>, warnedHeaders: Set<string>): Record<string, string> {
-        const nd: Record<string, string> = {};
+        const ndEntries: [string, string][] = [];
         for (const [k, v] of Object.entries(data)) {
             const nk = normalizeFieldName(k);
-            nd[nk] = sanitizeCellValue(v);
+            ndEntries.push([nk, sanitizeCellValue(v)]);
             if (nk !== k && !warnedHeaders.has(k)) {
                 warnedHeaders.add(k);
                 rootLogger.warn(
@@ -194,7 +194,7 @@ class CsvResource {
                 );
             }
         }
-        return nd;
+        return Object.fromEntries(ndEntries);
     }
 
     private _parseBulkCsvTitle(lines: string[]): string | null {
