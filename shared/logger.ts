@@ -5,14 +5,14 @@ import Config from './config.js';
 import { formatDateISO } from './date-utils.js';
 
 /** Numeric severity: DEBUG < INFO < WARN < ERROR. */
-const LEVELS: Record<string, number> = { DEBUG: 0, INFO: 1, WARN: 2, ERROR: 3 };
-const PREFIXES: Record<string, string> = { DEBUG: '\u00b7', INFO: 'i', WARN: '!', ERROR: 'ERR' };
-const COLOR_FNS: Record<string, (s: string) => string> = {
-    DEBUG: chalk.cyan,
-    INFO: chalk.green,
-    WARN: chalk.yellow,
-    ERROR: chalk.red,
-};
+const LEVELS = new Map([['DEBUG', 0], ['INFO', 1], ['WARN', 2], ['ERROR', 3]]);
+const PREFIXES = new Map([['DEBUG', '\u00b7'], ['INFO', 'i'], ['WARN', '!'], ['ERROR', 'ERR']]);
+const COLOR_FNS = new Map<string, (s: string) => string>([
+    ['DEBUG', chalk.cyan],
+    ['INFO', chalk.green],
+    ['WARN', chalk.yellow],
+    ['ERROR', chalk.red],
+]);
 const SECRET_RE = /token|secret|key|password|authorization/i;
 const MASK_MIN_LENGTH = 8;
 const MASK_VISIBLE_CHARS = 4;
@@ -30,19 +30,19 @@ function maskValue(v: unknown): unknown {
 export function maskDeep(obj: unknown): unknown {
     if (!obj || typeof obj !== 'object') return obj;
     if (Array.isArray(obj)) return obj.map((item) => maskDeep(item));
-    const masked: Record<string, unknown> = {};
+    const entries: [string, unknown][] = [];
     for (const [key, val] of Object.entries(obj)) {
         if (SECRET_RE.test(key)) {
-            masked[key] = typeof val === 'string' ? maskValue(val) : maskDeep(val);
+            entries.push([key, typeof val === 'string' ? maskValue(val) : maskDeep(val)]);
         } else if (Array.isArray(val)) {
-            masked[key] = val.map((item) => maskDeep(item));
+            entries.push([key, val.map((item) => maskDeep(item))]);
         } else if (typeof val === 'object' && val !== null) {
-            masked[key] = maskDeep(val);
+            entries.push([key, maskDeep(val)]);
         } else {
-            masked[key] = val;
+            entries.push([key, val]);
         }
     }
-    return masked;
+    return Object.fromEntries(entries);
 }
 
 /** Structured logger with console + file output, level filtering, rotation, and context binding. */
@@ -122,13 +122,13 @@ export class Logger {
     }
 
     _writeConsole(level: string, msg: string, data?: unknown): void {
-        const levelNum = LEVELS[level] ?? 1;
+        const levelNum = LEVELS.get(level) ?? 1;
         const envLevel = this._config?.get('logLevel') ?? Config.get('logLevel') ?? 'info';
-        const envLevelNum = LEVELS[envLevel] ?? 1;
+        const envLevelNum = LEVELS.get(envLevel) ?? 1;
         if (levelNum < envLevelNum) return;
 
-        const prefix = PREFIXES[level] || '?';
-        const colorFn = COLOR_FNS[level] || chalk;
+        const prefix = PREFIXES.get(level) ?? '?';
+        const colorFn = COLOR_FNS.get(level) ?? chalk;
         let text = colorFn(prefix) + ' ' + msg;
 
         if (data && level === 'ERROR') {
@@ -150,7 +150,8 @@ export class Logger {
 
         const timestamp = new Date().toISOString();
         const ctxKeys = Object.keys(this.context);
-        const ctxStr = ctxKeys.length > 0 ? ' [' + ctxKeys.map((k) => this.context[k]).join('] [') + ']' : '';
+        const ctxEntries = Object.entries(this.context);
+        const ctxStr = ctxKeys.length > 0 ? ' [' + ctxEntries.map(([, v]) => v).join('] [') + ']' : '';
         let dataStr = '';
         if (data) {
             try {
