@@ -78,8 +78,12 @@ function buildTrendTable(trends: DefectTrendPoint[]): string {
 
     const bodyRows = trends
         .map((t) => {
+            const catEntries = Object.entries(t.categories);
             const cells = cats
-                .map((c) => `<td style="padding:8px 12px;text-align:center">${t.categories[c] ?? 0}</td>`)
+                .map((c) => {
+                    const entry = catEntries.find(([k]) => k === c);
+                    return `<td style="padding:8px 12px;text-align:center">${entry?.[1] ?? 0}</td>`;
+                })
                 .join('');
             const dateStr = sanitizeHtml(t.date);
             return `<tr style="border-bottom:1px solid var(--color-border-subtle)"><td style="padding:8px 12px;font-weight:600">${dateStr}</td><td style="padding:8px 12px;text-align:center">${t.total}</td>${cells}</tr>`;
@@ -104,8 +108,8 @@ export function aggregateDefectTrends(classifications: FailureClassification[] |
         return { trends: [], topCategories: [], period: { from: '', to: '' } };
     }
 
-    const grouped = Object.create(null) as { [key: string]: { [key: string]: number } };
-    const overallCounts = Object.create(null) as { [key: string]: number };
+    const grouped = new Map<string, Map<string, number>>();
+    const overallCounts = new Map<string, number>();
     let minDate = '';
     let maxDate = '';
 
@@ -113,27 +117,27 @@ export function aggregateDefectTrends(classifications: FailureClassification[] |
         const date = extractDate(fc.timestamp);
         const cat = fc.category;
 
-        let dayGroup = grouped[date];
+        let dayGroup = grouped.get(date);
         if (!dayGroup) {
-            dayGroup = Object.create(null) as { [key: string]: number };
-            grouped[date] = dayGroup;
+            dayGroup = new Map();
+            grouped.set(date, dayGroup);
         }
-        dayGroup[cat] = (dayGroup[cat] ?? 0) + 1;
+        dayGroup.set(cat, (dayGroup.get(cat) ?? 0) + 1);
 
-        overallCounts[cat] = (overallCounts[cat] ?? 0) + 1;
+        overallCounts.set(cat, (overallCounts.get(cat) ?? 0) + 1);
 
         if (!minDate || date < minDate) minDate = date;
         if (!maxDate || date > maxDate) maxDate = date;
     }
 
-    const sortedDates = Object.keys(grouped).sort();
+    const sortedDates = Array.from(grouped.keys()).sort();
     const trends: DefectTrendPoint[] = sortedDates.map((date) => {
-        const cats = grouped[date] ?? {};
-        const total = Object.values(cats).reduce((sum, v) => sum + v, 0);
-        return { date, categories: { ...cats }, total };
+        const cats = grouped.get(date);
+        const total = cats ? Array.from(cats.values()).reduce((sum, v) => sum + v, 0) : 0;
+        return { date, categories: cats ? Object.fromEntries(cats) : {}, total };
     });
 
-    const topCategories = Object.entries(overallCounts)
+    const topCategories = Array.from(overallCounts.entries())
         .sort((a, b) => b[1] - a[1])
         .map(([category, count]) => ({ category, count }));
 
