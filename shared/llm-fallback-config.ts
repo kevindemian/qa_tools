@@ -102,7 +102,9 @@ const MODEL_PRICING: Record<string, ModelPricing> = {
 };
 
 export function estimateCostUSD(model: string, promptTokens: number, completionTokens: number): number {
-    const pricing = MODEL_PRICING[model] ?? MODEL_PRICING['google/gemini-2.0-flash-exp'];
+    const pricingEntries = Object.entries(MODEL_PRICING);
+    const entry = pricingEntries.find(([k]) => k === model) ?? pricingEntries.find(([k]) => k === 'google/gemini-2.0-flash-exp');
+    const pricing = entry?.[1];
     if (!pricing) return 0;
     return (promptTokens / 1000) * pricing.inputPer1K + (completionTokens / 1000) * pricing.outputPer1K;
 }
@@ -130,15 +132,23 @@ export const _llmMetrics: LlmClientMetrics = {
 };
 
 export function _trackUsage(data: Record<string, unknown>, providerKey: string, tier: LlmTier): void {
-    _llmMetrics.requestsByProviderKey[providerKey] = (_llmMetrics.requestsByProviderKey[providerKey] || 0) + 1;
+    const providerEntries = Object.entries(_llmMetrics.requestsByProviderKey);
+    const existingProviderEntry = providerEntries.find(([k]) => k === providerKey);
+    const existingProvider = existingProviderEntry?.[1] ?? 0;
+    const newProviderEntries = providerEntries.filter(([k]) => k !== providerKey);
+    newProviderEntries.push([providerKey, existingProvider + 1]);
+    _llmMetrics.requestsByProviderKey = Object.fromEntries(newProviderEntries);
     let promptTokens = 0;
     let completionTokens = 0;
-    const usageResult = LlmUsageSchema.safeParse(data['usage']);
+    const dataEntries = Object.entries(data);
+    const usageEntry = dataEntries.find(([k]) => k === 'usage');
+    const usageResult = LlmUsageSchema.safeParse(usageEntry?.[1]);
     if (usageResult.success) {
         promptTokens = usageResult.data.prompt_tokens || 0;
         completionTokens = usageResult.data.completion_tokens || 0;
     } else {
-        const metaResult = LlmUsageMetaSchema.safeParse(data['usageMetadata']);
+        const metaEntry = dataEntries.find(([k]) => k === 'usageMetadata');
+        const metaResult = LlmUsageMetaSchema.safeParse(metaEntry?.[1]);
         if (metaResult.success) {
             promptTokens = metaResult.data.promptTokenCount || 0;
             completionTokens = metaResult.data.candidatesTokenCount || 0;
@@ -151,7 +161,12 @@ export function _trackUsage(data: Record<string, unknown>, providerKey: string, 
     const model = tierToConfig(tier).model;
     const cost = estimateCostUSD(model, promptTokens, completionTokens);
     _llmMetrics.totalCostUSD += cost;
-    _llmMetrics.costPerTier[tier] = (_llmMetrics.costPerTier[tier] || 0) + cost;
+    const tierEntries = Object.entries(_llmMetrics.costPerTier);
+    const existingTierEntry = tierEntries.find(([k]) => k === tier);
+    const existingTier = existingTierEntry?.[1] ?? 0;
+    const newTierEntries = tierEntries.filter(([k]) => k !== tier);
+    newTierEntries.push([tier, existingTier + cost]);
+    _llmMetrics.costPerTier = Object.fromEntries(newTierEntries);
 
     rootLogger.debug(
         'Token usage: prompt=' +
@@ -171,15 +186,19 @@ const LlmAnthropicContentSchema = z.object({
 });
 
 export function extractContent(data: Record<string, unknown>, format: ProviderFormat): string {
+    const dataEntries = Object.entries(data);
     if (format === 'gemini') {
-        const result = z.array(LlmCandidateSchema).safeParse(data['candidates']);
+        const candidatesEntry = dataEntries.find(([k]) => k === 'candidates');
+        const result = z.array(LlmCandidateSchema).safeParse(candidatesEntry?.[1]);
         return result.success ? result.data[0]?.content?.parts?.[0]?.text || '' : '';
     }
     if (format === 'anthropic') {
-        const result = z.array(LlmAnthropicContentSchema).safeParse(data['content']);
+        const contentEntry = dataEntries.find(([k]) => k === 'content');
+        const result = z.array(LlmAnthropicContentSchema).safeParse(contentEntry?.[1]);
         return result.success ? result.data.map((c) => c.text ?? '').join('') : '';
     }
-    const result = z.array(LlmChoiceSchema).safeParse(data['choices']);
+    const choicesEntry = dataEntries.find(([k]) => k === 'choices');
+    const result = z.array(LlmChoiceSchema).safeParse(choicesEntry?.[1]);
     return result.success ? result.data[0]?.message?.content || '' : '';
 }
 
@@ -200,14 +219,14 @@ export function resetLlmClientMetrics(): void {
 // ---- tier configuration ----
 
 /** Temperature values per tier. */
-const TIER_TEMPS: Record<LlmTier, number> = {
-    main: LLM_TEMP_MAIN,
-    fast: LLM_TEMP_MAIN,
-    reviewer: LLM_TEMP_REVIEWER,
-    report: LLM_TEMP_REPORT,
-    fallback: LLM_TEMP_FALLBACK,
-    batch: LLM_TEMP_BATCH,
-};
+const TIER_TEMPS = new Map<LlmTier, number>([
+    ['main', LLM_TEMP_MAIN],
+    ['fast', LLM_TEMP_MAIN],
+    ['reviewer', LLM_TEMP_REVIEWER],
+    ['report', LLM_TEMP_REPORT],
+    ['fallback', LLM_TEMP_FALLBACK],
+    ['batch', LLM_TEMP_BATCH],
+]);
 
 /** Config key prefix for a given tier. */
 function tierPrefix(tier: LlmTier): string {
@@ -231,7 +250,7 @@ function configFromExplicit(tier: LlmTier): ProviderConfig | null {
     if (tier === 'main' || tier === 'report') return null;
     const apiKey = Config.get(tierKey(tier, 'ApiKey'));
     if (!apiKey) return null;
-    const temp = TIER_TEMPS[tier];
+    const temp = TIER_TEMPS.get(tier) ?? 0;
     const model = Config.get(tierKey(tier, 'Model'));
     const baseUrl = Config.get(tierKey(tier, 'BaseUrl'));
     return {
@@ -269,7 +288,7 @@ function resolveProvider(): LlmProvider {
  * 3. Fallback: main-like config with whatever keys are available
  */
 export function tierToConfig(tier: LlmTier): ProviderConfig {
-    const temp = TIER_TEMPS[tier];
+    const temp = TIER_TEMPS.get(tier) ?? 0;
 
     // 1. Explicit tier-specific config
     const explicit = configFromExplicit(tier);
@@ -282,7 +301,16 @@ export function tierToConfig(tier: LlmTier): ProviderConfig {
         const apiKey = Config.get('llmApiKey');
         const explicitModel = Config.get('llmModel') || Config.get(tierKey(tier, 'Model'));
         const explicitBaseUrl = Config.get('llmBaseUrl') || Config.get(tierKey(tier, 'BaseUrl'));
-        const model = explicitModel || resolveModel(tier, provider).id || profile.tiers[tier];
+        let tierDefault = profile.tiers.main;
+        switch (tier) {
+            case 'main': tierDefault = profile.tiers.main; break;
+            case 'fast': tierDefault = profile.tiers.fast; break;
+            case 'reviewer': tierDefault = profile.tiers.reviewer; break;
+            case 'report': tierDefault = profile.tiers.report; break;
+            case 'fallback': tierDefault = profile.tiers.fallback; break;
+            case 'batch': tierDefault = profile.tiers.batch; break;
+        }
+        const model = explicitModel || resolveModel(tier, provider).id || tierDefault;
         return {
             apiKey,
             model,
