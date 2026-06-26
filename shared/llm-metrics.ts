@@ -87,9 +87,9 @@ export class LlmMetricsCollector {
     private _artifactApproved = 0;
     private _artifactRejected = 0;
     private _adversarialRetryCount = 0;
-    private readonly _failuresByTier: Partial<Record<LlmTier, number>> = {};
-    private readonly _rejectionReasons: Record<string, number> = {};
-    private readonly _modelLatency: Record<string, { sum: number; count: number }> = {};
+    private readonly _failuresByTier = new Map<LlmTier, number>();
+    private readonly _rejectionReasons = new Map<string, number>();
+    private readonly _modelLatency = new Map<string, { sum: number; count: number }>();
 
     /** Record that an LLM request was made. modelId is optional — if provided, per-model latency is tracked. */
     recordLlmRequest(_tier: LlmTier, latencyMs: number, modelId?: string): void {
@@ -104,37 +104,37 @@ export class LlmMetricsCollector {
      * modelId may be omitted to skip per-model tracking. */
     recordModelLatency(modelId: string | undefined, latencyMs: number): void {
         if (!modelId) return;
-        const existing = this._modelLatency[modelId];
+        const existing = this._modelLatency.get(modelId);
         if (existing) {
             existing.sum += latencyMs;
             existing.count++;
         } else {
-            this._modelLatency[modelId] = { sum: latencyMs, count: 1 };
+            this._modelLatency.set(modelId, { sum: latencyMs, count: 1 });
         }
     }
 
     /** Return average latency in ms for a given model, or 0 if no data. */
     getModelAvgLatency(modelId: string): number {
-        const data = this._modelLatency[modelId];
+        const data = this._modelLatency.get(modelId);
         return data && data.count > 0 ? Math.round(data.sum / data.count) : 0;
     }
 
     /** Return all per-model latency data. */
     getModelLatencyData(): Record<string, { avgMs: number; count: number }> {
-        const result: Record<string, { avgMs: number; count: number }> = {};
-        for (const [modelId, data] of Object.entries(this._modelLatency)) {
-            result[modelId] = { avgMs: Math.round(data.sum / data.count), count: data.count };
+        const entries: [string, { avgMs: number; count: number }][] = [];
+        for (const [modelId, data] of this._modelLatency.entries()) {
+            entries.push([modelId, { avgMs: Math.round(data.sum / data.count), count: data.count }]);
         }
-        return result;
+        return Object.fromEntries(entries);
     }
 
     recordLlmFailure(tier: LlmTier): void {
-        this._failuresByTier[tier] = (this._failuresByTier[tier] || 0) + 1;
+        this._failuresByTier.set(tier, (this._failuresByTier.get(tier) ?? 0) + 1);
     }
 
     recordValidationRejection(reason: string): void {
         this._rejectedByValidator++;
-        this._rejectionReasons[reason] = (this._rejectionReasons[reason] || 0) + 1;
+        this._rejectionReasons.set(reason, (this._rejectionReasons.get(reason) ?? 0) + 1);
     }
 
     recordRetry(): void {
@@ -167,8 +167,8 @@ export class LlmMetricsCollector {
             adversarialRetryCount: this._adversarialRetryCount,
             avgConfidence: this._confidenceCount > 0 ? this._confidenceSum / this._confidenceCount : 0,
             avgLatencyMs: this._latencyCount > 0 ? Math.round(this._latencySum / this._latencyCount) : 0,
-            failuresByTier: { ...this._failuresByTier },
-            rejectionReasons: { ...this._rejectionReasons },
+            failuresByTier: Object.fromEntries(this._failuresByTier),
+            rejectionReasons: Object.fromEntries(this._rejectionReasons),
             artifactApproved: this._artifactApproved,
             artifactRejected: this._artifactRejected,
             cacheHits: cm.cacheHits,
@@ -206,9 +206,9 @@ export class LlmMetricsCollector {
         this._latencyCount = 0;
         this._artifactApproved = 0;
         this._artifactRejected = 0;
-        for (const key of Object.keys(this._failuresByTier)) delete this._failuresByTier[key as LlmTier];
-        for (const key of Object.keys(this._rejectionReasons)) delete this._rejectionReasons[key];
-        for (const key of Object.keys(this._modelLatency)) delete this._modelLatency[key];
+        for (const key of this._failuresByTier.keys()) this._failuresByTier.delete(key);
+        this._rejectionReasons.clear();
+        this._modelLatency.clear();
         resetLlmClientMetrics();
     }
 }
