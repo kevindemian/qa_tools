@@ -127,7 +127,7 @@ export function detectFramework(packageJsonPath?: string): DetectionResult {
         const content = fs.readFileSync(pkgPath, 'utf8');
         const pkg = JSON.parse(content) as Record<string, unknown>;
         const framework = detectFromPkg(pkg);
-        const defaults = { ...DEFAULTS[framework] };
+        const defaults = { ...Reflect.get(DEFAULTS, framework) };
 
         if (framework === 'vitest' || framework === 'generic') {
             const projectRoot = packageJsonPath ? path.dirname(packageJsonPath) : process.cwd();

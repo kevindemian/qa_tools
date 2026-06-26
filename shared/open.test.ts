@@ -8,7 +8,7 @@ vi.mock('fs', () => ({
     mkdirSync: vi.fn<(...args: [string]) => (path: string) => string | undefined>(),
 }));
 const mockConfigGet: Mock<(...args: [string]) => string | undefined> = vi.hoisted(() =>
-    vi.fn((key: string) => process.env[key] || undefined),
+    vi.fn((key: string) => Reflect.get(process.env, key) || undefined),
 );
 vi.mock('./config', () => ({
     default: { get: mockConfigGet },
@@ -57,7 +57,7 @@ function makeMockChild() {
         ref: vi.fn(),
         unref: vi.fn(),
         on(event: string, handler: (...args: unknown[]) => void) {
-            handlers[event] = handler;
+            Reflect.set(handlers, event, handler);
             return this;
         },
         once() {
@@ -92,7 +92,7 @@ function makeMockChild() {
             /* noop */
         },
         trigger(event: string, ...args: unknown[]) {
-            const fn = handlers[event] as (...args: unknown[]) => void;
+            const fn = Reflect.get(handlers, event);
             fn(...args);
         },
     };
@@ -390,7 +390,7 @@ describe('GetWinTempDir', () => {
 describe('GetDocsOutputDir', () => {
     beforeEach(() => {
         vi.resetAllMocks();
-        mockConfigGet.mockImplementation((key: string) => process.env[key] || undefined);
+        mockConfigGet.mockImplementation((key: string) => Reflect.get(process.env, key) || undefined);
         __resetWslCache();
     });
 

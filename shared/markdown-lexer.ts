@@ -24,7 +24,8 @@ export interface InlineToken {
 /** Safe accessor for string arrays: returns the element at index `i` or an empty string fallback.
  *  Eliminates non-null assertions (`lines[i]!`) that would crash on undefined. */
 function getLine(lines: string[], i: number): string {
-    return lines[i] ?? '';
+    const line: unknown = Reflect.get(lines, i);
+    return typeof line === 'string' ? line : '';
 }
 
 // ─── Inline handlers ────────────────────────────────────────────────────────────

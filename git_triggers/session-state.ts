@@ -88,7 +88,7 @@ function loadProjects(): Record<string, string> {
             const envKey = 'PROJECT_ID_' + key.toUpperCase();
             const overrideEntry = overrideEntries.find(([k]) => k === envKey);
             if (overrideEntry) {
-                _projects[key] = overrideEntry[1];
+                Reflect.set(_projects, key, overrideEntry[1]);
             }
         }
     } catch (err: unknown) {

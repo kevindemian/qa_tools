@@ -163,7 +163,7 @@ function _selectProject(): { projectName: string | null; names: string[] } {
     }
     const projectName = names[firstIdx - 1] as string;
     setCurrentProjectName(projectName);
-    setProjectId(allProjects[projectName] as string);
+    setProjectId(Reflect.get(allProjects, projectName));
     updateState((s: StateContainer) => {
         s['lastProject'] = projectName;
     });
@@ -714,8 +714,8 @@ async function _dispatchAction(
     }
     if (finalChoice === '0' || cmd === '/exit' || cmd === '/sair') return _handleExit();
 
-    const handlerFn = ACTION_HANDLERS[finalChoice];
-    if (handlerFn) return handlerFn(m, projectName, names);
+    const handlerFn: ((m: unknown, projectName: string, names: string[]) => boolean | Promise<boolean>) | undefined = Reflect.get(ACTION_HANDLERS, finalChoice);
+    if (handlerFn !== undefined) return handlerFn(m, projectName, names);
     warn('Opção inválida.');
     return false;
 }

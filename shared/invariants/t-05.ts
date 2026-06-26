@@ -14,7 +14,8 @@ export const invariantVerifiableResult: InvariantFn = (
 
     const vagueResults: Array<{ testIndex: number; text: string }> = [];
     for (let i = 0; i < tests.length; i++) {
-        const er = (tests[i] as TestCaseShape).expectedResult || '';
+        const test: TestCaseShape = Reflect.get(tests, i);
+        const er = test.expectedResult || '';
         if (VAGUE_RESULT_RE.test(er)) {
             vagueResults.push({ testIndex: i, text: er });
         }

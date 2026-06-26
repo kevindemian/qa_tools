@@ -49,7 +49,7 @@ class MappingFileGenerator {
 
     private _buildMappings(tasksId: string[], tests: TestCase[]): MappingEntry[] {
         return tasksId.map((key, i) => {
-            const test = tests[i] || emptyTestCase();
+            const test = (Reflect.get(tests, i) as TestCase | undefined) || emptyTestCase();
             const m: MappingEntry = { title: test.title || '', key };
             if (test.description) m.description = test.description;
             if (test.precondition && test.precondition.value) {
@@ -115,7 +115,7 @@ class MappingFileGenerator {
         const txtContent =
             tasksId
                 .map((key, i) => {
-                    const test = tests[i] || emptyTestCase();
+                    const test = (Reflect.get(tests, i) as TestCase | undefined) || emptyTestCase();
                     return key + ': ' + (test.title || '(untitled)');
                 })
                 .join('\n') + '\n';

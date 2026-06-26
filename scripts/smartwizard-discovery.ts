@@ -37,10 +37,10 @@ function parseArgs(): ProviderKey[] {
     const args = process.argv.slice(2);
     const providers: ProviderKey[] = [];
     for (let i = 0; i < args.length; i++) {
-        if (args[i] === '--provider' && i + 2 < args.length) {
-            const provider = args[++i];
-            const key = args[++i];
-            if (provider !== undefined && key !== undefined) {
+        if (Reflect.get(args, i) === '--provider' && i + 2 < args.length) {
+            const provider: unknown = Reflect.get(args, ++i);
+            const key: unknown = Reflect.get(args, ++i);
+            if (typeof provider === 'string' && typeof key === 'string') {
                 providers.push({ provider: provider as LlmProvider, key });
             }
         }

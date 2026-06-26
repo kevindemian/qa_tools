@@ -121,8 +121,8 @@ describe('CalculatePipelineCost — property-based', () => {
                 const result = calculatePipelineCost(runs, cpm);
                 const sortedRuns = [...runs].sort((a, b) => b.timestamp.localeCompare(a.timestamp));
                 for (let i = 0; i < result.costByRun.length; i++) {
-                    const entry = result.costByRun[i];
-                    const run = sortedRuns[i];
+                    const entry = Reflect.get(result.costByRun, i) as { status: string; timestamp: string } | undefined;
+                    const run = Reflect.get(sortedRuns, i) as { failed: number; passed: number; total: number; timestamp: string } | undefined;
                     if (!entry || !run) continue;
                     const expectedStatus = run.failed > 0 ? 'failed' : run.passed === run.total ? 'passed' : 'partial';
                     
@@ -139,8 +139,8 @@ describe('CalculatePipelineCost — property-based', () => {
             fc.property(fc.array(metricsRunArb, { minLength: 1, maxLength: 20 }), costPerMinuteArb, (runs, cpm) => {
                 const result = calculatePipelineCost(runs, cpm);
                 for (let i = 1; i < result.costByRun.length; i++) {
-                    const prev = result.costByRun[i - 1];
-                    const curr = result.costByRun[i];
+                    const prev = Reflect.get(result.costByRun, i - 1) as { timestamp: string } | undefined;
+                    const curr = Reflect.get(result.costByRun, i) as { timestamp: string } | undefined;
                     if (!prev || !curr) continue;
 
                     expect(prev.timestamp.localeCompare(curr.timestamp)).toBeGreaterThanOrEqual(0);

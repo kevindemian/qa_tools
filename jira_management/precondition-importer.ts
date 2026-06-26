@@ -44,12 +44,12 @@ export class PreconditionHandler {
         const fieldId = await this._getPreconditionFieldId();
         info(`Associando pre-condition ${preconditionKey} ao teste ${testKey}...`);
         const testIssue = await this.jiraResource.getJiraResource<{ fields?: JsonObject }>(`issue/${testKey}`);
-        const current = (testIssue.fields?.[fieldId] ?? []) as string[];
+        const current = (Reflect.get(testIssue.fields ?? {}, fieldId) ?? []) as string[];
         if (!current.includes(preconditionKey)) {
             current.push(preconditionKey);
         }
         const payload: JsonObject = {};
-        payload[fieldId] = current;
+        Reflect.set(payload, fieldId, current);
         return this.jiraResource.putJiraResource<JsonObject>(`issue/${testKey}`, { fields: payload });
     }
 

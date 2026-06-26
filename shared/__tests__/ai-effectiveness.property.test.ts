@@ -89,11 +89,14 @@ describe('ComputeAiEffectiveness — property-based', () => {
             fc.property(storeArb, (store) => {
                 const result = computeAiEffectiveness(store);
                 for (let i = 1; i < result.trend.length; i++) {
-                    const curr = result.trend[i];
-                    const prev = result.trend[i - 1];
-                    if (curr === undefined || prev === undefined) return;
+                    const curr: unknown = Reflect.get(result.trend, i);
+                    const prev: unknown = Reflect.get(result.trend, i - 1);
+                    if (curr === undefined || curr === null || prev === undefined || prev === null) return;
 
-                    expect(new Date(curr.date).getTime()).toBeGreaterThanOrEqual(new Date(prev.date).getTime());
+                    const c = curr as { date: string };
+                    const p = prev as { date: string };
+
+                    expect(new Date(c.date).getTime()).toBeGreaterThanOrEqual(new Date(p.date).getTime());
                 }
             }),
             { numRuns: 50 },

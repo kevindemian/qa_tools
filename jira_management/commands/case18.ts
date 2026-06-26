@@ -248,7 +248,7 @@ function convertTestCases(
             fields: { Action: stepText },
         }));
 
-        const pc = resolvedPreConditions[idx]?.[0];
+        const pc = (Reflect.get(resolvedPreConditions, idx) as unknown[] | undefined)?.[0];
         const precondition = resolvePrecondition(pc, createdKeys);
 
         return {

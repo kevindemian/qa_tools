@@ -55,7 +55,13 @@ vi.mock('../shared/config', () => ({
                 gitBaseUrl: 'https://gitlab.com',
                 githubApiUrl: '',
             };
-            return empty[key] ?? process.env[key] ?? process.env[key.toUpperCase()] ?? '';
+            const safeGet = (obj: object, key: string): unknown =>
+                Object.prototype.hasOwnProperty.call(obj, key) ? Reflect.get(obj, key) : undefined;
+            const envRecord = process.env as Record<string, string | undefined>;
+            const raw = safeGet(empty, key);
+            const envVal = safeGet(envRecord, key);
+            const envUpperVal = safeGet(envRecord, key.toUpperCase());
+            return (raw ?? envVal ?? envUpperVal ?? '') as string;
         },
         getAllPrefixed: vi.fn(() => ({})),
     },

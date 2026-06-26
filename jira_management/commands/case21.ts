@@ -110,9 +110,10 @@ function _showFailingEpics(result: CoverageGapResult): void {
     divider();
     warn('Épicos abaixo do threshold de ' + result.gateConfig.minCoveragePct + '%:');
     for (const epicKey of result.gateConfig.failingEpics) {
-        const epic = result.byEpic[epicKey];
-        if (epic) {
-            info(epicKey + ' (' + epic.epicSummary.slice(0, 40) + ') — ' + epic.rawPct + '%');
+        const epic: unknown = Reflect.get(result.byEpic, epicKey);
+        if (epic !== undefined && epic !== null && typeof epic === 'object') {
+            const e = epic as { epicSummary: string; rawPct: number };
+            info(epicKey + ' (' + e.epicSummary.slice(0, 40) + ') — ' + e.rawPct + '%');
         }
     }
 }

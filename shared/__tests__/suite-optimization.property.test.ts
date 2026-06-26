@@ -61,16 +61,21 @@ describe('AnalyzeSuiteOptimization — property-based', () => {
                 const entries = result.optimizations;
                 const impactOrder: Record<string, number> = { high: 3, medium: 2, low: 1 };
                 for (let i = 1; i < entries.length; i++) {
-                    const prevEntry = entries[i - 1];
-                    const currEntry = entries[i];
-                    if (prevEntry === undefined || currEntry === undefined) return;
-                    const prev = impactOrder[prevEntry.impact];
-                    const curr = impactOrder[currEntry.impact];
-                    if (prev === undefined || curr === undefined) return;
+                    const prevEntry: unknown = Reflect.get(entries, i - 1);
+                    const currEntry: unknown = Reflect.get(entries, i);
+                    if (prevEntry === undefined || prevEntry === null || currEntry === undefined || currEntry === null) return;
+                    const prevImpact = (prevEntry as { impact: string }).impact;
+                    const currImpact = (currEntry as { impact: string }).impact;
+                    const prev: unknown = Reflect.get(impactOrder, prevImpact);
+                    const curr: unknown = Reflect.get(impactOrder, currImpact);
+                    if (prev === undefined || prev === null || curr === undefined || curr === null) return;
 
-                    expect(prev).toBeGreaterThanOrEqual(curr);
+                    expect(prev as number).toBeGreaterThanOrEqual(curr as number);
 
-                    expect(prevEntry.duration).toBeGreaterThanOrEqual(prev === curr ? currEntry.duration : prevEntry.duration);
+                    const pEntry = prevEntry as { duration: number };
+                    const cEntry = currEntry as { duration: number };
+
+                    expect(pEntry.duration).toBeGreaterThanOrEqual((prev as number) === (curr as number) ? cEntry.duration : pEntry.duration);
                 }
             }),
             { numRuns: 50 },

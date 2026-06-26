@@ -113,12 +113,12 @@ export async function moveCardsToDone(resource: JiraResourceLike, taskIds: strin
 
         const statusLower = currentStatus.toLowerCase();
         try {
-            const targets = WORKFLOW_MAP[statusLower];
+            const targets = Reflect.get(WORKFLOW_MAP, statusLower) as string[] | undefined;
             if (!targets) {
                 warn(statusNotMapped(taskId, currentStatus));
             } else {
                 for (const target of targets) {
-                    const transitionId = transitionsMap[target];
+                    const transitionId = Reflect.get(transitionsMap, target);
                     if (!transitionId) {
                         warn(transitionNotFound(target, taskId));
                         continue;

@@ -42,7 +42,7 @@ describe('TestHistoryCache', () => {
         const mockConfig = createMockConfigInstance();
         mockConfig.get = function <T = string>(key: string): T {
             const map: Record<string, string> = { xrayMode: 'server', xrayClientId: '', xrayClientSecret: '' };
-            return (map[key] ?? '') as T;
+            return (Reflect.get(map, key) as string | undefined ?? '') as T;
         };
         vi.spyOn(Config, 'getDefault').mockReturnValue(mockConfig);
     });
@@ -204,7 +204,7 @@ describe('CloudHistoryProvider', () => {
                 xrayClientId: 'client-123',
                 xrayClientSecret: 'secret-456',
             };
-            return (map[key] ?? '') as T;
+            return (Reflect.get(map, key) as string | undefined ?? '') as T;
         };
         vi.spyOn(Config, 'getDefault').mockReturnValue(cloudMockConfig);
         provider = createHistoryProvider(jira, 'cloud');
@@ -226,7 +226,7 @@ describe('CloudHistoryProvider', () => {
         const missingCredsConfig = createMockConfigInstance();
         missingCredsConfig.get = function <T = string>(key: string): T {
             const map: Record<string, string> = { xrayMode: 'cloud', xrayClientId: '', xrayClientSecret: '' };
-            return (map[key] ?? '') as T;
+            return (Reflect.get(map, key) as string | undefined ?? '') as T;
         };
         vi.spyOn(Config, 'getDefault').mockReturnValue(missingCredsConfig);
         const result = await provider.getHistory('TEST-123');

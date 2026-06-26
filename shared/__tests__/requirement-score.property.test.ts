@@ -116,11 +116,14 @@ describe('Requirement Score.Property', () => {
                 fc.property(fc.array(AiGenerationRecordArb, { minLength: 0, maxLength: 10 }), (records) => {
                     const result = calculateRequirementScores(records);
                     for (let i = 1; i < result.entries.length; i++) {
-                        const prev = result.entries[i - 1];
-                        const curr = result.entries[i];
-                        if (curr === undefined || prev === undefined) return;
+                        const prev: unknown = Reflect.get(result.entries, i - 1);
+                        const curr: unknown = Reflect.get(result.entries, i);
+                        if (curr === undefined || curr === null || prev === undefined || prev === null) return;
 
-                        expect(prev.score).toBeGreaterThanOrEqual(curr.score);
+                        const p = prev as { score: number };
+                        const c = curr as { score: number };
+
+                        expect(p.score).toBeGreaterThanOrEqual(c.score);
                     }
                 }),
                 { numRuns: 50 },

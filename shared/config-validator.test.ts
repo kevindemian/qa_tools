@@ -8,11 +8,11 @@ describe('ValidateRequiredEnv', () => {
     const REQUIRED = ['JIRA_BASE_URL', 'JIRA_PERSONAL_TOKEN', 'XRAY_BASE_URL'];
 
     beforeEach(() => {
-        REQUIRED.forEach((v) => delete process.env[v]);
+        REQUIRED.forEach((v) => Reflect.deleteProperty(process.env, v));
     });
 
     afterAll(() => {
-        REQUIRED.forEach((v) => delete process.env[v]);
+        REQUIRED.forEach((v) => Reflect.deleteProperty(process.env, v));
     });
 
     it('throws when JIRA_BASE_URL is missing', () => {
@@ -147,7 +147,7 @@ describe('WarnUnknownEnv', () => {
     beforeEach(() => {
         for (const k of Object.keys(process.env)) {
             if (UNKNOWN_PREFIX.test(k)) {
-                delete process.env[k];
+                Reflect.deleteProperty(process.env, k);
             }
         }
     });
@@ -188,9 +188,9 @@ describe('ValidateAll', () => {
     const REQUIRED = ['JIRA_BASE_URL', 'JIRA_PERSONAL_TOKEN', 'XRAY_BASE_URL'];
 
     beforeEach(() => {
-        for (const k of REQUIRED) delete process.env[k];
+        for (const k of REQUIRED) Reflect.deleteProperty(process.env, k);
         for (const f of CONFIG_SCHEMA) {
-            delete process.env[f.envVar];
+            Reflect.deleteProperty(process.env, f.envVar);
         }
     });
 

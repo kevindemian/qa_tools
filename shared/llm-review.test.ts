@@ -23,13 +23,13 @@ vi.mock('./config', () => {
                 return mockConfig['llmReviewStrategy'] ?? 'selective';
             },
             get(key: string) {
-                return mockConfig[key] ?? undefined;
+                return Reflect.get(mockConfig, key);
             },
             set(key: string, value: string) {
-                mockConfig[key] = value;
+                Reflect.set(mockConfig, key, value);
             },
             reset() {
-                Object.keys(mockConfig).forEach((k) => delete mockConfig[k]);
+                Object.keys(mockConfig).forEach((k) => Reflect.deleteProperty(mockConfig, k));
             },
         },
     };

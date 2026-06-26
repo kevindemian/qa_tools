@@ -47,11 +47,11 @@ vi.mock('../shared/config', () => {
         getAllPrefixed: vi.fn(() => ({})),
         quiet: false,
         get: vi.fn((key: string) => {
-            const val = cfg[key] as string | undefined;
-            return val !== undefined ? val : process.env[key] || undefined;
+            const val = Reflect.get(cfg, key) as string | undefined;
+            return val !== undefined ? val : Reflect.get(process.env, key) || undefined;
         }),
         set: vi.fn((key: string, value: unknown) => {
-            cfg[key] = value;
+            Reflect.set(cfg, key, value);
         }),
     };
     return { __esModule: true, default: cfg };

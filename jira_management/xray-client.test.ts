@@ -68,7 +68,7 @@ describe('CloudStepImporter', () => {
                 xrayClientId: 'test-client-id',
                 xrayClientSecret: 'test-client-secret',
             };
-            return (map[key] ?? '') as T;
+            return (Reflect.get(map, key) as string | undefined ?? '') as T;
         };
         vi.spyOn(Config, 'getDefault').mockReturnValue(mockConfig);
     });
@@ -97,7 +97,7 @@ describe('CloudStepImporter', () => {
         const mockConfig = createMockConfigInstance();
         mockConfig.get = function <T = string>(key: string): T {
             const map: Record<string, string> = { xrayClientId: '', xrayClientSecret: '' };
-            return (map[key] ?? '') as T;
+            return (Reflect.get(map, key) as string | undefined ?? '') as T;
         };
         vi.spyOn(Config, 'getDefault').mockReturnValue(mockConfig);
 

@@ -65,20 +65,21 @@ export async function showDocs(): Promise<void> {
     }
     fs.mkdirSync(outDir, { recursive: true });
     for (let i = 0; i < docs.length; i++) {
-        const doc = docs[i];
-        if (!doc) continue;
+        const doc: unknown = Reflect.get(docs, i);
+        if (doc === undefined || doc === null || typeof doc !== 'object') continue;
+        const d = doc as { file: string; label: string };
         let content: string;
         try {
-            content = fs.readFileSync(path.join(docsDir, doc.file), 'utf8');
+            content = fs.readFileSync(path.join(docsDir, d.file), 'utf8');
         } catch (e: unknown) {
-            printError('Erro ao ler ' + doc.file, e);
+            printError('Erro ao ler ' + d.file, e);
             continue;
         }
         const prevDoc = i > 0 ? docs[i - 1] : undefined;
         const nextDoc = i < docs.length - 1 ? docs[i + 1] : undefined;
         fs.writeFileSync(
-            path.join(outDir, doc.file.replace(/\.md$/, '.html')),
-            mdToHtml(content, doc.label, {
+            path.join(outDir, d.file.replace(/\.md$/, '.html')),
+            mdToHtml(content, d.label, {
                 ...(prevDoc ? { prev: { label: prevDoc.label, file: prevDoc.file.replace(/\.md$/, '.html') } } : {}),
                 ...(nextDoc ? { next: { label: nextDoc.label, file: nextDoc.file.replace(/\.md$/, '.html') } } : {}),
             }),

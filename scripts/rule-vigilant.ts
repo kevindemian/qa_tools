@@ -1,6 +1,9 @@
 #!/usr/bin/env tsx
 import { readFileSync, existsSync } from 'fs';
 
+const safeGet = (obj: object, key: string | number): unknown =>
+    Object.prototype.hasOwnProperty.call(obj, key) ? Reflect.get(obj, key) : undefined;
+
 interface Warning {
     file: string;
     line: number;
@@ -78,7 +81,7 @@ function scanFile(filePath: string): Warning[] {
     ];
 
     for (let i = 0; i < lines.length; i++) {
-        const line = lines[i] ?? '';
+        const line = (safeGet(lines, i) ?? '') as string;
         for (const scanner of scanners) {
             const msg = scanner.test(line, i);
             if (msg) {
@@ -96,9 +99,9 @@ let quiet = false;
 let jsonOutput = false;
 
 for (let i = 0; i < args.length; i++) {
-    const arg = args[i];
+    const arg = safeGet(args, i) as string | undefined;
     if (arg === '--file' && i + 1 < args.length) {
-        filePath = args[++i] ?? '';
+        filePath = (safeGet(args, ++i) ?? '') as string;
     } else if (arg === '--quiet') {
         quiet = true;
     } else if (arg === '--json') {

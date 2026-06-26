@@ -100,7 +100,7 @@ export function ensureDotenv(): void {
 /** Read an env var with optional fallback. Calls `ensureDotenv` on each read. */
 export function envVal(key: string, fallback = ''): string {
     ensureDotenv();
-    return process.env[key] || fallback;
+    return (Reflect.get(process.env, key) as string) || fallback;
 }
 
 /** Parse a string/boolean/undefined into a strict boolean. */

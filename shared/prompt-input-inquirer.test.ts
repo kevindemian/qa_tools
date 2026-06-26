@@ -50,7 +50,7 @@ vi.mock('./prompt-ui', async () => {
             const cfg = ConfigAccessorActual.default.create();
             cfg.get = <T>(key: string): T => {
                 const v: Record<string, unknown> = { quiet: false, autoConfirm: false };
-                return v[key] as T;
+                return Reflect.get(v, key) as T;
             };
             return cfg;
         }),
@@ -92,7 +92,7 @@ describe('Prompt Input Inquirer', () => {
         mockReadlineQuestion.mockReturnValue('');
         Object.defineProperty(process.stdin, 'isTTY', { value: true, configurable: true });
         const cfg = ConfigAccessor.create();
-        cfg.get = <T>(k: string) => ({ quiet: false, autoConfirm: false })[k] as T;
+        cfg.get = <T>(k: string) => Reflect.get({ quiet: false, autoConfirm: false }, k) as T;
         mockGetConfig.mockReturnValue(cfg);
         __setInputMod(null);
         __setSelectMod(null);

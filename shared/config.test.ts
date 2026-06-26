@@ -91,7 +91,7 @@ describe('Config', () => {
     ];
 
     beforeEach(() => {
-        ENV_VARS.forEach((v) => delete process.env[v]);
+        ENV_VARS.forEach((v) => Reflect.deleteProperty(process.env, v));
         mockDotenvConfig.mockClear();
         Config.reset();
     });
@@ -141,7 +141,7 @@ describe('Config', () => {
         ];
 
         it.each(STRING_GETTERS)('%s returns the env value when set', (getter, envVar) => {
-            process.env[envVar] = 'from-env';
+            Reflect.set(process.env, envVar, 'from-env');
 
             expect(Config.get(getter)).toBe('from-env');
         });
@@ -200,7 +200,7 @@ describe('Config', () => {
         });
 
         it.each(BOOL_GETTERS)('%s returns true when "%s" set to true', (getter, envVar) => {
-            process.env[envVar] = 'true';
+            Reflect.set(process.env, envVar, 'true');
 
             expect(Config.get(getter)).toBeTruthy();
         });

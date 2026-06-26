@@ -13,10 +13,10 @@ export const invariantConcreteSteps: InvariantFn = (
 
     const violations: Array<{ testIndex: number; stepIndex: number; text: string }> = [];
     for (let i = 0; i < tests.length; i++) {
-        const test = tests[i] as TestCaseShape;
+        const test: TestCaseShape = Reflect.get(tests, i);
         const steps = test.steps || [];
         for (let j = 0; j < steps.length; j++) {
-            const step = steps[j] as string;
+            const step: string = Reflect.get(steps, j);
             if (PASSIVE_STEP_RE.test(step)) {
                 violations.push({ testIndex: i, stepIndex: j, text: step });
             }

@@ -39,7 +39,7 @@ const mockConfigMod: { [key: string]: unknown } = vi.hoisted(() => {
 });
 
 vi.mock('../../shared/config', () => {
-    const get = vi.fn((key: string) => mockConfigMod[key] as string);
+    const get = vi.fn((key: string) => Reflect.get(mockConfigMod, key) as string);
     mockConfigMod['get'] = get;
     mockConfigMod['getInstance'] = vi.fn(() => ({ get }));
     return { default: mockConfigMod };

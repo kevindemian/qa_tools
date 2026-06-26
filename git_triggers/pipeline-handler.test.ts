@@ -66,7 +66,7 @@ vi.mock('../shared/config', () => ({
     __esModule: true,
     default: {
         jiraProject: 'TEST',
-        get: vi.fn((key: string) => process.env[key] || undefined),
+        get: vi.fn((key: string) => Reflect.get(process.env, key) || undefined),
     },
 }));
 

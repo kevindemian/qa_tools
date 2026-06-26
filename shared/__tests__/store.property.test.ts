@@ -88,7 +88,7 @@ describe('Store — property-based', () => {
                         ['timestamp', meta.timestamp],
                     ];
 
-                    expect(fields.every(([k, v]) => loaded[k] === v)).toBeTruthy();
+                    expect(fields.every(([k, v]) => Reflect.get(loaded, k) === v)).toBeTruthy();
                 } finally {
                     cleanupDir(dir);
                 }
@@ -134,8 +134,8 @@ describe('Store — property-based', () => {
                     expect(list.length).toBeGreaterThanOrEqual(1);
 
                     for (let i = 1; i < list.length; i++) {
-                        const prev = list[i - 1];
-                        const curr = list[i];
+                        const prev = Reflect.get(list, i - 1) as { timestamp: string } | undefined;
+                        const curr = Reflect.get(list, i) as { timestamp: string } | undefined;
                         if (!prev || !curr) throw new Error('expected entries');
 
                         expect(prev.timestamp).toBeGreaterThanOrEqual(curr.timestamp);
@@ -190,8 +190,8 @@ describe('Store — property-based', () => {
                         expect(loaded).toHaveLength(entries.length);
 
                         for (let i = 0; i < entries.length; i++) {
-                            const loadedEntry = loaded[entries.length - 1 - i];
-                            const entry = entries[i];
+                            const loadedEntry = Reflect.get(loaded, entries.length - 1 - i) as { sha: string; timestamp: string } | undefined;
+                            const entry = Reflect.get(entries, i) as { sha: string; timestamp: string } | undefined;
                             if (!loadedEntry || !entry) throw new Error('expected entries');
 
                             expect(loadedEntry.sha).toBe(entry.sha);

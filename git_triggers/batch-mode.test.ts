@@ -50,7 +50,7 @@ vi.mock('../shared/config', () => ({
         jiraProject: 'TEST',
         setAutoConfirm: vi.fn(),
         get(key: string) {
-            return (this as Record<string, unknown>)[key] as string;
+            return Reflect.get(this, key) as string;
         },
     },
 }));

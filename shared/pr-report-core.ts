@@ -585,11 +585,11 @@ function parseArgs(args: string[]): CliOptions {
         skipAi: false,
         skipQuality: false,
         skipFlaky: false,
-        projectName: process.env['GITHUB_REPOSITORY'] ?? 'unknown',
+        projectName: (typeof Reflect.get(process.env, 'GITHUB_REPOSITORY') === 'string' ? Reflect.get(process.env, 'GITHUB_REPOSITORY') : undefined) || 'unknown',
     };
     let idx = 0;
     while (idx < args.length) {
-        const arg = args[idx];
+        const arg: unknown = Reflect.get(args, idx);
         switch (arg) {
             case '--help':
             case '-h':
@@ -631,7 +631,7 @@ function parseArgs(args: string[]): CliOptions {
                 opts.skipFlaky = true;
                 break;
             default:
-                rootLogger.warn(`Flag desconhecida ignorada: ${arg}`);
+                rootLogger.warn(`Flag desconhecida ignorada: ${String(arg)}`);
         }
         idx++;
     }

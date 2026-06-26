@@ -156,7 +156,7 @@ function saveCheckpoint(opts: SaveCheckpointOptions): void {
         project: projectName,
         ts: new Date().toISOString(),
         testCount: tests.length,
-        done: inMemoryTasksId.map((key, idx) => ({ key, title: inMemoryTasksText[idx] as string })),
+        done: inMemoryTasksId.map((key, idx) => ({ key, title: Reflect.get(inMemoryTasksText, idx) })),
     };
     const cpSaveEntries = Object.entries(cpSave);
     cpSaveEntries.push([cpKey, sourcePath]);
@@ -326,7 +326,7 @@ async function executeTestCreationLoop(opts: TestCreationLoopOptions): Promise<v
     } = opts;
 
     outer: for (let t = resumeFrom; t < tests.length; t++) {
-        const test = tests[t] as NonNullable<(typeof tests)[number]>;
+        const test = Reflect.get(tests, t);
         const testTitle = test.title;
         if (!isQuiet()) reportInfo('Criando: ' + testTitle);
         inMemoryTasksText.push(testTitle);

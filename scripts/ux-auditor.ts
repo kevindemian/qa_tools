@@ -350,7 +350,7 @@ function computeFrictionScore(): number {
     for (const id of handlerIds) {
         if (id === '0') continue;
         totalHandlers++;
-        if (helpTopics[id]) handlersWithHelp++;
+        if (Reflect.get(helpTopics, id)) handlersWithHelp++;
     }
     const EX = totalHandlers > 0 ? 1 - handlersWithHelp / totalHandlers : 0;
 
