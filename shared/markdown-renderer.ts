@@ -36,21 +36,27 @@ function renderPipeTable(head: string[], rows: string[][], availWidth: number): 
     const pipeOverhead = 3 * n + 1;
     const contentWidth = Math.max(availWidth - pipeOverhead, n * 3);
     const baseW = Math.floor(contentWidth / n);
-    const colWidths: number[] = new Array(n).fill(baseW) as number[];
-    colWidths[0] = (colWidths[0] ?? 0) + contentWidth - baseW * n;
+    const colWidthMap = new Map<number, number>();
+    for (let i = 0; i < n; i++) {
+        colWidthMap.set(i, baseW);
+    }
+    colWidthMap.set(0, (colWidthMap.get(0) ?? 0) + contentWidth - baseW * n);
 
-    const hSep = '│' + colWidths.map((w) => '─'.repeat(w + 2)).join('┼') + '│';
+    const hSep = '│' + Array.from(colWidthMap.values()).map((w) => '─'.repeat(w + 2)).join('┼') + '│';
 
-    const hLine = head.map((h, i) => palette.blue.bold(padCell(stripVTControlCharacters(h), colWidths[i] as number)));
+    const hLine = head.map((h, i) => palette.blue.bold(padCell(stripVTControlCharacters(h), colWidthMap.get(i) ?? 0)));
     out.push('│' + hLine.join('│') + '│');
 
     out.push(hSep);
 
     for (const row of rows) {
-        const wrappedCols = row.map((cell, i) => wrapCell(cell, colWidths[i] as number));
+        const wrappedCols = row.map((cell, i) => wrapCell(cell, colWidthMap.get(i) ?? 0));
         const maxLines = Math.max(...wrappedCols.map((l) => l.length), 1);
         for (let li = 0; li < maxLines; li++) {
-            const cells = wrappedCols.map((lines, ci) => padCell(lines[li] || '', colWidths[ci] as number));
+            const cells = wrappedCols.map((lns, ci) => {
+                const charMap = new Map(lns.map((ch, idx) => [idx, ch]));
+                return padCell(charMap.get(li) ?? '', colWidthMap.get(ci) ?? 0);
+            });
             out.push('│' + cells.join('│') + '│');
         }
     }
