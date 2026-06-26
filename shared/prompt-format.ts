@@ -28,13 +28,13 @@ const TITLE_BOX_WIDTH = 60;
 const MIN_COLUMN_WIDTH = 3;
 
 export function badge(count: number, label: string, status: 'ok' | 'error' | 'warn' | 'info'): string {
-    const colors: Record<string, ChalkInstance> = {
-        ok: chalk.hex('#3fb950'),
-        error: chalk.hex('#f85149'),
-        warn: chalk.hex('#d29922'),
-        info: chalk.hex('#8b949e'),
-    };
-    const c = colors[status] || chalk.hex('#8b949e');
+    const colors = new Map<string, ChalkInstance>([
+        ['ok', chalk.hex('#3fb950')],
+        ['error', chalk.hex('#f85149')],
+        ['warn', chalk.hex('#d29922')],
+        ['info', chalk.hex('#8b949e')],
+    ]);
+    const c = colors.get(status) ?? chalk.hex('#8b949e');
     const icon = status === 'info' ? '○' : '●';
     return `${c(icon)} ${c(count + ' ' + label)}`;
 }
@@ -42,11 +42,11 @@ export function badge(count: number, label: string, status: 'ok' | 'error' | 'wa
 export function icon(name: 'ok' | 'err' | 'warn' | 'info'): string {
     const useUnicode = !getConfig().get<boolean>('quiet') && Output.isTTY();
     if (useUnicode) {
-        const map: Record<string, string> = { ok: '\u2713', err: '\u2717', warn: '\u26A0', info: '\u2139' };
-        return map[name] ?? '';
+        const unicodeMap = new Map([['ok', '\u2713'], ['err', '\u2717'], ['warn', '\u26A0'], ['info', '\u2139']]);
+        return unicodeMap.get(name) ?? '';
     }
-    const fallback: Record<string, string> = { ok: 'OK ', err: 'ERR', warn: '!  ', info: 'i  ' };
-    return fallback[name] || 'i  ';
+    const fallbackMap = new Map([['ok', 'OK '], ['err', 'ERR'], ['warn', '!  '], ['info', 'i  ']]);
+    return fallbackMap.get(name) ?? 'i  ';
 }
 
 type LogLevel = 'INFO' | 'ERROR' | 'WARN' | 'HELP';
@@ -139,8 +139,10 @@ function buildCliTable3Config(keys: string[]): {
 }
 
 function colorizeRowCells(keys: string[], row: Record<string, unknown>, statusColIdx: number): string[] {
+    const rowEntries = Object.entries(row);
     return keys.map((k, i) => {
-        const v = row[k];
+        const entry = rowEntries.find(([ek]) => ek === k);
+        const v = entry?.[1];
         if (v === null || v === undefined) return '';
         if (typeof v === 'object') return JSON.stringify(v);
         const cell: string = typeof v === 'string' ? v : JSON.stringify(v);
@@ -165,11 +167,9 @@ export function tableView<T extends Record<string, unknown>>(
     }
     const rows = columns
         ? data.map((row) => {
-              const obj: Record<string, unknown> = {};
-              for (const col of columns) {
-                  if (col in row) obj[col] = row[col];
-              }
-              return obj;
+              const rowEntries = Object.entries(row);
+              const filtered = rowEntries.filter(([k]) => columns.includes(k));
+              return Object.fromEntries(filtered);
           })
         : data;
     if (rows.length === 0) return;
