@@ -3,7 +3,6 @@
  * Resilient to corruption: recovers from `.bak` on parse failure. */
 import fs from 'fs';
 import path from 'path';
-import os from 'os';
 import Config from './config.js';
 import { rootLogger } from './logger.js';
 import { warn } from './prompt.js';
@@ -13,7 +12,7 @@ const UTF8 = 'utf8';
 
 function getStateDir(config?: Config): string {
     const xdg = config ? config.get('xdgStateHome') : Config.get('xdgStateHome');
-    return xdg ? path.join(xdg, 'qa-tools') : path.join(os.homedir(), '.local', 'state', 'qa-tools');
+    return xdg ? path.join(xdg, 'qa-tools') : path.join(import.meta.dirname, '.local', 'state', 'qa-tools');
 }
 
 function ensureStateDir(config?: Config): boolean {
@@ -44,7 +43,7 @@ function bakPath(config?: Config): string {
 /** Migrate state from the legacy `~/.qa_tools_state.json` path to the new XDG path.
  * Called once at import. Safe to call multiple times (no-op if already migrated). */
 export function migrateOldState(config?: Config): void {
-    const OLD_STATE_PATH = path.join(os.homedir(), '.qa_tools_state.json');
+    const OLD_STATE_PATH = path.join(import.meta.dirname, '.qa_tools_state.json');
     try {
         if (fs.existsSync(OLD_STATE_PATH) && !fs.existsSync(statePath(config))) {
             const oldData = fs.readFileSync(OLD_STATE_PATH, UTF8);
