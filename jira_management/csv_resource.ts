@@ -99,7 +99,8 @@ class CsvResource {
         descIndex: number,
         title: string,
     ): { description: string; descEndIndex: number } {
-        const descLine = lines[descIndex] ?? '';
+        const lineMap = new Map(lines.map((l, idx) => [idx, l]));
+        const descLine = lineMap.get(descIndex) ?? '';
         const rawValue = descLine.replace(/^Description:\s*/, '');
         const parsed = parseQuotedValue(rawValue, lines, descIndex);
         let description = parsed.value;
@@ -112,13 +113,13 @@ class CsvResource {
         if (!rawValue.startsWith('"')) {
             const stopPrefixes = ['Title:', 'Pre-condition:', 'Linked Issues:', 'Group:', 'Action,Data'];
             while (descEndIndex < lines.length) {
-                const line = lines[descEndIndex] ?? '';
+                const line = lineMap.get(descEndIndex) ?? '';
                 if (stopPrefixes.some((p) => line.startsWith(p))) break;
                 descEndIndex++;
             }
             const parts: string[] = [];
             for (let i = descIndex; i < descEndIndex; i++) {
-                const line = lines[i] ?? '';
+                const line = lineMap.get(i) ?? '';
                 if (i === descIndex) {
                     parts.push(line.replace(/^Description:\s*/, ''));
                 } else {
@@ -136,7 +137,8 @@ class CsvResource {
         precIndex: number,
         title: string,
     ): { precValue: string | null; precEndIndex: number } {
-        const precLine = lines[precIndex] ?? '';
+        const lineMap = new Map(lines.map((l, idx) => [idx, l]));
+        const precLine = lineMap.get(precIndex) ?? '';
         const rawValue = precLine.replace(/^Pre-condition:\s*/, '');
         const parsed = parseQuotedValue(rawValue, lines, precIndex);
 
