@@ -47,7 +47,9 @@ function safeEntry(id: string, context?: number, capabilities?: string[]): RawMo
 }
 
 function arr<T>(raw: Record<string, unknown>, key: string): T[] | null {
-    const val = raw[key];
+    const entries = Object.entries(raw);
+    const entry = entries.find(([k]) => k === key);
+    const val = entry?.[1];
     return Array.isArray(val) ? (val as T[]) : null;
 }
 
@@ -117,7 +119,9 @@ function extractId(raw: Record<string, unknown>): string | null {
 }
 
 function extractNumber(raw: Record<string, unknown>, key: string): number | undefined {
-    const val = raw[key];
+    const entries = Object.entries(raw);
+    const entry = entries.find(([k]) => k === key);
+    const val = entry?.[1];
     return typeof val === 'number' ? val : undefined;
 }
 
@@ -263,7 +267,9 @@ const ADAPTERS: Record<string, ModelAdapter> = {
  * Returns null if no adapter is registered for the provider.
  */
 export function getAdapter(provider: LlmProvider): ModelAdapter | null {
-    return ADAPTERS[provider] ?? null;
+    const entries = Object.entries(ADAPTERS);
+    const entry = entries.find(([k]) => k === provider);
+    return entry?.[1] ?? null;
 }
 
 /**
