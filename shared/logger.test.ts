@@ -136,7 +136,7 @@ describe('Logger', () => {
             const result = writeAndCheck('info', 'Sem ANSI no arquivo');
 
             expect(result.fileFound).toBeTruthy();
-            expect(result.lastLine).not.toMatch(new RegExp(String.fromCharCode(0x1b) + '\\['));
+            expect(result.lastLine).not.toContain(String.fromCharCode(0x1b) + '[');
             
         });
 
