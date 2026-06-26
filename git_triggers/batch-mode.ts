@@ -87,7 +87,7 @@ async function setupBatchProject(batch: BatchCliArgs): Promise<{
 
     const projsEntries = Object.entries(projs);
     const firstEntry = projsEntries[0];
-    const projectName = (batch.project || (firstEntry ? firstEntry[0] : '')) ?? '';
+    const projectName = batch.project || (firstEntry ? firstEntry[0] : '');
     const projectEntry = projsEntries.find(([k]) => k === projectName);
     if (!projectEntry) {
         error('Projeto "' + projectName + '" não encontrado em config/projects.json.');
