@@ -30,7 +30,7 @@ function getLine(lines: string[], i: number): string {
 // ─── Inline handlers ────────────────────────────────────────────────────────────
 
 function lexDel(src: string, i: number, flush: () => void, push: (t: InlineToken) => void): number | null {
-    if (src[i] !== '~' || src[i + 1] !== '~') return null;
+    if (src.charAt(i) !== '~' || src.charAt(i + 1) !== '~') return null;
     const end = src.indexOf('~~', i + 2);
     if (end === -1) return null;
     flush();
@@ -39,7 +39,7 @@ function lexDel(src: string, i: number, flush: () => void, push: (t: InlineToken
 }
 
 function lexStrong(src: string, i: number, flush: () => void, push: (t: InlineToken) => void): number | null {
-    if (src[i] !== '*' || src[i + 1] !== '*') return null;
+    if (src.charAt(i) !== '*' || src.charAt(i + 1) !== '*') return null;
     const end = src.indexOf('**', i + 2);
     if (end === -1) return null;
     flush();
@@ -48,7 +48,7 @@ function lexStrong(src: string, i: number, flush: () => void, push: (t: InlineTo
 }
 
 function lexEmStar(src: string, i: number, flush: () => void, push: (t: InlineToken) => void): number | null {
-    if (src[i] !== '*' || src[i + 1] === '*') return null;
+    if (src.charAt(i) !== '*' || src.charAt(i + 1) === '*') return null;
     const end = src.indexOf('*', i + 1);
     if (end === -1) return null;
     flush();
@@ -57,7 +57,7 @@ function lexEmStar(src: string, i: number, flush: () => void, push: (t: InlineTo
 }
 
 function lexEmUnderscore(src: string, i: number, flush: () => void, push: (t: InlineToken) => void): number | null {
-    if (src[i] !== '_') return null;
+    if (src.charAt(i) !== '_') return null;
     const end = src.indexOf('_', i + 1);
     if (end === -1) return null;
     flush();
@@ -66,7 +66,7 @@ function lexEmUnderscore(src: string, i: number, flush: () => void, push: (t: In
 }
 
 function lexCodeSpan(src: string, i: number, flush: () => void, push: (t: InlineToken) => void): number | null {
-    if (src[i] !== '`') return null;
+    if (src.charAt(i) !== '`') return null;
     const end = src.indexOf('`', i + 1);
     if (end === -1) return null;
     flush();
@@ -75,9 +75,9 @@ function lexCodeSpan(src: string, i: number, flush: () => void, push: (t: Inline
 }
 
 function lexLink(src: string, i: number, flush: () => void, push: (t: InlineToken) => void): number | null {
-    if (src[i] !== '[') return null;
+    if (src.charAt(i) !== '[') return null;
     const cb = src.indexOf(']', i + 1);
-    if (cb === -1 || src[cb + 1] !== '(') return null;
+    if (cb === -1 || src.charAt(cb + 1) !== '(') return null;
     const cp = src.indexOf(')', cb + 2);
     if (cp === -1) return null;
     flush();
@@ -114,7 +114,7 @@ function lexInline(src: string): InlineToken[] {
             }
         }
         if (matched) continue;
-        buf += src[i];
+        buf += src.charAt(i);
         i++;
     }
 

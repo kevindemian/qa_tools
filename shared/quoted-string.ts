@@ -34,7 +34,8 @@ export function parseQuotedValue(
         const parts = [rawValue.slice(1)];
         let endIndex = startLineIndex + 1;
         while (endIndex < lines.length) {
-            const line = lines[endIndex] as string;
+            const lineMap = new Map(lines.map((l, idx) => [idx, l]));
+            const line = lineMap.get(endIndex) ?? '';
             if (line.endsWith('"')) {
                 parts.push(line.slice(0, -1));
                 endIndex++;

@@ -194,7 +194,7 @@ export function getToken(name: string): unknown {
     let current: unknown = tokens;
     for (const part of parts) {
         if (current && typeof current === 'object' && part in (current as Record<string, unknown>)) {
-            current = (current as Record<string, unknown>)[part];
+            current = Reflect.get(current as Record<string, unknown>, part);
         } else {
             return undefined;
         }

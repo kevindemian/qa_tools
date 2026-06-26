@@ -58,7 +58,7 @@ function redactUrlsWithCredentials(text: string): string {
                 continue;
             }
         }
-        result += text[i];
+        result += text.slice(i, i + 1);
         i++;
     }
     return result;

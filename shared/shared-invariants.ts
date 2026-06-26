@@ -22,8 +22,8 @@ function flattenStrings(obj: unknown, path = ''): Array<{ value: string; path: s
     if (typeof obj === 'string') {
         result.push({ value: obj, path });
     } else if (Array.isArray(obj)) {
-        for (let i = 0; i < obj.length; i++) {
-            result.push(...flattenStrings(obj[i], `${path}[${i}]`));
+        for (const [i, item] of obj.entries()) {
+            result.push(...flattenStrings(item, `${path}[${i}]`));
         }
     } else if (obj !== null && typeof obj === 'object') {
         for (const [key, val] of Object.entries(obj as Record<string, unknown>)) {

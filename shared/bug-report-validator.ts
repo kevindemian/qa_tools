@@ -66,8 +66,8 @@ export const invariantImperativeSteps: InvariantFn = (
 
     const nonImperative: number[] = [];
     const steps = report.stepsToReproduce || [];
-    for (let i = 0; i < steps.length; i++) {
-        if (!IMPERATIVE_RE.test(steps[i] as string)) {
+    for (const [i, step] of steps.entries()) {
+        if (!IMPERATIVE_RE.test(step)) {
             nonImperative.push(i);
         }
     }

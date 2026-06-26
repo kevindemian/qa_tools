@@ -65,8 +65,7 @@ const GIT_LOG_ARGS = ['--reverse'];
 export function parseGitLogOutput(output: string): GitCommitEntry[] {
     const lines = output.split('\n').filter(Boolean);
     const entries: GitCommitEntry[] = [];
-    for (let i = 0; i < lines.length; i++) {
-        const line = lines[i];
+    for (const [i, line] of lines.entries()) {
         if (!line) continue;
         const parts = line.split('\0');
         if (parts.length < 5) {

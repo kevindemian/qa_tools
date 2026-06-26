@@ -587,7 +587,9 @@ function parseArgs(args: string[]): CliOptions {
         skipFlaky: false,
         projectName: process.env['GITHUB_REPOSITORY'] ?? 'unknown',
     };
-    for (const [i, arg] of args.entries()) {
+    let idx = 0;
+    while (idx < args.length) {
+        const arg = args[idx];
         switch (arg) {
             case '--help':
             case '-h':
@@ -608,16 +610,16 @@ function parseArgs(args: string[]): CliOptions {
                 process.exit(0);
                 break;
             case '--ctrf':
-                opts.ctrfPath = args[++i] ?? opts.ctrfPath;
+                opts.ctrfPath = args[++idx] ?? opts.ctrfPath;
                 break;
             case '--html-output':
                 {
-                    const v = args[++i];
+                    const v = args[++idx];
                     if (v !== undefined) opts.htmlOutputPath = v;
                 }
                 break;
             case '--project':
-                opts.projectName = args[++i] ?? opts.projectName;
+                opts.projectName = args[++idx] ?? opts.projectName;
                 break;
             case '--no-ai':
                 opts.skipAi = true;
@@ -631,6 +633,7 @@ function parseArgs(args: string[]): CliOptions {
             default:
                 rootLogger.warn(`Flag desconhecida ignorada: ${arg}`);
         }
+        idx++;
     }
     return opts;
 }

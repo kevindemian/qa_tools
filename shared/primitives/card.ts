@@ -69,7 +69,7 @@ export function MetricCard(props: MetricCardProps): string {
                text-align:${props.icon ? 'left' : 'center'}">
         ${props.icon ? `<div data-part="icon" style="font-size:${tokens.fontSize.xl};margin-bottom:${tokens.spacing.xs}px">${props.icon}</div>` : ''}
         <div data-part="label" style="font-size:${tokens.fontSize.xs};text-transform:uppercase;color:var(--color-text-secondary);margin-bottom:${tokens.spacing.xs}px">${props.label}</div>
-        <div data-part="value" style="font-size:${tokens.fontSize['2xl']};font-weight:${tokens.fontWeight.bold};color:${valColor[s]}">${props.value}</div>
+        <div data-part="value" style="font-size:${tokens.fontSize['2xl']};font-weight:${tokens.fontWeight.bold};color:${Object.entries(valColor).find(([k]) => k === s)?.[1] ?? 'inherit'}">${props.value}</div>
         ${props.trend ? `<div data-part="trend" style="font-size:${tokens.fontSize.xs};color:var(--color-text-muted);margin-top:${tokens.spacing.xs}px">${props.trend}</div>` : ''}
     </div>`;
 }

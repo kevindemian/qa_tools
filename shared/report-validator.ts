@@ -121,7 +121,7 @@ export class ReportValidator {
         const testsEntry = dataEntries.find(([k]) => k === 'tests');
         const tests = testsEntry?.[1];
         if (!Array.isArray(tests)) return;
-        for (const [, t] of (tests as unknown[]).entries()) {
+        for (const [i, t] of (tests as unknown[]).entries()) {
             if (typeof t !== 'object' || t === null) continue;
             const tc = t as TestCaseShape;
             if (tc.severity === 'high' && typeof tc.recommendation === 'string' && tc.recommendation.length < 20) {

@@ -137,7 +137,7 @@ const _gradeVariant: Record<string, 'pass' | 'fail' | 'skip' | 'info' | 'warn'> 
 
 function _badgeForGrade(grade: string): string {
     const g = grade.toUpperCase();
-    const variant = _gradeVariant[g] || 'default';
+    const variant = Object.entries(_gradeVariant).find(([k]) => k === g)?.[1] || 'default';
     return Badge({ variant, children: grade });
 }
 
