@@ -107,21 +107,22 @@ export function nonNull<T>(value: T, msg?: string): NonNullable<T> {
 }
 
 export function withEnv(env: Record<string, string | undefined>): () => void {
-    const prev: Record<string, string | undefined> = {};
-    for (const key of Object.keys(env)) {
-        prev[key] = process.env[key];
-        if (env[key] === undefined) {
+    const prev = new Map<string, string | undefined>();
+    const envEntries = Object.entries(env);
+    for (const [key, value] of envEntries) {
+        prev.set(key, process.env[key]);
+        if (value === undefined) {
             delete process.env[key];
         } else {
-            process.env[key] = env[key];
+            process.env[key] = value;
         }
     }
     return () => {
-        for (const key of Object.keys(env)) {
-            if (prev[key] === undefined) {
+        for (const [key] of envEntries) {
+            if (prev.get(key) === undefined) {
                 delete process.env[key];
             } else {
-                process.env[key] = prev[key];
+                process.env[key] = prev.get(key);
             }
         }
     };
