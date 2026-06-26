@@ -67,18 +67,23 @@ function _showHealthScore(store: ReturnType<typeof loadMetrics>): void {
     const health = calculateHealthScore(store);
     const qcIcon = health.qualityGate === 'pass' ? '✅' : '❌';
     title('Test Suite Health — ' + health.overall + '/100 (' + health.grade.replace(/_/g, ' ') + ') ' + qcIcon);
-    const dimRows = (['passRate', 'flakyRate', 'coverage', 'suiteSpeed'] as const).map((dim) => ({
-        Dimensão:
-            dim === 'passRate'
-                ? 'Pass Rate'
-                : dim === 'flakyRate'
-                  ? 'Flaky Rate'
-                  : dim === 'coverage'
-                    ? 'Coverage'
-                    : 'Suite Speed',
-        Score: health.dimensions[dim].score,
-        Status: health.dimensions[dim].status === 'pass' ? '✅' : '❌',
-    }));
+    const dimEntries = Object.entries(health.dimensions);
+    const dimRows = (['passRate', 'flakyRate', 'coverage', 'suiteSpeed'] as const).map((dim) => {
+        const entry = dimEntries.find(([k]) => k === dim);
+        const dimData = entry?.[1];
+        return {
+            Dimensão:
+                dim === 'passRate'
+                    ? 'Pass Rate'
+                    : dim === 'flakyRate'
+                      ? 'Flaky Rate'
+                      : dim === 'coverage'
+                        ? 'Coverage'
+                        : 'Suite Speed',
+            Score: dimData?.score ?? 0,
+            Status: dimData?.status === 'pass' ? '✅' : '❌',
+        };
+    });
     tableView(dimRows, ['Dimensão', 'Score', 'Status']);
 }
 

@@ -45,7 +45,7 @@ export async function analyzeCoverage(jiraResource: JiraResource, project: strin
 
     const issues = response.issues;
     const unmappedSteps: string[] = [];
-    const gapsByEpic: Record<string, string[]> = {};
+    const gapsByEpicMap = new Map<string, string[]>();
     let mappedCount = 0;
     let totalStepCount = 0;
 
@@ -58,8 +58,12 @@ export async function analyzeCoverage(jiraResource: JiraResource, project: strin
             unmappedSteps.push(issue.key);
             const epic = getEpicFromIssue(issue.fields);
             if (epic) {
-                if (!gapsByEpic[epic]) gapsByEpic[epic] = [];
-                gapsByEpic[epic].push(issue.key);
+                const existing = gapsByEpicMap.get(epic);
+                if (existing) {
+                    existing.push(issue.key);
+                } else {
+                    gapsByEpicMap.set(epic, [issue.key]);
+                }
             }
         }
     }
@@ -71,7 +75,7 @@ export async function analyzeCoverage(jiraResource: JiraResource, project: strin
         totalSteps: totalStepCount,
         mappedIssues: mappedCount,
         unmappedSteps,
-        gapsByEpic,
+        gapsByEpic: Object.fromEntries(gapsByEpicMap),
         coveragePct,
     };
 }

@@ -56,7 +56,11 @@ function mergeEnvLocal(updates: Record<string, string>, existing: string[]): str
         if (match) {
             const key = line.split('=')[0]?.trim();
             if (key && updatedKeys.has(key)) {
-                keptLines.push(key + '=' + updates[key]);
+                const updateEntries = Object.entries(updates);
+                const updateEntry = updateEntries.find(([k]) => k === key);
+                if (updateEntry) {
+                    keptLines.push(key + '=' + updateEntry[1]);
+                }
                 updatedKeys.delete(key);
             }
         } else {
@@ -222,26 +226,26 @@ export async function main(): Promise<void> {
     }
 
     // ── Escrita do .env.local ──
-    const envUpdates: Record<string, string> = {};
-    envUpdates['LLM_PROVIDER'] = firstProvider;
+    const envUpdates = new Map<string, string>();
+    envUpdates.set('LLM_PROVIDER', firstProvider);
 
     // Apenas o primeiro provider tem LLM_API_KEY
-    envUpdates['LLM_API_KEY'] = firstKey;
+    envUpdates.set('LLM_API_KEY', firstKey);
 
     for (const [tier, model] of Object.entries(assignment.tiers)) {
         const envVar = 'LLM_' + tier.charAt(0).toUpperCase() + tier.slice(1) + '_MODEL';
-        envUpdates[envVar] = String(model);
+        envUpdates.set(envVar, String(model));
     }
 
     // Escreve chaves dos provedores adicionais como LLM_{PROVIDER}_API_KEY
     for (const [p, key] of providers) {
         if (p === firstProvider) continue;
         const envVar = 'LLM_' + p.charAt(0).toUpperCase() + p.slice(1).replace(/-/g, '_') + '_API_KEY';
-        envUpdates[envVar] = key;
+        envUpdates.set(envVar, key);
     }
 
     const existing = readEnvLocal();
-    const newContent = mergeEnvLocal(envUpdates, existing);
+    const newContent = mergeEnvLocal(Object.fromEntries(envUpdates), existing);
     writeEnvLocal(newContent);
 
     // Atualiza env no processo atual
