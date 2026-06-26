@@ -124,8 +124,7 @@ export const invariantSeverityConsistent: InvariantFn = (
     if (tests.length === 0) return [pass('A-03', 'No tests to validate')];
 
     const warnings: string[] = [];
-    for (let i = 0; i < tests.length; i++) {
-        const t = tests[i] as AnalysisTestShape;
+    for (const [i, t] of tests.entries()) {
         if (t.classification === 'ASSERTION' && t.severity === 'low') {
             warnings.push(`test[${i}]: ASSERTION classified as low severity`);
         }
@@ -152,8 +151,7 @@ export const invariantUnknownHasReason: InvariantFn = (
     if (tests.length === 0) return [pass('A-04', 'No tests to validate')];
 
     const unknownNoReason: number[] = [];
-    for (let i = 0; i < tests.length; i++) {
-        const t = tests[i] as AnalysisTestShape;
+    for (const [i, t] of tests.entries()) {
         if (t.classification === 'UNKNOWN') {
             const rec = t.recommendation || '';
             if (rec.length < 15) {
@@ -182,8 +180,7 @@ export const invariantHighSeverityRecommendation: InvariantFn = (
     if (tests.length === 0) return [pass('A-05', 'No tests to validate')];
 
     const shortRecommendations: number[] = [];
-    for (let i = 0; i < tests.length; i++) {
-        const t = tests[i] as AnalysisTestShape;
+    for (const [i, t] of tests.entries()) {
         if (t.severity === 'high' && (!t.recommendation || t.recommendation.length < 20)) {
             shortRecommendations.push(i);
         }
