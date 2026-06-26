@@ -13,7 +13,7 @@ async function processGitHubArtifacts(
     runs: GitHubWorkflowRun[],
 ): Promise<{ runStats: RunStats[]; allTestsByTitle: Record<string, { states: string[] }> }> {
     const runStats: RunStats[] = [];
-    const allTestsByTitle: Record<string, { states: string[] }> = {};
+    const allTestsByTitleMap = new Map<string, { states: string[] }>();
     for (const run of runs.slice(0, GIT_HISTORY_RUNS)) {
         try {
             const artResp = await client.get<GitHubArtifactsResponse>(
@@ -51,8 +51,12 @@ async function processGitHubArtifacts(
                 }
                 for (const t of tests) {
                     const name = t.name;
-                    if (!allTestsByTitle[name]) allTestsByTitle[name] = { states: [] };
-                    allTestsByTitle[name].states.push(t.status);
+                    const existing = allTestsByTitleMap.get(name);
+                    if (!existing) {
+                        allTestsByTitleMap.set(name, { states: [t.status] });
+                    } else {
+                        existing.states.push(t.status);
+                    }
                 }
             }
         } catch (err) {
@@ -61,7 +65,7 @@ async function processGitHubArtifacts(
             );
         }
     }
-    return { runStats, allTestsByTitle };
+    return { runStats, allTestsByTitle: Object.fromEntries(allTestsByTitleMap) };
 }
 
 function buildCommitsFromRuns(runs: GitHubWorkflowRun[]): string {

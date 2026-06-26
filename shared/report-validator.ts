@@ -117,7 +117,9 @@ export class ReportValidator {
     }
 
     private checkConsistency(data: Record<string, unknown>, warnings: string[]): void {
-        const tests = data['tests'];
+        const dataEntries = Object.entries(data);
+        const testsEntry = dataEntries.find(([k]) => k === 'tests');
+        const tests = testsEntry?.[1];
         if (!Array.isArray(tests)) return;
         for (let i = 0; i < tests.length; i++) {
             const t: unknown = tests[i];
@@ -147,12 +149,16 @@ export class ReportValidator {
                 const key = arrMatch[1] as string;
                 const idx = parseInt(arrMatch[2] as string, 10);
                 if (typeof current !== 'object' || current === null) return undefined;
-                const arr = (current as Record<string, unknown>)[key];
+                const objEntries = Object.entries(current as Record<string, unknown>);
+                const arrEntry = objEntries.find(([k]) => k === key);
+                const arr = arrEntry?.[1];
                 if (!Array.isArray(arr)) return undefined;
                 current = arr[idx];
             } else {
                 if (typeof current !== 'object' || current === null) return undefined;
-                current = (current as Record<string, unknown>)[part];
+                const objEntries = Object.entries(current as Record<string, unknown>);
+                const entry = objEntries.find(([k]) => k === part);
+                current = entry?.[1];
             }
         }
         return current;
