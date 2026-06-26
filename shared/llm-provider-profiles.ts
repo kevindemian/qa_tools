@@ -276,7 +276,8 @@ export function inferProviderFromKey(apiKey: string): LlmProvider | null {
 export function formatProviderList(): string {
     return KNOWN_PROVIDERS.filter((p) => p !== 'custom')
         .map((p) => {
-            const profile = PROVIDER_PROFILES[p];
+            const profile = Object.entries(PROVIDER_PROFILES).find(([k]) => k === p)?.[1];
+            if (!profile) return '';
             const freeTag = profile.free ? ' (free)' : '';
             return `  ${p}: ${profile.displayName}${freeTag}`;
         })

@@ -102,7 +102,7 @@ export function buildTraceabilityMatrix(metrics: MetricsStore, coverageResult?: 
         let passedTests = 0;
 
         for (const epicKey of epicKeys) {
-            const epicData = byEpic[epicKey];
+            const epicData = Object.entries(byEpic).find(([k]) => k === epicKey)?.[1];
             if (!epicData) continue;
 
             const items = itemsByEpic.get(epicKey) || [];

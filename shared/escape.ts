@@ -21,5 +21,5 @@ const HTML_ESCAPE_MAP: Record<string, string> = {
  * @param text - The raw string to escape
  * @returns The escaped string safe for HTML embedding */
 export function sanitizeHtml(text: string): string {
-    return text.replace(/[&<>"']/g, (ch) => HTML_ESCAPE_MAP[ch] || ch);
+    return text.replace(/[&<>"']/g, (ch) => Object.entries(HTML_ESCAPE_MAP).find(([k]) => k === ch)?.[1] ?? ch);
 }

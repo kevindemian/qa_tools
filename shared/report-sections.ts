@@ -20,14 +20,14 @@ import { tokens } from './theme-tokens.js';
 export function buildTabs(runs: TestRunTab[]): string {
     if (runs.length <= 1) return '';
     let html = '<div id="envTabs" class="tabs">';
-    for (let i = 0; i < runs.length; i++) {
+    for (const [i, run] of runs.entries()) {
         html +=
             '<button class="tab-btn' +
             (i === 0 ? ' active' : '') +
             '" onclick="switchTab(' +
             i +
             ')">' +
-            escapeHtml(runs[i]?.name ?? '') +
+            escapeHtml(run.name) +
             '</button>';
     }
     html += '</div>';

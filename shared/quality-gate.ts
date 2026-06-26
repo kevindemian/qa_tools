@@ -127,7 +127,7 @@ function _suiteSpeedCheck(health: HealthScoreResult, runs: MetricsRun[]): GateCh
     allDurations.sort((a, b) => a - b);
     const idx =
         allDurations.length > 0 ? Math.max(0, Math.ceil(allDurations.length * THRESHOLDS.p95Percentile) - 1) : -1;
-    const p95 = idx >= 0 ? (allDurations[idx] ?? 0) : 0;
+    const p95 = idx >= 0 ? (new Map(allDurations.map((v, i) => [i, v])).get(idx) ?? 0) : 0;
     const thresholdMs = THRESHOLDS.maxSuiteSpeed * 1000;
     const status = p95 <= thresholdMs ? 'pass' : 'fail';
     return {

@@ -74,7 +74,8 @@ export type ChalkKey = Exclude<PaletteKey, 'hex'>;
 
 /** Apply a palette color to text. Returns the colored string. */
 export function applyPalette(key: ChalkKey): ChalkInstance {
-    return palette[key];
+    const found = Object.entries(palette).find(([k]) => k === key);
+    return found ? (found[1] as ChalkInstance) : palette.fg;
 }
 
 /** Chalk level — read-only accessor.

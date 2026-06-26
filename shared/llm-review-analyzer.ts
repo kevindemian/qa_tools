@@ -92,7 +92,7 @@ export function shouldSkipAdversarialReview(
     }
 
     // 2. Risk-based gate
-    const risk = ARTIFACT_RISK[type];
+    const risk = Object.entries(ARTIFACT_RISK).find(([k]) => k === type)?.[1];
     if (risk === 'low' && result.confidence !== 'low') {
         return { skip: true, reason: 'low_risk_artifact', maxDepth: 0 };
     }

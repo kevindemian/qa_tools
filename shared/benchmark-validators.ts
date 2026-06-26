@@ -43,12 +43,12 @@ export function validateJsonArray(body: string, minItems: number): string | null
         const parsed: unknown = JSON.parse(body);
         if (!Array.isArray(parsed)) return 'Not an array';
         if (parsed.length < minItems) return 'Too few items: ' + parsed.length + ' < ' + minItems;
-        for (let i = 0; i < parsed.length; i++) {
-            const item = parsed[i] as JsonArrayItem;
-            if (!item.title || typeof item.title !== 'string' || item.title.length < 5)
+        for (const [i, item] of parsed.entries()) {
+            const shape = item as JsonArrayItem;
+            if (!shape.title || typeof shape.title !== 'string' || shape.title.length < 5)
                 return 'item[' + i + '] invalid title';
-            if (!Array.isArray(item.steps) || item.steps.length === 0) return 'item[' + i + '] invalid steps';
-            if (!item.expectedResult || typeof item.expectedResult !== 'string' || item.expectedResult.length < 10)
+            if (!Array.isArray(shape.steps) || shape.steps.length === 0) return 'item[' + i + '] invalid steps';
+            if (!shape.expectedResult || typeof shape.expectedResult !== 'string' || shape.expectedResult.length < 10)
                 return 'item[' + i + '] invalid expectedResult';
         }
         return null;

@@ -191,9 +191,17 @@ export function autoAssignTiers(provider: LlmProvider): TierAssignment {
         throw new Error(`Unknown provider: ${provider}`);
     }
     const tierNames = ['main', 'fast', 'reviewer', 'report', 'fallback', 'batch'] as const;
-    const tiers = {} as TierDefaults;
+    const tiersMap = new Map<string, string>();
     for (const t of tierNames) {
-        tiers[t] = resolveModel(t, provider).id;
+        tiersMap.set(t, resolveModel(t, provider).id);
     }
+    const tiers = {
+        main: tiersMap.get('main') ?? '',
+        fast: tiersMap.get('fast') ?? '',
+        reviewer: tiersMap.get('reviewer') ?? '',
+        report: tiersMap.get('report') ?? '',
+        fallback: tiersMap.get('fallback') ?? '',
+        batch: tiersMap.get('batch') ?? '',
+    };
     return { provider, tiers };
 }

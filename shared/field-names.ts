@@ -14,7 +14,7 @@ const CANONICAL: Record<string, string> = {
 export function normalizeFieldName(raw: string): string {
     const cleaned = raw.replace(/\r/g, '').trim();
     const key = cleaned.toLowerCase().replace(/[\s_-]+/g, '');
-    return CANONICAL[key] ?? cleaned;
+    return Object.entries(CANONICAL).find(([k]) => k === key)?.[1] ?? cleaned;
 }
 
 /** Sanitize a cell value: strip trailing `\r` (CRLF residue) but preserve intentional `\n`

@@ -124,7 +124,7 @@ export function buildHistoryCell(history: TestHistoryRun[]): string {
 }
 
 export function buildCategoryBadge(cat: string): string {
-    const color = CATEGORY_COLORS[cat] || '#6b7280';
+    const color = Object.entries(CATEGORY_COLORS).find(([k]) => k === cat)?.[1] || '#6b7280';
     return `<span style="display:inline-block;padding:1px 6px;border-radius:4px;background:${color}20;color:${color};font-size:0.7rem;font-weight:600;margin-left:4px">${cat}</span>`;
 }
 
