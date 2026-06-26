@@ -12,8 +12,9 @@ export const PRIORITY_WEIGHTS: Record<string, number> = {
 };
 
 export function getCoverageWeight(priority: string): number {
-    const w = PRIORITY_WEIGHTS[priority];
-    return w !== undefined ? w : 2;
+    const entries = Object.entries(PRIORITY_WEIGHTS);
+    const entry = entries.find(([k]) => k === priority);
+    return entry !== undefined ? entry[1] : 2;
 }
 
 export function normalizeType(rawType: string): 'Story' | 'Task' | 'Bug' | 'Epic' {
@@ -96,11 +97,12 @@ export function calculateTotals(items: CoverageGapItem[]): CoverageGapResult['to
 }
 
 export function buildEpicRollup(items: CoverageGapItem[], epicsMap: Map<string, string>): Record<string, EpicCoverage> {
-    const byEpic: Record<string, EpicCoverage> = {};
+    const byEpic = new Map<string, EpicCoverage>();
     for (const item of items) {
         const epicKey = item.epicKey || '__no_epic__';
-        if (!byEpic[epicKey]) {
-            byEpic[epicKey] = {
+        let entry = byEpic.get(epicKey);
+        if (!entry) {
+            entry = {
                 epicSummary: epicKey === '__no_epic__' ? 'No Epic' : epicsMap.get(epicKey) || item.epicSummary || '',
                 total: 0,
                 covered: 0,
@@ -109,11 +111,11 @@ export function buildEpicRollup(items: CoverageGapItem[], epicsMap: Map<string, 
                 gatePass: true,
                 issues: [],
             };
+            byEpic.set(epicKey, entry);
         }
-        byEpic[epicKey].issues.push(item);
+        entry.issues.push(item);
     }
-    for (const key of Object.keys(byEpic)) {
-        const epic = byEpic[key] as NonNullable<(typeof byEpic)[string]>;
+    for (const [, epic] of byEpic) {
         epic.total = epic.issues.length;
         epic.covered = epic.issues.filter((i) => i.hasTest).length;
         epic.rawPct = epic.total > 0 ? Math.round((epic.covered / epic.total) * 100) : 0;
@@ -125,7 +127,7 @@ export function buildEpicRollup(items: CoverageGapItem[], epicsMap: Map<string, 
         }
         epic.weightedPct = wSum > 0 ? Math.round((wCov / wSum) * 100) : 0;
     }
-    return byEpic;
+    return Object.fromEntries(byEpic);
 }
 
 export function getCoverageGateDefaults(): { minCoveragePct: number } {
