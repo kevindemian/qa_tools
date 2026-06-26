@@ -58,28 +58,26 @@ function structuralSimilarity(a: unknown, b: unknown): number {
 }
 
 function levenshtein(a: string, b: string): number {
-    const matrix: number[][] = [];
+    const cols = a.length + 1;
+    const cell = (i: number, j: number) => `${i},${j}`;
+    const matrix = new Map<string, number>();
     for (let i = 0; i <= b.length; i++) {
-        matrix[i] = [i];
+        matrix.set(cell(i, 0), i);
     }
-    for (let j = 0; j <= a.length; j++) {
-        const row0 = matrix[0] as number[];
-        row0[j] = j;
+    for (let j = 0; j <= cols; j++) {
+        matrix.set(cell(0, j), j);
     }
     for (let i = 1; i <= b.length; i++) {
-        for (let j = 1; j <= a.length; j++) {
+        for (let j = 1; j <= cols; j++) {
             const cost = a[j - 1] === b[i - 1] ? 0 : 1;
-            const row = matrix[i] as number[];
-            const rowPrev = matrix[i - 1] as number[];
-            row[j] = Math.min(
-                (rowPrev[j] as number) + 1,
-                (row[j - 1] as number) + 1,
-                (rowPrev[j - 1] as number) + cost,
-            );
+            matrix.set(cell(i, j), Math.min(
+                (matrix.get(cell(i - 1, j)) ?? 0) + 1,
+                (matrix.get(cell(i, j - 1)) ?? 0) + 1,
+                (matrix.get(cell(i - 1, j - 1)) ?? 0) + cost,
+            ));
         }
     }
-    const lastRow = matrix[b.length] as number[];
-    return lastRow[a.length] as number;
+    return matrix.get(cell(b.length, a.length)) ?? 0;
 }
 
 /**
@@ -143,10 +141,11 @@ export async function consensusGenerate<T>(
         };
     }
 
-    const hashes = candidates.map((c) => structuralHash(c));
+    const hashesMap = new Map<number, string>();
     const voteCounts = new Map<string, number[]>();
-    for (let i = 0; i < hashes.length; i++) {
-        const h = hashes[i] as string;
+    for (const [i, c] of candidates.entries()) {
+        const h = structuralHash(c);
+        hashesMap.set(i, h);
         const existing = voteCounts.get(h);
         if (existing) {
             existing.push(i);
@@ -158,12 +157,14 @@ export async function consensusGenerate<T>(
     const sorted = Array.from(voteCounts.entries()).sort((a, b) => b[1].length - a[1].length);
     const winnerHash = sorted[0]?.[0] ?? '';
     const winnerIndex = voteCounts.get(winnerHash)?.[0] ?? 0;
-    const winner = candidates[winnerIndex] as T;
+    const winner = new Map(candidates.entries()).get(winnerIndex) as T;
 
     const similarityPairs: number[] = [];
-    for (let i = 0; i < candidates.length; i++) {
-        for (let j = i + 1; j < candidates.length; j++) {
-            similarityPairs.push(structuralSimilarity(candidates[i], candidates[j]));
+    for (const [i, ci] of candidates.entries()) {
+        for (const [j, cj] of candidates.entries()) {
+            if (j > i && ci !== undefined && cj !== undefined) {
+                similarityPairs.push(structuralSimilarity(ci, cj));
+            }
         }
     }
     const avgSimilarity =
@@ -176,16 +177,16 @@ export async function consensusGenerate<T>(
         divergence = 'low';
     }
 
-    const votes: Record<number, number> = {};
-    for (let i = 0; i < candidates.length; i++) {
-        const h = hashes[i];
-        votes[i] = h !== undefined ? (voteCounts.get(h)?.length ?? 1) : 1;
+    const votesMap = new Map<number, number>();
+    for (const [i] of hashesMap.entries()) {
+        const h = hashesMap.get(i);
+        votesMap.set(i, h !== undefined ? (voteCounts.get(h)?.length ?? 1) : 1);
     }
 
     const preliminary: ConsistencyResult<T> = {
         winner,
         candidates,
-        votes,
+        votes: Object.fromEntries(votesMap),
         divergence,
         refined: false,
     };
