@@ -67,7 +67,7 @@ function _showHealthScore(store: ReturnType<typeof loadMetrics>): void {
     const health = calculateHealthScore(store);
     const qcIcon = health.qualityGate === 'pass' ? '✅' : '❌';
     title('Test Suite Health — ' + health.overall + '/100 (' + health.grade.replace(/_/g, ' ') + ') ' + qcIcon);
-    const dimEntries = Object.entries(health.dimensions);
+    const dimEntries = Object.entries(health.dimensions) as Array<[string, { score: number; status: string }]>;
     const dimRows = (['passRate', 'flakyRate', 'coverage', 'suiteSpeed'] as const).map((dim) => {
         const entry = dimEntries.find(([k]) => k === dim);
         const dimData = entry?.[1];
