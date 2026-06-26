@@ -158,10 +158,11 @@ function saveCheckpoint(opts: SaveCheckpointOptions): void {
         testCount: tests.length,
         done: inMemoryTasksId.map((key, idx) => ({ key, title: inMemoryTasksText[idx] as string })),
     };
-    cpSave[cpKey] = sourcePath;
+    const cpSaveEntries = Object.entries(cpSave);
+    cpSaveEntries.push([cpKey, sourcePath]);
     updateState((state) => {
         if (!state['_checkpoint']) state['_checkpoint'] = {};
-        Object.assign(state['_checkpoint'] as JsonObject, cpSave);
+        Object.assign(state['_checkpoint'] as JsonObject, Object.fromEntries(cpSaveEntries));
     });
 }
 

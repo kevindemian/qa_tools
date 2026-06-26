@@ -85,15 +85,18 @@ async function setupBatchProject(batch: BatchCliArgs): Promise<{
         return null;
     }
 
-    const projectName = (batch.project || Object.keys(projs)[0]) ?? '';
-    if (!projs[projectName]) {
+    const projsEntries = Object.entries(projs);
+    const firstEntry = projsEntries[0];
+    const projectName = (batch.project || (firstEntry ? firstEntry[0] : '')) ?? '';
+    const projectEntry = projsEntries.find(([k]) => k === projectName);
+    if (!projectEntry) {
         error('Projeto "' + projectName + '" não encontrado em config/projects.json.');
         return null;
     }
 
     setCurrentProjectName(projectName);
-    setProjectId(projs[projectName]);
-    const m = createManagerForProject(projectName, projs[projectName]);
+    setProjectId(projectEntry[1]);
+    const m = createManagerForProject(projectName, projectEntry[1]);
     setManager(m);
 
     const branch = batch.branch || 'main';
