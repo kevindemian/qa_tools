@@ -83,10 +83,12 @@ function loadProjects(): Record<string, string> {
     try {
         _projects = JSON.parse(fs.readFileSync(PROJECTS_PATH, 'utf8')) as Record<string, string>;
         const projectOverrides = Config.getAllPrefixed('PROJECT_ID_');
+        const overrideEntries = Object.entries(projectOverrides);
         for (const key of Object.keys(_projects)) {
             const envKey = 'PROJECT_ID_' + key.toUpperCase();
-            if (projectOverrides[envKey]) {
-                _projects[key] = projectOverrides[envKey];
+            const overrideEntry = overrideEntries.find(([k]) => k === envKey);
+            if (overrideEntry) {
+                _projects[key] = overrideEntry[1];
             }
         }
     } catch (err: unknown) {
@@ -107,7 +109,10 @@ export function getProjects(): Record<string, string> {
 }
 
 export function getProviderForProject(projectName: string): 'gitlab' | 'github' {
-    const cfg = loadProvidersConfig()[projectName];
+    const providers = loadProvidersConfig();
+    const entries = Object.entries(providers);
+    const entry = entries.find(([k]) => k === projectName);
+    const cfg = entry?.[1];
     return cfg?.provider === 'github' ? 'github' : 'gitlab';
 }
 
@@ -115,7 +120,10 @@ export function createManagerForProject(projectName: string, id: string): GitPro
     const provider = getProviderForProject(projectName);
     currentProvider = provider;
     if (provider === 'github') {
-        const cfg = loadProvidersConfig()[projectName];
+        const providers = loadProvidersConfig();
+        const entries = Object.entries(providers);
+        const entry = entries.find(([k]) => k === projectName);
+        const cfg = entry?.[1];
         const repo = cfg?.repo ?? id;
         const ghToken = Config.get('githubToken') || Config.get('gitToken') || '';
         if (!ghToken) throw new MissingTokenError('GitHub', 'GITHUB_TOKEN ou GIT_TOKEN');
