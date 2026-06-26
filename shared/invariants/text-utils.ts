@@ -141,26 +141,24 @@ export function similarity(a: string, b: string): number {
 }
 
 function levenshtein(a: string, b: string): number {
-    const matrix: number[][] = [];
+    const cols = a.length + 1;
+    const cell = (i: number, j: number) => `${i},${j}`;
+    const matrix = new Map<string, number>();
     for (let i = 0; i <= b.length; i++) {
-        matrix[i] = [i];
+        matrix.set(cell(i, 0), i);
     }
-    for (let j = 0; j <= a.length; j++) {
-        const row0 = matrix[0] as number[];
-        row0[j] = j;
+    for (let j = 0; j <= cols; j++) {
+        matrix.set(cell(0, j), j);
     }
     for (let i = 1; i <= b.length; i++) {
-        for (let j = 1; j <= a.length; j++) {
+        for (let j = 1; j <= cols; j++) {
             const cost = a[j - 1] === b[i - 1] ? 0 : 1;
-            const row = matrix[i] as number[];
-            const rowPrev = matrix[i - 1] as number[];
-            row[j] = Math.min(
-                (rowPrev[j] as number) + 1,
-                (row[j - 1] as number) + 1,
-                (rowPrev[j - 1] as number) + cost,
-            );
+            matrix.set(cell(i, j), Math.min(
+                (matrix.get(cell(i - 1, j)) ?? 0) + 1,
+                (matrix.get(cell(i, j - 1)) ?? 0) + 1,
+                (matrix.get(cell(i - 1, j - 1)) ?? 0) + cost,
+            ));
         }
     }
-    const lastRow = matrix[b.length] as number[];
-    return lastRow[a.length] as number;
+    return matrix.get(cell(b.length, a.length)) ?? 0;
 }
