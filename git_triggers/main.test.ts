@@ -1247,16 +1247,9 @@ describe('Main', () => {
         it('has handler keys for all new menu entries', () => {
             const keys = Object.keys(mainModule.ACTION_HANDLERS);
 
-            expect(keys).toContain('c');
-            expect(keys).toContain('d');
-            expect(keys).toContain('e');
-            expect(keys).toContain('g');
-            expect(keys).toContain('i');
-            expect(keys).toContain('p');
-            expect(keys).toContain('q');
-            expect(keys).toContain('t');
-            expect(keys).toContain('b');
-            expect(keys).toContain('r');
+            const expected = ['c', 'd', 'e', 'g', 'i', 'p', 'q', 't', 'b', 'r'];
+
+            expect(expected.every((k) => keys.includes(k))).toBeTruthy();
         });
     });
 

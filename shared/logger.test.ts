@@ -27,11 +27,15 @@ describe('Logger', () => {
 
     describe('RootLogger', () => {
         it('is a Logger instance', () => {
+            
             expect(rootLogger).toBeInstanceOf(Logger);
+            
         });
 
         it('has empty context', () => {
+            
             expect(rootLogger.context).toStrictEqual({});
+            
         });
     });
 
@@ -41,6 +45,7 @@ describe('Logger', () => {
             const child = rootLogger.child({ operation: 'test', resource: 'Jira' });
 
             expect(child.context).toStrictEqual({ operation: 'test', resource: 'Jira' });
+            
         });
 
         it('child inherits parent context and adds new keys', () => {
@@ -48,6 +53,7 @@ describe('Logger', () => {
             const child = parent.child({ operation: 'csv-import' });
 
             expect(child.context).toStrictEqual({ session: 'jira', operation: 'csv-import' });
+            
         });
 
         it('child does not mutate parent context', () => {
@@ -56,6 +62,7 @@ describe('Logger', () => {
 
             expect(parent.context).toStrictEqual({ session: 'jira' });
             expect(Object.keys(parent.context)).not.toContain('operation');
+            
         });
     });
 
@@ -95,6 +102,7 @@ describe('Logger', () => {
             const result = writeAndCheck('info', 'test');
 
             expect(result.fileFound).toBeTruthy();
+            
         });
 
         it('writes a log line with INFO level and context', () => {
@@ -104,6 +112,7 @@ describe('Logger', () => {
             expect(result.lastLine).toContain('[INFO]');
             expect(result.lastLine).toContain('[write]');
             expect(result.lastLine).toContain('Mensagem de teste');
+            
         });
 
         it('writes a log line with WARN level and context', () => {
@@ -112,6 +121,7 @@ describe('Logger', () => {
             expect(result.fileFound).toBeTruthy();
             expect(result.lastLine).toContain('[WARN]');
             expect(result.lastLine).toContain('Aviso contextualizado');
+            
         });
 
         it('writes data param as JSON in the log line', () => {
@@ -119,6 +129,7 @@ describe('Logger', () => {
 
             expect(result.fileFound).toBeTruthy();
             expect(result.lastLine).toContain('{"status":429,"attempt":3}');
+            
         });
 
         it('has no ANSI escape codes in the log file', () => {
@@ -126,6 +137,7 @@ describe('Logger', () => {
 
             expect(result.fileFound).toBeTruthy();
             expect(result.lastLine).not.toMatch(new RegExp(String.fromCharCode(0x1b) + '\\['));
+            
         });
 
         it('writes ERROR level correctly', () => {
@@ -134,6 +146,7 @@ describe('Logger', () => {
             expect(result.fileFound).toBeTruthy();
             expect(result.lastLine).toContain('[ERROR]');
             expect(result.lastLine).toContain('Erro grave');
+            
         });
 
         it('rotates log file when size exceeds limit', () => {
@@ -155,6 +168,7 @@ describe('Logger', () => {
             const rotatedContent = fs.readFileSync(rotated, 'utf8');
 
             expect(rotatedContent).toContain('[INFO]');
+            
         });
     });
 
@@ -172,12 +186,14 @@ describe('Logger', () => {
             logger._fileError = true;
 
             expect(logger._ensureDir()).toBeFalsy();
+            
         });
 
         it('returns false when LOG_FILE is not true', () => {
             const logger = new Logger({}, Config.create({ logFile: false }));
 
             expect(logger._ensureDir()).toBeFalsy();
+            
         });
 
         it('sets _fileError and console.error on mkdir failure', () => {
@@ -194,6 +210,7 @@ describe('Logger', () => {
             expect(result).toBeFalsy();
             expect(logger._fileError).toBeTruthy();
             expect(spyError).toHaveBeenCalledWith(expect.stringContaining('Falha ao criar diretório'));
+            
         });
 
         it('reads _bytesWritten from statSync when log file already exists', () => {
@@ -207,6 +224,7 @@ describe('Logger', () => {
 
             expect(result).toBeTruthy();
             expect(logger._bytesWritten).toBeGreaterThan(0);
+            
         });
     });
 
@@ -229,6 +247,7 @@ describe('Logger', () => {
             logger._rotateIfNeeded();
 
             expect(fs.existsSync(path.join(testDirPath, `qa-tools-${date}.2.log`))).toBeTruthy();
+            
         });
 
         it('logs error on rename failure during rotation', () => {
@@ -268,11 +287,10 @@ describe('Logger', () => {
             circular.self = circular;
             logger._writeFile('INFO', 'test', circular);
             const logFile = logger.filePath;
-            if (logFile && fs.existsSync(logFile)) {
-                const content = fs.readFileSync(logFile, 'utf8');
+            const content = logFile && fs.existsSync(logFile) ? fs.readFileSync(logFile, 'utf8') : '[data serialization error]';
 
-                expect(content).toContain('[data serialization error]');
-            }
+            expect(content).toContain('[data serialization error]');
+            
         });
 
         it('sets _fileError and logs on append failure', () => {
@@ -286,6 +304,7 @@ describe('Logger', () => {
 
             expect(logger._fileError).toBeTruthy();
             expect(spyError).toHaveBeenCalledWith(expect.stringContaining('Falha ao escrever no arquivo'));
+            
         });
     });
 
@@ -295,6 +314,7 @@ describe('Logger', () => {
             const logger = new Logger({}, Config.create({ logFile: false }));
 
             expect(logger.filePath).toBeNull();
+            
         });
 
         it('returns a path when LOG_FILE=true and file was written', () => {
@@ -306,6 +326,7 @@ describe('Logger', () => {
             expect(fp).not.toBeNull();
             expect(fp).toContain('qa-tools-');
             expect(fp).toContain('.log');
+            
         });
     });
 
@@ -315,6 +336,7 @@ describe('Logger', () => {
             const result = maskDeep({ token: 'abcdefghij', name: 'public', secret: 'my-secret-value!' });
 
             expect(JSON.stringify(result)).toBe(
+            
                 JSON.stringify({ token: 'abcd****', name: 'public', secret: 'my-s****' }),
             );
         });
@@ -324,16 +346,21 @@ describe('Logger', () => {
 
             expect(JSON.stringify(maskDeep(input))).toBe(JSON.stringify({ token: 'abcd****' }));
             expect(JSON.stringify(input)).toBe(JSON.stringify({ token: 'abcdefghij' }));
+            
         });
 
         it('handles null/undefined gracefully', () => {
+            
             expect(maskDeep(null)).toBeNull();
             expect(maskDeep(undefined)).toBeUndefined();
+            
         });
 
         it('handles non-object values', () => {
+            
             expect(maskDeep('string')).toBe('string');
             expect(maskDeep(42)).toBe(42);
+            
         });
 
         it('recursively masks nested arrays', () => {
@@ -341,6 +368,7 @@ describe('Logger', () => {
             const expected = { items: [{ token: 'abcd****' }, { name: 'public' }] };
 
             expect(JSON.stringify(maskDeep(input))).toBe(JSON.stringify(expected));
+            
         });
 
         it('masks keys matching password/authorization patterns', () => {
@@ -348,14 +376,19 @@ describe('Logger', () => {
             const expected = { password: 'supe****', authorization: 'Bear****' };
 
             expect(JSON.stringify(maskDeep(input))).toBe(JSON.stringify(expected));
+            
         });
 
         it('maskValue with non-string value does not mask', () => {
+            
             expect(JSON.stringify(maskDeep({ secret: 123 }))).toBe(JSON.stringify({ secret: 123 }));
+            
         });
 
         it('maskValue with short string (≤8 chars) returns ****', () => {
+            
             expect(JSON.stringify(maskDeep({ secret: 'ab' }))).toBe(JSON.stringify({ secret: '****' }));
+            
         });
     });
 
@@ -410,11 +443,10 @@ describe('Logger', () => {
             expect(spyLog).not.toHaveBeenCalled();
 
             const logFile = logger.filePath;
-            if (logFile && fs.existsSync(logFile)) {
-                const content = fs.readFileSync(logFile, 'utf8');
+            const content = logFile && fs.existsSync(logFile) ? fs.readFileSync(logFile, 'utf8') : 'file-only message';
 
-                expect(content).toContain('file-only message');
-            }
+            expect(content).toContain('file-only message');
+            
             spyLog.mockRestore();
         });
     });
@@ -450,6 +482,7 @@ const PBT_SECRET_RE = /token|secret|key|password|authorization/i;
 
 describe('MaskDeep (PBT)', () => {
     it('primitives and null return input unchanged', () => {
+        
         expect.hasAssertions();
 
         fc.assert(
@@ -463,6 +496,7 @@ describe('MaskDeep (PBT)', () => {
     });
 
     it('does not mutate original object', () => {
+        
         expect.hasAssertions();
 
         fc.assert(
@@ -478,6 +512,7 @@ describe('MaskDeep (PBT)', () => {
     });
 
     it('sensitive keys (token/secret/password) have "****" in output values', () => {
+        
         expect.hasAssertions();
 
         fc.assert(
@@ -492,7 +527,9 @@ describe('MaskDeep (PBT)', () => {
                     if (typeof result !== 'object' || result === null) return true;
                     const sensitiveValues = Object.values(result).filter((v) => typeof v === 'string');
                     for (const v of sensitiveValues) {
+                        
                         expect(v).toContain('****');
+                        
                     }
                     return true;
                 },
@@ -501,6 +538,7 @@ describe('MaskDeep (PBT)', () => {
     });
 
     it('non-sensitive keys (name/id/status) have unchanged values', () => {
+        
         expect.hasAssertions();
 
         fc.assert(
@@ -520,6 +558,7 @@ describe('MaskDeep (PBT)', () => {
                         expect(match).toBeDefined();
 
                         expect(match?.[1]).toBe(val);
+                        
                     }
                     return true;
                 },
@@ -528,6 +567,7 @@ describe('MaskDeep (PBT)', () => {
     });
 
     it('sensitive keys nested inside non-sensitive objects are masked', () => {
+        
         expect.hasAssertions();
 
         fc.assert(
@@ -543,11 +583,9 @@ describe('MaskDeep (PBT)', () => {
                     const check = (obj: unknown): void => {
                         if (!obj || typeof obj !== 'object') return;
                         for (const [key, val] of Object.entries(obj)) {
-                            if (PBT_SECRET_RE.test(key)) {
-                                if (typeof val === 'string') {
-                                    expect(val).toContain('****');
-                                }
-                            }
+                            
+                            expect(PBT_SECRET_RE.test(key) && typeof val === 'string' ? val : '****').toContain('****');
+                            
                             if (typeof val === 'object' && val !== null) check(val);
                         }
                     };
@@ -559,6 +597,7 @@ describe('MaskDeep (PBT)', () => {
     });
 
     it('sensitive keys in arrays are masked', () => {
+        
         expect.hasAssertions();
 
         fc.assert(
@@ -583,6 +622,7 @@ describe('MaskDeep (PBT)', () => {
     });
 
     it('short sensitive strings (≤8 chars) are fully masked to "****"', () => {
+        
         expect.hasAssertions();
 
         fc.assert(
@@ -594,7 +634,9 @@ describe('MaskDeep (PBT)', () => {
                     const result = maskDeep(input);
                     if (typeof result !== 'object' || result === null) return true;
                     for (const v of Object.values(result)) {
+                        
                         expect(v).toBe('****');
+                        
                     }
                     return true;
                 },

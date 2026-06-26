@@ -71,11 +71,8 @@ describe('FormatQualityGateText — property-based', () => {
         fc.assert(
             fc.property(QualityGateResultArb, (result) => {
                 const text = formatQualityGateText(result);
-                if (result.overall === 'pass') {
-                    expect(text).toContain('PASS');
-                } else {
-                    expect(text).toContain('FAIL');
-                }
+                
+                expect(text).toContain(result.overall === 'pass' ? 'PASS' : 'FAIL');
             }),
             { numRuns: 100 },
         );
@@ -87,6 +84,7 @@ describe('FormatQualityGateText — property-based', () => {
             fc.property(QualityGateResultArb, (result) => {
                 const text = formatQualityGateText(result);
                 for (const check of result.checks) {
+                    
                     expect(text).toContain(check.name);
                 }
             }),
@@ -100,6 +98,7 @@ describe('FormatQualityGateText — property-based', () => {
             fc.property(QualityGateResultArb, (result) => {
                 const text = formatQualityGateText(result);
                 for (const check of result.checks) {
+                    
                     expect(text).toContain(String(check.score));
                 }
             }),

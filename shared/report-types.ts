@@ -3,8 +3,8 @@ import type { FlatTest } from './result_parser.js';
 export interface TestHistoryRun {
     status: string;
     testExecKey: string;
-    startedOn?: string;
-    finishedOn?: string;
+    startedOn?: string | undefined;
+    finishedOn?: string | undefined;
 }
 
 export interface TestRunTab {

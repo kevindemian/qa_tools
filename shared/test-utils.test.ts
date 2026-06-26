@@ -28,15 +28,15 @@ describe('MakeMockCommandContext', () => {
     it('returns a context with all standard fields', () => {
         const ctx = makeMockCommandContext();
 
-        expect(ctx).toHaveProperty('jiraResource');
-        expect(ctx).toHaveProperty('jiraResourceXray');
-        expect(ctx).toHaveProperty('linkManager');
-        expect(ctx).toHaveProperty('linkManagerXray');
-        expect(ctx).toHaveProperty('csvResource');
+        const propTypes = ['jiraResource', 'jiraResourceXray', 'linkManager', 'linkManagerXray', 'csvResource'];
+
+        expect(propTypes.every((p) => Object.prototype.hasOwnProperty.call(ctx, p))).toBeTruthy();
         expect(ctx.base_url).toBe('https://jira.test.com');
         expect(ctx).toHaveProperty('ctx');
-        expect(typeof ctx.pushHistory).toBe('function');
-        expect(typeof ctx.printSessionSummary).toBe('function');
+
+        const fns = ['pushHistory', 'printSessionSummary'] as const;
+
+        expect(fns.every((f) => typeof ctx[f] === 'function')).toBeTruthy();
         expect(typeof ctx.sessionLog).toBe('object');
     });
 

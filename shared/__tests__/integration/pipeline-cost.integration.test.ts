@@ -46,16 +46,9 @@ describe('Integration: Pipeline Cost (FT-29)', () => {
             const result = calculatePipelineCost(runs, 0.01);
             const html = generatePipelineCostHtml(result);
 
-            expect(html).toContain('<!DOCTYPE html>');
-            expect(html).toContain('Pipeline Cost Analytics');
-            expect(html).toContain('Total Cost');
-            expect(html).toContain('Avg Cost / Run');
-            expect(html).toContain('Total Duration');
-            expect(html).toContain('Run Count');
-            expect(html).toContain('$0.02');
-            expect(html).toContain('2m');
-            expect(html).toContain('failed');
-            expect(html).toContain('data-component="data-table"');
+            const parts = ['<!DOCTYPE html>', 'Pipeline Cost Analytics', 'Total Cost', 'Avg Cost / Run', 'Total Duration', 'Run Count', '$0.02', '2m', 'failed', 'data-component="data-table"'];
+
+            expect(parts.every(p => html.includes(p))).toBeTruthy();
         });
     });
 

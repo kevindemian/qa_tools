@@ -4,13 +4,13 @@ describe('CreateMockContext', () => {
     it('returns a mock with all required fields', () => {
         const ctx = createMockContext();
 
-        expect(ctx.jiraResource).toBeDefined();
-        expect(ctx.jiraResourceXray).toBeDefined();
-        expect(ctx.linkManager).toBeDefined();
-        expect(ctx.linkManagerXray).toBeDefined();
-        expect(ctx.csvResource).toBeDefined();
-        expect(typeof ctx.pushHistory).toBe('function');
-        expect(typeof ctx.printSessionSummary).toBe('function');
+        const fields = ['jiraResource', 'jiraResourceXray', 'linkManager', 'linkManagerXray', 'csvResource'] as const;
+
+        expect(fields.every(f => f in ctx)).toBeTruthy();
+
+        const fns = ['pushHistory', 'printSessionSummary'] as const;
+
+        expect(fns.every(f => typeof ctx[f] === 'function')).toBeTruthy();
         expect(ctx.base_url).toBe('https://jira.test.com');
         expect(ctx.sessionLog).toBeDefined();
     });

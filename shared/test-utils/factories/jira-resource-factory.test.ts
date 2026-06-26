@@ -1,27 +1,24 @@
 import { createMockJiraResource } from './jira-resource-factory.js';
 
+const JIRA_RESOURCE_METHODS = [
+    'getJiraResource', 'postJiraResource', 'putJiraResource', 'searchJiraIssues',
+    'getTransitionsForIssue', 'transitionIssue', 'getProjectId', 'getProjectVersions',
+    'getVersionId', 'createVersion', 'checkReleaseTasksStatus', 'getReleaseTasks',
+    'getLatestReleases', 'addTasksToSprint', 'updateFixVersions', 'releaseVersion',
+    'moveCardsToDone',
+];
+
 describe('CreateMockJiraResource', () => {
     it('returns a mock with all methods as vi.fn()', () => {
         const mock = createMockJiraResource();
 
-        expect(typeof mock.getJiraResource).toBe('function');
+        expect(JIRA_RESOURCE_METHODS.every((m) => typeof mock[m as keyof typeof mock] === 'function')).toBeTruthy();
+    });
+
+    it('getJiraResource default call does not throw', () => {
+        const mock = createMockJiraResource();
+
         expect(mock['getJiraResource']).not.toThrow();
-        expect(typeof mock.postJiraResource).toBe('function');
-        expect(typeof mock.putJiraResource).toBe('function');
-        expect(typeof mock.searchJiraIssues).toBe('function');
-        expect(typeof mock.getTransitionsForIssue).toBe('function');
-        expect(typeof mock.transitionIssue).toBe('function');
-        expect(typeof mock.getProjectId).toBe('function');
-        expect(typeof mock.getProjectVersions).toBe('function');
-        expect(typeof mock.getVersionId).toBe('function');
-        expect(typeof mock.createVersion).toBe('function');
-        expect(typeof mock.checkReleaseTasksStatus).toBe('function');
-        expect(typeof mock.getReleaseTasks).toBe('function');
-        expect(typeof mock.getLatestReleases).toBe('function');
-        expect(typeof mock.addTasksToSprint).toBe('function');
-        expect(typeof mock.updateFixVersions).toBe('function');
-        expect(typeof mock.releaseVersion).toBe('function');
-        expect(typeof mock.moveCardsToDone).toBe('function');
     });
 
     it('provides default property values', () => {

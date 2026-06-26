@@ -77,7 +77,26 @@ describe('MappingFileGenerator', () => {
         expect(nonNull(json.tests[0]).description).toBe('Verifies login flow');
         expect(nonNull(nonNull(nonNull(json.tests[0]).steps)[0])['Action']).toBe('Type user');
         expect(nonNull(json.tests[1]).key).toBe('K-200');
-        expect(nonNull(json.tests[1]).title).toBe('Logout test');
+    });
+
+    it('generate() writes correct md and txt content', () => {
+        const base = 'my-tests';
+        generator.generate(
+            '/fake/path/' + base + '.csv',
+            'ECSPOL',
+            ['K-100', 'K-200'],
+            [
+                {
+                    title: 'Login test',
+                    description: 'Verifies login flow',
+                    steps: [{ fields: { Action: 'Type user', Data: 'admin', 'Expected Result': 'OK' } }],
+                },
+                {
+                    title: 'Logout test',
+                    steps: [{ fields: { Action: 'Click logout', Data: '', 'Expected Result': 'Redirected' } }],
+                },
+            ],
+        );
 
         const md = fs.readFileSync(path.join(tmpDir, base + '-jira-mapping.md'), 'utf8');
 

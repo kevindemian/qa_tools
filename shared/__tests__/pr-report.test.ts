@@ -534,9 +534,27 @@ describe('Pr-report entry point — HTML report generation', () => {
         expect(opts0).toBeDefined();
         expect(opts0?.['title']).toContain('PR Report');
         expect(opts0?.['branch']).toBe('feature-branch');
-        expect(opts0?.['healthScore']).toBeDefined();
         expect(opts0?.['trends']).toStrictEqual([]);
         expect(opts0?.['includeChart']).toBeTruthy();
+
+        exitSpy.mockRestore();
+    });
+
+    it('includes healthScore in HTML report options', async () => {expect.hasAssertions();
+
+        createCtrfFixture([
+            { name: 'pass-1', status: 'passed', duration: 100 },
+        ]);
+
+        const { main } = await import('../pr-report-core.js');
+        const exitSpy = vi.spyOn(process, 'exit').mockImplementation(() => undefined as never);
+
+        await main();
+
+        const genCall0 = mockGenerateHtmlReport.mock.calls[0];
+        const opts0 = genCall0?.[1] as Record<string, unknown> | undefined;
+
+        expect(opts0?.['healthScore']).toBeDefined();
 
         exitSpy.mockRestore();
     });

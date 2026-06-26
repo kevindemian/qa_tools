@@ -57,15 +57,9 @@ describe('Integration: Impact Alert (FT-30)', () => {
             const result = makeResult();
             const html = generateImpactAlertHtml(result, 'Alert Report');
 
-            expect(html).toContain('<!DOCTYPE html>');
-            expect(html).toContain('Alert Report');
-            expect(html).toContain('Low pass rate in low-coverage area');
-            expect(html).toContain('Elevated failure rate');
-            expect(html).toContain('Total Alerts');
-            expect(html).toContain('Critical');
-            expect(html).toContain('Warning');
-            expect(html).toContain('qa-report-theme');
-            expect(html).toContain('data-component="card"');
+            const parts = ['<!DOCTYPE html>', 'Alert Report', 'Low pass rate in low-coverage area', 'Elevated failure rate', 'Total Alerts', 'Critical', 'Warning', 'qa-report-theme', 'data-component="card"'];
+
+            expect(parts.every(p => html.includes(p))).toBeTruthy();
         });
     });
 

@@ -58,6 +58,9 @@ describe('SessionContext', () => {
         expect(ctx.inMemoryTasksId).toStrictEqual([]);
         expect(ctx.inMemoryTasksText).toStrictEqual([]);
         expect(ctx.project_name).toBe('');
+    });
+
+    it('initializes results with empty array', () => {
         expect(ctx.results).toStrictEqual([]);
     });
 
@@ -213,12 +216,12 @@ describe('ResolveTestDataSource', () => {
 
         expect(result).not.toBeNull();
 
-        if (result) {
-            expect(result.source).toBe('cache');
-            expect(result.result.tests).toHaveLength(2);
-            expect(result.result.stats.passed).toBe(1);
-            expect(result.result.stats.failed).toBe(1);
-        }
+        if (!result) throw new Error('expected non-null result');
+
+        expect(result.source).toBe('cache');
+        expect(result.result.tests).toHaveLength(2);
+        expect(result.result.stats.passed).toBe(1);
+        expect(result.result.stats.failed).toBe(1);
 
         expect(store.loadReport).toHaveBeenCalledWith('sha123');
     });
@@ -252,9 +255,7 @@ describe('ResolveTestDataSource', () => {
 
         expect(result).not.toBeNull();
 
-        if (result) {
-            expect(result.source).toBe('ci');
-        }
+        expect(result?.source).toBe('ci');
 
         expect(store.saveReport).toHaveBeenCalledWith('sha456', expect.any(Array));
         expect(store.put).toHaveBeenCalledWith('sha456', expect.objectContaining({ project: 'project', branch: 'main' }));
@@ -278,10 +279,10 @@ describe('ResolveTestDataSource', () => {
 
         expect(result).not.toBeNull();
 
-        if (result) {
-            expect(result.source).toBe('cache');
-            expect(result.result.tests).toHaveLength(1);
-        }
+        if (!result) throw new Error('expected non-null result');
+
+        expect(result.source).toBe('cache');
+        expect(result.result.tests).toHaveLength(1);
     });
 
     it('handles corrupted cache entry gracefully', async () => {expect.hasAssertions();
@@ -354,9 +355,7 @@ describe('ResolveTestDataSource', () => {
 
         expect(result).not.toBeNull();
 
-        if (result) {
-            expect(result.source).toBe('ci');
-        }
+        expect(result?.source).toBe('ci');
 
         expect(store.saveReport).not.toHaveBeenCalled();
     });

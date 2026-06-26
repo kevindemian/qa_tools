@@ -304,6 +304,39 @@ describe('GenerateImpactAlertHtml', () => {
         expect(html).toContain('Warning message');
         expect(html).toContain('Info message');
         expect(html).toContain('Core');
+    });
+
+    it('renders all alert fields', () => {
+        const result = makeResult({
+            alerts: [
+                {
+                    severity: 'critical',
+                    title: 'Critical issue',
+                    message: 'Critical message',
+                    affectedArea: 'Core',
+                    recommendation: 'Fix now',
+                },
+                {
+                    severity: 'warning',
+                    title: 'Warning issue',
+                    message: 'Warning message',
+                    affectedArea: 'Module A',
+                    recommendation: 'Review',
+                },
+                {
+                    severity: 'info',
+                    title: 'Info issue',
+                    message: 'Info message',
+                    affectedArea: 'All',
+                    recommendation: 'Monitor',
+                },
+            ],
+            criticalCount: 1,
+            warningCount: 1,
+            infoCount: 1,
+        });
+        const html = generateImpactAlertHtml(result);
+
         expect(html).toContain('Module A');
         expect(html).toContain('Fix now');
         expect(html).toContain('Review');

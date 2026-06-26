@@ -52,20 +52,22 @@ describe('Developer Profile', () => {
 
             const alice = result.authors.find((a) => a.author === 'alice');
 
-            expect(alice).toBeDefined();
-            expect(alice?.totalFailures).toBe(2);
-            expect(alice?.categories).toStrictEqual({ api: 1, ui: 1 });
-            expect(alice?.testsTouched).toBe(2);
-            expect(alice?.failureRate).toBe(100);
-            expect(alice?.topFailureCategory).toBe('api');
+            expect(alice).toMatchObject({
+                totalFailures: 2,
+                categories: { api: 1, ui: 1 },
+                testsTouched: 2,
+                failureRate: 100,
+                topFailureCategory: 'api',
+            });
 
             const bob = result.authors.find((a) => a.author === 'bob');
 
-            expect(bob).toBeDefined();
-            expect(bob?.totalFailures).toBe(1);
-            expect(bob?.categories).toStrictEqual({ api: 1 });
-            expect(bob?.testsTouched).toBe(1);
-            expect(bob?.failureRate).toBe(100);
+            expect(bob).toMatchObject({
+                totalFailures: 1,
+                categories: { api: 1 },
+                testsTouched: 1,
+                failureRate: 100,
+            });
         });
 
         it('uses Unknown for missing author', () => {
@@ -192,6 +194,32 @@ describe('Developer Profile', () => {
             expect(call.styles).toContain(':root{}');
             expect(call.footer).toContain('Developer Profile Dashboard');
             expect(call.bodyContent).toContain('alice');
+        });
+
+        it('renders body content with author metrics for populated result', () => {
+            const result = {
+                authors: [
+                    {
+                        author: 'alice',
+                        totalFailures: 5,
+                        categories: { api: 3, ui: 2 },
+                        testsTouched: 3,
+                        failureRate: 166.67,
+                        topFailureCategory: 'api',
+                    },
+                ],
+                totalAuthors: 1,
+                totalFailures: 5,
+                topContributor: 'alice',
+                topFailureAuthor: 'alice',
+                timestamp: '2024-01-01T00:00:00.000Z',
+            };
+
+            generateDeveloperProfileHtml(result);
+
+            const call = mockBuildHtmlPage.mock.calls[0]?.[0];
+            if (!call) throw new Error('mock not called');
+
             expect(call.bodyContent).toContain('5');
             expect(call.bodyContent).toContain('166.7');
             expect(call.bodyContent).toContain('api');

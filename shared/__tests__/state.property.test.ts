@@ -31,7 +31,7 @@ const ValueArb = fc.oneof(
     fc.array(fc.string({ maxLength: 20 }), { maxLength: 5 }),
 );
 
-const StateArb = fc.dictionary(KeyArb, ValueArb, { maxKeys: 10 });
+const StateArb = fc.dictionary(KeyArb, ValueArb, { maxKeys: 10 }).map((obj) => Object.assign({}, obj));
 
 describe('State Persistence — property-based invariants', () => {
     beforeEach(async () => {
@@ -57,7 +57,7 @@ describe('State Persistence — property-based invariants', () => {
                 stateModule.save(data, config);
                 const loaded = stateModule.load(config);
 
-                expect(loaded).toEqual(data);
+                expect(loaded).toStrictEqual(data);
             }),
             { numRuns: 50 },
         );
@@ -82,9 +82,7 @@ describe('State Persistence — property-based invariants', () => {
                 }
                 // Chaves de initial que não foram sobrescritas permanecem
                 for (const [k, v] of Object.entries(initial)) {
-                    if (!(k in changes)) {
-                        expect(result[k]).toStrictEqual(v);
-                    }
+                    expect(!(k in changes) ? result[k] : v).toStrictEqual(v);
                 }
             }),
             { numRuns: 50 },

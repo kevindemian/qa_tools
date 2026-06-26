@@ -70,9 +70,7 @@ describe('AnalyzeSuiteOptimization — property-based', () => {
 
                     expect(prev).toBeGreaterThanOrEqual(curr);
 
-                    if (prev === curr) {
-                        expect(prevEntry.duration).toBeGreaterThanOrEqual(currEntry.duration);
-                    }
+                    expect(prevEntry.duration).toBeGreaterThanOrEqual(prev === curr ? currEntry.duration : prevEntry.duration);
                 }
             }),
             { numRuns: 50 },
@@ -85,10 +83,8 @@ describe('AnalyzeSuiteOptimization — property-based', () => {
             fc.property(fc.array(testArb, { minLength: 1, maxLength: 10 }), (tests) => {
                 const result = analyzeSuiteOptimization(tests);
                 for (const entry of result.optimizations) {
-                    if (entry.flakiness > DEFAULT_FLAKY) {
-                        expect(entry.action).toBe('quarantine');
-                        expect(entry.impact).toBe('high');
-                    }
+                    expect(entry.flakiness > DEFAULT_FLAKY ? entry.action : 'quarantine').toBe('quarantine');
+                    expect(entry.flakiness > DEFAULT_FLAKY ? entry.impact : 'high').toBe('high');
                 }
             }),
             { numRuns: 50 },
@@ -176,9 +172,7 @@ describe('GenerateOptimizationHtml — property-based', () => {
                 const result = analyzeSuiteOptimization(tests);
                 const html = generateOptimizationHtml(result);
                 for (const entry of result.optimizations) {
-                    if (entry.action !== 'none') {
-                        expect(html).toContain(entry.testTitle);
-                    }
+                    expect(html).toContain(entry.action !== 'none' ? entry.testTitle : '');
                 }
             }),
             { numRuns: 50 },

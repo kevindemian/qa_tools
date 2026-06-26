@@ -100,11 +100,8 @@ describe('AggregateDefectSeasonality — property-based', () => {
                 const result = aggregateDefectSeasonality(classes);
                 const maxTotal = Math.max(...result.byDayOfWeek.map((d) => d.total));
                 const peakDayEntry = result.byDayOfWeek.find((d) => d.total === maxTotal);
-                if (result.totalRecords > 0) {
-                    if (peakDayEntry === undefined) return;
-
-                    expect(result.peakDay).toBe(peakDayEntry.dayOfWeek);
-                }
+                
+                expect(result.peakDay).toBe(result.totalRecords > 0 && peakDayEntry !== undefined ? peakDayEntry.dayOfWeek : result.peakDay);
             }),
             { numRuns: 50 },
         );
@@ -117,11 +114,8 @@ describe('AggregateDefectSeasonality — property-based', () => {
                 const result = aggregateDefectSeasonality(classes);
                 const maxTotal = Math.max(...result.byHour.map((h) => h.total));
                 const peakHourEntry = result.byHour.find((h) => h.total === maxTotal);
-                if (result.totalRecords > 0) {
-                    if (peakHourEntry === undefined) return;
-
-                    expect(result.peakHour).toBe(peakHourEntry.hour);
-                }
+                
+                expect(result.peakHour).toBe(result.totalRecords > 0 && peakHourEntry !== undefined ? peakHourEntry.hour : result.peakHour);
             }),
             { numRuns: 50 },
         );

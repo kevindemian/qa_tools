@@ -47,11 +47,7 @@ describe('QualityMetricsCollector — property-based', () => {
                 const ids = [...new Set(fires.map((f) => f.id))];
                 const totalRate = ids.reduce((sum, id) => sum + collector.invariantFireRate(id), 0);
 
-                if (fires.length === 0) {
-                    expect(totalRate).toBe(0);
-                } else {
-                    expect(totalRate).toBeCloseTo(1, 5);
-                }
+                expect(totalRate).toBeCloseTo(fires.length === 0 ? 0 : 1, 5);
             }),
             { numRuns: 100 },
         );
@@ -112,13 +108,11 @@ describe('QualityMetricsCollector — property-based', () => {
                     for (const s of scores) collector.recordStructureScore(s);
                     const snapshot = collector.snapshot();
 
-                    if (scores.length === 0) {
-                        expect(snapshot.avgStructureScore).toBe(0);
-                    } else {
-                        const expected = Math.round((scores.reduce((a, b) => a + b, 0) / scores.length) * 100) / 100;
+                    const expected = scores.length === 0
+                        ? 0
+                        : Math.round((scores.reduce((a, b) => a + b, 0) / scores.length) * 100) / 100;
 
-                        expect(snapshot.avgStructureScore).toBe(expected);
-                    }
+                    expect(snapshot.avgStructureScore).toBe(expected);
                 },
             ),
             { numRuns: 30 },

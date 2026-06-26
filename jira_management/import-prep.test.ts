@@ -274,6 +274,11 @@ describe('GeneratePreviewMarkdown', () => {
         expect(md).toContain('- **Action:** c');
         expect(md).toContain('- **Data:** d');
         expect(md).toContain('- **Expected Result:** e');
+    });
+
+    it('renders second test steps', () => {
+        const md = generatePreviewMarkdown(tests);
+
         expect(md).toContain('- **Action:** x');
         expect(md).toContain('- **Expected Result:** y');
     });
@@ -544,6 +549,24 @@ describe('Csv -> preview pipeline (e2e)', async () => {
         expect(md).toContain('- **Action:** Preencher email');
         expect(md).toContain('- **Action:** Clicar em Sair');
         expect(md).toContain('- **Expected Result:** Redirecionado para /login');
+
+        fs.unlinkSync(tmp);
+    });
+
+    it('all-quirks CSV preview contains metadata and labels', async () => {expect.hasAssertions();
+
+        const tmp = '/tmp/csv-e2e-quirks-meta.csv';
+        fs.writeFileSync(tmp, buildFixtureCsv(), 'utf-8');
+
+        const tests = await csvResource.readBulkCsv(tmp);
+        const totalSteps = tests.reduce((s: number, t: { steps: unknown[] }) => s + t.steps.length, 0);
+        const groupsCount = new Set(tests.map((t: { group?: string }) => t.group).filter(Boolean)).size;
+        const md = generatePreviewMarkdown(tests, {
+            labels: ['smoke', 'regression'],
+            totalSteps,
+            groupsCount,
+        });
+
         expect(md).toContain('US-100');
         expect(md).toContain('EPIC-42');
         expect(md).toContain('Verifica o fluxo completo de login');

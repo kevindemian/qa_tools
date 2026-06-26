@@ -3,12 +3,14 @@ import { nonNull } from './test-utils.js';
 
 describe('CONFIG_SCHEMA', () => {
     it('has at least 86 entries', () => {
+        
         expect(CONFIG_SCHEMA.length).toBeGreaterThanOrEqual(86);
     });
 
     it('every entry has key, envVar, type, description', () => {expect.hasAssertions();
 
         for (const f of CONFIG_SCHEMA) {
+            
             expect(f.key).toBeTruthy();
             expect(f.envVar).toBeTruthy();
             expect(['string', 'boolean', 'number']).toContain(f.type);
@@ -20,9 +22,8 @@ describe('CONFIG_SCHEMA', () => {
 
         for (const f of CONFIG_SCHEMA) {
             if (f.defaultVal === undefined) continue;
-            if (f.type === 'string') expect(typeof f.defaultVal).toBe('string');
-            else if (f.type === 'boolean') expect(typeof f.defaultVal).toBe('boolean');
-            else expect(typeof f.defaultVal).toBe('number');
+            
+            expect(typeof f.defaultVal).toBe(f.type);
         }
     });
 
@@ -94,21 +95,21 @@ describe('CONFIG_SCHEMA', () => {
     it('entries with allowedValues have matching type', () => {expect.hasAssertions();
 
         for (const f of CONFIG_SCHEMA) {
-            if (f.allowedValues) {
-                expect(f.type).toBe('string');
-                expect(Array.isArray(f.allowedValues)).toBeTruthy();
-                expect(f.allowedValues.length).toBeGreaterThanOrEqual(2);
-            }
+            if (!f.allowedValues) continue;
+            
+            expect(f.type).toBe('string');
+            expect(Array.isArray(f.allowedValues)).toBeTruthy();
+            expect(f.allowedValues.length).toBeGreaterThanOrEqual(2);
         }
     });
 
     it('entries with category are properly grouped', () => {expect.hasAssertions();
 
         for (const f of CONFIG_SCHEMA) {
-            if (f.category) {
-                expect(typeof f.category).toBe('string');
-                expect(f.category.length).toBeGreaterThan(0);
-            }
+            if (!f.category) continue;
+            
+            expect(typeof f.category).toBe('string');
+            expect(f.category.length).toBeGreaterThan(0);
         }
     });
 
@@ -126,6 +127,7 @@ describe('CONFIG_SCHEMA', () => {
             'jiraProject',
         ];
         for (const k of firstGroupKeys) {
+            
             expect(CONFIG_SCHEMA.find((f) => f.key === k)).toBeTruthy();
         }
     });

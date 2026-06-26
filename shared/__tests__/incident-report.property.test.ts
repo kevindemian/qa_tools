@@ -139,15 +139,9 @@ describe('Incident Report.Property', () => {
                             passRate,
                         );
 
-                        if (result.highCount > 0) {
-                            expect(result.overallSeverity).toBe('high');
-                        } else if (result.mediumCount > 0) {
-                            expect(result.overallSeverity).toBe('medium');
-                        } else if (result.lowCount > 0) {
-                            expect(result.overallSeverity).toBe('low');
-                        } else {
-                            expect(result.overallSeverity).toBe('none');
-                        }
+                        const expectedSeverity = result.highCount > 0 ? 'high' : result.mediumCount > 0 ? 'medium' : result.lowCount > 0 ? 'low' : 'none';
+                        
+                        expect(result.overallSeverity).toBe(expectedSeverity);
                     },
                 ),
                 { numRuns: 50 },
@@ -197,6 +191,7 @@ describe('Incident Report.Property', () => {
                             passRate,
                         );
                         for (const event of result.events) {
+                            
                             expect(typeof event.date).toBe('string');
                             expect(event.date.length).toBeGreaterThan(0);
                             expect(['failure', 'regression', 'coverage_gap', 'seasonality']).toContain(event.type);
@@ -232,16 +227,14 @@ describe('Incident Report.Property', () => {
                         let sawMedium = false;
                         let sawLow = false;
                         for (const event of result.events) {
+                            const sawLowBefore = sawLow;
+                            const sawMediumBefore = sawMedium;
                             if (event.severity === 'low') sawLow = true;
-                            if (event.severity === 'medium') {
-                                expect(sawLow).toBeFalsy();
-
-                                sawMedium = true;
-                            }
-                            if (event.severity === 'high') {
-                                expect(sawMedium).toBeFalsy();
-                                expect(sawLow).toBeFalsy();
-                            }
+                            if (event.severity === 'medium') sawMedium = true;
+                            
+                            expect(event.severity !== 'medium' || !sawLowBefore).toBeTruthy();
+                            expect(event.severity !== 'high' || !sawMediumBefore).toBeTruthy();
+                            expect(event.severity !== 'high' || !sawLowBefore).toBeTruthy();
                         }
                     },
                 ),

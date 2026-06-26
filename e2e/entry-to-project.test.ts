@@ -97,11 +97,9 @@ describe('Entry-menu to module spawn — full flow (CR-3c)', () => {
 
         expect(callOpts).toBeDefined();
 
-        if (callOpts) {
-            expect(callOpts).toHaveProperty('stdio', 'inherit');
-            expect(callOpts).toHaveProperty('cwd');
-            expect(callOpts.cwd).toStrictEqual(expect.any(String));
-        }
+        expect(callOpts).toHaveProperty('stdio', 'inherit');
+        expect(callOpts).toHaveProperty('cwd');
+        expect(callOpts?.cwd).toStrictEqual(expect.any(String));
     });
 
     it('exits loop on non-zero exit from module', async () => {expect.hasAssertions();

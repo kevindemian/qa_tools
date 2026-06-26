@@ -22,6 +22,7 @@ function makeCtx(input: string) {
 
 describe('Coverage invariants (PBT)', () => {
     it('realCoverage is always between 0 and 100', () => {
+        
         expect.hasAssertions();
 
         fc.assert(
@@ -44,6 +45,7 @@ describe('Coverage invariants (PBT)', () => {
     });
 
     it('totalCriteria >= coveredCriteria', () => {
+        
         expect.hasAssertions();
 
         fc.assert(
@@ -59,6 +61,7 @@ describe('Coverage invariants (PBT)', () => {
     });
 
     it('coveredCriteria + gaps.length === totalCriteria when criteria exist', () => {
+        
         expect.hasAssertions();
 
         fc.assert(
@@ -78,6 +81,7 @@ describe('Coverage invariants (PBT)', () => {
     });
 
     it('coverageDelta is 0 when declaredCoverage is null', () => {
+        
         expect.hasAssertions();
 
         fc.assert(
@@ -86,14 +90,14 @@ describe('Coverage invariants (PBT)', () => {
                     tests: [{ title: 'login' }],
                 };
                 const result = recalculateCoverage(artifact, makeCtx(input));
-                if (result.declaredCoverage === null) {
-                    expect(result.coverageDelta).toBe(0);
-                }
+                
+                expect(result.coverageDelta).toBe(result.declaredCoverage === null ? 0 : result.coverageDelta);
             }),
         );
     });
 
     it('coverageDelta = realCoverage - declaredCoverage when declared is not null', () => {
+        
         expect.hasAssertions();
 
         fc.assert(
@@ -103,14 +107,14 @@ describe('Coverage invariants (PBT)', () => {
                     coverageTable: { coverage: declared },
                 };
                 const result = recalculateCoverage(artifact, makeCtx('Given login\nWhen payment'));
-                if (result.declaredCoverage !== null) {
-                    expect(result.coverageDelta).toBe(result.realCoverage - result.declaredCoverage);
-                }
+                
+                expect(result.coverageDelta).toBe(result.declaredCoverage !== null ? result.realCoverage - result.declaredCoverage : result.coverageDelta);
             }),
         );
     });
 
     it('naN in coverageTable yields null declaredCoverage', () => {
+        
         expect.hasAssertions();
 
         const artifact = {
@@ -125,6 +129,7 @@ describe('Coverage invariants (PBT)', () => {
     });
 
     it('gaps entries have criterion truncated to 120 chars', () => {
+        
         expect.hasAssertions();
 
         fc.assert(

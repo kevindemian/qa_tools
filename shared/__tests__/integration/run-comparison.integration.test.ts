@@ -66,6 +66,16 @@ describe('Run Comparison.Integration', () => {
                 expect(callArg.user).toContain('=== RUN A (older) ===');
                 expect(callArg.user).toContain('=== RUN B (newer) ===');
                 expect(callArg.user).toContain('Date: 2026-01-01');
+            });
+
+            it('includes run B date in formatted data', async () => {expect.hasAssertions();
+
+                mockLlmPrompt.mockResolvedValue('analysis');
+
+                await compareRuns(runA, runB);
+
+                const callArg = nonNull(mockLlmPrompt.mock.calls[0])[0];
+
                 expect(callArg.user).toContain('Date: 2026-01-02');
             });
 

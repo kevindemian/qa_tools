@@ -75,6 +75,18 @@ describe('AggregateDefectTrends', () => {
         expect(result.trends[0]?.date).toBe('2026-05-31');
         expect(result.trends[0]?.categories).toStrictEqual({ ASSERTION: 1 });
         expect(result.trends[0]?.total).toBe(1);
+    });
+
+    it('handles multiple days with same category — second and third days', () => {
+        const input: FailureClassification[] = [
+            { timestamp: '2026-05-31T08:00:00Z', testTitle: 't1', category: 'ASSERTION', project: 'p' },
+            { timestamp: '2026-06-01T09:00:00Z', testTitle: 't2', category: 'ASSERTION', project: 'p' },
+            { timestamp: '2026-06-01T10:00:00Z', testTitle: 't3', category: 'ASSERTION', project: 'p' },
+            { timestamp: '2026-06-02T11:00:00Z', testTitle: 't4', category: 'TIMEOUT', project: 'p' },
+        ];
+
+        const result = aggregateDefectTrends(input);
+
         expect(result.trends[1]?.date).toBe('2026-06-01');
         expect(result.trends[1]?.categories).toStrictEqual({ ASSERTION: 2 });
         expect(result.trends[1]?.total).toBe(2);

@@ -211,13 +211,14 @@ describe('HTTP Client', () => {
 
             httpClient.createHttpClient({ baseUrl: 'https://api.test.com' });
             const err = new Error('no config');
+            let caughtError: unknown;
             try {
                 await nonNull(errorHandler)(err);
-
-                expect.unreachable('should have thrown');
             } catch (e) {
-                expect(e).toBe(err);
+                caughtError = e;
             }
+
+            expect(caughtError).toBe(err);
         });
 
         it('defaults method to get when config.method is missing', async () => {expect.hasAssertions();

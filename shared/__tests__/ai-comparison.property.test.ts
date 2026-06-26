@@ -47,11 +47,11 @@ describe('CompareAiVsManual — property-based', () => {
 
                 expect(['pass_rate', 'flakiness', 'none']).toContain(result.aiAdvantage);
 
-                if (result.aiAdvantage === 'pass_rate') {
-                    expect(result.aiPassRate).toBeGreaterThan(result.manualPassRate);
-                } else if (result.aiAdvantage === 'flakiness') {
-                    expect(result.aiFlakinessAvg).toBeLessThan(result.manualFlakinessAvg);
-                }
+                const isPassRateAdvantage = result.aiAdvantage === 'pass_rate' ? result.aiPassRate > result.manualPassRate : true;
+                const isFlakinessAdvantage = result.aiAdvantage === 'flakiness' ? result.aiFlakinessAvg < result.manualFlakinessAvg : true;
+                
+                expect(isPassRateAdvantage).toBeTruthy();
+                expect(isFlakinessAdvantage).toBeTruthy();
             }),
             { numRuns: 50 },
         );
@@ -78,11 +78,10 @@ describe('CompareAiVsManual — property-based', () => {
                 const result = compareAiVsManual(records);
                 const hasAi = records.some((r) => r.generatedBy === 'ai');
                 const hasManual = records.some((r) => r.generatedBy === 'manual');
-                if (!hasAi) expect(result.aiPassRate).toBe(0);
-                if (!hasManual) {
-                    expect(result.manualPassRate).toBe(0);
-                    expect(result.manualFlakinessAvg).toBe(0);
-                }
+                
+                expect(hasAi || result.aiPassRate === 0).toBeTruthy();
+                expect(hasManual || result.manualPassRate === 0).toBeTruthy();
+                expect(hasManual || result.manualFlakinessAvg === 0).toBeTruthy();
             }),
             { numRuns: 50 },
         );
@@ -125,16 +124,9 @@ describe('GenerateAiComparisonHtml — property-based', () => {
                 const result = compareAiVsManual(records);
                 const html = generateAiComparisonHtml(result, title);
 
-                expect(html).toContain('<!DOCTYPE html>');
-                expect(html).toContain('<html');
-                expect(html).toContain('</html>');
-                expect(html).toContain('<head>');
-                expect(html).toContain('</head>');
-                expect(html).toContain('<body>');
-                expect(html).toContain('</body>');
-                expect(html).toContain('prefers-color-scheme');
-                expect(html).toContain('--color-surface-page');
-                expect(html).toContain('html.dark');
+                const htmlParts = ['<!DOCTYPE html>', '<html', '</html>', '<head>', '</head>', '<body>', '</body>', 'prefers-color-scheme', '--color-surface-page', 'html.dark'];
+
+                expect(htmlParts.every(p => html.includes(p))).toBeTruthy();
             }),
             { numRuns: 50 },
         );
@@ -146,10 +138,10 @@ describe('GenerateAiComparisonHtml — property-based', () => {
             fc.property(fc.array(recordArb, { minLength: 1, maxLength: 10 }), (records) => {
                 const result = compareAiVsManual(records);
                 const html = generateAiComparisonHtml(result);
-                if (result.aiTotal > 0 || result.manualTotal > 0) {
-                    expect(html).toContain('data-component="metric-card"');
-                    expect(html).toContain('data-component="badge"');
-                }
+                const hasData = result.aiTotal > 0 || result.manualTotal > 0;
+                
+                expect(!hasData || html.includes('data-component="metric-card"')).toBeTruthy();
+                expect(!hasData || html.includes('data-component="badge"')).toBeTruthy();
             }),
             { numRuns: 50 },
         );

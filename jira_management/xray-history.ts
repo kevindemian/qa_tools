@@ -38,8 +38,8 @@ function safeStr(val: unknown, fallback = ''): string {
 export interface TestRun {
     status: string;
     testExecKey: string;
-    startedOn?: string;
-    finishedOn?: string;
+    startedOn?: string | undefined;
+    finishedOn?: string | undefined;
 }
 
 /** Abstraction over Xray history APIs (Server REST / Cloud GraphQL). */
@@ -104,13 +104,13 @@ class ServerHistoryProvider implements TestHistoryProvider {
             }
             return data.slice(0, MAX_RUNS).map((r: unknown) => {
                 const row = r as JsonObject;
-                const startedOn = safeStr(row['startedOn']);
-                const finishedOn = safeStr(row['finishedOn']);
+                const startedOn = typeof row['startedOn'] === 'string' ? row['startedOn'] : undefined;
+                const finishedOn = typeof row['finishedOn'] === 'string' ? row['finishedOn'] : undefined;
                 return {
                     status: safeStr(row['status'], 'UNKNOWN'),
                     testExecKey: safeStr(row['testExecKey']),
-                    ...(startedOn ? { startedOn } : {}),
-                    ...(finishedOn ? { finishedOn } : {}),
+                    startedOn,
+                    finishedOn,
                 };
             });
         } catch (err) {
@@ -254,8 +254,8 @@ class CloudHistoryProvider implements TestHistoryProvider {
             return {
                 status: rawStatus || 'UNKNOWN',
                 testExecKey: execKeyMap.get(r.testExecution?.issueId ?? '') ?? '',
-                ...(r.startedOn ? { startedOn: r.startedOn } : {}),
-                ...(r.finishedOn ? { finishedOn: r.finishedOn } : {}),
+                startedOn: r.startedOn ?? undefined,
+                finishedOn: r.finishedOn ?? undefined,
             };
         });
     }

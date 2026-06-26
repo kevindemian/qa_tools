@@ -27,9 +27,8 @@ describe('SeverityFromLatency — property-based', () => {
         fc.assert(
             fc.property(fc.integer({ min: 0, max: 20000 }), fc.integer({ min: 0, max: 20000 }), (a, b) => {
                 const order = (s: string): number => (s === 'info' ? 0 : s === 'warning' ? 1 : 2);
-                if (a <= b) {
-                    expect(order(severityFromLatency(a))).toBeLessThanOrEqual(order(severityFromLatency(b)));
-                }
+                
+                expect(order(severityFromLatency(a))).toBeLessThanOrEqual(a <= b ? order(severityFromLatency(b)) : order(severityFromLatency(a)));
             }),
             { numRuns: 100 },
         );
@@ -39,6 +38,7 @@ describe('SeverityFromLatency — property-based', () => {
 
         fc.assert(
             fc.property(fc.integer({ min: 0, max: 2999 }), (ms) => {
+                
                 expect(severityFromLatency(ms)).toBe('info');
             }),
             { numRuns: 50 },
@@ -49,6 +49,7 @@ describe('SeverityFromLatency — property-based', () => {
 
         fc.assert(
             fc.property(fc.integer({ min: 3000, max: 7999 }), (ms) => {
+                
                 expect(severityFromLatency(ms)).toBe('warning');
             }),
             { numRuns: 50 },
@@ -59,6 +60,7 @@ describe('SeverityFromLatency — property-based', () => {
 
         fc.assert(
             fc.property(fc.integer({ min: 8000, max: 100000 }), (ms) => {
+                
                 expect(severityFromLatency(ms)).toBe('critical');
             }),
             { numRuns: 50 },
@@ -74,6 +76,7 @@ describe('FailureRate — property-based', () => {
                 fc.integer({ min: -1000, max: 1000 }),
                 fc.integer({ min: -1000, max: 1000 }),
                 (failures, total) => {
+                    
                     expect(failureRate(failures, total)).toBeGreaterThanOrEqual(0);
                 },
             ),
@@ -85,6 +88,7 @@ describe('FailureRate — property-based', () => {
 
         fc.assert(
             fc.property(fc.nat({ max: 1000 }), fc.nat({ max: 1000 }), (failures, total) => {
+                
                 expect(failureRate(failures, total)).toBeLessThanOrEqual(1);
             }),
             { numRuns: 100 },
@@ -95,6 +99,7 @@ describe('FailureRate — property-based', () => {
 
         fc.assert(
             fc.property(fc.nat({ max: 1000 }), (failures) => {
+                
                 expect(failureRate(failures, 0)).toBe(0);
             }),
             { numRuns: 50 },
@@ -102,6 +107,7 @@ describe('FailureRate — property-based', () => {
     });
 
     it('naN e valores negativos são normalizados para 0', () => {
+        
         expect(failureRate(NaN, 100)).toBe(0);
         expect(failureRate(-5, 100)).toBe(0);
         expect(failureRate(5, NaN)).toBe(0);

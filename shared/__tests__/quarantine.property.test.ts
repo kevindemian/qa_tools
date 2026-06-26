@@ -87,9 +87,7 @@ describe('Quarantine.Property', () => {
                         expect(item?.quarantinedBy).toBe(entry?.quarantinedBy);
                         expect(item?.reviewRequired).toBe(entry?.reviewRequired);
 
-                        if (entry?.bugUrl) {
-                            expect(item?.bugUrl).toBe(entry.bugUrl);
-                        }
+                        expect(entry?.bugUrl ? item?.bugUrl : undefined).toBe(entry?.bugUrl);
                     }
                 }),
                 { numRuns: 50 },

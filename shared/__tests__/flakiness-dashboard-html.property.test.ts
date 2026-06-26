@@ -104,6 +104,7 @@ describe('GenerateFlakinessHtml — property-based', () => {
                 const html = generateFlakinessHtml(entries);
                 const high = filterHighFlakiness(entries);
                 for (const entry of high) {
+                    
                     expect(html).toContain(entry.title);
                 }
             }),
@@ -117,9 +118,8 @@ describe('GenerateFlakinessHtml — property-based', () => {
             fc.property(fc.array(flakyEntryArb, { minLength: 0, maxLength: 10 }), (entries) => {
                 const html = generateFlakinessHtml(entries);
                 const count = filterHighFlakiness(entries).length;
-                if (count > 0) {
-                    expect(html).toContain(String(count));
-                }
+                
+                expect(html).toContain(count > 0 ? String(count) : '');
             }),
             { numRuns: 50 },
         );
@@ -131,9 +131,8 @@ describe('GenerateFlakinessHtml — property-based', () => {
             fc.property(fc.array(flakyEntryArb, { minLength: 0, maxLength: 10 }), (entries) => {
                 const html = generateFlakinessHtml(entries);
                 const count = filterHighFlakiness(entries).length;
-                if (count > 5) {
-                    expect(html).toContain('data-severity="error"');
-                }
+                
+                expect(html).toContain(count > 5 ? 'data-severity="error"' : '');
             }),
             { numRuns: 50 },
         );
@@ -145,9 +144,8 @@ describe('GenerateFlakinessHtml — property-based', () => {
             fc.property(fc.array(flakyEntryArb, { minLength: 0, maxLength: 10 }), (entries) => {
                 const html = generateFlakinessHtml(entries);
                 const high = filterHighFlakiness(entries);
-                if (high.length === 0) {
-                    expect(html).toContain('No tests exceed');
-                }
+                
+                expect(html).toContain(high.length === 0 ? 'No tests exceed' : '');
             }),
             { numRuns: 50 },
         );

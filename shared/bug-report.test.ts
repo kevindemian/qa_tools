@@ -77,7 +77,7 @@ describe('BugReport Service', () => {
 
             const report = await collectManual();
 
-            expect(report).toEqual({
+            expect(report).toStrictEqual({
                 summary: 'Bug in login',
                 description: 'Cannot log in with valid credentials',
                 source: 'manual',
@@ -262,16 +262,20 @@ describe('BugReport Service', () => {
 
             const composed = compose(report);
 
-            expect(composed).toContain('**Summary:** Login issue');
-            expect(composed).toContain('**Severity:** major');
-            expect(composed).toContain('**Description:**\nDescription text');
-            expect(composed).toContain('1. Open app');
-            expect(composed).toContain('2. Click login');
-            expect(composed).toContain('**Expected Result:** Success');
-            expect(composed).toContain('**Actual Result:** Failure');
-            expect(composed).toContain('**Environment:** Staging');
-            expect(composed).toContain('**Component:** Frontend');
-            expect(composed).toContain('**AI Analysis:** UI_ELEMENT_MISSING');
+            const parts = [
+                '**Summary:** Login issue',
+                '**Severity:** major',
+                '**Description:**\nDescription text',
+                '1. Open app',
+                '2. Click login',
+                '**Expected Result:** Success',
+                '**Actual Result:** Failure',
+                '**Environment:** Staging',
+                '**Component:** Frontend',
+                '**AI Analysis:** UI_ELEMENT_MISSING',
+            ];
+
+            expect(parts.every((p) => composed.includes(p))).toBeTruthy();
         });
 
         it('includes pipeline metadata when present', () => {

@@ -93,9 +93,7 @@ describe('Integration: Test Impact (FT-35)', () => {
 
             expect(loginTest).toBeDefined();
 
-            if (loginTest) {
-                expect(loginTest.matchMode).toBe('mapping');
-            }
+            expect(loginTest?.matchMode).toBe('mapping');
         });
 
         it('finds keyword matches when no mapping or jest available', () => {
@@ -184,17 +182,13 @@ describe('Integration: Test Impact (FT-35)', () => {
 
             expect(loginTest).toBeDefined();
 
-            if (loginTest) {
-                expect(loginTest.matchMode).toBe('mapping');
-            }
+            expect(loginTest?.matchMode).toBe('mapping');
 
             const loginMappingEntry = result.impactedTests.find((t) => t.testKey === 'LOGIN-001');
 
             expect(loginMappingEntry).toBeDefined();
 
-            if (loginMappingEntry) {
-                expect(loginMappingEntry.matchMode).toBe('mapping');
-            }
+            expect(loginMappingEntry?.matchMode).toBe('mapping');
 
             const loginTestEntries = result.impactedTests.filter((t) => t.title === 'Login test');
 

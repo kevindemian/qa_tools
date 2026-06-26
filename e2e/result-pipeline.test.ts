@@ -109,11 +109,31 @@ describe('E2E: Result Processing Pipeline', () => {
         });
 
         expect(result.key).toBe('RESULT-1');
+    });
+
+    it('mochawesome e2e TE creation produces correct result stats', async () => {expect.hasAssertions();
+
+        const mochaPath = path.join(FIXTURES, 'mochawesome.json');
+        const raw = fs.readFileSync(mochaPath, 'utf8');
+        const parsed = parseTestResults(JSON.parse(raw));
+        const mappingPath = path.join(FIXTURES, 'test-mapping.json');
+        const { matched } = matchResultsToTests(parsed.tests, mappingPath);
+
+        const jiraResource = new JiraResource(E2E_TOKEN, 'http://localhost:1997/jira/rest/api/2');
+        const linkManager = new JiraLinkManager(jiraResource);
+        const result = await createTestExecutionFromResults({
+            jiraResource,
+            linkManager,
+            projectName: 'EXECPROJ',
+            matchedResults: matched,
+            csvName: 'testes-simples',
+            pipelineInfo: { pipelineId: 42, branch: 'main', provider: 'gitlab' },
+        });
+
         expect(result.summary).toMatch(/testes-simples \(main #42\)/);
         expect(result.passed).toBe(2);
         expect(result.failed).toBe(1);
         expect(result.skipped).toBe(0);
-
         expect(nock.isDone()).toBeTruthy();
     });
 

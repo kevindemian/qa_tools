@@ -47,6 +47,7 @@ describe('DetectSilentRegression — property-based invariants', () => {
                     .filter(([, d]) => d.length >= 2)
                     .map(([t]) => t);
                 for (const reg of result.regressions) {
+                    
                     expect(eligibleTitles).toContain(reg.title);
                 }
             }),
@@ -60,6 +61,7 @@ describe('DetectSilentRegression — property-based invariants', () => {
             fc.property(historyArb, (histories) => {
                 const result = detectSilentRegression(histories);
                 for (const reg of result.regressions) {
+                    
                     expect(Number.isFinite(reg.zScore)).toBeTruthy();
                 }
             }),
@@ -73,11 +75,9 @@ describe('DetectSilentRegression — property-based invariants', () => {
             fc.property(historyArb, (histories) => {
                 const result = detectSilentRegression(histories);
                 for (const reg of result.regressions) {
-                    if (reg.zScore > 5) expect(reg.severity).toBe('critical');
-                    else if (reg.zScore > 3) expect(reg.severity).toBe('high');
-                    else if (reg.zScore > 2) expect(reg.severity).toBe('medium');
-                    else if (reg.zScore > 1) expect(reg.severity).toBe('low');
-                    else expect(reg.severity).toBe('none');
+                    const expectedSeverity = reg.zScore > 5 ? 'critical' : reg.zScore > 3 ? 'high' : reg.zScore > 2 ? 'medium' : reg.zScore > 1 ? 'low' : 'none';
+                    
+                    expect(reg.severity).toBe(expectedSeverity);
                 }
             }),
             { numRuns: 50 },

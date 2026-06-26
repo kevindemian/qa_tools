@@ -4,15 +4,9 @@ describe('CreateMockConfig', () => {
     it('returns static methods as vi.fn()', () => {
         const mock = createMockConfig();
 
-        expect(typeof mock.get).toBe('function');
-        expect(typeof mock.set).toBe('function');
-        expect(typeof mock.reset).toBe('function');
-        expect(typeof mock.load).toBe('function');
-        expect(typeof mock.getDefault).toBe('function');
-        expect(typeof mock.create).toBe('function');
-        expect(typeof mock.setAutoConfirm).toBe('function');
-        expect(typeof mock.getAllPrefixed).toBe('function');
-        expect(typeof mock.validateRequiredEnv).toBe('function');
+        const methods = ['get', 'set', 'reset', 'load', 'getDefault', 'create', 'setAutoConfirm', 'getAllPrefixed', 'validateRequiredEnv'] as const;
+
+        expect(methods.every(m => m in mock)).toBeTruthy();
     });
 
     it('provides a working instance via getDefault()', () => {

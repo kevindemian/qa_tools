@@ -54,17 +54,9 @@ describe('Traceability Matrix.Integration', () => {
                 });
                 const html = generateTraceabilityHtml(result);
 
-                expect(html).toContain('<!DOCTYPE html>');
-                expect(html).toContain('Traceability Matrix');
-                expect(html).toContain('data-component="metric-card"');
-                expect(html).toContain('epic-node');
-                expect(html).toContain('story-node');
-                expect(html).toContain('test-row');
-                expect(html).toContain('test-passed');
-                expect(html).toContain('EPIC-1');
-                expect(html).toContain('STORY-1');
-                expect(html).toContain('TC-001');
-                expect(html).toContain('TC-002');
+                const parts = ['<!DOCTYPE html>', 'Traceability Matrix', 'data-component="metric-card"', 'epic-node', 'story-node', 'test-row', 'test-passed', 'EPIC-1', 'STORY-1', 'TC-001', 'TC-002'];
+
+                expect(parts.every(p => html.includes(p))).toBeTruthy();
             });
 
             it('renders health bars and status badges', async () => {expect.hasAssertions();

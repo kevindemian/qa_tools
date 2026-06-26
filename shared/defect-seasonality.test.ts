@@ -42,17 +42,14 @@ describe('AggregateDefectSeasonality', () => {
 
         expect(result.peakDay).toBe('N/A');
         expect(result.peakHour).toBe(-1);
-        expect(result.totalRecords).toBe(0);
-        expect(result.period).toStrictEqual({ from: '', to: '' });
-        expect(result.timestamp).toBeTruthy();
     });
 
-    it('returns zero-filled structure for empty input', () => {
+    it('returns zero metadata for empty input', () => {
         const result = aggregateDefectSeasonality([]);
 
         expect(result.totalRecords).toBe(0);
-        expect(result.peakDay).toBe('N/A');
-        expect(result.peakHour).toBe(-1);
+        expect(result.period).toStrictEqual({ from: '', to: '' });
+        expect(result.timestamp).toBeTruthy();
     });
 
     it('groups single classification by day and hour', () => {

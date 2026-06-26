@@ -166,7 +166,7 @@ export async function collectManual(): Promise<BugReport> {
         severity,
         ...(trimmedComp ? { component: trimmedComp } : {}),
         ...(linkedIssues ? { linkedIssues } : {}),
-        ...(llmEnrichment ? { llmEnrichment } : {}),
+        llmEnrichment,
     };
 }
 
