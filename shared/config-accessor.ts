@@ -61,13 +61,7 @@ class Config {
     }
 
     set(key: string, value: string | boolean | number): void {
-        const entries = Object.entries(this.overrides);
-        const existing = entries.find(([k]) => k === key);
-        if (existing) {
-            existing[1] = value;
-        } else {
-            entries.push([key, value]);
-        }
+        this.overrides[key] = value;
     }
 
     getAllPrefixed(prefix: string): Record<string, string> {
