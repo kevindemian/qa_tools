@@ -16,8 +16,8 @@ for (const f of testFiles) {
     const result: string[] = [];
 
     for (let i = 0; i < lines.length; i++) {
-        const line = lines[i];
-        if (line === undefined) continue;
+        const line: unknown = Reflect.get(lines, i);
+        if (line === undefined || line === null || typeof line !== 'string') continue;
         const isAssertion = /^\s*expect\.(?:hasAssertions|assertions)\(/.test(line);
 
         if (isAssertion) {

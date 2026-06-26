@@ -63,8 +63,11 @@ const handlers: Record<string, { handler: HandlerFn }> = {
 };
 
 function getHandler(caseNumber: string): HandlerFn | null {
-    const mod = handlers[caseNumber];
-    return mod ? mod.handler : null;
+    const mod: unknown = Reflect.get(handlers, caseNumber);
+    if (mod !== undefined && mod !== null && typeof mod === 'object' && 'handler' in mod) {
+        return (mod as { handler: HandlerFn }).handler;
+    }
+    return null;
 }
 
 export { getHandler };

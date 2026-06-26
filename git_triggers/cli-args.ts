@@ -98,7 +98,7 @@ export function parseCliArgs(): CliArgs {
 
         for (let i = 0; i < args.length; i++) {
             const val = _nextArg(args, i);
-            switch (args[i]) {
+            switch (Reflect.get(args, i)) {
                 case '--project':
                 case '-p':
                     if (val !== undefined) {

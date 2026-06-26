@@ -130,7 +130,10 @@ describe('Requirement Score', () => {
 
             const result = calculateRequirementScores(makeRecords());
             for (let i = 1; i < result.entries.length; i++) {
-                expect(result.entries[i]?.score).toBeLessThanOrEqual(result.entries[i - 1]?.score ?? 100);
+                const curr = Reflect.get(result.entries, i) as { score: number };
+                const prev = Reflect.get(result.entries, i - 1) as { score: number };
+
+                expect(curr.score).toBeLessThanOrEqual(prev.score);
             }
         });
 

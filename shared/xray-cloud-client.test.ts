@@ -23,7 +23,7 @@ vi.mock('./http-client', () => ({
 vi.mock('./config', () => {
     const mockGet = vi.fn((key: string) => {
         const map: Record<string, string> = { xrayCloudUrl: 'https://xray.cloud.getxray.app' };
-        return map[key];
+        return Reflect.get(map, key);
     });
     const mockDefault = {
         get: mockGet,

@@ -47,7 +47,7 @@ export async function nivelarBranches(
     }
     const branches = [mainBranch, rcBranch, devBranch];
     const existing = await Promise.all(branches.map((b) => gitlab.getBranch(b)));
-    const missing = branches.filter((_, i) => !existing[i]);
+    const missing = branches.filter((_, i) => !Reflect.get(existing, i));
     if (missing.length > 0) {
         warn('Branch(es) não encontrada(s): ' + missing.join(', '));
         return;

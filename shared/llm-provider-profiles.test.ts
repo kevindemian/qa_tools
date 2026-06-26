@@ -9,7 +9,7 @@ describe('PROVIDER_PROFILES', () => {
 
         const { PROVIDER_PROFILES, KNOWN_PROVIDERS } = await import('./llm-provider-profiles.js');
         for (const p of KNOWN_PROVIDERS) {
-            expect(PROVIDER_PROFILES[p]).toBeDefined();
+            expect(Reflect.get(PROVIDER_PROFILES, p)).toBeDefined();
         }
     });
 

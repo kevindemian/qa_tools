@@ -42,7 +42,7 @@ vi.mock('../shared/config', () => {
         xrayBaseUrl: 'https://xray.example.com',
         cypressProjectPath: '',
         getAllPrefixed: vi.fn(() => ({})),
-        get: vi.fn((key: string) => cfg[key] as string),
+        get: vi.fn((key: string) => Reflect.get(cfg, key) as string),
     };
     return { __esModule: true, default: cfg };
 });

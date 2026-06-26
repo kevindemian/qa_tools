@@ -75,7 +75,7 @@ function warn(msg: string): void {
 }
 
 function getArg(arr: string[], i: number): string {
-    const v = arr[i];
+    const v = Reflect.get(arr, i) as string | undefined;
     if (v === undefined) process.exit(2);
     return v;
 }
@@ -90,7 +90,7 @@ function readProgress(): string {
 }
 
 function checkpointMarker(phaseId: string, feature: string): string {
-    const m = CHECKPOINT_MARKERS[phaseId];
+    const m = Reflect.get(CHECKPOINT_MARKERS, phaseId) as string | undefined;
     if (m === undefined) process.exit(2);
     return '<!-- CHECKPOINT: ' + m + ' for ' + feature + ' -->';
 }

@@ -81,7 +81,7 @@ describe('Logger', () => {
             const testDirPath = testDir('write');
             const cfg = Config.create({ logFile: true, logDir: testDirPath });
             const logger = new Logger({ test: 'write' }, cfg);
-            (logger[level] as (m: string, d?: unknown) => void)(msg, data);
+            (Reflect.get(logger, level) as (m: string, d?: unknown) => void)(msg, data);
 
             const date = formatDateISO();
             const logFile = path.join(testDirPath, `qa-tools-${date}.log`);

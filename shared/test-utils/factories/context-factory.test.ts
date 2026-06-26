@@ -10,7 +10,7 @@ describe('CreateMockContext', () => {
 
         const fns = ['pushHistory', 'printSessionSummary'] as const;
 
-        expect(fns.every(f => typeof ctx[f] === 'function')).toBeTruthy();
+        expect(fns.every(f => typeof Reflect.get(ctx, f) === 'function')).toBeTruthy();
         expect(ctx.base_url).toBe('https://jira.test.com');
         expect(ctx.sessionLog).toBeDefined();
     });

@@ -10,8 +10,9 @@ export const invariantResultMatchesAction: InvariantFn = (
     if (tests.length === 0) return [fail('T-08', 'No tests to validate')];
     const mismatches: Array<{ testIndex: number; action: string; expected: string }> = [];
     for (let i = 0; i < tests.length; i++) {
-        const steps = (tests[i] as TestCaseShape).steps || [];
-        const expected = (tests[i] as TestCaseShape).expectedResult || '';
+        const test: TestCaseShape = Reflect.get(tests, i);
+        const steps = test.steps || [];
+        const expected = test.expectedResult || '';
         const stepsText = steps.join(' ');
         const createMatch = stepsText.match(/\b(create|register|add|new)\b/i);
         const updateMatch = stepsText.match(/\b(update|edit|modify|change|save)\b/i);

@@ -131,10 +131,10 @@ export function parseCliExtra(): { publishTarget?: string; extraRuns: Array<{ na
     const args = process.argv.slice(2);
     const result: { publishTarget?: string; extraRuns: Array<{ name: string; file: string }> } = { extraRuns: [] };
     for (let i = 0; i < args.length; i++) {
-        const arg = args[i];
+        const arg = Reflect.get(args, i);
         if (!arg) continue;
         if (arg === '--publish' && i + 1 < args.length) {
-            const val = args[i + 1];
+            const val = Reflect.get(args, i + 1);
             if (val) {
                 result.publishTarget = val;
                 i++;

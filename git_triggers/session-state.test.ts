@@ -39,7 +39,7 @@ function createMockConfig() {
             githubApiUrl: 'https://api.github.com',
             getAllPrefixed: vi.fn(() => ({})),
             get(key: string) {
-                return (this as Record<string, unknown>)[key] as string;
+                return Reflect.get(this, key) as string;
             },
         },
         __esModule: true,

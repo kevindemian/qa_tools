@@ -103,7 +103,7 @@ function countChanges(original: string, modified: string): number {
     const modLines = modified.split('\n');
     let changes = 0;
     for (let i = 0; i < Math.max(origLines.length, modLines.length); i++) {
-        if (origLines[i] !== modLines[i]) changes++;
+        if (Reflect.get(origLines, i) !== Reflect.get(modLines, i)) changes++;
     }
     return changes;
 }

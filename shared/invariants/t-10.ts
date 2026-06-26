@@ -12,9 +12,11 @@ export const invariantNoDuplicateTests: InvariantFn = (
     const pairs: Array<[number, number, number]> = [];
     for (let i = 0; i < tests.length; i++) {
         for (let j = i + 1; j < tests.length; j++) {
+            const a: TestCaseShape = Reflect.get(tests, i);
+            const b: TestCaseShape = Reflect.get(tests, j);
             const sim = similarity(
-                ((tests[i] as TestCaseShape).steps || []).join(' '),
-                ((tests[j] as TestCaseShape).steps || []).join(' '),
+                (a.steps || []).join(' '),
+                (b.steps || []).join(' '),
             );
             if (sim > 0.8) {
                 pairs.push([i, j, Math.round(sim * 100)]);

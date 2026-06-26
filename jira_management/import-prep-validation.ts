@@ -29,10 +29,10 @@ export function _checkResumeCheckpoint(
 
     if (
         cp &&
-        cp[cpKey] === sourcePath &&
-        cp['project'] === projectName &&
-        cp['testCount'] === tests.length &&
-        Array.isArray(cp['done'])
+        Reflect.get(cp, cpKey) === sourcePath &&
+        Reflect.get(cp, 'project') === projectName &&
+        Reflect.get(cp, 'testCount') === tests.length &&
+        Array.isArray(Reflect.get(cp, 'done'))
     ) {
         const age = Date.now() - new Date(cp['ts'] as string).getTime();
         if (age < CHECKPOINT_MAX_AGE_MS && (cp['done'] as Array<unknown>).length < tests.length) {

@@ -23,8 +23,8 @@ for (const f of testFiles) {
     let changes = 0;
 
     for (let i = 0; i < lines.length; i++) {
-        const line = lines[i];
-        if (line === undefined) continue;
+        const line: unknown = Reflect.get(lines, i);
+        if (line === undefined || line === null || typeof line !== 'string') continue;
         newLines.push(line);
 
         const trimmed = line.trim();

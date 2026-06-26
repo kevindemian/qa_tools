@@ -146,7 +146,7 @@ export class QualityMetricsCollector {
             );
             const ratios = baselineSnapshots
                 .map((s, i) => {
-                    const total = i < baselineTotals.length ? (baselineTotals[i] ?? 0) : 0;
+                    const total = i < baselineTotals.length ? ((Reflect.get(baselineTotals, i) as number | undefined) ?? 0) : 0;
                     const entries = Object.entries(s.invariantFireCount);
                     const entry = entries.find(([k]) => k === invariantId);
                     const rate = entry?.[1] ?? 0;

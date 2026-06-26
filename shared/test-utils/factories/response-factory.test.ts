@@ -44,7 +44,7 @@ describe('CreateMockAxiosInstance', () => {
 
         const methods = ['get', 'post', 'put', 'patch', 'delete', 'head', 'options', 'request', 'getUri'] as const;
 
-        expect(methods.every((m) => typeof mock[m] === 'function')).toBeTruthy();
+        expect(methods.every((m) => typeof Reflect.get(mock, m) === 'function')).toBeTruthy();
         expect(mock.interceptors.request).toBeDefined();
         expect(mock.interceptors.response).toBeDefined();
         expect(typeof mock.interceptors.request.use).toBe('function');

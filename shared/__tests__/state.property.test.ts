@@ -72,17 +72,17 @@ describe('State Persistence — property-based invariants', () => {
 
                 const result = stateModule.update((s) => {
                     for (const [k, v] of Object.entries(changes)) {
-                        s[k] = v;
+                        Reflect.set(s, k, v);
                     }
                 }, config);
 
                 // Todas as chaves de changes estão no resultado com o novo valor
                 for (const [k, v] of Object.entries(changes)) {
-                    expect(result[k]).toStrictEqual(v);
+                    expect(Reflect.get(result, k)).toStrictEqual(v);
                 }
                 // Chaves de initial que não foram sobrescritas permanecem
                 for (const [k, v] of Object.entries(initial)) {
-                    expect(!(k in changes) ? result[k] : v).toStrictEqual(v);
+                    expect(!(k in changes) ? Reflect.get(result, k) : v).toStrictEqual(v);
                 }
             }),
             { numRuns: 50 },

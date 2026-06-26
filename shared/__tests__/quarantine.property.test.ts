@@ -18,7 +18,7 @@ vi.mock('../config', () => ({
     default: {
         xdgStateHome: '/tmp/qa-tools-quarantine-pbt',
         get(key: string) {
-            return (this as Record<string, unknown>)[key] as string;
+            return Reflect.get(this, key) as string;
         },
     },
 }));
@@ -79,8 +79,8 @@ describe('Quarantine.Property', () => {
                     const pipeline = generatePipelineQuarantine(store, totalTests);
 
                     for (let i = 0; i < store.entries.length; i++) {
-                        const entry = store.entries[i];
-                        const item = pipeline.excluded[i];
+                        const entry = Reflect.get(store.entries, i) as { testTitle: string; reason: string; quarantinedBy: string; reviewRequired: boolean; bugUrl?: string } | undefined;
+                        const item = Reflect.get(pipeline.excluded, i) as { test: string; reason: string; quarantinedBy: string; reviewRequired: boolean; bugUrl?: string } | undefined;
 
                         expect(item?.test).toBe(entry?.testTitle);
                         expect(item?.reason).toBe(entry?.reason);

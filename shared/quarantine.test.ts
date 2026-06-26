@@ -10,7 +10,7 @@ vi.mock('./config', () => ({
     default: {
         xdgStateHome: '/tmp/qa-tools-quarantine-test-mock',
         get(key: string) {
-            return (this as Record<string, unknown>)[key] as string;
+            return Reflect.get(this, key) as string;
         },
     },
 }));

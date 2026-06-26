@@ -8,10 +8,10 @@ vi.mock('../shared/config', () => ({
     default: {
         jiraProject: 'ECSPOL',
         get(key: string) {
-            return (this as Record<string, unknown>)[key] as string;
+            return Reflect.get(this, key) as string;
         },
         set(key: string, value: unknown) {
-            (this as Record<string, unknown>)[key] = value;
+            Reflect.set(this, key, value);
         },
     },
     __esModule: true,

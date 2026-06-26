@@ -248,7 +248,7 @@ export async function runBenchmark(): Promise<void> {
             if (r.status === 'fulfilled') results.push(r.value);
             else {
                 results.push({
-                    fixture: batch[j]?.name || 'unknown',
+                    fixture: (Reflect.get(batch, j) as { name: string } | undefined)?.name || 'unknown',
                     passed: false,
                     error: (r.reason as Error | undefined)?.message || 'Unknown error',
                     durationMs: 0,

@@ -25,7 +25,7 @@ interface CrossRefGroup {
 }
 
 function buildCrossRefGroups(tests: TestCase[], ids: string[]): Record<string, CrossRefGroup> {
-    const valid = tests.map((t, i) => ({ test: t, id: ids[i] })).filter((x) => x.id && x.test.group);
+    const valid = tests.map((t, i) => ({ test: t, id: Reflect.get(ids, i) })).filter((x) => x.id && x.test.group);
     const groups = new Map<string, CrossRefGroup>();
     for (const { test, id } of valid) {
         const groupName = test.group as string;
@@ -35,7 +35,7 @@ function buildCrossRefGroups(tests: TestCase[], ids: string[]): Record<string, C
             entry = { name: groupName, members: [] };
             groups.set(key, entry);
         }
-        entry.members.push({ id: id as string, description: test.description || '' });
+        entry.members.push({ id: String(id), description: test.description || '' });
     }
     return Object.fromEntries(groups);
 }

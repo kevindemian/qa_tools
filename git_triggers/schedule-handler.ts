@@ -98,8 +98,8 @@ export async function handleChangeProject(names: string[]): Promise<void> {
     if (!isNaN(newIdx) && newIdx >= 1 && newIdx <= names.length) {
         const newName = names[newIdx - 1] as string;
         setCurrentProjectName(newName);
-        setProjectId(getProjects()[newName] as string);
-        const newManager = createManagerForProject(newName, getProjects()[newName] as string);
+        setProjectId(Reflect.get(getProjects(), newName));
+        const newManager = createManagerForProject(newName, Reflect.get(getProjects(), newName));
         setManager(newManager);
         updateState((s: StateContainer) => {
             s['lastProject'] = newName;

@@ -171,7 +171,7 @@ describe('CATEGORY_TITLES', () => {
     it('has titles for all categories', () => {expect.hasAssertions();
 
         for (const key of CATEGORY_IDS) {
-            expect(CATEGORY_TITLES[key]).toBeTruthy();
+            expect(Reflect.get(CATEGORY_TITLES, key)).toBeTruthy();
         }
     });
 
@@ -203,7 +203,7 @@ describe('ID_TO_ALIASES', () => {
             const [, value] = entry;
             if (value.startsWith('/')) continue;
 
-            expect(ID_TO_ALIASES[value]).toBeDefined();
+            expect(Reflect.get(ID_TO_ALIASES, value)).toBeDefined();
         }
     });
 });

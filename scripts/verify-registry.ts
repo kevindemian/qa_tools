@@ -75,20 +75,20 @@ function validateRegistry(): ValidationError[] {
         }
 
         for (let i = 0; i < providerModels.length; i++) {
-            const model = providerModels[i] as Record<string, unknown>;
+            const model = Reflect.get(providerModels, i) as Record<string, unknown>;
             const prefix = `providers.${providerName}[${i}]`;
 
-            const id = model['id'];
+            const id = Reflect.get(model, 'id');
             if (typeof id !== 'string' || id.length === 0) {
                 errors.push({ path: `${prefix}.id`, message: 'Must be a non-empty string' });
             }
 
-            if (!Array.isArray(model['tiers'])) {
+            if (!Array.isArray(Reflect.get(model, 'tiers'))) {
                 errors.push({ path: `${prefix}.tiers`, message: 'Must be an array' });
             } else {
-                const tiers = model['tiers'] as string[];
+                const tiers = Reflect.get(model, 'tiers') as string[];
                 for (let j = 0; j < tiers.length; j++) {
-                    const tier = tiers[j];
+                    const tier = Reflect.get(tiers, j) as string | undefined;
                     if (tier === undefined || !VALID_TIERS.has(tier)) {
                         errors.push({
                             path: `${prefix}.tiers[${j}]`,

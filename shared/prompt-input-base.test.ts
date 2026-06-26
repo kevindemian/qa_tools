@@ -50,7 +50,7 @@ vi.mock('./prompt-ui', async () => {
             const cfg = ConfigAccessorActual.default.create();
             cfg.get = <T>(key: string): T => {
                 const v: Record<string, unknown> = { quiet: false, autoConfirm: false };
-                return v[key] as T;
+                return Reflect.get(v, key) as T;
             };
             return cfg;
         }),
@@ -75,7 +75,7 @@ describe('Prompt Input Base', () => {
         mockReadlineQuestion.mockReturnValue('');
         Object.defineProperty(process.stdin, 'isTTY', { value: true, configurable: true });
         const cfg = ConfigAccessor.create();
-        cfg.get = <T>(k: string) => ({ quiet: false, autoConfirm: false })[k] as T;
+        cfg.get = <T>(k: string) => Reflect.get({ quiet: false, autoConfirm: false }, k) as T;
         mockGetConfig.mockReturnValue(cfg);
     });
 
@@ -149,7 +149,7 @@ describe('Prompt Input Base', () => {
 
         it('returns defaultYes when autoConfirm', () => {
             const cfg2 = ConfigAccessor.create();
-            cfg2.get = <T>(k: string) => ({ quiet: false, autoConfirm: true })[k] as T;
+            cfg2.get = <T>(k: string) => Reflect.get({ quiet: false, autoConfirm: true }, k) as T;
             mockGetConfig.mockReturnValue(cfg2);
 
             expect(confirm('Confirm?', true)).toBeTruthy();
@@ -238,7 +238,7 @@ describe('Prompt Input Base', () => {
         it('returns false when quiet is true', () => {
             Object.defineProperty(process.stdout, 'isTTY', { value: true, configurable: true });
             const cfg3 = ConfigAccessor.create();
-            cfg3.get = <T>(k: string) => ({ quiet: true, autoConfirm: false })[k] as T;
+            cfg3.get = <T>(k: string) => Reflect.get({ quiet: true, autoConfirm: false }, k) as T;
             mockGetConfig.mockReturnValue(cfg3);
 
             expect(isTTY()).toBeFalsy();

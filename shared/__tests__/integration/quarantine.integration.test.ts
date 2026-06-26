@@ -20,7 +20,7 @@ vi.mock('../../config', () => ({
     default: {
         xdgStateHome: MOCK_STATE_HOME,
         get(key: string) {
-            return (this as Record<string, unknown>)[key] as string;
+            return Reflect.get(this, key) as string;
         },
     },
 }));

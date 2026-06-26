@@ -219,12 +219,12 @@ function parseArgs(): { provider: string | null; dryRun: boolean; createPr: bool
     let createPr = false;
 
     for (let i = 0; i < args.length; i++) {
-        if (args[i] === '--provider' && i + 1 < args.length) {
-            const val = args[++i];
-            if (val !== undefined) provider = val;
-        } else if (args[i] === '--dry-run') {
+        const arg = Reflect.get(args, i);
+        if (arg === '--provider' && i + 1 < args.length) {
+            provider = Reflect.get(args, i + 1);
+        } else if (arg === '--dry-run') {
             dryRun = true;
-        } else if (args[i] === '--pr') {
+        } else if (arg === '--pr') {
             createPr = true;
         }
     }
@@ -241,7 +241,7 @@ function envVarForProvider(provider: string): string | null {
         ['gemini', 'GEMINI_API_KEY'],
     ]);
     const envName = vars.get(provider);
-    if (envName) return process.env[envName] ?? null;
+    if (envName) return Reflect.get(process.env, envName) ?? null;
     return process.env['LLM_API_KEY'] ?? null;
 }
 

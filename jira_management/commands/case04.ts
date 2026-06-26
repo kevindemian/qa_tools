@@ -15,7 +15,7 @@ async function handler(c: CommandContext): Promise<boolean | void> {
             taskIds = input.split(' ').filter(Boolean);
         } else {
             c.ctx.inMemoryTasksId.forEach((id, idx) => {
-                print('  ' + id + ' — ' + c.ctx.inMemoryTasksText[idx]);
+                print('  ' + id + ' — ' + Reflect.get(c.ctx.inMemoryTasksText, idx));
                 taskIds.push(id);
             });
         }

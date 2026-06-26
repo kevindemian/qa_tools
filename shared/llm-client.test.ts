@@ -56,7 +56,7 @@ vi.mock('./config', () => {
             return v ? parseInt(v, 10) : 128000;
         },
         set(key: string, value: string) {
-            mockConfig[key] = value;
+            Reflect.set(mockConfig, key, value);
         },
         get(key: string) {
             const defaults: Record<string, string | number> = {
@@ -72,13 +72,13 @@ vi.mock('./config', () => {
                 llmBatchBaseUrl: 'https://models.inference.ai.azure.com',
                 llmMaxTokens: 128000,
             };
-            return mockConfig[key] ?? defaults[key];
+            return (Reflect.get(mockConfig, key) as string | undefined) ?? Reflect.get(defaults, key);
         },
         resetInstance() {
-            Object.keys(mockConfig).forEach((k) => delete mockConfig[k]);
+            Object.keys(mockConfig).forEach((k) => Reflect.deleteProperty(mockConfig, k));
         },
         reset() {
-            Object.keys(mockConfig).forEach((k) => delete mockConfig[k]);
+            Object.keys(mockConfig).forEach((k) => Reflect.deleteProperty(mockConfig, k));
         },
     };
     return { __esModule: true, default: ConfigMock };

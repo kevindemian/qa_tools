@@ -55,11 +55,14 @@ describe('ComputeCrossSquadBenchmark — property-based', () => {
                 (projects) => {
                     const result = computeCrossSquadBenchmark(projects);
                     for (let i = 1; i < result.benchmarks.length; i++) {
-                        const curr = result.benchmarks[i];
-                        const prev = result.benchmarks[i - 1];
-                        if (curr === undefined || prev === undefined) return;
+                        const curr: unknown = Reflect.get(result.benchmarks, i);
+                        const prev: unknown = Reflect.get(result.benchmarks, i - 1);
+                        if (curr === undefined || curr === null || prev === undefined || prev === null) return;
 
-                        expect(curr.healthScore).toBeLessThanOrEqual(prev.healthScore);
+                        const c = curr as { healthScore: number };
+                        const p = prev as { healthScore: number };
+
+                        expect(c.healthScore).toBeLessThanOrEqual(p.healthScore);
                     }
                 },
             ),

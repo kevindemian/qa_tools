@@ -82,7 +82,7 @@ class TestCaseFactory {
                 await this.stepImporter.importStep(
                     issueKey,
                     i + 1,
-                    test.steps[i] as NonNullable<(typeof test.steps)[0]>,
+                    Reflect.get(test.steps, i),
                 );
                 if (stepBar) stepBar.update(i + 1);
             } catch (err) {

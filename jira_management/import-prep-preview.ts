@@ -18,7 +18,7 @@ export interface PreviewMdOptions {
 }
 
 function _renderTestHeader(t: TestCase, index: number, keys?: string[]): string {
-    const headingLabel = keys ? keys[index] || 'Test ' + (index + 1) : 'Test ' + (index + 1);
+    const headingLabel = keys ? Reflect.get(keys, index) || 'Test ' + (index + 1) : 'Test ' + (index + 1);
     let out = '## ' + headingLabel + ' — ' + t.title + '\n';
     out += t.description ? '**Description:** ' + t.description + '\n\n' : '**Description:** —\n\n';
     return out;
@@ -38,7 +38,8 @@ function _renderSteps(t: TestCase): string {
     if (t.steps.length === 0) return '_No steps defined._\n\n';
     let out = '### Steps\n\n';
     for (let j = 0; j < t.steps.length; j++) {
-        const s = t.steps[j] as NonNullable<NonNullable<(typeof t)['steps']>[number]>;
+        const s = Reflect.get(t.steps, j) as NonNullable<NonNullable<(typeof t)['steps']>[number]> | undefined;
+        if (!s) continue;
         out += '**Step ' + (j + 1) + '**\n';
         out += '- **Action:** ' + (s.fields.Action || '') + '\n';
         if (s.fields.Data) out += '- **Data:** ' + s.fields.Data + '\n';
@@ -72,7 +73,8 @@ export function generatePreviewMarkdown(tests: TestCase[], options?: PreviewMdOp
     if (summaryParts.length > 0) parts.push(summaryParts.join('  \n') + '\n\n---\n\n');
 
     for (let i = 0; i < tests.length; i++) {
-        const t = tests[i] as NonNullable<(typeof tests)[number]>;
+        const t = Reflect.get(tests, i) as NonNullable<(typeof tests)[number]> | undefined;
+        if (!t) continue;
         parts.push(_renderTestHeader(t, i, options?.keys));
         parts.push(_renderTestMeta(t));
         parts.push(_renderSteps(t));

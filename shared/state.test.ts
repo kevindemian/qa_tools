@@ -35,13 +35,13 @@ function mockFs(files: Record<string, string>) {
     const read = vi.spyOn(fs, 'readFileSync').mockImplementation((p: Parameters<typeof fs.readFileSync>[0]) => {
         const ps = p.toString();
         if (!(ps in files)) throw new Error('ENOENT');
-        return nonNull(files[ps]);
+        return nonNull(Reflect.get(files, ps));
     });
     const write = vi
         .spyOn(fs, 'writeFileSync')
         .mockImplementation(
             (p: Parameters<typeof fs.writeFileSync>[0], data: Parameters<typeof fs.writeFileSync>[1]) => {
-                files[p.toString()] = typeof data === 'string' ? data : '';
+                Reflect.set(files, p.toString(), typeof data === 'string' ? data : '');
             },
         );
     const rename = vi
@@ -49,8 +49,8 @@ function mockFs(files: Record<string, string>) {
         .mockImplementation((from: Parameters<typeof fs.renameSync>[0], to: Parameters<typeof fs.renameSync>[1]) => {
             const f = from.toString();
             if (f in files) {
-                files[to.toString()] = nonNull(files[f]);
-                delete files[f];
+                Reflect.set(files, to.toString(), nonNull(Reflect.get(files, f)));
+                Reflect.deleteProperty(files, f);
             }
         });
     return { exists, read, write, rename };

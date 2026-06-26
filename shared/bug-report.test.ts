@@ -22,7 +22,7 @@ vi.mock('./config', () => ({
     default: {
         jiraProject: '',
         get(key: string) {
-            return (this as Record<string, unknown>)[key] as string;
+            return Reflect.get(this, key) as string;
         },
     },
 }));

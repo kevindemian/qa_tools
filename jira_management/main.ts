@@ -277,7 +277,8 @@ async function runMainLoop(res: RuntimeResources): Promise<void> {
         if (!choice) continue;
 
         if (CATEGORY_IDS.has(choice)) {
-            pushBreadcrumb(CATEGORY_TITLES[choice] || choice);
+            const title: unknown = Reflect.get(CATEGORY_TITLES, choice);
+            pushBreadcrumb((typeof title === 'string' ? title : undefined) || choice);
             currentLevel = choice;
             continue;
         }

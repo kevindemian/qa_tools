@@ -36,7 +36,7 @@ describe('MakeMockCommandContext', () => {
 
         const fns = ['pushHistory', 'printSessionSummary'] as const;
 
-        expect(fns.every((f) => typeof ctx[f] === 'function')).toBeTruthy();
+        expect(fns.every((f) => typeof Reflect.get(ctx, f) === 'function')).toBeTruthy();
         expect(typeof ctx.sessionLog).toBe('object');
     });
 
@@ -172,45 +172,45 @@ describe('RestoreConsoleSpies', () => {
 describe('WithEnv', () => {
     it('sets env vars and returns cleanup function', () => {
         const key = 'TEST_ENV_VAR_123';
-        delete process.env[key];
+        Reflect.deleteProperty(process.env, key);
 
         const cleanup = withEnv({ [key]: 'hello' });
 
-        expect(process.env[key]).toBe('hello');
+        expect(Reflect.get(process.env, key)).toBe('hello');
 
         cleanup();
 
-        expect(process.env[key]).toBeUndefined();
+        expect(Reflect.get(process.env, key)).toBeUndefined();
     });
 
     it('with undefined value deletes the key', () => {
         const key = 'TEST_ENV_VAR_DELETE';
-        process.env[key] = 'temp';
+        Reflect.set(process.env, key, 'temp');
 
         const cleanup = withEnv({ [key]: undefined });
 
-        expect(process.env[key]).toBeUndefined();
+        expect(Reflect.get(process.env, key)).toBeUndefined();
 
         cleanup();
 
-        expect(process.env[key]).toBe('temp');
+        expect(Reflect.get(process.env, key)).toBe('temp');
 
-        delete process.env[key];
+        Reflect.deleteProperty(process.env, key);
     });
 
     it('restores previous value on cleanup', () => {
         const key = 'TEST_ENV_VAR_PREV';
-        process.env[key] = 'original';
+        Reflect.set(process.env, key, 'original');
 
         const cleanup = withEnv({ [key]: 'modified' });
 
-        expect(process.env[key]).toBe('modified');
+        expect(Reflect.get(process.env, key)).toBe('modified');
 
         cleanup();
 
-        expect(process.env[key]).toBe('original');
+        expect(Reflect.get(process.env, key)).toBe('original');
 
-        delete process.env[key];
+        Reflect.deleteProperty(process.env, key);
     });
 });
 

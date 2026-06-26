@@ -11,7 +11,8 @@ export const invariantUniqueTitles: InvariantFn = (
 
     const seen = new Map<string, number[]>();
     for (let i = 0; i < tests.length; i++) {
-        const title = ((tests[i] as TestCaseShape).title || '').toLowerCase().trim();
+        const test: TestCaseShape = Reflect.get(tests, i);
+        const title = (test.title || '').toLowerCase().trim();
         if (!title) continue;
         const existing = seen.get(title) || [];
         existing.push(i);

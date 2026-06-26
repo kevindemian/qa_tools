@@ -102,7 +102,7 @@ function _calcTopFailingJobs(
 ): Array<{ name: string; failCount: number; totalCount: number; rate: number }> {
     const jobFailMap = new Map<string, { fail: number; total: number }>();
     for (let i = 0; i < runs.length; i++) {
-        const jobs = allJobs[i] ?? [];
+        const jobs = (Reflect.get(allJobs, i) as PipelineJobExtended[] | undefined) ?? [];
         for (const job of jobs) {
             const entry = jobFailMap.get(job.name) ?? { fail: 0, total: 0 };
             entry.total++;

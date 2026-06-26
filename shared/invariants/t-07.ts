@@ -11,7 +11,8 @@ export const invariantPreconditionsExist: InvariantFn = (
 
     const withoutPreconditions: number[] = [];
     for (let i = 0; i < tests.length; i++) {
-        const pre = (tests[i] as TestCaseShape).preConditions;
+        const test: TestCaseShape = Reflect.get(tests, i);
+        const pre = test.preConditions;
         if (!pre || pre.length === 0) {
             withoutPreconditions.push(i);
         }

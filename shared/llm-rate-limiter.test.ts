@@ -7,16 +7,22 @@ vi.mock('./config', () => {
                 return mockConfig['llmApiKey'] ?? '';
             },
             get(key: string) {
-                return mockConfig[key] ?? undefined;
+                return Reflect.get(mockConfig, key);
             },
             set(key: string, value: string) {
-                mockConfig[key] = value;
+                Reflect.set(mockConfig, key, value);
             },
             resetInstance() {
-                Object.keys(mockConfig).forEach((k) => delete mockConfig[k]);
+                Object.keys(mockConfig).forEach((k) => Reflect.deleteProperty(mockConfig, k));
             },
             reset() {
-                Object.keys(mockConfig).forEach((k) => delete mockConfig[k]);
+                Object.keys(mockConfig).forEach((k) => Reflect.deleteProperty(mockConfig, k));
+            },
+            resetInstance() {
+                Object.keys(mockConfig).forEach((k) => Reflect.deleteProperty(mockConfig, k));
+            },
+            reset() {
+                Object.keys(mockConfig).forEach((k) => Reflect.deleteProperty(mockConfig, k));
             },
         },
     };
