@@ -1,19 +1,19 @@
-#!/usr/bin/env bash
+#!/usr/bin/env sh
 # Pre-push hook: --no-verify detection + CI checks + validation hook + security scan
-set -euo pipefail
+set -e
 
 PROJECT_ROOT="$(cd "$(dirname "$0")/.." && pwd)"
 AUDIT_LOG="$PROJECT_ROOT/.opencode/warden/audit.log"
 
 # ─── Security: --no-verify detection ────────────────────────────────────
-if [[ "${GIT_PUSH_NO_VERIFY:-0}" == "1" ]]; then
+if [ "${GIT_PUSH_NO_VERIFY:-0}" = "1" ]; then
   TIMESTAMP=$(date -Iseconds)
   USER_NAME=$(git config user.name || echo "unknown")
   USER_EMAIL=$(git config user.email || echo "unknown")
   BRANCH=$(git rev-parse --abbrev-ref HEAD 2>/dev/null || echo "unknown")
 
   BYPASS_MARKER="$PROJECT_ROOT/.opencode/warden/.bypass-authorized"
-  if [[ -f "$BYPASS_MARKER" ]]; then
+  if [ -f "$BYPASS_MARKER" ]; then
     echo "[pre-push] Authorized bypass detected. Logging to $AUDIT_LOG"
     mkdir -p "$(dirname "$AUDIT_LOG")"
     echo "{\"timestamp\":\"$TIMESTAMP\",\"type\":\"bypass\",\"subtype\":\"push-no-verify\",\"user\":\"$USER_NAME <$USER_EMAIL>\",\"branch\":\"$BRANCH\",\"authorized\":true}" >> "$AUDIT_LOG"
@@ -62,7 +62,7 @@ echo "--- Tests ---"
 npm test
 
 # Security log scan
-if [[ -x "$PROJECT_ROOT/scripts/scan-sec-logs.sh" ]]; then
+if [ -x "$PROJECT_ROOT/scripts/scan-sec-logs.sh" ]; then
   echo "--- Security log scan ---"
   "$PROJECT_ROOT/scripts/scan-sec-logs.sh" --quiet
 fi
