@@ -29,7 +29,9 @@
         "jira_management/**/*.ts",
         "git_triggers/**/*.ts",
         "e2e/**/*.ts",
-        "scripts/**/*.ts"
+        "scripts/**/*.ts",
+        ".tmp/**/*.ts",
+        ".shared/**/*.ts"
     ],
     "exclude": ["node_modules", "docs-archive"]
 }

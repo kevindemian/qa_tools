@@ -149,7 +149,7 @@ function buildContextLine(): string {
 function _selectProject(): { projectName: string | null; names: string[] } {
     const state = loadState();
     const allProjects = getProjects();
-    const names = Object.keys(allProjects).sort();
+    const names = Object.keys(allProjects).sort((a, b) => a.localeCompare(b));
     displayProjects(names, state['lastProject'] as string);
     const firstDefault = (state['lastProject'] as string) || '';
     const firstChoice = prompt('Escolha um projeto', {

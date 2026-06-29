@@ -51,7 +51,7 @@ export function filePathCompleter(line: string, extensions?: string[]): [string[
             }
             return extensions.some((ext) => lowerE.endsWith(ext));
         })
-        .sort()
+        .sort((a, b) => a.localeCompare(b))
         .map((e) => {
             const full = path.join(dir, e);
             try {

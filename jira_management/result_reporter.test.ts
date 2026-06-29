@@ -159,12 +159,12 @@ describe('CreateTestExecutionFromResults', () => {
     let linkManager: JiraLinkManager;
 
     beforeEach(() => {
-        jiraResource = vi.mocked(new JiraResource('fake-token', 'http://jira/rest/api/2'));
+        jiraResource = vi.mocked(new JiraResource('fake-token', 'https://jira/rest/api/2'));
         jiraResource.getJiraResource = vi.fn() as typeof jiraResource.getJiraResource;
         jiraResource.postJiraResource = vi.fn() as typeof jiraResource.postJiraResource;
         jiraResource.putJiraResource = vi.fn() as typeof jiraResource.putJiraResource;
 
-        linkJiraRes = vi.mocked(new JiraResource('fake-token', 'http://jira/rest/api/2'));
+        linkJiraRes = vi.mocked(new JiraResource('fake-token', 'https://jira/rest/api/2'));
         linkJiraRes.getJiraResource = vi.fn() as typeof linkJiraRes.getJiraResource;
         linkJiraRes.postJiraResource = vi.fn() as typeof linkJiraRes.postJiraResource;
         linkJiraRes.getJiraResource.mockImplementation((url: string) => {

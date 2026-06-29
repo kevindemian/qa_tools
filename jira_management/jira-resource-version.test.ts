@@ -45,7 +45,7 @@ function buildResource(): JiraResource {
     vi.mocked(createHttpClient).mockReturnValue(
         createMockAxiosInstance({ get: mockGet, post: mockPost, put: mockPut }),
     );
-    return new JiraResource('test-token', 'http://test-jira.com');
+    return new JiraResource('test-token', 'https://test-jira.com');
 }
 
 describe('Jira Resource Version', () => {

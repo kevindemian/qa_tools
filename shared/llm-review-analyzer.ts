@@ -25,7 +25,7 @@ export const HEDGING_PATTERNS = [
 export function detectHedging(text: string): number {
     let count = 0;
     for (const pattern of HEDGING_PATTERNS) {
-        count += (text.match(pattern) || []).length;
+        count += (pattern.exec(text) || []).length;
     }
     return count;
 }
@@ -142,7 +142,7 @@ export function stripVerdict(response: string): string {
     const lines = response.split('\n');
     return lines
         .map((l) => {
-            const match = l.match(VERDICT_PREFIX_RE);
+            const match = VERDICT_PREFIX_RE.exec(l);
             if (match) return l.slice(match[0].length).trim();
             return l;
         })

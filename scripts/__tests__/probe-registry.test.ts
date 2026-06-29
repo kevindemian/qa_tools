@@ -110,8 +110,8 @@ describe('Probe-registry', () => {
             const costChanges = diff.changed.filter((c: { field: string }) => c.field === 'costPer1kPrompt');
 
             expect(costChanges).toHaveLength(1);
-            expect(costChanges[0]?.old).toBe(0.0025);
-            expect(costChanges[0]?.new).toBe(0.003);
+            expect(costChanges[0]?.old).toBeCloseTo(0.0025);
+            expect(costChanges[0]?.new).toBeCloseTo(0.003);
         });
 
         it('returns empty diff when nothing changed', async () => {expect.hasAssertions();

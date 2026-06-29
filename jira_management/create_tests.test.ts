@@ -136,7 +136,7 @@ describe('CreateTestExecution', () => {
     let postJiraResourceSpy: Mock;
 
     beforeEach(() => {
-        jiraResource = vi.mocked(new JiraResource('fake-token', 'http://jira/rest/api/2'));
+        jiraResource = vi.mocked(new JiraResource('fake-token', 'https://jira/rest/api/2'));
         getJiraResourceSpy = vi.spyOn(jiraResource, 'getJiraResource');
         postJiraResourceSpy = vi.spyOn(jiraResource, 'postJiraResource');
         const linkManager = new JiraLinkManager(jiraResource);
@@ -287,11 +287,11 @@ describe('CreateTestExecutionWithLinks', () => {
     let linkPostJiraResourceSpy: Mock;
 
     beforeEach(() => {
-        jiraResource = vi.mocked(new JiraResource('fake-token', 'http://jira/rest/api/2'));
+        jiraResource = vi.mocked(new JiraResource('fake-token', 'https://jira/rest/api/2'));
         vi.spyOn(jiraResource, 'getJiraResource');
         vi.spyOn(jiraResource, 'postJiraResource');
 
-        linkJiraRes = vi.mocked(new JiraResource('fake-token', 'http://jira/rest/api/2'));
+        linkJiraRes = vi.mocked(new JiraResource('fake-token', 'https://jira/rest/api/2'));
         vi.spyOn(linkJiraRes, 'getJiraResource');
         linkPostJiraResourceSpy = vi.spyOn(linkJiraRes, 'postJiraResource');
         linkJiraRes.getJiraResource.mockImplementation((url: string) => {
@@ -556,7 +556,7 @@ describe('CreateTestsFromJson', () => {
     const FS = vi.mocked({ ...fs, ...mockFsMod } as typeof fs);
 
     function makeJiraResource(): Mocked<JiraResource> {
-        const r = vi.mocked(new JiraResource('fake-token', 'http://jira/rest/api/2'));
+        const r = vi.mocked(new JiraResource('fake-token', 'https://jira/rest/api/2'));
         vi.spyOn(r, 'getJiraResource');
         vi.spyOn(r, 'postJiraResource');
         return r;
@@ -581,7 +581,7 @@ describe('CreateTestsFromJson', () => {
             linkManager: makeLinkManager(),
             linkManagerXray: makeLinkManager(),
             project_name: 'TESTPROJ' as const,
-            base_url: 'http://jira',
+            base_url: 'https://jira',
             sessionLog: createMockLogger(),
             onBusy: vi.fn<(...args: [boolean]) => void>(),
         } satisfies Parameters<typeof createTestsFromJson>[0];
@@ -702,7 +702,7 @@ describe('ReadCsvTests (via createTestsFromCsv)', () => {
     let csvResource: Mocked<CsvResource>;
 
     function makeJiraResForCsv(): Mocked<JiraResource> {
-        const r = vi.mocked(new JiraResource('fake-token', 'http://jira/rest/api/2'));
+        const r = vi.mocked(new JiraResource('fake-token', 'https://jira/rest/api/2'));
         vi.spyOn(r, 'getJiraResource');
         vi.spyOn(r, 'postJiraResource');
         return r;
@@ -722,7 +722,7 @@ describe('ReadCsvTests (via createTestsFromCsv)', () => {
             linkManagerXray: makeLinkMgrForCsv(),
             csvResource,
             project_name: 'TESTPROJ',
-            base_url: 'http://jira',
+            base_url: 'https://jira',
             sessionLog,
             onBusy: vi.fn<(...args: [boolean]) => void>(),
             ...overrides,
@@ -783,7 +783,7 @@ describe('CreateTestsFromCsv', () => {
     let csvResource: Mocked<CsvResource>;
 
     function makeJiraResCSV(): Mocked<JiraResource> {
-        const r = vi.mocked(new JiraResource('fake-token', 'http://jira/rest/api/2'));
+        const r = vi.mocked(new JiraResource('fake-token', 'https://jira/rest/api/2'));
         vi.spyOn(r, 'getJiraResource');
         vi.spyOn(r, 'postJiraResource');
         return r;
@@ -797,7 +797,7 @@ describe('CreateTestsFromCsv', () => {
             linkManagerXray: new JiraLinkManager(createMockJiraResource()),
             csvResource,
             project_name: 'TESTPROJ' as const,
-            base_url: 'http://jira' as const,
+            base_url: 'https://jira' as const,
             sessionLog: createMockLogger(),
             onBusy: vi.fn<(...args: [boolean]) => void>(),
             csvPath: '/test.csv' as const,

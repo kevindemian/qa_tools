@@ -86,7 +86,7 @@ describe('Quarantine.Integration', () => {
             expect(entry).toBeDefined();
             expect(nonNull(entry).testTitle).toBe('login.spec.ts');
             expect(nonNull(entry).reason).toBe('flaky rate > 5%');
-            expect(nonNull(entry).flakyRate).toBe(0.7);
+            expect(nonNull(entry).flakyRate).toBeCloseTo(0.7);
             expect(nonNull(entry).bugUrl).toBe('https://jira/PROJ-42');
             expect(nonNull(entry).reviewRequired).toBeTruthy();
             expect(nonNull(entry).permanent).toBeFalsy();
@@ -185,7 +185,7 @@ describe('Quarantine.Integration', () => {
             expect(pipeline.excluded).toHaveLength(2);
             expect(pipeline.metadata.totalExcluded).toBe(2);
             expect(pipeline.metadata.totalTests).toBe(20);
-            expect(pipeline.metadata.ratio).toBe(0.1);
+            expect(pipeline.metadata.ratio).toBeCloseTo(0.1);
             expect(pipeline.metadata.warning).toContain('exceed 5%');
         });
 
@@ -199,7 +199,7 @@ describe('Quarantine.Integration', () => {
 
             const pipeline = generatePipelineQuarantine(undefined, 100);
 
-            expect(pipeline.metadata.ratio).toBe(0.01);
+            expect(pipeline.metadata.ratio).toBeCloseTo(0.01);
             expect(pipeline.metadata.warning).toBe('');
         });
     });

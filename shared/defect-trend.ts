@@ -67,7 +67,7 @@ function buildTrendTable(trends: DefectTrendPoint[]): string {
             allCategories.add(cat);
         }
     }
-    const cats = Array.from(allCategories).sort();
+    const cats = Array.from(allCategories).sort((a, b) => a.localeCompare(b));
 
     const headerCells = cats
         .map(
@@ -130,7 +130,7 @@ export function aggregateDefectTrends(classifications: FailureClassification[] |
         if (!maxDate || date > maxDate) maxDate = date;
     }
 
-    const sortedDates = Array.from(grouped.keys()).sort();
+    const sortedDates = Array.from(grouped.keys()).sort((a, b) => a.localeCompare(b));
     const trends: DefectTrendPoint[] = sortedDates.map((date) => {
         const cats = grouped.get(date);
         const total = cats ? Array.from(cats.values()).reduce((sum, v) => sum + v, 0) : 0;

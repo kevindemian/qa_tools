@@ -33,7 +33,7 @@ function structuralHash(obj: unknown): string {
         return `a:[${obj.map(structuralHash).join(',')}]`;
     }
     if (typeof obj === 'object') {
-        const keys = Object.keys(obj).sort();
+        const keys = Object.keys(obj).sort((a, b) => a.localeCompare(b));
         const entries = Object.entries(obj);
         return `o:{${keys.map((k) => {
             const entry = entries.find(([ek]) => ek === k);

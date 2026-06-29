@@ -7,6 +7,8 @@ import prettier from 'eslint-config-prettier';
 import security from 'eslint-plugin-security';
 import promise from 'eslint-plugin-promise';
 import vitest from '@vitest/eslint-plugin';
+import sonarjs from 'eslint-plugin-sonarjs';
+import unusedImports from 'eslint-plugin-unused-imports';
 
 const tsconfigRootDir = dirname(fileURLToPath(import.meta.url));
 
@@ -23,6 +25,7 @@ export default tseslint.config(
     ...tseslint.configs.recommendedTypeChecked,
     security.configs.recommended,
     promise.configs['flat/recommended'],
+    sonarjs.configs.recommended,
     {
         files: [
             '**/*.test.ts',
@@ -164,9 +167,15 @@ export default tseslint.config(
                 tsconfigRootDir,
             },
         },
+        plugins: {
+            'unused-imports': unusedImports,
+        },
         rules: {
+            'prefer-const': 'error',
+            'no-var': 'error',
             '@typescript-eslint/no-explicit-any': ['error', { fixToUnknown: true }],
             '@typescript-eslint/no-unused-vars': ['error', { argsIgnorePattern: '^_' }],
+            'unused-imports/no-unused-imports': 'error',
             '@typescript-eslint/return-await': 'error',
             '@typescript-eslint/prefer-readonly': 'error',
             '@typescript-eslint/no-require-imports': 'error',
@@ -269,14 +278,6 @@ export default tseslint.config(
         },
     },
     {
-        files: ['shared/test-utils.test.ts'],
-        rules: { 'no-console': 'off' },
-    },
-    {
-        files: ['shared/logger.ts', 'shared/logger.test.ts'],
-        rules: { 'no-console': 'off' },
-    },
-    {
         ignores: [
             'node_modules/',
             'docs-archive/',
@@ -286,6 +287,8 @@ export default tseslint.config(
             '**/*.mjs',
             '.config/',
             '.opencode/',
+            '.tmp/',
+            '.shared/',
         ],
     },
     prettier,

@@ -63,16 +63,14 @@ export function createMockRootLogger(filePath?: string): MockLogger {
 }
 
 export function createConsoleSpies() {
-    const log = vi.spyOn(console, 'log').mockImplementation(() => {});
-    const error = vi.spyOn(console, 'error').mockImplementation(() => {});
-    const warn = vi.spyOn(console, 'warn').mockImplementation(() => {});
-    return { log, error, warn };
+    const stdout = vi.spyOn(process.stdout, 'write').mockImplementation(() => true);
+    const stderr = vi.spyOn(process.stderr, 'write').mockImplementation(() => true);
+    return { stdout, stderr };
 }
 
 export function restoreConsoleSpies(spies: ReturnType<typeof createConsoleSpies>): void {
-    spies.log.mockRestore();
-    spies.error.mockRestore();
-    spies.warn.mockRestore();
+    spies.stdout.mockRestore();
+    spies.stderr.mockRestore();
 }
 
 /** Create a mock CommandContext with standard default fields for handler tests.

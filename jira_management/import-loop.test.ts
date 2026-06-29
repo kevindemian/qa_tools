@@ -294,7 +294,7 @@ describe('Import Loop', () => {
                 linker,
                 projectName: 'PROJ',
                 jiraLabels: [],
-                baseUrl: 'http://jira',
+                baseUrl: 'https://jira',
                 opLog,
                 sourcePath: '/path.csv',
                 sourceType: 'csv',

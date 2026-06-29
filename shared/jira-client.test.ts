@@ -63,8 +63,9 @@ describe('Jira Client', () => {
             });
 
             it('uses Bearer auth when mode is server (default)', () => {
-                new JiraClient(TOKEN, BASE_URL);
+                const client = new JiraClient(TOKEN, BASE_URL);
 
+                expect(client).toBeDefined();
                 expect(createHttpClient).toHaveBeenCalledWith(
                     expect.objectContaining({
                         authHeader: { Authorization: `Bearer ${TOKEN}` },
@@ -73,8 +74,9 @@ describe('Jira Client', () => {
             });
 
             it('uses Basic auth when mode is cloud', () => {
-                new JiraClient(CLOUD_CRED, BASE_URL, 'cloud');
+                const client = new JiraClient(CLOUD_CRED, BASE_URL, 'cloud');
 
+                expect(client).toBeDefined();
                 expect(createHttpClient).toHaveBeenCalledWith(
                     expect.objectContaining({
                         authHeader: { Authorization: `Basic ${Buffer.from(CLOUD_CRED).toString('base64')}` },

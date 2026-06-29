@@ -64,7 +64,7 @@ describe('MappingFileGenerator', () => {
                 },
             ],
         );
-        const files = fs.readdirSync(tmpDir).sort();
+        const files = fs.readdirSync(tmpDir).sort((a, b) => a.localeCompare(b));
 
         expect(files).toStrictEqual([base + '-jira-mapping.json', base + '-jira-mapping.md', base + '-summary.txt']);
 

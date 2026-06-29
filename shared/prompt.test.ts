@@ -356,7 +356,9 @@ describe('Prompt', () => {
 
             it('constructs SingleBar with format config', async () => {expect.hasAssertions();
 
-                new prompt.ProgressBar(100, { width: 30 });
+                const bar = new prompt.ProgressBar(100, { width: 30 });
+
+                expect(bar).toBeDefined();
                 const cliProgressMod = await import('cli-progress');
 
                 expect(vi.spyOn(cliProgressMod, 'SingleBar')).toHaveBeenCalledWith(
