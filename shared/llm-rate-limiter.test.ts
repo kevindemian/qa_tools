@@ -18,12 +18,6 @@ vi.mock('./config', () => {
             reset() {
                 Object.keys(mockConfig).forEach((k) => Reflect.deleteProperty(mockConfig, k));
             },
-            resetInstance() {
-                Object.keys(mockConfig).forEach((k) => Reflect.deleteProperty(mockConfig, k));
-            },
-            reset() {
-                Object.keys(mockConfig).forEach((k) => Reflect.deleteProperty(mockConfig, k));
-            },
         },
     };
 });

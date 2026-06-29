@@ -714,7 +714,7 @@ async function _dispatchAction(
     }
     if (finalChoice === '0' || cmd === '/exit' || cmd === '/sair') return _handleExit();
 
-    const handlerFn: ((m: unknown, projectName: string, names: string[]) => boolean | Promise<boolean>) | undefined = Reflect.get(ACTION_HANDLERS, finalChoice);
+    const handlerFn = Reflect.get(ACTION_HANDLERS, finalChoice) as ((m: GitProvider, projectName: string, names: string[]) => boolean | Promise<boolean>) | undefined;
     if (handlerFn !== undefined) return handlerFn(m, projectName, names);
     warn('Opção inválida.');
     return false;

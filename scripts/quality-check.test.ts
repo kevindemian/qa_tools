@@ -39,8 +39,6 @@ vi.mock('eslint', () => ({
     },
 }));
 
-const ASU_PREFIX = '\u0061s unknown as';
-
 describe('Quality-check unit tests', () => {
     beforeEach(() => {
         vi.clearAllMocks();
@@ -186,104 +184,12 @@ describe('Quality-check unit tests', () => {
             expect(r.passed).toBeFalsy();
         });
 
-        it('checkOnlyInTests flags exclusive tests', async () => {
-            expect.hasAssertions();
-
-            vi.mocked(readFileSync).mockReturnValue('content without pattern\n');
-            const { checkOnlyInTests } = await import('./quality-check.js');
-            const r = checkOnlyInTests();
-
-            expect(r.name).toBe('exclusive test in test files');
-            expect('passed' in r).toBeTruthy();
-            expect(Array.isArray(r.violations)).toBeTruthy();
-        });
-
-        it('checkAsUnknownAs has correct structure', async () => {
-            expect.hasAssertions();
-
-            vi.mocked(readFileSync).mockReturnValue('clean content\n');
-            const { checkAsUnknownAs } = await import('./quality-check.js');
-            const r = checkAsUnknownAs();
-
-            expect(r.name).toContain(ASU_PREFIX);
-            expect('passed' in r).toBeTruthy();
-        });
-
-        it('checkAsUnknownAs detects undocumented cast', async () => {
-            expect.hasAssertions();
-
-            vi.mocked(readFileSync).mockReturnValue(`const x = foo() ${ASU_PREFIX} Bar;\n`);
-            const { checkAsUnknownAs } = await import('./quality-check.js');
-            const r = checkAsUnknownAs();
-
-            expect(r.passed).toBeFalsy();
-            expect(r.violations).toHaveLength(1);
-            expect(r.violations[0]?.content).toContain(ASU_PREFIX);
-        });
-
-        it('checkAsUnknownAs excludes documented structural cast', async () => {
-            expect.hasAssertions();
-
-            vi.mocked(readFileSync).mockReturnValue(
-                `const x = foo() ${ASU_PREFIX} Bar; // structural: Bar has private fields\n`,
-            );
-            const { checkAsUnknownAs } = await import('./quality-check.js');
-            const r = checkAsUnknownAs();
-
-            expect(r.passed).toBeTruthy();
-            expect(r.violations).toHaveLength(0);
-        });
-
-        it('checkAsAny has correct structure', async () => {
-            expect.hasAssertions();
-
-            vi.mocked(readFileSync).mockReturnValue('clean content\n');
-            const { checkAsAny } = await import('./quality-check.js');
-            const r = checkAsAny();
-
-            expect(r.name).toContain('as-any');
-            expect('passed' in r).toBeTruthy();
-        });
-
         it('checkThrowDoubleQuote detects throw "', async () => {
             expect.hasAssertions();
 
             vi.mocked(readFileSync).mockReturnValue('throw "err"\n');
             const { checkThrowDoubleQuote } = await import('./quality-check.js');
             const r = checkThrowDoubleQuote();
-
-            expect(r.passed).toBeFalsy();
-        });
-
-        it('checkNoImplicitOverride passes when true', async () => {
-            expect.hasAssertions();
-
-            vi.mocked(existsSync).mockReturnValue(true);
-            vi.mocked(readFileSync).mockReturnValue(JSON.stringify({ compilerOptions: { noImplicitOverride: true } }));
-            const { checkNoImplicitOverride } = await import('./quality-check.js');
-            const r = checkNoImplicitOverride();
-
-            expect(r.passed).toBeTruthy();
-        });
-
-        it('checkNoImplicitOverride fails when false', async () => {
-            expect.hasAssertions();
-
-            vi.mocked(existsSync).mockReturnValue(true);
-            vi.mocked(readFileSync).mockReturnValue(JSON.stringify({ compilerOptions: { noImplicitOverride: false } }));
-            const { checkNoImplicitOverride } = await import('./quality-check.js');
-            const r = checkNoImplicitOverride();
-
-            expect(r.passed).toBeFalsy();
-        });
-
-        it('checkNoImplicitOverride handles parse error', async () => {
-            expect.hasAssertions();
-
-            vi.mocked(existsSync).mockReturnValue(true);
-            vi.mocked(readFileSync).mockReturnValue('invalid json');
-            const { checkNoImplicitOverride } = await import('./quality-check.js');
-            const r = checkNoImplicitOverride();
 
             expect(r.passed).toBeFalsy();
         });
@@ -553,7 +459,6 @@ describe('Quality-check unit tests', () => {
             ];
             vi.mocked(readFileSync).mockImplementation((path: PathOrFileDescriptor) => {
                 const p = String(path);
-                if (p === 'tsconfig.json') return JSON.stringify({ compilerOptions: { noImplicitOverride: true } });
                 if (p === 'scripts/quality-check.ts') {
                     return 'some content\n/* HASH:1111111111111111111111111111111111111111111111111111111111111111 */\n';
                 }

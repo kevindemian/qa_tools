@@ -12,7 +12,7 @@ const mockConfig = vi.hoisted(() => {
     return {
         ..._data,
         get: vi.fn((key: string) => {
-            const val: string | undefined = Reflect.get(_data, key);
+            const val: string | boolean | undefined = Reflect.get(_data, key);
             return val || undefined;
         }),
     };
