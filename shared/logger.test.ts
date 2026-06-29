@@ -15,7 +15,7 @@ import { Logger, rootLogger, maskDeep } from './logger.js';
 import { nonNull } from './test-utils.js';
 
 function testDir(label: string): string {
-    const dir = `/tmp/qa-tools-logger-${label}-${Math.random().toString(36).slice(2, 10)}`;
+    const dir = `/tmp/qa-tools-logger-${label}-${crypto.randomUUID()}`;
     fs.mkdirSync(dir, { recursive: true });
     return dir;
 }
@@ -27,25 +27,19 @@ describe('Logger', () => {
 
     describe('RootLogger', () => {
         it('is a Logger instance', () => {
-            
             expect(rootLogger).toBeInstanceOf(Logger);
-            
         });
 
         it('has empty context', () => {
-            
             expect(rootLogger.context).toStrictEqual({});
-            
         });
     });
-
 
     describe('Child()', () => {
         it('creates a child with merged context', () => {
             const child = rootLogger.child({ operation: 'test', resource: 'Jira' });
 
             expect(child.context).toStrictEqual({ operation: 'test', resource: 'Jira' });
-            
         });
 
         it('child inherits parent context and adds new keys', () => {
@@ -53,7 +47,6 @@ describe('Logger', () => {
             const child = parent.child({ operation: 'csv-import' });
 
             expect(child.context).toStrictEqual({ session: 'jira', operation: 'csv-import' });
-            
         });
 
         it('child does not mutate parent context', () => {
@@ -62,10 +55,8 @@ describe('Logger', () => {
 
             expect(parent.context).toStrictEqual({ session: 'jira' });
             expect(Object.keys(parent.context)).not.toContain('operation');
-            
         });
     });
-
 
     describe('WriteFile', () => {
         function writeAndCheck(
@@ -81,7 +72,7 @@ describe('Logger', () => {
             const testDirPath = testDir('write');
             const cfg = Config.create({ logFile: true, logDir: testDirPath });
             const logger = new Logger({ test: 'write' }, cfg);
-            (Reflect.get(logger, level) as (m: string, d?: unknown) => void)(msg, data);
+            (logger[level] as (m: string, d?: unknown) => void).call(logger, msg, data);
 
             const date = formatDateISO();
             const logFile = path.join(testDirPath, `qa-tools-${date}.log`);
@@ -102,7 +93,6 @@ describe('Logger', () => {
             const result = writeAndCheck('info', 'test');
 
             expect(result.fileFound).toBeTruthy();
-            
         });
 
         it('writes a log line with INFO level and context', () => {
@@ -112,7 +102,6 @@ describe('Logger', () => {
             expect(result.lastLine).toContain('[INFO]');
             expect(result.lastLine).toContain('[write]');
             expect(result.lastLine).toContain('Mensagem de teste');
-            
         });
 
         it('writes a log line with WARN level and context', () => {
@@ -121,7 +110,6 @@ describe('Logger', () => {
             expect(result.fileFound).toBeTruthy();
             expect(result.lastLine).toContain('[WARN]');
             expect(result.lastLine).toContain('Aviso contextualizado');
-            
         });
 
         it('writes data param as JSON in the log line', () => {
@@ -129,7 +117,6 @@ describe('Logger', () => {
 
             expect(result.fileFound).toBeTruthy();
             expect(result.lastLine).toContain('{"status":429,"attempt":3}');
-            
         });
 
         it('has no ANSI escape codes in the log file', () => {
@@ -137,7 +124,6 @@ describe('Logger', () => {
 
             expect(result.fileFound).toBeTruthy();
             expect(result.lastLine).not.toContain(String.fromCharCode(0x1b) + '[');
-            
         });
 
         it('writes ERROR level correctly', () => {
@@ -146,7 +132,6 @@ describe('Logger', () => {
             expect(result.fileFound).toBeTruthy();
             expect(result.lastLine).toContain('[ERROR]');
             expect(result.lastLine).toContain('Erro grave');
-            
         });
 
         it('rotates log file when size exceeds limit', () => {
@@ -168,10 +153,8 @@ describe('Logger', () => {
             const rotatedContent = fs.readFileSync(rotated, 'utf8');
 
             expect(rotatedContent).toContain('[INFO]');
-            
         });
     });
-
 
     describe('EnsureDir error paths', () => {
         let spyError: MockInstance | undefined;
@@ -186,18 +169,16 @@ describe('Logger', () => {
             logger._fileError = true;
 
             expect(logger._ensureDir()).toBeFalsy();
-            
         });
 
         it('returns false when LOG_FILE is not true', () => {
             const logger = new Logger({}, Config.create({ logFile: false }));
 
             expect(logger._ensureDir()).toBeFalsy();
-            
         });
 
-        it('sets _fileError and console.error on mkdir failure', () => {
-            spyError = vi.spyOn(console, 'error').mockImplementation(() => {});
+        it('sets _fileError and stderr.write on mkdir failure', () => {
+            spyError = vi.spyOn(process.stderr, 'write').mockImplementation(() => true);
             const testDirPath = testDir('ensure');
             const cfg = Config.create({ logFile: true, logDir: testDirPath });
             const logger = new Logger({}, cfg);
@@ -210,7 +191,6 @@ describe('Logger', () => {
             expect(result).toBeFalsy();
             expect(logger._fileError).toBeTruthy();
             expect(spyError).toHaveBeenCalledWith(expect.stringContaining('Falha ao criar diretório'));
-            
         });
 
         it('reads _bytesWritten from statSync when log file already exists', () => {
@@ -224,10 +204,8 @@ describe('Logger', () => {
 
             expect(result).toBeTruthy();
             expect(logger._bytesWritten).toBeGreaterThan(0);
-            
         });
     });
-
 
     describe('RotateIfNeeded error paths', () => {
         afterEach(() => {
@@ -247,11 +225,10 @@ describe('Logger', () => {
             logger._rotateIfNeeded();
 
             expect(fs.existsSync(path.join(testDirPath, `qa-tools-${date}.2.log`))).toBeTruthy();
-            
         });
 
         it('logs error on rename failure during rotation', () => {
-            const spyError = vi.spyOn(console, 'error').mockImplementation(() => {});
+            const spyError = vi.spyOn(process.stderr, 'write').mockImplementation(() => true);
             const testDirPath = testDir('rotfail');
             const date = formatDateISO();
             const logFile = path.join(testDirPath, `qa-tools-${date}.log`);
@@ -271,7 +248,6 @@ describe('Logger', () => {
         });
     });
 
-
     describe('WriteFile error paths', () => {
         let spyError: MockInstance | undefined;
 
@@ -287,14 +263,14 @@ describe('Logger', () => {
             circular.self = circular;
             logger._writeFile('INFO', 'test', circular);
             const logFile = logger.filePath;
-            const content = logFile && fs.existsSync(logFile) ? fs.readFileSync(logFile, 'utf8') : '[data serialization error]';
+            const content =
+                logFile && fs.existsSync(logFile) ? fs.readFileSync(logFile, 'utf8') : '[data serialization error]';
 
             expect(content).toContain('[data serialization error]');
-            
         });
 
         it('sets _fileError and logs on append failure', () => {
-            spyError = vi.spyOn(console, 'error').mockImplementation(() => {});
+            spyError = vi.spyOn(process.stderr, 'write').mockImplementation(() => true);
             const testDirPath = testDir('append');
             const logger = new Logger({}, Config.create({ logFile: true, logDir: testDirPath }));
             vi.spyOn(fs, 'appendFileSync').mockImplementationOnce(() => {
@@ -304,17 +280,14 @@ describe('Logger', () => {
 
             expect(logger._fileError).toBeTruthy();
             expect(spyError).toHaveBeenCalledWith(expect.stringContaining('Falha ao escrever no arquivo'));
-            
         });
     });
-
 
     describe('FilePath getter', () => {
         it('returns null when LOG_FILE is not true', () => {
             const logger = new Logger({}, Config.create({ logFile: false }));
 
             expect(logger.filePath).toBeNull();
-            
         });
 
         it('returns a path when LOG_FILE=true and file was written', () => {
@@ -326,17 +299,14 @@ describe('Logger', () => {
             expect(fp).not.toBeNull();
             expect(fp).toContain('qa-tools-');
             expect(fp).toContain('.log');
-            
         });
     });
-
 
     describe('MaskDeep', () => {
         it('masks values for keys matching token/secret/key', () => {
             const result = maskDeep({ token: 'abcdefghij', name: 'public', secret: 'my-secret-value!' });
 
             expect(JSON.stringify(result)).toBe(
-            
                 JSON.stringify({ token: 'abcd****', name: 'public', secret: 'my-s****' }),
             );
         });
@@ -346,21 +316,16 @@ describe('Logger', () => {
 
             expect(JSON.stringify(maskDeep(input))).toBe(JSON.stringify({ token: 'abcd****' }));
             expect(JSON.stringify(input)).toBe(JSON.stringify({ token: 'abcdefghij' }));
-            
         });
 
         it('handles null/undefined gracefully', () => {
-            
             expect(maskDeep(null)).toBeNull();
             expect(maskDeep(undefined)).toBeUndefined();
-            
         });
 
         it('handles non-object values', () => {
-            
             expect(maskDeep('string')).toBe('string');
             expect(maskDeep(42)).toBe(42);
-            
         });
 
         it('recursively masks nested arrays', () => {
@@ -368,7 +333,6 @@ describe('Logger', () => {
             const expected = { items: [{ token: 'abcd****' }, { name: 'public' }] };
 
             expect(JSON.stringify(maskDeep(input))).toBe(JSON.stringify(expected));
-            
         });
 
         it('masks keys matching password/authorization patterns', () => {
@@ -376,26 +340,20 @@ describe('Logger', () => {
             const expected = { password: 'supe****', authorization: 'Bear****' };
 
             expect(JSON.stringify(maskDeep(input))).toBe(JSON.stringify(expected));
-            
         });
 
         it('maskValue with non-string value does not mask', () => {
-            
             expect(JSON.stringify(maskDeep({ secret: 123 }))).toBe(JSON.stringify({ secret: 123 }));
-            
         });
 
         it('maskValue with short string (≤8 chars) returns ****', () => {
-            
             expect(JSON.stringify(maskDeep({ secret: 'ab' }))).toBe(JSON.stringify({ secret: '****' }));
-            
         });
     });
 
-
     describe('WriteConsole error with data', () => {
         it('appends short JSON data to ERROR console output', () => {
-            const spyError = vi.spyOn(console, 'error').mockImplementation(() => {});
+            const spyError = vi.spyOn(process.stderr, 'write').mockImplementation(() => true);
             const logger = new Logger();
             logger._writeConsole('ERROR', 'fail', { code: 500 });
 
@@ -405,7 +363,7 @@ describe('Logger', () => {
         });
 
         it('omits data when data is long for ERROR level', () => {
-            const spyError = vi.spyOn(console, 'error').mockImplementation(() => {});
+            const spyError = vi.spyOn(process.stderr, 'write').mockImplementation(() => true);
             const logger = new Logger();
             const bigData = { big: 'x'.repeat(200) };
             logger._writeConsole('ERROR', 'fail', bigData);
@@ -416,8 +374,8 @@ describe('Logger', () => {
             spyError.mockRestore();
         });
 
-        it('_writeConsole with unknown level uses default prefix "?" and default console.log', () => {
-            const spyLog = vi.spyOn(console, 'log').mockImplementation(() => {});
+        it('_writeConsole with unknown level uses default prefix "?" and default stdout.write', () => {
+            const spyLog = vi.spyOn(process.stdout, 'write').mockImplementation(() => true);
             const logger = new Logger();
             logger._writeConsole('TRACE', 'fallback test');
 
@@ -428,7 +386,6 @@ describe('Logger', () => {
         });
     });
 
-
     describe('WriteFileOnly', () => {
         afterEach(() => {
             vi.restoreAllMocks();
@@ -437,7 +394,7 @@ describe('Logger', () => {
         it('writes to file without console output', () => {
             const testDirPath = testDir('wfo');
             const logger = new Logger({ test: 'wfo' }, Config.create({ logFile: true, logDir: testDirPath }));
-            const spyLog = vi.spyOn(console, 'log').mockImplementation(() => {});
+            const spyLog = vi.spyOn(process.stdout, 'write').mockImplementation(() => true);
             logger.writeFileOnly('INFO', 'file-only message');
 
             expect(spyLog).not.toHaveBeenCalled();
@@ -446,11 +403,10 @@ describe('Logger', () => {
             const content = logFile && fs.existsSync(logFile) ? fs.readFileSync(logFile, 'utf8') : 'file-only message';
 
             expect(content).toContain('file-only message');
-            
+
             spyLog.mockRestore();
         });
     });
-
 
     describe('Level filtering', () => {
         it('does not call process.stdout.write for levels below LOG_LEVEL', () => {
@@ -482,12 +438,10 @@ const PBT_SECRET_RE = /token|secret|key|password|authorization/i;
 
 describe('MaskDeep (PBT)', () => {
     it('primitives and null return input unchanged', () => {
-        
         expect.hasAssertions();
 
         fc.assert(
             fc.property(fc.constantFrom(null, undefined, 42, 'hello', true, false), (input) => {
-
                 expect(maskDeep(input)).toStrictEqual(input);
 
                 return true;
@@ -496,7 +450,6 @@ describe('MaskDeep (PBT)', () => {
     });
 
     it('does not mutate original object', () => {
-        
         expect.hasAssertions();
 
         fc.assert(
@@ -512,7 +465,6 @@ describe('MaskDeep (PBT)', () => {
     });
 
     it('sensitive keys (token/secret/password) have "****" in output values', () => {
-        
         expect.hasAssertions();
 
         fc.assert(
@@ -524,21 +476,17 @@ describe('MaskDeep (PBT)', () => {
                 ),
                 (input) => {
                     const result = maskDeep(input);
-                    if (typeof result !== 'object' || result === null) return true;
+                    if (typeof result !== 'object' || result === null) return;
                     const sensitiveValues = Object.values(result).filter((v) => typeof v === 'string');
                     for (const v of sensitiveValues) {
-                        
                         expect(v).toContain('****');
-                        
                     }
-                    return true;
                 },
             ),
         );
     });
 
     it('non-sensitive keys (name/id/status) have unchanged values', () => {
-        
         expect.hasAssertions();
 
         fc.assert(
@@ -548,7 +496,7 @@ describe('MaskDeep (PBT)', () => {
                 }),
                 (input) => {
                     const result = maskDeep(input);
-                    if (typeof result !== 'object' || result === null) return true;
+                    if (typeof result !== 'object' || result === null) return;
                     const pairs = Object.entries(result);
                     const origPairs = Object.entries(input);
 
@@ -556,18 +504,14 @@ describe('MaskDeep (PBT)', () => {
                         const match = origPairs.find(([k]) => k === key);
 
                         expect(match).toBeDefined();
-
                         expect(match?.[1]).toBe(val);
-                        
                     }
-                    return true;
                 },
             ),
         );
     });
 
     it('sensitive keys nested inside non-sensitive objects are masked', () => {
-        
         expect.hasAssertions();
 
         fc.assert(
@@ -583,9 +527,8 @@ describe('MaskDeep (PBT)', () => {
                     const check = (obj: unknown): void => {
                         if (!obj || typeof obj !== 'object') return;
                         for (const [key, val] of Object.entries(obj)) {
-                            
                             expect(PBT_SECRET_RE.test(key) && typeof val === 'string' ? val : '****').toContain('****');
-                            
+
                             if (typeof val === 'object' && val !== null) check(val);
                         }
                     };
@@ -597,7 +540,6 @@ describe('MaskDeep (PBT)', () => {
     });
 
     it('sensitive keys in arrays are masked', () => {
-        
         expect.hasAssertions();
 
         fc.assert(
@@ -622,7 +564,6 @@ describe('MaskDeep (PBT)', () => {
     });
 
     it('short sensitive strings (≤8 chars) are fully masked to "****"', () => {
-        
         expect.hasAssertions();
 
         fc.assert(
@@ -632,13 +573,10 @@ describe('MaskDeep (PBT)', () => {
                 }),
                 (input) => {
                     const result = maskDeep(input);
-                    if (typeof result !== 'object' || result === null) return true;
+                    if (typeof result !== 'object' || result === null) return;
                     for (const v of Object.values(result)) {
-                        
                         expect(v).toBe('****');
-                        
                     }
-                    return true;
                 },
             ),
         );

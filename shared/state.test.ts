@@ -19,11 +19,10 @@ import { nonNull } from './test-utils.js';
 
 import fs from 'fs';
 import path from 'path';
-import os from 'os';
 import Config from './config.js';
 import * as stateModule from './state.js';
 
-const XDG_HOME = '/tmp/test-xdg-state';
+const XDG_HOME = path.join(path.dirname(new URL(import.meta.url).pathname), '..', '..', '.tmp', 'test-xdg-state');
 const STATE_PATH = path.join(XDG_HOME, 'qa-tools', 'state.json');
 
 function makeConfig(): Config {
@@ -134,7 +133,7 @@ describe('State', () => {
     });
 
     describe('State migration from old path', () => {
-        const OLD_STATE_PATH = path.join(os.homedir(), '.qa_tools_state.json');
+        const OLD_STATE_PATH = path.join(path.dirname(new URL(import.meta.url).pathname), '.qa_tools_state.json');
 
         it('copies old state to new path when old exists and new does not', () => {
             const mocks = mockFs({
@@ -178,10 +177,7 @@ describe('State', () => {
             });
             state.load(config);
 
-            expect(mockRootLogger.warn).toHaveBeenCalledWith(
-                expect.stringContaining('corrompido'),
-                expect.anything(),
-            );
+            expect(mockRootLogger.warn).toHaveBeenCalledWith(expect.stringContaining('corrompido'), expect.anything());
         });
     });
 
@@ -242,7 +238,7 @@ describe('State', () => {
 
     describe('MigrateOldState catch', () => {
         it('logs warn when readFileSync throws during migration', () => {
-            const OLD_STATE_PATH = path.join(os.homedir(), '.qa_tools_state.json');
+            const OLD_STATE_PATH = path.join(path.dirname(new URL(import.meta.url).pathname), '.qa_tools_state.json');
             mockFs({
                 [OLD_STATE_PATH]: JSON.stringify({ lastProject: 'MIGRATED' }),
             });

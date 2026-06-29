@@ -45,41 +45,25 @@ describe('Opencode Db Maintenance', () => {
         mockMkdirSync.mockReturnValue(undefined);
         mockCopyFileSync.mockReturnValue(undefined);
         mockStatSync.mockReturnValue({ dev: 1, isFile: () => true });
-        mockExecFileSync.mockImplementation((bin: string, args: string[], _opts?: unknown) => {
-            if (bin === 'stat') {
-                return '65536\n';
-            }
-            if (bin === 'sqlite3') {
-                const sqlCmd = args[1];
-                if (sqlCmd === 'PRAGMA journal_mode=WAL;') {
-                    return 'wal\n';
-                }
-                if (sqlCmd === 'PRAGMA integrity_check;') {
-                    return 'ok\n';
-                }
-                if (sqlCmd === 'PRAGMA wal_checkpoint(TRUNCATE);') {
-                    return '0,0,0\n';
-                }
-                if (sqlCmd === 'PRAGMA quick_check;') {
-                    return 'ok\n';
-                }
-                if (sqlCmd === 'REINDEX;') {
-                    return '';
-                }
-                if (sqlCmd === 'VACUUM;') {
-                    return '';
-                }
-                if (sqlCmd === 'PRAGMA journal_mode=DELETE;') {
-                    return 'delete\n';
-                }
-                return '';
-            }
+        const sqliteResponses: Record<string, string> = {
+            'PRAGMA journal_mode=WAL;': 'wal\n',
+            'PRAGMA integrity_check;': 'ok\n',
+            'PRAGMA wal_checkpoint(TRUNCATE);': '0,0,0\n',
+            'PRAGMA quick_check;': 'ok\n',
+            'REINDEX;': '',
+            'VACUUM;': '',
+            'PRAGMA journal_mode=DELETE;': 'delete\n',
+        };
+        mockExecFileSync.mockImplementation((bin: string, args: string[]) => {
+            if (bin === 'stat') return '65536\n';
+            if (bin === 'sqlite3') return sqliteResponses[args[1] as keyof typeof sqliteResponses] ?? '';
             return '';
         });
     });
 
     describe('DB constants', () => {
-        it('dB_DIR is derived from homedir and ends with share/opencode', async () => {expect.hasAssertions();
+        it('dB_DIR is derived from homedir and ends with share/opencode', async () => {
+            expect.hasAssertions();
 
             const { DB_DIR: dir } = await loadModule();
 
@@ -87,14 +71,16 @@ describe('Opencode Db Maintenance', () => {
             expect(dir).not.toBe('');
         });
 
-        it('dB_TIMEOUT_MS defaults to 300000 (5min) for large databases', async () => {expect.hasAssertions();
+        it('dB_TIMEOUT_MS defaults to 300000 (5min) for large databases', async () => {
+            expect.hasAssertions();
 
             const { DB_TIMEOUT_MS } = await loadModule();
 
             expect(DB_TIMEOUT_MS).toBe(300_000);
         });
 
-        it('dB_TIMEOUT_MS may be overridden by OPENCODE_DB_TIMEOUT_MS env var', async () => {expect.hasAssertions();
+        it('dB_TIMEOUT_MS may be overridden by OPENCODE_DB_TIMEOUT_MS env var', async () => {
+            expect.hasAssertions();
 
             const origEnv = process.env['OPENCODE_DB_TIMEOUT_MS'];
             process.env['OPENCODE_DB_TIMEOUT_MS'] = '60000';
@@ -112,7 +98,8 @@ describe('Opencode Db Maintenance', () => {
     });
 
     describe('EnsureDbDir', () => {
-        it('creates directory recursively and returns true on success', async () => {expect.hasAssertions();
+        it('creates directory recursively and returns true on success', async () => {
+            expect.hasAssertions();
 
             mockMkdirSync.mockReturnValue(undefined);
             const { ensureDbDir, DB_DIR: dir } = await loadModule();
@@ -122,7 +109,8 @@ describe('Opencode Db Maintenance', () => {
             expect(mockMkdirSync).toHaveBeenCalledWith(dir, { recursive: true });
         });
 
-        it('returns false when mkdir throws', async () => {expect.hasAssertions();
+        it('returns false when mkdir throws', async () => {
+            expect.hasAssertions();
 
             mockMkdirSync.mockImplementation(() => {
                 throw new Error('EACCES');
@@ -135,7 +123,8 @@ describe('Opencode Db Maintenance', () => {
     });
 
     describe('ModeCheckOnly', () => {
-        it('returns PASS when integrity and WAL checkpoint succeed', async () => {expect.hasAssertions();
+        it('returns PASS when integrity and WAL checkpoint succeed', async () => {
+            expect.hasAssertions();
 
             const { modeCheckOnly } = await loadModule();
             const result = modeCheckOnly(DB_PATH);
@@ -147,7 +136,8 @@ describe('Opencode Db Maintenance', () => {
             expect(result.dbSizeBytes).toBe(65536);
         });
 
-        it('reports integrity check errors', async () => {expect.hasAssertions();
+        it('reports integrity check errors', async () => {
+            expect.hasAssertions();
 
             mockExecFileSync.mockImplementation((bin: string, args: string[]) => {
                 if (bin === 'sqlite3' && args[1]?.includes('integrity_check')) {
@@ -163,7 +153,8 @@ describe('Opencode Db Maintenance', () => {
             expect(result.integrityCheck).toContain('ERROR');
         });
 
-        it('reports WAL checkpoint errors', async () => {expect.hasAssertions();
+        it('reports WAL checkpoint errors', async () => {
+            expect.hasAssertions();
 
             mockExecFileSync.mockImplementation((bin: string, args: string[]) => {
                 if (bin === 'sqlite3' && args[1]?.includes('wal_checkpoint')) {
@@ -181,7 +172,8 @@ describe('Opencode Db Maintenance', () => {
     });
 
     describe('ModeRepair', () => {
-        it('does nothing when integrity already passes', async () => {expect.hasAssertions();
+        it('does nothing when integrity already passes', async () => {
+            expect.hasAssertions();
 
             const { modeRepair } = await loadModule();
             const result = modeRepair(DB_PATH);
@@ -191,7 +183,8 @@ describe('Opencode Db Maintenance', () => {
             expect(result.errors).toHaveLength(0);
         });
 
-        it('repairs via REINDEX when integrity fails and recovers', async () => {expect.hasAssertions();
+        it('repairs via REINDEX when integrity fails and recovers', async () => {
+            expect.hasAssertions();
 
             let callCount = 0;
             mockExecFileSync.mockImplementation((bin: string, args: string[]) => {
@@ -220,7 +213,8 @@ describe('Opencode Db Maintenance', () => {
             );
         });
 
-        it('reports when reindex fails to repair', async () => {expect.hasAssertions();
+        it('reports when reindex fails to repair', async () => {
+            expect.hasAssertions();
 
             mockExecFileSync.mockImplementation((bin: string, args: string[]) => {
                 if (bin === 'sqlite3' && args[1]?.includes('integrity_check')) {
@@ -238,7 +232,8 @@ describe('Opencode Db Maintenance', () => {
     });
 
     describe('ModeVacuum', () => {
-        it('vacuums when integrity passes', async () => {expect.hasAssertions();
+        it('vacuums when integrity passes', async () => {
+            expect.hasAssertions();
 
             const { modeVacuum } = await loadModule();
             const result = modeVacuum(DB_PATH);
@@ -253,7 +248,8 @@ describe('Opencode Db Maintenance', () => {
             );
         });
 
-        it('skips vacuum when integrity fails', async () => {expect.hasAssertions();
+        it('skips vacuum when integrity fails', async () => {
+            expect.hasAssertions();
 
             mockExecFileSync.mockImplementation((bin: string, args: string[]) => {
                 if (bin === 'sqlite3' && args[1]?.includes('integrity_check')) {
@@ -271,7 +267,8 @@ describe('Opencode Db Maintenance', () => {
     });
 
     describe('GetDbSizeBytes', () => {
-        it('returns file size when stat succeeds', async () => {expect.hasAssertions();
+        it('returns file size when stat succeeds', async () => {
+            expect.hasAssertions();
 
             const { getDbSizeBytes } = await loadModule();
             const size = getDbSizeBytes();
@@ -279,7 +276,8 @@ describe('Opencode Db Maintenance', () => {
             expect(size).toBe(65536);
         });
 
-        it('returns 0 when stat fails', async () => {expect.hasAssertions();
+        it('returns 0 when stat fails', async () => {
+            expect.hasAssertions();
 
             mockExecFileSync.mockImplementation((bin: string) => {
                 if (bin === 'stat') throw new Error('ENOENT');
@@ -291,7 +289,8 @@ describe('Opencode Db Maintenance', () => {
             expect(size).toBe(0);
         });
 
-        it('returns 0 when database file does not exist', async () => {expect.hasAssertions();
+        it('returns 0 when database file does not exist', async () => {
+            expect.hasAssertions();
 
             mockExistsSync.mockReturnValue(false);
             const { getDbSizeBytes } = await loadModule();
@@ -303,30 +302,33 @@ describe('Opencode Db Maintenance', () => {
     });
 
     describe('BackupDb', () => {
-        it('copies database to .pre-run path and returns it', async () => {expect.hasAssertions();
+        it('copies database to .pre-run path and returns it', async () => {
+            expect.hasAssertions();
 
             const { backupDb } = await loadModule();
             mockCopyFileSync.mockReturnValue(undefined);
-            const result = backupDb('/tmp/test.db');
+            const result = backupDb('/var/data/test.db');
 
-            expect(result).toBe('/tmp/test.db.pre-run');
-            expect(mockCopyFileSync).toHaveBeenCalledWith('/tmp/test.db', '/tmp/test.db.pre-run');
+            expect(result).toBe('/var/data/test.db.pre-run');
+            expect(mockCopyFileSync).toHaveBeenCalledWith('/var/data/test.db', '/var/data/test.db.pre-run');
         });
 
-        it('returns null when copy fails', async () => {expect.hasAssertions();
+        it('returns null when copy fails', async () => {
+            expect.hasAssertions();
 
             const { backupDb } = await loadModule();
             mockCopyFileSync.mockImplementation(() => {
                 throw new Error('EACCES');
             });
-            const result = backupDb('/tmp/test.db');
+            const result = backupDb('/var/data/test.db');
 
             expect(result).toBeNull();
         });
     });
 
     describe('EnsureWalMode', () => {
-        it('returns WAL journal mode string on success', async () => {expect.hasAssertions();
+        it('returns WAL journal mode string on success', async () => {
+            expect.hasAssertions();
 
             const { ensureWalMode } = await loadModule();
             const result = ensureWalMode();
@@ -339,7 +341,8 @@ describe('Opencode Db Maintenance', () => {
             );
         });
 
-        it('returns null when sqlite3 throws', async () => {expect.hasAssertions();
+        it('returns null when sqlite3 throws', async () => {
+            expect.hasAssertions();
 
             mockExecFileSync.mockImplementation((bin: string) => {
                 if (bin === 'sqlite3') throw new Error('ENOENT');
@@ -353,7 +356,8 @@ describe('Opencode Db Maintenance', () => {
     });
 
     describe('CheckMountDevice', () => {
-        it('returns warning when DB and ~/.local are on the same device', async () => {expect.hasAssertions();
+        it('returns warning when DB and ~/.local are on the same device', async () => {
+            expect.hasAssertions();
 
             mockStatSync.mockReturnValue({ dev: 1, isFile: () => true });
             const { checkMountDevice } = await loadModule();
@@ -363,7 +367,8 @@ describe('Opencode Db Maintenance', () => {
             expect(result).toContain('mesmo device');
         });
 
-        it('returns null when DB and ~/.local are on different devices', async () => {expect.hasAssertions();
+        it('returns null when DB and ~/.local are on different devices', async () => {
+            expect.hasAssertions();
 
             mockStatSync
                 .mockReturnValueOnce({ dev: 1, isFile: () => true })
@@ -374,7 +379,8 @@ describe('Opencode Db Maintenance', () => {
             expect(result).toBeNull();
         });
 
-        it('returns null when stat fails', async () => {expect.hasAssertions();
+        it('returns null when stat fails', async () => {
+            expect.hasAssertions();
 
             mockStatSync.mockImplementation(() => {
                 throw new Error('ENOENT');
@@ -387,10 +393,11 @@ describe('Opencode Db Maintenance', () => {
     });
 
     describe('PrintResult', () => {
-        it('prints PASS when no errors', async () => {expect.hasAssertions();
+        it('prints PASS when no errors', async () => {
+            expect.hasAssertions();
 
             const { printResult } = await loadModule();
-            const consoleSpy = vi.spyOn(console, 'log').mockImplementation(() => {});
+            const stdoutSpy = vi.spyOn(process.stdout, 'write').mockImplementation(() => true);
             printResult({
                 mode: 'check-only',
                 dbPath: DB_PATH,
@@ -402,15 +409,16 @@ describe('Opencode Db Maintenance', () => {
                 errors: [],
             });
 
-            expect(consoleSpy).toHaveBeenCalledWith(expect.stringContaining('PASS'));
+            expect(stdoutSpy).toHaveBeenCalledWith(expect.stringContaining('PASS'));
 
-            consoleSpy.mockRestore();
+            stdoutSpy.mockRestore();
         });
 
-        it('prints FAIL with error details when errors exist', async () => {expect.hasAssertions();
+        it('prints FAIL with error details when errors exist', async () => {
+            expect.hasAssertions();
 
             const { printResult } = await loadModule();
-            const consoleSpy = vi.spyOn(console, 'log').mockImplementation(() => {});
+            const stdoutSpy = vi.spyOn(process.stdout, 'write').mockImplementation(() => true);
             printResult({
                 mode: 'repair',
                 dbPath: DB_PATH,
@@ -422,15 +430,16 @@ describe('Opencode Db Maintenance', () => {
                 errors: ['REINDEX failed to repair integrity'],
             });
 
-            expect(consoleSpy).toHaveBeenCalledWith(expect.stringContaining('FAIL'));
-            expect(consoleSpy).toHaveBeenCalledWith(expect.stringContaining('REINDEX failed'));
+            expect(stdoutSpy).toHaveBeenCalledWith(expect.stringContaining('FAIL'));
+            expect(stdoutSpy).toHaveBeenCalledWith(expect.stringContaining('REINDEX failed'));
 
-            consoleSpy.mockRestore();
+            stdoutSpy.mockRestore();
         });
     });
 
     describe('CheckSqlite3', () => {
-        it('returns true when sqlite3 --version succeeds', async () => {expect.hasAssertions();
+        it('returns true when sqlite3 --version succeeds', async () => {
+            expect.hasAssertions();
 
             mockExecFileSync.mockImplementation((bin: string) => {
                 if (bin === 'sqlite3') return '3.40.0\n';
@@ -441,7 +450,8 @@ describe('Opencode Db Maintenance', () => {
             expect(checkSqlite3()).toBeTruthy();
         });
 
-        it('returns false when sqlite3 throws', async () => {expect.hasAssertions();
+        it('returns false when sqlite3 throws', async () => {
+            expect.hasAssertions();
 
             mockExecFileSync.mockImplementation((bin: string) => {
                 if (bin === 'sqlite3') throw new Error('ENOENT');
@@ -471,63 +481,68 @@ describe('Opencode Db Maintenance', () => {
             });
         });
 
-        it('returns 3 when sqlite3 not available', async () => {expect.hasAssertions();
+        it('returns 3 when sqlite3 not available', async () => {
+            expect.hasAssertions();
 
             mockExecFileSync.mockImplementation((bin: string) => {
                 if (bin === 'sqlite3') throw new Error('ENOENT');
                 return '';
             });
             const { main } = await import('./opencode-db-maintenance.js');
-            const consoleSpy = vi.spyOn(console, 'error').mockImplementation(() => {});
+            const stderrSpy = vi.spyOn(process.stderr, 'write').mockImplementation(() => true);
             const result = main();
 
             expect(result).toBe(3);
 
-            consoleSpy.mockRestore();
+            stderrSpy.mockRestore();
         });
 
-        it('returns 0 when database not found — first run, creates directory', async () => {expect.hasAssertions();
+        it('returns 0 when database not found — first run, creates directory', async () => {
+            expect.hasAssertions();
 
             mockExistsSync.mockReturnValue(false);
             const { main } = await import('./opencode-db-maintenance.js');
-            const consoleSpy = vi.spyOn(console, 'log').mockImplementation(() => {});
+            const stdoutSpy = vi.spyOn(process.stdout, 'write').mockImplementation(() => true);
             const result = main();
 
             expect(result).toBe(0);
             expect(mockMkdirSync).toHaveBeenCalledWith(expect.any(String), { recursive: true });
-            expect(consoleSpy).toHaveBeenCalledWith(expect.stringContaining('creating directory'));
+            expect(stdoutSpy).toHaveBeenCalledWith(expect.stringContaining('creating directory'));
 
-            consoleSpy.mockRestore();
+            stdoutSpy.mockRestore();
         });
 
-        it('returns 1 when database not found but mkdir fails', async () => {expect.hasAssertions();
+        it('returns 1 when database not found but mkdir fails', async () => {
+            expect.hasAssertions();
 
             mockExistsSync.mockReturnValue(false);
             mockMkdirSync.mockImplementation(() => {
                 throw new Error('EACCES');
             });
             const { main } = await import('./opencode-db-maintenance.js');
-            const consoleSpy = vi.spyOn(console, 'error').mockImplementation(() => {});
+            const stderrSpy = vi.spyOn(process.stderr, 'write').mockImplementation(() => true);
             const result = main();
 
             expect(result).toBe(1);
 
-            consoleSpy.mockRestore();
+            stderrSpy.mockRestore();
         });
 
-        it('returns 0 for check-only mode and prints result', async () => {expect.hasAssertions();
+        it('returns 0 for check-only mode and prints result', async () => {
+            expect.hasAssertions();
 
             const { main } = await loadModule();
-            const consoleSpy = vi.spyOn(console, 'log').mockImplementation(() => {});
+            const stdoutSpy = vi.spyOn(process.stdout, 'write').mockImplementation(() => true);
             const result = main();
 
             expect(result).toBe(0);
-            expect(consoleSpy).toHaveBeenCalledWith(expect.stringContaining('PASS'));
+            expect(stdoutSpy).toHaveBeenCalledWith(expect.stringContaining('PASS'));
 
-            consoleSpy.mockRestore();
+            stdoutSpy.mockRestore();
         });
 
-        it('returns 1 when integrity check fails', async () => {expect.hasAssertions();
+        it('returns 1 when integrity check fails', async () => {
+            expect.hasAssertions();
 
             mockExecFileSync.mockImplementation((bin: string, args: string[]) => {
                 if (bin === 'sqlite3' && args[0] === '--version') return '3.40.0\n';
@@ -538,15 +553,16 @@ describe('Opencode Db Maintenance', () => {
                 return '';
             });
             const { main } = await loadModule();
-            const consoleSpy = vi.spyOn(console, 'log').mockImplementation(() => {});
+            const stdoutSpy = vi.spyOn(process.stdout, 'write').mockImplementation(() => true);
             const result = main();
 
             expect(result).toBe(1);
 
-            consoleSpy.mockRestore();
+            stdoutSpy.mockRestore();
         });
 
-        it('returns 0 with --repair flag', async () => {expect.hasAssertions();
+        it('returns 0 with --repair flag', async () => {
+            expect.hasAssertions();
 
             mockExecFileSync.mockImplementation((bin: string, args: string[]) => {
                 if (bin === 'sqlite3' && args[0] === '--version') return '3.40.0\n';
@@ -556,16 +572,17 @@ describe('Opencode Db Maintenance', () => {
             const { main } = await loadModule();
             const origArgv = process.argv;
             Object.defineProperty(process, 'argv', { value: ['node', 'script', '--repair'], configurable: true });
-            const consoleSpy = vi.spyOn(console, 'log').mockImplementation(() => {});
+            const stdoutSpy = vi.spyOn(process.stdout, 'write').mockImplementation(() => true);
             const result = main();
 
             expect(result).toBe(0);
 
-            consoleSpy.mockRestore();
+            stdoutSpy.mockRestore();
             Object.defineProperty(process, 'argv', { value: origArgv, configurable: true });
         });
 
-        it('returns 0 with --vacuum flag', async () => {expect.hasAssertions();
+        it('returns 0 with --vacuum flag', async () => {
+            expect.hasAssertions();
 
             mockExecFileSync.mockImplementation((bin: string, args: string[]) => {
                 if (bin === 'sqlite3' && args[0] === '--version') return '3.40.0\n';
@@ -575,18 +592,19 @@ describe('Opencode Db Maintenance', () => {
             const { main } = await loadModule();
             const origArgv = process.argv;
             Object.defineProperty(process, 'argv', { value: ['node', 'script', '--vacuum'], configurable: true });
-            const consoleSpy = vi.spyOn(console, 'log').mockImplementation(() => {});
+            const stdoutSpy = vi.spyOn(process.stdout, 'write').mockImplementation(() => true);
             const result = main();
 
             expect(result).toBe(0);
 
-            consoleSpy.mockRestore();
+            stdoutSpy.mockRestore();
             Object.defineProperty(process, 'argv', { value: origArgv, configurable: true });
         });
     });
 
     describe('ModeVacuum WAL error', () => {
-        it('reports WAL checkpoint error during vacuum', async () => {expect.hasAssertions();
+        it('reports WAL checkpoint error during vacuum', async () => {
+            expect.hasAssertions();
 
             let callCount = 0;
             mockExecFileSync.mockImplementation((bin: string, args: string[]) => {
@@ -607,7 +625,8 @@ describe('Opencode Db Maintenance', () => {
     });
 
     describe('RunAsScript', () => {
-        it('calls main and exits with its return code', async () => {expect.hasAssertions();
+        it('calls main and exits with its return code', async () => {
+            expect.hasAssertions();
 
             mockExecFileSync.mockImplementation((bin: string) => {
                 if (bin === 'sqlite3') return '3.40.0\n';
@@ -616,14 +635,13 @@ describe('Opencode Db Maintenance', () => {
             });
             const { runAsScript } = await loadModule();
             const exitSpy = vi.spyOn(process, 'exit').mockImplementation(() => undefined as never);
-            const consoleSpy = vi.spyOn(console, 'log').mockImplementation(() => {});
+            const stdoutSpy = vi.spyOn(process.stdout, 'write').mockImplementation(() => true);
             runAsScript();
 
             expect(exitSpy).toHaveBeenCalledWith(0);
 
-            consoleSpy.mockRestore();
+            stdoutSpy.mockRestore();
             exitSpy.mockRestore();
         });
     });
-
 });
