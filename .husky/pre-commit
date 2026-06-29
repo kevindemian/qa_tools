@@ -1,2 +1,51 @@
+#!/usr/bin/env sh
+set -e
+
+# Clear stale COMMIT_EDITMSG from previous commit.
+rm -f "$(git rev-parse --show-toplevel)/.git/COMMIT_EDITMSG"
+
+echo "=== Pre-commit checks ==="
+
+# Validation hook: self-test + staged diff check
+VALIDATION_HOOK="$HOME/.config/opencode/validation_hook.ts"
+if [ -f "$VALIDATION_HOOK" ]; then
+    echo "--- Validation hook (self-test) ---"
+    npx tsx "$VALIDATION_HOOK" --test
+
+    echo "--- Validation hook (diff check) ---"
+    STAGED_DIFF=$(git diff --cached -- . ':!.config/validation_hook.ts' ':!.husky/' ':!BACKLOG.md')
+    if [ -n "$STAGED_DIFF" ]; then
+        echo "$STAGED_DIFF" | grep '^[+]' | sed 's/^.//' | npx tsx "$VALIDATION_HOOK" --check --no-cache
+    else
+        echo "  (no staged changes to validate)"
+    fi
+fi
+
+# Rule-vigilant: scan security-critical config files
+VIGILANT="scripts/rule-vigilant.ts"
+if [ -f "$VIGILANT" ]; then
+    echo "--- Rule-vigilant scan ---"
+    for f in eslint.config.mjs .dependency-cruiser.js .gitleaks.toml AGENTS.md scripts/quality-check.ts; do
+        if [ -f "$f" ]; then
+            npx tsx "$VIGILANT" --file "$f" --quiet || echo "  [vigilant] warnings in $f"
+        fi
+    done
+fi
+
+# Typecheck
+echo "--- Typecheck ---"
+npx tsc --noEmit
+
+# Lint-staged (ESLint + Prettier on staged files)
+echo "--- Lint-staged ---"
 npx lint-staged
+
+# Lockfile integrity
+echo "--- Lockfile lint ---"
 npx lockfile-lint --path package-lock.json --type npm --allow-ssh
+
+# exclusive test detection in test files
+echo "--- Checking for exclusive tests ---"
+! grep -rn '[.]only(' --include='*.test.*' --exclude-dir=node_modules --exclude-dir=.git .
+
+echo "=== Pre-commit checks passed ==="

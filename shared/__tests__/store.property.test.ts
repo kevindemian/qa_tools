@@ -134,8 +134,8 @@ describe('Store — property-based', () => {
                     expect(list.length).toBeGreaterThanOrEqual(1);
 
                     for (let i = 1; i < list.length; i++) {
-                        const prev = Reflect.get(list, i - 1) as { timestamp: string } | undefined;
-                        const curr = Reflect.get(list, i) as { timestamp: string } | undefined;
+                        const prev = Reflect.get(list, i - 1) as { timestamp: number } | undefined;
+                        const curr = Reflect.get(list, i) as { timestamp: number } | undefined;
                         if (!prev || !curr) throw new Error('expected entries');
 
                         expect(prev.timestamp).toBeGreaterThanOrEqual(curr.timestamp);
@@ -190,8 +190,8 @@ describe('Store — property-based', () => {
                         expect(loaded).toHaveLength(entries.length);
 
                         for (let i = 0; i < entries.length; i++) {
-                            const loadedEntry = Reflect.get(loaded, entries.length - 1 - i) as { sha: string; timestamp: string } | undefined;
-                            const entry = Reflect.get(entries, i) as { sha: string; timestamp: string } | undefined;
+                            const loadedEntry = Reflect.get(loaded, entries.length - 1 - i) as { sha: string; timestamp: number } | undefined;
+                            const entry = Reflect.get(entries, i) as { sha: string; timestamp: number } | undefined;
                             if (!loadedEntry || !entry) throw new Error('expected entries');
 
                             expect(loadedEntry.sha).toBe(entry.sha);

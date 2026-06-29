@@ -1,0 +1,15 @@
+#!/usr/bin/env sh
+set -e
+
+# Commit-msg hook: validates the commit message via validation_hook.ts.
+# Runs after pre-commit, receives the message file path as $1.
+VALIDATION_HOOK="$HOME/.config/opencode/validation_hook.ts"
+if [ -f "$VALIDATION_HOOK" ]; then
+    GIT_DIR="$(git rev-parse --show-toplevel)/.git"
+    COMMIT_EDITMSG="$GIT_DIR/COMMIT_EDITMSG"
+    if [ "$(readlink -f "$1" 2>/dev/null)" != "$(readlink -f "$COMMIT_EDITMSG" 2>/dev/null)" ]; then
+        cp "$1" "$COMMIT_EDITMSG"
+        trap 'rm -f "$COMMIT_EDITMSG"' EXIT
+    fi
+    echo "# commit-msg: staged diff already validated by pre-commit" | npx tsx "$VALIDATION_HOOK" --check --no-cache
+fi
