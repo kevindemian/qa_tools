@@ -1,0 +1,2 @@
+npx lint-staged
+npx lockfile-lint --path package-lock.json --type npm --allow-ssh

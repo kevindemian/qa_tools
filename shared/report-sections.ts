@@ -61,7 +61,7 @@ export function buildHierarchySidebar(tests: FlatTest[]): string {
         if (suite) suites.add(suite);
     }
     if (suites.size === 0) return '';
-    const sorted = Array.from(suites).sort();
+    const sorted = Array.from(suites).sort((a, b) => a.localeCompare(b));
     let html = '<div class="sidebar">';
     html +=
         '<div style="font-weight:600;margin-bottom:6px;font-size:0.8rem;text-transform:uppercase;color:var(--color-text-muted)">Suites</div>';

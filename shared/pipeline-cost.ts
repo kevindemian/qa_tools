@@ -67,7 +67,7 @@ export function calculatePipelineCost(
     const totalCost = costByRun.reduce((sum, e) => sum + e.cost, 0);
     const totalDurationSec = costByRun.reduce((sum, e) => sum + e.durationSec, 0);
 
-    const sortedTimestamps = runs.map((r) => r.timestamp).sort();
+    const sortedTimestamps = runs.map((r) => r.timestamp).sort((a, b) => a.localeCompare(b));
     const period = {
         from: sortedTimestamps[0] ?? '',
         to: sortedTimestamps[sortedTimestamps.length - 1] ?? '',

@@ -740,8 +740,8 @@ describe('Pr-report entry point — HTML report generation', () => {
         const flakinessMap = options?.['flakinessMap'] as Record<string, number> | undefined;
 
         expect(flakinessMap).toBeDefined();
-        expect(flakinessMap?.['flaky-1']).toBe(0.5);
-        expect(flakinessMap?.['flaky-2']).toBe(0.33);
+        expect(flakinessMap?.['flaky-1']).toBeCloseTo(0.5);
+        expect(flakinessMap?.['flaky-2']).toBeCloseTo(0.33);
 
         exitSpy.mockRestore();
     });

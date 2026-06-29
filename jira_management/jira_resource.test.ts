@@ -67,7 +67,7 @@ let jiraResource: JiraResource;
 function buildResource(): void {
     mockClient = createMockAxiosInstance();
     vi.mocked(createHttpClient).mockReturnValue(mockClient);
-    jiraResource = new JiraResource('test-token', 'http://test-jira.com');
+    jiraResource = new JiraResource('test-token', 'https://test-jira.com');
 }
 
 describe('Jira_resource', () => {
@@ -1077,7 +1077,7 @@ describe('Jira_resource', () => {
 
             const result = await jiraResource.getFromOriginPath('rest/raven/1.0/api/test/TEST-1/testruns');
 
-            expect(mockClient['get']).toHaveBeenCalledWith('http://test-jira.com/rest/raven/1.0/api/test/TEST-1/testruns');
+            expect(mockClient['get']).toHaveBeenCalledWith('https://test-jira.com/rest/raven/1.0/api/test/TEST-1/testruns');
             expect(result).toStrictEqual(expected);
         });
 
@@ -1087,7 +1087,7 @@ describe('Jira_resource', () => {
 
             const result = await jiraResource.getFromOriginPath('/rest/raven/1.0/api/test/TEST-1/testruns');
 
-            expect(mockClient['get']).toHaveBeenCalledWith('http://test-jira.com/rest/raven/1.0/api/test/TEST-1/testruns');
+            expect(mockClient['get']).toHaveBeenCalledWith('https://test-jira.com/rest/raven/1.0/api/test/TEST-1/testruns');
             expect(result).toStrictEqual({ key: 'TEST-1' });
         });
 

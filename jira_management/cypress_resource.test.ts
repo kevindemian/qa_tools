@@ -18,7 +18,7 @@ describe('CypressResource', () => {
     beforeEach(() => {
         mockClient = createMockAxiosInstance();
         vi.mocked(createHttpClient).mockReturnValue(mockClient);
-        cypress = new CypressResource('http://cypress', 'token');
+        cypress = new CypressResource('https://cypress', 'token');
     });
 
     describe('GetCypressResource', () => {
@@ -50,7 +50,7 @@ describe('CypressResource', () => {
                 ],
             });
             const reportResult = await cypress.fetchReport({
-                cypressUrl: 'http://cypress',
+                cypressUrl: 'https://cypress',
                 cypressToken: 'tok',
                 startDate: '2024-01-01',
                 projects: ['PROJ'],
@@ -63,7 +63,7 @@ describe('CypressResource', () => {
 
             mockClient.get.mockResolvedValue({ data: { error: 'bad' } });
             const invalidResult = await cypress.fetchReport({
-                cypressUrl: 'http://cypress',
+                cypressUrl: 'https://cypress',
                 cypressToken: 'tok',
                 startDate: '2024-01-01',
                 projects: ['PROJ'],
@@ -82,7 +82,7 @@ describe('CypressResource', () => {
             });
 
             await cypress.fetchReport({
-                cypressUrl: 'http://cypress',
+                cypressUrl: 'https://cypress',
                 cypressToken: 'tok',
                 startDate: '2024-01-01',
                 projects: ['PROJ'],
@@ -101,7 +101,7 @@ describe('CypressResource', () => {
             });
 
             await cypress.fetchReport({
-                cypressUrl: 'http://cypress',
+                cypressUrl: 'https://cypress',
                 cypressToken: 'tok',
                 startDate: '2024-01-01',
                 projects: ['PROJ'],

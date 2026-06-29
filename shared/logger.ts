@@ -86,16 +86,16 @@ export class Logger {
                 this._bytesWritten = stat.size;
             } catch (err) {
                 if (!(err instanceof Error && 'code' in err && err['code'] === 'ENOENT')) {
-                    console.error(
-                        `[logger] Falha ao verificar arquivo de log: ${err instanceof Error ? err.message : String(err)}. Verifique permissões e integridade do diretório.`,
+                    process.stderr.write(
+                        `[logger] Falha ao verificar arquivo de log: ${err instanceof Error ? err.message : String(err)}. Verifique permissões e integridade do diretório.\n`,
                     );
                 }
             }
             return true;
         } catch (err) {
             this._fileError = true;
-            console.error(
-                `[logger] Falha ao criar diretório de log: ${err instanceof Error ? err.message : String(err)}. Verifique permissões e espaço em disco.`,
+            process.stderr.write(
+                `[logger] Falha ao criar diretório de log: ${err instanceof Error ? err.message : String(err)}. Verifique permissões e espaço em disco.\n`,
             );
             return false;
         }
@@ -115,8 +115,8 @@ export class Logger {
             fs.renameSync(this._filePathCached, rotated);
             this._bytesWritten = 0;
         } catch (err) {
-            console.error(
-                `[logger] Falha ao rotacionar log: ${err instanceof Error ? err.message : String(err)}. Verifique permissões e espaço em disco.`,
+            process.stderr.write(
+                `[logger] Falha ao rotacionar log: ${err instanceof Error ? err.message : String(err)}. Verifique permissões e espaço em disco.\n`,
             );
         }
     }
@@ -137,11 +137,11 @@ export class Logger {
         }
 
         if (level === 'ERROR') {
-            console.error(text);
+            process.stderr.write(text + '\n');
         } else if (level === 'WARN') {
-            console.warn(text);
+            process.stderr.write(text + '\n');
         } else {
-            console.log(text);
+            process.stdout.write(text + '\n');
         }
     }
 
@@ -158,8 +158,8 @@ export class Logger {
                 dataStr = ' | ' + JSON.stringify(maskDeep(data));
             } catch (err) {
                 dataStr = ' | [data serialization error]';
-                console.error(
-                    '[logger] Data serialization failed: ' + (err instanceof Error ? err.message : String(err)),
+                process.stderr.write(
+                    '[logger] Data serialization failed: ' + (err instanceof Error ? err.message : String(err)) + '\n',
                 );
             }
         }
@@ -172,8 +172,8 @@ export class Logger {
             this._bytesWritten += Buffer.byteLength(line);
         } catch (err) {
             this._fileError = true;
-            console.error(
-                `[logger] Falha ao escrever no arquivo de log: ${err instanceof Error ? err.message : String(err)}. Verifique permissões, espaço em disco e sistema de arquivos.`,
+            process.stderr.write(
+                `[logger] Falha ao escrever no arquivo de log: ${err instanceof Error ? err.message : String(err)}. Verifique permissões, espaço em disco e sistema de arquivos.\n`,
             );
         }
     }

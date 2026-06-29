@@ -58,7 +58,7 @@ function buildDayTable(days: SeasonalityDay[]): string {
             allCategories.add(cat);
         }
     }
-    const cats = Array.from(allCategories).sort();
+    const cats = Array.from(allCategories).sort((a, b) => a.localeCompare(b));
 
     const columns: TableColumn[] = [
         { key: 'day', label: 'Day' },
@@ -87,7 +87,7 @@ function buildHourTable(hours: SeasonalityHour[]): string {
             allCategories.add(cat);
         }
     }
-    const cats = Array.from(allCategories).sort();
+    const cats = Array.from(allCategories).sort((a, b) => a.localeCompare(b));
 
     const columns: TableColumn[] = [
         { key: 'hour', label: 'Hour', align: 'center' },

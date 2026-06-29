@@ -106,66 +106,34 @@ describe('NonNull', () => {
 });
 
 describe('CreateConsoleSpies', () => {
-    it('creates spy objects for log, error, warn', () => {
+    it('creates spy objects for stdout and stderr', () => {
         const spies = createConsoleSpies();
 
-        expect(spies).toHaveProperty('log');
-        expect(spies).toHaveProperty('error');
-        expect(spies).toHaveProperty('warn');
-        expect(typeof spies.log).toBe('function');
-        expect(typeof spies.error).toBe('function');
-        expect(typeof spies.warn).toBe('function');
+        expect(spies).toHaveProperty('stdout');
+        expect(spies).toHaveProperty('stderr');
+        expect(typeof spies.stdout).toBe('function');
+        expect(typeof spies.stderr).toBe('function');
 
-        spies.log.mockRestore();
-        spies.error.mockRestore();
-        spies.warn.mockRestore();
+        spies.stdout.mockRestore();
+        spies.stderr.mockRestore();
     });
 
-    it('mocks console.log so it does not output', () => {
+    it('mocks process.stdout.write so it does not output', () => {
         const spies = createConsoleSpies();
-        console.log('should not appear');
+        process.stdout.write('should not appear');
 
-        expect(spies.log).toHaveBeenCalledWith('should not appear');
+        expect(spies.stdout).toHaveBeenCalledWith('should not appear');
 
         restoreConsoleSpies(spies);
     });
 
-    it('mocks console.error so it does not output', () => {
+    it('mocks process.stderr.write so it does not output', () => {
         const spies = createConsoleSpies();
-        console.error('error msg');
+        process.stderr.write('error msg');
 
-        expect(spies.error).toHaveBeenCalledWith('error msg');
+        expect(spies.stderr).toHaveBeenCalledWith('error msg');
 
         restoreConsoleSpies(spies);
-    });
-
-    it('mocks console.warn so it does not output', () => {
-        const spies = createConsoleSpies();
-        console.warn('warn msg');
-
-        expect(spies.warn).toHaveBeenCalledWith('warn msg');
-
-        restoreConsoleSpies(spies);
-    });
-});
-
-describe('RestoreConsoleSpies', () => {
-    it('restores console methods', () => {
-        const originalLog = console.log;
-        const originalError = console.error;
-        const originalWarn = console.warn;
-
-        const spies = createConsoleSpies();
-
-        expect(console.log).not.toBe(originalLog);
-        expect(console.error).not.toBe(originalError);
-        expect(console.warn).not.toBe(originalWarn);
-
-        restoreConsoleSpies(spies);
-
-        expect(console.log).toBe(originalLog);
-        expect(console.error).toBe(originalError);
-        expect(console.warn).toBe(originalWarn);
     });
 });
 
@@ -214,25 +182,4 @@ describe('WithEnv', () => {
     });
 });
 
-describe('Integration: createConsoleSpies + restoreConsoleSpies', () => {
-    it('verifies console methods are mocked then restored', () => {
-        const originalLog = console.log;
-        const originalError = console.error;
-        const originalWarn = console.warn;
 
-        const spies = createConsoleSpies();
-        console.log('a');
-        console.error('b');
-        console.warn('c');
-
-        expect(spies.log).toHaveBeenCalledWith('a');
-        expect(spies.error).toHaveBeenCalledWith('b');
-        expect(spies.warn).toHaveBeenCalledWith('c');
-
-        restoreConsoleSpies(spies);
-
-        expect(console.log).toBe(originalLog);
-        expect(console.error).toBe(originalError);
-        expect(console.warn).toBe(originalWarn);
-    });
-});

@@ -187,7 +187,7 @@ export function _resetForTest(): void {
 export function displayProjects(names?: string[], lastProject?: string): void {
     const projs = loadProjects();
     title('Projetos');
-    const keys = names ?? Object.keys(projs).sort();
+    const keys = names ?? Object.keys(projs).sort((a, b) => a.localeCompare(b));
     keys.forEach((name, i) => {
         const p = getProviderForProject(name);
         const tag = p === 'github' ? ' [GH]' : ' [GL]';

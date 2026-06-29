@@ -14,7 +14,7 @@ function _loadDocFiles(docsDir: string): Array<{ label: string; file: string }> 
         files = fs
             .readdirSync(docsDir)
             .filter((f) => /^\d{2}-.+\.md$/.test(f))
-            .sort();
+            .sort((a, b) => a.localeCompare(b));
     } catch (err: unknown) {
         printError(
             'Documentação',

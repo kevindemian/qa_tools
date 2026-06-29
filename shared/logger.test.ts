@@ -453,25 +453,25 @@ describe('Logger', () => {
 
 
     describe('Level filtering', () => {
-        it('does not call console.log for levels below LOG_LEVEL', () => {
-            const spyLog = vi.spyOn(console, 'log').mockImplementation(() => {});
-            const spyError = vi.spyOn(console, 'error').mockImplementation(() => {});
+        it('does not call process.stdout.write for levels below LOG_LEVEL', () => {
+            const spyStdout = vi.spyOn(process.stdout, 'write').mockImplementation(() => true);
+            const spyStderr = vi.spyOn(process.stderr, 'write').mockImplementation(() => true);
             const logger = new Logger({ test: 'filter' }, Config.create({ logLevel: 'ERROR' }));
 
             logger.debug('debug msg');
             logger.info('info msg');
             logger.warn('warn msg');
 
-            expect(console.log).not.toHaveBeenCalled();
-            expect(console.error).not.toHaveBeenCalled();
+            expect(spyStdout).not.toHaveBeenCalled();
+            expect(spyStderr).not.toHaveBeenCalled();
 
             logger.error('error msg');
 
-            expect(console.log).not.toHaveBeenCalled();
-            expect(console.error).toHaveBeenCalledTimes(1);
+            expect(spyStdout).not.toHaveBeenCalled();
+            expect(spyStderr).toHaveBeenCalledTimes(1);
 
-            spyLog.mockRestore();
-            spyError.mockRestore();
+            spyStdout.mockRestore();
+            spyStderr.mockRestore();
         });
     });
 });

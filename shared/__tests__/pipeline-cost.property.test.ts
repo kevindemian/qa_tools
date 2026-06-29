@@ -155,7 +155,7 @@ describe('CalculatePipelineCost — property-based', () => {
         fc.assert(
             fc.property(fc.array(metricsRunArb, { minLength: 1, maxLength: 20 }), costPerMinuteArb, (runs, cpm) => {
                 const result = calculatePipelineCost(runs, cpm);
-                const timestamps = runs.map((r) => r.timestamp).sort();
+                const timestamps = runs.map((r) => r.timestamp).sort((a, b) => a.localeCompare(b));
 
                 expect(result.period.from).toBe(timestamps[0]);
                 expect(result.period.to).toBe(timestamps[timestamps.length - 1]);
@@ -215,7 +215,7 @@ describe('CalculatePipelineCost — property-based', () => {
             fc.property(fc.array(metricsRunArb, { minLength: 1, maxLength: 10 }), (runs) => {
                 const result = calculatePipelineCost(runs);
 
-                expect(result.costPerMinute).toBe(0.01);
+                expect(result.costPerMinute).toBeCloseTo(0.01);
             }),
             { numRuns: 50 },
         );

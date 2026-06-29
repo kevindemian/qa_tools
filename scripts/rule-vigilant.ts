@@ -22,7 +22,7 @@ function scanFile(filePath: string): Warning[] {
             rule: 'no-hardcoded-token',
             test: (line, _idx) => {
                 const tokenRe = /(?:token|secret|key|password|api_key|apikey)\s*[=:]\s*['"][^'"]+['"]/i;
-                const m = line.match(tokenRe);
+                const m = tokenRe.exec(line);
                 if (
                     m &&
                     !line.trimStart().startsWith('//') &&
