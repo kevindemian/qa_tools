@@ -36,8 +36,7 @@ function countCoveredCriteria(tests: TestCaseShape[], expectedCriteria: string[]
                 if (test.title.toLowerCase().includes(criterion.toLowerCase())) return true;
             }
             const stepsText = (test.steps || []).join(' ').toLowerCase();
-            if (stepsText.includes(criterion.toLowerCase())) return true;
-            return false;
+            return stepsText.includes(criterion.toLowerCase());
         });
         if (hasCoverage) covered++;
     }
@@ -49,7 +48,8 @@ function countCoveredPartitions(tests: TestCaseShape[], min: number, max: number
     const stepsTexts = tests.map((t) => (t.steps || []).join(' ').toLowerCase());
     const allText = stepsTexts.join(' ');
     const words = new Set(allText.split(/\s+/));
-    if (words.has(String(min + 1)) || words.has(String(min)) || words.has(String(max)) || words.has(String(max - 1))) partitions++;
+    if (words.has(String(min + 1)) || words.has(String(min)) || words.has(String(max)) || words.has(String(max - 1)))
+        partitions++;
     if (words.has(String(min - 1)) || /below|less than|under/i.test(allText)) partitions++;
     if (words.has(String(max + 1)) || /above|greater than|over|exceed/i.test(allText)) partitions++;
     return Math.min(partitions, MAX_PARTITION_TYPES);
