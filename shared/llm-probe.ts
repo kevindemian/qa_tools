@@ -16,6 +16,12 @@ import { rootLogger } from './logger.js';
 import type { LlmProvider } from './llm-provider-profiles.js';
 import type { TierDefaults } from './llm-provider-profiles.js';
 
+function stripTrailingSlashes(s: string): string {
+    let end = s.length;
+    while (end > 0 && s.charCodeAt(end - 1) === 47) end--;
+    return s.slice(0, end);
+}
+
 const PROBE_TIMEOUT_MS = 5_000;
 
 /** Result of a key probe operation. */
@@ -52,7 +58,7 @@ export function buildProbeRequest(provider: LlmProvider, apiKey: string): { url:
     if (!profile) return null;
     if (!profile.baseUrl && profile.requiresBaseUrl) return null;
 
-    const base = profile.baseUrl.replace(/\/+$/, '');
+    const base = stripTrailingSlashes(profile.baseUrl);
     const controller = new AbortController();
     setTimeout(() => controller.abort(), PROBE_TIMEOUT_MS);
 
