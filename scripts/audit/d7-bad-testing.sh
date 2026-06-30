@@ -59,7 +59,7 @@ fi
 ALL_SOURCE="${SOURCE_DIR:-$SEARCH_DIR}"
 ALL_TESTS="${TEST_DIR:-$SEARCH_DIR}"
 # Exclude the script itself and fixtures (fixtures are intentional violations for testing)
-EXCLUDE_PATHS="--exclude=d7-bad-testing.sh --exclude-dir=__fixtures__"
+EXCLUDE_PATHS="--exclude=d7-bad-testing.sh --exclude=audit-help.sh --exclude='*.bak' --exclude-dir=__fixtures__"
 
 # ── Result helpers ──────────────────────────────────────────────────────────────
 GLOBAL_FAILED=false
@@ -164,7 +164,7 @@ check "14c" "Tautologia: expect(x).toBe(x)" \
 
 # ── 5. toThrow without argument ─────────────────────────────────────────────────
 check "5" "toThrow() sem argumento" \
-    "grep -rnP ${EXCLUDE_PATHS} 'toThrow\(\s*\)' ${ALL_TESTS} 2>/dev/null || true"
+    "grep -rnP ${EXCLUDE_PATHS} '(?<!\.not\.)toThrow\(\s*\)' ${ALL_TESTS} 2>/dev/null || true"
 
 # ── 6. .skip detection ──────────────────────────────────────────────────────────
 check "6" ".skip em describe/it/test (verificar se documentado)" \
