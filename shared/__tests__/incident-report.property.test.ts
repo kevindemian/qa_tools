@@ -143,14 +143,16 @@ describe('Incident Report.Property', () => {
                             passRate,
                         );
 
-                        const expectedSeverity =
-                            result.highCount > 0
-                                ? 'high'
-                                : result.mediumCount > 0
-                                  ? 'medium'
-                                  : result.lowCount > 0
-                                    ? 'low'
-                                    : 'none';
+                        let expectedSeverity: string;
+                        if (result.highCount > 0) {
+                            expectedSeverity = 'high';
+                        } else if (result.mediumCount > 0) {
+                            expectedSeverity = 'medium';
+                        } else if (result.lowCount > 0) {
+                            expectedSeverity = 'low';
+                        } else {
+                            expectedSeverity = 'none';
+                        }
 
                         expect(result.overallSeverity).toBe(expectedSeverity);
                     },

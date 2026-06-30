@@ -77,11 +77,21 @@ describe('Integration: Quality Gate', () => {
                 failed: 1,
                 skipped: 1,
                 duration: 5000,
-                tests: Array.from({ length: 100 }, (_, j) => ({
-                    title: `test-${j}`,
-                    state: j === 99 ? 'skipped' : j === 98 ? 'failed' : 'passed',
-                    duration: 50,
-                })),
+                tests: Array.from({ length: 100 }, (_, j) => {
+                    let state: string;
+                    if (j === 99) {
+                        state = 'skipped';
+                    } else if (j === 98) {
+                        state = 'failed';
+                    } else {
+                        state = 'passed';
+                    }
+                    return {
+                        title: `test-${j}`,
+                        state,
+                        duration: 50,
+                    };
+                }),
             }));
 
             mockLoadMetrics.mockReturnValue({

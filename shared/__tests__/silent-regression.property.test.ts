@@ -77,16 +77,18 @@ describe('DetectSilentRegression — property-based invariants', () => {
             fc.property(historyArb, (histories) => {
                 const result = detectSilentRegression(histories);
                 for (const reg of result.regressions) {
-                    const expectedSeverity =
-                        reg.zScore > 5
-                            ? 'critical'
-                            : reg.zScore > 3
-                              ? 'high'
-                              : reg.zScore > 2
-                                ? 'medium'
-                                : reg.zScore > 1
-                                  ? 'low'
-                                  : 'none';
+                    let expectedSeverity: string;
+                    if (reg.zScore > 5) {
+                        expectedSeverity = 'critical';
+                    } else if (reg.zScore > 3) {
+                        expectedSeverity = 'high';
+                    } else if (reg.zScore > 2) {
+                        expectedSeverity = 'medium';
+                    } else if (reg.zScore > 1) {
+                        expectedSeverity = 'low';
+                    } else {
+                        expectedSeverity = 'none';
+                    }
 
                     expect(reg.severity).toBe(expectedSeverity);
                 }

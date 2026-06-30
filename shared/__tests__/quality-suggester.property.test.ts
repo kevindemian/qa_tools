@@ -27,7 +27,11 @@ describe('SeverityFromLatency — property-based', () => {
 
         fc.assert(
             fc.property(fc.integer({ min: 0, max: 20000 }), fc.integer({ min: 0, max: 20000 }), (a, b) => {
-                const order = (s: string): number => (s === 'info' ? 0 : s === 'warning' ? 1 : 2);
+                const order = (s: string): number => {
+                    if (s === 'info') return 0;
+                    if (s === 'warning') return 1;
+                    return 2;
+                };
 
                 expect(order(severityFromLatency(a))).toBeLessThanOrEqual(
                     a <= b ? order(severityFromLatency(b)) : order(severityFromLatency(a)),

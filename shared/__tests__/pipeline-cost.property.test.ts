@@ -130,7 +130,14 @@ describe('CalculatePipelineCost — property-based', () => {
                     const run = Reflect.get(sortedRuns, i) as
                         { failed: number; passed: number; total: number; timestamp: string } | undefined;
                     if (!entry || !run) continue;
-                    const expectedStatus = run.failed > 0 ? 'failed' : run.passed === run.total ? 'passed' : 'partial';
+                    let expectedStatus: string;
+                    if (run.failed > 0) {
+                        expectedStatus = 'failed';
+                    } else if (run.passed === run.total) {
+                        expectedStatus = 'passed';
+                    } else {
+                        expectedStatus = 'partial';
+                    }
 
                     expect(entry.status).toBe(expectedStatus);
                 }

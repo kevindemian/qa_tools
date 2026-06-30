@@ -83,12 +83,22 @@ function writeCtrfFixture(tests: FlatTest[]): string {
                 start: Date.now() - tests.length * 1000,
                 stop: Date.now(),
             },
-            tests: tests.map((t) => ({
-                name: t.title,
-                status: t.state === 'passed' ? 'passed' : t.state === 'failed' ? 'failed' : 'skipped',
-                duration: t.duration,
-                ...(t.error ? { message: t.error } : {}),
-            })),
+            tests: tests.map((t) => {
+                let status: string;
+                if (t.state === 'passed') {
+                    status = 'passed';
+                } else if (t.state === 'failed') {
+                    status = 'failed';
+                } else {
+                    status = 'skipped';
+                }
+                return {
+                    name: t.title,
+                    status,
+                    duration: t.duration,
+                    ...(t.error ? { message: t.error } : {}),
+                };
+            }),
         },
     };
     fs.writeFileSync(ctrfPath, JSON.stringify(ctrf, null, 2), 'utf8');
