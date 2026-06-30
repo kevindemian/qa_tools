@@ -1,3 +1,5 @@
+import os from 'os';
+import path from 'path';
 import { nonNull } from './test-utils.js';
 import type { Mock } from 'vitest';
 import http from 'http';
@@ -245,17 +247,17 @@ describe('ShowSplash', () => {
 
     it('includes statePath when provided', async () => {
         expect.hasAssertions();
-        await expect(showSplash('/tmp/state.json')).resolves.not.toThrow();
+        await expect(showSplash(path.join(os.tmpdir(), 'qa-state.json'))).resolves.not.toThrow();
         expect(outputMod.defaultOutput.box).toHaveBeenCalledTimes(1);
 
         const outputLines = nonNull(outputMod.defaultOutput.box.mock.calls[0])[0];
 
-        expect(outputLines.join('\n')).toContain('/tmp/state.json');
+        expect(outputLines.join('\n')).toContain(path.join(os.tmpdir(), 'qa-state.json'));
     });
 
     it('shows token status check without jiraBaseUrl', async () => {
         expect.hasAssertions();
-        await expect(showSplash('/tmp/state.json')).resolves.not.toThrow();
+        await expect(showSplash(path.join(os.tmpdir(), 'qa-state.json'))).resolves.not.toThrow();
         expect(outputMod.defaultOutput.box).toHaveBeenCalledTimes(1);
 
         const outputLines = nonNull(outputMod.defaultOutput.box.mock.calls[0])[0];
@@ -288,7 +290,7 @@ describe('ShowSplash', () => {
 
         outputMod.Output.isTTY.mockReturnValue(false);
 
-        await expect(showSplash('/tmp/state.json')).resolves.not.toThrow();
+        await expect(showSplash(path.join(os.tmpdir(), 'qa-state.json'))).resolves.not.toThrow();
         expect(outputMod.defaultOutput.print).toHaveBeenCalledWith(expect.stringContaining('QA Tools'));
     });
 
@@ -298,7 +300,7 @@ describe('ShowSplash', () => {
         outputMod.Output.isTTY.mockReturnValue(true);
         outputMod.Output.isCI.mockReturnValue(true);
 
-        await expect(showSplash('/tmp/state.json')).resolves.not.toThrow();
+        await expect(showSplash(path.join(os.tmpdir(), 'qa-state.json'))).resolves.not.toThrow();
         expect(outputMod.defaultOutput.print).toHaveBeenCalledWith(expect.stringContaining('QA Tools'));
     });
 
@@ -318,8 +320,8 @@ describe('ShowSplash', () => {
             throw new Error('no TTY');
         });
 
-        await expect(showSplash('/tmp/state.json')).resolves.not.toThrow();
-        expect(outputMod.defaultOutput.print).toHaveBeenCalledWith(expect.stringContaining('/tmp/state.json'));
+        await expect(showSplash(path.join(os.tmpdir(), 'qa-state.json'))).resolves.not.toThrow();
+        expect(outputMod.defaultOutput.print).toHaveBeenCalledWith(expect.stringContaining(path.join(os.tmpdir(), 'qa-state.json')));
     });
 
     it('handles figlet dynamic import failure in ensureDeps', async () => {
@@ -327,7 +329,7 @@ describe('ShowSplash', () => {
 
         __setFigletDep(undefined);
 
-        await expect(showSplash('/tmp/state.json')).resolves.not.toThrow();
+        await expect(showSplash(path.join(os.tmpdir(), 'qa-state.json'))).resolves.not.toThrow();
         expect(outputMod.defaultOutput.print).toHaveBeenCalledWith(expect.stringContaining('QA Tools'));
     });
 
@@ -336,7 +338,7 @@ describe('ShowSplash', () => {
 
         __setGradientDep(undefined);
 
-        await expect(showSplash('/tmp/state.json')).resolves.not.toThrow();
+        await expect(showSplash(path.join(os.tmpdir(), 'qa-state.json'))).resolves.not.toThrow();
         expect(outputMod.defaultOutput.print).toHaveBeenCalledWith(expect.stringContaining('QA Tools'));
     });
 

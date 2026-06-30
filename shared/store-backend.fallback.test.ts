@@ -1,3 +1,5 @@
+import os from 'os';
+import path from 'path';
 import { describe, expect, it, vi } from 'vitest';
 
 vi.mock('child_process', async () => {
@@ -20,7 +22,7 @@ describe('DetectStoreBackend fallback', () => {
     });
 
     it('returns FsStoreBackend when git is unavailable', () => {
-        process.env['XDG_STATE_HOME'] = '/tmp/nonexistent-xdg-fallback';
+        process.env['XDG_STATE_HOME'] = path.join(os.tmpdir(), 'qa-nonexistent-xdg-fallback');
         vi.mocked(execFileSync).mockImplementation(() => {
             throw new Error('ENOGIT');
         });

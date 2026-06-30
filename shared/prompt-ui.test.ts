@@ -1,3 +1,5 @@
+import os from 'os';
+import path from 'path';
 const mockPrint = vi.hoisted(() => vi.fn());
 const mockGetBreadcrumbPath = vi.hoisted(() => vi.fn(() => ''));
 
@@ -17,7 +19,7 @@ vi.mock('./logger', () => ({
         error: vi.fn(),
         debug: vi.fn(),
         writeFileOnly: vi.fn(),
-        filePath: '/tmp/test.log',
+        filePath: path.join(os.tmpdir(), 'qa-test.log'),
     },
     Logger: class {
         info = vi.fn();
@@ -26,7 +28,7 @@ vi.mock('./logger', () => ({
         debug = vi.fn();
         writeFileOnly = vi.fn();
         get filePath() {
-            return '/tmp/test.log';
+            return path.join(os.tmpdir(), 'qa-test.log');
         }
     },
 }));
