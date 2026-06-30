@@ -120,7 +120,7 @@ vi.mock('./schedule-handler', () => ({
     handleFlakinessDashboard: vi.fn(),
     generateWeeklyQualityReport: vi.fn(),
 }));
-vi.mock('./batch-mode', () => ({ tryBatchMode: vi.fn(), parseBatchArgs: vi.fn(), handlePipelineHealth: vi.fn() }));
+vi.mock('./batch-mode', () => ({ tryBatchMode: vi.fn(), handlePipelineHealth: vi.fn() }));
 vi.mock('../shared/release-score', () => ({
     generateReleaseScoreHtml: vi.fn(() => ''),
     calculateReleaseScore: vi.fn(() => ({})),

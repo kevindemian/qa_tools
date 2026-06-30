@@ -10,6 +10,7 @@ import * as prompt from '../shared/prompt.js';
 import * as state from '../shared/state.js';
 import * as nivelar from './nivelar.js';
 import * as cliBase from '../shared/cli_base.js';
+import { parseCliArgs } from './cli-args.js';
 // sessionContext import removed — unused
 
 vi.mock('fs', async (importOriginal) => {
@@ -889,9 +890,9 @@ describe('Main', () => {
         });
     });
 
-    // ---------- parseBatchArgs / tryBatchMode ----------
+    // ---------- parseCliArgs (batch mode) ----------
 
-    describe('ParseBatchArgs', () => {
+    describe('ParseCliArgs (batch mode)', () => {
         const origArgv = process.argv;
 
         afterEach(() => {
@@ -900,30 +901,35 @@ describe('Main', () => {
 
         it('parses --project and --branch', () => {
             process.argv = ['node', 'main.ts', '--project', 'my-proj', '--branch', 'feature/x'];
-            const result = mainModule.parseBatchArgs();
+            const result = parseCliArgs();
 
-            expect(result).toStrictEqual({ project: 'my-proj', branch: 'feature/x' });
+            expect(result.mode).toBe('batch');
+            expect(result).toHaveProperty('project', 'my-proj');
+            expect(result).toHaveProperty('branch', 'feature/x');
         });
 
         it('parses --auto flag', () => {
             process.argv = ['node', 'main.ts', '--auto'];
-            const result = mainModule.parseBatchArgs();
+            const result = parseCliArgs();
 
-            expect(result).toStrictEqual({ auto: true });
+            expect(result.mode).toBe('batch');
+            expect(result).toHaveProperty('auto', true);
         });
 
         it('parses -p and -b short flags', () => {
             process.argv = ['node', 'main.ts', '-p', 'proj', '-b', 'dev'];
-            const result = mainModule.parseBatchArgs();
+            const result = parseCliArgs();
 
-            expect(result).toStrictEqual({ project: 'proj', branch: 'dev' });
+            expect(result.mode).toBe('batch');
+            expect(result).toHaveProperty('project', 'proj');
+            expect(result).toHaveProperty('branch', 'dev');
         });
 
-        it('returns empty object when no args', () => {
+        it('returns interactive mode when no args', () => {
             process.argv = ['node', 'main.ts'];
-            const result = mainModule.parseBatchArgs();
+            const result = parseCliArgs();
 
-            expect(result).toStrictEqual({});
+            expect(result.mode).toBe('interactive');
         });
     });
 
