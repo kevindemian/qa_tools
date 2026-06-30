@@ -17,7 +17,8 @@ import {
     recordRetry,
     recordConfidence,
     recordAdversarialRetry,
-    recordArtifactReview,
+    recordArtifactApproved,
+    recordArtifactRejected,
 } from './llm-metrics.js';
 import {
     recordInvariantFire,
@@ -402,7 +403,7 @@ export async function reviewWithLlm(
         } = await runRetryLoop(parsed, system, user, startTime, type);
         if (!valid) {
             const fallback = await callLlmFallback(system, user, startTime, type);
-            recordArtifactReview(false);
+            recordArtifactRejected();
             return { ...fallback, content: sanitizeTerminal(fallback.content) };
         }
 
@@ -427,7 +428,8 @@ export async function reviewWithLlm(
                     ' cost=$' +
                     _llmMetrics.totalCostUSD.toFixed(4),
             );
-            recordArtifactReview(adversarialResult.confidence === 'high');
+            if (adversarialResult.confidence === 'high') recordArtifactApproved();
+            else recordArtifactRejected();
             snapshotQualityMetrics();
             return adversarialResult;
         }
@@ -442,7 +444,8 @@ export async function reviewWithLlm(
                 ' cost=$' +
                 _llmMetrics.totalCostUSD.toFixed(4),
         );
-        recordArtifactReview(result.confidence !== 'low');
+        if (result.confidence !== 'low') recordArtifactApproved();
+        else recordArtifactRejected();
         snapshotQualityMetrics();
         return { ...result, content: sanitizeTerminal(content), layerResults };
     } catch (err) {

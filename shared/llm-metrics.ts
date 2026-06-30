@@ -245,8 +245,12 @@ export function recordRetry(): void {
     _defaultCollector.recordRetry();
 }
 
-export function recordArtifactReview(approved: boolean): void {
-    _defaultCollector.recordArtifactReview(approved);
+export function recordArtifactApproved(): void {
+    _defaultCollector.recordArtifactApproved();
+}
+
+export function recordArtifactRejected(): void {
+    _defaultCollector.recordArtifactRejected();
 }
 
 export function recordAdversarialRetry(): void {
