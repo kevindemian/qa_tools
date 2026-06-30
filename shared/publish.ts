@@ -4,6 +4,7 @@ import { execFileSync } from 'child_process';
 import { rootLogger } from './logger.js';
 import Config from './config.js';
 import { cpSync, mkdirSync } from 'fs';
+import os from 'os';
 import { join } from 'path';
 
 export type PublishTarget = 's3' | 'gh-pages';
@@ -31,7 +32,7 @@ function publishToS3(localPath: string, destination?: string): void {
 /** Publish a file to gh-pages via the gh CLI. */
 function publishToGhPages(localPath: string, destination?: string): void {
     const dest = destination || './report.html';
-    const tmpDir = '/tmp/qa-gh-pages-' + Date.now();
+    const tmpDir = join(os.tmpdir(), 'qa-gh-pages-' + Date.now());
     try {
         execFileSync('git', ['clone', '--branch', 'gh-pages', '--single-branch', getOriginUrl(), tmpDir], {
             stdio: 'ignore',

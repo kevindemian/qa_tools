@@ -1,3 +1,5 @@
+import os from 'os';
+import path from 'path';
 import { QualityMetricsCollector } from './quality-metrics.js';
 import { recordInvariantFire, detectDrift, snapshotQualityMetrics, resetQualityMetrics } from './quality-metrics.js';
 import type { QualityMetricsSnapshot } from './quality-metrics.js';
@@ -19,7 +21,7 @@ vi.mock('fs', () => ({
 
 vi.mock('./config', () => ({
     default: {
-        get: vi.fn(() => '/tmp/.local/state/qa-tools'),
+        get: vi.fn(() => path.join(os.tmpdir(), '.local', 'state', 'qa-tools')),
     },
     __esModule: true,
 }));

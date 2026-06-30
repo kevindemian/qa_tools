@@ -1,3 +1,5 @@
+import os from 'os';
+import path from 'path';
 import type { Mock, MockInstance } from 'vitest';
 import { nonNull } from './test-utils.js';
 import readlineSync from 'readline-sync';
@@ -274,7 +276,7 @@ describe('Prompt', () => {
         });
 
         it('shows log path when filePath is set and some fail', () => {
-            mockRootLogger.filePath = '/tmp/qa-tools.log';
+            mockRootLogger.filePath = path.join(os.tmpdir(), 'qa-qa-tools.log');
             prompt.printSummary([{ status: 'error', label: 't1', message: 'erro' }]);
 
             expect(mockLog).toHaveBeenCalledWith(expect.stringContaining('Consulte o log'));
@@ -300,7 +302,7 @@ describe('Prompt', () => {
 
         it('shows log path in quiet error mode when filePath set', () => {
             prompt.__setConfig(Config.create({ quiet: true }));
-            mockRootLogger.filePath = '/tmp/qa-tools.log';
+            mockRootLogger.filePath = path.join(os.tmpdir(), 'qa-qa-tools.log');
             prompt.printSummary([{ status: 'error', label: 't1', message: 'erro' }]);
 
             expect(mockLog).toHaveBeenCalledWith(expect.stringContaining('Consulte o log'));

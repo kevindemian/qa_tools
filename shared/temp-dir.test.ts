@@ -1,4 +1,6 @@
 import * as fs from 'fs';
+import os from 'os';
+import path from 'path';
 import {
     reportsDir,
     logsDir,
@@ -80,7 +82,7 @@ describe('Temp Dir', () => {
 
     describe('WriteReport', () => {
         it('writes content to date-subfolder under reports directory', () => {
-            process.env['QA_TOOLS_REPORTS_DIR'] = '/tmp/test-reports';
+            process.env['QA_TOOLS_REPORTS_DIR'] = path.join(os.tmpdir(), 'qa-test-reports');
             const result = writeReport('test.json', '{}');
 
             expect(result).toMatch(/\/tmp\/test-reports\/\d{4}-\d{2}-\d{2}\/test\.json$/);
@@ -88,7 +90,7 @@ describe('Temp Dir', () => {
 
         it('logs and re-throws when mkdirSync fails (G1 bug-fix)', () => {
             const warnSpy = vi.spyOn(rootLogger, 'warn').mockImplementation(() => {});
-            process.env['QA_TOOLS_REPORTS_DIR'] = '/tmp/test-reports';
+            process.env['QA_TOOLS_REPORTS_DIR'] = path.join(os.tmpdir(), 'qa-test-reports');
             vi.mocked(fs.mkdirSync).mockImplementationOnce(() => {
                 throw new Error('EACCES: permission denied');
             });
@@ -99,7 +101,7 @@ describe('Temp Dir', () => {
 
         it('logs and re-throws when writeFileSync fails (G1 bug-fix)', () => {
             const warnSpy = vi.spyOn(rootLogger, 'warn').mockImplementation(() => {});
-            process.env['QA_TOOLS_REPORTS_DIR'] = '/tmp/test-reports';
+            process.env['QA_TOOLS_REPORTS_DIR'] = path.join(os.tmpdir(), 'qa-test-reports');
             vi.mocked(fs.writeFileSync).mockImplementationOnce(() => {
                 throw new Error('ENOSPC: no space left');
             });
@@ -111,15 +113,15 @@ describe('Temp Dir', () => {
 
     describe('WriteEphemeral', () => {
         it('writes content to temp category directory', () => {
-            process.env['QA_TOOLS_TEMP_DIR'] = '/tmp/test-temp';
+            process.env['QA_TOOLS_TEMP_DIR'] = path.join(os.tmpdir(), 'qa-test-temp');
             const result = writeEphemeral('previews', 'snap.html', '<html/>');
 
-            expect(result).toBe('/tmp/test-temp/previews/snap.html');
+            expect(result).toBe(path.join(os.tmpdir(), 'qa-test-temp', 'previews', 'snap.html'));
         });
 
         it('logs and re-throws when mkdirSync fails (G1 bug-fix)', () => {
             const warnSpy = vi.spyOn(rootLogger, 'warn').mockImplementation(() => {});
-            process.env['QA_TOOLS_TEMP_DIR'] = '/tmp/test-temp';
+            process.env['QA_TOOLS_TEMP_DIR'] = path.join(os.tmpdir(), 'qa-test-temp');
             vi.mocked(fs.mkdirSync).mockImplementationOnce(() => {
                 throw new Error('EACCES: permission denied');
             });
@@ -130,7 +132,7 @@ describe('Temp Dir', () => {
 
         it('logs and re-throws when writeFileSync fails (G1 bug-fix)', () => {
             const warnSpy = vi.spyOn(rootLogger, 'warn').mockImplementation(() => {});
-            process.env['QA_TOOLS_TEMP_DIR'] = '/tmp/test-temp';
+            process.env['QA_TOOLS_TEMP_DIR'] = path.join(os.tmpdir(), 'qa-test-temp');
             vi.mocked(fs.writeFileSync).mockImplementationOnce(() => {
                 throw new Error('ENOSPC: no space left');
             });
@@ -142,9 +144,9 @@ describe('Temp Dir', () => {
 
     describe('EnsureDirs', () => {
         it('creates all required directories', () => {
-            process.env['QA_TOOLS_REPORTS_DIR'] = '/tmp/test-reports';
-            process.env['QA_TOOLS_LOGS_DIR'] = '/tmp/test-logs';
-            process.env['QA_TOOLS_TEMP_DIR'] = '/tmp/test-temp';
+            process.env['QA_TOOLS_REPORTS_DIR'] = path.join(os.tmpdir(), 'qa-test-reports');
+            process.env['QA_TOOLS_LOGS_DIR'] = path.join(os.tmpdir(), 'qa-test-logs');
+            process.env['QA_TOOLS_TEMP_DIR'] = path.join(os.tmpdir(), 'qa-test-temp');
             ensureDirs();
 
             expect(fs.mkdirSync).toHaveBeenCalledTimes(5);
@@ -152,9 +154,9 @@ describe('Temp Dir', () => {
 
         it('logs and re-throws when mkdirSync fails (G1 bug-fix)', () => {
             const warnSpy = vi.spyOn(rootLogger, 'warn').mockImplementation(() => {});
-            process.env['QA_TOOLS_REPORTS_DIR'] = '/tmp/test-reports';
-            process.env['QA_TOOLS_LOGS_DIR'] = '/tmp/test-logs';
-            process.env['QA_TOOLS_TEMP_DIR'] = '/tmp/test-temp';
+            process.env['QA_TOOLS_REPORTS_DIR'] = path.join(os.tmpdir(), 'qa-test-reports');
+            process.env['QA_TOOLS_LOGS_DIR'] = path.join(os.tmpdir(), 'qa-test-logs');
+            process.env['QA_TOOLS_TEMP_DIR'] = path.join(os.tmpdir(), 'qa-test-temp');
             vi.mocked(fs.mkdirSync).mockImplementation(() => {
                 throw new Error('EACCES: permission denied');
             });

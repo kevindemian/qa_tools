@@ -1,14 +1,15 @@
 /** Tests for quarantine module — CRUD operations, expiry, pipeline file generation, and edge cases. */
 import fs from 'fs';
+import os from 'os';
 import path from 'path';
 
 const TEST_TITLE = 'tests/login.spec.ts';
-const MOCK_STATE_HOME = '/tmp/qa-tools-quarantine-test-mock';
+const MOCK_STATE_HOME = path.join(os.tmpdir(), 'qa-tools-quarantine-test-mock');
 
 vi.mock('./config', () => ({
     __esModule: true,
     default: {
-        xdgStateHome: '/tmp/qa-tools-quarantine-test-mock',
+        xdgStateHome: path.join(os.tmpdir(), 'qa-tools-quarantine-test-mock'),
         get(key: string) {
             return Reflect.get(this, key) as string;
         },

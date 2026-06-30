@@ -1,3 +1,5 @@
+import os from 'os';
+import path from 'path';
 import { nonNull } from './test-utils.js';
 
 const {
@@ -76,7 +78,7 @@ describe('Show Docs', () => {
         it('converts docs to html and opens index in browser', async () => {
             expect.hasAssertions();
 
-            mockGetDocsOutputDir.mockReturnValue('/tmp/docs');
+            mockGetDocsOutputDir.mockReturnValue(path.join(os.tmpdir(), 'qa-docs'));
             mockReaddirSync.mockReturnValue(['01-intro.md', '02-setup.md', '03-advanced.md']);
             mockReadFileSync.mockImplementation((...args: unknown[]) => {
                 const filePath = args[0] as string;
@@ -89,15 +91,15 @@ describe('Show Docs', () => {
             const { showDocs } = await loadModule();
             await showDocs();
 
-            expect(mockMkdirSync).toHaveBeenCalledWith('/tmp/docs', { recursive: true });
+            expect(mockMkdirSync).toHaveBeenCalledWith(path.join(os.tmpdir(), 'qa-docs'), { recursive: true });
             expect(mockWriteFileSync).toHaveBeenCalledTimes(4);
-            expect(mockOpenWithFallback).toHaveBeenCalledWith('/tmp/docs/index.html', 'Documentação', mockInfo);
+            expect(mockOpenWithFallback).toHaveBeenCalledWith(path.join(os.tmpdir(), 'qa-docs', 'index.html'), 'Documentação', mockInfo);
         });
 
         it('prints error when docs dir not found', async () => {
             expect.hasAssertions();
 
-            mockGetDocsOutputDir.mockReturnValue('/tmp/docs');
+            mockGetDocsOutputDir.mockReturnValue(path.join(os.tmpdir(), 'qa-docs'));
             mockReaddirSync.mockImplementation(() => {
                 throw new Error('ENOENT');
             });
@@ -113,7 +115,7 @@ describe('Show Docs', () => {
         it('warns and returns when no docs match pattern', async () => {
             expect.hasAssertions();
 
-            mockGetDocsOutputDir.mockReturnValue('/tmp/docs');
+            mockGetDocsOutputDir.mockReturnValue(path.join(os.tmpdir(), 'qa-docs'));
             mockReaddirSync.mockReturnValue(['readme.md', 'notes.txt']);
 
             const { showDocs } = await loadModule();
@@ -127,7 +129,7 @@ describe('Show Docs', () => {
         it('skips files that fail to read and continues', async () => {
             expect.hasAssertions();
 
-            mockGetDocsOutputDir.mockReturnValue('/tmp/docs');
+            mockGetDocsOutputDir.mockReturnValue(path.join(os.tmpdir(), 'qa-docs'));
             mockReaddirSync.mockReturnValue(['01-good.md', '02-bad.md', '03-good.md']);
             mockReadFileSync.mockImplementation((...args: unknown[]) => {
                 const filePath = args[0] as string;
