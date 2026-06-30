@@ -108,7 +108,7 @@ export function evaluateQualityGate(
     return 'pass';
 }
 
-function _computeFlakyRate(runs: MetricsRun[], config: HealthScoreConfig): number | null {
+function _buildTestCounts(runs: MetricsRun[]): Map<string, { pass: number; fail: number }> {
     const testMap = new Map<string, { pass: number; fail: number }>();
     for (const run of runs) {
         for (const t of run.tests) {
@@ -118,6 +118,11 @@ function _computeFlakyRate(runs: MetricsRun[], config: HealthScoreConfig): numbe
             testMap.set(t.title, entry);
         }
     }
+    return testMap;
+}
+
+function _computeFlakyRate(runs: MetricsRun[], config: HealthScoreConfig): number | null {
+    const testMap = _buildTestCounts(runs);
     let flakyCount = 0;
     let totalConsidered = 0;
     for (const [, counts] of testMap) {
@@ -358,12 +363,15 @@ export function calculateHealthScore(
         overall = Math.min(overall, PENALTY_CAP);
     }
 
-    const statusPassRate: 'pass' | 'fail' = actual.passRate >= config.minPassRateGate ? 'pass' : 'fail';
-    const statusFlaky: 'pass' | 'fail' =
-        actual.flakyPct !== null && actual.flakyPct <= config.maxFlakyGate ? 'pass' : 'fail';
-    const statusCoverage: 'pass' | 'fail' = actual.coverage >= config.minCoverageGate ? 'pass' : 'fail';
-    const statusSpeed: 'pass' | 'fail' = actual.suiteSpeed <= config.maxSuiteSpeedGate ? 'pass' : 'fail';
-    const statusExecRate: 'pass' | 'fail' = actual.executionRate >= config.minExecutionRateGate ? 'pass' : 'fail';
+    function gate(value: number, threshold: number, op: 'gte' | 'lte'): 'pass' | 'fail' {
+        return op === 'gte' ? (value >= threshold ? 'pass' : 'fail') : (value <= threshold ? 'pass' : 'fail');
+    }
+
+    const statusPassRate = gate(actual.passRate, config.minPassRateGate, 'gte');
+    const statusFlaky = (actual.flakyPct !== null && actual.flakyPct <= config.maxFlakyGate) ? 'pass' as const : 'fail' as const;
+    const statusCoverage = gate(actual.coverage, config.minCoverageGate, 'gte');
+    const statusSpeed = gate(actual.suiteSpeed, config.maxSuiteSpeedGate, 'lte');
+    const statusExecRate = gate(actual.executionRate, config.minExecutionRateGate, 'gte');
 
     const dims: HealthScoreDimensions = {
         passRate: { score: Math.round(scPassRate), status: statusPassRate },

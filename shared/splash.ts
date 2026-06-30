@@ -75,6 +75,18 @@ export async function checkJiraStatus(baseUrl: string, token: string, mode?: Jir
     }
 }
 
+function statusDot(status: string): string {
+    if (status === 'ok') return palette.green('●');
+    if (status === 'error') return palette.red('●');
+    return palette.muted('○');
+}
+
+function healthColor(grade: string): (s: string) => string {
+    if (grade === 'excellent' || grade === 'good') return palette.green;
+    if (grade === 'needs_attention') return palette.yellow;
+    return palette.red;
+}
+
 export function buildSplashLines(
     logo: string,
     statePath?: string,
@@ -91,28 +103,13 @@ export function buildSplashLines(
     splash.push('');
     if (statusChecks) {
         for (const c of statusChecks) {
-            let dot: string;
-            if (c.status === 'ok') {
-                dot = palette.green('●');
-            } else if (c.status === 'error') {
-                dot = palette.red('●');
-            } else {
-                dot = palette.muted('○');
-            }
-            splash.push('  ' + dot + ' ' + c.label + ': ' + palette.muted(c.detail));
+            splash.push('  ' + statusDot(c.status) + ' ' + c.label + ': ' + palette.muted(c.detail));
         }
         splash.push('');
     }
     if (healthScore) {
-        let healthColor: (s: string) => string;
-        if (healthScore.grade === 'excellent' || healthScore.grade === 'good') {
-            healthColor = palette.green;
-        } else if (healthScore.grade === 'needs_attention') {
-            healthColor = palette.yellow;
-        } else {
-            healthColor = palette.red;
-        }
-        splash.push(healthColor('  Health: ' + healthScore.score + '/100 (' + healthScore.grade + ')'));
+        const hColor = healthColor(healthScore.grade);
+        splash.push(hColor('  Health: ' + healthScore.score + '/100 (' + healthScore.grade + ')'));
         splash.push('');
     }
     if (statePath) {
@@ -126,6 +123,11 @@ export function buildSplashLines(
     return splash;
 }
 
+function printFallbackSplash(statePath?: string): void {
+    defaultOutput.print('🔧 QA Tools  v1.0.0 — Gestão de Testes & Automação de CI/CD');
+    if (statePath) defaultOutput.print('  State: ' + statePath);
+}
+
 export async function showSplash(
     statePath?: string,
     jiraBaseUrl?: string,
@@ -136,8 +138,7 @@ export async function showSplash(
     const isTTY = Output.isTTY() && !Output.isCI();
 
     if (!isTTY) {
-        defaultOutput.print('🔧 QA Tools  v1.0.0 — Gestão de Testes & Automação de CI/CD');
-        if (statePath) defaultOutput.print('  State: ' + statePath);
+        printFallbackSplash(statePath);
         return;
     }
 
@@ -146,8 +147,7 @@ export async function showSplash(
         const figletInstance = _cache.figlet;
         const gradientModule = _cache.gradient;
         if (!figletInstance || !gradientModule) {
-            defaultOutput.print('🔧 QA Tools  v1.0.0 — Gestão de Testes & Automação de CI/CD');
-            if (statePath) defaultOutput.print('  State: ' + statePath);
+            printFallbackSplash(statePath);
             return;
         }
         const logo = figletInstance.textSync('QA TOOLS', { font: 'ANSI Shadow' });
@@ -168,7 +168,6 @@ export async function showSplash(
         defaultOutput.box(splash, { border: 'double', padding: 1 });
     } catch (err) {
         rootLogger.debug('Splash rendering failed: ' + (err instanceof Error ? err.message : String(err)));
-        defaultOutput.print('🔧 QA Tools  v1.0.0 — Gestão de Testes & Automação de CI/CD');
-        if (statePath) defaultOutput.print('  State: ' + statePath);
+        printFallbackSplash(statePath);
     }
 }
