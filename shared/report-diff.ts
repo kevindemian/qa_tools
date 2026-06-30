@@ -21,7 +21,7 @@ function _buildDiffSummaryCards(newFails: number, newPasses: number, flakyCount:
 }
 
 function _buildDiffRow(t: FlatTest, badgeText: string, badgeClass: string): string {
-    let badgeVariant: string;
+    let badgeVariant: 'default' | 'info' | 'pass' | 'fail' | 'skip' | 'warn';
     if (badgeClass === 'passed') {
         badgeVariant = 'pass';
     } else if (badgeClass === 'failed') {
