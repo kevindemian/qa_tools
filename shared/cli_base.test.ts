@@ -525,7 +525,7 @@ describe('CLI Base', () => {
             mockRootLogger.filePath = path.join(os.tmpdir(), 'qa-test.log');
             cliBase.printSessionSummary([], null);
 
-            expect(MOCK_PROMPT.info).toHaveBeenCalledWith('Log: /tmp/test.log');
+            expect(MOCK_PROMPT.info).toHaveBeenCalledWith(`Log: ${path.join(os.tmpdir(), 'qa-test.log')}`);
         });
 
         it('does not print log path when undefined', () => {

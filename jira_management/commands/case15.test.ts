@@ -210,7 +210,7 @@ describe('Case15', () => {
             expect(offerTestExecutionAssociation).toHaveBeenCalledWith(
                 mockContext,
                 ['TEST-1', 'TEST-2'],
-                'resolve-abc123-12345',
+                'qa-resolve-abc123-12345',
             );
             expect(showResults).toHaveBeenCalledWith(mockContext, ['TEST-1', 'TEST-2'], { associated: false });
         });

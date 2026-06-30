@@ -609,7 +609,7 @@ describe('Handlers', () => {
             await mod.handler(baseContext);
 
             expect(prompt.success).toHaveBeenCalledWith(
-                expect.stringContaining('Template CSV gerado em: /tmp/test-template.csv'),
+                expect.stringContaining('Template CSV gerado em: ' + path.join(os.tmpdir(), 'qa-test-template.csv')),
             );
         });
 
@@ -622,7 +622,7 @@ describe('Handlers', () => {
             await mod.handler(baseContext);
 
             expect(prompt.success).toHaveBeenCalledWith(
-                expect.stringContaining('Template JSON gerado em: /tmp/test-template.json'),
+                expect.stringContaining('Template JSON gerado em: ' + path.join(os.tmpdir(), 'qa-test-template.json')),
             );
         });
 

@@ -85,7 +85,7 @@ describe('Temp Dir', () => {
             process.env['QA_TOOLS_REPORTS_DIR'] = path.join(os.tmpdir(), 'qa-test-reports');
             const result = writeReport('test.json', '{}');
 
-            expect(result).toMatch(/\/tmp\/test-reports\/\d{4}-\d{2}-\d{2}\/test\.json$/);
+            expect(result).toMatch(/\/tmp\/qa-test-reports\/\d{4}-\d{2}-\d{2}\/test\.json$/);
         });
 
         it('logs and re-throws when mkdirSync fails (G1 bug-fix)', () => {
