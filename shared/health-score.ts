@@ -364,11 +364,13 @@ export function calculateHealthScore(
     }
 
     function gate(value: number, threshold: number, op: 'gte' | 'lte'): 'pass' | 'fail' {
-        return op === 'gte' ? (value >= threshold ? 'pass' : 'fail') : (value <= threshold ? 'pass' : 'fail');
+        const pass = op === 'gte' ? value >= threshold : value <= threshold;
+        return pass ? 'pass' : 'fail';
     }
 
     const statusPassRate = gate(actual.passRate, config.minPassRateGate, 'gte');
-    const statusFlaky = (actual.flakyPct !== null && actual.flakyPct <= config.maxFlakyGate) ? 'pass' as const : 'fail' as const;
+    const statusFlaky =
+        actual.flakyPct !== null && actual.flakyPct <= config.maxFlakyGate ? ('pass' as const) : ('fail' as const);
     const statusCoverage = gate(actual.coverage, config.minCoverageGate, 'gte');
     const statusSpeed = gate(actual.suiteSpeed, config.maxSuiteSpeedGate, 'lte');
     const statusExecRate = gate(actual.executionRate, config.minExecutionRateGate, 'gte');

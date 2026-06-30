@@ -350,7 +350,8 @@ async function verifyNewTestCase(): Promise<boolean> {
                 ((fields?.['Action'] as Record<string, unknown> | undefined)?.['value'] as string | undefined) ?? '';
             const e =
                 ((fields?.['Expected Result'] as Record<string, unknown> | undefined)?.['value'] as
-                    string | undefined) ?? '';
+                    | string
+                    | undefined) ?? '';
             process.stdout.write(`    Step ${String(s['index'])}: ${a} → ${e}` + '\n');
         }
         return true;
@@ -409,12 +410,14 @@ async function fase6XrayHistory() {
                 const EntrySchema = z.record(z.string(), z.unknown());
                 const entry = EntrySchema.parse(h);
                 const entryDate = typeof entry['date'] === 'string' ? entry['date'] : '?';
-                const entryStatus =
-                    typeof entry['status'] === 'string'
-                        ? entry['status']
-                        : typeof entry['evolution'] === 'string'
-                          ? entry['evolution']
-                          : 'N/A';
+                let entryStatus: string;
+                if (typeof entry['status'] === 'string') {
+                    entryStatus = entry['status'];
+                } else if (typeof entry['evolution'] === 'string') {
+                    entryStatus = entry['evolution'];
+                } else {
+                    entryStatus = 'N/A';
+                }
                 process.stdout.write(`    ${entryDate}: ${entryStatus}` + '\n');
             });
         } else {

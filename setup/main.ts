@@ -68,16 +68,17 @@ async function gatherSetupContext(): Promise<SetupContext> {
     divider();
 
     const prReport = await askConfirm('Habilitar PR Report (relatório pós-CI nos PRs)?', true);
-    const prReportPublishTarget = prReport
-        ? (
-              await ask('Target de publicação [' + (gitProvider === 'github' ? 'github-actions' : 'gitlab-ci') + ']', {
-                  default: gitProvider === 'github' ? 'github-actions' : 'gitlab-ci',
-                  hint: 'github-actions | gitlab-ci',
-              })
-          )
-              .trim()
-              .toLowerCase() || (gitProvider === 'github' ? 'github-actions' : 'gitlab-ci')
-        : 'github-actions';
+    const defaultTarget = gitProvider === 'github' ? 'github-actions' : 'gitlab-ci';
+    let prReportPublishTarget: string;
+    if (prReport) {
+        const answer = await ask('Target de publicação [' + defaultTarget + ']', {
+            default: defaultTarget,
+            hint: 'github-actions | gitlab-ci',
+        });
+        prReportPublishTarget = answer.trim().toLowerCase() || defaultTarget;
+    } else {
+        prReportPublishTarget = 'github-actions';
+    }
 
     const features = {
         qualityGate: await askConfirm('Habilitar Quality Gate (bloqueio de PR por qualidade)?', true),
@@ -116,62 +117,96 @@ async function gatherSetupContext(): Promise<SetupContext> {
     };
 }
 
+function addUnique(list: string[], value: string): void {
+    if (!list.includes(value)) list.push(value);
+}
+
+function generateGitHubWorkflows(ctx: SetupContext): { created: string[]; skipped: string[] } {
+    const created: string[] = [];
+    const skipped: string[] = [];
+    const workflowDir = path.resolve(process.cwd(), '.github/workflows');
+    fs.mkdirSync(workflowDir, { recursive: true });
+    const wfPath = path.join(workflowDir, 'ci.yml');
+    const ppWfPath = path.join(workflowDir, 'qa-post-process.yml');
+    const actionsDir = path.resolve(process.cwd(), '.github/actions/qa-post-process');
+    fs.mkdirSync(actionsDir, { recursive: true });
+    const actionPath = path.join(actionsDir, 'action.yml');
+
+    if (ctx.features.prReport) {
+        fs.writeFileSync(ppWfPath, generateQaPostProcessWorkflow(ctx), 'utf8');
+        addUnique(created, ppWfPath);
+        fs.writeFileSync(actionPath, generateQaPostProcessAction(), 'utf8');
+        addUnique(created, actionPath);
+    }
+
+    if (fs.existsSync(wfPath)) {
+        const existing = fs.readFileSync(wfPath, 'utf8');
+        const updated = injectPostProcessJob(existing, ctx.projectName);
+        if (updated !== existing) {
+            fs.writeFileSync(wfPath, updated, 'utf8');
+            info('Job post-process adicionado ao ci.yml existente (conteúdo preservado).');
+            addUnique(created, wfPath);
+        } else {
+            info('ci.yml já contém post-process — sem alterações.');
+            skipped.push(wfPath);
+        }
+    } else {
+        fs.writeFileSync(wfPath, generateCIWorkflow(ctx), 'utf8');
+        addUnique(created, wfPath);
+    }
+
+    return { created, skipped };
+}
+
+async function generateGitLabCIFile(ctx: SetupContext): Promise<{ created: string[]; skipped: string[] }> {
+    const created: string[] = [];
+    const skipped: string[] = [];
+    const wfPath = path.resolve(process.cwd(), '.gitlab-ci.yml');
+    const yaml = generateGitLabCI(ctx);
+
+    if (fs.existsSync(wfPath)) {
+        const shouldOverwrite = await askConfirm('.gitlab-ci.yml já existe. Sobrescrever?', false);
+        if (shouldOverwrite) {
+            fs.writeFileSync(wfPath, yaml, 'utf8');
+            created.push(wfPath);
+        } else {
+            skipped.push(wfPath);
+        }
+    } else {
+        fs.writeFileSync(wfPath, yaml, 'utf8');
+        created.push(wfPath);
+    }
+
+    return { created, skipped };
+}
+
+function generatePrePushHookFiles(ctx: SetupContext): { created: string[]; skipped: string[] } {
+    const created: string[] = [];
+    const skipped: string[] = [];
+    const hookResult = writeHookFile(ctx);
+    created.push(...hookResult.filesCreated);
+    skipped.push(...hookResult.filesSkipped);
+    const hookDir = path.resolve(process.cwd(), '.git', 'hooks');
+    fs.mkdirSync(hookDir, { recursive: true });
+    const hookPath = path.join(hookDir, 'pre-push');
+    if (!fs.existsSync(hookPath)) {
+        fs.writeFileSync(hookPath, generatePrePushHook(ctx), 'utf8');
+        fs.chmodSync(hookPath, 0o700);
+        addUnique(created, hookPath);
+    } else if (!skipped.includes(hookPath)) {
+        skipped.push(hookPath);
+    }
+    return { created, skipped };
+}
+
 async function generateConfigFiles(ctx: SetupContext): Promise<{ created: string[]; skipped: string[] }> {
     const created: string[] = [];
     const skipped: string[] = [];
 
-    if (ctx.gitProvider === 'github') {
-        const workflowDir = path.resolve(process.cwd(), '.github/workflows');
-        fs.mkdirSync(workflowDir, { recursive: true });
-        const wfPath = path.join(workflowDir, 'ci.yml');
-        const ppWfPath = path.join(workflowDir, 'qa-post-process.yml');
-        const actionsDir = path.resolve(process.cwd(), '.github/actions/qa-post-process');
-        fs.mkdirSync(actionsDir, { recursive: true });
-        const actionPath = path.join(actionsDir, 'action.yml');
-
-        if (ctx.features.prReport) {
-            const ppYaml = generateQaPostProcessWorkflow(ctx);
-            fs.writeFileSync(ppWfPath, ppYaml, 'utf8');
-            if (!created.includes(ppWfPath)) created.push(ppWfPath);
-
-            const actionYaml = generateQaPostProcessAction();
-            fs.writeFileSync(actionPath, actionYaml, 'utf8');
-            if (!created.includes(actionPath)) created.push(actionPath);
-        }
-
-        if (fs.existsSync(wfPath)) {
-            // ci.yml exists → inject post-process job NON-destructively
-            const existing = fs.readFileSync(wfPath, 'utf8');
-            const updated = injectPostProcessJob(existing, ctx.projectName);
-            if (updated !== existing) {
-                fs.writeFileSync(wfPath, updated, 'utf8');
-                info('Job post-process adicionado ao ci.yml existente (conteúdo preservado).');
-                if (!created.includes(wfPath)) created.push(wfPath);
-            } else {
-                info('ci.yml já contém post-process — sem alterações.');
-                skipped.push(wfPath);
-            }
-        } else {
-            const yaml = generateCIWorkflow(ctx);
-            fs.writeFileSync(wfPath, yaml, 'utf8');
-            if (!created.includes(wfPath)) created.push(wfPath);
-        }
-    } else {
-        const wfPath = path.resolve(process.cwd(), '.gitlab-ci.yml');
-        const yaml = generateGitLabCI(ctx);
-        if (fs.existsSync(wfPath)) {
-            const shouldOverwrite = await askConfirm('.gitlab-ci.yml já existe. Sobrescrever?', false);
-            if (shouldOverwrite) {
-                fs.writeFileSync(wfPath, yaml, 'utf8');
-                created.push(wfPath);
-            } else {
-                skipped.push(wfPath);
-            }
-        } else {
-            fs.writeFileSync(wfPath, yaml, 'utf8');
-            created.push(wfPath);
-        }
-    }
+    const providerResult =
+        ctx.gitProvider === 'github' ? generateGitHubWorkflows(ctx) : await generateGitLabCIFile(ctx);
+    created.push(...providerResult.created);
+    skipped.push(...providerResult.skipped);
 
     const configResult = writeProjectsConfig(ctx);
     created.push(...configResult.filesCreated);
@@ -186,20 +221,9 @@ async function generateConfigFiles(ctx: SetupContext): Promise<{ created: string
     skipped.push(...featuresResult.filesSkipped);
 
     if (ctx.features.prePushHook) {
-        const hookResult = writeHookFile(ctx);
-        created.push(...hookResult.filesCreated);
-        skipped.push(...hookResult.filesSkipped);
-        const hookScript = generatePrePushHook(ctx);
-        const hookDir = path.resolve(process.cwd(), '.git', 'hooks');
-        fs.mkdirSync(hookDir, { recursive: true });
-        const hookPath = path.join(hookDir, 'pre-push');
-        if (!fs.existsSync(hookPath)) {
-            fs.writeFileSync(hookPath, hookScript, 'utf8');
-            fs.chmodSync(hookPath, 0o755);
-            if (!created.includes(hookPath)) created.push(hookPath);
-        } else if (!skipped.includes(hookPath)) {
-            skipped.push(hookPath);
-        }
+        const hookResult = generatePrePushHookFiles(ctx);
+        created.push(...hookResult.created);
+        skipped.push(...hookResult.skipped);
     }
 
     return { created, skipped };
