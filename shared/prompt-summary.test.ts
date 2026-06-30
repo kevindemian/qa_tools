@@ -1,8 +1,10 @@
+import os from 'os';
+import path from 'path';
 vi.mock('./output', () => ({
     defaultOutput: { print: vi.fn() },
 }));
 vi.mock('./logger', () => ({
-    rootLogger: { filePath: '/tmp/qa.log', info: vi.fn(), warn: vi.fn() },
+    rootLogger: { filePath: path.join(os.tmpdir(), 'qa-test.log'), info: vi.fn(), warn: vi.fn() },
 }));
 vi.mock('./prompt-format', async () => ({
     ...(await vi.importActual<typeof import('./prompt-format.js')>('./prompt-format')),

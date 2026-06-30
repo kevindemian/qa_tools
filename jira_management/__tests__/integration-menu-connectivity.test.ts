@@ -1,10 +1,12 @@
+import os from 'os';
+import path from 'path';
 import { describe, it, expect, vi, beforeEach } from 'vitest';
 import { createMockContext } from '../../shared/test-utils/factories/context-factory.js';
 
 vi.mock('../../shared/prompt.js', () => ({
     ask: vi.fn().mockResolvedValue('test-value'),
     askConfirm: vi.fn().mockResolvedValue(true),
-    askFilePath: vi.fn().mockResolvedValue('/tmp/test.csv'),
+    askFilePath: vi.fn().mockResolvedValue(path.join(os.tmpdir(), 'qa-test.csv')),
     warn: vi.fn(),
     info: vi.fn(),
     title: vi.fn(),
@@ -87,8 +89,8 @@ vi.mock('../../shared/open.js', () => ({
     openWithFallback: vi.fn(),
 }));
 vi.mock('../../shared/temp-dir.js', () => ({
-    writeReport: vi.fn(() => '/tmp/report.html'),
-    reportsDir: vi.fn(() => '/tmp/reports'),
+    writeReport: vi.fn(() => path.join(os.tmpdir(), 'qa-test-report.html')),
+    reportsDir: vi.fn(() => path.join(os.tmpdir(), 'qa-test-reports')),
 }));
 vi.mock('../../shared/first-run.js', () => ({
     maybeRunFirstRunWizard: vi.fn(),

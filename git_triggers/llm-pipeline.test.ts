@@ -1,3 +1,5 @@
+import os from 'os';
+import path from 'path';
 import { confirm, success } from '../shared/prompt.js';
 import { analyzeFailuresWithReport } from '../shared/failure-analysis.js';
 import type { analyzeFailuresWithReport as AnalyzeFailuresFn } from '../shared/failure-analysis.js';
@@ -13,7 +15,7 @@ import type {
 import { offerPipelineFailureAnalysis } from './llm-pipeline.js';
 
 vi.mock('../shared/temp-dir.js', () => ({
-    writeReport: vi.fn(() => '/tmp/report.html'),
+    writeReport: vi.fn(() => path.join(os.tmpdir(), 'qa-test-report.html')),
 }));
 
 vi.mock('../shared/failure-analysis', () => ({

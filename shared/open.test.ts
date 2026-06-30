@@ -1,3 +1,5 @@
+import os from 'os';
+import path from 'path';
 vi.mock('child_process', () => ({ spawn: vi.fn(), spawnSync: vi.fn(), execFileSync: vi.fn() }));
 vi.mock('os', () => ({
     platform: vi.fn<(...args: []) => () => string>(),
@@ -457,7 +459,7 @@ describe('OpenWithFallback', () => {
 
         const logInfo = vi.fn();
         makeAutoSpawn([0]);
-        await openWithFallback('/tmp/report.html', 'Relatório', logInfo);
+        await openWithFallback(path.join(os.tmpdir(), 'qa-report.html'), 'Relatório', logInfo);
 
         expect(logInfo).toHaveBeenCalledWith('Relatório aberto no navegador');
     });
@@ -467,7 +469,7 @@ describe('OpenWithFallback', () => {
 
         const logInfo = vi.fn();
         makeAutoSpawn([1, 0]);
-        await openWithFallback('/tmp/report.html', 'Relatório', logInfo);
+        await openWithFallback(path.join(os.tmpdir(), 'qa-report.html'), 'Relatório', logInfo);
 
         expect(logInfo).toHaveBeenCalledWith(
             'Relatório salvo. Navegador indisponível, pasta aberta no gerenciador de arquivos.',
@@ -479,7 +481,7 @@ describe('OpenWithFallback', () => {
 
         const logInfo = vi.fn();
         makeAutoSpawn([1, 1]);
-        await openWithFallback('/tmp/report.html', 'Relatório', logInfo);
+        await openWithFallback(path.join(os.tmpdir(), 'qa-report.html'), 'Relatório', logInfo);
 
         expect(logInfo).toHaveBeenCalledWith('Relatório salvo em: /tmp/report.html');
     });

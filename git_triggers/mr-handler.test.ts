@@ -1,3 +1,5 @@
+import os from 'os';
+import path from 'path';
 vi.mock('../shared/prompt', () => ({
     print: vi.fn(),
     success: vi.fn(),
@@ -20,7 +22,7 @@ vi.mock('./ai-test-impact', () => ({ assessTestImpact: vi.fn() }));
 vi.mock('./nivelar', () => ({ nivelarBranches: vi.fn() }));
 
 vi.mock('../shared/temp-dir', () => ({
-    reportsDir: vi.fn(() => '/tmp/reports'),
+    reportsDir: vi.fn(() => path.join(os.tmpdir(), 'qa-test-reports')),
 }));
 
 import { success, warn, info, prompt, confirm, printError } from '../shared/prompt.js';

@@ -1,3 +1,5 @@
+import os from 'os';
+import path from 'path';
 vi.mock('../shared/prompt', () => ({
     confirm: vi.fn(),
     success: vi.fn(),
@@ -71,7 +73,7 @@ let testBackend: FsStoreBackend;
 describe('Pipeline Jira', () => {
     beforeEach(() => {
         vi.clearAllMocks();
-        testBackend = new FsStoreBackend('/tmp/qa-tools-test-jira');
+        testBackend = new FsStoreBackend(path.join(os.tmpdir(), 'qa-tools-test-jira'));
         testBackend.init();
     });
 

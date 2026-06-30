@@ -1,4 +1,5 @@
 import { vi, describe, expect, it, beforeEach } from 'vitest';
+import os from 'os';
 import path from 'path';
 
 vi.mock('fs', async () => {
@@ -22,7 +23,7 @@ import type { MetricsRun, MetricsStore, CoverageSnapshot } from './metrics.js';
 import type { ParseResult } from './result_parser.js';
 import { nonNull } from './test-utils.js';
 
-const TMP_DIR = '/tmp/test-metrics';
+const TMP_DIR = path.join(os.tmpdir(), 'qa-test-metrics');
 
 describe('Metrics', () => {
     beforeEach(() => {

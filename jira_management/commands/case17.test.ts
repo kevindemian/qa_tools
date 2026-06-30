@@ -1,3 +1,5 @@
+import os from 'os';
+import path from 'path';
 import { expect, vi } from 'vitest';
 
 vi.mock('../../shared/prompt');
@@ -27,7 +29,7 @@ vi.mock('../../shared/open', () => ({
 }));
 
 vi.mock('../../shared/temp-dir', () => ({
-    writeReport: vi.fn(() => '/tmp/report.html'),
+    writeReport: vi.fn(() => path.join(os.tmpdir(), 'qa-test-report.html')),
 }));
 
 vi.mock('../../shared/bug-report', () => ({
@@ -229,7 +231,7 @@ describe('Case17', () => {
             const parser = vi.mocked(parserModule);
             const reportGen = vi.mocked(reportGenModule);
 
-            process.env['QA_MAPPING_PATH'] = '/tmp/qa-mapping.json';
+            process.env['QA_MAPPING_PATH'] = path.join(os.tmpdir(), 'qa-mapping.json');
 
             vi.mocked(fs).existsSync.mockReturnValue(true);
             vi.mocked(fs).readFileSync.mockReturnValue(
@@ -388,7 +390,7 @@ describe('Case17', () => {
             const parser = vi.mocked(parserModule);
             const reportGen = vi.mocked(reportGenModule);
 
-            process.env['QA_MAPPING_PATH'] = '/tmp/missing-tests.json';
+            process.env['QA_MAPPING_PATH'] = path.join(os.tmpdir(), 'qa-missing-tests.json');
 
             vi.mocked(fs).existsSync.mockReturnValue(true);
             vi.mocked(fs).readFileSync.mockReturnValue(JSON.stringify({ otherField: true }));

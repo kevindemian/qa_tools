@@ -1,3 +1,5 @@
+import os from 'os';
+import path from 'path';
 vi.mock('../shared/prompt', () => ({
     print: vi.fn(),
     success: vi.fn(),
@@ -74,7 +76,7 @@ vi.mock('fs', () => ({
     mkdirSync: vi.fn(),
     existsSync: vi.fn(() => false),
 }));
-vi.mock('../shared/temp-dir', () => ({ writeReport: vi.fn(() => '/tmp/flakiness-test.html') }));
+vi.mock('../shared/temp-dir', () => ({ writeReport: vi.fn(() => path.join(os.tmpdir(), 'qa-flakiness-test.html')) }));
 
 import Config from '../shared/config.js';
 const setAutoConfirmSpy = vi.spyOn(Config, 'setAutoConfirm');

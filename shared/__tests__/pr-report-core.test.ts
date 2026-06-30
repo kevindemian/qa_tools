@@ -1,3 +1,5 @@
+import os from 'os';
+import path from 'path';
 import { describe, it, expect, vi, beforeEach, afterAll } from 'vitest';
 import { generatePrReport } from '../pr-report-core.js';
 import type { FlatTest } from '../result_parser.js';
@@ -171,10 +173,10 @@ describe('Pr Report Core', () => {
             const result = await generatePrReport({
                 tests: [sampleTest],
                 stats: { passed: 1, failed: 0, skipped: 0, total: 1, duration: 100 },
-                htmlOutputPath: '/tmp/custom-report.html',
+                htmlOutputPath: path.join(os.tmpdir(), 'qa-custom-report.html'),
             });
 
-            expect(result.htmlPath).toBe('/tmp/custom-report.html');
+            expect(result.htmlPath).toBe(path.join(os.tmpdir(), 'qa-custom-report.html'));
         });
 
         it('includes coverage source in HTML options when coverage is resolved', async () => {
@@ -412,7 +414,7 @@ describe('Pr Report Core', () => {
         it('writes to GITHUB_STEP_SUMMARY when env var is set (VITEST guard bypassed)', async () => {
             expect.hasAssertions();
 
-            const summaryPath = '/tmp/test-step-summary.md';
+            const summaryPath = path.join(os.tmpdir(), 'qa-test-step-summary.md');
             const fs = await import('node:fs');
             const prevVitest = process.env['VITEST'];
             delete process.env['VITEST'];
@@ -450,7 +452,7 @@ describe('Pr Report Core', () => {
             expect.hasAssertions();
 
             process.env['VITEST'] = 'true';
-            const summaryPath = '/tmp/test-step-summary-guard.md';
+            const summaryPath = path.join(os.tmpdir(), 'qa-test-step-summary-guard.md');
             const fs = await import('node:fs');
             fs.writeFileSync(summaryPath, '', 'utf8');
             process.env['GITHUB_STEP_SUMMARY'] = summaryPath;

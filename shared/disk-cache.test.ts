@@ -1,4 +1,5 @@
 import { vi } from 'vitest';
+import os from 'os';
 import path from 'path';
 import crypto from 'node:crypto';
 
@@ -20,7 +21,7 @@ describe('Disk Cache', () => {
     });
 
     beforeEach(() => {
-        cacheDir = '/tmp/llm-disk-cache-' + Date.now() + '-' + crypto.randomBytes(4).toString('hex');
+        cacheDir = path.join(os.tmpdir(), 'qa-llm-disk-cache-' + Date.now() + '-' + crypto.randomBytes(4).toString('hex'));
         fs.mkdirSync(cacheDir, { recursive: true });
         process.env['LLM_DISK_CACHE_DIR'] = cacheDir;
     });
@@ -103,7 +104,7 @@ describe('Disk Cache', () => {
         });
 
         it('creates cache dir if it does not exist', () => {
-            const newDir = '/tmp/llm-cache-new-' + Date.now();
+            const newDir = path.join(os.tmpdir(), 'qa-llm-cache-new-' + Date.now());
             process.env['LLM_DISK_CACHE_DIR'] = newDir;
 
             expect(fs.existsSync(newDir)).toBeFalsy();
@@ -135,14 +136,14 @@ describe('Disk Cache', () => {
         });
 
         it('handles non-existent directory gracefully', () => {
-            const fakeDir = '/tmp/nonexistent-cache-' + Date.now();
+            const fakeDir = path.join(os.tmpdir(), 'qa-nonexistent-cache-' + Date.now());
             process.env['LLM_DISK_CACHE_DIR'] = fakeDir;
 
             expect(() => clearDiskCache()).not.toThrow();
         });
 
         it('handles clear failure when cache dir is a file', () => {
-            const fileDir = '/tmp/llm-cache-file-' + Date.now();
+            const fileDir = path.join(os.tmpdir(), 'qa-llm-cache-file-' + Date.now());
             fs.writeFileSync(fileDir, '');
             process.env['LLM_DISK_CACHE_DIR'] = fileDir;
 

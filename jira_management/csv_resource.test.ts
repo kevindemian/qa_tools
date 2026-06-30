@@ -1,3 +1,5 @@
+import os from 'os';
+import path from 'path';
 import { writeFileSync, unlinkSync } from 'fs';
 import { nonNull } from '../shared/test-utils.js';
 import { rootLogger } from '../shared/logger.js';
@@ -78,7 +80,7 @@ describe('CsvResource', () => {
         it('parses multi-line quoted Pre-condition', async () => {
             expect.hasAssertions();
 
-            const tmp = '/tmp/test-pre-quoted.csv';
+            const tmp = path.join(os.tmpdir(), 'qa-test-pre-quoted.csv');
             writeFileSync(
                 tmp,
                 [
@@ -106,7 +108,7 @@ describe('CsvResource', () => {
         it('parses single-line quoted Pre-condition', async () => {
             expect.hasAssertions();
 
-            const tmp = '/tmp/test-pre-quoted-single.csv';
+            const tmp = path.join(os.tmpdir(), 'qa-test-pre-quoted-single.csv');
             writeFileSync(
                 tmp,
                 [
@@ -131,7 +133,7 @@ describe('CsvResource', () => {
         it('parses unquoted Pre-condition (range mode fallback)', async () => {
             expect.hasAssertions();
 
-            const tmp = '/tmp/test-pre-range.csv';
+            const tmp = path.join(os.tmpdir(), 'qa-test-pre-range.csv');
             writeFileSync(
                 tmp,
                 [
@@ -204,7 +206,7 @@ describe('CsvResource', () => {
             expect.hasAssertions();
 
             const warnSpy = vi.spyOn(rootLogger, 'warn').mockImplementation(() => {});
-            const tmp = '/tmp/test-no-title.csv';
+            const tmp = path.join(os.tmpdir(), 'qa-test-no-title.csv');
             writeFileSync(tmp, 'Action,Data,Expected\nx,y,z\n---\nTitle: Real\nAction,Data,Expected\na,b,c\n', 'utf-8');
             const results = await csvResource.readBulkCsv(tmp);
 
@@ -219,7 +221,7 @@ describe('CsvResource', () => {
         it('parses single-line quoted description', async () => {
             expect.hasAssertions();
 
-            const tmp = '/tmp/test-desc-quoted.csv';
+            const tmp = path.join(os.tmpdir(), 'qa-test-desc-quoted.csv');
             writeFileSync(tmp, 'Title: TC\nDescription:"Quoted desc"\nAction,Data,Expected\nx,y,z\n', 'utf-8');
             const results = await csvResource.readBulkCsv(tmp);
 
@@ -232,7 +234,7 @@ describe('CsvResource', () => {
             expect.hasAssertions();
 
             const warnSpy = vi.spyOn(rootLogger, 'warn').mockImplementation(() => {});
-            const tmp = '/tmp/test-desc-unclosed.csv';
+            const tmp = path.join(os.tmpdir(), 'qa-test-desc-unclosed.csv');
             writeFileSync(
                 tmp,
                 ['Title: TC', 'Description:"Line 1', 'Line 2', 'Action,Data,Expected', 'x,y,z'].join('\n'),
@@ -251,7 +253,7 @@ describe('CsvResource', () => {
         it('parses multi-line quoted description with proper closing', async () => {
             expect.hasAssertions();
 
-            const tmp = '/tmp/test-desc-closed.csv';
+            const tmp = path.join(os.tmpdir(), 'qa-test-desc-closed.csv');
             writeFileSync(
                 tmp,
                 ['Title: TC', 'Description:"Line 1', 'Line 2"', 'Action,Data,Expected', 'x,y,z'].join('\n'),
@@ -267,7 +269,7 @@ describe('CsvResource', () => {
         it('parses multi-line description in range mode (no quotes)', async () => {
             expect.hasAssertions();
 
-            const tmp = '/tmp/test-desc-range-multi.csv';
+            const tmp = path.join(os.tmpdir(), 'qa-test-desc-range-multi.csv');
             writeFileSync(
                 tmp,
                 [
@@ -290,7 +292,7 @@ describe('CsvResource', () => {
         it('parses description in range mode with stop prefix adjacent', async () => {
             expect.hasAssertions();
 
-            const tmp = '/tmp/test-desc-range.csv';
+            const tmp = path.join(os.tmpdir(), 'qa-test-desc-range.csv');
             writeFileSync(
                 tmp,
                 ['Title: TC', 'Description:Some desc', 'Group: G1', 'Action,Data,Expected', 'x,y,z'].join('\n'),
@@ -307,7 +309,7 @@ describe('CsvResource', () => {
         it('parses empty description after Description: with metadata on next line', async () => {
             expect.hasAssertions();
 
-            const tmp = '/tmp/test-desc-empty.csv';
+            const tmp = path.join(os.tmpdir(), 'qa-test-desc-empty.csv');
             writeFileSync(
                 tmp,
                 ['Title: TC', 'Description:', 'Pre-condition: LOGIN', 'Action,Data,Expected', 'x,y,z'].join('\n'),
@@ -325,7 +327,7 @@ describe('CsvResource', () => {
             expect.hasAssertions();
 
             const warnSpy = vi.spyOn(rootLogger, 'warn').mockImplementation(() => {});
-            const tmp = '/tmp/test-pre-unclosed.csv';
+            const tmp = path.join(os.tmpdir(), 'qa-test-pre-unclosed.csv');
             writeFileSync(
                 tmp,
                 [
@@ -355,7 +357,7 @@ describe('CsvResource', () => {
             csvResource.readCsvFromString = vi
                 .fn<(...args: [string]) => Promise<never>>()
                 .mockRejectedValue(new Error('CSV parse error'));
-            const tmp = '/tmp/test-csv-error.csv';
+            const tmp = path.join(os.tmpdir(), 'qa-test-csv-error.csv');
             writeFileSync(tmp, 'Title: TC\nDescription: Test\nAction,Data,Expected\nx,y,z\n', 'utf-8');
 
             await expect(csvResource.readBulkCsv(tmp)).rejects.toThrow('CSV parse error');
@@ -508,7 +510,7 @@ describe('CsvResource', () => {
 
             const warnSpy = vi.spyOn(rootLogger, 'warn').mockImplementation(() => {});
             // Flat CSV format: header row with Title,Action,Data,Expected Result (no ---, no Title:)
-            const tmp = '/tmp/test-flat.csv';
+            const tmp = path.join(os.tmpdir(), 'qa-test-flat.csv');
             writeFileSync(tmp, 'Title,Action,Data,Expected Result\nTC1,Step1,,Result1\nTC2,Step2,,Result2\n', 'utf-8');
             const results = await csvResource.readBulkCsv(tmp);
 
@@ -524,7 +526,7 @@ describe('CsvResource', () => {
             expect.hasAssertions();
 
             const warnSpy = vi.spyOn(rootLogger, 'warn').mockImplementation(() => {});
-            const tmp = '/tmp/test-flat-action.csv';
+            const tmp = path.join(os.tmpdir(), 'qa-test-flat-action.csv');
             writeFileSync(tmp, 'Action,Data,Expected Result\nStep1,Data1,Result1\n', 'utf-8');
             const results = await csvResource.readBulkCsv(tmp);
 
@@ -540,7 +542,7 @@ describe('CsvResource', () => {
         it('splits blocks correctly with CRLF line endings', async () => {
             expect.hasAssertions();
 
-            const tmp = '/tmp/test-crlf-bulk.csv';
+            const tmp = path.join(os.tmpdir(), 'qa-test-crlf-bulk.csv');
             const crlf = '\r\n';
             const csvContent =
                 [
@@ -567,7 +569,7 @@ describe('CsvResource', () => {
         it('strips BOM character at start of file', async () => {
             expect.hasAssertions();
 
-            const tmp = '/tmp/test-bom-bulk.csv';
+            const tmp = path.join(os.tmpdir(), 'qa-test-bom-bulk.csv');
             const bom = '\uFEFF';
             const csvContent = bom + 'Title: Com BOM\nAction,Data,Expected Result\na,d,r\n';
             writeFileSync(tmp, csvContent, 'utf-8');
@@ -583,7 +585,7 @@ describe('CsvResource', () => {
         it('handles BOM + CRLF + semicolons combined', async () => {
             expect.hasAssertions();
 
-            const tmp = '/tmp/test-bom-crlf-semi.csv';
+            const tmp = path.join(os.tmpdir(), 'qa-test-bom-crlf-semi.csv');
             const bom = '\uFEFF';
             const crlf = '\r\n';
             const csvContent =

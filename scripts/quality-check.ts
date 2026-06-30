@@ -414,7 +414,7 @@ export function checkIntegrity(): CheckResult {
         const selfContent = readFileSync('scripts/quality-check.ts', 'utf-8');
         const contentWithoutHash = selfContent.replace(/\/\* HASH:[0-9a-f]{64} \*\//g, '');
         const currentHash = createHash('sha256').update(contentWithoutHash, 'utf-8').digest('hex');
-        /* HASH:1ef95757f12fe5e32e956e43de498a52d301cc73b7fe2f5c7cca9e6947d915a7 */
+        /* HASH:9fae91a8f4744312c5966d5a401534a7c8a9050e711e3d9ac188e4e740ee4fb2 */
         const match = /\/\* HASH:([0-9a-f]{64}) \*\//.exec(selfContent);
         if (!match) {
             violations.push({ file: 'scripts/quality-check.ts', line: 1, content: 'Missing HASH comment' });

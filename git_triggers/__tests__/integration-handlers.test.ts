@@ -1,3 +1,5 @@
+import os from 'os';
+import path from 'path';
 import { describe, it, expect, vi, beforeEach } from 'vitest';
 
 vi.mock('../../shared/prompt.js', () => ({
@@ -57,8 +59,8 @@ vi.mock('../nivelar.js', () => ({
     nivelarBranches: vi.fn(),
 }));
 vi.mock('../../shared/temp-dir.js', () => ({
-    writeReport: vi.fn(() => '/tmp/report.html'),
-    reportsDir: vi.fn(() => '/tmp/reports'),
+    writeReport: vi.fn(() => path.join(os.tmpdir(), 'qa-test-report.html')),
+    reportsDir: vi.fn(() => path.join(os.tmpdir(), 'qa-test-reports')),
     writeEphemeral: vi.fn(),
 }));
 vi.mock('../../shared/open.js', () => ({

@@ -8,6 +8,7 @@
  */
 import * as fc from 'fast-check';
 import fs from 'fs';
+import os from 'os';
 import path from 'path';
 import { describe, expect, it, afterEach } from 'vitest';
 import { generatePipelineQuarantine, loadQuarantine, filterExpiredEntries } from '../quarantine.js';
@@ -16,7 +17,7 @@ import type { QuarantineEntry, QuarantineStore } from '../quarantine.js';
 vi.mock('../config', () => ({
     __esModule: true,
     default: {
-        xdgStateHome: '/tmp/qa-tools-quarantine-pbt',
+        xdgStateHome: path.join(os.tmpdir(), 'qa-tools-quarantine-pbt'),
         get(key: string) {
             return Reflect.get(this, key) as string;
         },
@@ -26,7 +27,7 @@ vi.mock('../config', () => ({
 describe('Quarantine.Property', () => {
     afterEach(() => {
         try {
-            fs.rmSync('/tmp/qa-tools-quarantine-pbt', { recursive: true, force: true });
+            fs.rmSync(path.join(os.tmpdir(), 'qa-tools-quarantine-pbt'), { recursive: true, force: true });
         } catch {
             /* ok */
         }

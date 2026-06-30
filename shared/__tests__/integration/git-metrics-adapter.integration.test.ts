@@ -7,9 +7,10 @@
  * FT-37d: returns empty array when git fails
  * FT-37e: generateGitFailureClassifications for reverts only
  */
+import os from 'os';
+import path from 'path';
 import { execFileSync } from 'child_process';
 import fs from 'fs';
-import path from 'path';
 import { describe, expect, it, beforeEach, afterEach } from 'vitest';
 
 import {
@@ -37,7 +38,7 @@ function commit(msg: string, date: string): void {
 
 describe('Git Metrics Adapter Integration', () => {
     beforeEach(() => {
-        TEST_DIR = fs.mkdtempSync('/tmp/integration-git-metrics-');
+        TEST_DIR = fs.mkdtempSync(path.join(os.tmpdir(), 'qa-integration-git-metrics-'));
         git('init');
         git('config', 'user.email', 'test@test.com');
         git('config', 'user.name', 'Test');
@@ -111,7 +112,7 @@ describe('Git Metrics Adapter Integration', () => {
         it('returns empty for non-repo directory', () => {
             expect.hasAssertions();
 
-            const fakeDir = fs.mkdtempSync('/tmp/fake-repo-');
+            const fakeDir = fs.mkdtempSync(path.join(os.tmpdir(), 'qa-fake-repo-'));
 
             try {
                 const runs = generateGitMetricsRuns({ repoPath: fakeDir });
@@ -182,7 +183,7 @@ describe('Git Metrics Adapter Integration', () => {
         it('exposes the error message when git log fails', () => {
             expect.hasAssertions();
 
-            const fakeDir = fs.mkdtempSync('/tmp/fake-repo-');
+            const fakeDir = fs.mkdtempSync(path.join(os.tmpdir(), 'qa-fake-repo-'));
 
             try {
                 generateGitMetricsRuns({ repoPath: fakeDir });

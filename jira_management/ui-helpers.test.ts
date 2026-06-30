@@ -1,3 +1,5 @@
+import os from 'os';
+import path from 'path';
 vi.mock('../shared/prompt', () => {
     class CancelError extends Error {
         constructor(msg?: string) {
@@ -41,7 +43,7 @@ vi.mock('../shared/state', () => ({
     load: vi.fn().mockReturnValue({}),
     loadTypedState: vi.fn().mockReturnValue({}),
     update: vi.fn(),
-    getStatePath: vi.fn().mockReturnValue('/tmp/state.json'),
+    getStatePath: vi.fn().mockReturnValue(path.join(os.tmpdir(), 'qa-state.json')),
 }));
 
 const mockRootLogger = vi.hoisted(() => ({
@@ -101,7 +103,7 @@ vi.mock('child_process', () => ({
 }));
 
 vi.mock('../shared/open', () => ({
-    getDocsOutputDir: vi.fn().mockReturnValue('/tmp/qa_docs_test'),
+    getDocsOutputDir: vi.fn().mockReturnValue(path.join(os.tmpdir(), 'qa-docs-test')),
     openWithFallback: vi.fn(),
 }));
 
@@ -175,7 +177,7 @@ describe('Ui Helpers', () => {
     });
 
     describe('BuildMenuChoices', () => {
-        const ctx = { git_directory: '/tmp/repo' };
+        const ctx = { git_directory: path.join(os.tmpdir(), 'qa-repo') };
 
         it('returns array for main level', () => {
             expect(Array.isArray(buildMenuChoices('main', 'ECSPOL', ctx))).toBeTruthy();

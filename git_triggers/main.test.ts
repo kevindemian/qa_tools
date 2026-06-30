@@ -1,4 +1,6 @@
 import fs from 'fs';
+import os from 'os';
+import path from 'path';
 import type { GitProvider, PipelineInfo } from '../shared/types.js';
 import type JiraClient from '../shared/jira-client.js';
 import type JiraLinkManager from '../jira_management/jira_link_manager.js';
@@ -171,8 +173,8 @@ vi.mock('./case00-handler', () => ({
 vi.mock('../shared/temp-dir', () => ({
     ensureDirs: vi.fn(),
     registerCleanup: vi.fn(),
-    writeEphemeral: vi.fn(() => '/tmp/test'),
-    reportsDir: vi.fn(() => '/tmp/reports'),
+    writeEphemeral: vi.fn(() => path.join(os.tmpdir(), 'qa-test')),
+    reportsDir: vi.fn(() => path.join(os.tmpdir(), 'qa-test-reports')),
 }));
 
 type MainModule = typeof import('./interactive-mode.js')._testExports;
@@ -296,10 +298,10 @@ describe('Main', () => {
 
     describe('ResolveGlob', () => {
         it('returns resolved path when glob matches', () => {
-            globSyncMock.mockReturnValueOnce(['/tmp/mapping.json']);
-            const result = mainModule._resolveGlob('/tmp/*.json');
+            globSyncMock.mockReturnValueOnce([path.join(os.tmpdir(), 'mapping.json')]);
+            const result = mainModule._resolveGlob(path.join(os.tmpdir(), '*.json'));
 
-            expect(result).toBe('/tmp/mapping.json');
+            expect(result).toBe(path.join(os.tmpdir(), 'mapping.json'));
         });
 
         it('returns null when no match', () => {
