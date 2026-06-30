@@ -4,7 +4,8 @@ import { sanitizeHtml } from '../shared/escape.js';
 import { buildHtmlPage } from '../shared/html-factory.js';
 import { buildCss } from '../shared/report-styles.js';
 
-const ERROR_LOG_PATTERN = /(?:Error|Failure|Timeout|Exception|FATAL|OOMKilled):?\s*(.+)$/gim;
+const ERROR_KEYWORDS = ['Error', 'Failure', 'Timeout', 'Exception', 'FATAL', 'OOMKilled'];
+const ERROR_LOG_PATTERN = new RegExp('(?:' + ERROR_KEYWORDS.join('|') + '):?\\s*(.+)$', 'gim');
 
 /* ------------------------------------------------------------------ */
 /*  Types                                                              */
