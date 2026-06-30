@@ -193,6 +193,10 @@ export function generateRequirementScoreHtml(
                         if (result.averageAcceptanceRate >= 40) return 'warn';
                         return 'error';
                     })(),
+                }) +
+                MetricCard({
+                    label: 'Generated Tests',
+                    value: String(result.totalGenerated),
                 }),
         });
 
