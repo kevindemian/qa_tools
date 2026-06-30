@@ -8,11 +8,21 @@ const SEARCH_PRS_PAGE_SIZE = 100;
 
 export function formatPR(data: JsonObject | null | undefined): MergeRequestInfo | null {
     if (!data) return null;
+
+    let state: string;
+    if (data['merged']) {
+        state = 'merged';
+    } else if (data['state'] === 'closed') {
+        state = 'closed';
+    } else {
+        state = 'opened';
+    }
+
     return {
         iid: data['number'] as string | number,
         number: data['number'] as string | number,
         title: data['title'] as string,
-        state: data['merged'] ? 'merged' : data['state'] === 'closed' ? 'closed' : 'opened',
+        state,
         web_url: data['html_url'] as string,
         description: data['body'] as string,
         ...(data['head'] ? { source_branch: (data['head'] as JsonObject)['ref'] as string } : {}),

@@ -206,7 +206,14 @@ export async function displayRecentPipelines(m: GitProvider): Promise<void> {
                 const id = p.id ?? p.run_number ?? '?';
                 const ref = p.ref ?? p.head_branch ?? '';
                 const s = String(p.status ?? p.conclusion ?? '?');
-                const icon = s === 'success' ? '\u2713' : s === 'failed' ? '\u2717' : '~';
+                let icon: string;
+                if (s === 'success') {
+                    icon = '\u2713';
+                } else if (s === 'failed') {
+                    icon = '\u2717';
+                } else {
+                    icon = '~';
+                }
                 print('    #' + id + ' ' + ref + ' — ' + icon + ' ' + s);
             });
             print('');

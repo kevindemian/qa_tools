@@ -194,10 +194,12 @@ export async function getUserChoice(level: string, proj: string, ctx: SessionCon
     const catEntries = Object.entries(CATEGORY_TITLES);
     const catEntry = catEntries.find(([k]) => k === level);
     const catTitle = catEntry?.[1] ?? level;
-    const pathLine =
-        level === 'main'
-            ? `   ${proj}${contextLine ? ' | ' + contextLine : ''}`
-            : `   ${proj} > ${catTitle}${contextLine ? ' | ' + contextLine : ''}`;
+    let pathLine: string;
+    if (level === 'main') {
+        pathLine = `   ${proj}${contextLine ? ' | ' + contextLine : ''}`;
+    } else {
+        pathLine = `   ${proj} > ${catTitle}${contextLine ? ' | ' + contextLine : ''}`;
+    }
     const displayPath = pathLine.length > 74 ? pathLine.slice(0, 73) + '…' : pathLine;
     defaultOutput.box(headerLines.length > 0 ? [displayPath, '', ...headerLines] : [displayPath], {
         border: 'double',

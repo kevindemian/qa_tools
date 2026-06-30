@@ -330,7 +330,14 @@ function ensureDbDir(): boolean {
 
 function main(): number {
     const args = process.argv.slice(2);
-    const mode = args.includes('--repair') ? 'repair' : args.includes('--vacuum') ? 'vacuum' : 'check-only';
+    let mode: string;
+    if (args.includes('--repair')) {
+        mode = 'repair';
+    } else if (args.includes('--vacuum')) {
+        mode = 'vacuum';
+    } else {
+        mode = 'check-only';
+    }
 
     if (!checkSqlite3()) {
         rootLogger.error(`[opencode-db-maintenance] ERROR: ${SQLITE_BIN} not found or not executable`);

@@ -29,11 +29,21 @@ async function handler(c: CommandContext): Promise<boolean | void> {
         message: healthMsg,
     });
 
-    const tableData = diagResults.map((r) => ({
-        Endpoint: r.label,
-        Status: r.status === 'ok' ? '🟢 ' + r.message : r.status === 'warn' ? '🟡 ' + r.message : '🔴 ' + r.message,
-        Time: r.message,
-    }));
+    const tableData = diagResults.map((r) => {
+        let statusIcon: string;
+        if (r.status === 'ok') {
+            statusIcon = '🟢 ';
+        } else if (r.status === 'warn') {
+            statusIcon = '🟡 ';
+        } else {
+            statusIcon = '🔴 ';
+        }
+        return {
+            Endpoint: r.label,
+            Status: statusIcon + r.message,
+            Time: r.message,
+        };
+    });
     tableView(tableData, ['Endpoint', 'Status', 'Time'], 'Status');
 
     const okCount = diagResults.filter((r) => r.status === 'ok').length;

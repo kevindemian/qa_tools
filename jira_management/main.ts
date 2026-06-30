@@ -100,8 +100,18 @@ function _displayBadge(totalCount: number, project: string): void {
     const snapshot = metrics.coverageHistory?.filter((s) => s.project === project).pop();
     const pct = snapshot?.coveragePct;
     const gapCount = snapshot ? snapshot.totalIssues - snapshot.mappedIssues : null;
-    const color =
-        pct !== undefined ? (pct >= 70 ? palette.green : pct >= 40 ? palette.yellow : palette.red) : palette.muted;
+    let color: (s: string) => string;
+    if (pct !== undefined) {
+        if (pct >= 70) {
+            color = palette.green;
+        } else if (pct >= 40) {
+            color = palette.yellow;
+        } else {
+            color = palette.red;
+        }
+    } else {
+        color = palette.muted;
+    }
     const badge =
         pct !== undefined
             ? applyPalette('bold')(

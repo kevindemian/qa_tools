@@ -166,14 +166,16 @@ describe('ComputeCrossSquadBenchmark — property-based', () => {
                     for (const project of projects) {
                         const bench = result.benchmarks.find((b) => b.project === project.name);
                         if (bench === undefined) return;
-                        const expectedTrend =
-                            project.previousScore === undefined
-                                ? 'stable'
-                                : project.healthScore > project.previousScore
-                                  ? 'up'
-                                  : project.healthScore < project.previousScore
-                                    ? 'down'
-                                    : 'stable';
+                        let expectedTrend: string;
+                        if (project.previousScore === undefined) {
+                            expectedTrend = 'stable';
+                        } else if (project.healthScore > project.previousScore) {
+                            expectedTrend = 'up';
+                        } else if (project.healthScore < project.previousScore) {
+                            expectedTrend = 'down';
+                        } else {
+                            expectedTrend = 'stable';
+                        }
 
                         expect(bench.trend).toBe(expectedTrend);
                     }

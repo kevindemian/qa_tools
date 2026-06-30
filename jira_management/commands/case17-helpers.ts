@@ -11,7 +11,14 @@ function buildRunsBarChartHtml(runs: RunStats[]): string {
     html += '<div style="display:flex;gap:4px;align-items:flex-end;height:50px;padding:4px 0">';
     for (const run of runs) {
         const h = Math.max(4, (run.passRate / 100) * 46);
-        const color = run.passRate >= 90 ? '#22c55e' : run.passRate >= 70 ? '#f59e0b' : '#ef4444';
+        let color: string;
+        if (run.passRate >= 90) {
+            color = '#22c55e';
+        } else if (run.passRate >= 70) {
+            color = '#f59e0b';
+        } else {
+            color = '#ef4444';
+        }
         html +=
             '<div style="display:flex;flex-direction:column;align-items:center;gap:2px;flex:1">' +
             '<div style="width:100%;height:' +

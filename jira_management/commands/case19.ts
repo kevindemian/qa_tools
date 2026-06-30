@@ -71,15 +71,20 @@ function _showHealthScore(store: ReturnType<typeof loadMetrics>): void {
     const dimRows = (['passRate', 'flakyRate', 'coverage', 'suiteSpeed'] as const).map((dim) => {
         const entry = dimEntries.find(([k]) => k === dim);
         const dimData = entry?.[1];
+
+        let dimLabel: string;
+        if (dim === 'passRate') {
+            dimLabel = 'Pass Rate';
+        } else if (dim === 'flakyRate') {
+            dimLabel = 'Flaky Rate';
+        } else if (dim === 'coverage') {
+            dimLabel = 'Coverage';
+        } else {
+            dimLabel = 'Suite Speed';
+        }
+
         return {
-            Dimensão:
-                dim === 'passRate'
-                    ? 'Pass Rate'
-                    : dim === 'flakyRate'
-                      ? 'Flaky Rate'
-                      : dim === 'coverage'
-                        ? 'Coverage'
-                        : 'Suite Speed',
+            Dimensão: dimLabel,
             Score: dimData?.score ?? 0,
             Status: dimData?.status === 'pass' ? '✅' : '❌',
         };
