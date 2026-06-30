@@ -165,33 +165,13 @@ export function parseRetryAfter(resp: Response, defaultMs: number): number {
     return defaultMs;
 }
 
-export async function sendToProvider(
-    cfg: ProviderConfig,
-    system: string,
-    user: string,
-    tier?: LlmTier,
-): Promise<string> {
-    checkCircuitBreaker(configUniqueKey(cfg));
-    if (!cfg.apiKey) throw new LlmAuthError('API key missing for tier');
+function stripTrailingSlashes(s: string): string {
+    let end = s.length;
+    while (end > 0 && s.charCodeAt(end - 1) === 47) end--;
+    return s.slice(0, end);
+}
 
-    let url: string;
-    if (cfg.format === 'gemini') {
-        url = cfg.baseUrl + '/models/' + cfg.model + ':generateContent';
-    } else if (cfg.format === 'anthropic') {
-        url = cfg.baseUrl.replace(/\/+$/, '') + '/messages';
-    } else {
-        url = cfg.baseUrl.replace(/\/+$/, '') + '/chat/completions';
-    }
-
-    let payload: object;
-    if (cfg.format === 'gemini') {
-        payload = buildGeminiPayload(system, user);
-    } else if (cfg.format === 'anthropic') {
-        payload = buildAnthropicPayload(system, user, cfg.model, cfg.temperature, cfg.responseFormat);
-    } else {
-        payload = buildOpenAiPayload(system, user, cfg.model, cfg.temperature, cfg.responseFormat);
-    }
-
+function buildProviderHeaders(cfg: ProviderConfig): Record<string, string> {
     const headers: Record<string, string> = { 'Content-Type': 'application/json' };
     if (cfg.format === 'gemini') {
         headers['X-Goog-Api-Key'] = cfg.apiKey;
@@ -201,6 +181,38 @@ export async function sendToProvider(
     } else {
         headers['Authorization'] = 'Bearer ' + cfg.apiKey;
     }
+    return headers;
+}
+
+export async function sendToProvider(
+    cfg: ProviderConfig,
+    system: string,
+    user: string,
+    tier?: LlmTier,
+): Promise<string> {
+    checkCircuitBreaker(configUniqueKey(cfg));
+    if (!cfg.apiKey) throw new LlmAuthError('API key missing for tier');
+
+    const baseUrl = stripTrailingSlashes(cfg.baseUrl);
+    let url: string;
+    if (cfg.format === 'gemini') {
+        url = cfg.baseUrl + '/models/' + cfg.model + ':generateContent';
+    } else if (cfg.format === 'anthropic') {
+        url = baseUrl + '/messages';
+    } else {
+        url = baseUrl + '/chat/completions';
+    }
+
+    let payload: string;
+    if (cfg.format === 'gemini') {
+        payload = buildGeminiPayload(system, user);
+    } else if (cfg.format === 'anthropic') {
+        payload = buildAnthropicPayload(system, user, cfg.model, cfg.temperature, cfg.responseFormat);
+    } else {
+        payload = buildOpenAiPayload(system, user, cfg.model, cfg.temperature, cfg.responseFormat);
+    }
+
+    const headers = buildProviderHeaders(cfg);
 
     const start = performance.now();
     const resp = await fetchWithRetry(url, { method: 'POST', headers, body: payload });

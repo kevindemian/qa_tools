@@ -71,10 +71,10 @@ function buildFlakinessMap(metrics: MetricsStore): Map<string, number> {
 }
 
 function extractLatestRunSnapshots(metrics: MetricsStore): {
-    statusByTitle: Map<string, 'passed' | 'failed' | 'skipped'>;
+    statusByTitle: Map<string, TestStatus>;
     durationByTitle: Map<string, number>;
 } {
-    const statusByTitle = new Map<string, 'passed' | 'failed' | 'skipped'>();
+    const statusByTitle = new Map<string, TestStatus>();
     const durationByTitle = new Map<string, number>();
     const latestRun = metrics.runs.length > 0 ? metrics.runs[metrics.runs.length - 1] : null;
     if (latestRun) {
@@ -143,7 +143,7 @@ function buildStoryNode(
 
 function buildEpicNode(
     epicKey: string,
-    epicData: CoverageGapResult['byEpic'][string],
+    epicData: { total: number; covered: number; rawPct: number },
     stories: TraceabilityNode['stories'],
     epicPassed: number,
     epicTotal: number,

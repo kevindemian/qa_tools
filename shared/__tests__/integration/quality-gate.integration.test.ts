@@ -78,7 +78,7 @@ describe('Integration: Quality Gate', () => {
                 skipped: 1,
                 duration: 5000,
                 tests: Array.from({ length: 100 }, (_, j) => {
-                    let state: string;
+                    let state: 'skipped' | 'passed' | 'failed';
                     if (j === 99) {
                         state = 'skipped';
                     } else if (j === 98) {

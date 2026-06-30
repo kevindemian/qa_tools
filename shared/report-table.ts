@@ -171,7 +171,7 @@ function partitionTests(tests: FlatTest[]): { failed: FlatTest[]; passed: FlatTe
 
 function buildTestCell(t: FlatTest, categories?: Record<string, string>, rowIndex?: number): string {
     let testCell = escapeHtml(t.title);
-    const cat = (t.state === 'failed' && categories) ? categories[t.title] : undefined;
+    const cat = t.state === 'failed' && categories ? categories[t.title] : undefined;
     if (cat) testCell += buildCategoryBadge(cat);
     const hasDetails = (t.steps?.length ?? 0) > 0 || (t.screenshots?.length ?? 0) > 0 || (t.logs?.length ?? 0) > 0;
     if (hasDetails && rowIndex !== undefined) {
@@ -201,20 +201,37 @@ function buildCellsForTest(
 ): string {
     let cells = '';
     cells += Td({ children: String(i + 1) });
-    cells += Td({ children: buildTestCell(t, opts.categories, i), ...(t.fullTitle ? { title: escapeHtml(t.fullTitle) } : {}) });
+    cells += Td({
+        children: buildTestCell(t, opts.categories, i),
+        ...(t.fullTitle ? { title: escapeHtml(t.fullTitle) } : {}),
+    });
     if (opts.hasSuite) cells += Td({ children: escapeHtml(extractSuite(t)) });
-    cells += Td({ children: Badge({ variant: t.state === 'passed' ? 'pass' : t.state === 'failed' ? 'fail' : 'skip', children: t.state }) });
+    let badgeVariant: 'pass' | 'fail' | 'skip';
+    if (t.state === 'passed') {
+        badgeVariant = 'pass';
+    } else if (t.state === 'failed') {
+        badgeVariant = 'fail';
+    } else {
+        badgeVariant = 'skip';
+    }
+    cells += Td({ children: Badge({ variant: badgeVariant, children: t.state }) });
     cells += Td({ children: t.state === 'skipped' ? '—' : fmtDuration(t.duration) });
     if (opts.hasError) cells += Td({ children: buildErrorCell(t) });
     if (opts.hasHistory) {
-        const testHistory = opts.history![t.title] ?? opts.history![t.fullTitle ?? ''] ?? [];
+        const historyMap = opts.history ?? {};
+        const testHistory = historyMap[t.title] ?? historyMap[t.fullTitle ?? ''] ?? [];
         cells += Td({ children: buildHistoryCell(testHistory) });
     }
     if (opts.hasFlakiness) cells += Td({ children: buildFlakyCell(t, opts.flakinessMap) });
     return cells;
 }
 
-function buildColumns(opts: { hasSuite: boolean; hasError: boolean; hasHistory: boolean; hasFlakiness: boolean }): ColDef[] {
+function buildColumns(opts: {
+    hasSuite: boolean;
+    hasError: boolean;
+    hasHistory: boolean;
+    hasFlakiness: boolean;
+}): ColDef[] {
     return [
         { key: 'index', label: '#', width: '40px' },
         { key: 'test', label: 'Test' },
@@ -241,7 +258,15 @@ function buildTbody(
     allTests: FlatTest[],
     totalVisible: number,
     columns: ColDef[],
-    opts: { hasSuite: boolean; hasError: boolean; hasHistory: boolean; hasFlakiness: boolean; categories?: Record<string, string>; history?: Record<string, TestHistoryRun[]>; flakinessMap?: Record<string, number> },
+    opts: {
+        hasSuite: boolean;
+        hasError: boolean;
+        hasHistory: boolean;
+        hasFlakiness: boolean;
+        categories?: Record<string, string>;
+        history?: Record<string, TestHistoryRun[]>;
+        flakinessMap?: Record<string, number>;
+    },
 ): string {
     let tbody = '<tbody>';
     for (const [i, t] of allTests.entries()) {
@@ -258,10 +283,15 @@ function buildTbody(
 }
 
 function buildControls(hasPassed: boolean, overflowCount: number): string {
-    const toggleBtn = hasPassed ? '<div class="control-bar"><button id="toggleBtn" onclick="togglePassed()">Toggle Passed</button></div>' : '';
-    const showAllBtn = overflowCount > 0
-        ? '<div class="control-bar" style="margin-top:8px"><button id="showAllBtn" onclick="showAllTests()">Show all ' + overflowCount + ' passed tests</button></div>'
+    const toggleBtn = hasPassed
+        ? '<div class="control-bar"><button id="toggleBtn" onclick="togglePassed()">Toggle Passed</button></div>'
         : '';
+    const showAllBtn =
+        overflowCount > 0
+            ? '<div class="control-bar" style="margin-top:8px"><button id="showAllBtn" onclick="showAllTests()">Show all ' +
+              overflowCount +
+              ' passed tests</button></div>'
+            : '';
     return toggleBtn + showAllBtn;
 }
 
@@ -288,7 +318,19 @@ export function buildTestTable(
     const allTests = [...visibleTests, ...overflowPassed];
 
     const thead = buildThead(columns);
-    const tbody = buildTbody(allTests, totalVisible, columns, { hasSuite, hasError, hasHistory, hasFlakiness, categories, history, flakinessMap });
+    const tbodyOpts: {
+        hasSuite: boolean;
+        hasError: boolean;
+        hasHistory: boolean;
+        hasFlakiness: boolean;
+        categories?: Record<string, string>;
+        history?: Record<string, TestHistoryRun[]>;
+        flakinessMap?: Record<string, number>;
+    } = { hasSuite, hasError, hasHistory, hasFlakiness };
+    if (categories !== undefined) tbodyOpts.categories = categories;
+    if (history !== undefined) tbodyOpts.history = history;
+    if (flakinessMap !== undefined) tbodyOpts.flakinessMap = flakinessMap;
+    const tbody = buildTbody(allTests, totalVisible, columns, tbodyOpts);
     const tableHtml = `<div data-component="table-wrapper" style="overflow-x:auto;border-radius:${tokens.borderRadius.lg}px;box-shadow:${tokens.shadow.card}"><table data-component="data-table" role="table" style="width:100%;border-collapse:collapse;background:var(--color-surface-card);font-size:${tokens.fontSize.lg};color:var(--color-text-primary)">${thead}${tbody}</table></div>`;
     const controls = buildControls(hasPassed, overflowPassed.length);
 
