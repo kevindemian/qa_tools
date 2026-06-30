@@ -58,7 +58,11 @@ export function calculatePipelineCost(
             timestamp: r.timestamp,
             durationSec: safeDuration,
             cost: (safeDuration / 60) * cpm,
-            status: r.failed > 0 ? 'failed' : r.passed === r.total ? 'passed' : 'partial',
+            status: (() => {
+                if (r.failed > 0) return 'failed';
+                if (r.passed === r.total) return 'passed';
+                return 'partial';
+            })(),
         };
     });
 

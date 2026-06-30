@@ -128,11 +128,13 @@ export function generateReportWithFallback(tests: FlatTest[], options?: ReportOp
 }
 
 function _coverageStatusClass(status: string): string {
-    return status === 'Done' || status === 'Closed'
-        ? 'status-passed'
-        : status === 'In Progress'
-          ? 'status-skipped'
-          : 'status-failed';
+    if (status === 'Done' || status === 'Closed') {
+        return 'status-passed';
+    }
+    if (status === 'In Progress') {
+        return 'status-skipped';
+    }
+    return 'status-failed';
 }
 
 function _renderEpicRow(e: CoverageEpic, closePct: string): string {
@@ -141,12 +143,12 @@ function _renderEpicRow(e: CoverageEpic, closePct: string): string {
         issues +=
             '<div style="display:flex;gap:8px;align-items:center;padding:4px 0;font-size:0.85rem">' +
             Badge({
-                variant:
-                    _coverageStatusClass(issue.status) === 'status-passed'
-                        ? 'pass'
-                        : _coverageStatusClass(issue.status) === 'status-failed'
-                          ? 'fail'
-                          : 'skip',
+                variant: (() => {
+                    const cls = _coverageStatusClass(issue.status);
+                    if (cls === 'status-passed') return 'pass';
+                    if (cls === 'status-failed') return 'fail';
+                    return 'skip';
+                })(),
                 children: issue.status,
             }) +
             '<span><strong>' +

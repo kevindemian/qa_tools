@@ -146,7 +146,14 @@ export class LlmMetricsCollector {
     }
 
     recordConfidence(confidence: 'high' | 'medium' | 'low'): void {
-        const value = confidence === 'high' ? 1 : confidence === 'medium' ? 0.5 : 0;
+        let value: number;
+        if (confidence === 'high') {
+            value = 1;
+        } else if (confidence === 'medium') {
+            value = 0.5;
+        } else {
+            value = 0;
+        }
         this._confidenceSum += value;
         this._confidenceCount++;
     }
