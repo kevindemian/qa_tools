@@ -16,14 +16,12 @@ function readAndParse<T>(filePath: string, parser: (data: T) => ParseResult): Pa
         return parser(json as T);
     } catch (err: unknown) {
         const code = err && typeof err === 'object' && 'code' in err ? String(err.code) : undefined;
-        const msg =
-            code === 'ENOENT'
-                ? 'Arquivo não encontrado: ' + filePath
-                : 'Erro ao ler/parsear arquivo: ' +
-                  filePath +
-                  ' (' +
-                  (err instanceof Error ? err.message : String(err)) +
-                  ')';
+        let msg: string;
+        if (code === 'ENOENT') {
+            msg = 'Arquivo não encontrado: ' + filePath;
+        } else {
+            msg = 'Erro ao ler/parsear arquivo: ' + filePath + ' (' + (err instanceof Error ? err.message : String(err)) + ')';
+        }
         return { ...EMPTY_PARSE_RESULT, error: msg };
     }
 }
@@ -185,8 +183,14 @@ function _flattenTests(suite: MochawesomeSuite, parentTitle?: string): FlatTest[
     const currentPath = parentTitle ? parentTitle + ' > ' + suiteTitle : suiteTitle;
     if (suite.tests) {
         for (const t of suite.tests) {
-            const state: FlatTest['state'] =
-                t.state === 'passed' ? 'passed' : t.state === 'failed' ? 'failed' : 'skipped';
+            let state: FlatTest['state'];
+            if (t.state === 'passed') {
+                state = 'passed';
+            } else if (t.state === 'failed') {
+                state = 'failed';
+            } else {
+                state = 'skipped';
+            }
             const errMsg = t.err?.[0]?.message ?? t.err?.[0]?.title ?? undefined;
             tests.push({
                 title: t.title ?? '',
@@ -258,13 +262,23 @@ export function parseCtrfResults(jsonData: CtrfData): ParseResult {
 
     const summary = jsonData.results.summary;
 
-    const tests: FlatTest[] = jsonData.results.tests.map((t) => ({
-        title: t.name || '',
-        state: t.status === 'passed' ? 'passed' : t.status === 'failed' ? 'failed' : 'skipped',
-        duration: t.duration || 0,
-        ...(t.message !== undefined ? { error: t.message } : {}),
-        ...(t.suite ? { fullTitle: t.suite + ' > ' + (t.name || '') } : {}),
-    }));
+    const tests: FlatTest[] = jsonData.results.tests.map((t) => {
+        let state: FlatTest['state'];
+        if (t.status === 'passed') {
+            state = 'passed';
+        } else if (t.status === 'failed') {
+            state = 'failed';
+        } else {
+            state = 'skipped';
+        }
+        return {
+            title: t.name || '',
+            state,
+            duration: t.duration || 0,
+            ...(t.message !== undefined ? { error: t.message } : {}),
+            ...(t.suite ? { fullTitle: t.suite + ' > ' + (t.name || '') } : {}),
+        };
+    });
 
     const testCounts = tests.reduce(
         (acc, t) => {

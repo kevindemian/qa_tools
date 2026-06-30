@@ -88,12 +88,14 @@ export function analyzeSuiteOptimization(
             reason = 'Within acceptable thresholds';
         }
 
-        const impact: 'high' | 'medium' | 'low' =
-            duration > safeSlow * SPLIT_MULTIPLIER || flakiness > safeFlaky
-                ? 'high'
-                : duration > safeSlow
-                  ? 'medium'
-                  : 'low';
+        let impact: 'high' | 'medium' | 'low';
+        if (duration > safeSlow * SPLIT_MULTIPLIER || flakiness > safeFlaky) {
+            impact = 'high';
+        } else if (duration > safeSlow) {
+            impact = 'medium';
+        } else {
+            impact = 'low';
+        }
 
         if (action !== 'none') {
             potentialSavings += Math.max(0, duration - safeSlow);

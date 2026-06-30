@@ -179,21 +179,20 @@ export function generateRequirementScoreHtml(
                 MetricCard({
                     label: 'Overall Score',
                     value: result.overallGrade,
-                    severity: result.overallScore >= 75 ? 'info' : result.overallScore >= 40 ? 'warn' : 'error',
+                    severity: (() => {
+                        if (result.overallScore >= 75) return 'info';
+                        if (result.overallScore >= 40) return 'warn';
+                        return 'error';
+                    })(),
                 }) +
                 MetricCard({
                     label: 'Acceptance Rate',
                     value: result.averageAcceptanceRate + '%',
-                    severity:
-                        result.averageAcceptanceRate >= 70
-                            ? 'info'
-                            : result.averageAcceptanceRate >= 40
-                              ? 'warn'
-                              : 'error',
-                }) +
-                MetricCard({
-                    label: 'Generated Tests',
-                    value: String(result.totalGenerated),
+                    severity: (() => {
+                        if (result.averageAcceptanceRate >= 70) return 'info';
+                        if (result.averageAcceptanceRate >= 40) return 'warn';
+                        return 'error';
+                    })(),
                 }),
         });
 

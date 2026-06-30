@@ -102,8 +102,12 @@ export function buildHistoryCell(history: TestHistoryRun[]): string {
     const isPass = (s: string) => s.toUpperCase() === 'PASSED' || s === 'PASS';
     const isFail = (s: string) => s.toUpperCase() === 'FAILED' || s === 'FAIL';
     const isSkip = (s: string) => s.toUpperCase() === 'SKIPPED' || s === 'ABORTED';
-    const dotClass = (s: string) =>
-        isPass(s) ? 'hist-pass' : isFail(s) ? 'hist-fail' : isSkip(s) ? 'hist-skip' : 'hist-other';
+    const dotClass = (s: string) => {
+        if (isPass(s)) return 'hist-pass';
+        if (isFail(s)) return 'hist-fail';
+        if (isSkip(s)) return 'hist-skip';
+        return 'hist-other';
+    };
     const dots = history
         .map((r) => '<span class="hist-dot ' + dotClass(r.status) + '" title="' + escapeHtml(r.status) + '"></span>')
         .join('');
@@ -130,8 +134,18 @@ export function buildCategoryBadge(cat: string): string {
 
 export function buildFlakinessBadge(rate: number): string {
     const pct = Math.round(rate * 100);
-    const color = pct >= 50 ? '#dc2626' : pct >= 20 ? '#ca8a04' : '#16a34a';
-    const label = pct >= 50 ? 'alta' : pct >= 20 ? 'média' : 'baixa';
+    let color: string;
+    let label: string;
+    if (pct >= 50) {
+        color = '#dc2626';
+        label = 'alta';
+    } else if (pct >= 20) {
+        color = '#ca8a04';
+        label = 'média';
+    } else {
+        color = '#16a34a';
+        label = 'baixa';
+    }
     return `<span style="display:inline-block;padding:1px 6px;border-radius:4px;background:${color}20;color:${color};font-size:0.7rem;font-weight:600;margin-left:4px" title="Flakiness: ${pct}%">🔄 ${label}</span>`;
 }
 
@@ -208,7 +222,7 @@ export function buildTestTable(
         const isOverflow = i >= totalVisible;
         const rowIndex = i;
 
-        const cat = t.state === 'failed' && categories ? categories[t.title] : undefined;
+        const cat = (t.state === 'failed' && categories) ? categories[t.title] : undefined;
         const hasStepsOrScreenshotsOrLogs =
             (t.steps?.length ?? 0) > 0 || (t.screenshots?.length ?? 0) > 0 || (t.logs?.length ?? 0) > 0;
 
@@ -218,8 +232,16 @@ export function buildTestTable(
             testCell += '<span class="detail-toggle" onclick="toggleDetail(' + rowIndex + ')"> \u25BC</span>';
         }
 
+        let badgeVariant: string;
+        if (t.state === 'passed') {
+            badgeVariant = 'pass';
+        } else if (t.state === 'failed') {
+            badgeVariant = 'fail';
+        } else {
+            badgeVariant = 'skip';
+        }
         const statusBadge = Badge({
-            variant: t.state === 'passed' ? 'pass' : t.state === 'failed' ? 'fail' : 'skip',
+            variant: badgeVariant,
             children: t.state,
         });
 
