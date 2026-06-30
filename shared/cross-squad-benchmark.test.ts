@@ -83,7 +83,7 @@ describe('ComputeCrossSquadBenchmark', () => {
     it('computes stdDev for multiple squads', () => {
         const result = computeCrossSquadBenchmark(makeSquads());
         const expected = Math.sqrt(
-            [(92 - 69.75) ** 2, (78 - 69.75) ** 2, (64 - 69.75) ** 2, (45 - 69.75) ** 2].reduce((a, b) => a + b) / 4,
+            [(92 - 69.75) ** 2, (78 - 69.75) ** 2, (64 - 69.75) ** 2, (45 - 69.75) ** 2].reduce((a, b) => a + b, 0) / 4,
         );
 
         expect(result.stdDev).toBeCloseTo(expected, 10);

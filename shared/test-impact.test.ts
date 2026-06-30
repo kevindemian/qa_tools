@@ -232,8 +232,7 @@ describe('Test Impact', () => {
 
             it('handles malformed package.json gracefully', () => {
                 mockExistsSync.mockImplementation((p: PathLike) => {
-                    if (typeof p === 'string' && p.includes('package.json')) return true;
-                    return false;
+                    return typeof p === 'string' && p.includes('package.json');
                 });
                 mockReadFileSync.mockImplementation(() => {
                     throw new Error('parse error');
@@ -417,5 +416,4 @@ describe('Test Impact', () => {
             expect(nonNull(json.impactedTests[0]).matchMode).toBe('mapping');
         });
     });
-
 });

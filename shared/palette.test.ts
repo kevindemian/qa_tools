@@ -1,9 +1,6 @@
 vi.mock('./config', () => ({
     default: {
-        get: vi.fn((key: string) => {
-            if (key === 'noColor') return true;
-            return false;
-        }),
+        get: vi.fn((key: string) => key === 'noColor'),
     },
     __esModule: true,
 }));
@@ -12,7 +9,8 @@ import * as paletteModule from './palette.js';
 import chalk from 'chalk';
 
 describe('Palette', () => {
-    it('has all expected palette keys', () => {expect.hasAssertions();
+    it('has all expected palette keys', () => {
+        expect.hasAssertions();
 
         const { palette } = paletteModule;
         const expected = [
@@ -39,7 +37,8 @@ describe('Palette', () => {
         }
     });
 
-    it('applyPalette returns a chalk function for each ChalkInstance key', () => {expect.hasAssertions();
+    it('applyPalette returns a chalk function for each ChalkInstance key', () => {
+        expect.hasAssertions();
 
         const { applyPalette } = paletteModule;
         const nonFactoryKeys: Array<paletteModule.ChalkKey> = [
@@ -89,7 +88,8 @@ describe('Palette', () => {
         chalk.level = origLevel;
     });
 
-    it('palette colors render text', () => {expect.hasAssertions();
+    it('palette colors render text', () => {
+        expect.hasAssertions();
 
         const { applyPalette } = paletteModule;
         const nonFactoryKeys: Array<paletteModule.ChalkKey> = [
@@ -119,7 +119,8 @@ describe('Palette', () => {
         }
     });
 
-    it('disables chalk when NO_COLOR env is set', async () => {expect.hasAssertions();
+    it('disables chalk when NO_COLOR env is set', async () => {
+        expect.hasAssertions();
 
         process.env['NO_COLOR'] = '1';
         const chalkMod: { level: number } = await vi.importActual('chalk');
