@@ -174,19 +174,23 @@ export async function sendToProvider(
     checkCircuitBreaker(configUniqueKey(cfg));
     if (!cfg.apiKey) throw new LlmAuthError('API key missing for tier');
 
-    const url =
-        cfg.format === 'gemini'
-            ? cfg.baseUrl + '/models/' + cfg.model + ':generateContent'
-            : cfg.format === 'anthropic'
-              ? cfg.baseUrl.replace(/\/+$/, '') + '/messages'
-              : cfg.baseUrl.replace(/\/+$/, '') + '/chat/completions';
+    let url: string;
+    if (cfg.format === 'gemini') {
+        url = cfg.baseUrl + '/models/' + cfg.model + ':generateContent';
+    } else if (cfg.format === 'anthropic') {
+        url = cfg.baseUrl.replace(/\/+$/, '') + '/messages';
+    } else {
+        url = cfg.baseUrl.replace(/\/+$/, '') + '/chat/completions';
+    }
 
-    const payload =
-        cfg.format === 'gemini'
-            ? buildGeminiPayload(system, user)
-            : cfg.format === 'anthropic'
-              ? buildAnthropicPayload(system, user, cfg.model, cfg.temperature, cfg.responseFormat)
-              : buildOpenAiPayload(system, user, cfg.model, cfg.temperature, cfg.responseFormat);
+    let payload: object;
+    if (cfg.format === 'gemini') {
+        payload = buildGeminiPayload(system, user);
+    } else if (cfg.format === 'anthropic') {
+        payload = buildAnthropicPayload(system, user, cfg.model, cfg.temperature, cfg.responseFormat);
+    } else {
+        payload = buildOpenAiPayload(system, user, cfg.model, cfg.temperature, cfg.responseFormat);
+    }
 
     const headers: Record<string, string> = { 'Content-Type': 'application/json' };
     if (cfg.format === 'gemini') {
