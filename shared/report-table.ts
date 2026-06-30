@@ -151,6 +151,120 @@ export function buildFlakinessBadge(rate: number): string {
 
 const DEFAULT_MAX_VISIBLE_PASSED = 50;
 
+interface ColDef {
+    key: string;
+    label: string;
+    width?: string;
+}
+
+function partitionTests(tests: FlatTest[]): { failed: FlatTest[]; passed: FlatTest[]; skipped: FlatTest[] } {
+    const failed: FlatTest[] = [];
+    const passed: FlatTest[] = [];
+    const skipped: FlatTest[] = [];
+    for (const t of tests) {
+        if (t.state === 'failed') failed.push(t);
+        else if (t.state === 'passed') passed.push(t);
+        else skipped.push(t);
+    }
+    return { failed, passed, skipped };
+}
+
+function buildTestCell(t: FlatTest, categories?: Record<string, string>, rowIndex?: number): string {
+    let testCell = escapeHtml(t.title);
+    const cat = (t.state === 'failed' && categories) ? categories[t.title] : undefined;
+    if (cat) testCell += buildCategoryBadge(cat);
+    const hasDetails = (t.steps?.length ?? 0) > 0 || (t.screenshots?.length ?? 0) > 0 || (t.logs?.length ?? 0) > 0;
+    if (hasDetails && rowIndex !== undefined) {
+        testCell += '<span class="detail-toggle" onclick="toggleDetail(' + rowIndex + ')"> \u25BC</span>';
+    }
+    return testCell;
+}
+
+function buildFlakyCell(t: FlatTest, flakinessMap?: Record<string, number>): string {
+    if (!flakinessMap) return '';
+    const rate = flakinessMap[t.title] ?? flakinessMap[t.fullTitle ?? ''] ?? 0;
+    return rate > 0 ? buildFlakinessBadge(rate) : '<span style="color:var(--color-text-muted)">—</span>';
+}
+
+function buildCellsForTest(
+    t: FlatTest,
+    i: number,
+    opts: {
+        hasSuite: boolean;
+        hasError: boolean;
+        hasHistory: boolean;
+        hasFlakiness: boolean;
+        categories?: Record<string, string>;
+        history?: Record<string, TestHistoryRun[]>;
+        flakinessMap?: Record<string, number>;
+    },
+): string {
+    let cells = '';
+    cells += Td({ children: String(i + 1) });
+    cells += Td({ children: buildTestCell(t, opts.categories, i), ...(t.fullTitle ? { title: escapeHtml(t.fullTitle) } : {}) });
+    if (opts.hasSuite) cells += Td({ children: escapeHtml(extractSuite(t)) });
+    cells += Td({ children: Badge({ variant: t.state === 'passed' ? 'pass' : t.state === 'failed' ? 'fail' : 'skip', children: t.state }) });
+    cells += Td({ children: t.state === 'skipped' ? '—' : fmtDuration(t.duration) });
+    if (opts.hasError) cells += Td({ children: buildErrorCell(t) });
+    if (opts.hasHistory) {
+        const testHistory = opts.history![t.title] ?? opts.history![t.fullTitle ?? ''] ?? [];
+        cells += Td({ children: buildHistoryCell(testHistory) });
+    }
+    if (opts.hasFlakiness) cells += Td({ children: buildFlakyCell(t, opts.flakinessMap) });
+    return cells;
+}
+
+function buildColumns(opts: { hasSuite: boolean; hasError: boolean; hasHistory: boolean; hasFlakiness: boolean }): ColDef[] {
+    return [
+        { key: 'index', label: '#', width: '40px' },
+        { key: 'test', label: 'Test' },
+        ...(opts.hasSuite ? [{ key: 'suite', label: 'Suite' }] : []),
+        { key: 'status', label: 'Status' },
+        { key: 'duration', label: 'Duration' },
+        ...(opts.hasError ? [{ key: 'error', label: 'Error' }] : []),
+        ...(opts.hasHistory ? [{ key: 'history', label: 'History' }] : []),
+        ...(opts.hasFlakiness ? [{ key: 'flaky', label: 'Flaky' }] : []),
+    ];
+}
+
+function buildThead(columns: ColDef[]): string {
+    const cellPadding = `${tokens.spacing.xs}px ${tokens.spacing.sm}px`;
+    let thead = '<thead style="background:var(--color-surface-elevated)"><tr>';
+    for (const col of columns) {
+        const width = col.width ? `width:${col.width};` : '';
+        thead += `<th data-column="${col.key}" scope="col" style="padding:${cellPadding};${width}font-size:${tokens.fontSize.sm};text-transform:uppercase;color:var(--color-text-secondary);white-space:nowrap;border-bottom:2px solid var(--color-border-subtle)">${col.label}</th>`;
+    }
+    return thead + '</tr></thead>';
+}
+
+function buildTbody(
+    allTests: FlatTest[],
+    totalVisible: number,
+    columns: ColDef[],
+    opts: { hasSuite: boolean; hasError: boolean; hasHistory: boolean; hasFlakiness: boolean; categories?: Record<string, string>; history?: Record<string, TestHistoryRun[]>; flakinessMap?: Record<string, number> },
+): string {
+    let tbody = '<tbody>';
+    for (const [i, t] of allTests.entries()) {
+        const isOverflow = i >= totalVisible;
+        const rowClass = t.state === 'passed' ? 'row-passed' : '';
+        const overflowAttr = isOverflow ? ' data-overflow="true"' : '';
+        const hierarchyAttr = t.fullTitle ? ` data-hierarchy="${escapeHtml(t.fullTitle)}"` : '';
+        const cells = buildCellsForTest(t, i, opts);
+        tbody += Tr({ key: `test-${i}`, class: rowClass, attrs: hierarchyAttr + overflowAttr, children: cells });
+        const detail = buildDetailRow(t, i, columns.length);
+        if (detail) tbody += detail;
+    }
+    return tbody + '</tbody>';
+}
+
+function buildControls(hasPassed: boolean, overflowCount: number): string {
+    const toggleBtn = hasPassed ? '<div class="control-bar"><button id="toggleBtn" onclick="togglePassed()">Toggle Passed</button></div>' : '';
+    const showAllBtn = overflowCount > 0
+        ? '<div class="control-bar" style="margin-top:8px"><button id="showAllBtn" onclick="showAllTests()">Show all ' + overflowCount + ' passed tests</button></div>'
+        : '';
+    return toggleBtn + showAllBtn;
+}
+
 export function buildTestTable(
     tests: FlatTest[],
     categories?: Record<string, string>,
@@ -164,134 +278,19 @@ export function buildTestTable(
     const hasSuite = tests.some((t) => extractSuite(t));
     const hasHistory = history !== undefined && Object.keys(history).length > 0;
     const hasFlakiness = flakinessMap !== undefined && Object.keys(flakinessMap).length > 0;
+    const columns = buildColumns({ hasSuite, hasError, hasHistory, hasFlakiness });
 
-    interface ColDef {
-        key: string;
-        label: string;
-        width?: string;
-    }
-
-    const columns: ColDef[] = [
-        { key: 'index', label: '#', width: '40px' },
-        { key: 'test', label: 'Test' },
-        ...(hasSuite ? [{ key: 'suite', label: 'Suite' }] : []),
-        { key: 'status', label: 'Status' },
-        { key: 'duration', label: 'Duration' },
-        ...(hasError ? [{ key: 'error', label: 'Error' }] : []),
-        ...(hasHistory ? [{ key: 'history', label: 'History' }] : []),
-        ...(hasFlakiness ? [{ key: 'flaky', label: 'Flaky' }] : []),
-    ];
-
-    const cellPadding = `${tokens.spacing.xs}px ${tokens.spacing.sm}px`;
-
-    let thead = '<thead style="background:var(--color-surface-elevated)"><tr>';
-    for (const col of columns) {
-        const width = col.width ? `width:${col.width};` : '';
-        thead += `<th data-column="${col.key}"
-            scope="col"
-            style="padding:${cellPadding};${width}
-                   font-size:${tokens.fontSize.sm};text-transform:uppercase;
-                   color:var(--color-text-secondary);white-space:nowrap;
-                   border-bottom:2px solid var(--color-border-subtle)">
-            ${col.label}
-        </th>`;
-    }
-    thead += '</tr></thead>';
-
-    // Partition tests: failures always visible, passed tests limited by maxPassed
-    const failedTests: FlatTest[] = [];
-    const passedTests: FlatTest[] = [];
-    const skippedTests: FlatTest[] = [];
-    for (const t of tests) {
-        if (t.state === 'failed') failedTests.push(t);
-        else if (t.state === 'passed') passedTests.push(t);
-        else skippedTests.push(t);
-    }
-
+    const { failed: failedTests, passed: passedTests, skipped: skippedTests } = partitionTests(tests);
     const visiblePassed = passedTests.slice(0, maxPassed);
     const overflowPassed = passedTests.slice(maxPassed);
-    const hasOverflow = overflowPassed.length > 0;
-
-    // Rebuild ordered list: failed first, then visible passed, then skipped, then overflow passed (hidden)
     const visibleTests = [...failedTests, ...visiblePassed, ...skippedTests];
     const totalVisible = visibleTests.length;
     const allTests = [...visibleTests, ...overflowPassed];
 
-    let tbody = '<tbody>';
-    for (const [i, t] of allTests.entries()) {
-        const isOverflow = i >= totalVisible;
-        const rowIndex = i;
+    const thead = buildThead(columns);
+    const tbody = buildTbody(allTests, totalVisible, columns, { hasSuite, hasError, hasHistory, hasFlakiness, categories, history, flakinessMap });
+    const tableHtml = `<div data-component="table-wrapper" style="overflow-x:auto;border-radius:${tokens.borderRadius.lg}px;box-shadow:${tokens.shadow.card}"><table data-component="data-table" role="table" style="width:100%;border-collapse:collapse;background:var(--color-surface-card);font-size:${tokens.fontSize.lg};color:var(--color-text-primary)">${thead}${tbody}</table></div>`;
+    const controls = buildControls(hasPassed, overflowPassed.length);
 
-        const cat = (t.state === 'failed' && categories) ? categories[t.title] : undefined;
-        const hasStepsOrScreenshotsOrLogs =
-            (t.steps?.length ?? 0) > 0 || (t.screenshots?.length ?? 0) > 0 || (t.logs?.length ?? 0) > 0;
-
-        let testCell = escapeHtml(t.title);
-        if (cat) testCell += buildCategoryBadge(cat);
-        if (hasStepsOrScreenshotsOrLogs) {
-            testCell += '<span class="detail-toggle" onclick="toggleDetail(' + rowIndex + ')"> \u25BC</span>';
-        }
-
-        let badgeVariant: string;
-        if (t.state === 'passed') {
-            badgeVariant = 'pass';
-        } else if (t.state === 'failed') {
-            badgeVariant = 'fail';
-        } else {
-            badgeVariant = 'skip';
-        }
-        const statusBadge = Badge({
-            variant: badgeVariant,
-            children: t.state,
-        });
-
-        const durationCell = t.state === 'skipped' ? '—' : fmtDuration(t.duration);
-
-        let flakyCell = '';
-        if (hasFlakiness) {
-            const rate = flakinessMap[t.title] ?? flakinessMap[t.fullTitle ?? ''] ?? 0;
-            flakyCell = rate > 0 ? buildFlakinessBadge(rate) : '<span style="color:var(--color-text-muted)">—</span>';
-        }
-
-        const rowClass = t.state === 'passed' ? 'row-passed' : '';
-        const overflowAttr = isOverflow ? ' data-overflow="true"' : '';
-        const hierarchyAttr = t.fullTitle ? ` data-hierarchy="${escapeHtml(t.fullTitle)}"` : '';
-        const fullTitle = t.fullTitle;
-
-        let cells = '';
-        cells += Td({ children: String(i + 1) });
-        cells += Td({ children: testCell, ...(fullTitle ? { title: escapeHtml(fullTitle) } : {}) });
-        if (hasSuite) cells += Td({ children: escapeHtml(extractSuite(t)) });
-        cells += Td({ children: statusBadge });
-        cells += Td({ children: durationCell });
-        if (hasError) cells += Td({ children: buildErrorCell(t) });
-        if (hasHistory) {
-            const testHistory = history[t.title] ?? history[t.fullTitle ?? ''] ?? [];
-            cells += Td({ children: buildHistoryCell(testHistory) });
-        }
-        if (hasFlakiness) cells += Td({ children: flakyCell });
-
-        tbody += Tr({ key: `test-${i}`, class: rowClass, attrs: hierarchyAttr + overflowAttr, children: cells });
-
-        const detail = buildDetailRow(t, i, columns.length);
-        if (detail) tbody += detail;
-    }
-    tbody += '</tbody>';
-
-    const tableHtml = `<div data-component="table-wrapper" style="overflow-x:auto;border-radius:${tokens.borderRadius.lg}px;box-shadow:${tokens.shadow.card}"><table data-component="data-table"
-        role="table"
-        style="width:100%;border-collapse:collapse;background:var(--color-surface-card);
-               font-size:${tokens.fontSize.lg};color:var(--color-text-primary)">${thead}${tbody}</table></div>`;
-
-    const toggleBtn = hasPassed
-        ? '<div class="control-bar"><button id="toggleBtn" onclick="togglePassed()">Toggle Passed</button></div>'
-        : '';
-
-    const showAllBtn = hasOverflow
-        ? '<div class="control-bar" style="margin-top:8px"><button id="showAllBtn" onclick="showAllTests()">Show all ' +
-          overflowPassed.length +
-          ' passed tests</button></div>'
-        : '';
-
-    return toggleBtn + tableHtml + showAllBtn;
+    return controls + tableHtml;
 }

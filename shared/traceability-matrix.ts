@@ -70,34 +70,99 @@ function buildFlakinessMap(metrics: MetricsStore): Map<string, number> {
     return failCounts;
 }
 
+function extractLatestRunSnapshots(metrics: MetricsStore): {
+    statusByTitle: Map<string, 'passed' | 'failed' | 'skipped'>;
+    durationByTitle: Map<string, number>;
+} {
+    const statusByTitle = new Map<string, 'passed' | 'failed' | 'skipped'>();
+    const durationByTitle = new Map<string, number>();
+    const latestRun = metrics.runs.length > 0 ? metrics.runs[metrics.runs.length - 1] : null;
+    if (latestRun) {
+        for (const t of latestRun.tests) {
+            statusByTitle.set(t.title, t.state);
+            durationByTitle.set(t.title, t.duration);
+        }
+    }
+    return { statusByTitle, durationByTitle };
+}
+
+function groupItemsByEpic(items?: CoverageGapItem[]): Map<string, CoverageGapItem[]> {
+    const itemsByEpic = new Map<string, CoverageGapItem[]>();
+    if (items) {
+        for (const item of items) {
+            if (!itemsByEpic.has(item.epic)) {
+                itemsByEpic.set(item.epic, []);
+            }
+            const group = itemsByEpic.get(item.epic);
+            if (group) group.push(item);
+        }
+    }
+    return itemsByEpic;
+}
+
+function buildStoryNode(
+    item: CoverageGapItem,
+    epicKey: string,
+    statusByTitle: Map<string, 'passed' | 'failed' | 'skipped'>,
+    durationByTitle: Map<string, number>,
+    flakinessByTitle: Map<string, number>,
+): { node: TraceabilityNode['stories'][0]; storyPassed: number } | null {
+    const testTitles = item.linkedTestKeys || [];
+    const storyTests: TraceabilityNode['stories'][0]['tests'] = [];
+    let storyPassed = 0;
+
+    for (const title of testTitles) {
+        const status = statusByTitle.get(title);
+        if (!status) continue;
+        storyTests.push({
+            title,
+            status,
+            duration: durationByTitle.get(title) ?? 0,
+            flakiness: flakinessByTitle.get(title) ?? 0,
+        });
+        if (status === 'passed') storyPassed++;
+    }
+
+    if (storyTests.length === 0) return null;
+
+    const storyHealth = Math.round((storyPassed / storyTests.length) * 100);
+    const storyFlakiness =
+        Math.round((storyTests.reduce((s, t) => s + t.flakiness, 0) / storyTests.length) * 100) / 100;
+
+    return {
+        node: {
+            key: item.issueKey || epicKey,
+            coverage: item.hasTest ? 100 : 0,
+            health: storyHealth,
+            flakiness: storyFlakiness,
+            tests: storyTests,
+        },
+        storyPassed,
+    };
+}
+
+function buildEpicNode(
+    epicKey: string,
+    epicData: CoverageGapResult['byEpic'][string],
+    stories: TraceabilityNode['stories'],
+    epicPassed: number,
+    epicTotal: number,
+): TraceabilityNode {
+    const health = epicTotal > 0 ? Math.round((epicPassed / epicTotal) * 100) : 0;
+    const epicFlakiness =
+        stories.length > 0
+            ? Math.round((stories.reduce((s, st) => s + st.flakiness, 0) / stories.length) * 100) / 100
+            : 0;
+    return { epic: epicKey, coverage: epicData.rawPct, health, flakiness: epicFlakiness, stories };
+}
+
 export function buildTraceabilityMatrix(metrics: MetricsStore, coverageResult?: CoverageGapResult): TraceabilityResult {
     try {
-        const latestRun = metrics.runs.length > 0 ? metrics.runs[metrics.runs.length - 1] : null;
-
-        const statusByTitle = new Map<string, 'passed' | 'failed' | 'skipped'>();
-        const durationByTitle = new Map<string, number>();
-        if (latestRun) {
-            for (const t of latestRun.tests) {
-                statusByTitle.set(t.title, t.state);
-                durationByTitle.set(t.title, t.duration);
-            }
-        }
-
+        const { statusByTitle, durationByTitle } = extractLatestRunSnapshots(metrics);
         const flakinessByTitle = buildFlakinessMap(metrics);
-
         const byEpic = coverageResult?.byEpic ?? {};
         const epicKeys = Object.keys(byEpic);
-
-        const itemsByEpic = new Map<string, CoverageGapItem[]>();
-        if (coverageResult?.items) {
-            for (const item of coverageResult.items) {
-                if (!itemsByEpic.has(item.epic)) {
-                    itemsByEpic.set(item.epic, []);
-                }
-                const group = itemsByEpic.get(item.epic);
-                if (group) group.push(item);
-            }
-        }
+        const itemsByEpic = groupItemsByEpic(coverageResult?.items);
 
         const nodes: TraceabilityNode[] = [];
         let totalTests = 0;
@@ -108,59 +173,20 @@ export function buildTraceabilityMatrix(metrics: MetricsStore, coverageResult?: 
             if (!epicData) continue;
 
             const items = itemsByEpic.get(epicKey) || [];
-
             const stories: TraceabilityNode['stories'] = [];
             let epicPassed = 0;
             let epicTotal = 0;
 
             for (const item of items) {
-                const testTitles = item.linkedTestKeys || [];
-                const storyTests: TraceabilityNode['stories'][0]['tests'] = [];
-                let storyPassed = 0;
-
-                for (const title of testTitles) {
-                    const status = statusByTitle.get(title);
-                    if (status) {
-                        storyTests.push({
-                            title,
-                            status,
-                            duration: durationByTitle.get(title) ?? 0,
-                            flakiness: flakinessByTitle.get(title) ?? 0,
-                        });
-                        if (status === 'passed') storyPassed++;
-                        epicTotal++;
-                    }
-                }
-
-                if (storyTests.length > 0) {
-                    const storyHealth = Math.round((storyPassed / storyTests.length) * 100);
-                    const storyFlakiness =
-                        Math.round((storyTests.reduce((s, t) => s + t.flakiness, 0) / storyTests.length) * 100) / 100;
-                    stories.push({
-                        key: item.issueKey || epicKey,
-                        coverage: item.hasTest ? 100 : 0,
-                        health: storyHealth,
-                        flakiness: storyFlakiness,
-                        tests: storyTests,
-                    });
-                    epicPassed += storyPassed;
+                const result = buildStoryNode(item, epicKey, statusByTitle, durationByTitle, flakinessByTitle);
+                if (result) {
+                    stories.push(result.node);
+                    epicPassed += result.storyPassed;
+                    epicTotal += result.node.tests.length;
                 }
             }
 
-            const health = epicTotal > 0 ? Math.round((epicPassed / epicTotal) * 100) : 0;
-            const epicFlakiness =
-                stories.length > 0
-                    ? Math.round((stories.reduce((s, st) => s + st.flakiness, 0) / stories.length) * 100) / 100
-                    : 0;
-
-            nodes.push({
-                epic: epicKey,
-                coverage: epicData.rawPct,
-                health,
-                flakiness: epicFlakiness,
-                stories,
-            });
-
+            nodes.push(buildEpicNode(epicKey, epicData, stories, epicPassed, epicTotal));
             totalTests += epicTotal;
             passedTests += epicPassed;
         }

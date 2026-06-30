@@ -76,6 +76,20 @@ function computeEntryScore(entry: Omit<RequirementScoreEntry, 'score' | 'scoreGr
     };
 }
 
+function countFeedback(feedback?: AiGenerationRecord['feedback']): { kept: number; modified: number; deleted: number } {
+    let kept = 0;
+    let modified = 0;
+    let deleted = 0;
+    if (feedback) {
+        for (const fb of feedback) {
+            if (fb.action === 'kept') kept++;
+            else if (fb.action === 'modified') modified++;
+            else deleted++;
+        }
+    }
+    return { kept, modified, deleted };
+}
+
 export function calculateRequirementScores(records: AiGenerationRecord[] | null | undefined): RequirementScoreResult {
     const timestamp = new Date().toISOString();
 
@@ -98,29 +112,18 @@ export function calculateRequirementScores(records: AiGenerationRecord[] | null 
 
     for (const record of records) {
         const totalTests = record.generatedTests.length;
-        let keptCount = 0;
-        let modifiedCount = 0;
-        let deletedCount = 0;
-
-        if (record.feedback) {
-            for (const fb of record.feedback) {
-                if (fb.action === 'kept') keptCount++;
-                else if (fb.action === 'modified') modifiedCount++;
-                else deletedCount++;
-            }
-        }
-
-        const reviewedTests = keptCount + modifiedCount + deletedCount;
-        const acceptanceRate = reviewedTests > 0 ? Math.round(((keptCount + modifiedCount) / reviewedTests) * 100) : 0;
+        const counts = countFeedback(record.feedback);
+        const reviewedTests = counts.kept + counts.modified + counts.deleted;
+        const acceptanceRate = reviewedTests > 0 ? Math.round(((counts.kept + counts.modified) / reviewedTests) * 100) : 0;
 
         entries.push(
             computeEntryScore({
                 requirementId: record.id,
                 userStory: record.userStory.slice(0, USER_STORY_TRUNCATE_LENGTH),
                 totalTests,
-                keptTests: keptCount,
-                modifiedTests: modifiedCount,
-                deletedTests: deletedCount,
+                keptTests: counts.kept,
+                modifiedTests: counts.modified,
+                deletedTests: counts.deleted,
                 acceptanceRate,
                 promptVersion: record.promptVersion,
             }),
