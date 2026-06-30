@@ -35,10 +35,11 @@ export function BarChart(props: BarChartProps): string {
     for (const seg of props.segments) {
         const segW = (seg.value / total) * w * scale;
         if (segW <= 0) continue;
-        const label =
-            props.showLabels !== false && segW >= 20
-                ? `<text x="${x + segW / 2}" y="${h / 2 + 1}" text-anchor="middle" fill="${seg.color === '#facc15' ? '#333' : '#fff'}" font-size="12" font-family="${tokens.fontFamily}">${seg.label ?? seg.value}</text>`
-                : '';
+        let label = '';
+        if (props.showLabels !== false && segW >= 20) {
+            const textColor = seg.color === '#facc15' ? '#333' : '#fff';
+            label = `<text x="${x + segW / 2}" y="${h / 2 + 1}" text-anchor="middle" fill="${textColor}" font-size="12" font-family="${tokens.fontFamily}">${seg.label ?? seg.value}</text>`;
+        }
         bars += `<rect x="${x}" y="0" width="${segW}" height="${h}" rx="4" fill="${seg.color}" role="img" aria-label="${seg.label ?? seg.value}"/>
 ${label}`;
         x += segW;
@@ -118,12 +119,14 @@ export function Sparkline(props: SparklineProps): string {
     const w = props.width ?? 100;
     const h = props.height ?? 8;
     const pct = Math.min((props.value / (props.maxValue || 100)) * 100, 100);
-    const color =
-        pct >= 50
-            ? (props.colorHigh ?? tokens.color.chart.fail)
-            : pct >= 20
-              ? (props.colorMedium ?? tokens.color.chart.skip)
-              : (props.colorLow ?? tokens.color.chart.pass);
+    let color: string;
+    if (pct >= 50) {
+        color = props.colorHigh ?? tokens.color.chart.fail;
+    } else if (pct >= 20) {
+        color = props.colorMedium ?? tokens.color.chart.skip;
+    } else {
+        color = props.colorLow ?? tokens.color.chart.pass;
+    }
 
     const ariaAttr = props.ariaLabel ? `aria-label="${props.ariaLabel}"` : '';
     return `<div data-component="sparkline" role="${props.role || 'img'}" ${ariaAttr}
