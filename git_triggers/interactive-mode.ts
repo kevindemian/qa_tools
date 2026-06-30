@@ -477,7 +477,6 @@ async function _dashboardIncidentReport(): Promise<void> {
         runs: data.projectRuns,
         failureClassifications: data.failureClassifications,
     });
-    const defects = aggregateDefectTrends(data.failureClassifications);
     const matrix = buildTraceabilityMatrix({
         runs: data.projectRuns,
         failureClassifications: data.failureClassifications,

@@ -561,15 +561,19 @@ describe('ValidateCsvTests', () => {
     });
 });
 
+function makeJiraResource(): Mocked<JiraResource> {
+    const r = vi.mocked(new JiraResource('fake-token', 'https://jira/rest/api/2'));
+    vi.spyOn(r, 'getJiraResource');
+    vi.spyOn(r, 'postJiraResource');
+    return r;
+}
+
+function makeJiraResCSV(): Mocked<JiraResource> {
+    return makeJiraResource();
+}
+
 describe('CreateTestsFromJson', () => {
     const FS = vi.mocked({ ...fs, ...mockFsMod } as typeof fs);
-
-    function makeJiraResource(): Mocked<JiraResource> {
-        const r = vi.mocked(new JiraResource('fake-token', 'https://jira/rest/api/2'));
-        vi.spyOn(r, 'getJiraResource');
-        vi.spyOn(r, 'postJiraResource');
-        return r;
-    }
 
     function makeLinkManager(): JiraLinkManager & { postLink: Mock } {
         const fakeJira = createMockJiraResource();
@@ -794,13 +798,6 @@ describe('UpdateCrossReferences', () => {
 
 describe('CreateTestsFromCsv', () => {
     let csvResource: Mocked<CsvResource>;
-
-    function makeJiraResCSV(): Mocked<JiraResource> {
-        const r = vi.mocked(new JiraResource('fake-token', 'https://jira/rest/api/2'));
-        vi.spyOn(r, 'getJiraResource');
-        vi.spyOn(r, 'postJiraResource');
-        return r;
-    }
 
     function makeFullArgs(overrides: Partial<Parameters<typeof createTestsFromCsv>[0]> = {}) {
         const base: Parameters<typeof createTestsFromCsv>[0] = {
