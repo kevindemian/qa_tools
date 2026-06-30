@@ -375,7 +375,7 @@ export function checkDepWall(): CheckResult {
         const files = globSync(`${dir}/**/*.ts`, { ignore: ['node_modules/**'] });
         for (const file of files) {
             for (const { line, content } of grepLines(file, extPkgImport)) {
-                const m = content.match(extPkgImport);
+                const m = extPkgImport.exec(content);
                 const pkg = m?.[1];
                 if (pkg && pkg !== 'vitest' && !isBuiltin(pkg)) {
                     violations.push({
@@ -386,7 +386,7 @@ export function checkDepWall(): CheckResult {
                 }
             }
             for (const { line, content } of grepLines(file, requirePkg)) {
-                const m = content.match(requirePkg);
+                const m = requirePkg.exec(content);
                 const pkg = m?.[1];
                 if (pkg && pkg !== 'vitest' && !isBuiltin(pkg)) {
                     violations.push({
@@ -424,7 +424,7 @@ export function checkIntegrity(): CheckResult {
         const contentWithoutHash = selfContent.replace(/\/\* HASH:[0-9a-f]{64} \*\//g, '');
         const currentHash = createHash('sha256').update(contentWithoutHash, 'utf-8').digest('hex');
         /* HASH:0124cef66a8063ff139e4a8f8fb3d3c09f6b48abef3dd02671a14533f3b9e645 */
-        const match = selfContent.match(/\/\* HASH:([0-9a-f]{64}) \*\//);
+        const match = /\/\* HASH:([0-9a-f]{64}) \*\//.exec(selfContent);
         if (!match) {
             violations.push({ file: 'scripts/quality-check.ts', line: 1, content: 'Missing HASH comment' });
         } else if (match[1] !== currentHash) {

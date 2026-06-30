@@ -289,12 +289,14 @@ async function adversarialRetryParallel(
     return valid[0] as NonNullable<(typeof valid)[number]>;
 }
 
+type Confidence = 'high' | 'medium' | 'low';
+
 /** Re-review a candidate via parallel REV_TIERS and majority-confidence winner. */
 async function reReviewParallel(
     content: string,
     startTime: number,
     type: ArtifactType,
-): Promise<{ confidence: 'high' | 'medium' | 'low'; tier: string }> {
+): Promise<{ confidence: Confidence; tier: string }> {
     const reviewPrompt = buildReviewPrompt(content, type);
     const reviews = await Promise.allSettled(
         REV_TIERS.map(async (tier) => {
@@ -303,7 +305,7 @@ async function reReviewParallel(
             return { confidence: parseVerdict(raw), tier };
         }),
     );
-    const valid: Array<{ confidence: 'high' | 'medium' | 'low'; tier: string }> = [];
+    const valid: Array<{ confidence: Confidence; tier: string }> = [];
     for (const r of reviews) {
         if (r.status === 'fulfilled') valid.push(r.value);
     }
@@ -312,8 +314,8 @@ async function reReviewParallel(
 
     const counts = new Map<string, number>([['high', 0], ['medium', 0], ['low', 0]]);
     for (const v of valid) counts.set(v.confidence, (counts.get(v.confidence) ?? 0) + 1);
-    const sorted = (Array.from(counts.entries()) as Array<['high' | 'medium' | 'low', number]>).sort((a, b) => b[1] - a[1]);
-    const winner: 'high' | 'medium' | 'low' = sorted[0]?.[0] || 'medium';
+    const sorted = (Array.from(counts.entries()) as Array<[Confidence, number]>).sort((a, b) => b[1] - a[1]);
+    const winner: Confidence = sorted[0]?.[0] || 'medium';
     const winnerTier = valid.find((v) => v.confidence === winner)?.tier ?? 'reviewer';
     return { confidence: winner, tier: winnerTier };
 }

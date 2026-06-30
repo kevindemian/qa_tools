@@ -119,7 +119,8 @@ export interface LabelProps {
 }
 
 export function Label(props: LabelProps): string {
-    return `<label data-component="label" ${props.htmlFor ? `for="${props.htmlFor}"` : ''}
+    const forAttr = props.htmlFor ? `for="${props.htmlFor}"` : '';
+    return `<label data-component="label" ${forAttr}
         role="${props.role || 'text'}"
         style="font-size:${tokens.fontSize.xs};text-transform:uppercase;color:var(--color-text-secondary);margin-bottom:${tokens.spacing.xs}px;display:block">
         ${props.children}

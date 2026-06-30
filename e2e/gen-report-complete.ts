@@ -70,7 +70,8 @@ function buildXrayHistoryHtml(historyRows: Array<{ key: string; runs: unknown[] 
         html += '</div>';
     }
     html += '</div>';
-    rootLogger.info(`Xray history: ${historyRows.map((h) => `${h.key}=${h.runs.length}`).join(', ')}`);
+    const historySummary = historyRows.map((h) => `${h.key}=${h.runs.length}`).join(', ');
+    rootLogger.info(`Xray history: ${historySummary}`);
     return html;
 }
 

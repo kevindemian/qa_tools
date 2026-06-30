@@ -138,7 +138,7 @@ export async function glDownloadArtifact(
         });
         const disposition =
             typeof response.headers['content-disposition'] === 'string' ? response.headers['content-disposition'] : '';
-        const match = disposition.match(/filename="?(.+?)"?$/);
+        const match = /filename="?(.+?)"?$/.exec(disposition);
         const filename = match ? (match[1] ?? 'artifacts.zip') : 'artifacts.zip';
         return { buffer: Buffer.from(response.data), filename };
     } catch (err) {

@@ -6,9 +6,11 @@ import type { JiraResourceLike } from '../shared/types.js';
 import createTests from './create_tests.js';
 import TestExecutionCreator from './test-execution-creator.js';
 
+type TestState = 'passed' | 'failed' | 'skipped';
+
 interface TestResultItem {
     title: string;
-    state: 'passed' | 'failed' | 'skipped';
+    state: TestState;
     duration: number;
 }
 

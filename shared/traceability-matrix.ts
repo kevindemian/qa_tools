@@ -5,6 +5,8 @@ import { buildHtmlPage, buildErrorPage } from './html-factory.js';
 import { buildCss } from './report-styles.js';
 import { MetricCard, MetricGrid } from './primitives/index.js';
 
+type TestStatus = 'passed' | 'failed' | 'skipped';
+
 interface CoverageGapItem {
     epic: string;
     hasTest: boolean;
@@ -30,7 +32,7 @@ export interface TraceabilityNode {
         flakiness: number;
         tests: Array<{
             title: string;
-            status: 'passed' | 'failed' | 'skipped';
+            status: TestStatus;
             duration: number;
             flakiness: number;
         }>;

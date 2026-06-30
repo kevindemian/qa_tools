@@ -8,10 +8,12 @@ interface WriterResult {
     filesSkipped: string[];
 }
 
+type ConfigCtx = Pick<SetupContext, 'projectName' | 'gitProvider' | 'repoName' | 'repoOwner'>;
+
 function writeJsonConfig(
     filePath: string,
-    ctx: Pick<SetupContext, 'projectName' | 'gitProvider' | 'repoName' | 'repoOwner'>,
-    makeEntry: (ctx: Pick<SetupContext, 'projectName' | 'gitProvider' | 'repoName' | 'repoOwner'>) => unknown,
+    ctx: ConfigCtx,
+    makeEntry: (ctx: ConfigCtx) => unknown,
     result: WriterResult,
 ): void {
     if (!fs.existsSync(filePath)) {
@@ -34,11 +36,11 @@ function writeJsonConfig(
     }
 }
 
-function makeProjectEntry(ctx: Pick<SetupContext, 'projectName' | 'gitProvider' | 'repoName' | 'repoOwner'>): unknown {
+function makeProjectEntry(ctx: ConfigCtx): unknown {
     return ctx.gitProvider === 'github' ? ctx.repoName : ctx.projectName;
 }
 
-function makeProviderEntry(ctx: Pick<SetupContext, 'projectName' | 'gitProvider' | 'repoName' | 'repoOwner'>): unknown {
+function makeProviderEntry(ctx: ConfigCtx): unknown {
     return ctx.gitProvider === 'github'
         ? { provider: 'github', repo: ctx.repoOwner + '/' + ctx.repoName }
         : { provider: 'gitlab' };
@@ -51,7 +53,7 @@ function ensureConfigDir(): string {
 }
 
 export function writeProjectsConfig(
-    ctx: Pick<SetupContext, 'projectName' | 'gitProvider' | 'repoName' | 'repoOwner'>,
+    ctx: ConfigCtx,
 ): WriterResult {
     const result: WriterResult = { filesCreated: [], filesSkipped: [] };
     const configDir = ensureConfigDir();

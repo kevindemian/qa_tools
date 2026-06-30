@@ -141,12 +141,18 @@ describe('ValidateConfigValues', () => {
 });
 
 describe('WarnUnknownEnv', () => {
-    const UNKNOWN_PREFIX =
-        /^QA_|^LLM_|^JIRA_|^XRAY_|^GIT|^GITHUB_|^CYPRESS_|^CSV_|^DRY_|^DEBUG|^QUIET|^ON_|^LOG_|^AUTO_|^KNOWN_|^REPORT_|^METRICS_|^SKIP_|^NO_|^OPENCODE_|^BENCHMARK|^AWS_|^CI_/i;
+    const KNOWN_PREFIXES = [
+        'QA_', 'LLM_', 'JIRA_', 'XRAY_', 'GIT', 'GITHUB_',
+        'CYPRESS_', 'CSV_', 'DRY_', 'DEBUG', 'QUIET', 'ON_',
+        'LOG_', 'AUTO_', 'KNOWN_', 'REPORT_', 'METRICS_', 'SKIP_',
+        'NO_', 'OPENCODE_', 'BENCHMARK', 'AWS_', 'CI_',
+    ];
+    const matchesUnknownPrefix = (k: string) =>
+        KNOWN_PREFIXES.some((prefix) => k.startsWith(prefix));
 
     beforeEach(() => {
         for (const k of Object.keys(process.env)) {
-            if (UNKNOWN_PREFIX.test(k)) {
+            if (matchesUnknownPrefix(k)) {
                 Reflect.deleteProperty(process.env, k);
             }
         }

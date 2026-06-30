@@ -439,8 +439,9 @@ export async function generatePrReport(options: PrReportCoreOptions): Promise<Pr
         }
 
         const coverageSource = coverageResult?.source ?? 'none';
+        const branchLabel = ghBranch ? ` (${ghBranch})` : '';
         const htmlOptions: ReportOptions = {
-            title: `QA Tools — PR Report${ghBranch ? ` (${ghBranch})` : ''}`,
+            title: `QA Tools — PR Report${branchLabel}`,
             qualityGate: Math.round(passRate),
             healthScore,
             trends: getTrends(store),

@@ -18,6 +18,8 @@ import path from 'path';
 import os from 'os';
 import Config from './config.js';
 
+type Layer = 'layer1' | 'layer2' | 'layer3';
+
 const MAX_PASS_RATE = 1;
 const DRIFT_SIGMA_MULTIPLIER = 2;
 
@@ -91,7 +93,7 @@ export class QualityMetricsCollector {
         this._invariantFireCount.set(invariantId, (this._invariantFireCount.get(invariantId) ?? 0) + 1);
     }
 
-    recordLayerAttempt(layer: 'layer1' | 'layer2' | 'layer3'): void {
+    recordLayerAttempt(layer: Layer): void {
         switch (layer) {
             case 'layer1': this._layerAttempts.layer1++; break;
             case 'layer2': this._layerAttempts.layer2++; break;
@@ -99,7 +101,7 @@ export class QualityMetricsCollector {
         }
     }
 
-    recordLayerPass(layer: 'layer1' | 'layer2' | 'layer3'): void {
+    recordLayerPass(layer: Layer): void {
         switch (layer) {
             case 'layer1': this._layerPasses.layer1++; break;
             case 'layer2': this._layerPasses.layer2++; break;
@@ -122,7 +124,7 @@ export class QualityMetricsCollector {
         return (this._invariantFireCount.get(invariantId) ?? 0) / total;
     }
 
-    layerPassRate(layer: 'layer1' | 'layer2' | 'layer3'): number {
+    layerPassRate(layer: Layer): number {
         let attempts: number;
         let passes: number;
         switch (layer) {
