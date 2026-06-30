@@ -325,7 +325,7 @@ async function executeTestCreationLoop(opts: TestCreationLoopOptions): Promise<v
         reportPrint,
     } = opts;
 
-    outer: for (let t = resumeFrom; t < tests.length; t++) {
+    for (let t = resumeFrom; t < tests.length; t++) {
         const test = Reflect.get(tests, t);
         const testTitle = test.title;
         if (!isQuiet()) reportInfo('Criando: ' + testTitle);
@@ -353,7 +353,7 @@ async function executeTestCreationLoop(opts: TestCreationLoopOptions): Promise<v
             reportInfo,
             reportPrint,
         });
-        if (signal === 'abort') break outer;
+        if (signal === 'abort') break;
     }
 }
 
