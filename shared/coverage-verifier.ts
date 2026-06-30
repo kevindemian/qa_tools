@@ -139,7 +139,10 @@ export function recalculateCoverage(artifact: unknown, context: ValidationContex
             totalCriteria: 0,
             coveredCriteria: 0,
             gaps: [],
-            coverageDelta: declaredCoverage !== null ? (testTexts.length > 0 ? 100 : 0) - declaredCoverage : 0,
+            coverageDelta: (() => {
+                if (declaredCoverage === null) return 0;
+                return (testTexts.length > 0 ? 100 : 0) - declaredCoverage;
+            })(),
         };
     }
 

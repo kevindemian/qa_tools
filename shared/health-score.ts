@@ -170,18 +170,29 @@ function computeActualMetrics(store: MetricsStore, config: HealthScoreConfig): A
         run.total > 0 ? ((run.passed + run.failed) / run.total) * 100 : 0,
     );
 
-    const actualCoverage =
-        config.coverageOverride !== undefined
-            ? config.coverageOverride
-            : store.coverageHistory && store.coverageHistory.length > 0
-              ? (store.coverageHistory[store.coverageHistory.length - 1]?.coveragePct ?? 0)
-              : 0;
+    let actualCoverage: number;
+    if (config.coverageOverride !== undefined) {
+        actualCoverage = config.coverageOverride;
+    } else if (store.coverageHistory && store.coverageHistory.length > 0) {
+        actualCoverage = store.coverageHistory[store.coverageHistory.length - 1]?.coveragePct ?? 0;
+    } else {
+        actualCoverage = 0;
+    }
 
     const actualSuiteSpeed = _computeSuiteSpeed(runs);
 
+    let flakyPctResult: number | null;
+    if (actualFlakyPct === null) {
+        flakyPctResult = null;
+    } else if (Number.isFinite(actualFlakyPct)) {
+        flakyPctResult = actualFlakyPct;
+    } else {
+        flakyPctResult = 0;
+    }
+
     return {
         passRate: Number.isFinite(actualPassRate) ? actualPassRate : 0,
-        flakyPct: actualFlakyPct === null ? null : Number.isFinite(actualFlakyPct) ? actualFlakyPct : 0,
+        flakyPct: flakyPctResult,
         coverage: Number.isFinite(actualCoverage) ? actualCoverage : 0,
         executionRate: Number.isFinite(actualExecutionRate) ? actualExecutionRate : 0,
         suiteSpeed: Number.isFinite(actualSuiteSpeed) ? actualSuiteSpeed : 0,

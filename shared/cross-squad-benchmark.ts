@@ -117,7 +117,15 @@ export function computeCrossSquadBenchmark(
     }
 
     const topSquad = n > 0 ? (benchmarks[0]?.project ?? '') : '';
-    const bottomSquad = n > 1 ? (benchmarks[n - 1]?.project ?? '') : n > 0 ? (benchmarks[0]?.project ?? '') : '';
+
+    let bottomSquad: string;
+    if (n > 1) {
+        bottomSquad = benchmarks[n - 1]?.project ?? '';
+    } else if (n > 0) {
+        bottomSquad = benchmarks[0]?.project ?? '';
+    } else {
+        bottomSquad = '';
+    }
 
     return {
         benchmarks,
