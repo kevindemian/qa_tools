@@ -174,7 +174,7 @@ export function checkHandlerConsistency(): CheckResult {
         /* Files → handlers */
         const caseFiles = readdirSync('jira_management/commands')
             .filter((f) => /^case\d{2}\.ts$/.test(f))
-            .sort();
+            .sort((a, b) => a.localeCompare(b));
 
         for (const f of caseFiles) {
             const id = f.replace('case', '').replace('.ts', '').replace(/^0/, '');

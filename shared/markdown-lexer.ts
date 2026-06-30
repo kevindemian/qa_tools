@@ -173,7 +173,7 @@ function lexPipeTable(lines: string[]): InlineToken {
 // ─── Block-level handlers ───────────────────────────────────────────────────────
 
 function lexHeading(line: string): InlineToken | null {
-    const m = /^(#{1,6})\s+(.*)$/.exec(line);
+    const m = /^(#{1,6})[^\S\n]+([^\n]*)$/.exec(line);
     if (!m) return null;
     return { type: 'heading', depth: (m[1] ?? '').length, tokens: lexInline(m[2] ?? '') };
 }
@@ -201,11 +201,12 @@ function lexBlockquote(lines: string[], i: number): { token: InlineToken; next: 
 }
 
 function lexUnorderedList(lines: string[], i: number): { token: InlineToken; next: number } | null {
-    const m = /^(\s*)[-*+]\s+(.*)$/.exec(getLine(lines, i));
+    const listRe = /^(\s*)[-*+][^\S\n]+([^\n]*)$/;
+    const m = listRe.exec(getLine(lines, i));
     if (!m) return null;
     const items: Array<{ tokens: InlineToken[] }> = [];
     while (i < lines.length) {
-        const m2 = /^(\s*)[-*+]\s+(.*)$/.exec(getLine(lines, i));
+        const m2 = listRe.exec(getLine(lines, i));
         if (m2) {
             items.push({ tokens: lexInline(m2[2] ?? '') });
             i++;
@@ -219,11 +220,12 @@ function lexUnorderedList(lines: string[], i: number): { token: InlineToken; nex
 }
 
 function lexOrderedList(lines: string[], i: number): { token: InlineToken; next: number } | null {
-    const m = /^\s*\d+\.\s+(.*)$/.exec(getLine(lines, i));
+    const listRe = /^\s*\d+\.[^\S\n]+([^\n]*)$/;
+    const m = listRe.exec(getLine(lines, i));
     if (!m) return null;
     const items: Array<{ tokens: InlineToken[] }> = [];
     while (i < lines.length) {
-        const m2 = /^\s*\d+\.\s+(.*)$/.exec(getLine(lines, i));
+        const m2 = listRe.exec(getLine(lines, i));
         if (m2) {
             items.push({ tokens: lexInline(m2[1] ?? '') });
             i++;
@@ -266,9 +268,7 @@ function lexParagraph(lines: string[], i: number): { token: InlineToken; next: n
 }
 
 function dedupeSpaces(tokens: InlineToken[]): InlineToken[] {
-    return tokens.filter((t, idx, arr) =>
-        !(t.type === 'space' && idx > 0 && arr[idx - 1]?.type === 'space'),
-    );
+    return tokens.filter((t, idx, arr) => !(t.type === 'space' && idx > 0 && arr[idx - 1]?.type === 'space'));
 }
 
 // ─── Block-level token dispatcher ───────────────────────────────────────────────
