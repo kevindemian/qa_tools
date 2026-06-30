@@ -145,8 +145,16 @@ export function buildIncidentReport(
     const mediumCount = events.filter((e) => e.severity === 'medium').length;
     const lowCount = events.filter((e) => e.severity === 'low').length;
 
-    const overallSeverity: 'high' | 'medium' | 'low' | 'none' =
-        highCount > 0 ? 'high' : mediumCount > 0 ? 'medium' : lowCount > 0 ? 'low' : 'none';
+    let overallSeverity: 'high' | 'medium' | 'low' | 'none';
+    if (highCount > 0) {
+        overallSeverity = 'high';
+    } else if (mediumCount > 0) {
+        overallSeverity = 'medium';
+    } else if (lowCount > 0) {
+        overallSeverity = 'low';
+    } else {
+        overallSeverity = 'none';
+    }
 
     const summaryParts: string[] = [];
     if (highCount > 0) summaryParts.push(`${highCount} high severity`);
