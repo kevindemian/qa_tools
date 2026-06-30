@@ -52,7 +52,7 @@ describe('Structural.ts — module loads and runs', () => {
         const d5 = data[5] as Finding;
 
         expect(d0.pattern).toBe('Config getter pattern');
-        expect(d0.severity).toMatch(/^high|medium|low$/);
+        expect(d0.severity).toMatch(/^(high|medium|low)$/);
         expect(typeof d0.count).toBe('number');
         expect(d5.pattern).toBe('Git provider method post-processing');
 

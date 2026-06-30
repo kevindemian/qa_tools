@@ -139,7 +139,7 @@ export function checkHandlerConsistency(): CheckResult {
         }
 
         const aliasTargets = new Set<string>();
-        for (const m of menuSource.matchAll(/['"]([\w-]+)['"]:\s*['"]([\w\d/]+)['"]/g)) {
+        for (const m of menuSource.matchAll(/['"]([\w-]+)['"]:\s*['"]([\w/]+)['"]/g)) {
             if (m[2]) aliasTargets.add(m[2]);
         }
 

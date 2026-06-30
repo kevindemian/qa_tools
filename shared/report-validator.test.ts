@@ -115,7 +115,7 @@ describe('ValidateAll', () => {
     const allSchema: ValidationRule[] = [
         { field: 'tests', required: true, type: 'array', minLength: 1 },
         { field: 'tests[0].title', required: true, type: 'string', minLength: 3 },
-        { field: 'tests[0].classification', required: true, type: 'string', pattern: /^(A|B)$/ },
+        { field: 'tests[0].classification', required: true, type: 'string', pattern: /^[AB]$/ },
     ];
 
     beforeEach(() => {

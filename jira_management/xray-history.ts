@@ -172,7 +172,7 @@ class CloudHistoryProvider implements TestHistoryProvider {
             return result;
         }
         try {
-            const jql = 'id IN (' + uncached.map((id) => '"' + id.replace(/[^0-9]/g, '') + '"').join(',') + ')';
+            const jql = 'id IN (' + uncached.map((id) => '"' + id.replace(/\D/g, '') + '"').join(',') + ')';
             const data = await this.jiraResource.searchJiraIssues(jql, uncached.length);
             for (const issue of data.issues) {
                 const id = (issue as JiraIssue).id;

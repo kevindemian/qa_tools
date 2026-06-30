@@ -151,9 +151,12 @@ export class LlmMetricsCollector {
         this._confidenceCount++;
     }
 
-    recordArtifactReview(approved: boolean): void {
-        if (approved) this._artifactApproved++;
-        else this._artifactRejected++;
+    recordArtifactApproved(): void {
+        this._artifactApproved++;
+    }
+
+    recordArtifactRejected(): void {
+        this._artifactRejected++;
     }
 
     /** Take a snapshot of current metrics, persist to disk, and return it. */

@@ -500,12 +500,6 @@ async function _dashboardIncidentReport(): Promise<void> {
         if (n.coverage < 100) acc.push(n.epic);
         return acc;
     }, []);
-    const trendCategories = new Set<string>();
-    for (const t of defects.trends) {
-        for (const cat of Object.keys(t.categories)) {
-            trendCategories.add(cat);
-        }
-    }
     const incidentReport = buildIncidentReport(
         failRate,
         regression.regressions.length,

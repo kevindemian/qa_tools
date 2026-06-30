@@ -63,13 +63,13 @@ describe('Llm Metrics', () => {
             expect(nonNull(history[0]).totalRequests).toBe(1);
         });
 
-        it('23.12: recordArtifactReview approved/rejected', async () => {
+        it('23.12: recordArtifactApproved/rejected', async () => {
             expect.hasAssertions();
 
-            const { recordArtifactReview, snapshotLlmMetrics } = await loadMod();
-            recordArtifactReview(true); // approved
-            recordArtifactReview(false); // rejected
-            recordArtifactReview(true); // approved
+            const { recordArtifactApproved, recordArtifactRejected, snapshotLlmMetrics } = await loadMod();
+            recordArtifactApproved(); // approved
+            recordArtifactRejected(); // rejected
+            recordArtifactApproved(); // approved
 
             const snap = snapshotLlmMetrics();
 
@@ -167,11 +167,11 @@ describe('Llm Metrics', () => {
         it('records artifact review counters', async () => {
             expect.hasAssertions();
 
-            const { recordArtifactReview, snapshotLlmMetrics } = await loadMod();
+            const { recordArtifactApproved, recordArtifactRejected, snapshotLlmMetrics } = await loadMod();
 
-            recordArtifactReview(true);
-            recordArtifactReview(true);
-            recordArtifactReview(false);
+            recordArtifactApproved();
+            recordArtifactApproved();
+            recordArtifactRejected();
 
             const snap = snapshotLlmMetrics();
 

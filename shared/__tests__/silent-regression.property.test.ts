@@ -19,7 +19,7 @@ const historyArb: fc.Arbitrary<Record<string, number[]>> = fc
     .map((entries) => {
         const obj: Record<string, number[]> = {};
         for (const [name, durations] of entries) {
-            obj[name.replace(/[^a-zA-Z0-9_]/g, '_')] = durations;
+            obj[name.replace(/\W/g, '_')] = durations;
         }
         return obj;
     });
