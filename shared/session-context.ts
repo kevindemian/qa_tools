@@ -81,7 +81,13 @@ export class SessionContext {
     buildContextLine(projectName?: string): string {
         const ok = this.sessionCounters.filter((c) => c.status === 'ok').length;
         const er = this.sessionCounters.filter((c) => c.status === 'error').length;
-        const counts = ok > 0 || er > 0 ? ' | ' + ok + ' ok' + (er > 0 ? ' · ' + er + ' erro' : '') : '';
+        let counts = '';
+        if (ok > 0 || er > 0) {
+            counts = ' | ' + ok + ' ok';
+            if (er > 0) {
+                counts += ' · ' + er + ' erro';
+            }
+        }
         const prefix = projectName || '';
         return prefix + (this.lastOperation ? ' | ' + this.lastOperation : '') + counts;
     }

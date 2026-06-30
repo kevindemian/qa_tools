@@ -176,7 +176,12 @@ export function buildSummaryCards(stats: ReportStats, passRate: number): string 
             MetricCard({
                 label: 'Pass Rate',
                 value: passRate.toFixed(1) + '%',
-                severity: pctClass(passRate) === 'pass' ? 'success' : pctClass(passRate) === 'warn' ? 'warn' : 'error',
+                severity: (() => {
+                    const cls = pctClass(passRate);
+                    if (cls === 'pass') return 'success';
+                    if (cls === 'warn') return 'warn';
+                    return 'error';
+                })(),
             }),
     });
 }
@@ -260,7 +265,14 @@ export function buildReleaseSection(
     breakdown: Array<{ label: string; score: number; status: 'pass' | 'fail' }>,
     recommendation: string,
 ): string {
-    const scoreColor = score >= 80 ? 'var(--color-success)' : score >= 50 ? 'var(--color-warn)' : 'var(--color-error)';
+    let scoreColor: string;
+    if (score >= 80) {
+        scoreColor = 'var(--color-success)';
+    } else if (score >= 50) {
+        scoreColor = 'var(--color-warn)';
+    } else {
+        scoreColor = 'var(--color-error)';
+    }
 
     let breakdownHtml = '';
     for (const item of breakdown) {

@@ -193,14 +193,31 @@ function buildStatusBadge(status: 'passed' | 'failed' | 'skipped'): string {
 
 function buildHealthBar(value: number): string {
     const pct = Math.min(100, Math.max(0, value));
-    const color = pct >= 80 ? 'var(--color-success)' : pct >= 50 ? 'var(--color-warn)' : 'var(--color-error)';
+    let color: string;
+    if (pct >= 80) {
+        color = 'var(--color-success)';
+    } else if (pct >= 50) {
+        color = 'var(--color-warn)';
+    } else {
+        color = 'var(--color-error)';
+    }
     return `<div class="health-bar"><div class="health-fill" style="width:${pct}%;background:${color}"></div></div>`;
 }
 
 function buildTestHtml(test: TraceabilityNode['stories'][0]['tests'][0]): string {
     const flakinessPct = Math.round(test.flakiness * 100);
+
+    let testIcon: string;
+    if (test.status === 'passed') {
+        testIcon = '\u2705';
+    } else if (test.status === 'failed') {
+        testIcon = '\u274C';
+    } else {
+        testIcon = '\u23F8';
+    }
+
     return `<div class="test-row test-${test.status}" data-status="${test.status}">
-        <span class="test-icon">${test.status === 'passed' ? '\u2705' : test.status === 'failed' ? '\u274C' : '\u23F8'}</span>
+        <span class="test-icon">${testIcon}</span>
         <span class="test-title">${sanitizeHtml(test.title)}</span>
         <span class="test-meta">${test.duration}ms</span>
         <span class="test-flakiness">flak: ${flakinessPct}%</span>
@@ -284,8 +301,11 @@ export function generateTraceabilityHtml(result: TraceabilityResult | null | und
                 MetricCard({
                     label: 'Overall Coverage',
                     value: result.overallCoverage + '%',
-                    severity:
-                        result.overallCoverage >= 80 ? 'success' : result.overallCoverage >= 50 ? 'warn' : 'error',
+                    severity: (() => {
+                        if (result.overallCoverage >= 80) return 'success';
+                        if (result.overallCoverage >= 50) return 'warn';
+                        return 'error';
+                    })(),
                 }),
         });
 

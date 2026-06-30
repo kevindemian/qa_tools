@@ -91,19 +91,27 @@ export function buildSplashLines(
     splash.push('');
     if (statusChecks) {
         for (const c of statusChecks) {
-            const dot =
-                c.status === 'ok' ? palette.green('●') : c.status === 'error' ? palette.red('●') : palette.muted('○');
+            let dot: string;
+            if (c.status === 'ok') {
+                dot = palette.green('●');
+            } else if (c.status === 'error') {
+                dot = palette.red('●');
+            } else {
+                dot = palette.muted('○');
+            }
             splash.push('  ' + dot + ' ' + c.label + ': ' + palette.muted(c.detail));
         }
         splash.push('');
     }
     if (healthScore) {
-        const healthColor =
-            healthScore.grade === 'excellent' || healthScore.grade === 'good'
-                ? palette.green
-                : healthScore.grade === 'needs_attention'
-                  ? palette.yellow
-                  : palette.red;
+        let healthColor: (s: string) => string;
+        if (healthScore.grade === 'excellent' || healthScore.grade === 'good') {
+            healthColor = palette.green;
+        } else if (healthScore.grade === 'needs_attention') {
+            healthColor = palette.yellow;
+        } else {
+            healthColor = palette.red;
+        }
         splash.push(healthColor('  Health: ' + healthScore.score + '/100 (' + healthScore.grade + ')'));
         splash.push('');
     }
