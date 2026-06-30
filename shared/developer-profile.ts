@@ -174,14 +174,16 @@ function buildCategoryTable(categories: Record<string, number>): string {
 const RATE_THRESHOLD_LOW = 10;
 
 function buildAuthorSectionHtml(author: AuthorStat): string {
-    const rateClass =
-        author.failureRate >= RATE_THRESHOLD_HIGH
-            ? 'severity-critical'
-            : author.failureRate >= RATE_THRESHOLD_MEDIUM
-              ? 'severity-high'
-              : author.failureRate >= RATE_THRESHOLD_LOW
-                ? 'severity-medium'
-                : 'severity-low';
+    let rateClass: string;
+    if (author.failureRate >= RATE_THRESHOLD_HIGH) {
+        rateClass = 'severity-critical';
+    } else if (author.failureRate >= RATE_THRESHOLD_MEDIUM) {
+        rateClass = 'severity-high';
+    } else if (author.failureRate >= RATE_THRESHOLD_LOW) {
+        rateClass = 'severity-medium';
+    } else {
+        rateClass = 'severity-low';
+    }
 
     return `<div class="author-section">
         <div class="author-header">
