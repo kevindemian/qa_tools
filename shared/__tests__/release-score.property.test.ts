@@ -51,8 +51,16 @@ describe('CalculateReleaseScore — property-based', () => {
             fc.property(pctArb(), pctArb(), gateArb(), pctArb(), pctArb(), (tasks, health, gate, coverage, flaky) => {
                 const result = calculateReleaseScore(tasks, health, gate, coverage, flaky);
                 const s = result.score;
-                const expectedGrade =
-                    s >= 90 ? 'excellent' : s >= 70 ? 'good' : s >= 50 ? 'needs_attention' : 'critical';
+                let expectedGrade: string;
+                if (s >= 90) {
+                    expectedGrade = 'excellent';
+                } else if (s >= 70) {
+                    expectedGrade = 'good';
+                } else if (s >= 50) {
+                    expectedGrade = 'needs_attention';
+                } else {
+                    expectedGrade = 'critical';
+                }
 
                 expect(result.grade).toBe(expectedGrade);
             }),
@@ -133,7 +141,14 @@ describe('CalculateReleaseScore — property-based', () => {
                     expect(d.score).toBeGreaterThanOrEqual(0);
                     expect(d.score).toBeLessThanOrEqual(100);
 
-                    const expectedStatus = d.label === 'Health' ? gate : d.score >= 70 ? 'pass' : 'fail';
+                    let expectedStatus: string;
+                    if (d.label === 'Health') {
+                        expectedStatus = gate;
+                    } else if (d.score >= 70) {
+                        expectedStatus = 'pass';
+                    } else {
+                        expectedStatus = 'fail';
+                    }
 
                     expect(d.status).toBe(expectedStatus);
                 }
@@ -156,7 +171,14 @@ describe('CalculateReleaseScore — property-based', () => {
                 }
                 const flkA = flkAEntry.score;
                 const flkB = flkBEntry.score;
-                const isMonotonic = a > b ? flkA <= flkB : a < b ? flkA >= flkB : flkA === flkB;
+                let isMonotonic: boolean;
+                if (a > b) {
+                    isMonotonic = flkA <= flkB;
+                } else if (a < b) {
+                    isMonotonic = flkA >= flkB;
+                } else {
+                    isMonotonic = flkA === flkB;
+                }
 
                 expect(isMonotonic).toBeTruthy();
             }),
