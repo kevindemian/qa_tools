@@ -173,9 +173,15 @@ function lexPipeTable(lines: string[]): InlineToken {
 // ─── Block-level handlers ───────────────────────────────────────────────────────
 
 function lexHeading(line: string): InlineToken | null {
-    const m = /^(#{1,6})[^\S\n]+([^\n]*)$/.exec(line);
-    if (!m) return null;
-    return { type: 'heading', depth: (m[1] ?? '').length, tokens: lexInline(m[2] ?? '') };
+    const trimmed = line.trimStart();
+    if (!trimmed.startsWith('#')) return null;
+    let depth = 0;
+    while (depth < trimmed.length && trimmed.charAt(depth) === '#') depth++;
+    if (depth < 1 || depth > 6) return null;
+    const rest = trimmed.slice(depth);
+    if (rest.length === 0 || (rest.charAt(0) !== ' ' && rest.charAt(0) !== '\t')) return null;
+    const content = rest.replace(/^[ \t]+/, '');
+    return { type: 'heading', depth, tokens: lexInline(content) };
 }
 
 function lexCodeBlock(lines: string[], i: number): { token: InlineToken; next: number } | null {
@@ -200,15 +206,24 @@ function lexBlockquote(lines: string[], i: number): { token: InlineToken; next: 
     return { token: { type: 'blockquote', tokens: lexInline(quoteLines.join(' ').trim()) }, next: i };
 }
 
+function parseUnorderedListLine(line: string): { indent: string; content: string } | null {
+    const trimmed = line.trimStart();
+    if (!trimmed.startsWith('-') && !trimmed.startsWith('*') && !trimmed.startsWith('+')) return null;
+    const markerPos = trimmed.search(/[-*+]/);
+    const afterMarker = trimmed.slice(markerPos + 1);
+    if (afterMarker.length === 0 || (afterMarker[0] !== ' ' && afterMarker[0] !== '\t')) return null;
+    const content = afterMarker.replace(/^[ \t]+/, '');
+    return { indent: line.slice(0, line.length - trimmed.length), content };
+}
+
 function lexUnorderedList(lines: string[], i: number): { token: InlineToken; next: number } | null {
-    const listRe = /^(\s*)[-*+][^\S\n]+([^\n]*)$/;
-    const m = listRe.exec(getLine(lines, i));
-    if (!m) return null;
+    const first = parseUnorderedListLine(getLine(lines, i));
+    if (!first) return null;
     const items: Array<{ tokens: InlineToken[] }> = [];
     while (i < lines.length) {
-        const m2 = listRe.exec(getLine(lines, i));
-        if (m2) {
-            items.push({ tokens: lexInline(m2[2] ?? '') });
+        const parsed = parseUnorderedListLine(getLine(lines, i));
+        if (parsed) {
+            items.push({ tokens: lexInline(parsed.content) });
             i++;
         } else if (getLine(lines, i).trim() === '') {
             break;
@@ -219,15 +234,24 @@ function lexUnorderedList(lines: string[], i: number): { token: InlineToken; nex
     return { token: { type: 'list', items }, next: i };
 }
 
+function parseOrderedListLine(line: string): { indent: string; content: string } | null {
+    const trimmed = line.trimStart();
+    const match = /^(\d+)\./.exec(trimmed);
+    if (!match) return null;
+    const afterDot = trimmed.slice(match[0].length);
+    if (afterDot.length === 0 || (afterDot[0] !== ' ' && afterDot[0] !== '\t')) return null;
+    const content = afterDot.replace(/^[ \t]+/, '');
+    return { indent: line.slice(0, line.length - trimmed.length), content };
+}
+
 function lexOrderedList(lines: string[], i: number): { token: InlineToken; next: number } | null {
-    const listRe = /^\s*\d+\.[^\S\n]+([^\n]*)$/;
-    const m = listRe.exec(getLine(lines, i));
-    if (!m) return null;
+    const first = parseOrderedListLine(getLine(lines, i));
+    if (!first) return null;
     const items: Array<{ tokens: InlineToken[] }> = [];
     while (i < lines.length) {
-        const m2 = listRe.exec(getLine(lines, i));
-        if (m2) {
-            items.push({ tokens: lexInline(m2[1] ?? '') });
+        const parsed = parseOrderedListLine(getLine(lines, i));
+        if (parsed) {
+            items.push({ tokens: lexInline(parsed.content) });
             i++;
         } else if (getLine(lines, i).trim() === '') {
             break;
