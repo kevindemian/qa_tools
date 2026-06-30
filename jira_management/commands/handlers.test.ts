@@ -1,3 +1,5 @@
+import os from 'os';
+import path from 'path';
 vi.mock('../../shared/prompt');
 vi.mock('../../shared/state');
 vi.mock('../../shared/logger');
@@ -602,7 +604,7 @@ describe('Handlers', () => {
             expect.hasAssertions();
 
             const prompt = vi.mocked(promptModule);
-            prompt.ask.mockResolvedValueOnce('CSV').mockResolvedValueOnce('/tmp/test-template.csv');
+            prompt.ask.mockResolvedValueOnce('CSV').mockResolvedValueOnce(path.join(os.tmpdir(), 'qa-test-template.csv'));
             const mod = case11;
             await mod.handler(baseContext);
 
@@ -615,7 +617,7 @@ describe('Handlers', () => {
             expect.hasAssertions();
 
             const prompt = vi.mocked(promptModule);
-            prompt.ask.mockResolvedValueOnce('JSON').mockResolvedValueOnce('/tmp/test-template.json');
+            prompt.ask.mockResolvedValueOnce('JSON').mockResolvedValueOnce(path.join(os.tmpdir(), 'qa-test-template.json'));
             const mod = case11;
             await mod.handler(baseContext);
 
@@ -628,7 +630,7 @@ describe('Handlers', () => {
             expect.hasAssertions();
 
             const prompt = vi.mocked(promptModule);
-            prompt.ask.mockResolvedValueOnce('CSV').mockResolvedValueOnce('/tmp/test-template.csv');
+            prompt.ask.mockResolvedValueOnce('CSV').mockResolvedValueOnce(path.join(os.tmpdir(), 'qa-test-template.csv'));
 
             vi.spyOn(fs, 'copyFileSync').mockImplementationOnce(() => {
                 throw new Error('permission denied');

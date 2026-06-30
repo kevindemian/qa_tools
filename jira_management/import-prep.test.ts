@@ -1,3 +1,5 @@
+import os from 'os';
+import path from 'path';
 // Mock factories
 const mockConfig = vi.hoisted(() => {
     const _data: { [key: string]: string | boolean } = {
@@ -357,7 +359,7 @@ describe('ParseJsonTests', () => {
         ]);
         // writeFileSync is mocked in this file — use actual fs for temp file
         const actualFs = await vi.importActual<typeof import('fs')>('fs');
-        const tmp = '/tmp/test-expected-result-alias.json';
+        const tmp = path.join(os.tmpdir(), 'qa-test-expected-result-alias.json');
         actualFs.writeFileSync(tmp, jsonContent, 'utf-8');
 
         const warnSpy = vi.spyOn(rootLogger, 'warn');
@@ -382,7 +384,7 @@ describe('ParseJsonTests', () => {
             },
         ]);
         const actualFs = await vi.importActual<typeof import('fs')>('fs');
-        const tmp = '/tmp/test-expected-result-canonical.json';
+        const tmp = path.join(os.tmpdir(), 'qa-test-expected-result-canonical.json');
         actualFs.writeFileSync(tmp, jsonContent, 'utf-8');
 
         const result = parseJsonTests(tmp);
@@ -402,7 +404,7 @@ describe('ParseJsonTests', () => {
             },
         ]);
         const actualFs = await vi.importActual<typeof import('fs')>('fs');
-        const tmp = '/tmp/test-expected-result-missing.json';
+        const tmp = path.join(os.tmpdir(), 'qa-test-expected-result-missing.json');
         actualFs.writeFileSync(tmp, jsonContent, 'utf-8');
 
         const result = parseJsonTests(tmp);
@@ -535,7 +537,7 @@ describe('Csv -> preview pipeline (e2e)', async () => {
     it('parses all-quirks CSV and renders preview with correct content', async () => {
         expect.hasAssertions();
 
-        const tmp = '/tmp/csv-e2e-quirks.csv';
+        const tmp = path.join(os.tmpdir(), 'qa-csv-e2e-quirks.csv');
         fs.writeFileSync(tmp, buildFixtureCsv(), 'utf-8');
 
         const tests = await csvResource.readBulkCsv(tmp);
@@ -564,7 +566,7 @@ describe('Csv -> preview pipeline (e2e)', async () => {
     it('all-quirks CSV preview contains metadata and labels', async () => {
         expect.hasAssertions();
 
-        const tmp = '/tmp/csv-e2e-quirks-meta.csv';
+        const tmp = path.join(os.tmpdir(), 'qa-csv-e2e-quirks-meta.csv');
         fs.writeFileSync(tmp, buildFixtureCsv(), 'utf-8');
 
         const tests = await csvResource.readBulkCsv(tmp);
@@ -590,7 +592,7 @@ describe('Csv -> preview pipeline (e2e)', async () => {
         expect.hasAssertions();
 
         loggerWarn.mockClear();
-        const tmp = '/tmp/csv-e2e-golden.csv';
+        const tmp = path.join(os.tmpdir(), 'qa-csv-e2e-golden.csv');
         fs.writeFileSync(tmp, buildGoldenCsv(), 'utf-8');
 
         const tests = await csvResource.readBulkCsv(tmp);
@@ -611,7 +613,7 @@ describe('Csv -> preview pipeline (e2e)', async () => {
         expect.hasAssertions();
 
         loggerWarn.mockClear();
-        const tmp = '/tmp/csv-e2e-flat.csv';
+        const tmp = path.join(os.tmpdir(), 'qa-csv-e2e-flat.csv');
         fs.writeFileSync(tmp, 'Title,Action,Data,Expected Result\nTC1,Step1,,Result1\n', 'utf-8');
 
         const tests = await csvResource.readBulkCsv(tmp);

@@ -1,3 +1,5 @@
+import os from 'os';
+import path from 'path';
 import {
     createMockGitProvider,
     createMockJiraResource,
@@ -127,7 +129,7 @@ describe('Test Results', () => {
         vi.clearAllMocks();
         mockPrompt.mockResolvedValue('');
         mockLoadState.mockReturnValue({ lastCypressPath: '' });
-        mockReportsDir.mockReturnValue('/tmp/reports');
+        mockReportsDir.mockReturnValue(path.join(os.tmpdir(), 'qa-test-reports'));
         mockGlobSync.mockReturnValue([]);
         mockAdmZipGetEntries.mockReturnValue([]);
     });
@@ -151,10 +153,10 @@ describe('Test Results', () => {
 
     describe('ResolveGlob', () => {
         it('returns resolved path when glob matches', () => {
-            mockGlobSync.mockReturnValueOnce(['/tmp/mapping.json']);
-            const result = mod._resolveGlob('/tmp/*.json');
+            mockGlobSync.mockReturnValueOnce([path.join(os.tmpdir(), 'mapping.json')]);
+            const result = mod._resolveGlob(path.join(os.tmpdir(), '*.json'));
 
-            expect(result).toBe('/tmp/mapping.json');
+            expect(result).toBe(path.join(os.tmpdir(), 'mapping.json'));
         });
 
         it('returns null when no match', () => {

@@ -8,11 +8,12 @@
  * FT-36e: Corrupt store -> graceful fallback
  */
 import fs from 'fs';
+import os from 'os';
 import path from 'path';
 import { describe, expect, it, beforeEach, afterEach } from 'vitest';
 
 const { MOCK_STATE_HOME } = vi.hoisted(() => ({
-    MOCK_STATE_HOME: '/tmp/qa-tools-quarantine-integration',
+    MOCK_STATE_HOME: path.join(os.tmpdir(), 'qa-tools-quarantine-integration'),
 }));
 
 vi.mock('../../config', () => ({

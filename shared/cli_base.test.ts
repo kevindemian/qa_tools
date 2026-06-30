@@ -1,3 +1,5 @@
+import os from 'os';
+import path from 'path';
 import { nonNull } from './test-utils.js';
 import type { Mock, Mocked } from 'vitest';
 
@@ -520,7 +522,7 @@ describe('CLI Base', () => {
         });
 
         it('prints log path when available', () => {
-            mockRootLogger.filePath = '/tmp/test.log';
+            mockRootLogger.filePath = path.join(os.tmpdir(), 'qa-test.log');
             cliBase.printSessionSummary([], null);
 
             expect(MOCK_PROMPT.info).toHaveBeenCalledWith('Log: /tmp/test.log');

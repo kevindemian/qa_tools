@@ -1,3 +1,5 @@
+import os from 'os';
+import path from 'path';
 import { describe, it, expect, vi, beforeEach } from 'vitest';
 
 const mockFs = vi.hoisted(() => {
@@ -135,7 +137,7 @@ describe('CleanupTestDir', () => {
             throw Object.assign(new Error('permission denied'), { code: 'EACCES' });
         });
 
-        cleanupTestDir('/tmp/test');
+        cleanupTestDir(path.join(os.tmpdir(), 'qa-test'));
 
         expect(warnSpy).toHaveBeenCalledTimes(1);
 
@@ -149,7 +151,7 @@ describe('CleanupTestDir', () => {
             throw Object.assign(new Error('permission denied'), { code: 'EACCES' });
         });
 
-        cleanupTestDir('/tmp/test');
+        cleanupTestDir(path.join(os.tmpdir(), 'qa-test'));
 
         const message = String(warnSpy.mock.calls[0]?.[0]);
 
@@ -166,7 +168,7 @@ describe('CleanupTestDir', () => {
             throw Object.assign(new Error('not found'), { code: 'ENOENT' });
         });
 
-        cleanupTestDir('/tmp/test');
+        cleanupTestDir(path.join(os.tmpdir(), 'qa-test'));
 
         expect(warnSpy).not.toHaveBeenCalled();
 
@@ -201,7 +203,7 @@ describe('CreateFile', () => {
             throw fsError;
         });
 
-        expect(() => createFile('/tmp/base', 'sub/file.txt', 'content')).toThrow('createFile');
+        expect(() => createFile(path.join(os.tmpdir(), 'qa-base'), 'sub/file.txt', 'content')).toThrow('createFile');
     });
 });
 
@@ -216,7 +218,7 @@ describe('ReadFile', () => {
             throw Object.assign(new Error('not found'), { code: 'ENOENT' });
         });
 
-        const result = readFile('/tmp/base', 'missing.txt');
+        const result = readFile(path.join(os.tmpdir(), 'qa-base'), 'missing.txt');
 
         expect(result).toBeNull();
         expect(warnSpy).not.toHaveBeenCalled();
@@ -230,7 +232,7 @@ describe('ReadFile', () => {
             throw Object.assign(new Error('permission denied'), { code: 'EACCES' });
         });
 
-        const result = readFile('/tmp/base', 'noaccess.txt');
+        const result = readFile(path.join(os.tmpdir(), 'qa-base'), 'noaccess.txt');
 
         expect(result).toBeNull();
         expect(warnSpy).toHaveBeenCalledTimes(1);
@@ -250,7 +252,7 @@ describe('ReadJsonFile', () => {
             throw Object.assign(new Error('not found'), { code: 'ENOENT' });
         });
 
-        const result = readJsonFile('/tmp/base', 'missing.json');
+        const result = readJsonFile(path.join(os.tmpdir(), 'qa-base'), 'missing.json');
 
         expect(result).toBeNull();
         expect(warnSpy).not.toHaveBeenCalled();
@@ -261,7 +263,7 @@ describe('ReadJsonFile', () => {
     it('g5/G12: should return null on invalid JSON (not crash)', () => {
         mockFs.readFileSync.mockReturnValue('{ invalid json }');
 
-        const result = readJsonFile('/tmp/base', 'bad.json');
+        const result = readJsonFile(path.join(os.tmpdir(), 'qa-base'), 'bad.json');
 
         expect(result).toBeNull();
     });
@@ -272,7 +274,7 @@ describe('ReadJsonFile', () => {
             throw Object.assign(new Error('permission denied'), { code: 'EACCES' });
         });
 
-        const result = readJsonFile('/tmp/base', 'noaccess.json');
+        const result = readJsonFile(path.join(os.tmpdir(), 'qa-base'), 'noaccess.json');
 
         expect(result).toBeNull();
         expect(warnSpy).toHaveBeenCalledTimes(1);

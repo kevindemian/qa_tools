@@ -1,3 +1,5 @@
+import os from 'os';
+import path from 'path';
 import { describe, it, expect, vi, beforeEach } from 'vitest';
 import { createMockContext } from '../shared/test-utils/factories/context-factory.js';
 import type { MetricsStore } from '../shared/metrics.js';
@@ -182,7 +184,7 @@ describe('Case-d — dashboard menu', () => {
         const { loadMetrics } = await import('../shared/metrics.js');
         const { writeReport } = await import('../shared/temp-dir.js');
         vi.mocked(loadMetrics).mockReturnValue({ runs: [] });
-        vi.mocked(writeReport).mockReturnValue('/tmp/report.html');
+        vi.mocked(writeReport).mockReturnValue(path.join(os.tmpdir(), 'qa-test-report.html'));
         const ctx = createMockContext();
         const { default: caseD } = await import('./commands/case-d.js');
         await caseD.handler(ctx);
@@ -213,7 +215,7 @@ describe('Case-d — dashboard menu', () => {
         });
         vi.mocked(calculateReleaseScore).mockReturnValue(makeReleaseScoreResult());
         vi.mocked(generateReleaseScoreHtml).mockReturnValue(HTML_WITH_DOCTYPE);
-        vi.mocked(writeReport).mockReturnValue('/tmp/report.html');
+        vi.mocked(writeReport).mockReturnValue(path.join(os.tmpdir(), 'qa-test-report.html'));
         const ctx = createMockContext();
         const { default: caseD } = await import('./commands/case-d.js');
         await caseD.handler(ctx);
@@ -231,7 +233,7 @@ describe('Case-d — dashboard menu', () => {
         const { writeReport } = await import('../shared/temp-dir.js');
         vi.mocked(analyzeCoverageGaps).mockResolvedValue(makeCoverageResult());
         vi.mocked(generateCoverageGapHtml).mockReturnValue(HTML_WITH_DOCTYPE);
-        vi.mocked(writeReport).mockReturnValue('/tmp/report.html');
+        vi.mocked(writeReport).mockReturnValue(path.join(os.tmpdir(), 'qa-test-report.html'));
         const ctx = createMockContext();
         const { default: caseD } = await import('./commands/case-d.js');
         await caseD.handler(ctx);
@@ -268,7 +270,7 @@ describe('Case25 — Traceability Matrix', () => {
         vi.mocked(loadMetrics).mockReturnValue(store);
         vi.mocked(buildTraceabilityMatrix).mockReturnValue(makeTraceabilityResult());
         vi.mocked(generateTraceabilityHtml).mockReturnValue(HTML_WITH_DOCTYPE);
-        vi.mocked(writeReport).mockReturnValue('/tmp/traceability-matrix-TEST.html');
+        vi.mocked(writeReport).mockReturnValue(path.join(os.tmpdir(), 'qa-traceability-matrix-TEST.html'));
         const ctx = createMockContext();
         const { default: case25 } = await import('./commands/case25.js');
         await case25.handler(ctx);
@@ -284,7 +286,7 @@ describe('Case25 — Traceability Matrix', () => {
         const { writeReport } = await import('../shared/temp-dir.js');
         vi.mocked(buildTraceabilityMatrix).mockReturnValue(makeTraceabilityResult());
         vi.mocked(generateTraceabilityHtml).mockReturnValue(HTML_WITH_DOCTYPE);
-        vi.mocked(writeReport).mockReturnValue('/tmp/report.html');
+        vi.mocked(writeReport).mockReturnValue(path.join(os.tmpdir(), 'qa-test-report.html'));
         const ctx = createMockContext();
         ctx.ctx.project_name = 'MY_PROJECT';
         const { default: case25 } = await import('./commands/case25.js');
@@ -297,7 +299,7 @@ describe('Case25 — Traceability Matrix', () => {
         expect.hasAssertions();
 
         const { writeReport } = await import('../shared/temp-dir.js');
-        vi.mocked(writeReport).mockReturnValue('/tmp/report.html');
+        vi.mocked(writeReport).mockReturnValue(path.join(os.tmpdir(), 'qa-test-report.html'));
         const ctx = createMockContext();
         ctx.ctx.project_name = 'PROJ-XYZ';
         const { default: case25 } = await import('./commands/case25.js');
@@ -311,14 +313,14 @@ describe('Case25 — Traceability Matrix', () => {
 
         const { writeReport } = await import('../shared/temp-dir.js');
         const { openWithFallback } = await import('../shared/open.js');
-        vi.mocked(writeReport).mockReturnValue('/tmp/traceability-matrix-TEST.html');
+        vi.mocked(writeReport).mockReturnValue(path.join(os.tmpdir(), 'qa-traceability-matrix-TEST.html'));
         vi.mocked(openWithFallback).mockResolvedValue(undefined);
         const ctx = createMockContext();
         const { default: case25 } = await import('./commands/case25.js');
         await case25.handler(ctx);
 
         expect(openWithFallback).toHaveBeenCalledWith(
-            '/tmp/traceability-matrix-TEST.html',
+            path.join(os.tmpdir(), 'qa-traceability-matrix-TEST.html'),
             'Traceability Matrix',
             expect.any(Function),
         );
@@ -328,7 +330,7 @@ describe('Case25 — Traceability Matrix', () => {
         expect.hasAssertions();
 
         const { writeReport } = await import('../shared/temp-dir.js');
-        vi.mocked(writeReport).mockReturnValue('/tmp/report.html');
+        vi.mocked(writeReport).mockReturnValue(path.join(os.tmpdir(), 'qa-test-report.html'));
         const ctx = createMockContext();
         ctx.ctx.project_name = 'AUDIT-PROJ';
         const { default: case25 } = await import('./commands/case25.js');
@@ -347,7 +349,7 @@ describe('Case25 — Traceability Matrix', () => {
         vi.mocked(buildTraceabilityMatrix).mockReturnValue(
             makeTraceabilityResult({ nodes: [], totalEpics: 0, totalTests: 0, overallCoverage: 0 }),
         );
-        vi.mocked(writeReport).mockReturnValue('/tmp/report.html');
+        vi.mocked(writeReport).mockReturnValue(path.join(os.tmpdir(), 'qa-test-report.html'));
         const ctx = createMockContext();
         const { default: case25 } = await import('./commands/case25.js');
 
@@ -376,7 +378,7 @@ describe('Case25 — Traceability Matrix', () => {
         expect.hasAssertions();
 
         const { writeReport } = await import('../shared/temp-dir.js');
-        vi.mocked(writeReport).mockReturnValue('/tmp/report.html');
+        vi.mocked(writeReport).mockReturnValue(path.join(os.tmpdir(), 'qa-test-report.html'));
         const ctx = createMockContext();
         const { default: case25 } = await import('./commands/case25.js');
         await case25.handler(ctx);
@@ -422,7 +424,7 @@ describe('Case26 — Release Score', () => {
         vi.mocked(calculateFlakiness).mockReturnValue([]);
         vi.mocked(calculateReleaseScore).mockReturnValue(makeReleaseScoreResult());
         vi.mocked(generateReleaseScoreHtml).mockReturnValue(HTML_WITH_DOCTYPE);
-        vi.mocked(writeReport).mockReturnValue('/tmp/report.html');
+        vi.mocked(writeReport).mockReturnValue(path.join(os.tmpdir(), 'qa-test-report.html'));
         const ctx = createMockContext();
         const { default: case26 } = await import('./commands/case26.js');
         await case26.handler(ctx);
@@ -449,7 +451,7 @@ describe('Case26 — Release Score', () => {
         });
         vi.mocked(calculateReleaseScore).mockReturnValue(makeReleaseScoreResult());
         vi.mocked(generateReleaseScoreHtml).mockReturnValue(HTML_WITH_DOCTYPE);
-        vi.mocked(writeReport).mockReturnValue('/tmp/report.html');
+        vi.mocked(writeReport).mockReturnValue(path.join(os.tmpdir(), 'qa-test-report.html'));
         const ctx = createMockContext();
         const { default: case26 } = await import('./commands/case26.js');
         await case26.handler(ctx);
@@ -463,7 +465,7 @@ describe('Case26 — Release Score', () => {
         const { generateReleaseScoreHtml } = await import('../shared/release-score.js');
         const { writeReport } = await import('../shared/temp-dir.js');
         vi.mocked(generateReleaseScoreHtml).mockReturnValue(HTML_WITH_DOCTYPE);
-        vi.mocked(writeReport).mockReturnValue('/tmp/report.html');
+        vi.mocked(writeReport).mockReturnValue(path.join(os.tmpdir(), 'qa-test-report.html'));
         const ctx = createMockContext();
         const { default: case26 } = await import('./commands/case26.js');
         await case26.handler(ctx);
@@ -479,7 +481,7 @@ describe('Case26 — Release Score', () => {
         const { generateReleaseScoreHtml } = await import('../shared/release-score.js');
         const { writeReport } = await import('../shared/temp-dir.js');
         vi.mocked(generateReleaseScoreHtml).mockReturnValue(HTML_WITH_DOCTYPE);
-        vi.mocked(writeReport).mockReturnValue('/tmp/report.html');
+        vi.mocked(writeReport).mockReturnValue(path.join(os.tmpdir(), 'qa-test-report.html'));
         const ctx = createMockContext();
         ctx.ctx.project_name = 'RELEASE-PROJ';
         const { default: case26 } = await import('./commands/case26.js');
@@ -495,14 +497,14 @@ describe('Case26 — Release Score', () => {
         const { writeReport } = await import('../shared/temp-dir.js');
         const { openWithFallback } = await import('../shared/open.js');
         vi.mocked(generateReleaseScoreHtml).mockReturnValue(HTML_WITH_DOCTYPE);
-        vi.mocked(writeReport).mockReturnValue('/tmp/release-score-TEST.html');
+        vi.mocked(writeReport).mockReturnValue(path.join(os.tmpdir(), 'qa-release-score-TEST.html'));
         vi.mocked(openWithFallback).mockResolvedValue(undefined);
         const ctx = createMockContext();
         const { default: case26 } = await import('./commands/case26.js');
         await case26.handler(ctx);
 
         expect(openWithFallback).toHaveBeenCalledWith(
-            '/tmp/release-score-TEST.html',
+            path.join(os.tmpdir(), 'qa-release-score-TEST.html'),
             'Release Score',
             expect.any(Function),
         );
@@ -514,7 +516,7 @@ describe('Case26 — Release Score', () => {
         const { generateReleaseScoreHtml } = await import('../shared/release-score.js');
         const { writeReport } = await import('../shared/temp-dir.js');
         vi.mocked(generateReleaseScoreHtml).mockReturnValue(HTML_WITH_DOCTYPE);
-        vi.mocked(writeReport).mockReturnValue('/tmp/report.html');
+        vi.mocked(writeReport).mockReturnValue(path.join(os.tmpdir(), 'qa-test-report.html'));
         const ctx = createMockContext();
         ctx.ctx.project_name = 'QA-PROJECT';
         const { default: case26 } = await import('./commands/case26.js');
@@ -546,7 +548,7 @@ describe('Case26 — Release Score', () => {
         const { generateReleaseScoreHtml } = await import('../shared/release-score.js');
         const { writeReport } = await import('../shared/temp-dir.js');
         vi.mocked(generateReleaseScoreHtml).mockReturnValue(HTML_WITH_DOCTYPE);
-        vi.mocked(writeReport).mockReturnValue('/tmp/report.html');
+        vi.mocked(writeReport).mockReturnValue(path.join(os.tmpdir(), 'qa-test-report.html'));
         const ctx = createMockContext();
         const { default: case26 } = await import('./commands/case26.js');
         await case26.handler(ctx);
@@ -574,7 +576,7 @@ describe('Case26 — Release Score', () => {
         });
         vi.mocked(calculateReleaseScore).mockReturnValue(makeReleaseScoreResult());
         vi.mocked(generateReleaseScoreHtml).mockReturnValue(HTML_WITH_DOCTYPE);
-        vi.mocked(writeReport).mockReturnValue('/tmp/report.html');
+        vi.mocked(writeReport).mockReturnValue(path.join(os.tmpdir(), 'qa-test-report.html'));
         const ctx = createMockContext();
         const { default: case26 } = await import('./commands/case26.js');
         await case26.handler(ctx);
@@ -601,7 +603,7 @@ describe('Case26 — Release Score', () => {
         });
         vi.mocked(calculateReleaseScore).mockReturnValue(makeReleaseScoreResult({ grade: 'needs_attention' }));
         vi.mocked(generateReleaseScoreHtml).mockReturnValue(HTML_WITH_DOCTYPE);
-        vi.mocked(writeReport).mockReturnValue('/tmp/report.html');
+        vi.mocked(writeReport).mockReturnValue(path.join(os.tmpdir(), 'qa-test-report.html'));
         const ctx = createMockContext();
         const { default: case26 } = await import('./commands/case26.js');
         await case26.handler(ctx);
@@ -632,7 +634,7 @@ describe('Case27 — Coverage Dashboard', () => {
         const { writeReport } = await import('../shared/temp-dir.js');
         vi.mocked(analyzeCoverageGaps).mockResolvedValue(makeCoverageResult());
         vi.mocked(generateCoverageGapHtml).mockReturnValue(HTML_WITH_DOCTYPE);
-        vi.mocked(writeReport).mockReturnValue('/tmp/report.html');
+        vi.mocked(writeReport).mockReturnValue(path.join(os.tmpdir(), 'qa-test-report.html'));
         const ctx = createMockContext();
         const { default: case27 } = await import('./commands/case27.js');
         await case27.handler(ctx);
@@ -648,7 +650,7 @@ describe('Case27 — Coverage Dashboard', () => {
         const { writeReport } = await import('../shared/temp-dir.js');
         vi.mocked(analyzeCoverageGaps).mockResolvedValue(makeCoverageResult());
         vi.mocked(generateCoverageGapHtml).mockReturnValue(HTML_WITH_DOCTYPE);
-        vi.mocked(writeReport).mockReturnValue('/tmp/report.html');
+        vi.mocked(writeReport).mockReturnValue(path.join(os.tmpdir(), 'qa-test-report.html'));
         const ctx = createMockContext();
         ctx.ctx.project_name = 'COV-PROJ';
         const { default: case27 } = await import('./commands/case27.js');
@@ -665,7 +667,7 @@ describe('Case27 — Coverage Dashboard', () => {
         const { writeReport } = await import('../shared/temp-dir.js');
         vi.mocked(analyzeCoverageGaps).mockResolvedValue(makeCoverageResult());
         vi.mocked(generateCoverageGapHtml).mockReturnValue(HTML_WITH_DOCTYPE);
-        vi.mocked(writeReport).mockReturnValue('/tmp/report.html');
+        vi.mocked(writeReport).mockReturnValue(path.join(os.tmpdir(), 'qa-test-report.html'));
         const ctx = createMockContext();
         ctx.ctx.project_name = 'DASH-XYZ';
         const { default: case27 } = await import('./commands/case27.js');
@@ -683,14 +685,14 @@ describe('Case27 — Coverage Dashboard', () => {
         const { openWithFallback } = await import('../shared/open.js');
         vi.mocked(analyzeCoverageGaps).mockResolvedValue(makeCoverageResult());
         vi.mocked(generateCoverageGapHtml).mockReturnValue(HTML_WITH_DOCTYPE);
-        vi.mocked(writeReport).mockReturnValue('/tmp/coverage-dashboard-TEST.html');
+        vi.mocked(writeReport).mockReturnValue(path.join(os.tmpdir(), 'qa-coverage-dashboard-TEST.html'));
         vi.mocked(openWithFallback).mockResolvedValue(undefined);
         const ctx = createMockContext();
         const { default: case27 } = await import('./commands/case27.js');
         await case27.handler(ctx);
 
         expect(openWithFallback).toHaveBeenCalledWith(
-            '/tmp/coverage-dashboard-TEST.html',
+            path.join(os.tmpdir(), 'qa-coverage-dashboard-TEST.html'),
             'Coverage Dashboard',
             expect.any(Function),
         );
@@ -704,7 +706,7 @@ describe('Case27 — Coverage Dashboard', () => {
         const { writeReport } = await import('../shared/temp-dir.js');
         vi.mocked(analyzeCoverageGaps).mockResolvedValue(makeCoverageResult());
         vi.mocked(generateCoverageGapHtml).mockReturnValue(HTML_WITH_DOCTYPE);
-        vi.mocked(writeReport).mockReturnValue('/tmp/report.html');
+        vi.mocked(writeReport).mockReturnValue(path.join(os.tmpdir(), 'qa-test-report.html'));
         const ctx = createMockContext();
         const { default: case27 } = await import('./commands/case27.js');
         await case27.handler(ctx);
@@ -750,7 +752,7 @@ describe('Case27 — Coverage Dashboard', () => {
         const { openWithFallback } = await import('../shared/open.js');
         vi.mocked(analyzeCoverageGaps).mockResolvedValue(makeCoverageResult());
         vi.mocked(generateCoverageGapHtml).mockReturnValue(HTML_WITH_DOCTYPE);
-        vi.mocked(writeReport).mockReturnValue('/tmp/r.html');
+        vi.mocked(writeReport).mockReturnValue(path.join(os.tmpdir(), 'qa-r.html'));
         vi.mocked(openWithFallback).mockRejectedValue(new Error('no browser'));
         const ctx = createMockContext();
         const { default: case27 } = await import('./commands/case27.js');
@@ -766,7 +768,7 @@ describe('Case27 — Coverage Dashboard', () => {
         const { writeReport } = await import('../shared/temp-dir.js');
         vi.mocked(analyzeCoverageGaps).mockResolvedValue(makeCoverageResult());
         vi.mocked(generateCoverageGapHtml).mockReturnValue(HTML_WITH_DOCTYPE);
-        vi.mocked(writeReport).mockReturnValue('/tmp/report.html');
+        vi.mocked(writeReport).mockReturnValue(path.join(os.tmpdir(), 'qa-test-report.html'));
         const ctx = createMockContext();
         const { default: case27 } = await import('./commands/case27.js');
         await case27.handler(ctx);
@@ -783,7 +785,7 @@ describe('Case27 — Coverage Dashboard', () => {
         const { writeReport } = await import('../shared/temp-dir.js');
         vi.mocked(analyzeCoverageGaps).mockResolvedValue(makeCoverageResult());
         vi.mocked(generateCoverageGapHtml).mockReturnValue(HTML_WITH_DOCTYPE);
-        vi.mocked(writeReport).mockReturnValue('/tmp/report.html');
+        vi.mocked(writeReport).mockReturnValue(path.join(os.tmpdir(), 'qa-test-report.html'));
         const ctx = createMockContext();
         const { default: case27 } = await import('./commands/case27.js');
         await case27.handler(ctx);

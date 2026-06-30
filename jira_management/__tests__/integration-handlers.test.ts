@@ -48,8 +48,8 @@ vi.mock('../../shared/open.js', () => ({
     openWithFallback: vi.fn(),
 }));
 vi.mock('../../shared/temp-dir.js', () => ({
-    writeReport: vi.fn(() => '/tmp/report.html'),
-    reportsDir: vi.fn(() => '/tmp/reports'),
+    writeReport: vi.fn(() => path.join(os.tmpdir(), 'qa-test-report.html')),
+    reportsDir: vi.fn(() => path.join(os.tmpdir(), 'qa-test-reports')),
 }));
 vi.mock('../../shared/first-run.js', () => ({
     maybeRunFirstRunWizard: vi.fn(),
@@ -76,7 +76,7 @@ describe('Case01 — Import CSV', () => {
         expect.hasAssertions();
 
         const { askFilePath, ask } = await import('../../shared/prompt.js');
-        vi.mocked(askFilePath).mockResolvedValueOnce('/tmp/test.csv');
+        vi.mocked(askFilePath).mockResolvedValueOnce(path.join(os.tmpdir(), 'qa-test.csv'));
         vi.mocked(ask).mockResolvedValueOnce('label1,label2');
         const ctx = createMockContext();
         const { default: case01 } = await import('../commands/case01.js');
@@ -85,7 +85,7 @@ describe('Case01 — Import CSV', () => {
 
         expect(vi.mocked(createTests.createTestsFromCsv)).toHaveBeenCalledWith(
             expect.objectContaining({
-                csvPath: '/tmp/test.csv',
+                csvPath: path.join(os.tmpdir(), 'qa-test.csv'),
                 jiraLabels: ['label1', 'label2'],
                 project_name: 'TEST',
             }),
@@ -96,7 +96,7 @@ describe('Case01 — Import CSV', () => {
         expect.hasAssertions();
 
         const { askFilePath, ask } = await import('../../shared/prompt.js');
-        vi.mocked(askFilePath).mockResolvedValueOnce('/tmp/test.csv');
+        vi.mocked(askFilePath).mockResolvedValueOnce(path.join(os.tmpdir(), 'qa-test.csv'));
         vi.mocked(ask).mockResolvedValueOnce('');
         const ctx = createMockContext();
         const { default: case01 } = await import('../commands/case01.js');
@@ -109,7 +109,7 @@ describe('Case01 — Import CSV', () => {
         expect.hasAssertions();
 
         const { askFilePath, ask } = await import('../../shared/prompt.js');
-        vi.mocked(askFilePath).mockResolvedValueOnce('/tmp/test.csv');
+        vi.mocked(askFilePath).mockResolvedValueOnce(path.join(os.tmpdir(), 'qa-test.csv'));
         vi.mocked(ask).mockResolvedValueOnce('');
         const ctx = createMockContext();
         const { default: case01 } = await import('../commands/case01.js');
@@ -243,7 +243,7 @@ describe('Case05 — Update Package Version', () => {
         expect.hasAssertions();
 
         const { ask } = await import('../../shared/prompt.js');
-        vi.mocked(ask).mockResolvedValueOnce('/tmp/repo').mockResolvedValueOnce('v2.7.0');
+        vi.mocked(ask).mockResolvedValueOnce(path.join(os.tmpdir(), 'qa-repo')).mockResolvedValueOnce('v2.7.0');
         const ctx = createMockContext();
         ctx.ctx.createPackageManager = vi.fn().mockReturnValue({
             updateVersion: vi.fn(),
@@ -261,7 +261,7 @@ describe('Case05 — Update Package Version', () => {
 
         const { ask } = await import('../../shared/prompt.js');
         const mockPm = { updateVersion: vi.fn(), updateReleaseNotes: vi.fn() };
-        vi.mocked(ask).mockResolvedValueOnce('/tmp/repo').mockResolvedValueOnce('v2.7.0');
+        vi.mocked(ask).mockResolvedValueOnce(path.join(os.tmpdir(), 'qa-repo')).mockResolvedValueOnce('v2.7.0');
         const ctx = createMockContext();
         ctx.ctx.createPackageManager = vi.fn().mockReturnValue(mockPm) as never;
         vi.spyOn(ctx.jiraResource, 'getReleaseTasks').mockResolvedValue(['[TASK-1] desc']);
@@ -276,7 +276,7 @@ describe('Case05 — Update Package Version', () => {
         expect.hasAssertions();
 
         const { ask } = await import('../../shared/prompt.js');
-        vi.mocked(ask).mockResolvedValueOnce('/tmp/repo').mockResolvedValueOnce('v2.7.0');
+        vi.mocked(ask).mockResolvedValueOnce(path.join(os.tmpdir(), 'qa-repo')).mockResolvedValueOnce('v2.7.0');
         const ctx = createMockContext();
         ctx.ctx.createPackageManager = vi.fn().mockReturnValue({
             updateVersion: vi.fn(),
@@ -599,12 +599,12 @@ describe('Case14 — Set Cypress Directory', () => {
         expect.hasAssertions();
 
         const { ask } = await import('../../shared/prompt.js');
-        vi.mocked(ask).mockResolvedValueOnce('/tmp/cypress-results');
+        vi.mocked(ask).mockResolvedValueOnce(path.join(os.tmpdir(), 'qa-cypress-results'));
         const ctx = createMockContext();
         const { default: case14 } = await import('../commands/case14.js');
         await case14.handler(ctx);
 
-        expect(ctx.pushHistory).toHaveBeenCalledWith('config-tests', '/tmp/cypress-results', 'ok');
+        expect(ctx.pushHistory).toHaveBeenCalledWith('config-tests', path.join(os.tmpdir(), 'qa-cypress-results'), 'ok');
     });
 });
 
@@ -615,12 +615,12 @@ describe('Case16 — Set JSON Directory', () => {
         expect.hasAssertions();
 
         const { ask } = await import('../../shared/prompt.js');
-        vi.mocked(ask).mockResolvedValueOnce('/tmp/json-results');
+        vi.mocked(ask).mockResolvedValueOnce(path.join(os.tmpdir(), 'qa-json-results'));
         const ctx = createMockContext();
         const { default: case16 } = await import('../commands/case16.js');
         await case16.handler(ctx);
 
-        expect(ctx.pushHistory).toHaveBeenCalledWith('config-json-dir', '/tmp/json-results', 'ok');
+        expect(ctx.pushHistory).toHaveBeenCalledWith('config-json-dir', path.join(os.tmpdir(), 'qa-json-results'), 'ok');
     });
 });
 

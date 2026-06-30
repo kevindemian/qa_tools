@@ -1,3 +1,5 @@
+import os from 'os';
+import path from 'path';
 vi.mock('../../shared/prompt');
 
 vi.mock('../../shared/state', () => ({
@@ -75,7 +77,7 @@ describe('Case15', () => {
             inMemoryTasksText: ['test 1', 'test 2'],
             summary: '2 testes importados',
             status: 'ok',
-            sourcePath: '/tmp/resolve-abc123-12345.json',
+            sourcePath: path.join(os.tmpdir(), 'qa-resolve-abc123-12345.json'),
         });
     });
 

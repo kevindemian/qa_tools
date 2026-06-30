@@ -1,3 +1,5 @@
+import os from 'os';
+import path from 'path';
 // 1. Define mock factory values FIRST (before jest.mock)
 const mockPrompt = vi.hoisted(() => ({
     success: vi.fn<(...args: [string]) => void>(),
@@ -48,7 +50,7 @@ vi.mock('../shared/state', () => ({
 vi.mock('../shared/temp-dir', () => ({
     reportsDir: vi.fn<(...args: []) => string>(),
     writeEphemeral: vi.fn<(...args: [string, string, string]) => string>(),
-    tempDirPath: vi.fn<(...args: []) => string>().mockReturnValue('/tmp/qa-tools-temp'),
+    tempDirPath: vi.fn<(...args: []) => string>().mockReturnValue(path.join(os.tmpdir(), 'qa-tools-temp')),
 }));
 
 vi.mock('axios', () => {
@@ -401,10 +403,10 @@ describe('CreateTestExecutionWithLinks', () => {
 
 describe('GenerateMappingFiles', async () => {
     const realFs = await vi.importActual<typeof import('fs')>('fs');
-    const tmpDir = '/tmp/qa-tools-test-mapping-' + Date.now();
-    const csvPath = '/tmp/test-csv.csv';
+    const tmpDir = path.join(os.tmpdir(), 'qa-tools-test-mapping-' + Date.now());
+    const csvPath = path.join(os.tmpdir(), 'qa-test-csv.csv');
     let testIdx = 0;
-    const nextBase = () => '/tmp/test-csv-' + ++testIdx;
+    const nextBase = () => path.join(os.tmpdir(), 'qa-test-csv-' + ++testIdx);
 
     beforeAll(() => {
         realFs.writeFileSync(csvPath, 'Title: X\nAction,Data,Expected\nx,y,z\n', 'utf8');

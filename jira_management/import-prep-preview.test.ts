@@ -1,3 +1,5 @@
+import os from 'os';
+import path from 'path';
 import { confirmOrCancel } from './import-prep-preview.js';
 
 const mockConfirm = vi.fn<(...args: [message: string, defaultValue?: boolean]) => boolean>();
@@ -28,7 +30,7 @@ vi.mock('../shared/markdown', () => ({
 }));
 
 vi.mock('../shared/temp-dir', () => ({
-    writeEphemeral: vi.fn((_dir: string, _name: string, _content: string) => '/tmp/' + _name),
+    writeEphemeral: vi.fn((_dir: string, _name: string, _content: string) => path.join(os.tmpdir(), _name)),
 }));
 
 vi.mock('../shared/open', () => ({

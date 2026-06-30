@@ -1,3 +1,5 @@
+import os from 'os';
+import path from 'path';
 vi.mock('../shared/breadcrumbs', () => ({ pushBreadcrumb: vi.fn(), clearBreadcrumbs: vi.fn() }));
 vi.mock('../shared/cli_base', () => ({
     createValidateEnv: vi.fn(() => vi.fn()),
@@ -30,7 +32,7 @@ vi.mock('../shared/logger', () => ({
         warn: vi.fn(),
         info: vi.fn(),
         debug: vi.fn(),
-        filePath: '/tmp/log',
+        filePath: path.join(os.tmpdir(), 'qa-test.log'),
         child: vi.fn(() => ({ info: vi.fn(), debug: vi.fn(), error: vi.fn() })),
         writeFileOnly: vi.fn(),
     },
@@ -87,7 +89,7 @@ vi.mock('./session-state', () => ({
 vi.mock('../shared/temp-dir', () => ({
     ensureDirs: vi.fn(),
     registerCleanup: vi.fn(),
-    writeReport: vi.fn(() => '/tmp/report.html'),
+    writeReport: vi.fn(() => path.join(os.tmpdir(), 'qa-test-report.html')),
 }));
 vi.mock('./ai-pr-desc', () => ({ generatePrDescription: vi.fn() }));
 vi.mock('../shared/bug-report', () => ({ interactiveBugReportFlow: vi.fn() }));
