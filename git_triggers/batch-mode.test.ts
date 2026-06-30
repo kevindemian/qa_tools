@@ -83,7 +83,8 @@ const setAutoConfirmSpy = vi.spyOn(Config, 'setAutoConfirm');
 import { success, error, printError } from '../shared/prompt.js';
 import { pushHistory, getProjects } from './session-state.js';
 import { pollPipeline } from './pipeline-handler.js';
-import { parseBatchArgs, tryBatchMode } from './batch-mode.js';
+import { tryBatchMode } from './batch-mode.js';
+import { parseCliArgs } from './cli-args.js';
 
 const mockSuccess = vi.mocked(success);
 const mockError = vi.mocked(error);
@@ -112,61 +113,68 @@ describe('Batch Mode', () => {
         }
     });
 
-    describe('ParseBatchArgs', () => {
+    describe('ParseCliArgs (batch mode)', () => {
         it('parses --project long flag', () => {
             process.argv = ['node', 'script.js', '--project', 'my-proj'];
-            const result = parseBatchArgs();
+            const result = parseCliArgs();
 
-            expect(result.project).toBe('my-proj');
+            expect(result.mode).toBe('batch');
+            expect(result).toHaveProperty('project', 'my-proj');
         });
 
         it('parses -p short flag', () => {
             process.argv = ['node', 'script.js', '-p', 'my-proj'];
-            const result = parseBatchArgs();
+            const result = parseCliArgs();
 
-            expect(result.project).toBe('my-proj');
+            expect(result.mode).toBe('batch');
+            expect(result).toHaveProperty('project', 'my-proj');
         });
 
         it('parses --branch flag', () => {
             process.argv = ['node', 'script.js', '--branch', 'develop'];
-            const result = parseBatchArgs();
+            const result = parseCliArgs();
 
-            expect(result.branch).toBe('develop');
+            expect(result.mode).toBe('batch');
+            expect(result).toHaveProperty('branch', 'develop');
         });
 
         it('parses -b short flag', () => {
             process.argv = ['node', 'script.js', '-b', 'develop'];
-            const result = parseBatchArgs();
+            const result = parseCliArgs();
 
-            expect(result.branch).toBe('develop');
+            expect(result.mode).toBe('batch');
+            expect(result).toHaveProperty('branch', 'develop');
         });
 
         it('parses --auto flag', () => {
             process.argv = ['node', 'script.js', '--auto'];
-            const result = parseBatchArgs();
+            const result = parseCliArgs();
 
-            expect(result.auto).toBeTruthy();
+            expect(result.mode).toBe('batch');
+            expect(result).toHaveProperty('auto', true);
         });
 
         it('parses --batch flag', () => {
             process.argv = ['node', 'script.js', '--batch'];
-            const result = parseBatchArgs();
+            const result = parseCliArgs();
 
-            expect(result.auto).toBeTruthy();
+            expect(result.mode).toBe('batch');
+            expect(result).toHaveProperty('auto', true);
         });
 
-        it('returns empty when no args', () => {
+        it('returns interactive mode when no args', () => {
             process.argv = ['node', 'script.js'];
-            const result = parseBatchArgs();
+            const result = parseCliArgs();
 
-            expect(result).toStrictEqual({});
+            expect(result.mode).toBe('interactive');
         });
 
         it('parses --publish flag', () => {
             process.argv = ['node', 'script.js', '--publish', 's3'];
-            const result = parseBatchArgs();
+            const result = parseCliArgs();
 
-            expect(result.publish).toBe('s3');
+            expect(result.mode).toBe('batch');
+            expect(result).toHaveProperty('publish', 's3');
         });
     });
 

@@ -13,7 +13,6 @@ import { palette } from '../shared/palette.js';
 import { defaultOutput } from '../shared/output.js';
 import { rootLogger } from '../shared/logger.js';
 import {
-    CancelError,
     success,
     warn,
     info,
@@ -66,7 +65,7 @@ import {
     handleFlakinessDashboard,
     generateWeeklyQualityReport,
 } from './schedule-handler.js';
-import { tryBatchMode, parseBatchArgs, handlePipelineHealth } from './batch-mode.js';
+import { tryBatchMode, handlePipelineHealth } from './batch-mode.js';
 import { generatePrDescription } from './ai-pr-desc.js';
 import { interactiveBugReportFlow } from '../shared/bug-report.js';
 import JiraClient from '../shared/jira-client.js';
@@ -171,27 +170,34 @@ function _selectProject(): { projectName: string | null; names: string[] } {
     return { projectName, names };
 }
 
+function _buildSessionHeader(): string[] {
+    const headerLines: string[] = [];
+    if (sessionContext.sessionCounters.length > 0) {
+        const ok = sessionContext.sessionCounters.filter((c: { status: string }) => c.status === 'ok').length;
+        const err = sessionContext.sessionCounters.filter((c: { status: string }) => c.status === 'error').length;
+        headerLines.push(
+            `   ${palette.muted(sessionContext.sessionCounters.length + ' operações')}  ·  ${palette.green('' + ok + ' ✓')}${err > 0 ? '  ' + palette.red('' + err + ' ✗') : ''}`,
+        );
+    }
+    return headerLines;
+}
+
+function _getLastChoice(): string | undefined {
+    const lastChoice = loadState()['lastChoice'] as string | undefined;
+    return lastChoice && lastChoice !== '0' ? lastChoice : undefined;
+}
+
 async function _promptChoice(stateHint: string): Promise<string> {
     if (process.stdout.isTTY && !Config.get('quiet')) {
         const ctx = buildContextLine();
-        const ok = sessionContext.sessionCounters.filter((c: { status: string }) => c.status === 'ok').length;
-        const err = sessionContext.sessionCounters.filter((c: { status: string }) => c.status === 'error').length;
-        const headerLines: string[] = [];
-        if (sessionContext.sessionCounters.length > 0) {
-            headerLines.push(
-                `   ${palette.muted(sessionContext.sessionCounters.length + ' operações')}  ·  ${palette.green('' + ok + ' ✓')}${err > 0 ? '  ' + palette.red('' + err + ' ✗') : ''}`,
-            );
-        }
+        const headerLines = _buildSessionHeader();
         if (headerLines.length > 0) {
             defaultOutput.box(headerLines, { border: 'double', padding: 1, title: 'QA Tools · ' + ctx, width: 80 });
         }
 
-        const stateHint2 =
-            loadState()['lastChoice'] && (loadState()['lastChoice'] as string) !== '0'
-                ? (loadState()['lastChoice'] as string)
-                : undefined;
+        const defaultChoice = _getLastChoice();
         return showSelect('      Escolha uma opção', buildActionChoices(), {
-            ...(stateHint2 ? { default: stateHint2 } : {}),
+            ...(defaultChoice ? { default: defaultChoice } : {}),
             pageSize: (process.stdout.rows || 24) - 4,
         });
     }
@@ -208,10 +214,8 @@ async function _promptChoice(stateHint: string): Promise<string> {
         title: 'QA Tools · ' + providerLabel().toUpperCase() + ' TOOLS',
     });
     const choice = prompt('Escolha uma opção', { hint: stateHint });
-    const resolved =
-        !choice.trim() && (loadState()['lastChoice'] as string) && (loadState()['lastChoice'] as string) !== '0'
-            ? (loadState()['lastChoice'] as string)
-            : choice;
+    const lastChoice = _getLastChoice();
+    const resolved = !choice.trim() && lastChoice ? lastChoice : choice;
     if (resolved !== choice) info('Repetindo última opção: ' + resolved);
     return resolved;
 }
@@ -708,7 +712,8 @@ async function _dispatchAction(
     if (finalChoice === '0' || cmd === '/exit' || cmd === '/sair') return _handleExit();
 
     const handlerFn = Reflect.get(ACTION_HANDLERS, finalChoice) as
-        ((m: GitProvider, projectName: string, names: string[]) => boolean | Promise<boolean>) | undefined;
+        | ((m: GitProvider, projectName: string, names: string[]) => boolean | Promise<boolean>)
+        | undefined;
     if (handlerFn !== undefined) return handlerFn(m, projectName, names);
     warn('Opção inválida.');
     return false;
@@ -731,7 +736,7 @@ async function _ensureProjectsConfigured(): Promise<boolean> {
                 projs = getProjects();
             }
         } catch (err) {
-            rootLogger.debug('Project setup cancelled: ' + (err instanceof Error ? err.message : String(err)));
+            rootLogger.debug('Project setup cancelled: ' + _getErrorMessage(err));
         }
         if (Object.keys(projs).length === 0) {
             warn('É necessário configurar ao menos um projeto. Configure projects.json ou execute o setup wizard.');
@@ -752,11 +757,11 @@ async function _initEnvironment(): Promise<void> {
             try {
                 await _handleSetupWizard();
             } catch (err) {
-                rootLogger.debug('Setup wizard failed: ' + (err instanceof Error ? err.message : String(err)));
+                rootLogger.debug('Setup wizard failed: ' + _getErrorMessage(err));
             }
         }
     } catch (err) {
-        rootLogger.debug('Env setup failed: ' + (err instanceof Error ? err.message : String(err)));
+        rootLogger.debug('Env setup failed: ' + _getErrorMessage(err));
     }
     let healthScore: { score: number; grade: string } | undefined;
     try {
@@ -764,15 +769,52 @@ async function _initEnvironment(): Promise<void> {
         const health = calculateHealthScore(store);
         healthScore = { score: health.overall, grade: health.grade };
     } catch (err) {
-        rootLogger.debug('Health score failed: ' + (err instanceof Error ? err.message : String(err)));
+        rootLogger.debug('Health score failed: ' + _getErrorMessage(err));
     }
     try {
         await showSplash(undefined, undefined, undefined, undefined, healthScore);
     } catch (err) {
-        rootLogger.debug('Splash failed: ' + (err instanceof Error ? err.message : String(err)));
+        rootLogger.debug('Splash failed: ' + _getErrorMessage(err));
         defaultOutput.print('🔧 QA Tools  v1.0.0 — Gestão de Testes & Automação de CI/CD');
     }
     sessionLog.info('Sessão iniciada');
+}
+
+function _hasMessage(err: unknown): err is { message: string } {
+    return err !== null && err !== undefined && 'message' in (err as never);
+}
+
+function _getErrorMessage(err: unknown): string {
+    if (_hasMessage(err)) {
+        return err.message;
+    }
+    return String(err);
+}
+
+function _getStateHint(): string {
+    const lastChoice = loadState()['lastChoice'] as string | undefined;
+    return lastChoice && lastChoice !== '0' ? 'Enter = ' + lastChoice : '0-9';
+}
+
+function _clearScreen(args: CliArgs): void {
+    if (process.stdout.isTTY && !args.noClear && Config.get<boolean>('qaToolsNoClear') !== true) {
+        process.stdout.write('\x1b[2J\x1b[H');
+    }
+}
+
+async function _handleMissingToken(projectName: string): Promise<GitProvider | null> {
+    warn('Token de acesso não encontrado.');
+    if (!promptConfirm('Deseja configurar agora?')) {
+        return null;
+    }
+    try {
+        await _handleSetupWizard();
+        clearProjectCache();
+        return createManagerForProject(projectName, projectId);
+    } catch (err) {
+        rootLogger.debug('Create manager for project failed: ' + _getErrorMessage(err));
+        return null;
+    }
 }
 
 async function _selectProjectAndCreateManager(): Promise<{
@@ -782,26 +824,15 @@ async function _selectProjectAndCreateManager(): Promise<{
 } | null> {
     const { projectName, names } = _selectProject();
     if (!projectName) return null;
+
     let m: GitProvider;
     try {
         m = createManagerForProject(projectName, projectId);
     } catch (e) {
         if ((e as Error).name === 'MissingTokenError') {
-            warn(String(e));
-            try {
-                if (promptConfirm('Token de acesso não encontrado. Deseja configurar agora?')) {
-                    await _handleSetupWizard();
-                    clearProjectCache();
-                    m = createManagerForProject(projectName, projectId);
-                } else {
-                    return null;
-                }
-            } catch (err) {
-                rootLogger.debug(
-                    'Create manager for project failed: ' + (err instanceof Error ? err.message : String(err)),
-                );
-                return null;
-            }
+            const result = await _handleMissingToken(projectName);
+            if (!result) return null;
+            m = result;
         } else {
             printError('Erro ao criar gerenciador do projeto', e);
             rootLogger.error('createManagerForProject failed', { projectName, error: String(e) });
@@ -834,14 +865,10 @@ export async function runInteractiveMode(args: CliArgs): Promise<void> {
 
     await displayRecentPipelines(m);
 
-    const stateHint =
-        loadState()['lastChoice'] && (loadState()['lastChoice'] as string) !== '0'
-            ? 'Enter = ' + (loadState()['lastChoice'] as string)
-            : '0-9';
+    const stateHint = _getStateHint();
 
     for (;;) {
-        if (process.stdout.isTTY && !args.noClear && Config.get<boolean>('qaToolsNoClear') !== true)
-            process.stdout.write('\x1b[2J\x1b[H');
+        _clearScreen(args);
         const finalChoice = await _promptChoice(stateHint);
         updateState((s: StateContainer) => {
             s['lastChoice'] = finalChoice;
@@ -850,7 +877,8 @@ export async function runInteractiveMode(args: CliArgs): Promise<void> {
             const shouldExit = await _dispatchAction(finalChoice, m, projectName, names);
             if (shouldExit) return;
         } catch (e) {
-            if (e instanceof CancelError) continue;
+            const errObj = e && 'name' in (e as never) ? (e as { name?: string }) : undefined;
+            if (errObj?.name === 'CancelError') continue;
             printError('Erro na operação', e);
             rootLogger.error('Handler error', { error: String(e) });
             continue;
@@ -902,7 +930,6 @@ export const _testExports = {
     handleFlakinessDashboard,
     handleSetupWizard: _handleSetupWizard,
     tryBatchMode,
-    parseBatchArgs,
     _loadProjectRunsHelper,
     _generateAndOpenDashboard,
     handleBugReportFlow,
