@@ -179,11 +179,11 @@ export function aggregateDefectSeasonality(
 
     const peakDayEntry =
         byDayOfWeek.length > 0
-            ? byDayOfWeek.reduce((best, d) => (d.total > best.total ? d : best))
+            ? byDayOfWeek.reduce((best, d) => (d.total > best.total ? d : best), byDayOfWeek[0]!)
             : { dayOfWeek: 'N/A', total: 0, categories: {} };
     const peakHourEntry =
         byHour.length > 0
-            ? byHour.reduce((best, h) => (h.total > best.total ? h : best))
+            ? byHour.reduce((best, h) => (h.total > best.total ? h : best), byHour[0]!)
             : { hour: -1, total: 0, categories: {} };
 
     return {

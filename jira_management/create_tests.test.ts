@@ -718,13 +718,6 @@ describe('CreateTestsFromJson', () => {
 describe('ReadCsvTests (via createTestsFromCsv)', () => {
     let csvResource: Mocked<CsvResource>;
 
-    function makeJiraResForCsv(): Mocked<JiraResource> {
-        const r = vi.mocked(new JiraResource('fake-token', 'https://jira/rest/api/2'));
-        vi.spyOn(r, 'getJiraResource');
-        vi.spyOn(r, 'postJiraResource');
-        return r;
-    }
-
     function makeLinkMgrForCsv(): JiraLinkManager {
         const fakeJira = createMockJiraResource();
         return new JiraLinkManager(fakeJira);
@@ -733,8 +726,8 @@ describe('ReadCsvTests (via createTestsFromCsv)', () => {
     function makeCsvArgs(overrides: Record<string, unknown> = {}) {
         const sessionLog = createMockLogger();
         return {
-            jiraResource: makeJiraResForCsv(),
-            jiraResourceXray: makeJiraResForCsv(),
+            jiraResource: makeJiraResCSV(),
+            jiraResourceXray: makeJiraResCSV(),
             linkManager: makeLinkMgrForCsv(),
             linkManagerXray: makeLinkMgrForCsv(),
             csvResource,

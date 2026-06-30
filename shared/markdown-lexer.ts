@@ -266,10 +266,9 @@ function lexParagraph(lines: string[], i: number): { token: InlineToken; next: n
 }
 
 function dedupeSpaces(tokens: InlineToken[]): InlineToken[] {
-    return tokens.filter((t, idx, arr) => {
-        if (t.type === 'space' && idx > 0 && arr[idx - 1]?.type === 'space') return false;
-        return true;
-    });
+    return tokens.filter((t, idx, arr) =>
+        !(t.type === 'space' && idx > 0 && arr[idx - 1]?.type === 'space'),
+    );
 }
 
 // ─── Block-level token dispatcher ───────────────────────────────────────────────

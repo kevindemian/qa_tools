@@ -35,8 +35,6 @@ const mockReadFileSync = vi.mocked(readFileSync);
 const mockWriteFileSync = vi.mocked(writeFileSync);
 const mockMkdirSync = vi.mocked(mkdirSync);
 
-void mockSpawnSync;
-
 function makeMockChild() {
     const handlers: Record<string, (...args: unknown[]) => void> = {};
     const _stdio: [null, null, null, null, null] = [null, null, null, null, null];

@@ -83,7 +83,7 @@ export class Logger {
         if (!logFile) return false;
 
         const logDir = this._config?.get('logDir') ?? Config.get('logDir');
-        if (this._logDir === logDir && this._filePathCached) return true;
+        if (this._logDir == logDir && this._filePathCached) return true;
         if (!logDir) return false;
 
         try {

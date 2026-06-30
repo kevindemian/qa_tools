@@ -2,7 +2,7 @@ import type { CsvRow } from '../csv-import-schema.js';
 import type { TestCase } from '../../shared/types.js';
 
 export class CsvResource {
-    static detectSeparator = vi.fn<(firstLine: string) => string>().mockReturnValue(',');
+    static readonly detectSeparator = vi.fn<(firstLine: string) => string>().mockReturnValue(',');
 
     static readonly FLAT_CSV_PATTERNS = [/^Title,Action/i, /^Action,/i];
 
