@@ -1,0 +1,16 @@
+node_modules
+dist
+coverage
+reports
+tmp
+temp
+data
+docs
+internal_docs
+.audit
+.opencode
+.config
+.container
+package-lock.json
+*.html
+*.csv
