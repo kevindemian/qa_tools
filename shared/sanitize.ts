@@ -1,6 +1,6 @@
 /** Input sanitisation: LLM-safe redaction, HTML escaping, and ANSI stripping. */
 const SECRET_PATTERNS: RegExp[] = [
-    /bearer\s+[a-zA-Z0-9._~+/-]+/gi,
+    /bearer\s+[\w.~+/]+/gi,
     /-----BEGIN\s?RSA\s?PRIVATE\s?KEY-----[\s\S]*?-----END\s?RSA\s?PRIVATE\s?KEY-----/gi,
     /-----BEGIN\s?PRIVATE\s?KEY-----[\s\S]*?-----END\s?PRIVATE\s?KEY-----/gi,
     /-----BEGIN\s?CERTIFICATE-----[\s\S]*?-----END\s?CERTIFICATE-----/gi,
