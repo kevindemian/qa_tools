@@ -207,18 +207,10 @@ export function checkThrowString(): CheckResult {
     return checkNoPattern("throw 'string' (use throw new Error)", /throw\s+'/, files);
 }
 
-
-
-
-
-
-
 export function checkThrowDoubleQuote(): CheckResult {
     const files = allTsFiles().filter((f) => !f.startsWith('scripts/'));
     return checkNoPattern('throw "string" (use throw new Error)', /throw\s+"/, files);
 }
-
-
 
 export function checkViFnUnknown(): CheckResult {
     return checkNoPattern(
@@ -262,8 +254,7 @@ export function checkArtifactValidators(): CheckResult {
             content.includes('export function ' + req.export) ||
             content.includes('export class ' + req.export) ||
             content.includes('export async function ' + req.export);
-        const hasReexport =
-            content.includes('export {') && content.includes(req.export);
+        const hasReexport = content.includes('export {') && content.includes(req.export);
         if (!hasDirectExport && !hasReexport) {
             violations.push({ file: req.file, line: 1, content: `Missing export: ${req.export}` });
         }
@@ -423,7 +414,7 @@ export function checkIntegrity(): CheckResult {
         const selfContent = readFileSync('scripts/quality-check.ts', 'utf-8');
         const contentWithoutHash = selfContent.replace(/\/\* HASH:[0-9a-f]{64} \*\//g, '');
         const currentHash = createHash('sha256').update(contentWithoutHash, 'utf-8').digest('hex');
-        /* HASH:0124cef66a8063ff139e4a8f8fb3d3c09f6b48abef3dd02671a14533f3b9e645 */
+        /* HASH:1ef95757f12fe5e32e956e43de498a52d301cc73b7fe2f5c7cca9e6947d915a7 */
         const match = /\/\* HASH:([0-9a-f]{64}) \*\//.exec(selfContent);
         if (!match) {
             violations.push({ file: 'scripts/quality-check.ts', line: 1, content: 'Missing HASH comment' });
