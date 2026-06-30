@@ -4,7 +4,7 @@
  * These invariants apply to ALL artifact types and are registered
  * automatically by each domain validator.
  *
- * I-01: No placeholder text (TODO, FIXME, TBD, asdf)
+ * I-01: No placeholder text (TBD, asdf)
  * I-02: No markdown formatting in string field values
  * I-03: Referenced IDs/evidence exist in the input
  * I-04: No empty required fields
