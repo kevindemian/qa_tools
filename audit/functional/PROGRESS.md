@@ -3,12 +3,13 @@
 Start: 2026-06-15 | Method: INTEGRATED-PLAN.md (T1-T20 + 7 dim + FT-xx)
 
 **Status atual da Correção Sistêmica:**
-| Fase | Status |
-|------|--------|
-| F0 — Validar Detector | ✅ 100% |
-| F2 — Zero-Impact Corrections | 🔜 ~35% |
-| F1/F3/F4/F5/F6/F7/TC/D5d/D7s/QG | ❌ Pendente |
-| **(detalhes em SYSTEMIC-CORRECTION-PLAN.md)** | |
+
+| Fase                                          | Status      |
+| --------------------------------------------- | ----------- |
+| F0 — Validar Detector                         | ✅ 100%     |
+| F2 — Zero-Impact Corrections                  | 🔜 ~35%     |
+| F1/F3/F4/F5/F6/F7/TC/D5d/D7s/QG               | ❌ Pendente |
+| **(detalhes em SYSTEMIC-CORRECTION-PLAN.md)** |             |
 
 ## Feature Audit Summary
 

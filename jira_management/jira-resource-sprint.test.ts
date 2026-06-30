@@ -53,7 +53,8 @@ describe('Jira Resource Sprint', () => {
     });
 
     describe('GetTransitionsForIssue', () => {
-        it('builds transition map from API response', async () => {expect.hasAssertions();
+        it('builds transition map from API response', async () => {
+            expect.hasAssertions();
 
             mockGet.mockResolvedValue({
                 data: {
@@ -70,7 +71,8 @@ describe('Jira Resource Sprint', () => {
             expect(map['in progress']).toBe('21');
         });
 
-        it('returns empty object on API error', async () => {expect.hasAssertions();
+        it('returns empty object on API error', async () => {
+            expect.hasAssertions();
 
             mockGet.mockRejectedValue(new Error('API error'));
             const resource = buildResource();
@@ -81,7 +83,8 @@ describe('Jira Resource Sprint', () => {
     });
 
     describe('AddTasksToSprint', () => {
-        it('posts tasks to sprint and logs success', async () => {expect.hasAssertions();
+        it('posts tasks to sprint and logs success', async () => {
+            expect.hasAssertions();
 
             mockPost.mockResolvedValue({ data: {} });
             const resource = buildResource();
@@ -90,7 +93,8 @@ describe('Jira Resource Sprint', () => {
             expect(mockPost).toHaveBeenCalledWith('/sprint/sprint-1/issue', { issues: ['T-1', 'T-2'] });
         });
 
-        it('throws on API error', async () => {expect.hasAssertions();
+        it('throws on API error', async () => {
+            expect.hasAssertions();
 
             mockPost.mockRejectedValue(new Error('Sprint error'));
             const resource = buildResource();
@@ -100,7 +104,8 @@ describe('Jira Resource Sprint', () => {
     });
 
     describe('TransitionIssue', () => {
-        it('posts transition to issue', async () => {expect.hasAssertions();
+        it('posts transition to issue', async () => {
+            expect.hasAssertions();
 
             mockPost.mockResolvedValue({ data: {} });
             const resource = buildResource();
@@ -109,7 +114,8 @@ describe('Jira Resource Sprint', () => {
             expect(mockPost).toHaveBeenCalledWith('/issue/T-1/transitions', { transition: { id: '21' } });
         });
 
-        it('throws on API error', async () => {expect.hasAssertions();
+        it('throws on API error', async () => {
+            expect.hasAssertions();
 
             mockPost.mockRejectedValue(new Error('Transition error'));
             const resource = buildResource();
@@ -117,5 +123,4 @@ describe('Jira Resource Sprint', () => {
             await expect(transitionIssue(resource, 'T-1', '21')).rejects.toThrow('Transition error');
         });
     });
-
 });

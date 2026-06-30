@@ -14,12 +14,23 @@ import {
 
 describe('HELP_TOPICS', () => {
     it('contains expected topics', () => {
-        const topics = ['csv', 'labels', 'group', 'precondition', 'project', 'version', 'transitions', 'template', 'diagnostics'];
+        const topics = [
+            'csv',
+            'labels',
+            'group',
+            'precondition',
+            'project',
+            'version',
+            'transitions',
+            'template',
+            'diagnostics',
+        ];
 
-        expect(topics.every(t => Object.prototype.hasOwnProperty.call(HELP_TOPICS, t))).toBeTruthy();
+        expect(topics.every((t) => Object.prototype.hasOwnProperty.call(HELP_TOPICS, t))).toBeTruthy();
     });
 
-    it('each topic is a non-empty string', () => {expect.hasAssertions();
+    it('each topic is a non-empty string', () => {
+        expect.hasAssertions();
 
         for (const entry of Object.entries(HELP_TOPICS)) {
             const [, value] = entry;
@@ -38,7 +49,8 @@ describe('ALIASES', () => {
         expect(ALIASES['template']).toBe('11');
     });
 
-    it('every alias resolves to a string value', () => {expect.hasAssertions();
+    it('every alias resolves to a string value', () => {
+        expect.hasAssertions();
 
         for (const entry of Object.entries(ALIASES)) {
             const [alias, value] = entry;
@@ -88,7 +100,8 @@ describe('CATEGORIES', () => {
         expect(ids).toContain('config');
     });
 
-    it('each category has id and label', () => {expect.hasAssertions();
+    it('each category has id and label', () => {
+        expect.hasAssertions();
 
         for (const cat of CATEGORIES) {
             expect(cat.id).toBeTruthy();
@@ -105,7 +118,8 @@ describe('SUB_MENUS', () => {
         expect(SUB_MENUS).toHaveProperty('config');
     });
 
-    it('each sub-menu has items with id and label', () => {expect.hasAssertions();
+    it('each sub-menu has items with id and label', () => {
+        expect.hasAssertions();
 
         for (const entry of Object.entries(SUB_MENUS)) {
             const [, items] = entry;
@@ -168,7 +182,8 @@ describe('CATEGORY_IDS', () => {
 });
 
 describe('CATEGORY_TITLES', () => {
-    it('has titles for all categories', () => {expect.hasAssertions();
+    it('has titles for all categories', () => {
+        expect.hasAssertions();
 
         for (const key of CATEGORY_IDS) {
             expect(Reflect.get(CATEGORY_TITLES, key)).toBeTruthy();
@@ -197,7 +212,8 @@ describe('ID_TO_ALIASES', () => {
         expect(criarAliases).toContain('criar-testes');
     });
 
-    it('covers all non-special command IDs from ALIASES', () => {expect.hasAssertions();
+    it('covers all non-special command IDs from ALIASES', () => {
+        expect.hasAssertions();
 
         for (const entry of Object.entries(ALIASES)) {
             const [, value] = entry;

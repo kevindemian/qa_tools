@@ -141,7 +141,8 @@ describe('Pr Report Core', () => {
     });
 
     describe('GeneratePrReport', () => {
-        it('returns healthScore and passRate for basic test data', async () => {expect.hasAssertions();
+        it('returns healthScore and passRate for basic test data', async () => {
+            expect.hasAssertions();
 
             const result = await generatePrReport({
                 tests: [sampleTest, failedTest, skippedTest],
@@ -152,7 +153,8 @@ describe('Pr Report Core', () => {
             expect(result.passRate).toBeCloseTo(88.9, 1);
         });
 
-        it('generates HTML report at default path when no htmlOutputPath given', async () => {expect.hasAssertions();
+        it('generates HTML report at default path when no htmlOutputPath given', async () => {
+            expect.hasAssertions();
 
             const result = await generatePrReport({
                 tests: [sampleTest],
@@ -163,7 +165,8 @@ describe('Pr Report Core', () => {
             expect(result.htmlPath).toContain('reports/pr-report.html');
         });
 
-        it('uses custom htmlOutputPath when provided', async () => {expect.hasAssertions();
+        it('uses custom htmlOutputPath when provided', async () => {
+            expect.hasAssertions();
 
             const result = await generatePrReport({
                 tests: [sampleTest],
@@ -174,7 +177,8 @@ describe('Pr Report Core', () => {
             expect(result.htmlPath).toBe('/tmp/custom-report.html');
         });
 
-        it('includes coverage source in HTML options when coverage is resolved', async () => {expect.hasAssertions();
+        it('includes coverage source in HTML options when coverage is resolved', async () => {
+            expect.hasAssertions();
 
             mockCoverage.resolveCoverage.mockReturnValue({
                 source: 'istanbul',
@@ -197,7 +201,8 @@ describe('Pr Report Core', () => {
             expect(result.healthScore).toStrictEqual(defaultHealthScore);
         });
 
-        it('passes diffComparison to HTML options when provided', async () => {expect.hasAssertions();
+        it('passes diffComparison to HTML options when provided', async () => {
+            expect.hasAssertions();
 
             const diff = {
                 newFailures: [failedTest],
@@ -217,7 +222,8 @@ describe('Pr Report Core', () => {
             );
         });
 
-        it('runs quality gate when not skipped', async () => {expect.hasAssertions();
+        it('runs quality gate when not skipped', async () => {
+            expect.hasAssertions();
 
             const qgResult = {
                 overall: 'pass' as const,
@@ -241,7 +247,8 @@ describe('Pr Report Core', () => {
             );
         });
 
-        it('skips quality gate when skipQuality is true', async () => {expect.hasAssertions();
+        it('skips quality gate when skipQuality is true', async () => {
+            expect.hasAssertions();
 
             await generatePrReport({
                 tests: [sampleTest],
@@ -253,7 +260,8 @@ describe('Pr Report Core', () => {
             expect(mockCheckRun.createCheckRun).not.toHaveBeenCalled();
         });
 
-        it('skips AI section when skipAi is true', async () => {expect.hasAssertions();
+        it('skips AI section when skipAi is true', async () => {
+            expect.hasAssertions();
 
             const result = await generatePrReport({
                 tests: [sampleTest, failedTest],
@@ -265,7 +273,8 @@ describe('Pr Report Core', () => {
             expect(mockPRComment.postPrComment).toHaveBeenCalledWith(expect.any(String));
         });
 
-        it('skips flaky section when skipFlaky is true', async () => {expect.hasAssertions();
+        it('skips flaky section when skipFlaky is true', async () => {
+            expect.hasAssertions();
 
             mockMetrics.calculateFlakiness.mockReturnValue([
                 { title: 'flaky test', rate: 0.5, passCount: 3, totalRuns: 6 },
@@ -280,7 +289,8 @@ describe('Pr Report Core', () => {
             expect(mockPRComment.postPrComment).toHaveBeenCalledWith(expect.any(String));
         });
 
-        it('survives empty test list', async () => {expect.hasAssertions();
+        it('survives empty test list', async () => {
+            expect.hasAssertions();
 
             const result = await generatePrReport({
                 tests: [],
@@ -291,7 +301,8 @@ describe('Pr Report Core', () => {
             expect(result.passRate).toBe(0);
         });
 
-        it('handles health score with coverage override', async () => {expect.hasAssertions();
+        it('handles health score with coverage override', async () => {
+            expect.hasAssertions();
 
             mockCoverage.resolveCoverage.mockReturnValue({
                 source: 'istanbul',
@@ -313,7 +324,8 @@ describe('Pr Report Core', () => {
             );
         });
 
-        it('includes provenance metadata in PR comment footer when health score has provenance', async () => {expect.hasAssertions();
+        it('includes provenance metadata in PR comment footer when health score has provenance', async () => {
+            expect.hasAssertions();
 
             const healthWithProvenance = {
                 ...defaultHealthScore,
@@ -353,7 +365,8 @@ describe('Pr Report Core', () => {
             expect(calledWith).toContain('DORA State of DevOps 2025');
         });
 
-        it('includes CI Context section when ciEnv.isCI is true', async () => {expect.hasAssertions();
+        it('includes CI Context section when ciEnv.isCI is true', async () => {
+            expect.hasAssertions();
 
             await generatePrReport({
                 tests: [sampleTest],
@@ -376,7 +389,8 @@ describe('Pr Report Core', () => {
             expect(commentBody).toContain('test execution results');
         });
 
-        it('does not include CI Context section when ciEnv.isCI is false', async () => {expect.hasAssertions();
+        it('does not include CI Context section when ciEnv.isCI is false', async () => {
+            expect.hasAssertions();
 
             await generatePrReport({
                 tests: [sampleTest],
@@ -395,7 +409,8 @@ describe('Pr Report Core', () => {
             expect(commentBody).not.toContain('CI Context');
         });
 
-        it('writes to GITHUB_STEP_SUMMARY when env var is set (VITEST guard bypassed)', async () => {expect.hasAssertions();
+        it('writes to GITHUB_STEP_SUMMARY when env var is set (VITEST guard bypassed)', async () => {
+            expect.hasAssertions();
 
             const summaryPath = '/tmp/test-step-summary.md';
             const fs = await import('node:fs');
@@ -431,7 +446,8 @@ describe('Pr Report Core', () => {
             }
         });
 
-        it('does not write to job summary when VITEST is set', async () => {expect.hasAssertions();
+        it('does not write to job summary when VITEST is set', async () => {
+            expect.hasAssertions();
 
             process.env['VITEST'] = 'true';
             const summaryPath = '/tmp/test-step-summary-guard.md';
@@ -462,7 +478,8 @@ describe('Pr Report Core', () => {
             }
         });
 
-        it('does not write to job summary when GITHUB_STEP_SUMMARY is not set', async () => {expect.hasAssertions();
+        it('does not write to job summary when GITHUB_STEP_SUMMARY is not set', async () => {
+            expect.hasAssertions();
 
             const original = process.env['GITHUB_STEP_SUMMARY'];
             delete process.env['GITHUB_STEP_SUMMARY'];
@@ -479,5 +496,4 @@ describe('Pr Report Core', () => {
             }
         });
     });
-
 });

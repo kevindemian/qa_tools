@@ -36,7 +36,8 @@ describe('PostPrComment', () => {
         process.env = { ...originalEnv };
     });
 
-    it('posts comment to correct GitHub API URL', async () => {expect.hasAssertions();
+    it('posts comment to correct GitHub API URL', async () => {
+        expect.hasAssertions();
 
         mockPost.mockResolvedValueOnce({
             data: { id: 123, html_url: 'https://github.com/owner/repo/pull/42#issuecomment-123' },
@@ -57,7 +58,8 @@ describe('PostPrComment', () => {
         });
     });
 
-    it('returns null when GITHUB_TOKEN is missing', async () => {expect.hasAssertions();
+    it('returns null when GITHUB_TOKEN is missing', async () => {
+        expect.hasAssertions();
 
         delete penv['GITHUB_TOKEN'];
 
@@ -67,7 +69,8 @@ describe('PostPrComment', () => {
         expect(result).toBeNull();
     });
 
-    it('returns null when GITHUB_REPOSITORY is missing', async () => {expect.hasAssertions();
+    it('returns null when GITHUB_REPOSITORY is missing', async () => {
+        expect.hasAssertions();
 
         delete penv['GITHUB_REPOSITORY'];
 
@@ -77,7 +80,8 @@ describe('PostPrComment', () => {
         expect(result).toBeNull();
     });
 
-    it('returns null when PR number is missing', async () => {expect.hasAssertions();
+    it('returns null when PR number is missing', async () => {
+        expect.hasAssertions();
 
         delete penv['GITHUB_PR_NUMBER'];
 
@@ -87,7 +91,8 @@ describe('PostPrComment', () => {
         expect(result).toBeNull();
     });
 
-    it('uses explicit config over env vars', async () => {expect.hasAssertions();
+    it('uses explicit config over env vars', async () => {
+        expect.hasAssertions();
 
         mockPost.mockResolvedValueOnce({
             data: { id: 456, html_url: 'https://github.com/custom/repo/pull/99#issuecomment-456' },
@@ -112,7 +117,8 @@ describe('PostPrComment', () => {
         });
     });
 
-    it('handles API error gracefully', async () => {expect.hasAssertions();
+    it('handles API error gracefully', async () => {
+        expect.hasAssertions();
 
         mockPost.mockRejectedValueOnce({
             response: { status: 403 },
@@ -124,7 +130,8 @@ describe('PostPrComment', () => {
         expect(result).toBeNull();
     });
 
-    it('handles network error without response', async () => {expect.hasAssertions();
+    it('handles network error without response', async () => {
+        expect.hasAssertions();
 
         mockPost.mockRejectedValueOnce(new Error('Network error'));
 
@@ -133,7 +140,8 @@ describe('PostPrComment', () => {
         expect(result).toBeNull();
     });
 
-    it('uses CI_PR_NUMBER fallback', async () => {expect.hasAssertions();
+    it('uses CI_PR_NUMBER fallback', async () => {
+        expect.hasAssertions();
 
         delete penv['GITHUB_PR_NUMBER'];
         penv['CI_PR_NUMBER'] = '77';
@@ -152,7 +160,8 @@ describe('PostPrComment', () => {
         expect(result?.id).toBe(789);
     });
 
-    it('parses PR number from GITHUB_REF (github-actions fallback)', async () => {expect.hasAssertions();
+    it('parses PR number from GITHUB_REF (github-actions fallback)', async () => {
+        expect.hasAssertions();
 
         delete penv['GITHUB_PR_NUMBER'];
         delete penv['CI_PR_NUMBER'];
@@ -172,7 +181,8 @@ describe('PostPrComment', () => {
         expect(result?.id).toBe(999);
     });
 
-    it('does not parse non-PR GITHUB_REF as number', async () => {expect.hasAssertions();
+    it('does not parse non-PR GITHUB_REF as number', async () => {
+        expect.hasAssertions();
 
         delete penv['GITHUB_PR_NUMBER'];
         delete penv['CI_PR_NUMBER'];
@@ -184,7 +194,8 @@ describe('PostPrComment', () => {
         expect(result).toBeNull();
     });
 
-    it('uses custom apiBaseUrl when provided', async () => {expect.hasAssertions();
+    it('uses custom apiBaseUrl when provided', async () => {
+        expect.hasAssertions();
 
         mockPost.mockResolvedValueOnce({
             data: { id: 111, html_url: 'https://ghe.example.com/repos/owner/repo/issues/42#issuecomment-111' },

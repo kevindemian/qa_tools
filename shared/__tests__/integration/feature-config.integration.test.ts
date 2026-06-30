@@ -37,7 +37,8 @@ describe('Integration: Feature Config', () => {
     });
 
     describe('FT-02a: loadFeatureConfig round-trip', () => {
-        it('loads valid config from disk', async () => {expect.hasAssertions();
+        it('loads valid config from disk', async () => {
+            expect.hasAssertions();
 
             const configPath = path.join(TEST_DIR, 'config', 'features.json');
             fs.mkdirSync(path.dirname(configPath), { recursive: true });
@@ -52,7 +53,8 @@ describe('Integration: Feature Config', () => {
             expect(result['gitlab-project']?.gitProvider).toBe('gitlab');
         });
 
-        it('returns empty store when file does not exist', async () => {expect.hasAssertions();
+        it('returns empty store when file does not exist', async () => {
+            expect.hasAssertions();
 
             const { loadFeatureConfig } = await import('../../feature-config.js');
             const result = loadFeatureConfig();
@@ -60,7 +62,8 @@ describe('Integration: Feature Config', () => {
             expect(result).toStrictEqual({});
         });
 
-        it('returns empty store on invalid JSON', async () => {expect.hasAssertions();
+        it('returns empty store on invalid JSON', async () => {
+            expect.hasAssertions();
 
             const configPath = path.join(TEST_DIR, 'config', 'features.json');
             fs.mkdirSync(path.dirname(configPath), { recursive: true });
@@ -72,7 +75,8 @@ describe('Integration: Feature Config', () => {
             expect(result).toStrictEqual({});
         });
 
-        it('returns empty store on schema violation', async () => {expect.hasAssertions();
+        it('returns empty store on schema violation', async () => {
+            expect.hasAssertions();
 
             const configPath = path.join(TEST_DIR, 'config', 'features.json');
             fs.mkdirSync(path.dirname(configPath), { recursive: true });
@@ -86,7 +90,8 @@ describe('Integration: Feature Config', () => {
     });
 
     describe('FT-02b: saveFeatureConfig persistence', () => {
-        it('saves and reloads config', async () => {expect.hasAssertions();
+        it('saves and reloads config', async () => {
+            expect.hasAssertions();
 
             const { saveFeatureConfig, loadFeatureConfig } = await import('../../feature-config.js');
             const fixture = createFeaturesJsonFixture();
@@ -97,7 +102,8 @@ describe('Integration: Feature Config', () => {
             expect(reloaded).toStrictEqual(fixture);
         });
 
-        it('creates config directory if missing', async () => {expect.hasAssertions();
+        it('creates config directory if missing', async () => {
+            expect.hasAssertions();
 
             const { saveFeatureConfig } = await import('../../feature-config.js');
             saveFeatureConfig(createFeaturesJsonFixture());
@@ -107,7 +113,8 @@ describe('Integration: Feature Config', () => {
     });
 
     describe('FT-02c: getProjectFeatureConfig', () => {
-        it('returns config for known project', async () => {expect.hasAssertions();
+        it('returns config for known project', async () => {
+            expect.hasAssertions();
 
             const { saveFeatureConfig, getProjectFeatureConfig } = await import('../../feature-config.js');
             saveFeatureConfig(createFeaturesJsonFixture());
@@ -119,7 +126,8 @@ describe('Integration: Feature Config', () => {
             expect(result?.features.prReport?.enabled).toBeTruthy();
         });
 
-        it('returns undefined for unknown project', async () => {expect.hasAssertions();
+        it('returns undefined for unknown project', async () => {
+            expect.hasAssertions();
 
             const { saveFeatureConfig, getProjectFeatureConfig } = await import('../../feature-config.js');
             saveFeatureConfig(createFeaturesJsonFixture());
@@ -129,7 +137,8 @@ describe('Integration: Feature Config', () => {
     });
 
     describe('FT-02d: getPrReportConfig', () => {
-        it('returns configured PR report config', async () => {expect.hasAssertions();
+        it('returns configured PR report config', async () => {
+            expect.hasAssertions();
 
             const { saveFeatureConfig, getPrReportConfig } = await import('../../feature-config.js');
             saveFeatureConfig(createFeaturesJsonFixture());
@@ -140,7 +149,8 @@ describe('Integration: Feature Config', () => {
             expect(config.publishTarget).toBe('github-actions');
         });
 
-        it('returns default (disabled) for unknown project', async () => {expect.hasAssertions();
+        it('returns default (disabled) for unknown project', async () => {
+            expect.hasAssertions();
 
             const { getPrReportConfig } = await import('../../feature-config.js');
             const config = getPrReportConfig('nonexistent');
@@ -151,7 +161,8 @@ describe('Integration: Feature Config', () => {
     });
 
     describe('FT-02e: isPrReportEnabled', () => {
-        it('returns true when enabled', async () => {expect.hasAssertions();
+        it('returns true when enabled', async () => {
+            expect.hasAssertions();
 
             const { saveFeatureConfig, isPrReportEnabled } = await import('../../feature-config.js');
             saveFeatureConfig(createFeaturesJsonFixture());
@@ -159,7 +170,8 @@ describe('Integration: Feature Config', () => {
             expect(isPrReportEnabled('test-project')).toBeTruthy();
         });
 
-        it('returns false for disabled project', async () => {expect.hasAssertions();
+        it('returns false for disabled project', async () => {
+            expect.hasAssertions();
 
             const { saveFeatureConfig, isPrReportEnabled } = await import('../../feature-config.js');
             saveFeatureConfig(createFeaturesJsonFixture());
@@ -167,7 +179,8 @@ describe('Integration: Feature Config', () => {
             expect(isPrReportEnabled('gitlab-project')).toBeFalsy();
         });
 
-        it('returns false for unknown project', async () => {expect.hasAssertions();
+        it('returns false for unknown project', async () => {
+            expect.hasAssertions();
 
             const { isPrReportEnabled } = await import('../../feature-config.js');
 
@@ -176,7 +189,8 @@ describe('Integration: Feature Config', () => {
     });
 
     describe('FT-02f: setPrReportConfig creates project if needed', () => {
-        it('creates new project entry and sets config', async () => {expect.hasAssertions();
+        it('creates new project entry and sets config', async () => {
+            expect.hasAssertions();
 
             const { setPrReportConfig, getProjectFeatureConfig, getPrReportConfig } =
                 await import('../../feature-config.js');
@@ -197,7 +211,8 @@ describe('Integration: Feature Config', () => {
     });
 
     describe('FT-02g: resolvePublishTarget fallbacks', () => {
-        it('returns configured target when enabled', async () => {expect.hasAssertions();
+        it('returns configured target when enabled', async () => {
+            expect.hasAssertions();
 
             const { saveFeatureConfig, resolvePublishTarget } = await import('../../feature-config.js');
             saveFeatureConfig(createFeaturesJsonFixture());
@@ -205,7 +220,8 @@ describe('Integration: Feature Config', () => {
             expect(resolvePublishTarget('test-project')).toBe('github-actions');
         });
 
-        it('falls back to gitlab-ci for disabled gitlab project using stored gitProvider', async () => {expect.hasAssertions();
+        it('falls back to gitlab-ci for disabled gitlab project using stored gitProvider', async () => {
+            expect.hasAssertions();
 
             const { saveFeatureConfig, resolvePublishTarget } = await import('../../feature-config.js');
             saveFeatureConfig(createFeaturesJsonFixture());
@@ -214,14 +230,16 @@ describe('Integration: Feature Config', () => {
             expect(resolvePublishTarget('gitlab-project')).toBe('gitlab-ci');
         });
 
-        it('falls back to github-actions for unknown project', async () => {expect.hasAssertions();
+        it('falls back to github-actions for unknown project', async () => {
+            expect.hasAssertions();
 
             const { resolvePublishTarget } = await import('../../feature-config.js');
 
             expect(resolvePublishTarget('nonexistent')).toBe('github-actions');
         });
 
-        it('uses explicit gitProvider hint for unknown project', async () => {expect.hasAssertions();
+        it('uses explicit gitProvider hint for unknown project', async () => {
+            expect.hasAssertions();
 
             const { resolvePublishTarget } = await import('../../feature-config.js');
 
@@ -230,14 +248,16 @@ describe('Integration: Feature Config', () => {
     });
 
     describe('FT-02h: sub-feature skip flags', () => {
-        it('isAiSkipped returns false by default', async () => {expect.hasAssertions();
+        it('isAiSkipped returns false by default', async () => {
+            expect.hasAssertions();
 
             const { isAiSkipped } = await import('../../feature-config.js');
 
             expect(isAiSkipped('nonexistent')).toBeFalsy();
         });
 
-        it('isAiSkipped returns true when configured', async () => {expect.hasAssertions();
+        it('isAiSkipped returns true when configured', async () => {
+            expect.hasAssertions();
 
             const { saveFeatureConfig, isAiSkipped } = await import('../../feature-config.js');
             saveFeatureConfig({
@@ -250,14 +270,16 @@ describe('Integration: Feature Config', () => {
             expect(isAiSkipped('skip-project')).toBeTruthy();
         });
 
-        it('isQualitySkipped returns false by default', async () => {expect.hasAssertions();
+        it('isQualitySkipped returns false by default', async () => {
+            expect.hasAssertions();
 
             const { isQualitySkipped } = await import('../../feature-config.js');
 
             expect(isQualitySkipped('nonexistent')).toBeFalsy();
         });
 
-        it('isFlakySkipped returns false by default', async () => {expect.hasAssertions();
+        it('isFlakySkipped returns false by default', async () => {
+            expect.hasAssertions();
 
             const { isFlakySkipped } = await import('../../feature-config.js');
 

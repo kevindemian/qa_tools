@@ -79,7 +79,8 @@ describe('E2E: Result Processing Pipeline', () => {
         }
     });
 
-    it('flows end-to-end: mochawesome → match → TE creation', async () => {expect.hasAssertions();
+    it('flows end-to-end: mochawesome → match → TE creation', async () => {
+        expect.hasAssertions();
 
         const mochaPath = path.join(FIXTURES, 'mochawesome.json');
         const raw = fs.readFileSync(mochaPath, 'utf8');
@@ -111,7 +112,8 @@ describe('E2E: Result Processing Pipeline', () => {
         expect(result.key).toBe('RESULT-1');
     });
 
-    it('mochawesome e2e TE creation produces correct result stats', async () => {expect.hasAssertions();
+    it('mochawesome e2e TE creation produces correct result stats', async () => {
+        expect.hasAssertions();
 
         const mochaPath = path.join(FIXTURES, 'mochawesome.json');
         const raw = fs.readFileSync(mochaPath, 'utf8');

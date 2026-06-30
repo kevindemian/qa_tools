@@ -13,7 +13,8 @@ describe('IsGitHubCi', () => {
         vi.clearAllMocks();
     });
 
-    it('returns true when githubToken and GITHUB_REPOSITORY are set', async () => {expect.hasAssertions();
+    it('returns true when githubToken and GITHUB_REPOSITORY are set', async () => {
+        expect.hasAssertions();
 
         vi.spyOn(config, 'get').mockImplementation((key: string) => {
             if (key === 'githubToken') return 'gh_token_abc';
@@ -26,7 +27,8 @@ describe('IsGitHubCi', () => {
         expect(isGitHubCi()).toBeTruthy();
     });
 
-    it('returns false when githubToken is missing', async () => {expect.hasAssertions();
+    it('returns false when githubToken is missing', async () => {
+        expect.hasAssertions();
 
         vi.spyOn(config, 'get').mockImplementation((key: string) => {
             if (key === 'GITHUB_REPOSITORY') return 'owner/repo';
@@ -38,7 +40,8 @@ describe('IsGitHubCi', () => {
         expect(isGitHubCi()).toBeFalsy();
     });
 
-    it('returns false when GITHUB_REPOSITORY is missing', async () => {expect.hasAssertions();
+    it('returns false when GITHUB_REPOSITORY is missing', async () => {
+        expect.hasAssertions();
 
         vi.spyOn(config, 'get').mockImplementation((key: string) => {
             if (key === 'githubToken') return 'gh_token_abc';
@@ -50,7 +53,8 @@ describe('IsGitHubCi', () => {
         expect(isGitHubCi()).toBeFalsy();
     });
 
-    it('returns false when both are missing', async () => {expect.hasAssertions();
+    it('returns false when both are missing', async () => {
+        expect.hasAssertions();
 
         vi.spyOn(config, 'get').mockReturnValue(undefined);
 
@@ -65,7 +69,8 @@ describe('IsGitLabCi', () => {
         vi.clearAllMocks();
     });
 
-    it('returns true when CI_JOB_TOKEN and CI_PROJECT_ID are set', async () => {expect.hasAssertions();
+    it('returns true when CI_JOB_TOKEN and CI_PROJECT_ID are set', async () => {
+        expect.hasAssertions();
 
         vi.spyOn(config, 'get').mockImplementation((key: string) => {
             if (key === 'CI_JOB_TOKEN') return 'gl_token_xyz';
@@ -78,7 +83,8 @@ describe('IsGitLabCi', () => {
         expect(isGitLabCi()).toBeTruthy();
     });
 
-    it('returns false when CI_JOB_TOKEN is missing', async () => {expect.hasAssertions();
+    it('returns false when CI_JOB_TOKEN is missing', async () => {
+        expect.hasAssertions();
 
         vi.spyOn(config, 'get').mockImplementation((key: string) => {
             if (key === 'CI_PROJECT_ID') return '12345';
@@ -90,7 +96,8 @@ describe('IsGitLabCi', () => {
         expect(isGitLabCi()).toBeFalsy();
     });
 
-    it('returns false when CI_PROJECT_ID is missing', async () => {expect.hasAssertions();
+    it('returns false when CI_PROJECT_ID is missing', async () => {
+        expect.hasAssertions();
 
         vi.spyOn(config, 'get').mockImplementation((key: string) => {
             if (key === 'CI_JOB_TOKEN') return 'gl_token_xyz';
@@ -102,7 +109,8 @@ describe('IsGitLabCi', () => {
         expect(isGitLabCi()).toBeFalsy();
     });
 
-    it('returns false when both are missing', async () => {expect.hasAssertions();
+    it('returns false when both are missing', async () => {
+        expect.hasAssertions();
 
         vi.spyOn(config, 'get').mockReturnValue(undefined);
 
@@ -113,7 +121,8 @@ describe('IsGitLabCi', () => {
 });
 
 describe('Constants', () => {
-    it('exports GIT_HISTORY_RUNS', async () => {expect.hasAssertions();
+    it('exports GIT_HISTORY_RUNS', async () => {
+        expect.hasAssertions();
 
         const { GIT_HISTORY_RUNS } = await import('./ci-detect.js');
 

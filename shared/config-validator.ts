@@ -121,16 +121,32 @@ export function warnUnknownEnv(): string[] {
 
     const warnings: string[] = [];
     const knownPrefixes = [
-        'QA_', 'LLM_', 'JIRA_', 'XRAY_', 'GIT', 'GITHUB_',
-        'CYPRESS_', 'CSV_', 'DRY_', 'DEBUG', 'QUIET', 'ON_',
-        'LOG_', 'AUTO_', 'KNOWN_', 'REPORT_', 'METRICS_', 'SKIP_',
-        'NO_', 'OPENCODE_', 'BENCHMARK', 'AWS_', 'CI_',
+        'QA_',
+        'LLM_',
+        'JIRA_',
+        'XRAY_',
+        'GIT',
+        'GITHUB_',
+        'CYPRESS_',
+        'CSV_',
+        'DRY_',
+        'DEBUG',
+        'QUIET',
+        'ON_',
+        'LOG_',
+        'AUTO_',
+        'KNOWN_',
+        'REPORT_',
+        'METRICS_',
+        'SKIP_',
+        'NO_',
+        'OPENCODE_',
+        'BENCHMARK',
+        'AWS_',
+        'CI_',
     ];
     for (const k of Object.keys(process.env)) {
-        if (
-            !known.has(k) &&
-            knownPrefixes.some((prefix) => k.startsWith(prefix))
-        ) {
+        if (!known.has(k) && knownPrefixes.some((prefix) => k.startsWith(prefix))) {
             warnings.push(
                 `Variável de ambiente desconhecida: ${k}. Verifique se é um typo ou adicione ao CONFIG_SCHEMA.`,
             );

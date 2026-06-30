@@ -247,7 +247,8 @@ describe('Pr-report entry point — quality gate check run', () => {
         fs.rmSync(TEST_CTRF_DIR, { recursive: true, force: true });
     });
 
-    it('calls createCheckRun with success conclusion when quality gate passes', async () => {expect.hasAssertions();
+    it('calls createCheckRun with success conclusion when quality gate passes', async () => {
+        expect.hasAssertions();
 
         createCtrfFixture([{ name: 'pass-1', status: 'passed', duration: 100 }]);
 
@@ -267,7 +268,8 @@ describe('Pr-report entry point — quality gate check run', () => {
         exitSpy.mockRestore();
     });
 
-    it('calls createCheckRun with failure conclusion when quality gate fails', async () => {expect.hasAssertions();
+    it('calls createCheckRun with failure conclusion when quality gate fails', async () => {
+        expect.hasAssertions();
 
         const qgMod = await import('../quality-gate.js');
         vi.mocked(qgMod.runQualityGate).mockReturnValueOnce({
@@ -323,7 +325,8 @@ describe('Pr-report entry point — flaky detection with quarantine', () => {
         fs.rmSync(TEST_CTRF_DIR, { recursive: true, force: true });
     });
 
-    it('adds quarantine column when flaky tests exist', async () => {expect.hasAssertions();
+    it('adds quarantine column when flaky tests exist', async () => {
+        expect.hasAssertions();
 
         const metricsMod = await import('../metrics.js');
         const mockEntries = [
@@ -352,7 +355,8 @@ describe('Pr-report entry point — flaky detection with quarantine', () => {
         exitSpy.mockRestore();
     });
 
-    it('shows quarantined status for quarantined flaky tests', async () => {expect.hasAssertions();
+    it('shows quarantined status for quarantined flaky tests', async () => {
+        expect.hasAssertions();
 
         const metricsMod = await import('../metrics.js');
         const mockEntries = [
@@ -394,7 +398,8 @@ describe('Pr-report entry point — flaky detection with quarantine', () => {
         exitSpy.mockRestore();
     });
 
-    it('only shows suggestion when there are new (non-quarantined) flaky tests', async () => {expect.hasAssertions();
+    it('only shows suggestion when there are new (non-quarantined) flaky tests', async () => {
+        expect.hasAssertions();
 
         const metricsMod = await import('../metrics.js');
         const mockEntries: import('../metrics.js').FlakinessEntry[] = [
@@ -424,7 +429,8 @@ describe('Pr-report entry point — flaky detection with quarantine', () => {
         exitSpy.mockRestore();
     });
 
-    it('skips suggestion when all flaky tests are quarantined', async () => {expect.hasAssertions();
+    it('skips suggestion when all flaky tests are quarantined', async () => {
+        expect.hasAssertions();
 
         const metricsMod = await import('../metrics.js');
         const mockEntries: import('../metrics.js').FlakinessEntry[] = [
@@ -461,7 +467,8 @@ describe('Pr-report entry point — flaky detection with quarantine', () => {
         exitSpy.mockRestore();
     });
 
-    it('handles flaky section when calculateFlakiness returns empty', async () => {expect.hasAssertions();
+    it('handles flaky section when calculateFlakiness returns empty', async () => {
+        expect.hasAssertions();
 
         const metricsMod = await import('../metrics.js');
         vi.mocked(metricsMod.calculateFlakiness).mockImplementation(() => []);
@@ -507,7 +514,8 @@ describe('Pr-report entry point — HTML report generation', () => {
         fs.rmSync(TEST_CTRF_DIR, { recursive: true, force: true });
     });
 
-    it('generates HTML report file when main succeeds', async () => {expect.hasAssertions();
+    it('generates HTML report file when main succeeds', async () => {
+        expect.hasAssertions();
 
         createCtrfFixture([
             { name: 'pass-1', status: 'passed', duration: 100 },
@@ -540,11 +548,10 @@ describe('Pr-report entry point — HTML report generation', () => {
         exitSpy.mockRestore();
     });
 
-    it('includes healthScore in HTML report options', async () => {expect.hasAssertions();
+    it('includes healthScore in HTML report options', async () => {
+        expect.hasAssertions();
 
-        createCtrfFixture([
-            { name: 'pass-1', status: 'passed', duration: 100 },
-        ]);
+        createCtrfFixture([{ name: 'pass-1', status: 'passed', duration: 100 }]);
 
         const { main } = await import('../pr-report-core.js');
         const exitSpy = vi.spyOn(process, 'exit').mockImplementation(() => undefined as never);
@@ -559,7 +566,8 @@ describe('Pr-report entry point — HTML report generation', () => {
         exitSpy.mockRestore();
     });
 
-    it('includes health score in HTML report options', async () => {expect.hasAssertions();
+    it('includes health score in HTML report options', async () => {
+        expect.hasAssertions();
 
         createCtrfFixture([{ name: 'pass-1', status: 'passed', duration: 100 }]);
 
@@ -596,7 +604,8 @@ describe('Pr-report entry point — HTML report generation', () => {
         exitSpy.mockRestore();
     });
 
-    it('computes diff comparison when store has a previous run', async () => {expect.hasAssertions();
+    it('computes diff comparison when store has a previous run', async () => {
+        expect.hasAssertions();
 
         createCtrfFixture([
             { name: 'stable-test', status: 'passed', duration: 100 },
@@ -634,13 +643,14 @@ describe('Pr-report entry point — HTML report generation', () => {
         const diff = opts3?.['diffComparison'] as Record<string, unknown> | undefined;
 
         expect(diff).toBeDefined();
-        expect(((diff?.['newFailures'] ?? []) as unknown[])).toHaveLength(1);
+        expect((diff?.['newFailures'] ?? []) as unknown[]).toHaveLength(1);
         expect((diff?.['newFailures'] as Array<{ title: string }> | undefined)?.[0]?.title).toBe('regression-test');
 
         exitSpy.mockRestore();
     });
 
-    it('skips diff comparison when store is empty', async () => {expect.hasAssertions();
+    it('skips diff comparison when store is empty', async () => {
+        expect.hasAssertions();
 
         createCtrfFixture([{ name: 'pass-1', status: 'passed', duration: 100 }]);
 
@@ -659,7 +669,8 @@ describe('Pr-report entry point — HTML report generation', () => {
         exitSpy.mockRestore();
     });
 
-    it('includes trends in HTML report options', async () => {expect.hasAssertions();
+    it('includes trends in HTML report options', async () => {
+        expect.hasAssertions();
 
         createCtrfFixture([{ name: 'pass-1', status: 'passed', duration: 100 }]);
 
@@ -687,7 +698,8 @@ describe('Pr-report entry point — HTML report generation', () => {
         exitSpy.mockRestore();
     });
 
-    it('includes grade and artifact link in Check Run summary', async () => {expect.hasAssertions();
+    it('includes grade and artifact link in Check Run summary', async () => {
+        expect.hasAssertions();
 
         createCtrfFixture([{ name: 'pass-1', status: 'passed', duration: 100 }]);
 
@@ -718,7 +730,8 @@ describe('Pr-report entry point — HTML report generation', () => {
         exitSpy.mockRestore();
     });
 
-    it('creates flakiness map from flaky entries for HTML report', async () => {expect.hasAssertions();
+    it('creates flakiness map from flaky entries for HTML report', async () => {
+        expect.hasAssertions();
 
         createCtrfFixture([{ name: 'pass-1', status: 'passed', duration: 100 }]);
 
@@ -746,7 +759,8 @@ describe('Pr-report entry point — HTML report generation', () => {
         exitSpy.mockRestore();
     });
 
-    it('includes coverageSource in HTML report options', async () => {expect.hasAssertions();
+    it('includes coverageSource in HTML report options', async () => {
+        expect.hasAssertions();
 
         createCtrfFixture([{ name: 'pass-1', status: 'passed', duration: 100 }]);
 
@@ -765,7 +779,8 @@ describe('Pr-report entry point — HTML report generation', () => {
         exitSpy.mockRestore();
     });
 
-    it('handles missing env vars gracefully in HTML report', async () => {expect.hasAssertions();
+    it('handles missing env vars gracefully in HTML report', async () => {
+        expect.hasAssertions();
 
         createCtrfFixture([{ name: 'pass-1', status: 'passed', duration: 100 }]);
 

@@ -107,7 +107,13 @@ describe('Quarantine', () => {
             expect.hasAssertions();
 
             vi.useFakeTimers();
-            quarantineTest({ testTitle: TEST_TITLE, reason: 'flaky', quarantinedBy: 'test', flakyRate: 0.5, ttlDays: 0 });
+            quarantineTest({
+                testTitle: TEST_TITLE,
+                reason: 'flaky',
+                quarantinedBy: 'test',
+                flakyRate: 0.5,
+                ttlDays: 0,
+            });
             await vi.advanceTimersByTimeAsync(1000);
             const expired = expireQuarantine();
 
@@ -241,5 +247,4 @@ describe('Quarantine', () => {
             expect(store.entries).toStrictEqual([]);
         });
     });
-
 });

@@ -69,7 +69,8 @@ describe('ProbeApiKey', () => {
         vi.clearAllMocks();
     });
 
-    it('returns valid for OpenAI probe (sk-... → 200)', async () => {expect.hasAssertions();
+    it('returns valid for OpenAI probe (sk-... → 200)', async () => {
+        expect.hasAssertions();
 
         mockFetch.mockResolvedValueOnce(okResponse());
         const result = await probeApiKey('sk-test', 'openai');
@@ -83,7 +84,8 @@ describe('ProbeApiKey', () => {
         expect(url).toContain('/models');
     });
 
-    it('returns invalid for OpenAI probe (401)', async () => {expect.hasAssertions();
+    it('returns invalid for OpenAI probe (401)', async () => {
+        expect.hasAssertions();
 
         mockFetch.mockResolvedValueOnce(errorResponse(401));
         const result = await probeApiKey('sk-bad', 'openai');
@@ -91,7 +93,8 @@ describe('ProbeApiKey', () => {
         expect(result.valid).toBeFalsy();
     });
 
-    it('returns valid for Gemini probe (200)', async () => {expect.hasAssertions();
+    it('returns valid for Gemini probe (200)', async () => {
+        expect.hasAssertions();
 
         mockFetch.mockResolvedValueOnce(okResponse());
         const result = await probeApiKey('AIza-test', 'gemini');
@@ -104,7 +107,8 @@ describe('ProbeApiKey', () => {
         expect(url).toContain('?key=');
     });
 
-    it('returns invalid for Gemini probe (403)', async () => {expect.hasAssertions();
+    it('returns invalid for Gemini probe (403)', async () => {
+        expect.hasAssertions();
 
         mockFetch.mockResolvedValueOnce(errorResponse(403));
         const result = await probeApiKey('AIza-bad', 'gemini');
@@ -112,7 +116,8 @@ describe('ProbeApiKey', () => {
         expect(result.valid).toBeFalsy();
     });
 
-    it('validates Anthropic key via POST /v1/messages', async () => {expect.hasAssertions();
+    it('validates Anthropic key via POST /v1/messages', async () => {
+        expect.hasAssertions();
 
         mockFetch.mockResolvedValueOnce(okResponse());
         const result = await probeApiKey('sk-ant-test', 'anthropic');
@@ -129,7 +134,8 @@ describe('ProbeApiKey', () => {
         expect(headers?.['x-api-key']).toBe('sk-ant-test');
     });
 
-    it('returns error for custom provider without baseUrl', async () => {expect.hasAssertions();
+    it('returns error for custom provider without baseUrl', async () => {
+        expect.hasAssertions();
 
         const result = await probeApiKey('custom-key', 'custom');
 
@@ -137,7 +143,8 @@ describe('ProbeApiKey', () => {
         expect(result.error).toContain('Unsupported provider');
     });
 
-    it('handles network errors', async () => {expect.hasAssertions();
+    it('handles network errors', async () => {
+        expect.hasAssertions();
 
         mockFetch.mockRejectedValueOnce(new Error('Network failure'));
         const result = await probeApiKey('sk-test', 'openai');
@@ -146,7 +153,8 @@ describe('ProbeApiKey', () => {
         expect(result.error).toBe('Network failure');
     });
 
-    it('handles fetch abort (timeout)', async () => {expect.hasAssertions();
+    it('handles fetch abort (timeout)', async () => {
+        expect.hasAssertions();
 
         const abortError = new DOMException('The operation was aborted', 'AbortError');
         mockFetch.mockRejectedValueOnce(abortError);
@@ -155,7 +163,8 @@ describe('ProbeApiKey', () => {
         expect(result.valid).toBeFalsy();
     });
 
-    it('returns valid on 404 (endpoint not found but key may be valid)', async () => {expect.hasAssertions();
+    it('returns valid on 404 (endpoint not found but key may be valid)', async () => {
+        expect.hasAssertions();
 
         mockFetch.mockResolvedValueOnce(errorResponse(404));
         const result = await probeApiKey('sk-test', 'openai');
@@ -163,7 +172,8 @@ describe('ProbeApiKey', () => {
         expect(result.valid).toBeTruthy();
     });
 
-    it('records latency via recordLlmRequest on successful probe', async () => {expect.hasAssertions();
+    it('records latency via recordLlmRequest on successful probe', async () => {
+        expect.hasAssertions();
 
         mockFetch.mockResolvedValueOnce(okResponse());
 
@@ -186,7 +196,8 @@ describe('DiscoverProvider', () => {
         vi.clearAllMocks();
     });
 
-    it('returns valid when pattern match + probe succeed', async () => {expect.hasAssertions();
+    it('returns valid when pattern match + probe succeed', async () => {
+        expect.hasAssertions();
 
         mockFetch.mockResolvedValueOnce(okResponse());
         const result = await discoverProvider('sk-test');
@@ -195,7 +206,8 @@ describe('DiscoverProvider', () => {
         expect(result.provider).toBe('openai');
     });
 
-    it('falls through to other providers when pattern match fails probe', async () => {expect.hasAssertions();
+    it('falls through to other providers when pattern match fails probe', async () => {
+        expect.hasAssertions();
 
         // First probe (openai) fails with 401
         mockFetch
@@ -207,7 +219,8 @@ describe('DiscoverProvider', () => {
         expect(mockFetch).toHaveBeenCalledTimes(2);
     });
 
-    it('returns failure when no provider accepts the key', async () => {expect.hasAssertions();
+    it('returns failure when no provider accepts the key', async () => {
+        expect.hasAssertions();
 
         mockFetch.mockResolvedValue(errorResponse(401));
         const result = await discoverProvider('sk-test');
@@ -216,7 +229,8 @@ describe('DiscoverProvider', () => {
         expect(result.provider).toBe('openai');
     });
 
-    it('skips custom provider during discovery', async () => {expect.hasAssertions();
+    it('skips custom provider during discovery', async () => {
+        expect.hasAssertions();
 
         mockFetch.mockResolvedValue(errorResponse(401));
         const result = await discoverProvider('unknown-key');
@@ -231,7 +245,8 @@ describe('DiscoverProvider', () => {
         }
     });
 
-    it('continues probing after a timeout', async () => {expect.hasAssertions();
+    it('continues probing after a timeout', async () => {
+        expect.hasAssertions();
 
         const abortError = new DOMException('aborted', 'AbortError');
         mockFetch

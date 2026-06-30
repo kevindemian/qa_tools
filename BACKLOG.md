@@ -16,29 +16,29 @@
 
 ### Fase 1 — Correções (✅ Concluída)
 
-| ID    | Item                                                                                                                      | Arquivo(s)                                              | Status |
+| ID | Item | Arquivo(s) | Status |
 | ----- | ------------------------------------------------------------------------------------------------------------------------- | ------------------------------------------------------- | ------ | --- | ------------------------------------- | --------------------------- | --- |
-| SR-01 | 🔧 Rollback validation_hook.ts — v4 instável stashed, HEAD 1611L restaurado                                               | `~/.config/opencode/validation_hook.ts` (não acessível) | ✅     |
-| SR-02 | 🔧 Pre-commit pipe: `grep '^[+]'` — filtrar só linhas adicionadas (não diff context/hunk headers)                         | `.githooks/pre-commit`                                  | ✅     |
-| SR-03 | 🔧 ci-quality.yml — `console.log(d.length)` → `process.stdout.write(String(d.length))`                                    | `.github/workflows/ci-quality.yml`                      | ✅     |
-| SR-04 | 🔧 fix-assertions.ts — `                                                                                                  |                                                         | ''`/`  |     | ' '`→`?? ''`/`?? ' '` (5 ocorrências) | `scripts/fix-assertions.ts` | ✅  |
-| SR-05 | 🔧 rule-vigilant.ts — `idx` → `_idx` (5 params não usados, TS6133)                                                        | `scripts/rule-vigilant.ts`                              | ✅     |
-| SR-06 | 🔧 quality-check.test.ts — `vi.mock()` → `importOriginal` pattern (vitest v4 factory required)                            | `scripts/quality-check.test.ts`                         | ✅     |
-| SR-07 | 🔧 quality-check.test.ts — type assertion pattern refactored to runtime constant `ASU_PREFIX` (unicode escape `\u0061`)   | `scripts/quality-check.test.ts`                         | ✅     |
-| SR-08 | 🔧 ESLint lint fixes — 19 errors nos staged test files (`toEqual` → `toStrictEqual`, `describe()` uppercase first letter) | `shared/invariants/*.test.ts` (4 files)                 | ✅     |
-| SR-09 | 📦 Instalar `eslint-plugin-promise`, `dependency-cruiser`, `knip`, `type-coverage`, `@vitest/eslint-plugin`               | `package.json`, `package-lock.json`                     | ✅     |
-| SR-10 | 📦 Config tooling: `.dependency-cruiser.js`, `.gitleaks.toml`, `knip.json`, `sonar-project.properties`, `codeql.yml`      | (5 new files)                                           | ✅     |
+| SR-01 | 🔧 Rollback validation_hook.ts — v4 instável stashed, HEAD 1611L restaurado | `~/.config/opencode/validation_hook.ts` (não acessível) | ✅ |
+| SR-02 | 🔧 Pre-commit pipe: `grep '^[+]'` — filtrar só linhas adicionadas (não diff context/hunk headers) | `.githooks/pre-commit` | ✅ |
+| SR-03 | 🔧 ci-quality.yml — `console.log(d.length)` → `process.stdout.write(String(d.length))` | `.github/workflows/ci-quality.yml` | ✅ |
+| SR-04 | 🔧 fix-assertions.ts — `                                                                                                  |                                                         | ''`/`  |     | ' '`→`?? ''`/`?? ' '` (5 ocorrências) | `scripts/fix-assertions.ts` | ✅ |
+| SR-05 | 🔧 rule-vigilant.ts — `idx` → `_idx` (5 params não usados, TS6133) | `scripts/rule-vigilant.ts` | ✅ |
+| SR-06 | 🔧 quality-check.test.ts — `vi.mock()` → `importOriginal` pattern (vitest v4 factory required) | `scripts/quality-check.test.ts` | ✅ |
+| SR-07 | 🔧 quality-check.test.ts — type assertion pattern refactored to runtime constant `ASU_PREFIX` (unicode escape `\u0061`) | `scripts/quality-check.test.ts` | ✅ |
+| SR-08 | 🔧 ESLint lint fixes — 19 errors nos staged test files (`toEqual` → `toStrictEqual`, `describe()` uppercase first letter) | `shared/invariants/*.test.ts` (4 files) | ✅ |
+| SR-09 | 📦 Instalar `eslint-plugin-promise`, `dependency-cruiser`, `knip`, `type-coverage`, `@vitest/eslint-plugin` | `package.json`, `package-lock.json` | ✅ |
+| SR-10 | 📦 Config tooling: `.dependency-cruiser.js`, `.gitleaks.toml`, `knip.json`, `sonar-project.properties`, `codeql.yml` | (5 new files) | ✅ |
 
 ### Fase 2 — Commits (✅ Concluída)
 
 #### Commits realizados
 
-| ID     | Item                                                                     | Commit       | Status |
-| ------ | ------------------------------------------------------------------------ | ------------ | ------ |
-| SR-11a | Commit 1/2: package.json + package-lock.json (deps)                      | `12a67af`    | ✅     |
-| SR-11b | Commit 2/2: 17+ arquivos (configs, fixes, scripts, invariants)           | `430e302`    | ✅     |
-| SR-11c | Commit separado: eslint.config.mjs (vitest rules config)                 | `dcc16b0`    | ✅     |
-| SR-11d | Commit separado: quality-check.test.ts (vitest v4 mock pattern + ASU)    | `999591d`    | ✅     |
+| ID     | Item                                                                  | Commit    | Status |
+| ------ | --------------------------------------------------------------------- | --------- | ------ |
+| SR-11a | Commit 1/2: package.json + package-lock.json (deps)                   | `12a67af` | ✅     |
+| SR-11b | Commit 2/2: 17+ arquivos (configs, fixes, scripts, invariants)        | `430e302` | ✅     |
+| SR-11c | Commit separado: eslint.config.mjs (vitest rules config)              | `dcc16b0` | ✅     |
+| SR-11d | Commit separado: quality-check.test.ts (vitest v4 mock pattern + ASU) | `999591d` | ✅     |
 
 #### Linha do tempo real
 
@@ -770,27 +770,27 @@ Resolução (resolveSessionContext)
 └── 4. User prompt → "Quer acionar pipeline?" → CI → passo 2
 ```
 
-| ID     | Item                                                                                                              | Arquivo(s)                                | Esforço      | Status                           |
+| ID | Item | Arquivo(s) | Esforço | Status |
 | ------ | ----------------------------------------------------------------------------------------------------------------- | ----------------------------------------- | ------------ | -------------------------------- | --- | --- |
-| GC-01  | ♻️ StoreBackend interface + GitBackend + FsBackend (implementado, cobertura 68%)                                  | `shared/store-backend.ts`                 | 2h           | 🔄                               |
-| GC-01a | 📋 Completar testes store-backend.ts → 100% branches (detectStoreBackend, GitStoreBackend.init, read error paths) | `shared/store-backend.test.ts`            | 1h           | ✅                               |
-| GC-02  | ♻️ Store domain logic (implementado, cobertura 97%)                                                               | `shared/store.ts`                         | 2h           | ✅                               |
-| GC-03  | ♻️ `shared/git-sha.ts` (implementado, cobertura 100% stmts, 92,5% branches)                                       | `shared/git-sha.ts`                       | 30min        | 🔄                               |
-| GC-03a | 📋 Completar testes git-sha.ts → 100% (CI env, packed-refs, execFileSync fallback)                                | `shared/git-sha.test.ts`                  | 30min        | 🔄                               |
-| GC-04  | ♻️ session-context.ts expandido com resolveSessionContext + resolveTestDataSource                                 | `shared/session-context.ts`               | 2h           | ✅                               |
-| GC-04a | 📋 session-context.ts → 100% cobertura (withBusy label, branch                                                    |                                           | '' fallback) | `shared/session-context.test.ts` | 1h  | ✅  |
-| GC-05  | ♻️ Extrair git-artifact-downloader.ts (implementado, cobertura 95,6% stmts)                                       | `shared/git-artifact-downloader.ts`       | 2h           | 🔄                               |
-| GC-05a | 📋 Completar testes git-artifact-downloader.ts → 100%                                                             | `shared/git-artifact-downloader.test.ts`  | 2h           | 🔄                               |
-| GC-05b | ♻️ ci-detect.ts extraído (implementado)                                                                           | `shared/ci-detect.ts`                     | 10min        | ✅                               |
-| GC-05c | 📋 Testes ci-detect.ts → 100%                                                                                     | `shared/ci-detect.test.ts`                | 15min        | ✅                               |
-| GC-06  | ♻️ Rewrite `report-cache.ts` usando Store (obsoleto — report-cache.ts removido)                                   | `shared/report-cache.ts`                  | 1h           | ⏳                               |
-| GC-07  | ♻️ Rewrite `metrics.ts` usando Store (Store é per-project, metrics global — precisa análise)                      | `shared/metrics.ts`                       | 1h           | ⏳                               |
-| GC-08  | 🔧 Strangler Fig: limpeza dead code (SourceResult, resolveSource)                                                 | `jira_management/commands/case17.ts`      | 2h           | ✅                               |
-| GC-08a | 📋 Atualizar mocks/testes case17 após Strangler Fig                                                               | `jira_management/commands/case17.test.ts` | 1h           | ✅                               |
-| GC-09  | 🔧 case15: consumir resolveSessionContext, remover lastJsonDir (já feito)                                         | `jira_management/commands/case15.ts`      | 1h           | ✅                               |
-| GC-10  | 📋 Testes de integração: Store + SessionContext + CiDownloader (coberto por unit)                                 | —                                         | 0h           | ✅                               |
-| GC-11  | 🔧 Limpeza pós-Strangler Fig (feito junto com GC-08)                                                              | `case17.ts`, `case17-test-utils.ts`       | 1h           | ✅                               |
-| GC-12  | 🔧 Coverage CI ≥ 90% statements (atual: 92,5%)                                                                    | `vitest.config.ts`, todos os arquivos     | —            | ✅                               |
+| GC-01 | ♻️ StoreBackend interface + GitBackend + FsBackend (implementado, cobertura 68%) | `shared/store-backend.ts` | 2h | 🔄 |
+| GC-01a | 📋 Completar testes store-backend.ts → 100% branches (detectStoreBackend, GitStoreBackend.init, read error paths) | `shared/store-backend.test.ts` | 1h | ✅ |
+| GC-02 | ♻️ Store domain logic (implementado, cobertura 97%) | `shared/store.ts` | 2h | ✅ |
+| GC-03 | ♻️ `shared/git-sha.ts` (implementado, cobertura 100% stmts, 92,5% branches) | `shared/git-sha.ts` | 30min | 🔄 |
+| GC-03a | 📋 Completar testes git-sha.ts → 100% (CI env, packed-refs, execFileSync fallback) | `shared/git-sha.test.ts` | 30min | 🔄 |
+| GC-04 | ♻️ session-context.ts expandido com resolveSessionContext + resolveTestDataSource | `shared/session-context.ts` | 2h | ✅ |
+| GC-04a | 📋 session-context.ts → 100% cobertura (withBusy label, branch | | '' fallback) | `shared/session-context.test.ts` | 1h | ✅ |
+| GC-05 | ♻️ Extrair git-artifact-downloader.ts (implementado, cobertura 95,6% stmts) | `shared/git-artifact-downloader.ts` | 2h | 🔄 |
+| GC-05a | 📋 Completar testes git-artifact-downloader.ts → 100% | `shared/git-artifact-downloader.test.ts` | 2h | 🔄 |
+| GC-05b | ♻️ ci-detect.ts extraído (implementado) | `shared/ci-detect.ts` | 10min | ✅ |
+| GC-05c | 📋 Testes ci-detect.ts → 100% | `shared/ci-detect.test.ts` | 15min | ✅ |
+| GC-06 | ♻️ Rewrite `report-cache.ts` usando Store (obsoleto — report-cache.ts removido) | `shared/report-cache.ts` | 1h | ⏳ |
+| GC-07 | ♻️ Rewrite `metrics.ts` usando Store (Store é per-project, metrics global — precisa análise) | `shared/metrics.ts` | 1h | ⏳ |
+| GC-08 | 🔧 Strangler Fig: limpeza dead code (SourceResult, resolveSource) | `jira_management/commands/case17.ts` | 2h | ✅ |
+| GC-08a | 📋 Atualizar mocks/testes case17 após Strangler Fig | `jira_management/commands/case17.test.ts` | 1h | ✅ |
+| GC-09 | 🔧 case15: consumir resolveSessionContext, remover lastJsonDir (já feito) | `jira_management/commands/case15.ts` | 1h | ✅ |
+| GC-10 | 📋 Testes de integração: Store + SessionContext + CiDownloader (coberto por unit) | — | 0h | ✅ |
+| GC-11 | 🔧 Limpeza pós-Strangler Fig (feito junto com GC-08) | `case17.ts`, `case17-test-utils.ts` | 1h | ✅ |
+| GC-12 | 🔧 Coverage CI ≥ 90% statements (atual: 92,5%) | `vitest.config.ts`, todos os arquivos | — | ✅ |
 
 ### Métricas alvo — Sprint C
 
@@ -936,14 +936,14 @@ Resolução (resolveSessionContext)
 
 ### Fase 0 — Quick Wins (minutos, risco baixo) ✅ Concluída
 
-| ID     | Issue                                                     | Severidade  | Arquivo(s)                                                                                                       | Ação                                                           | Esforço                                                                                 | Status |
+| ID | Issue | Severidade | Arquivo(s) | Ação | Esforço | Status |
 | ------ | --------------------------------------------------------- | ----------- | ---------------------------------------------------------------------------------------------------------------- | -------------------------------------------------------------- | --------------------------------------------------------------------------------------- | ------ | --- |
-| SA2-01 | TSC errors + test timeout                                 | 🔴 CRITICAL | `e2e/real-import.ts`, `git_triggers/main.test.ts`, `scripts/check-unused-exports.sh`                             | Fix TSC (3 erros `string                                       | undefined`), test timeout (beforeAll 10s→30s), unused-exports falso positivo npm notice | 10min  | ✅  |
-| SA2-02 | Non-null assertions em `ux-auditor.ts` (6 `!` em Map.get) | 🟠 HIGH     | `scripts/ux-auditor.ts`                                                                                          | Substituir `!` por `?? ''` com fallback                        | 15min                                                                                   | ✅     |
-| SA2-03 | Magic literal `3600` em `pipeline-health.ts`              | 🟢 LOW      | `git_triggers/pipeline-health.ts`                                                                                | `SECONDS_PER_HOUR = 3600` já extraído (linha 354)              | 5min                                                                                    | ✅     |
-| SA2-04 | Variáveis mortas `mockStore`/`parser`                     | 🟢 LOW      | `jira_management/commands/case17.test.ts`                                                                        | Remover declarações não usadas                                 | 5min                                                                                    | ✅     |
-| SA2-05 | Hardcoded `'e2e-token'` em 4 e2e tests                    | 🟡 MEDIUM   | `e2e/csv-import.test.ts`, `e2e/result-pipeline.test.ts`, `e2e/testexec.test.ts`, `e2e/csv-import-errors.test.ts` | Mover para `process.env.E2E_JIRA_TOKEN` com fallback CI        | 15min                                                                                   | ✅     |
-| SA2-06 | `.filter().map()` em hot paths                            | 🟡 MEDIUM   | `jira_management/result_reporter.ts`, `git_triggers/interactive-mode.ts`, `git_triggers/schedule-handler.ts`     | Substituir por `reduce()` (já resolvido em sprints anteriores) | 10min                                                                                   | ✅     |
+| SA2-01 | TSC errors + test timeout | 🔴 CRITICAL | `e2e/real-import.ts`, `git_triggers/main.test.ts`, `scripts/check-unused-exports.sh` | Fix TSC (3 erros `string                                       | undefined`), test timeout (beforeAll 10s→30s), unused-exports falso positivo npm notice | 10min | ✅ |
+| SA2-02 | Non-null assertions em `ux-auditor.ts` (6 `!` em Map.get) | 🟠 HIGH | `scripts/ux-auditor.ts` | Substituir `!` por `?? ''` com fallback | 15min | ✅ |
+| SA2-03 | Magic literal `3600` em `pipeline-health.ts` | 🟢 LOW | `git_triggers/pipeline-health.ts` | `SECONDS_PER_HOUR = 3600` já extraído (linha 354) | 5min | ✅ |
+| SA2-04 | Variáveis mortas `mockStore`/`parser` | 🟢 LOW | `jira_management/commands/case17.test.ts` | Remover declarações não usadas | 5min | ✅ |
+| SA2-05 | Hardcoded `'e2e-token'` em 4 e2e tests | 🟡 MEDIUM | `e2e/csv-import.test.ts`, `e2e/result-pipeline.test.ts`, `e2e/testexec.test.ts`, `e2e/csv-import-errors.test.ts` | Mover para `process.env.E2E_JIRA_TOKEN` com fallback CI | 15min | ✅ |
+| SA2-06 | `.filter().map()` em hot paths | 🟡 MEDIUM | `jira_management/result_reporter.ts`, `git_triggers/interactive-mode.ts`, `git_triggers/schedule-handler.ts` | Substituir por `reduce()` (já resolvido em sprints anteriores) | 10min | ✅ |
 
 ### Fase 1 — Arquitetura e Dívida Estrutural (dias, risco médio-alto)
 
@@ -2096,28 +2096,28 @@ A auditoria adversarial do PR Report seguiu este fluxo:
 
 Cada feature deve ser verificada contra TODAS as categorias abaixo:
 
-| #   | Categoria                     | O que procurar                                                                                                                    | Exemplo PR Report                                                                                                                  |
+| # | Categoria | O que procurar | Exemplo PR Report |
 | --- | ----------------------------- | --------------------------------------------------------------------------------------------------------------------------------- | ---------------------------------------------------------------------------------------------------------------------------------- | --- | ------------------------------------------- |
-| T1  | **Entry point**               | A feature tem um entry point claro? Está acessível por CLI, trigger, ou CI?                                                       | `pr-report-core.ts` main() existia mas era pr-report-entry.ts separado                                                             |
-| T2  | **Config model**              | A feature tem schema de config? O schema é validado por Zod? As interfaces espelham o schema?                                     | `feature-config.ts` não tinha skipAi/skipQuality/skipFlaky aninhados                                                               |
-| T3  | **Config accessor**           | Existe módulo de acesso a config com getters tipados e defaults sensíveis?                                                        | `feature-config.ts` existia mas sem getters para sub-features                                                                      |
-| T4  | **Runtime lê config**         | O runtime lê a config em vez de depender exclusivamente de CLI flags/env vars?                                                    | `main()` usava só flags, não lia `features.json`                                                                                   |
-| T5  | **Wizard entry**              | O wizard tem entrada para configurar esta feature? O menu do git_triggers tem?                                                    | PR Report não tinha entrada no wizard (criado PR-3f)                                                                               |
-| T6  | **Wizard detection**          | O wizard detecta automaticamente o contexto relevante para a feature?                                                             | `detector.ts` detecta framework mas não pacote CTRF instalado                                                                      |
-| T7  | **Wizard output**             | O wizard gera/configura os arquivos necessários (CI, config, actions)?                                                            | `setup/main.ts` não gerava features.json (criado PR-3b)                                                                            |
-| T8  | **Wizard prompts**            | As perguntas ao usuário são claras e completas? Cobrem sub-opções?                                                                | `context.ts` tinha `jiraIntegration` → renomeado para `qualityGate`                                                                |
-| T9  | **Reconfig handler**          | Existe handler para reconfigurar a feature via `git_triggers`? Ele lê e escreve config corretamente?                              | `pr-report-setup-handler.ts` foi criado mas sem sub-features toggles (G5)                                                          |
-| T10 | **CI integration**            | A feature está integrada nos templates CI (github-ci.ts, gitlab-ci.ts)? Os workflows gerados estão corretos?                      | Guard `                                                                                                                            |     | ` em templates gerava PR Report sempre (G1) |
-| T11 | **CI safety**                 | O CI tem safety mechanisms ativos? Fallbacks seguros?                                                                             | `qa.yml` duplicava `ci.yml` (G16) — deletado, unificado via composite action                                                       |
-| T12 | **Test coverage**             | Cada módulo novo tem testes? Testes existentes cobrem os novos caminhos?                                                          | Vários gaps sem testes (G10, AR-T3)                                                                                                |
-| T13 | **Dead code**                 | Código da feature que foi substituído mas não deletado?                                                                           | `shared/quality-check.ts` (G17), `.github/workflows/qa.yml` (G16)                                                                  |
-| T14 | **Suppression**               | `as any`, `!`, `@ts-ignore`, `eslint-disable`, `process.exit()`, catch vazio, baseline?                                           | `process.exit(0)` em main() removido                                                                                               |
-| T15 | **Bidirectional consistency** | Se A → B e B → A existem: os dois caminhos fazem a mesma coisa? Contratos idênticos?                                              | Wizard escreve features.json, runtime lê — verificar sync                                                                          |
-| T16 | **CLI interface**             | A feature tem CLI? `--help` funciona? Unknown flags são reportadas? Valores default são documentados?                             | `parseArgs()` não tinha `--help` (G9)                                                                                              |
-| T17 | **Env var dependency**        | A feature depende de env vars? Elas estão em `.env.example` e no schema?                                                          | `GITHUB_*` vars usadas sem helper (G8)                                                                                             |
-| T18 | **Error handling**            | Erros são logados com contexto? Fallbacks são explícitos e documentados?                                                          | `main()` fazia `process.exit(0)` sem log em certos caminhos                                                                        |
-| T19 | **TECHDOC**                   | A feature está documentada no TECHDOC? Tipo, interface, entry point, flags?                                                       | `feature-config.ts` e `prePushHook` ausentes (G11, G12)                                                                            |
-| T20 | **CI/Config Contract**        | O CI passa parâmetros corretos pro runtime? Runtime resolve config? Contrato Action inputs → CLI args → config key é consistente? | `action.yml` sem `project-name` → runtime usa `GITHUB_REPOSITORY` (owner/repo) → features.json key mismatch → PR Report nunca roda |
+| T1 | **Entry point** | A feature tem um entry point claro? Está acessível por CLI, trigger, ou CI? | `pr-report-core.ts` main() existia mas era pr-report-entry.ts separado |
+| T2 | **Config model** | A feature tem schema de config? O schema é validado por Zod? As interfaces espelham o schema? | `feature-config.ts` não tinha skipAi/skipQuality/skipFlaky aninhados |
+| T3 | **Config accessor** | Existe módulo de acesso a config com getters tipados e defaults sensíveis? | `feature-config.ts` existia mas sem getters para sub-features |
+| T4 | **Runtime lê config** | O runtime lê a config em vez de depender exclusivamente de CLI flags/env vars? | `main()` usava só flags, não lia `features.json` |
+| T5 | **Wizard entry** | O wizard tem entrada para configurar esta feature? O menu do git_triggers tem? | PR Report não tinha entrada no wizard (criado PR-3f) |
+| T6 | **Wizard detection** | O wizard detecta automaticamente o contexto relevante para a feature? | `detector.ts` detecta framework mas não pacote CTRF instalado |
+| T7 | **Wizard output** | O wizard gera/configura os arquivos necessários (CI, config, actions)? | `setup/main.ts` não gerava features.json (criado PR-3b) |
+| T8 | **Wizard prompts** | As perguntas ao usuário são claras e completas? Cobrem sub-opções? | `context.ts` tinha `jiraIntegration` → renomeado para `qualityGate` |
+| T9 | **Reconfig handler** | Existe handler para reconfigurar a feature via `git_triggers`? Ele lê e escreve config corretamente? | `pr-report-setup-handler.ts` foi criado mas sem sub-features toggles (G5) |
+| T10 | **CI integration** | A feature está integrada nos templates CI (github-ci.ts, gitlab-ci.ts)? Os workflows gerados estão corretos? | Guard `                                                                                                                           |     |` em templates gerava PR Report sempre (G1) |
+| T11 | **CI safety** | O CI tem safety mechanisms ativos? Fallbacks seguros? | `qa.yml` duplicava `ci.yml` (G16) — deletado, unificado via composite action |
+| T12 | **Test coverage** | Cada módulo novo tem testes? Testes existentes cobrem os novos caminhos? | Vários gaps sem testes (G10, AR-T3) |
+| T13 | **Dead code** | Código da feature que foi substituído mas não deletado? | `shared/quality-check.ts` (G17), `.github/workflows/qa.yml` (G16) |
+| T14 | **Suppression** | `as any`, `!`, `@ts-ignore`, `eslint-disable`, `process.exit()`, catch vazio, baseline? | `process.exit(0)` em main() removido |
+| T15 | **Bidirectional consistency** | Se A → B e B → A existem: os dois caminhos fazem a mesma coisa? Contratos idênticos? | Wizard escreve features.json, runtime lê — verificar sync |
+| T16 | **CLI interface** | A feature tem CLI? `--help` funciona? Unknown flags são reportadas? Valores default são documentados? | `parseArgs()` não tinha `--help` (G9) |
+| T17 | **Env var dependency** | A feature depende de env vars? Elas estão em `.env.example` e no schema? | `GITHUB_*` vars usadas sem helper (G8) |
+| T18 | **Error handling** | Erros são logados com contexto? Fallbacks são explícitos e documentados? | `main()` fazia `process.exit(0)` sem log em certos caminhos |
+| T19 | **TECHDOC** | A feature está documentada no TECHDOC? Tipo, interface, entry point, flags? | `feature-config.ts` e `prePushHook` ausentes (G11, G12) |
+| T20 | **CI/Config Contract** | O CI passa parâmetros corretos pro runtime? Runtime resolve config? Contrato Action inputs → CLI args → config key é consistente? | `action.yml` sem `project-name` → runtime usa `GITHUB_REPOSITORY` (owner/repo) → features.json key mismatch → PR Report nunca roda |
 
 ---
 
@@ -2587,11 +2587,12 @@ export function buildAllStyles(): string {
 | CSS-14 | 🔧 Verificar: 0 ocorrências de `style="` em pipeline-health.ts                                                   | `git_triggers/pipeline-health.ts` | `grep 'style="' pipeline-health.ts` = 0                                                  |
 
 **Testes a atualizar:**
-| Arquivo de teste | O que ajustar |
-| --------------------------------------------------------- | -------------------------------------------------------------------------- |
-| `git_triggers/pipeline-health.test.ts` | Asserções de layout: `style="color:var(--color-*)"` → `class="text-*"` |
-| `git_triggers/__tests__/pipeline-health-html.property.test.ts` | Invariante 6 (ausência de legados): checar por `class="` em vez de `style="color:` |
-| `git_triggers/__tests__/integration/pipeline-health.integration.test.ts` | Layout assertions (PH-01 a PH-06): ajustar HTML esperado |
+
+| Arquivo de teste                                                         | O que ajustar                                                                      |
+| ------------------------------------------------------------------------ | ---------------------------------------------------------------------------------- |
+| `git_triggers/pipeline-health.test.ts`                                   | Asserções de layout: `style="color:var(--color-*)"` → `class="text-*"`             |
+| `git_triggers/__tests__/pipeline-health-html.property.test.ts`           | Invariante 6 (ausência de legados): checar por `class="` em vez de `style="color:` |
+| `git_triggers/__tests__/integration/pipeline-health.integration.test.ts` | Layout assertions (PH-01 a PH-06): ajustar HTML esperado                           |
 
 #### Fase 2 — interactive-mode.ts (HTML cru)
 
@@ -2619,43 +2620,48 @@ export function buildAllStyles(): string {
 **Estratégia:** Priorizar por frequência de violação + impacto visual. Refatorar em batches de 3-4 arquivos, rodando `tsc --noEmit + vitest run` após cada batch.
 
 **Batch 4a — Tabelas e Headers (alta repetição, baixo risco):**
-| ID | Arquivo | style="" | Padrão | Ação |
-| ------ | -------------------------- | -------- | --------------------------------------------------------- | ----------------------------------------------- |
-| CSS-40 | `shared/defect-trend.ts` | 7 | `th style="padding:10px 12px;font-size:0.75rem;text-transform:uppercase;color:var(--color-text-secondary)"` | Substituir por `cn.tableHeader` + CSS em `buildAllStyles()` |
-| CSS-41 | `shared/ai-effectiveness.ts` | 16 | Mesmo padrão de tabela + empty-state | Substituir por `cn.tableHeader`, `cn.tableCell`, `cn.emptyState` |
-| CSS-42 | `shared/report-table.ts` | 11 | table wrapper, data table, badges | Substituir por `cn.tableWrapper`, `cn.dataTable` + componentes de badge |
+
+| ID     | Arquivo                      | style="" | Padrão                                                                                                      | Ação                                                                    |
+| ------ | ---------------------------- | -------- | ----------------------------------------------------------------------------------------------------------- | ----------------------------------------------------------------------- |
+| CSS-40 | `shared/defect-trend.ts`     | 7        | `th style="padding:10px 12px;font-size:0.75rem;text-transform:uppercase;color:var(--color-text-secondary)"` | Substituir por `cn.tableHeader` + CSS em `buildAllStyles()`             |
+| CSS-41 | `shared/ai-effectiveness.ts` | 16       | Mesmo padrão de tabela + empty-state                                                                        | Substituir por `cn.tableHeader`, `cn.tableCell`, `cn.emptyState`        |
+| CSS-42 | `shared/report-table.ts`     | 11       | table wrapper, data table, badges                                                                           | Substituir por `cn.tableWrapper`, `cn.dataTable` + componentes de badge |
 
 **Batch 4b — Cards e Layout Flex (médio risco):**
-| ID | Arquivo | style="" | Padrão | Ação |
-| ------ | --------------------------------- | -------- | ------------------------------------- | ---------------------------------------------- |
-| CSS-43 | `shared/generate-coverage-gap-html.ts` | 19 | Cards em grid, tree toggle, quality gate | Substituir por `cn.coverageCard`, `cn.grid2col`, `cn.treeNode` |
-| CSS-44 | `shared/report-html.ts` | 9 | Layout flex, botão flakiness, sidebar | Substituir por `cn.flexRow`, `cn.flakinessBtn`, `cn.sidebar` |
-| CSS-45 | `shared/report-diff.ts` | 4 | Flex layout, truncated text, label | Substituir por `cn.flexGap`, `cn.truncated`, `cn.label` |
+
+| ID     | Arquivo                                | style="" | Padrão                                   | Ação                                                           |
+| ------ | -------------------------------------- | -------- | ---------------------------------------- | -------------------------------------------------------------- |
+| CSS-43 | `shared/generate-coverage-gap-html.ts` | 19       | Cards em grid, tree toggle, quality gate | Substituir por `cn.coverageCard`, `cn.grid2col`, `cn.treeNode` |
+| CSS-44 | `shared/report-html.ts`                | 9        | Layout flex, botão flakiness, sidebar    | Substituir por `cn.flexRow`, `cn.flakinessBtn`, `cn.sidebar`   |
+| CSS-45 | `shared/report-diff.ts`                | 4        | Flex layout, truncated text, label       | Substituir por `cn.flexGap`, `cn.truncated`, `cn.label`        |
 
 **Batch 4c — Empty States e Textos (baixo risco):**
-| ID | Arquivo | style="" | Padrão | Ação |
-| ------ | ----------------------------- | -------- | ----------------------------------------------- | ------------------------------------------- |
-| CSS-46 | `shared/incident-report.ts` | 8 | Empty state + eventos layout | Substituir por `cn.emptyState`, `cn.eventCard` |
-| CSS-47 | `shared/impact-alert.ts` | 5 | Layout + empty state | Substituir por `cn.emptyState`, `cn.alertLine` |
-| CSS-48 | `shared/developer-profile.ts` | 3 | Empty state + heading | Substituir por `cn.emptyState`, `cn.sectionHeading` |
-| CSS-49 | `shared/cross-squad-benchmark.ts` | 2 | Empty state | Substituir por `cn.emptyState` |
-| CSS-50 | `shared/backlog-health.ts` | 4 | Table/th styling | Substituir por `cn.tableCell`, `cn.tableHeader` |
-| CSS-51 | `shared/pipeline-cost.ts` | 1 | Empty state | Substituir por `cn.emptyState` |
-| CSS-52 | `shared/requirement-score.ts` | 1 | Empty state | Substituir por `cn.emptyState` |
-| CSS-53 | `shared/silent-regression.ts` | 1 | Empty state | Substituir por `cn.emptyState` |
-| CSS-54 | `shared/traceability-matrix.ts` | 2 | Health-bar width dinâmico + empty state | Substituir width dinâmico por `cn.healthFill` + CSS variável |
-| CSS-55 | `shared/report-utils.ts` | 1 | `#6b7280` hardcoded — ÚNICO `style="color:#6b7280"` no codebase | Substituir por `cn.mutedText` |
+
+| ID     | Arquivo                           | style="" | Padrão                                                          | Ação                                                         |
+| ------ | --------------------------------- | -------- | --------------------------------------------------------------- | ------------------------------------------------------------ |
+| CSS-46 | `shared/incident-report.ts`       | 8        | Empty state + eventos layout                                    | Substituir por `cn.emptyState`, `cn.eventCard`               |
+| CSS-47 | `shared/impact-alert.ts`          | 5        | Layout + empty state                                            | Substituir por `cn.emptyState`, `cn.alertLine`               |
+| CSS-48 | `shared/developer-profile.ts`     | 3        | Empty state + heading                                           | Substituir por `cn.emptyState`, `cn.sectionHeading`          |
+| CSS-49 | `shared/cross-squad-benchmark.ts` | 2        | Empty state                                                     | Substituir por `cn.emptyState`                               |
+| CSS-50 | `shared/backlog-health.ts`        | 4        | Table/th styling                                                | Substituir por `cn.tableCell`, `cn.tableHeader`              |
+| CSS-51 | `shared/pipeline-cost.ts`         | 1        | Empty state                                                     | Substituir por `cn.emptyState`                               |
+| CSS-52 | `shared/requirement-score.ts`     | 1        | Empty state                                                     | Substituir por `cn.emptyState`                               |
+| CSS-53 | `shared/silent-regression.ts`     | 1        | Empty state                                                     | Substituir por `cn.emptyState`                               |
+| CSS-54 | `shared/traceability-matrix.ts`   | 2        | Health-bar width dinâmico + empty state                         | Substituir width dinâmico por `cn.healthFill` + CSS variável |
+| CSS-55 | `shared/report-utils.ts`          | 1        | `#6b7280` hardcoded — ÚNICO `style="color:#6b7280"` no codebase | Substituir por `cn.mutedText`                                |
 
 **Batch 4d — Legend Dots (dinâmico via tokens):**
-| ID | Arquivo | style="" | Padrão | Ação |
-| ------ | -------------------------- | -------- | ----------------------------------- | ------------------------------------------- |
-| CSS-56 | `shared/report-chart.ts` | 3 | `style="background:${tokens.color.chart.pass/fail/skip}"` | Substituir por `cn.dotPass`, `cn.dotFail`, `cn.dotSkip` + CSS em `buildAllStyles()` |
+
+| ID     | Arquivo                  | style="" | Padrão                                                    | Ação                                                                                |
+| ------ | ------------------------ | -------- | --------------------------------------------------------- | ----------------------------------------------------------------------------------- |
+| CSS-56 | `shared/report-chart.ts` | 3        | `style="background:${tokens.color.chart.pass/fail/skip}"` | Substituir por `cn.dotPass`, `cn.dotFail`, `cn.dotSkip` + CSS em `buildAllStyles()` |
 
 **Testes para Fase 4:**
-| ID | Item | Arquivo(s) |
-| ------ | ---------------------------------------------------------------------------------------- | --------------------------------------------- |
+
+| ID     | Item                                                                            | Arquivo(s)                 |
+| ------ | ------------------------------------------------------------------------------- | -------------------------- |
 | CSS-57 | 📋 Verificar que cada arquivo refatorado tem 0 `style="` restantes (via `grep`) | Todos os arquivos do batch |
-| CSS-58 | 📋 Rodar `vitest run shared/__tests__/` após cada batch — 0 regressões | `shared/__tests__/*` |
+| CSS-58 | 📋 Rodar `vitest run shared/__tests__/` após cada batch — 0 regressões          | `shared/__tests__/*`       |
 
 #### Fase 5 — shared/primitives/ (6 componentes, 41 inline styles)
 

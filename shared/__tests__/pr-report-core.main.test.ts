@@ -103,7 +103,8 @@ describe('Pr Report Core.Main', () => {
     });
 
     describe('Main', () => {
-        it('returns early when CTRF file does not exist', async () => {expect.hasAssertions();
+        it('returns early when CTRF file does not exist', async () => {
+            expect.hasAssertions();
 
             vi.mocked(fs.existsSync).mockReturnValue(false);
             await main();
@@ -111,7 +112,8 @@ describe('Pr Report Core.Main', () => {
             expect(mockPRComment.postPrComment).not.toHaveBeenCalled();
         });
 
-        it('returns early when CTRF parsing fails', async () => {expect.hasAssertions();
+        it('returns early when CTRF parsing fails', async () => {
+            expect.hasAssertions();
 
             mockParseResult.mockReturnValue({ error: 'Invalid JSON' });
             await main();
@@ -119,7 +121,8 @@ describe('Pr Report Core.Main', () => {
             expect(mockPRComment.postPrComment).not.toHaveBeenCalled();
         });
 
-        it('returns early when feature is disabled in config', async () => {expect.hasAssertions();
+        it('returns early when feature is disabled in config', async () => {
+            expect.hasAssertions();
 
             mockGetConfig.mockReturnValue({
                 enabled: false,
@@ -133,7 +136,8 @@ describe('Pr Report Core.Main', () => {
             expect(mockPRComment.postPrComment).not.toHaveBeenCalled();
         });
 
-        it('calls generatePrReport and posts comment on success', async () => {expect.hasAssertions();
+        it('calls generatePrReport and posts comment on success', async () => {
+            expect.hasAssertions();
 
             mockParseResult.mockReturnValue({
                 tests: [{ title: 'test-1', state: 'passed', duration: 100 }],
@@ -153,7 +157,8 @@ describe('Pr Report Core.Main', () => {
             expect(mockPRComment.postPrComment).toHaveBeenCalledWith(expect.any(String));
         });
 
-        it('handles no comment URL gracefully', async () => {expect.hasAssertions();
+        it('handles no comment URL gracefully', async () => {
+            expect.hasAssertions();
 
             mockParseResult.mockReturnValue({
                 tests: [{ title: 'test-1', state: 'passed', duration: 100 }],
@@ -171,5 +176,4 @@ describe('Pr Report Core.Main', () => {
             expect(mockPRComment.postPrComment).toHaveBeenCalledWith(expect.any(String));
         });
     });
-
 });

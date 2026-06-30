@@ -153,11 +153,14 @@ function levenshtein(a: string, b: string): number {
     for (let i = 1; i <= b.length; i++) {
         for (let j = 1; j <= cols; j++) {
             const cost = a[j - 1] === b[i - 1] ? 0 : 1;
-            matrix.set(cell(i, j), Math.min(
-                (matrix.get(cell(i - 1, j)) ?? 0) + 1,
-                (matrix.get(cell(i, j - 1)) ?? 0) + 1,
-                (matrix.get(cell(i - 1, j - 1)) ?? 0) + cost,
-            ));
+            matrix.set(
+                cell(i, j),
+                Math.min(
+                    (matrix.get(cell(i - 1, j)) ?? 0) + 1,
+                    (matrix.get(cell(i, j - 1)) ?? 0) + 1,
+                    (matrix.get(cell(i - 1, j - 1)) ?? 0) + cost,
+                ),
+            );
         }
     }
     return matrix.get(cell(b.length, a.length)) ?? 0;

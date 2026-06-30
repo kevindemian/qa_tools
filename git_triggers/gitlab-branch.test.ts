@@ -35,7 +35,8 @@ describe('Gitlab Branch', () => {
     });
 
     describe('GlGetBranch', () => {
-        it('returns { name } on success', async () => {expect.hasAssertions();
+        it('returns { name } on success', async () => {
+            expect.hasAssertions();
 
             vi.mocked(apiGet).mockResolvedValue({ name: 'main' });
             const result = await glGetBranch(mockClient, 'owner', 'repo', 'main');
@@ -43,7 +44,8 @@ describe('Gitlab Branch', () => {
             expect(result).toStrictEqual({ name: 'main' });
         });
 
-        it('returns null when apiGet returns null', async () => {expect.hasAssertions();
+        it('returns null when apiGet returns null', async () => {
+            expect.hasAssertions();
 
             vi.mocked(apiGet).mockResolvedValue(null);
             const result = await glGetBranch(mockClient, 'owner', 'repo', 'main');
@@ -51,21 +53,27 @@ describe('Gitlab Branch', () => {
             expect(result).toBeNull();
         });
 
-        it('calls apiGet with correct URL encoding branch name', async () => {expect.hasAssertions();
+        it('calls apiGet with correct URL encoding branch name', async () => {
+            expect.hasAssertions();
 
             vi.mocked(apiGet).mockResolvedValue(null);
             await glGetBranch(mockClient, 'my-group', 'my-project', 'feature/x');
 
             expect(projectPath).toHaveBeenCalledWith('my-group', 'my-project');
-            expect(apiGet).toHaveBeenCalledWith(mockClient, expect.stringContaining('/repository/branches/feature%2Fx'), {
-                operation: 'buscar branch',
-                returnNull: true,
-            });
+            expect(apiGet).toHaveBeenCalledWith(
+                mockClient,
+                expect.stringContaining('/repository/branches/feature%2Fx'),
+                {
+                    operation: 'buscar branch',
+                    returnNull: true,
+                },
+            );
         });
     });
 
     describe('GlGetDiff', () => {
-        it('returns formatted diff string', async () => {expect.hasAssertions();
+        it('returns formatted diff string', async () => {
+            expect.hasAssertions();
 
             vi.mocked(apiGet).mockResolvedValue({
                 diffs: [{ diff: '+console.log("hi")', new_path: 'src/main.ts' }],
@@ -76,7 +84,8 @@ describe('Gitlab Branch', () => {
             expect(result).toContain('console.log');
         });
 
-        it('returns empty string when no diffs', async () => {expect.hasAssertions();
+        it('returns empty string when no diffs', async () => {
+            expect.hasAssertions();
 
             vi.mocked(apiGet).mockResolvedValue({ diffs: [] });
             const result = await glGetDiff(mockClient, 'owner', 'repo', 'feature', 'main');
@@ -84,7 +93,8 @@ describe('Gitlab Branch', () => {
             expect(result).toBe('');
         });
 
-        it('returns empty string when apiGet returns null', async () => {expect.hasAssertions();
+        it('returns empty string when apiGet returns null', async () => {
+            expect.hasAssertions();
 
             vi.mocked(apiGet).mockResolvedValue(null);
             const result = await glGetDiff(mockClient, 'owner', 'repo', 'feature', 'main');
@@ -92,7 +102,8 @@ describe('Gitlab Branch', () => {
             expect(result).toBe('');
         });
 
-        it('calls apiGet with compare endpoint and params', async () => {expect.hasAssertions();
+        it('calls apiGet with compare endpoint and params', async () => {
+            expect.hasAssertions();
 
             vi.mocked(apiGet).mockResolvedValue(null);
             await glGetDiff(mockClient, 'owner', 'repo', 'source', 'target');
@@ -104,5 +115,4 @@ describe('Gitlab Branch', () => {
             });
         });
     });
-
 });

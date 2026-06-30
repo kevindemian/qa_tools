@@ -258,7 +258,12 @@ function _renderCategoriesSection(health: PipelineHealth): string {
         flaky: 'var(--color-info)',
         unknown: 'var(--color-text-muted)',
     };
-    const catEmoji = new Map([['infrastructure', '🏗️'], ['code', '🧪'], ['flaky', '🔄'], ['unknown', '❓']]);
+    const catEmoji = new Map([
+        ['infrastructure', '🏗️'],
+        ['code', '🧪'],
+        ['flaky', '🔄'],
+        ['unknown', '❓'],
+    ]);
     const catColorEntries = Object.entries(catColors);
     let html = '<div style="display:flex;flex-wrap:wrap;gap:0.75rem">';
     for (const key of catKeys) {

@@ -5,8 +5,18 @@ import Config from './config.js';
 import { formatDateISO } from './date-utils.js';
 
 /** Numeric severity: DEBUG < INFO < WARN < ERROR. */
-const LEVELS = new Map([['DEBUG', 0], ['INFO', 1], ['WARN', 2], ['ERROR', 3]]);
-const PREFIXES = new Map([['DEBUG', '\u00b7'], ['INFO', 'i'], ['WARN', '!'], ['ERROR', 'ERR']]);
+const LEVELS = new Map([
+    ['DEBUG', 0],
+    ['INFO', 1],
+    ['WARN', 2],
+    ['ERROR', 3],
+]);
+const PREFIXES = new Map([
+    ['DEBUG', '\u00b7'],
+    ['INFO', 'i'],
+    ['WARN', '!'],
+    ['ERROR', 'ERR'],
+]);
 const COLOR_FNS = new Map<string, (s: string) => string>([
     ['DEBUG', chalk.cyan],
     ['INFO', chalk.green],

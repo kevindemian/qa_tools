@@ -3,14 +3,13 @@ import { nonNull } from './test-utils.js';
 
 describe('CONFIG_SCHEMA', () => {
     it('has at least 86 entries', () => {
-        
         expect(CONFIG_SCHEMA.length).toBeGreaterThanOrEqual(86);
     });
 
-    it('every entry has key, envVar, type, description', () => {expect.hasAssertions();
+    it('every entry has key, envVar, type, description', () => {
+        expect.hasAssertions();
 
         for (const f of CONFIG_SCHEMA) {
-            
             expect(f.key).toBeTruthy();
             expect(f.envVar).toBeTruthy();
             expect(['string', 'boolean', 'number']).toContain(f.type);
@@ -18,11 +17,12 @@ describe('CONFIG_SCHEMA', () => {
         }
     });
 
-    it('every entry with defaultVal matches its type', () => {expect.hasAssertions();
+    it('every entry with defaultVal matches its type', () => {
+        expect.hasAssertions();
 
         for (const f of CONFIG_SCHEMA) {
             if (f.defaultVal === undefined) continue;
-            
+
             expect(typeof f.defaultVal).toBe(f.type);
         }
     });
@@ -92,28 +92,31 @@ describe('CONFIG_SCHEMA', () => {
         expect(f.envVar).toBe('OPENCODE_DB_TIMEOUT_MS');
     });
 
-    it('entries with allowedValues have matching type', () => {expect.hasAssertions();
+    it('entries with allowedValues have matching type', () => {
+        expect.hasAssertions();
 
         for (const f of CONFIG_SCHEMA) {
             if (!f.allowedValues) continue;
-            
+
             expect(f.type).toBe('string');
             expect(Array.isArray(f.allowedValues)).toBeTruthy();
             expect(f.allowedValues.length).toBeGreaterThanOrEqual(2);
         }
     });
 
-    it('entries with category are properly grouped', () => {expect.hasAssertions();
+    it('entries with category are properly grouped', () => {
+        expect.hasAssertions();
 
         for (const f of CONFIG_SCHEMA) {
             if (!f.category) continue;
-            
+
             expect(typeof f.category).toBe('string');
             expect(f.category.length).toBeGreaterThan(0);
         }
     });
 
-    it('all keys defined in alphabetical order within groups', () => {expect.hasAssertions();
+    it('all keys defined in alphabetical order within groups', () => {
+        expect.hasAssertions();
 
         const firstGroupKeys = [
             'jiraBaseUrl',
@@ -127,7 +130,6 @@ describe('CONFIG_SCHEMA', () => {
             'jiraProject',
         ];
         for (const k of firstGroupKeys) {
-            
             expect(CONFIG_SCHEMA.find((f) => f.key === k)).toBeTruthy();
         }
     });

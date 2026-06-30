@@ -433,5 +433,4 @@ describe('Metrics', () => {
             expect(loaded.runs).toHaveLength(1);
         });
     });
-
 });

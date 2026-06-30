@@ -10,15 +10,12 @@ import {
 } from './temp-dir.js';
 import { rootLogger } from './logger.js';
 
-vi.mock(
-    'fs',
-    (): Pick<typeof fs, 'mkdirSync' | 'writeFileSync' | 'existsSync' | 'rmSync'> => ({
-        mkdirSync: vi.fn<(...args: Parameters<typeof fs.mkdirSync>) => ReturnType<typeof fs.mkdirSync>>(),
-        writeFileSync: vi.fn<(...args: Parameters<typeof fs.writeFileSync>) => ReturnType<typeof fs.writeFileSync>>(),
-        existsSync: vi.fn<(...args: Parameters<typeof fs.existsSync>) => ReturnType<typeof fs.existsSync>>(() => false),
-        rmSync: vi.fn<(...args: Parameters<typeof fs.rmSync>) => ReturnType<typeof fs.rmSync>>(),
-    }),
-);
+vi.mock('fs', (): Pick<typeof fs, 'mkdirSync' | 'writeFileSync' | 'existsSync' | 'rmSync'> => ({
+    mkdirSync: vi.fn<(...args: Parameters<typeof fs.mkdirSync>) => ReturnType<typeof fs.mkdirSync>>(),
+    writeFileSync: vi.fn<(...args: Parameters<typeof fs.writeFileSync>) => ReturnType<typeof fs.writeFileSync>>(),
+    existsSync: vi.fn<(...args: Parameters<typeof fs.existsSync>) => ReturnType<typeof fs.existsSync>>(() => false),
+    rmSync: vi.fn<(...args: Parameters<typeof fs.rmSync>) => ReturnType<typeof fs.rmSync>>(),
+}));
 
 describe('Temp Dir', () => {
     beforeEach(() => {
@@ -181,13 +178,16 @@ describe('Temp Dir', () => {
             expect(handlers).toContain('exit');
         });
 
-        it('registers cleanupTempDirs as the callback handler', () => {expect.hasAssertions();
+        it('registers cleanupTempDirs as the callback handler', () => {
+            expect.hasAssertions();
 
             const registered: Array<{ event: string | symbol; fn: (...args: unknown[]) => void }> = [];
-            vi.spyOn(process, 'on').mockImplementation((event: string | symbol, listener: (...args: unknown[]) => void) => {
-                registered.push({ event, fn: listener });
-                return process;
-            });
+            vi.spyOn(process, 'on').mockImplementation(
+                (event: string | symbol, listener: (...args: unknown[]) => void) => {
+                    registered.push({ event, fn: listener });
+                    return process;
+                },
+            );
             registerCleanup();
 
             expect(registered.length).toBeGreaterThanOrEqual(2);
@@ -247,5 +247,4 @@ describe('Temp Dir', () => {
             expect(warnSpy).not.toHaveBeenCalled();
         });
     });
-
 });

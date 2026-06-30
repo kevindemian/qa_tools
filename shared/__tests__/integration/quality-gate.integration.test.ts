@@ -46,7 +46,8 @@ describe('Integration: Quality Gate', () => {
     });
 
     describe('FT-10a: runQualityGate without data', () => {
-        it('returns fail when no metrics data exists', async () => {expect.hasAssertions();
+        it('returns fail when no metrics data exists', async () => {
+            expect.hasAssertions();
 
             const { mockLoadMetrics, runQualityGate } = await loadMockedModules();
             mockLoadMetrics.mockReturnValue({ runs: [] });
@@ -63,7 +64,8 @@ describe('Integration: Quality Gate', () => {
     });
 
     describe('FT-10b: runQualityGate with good data', () => {
-        it('returns pass when metrics are above all thresholds', async () => {expect.hasAssertions();
+        it('returns pass when metrics are above all thresholds', async () => {
+            expect.hasAssertions();
 
             const { mockLoadMetrics, mockCalcFlakiness, runQualityGate } = await loadMockedModules();
 
@@ -105,7 +107,8 @@ describe('Integration: Quality Gate', () => {
     });
 
     describe('FT-10c: formatQualityGateJson', () => {
-        it('produces valid JSON', async () => {expect.hasAssertions();
+        it('produces valid JSON', async () => {
+            expect.hasAssertions();
 
             const { formatQualityGateJson } = await loadMockedModules();
             const result = { overall: 'pass' as const, checks: [], score: 85 };
@@ -116,7 +119,8 @@ describe('Integration: Quality Gate', () => {
     });
 
     describe('FT-10d: formatQualityGateText', () => {
-        it('produces human-readable output', async () => {expect.hasAssertions();
+        it('produces human-readable output', async () => {
+            expect.hasAssertions();
 
             const { formatQualityGateText } = await loadMockedModules();
             const result = {

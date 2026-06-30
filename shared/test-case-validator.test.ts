@@ -22,8 +22,23 @@ function makeCtx(input: string): ValidationContext {
 
 describe('TestCaseValidator — createTestCaseValidator', () => {
     const EXPECTED_INVARIANT_IDS = [
-        'T-01', 'T-02', 'T-03', 'T-04', 'T-05', 'T-06', 'T-07', 'T-08', 'T-09', 'T-10', 'T-11', 'T-12',
-        'I-01', 'I-02', 'I-03', 'I-04', 'I-05',
+        'T-01',
+        'T-02',
+        'T-03',
+        'T-04',
+        'T-05',
+        'T-06',
+        'T-07',
+        'T-08',
+        'T-09',
+        'T-10',
+        'T-11',
+        'T-12',
+        'I-01',
+        'I-02',
+        'I-03',
+        'I-04',
+        'I-05',
     ];
 
     it('creates validator with all invariants registered', () => {

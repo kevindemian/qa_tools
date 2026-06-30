@@ -9,7 +9,8 @@ describe('Coverage', () => {
     });
 
     describe('AnalyzeCoverage', () => {
-        it('returns coverage result with some mapped and some unmapped', async () => {expect.hasAssertions();
+        it('returns coverage result with some mapped and some unmapped', async () => {
+            expect.hasAssertions();
 
             mockJiraResource.searchJiraIssues.mockResolvedValueOnce({
                 issues: [
@@ -33,7 +34,8 @@ describe('Coverage', () => {
             expect(result.coveragePct).toBe(50);
         });
 
-        it('handles empty response', async () => {expect.hasAssertions();
+        it('handles empty response', async () => {
+            expect.hasAssertions();
 
             mockJiraResource.searchJiraIssues.mockResolvedValueOnce({ issues: [], total: 0 });
 
@@ -45,7 +47,8 @@ describe('Coverage', () => {
             expect(result.unmappedSteps).toStrictEqual([]);
         });
 
-        it('handles network error and returns zero coverage', async () => {expect.hasAssertions();
+        it('handles network error and returns zero coverage', async () => {
+            expect.hasAssertions();
 
             mockJiraResource.searchJiraIssues.mockRejectedValueOnce(new Error('Network error'));
 
@@ -55,7 +58,8 @@ describe('Coverage', () => {
             expect(result.coveragePct).toBe(0);
         });
 
-        it('groups gaps by epic when epic field is present', async () => {expect.hasAssertions();
+        it('groups gaps by epic when epic field is present', async () => {
+            expect.hasAssertions();
 
             const mockEpic1 = { key: 'EPIC-1' };
             const mockEpic2 = { key: 'EPIC-2' };
@@ -75,7 +79,8 @@ describe('Coverage', () => {
             expect(result.gapsByEpic['EPIC-2']).toStrictEqual(['TEST-2', 'TEST-3']);
         });
 
-        it('handles epic as object without key property', async () => {expect.hasAssertions();
+        it('handles epic as object without key property', async () => {
+            expect.hasAssertions();
 
             mockJiraResource.searchJiraIssues.mockResolvedValueOnce({
                 issues: [
@@ -89,5 +94,4 @@ describe('Coverage', () => {
             expect(result.gapsByEpic).toStrictEqual({});
         });
     });
-
 });

@@ -324,7 +324,10 @@ describe('Model-adapter', () => {
             expect(adapter.name).toBe('custom');
             expect(adapter.parseListResponse({ data: [{ id: 'test' }] })).toStrictEqual([{ id: 'test' }]);
             expect(adapter.parseListResponse({ data: [{ id: 'test', extra: true }] })).toStrictEqual([{ id: 'test' }]);
-            expect(adapter.parseListResponse({ data: [{ id: 'a' }, { id: 'b' }] })).toStrictEqual([{ id: 'a' }, { id: 'b' }]);
+            expect(adapter.parseListResponse({ data: [{ id: 'a' }, { id: 'b' }] })).toStrictEqual([
+                { id: 'a' },
+                { id: 'b' },
+            ]);
             expect(adapter.parseListResponse({ data: 'invalid' })).toStrictEqual([]);
             expect(adapter.parseListResponse({})).toStrictEqual([]);
             expect(adapter.parseListResponse(null)).toStrictEqual([]);

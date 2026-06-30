@@ -95,17 +95,29 @@ export class QualityMetricsCollector {
 
     recordLayerAttempt(layer: Layer): void {
         switch (layer) {
-            case 'layer1': this._layerAttempts.layer1++; break;
-            case 'layer2': this._layerAttempts.layer2++; break;
-            case 'layer3': this._layerAttempts.layer3++; break;
+            case 'layer1':
+                this._layerAttempts.layer1++;
+                break;
+            case 'layer2':
+                this._layerAttempts.layer2++;
+                break;
+            case 'layer3':
+                this._layerAttempts.layer3++;
+                break;
         }
     }
 
     recordLayerPass(layer: Layer): void {
         switch (layer) {
-            case 'layer1': this._layerPasses.layer1++; break;
-            case 'layer2': this._layerPasses.layer2++; break;
-            case 'layer3': this._layerPasses.layer3++; break;
+            case 'layer1':
+                this._layerPasses.layer1++;
+                break;
+            case 'layer2':
+                this._layerPasses.layer2++;
+                break;
+            case 'layer3':
+                this._layerPasses.layer3++;
+                break;
         }
     }
 
@@ -128,9 +140,18 @@ export class QualityMetricsCollector {
         let attempts: number;
         let passes: number;
         switch (layer) {
-            case 'layer1': attempts = this._layerAttempts.layer1; passes = this._layerPasses.layer1; break;
-            case 'layer2': attempts = this._layerAttempts.layer2; passes = this._layerPasses.layer2; break;
-            case 'layer3': attempts = this._layerAttempts.layer3; passes = this._layerPasses.layer3; break;
+            case 'layer1':
+                attempts = this._layerAttempts.layer1;
+                passes = this._layerPasses.layer1;
+                break;
+            case 'layer2':
+                attempts = this._layerAttempts.layer2;
+                passes = this._layerPasses.layer2;
+                break;
+            case 'layer3':
+                attempts = this._layerAttempts.layer3;
+                passes = this._layerPasses.layer3;
+                break;
         }
         if (attempts === 0) return 1;
         return Math.min(passes / attempts, MAX_PASS_RATE);
@@ -148,7 +169,8 @@ export class QualityMetricsCollector {
             );
             const ratios = baselineSnapshots
                 .map((s, i) => {
-                    const total = i < baselineTotals.length ? ((Reflect.get(baselineTotals, i) as number | undefined) ?? 0) : 0;
+                    const total =
+                        i < baselineTotals.length ? ((Reflect.get(baselineTotals, i) as number | undefined) ?? 0) : 0;
                     const entries = Object.entries(s.invariantFireCount);
                     const entry = entries.find(([k]) => k === invariantId);
                     const rate = entry?.[1] ?? 0;

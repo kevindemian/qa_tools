@@ -51,20 +51,32 @@ describe('Integration: Impact Alert (FT-30)', () => {
     });
 
     describe('FT-30a: generateImpactAlertHtml with alerts', () => {
-        it('produces complete HTML with alert cards and summary', async () => {expect.hasAssertions();
+        it('produces complete HTML with alert cards and summary', async () => {
+            expect.hasAssertions();
 
             const { generateImpactAlertHtml } = await import('../../impact-alert.js');
             const result = makeResult();
             const html = generateImpactAlertHtml(result, 'Alert Report');
 
-            const parts = ['<!DOCTYPE html>', 'Alert Report', 'Low pass rate in low-coverage area', 'Elevated failure rate', 'Total Alerts', 'Critical', 'Warning', 'qa-report-theme', 'data-component="card"'];
+            const parts = [
+                '<!DOCTYPE html>',
+                'Alert Report',
+                'Low pass rate in low-coverage area',
+                'Elevated failure rate',
+                'Total Alerts',
+                'Critical',
+                'Warning',
+                'qa-report-theme',
+                'data-component="card"',
+            ];
 
-            expect(parts.every(p => html.includes(p))).toBeTruthy();
+            expect(parts.every((p) => html.includes(p))).toBeTruthy();
         });
     });
 
     describe('FT-30b: no alerts', () => {
-        it('shows no-alerts message', async () => {expect.hasAssertions();
+        it('shows no-alerts message', async () => {
+            expect.hasAssertions();
 
             const { generateImpactAlertHtml } = await import('../../impact-alert.js');
             const result = makeResult({ alerts: [], criticalCount: 0, warningCount: 0, infoCount: 0 });
@@ -76,7 +88,8 @@ describe('Integration: Impact Alert (FT-30)', () => {
     });
 
     describe('FT-30d: custom title', () => {
-        it('uses custom title in HTML', async () => {expect.hasAssertions();
+        it('uses custom title in HTML', async () => {
+            expect.hasAssertions();
 
             const { generateImpactAlertHtml } = await import('../../impact-alert.js');
             const result = makeResult({ alerts: [], criticalCount: 0, warningCount: 0, infoCount: 0 });

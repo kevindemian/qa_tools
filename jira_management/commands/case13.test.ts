@@ -21,12 +21,12 @@ describe('Case13', () => {
             expect(typeof case13.handler).toBe('function');
         });
 
-        it('executes without error with basic context', async () => {expect.hasAssertions();
+        it('executes without error with basic context', async () => {
+            expect.hasAssertions();
 
             const result = await case13.handler(mockContext);
 
             expect(result === undefined || typeof result === 'boolean').toBeTruthy();
         });
     });
-
 });

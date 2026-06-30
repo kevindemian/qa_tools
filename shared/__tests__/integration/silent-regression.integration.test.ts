@@ -16,7 +16,8 @@ describe('Integration: Silent Regression (FT-22)', () => {
     });
 
     describe('FT-22a: detectSilentRegression with data', () => {
-        it('detects regressions above threshold', async () => {expect.hasAssertions();
+        it('detects regressions above threshold', async () => {
+            expect.hasAssertions();
 
             const { detectSilentRegression } = await import('../../silent-regression.js');
             const histories: Record<string, number[]> = {
@@ -30,7 +31,8 @@ describe('Integration: Silent Regression (FT-22)', () => {
             expect(result.regressions[0]?.title).toBe('auth test');
         });
 
-        it('returns empty when all within range', async () => {expect.hasAssertions();
+        it('returns empty when all within range', async () => {
+            expect.hasAssertions();
 
             const { detectSilentRegression } = await import('../../silent-regression.js');
             const result = detectSilentRegression({ 'stable test': [1.0, 1.1, 0.9, 1.0, 1.05] });
@@ -40,7 +42,8 @@ describe('Integration: Silent Regression (FT-22)', () => {
     });
 
     describe('FT-22b: empty and edge input', () => {
-        it('returns empty for empty object', async () => {expect.hasAssertions();
+        it('returns empty for empty object', async () => {
+            expect.hasAssertions();
 
             const { detectSilentRegression } = await import('../../silent-regression.js');
             const result = detectSilentRegression({});
@@ -49,7 +52,8 @@ describe('Integration: Silent Regression (FT-22)', () => {
             expect(result.totalTests).toBe(0);
         });
 
-        it('skips entries with fewer than 2 durations', async () => {expect.hasAssertions();
+        it('skips entries with fewer than 2 durations', async () => {
+            expect.hasAssertions();
 
             const { detectSilentRegression } = await import('../../silent-regression.js');
             const result = detectSilentRegression({ single: [1.0], empty: [] });
@@ -59,7 +63,8 @@ describe('Integration: Silent Regression (FT-22)', () => {
     });
 
     describe('FT-22c: generateSilentRegressionHtml', () => {
-        it('produces complete HTML with regression data', async () => {expect.hasAssertions();
+        it('produces complete HTML with regression data', async () => {
+            expect.hasAssertions();
 
             const { detectSilentRegression, generateSilentRegressionHtml } = await import('../../silent-regression.js');
             const result = detectSilentRegression({ 'auth test': [1.0, 1.1, 0.9, 1.0, 3.5] });
@@ -71,7 +76,8 @@ describe('Integration: Silent Regression (FT-22)', () => {
             expect(html).toContain('data-component="table-wrapper"');
         });
 
-        it('shows no-regressions message when empty', async () => {expect.hasAssertions();
+        it('shows no-regressions message when empty', async () => {
+            expect.hasAssertions();
 
             const { generateSilentRegressionHtml } = await import('../../silent-regression.js');
             const emptyResult = {
@@ -87,7 +93,8 @@ describe('Integration: Silent Regression (FT-22)', () => {
     });
 
     describe('FT-22d: null handling', () => {
-        it('returns error page when result is null', async () => {expect.hasAssertions();
+        it('returns error page when result is null', async () => {
+            expect.hasAssertions();
 
             const { generateSilentRegressionHtml } = await import('../../silent-regression.js');
             const html = generateSilentRegressionHtml(null);
@@ -95,7 +102,8 @@ describe('Integration: Silent Regression (FT-22)', () => {
             expect(html).toContain('Error generating silent regression report');
         });
 
-        it('returns error page when result is undefined', async () => {expect.hasAssertions();
+        it('returns error page when result is undefined', async () => {
+            expect.hasAssertions();
 
             const { generateSilentRegressionHtml } = await import('../../silent-regression.js');
             const html = generateSilentRegressionHtml(undefined);
@@ -105,7 +113,8 @@ describe('Integration: Silent Regression (FT-22)', () => {
     });
 
     describe('FT-22e: error fallback', () => {
-        it('returns error page when buildCss throws', async () => {expect.hasAssertions();
+        it('returns error page when buildCss throws', async () => {
+            expect.hasAssertions();
 
             const spy = vi.spyOn(reportStyles, 'buildCss').mockImplementation(() => {
                 throw new Error('CSS failure');

@@ -21,7 +21,8 @@ const DEFAULT_SLOW = 5;
 const DEFAULT_FLAKY = 0.3;
 
 describe('AnalyzeSuiteOptimization — property-based', () => {
-    it('totalTests matches input length', () => {expect.hasAssertions();
+    it('totalTests matches input length', () => {
+        expect.hasAssertions();
 
         fc.assert(
             fc.property(fc.array(testArb, { minLength: 0, maxLength: 15 }), (tests) => {
@@ -33,7 +34,8 @@ describe('AnalyzeSuiteOptimization — property-based', () => {
         );
     });
 
-    it('totalDuration sums all durations with safe defaults', () => {expect.hasAssertions();
+    it('totalDuration sums all durations with safe defaults', () => {
+        expect.hasAssertions();
 
         fc.assert(
             fc.property(fc.array(testArb, { minLength: 0, maxLength: 15 }), (tests) => {
@@ -53,7 +55,8 @@ describe('AnalyzeSuiteOptimization — property-based', () => {
         );
     });
 
-    it('sorts by impact descending then duration descending', () => {expect.hasAssertions();
+    it('sorts by impact descending then duration descending', () => {
+        expect.hasAssertions();
 
         fc.assert(
             fc.property(fc.array(testArb, { minLength: 0, maxLength: 15 }), (tests) => {
@@ -63,7 +66,8 @@ describe('AnalyzeSuiteOptimization — property-based', () => {
                 for (let i = 1; i < entries.length; i++) {
                     const prevEntry: unknown = Reflect.get(entries, i - 1);
                     const currEntry: unknown = Reflect.get(entries, i);
-                    if (prevEntry === undefined || prevEntry === null || currEntry === undefined || currEntry === null) return;
+                    if (prevEntry === undefined || prevEntry === null || currEntry === undefined || currEntry === null)
+                        return;
                     const prevImpact = (prevEntry as { impact: string }).impact;
                     const currImpact = (currEntry as { impact: string }).impact;
                     const prev: unknown = Reflect.get(impactOrder, prevImpact);
@@ -75,14 +79,17 @@ describe('AnalyzeSuiteOptimization — property-based', () => {
                     const pEntry = prevEntry as { duration: number };
                     const cEntry = currEntry as { duration: number };
 
-                    expect(pEntry.duration).toBeGreaterThanOrEqual((prev as number) === (curr as number) ? cEntry.duration : pEntry.duration);
+                    expect(pEntry.duration).toBeGreaterThanOrEqual(
+                        (prev as number) === (curr as number) ? cEntry.duration : pEntry.duration,
+                    );
                 }
             }),
             { numRuns: 50 },
         );
     });
 
-    it('quarantine action for flakiness exceeding threshold', () => {expect.hasAssertions();
+    it('quarantine action for flakiness exceeding threshold', () => {
+        expect.hasAssertions();
 
         fc.assert(
             fc.property(fc.array(testArb, { minLength: 1, maxLength: 10 }), (tests) => {
@@ -96,7 +103,8 @@ describe('AnalyzeSuiteOptimization — property-based', () => {
         );
     });
 
-    it('potentialSavings is bounded by totalDuration', () => {expect.hasAssertions();
+    it('potentialSavings is bounded by totalDuration', () => {
+        expect.hasAssertions();
 
         fc.assert(
             fc.property(fc.array(testArb, { minLength: 0, maxLength: 15 }), (tests) => {
@@ -109,7 +117,8 @@ describe('AnalyzeSuiteOptimization — property-based', () => {
         );
     });
 
-    it('zero potentialSavings when all tests are within thresholds', () => {expect.hasAssertions();
+    it('zero potentialSavings when all tests are within thresholds', () => {
+        expect.hasAssertions();
 
         fc.assert(
             fc.property(fc.array(testArb, { minLength: 0, maxLength: 10 }), (tests) => {
@@ -132,7 +141,8 @@ describe('AnalyzeSuiteOptimization — property-based', () => {
         );
     });
 
-    it('handles NaN, negative and infinite values as 0', () => {expect.hasAssertions();
+    it('handles NaN, negative and infinite values as 0', () => {
+        expect.hasAssertions();
 
         fc.assert(
             fc.property(
@@ -156,7 +166,8 @@ describe('AnalyzeSuiteOptimization — property-based', () => {
 });
 
 describe('GenerateOptimizationHtml — property-based', () => {
-    it('always produces valid HTML', () => {expect.hasAssertions();
+    it('always produces valid HTML', () => {
+        expect.hasAssertions();
 
         fc.assert(
             fc.property(fc.array(testArb, { minLength: 0, maxLength: 10 }), (tests) => {
@@ -170,7 +181,8 @@ describe('GenerateOptimizationHtml — property-based', () => {
         );
     });
 
-    it('contains all test titles with non-none actions', () => {expect.hasAssertions();
+    it('contains all test titles with non-none actions', () => {
+        expect.hasAssertions();
 
         fc.assert(
             fc.property(fc.array(testArb, { minLength: 0, maxLength: 10 }), (tests) => {
@@ -184,7 +196,8 @@ describe('GenerateOptimizationHtml — property-based', () => {
         );
     });
 
-    it('contains Total Tests metric card', () => {expect.hasAssertions();
+    it('contains Total Tests metric card', () => {
+        expect.hasAssertions();
 
         fc.assert(
             fc.property(fc.array(testArb, { minLength: 0, maxLength: 10 }), (tests) => {

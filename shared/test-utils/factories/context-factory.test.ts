@@ -6,11 +6,11 @@ describe('CreateMockContext', () => {
 
         const fields = ['jiraResource', 'jiraResourceXray', 'linkManager', 'linkManagerXray', 'csvResource'] as const;
 
-        expect(fields.every(f => f in ctx)).toBeTruthy();
+        expect(fields.every((f) => f in ctx)).toBeTruthy();
 
         const fns = ['pushHistory', 'printSessionSummary'] as const;
 
-        expect(fns.every(f => typeof Reflect.get(ctx, f) === 'function')).toBeTruthy();
+        expect(fns.every((f) => typeof Reflect.get(ctx, f) === 'function')).toBeTruthy();
         expect(ctx.base_url).toBe('https://jira.test.com');
         expect(ctx.sessionLog).toBeDefined();
     });

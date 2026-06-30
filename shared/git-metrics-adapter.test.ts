@@ -248,7 +248,8 @@ describe('GenerateGitMetricsRuns', () => {
         expect(mergeTest?.state).toBe('skipped');
     });
 
-    it('marks normal commits as passed', () => {expect.hasAssertions();
+    it('marks normal commits as passed', () => {
+        expect.hasAssertions();
 
         mockGitOutput(SAMPLE_GIT_LOG);
         const runs = generateGitMetricsRuns();
@@ -326,7 +327,8 @@ describe('GenerateGitFailureClassifications', () => {
         expect(result).toStrictEqual([]);
     });
 
-    it('creates classifications for revert commits only', () => {expect.hasAssertions();
+    it('creates classifications for revert commits only', () => {
+        expect.hasAssertions();
 
         mockGitOutput(SAMPLE_GIT_LOG);
         const result = generateGitFailureClassifications();

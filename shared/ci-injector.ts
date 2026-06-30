@@ -108,11 +108,11 @@ export function generatePostProcessWorkflowFromContext(ctx: SetupContext): strin
 export function extractFirstJobName(ciYaml: string): string {
     // Match lines like "  jobname:" at the top level under jobs:
     // After the "jobs:" line, capture the first indented key at the same level
-    const jobsMatch = ciYaml.match(/^jobs:\s*$/m);
+    const jobsMatch = /^jobs:\s*$/m.exec(ciYaml);
     if (!jobsMatch || jobsMatch.index === undefined) return 'test';
 
     const afterJobs = ciYaml.slice(jobsMatch.index + jobsMatch[0].length);
-    const jobMatch = afterJobs.match(/^\s{2}([\w-]+):/m);
+    const jobMatch = /^\s{2}([\w-]+):/m.exec(afterJobs);
 
     return jobMatch?.[1] ?? 'test';
 }

@@ -94,7 +94,11 @@ describe('ArtifactValidator', () => {
         const validator = new ArtifactValidator('test-suite');
         validator.addCrossFieldCheck((artifact) => {
             const obj = artifact as Record<string, unknown>;
-            if (obj['items_count'] !== undefined && Array.isArray(obj['items']) && obj['items_count'] !== obj['items'].length) {
+            if (
+                obj['items_count'] !== undefined &&
+                Array.isArray(obj['items']) &&
+                obj['items_count'] !== obj['items'].length
+            ) {
                 return [
                     fail(
                         'cross-field',

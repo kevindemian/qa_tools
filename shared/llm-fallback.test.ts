@@ -280,7 +280,8 @@ describe('Llm Fallback', () => {
             vi.restoreAllMocks();
         });
 
-        it('sends to primary provider and returns response', async () => {expect.hasAssertions();
+        it('sends to primary provider and returns response', async () => {
+            expect.hasAssertions();
 
             Config.set('llmApiKey', 'sk-test');
             Config.set('llmModel', 'gpt-4');
@@ -295,7 +296,8 @@ describe('Llm Fallback', () => {
             expect(recordCircuitSuccess).toHaveBeenCalledWith(expect.any(String));
         });
 
-        it('falls back to next provider when primary fails', async () => {expect.hasAssertions();
+        it('falls back to next provider when primary fails', async () => {
+            expect.hasAssertions();
 
             Config.set('llmApiKey', 'sk-test');
             Config.set('llmModel', 'gpt-4');
@@ -322,7 +324,8 @@ describe('Llm Fallback', () => {
             expect(recordCircuitFailure).toHaveBeenCalledWith(expect.any(String));
         });
 
-        it('throws when all providers are exhausted', async () => {expect.hasAssertions();
+        it('throws when all providers are exhausted', async () => {
+            expect.hasAssertions();
 
             Config.set('llmApiKey', 'sk-test');
             Config.set('llmModel', 'gpt-4');
@@ -332,14 +335,16 @@ describe('Llm Fallback', () => {
             await expect(sendWithFallback('main', 'system', 'user')).rejects.toThrow('All LLM providers failed');
         });
 
-        it('aggregates error when API key is missing for all providers', async () => {expect.hasAssertions();
+        it('aggregates error when API key is missing for all providers', async () => {
+            expect.hasAssertions();
 
             Config.set('llmApiKey', '');
 
             await expect(sendWithFallback('main', 'system', 'user')).rejects.toThrow('All LLM providers failed');
         });
 
-        it('aggregates error messages from all providers', async () => {expect.hasAssertions();
+        it('aggregates error messages from all providers', async () => {
+            expect.hasAssertions();
 
             Config.set('llmApiKey', 'sk-test');
             Config.set('llmModel', 'gpt-4');
@@ -357,7 +362,8 @@ describe('Llm Fallback', () => {
             expect(msg).toContain('All LLM providers failed');
         });
 
-        it('applies responseFormat to all candidates', async () => {expect.hasAssertions();
+        it('applies responseFormat to all candidates', async () => {
+            expect.hasAssertions();
 
             Config.set('llmApiKey', 'sk-test');
             Config.set('llmModel', 'gpt-4');
@@ -371,7 +377,8 @@ describe('Llm Fallback', () => {
             expect(result).toBe('{"key":"val"}');
         });
 
-        it('deduplicates fallback provider with same config key as primary', async () => {expect.hasAssertions();
+        it('deduplicates fallback provider with same config key as primary', async () => {
+            expect.hasAssertions();
 
             Config.set('llmApiKey', 'sk-test');
             Config.set('llmModel', 'gpt-4');
@@ -389,5 +396,4 @@ describe('Llm Fallback', () => {
             expect(mockFetch).toHaveBeenCalledTimes(6);
         });
     });
-
 });

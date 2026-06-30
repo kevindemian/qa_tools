@@ -38,7 +38,8 @@ function makeFixture(criteria: string[], ranges: Array<{ field: string; min: num
 /* ── Tests ───────────────────────────────────────────────────── */
 
 describe('ComputeCoverageMetrics — property-based', () => {
-    it('criteriaCoverage, partitionCoverage, boundaryCoverage sempre em [0, 1]', () => {expect.hasAssertions();
+    it('criteriaCoverage, partitionCoverage, boundaryCoverage sempre em [0, 1]', () => {
+        expect.hasAssertions();
 
         fc.assert(
             fc.property(
@@ -61,7 +62,8 @@ describe('ComputeCoverageMetrics — property-based', () => {
         );
     });
 
-    it('totalTests = 0 para body inválido', () => {expect.hasAssertions();
+    it('totalTests = 0 para body inválido', () => {
+        expect.hasAssertions();
 
         fc.assert(
             fc.property(fc.string({ minLength: 1, maxLength: 50 }), (badBody) => {
@@ -76,7 +78,8 @@ describe('ComputeCoverageMetrics — property-based', () => {
         );
     });
 
-    it('totalTests = 0 para JSON não-array', () => {expect.hasAssertions();
+    it('totalTests = 0 para JSON não-array', () => {
+        expect.hasAssertions();
 
         fc.assert(
             fc.property(fc.constantFrom('{}', '{"key": "value"}', '"string"', 'null', 'true', 'false'), (body) => {
@@ -88,7 +91,8 @@ describe('ComputeCoverageMetrics — property-based', () => {
         );
     });
 
-    it('totalTests = length do array', () => {expect.hasAssertions();
+    it('totalTests = length do array', () => {
+        expect.hasAssertions();
 
         fc.assert(
             fc.property(fc.array(fc.record({ title: fc.string() }), { minLength: 0, maxLength: 20 }), (tests) => {
@@ -101,7 +105,8 @@ describe('ComputeCoverageMetrics — property-based', () => {
         );
     });
 
-    it('coveredCriteriaCount ≤ totalCriteria', () => {expect.hasAssertions();
+    it('coveredCriteriaCount ≤ totalCriteria', () => {
+        expect.hasAssertions();
 
         fc.assert(
             fc.property(
@@ -120,7 +125,8 @@ describe('ComputeCoverageMetrics — property-based', () => {
         );
     });
 
-    it('criteriaCoverage = 0 quando nenhum critério corresponde', () => {expect.hasAssertions();
+    it('criteriaCoverage = 0 quando nenhum critério corresponde', () => {
+        expect.hasAssertions();
 
         fc.assert(
             fc.property(

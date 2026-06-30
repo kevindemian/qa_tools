@@ -56,7 +56,8 @@ describe('FetchLatestTestRun', () => {
         vi.clearAllMocks();
     });
 
-    it('resolves GitHub run with CTRF artifact and returns ParseResult', async () => {expect.hasAssertions();
+    it('resolves GitHub run with CTRF artifact and returns ParseResult', async () => {
+        expect.hasAssertions();
 
         const mockGet = vi.fn();
         mockGet
@@ -84,7 +85,8 @@ describe('FetchLatestTestRun', () => {
         expect(result.stats.total).toBe(2);
     });
 
-    it('returns null when no runs found', async () => {expect.hasAssertions();
+    it('returns null when no runs found', async () => {
+        expect.hasAssertions();
 
         const mockGet = vi.fn().mockResolvedValueOnce({
             data: { workflow_runs: [] },
@@ -97,7 +99,8 @@ describe('FetchLatestTestRun', () => {
         expect(result).toBeNull();
     });
 
-    it('returns null when no CTRF artifact in latest run', async () => {expect.hasAssertions();
+    it('returns null when no CTRF artifact in latest run', async () => {
+        expect.hasAssertions();
 
         const mockGet = vi
             .fn()
@@ -115,7 +118,8 @@ describe('FetchLatestTestRun', () => {
         expect(result).toBeNull();
     });
 
-    it('returns null when CI returns no runs', async () => {expect.hasAssertions();
+    it('returns null when CI returns no runs', async () => {
+        expect.hasAssertions();
 
         const mockGet = vi.fn().mockResolvedValueOnce({
             data: { workflow_runs: [] },
@@ -134,7 +138,8 @@ describe('FetchLatestTestRun — GitLab', () => {
         vi.clearAllMocks();
     });
 
-    it('downloads and parses GitLab pipeline artifact', async () => {expect.hasAssertions();
+    it('downloads and parses GitLab pipeline artifact', async () => {
+        expect.hasAssertions();
 
         const cfg = (await import('./config.js')).default;
         vi.spyOn(cfg, 'get').mockImplementation((key: string) => {
@@ -163,7 +168,8 @@ describe('FetchLatestTestRun — GitLab', () => {
         expect(result.stats.failed).toBe(1);
     });
 
-    it('returns null when GitLab pipeline has no jobs', async () => {expect.hasAssertions();
+    it('returns null when GitLab pipeline has no jobs', async () => {
+        expect.hasAssertions();
 
         const cfg = (await import('./config.js')).default;
         vi.spyOn(cfg, 'get').mockImplementation((key: string) => {
@@ -184,7 +190,8 @@ describe('FetchLatestTestRun — GitLab', () => {
         expect(result).toBeNull();
     });
 
-    it('returns null when GitLab has no pipelines', async () => {expect.hasAssertions();
+    it('returns null when GitLab has no pipelines', async () => {
+        expect.hasAssertions();
 
         const cfg = (await import('./config.js')).default;
         vi.spyOn(cfg, 'get').mockImplementation((key: string) => {
@@ -202,7 +209,8 @@ describe('FetchLatestTestRun — GitLab', () => {
         expect(result).toBeNull();
     });
 
-    it('handles GitLab API error gracefully', async () => {expect.hasAssertions();
+    it('handles GitLab API error gracefully', async () => {
+        expect.hasAssertions();
 
         const cfg = (await import('./config.js')).default;
         vi.spyOn(cfg, 'get').mockImplementation((key: string) => {
@@ -226,7 +234,8 @@ describe('FetchLatestTestRun — no CI', () => {
         vi.clearAllMocks();
     });
 
-    it('returns null when no CI is configured', async () => {expect.hasAssertions();
+    it('returns null when no CI is configured', async () => {
+        expect.hasAssertions();
 
         const cfg = (await import('./config.js')).default;
         vi.spyOn(cfg, 'get').mockReturnValue(undefined);
@@ -240,7 +249,8 @@ describe('FetchLatestTestRun — no CI', () => {
         expect(result).toBeNull();
     });
 
-    it('returns null when GitHub ZIP entry has zero total', async () => {expect.hasAssertions();
+    it('returns null when GitHub ZIP entry has zero total', async () => {
+        expect.hasAssertions();
 
         const cfg = (await import('./config.js')).default;
         vi.spyOn(cfg, 'get').mockImplementation((key: string) => {
@@ -278,7 +288,8 @@ describe('FetchLatestTestRun — no CI', () => {
         expect(result).toBeNull();
     });
 
-    it('handles GitHub download API error gracefully', async () => {expect.hasAssertions();
+    it('handles GitHub download API error gracefully', async () => {
+        expect.hasAssertions();
 
         const cfg = (await import('./config.js')).default;
         vi.spyOn(cfg, 'get').mockImplementation((key: string) => {
@@ -310,7 +321,8 @@ describe('FetchLatestTestRun — no CI', () => {
         expect(result).toBeNull();
     });
 
-    it('returns null when GitLab ZIP entry has zero total', async () => {expect.hasAssertions();
+    it('returns null when GitLab ZIP entry has zero total', async () => {
+        expect.hasAssertions();
 
         const cfg = (await import('./config.js')).default;
         vi.spyOn(cfg, 'get').mockImplementation((key: string) => {
@@ -339,7 +351,8 @@ describe('FetchLatestTestRun — no CI', () => {
         expect(result).toBeNull();
     });
 
-    it('handles GitLab download API error gracefully', async () => {expect.hasAssertions();
+    it('handles GitLab download API error gracefully', async () => {
+        expect.hasAssertions();
 
         const cfg = (await import('./config.js')).default;
         vi.spyOn(cfg, 'get').mockImplementation((key: string) => {
@@ -367,7 +380,8 @@ describe('FetchGitHistory', () => {
         vi.clearAllMocks();
     });
 
-    it('returns empty context when no CI configured', async () => {expect.hasAssertions();
+    it('returns empty context when no CI configured', async () => {
+        expect.hasAssertions();
 
         vi.mocked(createHttpClient).mockReturnValue({ get: vi.fn() } as never);
 
@@ -377,7 +391,8 @@ describe('FetchGitHistory', () => {
         expect(result).toStrictEqual({ commits: '', runs: [], flakyTests: '' });
     });
 
-    it('returns history with runs and flaky tests for GitHub', async () => {expect.hasAssertions();
+    it('returns history with runs and flaky tests for GitHub', async () => {
+        expect.hasAssertions();
 
         const cfg = (await import('./config.js')).default;
         vi.spyOn(cfg, 'get').mockImplementation((key: string) => {
@@ -453,7 +468,8 @@ describe('FetchGitHistory', () => {
         expect(result.flakyTests).toContain('FlakyTest A');
     });
 
-    it('handles GitHub history API error gracefully', async () => {expect.hasAssertions();
+    it('handles GitHub history API error gracefully', async () => {
+        expect.hasAssertions();
 
         const mockGet = vi.fn().mockRejectedValueOnce(new Error('Network error'));
         vi.mocked(createHttpClient).mockReturnValue({ get: mockGet } as never);
@@ -464,7 +480,8 @@ describe('FetchGitHistory', () => {
         expect(result).toStrictEqual({ commits: '', runs: [], flakyTests: '' });
     });
 
-    it('handles runs without head_commit in buildCommitsFromRuns', async () => {expect.hasAssertions();
+    it('handles runs without head_commit in buildCommitsFromRuns', async () => {
+        expect.hasAssertions();
 
         const cfg = (await import('./config.js')).default;
         vi.spyOn(cfg, 'get').mockImplementation((key: string) => {
@@ -503,7 +520,8 @@ describe('FetchGitHistory', () => {
         expect(result.commits).toBe('');
     });
 
-    it('filters out non-JSON entries in processGitHubArtifacts', async () => {expect.hasAssertions();
+    it('filters out non-JSON entries in processGitHubArtifacts', async () => {
+        expect.hasAssertions();
 
         const cfg = (await import('./config.js')).default;
         vi.spyOn(cfg, 'get').mockImplementation((key: string) => {
@@ -567,7 +585,8 @@ describe('FetchGitHistory', () => {
         expect(result.runs).toHaveLength(1);
     });
 
-    it('returns GitLab history via fetchGitHistory', async () => {expect.hasAssertions();
+    it('returns GitLab history via fetchGitHistory', async () => {
+        expect.hasAssertions();
 
         const cfg = (await import('./config.js')).default;
         vi.spyOn(cfg, 'get').mockImplementation((key: string) => {
@@ -616,7 +635,8 @@ describe('FetchGitHistory', () => {
         expect(result.runs).toHaveLength(2);
     });
 
-    it('handles GitLab pipeline processing error in fetchGitHistory', async () => {expect.hasAssertions();
+    it('handles GitLab pipeline processing error in fetchGitHistory', async () => {
+        expect.hasAssertions();
 
         const cfg = (await import('./config.js')).default;
         vi.spyOn(cfg, 'get').mockImplementation((key: string) => {
@@ -642,7 +662,8 @@ describe('FetchGitHistory', () => {
 });
 
 describe('Ci helpers', () => {
-    it('exports isGitHubCi and isGitLabCi from ci-detect', async () => {expect.hasAssertions();
+    it('exports isGitHubCi and isGitLabCi from ci-detect', async () => {
+        expect.hasAssertions();
 
         const mod = await import('./git-artifact-downloader.js');
 
@@ -650,7 +671,8 @@ describe('Ci helpers', () => {
         expect(mod.isGitLabCi).toBeDefined();
     });
 
-    it('exports GIT_HISTORY_RUNS constant', async () => {expect.hasAssertions();
+    it('exports GIT_HISTORY_RUNS constant', async () => {
+        expect.hasAssertions();
 
         const mod = await import('./git-artifact-downloader.js');
 

@@ -42,7 +42,12 @@ function renderPipeTable(head: string[], rows: string[][], availWidth: number): 
     }
     colWidthMap.set(0, (colWidthMap.get(0) ?? 0) + contentWidth - baseW * n);
 
-    const hSep = '│' + Array.from(colWidthMap.values()).map((w) => '─'.repeat(w + 2)).join('┼') + '│';
+    const hSep =
+        '│' +
+        Array.from(colWidthMap.values())
+            .map((w) => '─'.repeat(w + 2))
+            .join('┼') +
+        '│';
 
     const hLine = head.map((h, i) => palette.blue.bold(padCell(stripVTControlCharacters(h), colWidthMap.get(i) ?? 0)));
     out.push('│' + hLine.join('│') + '│');

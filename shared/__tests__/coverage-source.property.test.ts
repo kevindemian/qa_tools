@@ -64,33 +64,36 @@ describe('ReadIstanbulCoverage — property-based', () => {
         }
     });
 
-    it('source is always istanbul when data exists', () => {expect.hasAssertions();
+    it('source is always istanbul when data exists', () => {
+        expect.hasAssertions();
 
         fc.assert(
             fc.property(istanbulFixtureArb, (fixture) => {
                 const coveragePath = writeFixture(fixture);
                 const result = readIstanbulCoverage(coveragePath);
-                
+
                 expect(result === undefined || result.source === 'istanbul').toBeTruthy();
             }),
             { numRuns: 50 },
         );
     });
 
-    it('coveragePct is always in [0, 100]', () => {expect.hasAssertions();
+    it('coveragePct is always in [0, 100]', () => {
+        expect.hasAssertions();
 
         fc.assert(
             fc.property(istanbulFixtureArb, (fixture) => {
                 const coveragePath = writeFixture(fixture);
                 const result = readIstanbulCoverage(coveragePath);
-                
+
                 expect(result === undefined || (result.coveragePct >= 0 && result.coveragePct <= 100)).toBeTruthy();
             }),
             { numRuns: 50 },
         );
     });
 
-    it('prefers lines pct over statements pct', () => {expect.hasAssertions();
+    it('prefers lines pct over statements pct', () => {
+        expect.hasAssertions();
 
         fc.assert(
             fc.property(randomPct(), randomPct(), (linesPct, stmtsPct) => {
@@ -111,7 +114,8 @@ describe('ReadIstanbulCoverage — property-based', () => {
         );
     });
 
-    it('falls back to statements when lines missing', () => {expect.hasAssertions();
+    it('falls back to statements when lines missing', () => {
+        expect.hasAssertions();
 
         fc.assert(
             fc.property(randomPct(), (stmtsPct) => {
@@ -130,7 +134,8 @@ describe('ReadIstanbulCoverage — property-based', () => {
         );
     });
 
-    it('detail prefix matches metric source', () => {expect.hasAssertions();
+    it('detail prefix matches metric source', () => {
+        expect.hasAssertions();
 
         fc.assert(
             fc.property(fc.boolean(), randomPct(), randomPct(), (useLines, linesPct, stmtsPct) => {
@@ -142,7 +147,7 @@ describe('ReadIstanbulCoverage — property-based', () => {
                 const coveragePath = writeFixture(fixture);
                 const result = readIstanbulCoverage(coveragePath);
                 const expectedDetail = useLines ? /^lines / : /^statements /;
-                
+
                 expect(result?.detail).toMatch(expectedDetail);
             }),
             { numRuns: 50 },
@@ -161,7 +166,8 @@ describe('ResolveCoverage — property-based', () => {
         }
     });
 
-    it('istanbul takes priority over ctrf', () => {expect.hasAssertions();
+    it('istanbul takes priority over ctrf', () => {
+        expect.hasAssertions();
 
         fc.assert(
             fc.property(randomPct(), randomPct(), (istanbulPct, ctrfPct) => {
@@ -179,7 +185,8 @@ describe('ResolveCoverage — property-based', () => {
         );
     });
 
-    it('ctrf is used when istanbul unavailable', () => {expect.hasAssertions();
+    it('ctrf is used when istanbul unavailable', () => {
+        expect.hasAssertions();
 
         fc.assert(
             fc.property(randomPct(), (ctrfPct) => {
@@ -195,7 +202,8 @@ describe('ResolveCoverage — property-based', () => {
         );
     });
 
-    it('returns undefined when no source available', () => {expect.hasAssertions();
+    it('returns undefined when no source available', () => {
+        expect.hasAssertions();
 
         fc.assert(
             fc.property(fc.boolean(), fc.boolean(), (hasIstanbul, hasCtrf) => {

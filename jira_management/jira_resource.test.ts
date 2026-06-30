@@ -82,7 +82,8 @@ describe('Jira_resource', () => {
     // =====================================================================
 
     describe('GetJiraResource', () => {
-        it('returns data on success', async () => {expect.hasAssertions();
+        it('returns data on success', async () => {
+            expect.hasAssertions();
 
             const expected = { id: '10000', name: 'TEST' };
             mockClient.get.mockResolvedValue({ data: expected });
@@ -93,14 +94,16 @@ describe('Jira_resource', () => {
             expect(result).toStrictEqual(expected);
         });
 
-        it('throws on network error', async () => {expect.hasAssertions();
+        it('throws on network error', async () => {
+            expect.hasAssertions();
 
             mockClient.get.mockRejectedValue(new Error('Network error'));
 
             await expect(jiraResource.getJiraResource('project/TEST')).rejects.toThrow('Network error');
         });
 
-        it('throws on axios error with status', async () => {expect.hasAssertions();
+        it('throws on axios error with status', async () => {
+            expect.hasAssertions();
 
             const axiosErr = new Error('Not found');
             Object.assign(axiosErr, { response: { status: 404, data: { message: 'Not Found' } } });
@@ -115,7 +118,8 @@ describe('Jira_resource', () => {
     // =====================================================================
 
     describe('PostJiraResource', () => {
-        it('returns data on success', async () => {expect.hasAssertions();
+        it('returns data on success', async () => {
+            expect.hasAssertions();
 
             const payload = { name: 'v1.0', project: 'TEST' };
             const expected = { id: '10001', name: 'v1.0' };
@@ -127,14 +131,16 @@ describe('Jira_resource', () => {
             expect(result).toStrictEqual(expected);
         });
 
-        it('throws on API error', async () => {expect.hasAssertions();
+        it('throws on API error', async () => {
+            expect.hasAssertions();
 
             mockClient.post.mockRejectedValue(new Error('API error'));
 
             await expect(jiraResource.postJiraResource('version', {})).rejects.toThrow('API error');
         });
 
-        it('logs error and re-throws on failure', async () => {expect.hasAssertions();
+        it('logs error and re-throws on failure', async () => {
+            expect.hasAssertions();
 
             const apiErr = new Error('Bad request');
             Object.assign(apiErr, { response: { status: 400 } });
@@ -149,7 +155,8 @@ describe('Jira_resource', () => {
     // =====================================================================
 
     describe('PutJiraResource', () => {
-        it('returns data on success', async () => {expect.hasAssertions();
+        it('returns data on success', async () => {
+            expect.hasAssertions();
 
             const payload = { released: true };
             const expected = { id: '10001', released: true };
@@ -161,7 +168,8 @@ describe('Jira_resource', () => {
             expect(result).toStrictEqual(expected);
         });
 
-        it('returns null when status is 204', async () => {expect.hasAssertions();
+        it('returns null when status is 204', async () => {
+            expect.hasAssertions();
 
             mockClient.put.mockResolvedValue({ data: {}, status: 204 });
 
@@ -170,14 +178,16 @@ describe('Jira_resource', () => {
             expect(result).toBeNull();
         });
 
-        it('throws on API error', async () => {expect.hasAssertions();
+        it('throws on API error', async () => {
+            expect.hasAssertions();
 
             mockClient.put.mockRejectedValue(new Error('API error'));
 
             await expect(jiraResource.putJiraResource('version/10001', {})).rejects.toThrow('API error');
         });
 
-        it('logs error and re-throws on failure', async () => {expect.hasAssertions();
+        it('logs error and re-throws on failure', async () => {
+            expect.hasAssertions();
 
             const apiErr = new Error('Forbidden');
             Object.assign(apiErr, { response: { status: 403 } });
@@ -192,7 +202,8 @@ describe('Jira_resource', () => {
     // =====================================================================
 
     describe('GetProjectId', () => {
-        it('returns project id from API', async () => {expect.hasAssertions();
+        it('returns project id from API', async () => {
+            expect.hasAssertions();
 
             mockClient.get.mockResolvedValue({ data: { id: '12345' } });
 
@@ -202,7 +213,8 @@ describe('Jira_resource', () => {
             expect(result).toBe('12345');
         });
 
-        it('returns empty string when project not found', async () => {expect.hasAssertions();
+        it('returns empty string when project not found', async () => {
+            expect.hasAssertions();
 
             mockClient.get.mockRejectedValue(new Error('Project not found'));
 
@@ -211,7 +223,8 @@ describe('Jira_resource', () => {
             expect(result).toBe('');
         });
 
-        it('returns empty string on network error', async () => {expect.hasAssertions();
+        it('returns empty string on network error', async () => {
+            expect.hasAssertions();
 
             mockClient.get.mockRejectedValue(new Error('ECONNREFUSED'));
 
@@ -226,7 +239,8 @@ describe('Jira_resource', () => {
     // =====================================================================
 
     describe('GetProjectVersions', () => {
-        it('returns versions array', async () => {expect.hasAssertions();
+        it('returns versions array', async () => {
+            expect.hasAssertions();
 
             const versions = [
                 { id: '1', name: 'v1.0', released: true, releaseDate: '2024-01-01' },
@@ -240,7 +254,8 @@ describe('Jira_resource', () => {
             expect(result).toStrictEqual(versions);
         });
 
-        it('returns empty array on API error', async () => {expect.hasAssertions();
+        it('returns empty array on API error', async () => {
+            expect.hasAssertions();
 
             mockClient.get.mockRejectedValue(new Error('Not found'));
 
@@ -249,7 +264,8 @@ describe('Jira_resource', () => {
             expect(result).toStrictEqual([]);
         });
 
-        it('returns whatever data shape comes from API', async () => {expect.hasAssertions();
+        it('returns whatever data shape comes from API', async () => {
+            expect.hasAssertions();
 
             const data = { versions: [{ id: '1' }] };
             mockClient.get.mockResolvedValue({ data });
@@ -265,7 +281,8 @@ describe('Jira_resource', () => {
     // =====================================================================
 
     describe('GetTransitionsForIssue', () => {
-        it('returns transition map by target name', async () => {expect.hasAssertions();
+        it('returns transition map by target name', async () => {
+            expect.hasAssertions();
 
             mockClient.get.mockResolvedValue({
                 data: {
@@ -281,7 +298,8 @@ describe('Jira_resource', () => {
             expect(result).toStrictEqual({ approve: '31', 'use test case': '41' });
         });
 
-        it('returns empty object when no transitions', async () => {expect.hasAssertions();
+        it('returns empty object when no transitions', async () => {
+            expect.hasAssertions();
 
             mockClient.get.mockResolvedValue({ data: {} });
 
@@ -290,7 +308,8 @@ describe('Jira_resource', () => {
             expect(result).toStrictEqual({});
         });
 
-        it('returns empty when transitions is empty array', async () => {expect.hasAssertions();
+        it('returns empty when transitions is empty array', async () => {
+            expect.hasAssertions();
 
             mockClient.get.mockResolvedValue({ data: { transitions: [] } });
 
@@ -299,7 +318,8 @@ describe('Jira_resource', () => {
             expect(result).toStrictEqual({});
         });
 
-        it('handles transitions without target name', async () => {expect.hasAssertions();
+        it('handles transitions without target name', async () => {
+            expect.hasAssertions();
 
             mockClient.get.mockResolvedValue({
                 data: {
@@ -316,7 +336,8 @@ describe('Jira_resource', () => {
             expect(result).toStrictEqual({ approve: '31', done: '41' });
         });
 
-        it('returns empty object on API error (catch block)', async () => {expect.hasAssertions();
+        it('returns empty object on API error (catch block)', async () => {
+            expect.hasAssertions();
 
             mockClient.get.mockRejectedValue(new Error('API error'));
 
@@ -331,7 +352,8 @@ describe('Jira_resource', () => {
     // =====================================================================
 
     describe('SearchJiraIssues', () => {
-        it('returns issues from a single page', async () => {expect.hasAssertions();
+        it('returns issues from a single page', async () => {
+            expect.hasAssertions();
 
             const issues = [{ key: 'TEST-1', fields: { summary: 'First issue' } }];
             mockClient.get.mockResolvedValue({ data: { issues, total: 1 } });
@@ -342,7 +364,8 @@ describe('Jira_resource', () => {
             expect(result.total).toBe(1);
         });
 
-        it('returns empty result when no issues', async () => {expect.hasAssertions();
+        it('returns empty result when no issues', async () => {
+            expect.hasAssertions();
 
             mockClient.get.mockResolvedValue({
                 data: { issues: [], total: 0 },
@@ -354,7 +377,8 @@ describe('Jira_resource', () => {
             expect(result.total).toBe(0);
         });
 
-        it('paginates when total exceeds maxResults', async () => {expect.hasAssertions();
+        it('paginates when total exceeds maxResults', async () => {
+            expect.hasAssertions();
 
             const page1 = [{ key: 'TEST-1', fields: { summary: 'First' } }];
             const page2 = [{ key: 'TEST-2', fields: { summary: 'Second' } }];
@@ -370,7 +394,8 @@ describe('Jira_resource', () => {
             expect(result.total).toBe(2);
         });
 
-        it('returns empty result on API error', async () => {expect.hasAssertions();
+        it('returns empty result on API error', async () => {
+            expect.hasAssertions();
 
             mockClient.get.mockRejectedValue(new Error('Search failed'));
 
@@ -379,7 +404,8 @@ describe('Jira_resource', () => {
             expect(result).toStrictEqual({ issues: [], total: 0 });
         });
 
-        it('handles empty issues in response', async () => {expect.hasAssertions();
+        it('handles empty issues in response', async () => {
+            expect.hasAssertions();
 
             mockClient.get.mockResolvedValue({
                 data: { issues: [], total: 0 },
@@ -397,7 +423,8 @@ describe('Jira_resource', () => {
     // =====================================================================
 
     describe('GetVersionId', () => {
-        it('returns version id when found', async () => {expect.hasAssertions();
+        it('returns version id when found', async () => {
+            expect.hasAssertions();
 
             mockClient.get.mockResolvedValueOnce({ data: { id: '10000' } }).mockResolvedValueOnce({
                 data: [
@@ -411,7 +438,8 @@ describe('Jira_resource', () => {
             expect(result).toBe('2');
         });
 
-        it('returns null when project not found', async () => {expect.hasAssertions();
+        it('returns null when project not found', async () => {
+            expect.hasAssertions();
 
             mockClient.get.mockRejectedValue(new Error('Project not found'));
 
@@ -420,16 +448,20 @@ describe('Jira_resource', () => {
             expect(result).toBeNull();
         });
 
-        it('returns null when versions fetch fails', async () => {expect.hasAssertions();
+        it('returns null when versions fetch fails', async () => {
+            expect.hasAssertions();
 
-            mockClient.get.mockResolvedValueOnce({ data: { id: '10000' } }).mockRejectedValue(new Error('Versions error'));
+            mockClient.get
+                .mockResolvedValueOnce({ data: { id: '10000' } })
+                .mockRejectedValue(new Error('Versions error'));
 
             const result = await jiraResource.getVersionId('TEST', 'v1.0');
 
             expect(result).toBeNull();
         });
 
-        it('returns null when versions is not an array', async () => {expect.hasAssertions();
+        it('returns null when versions is not an array', async () => {
+            expect.hasAssertions();
 
             mockClient.get
                 .mockResolvedValueOnce({ data: { id: '10000' } })
@@ -440,7 +472,8 @@ describe('Jira_resource', () => {
             expect(result).toBeNull();
         });
 
-        it('returns null when version name not found', async () => {expect.hasAssertions();
+        it('returns null when version name not found', async () => {
+            expect.hasAssertions();
 
             mockClient.get
                 .mockResolvedValueOnce({ data: { id: '10000' } })
@@ -451,7 +484,8 @@ describe('Jira_resource', () => {
             expect(result).toBeNull();
         });
 
-        it('is case-insensitive when matching version name', async () => {expect.hasAssertions();
+        it('is case-insensitive when matching version name', async () => {
+            expect.hasAssertions();
 
             mockClient.get.mockResolvedValueOnce({ data: { id: '10000' } }).mockResolvedValueOnce({
                 data: [{ id: '1', name: 'V2.0-rc1' }],
@@ -468,7 +502,8 @@ describe('Jira_resource', () => {
     // =====================================================================
 
     describe('CreateVersion', () => {
-        it('creates version when it does not exist', async () => {expect.hasAssertions();
+        it('creates version when it does not exist', async () => {
+            expect.hasAssertions();
 
             vi.spyOn(jiraResource, 'getVersionId').mockResolvedValueOnce(null);
             const created = { id: '10001', name: 'v1.0', project: 'TEST' };
@@ -485,7 +520,8 @@ describe('Jira_resource', () => {
             expect(result).toStrictEqual(created);
         });
 
-        it('returns null when version already exists', async () => {expect.hasAssertions();
+        it('returns null when version already exists', async () => {
+            expect.hasAssertions();
 
             vi.spyOn(jiraResource, 'getVersionId').mockResolvedValueOnce('existing-id');
 
@@ -495,7 +531,8 @@ describe('Jira_resource', () => {
             expect(mockClient['post']).not.toHaveBeenCalled();
         });
 
-        it('creates version without description', async () => {expect.hasAssertions();
+        it('creates version without description', async () => {
+            expect.hasAssertions();
 
             vi.spyOn(jiraResource, 'getVersionId').mockResolvedValueOnce(null);
             mockClient.post.mockResolvedValue({ data: { id: '1', name: 'v1.0' } });
@@ -509,7 +546,8 @@ describe('Jira_resource', () => {
             expect(result).toStrictEqual({ id: '1', name: 'v1.0' });
         });
 
-        it('handles post failure gracefully', async () => {expect.hasAssertions();
+        it('handles post failure gracefully', async () => {
+            expect.hasAssertions();
 
             vi.spyOn(jiraResource, 'getVersionId').mockResolvedValueOnce(null);
             mockClient.post.mockRejectedValue(new Error('API error'));
@@ -517,7 +555,8 @@ describe('Jira_resource', () => {
             await expect(jiraResource.createVersion('TEST', 'v1.0')).rejects.toThrow('API error');
         });
 
-        it('handles null response from postJiraResource', async () => {expect.hasAssertions();
+        it('handles null response from postJiraResource', async () => {
+            expect.hasAssertions();
 
             vi.spyOn(jiraResource, 'getVersionId').mockResolvedValueOnce(null);
             mockClient.post.mockResolvedValue({ data: null });
@@ -533,7 +572,8 @@ describe('Jira_resource', () => {
     // =====================================================================
 
     describe('CheckReleaseTasksStatus', () => {
-        it('returns true when all tasks are done', async () => {expect.hasAssertions();
+        it('returns true when all tasks are done', async () => {
+            expect.hasAssertions();
 
             vi.spyOn(jiraResource, 'getProjectId').mockResolvedValueOnce('10000');
             vi.spyOn(jiraResource, 'searchJiraIssues').mockResolvedValueOnce({
@@ -549,7 +589,8 @@ describe('Jira_resource', () => {
             expect(result).toBeTruthy();
         });
 
-        it('returns false when some tasks are not done', async () => {expect.hasAssertions();
+        it('returns false when some tasks are not done', async () => {
+            expect.hasAssertions();
 
             vi.spyOn(jiraResource, 'getProjectId').mockResolvedValueOnce('10000');
             vi.spyOn(jiraResource, 'searchJiraIssues').mockResolvedValueOnce({
@@ -565,7 +606,8 @@ describe('Jira_resource', () => {
             expect(result).toBeFalsy();
         });
 
-        it('returns false when no issues found', async () => {expect.hasAssertions();
+        it('returns false when no issues found', async () => {
+            expect.hasAssertions();
 
             vi.spyOn(jiraResource, 'getProjectId').mockResolvedValueOnce('10000');
             vi.spyOn(jiraResource, 'searchJiraIssues').mockResolvedValueOnce({
@@ -578,7 +620,8 @@ describe('Jira_resource', () => {
             expect(result).toBeFalsy();
         });
 
-        it('returns false on error from getProjectId', async () => {expect.hasAssertions();
+        it('returns false on error from getProjectId', async () => {
+            expect.hasAssertions();
 
             vi.spyOn(jiraResource, 'getProjectId').mockRejectedValueOnce(new Error('Project error'));
 
@@ -587,7 +630,8 @@ describe('Jira_resource', () => {
             expect(result).toBeFalsy();
         });
 
-        it('returns false when versionName is empty (sanitizeJqlValue throws)', async () => {expect.hasAssertions();
+        it('returns false when versionName is empty (sanitizeJqlValue throws)', async () => {
+            expect.hasAssertions();
 
             const result = await jiraResource.checkReleaseTasksStatus('TEST', '');
 
@@ -600,7 +644,8 @@ describe('Jira_resource', () => {
     // =====================================================================
 
     describe('GetReleaseTasks', () => {
-        it('returns formatted task list', async () => {expect.hasAssertions();
+        it('returns formatted task list', async () => {
+            expect.hasAssertions();
 
             vi.spyOn(jiraResource, 'getProjectId').mockResolvedValueOnce('10000');
             vi.spyOn(jiraResource, 'searchJiraIssues').mockResolvedValueOnce({
@@ -616,7 +661,8 @@ describe('Jira_resource', () => {
             expect(result).toStrictEqual(['[TASK-1] - Implement feature', '[TASK-2] - Fix bug']);
         });
 
-        it('returns empty array when no issues found', async () => {expect.hasAssertions();
+        it('returns empty array when no issues found', async () => {
+            expect.hasAssertions();
 
             vi.spyOn(jiraResource, 'getProjectId').mockResolvedValueOnce('10000');
             vi.spyOn(jiraResource, 'searchJiraIssues').mockResolvedValueOnce({
@@ -629,10 +675,13 @@ describe('Jira_resource', () => {
             expect(result).toStrictEqual([]);
         });
 
-        it('filters by type when testOnly=true', async () => {expect.hasAssertions();
+        it('filters by type when testOnly=true', async () => {
+            expect.hasAssertions();
 
             vi.spyOn(jiraResource, 'getProjectId').mockResolvedValueOnce('10000');
-            const searchSpy = vi.spyOn(jiraResource, 'searchJiraIssues').mockResolvedValueOnce({ issues: [], total: 0 });
+            const searchSpy = vi
+                .spyOn(jiraResource, 'searchJiraIssues')
+                .mockResolvedValueOnce({ issues: [], total: 0 });
 
             await jiraResource.getReleaseTasks('TEST', 'v1.0', true);
             const jql = nonNull(searchSpy.mock.calls[0])[0];
@@ -640,10 +689,13 @@ describe('Jira_resource', () => {
             expect(jql).toContain('AND type = "Test"');
         });
 
-        it('does not add type filter when testOnly=false', async () => {expect.hasAssertions();
+        it('does not add type filter when testOnly=false', async () => {
+            expect.hasAssertions();
 
             vi.spyOn(jiraResource, 'getProjectId').mockResolvedValueOnce('10000');
-            const searchSpy = vi.spyOn(jiraResource, 'searchJiraIssues').mockResolvedValueOnce({ issues: [], total: 0 });
+            const searchSpy = vi
+                .spyOn(jiraResource, 'searchJiraIssues')
+                .mockResolvedValueOnce({ issues: [], total: 0 });
 
             await jiraResource.getReleaseTasks('TEST', 'v1.0', false);
             const jql = nonNull(searchSpy.mock.calls[0])[0];
@@ -651,7 +703,8 @@ describe('Jira_resource', () => {
             expect(jql).not.toContain('AND type = "Test"');
         });
 
-        it('returns empty array on error from getProjectId', async () => {expect.hasAssertions();
+        it('returns empty array on error from getProjectId', async () => {
+            expect.hasAssertions();
 
             vi.spyOn(jiraResource, 'getProjectId').mockRejectedValueOnce(new Error('Project error'));
 
@@ -660,7 +713,8 @@ describe('Jira_resource', () => {
             expect(result).toStrictEqual([]);
         });
 
-        it('returns empty array when versionName is empty (sanitizeJqlValue throws)', async () => {expect.hasAssertions();
+        it('returns empty array when versionName is empty (sanitizeJqlValue throws)', async () => {
+            expect.hasAssertions();
 
             const result = await jiraResource.getReleaseTasks('TEST', '');
 
@@ -673,7 +727,8 @@ describe('Jira_resource', () => {
     // =====================================================================
 
     describe('GetLatestReleases', () => {
-        it('returns latest released and unreleased versions', async () => {expect.hasAssertions();
+        it('returns latest released and unreleased versions', async () => {
+            expect.hasAssertions();
 
             mockClient.get.mockResolvedValueOnce({ data: { id: '10000' } }).mockResolvedValueOnce({
                 data: [
@@ -691,7 +746,8 @@ describe('Jira_resource', () => {
             expect(nonNull(result.unreleasedVersions[0]).name).toBe('v2.0');
         });
 
-        it('returns empty arrays when project not found', async () => {expect.hasAssertions();
+        it('returns empty arrays when project not found', async () => {
+            expect.hasAssertions();
 
             mockClient.get.mockRejectedValueOnce(new Error('Project error'));
 
@@ -701,7 +757,8 @@ describe('Jira_resource', () => {
             expect(result.unreleasedVersions).toStrictEqual([]);
         });
 
-        it('returns empty arrays when versions fetch fails', async () => {expect.hasAssertions();
+        it('returns empty arrays when versions fetch fails', async () => {
+            expect.hasAssertions();
 
             mockClient.get
                 .mockResolvedValueOnce({ data: { id: '10000' } })
@@ -713,7 +770,8 @@ describe('Jira_resource', () => {
             expect(result.unreleasedVersions).toStrictEqual([]);
         });
 
-        it('returns empty arrays when versions is not an array', async () => {expect.hasAssertions();
+        it('returns empty arrays when versions is not an array', async () => {
+            expect.hasAssertions();
 
             mockClient.get
                 .mockResolvedValueOnce({ data: { id: '10000' } })
@@ -725,7 +783,8 @@ describe('Jira_resource', () => {
             expect(result.unreleasedVersions).toStrictEqual([]);
         });
 
-        it('returns multiple released versions sorted by date descending', async () => {expect.hasAssertions();
+        it('returns multiple released versions sorted by date descending', async () => {
+            expect.hasAssertions();
 
             mockClient.get.mockResolvedValueOnce({ data: { id: '10000' } }).mockResolvedValueOnce({
                 data: [
@@ -742,7 +801,8 @@ describe('Jira_resource', () => {
             expect(nonNull(result.latestReleasedVersions[1]).name).toBe('v3.0');
         });
 
-        it('filters out versions without releaseDate', async () => {expect.hasAssertions();
+        it('filters out versions without releaseDate', async () => {
+            expect.hasAssertions();
 
             mockClient.get.mockResolvedValueOnce({ data: { id: '10000' } }).mockResolvedValueOnce({
                 data: [
@@ -764,7 +824,8 @@ describe('Jira_resource', () => {
     // =====================================================================
 
     describe('AddTasksToSprint', () => {
-        it('posts tasks to sprint successfully', async () => {expect.hasAssertions();
+        it('posts tasks to sprint successfully', async () => {
+            expect.hasAssertions();
 
             mockClient.post.mockResolvedValue({ data: {} });
 
@@ -775,14 +836,16 @@ describe('Jira_resource', () => {
             });
         });
 
-        it('re-throws error after logging', async () => {expect.hasAssertions();
+        it('re-throws error after logging', async () => {
+            expect.hasAssertions();
 
             mockClient.post.mockRejectedValue(new Error('Sprint error'));
 
             await expect(jiraResource.addTasksToSprint(['TASK-1'], 'sprint-1')).rejects.toThrow('Sprint error');
         });
 
-        it('handles empty task list', async () => {expect.hasAssertions();
+        it('handles empty task list', async () => {
+            expect.hasAssertions();
 
             mockClient.post.mockResolvedValue({ data: {} });
 
@@ -799,7 +862,8 @@ describe('Jira_resource', () => {
     // =====================================================================
 
     describe('UpdateFixVersions', () => {
-        it('updates all task fix versions', async () => {expect.hasAssertions();
+        it('updates all task fix versions', async () => {
+            expect.hasAssertions();
 
             vi.spyOn(jiraResource, 'getVersionId').mockResolvedValueOnce('v-1');
             mockClient.put.mockResolvedValue({ data: {}, status: 200 });
@@ -815,7 +879,8 @@ describe('Jira_resource', () => {
             });
         });
 
-        it('skips when version not found', async () => {expect.hasAssertions();
+        it('skips when version not found', async () => {
+            expect.hasAssertions();
 
             vi.spyOn(jiraResource, 'getVersionId').mockResolvedValueOnce(null);
 
@@ -824,7 +889,8 @@ describe('Jira_resource', () => {
             expect(mockClient['put']).not.toHaveBeenCalled();
         });
 
-        it('handles single task', async () => {expect.hasAssertions();
+        it('handles single task', async () => {
+            expect.hasAssertions();
 
             vi.spyOn(jiraResource, 'getVersionId').mockResolvedValueOnce('v-1');
             mockClient.put.mockResolvedValue({ data: {}, status: 200 });
@@ -834,7 +900,8 @@ describe('Jira_resource', () => {
             expect(mockClient['put']).toHaveBeenCalledTimes(1);
         });
 
-        it('propagates put error', async () => {expect.hasAssertions();
+        it('propagates put error', async () => {
+            expect.hasAssertions();
 
             vi.spyOn(jiraResource, 'getVersionId').mockResolvedValueOnce('v-1');
             mockClient.put.mockRejectedValue(new Error('Update error'));
@@ -848,7 +915,8 @@ describe('Jira_resource', () => {
     // =====================================================================
 
     describe('ReleaseVersion', () => {
-        it('releases version successfully', async () => {expect.hasAssertions();
+        it('releases version successfully', async () => {
+            expect.hasAssertions();
 
             vi.spyOn(jiraResource, 'getVersionId').mockResolvedValueOnce('v-1');
             vi.spyOn(jiraResource, 'checkReleaseTasksStatus').mockResolvedValueOnce(true);
@@ -859,7 +927,8 @@ describe('Jira_resource', () => {
             expect(mockClient['put']).toHaveBeenCalledWith('/version/v-1', expect.objectContaining({ released: true }));
         });
 
-        it('aborts when version not found', async () => {expect.hasAssertions();
+        it('aborts when version not found', async () => {
+            expect.hasAssertions();
 
             vi.spyOn(jiraResource, 'getVersionId').mockResolvedValueOnce(null);
 
@@ -868,7 +937,8 @@ describe('Jira_resource', () => {
             expect(mockClient['put']).not.toHaveBeenCalled();
         });
 
-        it('aborts when tasks not completed', async () => {expect.hasAssertions();
+        it('aborts when tasks not completed', async () => {
+            expect.hasAssertions();
 
             vi.spyOn(jiraResource, 'getVersionId').mockResolvedValueOnce('v-1');
             vi.spyOn(jiraResource, 'checkReleaseTasksStatus').mockResolvedValueOnce(false);
@@ -878,7 +948,8 @@ describe('Jira_resource', () => {
             expect(mockClient['put']).not.toHaveBeenCalled();
         });
 
-        it('sets correct releaseDate in payload', async () => {expect.hasAssertions();
+        it('sets correct releaseDate in payload', async () => {
+            expect.hasAssertions();
 
             vi.spyOn(jiraResource, 'getVersionId').mockResolvedValueOnce('v-1');
             vi.spyOn(jiraResource, 'checkReleaseTasksStatus').mockResolvedValueOnce(true);
@@ -893,7 +964,8 @@ describe('Jira_resource', () => {
             });
         });
 
-        it('propagates put error', async () => {expect.hasAssertions();
+        it('propagates put error', async () => {
+            expect.hasAssertions();
 
             vi.spyOn(jiraResource, 'getVersionId').mockResolvedValueOnce('v-1');
             vi.spyOn(jiraResource, 'checkReleaseTasksStatus').mockResolvedValueOnce(true);
@@ -914,16 +986,19 @@ describe('Jira_resource', () => {
             transitionSpy = vi.spyOn(jiraResource, 'transitionIssue').mockResolvedValue();
         });
 
-        it('moves single task through full workflow', async () => {expect.hasAssertions();
+        it('moves single task through full workflow', async () => {
+            expect.hasAssertions();
 
-            mockClient.get.mockResolvedValueOnce({ data: { fields: { status: { name: 'New' } } } }).mockResolvedValueOnce({
-                data: {
-                    transitions: [
-                        { id: '31', to: { name: 'approve' } },
-                        { id: '41', to: { name: 'use test case' } },
-                    ],
-                },
-            });
+            mockClient.get
+                .mockResolvedValueOnce({ data: { fields: { status: { name: 'New' } } } })
+                .mockResolvedValueOnce({
+                    data: {
+                        transitions: [
+                            { id: '31', to: { name: 'approve' } },
+                            { id: '41', to: { name: 'use test case' } },
+                        ],
+                    },
+                });
 
             await jiraResource.moveCardsToDone(['TASK-1']);
 
@@ -932,7 +1007,8 @@ describe('Jira_resource', () => {
             expect(transitionSpy).toHaveBeenNthCalledWith(2, 'TASK-1', '41');
         });
 
-        it('moves through coding in progress workflow', async () => {expect.hasAssertions();
+        it('moves through coding in progress workflow', async () => {
+            expect.hasAssertions();
 
             mockClient.get
                 .mockResolvedValueOnce({
@@ -954,7 +1030,8 @@ describe('Jira_resource', () => {
             expect(transitionSpy).toHaveBeenNthCalledWith(2, 'TASK-1', '61');
         });
 
-        it('skips task when status fetch throws', async () => {expect.hasAssertions();
+        it('skips task when status fetch throws', async () => {
+            expect.hasAssertions();
 
             mockClient.get.mockRejectedValue(new Error('Not found'));
 
@@ -963,7 +1040,8 @@ describe('Jira_resource', () => {
             expect(transitionSpy).not.toHaveBeenCalled();
         });
 
-        it('skips task when data is incomplete', async () => {expect.hasAssertions();
+        it('skips task when data is incomplete', async () => {
+            expect.hasAssertions();
 
             mockClient.get.mockResolvedValueOnce({ data: {} });
 
@@ -972,7 +1050,8 @@ describe('Jira_resource', () => {
             expect(transitionSpy).not.toHaveBeenCalled();
         });
 
-        it('skips task when status is not in workflowMap', async () => {expect.hasAssertions();
+        it('skips task when status is not in workflowMap', async () => {
+            expect.hasAssertions();
 
             mockClient.get
                 .mockResolvedValueOnce({
@@ -985,7 +1064,8 @@ describe('Jira_resource', () => {
             expect(transitionSpy).not.toHaveBeenCalled();
         });
 
-        it('warns when status not in workflowMap even when transitions exist', async () => {expect.hasAssertions();
+        it('warns when status not in workflowMap even when transitions exist', async () => {
+            expect.hasAssertions();
 
             mockClient.get
                 .mockResolvedValueOnce({ data: { fields: { status: { name: 'Unknown Status' } } } })
@@ -998,13 +1078,16 @@ describe('Jira_resource', () => {
             expect(transitionSpy).not.toHaveBeenCalled();
         });
 
-        it('skips specific transition when transition id not found', async () => {expect.hasAssertions();
+        it('skips specific transition when transition id not found', async () => {
+            expect.hasAssertions();
 
-            mockClient.get.mockResolvedValueOnce({ data: { fields: { status: { name: 'New' } } } }).mockResolvedValueOnce({
-                data: {
-                    transitions: [{ id: '31', to: { name: 'approve' } }],
-                },
-            });
+            mockClient.get
+                .mockResolvedValueOnce({ data: { fields: { status: { name: 'New' } } } })
+                .mockResolvedValueOnce({
+                    data: {
+                        transitions: [{ id: '31', to: { name: 'approve' } }],
+                    },
+                });
 
             await jiraResource.moveCardsToDone(['TASK-1']);
 
@@ -1013,7 +1096,8 @@ describe('Jira_resource', () => {
             expect(transitionSpy).toHaveBeenCalledWith('TASK-1', '31');
         });
 
-        it('skips task when no transitions returned', async () => {expect.hasAssertions();
+        it('skips task when no transitions returned', async () => {
+            expect.hasAssertions();
 
             mockClient.get
                 .mockResolvedValueOnce({ data: { fields: { status: { name: 'New' } } } })
@@ -1024,7 +1108,8 @@ describe('Jira_resource', () => {
             expect(transitionSpy).not.toHaveBeenCalled();
         });
 
-        it('processes multiple tasks independently', async () => {expect.hasAssertions();
+        it('processes multiple tasks independently', async () => {
+            expect.hasAssertions();
 
             mockClient.get
                 // task-1
@@ -1051,11 +1136,14 @@ describe('Jira_resource', () => {
             expect(transitionSpy).toHaveBeenNthCalledWith(2, 'TASK-3', '71');
         });
 
-        it('handles API error during transition gracefully', async () => {expect.hasAssertions();
+        it('handles API error during transition gracefully', async () => {
+            expect.hasAssertions();
 
-            mockClient.get.mockResolvedValueOnce({ data: { fields: { status: { name: 'New' } } } }).mockResolvedValueOnce({
-                data: { transitions: [{ id: '31', to: { name: 'approve' } }] },
-            });
+            mockClient.get
+                .mockResolvedValueOnce({ data: { fields: { status: { name: 'New' } } } })
+                .mockResolvedValueOnce({
+                    data: { transitions: [{ id: '31', to: { name: 'approve' } }] },
+                });
             transitionSpy.mockRejectedValue(new Error('API error'));
 
             const moveResult = await jiraResource.moveCardsToDone(['TASK-1']);
@@ -1070,35 +1158,43 @@ describe('Jira_resource', () => {
     // =====================================================================
 
     describe('GetFromOriginPath', () => {
-        it('returns data on success', async () => {expect.hasAssertions();
+        it('returns data on success', async () => {
+            expect.hasAssertions();
 
             const expected = { id: '10000', name: 'TEST' };
             mockClient.get.mockResolvedValue({ data: expected });
 
             const result = await jiraResource.getFromOriginPath('rest/raven/1.0/api/test/TEST-1/testruns');
 
-            expect(mockClient['get']).toHaveBeenCalledWith('https://test-jira.com/rest/raven/1.0/api/test/TEST-1/testruns');
+            expect(mockClient['get']).toHaveBeenCalledWith(
+                'https://test-jira.com/rest/raven/1.0/api/test/TEST-1/testruns',
+            );
             expect(result).toStrictEqual(expected);
         });
 
-        it('strips leading slash from path', async () => {expect.hasAssertions();
+        it('strips leading slash from path', async () => {
+            expect.hasAssertions();
 
             mockClient.get.mockResolvedValue({ data: { key: 'TEST-1' } });
 
             const result = await jiraResource.getFromOriginPath('/rest/raven/1.0/api/test/TEST-1/testruns');
 
-            expect(mockClient['get']).toHaveBeenCalledWith('https://test-jira.com/rest/raven/1.0/api/test/TEST-1/testruns');
+            expect(mockClient['get']).toHaveBeenCalledWith(
+                'https://test-jira.com/rest/raven/1.0/api/test/TEST-1/testruns',
+            );
             expect(result).toStrictEqual({ key: 'TEST-1' });
         });
 
-        it('throws on network error', async () => {expect.hasAssertions();
+        it('throws on network error', async () => {
+            expect.hasAssertions();
 
             mockClient.get.mockRejectedValue(new Error('Network error'));
 
             await expect(jiraResource.getFromOriginPath('rest/api/test')).rejects.toThrow('Network error');
         });
 
-        it('throws on axios error with status', async () => {expect.hasAssertions();
+        it('throws on axios error with status', async () => {
+            expect.hasAssertions();
 
             const axiosErr = new Error('Not found');
             Object.assign(axiosErr, { response: { status: 404, data: { message: 'Not Found' } } });
@@ -1113,7 +1209,8 @@ describe('Jira_resource', () => {
     // =====================================================================
 
     describe('TransitionIssue', () => {
-        it('posts transition successfully', async () => {expect.hasAssertions();
+        it('posts transition successfully', async () => {
+            expect.hasAssertions();
 
             mockClient.post.mockResolvedValue({ data: {} });
 
@@ -1122,14 +1219,16 @@ describe('Jira_resource', () => {
             expect(mockClient['post']).toHaveBeenCalledWith('/issue/TASK-1/transitions', { transition: { id: '31' } });
         });
 
-        it('re-throws error after logging', async () => {expect.hasAssertions();
+        it('re-throws error after logging', async () => {
+            expect.hasAssertions();
 
             mockClient.post.mockRejectedValue(new Error('Transition error'));
 
             await expect(jiraResource.transitionIssue('TASK-1', '31')).rejects.toThrow('Transition error');
         });
 
-        it('passes correct transition id', async () => {expect.hasAssertions();
+        it('passes correct transition id', async () => {
+            expect.hasAssertions();
 
             mockClient.post.mockResolvedValue({ data: {} });
 
@@ -1138,5 +1237,4 @@ describe('Jira_resource', () => {
             expect(mockClient['post']).toHaveBeenCalledWith('/issue/TASK-1/transitions', { transition: { id: '999' } });
         });
     });
-
 });

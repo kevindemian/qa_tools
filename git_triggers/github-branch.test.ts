@@ -31,7 +31,8 @@ describe('Github Branch', () => {
             mockApiGet.mockClear();
         });
 
-        it('returns { name } for valid branch', async () => {expect.hasAssertions();
+        it('returns { name } for valid branch', async () => {
+            expect.hasAssertions();
 
             mockApiGet.mockResolvedValue({ name: 'main', commit: { sha: 'abc' } });
             const result = await getBranch(client, 'myorg', 'myrepo', 'main');
@@ -40,7 +41,8 @@ describe('Github Branch', () => {
             expect(mockApiGet).toHaveBeenCalledWith(client, '/repos/myorg/myrepo/branches/main', { returnNull: true });
         });
 
-        it('encodes branch name in URL', async () => {expect.hasAssertions();
+        it('encodes branch name in URL', async () => {
+            expect.hasAssertions();
 
             mockApiGet.mockResolvedValue({ name: 'feature/test' });
             await getBranch(client, 'myorg', 'myrepo', 'feature/test');
@@ -50,7 +52,8 @@ describe('Github Branch', () => {
             });
         });
 
-        it('returns null when data has no name', async () => {expect.hasAssertions();
+        it('returns null when data has no name', async () => {
+            expect.hasAssertions();
 
             mockApiGet.mockResolvedValue({ commit: { sha: 'abc' } });
             const result = await getBranch(client, 'myorg', 'myrepo', 'main');
@@ -58,7 +61,8 @@ describe('Github Branch', () => {
             expect(result).toBeNull();
         });
 
-        it('returns null when apiGet returns null', async () => {expect.hasAssertions();
+        it('returns null when apiGet returns null', async () => {
+            expect.hasAssertions();
 
             mockApiGet.mockResolvedValue(null);
             const result = await getBranch(client, 'myorg', 'myrepo', 'missing');
@@ -75,7 +79,8 @@ describe('Github Branch', () => {
             mockApiGet.mockClear();
         });
 
-        it('returns formatted diff string for valid comparison', async () => {expect.hasAssertions();
+        it('returns formatted diff string for valid comparison', async () => {
+            expect.hasAssertions();
 
             mockApiGet.mockResolvedValue({
                 files: [
@@ -95,7 +100,8 @@ describe('Github Branch', () => {
             });
         });
 
-        it('returns empty string when data is null', async () => {expect.hasAssertions();
+        it('returns empty string when data is null', async () => {
+            expect.hasAssertions();
 
             mockApiGet.mockResolvedValue(null);
             const result = await getDiff(client, 'myorg', 'myrepo', 'feature', 'main');
@@ -103,7 +109,8 @@ describe('Github Branch', () => {
             expect(result).toBe('');
         });
 
-        it('returns empty string when data.files is empty', async () => {expect.hasAssertions();
+        it('returns empty string when data.files is empty', async () => {
+            expect.hasAssertions();
 
             mockApiGet.mockResolvedValue({ files: [] });
             const result = await getDiff(client, 'myorg', 'myrepo', 'feature', 'main');
@@ -111,7 +118,8 @@ describe('Github Branch', () => {
             expect(result).toBe('');
         });
 
-        it('handles missing patch property in files', async () => {expect.hasAssertions();
+        it('handles missing patch property in files', async () => {
+            expect.hasAssertions();
 
             mockApiGet.mockResolvedValue({
                 files: [{ filename: 'readme.md', status: 'modified' }],
@@ -121,7 +129,8 @@ describe('Github Branch', () => {
             expect(result).toBe('');
         });
 
-        it('encodes branch names in compare URL', async () => {expect.hasAssertions();
+        it('encodes branch names in compare URL', async () => {
+            expect.hasAssertions();
 
             mockApiGet.mockResolvedValue({ files: [] });
             await getDiff(client, 'myorg', 'myrepo', 'feat/source', 'fix/target');
@@ -133,5 +142,4 @@ describe('Github Branch', () => {
             );
         });
     });
-
 });

@@ -372,5 +372,4 @@ describe('Llm Fallback Config', () => {
             expect(large).toBeCloseTo(small * 2, 5);
         });
     });
-
 });

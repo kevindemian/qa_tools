@@ -35,7 +35,8 @@ describe('PreconditionHandler', () => {
     });
 
     describe('GetPreconditionFieldId', () => {
-        it('returns cached value on second call', async () => {expect.hasAssertions();
+        it('returns cached value on second call', async () => {
+            expect.hasAssertions();
 
             const fields = [
                 { id: 'custom_123', schema: { custom: 'com.xpandit.plugins.xray:test-precondition-custom-field' } },
@@ -49,7 +50,8 @@ describe('PreconditionHandler', () => {
             expect(mockJiraResource.getJiraResource).toHaveBeenCalledTimes(1);
         });
 
-        it('falls back to customfield_13708 when API fails', async () => {expect.hasAssertions();
+        it('falls back to customfield_13708 when API fails', async () => {
+            expect.hasAssertions();
 
             mockJiraResource.getJiraResource.mockRejectedValue(new Error('API error'));
             const result = await handler._getPreconditionFieldId();
@@ -57,7 +59,8 @@ describe('PreconditionHandler', () => {
             expect(result).toBe('customfield_13708');
         });
 
-        it('falls back to customfield_13708 when no matching field', async () => {expect.hasAssertions();
+        it('falls back to customfield_13708 when no matching field', async () => {
+            expect.hasAssertions();
 
             mockJiraResource.getJiraResource.mockResolvedValue([{ id: 'other', schema: { custom: 'other' } }]);
             const result = await handler._getPreconditionFieldId();
@@ -67,7 +70,8 @@ describe('PreconditionHandler', () => {
     });
 
     describe('AssociatePrecondition', () => {
-        it('adds precondition to test issue fields', async () => {expect.hasAssertions();
+        it('adds precondition to test issue fields', async () => {
+            expect.hasAssertions();
 
             const fields = [
                 { id: 'custom_99', schema: { custom: 'com.xpandit.plugins.xray:test-precondition-custom-field' } },
@@ -83,7 +87,8 @@ describe('PreconditionHandler', () => {
             });
         });
 
-        it('does not duplicate existing precondition', async () => {expect.hasAssertions();
+        it('does not duplicate existing precondition', async () => {
+            expect.hasAssertions();
 
             const fields = [
                 { id: 'custom_99', schema: { custom: 'com.xpandit.plugins.xray:test-precondition-custom-field' } },
@@ -101,7 +106,8 @@ describe('PreconditionHandler', () => {
     });
 
     describe('ResolvePreconditionIssueTypeId', () => {
-        it('returns the issue type id for Pre-condition', async () => {expect.hasAssertions();
+        it('returns the issue type id for Pre-condition', async () => {
+            expect.hasAssertions();
 
             mockJiraResource.getJiraResource.mockResolvedValue([
                 { id: '11801', name: 'Pre-condition' },
@@ -112,7 +118,8 @@ describe('PreconditionHandler', () => {
             expect(result).toBe('11801');
         });
 
-        it('caches the result on second call', async () => {expect.hasAssertions();
+        it('caches the result on second call', async () => {
+            expect.hasAssertions();
 
             mockJiraResource.getJiraResource.mockResolvedValue([{ id: '11801', name: 'Pre-condition' }]);
             await handler._resolvePreconditionIssueTypeId();
@@ -121,7 +128,8 @@ describe('PreconditionHandler', () => {
             expect(mockJiraResource.getJiraResource).toHaveBeenCalledTimes(1);
         });
 
-        it('throws when no Pre-condition issue type exists', async () => {expect.hasAssertions();
+        it('throws when no Pre-condition issue type exists', async () => {
+            expect.hasAssertions();
 
             mockJiraResource.getJiraResource.mockResolvedValue([{ id: '100', name: 'Bug' }]);
 
@@ -132,7 +140,8 @@ describe('PreconditionHandler', () => {
     });
 
     describe('ListPreconditions', () => {
-        it('returns mapped preconditions from JQL search', async () => {expect.hasAssertions();
+        it('returns mapped preconditions from JQL search', async () => {
+            expect.hasAssertions();
 
             mockJiraResource.searchJiraIssues.mockResolvedValue({
                 issues: [
@@ -150,7 +159,8 @@ describe('PreconditionHandler', () => {
             expect(result[1]).toStrictEqual({ key: 'PREC-2', summary: 'Database must be seeded' });
         });
 
-        it('returns empty array when no preconditions found', async () => {expect.hasAssertions();
+        it('returns empty array when no preconditions found', async () => {
+            expect.hasAssertions();
 
             mockJiraResource.searchJiraIssues.mockResolvedValue({ issues: [], total: 0, startAt: 0, maxResults: 200 });
             const result = await handler.listPreconditions('EMPTY');
@@ -160,7 +170,8 @@ describe('PreconditionHandler', () => {
     });
 
     describe('FindExistingPrecondition', () => {
-        it('returns key when exact summary match found via JQL', async () => {expect.hasAssertions();
+        it('returns key when exact summary match found via JQL', async () => {
+            expect.hasAssertions();
 
             mockJiraResource.searchJiraIssues.mockResolvedValue({
                 issues: [{ key: 'PREC-1', fields: { summary: 'User must be logged in' } }],
@@ -173,7 +184,8 @@ describe('PreconditionHandler', () => {
             expect(key).toBe('PREC-1');
         });
 
-        it('returns null when no JQL match', async () => {expect.hasAssertions();
+        it('returns null when no JQL match', async () => {
+            expect.hasAssertions();
 
             mockJiraResource.searchJiraIssues.mockResolvedValue({ issues: [], total: 0, startAt: 0, maxResults: 5 });
             const key = await handler.findExistingPrecondition('ECSPOL', 'Nonexistent');
@@ -181,7 +193,8 @@ describe('PreconditionHandler', () => {
             expect(key).toBeNull();
         });
 
-        it('returns null when JQL matches but summaries differ case-sensitively', async () => {expect.hasAssertions();
+        it('returns null when JQL matches but summaries differ case-sensitively', async () => {
+            expect.hasAssertions();
 
             mockJiraResource.searchJiraIssues.mockResolvedValue({
                 issues: [{ key: 'PREC-1', fields: { summary: 'Different summary' } }],
@@ -194,7 +207,8 @@ describe('PreconditionHandler', () => {
             expect(key).toBeNull();
         });
 
-        it('escapes single quotes in summary for JQL safety', async () => {expect.hasAssertions();
+        it('escapes single quotes in summary for JQL safety', async () => {
+            expect.hasAssertions();
 
             mockJiraResource.searchJiraIssues.mockResolvedValue({ issues: [], total: 0, startAt: 0, maxResults: 5 });
             await handler.findExistingPrecondition('PROJ', "user's precondition");
@@ -207,7 +221,8 @@ describe('PreconditionHandler', () => {
     });
 
     describe('CreatePrecondition', () => {
-        it('creates a new precondition and returns its key', async () => {expect.hasAssertions();
+        it('creates a new precondition and returns its key', async () => {
+            expect.hasAssertions();
 
             mockJiraResource.searchJiraIssues.mockResolvedValue({ issues: [], total: 0, startAt: 0, maxResults: 5 });
             mockJiraResource.getJiraResource.mockResolvedValue([{ id: '11801', name: 'Pre-condition' }]);
@@ -224,7 +239,8 @@ describe('PreconditionHandler', () => {
             expect(key).toBe('ECSPOL-NEW-1');
         });
 
-        it('reuses existing precondition when found', async () => {expect.hasAssertions();
+        it('reuses existing precondition when found', async () => {
+            expect.hasAssertions();
 
             mockJiraResource.searchJiraIssues.mockResolvedValue({
                 issues: [{ key: 'PREC-EXISTING', fields: { summary: 'User must be admin' } }],

@@ -21,7 +21,8 @@ describe('Case24 handler', () => {
         vi.clearAllMocks();
     });
 
-    it('calls maybeRunFirstRunWizard and pushes history on success', async () => {expect.hasAssertions();
+    it('calls maybeRunFirstRunWizard and pushes history on success', async () => {
+        expect.hasAssertions();
 
         vi.mocked(maybeRunFirstRunWizard).mockResolvedValue(undefined);
 
@@ -33,7 +34,8 @@ describe('Case24 handler', () => {
         expect(result).toBeUndefined();
     });
 
-    it('returns false and prints error on first-run wizard failure', async () => {expect.hasAssertions();
+    it('returns false and prints error on first-run wizard failure', async () => {
+        expect.hasAssertions();
 
         vi.mocked(maybeRunFirstRunWizard).mockRejectedValue(new Error('network error'));
 

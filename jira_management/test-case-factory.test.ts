@@ -43,7 +43,8 @@ describe('TestCaseFactory', () => {
         const testData = { fields: { summary: 'Test' } };
         const opLog = { info: vi.fn() };
 
-        it('returns key on success', async () => {expect.hasAssertions();
+        it('returns key on success', async () => {
+            expect.hasAssertions();
 
             mockJiraResource.postJiraResource.mockResolvedValue({ key: 'TEST-123' });
             const result = await factory.createIssue({
@@ -59,7 +60,8 @@ describe('TestCaseFactory', () => {
             expect(opLog.info).toHaveBeenCalledWith('Issue criada', { key: 'TEST-123' });
         });
 
-        it('calls success when not quiet', async () => {expect.hasAssertions();
+        it('calls success when not quiet', async () => {
+            expect.hasAssertions();
 
             mockJiraResource.postJiraResource.mockResolvedValue({ key: 'TEST-123' });
             mockPrompt.isQuiet.mockReturnValue(false);
@@ -68,7 +70,8 @@ describe('TestCaseFactory', () => {
             expect(mockPrompt.success).toHaveBeenCalledWith('Issue criada: TEST-123');
         });
 
-        it('returns retry action on error with onError returning retry', async () => {expect.hasAssertions();
+        it('returns retry action on error with onError returning retry', async () => {
+            expect.hasAssertions();
 
             mockJiraResource.postJiraResource.mockRejectedValue(new Error('API error'));
             mockPrompt.onError.mockReturnValue('retry');
@@ -83,7 +86,8 @@ describe('TestCaseFactory', () => {
             expect(result).toStrictEqual({ action: 'retry' });
         });
 
-        it('returns abort action on error with onError returning abort', async () => {expect.hasAssertions();
+        it('returns abort action on error with onError returning abort', async () => {
+            expect.hasAssertions();
 
             mockJiraResource.postJiraResource.mockRejectedValue(new Error('API error'));
             mockPrompt.onError.mockReturnValue('abort');
@@ -103,7 +107,8 @@ describe('TestCaseFactory', () => {
         const testData = { project: 'TEST', fields: { summary: 'Login Test' } };
         const opLog = { info: vi.fn() };
 
-        it('skips creation when existing issue found by title', async () => {expect.hasAssertions();
+        it('skips creation when existing issue found by title', async () => {
+            expect.hasAssertions();
 
             mockJiraResource.searchJiraIssues.mockResolvedValue({
                 issues: [{ key: 'TEST-42', fields: { summary: 'Login Test' } }],
@@ -127,7 +132,8 @@ describe('TestCaseFactory', () => {
             });
         });
 
-        it('proceeds with creation when no existing issue matches', async () => {expect.hasAssertions();
+        it('proceeds with creation when no existing issue matches', async () => {
+            expect.hasAssertions();
 
             mockJiraResource.searchJiraIssues.mockResolvedValue({
                 issues: [],
@@ -148,7 +154,8 @@ describe('TestCaseFactory', () => {
             expect(mockJiraResource['postJiraResource']).toHaveBeenCalledWith('issue', testData);
         });
 
-        it('falls through to create when search fails gracefully', async () => {expect.hasAssertions();
+        it('falls through to create when search fails gracefully', async () => {
+            expect.hasAssertions();
 
             mockJiraResource.searchJiraIssues.mockRejectedValue(new Error('Search error'));
             mockJiraResource.postJiraResource.mockResolvedValue({ key: 'TEST-44' });
@@ -166,7 +173,8 @@ describe('TestCaseFactory', () => {
             expect(mockJiraResource['postJiraResource']).toHaveBeenCalledWith('issue', testData);
         });
 
-        it('does not search when skipExisting is false', async () => {expect.hasAssertions();
+        it('does not search when skipExisting is false', async () => {
+            expect.hasAssertions();
 
             mockJiraResource.postJiraResource.mockResolvedValue({ key: 'TEST-45' });
 
@@ -183,7 +191,8 @@ describe('TestCaseFactory', () => {
             expect(mockJiraResource['postJiraResource']).toHaveBeenCalledWith('issue', testData);
         });
 
-        it('shows prompt info when quiet is false and issue skipped', async () => {expect.hasAssertions();
+        it('shows prompt info when quiet is false and issue skipped', async () => {
+            expect.hasAssertions();
 
             mockJiraResource.searchJiraIssues.mockResolvedValue({
                 issues: [{ key: 'TEST-42', fields: { summary: 'Login Test' } }],
@@ -212,7 +221,8 @@ describe('TestCaseFactory', () => {
         };
         const opLog = { info: vi.fn() };
 
-        it('returns null on all steps success', async () => {expect.hasAssertions();
+        it('returns null on all steps success', async () => {
+            expect.hasAssertions();
 
             mockImporter.importStep.mockResolvedValue({});
             const result = await factory.postSteps(issueKey, test, opLog);
@@ -221,7 +231,8 @@ describe('TestCaseFactory', () => {
             expect(mockImporter.importStep).toHaveBeenCalledTimes(2);
         });
 
-        it('calls update on ProgressBar when not quiet', async () => {expect.hasAssertions();
+        it('calls update on ProgressBar when not quiet', async () => {
+            expect.hasAssertions();
 
             const update = vi.fn();
             const stop = vi.fn();
@@ -237,7 +248,8 @@ describe('TestCaseFactory', () => {
             expect(stop).toHaveBeenCalledWith();
         });
 
-        it('aborts on step error when onError returns abort', async () => {expect.hasAssertions();
+        it('aborts on step error when onError returns abort', async () => {
+            expect.hasAssertions();
 
             mockImporter.importStep.mockResolvedValueOnce({}).mockRejectedValueOnce(new Error('Step error'));
             mockPrompt.onError.mockReturnValue('abort');
@@ -247,7 +259,8 @@ describe('TestCaseFactory', () => {
             expect(mockImporter.importStep).toHaveBeenCalledTimes(2);
         });
 
-        it('continues after step error when onError does not return abort', async () => {expect.hasAssertions();
+        it('continues after step error when onError does not return abort', async () => {
+            expect.hasAssertions();
 
             const test3 = {
                 title: 'Test',

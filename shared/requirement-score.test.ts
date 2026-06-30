@@ -126,7 +126,8 @@ describe('Requirement Score', () => {
             expect(result.overallScore).toBeLessThanOrEqual(100);
         });
 
-        it('sorts entries by score descending', () => {expect.hasAssertions();
+        it('sorts entries by score descending', () => {
+            expect.hasAssertions();
 
             const result = calculateRequirementScores(makeRecords());
             for (let i = 1; i < result.entries.length; i++) {
@@ -138,7 +139,9 @@ describe('Requirement Score', () => {
         });
 
         it('assigns correct grade for score ranges', () => {
-            const records = [makeRecord({ id: 'a', generatedTests: [{ title: 'T1', preConditions: [], stepCount: 1 }] })];
+            const records = [
+                makeRecord({ id: 'a', generatedTests: [{ title: 'T1', preConditions: [], stepCount: 1 }] }),
+            ];
             const result = calculateRequirementScores(records);
 
             expect(['A', 'B', 'C', 'D', 'F']).toContain(result.entries[0]?.scoreGrade);
@@ -254,7 +257,9 @@ describe('Requirement Score', () => {
             const errorSpy = vi.spyOn(rootLogger, 'error');
             generateRequirementScoreHtml(nullAs<RequirementScoreResult>());
 
-            expect(errorSpy).toHaveBeenCalledWith(expect.stringContaining('Ensure a valid RequirementScoreResult object'));
+            expect(errorSpy).toHaveBeenCalledWith(
+                expect.stringContaining('Ensure a valid RequirementScoreResult object'),
+            );
         });
 
         it('returns error page for undefined result', () => {
@@ -362,12 +367,13 @@ describe('Requirement Score', () => {
                 generateRequirementScoreHtml(result);
 
                 expect(errorSpy).toHaveBeenCalledWith(
-                    expect.stringContaining('Verify that requirement data and html-factory module are working correctly.'),
+                    expect.stringContaining(
+                        'Verify that requirement data and html-factory module are working correctly.',
+                    ),
                 );
             } finally {
                 spy.mockRestore();
             }
         });
     });
-
 });

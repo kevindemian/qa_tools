@@ -468,7 +468,11 @@ describe('Config', () => {
         it('uses override values for all LLM getters', () => {
             const cfg = Config.create(LLM_OVERRIDES);
 
-            expect(Object.keys(LLM_OVERRIDES).every((key) => cfg.get(key) === LLM_OVERRIDES[key as keyof typeof LLM_OVERRIDES])).toBeTruthy();
+            expect(
+                Object.keys(LLM_OVERRIDES).every(
+                    (key) => cfg.get(key) === LLM_OVERRIDES[key as keyof typeof LLM_OVERRIDES],
+                ),
+            ).toBeTruthy();
         });
     });
 

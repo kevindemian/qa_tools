@@ -27,7 +27,8 @@ describe('Integration: Defect Seasonality (FT-21)', () => {
     });
 
     describe('FT-21a: aggregateDefectSeasonality with data', () => {
-        it('groups by day and hour', async () => {expect.hasAssertions();
+        it('groups by day and hour', async () => {
+            expect.hasAssertions();
 
             const { aggregateDefectSeasonality } = await import('../../defect-seasonality.js');
             const result = aggregateDefectSeasonality(makeClassifications());
@@ -39,7 +40,8 @@ describe('Integration: Defect Seasonality (FT-21)', () => {
             expect(result.byHour).toHaveLength(24);
         });
 
-        it('returns correct day distribution', async () => {expect.hasAssertions();
+        it('returns correct day distribution', async () => {
+            expect.hasAssertions();
 
             const { aggregateDefectSeasonality } = await import('../../defect-seasonality.js');
             const result = aggregateDefectSeasonality(makeClassifications());
@@ -56,7 +58,8 @@ describe('Integration: Defect Seasonality (FT-21)', () => {
     });
 
     describe('FT-21b: empty data', () => {
-        it('returns zero-filled result for empty array', async () => {expect.hasAssertions();
+        it('returns zero-filled result for empty array', async () => {
+            expect.hasAssertions();
 
             const { aggregateDefectSeasonality } = await import('../../defect-seasonality.js');
             const result = aggregateDefectSeasonality([]);
@@ -68,7 +71,8 @@ describe('Integration: Defect Seasonality (FT-21)', () => {
             expect(result.byHour.every((h) => h.total === 0)).toBeTruthy();
         });
 
-        it('returns zero-filled result for null', async () => {expect.hasAssertions();
+        it('returns zero-filled result for null', async () => {
+            expect.hasAssertions();
 
             const { aggregateDefectSeasonality } = await import('../../defect-seasonality.js');
             const result = aggregateDefectSeasonality(null);
@@ -76,7 +80,8 @@ describe('Integration: Defect Seasonality (FT-21)', () => {
             expect(result.totalRecords).toBe(0);
         });
 
-        it('returns zero-filled result for undefined', async () => {expect.hasAssertions();
+        it('returns zero-filled result for undefined', async () => {
+            expect.hasAssertions();
 
             const { aggregateDefectSeasonality } = await import('../../defect-seasonality.js');
             const result = aggregateDefectSeasonality(undefined);
@@ -86,7 +91,8 @@ describe('Integration: Defect Seasonality (FT-21)', () => {
     });
 
     describe('FT-21c: generateSeasonalityHtml', () => {
-        it('produces complete HTML with data', async () => {expect.hasAssertions();
+        it('produces complete HTML with data', async () => {
+            expect.hasAssertions();
 
             const { aggregateDefectSeasonality, generateSeasonalityHtml } = await import('../../defect-seasonality.js');
             const result = aggregateDefectSeasonality(makeClassifications());
@@ -99,7 +105,8 @@ describe('Integration: Defect Seasonality (FT-21)', () => {
             expect(html).toContain('data-component="metric-card"');
         });
 
-        it('shows no-data message when totalRecords is 0', async () => {expect.hasAssertions();
+        it('shows no-data message when totalRecords is 0', async () => {
+            expect.hasAssertions();
 
             const { generateSeasonalityHtml } = await import('../../defect-seasonality.js');
             const emptyResult: SeasonalityResult = {
@@ -118,7 +125,8 @@ describe('Integration: Defect Seasonality (FT-21)', () => {
     });
 
     describe('FT-21d: null handling', () => {
-        it('returns zero-filled result when aggregation receives null', async () => {expect.hasAssertions();
+        it('returns zero-filled result when aggregation receives null', async () => {
+            expect.hasAssertions();
 
             const { aggregateDefectSeasonality } = await import('../../defect-seasonality.js');
             const result = aggregateDefectSeasonality(null);
@@ -132,7 +140,8 @@ describe('Integration: Defect Seasonality (FT-21)', () => {
     });
 
     describe('FT-21e: error fallback', () => {
-        it('returns error page when buildCss throws', async () => {expect.hasAssertions();
+        it('returns error page when buildCss throws', async () => {
+            expect.hasAssertions();
 
             const spy = vi.spyOn(reportStyles, 'buildCss').mockImplementation(() => {
                 throw new Error('CSS failure');

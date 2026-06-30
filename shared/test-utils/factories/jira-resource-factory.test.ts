@@ -1,10 +1,22 @@
 import { createMockJiraResource } from './jira-resource-factory.js';
 
 const JIRA_RESOURCE_METHODS = [
-    'getJiraResource', 'postJiraResource', 'putJiraResource', 'searchJiraIssues',
-    'getTransitionsForIssue', 'transitionIssue', 'getProjectId', 'getProjectVersions',
-    'getVersionId', 'createVersion', 'checkReleaseTasksStatus', 'getReleaseTasks',
-    'getLatestReleases', 'addTasksToSprint', 'updateFixVersions', 'releaseVersion',
+    'getJiraResource',
+    'postJiraResource',
+    'putJiraResource',
+    'searchJiraIssues',
+    'getTransitionsForIssue',
+    'transitionIssue',
+    'getProjectId',
+    'getProjectVersions',
+    'getVersionId',
+    'createVersion',
+    'checkReleaseTasksStatus',
+    'getReleaseTasks',
+    'getLatestReleases',
+    'addTasksToSprint',
+    'updateFixVersions',
+    'releaseVersion',
     'moveCardsToDone',
 ];
 

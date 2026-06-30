@@ -85,7 +85,8 @@ describe('Case15', () => {
             expect(typeof case15.handler).toBe('function');
         });
 
-        it('warns and returns when no project is selected', async () => {expect.hasAssertions();
+        it('warns and returns when no project is selected', async () => {
+            expect.hasAssertions();
 
             const ctx = makeMockCommandContext();
             ctx.ctx.project_name = '';
@@ -95,7 +96,8 @@ describe('Case15', () => {
             expect(vi.mocked(resolveSessionContext)).not.toHaveBeenCalled();
         });
 
-        it('uses resolveTestDataSource when SHA is available and data is found', async () => {expect.hasAssertions();
+        it('uses resolveTestDataSource when SHA is available and data is found', async () => {
+            expect.hasAssertions();
 
             const store = mockStore();
             vi.mocked(resolveSessionContext).mockReturnValue({
@@ -126,7 +128,8 @@ describe('Case15', () => {
             expect(vi.spyOn(createTests, 'createTestsFromJson')).toHaveBeenCalledTimes(1);
         });
 
-        it('falls back to CI download when cache misses', async () => {expect.hasAssertions();
+        it('falls back to CI download when cache misses', async () => {
+            expect.hasAssertions();
 
             vi.mocked(resolveTestDataSource).mockResolvedValue({
                 result: {
@@ -142,7 +145,8 @@ describe('Case15', () => {
             expect(vi.spyOn(createTests, 'createTestsFromJson')).toHaveBeenCalledTimes(1);
         });
 
-        it('falls back to manual path when resolveTestDataSource returns null', async () => {expect.hasAssertions();
+        it('falls back to manual path when resolveTestDataSource returns null', async () => {
+            expect.hasAssertions();
 
             vi.mocked(resolveTestDataSource).mockResolvedValue(null);
 
@@ -155,7 +159,8 @@ describe('Case15', () => {
             expect(vi.spyOn(createTests, 'createTestsFromJson')).toHaveBeenCalledTimes(1);
         });
 
-        it('cancels when manual path is empty', async () => {expect.hasAssertions();
+        it('cancels when manual path is empty', async () => {
+            expect.hasAssertions();
 
             vi.mocked(resolveTestDataSource).mockResolvedValue(null);
             const { ask, warn } = await import('../../shared/prompt.js');
@@ -168,7 +173,8 @@ describe('Case15', () => {
             expect(warn).toHaveBeenCalledWith('Caminho do JSON vazio. Operação cancelada.');
         });
 
-        it('does not call resolveTestDataSource when SHA is null', async () => {expect.hasAssertions();
+        it('does not call resolveTestDataSource when SHA is null', async () => {
+            expect.hasAssertions();
 
             vi.mocked(resolveSessionContext).mockReturnValue({
                 sha: null,
@@ -186,7 +192,8 @@ describe('Case15', () => {
             expect(vi.spyOn(createTests, 'createTestsFromJson')).toHaveBeenCalledTimes(1);
         });
 
-        it('displays results after successful import', async () => {expect.hasAssertions();
+        it('displays results after successful import', async () => {
+            expect.hasAssertions();
 
             vi.mocked(resolveTestDataSource).mockResolvedValue({
                 result: {
@@ -198,9 +205,12 @@ describe('Case15', () => {
 
             await case15.handler(mockContext);
 
-            expect(offerTestExecutionAssociation).toHaveBeenCalledWith(mockContext, ['TEST-1', 'TEST-2'], 'resolve-abc123-12345');
+            expect(offerTestExecutionAssociation).toHaveBeenCalledWith(
+                mockContext,
+                ['TEST-1', 'TEST-2'],
+                'resolve-abc123-12345',
+            );
             expect(showResults).toHaveBeenCalledWith(mockContext, ['TEST-1', 'TEST-2'], { associated: false });
         });
     });
-
 });

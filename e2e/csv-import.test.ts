@@ -50,7 +50,8 @@ describe('E2E: CSV Import', () => {
         }
     });
 
-    it('cria 2 issues, preconditions, steps, linked issue, e cross-ref', async () => {expect.hasAssertions();
+    it('cria 2 issues, preconditions, steps, linked issue, e cross-ref', async () => {
+        expect.hasAssertions();
 
         const jiraResource = new JiraResource(E2E_TOKEN, 'http://localhost:9999/jira/rest/api/2');
         const jiraResourceXray = new JiraResource(E2E_TOKEN, 'http://localhost:9999/xray');

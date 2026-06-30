@@ -815,10 +815,7 @@ describe('Main.ts', () => {
             const mockJiraResource = { searchJiraIssues: vi.fn().mockResolvedValue({ total: 42 }) };
             await mod.showGapBadge(mockJiraResource, 'TESTPROJ');
 
-            expect(mockJiraResource.searchJiraIssues).toHaveBeenCalledWith(
-                expect.stringContaining('TESTPROJ'),
-                0,
-            );
+            expect(mockJiraResource.searchJiraIssues).toHaveBeenCalledWith(expect.stringContaining('TESTPROJ'), 0);
         });
     });
 });

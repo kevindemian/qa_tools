@@ -43,7 +43,8 @@ describe('IssueLinker', () => {
     describe('AssociatePrecondition', () => {
         const opLog = { info: vi.fn() };
 
-        it('returns null when no precondition', async () => {expect.hasAssertions();
+        it('returns null when no precondition', async () => {
+            expect.hasAssertions();
 
             const result = await linker.associatePrecondition({ title: 'Test', steps: [] }, 'TEST-1', opLog);
 
@@ -51,7 +52,8 @@ describe('IssueLinker', () => {
             expect(mockLinkManager['associatePrecondition']).not.toHaveBeenCalled();
         });
 
-        it('returns null on success', async () => {expect.hasAssertions();
+        it('returns null on success', async () => {
+            expect.hasAssertions();
 
             mockLinkManager.associatePrecondition.mockResolvedValue(null);
             const test: TestCase = { title: 'Test', steps: [], precondition: { type: 'reference', value: 'PREC-001' } };
@@ -61,7 +63,8 @@ describe('IssueLinker', () => {
             expect(mockLinkManager['associatePrecondition']).toHaveBeenCalledWith('TEST-1', 'PREC-001');
         });
 
-        it('calls success when not quiet', async () => {expect.hasAssertions();
+        it('calls success when not quiet', async () => {
+            expect.hasAssertions();
 
             mockLinkManager.associatePrecondition.mockResolvedValue(null);
             mockPrompt.isQuiet.mockReturnValue(false);
@@ -71,7 +74,8 @@ describe('IssueLinker', () => {
             expect(mockPrompt.success).toHaveBeenCalledWith('  Pre-condition PREC-001 associada');
         });
 
-        it('returns abort action on error', async () => {expect.hasAssertions();
+        it('returns abort action on error', async () => {
+            expect.hasAssertions();
 
             mockLinkManager.associatePrecondition.mockRejectedValue(new Error('API error'));
             mockPrompt.onError.mockReturnValue('abort');
@@ -83,7 +87,8 @@ describe('IssueLinker', () => {
     });
 
     describe('LinkIssues', () => {
-        it('returns null when no linkedIssues', async () => {expect.hasAssertions();
+        it('returns null when no linkedIssues', async () => {
+            expect.hasAssertions();
 
             const result = await linker.linkIssues('TEST-1', { title: 'Test', steps: [] });
 
@@ -91,14 +96,16 @@ describe('IssueLinker', () => {
             expect(mockLinkManager['linkIssues']).not.toHaveBeenCalled();
         });
 
-        it('returns null when linkedIssues is empty array', async () => {expect.hasAssertions();
+        it('returns null when linkedIssues is empty array', async () => {
+            expect.hasAssertions();
 
             const result = await linker.linkIssues('TEST-1', { title: 'Test', steps: [], linkedIssues: [] });
 
             expect(result).toBeNull();
         });
 
-        it('returns null on success', async () => {expect.hasAssertions();
+        it('returns null on success', async () => {
+            expect.hasAssertions();
 
             mockLinkManager.linkIssues.mockResolvedValue(undefined);
             const test: TestCase = {
@@ -112,7 +119,8 @@ describe('IssueLinker', () => {
             expect(mockLinkManager['linkIssues']).toHaveBeenCalledWith('TEST-1', test.linkedIssues);
         });
 
-        it('calls success when not quiet', async () => {expect.hasAssertions();
+        it('calls success when not quiet', async () => {
+            expect.hasAssertions();
 
             mockLinkManager.linkIssues.mockResolvedValue(undefined);
             mockPrompt.isQuiet.mockReturnValue(false);
@@ -126,7 +134,8 @@ describe('IssueLinker', () => {
             expect(mockPrompt.success).toHaveBeenCalledWith('  1 linked issue(s) criados');
         });
 
-        it('returns action on error', async () => {expect.hasAssertions();
+        it('returns action on error', async () => {
+            expect.hasAssertions();
 
             mockLinkManager.linkIssues.mockRejectedValue(new Error('API error'));
             mockPrompt.onError.mockReturnValue('retry');
@@ -142,14 +151,16 @@ describe('IssueLinker', () => {
     });
 
     describe('UpdateCrossReferences', () => {
-        it('does nothing when tests array is empty', async () => {expect.hasAssertions();
+        it('does nothing when tests array is empty', async () => {
+            expect.hasAssertions();
 
             await linker.updateCrossReferences([], []);
 
             expect(mockJiraResource['getJiraResource']).not.toHaveBeenCalled();
         });
 
-        it('skips tests without id or group', async () => {expect.hasAssertions();
+        it('skips tests without id or group', async () => {
+            expect.hasAssertions();
 
             const tests: TestCase[] = [{ title: 'Test', steps: [], group: '' }];
             await linker.updateCrossReferences(tests, ['']);
@@ -157,7 +168,8 @@ describe('IssueLinker', () => {
             expect(mockJiraResource['getJiraResource']).not.toHaveBeenCalled();
         });
 
-        it('skips groups with fewer than 2 members', async () => {expect.hasAssertions();
+        it('skips groups with fewer than 2 members', async () => {
+            expect.hasAssertions();
 
             const tests: TestCase[] = [{ title: 'Test', steps: [], group: 'G1' }];
             await linker.updateCrossReferences(tests, ['TEST-1']);
@@ -165,7 +177,8 @@ describe('IssueLinker', () => {
             expect(mockJiraResource['getJiraResource']).not.toHaveBeenCalled();
         });
 
-        it('updates descriptions for all group members', async () => {expect.hasAssertions();
+        it('updates descriptions for all group members', async () => {
+            expect.hasAssertions();
 
             mockJiraResource.getJiraResource
                 .mockResolvedValueOnce({ fields: { description: 'Old desc' } })
@@ -183,7 +196,8 @@ describe('IssueLinker', () => {
             expect(mockJiraResource['putJiraResource']).toHaveBeenCalledWith('issue/TEST-2', expect.any(Object));
         });
 
-        it('skips already updated issues', async () => {expect.hasAssertions();
+        it('skips already updated issues', async () => {
+            expect.hasAssertions();
 
             mockJiraResource.getJiraResource.mockResolvedValue({
                 fields: { description: 'This test case is part of the set Grupo X: TEST-2' },
@@ -197,7 +211,8 @@ describe('IssueLinker', () => {
             expect(mockJiraResource['putJiraResource']).not.toHaveBeenCalled();
         });
 
-        it('handles getJiraResource error', async () => {expect.hasAssertions();
+        it('handles getJiraResource error', async () => {
+            expect.hasAssertions();
 
             mockJiraResource.getJiraResource.mockRejectedValue({ response: { status: 404 } });
             const tests: TestCase[] = [
@@ -209,7 +224,8 @@ describe('IssueLinker', () => {
             expect(mockJiraResource['putJiraResource']).not.toHaveBeenCalled();
         });
 
-        it('handles putJiraResource error', async () => {expect.hasAssertions();
+        it('handles putJiraResource error', async () => {
+            expect.hasAssertions();
 
             mockJiraResource.getJiraResource
                 .mockResolvedValueOnce({ fields: { description: 'Old' } })
@@ -224,7 +240,8 @@ describe('IssueLinker', () => {
             expect(mockJiraResource['putJiraResource']).toHaveBeenCalledTimes(2);
         });
 
-        it('writes green char on success when not quiet', async () => {expect.hasAssertions();
+        it('writes green char on success when not quiet', async () => {
+            expect.hasAssertions();
 
             mockPrompt.isQuiet.mockReturnValue(false);
             mockJiraResource.getJiraResource
@@ -240,7 +257,8 @@ describe('IssueLinker', () => {
             expect(mockPrompt.print).toHaveBeenCalledWith(expect.stringContaining('+'));
         });
 
-        it('writes red char on error when not quiet', async () => {expect.hasAssertions();
+        it('writes red char on error when not quiet', async () => {
+            expect.hasAssertions();
 
             mockPrompt.isQuiet.mockReturnValue(false);
             mockJiraResource.getJiraResource

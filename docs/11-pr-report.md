@@ -137,8 +137,8 @@ No menu interativo, selecione `Configurar PR Report` para reconfigurar.
 ## 📊 Test Results
 
 | ✅ Passed | ❌ Failed | ⏭ Skipped | 📦 Total | ⏱ Duration | 📈 Pass Rate |
-| --------- | --------- | ---------- | -------- | ---------- | ------------ |
-| 4862      | 0         | 9          | 4871     | 55.4s      | 99.8%        |
+| --------- | --------- | --------- | -------- | ---------- | ------------ |
+| 4862      | 0         | 9         | 4871     | 55.4s      | 99.8%        |
 
 ## 🛡️ Quality Gate: ✅ PASS (Score: 85/100)
 

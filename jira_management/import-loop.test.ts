@@ -90,7 +90,8 @@ describe('Import Loop', () => {
     });
 
     describe('LinkTestRelations', () => {
-        it('associatePrecondition abort -> abort/errored', async () => {expect.hasAssertions();
+        it('associatePrecondition abort -> abort/errored', async () => {
+            expect.hasAssertions();
 
             const linker = makeLinker();
             const factory = makeFactory();
@@ -111,7 +112,8 @@ describe('Import Loop', () => {
             expect(nonNull(resultSink[0]).message).toContain('pre-condition');
         });
 
-        it('linkIssues abort -> abort/errored', async () => {expect.hasAssertions();
+        it('linkIssues abort -> abort/errored', async () => {
+            expect.hasAssertions();
 
             const linker = makeLinker();
             const factory = makeFactory();
@@ -198,7 +200,8 @@ describe('Import Loop', () => {
     });
 
     describe('CreateIssueForTest', () => {
-        it('abort branch', async () => {expect.hasAssertions();
+        it('abort branch', async () => {
+            expect.hasAssertions();
 
             const factory = makeFactory();
             factory.createIssue.mockResolvedValue({ action: 'abort' });
@@ -217,7 +220,8 @@ describe('Import Loop', () => {
             expect(result).toBe('abort');
         });
 
-        it('retry branch returns null', async () => {expect.hasAssertions();
+        it('retry branch returns null', async () => {
+            expect.hasAssertions();
 
             const factory = makeFactory();
             factory.createIssue.mockResolvedValue({ action: 'retry' });
@@ -236,7 +240,8 @@ describe('Import Loop', () => {
             expect(result).toBeNull();
         });
 
-        it('continue branch', async () => {expect.hasAssertions();
+        it('continue branch', async () => {
+            expect.hasAssertions();
 
             const factory = makeFactory();
             factory.createIssue.mockResolvedValue({ action: 'skip' });
@@ -255,7 +260,8 @@ describe('Import Loop', () => {
             expect(result).toBe('continue');
         });
 
-        it('success returns key', async () => {expect.hasAssertions();
+        it('success returns key', async () => {
+            expect.hasAssertions();
 
             const factory = makeFactory();
             factory.createIssue.mockResolvedValue({ key: 'TEST-100' });
@@ -276,7 +282,8 @@ describe('Import Loop', () => {
     });
 
     describe('ExecuteTestCreationLoop', () => {
-        it('main loop flow with one test', async () => {expect.hasAssertions();
+        it('main loop flow with one test', async () => {
+            expect.hasAssertions();
 
             const factory = makeFactory();
             const linker = makeLinker();
@@ -312,5 +319,4 @@ describe('Import Loop', () => {
             expect(nonNull(resultSink[0]).status).toBe('ok');
         });
     });
-
 });

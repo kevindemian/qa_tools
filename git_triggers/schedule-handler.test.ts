@@ -178,7 +178,8 @@ describe('Schedule Handler', () => {
     });
 
     describe('HandleListSchedules', () => {
-        it('lists schedules for gitlab', async () => {expect.hasAssertions();
+        it('lists schedules for gitlab', async () => {
+            expect.hasAssertions();
 
             const schedules = [
                 { id: '1', description: 'Nightly', next_run_at: '2026-01-01' },
@@ -193,7 +194,8 @@ describe('Schedule Handler', () => {
             expect(mockPushHistory).toHaveBeenCalledWith('list-schedules', '2 schedules', 'ok');
         });
 
-        it('warns on empty schedules', async () => {expect.hasAssertions();
+        it('warns on empty schedules', async () => {
+            expect.hasAssertions();
 
             vi.spyOn(mockManager, 'getSchedules').mockResolvedValue([]);
 
@@ -202,7 +204,8 @@ describe('Schedule Handler', () => {
             expect(mockWarn).toHaveBeenCalledWith(expect.stringContaining('Nenhum schedule'));
         });
 
-        it('warns for github provider', async () => {expect.hasAssertions();
+        it('warns for github provider', async () => {
+            expect.hasAssertions();
 
             mockState.currentProvider = 'github';
 
@@ -212,7 +215,8 @@ describe('Schedule Handler', () => {
             expect(mockManager.getSchedules).not.toHaveBeenCalled();
         });
 
-        it('handles error', async () => {expect.hasAssertions();
+        it('handles error', async () => {
+            expect.hasAssertions();
 
             vi.spyOn(mockManager, 'getSchedules').mockRejectedValue(new Error('API error'));
 
@@ -223,7 +227,8 @@ describe('Schedule Handler', () => {
     });
 
     describe('HandleRunSchedule', () => {
-        it('runs schedule for gitlab', async () => {expect.hasAssertions();
+        it('runs schedule for gitlab', async () => {
+            expect.hasAssertions();
 
             mockPrompt.mockReturnValue('schedule-1');
             vi.spyOn(mockManager, 'runSchedule').mockResolvedValue({ status: 'success' });
@@ -235,7 +240,8 @@ describe('Schedule Handler', () => {
             expect(mockPushHistory).toHaveBeenCalledWith('schedule-run', 'schedule-1', 'ok');
         });
 
-        it('warns for github provider', async () => {expect.hasAssertions();
+        it('warns for github provider', async () => {
+            expect.hasAssertions();
 
             mockState.currentProvider = 'github';
 
@@ -245,7 +251,8 @@ describe('Schedule Handler', () => {
             expect(mockManager.runSchedule).not.toHaveBeenCalled();
         });
 
-        it('handles error', async () => {expect.hasAssertions();
+        it('handles error', async () => {
+            expect.hasAssertions();
 
             mockPrompt.mockReturnValue('sched-1');
             vi.spyOn(mockManager, 'runSchedule').mockRejectedValue(new Error('fail'));
@@ -259,7 +266,8 @@ describe('Schedule Handler', () => {
     describe('HandleChangeProject', () => {
         const names = ['proj1', 'proj2'];
 
-        it('changes to valid project', async () => {expect.hasAssertions();
+        it('changes to valid project', async () => {
+            expect.hasAssertions();
 
             mockPrompt.mockReturnValue('1');
             vi.mocked(getProjects).mockReturnValue({ proj1: '1', proj2: '2' });
@@ -282,7 +290,8 @@ describe('Schedule Handler', () => {
             expect(success).toHaveBeenCalledWith(expect.stringContaining('proj1'));
         });
 
-        it('warns on invalid index', async () => {expect.hasAssertions();
+        it('warns on invalid index', async () => {
+            expect.hasAssertions();
 
             mockPrompt.mockReturnValue('99');
 
@@ -291,7 +300,8 @@ describe('Schedule Handler', () => {
             expect(mockWarn).toHaveBeenCalledWith(expect.stringContaining('inválida'));
         });
 
-        it('warns on NaN', async () => {expect.hasAssertions();
+        it('warns on NaN', async () => {
+            expect.hasAssertions();
 
             mockPrompt.mockReturnValue('abc');
 
@@ -312,7 +322,16 @@ describe('Schedule Handler', () => {
             mockState.currentProjectName = 'proj1';
             mockLoadMetrics.mockReturnValue({
                 runs: [
-                    { project: 'proj1', timestamp: '', total: 0, passed: 0, failed: 0, skipped: 0, duration: 0, tests: [] },
+                    {
+                        project: 'proj1',
+                        timestamp: '',
+                        total: 0,
+                        passed: 0,
+                        failed: 0,
+                        skipped: 0,
+                        duration: 0,
+                        tests: [],
+                    },
                 ],
             });
 
@@ -325,8 +344,26 @@ describe('Schedule Handler', () => {
             mockState.currentProjectName = 'proj1';
             mockLoadMetrics.mockReturnValue({
                 runs: [
-                    { project: 'proj1', timestamp: '', total: 0, passed: 0, failed: 0, skipped: 0, duration: 0, tests: [] },
-                    { project: 'proj1', timestamp: '', total: 0, passed: 0, failed: 0, skipped: 0, duration: 0, tests: [] },
+                    {
+                        project: 'proj1',
+                        timestamp: '',
+                        total: 0,
+                        passed: 0,
+                        failed: 0,
+                        skipped: 0,
+                        duration: 0,
+                        tests: [],
+                    },
+                    {
+                        project: 'proj1',
+                        timestamp: '',
+                        total: 0,
+                        passed: 0,
+                        failed: 0,
+                        skipped: 0,
+                        duration: 0,
+                        tests: [],
+                    },
                 ],
             });
             mockCalculateFlakiness.mockReturnValue([]);
@@ -336,13 +373,32 @@ describe('Schedule Handler', () => {
             expect(mockInfo).toHaveBeenCalledWith(expect.stringContaining('Nenhum teste flaky'));
         });
 
-        it('generates dashboard HTML and opens browser', async () => {expect.hasAssertions();
+        it('generates dashboard HTML and opens browser', async () => {
+            expect.hasAssertions();
 
             mockState.currentProjectName = 'proj1';
             mockLoadMetrics.mockReturnValue({
                 runs: [
-                    { project: 'proj1', timestamp: '', total: 0, passed: 0, failed: 0, skipped: 0, duration: 0, tests: [] },
-                    { project: 'proj1', timestamp: '', total: 0, passed: 0, failed: 0, skipped: 0, duration: 0, tests: [] },
+                    {
+                        project: 'proj1',
+                        timestamp: '',
+                        total: 0,
+                        passed: 0,
+                        failed: 0,
+                        skipped: 0,
+                        duration: 0,
+                        tests: [],
+                    },
+                    {
+                        project: 'proj1',
+                        timestamp: '',
+                        total: 0,
+                        passed: 0,
+                        failed: 0,
+                        skipped: 0,
+                        duration: 0,
+                        tests: [],
+                    },
                 ],
             });
             mockCalculateFlakiness.mockReturnValue([
@@ -357,7 +413,11 @@ describe('Schedule Handler', () => {
                 openWithFallback: (...args: unknown[]) => unknown;
             };
 
-            expect(openWithFallback).toHaveBeenCalledWith(expect.stringContaining('flakiness'), 'Dashboard de flaky', info);
+            expect(openWithFallback).toHaveBeenCalledWith(
+                expect.stringContaining('flakiness'),
+                'Dashboard de flaky',
+                info,
+            );
         });
     });
 
@@ -373,7 +433,16 @@ describe('Schedule Handler', () => {
             mockState.currentProjectName = 'proj1';
             mockLoadMetrics.mockReturnValue({
                 runs: [
-                    { project: 'proj1', timestamp: '', total: 0, passed: 0, failed: 0, skipped: 0, duration: 0, tests: [] },
+                    {
+                        project: 'proj1',
+                        timestamp: '',
+                        total: 0,
+                        passed: 0,
+                        failed: 0,
+                        skipped: 0,
+                        duration: 0,
+                        tests: [],
+                    },
                 ],
                 failureClassifications: [],
             });
@@ -382,5 +451,4 @@ describe('Schedule Handler', () => {
             expect(mockWarn).toHaveBeenCalledWith(expect.stringContaining('Menos de 2'));
         });
     });
-
 });

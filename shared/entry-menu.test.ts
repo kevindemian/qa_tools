@@ -37,7 +37,8 @@ describe('RunModule', () => {
         vi.clearAllMocks();
     });
 
-    it('spawns npx tsx for jira module', async () => {expect.hasAssertions();
+    it('spawns npx tsx for jira module', async () => {
+        expect.hasAssertions();
 
         mockSpawnWithExit(0);
 
@@ -51,7 +52,8 @@ describe('RunModule', () => {
         await expect(promise).resolves.toBeUndefined();
     });
 
-    it('spawns npx tsx for git module', async () => {expect.hasAssertions();
+    it('spawns npx tsx for git module', async () => {
+        expect.hasAssertions();
 
         mockSpawnWithExit(0);
 
@@ -65,7 +67,8 @@ describe('RunModule', () => {
         await expect(promise).resolves.toBeUndefined();
     });
 
-    it('rejects on non-zero exit code', async () => {expect.hasAssertions();
+    it('rejects on non-zero exit code', async () => {
+        expect.hasAssertions();
 
         mockSpawnWithExit(1);
 
@@ -74,7 +77,8 @@ describe('RunModule', () => {
         await expect(promise).rejects.toThrow('código 1');
     });
 
-    it('rejects on spawn error', async () => {expect.hasAssertions();
+    it('rejects on spawn error', async () => {
+        expect.hasAssertions();
 
         const cp = makeMockChildProcess();
         mockSpawn.mockImplementation(() => {
@@ -101,7 +105,8 @@ describe('Main', () => {
         vi.restoreAllMocks();
     });
 
-    it('prints usage when not TTY', async () => {expect.hasAssertions();
+    it('prints usage when not TTY', async () => {
+        expect.hasAssertions();
 
         vi.spyOn(Output, 'isTTY').mockReturnValue(false);
 
@@ -111,7 +116,8 @@ describe('Main', () => {
         expect(printSpy).toHaveBeenCalledWith(expect.stringContaining('npm run git'));
     });
 
-    it('loops and exits on /exit choice', async () => {expect.hasAssertions();
+    it('loops and exits on /exit choice', async () => {
+        expect.hasAssertions();
 
         vi.spyOn(Output, 'isTTY').mockReturnValue(true);
         vi.spyOn(Output, 'isCI').mockReturnValue(false);
@@ -123,7 +129,8 @@ describe('Main', () => {
         expect(showSelectMock).toHaveBeenCalledTimes(1);
     });
 
-    it('launches jira module when selected and exits on failure', async () => {expect.hasAssertions();
+    it('launches jira module when selected and exits on failure', async () => {
+        expect.hasAssertions();
 
         vi.spyOn(Output, 'isTTY').mockReturnValue(true);
         vi.spyOn(Output, 'isCI').mockReturnValue(false);
@@ -132,10 +139,15 @@ describe('Main', () => {
 
         await entryMenu.main();
 
-        expect(mockSpawn).toHaveBeenCalledWith('npx', expect.arrayContaining(['tsx']), expect.objectContaining({ stdio: 'inherit' }));
+        expect(mockSpawn).toHaveBeenCalledWith(
+            'npx',
+            expect.arrayContaining(['tsx']),
+            expect.objectContaining({ stdio: 'inherit' }),
+        );
     });
 
-    it('continues loop on unknown choice', async () => {expect.hasAssertions();
+    it('continues loop on unknown choice', async () => {
+        expect.hasAssertions();
 
         vi.spyOn(Output, 'isTTY').mockReturnValue(true);
         vi.spyOn(Output, 'isCI').mockReturnValue(false);

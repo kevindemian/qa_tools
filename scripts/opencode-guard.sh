@@ -177,6 +177,10 @@ diff_file() {
 
 save_backup() {
   local file="$1"
+  # Skip backup for files outside project root
+  if [[ "$file" != "$PROJECT_ROOT/"* ]]; then
+    return
+  fi
   local rel="${file#$PROJECT_ROOT/}"
   local backup_dir="$GUARD_DIR/backups/$(dirname "$rel")"
   mkdir -p "$backup_dir"

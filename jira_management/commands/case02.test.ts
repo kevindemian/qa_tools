@@ -31,14 +31,16 @@ describe('Case02', () => {
             expect(typeof case02.handler).toBe('function');
         });
 
-        it('runs full version list flow with mocked dependencies without throwing', async () => {expect.hasAssertions();
+        it('runs full version list flow with mocked dependencies without throwing', async () => {
+            expect.hasAssertions();
 
             const result = await case02.handler(mockContext);
 
             expect([undefined, true, false]).toContain(result);
         });
 
-        it('handles missing projectId gracefully', async () => {expect.hasAssertions();
+        it('handles missing projectId gracefully', async () => {
+            expect.hasAssertions();
 
             mockJiraResource.getProjectId.mockResolvedValueOnce(null);
             const result = await case02.handler(mockContext);
@@ -46,7 +48,8 @@ describe('Case02', () => {
             expect(result).toBeUndefined();
         });
 
-        it('handles versions list and calls pushHistory', async () => {expect.hasAssertions();
+        it('handles versions list and calls pushHistory', async () => {
+            expect.hasAssertions();
 
             mockJiraResource.getProjectVersions.mockResolvedValueOnce([
                 { name: 'v1.0', description: 'First release', released: true },
@@ -54,11 +57,16 @@ describe('Case02', () => {
             ]);
             const result = await case02.handler(mockContext);
 
-            expect(mockContext.pushHistory).toHaveBeenCalledWith('listar-versoes', expect.stringContaining('versão'), 'ok');
+            expect(mockContext.pushHistory).toHaveBeenCalledWith(
+                'listar-versoes',
+                expect.stringContaining('versão'),
+                'ok',
+            );
             expect([undefined, true, false]).toContain(result);
         });
 
-        it('handles versions list with overdue release', async () => {expect.hasAssertions();
+        it('handles versions list with overdue release', async () => {
+            expect.hasAssertions();
 
             const pastDate = new Date(Date.now() - 86400000).toISOString().slice(0, 10);
             mockJiraResource.getProjectVersions.mockResolvedValueOnce([
@@ -69,7 +77,8 @@ describe('Case02', () => {
             expect([undefined, true, false]).toContain(result);
         });
 
-        it('catches API failure and returns undefined without throwing', async () => {expect.hasAssertions();
+        it('catches API failure and returns undefined without throwing', async () => {
+            expect.hasAssertions();
 
             mockJiraResource.getProjectId.mockRejectedValueOnce(new Error('API failure'));
             const result = await case02.handler(mockContext);
@@ -77,5 +86,4 @@ describe('Case02', () => {
             expect([undefined, true, false]).toContain(result);
         });
     });
-
 });

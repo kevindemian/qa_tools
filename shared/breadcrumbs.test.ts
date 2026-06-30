@@ -48,5 +48,4 @@ describe('Breadcrumbs', () => {
             expect(() => popBreadcrumb()).not.toThrow();
         });
     });
-
 });

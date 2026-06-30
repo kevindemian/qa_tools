@@ -76,7 +76,8 @@ describe('Pipeline Jira', () => {
     });
 
     describe('HandleBugCreation', () => {
-        it('creates bug successfully when jira env is configured and user confirms', async () => {expect.hasAssertions();
+        it('creates bug successfully when jira env is configured and user confirms', async () => {
+            expect.hasAssertions();
 
             vi.mocked(_jiraEnv).mockReturnValue({
                 base: 'https://jira.example.com',
@@ -104,7 +105,8 @@ describe('Pipeline Jira', () => {
             expect(pushHistory).toHaveBeenCalledWith('create-jira-issue', 'ECSPOL-123', 'ok');
         });
 
-        it('prints error when Config.get("jiraProject") is not set', async () => {expect.hasAssertions();
+        it('prints error when Config.get("jiraProject") is not set', async () => {
+            expect.hasAssertions();
 
             vi.mocked(_jiraEnv).mockReturnValue({
                 base: 'https://jira.example.com',
@@ -117,7 +119,14 @@ describe('Pipeline Jira', () => {
             vi.mocked(fileToJira).mockRejectedValue(new Error('Project key is required'));
             Config.set('jiraProject', '');
 
-            await handleBugCreation(mockParseResult, '99', 'develop', mockAnalysisReport, mockJiraResource, testBackend);
+            await handleBugCreation(
+                mockParseResult,
+                '99',
+                'develop',
+                mockAnalysisReport,
+                mockJiraResource,
+                testBackend,
+            );
 
             expect(printError).toHaveBeenCalledWith('Falha ao criar bug no Jira', expect.any(Error));
             expect(pushHistory).toHaveBeenCalledWith('create-jira-issue', '99', 'error');
@@ -125,7 +134,8 @@ describe('Pipeline Jira', () => {
             Config.set('jiraProject', 'ECSPOL');
         });
 
-        it('returns early when jira env is not configured', async () => {expect.hasAssertions();
+        it('returns early when jira env is not configured', async () => {
+            expect.hasAssertions();
 
             vi.mocked(_jiraEnv).mockReturnValue(null);
 
@@ -137,7 +147,8 @@ describe('Pipeline Jira', () => {
             expect(pushHistory).not.toHaveBeenCalled();
         });
 
-        it('returns early when user declines confirmation', async () => {expect.hasAssertions();
+        it('returns early when user declines confirmation', async () => {
+            expect.hasAssertions();
 
             vi.mocked(_jiraEnv).mockReturnValue({
                 base: 'https://jira.example.com',
@@ -154,7 +165,8 @@ describe('Pipeline Jira', () => {
             expect(pushHistory).not.toHaveBeenCalled();
         });
 
-        it('handles jira API failure gracefully', async () => {expect.hasAssertions();
+        it('handles jira API failure gracefully', async () => {
+            expect.hasAssertions();
 
             vi.mocked(_jiraEnv).mockReturnValue({
                 base: 'https://jira.example.com',
@@ -173,7 +185,8 @@ describe('Pipeline Jira', () => {
             expect(pushHistory).toHaveBeenCalledWith('create-jira-issue', '42', 'error');
         });
 
-        it('assigns bugReport description from analysisReport content', async () => {expect.hasAssertions();
+        it('assigns bugReport description from analysisReport content', async () => {
+            expect.hasAssertions();
 
             vi.mocked(_jiraEnv).mockReturnValue({
                 base: 'https://jira.example.com',
@@ -194,7 +207,8 @@ describe('Pipeline Jira', () => {
             );
         });
 
-        it('passes pipelineId as string regardless of input type', async () => {expect.hasAssertions();
+        it('passes pipelineId as string regardless of input type', async () => {
+            expect.hasAssertions();
 
             vi.mocked(_jiraEnv).mockReturnValue({
                 base: 'https://jira.example.com',
@@ -215,5 +229,4 @@ describe('Pipeline Jira', () => {
             });
         });
     });
-
 });

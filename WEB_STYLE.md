@@ -45,62 +45,62 @@ CSS custom properties scoped to `:root`:
 
 ```css
 :root {
-  /* Backgrounds */
-  --bg-base:     #0d1117;
-  --bg-surface:  #161b22;
-  --bg-elevated: #1c2333;
-  --bg-hover:    #1c2128;
+    /* Backgrounds */
+    --bg-base: #0d1117;
+    --bg-surface: #161b22;
+    --bg-elevated: #1c2333;
+    --bg-hover: #1c2128;
 
-  /* Borders */
-  --border:      #30363d;
-  --border-focus:#58a6ff;
+    /* Borders */
+    --border: #30363d;
+    --border-focus: #58a6ff;
 
-  /* Text */
-  --text-primary:   #c9d1d9;
-  --text-secondary: #8b949e;
-  --text-muted:     #484f58;
+    /* Text */
+    --text-primary: #c9d1d9;
+    --text-secondary: #8b949e;
+    --text-muted: #484f58;
 
-  /* Accent */
-  --accent:     #58a6ff;
-  --accent-dim: #1f6feb;
+    /* Accent */
+    --accent: #58a6ff;
+    --accent-dim: #1f6feb;
 
-  /* Semantic */
-  --success: #3fb950;
-  --error:   #f85149;
-  --warning: #d29922;
-  --info:    #58a6ff;
+    /* Semantic */
+    --success: #3fb950;
+    --error: #f85149;
+    --warning: #d29922;
+    --info: #58a6ff;
 }
 
-[data-theme="light"] {
-  --bg-base:     #ffffff;
-  --bg-surface:  #f6f8fa;
-  --bg-elevated: #eaeef2;
-  --bg-hover:    #eaeef2;
-  --border:      #d0d7de;
-  --text-primary:   #1f2328;
-  --text-secondary: #656d76;
-  --text-muted:     #6e7681;
-  --accent:     #0969da;
-  --accent-dim: #0550ae;
-  --success: #1a7f37;
-  --error:   #cf222e;
-  --warning: #9a6700;
+[data-theme='light'] {
+    --bg-base: #ffffff;
+    --bg-surface: #f6f8fa;
+    --bg-elevated: #eaeef2;
+    --bg-hover: #eaeef2;
+    --border: #d0d7de;
+    --text-primary: #1f2328;
+    --text-secondary: #656d76;
+    --text-muted: #6e7681;
+    --accent: #0969da;
+    --accent-dim: #0550ae;
+    --success: #1a7f37;
+    --error: #cf222e;
+    --warning: #9a6700;
 }
 ```
 
 ### Typography
 
 ```css
---font-ui:    'Inter', -apple-system, sans-serif;
---font-mono:  'JetBrains Mono', 'Fira Code', monospace;
+--font-ui: 'Inter', -apple-system, sans-serif;
+--font-mono: 'JetBrains Mono', 'Fira Code', monospace;
 
 /* scale */
---text-xs:   0.75rem;   /* 12px — labels, meta */
---text-sm:   0.875rem;  /* 14px — body, descriptions */
---text-base: 1rem;      /* 16px — defaults */
---text-lg:   1.125rem;  /* 18px — section titles */
---text-xl:   1.25rem;   /* 20px — page titles */
---text-2xl:  1.5rem;    /* 24px — dashboard numbers */
+--text-xs: 0.75rem; /* 12px — labels, meta */
+--text-sm: 0.875rem; /* 14px — body, descriptions */
+--text-base: 1rem; /* 16px — defaults */
+--text-lg: 1.125rem; /* 18px — section titles */
+--text-xl: 1.25rem; /* 20px — page titles */
+--text-2xl: 1.5rem; /* 24px — dashboard numbers */
 ```
 
 ### Spacing
@@ -108,13 +108,13 @@ CSS custom properties scoped to `:root`:
 4px base grid:
 
 ```css
---space-1: 0.25rem;  /*  4px */
---space-2: 0.5rem;   /*  8px */
---space-3: 0.75rem;  /* 12px */
---space-4: 1rem;     /* 16px */
---space-6: 1.5rem;   /* 24px */
---space-8: 2rem;     /* 32px */
---space-12:3rem;     /* 48px */
+--space-1: 0.25rem; /*  4px */
+--space-2: 0.5rem; /*  8px */
+--space-3: 0.75rem; /* 12px */
+--space-4: 1rem; /* 16px */
+--space-6: 1.5rem; /* 24px */
+--space-8: 2rem; /* 32px */
+--space-12: 3rem; /* 48px */
 ```
 
 ### Radius
@@ -129,8 +129,8 @@ CSS custom properties scoped to `:root`:
 ### Shadows
 
 ```css
---shadow-sm: 0 1px 2px rgba(0,0,0,0.3);
---shadow-md: 0 4px 12px rgba(0,0,0,0.4);
+--shadow-sm: 0 1px 2px rgba(0, 0, 0, 0.3);
+--shadow-md: 0 4px 12px rgba(0, 0, 0, 0.4);
 ```
 
 ---
@@ -141,10 +141,10 @@ CSS custom properties scoped to `:root`:
 
 ```css
 .card {
-  background: var(--bg-surface);
-  border: 1px solid var(--border);
-  border-radius: var(--radius-lg);
-  padding: var(--space-4);
+    background: var(--bg-surface);
+    border: 1px solid var(--border);
+    border-radius: var(--radius-lg);
+    padding: var(--space-4);
 }
 ```
 
@@ -160,10 +160,10 @@ CSS custom properties scoped to `:root`:
 
 ```html
 <div class="metric-card">
-  <div class="metric-icon">📦</div>
-  <div class="metric-value">16</div>
-  <div class="metric-label">Commands</div>
-  <div class="metric-trend up">▲ +2 today</div>
+    <div class="metric-icon">📦</div>
+    <div class="metric-value">16</div>
+    <div class="metric-label">Commands</div>
+    <div class="metric-trend up">▲ +2 today</div>
 </div>
 ```
 
@@ -172,62 +172,75 @@ CSS custom properties scoped to `:root`:
 ```css
 /* Primary */
 .btn-primary {
-  background: var(--accent);
-  color: #fff;
-  border: none;
-  border-radius: var(--radius-md);
-  padding: var(--space-2) var(--space-4);
-  font-family: var(--font-ui);
-  font-size: var(--text-sm);
-  cursor: pointer;
+    background: var(--accent);
+    color: #fff;
+    border: none;
+    border-radius: var(--radius-md);
+    padding: var(--space-2) var(--space-4);
+    font-family: var(--font-ui);
+    font-size: var(--text-sm);
+    cursor: pointer;
 }
-.btn-primary:hover { filter: brightness(1.15); }
+.btn-primary:hover {
+    filter: brightness(1.15);
+}
 
 /* Secondary / Ghost */
 .btn-ghost {
-  background: transparent;
-  color: var(--text-primary);
-  border: 1px solid var(--border);
-  border-radius: var(--radius-md);
-  padding: var(--space-2) var(--space-4);
-  cursor: pointer;
+    background: transparent;
+    color: var(--text-primary);
+    border: 1px solid var(--border);
+    border-radius: var(--radius-md);
+    padding: var(--space-2) var(--space-4);
+    cursor: pointer;
 }
-.btn-ghost:hover { background: var(--bg-hover); }
+.btn-ghost:hover {
+    background: var(--bg-hover);
+}
 ```
 
 ### Forms
 
 ```css
 .form-input {
-  background: var(--bg-base);
-  border: 1px solid var(--border);
-  border-radius: var(--radius-md);
-  color: var(--text-primary);
-  padding: var(--space-2) var(--space-3);
-  font-family: var(--font-ui);
-  font-size: var(--text-sm);
-  width: 100%;
+    background: var(--bg-base);
+    border: 1px solid var(--border);
+    border-radius: var(--radius-md);
+    color: var(--text-primary);
+    padding: var(--space-2) var(--space-3);
+    font-family: var(--font-ui);
+    font-size: var(--text-sm);
+    width: 100%;
 }
 .form-input:focus {
-  outline: none;
-  border-color: var(--border-focus);
-  box-shadow: 0 0 0 3px var(--accent-dim);
+    outline: none;
+    border-color: var(--border-focus);
+    box-shadow: 0 0 0 3px var(--accent-dim);
 }
 
 .form-label {
-  color: var(--text-secondary);
-  font-size: var(--text-sm);
-  margin-bottom: var(--space-1);
-  display: block;
+    color: var(--text-secondary);
+    font-size: var(--text-sm);
+    margin-bottom: var(--space-1);
+    display: block;
 }
 ```
 
 ### Status Badges
 
 ```css
-.badge-ok    { color: var(--success); border-color: var(--success); }
-.badge-err   { color: var(--error);   border-color: var(--error);   }
-.badge-warn  { color: var(--warning); border-color: var(--warning); }
+.badge-ok {
+    color: var(--success);
+    border-color: var(--success);
+}
+.badge-err {
+    color: var(--error);
+    border-color: var(--error);
+}
+.badge-warn {
+    color: var(--warning);
+    border-color: var(--warning);
+}
 ```
 
 Rendered as inline dot + label:
@@ -240,40 +253,46 @@ Rendered as inline dot + label:
 
 ```css
 .table {
-  width: 100%;
-  border-collapse: collapse;
-  font-family: var(--font-mono);
-  font-size: var(--text-sm);
+    width: 100%;
+    border-collapse: collapse;
+    font-family: var(--font-mono);
+    font-size: var(--text-sm);
 }
 .table th {
-  color: var(--text-secondary);
-  text-align: left;
-  padding: var(--space-2) var(--space-3);
-  border-bottom: 1px solid var(--border);
+    color: var(--text-secondary);
+    text-align: left;
+    padding: var(--space-2) var(--space-3);
+    border-bottom: 1px solid var(--border);
 }
 .table td {
-  padding: var(--space-2) var(--space-3);
-  border-bottom: 1px solid var(--border);
+    padding: var(--space-2) var(--space-3);
+    border-bottom: 1px solid var(--border);
 }
-.table tr:hover { background: var(--bg-hover); }
+.table tr:hover {
+    background: var(--bg-hover);
+}
 ```
 
 ### Progress Bar
 
 ```css
 .progress-bar {
-  background: var(--bg-elevated);
-  border-radius: var(--radius-sm);
-  height: 8px;
-  overflow: hidden;
+    background: var(--bg-elevated);
+    border-radius: var(--radius-sm);
+    height: 8px;
+    overflow: hidden;
 }
 .progress-fill {
-  height: 100%;
-  border-radius: var(--radius-sm);
-  transition: width 0.3s ease;
+    height: 100%;
+    border-radius: var(--radius-sm);
+    transition: width 0.3s ease;
 }
-.progress-fill.ok    { background: var(--success); }
-.progress-fill.err   { background: var(--error);   }
+.progress-fill.ok {
+    background: var(--success);
+}
+.progress-fill.err {
+    background: var(--error);
+}
 ```
 
 ### Log / Terminal Feed
@@ -282,19 +301,27 @@ Monospace lines with level prefix coloring. Auto-scrolls to bottom.
 
 ```css
 .log-feed {
-  background: var(--bg-base);
-  border: 1px solid var(--border);
-  border-radius: var(--radius-md);
-  padding: var(--space-3);
-  font-family: var(--font-mono);
-  font-size: var(--text-xs);
-  max-height: 300px;
-  overflow-y: auto;
+    background: var(--bg-base);
+    border: 1px solid var(--border);
+    border-radius: var(--radius-md);
+    padding: var(--space-3);
+    font-family: var(--font-mono);
+    font-size: var(--text-xs);
+    max-height: 300px;
+    overflow-y: auto;
 }
-.log-line.info    { color: var(--info);    }
-.log-line.success { color: var(--success); }
-.log-line.error   { color: var(--error);   }
-.log-line.warn    { color: var(--warning); }
+.log-line.info {
+    color: var(--info);
+}
+.log-line.success {
+    color: var(--success);
+}
+.log-line.error {
+    color: var(--error);
+}
+.log-line.warn {
+    color: var(--warning);
+}
 ```
 
 ---
@@ -451,13 +478,20 @@ Active route highlighted with accent border-left. Sections separated by thin rul
 
 ```css
 .nav-item {
-  padding: var(--space-2) var(--space-4);
-  color: var(--text-secondary);
-  border-left: 2px solid transparent;
-  cursor: pointer;
+    padding: var(--space-2) var(--space-4);
+    color: var(--text-secondary);
+    border-left: 2px solid transparent;
+    cursor: pointer;
 }
-.nav-item:hover { background: var(--bg-hover); color: var(--text-primary); }
-.nav-item.active { border-left-color: var(--accent); color: var(--text-primary); font-weight: 600; }
+.nav-item:hover {
+    background: var(--bg-hover);
+    color: var(--text-primary);
+}
+.nav-item.active {
+    border-left-color: var(--accent);
+    color: var(--text-primary);
+    font-weight: 600;
+}
 ```
 
 ---
@@ -465,10 +499,13 @@ Active route highlighted with accent border-left. Sections separated by thin rul
 ## States
 
 ### Empty
-Centered message with muted icon and text: *"No operations yet. Start by running a command."*
+
+Centered message with muted icon and text: _"No operations yet. Start by running a command."_
 
 ### Loading
+
 Skeleton shimmer cards (animated gradient) matching card dimensions.
+
 ```
 ┌──────────────────────┐
 │ ░░░░░░░░░░░░░░░░░░░░ │  (shimmer animation)
@@ -477,7 +514,9 @@ Skeleton shimmer cards (animated gradient) matching card dimensions.
 ```
 
 ### Error Inline
+
 Red border card with icon:
+
 ```
 ┌──────────────────────────────────┐
 │ ⚠️  Failed to load projects     │
@@ -509,22 +548,22 @@ Default: dark (terminal-native). Toggle button in header.
 Use **Lucide** icons via CDN (`https://unpkg.com/lucide-static`). SVG-based,
 `1.5rem` default, semantic color inherited from text. Key icons:
 
-| Icon | Usage |
-|------|-------|
-| `terminal` | Logo / brand |
-| `layout-dashboard` | Dashboard nav |
-| `beaker` | Tests section |
-| `package` | Releases section |
-| `settings` | Config section |
-| `git-branch` | Git section |
-| `bar-chart-3` | Reports |
-| `upload` | CSV/JSON import |
-| `play` | Execute command |
-| `circle-check` | Success |
-| `circle-x` | Error |
-| `alert-triangle` | Warning |
-| `loader` | Loading spinner |
-| `moon` / `sun` | Theme toggle |
+| Icon               | Usage            |
+| ------------------ | ---------------- |
+| `terminal`         | Logo / brand     |
+| `layout-dashboard` | Dashboard nav    |
+| `beaker`           | Tests section    |
+| `package`          | Releases section |
+| `settings`         | Config section   |
+| `git-branch`       | Git section      |
+| `bar-chart-3`      | Reports          |
+| `upload`           | CSV/JSON import  |
+| `play`             | Execute command  |
+| `circle-check`     | Success          |
+| `circle-x`         | Error            |
+| `alert-triangle`   | Warning          |
+| `loader`           | Loading spinner  |
+| `moon` / `sun`     | Theme toggle     |
 
 ---
 
@@ -532,14 +571,42 @@ Use **Lucide** icons via CDN (`https://unpkg.com/lucide-static`). SVG-based,
 
 ```css
 /* Page transitions */
-.content-enter { opacity: 0; transform: translateY(8px); }
-.content-enter-active { opacity: 1; transform: translateY(0); transition: 0.2s ease; }
+.content-enter {
+    opacity: 0;
+    transform: translateY(8px);
+}
+.content-enter-active {
+    opacity: 1;
+    transform: translateY(0);
+    transition: 0.2s ease;
+}
 
 /* Card hover */
-.card { transition: border-color 0.15s, box-shadow 0.15s; }
-.card:hover { border-color: var(--accent-dim); box-shadow: var(--shadow-sm); }
+.card {
+    transition:
+        border-color 0.15s,
+        box-shadow 0.15s;
+}
+.card:hover {
+    border-color: var(--accent-dim);
+    box-shadow: var(--shadow-sm);
+}
 
 /* Skeleton shimmer */
-@keyframes shimmer { 0% { opacity: 0.4; } 50% { opacity: 0.8; } 100% { opacity: 0.4; } }
-.skeleton { animation: shimmer 1.5s infinite; background: var(--bg-elevated); border-radius: var(--radius-md); }
+@keyframes shimmer {
+    0% {
+        opacity: 0.4;
+    }
+    50% {
+        opacity: 0.8;
+    }
+    100% {
+        opacity: 0.4;
+    }
+}
+.skeleton {
+    animation: shimmer 1.5s infinite;
+    background: var(--bg-elevated);
+    border-radius: var(--radius-md);
+}
 ```

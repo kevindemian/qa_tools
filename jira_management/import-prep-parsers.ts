@@ -110,43 +110,41 @@ export function parseJsonTests(jsonPath: string): TestCase[] {
         return [];
     }
     let aliasWarned = false;
-    return validated.map(
-        (item: JsonTestItem): TestCase => ({
-            title: item.title,
-            description: item.description || '',
-            steps: item.steps.map((s) => {
-                const expectedResult = s['Expected Result'] ?? s.ExpectedResult ?? '';
-                if (!aliasWarned && s.ExpectedResult && !s['Expected Result']) {
-                    aliasWarned = true;
-                    rootLogger.warn(
-                        'JSON step usa "ExpectedResult" (junto, sem espaço) em vez de "Expected Result" (com espaço). ' +
-                            'Causa: template JSON desatualizado (test_cases_template.json / test_steps_template.json). ' +
-                            'Solução: renomeie a chave para "Expected Result" nos seus arquivos JSON. ' +
-                            'Este aviso aparece apenas uma vez por arquivo.',
-                    );
-                }
-                return {
-                    fields: {
-                        Action: s.Action ?? '',
-                        Data: s.Data ?? '',
-                        'Expected Result': expectedResult,
-                    },
-                };
-            }),
-            ...(item.precondition
-                ? {
-                      precondition: isPreconditionKey(item.precondition)
-                          ? { type: 'reference' as const, value: item.precondition }
-                          : { type: 'inline' as const, value: item.precondition },
-                  }
-                : {}),
-            group: item.group || '',
-            linkedIssues: Array.isArray(item.linkedIssues)
-                ? item.linkedIssues.map((li) => {
-                      if (typeof li === 'string') return { key: li, linkType: 'Tests' };
-                      return { key: li.key, linkType: li.linkType || 'Tests' };
-                  })
-                : [],
+    return validated.map((item: JsonTestItem): TestCase => ({
+        title: item.title,
+        description: item.description || '',
+        steps: item.steps.map((s) => {
+            const expectedResult = s['Expected Result'] ?? s.ExpectedResult ?? '';
+            if (!aliasWarned && s.ExpectedResult && !s['Expected Result']) {
+                aliasWarned = true;
+                rootLogger.warn(
+                    'JSON step usa "ExpectedResult" (junto, sem espaço) em vez de "Expected Result" (com espaço). ' +
+                        'Causa: template JSON desatualizado (test_cases_template.json / test_steps_template.json). ' +
+                        'Solução: renomeie a chave para "Expected Result" nos seus arquivos JSON. ' +
+                        'Este aviso aparece apenas uma vez por arquivo.',
+                );
+            }
+            return {
+                fields: {
+                    Action: s.Action ?? '',
+                    Data: s.Data ?? '',
+                    'Expected Result': expectedResult,
+                },
+            };
         }),
-    );
+        ...(item.precondition
+            ? {
+                  precondition: isPreconditionKey(item.precondition)
+                      ? { type: 'reference' as const, value: item.precondition }
+                      : { type: 'inline' as const, value: item.precondition },
+              }
+            : {}),
+        group: item.group || '',
+        linkedIssues: Array.isArray(item.linkedIssues)
+            ? item.linkedIssues.map((li) => {
+                  if (typeof li === 'string') return { key: li, linkType: 'Tests' };
+                  return { key: li.key, linkType: li.linkType || 'Tests' };
+              })
+            : [],
+    }));
 }

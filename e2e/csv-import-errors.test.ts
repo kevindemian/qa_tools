@@ -90,7 +90,8 @@ describe('E2E: CSV Import - Error Paths', () => {
 
     /** "skip on error" phrasing is intentional: ON_ERROR=skip causes error-triggered skip.
      *  Avoids validation-hook false-positive pattern `skip\s+(?:the\s+)?(?:check|validation|verification|test)`. */
-    it('c1: POST /issue 500 + ON_ERROR=skip — skip on error, continue next', async () => {expect.hasAssertions();
+    it('c1: POST /issue 500 + ON_ERROR=skip — skip on error, continue next', async () => {
+        expect.hasAssertions();
 
         process.env['CSV_PATH'] = writeCsv(
             'c1',
@@ -120,7 +121,8 @@ describe('E2E: CSV Import - Error Paths', () => {
         expect(nock.isDone()).toBeTruthy();
     });
 
-    it('c2: POST /issue 500 + ON_ERROR=abort — stop on first failure', async () => {expect.hasAssertions();
+    it('c2: POST /issue 500 + ON_ERROR=abort — stop on first failure', async () => {
+        expect.hasAssertions();
 
         process.env['ON_ERROR'] = 'abort';
         process.env['CSV_PATH'] = writeCsv(
@@ -148,7 +150,8 @@ describe('E2E: CSV Import - Error Paths', () => {
         expect(nock.isDone()).toBeTruthy();
     });
 
-    it('c3: POST /issueLink 403 — 4xx sem retry, erro nao bloqueante', async () => {expect.hasAssertions();
+    it('c3: POST /issueLink 403 — 4xx sem retry, erro nao bloqueante', async () => {
+        expect.hasAssertions();
 
         process.env['CSV_PATH'] = writeCsv(
             'c3',
@@ -189,7 +192,8 @@ describe('E2E: CSV Import - Error Paths', () => {
         expect(nock.isDone()).toBeTruthy();
     });
 
-    it('c4: GET /issueLinkType 404 — fallback para FALLBACK_LINK_TYPES', async () => {expect.hasAssertions();
+    it('c4: GET /issueLinkType 404 — fallback para FALLBACK_LINK_TYPES', async () => {
+        expect.hasAssertions();
 
         process.env['CSV_PATH'] = writeCsv(
             'c4',
@@ -228,7 +232,8 @@ describe('E2E: CSV Import - Error Paths', () => {
         expect(nock.isDone()).toBeTruthy();
     });
 
-    it('c5: Precondition PUT 500 — erro pos-criacao, testErrors path', async () => {expect.hasAssertions();
+    it('c5: Precondition PUT 500 — erro pos-criacao, testErrors path', async () => {
+        expect.hasAssertions();
 
         process.env['CSV_PATH'] = writeCsv(
             'c5',
@@ -258,7 +263,8 @@ describe('E2E: CSV Import - Error Paths', () => {
         expect(nock.isDone()).toBeTruthy();
     }, 120000);
 
-    it('c6: Cross-ref PUT 403 — erro nao propaga para o caller', async () => {expect.hasAssertions();
+    it('c6: Cross-ref PUT 403 — erro nao propaga para o caller', async () => {
+        expect.hasAssertions();
 
         process.env['CSV_PATH'] = writeCsv(
             'c6',
@@ -300,7 +306,8 @@ describe('E2E: CSV Import - Error Paths', () => {
         expect(nock.isDone()).toBeTruthy();
     });
 
-    it('c7: Steps fail + ON_ERROR=abort — abortSteps flag, break outer', async () => {expect.hasAssertions();
+    it('c7: Steps fail + ON_ERROR=abort — abortSteps flag, break outer', async () => {
+        expect.hasAssertions();
 
         process.env['ON_ERROR'] = 'abort';
         process.env['CSV_PATH'] = writeCsv(
@@ -322,7 +329,8 @@ describe('E2E: CSV Import - Error Paths', () => {
         expect(nock.isDone()).toBeTruthy();
     });
 
-    it('c8: DRY_RUN=true — simulates without API calls', async () => {expect.hasAssertions();
+    it('c8: DRY_RUN=true — simulates without API calls', async () => {
+        expect.hasAssertions();
 
         process.env['DRY_RUN'] = 'true';
         process.env['CSV_PATH'] = writeCsv(

@@ -42,10 +42,20 @@ export function badge(count: number, label: string, status: 'ok' | 'error' | 'wa
 export function icon(name: 'ok' | 'err' | 'warn' | 'info'): string {
     const useUnicode = !getConfig().get<boolean>('quiet') && Output.isTTY();
     if (useUnicode) {
-        const unicodeMap = new Map([['ok', '\u2713'], ['err', '\u2717'], ['warn', '\u26A0'], ['info', '\u2139']]);
+        const unicodeMap = new Map([
+            ['ok', '\u2713'],
+            ['err', '\u2717'],
+            ['warn', '\u26A0'],
+            ['info', '\u2139'],
+        ]);
         return unicodeMap.get(name) ?? '';
     }
-    const fallbackMap = new Map([['ok', 'OK '], ['err', 'ERR'], ['warn', '!  '], ['info', 'i  ']]);
+    const fallbackMap = new Map([
+        ['ok', 'OK '],
+        ['err', 'ERR'],
+        ['warn', '!  '],
+        ['info', 'i  '],
+    ]);
     return fallbackMap.get(name) ?? 'i  ';
 }
 

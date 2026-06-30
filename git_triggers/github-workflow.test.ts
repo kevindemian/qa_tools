@@ -59,7 +59,8 @@ describe('WfTriggerPipeline', () => {
         mockApiPost.mockClear();
     });
 
-    it('dispatches workflow with given workflow_id', async () => {expect.hasAssertions();
+    it('dispatches workflow with given workflow_id', async () => {
+        expect.hasAssertions();
 
         mockApiPost.mockResolvedValue({});
         const result = await wfTriggerPipeline(client, 'myorg', 'myrepo', 'https://api.github.com', {
@@ -77,7 +78,8 @@ describe('WfTriggerPipeline', () => {
         expect(result).toStrictEqual({ id: '123', web_url: 'https://api.github.com/myorg/myrepo/actions/runs' });
     });
 
-    it('auto-detects first workflow when workflow_id not given', async () => {expect.hasAssertions();
+    it('auto-detects first workflow when workflow_id not given', async () => {
+        expect.hasAssertions();
 
         mockApiGet.mockResolvedValue({ workflows: [{ id: 42, name: 'ci' }] });
         mockApiPost.mockResolvedValue({});
@@ -100,7 +102,8 @@ describe('WfTriggerPipeline', () => {
         expect(result).toStrictEqual({ id: 42, web_url: 'https://api.github.com/myorg/myrepo/actions/runs' });
     });
 
-    it('returns undefined when no workflows found', async () => {expect.hasAssertions();
+    it('returns undefined when no workflows found', async () => {
+        expect.hasAssertions();
 
         mockApiGet.mockResolvedValue({ workflows: [] });
         const result = await wfTriggerPipeline(client, 'myorg', 'myrepo', 'https://api.github.com', {
@@ -111,7 +114,8 @@ describe('WfTriggerPipeline', () => {
         expect(result).toBeUndefined();
     });
 
-    it('returns undefined when workflows data is null', async () => {expect.hasAssertions();
+    it('returns undefined when workflows data is null', async () => {
+        expect.hasAssertions();
 
         mockApiGet.mockResolvedValue(null);
         const result = await wfTriggerPipeline(client, 'myorg', 'myrepo', 'https://api.github.com', {
@@ -122,7 +126,8 @@ describe('WfTriggerPipeline', () => {
         expect(result).toBeUndefined();
     });
 
-    it('throws on API error', async () => {expect.hasAssertions();
+    it('throws on API error', async () => {
+        expect.hasAssertions();
 
         mockApiPost.mockRejectedValue(new Error('API error'));
 
@@ -144,7 +149,8 @@ describe('WfGetRecentPipelines', () => {
         mockApiGet.mockClear();
     });
 
-    it('returns workflow runs from API', async () => {expect.hasAssertions();
+    it('returns workflow runs from API', async () => {
+        expect.hasAssertions();
 
         const runs = [
             { id: 1, run_number: 100, head_branch: 'main', status: 'completed', conclusion: 'success' },
@@ -161,7 +167,8 @@ describe('WfGetRecentPipelines', () => {
         expect(result).toStrictEqual(runs);
     });
 
-    it('defaults to count=5 when not specified', async () => {expect.hasAssertions();
+    it('defaults to count=5 when not specified', async () => {
+        expect.hasAssertions();
 
         mockApiGet.mockResolvedValue({ workflow_runs: [] });
         await wfGetRecentPipelines(client, 'myorg', 'myrepo');
@@ -173,7 +180,8 @@ describe('WfGetRecentPipelines', () => {
         });
     });
 
-    it('returns empty array when apiGet returns null', async () => {expect.hasAssertions();
+    it('returns empty array when apiGet returns null', async () => {
+        expect.hasAssertions();
 
         mockApiGet.mockResolvedValue(null);
         const result = await wfGetRecentPipelines(client, 'myorg', 'myrepo');
@@ -190,7 +198,8 @@ describe('WfGetPipeline', () => {
         mockApiGet.mockClear();
     });
 
-    it('returns pipeline info for valid run ID', async () => {expect.hasAssertions();
+    it('returns pipeline info for valid run ID', async () => {
+        expect.hasAssertions();
 
         mockApiGet.mockResolvedValue({ id: 42, status: 'completed', conclusion: 'success' });
         const result = await wfGetPipeline(client, 'myorg', 'myrepo', 42);
@@ -202,7 +211,8 @@ describe('WfGetPipeline', () => {
         expect(result).toStrictEqual({ id: 42, status: 'completed', conclusion: 'success' });
     });
 
-    it('returns null when apiGet returns null', async () => {expect.hasAssertions();
+    it('returns null when apiGet returns null', async () => {
+        expect.hasAssertions();
 
         mockApiGet.mockResolvedValue(null);
         const result = await wfGetPipeline(client, 'myorg', 'myrepo', 999);
@@ -219,7 +229,8 @@ describe('WfGetPipelineJobs', () => {
         mockApiGet.mockClear();
     });
 
-    it('returns mapped jobs from API', async () => {expect.hasAssertions();
+    it('returns mapped jobs from API', async () => {
+        expect.hasAssertions();
 
         mockApiGet.mockResolvedValue({
             jobs: [
@@ -240,7 +251,8 @@ describe('WfGetPipelineJobs', () => {
         expect(nonNull(result[1]).status).toBe('failure');
     });
 
-    it('returns empty array when apiGet returns null', async () => {expect.hasAssertions();
+    it('returns empty array when apiGet returns null', async () => {
+        expect.hasAssertions();
 
         mockApiGet.mockResolvedValue(null);
         const result = await wfGetPipelineJobs(client, 'myorg', 'myrepo', 42);
@@ -248,7 +260,8 @@ describe('WfGetPipelineJobs', () => {
         expect(result).toStrictEqual([]);
     });
 
-    it('returns empty array when data has no jobs', async () => {expect.hasAssertions();
+    it('returns empty array when data has no jobs', async () => {
+        expect.hasAssertions();
 
         mockApiGet.mockResolvedValue({});
         const result = await wfGetPipelineJobs(client, 'myorg', 'myrepo', 42);
@@ -256,7 +269,8 @@ describe('WfGetPipelineJobs', () => {
         expect(result).toStrictEqual([]);
     });
 
-    it('uses conclusion first, then status as fallback', async () => {expect.hasAssertions();
+    it('uses conclusion first, then status as fallback', async () => {
+        expect.hasAssertions();
 
         mockApiGet.mockResolvedValue({
             jobs: [{ id: 1, name: 'job1', runner_group_name: '', status: 'in_progress' }],
@@ -275,7 +289,8 @@ describe('WfListPipelineArtifacts', () => {
         mockApiGet.mockClear();
     });
 
-    it('returns artifacts from API', async () => {expect.hasAssertions();
+    it('returns artifacts from API', async () => {
+        expect.hasAssertions();
 
         mockApiGet.mockResolvedValue({
             artifacts: [
@@ -295,7 +310,8 @@ describe('WfListPipelineArtifacts', () => {
         ]);
     });
 
-    it('returns empty array when apiGet returns null', async () => {expect.hasAssertions();
+    it('returns empty array when apiGet returns null', async () => {
+        expect.hasAssertions();
 
         mockApiGet.mockResolvedValue(null);
         const result = await wfListPipelineArtifacts(client, 'myorg', 'myrepo', 42);
@@ -311,7 +327,8 @@ describe('WfDownloadArtifact', () => {
         client = createMockAxiosInstance();
     });
 
-    it('returns buffer and filename from artifact zip', async () => {expect.hasAssertions();
+    it('returns buffer and filename from artifact zip', async () => {
+        expect.hasAssertions();
 
         const getSpy = vi.spyOn(client, 'get').mockResolvedValue({ data: Buffer.from('zip-data') });
         const result = await wfDownloadArtifact(client, 'myorg', 'myrepo', '301');
@@ -325,7 +342,8 @@ describe('WfDownloadArtifact', () => {
         expect(result.filename).toBe('artifact.zip');
     });
 
-    it('throws on API error', async () => {expect.hasAssertions();
+    it('throws on API error', async () => {
+        expect.hasAssertions();
 
         vi.spyOn(client, 'get').mockRejectedValue(new Error('Download failed'));
 
@@ -340,7 +358,8 @@ describe('WfGetJobLogs', () => {
         client = createMockAxiosInstance();
     });
 
-    it('returns truncated log text on success', async () => {expect.hasAssertions();
+    it('returns truncated log text on success', async () => {
+        expect.hasAssertions();
 
         const getSpy2 = vi.spyOn(client, 'get').mockResolvedValue({ data: 'line1\nline2\nline3\n' });
         const result = await wfGetJobLogs(client, 'myorg', 'myrepo', 42, 100);
@@ -352,7 +371,8 @@ describe('WfGetJobLogs', () => {
         expect(result).toBe('line1\nline2\nline3\n');
     });
 
-    it('truncates log when exceeding maxBytes', async () => {expect.hasAssertions();
+    it('truncates log when exceeding maxBytes', async () => {
+        expect.hasAssertions();
 
         vi.spyOn(client, 'get').mockResolvedValue({ data: 'a'.repeat(100) });
         const result = await wfGetJobLogs(client, 'myorg', 'myrepo', 42, 10);
@@ -361,7 +381,8 @@ describe('WfGetJobLogs', () => {
         expect(nonNull(result)).toHaveLength(10);
     });
 
-    it('handles non-string response data', async () => {expect.hasAssertions();
+    it('handles non-string response data', async () => {
+        expect.hasAssertions();
 
         vi.spyOn(client, 'get').mockResolvedValue({ data: Buffer.from('text-data') });
         const result = await wfGetJobLogs(client, 'myorg', 'myrepo', 42, 100);
@@ -369,7 +390,8 @@ describe('WfGetJobLogs', () => {
         expect(result).toBe('text-data');
     });
 
-    it('throws on API error', async () => {expect.hasAssertions();
+    it('throws on API error', async () => {
+        expect.hasAssertions();
 
         vi.spyOn(client, 'get').mockRejectedValue(new Error('Log fetch error'));
 
@@ -385,7 +407,8 @@ describe('WfGetCICDVariables', () => {
         mockApiGet.mockClear();
     });
 
-    it('returns mapped variables from API', async () => {expect.hasAssertions();
+    it('returns mapped variables from API', async () => {
+        expect.hasAssertions();
 
         mockApiGet.mockResolvedValue({
             variables: [
@@ -406,7 +429,8 @@ describe('WfGetCICDVariables', () => {
         ]);
     });
 
-    it('returns empty array when apiGet returns null', async () => {expect.hasAssertions();
+    it('returns empty array when apiGet returns null', async () => {
+        expect.hasAssertions();
 
         mockApiGet.mockResolvedValue(null);
         const result = await wfGetCICDVariables(client, 'myorg', 'myrepo');
@@ -414,7 +438,8 @@ describe('WfGetCICDVariables', () => {
         expect(result).toStrictEqual([]);
     });
 
-    it('returns empty array when variables field is missing', async () => {expect.hasAssertions();
+    it('returns empty array when variables field is missing', async () => {
+        expect.hasAssertions();
 
         mockApiGet.mockResolvedValue({});
         const result = await wfGetCICDVariables(client, 'myorg', 'myrepo');
@@ -424,7 +449,8 @@ describe('WfGetCICDVariables', () => {
 });
 
 describe('WfGetSchedules', () => {
-    it('returns empty array', async () => {expect.hasAssertions();
+    it('returns empty array', async () => {
+        expect.hasAssertions();
 
         const result = await wfGetSchedules();
 

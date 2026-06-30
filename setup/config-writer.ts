@@ -52,9 +52,7 @@ function ensureConfigDir(): string {
     return configDir;
 }
 
-export function writeProjectsConfig(
-    ctx: ConfigCtx,
-): WriterResult {
+export function writeProjectsConfig(ctx: ConfigCtx): WriterResult {
     const result: WriterResult = { filesCreated: [], filesSkipped: [] };
     const configDir = ensureConfigDir();
 

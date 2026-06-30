@@ -181,5 +181,3 @@ describe('WithEnv', () => {
         Reflect.deleteProperty(process.env, key);
     });
 });
-
-

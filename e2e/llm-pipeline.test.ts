@@ -63,7 +63,8 @@ describe('Llm Pipeline', () => {
     });
 
     describe('LLM Pipeline E2E', () => {
-        it('happy path: report → validation → review → metrics', async () => {expect.hasAssertions();
+        it('happy path: report → validation → review → metrics', async () => {
+            expect.hasAssertions();
 
             mockLlmPrompt.mockResolvedValueOnce(validParsedReport).mockResolvedValueOnce('AGREE - Good analysis.');
 
@@ -78,7 +79,8 @@ describe('Llm Pipeline', () => {
             expect(metrics.cacheHits).toBe(0);
         });
 
-        it('retry loop: invalid report → retry → success with adversarial retry', async () => {expect.hasAssertions();
+        it('retry loop: invalid report → retry → success with adversarial retry', async () => {
+            expect.hasAssertions();
 
             mockLlmPrompt
                 .mockResolvedValueOnce(invalidParsedReport)
@@ -98,7 +100,8 @@ describe('Llm Pipeline', () => {
             expect(mockLlmPrompt).toHaveBeenCalledTimes(9);
         });
 
-        it('all providers fail: throws error', async () => {expect.hasAssertions();
+        it('all providers fail: throws error', async () => {
+            expect.hasAssertions();
 
             mockLlmPrompt.mockRejectedValue(new Error('API failure'));
 
@@ -107,7 +110,8 @@ describe('Llm Pipeline', () => {
             );
         });
 
-        it('validates all elements with multi-element array', async () => {expect.hasAssertions();
+        it('validates all elements with multi-element array', async () => {
+            expect.hasAssertions();
 
             mockLlmPrompt
                 .mockResolvedValueOnce(multiElementParsedReport)
@@ -120,7 +124,8 @@ describe('Llm Pipeline', () => {
             expect(result.reviewed).toBeTruthy();
         });
 
-        it('circuit breaker opens during pipeline and triggers fallback', async () => {expect.hasAssertions();
+        it('circuit breaker opens during pipeline and triggers fallback', async () => {
+            expect.hasAssertions();
 
             mockLlmPrompt.mockRejectedValue(new Error('HTTP 429 Too Many Requests'));
 
@@ -130,5 +135,4 @@ describe('Llm Pipeline', () => {
             expect(mockLlmPrompt.mock.calls.length).toBeGreaterThanOrEqual(2);
         });
     });
-
 });

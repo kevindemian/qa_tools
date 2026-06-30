@@ -74,7 +74,9 @@ describe('Pr Report Setup Handler', () => {
 
             handlePrReportReconfig();
 
-            expect(mocks.mockInfo).toHaveBeenCalledWith('Nenhum projeto selecionado. Use "Trocar de projeto" primeiro.');
+            expect(mocks.mockInfo).toHaveBeenCalledWith(
+                'Nenhum projeto selecionado. Use "Trocar de projeto" primeiro.',
+            );
             expect(mocks.mockSetPrReportConfig).not.toHaveBeenCalled();
         });
 
@@ -289,5 +291,4 @@ describe('Pr Report Setup Handler', () => {
             });
         });
     });
-
 });

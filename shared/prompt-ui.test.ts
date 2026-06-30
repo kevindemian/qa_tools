@@ -386,7 +386,9 @@ describe('Prompt Ui', () => {
                 config: { url: 'https://jira.example.com/rest/api/2/search' },
             };
 
-            expect(extractErrorMessage(err)).toBe('Internal error (HTTP 500) → https://jira.example.com/rest/api/2/search');
+            expect(extractErrorMessage(err)).toBe(
+                'Internal error (HTTP 500) → https://jira.example.com/rest/api/2/search',
+            );
         });
     });
 
@@ -525,5 +527,4 @@ describe('Prompt Ui', () => {
             expect(mockPrint).toHaveBeenCalledWith(expect.any(String));
         });
     });
-
 });

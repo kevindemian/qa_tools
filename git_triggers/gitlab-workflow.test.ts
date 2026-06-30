@@ -37,7 +37,8 @@ describe('Gitlab Workflow', () => {
     });
 
     describe('GlTriggerPipeline', () => {
-        it('calls apiPost and returns result', async () => {expect.hasAssertions();
+        it('calls apiPost and returns result', async () => {
+            expect.hasAssertions();
 
             vi.mocked(apiPost).mockResolvedValue({ id: 1, web_url: 'https://...' });
             const payload = { ref: 'main', variables: [{ key: 'VAR', value: 'val' }] };
@@ -49,7 +50,8 @@ describe('Gitlab Workflow', () => {
             });
         });
 
-        it('returns undefined when apiPost returns undefined', async () => {expect.hasAssertions();
+        it('returns undefined when apiPost returns undefined', async () => {
+            expect.hasAssertions();
 
             vi.mocked(apiPost).mockResolvedValue(undefined);
             const result = await glTriggerPipeline(mockClient, 'owner', 'repo', { ref: 'main', variables: [] });
@@ -59,7 +61,8 @@ describe('Gitlab Workflow', () => {
     });
 
     describe('GlGetSchedules', () => {
-        it('calls apiGet and returns schedules', async () => {expect.hasAssertions();
+        it('calls apiGet and returns schedules', async () => {
+            expect.hasAssertions();
 
             vi.mocked(apiGet).mockResolvedValue([{ id: 1, description: 'Daily' }]);
             const result = await glGetSchedules(mockClient, 'owner', 'repo');
@@ -72,7 +75,8 @@ describe('Gitlab Workflow', () => {
             });
         });
 
-        it('returns [] when apiGet returns null', async () => {expect.hasAssertions();
+        it('returns [] when apiGet returns null', async () => {
+            expect.hasAssertions();
 
             vi.mocked(apiGet).mockResolvedValue(null);
             const result = await glGetSchedules(mockClient, 'owner', 'repo');
@@ -82,7 +86,8 @@ describe('Gitlab Workflow', () => {
     });
 
     describe('GlRunSchedule', () => {
-        it('calls apiPost and returns result', async () => {expect.hasAssertions();
+        it('calls apiPost and returns result', async () => {
+            expect.hasAssertions();
 
             vi.mocked(apiPost).mockResolvedValue({ id: 42 });
             const result = await glRunSchedule(mockClient, 'owner', 'repo', 42);
@@ -96,7 +101,8 @@ describe('Gitlab Workflow', () => {
             );
         });
 
-        it('works with string scheduleId', async () => {expect.hasAssertions();
+        it('works with string scheduleId', async () => {
+            expect.hasAssertions();
 
             vi.mocked(apiPost).mockResolvedValue({ id: 7 });
             const result = await glRunSchedule(mockClient, 'owner', 'repo', '7');
@@ -104,7 +110,8 @@ describe('Gitlab Workflow', () => {
             expect(result).toStrictEqual({ id: 7 });
         });
 
-        it('re-throws on API error', async () => {expect.hasAssertions();
+        it('re-throws on API error', async () => {
+            expect.hasAssertions();
 
             vi.mocked(apiPost).mockRejectedValue(new Error('fail'));
 
@@ -113,7 +120,8 @@ describe('Gitlab Workflow', () => {
     });
 
     describe('GlGetRecentPipelines', () => {
-        it('calls apiGet and returns pipelines', async () => {expect.hasAssertions();
+        it('calls apiGet and returns pipelines', async () => {
+            expect.hasAssertions();
 
             vi.mocked(apiGet).mockResolvedValue([{ id: 1, ref: 'main', status: 'success' }]);
             const result = await glGetRecentPipelines(mockClient, 'owner', 'repo', 3);
@@ -126,7 +134,8 @@ describe('Gitlab Workflow', () => {
             });
         });
 
-        it('defaults to count=5', async () => {expect.hasAssertions();
+        it('defaults to count=5', async () => {
+            expect.hasAssertions();
 
             vi.mocked(apiGet).mockResolvedValue([]);
             await glGetRecentPipelines(mockClient, 'owner', 'repo');
@@ -138,7 +147,8 @@ describe('Gitlab Workflow', () => {
             );
         });
 
-        it('returns [] when apiGet returns null', async () => {expect.hasAssertions();
+        it('returns [] when apiGet returns null', async () => {
+            expect.hasAssertions();
 
             vi.mocked(apiGet).mockResolvedValue(null);
             const result = await glGetRecentPipelines(mockClient, 'owner', 'repo');
@@ -148,7 +158,8 @@ describe('Gitlab Workflow', () => {
     });
 
     describe('GlGetPipeline', () => {
-        it('calls apiGet and returns pipeline', async () => {expect.hasAssertions();
+        it('calls apiGet and returns pipeline', async () => {
+            expect.hasAssertions();
 
             vi.mocked(apiGet).mockResolvedValue({ id: 42, status: 'success', web_url: 'https://...' });
             const result = await glGetPipeline(mockClient, 'owner', 'repo', 42);
@@ -160,7 +171,8 @@ describe('Gitlab Workflow', () => {
             });
         });
 
-        it('returns null when apiGet returns null', async () => {expect.hasAssertions();
+        it('returns null when apiGet returns null', async () => {
+            expect.hasAssertions();
 
             vi.mocked(apiGet).mockResolvedValue(null);
             const result = await glGetPipeline(mockClient, 'owner', 'repo', 42);
@@ -170,7 +182,8 @@ describe('Gitlab Workflow', () => {
     });
 
     describe('GlGetPipelineJobs', () => {
-        it('returns formatted jobs', async () => {expect.hasAssertions();
+        it('returns formatted jobs', async () => {
+            expect.hasAssertions();
 
             vi.mocked(apiGet).mockResolvedValue([
                 { id: 101, name: 'test', stage: 'test', status: 'success' },
@@ -188,7 +201,8 @@ describe('Gitlab Workflow', () => {
             });
         });
 
-        it('returns [] when apiGet returns null', async () => {expect.hasAssertions();
+        it('returns [] when apiGet returns null', async () => {
+            expect.hasAssertions();
 
             vi.mocked(apiGet).mockResolvedValue(null);
             const result = await glGetPipelineJobs(mockClient, 'owner', 'repo', 42);
@@ -198,7 +212,8 @@ describe('Gitlab Workflow', () => {
     });
 
     describe('GlListPipelineArtifacts', () => {
-        it('returns jobs with artifacts_file', async () => {expect.hasAssertions();
+        it('returns jobs with artifacts_file', async () => {
+            expect.hasAssertions();
 
             vi.mocked(apiGet).mockResolvedValue([
                 { id: 101, name: 'test', artifacts_file: { filename: 'results.zip' } },
@@ -210,7 +225,8 @@ describe('Gitlab Workflow', () => {
             expect(result).toStrictEqual([{ id: 101, name: 'test' }]);
         });
 
-        it('returns jobs with non-empty artifacts array', async () => {expect.hasAssertions();
+        it('returns jobs with non-empty artifacts array', async () => {
+            expect.hasAssertions();
 
             vi.mocked(apiGet).mockResolvedValue([{ id: 201, name: 'deploy', artifacts: [{ file_type: 'zip' }] }]);
             const result = await glListPipelineArtifacts(mockClient, 'owner', 'repo', 42);
@@ -218,7 +234,8 @@ describe('Gitlab Workflow', () => {
             expect(result).toStrictEqual([{ id: 201, name: 'deploy' }]);
         });
 
-        it('returns [] when apiGet returns null', async () => {expect.hasAssertions();
+        it('returns [] when apiGet returns null', async () => {
+            expect.hasAssertions();
 
             vi.mocked(apiGet).mockResolvedValue(null);
             const result = await glListPipelineArtifacts(mockClient, 'owner', 'repo', 42);
@@ -228,7 +245,8 @@ describe('Gitlab Workflow', () => {
     });
 
     describe('GlGetCICDVariables', () => {
-        it('calls apiGet and returns variables', async () => {expect.hasAssertions();
+        it('calls apiGet and returns variables', async () => {
+            expect.hasAssertions();
 
             vi.mocked(apiGet).mockResolvedValue([{ key: 'VAR1', value: 'val1' }]);
             const result = await glGetCICDVariables(mockClient, 'owner', 'repo');
@@ -241,7 +259,8 @@ describe('Gitlab Workflow', () => {
             });
         });
 
-        it('returns [] when apiGet returns null', async () => {expect.hasAssertions();
+        it('returns [] when apiGet returns null', async () => {
+            expect.hasAssertions();
 
             vi.mocked(apiGet).mockResolvedValue(null);
             const result = await glGetCICDVariables(mockClient, 'owner', 'repo');
@@ -251,7 +270,8 @@ describe('Gitlab Workflow', () => {
     });
 
     describe('GlDownloadArtifact', () => {
-        it('returns buffer and filename from /jobs/{id}/artifacts', async () => {expect.hasAssertions();
+        it('returns buffer and filename from /jobs/{id}/artifacts', async () => {
+            expect.hasAssertions();
 
             mockClient.get.mockResolvedValue({
                 data: Buffer.from('fake-zip-content'),
@@ -266,7 +286,8 @@ describe('Gitlab Workflow', () => {
             expect(result.filename).toBe('artifacts.zip');
         });
 
-        it('falls back to artifacts.zip when no content-disposition', async () => {expect.hasAssertions();
+        it('falls back to artifacts.zip when no content-disposition', async () => {
+            expect.hasAssertions();
 
             mockClient.get.mockResolvedValue({
                 data: Buffer.from('data'),
@@ -277,7 +298,8 @@ describe('Gitlab Workflow', () => {
             expect(result.filename).toBe('artifacts.zip');
         });
 
-        it('throws on API error (mutation)', async () => {expect.hasAssertions();
+        it('throws on API error (mutation)', async () => {
+            expect.hasAssertions();
 
             mockClient.get.mockRejectedValue(new Error('Download failed'));
 
@@ -286,7 +308,8 @@ describe('Gitlab Workflow', () => {
     });
 
     describe('GlGetJobLogs', () => {
-        it('returns truncated log text from GET /jobs/{id}/trace', async () => {expect.hasAssertions();
+        it('returns truncated log text from GET /jobs/{id}/trace', async () => {
+            expect.hasAssertions();
 
             mockClient.get.mockResolvedValue({ data: 'line1\nline2\nline3\n' });
             const result = await glGetJobLogs(mockClient, 'owner', 'repo', 101);
@@ -297,7 +320,8 @@ describe('Gitlab Workflow', () => {
             expect(result).toBe('line1\nline2\nline3\n');
         });
 
-        it('truncates log to maxBytes', async () => {expect.hasAssertions();
+        it('truncates log to maxBytes', async () => {
+            expect.hasAssertions();
 
             const longLog = 'a'.repeat(100);
             mockClient.get.mockResolvedValue({ data: longLog });
@@ -306,7 +330,8 @@ describe('Gitlab Workflow', () => {
             expect(result).toBe('a'.repeat(10));
         });
 
-        it('returns null on API error', async () => {expect.hasAssertions();
+        it('returns null on API error', async () => {
+            expect.hasAssertions();
 
             mockClient.get.mockRejectedValue(new Error('Log not found'));
             const result = await glGetJobLogs(mockClient, 'owner', 'repo', 999);
@@ -314,5 +339,4 @@ describe('Gitlab Workflow', () => {
             expect(result).toBeNull();
         });
     });
-
 });

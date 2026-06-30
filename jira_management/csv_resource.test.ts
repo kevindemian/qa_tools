@@ -75,7 +75,8 @@ describe('CsvResource', () => {
     });
 
     describe('ReadBulkCsv with quoted Pre-condition', () => {
-        it('parses multi-line quoted Pre-condition', async () => {expect.hasAssertions();
+        it('parses multi-line quoted Pre-condition', async () => {
+            expect.hasAssertions();
 
             const tmp = '/tmp/test-pre-quoted.csv';
             writeFileSync(
@@ -102,7 +103,8 @@ describe('CsvResource', () => {
             unlinkSync(tmp);
         });
 
-        it('parses single-line quoted Pre-condition', async () => {expect.hasAssertions();
+        it('parses single-line quoted Pre-condition', async () => {
+            expect.hasAssertions();
 
             const tmp = '/tmp/test-pre-quoted-single.csv';
             writeFileSync(
@@ -126,7 +128,8 @@ describe('CsvResource', () => {
             unlinkSync(tmp);
         });
 
-        it('parses unquoted Pre-condition (range mode fallback)', async () => {expect.hasAssertions();
+        it('parses unquoted Pre-condition (range mode fallback)', async () => {
+            expect.hasAssertions();
 
             const tmp = '/tmp/test-pre-range.csv';
             writeFileSync(
@@ -175,7 +178,9 @@ describe('CsvResource', () => {
         it('parses single linked issue', () => {
             const lines = ['Title: Test', 'Linked Issues: ECSPOL-100 (is tested by)', 'Action,Data,Expected'];
 
-            expect(csvResource.parseLinkedIssues(lines)).toStrictEqual([{ key: 'ECSPOL-100', linkType: 'is tested by' }]);
+            expect(csvResource.parseLinkedIssues(lines)).toStrictEqual([
+                { key: 'ECSPOL-100', linkType: 'is tested by' },
+            ]);
         });
 
         it('parses multiple linked issues', () => {
@@ -195,7 +200,8 @@ describe('CsvResource', () => {
     });
 
     describe('ReadBulkCsv edge cases', () => {
-        it('skips block without Title and warns', async () => {expect.hasAssertions();
+        it('skips block without Title and warns', async () => {
+            expect.hasAssertions();
 
             const warnSpy = vi.spyOn(rootLogger, 'warn').mockImplementation(() => {});
             const tmp = '/tmp/test-no-title.csv';
@@ -210,7 +216,8 @@ describe('CsvResource', () => {
             unlinkSync(tmp);
         });
 
-        it('parses single-line quoted description', async () => {expect.hasAssertions();
+        it('parses single-line quoted description', async () => {
+            expect.hasAssertions();
 
             const tmp = '/tmp/test-desc-quoted.csv';
             writeFileSync(tmp, 'Title: TC\nDescription:"Quoted desc"\nAction,Data,Expected\nx,y,z\n', 'utf-8');
@@ -221,7 +228,8 @@ describe('CsvResource', () => {
             unlinkSync(tmp);
         });
 
-        it('parses multi-line quoted description without closing quote', async () => {expect.hasAssertions();
+        it('parses multi-line quoted description without closing quote', async () => {
+            expect.hasAssertions();
 
             const warnSpy = vi.spyOn(rootLogger, 'warn').mockImplementation(() => {});
             const tmp = '/tmp/test-desc-unclosed.csv';
@@ -240,7 +248,8 @@ describe('CsvResource', () => {
             unlinkSync(tmp);
         });
 
-        it('parses multi-line quoted description with proper closing', async () => {expect.hasAssertions();
+        it('parses multi-line quoted description with proper closing', async () => {
+            expect.hasAssertions();
 
             const tmp = '/tmp/test-desc-closed.csv';
             writeFileSync(
@@ -255,7 +264,8 @@ describe('CsvResource', () => {
             unlinkSync(tmp);
         });
 
-        it('parses multi-line description in range mode (no quotes)', async () => {expect.hasAssertions();
+        it('parses multi-line description in range mode (no quotes)', async () => {
+            expect.hasAssertions();
 
             const tmp = '/tmp/test-desc-range-multi.csv';
             writeFileSync(
@@ -277,7 +287,8 @@ describe('CsvResource', () => {
             unlinkSync(tmp);
         });
 
-        it('parses description in range mode with stop prefix adjacent', async () => {expect.hasAssertions();
+        it('parses description in range mode with stop prefix adjacent', async () => {
+            expect.hasAssertions();
 
             const tmp = '/tmp/test-desc-range.csv';
             writeFileSync(
@@ -293,7 +304,8 @@ describe('CsvResource', () => {
             unlinkSync(tmp);
         });
 
-        it('parses empty description after Description: with metadata on next line', async () => {expect.hasAssertions();
+        it('parses empty description after Description: with metadata on next line', async () => {
+            expect.hasAssertions();
 
             const tmp = '/tmp/test-desc-empty.csv';
             writeFileSync(
@@ -309,7 +321,8 @@ describe('CsvResource', () => {
             unlinkSync(tmp);
         });
 
-        it('warns on multi-line quoted pre-condition without closing quote', async () => {expect.hasAssertions();
+        it('warns on multi-line quoted pre-condition without closing quote', async () => {
+            expect.hasAssertions();
 
             const warnSpy = vi.spyOn(rootLogger, 'warn').mockImplementation(() => {});
             const tmp = '/tmp/test-pre-unclosed.csv';
@@ -334,7 +347,8 @@ describe('CsvResource', () => {
             unlinkSync(tmp);
         });
 
-        it('throws on CSV parse error', async () => {expect.hasAssertions();
+        it('throws on CSV parse error', async () => {
+            expect.hasAssertions();
 
             const errorSpy = vi.spyOn(rootLogger, 'error').mockImplementation(() => {});
             const orig = csvResource['readCsvFromString'];
@@ -380,7 +394,8 @@ describe('CsvResource', () => {
     });
 
     describe('ReadCsvFromString', () => {
-        it('skips CSV row with empty Action field', async () => {expect.hasAssertions();
+        it('skips CSV row with empty Action field', async () => {
+            expect.hasAssertions();
 
             const csvString = 'Action,Data,Expected Result\n,y,z';
             const result = await csvResource.readCsvFromString(csvString);
@@ -388,7 +403,8 @@ describe('CsvResource', () => {
             expect(result).toHaveLength(0);
         });
 
-        it('parses CSV with empty Data field', async () => {expect.hasAssertions();
+        it('parses CSV with empty Data field', async () => {
+            expect.hasAssertions();
 
             const csvString = 'Action,Data,Expected Result\nx,,z';
             const result = await csvResource.readCsvFromString(csvString);
@@ -398,7 +414,8 @@ describe('CsvResource', () => {
             expect(nonNull(result[0]).fields['Expected Result']).toBe('z');
         });
 
-        it('parses CSV with semicolon separator', async () => {expect.hasAssertions();
+        it('parses CSV with semicolon separator', async () => {
+            expect.hasAssertions();
 
             const csvString = 'Action;Data;Expected Result\nstep1;data1;result1';
             const result = await csvResource.readCsvFromString(csvString);
@@ -409,7 +426,8 @@ describe('CsvResource', () => {
             expect(nonNull(result[0]).fields['Expected Result']).toBe('result1');
         });
 
-        it('normalizes ExpectedResult (camelCase) header', async () => {expect.hasAssertions();
+        it('normalizes ExpectedResult (camelCase) header', async () => {
+            expect.hasAssertions();
 
             const warnSpy = vi.spyOn(rootLogger, 'warn').mockImplementation(() => {});
             const csvString = 'Action,Data,ExpectedResult\nx,y,z';
@@ -422,7 +440,8 @@ describe('CsvResource', () => {
             warnSpy.mockRestore();
         });
 
-        it('normalizes lowercase expected result header', async () => {expect.hasAssertions();
+        it('normalizes lowercase expected result header', async () => {
+            expect.hasAssertions();
 
             const csvString = 'action,data,expected result\nx,y,z';
             const result = await csvResource.readCsvFromString(csvString);
@@ -432,7 +451,8 @@ describe('CsvResource', () => {
             expect(nonNull(result[0]).fields['Expected Result']).toBe('z');
         });
 
-        it('normalizes header with trailing \\r', async () => {expect.hasAssertions();
+        it('normalizes header with trailing \\r', async () => {
+            expect.hasAssertions();
 
             const csvString = 'Action,Data,Expected Result\r\nstep1,data1,result1';
             const result = await csvResource.readCsvFromString(csvString);
@@ -441,7 +461,8 @@ describe('CsvResource', () => {
             expect(nonNull(result[0]).fields['Expected Result']).toBe('result1');
         });
 
-        it('deduplicates normalization warnings per column', async () => {expect.hasAssertions();
+        it('deduplicates normalization warnings per column', async () => {
+            expect.hasAssertions();
 
             const warnSpy = vi.spyOn(rootLogger, 'warn').mockImplementation(() => {});
             const csvString = 'Action,ExpectedResult,ExpectedResult\nx,y,z\nw,v,u';
@@ -457,7 +478,8 @@ describe('CsvResource', () => {
             warnSpy.mockRestore();
         });
 
-        it('strips \\r from cell values', async () => {expect.hasAssertions();
+        it('strips \\r from cell values', async () => {
+            expect.hasAssertions();
 
             const csvString = 'Action,Data,Expected Result\nstep1\r,data1\r,result1\r';
             const result = await csvResource.readCsvFromString(csvString);
@@ -468,7 +490,8 @@ describe('CsvResource', () => {
             expect(nonNull(result[0]).fields['Expected Result']).toBe('result1');
         });
 
-        it('preserves \\n inside quoted cell values', async () => {expect.hasAssertions();
+        it('preserves \\n inside quoted cell values', async () => {
+            expect.hasAssertions();
 
             const csvString = 'Action,Data,Expected Result\n"line1\nline2",data,result\nstep3,data3,result3';
             const result = await csvResource.readCsvFromString(csvString);
@@ -480,7 +503,8 @@ describe('CsvResource', () => {
     });
 
     describe('ProcessBulkCsvBlock flat CSV warning', () => {
-        it('warns with diagnostic for flat CSV (Title,Action,... header)', async () => {expect.hasAssertions();
+        it('warns with diagnostic for flat CSV (Title,Action,... header)', async () => {
+            expect.hasAssertions();
 
             const warnSpy = vi.spyOn(rootLogger, 'warn').mockImplementation(() => {});
             // Flat CSV format: header row with Title,Action,Data,Expected Result (no ---, no Title:)
@@ -496,7 +520,8 @@ describe('CsvResource', () => {
             unlinkSync(tmp);
         });
 
-        it('warns with diagnostic for flat CSV (just Action,Data,...)', async () => {expect.hasAssertions();
+        it('warns with diagnostic for flat CSV (just Action,Data,...)', async () => {
+            expect.hasAssertions();
 
             const warnSpy = vi.spyOn(rootLogger, 'warn').mockImplementation(() => {});
             const tmp = '/tmp/test-flat-action.csv';
@@ -512,7 +537,8 @@ describe('CsvResource', () => {
     });
 
     describe('ReadBulkCsv — CRLF normalization', () => {
-        it('splits blocks correctly with CRLF line endings', async () => {expect.hasAssertions();
+        it('splits blocks correctly with CRLF line endings', async () => {
+            expect.hasAssertions();
 
             const tmp = '/tmp/test-crlf-bulk.csv';
             const crlf = '\r\n';
@@ -538,7 +564,8 @@ describe('CsvResource', () => {
             unlinkSync(tmp);
         });
 
-        it('strips BOM character at start of file', async () => {expect.hasAssertions();
+        it('strips BOM character at start of file', async () => {
+            expect.hasAssertions();
 
             const tmp = '/tmp/test-bom-bulk.csv';
             const bom = '\uFEFF';
@@ -553,7 +580,8 @@ describe('CsvResource', () => {
             unlinkSync(tmp);
         });
 
-        it('handles BOM + CRLF + semicolons combined', async () => {expect.hasAssertions();
+        it('handles BOM + CRLF + semicolons combined', async () => {
+            expect.hasAssertions();
 
             const tmp = '/tmp/test-bom-crlf-semi.csv';
             const bom = '\uFEFF';

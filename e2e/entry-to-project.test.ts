@@ -42,7 +42,8 @@ describe('Entry-menu to module spawn — full flow (CR-3c)', () => {
         vi.spyOn(console, 'clear').mockImplementation(() => {});
     });
 
-    it('launches git module on selection and spawns correct command', async () => {expect.hasAssertions();
+    it('launches git module on selection and spawns correct command', async () => {
+        expect.hasAssertions();
 
         vi.mocked(Output).isTTY.mockReturnValue(true);
         vi.mocked(Output).isCI.mockReturnValue(false);
@@ -67,7 +68,8 @@ describe('Entry-menu to module spawn — full flow (CR-3c)', () => {
         );
     });
 
-    it('launches jira module on selection and spawns correct command', async () => {expect.hasAssertions();
+    it('launches jira module on selection and spawns correct command', async () => {
+        expect.hasAssertions();
 
         vi.mocked(Output).isTTY.mockReturnValue(true);
         vi.mocked(Output).isCI.mockReturnValue(false);
@@ -83,7 +85,8 @@ describe('Entry-menu to module spawn — full flow (CR-3c)', () => {
         );
     });
 
-    it('sets stdio inherit and cwd in spawned process', async () => {expect.hasAssertions();
+    it('sets stdio inherit and cwd in spawned process', async () => {
+        expect.hasAssertions();
 
         vi.mocked(Output).isTTY.mockReturnValue(true);
         vi.mocked(Output).isCI.mockReturnValue(false);
@@ -102,7 +105,8 @@ describe('Entry-menu to module spawn — full flow (CR-3c)', () => {
         expect(callOpts?.cwd).toStrictEqual(expect.any(String));
     });
 
-    it('exits loop on non-zero exit from module', async () => {expect.hasAssertions();
+    it('exits loop on non-zero exit from module', async () => {
+        expect.hasAssertions();
 
         vi.mocked(Output).isTTY.mockReturnValue(true);
         vi.mocked(Output).isCI.mockReturnValue(false);

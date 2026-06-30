@@ -28,7 +28,8 @@ describe('Integration: AI Effectiveness Dashboard (FT-23)', () => {
     });
 
     describe('FT-23a: generateAiEffectivenessHtml', () => {
-        it('returns complete HTML document with data', async () => {expect.hasAssertions();
+        it('returns complete HTML document with data', async () => {
+            expect.hasAssertions();
 
             const { computeAiEffectiveness, generateAiEffectivenessHtml } = await import('../../ai-effectiveness.js');
             const store: AiFeedbackStore = {
@@ -57,7 +58,8 @@ describe('Integration: AI Effectiveness Dashboard (FT-23)', () => {
             expect(html).toContain('By Prompt Version');
         });
 
-        it('shows no data message for empty store', async () => {expect.hasAssertions();
+        it('shows no data message for empty store', async () => {
+            expect.hasAssertions();
 
             const { computeAiEffectiveness, generateAiEffectivenessHtml } = await import('../../ai-effectiveness.js');
             const result = computeAiEffectiveness({ records: [] });
@@ -68,7 +70,8 @@ describe('Integration: AI Effectiveness Dashboard (FT-23)', () => {
             expect(html).not.toContain('Daily Trend');
         });
 
-        it('uses custom title', async () => {expect.hasAssertions();
+        it('uses custom title', async () => {
+            expect.hasAssertions();
 
             const { computeAiEffectiveness, generateAiEffectivenessHtml } = await import('../../ai-effectiveness.js');
             const store: AiFeedbackStore = {
@@ -83,7 +86,8 @@ describe('Integration: AI Effectiveness Dashboard (FT-23)', () => {
     });
 
     describe('FT-23b: edge cases', () => {
-        it('handles all accepted records', async () => {expect.hasAssertions();
+        it('handles all accepted records', async () => {
+            expect.hasAssertions();
 
             const { computeAiEffectiveness, generateAiEffectivenessHtml } = await import('../../ai-effectiveness.js');
             const store: AiFeedbackStore = {
@@ -104,7 +108,8 @@ describe('Integration: AI Effectiveness Dashboard (FT-23)', () => {
             expect(html).toContain('100%');
         });
 
-        it('handles all rejected records', async () => {expect.hasAssertions();
+        it('handles all rejected records', async () => {
+            expect.hasAssertions();
 
             const { computeAiEffectiveness } = await import('../../ai-effectiveness.js');
             const store: AiFeedbackStore = {
@@ -132,7 +137,8 @@ describe('Integration: AI Effectiveness Dashboard (FT-23)', () => {
             expect(result.totalDeleted).toBe(1);
         });
 
-        it('handles 100 records without error', async () => {expect.hasAssertions();
+        it('handles 100 records without error', async () => {
+            expect.hasAssertions();
 
             const { computeAiEffectiveness, generateAiEffectivenessHtml } = await import('../../ai-effectiveness.js');
             const records: AiFeedbackRecord[] = [];
@@ -157,7 +163,8 @@ describe('Integration: AI Effectiveness Dashboard (FT-23)', () => {
     });
 
     describe('FT-23c: HTML structural validation', () => {
-        it('contains proper HTML structure', async () => {expect.hasAssertions();
+        it('contains proper HTML structure', async () => {
+            expect.hasAssertions();
 
             const { computeAiEffectiveness, generateAiEffectivenessHtml } = await import('../../ai-effectiveness.js');
             const store: AiFeedbackStore = {
@@ -166,14 +173,25 @@ describe('Integration: AI Effectiveness Dashboard (FT-23)', () => {
             const result = computeAiEffectiveness(store);
             const html = generateAiEffectivenessHtml(result);
 
-            const parts = ['<!DOCTYPE html>', '<html', '</html>', '<head>', '</head>', '<body>', '</body>', '--color-surface-page', 'prefers-color-scheme'];
+            const parts = [
+                '<!DOCTYPE html>',
+                '<html',
+                '</html>',
+                '<head>',
+                '</head>',
+                '<body>',
+                '</body>',
+                '--color-surface-page',
+                'prefers-color-scheme',
+            ];
 
-            expect(parts.every(p => html.includes(p))).toBeTruthy();
+            expect(parts.every((p) => html.includes(p))).toBeTruthy();
         });
     });
 
     describe('FT-23d: null handling', () => {
-        it('handles null store without crashing (returning empty result)', async () => {expect.hasAssertions();
+        it('handles null store without crashing (returning empty result)', async () => {
+            expect.hasAssertions();
 
             const { computeAiEffectiveness } = await import('../../ai-effectiveness.js');
             const result = computeAiEffectiveness(null);
@@ -183,7 +201,8 @@ describe('Integration: AI Effectiveness Dashboard (FT-23)', () => {
             expect(result.totalGenerated).toBe(0);
         });
 
-        it('handles undefined store without crashing', async () => {expect.hasAssertions();
+        it('handles undefined store without crashing', async () => {
+            expect.hasAssertions();
 
             const { computeAiEffectiveness } = await import('../../ai-effectiveness.js');
             const result = computeAiEffectiveness(undefined);
@@ -192,7 +211,8 @@ describe('Integration: AI Effectiveness Dashboard (FT-23)', () => {
             expect(result.totalRecords).toBe(0);
         });
 
-        it('handles null result in generateAiEffectivenessHtml without crashing', async () => {expect.hasAssertions();
+        it('handles null result in generateAiEffectivenessHtml without crashing', async () => {
+            expect.hasAssertions();
 
             const { generateAiEffectivenessHtml } = await import('../../ai-effectiveness.js');
             const html = generateAiEffectivenessHtml(null);
@@ -202,7 +222,8 @@ describe('Integration: AI Effectiveness Dashboard (FT-23)', () => {
     });
 
     describe('FT-23e: error fallback', () => {
-        it('returns error page when buildHtmlPage throws', async () => {expect.hasAssertions();
+        it('returns error page when buildHtmlPage throws', async () => {
+            expect.hasAssertions();
 
             const { computeAiEffectiveness, generateAiEffectivenessHtml } = await import('../../ai-effectiveness.js');
             const htmlFactory = await import('../../html-factory.js');

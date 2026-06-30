@@ -79,11 +79,7 @@ class TestCaseFactory {
         const stepBar = !isQuiet() ? new ProgressBar(test.steps.length, { width: 15 }) : null;
         for (let i = 0; i < test.steps.length; i++) {
             try {
-                await this.stepImporter.importStep(
-                    issueKey,
-                    i + 1,
-                    Reflect.get(test.steps, i),
-                );
+                await this.stepImporter.importStep(issueKey, i + 1, Reflect.get(test.steps, i));
                 if (stepBar) stepBar.update(i + 1);
             } catch (err) {
                 const action = onError('  Step ' + (i + 1) + ' de "' + test.title + '"', err, {

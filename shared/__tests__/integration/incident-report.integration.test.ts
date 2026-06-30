@@ -20,7 +20,8 @@ describe('Incident Report.Integration', () => {
 
     describe('Integration: Incident Investigation Report', () => {
         describe('FT-31a: basic HTML generation with events', () => {
-            it('generates valid HTML from real event data', async () => {expect.hasAssertions();
+            it('generates valid HTML from real event data', async () => {
+                expect.hasAssertions();
 
                 const { buildIncidentReport, generateIncidentReportHtml } = await import('../../incident-report.js');
                 const report = buildIncidentReport(45, 3, 'December Peak', ['EPIC-1'], 50);
@@ -35,7 +36,8 @@ describe('Incident Report.Integration', () => {
                 expect(html).toContain('4 incident(s) detected');
             });
 
-            it('includes all event types in sorted order', async () => {expect.hasAssertions();
+            it('includes all event types in sorted order', async () => {
+                expect.hasAssertions();
 
                 const { buildIncidentReport, generateIncidentReportHtml } = await import('../../incident-report.js');
                 const report = buildIncidentReport(45, 5, 'January Spike', ['EPIC-X', 'EPIC-Y'], 50);
@@ -49,7 +51,8 @@ describe('Incident Report.Integration', () => {
         });
 
         describe('FT-31b: empty input — no incidents', () => {
-            it('generates HTML with no-incidents message when no events exist', async () => {expect.hasAssertions();
+            it('generates HTML with no-incidents message when no events exist', async () => {
+                expect.hasAssertions();
 
                 const { buildIncidentReport, generateIncidentReportHtml } = await import('../../incident-report.js');
                 const report = buildIncidentReport(10, 0, 'N/A', [], 95);
@@ -62,7 +65,8 @@ describe('Incident Report.Integration', () => {
         });
 
         describe('FT-31c: null/undefined input returns error page', () => {
-            it('returns error page for null report', async () => {expect.hasAssertions();
+            it('returns error page for null report', async () => {
+                expect.hasAssertions();
 
                 const { generateIncidentReportHtml } = await import('../../incident-report.js');
                 const html = generateIncidentReportHtml(null);
@@ -70,7 +74,8 @@ describe('Incident Report.Integration', () => {
                 expect(html).toContain('Error generating incident investigation report');
             });
 
-            it('returns error page for undefined report', async () => {expect.hasAssertions();
+            it('returns error page for undefined report', async () => {
+                expect.hasAssertions();
 
                 const { generateIncidentReportHtml } = await import('../../incident-report.js');
                 const html = generateIncidentReportHtml(undefined);
@@ -80,7 +85,8 @@ describe('Incident Report.Integration', () => {
         });
 
         describe('FT-31d: custom title', () => {
-            it('uses custom title in HTML and page title', async () => {expect.hasAssertions();
+            it('uses custom title in HTML and page title', async () => {
+                expect.hasAssertions();
 
                 const { buildIncidentReport, generateIncidentReportHtml } = await import('../../incident-report.js');
                 const report = buildIncidentReport(10, 0, 'N/A', [], 95);
@@ -90,7 +96,8 @@ describe('Incident Report.Integration', () => {
                 expect(html).toContain('<h1>Sprint 42 Incident Report</h1>');
             });
 
-            it('defaults to Incident Investigation Report when no title given', async () => {expect.hasAssertions();
+            it('defaults to Incident Investigation Report when no title given', async () => {
+                expect.hasAssertions();
 
                 const { buildIncidentReport, generateIncidentReportHtml } = await import('../../incident-report.js');
                 const report = buildIncidentReport(10, 0, 'N/A', [], 95);
@@ -101,5 +108,4 @@ describe('Incident Report.Integration', () => {
             });
         });
     });
-
 });

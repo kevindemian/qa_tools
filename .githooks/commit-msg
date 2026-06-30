@@ -1,9 +1,8 @@
-#!/bin/sh
+#!/usr/bin/env sh
 set -e
 
-# commit-msg hook: validates the actual commit message.
+# Commit-msg hook: validates the commit message via validation_hook.ts.
 # Runs after pre-commit, receives the message file path as $1.
-# Copy the real message to COMMIT_EDITMSG so validation_hook --check reads it.
 VALIDATION_HOOK="$HOME/.config/opencode/validation_hook.ts"
 if [ -f "$VALIDATION_HOOK" ]; then
     GIT_DIR="$(git rev-parse --show-toplevel)/.git"
@@ -12,9 +11,5 @@ if [ -f "$VALIDATION_HOOK" ]; then
         cp "$1" "$COMMIT_EDITMSG"
         trap 'rm -f "$COMMIT_EDITMSG"' EXIT
     fi
-    # Validate commit message (read from COMMIT_EDITMSG by --check).
-    # Staged diff already validated by pre-commit with proper exclusions.
-    # Pipe a dummy #-prefixed line (skipped by validation_hook) to satisfy --check's
-    # stdin requirement while letting runCheckCommitMsg do the real work.
     echo "# commit-msg: staged diff already validated by pre-commit" | npx tsx "$VALIDATION_HOOK" --check --no-cache
 fi

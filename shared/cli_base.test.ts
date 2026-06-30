@@ -175,9 +175,7 @@ describe('CLI Base', () => {
             expect.hasAssertions();
 
             vi.useFakeTimers();
-            const exitSpy = vi
-                .spyOn(process, 'exit')
-                .mockImplementation(vi.fn<(...args: [ExitArg]) => never>());
+            const exitSpy = vi.spyOn(process, 'exit').mockImplementation(vi.fn<(...args: [ExitArg]) => never>());
             vi.spyOn(process, 'on').mockImplementation((evt, handler) => {
                 if (evt === 'SIGINT') (handler as () => void)();
                 return process;
@@ -216,9 +214,7 @@ describe('CLI Base', () => {
             expect.hasAssertions();
 
             vi.useFakeTimers();
-            const exitSpy = vi
-                .spyOn(process, 'exit')
-                .mockImplementation(vi.fn<(...args: [ExitArg]) => never>());
+            const exitSpy = vi.spyOn(process, 'exit').mockImplementation(vi.fn<(...args: [ExitArg]) => never>());
             let capturedHandler: () => void = () => {};
             vi.spyOn(process, 'on').mockImplementation((evt, handler) => {
                 if (evt === 'SIGINT') capturedHandler = handler as () => void;
@@ -229,10 +225,7 @@ describe('CLI Base', () => {
             cliBase.setupSigint(null, onExit);
             capturedHandler();
 
-            expect(questionSpy).toHaveBeenCalledWith(
-                expect.any(String),
-                expect.any(Function),
-            );
+            expect(questionSpy).toHaveBeenCalledWith(expect.any(String), expect.any(Function));
 
             capturedHandler();
 
@@ -265,9 +258,7 @@ describe('CLI Base', () => {
             expect.hasAssertions();
 
             vi.useFakeTimers();
-            const exitSpy = vi
-                .spyOn(process, 'exit')
-                .mockImplementation(vi.fn<(...args: [ExitArg]) => never>());
+            const exitSpy = vi.spyOn(process, 'exit').mockImplementation(vi.fn<(...args: [ExitArg]) => never>());
             let capturedHandler: () => void = () => {};
             vi.spyOn(process, 'on').mockImplementation((evt, handler) => {
                 if (evt === 'SIGINT') capturedHandler = handler as () => void;

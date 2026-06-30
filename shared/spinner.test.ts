@@ -36,7 +36,8 @@ describe('Spinner', () => {
     describe('WithSpinner', () => {
         const fn = vi.fn().mockResolvedValue(42);
 
-        it('calls fn directly when quiet', async () => {expect.hasAssertions();
+        it('calls fn directly when quiet', async () => {
+            expect.hasAssertions();
 
             mockIsQuiet.mockReturnValue(true);
             const result = await withSpinner('loading', fn);
@@ -44,7 +45,8 @@ describe('Spinner', () => {
             expect(result).toBe(42);
         });
 
-        it('calls fn directly when not TTY', async () => {expect.hasAssertions();
+        it('calls fn directly when not TTY', async () => {
+            expect.hasAssertions();
 
             mockIsTTY.mockReturnValue(false);
             const result = await withSpinner('loading', fn);
@@ -52,7 +54,8 @@ describe('Spinner', () => {
             expect(result).toBe(42);
         });
 
-        it('calls fn directly when CI', async () => {expect.hasAssertions();
+        it('calls fn directly when CI', async () => {
+            expect.hasAssertions();
 
             mockIsCI.mockReturnValue(true);
             const result = await withSpinner('loading', fn);
@@ -60,7 +63,8 @@ describe('Spinner', () => {
             expect(result).toBe(42);
         });
 
-        it('uses ora spinner when TTY and not quiet', async () => {expect.hasAssertions();
+        it('uses ora spinner when TTY and not quiet', async () => {
+            expect.hasAssertions();
 
             const mockSpinner = { start: vi.fn().mockReturnThis(), succeed: vi.fn(), fail: vi.fn() };
             const mockOra = vi.fn(() => mockSpinner);
@@ -74,7 +78,8 @@ describe('Spinner', () => {
             expect(mockSpinner.succeed).toHaveBeenCalledTimes(1);
         });
 
-        it('calls spinner.fail on fn rejection', async () => {expect.hasAssertions();
+        it('calls spinner.fail on fn rejection', async () => {
+            expect.hasAssertions();
 
             const mockSpinner = { start: vi.fn().mockReturnThis(), succeed: vi.fn(), fail: vi.fn() };
             __setOraDep(vi.fn(() => mockSpinner));
@@ -140,5 +145,4 @@ describe('Spinner', () => {
             });
         });
     });
-
 });

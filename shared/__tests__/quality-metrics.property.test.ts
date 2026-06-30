@@ -37,7 +37,8 @@ function snapshotBase(): QualityMetricsSnapshot {
 /* ── Tests ───────────────────────────────────────────────────── */
 
 describe('QualityMetricsCollector — property-based', () => {
-    it('invariantFireRate: sum of all rates = 1 (or 0 when none)', () => {expect.hasAssertions();
+    it('invariantFireRate: sum of all rates = 1 (or 0 when none)', () => {
+        expect.hasAssertions();
 
         fc.assert(
             fc.property(fc.array(fc.record({ id: invariantArb() }), { minLength: 0, maxLength: 50 }), (fires) => {
@@ -53,7 +54,8 @@ describe('QualityMetricsCollector — property-based', () => {
         );
     });
 
-    it('invariantFireRate: each rate in [0, 1]', () => {expect.hasAssertions();
+    it('invariantFireRate: each rate in [0, 1]', () => {
+        expect.hasAssertions();
 
         fc.assert(
             fc.property(fc.array(invariantArb(), { minLength: 0, maxLength: 50 }), (fires) => {
@@ -75,7 +77,8 @@ describe('QualityMetricsCollector — property-based', () => {
         );
     });
 
-    it('layerPassRate: em [0, 1], default 1 sem attempts', () => {expect.hasAssertions();
+    it('layerPassRate: em [0, 1], default 1 sem attempts', () => {
+        expect.hasAssertions();
 
         fc.assert(
             fc.property(
@@ -98,7 +101,8 @@ describe('QualityMetricsCollector — property-based', () => {
         );
     });
 
-    it('snapshot: avgStructureScore consistente', () => {expect.hasAssertions();
+    it('snapshot: avgStructureScore consistente', () => {
+        expect.hasAssertions();
 
         fc.assert(
             fc.property(
@@ -108,9 +112,10 @@ describe('QualityMetricsCollector — property-based', () => {
                     for (const s of scores) collector.recordStructureScore(s);
                     const snapshot = collector.snapshot();
 
-                    const expected = scores.length === 0
-                        ? 0
-                        : Math.round((scores.reduce((a, b) => a + b, 0) / scores.length) * 100) / 100;
+                    const expected =
+                        scores.length === 0
+                            ? 0
+                            : Math.round((scores.reduce((a, b) => a + b, 0) / scores.length) * 100) / 100;
 
                     expect(snapshot.avgStructureScore).toBe(expected);
                 },
@@ -119,7 +124,8 @@ describe('QualityMetricsCollector — property-based', () => {
         );
     });
 
-    it('clear: reseta todos os acumuladores', () => {expect.hasAssertions();
+    it('clear: reseta todos os acumuladores', () => {
+        expect.hasAssertions();
 
         fc.assert(
             fc.property(
@@ -146,7 +152,8 @@ describe('QualityMetricsCollector — property-based', () => {
         );
     });
 
-    it('detectDrift: < 2 snapshots → []', () => {expect.hasAssertions();
+    it('detectDrift: < 2 snapshots → []', () => {
+        expect.hasAssertions();
 
         fc.assert(
             fc.property(fc.array(invariantArb(), { minLength: 0, maxLength: 10 }), (fires) => {
@@ -160,7 +167,8 @@ describe('QualityMetricsCollector — property-based', () => {
         );
     });
 
-    it('detectDrift: invariante sem baseline suficiente é ignorado', () => {expect.hasAssertions();
+    it('detectDrift: invariante sem baseline suficiente é ignorado', () => {
+        expect.hasAssertions();
 
         fc.assert(
             fc.property(
@@ -187,7 +195,8 @@ describe('QualityMetricsCollector — property-based', () => {
         );
     });
 
-    it('detectDrift: drift detectado quando ratio atual > 2σ', () => {expect.hasAssertions();
+    it('detectDrift: drift detectado quando ratio atual > 2σ', () => {
+        expect.hasAssertions();
 
         fc.assert(
             fc.property(fc.integer({ min: 40, max: 49 }), fc.integer({ min: 60, max: 70 }), (lowCount, highCount) => {

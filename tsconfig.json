@@ -22,7 +22,6 @@
         "isolatedModules": true,
         "types": ["node", "vitest/globals"]
     },
-    "noPropertyAccessFromIndexSignature": true,
     "include": [
         "setup/**/*.ts",
         "shared/**/*.ts",

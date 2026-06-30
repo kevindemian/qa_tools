@@ -13,7 +13,8 @@ describe('GetRegistry', () => {
         expect(reg.updated).toBeTruthy();
     });
 
-    it('contains all known providers', () => {expect.hasAssertions();
+    it('contains all known providers', () => {
+        expect.hasAssertions();
 
         const reg = getRegistry();
         const expected = [
@@ -33,7 +34,8 @@ describe('GetRegistry', () => {
         }
     });
 
-    it('each provider has at least one model', () => {expect.hasAssertions();
+    it('each provider has at least one model', () => {
+        expect.hasAssertions();
 
         const reg = getRegistry();
         for (const [provider, models] of Object.entries(reg.providers)) {
@@ -142,7 +144,8 @@ describe('ResolveModel', () => {
         expect(result.id).toContain('kimi');
     });
 
-    it('github-models resolves all tiers to gpt-4o-mini', () => {expect.hasAssertions();
+    it('github-models resolves all tiers to gpt-4o-mini', () => {
+        expect.hasAssertions();
 
         const tiers = ['main', 'fast', 'reviewer', 'report', 'fallback', 'batch'];
         for (const t of tiers) {

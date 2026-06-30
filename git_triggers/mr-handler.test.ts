@@ -49,7 +49,8 @@ describe('Mr Handler', () => {
     });
 
     describe('NivelarBranchesWrapper', () => {
-        it('delegates to nivelarBranches', async () => {expect.hasAssertions();
+        it('delegates to nivelarBranches', async () => {
+            expect.hasAssertions();
 
             await nivelarBranchesWrapper(mockM);
 
@@ -58,7 +59,8 @@ describe('Mr Handler', () => {
     });
 
     describe('HandleCreateMR', () => {
-        it('creates MR with manual description', async () => {expect.hasAssertions();
+        it('creates MR with manual description', async () => {
+            expect.hasAssertions();
 
             mockConfirm.mockReturnValueOnce(false);
             mockPrompt
@@ -74,7 +76,8 @@ describe('Mr Handler', () => {
             expect(success).toHaveBeenCalledWith(expect.stringContaining('https://gitlab.com/merge/1'));
         });
 
-        it('uses AI description when available', async () => {expect.hasAssertions();
+        it('uses AI description when available', async () => {
+            expect.hasAssertions();
 
             mockConfirm.mockReturnValueOnce(true).mockReturnValueOnce(false);
             mockGeneratePrDesc.mockResolvedValue('AI generated description');
@@ -87,7 +90,8 @@ describe('Mr Handler', () => {
             expect(mockM.createMergeRequest).toHaveBeenCalledWith('feat', 'main', 'Title', 'AI generated description');
         });
 
-        it('falls back to manual when AI returns empty', async () => {expect.hasAssertions();
+        it('falls back to manual when AI returns empty', async () => {
+            expect.hasAssertions();
 
             mockConfirm.mockReturnValueOnce(true).mockReturnValueOnce(false);
             mockGeneratePrDesc.mockResolvedValue('');
@@ -104,7 +108,8 @@ describe('Mr Handler', () => {
             expect(warn).toHaveBeenCalledWith(expect.stringContaining('IA não retornou'));
         });
 
-        it('includes test impact analysis when requested', async () => {expect.hasAssertions();
+        it('includes test impact analysis when requested', async () => {
+            expect.hasAssertions();
 
             mockConfirm.mockReturnValueOnce(false).mockReturnValueOnce(true);
             mockAssessImpact.mockResolvedValue('Impact: tests affected');
@@ -117,11 +122,17 @@ describe('Mr Handler', () => {
 
             await handleCreateMR(mockM);
 
-            expect(mockAssessImpact).toHaveBeenCalledWith(expect.any(Object), expect.any(String), expect.any(String), expect.anything());
+            expect(mockAssessImpact).toHaveBeenCalledWith(
+                expect.any(Object),
+                expect.any(String),
+                expect.any(String),
+                expect.anything(),
+            );
             expect(info).toHaveBeenCalledWith('Impacto nos testes:');
         });
 
-        it('handles create error', async () => {expect.hasAssertions();
+        it('handles create error', async () => {
+            expect.hasAssertions();
 
             mockConfirm.mockReturnValueOnce(false);
             mockPrompt
@@ -139,7 +150,8 @@ describe('Mr Handler', () => {
     });
 
     describe('HandleListApprovedMRs', () => {
-        it('lists approved MRs', async () => {expect.hasAssertions();
+        it('lists approved MRs', async () => {
+            expect.hasAssertions();
 
             mockPrompt.mockReturnValue('opened');
             const mrs = [
@@ -155,7 +167,8 @@ describe('Mr Handler', () => {
             expect(pushHistory).toHaveBeenCalledWith('prs-approved', expect.stringContaining('2'), 'ok');
         });
 
-        it('warns when no approved MRs', async () => {expect.hasAssertions();
+        it('warns when no approved MRs', async () => {
+            expect.hasAssertions();
 
             mockPrompt.mockReturnValue('opened');
             vi.spyOn(mockM, 'searchMergeRequests').mockResolvedValue([]);
@@ -165,7 +178,8 @@ describe('Mr Handler', () => {
             expect(warn).toHaveBeenCalledWith(expect.stringContaining('aprovado'));
         });
 
-        it('handles search error', async () => {expect.hasAssertions();
+        it('handles search error', async () => {
+            expect.hasAssertions();
 
             mockPrompt.mockReturnValue('opened');
             vi.spyOn(mockM, 'searchMergeRequests').mockRejectedValue(new Error('search fail'));
@@ -175,7 +189,8 @@ describe('Mr Handler', () => {
             expect(mockPrintError).toHaveBeenCalledWith(expect.stringContaining('Erro ao listar'), expect.any(Error));
         });
 
-        it('handles provider without isApproved', async () => {expect.hasAssertions();
+        it('handles provider without isApproved', async () => {
+            expect.hasAssertions();
 
             mockPrompt.mockReturnValue('opened');
             const mrs = [{ iid: 1, title: 'MR 1' }] as MergeRequestInfo[];
@@ -189,7 +204,8 @@ describe('Mr Handler', () => {
     });
 
     describe('HandleMergeMR', () => {
-        it('merges MR successfully', async () => {expect.hasAssertions();
+        it('merges MR successfully', async () => {
+            expect.hasAssertions();
 
             mockPrompt.mockReturnValue('42');
             vi.spyOn(mockM, 'acceptMergeRequest').mockResolvedValue({ web_url: 'https://gitlab.com/merge/42' });
@@ -201,16 +217,19 @@ describe('Mr Handler', () => {
             expect(pushHistory).toHaveBeenCalledWith('pr-merge', '42', 'ok');
         });
 
-        it('handles merge error', async () => {expect.hasAssertions();
+        it('handles merge error', async () => {
+            expect.hasAssertions();
 
             mockPrompt.mockReturnValue('42');
             vi.spyOn(mockM, 'acceptMergeRequest').mockRejectedValue(new Error('merge fail'));
 
             await handleMergeMR(mockM);
 
-            expect(mockPrintError).toHaveBeenCalledWith(expect.stringContaining('Falha ao fazer merge'), expect.any(Error));
+            expect(mockPrintError).toHaveBeenCalledWith(
+                expect.stringContaining('Falha ao fazer merge'),
+                expect.any(Error),
+            );
             expect(pushHistory).toHaveBeenCalledWith('pr-merge', '42', 'error');
         });
     });
-
 });

@@ -1,35 +1,35 @@
 {
-  "19bf76e00aeecda3a36541ae409d276d84d4b76f": {
-    "sha": "19bf76e00aeecda3a36541ae409d276d84d4b76f",
-    "project": "proj-x",
-    "timestamp": 1780856730598,
-    "tool": "",
-    "branch": "",
-    "total": 3,
-    "passed": 2,
-    "failed": 1,
-    "skipped": 0
-  },
-  "c6c70d7ed5f68dbbd7ff20b128e05ba1c47c17b3": {
-    "sha": "c6c70d7ed5f68dbbd7ff20b128e05ba1c47c17b3",
-    "project": "proj-x",
-    "timestamp": 1780856730630,
-    "tool": "",
-    "branch": "",
-    "total": 1,
-    "passed": 1,
-    "failed": 0,
-    "skipped": 0
-  },
-  "3c5887202c5d42892c8e3ac5dd0dcbfa3d2a0649": {
-    "sha": "3c5887202c5d42892c8e3ac5dd0dcbfa3d2a0649",
-    "project": "proj-x",
-    "timestamp": 1780856730648,
-    "tool": "",
-    "branch": "",
-    "total": 1,
-    "passed": 1,
-    "failed": 0,
-    "skipped": 0
-  }
+    "19bf76e00aeecda3a36541ae409d276d84d4b76f": {
+        "sha": "19bf76e00aeecda3a36541ae409d276d84d4b76f",
+        "project": "proj-x",
+        "timestamp": 1780856730598,
+        "tool": "",
+        "branch": "",
+        "total": 3,
+        "passed": 2,
+        "failed": 1,
+        "skipped": 0
+    },
+    "c6c70d7ed5f68dbbd7ff20b128e05ba1c47c17b3": {
+        "sha": "c6c70d7ed5f68dbbd7ff20b128e05ba1c47c17b3",
+        "project": "proj-x",
+        "timestamp": 1780856730630,
+        "tool": "",
+        "branch": "",
+        "total": 1,
+        "passed": 1,
+        "failed": 0,
+        "skipped": 0
+    },
+    "3c5887202c5d42892c8e3ac5dd0dcbfa3d2a0649": {
+        "sha": "3c5887202c5d42892c8e3ac5dd0dcbfa3d2a0649",
+        "project": "proj-x",
+        "timestamp": 1780856730648,
+        "tool": "",
+        "branch": "",
+        "total": 1,
+        "passed": 1,
+        "failed": 0,
+        "skipped": 0
+    }
 }

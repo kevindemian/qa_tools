@@ -45,7 +45,8 @@ describe('Case19', () => {
     });
 
     describe('Case19 — History & Coverage', () => {
-        it('displays history when option a is selected', async () => {expect.hasAssertions();
+        it('displays history when option a is selected', async () => {
+            expect.hasAssertions();
 
             const prompt = vi.mocked(promptModule);
             const metrics = vi.mocked(metricsModule);
@@ -80,7 +81,8 @@ describe('Case19', () => {
             expect(prompt.title).toHaveBeenCalledWith('Histórico de execuções');
         });
 
-        it('displays coverage when option b is selected', async () => {expect.hasAssertions();
+        it('displays coverage when option b is selected', async () => {
+            expect.hasAssertions();
 
             const prompt = vi.mocked(promptModule);
             const coverage = vi.mocked(coverageModule);
@@ -112,7 +114,8 @@ describe('Case19', () => {
             expect(baseContext.pushHistory).toHaveBeenCalledWith('coverage-analysis', '60% coverage', 'ok');
         });
 
-        it('handles empty metrics gracefully', async () => {expect.hasAssertions();
+        it('handles empty metrics gracefully', async () => {
+            expect.hasAssertions();
 
             const prompt = vi.mocked(promptModule);
             const metrics = vi.mocked(metricsModule);
@@ -127,7 +130,8 @@ describe('Case19', () => {
             expect(prompt.warn).toHaveBeenCalledWith('Nenhuma execução registrada.');
         });
 
-        it('returns when user selects voltar', async () => {expect.hasAssertions();
+        it('returns when user selects voltar', async () => {
+            expect.hasAssertions();
 
             const prompt = vi.mocked(promptModule);
             prompt.showSelect.mockResolvedValueOnce('0');
@@ -138,7 +142,8 @@ describe('Case19', () => {
             expect(prompt.tableView).not.toHaveBeenCalled();
         });
 
-        it('displays history comparison, flaky tests and trends when multiple runs exist', async () => {expect.hasAssertions();
+        it('displays history comparison, flaky tests and trends when multiple runs exist', async () => {
+            expect.hasAssertions();
 
             const prompt = vi.mocked(promptModule);
             const metrics = vi.mocked(metricsModule);
@@ -186,7 +191,8 @@ describe('Case19', () => {
             expect(prompt.title).toHaveBeenCalledWith('Tendência');
         });
 
-        it('handles coverage analysis error', async () => {expect.hasAssertions();
+        it('handles coverage analysis error', async () => {
+            expect.hasAssertions();
 
             const prompt = vi.mocked(promptModule);
             const coverage = vi.mocked(coverageModule);
@@ -200,7 +206,8 @@ describe('Case19', () => {
             expect(prompt.printError).toHaveBeenCalledWith('Erro ao analisar cobertura', expect.any(Error));
         });
 
-        it('handles compareRuns returning null (falsy analysis)', async () => {expect.hasAssertions();
+        it('handles compareRuns returning null (falsy analysis)', async () => {
+            expect.hasAssertions();
 
             const prompt = vi.mocked(promptModule);
             const metrics = vi.mocked(metricsModule);
@@ -244,7 +251,8 @@ describe('Case19', () => {
             expect(prompt.info).not.toHaveBeenCalledWith(expect.stringContaining('Análise comparativa'));
         });
 
-        it('shows coverage without unmapped steps or gaps', async () => {expect.hasAssertions();
+        it('shows coverage without unmapped steps or gaps', async () => {
+            expect.hasAssertions();
 
             const prompt = vi.mocked(promptModule);
             const coverage = vi.mocked(coverageModule);
@@ -267,7 +275,8 @@ describe('Case19', () => {
             expect(prompt.title).not.toHaveBeenCalledWith('Gaps por épico');
         });
 
-        it('shows health score when enough runs exist', async () => {expect.hasAssertions();
+        it('shows health score when enough runs exist', async () => {
+            expect.hasAssertions();
 
             const prompt = vi.mocked(promptModule);
             const metrics = vi.mocked(metricsModule);
@@ -317,7 +326,8 @@ describe('Case19', () => {
             );
         });
 
-        it('shows history without flaky or trends data', async () => {expect.hasAssertions();
+        it('shows history without flaky or trends data', async () => {
+            expect.hasAssertions();
 
             const prompt = vi.mocked(promptModule);
             const metrics = vi.mocked(metricsModule);
@@ -359,7 +369,8 @@ describe('Case19', () => {
             expect(prompt.tableView).toHaveBeenCalledWith(expect.any(Array), expect.any(Array));
         });
 
-        it('handles run with total=0 to cover Rate branch', async () => {expect.hasAssertions();
+        it('handles run with total=0 to cover Rate branch', async () => {
+            expect.hasAssertions();
 
             const prompt = vi.mocked(promptModule);
             const metrics = vi.mocked(metricsModule);
@@ -391,7 +402,8 @@ describe('Case19', () => {
             expect(prompt.tableView).toHaveBeenCalledWith(expect.any(Array), expect.any(Array));
         });
 
-        it('shows health score section when 5+ runs exist', async () => {expect.hasAssertions();
+        it('shows health score section when 5+ runs exist', async () => {
+            expect.hasAssertions();
 
             const prompt = vi.mocked(promptModule);
             const metrics = vi.mocked(metricsModule);
@@ -437,7 +449,8 @@ describe('Case19', () => {
             expect(prompt.title).toHaveBeenCalledWith(expect.stringContaining('Test Suite Health'));
         });
 
-        it('shows coverage with gapsByEpic data', async () => {expect.hasAssertions();
+        it('shows coverage with gapsByEpic data', async () => {
+            expect.hasAssertions();
 
             const prompt = vi.mocked(promptModule);
             const coverage = vi.mocked(coverageModule);
@@ -459,5 +472,4 @@ describe('Case19', () => {
             expect(prompt.info).toHaveBeenCalledWith(expect.stringContaining('Epic-1'));
         });
     });
-
 });

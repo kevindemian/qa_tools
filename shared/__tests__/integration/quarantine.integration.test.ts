@@ -230,5 +230,4 @@ describe('Quarantine.Integration', () => {
             expect(meta.warning).toBe('');
         });
     });
-
 });

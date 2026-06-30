@@ -192,7 +192,7 @@ export function resolveModel(
     modelList: RegistryModel[] | null = null,
 ): ResolveResult {
     const registry = loadRegistry();
-    const baseModels = modelList ?? (Object.entries(registry.providers).find(([k]) => k === provider)?.[1] ?? []);
+    const baseModels = modelList ?? Object.entries(registry.providers).find(([k]) => k === provider)?.[1] ?? [];
     const models = applyEnrichment(baseModels);
 
     if (models.length > 0) {

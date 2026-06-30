@@ -150,7 +150,10 @@ describe('Detector', () => {
         it('returns false when config file exists but no CTRF reporter', () => {
             mockFsExistsSync.mockImplementation(mockPathEndsWith('vitest.config.ts'));
             mockFsReadFileSync.mockImplementation(
-                mockReadFileWith('vitest.config.ts', `export default defineConfig({ test: { reporters: ['default'] } })`),
+                mockReadFileWith(
+                    'vitest.config.ts',
+                    `export default defineConfig({ test: { reporters: ['default'] } })`,
+                ),
             );
 
             expect(detectConfigCtrf('/fake/project')).toBeFalsy();
@@ -184,7 +187,9 @@ describe('Detector', () => {
         });
 
         it('returns ctrfSource=cli-flag for playwright', () => {
-            mockFsReadFileSync.mockReturnValueOnce(JSON.stringify({ devDependencies: { '@playwright/test': '^1.40' } }));
+            mockFsReadFileSync.mockReturnValueOnce(
+                JSON.stringify({ devDependencies: { '@playwright/test': '^1.40' } }),
+            );
             const result = detectFramework('/fake/package.json');
 
             expect(result.ctrfSource).toBe('cli-flag');
@@ -262,5 +267,4 @@ describe('Detector', () => {
             expect(result.repo).toBe('');
         });
     });
-
 });

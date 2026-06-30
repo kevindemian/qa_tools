@@ -71,7 +71,8 @@ function createStore(
 
 describe('Integration: Health Score', () => {
     describe('FT-09a: score range and grade', () => {
-        it('returns score 0-100', async () => {expect.hasAssertions();
+        it('returns score 0-100', async () => {
+            expect.hasAssertions();
 
             const { calculateHealthScore } = await import('../../health-score.js');
             const store = createStore({ passed: 95, failed: 5, skipped: 0 });
@@ -81,7 +82,8 @@ describe('Integration: Health Score', () => {
             expect(result.overall).toBeLessThanOrEqual(100);
         });
 
-        it('assigns grade based on score', async () => {expect.hasAssertions();
+        it('assigns grade based on score', async () => {
+            expect.hasAssertions();
 
             const { calculateHealthScore } = await import('../../health-score.js');
             // excellent: near-perfect pass rate + good coverage
@@ -101,7 +103,8 @@ describe('Integration: Health Score', () => {
     });
 
     describe('FT-09b: dimensions', () => {
-        it('all 5 dimensions are present', async () => {expect.hasAssertions();
+        it('all 5 dimensions are present', async () => {
+            expect.hasAssertions();
 
             const { calculateHealthScore } = await import('../../health-score.js');
             const result = calculateHealthScore(createStore(), {});
@@ -114,7 +117,8 @@ describe('Integration: Health Score', () => {
             expect(result.dimensions.suiteSpeed).toBeDefined();
         });
 
-        it('passRate score reflects actual pass rate', async () => {expect.hasAssertions();
+        it('passRate score reflects actual pass rate', async () => {
+            expect.hasAssertions();
 
             const { calculateHealthScore } = await import('../../health-score.js');
             const result = calculateHealthScore(createStore({ passed: 95, failed: 5, skipped: 0 }), {});
@@ -124,7 +128,8 @@ describe('Integration: Health Score', () => {
     });
 
     describe('FT-09c: provenance', () => {
-        it('provenance has 5 entries', async () => {expect.hasAssertions();
+        it('provenance has 5 entries', async () => {
+            expect.hasAssertions();
 
             const { calculateHealthScore } = await import('../../health-score.js');
             const result = calculateHealthScore(createStore(), {});
@@ -133,7 +138,8 @@ describe('Integration: Health Score', () => {
             expect(result.provenance).toHaveLength(5);
         });
 
-        it('each provenance entry has source and formula', async () => {expect.hasAssertions();
+        it('each provenance entry has source and formula', async () => {
+            expect.hasAssertions();
 
             const { calculateHealthScore } = await import('../../health-score.js');
             const result = calculateHealthScore(createStore(), {});
@@ -147,7 +153,8 @@ describe('Integration: Health Score', () => {
     });
 
     describe('FT-09d: qualityGate flag', () => {
-        it('returns "pass" when score >= 70 and all thresholds satisfied', async () => {expect.hasAssertions();
+        it('returns "pass" when score >= 70 and all thresholds satisfied', async () => {
+            expect.hasAssertions();
 
             const { calculateHealthScore } = await import('../../health-score.js');
             const result = calculateHealthScore(
@@ -158,7 +165,8 @@ describe('Integration: Health Score', () => {
             expect(result.qualityGate).toBe('pass');
         });
 
-        it('returns "fail" when coverage is below threshold', async () => {expect.hasAssertions();
+        it('returns "fail" when coverage is below threshold', async () => {
+            expect.hasAssertions();
 
             const { calculateHealthScore } = await import('../../health-score.js');
             const result = calculateHealthScore(createStore({ passed: 95, failed: 5, skipped: 0 }), {});
@@ -168,7 +176,8 @@ describe('Integration: Health Score', () => {
     });
 
     describe('FT-09e: config overrides', () => {
-        it('custom grade boundaries change grade assignment', async () => {expect.hasAssertions();
+        it('custom grade boundaries change grade assignment', async () => {
+            expect.hasAssertions();
 
             const { calculateHealthScore } = await import('../../health-score.js');
             const store = createStore({ passed: 95, failed: 5, skipped: 0, flakyTests: 0, coveragePct: 100 });
@@ -185,7 +194,8 @@ describe('Integration: Health Score', () => {
     });
 
     describe('FT-09f: edge cases', () => {
-        it('handles store with single run', async () => {expect.hasAssertions();
+        it('handles store with single run', async () => {
+            expect.hasAssertions();
 
             const { calculateHealthScore } = await import('../../health-score.js');
             const store = createStore({ totalRuns: 1, passed: 10, failed: 0, skipped: 0 });
@@ -194,7 +204,8 @@ describe('Integration: Health Score', () => {
             expect(result.overall).toBeGreaterThanOrEqual(0);
         });
 
-        it('handles store with zero tests — returns score 0, grade critical', async () => {expect.hasAssertions();
+        it('handles store with zero tests — returns score 0, grade critical', async () => {
+            expect.hasAssertions();
 
             const { calculateHealthScore } = await import('../../health-score.js');
             const store: MetricsStore = { runs: [] };
@@ -208,7 +219,8 @@ describe('Integration: Health Score', () => {
             expect(result.dimensions.coverage.status).toBe('fail');
         });
 
-        it('handles coverageHistory entry with missing coveragePct without NaN (G1 RED)', async () => {expect.hasAssertions();
+        it('handles coverageHistory entry with missing coveragePct without NaN (G1 RED)', async () => {
+            expect.hasAssertions();
 
             const { calculateHealthScore } = await import('../../health-score.js');
             const store: MetricsStore = {

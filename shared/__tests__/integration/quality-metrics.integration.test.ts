@@ -17,7 +17,8 @@ import { describe, expect, it } from 'vitest';
 
 describe('Integration: Quality Metrics', () => {
     describe('FT-12a: invariant fire counting', () => {
-        it('counts fires per invariant and computes rate', async () => {expect.hasAssertions();
+        it('counts fires per invariant and computes rate', async () => {
+            expect.hasAssertions();
 
             const { QualityMetricsCollector } = await import('../../quality-metrics.js');
             const collector = new QualityMetricsCollector();
@@ -31,7 +32,8 @@ describe('Integration: Quality Metrics', () => {
             expect(collector.invariantFireRate('A-02')).toBeCloseTo(1 / 3);
         });
 
-        it('returns 0 for unknown invariant', async () => {expect.hasAssertions();
+        it('returns 0 for unknown invariant', async () => {
+            expect.hasAssertions();
 
             const { QualityMetricsCollector } = await import('../../quality-metrics.js');
             const collector = new QualityMetricsCollector();
@@ -41,7 +43,8 @@ describe('Integration: Quality Metrics', () => {
     });
 
     describe('FT-12b: layer pass rates', () => {
-        it('computes pass rate per layer', async () => {expect.hasAssertions();
+        it('computes pass rate per layer', async () => {
+            expect.hasAssertions();
 
             const { QualityMetricsCollector } = await import('../../quality-metrics.js');
             const collector = new QualityMetricsCollector();
@@ -53,7 +56,8 @@ describe('Integration: Quality Metrics', () => {
             expect(collector.layerPassRate('layer1')).toBeCloseTo(0.5);
         });
 
-        it('returns 1 when no attempts', async () => {expect.hasAssertions();
+        it('returns 1 when no attempts', async () => {
+            expect.hasAssertions();
 
             const { QualityMetricsCollector } = await import('../../quality-metrics.js');
             const collector = new QualityMetricsCollector();
@@ -63,7 +67,8 @@ describe('Integration: Quality Metrics', () => {
     });
 
     describe('FT-12c: artifact type counting', () => {
-        it('counts artifact types', async () => {expect.hasAssertions();
+        it('counts artifact types', async () => {
+            expect.hasAssertions();
 
             const { QualityMetricsCollector } = await import('../../quality-metrics.js');
             const collector = new QualityMetricsCollector();
@@ -80,7 +85,8 @@ describe('Integration: Quality Metrics', () => {
     });
 
     describe('FT-12d: snapshot', () => {
-        it('creates snapshot with all fields', async () => {expect.hasAssertions();
+        it('creates snapshot with all fields', async () => {
+            expect.hasAssertions();
 
             const { QualityMetricsCollector } = await import('../../quality-metrics.js');
             const collector = new QualityMetricsCollector();
@@ -103,7 +109,8 @@ describe('Integration: Quality Metrics', () => {
     });
 
     describe('FT-12e: clear', () => {
-        it('resets all accumulators', async () => {expect.hasAssertions();
+        it('resets all accumulators', async () => {
+            expect.hasAssertions();
 
             const { QualityMetricsCollector } = await import('../../quality-metrics.js');
             const collector = new QualityMetricsCollector();
@@ -119,7 +126,8 @@ describe('Integration: Quality Metrics', () => {
     });
 
     describe('FT-12f: drift detection', () => {
-        it('detects drift when current ratio exceeds 2σ from baseline', async () => {expect.hasAssertions();
+        it('detects drift when current ratio exceeds 2σ from baseline', async () => {
+            expect.hasAssertions();
 
             const { QualityMetricsCollector } = await import('../../quality-metrics.js');
             // Baseline: A-02 ratio = 0.91, 0.89 => mean 0.90, σ 0.01, 2σ upper = 0.92
@@ -155,7 +163,8 @@ describe('Integration: Quality Metrics', () => {
             expect(alerts[0]).toContain('"A-02"');
         });
 
-        it('returns empty when baseline too small', async () => {expect.hasAssertions();
+        it('returns empty when baseline too small', async () => {
+            expect.hasAssertions();
 
             const { QualityMetricsCollector } = await import('../../quality-metrics.js');
             const collector = new QualityMetricsCollector();

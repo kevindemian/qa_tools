@@ -206,9 +206,7 @@ export async function getUserChoice(level: string, proj: string, ctx: SessionCon
         width: 80,
     });
     return showSelect(
-        level === 'main'
-            ? '      Selecione uma seção'
-            : `      ${catTitle} — Selecione uma opção`,
+        level === 'main' ? '      Selecione uma seção' : `      ${catTitle} — Selecione uma opção`,
         choices,
         { pageSize: (process.stdout.rows || 24) - 4, menuMode: true },
     );

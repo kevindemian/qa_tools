@@ -38,7 +38,7 @@ describe('Llm Rate Limiter', () => {
         });
 
         it('returns a value between 0 and waitMs', () => {
-        expect.hasAssertions();
+            expect.hasAssertions();
 
             for (let i = 0; i < 50; i++) {
                 const result = jitter(1000);
@@ -73,7 +73,7 @@ describe('Llm Rate Limiter', () => {
         });
 
         it('uses default limit of 30 when env not set', () => {
-        expect.hasAssertions();
+            expect.hasAssertions();
 
             for (let i = 0; i < 30; i++) {
                 expect(() => checkRateLimit('main')).not.toThrow();
@@ -130,5 +130,4 @@ describe('Llm Rate Limiter', () => {
             expect(() => checkRateLimit('main')).not.toThrow();
         });
     });
-
 });

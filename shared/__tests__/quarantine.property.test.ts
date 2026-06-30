@@ -55,7 +55,8 @@ describe('Quarantine.Property', () => {
         .map((entries) => ({ entries }));
 
     describe('GeneratePipelineQuarantine — property-based', () => {
-        it('metadata matches store entries when store is provided', () => {expect.hasAssertions();
+        it('metadata matches store entries when store is provided', () => {
+            expect.hasAssertions();
 
             fc.assert(
                 fc.property(storeArb, fc.nat({ max: 1000 }), (store, total) => {
@@ -71,7 +72,8 @@ describe('Quarantine.Property', () => {
             );
         });
 
-        it('excluded items preserve entry fields', () => {expect.hasAssertions();
+        it('excluded items preserve entry fields', () => {
+            expect.hasAssertions();
 
             fc.assert(
                 fc.property(storeArb, fc.nat({ max: 1000 }), (store, total) => {
@@ -79,8 +81,24 @@ describe('Quarantine.Property', () => {
                     const pipeline = generatePipelineQuarantine(store, totalTests);
 
                     for (let i = 0; i < store.entries.length; i++) {
-                        const entry = Reflect.get(store.entries, i) as { testTitle: string; reason: string; quarantinedBy: string; reviewRequired: boolean; bugUrl?: string } | undefined;
-                        const item = Reflect.get(pipeline.excluded, i) as { test: string; reason: string; quarantinedBy: string; reviewRequired: boolean; bugUrl?: string } | undefined;
+                        const entry = Reflect.get(store.entries, i) as
+                            | {
+                                  testTitle: string;
+                                  reason: string;
+                                  quarantinedBy: string;
+                                  reviewRequired: boolean;
+                                  bugUrl?: string;
+                              }
+                            | undefined;
+                        const item = Reflect.get(pipeline.excluded, i) as
+                            | {
+                                  test: string;
+                                  reason: string;
+                                  quarantinedBy: string;
+                                  reviewRequired: boolean;
+                                  bugUrl?: string;
+                              }
+                            | undefined;
 
                         expect(item?.test).toBe(entry?.testTitle);
                         expect(item?.reason).toBe(entry?.reason);
@@ -106,7 +124,8 @@ describe('Quarantine.Property', () => {
     });
 
     describe('LoadQuarantine — property-based', () => {
-        it('returns empty store for missing file', () => {expect.hasAssertions();
+        it('returns empty store for missing file', () => {
+            expect.hasAssertions();
 
             fc.assert(
                 fc.property(fc.constant(undefined), () => {
@@ -120,7 +139,8 @@ describe('Quarantine.Property', () => {
     });
 
     describe('FilterExpiredEntries — property-based', () => {
-        it('expired count matches entries that are neither permanent nor future-dated', () => {expect.hasAssertions();
+        it('expired count matches entries that are neither permanent nor future-dated', () => {
+            expect.hasAssertions();
 
             fc.assert(
                 fc.property(
@@ -155,7 +175,8 @@ describe('Quarantine.Property', () => {
             );
         });
 
-        it('all remaining entries are permanent or have future expiresAt', () => {expect.hasAssertions();
+        it('all remaining entries are permanent or have future expiresAt', () => {
+            expect.hasAssertions();
 
             fc.assert(
                 fc.property(
@@ -187,7 +208,8 @@ describe('Quarantine.Property', () => {
             );
         });
 
-        it('never expires permanent entries regardless of expiresAt', () => {expect.hasAssertions();
+        it('never expires permanent entries regardless of expiresAt', () => {
+            expect.hasAssertions();
 
             fc.assert(
                 fc.property(
@@ -216,7 +238,8 @@ describe('Quarantine.Property', () => {
             );
         });
 
-        it('entries with malformed expiresAt are treated as expired', () => {expect.hasAssertions();
+        it('entries with malformed expiresAt are treated as expired', () => {
+            expect.hasAssertions();
 
             fc.assert(
                 fc.property(
@@ -252,5 +275,4 @@ describe('Quarantine.Property', () => {
             expect(remaining.entries).toStrictEqual([]);
         });
     });
-
 });

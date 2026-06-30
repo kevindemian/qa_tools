@@ -134,7 +134,7 @@ export function verifyEvidence(artifact: unknown, context: ValidationContext): E
         }
 
         // Check citation-like patterns (IDs, line numbers, error codes)
-        const idMatch = trimmed.match(/^([A-Z]+-\d+|[a-z0-9]{8,}|error\s+\d{3})/i);
+        const idMatch = /^([A-Z]+-\d+|[a-z0-9]{8,}|error\s+\d{3})/i.exec(trimmed);
         if (idMatch && input.includes(idMatch[1] as string)) {
             details.push({
                 citation: trimmed.slice(0, 100),

@@ -39,21 +39,34 @@ describe('Integration: Pipeline Cost (FT-29)', () => {
     });
 
     describe('FT-29a: calculate and render pipeline cost', () => {
-        it('produces complete HTML with summary and data table', async () => {expect.hasAssertions();
+        it('produces complete HTML with summary and data table', async () => {
+            expect.hasAssertions();
 
             const { calculatePipelineCost, generatePipelineCostHtml } = await import('../../pipeline-cost.js');
             const runs = [makeRun({ timestamp: '2026-06-16T00:00:00.000Z', duration: 120, failed: 1, passed: 9 })];
             const result = calculatePipelineCost(runs, 0.01);
             const html = generatePipelineCostHtml(result);
 
-            const parts = ['<!DOCTYPE html>', 'Pipeline Cost Analytics', 'Total Cost', 'Avg Cost / Run', 'Total Duration', 'Run Count', '$0.02', '2m', 'failed', 'data-component="data-table"'];
+            const parts = [
+                '<!DOCTYPE html>',
+                'Pipeline Cost Analytics',
+                'Total Cost',
+                'Avg Cost / Run',
+                'Total Duration',
+                'Run Count',
+                '$0.02',
+                '2m',
+                'failed',
+                'data-component="data-table"',
+            ];
 
-            expect(parts.every(p => html.includes(p))).toBeTruthy();
+            expect(parts.every((p) => html.includes(p))).toBeTruthy();
         });
     });
 
     describe('FT-29b: empty runs', () => {
-        it('shows no-data message and zeroed metrics', async () => {expect.hasAssertions();
+        it('shows no-data message and zeroed metrics', async () => {
+            expect.hasAssertions();
 
             const { calculatePipelineCost, generatePipelineCostHtml } = await import('../../pipeline-cost.js');
             const result = calculatePipelineCost([]);
@@ -67,7 +80,8 @@ describe('Integration: Pipeline Cost (FT-29)', () => {
     });
 
     describe('FT-29d: custom title', () => {
-        it('uses custom title in HTML page', async () => {expect.hasAssertions();
+        it('uses custom title in HTML page', async () => {
+            expect.hasAssertions();
 
             const { calculatePipelineCost, generatePipelineCostHtml } = await import('../../pipeline-cost.js');
             const result = calculatePipelineCost([]);

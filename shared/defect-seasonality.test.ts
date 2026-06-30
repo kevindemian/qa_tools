@@ -24,7 +24,8 @@ function makeFC(dow: number, hour: number, cat: string): FailureClassification {
 }
 
 describe('AggregateDefectSeasonality', () => {
-    it('returns zero-filled structure for empty array', () => {expect.hasAssertions();
+    it('returns zero-filled structure for empty array', () => {
+        expect.hasAssertions();
 
         const result = aggregateDefectSeasonality([]);
 

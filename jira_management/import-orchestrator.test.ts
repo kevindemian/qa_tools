@@ -92,7 +92,8 @@ describe('Import Orchestrator', () => {
     });
 
     describe('PrepareTestRun', () => {
-        it('user cancels via confirmOrCancel', async () => {expect.hasAssertions();
+        it('user cancels via confirmOrCancel', async () => {
+            expect.hasAssertions();
 
             vi.mocked(confirmOrCancel).mockReturnValue(false);
             const result = await prepareTestRun({
@@ -109,7 +110,8 @@ describe('Import Orchestrator', () => {
             expect(warn).toHaveBeenCalledWith(expect.stringContaining('cancelada'));
         });
 
-        it('filterTests returns null', async () => {expect.hasAssertions();
+        it('filterTests returns null', async () => {
+            expect.hasAssertions();
 
             vi.mocked(filterTests).mockReturnValue(null);
             const result = await prepareTestRun({
@@ -125,7 +127,8 @@ describe('Import Orchestrator', () => {
             expect(result).toBeUndefined();
         });
 
-        it('dry-run returns early', async () => {expect.hasAssertions();
+        it('dry-run returns early', async () => {
+            expect.hasAssertions();
 
             vi.mocked(handleDryRun).mockReturnValue({
                 inMemoryTasksId: [],
@@ -155,7 +158,8 @@ describe('Import Orchestrator', () => {
     });
 
     describe('FinalizeTestCreation', () => {
-        it('with errors', async () => {expect.hasAssertions();
+        it('with errors', async () => {
+            expect.hasAssertions();
 
             const results = [
                 { status: 'ok' as const, label: 'Test 1', message: '' },
@@ -189,7 +193,8 @@ describe('Import Orchestrator', () => {
     });
 
     describe('PostProcessCheckpoint', () => {
-        it('deletes checkpoint and updates xrefs', async () => {expect.hasAssertions();
+        it('deletes checkpoint and updates xrefs', async () => {
+            expect.hasAssertions();
 
             const linker = linkerMock({
                 updateCrossReferences: vi.fn().mockResolvedValue(undefined),
@@ -208,8 +213,12 @@ describe('Import Orchestrator', () => {
             });
 
             expect(STATE.update).toHaveBeenCalledWith(expect.any(Function));
-            expect(updateFinalState).toHaveBeenCalledWith(expect.any(String), expect.any(String), expect.any(String), expect.any(Array));
+            expect(updateFinalState).toHaveBeenCalledWith(
+                expect.any(String),
+                expect.any(String),
+                expect.any(String),
+                expect.any(Array),
+            );
         });
     });
-
 });

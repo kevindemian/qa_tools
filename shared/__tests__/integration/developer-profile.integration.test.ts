@@ -55,7 +55,8 @@ describe('Integration: Developer Profile (FT-27)', () => {
     });
 
     describe('FT-27a: generateDeveloperProfileHtml with data', () => {
-        it('produces complete HTML with summary and author sections', async () => {expect.hasAssertions();
+        it('produces complete HTML with summary and author sections', async () => {
+            expect.hasAssertions();
 
             const { generateDeveloperProfileHtml } = await import('../../developer-profile.js');
             const result = makeResult();
@@ -73,7 +74,8 @@ describe('Integration: Developer Profile (FT-27)', () => {
     });
 
     describe('FT-27b: empty authors list', () => {
-        it('shows no-data message', async () => {expect.hasAssertions();
+        it('shows no-data message', async () => {
+            expect.hasAssertions();
 
             const { generateDeveloperProfileHtml } = await import('../../developer-profile.js');
             const result = makeResult({
@@ -92,7 +94,8 @@ describe('Integration: Developer Profile (FT-27)', () => {
     });
 
     describe('FT-27c: error fallback for null result', () => {
-        it('returns error page for null result', async () => {expect.hasAssertions();
+        it('returns error page for null result', async () => {
+            expect.hasAssertions();
 
             const { generateDeveloperProfileHtml } = await import('../../developer-profile.js');
             const html = generateDeveloperProfileHtml(null);
@@ -101,7 +104,8 @@ describe('Integration: Developer Profile (FT-27)', () => {
             expect(html).toContain('qa-report-theme');
         });
 
-        it('returns error page for undefined result', async () => {expect.hasAssertions();
+        it('returns error page for undefined result', async () => {
+            expect.hasAssertions();
 
             const { generateDeveloperProfileHtml } = await import('../../developer-profile.js');
             const html = generateDeveloperProfileHtml(undefined);
@@ -111,7 +115,8 @@ describe('Integration: Developer Profile (FT-27)', () => {
     });
 
     describe('FT-27d: custom title', () => {
-        it('uses custom title in HTML page', async () => {expect.hasAssertions();
+        it('uses custom title in HTML page', async () => {
+            expect.hasAssertions();
 
             const { generateDeveloperProfileHtml } = await import('../../developer-profile.js');
             const result = makeResult({

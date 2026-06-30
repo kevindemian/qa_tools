@@ -41,7 +41,8 @@ describe('Incident Report.Property', () => {
     );
 
     describe('BuildIncidentReport — property-based', () => {
-        it('eventCount always matches events.length', () => {expect.hasAssertions();
+        it('eventCount always matches events.length', () => {
+            expect.hasAssertions();
 
             fc.assert(
                 fc.property(
@@ -66,7 +67,8 @@ describe('Incident Report.Property', () => {
             );
         });
 
-        it('severity counts are non-negative and within bounds', () => {expect.hasAssertions();
+        it('severity counts are non-negative and within bounds', () => {
+            expect.hasAssertions();
 
             fc.assert(
                 fc.property(
@@ -96,7 +98,8 @@ describe('Incident Report.Property', () => {
             );
         });
 
-        it('severity count sum matches eventCount', () => {expect.hasAssertions();
+        it('severity count sum matches eventCount', () => {
+            expect.hasAssertions();
 
             fc.assert(
                 fc.property(
@@ -121,7 +124,8 @@ describe('Incident Report.Property', () => {
             );
         });
 
-        it('overallSeverity is consistent with severity counts', () => {expect.hasAssertions();
+        it('overallSeverity is consistent with severity counts', () => {
+            expect.hasAssertions();
 
             fc.assert(
                 fc.property(
@@ -139,8 +143,15 @@ describe('Incident Report.Property', () => {
                             passRate,
                         );
 
-                        const expectedSeverity = result.highCount > 0 ? 'high' : result.mediumCount > 0 ? 'medium' : result.lowCount > 0 ? 'low' : 'none';
-                        
+                        const expectedSeverity =
+                            result.highCount > 0
+                                ? 'high'
+                                : result.mediumCount > 0
+                                  ? 'medium'
+                                  : result.lowCount > 0
+                                    ? 'low'
+                                    : 'none';
+
                         expect(result.overallSeverity).toBe(expectedSeverity);
                     },
                 ),
@@ -148,7 +159,8 @@ describe('Incident Report.Property', () => {
             );
         });
 
-        it('timestamp is valid ISO string', () => {expect.hasAssertions();
+        it('timestamp is valid ISO string', () => {
+            expect.hasAssertions();
 
             fc.assert(
                 fc.property(
@@ -173,7 +185,8 @@ describe('Incident Report.Property', () => {
             );
         });
 
-        it('each event has required fields', () => {expect.hasAssertions();
+        it('each event has required fields', () => {
+            expect.hasAssertions();
 
             fc.assert(
                 fc.property(
@@ -191,7 +204,6 @@ describe('Incident Report.Property', () => {
                             passRate,
                         );
                         for (const event of result.events) {
-                            
                             expect(typeof event.date).toBe('string');
                             expect(event.date.length).toBeGreaterThan(0);
                             expect(['failure', 'regression', 'coverage_gap', 'seasonality']).toContain(event.type);
@@ -207,7 +219,8 @@ describe('Incident Report.Property', () => {
             );
         });
 
-        it('high severity events precede medium which precede low', () => {expect.hasAssertions();
+        it('high severity events precede medium which precede low', () => {
+            expect.hasAssertions();
 
             fc.assert(
                 fc.property(
@@ -231,7 +244,7 @@ describe('Incident Report.Property', () => {
                             const sawMediumBefore = sawMedium;
                             if (event.severity === 'low') sawLow = true;
                             if (event.severity === 'medium') sawMedium = true;
-                            
+
                             expect(event.severity !== 'medium' || !sawLowBefore).toBeTruthy();
                             expect(event.severity !== 'high' || !sawMediumBefore).toBeTruthy();
                             expect(event.severity !== 'high' || !sawLowBefore).toBeTruthy();
@@ -244,7 +257,8 @@ describe('Incident Report.Property', () => {
     });
 
     describe('GenerateIncidentReportHtml — property-based', () => {
-        it('always produces valid HTML with DOCTYPE', () => {expect.hasAssertions();
+        it('always produces valid HTML with DOCTYPE', () => {
+            expect.hasAssertions();
 
             fc.assert(
                 fc.property(
@@ -271,7 +285,8 @@ describe('Incident Report.Property', () => {
             );
         });
 
-        it('contains severity badge and summary', () => {expect.hasAssertions();
+        it('contains severity badge and summary', () => {
+            expect.hasAssertions();
 
             fc.assert(
                 fc.property(
@@ -298,5 +313,4 @@ describe('Incident Report.Property', () => {
             );
         });
     });
-
 });

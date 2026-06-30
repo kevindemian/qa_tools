@@ -30,7 +30,8 @@ describe('Github Issues', () => {
             mockApiGet.mockClear();
         });
 
-        it('returns issues filtering out pull requests', async () => {expect.hasAssertions();
+        it('returns issues filtering out pull requests', async () => {
+            expect.hasAssertions();
 
             mockApiGet.mockResolvedValue([
                 {
@@ -76,7 +77,8 @@ describe('Github Issues', () => {
             });
         });
 
-        it('returns empty array when data is not an array', async () => {expect.hasAssertions();
+        it('returns empty array when data is not an array', async () => {
+            expect.hasAssertions();
 
             mockApiGet.mockResolvedValue({ message: 'error', something: true });
             const result = await getOpenIssues(client, 'myorg', 'myrepo');
@@ -84,7 +86,8 @@ describe('Github Issues', () => {
             expect(result).toStrictEqual([]);
         });
 
-        it('returns empty array when apiGet returns null', async () => {expect.hasAssertions();
+        it('returns empty array when apiGet returns null', async () => {
+            expect.hasAssertions();
 
             mockApiGet.mockResolvedValue(null);
             const result = await getOpenIssues(client, 'myorg', 'myrepo');
@@ -92,7 +95,8 @@ describe('Github Issues', () => {
             expect(result).toStrictEqual([]);
         });
 
-        it('returns empty array when data is empty array', async () => {expect.hasAssertions();
+        it('returns empty array when data is empty array', async () => {
+            expect.hasAssertions();
 
             mockApiGet.mockResolvedValue([]);
             const result = await getOpenIssues(client, 'myorg', 'myrepo');
@@ -100,9 +104,12 @@ describe('Github Issues', () => {
             expect(result).toStrictEqual([]);
         });
 
-        it('handles items with missing optional fields gracefully', async () => {expect.hasAssertions();
+        it('handles items with missing optional fields gracefully', async () => {
+            expect.hasAssertions();
 
-            mockApiGet.mockResolvedValue([{ number: 1, title: 'Minimal', state: 'open', labels: null, html_url: null }]);
+            mockApiGet.mockResolvedValue([
+                { number: 1, title: 'Minimal', state: 'open', labels: null, html_url: null },
+            ]);
             const result = await getOpenIssues(client, 'myorg', 'myrepo');
 
             expect(result).toHaveLength(1);
@@ -112,7 +119,8 @@ describe('Github Issues', () => {
             expect(nonNull(result[0]).html_url).toBe('');
         });
 
-        it('maps label names correctly filtering out non-object labels', async () => {expect.hasAssertions();
+        it('maps label names correctly filtering out non-object labels', async () => {
+            expect.hasAssertions();
 
             mockApiGet.mockResolvedValue([
                 {
@@ -130,5 +138,4 @@ describe('Github Issues', () => {
             expect(nonNull(result[0]).labels).toStrictEqual(['bug', 'critical']);
         });
     });
-
 });

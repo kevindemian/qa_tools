@@ -54,7 +54,8 @@ describe('Jira Resource Version', () => {
     });
 
     describe('GetProjectId', () => {
-        it('returns project id on success', async () => {expect.hasAssertions();
+        it('returns project id on success', async () => {
+            expect.hasAssertions();
 
             mockGet.mockResolvedValue({ data: { id: '10000' } });
             const resource = buildResource();
@@ -63,7 +64,8 @@ describe('Jira Resource Version', () => {
             expect(result).toBe('10000');
         });
 
-        it('returns empty string on error', async () => {expect.hasAssertions();
+        it('returns empty string on error', async () => {
+            expect.hasAssertions();
 
             mockGet.mockRejectedValue(new Error('Not found'));
             const resource = buildResource();
@@ -74,7 +76,8 @@ describe('Jira Resource Version', () => {
     });
 
     describe('GetProjectVersions', () => {
-        it('returns versions on success', async () => {expect.hasAssertions();
+        it('returns versions on success', async () => {
+            expect.hasAssertions();
 
             mockGet.mockResolvedValue({
                 data: [
@@ -88,7 +91,8 @@ describe('Jira Resource Version', () => {
             expect(versions).toHaveLength(2);
         });
 
-        it('returns empty array on network error', async () => {expect.hasAssertions();
+        it('returns empty array on network error', async () => {
+            expect.hasAssertions();
 
             mockGet.mockRejectedValue(new Error('Network error'));
             const resource = buildResource();
@@ -99,7 +103,8 @@ describe('Jira Resource Version', () => {
     });
 
     describe('GetVersionId', () => {
-        it('returns version id when found', async () => {expect.hasAssertions();
+        it('returns version id when found', async () => {
+            expect.hasAssertions();
 
             const resource = buildResource();
             vi.spyOn(resource, 'getProjectId').mockResolvedValue('10000');
@@ -109,7 +114,8 @@ describe('Jira Resource Version', () => {
             expect(id).toBe('99');
         });
 
-        it('returns null when no project', async () => {expect.hasAssertions();
+        it('returns null when no project', async () => {
+            expect.hasAssertions();
 
             const resource = buildResource();
             vi.spyOn(resource, 'getProjectId').mockResolvedValue('');
@@ -120,7 +126,8 @@ describe('Jira Resource Version', () => {
     });
 
     describe('GetLatestReleases', () => {
-        it('returns empty when project not found', async () => {expect.hasAssertions();
+        it('returns empty when project not found', async () => {
+            expect.hasAssertions();
 
             const resource = buildResource();
             vi.spyOn(resource, 'getProjectId').mockResolvedValue('');
@@ -130,5 +137,4 @@ describe('Jira Resource Version', () => {
             expect(result.unreleasedVersions).toStrictEqual([]);
         });
     });
-
 });

@@ -42,7 +42,8 @@ const classArb: fc.Arbitrary<FailureClassification> = fc
     }));
 
 describe('AggregateDefectSeasonality — property-based', () => {
-    it('totalRecords matches classification count', () => {expect.hasAssertions();
+    it('totalRecords matches classification count', () => {
+        expect.hasAssertions();
 
         fc.assert(
             fc.property(fc.array(classArb, { minLength: 0, maxLength: 20 }), (classes) => {
@@ -54,7 +55,8 @@ describe('AggregateDefectSeasonality — property-based', () => {
         );
     });
 
-    it('always returns 7 days and 24 hours', () => {expect.hasAssertions();
+    it('always returns 7 days and 24 hours', () => {
+        expect.hasAssertions();
 
         fc.assert(
             fc.property(fc.array(classArb, { minLength: 0, maxLength: 20 }), (classes) => {
@@ -67,7 +69,8 @@ describe('AggregateDefectSeasonality — property-based', () => {
         );
     });
 
-    it('day totals sum to totalRecords', () => {expect.hasAssertions();
+    it('day totals sum to totalRecords', () => {
+        expect.hasAssertions();
 
         fc.assert(
             fc.property(fc.array(classArb, { minLength: 0, maxLength: 20 }), (classes) => {
@@ -80,7 +83,8 @@ describe('AggregateDefectSeasonality — property-based', () => {
         );
     });
 
-    it('hour totals sum to totalRecords', () => {expect.hasAssertions();
+    it('hour totals sum to totalRecords', () => {
+        expect.hasAssertions();
 
         fc.assert(
             fc.property(fc.array(classArb, { minLength: 0, maxLength: 20 }), (classes) => {
@@ -93,35 +97,42 @@ describe('AggregateDefectSeasonality — property-based', () => {
         );
     });
 
-    it('peakDay matches the day with highest total', () => {expect.hasAssertions();
+    it('peakDay matches the day with highest total', () => {
+        expect.hasAssertions();
 
         fc.assert(
             fc.property(fc.array(classArb, { minLength: 1, maxLength: 20 }), (classes) => {
                 const result = aggregateDefectSeasonality(classes);
                 const maxTotal = Math.max(...result.byDayOfWeek.map((d) => d.total));
                 const peakDayEntry = result.byDayOfWeek.find((d) => d.total === maxTotal);
-                
-                expect(result.peakDay).toBe(result.totalRecords > 0 && peakDayEntry !== undefined ? peakDayEntry.dayOfWeek : result.peakDay);
+
+                expect(result.peakDay).toBe(
+                    result.totalRecords > 0 && peakDayEntry !== undefined ? peakDayEntry.dayOfWeek : result.peakDay,
+                );
             }),
             { numRuns: 50 },
         );
     });
 
-    it('peakHour matches the hour with highest total', () => {expect.hasAssertions();
+    it('peakHour matches the hour with highest total', () => {
+        expect.hasAssertions();
 
         fc.assert(
             fc.property(fc.array(classArb, { minLength: 1, maxLength: 20 }), (classes) => {
                 const result = aggregateDefectSeasonality(classes);
                 const maxTotal = Math.max(...result.byHour.map((h) => h.total));
                 const peakHourEntry = result.byHour.find((h) => h.total === maxTotal);
-                
-                expect(result.peakHour).toBe(result.totalRecords > 0 && peakHourEntry !== undefined ? peakHourEntry.hour : result.peakHour);
+
+                expect(result.peakHour).toBe(
+                    result.totalRecords > 0 && peakHourEntry !== undefined ? peakHourEntry.hour : result.peakHour,
+                );
             }),
             { numRuns: 50 },
         );
     });
 
-    it('generateSeasonalityHtml produces valid HTML', () => {expect.hasAssertions();
+    it('generateSeasonalityHtml produces valid HTML', () => {
+        expect.hasAssertions();
 
         fc.assert(
             fc.property(fc.array(classArb, { minLength: 0, maxLength: 10 }), (classes) => {

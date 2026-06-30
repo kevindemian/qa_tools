@@ -212,24 +212,29 @@ describe('Ui Helpers', () => {
             vi.mocked(prompt).mockReturnValue('0');
         });
 
-        it('returns true and shows help for /help', async () => {expect.hasAssertions();
+        it('returns true and shows help for /help', async () => {
+            expect.hasAssertions();
             await expect(handleSpecialInput('/help')).resolves.toBeTruthy();
             expect(title).toHaveBeenCalledWith(expect.stringContaining('HELP'));
         });
 
-        it('returns false for /exit', async () => {expect.hasAssertions();
+        it('returns false for /exit', async () => {
+            expect.hasAssertions();
             await expect(handleSpecialInput('/exit')).resolves.toBeFalsy();
         });
 
-        it('returns __exit__ for /back at main level', async () => {expect.hasAssertions();
+        it('returns __exit__ for /back at main level', async () => {
+            expect.hasAssertions();
             await expect(handleSpecialInput('/back', 'main')).resolves.toBe('__exit__');
         });
 
-        it('returns __back__ for /back at sub-menu level', async () => {expect.hasAssertions();
+        it('returns __back__ for /back at sub-menu level', async () => {
+            expect.hasAssertions();
             await expect(handleSpecialInput('/back', 'releases')).resolves.toBe('__back__');
         });
 
-        it('returns false for regular input', async () => {expect.hasAssertions();
+        it('returns false for regular input', async () => {
+            expect.hasAssertions();
             await expect(handleSpecialInput('1')).resolves.toBeFalsy();
             await expect(handleSpecialInput('')).resolves.toBeFalsy();
         });
@@ -243,7 +248,8 @@ describe('Ui Helpers', () => {
             commands.getHandler.mockReturnValue(null);
         });
 
-        it("returns 'continue' for invalid choice", async () => {expect.hasAssertions();
+        it("returns 'continue' for invalid choice", async () => {
+            expect.hasAssertions();
 
             const result = await dispatchChoice('99', minimalCtx);
 
@@ -251,14 +257,16 @@ describe('Ui Helpers', () => {
             expect(warn).toHaveBeenCalledWith(expect.stringContaining('inválida'));
         });
 
-        it("returns 'continue' for docs choice", async () => {expect.hasAssertions();
+        it("returns 'continue' for docs choice", async () => {
+            expect.hasAssertions();
 
             const result = await dispatchChoice('d', minimalCtx);
 
             expect(result).toBe('continue');
         });
 
-        it('dispatches to handler', async () => {expect.hasAssertions();
+        it('dispatches to handler', async () => {
+            expect.hasAssertions();
 
             const handler = vi.fn().mockResolvedValue(false);
             const commands = vi.mocked(await vi.importMock<typeof import('./commands/index.js')>('./commands'));
@@ -300,7 +308,8 @@ describe('Ui Helpers', () => {
             expect(warn).toHaveBeenCalledWith(expect.stringContaining('não encontrado'));
         });
 
-        it('handles CancelError in showHelpLoop (line 84-85)', async () => {expect.hasAssertions();
+        it('handles CancelError in showHelpLoop (line 84-85)', async () => {
+            expect.hasAssertions();
 
             const { CancelError } = await vi.importMock<typeof import('../shared/prompt.js')>('../shared/prompt');
             vi.mocked(prompt).mockImplementationOnce(() => {
@@ -318,5 +327,4 @@ describe('Ui Helpers', () => {
             expect(title).toHaveBeenCalledWith(expect.stringContaining('csv'));
         });
     });
-
 });

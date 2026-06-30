@@ -57,7 +57,8 @@ describe('Case18', () => {
     });
 
     describe('Case18 — AI tests generator', () => {
-        it('generates tests with AI successfully', async () => {expect.hasAssertions();
+        it('generates tests with AI successfully', async () => {
+            expect.hasAssertions();
 
             const prompt = vi.mocked(promptModule);
             const llm = vi.mocked(llmClientModule);
@@ -88,7 +89,8 @@ describe('Case18', () => {
             expect(baseContext.pushHistory).toHaveBeenCalledWith('ai-generate-tests', expect.any(String), 'ok');
         });
 
-        it('handles empty user story', async () => {expect.hasAssertions();
+        it('handles empty user story', async () => {
+            expect.hasAssertions();
 
             const prompt = vi.mocked(promptModule);
             prompt.ask.mockResolvedValueOnce('');
@@ -99,7 +101,8 @@ describe('Case18', () => {
             expect(prompt.warn).toHaveBeenCalledWith('História vazia. Operação cancelada.');
         });
 
-        it('handles LLM error', async () => {expect.hasAssertions();
+        it('handles LLM error', async () => {
+            expect.hasAssertions();
 
             const prompt = vi.mocked(promptModule);
             const llm = vi.mocked(llmClientModule);
@@ -117,7 +120,8 @@ describe('Case18', () => {
             expect(prompt.printError).toHaveBeenCalledWith('Falha ao gerar casos de teste com IA', expect.any(Error));
         });
 
-        it('handles template read error', async () => {expect.hasAssertions();
+        it('handles template read error', async () => {
+            expect.hasAssertions();
 
             const prompt = vi.mocked(promptModule);
             const fs = vi.mocked(fsModule);
@@ -134,7 +138,8 @@ describe('Case18', () => {
             expect(prompt.printError).toHaveBeenCalledWith('Erro ao ler template de prompt', expect.any(Error));
         });
 
-        it('handles valid test cases from llmPrompt', async () => {expect.hasAssertions();
+        it('handles valid test cases from llmPrompt', async () => {
+            expect.hasAssertions();
 
             const prompt = vi.mocked(promptModule);
             const llm = vi.mocked(llmClientModule);
@@ -157,7 +162,8 @@ describe('Case18', () => {
             expect(baseContext.pushHistory).toHaveBeenCalledWith('ai-generate-tests', expect.any(String), 'ok');
         });
 
-        it('23.14: prints error when llmPrompt throws (Zod validation failed after retry)', async () => {expect.hasAssertions();
+        it('23.14: prints error when llmPrompt throws (Zod validation failed after retry)', async () => {
+            expect.hasAssertions();
 
             const llmPrompt = vi.mocked(llmClientModule).llmPrompt;
             const printError = vi.mocked(promptModule).printError;
@@ -175,7 +181,8 @@ describe('Case18', () => {
             expect(printError).toHaveBeenCalledWith('Falha ao gerar casos de teste com IA', expect.any(Error));
         });
 
-        it('warns when project name is empty', async () => {expect.hasAssertions();
+        it('warns when project name is empty', async () => {
+            expect.hasAssertions();
 
             const prompt = vi.mocked(promptModule);
             const origProjectName = baseContext.ctx.project_name;
@@ -194,7 +201,8 @@ describe('Case18', () => {
             baseContext.ctx.project_name = origProjectName;
         });
 
-        it('lists preconditions from Jira project', async () => {expect.hasAssertions();
+        it('lists preconditions from Jira project', async () => {
+            expect.hasAssertions();
 
             const prompt = vi.mocked(promptModule);
             const llm = vi.mocked(llmClientModule);
@@ -220,7 +228,8 @@ describe('Case18', () => {
             expect(prompt.info).toHaveBeenCalledWith(expect.stringContaining('pre-conditions encontradas'));
         });
 
-        it('creates new preconditions when dual-threshold returns create', async () => {expect.hasAssertions();
+        it('creates new preconditions when dual-threshold returns create', async () => {
+            expect.hasAssertions();
 
             const prompt = vi.mocked(promptModule);
             const llm = vi.mocked(llmClientModule);
@@ -262,7 +271,8 @@ describe('Case18', () => {
             expect(prompt.info).toHaveBeenCalledWith(expect.stringContaining('pre-conditions foram criadas'));
         });
 
-        it('resolves matched preconditions to reference without creating', async () => {expect.hasAssertions();
+        it('resolves matched preconditions to reference without creating', async () => {
+            expect.hasAssertions();
 
             const prompt = vi.mocked(promptModule);
             const llm = vi.mocked(llmClientModule);
@@ -301,7 +311,8 @@ describe('Case18', () => {
             expect(prompt.info).toHaveBeenCalledWith(expect.stringContaining('Nenhuma pre-condition nova foi criada'));
         });
 
-        it('handles failure to list preconditions', async () => {expect.hasAssertions();
+        it('handles failure to list preconditions', async () => {
+            expect.hasAssertions();
 
             const prompt = vi.mocked(promptModule);
             const llm = vi.mocked(llmClientModule);
@@ -327,7 +338,8 @@ describe('Case18', () => {
             expect(prompt.warn).toHaveBeenCalledWith(expect.stringContaining('Não foi possível buscar pre-conditions'));
         });
 
-        it('handles various precondition types in converted test cases', async () => {expect.hasAssertions();
+        it('handles various precondition types in converted test cases', async () => {
+            expect.hasAssertions();
 
             const prompt = vi.mocked(promptModule);
             const llm = vi.mocked(llmClientModule);
@@ -365,7 +377,8 @@ describe('Case18', () => {
             expect(baseContext.pushHistory).toHaveBeenCalledWith('ai-generate-tests', expect.any(String), 'ok');
         });
 
-        it('handles precondition creation failure', async () => {expect.hasAssertions();
+        it('handles precondition creation failure', async () => {
+            expect.hasAssertions();
 
             const prompt = vi.mocked(promptModule);
             const llm = vi.mocked(llmClientModule);
@@ -401,7 +414,8 @@ describe('Case18', () => {
             expect(prompt.warn).toHaveBeenCalledWith(expect.stringContaining('Falha ao criar pre-condition'));
         });
 
-        it('converts test cases with various precondition resolutions', async () => {expect.hasAssertions();
+        it('converts test cases with various precondition resolutions', async () => {
+            expect.hasAssertions();
 
             const prompt = vi.mocked(promptModule);
             const llm = vi.mocked(llmClientModule);
@@ -443,7 +457,8 @@ describe('Case18', () => {
             expect(createPrecondSpy).toHaveBeenCalledWith('TEST', 'Newly created PC');
         });
 
-        it('deduplicates identical summaries across test cases', async () => {expect.hasAssertions();
+        it('deduplicates identical summaries across test cases', async () => {
+            expect.hasAssertions();
 
             const prompt = vi.mocked(promptModule);
             const llm = vi.mocked(llmClientModule);
@@ -487,7 +502,8 @@ describe('Case18', () => {
             expect(createPrecondSpy).toHaveBeenCalledTimes(1);
         });
 
-        it('records AI generation after successful test generation', async () => {expect.hasAssertions();
+        it('records AI generation after successful test generation', async () => {
+            expect.hasAssertions();
 
             const prompt = vi.mocked(promptModule);
             const llm = vi.mocked(llmClientModule);
@@ -531,5 +547,4 @@ describe('Case18', () => {
             );
         });
     });
-
 });
