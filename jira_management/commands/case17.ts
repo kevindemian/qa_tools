@@ -34,7 +34,8 @@ async function _fetchJiraContext(
     if (failedTests.length === 0 || !projectName) return '';
 
     const testNames = failedTests.slice(0, 10).map((t) => t.title.replace(/['"]/g, ''));
-    const jql = `project=${projectName} AND issuetype=Bug AND (${testNames.map((t) => `summary~"${t}"`).join(' OR ')})`;
+    const summaryClauses = testNames.map((t) => `summary~"${t}"`).join(' OR ');
+    const jql = `project=${projectName} AND issuetype=Bug AND (${summaryClauses})`;
     try {
         const data = await jiraResource.getJiraResource<JiraSearchResult>(
             'search?jql=' + encodeURIComponent(jql) + '&maxResults=5',

@@ -75,7 +75,7 @@ const VITEST_CONFIG_NAMES = [
  *   - './shared/vitest-ctrf-reporter'
  */
 const CTRF_REPORTER_PATTERN =
-    /['"`]?(?:vitest[-@]?ctrf|@[\w-]+\/vitest-ctrf|ctrf-json|\.\/.*?ctrf.*?reporter)['"`]?|VitestCtrfReporter/i;
+    /vitest[-@]?ctrf|@[\w-]+\/vitest-ctrf|ctrf-json|\.\/.*?ctrf.*?reporter|VitestCtrfReporter/i;
 
 /**
  * Scans project root for a vitest/vite config file and checks if a CTRF reporter

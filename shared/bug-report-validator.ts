@@ -25,8 +25,16 @@ import {
     invariantConclusionHasEvidence,
 } from './shared-invariants.js';
 
-const IMPERATIVE_RE =
-    /^(Click|Type|Navigate|Enter|Select|Executar|Clicar|Preencher|Navegar|Press|Open|Close|Drag|Drop|Scroll|Hover|Focus|Submit|Send|Tap|Swipe|Input|Choose|Check|Uncheck|Fill|Clear|Wait|Verify|Assert|Expect|Run|Execute)/i;
+const IMPERATIVE_VERBS = [
+    'Click', 'Type', 'Navigate', 'Enter', 'Select',
+    'Executar', 'Clicar', 'Preencher', 'Navegar', 'Press',
+    'Open', 'Close', 'Drag', 'Drop', 'Scroll',
+    'Hover', 'Focus', 'Submit', 'Send', 'Tap',
+    'Swipe', 'Input', 'Choose', 'Check', 'Uncheck',
+    'Fill', 'Clear', 'Wait', 'Verify', 'Assert',
+    'Expect', 'Run', 'Execute',
+];
+const IMPERATIVE_RE = new RegExp(`^(?:${IMPERATIVE_VERBS.join('|')})`, 'i');
 
 interface BugReportShape {
     summary?: string;

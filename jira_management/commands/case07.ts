@@ -18,7 +18,7 @@ async function handler(c: CommandContext): Promise<boolean | void> {
         return true;
     }
     const taskIds: string[] = tasks
-        .map((task: string) => task.match(/\[([A-Z][A-Z0-9]+-\d+)\]/)?.[1])
+        .map((task: string) => /\[([A-Z][A-Z0-9]+-\d+)\]/.exec(task)?.[1])
         .filter((id: string | undefined): id is string => id !== undefined);
     if (taskIds.length === 0) {
         warn('Nenhuma tarefa encontrada.');

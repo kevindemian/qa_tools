@@ -125,7 +125,8 @@ export function Sparkline(props: SparklineProps): string {
               ? (props.colorMedium ?? tokens.color.chart.skip)
               : (props.colorLow ?? tokens.color.chart.pass);
 
-    return `<div data-component="sparkline" role="${props.role || 'img'}" ${props.ariaLabel ? `aria-label="${props.ariaLabel}"` : ''}
+    const ariaAttr = props.ariaLabel ? `aria-label="${props.ariaLabel}"` : '';
+    return `<div data-component="sparkline" role="${props.role || 'img'}" ${ariaAttr}
         style="display:inline-block;vertical-align:middle">
         <span style="display:inline-block;width:${w}px;height:${h}px;background:var(--color-border-subtle);border-radius:${tokens.borderRadius.pill}px;overflow:hidden">
             <span style="display:block;height:100%;width:${pct.toFixed(0)}px;background:${color};border-radius:${tokens.borderRadius.pill}px;transition:width 0.3s"></span>

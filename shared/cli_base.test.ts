@@ -1,6 +1,8 @@
 import { nonNull } from './test-utils.js';
 import type { Mock, Mocked } from 'vitest';
 
+type ExitArg = string | number | null | undefined;
+
 const mockRootLogger = vi.hoisted(() => ({
     info: vi.fn(),
     error: vi.fn(),
@@ -175,7 +177,7 @@ describe('CLI Base', () => {
             vi.useFakeTimers();
             const exitSpy = vi
                 .spyOn(process, 'exit')
-                .mockImplementation(vi.fn<(...args: [string | number | null | undefined]) => never>());
+                .mockImplementation(vi.fn<(...args: [ExitArg]) => never>());
             vi.spyOn(process, 'on').mockImplementation((evt, handler) => {
                 if (evt === 'SIGINT') (handler as () => void)();
                 return process;
@@ -216,7 +218,7 @@ describe('CLI Base', () => {
             vi.useFakeTimers();
             const exitSpy = vi
                 .spyOn(process, 'exit')
-                .mockImplementation(vi.fn<(...args: [string | number | null | undefined]) => never>());
+                .mockImplementation(vi.fn<(...args: [ExitArg]) => never>());
             let capturedHandler: () => void = () => {};
             vi.spyOn(process, 'on').mockImplementation((evt, handler) => {
                 if (evt === 'SIGINT') capturedHandler = handler as () => void;
@@ -265,7 +267,7 @@ describe('CLI Base', () => {
             vi.useFakeTimers();
             const exitSpy = vi
                 .spyOn(process, 'exit')
-                .mockImplementation(vi.fn<(...args: [string | number | null | undefined]) => never>());
+                .mockImplementation(vi.fn<(...args: [ExitArg]) => never>());
             let capturedHandler: () => void = () => {};
             vi.spyOn(process, 'on').mockImplementation((evt, handler) => {
                 if (evt === 'SIGINT') capturedHandler = handler as () => void;

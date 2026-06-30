@@ -9,12 +9,14 @@
 
 import { tokens } from '../theme-tokens.js';
 
+export type TableAlign = 'left' | 'center' | 'right';
+
 export interface TableColumn {
     key: string;
     label: string;
     sortable?: boolean;
     width?: string;
-    align?: 'left' | 'center' | 'right';
+    align?: TableAlign;
 }
 
 export interface TableRow {

@@ -1,4 +1,5 @@
 import { beforeEach, describe, expect, it, vi } from 'vitest';
+import crypto from 'node:crypto';
 import type { AiComparisonRecord } from '../../ai-comparison.js';
 
 vi.mock('../../logger.js', () => ({
@@ -161,8 +162,8 @@ describe('Integration: AI Comparison Dashboard (FT-24)', () => {
                     generatedBy: i % 2 === 0 ? 'ai' : 'manual',
                     accepted: i % 3 !== 0,
                     passed: i % 4 !== 0,
-                    duration: Math.floor(Math.random() * 1000),
-                    flakiness: Math.random() * 0.5,
+                    duration: crypto.randomInt(1000),
+                    flakiness: crypto.randomInt(50) / 100,
                     promptVersion: `v${(i % 3) + 1}`,
                 });
             }

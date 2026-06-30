@@ -16,6 +16,8 @@ import { Card, MetricCard, MetricGrid, Badge, DataTable } from './primitives/ind
 import type { TableColumn, TableRow } from './primitives/index.js';
 import { rootLogger } from './logger.js';
 
+type Trend = 'up' | 'down' | 'stable';
+
 export interface SquadBenchmark {
     project: string;
     healthScore: number;
@@ -24,7 +26,7 @@ export interface SquadBenchmark {
     flakyRate: number;
     coveragePct: number;
     runCount: number;
-    trend: 'up' | 'down' | 'stable';
+    trend: Trend;
 }
 
 export interface CrossSquadResult {

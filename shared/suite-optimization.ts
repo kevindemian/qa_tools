@@ -16,11 +16,13 @@ import { rootLogger } from './logger.js';
 
 export type OptimizationAction = 'parallelize' | 'quarantine' | 'speed_up' | 'split' | 'remove_wait' | 'none';
 
+export type OptimizationImpact = 'high' | 'medium' | 'low';
+
 export interface OptimizationEntry {
     testTitle: string;
     duration: number;
     flakiness: number;
-    impact: 'high' | 'medium' | 'low';
+    impact: OptimizationImpact;
     action: string;
     reason: string;
 }

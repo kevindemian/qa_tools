@@ -1,5 +1,6 @@
 import { vi } from 'vitest';
 import path from 'path';
+import crypto from 'node:crypto';
 
 vi.mock('fs', async () => {
     const memfs = await import('memfs');
@@ -19,7 +20,7 @@ describe('Disk Cache', () => {
     });
 
     beforeEach(() => {
-        cacheDir = '/tmp/llm-disk-cache-' + Date.now() + '-' + Math.random().toString(36).slice(2, 8);
+        cacheDir = '/tmp/llm-disk-cache-' + Date.now() + '-' + crypto.randomBytes(4).toString('hex');
         fs.mkdirSync(cacheDir, { recursive: true });
         process.env['LLM_DISK_CACHE_DIR'] = cacheDir;
     });
