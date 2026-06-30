@@ -1,3 +1,9 @@
+function stripTrailingSlashes(s: string): string {
+    let end = s.length;
+    while (end > 0 && s.charCodeAt(end - 1) === 47) end--;
+    return s.slice(0, end);
+}
+
 import { createThrottledClient } from '../shared/http-client.js';
 import { Logger } from '../shared/logger.js';
 import { handleError } from '../shared/git-provider-error.js';
@@ -54,7 +60,7 @@ class GitHubManager extends GitProviderBase implements GitProvider {
         super();
         this.repoFullName = repoFullName;
         this.apiToken = apiToken;
-        this.apiUrl = (baseUrl || 'https://api.github.com').replace(/\/+$/, '');
+        this.apiUrl = stripTrailingSlashes(baseUrl || 'https://api.github.com');
         if (!apiToken) {
             throw new Error('GitHub: apiToken é obrigatório');
         }
