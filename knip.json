@@ -6,6 +6,14 @@
         "scripts/build.mjs",
         "scripts/quality-check.ts",
         "scripts/generate-env-example.ts",
+        "scripts/ux-auditor.ts",
+        "scripts/sop-phase-enforcer.ts",
+        "scripts/smartwizard-llm.ts",
+        "scripts/smartwizard-discovery.ts",
+        "scripts/rule-vigilant.ts",
+        "scripts/verify-registry.ts",
+        "scripts/opencode-db-maintenance.ts",
+        "scripts/probe-registry.ts",
         "e2e/smoke-github.ts",
         "e2e/smoke-llm.ts",
         "e2e/smoke-pipeline.ts"
@@ -18,7 +26,24 @@
         "e2e/**/*.ts",
         "scripts/**/*.ts"
     ],
-    "ignoreDependencies": [],
+    "ignoreDependencies": [
+        "cli-progress",
+        "cli-table3",
+        "figlet",
+        "readline-sync",
+        "yaml",
+        "zod",
+        "dotenv",
+        "chalk",
+        "gradient-string",
+        "ora",
+        "adm-zip",
+        "csv-parser",
+        "glob",
+        "@inquirer/confirm",
+        "@inquirer/input",
+        "@inquirer/select"
+    ],
     "vitest": {
         "config": "vitest.config.ts"
     }
