@@ -438,8 +438,8 @@ describe('GenerateMappingFiles', async () => {
         ];
         generateMappingFiles(base + '.csv', 'PROJ', ['TEST-1', 'TEST-2'], testCases);
 
-        const jsonPath = tmpDir + '/test-csv-' + testIdx + '-jira-mapping.json';
-        const mdPath = tmpDir + '/test-csv-' + testIdx + '-jira-mapping.md';
+        const jsonPath = tmpDir + '/qa-test-csv-' + testIdx + '-jira-mapping.json';
+        const mdPath = tmpDir + '/qa-test-csv-' + testIdx + '-jira-mapping.md';
 
         expect(realFs.existsSync(jsonPath)).toBeTruthy();
         expect(realFs.existsSync(mdPath)).toBeTruthy();
@@ -459,7 +459,7 @@ describe('GenerateMappingFiles', async () => {
         const testCases: TestCase[] = [{ title: 'TC1', description: 'Descricao do TC1', steps: makeSteps('a1', 'a2') }];
         generateMappingFiles(base + '.csv', 'PROJ', ['TEST-1'], testCases);
 
-        const content = realFs.readFileSync(tmpDir + '/test-csv-' + testIdx + '-jira-mapping.json', 'utf8');
+        const content = realFs.readFileSync(tmpDir + '/qa-test-csv-' + testIdx + '-jira-mapping.json', 'utf8');
 
         expect(content).toContain('"Action": "a2"');
     });
@@ -470,7 +470,7 @@ describe('GenerateMappingFiles', async () => {
         const testCases: TestCase[] = [{ title: 'TC', steps: [] }];
         generateMappingFiles(base + '.csv', 'PROJ', ['TEST-1'], testCases);
 
-        expect(realFs.existsSync(tmpDir + '/test-csv-' + testIdx + '-jira-mapping.json')).toBeTruthy();
+        expect(realFs.existsSync(tmpDir + '/qa-test-csv-' + testIdx + '-jira-mapping.json')).toBeTruthy();
 
         process.env['CYPRESS_PROJECT_PATH'] = tmpDir;
     });
@@ -497,7 +497,7 @@ describe('GenerateMappingFiles', async () => {
             },
         ];
         generateMappingFiles(base + '.csv', 'PROJ', ['TEST-3'], testCases);
-        const content2 = realFs.readFileSync(tmpDir + '/test-csv-' + testIdx + '-jira-mapping.json', 'utf8');
+        const content2 = realFs.readFileSync(tmpDir + '/qa-test-csv-' + testIdx + '-jira-mapping.json', 'utf8');
 
         expect(content2).toContain('"precondition": "User must be logged in"');
         expect(content2).toContain('"Action": "Click login"');
@@ -510,7 +510,7 @@ describe('GenerateMappingFiles', async () => {
             { title: 'TC2', steps: [] },
         ];
         generateMappingFiles(base + '.csv', 'PROJ', ['TEST-1', 'TEST-2'], testCases);
-        const md = realFs.readFileSync(tmpDir + '/test-csv-' + testIdx + '-jira-mapping.md', 'utf8');
+        const md = realFs.readFileSync(tmpDir + '/qa-test-csv-' + testIdx + '-jira-mapping.md', 'utf8');
         const mdLines = md.split('\n');
 
         expect(md).toContain('## TEST-1 — TC1');
