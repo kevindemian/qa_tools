@@ -33,7 +33,8 @@ describe('CreateCheckRun', () => {
         process.env = { ...originalEnv };
     });
 
-    it('sends POST to correct GitHub API URL', async () => {expect.hasAssertions();
+    it('sends POST to correct GitHub API URL', async () => {
+        expect.hasAssertions();
 
         mockPost.mockResolvedValueOnce({
             data: { id: 1, html_url: 'https://github.com/owner/repo/checks/1' },
@@ -60,7 +61,8 @@ describe('CreateCheckRun', () => {
         expect(result).toStrictEqual({ id: 1, html_url: 'https://github.com/owner/repo/checks/1' });
     });
 
-    it('includes output when provided', async () => {expect.hasAssertions();
+    it('includes output when provided', async () => {
+        expect.hasAssertions();
 
         mockPost.mockResolvedValueOnce({
             data: { id: 2, html_url: '' },
@@ -90,7 +92,8 @@ describe('CreateCheckRun', () => {
         );
     });
 
-    it('includes details_url when provided', async () => {expect.hasAssertions();
+    it('includes details_url when provided', async () => {
+        expect.hasAssertions();
 
         mockPost.mockResolvedValueOnce({
             data: { id: 3, html_url: '' },
@@ -112,7 +115,8 @@ describe('CreateCheckRun', () => {
         );
     });
 
-    it('returns null when GITHUB_TOKEN is missing', async () => {expect.hasAssertions();
+    it('returns null when GITHUB_TOKEN is missing', async () => {
+        expect.hasAssertions();
 
         delete penv['GITHUB_TOKEN'];
 
@@ -126,7 +130,8 @@ describe('CreateCheckRun', () => {
         expect(result).toBeNull();
     });
 
-    it('returns null when GITHUB_REPOSITORY is missing', async () => {expect.hasAssertions();
+    it('returns null when GITHUB_REPOSITORY is missing', async () => {
+        expect.hasAssertions();
 
         delete penv['GITHUB_REPOSITORY'];
 
@@ -140,7 +145,8 @@ describe('CreateCheckRun', () => {
         expect(result).toBeNull();
     });
 
-    it('returns null when GITHUB_SHA is missing', async () => {expect.hasAssertions();
+    it('returns null when GITHUB_SHA is missing', async () => {
+        expect.hasAssertions();
 
         delete penv['GITHUB_SHA'];
 
@@ -154,7 +160,8 @@ describe('CreateCheckRun', () => {
         expect(result).toBeNull();
     });
 
-    it('handles API error gracefully', async () => {expect.hasAssertions();
+    it('handles API error gracefully', async () => {
+        expect.hasAssertions();
 
         mockPost.mockRejectedValueOnce({
             response: { status: 403 },
@@ -170,7 +177,8 @@ describe('CreateCheckRun', () => {
         expect(result).toBeNull();
     });
 
-    it('handles network error gracefully', async () => {expect.hasAssertions();
+    it('handles network error gracefully', async () => {
+        expect.hasAssertions();
 
         mockPost.mockRejectedValueOnce(new Error('Network error'));
 

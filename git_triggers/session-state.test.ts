@@ -184,7 +184,8 @@ describe('Session-state', () => {
     });
 
     describe('DisplayRecentPipelines flakiness', () => {
-        it('warns about high flakiness tests', async () => {expect.hasAssertions();
+        it('warns about high flakiness tests', async () => {
+            expect.hasAssertions();
 
             vi.mocked(_loadMetrics).mockReturnValueOnce({
                 runs: [

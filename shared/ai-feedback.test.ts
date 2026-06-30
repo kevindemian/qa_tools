@@ -57,7 +57,9 @@ describe('Ai Feedback', () => {
 
             expect(mockWriteFileSync).toHaveBeenCalledTimes(1);
 
-            const written = JSON.parse(mockWriteFileSync.mock.calls[0]?.[1] as string) as { records: AiGenerationRecord[] };
+            const written = JSON.parse(mockWriteFileSync.mock.calls[0]?.[1] as string) as {
+                records: AiGenerationRecord[];
+            };
 
             expect(written.records).toHaveLength(1);
             expect(nonNull(written.records[0]).id).toBe('rec-1');
@@ -69,7 +71,9 @@ describe('Ai Feedback', () => {
 
             recordAiGeneration(makeRecord('rec-2'));
 
-            const written = JSON.parse(mockWriteFileSync.mock.calls[0]?.[1] as string) as { records: AiGenerationRecord[] };
+            const written = JSON.parse(mockWriteFileSync.mock.calls[0]?.[1] as string) as {
+                records: AiGenerationRecord[];
+            };
 
             expect(written.records).toHaveLength(2);
         });
@@ -81,7 +85,9 @@ describe('Ai Feedback', () => {
 
             recordAiGeneration(makeRecord('rec-200'));
 
-            const written = JSON.parse(mockWriteFileSync.mock.calls[0]?.[1] as string) as { records: AiGenerationRecord[] };
+            const written = JSON.parse(mockWriteFileSync.mock.calls[0]?.[1] as string) as {
+                records: AiGenerationRecord[];
+            };
 
             expect(written.records).toHaveLength(200);
             expect(nonNull(written.records[0]).id).toBe('rec-1');
@@ -183,5 +189,4 @@ describe('Ai Feedback', () => {
             expect(nonNull(recent[1]).id).toBe('r2');
         });
     });
-
 });

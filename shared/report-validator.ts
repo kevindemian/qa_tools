@@ -143,7 +143,7 @@ export class ReportValidator {
         const parts = fieldPath.split('.');
         let current: unknown = obj;
         for (const part of parts) {
-            const arrMatch = part.match(/^(\w+)\[(\d+)]$/);
+            const arrMatch = /^(\w+)\[(\d+)]$/.exec(part);
             if (arrMatch) {
                 const key = arrMatch[1] as string;
                 const idx = parseInt(arrMatch[2] as string, 10);

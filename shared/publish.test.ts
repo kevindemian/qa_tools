@@ -109,5 +109,4 @@ describe('Publish', () => {
             expect(mockExecFileSync).not.toHaveBeenCalled();
         });
     });
-
 });

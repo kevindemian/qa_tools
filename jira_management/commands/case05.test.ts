@@ -23,12 +23,12 @@ describe('Case05', () => {
             expect(typeof case05.handler).toBe('function');
         });
 
-        it('executes without error with basic context', async () => {expect.hasAssertions();
+        it('executes without error with basic context', async () => {
+            expect.hasAssertions();
 
             const result = await case05.handler(mockContext);
 
             expect([undefined, true, false]).toContain(result);
         });
     });
-
 });

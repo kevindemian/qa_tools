@@ -28,7 +28,8 @@ describe('Smoke-xray-cloud', () => {
         expect(Config.get('xrayMode')).toBe('cloud');
     });
 
-    it.runIf(process.env['XRAY_MODE'] === 'cloud')('default XrayClient instantiates from JiraResource', async () => {expect.hasAssertions();
+    it.runIf(process.env['XRAY_MODE'] === 'cloud')('default XrayClient instantiates from JiraResource', async () => {
+        expect.hasAssertions();
 
         const mod = await import('../jira_management/xray-client.js');
 
@@ -36,12 +37,15 @@ describe('Smoke-xray-cloud', () => {
         expect(typeof (mod as Record<string, unknown>)['default']).toBe('undefined');
     });
 
-    it.runIf(process.env['XRAY_MODE'] === 'cloud')('createStepImporter returns CloudStepImporter when mode=cloud', () => {
-        const jira = new JiraResource('test', 'https://example.atlassian.net');
-        const importer = createStepImporter(jira, 'cloud');
+    it.runIf(process.env['XRAY_MODE'] === 'cloud')(
+        'createStepImporter returns CloudStepImporter when mode=cloud',
+        () => {
+            const jira = new JiraResource('test', 'https://example.atlassian.net');
+            const importer = createStepImporter(jira, 'cloud');
 
-        expect(importer).toBeDefined();
-    });
+            expect(importer).toBeDefined();
+        },
+    );
 
     it.runIf(process.env['XRAY_MODE'] === 'cloud')('jiraResource with cloud base URL is valid', () => {
         const jira = new JiraResource('test', 'https://example.atlassian.net');

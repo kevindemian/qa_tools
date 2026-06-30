@@ -1,9 +1,9 @@
 {
-  "tests": [
-    {
-      "title": "test-0",
-      "state": "passed",
-      "duration": 100
-    }
-  ]
+    "tests": [
+        {
+            "title": "test-0",
+            "state": "passed",
+            "duration": 100
+        }
+    ]
 }

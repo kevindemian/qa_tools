@@ -58,7 +58,8 @@ describe('JiraLinkManager', () => {
     });
 
     describe('GetIssueLinkTypes', () => {
-        it('returns cached value on second call', async () => {expect.hasAssertions();
+        it('returns cached value on second call', async () => {
+            expect.hasAssertions();
 
             const fakeTypes = [{ id: '1', name: 'Test' }];
             mockJiraResource.getJiraResource.mockResolvedValue({ issueLinkTypes: fakeTypes });
@@ -70,7 +71,8 @@ describe('JiraLinkManager', () => {
             expect(mockJiraResource.getJiraResource).toHaveBeenCalledTimes(1);
         });
 
-        it('fetches from API and caches to disk', async () => {expect.hasAssertions();
+        it('fetches from API and caches to disk', async () => {
+            expect.hasAssertions();
 
             const fakeTypes = [{ id: '10200', name: 'Tested by' }];
             mockJiraResource.getJiraResource.mockResolvedValue({ issueLinkTypes: fakeTypes });
@@ -79,7 +81,8 @@ describe('JiraLinkManager', () => {
             expect(fs.writeFileSync).toHaveBeenCalledWith(CACHE_PATH, JSON.stringify(fakeTypes), 'utf8');
         });
 
-        it('falls back to local cache when API fails', async () => {expect.hasAssertions();
+        it('falls back to local cache when API fails', async () => {
+            expect.hasAssertions();
 
             const cachedTypes = [{ id: '99', name: 'Cached' }];
             mockJiraResource.getJiraResource.mockRejectedValue(new Error('API down'));
@@ -90,7 +93,8 @@ describe('JiraLinkManager', () => {
             expect(result).toStrictEqual(cachedTypes);
         });
 
-        it('falls back to hardcoded types when API and cache fail', async () => {expect.hasAssertions();
+        it('falls back to hardcoded types when API and cache fail', async () => {
+            expect.hasAssertions();
 
             mockJiraResource.getJiraResource.mockRejectedValue(new Error('API down'));
             vi.spyOn(fs, 'existsSync').mockReturnValue(false);
@@ -100,7 +104,8 @@ describe('JiraLinkManager', () => {
             expect(nonNull(result[0]).name).toBe('Relates');
         });
 
-        it('logs warning when cache read has invalid JSON', async () => {expect.hasAssertions();
+        it('logs warning when cache read has invalid JSON', async () => {
+            expect.hasAssertions();
 
             mockJiraResource.getJiraResource.mockRejectedValue(new Error('API down'));
             vi.spyOn(fs, 'existsSync').mockReturnValue(true);
@@ -123,42 +128,48 @@ describe('JiraLinkManager', () => {
             mockJiraResource.getJiraResource.mockResolvedValue({ issueLinkTypes: fakeTypes });
         });
 
-        it('matches by name', async () => {expect.hasAssertions();
+        it('matches by name', async () => {
+            expect.hasAssertions();
 
             const id = await manager.resolveLinkTypeId('Tests');
 
             expect(id).toBe('200');
         });
 
-        it('matches by inward', async () => {expect.hasAssertions();
+        it('matches by inward', async () => {
+            expect.hasAssertions();
 
             const id = await manager.resolveLinkTypeId('is tested by');
 
             expect(id).toBe('200');
         });
 
-        it('matches by outward', async () => {expect.hasAssertions();
+        it('matches by outward', async () => {
+            expect.hasAssertions();
 
             const id = await manager.resolveLinkTypeId('tests');
 
             expect(id).toBe('200');
         });
 
-        it('is case insensitive', async () => {expect.hasAssertions();
+        it('is case insensitive', async () => {
+            expect.hasAssertions();
 
             const id = await manager.resolveLinkTypeId('tests');
 
             expect(id).toBe('200');
         });
 
-        it('trims whitespace', async () => {expect.hasAssertions();
+        it('trims whitespace', async () => {
+            expect.hasAssertions();
 
             const id = await manager.resolveLinkTypeId('  Tests  ');
 
             expect(id).toBe('200');
         });
 
-        it('falls back to 11701 when no match', async () => {expect.hasAssertions();
+        it('falls back to 11701 when no match', async () => {
+            expect.hasAssertions();
 
             const id = await manager.resolveLinkTypeId('nonexistent');
 
@@ -167,7 +178,8 @@ describe('JiraLinkManager', () => {
     });
 
     describe('LinkIssues', () => {
-        it('creates links for each linked issue', async () => {expect.hasAssertions();
+        it('creates links for each linked issue', async () => {
+            expect.hasAssertions();
 
             mockJiraResource.getJiraResource.mockResolvedValue({
                 issueLinkTypes: [{ id: '10200', name: 'Tests', inward: 'is tested by', outward: 'tests' }],
@@ -194,7 +206,8 @@ describe('JiraLinkManager', () => {
     });
 
     describe('GetPreconditionFieldId', () => {
-        it('returns cached value on second call', async () => {expect.hasAssertions();
+        it('returns cached value on second call', async () => {
+            expect.hasAssertions();
 
             const fields = [
                 { id: 'custom_123', schema: { custom: 'com.xpandit.plugins.xray:test-precondition-custom-field' } },
@@ -208,7 +221,8 @@ describe('JiraLinkManager', () => {
             expect(mockJiraResource.getJiraResource).toHaveBeenCalledTimes(1);
         });
 
-        it('falls back to customfield_13708 when API fails', async () => {expect.hasAssertions();
+        it('falls back to customfield_13708 when API fails', async () => {
+            expect.hasAssertions();
 
             mockJiraResource.getJiraResource.mockRejectedValue(new Error('API error'));
             const result = await manager._getPreconditionFieldId();
@@ -216,7 +230,8 @@ describe('JiraLinkManager', () => {
             expect(result).toBe('customfield_13708');
         });
 
-        it('falls back to customfield_13708 when no matching field', async () => {expect.hasAssertions();
+        it('falls back to customfield_13708 when no matching field', async () => {
+            expect.hasAssertions();
 
             mockJiraResource.getJiraResource.mockResolvedValue([{ id: 'other', schema: { custom: 'other' } }]);
             const result = await manager._getPreconditionFieldId();
@@ -226,7 +241,8 @@ describe('JiraLinkManager', () => {
     });
 
     describe('CreateIssueLink', () => {
-        it('creates a single issue link with resolved type', async () => {expect.hasAssertions();
+        it('creates a single issue link with resolved type', async () => {
+            expect.hasAssertions();
 
             mockJiraResource.getJiraResource.mockResolvedValue({
                 issueLinkTypes: [{ id: '10200', name: 'Tests', inward: 'is tested by', outward: 'tests' }],
@@ -244,7 +260,8 @@ describe('JiraLinkManager', () => {
     });
 
     describe('AssociatePrecondition', () => {
-        it('adds precondition to test issue fields', async () => {expect.hasAssertions();
+        it('adds precondition to test issue fields', async () => {
+            expect.hasAssertions();
 
             const fields = [
                 { id: 'custom_99', schema: { custom: 'com.xpandit.plugins.xray:test-precondition-custom-field' } },
@@ -260,7 +277,8 @@ describe('JiraLinkManager', () => {
             });
         });
 
-        it('does not duplicate existing precondition', async () => {expect.hasAssertions();
+        it('does not duplicate existing precondition', async () => {
+            expect.hasAssertions();
 
             const fields = [
                 { id: 'custom_99', schema: { custom: 'com.xpandit.plugins.xray:test-precondition-custom-field' } },
@@ -278,7 +296,8 @@ describe('JiraLinkManager', () => {
     });
 
     describe('ResolvePreconditionIssueTypeId', () => {
-        it('returns the issue type id for Pre-condition', async () => {expect.hasAssertions();
+        it('returns the issue type id for Pre-condition', async () => {
+            expect.hasAssertions();
 
             mockJiraResource.getJiraResource.mockResolvedValue([
                 { id: '11801', name: 'Pre-condition' },
@@ -289,7 +308,8 @@ describe('JiraLinkManager', () => {
             expect(result).toBe('11801');
         });
 
-        it('caches the result on second call', async () => {expect.hasAssertions();
+        it('caches the result on second call', async () => {
+            expect.hasAssertions();
 
             mockJiraResource.getJiraResource.mockResolvedValue([{ id: '11801', name: 'Pre-condition' }]);
             await manager._resolvePreconditionIssueTypeId();
@@ -298,7 +318,8 @@ describe('JiraLinkManager', () => {
             expect(mockJiraResource.getJiraResource).toHaveBeenCalledTimes(1);
         });
 
-        it('throws when no Pre-condition issue type exists', async () => {expect.hasAssertions();
+        it('throws when no Pre-condition issue type exists', async () => {
+            expect.hasAssertions();
 
             mockJiraResource.getJiraResource.mockResolvedValue([{ id: '100', name: 'Bug' }]);
 
@@ -309,7 +330,8 @@ describe('JiraLinkManager', () => {
     });
 
     describe('ListPreconditions', () => {
-        it('returns mapped preconditions from JQL search', async () => {expect.hasAssertions();
+        it('returns mapped preconditions from JQL search', async () => {
+            expect.hasAssertions();
 
             mockJiraResource.searchJiraIssues.mockResolvedValue({
                 issues: [
@@ -327,7 +349,8 @@ describe('JiraLinkManager', () => {
             expect(result[1]).toStrictEqual({ key: 'PREC-2', summary: 'Database must be seeded' });
         });
 
-        it('returns empty array when no preconditions found', async () => {expect.hasAssertions();
+        it('returns empty array when no preconditions found', async () => {
+            expect.hasAssertions();
 
             mockJiraResource.searchJiraIssues.mockResolvedValue({ issues: [], total: 0, startAt: 0, maxResults: 200 });
             const result = await manager.listPreconditions('EMPTY');
@@ -337,7 +360,8 @@ describe('JiraLinkManager', () => {
     });
 
     describe('CreatePrecondition', () => {
-        it('creates a new precondition and returns its key', async () => {expect.hasAssertions();
+        it('creates a new precondition and returns its key', async () => {
+            expect.hasAssertions();
 
             mockJiraResource.searchJiraIssues.mockResolvedValue({ issues: [], total: 0, startAt: 0, maxResults: 5 });
             mockJiraResource.getJiraResource.mockResolvedValue([{ id: '11801', name: 'Pre-condition' }]);
@@ -356,7 +380,8 @@ describe('JiraLinkManager', () => {
     });
 
     describe('ListTestExecutions', () => {
-        it('returns mapped test execution summaries', async () => {expect.hasAssertions();
+        it('returns mapped test execution summaries', async () => {
+            expect.hasAssertions();
 
             mockJiraResource.searchJiraIssues.mockResolvedValue({
                 issues: [
@@ -392,7 +417,8 @@ describe('JiraLinkManager', () => {
     });
 
     describe('ValidateTestExecutionKey', () => {
-        it('passes when issue is a Test Execution', async () => {expect.hasAssertions();
+        it('passes when issue is a Test Execution', async () => {
+            expect.hasAssertions();
 
             mockJiraResource.getJiraResource.mockResolvedValue({
                 fields: { issuetype: { name: 'Test Execution' } },
@@ -401,14 +427,16 @@ describe('JiraLinkManager', () => {
             await expect(manager.validateTestExecutionKey('TE-1')).resolves.toBeTruthy();
         });
 
-        it('returns false when issue is not found', async () => {expect.hasAssertions();
+        it('returns false when issue is not found', async () => {
+            expect.hasAssertions();
 
             mockJiraResource.getJiraResource.mockResolvedValue({ fields: {} });
 
             await expect(manager.validateTestExecutionKey('MISSING')).resolves.toBeFalsy();
         });
 
-        it('returns false when issue type is not Test Execution', async () => {expect.hasAssertions();
+        it('returns false when issue type is not Test Execution', async () => {
+            expect.hasAssertions();
 
             mockJiraResource.getJiraResource.mockResolvedValue({
                 fields: { issuetype: { name: 'Bug' } },
@@ -419,7 +447,8 @@ describe('JiraLinkManager', () => {
     });
 
     describe('GetTestCaseSummaries', () => {
-        it('returns (key not found) for keys that fail to fetch', async () => {expect.hasAssertions();
+        it('returns (key not found) for keys that fail to fetch', async () => {
+            expect.hasAssertions();
 
             mockJiraResource.getJiraResource
                 .mockResolvedValueOnce({ key: 'TEST-1', fields: { summary: 'Works' } })
@@ -432,7 +461,8 @@ describe('JiraLinkManager', () => {
             ]);
         });
 
-        it('returns empty array for empty input', async () => {expect.hasAssertions();
+        it('returns empty array for empty input', async () => {
+            expect.hasAssertions();
 
             const result = await manager.getTestCaseSummaries([]);
 

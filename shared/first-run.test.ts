@@ -54,7 +54,8 @@ describe('First Run', () => {
     });
 
     describe('IsFirstRun', () => {
-        it('returns false when CI=true', async () => {expect.hasAssertions();
+        it('returns false when CI=true', async () => {
+            expect.hasAssertions();
 
             process.env['CI'] = 'true';
             const { isFirstRun } = await loadModule();
@@ -62,7 +63,8 @@ describe('First Run', () => {
             expect(isFirstRun()).toBeFalsy();
         });
 
-        it('returns false when AUTO_CONFIRM=true', async () => {expect.hasAssertions();
+        it('returns false when AUTO_CONFIRM=true', async () => {
+            expect.hasAssertions();
 
             process.env['AUTO_CONFIRM'] = 'true';
             const { isFirstRun } = await loadModule();
@@ -70,7 +72,8 @@ describe('First Run', () => {
             expect(isFirstRun()).toBeFalsy();
         });
 
-        it('returns false when SKIP_FIRST_RUN=true', async () => {expect.hasAssertions();
+        it('returns false when SKIP_FIRST_RUN=true', async () => {
+            expect.hasAssertions();
 
             process.env['SKIP_FIRST_RUN'] = 'true';
             const { isFirstRun } = await loadModule();
@@ -78,7 +81,8 @@ describe('First Run', () => {
             expect(isFirstRun()).toBeFalsy();
         });
 
-        it('returns false when --batch is in argv', async () => {expect.hasAssertions();
+        it('returns false when --batch is in argv', async () => {
+            expect.hasAssertions();
 
             process.argv.push('--batch');
             const { isFirstRun } = await loadModule();
@@ -86,7 +90,8 @@ describe('First Run', () => {
             expect(isFirstRun()).toBeFalsy();
         });
 
-        it('returns false when --auto is in argv', async () => {expect.hasAssertions();
+        it('returns false when --auto is in argv', async () => {
+            expect.hasAssertions();
 
             process.argv.push('--auto');
             const { isFirstRun } = await loadModule();
@@ -94,7 +99,8 @@ describe('First Run', () => {
             expect(isFirstRun()).toBeFalsy();
         });
 
-        it('returns false when firstRunDone flag exists in state', async () => {expect.hasAssertions();
+        it('returns false when firstRunDone flag exists in state', async () => {
+            expect.hasAssertions();
 
             mockLoadTypedState.mockReturnValue({ _firstRunDone: true });
             const { isFirstRun } = await loadModule();
@@ -102,7 +108,8 @@ describe('First Run', () => {
             expect(isFirstRun()).toBeFalsy();
         });
 
-        it('returns false when state has history', async () => {expect.hasAssertions();
+        it('returns false when state has history', async () => {
+            expect.hasAssertions();
 
             mockLoadTypedState.mockReturnValue({ history: [{ ts: '1', op: 'test', detail: '', status: 'ok' }] });
             const { isFirstRun } = await loadModule();
@@ -110,7 +117,8 @@ describe('First Run', () => {
             expect(isFirstRun()).toBeFalsy();
         });
 
-        it('returns true for fresh state with no flags', async () => {expect.hasAssertions();
+        it('returns true for fresh state with no flags', async () => {
+            expect.hasAssertions();
 
             mockLoadTypedState.mockReturnValue({});
             const { isFirstRun } = await loadModule();
@@ -120,7 +128,8 @@ describe('First Run', () => {
     });
 
     describe('MarkFirstRunDone', () => {
-        it('calls updateState with callback that sets _firstRunDone', async () => {expect.hasAssertions();
+        it('calls updateState with callback that sets _firstRunDone', async () => {
+            expect.hasAssertions();
 
             const { _markFirstRunDone } = await loadModule();
             _markFirstRunDone();
@@ -139,7 +148,8 @@ describe('First Run', () => {
     });
 
     describe('MaybeRunFirstRunWizard', () => {
-        it('returns immediately when not first run', async () => {expect.hasAssertions();
+        it('returns immediately when not first run', async () => {
+            expect.hasAssertions();
 
             mockLoadTypedState.mockReturnValue({ _firstRunDone: true });
             const { maybeRunFirstRunWizard: f } = await loadModule();
@@ -149,7 +159,8 @@ describe('First Run', () => {
             expect(mockShowSelect).not.toHaveBeenCalled();
         });
 
-        it('shows welcome and skips when user picks skip', async () => {expect.hasAssertions();
+        it('shows welcome and skips when user picks skip', async () => {
+            expect.hasAssertions();
 
             mockLoadTypedState.mockReturnValue({});
             mockShowSelect.mockResolvedValue('skip');
@@ -161,7 +172,8 @@ describe('First Run', () => {
             expect(mockUpdateState).toHaveBeenCalledTimes(1);
         });
 
-        it('tries to launch setup when user picks setup', async () => {expect.hasAssertions();
+        it('tries to launch setup when user picks setup', async () => {
+            expect.hasAssertions();
 
             mockLoadTypedState.mockReturnValue({});
             mockShowSelect.mockResolvedValue('setup');
@@ -172,7 +184,8 @@ describe('First Run', () => {
             expect(mockUpdateState).toHaveBeenCalledTimes(1);
         });
 
-        it('tries to open docs when user picks docs', async () => {expect.hasAssertions();
+        it('tries to open docs when user picks docs', async () => {
+            expect.hasAssertions();
 
             mockLoadTypedState.mockReturnValue({});
             mockShowSelect.mockResolvedValue('docs');
@@ -182,7 +195,8 @@ describe('First Run', () => {
             expect(mockUpdateState).toHaveBeenCalledTimes(1);
         });
 
-        it('does not crash when setupMain() throws', async () => {expect.hasAssertions();
+        it('does not crash when setupMain() throws', async () => {
+            expect.hasAssertions();
 
             mockLoadTypedState.mockReturnValue({});
             mockShowSelect.mockResolvedValue('setup');
@@ -194,5 +208,4 @@ describe('First Run', () => {
             expect(mockUpdateState).toHaveBeenCalledTimes(1);
         });
     });
-
 });

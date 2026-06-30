@@ -53,14 +53,17 @@ describe('Case22', () => {
     });
 
     describe('Case22 — Test Impact Analysis', () => {
-        it('analyzes test impact from git diff', async () => {expect.hasAssertions();
+        it('analyzes test impact from git diff', async () => {
+            expect.hasAssertions();
 
             mockAsk.mockResolvedValue('HEAD~1');
             mockExecFileSync.mockReturnValue('src/login.ts\nsrc/auth.ts\n');
             mockExistsSync.mockReturnValue(false);
             mockAnalyzeTestImpact.mockReturnValue({
                 changedFiles: ['src/login.ts', 'src/auth.ts'],
-                impactedTests: [{ testKey: 'PROJ-42', title: 'Login test', matchMode: 'mapping', reason: 'mapping match' }],
+                impactedTests: [
+                    { testKey: 'PROJ-42', title: 'Login test', matchMode: 'mapping', reason: 'mapping match' },
+                ],
                 unaffected: { total: 10, skippedDueTo: [] },
                 confidence: 'high',
             });
@@ -72,7 +75,8 @@ describe('Case22', () => {
             expect(title).toHaveBeenCalledWith('TEST IMPACT ANALYSIS');
         });
 
-        it('uses HEAD~1 as default range', async () => {expect.hasAssertions();
+        it('uses HEAD~1 as default range', async () => {
+            expect.hasAssertions();
 
             mockAsk.mockResolvedValue('');
             mockExecFileSync.mockReturnValue('src/file.ts\n');
@@ -87,10 +91,13 @@ describe('Case22', () => {
             const mod = case22Module;
             await mod.handler(makeMockCommandContext());
 
-            expect(mockExecFileSync).toHaveBeenCalledWith('git', ['diff', '--name-only', 'HEAD~1'], { encoding: 'utf8' });
+            expect(mockExecFileSync).toHaveBeenCalledWith('git', ['diff', '--name-only', 'HEAD~1'], {
+                encoding: 'utf8',
+            });
         });
 
-        it('shows info when no diff changes found', async () => {expect.hasAssertions();
+        it('shows info when no diff changes found', async () => {
+            expect.hasAssertions();
 
             mockAsk.mockResolvedValue('HEAD~1');
             mockExecFileSync.mockReturnValue('');
@@ -103,7 +110,8 @@ describe('Case22', () => {
             expect(info).toHaveBeenCalledWith('Nenhuma alteração encontrada.');
         });
 
-        it('handles git diff failure gracefully', async () => {expect.hasAssertions();
+        it('handles git diff failure gracefully', async () => {
+            expect.hasAssertions();
 
             mockAsk.mockResolvedValue('HEAD~1');
             mockExecFileSync.mockImplementation(() => {
@@ -120,7 +128,8 @@ describe('Case22', () => {
             );
         });
 
-        it('populates inMemoryTasksId with impacted test keys', async () => {expect.hasAssertions();
+        it('populates inMemoryTasksId with impacted test keys', async () => {
+            expect.hasAssertions();
 
             mockAsk.mockResolvedValue('HEAD~1');
             mockExecFileSync.mockReturnValue('src/login.ts\n');
@@ -129,7 +138,9 @@ describe('Case22', () => {
             mockCalcFlaky.mockReturnValue([]);
             mockAnalyzeTestImpact.mockReturnValue({
                 changedFiles: ['src/login.ts'],
-                impactedTests: [{ testKey: 'PROJ-42', title: 'Login test', matchMode: 'mapping', reason: 'mapping match' }],
+                impactedTests: [
+                    { testKey: 'PROJ-42', title: 'Login test', matchMode: 'mapping', reason: 'mapping match' },
+                ],
                 unaffected: { total: 10, skippedDueTo: [] },
                 confidence: 'high',
             });
@@ -142,7 +153,8 @@ describe('Case22', () => {
             expect(info).toHaveBeenCalledWith(expect.stringContaining('pré-carregado'));
         });
 
-        it('shows gap hint when confidence is low', async () => {expect.hasAssertions();
+        it('shows gap hint when confidence is low', async () => {
+            expect.hasAssertions();
 
             mockAsk.mockResolvedValue('HEAD~1');
             mockExecFileSync.mockReturnValue('src/unknown.ts\n');
@@ -151,7 +163,9 @@ describe('Case22', () => {
             mockCalcFlaky.mockReturnValue([]);
             mockAnalyzeTestImpact.mockReturnValue({
                 changedFiles: ['src/unknown.ts'],
-                impactedTests: [{ testKey: 'PROJ-99', title: 'Unknown', matchMode: 'keyword', reason: 'keyword match' }],
+                impactedTests: [
+                    { testKey: 'PROJ-99', title: 'Unknown', matchMode: 'keyword', reason: 'keyword match' },
+                ],
                 unaffected: { total: 0, skippedDueTo: [] },
                 confidence: 'low',
             });
@@ -162,7 +176,8 @@ describe('Case22', () => {
             expect(info).toHaveBeenCalledWith(expect.stringContaining('Gap Analysis'));
         });
 
-        it('warns about flaky impacted tests', async () => {expect.hasAssertions();
+        it('warns about flaky impacted tests', async () => {
+            expect.hasAssertions();
 
             mockAsk.mockResolvedValue('HEAD~1');
             mockExecFileSync.mockReturnValue('src/login.ts\n');
@@ -186,7 +201,9 @@ describe('Case22', () => {
             ]);
             mockAnalyzeTestImpact.mockReturnValue({
                 changedFiles: ['src/login.ts'],
-                impactedTests: [{ testKey: 'PROJ-42', title: 'Login test', matchMode: 'mapping', reason: 'mapping match' }],
+                impactedTests: [
+                    { testKey: 'PROJ-42', title: 'Login test', matchMode: 'mapping', reason: 'mapping match' },
+                ],
                 unaffected: { total: 10, skippedDueTo: [] },
                 confidence: 'high',
             });
@@ -197,11 +214,14 @@ describe('Case22', () => {
             expect(warn).toHaveBeenCalledWith(expect.stringContaining('flaky'));
         });
 
-        it('loads mapping file when it exists', async () => {expect.hasAssertions();
+        it('loads mapping file when it exists', async () => {
+            expect.hasAssertions();
 
             mockAsk.mockResolvedValue('HEAD~1');
             mockExecFileSync.mockReturnValue('src/login.ts\n');
-            mockExistsSync.mockImplementation((p: PathLike) => typeof p === 'string' && p.includes('test-mapping.json'));
+            mockExistsSync.mockImplementation(
+                (p: PathLike) => typeof p === 'string' && p.includes('test-mapping.json'),
+            );
             mockAnalyzeTestImpact.mockReturnValue({
                 changedFiles: ['src/login.ts'],
                 impactedTests: [
@@ -222,5 +242,4 @@ describe('Case22', () => {
             );
         });
     });
-
 });

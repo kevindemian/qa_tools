@@ -26,7 +26,8 @@ class TestProvider extends GitProviderBase {
 }
 
 describe('GitProviderBase._get', () => {
-    it('returns data on successful get', async () => {expect.hasAssertions();
+    it('returns data on successful get', async () => {
+        expect.hasAssertions();
 
         const provider = new TestProvider();
         vi.spyOn(provider.client, 'get').mockResolvedValue({ data: { id: 1 } });
@@ -35,7 +36,8 @@ describe('GitProviderBase._get', () => {
         expect(result).toStrictEqual({ id: 1 });
     });
 
-    it('passes params to client.get', async () => {expect.hasAssertions();
+    it('passes params to client.get', async () => {
+        expect.hasAssertions();
 
         const provider = new TestProvider();
         const getSpy = vi.spyOn(provider.client, 'get').mockResolvedValue({ data: [] });
@@ -44,7 +46,8 @@ describe('GitProviderBase._get', () => {
         expect(getSpy).toHaveBeenCalledWith('/test', { params: { page: 2 } });
     });
 
-    it('returns null on error when returnNull is set', async () => {expect.hasAssertions();
+    it('returns null on error when returnNull is set', async () => {
+        expect.hasAssertions();
 
         const provider = new TestProvider();
         vi.spyOn(provider.client, 'get').mockRejectedValue(new Error('fail'));
@@ -55,7 +58,8 @@ describe('GitProviderBase._get', () => {
 });
 
 describe('GitProviderBase._post', () => {
-    it('returns data on successful post', async () => {expect.hasAssertions();
+    it('returns data on successful post', async () => {
+        expect.hasAssertions();
 
         const provider = new TestProvider();
         vi.spyOn(provider.client, 'post').mockResolvedValue({ data: { key: 1 } });
@@ -64,7 +68,8 @@ describe('GitProviderBase._post', () => {
         expect(result).toStrictEqual({ key: 1 });
     });
 
-    it('calls post without body when body is undefined', async () => {expect.hasAssertions();
+    it('calls post without body when body is undefined', async () => {
+        expect.hasAssertions();
 
         const provider = new TestProvider();
         const postSpy = vi.spyOn(provider.client, 'post').mockResolvedValue({ data: null });

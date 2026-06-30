@@ -24,7 +24,8 @@ const recordArb = fc.record({
 const recordsArb = fc.array(recordArb, { minLength: 0, maxLength: 20 });
 
 describe('CompareAiVsManual — property-based', () => {
-    it('total counts match record filtering', () => {expect.hasAssertions();
+    it('total counts match record filtering', () => {
+        expect.hasAssertions();
 
         fc.assert(
             fc.property(recordsArb, (records) => {
@@ -39,7 +40,8 @@ describe('CompareAiVsManual — property-based', () => {
         );
     });
 
-    it('aiAdvantage postconditions hold for all inputs', () => {expect.hasAssertions();
+    it('aiAdvantage postconditions hold for all inputs', () => {
+        expect.hasAssertions();
 
         fc.assert(
             fc.property(recordsArb, (records) => {
@@ -47,9 +49,11 @@ describe('CompareAiVsManual — property-based', () => {
 
                 expect(['pass_rate', 'flakiness', 'none']).toContain(result.aiAdvantage);
 
-                const isPassRateAdvantage = result.aiAdvantage === 'pass_rate' ? result.aiPassRate > result.manualPassRate : true;
-                const isFlakinessAdvantage = result.aiAdvantage === 'flakiness' ? result.aiFlakinessAvg < result.manualFlakinessAvg : true;
-                
+                const isPassRateAdvantage =
+                    result.aiAdvantage === 'pass_rate' ? result.aiPassRate > result.manualPassRate : true;
+                const isFlakinessAdvantage =
+                    result.aiAdvantage === 'flakiness' ? result.aiFlakinessAvg < result.manualFlakinessAvg : true;
+
                 expect(isPassRateAdvantage).toBeTruthy();
                 expect(isFlakinessAdvantage).toBeTruthy();
             }),
@@ -57,7 +61,8 @@ describe('CompareAiVsManual — property-based', () => {
         );
     });
 
-    it('byVersion counts sum to aiTotal', () => {expect.hasAssertions();
+    it('byVersion counts sum to aiTotal', () => {
+        expect.hasAssertions();
 
         fc.assert(
             fc.property(recordsArb, (records) => {
@@ -71,14 +76,15 @@ describe('CompareAiVsManual — property-based', () => {
         );
     });
 
-    it('pass rate is 0 when no records in group', () => {expect.hasAssertions();
+    it('pass rate is 0 when no records in group', () => {
+        expect.hasAssertions();
 
         fc.assert(
             fc.property(fc.array(recordArb, { minLength: 0, maxLength: 5 }), (records) => {
                 const result = compareAiVsManual(records);
                 const hasAi = records.some((r) => r.generatedBy === 'ai');
                 const hasManual = records.some((r) => r.generatedBy === 'manual');
-                
+
                 expect(hasAi || result.aiPassRate === 0).toBeTruthy();
                 expect(hasManual || result.manualPassRate === 0).toBeTruthy();
                 expect(hasManual || result.manualFlakinessAvg === 0).toBeTruthy();
@@ -87,7 +93,8 @@ describe('CompareAiVsManual — property-based', () => {
         );
     });
 
-    it('acceptance rate matches AI accepted / AI total', () => {expect.hasAssertions();
+    it('acceptance rate matches AI accepted / AI total', () => {
+        expect.hasAssertions();
 
         fc.assert(
             fc.property(recordsArb, (records) => {
@@ -103,7 +110,8 @@ describe('CompareAiVsManual — property-based', () => {
         );
     });
 
-    it('timestamp is valid ISO format', () => {expect.hasAssertions();
+    it('timestamp is valid ISO format', () => {
+        expect.hasAssertions();
 
         fc.assert(
             fc.property(recordsArb, (records) => {
@@ -117,29 +125,42 @@ describe('CompareAiVsManual — property-based', () => {
 });
 
 describe('GenerateAiComparisonHtml — property-based', () => {
-    it('structural HTML invariants for all valid inputs', () => {expect.hasAssertions();
+    it('structural HTML invariants for all valid inputs', () => {
+        expect.hasAssertions();
 
         fc.assert(
             fc.property(fc.array(recordArb, { minLength: 0, maxLength: 10 }), fc.string(), (records, title) => {
                 const result = compareAiVsManual(records);
                 const html = generateAiComparisonHtml(result, title);
 
-                const htmlParts = ['<!DOCTYPE html>', '<html', '</html>', '<head>', '</head>', '<body>', '</body>', 'prefers-color-scheme', '--color-surface-page', 'html.dark'];
+                const htmlParts = [
+                    '<!DOCTYPE html>',
+                    '<html',
+                    '</html>',
+                    '<head>',
+                    '</head>',
+                    '<body>',
+                    '</body>',
+                    'prefers-color-scheme',
+                    '--color-surface-page',
+                    'html.dark',
+                ];
 
-                expect(htmlParts.every(p => html.includes(p))).toBeTruthy();
+                expect(htmlParts.every((p) => html.includes(p))).toBeTruthy();
             }),
             { numRuns: 50 },
         );
     });
 
-    it('contains metric-card and badge components for non-empty data', () => {expect.hasAssertions();
+    it('contains metric-card and badge components for non-empty data', () => {
+        expect.hasAssertions();
 
         fc.assert(
             fc.property(fc.array(recordArb, { minLength: 1, maxLength: 10 }), (records) => {
                 const result = compareAiVsManual(records);
                 const html = generateAiComparisonHtml(result);
                 const hasData = result.aiTotal > 0 || result.manualTotal > 0;
-                
+
                 expect(!hasData || html.includes('data-component="metric-card"')).toBeTruthy();
                 expect(!hasData || html.includes('data-component="badge"')).toBeTruthy();
             }),
@@ -147,7 +168,8 @@ describe('GenerateAiComparisonHtml — property-based', () => {
         );
     });
 
-    it('contains pass rate values', () => {expect.hasAssertions();
+    it('contains pass rate values', () => {
+        expect.hasAssertions();
 
         fc.assert(
             fc.property(fc.array(recordArb, { minLength: 1, maxLength: 10 }), (records) => {
@@ -161,7 +183,8 @@ describe('GenerateAiComparisonHtml — property-based', () => {
         );
     });
 
-    it('shows no-data message when both groups empty', () => {expect.hasAssertions();
+    it('shows no-data message when both groups empty', () => {
+        expect.hasAssertions();
 
         fc.assert(
             fc.property(fc.array(recordArb, { minLength: 0, maxLength: 0 }), (records) => {

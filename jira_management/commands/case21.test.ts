@@ -74,7 +74,8 @@ describe('Case21', () => {
     });
 
     describe('Case21 — Gap Analysis', () => {
-        it('displays coverage gap summary', async () => {expect.hasAssertions();
+        it('displays coverage gap summary', async () => {
+            expect.hasAssertions();
 
             const coverageGap = vi.mocked(coverageGapModule);
             coverageGap.analyzeCoverageGaps.mockResolvedValueOnce(mockGapResult);
@@ -86,7 +87,8 @@ describe('Case21', () => {
             expect(baseContext.pushHistory).toHaveBeenCalledWith('coverage-gap-analysis', '60% coverage, 2 gaps', 'ok');
         });
 
-        it('handles error from analyzeCoverageGaps', async () => {expect.hasAssertions();
+        it('handles error from analyzeCoverageGaps', async () => {
+            expect.hasAssertions();
 
             const prompt = vi.mocked(promptModule);
             const coverageGap = vi.mocked(coverageGapModule);
@@ -98,7 +100,8 @@ describe('Case21', () => {
             expect(prompt.printError).toHaveBeenCalledWith('Erro ao analisar gaps de cobertura', expect.any(Error));
         });
 
-        it('shows failing epics when quality gate fails', async () => {expect.hasAssertions();
+        it('shows failing epics when quality gate fails', async () => {
+            expect.hasAssertions();
 
             const prompt = vi.mocked(promptModule);
             const coverageGap = vi.mocked(coverageGapModule);
@@ -126,7 +129,8 @@ describe('Case21', () => {
             expect(prompt.info).toHaveBeenCalledWith(expect.stringContaining('EPIC-1'));
         });
 
-        it('delegates to case18 when user confirms AI gen', async () => {expect.hasAssertions();
+        it('delegates to case18 when user confirms AI gen', async () => {
+            expect.hasAssertions();
 
             const prompt = vi.mocked(promptModule);
             const coverageGap = vi.mocked(coverageGapModule);
@@ -146,7 +150,8 @@ describe('Case21', () => {
             expect(case18.handler).toHaveBeenCalledWith(baseContext);
         });
 
-        it('generates HTML report when user confirms', async () => {expect.hasAssertions();
+        it('generates HTML report when user confirms', async () => {
+            expect.hasAssertions();
 
             const prompt = vi.mocked(promptModule);
             const coverageGap = vi.mocked(coverageGapModule);
@@ -163,7 +168,10 @@ describe('Case21', () => {
             const mod = case21Module;
             await mod.handler(baseContext);
 
-            expect(vi.mocked(htmlModule).generateCoverageGapHtml).toHaveBeenCalledWith(expect.anything(), expect.any(String));
+            expect(vi.mocked(htmlModule).generateCoverageGapHtml).toHaveBeenCalledWith(
+                expect.anything(),
+                expect.any(String),
+            );
             expect(vi.mocked(openModule).openWithFallback).toHaveBeenCalledWith(
                 expect.stringContaining('coverage-gap-report.html'),
                 'Relatório de cobertura',
@@ -171,7 +179,8 @@ describe('Case21', () => {
             );
         });
 
-        it('handles HTML generation error gracefully', async () => {expect.hasAssertions();
+        it('handles HTML generation error gracefully', async () => {
+            expect.hasAssertions();
 
             const prompt = vi.mocked(promptModule);
             const coverageGap = vi.mocked(coverageGapModule);
@@ -192,7 +201,8 @@ describe('Case21', () => {
             expect(prompt.printError).toHaveBeenCalledWith('Erro ao gerar relatório HTML', expect.any(Error));
         });
 
-        it('handles create tests confirmation', async () => {expect.hasAssertions();
+        it('handles create tests confirmation', async () => {
+            expect.hasAssertions();
 
             const prompt = vi.mocked(promptModule);
             const coverageGap = vi.mocked(coverageGapModule);
@@ -210,7 +220,8 @@ describe('Case21', () => {
             expect(prompt.info).toHaveBeenCalledWith('Funcionalidade de criação de testes será implementada em breve.');
         });
 
-        it('handles AI gen with more than 5 gaps', async () => {expect.hasAssertions();
+        it('handles AI gen with more than 5 gaps', async () => {
+            expect.hasAssertions();
 
             const prompt = vi.mocked(promptModule);
             const coverageGap = vi.mocked(coverageGapModule);
@@ -248,5 +259,4 @@ describe('Case21', () => {
             expect(case18.handler).toHaveBeenCalledWith(baseContext);
         });
     });
-
 });

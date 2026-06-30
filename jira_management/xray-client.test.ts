@@ -18,7 +18,8 @@ vi.mock('../shared/xray-cloud-client', () => ({
 vi.mock('../shared/config');
 
 describe('ServerStepImporter', () => {
-    it('calls postJiraResource with correct endpoint and payload', async () => {expect.hasAssertions();
+    it('calls postJiraResource with correct endpoint and payload', async () => {
+        expect.hasAssertions();
 
         const mockJira = createMockJiraResource();
         const postSpy = vi.spyOn(mockJira, 'postJiraResource');
@@ -33,7 +34,8 @@ describe('ServerStepImporter', () => {
         });
     });
 
-    it('sends step data in the POST payload', async () => {expect.hasAssertions();
+    it('sends step data in the POST payload', async () => {
+        expect.hasAssertions();
 
         const mockJira = createMockJiraResource();
         const postSpy = vi.spyOn(mockJira, 'postJiraResource');
@@ -48,7 +50,8 @@ describe('ServerStepImporter', () => {
         });
     });
 
-    it('propagates post error', async () => {expect.hasAssertions();
+    it('propagates post error', async () => {
+        expect.hasAssertions();
 
         const mockJira = createMockJiraResource();
         mockJira.postJiraResource.mockRejectedValue(new Error('Network error'));
@@ -68,12 +71,13 @@ describe('CloudStepImporter', () => {
                 xrayClientId: 'test-client-id',
                 xrayClientSecret: 'test-client-secret',
             };
-            return (Reflect.get(map, key) as string | undefined ?? '') as T;
+            return ((Reflect.get(map, key) as string | undefined) ?? '') as T;
         };
         vi.spyOn(Config, 'getDefault').mockReturnValue(mockConfig);
     });
 
-    it('happy path — sends GraphQL mutation via XrayCloudClient', async () => {expect.hasAssertions();
+    it('happy path — sends GraphQL mutation via XrayCloudClient', async () => {
+        expect.hasAssertions();
 
         mockGraphqlMutation.mockResolvedValue(undefined);
 
@@ -92,12 +96,13 @@ describe('CloudStepImporter', () => {
         expect(callArgs[3]).toBe('test-client-secret');
     });
 
-    it('throws on missing credentials', async () => {expect.hasAssertions();
+    it('throws on missing credentials', async () => {
+        expect.hasAssertions();
 
         const mockConfig = createMockConfigInstance();
         mockConfig.get = function <T = string>(key: string): T {
             const map: Record<string, string> = { xrayClientId: '', xrayClientSecret: '' };
-            return (Reflect.get(map, key) as string | undefined ?? '') as T;
+            return ((Reflect.get(map, key) as string | undefined) ?? '') as T;
         };
         vi.spyOn(Config, 'getDefault').mockReturnValue(mockConfig);
 
@@ -109,7 +114,8 @@ describe('CloudStepImporter', () => {
         );
     });
 
-    it('propagates GraphQL mutation error', async () => {expect.hasAssertions();
+    it('propagates GraphQL mutation error', async () => {
+        expect.hasAssertions();
 
         mockGraphqlMutation.mockRejectedValue(new Error('Xray Cloud GraphQL mutation failed: field not found'));
 

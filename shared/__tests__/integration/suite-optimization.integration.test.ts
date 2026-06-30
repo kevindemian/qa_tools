@@ -15,7 +15,8 @@ describe('Integration: Suite Optimization (FT-26)', () => {
     });
 
     describe('FT-26a: generateOptimizationHtml', () => {
-        it('returns complete HTML document with data', async () => {expect.hasAssertions();
+        it('returns complete HTML document with data', async () => {
+            expect.hasAssertions();
 
             const { analyzeSuiteOptimization, generateOptimizationHtml } = await import('../../suite-optimization.js');
             const tests = [
@@ -34,7 +35,8 @@ describe('Integration: Suite Optimization (FT-26)', () => {
             expect(html).toContain('Slow Test');
         });
 
-        it('shows clean state when no optimizations needed', async () => {expect.hasAssertions();
+        it('shows clean state when no optimizations needed', async () => {
+            expect.hasAssertions();
 
             const { analyzeSuiteOptimization, generateOptimizationHtml } = await import('../../suite-optimization.js');
             const tests = [{ title: 'Fast Test', duration: 2, flakiness: 0 }];
@@ -44,7 +46,8 @@ describe('Integration: Suite Optimization (FT-26)', () => {
             expect(html).toContain('no optimizations needed');
         });
 
-        it('shows clean state for empty input', async () => {expect.hasAssertions();
+        it('shows clean state for empty input', async () => {
+            expect.hasAssertions();
 
             const { analyzeSuiteOptimization, generateOptimizationHtml } = await import('../../suite-optimization.js');
             const result = analyzeSuiteOptimization([]);
@@ -53,7 +56,8 @@ describe('Integration: Suite Optimization (FT-26)', () => {
             expect(html).toContain('clean-state');
         });
 
-        it('uses custom title', async () => {expect.hasAssertions();
+        it('uses custom title', async () => {
+            expect.hasAssertions();
 
             const { analyzeSuiteOptimization, generateOptimizationHtml } = await import('../../suite-optimization.js');
             const result = analyzeSuiteOptimization([]);
@@ -65,7 +69,8 @@ describe('Integration: Suite Optimization (FT-26)', () => {
     });
 
     describe('FT-26b: error fallback', () => {
-        it('returns error page when buildHtmlPage throws', async () => {expect.hasAssertions();
+        it('returns error page when buildHtmlPage throws', async () => {
+            expect.hasAssertions();
 
             const { analyzeSuiteOptimization, generateOptimizationHtml } = await import('../../suite-optimization.js');
             const htmlFactory = await import('../../html-factory.js');

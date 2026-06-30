@@ -46,12 +46,12 @@ describe('Case01', () => {
             expect(typeof case01.handler).toBe('function');
         });
 
-        it('runs full CSV import flow with mocked dependencies without throwing', async () => {expect.hasAssertions();
+        it('runs full CSV import flow with mocked dependencies without throwing', async () => {
+            expect.hasAssertions();
 
             const result = await case01.handler(mockContext);
 
             expect([undefined, true, false]).toContain(result);
         });
     });
-
 });

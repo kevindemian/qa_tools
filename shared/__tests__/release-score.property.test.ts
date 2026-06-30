@@ -30,7 +30,8 @@ function gateArb(): fc.Arbitrary<'pass' | 'fail'> {
 /* ── Tests ───────────────────────────────────────────────────── */
 
 describe('CalculateReleaseScore — property-based', () => {
-    it('score sempre em [0, 100]', () => {expect.hasAssertions();
+    it('score sempre em [0, 100]', () => {
+        expect.hasAssertions();
 
         fc.assert(
             fc.property(pctArb(), pctArb(), gateArb(), pctArb(), pctArb(), (tasks, health, gate, coverage, flaky) => {
@@ -43,31 +44,38 @@ describe('CalculateReleaseScore — property-based', () => {
         );
     });
 
-    it('grade: excellent >= 90, good >= 70, needs_attention >= 50, critical < 50', () => {expect.hasAssertions();
+    it('grade: excellent >= 90, good >= 70, needs_attention >= 50, critical < 50', () => {
+        expect.hasAssertions();
 
         fc.assert(
             fc.property(pctArb(), pctArb(), gateArb(), pctArb(), pctArb(), (tasks, health, gate, coverage, flaky) => {
                 const result = calculateReleaseScore(tasks, health, gate, coverage, flaky);
                 const s = result.score;
-                const expectedGrade = s >= 90 ? 'excellent' : s >= 70 ? 'good' : s >= 50 ? 'needs_attention' : 'critical';
-                
+                const expectedGrade =
+                    s >= 90 ? 'excellent' : s >= 70 ? 'good' : s >= 50 ? 'needs_attention' : 'critical';
+
                 expect(result.grade).toBe(expectedGrade);
             }),
             { numRuns: 100 },
         );
     });
 
-    it('breakdown: sempre 4 dimensões com labels fixos', () => {expect.hasAssertions();
+    it('breakdown: sempre 4 dimensões com labels fixos', () => {
+        expect.hasAssertions();
 
         fc.assert(
             fc.property(pctArb(), pctArb(), gateArb(), pctArb(), pctArb(), (tasks, health, gate, coverage, flaky) => {
                 const result = calculateReleaseScore(tasks, health, gate, coverage, flaky);
 
                 expect(result.breakdown).toHaveLength(4);
-                expect(result.breakdown.map((d) => d.label)).toStrictEqual(['Tasks', 'Health', 'Coverage', 'Flakiness']);
+                expect(result.breakdown.map((d) => d.label)).toStrictEqual([
+                    'Tasks',
+                    'Health',
+                    'Coverage',
+                    'Flakiness',
+                ]);
 
                 for (const d of result.breakdown) {
-                    
                     expect(d.score).toBeGreaterThanOrEqual(0);
                     expect(d.score).toBeLessThanOrEqual(100);
                 }
@@ -76,7 +84,8 @@ describe('CalculateReleaseScore — property-based', () => {
         );
     });
 
-    it('recommendation: "Ready" quando todas >= 70 e healthGate="pass"', () => {expect.hasAssertions();
+    it('recommendation: "Ready" quando todas >= 70 e healthGate="pass"', () => {
+        expect.hasAssertions();
 
         fc.assert(
             fc.property(
@@ -94,7 +103,8 @@ describe('CalculateReleaseScore — property-based', () => {
         );
     });
 
-    it('recommendation: lista dimensões falhando', () => {expect.hasAssertions();
+    it('recommendation: lista dimensões falhando', () => {
+        expect.hasAssertions();
 
         fc.assert(
             fc.property(
@@ -113,18 +123,18 @@ describe('CalculateReleaseScore — property-based', () => {
         );
     });
 
-    it('breakdown status matches score thresholds per dimension', () => {expect.hasAssertions();
+    it('breakdown status matches score thresholds per dimension', () => {
+        expect.hasAssertions();
 
         fc.assert(
             fc.property(pctArb(), pctArb(), gateArb(), pctArb(), pctArb(), (tasks, health, gate, coverage, flaky) => {
                 const result = calculateReleaseScore(tasks, health, gate, coverage, flaky);
                 for (const d of result.breakdown) {
-                    
                     expect(d.score).toBeGreaterThanOrEqual(0);
                     expect(d.score).toBeLessThanOrEqual(100);
 
-                    const expectedStatus = d.label === 'Health' ? gate : (d.score >= 70 ? 'pass' : 'fail');
-                    
+                    const expectedStatus = d.label === 'Health' ? gate : d.score >= 70 ? 'pass' : 'fail';
+
                     expect(d.status).toBe(expectedStatus);
                 }
             }),
@@ -132,7 +142,8 @@ describe('CalculateReleaseScore — property-based', () => {
         );
     });
 
-    it('flakiness score is inversely monotonic with flakyRate', () => {expect.hasAssertions();
+    it('flakiness score is inversely monotonic with flakyRate', () => {
+        expect.hasAssertions();
 
         fc.assert(
             fc.property(intPctArb(), intPctArb(), (a, b) => {
@@ -146,14 +157,15 @@ describe('CalculateReleaseScore — property-based', () => {
                 const flkA = flkAEntry.score;
                 const flkB = flkBEntry.score;
                 const isMonotonic = a > b ? flkA <= flkB : a < b ? flkA >= flkB : flkA === flkB;
-                
+
                 expect(isMonotonic).toBeTruthy();
             }),
             { numRuns: 100 },
         );
     });
 
-    it('score is monotonic in each positive dimension', () => {expect.hasAssertions();
+    it('score is monotonic in each positive dimension', () => {
+        expect.hasAssertions();
 
         fc.assert(
             fc.property(
@@ -182,7 +194,8 @@ describe('CalculateReleaseScore — property-based', () => {
         expect(full.score).toBe(100);
     });
 
-    it('timestamp no formato ISO', () => {expect.hasAssertions();
+    it('timestamp no formato ISO', () => {
+        expect.hasAssertions();
 
         fc.assert(
             fc.property(pctArb(), pctArb(), gateArb(), pctArb(), pctArb(), (tasks, health, gate, coverage, flaky) => {

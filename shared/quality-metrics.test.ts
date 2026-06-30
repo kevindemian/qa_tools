@@ -218,7 +218,8 @@ describe('QualityMetricsCollector', () => {
     });
 
     describe('Exported functions', () => {
-        it('recordInvariantFire calls default collector', () => {expect.hasAssertions();
+        it('recordInvariantFire calls default collector', () => {
+            expect.hasAssertions();
 
             recordInvariantFire('T-01');
             const snapshot = snapshotQualityMetrics();

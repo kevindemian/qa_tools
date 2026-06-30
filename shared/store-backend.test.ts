@@ -87,7 +87,7 @@ describe('Store Backend', () => {
             backend.write('data.json', Buffer.from('first'));
             backend.write('data.json', Buffer.from('second'));
             const result = backend.read('data.json');
-            
+
             expect(result?.toString()).toBe('second');
         });
 
@@ -192,7 +192,6 @@ describe('Store Backend', () => {
             /* Make dir read-only so git init cannot create .git */
             fs.chmodSync(dir, 0o444);
             try {
-                
                 expect(() => backend.init()).toThrow('GitStoreBackend: git init falhou');
             } finally {
                 fs.chmodSync(dir, 0o755);
@@ -219,7 +218,6 @@ describe('Store Backend', () => {
             /* Make .git read-only so git add/commit fails */
             fs.chmodSync(path.join(dir, '.git'), 0o444);
             try {
-                
                 expect(() => backend.flush('test commit')).toThrow('GitStoreBackend: git add/commit falhou');
             } finally {
                 fs.chmodSync(path.join(dir, '.git'), 0o755);
@@ -302,7 +300,6 @@ describe('Store Backend', () => {
 
     describe('DetectProjectGitDir', () => {
         it('returns null when no .git found', () => {
-            
             expect(detectProjectGitDir('/nonexistent-path-xyz')).toBeNull();
         });
 
@@ -312,7 +309,6 @@ describe('Store Backend', () => {
             const origCwd = process.cwd();
             process.chdir(noGitDir);
             try {
-                
                 expect(detectProjectGitDir()).toBeNull();
             } finally {
                 process.chdir(origCwd);
@@ -359,7 +355,7 @@ describe('Store Backend', () => {
                 }
             })();
             const expectedName = hasGit ? 'GitStoreBackend' : 'FsStoreBackend';
-            
+
             expect(backend.constructor.name).toBe(expectedName);
         });
 
@@ -456,5 +452,4 @@ describe('Store Backend', () => {
             }
         });
     });
-
 });

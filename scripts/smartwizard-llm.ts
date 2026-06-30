@@ -52,7 +52,7 @@ function mergeEnvLocal(updates: Record<string, string>, existing: string[]): str
     const updatedKeys = new Set(Object.keys(updates));
     const keptLines: string[] = [];
     for (const line of existing) {
-        const match = line.match(/^(LLM_|OPENCODE_)/);
+        const match = /^(LLM_|OPENCODE_)/.exec(line);
         if (match) {
             const key = line.split('=')[0]?.trim();
             if (key && updatedKeys.has(key)) {

@@ -17,7 +17,8 @@ describe('Integration: AI Comparison Dashboard (FT-24)', () => {
     });
 
     describe('FT-24a: generateAiComparisonHtml', () => {
-        it('returns complete HTML document with data', async () => {expect.hasAssertions();
+        it('returns complete HTML document with data', async () => {
+            expect.hasAssertions();
 
             const { compareAiVsManual, generateAiComparisonHtml } = await import('../../ai-comparison.js');
             const records: AiComparisonRecord[] = [
@@ -55,7 +56,8 @@ describe('Integration: AI Comparison Dashboard (FT-24)', () => {
             expect(html).toContain('Manual Pass Rate');
         });
 
-        it('shows no data message for empty records', async () => {expect.hasAssertions();
+        it('shows no data message for empty records', async () => {
+            expect.hasAssertions();
 
             const { compareAiVsManual, generateAiComparisonHtml } = await import('../../ai-comparison.js');
             const result = compareAiVsManual([]);
@@ -65,7 +67,8 @@ describe('Integration: AI Comparison Dashboard (FT-24)', () => {
             expect(html).not.toContain('Comparison Overview');
         });
 
-        it('uses custom title', async () => {expect.hasAssertions();
+        it('uses custom title', async () => {
+            expect.hasAssertions();
 
             const { compareAiVsManual, generateAiComparisonHtml } = await import('../../ai-comparison.js');
             const result = compareAiVsManual([]);
@@ -77,7 +80,8 @@ describe('Integration: AI Comparison Dashboard (FT-24)', () => {
     });
 
     describe('FT-24b: edge cases', () => {
-        it('handles all AI records', async () => {expect.hasAssertions();
+        it('handles all AI records', async () => {
+            expect.hasAssertions();
 
             const { compareAiVsManual, generateAiComparisonHtml } = await import('../../ai-comparison.js');
             const records: AiComparisonRecord[] = [
@@ -121,7 +125,8 @@ describe('Integration: AI Comparison Dashboard (FT-24)', () => {
             expect(html).toContain('N/A');
         });
 
-        it('handles all manual records', async () => {expect.hasAssertions();
+        it('handles all manual records', async () => {
+            expect.hasAssertions();
 
             const { compareAiVsManual } = await import('../../ai-comparison.js');
             const records: AiComparisonRecord[] = [
@@ -152,7 +157,8 @@ describe('Integration: AI Comparison Dashboard (FT-24)', () => {
             expect(result.aiAdvantage).toBe('none');
         });
 
-        it('handles 100 records without error', async () => {expect.hasAssertions();
+        it('handles 100 records without error', async () => {
+            expect.hasAssertions();
 
             const { compareAiVsManual, generateAiComparisonHtml } = await import('../../ai-comparison.js');
             const records: AiComparisonRecord[] = [];
@@ -178,7 +184,8 @@ describe('Integration: AI Comparison Dashboard (FT-24)', () => {
     });
 
     describe('FT-24c: HTML structural validation', () => {
-        it('contains proper HTML structure', async () => {expect.hasAssertions();
+        it('contains proper HTML structure', async () => {
+            expect.hasAssertions();
 
             const { compareAiVsManual, generateAiComparisonHtml } = await import('../../ai-comparison.js');
             const records: AiComparisonRecord[] = [
@@ -204,14 +211,27 @@ describe('Integration: AI Comparison Dashboard (FT-24)', () => {
             const result = compareAiVsManual(records);
             const html = generateAiComparisonHtml(result);
 
-            const htmlParts = ['<!DOCTYPE html>', '<html', '</html>', '<head>', '</head>', '<body>', '</body>', '--color-surface-page', 'prefers-color-scheme', 'data-component="metric-card"', 'data-component="badge"'];
+            const htmlParts = [
+                '<!DOCTYPE html>',
+                '<html',
+                '</html>',
+                '<head>',
+                '</head>',
+                '<body>',
+                '</body>',
+                '--color-surface-page',
+                'prefers-color-scheme',
+                'data-component="metric-card"',
+                'data-component="badge"',
+            ];
 
-            expect(htmlParts.every(p => html.includes(p))).toBeTruthy();
+            expect(htmlParts.every((p) => html.includes(p))).toBeTruthy();
         });
     });
 
     describe('FT-24d: null handling', () => {
-        it('handles null records without crashing', async () => {expect.hasAssertions();
+        it('handles null records without crashing', async () => {
+            expect.hasAssertions();
 
             const { compareAiVsManual } = await import('../../ai-comparison.js');
             const result = compareAiVsManual(null);
@@ -220,7 +240,8 @@ describe('Integration: AI Comparison Dashboard (FT-24)', () => {
             expect(result.manualTotal).toBe(0);
         });
 
-        it('handles undefined records without crashing', async () => {expect.hasAssertions();
+        it('handles undefined records without crashing', async () => {
+            expect.hasAssertions();
 
             const { compareAiVsManual } = await import('../../ai-comparison.js');
             const result = compareAiVsManual(undefined);
@@ -229,7 +250,8 @@ describe('Integration: AI Comparison Dashboard (FT-24)', () => {
             expect(result.manualTotal).toBe(0);
         });
 
-        it('handles null result in generateAiComparisonHtml without crashing', async () => {expect.hasAssertions();
+        it('handles null result in generateAiComparisonHtml without crashing', async () => {
+            expect.hasAssertions();
 
             const { generateAiComparisonHtml } = await import('../../ai-comparison.js');
             const html = generateAiComparisonHtml(null);
@@ -239,7 +261,8 @@ describe('Integration: AI Comparison Dashboard (FT-24)', () => {
     });
 
     describe('FT-24e: error fallback', () => {
-        it('returns error page when buildHtmlPage throws', async () => {expect.hasAssertions();
+        it('returns error page when buildHtmlPage throws', async () => {
+            expect.hasAssertions();
 
             const { compareAiVsManual, generateAiComparisonHtml } = await import('../../ai-comparison.js');
             const htmlFactory = await import('../../html-factory.js');

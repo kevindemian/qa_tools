@@ -224,7 +224,8 @@ describe('Prompt Input Filepath', () => {
     });
 
     describe('AskFilePath', () => {
-        it('falls back to prompt when no TTY', async () => {expect.hasAssertions();
+        it('falls back to prompt when no TTY', async () => {
+            expect.hasAssertions();
 
             mockReadlineQuestion.mockReturnValue('/some/path');
             const result = await askFilePath('File:');
@@ -246,7 +247,8 @@ describe('Prompt Input Filepath', () => {
             Object.defineProperty(process.stdout, 'isTTY', { value: undefined, configurable: true });
         });
 
-        it('resolves with user input', async () => {expect.hasAssertions();
+        it('resolves with user input', async () => {
+            expect.hasAssertions();
 
             const mockRl = _mockRl;
             mockRl.question.mockImplementation((_prompt: string, cb: (a: string) => void) => cb('user path'));
@@ -256,7 +258,8 @@ describe('Prompt Input Filepath', () => {
             expect(mockRl.close).toHaveBeenCalledWith();
         });
 
-        it('rejects on navigation command', async () => {expect.hasAssertions();
+        it('rejects on navigation command', async () => {
+            expect.hasAssertions();
 
             const mockRl = _mockRl;
             mockRl.question.mockImplementation((_prompt: string, cb: (a: string) => void) => cb('/back'));
@@ -265,7 +268,8 @@ describe('Prompt Input Filepath', () => {
             expect(mockRl.close).toHaveBeenCalledWith();
         });
 
-        it('rejects on SIGINT', async () => {expect.hasAssertions();
+        it('rejects on SIGINT', async () => {
+            expect.hasAssertions();
 
             const mockRl = _mockRl;
             mockRl.question.mockImplementation(() => {});
@@ -280,7 +284,8 @@ describe('Prompt Input Filepath', () => {
             expect(mockRl.close).toHaveBeenCalledWith();
         });
 
-        it('resolves with default when empty answer', async () => {expect.hasAssertions();
+        it('resolves with default when empty answer', async () => {
+            expect.hasAssertions();
 
             const mockRl = _mockRl;
             mockRl.question.mockImplementation((_prompt: string, cb: (a: string) => void) => cb(''));
@@ -290,7 +295,8 @@ describe('Prompt Input Filepath', () => {
             expect(mockRl.close).toHaveBeenCalledWith();
         });
 
-        it('resolves with empty string when no default and empty answer', async () => {expect.hasAssertions();
+        it('resolves with empty string when no default and empty answer', async () => {
+            expect.hasAssertions();
 
             const mockRl = _mockRl;
             mockRl.question.mockImplementation((_prompt: string, cb: (a: string) => void) => cb(''));
@@ -300,5 +306,4 @@ describe('Prompt Input Filepath', () => {
             expect(mockRl.close).toHaveBeenCalledWith();
         });
     });
-
 });

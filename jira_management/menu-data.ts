@@ -206,7 +206,7 @@ export function _configHint(key: string, ctx: { git_directory: string }): string
 export function buildMenuChoices(level: string, proj: string, ctx: { git_directory: string }): MenuChoice[] {
     const subMenuEntries = Object.entries(SUB_MENUS);
     const subMenuEntry = subMenuEntries.find(([k]) => k === level);
-    const items = level === 'main' ? CATEGORIES : subMenuEntry?.[1] ?? CATEGORIES;
+    const items = level === 'main' ? CATEGORIES : (subMenuEntry?.[1] ?? CATEGORIES);
     const choices: MenuChoice[] = [];
     for (const item of items) {
         if (item.section) {

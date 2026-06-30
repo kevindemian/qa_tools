@@ -41,7 +41,8 @@ describe('Test Execution Flow', () => {
     });
 
     describe('OfferTestExecutionAssociation', () => {
-        it('returns not associated when testKeys is empty', async () => {expect.hasAssertions();
+        it('returns not associated when testKeys is empty', async () => {
+            expect.hasAssertions();
 
             const c = createMockContext();
             const result = await offerTestExecutionAssociation(c, [], 'src');
@@ -49,7 +50,8 @@ describe('Test Execution Flow', () => {
             expect(result.associated).toBeFalsy();
         });
 
-        it('returns not associated when project_name is missing', async () => {expect.hasAssertions();
+        it('returns not associated when project_name is missing', async () => {
+            expect.hasAssertions();
 
             const c = createMockContext();
             c.ctx.project_name = '';
@@ -59,7 +61,8 @@ describe('Test Execution Flow', () => {
         });
 
         describe('Option 1 — create new', () => {
-            it('creates a Test Execution successfully', async () => {expect.hasAssertions();
+            it('creates a Test Execution successfully', async () => {
+                expect.hasAssertions();
 
                 vi.mocked(ask)
                     .mockResolvedValueOnce('1')
@@ -82,7 +85,8 @@ describe('Test Execution Flow', () => {
                 expect(c.pushHistory).toHaveBeenCalledWith('create-testexec', 'TEST-TE-1', 'ok');
             });
 
-            it('handles error during creation', async () => {expect.hasAssertions();
+            it('handles error during creation', async () => {
+                expect.hasAssertions();
 
                 vi.mocked(ask)
                     .mockResolvedValueOnce('1')
@@ -100,14 +104,17 @@ describe('Test Execution Flow', () => {
         });
 
         describe('Option 2 — use existing', () => {
-            it('uses TE from list by numeric index', async () => {expect.hasAssertions();
+            it('uses TE from list by numeric index', async () => {
+                expect.hasAssertions();
 
                 vi.mocked(ask).mockResolvedValueOnce('2').mockResolvedValueOnce('1');
                 const c = createMockContext();
                 c.linkManager = createMockLinkManager({
                     listTestExecutions: vi
                         .fn()
-                        .mockResolvedValue([{ key: 'TEST-TE-1', summary: 'TE 1', created: '2024-01-01', status: 'DONE' }]),
+                        .mockResolvedValue([
+                            { key: 'TEST-TE-1', summary: 'TE 1', created: '2024-01-01', status: 'DONE' },
+                        ]),
                     validateTestExecutionKey: vi.fn().mockResolvedValue(undefined),
                     getTestCaseSummaries: vi.fn(),
                 });
@@ -128,7 +135,8 @@ describe('Test Execution Flow', () => {
                 expect(c.pushHistory).toHaveBeenCalledWith('associate-testexec', 'TEST-TE-1 (1 testes)', 'ok');
             });
 
-            it('uses TE by manual key when list is empty', async () => {expect.hasAssertions();
+            it('uses TE by manual key when list is empty', async () => {
+                expect.hasAssertions();
 
                 vi.mocked(ask).mockResolvedValueOnce('2').mockResolvedValueOnce('TEST-TE-999');
                 const c = createMockContext();
@@ -149,7 +157,8 @@ describe('Test Execution Flow', () => {
                 expect(result.key).toBe('TEST-TE-999');
             });
 
-            it('returns not associated when user enters empty key with empty list', async () => {expect.hasAssertions();
+            it('returns not associated when user enters empty key with empty list', async () => {
+                expect.hasAssertions();
 
                 vi.mocked(ask).mockResolvedValueOnce('2').mockResolvedValueOnce('');
                 const c = createMockContext();
@@ -163,14 +172,17 @@ describe('Test Execution Flow', () => {
                 expect(result.associated).toBeFalsy();
             });
 
-            it('returns not associated when invalid index format entered for list', async () => {expect.hasAssertions();
+            it('returns not associated when invalid index format entered for list', async () => {
+                expect.hasAssertions();
 
                 vi.mocked(ask).mockResolvedValueOnce('2').mockResolvedValueOnce('garbage');
                 const c = createMockContext();
                 c.linkManager = createMockLinkManager({
                     listTestExecutions: vi
                         .fn()
-                        .mockResolvedValue([{ key: 'TEST-TE-1', summary: 'TE 1', created: '2024-01-01', status: 'DONE' }]),
+                        .mockResolvedValue([
+                            { key: 'TEST-TE-1', summary: 'TE 1', created: '2024-01-01', status: 'DONE' },
+                        ]),
                     validateTestExecutionKey: vi.fn(),
                     getTestCaseSummaries: vi.fn(),
                 });
@@ -179,7 +191,8 @@ describe('Test Execution Flow', () => {
                 expect(result.associated).toBeFalsy();
             });
 
-            it('validates key and retries on failure', async () => {expect.hasAssertions();
+            it('validates key and retries on failure', async () => {
+                expect.hasAssertions();
 
                 vi.mocked(ask)
                     .mockResolvedValueOnce('2')
@@ -190,7 +203,9 @@ describe('Test Execution Flow', () => {
                 c.linkManager = createMockLinkManager({
                     listTestExecutions: vi
                         .fn()
-                        .mockResolvedValue([{ key: 'TEST-TE-1', summary: 'TE 1', created: '2024-01-01', status: 'DONE' }]),
+                        .mockResolvedValue([
+                            { key: 'TEST-TE-1', summary: 'TE 1', created: '2024-01-01', status: 'DONE' },
+                        ]),
                     validateTestExecutionKey: vi
                         .fn()
                         .mockRejectedValueOnce(new Error('Invalid key'))
@@ -207,7 +222,8 @@ describe('Test Execution Flow', () => {
                 expect(result.key).toBe('TEST-TE-2');
             });
 
-            it('returns not associated when retry validation fails', async () => {expect.hasAssertions();
+            it('returns not associated when retry validation fails', async () => {
+                expect.hasAssertions();
 
                 vi.mocked(ask)
                     .mockResolvedValueOnce('2')
@@ -218,7 +234,9 @@ describe('Test Execution Flow', () => {
                 c.linkManager = createMockLinkManager({
                     listTestExecutions: vi
                         .fn()
-                        .mockResolvedValue([{ key: 'TEST-TE-1', summary: 'TE 1', created: '2024-01-01', status: 'DONE' }]),
+                        .mockResolvedValue([
+                            { key: 'TEST-TE-1', summary: 'TE 1', created: '2024-01-01', status: 'DONE' },
+                        ]),
                     validateTestExecutionKey: vi
                         .fn()
                         .mockRejectedValueOnce(new Error('Invalid key'))
@@ -231,14 +249,17 @@ describe('Test Execution Flow', () => {
                 expect(printError).toHaveBeenCalledWith(expect.any(String), expect.any(Error));
             });
 
-            it('returns not associated when retry canceled', async () => {expect.hasAssertions();
+            it('returns not associated when retry canceled', async () => {
+                expect.hasAssertions();
 
                 vi.mocked(ask).mockResolvedValueOnce('2').mockResolvedValueOnce('1').mockResolvedValueOnce('');
                 const c = createMockContext();
                 c.linkManager = createMockLinkManager({
                     listTestExecutions: vi
                         .fn()
-                        .mockResolvedValue([{ key: 'TEST-TE-1', summary: 'TE 1', created: '2024-01-01', status: 'DONE' }]),
+                        .mockResolvedValue([
+                            { key: 'TEST-TE-1', summary: 'TE 1', created: '2024-01-01', status: 'DONE' },
+                        ]),
                     validateTestExecutionKey: vi.fn().mockRejectedValue(new Error('Invalid')),
                     getTestCaseSummaries: vi.fn(),
                 });
@@ -247,7 +268,8 @@ describe('Test Execution Flow', () => {
                 expect(result.associated).toBeFalsy();
             });
 
-            it('handles listTestExecutions failure gracefully', async () => {expect.hasAssertions();
+            it('handles listTestExecutions failure gracefully', async () => {
+                expect.hasAssertions();
 
                 vi.mocked(ask).mockResolvedValueOnce('2').mockResolvedValueOnce('TEST-TE-1');
                 const c = createMockContext();
@@ -266,14 +288,17 @@ describe('Test Execution Flow', () => {
                 expect(result.key).toBe('TEST-TE-1');
             });
 
-            it('handles addTestsToExistingExecution error', async () => {expect.hasAssertions();
+            it('handles addTestsToExistingExecution error', async () => {
+                expect.hasAssertions();
 
                 vi.mocked(ask).mockResolvedValueOnce('2').mockResolvedValueOnce('1');
                 const c = createMockContext();
                 c.linkManager = createMockLinkManager({
                     listTestExecutions: vi
                         .fn()
-                        .mockResolvedValue([{ key: 'TEST-TE-1', summary: 'TE 1', created: '2024-01-01', status: 'DONE' }]),
+                        .mockResolvedValue([
+                            { key: 'TEST-TE-1', summary: 'TE 1', created: '2024-01-01', status: 'DONE' },
+                        ]),
                     validateTestExecutionKey: vi.fn().mockResolvedValue(undefined),
                     getTestCaseSummaries: vi.fn(),
                 });
@@ -289,7 +314,8 @@ describe('Test Execution Flow', () => {
         });
 
         describe('Option skip', () => {
-            it('returns not associated when user skips (empty choice)', async () => {expect.hasAssertions();
+            it('returns not associated when user skips (empty choice)', async () => {
+                expect.hasAssertions();
 
                 vi.mocked(ask).mockResolvedValueOnce('');
                 const c = createMockContext();
@@ -301,7 +327,8 @@ describe('Test Execution Flow', () => {
     });
 
     describe('ShowResults', () => {
-        it('shows summaries when getTestCaseSummaries succeeds', async () => {expect.hasAssertions();
+        it('shows summaries when getTestCaseSummaries succeeds', async () => {
+            expect.hasAssertions();
 
             const c = createMockContext();
             c.linkManager = createMockLinkManager({
@@ -315,7 +342,8 @@ describe('Test Execution Flow', () => {
             expect(c.linkManager['getTestCaseSummaries']).toHaveBeenCalledWith(['TEST-1', 'TEST-2']);
         });
 
-        it('shows keys when getTestCaseSummaries fails', async () => {expect.hasAssertions();
+        it('shows keys when getTestCaseSummaries fails', async () => {
+            expect.hasAssertions();
 
             const c = createMockContext();
             c.linkManager = createMockLinkManager({
@@ -328,7 +356,8 @@ describe('Test Execution Flow', () => {
             expect(prompt.info).toHaveBeenCalledWith(expect.any(String));
         });
 
-        it('includes TE association info when provided', async () => {expect.hasAssertions();
+        it('includes TE association info when provided', async () => {
+            expect.hasAssertions();
 
             const c = createMockContext();
             c.linkManager = createMockLinkManager({
@@ -346,7 +375,8 @@ describe('Test Execution Flow', () => {
             expect(prompt.info).toHaveBeenCalledWith(expect.any(String));
         });
 
-        it('omits TE info when not associated', async () => {expect.hasAssertions();
+        it('omits TE info when not associated', async () => {
+            expect.hasAssertions();
 
             const c = createMockContext();
             c.linkManager = createMockLinkManager({
@@ -359,7 +389,8 @@ describe('Test Execution Flow', () => {
             expect(prompt.info).toHaveBeenCalledWith(expect.any(String));
         });
 
-        it('limits summaries to 20 test keys', async () => {expect.hasAssertions();
+        it('limits summaries to 20 test keys', async () => {
+            expect.hasAssertions();
 
             const keys = Array.from({ length: 25 }, (_, i) => 'TEST-' + (i + 1));
             const c = createMockContext();
@@ -373,5 +404,4 @@ describe('Test Execution Flow', () => {
             expect(c.linkManager['getTestCaseSummaries']).toHaveBeenCalledWith(keys.slice(0, 20));
         });
     });
-
 });

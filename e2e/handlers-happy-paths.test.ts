@@ -131,8 +131,8 @@ describe('Handlers Happy Paths', () => {
             linkManagerXray: lmXray,
             csvResource: csv,
             ctx,
-            pushHistory: vi.fn<(...args: [string, string, string]) => void>((op: string, detail: string, status: string) =>
-                ctx.pushHistory(op, detail, status),
+            pushHistory: vi.fn<(...args: [string, string, string]) => void>(
+                (op: string, detail: string, status: string) => ctx.pushHistory(op, detail, status),
             ),
             printSessionSummary: vi.fn<(...args: []) => () => void>(),
             base_url: HOST,
@@ -146,7 +146,8 @@ describe('Handlers Happy Paths', () => {
     // case02 — List versions  (GET project + versions)
     // ──────────────────────────────────────────────
     describe('Case02 — list versions', () => {
-        it('happy path: project found, 2 versions returned', async () => {expect.hasAssertions();
+        it('happy path: project found, 2 versions returned', async () => {
+            expect.hasAssertions();
 
             const { api } = freshScope();
             api.get('/project/ECSPOL').reply(200, { id: '123' });
@@ -162,7 +163,8 @@ describe('Handlers Happy Paths', () => {
             expect(nock.isDone()).toBeTruthy();
         });
 
-        it('no versions found — empty array', async () => {expect.hasAssertions();
+        it('no versions found — empty array', async () => {
+            expect.hasAssertions();
 
             const { api } = freshScope();
             api.get('/project/ECSPOL').reply(200, { id: '123' });
@@ -176,7 +178,8 @@ describe('Handlers Happy Paths', () => {
             expect(nock.isDone()).toBeTruthy();
         });
 
-        it('project not found — returns early without pushHistory', async () => {expect.hasAssertions();
+        it('project not found — returns early without pushHistory', async () => {
+            expect.hasAssertions();
 
             const { api } = freshScope();
             api.get('/project/ECSPOL').reply(404);
@@ -193,7 +196,8 @@ describe('Handlers Happy Paths', () => {
     // case03 — Create version  (postJiraResource → POST /version)
     // ──────────────────────────────────────────────
     describe('Case03 — create version', () => {
-        it('happy path: creates version', async () => {expect.hasAssertions();
+        it('happy path: creates version', async () => {
+            expect.hasAssertions();
 
             const { api } = freshScope();
             // createVersion → getVersionId → getProjectId + getProjectVersions, then POST
@@ -210,7 +214,8 @@ describe('Handlers Happy Paths', () => {
             expect(nock.isDone()).toBeTruthy();
         });
 
-        it('empty name — returns early without history', async () => {expect.hasAssertions();
+        it('empty name — returns early without history', async () => {
+            expect.hasAssertions();
 
             getPrompt().ask.mockResolvedValueOnce('');
             const c = buildContext();
@@ -225,7 +230,8 @@ describe('Handlers Happy Paths', () => {
     // case04 — Assign fixVersion  (uses in-memory tasks + updateFixVersions)
     // ──────────────────────────────────────────────
     describe('Case04 — assign fixVersion', () => {
-        it('happy path with in-memory tasks: updateFixVersions for each', async () => {expect.hasAssertions();
+        it('happy path with in-memory tasks: updateFixVersions for each', async () => {
+            expect.hasAssertions();
 
             const { api } = freshScope();
             // Handler calls updateFixVersions per task (in a for loop)
@@ -256,7 +262,8 @@ describe('Handlers Happy Paths', () => {
     // case05 — Update package + release notes  (getReleaseTasks + PackageVersionManager)
     // ──────────────────────────────────────────────
     describe('Case05 — update package + release notes', () => {
-        it('happy path: fetches tasks, updates package.json and release notes', async () => {expect.hasAssertions();
+        it('happy path: fetches tasks, updates package.json and release notes', async () => {
+            expect.hasAssertions();
 
             const { api } = freshScope();
             api.get('/project/ECSPOL').reply(200, { id: '123' });
@@ -292,7 +299,8 @@ describe('Handlers Happy Paths', () => {
     // case06 — Check task status  (checkReleaseTasksStatus)
     // ──────────────────────────────────────────────
     describe('Case06 — check task status', () => {
-        it('happy path: all tasks done', async () => {expect.hasAssertions();
+        it('happy path: all tasks done', async () => {
+            expect.hasAssertions();
 
             const { api } = freshScope();
             api.get('/project/ECSPOL').reply(200, { id: '123' });
@@ -316,7 +324,8 @@ describe('Handlers Happy Paths', () => {
     // case07 — Close tasks  (getReleaseTasks + moveCardsToDone)
     // ──────────────────────────────────────────────
     describe('Case07 — close tasks', () => {
-        it('happy path: close 2 tasks from New → approve → use test case', async () => {expect.hasAssertions();
+        it('happy path: close 2 tasks from New → approve → use test case', async () => {
+            expect.hasAssertions();
 
             const { api } = freshScope();
             api.get('/project/ECSPOL').reply(200, { id: '123' });
@@ -359,7 +368,8 @@ describe('Handlers Happy Paths', () => {
             expect(nock.isDone()).toBeTruthy();
         });
 
-        it('no tasks found — returns early', async () => {expect.hasAssertions();
+        it('no tasks found — returns early', async () => {
+            expect.hasAssertions();
 
             const { api } = freshScope();
             api.get('/project/ECSPOL').reply(200, { id: '123' });
@@ -379,7 +389,8 @@ describe('Handlers Happy Paths', () => {
     // case08 — Publish version  (releaseVersion)
     // ──────────────────────────────────────────────
     describe('Case08 — publish version', () => {
-        it('happy path: releases version', async () => {expect.hasAssertions();
+        it('happy path: releases version', async () => {
+            expect.hasAssertions();
 
             const { api } = freshScope();
             // releaseVersion → getVersionId → getProjectId + getProjectVersions
@@ -410,7 +421,8 @@ describe('Handlers Happy Paths', () => {
     // case09 — Switch project  (local — no HTTP)
     // ──────────────────────────────────────────────
     describe('Case09 — switch project', () => {
-        it('updates ctx.project_name and persists to state', async () => {expect.hasAssertions();
+        it('updates ctx.project_name and persists to state', async () => {
+            expect.hasAssertions();
 
             getPrompt().ask.mockResolvedValueOnce('NEWPROJ');
             const c = buildContext();
@@ -427,7 +439,8 @@ describe('Handlers Happy Paths', () => {
     // case10 — Change git directory  (local — no HTTP)
     // ──────────────────────────────────────────────
     describe('Case10 — change git directory', () => {
-        it('sets git directory and packageManager', async () => {expect.hasAssertions();
+        it('sets git directory and packageManager', async () => {
+            expect.hasAssertions();
 
             getPrompt().ask.mockResolvedValueOnce(tmpGitDir);
             const c = buildContext();
@@ -443,7 +456,8 @@ describe('Handlers Happy Paths', () => {
     // case11 — Generate CSV/JSON template  (local — copies file)
     // ──────────────────────────────────────────────
     describe('Case11 — generate CSV/JSON template', () => {
-        it('copies CSV template file to target path', async () => {expect.hasAssertions();
+        it('copies CSV template file to target path', async () => {
+            expect.hasAssertions();
 
             const dest = path.join(tmpHome, 'template.csv');
             getPrompt().ask.mockResolvedValueOnce('CSV').mockResolvedValueOnce(dest);
@@ -455,7 +469,8 @@ describe('Handlers Happy Paths', () => {
             expect(c.pushHistory).toHaveBeenCalledWith('gerar-template', 'CSV: ' + dest, 'ok');
         });
 
-        it('copies JSON template file to target path', async () => {expect.hasAssertions();
+        it('copies JSON template file to target path', async () => {
+            expect.hasAssertions();
 
             const dest = path.join(tmpHome, 'template.json');
             getPrompt().ask.mockResolvedValueOnce('JSON').mockResolvedValueOnce(dest);
@@ -472,7 +487,8 @@ describe('Handlers Happy Paths', () => {
     // case12 — Diagnose connection  (3 GET endpoints)
     // ──────────────────────────────────────────────
     describe('Case12 — diagnose connection', () => {
-        it('all 3 endpoints respond 200', async () => {expect.hasAssertions();
+        it('all 3 endpoints respond 200', async () => {
+            expect.hasAssertions();
 
             const { api, xray } = freshScope();
             api.get('/myself').reply(200, { displayName: 'Bot' });
@@ -486,7 +502,8 @@ describe('Handlers Happy Paths', () => {
             expect(nock.isDone()).toBeTruthy();
         });
 
-        it('one endpoint fails with 401', async () => {expect.hasAssertions();
+        it('one endpoint fails with 401', async () => {
+            expect.hasAssertions();
 
             const { api, xray } = freshScope();
             api.get('/myself').reply(200, { displayName: 'Bot' });
@@ -505,7 +522,8 @@ describe('Handlers Happy Paths', () => {
     // case13 — Create Test Execution  (uses in-memory tasks, helper → HTTP)
     // ──────────────────────────────────────────────
     describe('Case13 — create Test Execution', () => {
-        it('happy path with in-memory tasks', async () => {expect.hasAssertions();
+        it('happy path with in-memory tasks', async () => {
+            expect.hasAssertions();
 
             const { api } = freshScope();
             // createTestExecution → findExistingTe(GET /search), GET /issuetype, GET /field, POST /issue
@@ -556,7 +574,8 @@ describe('Handlers Happy Paths', () => {
     // case14 — Change Cypress directory  (local — no HTTP)
     // ──────────────────────────────────────────────
     describe('Case14 — change Cypress directory', () => {
-        it('sets cypress dir in state', async () => {expect.hasAssertions();
+        it('sets cypress dir in state', async () => {
+            expect.hasAssertions();
 
             getPrompt().ask.mockResolvedValueOnce('/tmp/cypress');
             const c = buildContext();
@@ -572,7 +591,8 @@ describe('Handlers Happy Paths', () => {
     // case15 — Import JSON tests  (createTestsFromJson + optional TE)
     // ──────────────────────────────────────────────
     describe('Case15 — import JSON tests', () => {
-        it('happy path: creates test from JSON then Test Execution', async () => {expect.hasAssertions();
+        it('happy path: creates test from JSON then Test Execution', async () => {
+            expect.hasAssertions();
 
             const { api, xray } = freshScope();
             // createTestsFromJson creates 1 test from JSON fixture:
@@ -629,7 +649,8 @@ describe('Handlers Happy Paths', () => {
     // case16 — Change JSON directory  (local — no HTTP)
     // ──────────────────────────────────────────────
     describe('Case16 — change JSON directory', () => {
-        it('sets json dir', async () => {expect.hasAssertions();
+        it('sets json dir', async () => {
+            expect.hasAssertions();
 
             getPrompt().ask.mockResolvedValueOnce('/tmp/json');
             const c = buildContext();
@@ -650,5 +671,4 @@ describe('Handlers Happy Paths', () => {
         const xray = nock(HOST).defaultReplyHeaders({ 'Content-Type': 'application/json' });
         return { api, xray };
     }
-
 });

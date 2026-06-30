@@ -36,7 +36,8 @@ const QualityGateResultArb: fc.Arbitrary<QualityGateResult> = fc.record({
 /* ── Properties — formatQualityGateJson ──────────────────────── */
 
 describe('FormatQualityGateJson — property-based', () => {
-    it('produces valid JSON and round-trips', () => {expect.hasAssertions();
+    it('produces valid JSON and round-trips', () => {
+        expect.hasAssertions();
 
         fc.assert(
             fc.property(QualityGateResultArb, (result) => {
@@ -54,7 +55,8 @@ describe('FormatQualityGateJson — property-based', () => {
 /* ── Properties — formatQualityGateText ──────────────────────── */
 
 describe('FormatQualityGateText — property-based', () => {
-    it('always contains Quality Gate header', () => {expect.hasAssertions();
+    it('always contains Quality Gate header', () => {
+        expect.hasAssertions();
 
         fc.assert(
             fc.property(QualityGateResultArb, (result) => {
@@ -66,25 +68,26 @@ describe('FormatQualityGateText — property-based', () => {
         );
     });
 
-    it('overall PASS/FAIL appears in output', () => {expect.hasAssertions();
+    it('overall PASS/FAIL appears in output', () => {
+        expect.hasAssertions();
 
         fc.assert(
             fc.property(QualityGateResultArb, (result) => {
                 const text = formatQualityGateText(result);
-                
+
                 expect(text).toContain(result.overall === 'pass' ? 'PASS' : 'FAIL');
             }),
             { numRuns: 100 },
         );
     });
 
-    it('lists all check names in output', () => {expect.hasAssertions();
+    it('lists all check names in output', () => {
+        expect.hasAssertions();
 
         fc.assert(
             fc.property(QualityGateResultArb, (result) => {
                 const text = formatQualityGateText(result);
                 for (const check of result.checks) {
-                    
                     expect(text).toContain(check.name);
                 }
             }),
@@ -92,13 +95,13 @@ describe('FormatQualityGateText — property-based', () => {
         );
     });
 
-    it('includes check score for each check', () => {expect.hasAssertions();
+    it('includes check score for each check', () => {
+        expect.hasAssertions();
 
         fc.assert(
             fc.property(QualityGateResultArb, (result) => {
                 const text = formatQualityGateText(result);
                 for (const check of result.checks) {
-                    
                     expect(text).toContain(String(check.score));
                 }
             }),
@@ -106,7 +109,8 @@ describe('FormatQualityGateText — property-based', () => {
         );
     });
 
-    it('score appears in output', () => {expect.hasAssertions();
+    it('score appears in output', () => {
+        expect.hasAssertions();
 
         fc.assert(
             fc.property(QualityGateResultArb, (result) => {

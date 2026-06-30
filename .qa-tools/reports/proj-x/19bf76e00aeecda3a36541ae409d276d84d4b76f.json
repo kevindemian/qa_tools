@@ -1,19 +1,19 @@
 {
-  "tests": [
-    {
-      "title": "test-0",
-      "state": "passed",
-      "duration": 100
-    },
-    {
-      "title": "test-1",
-      "state": "failed",
-      "duration": 101
-    },
-    {
-      "title": "test-2",
-      "state": "passed",
-      "duration": 102
-    }
-  ]
+    "tests": [
+        {
+            "title": "test-0",
+            "state": "passed",
+            "duration": 100
+        },
+        {
+            "title": "test-1",
+            "state": "failed",
+            "duration": 101
+        },
+        {
+            "title": "test-2",
+            "state": "passed",
+            "duration": 102
+        }
+    ]
 }

@@ -85,7 +85,8 @@ const CoverageResultArb = fc
     });
 
 describe('BuildTraceabilityMatrix — property-based', () => {
-    it('nodes.length equals totalEpics', () => {expect.hasAssertions();
+    it('nodes.length equals totalEpics', () => {
+        expect.hasAssertions();
 
         fc.assert(
             fc.property(MetricsStoreArb, CoverageResultArb, (metrics, coverage) => {
@@ -97,7 +98,8 @@ describe('BuildTraceabilityMatrix — property-based', () => {
         );
     });
 
-    it('overallCoverage is in [0, 100]', () => {expect.hasAssertions();
+    it('overallCoverage is in [0, 100]', () => {
+        expect.hasAssertions();
 
         fc.assert(
             fc.property(MetricsStoreArb, CoverageResultArb, (metrics, coverage) => {
@@ -110,7 +112,8 @@ describe('BuildTraceabilityMatrix — property-based', () => {
         );
     });
 
-    it('totalTests and totalEpics are non-negative', () => {expect.hasAssertions();
+    it('totalTests and totalEpics are non-negative', () => {
+        expect.hasAssertions();
 
         fc.assert(
             fc.property(MetricsStoreArb, CoverageResultArb, (metrics, coverage) => {
@@ -123,7 +126,8 @@ describe('BuildTraceabilityMatrix — property-based', () => {
         );
     });
 
-    it('each node has required fields', () => {expect.hasAssertions();
+    it('each node has required fields', () => {
+        expect.hasAssertions();
 
         fc.assert(
             fc.property(MetricsStoreArb, CoverageResultArb, (metrics, coverage) => {
@@ -142,7 +146,8 @@ describe('BuildTraceabilityMatrix — property-based', () => {
         );
     });
 
-    it('timestamp is valid ISO string', () => {expect.hasAssertions();
+    it('timestamp is valid ISO string', () => {
+        expect.hasAssertions();
 
         fc.assert(
             fc.property(MetricsStoreArb, CoverageResultArb, (metrics, coverage) => {
@@ -166,7 +171,8 @@ describe('BuildTraceabilityMatrix — property-based', () => {
 });
 
 describe('GenerateTraceabilityHtml — property-based', () => {
-    it('always produces valid HTML with DOCTYPE', () => {expect.hasAssertions();
+    it('always produces valid HTML with DOCTYPE', () => {
+        expect.hasAssertions();
 
         fc.assert(
             fc.property(MetricsStoreArb, CoverageResultArb, (metrics, coverage) => {

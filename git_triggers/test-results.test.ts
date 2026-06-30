@@ -120,7 +120,7 @@ let mod: TestResultsModule;
 
 describe('Test Results', () => {
     beforeAll(async () => {
-        mod = (await import('./test-results.js'));
+        mod = await import('./test-results.js');
     });
 
     beforeEach(() => {
@@ -177,7 +177,8 @@ describe('Test Results', () => {
     // ── downloadTestArtifacts ────────────────────────────────────────────────
 
     describe('DownloadTestArtifacts', () => {
-        it('returns parsed results when zip contains valid mochawesome.json', async () => {expect.hasAssertions();
+        it('returns parsed results when zip contains valid mochawesome.json', async () => {
+            expect.hasAssertions();
 
             mockListPipelineArtifacts.mockResolvedValue([{ id: 1, name: 'mochawesome-report' }]);
             mockDownloadArtifact.mockResolvedValue({ buffer: Buffer.from(''), filename: 'artifact.zip' });
@@ -202,7 +203,8 @@ describe('Test Results', () => {
             expect(mockParseTestResults).toHaveBeenCalledWith(expect.anything());
         });
 
-        it('returns parsed results when zip contains valid ctrf.json', async () => {expect.hasAssertions();
+        it('returns parsed results when zip contains valid ctrf.json', async () => {
+            expect.hasAssertions();
 
             mockListPipelineArtifacts.mockResolvedValue([{ id: 1, name: 'test-results' }]);
             mockDownloadArtifact.mockResolvedValue({ buffer: Buffer.from(''), filename: 'results.zip' });
@@ -242,7 +244,8 @@ describe('Test Results', () => {
             expect(mockParseTestResults).toHaveBeenCalledWith(expect.anything());
         });
 
-        it('returns null when no artifacts found in pipeline', async () => {expect.hasAssertions();
+        it('returns null when no artifacts found in pipeline', async () => {
+            expect.hasAssertions();
 
             mockListPipelineArtifacts.mockResolvedValue([]);
 
@@ -252,7 +255,8 @@ describe('Test Results', () => {
             expect(mockDownloadArtifact).not.toHaveBeenCalled();
         });
 
-        it('returns null when download fails', async () => {expect.hasAssertions();
+        it('returns null when download fails', async () => {
+            expect.hasAssertions();
 
             mockListPipelineArtifacts.mockResolvedValue([{ id: 1, name: 'artifact' }]);
             mockDownloadArtifact.mockRejectedValue(new Error('Download error'));
@@ -262,7 +266,8 @@ describe('Test Results', () => {
             expect(result).toBeNull();
         });
 
-        it('returns null when no result file (ctrf.json / mochawesome.json) found in zip', async () => {expect.hasAssertions();
+        it('returns null when no result file (ctrf.json / mochawesome.json) found in zip', async () => {
+            expect.hasAssertions();
 
             mockListPipelineArtifacts.mockResolvedValue([{ id: 1, name: 'mochawesome-report' }]);
             mockDownloadArtifact.mockResolvedValue({ buffer: Buffer.from(''), filename: 'artifact.zip' });
@@ -279,7 +284,8 @@ describe('Test Results', () => {
             expect(result).toBeNull();
         });
 
-        it('returns null when JSON parse fails', async () => {expect.hasAssertions();
+        it('returns null when JSON parse fails', async () => {
+            expect.hasAssertions();
 
             mockListPipelineArtifacts.mockResolvedValue([{ id: 1, name: 'mochawesome-report' }]);
             mockDownloadArtifact.mockResolvedValue({ buffer: Buffer.from(''), filename: 'artifact.zip' });
@@ -296,7 +302,8 @@ describe('Test Results', () => {
             expect(result).toBeNull();
         });
 
-        it('returns null when report has no tests', async () => {expect.hasAssertions();
+        it('returns null when report has no tests', async () => {
+            expect.hasAssertions();
 
             mockListPipelineArtifacts.mockResolvedValue([{ id: 1, name: 'mochawesome-report' }]);
             mockDownloadArtifact.mockResolvedValue({ buffer: Buffer.from(''), filename: 'artifact.zip' });
@@ -321,7 +328,8 @@ describe('Test Results', () => {
     // ── parseTestResults ─────────────────────────────────────────────────────
 
     describe('ParseTestResults', () => {
-        it('returns matched results with csvName when mapping is valid', async () => {expect.hasAssertions();
+        it('returns matched results with csvName when mapping is valid', async () => {
+            expect.hasAssertions();
 
             mockMatchResultsToTests.mockReturnValue({
                 matched: [{ key: 'TEST-1', title: 'test1', status: 'passed', duration: 100 }],
@@ -344,7 +352,8 @@ describe('Test Results', () => {
             expect(mockMatchResultsToTests).toHaveBeenCalledWith(expect.any(Array), expect.any(String));
         });
 
-        it('returns null when mapping path is empty', async () => {expect.hasAssertions();
+        it('returns null when mapping path is empty', async () => {
+            expect.hasAssertions();
 
             mockPrompt.mockResolvedValue('   ');
             const parsed: ParseResult = {
@@ -358,7 +367,8 @@ describe('Test Results', () => {
             expect(mockMatchResultsToTests).not.toHaveBeenCalled();
         });
 
-        it('resolves glob pattern in mapping path', async () => {expect.hasAssertions();
+        it('resolves glob pattern in mapping path', async () => {
+            expect.hasAssertions();
 
             mockMatchResultsToTests.mockReturnValue({
                 matched: [{ key: 'T1', title: 'test1', status: 'passed', duration: 0 }],
@@ -382,7 +392,8 @@ describe('Test Results', () => {
     // ── createTestExecution ─────────────────────────────────────────────────
 
     describe('CreateTestExecution', () => {
-        it('creates test execution and pushes success history', async () => {expect.hasAssertions();
+        it('creates test execution and pushes success history', async () => {
+            expect.hasAssertions();
 
             mockCreateTestExecutionFromResults.mockResolvedValue({
                 key: 'TE-123',
@@ -412,7 +423,8 @@ describe('Test Results', () => {
             expect(pushHistory).toHaveBeenCalledWith('resultados', expect.stringContaining('TE-123'), 'ok');
         });
 
-        it('handles error, pushes error history, and re-throws', async () => {expect.hasAssertions();
+        it('handles error, pushes error history, and re-throws', async () => {
+            expect.hasAssertions();
 
             mockCreateTestExecutionFromResults.mockRejectedValue(new Error('Creation failed'));
             const pushHistory = vi.fn();
@@ -439,7 +451,8 @@ describe('Test Results', () => {
     // ── collectTestResults ──────────────────────────────────────────────────
 
     describe('CollectTestResults', () => {
-        it('downloads, parses, and creates test execution on full success', async () => {expect.hasAssertions();
+        it('downloads, parses, and creates test execution on full success', async () => {
+            expect.hasAssertions();
 
             mockListPipelineArtifacts.mockResolvedValue([{ id: 1, name: 'mochawesome-report' }]);
             mockDownloadArtifact.mockResolvedValue({ buffer: Buffer.from(''), filename: 'artifact.zip' });
@@ -495,7 +508,8 @@ describe('Test Results', () => {
             expect(pushHistory).toHaveBeenCalledWith('resultados', expect.stringContaining('TE-123'), 'ok');
         });
 
-        it('returns early when downloadTestArtifacts returns null', async () => {expect.hasAssertions();
+        it('returns early when downloadTestArtifacts returns null', async () => {
+            expect.hasAssertions();
 
             mockListPipelineArtifacts.mockResolvedValue([]);
             const pushHistory = vi.fn();
@@ -520,7 +534,8 @@ describe('Test Results', () => {
             expect(pushHistory).not.toHaveBeenCalled();
         });
 
-        it('returns early when parseTestResults returns null', async () => {expect.hasAssertions();
+        it('returns early when parseTestResults returns null', async () => {
+            expect.hasAssertions();
 
             mockListPipelineArtifacts.mockResolvedValue([{ id: 1, name: 'mochawesome-report' }]);
             mockDownloadArtifact.mockResolvedValue({ buffer: Buffer.from(''), filename: 'artifact.zip' });
@@ -562,5 +577,4 @@ describe('Test Results', () => {
             expect(pushHistory).not.toHaveBeenCalled();
         });
     });
-
 });

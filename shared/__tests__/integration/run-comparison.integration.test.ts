@@ -49,7 +49,8 @@ describe('Run Comparison.Integration', () => {
 
     describe('Integration: Run Comparison (FT-39)', () => {
         describe('FT-39a: compareRuns data formatting', () => {
-            it('formats run summary with correct structure', async () => {expect.hasAssertions();
+            it('formats run summary with correct structure', async () => {
+                expect.hasAssertions();
 
                 mockLlmPrompt.mockResolvedValue('Improved pass rate from 80% to 90%');
 
@@ -68,7 +69,8 @@ describe('Run Comparison.Integration', () => {
                 expect(callArg.user).toContain('Date: 2026-01-01');
             });
 
-            it('includes run B date in formatted data', async () => {expect.hasAssertions();
+            it('includes run B date in formatted data', async () => {
+                expect.hasAssertions();
 
                 mockLlmPrompt.mockResolvedValue('analysis');
 
@@ -79,7 +81,8 @@ describe('Run Comparison.Integration', () => {
                 expect(callArg.user).toContain('Date: 2026-01-02');
             });
 
-            it('includes pass rate percentage in formatted data', async () => {expect.hasAssertions();
+            it('includes pass rate percentage in formatted data', async () => {
+                expect.hasAssertions();
 
                 mockLlmPrompt.mockResolvedValue('analysis');
 
@@ -93,7 +96,8 @@ describe('Run Comparison.Integration', () => {
                 expect(callArg.user).toContain('Pass rate: 90%');
             });
 
-            it('includes detailed metrics in formatted data', async () => {expect.hasAssertions();
+            it('includes detailed metrics in formatted data', async () => {
+                expect.hasAssertions();
 
                 mockLlmPrompt.mockResolvedValue('analysis');
 
@@ -108,7 +112,8 @@ describe('Run Comparison.Integration', () => {
         });
 
         describe('FT-39b: compareRuns null handling', () => {
-            it('returns early message when first run is null', async () => {expect.hasAssertions();
+            it('returns early message when first run is null', async () => {
+                expect.hasAssertions();
 
                 const result = await compareRuns(null, runB);
 
@@ -116,7 +121,8 @@ describe('Run Comparison.Integration', () => {
                 expect(mockLlmPrompt).not.toHaveBeenCalled();
             });
 
-            it('returns early message when second run is null', async () => {expect.hasAssertions();
+            it('returns early message when second run is null', async () => {
+                expect.hasAssertions();
 
                 const result = await compareRuns(runA, null);
 
@@ -124,7 +130,8 @@ describe('Run Comparison.Integration', () => {
                 expect(mockLlmPrompt).not.toHaveBeenCalled();
             });
 
-            it('returns early message when both runs are null', async () => {expect.hasAssertions();
+            it('returns early message when both runs are null', async () => {
+                expect.hasAssertions();
 
                 const result = await compareRuns(null, null);
 
@@ -134,7 +141,8 @@ describe('Run Comparison.Integration', () => {
         });
 
         describe('FT-39c: compareRuns error handling', () => {
-            it('returns empty string when LLM call fails', async () => {expect.hasAssertions();
+            it('returns empty string when LLM call fails', async () => {
+                expect.hasAssertions();
 
                 mockLlmPrompt.mockRejectedValue(new Error('API rate limit exceeded'));
 
@@ -143,7 +151,8 @@ describe('Run Comparison.Integration', () => {
                 expect(result).toBe('');
             });
 
-            it('handles empty run data without error', async () => {expect.hasAssertions();
+            it('handles empty run data without error', async () => {
+                expect.hasAssertions();
 
                 const empty: MetricsRun = {
                     timestamp: '2026-01-01T00:00:00.000Z',
@@ -164,7 +173,8 @@ describe('Run Comparison.Integration', () => {
         });
 
         describe('FT-39d: sanitization integration', () => {
-            it('sanitizes secrets from project name before LLM call', async () => {expect.hasAssertions();
+            it('sanitizes secrets from project name before LLM call', async () => {
+                expect.hasAssertions();
 
                 const secret = 'sk-12345678901234567890';
                 const runWithSecret = { ...runA, project: `proj-${secret}` };
@@ -179,7 +189,8 @@ describe('Run Comparison.Integration', () => {
                 expect(callArg.user).not.toContain(secret);
             });
 
-            it('passes sanitized string to LLM without modification', async () => {expect.hasAssertions();
+            it('passes sanitized string to LLM without modification', async () => {
+                expect.hasAssertions();
 
                 const { sanitizeForLlm } = await import('../../sanitize.js');
                 mockLlmPrompt.mockResolvedValue('sanitized analysis');
@@ -195,5 +206,4 @@ describe('Run Comparison.Integration', () => {
             });
         });
     });
-
 });

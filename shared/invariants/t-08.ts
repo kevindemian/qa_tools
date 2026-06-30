@@ -14,9 +14,9 @@ export const invariantResultMatchesAction: InvariantFn = (
         const steps = test.steps || [];
         const expected = test.expectedResult || '';
         const stepsText = steps.join(' ');
-        const createMatch = stepsText.match(/\b(create|register|add|new)\b/i);
-        const updateMatch = stepsText.match(/\b(update|edit|modify|change|save)\b/i);
-        const deleteMatch = stepsText.match(/\b(delete|remove|destroy|erase)\b/i);
+        const createMatch = /\b(create|register|add|new)\b/i.exec(stepsText);
+        const updateMatch = /\b(update|edit|modify|change|save)\b/i.exec(stepsText);
+        const deleteMatch = /\b(delete|remove|destroy|erase)\b/i.exec(stepsText);
         if (createMatch && !/\b(created|id|new|confirmation|success)\b/i.test(expected)) {
             mismatches.push({ testIndex: i, action: 'create', expected });
         } else if (updateMatch && !/\b(updated|changed|modified|success|confirmation)\b/i.test(expected)) {

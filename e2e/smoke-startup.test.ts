@@ -7,7 +7,8 @@ const ROOT = path.resolve(__dirname, '..');
 const STARTUP_TIMEOUT = 12000;
 
 describe('Smoke-startup', () => {
-    it('jira_management não crasha com JIRA/XRAY vars vazias', async () => {expect.hasAssertions();
+    it('jira_management não crasha com JIRA/XRAY vars vazias', async () => {
+        expect.hasAssertions();
 
         const child = spawn('npx', ['tsx', 'jira_management/main.ts'], {
             cwd: ROOT,
@@ -48,7 +49,8 @@ describe('Smoke-startup', () => {
         expect(output).not.toContain('Erro inesperado');
     }, 20000);
 
-    it('entry-menu não crasha com JIRA/XRAY vars vazias', async () => {expect.hasAssertions();
+    it('entry-menu não crasha com JIRA/XRAY vars vazias', async () => {
+        expect.hasAssertions();
 
         const child = spawn('npx', ['tsx', 'shared/entry-menu.ts'], {
             cwd: ROOT,

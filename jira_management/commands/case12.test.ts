@@ -50,14 +50,16 @@ describe('Case12', () => {
             expect(typeof case12.handler).toBe('function');
         });
 
-        it('executes without error with basic context', async () => {expect.hasAssertions();
+        it('executes without error with basic context', async () => {
+            expect.hasAssertions();
 
             const result = await case12.handler(mockContext);
 
             expect(result === undefined || typeof result === 'boolean').toBeTruthy();
         });
 
-        it('shows health score warning when metrics and endpoints both fail', async () => {expect.hasAssertions();
+        it('shows health score warning when metrics and endpoints both fail', async () => {
+            expect.hasAssertions();
 
             mockLoadMetrics.mockReturnValueOnce({ runs: [], coverageHistory: [] });
 
@@ -74,7 +76,8 @@ describe('Case12', () => {
             expect(mockPrint).toHaveBeenCalledWith(expect.any(String));
         });
 
-        it('shows health score ready when enough runs exist', async () => {expect.hasAssertions();
+        it('shows health score ready when enough runs exist', async () => {
+            expect.hasAssertions();
 
             const runs = Array.from({ length: 10 }, (_, i) => ({
                 timestamp: `2024-01-${String(i + 1).padStart(2, '0')}T10:00:00Z`,
@@ -109,7 +112,8 @@ describe('Case12', () => {
             expect(mockPaletteYellow).not.toHaveBeenCalledWith(expect.stringContaining('Dica: rode pipelines'));
         });
 
-        it('shows health score with runs but no coverage', async () => {expect.hasAssertions();
+        it('shows health score with runs but no coverage', async () => {
+            expect.hasAssertions();
 
             const runs = Array.from({ length: 10 }, (_, i) => ({
                 timestamp: `2024-01-${String(i + 1).padStart(2, '0')}T10:00:00Z`,
@@ -137,7 +141,8 @@ describe('Case12', () => {
             );
         });
 
-        it('shows health score with coverage but too few runs', async () => {expect.hasAssertions();
+        it('shows health score with coverage but too few runs', async () => {
+            expect.hasAssertions();
 
             mockLoadMetrics.mockReturnValueOnce({
                 runs: [
@@ -174,5 +179,4 @@ describe('Case12', () => {
             );
         });
     });
-
 });

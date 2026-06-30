@@ -123,5 +123,4 @@ describe('Circuit Breaker', () => {
             expect(getCircuitState(CFG_KEY)).toBe('CLOSED');
         });
     });
-
 });

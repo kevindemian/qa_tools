@@ -177,7 +177,8 @@ describe('CreateTestExecutionFromResults', () => {
         linkManager = new JiraLinkManager(linkJiraRes);
     });
 
-    it('creates TE with matched results and links', async () => {expect.hasAssertions();
+    it('creates TE with matched results and links', async () => {
+        expect.hasAssertions();
 
         jiraResource.getJiraResource.mockImplementation((url: string) => {
             if (url === 'issuetype') return Promise.resolve(MOCK_ISSUE_TYPES);
@@ -211,7 +212,8 @@ describe('CreateTestExecutionFromResults', () => {
         expect(postArg).toHaveProperty('fields.summary', expect.stringContaining('Results:'));
     });
 
-    it('skips linking for skipped tests', async () => {expect.hasAssertions();
+    it('skips linking for skipped tests', async () => {
+        expect.hasAssertions();
 
         jiraResource.getJiraResource.mockImplementation((url: string) => {
             if (url === 'issuetype') return Promise.resolve(MOCK_ISSUE_TYPES);
@@ -246,7 +248,8 @@ describe('CreateTestExecutionFromResults', () => {
         expect(nonNull(linkCalls[0])[1].outwardIssue.key).toBe('TEST-1');
     });
 
-    it('logs warning when createIssueLink throws, but execution is still created', async () => {expect.hasAssertions();
+    it('logs warning when createIssueLink throws, but execution is still created', async () => {
+        expect.hasAssertions();
 
         jiraResource.getJiraResource.mockImplementation((url: string) => {
             if (url === 'issuetype') return Promise.resolve(MOCK_ISSUE_TYPES);
@@ -270,7 +273,8 @@ describe('CreateTestExecutionFromResults', () => {
         expect(rootLogger['warn']).toHaveBeenCalledWith(expect.stringContaining('Falha ao linkar'));
     });
 
-    it('uses existingTeKey to add tests to existing TE instead of creating new', async () => {expect.hasAssertions();
+    it('uses existingTeKey to add tests to existing TE instead of creating new', async () => {
+        expect.hasAssertions();
 
         const teKey = 'EXEC-EXISTING-1';
         jiraResource.getJiraResource.mockImplementation((url: string) => {

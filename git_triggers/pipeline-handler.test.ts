@@ -150,16 +150,21 @@ describe('Pipeline Handler', () => {
     });
 
     describe('PollPipeline', () => {
-        it('returns completed status when pipeline finishes', async () => {expect.hasAssertions();
+        it('returns completed status when pipeline finishes', async () => {
+            expect.hasAssertions();
 
-            vi.spyOn(mockM, 'getPipeline').mockResolvedValue({ status: 'success', web_url: 'https://gitlab.com/pipe/1' });
+            vi.spyOn(mockM, 'getPipeline').mockResolvedValue({
+                status: 'success',
+                web_url: 'https://gitlab.com/pipe/1',
+            });
 
             const result = await pollPipeline(mockM, '1', 100, 10000);
 
             expect(result).toStrictEqual({ status: 'success', web_url: 'https://gitlab.com/pipe/1' });
         });
 
-        it('continues polling when pipeline returns null', async () => {expect.hasAssertions();
+        it('continues polling when pipeline returns null', async () => {
+            expect.hasAssertions();
 
             vi.spyOn(mockM, 'getPipeline')
                 .mockResolvedValueOnce(null)
@@ -170,7 +175,8 @@ describe('Pipeline Handler', () => {
             expect(result.status).toBe('success');
         });
 
-        it('returns timeout when pipeline does not complete', async () => {expect.hasAssertions();
+        it('returns timeout when pipeline does not complete', async () => {
+            expect.hasAssertions();
 
             vi.spyOn(mockM, 'getPipeline').mockResolvedValue({ status: 'running', web_url: '' });
 
@@ -179,7 +185,8 @@ describe('Pipeline Handler', () => {
             expect(result).toStrictEqual({ status: 'timeout', web_url: '' });
         });
 
-        it('handles missing status/state and web_url', async () => {expect.hasAssertions();
+        it('handles missing status/state and web_url', async () => {
+            expect.hasAssertions();
 
             let callCount = 0;
             vi.spyOn(mockM, 'getPipeline').mockImplementation(async () => {
@@ -195,7 +202,8 @@ describe('Pipeline Handler', () => {
     });
 
     describe('HandleTriggerPipeline', () => {
-        it('prompts for branch and triggers pipeline', async () => {expect.hasAssertions();
+        it('prompts for branch and triggers pipeline', async () => {
+            expect.hasAssertions();
 
             mockConfirm
                 .mockReturnValueOnce(false) // Adicionar variáveis?
@@ -212,7 +220,8 @@ describe('Pipeline Handler', () => {
             expect(mockSuccess).toHaveBeenCalledWith(expect.stringContaining('https://gitlab.com/pipe/42'));
         });
 
-        it('warns when branch not found', async () => {expect.hasAssertions();
+        it('warns when branch not found', async () => {
+            expect.hasAssertions();
 
             mockPrompt.mockReturnValue('unknown-branch');
             vi.spyOn(mockM, 'getBranch').mockResolvedValue(null);
@@ -220,10 +229,15 @@ describe('Pipeline Handler', () => {
             await handleTriggerPipeline(mockM, 'my-project');
 
             expect(mockWarn).toHaveBeenCalledWith(expect.stringContaining('não encontrada'));
-            expect(mockPushHistory).toHaveBeenCalledWith('pipeline', expect.stringContaining('branch-not-found'), 'error');
+            expect(mockPushHistory).toHaveBeenCalledWith(
+                'pipeline',
+                expect.stringContaining('branch-not-found'),
+                'error',
+            );
         });
 
-        it('handles trigger error', async () => {expect.hasAssertions();
+        it('handles trigger error', async () => {
+            expect.hasAssertions();
 
             mockConfirm
                 .mockReturnValueOnce(false) // Adicionar variáveis?
@@ -238,7 +252,8 @@ describe('Pipeline Handler', () => {
             expect(mockPushHistory).toHaveBeenCalledWith('pipeline', 'main', 'error');
         });
 
-        it('resumes pending pipeline when confirmed', async () => {expect.hasAssertions();
+        it('resumes pending pipeline when confirmed', async () => {
+            expect.hasAssertions();
 
             const mockLoad = vi.spyOn(stateModule, 'load');
             mockLoad.mockReturnValueOnce({
@@ -258,7 +273,8 @@ describe('Pipeline Handler', () => {
             expect(mockM.getPipeline).toHaveBeenCalledWith('99');
         });
 
-        it('resumes pending pipeline with failed status triggers quick-merge early return', async () => {expect.hasAssertions();
+        it('resumes pending pipeline with failed status triggers quick-merge early return', async () => {
+            expect.hasAssertions();
 
             const mockLoad = vi.spyOn(stateModule, 'load');
             mockLoad.mockReturnValueOnce({
@@ -279,7 +295,8 @@ describe('Pipeline Handler', () => {
             expect(mockPushHistory).not.toHaveBeenCalledWith(expect.stringContaining('quick-mr'));
         });
 
-        it('resumes pending pipeline with canceled status skips post-pipeline', async () => {expect.hasAssertions();
+        it('resumes pending pipeline with canceled status skips post-pipeline', async () => {
+            expect.hasAssertions();
 
             const mockLoad = vi.spyOn(stateModule, 'load');
             mockLoad.mockReturnValueOnce({
@@ -296,7 +313,8 @@ describe('Pipeline Handler', () => {
             expect(mockPrompt).not.toHaveBeenCalled();
         });
 
-        it('resumes pending pipeline with undefined branch', async () => {expect.hasAssertions();
+        it('resumes pending pipeline with undefined branch', async () => {
+            expect.hasAssertions();
 
             const mockLoad = vi.spyOn(stateModule, 'load');
             mockLoad.mockReturnValueOnce({
@@ -318,7 +336,8 @@ describe('Pipeline Handler', () => {
     });
 
     describe('HandleExportVariables', () => {
-        it('exports variables when confirmed', async () => {expect.hasAssertions();
+        it('exports variables when confirmed', async () => {
+            expect.hasAssertions();
 
             mockConfirm.mockReturnValue(true);
             vi.spyOn(mockM, 'getCICDVariables').mockResolvedValue([
@@ -332,7 +351,8 @@ describe('Pipeline Handler', () => {
             expect(mockPushHistory).toHaveBeenCalledWith('export-vars', '2 variáveis', 'ok');
         });
 
-        it('cancels when not confirmed', async () => {expect.hasAssertions();
+        it('cancels when not confirmed', async () => {
+            expect.hasAssertions();
 
             mockConfirm.mockReturnValue(false);
 
@@ -342,7 +362,8 @@ describe('Pipeline Handler', () => {
             expect(mockM.getCICDVariables).not.toHaveBeenCalled();
         });
 
-        it('handles fetch error', async () => {expect.hasAssertions();
+        it('handles fetch error', async () => {
+            expect.hasAssertions();
 
             mockConfirm.mockReturnValue(true);
             vi.spyOn(mockM, 'getCICDVariables').mockRejectedValue(new Error('fetch fail'));
@@ -353,7 +374,8 @@ describe('Pipeline Handler', () => {
             expect(mockPushHistory).toHaveBeenCalledWith('export-vars', 'erro', 'error');
         });
 
-        it('handles null variables', async () => {expect.hasAssertions();
+        it('handles null variables', async () => {
+            expect.hasAssertions();
 
             mockConfirm.mockReturnValue(true);
             vi.spyOn(mockM, 'getCICDVariables').mockResolvedValue(null);
@@ -363,7 +385,8 @@ describe('Pipeline Handler', () => {
             expect(mockSuccess).not.toHaveBeenCalledWith(expect.stringContaining('Variáveis exportadas'));
         });
 
-        it('handles empty variable value', async () => {expect.hasAssertions();
+        it('handles empty variable value', async () => {
+            expect.hasAssertions();
 
             mockConfirm.mockReturnValue(true);
             vi.spyOn(mockM, 'getCICDVariables').mockResolvedValue([
@@ -380,7 +403,8 @@ describe('Pipeline Handler', () => {
     // ---------- parseTestResults delegation ----------
 
     describe('ParseTestResults', () => {
-        it('delegates to test-results parseTestResults', async () => {expect.hasAssertions();
+        it('delegates to test-results parseTestResults', async () => {
+            expect.hasAssertions();
 
             const testResults = vi.mocked(testResultsModule);
             vi.spyOn(testResults, 'parseTestResults').mockResolvedValue({
@@ -396,7 +420,8 @@ describe('Pipeline Handler', () => {
             expect(result).toStrictEqual({ matched: [], unmatched: [], csvName: 'test' });
         });
 
-        it('returns null when delegate returns null', async () => {expect.hasAssertions();
+        it('returns null when delegate returns null', async () => {
+            expect.hasAssertions();
 
             const testResults = vi.mocked(testResultsModule);
             vi.spyOn(testResults, 'parseTestResults').mockResolvedValue(null);
@@ -412,7 +437,8 @@ describe('Pipeline Handler', () => {
     // ---------- createTestExecution delegation ----------
 
     describe('CreateTestExecution', () => {
-        it('delegates to test-results createTestExecution', async () => {expect.hasAssertions();
+        it('delegates to test-results createTestExecution', async () => {
+            expect.hasAssertions();
 
             const testResults = vi.mocked(testResultsModule);
             vi.spyOn(testResults, 'createTestExecution').mockResolvedValue(undefined);
@@ -440,7 +466,8 @@ describe('Pipeline Handler', () => {
     // ---------- downloadTestArtifacts delegation ----------
 
     describe('DownloadTestArtifacts', () => {
-        it('delegates to test-results downloadTestArtifacts', async () => {expect.hasAssertions();
+        it('delegates to test-results downloadTestArtifacts', async () => {
+            expect.hasAssertions();
 
             const testResults = vi.mocked(testResultsModule);
             vi.spyOn(testResults, 'downloadTestArtifacts').mockResolvedValue(null);
@@ -454,7 +481,8 @@ describe('Pipeline Handler', () => {
     // ---------- collectTestResults delegation ----------
 
     describe('CollectTestResults', () => {
-        it('delegates to test-results collectTestResults', async () => {expect.hasAssertions();
+        it('delegates to test-results collectTestResults', async () => {
+            expect.hasAssertions();
 
             const testResults = vi.mocked(testResultsModule);
             vi.spyOn(testResults, 'collectTestResults').mockResolvedValue(null);
@@ -473,7 +501,8 @@ describe('Pipeline Handler', () => {
     // ---------- buildPipelinePayload cancel ----------
 
     describe('BuildPipelinePayload cancel', () => {
-        it('cancels when user declines trigger confirmation', async () => {expect.hasAssertions();
+        it('cancels when user declines trigger confirmation', async () => {
+            expect.hasAssertions();
 
             mockPrompt.mockReturnValue('main');
             vi.spyOn(mockM, 'getBranch').mockResolvedValue({ name: 'main' });
@@ -511,7 +540,8 @@ describe('Pipeline Handler', () => {
             });
         });
 
-        it('completes full pipeline flow with bug creation and quick merge', async () => {expect.hasAssertions();
+        it('completes full pipeline flow with bug creation and quick merge', async () => {
+            expect.hasAssertions();
 
             mockConfirm
                 .mockReturnValueOnce(false) // Adicionar variáveis?
@@ -554,7 +584,8 @@ describe('Pipeline Handler', () => {
             expect(mockPushHistory).toHaveBeenCalledWith('quick-merge', '1', 'ok');
         });
 
-        it('handles bug creation error', async () => {expect.hasAssertions();
+        it('handles bug creation error', async () => {
+            expect.hasAssertions();
 
             const bugReport = vi.mocked(bugReportModule);
             vi.spyOn(bugReport, 'fileToJira').mockRejectedValue(new Error('Jira API error'));
@@ -591,7 +622,8 @@ describe('Pipeline Handler', () => {
             expect(mockPushHistory).toHaveBeenCalledWith('create-jira-issue', '42', 'error');
         });
 
-        it('handles quick merge creation error', async () => {expect.hasAssertions();
+        it('handles quick merge creation error', async () => {
+            expect.hasAssertions();
 
             vi.spyOn(mockM, 'createMergeRequest').mockRejectedValue(new Error('Merge create error'));
 
@@ -608,7 +640,8 @@ describe('Pipeline Handler', () => {
             expect(mockPushHistory).toHaveBeenCalledWith('quick-mr', 'main->main', 'error');
         });
 
-        it('handles merge acceptance error', async () => {expect.hasAssertions();
+        it('handles merge acceptance error', async () => {
+            expect.hasAssertions();
 
             vi.spyOn(mockM, 'createMergeRequest').mockResolvedValue({
                 web_url: 'https://gitlab.com/mr/1',
@@ -630,7 +663,8 @@ describe('Pipeline Handler', () => {
             expect(mockPushHistory).toHaveBeenCalledWith('quick-merge', '1', 'error');
         });
 
-        it('skips empty variable keys during payload build', async () => {expect.hasAssertions();
+        it('skips empty variable keys during payload build', async () => {
+            expect.hasAssertions();
 
             mockPrompt
                 .mockReturnValueOnce('main') // branch
@@ -651,7 +685,8 @@ describe('Pipeline Handler', () => {
             );
         });
 
-        it('skips bug creation when jira env is null', async () => {expect.hasAssertions();
+        it('skips bug creation when jira env is null', async () => {
+            expect.hasAssertions();
 
             const testResults = vi.mocked(testResultsModule);
             vi.spyOn(testResults, '_jiraEnv').mockReturnValueOnce(null);
@@ -677,7 +712,8 @@ describe('Pipeline Handler', () => {
             expect(bugReport.fileToJira).not.toHaveBeenCalled();
         });
 
-        it('triggers pipeline with canceled status skips post-pipeline', async () => {expect.hasAssertions();
+        it('triggers pipeline with canceled status skips post-pipeline', async () => {
+            expect.hasAssertions();
 
             vi.spyOn(mockM, 'getPipeline').mockResolvedValue({ status: 'canceled', web_url: '' });
             mockConfirm
@@ -690,7 +726,8 @@ describe('Pipeline Handler', () => {
             expect(mockInfo).toHaveBeenCalledWith(expect.stringContaining('✗'));
         });
 
-        it('handles pipelineResult being null from triggerPipeline', async () => {expect.hasAssertions();
+        it('handles pipelineResult being null from triggerPipeline', async () => {
+            expect.hasAssertions();
 
             vi.spyOn(mockM, 'triggerPipeline').mockResolvedValue(undefined);
             mockConfirm
@@ -704,7 +741,8 @@ describe('Pipeline Handler', () => {
             expect(setIsBusy).not.toHaveBeenCalled();
         });
 
-        it('creates merge request returning null', async () => {expect.hasAssertions();
+        it('creates merge request returning null', async () => {
+            expect.hasAssertions();
 
             vi.spyOn(mockM, 'createMergeRequest').mockResolvedValue(null);
             mockConfirm
@@ -725,7 +763,8 @@ describe('Pipeline Handler', () => {
             expect(mockM.acceptMergeRequest).not.toHaveBeenCalled();
         });
 
-        it('accepts merge returning null', async () => {expect.hasAssertions();
+        it('accepts merge returning null', async () => {
+            expect.hasAssertions();
 
             vi.spyOn(mockM, 'acceptMergeRequest').mockResolvedValue(null);
             mockConfirm
@@ -742,7 +781,8 @@ describe('Pipeline Handler', () => {
             expect(mockSuccess).not.toHaveBeenCalledWith(expect.stringContaining('Merge realizado'));
         });
 
-        it('declines merge when user says no to merge now', async () => {expect.hasAssertions();
+        it('declines merge when user says no to merge now', async () => {
+            expect.hasAssertions();
 
             mockConfirm
                 .mockReturnValueOnce(false) // Adicionar variáveis?
@@ -763,7 +803,8 @@ describe('Pipeline Handler', () => {
     // ---------- triggerPipeline with missing ID ----------
 
     describe('TriggerPipeline missing id', () => {
-        it('returns early when pipeline result has no id', async () => {expect.hasAssertions();
+        it('returns early when pipeline result has no id', async () => {
+            expect.hasAssertions();
 
             mockPrompt.mockReturnValue('main');
             vi.spyOn(mockM, 'getBranch').mockResolvedValue({ name: 'main' });
@@ -785,7 +826,8 @@ describe('Pipeline Handler', () => {
     // ---------- resume pipeline decline ----------
 
     describe('ResumePendingPipeline decline', () => {
-        it('deletes pending state when user declines resume', async () => {expect.hasAssertions();
+        it('deletes pending state when user declines resume', async () => {
+            expect.hasAssertions();
 
             const state = vi.mocked(stateModule);
             vi.spyOn(state, 'load').mockReturnValueOnce({
@@ -800,5 +842,4 @@ describe('Pipeline Handler', () => {
             expect(mockPrompt).toHaveBeenCalledWith('Branch para disparar pipeline');
         });
     });
-
 });

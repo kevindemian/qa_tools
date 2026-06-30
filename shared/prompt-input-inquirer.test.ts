@@ -104,7 +104,8 @@ describe('Prompt Input Inquirer', () => {
     });
 
     describe('SmartPrompt', () => {
-        it('returns value on first try', async () => {expect.hasAssertions();
+        it('returns value on first try', async () => {
+            expect.hasAssertions();
 
             mockReadlineQuestion.mockReturnValue('my value');
             const result = await smartPrompt('Label');
@@ -112,7 +113,8 @@ describe('Prompt Input Inquirer', () => {
             expect(result).toBe('my value');
         });
 
-        it('triggers help callback on /help', async () => {expect.hasAssertions();
+        it('triggers help callback on /help', async () => {
+            expect.hasAssertions();
 
             mockReadlineQuestion.mockReturnValueOnce('/help').mockReturnValueOnce('value');
             const helpCb = vi.fn();
@@ -122,14 +124,16 @@ describe('Prompt Input Inquirer', () => {
             expect(helpCb).toHaveBeenCalledWith();
         });
 
-        it('throws CancelError on navigation', async () => {expect.hasAssertions();
+        it('throws CancelError on navigation', async () => {
+            expect.hasAssertions();
 
             mockReadlineQuestion.mockReturnValue('/back');
 
             await expect(smartPrompt('Label')).rejects.toThrow(CancelError);
         });
 
-        it('handles CancelError with /help from ask', async () => {expect.hasAssertions();
+        it('handles CancelError with /help from ask', async () => {
+            expect.hasAssertions();
 
             mockReadlineQuestion.mockReturnValueOnce('/help').mockReturnValueOnce('ok');
             const helpCb = vi.fn();
@@ -138,7 +142,8 @@ describe('Prompt Input Inquirer', () => {
             expect(result).toBe('ok');
         });
 
-        it('warns on max retries exceeded', async () => {expect.hasAssertions();
+        it('warns on max retries exceeded', async () => {
+            expect.hasAssertions();
 
             mockReadlineQuestion.mockReturnValue('');
             const result = await smartPrompt('Label', { maxRetries: 2 });
@@ -147,7 +152,8 @@ describe('Prompt Input Inquirer', () => {
             expect(mockWarn).toHaveBeenCalledWith(expect.stringContaining('máximo'));
         });
 
-        it('returns default after retries when readlineSync throws (TTY unavailable)', async () => {expect.hasAssertions();
+        it('returns default after retries when readlineSync throws (TTY unavailable)', async () => {
+            expect.hasAssertions();
 
             mockReadlineQuestion.mockImplementation(() => {
                 throw new Error('readline error');
@@ -157,7 +163,8 @@ describe('Prompt Input Inquirer', () => {
             expect(result).toBe('fallback');
         });
 
-        it('continues on /help CancelError without callback', async () => {expect.hasAssertions();
+        it('continues on /help CancelError without callback', async () => {
+            expect.hasAssertions();
 
             mockReadlineQuestion.mockReturnValueOnce('/help').mockReturnValueOnce('ok');
             const result = await smartPrompt('Label');
@@ -167,7 +174,8 @@ describe('Prompt Input Inquirer', () => {
     });
 
     describe('Ask', () => {
-        it('returns prompt result when no TTY', async () => {expect.hasAssertions();
+        it('returns prompt result when no TTY', async () => {
+            expect.hasAssertions();
 
             mockReadlineQuestion.mockReturnValue('user input');
             const result = await ask('Label');
@@ -175,14 +183,16 @@ describe('Prompt Input Inquirer', () => {
             expect(result).toBe('user input');
         });
 
-        it('throws CancelError on navigation command', async () => {expect.hasAssertions();
+        it('throws CancelError on navigation command', async () => {
+            expect.hasAssertions();
 
             mockReadlineQuestion.mockReturnValue('/back');
 
             await expect(ask('Label')).rejects.toThrow('/back');
         });
 
-        it('falls back to prompt when no inquirer mod', async () => {expect.hasAssertions();
+        it('falls back to prompt when no inquirer mod', async () => {
+            expect.hasAssertions();
 
             mockReadlineQuestion.mockReturnValue('fallback');
             const result = await ask('Label');
@@ -190,7 +200,8 @@ describe('Prompt Input Inquirer', () => {
             expect(result).toBe('fallback');
         });
 
-        it('works with injected input mod', async () => {expect.hasAssertions();
+        it('works with injected input mod', async () => {
+            expect.hasAssertions();
 
             __setInputMod({ default: vi.fn().mockResolvedValue('injected') });
             mockReadlineQuestion.mockReturnValue('fallback value');
@@ -199,7 +210,8 @@ describe('Prompt Input Inquirer', () => {
             expect(result).toBe('fallback value');
         });
 
-        it('throws CancelError on navigation command in fallback', async () => {expect.hasAssertions();
+        it('throws CancelError on navigation command in fallback', async () => {
+            expect.hasAssertions();
 
             mockReadlineQuestion.mockReturnValue('/back');
 
@@ -216,7 +228,8 @@ describe('Prompt Input Inquirer', () => {
             Object.defineProperty(process.stdout, 'isTTY', { value: undefined, configurable: true });
         });
 
-        it('returns inquirer result when mod injected and TTY', async () => {expect.hasAssertions();
+        it('returns inquirer result when mod injected and TTY', async () => {
+            expect.hasAssertions();
 
             const mockMod = vi.fn().mockResolvedValue('inquirer answer');
             __setInputMod({ default: mockMod });
@@ -226,7 +239,8 @@ describe('Prompt Input Inquirer', () => {
             expect(mockMod).toHaveBeenCalledWith(expect.objectContaining({ message: 'Label' }));
         });
 
-        it('falls through to prompt when navigation command from inquirer', async () => {expect.hasAssertions();
+        it('falls through to prompt when navigation command from inquirer', async () => {
+            expect.hasAssertions();
 
             const mockMod = vi.fn().mockResolvedValue('/back');
             __setInputMod({ default: mockMod });
@@ -236,7 +250,8 @@ describe('Prompt Input Inquirer', () => {
             expect(result).toBe('backup result');
         });
 
-        it('falls back to prompt when inquirer throws', async () => {expect.hasAssertions();
+        it('falls back to prompt when inquirer throws', async () => {
+            expect.hasAssertions();
 
             const mockMod = vi.fn().mockRejectedValue(new Error('inquirer error'));
             __setInputMod({ default: mockMod });
@@ -246,7 +261,8 @@ describe('Prompt Input Inquirer', () => {
             expect(result).toBe('fallback answer');
         });
 
-        it('uses prompt fallback when _inputMod is false (cached import failure)', async () => {expect.hasAssertions();
+        it('uses prompt fallback when _inputMod is false (cached import failure)', async () => {
+            expect.hasAssertions();
 
             __setInputMod(false);
             mockReadlineQuestion.mockReturnValue('fallback');
@@ -255,7 +271,8 @@ describe('Prompt Input Inquirer', () => {
             expect(result).toBe('fallback');
         });
 
-        it('calls theme.answer and theme.message via inquirer input mod', async () => {expect.hasAssertions();
+        it('calls theme.answer and theme.message via inquirer input mod', async () => {
+            expect.hasAssertions();
 
             const mockMod = vi
                 .fn()
@@ -274,7 +291,8 @@ describe('Prompt Input Inquirer', () => {
     });
 
     describe('AskConfirm', () => {
-        it('returns confirm result when no TTY', async () => {expect.hasAssertions();
+        it('returns confirm result when no TTY', async () => {
+            expect.hasAssertions();
 
             mockReadlineQuestion.mockReturnValue('s');
             const result = await askConfirm('Confirm?');
@@ -282,7 +300,8 @@ describe('Prompt Input Inquirer', () => {
             expect(result).toBeTruthy();
         });
 
-        it('returns false for no response', async () => {expect.hasAssertions();
+        it('returns false for no response', async () => {
+            expect.hasAssertions();
 
             mockReadlineQuestion.mockReturnValue('n');
             const result = await askConfirm('Confirm?');
@@ -290,7 +309,8 @@ describe('Prompt Input Inquirer', () => {
             expect(result).toBeFalsy();
         });
 
-        it('returns inquirer result when askConfirm mod injected and TTY', async () => {expect.hasAssertions();
+        it('returns inquirer result when askConfirm mod injected and TTY', async () => {
+            expect.hasAssertions();
 
             Object.defineProperty(process.stdout, 'isTTY', { value: true, configurable: true });
             const mockConfirmMod = vi.fn().mockResolvedValue(true);
@@ -303,7 +323,8 @@ describe('Prompt Input Inquirer', () => {
             Object.defineProperty(process.stdout, 'isTTY', { value: undefined, configurable: true });
         });
 
-        it('falls back to confirm when askConfirm inquirer throws', async () => {expect.hasAssertions();
+        it('falls back to confirm when askConfirm inquirer throws', async () => {
+            expect.hasAssertions();
 
             Object.defineProperty(process.stdout, 'isTTY', { value: true, configurable: true });
             const mockConfirmMod = vi.fn().mockRejectedValue(new Error('err'));
@@ -316,7 +337,8 @@ describe('Prompt Input Inquirer', () => {
             Object.defineProperty(process.stdout, 'isTTY', { value: undefined, configurable: true });
         });
 
-        it('uses confirm fallback when _confirmMod is false (cached import failure)', async () => {expect.hasAssertions();
+        it('uses confirm fallback when _confirmMod is false (cached import failure)', async () => {
+            expect.hasAssertions();
 
             Object.defineProperty(process.stdout, 'isTTY', { value: true, configurable: true });
             __setConfirmMod(false);
@@ -335,7 +357,8 @@ describe('Prompt Input Inquirer', () => {
             { name: 'Option 2', value: '2' },
         ];
 
-        it('returns selected value by number', async () => {expect.hasAssertions();
+        it('returns selected value by number', async () => {
+            expect.hasAssertions();
 
             mockReadlineQuestion.mockReturnValue('1');
             const result = await showSelect('Choose', choices);
@@ -343,7 +366,8 @@ describe('Prompt Input Inquirer', () => {
             expect(result).toBe('1');
         });
 
-        it('returns 0 for second choice by number', async () => {expect.hasAssertions();
+        it('returns 0 for second choice by number', async () => {
+            expect.hasAssertions();
 
             mockReadlineQuestion.mockReturnValue('2');
             const result = await showSelect('Choose', choices);
@@ -351,7 +375,8 @@ describe('Prompt Input Inquirer', () => {
             expect(result).toBe('2');
         });
 
-        it('handles choice by alias', async () => {expect.hasAssertions();
+        it('handles choice by alias', async () => {
+            expect.hasAssertions();
 
             mockReadlineQuestion.mockReturnValue('Option 1');
             const result = await showSelect('Choose', choices);
@@ -359,14 +384,16 @@ describe('Prompt Input Inquirer', () => {
             expect(result).toBe('Option 1');
         });
 
-        it('throws CancelError on navigation command', async () => {expect.hasAssertions();
+        it('throws CancelError on navigation command', async () => {
+            expect.hasAssertions();
 
             mockReadlineQuestion.mockReturnValue('/help');
 
             await expect(showSelect('Choose', choices)).rejects.toThrow('/help');
         });
 
-        it('returns 0 for exit choice', async () => {expect.hasAssertions();
+        it('returns 0 for exit choice', async () => {
+            expect.hasAssertions();
 
             mockReadlineQuestion.mockReturnValue('0');
             const result = await showSelect('Choose', choices);
@@ -374,7 +401,8 @@ describe('Prompt Input Inquirer', () => {
             expect(result).toBe('0');
         });
 
-        it('handles sections in fallback mode', async () => {expect.hasAssertions();
+        it('handles sections in fallback mode', async () => {
+            expect.hasAssertions();
 
             const sectionedChoices: SelectChoice[] = [
                 { type: 'separator' as const, line: 'Section 1' },
@@ -387,7 +415,8 @@ describe('Prompt Input Inquirer', () => {
             expect(result).toBe('a');
         });
 
-        it('shows description when provided', async () => {expect.hasAssertions();
+        it('shows description when provided', async () => {
+            expect.hasAssertions();
 
             mockReadlineQuestion.mockReturnValue('1');
             const result = await showSelect('Choose', [{ name: 'Option 1', value: '1', description: 'desc' }]);
@@ -395,7 +424,8 @@ describe('Prompt Input Inquirer', () => {
             expect(result).toBe('1');
         });
 
-        it('uses name as value when value not provided', async () => {expect.hasAssertions();
+        it('uses name as value when value not provided', async () => {
+            expect.hasAssertions();
 
             mockReadlineQuestion.mockReturnValue('1');
             const result = await showSelect('Choose', [{ name: 'Option A' }]);
@@ -403,7 +433,8 @@ describe('Prompt Input Inquirer', () => {
             expect(result).toBe('Option A');
         });
 
-        it('handles choices with no name resulting in empty rendered items', async () => {expect.hasAssertions();
+        it('handles choices with no name resulting in empty rendered items', async () => {
+            expect.hasAssertions();
 
             mockReadlineQuestion.mockReturnValue('0');
             const result = await showSelect('Choose', [{ value: 'a' }, { value: 'b' }]);
@@ -411,7 +442,8 @@ describe('Prompt Input Inquirer', () => {
             expect(result).toBe('0');
         });
 
-        it('returns default when empty answer and default provided', async () => {expect.hasAssertions();
+        it('returns default when empty answer and default provided', async () => {
+            expect.hasAssertions();
 
             mockReadlineQuestion.mockReturnValue('');
             const result = await showSelect('Choose', [{ name: 'A', value: 'a' }], { default: 'def' });
@@ -419,7 +451,8 @@ describe('Prompt Input Inquirer', () => {
             expect(result).toBe('def');
         });
 
-        it('returns 0 when empty answer and no default', async () => {expect.hasAssertions();
+        it('returns 0 when empty answer and no default', async () => {
+            expect.hasAssertions();
 
             mockReadlineQuestion.mockReturnValue('');
             const result = await showSelect('Choose', [{ name: 'A', value: 'a' }]);
@@ -429,7 +462,8 @@ describe('Prompt Input Inquirer', () => {
     });
 
     describe('ShowSelect with menuMode', () => {
-        it('forces fallback when menuMode is true', async () => {expect.hasAssertions();
+        it('forces fallback when menuMode is true', async () => {
+            expect.hasAssertions();
 
             mockReadlineQuestion.mockReturnValue('1');
             const result = await showSelect('Choose', [{ name: 'Item A', value: 'a' }], { menuMode: true });
@@ -437,7 +471,8 @@ describe('Prompt Input Inquirer', () => {
             expect(result).toBe('a');
         });
 
-        it('handles separator with empty line in fallback mode', async () => {expect.hasAssertions();
+        it('handles separator with empty line in fallback mode', async () => {
+            expect.hasAssertions();
 
             mockReadlineQuestion.mockReturnValue('1');
             const result = await showSelect('Choose', [
@@ -458,7 +493,8 @@ describe('Prompt Input Inquirer', () => {
             Object.defineProperty(process.stdout, 'isTTY', { value: undefined, configurable: true });
         });
 
-        it('returns inquirer result when mod injected and TTY', async () => {expect.hasAssertions();
+        it('returns inquirer result when mod injected and TTY', async () => {
+            expect.hasAssertions();
 
             const mockSelectMod = vi.fn().mockResolvedValue('selected');
             __setSelectMod({ default: mockSelectMod });
@@ -471,7 +507,8 @@ describe('Prompt Input Inquirer', () => {
             expect(mockSelectMod).toHaveBeenCalledWith(expect.objectContaining({ message: 'Choose' }));
         });
 
-        it('handles separator and no-name choices in TTY mode', async () => {expect.hasAssertions();
+        it('handles separator and no-name choices in TTY mode', async () => {
+            expect.hasAssertions();
 
             const mockSelectMod = vi.fn().mockResolvedValue('val');
             __setSelectMod({ default: mockSelectMod });
@@ -484,7 +521,8 @@ describe('Prompt Input Inquirer', () => {
             expect(result).toBe('val');
         });
 
-        it('returns __error__ when inquirer mod throws in TTY mode', async () => {expect.hasAssertions();
+        it('returns __error__ when inquirer mod throws in TTY mode', async () => {
+            expect.hasAssertions();
 
             const mockSelectMod = vi.fn().mockRejectedValue(new Error('select error'));
             __setSelectMod({ default: mockSelectMod });
@@ -493,7 +531,8 @@ describe('Prompt Input Inquirer', () => {
             expect(result).toBe('__error__');
         });
 
-        it('calls theme.renderSelected via inquirer select mod', async () => {expect.hasAssertions();
+        it('calls theme.renderSelected via inquirer select mod', async () => {
+            expect.hasAssertions();
 
             const mockSelectMod = vi
                 .fn()
@@ -507,16 +546,21 @@ describe('Prompt Input Inquirer', () => {
             expect(result).toBe('selected');
         });
 
-        it('handles separator without line property', async () => {expect.hasAssertions();
+        it('handles separator without line property', async () => {
+            expect.hasAssertions();
 
             const mockSelectMod = vi.fn().mockResolvedValue('val');
             __setSelectMod({ default: mockSelectMod });
-            const result = await showSelect('Choose', [{ type: 'separator' as const }, { name: 'Visible', value: 'val' }]);
+            const result = await showSelect('Choose', [
+                { type: 'separator' as const },
+                { name: 'Visible', value: 'val' },
+            ]);
 
             expect(result).toBe('val');
         });
 
-        it('handles choice without value in TTY mode', async () => {expect.hasAssertions();
+        it('handles choice without value in TTY mode', async () => {
+            expect.hasAssertions();
 
             const mockSelectMod = vi.fn().mockResolvedValue('Visible');
             __setSelectMod({ default: mockSelectMod });
@@ -527,7 +571,8 @@ describe('Prompt Input Inquirer', () => {
     });
 
     describe('ShowSelect fallback', () => {
-        it('returns slash command directly when not in NAV_CMDS', async () => {expect.hasAssertions();
+        it('returns slash command directly when not in NAV_CMDS', async () => {
+            expect.hasAssertions();
 
             mockReadlineQuestion.mockReturnValue('/custom-cmd');
             const result = await showSelect('Choose', [{ name: 'Item A', value: 'a' }]);
@@ -535,7 +580,8 @@ describe('Prompt Input Inquirer', () => {
             expect(result).toBe('/custom-cmd');
         });
 
-        it('handles choice with no name in fallback mode', async () => {expect.hasAssertions();
+        it('handles choice with no name in fallback mode', async () => {
+            expect.hasAssertions();
 
             mockReadlineQuestion.mockReturnValue('1');
             const result = await showSelect('Choose', [{ value: 'a' }, { name: 'Visible', value: 'v' }]);
@@ -543,5 +589,4 @@ describe('Prompt Input Inquirer', () => {
             expect(result).toBe('v');
         });
     });
-
 });

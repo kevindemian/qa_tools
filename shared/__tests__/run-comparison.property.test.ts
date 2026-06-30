@@ -41,7 +41,8 @@ describe('Run Comparison.Property', () => {
     });
 
     describe('CompareRuns PBT invariants', () => {
-        it('pass rate is always 0-100 regardless of input values', async () => {expect.hasAssertions();
+        it('pass rate is always 0-100 regardless of input values', async () => {
+            expect.hasAssertions();
 
             await fc.assert(
                 fc.asyncProperty(MetricsRunArb, MetricsRunArb, async (runA, runB) => {
@@ -53,7 +54,8 @@ describe('Run Comparison.Property', () => {
             );
         });
 
-        it('lLM prompt includes run summary with date, project, and metrics', async () => {expect.hasAssertions();
+        it('lLM prompt includes run summary with date, project, and metrics', async () => {
+            expect.hasAssertions();
 
             await fc.assert(
                 fc.asyncProperty(MetricsRunArb, MetricsRunArb, async (runA, runB) => {
@@ -72,7 +74,8 @@ describe('Run Comparison.Property', () => {
             );
         });
 
-        it('lLM prompt includes pass rate for both runs', async () => {expect.hasAssertions();
+        it('lLM prompt includes pass rate for both runs', async () => {
+            expect.hasAssertions();
 
             await fc.assert(
                 fc.asyncProperty(MetricsRunArb, MetricsRunArb, async (runA, runB) => {
@@ -96,7 +99,8 @@ describe('Run Comparison.Property', () => {
             );
         });
 
-        it('null run returns early message without calling LLM', async () => {expect.hasAssertions();
+        it('null run returns early message without calling LLM', async () => {
+            expect.hasAssertions();
 
             await fc.assert(
                 fc.asyncProperty(MetricsRunArb, async (runA) => {
@@ -109,7 +113,8 @@ describe('Run Comparison.Property', () => {
             );
         });
 
-        it('pass rate is 0 when all tests fail', async () => {expect.hasAssertions();
+        it('pass rate is 0 when all tests fail', async () => {
+            expect.hasAssertions();
 
             const failingRun: MetricsRun = {
                 timestamp: '2026-01-01T00:00:00.000Z',
@@ -132,7 +137,8 @@ describe('Run Comparison.Property', () => {
             expect(callArg.user).toContain('Pass rate: 0%');
         });
 
-        it('pass rate is 100 when all tests pass', async () => {expect.hasAssertions();
+        it('pass rate is 100 when all tests pass', async () => {
+            expect.hasAssertions();
 
             const passingRun: MetricsRun = {
                 timestamp: '2026-01-01T00:00:00.000Z',
@@ -155,7 +161,8 @@ describe('Run Comparison.Property', () => {
             expect(callArg.user).toContain('Pass rate: 100%');
         });
 
-        it('pass rate is 0 when no tests executed', async () => {expect.hasAssertions();
+        it('pass rate is 0 when no tests executed', async () => {
+            expect.hasAssertions();
 
             const noExecRun: MetricsRun = {
                 timestamp: '2026-01-01T00:00:00.000Z',
@@ -178,5 +185,4 @@ describe('Run Comparison.Property', () => {
             expect(callArg.user).toContain('Pass rate: 0%');
         });
     });
-
 });

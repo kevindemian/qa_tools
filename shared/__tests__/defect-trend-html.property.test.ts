@@ -49,7 +49,8 @@ describe('GenerateDefectTrendHtml — property-based', () => {
         vi.restoreAllMocks();
     });
 
-    it('always produces valid HTML', () => {expect.hasAssertions();
+    it('always produces valid HTML', () => {
+        expect.hasAssertions();
 
         fc.assert(
             fc.property(fc.array(classArb, { minLength: 0, maxLength: 10 }), (classes) => {
@@ -63,7 +64,8 @@ describe('GenerateDefectTrendHtml — property-based', () => {
         );
     });
 
-    it('contains all trend categories in output', () => {expect.hasAssertions();
+    it('contains all trend categories in output', () => {
+        expect.hasAssertions();
 
         fc.assert(
             fc.property(fc.array(classArb, { minLength: 1, maxLength: 10 }), (classes) => {
@@ -78,7 +80,8 @@ describe('GenerateDefectTrendHtml — property-based', () => {
         );
     });
 
-    it('contains all trend dates in output', () => {expect.hasAssertions();
+    it('contains all trend dates in output', () => {
+        expect.hasAssertions();
 
         fc.assert(
             fc.property(fc.array(classArb, { minLength: 1, maxLength: 10 }), (classes) => {
@@ -93,7 +96,8 @@ describe('GenerateDefectTrendHtml — property-based', () => {
         );
     });
 
-    it('shows no-data message when trends empty', () => {expect.hasAssertions();
+    it('shows no-data message when trends empty', () => {
+        expect.hasAssertions();
 
         fc.assert(
             fc.property(fc.array(classArb, { minLength: 0, maxLength: 0 }), (classes) => {

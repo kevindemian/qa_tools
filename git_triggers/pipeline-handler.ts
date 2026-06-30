@@ -188,8 +188,7 @@ async function resumePendingPipeline(
 ): Promise<string | null> {
     const savedState = loadState();
     const pending = savedState['pendingPipeline'] as
-        | { branch?: string; pipelineId?: string; projectName?: string }
-        | undefined;
+        { branch?: string; pipelineId?: string; projectName?: string } | undefined;
     if (!pending || pending.projectName !== projectName || !pending.pipelineId) return null;
 
     if (

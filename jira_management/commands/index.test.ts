@@ -35,7 +35,8 @@ describe('GetHandler', () => {
         expect(handler).toBeInstanceOf(Function);
     });
 
-    it('returns a handler for each known case', () => {expect.hasAssertions();
+    it('returns a handler for each known case', () => {
+        expect.hasAssertions();
 
         for (const num of KNOWN_CASES) {
             const h = getHandler(num);
@@ -60,7 +61,8 @@ describe('GetHandler', () => {
 describe('Handler contract (bidirectional)', () => {
     const caseDir = import.meta.dirname;
 
-    it('every registered handler has a corresponding file on disk', () => {expect.hasAssertions();
+    it('every registered handler has a corresponding file on disk', () => {
+        expect.hasAssertions();
 
         for (const num of KNOWN_CASES) {
             const filename = `case${String(num).padStart(2, '0')}.ts`;
@@ -70,18 +72,20 @@ describe('Handler contract (bidirectional)', () => {
         }
     });
 
-    it('every case file on disk has a corresponding registered handler', () => {expect.hasAssertions();
+    it('every case file on disk has a corresponding registered handler', () => {
+        expect.hasAssertions();
 
         const files = fs.readdirSync(caseDir).filter((f) => /^case\d+\.ts$/.test(f) && !f.endsWith('.test.ts'));
         for (const file of files) {
-            const rawNum = file.match(/^case(\d+)\.ts$/)?.[1] || '';
+            const rawNum = /^case(\d+)\.ts$/.exec(file)?.[1] ?? '';
             const handler = getHandler(rawNum) || getHandler(rawNum.replace(/^0+/, '') || '0');
 
             expect(handler).toBeInstanceOf(Function);
         }
     });
 
-    it('every handler module exports a handler function', async () => {expect.hasAssertions();
+    it('every handler module exports a handler function', async () => {
+        expect.hasAssertions();
 
         for (const num of KNOWN_CASES) {
             const padded = String(num).padStart(2, '0');

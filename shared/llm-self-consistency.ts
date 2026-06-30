@@ -35,10 +35,12 @@ function structuralHash(obj: unknown): string {
     if (typeof obj === 'object') {
         const keys = Object.keys(obj).sort((a, b) => a.localeCompare(b));
         const entries = Object.entries(obj);
-        return `o:{${keys.map((k) => {
-            const entry = entries.find(([ek]) => ek === k);
-            return `${k}:${structuralHash(entry ? entry[1] : undefined)}`;
-        }).join(',')}}`;
+        return `o:{${keys
+            .map((k) => {
+                const entry = entries.find(([ek]) => ek === k);
+                return `${k}:${structuralHash(entry ? entry[1] : undefined)}`;
+            })
+            .join(',')}}`;
     }
     if (typeof obj === 'bigint') return `big:${obj}`;
     if (typeof obj === 'symbol') return `sym:${obj.description ?? ''}`;
@@ -70,11 +72,14 @@ function levenshtein(a: string, b: string): number {
     for (let i = 1; i <= b.length; i++) {
         for (let j = 1; j <= cols; j++) {
             const cost = a[j - 1] === b[i - 1] ? 0 : 1;
-            matrix.set(cell(i, j), Math.min(
-                (matrix.get(cell(i - 1, j)) ?? 0) + 1,
-                (matrix.get(cell(i, j - 1)) ?? 0) + 1,
-                (matrix.get(cell(i - 1, j - 1)) ?? 0) + cost,
-            ));
+            matrix.set(
+                cell(i, j),
+                Math.min(
+                    (matrix.get(cell(i - 1, j)) ?? 0) + 1,
+                    (matrix.get(cell(i, j - 1)) ?? 0) + 1,
+                    (matrix.get(cell(i - 1, j - 1)) ?? 0) + cost,
+                ),
+            );
         }
     }
     return matrix.get(cell(b.length, a.length)) ?? 0;

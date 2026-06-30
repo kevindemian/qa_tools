@@ -173,7 +173,7 @@ function lexPipeTable(lines: string[]): InlineToken {
 // ─── Block-level handlers ───────────────────────────────────────────────────────
 
 function lexHeading(line: string): InlineToken | null {
-    const m = line.match(/^(#{1,6})\s+(.*)$/);
+    const m = /^(#{1,6})\s+(.*)$/.exec(line);
     if (!m) return null;
     return { type: 'heading', depth: (m[1] ?? '').length, tokens: lexInline(m[2] ?? '') };
 }
@@ -201,11 +201,11 @@ function lexBlockquote(lines: string[], i: number): { token: InlineToken; next: 
 }
 
 function lexUnorderedList(lines: string[], i: number): { token: InlineToken; next: number } | null {
-    const m = getLine(lines, i).match(/^(\s*)[-*+]\s+(.*)$/);
+    const m = /^(\s*)[-*+]\s+(.*)$/.exec(getLine(lines, i));
     if (!m) return null;
     const items: Array<{ tokens: InlineToken[] }> = [];
     while (i < lines.length) {
-        const m2 = getLine(lines, i).match(/^(\s*)[-*+]\s+(.*)$/);
+        const m2 = /^(\s*)[-*+]\s+(.*)$/.exec(getLine(lines, i));
         if (m2) {
             items.push({ tokens: lexInline(m2[2] ?? '') });
             i++;
@@ -219,11 +219,11 @@ function lexUnorderedList(lines: string[], i: number): { token: InlineToken; nex
 }
 
 function lexOrderedList(lines: string[], i: number): { token: InlineToken; next: number } | null {
-    const m = getLine(lines, i).match(/^\s*\d+\.\s+(.*)$/);
+    const m = /^\s*\d+\.\s+(.*)$/.exec(getLine(lines, i));
     if (!m) return null;
     const items: Array<{ tokens: InlineToken[] }> = [];
     while (i < lines.length) {
-        const m2 = getLine(lines, i).match(/^\s*\d+\.\s+(.*)$/);
+        const m2 = /^\s*\d+\.\s+(.*)$/.exec(getLine(lines, i));
         if (m2) {
             items.push({ tokens: lexInline(m2[1] ?? '') });
             i++;

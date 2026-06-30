@@ -36,7 +36,8 @@ describe('Jira Helper', () => {
     });
 
     describe('SafeJiraCall', () => {
-        it('calls fn, pushes ok history on success', async () => {expect.hasAssertions();
+        it('calls fn, pushes ok history on success', async () => {
+            expect.hasAssertions();
 
             const fn = vi.fn().mockResolvedValue(undefined);
             const ctx = makeCtx() as Parameters<typeof safeJiraCall>[0];
@@ -47,17 +48,15 @@ describe('Jira Helper', () => {
             expect(mockPushHistory).toHaveBeenCalledWith('test-op', 'v1', 'ok');
         });
 
-        it('logs error, pushes error history on failure', async () => {expect.hasAssertions();
+        it('logs error, pushes error history on failure', async () => {
+            expect.hasAssertions();
 
             const fn = vi.fn().mockRejectedValue(new Error('API error'));
             const ctx = makeCtx() as Parameters<typeof safeJiraCall>[0];
             const result = await safeJiraCall(ctx, 'test-op', 'v1', fn);
 
             expect(result).toBeFalsy();
-            expect(mockPrintError).toHaveBeenCalledWith(
-                expect.stringContaining('Erro ao'),
-                expect.anything(),
-            );
+            expect(mockPrintError).toHaveBeenCalledWith(expect.stringContaining('Erro ao'), expect.anything());
             expect(mockRootLoggerError).toHaveBeenCalledWith(
                 expect.stringContaining('Erro ao'),
                 expect.objectContaining({ detail: 'v1', project: 'TEST' }),
@@ -65,7 +64,8 @@ describe('Jira Helper', () => {
             expect(mockPushHistory).toHaveBeenCalledWith('test-op', 'v1', 'error');
         });
 
-        it('extracts HTTP status from error response', async () => {expect.hasAssertions();
+        it('extracts HTTP status from error response', async () => {
+            expect.hasAssertions();
 
             const fn = vi.fn().mockRejectedValue({ response: { status: 401 } });
             const ctx = makeCtx() as Parameters<typeof safeJiraCall>[0];
@@ -77,5 +77,4 @@ describe('Jira Helper', () => {
             );
         });
     });
-
 });

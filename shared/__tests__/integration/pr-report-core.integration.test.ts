@@ -120,7 +120,8 @@ describe('Pr Report Core.Integration', () => {
 
     describe('Integration: PR Report (FT-16)', () => {
         describe('FT-16a: generatePrReport with all-passing tests', () => {
-            it('returns health score and generates HTML file', async () => {expect.hasAssertions();
+            it('returns health score and generates HTML file', async () => {
+                expect.hasAssertions();
 
                 const { generatePrReport } = await import('../../pr-report-core.js');
                 const htmlPath = path.join(TEST_DIR, 'pr-report.html');
@@ -146,7 +147,8 @@ describe('Pr Report Core.Integration', () => {
                 expect(html).toContain('</html>');
             });
 
-            it('returns comment URL when posted', async () => {expect.hasAssertions();
+            it('returns comment URL when posted', async () => {
+                expect.hasAssertions();
 
                 const { generatePrReport } = await import('../../pr-report-core.js');
                 const htmlPath = path.join(TEST_DIR, 'pr-report.html');
@@ -164,7 +166,8 @@ describe('Pr Report Core.Integration', () => {
                 expect(result.commentUrl).toBe('https://github.com/mock/pull/1');
             });
 
-            it('persists run to metrics store', async () => {expect.hasAssertions();
+            it('persists run to metrics store', async () => {
+                expect.hasAssertions();
 
                 const { generatePrReport } = await import('../../pr-report-core.js');
                 const { loadMetrics } = await import('../../metrics.js');
@@ -193,7 +196,8 @@ describe('Pr Report Core.Integration', () => {
         });
 
         describe('FT-16b: generatePrReport with failures', () => {
-            it('includes lower pass rate with failures', async () => {expect.hasAssertions();
+            it('includes lower pass rate with failures', async () => {
+                expect.hasAssertions();
 
                 const { generatePrReport } = await import('../../pr-report-core.js');
                 const htmlPath = path.join(TEST_DIR, 'pr-report.html');
@@ -212,7 +216,8 @@ describe('Pr Report Core.Integration', () => {
                 expect(result.passRate).toBe(60);
             });
 
-            it('calculates health score reflecting failures', async () => {expect.hasAssertions();
+            it('calculates health score reflecting failures', async () => {
+                expect.hasAssertions();
 
                 const { generatePrReport } = await import('../../pr-report-core.js');
                 const htmlPath = path.join(TEST_DIR, 'pr-report.html');
@@ -235,7 +240,8 @@ describe('Pr Report Core.Integration', () => {
         });
 
         describe('FT-16c: generatePrReport with quality gate', () => {
-            it('creates check run when quality gate runs', async () => {expect.hasAssertions();
+            it('creates check run when quality gate runs', async () => {
+                expect.hasAssertions();
 
                 const { generatePrReport } = await import('../../pr-report-core.js');
                 const { createCheckRun } = await import('../../github-check-run.js');
@@ -259,7 +265,8 @@ describe('Pr Report Core.Integration', () => {
                 );
             });
 
-            it('posts quality gate check with pass/fail conclusion', async () => {expect.hasAssertions();
+            it('posts quality gate check with pass/fail conclusion', async () => {
+                expect.hasAssertions();
 
                 const { generatePrReport } = await import('../../pr-report-core.js');
                 const { createCheckRun } = await import('../../github-check-run.js');
@@ -285,7 +292,8 @@ describe('Pr Report Core.Integration', () => {
         });
 
         describe('FT-16d: CTRF parsing integration', () => {
-            it('parses real CTRF fixture into FlatTest array', async () => {expect.hasAssertions();
+            it('parses real CTRF fixture into FlatTest array', async () => {
+                expect.hasAssertions();
 
                 const ctrfPath = writeCtrfFixture(MIXED_TESTS);
                 const { parseTestResultsFile } = await import('../../result_parser.js');
@@ -303,7 +311,8 @@ describe('Pr Report Core.Integration', () => {
                 expect(failedTest?.error).toBe('AssertionError: expected 1 to equal 2');
             });
 
-            it('feeds parsed CTRF data into generatePrReport', async () => {expect.hasAssertions();
+            it('feeds parsed CTRF data into generatePrReport', async () => {
+                expect.hasAssertions();
 
                 const ctrfPath = writeCtrfFixture(PASSING_TESTS);
                 const { parseTestResultsFile } = await import('../../result_parser.js');
@@ -330,7 +339,8 @@ describe('Pr Report Core.Integration', () => {
         });
 
         describe('FT-16f: error handling in generatePrReport', () => {
-            it('logs warning and continues when createCheckRun fails', async () => {expect.hasAssertions();
+            it('logs warning and continues when createCheckRun fails', async () => {
+                expect.hasAssertions();
 
                 const { generatePrReport } = await import('../../pr-report-core.js');
                 const { createCheckRun } = await import('../../github-check-run.js');
@@ -349,11 +359,14 @@ describe('Pr Report Core.Integration', () => {
                     htmlOutputPath: htmlPath,
                 });
 
-                expect(vi.spyOn(rootLogger, 'warn')).toHaveBeenCalledWith(expect.stringContaining('createCheckRun error'));
+                expect(vi.spyOn(rootLogger, 'warn')).toHaveBeenCalledWith(
+                    expect.stringContaining('createCheckRun error'),
+                );
                 expect(result.healthScore).toBeDefined();
             });
 
-            it('logs error and returns result when generateHtmlReport throws', async () => {expect.hasAssertions();
+            it('logs error and returns result when generateHtmlReport throws', async () => {
+                expect.hasAssertions();
 
                 const { generatePrReport } = await import('../../pr-report-core.js');
                 const { generateHtmlReport } = await import('../../report-html.js');
@@ -383,7 +396,8 @@ describe('Pr Report Core.Integration', () => {
         });
 
         describe('FT-16e: computeDiffComparison integration', () => {
-            it('detects new failures between runs', async () => {expect.hasAssertions();
+            it('detects new failures between runs', async () => {
+                expect.hasAssertions();
 
                 const prev: FlatTest[] = [
                     { title: 'Login', state: 'passed', duration: 100 },
@@ -407,7 +421,8 @@ describe('Pr Report Core.Integration', () => {
                 expect(diff.newPasses).toHaveLength(0);
             });
 
-            it('returns undefined when identical', async () => {expect.hasAssertions();
+            it('returns undefined when identical', async () => {
+                expect.hasAssertions();
 
                 const tests: FlatTest[] = [
                     { title: 'T1', state: 'passed', duration: 100 },
@@ -421,7 +436,8 @@ describe('Pr Report Core.Integration', () => {
                 expect(diff).toBeUndefined();
             });
 
-            it('uses previous run from metrics store when previous exists', async () => {expect.hasAssertions();
+            it('uses previous run from metrics store when previous exists', async () => {
+                expect.hasAssertions();
 
                 const { generatePrReport } = await import('../../pr-report-core.js');
                 const { computeDiffComparison } = await import('../../pr-report-core.js');
@@ -460,5 +476,4 @@ describe('Pr Report Core.Integration', () => {
             });
         });
     });
-
 });

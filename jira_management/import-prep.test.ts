@@ -342,7 +342,8 @@ describe('ParseJsonTests', () => {
         vi.clearAllMocks();
     });
 
-    it('accepts ExpectedResult alias and warns once', async () => {expect.hasAssertions();
+    it('accepts ExpectedResult alias and warns once', async () => {
+        expect.hasAssertions();
 
         const jsonContent = JSON.stringify([
             {
@@ -371,7 +372,8 @@ describe('ParseJsonTests', () => {
         actualFs.unlinkSync(tmp);
     });
 
-    it('prefers canonical Expected Result over alias', async () => {expect.hasAssertions();
+    it('prefers canonical Expected Result over alias', async () => {
+        expect.hasAssertions();
 
         const jsonContent = JSON.stringify([
             {
@@ -390,7 +392,8 @@ describe('ParseJsonTests', () => {
         actualFs.unlinkSync(tmp);
     });
 
-    it('handles missing both Expected Result and ExpectedResult', async () => {expect.hasAssertions();
+    it('handles missing both Expected Result and ExpectedResult', async () => {
+        expect.hasAssertions();
 
         const jsonContent = JSON.stringify([
             {
@@ -428,7 +431,8 @@ describe('ShowPreview', () => {
         mockOpen.mockResolvedValue(true);
     });
 
-    it('prints title and generates MD files', async () => {expect.hasAssertions();
+    it('prints title and generates MD files', async () => {
+        expect.hasAssertions();
 
         await showPreview(tests, ['smoke'], 2, 1, mockOpen);
 
@@ -442,7 +446,8 @@ describe('ShowPreview', () => {
         expect(nonNull(calls[1])[0]).toContain('qa-preview.html');
     });
 
-    it('opens browser when available', async () => {expect.hasAssertions();
+    it('opens browser when available', async () => {
+        expect.hasAssertions();
 
         mockOpen.mockResolvedValue(true);
         await showPreview(tests, ['smoke'], 2, 1, mockOpen);
@@ -452,7 +457,8 @@ describe('ShowPreview', () => {
         expect(PROMPT.print).not.toHaveBeenCalled();
     });
 
-    it('falls back to terminal when browser unavailable', async () => {expect.hasAssertions();
+    it('falls back to terminal when browser unavailable', async () => {
+        expect.hasAssertions();
 
         mockOpen.mockResolvedValue(false);
         await showPreview(tests, ['smoke'], 2, 1, mockOpen);
@@ -463,7 +469,8 @@ describe('ShowPreview', () => {
         expect(PROMPT.info).toHaveBeenCalledWith(expect.stringContaining('Nao foi possivel abrir'));
     });
 
-    it('saves both .md and .html files', async () => {expect.hasAssertions();
+    it('saves both .md and .html files', async () => {
+        expect.hasAssertions();
 
         await showPreview(tests, ['smoke'], 2, 1, mockOpen);
 
@@ -525,7 +532,8 @@ describe('Csv -> preview pipeline (e2e)', async () => {
         loggerWarn.mockRestore();
     });
 
-    it('parses all-quirks CSV and renders preview with correct content', async () => {expect.hasAssertions();
+    it('parses all-quirks CSV and renders preview with correct content', async () => {
+        expect.hasAssertions();
 
         const tmp = '/tmp/csv-e2e-quirks.csv';
         fs.writeFileSync(tmp, buildFixtureCsv(), 'utf-8');
@@ -553,7 +561,8 @@ describe('Csv -> preview pipeline (e2e)', async () => {
         fs.unlinkSync(tmp);
     });
 
-    it('all-quirks CSV preview contains metadata and labels', async () => {expect.hasAssertions();
+    it('all-quirks CSV preview contains metadata and labels', async () => {
+        expect.hasAssertions();
 
         const tmp = '/tmp/csv-e2e-quirks-meta.csv';
         fs.writeFileSync(tmp, buildFixtureCsv(), 'utf-8');
@@ -577,7 +586,8 @@ describe('Csv -> preview pipeline (e2e)', async () => {
         fs.unlinkSync(tmp);
     });
 
-    it('golden-path CSV (LF, comma, correct header) produces clean preview without normalization warning', async () => {expect.hasAssertions();
+    it('golden-path CSV (LF, comma, correct header) produces clean preview without normalization warning', async () => {
+        expect.hasAssertions();
 
         loggerWarn.mockClear();
         const tmp = '/tmp/csv-e2e-golden.csv';
@@ -597,7 +607,8 @@ describe('Csv -> preview pipeline (e2e)', async () => {
         fs.unlinkSync(tmp);
     });
 
-    it('flat CSV (no Title:) yields 0 results with diagnostic warning', async () => {expect.hasAssertions();
+    it('flat CSV (no Title:) yields 0 results with diagnostic warning', async () => {
+        expect.hasAssertions();
 
         loggerWarn.mockClear();
         const tmp = '/tmp/csv-e2e-flat.csv';

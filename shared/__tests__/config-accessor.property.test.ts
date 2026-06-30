@@ -29,7 +29,8 @@ describe('Config Accessor.Property', () => {
     });
 
     describe('Config.get boolean coercion — property-based', () => {
-        it('aUTO_CONFIRM returns boolean for any env value', () => {expect.hasAssertions();
+        it('aUTO_CONFIRM returns boolean for any env value', () => {
+            expect.hasAssertions();
 
             fc.assert(
                 fc.property(fc.string({ minLength: 0, maxLength: 20 }), (val) => {
@@ -44,7 +45,8 @@ describe('Config Accessor.Property', () => {
     });
 
     describe('Config.get number coercion — property-based', () => {
-        it('lOG_MAX_SIZE returns number for any env value', () => {expect.hasAssertions();
+        it('lOG_MAX_SIZE returns number for any env value', () => {
+            expect.hasAssertions();
 
             fc.assert(
                 fc.property(fc.string({ minLength: 0, maxLength: 20 }), (val) => {
@@ -59,7 +61,8 @@ describe('Config Accessor.Property', () => {
     });
 
     describe('Config.get override precedence — property-based', () => {
-        it('override always beats env var', () => {expect.hasAssertions();
+        it('override always beats env var', () => {
+            expect.hasAssertions();
 
             fc.assert(
                 fc.property(
@@ -76,7 +79,8 @@ describe('Config Accessor.Property', () => {
             );
         });
 
-        it('config.create isolated instance does not affect default', () => {expect.hasAssertions();
+        it('config.create isolated instance does not affect default', () => {
+            expect.hasAssertions();
 
             fc.assert(
                 fc.property(fc.boolean(), (customVal) => {
@@ -98,7 +102,8 @@ describe('Config Accessor.Property', () => {
             process.env['OTHER_VAR'] = 'other';
         });
 
-        it('returns only env vars matching prefix', () => {expect.hasAssertions();
+        it('returns only env vars matching prefix', () => {
+            expect.hasAssertions();
 
             fc.assert(
                 fc.property(fc.boolean(), fc.boolean(), () => {
@@ -114,7 +119,8 @@ describe('Config Accessor.Property', () => {
     });
 
     describe('Config.validateRequiredEnv — property-based', () => {
-        it('does not throw when all required env vars are present', () => {expect.hasAssertions();
+        it('does not throw when all required env vars are present', () => {
+            expect.hasAssertions();
 
             fc.assert(
                 fc.property(
@@ -133,5 +139,4 @@ describe('Config Accessor.Property', () => {
             );
         });
     });
-
 });

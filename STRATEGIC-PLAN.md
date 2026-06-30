@@ -71,12 +71,13 @@ qa-quality-gate --json    # saída JSON para pipeline processar
 ```
 
 **Thresholds (configuráveis via env):**
-| Gate | Default | Justificativa |
-|---|---|---|
-| Pass rate | ≥ 80% | Abaixo = regressão sistêmica |
-| Flaky rate | ≤ 30% | Acima = resultados não confiáveis |
-| Coverage por Epic | ≥ 70% | Abaixo = Epic em risco |
-| Suite speed | ≤ 8s/teste | Acima = feedback loop degradado |
+
+| Gate              | Default    | Justificativa                     |
+| ----------------- | ---------- | --------------------------------- |
+| Pass rate         | ≥ 80%      | Abaixo = regressão sistêmica      |
+| Flaky rate        | ≤ 30%      | Acima = resultados não confiáveis |
+| Coverage por Epic | ≥ 70%      | Abaixo = Epic em risco            |
+| Suite speed       | ≤ 8s/teste | Acima = feedback loop degradado   |
 
 **Riscos:**
 
@@ -174,11 +175,12 @@ Pipeline falha
 **Status:** **Já wireado** em `batch-mode.ts`, `schedule-handler.ts`, `case19.ts`. Só precisa configurar.
 
 **Thresholds:**
-| Parâmetro | Default | Descrição |
-|---|---|---|
-| `QA_FLAKY_THRESHOLD` | 30% | Acima disso cria bug + quarantine |
-| `QA_FLAKY_STABLE_THRESHOLD` | 5% | Abaixo disso por 10 runs → re-enable |
-| `QA_FLAKY_AUTO_ACTIONS` | `true` | Auto-cria bugs Jira |
+
+| Parâmetro                   | Default | Descrição                            |
+| --------------------------- | ------- | ------------------------------------ |
+| `QA_FLAKY_THRESHOLD`        | 30%     | Acima disso cria bug + quarantine    |
+| `QA_FLAKY_STABLE_THRESHOLD` | 5%      | Abaixo disso por 10 runs → re-enable |
+| `QA_FLAKY_AUTO_ACTIONS`     | `true`  | Auto-cria bugs Jira                  |
 
 **O que wirear:**
 Apenas documentar os thresholds e garantir que `QA_FLAKY_AUTO_ACTIONS=true` está no `.env.example`.

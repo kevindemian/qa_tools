@@ -354,11 +354,13 @@ describe('Prompt', () => {
                 mockSingleBar.stop.mockClear();
             });
 
-            it('constructs SingleBar with format config', async () => {expect.hasAssertions();
+            it('constructs SingleBar with format config', async () => {
+                expect.hasAssertions();
 
                 const bar = new prompt.ProgressBar(100, { width: 30 });
 
                 expect(bar).toBeDefined();
+
                 const cliProgressMod = await import('cli-progress');
 
                 expect(vi.spyOn(cliProgressMod, 'SingleBar')).toHaveBeenCalledWith(
@@ -393,7 +395,8 @@ describe('Prompt', () => {
             promptModule.__setOraDep(null);
         });
 
-        it('executes fn and returns result when QUIET=true', async () => {expect.hasAssertions();
+        it('executes fn and returns result when QUIET=true', async () => {
+            expect.hasAssertions();
 
             prompt.__setConfig(Config.create({ quiet: true }));
             const result = await prompt.withSpinner('label', () => Promise.resolve(42));
@@ -401,14 +404,16 @@ describe('Prompt', () => {
             expect(result).toBe(42);
         });
 
-        it('executes fn and returns result when QUIET=false', async () => {expect.hasAssertions();
+        it('executes fn and returns result when QUIET=false', async () => {
+            expect.hasAssertions();
 
             const result = await prompt.withSpinner('label', () => Promise.resolve('ok'));
 
             expect(result).toBe('ok');
         });
 
-        it('shows spinner when TTY mode', async () => {expect.hasAssertions();
+        it('shows spinner when TTY mode', async () => {
+            expect.hasAssertions();
 
             process.stdout.isTTY = true;
             const result = await prompt.withSpinner('loading...', () => Promise.resolve('done'));
@@ -540,7 +545,8 @@ describe('Prompt', () => {
             vi.restoreAllMocks();
         });
 
-        it('selects by number', async () => {expect.hasAssertions();
+        it('selects by number', async () => {
+            expect.hasAssertions();
 
             const spy = vi.spyOn(readlineSync, 'question').mockReturnValue('2');
             const result = await prompt.showSelect('Test', [
@@ -553,7 +559,8 @@ describe('Prompt', () => {
             expect(spy).toHaveBeenCalledTimes(1);
         });
 
-        it('handles separator', async () => {expect.hasAssertions();
+        it('handles separator', async () => {
+            expect.hasAssertions();
 
             const spy = vi.spyOn(readlineSync, 'question').mockReturnValue('2');
             const result = await prompt.showSelect('With sep', [
@@ -566,7 +573,8 @@ describe('Prompt', () => {
             expect(spy).toHaveBeenCalledTimes(1);
         });
 
-        it('returns "0" for empty input', async () => {expect.hasAssertions();
+        it('returns "0" for empty input', async () => {
+            expect.hasAssertions();
 
             vi.spyOn(readlineSync, 'question').mockReturnValue('');
             const result = await prompt.showSelect('Test', [
@@ -577,7 +585,8 @@ describe('Prompt', () => {
             expect(result).toBe('0');
         });
 
-        it('returns selected value for numeric input', async () => {expect.hasAssertions();
+        it('returns selected value for numeric input', async () => {
+            expect.hasAssertions();
 
             vi.spyOn(readlineSync, 'question').mockReturnValue('1');
             const result = await prompt.showSelect('Test', [
@@ -588,7 +597,8 @@ describe('Prompt', () => {
             expect(result).toBe('1v');
         });
 
-        it('returns value from name when value is missing', async () => {expect.hasAssertions();
+        it('returns value from name when value is missing', async () => {
+            expect.hasAssertions();
 
             vi.spyOn(readlineSync, 'question').mockReturnValue('1');
             const result = await prompt.showSelect('Test', [{ name: 'Alpha' }, { name: 'Beta' }]);
@@ -596,7 +606,8 @@ describe('Prompt', () => {
             expect(result).toBe('Alpha');
         });
 
-        it('returns "0" for zero input', async () => {expect.hasAssertions();
+        it('returns "0" for zero input', async () => {
+            expect.hasAssertions();
 
             vi.spyOn(readlineSync, 'question').mockReturnValue('0');
             const result = await prompt.showSelect('Test', [
@@ -607,7 +618,8 @@ describe('Prompt', () => {
             expect(result).toBe('0');
         });
 
-        it('returns raw value for non-numeric input', async () => {expect.hasAssertions();
+        it('returns raw value for non-numeric input', async () => {
+            expect.hasAssertions();
 
             vi.spyOn(readlineSync, 'question').mockReturnValue('criar');
             const result = await prompt.showSelect('Test', [{ name: '1', value: '1' }]);
@@ -657,7 +669,8 @@ describe('Prompt', () => {
             vi.restoreAllMocks();
         });
 
-        it('returns value on first attempt', async () => {expect.hasAssertions();
+        it('returns value on first attempt', async () => {
+            expect.hasAssertions();
 
             vi.spyOn(readlineSync, 'question').mockReturnValue('my-value');
             const result = await prompt.smartPrompt('Enter value');
@@ -665,7 +678,8 @@ describe('Prompt', () => {
             expect(result).toBe('my-value');
         });
 
-        it('calls helpCallback on /help and retries', async () => {expect.hasAssertions();
+        it('calls helpCallback on /help and retries', async () => {
+            expect.hasAssertions();
 
             const helpCb = vi.fn();
             vi.spyOn(readlineSync, 'question').mockReturnValueOnce('/help').mockReturnValueOnce('final-value');
@@ -675,7 +689,8 @@ describe('Prompt', () => {
             expect(result).toBe('final-value');
         });
 
-        it('returns empty string after max retries with empty input', async () => {expect.hasAssertions();
+        it('returns empty string after max retries with empty input', async () => {
+            expect.hasAssertions();
 
             vi.spyOn(readlineSync, 'question').mockReturnValue('');
             const result = await prompt.smartPrompt('Enter', { maxRetries: 2 });
@@ -683,28 +698,32 @@ describe('Prompt', () => {
             expect(result).toBe('');
         });
 
-        it('throws CancelError for /back navigation command', async () => {expect.hasAssertions();
+        it('throws CancelError for /back navigation command', async () => {
+            expect.hasAssertions();
 
             vi.spyOn(readlineSync, 'question').mockReturnValue('/back');
 
             await expect(prompt.smartPrompt('Enter')).rejects.toThrow(prompt.CancelError);
         });
 
-        it('throws CancelError for /exit navigation command', async () => {expect.hasAssertions();
+        it('throws CancelError for /exit navigation command', async () => {
+            expect.hasAssertions();
 
             vi.spyOn(readlineSync, 'question').mockReturnValue('/exit');
 
             await expect(prompt.smartPrompt('Enter')).rejects.toThrow(prompt.CancelError);
         });
 
-        it('throws CancelError for /menu navigation command', async () => {expect.hasAssertions();
+        it('throws CancelError for /menu navigation command', async () => {
+            expect.hasAssertions();
 
             vi.spyOn(readlineSync, 'question').mockReturnValue('/menu');
 
             await expect(prompt.smartPrompt('Enter')).rejects.toThrow(prompt.CancelError);
         });
 
-        it('allows unlimited /help and returns on valid input', async () => {expect.hasAssertions();
+        it('allows unlimited /help and returns on valid input', async () => {
+            expect.hasAssertions();
 
             const helpCb = vi.fn();
             vi.spyOn(readlineSync, 'question')
@@ -770,7 +789,8 @@ describe('Prompt', () => {
             promptModule.__setInputMod(null);
         });
 
-        it('uses inquirer when TTY mode', async () => {expect.hasAssertions();
+        it('uses inquirer when TTY mode', async () => {
+            expect.hasAssertions();
 
             process.stdout.isTTY = true;
             const result = await promptModule.ask('Enter name', { default: 'John' });
@@ -781,7 +801,8 @@ describe('Prompt', () => {
             );
         });
 
-        it('falls back to readline-sync when inquirer throws', async () => {expect.hasAssertions();
+        it('falls back to readline-sync when inquirer throws', async () => {
+            expect.hasAssertions();
 
             vi.spyOn(readlineSync, 'question').mockReturnValue('fallback');
             process.stdout.isTTY = true;
@@ -791,7 +812,8 @@ describe('Prompt', () => {
             expect(result).toBe('fallback');
         });
 
-        it('uses readline-sync when not TTY', async () => {expect.hasAssertions();
+        it('uses readline-sync when not TTY', async () => {
+            expect.hasAssertions();
 
             vi.spyOn(readlineSync, 'question').mockReturnValue('cli-value');
             const result = await promptModule.ask('Label');
@@ -799,7 +821,8 @@ describe('Prompt', () => {
             expect(result).toBe('cli-value');
         });
 
-        it('attempts import when _inputMod is null with TTY', async () => {expect.hasAssertions();
+        it('attempts import when _inputMod is null with TTY', async () => {
+            expect.hasAssertions();
 
             prompt.__setInputMod(null);
             process.stdout.isTTY = true;
@@ -822,7 +845,8 @@ describe('Prompt', () => {
             promptModule.__setConfirmMod(null);
         });
 
-        it('uses inquirer when TTY mode', async () => {expect.hasAssertions();
+        it('uses inquirer when TTY mode', async () => {
+            expect.hasAssertions();
 
             process.stdout.isTTY = true;
             const result = await promptModule.askConfirm('Proceed?', true);
@@ -833,7 +857,8 @@ describe('Prompt', () => {
             );
         });
 
-        it('falls back to readline-sync when inquirer throws', async () => {expect.hasAssertions();
+        it('falls back to readline-sync when inquirer throws', async () => {
+            expect.hasAssertions();
 
             vi.spyOn(readlineSync, 'question').mockReturnValue('y');
             process.stdout.isTTY = true;
@@ -843,7 +868,8 @@ describe('Prompt', () => {
             expect(result).toBeTruthy();
         });
 
-        it('uses readline-sync when not TTY', async () => {expect.hasAssertions();
+        it('uses readline-sync when not TTY', async () => {
+            expect.hasAssertions();
 
             vi.spyOn(readlineSync, 'question').mockReturnValue('n');
             const result = await promptModule.askConfirm('?');
@@ -851,7 +877,8 @@ describe('Prompt', () => {
             expect(result).toBeFalsy();
         });
 
-        it('attempts import when _confirmMod is null with TTY', async () => {expect.hasAssertions();
+        it('attempts import when _confirmMod is null with TTY', async () => {
+            expect.hasAssertions();
 
             prompt.__setConfirmMod(null);
             process.stdout.isTTY = true;

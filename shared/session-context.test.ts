@@ -71,7 +71,8 @@ describe('SessionContext', () => {
         expect(ctx.results).toStrictEqual([]);
     });
 
-    it('withBusy sets isBusy during execution', async () => {expect.hasAssertions();
+    it('withBusy sets isBusy during execution', async () => {
+        expect.hasAssertions();
         expect(ctx.isBusy).toBeFalsy();
 
         const result = await ctx.withBusy(async () => {
@@ -86,7 +87,8 @@ describe('SessionContext', () => {
         expect(ctx.isBusy).toBeFalsy();
     });
 
-    it('withBusy ensures isBusy is false on error', async () => {expect.hasAssertions();
+    it('withBusy ensures isBusy is false on error', async () => {
+        expect.hasAssertions();
         await expect(
             ctx.withBusy(() => {
                 throw new Error('fail');
@@ -96,7 +98,8 @@ describe('SessionContext', () => {
         expect(ctx.isBusy).toBeFalsy();
     });
 
-    it('withBusy passes label to spinner', async () => {expect.hasAssertions();
+    it('withBusy passes label to spinner', async () => {
+        expect.hasAssertions();
 
         const result = await ctx.withBusy(() => Promise.resolve('labelled'), 'working');
 
@@ -154,7 +157,8 @@ describe('ResolveSessionContext', () => {
         vi.clearAllMocks();
     });
 
-    it('resolves sha, branch, and store from git context', async () => {expect.hasAssertions();
+    it('resolves sha, branch, and store from git context', async () => {
+        expect.hasAssertions();
 
         const { resolveSessionContext } = await import('./session-context.js');
         vi.mocked(getHeadSha).mockReturnValue('abc123def456');
@@ -180,7 +184,8 @@ describe('ResolveSessionContext', () => {
         expect(detectStoreBackend).toHaveBeenCalledWith('/project');
     });
 
-    it('returns null sha when git is unavailable', async () => {expect.hasAssertions();
+    it('returns null sha when git is unavailable', async () => {
+        expect.hasAssertions();
 
         const { resolveSessionContext } = await import('./session-context.js');
         vi.mocked(getHeadSha).mockReturnValue(null);
@@ -201,7 +206,8 @@ describe('ResolveTestDataSource', () => {
         vi.clearAllMocks();
     });
 
-    it('returns cached result when SHA cache hit', async () => {expect.hasAssertions();
+    it('returns cached result when SHA cache hit', async () => {
+        expect.hasAssertions();
 
         const { resolveTestDataSource } = await import('./session-context.js');
         const store = createMockStore();
@@ -226,7 +232,8 @@ describe('ResolveTestDataSource', () => {
         expect(store.loadReport).toHaveBeenCalledWith('sha123');
     });
 
-    it('returns null when cache miss and no CI download', async () => {expect.hasAssertions();
+    it('returns null when cache miss and no CI download', async () => {
+        expect.hasAssertions();
 
         const { resolveTestDataSource } = await import('./session-context.js');
         const store = createMockStore();
@@ -238,7 +245,8 @@ describe('ResolveTestDataSource', () => {
         expect(result).toBeNull();
     });
 
-    it('returns CI result when CI download succeeds', async () => {expect.hasAssertions();
+    it('returns CI result when CI download succeeds', async () => {
+        expect.hasAssertions();
 
         const { resolveTestDataSource } = await import('./session-context.js');
         const store = createMockStore();
@@ -258,11 +266,15 @@ describe('ResolveTestDataSource', () => {
         expect(result?.source).toBe('ci');
 
         expect(store.saveReport).toHaveBeenCalledWith('sha456', expect.any(Array));
-        expect(store.put).toHaveBeenCalledWith('sha456', expect.objectContaining({ project: 'project', branch: 'main' }));
+        expect(store.put).toHaveBeenCalledWith(
+            'sha456',
+            expect.objectContaining({ project: 'project', branch: 'main' }),
+        );
         expect(store.flush).toHaveBeenCalledWith(expect.stringContaining('sha456'));
     });
 
-    it('falls back to branch baseline when cache and CI fail', async () => {expect.hasAssertions();
+    it('falls back to branch baseline when cache and CI fail', async () => {
+        expect.hasAssertions();
 
         const { resolveTestDataSource } = await import('./session-context.js');
         const store = createMockStore();
@@ -285,7 +297,8 @@ describe('ResolveTestDataSource', () => {
         expect(result.result.tests).toHaveLength(1);
     });
 
-    it('handles corrupted cache entry gracefully', async () => {expect.hasAssertions();
+    it('handles corrupted cache entry gracefully', async () => {
+        expect.hasAssertions();
 
         const { resolveTestDataSource } = await import('./session-context.js');
         const store = createMockStore();
@@ -298,7 +311,8 @@ describe('ResolveTestDataSource', () => {
         expect(result).toBeNull();
     });
 
-    it('stores CI result in cache when sha is available', async () => {expect.hasAssertions();
+    it('stores CI result in cache when sha is available', async () => {
+        expect.hasAssertions();
 
         const { resolveTestDataSource } = await import('./session-context.js');
         const store = createMockStore();
@@ -321,7 +335,8 @@ describe('ResolveTestDataSource', () => {
         );
     });
 
-    it('stores CI result with empty branch when branch is null', async () => {expect.hasAssertions();
+    it('stores CI result with empty branch when branch is null', async () => {
+        expect.hasAssertions();
 
         const { resolveTestDataSource } = await import('./session-context.js');
         const store = createMockStore();
@@ -341,7 +356,8 @@ describe('ResolveTestDataSource', () => {
         );
     });
 
-    it('skips CI download when no sha provided', async () => {expect.hasAssertions();
+    it('skips CI download when no sha provided', async () => {
+        expect.hasAssertions();
 
         const { resolveTestDataSource } = await import('./session-context.js');
         const store = createMockStore();
@@ -360,7 +376,8 @@ describe('ResolveTestDataSource', () => {
         expect(store.saveReport).not.toHaveBeenCalled();
     });
 
-    it('handles loadReport returning non-array tests', async () => {expect.hasAssertions();
+    it('handles loadReport returning non-array tests', async () => {
+        expect.hasAssertions();
 
         const { resolveTestDataSource } = await import('./session-context.js');
         const store = createMockStore();
@@ -372,7 +389,8 @@ describe('ResolveTestDataSource', () => {
         expect(result).toBeNull();
     });
 
-    it('handles loadReport returning empty array', async () => {expect.hasAssertions();
+    it('handles loadReport returning empty array', async () => {
+        expect.hasAssertions();
 
         const { resolveTestDataSource } = await import('./session-context.js');
         const store = createMockStore();
@@ -384,7 +402,8 @@ describe('ResolveTestDataSource', () => {
         expect(result).toBeNull();
     });
 
-    it('handles branch baseline entry with no sha', async () => {expect.hasAssertions();
+    it('handles branch baseline entry with no sha', async () => {
+        expect.hasAssertions();
 
         const { resolveTestDataSource } = await import('./session-context.js');
         const store = createMockStore();

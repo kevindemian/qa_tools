@@ -151,5 +151,4 @@ describe('Disk Cache', () => {
             fs.unlinkSync(fileDir);
         });
     });
-
 });

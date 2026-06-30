@@ -103,7 +103,8 @@ const MODEL_PRICING: Record<string, ModelPricing> = {
 
 export function estimateCostUSD(model: string, promptTokens: number, completionTokens: number): number {
     const pricingEntries = Object.entries(MODEL_PRICING);
-    const entry = pricingEntries.find(([k]) => k === model) ?? pricingEntries.find(([k]) => k === 'google/gemini-2.0-flash-exp');
+    const entry =
+        pricingEntries.find(([k]) => k === model) ?? pricingEntries.find(([k]) => k === 'google/gemini-2.0-flash-exp');
     const pricing = entry?.[1];
     if (!pricing) return 0;
     return (promptTokens / 1000) * pricing.inputPer1K + (completionTokens / 1000) * pricing.outputPer1K;
@@ -303,12 +304,24 @@ export function tierToConfig(tier: LlmTier): ProviderConfig {
         const explicitBaseUrl = Config.get('llmBaseUrl') || Config.get(tierKey(tier, 'BaseUrl'));
         let tierDefault = profile.tiers.main;
         switch (tier) {
-            case 'main': tierDefault = profile.tiers.main; break;
-            case 'fast': tierDefault = profile.tiers.fast; break;
-            case 'reviewer': tierDefault = profile.tiers.reviewer; break;
-            case 'report': tierDefault = profile.tiers.report; break;
-            case 'fallback': tierDefault = profile.tiers.fallback; break;
-            case 'batch': tierDefault = profile.tiers.batch; break;
+            case 'main':
+                tierDefault = profile.tiers.main;
+                break;
+            case 'fast':
+                tierDefault = profile.tiers.fast;
+                break;
+            case 'reviewer':
+                tierDefault = profile.tiers.reviewer;
+                break;
+            case 'report':
+                tierDefault = profile.tiers.report;
+                break;
+            case 'fallback':
+                tierDefault = profile.tiers.fallback;
+                break;
+            case 'batch':
+                tierDefault = profile.tiers.batch;
+                break;
         }
         const model = explicitModel || resolveModel(tier, provider).id || tierDefault;
         return {

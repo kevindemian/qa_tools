@@ -29,7 +29,8 @@ const storeArb = fc.record({
 });
 
 describe('ComputeAiEffectiveness — property-based', () => {
-    it('acceptance rate matches the math', () => {expect.hasAssertions();
+    it('acceptance rate matches the math', () => {
+        expect.hasAssertions();
 
         fc.assert(
             fc.property(storeArb, (store) => {
@@ -44,7 +45,8 @@ describe('ComputeAiEffectiveness — property-based', () => {
         );
     });
 
-    it('totalRecords matches store size', () => {expect.hasAssertions();
+    it('totalRecords matches store size', () => {
+        expect.hasAssertions();
 
         fc.assert(
             fc.property(storeArb, (store) => {
@@ -57,7 +59,8 @@ describe('ComputeAiEffectiveness — property-based', () => {
         );
     });
 
-    it('byVersion counts sum to total', () => {expect.hasAssertions();
+    it('byVersion counts sum to total', () => {
+        expect.hasAssertions();
 
         fc.assert(
             fc.property(storeArb, (store) => {
@@ -70,7 +73,8 @@ describe('ComputeAiEffectiveness — property-based', () => {
         );
     });
 
-    it('trend generated sum matches total', () => {expect.hasAssertions();
+    it('trend generated sum matches total', () => {
+        expect.hasAssertions();
 
         fc.assert(
             fc.property(storeArb, (store) => {
@@ -83,7 +87,8 @@ describe('ComputeAiEffectiveness — property-based', () => {
         );
     });
 
-    it('trend is sorted by date', () => {expect.hasAssertions();
+    it('trend is sorted by date', () => {
+        expect.hasAssertions();
 
         fc.assert(
             fc.property(storeArb, (store) => {
@@ -105,7 +110,8 @@ describe('ComputeAiEffectiveness — property-based', () => {
 });
 
 describe('GenerateAiEffectivenessHtml — property-based', () => {
-    it('always produces valid HTML', () => {expect.hasAssertions();
+    it('always produces valid HTML', () => {
+        expect.hasAssertions();
 
         fc.assert(
             fc.property(storeArb, (store) => {
@@ -119,7 +125,8 @@ describe('GenerateAiEffectivenessHtml — property-based', () => {
         );
     });
 
-    it('contains the acceptance rate percentage', () => {expect.hasAssertions();
+    it('contains the acceptance rate percentage', () => {
+        expect.hasAssertions();
 
         fc.assert(
             fc.property(storeArb, (store) => {
@@ -132,7 +139,8 @@ describe('GenerateAiEffectivenessHtml — property-based', () => {
         );
     });
 
-    it('contains version names in byVersion table', () => {expect.hasAssertions();
+    it('contains version names in byVersion table', () => {
+        expect.hasAssertions();
 
         fc.assert(
             fc.property(storeArb, (store) => {

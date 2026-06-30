@@ -169,7 +169,8 @@ describe('Batch Mode', () => {
     });
 
     describe('TryBatchMode', () => {
-        it('returns false when no batch args', async () => {expect.hasAssertions();
+        it('returns false when no batch args', async () => {
+            expect.hasAssertions();
 
             process.argv = ['node', 'script.js'];
             const result = await tryBatchMode();
@@ -177,7 +178,8 @@ describe('Batch Mode', () => {
             expect(result).toBeFalsy();
         });
 
-        it('errors when no projects configured', async () => {expect.hasAssertions();
+        it('errors when no projects configured', async () => {
+            expect.hasAssertions();
 
             process.argv = ['node', 'script.js', '--auto'];
             mockGetProjects.mockReturnValue({});
@@ -188,7 +190,8 @@ describe('Batch Mode', () => {
             expect(mockError).toHaveBeenCalledWith(expect.stringContaining('Nenhum projeto'));
         });
 
-        it('errors when project not found', async () => {expect.hasAssertions();
+        it('errors when project not found', async () => {
+            expect.hasAssertions();
 
             process.argv = ['node', 'script.js', '--project', 'unknown'];
             mockGetProjects.mockReturnValue({ existing: '1' });
@@ -199,7 +202,8 @@ describe('Batch Mode', () => {
             expect(mockError).toHaveBeenCalledWith(expect.stringContaining('unknown'));
         });
 
-        it('errors when branch not found', async () => {expect.hasAssertions();
+        it('errors when branch not found', async () => {
+            expect.hasAssertions();
 
             process.argv = ['node', 'script.js', '--project', 'proj1', '--branch', 'bad'];
             mockGetProjects.mockReturnValue({ proj1: '1' });
@@ -211,7 +215,8 @@ describe('Batch Mode', () => {
             expect(mockError).toHaveBeenCalledWith(expect.stringContaining('bad'));
         });
 
-        it('triggers pipeline and polls when batch mode', async () => {expect.hasAssertions();
+        it('triggers pipeline and polls when batch mode', async () => {
+            expect.hasAssertions();
 
             process.argv = ['node', 'script.js', '--project', 'proj1', '--branch', 'main'];
             mockGetProjects.mockReturnValue({ proj1: '1' });
@@ -230,7 +235,8 @@ describe('Batch Mode', () => {
             expect(mockPollPipeline).toHaveBeenCalledWith(mockManager, '42');
         });
 
-        it('sets AUTO_CONFIRM when --auto flag passed', async () => {expect.hasAssertions();
+        it('sets AUTO_CONFIRM when --auto flag passed', async () => {
+            expect.hasAssertions();
 
             process.argv = ['node', 'script.js', '--auto', '--project', 'proj1'];
             mockGetProjects.mockReturnValue({ proj1: '1' });
@@ -243,7 +249,8 @@ describe('Batch Mode', () => {
             expect(setAutoConfirmSpy).toHaveBeenCalledWith(true);
         });
 
-        it('handles pipeline trigger error', async () => {expect.hasAssertions();
+        it('handles pipeline trigger error', async () => {
+            expect.hasAssertions();
 
             process.argv = ['node', 'script.js', '--project', 'proj1'];
             mockGetProjects.mockReturnValue({ proj1: '1' });
@@ -256,7 +263,8 @@ describe('Batch Mode', () => {
             expect(mockPrintError).toHaveBeenCalledWith(expect.any(String), expect.any(Error));
         });
 
-        it('returns early when pipelineResult is undefined', async () => {expect.hasAssertions();
+        it('returns early when pipelineResult is undefined', async () => {
+            expect.hasAssertions();
 
             process.argv = ['node', 'script.js', '--project', 'proj1'];
             mockGetProjects.mockReturnValue({ proj1: '1' });
@@ -268,7 +276,8 @@ describe('Batch Mode', () => {
             expect(result).toBeTruthy();
         });
 
-        it('calls offerPipelineFailureAnalysis when results are collected', async () => {expect.hasAssertions();
+        it('calls offerPipelineFailureAnalysis when results are collected', async () => {
+            expect.hasAssertions();
 
             process.argv = ['node', 'script.js', '--project', 'proj1', '--branch', 'main'];
             mockGetProjects.mockReturnValue({ proj1: '1' });
@@ -284,7 +293,8 @@ describe('Batch Mode', () => {
             expect(result).toBeTruthy();
         });
 
-        it('handles empty pipelineId', async () => {expect.hasAssertions();
+        it('handles empty pipelineId', async () => {
+            expect.hasAssertions();
 
             process.argv = ['node', 'script.js', '--project', 'proj1'];
             mockGetProjects.mockReturnValue({ proj1: '1' });
@@ -297,5 +307,4 @@ describe('Batch Mode', () => {
             expect(mockError).toHaveBeenCalledWith(expect.stringContaining('ID da pipeline'));
         });
     });
-
 });

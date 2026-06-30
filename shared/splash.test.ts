@@ -80,7 +80,8 @@ vi.mock('./output', () => ({
 }));
 
 describe('CheckJiraStatus', () => {
-    it('returns info when URL is empty', async () => {expect.hasAssertions();
+    it('returns info when URL is empty', async () => {
+        expect.hasAssertions();
 
         const result = await checkJiraStatus('', '');
 
@@ -88,7 +89,8 @@ describe('CheckJiraStatus', () => {
         expect(result.detail).toContain('não configurado');
     });
 
-    it('returns info when token is empty', async () => {expect.hasAssertions();
+    it('returns info when token is empty', async () => {
+        expect.hasAssertions();
 
         const result = await checkJiraStatus('https://jira.example.com', '');
 
@@ -119,7 +121,8 @@ describe('CheckJiraStatus', () => {
             await new Promise<void>((resolve, _reject) => server.close((err) => (err ? _reject(err) : resolve())));
         });
 
-        it('returns ok when HTTP request succeeds', async () => {expect.hasAssertions();
+        it('returns ok when HTTP request succeeds', async () => {
+            expect.hasAssertions();
 
             const result = await checkJiraStatus(`http://localhost:${port}`, 'valid-token');
 
@@ -127,14 +130,16 @@ describe('CheckJiraStatus', () => {
             expect(result.detail).toContain('online');
         });
 
-        it('returns error on connection failure', async () => {expect.hasAssertions();
+        it('returns error on connection failure', async () => {
+            expect.hasAssertions();
 
             const result = await checkJiraStatus('http://localhost:49872', 'valid-token');
 
             expect(result.status).toBe('error');
         });
 
-        it('returns error on timeout', async () => {expect.hasAssertions();
+        it('returns error on timeout', async () => {
+            expect.hasAssertions();
 
             const mockReq = { on: vi.fn(), setTimeout: vi.fn(), destroy: vi.fn() };
             mockReq.setTimeout.mockImplementation((_ms: number, handler: () => void) => {
@@ -150,7 +155,8 @@ describe('CheckJiraStatus', () => {
             __setHttpDep(http);
         });
 
-        it('succeeds with explicit server mode', async () => {expect.hasAssertions();
+        it('succeeds with explicit server mode', async () => {
+            expect.hasAssertions();
 
             const result = await checkJiraStatus(`http://localhost:${port}`, 'valid-token', 'server');
 
@@ -158,7 +164,8 @@ describe('CheckJiraStatus', () => {
             expect(result.detail).toContain('online');
         });
 
-        it('succeeds with explicit cloud mode', async () => {expect.hasAssertions();
+        it('succeeds with explicit cloud mode', async () => {
+            expect.hasAssertions();
 
             const result = await checkJiraStatus(`http://localhost:${port}`, 'email:apiToken', 'cloud');
 
@@ -166,7 +173,8 @@ describe('CheckJiraStatus', () => {
             expect(result.detail).toContain('online');
         });
 
-        it('falls back to server mode when mode is not provided', async () => {expect.hasAssertions();
+        it('falls back to server mode when mode is not provided', async () => {
+            expect.hasAssertions();
 
             const result = await checkJiraStatus(`http://localhost:${port}`, 'valid-token');
 
@@ -174,7 +182,8 @@ describe('CheckJiraStatus', () => {
             expect(result.detail).toContain('online');
         });
 
-        it('handles https dynamic import fallback failure', async () => {expect.hasAssertions();
+        it('handles https dynamic import fallback failure', async () => {
+            expect.hasAssertions();
 
             __setHttpsDep(undefined);
             const result = await checkJiraStatus('https://jira.example.com', 'valid-token');
@@ -184,7 +193,8 @@ describe('CheckJiraStatus', () => {
             __setHttpsDep(await import('https'));
         });
 
-        it('handles http dynamic import fallback failure', async () => {expect.hasAssertions();
+        it('handles http dynamic import fallback failure', async () => {
+            expect.hasAssertions();
 
             __setHttpDep(undefined);
             const result = await checkJiraStatus('http://localhost:49873', 'valid-token');
@@ -226,13 +236,15 @@ describe('ShowSplash', () => {
         vi.clearAllMocks();
     });
 
-    it('renders splash with figlet and gradient', async () => {expect.hasAssertions();
+    it('renders splash with figlet and gradient', async () => {
+        expect.hasAssertions();
         await expect(showSplash()).resolves.not.toThrow();
         expect(mockFiglet.textSync).toHaveBeenCalledWith('QA TOOLS', { font: 'ANSI Shadow' });
         expect(mockGradient).toHaveBeenCalledWith(['#58a6ff', '#bc8cff']);
     });
 
-    it('includes statePath when provided', async () => {expect.hasAssertions();
+    it('includes statePath when provided', async () => {
+        expect.hasAssertions();
         await expect(showSplash('/tmp/state.json')).resolves.not.toThrow();
         expect(outputMod.defaultOutput.box).toHaveBeenCalledTimes(1);
 
@@ -241,7 +253,8 @@ describe('ShowSplash', () => {
         expect(outputLines.join('\n')).toContain('/tmp/state.json');
     });
 
-    it('shows token status check without jiraBaseUrl', async () => {expect.hasAssertions();
+    it('shows token status check without jiraBaseUrl', async () => {
+        expect.hasAssertions();
         await expect(showSplash('/tmp/state.json')).resolves.not.toThrow();
         expect(outputMod.defaultOutput.box).toHaveBeenCalledTimes(1);
 
@@ -250,7 +263,8 @@ describe('ShowSplash', () => {
         expect(outputLines.join('\n')).toContain('Token');
     });
 
-    it('handles figlet textSync failure', async () => {expect.hasAssertions();
+    it('handles figlet textSync failure', async () => {
+        expect.hasAssertions();
 
         mockFiglet.textSync.mockImplementationOnce(() => {
             throw new Error('no TTY');
@@ -259,7 +273,8 @@ describe('ShowSplash', () => {
         await expect(showSplash()).resolves.not.toThrow();
     });
 
-    it('handles gradient failure', async () => {expect.hasAssertions();
+    it('handles gradient failure', async () => {
+        expect.hasAssertions();
 
         mockGradient.mockImplementationOnce(() => {
             throw new Error('fail');
@@ -268,7 +283,8 @@ describe('ShowSplash', () => {
         await expect(showSplash()).resolves.not.toThrow();
     });
 
-    it('prints plain text when not TTY', async () => {expect.hasAssertions();
+    it('prints plain text when not TTY', async () => {
+        expect.hasAssertions();
 
         outputMod.Output.isTTY.mockReturnValue(false);
 
@@ -276,7 +292,8 @@ describe('ShowSplash', () => {
         expect(outputMod.defaultOutput.print).toHaveBeenCalledWith(expect.stringContaining('QA Tools'));
     });
 
-    it('prints plain text in CI mode', async () => {expect.hasAssertions();
+    it('prints plain text in CI mode', async () => {
+        expect.hasAssertions();
 
         outputMod.Output.isTTY.mockReturnValue(true);
         outputMod.Output.isCI.mockReturnValue(true);
@@ -285,7 +302,8 @@ describe('ShowSplash', () => {
         expect(outputMod.defaultOutput.print).toHaveBeenCalledWith(expect.stringContaining('QA Tools'));
     });
 
-    it('uses plain text header when not TTY with jiraBaseUrl', async () => {expect.hasAssertions();
+    it('uses plain text header when not TTY with jiraBaseUrl', async () => {
+        expect.hasAssertions();
 
         outputMod.Output.isTTY.mockReturnValue(false);
 
@@ -293,7 +311,8 @@ describe('ShowSplash', () => {
         expect(outputMod.defaultOutput.print).toHaveBeenCalledWith(expect.stringContaining('QA Tools'));
     });
 
-    it('prints statePath in fallback when figlet fails', async () => {expect.hasAssertions();
+    it('prints statePath in fallback when figlet fails', async () => {
+        expect.hasAssertions();
 
         mockFiglet.textSync.mockImplementationOnce(() => {
             throw new Error('no TTY');
@@ -303,7 +322,8 @@ describe('ShowSplash', () => {
         expect(outputMod.defaultOutput.print).toHaveBeenCalledWith(expect.stringContaining('/tmp/state.json'));
     });
 
-    it('handles figlet dynamic import failure in ensureDeps', async () => {expect.hasAssertions();
+    it('handles figlet dynamic import failure in ensureDeps', async () => {
+        expect.hasAssertions();
 
         __setFigletDep(undefined);
 
@@ -311,7 +331,8 @@ describe('ShowSplash', () => {
         expect(outputMod.defaultOutput.print).toHaveBeenCalledWith(expect.stringContaining('QA Tools'));
     });
 
-    it('handles gradient dynamic import failure in ensureDeps', async () => {expect.hasAssertions();
+    it('handles gradient dynamic import failure in ensureDeps', async () => {
+        expect.hasAssertions();
 
         __setGradientDep(undefined);
 
@@ -319,7 +340,8 @@ describe('ShowSplash', () => {
         expect(outputMod.defaultOutput.print).toHaveBeenCalledWith(expect.stringContaining('QA Tools'));
     });
 
-    it('calls checkJiraStatus with fallback empty token', async () => {expect.hasAssertions();
+    it('calls checkJiraStatus with fallback empty token', async () => {
+        expect.hasAssertions();
         await expect(showSplash(undefined, 'https://jira.example.com')).resolves.not.toThrow();
         expect(outputMod.defaultOutput.box).toHaveBeenCalledTimes(1);
 
@@ -328,7 +350,8 @@ describe('ShowSplash', () => {
         expect(outputLines.join('\n')).toContain('Token');
     });
 
-    it('passes jiraMode to checkJiraStatus', async () => {expect.hasAssertions();
+    it('passes jiraMode to checkJiraStatus', async () => {
+        expect.hasAssertions();
 
         outputMod.Output.isTTY.mockReturnValue(true);
         __setFigletDep(mockFiglet);
@@ -342,7 +365,8 @@ describe('ShowSplash', () => {
         expect(outputLines.join('\n')).toContain('Jira API');
     });
 
-    it('includes jiraBaseUrl and token check in TTY mode', async () => {expect.hasAssertions();
+    it('includes jiraBaseUrl and token check in TTY mode', async () => {
+        expect.hasAssertions();
 
         outputMod.Output.isTTY.mockReturnValue(true);
         __setFigletDep(mockFiglet);

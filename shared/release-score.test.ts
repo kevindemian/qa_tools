@@ -89,7 +89,8 @@ describe('CalculateReleaseScore', () => {
     });
 
     describe('Breakdown', () => {
-        it('reports pass status when all dimensions meet threshold', () => {expect.hasAssertions();
+        it('reports pass status when all dimensions meet threshold', () => {
+            expect.hasAssertions();
 
             const result = calculateReleaseScore(100, 100, 'pass', 100, 0);
             for (const item of result.breakdown) {
@@ -97,7 +98,8 @@ describe('CalculateReleaseScore', () => {
             }
         });
 
-        it('reports fail status when dimensions are below threshold', () => {expect.hasAssertions();
+        it('reports fail status when dimensions are below threshold', () => {
+            expect.hasAssertions();
 
             const result = calculateReleaseScore(0, 0, 'fail', 0, 100);
             for (const item of result.breakdown) {
@@ -300,7 +302,8 @@ describe('GenerateReleaseScoreHtml', () => {
         expect(html).toContain('All dimensions meet the release threshold. Ready for release.');
     });
 
-    it('contains breakdown items', () => {expect.hasAssertions();
+    it('contains breakdown items', () => {
+        expect.hasAssertions();
 
         const html = generateReleaseScoreHtml(result);
         for (const item of result.breakdown) {

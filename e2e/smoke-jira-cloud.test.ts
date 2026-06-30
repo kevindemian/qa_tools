@@ -36,7 +36,8 @@ let JiraClient: typeof JiraClientType;
 
 describe('Smoke Jira Cloud', () => {
     beforeAll(async () => {
-        JiraClient = (await vi.importActual<typeof import('../shared/jira-client.js')>('../shared/jira-client')).default;
+        JiraClient = (await vi.importActual<typeof import('../shared/jira-client.js')>('../shared/jira-client'))
+            .default;
     });
 
     describe('Smoke-jira-cloud', () => {
@@ -48,16 +49,19 @@ describe('Smoke Jira Cloud', () => {
             expect(Config.get('jiraMode')).toBe('cloud');
         });
 
-        it.runIf(process.env['JIRA_MODE'] === 'cloud')('createJiraAuthHeader produces Basic auth for cloud mode', () => {
-            const cred = 'user@example.com:APITOKEN123';
-            const header = createJiraAuthHeader(cred, 'cloud');
+        it.runIf(process.env['JIRA_MODE'] === 'cloud')(
+            'createJiraAuthHeader produces Basic auth for cloud mode',
+            () => {
+                const cred = 'user@example.com:APITOKEN123';
+                const header = createJiraAuthHeader(cred, 'cloud');
 
-            expect(header.Authorization).toMatch(/^Basic /);
+                expect(header.Authorization).toMatch(/^Basic /);
 
-            const decoded = Buffer.from(header.Authorization.slice(6), 'base64').toString('utf-8');
+                const decoded = Buffer.from(header.Authorization.slice(6), 'base64').toString('utf-8');
 
-            expect(decoded).toBe(cred);
-        });
+                expect(decoded).toBe(cred);
+            },
+        );
 
         it.runIf(process.env['JIRA_MODE'] === 'cloud')('jiraClient uses Basic auth when mode is cloud', () => {
             const client = new JiraClient(
@@ -87,5 +91,4 @@ describe('Smoke Jira Cloud', () => {
             expect(f?.description).toMatch(/server.*cloud/i);
         });
     });
-
 });

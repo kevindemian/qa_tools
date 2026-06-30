@@ -107,7 +107,8 @@ describe('Setup main', () => {
         MockGenHook.mockReturnValue('#!/bin/sh\necho "running"\n');
     });
 
-    it('generates GitHub workflow when repo has owner', async () => {expect.hasAssertions();
+    it('generates GitHub workflow when repo has owner', async () => {
+        expect.hasAssertions();
 
         MockExtract.mockReturnValue({ owner: 'myorg', repo: 'my-repo' });
         mockGitHubDetect();
@@ -123,7 +124,8 @@ describe('Setup main', () => {
         );
     });
 
-    it('generates GitLab CI when user picks gitlab', async () => {expect.hasAssertions();
+    it('generates GitLab CI when user picks gitlab', async () => {
+        expect.hasAssertions();
 
         MockExtract.mockReturnValue({ owner: '', repo: '' });
         MockAsk.mockResolvedValueOnce('myapp')
@@ -147,7 +149,8 @@ describe('Setup main', () => {
         expect(MockGenGitlab).toHaveBeenCalledTimes(1);
     });
 
-    it('writes .env.example via config-writer', async () => {expect.hasAssertions();
+    it('writes .env.example via config-writer', async () => {
+        expect.hasAssertions();
 
         MockExtract.mockReturnValue({ owner: 'myorg', repo: 'my-repo' });
         mockGitHubDetect();
@@ -158,7 +161,8 @@ describe('Setup main', () => {
         expect(MockWriteEnv).toHaveBeenCalledTimes(1);
     });
 
-    it('creates pre-push hook when feature is enabled', async () => {expect.hasAssertions();
+    it('creates pre-push hook when feature is enabled', async () => {
+        expect.hasAssertions();
 
         MockExtract.mockReturnValue({ owner: 'myorg', repo: 'my-repo' });
         mockGitHubDetect();
@@ -170,7 +174,8 @@ describe('Setup main', () => {
         expect(MockWriteHook).toHaveBeenCalledTimes(1);
     });
 
-    it('does not create pre-push hook when feature is disabled', async () => {expect.hasAssertions();
+    it('does not create pre-push hook when feature is disabled', async () => {
+        expect.hasAssertions();
 
         MockExtract.mockReturnValue({ owner: 'myorg', repo: 'my-repo' });
         mockGitHubDetect();
@@ -181,7 +186,8 @@ describe('Setup main', () => {
         expect(MockGenHook).not.toHaveBeenCalled();
     });
 
-    it('asks to configure LLM and does so when accepted', async () => {expect.hasAssertions();
+    it('asks to configure LLM and does so when accepted', async () => {
+        expect.hasAssertions();
 
         MockExtract.mockReturnValue({ owner: 'myorg', repo: 'my-repo' });
         mockGitHubDetect();
@@ -204,7 +210,8 @@ describe('Setup main', () => {
         expect(MockConfigureLlm).toHaveBeenCalledTimes(1);
     });
 
-    it('skips LLM config when user declines', async () => {expect.hasAssertions();
+    it('skips LLM config when user declines', async () => {
+        expect.hasAssertions();
 
         MockExtract.mockReturnValue({ owner: 'myorg', repo: 'my-repo' });
         mockGitHubDetect();
@@ -227,7 +234,8 @@ describe('Setup main', () => {
         expect(MockConfigureLlm).not.toHaveBeenCalled();
     });
 
-    it('skips existing GitLab pipeline file', async () => {expect.hasAssertions();
+    it('skips existing GitLab pipeline file', async () => {
+        expect.hasAssertions();
 
         MockExtract.mockReturnValue({ owner: '', repo: '' });
         MockAsk.mockResolvedValueOnce('myapp')

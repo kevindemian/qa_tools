@@ -350,8 +350,7 @@ async function verifyNewTestCase(): Promise<boolean> {
                 ((fields?.['Action'] as Record<string, unknown> | undefined)?.['value'] as string | undefined) ?? '';
             const e =
                 ((fields?.['Expected Result'] as Record<string, unknown> | undefined)?.['value'] as
-                    | string
-                    | undefined) ?? '';
+                    string | undefined) ?? '';
             process.stdout.write(`    Step ${String(s['index'])}: ${a} → ${e}` + '\n');
         }
         return true;

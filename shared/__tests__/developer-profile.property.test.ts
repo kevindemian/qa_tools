@@ -43,7 +43,8 @@ const failureArb = fc
 /* ── Tests ───────────────────────────────────────────────────── */
 
 describe('BuildDeveloperProfile — property-based', () => {
-    it('totalAuthors equals number of unique authors (Unknown for missing)', () => {expect.hasAssertions();
+    it('totalAuthors equals number of unique authors (Unknown for missing)', () => {
+        expect.hasAssertions();
 
         fc.assert(
             fc.property(fc.array(failureArb, { maxLength: 30 }), (failures) => {
@@ -56,7 +57,8 @@ describe('BuildDeveloperProfile — property-based', () => {
         );
     });
 
-    it('totalFailures equals input length', () => {expect.hasAssertions();
+    it('totalFailures equals input length', () => {
+        expect.hasAssertions();
 
         fc.assert(
             fc.property(fc.array(failureArb, { maxLength: 30 }), (failures) => {
@@ -68,7 +70,8 @@ describe('BuildDeveloperProfile — property-based', () => {
         );
     });
 
-    it('sum of author totalFailures equals totalFailures', () => {expect.hasAssertions();
+    it('sum of author totalFailures equals totalFailures', () => {
+        expect.hasAssertions();
 
         fc.assert(
             fc.property(fc.array(failureArb, { maxLength: 30 }), (failures) => {
@@ -81,7 +84,8 @@ describe('BuildDeveloperProfile — property-based', () => {
         );
     });
 
-    it('failureRate is (totalFailures / testsTouched) * 100', () => {expect.hasAssertions();
+    it('failureRate is (totalFailures / testsTouched) * 100', () => {
+        expect.hasAssertions();
 
         fc.assert(
             fc.property(fc.array(failureArb, { maxLength: 30 }), (failures) => {
@@ -96,7 +100,8 @@ describe('BuildDeveloperProfile — property-based', () => {
         );
     });
 
-    it('topFailureCategory is the category with highest count', () => {expect.hasAssertions();
+    it('topFailureCategory is the category with highest count', () => {
+        expect.hasAssertions();
 
         fc.assert(
             fc.property(fc.array(failureArb, { maxLength: 30 }), (failures) => {
@@ -104,7 +109,8 @@ describe('BuildDeveloperProfile — property-based', () => {
                 for (const author of result.authors) {
                     const entries = Object.entries(author.categories);
                     const maxCount = entries.length > 0 ? Math.max(...entries.map(([, c]) => c)) : 0;
-                    const topCats = entries.length > 0 ? entries.filter(([, c]) => c === maxCount).map(([cat]) => cat) : [''];
+                    const topCats =
+                        entries.length > 0 ? entries.filter(([, c]) => c === maxCount).map(([cat]) => cat) : [''];
 
                     expect(topCats).toContain(author.topFailureCategory);
                 }
@@ -113,7 +119,8 @@ describe('BuildDeveloperProfile — property-based', () => {
         );
     });
 
-    it('returns empty result for null input', () => {expect.hasAssertions();
+    it('returns empty result for null input', () => {
+        expect.hasAssertions();
 
         fc.assert(
             fc.property(fc.boolean(), () => {
@@ -127,7 +134,8 @@ describe('BuildDeveloperProfile — property-based', () => {
         );
     });
 
-    it('returns empty result for undefined input', () => {expect.hasAssertions();
+    it('returns empty result for undefined input', () => {
+        expect.hasAssertions();
 
         fc.assert(
             fc.property(fc.boolean(), () => {
@@ -143,7 +151,8 @@ describe('BuildDeveloperProfile — property-based', () => {
 });
 
 describe('GenerateDeveloperProfileHtml — property-based', () => {
-    it('always produces valid HTML with DOCTYPE', () => {expect.hasAssertions();
+    it('always produces valid HTML with DOCTYPE', () => {
+        expect.hasAssertions();
 
         fc.assert(
             fc.property(
@@ -161,7 +170,8 @@ describe('GenerateDeveloperProfileHtml — property-based', () => {
         );
     });
 
-    it('contains summary cards with totalAuthors and totalFailures', () => {expect.hasAssertions();
+    it('contains summary cards with totalAuthors and totalFailures', () => {
+        expect.hasAssertions();
 
         fc.assert(
             fc.property(fc.array(failureArb, { maxLength: 10 }), (failures) => {
@@ -177,7 +187,8 @@ describe('GenerateDeveloperProfileHtml — property-based', () => {
         );
     });
 
-    it('renders author sections when authors exist', () => {expect.hasAssertions();
+    it('renders author sections when authors exist', () => {
+        expect.hasAssertions();
 
         fc.assert(
             fc.property(fc.array(failureArb, { minLength: 1, maxLength: 10 }), (failures) => {

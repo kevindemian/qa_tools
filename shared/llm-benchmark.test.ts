@@ -79,7 +79,8 @@ describe('RunBenchmark', () => {
         }
     });
 
-    it('prints skip message and returns early when BENCHMARK env var is not true', async () => {expect.hasAssertions();
+    it('prints skip message and returns early when BENCHMARK env var is not true', async () => {
+        expect.hasAssertions();
 
         restoreEnv = withEnv({ BENCHMARK: 'false' });
 
@@ -88,7 +89,8 @@ describe('RunBenchmark', () => {
         expect(stdoutSpy).toHaveBeenCalledWith(expect.stringContaining('Skipping'));
     });
 
-    it('loads fixtures and executes all benchmark types when BENCHMARK is true', async () => {expect.hasAssertions();
+    it('loads fixtures and executes all benchmark types when BENCHMARK is true', async () => {
+        expect.hasAssertions();
 
         restoreEnv = withEnv({ BENCHMARK: 'true' });
 
@@ -156,7 +158,8 @@ describe('RunBenchmark — error handling', () => {
         }
     });
 
-    it('reports failure when llmPrompt throws', async () => {expect.hasAssertions();
+    it('reports failure when llmPrompt throws', async () => {
+        expect.hasAssertions();
 
         restoreEnv = withEnv({ BENCHMARK: 'true' });
 
@@ -169,7 +172,8 @@ describe('RunBenchmark — error handling', () => {
         expect(stdoutSpy).toHaveBeenCalledWith(expect.stringContaining('API timeout'));
     });
 
-    it('handles empty fixture lists gracefully', async () => {expect.hasAssertions();
+    it('handles empty fixture lists gracefully', async () => {
+        expect.hasAssertions();
 
         restoreEnv = withEnv({ BENCHMARK: 'true' });
 

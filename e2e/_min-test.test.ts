@@ -41,7 +41,8 @@ describe('Case04', () => {
         nock.restore();
     });
 
-    it('happy path', async () => {expect.hasAssertions();
+    it('happy path', async () => {
+        expect.hasAssertions();
 
         const { default: JiraResource } = await vi.importActual<typeof import('../jira_management/jira_resource.js')>(
             '../jira_management/jira_resource',

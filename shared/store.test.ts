@@ -240,7 +240,9 @@ describe('Store', () => {
                 const store = new Store(failBackend, project);
                 const warnSpy = vi.spyOn(rootLogger, 'warn');
 
-                expect(() => store.saveReport('sha1', [{ title: 't', state: 'passed', duration: 1 }])).toThrow('EACCES');
+                expect(() => store.saveReport('sha1', [{ title: 't', state: 'passed', duration: 1 }])).toThrow(
+                    'EACCES',
+                );
                 expect(warnSpy).toHaveBeenCalledWith(expect.stringContaining('store:'));
             });
 
@@ -442,5 +444,4 @@ describe('Store', () => {
             });
         });
     });
-
 });

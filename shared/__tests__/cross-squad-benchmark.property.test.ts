@@ -33,21 +33,20 @@ const projectArb = fc
         runCount: fc.integer({ min: 0, max: 1000 }),
         previousScore: fc.option(fc.integer({ min: 0, max: 100 }), { nil: undefined }),
     })
-    .map(
-        (r): ProjectInput => ({
-            name: r.name,
-            healthScore: r.healthScore,
-            grade: r.grade,
-            passRate: r.passRate,
-            flakyRate: r.flakyRate,
-            coveragePct: r.coveragePct,
-            runCount: r.runCount,
-            ...(r.previousScore !== undefined ? { previousScore: r.previousScore } : {}),
-        }),
-    );
+    .map((r): ProjectInput => ({
+        name: r.name,
+        healthScore: r.healthScore,
+        grade: r.grade,
+        passRate: r.passRate,
+        flakyRate: r.flakyRate,
+        coveragePct: r.coveragePct,
+        runCount: r.runCount,
+        ...(r.previousScore !== undefined ? { previousScore: r.previousScore } : {}),
+    }));
 
 describe('ComputeCrossSquadBenchmark — property-based', () => {
-    it('sorts benchmarks by healthScore descending', () => {expect.hasAssertions();
+    it('sorts benchmarks by healthScore descending', () => {
+        expect.hasAssertions();
 
         fc.assert(
             fc.property(
@@ -70,7 +69,8 @@ describe('ComputeCrossSquadBenchmark — property-based', () => {
         );
     });
 
-    it('computes average score correctly', () => {expect.hasAssertions();
+    it('computes average score correctly', () => {
+        expect.hasAssertions();
 
         fc.assert(
             fc.property(
@@ -87,7 +87,8 @@ describe('ComputeCrossSquadBenchmark — property-based', () => {
         );
     });
 
-    it('identifies top and bottom squads', () => {expect.hasAssertions();
+    it('identifies top and bottom squads', () => {
+        expect.hasAssertions();
 
         fc.assert(
             fc.property(
@@ -106,7 +107,8 @@ describe('ComputeCrossSquadBenchmark — property-based', () => {
         );
     });
 
-    it('stdDev is 0 for single squad', () => {expect.hasAssertions();
+    it('stdDev is 0 for single squad', () => {
+        expect.hasAssertions();
 
         fc.assert(
             fc.property(projectArb, (project) => {
@@ -118,7 +120,8 @@ describe('ComputeCrossSquadBenchmark — property-based', () => {
         );
     });
 
-    it('stdDev is always >= 0 (G-03)', () => {expect.hasAssertions();
+    it('stdDev is always >= 0 (G-03)', () => {
+        expect.hasAssertions();
 
         fc.assert(
             fc.property(
@@ -133,7 +136,8 @@ describe('ComputeCrossSquadBenchmark — property-based', () => {
         );
     });
 
-    it('stdDev is 0 when all health scores are equal (G-03)', () => {expect.hasAssertions();
+    it('stdDev is 0 when all health scores are equal (G-03)', () => {
+        expect.hasAssertions();
 
         fc.assert(
             fc.property(
@@ -151,7 +155,8 @@ describe('ComputeCrossSquadBenchmark — property-based', () => {
         );
     });
 
-    it('trend matches healthScore comparison', () => {expect.hasAssertions();
+    it('trend matches healthScore comparison', () => {
+        expect.hasAssertions();
 
         fc.assert(
             fc.property(
@@ -161,8 +166,15 @@ describe('ComputeCrossSquadBenchmark — property-based', () => {
                     for (const project of projects) {
                         const bench = result.benchmarks.find((b) => b.project === project.name);
                         if (bench === undefined) return;
-                        const expectedTrend = project.previousScore === undefined ? 'stable' : project.healthScore > project.previousScore ? 'up' : project.healthScore < project.previousScore ? 'down' : 'stable';
-                        
+                        const expectedTrend =
+                            project.previousScore === undefined
+                                ? 'stable'
+                                : project.healthScore > project.previousScore
+                                  ? 'up'
+                                  : project.healthScore < project.previousScore
+                                    ? 'down'
+                                    : 'stable';
+
                         expect(bench.trend).toBe(expectedTrend);
                     }
                 },
@@ -173,7 +185,8 @@ describe('ComputeCrossSquadBenchmark — property-based', () => {
 });
 
 describe('GenerateBenchmarkHtml — property-based', () => {
-    it('always produces valid HTML', () => {expect.hasAssertions();
+    it('always produces valid HTML', () => {
+        expect.hasAssertions();
 
         fc.assert(
             fc.property(
@@ -190,7 +203,8 @@ describe('GenerateBenchmarkHtml — property-based', () => {
         );
     });
 
-    it('contains all project names', () => {expect.hasAssertions();
+    it('contains all project names', () => {
+        expect.hasAssertions();
 
         fc.assert(
             fc.property(
@@ -199,7 +213,6 @@ describe('GenerateBenchmarkHtml — property-based', () => {
                     const result = computeCrossSquadBenchmark(projects);
                     const html = generateBenchmarkHtml(result);
                     for (const p of projects) {
-                        
                         expect(html).toContain(p.name);
                     }
                 },

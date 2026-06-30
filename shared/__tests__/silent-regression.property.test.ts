@@ -25,7 +25,8 @@ const historyArb: fc.Arbitrary<Record<string, number[]>> = fc
     });
 
 describe('DetectSilentRegression — property-based invariants', () => {
-    it('totalTests equals number of histories with >= 2 durations', () => {expect.hasAssertions();
+    it('totalTests equals number of histories with >= 2 durations', () => {
+        expect.hasAssertions();
 
         fc.assert(
             fc.property(historyArb, (histories) => {
@@ -38,7 +39,8 @@ describe('DetectSilentRegression — property-based invariants', () => {
         );
     });
 
-    it('regression entries are subset of tests with >= 2 durations', () => {expect.hasAssertions();
+    it('regression entries are subset of tests with >= 2 durations', () => {
+        expect.hasAssertions();
 
         fc.assert(
             fc.property(historyArb, (histories) => {
@@ -47,7 +49,6 @@ describe('DetectSilentRegression — property-based invariants', () => {
                     .filter(([, d]) => d.length >= 2)
                     .map(([t]) => t);
                 for (const reg of result.regressions) {
-                    
                     expect(eligibleTitles).toContain(reg.title);
                 }
             }),
@@ -55,13 +56,13 @@ describe('DetectSilentRegression — property-based invariants', () => {
         );
     });
 
-    it('z-score is a finite number', () => {expect.hasAssertions();
+    it('z-score is a finite number', () => {
+        expect.hasAssertions();
 
         fc.assert(
             fc.property(historyArb, (histories) => {
                 const result = detectSilentRegression(histories);
                 for (const reg of result.regressions) {
-                    
                     expect(Number.isFinite(reg.zScore)).toBeTruthy();
                 }
             }),
@@ -69,14 +70,24 @@ describe('DetectSilentRegression — property-based invariants', () => {
         );
     });
 
-    it('severity matches z-score range', () => {expect.hasAssertions();
+    it('severity matches z-score range', () => {
+        expect.hasAssertions();
 
         fc.assert(
             fc.property(historyArb, (histories) => {
                 const result = detectSilentRegression(histories);
                 for (const reg of result.regressions) {
-                    const expectedSeverity = reg.zScore > 5 ? 'critical' : reg.zScore > 3 ? 'high' : reg.zScore > 2 ? 'medium' : reg.zScore > 1 ? 'low' : 'none';
-                    
+                    const expectedSeverity =
+                        reg.zScore > 5
+                            ? 'critical'
+                            : reg.zScore > 3
+                              ? 'high'
+                              : reg.zScore > 2
+                                ? 'medium'
+                                : reg.zScore > 1
+                                  ? 'low'
+                                  : 'none';
+
                     expect(reg.severity).toBe(expectedSeverity);
                 }
             }),
@@ -84,7 +95,8 @@ describe('DetectSilentRegression — property-based invariants', () => {
         );
     });
 
-    it('threshold is always 2 by default', () => {expect.hasAssertions();
+    it('threshold is always 2 by default', () => {
+        expect.hasAssertions();
 
         fc.assert(
             fc.property(historyArb, (histories) => {
@@ -96,7 +108,8 @@ describe('DetectSilentRegression — property-based invariants', () => {
         );
     });
 
-    it('generateSilentRegressionHtml produces valid HTML structure', () => {expect.hasAssertions();
+    it('generateSilentRegressionHtml produces valid HTML structure', () => {
+        expect.hasAssertions();
 
         fc.assert(
             fc.property(historyArb, (histories) => {
@@ -110,7 +123,8 @@ describe('DetectSilentRegression — property-based invariants', () => {
         );
     });
 
-    it('hist entries have previousDurations matching input sans last', () => {expect.hasAssertions();
+    it('hist entries have previousDurations matching input sans last', () => {
+        expect.hasAssertions();
 
         fc.assert(
             fc.property(historyArb, (histories) => {

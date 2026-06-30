@@ -94,7 +94,8 @@ describe('Integration: Coverage Gap (FT-18)', () => {
     });
 
     describe('FT-18a: generateCoverageGapHtml with gaps', () => {
-        it('produces complete HTML with summary and gap table', async () => {expect.hasAssertions();
+        it('produces complete HTML with summary and gap table', async () => {
+            expect.hasAssertions();
 
             const { generateCoverageGapHtml } = await import('../../generate-coverage-gap-html.js');
             const result = makeResult();
@@ -109,7 +110,8 @@ describe('Integration: Coverage Gap (FT-18)', () => {
     });
 
     describe('FT-18b: all items covered (no gaps)', () => {
-        it('shows no-gaps message and passing quality gate', async () => {expect.hasAssertions();
+        it('shows no-gaps message and passing quality gate', async () => {
+            expect.hasAssertions();
 
             const { generateCoverageGapHtml } = await import('../../generate-coverage-gap-html.js');
             const result = makeResult({
@@ -138,7 +140,8 @@ describe('Integration: Coverage Gap (FT-18)', () => {
     });
 
     describe('FT-18c: error fallback', () => {
-        it('returns error page when formatDateISO throws', async () => {expect.hasAssertions();
+        it('returns error page when formatDateISO throws', async () => {
+            expect.hasAssertions();
 
             const { formatDateISO } = await import('../../date-utils.js');
             const dateMock = vi.mocked(formatDateISO);
@@ -150,7 +153,9 @@ describe('Integration: Coverage Gap (FT-18)', () => {
             const result = generateCoverageGapHtml(makeResult());
 
             expect(result).toContain('Error generating coverage gap report');
-            expect(rootLogger['error']).toHaveBeenCalledWith(expect.stringContaining('Failed to generate coverage gap HTML'));
+            expect(rootLogger['error']).toHaveBeenCalledWith(
+                expect.stringContaining('Failed to generate coverage gap HTML'),
+            );
         });
     });
 });

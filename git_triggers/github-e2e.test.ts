@@ -64,7 +64,8 @@ describe('GitHub e2e — real API', () => {
     }, 300000);
 
     describe('Data fetching', () => {
-        it('fetches recent workflow runs with correct structure', () => {expect.hasAssertions();
+        it('fetches recent workflow runs with correct structure', () => {
+            expect.hasAssertions();
             expect(Array.isArray(runs)).toBeTruthy();
 
             for (const run of runs) {
@@ -75,7 +76,8 @@ describe('GitHub e2e — real API', () => {
             }
         });
 
-        it('fetches pipeline jobs for each run', () => {expect.hasAssertions();
+        it('fetches pipeline jobs for each run', () => {
+            expect.hasAssertions();
             expect(allJobs).toHaveLength(runs.length);
 
             for (const jobs of allJobs) {
@@ -89,7 +91,8 @@ describe('GitHub e2e — real API', () => {
             }
         });
 
-        it('fetches open PRs with correct structure', () => {expect.hasAssertions();
+        it('fetches open PRs with correct structure', () => {
+            expect.hasAssertions();
             expect(Array.isArray(prs)).toBeTruthy();
 
             for (const pr of prs) {
@@ -100,7 +103,8 @@ describe('GitHub e2e — real API', () => {
             }
         });
 
-        it('fetches open issues (excluding PRs)', () => {expect.hasAssertions();
+        it('fetches open issues (excluding PRs)', () => {
+            expect.hasAssertions();
             expect(Array.isArray(issues)).toBeTruthy();
 
             for (const issue of issues) {
@@ -133,7 +137,8 @@ describe('GitHub e2e — real API', () => {
             expect(health.passRate).toBeLessThanOrEqual(100);
         });
 
-        it('identifies top failing jobs when failures exist', () => {expect.hasAssertions();
+        it('identifies top failing jobs when failures exist', () => {
+            expect.hasAssertions();
             expect(Array.isArray(health.topFailingJobs)).toBeTruthy();
 
             for (const j of health.topFailingJobs) {
@@ -147,7 +152,8 @@ describe('GitHub e2e — real API', () => {
             expect(Array.isArray(health.failureReasons)).toBeTruthy();
         });
 
-        it('breaks down by branch', () => {expect.hasAssertions();
+        it('breaks down by branch', () => {
+            expect.hasAssertions();
             expect(health.branchBreakdown.length).toBeGreaterThanOrEqual(1);
 
             for (const b of health.branchBreakdown) {

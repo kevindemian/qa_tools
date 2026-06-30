@@ -62,7 +62,7 @@ describe('EvidenceValidationResult', () => {
         );
         // Note: depending on token overlap, this might be hallucinated or unverifiable
         const e01 = results.find((r) => r.invariantId === 'E-01');
-        
+
         expect(e01?.passed).toBeFalsy();
     });
 });

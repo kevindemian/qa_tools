@@ -328,7 +328,8 @@ describe('Main', () => {
             mockGetPipeline.mockReset();
         });
 
-        it('returns status when pipeline completes', async () => {expect.hasAssertions();
+        it('returns status when pipeline completes', async () => {
+            expect.hasAssertions();
 
             mockGetPipeline.mockResolvedValue({ status: 'success', web_url: 'https://pipe/1' });
             const m = createMockGitProvider({ getPipeline: mockGetPipeline });
@@ -337,7 +338,8 @@ describe('Main', () => {
             expect(result).toStrictEqual({ status: 'success', web_url: 'https://pipe/1' });
         });
 
-        it('returns timeout when pipeline never completes', async () => {expect.hasAssertions();
+        it('returns timeout when pipeline never completes', async () => {
+            expect.hasAssertions();
 
             mockGetPipeline.mockResolvedValue({ status: 'running' });
             const m = createMockGitProvider({ getPipeline: mockGetPipeline });
@@ -346,7 +348,8 @@ describe('Main', () => {
             expect(result).toStrictEqual({ status: 'timeout', web_url: '' });
         });
 
-        it('reads state field when status is absent', async () => {expect.hasAssertions();
+        it('reads state field when status is absent', async () => {
+            expect.hasAssertions();
 
             mockGetPipeline.mockResolvedValue({ state: 'success', web_url: 'https://pipe/2' });
             const m = createMockGitProvider({ getPipeline: mockGetPipeline });
@@ -355,7 +358,8 @@ describe('Main', () => {
             expect(result).toStrictEqual({ status: 'success', web_url: 'https://pipe/2' });
         });
 
-        it('handles null getPipeline response', async () => {expect.hasAssertions();
+        it('handles null getPipeline response', async () => {
+            expect.hasAssertions();
 
             mockGetPipeline.mockResolvedValue(null);
             const m = createMockGitProvider({ getPipeline: mockGetPipeline });
@@ -378,7 +382,8 @@ describe('Main', () => {
     // ---------- handleCreateMR ----------
 
     describe('HandleCreateMR', () => {
-        it('creates MR and shows success', async () => {expect.hasAssertions();
+        it('creates MR and shows success', async () => {
+            expect.hasAssertions();
 
             vi.spyOn(prompt, 'prompt')
                 .mockReturnValueOnce('feature-x')
@@ -393,7 +398,8 @@ describe('Main', () => {
             expect(prompt.success).toHaveBeenCalledWith(expect.stringContaining('https://gitlab/mr/1'));
         });
 
-        it('handles creation error', async () => {expect.hasAssertions();
+        it('handles creation error', async () => {
+            expect.hasAssertions();
 
             vi.spyOn(prompt, 'prompt')
                 .mockReturnValueOnce('src')
@@ -411,7 +417,8 @@ describe('Main', () => {
     // ---------- handleMergeMR ----------
 
     describe('HandleMergeMR', () => {
-        it('merges MR and shows success', async () => {expect.hasAssertions();
+        it('merges MR and shows success', async () => {
+            expect.hasAssertions();
 
             vi.spyOn(prompt, 'prompt').mockReturnValueOnce('42');
             mockProvider.acceptMergeRequest.mockResolvedValue({ web_url: 'https://gitlab/mr/42' });
@@ -422,7 +429,8 @@ describe('Main', () => {
             expect(prompt.success).toHaveBeenCalledWith(expect.stringContaining('https://gitlab/mr/42'));
         });
 
-        it('handles merge error', async () => {expect.hasAssertions();
+        it('handles merge error', async () => {
+            expect.hasAssertions();
 
             vi.spyOn(prompt, 'prompt').mockReturnValueOnce('99');
             mockProvider.acceptMergeRequest.mockRejectedValue(new Error('Merge conflict'));
@@ -436,16 +444,20 @@ describe('Main', () => {
     // ---------- handleListSchedules ----------
 
     describe('HandleListSchedules', () => {
-        it('lists schedules when found', async () => {expect.hasAssertions();
+        it('lists schedules when found', async () => {
+            expect.hasAssertions();
 
-            mockProvider.getSchedules.mockResolvedValue([{ id: '5', description: 'Nightly', next_run_at: '2026-01-01' }]);
+            mockProvider.getSchedules.mockResolvedValue([
+                { id: '5', description: 'Nightly', next_run_at: '2026-01-01' },
+            ]);
 
             await mainModule.handleListSchedules(mockProvider);
 
             expect(prompt.info).toHaveBeenCalledWith(expect.stringContaining('Schedules encontrados'));
         });
 
-        it('handles empty schedules', async () => {expect.hasAssertions();
+        it('handles empty schedules', async () => {
+            expect.hasAssertions();
 
             mockProvider.getSchedules.mockResolvedValue([]);
 
@@ -454,7 +466,8 @@ describe('Main', () => {
             expect(prompt.warn).toHaveBeenCalledWith(expect.stringContaining('Nenhum schedule'));
         });
 
-        it('calls printError when getSchedules throws', async () => {expect.hasAssertions();
+        it('calls printError when getSchedules throws', async () => {
+            expect.hasAssertions();
 
             mockProvider.getSchedules.mockRejectedValue(new Error('API fail'));
 
@@ -467,7 +480,8 @@ describe('Main', () => {
     // ---------- handleRunSchedule ----------
 
     describe('HandleRunSchedule', () => {
-        it('runs schedule on success', async () => {expect.hasAssertions();
+        it('runs schedule on success', async () => {
+            expect.hasAssertions();
 
             vi.spyOn(prompt, 'prompt').mockReturnValueOnce('10');
             mockProvider.runSchedule.mockResolvedValue({ id: '10' });
@@ -478,7 +492,8 @@ describe('Main', () => {
             expect(prompt.success).toHaveBeenCalledWith(expect.stringContaining('Schedule disparado'));
         });
 
-        it('handles run error', async () => {expect.hasAssertions();
+        it('handles run error', async () => {
+            expect.hasAssertions();
 
             vi.spyOn(prompt, 'prompt').mockReturnValueOnce('bad-id');
             mockProvider.runSchedule.mockRejectedValue(new Error('Not found'));
@@ -492,7 +507,8 @@ describe('Main', () => {
     // ---------- handleListApprovedMRs ----------
 
     describe('HandleListApprovedMRs', () => {
-        it('lists approved MRs', async () => {expect.hasAssertions();
+        it('lists approved MRs', async () => {
+            expect.hasAssertions();
 
             vi.spyOn(prompt, 'prompt').mockReturnValueOnce('opened');
             mockProvider.searchMergeRequests.mockResolvedValue([{ iid: '1', title: 'Fix' }]);
@@ -503,7 +519,8 @@ describe('Main', () => {
             expect(prompt.info).toHaveBeenCalledWith(expect.stringContaining('aprovados'));
         });
 
-        it('warns when none approved', async () => {expect.hasAssertions();
+        it('warns when none approved', async () => {
+            expect.hasAssertions();
 
             vi.spyOn(prompt, 'prompt').mockReturnValueOnce('opened');
             mockProvider.searchMergeRequests.mockResolvedValue([{ iid: '2', title: 'WIP' }]);
@@ -518,7 +535,8 @@ describe('Main', () => {
     // ---------- handleExportVariables ----------
 
     describe('HandleExportVariables', () => {
-        it('exports variables when confirmed', async () => {expect.hasAssertions();
+        it('exports variables when confirmed', async () => {
+            expect.hasAssertions();
 
             mockProvider.getCICDVariables.mockResolvedValue([{ key: 'MY_VAR', value: 'my_value' }]);
 
@@ -527,7 +545,8 @@ describe('Main', () => {
             expect(prompt.success).toHaveBeenCalledWith(expect.stringContaining('Variáveis exportadas'));
         });
 
-        it('cancels when user declines', async () => {expect.hasAssertions();
+        it('cancels when user declines', async () => {
+            expect.hasAssertions();
 
             const cliBase: typeof import('../shared/cli_base.js') = await import('../shared/cli_base.js');
             vi.spyOn(cliBase, 'confirmDestructiveAction').mockReturnValueOnce(false);
@@ -541,7 +560,8 @@ describe('Main', () => {
     // ---------- handleHelp ----------
 
     describe('HandleHelp', () => {
-        it('prints help box and prompts to continue', async () => {expect.hasAssertions();
+        it('prints help box and prompts to continue', async () => {
+            expect.hasAssertions();
 
             vi.spyOn(process.stdout, 'write').mockImplementationOnce(() => true);
             await mainModule.handleHelp();
@@ -554,7 +574,8 @@ describe('Main', () => {
     // ---------- handleShowHistory ----------
 
     describe('HandleShowHistory', () => {
-        it('shows history table when entries exist', async () => {expect.hasAssertions();
+        it('shows history table when entries exist', async () => {
+            expect.hasAssertions();
 
             vi.spyOn(state, 'load').mockReturnValueOnce({
                 history: [{ op: 'pipeline', detail: 'main', status: 'ok', ts: '2026-01-01T00:00:00Z' }],
@@ -566,7 +587,8 @@ describe('Main', () => {
             expect(prompt.tableView).toHaveBeenCalledTimes(1);
         });
 
-        it('warns when history is empty', async () => {expect.hasAssertions();
+        it('warns when history is empty', async () => {
+            expect.hasAssertions();
 
             vi.spyOn(state, 'load').mockReturnValueOnce({});
 
@@ -579,7 +601,8 @@ describe('Main', () => {
     // ---------- nivelarBranchesWrapper ----------
 
     describe('NivelarBranchesWrapper', () => {
-        it('calls nivelarBranches with provider and pushHistory', async () => {expect.hasAssertions();
+        it('calls nivelarBranches with provider and pushHistory', async () => {
+            expect.hasAssertions();
 
             const gitlab = createMockGitProvider();
             await mainModule.nivelarBranchesWrapper(gitlab);
@@ -594,7 +617,8 @@ describe('Main', () => {
     // ---------- downloadTestArtifacts ----------
 
     describe('DownloadTestArtifacts', () => {
-        it('returns null when no artifacts found', async () => {expect.hasAssertions();
+        it('returns null when no artifacts found', async () => {
+            expect.hasAssertions();
 
             mockProvider.listPipelineArtifacts.mockResolvedValue([]);
             const result = await mainModule.downloadTestArtifacts(mockProvider, '1');
@@ -606,7 +630,8 @@ describe('Main', () => {
     // ---------- collectTestResults ----------
 
     describe('CollectTestResults', () => {
-        it('returns early when jira env vars are missing', async () => {expect.hasAssertions();
+        it('returns early when jira env vars are missing', async () => {
+            expect.hasAssertions();
 
             const jiraResource = {} as JiraClient;
             const linkManager = {} as JiraLinkManager;
@@ -623,7 +648,8 @@ describe('Main', () => {
     // ---------- handleChangeProject ----------
 
     describe('HandleChangeProject', () => {
-        it('switches to valid project', async () => {expect.hasAssertions();
+        it('switches to valid project', async () => {
+            expect.hasAssertions();
 
             vi.spyOn(prompt, 'prompt').mockReturnValueOnce('1');
 
@@ -632,7 +658,8 @@ describe('Main', () => {
             expect(prompt.success).toHaveBeenCalledWith(expect.stringContaining('proj-a'));
         });
 
-        it('warns on invalid project index', async () => {expect.hasAssertions();
+        it('warns on invalid project index', async () => {
+            expect.hasAssertions();
 
             vi.spyOn(prompt, 'prompt').mockReturnValueOnce('99');
 
@@ -667,7 +694,8 @@ describe('Main', () => {
     // ---------- displayRecentPipelines ----------
 
     describe('DisplayRecentPipelines', () => {
-        it('prints pipelines when results exist', async () => {expect.hasAssertions();
+        it('prints pipelines when results exist', async () => {
+            expect.hasAssertions();
 
             mockProvider.getRecentPipelines.mockResolvedValue([
                 { id: '1', ref: 'main', status: 'success' },
@@ -679,7 +707,8 @@ describe('Main', () => {
             expect(prompt.print).toHaveBeenCalledWith(expect.stringContaining('Últimas pipelines'));
         });
 
-        it('does not print when pipelines array is empty', async () => {expect.hasAssertions();
+        it('does not print when pipelines array is empty', async () => {
+            expect.hasAssertions();
 
             mockProvider.getRecentPipelines.mockResolvedValue([]);
 
@@ -688,7 +717,8 @@ describe('Main', () => {
             expect(prompt.print).not.toHaveBeenCalledWith(expect.stringContaining('Últimas'));
         });
 
-        it('silently catches getRecentPipelines error', async () => {expect.hasAssertions();
+        it('silently catches getRecentPipelines error', async () => {
+            expect.hasAssertions();
 
             mockProvider.getRecentPipelines.mockRejectedValue(new Error('API error'));
 
@@ -699,21 +729,26 @@ describe('Main', () => {
     // ---------- handleListApprovedMRs - error ----------
 
     describe('HandleListApprovedMRs - error', () => {
-        it('calls printError when searchMergeRequests throws', async () => {expect.hasAssertions();
+        it('calls printError when searchMergeRequests throws', async () => {
+            expect.hasAssertions();
 
             vi.spyOn(prompt, 'prompt').mockReturnValueOnce('opened');
             mockProvider.searchMergeRequests.mockRejectedValue(new Error('API fail'));
 
             await mainModule.handleListApprovedMRs(mockProvider);
 
-            expect(prompt.printError).toHaveBeenCalledWith(expect.stringContaining('Erro ao listar'), expect.any(Error));
+            expect(prompt.printError).toHaveBeenCalledWith(
+                expect.stringContaining('Erro ao listar'),
+                expect.any(Error),
+            );
         });
     });
 
     // ---------- handleExportVariables - extended ----------
 
     describe('HandleExportVariables - extended', () => {
-        it('calls printError when getCICDVariables throws', async () => {expect.hasAssertions();
+        it('calls printError when getCICDVariables throws', async () => {
+            expect.hasAssertions();
 
             mockProvider.getCICDVariables.mockRejectedValue(new Error('API fail'));
 
@@ -722,7 +757,8 @@ describe('Main', () => {
             expect(prompt.printError).toHaveBeenCalledWith('Falha ao buscar variáveis CI/CD', expect.any(Error));
         });
 
-        it('escapes values containing = sign with double quotes', async () => {expect.hasAssertions();
+        it('escapes values containing = sign with double quotes', async () => {
+            expect.hasAssertions();
 
             mockProvider.getCICDVariables.mockResolvedValue([{ key: 'MY_VAR', value: 'foo=bar' }]);
             const writeSpy = vi.spyOn(fs, 'writeFileSync').mockImplementation(() => {});
@@ -746,14 +782,15 @@ describe('Main', () => {
             const testState = { history: Array(51).fill({}) };
             callback(testState);
 
-            expect((testState.history as Array<unknown>)).toHaveLength(50);
+            expect(testState.history as Array<unknown>).toHaveLength(50);
         });
     });
 
     // ---------- handleTriggerPipeline ----------
 
     describe('HandleTriggerPipeline', () => {
-        it('warns when branch is not found', async () => {expect.hasAssertions();
+        it('warns when branch is not found', async () => {
+            expect.hasAssertions();
 
             vi.spyOn(prompt, 'prompt').mockReturnValueOnce('bad-branch');
             mockProvider.getBranch.mockResolvedValue(null);
@@ -763,7 +800,8 @@ describe('Main', () => {
             expect(prompt.warn).toHaveBeenCalledWith(expect.stringContaining('não encontrada'));
         });
 
-        it('triggers pipeline successfully without waiting', async () => {expect.hasAssertions();
+        it('triggers pipeline successfully without waiting', async () => {
+            expect.hasAssertions();
 
             vi.spyOn(prompt, 'prompt')
                 .mockReturnValueOnce('main') // branch
@@ -782,7 +820,8 @@ describe('Main', () => {
             expect(prompt.success).toHaveBeenCalledWith(expect.stringContaining('https://gitlab/pipe/1'));
         });
 
-        it('handles triggerPipeline error', async () => {expect.hasAssertions();
+        it('handles triggerPipeline error', async () => {
+            expect.hasAssertions();
 
             vi.spyOn(prompt, 'prompt')
                 .mockReturnValueOnce('main') // branch
@@ -796,7 +835,8 @@ describe('Main', () => {
             expect(prompt.printError).toHaveBeenCalledWith('Falha ao disparar pipeline', expect.any(Error));
         });
 
-        it('triggers with custom variables', async () => {expect.hasAssertions();
+        it('triggers with custom variables', async () => {
+            expect.hasAssertions();
 
             vi.spyOn(prompt, 'prompt')
                 .mockReturnValueOnce('main') // branch
@@ -821,7 +861,8 @@ describe('Main', () => {
             );
         });
 
-        it('resumes pending pipeline', async () => {expect.hasAssertions();
+        it('resumes pending pipeline', async () => {
+            expect.hasAssertions();
 
             vi.spyOn(state, 'load').mockReturnValueOnce({
                 pendingPipeline: { branch: 'feature-x', pipelineId: '123', projectName: 'proj-b' },
@@ -893,7 +934,8 @@ describe('Main', () => {
             vi.clearAllMocks();
         });
 
-        it('returns true when getProjects has entries', async () => {expect.hasAssertions();
+        it('returns true when getProjects has entries', async () => {
+            expect.hasAssertions();
 
             const ss: typeof import('./session-state.js') = await import('./session-state.js');
             vi.spyOn(ss, 'getProjects').mockReturnValueOnce({ proj: '123' });
@@ -902,7 +944,8 @@ describe('Main', () => {
             expect(result).toBeTruthy();
         });
 
-        it('warns and prompts when no projects exist, returns false on user decline', async () => {expect.hasAssertions();
+        it('warns and prompts when no projects exist, returns false on user decline', async () => {
+            expect.hasAssertions();
 
             const ss: typeof import('./session-state.js') = await import('./session-state.js');
             vi.spyOn(ss, 'getProjects').mockReturnValue({});
@@ -913,7 +956,8 @@ describe('Main', () => {
             expect(result).toBeFalsy();
         });
 
-        it('returns false when setup wizard is cancelled', async () => {expect.hasAssertions();
+        it('returns false when setup wizard is cancelled', async () => {
+            expect.hasAssertions();
 
             const ss: typeof import('./session-state.js') = await import('./session-state.js');
             vi.spyOn(ss, 'getProjects').mockReturnValue({});
@@ -927,7 +971,8 @@ describe('Main', () => {
     // ---------- _selectProjectAndCreateManager ----------
 
     describe('SelectProjectAndCreateManager', () => {
-        it('returns null when _selectProject returns null projectName', async () => {expect.hasAssertions();
+        it('returns null when _selectProject returns null projectName', async () => {
+            expect.hasAssertions();
 
             vi.spyOn(prompt, 'prompt').mockReturnValueOnce('99');
             const result = await mainModule._selectProjectAndCreateManager();
@@ -949,7 +994,8 @@ describe('Main', () => {
     // ---------- withErrorHandling ----------
 
     describe('WithErrorHandling', () => {
-        it('returns false when handler resolves', async () => {expect.hasAssertions();
+        it('returns false when handler resolves', async () => {
+            expect.hasAssertions();
 
             const handler: (m: GitProvider, pn: string, ns: string[]) => Promise<object> = vi
                 .fn<(m: GitProvider, pn: string, ns: string[]) => Promise<object>>()
@@ -960,7 +1006,8 @@ describe('Main', () => {
             expect(result).toBeFalsy();
         });
 
-        it('calls printError when handler rejects and returns false', async () => {expect.hasAssertions();
+        it('calls printError when handler rejects and returns false', async () => {
+            expect.hasAssertions();
 
             const handler: (m: GitProvider, pn: string, ns: string[]) => Promise<object> = vi
                 .fn<(m: GitProvider, pn: string, ns: string[]) => Promise<object>>()
@@ -976,7 +1023,8 @@ describe('Main', () => {
     // ---------- _handleExit ----------
 
     describe('HandleExit', () => {
-        it('prints goodbye and returns true', async () => {expect.hasAssertions();
+        it('prints goodbye and returns true', async () => {
+            expect.hasAssertions();
 
             const breadcrumbs: typeof import('../shared/breadcrumbs.js') = await import('../shared/breadcrumbs.js');
             const result = mainModule._handleExit();
@@ -986,7 +1034,8 @@ describe('Main', () => {
             expect(breadcrumbs.clearBreadcrumbs).toHaveBeenCalledTimes(1);
         });
 
-        it('does not set exit code when session has errors — no exitCode', async () => {expect.hasAssertions();
+        it('does not set exit code when session has errors — no exitCode', async () => {
+            expect.hasAssertions();
 
             const ss: typeof import('./session-state.js') = await import('./session-state.js');
             const orig = ss.sessionContext.sessionCounters;
@@ -1013,21 +1062,24 @@ describe('Main', () => {
             vi.spyOn(outputMod.defaultOutput, 'box').mockImplementation(() => {});
         });
 
-        it('handles /help and returns false', async () => {expect.hasAssertions();
+        it('handles /help and returns false', async () => {
+            expect.hasAssertions();
 
             const result = await mainModule._dispatchAction('/help', mockM, pn, ns);
 
             expect(result).toBeFalsy();
         });
 
-        it('handles /history and returns false', async () => {expect.hasAssertions();
+        it('handles /history and returns false', async () => {
+            expect.hasAssertions();
 
             const result = await mainModule._dispatchAction('/history', mockM, pn, ns);
 
             expect(result).toBeFalsy();
         });
 
-        it('handles /docs and returns false', async () => {expect.hasAssertions();
+        it('handles /docs and returns false', async () => {
+            expect.hasAssertions();
 
             const result = await mainModule._dispatchAction('/docs', mockM, pn, ns);
 
@@ -1035,7 +1087,8 @@ describe('Main', () => {
             expect(prompt.warn).not.toHaveBeenCalledWith('Documentação disponível apenas no módulo Jira.');
         });
 
-        it('handles /d and returns false', async () => {expect.hasAssertions();
+        it('handles /d and returns false', async () => {
+            expect.hasAssertions();
 
             const result = await mainModule._dispatchAction('/d', mockM, pn, ns);
 
@@ -1043,49 +1096,56 @@ describe('Main', () => {
             expect(prompt.warn).not.toHaveBeenCalledWith('Documentação disponível apenas no módulo Jira.');
         });
 
-        it('handles /back and returns false', async () => {expect.hasAssertions();
+        it('handles /back and returns false', async () => {
+            expect.hasAssertions();
 
             const result = await mainModule._dispatchAction('/back', mockM, pn, ns);
 
             expect(result).toBeFalsy();
         });
 
-        it('handles /menu and returns false', async () => {expect.hasAssertions();
+        it('handles /menu and returns false', async () => {
+            expect.hasAssertions();
 
             const result = await mainModule._dispatchAction('/menu', mockM, pn, ns);
 
             expect(result).toBeFalsy();
         });
 
-        it('handles /exit and returns true via _handleExit', async () => {expect.hasAssertions();
+        it('handles /exit and returns true via _handleExit', async () => {
+            expect.hasAssertions();
 
             const result = await mainModule._dispatchAction('/exit', mockM, pn, ns);
 
             expect(result).toBeTruthy();
         });
 
-        it('handles /sair and returns true via _handleExit', async () => {expect.hasAssertions();
+        it('handles /sair and returns true via _handleExit', async () => {
+            expect.hasAssertions();
 
             const result = await mainModule._dispatchAction('/sair', mockM, pn, ns);
 
             expect(result).toBeTruthy();
         });
 
-        it('handles option 0 and returns true via _handleExit', async () => {expect.hasAssertions();
+        it('handles option 0 and returns true via _handleExit', async () => {
+            expect.hasAssertions();
 
             const result = await mainModule._dispatchAction('0', mockM, pn, ns);
 
             expect(result).toBeTruthy();
         });
 
-        it('dispatches to action handler and returns false', async () => {expect.hasAssertions();
+        it('dispatches to action handler and returns false', async () => {
+            expect.hasAssertions();
 
             const result = await mainModule._dispatchAction('1', mockM, pn, ns);
 
             expect(result).toBeFalsy();
         });
 
-        it('warns for invalid option', async () => {expect.hasAssertions();
+        it('warns for invalid option', async () => {
+            expect.hasAssertions();
 
             const result = await mainModule._dispatchAction('zzz', mockM, pn, ns);
 
@@ -1126,7 +1186,8 @@ describe('Main', () => {
             expect(prompt.warn).toHaveBeenCalledWith('Projeto inválido.');
         });
 
-        it('returns null when no projects available and user declines setup', async () => {expect.hasAssertions();
+        it('returns null when no projects available and user declines setup', async () => {
+            expect.hasAssertions();
 
             const ss: typeof import('./session-state.js') = await import('./session-state.js');
             gpSpy.mockRestore();
@@ -1144,7 +1205,8 @@ describe('Main', () => {
     // ---------- _promptChoice ----------
 
     describe('PromptChoice', () => {
-        it('returns prompt choice in non-TTY mode', async () => {expect.hasAssertions();
+        it('returns prompt choice in non-TTY mode', async () => {
+            expect.hasAssertions();
 
             vi.spyOn(prompt, 'prompt').mockReturnValueOnce('/exit');
             const result = await mainModule._promptChoice('0-9');
@@ -1152,7 +1214,8 @@ describe('Main', () => {
             expect(result).toBe('/exit');
         });
 
-        it('falls back to lastChoice when prompt returns empty string', async () => {expect.hasAssertions();
+        it('falls back to lastChoice when prompt returns empty string', async () => {
+            expect.hasAssertions();
 
             vi.spyOn(prompt, 'prompt').mockReturnValueOnce('');
             vi.spyOn(state, 'load').mockReturnValue({ lastChoice: '3' });
@@ -1162,7 +1225,8 @@ describe('Main', () => {
             expect(prompt.info).toHaveBeenCalledWith(expect.stringContaining('Repetindo última opção'));
         });
 
-        it('skips lastChoice when it is "0"', async () => {expect.hasAssertions();
+        it('skips lastChoice when it is "0"', async () => {
+            expect.hasAssertions();
 
             vi.spyOn(prompt, 'prompt').mockReturnValueOnce('');
             vi.spyOn(state, 'load').mockReturnValue({ lastChoice: '0' });
@@ -1190,7 +1254,8 @@ describe('Main', () => {
             process.stdout.isTTY = _origIsTTY;
         });
 
-        it('shows box with session counters when TTY and not quiet', async () => {expect.hasAssertions();
+        it('shows box with session counters when TTY and not quiet', async () => {
+            expect.hasAssertions();
 
             const sessionState: typeof import('./session-state.js') = await import('./session-state.js');
             sessionState.sessionContext.sessionCounters = [
@@ -1223,21 +1288,24 @@ describe('Main', () => {
             ns = ['proj-a', 'proj-b'];
         });
 
-        it('handler 9 calls handleChangeProject', async () => {expect.hasAssertions();
+        it('handler 9 calls handleChangeProject', async () => {
+            expect.hasAssertions();
 
             const result = await mainModule._dispatchAction('9', mockProvider, pn, ns);
 
             expect(result).toBeFalsy();
         });
 
-        it('handler a calls handleFlakinessDashboard (void)', async () => {expect.hasAssertions();
+        it('handler a calls handleFlakinessDashboard (void)', async () => {
+            expect.hasAssertions();
 
             const result = await mainModule._dispatchAction('a', mockProvider, pn, ns);
 
             expect(result).toBeFalsy();
         });
 
-        it('handler 00 calls handleSetupWizard', async () => {expect.hasAssertions();
+        it('handler 00 calls handleSetupWizard', async () => {
+            expect.hasAssertions();
 
             const result = await mainModule._dispatchAction('00', mockProvider, pn, ns);
 
@@ -1252,5 +1320,4 @@ describe('Main', () => {
             expect(expected.every((k) => keys.includes(k))).toBeTruthy();
         });
     });
-
 });

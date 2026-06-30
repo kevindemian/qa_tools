@@ -82,10 +82,13 @@ export function setPrReportConfig(projectName: string, config: PrReportFeatureCo
     const entries = Object.entries(store);
     const existing = entries.find(([k]) => k === projectName);
     if (!existing) {
-        entries.push([projectName, {
-            gitProvider: 'github',
-            features: {},
-        }]);
+        entries.push([
+            projectName,
+            {
+                gitProvider: 'github',
+                features: {},
+            },
+        ]);
     }
     const projectEntry = entries.find(([k]) => k === projectName);
     if (projectEntry) {

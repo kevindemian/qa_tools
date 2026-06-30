@@ -3,7 +3,7 @@ feature: qa-tools-audit
 status: delivered
 specs: []
 plans:
-  - .mimocode/plans/1782724008925-brave-garden.md
+    - .mimocode/plans/1782724008925-brave-garden.md
 branch: main
 commits: (pending)
 ---
@@ -21,6 +21,7 @@ A comprehensive audit of the QA tools suite identified and resolved critical gap
 The project had two hook systems: Husky (active via `core.hooksPath`) and `.githooks/` (inactive). Husky was a strict subset of `.githooks/`, missing critical security checks. The fix unified both into Husky:
 
 **`.husky/pre-commit`** now runs:
+
 1. Stale COMMIT_EDITMSG cleanup
 2. `validation_hook.ts` self-test + staged diff check
 3. `rule-vigilant.ts` security config scan
@@ -30,6 +31,7 @@ The project had two hook systems: Husky (active via `core.hooksPath`) and `.gith
 7. exclusive test detection in test files
 
 **`.husky/pre-push`** now runs:
+
 1. `--no-verify` bypass detection + audit logging
 2. Typecheck + quality enforcement
 3. `validation_hook.ts` self-test + diff check
@@ -42,28 +44,28 @@ The project had two hook systems: Husky (active via `core.hooksPath`) and `.gith
 
 15 scripts were removed — all were either migration artifacts (jest→vitest, ESM), debug snippets, or duplicates of installed tools:
 
-| Removed | Replaced By |
-|---------|-------------|
-| `check-unused-exports.sh` | Knip (`npm run unused-exports`) |
-| `fix-lint-errors.ts` | ESLint `--fix` |
-| `fix-mock-types.mjs`, `transform-*.ts` | Migration completed |
-| `fix-assertions.ts`, `fix-padding.ts` | ESLint rules + Prettier |
-| `fix-require-*.mjs` | ESLint `--fix` |
-| `audit-condition.mjs`, `debug-condition.mjs` | Debug snippets |
-| `codemod-esm-imports.mjs` | Migration completed |
-| `trace-shared-imports.sh` | dependency-cruiser + Knip |
-| `verify-mocks.sh` | TypeScript type system |
+| Removed                                      | Replaced By                     |
+| -------------------------------------------- | ------------------------------- |
+| `check-unused-exports.sh`                    | Knip (`npm run unused-exports`) |
+| `fix-lint-errors.ts`                         | ESLint `--fix`                  |
+| `fix-mock-types.mjs`, `transform-*.ts`       | Migration completed             |
+| `fix-assertions.ts`, `fix-padding.ts`        | ESLint rules + Prettier         |
+| `fix-require-*.mjs`                          | ESLint `--fix`                  |
+| `audit-condition.mjs`, `debug-condition.mjs` | Debug snippets                  |
+| `codemod-esm-imports.mjs`                    | Migration completed             |
+| `trace-shared-imports.sh`                    | dependency-cruiser + Knip       |
+| `verify-mocks.sh`                            | TypeScript type system          |
 
 ### quality-check.ts Simplified
 
 4 checks were removed (now handled by ESLint/tsconfig):
 
-| Removed Check | Replacement |
-|---------------|-------------|
-| `checkOnlyInTests` | `vitest/no-focused-tests` (ESLint) |
-| `checkAsUnknownAs` | `@typescript-eslint/no-unsafe-*` (ESLint) |
-| `checkAsAny` | `@typescript-eslint/no-explicit-any` (ESLint) |
-| `checkNoImplicitOverride` | `tsconfig.json` (compiler) |
+| Removed Check             | Replacement                                   |
+| ------------------------- | --------------------------------------------- |
+| `checkOnlyInTests`        | `vitest/no-focused-tests` (ESLint)            |
+| `checkAsUnknownAs`        | `@typescript-eslint/no-unsafe-*` (ESLint)     |
+| `checkAsAny`              | `@typescript-eslint/no-explicit-any` (ESLint) |
+| `checkNoImplicitOverride` | `tsconfig.json` (compiler)                    |
 
 `minChecks` guard updated from 17 to 13. Integrity hash regenerated.
 
@@ -73,17 +75,17 @@ The project had two hook systems: Husky (active via `core.hooksPath`) and `.gith
 
 ## Verification
 
-| Check | Result |
-|-------|--------|
-| TypeScript typecheck | Pre-existing errors (11), not introduced by changes |
-| Vitest tests | 5739 passed, 18 failed (pre-existing), 9 skipped |
-| quality-check.test.ts | 27/27 pass |
-| Prettier | 292 files with formatting (pre-existing) |
-| Knip (unused exports) | Pass (pre-existing unused items) |
-| dependency-cruiser | Clean |
-| type-coverage | 99.94% (above 90% threshold) |
-| gitleaks | No leaks found |
-| osv-scan | 1 medium vulnerability (js-yaml, pre-existing) |
+| Check                 | Result                                              |
+| --------------------- | --------------------------------------------------- |
+| TypeScript typecheck  | Pre-existing errors (11), not introduced by changes |
+| Vitest tests          | 5739 passed, 18 failed (pre-existing), 9 skipped    |
+| quality-check.test.ts | 27/27 pass                                          |
+| Prettier              | 292 files with formatting (pre-existing)            |
+| Knip (unused exports) | Pass (pre-existing unused items)                    |
+| dependency-cruiser    | Clean                                               |
+| type-coverage         | 99.94% (above 90% threshold)                        |
+| gitleaks              | No leaks found                                      |
+| osv-scan              | 1 medium vulnerability (js-yaml, pre-existing)      |
 
 ## Journey Log
 
@@ -93,11 +95,11 @@ The project had two hook systems: Husky (active via `core.hooksPath`) and `.gith
 
 ## Source Materials
 
-| File | Role | Notes |
-|------|------|-------|
-| `.mimocode/plans/1782724008925-brave-garden.md` | Implementation plan | Complete |
-| `.husky/pre-commit` | Unified pre-commit hook | Updated |
-| `.husky/pre-push` | Unified pre-push hook | Updated |
-| `.husky/commit-msg` | New commit-msg hook | Created |
-| `scripts/quality-check.ts` | Quality gate | Simplified |
-| `scripts/quality-check.test.ts` | Tests for quality gate | Updated |
+| File                                            | Role                    | Notes      |
+| ----------------------------------------------- | ----------------------- | ---------- |
+| `.mimocode/plans/1782724008925-brave-garden.md` | Implementation plan     | Complete   |
+| `.husky/pre-commit`                             | Unified pre-commit hook | Updated    |
+| `.husky/pre-push`                               | Unified pre-push hook   | Updated    |
+| `.husky/commit-msg`                             | New commit-msg hook     | Created    |
+| `scripts/quality-check.ts`                      | Quality gate            | Simplified |
+| `scripts/quality-check.test.ts`                 | Tests for quality gate  | Updated    |

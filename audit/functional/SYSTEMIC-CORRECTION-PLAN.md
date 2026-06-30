@@ -609,18 +609,19 @@ Quando cada feature for auditada via per-feature workflow, o T12 já detectará 
 **Referência SOP:** ANEXO A (linhas 632-663), D5 (linhas 257-276), D8 (linhas 314-363)
 
 **Registry atual (F01-F10):**
-| ID | Tipo | Features cobertas |
-|:--:|------|-------------------|
-| F01 | Média aritmética | FT-25 |
-| F02 | Desvio padrão (populacional) | FT-25 |
-| F03 | Filtro de outliers (NaN/IQR) | FT-19,20,22,25 |
-| F04 | Taxa de flakiness individual | FT-04 |
-| F05 | Taxa de flakiness agregada | FT-04 |
-| F06 | Pass rate | FT-04 |
-| F07 | EWMA | FT-09 |
-| F08 | Percentil | FT-09,10 |
-| F09 | Score por interpolação linear | FT-09,10,14 |
-| F10 | Média ponderada | FT-09,14 |
+
+| ID  | Tipo                          | Features cobertas |
+| :-: | ----------------------------- | ----------------- |
+| F01 | Média aritmética              | FT-25             |
+| F02 | Desvio padrão (populacional)  | FT-25             |
+| F03 | Filtro de outliers (NaN/IQR)  | FT-19,20,22,25    |
+| F04 | Taxa de flakiness individual  | FT-04             |
+| F05 | Taxa de flakiness agregada    | FT-04             |
+| F06 | Pass rate                     | FT-04             |
+| F07 | EWMA                          | FT-09             |
+| F08 | Percentil                     | FT-09,10          |
+| F09 | Score por interpolação linear | FT-09,10,14       |
+| F10 | Média ponderada               | FT-09,14          |
 
 **Protocolo de atualização retroativa (SOP ANEXO A):**
 

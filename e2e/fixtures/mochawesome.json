@@ -1,18 +1,18 @@
 {
-  "stats": { "passes": 2, "failures": 1, "pending": 0, "duration": 1234 },
-  "results": [
-    {
-      "suites": [
+    "stats": { "passes": 2, "failures": 1, "pending": 0, "duration": 1234 },
+    "results": [
         {
-          "title": "Root Suite",
-          "tests": [
-            { "title": "TC01 - Login valido", "state": "passed", "duration": 100 },
-            { "title": "TC02 - Login invalido", "state": "failed", "duration": 200 },
-            { "title": "TC03 - Logout", "state": "passed", "duration": 150 }
-          ],
-          "suites": []
+            "suites": [
+                {
+                    "title": "Root Suite",
+                    "tests": [
+                        { "title": "TC01 - Login valido", "state": "passed", "duration": 100 },
+                        { "title": "TC02 - Login invalido", "state": "failed", "duration": 200 },
+                        { "title": "TC03 - Logout", "state": "passed", "duration": 150 }
+                    ],
+                    "suites": []
+                }
+            ]
         }
-      ]
-    }
-  ]
+    ]
 }

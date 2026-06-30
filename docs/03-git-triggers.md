@@ -201,13 +201,14 @@ Após o parse, se houver testes falhos, a CLI pergunta: _"Deseja analisar falhas
 **Arquivos:** `git_triggers/llm-pipeline.ts`, `shared/failure-analysis.ts`, `shared/llm-review.ts`, `shared/report-generator.ts`, `shared/llm-metrics.ts`, `shared/report-validator.ts`
 
 **Comportamento sem LLM:**
-| Situação | Ocorre |
-|----------|--------|
-| Usuário recusa análise IA | Relatório HTML gerado sem seção IA — funcionalidade completa |
-| Report tier falha | Cai para `main` tier; se também falhar, relatório gerado sem IA com ⚠ warning |
-| `LLM_API_KEY` não configurada | Análise IA retorna vazia; pipeline segue normalmente com mensagem "verifique chaves LLM" |
-| Apenas tier **fast** configurado (PR desc) | Pipeline de resultados não é afetado — **fast** é usado apenas em features separadas |
-| Circuit breaker aberto | LLM pula automaticamente; pipeline segue sem IA — veja [`docs/06-env-vars.md`](06-env-vars.md) > Circuit Breaker |
+
+| Situação                                   | Ocorre                                                                                                           |
+| ------------------------------------------ | ---------------------------------------------------------------------------------------------------------------- |
+| Usuário recusa análise IA                  | Relatório HTML gerado sem seção IA — funcionalidade completa                                                     |
+| Report tier falha                          | Cai para `main` tier; se também falhar, relatório gerado sem IA com ⚠ warning                                    |
+| `LLM_API_KEY` não configurada              | Análise IA retorna vazia; pipeline segue normalmente com mensagem "verifique chaves LLM"                         |
+| Apenas tier **fast** configurado (PR desc) | Pipeline de resultados não é afetado — **fast** é usado apenas em features separadas                             |
+| Circuit breaker aberto                     | LLM pula automaticamente; pipeline segue sem IA — veja [`docs/06-env-vars.md`](06-env-vars.md) > Circuit Breaker |
 
 > Consulte [`docs/06-env-vars.md`](06-env-vars.md) para detalhes sobre **circuit breaker** (proteção contra falhas encadeadas) e **benchmark LLM** (validação de acurácia dos provedores).
 

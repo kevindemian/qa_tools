@@ -7,6 +7,6 @@
         "declarationMap": true,
         "sourceMap": true
     },
-    "include": ["shared/**/*.ts", "jira_management/**/*.ts", "git_triggers/**/*.ts", "shared/types/ambient.d.ts"],
+    "include": ["shared/**/*.ts", "jira_management/**/*.ts", "git_triggers/**/*.ts"],
     "exclude": ["**/*.test.ts", "**/*.test-d.ts", "node_modules", "e2e/**/*.ts", "setup/**/*.ts"]
 }

@@ -499,5 +499,4 @@ describe('Developer Profile', () => {
             expect(call.bodyContent).toContain('No categories');
         });
     });
-
 });

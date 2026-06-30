@@ -586,7 +586,10 @@ function parseArgs(args: string[]): CliOptions {
         skipAi: false,
         skipQuality: false,
         skipFlaky: false,
-        projectName: (typeof Reflect.get(process.env, 'GITHUB_REPOSITORY') === 'string' ? Reflect.get(process.env, 'GITHUB_REPOSITORY') : undefined) || 'unknown',
+        projectName:
+            (typeof Reflect.get(process.env, 'GITHUB_REPOSITORY') === 'string'
+                ? Reflect.get(process.env, 'GITHUB_REPOSITORY')
+                : undefined) || 'unknown',
     };
     let idx = 0;
     while (idx < args.length) {

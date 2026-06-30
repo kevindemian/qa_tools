@@ -16,7 +16,8 @@ describe('CypressTest', () => {
     });
 
     describe('ParseResults', () => {
-        it('parses a single block correctly', async () => {expect.hasAssertions();
+        it('parses a single block correctly', async () => {
+            expect.hasAssertions();
 
             const content = '10\n20\n30\n40';
             vi.spyOn(fs, 'readFile').mockImplementation((...args: unknown[]) => {
@@ -31,7 +32,8 @@ describe('CypressTest', () => {
             expect(result.percentPassed).toBe(42.86);
         });
 
-        it('returns zeros for empty file with no delimiter', async () => {expect.hasAssertions();
+        it('returns zeros for empty file with no delimiter', async () => {
+            expect.hasAssertions();
 
             vi.spyOn(fs, 'readFile').mockImplementation((...args: unknown[]) => {
                 const cb = args[args.length - 1] as (err: Error | null, data?: string) => void;
@@ -43,7 +45,8 @@ describe('CypressTest', () => {
             expect(result).toStrictEqual({ avgPassed: 0, avgFailed: 0, percentPassed: 0 });
         });
 
-        it('averages correctly across multiple blocks', async () => {expect.hasAssertions();
+        it('averages correctly across multiple blocks', async () => {
+            expect.hasAssertions();
 
             const content = [
                 "Merge branch 'rel_cand' into 'main'",
@@ -69,7 +72,8 @@ describe('CypressTest', () => {
             expect(result.percentPassed).toBe(45.45);
         });
 
-        it('rejects on file read error', async () => {expect.hasAssertions();
+        it('rejects on file read error', async () => {
+            expect.hasAssertions();
 
             vi.spyOn(fs, 'readFile').mockImplementation((...args: unknown[]) => {
                 const cb = args[args.length - 1] as (err: Error | null, data?: string) => void;
@@ -79,7 +83,8 @@ describe('CypressTest', () => {
             await expect(cypressTest.parseResults('/nonexistent')).rejects.toThrow('ENOENT');
         });
 
-        it('skips block with not enough numeric lines and logs warning', async () => {expect.hasAssertions();
+        it('skips block with not enough numeric lines and logs warning', async () => {
+            expect.hasAssertions();
 
             const content = '10\n20';
             vi.spyOn(fs, 'readFile').mockImplementation((...args: unknown[]) => {
@@ -93,7 +98,8 @@ describe('CypressTest', () => {
             expect(result).toStrictEqual({ avgPassed: 0, avgFailed: 0, percentPassed: 0 });
         });
 
-        it('returns zero percent when total tests is zero', async () => {expect.hasAssertions();
+        it('returns zero percent when total tests is zero', async () => {
+            expect.hasAssertions();
 
             const content = '0\n0\n0\n0';
             vi.spyOn(fs, 'readFile').mockImplementation((...args: unknown[]) => {

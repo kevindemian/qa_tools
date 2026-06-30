@@ -1,10 +1,22 @@
 import { createMockGitProvider } from './git-provider-factory.js';
 
 const GIT_PROVIDER_METHODS = [
-    'triggerPipeline', 'getSchedules', 'runSchedule', 'createMergeRequest',
-    'updateMergeRequest', 'getMergeRequest', 'searchMergeRequests', 'acceptMergeRequest',
-    'isApproved', 'getCICDVariables', 'getRecentPipelines', 'getBranch',
-    'getPipeline', 'getPipelineJobs', 'listPipelineArtifacts', 'downloadArtifact',
+    'triggerPipeline',
+    'getSchedules',
+    'runSchedule',
+    'createMergeRequest',
+    'updateMergeRequest',
+    'getMergeRequest',
+    'searchMergeRequests',
+    'acceptMergeRequest',
+    'isApproved',
+    'getCICDVariables',
+    'getRecentPipelines',
+    'getBranch',
+    'getPipeline',
+    'getPipelineJobs',
+    'listPipelineArtifacts',
+    'downloadArtifact',
     'getDiff',
 ];
 

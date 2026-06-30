@@ -53,8 +53,8 @@ export function getCommitAuthor(diff: string): string {
                     timeout: 5000,
                     stdio: ['pipe', 'pipe', 'ignore'],
                 });
-                const authorMatch = blameOut.match(/^author (.+)$/m);
-                const emailMatch = blameOut.match(/^author-mail <(.+)>$/m);
+                const authorMatch = /^author (.+)$/m.exec(blameOut);
+                const emailMatch = /^author-mail <(.+)>$/m.exec(blameOut);
                 if (authorMatch) {
                     author = authorMatch[1]?.trim() ?? author;
                     if (emailMatch) {

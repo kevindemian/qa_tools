@@ -133,5 +133,4 @@ describe('Incident Report', () => {
             expect(html).toContain('Custom Incident Report');
         });
     });
-
 });

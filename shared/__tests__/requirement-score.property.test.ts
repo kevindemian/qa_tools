@@ -34,14 +34,12 @@ describe('Requirement Score.Property', () => {
             action: ActionArb,
             reason: fc.option(fc.string({ minLength: 0, maxLength: 30 }), { nil: undefined }),
         })
-        .map(
-            (r): AiModification => ({
-                testKey: r.testKey,
-                recordedAt: r.recordedAt,
-                action: r.action,
-                ...(r.reason !== undefined ? { reason: r.reason } : {}),
-            }),
-        );
+        .map((r): AiModification => ({
+            testKey: r.testKey,
+            recordedAt: r.recordedAt,
+            action: r.action,
+            ...(r.reason !== undefined ? { reason: r.reason } : {}),
+        }));
 
     const AiGenerationRecordArb = fc
         .record({
@@ -67,23 +65,22 @@ describe('Requirement Score.Property', () => {
             ),
             feedback: fc.option(fc.array(AiModificationArb, { minLength: 0, maxLength: 8 }), { nil: undefined }),
         })
-        .map(
-            (r): AiGenerationRecord => ({
-                id: r.id,
-                generatedAt: r.generatedAt,
-                promptVersion: r.promptVersion,
-                userStory: r.userStory,
-                acceptanceCriteria: r.acceptanceCriteria,
-                generatedTests: r.generatedTests,
-                preconditionMatches: r.preconditionMatches,
-                ...(r.feedback !== undefined ? { feedback: r.feedback } : {}),
-            }),
-        );
+        .map((r): AiGenerationRecord => ({
+            id: r.id,
+            generatedAt: r.generatedAt,
+            promptVersion: r.promptVersion,
+            userStory: r.userStory,
+            acceptanceCriteria: r.acceptanceCriteria,
+            generatedTests: r.generatedTests,
+            preconditionMatches: r.preconditionMatches,
+            ...(r.feedback !== undefined ? { feedback: r.feedback } : {}),
+        }));
 
     const ValidGrades = ['A', 'B', 'C', 'D', 'F'] as const;
 
     describe('CalculateRequirementScores — property-based', () => {
-        it('entries.length equals totalRequirements', () => {expect.hasAssertions();
+        it('entries.length equals totalRequirements', () => {
+            expect.hasAssertions();
 
             fc.assert(
                 fc.property(fc.array(AiGenerationRecordArb, { minLength: 0, maxLength: 10 }), (records) => {
@@ -95,7 +92,8 @@ describe('Requirement Score.Property', () => {
             );
         });
 
-        it('each score is non-negative and grade is valid', () => {expect.hasAssertions();
+        it('each score is non-negative and grade is valid', () => {
+            expect.hasAssertions();
 
             fc.assert(
                 fc.property(fc.array(AiGenerationRecordArb, { minLength: 0, maxLength: 10 }), (records) => {
@@ -110,7 +108,8 @@ describe('Requirement Score.Property', () => {
             );
         });
 
-        it('entries are sorted by score descending', () => {expect.hasAssertions();
+        it('entries are sorted by score descending', () => {
+            expect.hasAssertions();
 
             fc.assert(
                 fc.property(fc.array(AiGenerationRecordArb, { minLength: 0, maxLength: 10 }), (records) => {
@@ -130,7 +129,8 @@ describe('Requirement Score.Property', () => {
             );
         });
 
-        it('acceptanceRate is in [0, 100]', () => {expect.hasAssertions();
+        it('acceptanceRate is in [0, 100]', () => {
+            expect.hasAssertions();
 
             fc.assert(
                 fc.property(fc.array(AiGenerationRecordArb, { minLength: 0, maxLength: 10 }), (records) => {
@@ -144,7 +144,8 @@ describe('Requirement Score.Property', () => {
             );
         });
 
-        it('aggregate counts match sum of entries', () => {expect.hasAssertions();
+        it('aggregate counts match sum of entries', () => {
+            expect.hasAssertions();
 
             fc.assert(
                 fc.property(fc.array(AiGenerationRecordArb, { minLength: 0, maxLength: 10 }), (records) => {
@@ -163,14 +164,16 @@ describe('Requirement Score.Property', () => {
             );
         });
 
-        it('overallScore matches average of entry scores', () => {expect.hasAssertions();
+        it('overallScore matches average of entry scores', () => {
+            expect.hasAssertions();
 
             fc.assert(
                 fc.property(fc.array(AiGenerationRecordArb, { minLength: 0, maxLength: 10 }), (records) => {
                     const result = calculateRequirementScores(records);
-                    const expectedAvg = result.totalRequirements > 0
-                        ? Math.round(result.entries.reduce((s, e) => s + e.score, 0) / result.totalRequirements)
-                        : result.overallScore;
+                    const expectedAvg =
+                        result.totalRequirements > 0
+                            ? Math.round(result.entries.reduce((s, e) => s + e.score, 0) / result.totalRequirements)
+                            : result.overallScore;
 
                     expect(result.overallScore).toBe(expectedAvg);
 
@@ -180,7 +183,8 @@ describe('Requirement Score.Property', () => {
             );
         });
 
-        it('timestamp is valid ISO string', () => {expect.hasAssertions();
+        it('timestamp is valid ISO string', () => {
+            expect.hasAssertions();
 
             fc.assert(
                 fc.property(fc.array(AiGenerationRecordArb, { minLength: 0, maxLength: 10 }), (records) => {
@@ -213,7 +217,8 @@ describe('Requirement Score.Property', () => {
     });
 
     describe('GenerateRequirementScoreHtml — property-based', () => {
-        it('always produces valid HTML with DOCTYPE', () => {expect.hasAssertions();
+        it('always produces valid HTML with DOCTYPE', () => {
+            expect.hasAssertions();
 
             fc.assert(
                 fc.property(fc.array(AiGenerationRecordArb, { minLength: 0, maxLength: 8 }), (records) => {
@@ -227,5 +232,4 @@ describe('Requirement Score.Property', () => {
             );
         });
     });
-
 });

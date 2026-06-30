@@ -34,63 +34,70 @@ gaps: G1(baixo) import {z} from zod → deps.js; G6(baixo) as never → Config.c
 ft: (integration tests listed inline)
 
 **D8 — Domain Adequacy (2026-06-19):**
-| ID Registry | Cálculo | Fonte | Status |
-|-------------|---------|-------|--------|
-| F04 | Taxa de flakiness individual (`calculateFlakiness`) | ISO/IEC 25010:2011 §4.2.1 | ✅ Corrigido (skip excluído do denominador) |
-| F05 | Taxa de flakiness agregada (`calculateFlakyRate`) | Indústria CI/CD | ✅ Consistente com F04 |
-| F06 | Pass rate (`getTrends`) | ISO/IEC 25010:2011 §4.2.1 | ✅ Correto desde origem |
+
+| ID Registry | Cálculo                                             | Fonte                     | Status                                      |
+| ----------- | --------------------------------------------------- | ------------------------- | ------------------------------------------- |
+| F04         | Taxa de flakiness individual (`calculateFlakiness`) | ISO/IEC 25010:2011 §4.2.1 | ✅ Corrigido (skip excluído do denominador) |
+| F05         | Taxa de flakiness agregada (`calculateFlakyRate`)   | Indústria CI/CD           | ✅ Consistente com F04                      |
+| F06         | Pass rate (`getTrends`)                             | ISO/IEC 25010:2011 §4.2.1 | ✅ Correto desde origem                     |
 
 **Gap D8-01 (corrigido):** `calculateFlakiness` incluía `skip` no denominador da taxa. Gold standard ISO 25010 define taxa sobre executados apenas. Corrigido: `executedCount = pass + fail` em vez de `totalRunAppearances = pass + fail + skip`. Taxa anterior era artificialmente reduzida quando skip presente. `calculateFlakyRate` também corrigido para consistência (denominador conta execuções, não aparições).
 
 ### D8 — Grupo 1 (FT-09 a FT-15)
 
 **FT-09 — Health Score:**
-| ID Registry | Cálculo | Fonte | Status |
-|-------------|---------|-------|--------|
-| F07 | Média exponencial ponderada (`_computeExpWeighted`) | NIST/SEMATECH §6.4.4 | ✅ Correto |
-| F08 | Percentil p95 (`_computeSuiteSpeed`) | ISO 16269-4:2017 | ✅ Correto |
-| F09 | Score por interpolação linear (`scorePassRate`, etc.) | ISO/IEC 25020:2019 Annex D | ✅ Correto |
-| F10 | Média ponderada (`calculateHealthScore`) | NIST/SEMATECH §2.3.1 | ✅ Correto |
-Resultado: Sem gap aritmético. 5 dimensões com gold standard, todas corretas.
+
+| ID Registry                                                                   | Cálculo                                               | Fonte                      | Status     |
+| ----------------------------------------------------------------------------- | ----------------------------------------------------- | -------------------------- | ---------- |
+| F07                                                                           | Média exponencial ponderada (`_computeExpWeighted`)   | NIST/SEMATECH §6.4.4       | ✅ Correto |
+| F08                                                                           | Percentil p95 (`_computeSuiteSpeed`)                  | ISO 16269-4:2017           | ✅ Correto |
+| F09                                                                           | Score por interpolação linear (`scorePassRate`, etc.) | ISO/IEC 25020:2019 Annex D | ✅ Correto |
+| F10                                                                           | Média ponderada (`calculateHealthScore`)              | NIST/SEMATECH §2.3.1       | ✅ Correto |
+| Resultado: Sem gap aritmético. 5 dimensões com gold standard, todas corretas. |
 
 **FT-10 — Quality Gate:**
-| Cálculo | Fonte | Status |
-|---------|-------|--------|
-| Flaky rate (`_flakyCheck`) | ISO/IEC 25010:2011 §4.2.1 (mesmo F04/F05) | ✅ Corrigido (D8-02) |
-| p95 suite speed | ISO 16269-4:2017 (F08) | ✅ Correto |
-| Score por interpolação | ISO/IEC 25020:2019 Annex D (F09) | ✅ Correto |
-**Gap D8-02 (corrigido):** `_flakyCheck` contava `skip` no denominador (mesmo padrão do D8-01). Corrigido: `if (t.state === 'skipped') continue;`.
+
+| Cálculo                                                                                                                                            | Fonte                                     | Status               |
+| -------------------------------------------------------------------------------------------------------------------------------------------------- | ----------------------------------------- | -------------------- |
+| Flaky rate (`_flakyCheck`)                                                                                                                         | ISO/IEC 25010:2011 §4.2.1 (mesmo F04/F05) | ✅ Corrigido (D8-02) |
+| p95 suite speed                                                                                                                                    | ISO 16269-4:2017 (F08)                    | ✅ Correto           |
+| Score por interpolação                                                                                                                             | ISO/IEC 25020:2019 Annex D (F09)          | ✅ Correto           |
+| **Gap D8-02 (corrigido):** `_flakyCheck` contava `skip` no denominador (mesmo padrão do D8-01). Corrigido: `if (t.state === 'skipped') continue;`. |
 
 **FT-11 — Coverage Source:** Sem cálculo próprio — apenas leitura de `pct` do relatório Istanbul. N/A para D8.
 
 **FT-12 — Quality Metrics:**
-| Cálculo | Fonte | Status |
-|---------|-------|--------|
-| invariantFireRate (proporção) | ISO/IEC 25010 §4.2.1 (F01) | ✅ Correto |
-| layerPassRate (proporção) | ISO/IEC 25010 §4.2.1 (F01) | ✅ Correto |
-| detectDrift (média + desvio + z-score) | NIST/SEMATECH §2.3.6 (F01+F02) | ✅ Correto |
-| avgStructureScore (média aritmética) | NIST/SEMATECH §2.3.1 (F01) | ✅ Correto |
-Nota: detectDrift usa desvio padrão populacional (/n) para análise descritiva de snapshots, não inferência amostral. Aceitável para drift detection interno.
+
+| Cálculo                                                                                                                                                      | Fonte                          | Status     |
+| ------------------------------------------------------------------------------------------------------------------------------------------------------------ | ------------------------------ | ---------- |
+| invariantFireRate (proporção)                                                                                                                                | ISO/IEC 25010 §4.2.1 (F01)     | ✅ Correto |
+| layerPassRate (proporção)                                                                                                                                    | ISO/IEC 25010 §4.2.1 (F01)     | ✅ Correto |
+| detectDrift (média + desvio + z-score)                                                                                                                       | NIST/SEMATECH §2.3.6 (F01+F02) | ✅ Correto |
+| avgStructureScore (média aritmética)                                                                                                                         | NIST/SEMATECH §2.3.1 (F01)     | ✅ Correto |
+| Nota: detectDrift usa desvio padrão populacional (/n) para análise descritiva de snapshots, não inferência amostral. Aceitável para drift detection interno. |
 
 **FT-13 — Quality Suggester:**
-| Cálculo | Fonte | Status |
-|---------|-------|--------|
-| failureRate (proporção) | ISO/IEC 25010 §4.2.1 (F01) | ✅ Correto |
+
+| Cálculo                          | Fonte                                       | Status                         |
+| -------------------------------- | ------------------------------------------- | ------------------------------ |
+| failureRate (proporção)          | ISO/IEC 25010 §4.2.1 (F01)                  | ✅ Correto                     |
 | severityFromLatency (thresholds) | Sem gold standard formal (regra de domínio) | ⚠️ Apenas corretude verificada |
 
 **FT-14 — Release Score:**
-| Cálculo | Fonte | Status |
-|---------|-------|--------|
-| invertFlakiness (100 - rate) | ISO/IEC 25010 §4.2.1 (F01) | ✅ Correto |
-| calculateReleaseScore (média ponderada) | NIST/SEMATECH §2.3.1 (F01) | ✅ Correto |
-| computeGrade (threshold mapping) | ISO/IEC 25020:2019 Annex D (F09) | ✅ Correto |
+
+| Cálculo                                 | Fonte                            | Status     |
+| --------------------------------------- | -------------------------------- | ---------- |
+| invertFlakiness (100 - rate)            | ISO/IEC 25010 §4.2.1 (F01)       | ✅ Correto |
+| calculateReleaseScore (média ponderada) | NIST/SEMATECH §2.3.1 (F01)       | ✅ Correto |
+| computeGrade (threshold mapping)        | ISO/IEC 25020:2019 Annex D (F09) | ✅ Correto |
 
 **FT-15 — Benchmark Metrics:**
-| Cálculo | Fonte | Status |
-|---------|-------|--------|
-| countCoveredCriteria (contagem) | N/A (string matching) | ✅ N/A |
-| partitionCoverage / boundaryCoverage (proporção) | ISO/IEC 25010 §4.2.1 (F01) | ✅ Correto |
-Resultado: Sem gap aritmético. Ratios de cobertura seguem F01.
+
+| Cálculo                                                        | Fonte                      | Status     |
+| -------------------------------------------------------------- | -------------------------- | ---------- |
+| countCoveredCriteria (contagem)                                | N/A (string matching)      | ✅ N/A     |
+| partitionCoverage / boundaryCoverage (proporção)               | ISO/IEC 25010 §4.2.1 (F01) | ✅ Correto |
+| Resultado: Sem gap aritmético. Ratios de cobertura seguem F01. |
 
 **Sumário D8 Grupo 1:** 2 gaps encontrados (D8-02), ambos corrigidos. Nenhum gap aritmético pendente. Registry expandido de F01-F06 para F01-F10.
 
@@ -277,44 +284,47 @@ changes: FT-20c buildHtmlPage.mockImplementationOnce(throw) → buildErrorPage, 
 - DOCS: docs/TECHDOC.md — sem referência a defect-seasonality (gap T19-1)
 
 [SOP] **Pre-scan source (Phase 0.1.1):** ✅ todas as 12 perguntas OK, exceto:
-| # | Categoria | Local | Descrição |
-|---|-----------|-------|-----------|
-| 9 | UX | defect-seasonality.ts:234 | `rootLogger.error('Failed to generate seasonality dashboard: ' + msg)` — mensagem não diz ação |
+
+| #   | Categoria | Local                     | Descrição                                                                                      |
+| --- | --------- | ------------------------- | ---------------------------------------------------------------------------------------------- |
+| 9   | UX        | defect-seasonality.ts:234 | `rootLogger.error('Failed to generate seasonality dashboard: ' + msg)` — mensagem não diz ação |
 
 **Pre-scan tests (Phase 0.1.2):** ✅ todas as 9 perguntas OK.
 
 ``
 **Phase 2 — T1-T20:**
-| ID | Status | Observação |
-|----|--------|------------|
-| T1 | ✅ | 2 exports públicos |
-| T2 | ⚠️ | interfaces OK, sem Zod schema |
-| T3 | ✅ N/A | sem config accessor |
-| T4 | ✅ N/A | sem config/env |
-| T5-T8 | ✅ N/A | sem wizard |
-| T9 | ✅ N/A | sem reconfig handler |
-| T10 | ✅ N/A | sem CI .github |
-| T11 | ✅ | try/catch ativo |
-| T12 | ✅ | 47 tests (u32 + i8 + p7) |
-| T13 | ✅ | zero dead code |
-| T14 | ✅ | zero suppressions |
-| T15 | ✅ | consumers: interactive-mode.ts, schedule-handler.ts |
-| T16 | ✅ N/A | sem CLI |
-| T17 | ✅ | zero env vars |
-| T18 | ✅ | try/catch + instanceof + fallbacks |
-| T19 | ❌ | TECHDOC sem referência |
-| T20 | ✅ N/A | sem CI config |
+
+| ID    | Status | Observação                                          |
+| ----- | ------ | --------------------------------------------------- |
+| T1    | ✅     | 2 exports públicos                                  |
+| T2    | ⚠️     | interfaces OK, sem Zod schema                       |
+| T3    | ✅ N/A | sem config accessor                                 |
+| T4    | ✅ N/A | sem config/env                                      |
+| T5-T8 | ✅ N/A | sem wizard                                          |
+| T9    | ✅ N/A | sem reconfig handler                                |
+| T10   | ✅ N/A | sem CI .github                                      |
+| T11   | ✅     | try/catch ativo                                     |
+| T12   | ✅     | 47 tests (u32 + i8 + p7)                            |
+| T13   | ✅     | zero dead code                                      |
+| T14   | ✅     | zero suppressions                                   |
+| T15   | ✅     | consumers: interactive-mode.ts, schedule-handler.ts |
+| T16   | ✅ N/A | sem CLI                                             |
+| T17   | ✅     | zero env vars                                       |
+| T18   | ✅     | try/catch + instanceof + fallbacks                  |
+| T19   | ❌     | TECHDOC sem referência                              |
+| T20   | ✅ N/A | sem CI config                                       |
 
 **Phase 3 — D1-D7:**
-| ID | Status | Observação |
-|----|--------|------------|
-| D1 | ✅ | cleanup beforeEach, vi.mock, sem estado compartilhado |
-| D2 | ✅ | input validation, guard clauses, fallbacks |
-| D3 | ✅ | SRP, DepWall, sem duplicação, 237L |
-| D4 | ✅ | complexidade adequada, constantes nomeadas |
-| D5 | ✅ N/A | agregador, não produz métricas |
-| D6 | ⚠️/❌ | D6.1⚠️ msg não acionável; D6.2❌ sem TECHDOC |
-| D7 | ✅ | 120 expects ≥ 47 tests, zero weak assertions, PBT presente |
+
+| ID  | Status | Observação                                                 |
+| --- | ------ | ---------------------------------------------------------- |
+| D1  | ✅     | cleanup beforeEach, vi.mock, sem estado compartilhado      |
+| D2  | ✅     | input validation, guard clauses, fallbacks                 |
+| D3  | ✅     | SRP, DepWall, sem duplicação, 237L                         |
+| D4  | ✅     | complexidade adequada, constantes nomeadas                 |
+| D5  | ✅ N/A | agregador, não produz métricas                             |
+| D6  | ⚠️/❌  | D6.1⚠️ msg não acionável; D6.2❌ sem TECHDOC               |
+| D7  | ✅     | 120 expects ≥ 47 tests, zero weak assertions, PBT presente |
 
 **Phase 4 — Gaps identificados:**
 
@@ -359,14 +369,15 @@ Ordem de correção (Phase 4.2): T14 (0) → TSC (0) → T12 (G3) → D7 (0) →
 `
 `
 `**Phase 11 — Quality Gate:**
-| Dimensão | Status | Itens |
-|----------|--------|-------|
-| Architecture | ✅ | SRP, DepWall, zero duplicação |
-| Security | ✅ | Path traversal: N/A, sem eval, sem secrets |
-| Error handling | ✅ | try/catch discriminado (instanceof), fallback buildErrorPage |
-| Type safety | ✅ | zero casts, zero`!`, zero suppressions |
-| Maintainability | ✅ | nomes claros, 237L (<400), complexidade moderada |
-| Consistency | ✅ | 15/15 checkpoints completos, testes passam |
+
+| Dimensão        | Status | Itens                                                        |
+| --------------- | ------ | ------------------------------------------------------------ |
+| Architecture    | ✅     | SRP, DepWall, zero duplicação                                |
+| Security        | ✅     | Path traversal: N/A, sem eval, sem secrets                   |
+| Error handling  | ✅     | try/catch discriminado (instanceof), fallback buildErrorPage |
+| Type safety     | ✅     | zero casts, zero`!`, zero suppressions                       |
+| Maintainability | ✅     | nomes claros, 237L (<400), complexidade moderada             |
+| Consistency     | ✅     | 15/15 checkpoints completos, testes passam                   |
 
 `
 `
@@ -387,36 +398,38 @@ Ordem de correção (Phase 4.2): T14 (0) → TSC (0) → T12 (G3) → D7 (0) →
   **Pre-scan source (Phase 0.1.1):**
 
 **Phase 2 — T1-T20:**
-| ID | Status | Observação |
-|----|--------|------------|
-| T1 | ✅ | 2 exports públicos |
-| T2 | ⚠️ | interfaces OK, sem Zod schema |
-| T3 | ✅ N/A | sem config accessor |
-| T4 | ✅ N/A | sem config/env |
-| T5-T8 | ✅ N/A | sem wizard |
-| T9 | ✅ N/A | sem reconfig handler |
-| T10 | ✅ N/A | sem CI .github |
-| T11 | ✅ | try/catch ativo |
-| T12 | ❌ | apenas 26 unit tests — sem integration, sem PBT |
-| T13 | ✅ | zero dead code |
-| T14 | ❌ T14h | `as number` cast (line 63) suprime noUncheckedIndexedAccess |
-| T15 | ✅ | zero consumers |
-| T16 | ✅ N/A | sem CLI |
-| T17 | ✅ | zero env vars |
-| T18 | ✅ | try/catch + instanceof + fallbacks |
-| T19 | ❌ | TECHDOC sem referência |
-| T20 | ✅ N/A | sem CI config |
+
+| ID    | Status  | Observação                                                  |
+| ----- | ------- | ----------------------------------------------------------- |
+| T1    | ✅      | 2 exports públicos                                          |
+| T2    | ⚠️      | interfaces OK, sem Zod schema                               |
+| T3    | ✅ N/A  | sem config accessor                                         |
+| T4    | ✅ N/A  | sem config/env                                              |
+| T5-T8 | ✅ N/A  | sem wizard                                                  |
+| T9    | ✅ N/A  | sem reconfig handler                                        |
+| T10   | ✅ N/A  | sem CI .github                                              |
+| T11   | ✅      | try/catch ativo                                             |
+| T12   | ❌      | apenas 26 unit tests — sem integration, sem PBT             |
+| T13   | ✅      | zero dead code                                              |
+| T14   | ❌ T14h | `as number` cast (line 63) suprime noUncheckedIndexedAccess |
+| T15   | ✅      | zero consumers                                              |
+| T16   | ✅ N/A  | sem CLI                                                     |
+| T17   | ✅      | zero env vars                                               |
+| T18   | ✅      | try/catch + instanceof + fallbacks                          |
+| T19   | ❌      | TECHDOC sem referência                                      |
+| T20   | ✅ N/A  | sem CI config                                               |
 
 **Phase 3 — D1-D7:**
-| ID | Status | Observação |
-|----|--------|------------|
-| D1 | ✅ | sem mocks, testes puros, isolados |
-| D2 | ✅ | input validation, guard clauses, fallbacks |
-| D3 | ✅ | SRP, DepWall, sem duplicação, 172L |
-| D4 | ⚠️ | constantes mágicas (5,3,2,1,0.001) |
-| D5 | ✅ N/A | detector, não métrica |
-| D6 | ❌/⚠️ | D6.1⚠️ msg não acionável (G-A); D6.2❌ TECHDOC |
-| D7 | ❌ | D7.11 PBT ausente (lógica estatística crítica) |
+
+| ID  | Status | Observação                                     |
+| --- | ------ | ---------------------------------------------- |
+| D1  | ✅     | sem mocks, testes puros, isolados              |
+| D2  | ✅     | input validation, guard clauses, fallbacks     |
+| D3  | ✅     | SRP, DepWall, sem duplicação, 172L             |
+| D4  | ⚠️     | constantes mágicas (5,3,2,1,0.001)             |
+| D5  | ✅ N/A | detector, não métrica                          |
+| D6  | ❌/⚠️  | D6.1⚠️ msg não acionável (G-A); D6.2❌ TECHDOC |
+| D7  | ❌     | D7.11 PBT ausente (lógica estatística crítica) |
 
 **Phase 4 — Gaps identificados:**
 
@@ -478,25 +491,27 @@ Bug REAL encontrado: NaN/Infinity em computeMean/computeStdDev propaga NaN para 
 ``
 
 **Phase 9 — Validação Final:**
-| Check | Status |
-|-------|--------|
-| TSC --noEmit | ✅ 0 erros |
-| Lint | ✅ All quality checks passed |
-| Tests | ✅ 5671/5671 passaram |
-| Git diff | ✅ apenas arquivos esperados |
+
+| Check        | Status                       |
+| ------------ | ---------------------------- |
+| TSC --noEmit | ✅ 0 erros                   |
+| Lint         | ✅ All quality checks passed |
+| Tests        | ✅ 5671/5671 passaram        |
+| Git diff     | ✅ apenas arquivos esperados |
 
 `
 `
 
 **Phase 11 — Quality Gate:**
-| Dimensão | Status | Itens |
-|----------|--------|-------|
-| Architecture | ✅ | SRP, DepWall, zero duplicação |
-| Security | ✅ | sem eval, sem secrets, path N/A |
-| Error handling | ✅ | instanceof discriminado, fallbacks, sem catch vazio |
-| Type safety | ✅ | zero casts, zero `!`, zero suppressions |
-| Maintainability | ✅ | nomes claros, 187L, constantes nomeadas |
-| Consistency | ✅ | 15/15 checkpoints, testes passam |
+
+| Dimensão        | Status | Itens                                               |
+| --------------- | ------ | --------------------------------------------------- |
+| Architecture    | ✅     | SRP, DepWall, zero duplicação                       |
+| Security        | ✅     | sem eval, sem secrets, path N/A                     |
+| Error handling  | ✅     | instanceof discriminado, fallbacks, sem catch vazio |
+| Type safety     | ✅     | zero casts, zero `!`, zero suppressions             |
+| Maintainability | ✅     | nomes claros, 187L, constantes nomeadas             |
+| Consistency     | ✅     | 15/15 checkpoints, testes passam                    |
 
 ``
 
@@ -549,14 +564,15 @@ Bug REAL encontrado: NaN/Infinity em computeMean/computeStdDev propaga NaN para 
 ## ➡️ NEXT: FT-24 — AI Comparison
 
 **Quality Gate (Phase 11):**
-| Dimensão | Status |
-|----------|--------|
-| Architecture | ✅ SRP, DepWall, zero duplicação |
-| Security | ✅ sem path traversal, sem eval, sem secrets |
-| Error handling | ✅ zero catches vazios, discriminados, fallbacks |
-| Type safety | ✅ casts com guard, zero !, zero suppressions |
-| Maintainability | ✅ nomes claros, 188L, baixa complexidade |
-| Consistency | ✅ checkpoints completos, testes passam |
+
+| Dimensão        | Status                                           |
+| --------------- | ------------------------------------------------ |
+| Architecture    | ✅ SRP, DepWall, zero duplicação                 |
+| Security        | ✅ sem path traversal, sem eval, sem secrets     |
+| Error handling  | ✅ zero catches vazios, discriminados, fallbacks |
+| Type safety     | ✅ casts com guard, zero !, zero suppressions    |
+| Maintainability | ✅ nomes claros, 188L, baixa complexidade        |
+| Consistency     | ✅ checkpoints completos, testes passam          |
 
 ``
 
@@ -933,11 +949,12 @@ Decisão arquitetural (solução tecnicamente superior): tipos ampliados em vez 
 - DOCS: ❌ TECHDOC — pendente
 
 **Pre-scan source (Phase 0.1.1):**
-| # | Categoria | Local | Descrição |
-|---|-----------|-------|-----------|
-| 5 | Error handling | suite-optimization.ts:194 | `generateOptimizationHtml` chama `buildHtmlPage` sem try/catch — se throw, erro propaga sem log |
-| 9 | UX | suite-optimization.ts | Nenhuma mensagem de erro acionável — sem rootLogger, sem buildErrorPage |
-| 12 | Manutenibilidade | suite-optimization.ts:67-78 | Multiplicadores mágicos inline (3, 2, 1.5) em vez de constantes nomeadas |
+
+| #   | Categoria        | Local                       | Descrição                                                                                       |
+| --- | ---------------- | --------------------------- | ----------------------------------------------------------------------------------------------- |
+| 5   | Error handling   | suite-optimization.ts:194   | `generateOptimizationHtml` chama `buildHtmlPage` sem try/catch — se throw, erro propaga sem log |
+| 9   | UX               | suite-optimization.ts       | Nenhuma mensagem de erro acionável — sem rootLogger, sem buildErrorPage                         |
+| 12  | Manutenibilidade | suite-optimization.ts:67-78 | Multiplicadores mágicos inline (3, 2, 1.5) em vez de constantes nomeadas                        |
 
 **Pre-scan tests (Phase 0.1.2):** ✅ todas as 9 perguntas OK.
 
@@ -1007,11 +1024,12 @@ Decisão arquitetural (solução tecnicamente superior): tipos ampliados em vez 
 **Phase 3.5 — D8 Domain Adequacy (SOP §3.5):**
 
 **D8.0 — Tipos de cálculo identificados:**
-| Operação | Fonte | ID Registry | Status |
-|----------|-------|-------------|--------|
-| potentialSavings | Domain heuristic | — | Sem gold standard conhecido |
-| Impact classification | Domain heuristic | — | Sem gold standard conhecido |
-| Action selection (priority chain) | Domain heuristic | — | Sem gold standard conhecido |
+
+| Operação                          | Fonte            | ID Registry | Status                      |
+| --------------------------------- | ---------------- | ----------- | --------------------------- |
+| potentialSavings                  | Domain heuristic | —           | Sem gold standard conhecido |
+| Impact classification             | Domain heuristic | —           | Sem gold standard conhecido |
+| Action selection (priority chain) | Domain heuristic | —           | Sem gold standard conhecido |
 
 **D8.1 — Gold standard:** Nenhum cálculo tem gold standard formal. Verificados apenas por corretude via testes.
 
@@ -1193,26 +1211,29 @@ FT-26 completo. D7 pós-correção: arrasto --all executado, 0 violações.
 ### Phase 3.5 — D8 Domain Adequacy
 
 **D8.0 — Tipos de cálculo:**
-| Operação | Fonte | ID Registry |
-| ------------------ | ------------------------------------------ | ---------------- |
-| failureRate | `(totalFailures / testsTouched) * 100` | Sem gold standard |
-| totalFailures | Contagem simples | — |
-| totalAuthors | Unique count | — |
-| testsTouched | Cardinalidade de Set | — |
-| topFailureCategory | Moda (maior contagem) | Sem gold standard |
+
+| Operação           | Fonte                                  | ID Registry       |
+| ------------------ | -------------------------------------- | ----------------- |
+| failureRate        | `(totalFailures / testsTouched) * 100` | Sem gold standard |
+| totalFailures      | Contagem simples                       | —                 |
+| totalAuthors       | Unique count                           | —                 |
+| testsTouched       | Cardinalidade de Set                   | —                 |
+| topFailureCategory | Moda (maior contagem)                  | Sem gold standard |
 
 **D8.2 — failureRate (derivação):**
-| Camada | Expressão | Match? |
-| -------------------- | ----------------------------------------------------------- | ------ |
-| Referência | N/A — métrica de domínio sem gold standard formal | — |
-| Núcleo implementação | `(data.totalFailures / testsTouched) * 100` | — |
-| Observação | Métrica pode exceder 100% (1 teste pode falhar N vezes). | — |
+
+| Camada               | Expressão                                                | Match? |
+| -------------------- | -------------------------------------------------------- | ------ |
+| Referência           | N/A — métrica de domínio sem gold standard formal        | —      |
+| Núcleo implementação | `(data.totalFailures / testsTouched) * 100`              | —      |
+| Observação           | Métrica pode exceder 100% (1 teste pode falhar N vezes). | —      |
 
 **D8.2 — totalFailures (derivação):**
-| Camada | Expressão | Match? |
-| -------------------- | ----------------------------- | ------ |
-| Referência | Contagem simples | — |
-| Núcleo implementação | Incremento por iteração | ✅ |
+
+| Camada               | Expressão               | Match? |
+| -------------------- | ----------------------- | ------ |
+| Referência           | Contagem simples        | —      |
+| Núcleo implementação | Incremento por iteração | ✅     |
 
 **D8.3 — Desvios estruturais:** Nenhum — operações sem desvios entre input e saída.
 
@@ -1372,47 +1393,52 @@ TECHDOC: ❌ gap — sem entrada para `backlog-health`
 **Phase 3 — D1-D7:**
 
 **D1: Isolamento de Testes** ✅
-| Check | Resultado |
-|-------|-----------|
+
+| Check                               | Resultado                                            |
+| ----------------------------------- | ---------------------------------------------------- |
 | D1.1 cleanup (beforeEach/afterEach) | ✅ integration: `vi.restoreAllMocks()` em beforeEach |
-| D1.2 vi.mock | ✅ integration: logger + config mockados |
-| D1.3 sem estado compartilhado | ✅ todos os testes usam dados locais/fresh |
-| D1.4 limpeza de recursos | ✅ vi.restoreAllMocks() |
+| D1.2 vi.mock                        | ✅ integration: logger + config mockados             |
+| D1.3 sem estado compartilhado       | ✅ todos os testes usam dados locais/fresh           |
+| D1.4 limpeza de recursos            | ✅ vi.restoreAllMocks()                              |
 
 **D2: Robustez** ✅ (2/2 aplicáveis)
-| Check | Resultado |
-|-------|-----------|
-| D2.1 input validation | ✅ parâmetros tipados, options com defaults |
-| D2.2 guard clauses | ✅ options spread `{ ...DEFAULTS, ...options }` |
-| D2.3 fallbacks I/O | ❌ N/A (sem I/O) |
-| D2.4 timeout | ❌ N/A (sem I/O) |
+
+| Check                 | Resultado                                       |
+| --------------------- | ----------------------------------------------- |
+| D2.1 input validation | ✅ parâmetros tipados, options com defaults     |
+| D2.2 guard clauses    | ✅ options spread `{ ...DEFAULTS, ...options }` |
+| D2.3 fallbacks I/O    | ❌ N/A (sem I/O)                                |
+| D2.4 timeout          | ❌ N/A (sem I/O)                                |
 
 **D3: Boas Práticas** ✅ (5/5)
-| Check | Resultado |
-|-------|-----------|
-| D3.1 SRP | ✅ cada função tem responsabilidade única |
-| D3.2 DepWall | ✅ imports só de `./escape.js` e `./primitives/index.js` |
-| D3.3 sem bypass | ✅ sem workarounds |
-| D3.4 sem duplicação | ✅ 0 duplicação |
-| D3.5 nomes claros | ✅ descritivos |
+
+| Check               | Resultado                                                |
+| ------------------- | -------------------------------------------------------- |
+| D3.1 SRP            | ✅ cada função tem responsabilidade única                |
+| D3.2 DepWall        | ✅ imports só de `./escape.js` e `./primitives/index.js` |
+| D3.3 sem bypass     | ✅ sem workarounds                                       |
+| D3.4 sem duplicação | ✅ 0 duplicação                                          |
+| D3.5 nomes claros   | ✅ descritivos                                           |
 
 **D4: Implementação** ⚠️ (3/5 — D4.3 gaps)
-| Check | Resultado |
-|-------|-----------|
-| D4.1 complexidade adequada | ✅ filter/map/reduce lineares |
-| D4.2 sem cópias desnecessárias | ✅ |
-| D4.3 constantes mágicas | ❌ `80` (slice), `50`/`80` (severity thresholds) |
-| D4.4 early returns | ✅ single return |
-| D4.5 sem dead code | ✅ |
+
+| Check                          | Resultado                                        |
+| ------------------------------ | ------------------------------------------------ |
+| D4.1 complexidade adequada     | ✅ filter/map/reduce lineares                    |
+| D4.2 sem cópias desnecessárias | ✅                                               |
+| D4.3 constantes mágicas        | ❌ `80` (slice), `50`/`80` (severity thresholds) |
+| D4.4 early returns             | ✅ single return                                 |
+| D4.5 sem dead code             | ✅                                               |
 
 **D5: Métricas** ❌ N/A — módulo de análise, não produz métricas persistidas
 
 **D6: UX** ❌
-| Check | Resultado |
-|-------|-----------|
-| D6.1 mensagens acionáveis | ❌ N/A — sem error paths |
-| D6.2 documentação | ❌ TECHDOC sem entrada |
-| D6.3 terminologia consistente | ✅ |
+
+| Check                         | Resultado                |
+| ----------------------------- | ------------------------ |
+| D6.1 mensagens acionáveis     | ❌ N/A — sem error paths |
+| D6.2 documentação             | ❌ TECHDOC sem entrada   |
+| D6.3 terminologia consistente | ✅                       |
 
 **D7: Deep Test Audit (manual):**
 
@@ -1553,16 +1579,18 @@ Q1(casts)❌ Q2(violação ignorada)❌ Q3(causa raiz)✅ Q4(UX acionável)✅ N
 **Pre-scan achados (Phase 0.1):**
 
 Source:
-| # | Categoria | Local | Descrição |
-|---|-----------|-------|-----------|
-| 1 | UX (D6.1) | source:101 | `rootLogger.error('Pipeline cost result is null or undefined')` — mensagem não acionável, não diz o que fazer |
-| 2 | D4.3 | source:37 | Magic number `0.01` como default inline — sem constante nomeada |
+
+| #   | Categoria | Local      | Descrição                                                                                                     |
+| --- | --------- | ---------- | ------------------------------------------------------------------------------------------------------------- |
+| 1   | UX (D6.1) | source:101 | `rootLogger.error('Pipeline cost result is null or undefined')` — mensagem não acionável, não diz o que fazer |
+| 2   | D4.3      | source:37  | Magic number `0.01` como default inline — sem constante nomeada                                               |
 
 Tests:
-| # | Categoria | Local | Descrição |
-|---|-----------|-------|-----------|
-| T1 | D7.5 | test:174 | `expect(() => new Date(result.timestamp)).not.toThrow()` — toThrow() sem argumento |
-| T2 | D7.1 | test:298 | `expect(html).toContain('Pipeline Cost Analytics')` — assert genérico, substring do título, não valida footer especificamente |
+
+| #   | Categoria | Local    | Descrição                                                                                                                     |
+| --- | --------- | -------- | ----------------------------------------------------------------------------------------------------------------------------- |
+| T1  | D7.5      | test:174 | `expect(() => new Date(result.timestamp)).not.toThrow()` — toThrow() sem argumento                                            |
+| T2  | D7.1      | test:298 | `expect(html).toContain('Pipeline Cost Analytics')` — assert genérico, substring do título, não valida footer especificamente |
 
 ``
 
@@ -1748,67 +1776,72 @@ Q1(casts)❌ Q2(violação ignorada)❌ Q3(causa raiz)✅ Q4(UX acionável)✅
 ``
 
 **Pre-scan source (Phase 0.1.1):**
-| # | Categoria | Local | Descrição |
-|---|-----------|-------|-----------|
-| 9 | UX | impact-alert.ts:202 | `rootLogger.error('Impact alert result is null or undefined')` — mensagem não acionável, não diz o que fazer |
-| 9 | UX | impact-alert.ts:246 | `rootLogger.error('Failed to generate impact alert HTML: ' + msg)` — mensagem não acionável, não diz ação |
-| 12 | Manutenibilidade | impact-alert.ts:91,102,115,131,144 | Thresholds `70`, `80` literais inline em vez de constantes nomeadas |
-| 12 | Manutenibilidade | impact-alert.ts:97 | Magic number `3` (topFailures.slice(0, 3)) |
+
+| #   | Categoria        | Local                              | Descrição                                                                                                    |
+| --- | ---------------- | ---------------------------------- | ------------------------------------------------------------------------------------------------------------ |
+| 9   | UX               | impact-alert.ts:202                | `rootLogger.error('Impact alert result is null or undefined')` — mensagem não acionável, não diz o que fazer |
+| 9   | UX               | impact-alert.ts:246                | `rootLogger.error('Failed to generate impact alert HTML: ' + msg)` — mensagem não acionável, não diz ação    |
+| 12  | Manutenibilidade | impact-alert.ts:91,102,115,131,144 | Thresholds `70`, `80` literais inline em vez de constantes nomeadas                                          |
+| 12  | Manutenibilidade | impact-alert.ts:97                 | Magic number `3` (topFailures.slice(0, 3))                                                                   |
 
 **Pre-scan tests (Phase 0.1.2):**
-| # | Categoria | Local | Descrição |
-|---|-----------|-------|-----------|
-| T2 | Suppression (indireto) | test.ts:8 | Import de `nullAs`/`undefinedAs` de test-utils — cast `as unknown as T` centralizado (padrão codebase) |
-| T5 | D7.5 | test.ts:94 | `expect(() => new Date(result.timestamp)).not.toThrow()` — toThrow() sem argumento |
-| T5 | D7.5 | property.test.ts:238 | `expect(() => new Date(result.timestamp)).not.toThrow()` — toThrow() sem argumento |
-| T5 | D7.10 | property.test.ts:36-61 | PBT `severity counts match actual filtered alerts` replica internamente countBySeverity (dual-implementation) |
+
+| #   | Categoria              | Local                  | Descrição                                                                                                     |
+| --- | ---------------------- | ---------------------- | ------------------------------------------------------------------------------------------------------------- |
+| T2  | Suppression (indireto) | test.ts:8              | Import de `nullAs`/`undefinedAs` de test-utils — cast `as unknown as T` centralizado (padrão codebase)        |
+| T5  | D7.5                   | test.ts:94             | `expect(() => new Date(result.timestamp)).not.toThrow()` — toThrow() sem argumento                            |
+| T5  | D7.5                   | property.test.ts:238   | `expect(() => new Date(result.timestamp)).not.toThrow()` — toThrow() sem argumento                            |
+| T5  | D7.10                  | property.test.ts:36-61 | PBT `severity counts match actual filtered alerts` replica internamente countBySeverity (dual-implementation) |
 
 ``
 
 **Phase 2 — T1-T20:**
-| ID | Status | Observação |
-|----|--------|------------|
-| T1 | ✅ | 2 functions + 3 type exports públicos |
-| T2 | ⚠️ | Interfaces OK, sem Zod schema (N/A — sem I/O externo) |
-| T3 | ✅ N/A | sem config accessor |
-| T4 | ✅ N/A | sem config/env |
-| T5-T8 | ✅ N/A | sem wizard |
-| T9 | ✅ N/A | sem reconfig handler |
-| T10 | ✅ N/A | sem CI .github |
-| T11 | ✅ | try/catch ativo (lines 200, 244) |
-| T12 | ✅ | 41 tests (3 files: unit + integration + PBT) |
-| T13 | ✅ | zero dead code |
-| T14 | ❌ T14h | `[] as string[]` casts em property.test.ts:203,205 |
-| T15 | ✅ | consumers unidirecionais |
-| T16 | ✅ N/A | sem CLI |
-| T17 | ✅ | zero env vars |
-| T18 | ✅ | try/catch + instanceof + rootLogger.error + buildErrorPage fallback |
-| T19 | ❌ | TECHDOC sem entrada para impact-alert |
-| T20 | ✅ N/A | sem CI config |
+
+| ID    | Status  | Observação                                                          |
+| ----- | ------- | ------------------------------------------------------------------- |
+| T1    | ✅      | 2 functions + 3 type exports públicos                               |
+| T2    | ⚠️      | Interfaces OK, sem Zod schema (N/A — sem I/O externo)               |
+| T3    | ✅ N/A  | sem config accessor                                                 |
+| T4    | ✅ N/A  | sem config/env                                                      |
+| T5-T8 | ✅ N/A  | sem wizard                                                          |
+| T9    | ✅ N/A  | sem reconfig handler                                                |
+| T10   | ✅ N/A  | sem CI .github                                                      |
+| T11   | ✅      | try/catch ativo (lines 200, 244)                                    |
+| T12   | ✅      | 41 tests (3 files: unit + integration + PBT)                        |
+| T13   | ✅      | zero dead code                                                      |
+| T14   | ❌ T14h | `[] as string[]` casts em property.test.ts:203,205                  |
+| T15   | ✅      | consumers unidirecionais                                            |
+| T16   | ✅ N/A  | sem CLI                                                             |
+| T17   | ✅      | zero env vars                                                       |
+| T18   | ✅      | try/catch + instanceof + rootLogger.error + buildErrorPage fallback |
+| T19   | ❌      | TECHDOC sem entrada para impact-alert                               |
+| T20   | ✅ N/A  | sem CI config                                                       |
 
 ``
 
 **Phase 3 — D1-D7:**
-| ID | Status | Observação |
-|----|--------|------------|
-| D1 | ✅ | cleanup (integration beforeEach vi.restoreAllMocks), vi.mock no topo (PBT+integration), sem estado compartilhado |
-| D2 | ✅ | input validation (null guard passRate/coveragePct), guard clauses, fallback buildErrorPage |
-| D3 | ✅ | SRP, DepWall (só shared/), 249L (<400), sem duplicação, nomes claros |
-| D4 | ⚠️ | complexidade OK, early returns, sem dead code; D4.3❌ constantes mágicas (70, 80, 3) |
-| D5 | ✅ N/A | não produz métricas |
-| D6 | ❌ | D6.1❌ msgs não acionáveis (lines 202, 246); D6.2❌ TECHDOC ausente; D6.3✅ terminologia |
-| D7 script | ⚠️ | 13/14 PASS, 1 FAIL (D7.5 toThrow sem argumento) |
-| D7 manual | ⚠️ | D7.10 dual-implementation PBT (severity count filter replica countBySeverity) |
+
+| ID        | Status | Observação                                                                                                       |
+| --------- | ------ | ---------------------------------------------------------------------------------------------------------------- |
+| D1        | ✅     | cleanup (integration beforeEach vi.restoreAllMocks), vi.mock no topo (PBT+integration), sem estado compartilhado |
+| D2        | ✅     | input validation (null guard passRate/coveragePct), guard clauses, fallback buildErrorPage                       |
+| D3        | ✅     | SRP, DepWall (só shared/), 249L (<400), sem duplicação, nomes claros                                             |
+| D4        | ⚠️     | complexidade OK, early returns, sem dead code; D4.3❌ constantes mágicas (70, 80, 3)                             |
+| D5        | ✅ N/A | não produz métricas                                                                                              |
+| D6        | ❌     | D6.1❌ msgs não acionáveis (lines 202, 246); D6.2❌ TECHDOC ausente; D6.3✅ terminologia                         |
+| D7 script | ⚠️     | 13/14 PASS, 1 FAIL (D7.5 toThrow sem argumento)                                                                  |
+| D7 manual | ⚠️     | D7.10 dual-implementation PBT (severity count filter replica countBySeverity)                                    |
 
 ``
 
 **Phase 3.5 — D8 Domain Adequacy:**
-| Operação | Fonte | ID Registry | Status |
-|---|---|---|---|
-| Threshold comparisons (passRate < 70, coveragePct < 70, etc.) | Domain heuristic | — | Sem gold standard conhecido |
-| Severity counting (countBySeverity) | Simple increment | — | Sem gold standard |
-| Deduplication (Set-based) | Standard CS | — | Sem gold standard |
-| Math.round (display) | F01 — trivial | F01 | ✅ N/A |
+
+| Operação                                                      | Fonte            | ID Registry | Status                      |
+| ------------------------------------------------------------- | ---------------- | ----------- | --------------------------- |
+| Threshold comparisons (passRate < 70, coveragePct < 70, etc.) | Domain heuristic | —           | Sem gold standard conhecido |
+| Severity counting (countBySeverity)                           | Simple increment | —           | Sem gold standard           |
+| Deduplication (Set-based)                                     | Standard CS      | —           | Sem gold standard           |
+| Math.round (display)                                          | F01 — trivial    | F01         | ✅ N/A                      |
 
 Conclusão: Nenhum gap aritmético. Nenhum novo tipo a registrar no registry.
 
@@ -1973,16 +2006,18 @@ Nenhum bug real encontrado nos 6 gaps. Gaps G-01/G-04/G-05 são de qualidade de 
 - DOCS: TBD
 
 **Pre-scan source (Phase 0.1.1):**
-| # | Categoria | Local | Descrição |
-|---|-----------|-------|-----------|
-| 9 | UX | source:250 | `rootLogger.error('Failed to generate incident report HTML: ' + msg)` — mensagem não acionável, não diz o que fazer |
+
+| #   | Categoria | Local      | Descrição                                                                                                           |
+| --- | --------- | ---------- | ------------------------------------------------------------------------------------------------------------------- |
+| 9   | UX        | source:250 | `rootLogger.error('Failed to generate incident report HTML: ' + msg)` — mensagem não acionável, não diz o que fazer |
 
 **Pre-scan tests (Phase 0.1.2):**
-| # | Categoria | Local | Descrição |
-|---|-----------|-------|-----------|
-| T7 | D7.1 | property.test.ts:190,193,194 | `expect(event.date).toBeTruthy()`, análogos para title, description — asserts fracos (não verificam tipo nem conteúdo) |
-| T7 | D7.10 | property.test.ts:82-84 | PBT `severity counts match actual events` replica countBySeverity do source (dual-implementation) — não testa invariante genuína |
-| T7 | D7.10 | property.test.ts:202-237 | PBT `events are sorted by severity then type` replica SEVERITY_ORDER/TYPE_ORDER do source (dual-implementation) — não testa invariante genuína |
+
+| #   | Categoria | Local                        | Descrição                                                                                                                                      |
+| --- | --------- | ---------------------------- | ---------------------------------------------------------------------------------------------------------------------------------------------- |
+| T7  | D7.1      | property.test.ts:190,193,194 | `expect(event.date).toBeTruthy()`, análogos para title, description — asserts fracos (não verificam tipo nem conteúdo)                         |
+| T7  | D7.10     | property.test.ts:82-84       | PBT `severity counts match actual events` replica countBySeverity do source (dual-implementation) — não testa invariante genuína               |
+| T7  | D7.10     | property.test.ts:202-237     | PBT `events are sorted by severity then type` replica SEVERITY_ORDER/TYPE_ORDER do source (dual-implementation) — não testa invariante genuína |
 
 `
 
@@ -2051,26 +2086,27 @@ Nenhum bug real encontrado nos 6 gaps. Gaps G-01/G-04/G-05 são de qualidade de 
 **D6: UX** — ❌ D6.1⚠️ source:250 rootLogger.error não acionável; D6.2✅ TECHDOC presente; D6.3✅ terminologia consistente
 
 **D7: Deep Test Audit:**
-| Check | Status | Detalhes |
-|-------|--------|----------|
-| D7.1 toBeDefined/toBeTruthy/toBeNull | ❌ | property.test.ts:190,193,194 `toBeTruthy()` para date/title/description — asserts fracos |
-| D7.2 expects >= tests | ✅ | 50+ expects > 10 test definitions |
-| D7.3 Oracle Problem | ✅ | expected values from requirements |
-| D7.4 Mock shape | ✅ | logger + padrão codebase |
-| D7.5 toThrow sem argumento | ✅ | 0 hits |
-| D7.6 .skip | ✅ | 0 hits |
-| D7.7 Nomes de comportamento | ✅ | descritivos |
-| D7.8 Cleanup presente | ✅ | vi.restoreAllMocks() em todos 3 files |
-| D7.9 Suppressions (testes) | ✅ | 0 hits |
-| D7.10 Dual-implementation | ❌ | property.test.ts:82-84 severity counts replica countBySeverity; property.test.ts:202-237 sort order replica SEVERITY_ORDER/TYPE_ORDER |
-| D7.11 PBT presente | ✅ | incident-report.property.test.ts (290L, 10 tests) |
-| D7.12 Covered suppressors | ✅ | 0 hits |
-| D7.13 Empty test bodies | ✅ | 0 hits |
-| D7.14 Tautology | ✅ | 0 hits |
-| D7.15 Catch suppressing | ✅ | 0 hits |
-| D7.16 Oracle git history | ✅ | 0 hits |
-| D7.17 Blind snapshot | ✅ | 0 hits |
-| D7.18 Snapshot as fix | ✅ | 0 hits |
+
+| Check                                | Status | Detalhes                                                                                                                              |
+| ------------------------------------ | ------ | ------------------------------------------------------------------------------------------------------------------------------------- |
+| D7.1 toBeDefined/toBeTruthy/toBeNull | ❌     | property.test.ts:190,193,194 `toBeTruthy()` para date/title/description — asserts fracos                                              |
+| D7.2 expects >= tests                | ✅     | 50+ expects > 10 test definitions                                                                                                     |
+| D7.3 Oracle Problem                  | ✅     | expected values from requirements                                                                                                     |
+| D7.4 Mock shape                      | ✅     | logger + padrão codebase                                                                                                              |
+| D7.5 toThrow sem argumento           | ✅     | 0 hits                                                                                                                                |
+| D7.6 .skip                           | ✅     | 0 hits                                                                                                                                |
+| D7.7 Nomes de comportamento          | ✅     | descritivos                                                                                                                           |
+| D7.8 Cleanup presente                | ✅     | vi.restoreAllMocks() em todos 3 files                                                                                                 |
+| D7.9 Suppressions (testes)           | ✅     | 0 hits                                                                                                                                |
+| D7.10 Dual-implementation            | ❌     | property.test.ts:82-84 severity counts replica countBySeverity; property.test.ts:202-237 sort order replica SEVERITY_ORDER/TYPE_ORDER |
+| D7.11 PBT presente                   | ✅     | incident-report.property.test.ts (290L, 10 tests)                                                                                     |
+| D7.12 Covered suppressors            | ✅     | 0 hits                                                                                                                                |
+| D7.13 Empty test bodies              | ✅     | 0 hits                                                                                                                                |
+| D7.14 Tautology                      | ✅     | 0 hits                                                                                                                                |
+| D7.15 Catch suppressing              | ✅     | 0 hits                                                                                                                                |
+| D7.16 Oracle git history             | ✅     | 0 hits                                                                                                                                |
+| D7.17 Blind snapshot                 | ✅     | 0 hits                                                                                                                                |
+| D7.18 Snapshot as fix                | ✅     | 0 hits                                                                                                                                |
 
 `
 
@@ -2229,21 +2265,23 @@ Exceção de código já corrigido (re-auditoria): N/A — primeira auditoria.
 - DOCS: TBD
 
 **Pre-scan source (Phase 0.1.1):**
-| # | Categoria | Local | Descrição |
-|---|-----------|-------|-----------|
-| 9 | UX | source:156 | `rootLogger.error('Requirement score result is null or undefined')` — não acionável, não diz ação |
-| 9 | UX | source:234 | `rootLogger.error('Failed to generate requirement score HTML: ' + msg)` — não acionável, não diz ação |
-| 12 | Manutenibilidade | source:58 | `(entry.totalTests / 10) * 100` — magic number `10` inline |
-| 12 | Manutenibilidade | source:111 | `.slice(0, 120)` — magic number `120` inline |
-| 12 | Manutenibilidade | source:43-48 | Grade thresholds `90`, `75`, `60`, `40` literais inline |
+
+| #   | Categoria        | Local        | Descrição                                                                                             |
+| --- | ---------------- | ------------ | ----------------------------------------------------------------------------------------------------- |
+| 9   | UX               | source:156   | `rootLogger.error('Requirement score result is null or undefined')` — não acionável, não diz ação     |
+| 9   | UX               | source:234   | `rootLogger.error('Failed to generate requirement score HTML: ' + msg)` — não acionável, não diz ação |
+| 12  | Manutenibilidade | source:58    | `(entry.totalTests / 10) * 100` — magic number `10` inline                                            |
+| 12  | Manutenibilidade | source:111   | `.slice(0, 120)` — magic number `120` inline                                                          |
+| 12  | Manutenibilidade | source:43-48 | Grade thresholds `90`, `75`, `60`, `40` literais inline                                               |
 
 **Pre-scan tests (Phase 0.1.2):**
-| # | Categoria | Local | Descrição |
-|---|-----------|-------|-----------|
-| T2 | Suppression (indireto) | test.ts:9,77,85,225,230 | `nullAs`/`undefinedAs` de test-utils — cast `as unknown as T` centralizado (padrão codebase) |
-| T7 | D7.1 | test.ts:127 | `expect(result.entries[0]?.scoreGrade).toBeDefined()` — assert fraco, não verifica grade esperado |
-| T9 | Isolamento | test.ts | `vi.mock` ativo mas sem `beforeEach` `vi.restoreAllMocks()` — mocks acumulam chamadas |
-| T9 | Isolamento | property.test.ts | `vi.mock` ativo mas sem `beforeEach` `vi.restoreAllMocks()` — mocks acumulam chamadas |
+
+| #   | Categoria              | Local                   | Descrição                                                                                         |
+| --- | ---------------------- | ----------------------- | ------------------------------------------------------------------------------------------------- |
+| T2  | Suppression (indireto) | test.ts:9,77,85,225,230 | `nullAs`/`undefinedAs` de test-utils — cast `as unknown as T` centralizado (padrão codebase)      |
+| T7  | D7.1                   | test.ts:127             | `expect(result.entries[0]?.scoreGrade).toBeDefined()` — assert fraco, não verifica grade esperado |
+| T9  | Isolamento             | test.ts                 | `vi.mock` ativo mas sem `beforeEach` `vi.restoreAllMocks()` — mocks acumulam chamadas             |
+| T9  | Isolamento             | property.test.ts        | `vi.mock` ativo mas sem `beforeEach` `vi.restoreAllMocks()` — mocks acumulam chamadas             |
 
 `
 
@@ -2312,26 +2350,27 @@ Exceção de código já corrigido (re-auditoria): N/A — primeira auditoria.
 **D6: UX** — ❌ D6.1❌ rootLogger.error source:156 e source:234 não acionáveis. D6.2❌ TECHDOC sem entrada. D6.3✅ terminologia consistente.
 
 **D7: Deep Test Audit:**
-| Check | Status | Detalhes |
-|-------|--------|----------|
-| D7.1 toBeDefined/toBeTruthy/toBeNull | ❌ | test.ts:127 `toBeDefined()` — assert fraco |
-| D7.2 expects >= tests | ✅ | 70+ expects > 15 test definitions |
-| D7.3 Oracle Problem | ✅ | expected values from requirements |
-| D7.4 Mock shape | ✅ | logger padrão codebase |
-| D7.5 toThrow sem argumento | ✅ | 0 hits |
-| D7.6 .skip | ✅ | 0 hits |
-| D7.7 Nomes de comportamento | ✅ | descritivos |
-| D7.8 Cleanup presente | ❌ | unit+PBT têm vi.mock mas sem beforeEach/restoreAllMocks (D7 script detectou) |
-| D7.9 Suppressions (testes) | ✅ | 0 hits |
-| D7.10 Dual-implementation | ❌ | property.test.ts:78-84 `computeGrade` replica `calculateGrade` do source identicamente |
-| D7.11 PBT presente | ✅ | requirement-score.property.test.ts (211L, 8 tests) |
-| D7.12 Coverage suppressors | ✅ | 0 hits |
-| D7.13 Empty test bodies | ✅ | 0 hits |
-| D7.14 Tautology | ✅ | 0 hits |
-| D7.15 Catch suppressing | ✅ | 0 hits |
-| D7.16 Oracle git history | ✅ | 0 hits |
-| D7.17 Blind snapshot | ✅ | 0 hits |
-| D7.18 Snapshot as fix | ✅ | 0 hits |
+
+| Check                                | Status | Detalhes                                                                               |
+| ------------------------------------ | ------ | -------------------------------------------------------------------------------------- |
+| D7.1 toBeDefined/toBeTruthy/toBeNull | ❌     | test.ts:127 `toBeDefined()` — assert fraco                                             |
+| D7.2 expects >= tests                | ✅     | 70+ expects > 15 test definitions                                                      |
+| D7.3 Oracle Problem                  | ✅     | expected values from requirements                                                      |
+| D7.4 Mock shape                      | ✅     | logger padrão codebase                                                                 |
+| D7.5 toThrow sem argumento           | ✅     | 0 hits                                                                                 |
+| D7.6 .skip                           | ✅     | 0 hits                                                                                 |
+| D7.7 Nomes de comportamento          | ✅     | descritivos                                                                            |
+| D7.8 Cleanup presente                | ❌     | unit+PBT têm vi.mock mas sem beforeEach/restoreAllMocks (D7 script detectou)           |
+| D7.9 Suppressions (testes)           | ✅     | 0 hits                                                                                 |
+| D7.10 Dual-implementation            | ❌     | property.test.ts:78-84 `computeGrade` replica `calculateGrade` do source identicamente |
+| D7.11 PBT presente                   | ✅     | requirement-score.property.test.ts (211L, 8 tests)                                     |
+| D7.12 Coverage suppressors           | ✅     | 0 hits                                                                                 |
+| D7.13 Empty test bodies              | ✅     | 0 hits                                                                                 |
+| D7.14 Tautology                      | ✅     | 0 hits                                                                                 |
+| D7.15 Catch suppressing              | ✅     | 0 hits                                                                                 |
+| D7.16 Oracle git history             | ✅     | 0 hits                                                                                 |
+| D7.17 Blind snapshot                 | ✅     | 0 hits                                                                                 |
+| D7.18 Snapshot as fix                | ✅     | 0 hits                                                                                 |
 
 `
 

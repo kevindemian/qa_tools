@@ -63,7 +63,8 @@ const BranchEntryArb = fc
  * ────────────────────────────────────────────────────────────── */
 
 describe('Store — property-based', () => {
-    it('put + lookup round-trip preserves all fields', () => {expect.hasAssertions();
+    it('put + lookup round-trip preserves all fields', () => {
+        expect.hasAssertions();
 
         fc.assert(
             fc.property(ReportMetaArb, (meta) => {
@@ -97,7 +98,8 @@ describe('Store — property-based', () => {
         );
     });
 
-    it('lookup returns null for unknown sha', () => {expect.hasAssertions();
+    it('lookup returns null for unknown sha', () => {
+        expect.hasAssertions();
 
         fc.assert(
             fc.property(
@@ -116,7 +118,8 @@ describe('Store — property-based', () => {
         );
     });
 
-    it('multiple puts → listByProject returns sorted by timestamp descending', () => {expect.hasAssertions();
+    it('multiple puts → listByProject returns sorted by timestamp descending', () => {
+        expect.hasAssertions();
 
         fc.assert(
             fc.property(fc.array(ReportMetaArb, { minLength: 1, maxLength: 20 }), (metas) => {
@@ -148,7 +151,8 @@ describe('Store — property-based', () => {
         );
     });
 
-    it('listByProject returns only entries for the project', () => {expect.hasAssertions();
+    it('listByProject returns only entries for the project', () => {
+        expect.hasAssertions();
 
         fc.assert(
             fc.property(
@@ -173,7 +177,8 @@ describe('Store — property-based', () => {
         );
     });
 
-    it('appendBranch + getBranch round-trip preserves entries in LIFO order', () => {expect.hasAssertions();
+    it('appendBranch + getBranch round-trip preserves entries in LIFO order', () => {
+        expect.hasAssertions();
 
         fc.assert(
             fc.property(
@@ -190,7 +195,8 @@ describe('Store — property-based', () => {
                         expect(loaded).toHaveLength(entries.length);
 
                         for (let i = 0; i < entries.length; i++) {
-                            const loadedEntry = Reflect.get(loaded, entries.length - 1 - i) as { sha: string; timestamp: number } | undefined;
+                            const loadedEntry = Reflect.get(loaded, entries.length - 1 - i) as
+                                { sha: string; timestamp: number } | undefined;
                             const entry = Reflect.get(entries, i) as { sha: string; timestamp: number } | undefined;
                             if (!loadedEntry || !entry) throw new Error('expected entries');
 
@@ -206,7 +212,8 @@ describe('Store — property-based', () => {
         );
     });
 
-    it('getBranch returns empty array for unknown branch', () => {expect.hasAssertions();
+    it('getBranch returns empty array for unknown branch', () => {
+        expect.hasAssertions();
 
         fc.assert(
             fc.property(fc.string({ minLength: 1, maxLength: 20 }), (branch) => {
@@ -221,7 +228,8 @@ describe('Store — property-based', () => {
         );
     });
 
-    it('saveReport + loadReport round-trip preserves test data', () => {expect.hasAssertions();
+    it('saveReport + loadReport round-trip preserves test data', () => {
+        expect.hasAssertions();
 
         fc.assert(
             fc.property(

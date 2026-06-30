@@ -59,7 +59,8 @@ describe('ReviewWithLlm', () => {
         vi.clearAllMocks();
     });
 
-    it('returns high confidence when reviewer agrees', async () => {expect.hasAssertions();
+    it('returns high confidence when reviewer agrees', async () => {
+        expect.hasAssertions();
 
         mockLlmPrompt
             .mockResolvedValueOnce(validParsedReport)
@@ -73,7 +74,8 @@ describe('ReviewWithLlm', () => {
         expect(result.adversarialRetried).toBeUndefined();
     });
 
-    it('returns medium confidence with reviewer notes when adversarial retry fails', async () => {expect.hasAssertions();
+    it('returns medium confidence with reviewer notes when adversarial retry fails', async () => {
+        expect.hasAssertions();
 
         mockLlmPrompt
             .mockResolvedValueOnce(validParsedReport)
@@ -89,7 +91,8 @@ describe('ReviewWithLlm', () => {
         expect(result.confidence).toBe('medium');
     });
 
-    it('triggers adversarial retry when reviewerNotes have medium confidence', async () => {expect.hasAssertions();
+    it('triggers adversarial retry when reviewerNotes have medium confidence', async () => {
+        expect.hasAssertions();
 
         mockLlmPrompt
             .mockResolvedValueOnce(validParsedReport)
@@ -105,7 +108,8 @@ describe('ReviewWithLlm', () => {
         expect(result.content).toContain('ASSERTION');
     });
 
-    it('retries when validation fails and eventually succeeds', async () => {expect.hasAssertions();
+    it('retries when validation fails and eventually succeeds', async () => {
+        expect.hasAssertions();
 
         mockLlmPrompt
             .mockResolvedValueOnce(invalidParsedReport)
@@ -119,7 +123,8 @@ describe('ReviewWithLlm', () => {
         expect(mockLlmPrompt).toHaveBeenCalledTimes(3);
     });
 
-    it('falls back to main when report returns non-object (null from attemptPrimary)', async () => {expect.hasAssertions();
+    it('falls back to main when report returns non-object (null from attemptPrimary)', async () => {
+        expect.hasAssertions();
 
         mockLlmPrompt
             .mockRejectedValueOnce(new Error('Zod validation failed'))
@@ -133,7 +138,8 @@ describe('ReviewWithLlm', () => {
         expect(result.fallbackUsed).toBeTruthy();
     });
 
-    it('falls back to main when all retries fail validation', async () => {expect.hasAssertions();
+    it('falls back to main when all retries fail validation', async () => {
+        expect.hasAssertions();
 
         mockLlmPrompt
             .mockResolvedValueOnce(invalidParsedReport)
@@ -150,7 +156,8 @@ describe('ReviewWithLlm', () => {
         expect(mockLlmPrompt).toHaveBeenCalledTimes(5);
     });
 
-    it('buildRetryPrompt includes validation errors and invalid response', async () => {expect.hasAssertions();
+    it('buildRetryPrompt includes validation errors and invalid response', async () => {
+        expect.hasAssertions();
 
         mockLlmPrompt
             .mockResolvedValueOnce(invalidParsedReport)
@@ -164,7 +171,8 @@ describe('ReviewWithLlm', () => {
         expect(retrySystemArg).toContain(JSON.stringify(invalidParsedReport));
     });
 
-    it('returns fallback when report is non-object and main fails', async () => {expect.hasAssertions();
+    it('returns fallback when report is non-object and main fails', async () => {
+        expect.hasAssertions();
 
         mockLlmPrompt.mockRejectedValueOnce(new Error('Zod failed')).mockRejectedValueOnce(new Error('Main API error'));
 
@@ -175,7 +183,8 @@ describe('ReviewWithLlm', () => {
         expect(result.reviewed).toBeFalsy();
     });
 
-    it('exhausts MAX_RETRIES=3 before falling back', async () => {expect.hasAssertions();
+    it('exhausts MAX_RETRIES=3 before falling back', async () => {
+        expect.hasAssertions();
 
         mockLlmPrompt
             .mockResolvedValueOnce(invalidParsedReport)

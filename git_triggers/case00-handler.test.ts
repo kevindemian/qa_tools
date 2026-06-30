@@ -26,7 +26,8 @@ describe('Case00 Handler', () => {
     });
 
     describe('HandleSetupWizard', () => {
-        it('calls setup main and records history on success', async () => {expect.hasAssertions();
+        it('calls setup main and records history on success', async () => {
+            expect.hasAssertions();
 
             mockSetupModule.main.mockResolvedValue(undefined);
 
@@ -40,7 +41,8 @@ describe('Case00 Handler', () => {
             expect(result).toBeFalsy();
         });
 
-        it('handles setup failure gracefully', async () => {expect.hasAssertions();
+        it('handles setup failure gracefully', async () => {
+            expect.hasAssertions();
 
             mockSetupModule.main.mockRejectedValue(new Error('Setup error'));
 
@@ -51,5 +53,4 @@ describe('Case00 Handler', () => {
             expect(pushHistory).not.toHaveBeenCalled();
         });
     });
-
 });

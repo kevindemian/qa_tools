@@ -61,7 +61,8 @@ describe('Testexec', () => {
     });
 
     describe('E2E: createTestExecution', () => {
-        it('creates Test Execution with 2 test keys', async () => {expect.hasAssertions();
+        it('creates Test Execution with 2 test keys', async () => {
+            expect.hasAssertions();
 
             const result = await createTestExecution({
                 testExecutionCreator,
@@ -74,7 +75,8 @@ describe('Testexec', () => {
             expect(nonNull(result).summary).toMatch(/^meus-testes - /);
         });
 
-        it('creates Test Execution with single key and default name', async () => {expect.hasAssertions();
+        it('creates Test Execution with single key and default name', async () => {
+            expect.hasAssertions();
 
             const result = await createTestExecution({
                 testExecutionCreator,
@@ -87,5 +89,4 @@ describe('Testexec', () => {
             expect(nonNull(result).summary).toMatch(/^Automated Execution - /);
         });
     });
-
 });

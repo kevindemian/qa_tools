@@ -28,7 +28,8 @@ function createFixture(overrides: Partial<UserStoryFixture['coverage']> = {}): U
 
 describe('Integration: Benchmark Metrics', () => {
     describe('FT-15a: computeCoverageMetrics', () => {
-        it('computes criteria coverage from matching titles', async () => {expect.hasAssertions();
+        it('computes criteria coverage from matching titles', async () => {
+            expect.hasAssertions();
 
             const { computeCoverageMetrics } = await import('../../benchmark-metrics.js');
             const body = JSON.stringify([
@@ -43,7 +44,8 @@ describe('Integration: Benchmark Metrics', () => {
             expect(result.criteriaCoverage).toBeGreaterThan(0);
         });
 
-        it('returns zeros for empty test array', async () => {expect.hasAssertions();
+        it('returns zeros for empty test array', async () => {
+            expect.hasAssertions();
 
             const { computeCoverageMetrics } = await import('../../benchmark-metrics.js');
             const body = JSON.stringify([]);
@@ -54,7 +56,8 @@ describe('Integration: Benchmark Metrics', () => {
             expect(result.criteriaCoverage).toBe(0);
         });
 
-        it('returns zeros for invalid JSON', async () => {expect.hasAssertions();
+        it('returns zeros for invalid JSON', async () => {
+            expect.hasAssertions();
 
             const { computeCoverageMetrics } = await import('../../benchmark-metrics.js');
             const result = computeCoverageMetrics('not json', createFixture());
@@ -62,7 +65,8 @@ describe('Integration: Benchmark Metrics', () => {
             expect(result.totalTests).toBe(0);
         });
 
-        it('returns zeros for non-array JSON', async () => {expect.hasAssertions();
+        it('returns zeros for non-array JSON', async () => {
+            expect.hasAssertions();
 
             const { computeCoverageMetrics } = await import('../../benchmark-metrics.js');
             const result = computeCoverageMetrics('{"key": "value"}', createFixture());
@@ -70,7 +74,8 @@ describe('Integration: Benchmark Metrics', () => {
             expect(result.totalTests).toBe(0);
         });
 
-        it('computes partition coverage for numeric ranges', async () => {expect.hasAssertions();
+        it('computes partition coverage for numeric ranges', async () => {
+            expect.hasAssertions();
 
             const { computeCoverageMetrics } = await import('../../benchmark-metrics.js');
             const body = JSON.stringify([
@@ -91,7 +96,8 @@ describe('Integration: Benchmark Metrics', () => {
 describe('RED: G1 — catch vazio sem log', () => {
     vi.mock('../../logger.js');
 
-    it('logs rootLogger.warn when JSON.parse fails (body inválido)', async () => {expect.hasAssertions();
+    it('logs rootLogger.warn when JSON.parse fails (body inválido)', async () => {
+        expect.hasAssertions();
 
         const { rootLogger } = await import('../../logger.js');
         const warnSpy = vi.spyOn(rootLogger, 'warn');

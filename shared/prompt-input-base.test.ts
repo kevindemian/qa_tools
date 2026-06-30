@@ -250,5 +250,4 @@ describe('Prompt Input Base', () => {
             expect(NAV_CMDS).toStrictEqual(['/back', '/menu', '/exit', '/sair', '/quit', '/help']);
         });
     });
-
 });

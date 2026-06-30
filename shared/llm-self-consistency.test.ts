@@ -23,7 +23,8 @@ describe('ConsensusGenerate', () => {
         vi.clearAllMocks();
     });
 
-    it('returns consensus when all candidates pass and agree', async () => {expect.hasAssertions();
+    it('returns consensus when all candidates pass and agree', async () => {
+        expect.hasAssertions();
 
         mockLlmPrompt.mockResolvedValue({ tests: [] });
 
@@ -33,7 +34,8 @@ describe('ConsensusGenerate', () => {
         expect(result.candidates.length).toBeGreaterThan(0);
     });
 
-    it('tries all candidates even if some fail validation', async () => {expect.hasAssertions();
+    it('tries all candidates even if some fail validation', async () => {
+        expect.hasAssertions();
 
         mockLlmPrompt.mockResolvedValueOnce(null).mockResolvedValueOnce({ tests: [] });
 
@@ -42,7 +44,8 @@ describe('ConsensusGenerate', () => {
         expect(result.candidates.length).toBeGreaterThan(0);
     });
 
-    it('throws when all candidates fail', async () => {expect.hasAssertions();
+    it('throws when all candidates fail', async () => {
+        expect.hasAssertions();
 
         mockLlmPrompt.mockRejectedValue(new Error('API error'));
 
@@ -51,7 +54,8 @@ describe('ConsensusGenerate', () => {
         ).rejects.toThrow(/./i);
     });
 
-    it('reports divergence based on structural similarity', async () => {expect.hasAssertions();
+    it('reports divergence based on structural similarity', async () => {
+        expect.hasAssertions();
 
         mockLlmPrompt
             .mockResolvedValueOnce({ tests: [{ title: 'Test A' }] })
@@ -62,7 +66,8 @@ describe('ConsensusGenerate', () => {
         expect(['none', 'low', 'high']).toContain(result.divergence);
     });
 
-    it('reports low divergence for moderately similar candidates', async () => {expect.hasAssertions();
+    it('reports low divergence for moderately similar candidates', async () => {
+        expect.hasAssertions();
 
         mockLlmPrompt.mockResolvedValueOnce({ a: 1, b: 2, c: 3, d: 4 }).mockResolvedValueOnce({ a: 5, b: 6, c: 7 });
 
@@ -71,7 +76,8 @@ describe('ConsensusGenerate', () => {
         expect(result.divergence).toBe('low');
     });
 
-    it('recovers with fallback when all candidates fail validation', async () => {expect.hasAssertions();
+    it('recovers with fallback when all candidates fail validation', async () => {
+        expect.hasAssertions();
 
         const rejectInvariant = (a: unknown) =>
             a && typeof a === 'object'
@@ -104,7 +110,8 @@ describe('ConsensusGenerate', () => {
         expect(result.refined).toBeFalsy();
     });
 
-    it('auto-refines when divergence is high and refinement passes validation', async () => {expect.hasAssertions();
+    it('auto-refines when divergence is high and refinement passes validation', async () => {
+        expect.hasAssertions();
 
         const BIG_OBJ = { items: Array.from({ length: 20 }, (_, i) => ({ id: i, name: `field-${i}` })) };
         const SMALL_VAL = { single: 'value' };
@@ -119,7 +126,8 @@ describe('ConsensusGenerate', () => {
         expect(mockLlmPrompt).toHaveBeenCalledTimes(3);
     });
 
-    it('falls back to preliminary winner when refinement result fails validation', async () => {expect.hasAssertions();
+    it('falls back to preliminary winner when refinement result fails validation', async () => {
+        expect.hasAssertions();
 
         const BIG_OBJ = { items: Array.from({ length: 20 }, (_, i) => ({ id: i, name: `field-${i}` })) };
         const SMALL_VAL = { single: 'value' };
@@ -149,7 +157,8 @@ describe('ConsensusGenerate', () => {
         expect(result.winner).toBeDefined();
     });
 
-    it('falls back to preliminary winner when refinement throws', async () => {expect.hasAssertions();
+    it('falls back to preliminary winner when refinement throws', async () => {
+        expect.hasAssertions();
 
         const BIG_OBJ = { items: Array.from({ length: 20 }, (_, i) => ({ id: i, name: `field-${i}` })) };
         const SMALL_VAL = { single: 'value' };
@@ -164,7 +173,8 @@ describe('ConsensusGenerate', () => {
         expect(result.winner).toBeDefined();
     });
 
-    it('falls back when refinement succeeds but re-validation rejects it', async () => {expect.hasAssertions();
+    it('falls back when refinement succeeds but re-validation rejects it', async () => {
+        expect.hasAssertions();
 
         const BIG_OBJ = { items: Array.from({ length: 20 }, (_, i) => ({ id: i, name: `field-${i}` })) };
         const SMALL_VAL = { single: 'value' };
@@ -203,7 +213,8 @@ describe('RefineWithConsistency', () => {
         vi.clearAllMocks();
     });
 
-    it('returns refined result when LLM produces valid output', async () => {expect.hasAssertions();
+    it('returns refined result when LLM produces valid output', async () => {
+        expect.hasAssertions();
 
         mockLlmPrompt.mockResolvedValue({ tests: [{ title: 'Refined' }] });
 
@@ -226,7 +237,8 @@ describe('RefineWithConsistency', () => {
         expect(result.candidates).toHaveLength(1);
     });
 
-    it('falls back to previous result when refined output fails validation', async () => {expect.hasAssertions();
+    it('falls back to previous result when refined output fails validation', async () => {
+        expect.hasAssertions();
 
         mockLlmPrompt.mockResolvedValue({ _marked: true });
 
@@ -256,7 +268,8 @@ describe('RefineWithConsistency', () => {
         expect(result.winner).toStrictEqual({ tests: [{ title: 'Original' }] });
     });
 
-    it('falls back to previous result when LLM throws', async () => {expect.hasAssertions();
+    it('falls back to previous result when LLM throws', async () => {
+        expect.hasAssertions();
 
         mockLlmPrompt.mockRejectedValue(new Error('API error'));
 

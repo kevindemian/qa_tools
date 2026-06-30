@@ -62,7 +62,8 @@ describe('RenderPipelineHealthHtml — property-based', () => {
         vi.restoreAllMocks();
     });
 
-    it('always produces valid HTML', () => {expect.hasAssertions();
+    it('always produces valid HTML', () => {
+        expect.hasAssertions();
 
         fc.assert(
             fc.property(
@@ -82,7 +83,8 @@ describe('RenderPipelineHealthHtml — property-based', () => {
         );
     });
 
-    it('contains title in output', () => {expect.hasAssertions();
+    it('contains title in output', () => {
+        expect.hasAssertions();
 
         fc.assert(
             fc.property(
@@ -98,7 +100,8 @@ describe('RenderPipelineHealthHtml — property-based', () => {
         );
     });
 
-    it('uses buildCss design tokens', () => {expect.hasAssertions();
+    it('uses buildCss design tokens', () => {
+        expect.hasAssertions();
 
         fc.assert(
             fc.property(
@@ -118,7 +121,8 @@ describe('RenderPipelineHealthHtml — property-based', () => {
         );
     });
 
-    it('has theme toggle script', () => {expect.hasAssertions();
+    it('has theme toggle script', () => {
+        expect.hasAssertions();
 
         fc.assert(
             fc.property(fc.array(runArb, { minLength: 0, maxLength: 3 }), (runs) => {
@@ -131,7 +135,8 @@ describe('RenderPipelineHealthHtml — property-based', () => {
         );
     });
 
-    it('has footer', () => {expect.hasAssertions();
+    it('has footer', () => {
+        expect.hasAssertions();
 
         fc.assert(
             fc.property(fc.array(runArb, { minLength: 0, maxLength: 3 }), (runs) => {
@@ -144,7 +149,8 @@ describe('RenderPipelineHealthHtml — property-based', () => {
         );
     });
 
-    it('has no legacy inline styles', () => {expect.hasAssertions();
+    it('has no legacy inline styles', () => {
+        expect.hasAssertions();
 
         fc.assert(
             fc.property(

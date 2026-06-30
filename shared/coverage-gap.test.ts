@@ -43,7 +43,8 @@ describe('Coverage Gap', () => {
     });
 
     describe('AnalyzeCoverageGaps', () => {
-        it('returns metrics for uncovered issues', async () => {expect.hasAssertions();
+        it('returns metrics for uncovered issues', async () => {
+            expect.hasAssertions();
 
             mockSearch
                 .mockResolvedValueOnce({ issues: [], total: 2 })
@@ -57,7 +58,8 @@ describe('Coverage Gap', () => {
             expect(result.totals.rawCoveragePct).toBe(0);
         });
 
-        it('detects linked tests via issuelinks', async () => {expect.hasAssertions();
+        it('detects linked tests via issuelinks', async () => {
+            expect.hasAssertions();
 
             mockSearch
                 .mockResolvedValueOnce({ issues: [], total: 2 })
@@ -65,7 +67,11 @@ describe('Coverage Gap', () => {
                     issues: [
                         makeIssue('PROJ-1', {
                             issuelinks: [
-                                { type: { name: 'Test' }, inwardIssue: { key: 'TEST-1' }, outwardIssue: { key: 'PROJ-1' } },
+                                {
+                                    type: { name: 'Test' },
+                                    inwardIssue: { key: 'TEST-1' },
+                                    outwardIssue: { key: 'PROJ-1' },
+                                },
                             ],
                         }),
                         makeIssue('PROJ-2'),
@@ -80,7 +86,8 @@ describe('Coverage Gap', () => {
             expect(nonNull(result.items[0]).linkedTestKeys).toContain('TEST-1');
         });
 
-        it('calculates weighted coverage by priority', async () => {expect.hasAssertions();
+        it('calculates weighted coverage by priority', async () => {
+            expect.hasAssertions();
 
             mockSearch
                 .mockResolvedValueOnce({ issues: [], total: 3 })
@@ -89,14 +96,22 @@ describe('Coverage Gap', () => {
                         makeIssue('PROJ-1', {
                             priority: { name: 'Blocker' },
                             issuelinks: [
-                                { type: { name: 'Test' }, inwardIssue: { key: 'TEST-1' }, outwardIssue: { key: 'PROJ-1' } },
+                                {
+                                    type: { name: 'Test' },
+                                    inwardIssue: { key: 'TEST-1' },
+                                    outwardIssue: { key: 'PROJ-1' },
+                                },
                             ],
                         }),
                         makeIssue('PROJ-2', { priority: { name: 'Trivial' } }),
                         makeIssue('PROJ-3', {
                             priority: { name: 'High' },
                             issuelinks: [
-                                { type: { name: 'Test' }, inwardIssue: { key: 'TEST-2' }, outwardIssue: { key: 'PROJ-3' } },
+                                {
+                                    type: { name: 'Test' },
+                                    inwardIssue: { key: 'TEST-2' },
+                                    outwardIssue: { key: 'PROJ-3' },
+                                },
                             ],
                         }),
                     ],
@@ -111,7 +126,8 @@ describe('Coverage Gap', () => {
             expect(result.totals.weightedCoveragePct).toBeGreaterThan(0);
         });
 
-        it('handles >5000 issues by fetching recent/active only', async () => {expect.hasAssertions();
+        it('handles >5000 issues by fetching recent/active only', async () => {
+            expect.hasAssertions();
 
             const manyIssues = Array.from({ length: 30 }, (_, i) => makeIssue('PROJ-' + (i + 1)));
             mockSearch
@@ -123,7 +139,8 @@ describe('Coverage Gap', () => {
             expect(result.items).toHaveLength(30);
         });
 
-        it('builds epic rollup with correct counts', async () => {expect.hasAssertions();
+        it('builds epic rollup with correct counts', async () => {
+            expect.hasAssertions();
 
             mockSearch
                 .mockResolvedValueOnce({ issues: [], total: 3 })
@@ -133,7 +150,11 @@ describe('Coverage Gap', () => {
                         makeIssue('PROJ-1', {
                             customfield_10014: { key: 'EPIC-1' },
                             issuelinks: [
-                                { type: { name: 'Test' }, inwardIssue: { key: 'TEST-1' }, outwardIssue: { key: 'PROJ-1' } },
+                                {
+                                    type: { name: 'Test' },
+                                    inwardIssue: { key: 'TEST-1' },
+                                    outwardIssue: { key: 'PROJ-1' },
+                                },
                             ],
                         }),
                         makeIssue('PROJ-2', { customfield_10014: { key: 'EPIC-1' } }),
@@ -148,7 +169,8 @@ describe('Coverage Gap', () => {
             expect(nonNull(result.byEpic['EPIC-1']).rawPct).toBe(50);
         });
 
-        it('quality gate passes when all epics meet threshold', async () => {expect.hasAssertions();
+        it('quality gate passes when all epics meet threshold', async () => {
+            expect.hasAssertions();
 
             mockSearch
                 .mockResolvedValueOnce({ issues: [], total: 2 })
@@ -158,7 +180,11 @@ describe('Coverage Gap', () => {
                         makeIssue('PROJ-1', {
                             customfield_10014: { key: 'EPIC-1' },
                             issuelinks: [
-                                { type: { name: 'Test' }, inwardIssue: { key: 'TEST-1' }, outwardIssue: { key: 'PROJ-1' } },
+                                {
+                                    type: { name: 'Test' },
+                                    inwardIssue: { key: 'TEST-1' },
+                                    outwardIssue: { key: 'PROJ-1' },
+                                },
                             ],
                         }),
                     ],
@@ -171,7 +197,8 @@ describe('Coverage Gap', () => {
             expect(nonNull(result.byEpic['EPIC-1']).gatePass).toBeTruthy();
         });
 
-        it('quality gate fails when epics below threshold', async () => {expect.hasAssertions();
+        it('quality gate fails when epics below threshold', async () => {
+            expect.hasAssertions();
 
             mockSearch
                 .mockResolvedValueOnce({ issues: [], total: 2 })
@@ -189,7 +216,8 @@ describe('Coverage Gap', () => {
             expect(nonNull(result.byEpic['EPIC-1']).gatePass).toBeFalsy();
         });
 
-        it('builds hierarchy tree with epics and children', async () => {expect.hasAssertions();
+        it('builds hierarchy tree with epics and children', async () => {
+            expect.hasAssertions();
 
             mockSearch
                 .mockResolvedValueOnce({ issues: [], total: 3 })
@@ -201,7 +229,11 @@ describe('Coverage Gap', () => {
                             customfield_10014: { key: 'EPIC-1' },
                             issuetype: { name: 'Task' },
                             issuelinks: [
-                                { type: { name: 'Test' }, inwardIssue: { key: 'TEST-1' }, outwardIssue: { key: 'TASK-1' } },
+                                {
+                                    type: { name: 'Test' },
+                                    inwardIssue: { key: 'TEST-1' },
+                                    outwardIssue: { key: 'TASK-1' },
+                                },
                             ],
                         }),
                     ],
@@ -217,7 +249,8 @@ describe('Coverage Gap', () => {
             expect(nonNull(result.hierarchy[0]).coveredIssues).toBe(1);
         });
 
-        it('returns empty result for empty project', async () => {expect.hasAssertions();
+        it('returns empty result for empty project', async () => {
+            expect.hasAssertions();
 
             mockSearch.mockResolvedValueOnce({ issues: [], total: 0 });
             const result = await analyzeCoverageGaps(mockJiraResource, 'PROJ');
@@ -226,7 +259,8 @@ describe('Coverage Gap', () => {
             expect(result.items).toStrictEqual([]);
         });
 
-        it('returns 100% coverage when all issues have tests', async () => {expect.hasAssertions();
+        it('returns 100% coverage when all issues have tests', async () => {
+            expect.hasAssertions();
 
             mockSearch
                 .mockResolvedValueOnce({ issues: [], total: 2 })
@@ -234,12 +268,20 @@ describe('Coverage Gap', () => {
                     issues: [
                         makeIssue('PROJ-1', {
                             issuelinks: [
-                                { type: { name: 'Test' }, inwardIssue: { key: 'TEST-1' }, outwardIssue: { key: 'PROJ-1' } },
+                                {
+                                    type: { name: 'Test' },
+                                    inwardIssue: { key: 'TEST-1' },
+                                    outwardIssue: { key: 'PROJ-1' },
+                                },
                             ],
                         }),
                         makeIssue('PROJ-2', {
                             issuelinks: [
-                                { type: { name: 'Test' }, inwardIssue: { key: 'TEST-2' }, outwardIssue: { key: 'PROJ-2' } },
+                                {
+                                    type: { name: 'Test' },
+                                    inwardIssue: { key: 'TEST-2' },
+                                    outwardIssue: { key: 'PROJ-2' },
+                                },
                             ],
                         }),
                     ],
@@ -251,7 +293,8 @@ describe('Coverage Gap', () => {
             expect(result.totals.rawCoveragePct).toBe(100);
         });
 
-        it('returns 0% coverage when no issues have tests', async () => {expect.hasAssertions();
+        it('returns 0% coverage when no issues have tests', async () => {
+            expect.hasAssertions();
 
             mockSearch
                 .mockResolvedValueOnce({ issues: [], total: 2 })
@@ -262,7 +305,8 @@ describe('Coverage Gap', () => {
             expect(result.totals.rawCoveragePct).toBe(0);
         });
 
-        it('handles searchJiraIssues throwing an error', async () => {expect.hasAssertions();
+        it('handles searchJiraIssues throwing an error', async () => {
+            expect.hasAssertions();
 
             mockSearch.mockRejectedValueOnce(new Error('API timeout'));
             const result = await analyzeCoverageGaps(mockJiraResource, 'PROJ');
@@ -271,7 +315,8 @@ describe('Coverage Gap', () => {
             expect(result.items).toStrictEqual([]);
         });
 
-        it('correctly identifies issue types', async () => {expect.hasAssertions();
+        it('correctly identifies issue types', async () => {
+            expect.hasAssertions();
 
             mockSearch
                 .mockResolvedValueOnce({ issues: [], total: 3 })
@@ -291,7 +336,8 @@ describe('Coverage Gap', () => {
             expect(nonNull(result.items[2]).type).toBe('Task');
         });
 
-        it('loads trends from metrics store', async () => {expect.hasAssertions();
+        it('loads trends from metrics store', async () => {
+            expect.hasAssertions();
 
             mockLoadMetrics.mockReturnValue({
                 runs: [],
@@ -315,7 +361,8 @@ describe('Coverage Gap', () => {
             expect(nonNull(result.trends[0]).coveragePct).toBe(50);
         });
 
-        it('handles fetchLinkedTestsBatch error (lines 84-85)', async () => {expect.hasAssertions();
+        it('handles fetchLinkedTestsBatch error (lines 84-85)', async () => {
+            expect.hasAssertions();
 
             mockSearch
                 .mockResolvedValueOnce({ issues: [], total: 1 })
@@ -327,7 +374,8 @@ describe('Coverage Gap', () => {
             expect(nonNull(result.items[0]).linkedTestKeys).toStrictEqual([]);
         });
 
-        it('handles fetchLinkedTestsBatch empty response (line 68)', async () => {expect.hasAssertions();
+        it('handles fetchLinkedTestsBatch empty response (line 68)', async () => {
+            expect.hasAssertions();
 
             mockSearch
                 .mockResolvedValueOnce({ issues: [], total: 1 })
@@ -338,7 +386,8 @@ describe('Coverage Gap', () => {
             expect(nonNull(result.items[0]).linkedTestKeys).toStrictEqual([]);
         });
 
-        it('handles collectAllPages with empty issues batch (line 43)', async () => {expect.hasAssertions();
+        it('handles collectAllPages with empty issues batch (line 43)', async () => {
+            expect.hasAssertions();
 
             mockSearch
                 .mockResolvedValueOnce({ issues: [], total: 0 })
@@ -349,7 +398,8 @@ describe('Coverage Gap', () => {
             expect(result.totals.totalIssues).toBe(0);
         });
 
-        it('handles linked tests with issuelinks on issue (lines 70-83)', async () => {expect.hasAssertions();
+        it('handles linked tests with issuelinks on issue (lines 70-83)', async () => {
+            expect.hasAssertions();
 
             mockSearch
                 .mockResolvedValueOnce({ issues: [], total: 2 })
@@ -360,7 +410,11 @@ describe('Coverage Gap', () => {
                         }),
                         makeIssue('PROJ-2', {
                             issuelinks: [
-                                { type: { name: 'Test' }, outwardIssue: { key: 'TEST-2' }, inwardIssue: { key: 'PROJ-2' } },
+                                {
+                                    type: { name: 'Test' },
+                                    outwardIssue: { key: 'TEST-2' },
+                                    inwardIssue: { key: 'PROJ-2' },
+                                },
                             ],
                         }),
                     ],
@@ -372,7 +426,8 @@ describe('Coverage Gap', () => {
             expect(result.totals.covered).toBe(2);
         });
 
-        it('handles collectAllPages catch error (lines 53-54)', async () => {expect.hasAssertions();
+        it('handles collectAllPages catch error (lines 53-54)', async () => {
+            expect.hasAssertions();
 
             mockSearch
                 .mockResolvedValueOnce({ issues: [], total: 1 })
@@ -382,5 +437,4 @@ describe('Coverage Gap', () => {
             expect(result.totals.totalIssues).toBe(0);
         });
     });
-
 });

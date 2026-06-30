@@ -37,7 +37,7 @@ function resolvePrNumber(config: PrCommentConfig): number | undefined {
         if (Number.isFinite(parsed) && parsed > 0) return parsed;
     }
     const ref = penv['GITHUB_REF'] || '';
-    const match = ref.match(/^refs\/pull\/(\d+)\//);
+    const match = /^refs\/pull\/(\d+)\//.exec(ref);
     if (match) {
         const parsed = Number(match[1]);
         if (Number.isFinite(parsed) && parsed > 0) return parsed;
