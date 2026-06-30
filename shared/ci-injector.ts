@@ -147,6 +147,15 @@ export function injectPostProcessJob(ciYaml: string, projectName: string): strin
     ].join('\n');
 
     // Append to the end of the file (preserving trailing content)
-    const trimmed = ciYaml.replace(/\s*$/, '');
+    let trimmed = ciYaml;
+    while (
+        trimmed.length > 0 &&
+        (trimmed.charCodeAt(trimmed.length - 1) === 32 ||
+            trimmed.charCodeAt(trimmed.length - 1) === 9 ||
+            trimmed.charCodeAt(trimmed.length - 1) === 10 ||
+            trimmed.charCodeAt(trimmed.length - 1) === 13)
+    ) {
+        trimmed = trimmed.slice(0, -1);
+    }
     return trimmed + '\n' + postProcessBlock + '\n';
 }
