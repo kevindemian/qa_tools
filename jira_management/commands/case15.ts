@@ -40,13 +40,15 @@ async function handler(c: CommandContext): Promise<boolean | void> {
             2,
         );
         jsonPath = writeEphemeral('ctrf-import', `resolve-${sha ?? 'nosha'}-${Date.now()}.json`, ctrfContent);
-        success(
-            resolvedData.source === 'cache'
-                ? 'Usando dados em cache (SHA ' + (sha as string).slice(0, 7) + ')'
-                : resolvedData.source === 'ci'
-                  ? 'Resultados baixados do CI'
-                  : 'Usando baseline do branch ' + branch,
-        );
+        let sourceMsg: string;
+        if (resolvedData.source === 'cache') {
+            sourceMsg = 'Usando dados em cache (SHA ' + (sha as string).slice(0, 7) + ')';
+        } else if (resolvedData.source === 'ci') {
+            sourceMsg = 'Resultados baixados do CI';
+        } else {
+            sourceMsg = 'Usando baseline do branch ' + branch;
+        }
+        success(sourceMsg);
     } else {
         /* Fallback: prompt user for manual file path */
         const jsonPathInput =

@@ -129,12 +129,11 @@ export function generateBacklogHealthHtml(result: BacklogHealthResult): string {
             MetricCard({
                 label: 'Backlog Score',
                 value: String(result.score) + '%',
-                severity:
-                    result.score >= SCORE_THRESHOLD_SUCCESS
-                        ? 'success'
-                        : result.score >= SCORE_THRESHOLD_WARN
-                          ? 'warn'
-                          : 'error',
+                severity: (() => {
+                    if (result.score >= SCORE_THRESHOLD_SUCCESS) return 'success';
+                    if (result.score >= SCORE_THRESHOLD_WARN) return 'warn';
+                    return 'error';
+                })(),
             }) +
             MetricCard({
                 label: 'Unassigned',

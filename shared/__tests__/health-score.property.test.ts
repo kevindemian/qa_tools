@@ -101,16 +101,18 @@ describe('CalculateHealthScore — property-based', () => {
             fc.property(MetricsStoreArb, (store) => {
                 const result = calculateHealthScore(store);
                 const score = result.overall;
-                const expectedGrade =
-                    score >= 90
-                        ? 'excellent'
-                        : score >= 80
-                          ? 'good'
-                          : score >= 70
-                            ? 'needs_attention'
-                            : score >= 60
-                              ? 'poor'
-                              : 'critical';
+                let expectedGrade: string;
+                if (score >= 90) {
+                    expectedGrade = 'excellent';
+                } else if (score >= 80) {
+                    expectedGrade = 'good';
+                } else if (score >= 70) {
+                    expectedGrade = 'needs_attention';
+                } else if (score >= 60) {
+                    expectedGrade = 'poor';
+                } else {
+                    expectedGrade = 'critical';
+                }
 
                 expect(result.grade).toBe(expectedGrade);
             }),
@@ -227,16 +229,18 @@ describe('CalculateHealthScore — property-based', () => {
                     };
                     const result = calculateHealthScore(store, { gradeBoundaries: boundaries });
                     const score = result.overall;
-                    const expectedGrade =
-                        score >= boundaries.excellent
-                            ? 'excellent'
-                            : score >= boundaries.good
-                              ? 'good'
-                              : score >= boundaries.needs_attention
-                                ? 'needs_attention'
-                                : score >= boundaries.poor
-                                  ? 'poor'
-                                  : 'critical';
+                    let expectedGrade: string;
+                    if (score >= boundaries.excellent) {
+                        expectedGrade = 'excellent';
+                    } else if (score >= boundaries.good) {
+                        expectedGrade = 'good';
+                    } else if (score >= boundaries.needs_attention) {
+                        expectedGrade = 'needs_attention';
+                    } else if (score >= boundaries.poor) {
+                        expectedGrade = 'poor';
+                    } else {
+                        expectedGrade = 'critical';
+                    }
 
                     expect(result.grade).toBe(expectedGrade);
                 },

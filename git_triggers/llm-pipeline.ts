@@ -29,12 +29,14 @@ export async function offerPipelineFailureAnalysis(
             warn('Análise IA com qualidade reduzida — validação estrutural falhou, usou fallback.');
         }
 
-        const confidenceBadge =
-            analysis.confidence === 'high'
-                ? ''
-                : analysis.confidence === 'medium'
-                  ? ' (confiança média)'
-                  : ' (confiança baixa)';
+        let confidenceBadge: string;
+        if (analysis.confidence === 'high') {
+            confidenceBadge = '';
+        } else if (analysis.confidence === 'medium') {
+            confidenceBadge = ' (confiança média)';
+        } else {
+            confidenceBadge = ' (confiança baixa)';
+        }
         success('Análise de falhas (IA)' + confidenceBadge + ':');
         divider();
         print(analysis.content);

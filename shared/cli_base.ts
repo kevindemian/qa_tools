@@ -217,14 +217,16 @@ function _tryPrintHealthScore(): void {
         const store = loadMetrics();
         if (store.runs.length >= 5) {
             const hs = calculateHealthScore(store);
-            const gradeIcon =
-                hs.grade === 'excellent'
-                    ? '🟢'
-                    : hs.grade === 'good'
-                      ? '🟡'
-                      : hs.grade === 'needs_attention'
-                        ? '🟠'
-                        : '🔴';
+            let gradeIcon: string;
+            if (hs.grade === 'excellent') {
+                gradeIcon = '🟢';
+            } else if (hs.grade === 'good') {
+                gradeIcon = '🟡';
+            } else if (hs.grade === 'needs_attention') {
+                gradeIcon = '🟠';
+            } else {
+                gradeIcon = '🔴';
+            }
             const gateIcon = hs.qualityGate === 'pass' ? '✓' : '✗';
             info(`Saúde: ${hs.overall}/100 ${gradeIcon} · Quality Gate: ${gateIcon}`);
         }
