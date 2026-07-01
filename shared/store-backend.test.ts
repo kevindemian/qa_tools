@@ -419,20 +419,16 @@ describe('Store Backend', () => {
             }
         });
 
-        it('returns FsStoreBackend when canExecGit throws', () => {
-            const xdgDir = path.join(tmpDir, 'xdg-execfile-throw');
+        it('returns GitStoreBackend when canExecGit succeeds with full path', () => {
+            const xdgDir = path.join(tmpDir, 'xdg-fullpath');
             fs.mkdirSync(path.resolve(xdgDir), { recursive: true });
             process.env['XDG_STATE_HOME'] = xdgDir;
-            /* Remove git from PATH so canExecGit throws */
-            const origPath = process.env['PATH'];
-            process.env['PATH'] = '';
-            try {
-                const backend = detectStoreBackend('/nonexistent-project-dir');
+            /* Implementation uses /usr/bin/git (full path), so canExecGit
+               succeeds even when PATH is cleared — this is the correct
+               behavior for sonarjs/no-os-command-from-path compliance. */
+            const backend = detectStoreBackend('/nonexistent-project-dir');
 
-                expect(backend).toBeInstanceOf(FsStoreBackend);
-            } finally {
-                process.env['PATH'] = origPath;
-            }
+            expect(backend).toBeInstanceOf(GitStoreBackend);
         });
 
         it('falls back to os.homedir when XDG_STATE_HOME is not set', () => {

@@ -55,8 +55,8 @@ describe('Opencode Db Maintenance', () => {
             'PRAGMA journal_mode=DELETE;': 'delete\n',
         };
         mockExecFileSync.mockImplementation((bin: string, args: string[]) => {
-            if (bin === 'stat') return '65536\n';
-            if (bin === 'sqlite3') return sqliteResponses[args[1] as keyof typeof sqliteResponses] ?? '';
+            if (bin === '/usr/bin/stat') return '65536\n';
+            if (bin === '/usr/bin/sqlite3') return sqliteResponses[args[1] as keyof typeof sqliteResponses] ?? '';
             return '';
         });
     });
@@ -140,10 +140,10 @@ describe('Opencode Db Maintenance', () => {
             expect.hasAssertions();
 
             mockExecFileSync.mockImplementation((bin: string, args: string[]) => {
-                if (bin === 'sqlite3' && args[1]?.includes('integrity_check')) {
+                if (bin === '/usr/bin/sqlite3' && args[1]?.includes('integrity_check')) {
                     throw new Error('database disk image is malformed');
                 }
-                if (bin === 'stat') return '65536\n';
+                if (bin === '/usr/bin/stat') return '65536\n';
                 return '';
             });
             const { modeCheckOnly } = await loadModule();
@@ -157,10 +157,10 @@ describe('Opencode Db Maintenance', () => {
             expect.hasAssertions();
 
             mockExecFileSync.mockImplementation((bin: string, args: string[]) => {
-                if (bin === 'sqlite3' && args[1]?.includes('wal_checkpoint')) {
+                if (bin === '/usr/bin/sqlite3' && args[1]?.includes('wal_checkpoint')) {
                     throw new Error('checkpoint error');
                 }
-                if (bin === 'stat') return '65536\n';
+                if (bin === '/usr/bin/stat') return '65536\n';
                 return 'ok\n';
             });
             const { modeCheckOnly } = await loadModule();
@@ -188,12 +188,12 @@ describe('Opencode Db Maintenance', () => {
 
             let callCount = 0;
             mockExecFileSync.mockImplementation((bin: string, args: string[]) => {
-                if (bin === 'sqlite3' && args[1]?.includes('integrity_check')) {
+                if (bin === '/usr/bin/sqlite3' && args[1]?.includes('integrity_check')) {
                     callCount++;
                     if (callCount === 1) throw new Error('malformed');
                     return 'ok\n';
                 }
-                if (bin === 'stat') return '65536\n';
+                if (bin === '/usr/bin/stat') return '65536\n';
                 return '';
             });
             const { modeRepair } = await loadModule();
@@ -202,12 +202,12 @@ describe('Opencode Db Maintenance', () => {
             expect(result.repaired).toBeTruthy();
             expect(result.errors).toHaveLength(0);
             expect(mockExecFileSync).toHaveBeenCalledWith(
-                'sqlite3',
+                '/usr/bin/sqlite3',
                 [expect.stringContaining('opencode.db'), 'PRAGMA journal_mode=DELETE;'],
                 expect.any(Object),
             );
             expect(mockExecFileSync).toHaveBeenCalledWith(
-                'sqlite3',
+                '/usr/bin/sqlite3',
                 [expect.stringContaining('opencode.db'), 'REINDEX;'],
                 expect.any(Object),
             );
@@ -217,10 +217,10 @@ describe('Opencode Db Maintenance', () => {
             expect.hasAssertions();
 
             mockExecFileSync.mockImplementation((bin: string, args: string[]) => {
-                if (bin === 'sqlite3' && args[1]?.includes('integrity_check')) {
+                if (bin === '/usr/bin/sqlite3' && args[1]?.includes('integrity_check')) {
                     throw new Error('malformed');
                 }
-                if (bin === 'stat') return '65536\n';
+                if (bin === '/usr/bin/stat') return '65536\n';
                 return '';
             });
             const { modeRepair } = await loadModule();
@@ -242,7 +242,7 @@ describe('Opencode Db Maintenance', () => {
             expect(result.vacuumed).toBeTruthy();
             expect(result.errors).toHaveLength(0);
             expect(mockExecFileSync).toHaveBeenCalledWith(
-                'sqlite3',
+                '/usr/bin/sqlite3',
                 [expect.stringContaining('opencode.db'), 'VACUUM;'],
                 expect.any(Object),
             );
@@ -252,10 +252,10 @@ describe('Opencode Db Maintenance', () => {
             expect.hasAssertions();
 
             mockExecFileSync.mockImplementation((bin: string, args: string[]) => {
-                if (bin === 'sqlite3' && args[1]?.includes('integrity_check')) {
+                if (bin === '/usr/bin/sqlite3' && args[1]?.includes('integrity_check')) {
                     throw new Error('malformed');
                 }
-                if (bin === 'stat') return '65536\n';
+                if (bin === '/usr/bin/stat') return '65536\n';
                 return '';
             });
             const { modeVacuum } = await loadModule();
@@ -280,7 +280,7 @@ describe('Opencode Db Maintenance', () => {
             expect.hasAssertions();
 
             mockExecFileSync.mockImplementation((bin: string) => {
-                if (bin === 'stat') throw new Error('ENOENT');
+                if (bin === '/usr/bin/stat') throw new Error('ENOENT');
                 return '';
             });
             const { getDbSizeBytes } = await loadModule();
@@ -297,7 +297,7 @@ describe('Opencode Db Maintenance', () => {
             const size = getDbSizeBytes();
 
             expect(size).toBe(0);
-            expect(mockExecFileSync).not.toHaveBeenCalledWith('stat', expect.anything(), expect.anything());
+            expect(mockExecFileSync).not.toHaveBeenCalledWith('/usr/bin/stat', expect.anything(), expect.anything());
         });
     });
 
@@ -335,7 +335,7 @@ describe('Opencode Db Maintenance', () => {
 
             expect(result).toBe('wal');
             expect(mockExecFileSync).toHaveBeenCalledWith(
-                'sqlite3',
+                '/usr/bin/sqlite3',
                 [expect.stringContaining('opencode.db'), 'PRAGMA journal_mode=WAL;'],
                 expect.any(Object),
             );
@@ -345,7 +345,7 @@ describe('Opencode Db Maintenance', () => {
             expect.hasAssertions();
 
             mockExecFileSync.mockImplementation((bin: string) => {
-                if (bin === 'sqlite3') throw new Error('ENOENT');
+                if (bin === '/usr/bin/sqlite3') throw new Error('ENOENT');
                 return '';
             });
             const { ensureWalMode } = await loadModule();
@@ -442,7 +442,7 @@ describe('Opencode Db Maintenance', () => {
             expect.hasAssertions();
 
             mockExecFileSync.mockImplementation((bin: string) => {
-                if (bin === 'sqlite3') return '3.40.0\n';
+                if (bin === '/usr/bin/sqlite3') return '3.40.0\n';
                 return '';
             });
             const { checkSqlite3 } = await import('./opencode-db-maintenance.js');
@@ -454,7 +454,7 @@ describe('Opencode Db Maintenance', () => {
             expect.hasAssertions();
 
             mockExecFileSync.mockImplementation((bin: string) => {
-                if (bin === 'sqlite3') throw new Error('ENOENT');
+                if (bin === '/usr/bin/sqlite3') throw new Error('ENOENT');
                 return '';
             });
             const { checkSqlite3 } = await import('./opencode-db-maintenance.js');
@@ -469,9 +469,9 @@ describe('Opencode Db Maintenance', () => {
             DB_PATH = mod.DB_PATH;
             mockExistsSync.mockReturnValue(true);
             mockExecFileSync.mockImplementation((bin: string, args: string[]) => {
-                if (bin === 'sqlite3' && args[0] === '--version') return '3.40.0\n';
-                if (bin === 'stat') return '65536\n';
-                if (bin === 'sqlite3') {
+                if (bin === '/usr/bin/sqlite3' && args[0] === '--version') return '3.40.0\n';
+                if (bin === '/usr/bin/stat') return '65536\n';
+                if (bin === '/usr/bin/sqlite3') {
                     const sqlCmd = args[1];
                     if (sqlCmd?.includes('integrity_check')) return 'ok\n';
                     if (sqlCmd?.includes('wal_checkpoint')) return '0,0,0\n';
@@ -485,7 +485,7 @@ describe('Opencode Db Maintenance', () => {
             expect.hasAssertions();
 
             mockExecFileSync.mockImplementation((bin: string) => {
-                if (bin === 'sqlite3') throw new Error('ENOENT');
+                if (bin === '/usr/bin/sqlite3') throw new Error('ENOENT');
                 return '';
             });
             const { main } = await import('./opencode-db-maintenance.js');
@@ -545,11 +545,11 @@ describe('Opencode Db Maintenance', () => {
             expect.hasAssertions();
 
             mockExecFileSync.mockImplementation((bin: string, args: string[]) => {
-                if (bin === 'sqlite3' && args[0] === '--version') return '3.40.0\n';
-                if (bin === 'sqlite3' && args[1]?.includes('integrity_check')) {
+                if (bin === '/usr/bin/sqlite3' && args[0] === '--version') return '3.40.0\n';
+                if (bin === '/usr/bin/sqlite3' && args[1]?.includes('integrity_check')) {
                     throw new Error('malformed');
                 }
-                if (bin === 'stat') return '65536\n';
+                if (bin === '/usr/bin/stat') return '65536\n';
                 return '';
             });
             const { main } = await loadModule();
@@ -565,8 +565,8 @@ describe('Opencode Db Maintenance', () => {
             expect.hasAssertions();
 
             mockExecFileSync.mockImplementation((bin: string, args: string[]) => {
-                if (bin === 'sqlite3' && args[0] === '--version') return '3.40.0\n';
-                if (bin === 'stat') return '65536\n';
+                if (bin === '/usr/bin/sqlite3' && args[0] === '--version') return '3.40.0\n';
+                if (bin === '/usr/bin/stat') return '65536\n';
                 return 'ok\n';
             });
             const { main } = await loadModule();
@@ -585,8 +585,8 @@ describe('Opencode Db Maintenance', () => {
             expect.hasAssertions();
 
             mockExecFileSync.mockImplementation((bin: string, args: string[]) => {
-                if (bin === 'sqlite3' && args[0] === '--version') return '3.40.0\n';
-                if (bin === 'stat') return '65536\n';
+                if (bin === '/usr/bin/sqlite3' && args[0] === '--version') return '3.40.0\n';
+                if (bin === '/usr/bin/stat') return '65536\n';
                 return 'ok\n';
             });
             const { main } = await loadModule();
@@ -608,12 +608,12 @@ describe('Opencode Db Maintenance', () => {
 
             let callCount = 0;
             mockExecFileSync.mockImplementation((bin: string, args: string[]) => {
-                if (bin === 'sqlite3' && args[1]?.includes('wal_checkpoint')) {
+                if (bin === '/usr/bin/sqlite3' && args[1]?.includes('wal_checkpoint')) {
                     callCount++;
                     if (callCount >= 1) throw new Error('checkpoint failed');
                 }
-                if (bin === 'stat') return '65536\n';
-                if (bin === 'sqlite3') return 'ok\n';
+                if (bin === '/usr/bin/stat') return '65536\n';
+                if (bin === '/usr/bin/sqlite3') return 'ok\n';
                 return '';
             });
             const { modeVacuum } = await loadModule();
@@ -629,8 +629,8 @@ describe('Opencode Db Maintenance', () => {
             expect.hasAssertions();
 
             mockExecFileSync.mockImplementation((bin: string) => {
-                if (bin === 'sqlite3') return '3.40.0\n';
-                if (bin === 'stat') return '65536\n';
+                if (bin === '/usr/bin/sqlite3') return '3.40.0\n';
+                if (bin === '/usr/bin/stat') return '65536\n';
                 return '';
             });
             const { runAsScript } = await loadModule();

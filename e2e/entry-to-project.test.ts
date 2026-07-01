@@ -59,8 +59,8 @@ describe('Entry-menu to module spawn — full flow (CR-3c)', () => {
             expect.arrayContaining([expect.objectContaining({ value: 'git' })]),
         );
         expect(spawn).toHaveBeenCalledWith(
-            'npx',
-            ['tsx', expect.stringContaining('git_triggers/main.ts')],
+            process.execPath,
+            [expect.stringContaining('.bin/tsx'), expect.stringContaining('git_triggers/main.ts')],
             expect.objectContaining({
                 stdio: 'inherit',
                 cwd: expect.any(String) as string,
@@ -79,8 +79,8 @@ describe('Entry-menu to module spawn — full flow (CR-3c)', () => {
         await entryMain();
 
         expect(spawn).toHaveBeenCalledWith(
-            'npx',
-            ['tsx', expect.stringContaining('jira_management/main.ts')],
+            process.execPath,
+            [expect.stringContaining('.bin/tsx'), expect.stringContaining('jira_management/main.ts')],
             expect.any(Object),
         );
     });

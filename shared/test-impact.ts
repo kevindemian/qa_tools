@@ -19,8 +19,8 @@ const PackageJsonSchema = z.object({
 function loadPackageJson(): { devDependencies?: Record<string, string> | undefined } | null {
     try {
         const pkgPath = path.resolve(process.cwd(), 'package.json');
-        if (!fs.existsSync(path.resolve(pkgPath))) return null;
-        const raw = fs.readFileSync(path.resolve(pkgPath), 'utf8');
+        if (!fs.existsSync(pkgPath)) return null;
+        const raw = fs.readFileSync(pkgPath, 'utf8');
         const parsed: unknown = JSON.parse(raw);
         return PackageJsonSchema.parse(parsed);
     } catch (err: unknown) {
@@ -89,8 +89,8 @@ function keywordMatch(changedFiles: string[], testTitles: string[]): ImpactedTes
 
 function explicitMapping(changedFiles: string[], mappingPath: string): ImpactedTest[] {
     try {
-        if (!fs.existsSync(path.resolve(mappingPath))) return [];
-        const content = fs.readFileSync(path.resolve(mappingPath), 'utf8');
+        if (!fs.existsSync(mappingPath)) return [];
+        const content = fs.readFileSync(mappingPath, 'utf8');
         const mappings = parseFileTestMappings(content);
         const impacted: ImpactedTest[] = [];
         for (const file of changedFiles) {

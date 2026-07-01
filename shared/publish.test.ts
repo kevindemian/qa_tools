@@ -36,7 +36,7 @@ describe('Publish', () => {
             publishReport({ target: 's3', filePath: './report.html' });
 
             expect(mockExecFileSync).toHaveBeenCalledWith(
-                'aws',
+                '/usr/bin/aws',
                 ['s3', 'cp', './report.html', 's3://my-bucket', '--no-progress'],
                 { stdio: 'inherit', timeout: 120_000 },
             );
@@ -46,7 +46,7 @@ describe('Publish', () => {
             publishReport({ target: 's3', filePath: './report.html', destination: 's3://other' });
 
             expect(mockExecFileSync).toHaveBeenCalledWith(
-                'aws',
+                '/usr/bin/aws',
                 ['s3', 'cp', './report.html', 's3://other', '--no-progress'],
                 { stdio: 'inherit', timeout: 120_000 },
             );
@@ -58,7 +58,7 @@ describe('Publish', () => {
             publishReport({ target: 's3', filePath: maliciousPath });
 
             expect(mockExecFileSync).toHaveBeenCalledWith(
-                'aws',
+                '/usr/bin/aws',
                 ['s3', 'cp', maliciousPath, 's3://bucket', '--no-progress'],
                 { stdio: 'inherit', timeout: 120_000 },
             );

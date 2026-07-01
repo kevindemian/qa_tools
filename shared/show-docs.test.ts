@@ -42,7 +42,10 @@ vi.mock('fs', () => ({
 }));
 
 vi.mock('path', () => ({
-    default: { join: mockJoin },
+    default: {
+        join: mockJoin,
+        resolve: (...args: string[]) => args.join('/'),
+    },
 }));
 
 vi.mock('./prompt', () => ({
