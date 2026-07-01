@@ -72,7 +72,7 @@ interface CollectedTest {
  * }]],
  * ```
  */
-export class VitestCtrfReporter implements Reporter {
+class VitestCtrfReporter implements Reporter {
     private tests: CollectedTest[] = [];
     private startTime: number = 0;
     private readonly options: Required<VitestCtrfReporterOptions>;

@@ -11,7 +11,7 @@ import { resolve } from 'node:path';
 import { afterEach, beforeEach, describe, expect, it } from 'vitest';
 import type { TestCase } from 'vitest/node';
 import { isCtrfFormat, parseTestResults, type CtrfData } from './result_parser.js';
-import { VitestCtrfReporter } from './vitest-ctrf-reporter.js';
+import VitestCtrfReporter from './vitest-ctrf-reporter.js';
 
 const TEST_OUTPUT_DIR = resolve('reports-test');
 const TEST_OUTPUT_FILE = 'test-ctrf-report.json';

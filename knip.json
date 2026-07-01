@@ -1,7 +1,6 @@
 {
     "$schema": "https://unpkg.com/knip@6/schema.json",
     "entry": [
-        "scripts/build.mjs",
         "scripts/ux-auditor.ts",
         "scripts/sop-phase-enforcer.ts",
         "scripts/smartwizard-llm.ts",
@@ -19,7 +18,7 @@
         "e2e/**/*.ts",
         "scripts/**/*.ts"
     ],
-    "ignoreDependencies": ["adm-zip", "csv-parser", "glob", "@inquirer/confirm", "@inquirer/input", "@inquirer/select"],
+    "ignoreDependencies": [],
     "vitest": {
         "config": "vitest.config.ts"
     }
