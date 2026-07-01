@@ -27,47 +27,62 @@ export interface EvidenceVerificationResult {
     allVerified: boolean;
 }
 
+function isNonNullObject(val: unknown): val is Record<string, unknown> {
+    return val != null && Object.getPrototypeOf(val) !== null;
+}
+
+function extractCoverageTexts(testObj: { [key: string]: unknown }): string[] {
+    if (!Array.isArray(testObj['coverage'])) return [];
+    const results: string[] = [];
+    for (const cov of testObj['coverage']) {
+        if (isNonNullObject(cov)) {
+            const covObj = cov as { [key: string]: unknown };
+            if (typeof covObj['criterionText'] === 'string') {
+                results.push(covObj['criterionText']);
+            }
+        }
+    }
+    return results;
+}
+
+function extractLongSteps(testObj: { [key: string]: unknown }): string[] {
+    if (!Array.isArray(testObj['steps'])) return [];
+    const results: string[] = [];
+    for (const step of testObj['steps']) {
+        if (typeof step === 'string' && step.length > 20) {
+            results.push(step);
+        }
+    }
+    return results;
+}
+
+function extractEvidenceFromTest(testObj: { [key: string]: unknown }): string[] {
+    const results: string[] = [];
+    if (Array.isArray(testObj['evidence'])) {
+        results.push(...testObj['evidence'].filter((e): e is string => typeof e === 'string'));
+    }
+    results.push(...extractCoverageTexts(testObj));
+    results.push(...extractLongSteps(testObj));
+    return results;
+}
+
 /** Extract all strings from evidence arrays in an artifact. */
 function extractEvidenceStrings(artifact: unknown): string[] {
+    if (typeof artifact !== 'object' || artifact === null) return [];
+
+    const obj = artifact as { [key: string]: unknown };
     const results: string[] = [];
-    if (typeof artifact !== 'object' || artifact === null) return results;
 
-    const obj = artifact as Record<string, unknown>;
-
-    // Direct evidence[] field at root
     if (Array.isArray(obj['evidence'])) {
         results.push(...obj['evidence'].filter((e): e is string => typeof e === 'string'));
     }
 
-    // Evidence in individual tests
     const tests = obj['tests'];
-    if (Array.isArray(tests)) {
-        for (const test of tests) {
-            if (typeof test === 'object' && test !== null) {
-                const testObj = test as Record<string, unknown>;
-                if (Array.isArray(testObj['evidence'])) {
-                    results.push(...testObj['evidence'].filter((e): e is string => typeof e === 'string'));
-                }
-                // Evidence in coverage references
-                if (Array.isArray(testObj['coverage'])) {
-                    for (const cov of testObj['coverage']) {
-                        if (typeof cov === 'object' && cov !== null) {
-                            const covObj = cov as Record<string, unknown>;
-                            if (typeof covObj['criterionText'] === 'string') {
-                                results.push(covObj['criterionText']);
-                            }
-                        }
-                    }
-                }
-                // Steps as implicit evidence
-                if (Array.isArray(testObj['steps'])) {
-                    for (const step of testObj['steps']) {
-                        if (typeof step === 'string' && step.length > 20) {
-                            results.push(step);
-                        }
-                    }
-                }
-            }
+    if (!Array.isArray(tests)) return results;
+
+    for (const test of tests) {
+        if (isNonNullObject(test)) {
+            results.push(...extractEvidenceFromTest(test));
         }
     }
 
@@ -97,6 +112,44 @@ function tokenOverlap(evidence: string, input: string): number {
     return matchCount / evTokens.size;
 }
 
+function verifySingleCitation(citation: string, input: string): EvidenceVerificationResult['details'][number] {
+    const trimmed = citation.trim();
+    if (trimmed.length < 5) {
+        return { citation: trimmed, status: 'unverifiable', context: 'Too short to verify' };
+    }
+    if (input.includes(trimmed) || input.includes(trimmed.slice(0, 80))) {
+        return { citation: trimmed.slice(0, 100), status: 'verified', context: 'Direct match found' };
+    }
+    const overlap = tokenOverlap(trimmed, input);
+    if (overlap >= 0.7) {
+        return {
+            citation: trimmed.slice(0, 100),
+            status: 'verified',
+            context: `Token overlap ${Math.round(overlap * 100)}%`,
+        };
+    }
+    const idMatch = /^([A-Z]+-\d+|[a-z0-9]{8,}|error\s+\d{3})/i.exec(trimmed);
+    if (idMatch && input.includes(idMatch[1] as string)) {
+        return {
+            citation: trimmed.slice(0, 100),
+            status: 'verified',
+            context: `Reference ID "${idMatch[1]}" found in input`,
+        };
+    }
+    if (overlap < 0.3 && trimmed.length > 20) {
+        return {
+            citation: trimmed.slice(0, 100),
+            status: 'hallucinated',
+            context: `Only ${Math.round(overlap * 100)}% token overlap with input`,
+        };
+    }
+    return {
+        citation: trimmed.slice(0, 100),
+        status: 'unverifiable',
+        context: `Partial overlap ${Math.round(overlap * 100)}%`,
+    };
+}
+
 /**
  * Verify every evidence citation in artifact against input context.
  * Citations are classified as:
@@ -107,57 +160,7 @@ function tokenOverlap(evidence: string, input: string): number {
 export function verifyEvidence(artifact: unknown, context: ValidationContext): EvidenceVerificationResult {
     const input = context.inputRaw;
     const citations = extractEvidenceStrings(artifact);
-    const details: EvidenceVerificationResult['details'] = [];
-
-    for (const citation of citations) {
-        const trimmed = citation.trim();
-        if (trimmed.length < 5) {
-            details.push({ citation: trimmed, status: 'unverifiable', context: 'Too short to verify' });
-            continue;
-        }
-
-        // Direct substring match
-        if (input.includes(trimmed) || input.includes(trimmed.slice(0, 80))) {
-            details.push({ citation: trimmed.slice(0, 100), status: 'verified', context: 'Direct match found' });
-            continue;
-        }
-
-        // Token overlap
-        const overlap = tokenOverlap(trimmed, input);
-        if (overlap >= 0.7) {
-            details.push({
-                citation: trimmed.slice(0, 100),
-                status: 'verified',
-                context: `Token overlap ${Math.round(overlap * 100)}%`,
-            });
-            continue;
-        }
-
-        // Check citation-like patterns (IDs, line numbers, error codes)
-        const idMatch = /^([A-Z]+-\d+|[a-z0-9]{8,}|error\s+\d{3})/i.exec(trimmed);
-        if (idMatch && input.includes(idMatch[1] as string)) {
-            details.push({
-                citation: trimmed.slice(0, 100),
-                status: 'verified',
-                context: `Reference ID "${idMatch[1]}" found in input`,
-            });
-            continue;
-        }
-
-        if (overlap < 0.3 && trimmed.length > 20) {
-            details.push({
-                citation: trimmed.slice(0, 100),
-                status: 'hallucinated',
-                context: `Only ${Math.round(overlap * 100)}% token overlap with input`,
-            });
-        } else {
-            details.push({
-                citation: trimmed.slice(0, 100),
-                status: 'unverifiable',
-                context: `Partial overlap ${Math.round(overlap * 100)}%`,
-            });
-        }
-    }
+    const details = citations.map((citation) => verifySingleCitation(citation, input));
 
     const verified = details.filter((d) => d.status === 'verified').length;
     const unverifiable = details.filter((d) => d.status === 'unverifiable').length;

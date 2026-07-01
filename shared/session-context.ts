@@ -3,6 +3,17 @@
  *
  * Sprint C extension: resolveTestDataSource() replaces manual path with
  * SHA-keyed cache lookup + CI auto-download via Store. */
+
+function isNonNullObject(val: unknown): val is Record<string, unknown> {
+    return val != null && Object.getPrototypeOf(val) !== null;
+}
+
+function getErrorMessage(err: unknown): string {
+    if (isNonNullObject(err) && 'message' in err) {
+        return String((err as { message: unknown }).message);
+    }
+    return String(err);
+}
 import { withSpinner } from './prompt.js';
 import { getHeadSha, getCurrentBranch } from './git-sha.js';
 import { detectStoreBackend, detectProjectGitDir } from './store-backend.js';
@@ -88,7 +99,7 @@ export class SessionContext {
                 counts += ' · ' + er + ' erro';
             }
         }
-        const prefix = projectName || '';
+        const prefix = projectName;
         return prefix + (this.lastOperation ? ' | ' + this.lastOperation : '') + counts;
     }
 }
@@ -111,6 +122,67 @@ export function resolveSessionContext(
     return { sha, branch, store };
 }
 
+function tryLoadFromCache(sha: string | null, store: Store): { result: ParseResult; source: 'cache' } | null {
+    if (!sha) return null;
+    try {
+        const cached = store.loadReport(sha);
+        if (cached && Array.isArray(cached.tests) && cached.tests.length > 0) {
+            const tests = cached.tests;
+            const passed = tests.filter((t) => t.state === 'passed').length;
+            const failed = tests.filter((t) => t.state === 'failed').length;
+            const skipped = tests.filter((t) => t.state === 'skipped').length;
+            return {
+                result: {
+                    tests,
+                    stats: { passed, failed, skipped, total: tests.length, duration: 0 },
+                },
+                source: 'cache',
+            };
+        }
+    } catch (err) {
+        rootLogger.warn('resolveTestDataSource: corrupted cache entry, falling through: ' + getErrorMessage(err));
+    }
+    return null;
+}
+
+function trySaveCiResult(
+    downloaded: ParseResult,
+    sha: string | null,
+    branch: string | null,
+    projectName: string,
+    store: Store,
+): void {
+    if (!sha) return;
+    store.saveReport(sha, downloaded.tests);
+    const meta: ReportMeta = {
+        sha,
+        project: projectName,
+        timestamp: Date.now(),
+        tool: '',
+        branch: branch ?? '',
+        total: downloaded.stats.total,
+        passed: downloaded.stats.passed,
+        failed: downloaded.stats.failed,
+        skipped: downloaded.stats.skipped,
+    };
+    store.put(sha, meta);
+    store.flush(`qa-tools: auto-cache ${sha.slice(0, 7)}`);
+}
+
+function resolveFromBranch(
+    projectName: string,
+    branch: string | null,
+    sha: string | null,
+    store: Store,
+): Promise<{ result: ParseResult; source: 'cache' | 'ci' | 'branch' } | null> | null {
+    if (!branch || !sha) return null;
+    const entries = store.getBranch(branch);
+    if (entries.length === 0) return null;
+    const lastSha = entries[0]?.sha;
+    if (!lastSha) return null;
+    return resolveTestDataSource(projectName, lastSha, branch, store);
+}
+
 /** Resolve test data source using 4-step sequential fallback:
  *  1. SHA cache hit → return cached
  *  2. CI download → cache → return
@@ -125,60 +197,17 @@ export async function resolveTestDataSource(
     branch: string | null,
     store: Store,
 ): Promise<{ result: ParseResult; source: 'cache' | 'ci' | 'branch' } | null> {
-    if (sha) {
-        try {
-            const cached = store.loadReport(sha);
-            if (cached && Array.isArray(cached.tests) && cached.tests.length > 0) {
-                const tests = cached.tests;
-                const passed = tests.filter((t) => t.state === 'passed').length;
-                const failed = tests.filter((t) => t.state === 'failed').length;
-                const skipped = tests.filter((t) => t.state === 'skipped').length;
-                return {
-                    result: {
-                        tests,
-                        stats: { passed, failed, skipped, total: tests.length, duration: 0 },
-                    },
-                    source: 'cache',
-                };
-            }
-        } catch (err) {
-            rootLogger.warn(
-                'resolveTestDataSource: corrupted cache entry, falling through: ' +
-                    (err instanceof Error ? err.message : String(err)),
-            );
-        }
-    }
+    const cached = tryLoadFromCache(sha, store);
+    if (cached) return cached;
 
     const downloaded = await fetchLatestTestRun();
     if (downloaded && downloaded.stats.total > 0) {
-        if (sha) {
-            store.saveReport(sha, downloaded.tests);
-            const meta: ReportMeta = {
-                sha,
-                project: projectName,
-                timestamp: Date.now(),
-                tool: '',
-                branch: branch || '',
-                total: downloaded.stats.total,
-                passed: downloaded.stats.passed,
-                failed: downloaded.stats.failed,
-                skipped: downloaded.stats.skipped,
-            };
-            store.put(sha, meta);
-            store.flush(`qa-tools: auto-cache ${sha.slice(0, 7)}`);
-        }
+        trySaveCiResult(downloaded, sha, branch, projectName, store);
         return { result: downloaded, source: 'ci' };
     }
 
-    if (branch && sha) {
-        const entries = store.getBranch(branch);
-        if (entries.length > 0) {
-            const lastSha = entries[0]?.sha;
-            if (lastSha) {
-                return resolveTestDataSource(projectName, lastSha, branch, store);
-            }
-        }
-    }
+    const branchResult = resolveFromBranch(projectName, branch, sha, store);
+    if (branchResult) return branchResult;
 
     return null;
 }

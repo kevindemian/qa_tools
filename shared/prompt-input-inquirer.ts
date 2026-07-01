@@ -3,6 +3,21 @@
 import { Output, defaultOutput as output } from './output.js';
 import { palette } from './palette.js';
 import { CancelError, warn } from './prompt-ui.js';
+
+function isNonNullObject(val: unknown): val is Record<string, unknown> {
+    return val != null && Object.getPrototypeOf(val) !== null;
+}
+
+function getErrorMessage(err: unknown): string {
+    if (isNonNullObject(err) && 'message' in err) {
+        return String((err as { message: unknown }).message);
+    }
+    return String(err);
+}
+
+function isCancelError(err: unknown): err is { name: string; cmd: string } {
+    return isNonNullObject(err) && 'name' in err && (err as { name: unknown }).name === 'CancelError' && 'cmd' in err;
+}
 import { PromptOptions, NAV_CMDS, prompt, confirm, isTTY } from './prompt-input-base.js';
 
 export interface SelectChoice {
@@ -48,7 +63,7 @@ async function _loadSelect(): Promise<unknown> {
         _selectMod = await import('@inquirer/select');
         return _selectMod;
     } catch (err) {
-        warn('@inquirer/select not available, using fallback: ' + (err instanceof Error ? err.message : String(err)));
+        warn('@inquirer/select not available, using fallback: ' + getErrorMessage(err));
         _selectMod = false;
         return false;
     }
@@ -67,7 +82,7 @@ async function _loadInput(): Promise<unknown> {
         _inputMod = await import('@inquirer/input');
         return _inputMod;
     } catch (err) {
-        warn('@inquirer/input not available, using fallback: ' + (err instanceof Error ? err.message : String(err)));
+        warn('@inquirer/input not available, using fallback: ' + getErrorMessage(err));
         _inputMod = false;
         return false;
     }
@@ -86,10 +101,34 @@ async function _loadConfirm(): Promise<unknown> {
         _confirmMod = await import('@inquirer/confirm');
         return _confirmMod;
     } catch (err) {
-        warn('@inquirer/confirm not available, using fallback: ' + (err instanceof Error ? err.message : String(err)));
+        warn('@inquirer/confirm not available, using fallback: ' + getErrorMessage(err));
         _confirmMod = false;
         return false;
     }
+}
+
+function handleHelpCommand(cmd: string, helpCallback?: () => void): boolean {
+    if (cmd === '/help' || cmd === '/h') {
+        if (helpCallback) helpCallback();
+        return true;
+    }
+    return false;
+}
+
+function handleEmptyInput(
+    value: string,
+    retries: number,
+    maxRetries: number,
+): { result: 'retry' | 'return'; retries: number } {
+    const trimmed = value.trim().toLowerCase();
+    if (!trimmed) {
+        retries++;
+        if (retries < maxRetries) {
+            warn(`Entrada vazia. Tentativa ${retries + 1}/${maxRetries}.`);
+        }
+        return { result: 'retry', retries };
+    }
+    return { result: 'return', retries };
 }
 
 /** Async text prompt with retry logic and optional help callback.
@@ -106,27 +145,15 @@ export async function smartPrompt(
         try {
             value = await ask(label, options);
         } catch (err: unknown) {
-            if (err instanceof CancelError) {
-                if (err.cmd === '/help' || err.cmd === '/h') {
-                    if (helpCallback) helpCallback();
-                    continue;
-                }
-                throw err;
+            if (isCancelError(err) && handleHelpCommand(err.cmd, helpCallback)) {
+                continue;
             }
             throw err;
         }
-        const trimmed = value.trim().toLowerCase();
-        if (trimmed === '/help' || trimmed === '/h') {
-            if (helpCallback) helpCallback();
-            continue;
-        }
-        if (!trimmed) {
-            retries++;
-            if (retries < maxRetries) {
-                warn(`Entrada vazia. Tentativa ${retries + 1}/${maxRetries}.`);
-            }
-            continue;
-        }
+        if (handleHelpCommand(value.trim().toLowerCase(), helpCallback)) continue;
+        const emptyResult = handleEmptyInput(value, retries, maxRetries);
+        retries = emptyResult.retries;
+        if (emptyResult.result === 'retry') continue;
         return value;
     }
     warn('Número máximo de tentativas excedido.');
@@ -147,7 +174,7 @@ export async function ask(label: string, options: PromptOptions = {}): Promise<s
             if (NAV_CMDS.includes(trimmed)) throw new CancelError(trimmed);
             return (answer as string).trim();
         } catch (err) {
-            warn('Inquirer prompt failed, using sync fallback: ' + (err instanceof Error ? err.message : String(err)));
+            warn('Inquirer prompt failed, using sync fallback: ' + getErrorMessage(err));
             return prompt(label, options);
         }
     }
@@ -166,7 +193,7 @@ export async function askConfirm(label: string, defaultYes = false): Promise<boo
             });
             return answer as boolean;
         } catch (err) {
-            warn('Inquirer confirm failed, using sync fallback: ' + (err instanceof Error ? err.message : String(err)));
+            warn('Inquirer confirm failed, using sync fallback: ' + getErrorMessage(err));
             return confirm(label, defaultYes);
         }
     }
@@ -181,7 +208,7 @@ function groupChoices(choices: SelectChoice[]): { sections: SectionGroup[]; stan
 
     for (const c of choices) {
         if (c.type === 'separator') {
-            const line = (c.line || '').trim();
+            const line = (c.line ?? '').trim();
             if (!line) continue;
             current = { title: line, items: [], itemValues: [] };
             sections.push(current);
@@ -219,6 +246,52 @@ function _renderChoices(sections: SectionGroup[], standaloneItems: string[]): vo
     }
 }
 
+async function handleInquirerSelect(
+    mod: unknown,
+    label: string,
+    choices: SelectChoice[],
+    options: SelectOptions,
+): Promise<string> {
+    const selectChoices = choices.map((c) => {
+        if (c.type === 'separator') return { type: 'separator' as const, separator: c.line };
+        if (!c.name) return { type: 'separator' as const, separator: '' };
+        return { name: c.name, value: c.value ?? c.name };
+    });
+    try {
+        const answer = await (mod as { default: (...args: unknown[]) => unknown }).default({
+            message: label,
+            choices: selectChoices,
+            pageSize: options.pageSize || Output.rows() - 5,
+            loop: true,
+            theme: inquirerTheme,
+        });
+        return answer as string;
+    } catch (err) {
+        warn('Falha no seletor interativo. Usando modo texto: ' + getErrorMessage(err));
+        return '__error__';
+    }
+}
+
+function handleFallbackSelect(label: string, flatChoices: SelectChoice[], options: SelectOptions): string {
+    const { sections, standaloneItems } = groupChoices(flatChoices);
+    _renderChoices(sections, standaloneItems);
+    output.print(palette.muted('  Dica: digite o número da opção, alias (ex: criar, status, versões) ou /help'));
+    let answer: string;
+    try {
+        answer = prompt(label, { ...(options.default ? { default: options.default } : {}) }).trim();
+    } catch (e) {
+        if (isCancelError(e)) throw e;
+        return '0';
+    }
+    if (answer === '') return options.default || '0';
+    const trimmed = answer.toLowerCase();
+    if (trimmed === '0' || trimmed === 'exit' || trimmed === 'sair') return '0';
+    if (trimmed.startsWith('/')) return answer;
+    const num = parseInt(answer, 10);
+    const choice = num >= 1 && num <= flatChoices.length ? flatChoices[num - 1] : undefined;
+    return choice?.value ?? answer;
+}
+
 /** Interactive select menu. Uses `@inquirer/select` in TTY mode, falls back to a numbered list + `prompt()`.
  * Supports section separators and navigation commands (`/back`, etc.). */
 export async function showSelect(label: string, choices: SelectChoice[], options: SelectOptions = {}): Promise<string> {
@@ -228,47 +301,7 @@ export async function showSelect(label: string, choices: SelectChoice[], options
 
     const mod: unknown = await _loadSelect();
     if (mod && isTTY() && !options.menuMode) {
-        const selectChoices = choices.map((c) => {
-            if (c.type === 'separator') return { type: 'separator' as const, separator: c.line || '' };
-            if (!c.name) return { type: 'separator' as const, separator: '' };
-            return { name: c.name, value: c.value ?? c.name };
-        });
-        try {
-            const answer = await (mod as { default: (...args: unknown[]) => unknown }).default({
-                message: label,
-                choices: selectChoices,
-                pageSize: options.pageSize || Output.rows() - 5,
-                loop: true,
-                theme: inquirerTheme,
-            });
-            return answer as string;
-        } catch (err) {
-            warn(
-                'Falha no seletor interativo. Usando modo texto: ' + (err instanceof Error ? err.message : String(err)),
-            );
-            return '__error__';
-        }
+        return handleInquirerSelect(mod, label, choices, options);
     }
-
-    const { sections, standaloneItems } = groupChoices(choices);
-    _renderChoices(sections, standaloneItems);
-
-    output.print(palette.muted('  Dica: digite o número da opção, alias (ex: criar, status, versões) ou /help'));
-    let answer: string;
-    try {
-        answer = prompt(label, { ...(options.default ? { default: options.default } : {}) }).trim();
-    } catch (e) {
-        if (e instanceof CancelError) throw e;
-        return '0';
-    }
-    if (answer === '') return options.default || '0';
-    const trimmed = answer.toLowerCase();
-    if (trimmed === '0' || trimmed === 'exit' || trimmed === 'sair') return '0';
-    if (trimmed.startsWith('/')) return answer;
-    const num = parseInt(answer, 10);
-    const choice = num >= 1 && num <= flatChoices.length ? flatChoices[num - 1] : undefined;
-    if (choice) {
-        return choice.value;
-    }
-    return answer;
+    return handleFallbackSelect(label, flatChoices, options);
 }
