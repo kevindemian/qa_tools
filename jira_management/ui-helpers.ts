@@ -182,16 +182,18 @@ export async function dispatchChoice(choice: string, cmdCtx: CommandContext): Pr
     }
     const cmdHandler = getHandler(choice);
     if (cmdHandler) {
+        let result: boolean | void;
         try {
-            await cmdHandler(cmdCtx);
+            result = await cmdHandler(cmdCtx);
         } catch (e) {
             if ((e as Error).name === 'CancelError') return 'continue';
             printError('Erro no handler', e);
+            return 'continue';
         }
-        return 'continue';
+        return result === false ? 'exit' : 'continue';
     }
     warn('Opção inválida. Escolha entre 0-19, alias ou digite /help.');
-    return 'exit';
+    return 'continue';
 }
 export async function getUserChoice(level: string, proj: string, ctx: SessionContext): Promise<string> {
     if (Config.get('autoChoice')) return Config.get('autoChoice');

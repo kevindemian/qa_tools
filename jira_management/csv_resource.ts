@@ -78,17 +78,15 @@ class CsvResource {
         const value = line.replace('Linked Issues:', '').trim();
         if (!value) return [];
 
-        const LINKED_ISSUE_PATTERN = /(\w+-\d+)\s*\(([^)]+)\)/g;
+        const LINKED_ISSUE_RE = /^([A-Z]+-\d+)\s*\((.+)\)$/;
         const results: Array<{ key: string; linkType: string }> = [];
-        let match: RegExpExecArray | null;
-
-        while ((match = LINKED_ISSUE_PATTERN.exec(value)) !== null) {
-            const matchedKey = match[1] ?? '';
-            const matchedType = match[2] ?? '';
-            results.push({
-                key: matchedKey,
-                linkType: matchedType.trim(),
-            });
+        const parts = value.split(/,\s*/);
+        for (const part of parts) {
+            const trimmed = part.trim();
+            const m = LINKED_ISSUE_RE.exec(trimmed);
+            if (m && m[1] && m[2]) {
+                results.push({ key: m[1], linkType: m[2].trim() });
+            }
         }
 
         return results;

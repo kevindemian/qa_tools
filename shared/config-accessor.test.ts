@@ -127,6 +127,9 @@ describe('Config (accessor)', () => {
 
         it('overwrites previous override with new value', () => {
             Config.set('testKey', 'first');
+
+            expect(Config.get('testKey')).toBe('first');
+
             Config.set('testKey', 'second');
 
             expect(Config.get('testKey')).toBe('second');

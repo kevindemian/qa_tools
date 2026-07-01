@@ -267,7 +267,7 @@ describe('Ui Helpers', () => {
             expect(result).toBe('continue');
         });
 
-        it('dispatches to handler', async () => {
+        it('returns exit when handler returns false', async () => {
             expect.hasAssertions();
 
             const handler = vi.fn().mockResolvedValue(false);
@@ -276,7 +276,7 @@ describe('Ui Helpers', () => {
 
             const result = await dispatchChoice('1', minimalCtx);
 
-            expect(result).toBe('continue');
+            expect(result).toBe('exit');
             expect(handler).toHaveBeenCalledWith(minimalCtx);
         });
     });
