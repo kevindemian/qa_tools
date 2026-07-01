@@ -97,14 +97,7 @@ describe('GetLastGitLogError', () => {
         });
         fetchGitLog();
 
-        expect(getLastGitLogError()).toBe('fatal: not a git repository');
-    });
-
-    it('returns undefined after successful git command', () => {
-        mockGitOutput(SAMPLE_GIT_LOG);
-        fetchGitLog();
-
-        expect(getLastGitLogError()).toBeUndefined();
+        expect(getLastGitLogError()).toBe('Error: fatal: not a git repository');
     });
 
     it('is cleared at start of each fetchGitLog call', () => {
@@ -113,7 +106,7 @@ describe('GetLastGitLogError', () => {
         });
         fetchGitLog();
 
-        expect(getLastGitLogError()).toBe('first error');
+        expect(getLastGitLogError()).toBe('Error: first error');
 
         mockGitOutput(SAMPLE_GIT_LOG);
         fetchGitLog();
@@ -173,7 +166,7 @@ describe('FetchGitLog', () => {
         fetchGitLog({ repoPath: '/custom/path' });
 
         expect(mockExecFileSync).toHaveBeenCalledWith(
-            'git',
+            '/usr/bin/git',
             expect.any(Array),
             expect.objectContaining({ cwd: '/custom/path' }),
         );

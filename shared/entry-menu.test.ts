@@ -45,8 +45,8 @@ describe('RunModule', () => {
         const promise = entryMenu.runModule('jira');
 
         expect(mockSpawn).toHaveBeenCalledWith(
-            'npx',
-            ['tsx', expect.stringContaining('jira_management/main.ts')],
+            process.execPath,
+            [expect.stringContaining('.bin/tsx'), expect.stringContaining('jira_management/main.ts')],
             expect.any(Object),
         );
         await expect(promise).resolves.toBeUndefined();
@@ -60,8 +60,8 @@ describe('RunModule', () => {
         const promise = entryMenu.runModule('git');
 
         expect(mockSpawn).toHaveBeenCalledWith(
-            'npx',
-            ['tsx', expect.stringContaining('git_triggers/main.ts')],
+            process.execPath,
+            [expect.stringContaining('.bin/tsx'), expect.stringContaining('git_triggers/main.ts')],
             expect.any(Object),
         );
         await expect(promise).resolves.toBeUndefined();
@@ -140,8 +140,8 @@ describe('Main', () => {
         await entryMenu.main();
 
         expect(mockSpawn).toHaveBeenCalledWith(
-            'npx',
-            expect.arrayContaining(['tsx']),
+            process.execPath,
+            expect.arrayContaining([expect.stringContaining('.bin/tsx')]),
             expect.objectContaining({ stdio: 'inherit' }),
         );
     });

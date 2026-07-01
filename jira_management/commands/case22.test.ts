@@ -91,7 +91,7 @@ describe('Case22', () => {
             const mod = case22Module;
             await mod.handler(makeMockCommandContext());
 
-            expect(mockExecFileSync).toHaveBeenCalledWith('git', ['diff', '--name-only', 'HEAD~1'], {
+            expect(mockExecFileSync).toHaveBeenCalledWith('/usr/bin/git', ['diff', '--name-only', 'HEAD~1'], {
                 encoding: 'utf8',
             });
         });
