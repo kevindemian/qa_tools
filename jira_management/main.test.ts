@@ -503,7 +503,7 @@ describe('Main.ts', () => {
             expect(warn).toHaveBeenCalledWith(expect.stringContaining('inválida'));
         });
 
-        it("dispatches to handler and returns 'continue' for choice '1'", async () => {
+        it("dispatches to handler and returns 'exit' when handler returns false for choice '1'", async () => {
             expect.hasAssertions();
 
             const handler = vi.fn().mockResolvedValue(false);
@@ -511,11 +511,11 @@ describe('Main.ts', () => {
 
             const result = await mod.dispatchChoice('1', minimalCtx);
 
-            expect(result).toBe('continue');
+            expect(result).toBe('exit');
             expect(handler).toHaveBeenCalledWith(minimalCtx);
         });
 
-        it("dispatches to handler and returns 'continue' for choice '7'", async () => {
+        it("dispatches to handler and returns 'exit' when handler returns false for choice '7'", async () => {
             expect.hasAssertions();
 
             const handler = vi.fn().mockResolvedValue(false);
@@ -523,7 +523,7 @@ describe('Main.ts', () => {
 
             const result = await mod.dispatchChoice('7', minimalCtx);
 
-            expect(result).toBe('continue');
+            expect(result).toBe('exit');
             expect(handler).toHaveBeenCalledWith(minimalCtx);
         });
 
