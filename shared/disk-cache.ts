@@ -73,9 +73,9 @@ function decrypt(data: string): string | null {
 
 function ensureCacheDir(dir: string): void {
     try {
-        if (!fs.existsSync(dir)) {
-            fs.mkdirSync(dir, { recursive: true });
-            fs.chmodSync(dir, CACHE_DIR_PERM);
+        if (!fs.existsSync(path.resolve(dir))) {
+            fs.mkdirSync(path.resolve(dir), { recursive: true });
+            fs.chmodSync(path.resolve(dir), CACHE_DIR_PERM);
         }
     } catch (err) {
         rootLogger.warn('LLM disk cache dir init failed: ' + (err instanceof Error ? err.message : String(err)));
@@ -86,12 +86,12 @@ function ensureCacheDir(dir: string): void {
 export function diskCacheGet(key: string): string | null {
     const file = filePath(key);
     try {
-        const raw = fs.readFileSync(file, 'utf-8');
+        const raw = fs.readFileSync(path.resolve(file), 'utf-8');
         const decrypted = decrypt(raw);
         if (decrypted === null) {
             rootLogger.warn('LLM disk cache decrypt failed for key=' + key.slice(0, 12) + '… — removing');
             try {
-                fs.unlinkSync(file);
+                fs.unlinkSync(path.resolve(file));
             } catch (err) {
                 rootLogger.debug(
                     'LLM disk cache: failed to remove corrupted entry: ' +
@@ -107,7 +107,7 @@ export function diskCacheGet(key: string): string | null {
             rootLogger.info('LLM disk cache hit for key=' + key.slice(0, 12) + '…');
             return entry.response;
         }
-        fs.unlinkSync(file);
+        fs.unlinkSync(path.resolve(file));
         rootLogger.info('LLM disk cache expired for key=' + key.slice(0, 12) + '…');
     } catch (err) {
         rootLogger.debug('LLM disk cache: miss or corrupt: ' + (err instanceof Error ? err.message : String(err)));
@@ -124,8 +124,8 @@ export function diskCacheSet(key: string, response: string): void {
         const serialized = JSON.stringify(entry);
         const encrypted = encrypt(serialized);
         const file = filePath(key);
-        fs.writeFileSync(file, encrypted, 'utf-8');
-        fs.chmodSync(file, CACHE_FILE_PERM);
+        fs.writeFileSync(path.resolve(file), encrypted, 'utf-8');
+        fs.chmodSync(path.resolve(file), CACHE_FILE_PERM);
     } catch (err) {
         rootLogger.warn('LLM disk cache write failed: ' + (err instanceof Error ? err.message : String(err)));
     }
@@ -135,8 +135,8 @@ export function diskCacheSet(key: string, response: string): void {
 export function clearDiskCache(): void {
     const dir = cacheDir();
     try {
-        if (fs.existsSync(dir)) {
-            const files = fs.readdirSync(dir);
+        if (fs.existsSync(path.resolve(dir))) {
+            const files = fs.readdirSync(path.resolve(dir));
             for (const f of files) {
                 if (f.endsWith('.json')) fs.unlinkSync(path.join(dir, f));
             }

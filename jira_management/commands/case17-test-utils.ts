@@ -15,7 +15,7 @@ function getMappingCandidates(): string[] {
 
 function parseTestFile(candidate: string): Map<string, string> | null {
     try {
-        const raw = fs.readFileSync(candidate, 'utf8');
+        const raw = fs.readFileSync(path.resolve(candidate), 'utf8');
         const data: { tests?: Array<Record<string, string>> } = JSON.parse(raw) as {
             tests?: Array<Record<string, string>>;
         };
@@ -34,7 +34,7 @@ function parseTestFile(candidate: string): Map<string, string> | null {
 
 export function resolveMapping(): Map<string, string> {
     for (const candidate of getMappingCandidates()) {
-        if (!candidate || !fs.existsSync(candidate)) continue;
+        if (!candidate || !fs.existsSync(path.resolve(candidate))) continue;
         const result = parseTestFile(candidate);
         if (result !== null) return result;
     }

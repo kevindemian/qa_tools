@@ -31,8 +31,8 @@ class MappingFileGenerator {
         const outDir = reportsDir();
 
         try {
-            if (!fs.existsSync(outDir)) {
-                fs.mkdirSync(outDir, { recursive: true });
+            if (!fs.existsSync(path.resolve(outDir))) {
+                fs.mkdirSync(path.resolve(outDir), { recursive: true });
             }
         } catch (err: unknown) {
             rootLogger.warn('Não foi possível criar diretório de saida: ' + outDir + ' — ' + (err as Error).message);
@@ -85,7 +85,7 @@ class MappingFileGenerator {
             null,
             2,
         );
-        fs.writeFileSync(jsonPath, jsonContent, 'utf8');
+        fs.writeFileSync(path.resolve(jsonPath), jsonContent, 'utf8');
         if (!isQuiet()) {
             info('Mapeamento salvo: ' + path.basename(jsonPath));
         }
@@ -104,7 +104,7 @@ class MappingFileGenerator {
             documentTitle: 'Jira Mapping: ' + baseName + path.extname(sourcePath),
             showTimestamp: true,
         });
-        fs.writeFileSync(mdPath, mdContent, 'utf8');
+        fs.writeFileSync(path.resolve(mdPath), mdContent, 'utf8');
         if (!isQuiet()) {
             info('Sumario salvo: ' + path.basename(mdPath));
         }
@@ -119,7 +119,7 @@ class MappingFileGenerator {
                     return key + ': ' + (test.title || '(untitled)');
                 })
                 .join('\n') + '\n';
-        fs.writeFileSync(txtPath, txtContent, 'utf8');
+        fs.writeFileSync(path.resolve(txtPath), txtContent, 'utf8');
     }
 }
 

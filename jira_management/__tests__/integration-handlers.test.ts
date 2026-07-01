@@ -526,7 +526,7 @@ describe('Case11 — Generate Template', () => {
         const { default: case11 } = await import('../commands/case11.js');
         await case11.handler(ctx);
 
-        expect(fs.existsSync(path.join(tmpDir, 'output.csv'))).toBeTruthy();
+        expect(fs.existsSync(path.resolve(path.join(tmpDir, 'output.csv')))).toBeTruthy();
     });
 
     it('pushes history after generating template', async () => {
@@ -604,7 +604,11 @@ describe('Case14 — Set Cypress Directory', () => {
         const { default: case14 } = await import('../commands/case14.js');
         await case14.handler(ctx);
 
-        expect(ctx.pushHistory).toHaveBeenCalledWith('config-tests', path.join(os.tmpdir(), 'qa-cypress-results'), 'ok');
+        expect(ctx.pushHistory).toHaveBeenCalledWith(
+            'config-tests',
+            path.join(os.tmpdir(), 'qa-cypress-results'),
+            'ok',
+        );
     });
 });
 
@@ -620,7 +624,11 @@ describe('Case16 — Set JSON Directory', () => {
         const { default: case16 } = await import('../commands/case16.js');
         await case16.handler(ctx);
 
-        expect(ctx.pushHistory).toHaveBeenCalledWith('config-json-dir', path.join(os.tmpdir(), 'qa-json-results'), 'ok');
+        expect(ctx.pushHistory).toHaveBeenCalledWith(
+            'config-json-dir',
+            path.join(os.tmpdir(), 'qa-json-results'),
+            'ok',
+        );
     });
 });
 

@@ -114,7 +114,8 @@ export function calculateRequirementScores(records: AiGenerationRecord[] | null 
         const totalTests = record.generatedTests.length;
         const counts = countFeedback(record.feedback);
         const reviewedTests = counts.kept + counts.modified + counts.deleted;
-        const acceptanceRate = reviewedTests > 0 ? Math.round(((counts.kept + counts.modified) / reviewedTests) * 100) : 0;
+        const acceptanceRate =
+            reviewedTests > 0 ? Math.round(((counts.kept + counts.modified) / reviewedTests) * 100) : 0;
 
         entries.push(
             computeEntryScore({

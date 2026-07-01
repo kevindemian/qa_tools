@@ -176,7 +176,7 @@ describe('GitHub e2e — real API', () => {
 
             const outPath = writeReport('github-health-e2e.html', html);
 
-            expect(fs.existsSync(outPath)).toBeTruthy();
+            expect(fs.existsSync(path.resolve(outPath))).toBeTruthy();
 
             expect(html).toContain('GitHub Health Report');
             expect(html).toContain(String(health.totalRuns));

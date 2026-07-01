@@ -1,4 +1,5 @@
 /** Temporary directory management: reports, ephemeral files, and cleanup handlers. */
+import path from 'path';
 import { resolve, join } from 'path';
 import { mkdirSync, writeFileSync, existsSync, rmSync } from 'fs';
 import Config from './config.js';
@@ -33,7 +34,7 @@ export function writeReport(filename: string, content: string): string {
     const dateStr = formatDateISO();
     const targetDir = join(dir, dateStr);
     try {
-        mkdirSync(targetDir, { recursive: true });
+        mkdirSync(path.resolve(targetDir), { recursive: true });
     } catch (err) {
         const msg = err instanceof Error ? err.message : String(err);
         rootLogger.warn(
@@ -43,7 +44,7 @@ export function writeReport(filename: string, content: string): string {
     }
     const filepath = join(targetDir, filename);
     try {
-        writeFileSync(filepath, content, 'utf8');
+        writeFileSync(path.resolve(filepath), content, 'utf8');
     } catch (err) {
         const msg = err instanceof Error ? err.message : String(err);
         rootLogger.warn(`writeReport: failed to write ${filepath} (${msg}). Verify disk space and permissions.`);
@@ -56,7 +57,7 @@ export function writeReport(filename: string, content: string): string {
 export function writeEphemeral(category: string, filename: string, content: string): string {
     const dir = join(tempDir(), category);
     try {
-        mkdirSync(dir, { recursive: true });
+        mkdirSync(path.resolve(dir), { recursive: true });
     } catch (err) {
         const msg = err instanceof Error ? err.message : String(err);
         rootLogger.warn(
@@ -66,7 +67,7 @@ export function writeEphemeral(category: string, filename: string, content: stri
     }
     const filepath = join(dir, filename);
     try {
-        writeFileSync(filepath, content, 'utf8');
+        writeFileSync(path.resolve(filepath), content, 'utf8');
     } catch (err) {
         const msg = err instanceof Error ? err.message : String(err);
         rootLogger.warn(`writeEphemeral: failed to write ${filepath} (${msg}). Verify disk space and permissions.`);
@@ -91,7 +92,7 @@ export function ensureDirs(): void {
     ];
     for (const dir of dirs) {
         try {
-            mkdirSync(dir, { recursive: true });
+            mkdirSync(path.resolve(dir), { recursive: true });
         } catch (err) {
             const msg = err instanceof Error ? err.message : String(err);
             rootLogger.warn(`ensureDirs: failed to create ${dir} (${msg}). Verify permissions and disk space.`);
@@ -108,7 +109,7 @@ export function cleanupTempDirs(): void {
     for (const sub of ['previews', 'vars', 'cache']) {
         const p = join(td, sub);
         try {
-            if (existsSync(p)) rmSync(p, { recursive: true, force: true });
+            if (existsSync(path.resolve(p))) rmSync(p, { recursive: true, force: true });
         } catch (err) {
             if (err instanceof Error && 'code' in err && err.code === 'ENOENT') {
                 continue;

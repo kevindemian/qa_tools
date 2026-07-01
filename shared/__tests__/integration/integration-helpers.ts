@@ -35,7 +35,7 @@ export function createTestDir(prefix: string): string {
  */
 export function cleanupTestDir(dir: string): void {
     try {
-        if (fs.existsSync(dir)) {
+        if (fs.existsSync(path.resolve(dir))) {
             fs.rmSync(dir, { recursive: true, force: true });
         }
     } catch (err: unknown) {
@@ -61,7 +61,7 @@ export function createFile(baseDir: string, relPath: string, content: string): s
     }
     try {
         fs.mkdirSync(path.dirname(full), { recursive: true });
-        fs.writeFileSync(full, content, 'utf8');
+        fs.writeFileSync(path.resolve(full), content, 'utf8');
         return full;
     } catch (err: unknown) {
         throw new Error(`createFile("${baseDir}", "${relPath}"): failed — ${String(err)}`, { cause: err });
@@ -75,7 +75,7 @@ export function createFile(baseDir: string, relPath: string, content: string): s
 export function readFile(baseDir: string, relPath: string): string | null {
     const full = path.join(baseDir, relPath);
     try {
-        return fs.readFileSync(full, 'utf8');
+        return fs.readFileSync(path.resolve(full), 'utf8');
     } catch (err: unknown) {
         if (err instanceof Error && 'code' in err && err.code === 'ENOENT') return null;
         process.stderr.write(

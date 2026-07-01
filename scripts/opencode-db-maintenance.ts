@@ -20,6 +20,7 @@
  *   tsx scripts/opencode-db-maintenance.ts --repair
  *   tsx scripts/opencode-db-maintenance.ts --vacuum
  */
+import path from 'path';
 import { execFileSync } from 'node:child_process';
 import { copyFileSync, existsSync, mkdirSync, statSync } from 'node:fs';
 import { homedir } from 'node:os';
@@ -51,7 +52,7 @@ interface MaintenanceResult {
 
 function getDbSizeBytes(): number {
     try {
-        const stats = existsSync(DB_PATH)
+        const stats = existsSync(path.resolve(DB_PATH))
             ? execFileSync(STAT_BIN, ['--format=%s', DB_PATH], { encoding: 'utf-8' }).trim()
             : '0';
         return Number(stats);
@@ -126,9 +127,9 @@ function ensureWalMode(): string | null {
  */
 function checkMountDevice(dbPath: string): string | null {
     try {
-        const dbStat = statSync(dbPath);
+        const dbStat = statSync(path.resolve(dbPath));
         const localDir = resolve(dbPath, '..', '..', '..');
-        const localStat = statSync(localDir);
+        const localStat = statSync(path.resolve(localDir));
         if (dbStat.dev === localStat.dev) {
             return (
                 `AVISO: opencode.db (device ${dbStat.dev}) está no mesmo device de ~/.local ` +
@@ -315,7 +316,7 @@ function checkSqlite3(): boolean {
 
 function ensureDbDir(): boolean {
     try {
-        mkdirSync(DB_DIR, { recursive: true });
+        mkdirSync(path.resolve(DB_DIR), { recursive: true });
         return true;
     } catch (err) {
         rootLogger.warn(`[db-maintenance] Failed to create DB directory: ${String(err)}`);
@@ -339,7 +340,7 @@ function main(): number {
         return 3;
     }
 
-    if (!existsSync(DB_PATH)) {
+    if (!existsSync(path.resolve(DB_PATH))) {
         rootLogger.info(`[opencode-db-maintenance] Database not found at ${DB_PATH} — first run, creating directory`);
         const created = ensureDbDir();
         if (!created) {

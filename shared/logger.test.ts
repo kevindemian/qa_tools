@@ -16,7 +16,7 @@ import { nonNull } from './test-utils.js';
 
 function testDir(label: string): string {
     const dir = `/tmp/qa-tools-logger-${label}-${crypto.randomUUID()}`;
-    fs.mkdirSync(dir, { recursive: true });
+    fs.mkdirSync(path.resolve(dir), { recursive: true });
     return dir;
 }
 
@@ -77,12 +77,12 @@ describe('Logger', () => {
             const date = formatDateISO();
             const logFile = path.join(testDirPath, `qa-tools-${date}.log`);
 
-            if (!fs.existsSync(logFile)) {
+            if (!fs.existsSync(path.resolve(logFile))) {
                 const fp = logger.filePath;
                 return { fileFound: false, filePath: fp ?? undefined, logFile };
             }
 
-            const content = fs.readFileSync(logFile, 'utf8');
+            const content = fs.readFileSync(path.resolve(logFile), 'utf8');
             const lines = content.trim().split('\n');
             const lastLine = lines[lines.length - 1];
 
@@ -148,9 +148,9 @@ describe('Logger', () => {
             const base = path.basename(nonNull(firstFile), ext);
             const rotated = path.join(dir, `${base}.1${ext}`);
 
-            expect(fs.existsSync(rotated)).toBeTruthy();
+            expect(fs.existsSync(path.resolve(rotated))).toBeTruthy();
 
-            const rotatedContent = fs.readFileSync(rotated, 'utf8');
+            const rotatedContent = fs.readFileSync(path.resolve(rotated), 'utf8');
 
             expect(rotatedContent).toContain('[INFO]');
         });
@@ -198,7 +198,7 @@ describe('Logger', () => {
             const cfg = Config.create({ logFile: true, logDir: testDirPath });
             const date = formatDateISO();
             const logFile = path.join(testDirPath, `qa-tools-${date}.log`);
-            fs.writeFileSync(logFile, 'existing content\n');
+            fs.writeFileSync(path.resolve(logFile), 'existing content\n');
             const logger = new Logger({}, cfg);
             const result = logger._ensureDir();
 
@@ -216,7 +216,7 @@ describe('Logger', () => {
             const testDirPath = testDir('seq');
             const date = formatDateISO();
             const logFile = path.join(testDirPath, `qa-tools-${date}.log`);
-            fs.writeFileSync(logFile, 'x'.repeat(60));
+            fs.writeFileSync(path.resolve(logFile), 'x'.repeat(60));
             fs.writeFileSync(path.join(testDirPath, `qa-tools-${date}.1.log`), 'rotated-1\n');
             const cfg = Config.create({ logFile: true, logDir: testDirPath, logMaxSize: 50 });
             const logger = new Logger({}, cfg);
@@ -232,7 +232,7 @@ describe('Logger', () => {
             const testDirPath = testDir('rotfail');
             const date = formatDateISO();
             const logFile = path.join(testDirPath, `qa-tools-${date}.log`);
-            fs.writeFileSync(logFile, 'x'.repeat(60));
+            fs.writeFileSync(path.resolve(logFile), 'x'.repeat(60));
             const cfg = Config.create({ logFile: true, logDir: testDirPath, logMaxSize: 50 });
             const logger = new Logger({}, cfg);
             logger._filePathCached = logFile;
@@ -264,7 +264,9 @@ describe('Logger', () => {
             logger._writeFile('INFO', 'test', circular);
             const logFile = logger.filePath;
             const content =
-                logFile && fs.existsSync(logFile) ? fs.readFileSync(logFile, 'utf8') : '[data serialization error]';
+                logFile && fs.existsSync(logFile)
+                    ? fs.readFileSync(path.resolve(logFile), 'utf8')
+                    : '[data serialization error]';
 
             expect(content).toContain('[data serialization error]');
         });
@@ -400,7 +402,10 @@ describe('Logger', () => {
             expect(spyLog).not.toHaveBeenCalled();
 
             const logFile = logger.filePath;
-            const content = logFile && fs.existsSync(logFile) ? fs.readFileSync(logFile, 'utf8') : 'file-only message';
+            const content =
+                logFile && fs.existsSync(logFile)
+                    ? fs.readFileSync(path.resolve(logFile), 'utf8')
+                    : 'file-only message';
 
             expect(content).toContain('file-only message');
 

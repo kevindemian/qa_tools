@@ -38,6 +38,7 @@ export function createMockLogger(): Logger {
         _config: null,
         filePath: null,
         _ensureDir: vi.fn(),
+        _initFileBytes: vi.fn(),
         _rotateIfNeeded: vi.fn(),
         _writeConsole: vi.fn(),
         _writeFile: vi.fn(),

@@ -43,7 +43,7 @@ describe('Integration: Feature Config', () => {
             const configPath = path.join(TEST_DIR, 'config', 'features.json');
             fs.mkdirSync(path.dirname(configPath), { recursive: true });
             const fixture = createFeaturesJsonFixture();
-            fs.writeFileSync(configPath, JSON.stringify(fixture), 'utf8');
+            fs.writeFileSync(path.resolve(configPath), JSON.stringify(fixture), 'utf8');
 
             const { loadFeatureConfig } = await import('../../feature-config.js');
             const result = loadFeatureConfig();
@@ -67,7 +67,7 @@ describe('Integration: Feature Config', () => {
 
             const configPath = path.join(TEST_DIR, 'config', 'features.json');
             fs.mkdirSync(path.dirname(configPath), { recursive: true });
-            fs.writeFileSync(configPath, '{broken json!!', 'utf8');
+            fs.writeFileSync(path.resolve(configPath), '{broken json!!', 'utf8');
 
             const { loadFeatureConfig } = await import('../../feature-config.js');
             const result = loadFeatureConfig();
@@ -80,7 +80,7 @@ describe('Integration: Feature Config', () => {
 
             const configPath = path.join(TEST_DIR, 'config', 'features.json');
             fs.mkdirSync(path.dirname(configPath), { recursive: true });
-            fs.writeFileSync(configPath, JSON.stringify({ project: { invalid: true } }), 'utf8');
+            fs.writeFileSync(path.resolve(configPath), JSON.stringify({ project: { invalid: true } }), 'utf8');
 
             const { loadFeatureConfig } = await import('../../feature-config.js');
             const result = loadFeatureConfig();

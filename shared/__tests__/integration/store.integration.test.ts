@@ -281,8 +281,8 @@ describe('Integration: Store', () => {
             const indexPath = path.join(TEST_DIR, 'reports', 'index.json');
             const projIndexPath = path.join(TEST_DIR, 'reports', 'test-project', 'index.json');
 
-            expect(fs.existsSync(indexPath)).toBeTruthy();
-            expect(fs.existsSync(projIndexPath)).toBeTruthy();
+            expect(fs.existsSync(path.resolve(indexPath))).toBeTruthy();
+            expect(fs.existsSync(path.resolve(projIndexPath))).toBeTruthy();
         });
     });
 });

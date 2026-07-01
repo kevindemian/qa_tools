@@ -35,7 +35,7 @@ export class LinkTypeManager {
             if (data.issueLinkTypes) {
                 this.linkTypesCache = data.issueLinkTypes;
                 try {
-                    fs.writeFileSync(this.cacheFilePath, JSON.stringify(data.issueLinkTypes), 'utf8');
+                    fs.writeFileSync(path.resolve(this.cacheFilePath), JSON.stringify(data.issueLinkTypes), 'utf8');
                 } catch (err) {
                     rootLogger.warn('Falha ao escrever cache de link types: ' + (err as Error).message);
                 }
@@ -45,8 +45,8 @@ export class LinkTypeManager {
             rootLogger.warn('getIssueLinkTypes — API falhou, verificando cache local... ' + (err as Error).message);
         }
         try {
-            if (fs.existsSync(this.cacheFilePath)) {
-                const raw = fs.readFileSync(this.cacheFilePath, 'utf8');
+            if (fs.existsSync(path.resolve(this.cacheFilePath))) {
+                const raw = fs.readFileSync(path.resolve(this.cacheFilePath), 'utf8');
                 const parsed: unknown = JSON.parse(raw);
                 if (Array.isArray(parsed)) {
                     this.linkTypesCache = parsed.filter(

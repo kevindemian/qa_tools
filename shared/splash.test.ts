@@ -321,7 +321,9 @@ describe('ShowSplash', () => {
         });
 
         await expect(showSplash(path.join(os.tmpdir(), 'qa-state.json'))).resolves.not.toThrow();
-        expect(outputMod.defaultOutput.print).toHaveBeenCalledWith(expect.stringContaining(path.join(os.tmpdir(), 'qa-state.json')));
+        expect(outputMod.defaultOutput.print).toHaveBeenCalledWith(
+            expect.stringContaining(path.join(os.tmpdir(), 'qa-state.json')),
+        );
     });
 
     it('handles figlet dynamic import failure in ensureDeps', async () => {

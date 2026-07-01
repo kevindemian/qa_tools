@@ -68,8 +68,8 @@ describe('Integration: Session State', () => {
             const statePath = path.join(stateDir, 'state.json');
             const bakPath = path.join(stateDir, 'state.json.bak');
 
-            expect(fs.existsSync(statePath)).toBeTruthy();
-            expect(fs.existsSync(bakPath)).toBeTruthy();
+            expect(fs.existsSync(path.resolve(statePath))).toBeTruthy();
+            expect(fs.existsSync(path.resolve(bakPath))).toBeTruthy();
         });
     });
 
@@ -159,9 +159,9 @@ describe('Integration: Session State', () => {
 
             expect(beforeCorruption).toStrictEqual({ lastProject: 'ORIGINAL', counter: 42 });
 
-            fs.writeFileSync(statePath, '{corrupted json!!!', 'utf8');
+            fs.writeFileSync(path.resolve(statePath), '{corrupted json!!!', 'utf8');
 
-            expect(fs.existsSync(bakPath)).toBeTruthy();
+            expect(fs.existsSync(path.resolve(bakPath))).toBeTruthy();
 
             vi.resetModules();
             const freshModule = await import('../../state.js');
@@ -180,8 +180,8 @@ describe('Integration: Session State', () => {
 
             stateModule.save({ data: 'valid' }, config);
 
-            fs.writeFileSync(statePath, '{garbage}', 'utf8');
-            fs.writeFileSync(bakPath, 'also{broken}', 'utf8');
+            fs.writeFileSync(path.resolve(statePath), '{garbage}', 'utf8');
+            fs.writeFileSync(path.resolve(bakPath), 'also{broken}', 'utf8');
 
             vi.resetModules();
             const freshModule = await import('../../state.js');

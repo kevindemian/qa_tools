@@ -28,7 +28,7 @@ const TMP_DIR = path.join(os.tmpdir(), 'qa-test-metrics');
 describe('Metrics', () => {
     beforeEach(() => {
         fs.rmSync(TMP_DIR, { recursive: true, force: true });
-        fs.mkdirSync(TMP_DIR, { recursive: true });
+        fs.mkdirSync(path.resolve(TMP_DIR), { recursive: true });
     });
 
     function makeConfig(tmpDir: string): Config {
@@ -73,9 +73,9 @@ describe('Metrics', () => {
         it('returns empty store on corrupted JSON', () => {
             const cfg = makeConfig(TMP_DIR);
             const dir = path.join(TMP_DIR, 'qa-tools', 'metrics');
-            fs.mkdirSync(dir, { recursive: true });
+            fs.mkdirSync(path.resolve(dir), { recursive: true });
             const sp = path.join(dir, 'metrics.json');
-            fs.writeFileSync(sp, 'not valid json{{{');
+            fs.writeFileSync(path.resolve(sp), 'not valid json{{{');
             const store = loadMetrics(cfg);
 
             expect(store.runs).toStrictEqual([]);

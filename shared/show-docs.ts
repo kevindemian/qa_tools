@@ -63,7 +63,7 @@ export async function showDocs(): Promise<void> {
         printError('Documentação', new Error('Não foi possível determinar diretório de saída'));
         return;
     }
-    fs.mkdirSync(outDir, { recursive: true });
+    fs.mkdirSync(path.resolve(outDir), { recursive: true });
     for (let i = 0; i < docs.length; i++) {
         const doc: unknown = Reflect.get(docs, i);
         if (doc === undefined || doc === null || typeof doc !== 'object') continue;
@@ -87,6 +87,6 @@ export async function showDocs(): Promise<void> {
         );
     }
     const indexPath = path.join(outDir, 'index.html');
-    fs.writeFileSync(indexPath, _buildIndexHtml(docs), 'utf8');
+    fs.writeFileSync(path.resolve(indexPath), _buildIndexHtml(docs), 'utf8');
     await openWithFallback(indexPath, 'Documentação', info);
 }

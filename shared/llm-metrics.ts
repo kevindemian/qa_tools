@@ -55,8 +55,8 @@ function storePath(): string {
 function loadStore(): StoredMetrics {
     try {
         const p = storePath();
-        if (!fs.existsSync(p)) return { snapshots: [] };
-        return safeParseJson<StoredMetrics>(fs.readFileSync(p, 'utf8'), { snapshots: [] });
+        if (!fs.existsSync(path.resolve(p))) return { snapshots: [] };
+        return safeParseJson<StoredMetrics>(fs.readFileSync(path.resolve(p), 'utf8'), { snapshots: [] });
     } catch (err: unknown) {
         rootLogger.warn('Failed to load LLM metrics from disk: ' + (err as Error).message);
         return { snapshots: [] };
@@ -68,8 +68,8 @@ function saveStore(store: StoredMetrics): void {
         const p = storePath();
         fs.mkdirSync(path.dirname(p), { recursive: true });
         const tmp = p + '.tmp';
-        fs.writeFileSync(tmp, JSON.stringify(store, null, 2), 'utf8');
-        fs.renameSync(tmp, p);
+        fs.writeFileSync(path.resolve(tmp), JSON.stringify(store, null, 2), 'utf8');
+        fs.renameSync(path.resolve(tmp), p);
     } catch (err) {
         rootLogger.error('Failed to persist LLM metrics: ' + (err as Error).message);
         throw new Error('Failed to persist LLM metrics', { cause: err });

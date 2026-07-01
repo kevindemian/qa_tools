@@ -12,12 +12,15 @@ import {
 } from './temp-dir.js';
 import { rootLogger } from './logger.js';
 
-vi.mock('fs', (): Pick<typeof fs, 'mkdirSync' | 'writeFileSync' | 'existsSync' | 'rmSync'> => ({
-    mkdirSync: vi.fn<(...args: Parameters<typeof fs.mkdirSync>) => ReturnType<typeof fs.mkdirSync>>(),
-    writeFileSync: vi.fn<(...args: Parameters<typeof fs.writeFileSync>) => ReturnType<typeof fs.writeFileSync>>(),
-    existsSync: vi.fn<(...args: Parameters<typeof fs.existsSync>) => ReturnType<typeof fs.existsSync>>(() => false),
-    rmSync: vi.fn<(...args: Parameters<typeof fs.rmSync>) => ReturnType<typeof fs.rmSync>>(),
-}));
+vi.mock(
+    'fs',
+    (): Pick<typeof fs, 'mkdirSync' | 'writeFileSync' | 'existsSync' | 'rmSync'> => ({
+        mkdirSync: vi.fn<(...args: Parameters<typeof fs.mkdirSync>) => ReturnType<typeof fs.mkdirSync>>(),
+        writeFileSync: vi.fn<(...args: Parameters<typeof fs.writeFileSync>) => ReturnType<typeof fs.writeFileSync>>(),
+        existsSync: vi.fn<(...args: Parameters<typeof fs.existsSync>) => ReturnType<typeof fs.existsSync>>(() => false),
+        rmSync: vi.fn<(...args: Parameters<typeof fs.rmSync>) => ReturnType<typeof fs.rmSync>>(),
+    }),
+);
 
 describe('Temp Dir', () => {
     beforeEach(() => {

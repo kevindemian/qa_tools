@@ -86,15 +86,14 @@ function levenshtein(a: string, b: string): number {
 }
 
 /**
- * Generate n candidate responses and select by majority structural vote.
- * If divergence is high, automatically refines with a consistency instruction.
+ * Run n parallel LLM calls, validate results, return valid candidates and errors.
  */
-export async function consensusGenerate<T>(
+async function collectCandidates<T>(
     opts: LlmPromptOptions,
     validator: ArtifactValidator<T>,
     context: ValidationContext,
-    n = 3,
-): Promise<ConsistencyResult<T>> {
+    n: number,
+): Promise<{ candidates: T[]; errors: string[]; results: PromiseSettledResult<unknown>[] }> {
     const candidates: T[] = [];
     const errors: string[] = [];
 
@@ -121,33 +120,33 @@ export async function consensusGenerate<T>(
         }
     }
 
-    if (candidates.length === 0) {
-        rootLogger.warn(
-            `Self-consistency: all ${n} candidates failed validation. Returning first candidate despite errors.`,
-        );
-        let fallback: T | undefined;
-        for (const result of results) {
-            if (result.status === 'fulfilled' && result.value !== null) {
-                fallback = result.value as T;
-                break;
-            }
-        }
-        if (!fallback) {
-            throw new Error(
-                `Self-consistency: all ${n} candidates failed and no fallback available. Errors: ${errors.join('; ')}`,
-            );
-        }
-        return {
-            winner: fallback,
-            candidates,
-            votes: { 0: 1 },
-            divergence: 'high',
-            refined: false,
-        };
-    }
+    return { candidates, errors, results };
+}
 
+/**
+ * Find first fulfilled result as fallback when no candidates pass validation.
+ */
+function findFallbackCandidate<T>(results: PromiseSettledResult<unknown>[]): T | undefined {
+    for (const result of results) {
+        if (result.status === 'fulfilled' && result.value !== null) {
+            return result.value as T;
+        }
+    }
+    return undefined;
+}
+
+/**
+ * Compute voting result from candidates: hashes, votes, and winner selection.
+ */
+function computeVotingResult<T>(candidates: T[]): {
+    hashesMap: Map<number, string>;
+    voteCounts: Map<string, number[]>;
+    winner: T;
+    votesMap: Map<number, number>;
+} {
     const hashesMap = new Map<number, string>();
     const voteCounts = new Map<string, number[]>();
+
     for (const [i, c] of candidates.entries()) {
         const h = structuralHash(c);
         hashesMap.set(i, h);
@@ -164,6 +163,19 @@ export async function consensusGenerate<T>(
     const winnerIndex = voteCounts.get(winnerHash)?.[0] ?? 0;
     const winner = new Map(candidates.entries()).get(winnerIndex) as T;
 
+    const votesMap = new Map<number, number>();
+    for (const [i] of hashesMap.entries()) {
+        const h = hashesMap.get(i);
+        votesMap.set(i, h !== undefined ? (voteCounts.get(h)?.length ?? 1) : 1);
+    }
+
+    return { hashesMap, voteCounts, winner, votesMap };
+}
+
+/**
+ * Compute divergence level based on pairwise structural similarity.
+ */
+function computeDivergence<T>(candidates: T[]): 'none' | 'low' | 'high' {
     const similarityPairs: number[] = [];
     for (const [i, ci] of candidates.entries()) {
         for (const [j, cj] of candidates.entries()) {
@@ -172,21 +184,71 @@ export async function consensusGenerate<T>(
             }
         }
     }
+
     const avgSimilarity =
         similarityPairs.length > 0 ? similarityPairs.reduce((a, b) => a + b, 0) / similarityPairs.length : 1;
 
-    let divergence: 'none' | 'low' | 'high' = 'none';
-    if (avgSimilarity < 0.4) {
-        divergence = 'high';
-    } else if (avgSimilarity < SIMILARITY_THRESHOLD) {
-        divergence = 'low';
+    if (avgSimilarity < 0.4) return 'high';
+    if (avgSimilarity < SIMILARITY_THRESHOLD) return 'low';
+    return 'none';
+}
+
+/**
+ * Attempt refinement when divergence is high. Returns refined result or null.
+ */
+async function attemptRefinement<T>(
+    opts: LlmPromptOptions,
+    validator: ArtifactValidator<T>,
+    context: ValidationContext,
+    preliminary: ConsistencyResult<T>,
+): Promise<ConsistencyResult<T> | null> {
+    rootLogger.info('Self-consistency: high divergence detected — attempting refinement');
+    const refined = await refineWithConsistency(opts, validator, context, preliminary);
+    if (refined.refined) {
+        const validationResult = validator.validate(refined.winner, context);
+        if (validationResult.allPassed) {
+            return refined;
+        }
+        rootLogger.warn('Self-consistency: refinement produced invalid result — using preliminary winner');
+        return null;
+    }
+    rootLogger.warn('Self-consistency: refinement failed — using preliminary winner');
+    return null;
+}
+
+/**
+ * Generate n candidate responses and select by majority structural vote.
+ * If divergence is high, automatically refines with a consistency instruction.
+ */
+export async function consensusGenerate<T>(
+    opts: LlmPromptOptions,
+    validator: ArtifactValidator<T>,
+    context: ValidationContext,
+    n = 3,
+): Promise<ConsistencyResult<T>> {
+    const { candidates, errors, results } = await collectCandidates(opts, validator, context, n);
+
+    if (candidates.length === 0) {
+        rootLogger.warn(
+            `Self-consistency: all ${n} candidates failed validation. Returning first candidate despite errors.`,
+        );
+        const fallback = findFallbackCandidate<T>(results);
+        if (!fallback) {
+            throw new Error(
+                `Self-consistency: all ${n} candidates failed and no fallback available. Errors: ${errors.join('; ')}`,
+            );
+        }
+        return {
+            winner: fallback,
+            candidates,
+            votes: { 0: 1 },
+            divergence: 'high',
+            refined: false,
+        };
     }
 
-    const votesMap = new Map<number, number>();
-    for (const [i] of hashesMap.entries()) {
-        const h = hashesMap.get(i);
-        votesMap.set(i, h !== undefined ? (voteCounts.get(h)?.length ?? 1) : 1);
-    }
+    const { winner, votesMap } = computeVotingResult(candidates);
+    const divergence = computeDivergence(candidates);
 
     const preliminary: ConsistencyResult<T> = {
         winner,
@@ -197,17 +259,8 @@ export async function consensusGenerate<T>(
     };
 
     if (divergence === 'high') {
-        rootLogger.info('Self-consistency: high divergence detected — attempting refinement');
-        const refined = await refineWithConsistency(opts, validator, context, preliminary);
-        if (refined.refined) {
-            const validationResult = validator.validate(refined.winner, context);
-            if (validationResult.allPassed) {
-                return refined;
-            }
-            rootLogger.warn('Self-consistency: refinement produced invalid result — using preliminary winner');
-        } else {
-            rootLogger.warn('Self-consistency: refinement failed — using preliminary winner');
-        }
+        const refined = await attemptRefinement(opts, validator, context, preliminary);
+        if (refined) return refined;
     }
 
     return preliminary;

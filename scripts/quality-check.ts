@@ -10,6 +10,7 @@
  * - 1: alguma verificação falhou
  */
 
+import path from 'path';
 import { createHash } from 'crypto';
 import { readFileSync, existsSync, readdirSync } from 'fs';
 import { isBuiltin } from 'module';
@@ -45,7 +46,7 @@ interface CheckResult {
 function grepLines(file: string, pattern: RegExp): Array<{ line: number; content: string }> {
     const results: Array<{ line: number; content: string }> = [];
     try {
-        const content = readFileSync(file, 'utf-8');
+        const content = readFileSync(path.resolve(file), 'utf-8');
         const lines = content.split('\n');
         lines.forEach((line, i) => {
             if (pattern.test(line)) {
@@ -279,11 +280,11 @@ export function checkArtifactValidators(): CheckResult {
         { file: 'shared/quality-metrics.ts', export: 'snapshotQualityMetrics' },
     ];
     for (const req of requiredExports) {
-        if (!existsSync(req.file)) {
+        if (!existsSync(path.resolve(req.file))) {
             violations.push({ file: req.file, line: 1, content: `MISSING FILE: ${req.file}` });
             continue;
         }
-        const content = readFileSync(req.file, 'utf-8');
+        const content = readFileSync(path.resolve(req.file), 'utf-8');
         const hasDirectExport =
             content.includes('export ' + req.export) ||
             content.includes('export function ' + req.export) ||
@@ -307,7 +308,7 @@ export function checkArtifactValidatorsExist(): CheckResult {
         'shared/comparison-validator.ts',
     ];
     for (const vf of validators) {
-        if (!existsSync(vf)) {
+        if (!existsSync(path.resolve(vf))) {
             violations.push({ file: vf, line: 1, content: `Missing validator: ${vf}` });
         }
     }
@@ -349,11 +350,11 @@ export function checkDashboardExports(): CheckResult {
         { file: 'shared/requirement-score.ts', export_: 'generateRequirementScoreHtml' },
     ];
     for (const d of dashboards) {
-        if (!existsSync(d.file)) {
+        if (!existsSync(path.resolve(d.file))) {
             violations.push({ file: d.file, line: 1, content: `MISSING FILE: ${d.file}` });
             continue;
         }
-        const content = readFileSync(d.file, 'utf-8');
+        const content = readFileSync(path.resolve(d.file), 'utf-8');
         if (!content.includes('export function ' + d.export_)) {
             violations.push({ file: d.file, line: 1, content: `Missing export: ${d.export_} not found` });
         }
@@ -365,7 +366,7 @@ export function checkQualityGateFiles(): CheckResult {
     const violations: Violation[] = [];
     const files = ['shared/quality-gate.ts'];
     for (const f of files) {
-        if (!existsSync(f)) {
+        if (!existsSync(path.resolve(f))) {
             violations.push({ file: f, line: 1, content: `MISSING FILE: ${f}` });
         }
     }

@@ -1,5 +1,6 @@
 /** Auto-publish report files to S3 or gh-pages.
  * Provides CLI-wrapper functions for uploading generated HTML reports. */
+import path from 'path';
 import { execFileSync } from 'child_process';
 import { rootLogger } from './logger.js';
 import Config from './config.js';
@@ -43,7 +44,7 @@ function publishToGhPages(localPath: string, destination?: string): void {
         });
     } catch (err) {
         rootLogger.warn('publish: git worktree add failed, using tmp dir: ' + String(err));
-        mkdirSync(tmpDir, { recursive: true });
+        mkdirSync(path.resolve(tmpDir), { recursive: true });
     }
     try {
         cpSync(localPath, join(tmpDir, dest));

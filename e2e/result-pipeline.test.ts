@@ -74,7 +74,7 @@ describe('E2E: Result Processing Pipeline', () => {
         nock.cleanAll();
         nock.enableNetConnect();
         nock.restore();
-        if (fs.existsSync(tmpHome)) {
+        if (fs.existsSync(path.resolve(tmpHome))) {
             fs.rmSync(tmpHome, { recursive: true, force: true });
         }
     });

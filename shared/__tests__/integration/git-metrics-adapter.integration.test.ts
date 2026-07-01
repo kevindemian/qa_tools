@@ -29,7 +29,7 @@ function git(...args: string[]): string {
 
 function commit(msg: string, date: string): void {
     const filePath = path.join(TEST_DIR, 'file.txt');
-    fs.writeFileSync(filePath, msg, 'utf-8');
+    fs.writeFileSync(path.resolve(filePath), msg, 'utf-8');
     execFileSync(GIT_BIN, ['add', '.'], { cwd: TEST_DIR, encoding: 'utf-8' });
     execFileSync(GIT_BIN, ['commit', '-m', msg, '--date', date], {
         cwd: TEST_DIR,

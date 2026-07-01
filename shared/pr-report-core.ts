@@ -20,6 +20,7 @@
  * Accepts parsed test data directly (no filesystem dependency on CTRF).
  */
 import fs from 'node:fs';
+import path from 'path';
 import { rootLogger } from './logger.js';
 import { loadMetrics, saveParseResult, calculateFlakiness, getTrends } from './metrics.js';
 import { runQualityGate } from './quality-gate.js';
@@ -303,7 +304,7 @@ function writeToJobSummary(stats: PrReportStats, htmlArtifactUrl?: string): void
         }
         lines.push('', `_${new Date().toISOString()}_`, '');
 
-        fs.writeFileSync(stepSummaryPath, lines.join('\n'), 'utf8');
+        fs.writeFileSync(path.resolve(stepSummaryPath), lines.join('\n'), 'utf8');
         rootLogger.info('Job summary written to $GITHUB_STEP_SUMMARY');
     } catch (err) {
         rootLogger.warn(`Failed to write job summary: ${String(err)}`);
@@ -396,7 +397,7 @@ function generateHtmlReportFile(
         const html = generateHtmlReport(tests, htmlOptions);
         const htmlPath = options.htmlOutputPath ?? 'reports/pr-report.html';
         fs.mkdirSync('reports', { recursive: true });
-        fs.writeFileSync(htmlPath, html, 'utf8');
+        fs.writeFileSync(path.resolve(htmlPath), html, 'utf8');
         rootLogger.info(`HTML report generated: ${htmlPath} (${html.length} bytes)`);
         return htmlPath;
     } catch (err) {
@@ -657,7 +658,7 @@ function parseArgs(args: string[]): CliOptions {
 export async function main(): Promise<void> {
     const opts = parseArgs(process.argv.slice(2));
 
-    if (!fs.existsSync(opts.ctrfPath)) {
+    if (!fs.existsSync(path.resolve(opts.ctrfPath))) {
         rootLogger.warn(`CTRF report not found: ${opts.ctrfPath}. Skipping PR comment.`);
         return;
     }

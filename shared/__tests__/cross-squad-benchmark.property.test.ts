@@ -33,16 +33,18 @@ const projectArb = fc
         runCount: fc.integer({ min: 0, max: 1000 }),
         previousScore: fc.option(fc.integer({ min: 0, max: 100 }), { nil: undefined }),
     })
-    .map((r): ProjectInput => ({
-        name: r.name,
-        healthScore: r.healthScore,
-        grade: r.grade,
-        passRate: r.passRate,
-        flakyRate: r.flakyRate,
-        coveragePct: r.coveragePct,
-        runCount: r.runCount,
-        ...(r.previousScore !== undefined ? { previousScore: r.previousScore } : {}),
-    }));
+    .map(
+        (r): ProjectInput => ({
+            name: r.name,
+            healthScore: r.healthScore,
+            grade: r.grade,
+            passRate: r.passRate,
+            flakyRate: r.flakyRate,
+            coveragePct: r.coveragePct,
+            runCount: r.runCount,
+            ...(r.previousScore !== undefined ? { previousScore: r.previousScore } : {}),
+        }),
+    );
 
 describe('ComputeCrossSquadBenchmark — property-based', () => {
     it('sorts benchmarks by healthScore descending', () => {

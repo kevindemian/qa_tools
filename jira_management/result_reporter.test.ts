@@ -1,4 +1,5 @@
 import fs from 'fs';
+import path from 'path';
 import type { Mocked } from 'vitest';
 import os from 'os';
 import { matchResultsToTests, createTestExecutionFromResults } from './result_reporter.js';
@@ -60,7 +61,7 @@ describe('MatchResultsToTests', () => {
     const mappingPath = tmpDir + '/mapping.json';
 
     beforeAll(() => {
-        fs.mkdirSync(tmpDir, { recursive: true });
+        fs.mkdirSync(path.resolve(tmpDir), { recursive: true });
         const mapping = {
             project: 'PROJ',
             csv: 'test.csv',
@@ -70,7 +71,7 @@ describe('MatchResultsToTests', () => {
                 { title: 'TC02 - Login invalido', key: 'TEST-2' },
             ],
         };
-        fs.writeFileSync(mappingPath, JSON.stringify(mapping), 'utf8');
+        fs.writeFileSync(path.resolve(mappingPath), JSON.stringify(mapping), 'utf8');
     });
 
     afterAll(() => {
@@ -135,7 +136,7 @@ describe('MatchResultsToTests', () => {
 
     it('returns empty result and warns when tests array is empty', () => {
         const emptyMappingPath = tmpDir + '/empty_mapping.json';
-        fs.writeFileSync(emptyMappingPath, JSON.stringify({ tests: [] }), 'utf8');
+        fs.writeFileSync(path.resolve(emptyMappingPath), JSON.stringify({ tests: [] }), 'utf8');
 
         const result = matchResultsToTests([], emptyMappingPath);
 

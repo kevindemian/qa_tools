@@ -545,9 +545,9 @@ vi.mock('fs', async () => {
     const actual = await vi.importActual<typeof import('fs')>('fs');
     return {
         ...actual,
-        readFileSync: vi.fn((p: string) => {
+        readFileSync: vi.fn((p: string): string => {
             if (p.includes('bug-report-from-description.md')) return 'mock prompt content';
-            return actual.readFileSync(p);
+            return actual.readFileSync(p, 'utf8');
         }),
     };
 });

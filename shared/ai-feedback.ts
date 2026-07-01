@@ -26,7 +26,7 @@ function tmpPath(config?: Config): string {
 
 function ensureDir(dir: string): void {
     try {
-        fs.mkdirSync(dir, { recursive: true });
+        fs.mkdirSync(path.resolve(dir), { recursive: true });
     } catch (err) {
         rootLogger.error('Failed to create feedback directory: ' + (err as Error).message);
     }
@@ -40,8 +40,8 @@ function loadStore(config?: Config): AiFeedbackStore {
     try {
         ensureDir(getStoreDir(config));
         const sp = storePath(config);
-        if (!fs.existsSync(sp)) return { records: [] };
-        const raw = fs.readFileSync(sp, 'utf8');
+        if (!fs.existsSync(path.resolve(sp))) return { records: [] };
+        const raw = fs.readFileSync(path.resolve(sp), 'utf8');
         return safeParseJson<AiFeedbackStore>(raw, { records: [] });
     } catch (err) {
         rootLogger.warn('Failed to load AI feedback: ' + (err as Error).message);
@@ -55,8 +55,8 @@ function saveStore(store: AiFeedbackStore, config?: Config): void {
         ensureDir(dir);
         const sp = storePath(config);
         const tp = tmpPath(config);
-        fs.writeFileSync(tp, JSON.stringify(store, null, 2), 'utf8');
-        fs.renameSync(tp, sp);
+        fs.writeFileSync(path.resolve(tp), JSON.stringify(store, null, 2), 'utf8');
+        fs.renameSync(path.resolve(tp), sp);
     } catch (err) {
         rootLogger.error('Failed to save AI feedback: ' + (err as Error).message);
         throw new Error('Failed to save AI feedback', { cause: err });

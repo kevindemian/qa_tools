@@ -34,7 +34,7 @@ describe('Integration: Coverage Source', () => {
             const { readIstanbulCoverage } = await import('../../coverage-source.js');
             const coveragePath = path.join(TEST_DIR, 'coverage-summary.json');
             fs.writeFileSync(
-                coveragePath,
+                path.resolve(path.resolve(coveragePath)),
                 JSON.stringify({
                     total: {
                         lines: { total: 1000, covered: 850, pct: 85 },
@@ -66,7 +66,7 @@ describe('Integration: Coverage Source', () => {
 
             const { readIstanbulCoverage } = await import('../../coverage-source.js');
             const coveragePath = path.join(TEST_DIR, 'bad.json');
-            fs.writeFileSync(coveragePath, 'not json');
+            fs.writeFileSync(path.resolve(coveragePath), 'not json');
             const result = readIstanbulCoverage(coveragePath);
 
             expect(result).toBeUndefined();
@@ -77,7 +77,7 @@ describe('Integration: Coverage Source', () => {
 
             const { readIstanbulCoverage } = await import('../../coverage-source.js');
             const coveragePath = path.join(TEST_DIR, 'no-total.json');
-            fs.writeFileSync(coveragePath, JSON.stringify({ total: undefined }));
+            fs.writeFileSync(path.resolve(coveragePath), JSON.stringify({ total: undefined }));
             const result = readIstanbulCoverage(coveragePath);
 
             expect(result).toBeUndefined();
@@ -91,7 +91,7 @@ describe('Integration: Coverage Source', () => {
             const { resolveCoverage } = await import('../../coverage-source.js');
             const coveragePath = path.join(TEST_DIR, 'coverage-summary.json');
             fs.writeFileSync(
-                coveragePath,
+                path.resolve(path.resolve(coveragePath)),
                 JSON.stringify({
                     total: { lines: { total: 100, covered: 90, pct: 90 } },
                 }),

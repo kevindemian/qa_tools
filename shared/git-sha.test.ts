@@ -20,7 +20,7 @@ describe('Git Sha', () => {
 
         it('finds .git in current directory', () => {
             const dir = path.join(tmpDir, 'has-git');
-            fs.mkdirSync(dir, { recursive: true });
+            fs.mkdirSync(path.resolve(dir), { recursive: true });
             fs.mkdirSync(path.join(dir, '.git'));
             const result = detectGitDir(dir);
 
@@ -30,7 +30,7 @@ describe('Git Sha', () => {
         it('finds .git in parent directory', () => {
             const gitDir = path.join(tmpDir, 'parent-git');
             const subDir = path.join(gitDir, 'sub', 'deep');
-            fs.mkdirSync(subDir, { recursive: true });
+            fs.mkdirSync(path.resolve(subDir), { recursive: true });
             fs.mkdirSync(path.join(gitDir, '.git'));
             const result = detectGitDir(subDir);
 
@@ -130,7 +130,7 @@ describe('Git Sha', () => {
 
         it('falls back to execSync when no .git directory exists', () => {
             const fakeDir = path.join(tmpDir, 'no-git-exec');
-            fs.mkdirSync(fakeDir, { recursive: true });
+            fs.mkdirSync(path.resolve(fakeDir), { recursive: true });
             const origCwd = process.cwd();
             process.chdir(fakeDir);
             try {
@@ -151,7 +151,7 @@ describe('Git Sha', () => {
             delete process.env['BUILD_SOURCEVERSION'];
 
             const fakeDir = path.join(tmpDir, 'no-git-omit-env');
-            fs.mkdirSync(fakeDir, { recursive: true });
+            fs.mkdirSync(path.resolve(fakeDir), { recursive: true });
             const origCwd = process.cwd();
             process.chdir(fakeDir);
             try {
@@ -202,7 +202,7 @@ describe('Git Sha', () => {
 
         it('returns null when git rev-parse fails', () => {
             const fakeDir = path.join(tmpDir, 'no-git-branch');
-            fs.mkdirSync(fakeDir, { recursive: true });
+            fs.mkdirSync(path.resolve(fakeDir), { recursive: true });
             const origCwd = process.cwd();
             process.chdir(fakeDir);
             try {
@@ -259,7 +259,7 @@ describe('Git Sha', () => {
             delete process.env['BUILD_SOURCEBRANCHNAME'];
 
             const fakeDir = path.join(tmpDir, 'no-git-omit-env-branch');
-            fs.mkdirSync(fakeDir, { recursive: true });
+            fs.mkdirSync(path.resolve(fakeDir), { recursive: true });
             const origCwd = process.cwd();
             process.chdir(fakeDir);
             try {

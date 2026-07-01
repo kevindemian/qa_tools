@@ -22,20 +22,22 @@ describe('PackageVersionManager', () => {
     });
 
     function writePackage(version = '1.0.0') {
-        fs.writeFileSync(path.join(tmpDir, 'package.json'), JSON.stringify({ version }));
+        fs.writeFileSync(path.resolve(path.join(tmpDir, 'package.json')), JSON.stringify({ version }));
     }
 
     function writeReleaseNotes() {
         const dir = path.join(tmpDir, 'release_notes');
-        fs.mkdirSync(dir, { recursive: true });
-        fs.writeFileSync(path.join(dir, 'ReleaseNotes.txt'), 'Header\n----\nOld content');
+        fs.mkdirSync(path.resolve(dir), { recursive: true });
+        fs.writeFileSync(path.resolve(path.join(dir, 'ReleaseNotes.txt')), 'Header\n----\nOld content');
     }
 
     describe('UpdateVersion', () => {
         it('updates version in package.json', () => {
             writePackage('1.0.0');
             pkg.updateVersion('2.0.0');
-            const json = JSON.parse(fs.readFileSync(path.join(tmpDir, 'package.json'), 'utf8')) as { version: string };
+            const json = JSON.parse(fs.readFileSync(path.resolve(path.join(tmpDir, 'package.json')), 'utf8')) as {
+                version: string;
+            };
 
             expect(json.version).toBe('2.0.0');
         });
@@ -51,7 +53,9 @@ describe('PackageVersionManager', () => {
 
             expect(extraUpdate).toHaveBeenCalledTimes(1);
 
-            const json = JSON.parse(fs.readFileSync(path.join(tmpDir, 'package.json'), 'utf8')) as { version: string };
+            const json = JSON.parse(fs.readFileSync(path.resolve(path.join(tmpDir, 'package.json')), 'utf8')) as {
+                version: string;
+            };
 
             expect(json.version).toBe('3.0.0');
         });
@@ -61,7 +65,10 @@ describe('PackageVersionManager', () => {
         it('prepends new release notes', () => {
             writeReleaseNotes();
             pkg.updateReleaseNotes('v2.0', ['TASK-1 Fix bug', 'TASK-2 Add feature']);
-            const content = fs.readFileSync(path.join(tmpDir, 'release_notes', 'ReleaseNotes.txt'), 'utf8');
+            const content = fs.readFileSync(
+                path.resolve(path.join(tmpDir, 'release_notes', 'ReleaseNotes.txt')),
+                'utf8',
+            );
 
             expect(content).toContain('Release v2.0');
             expect(content).toContain('TASK-1 Fix bug');
