@@ -1,11 +1,7 @@
 {
     "$schema": "https://unpkg.com/knip@6/schema.json",
     "entry": [
-        "jira_management/main.ts",
-        "git_triggers/main.ts",
         "scripts/build.mjs",
-        "scripts/quality-check.ts",
-        "scripts/generate-env-example.ts",
         "scripts/ux-auditor.ts",
         "scripts/sop-phase-enforcer.ts",
         "scripts/smartwizard-llm.ts",
@@ -13,10 +9,7 @@
         "scripts/rule-vigilant.ts",
         "scripts/verify-registry.ts",
         "scripts/opencode-db-maintenance.ts",
-        "scripts/probe-registry.ts",
-        "e2e/smoke-github.ts",
-        "e2e/smoke-llm.ts",
-        "e2e/smoke-pipeline.ts"
+        "scripts/probe-registry.ts"
     ],
     "project": [
         "setup/**/*.ts",
@@ -27,16 +20,6 @@
         "scripts/**/*.ts"
     ],
     "ignoreDependencies": [
-        "cli-progress",
-        "cli-table3",
-        "figlet",
-        "readline-sync",
-        "yaml",
-        "zod",
-        "dotenv",
-        "chalk",
-        "gradient-string",
-        "ora",
         "adm-zip",
         "csv-parser",
         "glob",

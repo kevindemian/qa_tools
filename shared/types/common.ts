@@ -94,10 +94,6 @@ export enum ExitCode {
     OK = 0,
     /** General error. */
     ERROR = 1,
-    /** Incorrect usage / invalid arguments. */
-    USAGE = 2,
-    /** Required resource unavailable (e.g. API down, missing env). */
-    UNAVAILABLE = 3,
 }
 
 /** Runtime overrides for any config key. Keys map 1:1 to env var names (lowercase, camelCase).
