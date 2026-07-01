@@ -1,4 +1,5 @@
 #!/usr/bin/env tsx
+import path from 'path';
 import { readFileSync, existsSync } from 'fs';
 
 const safeGet = (obj: object, key: string | number): unknown =>
@@ -12,9 +13,9 @@ interface Warning {
 }
 
 function scanFile(filePath: string): Warning[] {
-    if (!existsSync(filePath)) return [];
+    if (!existsSync(path.resolve(filePath))) return [];
     const warnings: Warning[] = [];
-    const content = readFileSync(filePath, 'utf-8');
+    const content = readFileSync(path.resolve(filePath), 'utf-8');
     const lines = content.split('\n');
 
     const scanners: Array<{ rule: string; test: (line: string, _idx: number) => string | null }> = [

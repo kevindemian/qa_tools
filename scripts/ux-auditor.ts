@@ -45,14 +45,14 @@ interface ImportGraphEntry {
 const UTF8 = 'utf-8';
 
 function readSource(file: string): string {
-    return fs.readFileSync(file, UTF8);
+    return fs.readFileSync(path.resolve(file), UTF8);
 }
 
 function getAllTsFiles(dir: string, excludeTests = false): string[] {
     const files: string[] = [];
     const abs = path.resolve(dir);
     function walk(d: string) {
-        for (const entry of fs.readdirSync(d, { withFileTypes: true })) {
+        for (const entry of fs.readdirSync(path.resolve(d), { withFileTypes: true })) {
             const p = path.join(d, entry.name);
             if (
                 entry.isDirectory() &&
@@ -464,7 +464,7 @@ function main() {
 
     const date = new Date().toISOString().slice(0, 10);
     const outPath = path.join(auditDir, `ux-audit-${date}.json`);
-    fs.writeFileSync(outPath, JSON.stringify(report, null, 2), UTF8);
+    fs.writeFileSync(path.resolve(outPath), JSON.stringify(report, null, 2), UTF8);
 
     process.stdout.write(`\nUX Auditor Report: ${outPath}\n`);
     process.stdout.write(`Friction Score: ${report.frictionScore}\n`);

@@ -17,8 +17,8 @@ export function detectGitDir(startDir?: string): string | null {
 
 function resolveRefFromPackedRefs(gitDir: string, ref: string): string | null {
     const packedPath = path.join(gitDir, '.git', 'packed-refs');
-    if (!fs.existsSync(packedPath)) return null;
-    const packed = fs.readFileSync(packedPath, 'utf8');
+    if (!fs.existsSync(path.resolve(packedPath))) return null;
+    const packed = fs.readFileSync(path.resolve(packedPath), 'utf8');
     for (const line of packed.split('\n')) {
         if (line.endsWith(ref) && !line.startsWith('#')) {
             const parts = line.split(' ');
@@ -31,12 +31,12 @@ function resolveRefFromPackedRefs(gitDir: string, ref: string): string | null {
 function resolveHeadViaFilesystem(gitDir: string): string | null {
     const headFile = path.join(gitDir, '.git', 'HEAD');
     try {
-        const head = fs.readFileSync(headFile, 'utf8').trim();
+        const head = fs.readFileSync(path.resolve(headFile), 'utf8').trim();
         if (head.startsWith('ref: ')) {
             const ref = head.slice(5);
             const refPath = path.join(gitDir, '.git', ref);
-            if (fs.existsSync(refPath)) {
-                return fs.readFileSync(refPath, 'utf8').trim();
+            if (fs.existsSync(path.resolve(refPath))) {
+                return fs.readFileSync(path.resolve(refPath), 'utf8').trim();
             }
             return resolveRefFromPackedRefs(gitDir, ref);
         }

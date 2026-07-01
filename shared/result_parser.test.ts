@@ -144,12 +144,12 @@ describe('ParseTestResultsFile (Mochawesome file)', () => {
     const tmpFile = path.join(os.tmpdir(), 'qa-test-mochawesome-' + Date.now() + '.json');
 
     beforeEach(() => {
-        fs.writeFileSync(tmpFile, JSON.stringify(SAMPLE_MOCHAWESOME), 'utf8');
+        fs.writeFileSync(path.resolve(tmpFile), JSON.stringify(SAMPLE_MOCHAWESOME), 'utf8');
     });
 
     afterEach(() => {
         try {
-            fs.unlinkSync(tmpFile);
+            fs.unlinkSync(path.resolve(tmpFile));
         } catch {
             /* ignore */
         }
@@ -172,13 +172,13 @@ describe('ParseTestResultsFile (Mochawesome file)', () => {
 
     it('returns error for invalid JSON content', () => {
         const invalidFile = tmpFile + '-invalid.json';
-        fs.writeFileSync(invalidFile, 'not json', 'utf8');
+        fs.writeFileSync(path.resolve(invalidFile), 'not json', 'utf8');
         const result = parseTestResultsFile(invalidFile);
 
         expect(result.error).toContain('Erro ao ler/parsear');
 
         try {
-            fs.unlinkSync(invalidFile);
+            fs.unlinkSync(path.resolve(invalidFile));
         } catch {
             /* ignore */
         }

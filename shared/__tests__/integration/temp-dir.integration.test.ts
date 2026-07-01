@@ -50,8 +50,8 @@ describe('Integration: Temp Dir', () => {
             expect(logsDir().length).toBeGreaterThan(0);
 
             // The directories should exist at the paths these functions report
-            expect(fs.existsSync(tempDirPath())).toBeTruthy();
-            expect(fs.existsSync(reportsDir())).toBeTruthy();
+            expect(fs.existsSync(path.resolve(tempDirPath()))).toBeTruthy();
+            expect(fs.existsSync(path.resolve(reportsDir()))).toBeTruthy();
         });
 
         it('logsDir exists after ensureDirs', async () => {
@@ -61,7 +61,7 @@ describe('Integration: Temp Dir', () => {
 
             ensureDirs();
 
-            expect(fs.existsSync(logsDir())).toBeTruthy();
+            expect(fs.existsSync(path.resolve(logsDir()))).toBeTruthy();
         });
     });
 
@@ -74,8 +74,8 @@ describe('Integration: Temp Dir', () => {
 
             const filepath = writeReport('test-report.html', content);
 
-            expect(fs.existsSync(filepath)).toBeTruthy();
-            expect(fs.readFileSync(filepath, 'utf8')).toBe(content);
+            expect(fs.existsSync(path.resolve(filepath))).toBeTruthy();
+            expect(fs.readFileSync(path.resolve(filepath), 'utf8')).toBe(content);
             expect(filepath).toContain('test-report.html');
             expect(filepath).toMatch(/\d{4}-\d{2}-\d{2}/); // dated directory
         });
@@ -90,8 +90,8 @@ describe('Integration: Temp Dir', () => {
 
             const filepath = writeEphemeral('cache', 'data.json', content);
 
-            expect(fs.existsSync(filepath)).toBeTruthy();
-            expect(fs.readFileSync(filepath, 'utf8')).toBe(content);
+            expect(fs.existsSync(path.resolve(filepath))).toBeTruthy();
+            expect(fs.readFileSync(path.resolve(filepath), 'utf8')).toBe(content);
             expect(filepath).toContain(path.join('cache', 'data.json'));
         });
     });

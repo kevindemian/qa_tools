@@ -45,7 +45,7 @@ describe('E2E: CSV Import', () => {
     afterAll(() => {
         resetHandlers();
         nock.restore();
-        if (fs.existsSync(tmpHome)) {
+        if (fs.existsSync(path.resolve(tmpHome))) {
             fs.rmSync(tmpHome, { recursive: true, force: true });
         }
     });

@@ -47,7 +47,7 @@ const istanbulFixtureArb: fc.Arbitrary<IstanbulFixture> = fc
 
 function writeFixture(fixture: unknown, name = 'coverage-summary.json'): string {
     const coveragePath = path.join(TEST_DIR, name);
-    fs.writeFileSync(coveragePath, JSON.stringify(fixture));
+    fs.writeFileSync(path.resolve(coveragePath), JSON.stringify(fixture));
     return coveragePath;
 }
 

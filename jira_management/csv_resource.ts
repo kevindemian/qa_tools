@@ -1,5 +1,6 @@
 /** CSV parsing: single-step, bulk (multi-block), description/precondition/linked-issues extraction. */
 import fs from 'fs';
+import path from 'path';
 import { csv } from '../shared/deps.js';
 import { Readable } from 'stream';
 import { rootLogger } from '../shared/logger.js';
@@ -267,7 +268,7 @@ class CsvResource {
     }
 
     async readBulkCsv(filePath: string): Promise<TestCase[]> {
-        let raw = await fs.promises.readFile(filePath, 'utf-8');
+        let raw = await fs.promises.readFile(path.resolve(filePath), 'utf-8');
         raw = raw.replace(/^\uFEFF/, ''); /* strip BOM */
         raw = raw.replace(/\r\n/g, '\n'); /* normalize CRLF → LF for block splitting */
 

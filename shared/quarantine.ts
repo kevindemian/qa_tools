@@ -78,7 +78,7 @@ function pipelinePath(): string {
 
 function ensureDir(dir: string): void {
     try {
-        fs.mkdirSync(dir, { recursive: true });
+        fs.mkdirSync(path.resolve(dir), { recursive: true });
     } catch (err) {
         rootLogger.warn('Failed to create directory: ' + (err instanceof Error ? err.message : String(err)));
     }
@@ -90,8 +90,8 @@ export function loadQuarantine(): QuarantineStore {
     try {
         ensureDir(getDataDir());
         const sp = storePath();
-        if (!fs.existsSync(sp)) return { entries: [] };
-        const raw = fs.readFileSync(sp, 'utf8');
+        if (!fs.existsSync(path.resolve(sp))) return { entries: [] };
+        const raw = fs.readFileSync(path.resolve(sp), 'utf8');
         const parsed: unknown = JSON.parse(raw);
         return QuarantineStoreSchema.parse(parsed) as QuarantineStore;
     } catch (err) {
@@ -106,8 +106,8 @@ function saveQuarantine(store: QuarantineStore): void {
         ensureDir(dir);
         const sp = storePath();
         const tp = sp + '.tmp';
-        fs.writeFileSync(tp, JSON.stringify(store, null, 2), 'utf8');
-        fs.renameSync(tp, sp);
+        fs.writeFileSync(path.resolve(tp), JSON.stringify(store, null, 2), 'utf8');
+        fs.renameSync(path.resolve(tp), sp);
     } catch (err) {
         rootLogger.error('Failed to save quarantine store: ' + (err as Error).message);
     }
@@ -258,7 +258,7 @@ export function generatePipelineQuarantine(store?: QuarantineStore, totalTests?:
     };
     try {
         const pp = pipelinePath();
-        fs.writeFileSync(pp, JSON.stringify(pipeline, null, 2), 'utf8');
+        fs.writeFileSync(path.resolve(pp), JSON.stringify(pipeline, null, 2), 'utf8');
     } catch (err) {
         rootLogger.error('Failed to write pipeline quarantine file: ' + (err as Error).message);
     }

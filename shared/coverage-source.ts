@@ -47,10 +47,10 @@ const DEFAULT_COVERAGE_PATH = 'coverage/coverage-summary.json';
 export function readIstanbulCoverage(coveragePath?: string): CoverageResult | undefined {
     const resolvedPath = path.resolve(coveragePath ?? DEFAULT_COVERAGE_PATH);
     try {
-        if (!fs.existsSync(resolvedPath)) {
+        if (!fs.existsSync(path.resolve(resolvedPath))) {
             return undefined;
         }
-        const raw = fs.readFileSync(resolvedPath, 'utf8');
+        const raw = fs.readFileSync(path.resolve(resolvedPath), 'utf8');
         const json = parseIstanbul(raw);
         if (!json) return undefined;
         const total = json.total;

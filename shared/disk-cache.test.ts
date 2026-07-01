@@ -21,8 +21,11 @@ describe('Disk Cache', () => {
     });
 
     beforeEach(() => {
-        cacheDir = path.join(os.tmpdir(), 'qa-llm-disk-cache-' + Date.now() + '-' + crypto.randomBytes(4).toString('hex'));
-        fs.mkdirSync(cacheDir, { recursive: true });
+        cacheDir = path.join(
+            os.tmpdir(),
+            'qa-llm-disk-cache-' + Date.now() + '-' + crypto.randomBytes(4).toString('hex'),
+        );
+        fs.mkdirSync(path.resolve(cacheDir), { recursive: true });
         process.env['LLM_DISK_CACHE_DIR'] = cacheDir;
     });
 
@@ -44,11 +47,11 @@ describe('Disk Cache', () => {
         it('returns null for expired entry', () => {
             const file = path.join(cacheDir, 'exp-key.json');
             const expired = JSON.stringify({ response: 'stale', createdAt: Date.now() - 60 * 60 * 1000 - 1 });
-            fs.mkdirSync(cacheDir, { recursive: true });
-            fs.writeFileSync(file, expired, 'utf-8');
+            fs.mkdirSync(path.resolve(cacheDir), { recursive: true });
+            fs.writeFileSync(path.resolve(file), expired, 'utf-8');
 
             expect(diskCacheGet('exp-key')).toBeNull();
-            expect(fs.existsSync(file)).toBeFalsy();
+            expect(fs.existsSync(path.resolve(file))).toBeFalsy();
         });
 
         it('overwrites existing key', () => {
@@ -67,7 +70,7 @@ describe('Disk Cache', () => {
 
         it('returns null for corrupt JSON data', () => {
             const file = path.join(cacheDir, 'corrupt.json');
-            fs.writeFileSync(file, 'not-json', 'utf-8');
+            fs.writeFileSync(path.resolve(file), 'not-json', 'utf-8');
 
             expect(diskCacheGet('corrupt')).toBeNull();
         });
@@ -76,22 +79,22 @@ describe('Disk Cache', () => {
             process.env['LLM_CACHE_KEY'] = 'test-secret-key-32bytes!';
             const file = path.join(cacheDir, 'bad-enc.json');
             const bad = JSON.stringify({ e: 'base64', iv: 'base64' });
-            fs.writeFileSync(file, bad, 'utf-8');
+            fs.writeFileSync(path.resolve(file), bad, 'utf-8');
 
             expect(diskCacheGet('bad-enc')).toBeNull();
-            expect(fs.existsSync(file)).toBeFalsy();
+            expect(fs.existsSync(path.resolve(file))).toBeFalsy();
         });
 
         it('returns null when decrypt fails on non-JSON with cache key set', () => {
             process.env['LLM_CACHE_KEY'] = 'test-secret-key-32bytes!';
             const file = path.join(cacheDir, 'corrupt-enc.json');
-            fs.writeFileSync(file, 'not-json', 'utf-8');
+            fs.writeFileSync(path.resolve(file), 'not-json', 'utf-8');
 
             expect(diskCacheGet('corrupt-enc')).toBeNull();
         });
 
         it('handles write failure gracefully (readonly dir)', () => {
-            fs.chmodSync(cacheDir, 0o444);
+            fs.chmodSync(path.resolve(cacheDir), 0o600);
 
             expect(() => diskCacheSet('fail-key', 'value')).not.toThrow();
         });
@@ -107,11 +110,11 @@ describe('Disk Cache', () => {
             const newDir = path.join(os.tmpdir(), 'qa-llm-cache-new-' + Date.now());
             process.env['LLM_DISK_CACHE_DIR'] = newDir;
 
-            expect(fs.existsSync(newDir)).toBeFalsy();
+            expect(fs.existsSync(path.resolve(newDir))).toBeFalsy();
 
             diskCacheSet('new-dir-key', 'val');
 
-            expect(fs.existsSync(newDir)).toBeTruthy();
+            expect(fs.existsSync(path.resolve(newDir))).toBeTruthy();
             expect(diskCacheGet('new-dir-key')).toBe('val');
         });
 
@@ -144,12 +147,12 @@ describe('Disk Cache', () => {
 
         it('handles clear failure when cache dir is a file', () => {
             const fileDir = path.join(os.tmpdir(), 'qa-llm-cache-file-' + Date.now());
-            fs.writeFileSync(fileDir, '');
+            fs.writeFileSync(path.resolve(fileDir), '');
             process.env['LLM_DISK_CACHE_DIR'] = fileDir;
 
             expect(() => clearDiskCache()).not.toThrow();
 
-            fs.unlinkSync(fileDir);
+            fs.unlinkSync(path.resolve(fileDir));
         });
     });
 });

@@ -2,6 +2,7 @@
  * Provides unified flattening, detection, and file-I/O wrappers. */
 
 import fs from 'fs';
+import path from 'path';
 import { rootLogger } from './logger.js';
 
 const EMPTY_PARSE_RESULT: ParseResult = Object.freeze({
@@ -11,7 +12,7 @@ const EMPTY_PARSE_RESULT: ParseResult = Object.freeze({
 
 function readAndParse<T>(filePath: string, parser: (data: T) => ParseResult): ParseResultWithError {
     try {
-        const raw = fs.readFileSync(filePath, 'utf8');
+        const raw = fs.readFileSync(path.resolve(filePath), 'utf8');
         const json: unknown = JSON.parse(raw);
         return parser(json as T);
     } catch (err: unknown) {

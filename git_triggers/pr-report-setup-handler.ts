@@ -80,17 +80,17 @@ function _generateCiFiles(projectName: string): void {
     const ciPath = path.join(workflowDir, 'ci.yml');
 
     // 1. Generate reusable workflow
-    fs.mkdirSync(workflowDir, { recursive: true });
+    fs.mkdirSync(path.resolve(workflowDir), { recursive: true });
     const yaml = generatePostProcessWorkflowYaml({ projectName });
-    fs.writeFileSync(ppWfPath, yaml, 'utf8');
+    fs.writeFileSync(path.resolve(ppWfPath), yaml, 'utf8');
     success('Workflow gerado: .github/workflows/qa-post-process.yml');
 
     // 2. Inject post-process job into ci.yml (preserving existing content)
-    if (fs.existsSync(ciPath)) {
-        const existing = fs.readFileSync(ciPath, 'utf8');
+    if (fs.existsSync(path.resolve(ciPath))) {
+        const existing = fs.readFileSync(path.resolve(ciPath), 'utf8');
         const updated = injectPostProcessJob(existing, projectName);
         if (updated !== existing) {
-            fs.writeFileSync(ciPath, updated, 'utf8');
+            fs.writeFileSync(path.resolve(ciPath), updated, 'utf8');
             success('Job post-process injetado em ci.yml (conteúdo existente preservado).');
         } else {
             info('ci.yml já contém job post-process — sem alterações.');

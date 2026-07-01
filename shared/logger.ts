@@ -87,27 +87,32 @@ export class Logger {
         if (!logDir) return false;
 
         try {
-            if (!fs.existsSync(logDir)) fs.mkdirSync(logDir, { recursive: true });
+            if (!fs.existsSync(logDir)) fs.mkdirSync(path.resolve(logDir), { recursive: true });
             this._logDir = logDir;
             const date = formatDateISO();
             this._filePathCached = path.join(logDir, `qa-tools-${date}.log`);
-            try {
-                const stat = fs.statSync(this._filePathCached);
-                this._bytesWritten = stat.size;
-            } catch (err) {
-                if (!(err instanceof Error && 'code' in err && err['code'] === 'ENOENT')) {
-                    process.stderr.write(
-                        `[logger] Falha ao verificar arquivo de log: ${err instanceof Error ? err.message : String(err)}. Verifique permissões e integridade do diretório.\n`,
-                    );
-                }
-            }
+            this._initFileBytes();
             return true;
         } catch (err) {
             this._fileError = true;
             process.stderr.write(
-                `[logger] Falha ao criar diretório de log: ${err instanceof Error ? err.message : String(err)}. Verifique permissões e espaço em disco.\n`,
+                `[logger] Falha ao criar diretório de log: ${String(err)}. Verifique permissões e espaço em disco.\n`,
             );
             return false;
+        }
+    }
+
+    _initFileBytes(): void {
+        if (!this._filePathCached) return;
+        try {
+            const stat = fs.statSync(path.resolve(this._filePathCached));
+            this._bytesWritten = stat.size;
+        } catch (err) {
+            if (!('code' in Object(err) && (err as { code?: string }).code === 'ENOENT')) {
+                process.stderr.write(
+                    `[logger] Falha ao verificar arquivo de log: ${String(err)}. Verifique permissões e integridade do diretório.\n`,
+                );
+            }
         }
     }
 
@@ -122,11 +127,11 @@ export class Logger {
         }
         const rotated = path.join(dir, `${base}.${seq}${ext}`);
         try {
-            fs.renameSync(this._filePathCached, rotated);
+            fs.renameSync(path.resolve(this._filePathCached), rotated);
             this._bytesWritten = 0;
         } catch (err) {
             process.stderr.write(
-                `[logger] Falha ao rotacionar log: ${err instanceof Error ? err.message : String(err)}. Verifique permissões e espaço em disco.\n`,
+                `[logger] Falha ao rotacionar log: ${String(err)}. Verifique permissões e espaço em disco.\n`,
             );
         }
     }
@@ -168,9 +173,7 @@ export class Logger {
                 dataStr = ' | ' + JSON.stringify(maskDeep(data));
             } catch (err) {
                 dataStr = ' | [data serialization error]';
-                process.stderr.write(
-                    '[logger] Data serialization failed: ' + (err instanceof Error ? err.message : String(err)) + '\n',
-                );
+                process.stderr.write('[logger] Data serialization failed: ' + String(err) + '\n');
             }
         }
         const line = `[${timestamp}] [${level}]${ctxStr} ${msg}${dataStr}\n`;
@@ -178,12 +181,12 @@ export class Logger {
         if (!this._filePathCached) return;
         this._rotateIfNeeded();
         try {
-            fs.appendFileSync(this._filePathCached, line);
+            fs.appendFileSync(path.resolve(this._filePathCached), line);
             this._bytesWritten += Buffer.byteLength(line);
         } catch (err) {
             this._fileError = true;
             process.stderr.write(
-                `[logger] Falha ao escrever no arquivo de log: ${err instanceof Error ? err.message : String(err)}. Verifique permissões, espaço em disco e sistema de arquivos.\n`,
+                `[logger] Falha ao escrever no arquivo de log: ${String(err)}. Verifique permissões, espaço em disco e sistema de arquivos.\n`,
             );
         }
     }

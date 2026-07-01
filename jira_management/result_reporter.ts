@@ -1,5 +1,6 @@
 /** Match test results to Jira issues via mapping JSON and create Test Executions. */
 import fs from 'fs';
+import path from 'path';
 import { rootLogger } from '../shared/logger.js';
 import type { JiraResourceLike } from '../shared/types.js';
 // anti-circular (prompt → create_tests → session-context → prompt)
@@ -78,7 +79,7 @@ function _fuzzyMatch(title: string, mappings: MappingItem[]): MappingItem | null
 function matchResultsToTests(results: TestResultItem[], mappingJsonPath: string): MatchResult {
     let mappings: MappingItem[];
     try {
-        const raw = fs.readFileSync(mappingJsonPath, 'utf8');
+        const raw = fs.readFileSync(path.resolve(mappingJsonPath), 'utf8');
         const data: { tests?: Array<Record<string, string>> } = JSON.parse(raw) as {
             tests?: Array<Record<string, string>>;
         };

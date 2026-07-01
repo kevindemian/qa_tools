@@ -1,4 +1,5 @@
 /** OS-aware file opener: macOS `open`, Windows `start`, Linux `xdg-open` (with WSL fallback). */
+import path from 'path';
 import { spawn, spawnSync, execFileSync } from 'child_process';
 import { platform } from 'os';
 import { readFileSync, writeFileSync, mkdirSync } from 'fs';
@@ -82,11 +83,11 @@ function toWinPath(target: string): string | null {
     if (!tmpRoot) return null;
 
     try {
-        const content = readFileSync(target);
+        const content = readFileSync(path.resolve(target));
         const dir = join(tmpRoot, 'qa_tools_docs');
-        mkdirSync(dir, { recursive: true });
+        mkdirSync(path.resolve(dir), { recursive: true });
         const dest = join(dir, basename(target));
-        writeFileSync(dest, content);
+        writeFileSync(path.resolve(dest), content);
         const result2 = spawnSync(WSLPATH_BIN, ['-w', dest], { encoding: 'utf8' });
         if (result2.status === 0) {
             const wp = result2.stdout.trim();

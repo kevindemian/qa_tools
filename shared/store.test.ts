@@ -15,7 +15,7 @@ const project = 'test-proj';
 describe('Store', () => {
     beforeEach(() => {
         /* Clean all files in tmpDir */
-        for (const f of fs.readdirSync(tmpDir)) {
+        for (const f of fs.readdirSync(path.resolve(tmpDir))) {
             const fp = path.join(tmpDir, f);
             fs.rmSync(fp, { recursive: true, force: true });
         }

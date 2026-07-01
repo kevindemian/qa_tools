@@ -18,6 +18,7 @@
  * Environment variables (one per provider):
  *   LLM_API_KEY - used to probe the currently configured provider
  */
+import path from 'path';
 import { readFileSync, writeFileSync } from 'node:fs';
 import { resolve, dirname } from 'node:path';
 import { fileURLToPath } from 'node:url';
@@ -307,7 +308,7 @@ async function main(): Promise<void> {
     }
 
     const outputPath = resolve(__dirname, '..', 'data', `registry-probe-${timestamp}.md`);
-    writeFileSync(outputPath, report, 'utf8');
+    writeFileSync(path.resolve(outputPath), report, 'utf8');
     process.stdout.write(`Report written to ${outputPath}\n`);
 
     if (createPr) {

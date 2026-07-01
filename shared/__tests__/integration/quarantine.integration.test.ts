@@ -51,7 +51,7 @@ describe('Quarantine.Integration', () => {
             /* ok */
         }
         try {
-            fs.unlinkSync(pipelineFilePath());
+            fs.unlinkSync(path.resolve(pipelineFilePath()));
         } catch {
             /* ok */
         }
@@ -64,7 +64,7 @@ describe('Quarantine.Integration', () => {
             /* ok */
         }
         try {
-            fs.unlinkSync(pipelineFilePath());
+            fs.unlinkSync(path.resolve(pipelineFilePath()));
         } catch {
             /* ok */
         }
@@ -90,7 +90,7 @@ describe('Quarantine.Integration', () => {
             expect(nonNull(entry).reviewRequired).toBeTruthy();
             expect(nonNull(entry).permanent).toBeFalsy();
 
-            expect(fs.existsSync(storePath())).toBeTruthy();
+            expect(fs.existsSync(path.resolve(storePath()))).toBeTruthy();
         });
 
         it('persists pipeline file to disk', () => {
@@ -102,7 +102,7 @@ describe('Quarantine.Integration', () => {
                 bugUrl: 'https://jira/PROJ-42',
             });
 
-            expect(fs.existsSync(pipelineFilePath())).toBeTruthy();
+            expect(fs.existsSync(path.resolve(pipelineFilePath()))).toBeTruthy();
         });
     });
 
@@ -206,8 +206,8 @@ describe('Quarantine.Integration', () => {
     describe('FT-36e — Corrupt store recovery', () => {
         it('returns empty store for corrupt JSON', () => {
             const dir = path.dirname(storePath());
-            fs.mkdirSync(dir, { recursive: true });
-            fs.writeFileSync(storePath(), 'not-valid-json', 'utf8');
+            fs.mkdirSync(path.resolve(dir), { recursive: true });
+            fs.writeFileSync(path.resolve(storePath()), 'not-valid-json', 'utf8');
             const store = loadQuarantine();
 
             expect(store.entries).toStrictEqual([]);

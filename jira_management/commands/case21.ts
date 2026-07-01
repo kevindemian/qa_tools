@@ -140,7 +140,7 @@ async function _handleHtmlExport(result: CoverageGapResult, c: CommandContext): 
     try {
         const html = generateCoverageGapHtml(result, 'Coverage Gap Report — ' + c.ctx.project_name);
         const filePath = path.join(process.cwd(), 'coverage-gap-report.html');
-        fs.writeFileSync(filePath, html, 'utf8');
+        fs.writeFileSync(path.resolve(filePath), html, 'utf8');
         await openWithFallback(filePath, 'Relatório de cobertura', info);
     } catch (err: unknown) {
         printError('Erro ao gerar relatório HTML', err);

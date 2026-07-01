@@ -93,7 +93,11 @@ describe('Show Docs', () => {
 
             expect(mockMkdirSync).toHaveBeenCalledWith(path.join(os.tmpdir(), 'qa-docs'), { recursive: true });
             expect(mockWriteFileSync).toHaveBeenCalledTimes(4);
-            expect(mockOpenWithFallback).toHaveBeenCalledWith(path.join(os.tmpdir(), 'qa-docs', 'index.html'), 'Documentação', mockInfo);
+            expect(mockOpenWithFallback).toHaveBeenCalledWith(
+                path.join(os.tmpdir(), 'qa-docs', 'index.html'),
+                'Documentação',
+                mockInfo,
+            );
         });
 
         it('prints error when docs dir not found', async () => {

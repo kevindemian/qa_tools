@@ -128,7 +128,8 @@ describe('CalculatePipelineCost — property-based', () => {
                 for (let i = 0; i < result.costByRun.length; i++) {
                     const entry = Reflect.get(result.costByRun, i) as { status: string; timestamp: string } | undefined;
                     const run = Reflect.get(sortedRuns, i) as
-                        { failed: number; passed: number; total: number; timestamp: string } | undefined;
+                        | { failed: number; passed: number; total: number; timestamp: string }
+                        | undefined;
                     if (!entry || !run) continue;
                     let expectedStatus: string;
                     if (run.failed > 0) {

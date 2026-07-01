@@ -196,7 +196,8 @@ describe('Store — property-based', () => {
 
                         for (let i = 0; i < entries.length; i++) {
                             const loadedEntry = Reflect.get(loaded, entries.length - 1 - i) as
-                                { sha: string; timestamp: number } | undefined;
+                                | { sha: string; timestamp: number }
+                                | undefined;
                             const entry = Reflect.get(entries, i) as { sha: string; timestamp: number } | undefined;
                             if (!loadedEntry || !entry) throw new Error('expected entries');
 

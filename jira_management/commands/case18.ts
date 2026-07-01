@@ -205,9 +205,9 @@ function _buildGenerationRecord(
 /** Write test cases JSON to disk and log summary to console. */
 function writeTestOutput(converted: TestCase[], createdCount: number): void {
     const outDir = path.join(process.cwd(), 'reports', formatDateISO());
-    fs.mkdirSync(outDir, { recursive: true });
+    fs.mkdirSync(path.resolve(outDir), { recursive: true });
     const outPath = path.join(outDir, 'llm-generated-tests.json');
-    fs.writeFileSync(outPath, JSON.stringify(converted, null, 2), 'utf8');
+    fs.writeFileSync(path.resolve(outPath), JSON.stringify(converted, null, 2), 'utf8');
 
     divider();
     info(`Testes gerados (${converted.length}) — salvos em ${outPath}:`);

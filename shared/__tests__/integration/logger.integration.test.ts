@@ -42,7 +42,7 @@ describe('Integration: Logger', () => {
     function readLog(logger: Logger): string {
         const fp = logger.filePath;
         if (!fp) throw new Error('Expected filePath to be non-null');
-        return fs.readFileSync(fp, 'utf8');
+        return fs.readFileSync(path.resolve(fp), 'utf8');
     }
 
     describe('FT-05a: log levels produce correct file output', () => {

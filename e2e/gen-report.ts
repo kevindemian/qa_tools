@@ -20,7 +20,7 @@ function loadCtrfFixture(): { ctrfPath: string; result: ReturnType<typeof parseT
         gracefulExit(1);
     }
 
-    writeReport('last-results.ctrf.json', fs.readFileSync(ctrfPath, 'utf8'));
+    writeReport('last-results.ctrf.json', fs.readFileSync(path.resolve(ctrfPath), 'utf8'));
     return { ctrfPath, result };
 }
 

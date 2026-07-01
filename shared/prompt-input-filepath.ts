@@ -28,7 +28,7 @@ export function filePathCompleter(line: string, extensions?: string[]): [string[
 
     let entries: string[];
     try {
-        entries = fs.readdirSync(dir);
+        entries = fs.readdirSync(path.resolve(dir));
     } catch (err) {
         rootLogger.warn('prompt-input-filepath: readdir failed: ' + (err instanceof Error ? err.message : String(err)));
         return [[], line];
@@ -42,7 +42,7 @@ export function filePathCompleter(line: string, extensions?: string[]): [string[
             if (!extensions) return true;
             const full = path.join(dir, e);
             try {
-                if (fs.statSync(full).isDirectory()) return true;
+                if (fs.statSync(path.resolve(full)).isDirectory()) return true;
             } catch (err) {
                 rootLogger.warn(
                     'prompt-input-filepath: stat failed: ' + (err instanceof Error ? err.message : String(err)),
@@ -55,7 +55,7 @@ export function filePathCompleter(line: string, extensions?: string[]): [string[
         .map((e) => {
             const full = path.join(dir, e);
             try {
-                return fs.statSync(full).isDirectory() ? full + '/' : full;
+                return fs.statSync(path.resolve(full)).isDirectory() ? full + '/' : full;
             } catch (err) {
                 rootLogger.warn(
                     'prompt-input-filepath: stat failed: ' + (err instanceof Error ? err.message : String(err)),

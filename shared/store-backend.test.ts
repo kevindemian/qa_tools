@@ -10,7 +10,7 @@ const tmpDir = fs.mkdtempSync(path.join(os.tmpdir(), 'qa-store-backend-test-'));
 
 describe('Store Backend', () => {
     beforeEach(() => {
-        for (const f of fs.readdirSync(tmpDir)) {
+        for (const f of fs.readdirSync(path.resolve(tmpDir))) {
             const fp = path.join(tmpDir, f);
             fs.rmSync(fp, { recursive: true, force: true });
         }
@@ -26,7 +26,7 @@ describe('Store Backend', () => {
             const backend = new FsStoreBackend(dir);
             backend.init();
 
-            expect(fs.existsSync(dir)).toBeTruthy();
+            expect(fs.existsSync(path.resolve(dir))).toBeTruthy();
         });
 
         it('write creates intermediate directories and writes file', () => {
@@ -36,9 +36,9 @@ describe('Store Backend', () => {
             backend.write('subdir/test.json', Buffer.from(JSON.stringify({ key: 'value' })));
             const full = path.join(dir, 'subdir', 'test.json');
 
-            expect(fs.existsSync(full)).toBeTruthy();
+            expect(fs.existsSync(path.resolve(full))).toBeTruthy();
 
-            const content = JSON.parse(fs.readFileSync(full, 'utf8')) as Record<string, string>;
+            const content = JSON.parse(fs.readFileSync(path.resolve(full), 'utf8')) as Record<string, string>;
 
             expect(content['key']).toBe('value');
         });
@@ -97,7 +97,7 @@ describe('Store Backend', () => {
             const backend = new FsStoreBackend(dir);
             backend.init();
             const full = path.join(dir, 'bad.json');
-            fs.writeFileSync(full, 'not valid buffer', 'utf8');
+            fs.writeFileSync(path.resolve(full), 'not valid buffer', 'utf8');
             const result = backend.read('bad.json');
 
             expect(result).not.toBeNull();
@@ -112,7 +112,7 @@ describe('Store Backend', () => {
             const backend = new GitStoreBackend(dir, '.');
             backend.init();
 
-            expect(fs.existsSync(dir)).toBeTruthy();
+            expect(fs.existsSync(path.resolve(dir))).toBeTruthy();
             expect(fs.existsSync(path.join(dir, '.git'))).toBeTruthy();
             expect(fs.existsSync(path.join(dir, '.git', 'config'))).toBeTruthy();
         });
@@ -157,12 +157,12 @@ describe('Store Backend', () => {
             backend.write('data.json', Buffer.from('subdir test'));
             const full = path.join(dir, '.qa-tools', 'data.json');
 
-            expect(fs.existsSync(full)).toBeTruthy();
+            expect(fs.existsSync(path.resolve(full))).toBeTruthy();
         });
 
         it('pre-existing git repo is not re-initialized', () => {
             const dir = path.join(tmpDir, 'git-test-existing');
-            fs.mkdirSync(dir, { recursive: true });
+            fs.mkdirSync(path.resolve(dir), { recursive: true });
             execFileSync(GIT_BIN, ['init', dir], { stdio: 'ignore' });
             execFileSync(GIT_BIN, ['-C', dir, 'config', 'user.name', 'preexisting'], { stdio: 'ignore' });
             const backend = new GitStoreBackend(dir, '.');
@@ -188,14 +188,14 @@ describe('Store Backend', () => {
 
         it('init throws when git init fails', () => {
             const dir = path.join(tmpDir, 'git-init-git-fail');
-            fs.mkdirSync(dir, { recursive: true });
+            fs.mkdirSync(path.resolve(dir), { recursive: true });
             const backend = new GitStoreBackend(dir, '.');
             /* Make dir read-only so git init cannot create .git */
-            fs.chmodSync(dir, 0o500);
+            fs.chmodSync(path.resolve(dir), 0o500);
             try {
                 expect(() => backend.init()).toThrow('GitStoreBackend: git init falhou');
             } finally {
-                fs.chmodSync(dir, 0o750);
+                fs.chmodSync(path.resolve(dir), 0o750);
             }
         });
 
@@ -265,7 +265,7 @@ describe('Store Backend', () => {
             backend.write('deeply/nested/file.json', Buffer.from('nested'));
             const full = path.join(dir, '.qa-tools', 'deeply', 'nested', 'file.json');
 
-            expect(fs.existsSync(full)).toBeTruthy();
+            expect(fs.existsSync(path.resolve(full))).toBeTruthy();
         });
     });
 
@@ -306,7 +306,7 @@ describe('Store Backend', () => {
 
         it('returns null when no .git found from cwd', () => {
             const noGitDir = path.join(tmpDir, 'no-git-cwd');
-            fs.mkdirSync(noGitDir, { recursive: true });
+            fs.mkdirSync(path.resolve(noGitDir), { recursive: true });
             const origCwd = process.cwd();
             process.chdir(noGitDir);
             try {
@@ -326,7 +326,7 @@ describe('Store Backend', () => {
         it('finds .git in parent directory', () => {
             const gitDir = path.join(tmpDir, 'detect-parent');
             const subDir = path.join(gitDir, 'sub', 'deep');
-            fs.mkdirSync(subDir, { recursive: true });
+            fs.mkdirSync(path.resolve(subDir), { recursive: true });
             fs.mkdirSync(path.join(gitDir, '.git'));
 
             expect(detectProjectGitDir(subDir)).toBe(gitDir);
@@ -370,7 +370,7 @@ describe('Store Backend', () => {
 
         it('falls through to XDG when projectDir has no .git', () => {
             const projDir = path.join(tmpDir, 'proj-no-git');
-            fs.mkdirSync(projDir, { recursive: true });
+            fs.mkdirSync(path.resolve(projDir), { recursive: true });
             const prevXdg = process.env['XDG_STATE_HOME'];
             const xdgDir = path.join(tmpDir, 'xdg-fallback-no-git');
             process.env['XDG_STATE_HOME'] = xdgDir;
@@ -421,7 +421,7 @@ describe('Store Backend', () => {
 
         it('returns FsStoreBackend when canExecGit throws', () => {
             const xdgDir = path.join(tmpDir, 'xdg-execfile-throw');
-            fs.mkdirSync(xdgDir, { recursive: true });
+            fs.mkdirSync(path.resolve(xdgDir), { recursive: true });
             process.env['XDG_STATE_HOME'] = xdgDir;
             /* Remove git from PATH so canExecGit throws */
             const origPath = process.env['PATH'];

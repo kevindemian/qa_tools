@@ -20,11 +20,11 @@ class PackageVersionManager {
 
     _updateJsonFile(filePath: string, newVersion: string, extraUpdate?: (json: JsonObject) => void): void {
         try {
-            const data = fs.readFileSync(filePath, 'utf8');
+            const data = fs.readFileSync(path.resolve(filePath), 'utf8');
             const json: JsonObject = JSON.parse(data) as JsonObject;
             json['version'] = newVersion;
             if (extraUpdate) extraUpdate(json);
-            fs.writeFileSync(filePath, JSON.stringify(json, null, 2), 'utf8');
+            fs.writeFileSync(path.resolve(filePath), JSON.stringify(json, null, 2), 'utf8');
             rootLogger.info(`Versão atualizada em ${path.basename(filePath)}: ${newVersion}`);
         } catch (err) {
             rootLogger.error(`Erro ao atualizar ${path.basename(filePath)}: ${(err as Error).message}`);
@@ -37,13 +37,13 @@ class PackageVersionManager {
             return;
         }
 
-        if (!fs.existsSync(this.releaseNotesPath)) {
+        if (!fs.existsSync(path.resolve(this.releaseNotesPath))) {
             rootLogger.error(`Arquivo de release notes não encontrado: ${this.releaseNotesPath}`);
             return;
         }
 
         try {
-            const releaseNotesContent = fs.readFileSync(this.releaseNotesPath, 'utf8');
+            const releaseNotesContent = fs.readFileSync(path.resolve(this.releaseNotesPath), 'utf8');
             const lines = releaseNotesContent.split('\n');
             const releaseNotesHeader = lines.slice(0, 2).join('\n');
             const oldReleaseNotes = lines.slice(2).join('\n');
@@ -59,7 +59,7 @@ class PackageVersionManager {
             });
 
             const updatedReleaseNotes = `${releaseNotesHeader}\n\n${newReleaseNotes}${oldReleaseNotes}\n`;
-            fs.writeFileSync(this.releaseNotesPath, updatedReleaseNotes, 'utf8');
+            fs.writeFileSync(path.resolve(this.releaseNotesPath), updatedReleaseNotes, 'utf8');
             rootLogger.info(`Release notes atualizadas com versão ${versionNumber}.`);
         } catch (error) {
             rootLogger.error(`Erro ao atualizar release notes: ${(error as Error).message}`);

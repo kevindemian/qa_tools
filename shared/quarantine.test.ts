@@ -45,7 +45,7 @@ describe('Quarantine', () => {
             /* best effort */
         }
         try {
-            fs.unlinkSync(pipelineFilePath());
+            fs.unlinkSync(path.resolve(pipelineFilePath()));
         } catch {
             /* best effort */
         }
@@ -58,7 +58,7 @@ describe('Quarantine', () => {
             /* best effort */
         }
         try {
-            fs.unlinkSync(pipelineFilePath());
+            fs.unlinkSync(path.resolve(pipelineFilePath()));
         } catch {
             /* best effort */
         }
@@ -236,7 +236,7 @@ describe('Quarantine', () => {
     describe('LoadQuarantine', () => {
         it('returns empty store for corrupt data', () => {
             fs.mkdirSync(path.dirname(quarantineStorePath()), { recursive: true });
-            fs.writeFileSync(quarantineStorePath(), 'not-json', 'utf8');
+            fs.writeFileSync(path.resolve(quarantineStorePath()), 'not-json', 'utf8');
             const store = loadQuarantine();
 
             expect(store.entries).toStrictEqual([]);

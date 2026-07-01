@@ -44,7 +44,7 @@ function csvPath(name: string): string {
 
 function writeCsv(name: string, content: string): string {
     const p = csvPath(name);
-    fs.writeFileSync(p, content, 'utf8');
+    fs.writeFileSync(path.resolve(p), content, 'utf8');
     return p;
 }
 
@@ -62,7 +62,7 @@ describe('E2E: CSV Import - Error Paths', () => {
         process.env['ON_ERROR'] = 'skip';
         const cachePath = path.join(tempDirPath(), 'cache', 'link-types-cache.json');
         try {
-            fs.unlinkSync(cachePath);
+            fs.unlinkSync(path.resolve(cachePath));
         } catch {
             /* ignore */
         }

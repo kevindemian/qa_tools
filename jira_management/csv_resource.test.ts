@@ -82,7 +82,7 @@ describe('CsvResource', () => {
 
             const tmp = path.join(os.tmpdir(), 'qa-test-pre-quoted.csv');
             writeFileSync(
-                tmp,
+                path.resolve(path.resolve(tmp)),
                 [
                     'Title: TC - Pre quoted',
                     'Description: Test',
@@ -102,7 +102,7 @@ describe('CsvResource', () => {
             });
             expect(nonNull(results[0]).steps).toHaveLength(1);
 
-            unlinkSync(tmp);
+            unlinkSync(path.resolve(tmp));
         });
 
         it('parses single-line quoted Pre-condition', async () => {
@@ -110,7 +110,7 @@ describe('CsvResource', () => {
 
             const tmp = path.join(os.tmpdir(), 'qa-test-pre-quoted-single.csv');
             writeFileSync(
-                tmp,
+                path.resolve(path.resolve(tmp)),
                 [
                     'Title: TC - Pre quoted single',
                     'Description: Test',
@@ -127,7 +127,7 @@ describe('CsvResource', () => {
                 value: 'User must be logged in',
             });
 
-            unlinkSync(tmp);
+            unlinkSync(path.resolve(tmp));
         });
 
         it('parses unquoted Pre-condition (range mode fallback)', async () => {
@@ -135,7 +135,7 @@ describe('CsvResource', () => {
 
             const tmp = path.join(os.tmpdir(), 'qa-test-pre-range.csv');
             writeFileSync(
-                tmp,
+                path.resolve(path.resolve(tmp)),
                 [
                     'Title: TC - Pre range',
                     'Description: Test',
@@ -152,7 +152,7 @@ describe('CsvResource', () => {
                 value: 'User must be logged in',
             });
 
-            unlinkSync(tmp);
+            unlinkSync(path.resolve(tmp));
         });
     });
 
@@ -207,7 +207,11 @@ describe('CsvResource', () => {
 
             const warnSpy = vi.spyOn(rootLogger, 'warn').mockImplementation(() => {});
             const tmp = path.join(os.tmpdir(), 'qa-test-no-title.csv');
-            writeFileSync(tmp, 'Action,Data,Expected\nx,y,z\n---\nTitle: Real\nAction,Data,Expected\na,b,c\n', 'utf-8');
+            writeFileSync(
+                path.resolve(tmp),
+                'Action,Data,Expected\nx,y,z\n---\nTitle: Real\nAction,Data,Expected\na,b,c\n',
+                'utf-8',
+            );
             const results = await csvResource.readBulkCsv(tmp);
 
             expect(results).toHaveLength(1);
@@ -215,19 +219,23 @@ describe('CsvResource', () => {
             expect(warnSpy).toHaveBeenCalledWith(expect.stringContaining('formato flat'));
 
             warnSpy.mockRestore();
-            unlinkSync(tmp);
+            unlinkSync(path.resolve(tmp));
         });
 
         it('parses single-line quoted description', async () => {
             expect.hasAssertions();
 
             const tmp = path.join(os.tmpdir(), 'qa-test-desc-quoted.csv');
-            writeFileSync(tmp, 'Title: TC\nDescription:"Quoted desc"\nAction,Data,Expected\nx,y,z\n', 'utf-8');
+            writeFileSync(
+                path.resolve(tmp),
+                'Title: TC\nDescription:"Quoted desc"\nAction,Data,Expected\nx,y,z\n',
+                'utf-8',
+            );
             const results = await csvResource.readBulkCsv(tmp);
 
             expect(nonNull(results[0]).description).toBe('Quoted desc');
 
-            unlinkSync(tmp);
+            unlinkSync(path.resolve(tmp));
         });
 
         it('parses multi-line quoted description without closing quote', async () => {
@@ -236,7 +244,7 @@ describe('CsvResource', () => {
             const warnSpy = vi.spyOn(rootLogger, 'warn').mockImplementation(() => {});
             const tmp = path.join(os.tmpdir(), 'qa-test-desc-unclosed.csv');
             writeFileSync(
-                tmp,
+                path.resolve(path.resolve(tmp)),
                 ['Title: TC', 'Description:"Line 1', 'Line 2', 'Action,Data,Expected', 'x,y,z'].join('\n'),
                 'utf-8',
             );
@@ -247,7 +255,7 @@ describe('CsvResource', () => {
             expect(warnSpy).toHaveBeenCalledWith(expect.stringContaining('Description sem aspas de fechamento'));
 
             warnSpy.mockRestore();
-            unlinkSync(tmp);
+            unlinkSync(path.resolve(tmp));
         });
 
         it('parses multi-line quoted description with proper closing', async () => {
@@ -255,7 +263,7 @@ describe('CsvResource', () => {
 
             const tmp = path.join(os.tmpdir(), 'qa-test-desc-closed.csv');
             writeFileSync(
-                tmp,
+                path.resolve(path.resolve(tmp)),
                 ['Title: TC', 'Description:"Line 1', 'Line 2"', 'Action,Data,Expected', 'x,y,z'].join('\n'),
                 'utf-8',
             );
@@ -263,7 +271,7 @@ describe('CsvResource', () => {
 
             expect(nonNull(results[0]).description).toBe('Line 1\nLine 2');
 
-            unlinkSync(tmp);
+            unlinkSync(path.resolve(tmp));
         });
 
         it('parses multi-line description in range mode (no quotes)', async () => {
@@ -271,7 +279,7 @@ describe('CsvResource', () => {
 
             const tmp = path.join(os.tmpdir(), 'qa-test-desc-range-multi.csv');
             writeFileSync(
-                tmp,
+                path.resolve(path.resolve(tmp)),
                 [
                     'Title: TC',
                     'Description: First line',
@@ -286,7 +294,7 @@ describe('CsvResource', () => {
 
             expect(nonNull(results[0]).description).toBe('First line\nSecond line\nThird line');
 
-            unlinkSync(tmp);
+            unlinkSync(path.resolve(tmp));
         });
 
         it('parses description in range mode with stop prefix adjacent', async () => {
@@ -294,7 +302,7 @@ describe('CsvResource', () => {
 
             const tmp = path.join(os.tmpdir(), 'qa-test-desc-range.csv');
             writeFileSync(
-                tmp,
+                path.resolve(path.resolve(tmp)),
                 ['Title: TC', 'Description:Some desc', 'Group: G1', 'Action,Data,Expected', 'x,y,z'].join('\n'),
                 'utf-8',
             );
@@ -303,7 +311,7 @@ describe('CsvResource', () => {
             expect(nonNull(results[0]).description).toBe('Some desc');
             expect(nonNull(results[0]).group).toBe('G1');
 
-            unlinkSync(tmp);
+            unlinkSync(path.resolve(tmp));
         });
 
         it('parses empty description after Description: with metadata on next line', async () => {
@@ -311,7 +319,7 @@ describe('CsvResource', () => {
 
             const tmp = path.join(os.tmpdir(), 'qa-test-desc-empty.csv');
             writeFileSync(
-                tmp,
+                path.resolve(path.resolve(tmp)),
                 ['Title: TC', 'Description:', 'Pre-condition: LOGIN', 'Action,Data,Expected', 'x,y,z'].join('\n'),
                 'utf-8',
             );
@@ -320,7 +328,7 @@ describe('CsvResource', () => {
             expect(nonNull(results[0]).description).toBe('');
             expect(nonNull(results[0]).precondition).toBeDefined();
 
-            unlinkSync(tmp);
+            unlinkSync(path.resolve(tmp));
         });
 
         it('warns on multi-line quoted pre-condition without closing quote', async () => {
@@ -329,7 +337,7 @@ describe('CsvResource', () => {
             const warnSpy = vi.spyOn(rootLogger, 'warn').mockImplementation(() => {});
             const tmp = path.join(os.tmpdir(), 'qa-test-pre-unclosed.csv');
             writeFileSync(
-                tmp,
+                path.resolve(path.resolve(tmp)),
                 [
                     'Title: TC',
                     'Description: Test',
@@ -346,7 +354,7 @@ describe('CsvResource', () => {
             expect(warnSpy).toHaveBeenCalledWith(expect.stringContaining('Pre-condition sem aspas de fechamento'));
 
             warnSpy.mockRestore();
-            unlinkSync(tmp);
+            unlinkSync(path.resolve(tmp));
         });
 
         it('throws on CSV parse error', async () => {
@@ -358,14 +366,14 @@ describe('CsvResource', () => {
                 .fn<(...args: [string]) => Promise<never>>()
                 .mockRejectedValue(new Error('CSV parse error'));
             const tmp = path.join(os.tmpdir(), 'qa-test-csv-error.csv');
-            writeFileSync(tmp, 'Title: TC\nDescription: Test\nAction,Data,Expected\nx,y,z\n', 'utf-8');
+            writeFileSync(path.resolve(tmp), 'Title: TC\nDescription: Test\nAction,Data,Expected\nx,y,z\n', 'utf-8');
 
             await expect(csvResource.readBulkCsv(tmp)).rejects.toThrow('CSV parse error');
             expect(errorSpy).toHaveBeenCalledWith(expect.stringContaining('Erro ao analisar bloco CSV'));
 
             csvResource.readCsvFromString = orig;
             errorSpy.mockRestore();
-            unlinkSync(tmp);
+            unlinkSync(path.resolve(tmp));
         });
     });
 
@@ -511,7 +519,11 @@ describe('CsvResource', () => {
             const warnSpy = vi.spyOn(rootLogger, 'warn').mockImplementation(() => {});
             // Flat CSV format: header row with Title,Action,Data,Expected Result (no ---, no Title:)
             const tmp = path.join(os.tmpdir(), 'qa-test-flat.csv');
-            writeFileSync(tmp, 'Title,Action,Data,Expected Result\nTC1,Step1,,Result1\nTC2,Step2,,Result2\n', 'utf-8');
+            writeFileSync(
+                path.resolve(tmp),
+                'Title,Action,Data,Expected Result\nTC1,Step1,,Result1\nTC2,Step2,,Result2\n',
+                'utf-8',
+            );
             const results = await csvResource.readBulkCsv(tmp);
 
             // No bulk-format blocks found, so 0 results
@@ -519,7 +531,7 @@ describe('CsvResource', () => {
             expect(warnSpy).toHaveBeenCalledWith(expect.stringContaining('formato flat'));
 
             warnSpy.mockRestore();
-            unlinkSync(tmp);
+            unlinkSync(path.resolve(tmp));
         });
 
         it('warns with diagnostic for flat CSV (just Action,Data,...)', async () => {
@@ -527,14 +539,14 @@ describe('CsvResource', () => {
 
             const warnSpy = vi.spyOn(rootLogger, 'warn').mockImplementation(() => {});
             const tmp = path.join(os.tmpdir(), 'qa-test-flat-action.csv');
-            writeFileSync(tmp, 'Action,Data,Expected Result\nStep1,Data1,Result1\n', 'utf-8');
+            writeFileSync(path.resolve(tmp), 'Action,Data,Expected Result\nStep1,Data1,Result1\n', 'utf-8');
             const results = await csvResource.readBulkCsv(tmp);
 
             expect(results).toHaveLength(0);
             expect(warnSpy).toHaveBeenCalledWith(expect.stringContaining('formato flat'));
 
             warnSpy.mockRestore();
-            unlinkSync(tmp);
+            unlinkSync(path.resolve(tmp));
         });
     });
 
@@ -554,7 +566,7 @@ describe('CsvResource', () => {
                     'Action,Data,Expected Result',
                     'a2,d2,r2',
                 ].join(crlf) + crlf;
-            writeFileSync(tmp, csvContent, 'utf-8');
+            writeFileSync(path.resolve(tmp), csvContent, 'utf-8');
             const results = await csvResource.readBulkCsv(tmp);
 
             expect(results).toHaveLength(2);
@@ -563,7 +575,7 @@ describe('CsvResource', () => {
             expect(nonNull(results[0]).steps).toHaveLength(1);
             expect(nonNull(nonNull(results[0]).steps[0]).fields['Expected Result']).toBe('r1');
 
-            unlinkSync(tmp);
+            unlinkSync(path.resolve(tmp));
         });
 
         it('strips BOM character at start of file', async () => {
@@ -572,14 +584,14 @@ describe('CsvResource', () => {
             const tmp = path.join(os.tmpdir(), 'qa-test-bom-bulk.csv');
             const bom = '\uFEFF';
             const csvContent = bom + 'Title: Com BOM\nAction,Data,Expected Result\na,d,r\n';
-            writeFileSync(tmp, csvContent, 'utf-8');
+            writeFileSync(path.resolve(tmp), csvContent, 'utf-8');
             const results = await csvResource.readBulkCsv(tmp);
 
             expect(results).toHaveLength(1);
             expect(nonNull(results[0]).title).toBe('Com BOM');
             expect(nonNull(nonNull(results[0]).steps[0]).fields['Expected Result']).toBe('r');
 
-            unlinkSync(tmp);
+            unlinkSync(path.resolve(tmp));
         });
 
         it('handles BOM + CRLF + semicolons combined', async () => {
@@ -590,7 +602,7 @@ describe('CsvResource', () => {
             const crlf = '\r\n';
             const csvContent =
                 bom + ['Title: Combined quirks', 'Action;Data;ExpectedResult', 'step1;d1;r1'].join(crlf) + crlf;
-            writeFileSync(tmp, csvContent, 'utf-8');
+            writeFileSync(path.resolve(tmp), csvContent, 'utf-8');
             const results = await csvResource.readBulkCsv(tmp);
 
             expect(results).toHaveLength(1);
@@ -598,7 +610,7 @@ describe('CsvResource', () => {
             expect(nonNull(nonNull(results[0]).steps[0]).fields['Expected Result']).toBe('r1');
             expect(nonNull(nonNull(results[0]).steps[0]).fields.Action).toBe('step1');
 
-            unlinkSync(tmp);
+            unlinkSync(path.resolve(tmp));
         });
     });
 });

@@ -23,7 +23,7 @@ function loadCtrfFixture(): { ctrfPath: string; result: ReturnType<typeof parseT
         rootLogger.error('Parse error:', result.error);
         gracefulExit(1);
     }
-    writeReport('last-results.ctrf.json', fs.readFileSync(ctrfPath, 'utf8'));
+    writeReport('last-results.ctrf.json', fs.readFileSync(path.resolve(ctrfPath), 'utf8'));
     return { ctrfPath, result };
 }
 
@@ -31,7 +31,7 @@ function setupMappingFile(): void {
     const mappingArg = process.argv.find((a) => a.startsWith('--mapping='));
     if (mappingArg) {
         const mappingPath = path.resolve(mappingArg.split('=')[1] ?? '');
-        const raw = JSON.parse(fs.readFileSync(mappingPath, 'utf8')) as {
+        const raw = JSON.parse(fs.readFileSync(path.resolve(mappingPath), 'utf8')) as {
             tests?: Array<{ title: string; key: string }>;
         };
         const mappingCopy = writeReport('mapping.json', JSON.stringify(raw, null, 2));

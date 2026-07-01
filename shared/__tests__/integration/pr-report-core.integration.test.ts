@@ -101,7 +101,7 @@ function writeCtrfFixture(tests: FlatTest[]): string {
             }),
         },
     };
-    fs.writeFileSync(ctrfPath, JSON.stringify(ctrf, null, 2), 'utf8');
+    fs.writeFileSync(path.resolve(ctrfPath), JSON.stringify(ctrf, null, 2), 'utf8');
     return ctrfPath;
 }
 
@@ -149,9 +149,9 @@ describe('Pr Report Core.Integration', () => {
                 expect(result.healthScore.overall).toBeGreaterThanOrEqual(0);
                 expect(result.healthScore.overall).toBeLessThanOrEqual(100);
                 expect(result.passRate).toBe(100);
-                expect(fs.existsSync(htmlPath)).toBeTruthy();
+                expect(fs.existsSync(path.resolve(htmlPath))).toBeTruthy();
 
-                const html = fs.readFileSync(htmlPath, 'utf8');
+                const html = fs.readFileSync(path.resolve(htmlPath), 'utf8');
 
                 expect(html).toContain('<!DOCTYPE html>');
                 expect(html).toContain('</html>');
@@ -344,7 +344,7 @@ describe('Pr Report Core.Integration', () => {
                 });
 
                 expect(result.passRate).toBe(100);
-                expect(fs.existsSync(htmlPath)).toBeTruthy();
+                expect(fs.existsSync(path.resolve(htmlPath))).toBeTruthy();
             });
         });
 

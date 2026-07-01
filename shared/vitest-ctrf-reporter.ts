@@ -235,8 +235,8 @@ export class VitestCtrfReporter implements Reporter {
         const outputDir = this.options.outputDir;
         const outputFile = path.resolve(outputDir, this.options.outputFile);
 
-        fs.mkdirSync(outputDir, { recursive: true });
-        fs.writeFileSync(outputFile, JSON.stringify(data, null, 2), 'utf8');
+        fs.mkdirSync(path.resolve(outputDir), { recursive: true });
+        fs.writeFileSync(path.resolve(outputFile), JSON.stringify(data, null, 2), 'utf8');
     }
 }
 

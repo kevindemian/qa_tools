@@ -26,7 +26,7 @@ export class GitStoreBackend implements StoreBackend {
 
     init(): void {
         try {
-            fs.mkdirSync(this.fullPath, { recursive: true });
+            fs.mkdirSync(path.resolve(this.fullPath), { recursive: true });
         } catch (err) {
             rootLogger.error('GitStoreBackend: mkdir failed: ' + String(err));
             /* if mkdir fails, subsequent operations will also fail — propagate */
@@ -49,7 +49,7 @@ export class GitStoreBackend implements StoreBackend {
     read(relPath: string): Buffer | null {
         const full = path.join(this.fullPath, relPath);
         try {
-            return fs.existsSync(full) ? fs.readFileSync(full) : null;
+            return fs.existsSync(path.resolve(full)) ? fs.readFileSync(full) : null;
         } catch (err) {
             rootLogger.debug('GitStoreBackend: read failed: ' + String(err));
             return null;
@@ -60,7 +60,7 @@ export class GitStoreBackend implements StoreBackend {
         const full = path.join(this.fullPath, relPath);
         try {
             fs.mkdirSync(path.dirname(full), { recursive: true });
-            fs.writeFileSync(full, data);
+            fs.writeFileSync(path.resolve(full), data);
         } catch (err) {
             const msg = String(err);
             throw new Error(`GitStoreBackend: falha ao escrever ${relPath} — ${msg}`, {
@@ -94,13 +94,13 @@ export class FsStoreBackend implements StoreBackend {
     constructor(private readonly baseDir: string) {}
 
     init(): void {
-        fs.mkdirSync(this.baseDir, { recursive: true });
+        fs.mkdirSync(path.resolve(this.baseDir), { recursive: true });
     }
 
     read(relPath: string): Buffer | null {
         const full = path.join(this.baseDir, relPath);
         try {
-            return fs.existsSync(full) ? fs.readFileSync(full) : null;
+            return fs.existsSync(path.resolve(full)) ? fs.readFileSync(full) : null;
         } catch (err) {
             rootLogger.debug('FsStoreBackend: read failed: ' + String(err));
             return null;
@@ -111,7 +111,7 @@ export class FsStoreBackend implements StoreBackend {
         const full = path.join(this.baseDir, relPath);
         try {
             fs.mkdirSync(path.dirname(full), { recursive: true });
-            fs.writeFileSync(full, data);
+            fs.writeFileSync(path.resolve(full), data);
         } catch (err) {
             const msg = String(err);
             throw new Error(`FsStoreBackend: falha ao escrever ${relPath} — ${msg}`, { cause: err });
@@ -149,7 +149,7 @@ export function detectStoreBackend(projectDir?: string): StoreBackend {
 
     try {
         const gitDir = path.join(xdgDir, '.git');
-        if (fs.existsSync(gitDir) || canExecGit()) {
+        if (fs.existsSync(path.resolve(gitDir)) || canExecGit()) {
             return new GitStoreBackend(xdgDir, '.');
         }
     } catch (err) {

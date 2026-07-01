@@ -5,6 +5,7 @@
  * that are compatible with shared/result_parser.ts's isCtrfFormat().
  */
 
+import path from 'path';
 import { existsSync, readFileSync, rmSync } from 'node:fs';
 import { resolve } from 'node:path';
 import { afterEach, beforeEach, describe, expect, it } from 'vitest';
@@ -160,7 +161,7 @@ describe('VitestCtrfReporter', () => {
     });
 
     function readReport(dir: string = TEST_OUTPUT_DIR, file: string = TEST_OUTPUT_FILE): CtrfData {
-        const content = readFileSync(resolve(dir, file), 'utf8');
+        const content = readFileSync(path.resolve(resolve(dir), file), 'utf8');
         return JSON.parse(content) as CtrfData;
     }
 

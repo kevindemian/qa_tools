@@ -68,7 +68,7 @@ describe('Handler contract (bidirectional)', () => {
             const filename = `case${String(num).padStart(2, '0')}.ts`;
             const filePath = path.join(caseDir, filename);
 
-            expect(fs.existsSync(filePath)).toBeTruthy();
+            expect(fs.existsSync(path.resolve(filePath))).toBeTruthy();
         }
     });
 
