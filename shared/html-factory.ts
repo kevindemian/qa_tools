@@ -47,7 +47,7 @@ export function buildThemeScript(theme?: string, storageKey?: string): string {
     const key = storageKey || 'qa-theme';
     return `<script id="qa-report-theme">
 (function() {
-    var theme = '${t}';
+    const theme = '${t}';
     function apply(t) {
         if (t === 'dark') { document.documentElement.classList.add('dark'); }
         else if (t === 'light') { document.documentElement.classList.remove('dark'); }
@@ -55,10 +55,10 @@ export function buildThemeScript(theme?: string, storageKey?: string): string {
     }
     apply(theme);
 })();
-var _toggleTheme = function toggleTheme() {
-    var html = document.documentElement;
+const _toggleTheme = function toggleTheme() {
+    const html = document.documentElement;
     html.classList.toggle('dark');
-    var isDark = html.classList.contains('dark');
+    const isDark = html.classList.contains('dark');
     try { localStorage.setItem('${key}', isDark ? 'dark' : 'light'); } catch {/* localStorage unavailable — non-critical */}
 };
 </script>`;

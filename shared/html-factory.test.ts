@@ -118,7 +118,7 @@ describe('BuildThemeScript', () => {
     it('defaults theme to system', () => {
         const script = buildThemeScript();
 
-        expect(script).toContain("var theme = 'system'");
+        expect(script).toContain("const theme = 'system'");
     });
 
     it('generates a script tag', () => {
