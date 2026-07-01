@@ -3,8 +3,6 @@ import fs from 'fs';
 import os from 'os';
 import { nonNull, nullAs } from './test-utils.js';
 import {
-    parseMochawesome,
-    parseCypressResults,
     parseCtrfResults,
     parseTestResults,
     parseTestResultsFile,
@@ -44,9 +42,9 @@ const SAMPLE_MOCHAWESOME = {
     ],
 };
 
-describe('ParseMochawesome', () => {
+describe('ParseTestResults (Mochawesome input)', () => {
     it('extracts all tests flat from nested suites', () => {
-        const result = parseMochawesome(SAMPLE_MOCHAWESOME);
+        const result = parseTestResults(SAMPLE_MOCHAWESOME);
 
         expect(result.tests).toHaveLength(4);
         expect(nonNull(result.tests[0]).title).toBe('TC01 - Login valido');
@@ -58,7 +56,7 @@ describe('ParseMochawesome', () => {
     });
 
     it('returns correct stats', () => {
-        const result = parseMochawesome(SAMPLE_MOCHAWESOME);
+        const result = parseTestResults(SAMPLE_MOCHAWESOME);
 
         expect(result.stats.passed).toBe(2);
         expect(result.stats.failed).toBe(1);
@@ -68,14 +66,14 @@ describe('ParseMochawesome', () => {
     });
 
     it('returns empty for null input', () => {
-        const result = parseMochawesome(nullAs<MochawesomeData>());
+        const result = parseTestResults(nullAs<MochawesomeData>());
 
         expect(result.tests).toStrictEqual([]);
         expect(result.stats.total).toBe(0);
     });
 
     it('returns empty for input without results', () => {
-        const result = parseMochawesome({});
+        const result = parseTestResults({});
 
         expect(result.tests).toStrictEqual([]);
     });
@@ -84,7 +82,7 @@ describe('ParseMochawesome', () => {
         const input = {
             results: [{ suites: [{ tests: [{ title: 'X', state: 'pending', duration: 0 }] }] }],
         };
-        const result = parseMochawesome(input);
+        const result = parseTestResults(input);
 
         expect(nonNull(result.tests[0]).state).toBe('skipped');
     });
@@ -106,7 +104,7 @@ describe('ParseMochawesome', () => {
                 },
             ],
         };
-        const result = parseMochawesome(input);
+        const result = parseTestResults(input);
 
         expect(result.tests).toHaveLength(1);
         expect(nonNull(result.tests[0]).title).toBe('TC01');
@@ -116,7 +114,7 @@ describe('ParseMochawesome', () => {
         const input = {
             results: [{ suites: [{ tests: [{ title: 'TC01' }] }] }],
         };
-        const result = parseMochawesome(input);
+        const result = parseTestResults(input);
 
         expect(nonNull(result.tests[0]).state).toBe('skipped');
     });
@@ -125,7 +123,7 @@ describe('ParseMochawesome', () => {
         const input = {
             results: [{ suites: [{ tests: [{ state: 'passed' }] }] }],
         };
-        const result = parseMochawesome(input);
+        const result = parseTestResults(input);
 
         expect(nonNull(result.tests[0]).title).toBe('');
         expect(nonNull(result.tests[0]).duration).toBe(0);
@@ -135,14 +133,14 @@ describe('ParseMochawesome', () => {
         const input = {
             results: [{}],
         };
-        const result = parseMochawesome(input);
+        const result = parseTestResults(input);
 
         expect(result.tests).toStrictEqual([]);
         expect(result.stats.total).toBe(0);
     });
 });
 
-describe('ParseCypressResults', () => {
+describe('ParseTestResultsFile (Mochawesome file)', () => {
     const tmpFile = path.join(os.tmpdir(), 'qa-test-mochawesome-' + Date.now() + '.json');
 
     beforeEach(() => {
@@ -158,14 +156,14 @@ describe('ParseCypressResults', () => {
     });
 
     it('reads JSON file and parses it', () => {
-        const result = parseCypressResults(tmpFile);
+        const result = parseTestResultsFile(tmpFile);
 
         expect(result.tests).toHaveLength(4);
         expect(result.stats.passed).toBe(2);
     });
 
     it('returns error object for nonexistent file', () => {
-        const result = parseCypressResults('/nonexistent-' + Date.now() + '.json');
+        const result = parseTestResultsFile('/nonexistent-' + Date.now() + '.json');
 
         expect(result.error).toContain('Arquivo não encontrado');
         expect(result.stats.total).toBe(0);
@@ -175,7 +173,7 @@ describe('ParseCypressResults', () => {
     it('returns error for invalid JSON content', () => {
         const invalidFile = tmpFile + '-invalid.json';
         fs.writeFileSync(invalidFile, 'not json', 'utf8');
-        const result = parseCypressResults(invalidFile);
+        const result = parseTestResultsFile(invalidFile);
 
         expect(result.error).toContain('Erro ao ler/parsear');
 
@@ -310,7 +308,7 @@ describe('ParseTestResults (dispatch)', () => {
         expect(result.stats.passed).toBe(2);
     });
 
-    it('routes Mochawesome format to parseMochawesome', () => {
+    it('routes Mochawesome format via parseTestResults', () => {
         const mochaInput = {
             stats: { duration: 100 },
             results: [{ suites: [{ tests: [{ title: 'Mocha Test', state: 'passed', duration: 100 }] }] }],
