@@ -24,7 +24,13 @@ export const invariantNoDuplicateTests: InvariantFn = (
         return [
             warn(
                 'T-10',
-                `Found ${pairs.length} highly similar test pair(s): ${pairs.map(([i, j, s]) => `test[${i}] ↔ test[${j}] (${s}% similarity)`).join('; ')}`,
+                `Found ${pairs.length} highly similar test pair(s): ${pairs
+                    .map(([i, j, s]) => {
+                        const pair = `test[${i}] ↔ test[${j}]`;
+                        const sim = `(${s}% similarity)`;
+                        return `${pair} ${sim}`;
+                    })
+                    .join('; ')}`,
             ),
         ];
     }

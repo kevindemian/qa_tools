@@ -32,7 +32,13 @@ export const invariantResultMatchesAction: InvariantFn = (
         return [
             warn(
                 'T-08',
-                `${mismatches.length} test(s) have expectedResult that may not match action: ${mismatches.map((m) => `test[${m.testIndex}] action=${m.action}`).join('; ')}`,
+                `${mismatches.length} test(s) have expectedResult that may not match action: ${mismatches
+                    .map((m) => {
+                        const test = `test[${m.testIndex}]`;
+                        const action = `action=${m.action}`;
+                        return `${test} ${action}`;
+                    })
+                    .join('; ')}`,
             ),
         ];
     }

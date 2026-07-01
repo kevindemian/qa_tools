@@ -27,7 +27,13 @@ export const invariantConcreteSteps: InvariantFn = (
         return [
             fail(
                 'T-04',
-                `Found ${violations.length} passive/vague step(s): ${violations.map((v) => `test[${v.testIndex}].steps[${v.stepIndex}]="${v.text.slice(0, 50)}..."`).join('; ')}`,
+                `Found ${violations.length} passive/vague step(s): ${violations
+                    .map((v) => {
+                        const step = `test[${v.testIndex}].steps[${v.stepIndex}]`;
+                        const text = `"${v.text.slice(0, 50)}..."`;
+                        return `${step}=${text}`;
+                    })
+                    .join('; ')}`,
             ),
         ];
     }
