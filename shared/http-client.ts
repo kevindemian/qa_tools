@@ -1,6 +1,7 @@
 /** HTTP client with automatic retry (GET/PUT), exponential backoff + jitter, and TLS config.
  * Uses axios under the hood. */
 import axios, { type AxiosInstance } from 'axios';
+import crypto from 'crypto';
 import { createAgent } from './tls.js';
 import { rootLogger } from './logger.js';
 import { extractHost, HostSemaphore } from './host-semaphore.js';
@@ -138,7 +139,8 @@ function _calculateRetryDelay(
     } else {
         waitMs = Math.min(RETRY_BASE_WAIT_MS * Math.pow(2, attempt - 1), RETRY_MAX_WAIT_MS);
     }
-    const jitter = Math.random() * RETRY_JITTER_MS;
+    const rand = crypto.getRandomValues(new Uint32Array(1));
+    const jitter = ((rand[0] ?? 0) / 0xffffffff) * RETRY_JITTER_MS;
     return waitMs + jitter;
 }
 

@@ -53,7 +53,7 @@ function grepLines(file: string, pattern: RegExp): Array<{ line: number; content
             }
         });
     } catch (err) {
-        rootLogger.warn('quality-check: skip unreadable file: ' + (err instanceof Error ? err.message : String(err)));
+        rootLogger.warn('quality-check: skip unreadable file: ' + String(err));
     }
     return results;
 }
@@ -113,10 +113,98 @@ export async function checkEslintBaseline(): Promise<CheckResult> {
         violations.push({
             file: 'scripts/quality-check.ts',
             line: 1,
-            content: `ESLint check failed: ${err instanceof Error ? err.message : String(err)}`,
+            content: `ESLint check failed: ${String(err)}`,
         });
         return { name: 'eslint (zero violations)', passed: false, violations };
     }
+}
+
+function parseRegisteredHandlers(indexSource: string): Set<string> {
+    const registered = new Set<string>();
+    for (const m of indexSource.matchAll(/'(\d+|d)'\s*:\s*\{/g)) {
+        registered.add(m[1] ?? '');
+    }
+    for (const m of indexSource.matchAll(/(?:\b)(d)\s*:\s*\{/g)) {
+        registered.add(m[1] ?? '');
+    }
+    return registered;
+}
+
+function parseMenuData(menuSource: string): {
+    menuIds: Set<string>;
+    aliasTargets: Set<string>;
+    categoryIds: Set<string>;
+} {
+    const menuIds = new Set<string>();
+    for (const m of menuSource.matchAll(/id:\s+'(\d+|d)'/g)) {
+        menuIds.add(m[1] ?? '');
+    }
+
+    const aliasTargets = new Set<string>();
+    for (const m of menuSource.matchAll(/['"]([\w-]+)['"]:\s*['"]([\w/]+)['"]/g)) {
+        if (m[2]) aliasTargets.add(m[2]);
+    }
+
+    const categoryIds = new Set<string>();
+    for (const m of menuSource.matchAll(/['"](reports|tests|bugreport|analytics|releases|config)['"]/g)) {
+        categoryIds.add(m[1] ?? '');
+    }
+
+    return { menuIds, aliasTargets, categoryIds };
+}
+
+function checkRegisteredWithoutMenu(
+    registered: Set<string>,
+    menuIds: Set<string>,
+    aliasTargets: Set<string>,
+    categoryIds: Set<string>,
+): Violation[] {
+    const violations: Violation[] = [];
+    const allowedExceptions = new Set(['0', 'docs', '/menu', '/help']);
+    for (const id of registered) {
+        if (!menuIds.has(id) && !aliasTargets.has(id) && !categoryIds.has(id) && !allowedExceptions.has(id)) {
+            violations.push({
+                file: 'jira_management/commands/index.ts',
+                line: 1,
+                content: `Handler '${id}' registered but has no SUB_MENUS entry or ALIAS`,
+            });
+        }
+    }
+    return violations;
+}
+
+function checkMenuWithoutHandler(registered: Set<string>, menuIds: Set<string>): Violation[] {
+    const violations: Violation[] = [];
+    for (const id of menuIds) {
+        if (id === '0') continue;
+        if (!registered.has(id)) {
+            violations.push({
+                file: 'jira_management/menu-data.ts',
+                line: 1,
+                content: `SUB_MENUS entry '${id}' has no registered handler`,
+            });
+        }
+    }
+    return violations;
+}
+
+function checkCaseFiles(indexSource: string): Violation[] {
+    const violations: Violation[] = [];
+    const caseFiles = readdirSync('jira_management/commands')
+        .filter((f) => /^case\d{2}\.ts$/.test(f))
+        .sort((a, b) => a.localeCompare(b));
+
+    for (const f of caseFiles) {
+        const id = f.replace('case', '').replace('.ts', '').replace(/^0/, '');
+        if (!indexSource.includes(`'${id}':`)) {
+            violations.push({
+                file: `jira_management/commands/${f}`,
+                line: 1,
+                content: `Handler file exists but is not registered in commands/index.ts`,
+            });
+        }
+    }
+    return violations;
 }
 
 export function checkHandlerConsistency(): CheckResult {
@@ -125,74 +213,21 @@ export function checkHandlerConsistency(): CheckResult {
         const menuSource = readFileSync('jira_management/menu-data.ts', 'utf-8');
         const indexSource = readFileSync('jira_management/commands/index.ts', 'utf-8');
 
-        const registered = new Set<string>();
-        for (const m of indexSource.matchAll(/'(\d+|d)'\s*:\s*\{/g)) {
-            registered.add(m[1] ?? '');
-        }
-        for (const m of indexSource.matchAll(/(?:\b)(d)\s*:\s*\{/g)) {
-            registered.add(m[1] ?? '');
-        }
+        const registered = parseRegisteredHandlers(indexSource);
+        const { menuIds, aliasTargets, categoryIds } = parseMenuData(menuSource);
 
-        const menuIds = new Set<string>();
-        for (const m of menuSource.matchAll(/id:\s+'(\d+|d)'/g)) {
-            menuIds.add(m[1] ?? '');
-        }
-
-        const aliasTargets = new Set<string>();
-        for (const m of menuSource.matchAll(/['"]([\w-]+)['"]:\s*['"]([\w/]+)['"]/g)) {
-            if (m[2]) aliasTargets.add(m[2]);
-        }
-
-        const categoryIds = new Set<string>();
-        for (const m of menuSource.matchAll(/['"](reports|tests|bugreport|analytics|releases|config)['"]/g)) {
-            categoryIds.add(m[1] ?? '');
-        }
-
-        const allowedExceptions = new Set(['0', 'docs', '/menu', '/help']);
-
-        for (const id of registered) {
-            if (!menuIds.has(id) && !aliasTargets.has(id) && !categoryIds.has(id) && !allowedExceptions.has(id)) {
-                violations.push({
-                    file: 'jira_management/commands/index.ts',
-                    line: 1,
-                    content: `Handler '${id}' registered but has no SUB_MENUS entry or ALIAS`,
-                });
-            }
-        }
-
-        for (const id of menuIds) {
-            if (id === '0') continue;
-            if (!registered.has(id)) {
-                violations.push({
-                    file: 'jira_management/menu-data.ts',
-                    line: 1,
-                    content: `SUB_MENUS entry '${id}' has no registered handler`,
-                });
-            }
-        }
-
-        /* Files → handlers */
-        const caseFiles = readdirSync('jira_management/commands')
-            .filter((f) => /^case\d{2}\.ts$/.test(f))
-            .sort((a, b) => a.localeCompare(b));
-
-        for (const f of caseFiles) {
-            const id = f.replace('case', '').replace('.ts', '').replace(/^0/, '');
-            if (!indexSource.includes(`'${id}':`)) {
-                violations.push({
-                    file: `jira_management/commands/${f}`,
-                    line: 1,
-                    content: `Handler file exists but is not registered in commands/index.ts`,
-                });
-            }
-        }
+        violations.push(
+            ...checkRegisteredWithoutMenu(registered, menuIds, aliasTargets, categoryIds),
+            ...checkMenuWithoutHandler(registered, menuIds),
+            ...checkCaseFiles(indexSource),
+        );
 
         return { name: '3-way handler ↔ menu ↔ alias consistency', passed: violations.length === 0, violations };
     } catch (err) {
         violations.push({
             file: 'scripts/quality-check.ts',
             line: 1,
-            content: `Handler check failed: ${err instanceof Error ? err.message : String(err)}`,
+            content: `Handler check failed: ${String(err)}`,
         });
         return { name: '3-way handler ↔ menu ↔ alias consistency', passed: false, violations };
     }
@@ -350,11 +385,23 @@ export function checkNonNullAssertion(): CheckResult {
                     f,
                 ),
         );
-    return checkNoPattern(
-        'non-null assertion (!) in .ts files',
-        /(?:\)|\]|\w+)\s*!\s*(?:\.|\[|;|,|\)|$|(?:\s+as\b))/,
-        files,
-    );
+    return checkNoPattern('non-null assertion (!) in .ts files', /[\w)\]]!(?:[.,;\s]|as\b|$)/, files);
+}
+
+function collectDepWallViolations(file: string, pattern: RegExp): Violation[] {
+    const violations: Violation[] = [];
+    for (const { line, content } of grepLines(file, pattern)) {
+        const m = pattern.exec(content);
+        const pkg = m?.[1];
+        if (pkg && pkg !== 'vitest' && !isBuiltin(pkg)) {
+            violations.push({
+                file,
+                line,
+                content: `Direct external import '${pkg}' — must go through shared/deps.ts (DepWal)`,
+            });
+        }
+    }
+    return violations;
 }
 
 export function checkDepWall(): CheckResult {
@@ -365,28 +412,10 @@ export function checkDepWall(): CheckResult {
     for (const dir of dirs) {
         const files = globSync(`${dir}/**/*.ts`, { ignore: ['node_modules/**'] });
         for (const file of files) {
-            for (const { line, content } of grepLines(file, extPkgImport)) {
-                const m = extPkgImport.exec(content);
-                const pkg = m?.[1];
-                if (pkg && pkg !== 'vitest' && !isBuiltin(pkg)) {
-                    violations.push({
-                        file,
-                        line,
-                        content: `Direct external import '${pkg}' — must go through shared/deps.ts (DepWal)`,
-                    });
-                }
-            }
-            for (const { line, content } of grepLines(file, requirePkg)) {
-                const m = requirePkg.exec(content);
-                const pkg = m?.[1];
-                if (pkg && pkg !== 'vitest' && !isBuiltin(pkg)) {
-                    violations.push({
-                        file,
-                        line,
-                        content: `Direct external import '${pkg}' — must go through shared/deps.ts (DepWal)`,
-                    });
-                }
-            }
+            violations.push(
+                ...collectDepWallViolations(file, extPkgImport),
+                ...collectDepWallViolations(file, requirePkg),
+            );
         }
     }
     return {
@@ -429,7 +458,7 @@ export function checkIntegrity(): CheckResult {
         violations.push({
             file: 'scripts/quality-check.ts',
             line: 1,
-            content: `Integrity check failed: ${err instanceof Error ? err.message : String(err)}`,
+            content: `Integrity check failed: ${String(err)}`,
         });
     }
     return { name: 'quality-check auto-integrity', passed: violations.length === 0, violations };
@@ -505,7 +534,7 @@ export async function main(): Promise<void> {
 const isMainImport = process.argv[1]?.replace(/\\/g, '/').endsWith('/quality-check.ts');
 if (isMainImport) {
     main().catch((err: unknown) => {
-        process.stderr.write(err instanceof Error ? err.message : String(err));
+        process.stderr.write(String(err));
         gracefulExit(ExitCode.ERROR);
     });
 }

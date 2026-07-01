@@ -145,7 +145,7 @@ export function detectFramework(packageJsonPath?: string): DetectionResult {
 export function extractRepoFromGit(): { owner: string; repo: string } {
     try {
         const gitConfig = fs.readFileSync(process.cwd() + '/.git/config', 'utf8');
-        const match = /url\s*=\s*.*?(?:github\.com|gitlab\.com)[/:]([^/]+)\/([^/\s]+?)(?:\.git)?\s/.exec(gitConfig);
+        const match = /url\s*=\s*\S+(?:github\.com|gitlab\.com)[/:]([^/]+)\/([^/\s]+?)(?:\.git)?\s/.exec(gitConfig);
         if (match) {
             const owner = String(match[1] ?? '');
             const repo = String(match[2] ?? '');

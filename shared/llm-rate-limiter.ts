@@ -3,6 +3,7 @@
  * Tracks request timestamps per tier and enforces a sliding-window limit.
  */
 import type { LlmTier } from './types.js';
+import crypto from 'crypto';
 import { LlmRateLimitError } from './errors.js';
 import Config from './config.js';
 
@@ -17,7 +18,8 @@ function getRateLimitPerTier(): number {
 
 /** Random jitter: 0..waitMs (for exponential backoff). */
 export function jitter(waitMs: number): number {
-    return Math.round(waitMs * Math.random());
+    const rand = crypto.getRandomValues(new Uint32Array(1));
+    return Math.round(waitMs * ((rand[0] ?? 0) / 0xffffffff));
 }
 
 /** Throws LlmRateLimitError if the tier has exceeded its request quota in the current window. */

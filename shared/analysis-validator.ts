@@ -44,7 +44,7 @@ function extractFailedTestTitles(input: string): string[] {
     const lines = input.split('\n');
     const titles: string[] = [];
     for (const line of lines) {
-        const match = /\d+\.\s+\[(?:failed|error|FAILED|ERROR)\]\s+(.+)/i.exec(line);
+        const match = /^\d+\.\s+\[(?:failed|error)\]\s+(.+)/i.exec(line);
         if (match && match[1]) {
             titles.push(match[1].trim());
         }

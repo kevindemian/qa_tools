@@ -399,6 +399,9 @@ describe('Config', () => {
 
         it('config.set can override a previously set value', () => {
             Config.set('jiraBaseUrl', 'https://first.url');
+
+            expect(Config.get('jiraBaseUrl')).toBe('https://first.url');
+
             Config.set('jiraBaseUrl', 'https://second.url');
 
             expect(Config.get('jiraBaseUrl')).toBe('https://second.url');
