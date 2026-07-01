@@ -59,7 +59,7 @@ const _toggleTheme = function toggleTheme() {
     const html = document.documentElement;
     html.classList.toggle('dark');
     const isDark = html.classList.contains('dark');
-    try { localStorage.setItem('${key}', isDark ? 'dark' : 'light'); } catch {/* localStorage unavailable — non-critical */}
+    try { localStorage.setItem('${key}', isDark ? 'dark' : 'light'); } catch (e) { console.debug('Theme save skipped:', e); }
 };
 </script>`;
 }
