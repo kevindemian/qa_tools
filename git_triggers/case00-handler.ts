@@ -15,13 +15,16 @@ export async function handleSetupWizard(): Promise<boolean> {
     info('Iniciando wizard de configuração de CI/CD...');
     divider();
 
+    let success = false;
     try {
         await setupMain();
+        success = true;
     } catch (err: unknown) {
         printError('Erro ao executar setup wizard', err);
-        return false;
     }
 
-    pushHistory('setup-wizard', 'wizard concluído', 'ok');
+    if (success) {
+        pushHistory('setup-wizard', 'wizard concluído', 'ok');
+    }
     return false;
 }

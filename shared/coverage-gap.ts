@@ -4,6 +4,7 @@ import { rootLogger } from './logger.js';
 import { loadMetrics } from './metrics.js';
 import type {
     JiraIssueFields,
+    JiraIssueLink,
     JiraResourceLike,
     CoverageSnapshot,
     CoverageGapItem,
@@ -24,7 +25,7 @@ async function fetchTotalCount(jiraResource: JiraResourceLike, jql: string): Pro
         const response = await jiraResource.searchJiraIssues(jql, 1);
         return response.total;
     } catch (err) {
-        const msg = err instanceof Error ? err.message : String(err);
+        const msg = String(err);
         rootLogger.error('Failed to count issues: ' + msg);
         return 0;
     }
@@ -51,9 +52,31 @@ async function collectAllPages(
 
         return allIssues;
     } catch (err) {
-        const msg = err instanceof Error ? err.message : String(err);
+        const msg = String(err);
         rootLogger.error('Failed to fetch issues: ' + msg);
         return [];
+    }
+}
+
+function resolveLinkedIssueKey(link: JiraIssueLink, testKey: string): string | undefined {
+    const linkedKey = link.inwardIssue?.key === testKey ? link.outwardIssue?.key : link.inwardIssue?.key;
+    return typeof linkedKey === 'string' ? linkedKey : undefined;
+}
+
+function collectTestLinksForIssue(
+    testIssue: { key: string; fields: Record<string, unknown> },
+    issueKeys: string[],
+    linkMap: Map<string, string[]>,
+): void {
+    const testKey = testIssue.key;
+    const testLinks = (testIssue.fields as JiraIssueFields)['issuelinks'];
+    if (!Array.isArray(testLinks)) return;
+    for (const link of testLinks) {
+        const linkedKey = resolveLinkedIssueKey(link, testKey);
+        if (linkedKey !== undefined && issueKeys.includes(linkedKey)) {
+            if (!linkMap.has(linkedKey)) linkMap.set(linkedKey, []);
+            linkMap.get(linkedKey)?.push(testKey);
+        }
     }
 }
 
@@ -67,23 +90,11 @@ async function fetchLinkedTestsBatch(
         if (chunk.length === 0) return linkMap;
         const jql = `issueType = Test AND issue in linkedIssuesOf("${chunk.join('","')}")`;
         const response = await jiraResource.searchJiraIssues(jql, 500);
-
         for (const test of response.issues) {
-            const testKey = test.key;
-            const testLinks = (test.fields as JiraIssueFields)['issuelinks'];
-            if (!Array.isArray(testLinks)) continue;
-            for (const link of testLinks) {
-                const inward = link.inwardIssue;
-                const outward = link.outwardIssue;
-                const linkedKey = inward?.key === testKey ? outward?.key : inward?.key;
-                if (typeof linkedKey === 'string' && issueKeys.includes(linkedKey)) {
-                    if (!linkMap.has(linkedKey)) linkMap.set(linkedKey, []);
-                    linkMap.get(linkedKey)?.push(testKey);
-                }
-            }
+            collectTestLinksForIssue(test, issueKeys, linkMap);
         }
     } catch (err) {
-        const msg = err instanceof Error ? err.message : String(err);
+        const msg = String(err);
         rootLogger.error('Failed to fetch linked tests: ' + msg);
     }
     return linkMap;

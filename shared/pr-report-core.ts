@@ -207,7 +207,7 @@ function buildFlakySection(): string {
             '',
         ].join('\n');
     } catch (err) {
-        rootLogger.warn(`buildFlakySection error: ${err instanceof Error ? err.message : String(err)}`);
+        rootLogger.warn(`buildFlakySection error: ${String(err)}`);
         return '';
     }
 }
@@ -306,7 +306,102 @@ function writeToJobSummary(stats: PrReportStats, htmlArtifactUrl?: string): void
         fs.writeFileSync(stepSummaryPath, lines.join('\n'), 'utf8');
         rootLogger.info('Job summary written to $GITHUB_STEP_SUMMARY');
     } catch (err) {
-        rootLogger.warn(`Failed to write job summary: ${err instanceof Error ? err.message : String(err)}`);
+        rootLogger.warn(`Failed to write job summary: ${String(err)}`);
+    }
+}
+
+function persistCurrentRun(tests: FlatTest[], stats: PrReportStats, project?: string): void {
+    if (!project) return;
+    const parseResult: ParseResult = {
+        tests,
+        stats: {
+            passed: stats.passed,
+            failed: stats.failed,
+            skipped: stats.skipped,
+            total: stats.total,
+            duration: stats.duration,
+        },
+    };
+    saveParseResult(project, parseResult);
+}
+
+function resolveCiUrls(): { workflowUrl?: string; artifactUrl?: string } {
+    const ghServer = process.env['GITHUB_SERVER_URL'];
+    const ghRepo = process.env['GITHUB_REPOSITORY'];
+    const ghRunId = process.env['GITHUB_RUN_ID'];
+    const url = ghServer && ghRepo && ghRunId ? `${ghServer}/${ghRepo}/actions/runs/${ghRunId}` : undefined;
+    return url ? { workflowUrl: url, artifactUrl: `${url}?pr=1#artifacts` } : {};
+}
+
+async function handleQualityGate(
+    healthScore: ReturnType<typeof calculateHealthScore>,
+    artifactUrl?: string,
+): Promise<string | undefined> {
+    try {
+        const qgResult = runQualityGate();
+        const gradeStr = healthScore.grade.replace(/_/g, ' ').toUpperCase();
+        const checkSummary = buildQGCHeckSummary(qgResult, gradeStr, artifactUrl);
+
+        await createCheckRun({
+            name: 'Quality Gate',
+            status: 'completed',
+            conclusion: qgResult.overall === 'pass' ? 'success' : 'failure',
+            output: {
+                title: `Quality Gate: ${qgResult.overall.toUpperCase()} (Score: ${qgResult.score}/100) | Grade: ${gradeStr}`,
+                summary: checkSummary,
+            },
+        });
+
+        return buildQualityGateSection(qgResult);
+    } catch (err) {
+        rootLogger.warn(`createCheckRun error: ${String(err)}`);
+        return undefined;
+    }
+}
+
+function generateHtmlReportFile(
+    tests: FlatTest[],
+    stats: PrReportStats,
+    options: PrReportCoreOptions,
+    store: ReturnType<typeof loadMetrics>,
+    coverageResult: ReturnType<typeof resolveCoverage>,
+    healthScore: ReturnType<typeof calculateHealthScore>,
+    workflowUrl?: string,
+): string | undefined {
+    try {
+        const executed = stats.passed + stats.failed;
+        const passRate = executed > 0 ? (stats.passed / executed) * 100 : 0;
+        const flakyEntries = calculateFlakiness(store, MIN_FLAKINESS_RUNS);
+        const flakinessMap: Record<string, number> = {};
+        for (const entry of flakyEntries) {
+            flakinessMap[entry.title] = entry.rate;
+        }
+
+        const ghBranch = process.env['GITHUB_REF_NAME'];
+        const coverageSource = coverageResult?.source ?? 'none';
+        const branchLabel = ghBranch ? ` (${ghBranch})` : '';
+        const htmlOptions: ReportOptions = {
+            title: `QA Tools — PR Report${branchLabel}`,
+            qualityGate: Math.round(passRate),
+            healthScore,
+            trends: getTrends(store),
+            includeChart: true,
+            coverageSource,
+            ...(workflowUrl ? { ciUrl: workflowUrl } : {}),
+            ...(ghBranch ? { branch: ghBranch } : {}),
+            ...(Object.keys(flakinessMap).length > 0 ? { flakinessMap } : {}),
+            ...(options.diffComparison ? { diffComparison: options.diffComparison } : {}),
+        };
+
+        const html = generateHtmlReport(tests, htmlOptions);
+        const htmlPath = options.htmlOutputPath ?? 'reports/pr-report.html';
+        fs.mkdirSync('reports', { recursive: true });
+        fs.writeFileSync(htmlPath, html, 'utf8');
+        rootLogger.info(`HTML report generated: ${htmlPath} (${html.length} bytes)`);
+        return htmlPath;
+    } catch (err) {
+        rootLogger.error(`Failed to generate HTML report: ${String(err)}`);
+        return undefined;
     }
 }
 
@@ -349,128 +444,45 @@ export async function generatePrReport(options: PrReportCoreOptions): Promise<Pr
     const { tests, stats } = options;
     validatePrReportStats(tests, stats);
 
-    // Persist current run to MetricsStore so health score includes it
-    if (options.project) {
-        const parseResult: ParseResult = {
-            tests,
-            stats: {
-                passed: stats.passed,
-                failed: stats.failed,
-                skipped: stats.skipped,
-                total: stats.total,
-                duration: stats.duration,
-            },
-        };
-        saveParseResult(options.project, parseResult);
-    }
+    persistCurrentRun(tests, stats, options.project);
 
-    // Load metrics store for health score, trends, flaky
     const store = loadMetrics();
-
-    // Resolve coverage from best available source
     const coverageResult = resolveCoverage();
     const healthConfig = coverageResult ? { coverageOverride: coverageResult.coveragePct } : {};
     const healthScore = calculateHealthScore(store, healthConfig);
 
-    const ghServer = process.env['GITHUB_SERVER_URL'];
-    const ghRepo = process.env['GITHUB_REPOSITORY'];
-    const ghRunId = process.env['GITHUB_RUN_ID'];
-    const ghBranch = process.env['GITHUB_REF_NAME'];
-    const workflowUrl = ghServer && ghRepo && ghRunId ? `${ghServer}/${ghRepo}/actions/runs/${ghRunId}` : undefined;
-    const artifactUrl = workflowUrl ? `${workflowUrl}?pr=1#artifacts` : undefined;
+    const { workflowUrl, artifactUrl } = resolveCiUrls();
 
     const sections: string[] = [];
-
-    // 0. CI context (D2 FIX — makes CI environment explicit when running in CI)
-    const ciEnvForSection = options.ciEnv ?? getCiEnv();
-    sections.push(buildCiContextSection(ciEnvForSection, stats));
-
-    // 1. Summary table
+    sections.push(buildCiContextSection(options.ciEnv ?? getCiEnv(), stats));
     sections.push(buildSummaryTable(stats));
 
-    // 2. Failed tests table
     const failSection = buildFailureTable(tests);
     if (failSection) sections.push(failSection);
 
-    // 3. AI analysis
     if (!options.skipAi) {
         sections.push(buildAiAnalysisSection());
     }
 
-    // 4. Quality gate
     if (!options.skipQuality) {
-        try {
-            const qgResult = runQualityGate();
-            const gradeStr = healthScore.grade.replace(/_/g, ' ').toUpperCase();
-            const checkSummary = buildQGCHeckSummary(qgResult, gradeStr, artifactUrl);
-
-            sections.push(buildQualityGateSection(qgResult));
-
-            await createCheckRun({
-                name: 'Quality Gate',
-                status: 'completed',
-                conclusion: qgResult.overall === 'pass' ? 'success' : 'failure',
-                output: {
-                    title: `Quality Gate: ${qgResult.overall.toUpperCase()} (Score: ${qgResult.score}/100) | Grade: ${gradeStr}`,
-                    summary: checkSummary,
-                },
-            });
-        } catch (err) {
-            rootLogger.warn(`createCheckRun error: ${err instanceof Error ? err.message : String(err)}`);
-        }
+        const qgSection = await handleQualityGate(healthScore, artifactUrl);
+        if (qgSection) sections.push(qgSection);
     }
 
-    // 5. Flaky detection
     if (!options.skipFlaky) {
         const flakySection = buildFlakySection();
         if (flakySection) sections.push(flakySection);
     }
 
-    // 6. Generate HTML report
-    const executed = stats.passed + stats.failed;
-    const passRate = executed > 0 ? (stats.passed / executed) * 100 : 0;
-    let htmlPath: string | undefined;
+    const htmlPath = generateHtmlReportFile(tests, stats, options, store, coverageResult, healthScore, workflowUrl);
 
-    try {
-        const flakyEntries = calculateFlakiness(store, MIN_FLAKINESS_RUNS);
-        const flakinessMap: Record<string, number> = {};
-        for (const entry of flakyEntries) {
-            flakinessMap[entry.title] = entry.rate;
-        }
-
-        const coverageSource = coverageResult?.source ?? 'none';
-        const branchLabel = ghBranch ? ` (${ghBranch})` : '';
-        const htmlOptions: ReportOptions = {
-            title: `QA Tools — PR Report${branchLabel}`,
-            qualityGate: Math.round(passRate),
-            healthScore,
-            trends: getTrends(store),
-            includeChart: true,
-            coverageSource,
-            ...(workflowUrl ? { ciUrl: workflowUrl } : {}),
-            ...(ghBranch ? { branch: ghBranch } : {}),
-            ...(Object.keys(flakinessMap).length > 0 ? { flakinessMap } : {}),
-            ...(options.diffComparison ? { diffComparison: options.diffComparison } : {}),
-        };
-
-        const html = generateHtmlReport(tests, htmlOptions);
-        htmlPath = options.htmlOutputPath ?? 'reports/pr-report.html';
-        fs.mkdirSync('reports', { recursive: true });
-        fs.writeFileSync(htmlPath, html, 'utf8');
-        rootLogger.info(`HTML report generated: ${htmlPath} (${html.length} bytes)`);
-    } catch (err) {
-        rootLogger.error(`Failed to generate HTML report: ${err instanceof Error ? err.message : String(err)}`);
-    }
-
-    // 7. Footer
     sections.push(buildFooter(artifactUrl, workflowUrl, healthScore));
 
-    // 8. Write to GitHub Actions Job Summary (PRUX — inline visualization)
-    // Uses stats directly — independent of the PR comment sections array.
     const htmlArtifactUrl = workflowUrl ? `${workflowUrl}?pr=1#artifacts` : undefined;
     writeToJobSummary(stats, htmlArtifactUrl);
 
-    // 9. Post PR comment
+    const executed = stats.passed + stats.failed;
+    const passRate = executed > 0 ? (stats.passed / executed) * 100 : 0;
     const commentBody = sections.join('\n');
     const postResult = await postPrComment(commentBody);
 
@@ -713,7 +725,7 @@ export async function main(): Promise<void> {
 const runningEntry = process.argv[1]?.replace(/\\/g, '/');
 if (!process.env['VITEST'] && runningEntry?.includes('pr-report-core')) {
     main().catch((err) => {
-        rootLogger.error(`pr-report failed: ${err instanceof Error ? err.message : String(err)}`);
+        rootLogger.error(`pr-report failed: ${String(err)}`);
         process.exit(1);
     });
 }

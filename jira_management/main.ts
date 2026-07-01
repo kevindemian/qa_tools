@@ -81,7 +81,7 @@ async function showGapBadge(jiraResource: JiraResource, project: string): Promis
         _badgeCache.set(cacheKey, { totalCount, timestamp: Date.now() });
         _displayBadge(totalCount, project);
     } catch (err) {
-        rootLogger.debug('Gap badge fetch failed: ' + (err instanceof Error ? err.message : String(err)));
+        rootLogger.debug('Gap badge fetch failed: ' + String(err));
     }
 }
 
@@ -168,7 +168,7 @@ async function initializeSession() {
             prompt('Nome do projeto Jira', { default: state.lastProject || default_project })
         ).toUpperCase();
     } catch (err) {
-        rootLogger.debug('Prompt de projeto falhou: ' + (err instanceof Error ? err.message : String(err)));
+        rootLogger.debug('Prompt de projeto falhou: ' + String(err));
         warn('Não foi possível obter o nome do projeto. Usando o último projeto da sessão anterior.');
         ctx.project_name = (state.lastProject || default_project).toUpperCase();
     }
@@ -178,7 +178,7 @@ async function initializeSession() {
         try {
             await jiraResource.searchJiraIssues(jql, 1);
         } catch (err) {
-            rootLogger.debug('Jira project validation failed: ' + (err instanceof Error ? err.message : String(err)));
+            rootLogger.debug('Jira project validation failed: ' + String(err));
             warn('Projeto "' + ctx.project_name + '" não encontrado no Jira. Verifique se o nome está correto.');
         }
     }
@@ -262,38 +262,54 @@ function _shouldNoClear(): boolean {
     return process.argv.includes('--no-clear') || Config.get<boolean>('qaToolsNoClear') === true;
 }
 
+function _clearScreenIfNeeded(): void {
+    if (process.stdout.isTTY && !_shouldNoClear()) {
+        process.stdout.write('\x1b[2J\x1b[H');
+    }
+}
+
+function _classifyChoice(choice: string | null): { action: string; category?: string } {
+    if (choice === null) return { action: 'skip' };
+    if (choice === '__exit__') return { action: 'exit' };
+    if (choice === '__back__') return { action: 'back' };
+    if (choice === '__skip__' || choice === '') return { action: 'skip' };
+    if (CATEGORY_IDS.has(choice)) return { action: 'category', category: choice };
+    return { action: 'continue' };
+}
+
 async function runMainLoop(res: RuntimeResources): Promise<void> {
     const { ctx, printSessionSummary } = res;
     let currentLevel = 'main';
     clearBreadcrumbs();
     for (;;) {
-        if (process.stdout.isTTY && !_shouldNoClear()) {
-            process.stdout.write('\x1b[2J\x1b[H');
-        }
+        _clearScreenIfNeeded();
         const choice = await getAndResolveChoice(currentLevel, ctx);
-        if (choice === '__exit__') {
+        const classified = _classifyChoice(choice);
+
+        if (classified.action === 'exit') {
             clearBreadcrumbs();
             title('Até logo!');
             printSessionSummary();
             return;
         }
-        if (choice === '__back__') {
+        if (classified.action === 'back') {
             popBreadcrumb();
             currentLevel = 'main';
             info('Voltando ao menu principal...');
             continue;
         }
-        if (choice === '__skip__') continue;
-        if (!choice) continue;
+        if (classified.action === 'skip') continue;
 
-        if (CATEGORY_IDS.has(choice)) {
-            const title: unknown = Reflect.get(CATEGORY_TITLES, choice);
-            pushBreadcrumb((typeof title === 'string' ? title : undefined) || choice);
-            currentLevel = choice;
+        if (classified.action === 'category' && classified.category) {
+            const catTitle: unknown = Reflect.get(CATEGORY_TITLES, classified.category);
+            pushBreadcrumb((typeof catTitle === 'string' ? catTitle : undefined) || classified.category);
+            currentLevel = classified.category;
             continue;
         }
 
-        await _executeChoice(choice, res);
+        if (choice !== null) {
+            await _executeChoice(choice, res);
+        }
     }
 }
 
@@ -327,7 +343,7 @@ async function main(): Promise<void> {
         const health = calculateHealthScore(store);
         healthScore = { score: health.overall, grade: health.grade };
     } catch (err) {
-        rootLogger.debug('Health score failed: ' + (err instanceof Error ? err.message : String(err)));
+        rootLogger.debug('Health score failed: ' + String(err));
     }
     await showSplash(getStatePath(), undefined, undefined, undefined, healthScore);
     rootLogger.writeFileOnly('INFO', 'Sessão iniciada');
@@ -338,7 +354,7 @@ async function main(): Promise<void> {
     try {
         await maybeRunFirstRunWizard();
     } catch (err) {
-        rootLogger.debug('Setup wizard failed: ' + (err instanceof Error ? err.message : String(err)));
+        rootLogger.debug('Setup wizard failed: ' + String(err));
     }
 
     // Early SIGINT handler: protege contra crash durante prompts síncronos
