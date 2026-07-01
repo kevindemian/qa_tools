@@ -145,14 +145,14 @@ export function _trackUsage(data: Record<string, unknown>, providerKey: string, 
     const usageEntry = dataEntries.find(([k]) => k === 'usage');
     const usageResult = LlmUsageSchema.safeParse(usageEntry?.[1]);
     if (usageResult.success) {
-        promptTokens = usageResult.data.prompt_tokens || 0;
-        completionTokens = usageResult.data.completion_tokens || 0;
+        promptTokens = usageResult.data.prompt_tokens ?? 0;
+        completionTokens = usageResult.data.completion_tokens ?? 0;
     } else {
         const metaEntry = dataEntries.find(([k]) => k === 'usageMetadata');
         const metaResult = LlmUsageMetaSchema.safeParse(metaEntry?.[1]);
         if (metaResult.success) {
-            promptTokens = metaResult.data.promptTokenCount || 0;
-            completionTokens = metaResult.data.candidatesTokenCount || 0;
+            promptTokens = metaResult.data.promptTokenCount ?? 0;
+            completionTokens = metaResult.data.candidatesTokenCount ?? 0;
         }
     }
     _llmMetrics.totalPromptTokens += promptTokens;

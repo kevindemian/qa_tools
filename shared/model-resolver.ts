@@ -149,10 +149,10 @@ export async function initModelResolver(): Promise<void> {
 }
 
 function sortByFitness(a: RegistryModel, b: RegistryModel): number {
-    const ctxCmp = (b.context || 0) - (a.context || 0);
+    const ctxCmp = b.context - a.context;
     if (ctxCmp !== 0) return ctxCmp;
-    const costA = (a.costPer1kPrompt || 0) + (a.costPer1kCompletion || 0);
-    const costB = (b.costPer1kPrompt || 0) + (b.costPer1kCompletion || 0);
+    const costA = a.costPer1kPrompt + a.costPer1kCompletion;
+    const costB = b.costPer1kPrompt + b.costPer1kCompletion;
     if (costA !== costB) return costA - costB;
     const latA = getDefaultMetrics().getModelAvgLatency(a.id);
     const latB = getDefaultMetrics().getModelAvgLatency(b.id);
@@ -162,9 +162,9 @@ function sortByFitness(a: RegistryModel, b: RegistryModel): number {
 function pick(m: RegistryModel): ResolveResult {
     const base = {
         id: m.id,
-        context: m.context || 0,
-        costPer1kPrompt: m.costPer1kPrompt || 0,
-        costPer1kCompletion: m.costPer1kCompletion || 0,
+        context: m.context,
+        costPer1kPrompt: m.costPer1kPrompt,
+        costPer1kCompletion: m.costPer1kCompletion,
         source: 'registry' as const,
     };
     if (m.capabilities) return { ...base, capabilities: m.capabilities };

@@ -101,7 +101,7 @@ export function assignTierHints(models: RegistryModel[]): RegistryModel[] {
         }
     }
 
-    const sortCtx = (a: RegistryModel, b: RegistryModel) => (b.context || 0) - (a.context || 0);
+    const sortCtx = (a: RegistryModel, b: RegistryModel) => b.context - a.context;
     high.sort(sortCtx);
     medium.sort(sortCtx);
     low.sort(sortCtx);

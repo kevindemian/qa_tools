@@ -217,7 +217,7 @@ export function calculateFlakyRate(store: MetricsStore, minRuns = 2): number {
     for (const run of store.runs) {
         for (const t of run.tests) {
             if (t.state === 'skipped') continue;
-            testRunCounts.set(t.title, (testRunCounts.get(t.title) || 0) + 1);
+            testRunCounts.set(t.title, (testRunCounts.get(t.title) ?? 0) + 1);
         }
     }
 

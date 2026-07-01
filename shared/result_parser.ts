@@ -278,7 +278,7 @@ export function parseCtrfResults(jsonData: CtrfData): ParseResult {
         return {
             title: t.name || '',
             state,
-            duration: t.duration || 0,
+            duration: t.duration,
             ...(t.message !== undefined ? { error: t.message } : {}),
             ...(t.suite ? { fullTitle: t.suite + ' > ' + (t.name || '') } : {}),
         };
