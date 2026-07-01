@@ -1,6 +1,8 @@
 /** Integration tests for friendly error paths (Sprint W — Caminho Amigável).
  *  Validates that missing config/env vars trigger setup wizard offers.
  *  Uses nock for HTTP isolation and confirms the user is never left without an actionable message. */
+import os from 'os';
+import path from 'path';
 import nock from 'nock';
 import { offerEnvSetup } from '../shared/cli_base.js';
 import { getProjects } from '../git_triggers/session-state.js';
@@ -43,7 +45,7 @@ vi.mock('../shared/state', () => ({
     load: vi.fn(() => ({})),
     loadTypedState: vi.fn<() => object>(),
     update: vi.fn(),
-    getStatePath: vi.fn(() => '/tmp/state.json'),
+    getStatePath: vi.fn(() => path.join(os.tmpdir(), 'state.json')),
 }));
 
 vi.mock('../shared/config', () => ({

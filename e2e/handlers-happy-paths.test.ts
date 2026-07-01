@@ -577,12 +577,13 @@ describe('Handlers Happy Paths', () => {
         it('sets cypress dir in state', async () => {
             expect.hasAssertions();
 
-            getPrompt().ask.mockResolvedValueOnce('/tmp/cypress');
+            const tmpCypress = path.join(os.tmpdir(), 'cypress');
+            getPrompt().ask.mockResolvedValueOnce(tmpCypress);
             const c = buildContext();
             const mod = case14;
             await mod.handler(c);
 
-            expect(c.pushHistory).toHaveBeenCalledWith('config-tests', '/tmp/cypress', 'ok');
+            expect(c.pushHistory).toHaveBeenCalledWith('config-tests', tmpCypress, 'ok');
             expect(stateModule.update).toHaveBeenCalledWith(expect.any(Function));
         });
     });
@@ -652,12 +653,13 @@ describe('Handlers Happy Paths', () => {
         it('sets json dir', async () => {
             expect.hasAssertions();
 
-            getPrompt().ask.mockResolvedValueOnce('/tmp/json');
+            const tmpJson = path.join(os.tmpdir(), 'json');
+            getPrompt().ask.mockResolvedValueOnce(tmpJson);
             const c = buildContext();
             const mod = case16;
             await mod.handler(c);
 
-            expect(c.pushHistory).toHaveBeenCalledWith('config-json-dir', '/tmp/json', 'ok');
+            expect(c.pushHistory).toHaveBeenCalledWith('config-json-dir', tmpJson, 'ok');
         });
     });
 
