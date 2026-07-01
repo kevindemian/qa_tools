@@ -25,7 +25,13 @@ export const invariantVerifiableResult: InvariantFn = (
         return [
             fail(
                 'T-05',
-                `Found ${vagueResults.length} vague expectedResult(s): ${vagueResults.map((v) => `test[${v.testIndex}]="${v.text.slice(0, 50)}..."`).join('; ')}`,
+                `Found ${vagueResults.length} vague expectedResult(s): ${vagueResults
+                    .map((v) => {
+                        const test = `test[${v.testIndex}]`;
+                        const text = `"${v.text.slice(0, 50)}..."`;
+                        return `${test}=${text}`;
+                    })
+                    .join('; ')}`,
             ),
         ];
     }

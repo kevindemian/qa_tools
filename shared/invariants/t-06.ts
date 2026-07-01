@@ -24,7 +24,13 @@ export const invariantUniqueTitles: InvariantFn = (
         return [
             fail(
                 'T-06',
-                `Duplicate titles found: ${duplicates.map(([title, indices]) => `"${title}" at indices [${indices.join(',')}]`).join('; ')}`,
+                `Duplicate titles found: ${duplicates
+                    .map(([title, indices]) => {
+                        const quoted = `"${title}"`;
+                        const idx = `[${indices.join(',')}]`;
+                        return `${quoted} at indices ${idx}`;
+                    })
+                    .join('; ')}`,
             ),
         ];
     }
