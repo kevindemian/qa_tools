@@ -5,18 +5,6 @@
   "_llmConfigSuggestions": {
     "pending": false,
     "qualitySignals": [],
-    "timestamp": "2026-07-01T18:47:52.736Z"
-  },
-  "_checkpoint": {
-    "project": "ECSPOL",
-    "ts": "2026-07-01T18:47:49.368Z",
-    "testCount": 1,
-    "done": [
-      {
-        "key": "TEST-1",
-        "title": "TC01"
-      }
-    ],
-    "csvPath": "/tmp/qa-e2e-err-QLgmIQ/c7.csv"
+    "timestamp": "2026-07-01T20:22:53.332Z"
   }
 }
