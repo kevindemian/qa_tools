@@ -86,8 +86,8 @@ export function detectConfigCtrf(projectRoot?: string): boolean {
     for (const name of VITEST_CONFIG_NAMES) {
         const configPath = path.join(dir, name);
         try {
-            if (fs.existsSync(configPath)) {
-                const content = fs.readFileSync(configPath, 'utf8');
+            if (fs.existsSync(path.resolve(configPath))) {
+                const content = fs.readFileSync(path.resolve(configPath), 'utf8');
                 if (CTRF_REPORTER_PATTERN.test(content)) {
                     return true;
                 }
@@ -99,7 +99,7 @@ export function detectConfigCtrf(projectRoot?: string): boolean {
     return false;
 }
 
-function detectFromPkg(pkg: Record<string, unknown>): Framework {
+function detectFromPkg(pkg: { [key: string]: unknown }): Framework {
     const deps = {
         ...(pkg['dependencies'] as Record<string, string>),
         ...(pkg['devDependencies'] as Record<string, string>),
@@ -124,8 +124,8 @@ function detectFromPkg(pkg: Record<string, unknown>): Framework {
 export function detectFramework(packageJsonPath?: string): DetectionResult {
     try {
         const pkgPath = packageJsonPath || path.join(process.cwd(), 'package.json');
-        const content = fs.readFileSync(pkgPath, 'utf8');
-        const pkg = JSON.parse(content) as Record<string, unknown>;
+        const content = fs.readFileSync(path.resolve(pkgPath), 'utf8');
+        const pkg = JSON.parse(content) as { [key: string]: unknown };
         const framework = detectFromPkg(pkg);
         const defaults = { ...Reflect.get(DEFAULTS, framework) };
 
@@ -144,7 +144,7 @@ export function detectFramework(packageJsonPath?: string): DetectionResult {
 
 export function extractRepoFromGit(): { owner: string; repo: string } {
     try {
-        const gitConfig = fs.readFileSync(process.cwd() + '/.git/config', 'utf8');
+        const gitConfig = fs.readFileSync(path.resolve(process.cwd()) + '/.git/config', 'utf8');
         const match = /url\s*=\s*\S+(?:github\.com|gitlab\.com)[/:]([^/]+)\/([^/\s]+?)(?:\.git)?\s/.exec(gitConfig);
         if (match) {
             const owner = String(match[1] ?? '');

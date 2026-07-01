@@ -40,15 +40,39 @@ export function failureRate(failures: number, total: number): number {
  *  3. Benchmark regression (optional) — passed externally from llm-benchmark
  *
  * Returns the generated signals. */
+function analyzeSnapshotMetrics(snapshot: ReturnType<typeof snapshotLlmMetrics>, signals: QualitySignal[]): void {
+    const totalRequests = snapshot.totalRequests;
+    if (totalRequests === 0) return;
+
+    if (snapshot.avgLatencyMs > LATENCY_WARNING_MS) {
+        signals.push({
+            severity: severityFromLatency(snapshot.avgLatencyMs),
+            source: 'llm-metrics',
+            message: `Latência média ${snapshot.avgLatencyMs.toFixed(0)}ms acima do limiar de alerta.`,
+            suggestedAction: 'Considere trocar para um modelo mais rápido ou verificar a conectividade com o provedor.',
+        });
+    }
+
+    const totalFailures = Object.values(snapshot.failuresByTier ?? {}).reduce((a, b) => a + b, 0);
+    const rate = failureRate(totalFailures, totalRequests);
+    if (rate > FAILURE_RATE_WARNING) {
+        signals.push({
+            severity: rate > FAILURE_RATE_CRITICAL ? 'critical' : 'warning',
+            source: 'llm-metrics',
+            message: `Taxa de falha ${(rate * 100).toFixed(1)}% (${totalFailures}/${totalRequests}) acima do limiar de alerta.`,
+            suggestedAction: 'Verifique a chave de API, o status do provedor ou alterne para um provedor alternativo.',
+        });
+    }
+}
+
 export function checkQualitySignals(benchmarkSignals?: QualitySignal[]): QualitySignal[] {
     const signals: QualitySignal[] = [];
 
-    // 1. Drift detection
     let driftAlerts: string[];
     try {
         driftAlerts = detectDrift();
     } catch (err) {
-        rootLogger.warn('quality-suggester: detectDrift failed', err instanceof Error ? err.message : String(err));
+        rootLogger.warn('quality-suggester: detectDrift failed', String(err));
         driftAlerts = [];
     }
     for (const alert of driftAlerts) {
@@ -60,52 +84,20 @@ export function checkQualitySignals(benchmarkSignals?: QualitySignal[]): Quality
         });
     }
 
-    // 2. LLM metrics analysis
     let snapshot: ReturnType<typeof snapshotLlmMetrics> | null = null;
     try {
         snapshot = snapshotLlmMetrics();
     } catch (err) {
-        rootLogger.warn(
-            'quality-suggester: snapshotLlmMetrics failed',
-            err instanceof Error ? err.message : String(err),
-        );
+        rootLogger.warn('quality-suggester: snapshotLlmMetrics failed', String(err));
     }
     if (snapshot) {
-        const totalRequests = snapshot.totalRequests || 0;
-
-        if (totalRequests > 0) {
-            // Average latency check
-            if (snapshot.avgLatencyMs > LATENCY_WARNING_MS) {
-                signals.push({
-                    severity: severityFromLatency(snapshot.avgLatencyMs),
-                    source: 'llm-metrics',
-                    message: `Latência média ${snapshot.avgLatencyMs.toFixed(0)}ms acima do limiar de alerta.`,
-                    suggestedAction:
-                        'Considere trocar para um modelo mais rápido ou verificar a conectividade com o provedor.',
-                });
-            }
-
-            // Per-tier failure rate
-            const totalFailures = Object.values(snapshot.failuresByTier ?? {}).reduce((a, b) => a + b, 0);
-            const rate = failureRate(totalFailures, totalRequests);
-            if (rate > FAILURE_RATE_WARNING) {
-                signals.push({
-                    severity: rate > FAILURE_RATE_CRITICAL ? 'critical' : 'warning',
-                    source: 'llm-metrics',
-                    message: `Taxa de falha ${(rate * 100).toFixed(1)}% (${totalFailures}/${totalRequests}) acima do limiar de alerta.`,
-                    suggestedAction:
-                        'Verifique a chave de API, o status do provedor ou alterne para um provedor alternativo.',
-                });
-            }
-        }
+        analyzeSnapshotMetrics(snapshot, signals);
     }
 
-    // 3. Benchmark signals (passed externally)
     if (benchmarkSignals) {
         signals.push(...benchmarkSignals);
     }
 
-    // Persist to state
     try {
         updateTyped((s) => {
             s._llmConfigSuggestions = {
@@ -115,7 +107,7 @@ export function checkQualitySignals(benchmarkSignals?: QualitySignal[]): Quality
             };
         });
     } catch (err) {
-        rootLogger.warn('quality-suggester: updateTyped failed', err instanceof Error ? err.message : String(err));
+        rootLogger.warn('quality-suggester: updateTyped failed', String(err));
     }
 
     return signals;

@@ -10,8 +10,8 @@ vi.mock('../shared/prompt', async () => {
     };
 });
 vi.mock('../shared/state', () => ({
-    load: vi.fn<(...args: []) => Record<string, unknown>>().mockReturnValue({}),
-    update: vi.fn<(...args: [Record<string, unknown>]) => void>(),
+    load: vi.fn<(...args: []) => { [key: string]: unknown }>().mockReturnValue({}),
+    update: vi.fn<(...args: [{ [key: string]: unknown }]) => void>(),
 }));
 vi.mock('../shared/open', () => ({ openWithOsOrFallback: vi.fn<(...args: [string]) => void>() }));
 
@@ -24,14 +24,17 @@ import * as stateModule from '../shared/state.js';
 const tmpHome = fs.mkdtempSync(path.join(os.tmpdir(), 'qa-e2e-hp-'));
 const tmpGitDir = fs.mkdtempSync(path.join(os.tmpdir(), 'qa-e2e-git-'));
 
-fs.writeFileSync(path.join(tmpGitDir, 'package.json'), JSON.stringify({ name: 'test', version: '1.0.0', scripts: {} }));
+fs.writeFileSync(
+    path.resolve(path.join(tmpGitDir, 'package.json')),
+    JSON.stringify({ name: 'test', version: '1.0.0', scripts: {} }),
+);
 const rnDir = path.join(tmpGitDir, 'release_notes');
-fs.mkdirSync(rnDir, { recursive: true });
-fs.writeFileSync(path.join(rnDir, 'ReleaseNotes.txt'), '');
+fs.mkdirSync(path.resolve(rnDir), { recursive: true });
+fs.writeFileSync(path.resolve(path.join(rnDir, 'ReleaseNotes.txt')), '');
 
 const jsonFixture = path.join(tmpHome, 'cases.json');
 fs.writeFileSync(
-    jsonFixture,
+    path.resolve(jsonFixture),
     JSON.stringify([{ title: 'TC E2E', description: 'e2e', steps: [{ Action: 'Step1', 'Expected Result': 'R1' }] }]),
 );
 
@@ -282,10 +285,10 @@ describe('Handlers Happy Paths', () => {
             const mod = case05;
             await mod.handler(c);
 
-            const pkg: Record<string, unknown> = JSON.parse(
-                fs.readFileSync(path.join(tmpGitDir, 'package.json'), 'utf8'),
-            ) as Record<string, unknown>;
-            const rn = fs.readFileSync(path.join(rnDir, 'ReleaseNotes.txt'), 'utf8');
+            const pkg: { [key: string]: unknown } = JSON.parse(
+                fs.readFileSync(path.resolve(path.join(tmpGitDir, 'package.json')), 'utf8'),
+            ) as { [key: string]: unknown };
+            const rn = fs.readFileSync(path.resolve(path.join(rnDir, 'ReleaseNotes.txt')), 'utf8');
 
             expect(pkg['version']).toBe('2.0.0');
             expect(rn).toContain('TEST-1');
@@ -465,7 +468,7 @@ describe('Handlers Happy Paths', () => {
             const mod = case11;
             await mod.handler(c);
 
-            expect(fs.existsSync(dest)).toBeTruthy();
+            expect(fs.existsSync(path.resolve(dest))).toBeTruthy();
             expect(c.pushHistory).toHaveBeenCalledWith('gerar-template', 'CSV: ' + dest, 'ok');
         });
 
@@ -478,7 +481,7 @@ describe('Handlers Happy Paths', () => {
             const mod = case11;
             await mod.handler(c);
 
-            expect(fs.existsSync(dest)).toBeTruthy();
+            expect(fs.existsSync(path.resolve(dest))).toBeTruthy();
             expect(c.pushHistory).toHaveBeenCalledWith('gerar-template', 'JSON: ' + dest, 'ok');
         });
     });
