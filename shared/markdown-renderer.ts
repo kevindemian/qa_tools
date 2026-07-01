@@ -97,52 +97,41 @@ function renderInline(tokens: InlineToken[] | undefined): string {
 // ─── Block token → ANSI lines ──────────────────────────────────────────────────
 
 function renderBlockToken(token: InlineToken, availWidth?: number): string[] {
-    const out: string[] = [];
+    const width = availWidth || process.stdout.columns || 80;
 
     if (token.type === 'heading') {
+        return [palette.blue.bold(renderInline(token.tokens)), ''];
+    }
+    if (token.type === 'paragraph') {
         const text = renderInline(token.tokens);
-        out.push(palette.blue.bold(text));
-        out.push('');
-    } else if (token.type === 'paragraph') {
-        const text = renderInline(token.tokens);
-        if (text.trim()) out.push(text);
-        out.push('');
-    } else if (token.type === 'code') {
-        const lines = (token.text ?? '').split('\n');
-        for (const line of lines) {
-            out.push(palette.muted(line));
-        }
-        out.push('');
-    } else if (token.type === 'list') {
-        for (const item of token.items as Array<{ tokens: InlineToken[] }>) {
-            const text = renderInline(item.tokens);
-            out.push('  ● ' + text);
-        }
-        out.push('');
-    } else if (token.type === 'table') {
+        return text.trim() ? [text, ''] : [''];
+    }
+    if (token.type === 'code') {
+        return [...(token.text ?? '').split('\n').map((line) => palette.muted(line)), ''];
+    }
+    if (token.type === 'list') {
+        const items = (token.items as Array<{ tokens: InlineToken[] }>).map(
+            (item) => '  ● ' + renderInline(item.tokens),
+        );
+        return [...items, ''];
+    }
+    if (token.type === 'table') {
         const head: string[] = (token.header as Array<{ tokens: InlineToken[] }>).map((h) => renderInline(h.tokens));
         const rows: string[][] = (token.rows as Array<Array<{ tokens: InlineToken[] }>>).map((r) =>
             r.map((c) => renderInline(c.tokens)),
         );
-        const termWidth = availWidth || process.stdout.columns || 80;
-        const tableLines = renderPipeTable(head, rows, termWidth);
-        for (const line of tableLines) {
-            out.push(line);
-        }
-        out.push('');
-    } else if (token.type === 'hr') {
-        const w = availWidth || process.stdout.columns || 80;
-        out.push(palette.border('─'.repeat(Math.min(w - 2, 60))));
-        out.push('');
-    } else if (token.type === 'space') {
-        out.push('');
-    } else if (token.type === 'blockquote') {
-        const text = renderInline(token.tokens);
-        out.push(palette.muted('│ ' + text));
-        out.push('');
+        return [...renderPipeTable(head, rows, width), ''];
     }
-
-    return out;
+    if (token.type === 'hr') {
+        return [palette.border('─'.repeat(Math.min(width - 2, 60))), ''];
+    }
+    if (token.type === 'space') {
+        return [''];
+    }
+    if (token.type === 'blockquote') {
+        return [palette.muted('│ ' + renderInline(token.tokens)), ''];
+    }
+    return [];
 }
 
 // ─── Token list → ANSI lines ───────────────────────────────────────────────────

@@ -96,6 +96,16 @@ export function calculateTotals(items: CoverageGapItem[]): CoverageGapResult['to
     return { totalIssues, covered, gap, weightedCoveragePct, rawCoveragePct };
 }
 
+function computeWeightedPct(issues: CoverageGapItem[]): number {
+    let wSum = 0;
+    let wCov = 0;
+    for (const i of issues) {
+        wSum += i.coverageWeight;
+        if (i.hasTest) wCov += i.coverageWeight;
+    }
+    return wSum > 0 ? Math.round((wCov / wSum) * 100) : 0;
+}
+
 export function buildEpicRollup(items: CoverageGapItem[], epicsMap: Map<string, string>): Record<string, EpicCoverage> {
     const byEpic = new Map<string, EpicCoverage>();
     for (const item of items) {
@@ -119,13 +129,7 @@ export function buildEpicRollup(items: CoverageGapItem[], epicsMap: Map<string, 
         epic.total = epic.issues.length;
         epic.covered = epic.issues.filter((i) => i.hasTest).length;
         epic.rawPct = epic.total > 0 ? Math.round((epic.covered / epic.total) * 100) : 0;
-        let wSum = 0;
-        let wCov = 0;
-        for (const i of epic.issues) {
-            wSum += i.coverageWeight;
-            if (i.hasTest) wCov += i.coverageWeight;
-        }
-        epic.weightedPct = wSum > 0 ? Math.round((wCov / wSum) * 100) : 0;
+        epic.weightedPct = computeWeightedPct(epic.issues);
     }
     return Object.fromEntries(byEpic);
 }

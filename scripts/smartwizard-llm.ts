@@ -22,7 +22,7 @@ import { spawn } from 'node:child_process';
 import { resolve, dirname } from 'node:path';
 import { fileURLToPath } from 'node:url';
 import { inferProviderFromKey, KNOWN_PROVIDERS } from '../shared/llm-provider-profiles.js';
-import { autoAssignTiers, probeApiKey } from '../shared/llm-probe.js';
+import { autoAssignTiers, probeApiKey, type TierAssignment } from '../shared/llm-probe.js';
 import { reloadDotenv } from '../shared/env-loader.js';
 import { updateTyped as updateState } from '../shared/state.js';
 import { ask, askConfirm, title, info, warn, divider } from '../shared/prompt.js';
@@ -32,6 +32,7 @@ import type { LlmProvider } from '../shared/llm-provider-profiles.js';
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = dirname(__filename);
 const ENV_LOCAL = resolve(__dirname, '..', '.env.local');
+const TSX_BIN = resolve(__dirname, '..', 'node_modules', '.bin', 'tsx');
 
 // ───────────────────────────────────────────
 // Helpers
@@ -41,11 +42,15 @@ function readEnvLocal(): string[] {
     try {
         return fs.readFileSync(ENV_LOCAL, 'utf8').split('\n');
     } catch (err) {
-        rootLogger.debug(
-            'smartwizard-llm: failed to read .env.local: ' + (err instanceof Error ? err.message : String(err)),
-        );
+        rootLogger.debug('smartwizard-llm: failed to read .env.local: ' + String(err));
         return [];
     }
+}
+
+function replaceOrUpdateKey(line: string, updates: Record<string, string>): string | null {
+    const key = line.split('=')[0]?.trim();
+    if (!key || !(key in updates)) return null;
+    return key + '=' + updates[key];
 }
 
 function mergeEnvLocal(updates: Record<string, string>, existing: string[]): string {
@@ -53,29 +58,29 @@ function mergeEnvLocal(updates: Record<string, string>, existing: string[]): str
     const keptLines: string[] = [];
     for (const line of existing) {
         const match = /^(LLM_|OPENCODE_)/.exec(line);
-        if (match) {
-            const key = line.split('=')[0]?.trim();
-            if (key && updatedKeys.has(key)) {
-                const updateEntries = Object.entries(updates);
-                const updateEntry = updateEntries.find(([k]) => k === key);
-                if (updateEntry) {
-                    keptLines.push(key + '=' + updateEntry[1]);
-                }
-                updatedKeys.delete(key);
-            }
-        } else {
+        if (!match) {
             keptLines.push(line);
+            continue;
+        }
+        const replacement = replaceOrUpdateKey(line, updates);
+        if (replacement) {
+            keptLines.push(replacement);
+            const key = line.split('=')[0]?.trim();
+            if (key) updatedKeys.delete(key);
         }
     }
-    for (const [key, val] of Object.entries(updates)) {
-        if (updatedKeys.has(key)) {
-            if (keptLines.length > 0 && keptLines[keptLines.length - 1] !== '') {
-                keptLines.push('');
-            }
-            keptLines.push(key + '=' + val);
-        }
-    }
+    appendNewKeys(keptLines, updates, updatedKeys);
     return keptLines.join('\n') + '\n';
+}
+
+function appendNewKeys(keptLines: string[], updates: Record<string, string>, updatedKeys: Set<string>): void {
+    for (const [key, val] of Object.entries(updates)) {
+        if (!updatedKeys.has(key)) continue;
+        if (keptLines.length > 0 && keptLines[keptLines.length - 1] !== '') {
+            keptLines.push('');
+        }
+        keptLines.push(key + '=' + val);
+    }
 }
 
 function writeEnvLocal(content: string): void {
@@ -101,12 +106,118 @@ function runDiscoveryBackground(providers: Map<LlmProvider, string>): void {
         args.push('--provider', provider, '--key', key);
     }
 
-    const child = spawn('npx', ['tsx', scriptPath, ...args], {
+    const child = spawn(process.execPath, [TSX_BIN, scriptPath, ...args], {
         stdio: 'ignore',
         detached: true,
         cwd: resolve(__dirname, '..'),
     });
     child.unref();
+}
+
+async function processProviderKey(trimmed: string, providers: Map<LlmProvider, string>): Promise<void> {
+    const detected = inferProviderFromKey(trimmed);
+    if (!detected) {
+        info('Padrão não reconhecido. Testando provedores conhecidos...');
+        const found = await probeUnknownKey(trimmed, providers);
+        if (!found) {
+            warn('Chave não reconhecida por nenhum provedor conhecido. Ignorando.');
+        }
+        return;
+    }
+    if (providers.has(detected)) {
+        warn(`Provider ${detected} já registrado. Ignorando duplicata.`);
+    } else {
+        providers.set(detected, trimmed);
+        info(`✓ ${detected} detectado`);
+    }
+}
+
+async function collectProviderKeys(): Promise<Map<LlmProvider, string>> {
+    const providers = new Map<LlmProvider, string>();
+    let addMore = true;
+    while (addMore) {
+        const keyRaw = await ask(providers.size === 0 ? 'Cole sua chave de API:' : 'Cole a próxima chave de API:');
+        const trimmed = keyRaw.trim();
+
+        if (!trimmed) {
+            if (providers.size === 0) {
+                warn('Nenhuma chave informada. Cancelando.');
+                return providers;
+            }
+            break;
+        }
+
+        await processProviderKey(trimmed, providers);
+
+        if (providers.size === 0) continue;
+
+        addMore = await askConfirm('Registrar outra chave? (s/N)', false);
+    }
+    return providers;
+}
+
+async function probeUnknownKey(trimmed: string, providers: Map<LlmProvider, string>): Promise<boolean> {
+    for (const p of KNOWN_PROVIDERS) {
+        if (p === 'custom') continue;
+        if (providers.has(p)) continue;
+        const result = await probeApiKey(trimmed, p);
+        if (result.valid) {
+            providers.set(p, trimmed);
+            info(`✓ ${p} — chave válida`);
+            return true;
+        }
+    }
+    return false;
+}
+
+function displayConfigTable(firstProvider: LlmProvider, assignment: TierAssignment): void {
+    divider();
+    info('Configuração sugerida:');
+    info(`  Provedor principal: ${firstProvider}`);
+    info('');
+    info('  Tier     | Modelo');
+    info('  ---------|----------------------------');
+    for (const [tier, model] of Object.entries(assignment.tiers)) {
+        info(`  ${tier.padEnd(9)}| ${model}`);
+    }
+    divider();
+}
+
+function displayAdditionalProviders(firstProvider: LlmProvider, providers: Map<LlmProvider, string>): void {
+    if (providers.size <= 1) return;
+    info('Provedores adicionais registrados:');
+    for (const [p, key] of providers) {
+        if (p === firstProvider) continue;
+        info(`  • ${p} (chave: ${maskKey(key)})`);
+    }
+    divider();
+}
+
+function writeEnvConfig(
+    firstProvider: LlmProvider,
+    firstKey: string,
+    assignment: TierAssignment,
+    providers: Map<LlmProvider, string>,
+): void {
+    const envUpdates = new Map<string, string>();
+    envUpdates.set('LLM_PROVIDER', firstProvider);
+    envUpdates.set('LLM_API_KEY', firstKey);
+
+    for (const [tier, model] of Object.entries(assignment.tiers)) {
+        const envVar = 'LLM_' + tier.charAt(0).toUpperCase() + tier.slice(1) + '_MODEL';
+        envUpdates.set(envVar, String(model));
+    }
+
+    for (const [p, key] of providers) {
+        if (p === firstProvider) continue;
+        const envVar = 'LLM_' + p.charAt(0).toUpperCase() + p.slice(1).replace(/-/g, '_') + '_API_KEY';
+        envUpdates.set(envVar, key);
+    }
+
+    const existing = readEnvLocal();
+    const updates: Record<string, string> = Object.fromEntries(envUpdates);
+    const newContent = mergeEnvLocal(updates, existing);
+    writeEnvLocal(newContent);
 }
 
 export async function main(): Promise<void> {
@@ -126,52 +237,9 @@ export async function main(): Promise<void> {
     const providers = new Map<LlmProvider, string>();
 
     if (!isReview) {
-        let addMore = true;
-        while (addMore) {
-            const keyRaw = await ask(providers.size === 0 ? 'Cole sua chave de API:' : 'Cole a próxima chave de API:');
-            const trimmed = keyRaw.trim();
-
-            if (!trimmed) {
-                if (providers.size === 0) {
-                    warn('Nenhuma chave informada. Cancelando.');
-                    return;
-                }
-                break;
-            }
-
-            // Validação síncrona — instantânea
-            const detected = inferProviderFromKey(trimmed);
-
-            if (!detected) {
-                // Tenta probe em todos os provedores conhecidos
-                info('Padrão não reconhecido. Testando provedores conhecidos...');
-                let found = false;
-                for (const p of KNOWN_PROVIDERS) {
-                    if (p === 'custom') continue;
-                    if (providers.has(p)) continue;
-                    const result = await probeApiKey(trimmed, p);
-                    if (result.valid) {
-                        providers.set(p, trimmed);
-                        info(`✓ ${p} — chave válida`);
-                        found = true;
-                        break;
-                    }
-                }
-                if (!found) {
-                    warn('Chave não reconhecida por nenhum provedor conhecido. Ignorando.');
-                }
-            } else {
-                if (providers.has(detected)) {
-                    warn(`Provider ${detected} já registrado. Ignorando duplicata.`);
-                } else {
-                    providers.set(detected, trimmed);
-                    info(`✓ ${detected} detectado`);
-                }
-            }
-
-            if (providers.size === 0) continue;
-
-            addMore = await askConfirm('Registrar outra chave? (s/N)', false);
+        const collected = await collectProviderKeys();
+        for (const [k, v] of collected) {
+            providers.set(k, v);
         }
 
         if (providers.size === 0) {
@@ -191,26 +259,8 @@ export async function main(): Promise<void> {
     const firstKey: string = providers.get(firstProvider) ?? '';
     const assignment = autoAssignTiers(firstProvider);
 
-    // Mostra tabela de configuração
-    divider();
-    info('Configuração sugerida:');
-    info(`  Provedor principal: ${firstProvider}`);
-    info('');
-    info('  Tier     | Modelo');
-    info('  ---------|----------------------------');
-    for (const [tier, model] of Object.entries(assignment.tiers)) {
-        info(`  ${tier.padEnd(9)}| ${model}`);
-    }
-    divider();
-
-    if (providers.size > 1) {
-        info('Provedores adicionais registrados:');
-        for (const [p, key] of providers) {
-            if (p === firstProvider) continue;
-            info(`  • ${p} (chave: ${maskKey(key)})`);
-        }
-        divider();
-    }
+    displayConfigTable(firstProvider, assignment);
+    displayAdditionalProviders(firstProvider, providers);
 
     const accepted = await askConfirm('Aceitar configuração? (S/n)', true);
 
@@ -225,28 +275,7 @@ export async function main(): Promise<void> {
         return;
     }
 
-    // ── Escrita do .env.local ──
-    const envUpdates = new Map<string, string>();
-    envUpdates.set('LLM_PROVIDER', firstProvider);
-
-    // Apenas o primeiro provider tem LLM_API_KEY
-    envUpdates.set('LLM_API_KEY', firstKey);
-
-    for (const [tier, model] of Object.entries(assignment.tiers)) {
-        const envVar = 'LLM_' + tier.charAt(0).toUpperCase() + tier.slice(1) + '_MODEL';
-        envUpdates.set(envVar, String(model));
-    }
-
-    // Escreve chaves dos provedores adicionais como LLM_{PROVIDER}_API_KEY
-    for (const [p, key] of providers) {
-        if (p === firstProvider) continue;
-        const envVar = 'LLM_' + p.charAt(0).toUpperCase() + p.slice(1).replace(/-/g, '_') + '_API_KEY';
-        envUpdates.set(envVar, key);
-    }
-
-    const existing = readEnvLocal();
-    const newContent = mergeEnvLocal(Object.fromEntries(envUpdates), existing);
-    writeEnvLocal(newContent);
+    writeEnvConfig(firstProvider, firstKey, assignment, providers);
 
     // Atualiza env no processo atual
     reloadDotenv();
@@ -271,13 +300,13 @@ export async function main(): Promise<void> {
     try {
         runDiscoveryBackground(providers);
     } catch (err) {
-        rootLogger.debug(`Background discovery spawn failed: ${err instanceof Error ? err.message : String(err)}`);
+        rootLogger.debug(`Background discovery spawn failed: ${String(err)}`);
     }
 }
 
 if (!process.env['VITEST'] && process.argv[1]?.includes('smartwizard-llm')) {
     main().catch((err) => {
-        process.stderr.write(`SmartWizard LLM failed: ${err instanceof Error ? err.message : String(err)}\n`);
+        process.stderr.write(`SmartWizard LLM failed: ${String(err)}\n`);
         process.exit(1);
     });
 }

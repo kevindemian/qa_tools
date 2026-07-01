@@ -103,7 +103,7 @@ export function extractErrorMessage(err: unknown): string {
         if (url) msg += ' → ' + url;
         return msg;
     } catch (err) {
-        rootLogger.debug('Error extraction failed: ' + (err instanceof Error ? err.message : String(err)));
+        rootLogger.debug('Error extraction failed: ' + String(err));
         return MSG_UNKNOWN_ERROR;
     }
 }
@@ -166,6 +166,47 @@ export class CancelError extends Error {
     }
 }
 
+function handleAutoConfirm(_err: unknown, _raw: string): 'abort' | 'skip' | 'retry' | null {
+    if (!getConfig().get<boolean>('autoConfirm')) return null;
+    const autoAction = getConfig().get('onError');
+    if (autoAction === 'skip') warn('Modo automatico: pulando...');
+    else error('Modo automatico: abortando...');
+    return autoAction as 'abort' | 'skip' | 'retry';
+}
+
+function processAnswer(
+    answer: string,
+    canRetry: boolean,
+    canDetails: boolean,
+): 'abort' | 'skip' | 'retry' | 'details' | null {
+    if (answer === 'r' && canRetry) return 'retry';
+    if (answer === 's') return 'skip';
+    if (answer === 'a') return 'abort';
+    if (answer === 'd' && canDetails) return 'details';
+    return null;
+}
+
+function readUserChoice(canRetry: boolean, canDetails: boolean): string {
+    const opts: string[] = [];
+    if (canRetry) opts.push('[R]etry');
+    opts.push('[S]kip');
+    opts.push('[A]bort');
+    if (canDetails) opts.push('[D]etails');
+
+    output.print('  ' + boxDivider());
+    output.print('    ' + opts.join('   '));
+    output.print('  ' + boxDivider());
+    let answer: string;
+    try {
+        answer = readlineSync.question('  Escolha: ').trim().toLowerCase();
+    } catch (err) {
+        error('Entrada padrão indisponível. Abortando: ' + String(err));
+        return 'abort';
+    }
+    if (NAV_CMDS.includes(answer)) throw new CancelError(answer);
+    return answer;
+}
+
 export function onError(
     context: string,
     err: unknown,
@@ -179,40 +220,24 @@ export function onError(
         output.print(palette.blue('→  Token inválido ou expirado. Reconfigure com /setup ou edite o .env'));
     }
 
-    if (getConfig().get<boolean>('autoConfirm')) {
-        const autoAction = getConfig().get('onError');
-        if (autoAction === 'skip') warn('Modo automatico: pulando...');
-        else error('Modo automatico: abortando...');
-        return autoAction as 'abort' | 'skip' | 'retry';
-    }
+    const autoResult = handleAutoConfirm(err, raw);
+    if (autoResult) return autoResult;
 
     for (;;) {
+        const answer = readUserChoice(canRetry, canDetails);
+        if (answer === 'abort') return 'abort';
+        const result = processAnswer(answer, canRetry, canDetails);
+        if (result === 'retry') return 'retry';
+        if (result === 'skip') return 'skip';
+        if (result === 'details') {
+            _showErrorDetails(err);
+            continue;
+        }
         const opts: string[] = [];
         if (canRetry) opts.push('[R]etry');
         opts.push('[S]kip');
         opts.push('[A]bort');
         if (canDetails) opts.push('[D]etails');
-
-        output.print('  ' + boxDivider());
-        output.print('    ' + opts.join('   '));
-        output.print('  ' + boxDivider());
-        let answer: string;
-        try {
-            answer = readlineSync.question('  Escolha: ').trim().toLowerCase();
-        } catch (err) {
-            /* stdin indisponível (ex: WSL sem /dev/tty) — aborta como fallback seguro */
-            error('Entrada padrão indisponível. Abortando: ' + (err instanceof Error ? err.message : String(err)));
-            return 'abort';
-        }
-        if (NAV_CMDS.includes(answer)) throw new CancelError(answer);
-
-        if (answer === 'r' && canRetry) return 'retry';
-        if (answer === 's') return 'skip';
-        if (answer === 'a') return 'abort';
-        if (answer === 'd' && canDetails) {
-            _showErrorDetails(err);
-            continue;
-        }
         warn('Opção inválida. Escolha ' + opts.join(', '));
     }
 }

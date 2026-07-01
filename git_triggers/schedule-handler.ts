@@ -112,6 +112,18 @@ export async function handleChangeProject(names: string[]): Promise<void> {
     }
 }
 
+function buildTestDurationMap(store: import('../shared/metrics.js').MetricsStore): Record<string, number[]> {
+    const testDurationMap: Record<string, number[]> = {};
+    for (const run of store.runs) {
+        for (const t of run.tests) {
+            if (t.state === 'skipped') continue;
+            if (!testDurationMap[t.title]) testDurationMap[t.title] = [];
+            testDurationMap[t.title]?.push(t.duration);
+        }
+    }
+    return testDurationMap;
+}
+
 export function generateWeeklyQualityReport(): void {
     try {
         if (!currentProjectName) {
@@ -165,15 +177,7 @@ export function generateWeeklyQualityReport(): void {
 
         /* Fase 2 dashboards */
         const seasonality = aggregateDefectSeasonality(failureClassifications);
-        const testDurationMap: Record<string, number[]> = {};
-        for (const run of effectiveStore.runs) {
-            for (const t of run.tests) {
-                if (t.state === 'skipped') continue;
-                if (!testDurationMap[t.title]) testDurationMap[t.title] = [];
-                testDurationMap[t.title]?.push(t.duration);
-            }
-        }
-        const regression = detectSilentRegression(testDurationMap);
+        const regression = detectSilentRegression(buildTestDurationMap(effectiveStore));
         const devProfile = buildDeveloperProfile(
             failureClassifications.map((fc) => ({
                 testTitle: fc.testTitle,

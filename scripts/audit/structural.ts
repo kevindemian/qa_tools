@@ -6,6 +6,8 @@
 import { execFileSync } from 'child_process';
 import { rootLogger } from '../../shared/logger.js';
 
+const RG_BIN = '/usr/bin/rg';
+
 interface Finding {
     pattern: string;
     severity: 'high' | 'medium' | 'low';
@@ -25,13 +27,13 @@ interface Pattern {
 
 function grep(pattern: string, path: string): string {
     try {
-        return execFileSync('rg', ['-n', pattern, '--include', '*.ts', path], {
+        return execFileSync(RG_BIN, ['-n', pattern, '--include', '*.ts', path], {
             encoding: 'utf8',
             maxBuffer: 10 * 1024 * 1024,
             stdio: ['ignore', 'pipe', 'ignore'],
         }).trim();
     } catch (err) {
-        rootLogger.warn('structural: git command failed: ' + (err instanceof Error ? err.message : String(err)));
+        rootLogger.warn('structural: git command failed: ' + String(err));
         return '';
     }
 }

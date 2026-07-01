@@ -6,6 +6,9 @@ import { basename, dirname, join, resolve } from 'path';
 import Config from './config.js';
 import { rootLogger } from './logger.js';
 
+const CMD_EXE_BIN = '/mnt/c/WINDOWS/system32/cmd.exe';
+const WSLPATH_BIN = '/usr/bin/wslpath';
+
 interface OsOpenCommand {
     cmd: string;
     args: string[];
@@ -26,7 +29,7 @@ function isWsl(): boolean {
         const version = readFileSync('/proc/version', 'utf8');
         _wslCached = /microsoft|wsl/i.test(version);
     } catch (err) {
-        rootLogger.warn('open: WSL detection failed: ' + (err instanceof Error ? err.message : String(err)));
+        rootLogger.warn('open: WSL detection failed: ' + String(err));
         _wslCached = false;
     }
     return _wslCached;
@@ -37,7 +40,7 @@ export function getWinTempDir(): string | null {
     if (process.env['TEMP'] && process.env['TEMP'].startsWith('/')) return process.env['TEMP'];
     if (process.env['TMP'] && process.env['TMP'].startsWith('/')) return process.env['TMP'];
     try {
-        const raw = execFileSync('cmd.exe', ['/c', 'echo', '%TEMP%'], {
+        const raw = execFileSync(CMD_EXE_BIN, ['/c', 'echo', '%TEMP%'], {
             encoding: 'utf8',
             stdio: ['pipe', 'pipe', 'ignore'],
         }).trim();
@@ -46,7 +49,7 @@ export function getWinTempDir(): string | null {
             .replace(/\\/g, '/')
             .replace(/^([A-Za-z]):/, (_m: string, letter: string) => '/mnt/' + letter.toLowerCase());
     } catch (err) {
-        rootLogger.warn('open: getWinTempDir failed: ' + (err instanceof Error ? err.message : String(err)));
+        rootLogger.warn('open: getWinTempDir failed: ' + String(err));
         return null;
     }
 }
@@ -66,13 +69,13 @@ export function getDocsOutputDir(): string | null {
 /** Convert a Unix path to Windows path using wslpath. Uses spawnSync with argument array to prevent shell injection (C13-1). */
 function toWinPath(target: string): string | null {
     try {
-        const result = spawnSync('wslpath', ['-w', target], { encoding: 'utf8' });
+        const result = spawnSync(WSLPATH_BIN, ['-w', target], { encoding: 'utf8' });
         if (result.status === 0) {
             const wp = result.stdout.trim();
             if (/^[A-Za-z]:\\/.test(wp)) return wp;
         }
     } catch (err) {
-        rootLogger.warn('open: wslpath failed: ' + (err instanceof Error ? err.message : String(err)));
+        rootLogger.warn('open: wslpath failed: ' + String(err));
     }
 
     const tmpRoot = getWinTempDir();
@@ -84,14 +87,14 @@ function toWinPath(target: string): string | null {
         mkdirSync(dir, { recursive: true });
         const dest = join(dir, basename(target));
         writeFileSync(dest, content);
-        const result2 = spawnSync('wslpath', ['-w', dest], { encoding: 'utf8' });
+        const result2 = spawnSync(WSLPATH_BIN, ['-w', dest], { encoding: 'utf8' });
         if (result2.status === 0) {
             const wp = result2.stdout.trim();
             return /^[A-Za-z]:\\/.test(wp) ? wp : null;
         }
         return null;
     } catch (err) {
-        rootLogger.warn('open: file copy + wslpath failed: ' + (err instanceof Error ? err.message : String(err)));
+        rootLogger.warn('open: file copy + wslpath failed: ' + String(err));
         return null;
     }
 }

@@ -19,17 +19,19 @@ import {
     getLastGitLogError,
 } from '../../git-metrics-adapter.js';
 
+const GIT_BIN = '/usr/bin/git';
+
 let TEST_DIR: string;
 
 function git(...args: string[]): string {
-    return execFileSync('git', args, { cwd: TEST_DIR, encoding: 'utf-8' }).trim();
+    return execFileSync(GIT_BIN, args, { cwd: TEST_DIR, encoding: 'utf-8' }).trim();
 }
 
 function commit(msg: string, date: string): void {
     const filePath = path.join(TEST_DIR, 'file.txt');
     fs.writeFileSync(filePath, msg, 'utf-8');
-    execFileSync('git', ['add', '.'], { cwd: TEST_DIR, encoding: 'utf-8' });
-    execFileSync('git', ['commit', '-m', msg, '--date', date], {
+    execFileSync(GIT_BIN, ['add', '.'], { cwd: TEST_DIR, encoding: 'utf-8' });
+    execFileSync(GIT_BIN, ['commit', '-m', msg, '--date', date], {
         cwd: TEST_DIR,
         encoding: 'utf-8',
         env: { ...process.env, GIT_AUTHOR_DATE: date, GIT_COMMITTER_DATE: date },
@@ -76,7 +78,7 @@ describe('Git Metrics Adapter Integration', () => {
             git('checkout', '-b', 'feat');
             commit('feature work', '2026-06-03T10:00:00');
             git('checkout', '-'); // back to previous branch (master)
-            execFileSync('git', ['merge', 'feat', '--no-ff', '-m', 'Merge branch feat'], {
+            execFileSync(GIT_BIN, ['merge', 'feat', '--no-ff', '-m', 'Merge branch feat'], {
                 cwd: TEST_DIR,
                 encoding: 'utf-8',
             });

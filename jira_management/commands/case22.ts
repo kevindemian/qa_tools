@@ -6,9 +6,11 @@ import { analyzeTestImpact } from '../../shared/test-impact.js';
 import { loadMetrics, calculateFlakiness } from '../../shared/metrics.js';
 import type { CommandContext } from './context.js';
 
+const GIT_BIN = '/usr/bin/git';
+
 function _getGitDiff(range: string): string | null {
     try {
-        return execFileSync('git', ['diff', '--name-only', range], { encoding: 'utf8' }).toString().trim();
+        return execFileSync(GIT_BIN, ['diff', '--name-only', range], { encoding: 'utf8' }).toString().trim();
     } catch (err: unknown) {
         printError(
             'Não foi possível obter o git diff. Verifique se o repositório tem commits suficientes no branch atual ou forneça um range manual diferente.',

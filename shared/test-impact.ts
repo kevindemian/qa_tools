@@ -7,6 +7,9 @@ import { rootLogger } from './logger.js';
 import { parseFileTestMappings } from './types/bugs.js';
 import type { TestImpactResult, ImpactedTest, TestSelectionJson } from './types.js';
 
+const GIT_BIN = '/usr/bin/git';
+const JEST_BIN = path.resolve('node_modules', '.bin', 'jest');
+
 // ---- helpers ----
 
 const PackageJsonSchema = z.object({
@@ -45,7 +48,7 @@ interface JestResult {
 
 function runJestFindRelated(changedFiles: string[]): JestResult | null {
     try {
-        const output = execFileSync('npx', ['jest', '--listTests', '--findRelatedTests', ...changedFiles], {
+        const output = execFileSync(JEST_BIN, ['--listTests', '--findRelatedTests', ...changedFiles], {
             encoding: 'utf8',
         }).trim();
         const testFiles = output.split('\n').filter(Boolean);
@@ -120,11 +123,11 @@ function explicitMapping(changedFiles: string[], mappingPath: string): ImpactedT
 
 function getGitDiff(): string {
     try {
-        return execFileSync('git', ['diff', '--name-only', 'HEAD~1'], {
+        return execFileSync(GIT_BIN, ['diff', '--name-only', 'HEAD~1'], {
             encoding: 'utf8',
         }).trim();
     } catch (err) {
-        rootLogger.error('Failed to get git diff: ' + (err instanceof Error ? err.message : String(err)));
+        rootLogger.error('Failed to get git diff: ' + String(err));
         return '';
     }
 }

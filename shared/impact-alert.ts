@@ -81,6 +81,89 @@ function countBySeverity(alerts: ImpactAlert[]): {
     return { criticalCount, warningCount, infoCount };
 }
 
+function addLowPassRateLowCoverageAlert(
+    passRate: number,
+    coveragePct: number,
+    topFailures: string[],
+    alerts: ImpactAlert[],
+): void {
+    if (passRate >= PASS_RATE_THRESHOLD_LOW || coveragePct >= COVERAGE_THRESHOLD_LOW) return;
+    alerts.push({
+        severity: 'critical',
+        title: 'Low pass rate in low-coverage area',
+        message:
+            'Pipeline pass rate is below 70% and coverage is below 70%. Failures are occurring in areas with insufficient test coverage, increasing the risk of undetected regressions.',
+        affectedArea: topFailures.length > 0 ? topFailures.slice(0, TOP_FAILURES_DISPLAY_LIMIT).join(', ') : 'Unknown',
+        recommendation: 'Increase test coverage in affected areas and investigate pipeline failures immediately.',
+    });
+}
+
+function addLowPassRateFailingAlert(
+    passRate: number,
+    failingJobs: number,
+    topFailures: string[],
+    alerts: ImpactAlert[],
+): void {
+    if (passRate >= PASS_RATE_THRESHOLD_LOW || failingJobs === 0) return;
+    alerts.push({
+        severity: 'warning',
+        title: 'Elevated failure rate',
+        message:
+            'Pipeline pass rate is below 70% with ' +
+            String(failingJobs) +
+            ' failing job(s). Overall pipeline health is degraded.',
+        affectedArea: topFailures.length > 0 ? topFailures.slice(0, TOP_FAILURES_DISPLAY_LIMIT).join(', ') : 'Pipeline',
+        recommendation: 'Review failing jobs and stabilize the pipeline before merging new changes.',
+    });
+}
+
+function addFailingUncoveredAlert(failingJobs: number, uncoveredEpics: string[], alerts: ImpactAlert[]): void {
+    if (failingJobs === 0 || uncoveredEpics.length === 0) return;
+    alerts.push({
+        severity: 'warning',
+        title: 'Failures in uncovered epics',
+        message:
+            'There are ' +
+            String(failingJobs) +
+            ' failing job(s) and ' +
+            String(uncoveredEpics.length) +
+            ' epic(s) without test coverage. Failures may impact untested areas.',
+        affectedArea: uncoveredEpics.join(', '),
+        recommendation:
+            'Add test coverage for uncovered epics and investigate pipeline failures for potential impact on these areas.',
+    });
+}
+
+function addLowCoverageAlert(coveragePct: number, uncoveredEpics: string[], alerts: ImpactAlert[]): void {
+    if (coveragePct >= COVERAGE_THRESHOLD_LOW) return;
+    alerts.push({
+        severity: 'warning',
+        title: 'Coverage below threshold',
+        message:
+            'Current coverage is ' +
+            String(Math.round(coveragePct)) +
+            '%, below the 70% threshold. Areas without adequate testing are more susceptible to regressions.',
+        affectedArea: uncoveredEpics.length > 0 ? uncoveredEpics.join(', ') : 'General',
+        recommendation: 'Prioritize writing tests for uncovered areas to raise coverage above 70%.',
+    });
+}
+
+function addAllClearAlert(passRate: number, coveragePct: number, alerts: ImpactAlert[]): void {
+    if (passRate < PASS_RATE_THRESHOLD_HIGH || coveragePct < COVERAGE_THRESHOLD_HIGH) return;
+    alerts.push({
+        severity: 'info',
+        title: 'All clear',
+        message:
+            'Pipeline pass rate is ' +
+            String(Math.round(passRate)) +
+            '% and coverage is ' +
+            String(Math.round(coveragePct)) +
+            '%. No critical issues detected.',
+        affectedArea: 'General',
+        recommendation: 'Continue monitoring pipeline health and maintaining test coverage.',
+    });
+}
+
 export function analyzePipelineImpact(
     passRate: number | null | undefined,
     failingJobs: number,
@@ -94,75 +177,11 @@ export function analyzePipelineImpact(
 
     const alerts: ImpactAlert[] = [];
 
-    if (passRate < PASS_RATE_THRESHOLD_LOW && coveragePct < COVERAGE_THRESHOLD_LOW) {
-        alerts.push({
-            severity: 'critical',
-            title: 'Low pass rate in low-coverage area',
-            message:
-                'Pipeline pass rate is below 70% and coverage is below 70%. Failures are occurring in areas with insufficient test coverage, increasing the risk of undetected regressions.',
-            affectedArea:
-                topFailures.length > 0 ? topFailures.slice(0, TOP_FAILURES_DISPLAY_LIMIT).join(', ') : 'Unknown',
-            recommendation: 'Increase test coverage in affected areas and investigate pipeline failures immediately.',
-        });
-    }
-
-    if (passRate < PASS_RATE_THRESHOLD_LOW && failingJobs > 0) {
-        alerts.push({
-            severity: 'warning',
-            title: 'Elevated failure rate',
-            message:
-                'Pipeline pass rate is below 70% with ' +
-                String(failingJobs) +
-                ' failing job(s). Overall pipeline health is degraded.',
-            affectedArea:
-                topFailures.length > 0 ? topFailures.slice(0, TOP_FAILURES_DISPLAY_LIMIT).join(', ') : 'Pipeline',
-            recommendation: 'Review failing jobs and stabilize the pipeline before merging new changes.',
-        });
-    }
-
-    if (failingJobs > 0 && uncoveredEpics.length > 0) {
-        alerts.push({
-            severity: 'warning',
-            title: 'Failures in uncovered epics',
-            message:
-                'There are ' +
-                String(failingJobs) +
-                ' failing job(s) and ' +
-                String(uncoveredEpics.length) +
-                ' epic(s) without test coverage. Failures may impact untested areas.',
-            affectedArea: uncoveredEpics.join(', '),
-            recommendation:
-                'Add test coverage for uncovered epics and investigate pipeline failures for potential impact on these areas.',
-        });
-    }
-
-    if (coveragePct < COVERAGE_THRESHOLD_LOW) {
-        alerts.push({
-            severity: 'warning',
-            title: 'Coverage below threshold',
-            message:
-                'Current coverage is ' +
-                String(Math.round(coveragePct)) +
-                '%, below the 70% threshold. Areas without adequate testing are more susceptible to regressions.',
-            affectedArea: uncoveredEpics.length > 0 ? uncoveredEpics.join(', ') : 'General',
-            recommendation: 'Prioritize writing tests for uncovered areas to raise coverage above 70%.',
-        });
-    }
-
-    if (passRate >= PASS_RATE_THRESHOLD_HIGH && coveragePct >= COVERAGE_THRESHOLD_HIGH) {
-        alerts.push({
-            severity: 'info',
-            title: 'All clear',
-            message:
-                'Pipeline pass rate is ' +
-                String(Math.round(passRate)) +
-                '% and coverage is ' +
-                String(Math.round(coveragePct)) +
-                '%. No critical issues detected.',
-            affectedArea: 'General',
-            recommendation: 'Continue monitoring pipeline health and maintaining test coverage.',
-        });
-    }
+    addLowPassRateLowCoverageAlert(passRate, coveragePct, topFailures, alerts);
+    addLowPassRateFailingAlert(passRate, failingJobs, topFailures, alerts);
+    addFailingUncoveredAlert(failingJobs, uncoveredEpics, alerts);
+    addLowCoverageAlert(coveragePct, uncoveredEpics, alerts);
+    addAllClearAlert(passRate, coveragePct, alerts);
 
     const uniqueAlerts = deduplicateAlerts(alerts);
     const counts = countBySeverity(uniqueAlerts);
@@ -252,7 +271,7 @@ export function generateImpactAlertHtml(result: ImpactAlertResult | null | undef
             footer: 'Generated by QA Tools — Impact-Aware Pipeline Alert',
         });
     } catch (err) {
-        const msg = err instanceof Error ? err.message : String(err);
+        const msg = String(err);
         rootLogger.error(
             'Failed to generate impact alert HTML: ' + msg + '. Check html-factory dependencies and try again.',
         );

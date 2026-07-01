@@ -27,6 +27,18 @@ function issueHasSteps(fields: JsonObject): boolean {
     return Array.isArray(steps) && steps.length > 0;
 }
 
+function trackUnmappedIssue(issue: { key: string; fields: JsonObject }, gapsByEpicMap: Map<string, string[]>): void {
+    const epic = getEpicFromIssue(issue.fields);
+    if (epic) {
+        const existing = gapsByEpicMap.get(epic);
+        if (existing) {
+            existing.push(issue.key);
+        } else {
+            gapsByEpicMap.set(epic, [issue.key]);
+        }
+    }
+}
+
 export async function analyzeCoverage(jiraResource: JiraResource, project: string): Promise<CoverageResult> {
     let response: { issues: Array<{ key: string; fields: JsonObject }> };
     try {
@@ -56,15 +68,7 @@ export async function analyzeCoverage(jiraResource: JiraResource, project: strin
             if (Array.isArray(steps)) totalStepCount += steps.length;
         } else {
             unmappedSteps.push(issue.key);
-            const epic = getEpicFromIssue(issue.fields);
-            if (epic) {
-                const existing = gapsByEpicMap.get(epic);
-                if (existing) {
-                    existing.push(issue.key);
-                } else {
-                    gapsByEpicMap.set(epic, [issue.key]);
-                }
-            }
+            trackUnmappedIssue(issue, gapsByEpicMap);
         }
     }
 

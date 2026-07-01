@@ -4,6 +4,8 @@ import os from 'os';
 import { execFileSync } from 'child_process';
 import { rootLogger } from './logger.js';
 
+const GIT_BIN = '/usr/bin/git';
+
 export interface StoreBackend {
     init(): void;
     read(relPath: string): Buffer | null;
@@ -26,21 +28,19 @@ export class GitStoreBackend implements StoreBackend {
         try {
             fs.mkdirSync(this.fullPath, { recursive: true });
         } catch (err) {
-            rootLogger.error('GitStoreBackend: mkdir failed: ' + (err instanceof Error ? err.message : String(err)));
+            rootLogger.error('GitStoreBackend: mkdir failed: ' + String(err));
             /* if mkdir fails, subsequent operations will also fail — propagate */
             throw new Error(`GitStoreBackend: não foi possível criar diretório ${this.fullPath}`, { cause: err });
         }
         if (!fs.existsSync(path.join(this.gitWorkDir, '.git'))) {
             try {
-                execFileSync('git', ['init', this.gitWorkDir], { stdio: 'ignore' });
-                execFileSync('git', ['-C', this.gitWorkDir, 'config', 'user.name', 'qa-tools'], { stdio: 'ignore' });
-                execFileSync('git', ['-C', this.gitWorkDir, 'config', 'user.email', 'qa-tools@localhost'], {
+                execFileSync(GIT_BIN, ['init', this.gitWorkDir], { stdio: 'ignore' });
+                execFileSync(GIT_BIN, ['-C', this.gitWorkDir, 'config', 'user.name', 'qa-tools'], { stdio: 'ignore' });
+                execFileSync(GIT_BIN, ['-C', this.gitWorkDir, 'config', 'user.email', 'qa-tools@localhost'], {
                     stdio: 'ignore',
                 });
             } catch (err) {
-                rootLogger.error(
-                    'GitStoreBackend: git init failed: ' + (err instanceof Error ? err.message : String(err)),
-                );
+                rootLogger.error('GitStoreBackend: git init failed: ' + String(err));
                 throw new Error(`GitStoreBackend: git init falhou em ${this.gitWorkDir}`, { cause: err });
             }
         }
@@ -51,7 +51,7 @@ export class GitStoreBackend implements StoreBackend {
         try {
             return fs.existsSync(full) ? fs.readFileSync(full) : null;
         } catch (err) {
-            rootLogger.debug('GitStoreBackend: read failed: ' + (err instanceof Error ? err.message : String(err)));
+            rootLogger.debug('GitStoreBackend: read failed: ' + String(err));
             return null;
         }
     }
@@ -62,7 +62,7 @@ export class GitStoreBackend implements StoreBackend {
             fs.mkdirSync(path.dirname(full), { recursive: true });
             fs.writeFileSync(full, data);
         } catch (err) {
-            const msg = err instanceof Error ? err.message : String(err);
+            const msg = String(err);
             throw new Error(`GitStoreBackend: falha ao escrever ${relPath} — ${msg}`, {
                 cause: err,
             });
@@ -75,16 +75,16 @@ export class GitStoreBackend implements StoreBackend {
 
     flush(message: string): void {
         try {
-            execFileSync('git', ['-C', this.gitWorkDir, 'add', this.relStoreDir], { stdio: 'ignore' });
+            execFileSync(GIT_BIN, ['-C', this.gitWorkDir, 'add', this.relStoreDir], { stdio: 'ignore' });
             execFileSync(
-                'git',
+                GIT_BIN,
                 ['-C', this.gitWorkDir, '-c', 'core.hooksPath=/dev/null', 'commit', '--allow-empty', '-m', message],
                 {
                     stdio: 'ignore',
                 },
             );
         } catch (err) {
-            const msg = err instanceof Error ? err.message : String(err);
+            const msg = String(err);
             throw new Error(`GitStoreBackend: git add/commit falhou em ${this.gitWorkDir} — ${msg}`, { cause: err });
         }
     }
@@ -102,7 +102,7 @@ export class FsStoreBackend implements StoreBackend {
         try {
             return fs.existsSync(full) ? fs.readFileSync(full) : null;
         } catch (err) {
-            rootLogger.debug('FsStoreBackend: read failed: ' + (err instanceof Error ? err.message : String(err)));
+            rootLogger.debug('FsStoreBackend: read failed: ' + String(err));
             return null;
         }
     }
@@ -113,7 +113,7 @@ export class FsStoreBackend implements StoreBackend {
             fs.mkdirSync(path.dirname(full), { recursive: true });
             fs.writeFileSync(full, data);
         } catch (err) {
-            const msg = err instanceof Error ? err.message : String(err);
+            const msg = String(err);
             throw new Error(`FsStoreBackend: falha ao escrever ${relPath} — ${msg}`, { cause: err });
         }
     }
@@ -153,7 +153,7 @@ export function detectStoreBackend(projectDir?: string): StoreBackend {
             return new GitStoreBackend(xdgDir, '.');
         }
     } catch (err) {
-        const msg = err instanceof Error ? err.message : String(err);
+        const msg = String(err);
         /* GitStoreBackend init failed — fall back to FsStoreBackend */
         rootLogger.warn('GitStoreBackend init failed, falling back to FsStoreBackend: ' + msg);
     }
@@ -163,10 +163,10 @@ export function detectStoreBackend(projectDir?: string): StoreBackend {
 
 function canExecGit(): boolean {
     try {
-        execFileSync('git', ['--version'], { stdio: 'ignore' });
+        execFileSync(GIT_BIN, ['--version'], { stdio: 'ignore' });
         return true;
     } catch (err) {
-        rootLogger.debug('store-backend: git not available: ' + (err instanceof Error ? err.message : String(err)));
+        rootLogger.debug('store-backend: git not available: ' + String(err));
         return false;
     }
 }

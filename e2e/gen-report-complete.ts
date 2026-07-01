@@ -50,23 +50,38 @@ function setupMappingFile(): void {
     }
 }
 
+function formatRunStatus(r: { [key: string]: unknown }): string {
+    const status = (r['status'] as string) || 'TODO';
+    let color: string;
+    if (status === 'PASS') {
+        color = '#22c55e';
+    } else if (status === 'FAIL') {
+        color = '#ef4444';
+    } else {
+        color = '#6b7280';
+    }
+    let html = `<li>${(r['testExecKey'] as string) || '?'} — <span style="color:${color};font-weight:600">${status}</span>`;
+    if (r['finishedOn']) html += ` (${(r['finishedOn'] as string).slice(0, 10)})`;
+    html += '</li>';
+    return html;
+}
+
+function formatRunRuns(runs: unknown[]): string {
+    if (runs.length === 0) return '';
+    let html = '<ul style="font-size:0.85rem;margin:4px 0 0 16px">';
+    for (const run of runs) {
+        html += formatRunStatus(run as { [key: string]: unknown });
+    }
+    html += '</ul>';
+    return html;
+}
+
 function buildXrayHistoryHtml(historyRows: Array<{ key: string; runs: unknown[] }>): string {
     let html = '<div class="chart-box" style="border-left:4px solid #0052cc;margin-bottom:12px">';
     html += '<div class="label" style="margin-bottom:6px">📋 Xray Test History</div>';
     for (const h of historyRows) {
         html += `<div style="margin-bottom:8px"><b>${h.key}</b> — ${h.runs.length} run(s)`;
-        if (h.runs.length > 0) {
-            html += '<ul style="font-size:0.85rem;margin:4px 0 0 16px">';
-            for (const run of h.runs) {
-                const r = run as Record<string, unknown>;
-                const status = (r['status'] as string) || 'TODO';
-                const color = status === 'PASS' ? '#22c55e' : status === 'FAIL' ? '#ef4444' : '#6b7280';
-                html += `<li>${(r['testExecKey'] as string) || '?'} — <span style="color:${color};font-weight:600">${status}</span>`;
-                if (r['finishedOn']) html += ` (${(r['finishedOn'] as string).slice(0, 10)})`;
-                html += '</li>';
-            }
-            html += '</ul>';
-        }
+        html += formatRunRuns(h.runs);
         html += '</div>';
     }
     html += '</div>';

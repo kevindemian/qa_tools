@@ -79,9 +79,7 @@ async function fetchOpenRouterContext(): Promise<Map<string, { context?: number;
             map.set(e.id, entry);
         }
     } catch (err) {
-        rootLogger.warn(
-            'probe-registry: OpenRouter unavailable: ' + (err instanceof Error ? err.message : String(err)),
-        );
+        rootLogger.warn('probe-registry: OpenRouter unavailable: ' + String(err));
     }
     return map;
 }
@@ -102,19 +100,41 @@ function enrichFromOpenRouter(
     }
 }
 
-function loadRegistry(): Record<string, unknown> {
+function loadRegistry(): { [key: string]: unknown } {
     const content = readFileSync(REGISTRY_PATH, 'utf8');
-    return JSON.parse(content) as Record<string, unknown>;
+    return JSON.parse(content) as { [key: string]: unknown };
 }
 
-function getProviderModels(registry: Record<string, unknown>, provider: string): RegistryModel[] {
-    const providers = registry['providers'] as Record<string, unknown> | undefined;
+function getProviderModels(registry: { [key: string]: unknown }, provider: string): RegistryModel[] {
+    const providers = registry['providers'] as { [key: string]: unknown } | undefined;
     if (!providers) return [];
     const providerEntries = Object.entries(providers);
     const providerEntry = providerEntries.find(([k]) => k === provider);
     const models = providerEntry?.[1];
     if (!Array.isArray(models)) return [];
     return models as RegistryModel[];
+}
+
+function detectFieldChanges(ex: RegistryModel, m: RegistryModel, report: ProviderDiff): void {
+    if (ex.context !== m.context) {
+        report.changed.push({ model: m.id, field: 'context', old: ex.context, new: m.context });
+    }
+    if (ex.costPer1kPrompt !== m.costPer1kPrompt) {
+        report.changed.push({
+            model: m.id,
+            field: 'costPer1kPrompt',
+            old: ex.costPer1kPrompt,
+            new: m.costPer1kPrompt,
+        });
+    }
+    if (ex.costPer1kCompletion !== m.costPer1kCompletion) {
+        report.changed.push({
+            model: m.id,
+            field: 'costPer1kCompletion',
+            old: ex.costPer1kCompletion,
+            new: m.costPer1kCompletion,
+        });
+    }
 }
 
 function diffModels(discovered: RegistryModel[], existing: RegistryModel[], provider: string): ProviderDiff {
@@ -128,25 +148,7 @@ function diffModels(discovered: RegistryModel[], existing: RegistryModel[], prov
         } else {
             const ex = existingMap.get(m.id);
             if (!ex) continue;
-            if (ex.context !== m.context) {
-                report.changed.push({ model: m.id, field: 'context', old: ex.context, new: m.context });
-            }
-            if (ex.costPer1kPrompt !== m.costPer1kPrompt) {
-                report.changed.push({
-                    model: m.id,
-                    field: 'costPer1kPrompt',
-                    old: ex.costPer1kPrompt,
-                    new: m.costPer1kPrompt,
-                });
-            }
-            if (ex.costPer1kCompletion !== m.costPer1kCompletion) {
-                report.changed.push({
-                    model: m.id,
-                    field: 'costPer1kCompletion',
-                    old: ex.costPer1kCompletion,
-                    new: m.costPer1kCompletion,
-                });
-            }
+            detectFieldChanges(ex, m, report);
         }
     }
 
@@ -157,6 +159,36 @@ function diffModels(discovered: RegistryModel[], existing: RegistryModel[], prov
     }
 
     return report;
+}
+
+function writeReportSection(lines: string[], r: ProviderDiff): void {
+    if (r.added.length === 0 && r.removed.length === 0 && r.changed.length === 0) return;
+
+    lines.push(`## ${r.provider}\n`);
+
+    if (r.added.length > 0) {
+        lines.push(`### Added (+${r.added.length})`);
+        for (const a of r.added) {
+            lines.push(`- \`${a.model}\``);
+        }
+        lines.push('');
+    }
+
+    if (r.removed.length > 0) {
+        lines.push(`### Removed (-${r.removed.length})`);
+        for (const rm of r.removed) {
+            lines.push(`- \`${rm.model}\``);
+        }
+        lines.push('');
+    }
+
+    if (r.changed.length > 0) {
+        lines.push(`### Changed (~${r.changed.length})`);
+        for (const c of r.changed) {
+            lines.push(`- \`${c.model}\`: ${c.field} ${String(c.old)} → ${String(c.new)}`);
+        }
+        lines.push('');
+    }
 }
 
 function writeMarkdownReport(reports: ProviderDiff[], timestamp: string): string {
@@ -180,33 +212,7 @@ function writeMarkdownReport(reports: ProviderDiff[], timestamp: string): string
     }
 
     for (const r of reports) {
-        if (r.added.length === 0 && r.removed.length === 0 && r.changed.length === 0) continue;
-
-        lines.push(`## ${r.provider}\n`);
-
-        if (r.added.length > 0) {
-            lines.push(`### Added (+${r.added.length})`);
-            for (const a of r.added) {
-                lines.push(`- \`${a.model}\``);
-            }
-            lines.push('');
-        }
-
-        if (r.removed.length > 0) {
-            lines.push(`### Removed (-${r.removed.length})`);
-            for (const rm of r.removed) {
-                lines.push(`- \`${rm.model}\``);
-            }
-            lines.push('');
-        }
-
-        if (r.changed.length > 0) {
-            lines.push(`### Changed (~${r.changed.length})`);
-            for (const c of r.changed) {
-                lines.push(`- \`${c.model}\`: ${c.field} ${String(c.old)} → ${String(c.new)}`);
-            }
-            lines.push('');
-        }
+        writeReportSection(lines, r);
     }
 
     return lines.join('\n');
@@ -248,7 +254,7 @@ function envVarForProvider(provider: string): string | null {
 async function main(): Promise<void> {
     const { provider: targetProvider, dryRun, createPr } = parseArgs();
     const registry = loadRegistry();
-    const providers = (registry['providers'] as Record<string, unknown> | undefined) ?? {};
+    const providers = (registry['providers'] as { [key: string]: unknown } | undefined) ?? {};
     const timestamp = new Date().toISOString().split('T')[0] ?? 'unknown';
     const reports: ProviderDiff[] = [];
 
@@ -319,7 +325,7 @@ async function main(): Promise<void> {
 
 if (!process.env['VITEST'] && process.argv[1]?.includes('probe-registry')) {
     main().catch((err) => {
-        process.stderr.write(`Probe failed: ${err instanceof Error ? err.message : String(err)}\n`);
+        process.stderr.write(`Probe failed: ${String(err)}\n`);
         process.exit(1);
     });
 }

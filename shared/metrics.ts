@@ -45,10 +45,8 @@ const FlatTestSchema = z.object({
     duration: z.number().nonnegative(),
     error: z.string().optional(),
     fullTitle: z.string().optional(),
-    steps: z
-        .array(z.object({ action: z.string().optional(), expected: z.string().optional() }).passthrough())
-        .optional(),
-    screenshots: z.array(z.object({ title: z.string(), dataUri: z.string() }).passthrough()).optional(),
+    steps: z.array(z.object({ action: z.string().optional(), expected: z.string().optional() }).loose()).optional(),
+    screenshots: z.array(z.object({ title: z.string(), dataUri: z.string() }).loose()).optional(),
     logs: z.array(z.string()).optional(),
 });
 
@@ -130,10 +128,7 @@ export function loadMetrics(config?: Config, backend?: StoreBackend): MetricsSto
         const parsed: unknown = JSON.parse(raw.toString('utf8'));
         return MetricsStoreSchema.parse(parsed) as MetricsStore;
     } catch (err) {
-        rootLogger.warn(
-            'Failed to load metrics. Verify the metrics file exists and is readable: ' +
-                (err instanceof Error ? err.message : String(err)),
-        );
+        rootLogger.warn('Failed to load metrics. Verify the metrics file exists and is readable: ' + String(err));
         return { runs: [] };
     }
 }
@@ -144,10 +139,7 @@ export function saveMetrics(store: MetricsStore, config?: Config, backend?: Stor
         b.write(METRICS_FILE, Buffer.from(JSON.stringify(store, null, 2), 'utf8'));
         b.flush('qa-tools: update metrics run');
     } catch (err) {
-        rootLogger.error(
-            'Failed to save metrics. Check write permissions and disk space: ' +
-                (err instanceof Error ? err.message : String(err)),
-        );
+        rootLogger.error('Failed to save metrics. Check write permissions and disk space: ' + String(err));
     }
 }
 
@@ -176,9 +168,10 @@ export function saveParseResult(project: string, result: ParseResult, config?: C
     return run;
 }
 
-export function calculateFlakiness(store: MetricsStore, minRuns = 2): FlakinessEntry[] {
-    const testMap = new Map<string, { pass: number; fail: number; skip: number }>();
-
+function accumulateTestFlakiness(
+    testMap: Map<string, { pass: number; fail: number; skip: number }>,
+    store: MetricsStore,
+): void {
     for (const run of store.runs) {
         for (const t of run.tests) {
             const entry = testMap.get(t.title) || { pass: 0, fail: 0, skip: 0 };
@@ -188,6 +181,12 @@ export function calculateFlakiness(store: MetricsStore, minRuns = 2): FlakinessE
             testMap.set(t.title, entry);
         }
     }
+}
+
+export function calculateFlakiness(store: MetricsStore, minRuns = 2): FlakinessEntry[] {
+    const testMap = new Map<string, { pass: number; fail: number; skip: number }>();
+
+    accumulateTestFlakiness(testMap, store);
 
     const result: FlakinessEntry[] = [];
     for (const [title, counts] of testMap) {
