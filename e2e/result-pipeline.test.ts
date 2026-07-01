@@ -173,7 +173,7 @@ describe('E2E: Result Processing Pipeline', () => {
     it('returns empty match for missing mapping file', () => {
         const result = matchResultsToTests(
             [{ title: 'TC01', state: 'passed', duration: 100 }],
-            '/tmp/nonexistent.json',
+            path.join(os.tmpdir(), 'nonexistent.json'),
         );
 
         expect(result.matched).toHaveLength(0);

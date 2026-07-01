@@ -3,6 +3,8 @@
  * Focuses on CLI argument parsing and control flow (skip-jira, output).
  */
 
+import os from 'os';
+import path from 'path';
 import { describe, expect, it, vi, afterEach } from 'vitest';
 
 // Mock external deps
@@ -19,7 +21,7 @@ vi.mock('../shared/report-generator.js', () => ({
 }));
 
 vi.mock('../shared/temp-dir.js', () => ({
-    writeReport: vi.fn(() => '/tmp/report.html'),
+    writeReport: vi.fn(() => path.join(os.tmpdir(), 'report.html')),
 }));
 
 vi.mock('../shared/http-client.js', () => ({
