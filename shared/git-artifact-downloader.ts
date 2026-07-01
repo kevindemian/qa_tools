@@ -7,6 +7,75 @@ import { parseTestResults } from './result_parser.js';
 import type { GitHubWorkflowRun, GitHubWorkflowRunsResponse, GitHubArtifactsResponse, GitLabJob } from './types.js';
 import { isGitHubCi, isGitLabCi, GIT_HISTORY_RUNS, type CiContext, type RunStats } from './ci-detect.js';
 
+function addRunStatsFromSummary(
+    summary: NonNullable<Partial<CtrfData>['results']>['summary'],
+    run: GitHubWorkflowRun,
+    runStats: RunStats[],
+): void {
+    if (!summary) return;
+    runStats.push({
+        runId: run.id,
+        createdAt: typeof run.created_at === 'string' ? run.created_at : '',
+        passed: summary.passed,
+        failed: summary.failed,
+        skipped: summary.skipped,
+        total: summary.tests,
+        passRate: summary.passed + summary.failed > 0 ? (summary.passed / (summary.passed + summary.failed)) * 100 : 0,
+    });
+}
+
+function trackTestStatuses(
+    tests: Array<{ name: string; status: string }> | undefined,
+    allTestsByTitleMap: Map<string, { states: string[] }>,
+): void {
+    for (const t of tests ?? []) {
+        const name = t.name;
+        const existing = allTestsByTitleMap.get(name);
+        if (!existing) {
+            allTestsByTitleMap.set(name, { states: [t.status] });
+        } else {
+            existing.states.push(t.status);
+        }
+    }
+}
+
+function parseGitHubZipEntries(
+    zip: AdmZip,
+    run: GitHubWorkflowRun,
+    runStats: RunStats[],
+    allTestsByTitleMap: Map<string, { states: string[] }>,
+): void {
+    for (const entry of zip.getEntries()) {
+        if (!entry.name.endsWith('.json')) continue;
+        const parsed: Partial<CtrfData> = JSON.parse(entry.getData().toString('utf8')) as Partial<CtrfData>;
+        addRunStatsFromSummary(parsed.results?.summary, run, runStats);
+        trackTestStatuses(parsed.results?.tests, allTestsByTitleMap);
+    }
+}
+
+async function processGitHubRun(
+    repo: string,
+    client: ReturnType<typeof createHttpClient>,
+    run: GitHubWorkflowRun,
+    runStats: RunStats[],
+    allTestsByTitleMap: Map<string, { states: string[] }>,
+): Promise<void> {
+    const artResp = await client.get<GitHubArtifactsResponse>(
+        `/repos/${repo}/actions/runs/${String(run.id)}/artifacts`,
+    );
+    const artifacts = artResp.data.artifacts;
+    const ctrf = artifacts.find((a) => {
+        const name = a.name.toLowerCase();
+        return name.includes('ctrf') || name.includes('test-results');
+    });
+    if (!ctrf) return;
+    const zipResp = await client.get(`/repos/${repo}/actions/artifacts/${String(ctrf.id)}/zip`, {
+        responseType: 'arraybuffer' as const,
+    });
+    const zip = new AdmZip(Buffer.from(zipResp.data));
+    parseGitHubZipEntries(zip, run, runStats, allTestsByTitleMap);
+}
+
 async function processGitHubArtifacts(
     repo: string,
     client: ReturnType<typeof createHttpClient>,
@@ -16,49 +85,7 @@ async function processGitHubArtifacts(
     const allTestsByTitleMap = new Map<string, { states: string[] }>();
     for (const run of runs.slice(0, GIT_HISTORY_RUNS)) {
         try {
-            const artResp = await client.get<GitHubArtifactsResponse>(
-                `/repos/${repo}/actions/runs/${String(run.id)}/artifacts`,
-            );
-            const artifacts = artResp.data.artifacts;
-            const ctrf = artifacts.find((a) => {
-                const name = (a.name || '').toLowerCase();
-                return name.includes('ctrf') || name.includes('test-results');
-            });
-            if (!ctrf) continue;
-
-            const zipResp = await client.get(`/repos/${repo}/actions/artifacts/${String(ctrf.id)}/zip`, {
-                responseType: 'arraybuffer' as const,
-            });
-            const zip = new AdmZip(Buffer.from(zipResp.data));
-            for (const entry of zip.getEntries()) {
-                if (!entry.name.endsWith('.json')) continue;
-                const parsed: Partial<CtrfData> = JSON.parse(entry.getData().toString('utf8')) as Partial<CtrfData>;
-                const summary = parsed.results?.summary;
-                const tests = parsed.results?.tests || [];
-                if (summary) {
-                    runStats.push({
-                        runId: run.id,
-                        createdAt: typeof run.created_at === 'string' ? run.created_at : '',
-                        passed: summary.passed || 0,
-                        failed: summary.failed || 0,
-                        skipped: summary.skipped || 0,
-                        total: summary.tests || 0,
-                        passRate:
-                            summary.passed + summary.failed > 0
-                                ? (summary.passed / (summary.passed + summary.failed)) * 100
-                                : 0,
-                    });
-                }
-                for (const t of tests) {
-                    const name = t.name;
-                    const existing = allTestsByTitleMap.get(name);
-                    if (!existing) {
-                        allTestsByTitleMap.set(name, { states: [t.status] });
-                    } else {
-                        existing.states.push(t.status);
-                    }
-                }
-            }
+            await processGitHubRun(repo, client, run, runStats, allTestsByTitleMap);
         } catch (err) {
             rootLogger.debug(
                 'git-artifact-downloader: skip individual run: ' + (err instanceof Error ? err.message : String(err)),
@@ -73,7 +100,7 @@ function buildCommitsFromRuns(runs: GitHubWorkflowRun[]): string {
     for (const run of runs.slice(0, GIT_HISTORY_RUNS)) {
         const hc = run.head_commit;
         if (hc) {
-            const msg = (hc.message || '').split('\n')[0];
+            const msg = (hc.message ?? '').split('\n')[0];
             const author = typeof hc.author?.name === 'string' ? hc.author.name : 'unknown';
             const date = (typeof run.created_at === 'string' ? run.created_at : '').slice(0, 10);
             commits += `- ${msg} (${author}, ${date})\n`;
@@ -96,8 +123,8 @@ function detectFlakyTests(allTestsByTitle: Record<string, { states: string[] }>)
 }
 
 async function fetchGitHubHistory(): Promise<CiContext> {
-    const token = Config.getDefault().get('githubToken') || '';
-    const repo = Config.get('GITHUB_REPOSITORY') || '';
+    const token = Config.getDefault().get('githubToken');
+    const repo = Config.get('GITHUB_REPOSITORY');
     const client = createHttpClient({
         baseUrl: 'https://api.github.com',
         authHeader: { Authorization: 'Bearer ' + token },
@@ -125,7 +152,7 @@ async function processGitLabPipelineArtifacts(
     const jobsResp = await client.get<GitLabJob[]>(`/projects/${projectId}/pipelines/${String(pipeline['id'])}/jobs`);
     const jobs: GitLabJob[] = jobsResp.data;
     const testJob = jobs.find((j) => {
-        const name = (j.name || '').toLowerCase();
+        const name = j.name.toLowerCase();
         return name.includes('test') || name.includes('e2e') || name.includes('ctrf');
     });
     if (!testJob) return [];
@@ -143,11 +170,11 @@ async function processGitLabPipelineArtifacts(
         if (summary) {
             stats.push({
                 runId: pipeline['id'] as number,
-                createdAt: (pipeline['created_at'] as string) || '',
-                passed: summary.passed || 0,
-                failed: summary.failed || 0,
-                skipped: summary.skipped || 0,
-                total: summary.tests || 0,
+                createdAt: pipeline['created_at'] as string,
+                passed: summary.passed,
+                failed: summary.failed,
+                skipped: summary.skipped,
+                total: summary.tests,
                 passRate:
                     summary.passed + summary.failed > 0
                         ? (summary.passed / (summary.passed + summary.failed)) * 100
@@ -159,8 +186,8 @@ async function processGitLabPipelineArtifacts(
 }
 
 async function fetchGitLabHistory(): Promise<CiContext> {
-    const token = Config.get('CI_JOB_TOKEN') || '';
-    const projectId = Config.get('CI_PROJECT_ID') || '';
+    const token = Config.get('CI_JOB_TOKEN');
+    const projectId = Config.get('CI_PROJECT_ID');
     const serverUrl = Config.get('CI_SERVER_URL') || 'https://gitlab.com';
     const client = createHttpClient({
         baseUrl: serverUrl + '/api/v4',
@@ -189,8 +216,8 @@ async function fetchGitLabHistory(): Promise<CiContext> {
 }
 
 async function downloadAndParseLatestGitHubRun(): Promise<ParseResult | null> {
-    const token = Config.getDefault().get('githubToken') || '';
-    const repo = Config.get('GITHUB_REPOSITORY') || '';
+    const token = Config.getDefault().get('githubToken');
+    const repo = Config.get('GITHUB_REPOSITORY');
     if (!token || !repo) return null;
     const client = createHttpClient({
         baseUrl: 'https://api.github.com',
@@ -209,7 +236,7 @@ async function downloadAndParseLatestGitHubRun(): Promise<ParseResult | null> {
         );
         const artifacts = artResp.data.artifacts;
         const ctrf = artifacts.find((a) => {
-            const name = (a.name || '').toLowerCase();
+            const name = a.name.toLowerCase();
             return name.includes('ctrf') || name.includes('test-results');
         });
         if (!ctrf) return null;
@@ -231,8 +258,8 @@ async function downloadAndParseLatestGitHubRun(): Promise<ParseResult | null> {
 }
 
 async function downloadAndParseLatestGitLabRun(): Promise<ParseResult | null> {
-    const token = Config.get('CI_JOB_TOKEN') || '';
-    const projectId = Config.get('CI_PROJECT_ID') || '';
+    const token = Config.get('CI_JOB_TOKEN');
+    const projectId = Config.get('CI_PROJECT_ID');
     const serverUrl = Config.get('CI_SERVER_URL') || 'https://gitlab.com';
     if (!token || !projectId) return null;
     const client = createHttpClient({
@@ -247,7 +274,7 @@ async function downloadAndParseLatestGitLabRun(): Promise<ParseResult | null> {
         const jobsResp = await client.get(`/projects/${projectId}/pipelines/${String(pipeline.id)}/jobs`);
         const jobs: GitLabJob[] = jobsResp.data as GitLabJob[];
         const testJob = jobs.find((j) => {
-            const name = (j.name || '').toLowerCase();
+            const name = j.name.toLowerCase();
             return name.includes('test') || name.includes('e2e') || name.includes('ctrf');
         });
         if (!testJob) return null;

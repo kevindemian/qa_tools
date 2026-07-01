@@ -6,32 +6,40 @@ import type { InlineToken } from './markdown-lexer.js';
 
 // ─── Inline token → HTML ────────────────────────────────────────────────────────
 
+function renderLink(t: InlineToken): string {
+    let hrefVal = t.href;
+    if (hrefVal && !hrefVal.includes('://') && /\.md(#|$)/.test(hrefVal)) {
+        hrefVal = hrefVal.replace(/\.md(?=#|$)/, '.html');
+    }
+    const hrefAttr = hrefVal ? ' href="' + sanitizeHtml(hrefVal) + '"' : '';
+    return '<a' + hrefAttr + '>' + sanitizeHtml(t.text ?? '') + '</a>';
+}
+
+function renderInlineToken(t: InlineToken): string {
+    switch (t.type) {
+        case 'text':
+        case 'plain':
+            return sanitizeHtml(t.text ?? '');
+        case 'strong':
+            return '<strong>' + renderInlineToHtml(t.tokens) + '</strong>';
+        case 'em':
+            return '<em>' + renderInlineToHtml(t.tokens) + '</em>';
+        case 'codespan':
+            return '<code>' + sanitizeHtml(t.text ?? '') + '</code>';
+        case 'link':
+            return renderLink(t);
+        case 'br':
+            return '<br>';
+        case 'del':
+            return '<del>' + renderInlineToHtml(t.tokens) + '</del>';
+        default:
+            return '';
+    }
+}
+
 function renderInlineToHtml(tokens: InlineToken[] | undefined): string {
     if (!tokens) return '';
-    let out = '';
-    for (const t of tokens) {
-        if (t.type === 'text' || t.type === 'plain') {
-            out += sanitizeHtml(t.text ?? '');
-        } else if (t.type === 'strong') {
-            out += '<strong>' + renderInlineToHtml(t.tokens) + '</strong>';
-        } else if (t.type === 'em') {
-            out += '<em>' + renderInlineToHtml(t.tokens) + '</em>';
-        } else if (t.type === 'codespan') {
-            out += '<code>' + sanitizeHtml(t.text ?? '') + '</code>';
-        } else if (t.type === 'link') {
-            let hrefVal = t.href || '';
-            if (hrefVal && !hrefVal.includes('://') && /\.md(#|$)/.test(hrefVal)) {
-                hrefVal = hrefVal.replace(/\.md(?=#|$)/, '.html');
-            }
-            const hrefAttr = hrefVal ? ' href="' + sanitizeHtml(hrefVal) + '"' : '';
-            out += '<a' + hrefAttr + '>' + sanitizeHtml(t.text || '') + '</a>';
-        } else if (t.type === 'br') {
-            out += '<br>';
-        } else if (t.type === 'del') {
-            out += '<del>' + renderInlineToHtml(t.tokens) + '</del>';
-        }
-    }
-    return out;
+    return tokens.map(renderInlineToken).join('');
 }
 
 // ─── Token list → HTML block string ────────────────────────────────────────────
@@ -46,7 +54,7 @@ export function renderTokensToHtml(tokens: InlineToken[]): string {
             const text = renderInlineToHtml(token.tokens);
             if (text.trim()) parts.push('<p>' + text + '</p>');
         } else if (token.type === 'code') {
-            parts.push('<pre><code>' + sanitizeHtml(token.text || '') + '</code></pre>');
+            parts.push('<pre><code>' + sanitizeHtml(token.text ?? '') + '</code></pre>');
         } else if (token.type === 'list') {
             const items = (token.items as Array<{ tokens: InlineToken[] }>).map(
                 (item) => '<li>' + renderInlineToHtml(item.tokens) + '</li>',
