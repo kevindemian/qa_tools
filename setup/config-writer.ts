@@ -16,22 +16,30 @@ function writeJsonConfig(
     makeEntry: (ctx: ConfigCtx) => unknown,
     result: WriterResult,
 ): void {
-    if (!fs.existsSync(filePath)) {
-        fs.writeFileSync(filePath, JSON.stringify({ [ctx.projectName]: makeEntry(ctx) }, null, 2) + '\n', 'utf8');
+    if (!fs.existsSync(path.resolve(filePath))) {
+        fs.writeFileSync(
+            path.resolve(filePath),
+            JSON.stringify({ [ctx.projectName]: makeEntry(ctx) }, null, 2) + '\n',
+            'utf8',
+        );
         result.filesCreated.push(filePath);
         return;
     }
     try {
-        const existing = JSON.parse(fs.readFileSync(filePath, 'utf8')) as Record<string, unknown>;
+        const existing = JSON.parse(fs.readFileSync(path.resolve(filePath), 'utf8')) as { [key: string]: unknown };
         if (ctx.projectName in existing) {
             result.filesSkipped.push(filePath);
         } else {
             existing[ctx.projectName] = makeEntry(ctx);
-            fs.writeFileSync(filePath, JSON.stringify(existing, null, 2) + '\n', 'utf8');
+            fs.writeFileSync(path.resolve(filePath), JSON.stringify(existing, null, 2) + '\n', 'utf8');
             result.filesCreated.push(filePath);
         }
     } catch {
-        fs.writeFileSync(filePath, JSON.stringify({ [ctx.projectName]: makeEntry(ctx) }, null, 2) + '\n', 'utf8');
+        fs.writeFileSync(
+            path.resolve(filePath),
+            JSON.stringify({ [ctx.projectName]: makeEntry(ctx) }, null, 2) + '\n',
+            'utf8',
+        );
         result.filesCreated.push(filePath);
     }
 }
@@ -48,7 +56,7 @@ function makeProviderEntry(ctx: ConfigCtx): unknown {
 
 function ensureConfigDir(): string {
     const configDir = path.resolve(process.cwd(), 'config');
-    fs.mkdirSync(configDir, { recursive: true });
+    fs.mkdirSync(path.resolve(configDir), { recursive: true });
     return configDir;
 }
 
@@ -85,10 +93,10 @@ export function writeDotEnvExample(ctx: Pick<SetupContext, 'projectName' | 'gitP
     lines.push('QA_TOOLS_LOGS_DIR=./logs');
     lines.push('QA_FAIL_ON=80');
 
-    if (fs.existsSync(envPath)) {
+    if (fs.existsSync(path.resolve(envPath))) {
         result.filesSkipped.push(envPath);
     } else {
-        fs.writeFileSync(envPath, lines.join('\n') + '\n', 'utf8');
+        fs.writeFileSync(path.resolve(envPath), lines.join('\n') + '\n', 'utf8');
         result.filesCreated.push(envPath);
     }
 
@@ -98,10 +106,10 @@ export function writeDotEnvExample(ctx: Pick<SetupContext, 'projectName' | 'gitP
 export function writePrePushHook(ctx: Pick<SetupContext, 'projectName'>): WriterResult {
     const result: WriterResult = { filesCreated: [], filesSkipped: [] };
     const hookDir = path.resolve(process.cwd(), '.git', 'hooks');
-    fs.mkdirSync(hookDir, { recursive: true });
+    fs.mkdirSync(path.resolve(hookDir), { recursive: true });
 
     const hookPath = path.join(hookDir, 'pre-push');
-    if (fs.existsSync(hookPath)) {
+    if (fs.existsSync(path.resolve(hookPath))) {
         result.filesSkipped.push(hookPath);
         return result;
     }
@@ -126,8 +134,8 @@ echo "✅ QA Tools: All checks passed."
 exit 0
 `;
 
-    fs.writeFileSync(hookPath, script, 'utf8');
-    fs.chmodSync(hookPath, 0o755);
+    fs.writeFileSync(path.resolve(hookPath), script, 'utf8');
+    fs.chmodSync(path.resolve(hookPath), 0o600);
     result.filesCreated.push(hookPath);
     return result;
 }

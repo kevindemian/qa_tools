@@ -37,6 +37,46 @@ export interface DataTableProps {
     caption?: string;
 }
 
+function renderTableHeader(columns: TableColumn[], cellPadding: string, headStyle: string): string {
+    let html = `<thead style="background:var(--color-surface-elevated);${headStyle}"><tr>`;
+    for (const col of columns) {
+        const align = col.align ? `text-align:${col.align}` : 'text-align:left';
+        const width = col.width ? `width:${col.width}` : '';
+        const sortAttr = col.sortable ? ' data-sortable="true"' : '';
+        html += `<th data-column="${col.key}"${sortAttr}
+            scope="col"
+            style="padding:${cellPadding};${align};${width};
+                   font-size:${tokens.fontSize.sm};text-transform:uppercase;
+                   color:var(--color-text-secondary);white-space:nowrap;
+                   border-bottom:2px solid var(--color-border-subtle)">
+            ${col.label}
+            ${col.sortable ? '<span data-part="sort-indicator" style="margin-left:4px;opacity:0.4">↕</span>' : ''}
+        </th>`;
+    }
+    html += '</tr></thead>';
+    return html;
+}
+
+function renderTableRows(rows: TableRow[], columns: TableColumn[], cellPadding: string): string {
+    let html = '<tbody>';
+    for (const row of rows) {
+        const cls = row.class ? ` class="${row.class}"` : '';
+        html += `<tr data-row="${row.key}"${cls}${row.attrs || ''}
+            style="border-bottom:1px solid var(--color-border-subtle);
+                   transition:background 0.15s"
+            onmouseover="this.style.background='var(--color-surface-elevated)'"
+            onmouseout="this.style.background=''">`;
+        for (const col of columns) {
+            const cell = row.cells[col.key] ?? '';
+            const align = col.align ? `text-align:${col.align}` : '';
+            html += `<td style="padding:${cellPadding};${align};font-size:${tokens.fontSize.md};color:var(--color-text-primary)">${cell}</td>`;
+        }
+        html += '</tr>';
+    }
+    html += '</tbody>';
+    return html;
+}
+
 export function DataTable(props: DataTableProps): string {
     const headStyle = props.stickyHeader ? 'position:sticky;top:0;z-index:1;' : '';
     const cellPadding = props.compact
@@ -52,37 +92,9 @@ export function DataTable(props: DataTableProps): string {
     if (props.caption) {
         html += `<caption style="caption-side:bottom;font-size:${tokens.fontSize.xs};color:var(--color-text-muted);padding:${tokens.spacing.sm}px;text-align:left">${props.caption}</caption>`;
     }
-    html += `<thead style="background:var(--color-surface-elevated);${headStyle}"><tr>`;
-    for (const col of props.columns) {
-        const align = col.align ? `text-align:${col.align}` : 'text-align:left';
-        const width = col.width ? `width:${col.width}` : '';
-        const sortAttr = col.sortable ? ' data-sortable="true"' : '';
-        html += `<th data-column="${col.key}"${sortAttr}
-            scope="col"
-            style="padding:${cellPadding};${align};${width};
-                   font-size:${tokens.fontSize.sm};text-transform:uppercase;
-                   color:var(--color-text-secondary);white-space:nowrap;
-                   border-bottom:2px solid var(--color-border-subtle)">
-            ${col.label}
-            ${col.sortable ? '<span data-part="sort-indicator" style="margin-left:4px;opacity:0.4">↕</span>' : ''}
-        </th>`;
-    }
-    html += '</tr></thead><tbody>';
-    for (const row of props.rows) {
-        const cls = row.class ? ` class="${row.class}"` : '';
-        html += `<tr data-row="${row.key}"${cls}${row.attrs || ''}
-            style="border-bottom:1px solid var(--color-border-subtle);
-                   transition:background 0.15s"
-            onmouseover="this.style.background='var(--color-surface-elevated)'"
-            onmouseout="this.style.background=''">`;
-        for (const col of props.columns) {
-            const cell = row.cells[col.key] ?? '';
-            const align = col.align ? `text-align:${col.align}` : '';
-            html += `<td style="padding:${cellPadding};${align};font-size:${tokens.fontSize.md};color:var(--color-text-primary)">${cell}</td>`;
-        }
-        html += '</tr>';
-    }
-    html += '</tbody></table></div>';
+    html += renderTableHeader(props.columns, cellPadding, headStyle);
+    html += renderTableRows(props.rows, props.columns, cellPadding);
+    html += '</table></div>';
     return html;
 }
 
