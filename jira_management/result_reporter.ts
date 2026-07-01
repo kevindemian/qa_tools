@@ -143,6 +143,21 @@ function _buildExecutionPayload(
     return { summary, testKeys };
 }
 
+async function linkTestsToTe(
+    matchedResults: Array<{ key: string; status: string }>,
+    te: { key: string },
+    linkManager: import('../jira_management/jira_link_manager.js').default,
+): Promise<void> {
+    try {
+        for (const m of matchedResults) {
+            if (m.status === 'skipped') continue;
+            await linkManager.createIssueLink(m.key, te.key, 'Tests');
+        }
+    } catch (err) {
+        rootLogger.warn('Falha ao linkar alguns testes: ' + (err as Error).message);
+    }
+}
+
 async function createTestExecutionFromResults(opts: CreateTeOpts): Promise<TestExecResult> {
     const { testKeys } = _buildExecutionPayload(opts.matchedResults, opts.csvName, opts.pipelineInfo);
 
@@ -165,14 +180,7 @@ async function createTestExecutionFromResults(opts: CreateTeOpts): Promise<TestE
         });
 
         if (te && te.key && opts.matchedResults.length > 0) {
-            try {
-                for (const m of opts.matchedResults) {
-                    if (m.status === 'skipped') continue;
-                    await opts.linkManager.createIssueLink(m.key, te.key, 'Tests');
-                }
-            } catch (err) {
-                rootLogger.warn('Falha ao linkar alguns testes: ' + (err as Error).message);
-            }
+            await linkTestsToTe(opts.matchedResults, te, opts.linkManager);
         }
     }
 

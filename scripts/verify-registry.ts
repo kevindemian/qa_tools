@@ -22,6 +22,74 @@ interface ValidationError {
 
 const VALID_TIERS = new Set(['main', 'fast', 'reviewer', 'report', 'fallback', 'batch']);
 
+function validateTiers(prefix: string, model: { [key: string]: unknown }, errors: ValidationError[]): void {
+    if (!Array.isArray(Reflect.get(model, 'tiers'))) {
+        errors.push({ path: `${prefix}.tiers`, message: 'Must be an array' });
+        return;
+    }
+    const tiers = Reflect.get(model, 'tiers') as string[];
+    for (let j = 0; j < tiers.length; j++) {
+        const tier = Reflect.get(tiers, j) as string | undefined;
+        if (tier === undefined || !VALID_TIERS.has(tier)) {
+            errors.push({
+                path: `${prefix}.tiers[${j}]`,
+                message: `Invalid tier "${tier}". Valid: ${[...VALID_TIERS].join(', ')}`,
+            });
+        }
+    }
+}
+
+function validateNonNegativeNumber(
+    prefix: string,
+    fieldName: string,
+    model: { [key: string]: unknown },
+    errors: ValidationError[],
+): void {
+    const val = model[fieldName];
+    if (val !== undefined && (typeof val !== 'number' || val < 0)) {
+        errors.push({ path: `${prefix}.${fieldName}`, message: 'Must be a non-negative number' });
+    }
+}
+
+function validateModel(
+    model: { [key: string]: unknown },
+    providerName: string,
+    i: number,
+    errors: ValidationError[],
+): void {
+    const prefix = `providers.${providerName}[${i}]`;
+
+    const id = Reflect.get(model, 'id');
+    if (typeof id !== 'string' || id.length === 0) {
+        errors.push({ path: `${prefix}.id`, message: 'Must be a non-empty string' });
+    }
+
+    validateTiers(prefix, model, errors);
+    validateNonNegativeNumber(prefix, 'context', model, errors);
+    validateNonNegativeNumber(prefix, 'costPer1kPrompt', model, errors);
+    validateNonNegativeNumber(prefix, 'costPer1kCompletion', model, errors);
+
+    const capabilities = model['capabilities'];
+    if (
+        capabilities !== undefined &&
+        (!Array.isArray(capabilities) || !capabilities.every((c): c is string => typeof c === 'string'))
+    ) {
+        errors.push({ path: `${prefix}.capabilities`, message: 'Must be an array of strings' });
+    }
+}
+
+function validateProvider(providerName: string, providerModels: unknown, errors: ValidationError[]): void {
+    if (!Array.isArray(providerModels)) {
+        errors.push({ path: `providers.${providerName}`, message: 'Must be an array' });
+        return;
+    }
+
+    for (let i = 0; i < providerModels.length; i++) {
+        const model = Reflect.get(providerModels, i) as { [key: string]: unknown };
+        validateModel(model, providerName, i, errors);
+    }
+}
+
 function validateRegistry(): ValidationError[] {
     const errors: ValidationError[] = [];
 
@@ -31,7 +99,7 @@ function validateRegistry(): ValidationError[] {
     } catch (err) {
         errors.push({
             path: '',
-            message: `Cannot read registry file: ${err instanceof Error ? err.message : String(err)}`,
+            message: `Cannot read registry file: ${String(err)}`,
         });
         return errors;
     }
@@ -40,7 +108,7 @@ function validateRegistry(): ValidationError[] {
     try {
         data = JSON.parse(content);
     } catch (err) {
-        errors.push({ path: '', message: `Invalid JSON: ${err instanceof Error ? err.message : String(err)}` });
+        errors.push({ path: '', message: `Invalid JSON: ${String(err)}` });
         return errors;
     }
 
@@ -49,7 +117,7 @@ function validateRegistry(): ValidationError[] {
         return errors;
     }
 
-    const root = data as Record<string, unknown>;
+    const root = data as { [key: string]: unknown };
 
     const version = root['version'];
     if (typeof version !== 'number' || version < 1) {
@@ -66,60 +134,10 @@ function validateRegistry(): ValidationError[] {
         return errors;
     }
 
-    const providers = root['providers'] as Record<string, unknown>;
+    const providers = root['providers'] as { [key: string]: unknown };
 
     for (const [providerName, providerModels] of Object.entries(providers)) {
-        if (!Array.isArray(providerModels)) {
-            errors.push({ path: `providers.${providerName}`, message: 'Must be an array' });
-            continue;
-        }
-
-        for (let i = 0; i < providerModels.length; i++) {
-            const model = Reflect.get(providerModels, i) as Record<string, unknown>;
-            const prefix = `providers.${providerName}[${i}]`;
-
-            const id = Reflect.get(model, 'id');
-            if (typeof id !== 'string' || id.length === 0) {
-                errors.push({ path: `${prefix}.id`, message: 'Must be a non-empty string' });
-            }
-
-            if (!Array.isArray(Reflect.get(model, 'tiers'))) {
-                errors.push({ path: `${prefix}.tiers`, message: 'Must be an array' });
-            } else {
-                const tiers = Reflect.get(model, 'tiers') as string[];
-                for (let j = 0; j < tiers.length; j++) {
-                    const tier = Reflect.get(tiers, j) as string | undefined;
-                    if (tier === undefined || !VALID_TIERS.has(tier)) {
-                        errors.push({
-                            path: `${prefix}.tiers[${j}]`,
-                            message: `Invalid tier "${tier}". Valid: ${[...VALID_TIERS].join(', ')}`,
-                        });
-                    }
-                }
-            }
-
-            const ctx = model['context'];
-            if (ctx !== undefined && (typeof ctx !== 'number' || ctx < 0)) {
-                errors.push({ path: `${prefix}.context`, message: 'Must be a non-negative integer' });
-            }
-
-            const costPrompt = model['costPer1kPrompt'];
-            if (costPrompt !== undefined && (typeof costPrompt !== 'number' || costPrompt < 0)) {
-                errors.push({ path: `${prefix}.costPer1kPrompt`, message: 'Must be a non-negative number' });
-            }
-
-            const costCompletion = model['costPer1kCompletion'];
-            if (costCompletion !== undefined && (typeof costCompletion !== 'number' || costCompletion < 0)) {
-                errors.push({ path: `${prefix}.costPer1kCompletion`, message: 'Must be a non-negative number' });
-            }
-
-            const capabilities = model['capabilities'];
-            if (capabilities !== undefined) {
-                if (!Array.isArray(capabilities) || !capabilities.every((c): c is string => typeof c === 'string')) {
-                    errors.push({ path: `${prefix}.capabilities`, message: 'Must be an array of strings' });
-                }
-            }
-        }
+        validateProvider(providerName, providerModels, errors);
     }
 
     return errors;

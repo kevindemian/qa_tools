@@ -128,6 +128,36 @@ async function _triggerPipeline(
     }
 }
 
+async function generatePrReportIfNeeded(
+    parsed: import('../shared/result_parser.js').ParseResult,
+    projectName: string,
+): Promise<void> {
+    const prReportEnabled = isPrReportEnabled(projectName);
+    if (!process.env['GITHUB_TOKEN'] || !prReportEnabled) return;
+    const prConfig = getPrReportConfig(projectName);
+    try {
+        const reportResult = await generatePrReport({
+            tests: parsed.tests,
+            stats: {
+                passed: parsed.stats.passed,
+                failed: parsed.stats.failed,
+                skipped: parsed.stats.skipped,
+                total: parsed.stats.total,
+                duration: parsed.stats.duration,
+            },
+            skipAi: prConfig.skipAi ?? false,
+            skipQuality: prConfig.skipQuality ?? false,
+            skipFlaky: prConfig.skipFlaky ?? false,
+            htmlOutputPath: 'reports/pr-report.html',
+        });
+        if (reportResult.htmlPath) {
+            success('PR report gerado: ' + reportResult.htmlPath);
+        }
+    } catch (err) {
+        warn('PR report generation failed: ' + String(err));
+    }
+}
+
 async function _collectPipelineResults(
     m: import('../shared/types.js').GitProvider,
     pipelineResult: PipelineTriggerResult,
@@ -164,31 +194,7 @@ async function _collectPipelineResults(
         });
         if (parsed) {
             await offerPipelineFailureAnalysis(parsed);
-            const prReportEnabled = isPrReportEnabled(projectName);
-            if (process.env['GITHUB_TOKEN'] && prReportEnabled) {
-                const prConfig = getPrReportConfig(projectName);
-                try {
-                    const reportResult = await generatePrReport({
-                        tests: parsed.tests,
-                        stats: {
-                            passed: parsed.stats.passed,
-                            failed: parsed.stats.failed,
-                            skipped: parsed.stats.skipped,
-                            total: parsed.stats.total,
-                            duration: parsed.stats.duration,
-                        },
-                        skipAi: prConfig.skipAi ?? false,
-                        skipQuality: prConfig.skipQuality ?? false,
-                        skipFlaky: prConfig.skipFlaky ?? false,
-                        htmlOutputPath: 'reports/pr-report.html',
-                    });
-                    if (reportResult.htmlPath) {
-                        success('PR report gerado: ' + reportResult.htmlPath);
-                    }
-                } catch (err) {
-                    warn('PR report generation failed: ' + (err instanceof Error ? err.message : String(err)));
-                }
-            }
+            await generatePrReportIfNeeded(parsed, projectName);
         }
     }
     return false;

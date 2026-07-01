@@ -7,6 +7,9 @@ import { cpSync, mkdirSync } from 'fs';
 import os from 'os';
 import { join } from 'path';
 
+const GIT_BIN = '/usr/bin/git';
+const AWS_BIN = '/usr/bin/aws';
+
 export type PublishTarget = 's3' | 'gh-pages';
 
 export interface PublishOptions {
@@ -23,7 +26,7 @@ function publishToS3(localPath: string, destination?: string): void {
         return;
     }
     try {
-        execFileSync('aws', ['s3', 'cp', localPath, dest, '--no-progress'], { stdio: 'inherit', timeout: 120_000 });
+        execFileSync(AWS_BIN, ['s3', 'cp', localPath, dest, '--no-progress'], { stdio: 'inherit', timeout: 120_000 });
     } catch (err: unknown) {
         rootLogger.error('S3 publish failed: ' + (err as Error).message);
     }
@@ -34,25 +37,23 @@ function publishToGhPages(localPath: string, destination?: string): void {
     const dest = destination || './report.html';
     const tmpDir = join(os.tmpdir(), 'qa-gh-pages-' + Date.now());
     try {
-        execFileSync('git', ['clone', '--branch', 'gh-pages', '--single-branch', getOriginUrl(), tmpDir], {
+        execFileSync(GIT_BIN, ['clone', '--branch', 'gh-pages', '--single-branch', getOriginUrl(), tmpDir], {
             stdio: 'ignore',
             timeout: 120_000,
         });
     } catch (err) {
-        rootLogger.warn(
-            'publish: git worktree add failed, using tmp dir: ' + (err instanceof Error ? err.message : String(err)),
-        );
+        rootLogger.warn('publish: git worktree add failed, using tmp dir: ' + String(err));
         mkdirSync(tmpDir, { recursive: true });
     }
     try {
         cpSync(localPath, join(tmpDir, dest));
-        execFileSync('git', ['add', dest], { stdio: 'inherit', cwd: tmpDir, timeout: 120_000 });
-        execFileSync('git', ['commit', '-m', 'Auto-publish report'], {
+        execFileSync(GIT_BIN, ['add', dest], { stdio: 'inherit', cwd: tmpDir, timeout: 120_000 });
+        execFileSync(GIT_BIN, ['commit', '-m', 'Auto-publish report'], {
             stdio: 'inherit',
             cwd: tmpDir,
             timeout: 120_000,
         });
-        execFileSync('git', ['push'], { stdio: 'inherit', cwd: tmpDir, timeout: 120_000 });
+        execFileSync(GIT_BIN, ['push'], { stdio: 'inherit', cwd: tmpDir, timeout: 120_000 });
     } catch (err: unknown) {
         rootLogger.error('gh-pages publish failed: ' + (err as Error).message);
     }
@@ -60,9 +61,9 @@ function publishToGhPages(localPath: string, destination?: string): void {
 
 function getOriginUrl(): string {
     try {
-        return execFileSync('git', ['remote', 'get-url', 'origin'], { encoding: 'utf8' }).trim();
+        return execFileSync(GIT_BIN, ['remote', 'get-url', 'origin'], { encoding: 'utf8' }).trim();
     } catch (err) {
-        rootLogger.warn('publish: failed to get origin URL: ' + (err instanceof Error ? err.message : String(err)));
+        rootLogger.warn('publish: failed to get origin URL: ' + String(err));
         return 'origin';
     }
 }

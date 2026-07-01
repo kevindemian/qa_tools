@@ -11,6 +11,16 @@ import type { CommandContext } from './context.js';
 import createTests from '../create_tests.js';
 import { offerTestExecutionAssociation, showResults } from './test-execution-flow.js';
 
+function getSourceMessage(resolvedData: { source: string }, sha: string | null): string {
+    if (resolvedData.source === 'cache') {
+        return 'Usando dados em cache (SHA ' + (sha as string).slice(0, 7) + ')';
+    }
+    if (resolvedData.source === 'ci') {
+        return 'Resultados baixados do CI';
+    }
+    return 'Usando baseline do branch ';
+}
+
 async function handler(c: CommandContext): Promise<boolean | void> {
     const projectName = c.ctx.project_name;
     if (!projectName) {
@@ -40,14 +50,7 @@ async function handler(c: CommandContext): Promise<boolean | void> {
             2,
         );
         jsonPath = writeEphemeral('ctrf-import', `resolve-${sha ?? 'nosha'}-${Date.now()}.json`, ctrfContent);
-        let sourceMsg: string;
-        if (resolvedData.source === 'cache') {
-            sourceMsg = 'Usando dados em cache (SHA ' + (sha as string).slice(0, 7) + ')';
-        } else if (resolvedData.source === 'ci') {
-            sourceMsg = 'Resultados baixados do CI';
-        } else {
-            sourceMsg = 'Usando baseline do branch ' + branch;
-        }
+        const sourceMsg = getSourceMessage(resolvedData, sha);
         success(sourceMsg);
     } else {
         /* Fallback: prompt user for manual file path */

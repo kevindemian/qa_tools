@@ -13,6 +13,8 @@ import Config from './config-accessor.js';
 import { sanitizeForLlm } from './sanitize.js';
 import { withSpinner } from './spinner.js';
 import { ClassifyResponseSchema } from './classify.schema.js';
+
+const GIT_BIN = '/usr/bin/git';
 import { consensusGenerate } from './llm-self-consistency.js';
 import { ArtifactValidator, type ValidationContext, pass, fail } from './artifact-validator.js';
 
@@ -29,52 +31,53 @@ export interface LlmContext {
     jiraIssues?: string;
 }
 
-/** Extract commit author from a git diff via `git blame` on the changed file paths.
- *  Returns the author name + email of the last commit touching those lines, or 'unknown' on error.
- *  Uses `--ignore-rev` to skip known reformatting/merge commits (configurable via QA_GIT_BLAME_IGNORE). */
+function extractFilesFromDiff(diff: string): Set<string> {
+    const lines = diff.split('\n').filter((l) => l.startsWith('+++ b/') || l.startsWith('--- a/'));
+    const files = new Set<string>();
+    for (const line of lines) {
+        const file = line.replace(/^--- a\//, '').replace(/^\+\+\+ b\//, '');
+        if (file && file !== '/dev/null') files.add(file);
+    }
+    return files;
+}
+
+function blameFile(file: string, ignoreArgs: string[]): string | null {
+    try {
+        const blameOut = execFileSync(GIT_BIN, ['blame', '--line-porcelain', ...ignoreArgs, '--', file], {
+            encoding: 'utf-8',
+            timeout: 5000,
+            stdio: ['pipe', 'pipe', 'ignore'],
+        });
+        const authorMatch = /^author (.+)$/m.exec(blameOut);
+        const emailMatch = /^author-mail <(.+)>$/m.exec(blameOut);
+        if (authorMatch) {
+            let author = authorMatch[1]?.trim() ?? 'unknown';
+            if (emailMatch) {
+                author += ' <' + (emailMatch[1] ?? '') + '>';
+            }
+            return author;
+        }
+    } catch (err) {
+        rootLogger.debug('failure-analysis: git blame failed for candidate: ' + String(err));
+    }
+    return null;
+}
+
 export function getCommitAuthor(diff: string): string {
     try {
-        const lines = diff.split('\n').filter((l) => l.startsWith('+++ b/') || l.startsWith('--- a/'));
-        const files = new Set<string>();
-        for (const line of lines) {
-            const file = line.replace(/^--- a\//, '').replace(/^\+\+\+ b\//, '');
-            if (file && file !== '/dev/null') files.add(file);
-        }
+        const files = extractFilesFromDiff(diff);
         if (files.size === 0) return 'unknown';
 
         const ignoreRevs = String(Config.get('qaGitBlameIgnore') || '');
         const ignoreArgs = ignoreRevs ? ['--ignore-rev', ignoreRevs] : [];
 
-        let author = 'unknown';
         for (const file of files) {
-            try {
-                const blameOut = execFileSync('git', ['blame', '--line-porcelain', ...ignoreArgs, '--', file], {
-                    encoding: 'utf-8',
-                    timeout: 5000,
-                    stdio: ['pipe', 'pipe', 'ignore'],
-                });
-                const authorMatch = /^author (.+)$/m.exec(blameOut);
-                const emailMatch = /^author-mail <(.+)>$/m.exec(blameOut);
-                if (authorMatch) {
-                    author = authorMatch[1]?.trim() ?? author;
-                    if (emailMatch) {
-                        author += ' <' + (emailMatch[1] ?? '') + '>';
-                    }
-                    break;
-                }
-            } catch (err) {
-                rootLogger.debug(
-                    'failure-analysis: git blame failed for candidate: ' +
-                        (err instanceof Error ? err.message : String(err)),
-                );
-                continue;
-            }
+            const author = blameFile(file, ignoreArgs);
+            if (author) return author;
         }
-        return author;
+        return 'unknown';
     } catch (err) {
-        rootLogger.debug(
-            'failure-analysis: author extraction failed: ' + (err instanceof Error ? err.message : String(err)),
-        );
+        rootLogger.debug('failure-analysis: author extraction failed: ' + String(err));
         return 'unknown';
     }
 }
@@ -133,7 +136,7 @@ export async function analyzeFailuresWithReport(tests: FlatTest[], context?: Llm
     try {
         result = await withSpinner('Analisando falhas com IA...', () => reviewWithLlm(systemTemplate, userMessage));
     } catch (err) {
-        rootLogger.warn('Failure analysis LLM call failed: ' + (err instanceof Error ? err.message : String(err)));
+        rootLogger.warn('Failure analysis LLM call failed: ' + String(err));
         return { content: '', confidence: 'medium', fallbackUsed: true };
     }
 
@@ -189,9 +192,7 @@ export async function classifyFailure(title: string, error: string): Promise<str
         }
         return result.winner;
     } catch (err) {
-        rootLogger.warn(
-            'Self-consistency failed for classifyFailure: ' + (err instanceof Error ? err.message : String(err)),
-        );
+        rootLogger.warn('Self-consistency failed for classifyFailure: ' + String(err));
         try {
             const fallbackResult = await llmPrompt({
                 tier: 'fast',
@@ -202,10 +203,7 @@ export async function classifyFailure(title: string, error: string): Promise<str
             });
             return fallbackResult;
         } catch (err) {
-            rootLogger.warn(
-                'classifyFailure: llmPrompt + Zod validation failed: ' +
-                    (err instanceof Error ? err.message : String(err)),
-            );
+            rootLogger.warn('classifyFailure: llmPrompt + Zod validation failed: ' + String(err));
             return 'UNKNOWN: Could not classify failure after retry';
         }
     }

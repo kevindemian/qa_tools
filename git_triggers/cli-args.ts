@@ -49,6 +49,54 @@ function _nextArg(args: string[], i: number): string | undefined {
  * Parses command line arguments into a discriminated union.
  * Batch mode is triggered when any batch-specific flag is present.
  */
+function parseBatchFlag(args: string[], i: number, result: BatchCliArgs): number {
+    const val = _nextArg(args, i);
+    switch (Reflect.get(args, i)) {
+        case '--project':
+        case '-p':
+            if (val !== undefined) {
+                result.project = val;
+                return i + 1;
+            }
+            return i;
+        case '--branch':
+        case '-b':
+            if (val !== undefined) {
+                result.branch = val;
+                return i + 1;
+            }
+            return i;
+        case '--auto':
+        case '--batch':
+            result.auto = true;
+            return i;
+        case '--publish':
+            if (val !== undefined) {
+                result.publish = val;
+                return i + 1;
+            }
+            return i;
+        case '--run-impacted-tests':
+            result.runImpactedTests = true;
+            return i;
+        case '--conservative':
+            result.conservative = true;
+            return i;
+        case '--dry-run':
+            result.dryRun = true;
+            return i;
+        case '--te-key':
+        case '-k':
+            if (val !== undefined) {
+                result.teKey = val;
+                return i + 1;
+            }
+            return i;
+        default:
+            return i;
+    }
+}
+
 export function parseCliArgs(): CliArgs {
     const args = process.argv.slice(2);
 
@@ -96,52 +144,10 @@ export function parseCliArgs(): CliArgs {
             dryRun: false,
         };
 
-        for (let i = 0; i < args.length; i++) {
-            const val = _nextArg(args, i);
-            switch (Reflect.get(args, i)) {
-                case '--project':
-                case '-p':
-                    if (val !== undefined) {
-                        result.project = val;
-                        i++;
-                    }
-                    break;
-                case '--branch':
-                case '-b':
-                    if (val !== undefined) {
-                        result.branch = val;
-                        i++;
-                    }
-                    break;
-                case '--auto':
-                case '--batch':
-                    result.auto = true;
-                    break;
-                case '--publish':
-                    if (val !== undefined) {
-                        result.publish = val;
-                        i++;
-                    }
-                    break;
-                case '--run-impacted-tests':
-                    result.runImpactedTests = true;
-                    break;
-                case '--conservative':
-                    result.conservative = true;
-                    break;
-                case '--dry-run':
-                    result.dryRun = true;
-                    break;
-                case '--te-key':
-                case '-k':
-                    if (val !== undefined) {
-                        result.teKey = val;
-                        i++;
-                    }
-                    break;
-                default:
-                    break;
-            }
+        let idx = 0;
+        while (idx < args.length) {
+            idx = parseBatchFlag(args, idx, result);
+            idx++;
         }
 
         if (!result.auto && !result.project && !result.branch) {

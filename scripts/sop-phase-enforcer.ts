@@ -15,6 +15,14 @@
 
 import { readFileSync } from 'node:fs';
 import { execFileSync } from 'node:child_process';
+import { resolve, dirname } from 'node:path';
+import { fileURLToPath } from 'node:url';
+
+const __filename = fileURLToPath(import.meta.url);
+const __dirname = dirname(__filename);
+const GIT_BIN = '/usr/bin/git';
+const VITEST_BIN = resolve(__dirname, '..', 'node_modules', '.bin', 'vitest');
+const TSC_BIN = resolve(__dirname, '..', 'node_modules', '.bin', 'tsc');
 
 const PROGRESS_FILE = 'FUNCTIONAL-AUDIT-PROGRESS.md';
 
@@ -162,21 +170,22 @@ function parseCli(argv: string[]): CliArgs {
 
 function verifyGitClean(): boolean {
     try {
-        const status = execFileSync('git', ['status', '--porcelain'], { encoding: 'utf-8', timeout: 30_000 }).trim();
+        const status = execFileSync(GIT_BIN, ['status', '--porcelain'], { encoding: 'utf-8', timeout: 30_000 }).trim();
         if (status.length !== 0) {
             warn('Working directory has uncommitted changes:\n' + status);
+            return false;
         }
         return true;
     } catch (e) {
         warn('Nao foi possivel verificar git status: ' + (e instanceof Error ? e.message : String(e)));
-        return true;
+        return false;
     }
 }
 
 function verifyTsc(): boolean {
     info('Rodando tsc --noEmit...');
     try {
-        execFileSync('npx', ['tsc', '--noEmit'], { encoding: 'utf-8', timeout: 120_000, stdio: 'pipe' });
+        execFileSync(TSC_BIN, ['--noEmit'], { encoding: 'utf-8', timeout: 120_000, stdio: 'pipe' });
         return true;
     } catch (e) {
         process.stderr.write('  L-- TSC FALHOU: ' + (e instanceof Error ? e.message : String(e)) + '\n');
@@ -188,7 +197,7 @@ function verifyTests(testPattern: string | null): boolean {
     const args = testPattern !== null ? ['run', '--', testPattern] : ['run'];
     info('Rodando vitest run' + (testPattern !== null ? ' -- ' + testPattern : '') + '...');
     try {
-        execFileSync('npx', ['vitest', ...args], { encoding: 'utf-8', timeout: 180_000, stdio: 'pipe' });
+        execFileSync(VITEST_BIN, args, { encoding: 'utf-8', timeout: 180_000, stdio: 'pipe' });
         return true;
     } catch (e) {
         process.stderr.write('  L-- TESTES FALHARAM\n');

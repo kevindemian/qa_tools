@@ -16,6 +16,15 @@ export const NAV_CMDS = ['/back', '/menu', '/exit', '/sair', '/quit', '/help'];
 
 export const isTTY = (): boolean => !!(process.stdout.isTTY && !getConfig().get<boolean>('quiet'));
 
+function readAnswer(text: string, def: string): string | null {
+    try {
+        return readlineSync.question(text + ': ', { defaultInput: def }).trim();
+    } catch (err) {
+        warn('Prompt input failed: ' + String(err));
+        return null;
+    }
+}
+
 /** Synchronous text prompt (readline-sync). Falls back when inquirer is unavailable.
  * @throws {@link CancelError} on nav commands (`/back`, `/exit`, etc.). */
 export function prompt(label: string, options: PromptOptions = {}): string {
@@ -28,13 +37,8 @@ export function prompt(label: string, options: PromptOptions = {}): string {
         if (hint) text += ' ' + chalk.yellow('(' + hint + ')');
         if (def) text += ' ' + chalk.yellow('[' + def + ']');
         text += chalk.dim('  (/help)');
-        let answer: string;
-        try {
-            answer = readlineSync.question(text + ': ', { defaultInput: def ?? '' }).trim();
-        } catch (err) {
-            warn('Prompt input failed: ' + (err instanceof Error ? err.message : String(err)));
-            return def ?? '';
-        }
+        const answer = readAnswer(text, def ?? '');
+        if (answer === null) return def ?? '';
         const trimmed = answer.toLowerCase();
         if (NAV_CMDS.includes(trimmed)) throw new CancelError(trimmed);
         if (minLength !== undefined && answer.length < minLength) {
@@ -60,7 +64,7 @@ export function confirm(label: string, defaultYes = false): boolean {
                 .trim()
                 .toLowerCase();
         } catch (err) {
-            warn('Confirm input failed: ' + (err instanceof Error ? err.message : String(err)));
+            warn('Confirm input failed: ' + String(err));
             return defaultYes;
         }
         if (NAV_CMDS.includes(answer)) throw new CancelError(answer);

@@ -13,27 +13,30 @@ function getMappingCandidates(): string[] {
     return [Config.get('QA_MAPPING_PATH') || '', path.join(process.cwd(), 'mapping.json')];
 }
 
+function parseTestFile(candidate: string): Map<string, string> | null {
+    try {
+        const raw = fs.readFileSync(candidate, 'utf8');
+        const data: { tests?: Array<Record<string, string>> } = JSON.parse(raw) as {
+            tests?: Array<Record<string, string>>;
+        };
+        const tests: Array<Record<string, string>> = data.tests ?? [];
+        if (tests.length === 0) return new Map();
+        const entries: Array<[string, string]> = [];
+        for (const t of tests) {
+            if (t['title'] && t['key']) entries.push([t['title'], t['key']]);
+        }
+        return new Map(entries);
+    } catch (err) {
+        rootLogger.warn('case17-test-utils: failed to parse test data, trying next: ' + String(err));
+        return null;
+    }
+}
+
 export function resolveMapping(): Map<string, string> {
     for (const candidate of getMappingCandidates()) {
         if (!candidate || !fs.existsSync(candidate)) continue;
-        try {
-            const raw = fs.readFileSync(candidate, 'utf8');
-            const data: { tests?: Array<Record<string, string>> } = JSON.parse(raw) as {
-                tests?: Array<Record<string, string>>;
-            };
-            const tests: Array<Record<string, string>> = data.tests ?? [];
-            if (tests.length === 0) return new Map();
-            const entries: Array<[string, string]> = [];
-            for (const t of tests) {
-                if (t['title'] && t['key']) entries.push([t['title'], t['key']]);
-            }
-            return new Map(entries);
-        } catch (err) {
-            rootLogger.warn(
-                'case17-test-utils: failed to parse test data, trying next: ' +
-                    (err instanceof Error ? err.message : String(err)),
-            );
-        }
+        const result = parseTestFile(candidate);
+        if (result !== null) return result;
     }
     return new Map();
 }
@@ -76,6 +79,20 @@ export async function resolveTestHistory(
     return titleToHistory;
 }
 
+function loadLastTests(
+    store?: import('../../shared/store.js').Store,
+    project?: string,
+): Array<{ name: string; status: string }> {
+    if (!store || !project) return [];
+    const stored = store.loadMetrics<{
+        tests?: Array<{ title: string; state: string }>;
+    }>();
+    if (stored?.tests && Array.isArray(stored.tests) && stored.tests.length > 0) {
+        return stored.tests.map((t) => ({ name: t.title, status: t.state }));
+    }
+    return [];
+}
+
 export function computeDiff(
     current: FlatTest[],
     store?: import('../../shared/store.js').Store,
@@ -85,16 +102,7 @@ export function computeDiff(
     newPasses: FlatTest[];
     flaky: FlatTest[];
 } {
-    let lastTests: Array<{ name: string; status: string }> = [];
-
-    if (store && project) {
-        const stored = store.loadMetrics<{
-            tests?: Array<{ title: string; state: string }>;
-        }>();
-        if (stored?.tests && Array.isArray(stored.tests) && stored.tests.length > 0) {
-            lastTests = stored.tests.map((t) => ({ name: t.title, status: t.state }));
-        }
-    }
+    const lastTests = loadLastTests(store, project);
 
     if (lastTests.length === 0) {
         return { newFailures: [], newPasses: [], flaky: [] };

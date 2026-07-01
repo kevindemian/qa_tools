@@ -22,6 +22,7 @@ import { loadTypedState, updateTyped } from './state.js';
 import { checkQualitySignals } from './quality-suggester.js';
 
 const root = join(import.meta.dirname, '..');
+const TSX_BIN = join(root, 'node_modules', '.bin', 'tsx');
 const RETRY_DELAY_BASE_MS = 60_000;
 const MAX_ATTEMPTS = 3;
 
@@ -31,7 +32,7 @@ const MAX_ATTEMPTS = 3;
 export async function runModule(module: 'jira' | 'git'): Promise<void> {
     const script = module === 'jira' ? 'jira_management/main.ts' : 'git_triggers/main.ts';
     return new Promise<void>((resolve, reject) => {
-        const child = spawn('npx', ['tsx', join(root, script)], {
+        const child = spawn(process.execPath, [TSX_BIN, join(root, script)], {
             stdio: 'inherit',
             cwd: root,
         });
@@ -63,7 +64,7 @@ async function checkPreMenu(): Promise<boolean> {
         shouldAutoRetry(state._llmConfigLastAttempt, state._llmConfigAttempts)
     ) {
         // Fire background discovery silently
-        const spy = spawn('npx', ['tsx', join(root, 'scripts/smartwizard-discovery.ts')], {
+        const spy = spawn(process.execPath, [TSX_BIN, join(root, 'scripts/smartwizard-discovery.ts')], {
             stdio: 'ignore',
             detached: true,
             cwd: root,
@@ -137,12 +138,12 @@ async function checkPreMenu(): Promise<boolean> {
 }
 
 async function spawnWizard(reviewFlag = ''): Promise<void> {
-    const args = ['tsx', join(root, 'scripts/smartwizard-llm.ts')];
+    const args = [TSX_BIN, join(root, 'scripts/smartwizard-llm.ts')];
     if (reviewFlag) args.push(reviewFlag);
 
     try {
         await new Promise<void>((resolve, reject) => {
-            const child = spawn('npx', args, { stdio: 'inherit', cwd: root });
+            const child = spawn(process.execPath, args, { stdio: 'inherit', cwd: root });
             child.on('exit', (code) => {
                 if (code === 0) resolve();
                 else reject(new Error(`SmartWizard encerrou com código ${code}`));
@@ -154,6 +155,26 @@ async function spawnWizard(reviewFlag = ''): Promise<void> {
     }
 }
 
+function handleModuleChoice(choice: string): Promise<void> | null {
+    if (choice === 'setup') {
+        return new Promise<void>((resolve, reject) => {
+            const child = spawn(process.execPath, [TSX_BIN, join(root, 'setup/main.ts')], {
+                stdio: 'inherit',
+                cwd: root,
+            });
+            child.on('exit', (code) => {
+                if (code === 0) resolve();
+                else reject(new Error('Setup encerrou com código ' + code));
+            });
+            child.on('error', reject);
+        });
+    }
+    if (choice === 'ai-setup') {
+        return spawnWizard();
+    }
+    return null;
+}
+
 export async function main(): Promise<void> {
     const isTTY = Output.isTTY() && !Output.isCI();
 
@@ -163,7 +184,6 @@ export async function main(): Promise<void> {
         return;
     }
 
-    // Run quality signal engine once at process start
     checkQualitySignals();
 
     for (;;) {
@@ -183,22 +203,9 @@ export async function main(): Promise<void> {
         ]);
 
         if (choice === 'exit') break;
-        if (choice === 'setup') {
-            await new Promise<void>((resolve, reject) => {
-                const child = spawn('npx', ['tsx', join(root, 'setup/main.ts')], {
-                    stdio: 'inherit',
-                    cwd: root,
-                });
-                child.on('exit', (code) => {
-                    if (code === 0) resolve();
-                    else reject(new Error('Setup encerrou com código ' + code));
-                });
-                child.on('error', reject);
-            });
-            continue;
-        }
-        if (choice === 'ai-setup') {
-            await spawnWizard();
+        const moduleResult = handleModuleChoice(choice);
+        if (moduleResult) {
+            await moduleResult;
             continue;
         }
         if (choice !== 'jira' && choice !== 'git') continue;

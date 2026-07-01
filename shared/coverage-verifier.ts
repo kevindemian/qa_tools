@@ -27,33 +27,49 @@ export interface CoverageVerificationResult {
     coverageDelta: number; // real - declared (negative = overselling)
 }
 
-/** Extract criteria from input text (acceptance criteria section). */
-function extractCriteria(input: string): string[] {
-    const lines = input.split('\n');
-    const criteria: string[] = [];
-    let inCriteria = false;
+function isCriteriaHeader(line: string): boolean {
+    return /^(acceptance\s*criteria|scenarios|cenarios|given|when|then)\b/i.test(line);
+}
 
+function isCriterionLine(line: string): boolean {
+    return line.startsWith('-') || line.startsWith('*') || /^\d+[.)]/.test(line);
+}
+
+function isSectionEnd(line: string): boolean {
+    return /^(user story|description|test|acceptance)/i.test(line);
+}
+
+function processCriteriaLine(trimmed: string, inCriteria: boolean, criteria: string[]): boolean {
+    if (isCriteriaHeader(trimmed)) {
+        if (/^(given|when|then)\b/i.test(trimmed)) {
+            criteria.push(trimmed);
+        }
+        return true;
+    }
+    if (!inCriteria) return false;
+    if (isCriterionLine(trimmed)) {
+        const cleaned = trimmed.replace(/^[-*\d.)\s]+/, '');
+        if (cleaned.length > 5) criteria.push(cleaned);
+    } else if (isSectionEnd(trimmed)) {
+        return false;
+    }
+    return inCriteria;
+}
+
+function extractCriteriaFromSection(lines: string[], criteria: string[]): void {
+    let inCriteria = false;
     for (const line of lines) {
         const trimmed = line.trim();
         if (trimmed.length < 3) continue;
-
-        if (/^(acceptance\s*criteria|scenarios|cenarios|given|when|then)\b/i.test(trimmed)) {
-            inCriteria = true;
-            if (/^(given|when|then)\b/i.test(trimmed)) {
-                criteria.push(trimmed);
-            }
-            continue;
-        }
-
-        if (inCriteria) {
-            if (trimmed.startsWith('-') || trimmed.startsWith('*') || /^\d+[.)]/.test(trimmed)) {
-                const cleaned = trimmed.replace(/^[-*\d.)\s]+/, '');
-                if (cleaned.length > 5) criteria.push(cleaned);
-            } else if (/^(user story|description|test|acceptance)/i.test(trimmed)) {
-                inCriteria = false;
-            }
-        }
+        inCriteria = processCriteriaLine(trimmed, inCriteria, criteria);
     }
+}
+
+function extractCriteria(input: string): string[] {
+    const lines = input.split('\n');
+    const criteria: string[] = [];
+
+    extractCriteriaFromSection(lines, criteria);
 
     return criteria.length > 0 ? criteria : extractFallback(input);
 }
@@ -95,25 +111,39 @@ function criterionMatches(criterion: string, testText: string): boolean {
     return matches / criterionTerms.length >= 0.5;
 }
 
-/** Get test titles and steps from artifact. */
-function extractTestTexts(artifact: unknown): string[] {
+function extractTestTextsFromArtifact(artifact: unknown): string[] {
     const texts: string[] = [];
     if (typeof artifact !== 'object' || artifact === null) return texts;
 
-    const obj = artifact as Record<string, unknown>;
+    const obj = artifact as { [key: string]: unknown };
     const tests = obj['tests'];
-    if (Array.isArray(tests)) {
-        for (const test of tests) {
-            if (typeof test !== 'object' || test === null) continue;
-            const t = test as Record<string, unknown>;
-            if (typeof t['title'] === 'string') texts.push(t['title']);
-            if (Array.isArray(t['steps'])) {
-                texts.push(t['steps'].filter((s): s is string => typeof s === 'string').join(' '));
-            }
-            if (typeof t['expectedResult'] === 'string') texts.push(t['expectedResult']);
+    if (!Array.isArray(tests)) return texts;
+
+    for (const test of tests) {
+        if (typeof test !== 'object' || test === null) continue;
+        const t = test as { [key: string]: unknown };
+        if (typeof t['title'] === 'string') texts.push(t['title']);
+        if (Array.isArray(t['steps'])) {
+            texts.push(t['steps'].filter((s): s is string => typeof s === 'string').join(' '));
         }
+        if (typeof t['expectedResult'] === 'string') texts.push(t['expectedResult']);
     }
     return texts;
+}
+
+/** Get test titles and steps from artifact. */
+function extractTestTexts(artifact: unknown): string[] {
+    return extractTestTextsFromArtifact(artifact);
+}
+
+function extractDeclaredCoverage(artifact: unknown): number | null {
+    if (typeof artifact !== 'object' || artifact === null) return null;
+    const obj = artifact as { [key: string]: unknown };
+    const ct = obj['coverageTable'] as { [key: string]: unknown } | undefined;
+    if (ct && typeof ct['coverage'] === 'number' && !isNaN(ct['coverage'])) {
+        return ct['coverage'];
+    }
+    return null;
 }
 
 /**
@@ -122,27 +152,17 @@ function extractTestTexts(artifact: unknown): string[] {
 export function recalculateCoverage(artifact: unknown, context: ValidationContext): CoverageVerificationResult {
     const criteria = extractCriteria(context.inputRaw);
     const testTexts = extractTestTexts(artifact);
-
-    let declaredCoverage: number | null = null;
-    if (typeof artifact === 'object' && artifact !== null) {
-        const obj = artifact as Record<string, unknown>;
-        const ct = obj['coverageTable'] as Record<string, unknown> | undefined;
-        if (ct && typeof ct['coverage'] === 'number' && !isNaN(ct['coverage'])) {
-            declaredCoverage = ct['coverage'];
-        }
-    }
+    const declaredCoverage = extractDeclaredCoverage(artifact);
 
     if (criteria.length === 0) {
+        const realCoverage = testTexts.length > 0 ? 100 : 0;
         return {
             declaredCoverage,
-            realCoverage: testTexts.length > 0 ? 100 : 0,
+            realCoverage,
             totalCriteria: 0,
             coveredCriteria: 0,
             gaps: [],
-            coverageDelta: (() => {
-                if (declaredCoverage === null) return 0;
-                return (testTexts.length > 0 ? 100 : 0) - declaredCoverage;
-            })(),
+            coverageDelta: declaredCoverage === null ? 0 : realCoverage - declaredCoverage,
         };
     }
 
@@ -150,13 +170,7 @@ export function recalculateCoverage(artifact: unknown, context: ValidationContex
     let coveredCount = 0;
 
     for (const criterion of criteria) {
-        let isCovered = false;
-        for (const text of testTexts) {
-            if (criterionMatches(criterion, text)) {
-                isCovered = true;
-                break;
-            }
-        }
+        const isCovered = testTexts.some((text) => criterionMatches(criterion, text));
         if (isCovered) {
             coveredCount++;
         } else {

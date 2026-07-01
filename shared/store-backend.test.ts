@@ -5,6 +5,7 @@ import { execFileSync } from 'child_process';
 import { afterAll, beforeEach, describe, expect, it, vi } from 'vitest';
 import { FsStoreBackend, GitStoreBackend, detectStoreBackend, detectProjectGitDir } from './store-backend.js';
 
+const GIT_BIN = '/usr/bin/git';
 const tmpDir = fs.mkdtempSync(path.join(os.tmpdir(), 'qa-store-backend-test-'));
 
 describe('Store Backend', () => {
@@ -134,7 +135,7 @@ describe('Store Backend', () => {
             backend.init();
             backend.write('data.json', Buffer.from('test'));
             backend.flush('qa-tools: test commit');
-            const log = execFileSync('git', ['-C', dir, 'log', '--oneline'], { encoding: 'utf8' });
+            const log = execFileSync(GIT_BIN, ['-C', dir, 'log', '--oneline'], { encoding: 'utf8' });
 
             expect(log).toContain('qa-tools: test commit');
         });
@@ -144,7 +145,7 @@ describe('Store Backend', () => {
             const backend = new GitStoreBackend(dir, '.');
             backend.init();
             backend.flush('qa-tools: empty');
-            const log = execFileSync('git', ['-C', dir, 'log', '--oneline'], { encoding: 'utf8' });
+            const log = execFileSync(GIT_BIN, ['-C', dir, 'log', '--oneline'], { encoding: 'utf8' });
 
             expect(log).toContain('qa-tools: empty');
         });
@@ -162,8 +163,8 @@ describe('Store Backend', () => {
         it('pre-existing git repo is not re-initialized', () => {
             const dir = path.join(tmpDir, 'git-test-existing');
             fs.mkdirSync(dir, { recursive: true });
-            execFileSync('git', ['init', dir], { stdio: 'ignore' });
-            execFileSync('git', ['-C', dir, 'config', 'user.name', 'preexisting'], { stdio: 'ignore' });
+            execFileSync(GIT_BIN, ['init', dir], { stdio: 'ignore' });
+            execFileSync(GIT_BIN, ['-C', dir, 'config', 'user.name', 'preexisting'], { stdio: 'ignore' });
             const backend = new GitStoreBackend(dir, '.');
             backend.init();
             const config = fs.readFileSync(path.join(dir, '.git', 'config'), 'utf8');
@@ -190,11 +191,11 @@ describe('Store Backend', () => {
             fs.mkdirSync(dir, { recursive: true });
             const backend = new GitStoreBackend(dir, '.');
             /* Make dir read-only so git init cannot create .git */
-            fs.chmodSync(dir, 0o444);
+            fs.chmodSync(dir, 0o500);
             try {
                 expect(() => backend.init()).toThrow('GitStoreBackend: git init falhou');
             } finally {
-                fs.chmodSync(dir, 0o755);
+                fs.chmodSync(dir, 0o750);
             }
         });
 
@@ -216,11 +217,11 @@ describe('Store Backend', () => {
             const backend = new GitStoreBackend(dir, '.');
             backend.init();
             /* Make .git read-only so git add/commit fails */
-            fs.chmodSync(path.join(dir, '.git'), 0o444);
+            fs.chmodSync(path.join(dir, '.git'), 0o500);
             try {
                 expect(() => backend.flush('test commit')).toThrow('GitStoreBackend: git add/commit falhou');
             } finally {
-                fs.chmodSync(path.join(dir, '.git'), 0o755);
+                fs.chmodSync(path.join(dir, '.git'), 0o750);
             }
         });
 
@@ -348,7 +349,7 @@ describe('Store Backend', () => {
             const backend = detectStoreBackend();
             const hasGit = (() => {
                 try {
-                    execFileSync('git', ['--version'], { stdio: 'ignore' });
+                    execFileSync(GIT_BIN, ['--version'], { stdio: 'ignore' });
                     return true;
                 } catch {
                     return false;

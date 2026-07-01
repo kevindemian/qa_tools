@@ -4,6 +4,8 @@ import { execFileSync } from 'node:child_process';
 import { resolve, dirname } from 'node:path';
 import { fileURLToPath } from 'node:url';
 
+const BASH_BIN = '/usr/bin/bash';
+
 const __dirname = dirname(fileURLToPath(import.meta.url));
 const QA_SCRIPT = resolve(__dirname, 'qa.sh');
 
@@ -28,7 +30,7 @@ describe('Qa.sh — OpenCode container wrapper', () => {
 
         it('passes bash syntax check', () => {
             // bash -n validates syntax without executing
-            const result = execFileSync('bash', ['-n', QA_SCRIPT], {
+            const result = execFileSync(BASH_BIN, ['-n', QA_SCRIPT], {
                 encoding: 'utf-8',
                 stdio: ['pipe', 'pipe', 'pipe'],
             });

@@ -4,13 +4,14 @@ import { fileURLToPath } from 'url';
 
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
 const ROOT = path.resolve(__dirname, '..');
+const TSX_BIN = path.join(ROOT, 'node_modules', '.bin', 'tsx');
 const STARTUP_TIMEOUT = 12000;
 
 describe('Smoke-startup', () => {
     it('jira_management não crasha com JIRA/XRAY vars vazias', async () => {
         expect.hasAssertions();
 
-        const child = spawn('npx', ['tsx', 'jira_management/main.ts'], {
+        const child = spawn(process.execPath, [TSX_BIN, 'jira_management/main.ts'], {
             cwd: ROOT,
             env: {
                 ...process.env,
@@ -52,7 +53,7 @@ describe('Smoke-startup', () => {
     it('entry-menu não crasha com JIRA/XRAY vars vazias', async () => {
         expect.hasAssertions();
 
-        const child = spawn('npx', ['tsx', 'shared/entry-menu.ts'], {
+        const child = spawn(process.execPath, [TSX_BIN, 'shared/entry-menu.ts'], {
             cwd: ROOT,
             env: {
                 ...process.env,

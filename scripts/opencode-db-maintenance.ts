@@ -28,7 +28,8 @@ import { rootLogger } from '../shared/logger.js';
 
 const DB_DIR = resolve(homedir(), '.local', 'share', 'opencode');
 const DB_PATH = resolve(DB_DIR, 'opencode.db');
-const SQLITE_BIN = 'sqlite3';
+const SQLITE_BIN = '/usr/bin/sqlite3';
+const STAT_BIN = '/usr/bin/stat';
 
 /**
  * Timeout (ms) for each sqlite3 CLI call.
@@ -51,11 +52,11 @@ interface MaintenanceResult {
 function getDbSizeBytes(): number {
     try {
         const stats = existsSync(DB_PATH)
-            ? execFileSync('stat', ['--format=%s', DB_PATH], { encoding: 'utf-8' }).trim()
+            ? execFileSync(STAT_BIN, ['--format=%s', DB_PATH], { encoding: 'utf-8' }).trim()
             : '0';
         return Number(stats);
     } catch (err) {
-        rootLogger.debug(`[db-maintenance] Failed to get DB size: ${err instanceof Error ? err.message : String(err)}`);
+        rootLogger.debug(`[db-maintenance] Failed to get DB size: ${String(err)}`);
         return 0;
     }
 }
@@ -95,7 +96,7 @@ function backupDb(dbPath: string): string | null {
         copyFileSync(dbPath, backupPath);
         return backupPath;
     } catch (err) {
-        rootLogger.warn(`[db-maintenance] Backup failed: ${err instanceof Error ? err.message : String(err)}`);
+        rootLogger.warn(`[db-maintenance] Backup failed: ${String(err)}`);
         return null;
     }
 }
@@ -110,9 +111,7 @@ function ensureWalMode(): string | null {
     try {
         return runSqlite('PRAGMA journal_mode=WAL;');
     } catch (err) {
-        rootLogger.debug(
-            `[db-maintenance] Failed to set WAL mode: ${err instanceof Error ? err.message : String(err)}`,
-        );
+        rootLogger.debug(`[db-maintenance] Failed to set WAL mode: ${String(err)}`);
         return null;
     }
 }
@@ -139,9 +138,7 @@ function checkMountDevice(dbPath: string): string | null {
         }
         return null;
     } catch (err) {
-        rootLogger.debug(
-            `[db-maintenance] Mount device check failed: ${err instanceof Error ? err.message : String(err)}`,
-        );
+        rootLogger.debug(`[db-maintenance] Mount device check failed: ${String(err)}`);
         return null;
     }
 }
@@ -174,14 +171,14 @@ function modeCheckOnly(dbPath: string): MaintenanceResult {
     try {
         integrityCheck = checkIntegrity();
     } catch (err) {
-        integrityCheck = `ERROR: ${err instanceof Error ? err.message : String(err)}`;
+        integrityCheck = `ERROR: ${String(err)}`;
         errors.push(integrityCheck);
     }
 
     try {
         walCheckpoint = checkpointWal();
     } catch (err) {
-        walCheckpoint = `ERROR: ${err instanceof Error ? err.message : String(err)}`;
+        walCheckpoint = `ERROR: ${String(err)}`;
         errors.push(walCheckpoint);
     }
 
@@ -207,7 +204,7 @@ function modeRepair(dbPath: string): MaintenanceResult {
     try {
         integrityCheck = checkIntegrity();
     } catch (err) {
-        integrityCheck = `ERROR: ${err instanceof Error ? err.message : String(err)}`;
+        integrityCheck = `ERROR: ${String(err)}`;
     }
 
     const needsRepair = !integrityCheck.includes('ok');
@@ -222,7 +219,7 @@ function modeRepair(dbPath: string): MaintenanceResult {
                 errors.push('REINDEX failed to repair integrity');
             }
         } catch (err) {
-            errors.push(`Repair error: ${err instanceof Error ? err.message : String(err)}`);
+            errors.push(`Repair error: ${String(err)}`);
         }
     }
 
@@ -230,7 +227,7 @@ function modeRepair(dbPath: string): MaintenanceResult {
     try {
         walCheckpoint = checkpointWal();
     } catch (err) {
-        walCheckpoint = `ERROR: ${err instanceof Error ? err.message : String(err)}`;
+        walCheckpoint = `ERROR: ${String(err)}`;
         errors.push(walCheckpoint);
     }
 
@@ -254,7 +251,7 @@ function modeVacuum(dbPath: string): MaintenanceResult {
     try {
         integrityCheck = checkIntegrity();
     } catch (err) {
-        integrityCheck = `ERROR: ${err instanceof Error ? err.message : String(err)}`;
+        integrityCheck = `ERROR: ${String(err)}`;
         errors.push(integrityCheck);
     }
 
@@ -264,7 +261,7 @@ function modeVacuum(dbPath: string): MaintenanceResult {
             vacuum();
             vacuumed = true;
         } catch (err) {
-            errors.push(`VACUUM error: ${err instanceof Error ? err.message : String(err)}`);
+            errors.push(`VACUUM error: ${String(err)}`);
         }
     } else {
         errors.push('Cannot VACUUM: integrity check failed');
@@ -274,7 +271,7 @@ function modeVacuum(dbPath: string): MaintenanceResult {
     try {
         walCheckpoint = checkpointWal();
     } catch (err) {
-        walCheckpoint = `ERROR: ${err instanceof Error ? err.message : String(err)}`;
+        walCheckpoint = `ERROR: ${String(err)}`;
         errors.push(walCheckpoint);
     }
 
@@ -311,7 +308,7 @@ function checkSqlite3(): boolean {
         execFileSync(SQLITE_BIN, ['--version'], { encoding: 'utf-8', stdio: 'pipe', timeout: 5_000 });
         return true;
     } catch (err) {
-        rootLogger.debug(`[db-maintenance] sqlite3 not available: ${err instanceof Error ? err.message : String(err)}`);
+        rootLogger.debug(`[db-maintenance] sqlite3 not available: ${String(err)}`);
         return false;
     }
 }
@@ -321,9 +318,7 @@ function ensureDbDir(): boolean {
         mkdirSync(DB_DIR, { recursive: true });
         return true;
     } catch (err) {
-        rootLogger.warn(
-            `[db-maintenance] Failed to create DB directory: ${err instanceof Error ? err.message : String(err)}`,
-        );
+        rootLogger.warn(`[db-maintenance] Failed to create DB directory: ${String(err)}`);
         return false;
     }
 }

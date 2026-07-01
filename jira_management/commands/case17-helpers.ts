@@ -134,32 +134,52 @@ export function isValidCtrfData(data: unknown): data is CtrfData {
     return Array.isArray(obj.results.tests);
 }
 
+function parsePublishArg(
+    args: string[],
+    i: number,
+    result: { publishTarget?: string; extraRuns: Array<{ name: string; file: string }> },
+): number {
+    if (args[i] !== '--publish' || i + 1 >= args.length) return i;
+    const val = Reflect.get(args, i + 1);
+    if (val) {
+        result.publishTarget = val;
+        return i + 1;
+    }
+    return i;
+}
+
+function parseRunArg(
+    args: string[],
+    i: number,
+    result: { publishTarget?: string; extraRuns: Array<{ name: string; file: string }> },
+): number {
+    if (args[i] !== '--run' || i + 1 >= args.length) return i;
+    const val = args[i + 1];
+    if (!val) return i;
+    const eqIdx = val.indexOf('=');
+    if (eqIdx > 0) {
+        const name = val.slice(0, eqIdx);
+        const file = val.slice(eqIdx + 1);
+        if (name && file) {
+            result.extraRuns.push({ name, file });
+        }
+    }
+    return i + 1;
+}
+
 export function parseCliExtra(): { publishTarget?: string; extraRuns: Array<{ name: string; file: string }> } {
     const args = process.argv.slice(2);
     const result: { publishTarget?: string; extraRuns: Array<{ name: string; file: string }> } = { extraRuns: [] };
-    for (let i = 0; i < args.length; i++) {
-        const arg = Reflect.get(args, i);
-        if (!arg) continue;
-        if (arg === '--publish' && i + 1 < args.length) {
-            const val = Reflect.get(args, i + 1);
-            if (val) {
-                result.publishTarget = val;
-                i++;
-            }
-        } else if (arg === '--run' && i + 1 < args.length) {
-            const val = args[i + 1];
-            if (val) {
-                i++;
-                const eqIdx = val.indexOf('=');
-                if (eqIdx > 0) {
-                    const name = val.slice(0, eqIdx);
-                    const file = val.slice(eqIdx + 1);
-                    if (name && file) {
-                        result.extraRuns.push({ name, file });
-                    }
-                }
-            }
+    let idx = 0;
+    while (idx < args.length) {
+        const arg = Reflect.get(args, idx);
+        if (!arg) {
+            idx++;
+            continue;
         }
+        idx = parsePublishArg(args, idx, result);
+        idx = parseRunArg(args, idx, result);
+        idx++;
     }
     return result;
 }

@@ -39,7 +39,7 @@ export class ReportValidator {
             return { valid: false, errors: ['Expected object, got ' + typeof data], warnings: [] };
         }
 
-        const obj = data as Record<string, unknown>;
+        const obj = data as { [key: string]: unknown };
 
         for (const rule of this.schema) {
             this.applyRule(obj, rule, rule.field, errors, warnings);
@@ -56,7 +56,7 @@ export class ReportValidator {
         const result = this.validate(data);
         if (!result.valid) return result;
 
-        const obj = data as Record<string, unknown>;
+        const obj = data as { [key: string]: unknown };
         const tests = obj['tests'];
         if (!Array.isArray(tests) || tests.length <= 1) return result;
 
@@ -76,8 +76,29 @@ export class ReportValidator {
         return { valid: errors.length === 0, errors, warnings };
     }
 
+    private validateStringRule(
+        str: string,
+        fieldPath: string,
+        rule: ValidationRule,
+        warnings: string[],
+        errors: string[],
+    ): void {
+        if (rule.minLength !== undefined && str.length < rule.minLength) {
+            warnings.push('Campo "' + fieldPath + '" muito curto (' + str.length + ' < ' + rule.minLength + ')');
+        }
+        if (rule.pattern && !rule.pattern.test(str)) {
+            errors.push('Campo "' + fieldPath + '" não corresponde ao padrão esperado');
+        }
+    }
+
+    private validateArrayRule(arr: unknown[], fieldPath: string, rule: ValidationRule, warnings: string[]): void {
+        if (rule.minLength !== undefined && arr.length < rule.minLength) {
+            warnings.push('Campo "' + fieldPath + '" muito pequeno (' + arr.length + ' < ' + rule.minLength + ')');
+        }
+    }
+
     private applyRule(
-        obj: Record<string, unknown>,
+        obj: { [key: string]: unknown },
         rule: ValidationRule,
         fieldPath: string,
         errors: string[],
@@ -99,24 +120,15 @@ export class ReportValidator {
         }
 
         if (rule.type === 'string') {
-            const str = value as string;
-            if (rule.minLength !== undefined && str.length < rule.minLength) {
-                warnings.push('Campo "' + fieldPath + '" muito curto (' + str.length + ' < ' + rule.minLength + ')');
-            }
-            if (rule.pattern && !rule.pattern.test(str)) {
-                errors.push('Campo "' + fieldPath + '" não corresponde ao padrão esperado');
-            }
+            this.validateStringRule(value as string, fieldPath, rule, warnings, errors);
         }
 
         if (rule.type === 'array') {
-            const arr = value as unknown[];
-            if (rule.minLength !== undefined && arr.length < rule.minLength) {
-                warnings.push('Campo "' + fieldPath + '" muito pequeno (' + arr.length + ' < ' + rule.minLength + ')');
-            }
+            this.validateArrayRule(value as unknown[], fieldPath, rule, warnings);
         }
     }
 
-    private checkConsistency(data: Record<string, unknown>, warnings: string[]): void {
+    private checkConsistency(data: { [key: string]: unknown }, warnings: string[]): void {
         const dataEntries = Object.entries(data);
         const testsEntry = dataEntries.find(([k]) => k === 'tests');
         const tests = testsEntry?.[1];
@@ -139,7 +151,7 @@ export class ReportValidator {
         }
     }
 
-    private resolveField(obj: Record<string, unknown>, fieldPath: string): unknown {
+    private resolveField(obj: { [key: string]: unknown }, fieldPath: string): unknown {
         const parts = fieldPath.split('.');
         let current: unknown = obj;
         for (const part of parts) {
@@ -148,14 +160,14 @@ export class ReportValidator {
                 const key = arrMatch[1] as string;
                 const idx = parseInt(arrMatch[2] as string, 10);
                 if (typeof current !== 'object' || current === null) return undefined;
-                const objEntries = Object.entries(current as Record<string, unknown>);
+                const objEntries = Object.entries(current as { [key: string]: unknown });
                 const arrEntry = objEntries.find(([k]) => k === key);
                 const arr = arrEntry?.[1];
                 if (!Array.isArray(arr)) return undefined;
                 current = new Map(arr.map((v, i) => [i, v])).get(idx);
             } else {
                 if (typeof current !== 'object' || current === null) return undefined;
-                const objEntries = Object.entries(current as Record<string, unknown>);
+                const objEntries = Object.entries(current as { [key: string]: unknown });
                 const entry = objEntries.find(([k]) => k === part);
                 current = entry?.[1];
             }

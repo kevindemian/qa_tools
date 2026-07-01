@@ -20,7 +20,7 @@ function readAndParse<T>(filePath: string, parser: (data: T) => ParseResult): Pa
         if (code === 'ENOENT') {
             msg = 'Arquivo não encontrado: ' + filePath;
         } else {
-            msg = 'Erro ao ler/parsear arquivo: ' + filePath + ' (' + (err instanceof Error ? err.message : String(err)) + ')';
+            msg = 'Erro ao ler/parsear arquivo: ' + filePath + ' (' + String(err) + ')';
         }
         return { ...EMPTY_PARSE_RESULT, error: msg };
     }
@@ -177,20 +177,19 @@ interface ParseResultWithError extends ParseResult {
     error?: string;
 }
 
+function mapTestState(state: string | undefined): FlatTest['state'] {
+    if (state === 'passed') return 'passed';
+    if (state === 'failed') return 'failed';
+    return 'skipped';
+}
+
 function _flattenTests(suite: MochawesomeSuite, parentTitle?: string): FlatTest[] {
     const tests: FlatTest[] = [];
     const suiteTitle = suite.title ?? '';
     const currentPath = parentTitle ? parentTitle + ' > ' + suiteTitle : suiteTitle;
     if (suite.tests) {
         for (const t of suite.tests) {
-            let state: FlatTest['state'];
-            if (t.state === 'passed') {
-                state = 'passed';
-            } else if (t.state === 'failed') {
-                state = 'failed';
-            } else {
-                state = 'skipped';
-            }
+            const state = mapTestState(t.state);
             const errMsg = t.err?.[0]?.message ?? t.err?.[0]?.title ?? undefined;
             tests.push({
                 title: t.title ?? '',
@@ -217,6 +216,10 @@ export function parseMochawesome(jsonData: MochawesomeData | null | undefined): 
     rootLogger.warn(
         '[deprecated] Mochawesome format detected. Migrate to CTRF (ctrf.io) — mochawesome support will be removed in a future version.',
     );
+    return _parseMochawesomeData(jsonData);
+}
+
+function _parseMochawesomeData(jsonData: MochawesomeData | null | undefined): ParseResult {
     if (!jsonData?.results) return EMPTY_PARSE_RESULT;
 
     const allTests: FlatTest[] = [];
@@ -339,7 +342,7 @@ export function parseTestResults(jsonData: unknown): ParseResult {
     if (isCtrfFormat(jsonData)) {
         return parseCtrfResults(jsonData);
     }
-    return parseMochawesome(jsonData as MochawesomeData);
+    return _parseMochawesomeData(jsonData as MochawesomeData);
 }
 
 /** Read a JSON file from disk, detect its format, and parse test results.
@@ -352,5 +355,5 @@ export function parseTestResultsFile(filePath: string): ParseResultWithError {
  * Returns an error string in the result on I/O or parse failure.
  * @deprecated Use {@link parseTestResultsFile} instead. Will be removed in the next major version. */
 export function parseCypressResults(filePath: string): ParseResultWithError {
-    return readAndParse(filePath, parseMochawesome);
+    return readAndParse(filePath, _parseMochawesomeData);
 }

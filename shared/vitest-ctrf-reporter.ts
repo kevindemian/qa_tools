@@ -103,28 +103,19 @@ export class VitestCtrfReporter implements Reporter {
         this.startTime = Date.now();
     }
 
-    onTestCaseResult(testCase: TestCase): void {
-        const result = testCase.result();
+    extractErrorInfo(result: { state: string; errors?: unknown }): { message?: string; trace?: string } {
+        if (result.state !== 'failed' || !('errors' in result)) return {};
+        const errors = result.errors as ReadonlyArray<{ message?: string; stack?: string }> | undefined;
+        if (!errors || errors.length === 0) return {};
+        const msg = errors[0]?.message;
+        const trace = errors[0]?.stack;
+        const info: { message?: string; trace?: string } = {};
+        if (msg !== undefined) info.message = msg;
+        if (trace !== undefined) info.trace = trace;
+        return info;
+    }
 
-        // Skip pending tests (not yet finished)
-        if (result.state === 'pending') return;
-
-        const diagnostic = testCase.diagnostic();
-        const status = vitestStateToCtrfStatus(result.state);
-        const duration = diagnostic?.duration ?? 0;
-
-        // Extract first error message and trace if available
-        let message: string | undefined;
-        let trace: string | undefined;
-        if (result.state === 'failed' && 'errors' in result) {
-            const errors = result.errors as ReadonlyArray<{ message?: string; stack?: string }> | undefined;
-            if (errors && errors.length > 0) {
-                message = errors[0]?.message;
-                trace = errors[0]?.stack;
-            }
-        }
-
-        // Build suite hierarchy from parent chain
+    buildSuiteHierarchy(testCase: TestCase): string | undefined {
         const suites: string[] = [];
         let parent: { readonly type: string; readonly name: string; readonly parent: unknown } | undefined =
             testCase.parent as { readonly type: string; readonly name: string; readonly parent: unknown };
@@ -132,14 +123,24 @@ export class VitestCtrfReporter implements Reporter {
             suites.unshift(parent.name);
             parent = parent.parent as typeof parent;
         }
+        return suites.length > 0 ? suites.join(' > ') : undefined;
+    }
 
-        const suite = suites.length > 0 ? suites.join(' > ') : undefined;
+    onTestCaseResult(testCase: TestCase): void {
+        const result = testCase.result();
 
-        // A test is flaky if it passed after retries
+        if (result.state === 'pending') return;
+
+        const diagnostic = testCase.diagnostic();
+        const status = vitestStateToCtrfStatus(result.state);
+        const duration = diagnostic?.duration ?? 0;
+
+        const { message, trace } = this.extractErrorInfo(result);
+        const suite = this.buildSuiteHierarchy(testCase);
+
         const retryCount = diagnostic?.retryCount ?? 0;
         const flaky = status === 'passed' && retryCount > 0 ? true : undefined;
 
-        // File path with line number if available
         const thisModule = testCase.module as { name?: string };
         const location = testCase.location;
         const filePath = location && thisModule.name ? `${thisModule.name}:${location.line}` : undefined;

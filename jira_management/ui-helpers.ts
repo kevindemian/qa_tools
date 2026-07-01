@@ -68,11 +68,55 @@ function _showAndPause(topic: string): void {
     try {
         prompt('Pressione Enter para continuar');
     } catch (err) {
-        rootLogger.debug(
-            'User pressed Ctrl+C or non-TTY during help pause: ' + (err instanceof Error ? err.message : String(err)),
-        );
+        rootLogger.debug('User pressed Ctrl+C or non-TTY during help pause: ' + String(err));
     }
 }
+function handleSearchTopic(lower: string, topicEntries: Array<[string, string]>): void {
+    const term = lower.slice(7).trim();
+    if (!term) return;
+    title('HELP — busca por "' + term + '"');
+    const found = topicEntries.filter(([_, v]) => v.toLowerCase().includes(term));
+    if (found.length > 0) found.forEach(([k, v]) => helpLine(k + ': ' + (v.split('\n')[0] ?? '')));
+    else warn('Nenhum topico encontrado para "' + term + '".');
+}
+
+type HelpAction = 'exit' | 'continue' | 'handled';
+
+function handleHelpInput(trimmed: string, lower: string, topicEntries: Array<[string, string]>): HelpAction {
+    if (!trimmed) return 'continue';
+    if (lower === '/back' || lower === '/menu') return 'exit';
+    if (lower === '/help' || lower === '/h') {
+        showHelp();
+        return 'continue';
+    }
+    if (lower.startsWith('/help ') || lower.startsWith('/h ')) {
+        _showAndPause(trimmed.slice(lower.startsWith('/help ') ? 6 : 3).trim());
+        return 'continue';
+    }
+    if (lower.startsWith('search ')) {
+        handleSearchTopic(lower, topicEntries);
+        return 'continue';
+    }
+    return handleTopicLookup(trimmed, lower, topicEntries);
+}
+
+function handleTopicLookup(trimmed: string, lower: string, topicEntries: Array<[string, string]>): HelpAction {
+    const found = topicEntries.filter(([k]) => k.includes(lower));
+    if (found.length === 1) {
+        const e = found[0];
+        if (e) _showAndPause(e[0]);
+        return 'continue';
+    }
+    if (found.length > 1) {
+        title('Tópicos encontrados');
+        found.forEach(([k, v]) => helpLine(k + ': ' + (v.split('\n')[0] ?? '')));
+        divider();
+        return 'continue';
+    }
+    warn('Tópico não encontrado: "' + trimmed + '". Tente /help search <termo>');
+    return 'handled';
+}
+
 export function showHelpLoop(): void {
     const topicEntries = Object.entries(HELP_TOPICS);
     for (;;) {
@@ -87,30 +131,9 @@ export function showHelpLoop(): void {
             throw e;
         }
         const trimmed = input.trim();
-        if (!trimmed) continue;
         const lower = trimmed.toLowerCase();
-        if (lower === '/back' || lower === '/menu') return;
-        if (lower === '/help' || lower === '/h') {
-            showHelp();
-            continue;
-        }
-        if (lower.startsWith('/help ') || lower.startsWith('/h ')) {
-            _showAndPause(trimmed.slice(lower.startsWith('/help ') ? 6 : 3).trim());
-            continue;
-        }
-        const found = topicEntries.filter(([k]) => k.includes(lower));
-        if (found.length === 1) {
-            const e = found[0];
-            if (e) _showAndPause(e[0]);
-            continue;
-        }
-        if (found.length > 1) {
-            title('Tópicos encontrados');
-            found.forEach(([k, v]) => helpLine(k + ': ' + (v.split('\n')[0] ?? '')));
-            divider();
-            continue;
-        }
-        warn('Tópico não encontrado: "' + trimmed + '". Tente /help search <termo>');
+        const action = handleHelpInput(trimmed, lower, topicEntries);
+        if (action === 'exit') return;
     }
 }
 export async function handleSpecialInput(
@@ -160,17 +183,15 @@ export async function dispatchChoice(choice: string, cmdCtx: CommandContext): Pr
     const cmdHandler = getHandler(choice);
     if (cmdHandler) {
         try {
-            const shouldContinue = await cmdHandler(cmdCtx);
-            if (shouldContinue) return 'continue';
+            await cmdHandler(cmdCtx);
         } catch (e) {
-            if (e instanceof CancelError) return 'continue';
+            if ((e as Error).name === 'CancelError') return 'continue';
             printError('Erro no handler', e);
-            return 'continue';
         }
         return 'continue';
     }
     warn('Opção inválida. Escolha entre 0-19, alias ou digite /help.');
-    return 'continue';
+    return 'exit';
 }
 export async function getUserChoice(level: string, proj: string, ctx: SessionContext): Promise<string> {
     if (Config.get('autoChoice')) return Config.get('autoChoice');
@@ -213,6 +234,18 @@ export async function getUserChoice(level: string, proj: string, ctx: SessionCon
         { pageSize: (process.stdout.rows || 24) - 4, menuMode: true },
     );
 }
+async function resolveChoiceResult(choice: string, level: string): Promise<string | null> {
+    if (CATEGORY_IDS.has(choice)) return choice;
+    const sr = await handleSpecialInput(choice, level);
+    if (sr === '__exit__') return '__exit__';
+    if (sr === '__back__') return '__back__';
+    if (sr === true) return '__skip__';
+    if (choice === '0') return level === 'main' ? '__exit__' : '__back__';
+    if (getHandler(choice) || choice === 'docs') return choice;
+    warn('Opção inválida. Escolha entre as opções disponíveis ou digite /help.');
+    return '__skip__';
+}
+
 export async function getAndResolveChoice(level: string, ctx: SessionContext): Promise<string | null> {
     let choice: string;
     try {
@@ -227,13 +260,5 @@ export async function getAndResolveChoice(level: string, ctx: SessionContext): P
         if (resolved === 'docs' || getHandler(resolved)) return resolved;
         choice = resolved;
     }
-    if (CATEGORY_IDS.has(choice)) return choice;
-    const sr = await handleSpecialInput(choice, level);
-    if (sr === '__exit__') return '__exit__';
-    if (sr === '__back__') return '__back__';
-    if (sr === true) return '__skip__';
-    if (choice === '0') return level === 'main' ? '__exit__' : '__back__';
-    if (getHandler(choice) || choice === 'docs') return choice;
-    warn('Opção inválida. Escolha entre as opções disponíveis ou digite /help.');
-    return '__skip__';
+    return resolveChoiceResult(choice, level);
 }

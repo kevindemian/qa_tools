@@ -43,6 +43,52 @@ const BOOLEAN_FALSE = new Set(['false', '0', 'no']);
  * Returns an array of warning messages for non-critical issues.
  * Call during startup after env is loaded.
  */
+function fmtDefault(val: unknown, fallback: string): string {
+    if (val === undefined || val === null) return fallback;
+    if (typeof val === 'string') return val;
+    if (typeof val === 'number' || typeof val === 'boolean') return String(val);
+    return fallback;
+}
+
+function checkBooleanEnv(
+    f: { envVar: string; type: string; defaultVal?: unknown },
+    raw: string,
+    warnings: string[],
+): void {
+    if (f.type !== 'boolean') return;
+    if (!BOOLEAN_TRUE.has(raw.toLowerCase()) && !BOOLEAN_FALSE.has(raw.toLowerCase())) {
+        warnings.push(
+            `${f.envVar}="${raw}" não é um valor booleano válido. Esperado: true/false/1/0. Usando default: ${fmtDefault(f.defaultVal, 'false')}.`,
+        );
+    }
+}
+
+function checkNumberEnv(
+    f: { envVar: string; type: string; defaultVal?: unknown },
+    raw: string,
+    warnings: string[],
+): void {
+    if (f.type !== 'number') return;
+    const num = Number(raw);
+    if (!Number.isFinite(num)) {
+        warnings.push(`${f.envVar}="${raw}" não é um número válido. Usando default: ${fmtDefault(f.defaultVal, '0')}.`);
+    }
+}
+
+function checkAllowedValues(
+    f: { envVar: string; allowedValues?: string[]; defaultVal?: unknown },
+    raw: string,
+    warnings: string[],
+): void {
+    if (!f.allowedValues || f.allowedValues.length === 0) return;
+    const val = raw.trim();
+    if (val !== '' && !f.allowedValues.includes(val)) {
+        warnings.push(
+            `${f.envVar}="${val}" não é um valor válido. Permitidos: ${f.allowedValues.join(', ')}. Usando default: ${fmtDefault(f.defaultVal, '')}.`,
+        );
+    }
+}
+
 export function validateConfigValues(): string[] {
     const warnings: string[] = [];
 
@@ -50,27 +96,9 @@ export function validateConfigValues(): string[] {
         const raw = process.env[f.envVar];
         if (raw === undefined) continue;
 
-        if (f.type === 'boolean') {
-            if (!BOOLEAN_TRUE.has(raw.toLowerCase()) && !BOOLEAN_FALSE.has(raw.toLowerCase())) {
-                warnings.push(
-                    `${f.envVar}="${raw}" não é um valor booleano válido. Esperado: true/false/1/0. Usando default: ${f.defaultVal ?? 'false'}.`,
-                );
-            }
-        } else if (f.type === 'number') {
-            const num = Number(raw);
-            if (!Number.isFinite(num)) {
-                warnings.push(`${f.envVar}="${raw}" não é um número válido. Usando default: ${f.defaultVal ?? '0'}.`);
-            }
-        }
-
-        if (f.allowedValues && f.allowedValues.length > 0) {
-            const val = raw.trim();
-            if (val !== '' && !f.allowedValues.includes(val)) {
-                warnings.push(
-                    `${f.envVar}="${val}" não é um valor válido. Permitidos: ${f.allowedValues.join(', ')}. Usando default: ${f.defaultVal ?? ''}.`,
-                );
-            }
-        }
+        checkBooleanEnv(f, raw, warnings);
+        checkNumberEnv(f, raw, warnings);
+        checkAllowedValues(f, raw, warnings);
     }
 
     return warnings;

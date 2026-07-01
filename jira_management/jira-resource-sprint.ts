@@ -88,6 +88,23 @@ export const WORKFLOW_MAP: Record<string, string[]> = {
     approve: ['use test case'],
 };
 
+async function transitionToTarget(
+    resource: JiraResourceLike,
+    taskId: string,
+    transitionsMap: Record<string, string>,
+    targets: string[],
+): Promise<void> {
+    for (const target of targets) {
+        const transitionId = Reflect.get(transitionsMap, target);
+        if (!transitionId) {
+            warn(transitionNotFound(target, taskId));
+            continue;
+        }
+        resource.log.info(`   ${taskId}: -> ${target}`);
+        await resource.transitionIssue(taskId, transitionId);
+    }
+}
+
 export async function moveCardsToDone(resource: JiraResourceLike, taskIds: string[]): Promise<void> {
     for (const taskId of taskIds) {
         let issueData: { fields?: { status?: { name: string } } };
@@ -117,15 +134,7 @@ export async function moveCardsToDone(resource: JiraResourceLike, taskIds: strin
             if (!targets) {
                 warn(statusNotMapped(taskId, currentStatus));
             } else {
-                for (const target of targets) {
-                    const transitionId = Reflect.get(transitionsMap, target);
-                    if (!transitionId) {
-                        warn(transitionNotFound(target, taskId));
-                        continue;
-                    }
-                    resource.log.info(`   ${taskId}: -> ${target}`);
-                    await resource.transitionIssue(taskId, transitionId);
-                }
+                await transitionToTarget(resource, taskId, transitionsMap, targets);
             }
         } catch (err: unknown) {
             const axiosErr = err as { response?: { status?: number } };

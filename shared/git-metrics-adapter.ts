@@ -16,6 +16,8 @@
 
 import { execFileSync } from 'child_process';
 import { rootLogger } from './logger.js';
+
+const GIT_BIN = '/usr/bin/git';
 import type { MetricsRun, FailureClassification } from './metrics.js';
 import type { FlatTest } from './result_parser.js';
 
@@ -115,7 +117,7 @@ export function fetchGitLog(options?: GitMetricsAdapterOptions): GitCommitEntry[
     try {
         const repoPath = options?.repoPath ?? process.cwd();
         const args = buildGitLogArgs(options);
-        const output = execFileSync('git', args, {
+        const output = execFileSync(GIT_BIN, args, {
             cwd: repoPath,
             encoding: 'utf-8',
             maxBuffer: 10 * 1024 * 1024,
@@ -123,7 +125,7 @@ export function fetchGitLog(options?: GitMetricsAdapterOptions): GitCommitEntry[
         });
         return parseGitLogOutput(output);
     } catch (err) {
-        const message = err instanceof Error ? err.message : String(err);
+        const message = String(err);
         lastGitLogError = message;
         rootLogger.warn('Git metrics adapter: failed to fetch git log — ' + message);
         return [];
@@ -171,6 +173,46 @@ function buildFlatTest(commit: GitCommitEntry): FlatTest {
     };
 }
 
+function buildDayRuns(dayCommits: GitCommitEntry[], projectName: string): MetricsRun {
+    const tests: FlatTest[] = [];
+    let totalDuration = 0;
+    let passedCount = 0;
+    let failedCount = 0;
+    let skippedCount = 0;
+    let prevCommitTime: number | null = null;
+
+    for (const commit of dayCommits) {
+        const test = buildFlatTest(commit);
+        const commitTime = new Date(commit.date).getTime();
+
+        if (!isNaN(commitTime) && prevCommitTime !== null) {
+            const diffSec = Math.round((commitTime - prevCommitTime) / 1000);
+            test.duration = Math.max(0, diffSec);
+        }
+
+        totalDuration += test.duration;
+
+        if (test.state === 'passed') passedCount++;
+        else if (test.state === 'failed') failedCount++;
+        else skippedCount++;
+
+        tests.push(test);
+        prevCommitTime = commitTime;
+    }
+
+    const firstDate = dayCommits[0]?.date;
+    return {
+        timestamp: (firstDate != null ? firstDate.slice(0, 10) : '') + 'T00:00:00.000Z',
+        project: projectName,
+        total: tests.length,
+        passed: passedCount,
+        failed: failedCount,
+        skipped: skippedCount,
+        duration: totalDuration,
+        tests,
+    };
+}
+
 export function generateGitMetricsRuns(options?: GitMetricsAdapterOptions): MetricsRun[] {
     clearGitLogError();
     const allCommits = fetchGitLog(options);
@@ -191,44 +233,11 @@ export function generateGitMetricsRuns(options?: GitMetricsAdapterOptions): Metr
     }
 
     const runs: MetricsRun[] = [];
-
-    for (const [day, dayCommits] of dayBuckets) {
-        const tests: FlatTest[] = [];
-        let totalDuration = 0;
-        let passedCount = 0;
-        let failedCount = 0;
-        let skippedCount = 0;
-        let prevCommitTime: number | null = null;
-
-        for (const commit of dayCommits) {
-            const test = buildFlatTest(commit);
-            const commitTime = new Date(commit.date).getTime();
-
-            if (!isNaN(commitTime) && prevCommitTime !== null) {
-                const diffSec = Math.round((commitTime - prevCommitTime) / 1000);
-                test.duration = Math.max(0, diffSec);
-            }
-
-            totalDuration += test.duration;
-
-            if (test.state === 'passed') passedCount++;
-            else if (test.state === 'failed') failedCount++;
-            else skippedCount++;
-
-            tests.push(test);
-            prevCommitTime = commitTime;
+    for (const day of dayBuckets.keys()) {
+        const dayCommits = dayBuckets.get(day);
+        if (dayCommits) {
+            runs.push(buildDayRuns(dayCommits, projectName));
         }
-
-        runs.push({
-            timestamp: day + 'T00:00:00.000Z',
-            project: projectName,
-            total: tests.length,
-            passed: passedCount,
-            failed: failedCount,
-            skipped: skippedCount,
-            duration: totalDuration,
-            tests,
-        });
     }
 
     return runs;

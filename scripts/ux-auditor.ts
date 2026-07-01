@@ -97,21 +97,30 @@ function resolveModulePath(specifier: string, importingFile: string): string | n
     return null;
 }
 
+function ensureImportModule(imports: Map<string, Set<string>>, modulePath: string): Set<string> {
+    if (!imports.has(modulePath)) imports.set(modulePath, new Set());
+    return imports.get(modulePath) ?? new Set();
+}
+
+function parseNamedSymbols(namesRaw: string): string[] {
+    return namesRaw
+        .split(',')
+        .map((p) => p.trim().split(' as ')[0] ?? '')
+        .filter(Boolean);
+}
+
 /** Parse import statements from source, return map of normalized module path → imported symbols. */
 function parseImports(src: string, importingFile: string): Map<string, Set<string>> {
     const imports = new Map<string, Set<string>>();
 
     /* named imports: import { a, b as alias } from './x' */
-    const namedRe = /import\s+\{\s*([^}]+)\s*\}\s+from\s+['"]([^'"]+)['"]/g;
+    const namedRe = /import\s+\{([^}]+)\}\s+from\s+['"]([^'"]+)['"]/g;
     for (const m of src.matchAll(namedRe)) {
         const normalized = resolveModulePath(m[2] ?? '', importingFile);
         if (!normalized) continue;
-        if (!imports.has(normalized)) imports.set(normalized, new Set());
-        const symbols = imports.get(normalized) ?? new Set();
-        imports.set(normalized, symbols);
-        for (const part of (m[1] ?? '').split(',')) {
-            const name = part.trim().split(/\s+as\s+/)[0] ?? '';
-            if (name) symbols.add(name);
+        const symbols = ensureImportModule(imports, normalized);
+        for (const name of parseNamedSymbols(m[1] ?? '')) {
+            symbols.add(name);
         }
     }
 
@@ -120,8 +129,7 @@ function parseImports(src: string, importingFile: string): Map<string, Set<strin
     for (const m of src.matchAll(defaultRe)) {
         const normalized = resolveModulePath(m[2] ?? '', importingFile);
         if (!normalized) continue;
-        if (!imports.has(normalized)) imports.set(normalized, new Set());
-        imports.get(normalized)?.add(m[1] ?? '');
+        ensureImportModule(imports, normalized).add(m[1] ?? '');
     }
 
     /* namespace imports: import * as X from './x' */
@@ -129,9 +137,7 @@ function parseImports(src: string, importingFile: string): Map<string, Set<strin
     for (const m of src.matchAll(nsRe)) {
         const normalized = resolveModulePath(m[1] ?? '', importingFile);
         if (!normalized) continue;
-        /* namespace = wildcard, assume all exports used */
-        if (!imports.has(normalized)) imports.set(normalized, new Set());
-        imports.get(normalized)?.add('*');
+        ensureImportModule(imports, normalized).add('*');
     }
 
     return imports;
@@ -140,7 +146,7 @@ function parseImports(src: string, importingFile: string): Map<string, Set<strin
 /** Parse re-export statements from source. Same format as imports but with `export` prefix. */
 function parseReExports(src: string, exportingFile: string): Map<string, Set<string>> {
     const reExports = new Map<string, Set<string>>();
-    const reRe = /export\s+\{\s*([^}]+)\s*\}\s+from\s+['"]([^'"]+)['"]/g;
+    const reRe = /export\s+\{([^}]+)\}\s+from\s+['"]([^'"]+)['"]/g;
     for (const m of src.matchAll(reRe)) {
         const normalized = resolveModulePath(m[2] ?? '', exportingFile);
         if (!normalized) continue;
@@ -148,7 +154,7 @@ function parseReExports(src: string, exportingFile: string): Map<string, Set<str
         const symbols = reExports.get(normalized) ?? new Set();
         reExports.set(normalized, symbols);
         for (const part of (m[1] ?? '').split(',')) {
-            const name = part.trim().split(/\s+as\s+/)[0] ?? '';
+            const name = part.trim().split(' as ')[0] ?? '';
             if (name) symbols.add(name);
         }
     }
@@ -231,84 +237,107 @@ function isSkippedDir(file: string): boolean {
     return SKIP_DIR_PREFIXES.some((d) => normalized.startsWith(d));
 }
 
-function detectDeadUtilities(importGraph: ImportGraph): AuditFinding[] {
-    const findings: AuditFinding[] = [];
-    const allNonTestFiles = getAllTsFiles('.').filter((f) => !f.endsWith('.test.ts'));
-    const allTestFiles = getAllTsFiles('.').filter((f) => f.endsWith('.test.ts'));
-
-    for (const f of allNonTestFiles) {
-        if (isSkippedDir(f)) continue;
-        const src = readSource(f);
-        if (src.includes('__SKIP_AUDIT__')) continue;
-
-        /* Find exports */
-        const exports_: Array<{ name: string; line: number }> = [];
-        for (const m of src.matchAll(/^export (?:async )?function (\w+)/gm)) {
-            const lineNum = src.slice(0, m.index).split('\n').length;
-            exports_.push({ name: m[1] ?? '', line: lineNum });
+function countTestCallsForExport(exp: { name: string }, allTestFiles: string[]): number {
+    let testCalls = 0;
+    for (const tf of allTestFiles) {
+        const tfSrc = readSource(tf);
+        if (!tfSrc) continue;
+        const callPattern = exp.name + '(';
+        let idx = 0;
+        while ((idx = tfSrc.indexOf(callPattern, idx)) !== -1) {
+            const prev = idx > 0 ? tfSrc[idx - 1] : undefined;
+            if (idx === 0 || (prev !== undefined && /\s/.test(prev))) testCalls++;
+            idx++;
         }
-        for (const m of src.matchAll(/^export (?:const|let|var) (\w+)/gm)) {
-            const lineNum = src.slice(0, m.index).split('\n').length;
-            exports_.push({ name: m[1] ?? '', line: lineNum });
-        }
+    }
+    return testCalls;
+}
 
-        const normalizedPath = path.normalize(f);
+function checkExportUsage(
+    exp: { name: string; line: number },
+    src: string,
+    normalizedPath: string,
+    importGraph: ImportGraph,
+    allTestFiles: string[],
+): AuditFinding | null {
+    let prodCalls = 0;
 
-        for (const exp of exports_) {
-            if (exp.name === 'default') continue;
-            if (exp.name.startsWith('_')) continue;
-
-            let prodCalls = 0;
-
-            /* 1. Check import graph — does any non-test file import this symbol from this module? */
-            const importers = importGraph.reverse.get(normalizedPath);
-            if (importers) {
-                for (const importer of importers) {
-                    if (importer.symbols.has('*') || importer.symbols.has(exp.name)) {
-                        prodCalls++;
-                        break;
-                    }
-                }
-            }
-
-            /* 2. Check if the export is called at module-level within its own file.
-             *    Module-level calls are not inside a function body — they execute at import time. */
-            if (prodCalls === 0) {
-                const selfCallPattern = exp.name + '(';
-                const selfCallIdx = src.indexOf(selfCallPattern);
-                const selfCallRe = selfCallIdx >= 0 && /^\s*\S/.test(src.slice(selfCallIdx));
-                if (selfCallRe) {
-                    prodCalls++;
-                }
-            }
-
-            /* 3. If still zero prod usage but called from tests, flag as dead utility */
-            if (prodCalls === 0) {
-                let testCalls = 0;
-                for (const tf of allTestFiles) {
-                    const tfSrc = readSource(tf);
-                    if (!tfSrc) continue;
-                    const callPattern = exp.name + '(';
-                    let idx = 0;
-                    while ((idx = tfSrc.indexOf(callPattern, idx)) !== -1) {
-                        const prev = idx > 0 ? tfSrc[idx - 1] : undefined;
-                        if (idx === 0 || (prev !== undefined && /\s/.test(prev))) testCalls++;
-                        idx++;
-                    }
-                }
-
-                if (testCalls > 0) {
-                    findings.push({
-                        type: 'dead-utility',
-                        file: f,
-                        line: exp.line,
-                        detail: `Export '${exp.name}' called ${testCalls}x from tests, 0x from production code`,
-                    });
-                }
+    const importers = importGraph.reverse.get(normalizedPath);
+    if (importers) {
+        for (const importer of importers) {
+            if (importer.symbols.has('*') || importer.symbols.has(exp.name)) {
+                prodCalls++;
+                break;
             }
         }
     }
 
+    if (prodCalls === 0) {
+        const selfCallPattern = exp.name + '(';
+        const selfCallIdx = src.indexOf(selfCallPattern);
+        const selfCallRe = selfCallIdx >= 0 && /^\s*\S/.test(src.slice(selfCallIdx));
+        if (selfCallRe) {
+            prodCalls++;
+        }
+    }
+
+    if (prodCalls > 0) return null;
+
+    const testCalls = countTestCallsForExport(exp, allTestFiles);
+    if (testCalls > 0) {
+        return {
+            type: 'dead-utility',
+            file: '',
+            line: exp.line,
+            detail: `Export '${exp.name}' called ${testCalls}x from tests, 0x from production code`,
+        };
+    }
+    return null;
+}
+
+function extractExports(src: string): Array<{ name: string; line: number }> {
+    const exports_: Array<{ name: string; line: number }> = [];
+    for (const m of src.matchAll(/^export (?:async )?function (\w+)/gm)) {
+        const lineNum = src.slice(0, m.index).split('\n').length;
+        exports_.push({ name: m[1] ?? '', line: lineNum });
+    }
+    for (const m of src.matchAll(/^export (?:const|let|var) (\w+)/gm)) {
+        const lineNum = src.slice(0, m.index).split('\n').length;
+        exports_.push({ name: m[1] ?? '', line: lineNum });
+    }
+    return exports_;
+}
+
+function checkFileDeadExports(f: string, importGraph: ImportGraph, allTestFiles: string[]): AuditFinding[] {
+    if (isSkippedDir(f)) return [];
+    const src = readSource(f);
+    if (src.includes('__SKIP_AUDIT__')) return [];
+
+    const exports_ = extractExports(src);
+    const normalizedPath = path.normalize(f);
+    const findings: AuditFinding[] = [];
+
+    for (const exp of exports_) {
+        if (exp.name === 'default') continue;
+        if (exp.name.startsWith('_')) continue;
+
+        const finding = checkExportUsage(exp, src, normalizedPath, importGraph, allTestFiles);
+        if (finding) {
+            finding.file = f;
+            findings.push(finding);
+        }
+    }
+    return findings;
+}
+
+function detectDeadUtilities(importGraph: ImportGraph): AuditFinding[] {
+    const allNonTestFiles = getAllTsFiles('.').filter((f) => !f.endsWith('.test.ts'));
+    const allTestFiles = getAllTsFiles('.').filter((f) => f.endsWith('.test.ts'));
+
+    const findings: AuditFinding[] = [];
+    for (const f of allNonTestFiles) {
+        findings.push(...checkFileDeadExports(f, importGraph, allTestFiles));
+    }
     return findings;
 }
 
@@ -316,10 +345,7 @@ function detectDeadUtilities(importGraph: ImportGraph): AuditFinding[] {
 /*  3. UX Friction Score                                               */
 /* ------------------------------------------------------------------ */
 
-function computeFrictionScore(): number {
-    const menuSource = readSource('jira_management/menu-data.ts');
-
-    /* PR: prompts without hint / total prompts */
+function computePromptRatio(): number {
     let totalPrompts = 0;
     let promptsWithoutHint = 0;
     const handlerFiles = getAllTsFiles('jira_management/commands', true);
@@ -334,13 +360,36 @@ function computeFrictionScore(): number {
             }
         }
     }
-    const PR = totalPrompts > 0 ? promptsWithoutHint / totalPrompts : 0;
+    return totalPrompts > 0 ? promptsWithoutHint / totalPrompts : 0;
+}
 
-    /* EX: handlers without HELP_TOPICS entry / total handlers */
+function extractHelpTopics(menuSource: string): Record<string, string> {
     const helpTopics: Record<string, string> = {};
-    for (const m of menuSource.matchAll(/(\w+):\s*'[^']*'/g)) {
-        helpTopics[m[1] ?? ''] = '';
+    let pos = 0;
+    while (pos < menuSource.length) {
+        const colonIdx = menuSource.indexOf(':', pos);
+        if (colonIdx === -1) break;
+        const keyMatch = /^\w+/.exec(menuSource.slice(Math.max(0, colonIdx - 30), colonIdx));
+        if (!keyMatch) {
+            pos = colonIdx + 1;
+            continue;
+        }
+        const key = keyMatch[0];
+        const afterColon = colonIdx + 1;
+        if (afterColon >= menuSource.length || menuSource[afterColon] !== "'") {
+            pos = colonIdx + 1;
+            continue;
+        }
+        const closeQuote = menuSource.indexOf("'", afterColon + 1);
+        if (closeQuote === -1) break;
+        helpTopics[key] = '';
+        pos = closeQuote + 1;
     }
+    return helpTopics;
+}
+
+function computeHandlerRatio(menuSource: string): number {
+    const helpTopics = extractHelpTopics(menuSource);
     const handlerIds = new Set<string>();
     for (const m of menuSource.matchAll(/id:\s+'(\d+|d)'/g)) {
         handlerIds.add(m[1] ?? '');
@@ -352,9 +401,10 @@ function computeFrictionScore(): number {
         totalHandlers++;
         if (Reflect.get(helpTopics, id)) handlersWithHelp++;
     }
-    const EX = totalHandlers > 0 ? 1 - handlersWithHelp / totalHandlers : 0;
+    return totalHandlers > 0 ? 1 - handlersWithHelp / totalHandlers : 0;
+}
 
-    /* AL: submenu items without alias / total submenu items */
+function computeAliasRatio(menuSource: string): number {
     const aliasTargets = new Set<string>();
     for (const m of menuSource.matchAll(/['"]([\w-]+)['"]:\s*['"]([\w/]+)['"]/g)) {
         if (m[2]) aliasTargets.add(m[2]);
@@ -367,9 +417,16 @@ function computeFrictionScore(): number {
         totalItems++;
         if (aliasTargets.has(id)) itemsWithAlias++;
     }
-    const AL = totalItems > 0 ? 1 - itemsWithAlias / totalItems : 0;
+    return totalItems > 0 ? 1 - itemsWithAlias / totalItems : 0;
+}
 
-    /* DP: max submenu depth */
+function computeFrictionScore(): number {
+    const menuSource = readSource('jira_management/menu-data.ts');
+
+    const PR = computePromptRatio();
+    const EX = computeHandlerRatio(menuSource);
+    const AL = computeAliasRatio(menuSource);
+
     const submenus = ['reports', 'tests', 'bugreport', 'analytics', 'releases', 'config'];
     const DP = submenus.some((s) => menuSource.includes(s)) ? 2 : 1;
 
