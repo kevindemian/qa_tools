@@ -67,6 +67,7 @@ const opLog = vi.mocked({
     _maxLogSize: 0,
     _config: null,
     _ensureDir: vi.fn(),
+    _initFileBytes: vi.fn(),
     _rotateIfNeeded: vi.fn(),
     _writeConsole: vi.fn(),
     _writeFile: vi.fn(),

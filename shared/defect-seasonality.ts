@@ -109,82 +109,107 @@ function buildHourTable(hours: SeasonalityHour[]): string {
     return DataTable({ columns, rows, compact: true, ariaLabel: 'Hour Breakdown' });
 }
 
+function buildEmptySeasonalityResult(): SeasonalityResult {
+    const emptyDays: SeasonalityDay[] = DAY_SORT_ORDER.map((d) => ({
+        dayOfWeek: d,
+        total: 0,
+        categories: {},
+    }));
+    const emptyHours: SeasonalityHour[] = Array.from({ length: HOUR_COUNT }, (_, i) => ({
+        hour: i,
+        total: 0,
+        categories: {},
+    }));
+    return {
+        byDayOfWeek: emptyDays,
+        byHour: emptyHours,
+        peakDay: 'N/A',
+        peakHour: -1,
+        totalRecords: 0,
+        period: { from: '', to: '' },
+        timestamp: new Date().toISOString(),
+    };
+}
+
+interface AccumulatorState {
+    dayAcc: Map<string, { total: number; categories: Map<string, number> }>;
+    hourAcc: Map<number, { total: number; categories: Map<string, number> }>;
+    minDate: string;
+    maxDate: string;
+}
+
+function accumulateClassification(state: AccumulatorState, fc: FailureClassification): void {
+    const dayName = getDayName(fc.timestamp);
+    const hour = getHour(fc.timestamp);
+    const cat = fc.category;
+
+    if (!state.dayAcc.has(dayName)) state.dayAcc.set(dayName, { total: 0, categories: new Map() });
+    const dayEntry = state.dayAcc.get(dayName);
+    if (dayEntry) {
+        dayEntry.total++;
+        dayEntry.categories.set(cat, (dayEntry.categories.get(cat) ?? 0) + 1);
+    }
+
+    if (!isNaN(hour)) {
+        if (!state.hourAcc.has(hour)) state.hourAcc.set(hour, { total: 0, categories: new Map() });
+        const hourEntry = state.hourAcc.get(hour);
+        if (hourEntry) {
+            hourEntry.total++;
+            hourEntry.categories.set(cat, (hourEntry.categories.get(cat) ?? 0) + 1);
+        }
+    }
+
+    const date = extractDate(fc.timestamp);
+    if (!state.minDate || date < state.minDate) state.minDate = date;
+    if (!state.maxDate || date > state.maxDate) state.maxDate = date;
+}
+
+function findPeakDay(days: SeasonalityDay[]): SeasonalityDay {
+    const fallback: SeasonalityDay = { dayOfWeek: 'N/A', total: 0, categories: {} };
+    return days.length > 0
+        ? days.reduce((best, d) => (d.total > best.total ? d : best), days[0] ?? fallback)
+        : fallback;
+}
+
+function findPeakHour(hours: SeasonalityHour[]): SeasonalityHour {
+    const fallback: SeasonalityHour = { hour: -1, total: 0, categories: {} };
+    return hours.length > 0
+        ? hours.reduce((best, h) => (h.total > best.total ? h : best), hours[0] ?? fallback)
+        : fallback;
+}
+
 export function aggregateDefectSeasonality(
     classifications: FailureClassification[] | null | undefined,
 ): SeasonalityResult {
     if (!classifications || classifications.length === 0) {
-        const emptyDays: SeasonalityDay[] = DAY_SORT_ORDER.map((d) => ({
-            dayOfWeek: d,
-            total: 0,
-            categories: {},
-        }));
-        const emptyHours: SeasonalityHour[] = Array.from({ length: HOUR_COUNT }, (_, i) => ({
-            hour: i,
-            total: 0,
-            categories: {},
-        }));
-        return {
-            byDayOfWeek: emptyDays,
-            byHour: emptyHours,
-            peakDay: 'N/A',
-            peakHour: -1,
-            totalRecords: 0,
-            period: { from: '', to: '' },
-            timestamp: new Date().toISOString(),
-        };
+        return buildEmptySeasonalityResult();
     }
 
-    const dayAcc = new Map<string, { total: number; categories: Map<string, number> }>();
-    const hourAcc = new Map<number, { total: number; categories: Map<string, number> }>();
-    let minDate = '';
-    let maxDate = '';
+    const state: AccumulatorState = {
+        dayAcc: new Map(),
+        hourAcc: new Map(),
+        minDate: '',
+        maxDate: '',
+    };
 
     for (const fc of classifications) {
-        const dayName = getDayName(fc.timestamp);
-        const hour = getHour(fc.timestamp);
-        const cat = fc.category;
-
-        if (!dayAcc.has(dayName)) dayAcc.set(dayName, { total: 0, categories: new Map() });
-        const dayEntry = dayAcc.get(dayName);
-        if (dayEntry) {
-            dayEntry.total++;
-            dayEntry.categories.set(cat, (dayEntry.categories.get(cat) ?? 0) + 1);
-        }
-
-        if (!isNaN(hour)) {
-            if (!hourAcc.has(hour)) hourAcc.set(hour, { total: 0, categories: new Map() });
-            const hourEntry = hourAcc.get(hour);
-            if (hourEntry) {
-                hourEntry.total++;
-                hourEntry.categories.set(cat, (hourEntry.categories.get(cat) ?? 0) + 1);
-            }
-        }
-
-        const date = extractDate(fc.timestamp);
-        if (!minDate || date < minDate) minDate = date;
-        if (!maxDate || date > maxDate) maxDate = date;
+        accumulateClassification(state, fc);
     }
 
     const byDayOfWeek: SeasonalityDay[] = DAY_SORT_ORDER.map((d) => ({
         dayOfWeek: d,
-        total: dayAcc.get(d)?.total ?? 0,
-        categories: Object.fromEntries(dayAcc.get(d)?.categories ?? []),
+        total: state.dayAcc.get(d)?.total ?? 0,
+        categories: Object.fromEntries(state.dayAcc.get(d)?.categories ?? []),
     }));
 
     const byHour: SeasonalityHour[] = Array.from({ length: HOUR_COUNT }, (_, i) => ({
         hour: i,
-        total: hourAcc.get(i)?.total ?? 0,
-        categories: Object.fromEntries(hourAcc.get(i)?.categories ?? []),
+        total: state.hourAcc.get(i)?.total ?? 0,
+        categories: Object.fromEntries(state.hourAcc.get(i)?.categories ?? []),
     }));
 
-    const peakDayEntry =
-        byDayOfWeek.length > 0
-            ? byDayOfWeek.reduce((best, d) => (d.total > best.total ? d : best), byDayOfWeek[0]!)
-            : { dayOfWeek: 'N/A', total: 0, categories: {} };
-    const peakHourEntry =
-        byHour.length > 0
-            ? byHour.reduce((best, h) => (h.total > best.total ? h : best), byHour[0]!)
-            : { hour: -1, total: 0, categories: {} };
+    const peakDayEntry = findPeakDay(byDayOfWeek);
+    const peakHourEntry = findPeakHour(byHour);
 
     return {
         byDayOfWeek,
@@ -192,7 +217,7 @@ export function aggregateDefectSeasonality(
         peakDay: peakDayEntry.total > 0 ? peakDayEntry.dayOfWeek : 'N/A',
         peakHour: peakHourEntry.total > 0 ? peakHourEntry.hour : -1,
         totalRecords: classifications.length,
-        period: { from: minDate, to: maxDate },
+        period: { from: state.minDate, to: state.maxDate },
         timestamp: new Date().toISOString(),
     };
 }
@@ -236,7 +261,7 @@ export function generateSeasonalityHtml(result: SeasonalityResult, title?: strin
             footer: 'Generated by QA Tools — Defect Seasonality Dashboard',
         });
     } catch (err) {
-        const msg = err instanceof Error ? err.message : String(err);
+        const msg = String(err);
         rootLogger.error('Failed to generate seasonality dashboard: ' + msg + '. Verify buildCss dependency.');
         return buildErrorPage('Error generating dashboard', 'Error generating dashboard');
     }

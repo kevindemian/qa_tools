@@ -46,6 +46,17 @@ function buildInvariantHint(results: ValidationResult[]): string {
     return errors.map((e) => `- [${e.invariantId}] ${e.message}`).join('\n');
 }
 
+function buildSchemaHint(schemaResult: { error: { issues: Array<{ path: PropertyKey[]; message: string }> } }): string {
+    return schemaResult.error.issues.map((issue) => `- ${issue.path.join('.')}: ${issue.message}`).join('\n');
+}
+
+function collectInvariantErrors(summary: ValidatorSummary): string[] {
+    if (summary.allPassed) return [];
+    return summary.results
+        .filter((r) => !r.passed && r.severity === 'error')
+        .map((r) => `${r.invariantId}: ${r.message}`);
+}
+
 /**
  * Attempt generation + multi-layer validation with targeted retry.
  * Each layer retries with increasingly specific hints.
@@ -81,37 +92,66 @@ export async function generateWithRetry<T>(
             if (parsed.success) return parsed.data;
             return null;
         } catch (err) {
-            rootLogger.warn(
-                'targeted-retry: LLM + schema parsing failed: ' + (err instanceof Error ? err.message : String(err)),
-            );
+            rootLogger.warn('targeted-retry: LLM + schema parsing failed: ' + String(err));
             return null;
         }
     }
 
-    let system = opts.system;
-    const user = opts.user;
-    let result: T | null = null;
+    async function runLayer1(): Promise<{ result: T | null; updatedSystem: string; failed: boolean }> {
+        let sys = opts.system;
+        const user = opts.user;
+        for (let i = 0; i < config.layer1.maxRetries; i++) {
+            const attempt = await tryLayer(sys, user, 'layer1', '');
+            if (attempt !== null) {
+                const schemaResult = schema.safeParse(attempt);
+                if (schemaResult.success) return { result: attempt, updatedSystem: sys, failed: false };
+                layerFailures.layer1++;
+                recordRetry();
+                sys = `${sys}\n\n[SCHEMA VALIDATION FAILED]\nFix these issues:\n${buildSchemaHint(schemaResult)}`;
+            } else {
+                layerFailures.layer1++;
+                recordRetry();
+            }
+        }
+        return { result: null, updatedSystem: sys, failed: true };
+    }
 
-    // Layer 1: Schema validation
-    for (let i = 0; i < config.layer1.maxRetries; i++) {
-        result = await tryLayer(system, user, 'layer1', '');
-        if (result === null) {
-            layerFailures.layer1++;
+    async function runInvariantLayer(
+        currentResult: T,
+        currentSystem: string,
+        layer: 'layer2' | 'layer3',
+        validator: {
+            validate: (
+                data: unknown,
+                ctx: { inputRaw: string; outputRaw: unknown; artifactType: string },
+            ) => ValidatorSummary;
+        },
+    ): Promise<T> {
+        const maxRetries = config[layer].maxRetries;
+        let result = currentResult;
+        for (let i = 0; i < maxRetries; i++) {
+            const summary = validator.validate(result, validationCtx);
+            if (summary.allPassed) break;
+            layerFailures[layer]++;
             recordRetry();
-            continue;
+            const hint = buildInvariantHint(summary.results);
+            const retryResult = await tryLayer(currentSystem, opts.user, layer, hint);
+            if (retryResult !== null) result = retryResult;
         }
+        return result;
+    }
 
-        const schemaResult = schema.safeParse(result);
-        if (schemaResult.success) {
-            break;
-        }
+    const layer1Outcome = await runLayer1();
+    const system = layer1Outcome.updatedSystem;
+    let result: T | null = layer1Outcome.result;
 
-        layerFailures.layer1++;
-        recordRetry();
-        const hints = schemaResult.error.issues
-            .map((issue) => `- ${issue.path.join('.')}: ${issue.message}`)
-            .join('\n');
-        system = `${system}\n\n[SCHEMA VALIDATION FAILED]\nFix these issues:\n${hints}`;
+    if (layer1Outcome.failed) {
+        return {
+            data: null,
+            attempts: attempts.length,
+            layerFailures,
+            finalErrors: ['Layer 1: all retries exhausted'],
+        };
     }
 
     if (result === null) {
@@ -119,7 +159,7 @@ export async function generateWithRetry<T>(
             data: null,
             attempts: attempts.length,
             layerFailures,
-            finalErrors: ['Layer 1: all retries exhausted'],
+            finalErrors: ['Layer 1: result is null after retries'],
         };
     }
 
@@ -129,52 +169,13 @@ export async function generateWithRetry<T>(
         artifactType: context.artifactType,
     };
 
-    // Layer 2: Domain invariants
-    for (let i = 0; i < config.layer2.maxRetries; i++) {
-        const layer2Result = layer2Validator.validate(result, validationCtx);
-        if (layer2Result.allPassed) break;
+    result = await runInvariantLayer(result, system, 'layer2', layer2Validator);
+    result = await runInvariantLayer(result, system, 'layer3', layer3Validator);
 
-        layerFailures.layer2++;
-        recordRetry();
-        const hint = buildInvariantHint(layer2Result.results);
-        const retryResult = await tryLayer(system, user, 'layer2', hint);
-        if (retryResult !== null) {
-            result = retryResult;
-        }
-    }
-
-    // Layer 3: Semantic validation
-    for (let i = 0; i < config.layer3.maxRetries; i++) {
-        const layer3Result = layer3Validator.validate(result, validationCtx);
-        if (layer3Result.allPassed) break;
-
-        layerFailures.layer3++;
-        recordRetry();
-        const hint = buildInvariantHint(layer3Result.results);
-        const retryResult = await tryLayer(system, user, 'layer3', hint);
-        if (retryResult !== null) {
-            result = retryResult;
-        }
-    }
-
-    // Final validation check
-    const finalLayer2 = layer2Validator.validate(result, validationCtx);
-    const finalLayer3 = layer3Validator.validate(result, validationCtx);
-    const finalErrors: string[] = [];
-    if (!finalLayer2.allPassed) {
-        finalErrors.push(
-            ...finalLayer2.results
-                .filter((r) => !r.passed && r.severity === 'error')
-                .map((r) => `${r.invariantId}: ${r.message}`),
-        );
-    }
-    if (!finalLayer3.allPassed) {
-        finalErrors.push(
-            ...finalLayer3.results
-                .filter((r) => !r.passed && r.severity === 'error')
-                .map((r) => `${r.invariantId}: ${r.message}`),
-        );
-    }
+    const finalErrors = [
+        ...collectInvariantErrors(layer2Validator.validate(result, validationCtx)),
+        ...collectInvariantErrors(layer3Validator.validate(result, validationCtx)),
+    ];
 
     return {
         data: finalErrors.length === 0 ? result : null,
