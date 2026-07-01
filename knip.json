@@ -19,14 +19,7 @@
         "e2e/**/*.ts",
         "scripts/**/*.ts"
     ],
-    "ignoreDependencies": [
-        "adm-zip",
-        "csv-parser",
-        "glob",
-        "@inquirer/confirm",
-        "@inquirer/input",
-        "@inquirer/select"
-    ],
+    "ignoreDependencies": ["adm-zip", "csv-parser", "glob", "@inquirer/confirm", "@inquirer/input", "@inquirer/select"],
     "vitest": {
         "config": "vitest.config.ts"
     }
