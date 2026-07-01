@@ -84,7 +84,7 @@ async function _runSingleDiagnostic(
 function _checkHealthScore(projectName: string): { healthReady: boolean; healthMsg: string } {
     const store = loadMetrics();
     const projectRuns = store.runs.filter((r) => r.project === projectName);
-    const coverageCount = store.coverageHistory?.length || 0;
+    const coverageCount = store.coverageHistory?.length ?? 0;
     const healthReady = projectRuns.length >= 10 && coverageCount > 0;
     let healthMsg = healthReady ? 'pronto' : 'insuficiente';
     if (!healthReady) {

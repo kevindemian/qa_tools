@@ -102,7 +102,7 @@ function _aggregateFeedbackStats(records: AiGenerationRecord[]): {
 
     for (const record of records) {
         totalGenerated += record.generatedTests.length;
-        versionCounts[record.promptVersion] = (versionCounts[record.promptVersion] || 0) + 1;
+        versionCounts[record.promptVersion] = (versionCounts[record.promptVersion] ?? 0) + 1;
         if (record.feedback) {
             for (const fb of record.feedback) {
                 if (fb.action === 'modified') totalModified++;
