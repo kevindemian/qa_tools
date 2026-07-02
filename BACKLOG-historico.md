@@ -556,21 +556,21 @@ Também marcar o AUDIO-01 (M1, M2, M3 do bloco antigo) como resolvidos:
 
 ## 🧹 Sprint Débitos — 2026-05-27
 
-| # | Item | Onde | Prio | Status |
+| #   | Item                              | Onde                        | Prio                  | Status                                                          |
 | --- | --------------------------------- | --------------------------- | --------------------- | --------------------------------------------------------------- | --- | --- |
-| S7 | Remover `analyzeFailures` wrapper | `failure-analysis.ts:34-37` | P1 | ✅ |
-| S9 | `loadTypedState()` helper | `state.ts` + `main.ts` | P2 | ✅ |
-| I4 | `ts-prune` no CI | CI pipeline | P1 | ✅ |
-| I5 | Script handlers↔arquivos | `package.json` | P2 | ✅ |
-| S8 | LlmTier configs → `Record` | `llm-client.ts:67-145` | P1 | ✅ |
-| S10 | `                                 |                             | undefined` redundante | `result_parser.ts:96` | P2 | ✅ |
-| S11 | `for (let i...)` → `for..of` | `report-generator.ts:263` | P3 | ✅ |
-| S12 | Ternário → `Record` lookup | `report-generator.ts:197` | P3 | ✅ |
-| S13 | 3× `.filter().length` → 1× | `result_parser.ts:128-130` | P3 | ⬜ Já usa `reduce` em outras partes; avaliar se ainda aplicável |
-| S14 | Retry manual → `for` loop | `failure-analysis.ts:78-89` | P3 | ✅ |
-| S1 | config.ts Proxy refactor | `config.ts` | P1 | ✅ Proxy revertido — 43 static getter one-liners mantidos |
-| I1 | Teste de contrato handlers | `index.test.ts` | P2 | ✅ Bidirecional: file→handler + handler→file + export contract |
-| I3 | Smoke test com asserções | `e2e/smoke-pipeline.ts` | P3 | ✅ Função `assert()` + validações estruturais em cada etapa |
+| S7  | Remover `analyzeFailures` wrapper | `failure-analysis.ts:34-37` | P1                    | ✅                                                              |
+| S9  | `loadTypedState()` helper         | `state.ts` + `main.ts`      | P2                    | ✅                                                              |
+| I4  | `ts-prune` no CI                  | CI pipeline                 | P1                    | ✅                                                              |
+| I5  | Script handlers↔arquivos          | `package.json`              | P2                    | ✅                                                              |
+| S8  | LlmTier configs → `Record`        | `llm-client.ts:67-145`      | P1                    | ✅                                                              |
+| S10 | `                                 |                             | undefined` redundante | `result_parser.ts:96`                                           | P2  | ✅  |
+| S11 | `for (let i...)` → `for..of`      | `report-generator.ts:263`   | P3                    | ✅                                                              |
+| S12 | Ternário → `Record` lookup        | `report-generator.ts:197`   | P3                    | ✅                                                              |
+| S13 | 3× `.filter().length` → 1×        | `result_parser.ts:128-130`  | P3                    | ⬜ Já usa `reduce` em outras partes; avaliar se ainda aplicável |
+| S14 | Retry manual → `for` loop         | `failure-analysis.ts:78-89` | P3                    | ✅                                                              |
+| S1  | config.ts Proxy refactor          | `config.ts`                 | P1                    | ✅ Proxy revertido — 43 static getter one-liners mantidos       |
+| I1  | Teste de contrato handlers        | `index.test.ts`             | P2                    | ✅ Bidirecional: file→handler + handler→file + export contract  |
+| I3  | Smoke test com asserções          | `e2e/smoke-pipeline.ts`     | P3                    | ✅ Função `assert()` + validações estruturais em cada etapa     |
 
 ---
 

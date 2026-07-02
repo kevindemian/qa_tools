@@ -67,8 +67,10 @@ if [[ -d "$OPENDATA_DIR" ]]; then
 
   TOTAL_HITS=0
   for pattern in "${SECRET_PATTERNS[@]}"; do
-    HITS=$(grep -rnE "$pattern" "$OPENDATA_DIR" 2>/dev/null | grep -v ".log:" | wc -l || echo 0)
-    TOTAL_HITS=$((TOTAL_HITS + HITS))
+    HITS=$(grep -rnE "$pattern" "$OPENDATA_DIR" 2>/dev/null | grep -v ".log:" | wc -l | tr -d '[:space:]' || echo 0)
+    if [[ "$HITS" =~ ^[0-9]+$ ]]; then
+      TOTAL_HITS=$((TOTAL_HITS + HITS))
+    fi
   done
 
   if [[ "$TOTAL_HITS" -gt 0 ]]; then

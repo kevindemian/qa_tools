@@ -71,7 +71,7 @@ Maps individual testing suites keys to their corresponding GitLab/GitHub project
 }
 ```
 
-_Note: Any environment variable defined as `PROJECT_ID_<PROJECT_KEY_UPPERCASE>` (e.g. `PROJECT_ID_QA_TOOLS`) will dynamically override these JSON map values at runtime._
+_Note: Any environment variable defined as `PROJECT_ID_<PROJECT*KEY_UPPERCASE>`(e.g.`PROJECT_ID_QA_TOOLS`) will dynamically override these JSON map values at runtime.*
 
 ### B. Project Provider Mappings (`config/providers.json`)
 

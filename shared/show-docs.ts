@@ -17,10 +17,7 @@ function _loadDocFiles(docsDir: string): Array<{ label: string; file: string }> 
             .filter((f) => /^\d{2}-.+\.md$/.test(f))
             .sort((a, b) => a.localeCompare(b));
     } catch (err: unknown) {
-        printError(
-            'Documentação',
-            new Error('Diretório docs/ não encontrado em ' + docsDir + ': ' + formatErr(err)),
-        );
+        printError('Documentação', new Error('Diretório docs/ não encontrado em ' + docsDir + ': ' + formatErr(err)));
         return null;
     }
     if (files.length === 0) {
