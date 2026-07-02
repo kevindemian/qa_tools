@@ -7,55 +7,46 @@
  * - Signals have correct severity/source/message/action fields
  * - State persistence of suggestions
  *
- * Uses mocked state to avoid filesystem side effects.
+ * Uses vi.spyOn for detectDrift (reads in-memory state, not I/O).
+ * State is mocked to avoid filesystem side effects.
  */
 import { describe, expect, it, vi, beforeEach, assert } from 'vitest';
-
-const mockDetectDrift = vi.hoisted(() => vi.fn());
-const mockSnapshot = vi.hoisted(() => vi.fn());
-const mockUpdateTyped = vi.hoisted(() => vi.fn());
-
-vi.mock('../../quality-metrics', () => ({
-    detectDrift: mockDetectDrift,
-}));
-
-vi.mock('../../llm-metrics', () => ({
-    snapshotLlmMetrics: mockSnapshot,
-}));
+import * as qualityMetrics from '../../quality-metrics.js';
+import * as llmMetrics from '../../llm-metrics.js';
 
 vi.mock('../../state', () => ({
-    updateTyped: mockUpdateTyped,
+    updateTyped: vi.fn(),
 }));
 
 vi.mock('../../logger');
 
 import { checkQualitySignals } from '../../quality-suggester.js';
 
+const EMPTY_SNAPSHOT = {
+    totalRequests: 0,
+    avgLatencyMs: 0,
+    failuresByTier: {},
+    timestamp: '',
+    rejectedByValidator: 0,
+    retryCount: 0,
+    adversarialRetryCount: 0,
+    avgConfidence: 0,
+    rejectionReasons: {},
+    artifactApproved: 0,
+    artifactRejected: 0,
+    cacheHits: 0,
+    cacheMisses: 0,
+    totalPromptTokens: 0,
+    totalCompletionTokens: 0,
+    totalCostUSD: 0,
+    costPerTier: {},
+    requestsByProvider: {},
+    latencyByModel: {},
+};
+
 describe('Integration: Quality Suggester', () => {
     beforeEach(() => {
         vi.clearAllMocks();
-        mockDetectDrift.mockReturnValue([]);
-        mockSnapshot.mockReturnValue({
-            totalRequests: 0,
-            avgLatencyMs: 0,
-            failuresByTier: {},
-            timestamp: '',
-            rejectedByValidator: 0,
-            retryCount: 0,
-            adversarialRetryCount: 0,
-            avgConfidence: 0,
-            rejectionReasons: {},
-            artifactApproved: 0,
-            artifactRejected: 0,
-            cacheHits: 0,
-            cacheMisses: 0,
-            totalPromptTokens: 0,
-            totalCompletionTokens: 0,
-            totalCostUSD: 0,
-            costPerTier: {},
-            requestsByProvider: {},
-            latencyByModel: {},
-        });
     });
 
     describe('FT-13a: checkQualitySignals', () => {
@@ -66,7 +57,8 @@ describe('Integration: Quality Suggester', () => {
         });
 
         it('produces drift signal with source quality-metrics', () => {
-            mockDetectDrift.mockReturnValue(['drift alert']);
+            const driftSpy = vi.spyOn(qualityMetrics, 'detectDrift').mockReturnValue(['drift alert']);
+            vi.spyOn(llmMetrics, 'snapshotLlmMetrics').mockReturnValue(EMPTY_SNAPSHOT);
             const signals = checkQualitySignals();
 
             expect(signals.length).toBeGreaterThanOrEqual(1);
@@ -78,10 +70,13 @@ describe('Integration: Quality Suggester', () => {
             assert(driftSignal !== undefined);
 
             expect(driftSignal.source).toBe('quality-metrics');
+
+            driftSpy.mockRestore();
         });
 
         it('drift signal has severity warning', () => {
-            mockDetectDrift.mockReturnValue(['drift alert']);
+            vi.spyOn(qualityMetrics, 'detectDrift').mockReturnValue(['drift alert']);
+            vi.spyOn(llmMetrics, 'snapshotLlmMetrics').mockReturnValue(EMPTY_SNAPSHOT);
             const signals = checkQualitySignals();
             const driftSignal = signals.find((s) => s.source === 'quality-metrics');
             assert(driftSignal !== undefined);
@@ -90,7 +85,8 @@ describe('Integration: Quality Suggester', () => {
         });
 
         it('drift signal includes the alert message', () => {
-            mockDetectDrift.mockReturnValue(['drift alert']);
+            vi.spyOn(qualityMetrics, 'detectDrift').mockReturnValue(['drift alert']);
+            vi.spyOn(llmMetrics, 'snapshotLlmMetrics').mockReturnValue(EMPTY_SNAPSHOT);
             const signals = checkQualitySignals();
             const driftSignal = signals.find((s) => s.source === 'quality-metrics');
             assert(driftSignal !== undefined);
@@ -99,7 +95,8 @@ describe('Integration: Quality Suggester', () => {
         });
 
         it('drift signal includes actionable suggestion', () => {
-            mockDetectDrift.mockReturnValue(['drift alert']);
+            vi.spyOn(qualityMetrics, 'detectDrift').mockReturnValue(['drift alert']);
+            vi.spyOn(llmMetrics, 'snapshotLlmMetrics').mockReturnValue(EMPTY_SNAPSHOT);
             const signals = checkQualitySignals();
             const driftSignal = signals.find((s) => s.source === 'quality-metrics');
             assert(driftSignal !== undefined);
