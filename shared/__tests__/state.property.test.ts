@@ -22,7 +22,8 @@ function getConfig() {
 }
 
 /** Arbitrário para geração de estados. */
-const KeyArb = fc.string({ minLength: 1, maxLength: 20 }).filter((s) => s !== '__proto__');
+const PROTO_KEYS = new Set(['__proto__', 'constructor', 'prototype']);
+const KeyArb = fc.string({ minLength: 1, maxLength: 20 }).filter((s) => !PROTO_KEYS.has(s));
 const ValueArb = fc.oneof(
     fc.string({ minLength: 0, maxLength: 50 }),
     fc.integer(),
