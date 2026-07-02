@@ -1,7 +1,7 @@
 /** Zod schemas for CSV row validation and test case structure. */
 import { z } from '../shared/validation.js';
 
-export const CsvRowFieldsSchema = z.object({
+const CsvRowFieldsSchema = z.object({
     Action: z.string().min(1, 'Action é obrigatório'),
     Data: z.string().default(''),
     'Expected Result': z.string().default(''),
@@ -13,7 +13,7 @@ export const CsvRowSchema = z.object({
 
 export type CsvRow = z.infer<typeof CsvRowSchema>;
 
-export const TestStepSchema = z.object({
+const TestStepSchema = z.object({
     fields: z.object({
         Action: z.string().optional(),
         Data: z.string().optional(),
@@ -43,7 +43,7 @@ export const TestCaseSchema = z.object({
         .optional(),
 });
 
-export const ImportJsonStepSchema = z.object({
+const ImportJsonStepSchema = z.object({
     Action: z.string().optional(),
     Data: z.string().optional(),
     /** @production Field name com espaço exigido pela Xray Server API. */

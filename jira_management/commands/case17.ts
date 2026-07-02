@@ -2,6 +2,7 @@ import { formatErr } from '../../shared/errors.js';
 import fs from 'fs';
 import path from 'path';
 import { createHttpClient } from '../../shared/http-client.js';
+import { sanitizePath } from '../../shared/path-utils.js';
 import { rootLogger } from '../../shared/logger.js';
 import { ask, askConfirm, info, print, printError, title, withSpinner } from '../../shared/prompt.js';
 import type { JiraSearchResult } from '../../shared/types.js';
@@ -69,9 +70,9 @@ async function _writeReportFile(html: string, projectName: string): Promise<stri
     const defaultName = `report-${projectName}-${Date.now()}.html`;
     const outPath = await ask('Caminho de saída do HTML', { hint: 'ex: ./relatorio.html', default: '' });
     if (outPath.trim()) {
-        const resolvedPath = path.resolve(outPath.trim());
-        fs.mkdirSync(path.resolve(path.dirname(resolvedPath)), { recursive: true });
-        fs.writeFileSync(path.resolve(resolvedPath), html, 'utf8');
+        const resolvedPath = sanitizePath(process.cwd(), outPath.trim());
+        fs.mkdirSync(path.dirname(resolvedPath), { recursive: true });
+        fs.writeFileSync(resolvedPath, html, 'utf8');
         return resolvedPath;
     }
     return writeReport(defaultName, html);
@@ -352,7 +353,7 @@ async function handler(c: CommandContext): Promise<boolean | void> {
     const failed = result.tests.filter((t) => t.state === 'failed').length;
     const skipped = result.tests.filter((t) => t.state === 'skipped').length;
     fs.writeFileSync(
-        path.resolve(path.join(htmlDir, 'report.ctrf.json')),
+        sanitizePath(htmlDir, 'report.ctrf.json'),
         JSON.stringify(
             {
                 results: { tests: result.tests.map((t) => ({ name: t.title, status: t.state, duration: t.duration })) },
@@ -363,7 +364,7 @@ async function handler(c: CommandContext): Promise<boolean | void> {
         'utf8',
     );
     fs.writeFileSync(
-        path.resolve(path.join(htmlDir, 'report.stats.json')),
+        sanitizePath(htmlDir, 'report.stats.json'),
         JSON.stringify(
             {
                 generatedAt: new Date().toISOString(),

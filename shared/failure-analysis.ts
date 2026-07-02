@@ -2,6 +2,7 @@
 import { formatErr } from './errors.js';
 import fs from 'fs';
 import path from 'path';
+import { sanitizePath } from './path-utils.js';
 import { execFileSync } from 'child_process';
 import type { FlatTest } from './result_parser.js';
 import { llmPrompt } from './llm-client.js';
@@ -99,7 +100,7 @@ const PROMPT_DIR = path.resolve(import.meta.dirname, 'prompts');
 
 function readPrompt(file: string): string {
     try {
-        return fs.readFileSync(path.join(PROMPT_DIR, file), 'utf8');
+        return fs.readFileSync(sanitizePath(PROMPT_DIR, file), 'utf8');
     } catch (err) {
         rootLogger.error('Failed to read prompt template: ' + formatErr(err));
         return '';

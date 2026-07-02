@@ -2,6 +2,7 @@
 import crypto from 'crypto';
 import fs from 'fs';
 import path from 'path';
+import { sanitizePath } from './path-utils.js';
 import { z } from 'zod';
 import { rootLogger } from './logger.js';
 import Config from './config.js';
@@ -31,7 +32,7 @@ function cacheDir(): string {
 }
 
 function filePath(key: string): string {
-    return path.join(cacheDir(), key + '.json');
+    return sanitizePath(cacheDir(), key + '.json');
 }
 
 function cacheKeyBytes(): Buffer {
@@ -138,7 +139,7 @@ export function clearDiskCache(): void {
         if (fs.existsSync(path.resolve(dir))) {
             const files = fs.readdirSync(path.resolve(dir));
             for (const f of files) {
-                if (f.endsWith('.json')) fs.unlinkSync(path.join(dir, f));
+                if (f.endsWith('.json')) fs.unlinkSync(sanitizePath(dir, f));
             }
         }
     } catch (err) {

@@ -46,4 +46,4 @@ function formatBranch(branch: string): string {
     return stripVTControlCharacters(branch);
 }
 
-export { MSG_NO_OPERATION_RECORDED, providerLabel, handleHelp, handleShowHistory, formatBranch };
+export { providerLabel, handleHelp, handleShowHistory, formatBranch };

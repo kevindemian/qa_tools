@@ -1,6 +1,7 @@
 import { formatErr } from './errors.js';
 import * as fs from 'fs';
 import * as path from 'path';
+import { sanitizePath } from './path-utils.js';
 import { ask, askConfirm, info, printError, title, warn } from './prompt.js';
 import { rootLogger } from './logger.js';
 import { classifyFailure } from './failure-analysis.js';
@@ -17,7 +18,7 @@ const PROMPT_DIR = path.resolve(import.meta.dirname, 'prompts');
 
 function readPrompt(file: string): string {
     try {
-        return fs.readFileSync(path.join(PROMPT_DIR, file), 'utf8');
+        return fs.readFileSync(sanitizePath(PROMPT_DIR, file), 'utf8');
     } catch (err) {
         rootLogger.error('Failed to read prompt template: ' + formatErr(err));
         return '';
