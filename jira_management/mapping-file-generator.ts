@@ -32,8 +32,14 @@ class MappingFileGenerator {
         const outDir = reportsDir();
 
         try {
-            if (!fs.existsSync(path.resolve(outDir))) {
-                fs.mkdirSync(path.resolve(outDir), { recursive: true });
+            const resolvedDir = path.resolve(outDir);
+            const normalizedBase = path.resolve(outDir);
+            if (!resolvedDir.startsWith(normalizedBase + path.sep) && resolvedDir !== normalizedBase) {
+                rootLogger.warn('MappingFileGenerator: path traversal blocked for output dir');
+                return;
+            }
+            if (!fs.existsSync(resolvedDir)) {
+                fs.mkdirSync(resolvedDir, { recursive: true });
             }
         } catch (err: unknown) {
             rootLogger.warn('Não foi possível criar diretório de saida: ' + outDir + ' — ' + formatErr(err));
@@ -75,6 +81,12 @@ class MappingFileGenerator {
         mappings: MappingEntry[],
     ): void {
         const jsonPath = path.join(outDir, baseName + '-jira-mapping.json');
+        const resolvedJsonPath = path.resolve(jsonPath);
+        const normalizedBase = path.resolve(outDir);
+        if (!resolvedJsonPath.startsWith(normalizedBase + path.sep) && resolvedJsonPath !== normalizedBase) {
+            rootLogger.warn('MappingFileGenerator: path traversal blocked for JSON');
+            return;
+        }
         const jsonContent = JSON.stringify(
             {
                 project: projectName,
@@ -86,7 +98,7 @@ class MappingFileGenerator {
             null,
             2,
         );
-        fs.writeFileSync(path.resolve(jsonPath), jsonContent, 'utf8');
+        fs.writeFileSync(resolvedJsonPath, jsonContent, 'utf8');
         if (!isQuiet()) {
             info('Mapeamento salvo: ' + path.basename(jsonPath));
         }
@@ -100,12 +112,18 @@ class MappingFileGenerator {
         tasksId: string[],
     ): void {
         const mdPath = path.join(outDir, baseName + '-jira-mapping.md');
+        const resolvedMdPath = path.resolve(mdPath);
+        const normalizedBase = path.resolve(outDir);
+        if (!resolvedMdPath.startsWith(normalizedBase + path.sep) && resolvedMdPath !== normalizedBase) {
+            rootLogger.warn('MappingFileGenerator: path traversal blocked for MD');
+            return;
+        }
         const mdContent = generatePreviewMarkdown(tests, {
             keys: tasksId,
             documentTitle: 'Jira Mapping: ' + baseName + path.extname(sourcePath),
             showTimestamp: true,
         });
-        fs.writeFileSync(path.resolve(mdPath), mdContent, 'utf8');
+        fs.writeFileSync(resolvedMdPath, mdContent, 'utf8');
         if (!isQuiet()) {
             info('Sumario salvo: ' + path.basename(mdPath));
         }
@@ -113,6 +131,12 @@ class MappingFileGenerator {
 
     private _writeSummaryTxt(outDir: string, baseName: string, tasksId: string[], tests: TestCase[]): void {
         const txtPath = path.join(outDir, baseName + '-summary.txt');
+        const resolvedTxtPath = path.resolve(txtPath);
+        const normalizedBase = path.resolve(outDir);
+        if (!resolvedTxtPath.startsWith(normalizedBase + path.sep) && resolvedTxtPath !== normalizedBase) {
+            rootLogger.warn('MappingFileGenerator: path traversal blocked for TXT');
+            return;
+        }
         const txtContent =
             tasksId
                 .map((key, i) => {
@@ -120,7 +144,7 @@ class MappingFileGenerator {
                     return key + ': ' + (test.title || '(untitled)');
                 })
                 .join('\n') + '\n';
-        fs.writeFileSync(path.resolve(txtPath), txtContent, 'utf8');
+        fs.writeFileSync(resolvedTxtPath, txtContent, 'utf8');
     }
 }
 
