@@ -20,7 +20,7 @@ runs:
               PROJECT_NAME: ${{ inputs.project-name }}
           run: npx tsx shared/pr-report-core.ts --ctrf "$CTRF_PATH" --project "$PROJECT_NAME"
         - name: Upload PR Report HTML
-          uses: actions/upload-artifact@ea165f8
+          uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02
           if: always()
           with:
               name: pr-report-html
