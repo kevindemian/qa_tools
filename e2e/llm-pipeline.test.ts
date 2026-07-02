@@ -13,12 +13,6 @@ vi.mock('../shared/llm-client', () => ({
     resetCircuitState: vi.fn(),
     resetRateLimiter: vi.fn(),
 }));
-vi.mock('../shared/sanitize', () => ({
-    sanitizeForLlm: (s: string) => s,
-    sanitizeTerminal: (s: string) => s,
-    sanitizeHtml: (s: string) => s,
-}));
-
 import { llmPrompt } from '../shared/llm-client.js';
 import { reviewWithLlm } from '../shared/llm-review.js';
 import { snapshotLlmMetrics } from '../shared/llm-metrics.js';
