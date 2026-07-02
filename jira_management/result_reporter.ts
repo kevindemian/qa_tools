@@ -1,4 +1,5 @@
 /** Match test results to Jira issues via mapping JSON and create Test Executions. */
+import { formatErr } from '../shared/errors.js';
 import fs from 'fs';
 import path from 'path';
 import { rootLogger } from '../shared/logger.js';
@@ -88,7 +89,7 @@ function matchResultsToTests(results: TestResultItem[], mappingJsonPath: string)
             key: t['key'] || '',
         }));
     } catch (err) {
-        rootLogger.warn('Não foi possível ler mapping JSON: ' + (err as Error).message);
+        rootLogger.warn('Não foi possível ler mapping JSON: ' + formatErr(err));
         return { matched: [], unmatched: [], stats: { passed: 0, failed: 0, skipped: 0, total: 0 } };
     }
 
@@ -155,7 +156,7 @@ async function linkTestsToTe(
             await linkManager.createIssueLink(m.key, te.key, 'Tests');
         }
     } catch (err) {
-        rootLogger.warn('Falha ao linkar alguns testes: ' + (err as Error).message);
+        rootLogger.warn('Falha ao linkar alguns testes: ' + formatErr(err));
     }
 }
 

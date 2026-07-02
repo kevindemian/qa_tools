@@ -1,3 +1,4 @@
+import { formatErr } from './errors.js';
 import * as fs from 'fs';
 import * as path from 'path';
 import { ask, askConfirm, info, printError, title, warn } from './prompt.js';
@@ -18,7 +19,7 @@ function readPrompt(file: string): string {
     try {
         return fs.readFileSync(path.join(PROMPT_DIR, file), 'utf8');
     } catch (err) {
-        rootLogger.error('Failed to read prompt template: ' + (err as Error).message);
+        rootLogger.error('Failed to read prompt template: ' + formatErr(err));
         return '';
     }
 }
@@ -51,7 +52,7 @@ async function enrichWithLlm(summary: string, description: string): Promise<LLME
             confidence: LLM_CONFIDENCE,
         };
     } catch (err) {
-        rootLogger.warn('LLM enrichment failed: ' + (err as Error).message);
+        rootLogger.warn('LLM enrichment failed: ' + formatErr(err));
         return undefined;
     }
 }
@@ -93,7 +94,7 @@ export async function generateBugReportFromDescription(raw: string): Promise<Bug
             },
         };
     } catch (err) {
-        rootLogger.warn('AI bug report generation failed: ' + (err as Error).message);
+        rootLogger.warn('AI bug report generation failed: ' + formatErr(err));
         return null;
     }
 }
@@ -297,6 +298,6 @@ export async function interactiveBugReportFlow(
         return { status: 'ok', label: key, message: report.summary };
     } catch (err) {
         printError('Falha ao criar bug no Jira', err);
-        return { status: 'error', label: '', message: (err as Error).message };
+        return { status: 'error', label: '', message: formatErr(err) };
     }
 }

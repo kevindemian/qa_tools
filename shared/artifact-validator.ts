@@ -1,3 +1,4 @@
+import { formatErr } from './errors.js';
 /**
  * Generic artifact validation framework — Layer 2 (Domain Invariants).
  *
@@ -74,7 +75,7 @@ export class ArtifactValidator<T = unknown> {
                 results.push({
                     passed: false,
                     invariantId: id,
-                    message: `Invariant "${id}" threw: ${(err as Error).message}`,
+                    message: `Invariant "${id}" threw: ${formatErr(err)}`,
                     severity: 'error',
                     artifactPath: '',
                 });
@@ -89,7 +90,7 @@ export class ArtifactValidator<T = unknown> {
                 results.push({
                     passed: false,
                     invariantId: 'cross-field',
-                    message: `Cross-field check threw: ${(err as Error).message}`,
+                    message: `Cross-field check threw: ${formatErr(err)}`,
                     severity: 'error',
                     artifactPath: '',
                 });

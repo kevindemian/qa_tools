@@ -1,4 +1,5 @@
 /** Add tasks to sprint — assign issue keys to the current active sprint. */
+import { formatErr } from '../../shared/errors.js';
 import { print, success, warn, title, ask, askConfirm, printError, printSummary } from '../../shared/prompt.js';
 import { rootLogger } from '../../shared/logger.js';
 import type { CommandContext } from './context.js';
@@ -64,7 +65,7 @@ async function _processBatchTasks(
             await jiraResource.updateFixVersions([taskId], project, version);
             results.push({ status: 'ok', label: taskId, message: '' });
         } catch (err: unknown) {
-            rootLogger.error('Falha ao atualizar fixVersion: ' + (err as Error).message);
+            rootLogger.error('Falha ao atualizar fixVersion: ' + formatErr(err));
             results.push({ status: 'error', label: taskId, message: 'Falha ao atualizar fixVersion' });
         }
     }

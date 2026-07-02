@@ -9,6 +9,7 @@
  * - Refinement on divergence > threshold
  */
 
+import { formatErr } from './errors.js';
 import { llmPrompt, type LlmPromptOptions } from './llm-client.js';
 import { ArtifactValidator, type ValidationContext } from './artifact-validator.js';
 import { rootLogger } from './logger.js';
@@ -306,7 +307,7 @@ export async function refineWithConsistency<T>(
             refined: true,
         };
     } catch (err) {
-        rootLogger.warn('Consistency refinement failed, returning previous winner: ' + (err as Error).message);
+        rootLogger.warn('Consistency refinement failed, returning previous winner: ' + formatErr(err));
         return previousResult;
     }
 }

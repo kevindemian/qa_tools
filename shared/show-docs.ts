@@ -1,6 +1,7 @@
 /** Docs renderer — converts Markdown documentation to HTML and opens in browser.
  * Extracted from jira_management/ui-helpers.ts so both Jira and Git modules
  * can serve documentation without cross-module dependency. */
+import { formatErr } from './errors.js';
 import fs from 'fs';
 import path from 'path';
 import { printError, warn, info, divider } from './prompt.js';
@@ -18,7 +19,7 @@ function _loadDocFiles(docsDir: string): Array<{ label: string; file: string }> 
     } catch (err: unknown) {
         printError(
             'Documentação',
-            new Error('Diretório docs/ não encontrado em ' + docsDir + ': ' + (err as Error).message),
+            new Error('Diretório docs/ não encontrado em ' + docsDir + ': ' + formatErr(err)),
         );
         return null;
     }

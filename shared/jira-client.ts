@@ -8,6 +8,7 @@
  *
  *  Circuit breaker key: 'jira-client' — all HTTP methods check the breaker before
  *  issuing requests and record success/failure after completion. */
+import { formatErr } from './errors.js';
 import { createHttpClient } from './http-client.js';
 import { extractErrorMessage } from './prompt.js';
 import { rootLogger } from './logger.js';
@@ -55,7 +56,7 @@ class JiraClient implements JiraResourceLike {
         } catch (err: unknown) {
             const axiosErr = err as { response?: { status?: number }; code?: string };
             if (!axiosErr.response) recordCircuitFailure('jira-client');
-            rootLogger.error('GET ' + resourceUrl + ' failed: ' + (err as Error).message);
+            rootLogger.error('GET ' + resourceUrl + ' failed: ' + formatErr(err));
             throw err;
         }
     }
@@ -104,7 +105,7 @@ class JiraClient implements JiraResourceLike {
         } catch (err: unknown) {
             const axiosErr = err as { response?: { status?: number }; code?: string };
             if (!axiosErr.response) recordCircuitFailure('jira-client');
-            rootLogger.error('GET from origin ' + path + ' failed: ' + (err as Error).message);
+            rootLogger.error('GET from origin ' + path + ' failed: ' + formatErr(err));
             throw err;
         }
     }

@@ -1,6 +1,7 @@
 /** Test Execution flow — shared prompt + dispatch for creating or reusing a Test Execution,
  * plus a unified preview of created tests and their TE association.
  * Extracted to a single module per SRP: all creation handlers call this instead of duplicating prompts. */
+import { formatErr } from '../../shared/errors.js';
 import { printError, ask, info, warn, success, title, divider } from '../../shared/prompt.js';
 import type { CommandContext } from './context.js';
 import type { TestExecutionSummary } from '../../shared/types.js';
@@ -146,7 +147,7 @@ async function validateAndLinkTe(
     try {
         await c.linkManager.validateTestExecutionKey(teKey);
     } catch (err: unknown) {
-        warn((err as Error).message);
+        warn(formatErr(err));
         const retry = await ask('Tentar novamente? (s/N)', { hint: 's ou Enter para não', default: '' });
         if (retry.toLowerCase() === 's' || retry.toLowerCase() === 'sim') {
             teKey = await ask('Informe a key da Test Execution', { hint: 'ex: ' + c.ctx.project_name + '-TE-999' });

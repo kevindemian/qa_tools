@@ -3,6 +3,7 @@
  *  Each pattern is a class that implements `Pattern`.
  *  Output: JSON array of findings. */
 
+import { formatErr } from '../../shared/errors.js';
 import { execFileSync } from 'child_process';
 import { rootLogger } from '../../shared/logger.js';
 
@@ -188,7 +189,7 @@ function run(): void {
                 pattern: p.name,
                 severity: 'low',
                 count: -1,
-                description: `Error: ${(err as Error).message}`,
+                description: `Error: ${formatErr(err)}`,
                 recommendation: 'Run manually',
             };
         }

@@ -7,6 +7,7 @@
  *  Sources (both at project root):
  *    - test_steps_template.csv (94 lines, bulk format, 7 example blocks)
  *    - test_cases_template.json (86 lines, 5 example cases, comprehensive) */
+import { formatErr } from '../../shared/errors.js';
 import { success, error, info, ask } from '../../shared/prompt.js';
 import fs from 'fs';
 import path from 'path';
@@ -36,7 +37,7 @@ async function handler(c: CommandContext): Promise<boolean | void> {
         success(`Template ${fmt} gerado em: ${tmplPath}`);
         c.pushHistory('gerar-template', `${fmt}: ${tmplPath}`, 'ok');
     } catch (err) {
-        error(`Não foi possível copiar template de "${src}": ${(err as Error).message}`);
+        error(`Não foi possível copiar template de "${src}": ${formatErr(err)}`);
         return;
     }
 

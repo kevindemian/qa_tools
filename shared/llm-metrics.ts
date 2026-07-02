@@ -4,6 +4,7 @@
  * (~/.local/state/qa-tools/llm-metrics.json) for historical analysis.
  * In-memory counters are scoped to the process lifetime. */
 
+import { formatErr } from './errors.js';
 import fs from 'fs';
 import path from 'path';
 import os from 'os';
@@ -58,7 +59,7 @@ function loadStore(): StoredMetrics {
         if (!fs.existsSync(path.resolve(p))) return { snapshots: [] };
         return safeParseJson<StoredMetrics>(fs.readFileSync(path.resolve(p), 'utf8'), { snapshots: [] });
     } catch (err: unknown) {
-        rootLogger.warn('Failed to load LLM metrics from disk: ' + (err as Error).message);
+        rootLogger.warn('Failed to load LLM metrics from disk: ' + formatErr(err));
         return { snapshots: [] };
     }
 }
@@ -71,7 +72,7 @@ function saveStore(store: StoredMetrics): void {
         fs.writeFileSync(path.resolve(tmp), JSON.stringify(store, null, 2), 'utf8');
         fs.renameSync(path.resolve(tmp), p);
     } catch (err) {
-        rootLogger.error('Failed to persist LLM metrics: ' + (err as Error).message);
+        rootLogger.error('Failed to persist LLM metrics: ' + formatErr(err));
         throw new Error('Failed to persist LLM metrics', { cause: err });
     }
 }

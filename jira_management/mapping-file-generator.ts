@@ -1,4 +1,5 @@
 /** Generate mapping JSON files that link test titles to Jira issue keys after import. */
+import { formatErr } from '../shared/errors.js';
 import fs from 'fs';
 import path from 'path';
 import { rootLogger } from '../shared/logger.js';
@@ -35,7 +36,7 @@ class MappingFileGenerator {
                 fs.mkdirSync(path.resolve(outDir), { recursive: true });
             }
         } catch (err: unknown) {
-            rootLogger.warn('Não foi possível criar diretório de saida: ' + outDir + ' — ' + (err as Error).message);
+            rootLogger.warn('Não foi possível criar diretório de saida: ' + outDir + ' — ' + formatErr(err));
             return;
         }
 

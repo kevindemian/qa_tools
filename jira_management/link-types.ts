@@ -1,3 +1,4 @@
+import { formatErr } from '../shared/errors.js';
 import fs from 'fs';
 import path from 'path';
 import { rootLogger } from '../shared/logger.js';
@@ -37,12 +38,12 @@ export class LinkTypeManager {
                 try {
                     fs.writeFileSync(path.resolve(this.cacheFilePath), JSON.stringify(data.issueLinkTypes), 'utf8');
                 } catch (err) {
-                    rootLogger.warn('Falha ao escrever cache de link types: ' + (err as Error).message);
+                    rootLogger.warn('Falha ao escrever cache de link types: ' + formatErr(err));
                 }
                 return this.linkTypesCache;
             }
         } catch (err: unknown) {
-            rootLogger.warn('getIssueLinkTypes — API falhou, verificando cache local... ' + (err as Error).message);
+            rootLogger.warn('getIssueLinkTypes — API falhou, verificando cache local... ' + formatErr(err));
         }
         try {
             if (fs.existsSync(path.resolve(this.cacheFilePath))) {
@@ -56,7 +57,7 @@ export class LinkTypeManager {
                 }
             }
         } catch (err) {
-            rootLogger.warn('Falha ao ler cache de link types: ' + (err as Error).message);
+            rootLogger.warn('Falha ao ler cache de link types: ' + formatErr(err));
         }
         this.linkTypesCache = FALLBACK_LINK_TYPES;
         return this.linkTypesCache;

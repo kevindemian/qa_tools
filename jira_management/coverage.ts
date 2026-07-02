@@ -1,4 +1,5 @@
 /** Jira test coverage analysis: check which test cases have test steps and which are missing them. */
+import { formatErr } from '../shared/errors.js';
 import type { JsonObject } from '../shared/types.js';
 import { rootLogger } from '../shared/logger.js';
 import type JiraResource from './jira_resource.js';
@@ -44,7 +45,7 @@ export async function analyzeCoverage(jiraResource: JiraResource, project: strin
     try {
         response = await jiraResource.searchJiraIssues(`project = ${project} AND issuetype = Test`);
     } catch (err: unknown) {
-        rootLogger.error('analyzeCoverage — JQL search failed: ' + (err as Error).message);
+        rootLogger.error('analyzeCoverage — JQL search failed: ' + formatErr(err));
         return {
             totalIssues: 0,
             totalSteps: 0,

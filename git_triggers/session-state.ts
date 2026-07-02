@@ -1,4 +1,5 @@
 /** Session state — persist/load session context as JSON for the git_triggers lifecycle. */
+import { formatErr } from '../shared/errors.js';
 import fs from 'fs';
 import path from 'path';
 import Config from '../shared/config.js';
@@ -72,7 +73,7 @@ function loadProvidersConfig(): Record<string, ProviderConfig> {
         >;
         _providersConfig = parsed;
     } catch (err: unknown) {
-        rootLogger.warn('Falha ao carregar providers.json: ' + (err as Error).message + '. Usando GitLab como padrao.');
+        rootLogger.warn('Falha ao carregar providers.json: ' + formatErr(err) + '. Usando GitLab como padrao.');
         _providersConfig = {};
     }
     return _providersConfig;
@@ -93,7 +94,7 @@ function loadProjects(): Record<string, string> {
         }
     } catch (err: unknown) {
         rootLogger.error(
-            `Falha ao carregar configuração de projetos de "${PROJECTS_PATH}": ${(err as Error).message}`,
+            `Falha ao carregar configuração de projetos de "${PROJECTS_PATH}": ${formatErr(err)}`,
             {
                 configPath: PROJECTS_PATH,
             },
@@ -230,7 +231,7 @@ export async function displayRecentPipelines(m: GitProvider): Promise<void> {
             }
         }
     } catch (err) {
-        rootLogger.warn('Flakiness check failed: ' + (err as Error).message);
+        rootLogger.warn('Flakiness check failed: ' + formatErr(err));
     }
 }
 

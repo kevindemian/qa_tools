@@ -2,6 +2,7 @@
  * Fetches historical test runs for a given test issue key.
  * Falls back gracefully on API errors — never throws. */
 
+import { formatErr } from '../shared/errors.js';
 import type JiraResource from './jira_resource.js';
 import Config from '../shared/config.js';
 import { rootLogger } from '../shared/logger.js';
@@ -114,7 +115,7 @@ class ServerHistoryProvider implements TestHistoryProvider {
                 };
             });
         } catch (err) {
-            this.log.warn('Server history failed for ' + testKey + ': ' + (err as Error).message);
+            this.log.warn('Server history failed for ' + testKey + ': ' + formatErr(err));
             return [];
         }
     }
@@ -156,7 +157,7 @@ class CloudHistoryProvider implements TestHistoryProvider {
                 return data.id;
             }
         } catch (err) {
-            this.log.warn('Could not resolve issueId for ' + testKey + ': ' + (err as Error).message);
+            this.log.warn('Could not resolve issueId for ' + testKey + ': ' + formatErr(err));
         }
         return null;
     }
@@ -183,7 +184,7 @@ class CloudHistoryProvider implements TestHistoryProvider {
                 }
             }
         } catch (err) {
-            this.log.warn('Batch exec key resolution failed: ' + (err as Error).message);
+            this.log.warn('Batch exec key resolution failed: ' + formatErr(err));
         }
         for (const id of uncached) {
             if (!result.has(id)) {
@@ -212,7 +213,7 @@ class CloudHistoryProvider implements TestHistoryProvider {
 
             return await this._parseGraphqlHistoryResponse(data);
         } catch (err) {
-            this.log.warn('Cloud history failed for ' + testKey + ': ' + (err as Error).message);
+            this.log.warn('Cloud history failed for ' + testKey + ': ' + formatErr(err));
             return [];
         }
     }

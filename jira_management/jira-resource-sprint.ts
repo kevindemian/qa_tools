@@ -1,4 +1,5 @@
 /** Jira sprint management: add tasks to active sprint. */
+import { formatErr } from '../shared/errors.js';
 import { success, info, warn, extractErrorMessage } from '../shared/prompt.js';
 import type { JiraResourceLike } from './jira-resource-types.js';
 import {
@@ -111,7 +112,7 @@ export async function moveCardsToDone(resource: JiraResourceLike, taskIds: strin
         try {
             issueData = await resource.getJiraResource(`issue/${taskId}`);
         } catch (err: unknown) {
-            resource.log.warn(skippingTask(taskId) + ' — ' + (err as Error).message);
+            resource.log.warn(skippingTask(taskId) + ' — ' + formatErr(err));
             continue;
         }
         if (!issueData.fields || !issueData.fields.status) {

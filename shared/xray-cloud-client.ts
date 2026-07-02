@@ -1,6 +1,7 @@
 /** Xray Cloud HTTP client with retry, throttling, TLS, and token caching.
  * Replaces raw axios calls in CloudHistoryProvider and CloudStepImporter
  * so Cloud infrastructure gets the same resilience as Server (retry, backoff, concurrency limit). */
+import { formatErr } from './errors.js';
 import { createThrottledClient } from './http-client.js';
 import { rootLogger } from './logger.js';
 import Config from './config.js';
@@ -45,7 +46,7 @@ export class XrayCloudClient {
             this.tokenExpiresAt = Date.now() + 55 * 60 * 1000;
             return token;
         } catch (err) {
-            rootLogger.warn('Xray Cloud auth failed: ' + (err as Error).message);
+            rootLogger.warn('Xray Cloud auth failed: ' + formatErr(err));
             return null;
         }
     }
@@ -75,7 +76,7 @@ export class XrayCloudClient {
             );
             return res.data.data ?? null;
         } catch (err) {
-            rootLogger.warn('Xray Cloud GraphQL call failed: ' + (err as Error).message);
+            rootLogger.warn('Xray Cloud GraphQL call failed: ' + formatErr(err));
             return null;
         }
     }

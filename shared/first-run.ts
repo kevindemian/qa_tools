@@ -5,6 +5,7 @@
  *   - state.history already exists (returning user)
  *   - SKIP_FIRST_RUN=true env var is set
  * Once acknowledged, stores a flag in state so it never shows again. */
+import { formatErr } from './errors.js';
 import { title, info, divider, warn, showSelect } from './prompt.js';
 import { loadTypedState, update as updateState } from './state.js';
 import { main as setupMain } from '../setup/main.js';
@@ -66,7 +67,7 @@ export async function maybeRunFirstRunWizard(): Promise<void> {
             const { showDocs } = await import('./show-docs.js');
             await showDocs();
         } catch (err: unknown) {
-            warn('Não foi possível abrir a documentação: ' + (err as Error).message);
+            warn('Não foi possível abrir a documentação: ' + formatErr(err));
         }
     }
 
