@@ -8,6 +8,7 @@ export default defineConfig({
         reporters: ['default', new VitestCtrfReporter()],
         setupFiles: [],
         exclude: ['**/node_modules/**'],
+        teardownTimeout: 5000,
         coverage: {
             provider: 'v8',
             thresholds: {
