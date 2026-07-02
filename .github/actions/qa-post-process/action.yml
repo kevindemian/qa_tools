@@ -14,11 +14,13 @@ runs:
         - name: Run QA Tools Post-Processing
           shell: bash
           working-directory: ${{ github.workspace }}
-          run: npx tsx shared/pr-report-core.ts --ctrf ${{ inputs.ctrf-path }} --project ${{ inputs.project-name }}
           env:
               GITHUB_TOKEN: ${{ github.token }}
+              CTRF_PATH: ${{ inputs.ctrf-path }}
+              PROJECT_NAME: ${{ inputs.project-name }}
+          run: npx tsx shared/pr-report-core.ts --ctrf "$CTRF_PATH" --project "$PROJECT_NAME"
         - name: Upload PR Report HTML
-          uses: actions/upload-artifact@v4
+          uses: actions/upload-artifact@ea165f8
           if: always()
           with:
               name: pr-report-html
