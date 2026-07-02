@@ -11,13 +11,6 @@ vi.mock('../../../shared/config', () => {
         default: { get: mockGet, getInstance: vi.fn().mockReturnValue({ get: mockGet }) },
     };
 });
-vi.mock('../../create_tests', () => ({
-    default: { createTestsFromCsv: vi.fn(), createTestsFromJson: vi.fn(), createTestExecutionWithLinks: vi.fn() },
-}));
-vi.mock('../test-execution-flow', () => ({
-    offerTestExecutionAssociation: vi.fn().mockResolvedValue({ associated: false }),
-    showResults: vi.fn().mockResolvedValue(undefined),
-}));
 
 import { describe, it, expect, vi, beforeEach } from 'vitest';
 import case01 from '../case01.js';
@@ -27,8 +20,8 @@ import createTestsModule from '../../create_tests.js';
 import * as testExecFlow from '../test-execution-flow.js';
 
 const mockConfigGet = vi.spyOn(configModule, 'get');
-const mockCreateTestsFromCsv = vi.spyOn(createTestsModule, 'createTestsFromCsv');
-const mockOfferTE = vi.spyOn(testExecFlow, 'offerTestExecutionAssociation');
+const mockCreateTestsFromCsv = vi.spyOn(createTestsModule, 'createTestsFromCsv').mockResolvedValue(undefined);
+const mockOfferTE = vi.spyOn(testExecFlow, 'offerTestExecutionAssociation').mockResolvedValue({ associated: false });
 
 function makeContext(overrides: Record<string, unknown> = {}) {
     return makeMockCommandContext(overrides);
