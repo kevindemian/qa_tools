@@ -12,7 +12,7 @@ export interface LinkType {
     outward?: string;
 }
 
-export const FALLBACK_LINK_TYPES: LinkType[] = [
+const FALLBACK_LINK_TYPES: LinkType[] = [
     { id: '11701', name: 'Relates', inward: 'relates to', outward: 'relates to' },
     { id: '10600', name: 'Tests', inward: 'is tested by', outward: 'tests' },
     { id: '10200', name: 'Tested by', inward: 'tested by', outward: 'tests' },

@@ -4,6 +4,7 @@ import fs from 'fs';
 import path from 'path';
 import os from 'os';
 import nock from 'nock';
+import { sanitizePath } from '../shared/path-utils.js';
 import JiraResource from '../jira_management/jira_resource.js';
 import JiraLinkManager from '../jira_management/jira_link_manager.js';
 import CsvResource from '../jira_management/csv_resource.js';
@@ -17,7 +18,7 @@ const { createTestsFromCsv } = createTests;
 
 const E2E_TOKEN = process.env['E2E_JIRA_TOKEN'] ?? (process.env['CI'] ? '' : 'e2e-token');
 
-const tmpHome = fs.mkdtempSync(path.join(os.tmpdir(), 'qa-e2e-err-'));
+const tmpHome = fs.mkdtempSync(sanitizePath(os.tmpdir(), 'qa-e2e-err-'));
 
 const BASE = 'http://localhost:1999/jira/rest/api/2';
 const XRAY = 'http://localhost:1999/xray';
@@ -39,12 +40,12 @@ function makeState() {
 }
 
 function csvPath(name: string): string {
-    return path.join(tmpHome, name + '.csv');
+    return sanitizePath(tmpHome, name + '.csv');
 }
 
 function writeCsv(name: string, content: string): string {
     const p = csvPath(name);
-    fs.writeFileSync(path.resolve(p), content, 'utf8');
+    fs.writeFileSync(p, content, 'utf8');
     return p;
 }
 
@@ -60,9 +61,9 @@ describe('E2E: CSV Import - Error Paths', () => {
         process.env['QUIET'] = 'true';
         process.env['AUTO_CONFIRM'] = 'true';
         process.env['ON_ERROR'] = 'skip';
-        const cachePath = path.join(tempDirPath(), 'cache', 'link-types-cache.json');
+        const cachePath = sanitizePath(tempDirPath(), path.join('cache', 'link-types-cache.json'));
         try {
-            fs.unlinkSync(path.resolve(cachePath));
+            fs.unlinkSync(cachePath);
         } catch {
             /* ignore */
         }

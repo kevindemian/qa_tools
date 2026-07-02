@@ -1,5 +1,5 @@
 import os from 'os';
-import path from 'path';
+import { sanitizePath } from '../shared/path-utils.js';
 vi.mock('../shared/prompt', () => ({
     print: vi.fn(),
     success: vi.fn(),
@@ -124,7 +124,7 @@ vi.mock('../shared/quality-gate', () => ({
     runQualityGate: vi.fn(() => ({ passed: true })),
     formatQualityGateText: vi.fn(() => ''),
 }));
-vi.mock('../shared/temp-dir', () => ({ writeReport: vi.fn((name: string) => path.join(os.tmpdir(), name)) }));
+vi.mock('../shared/temp-dir', () => ({ writeReport: vi.fn((name: string) => sanitizePath(os.tmpdir(), name)) }));
 vi.mock('../shared/jira-client', () => ({ default: vi.fn() }));
 
 vi.mock('../shared/flakiness-dashboard', () => ({ generateFlakinessHtml: vi.fn(() => '<html>') }));

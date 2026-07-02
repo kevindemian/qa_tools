@@ -1,8 +1,8 @@
 /** AI-powered test-impact assessment — analyze which tests to run based on code changes. */
 import { formatErr } from '../shared/errors.js';
 import fs from 'fs';
-import path from 'path';
 import { llmPrompt } from '../shared/llm-client.js';
+import { sanitizePath } from '../shared/path-utils.js';
 import { rootLogger } from '../shared/logger.js';
 import { sanitizeForLlm } from '../shared/sanitize.js';
 import type { GitProvider } from '../shared/types.js';
@@ -15,7 +15,7 @@ interface MappingItem {
 function loadMappingTitles(mappingPath?: string): string[] {
     if (!mappingPath) return [];
     try {
-        const raw = fs.readFileSync(path.resolve(mappingPath), 'utf8');
+        const raw = fs.readFileSync(sanitizePath(process.cwd(), mappingPath), 'utf8');
         const parsed: unknown = JSON.parse(raw);
         const items: MappingItem[] = Array.isArray(parsed) ? (parsed as MappingItem[]) : [];
         if (items.length === 0) return [];

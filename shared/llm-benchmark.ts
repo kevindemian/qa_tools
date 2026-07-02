@@ -5,7 +5,7 @@
  */
 import { formatErr } from './errors.js';
 import fs from 'fs';
-import path from 'path';
+import { sanitizePath } from './path-utils.js';
 import { llmPrompt } from './llm-client.js';
 import { rootLogger } from './logger.js';
 import { gracefulExit } from './cli_base.js';
@@ -29,7 +29,7 @@ const PROMPT_DIR = import.meta.dirname + '/prompts';
 
 function readPrompt(file: string): string {
     try {
-        return fs.readFileSync(path.join(PROMPT_DIR, file), 'utf8');
+        return fs.readFileSync(sanitizePath(PROMPT_DIR, file), 'utf8');
     } catch (err) {
         rootLogger.debug('llm-benchmark: failed to read prompt: ' + (err instanceof Error ? err.message : String(err)));
         return '';

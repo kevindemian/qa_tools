@@ -2,13 +2,14 @@ import fs from 'fs';
 import path from 'path';
 import { execFileSync } from 'child_process';
 import { rootLogger } from './logger.js';
+import { sanitizePath } from './path-utils.js';
 
 const GIT_BIN = '/usr/bin/git';
 
 export function detectGitDir(startDir?: string): string | null {
     let dir = startDir ? path.resolve(startDir) : process.cwd();
     for (;;) {
-        if (fs.existsSync(path.join(dir, '.git'))) return dir;
+        if (fs.existsSync(sanitizePath(dir, '.git'))) return dir;
         const parent = path.dirname(dir);
         if (parent === dir) return null;
         dir = parent;
@@ -16,7 +17,7 @@ export function detectGitDir(startDir?: string): string | null {
 }
 
 function resolveRefFromPackedRefs(gitDir: string, ref: string): string | null {
-    const packedPath = path.join(gitDir, '.git', 'packed-refs');
+    const packedPath = sanitizePath(sanitizePath(gitDir, '.git'), 'packed-refs');
     if (!fs.existsSync(path.resolve(packedPath))) return null;
     const packed = fs.readFileSync(path.resolve(packedPath), 'utf8');
     for (const line of packed.split('\n')) {
@@ -29,12 +30,12 @@ function resolveRefFromPackedRefs(gitDir: string, ref: string): string | null {
 }
 
 function resolveHeadViaFilesystem(gitDir: string): string | null {
-    const headFile = path.join(gitDir, '.git', 'HEAD');
+    const headFile = sanitizePath(sanitizePath(gitDir, '.git'), 'HEAD');
     try {
         const head = fs.readFileSync(path.resolve(headFile), 'utf8').trim();
         if (head.startsWith('ref: ')) {
             const ref = head.slice(5);
-            const refPath = path.join(gitDir, '.git', ref);
+            const refPath = sanitizePath(sanitizePath(gitDir, '.git'), ref);
             if (fs.existsSync(path.resolve(refPath))) {
                 return fs.readFileSync(path.resolve(refPath), 'utf8').trim();
             }

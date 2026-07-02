@@ -18,7 +18,14 @@
         "e2e/**/*.ts",
         "scripts/**/*.ts"
     ],
-    "ignoreDependencies": [],
+    "ignoreDependencies": [
+        "snyk",
+        "gitleaks",
+        "osv-scanner"
+    ],
+    "ignoreBinaries": [
+        "const"
+    ],
     "vitest": {
         "config": "vitest.config.ts"
     }

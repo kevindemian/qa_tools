@@ -42,34 +42,6 @@ import type { BatchCliArgs } from './cli-args.js';
 import { parseCliArgs } from './cli-args.js';
 
 /**
- * @deprecated Use parseCliArgs() from cli-args.ts instead.
- * Backward-compatible wrapper that returns only set fields.
- */
-export function parseBatchArgs(): {
-    project?: string;
-    branch?: string;
-    auto?: boolean;
-    publish?: string;
-    runImpactedTests?: boolean;
-    conservative?: boolean;
-    teKey?: string;
-    dryRun?: boolean;
-} {
-    const args = parseCliArgs();
-    if (args.mode !== 'batch') return {};
-    const result: Record<string, string | boolean> = {};
-    if (args.project !== undefined) result['project'] = args.project;
-    if (args.branch !== undefined) result['branch'] = args.branch;
-    if (args.auto) result['auto'] = true;
-    if (args.publish !== undefined) result['publish'] = args.publish;
-    if (args.runImpactedTests) result['runImpactedTests'] = true;
-    if (args.conservative) result['conservative'] = true;
-    if (args.teKey !== undefined) result['teKey'] = args.teKey;
-    if (args.dryRun) result['dryRun'] = true;
-    return result;
-}
-
-/**
  * Sets up a batch project from CLI args.
  * @param batch Parsed batch CLI arguments
  * @returns Project setup info or null on failure
@@ -200,7 +172,7 @@ async function _collectPipelineResults(
     return false;
 }
 
-export async function triggerAndCollectBatchPipeline(
+async function triggerAndCollectBatchPipeline(
     m: import('../shared/types.js').GitProvider,
     branch: string,
     projectName: string,
@@ -224,7 +196,7 @@ export async function triggerAndCollectBatchPipeline(
     );
 }
 
-export function generateFlakinessDashboard(projectName: string, publishTarget?: string): void {
+function generateFlakinessDashboard(projectName: string, publishTarget?: string): void {
     if (!currentProjectName) return;
     const store = loadMetrics();
     let projectRuns = store.runs.filter((r) => r.project === currentProjectName);
@@ -322,7 +294,7 @@ export async function tryBatchMode(batchArgs?: BatchCliArgs): Promise<boolean> {
     return true;
 }
 
-export function runTestImpactSelection(conservative?: boolean): void {
+function runTestImpactSelection(conservative?: boolean): void {
     try {
         const result = analyzeTestImpact();
         if (result.changedFiles.length === 0) {

@@ -1,6 +1,6 @@
 import fs from 'fs';
-import path from 'path';
 import Config from '../../shared/config.js';
+import { sanitizePath } from '../../shared/path-utils.js';
 import type { FlatTest } from '../../shared/result_parser.js';
 import type { TestHistoryRun } from '../../shared/report-generator.js';
 import { createHistoryProvider, TestHistoryCache } from '../xray-history.js';
@@ -10,12 +10,12 @@ import { rootLogger } from '../../shared/logger.js';
 export { fetchGitHistory, fetchLatestTestRun } from '../../shared/git-artifact-downloader.js';
 
 function getMappingCandidates(): string[] {
-    return [Config.get('QA_MAPPING_PATH') || '', path.join(process.cwd(), 'mapping.json')];
+    return [Config.get('QA_MAPPING_PATH'), sanitizePath(process.cwd(), 'mapping.json')];
 }
 
 function parseTestFile(candidate: string): Map<string, string> | null {
     try {
-        const raw = fs.readFileSync(path.resolve(candidate), 'utf8');
+        const raw = fs.readFileSync(sanitizePath(process.cwd(), candidate), 'utf8');
         const data: { tests?: Array<Record<string, string>> } = JSON.parse(raw) as {
             tests?: Array<Record<string, string>>;
         };
@@ -32,9 +32,9 @@ function parseTestFile(candidate: string): Map<string, string> | null {
     }
 }
 
-export function resolveMapping(): Map<string, string> {
+function resolveMapping(): Map<string, string> {
     for (const candidate of getMappingCandidates()) {
-        if (!candidate || !fs.existsSync(path.resolve(candidate))) continue;
+        if (!candidate || !fs.existsSync(sanitizePath(process.cwd(), candidate))) continue;
         const result = parseTestFile(candidate);
         if (result !== null) return result;
     }
@@ -50,7 +50,7 @@ export async function resolveTestHistory(
     if (mapping.size === 0) return {};
     const provider = createHistoryProvider(c.jiraResource);
 
-    const keys = tests.map((t) => mapping.get(t.title) || mapping.get(t.fullTitle ?? '') || '').filter(Boolean);
+    const keys = tests.map((t) => mapping.get(t.title) ?? mapping.get(t.fullTitle ?? '') ?? '').filter(Boolean);
     if (keys.length === 0) return {};
     const uniqueKeys = [...new Set(keys)];
     const results = await Promise.allSettled(
@@ -71,7 +71,7 @@ export async function resolveTestHistory(
     }
     const titleToHistory: Record<string, TestHistoryRun[]> = {};
     for (const t of tests) {
-        const key = mapping.get(t.title) || mapping.get(t.fullTitle ?? '') || '';
+        const key = mapping.get(t.title) ?? mapping.get(t.fullTitle ?? '') ?? '';
         if (key && keyToHistory.has(key)) {
             titleToHistory[t.title] = keyToHistory.get(key) ?? [];
         }

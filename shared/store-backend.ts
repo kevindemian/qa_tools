@@ -3,6 +3,7 @@ import path from 'path';
 import os from 'os';
 import { execFileSync } from 'child_process';
 import { rootLogger } from './logger.js';
+import { sanitizePath } from './path-utils.js';
 
 const GIT_BIN = '/usr/bin/git';
 
@@ -47,7 +48,7 @@ export class GitStoreBackend implements StoreBackend {
     }
 
     read(relPath: string): Buffer | null {
-        const full = path.join(this.fullPath, relPath);
+        const full = sanitizePath(this.fullPath, relPath);
         try {
             return fs.existsSync(path.resolve(full)) ? fs.readFileSync(full) : null;
         } catch (err) {
@@ -57,7 +58,7 @@ export class GitStoreBackend implements StoreBackend {
     }
 
     write(relPath: string, data: Buffer): void {
-        const full = path.join(this.fullPath, relPath);
+        const full = sanitizePath(this.fullPath, relPath);
         try {
             fs.mkdirSync(path.dirname(full), { recursive: true });
             fs.writeFileSync(path.resolve(full), data);
@@ -70,7 +71,7 @@ export class GitStoreBackend implements StoreBackend {
     }
 
     exists(relPath: string): boolean {
-        return fs.existsSync(path.join(this.fullPath, relPath));
+        return fs.existsSync(sanitizePath(this.fullPath, relPath));
     }
 
     flush(message: string): void {
