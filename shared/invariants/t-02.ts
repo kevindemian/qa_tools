@@ -21,7 +21,9 @@ export const invariantCoverageThreshold: InvariantFn = (
     if (!gaps || gaps.length === 0) {
         return [fail('T-02', `Coverage is ${coverage}% (< 90%) but no gaps array with reasons provided`)];
     }
-    const missingReasons = gaps.filter((g) => !g['reason'] || typeof g['reason'] !== 'string' || g['reason'].trim() === '');
+    const missingReasons = gaps.filter(
+        (g) => !g['reason'] || typeof g['reason'] !== 'string' || g['reason'].trim() === '',
+    );
     if (missingReasons.length > 0) {
         return [fail('T-02', `Coverage is ${coverage}% but ${missingReasons.length} gap(s) missing reason`)];
     }

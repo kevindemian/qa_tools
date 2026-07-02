@@ -9,8 +9,8 @@
     "main": "jira_management/main.ts",
     "scripts": {
         "setup": "bash setup.sh",
-        "test": "vitest run",
-        "test:coverage": "vitest run --coverage",
+        "test": "NODE_OPTIONS=--max-old-space-size=4096 vitest run",
+        "test:coverage": "NODE_OPTIONS=--max-old-space-size=4096 vitest run --coverage",
         "typecheck": "tsc --noEmit",
         "lint": "npx tsx scripts/quality-check.ts",
         "unused-exports": "ts-prune -p tsconfig.json | grep -v \"(used in module)\" || true",
