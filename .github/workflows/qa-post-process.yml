@@ -17,8 +17,8 @@ jobs:
     post-process:
         runs-on: ubuntu-latest
         steps:
-            - uses: actions/checkout@v4
-            - uses: actions/setup-node@v4
+            - uses: actions/checkout@34e1148
+            - uses: actions/setup-node@49933ea
               with:
                   node-version: 22
                   cache: npm
@@ -26,7 +26,7 @@ jobs:
               run: npm ci
             - name: Download CTRF report
               continue-on-error: true
-              uses: actions/download-artifact@v4
+              uses: actions/download-artifact@d3f86a1
               with:
                   name: ctrf-report
                   path: reports/
@@ -40,7 +40,7 @@ jobs:
                   GITHUB_TOKEN: ${{ github.token }}
             - name: Upload PR Report HTML
               if: always()
-              uses: actions/upload-artifact@v4
+              uses: actions/upload-artifact@ea165f8
               with:
                   name: pr-report-html
                   path: reports/pr-report.html
