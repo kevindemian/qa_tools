@@ -386,7 +386,7 @@ export function checkNonNullAssertion(): CheckResult {
                     f,
                 ),
         );
-    return checkNoPattern('non-null assertion (!) in .ts files', /[\w)\]]!(?:[.,;\s]|as\b|$)/, files);
+    return checkNoPattern('non-null assertion (!) in .ts files', /[\w)\]]!(?:[.,)\];[]|\s+as\b|\s*$)/, files);
 }
 
 function collectDepWallViolations(file: string, pattern: RegExp): Violation[] {
@@ -444,7 +444,7 @@ export function checkIntegrity(): CheckResult {
         const selfContent = readFileSync('scripts/quality-check.ts', 'utf-8');
         const contentWithoutHash = selfContent.replace(/\/\* HASH:[0-9a-f]{64} \*\//g, '');
         const currentHash = createHash('sha256').update(contentWithoutHash, 'utf-8').digest('hex');
-        /* HASH:9fae91a8f4744312c5966d5a401534a7c8a9050e711e3d9ac188e4e740ee4fb2 */
+        /* HASH:df5aa3e89e53cfff5653825fd9d4a8d3506fc4a4a95e86f73563878c7586dc61 */
         const match = /\/\* HASH:([0-9a-f]{64}) \*\//.exec(selfContent);
         if (!match) {
             violations.push({ file: 'scripts/quality-check.ts', line: 1, content: 'Missing HASH comment' });

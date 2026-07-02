@@ -23,7 +23,13 @@
         "smoke:llm": "npx tsx e2e/smoke-llm.ts",
         "smoke:pipeline": "E2E_PIPELINE=true npx tsx e2e/smoke-pipeline.ts",
         "smoke": "npx tsx e2e/smoke-github.ts",
-        "generate-env-example": "npx tsx scripts/generate-env-example.ts"
+        "generate-env-example": "npx tsx scripts/generate-env-example.ts",
+        "snyk-test": "snyk test --all-projects --severity-threshold=high --json > snyk-report.json 2>&1 || true",
+        "gitleaks": "gitleaks detect --source . --verbose --redact",
+        "osv-scan": "osv-scanner --lockfile=package-lock.json --format json > osv-report.json 2>&1 || true",
+        "sonar": "npx sonar-scanner",
+        "type-coverage": "npx type-coverage --detail --at-least 95",
+        "depcruise": "npx depcruise --config .dependency-cruiser.js shared/ jira_management/ git_triggers/ scripts/"
     },
     "license": "ISC",
     "type": "module",
