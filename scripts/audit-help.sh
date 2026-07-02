@@ -4,6 +4,9 @@
 set -euo pipefail
 
 FEATURE="${1:?Usage: $0 <feature-module-name>}"
+# Strip leading shared/ and trailing .ts if provided as full path
+FEATURE="${FEATURE#shared/}"
+FEATURE="${FEATURE%.ts}"
 SRC="shared/${FEATURE}.ts"
 TEST="shared/${FEATURE}.test.ts"
 TYPES="shared/types/*.ts"

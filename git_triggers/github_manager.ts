@@ -51,10 +51,10 @@ class GitHubManager extends GitProviderBase implements GitProvider {
     repoFullName: string;
     apiToken: string;
     apiUrl: string;
-    client!: AxiosInstance;
-    log!: Logger;
-    owner!: string;
-    repo!: string;
+    client: AxiosInstance = {} as AxiosInstance;
+    log: Logger = {} as Logger;
+    owner: string = '';
+    repo: string = '';
 
     constructor(repoFullName: string, apiToken: string, baseUrl?: string) {
         super();
