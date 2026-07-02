@@ -223,7 +223,8 @@ export function onError(
     const autoResult = handleAutoConfirm(err, raw);
     if (autoResult) return autoResult;
 
-    for (;;) {
+    const MAX_ATTEMPTS = 10;
+    for (let attempt = 0; attempt < MAX_ATTEMPTS; attempt++) {
         const answer = readUserChoice(canRetry, canDetails);
         if (answer === 'abort') return 'abort';
         const result = processAnswer(answer, canRetry, canDetails);
@@ -240,4 +241,5 @@ export function onError(
         if (canDetails) opts.push('[D]etails');
         warn('Opção inválida. Escolha ' + opts.join(', '));
     }
+    return 'abort';
 }
