@@ -11,6 +11,13 @@ const DISK_CACHE_TTL_MS = 60 * 60 * 1000;
 const CACHE_DIR_PERM = 0o700;
 const CACHE_FILE_PERM = 0o600;
 
+/** Validate that a resolved path is within the expected cache directory. */
+function isPathWithinCache(resolvedPath: string): boolean {
+    const cacheRoot = path.resolve(cacheDir());
+    const normalized = path.resolve(resolvedPath);
+    return normalized.startsWith(cacheRoot + path.sep) || normalized === cacheRoot;
+}
+
 interface DiskCacheEntry {
     response: string;
     createdAt: number;
@@ -62,7 +69,12 @@ function decrypt(data: string): string | null {
         const parsed: unknown = JSON.parse(data);
         const p = EncryptedPayloadSchema.parse(parsed);
         const decipher = crypto.createDecipheriv('aes-256-gcm', key, Buffer.from(p.iv, 'base64'));
-        decipher.setAuthTag(Buffer.from(p.t, 'base64'));
+        const authTag = Buffer.from(p.t, 'base64');
+        if (authTag.length !== 16) {
+            rootLogger.debug('Disk cache decrypt failed — invalid auth tag length');
+            return null;
+        }
+        decipher.setAuthTag(authTag);
         return decipher.update(Buffer.from(p.e, 'base64'), undefined, 'utf8') + decipher.final('utf8');
     } catch (err: unknown) {
         rootLogger.debug(
@@ -74,9 +86,14 @@ function decrypt(data: string): string | null {
 
 function ensureCacheDir(dir: string): void {
     try {
-        if (!fs.existsSync(path.resolve(dir))) {
-            fs.mkdirSync(path.resolve(dir), { recursive: true });
-            fs.chmodSync(path.resolve(dir), CACHE_DIR_PERM);
+        const resolved = path.resolve(dir);
+        if (!isPathWithinCache(resolved)) {
+            rootLogger.warn('LLM disk cache: path traversal blocked for dir');
+            return;
+        }
+        if (!fs.existsSync(resolved)) {
+            fs.mkdirSync(resolved, { recursive: true });
+            fs.chmodSync(resolved, CACHE_DIR_PERM);
         }
     } catch (err) {
         rootLogger.warn('LLM disk cache dir init failed: ' + (err instanceof Error ? err.message : String(err)));
@@ -87,12 +104,17 @@ function ensureCacheDir(dir: string): void {
 export function diskCacheGet(key: string): string | null {
     const file = filePath(key);
     try {
-        const raw = fs.readFileSync(path.resolve(file), 'utf-8');
+        const resolvedFile = path.resolve(file);
+        if (!isPathWithinCache(resolvedFile)) {
+            rootLogger.warn('LLM disk cache: path traversal blocked for key=' + key.slice(0, 12) + '…');
+            return null;
+        }
+        const raw = fs.readFileSync(resolvedFile, 'utf-8');
         const decrypted = decrypt(raw);
         if (decrypted === null) {
             rootLogger.warn('LLM disk cache decrypt failed for key=' + key.slice(0, 12) + '… — removing');
             try {
-                fs.unlinkSync(path.resolve(file));
+                fs.unlinkSync(resolvedFile);
             } catch (err) {
                 rootLogger.debug(
                     'LLM disk cache: failed to remove corrupted entry: ' +
@@ -108,7 +130,7 @@ export function diskCacheGet(key: string): string | null {
             rootLogger.info('LLM disk cache hit for key=' + key.slice(0, 12) + '…');
             return entry.response;
         }
-        fs.unlinkSync(path.resolve(file));
+        fs.unlinkSync(resolvedFile);
         rootLogger.info('LLM disk cache expired for key=' + key.slice(0, 12) + '…');
     } catch (err) {
         rootLogger.debug('LLM disk cache: miss or corrupt: ' + (err instanceof Error ? err.message : String(err)));
@@ -125,8 +147,13 @@ export function diskCacheSet(key: string, response: string): void {
         const serialized = JSON.stringify(entry);
         const encrypted = encrypt(serialized);
         const file = filePath(key);
-        fs.writeFileSync(path.resolve(file), encrypted, 'utf-8');
-        fs.chmodSync(path.resolve(file), CACHE_FILE_PERM);
+        const resolvedFile = path.resolve(file);
+        if (!isPathWithinCache(resolvedFile)) {
+            rootLogger.warn('LLM disk cache: path traversal blocked for key=' + key.slice(0, 12) + '…');
+            return;
+        }
+        fs.writeFileSync(resolvedFile, encrypted, 'utf-8');
+        fs.chmodSync(resolvedFile, CACHE_FILE_PERM);
     } catch (err) {
         rootLogger.warn('LLM disk cache write failed: ' + (err instanceof Error ? err.message : String(err)));
     }
@@ -136,8 +163,13 @@ export function diskCacheSet(key: string, response: string): void {
 export function clearDiskCache(): void {
     const dir = cacheDir();
     try {
-        if (fs.existsSync(path.resolve(dir))) {
-            const files = fs.readdirSync(path.resolve(dir));
+        const resolvedDir = path.resolve(dir);
+        if (!isPathWithinCache(resolvedDir)) {
+            rootLogger.warn('LLM disk cache: path traversal blocked for clear');
+            return;
+        }
+        if (fs.existsSync(resolvedDir)) {
+            const files = fs.readdirSync(resolvedDir);
             for (const f of files) {
                 if (f.endsWith('.json')) fs.unlinkSync(sanitizePath(dir, f));
             }

@@ -83,11 +83,13 @@ function toWinPath(target: string): string | null {
     if (!tmpRoot) return null;
 
     try {
-        const content = readFileSync(path.resolve(target));
+        const resolvedTarget = path.resolve(target);
+        const content = readFileSync(resolvedTarget);
         const dir = join(tmpRoot, 'qa_tools_docs');
         mkdirSync(path.resolve(dir), { recursive: true });
         const dest = join(dir, basename(target));
-        writeFileSync(path.resolve(dest), content);
+        const resolvedDest = path.resolve(dest);
+        writeFileSync(resolvedDest, content);
         const result2 = spawnSync(WSLPATH_BIN, ['-w', dest], { encoding: 'utf8' });
         if (result2.status === 0) {
             const wp = result2.stdout.trim();
@@ -118,9 +120,20 @@ export function getOsOpenCommand(target: string): OsOpenCommand | null {
     }
 }
 
+/** Validate that target is a safe file path or URL, not a shell command. */
+function validateTarget(target: string): boolean {
+    if (!target || target.length > 2048) return false;
+    if (/[;&|`$(){}!<>]/.test(target)) return false;
+    return true;
+}
+
 /** Open a file/URL with the OS default handler. Falls back to `fallbackViewer` when no OS command works. */
 export async function openWithOsOrFallback(target: string, fallbackViewer?: () => void): Promise<boolean> {
     if (!target || target === 'undefined') {
+        fallbackViewer?.();
+        return false;
+    }
+    if (!validateTarget(target)) {
         fallbackViewer?.();
         return false;
     }
