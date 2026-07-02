@@ -39,3 +39,13 @@ export class LlmAuthError extends LlmError {
         this.name = 'LlmAuthError';
     }
 }
+
+/** Safely extract message from caught value. In Node.js anything can be thrown
+ *  (string, number, object) — casting to Error and reading .message returns
+ *  undefined for non-Error values, producing "Failed: undefined" in logs. */
+export function formatErr(err: unknown): string {
+    if (typeof err === 'object' && err !== null && 'message' in err) {
+        return String((err as { message: string }).message);
+    }
+    return String(err);
+}

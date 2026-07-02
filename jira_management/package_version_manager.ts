@@ -1,4 +1,5 @@
 /** Manage project version and release notes: update `package.json` version and prepend release notes entries. */
+import { formatErr } from '../shared/errors.js';
 import fs from 'fs';
 import path from 'path';
 import type { JsonObject } from '../shared/types.js';
@@ -27,7 +28,7 @@ class PackageVersionManager {
             fs.writeFileSync(path.resolve(filePath), JSON.stringify(json, null, 2), 'utf8');
             rootLogger.info(`Versão atualizada em ${path.basename(filePath)}: ${newVersion}`);
         } catch (err) {
-            rootLogger.error(`Erro ao atualizar ${path.basename(filePath)}: ${(err as Error).message}`);
+            rootLogger.error(`Erro ao atualizar ${path.basename(filePath)}: ${formatErr(err)}`);
         }
     }
 

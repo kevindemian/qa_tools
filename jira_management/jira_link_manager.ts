@@ -1,3 +1,4 @@
+import { formatErr } from '../shared/errors.js';
 import type { TestExecutionSummary, JiraResourceLike } from '../shared/types.js';
 import { rootLogger } from '../shared/logger.js';
 import { LinkTypeManager } from './link-types.js';
@@ -88,7 +89,7 @@ class JiraLinkManager {
             }
             return true;
         } catch (err) {
-            rootLogger.error('Erro ao validar Test Execution key: ' + (err as Error).message);
+            rootLogger.error('Erro ao validar Test Execution key: ' + formatErr(err));
             return false;
         }
     }

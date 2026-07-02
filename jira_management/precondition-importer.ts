@@ -1,3 +1,4 @@
+import { formatErr } from '../shared/errors.js';
 import { info } from '../shared/prompt.js';
 import { rootLogger } from '../shared/logger.js';
 import type { JsonObject, PreConditionSummary, JiraResourceLike } from '../shared/types.js';
@@ -33,7 +34,7 @@ export class PreconditionHandler {
         } catch (err: unknown) {
             rootLogger.warn(
                 'Não foi possível descobrir field ID para pre-condition, usando fallback 13708: ' +
-                    (err as Error).message,
+                    formatErr(err),
             );
         }
         this._preconditionFieldId = 'customfield_13708';

@@ -1,4 +1,5 @@
 /** Parsing and resolution — dry-run handler, CSV/JSON path resolution, label parsing, JSON test parsing. */
+import { formatErr } from '../shared/errors.js';
 import * as fs from 'fs';
 import * as path from 'path';
 import Config from '../shared/config.js';
@@ -89,7 +90,7 @@ export function parseJsonTests(jsonPath: string): TestCase[] {
     try {
         raw = fs.readFileSync(jsonPath, 'utf8');
     } catch (err) {
-        rootLogger.error(`Falha ao ler arquivo JSON: ${jsonPath} — ${(err as Error).message}`);
+        rootLogger.error(`Falha ao ler arquivo JSON: ${jsonPath} — ${formatErr(err)}`);
         warn(`Não foi possível ler o arquivo: ${jsonPath}. Operação cancelada.`);
         return [];
     }
@@ -97,7 +98,7 @@ export function parseJsonTests(jsonPath: string): TestCase[] {
     try {
         parsed = JSON.parse(raw) as Array<Record<string, unknown>>;
     } catch (err) {
-        rootLogger.error(`JSON malformado em ${jsonPath}: ${(err as Error).message}`);
+        rootLogger.error(`JSON malformado em ${jsonPath}: ${formatErr(err)}`);
         warn(`Arquivo JSON inválido: ${jsonPath}. Verifique o formato. Operação cancelada.`);
         return [];
     }
@@ -105,7 +106,7 @@ export function parseJsonTests(jsonPath: string): TestCase[] {
     try {
         validated = ImportJsonSchema.parse(parsed);
     } catch (err) {
-        rootLogger.error(`Schema JSON inválido em ${jsonPath}: ${(err as Error).message}`);
+        rootLogger.error(`Schema JSON inválido em ${jsonPath}: ${formatErr(err)}`);
         warn(`Formato JSON não corresponde ao schema esperado: ${jsonPath}. Operação cancelada.`);
         return [];
     }

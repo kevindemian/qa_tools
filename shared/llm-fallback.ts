@@ -9,6 +9,7 @@
  *   - llm-cache            → configUniqueKey for deduplication
  *   - circuit-breaker      → per-provider circuit state tracking
  */
+import { formatErr } from './errors.js';
 import { checkRateLimit } from './llm-rate-limiter.js';
 import { configUniqueKey } from './llm-cache.js';
 import { recordCircuitFailure, recordCircuitSuccess } from './circuit-breaker.js';
@@ -65,7 +66,7 @@ export async function sendWithFallback(
             recordCircuitSuccess(cfgKey);
             return result;
         } catch (err) {
-            const msg = (err as Error).message;
+            const msg = formatErr(err);
             errors.push(cfg.model + '@' + cfg.baseUrl + ': ' + msg);
             rootLogger.warn('LLM provider failed: ' + msg + ' — trying next');
             recordCircuitFailure(cfgKey);

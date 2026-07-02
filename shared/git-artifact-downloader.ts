@@ -1,3 +1,4 @@
+import { formatErr } from './errors.js';
 import { AdmZip } from './deps.js';
 import { createHttpClient } from './http-client.js';
 import Config from './config.js';
@@ -210,7 +211,7 @@ async function fetchGitLabHistory(): Promise<CiContext> {
         }
         return { commits: '', runs: runStats, flakyTests: '' };
     } catch (err: unknown) {
-        rootLogger.warn('fetchGitLabHistory failed: ' + (err as Error).message);
+        rootLogger.warn('fetchGitLabHistory failed: ' + formatErr(err));
         return { commits: '', runs: [], flakyTests: '' };
     }
 }

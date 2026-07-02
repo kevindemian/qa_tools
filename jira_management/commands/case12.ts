@@ -1,4 +1,5 @@
 /** Diagnose Jira/Xray connection by probing key endpoints, plus local health readiness. */
+import { formatErr } from '../../shared/errors.js';
 import { title, printSummary, divider, badge, tableView } from '../../shared/prompt.js';
 import { sanitizeUrl } from '../../shared/cli_base.js';
 import { rootLogger } from '../../shared/logger.js';
@@ -73,7 +74,7 @@ async function _runSingleDiagnostic(
         const ms = Date.now() - start;
         return { status: 'ok', label: ep.label, message: ms + 'ms' };
     } catch (err) {
-        rootLogger.error('Falha ao diagnosticar ' + ep.label + ': ' + (err as Error).message);
+        rootLogger.error('Falha ao diagnosticar ' + ep.label + ': ' + formatErr(err));
         const ms = Date.now() - start;
         const st = (err as { response?: { status?: number } }).response?.status || 'ERR';
         const detail = st === 401 || st === 403 ? 'token pode estar inválido' : 'falha na conexão';

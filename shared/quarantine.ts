@@ -1,6 +1,7 @@
 /** Quarantine management for flaky tests.
  *  Persists quarantined test metadata, auto-expires entries after configurable TTL,
  *  generates pipeline-consumable `qa-quarantine.json`, and integrates with flaky auto-actions. */
+import { formatErr } from './errors.js';
 import fs from 'fs';
 import path from 'path';
 import os from 'os';
@@ -109,7 +110,7 @@ function saveQuarantine(store: QuarantineStore): void {
         fs.writeFileSync(path.resolve(tp), JSON.stringify(store, null, 2), 'utf8');
         fs.renameSync(path.resolve(tp), sp);
     } catch (err) {
-        rootLogger.error('Failed to save quarantine store: ' + (err as Error).message);
+        rootLogger.error('Failed to save quarantine store: ' + formatErr(err));
     }
 }
 
@@ -260,7 +261,7 @@ export function generatePipelineQuarantine(store?: QuarantineStore, totalTests?:
         const pp = pipelinePath();
         fs.writeFileSync(path.resolve(pp), JSON.stringify(pipeline, null, 2), 'utf8');
     } catch (err) {
-        rootLogger.error('Failed to write pipeline quarantine file: ' + (err as Error).message);
+        rootLogger.error('Failed to write pipeline quarantine file: ' + formatErr(err));
     }
     return pipeline;
 }

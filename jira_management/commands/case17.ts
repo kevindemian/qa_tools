@@ -1,3 +1,4 @@
+import { formatErr } from '../../shared/errors.js';
 import fs from 'fs';
 import path from 'path';
 import { createHttpClient } from '../../shared/http-client.js';
@@ -53,7 +54,7 @@ async function _fetchJiraContext(
         }
         return s;
     } catch (err) {
-        rootLogger.error('Falha ao buscar contexto Jira: ' + (err as Error).message);
+        rootLogger.error('Falha ao buscar contexto Jira: ' + formatErr(err));
         return '';
     }
 }
@@ -157,7 +158,7 @@ function _loadFlakinessMap(c: CommandContext): Record<string, number> {
         }
         return map;
     } catch (err: unknown) {
-        rootLogger.warn('Failed to load flakiness metrics: ' + (err as Error).message);
+        rootLogger.warn('Failed to load flakiness metrics: ' + formatErr(err));
         return {};
     }
 }

@@ -3,6 +3,7 @@
  * Skip by default. Run with: BENCHMARK=true npx tsx shared/llm-benchmark.ts
  * Requires LLM_API_KEY (and optionally LLM_FAST_API_KEY) in environment.
  */
+import { formatErr } from './errors.js';
 import fs from 'fs';
 import path from 'path';
 import { llmPrompt } from './llm-client.js';
@@ -76,7 +77,7 @@ async function runFailureAnalysisFixture(fixture: FailureAnalysisFixture): Promi
         return {
             fixture: fixture.name,
             passed: false,
-            error: (err as Error).message,
+            error: formatErr(err),
             durationMs: Date.now() - start,
             metrics: {
                 criteriaCoverage: 0,
@@ -112,7 +113,7 @@ async function runUserStoryFixture(fixture: UserStoryFixture): Promise<Benchmark
         return {
             fixture: fixture.name,
             passed: false,
-            error: (err as Error).message,
+            error: formatErr(err),
             durationMs: Date.now() - start,
             metrics: {
                 criteriaCoverage: 0,
@@ -151,7 +152,7 @@ async function runClassifyFixture(fixture: ClassifyFixture): Promise<BenchmarkRe
         return {
             fixture: fixture.name,
             passed: false,
-            error: (err as Error).message,
+            error: formatErr(err),
             durationMs: Date.now() - start,
             metrics: {
                 criteriaCoverage: 0,
@@ -293,7 +294,7 @@ export async function runBenchmark(): Promise<void> {
 const isMain = process.argv[1]?.endsWith('llm-benchmark.ts');
 if (isMain) {
     runBenchmark().catch((err) => {
-        rootLogger.error('Benchmark failed: ' + (err as Error).message);
+        rootLogger.error('Benchmark failed: ' + formatErr(err));
         gracefulExit(ExitCode.ERROR);
     });
 }

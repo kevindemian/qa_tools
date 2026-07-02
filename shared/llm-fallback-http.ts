@@ -5,6 +5,7 @@
  * Extracted from llm-fallback.ts (F35 debt attack plan).
  * Depends on: llm-fallback-config, llm-rate-limiter, llm-cache, circuit-breaker.
  */
+import { formatErr } from './errors.js';
 import { jitter } from './llm-rate-limiter.js';
 import { configUniqueKey } from './llm-cache.js';
 import { checkCircuitBreaker } from './circuit-breaker.js';
@@ -118,7 +119,7 @@ export async function fetchWithRetry(
         } catch (err) {
             if (attempt < retries) {
                 const wait = jitter(Math.min(LLM_RETRY_BASE_WAIT_MS * Math.pow(2, attempt - 1), LLM_RETRY_MAX_WAIT_MS));
-                rootLogger.warn('LLM fetch error, retrying in ' + wait + 'ms: ' + (err as Error).message);
+                rootLogger.warn('LLM fetch error, retrying in ' + wait + 'ms: ' + formatErr(err));
                 await new Promise((resolve) => setTimeout(resolve, wait));
                 continue;
             }

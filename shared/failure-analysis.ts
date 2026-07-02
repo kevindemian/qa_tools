@@ -1,4 +1,5 @@
 /** AI-powered failure analysis: classifies test failures, assigns blame via git blame, and generates HTML reports with LLM analysis. */
+import { formatErr } from './errors.js';
 import fs from 'fs';
 import path from 'path';
 import { execFileSync } from 'child_process';
@@ -100,7 +101,7 @@ function readPrompt(file: string): string {
     try {
         return fs.readFileSync(path.join(PROMPT_DIR, file), 'utf8');
     } catch (err) {
-        rootLogger.error('Failed to read prompt template: ' + (err as Error).message);
+        rootLogger.error('Failed to read prompt template: ' + formatErr(err));
         return '';
     }
 }

@@ -1,4 +1,5 @@
 /** LLM pipeline failure analysis — offer to analyze failures and generate a report. */
+import { formatErr } from '../shared/errors.js';
 import { confirm, info, warn, success, printError, divider, print } from '../shared/prompt.js';
 import { writeReport } from '../shared/temp-dir.js';
 import { analyzeFailuresWithReport } from '../shared/failure-analysis.js';
@@ -52,6 +53,6 @@ export async function offerPipelineFailureAnalysis(
         }
     } catch (err) {
         printError('Falha ao analisar com IA', err);
-        rootLogger.error('LLM pipeline analysis error: ' + (err as Error).message);
+        rootLogger.error('LLM pipeline analysis error: ' + formatErr(err));
     }
 }

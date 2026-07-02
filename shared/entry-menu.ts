@@ -9,6 +9,7 @@
  *   - _llmConfigError → show error and offer retry
  *   - Auto-retry: if _attempts < 3 && time > 60s*2^attempts → fire background discovery */
 
+import { formatErr } from './errors.js';
 import { spawn } from 'child_process';
 import { showSplash } from './splash.js';
 import { showSelect, confirm, info, warn, divider } from './prompt.js';
@@ -151,7 +152,7 @@ async function spawnWizard(reviewFlag = ''): Promise<void> {
             child.on('error', reject);
         });
     } catch (err: unknown) {
-        rootLogger.error('SmartWizard error: ' + (err as Error).message);
+        rootLogger.error('SmartWizard error: ' + formatErr(err));
     }
 }
 
@@ -213,7 +214,7 @@ export async function main(): Promise<void> {
         try {
             await runModule(choice);
         } catch (err: unknown) {
-            rootLogger.error('Entry menu child module error: ' + (err as Error).message);
+            rootLogger.error('Entry menu child module error: ' + formatErr(err));
             break;
         }
     }

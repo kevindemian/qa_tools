@@ -9,6 +9,7 @@
  *      — matches found → resolved as reference
  *      — unmatched → create in Jira
  *   4. output JSON with resolved preConditions */
+import { formatErr } from '../../shared/errors.js';
 import crypto from 'crypto';
 import fs from 'fs';
 import path from 'path';
@@ -32,8 +33,8 @@ async function handler(c: CommandContext): Promise<boolean | void> {
         preconditions = await c.linkManager.listPreconditions(input.project);
         info(`${preconditions.length} pre-conditions encontradas no projeto ${input.project}`);
     } catch (err: unknown) {
-        rootLogger.error('Failed to fetch pre-conditions: ' + (err as Error).message);
-        warn('Não foi possível buscar pre-conditions: ' + (err as Error).message + ' — continuando sem contexto');
+        rootLogger.error('Failed to fetch pre-conditions: ' + formatErr(err));
+        warn('Não foi possível buscar pre-conditions: ' + formatErr(err) + ' — continuando sem contexto');
     }
 
     const userMsg = 'User Story:\n' + input.userStory + '\n\nAcceptance Criteria:\n' + input.acceptanceCriteria;
@@ -175,7 +176,7 @@ async function createMissingPreconditions(
             createdKeys.set(summary, newKey);
             info(`Pre-condition criada: ${newKey} — "${summary}"`);
         } catch (err: unknown) {
-            warn(`Falha ao criar pre-condition "${summary}": ${(err as Error).message}`);
+            warn(`Falha ao criar pre-condition "${summary}": ${formatErr(err)}`);
         }
     }
     return createdKeys;

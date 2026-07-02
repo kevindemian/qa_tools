@@ -5,6 +5,7 @@
  * ORCHESTRATION ONLY — prompt builders live in llm-review-prompts.ts,
  * heuristics/analyzers live in llm-review-analyzer.ts.
  */
+import { formatErr } from './errors.js';
 import { llmPrompt } from './llm-client.js';
 import type { LlmTier } from './types.js';
 import { rootLogger } from './logger.js';
@@ -368,7 +369,7 @@ async function _handleReviewFallback(
     startTime: number,
     type: ArtifactType,
 ): Promise<ReviewResult> {
-    rootLogger.warn('LLM review failed, falling back to primary: ' + (err as Error).message);
+    rootLogger.warn('LLM review failed, falling back to primary: ' + formatErr(err));
     recordLlmFailure('main');
     try {
         return await callLlmFallback(system, user, startTime, type);

@@ -1,4 +1,5 @@
 /** AI-powered PR description generation from git diff + branch metadata. */
+import { formatErr } from '../shared/errors.js';
 import { llmPrompt } from '../shared/llm-client.js';
 import { rootLogger } from '../shared/logger.js';
 import { sanitizeForLlm } from '../shared/sanitize.js';
@@ -40,7 +41,7 @@ export async function generatePrDescription(m: GitProvider, source: string, targ
         const user = buildPrompt(sanitizeForLlm(diff), source, target);
         return await llmPrompt({ tier: 'fast', system, user, callerId: 'pr-description' });
     } catch (err) {
-        rootLogger.error('Failed to generate PR description: ' + (err as Error).message);
+        rootLogger.error('Failed to generate PR description: ' + formatErr(err));
         return '';
     }
 }

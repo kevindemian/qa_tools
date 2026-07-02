@@ -1,4 +1,5 @@
 /** Close all tasks for a given version — transition unresolved issues to Done. */
+import { formatErr } from '../../shared/errors.js';
 import { warn, askConfirm, ask, printSummary, printError } from '../../shared/prompt.js';
 import { rootLogger } from '../../shared/logger.js';
 import type { CommandContext } from './context.js';
@@ -32,7 +33,7 @@ async function handler(c: CommandContext): Promise<boolean | void> {
                 printSummary(summary);
                 c.pushHistory('fechar-tarefas', taskIds.length + ' tarefa(s)', 'ok');
             } catch (err: unknown) {
-                rootLogger.error('Falha ao fechar tarefas: ' + (err as Error).message);
+                rootLogger.error('Falha ao fechar tarefas: ' + formatErr(err));
                 printError('Erro ao fechar tarefas', err);
                 const summary = taskIds.map((id) => ({
                     status: 'error' as const,

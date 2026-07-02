@@ -1,4 +1,5 @@
 /** Test Execution creator — creates Test Execution issues and associates test results. */
+import { formatErr } from '../shared/errors.js';
 import { rootLogger } from '../shared/logger.js';
 import { success, info, withSpinner } from '../shared/prompt.js';
 import type { JiraResourceLike } from '../shared/types.js';
@@ -38,7 +39,7 @@ class TestExecutionCreator {
                 return { key: issue.key, summary: (issue.fields['summary'] as string) || summary };
             }
         } catch (err) {
-            rootLogger.warn('Falha ao buscar Test Execution existente: ' + (err as Error).message);
+            rootLogger.warn('Falha ao buscar Test Execution existente: ' + formatErr(err));
         }
         return null;
     }
@@ -149,7 +150,7 @@ class TestExecutionCreator {
                 }
             }
         } catch (err) {
-            rootLogger.warn('Não foi possível verificar links existentes: ' + (err as Error).message);
+            rootLogger.warn('Não foi possível verificar links existentes: ' + formatErr(err));
         }
 
         const unlinked = testKeys.filter((k) => !linkedKeys.includes(k));
@@ -164,7 +165,7 @@ class TestExecutionCreator {
                     await this.linkManager.createIssueLink(key, teKey, 'Tests');
                     linked++;
                 } catch (err: unknown) {
-                    const msg = (err as Error).message;
+                    const msg = formatErr(err);
                     if (msg.includes('already exists') || msg.includes('already linked')) {
                         linked++;
                     } else {
@@ -242,7 +243,7 @@ class TestExecutionCreator {
             try {
                 await this._linkTestsToExecution(result.key, testKeys);
             } catch (err) {
-                rootLogger.error('Erro ao vincular testes: ' + (err as Error).message);
+                rootLogger.error('Erro ao vincular testes: ' + formatErr(err));
             }
         }
 

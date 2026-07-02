@@ -1,5 +1,6 @@
 /** AI Feedback Loop — record and analyze modifications made to AI-generated tests.
  *  Tracks acceptance rates, modification patterns, and per-prompt-version metrics. */
+import { formatErr } from './errors.js';
 import fs from 'fs';
 import path from 'path';
 import os from 'os';
@@ -28,7 +29,7 @@ function ensureDir(dir: string): void {
     try {
         fs.mkdirSync(path.resolve(dir), { recursive: true });
     } catch (err) {
-        rootLogger.error('Failed to create feedback directory: ' + (err as Error).message);
+        rootLogger.error('Failed to create feedback directory: ' + formatErr(err));
     }
 }
 
@@ -44,7 +45,7 @@ function loadStore(config?: Config): AiFeedbackStore {
         const raw = fs.readFileSync(path.resolve(sp), 'utf8');
         return safeParseJson<AiFeedbackStore>(raw, { records: [] });
     } catch (err) {
-        rootLogger.warn('Failed to load AI feedback: ' + (err as Error).message);
+        rootLogger.warn('Failed to load AI feedback: ' + formatErr(err));
         return { records: [] };
     }
 }
@@ -58,7 +59,7 @@ function saveStore(store: AiFeedbackStore, config?: Config): void {
         fs.writeFileSync(path.resolve(tp), JSON.stringify(store, null, 2), 'utf8');
         fs.renameSync(path.resolve(tp), sp);
     } catch (err) {
-        rootLogger.error('Failed to save AI feedback: ' + (err as Error).message);
+        rootLogger.error('Failed to save AI feedback: ' + formatErr(err));
         throw new Error('Failed to save AI feedback', { cause: err });
     }
 }

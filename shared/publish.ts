@@ -1,5 +1,6 @@
 /** Auto-publish report files to S3 or gh-pages.
  * Provides CLI-wrapper functions for uploading generated HTML reports. */
+import { formatErr } from './errors.js';
 import path from 'path';
 import { execFileSync } from 'child_process';
 import { rootLogger } from './logger.js';
@@ -29,7 +30,7 @@ function publishToS3(localPath: string, destination?: string): void {
     try {
         execFileSync(AWS_BIN, ['s3', 'cp', localPath, dest, '--no-progress'], { stdio: 'inherit', timeout: 120_000 });
     } catch (err: unknown) {
-        rootLogger.error('S3 publish failed: ' + (err as Error).message);
+        rootLogger.error('S3 publish failed: ' + formatErr(err));
     }
 }
 
@@ -56,7 +57,7 @@ function publishToGhPages(localPath: string, destination?: string): void {
         });
         execFileSync(GIT_BIN, ['push'], { stdio: 'inherit', cwd: tmpDir, timeout: 120_000 });
     } catch (err: unknown) {
-        rootLogger.error('gh-pages publish failed: ' + (err as Error).message);
+        rootLogger.error('gh-pages publish failed: ' + formatErr(err));
     }
 }
 

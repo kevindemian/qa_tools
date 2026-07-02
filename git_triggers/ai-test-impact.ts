@@ -1,4 +1,5 @@
 /** AI-powered test-impact assessment — analyze which tests to run based on code changes. */
+import { formatErr } from '../shared/errors.js';
 import fs from 'fs';
 import path from 'path';
 import { llmPrompt } from '../shared/llm-client.js';
@@ -20,7 +21,7 @@ function loadMappingTitles(mappingPath?: string): string[] {
         if (items.length === 0) return [];
         return items.map((m) => m.title).filter(Boolean);
     } catch (err: unknown) {
-        rootLogger.warn('Failed to load mapping titles from ' + mappingPath + ': ' + (err as Error).message);
+        rootLogger.warn('Failed to load mapping titles from ' + mappingPath + ': ' + formatErr(err));
         return [];
     }
 }
@@ -83,7 +84,7 @@ export async function assessTestImpact(
         const user = buildPrompt(sanitizeForLlm(diff), titles, source, target);
         return await llmPrompt({ tier: 'fast', system, user, callerId: 'test-impact' });
     } catch (err) {
-        rootLogger.error('Failed to assess test impact: ' + (err as Error).message);
+        rootLogger.error('Failed to assess test impact: ' + formatErr(err));
         return '';
     }
 }
