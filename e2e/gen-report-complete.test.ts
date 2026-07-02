@@ -3,27 +3,10 @@
  * Focuses on CLI argument parsing and control flow (skip-jira, output).
  */
 
-import os from 'os';
 import path from 'path';
 import { describe, expect, it, vi, afterEach } from 'vitest';
 
-// Mock external deps
-vi.mock('../shared/result_parser.js', () => ({
-    parseTestResultsFile: vi.fn(() => ({
-        tests: [{ name: 'test-1', status: 'passed', duration: 100 }],
-        stats: { total: 1, passed: 1, failed: 0, skipped: 0, duration: 100 },
-        error: undefined,
-    })),
-}));
-
-vi.mock('../shared/report-generator.js', () => ({
-    generateHtmlReport: vi.fn(() => '<html><body>REPORT</body></html>'),
-}));
-
-vi.mock('../shared/temp-dir.js', () => ({
-    writeReport: vi.fn(() => path.join(os.tmpdir(), 'report.html')),
-}));
-
+// Mock only network/infrastructure deps — business logic is real
 vi.mock('../shared/http-client.js', () => ({
     createHttpClient: vi.fn(() => ({
         get: vi.fn().mockResolvedValue({ data: { workflow_runs: [] } }),
@@ -69,9 +52,6 @@ describe('Gen-report-complete', () => {
 
         const mod = await import('./gen-report-complete.js');
 
-        // Clear argv so main() runs fresh
-        // We need to set process.argv before import to pick up --ctrf in loadCtrfFixture
-        // Already set above
         await expect(mod.main()).resolves.toBeUndefined();
     });
 
@@ -80,10 +60,14 @@ describe('Gen-report-complete', () => {
 
         process.argv = ['node', 'gen-report-complete.ts', '--ctrf=e2e/fixtures/ctrf-report.json', '--skip-jira'];
 
-        const { writeReport } = await import('../shared/temp-dir.js');
+        const tempDir = await import('../shared/temp-dir.js');
+        const writeSpy = vi.spyOn(tempDir, 'writeReport').mockImplementation((name, _content) => {
+            return path.join(import.meta.dirname, '..', '..', '.tmp', name);
+        });
+
         const mod = await import('./gen-report-complete.js');
         await mod.main();
 
-        expect(writeReport).toHaveBeenCalledWith('report-e2e-complete.html', expect.stringContaining('REPORT'));
+        expect(writeSpy).toHaveBeenCalledWith('report-e2e-complete.html', expect.stringContaining('html'));
     });
 });
