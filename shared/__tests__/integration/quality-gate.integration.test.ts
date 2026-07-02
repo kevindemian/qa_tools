@@ -8,27 +8,16 @@
  * - Project filtering
  * - formatQualityGateJson / formatQualityGateText output
  *
- * Uses mocked loadMetrics to isolate from persistence layer.
+ * Uses vi.spyOn for loadMetrics (reads from disk) but keeps
+ * calculateFlakiness real (pure function, no I/O).
  */
-import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
-import type { MetricsRun, MetricsStore } from '../../metrics.js';
+import { afterEach, describe, expect, it, vi } from 'vitest';
+import type { MetricsRun } from '../../metrics.js';
+import * as metrics from '../../metrics.js';
 
-vi.mock('../../metrics.js', async (importOriginal) => {
-    const actual = await importOriginal<typeof import('../../metrics.js')>();
-    return {
-        ...actual,
-        loadMetrics: vi.fn<() => MetricsStore>(),
-        calculateFlakiness:
-            vi.fn<(metrics: { runs: MetricsRun[] }, minRuns?: number) => Array<{ title: string; rate: number }>>(),
-    };
-});
-
-async function loadMockedModules() {
-    const metrics = await import('../../metrics.js');
+async function loadModules() {
     const qg = await import('../../quality-gate.js');
     return {
-        mockLoadMetrics: vi.mocked(metrics.loadMetrics),
-        mockCalcFlakiness: vi.mocked(metrics.calculateFlakiness),
         runQualityGate: qg.runQualityGate,
         formatQualityGateJson: qg.formatQualityGateJson,
         formatQualityGateText: qg.formatQualityGateText,
@@ -36,11 +25,6 @@ async function loadMockedModules() {
 }
 
 describe('Integration: Quality Gate', () => {
-    beforeEach(() => {
-        vi.restoreAllMocks();
-        vi.resetModules();
-    });
-
     afterEach(() => {
         vi.restoreAllMocks();
     });
@@ -49,8 +33,8 @@ describe('Integration: Quality Gate', () => {
         it('returns fail when no metrics data exists', async () => {
             expect.hasAssertions();
 
-            const { mockLoadMetrics, runQualityGate } = await loadMockedModules();
-            mockLoadMetrics.mockReturnValue({ runs: [] });
+            vi.spyOn(metrics, 'loadMetrics').mockReturnValue({ runs: [] });
+            const { runQualityGate } = await loadModules();
             const result = runQualityGate();
 
             expect(result.overall).toBe('fail');
@@ -66,8 +50,6 @@ describe('Integration: Quality Gate', () => {
     describe('FT-10b: runQualityGate with good data', () => {
         it('returns pass when metrics are above all thresholds', async () => {
             expect.hasAssertions();
-
-            const { mockLoadMetrics, mockCalcFlakiness, runQualityGate } = await loadMockedModules();
 
             const runs: MetricsRun[] = Array.from({ length: 15 }, (_, i) => ({
                 timestamp: new Date(Date.now() + i * 60000).toISOString(),
@@ -94,7 +76,7 @@ describe('Integration: Quality Gate', () => {
                 }),
             }));
 
-            mockLoadMetrics.mockReturnValue({
+            vi.spyOn(metrics, 'loadMetrics').mockReturnValue({
                 runs,
                 coverageHistory: [
                     {
@@ -106,8 +88,8 @@ describe('Integration: Quality Gate', () => {
                     },
                 ],
             });
-            mockCalcFlakiness.mockReturnValue([]);
 
+            const { runQualityGate } = await loadModules();
             const result = runQualityGate({ project: 'test-project' });
 
             expect(result.overall).toBe('pass');
@@ -120,7 +102,7 @@ describe('Integration: Quality Gate', () => {
         it('produces valid JSON', async () => {
             expect.hasAssertions();
 
-            const { formatQualityGateJson } = await loadMockedModules();
+            const { formatQualityGateJson } = await loadModules();
             const result = { overall: 'pass' as const, checks: [], score: 85 };
             const json = formatQualityGateJson(result);
 
@@ -132,7 +114,7 @@ describe('Integration: Quality Gate', () => {
         it('produces human-readable output', async () => {
             expect.hasAssertions();
 
-            const { formatQualityGateText } = await loadMockedModules();
+            const { formatQualityGateText } = await loadModules();
             const result = {
                 overall: 'pass' as const,
                 checks: [{ name: 'health-score', status: 'pass' as const, score: 85, threshold: 70, details: 'good' }],
