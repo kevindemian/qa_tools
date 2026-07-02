@@ -10,11 +10,11 @@ import type { StateSchema } from './types.js';
 
 const UTF8 = 'utf8';
 
-/** Validate that a resolved path is within the expected state directory. */
-function isPathWithinStateDir(resolvedPath: string): boolean {
-    const stateRoot = path.resolve(getStateDir());
+/** Validate that a resolved path is within the given base directory. */
+function isPathWithinBase(resolvedPath: string, baseDir: string): boolean {
     const normalized = path.resolve(resolvedPath);
-    return normalized.startsWith(stateRoot + path.sep) || normalized === stateRoot;
+    const normalizedBase = path.resolve(baseDir);
+    return normalized.startsWith(normalizedBase + path.sep) || normalized === normalizedBase;
 }
 
 function getStateDir(config?: Config): string {
@@ -26,7 +26,7 @@ function ensureStateDir(config?: Config): boolean {
     const dir = getStateDir(config);
     try {
         const resolved = path.resolve(dir);
-        if (!isPathWithinStateDir(resolved)) {
+        if (!isPathWithinBase(resolved, dir)) {
             rootLogger.warn('State dir: path traversal blocked');
             return false;
         }
@@ -52,12 +52,7 @@ function bakPath(config?: Config): string {
 function cleanupOldFiles(OLD_STATE_PATH: string): void {
     for (const suffix of ['.bak', '.tmp', '']) {
         try {
-            const resolved = path.resolve(OLD_STATE_PATH + suffix);
-            if (!isPathWithinStateDir(resolved)) {
-                rootLogger.debug('Old file cleanup: path traversal blocked');
-                continue;
-            }
-            fs.unlinkSync(resolved);
+            fs.unlinkSync(path.resolve(OLD_STATE_PATH + suffix));
         } catch (err) {
             rootLogger.debug(
                 'Old ' +
@@ -72,20 +67,10 @@ function cleanupOldFiles(OLD_STATE_PATH: string): void {
 export function migrateOldState(config?: Config): void {
     const OLD_STATE_PATH = path.join(import.meta.dirname, '.qa_tools_state.json');
     try {
-        const resolvedOld = path.resolve(OLD_STATE_PATH);
-        if (!isPathWithinStateDir(resolvedOld)) {
-            rootLogger.warn('Old state migration: path traversal blocked');
-            return;
-        }
-        if (fs.existsSync(resolvedOld) && !fs.existsSync(statePath(config))) {
-            const oldData = fs.readFileSync(resolvedOld, UTF8);
-            const resolvedTmp = path.resolve(tmpPath(config));
-            if (!isPathWithinStateDir(resolvedTmp)) {
-                rootLogger.warn('Old state migration: path traversal blocked for tmp');
-                return;
-            }
-            fs.writeFileSync(resolvedTmp, oldData, UTF8);
-            fs.renameSync(resolvedTmp, statePath(config));
+        if (fs.existsSync(path.resolve(OLD_STATE_PATH)) && !fs.existsSync(statePath(config))) {
+            const oldData = fs.readFileSync(OLD_STATE_PATH, UTF8);
+            fs.writeFileSync(path.resolve(tmpPath(config)), oldData, UTF8);
+            fs.renameSync(path.resolve(tmpPath(config)), statePath(config));
             cleanupOldFiles(OLD_STATE_PATH);
         }
     } catch (err: unknown) {
@@ -114,22 +99,12 @@ export function loadTypedState(config?: Config): StateSchema {
  * @returns A plain object (empty `{}` when no file or unrecoverable). */
 function tryRecoverBackup(bp: string, tp: string, sp: string): { [key: string]: unknown } | null {
     try {
-        const resolvedBp = path.resolve(bp);
-        if (!isPathWithinStateDir(resolvedBp)) {
-            rootLogger.debug('Backup recovery: path traversal blocked');
-            return null;
-        }
-        if (fs.existsSync(resolvedBp)) {
-            const backup: { [key: string]: unknown } = JSON.parse(fs.readFileSync(resolvedBp, UTF8)) as {
+        if (fs.existsSync(path.resolve(bp))) {
+            const backup: { [key: string]: unknown } = JSON.parse(fs.readFileSync(path.resolve(bp), UTF8)) as {
                 [key: string]: unknown;
             };
-            const resolvedTp = path.resolve(tp);
-            if (!isPathWithinStateDir(resolvedTp)) {
-                rootLogger.debug('Backup recovery: path traversal blocked for tmp');
-                return null;
-            }
-            fs.writeFileSync(resolvedTp, JSON.stringify(backup, null, 2), UTF8);
-            fs.renameSync(resolvedTp, sp);
+            fs.writeFileSync(path.resolve(tp), JSON.stringify(backup, null, 2), UTF8);
+            fs.renameSync(path.resolve(tp), sp);
             return backup;
         }
     } catch (err2) {
@@ -143,12 +118,7 @@ function tryRecoverBackup(bp: string, tp: string, sp: string): { [key: string]: 
 
 function renameCorruptedToBackup(sp: string, bp: string): void {
     try {
-        const resolvedSp = path.resolve(sp);
-        if (!isPathWithinStateDir(resolvedSp)) {
-            rootLogger.debug('Corrupted backup: path traversal blocked');
-            return;
-        }
-        fs.renameSync(resolvedSp, bp);
+        fs.renameSync(path.resolve(sp), bp);
         warn('Backup salvo. Criando novo estado.');
         rootLogger.warn('Backup salvo em ' + bp + '. Criando novo estado.');
     } catch (err3) {
@@ -165,13 +135,8 @@ export function load(config?: Config): { [key: string]: unknown } {
     const bp = bakPath(config);
     const tp = tmpPath(config);
     try {
-        const resolvedSp = path.resolve(sp);
-        if (!isPathWithinStateDir(resolvedSp)) {
-            rootLogger.warn('State load: path traversal blocked');
-            return {};
-        }
-        if (fs.existsSync(resolvedSp)) {
-            return JSON.parse(fs.readFileSync(resolvedSp, UTF8)) as { [key: string]: unknown };
+        if (fs.existsSync(path.resolve(sp))) {
+            return JSON.parse(fs.readFileSync(path.resolve(sp), UTF8)) as { [key: string]: unknown };
         }
     } catch (err: unknown) {
         warn('Arquivo de estado corrompido. Recuperando backup...');
@@ -190,19 +155,9 @@ export function save(state: { [key: string]: unknown }, config?: Config): void {
     const tp = tmpPath(config);
     const bp = bakPath(config);
     try {
-        const resolvedTp = path.resolve(tp);
-        if (!isPathWithinStateDir(resolvedTp)) {
-            rootLogger.warn('State save: path traversal blocked for tmp');
-            return;
-        }
-        fs.writeFileSync(resolvedTp, JSON.stringify(state, null, 2), UTF8);
-        fs.renameSync(resolvedTp, sp);
-        const resolvedBp = path.resolve(bp);
-        if (!isPathWithinStateDir(resolvedBp)) {
-            rootLogger.warn('State save: path traversal blocked for backup');
-            return;
-        }
-        fs.writeFileSync(resolvedBp, JSON.stringify(state, null, 2), UTF8);
+        fs.writeFileSync(path.resolve(tp), JSON.stringify(state, null, 2), UTF8);
+        fs.renameSync(path.resolve(tp), sp);
+        fs.writeFileSync(path.resolve(bp), JSON.stringify(state, null, 2), UTF8);
     } catch (err) {
         warn('Falha ao salvar estado. Alteracoes podem ser perdidas.');
         rootLogger.error('Falha ao salvar estado. Verifique permissões de escrita e espaço em disco: ' + String(err));
