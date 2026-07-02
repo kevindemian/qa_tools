@@ -35,9 +35,11 @@ jobs:
               run: ls -la reports/ctrf-report.json
             - name: Run QA Tools Post-Processing
               if: always()
-              run: npx tsx shared/pr-report-core.ts --ctrf ${{ inputs.ctrf-path }} --project ${{ inputs.project-name }}
               env:
                   GITHUB_TOKEN: ${{ github.token }}
+                  CTRF_PATH: ${{ inputs.ctrf-path }}
+                  PROJECT_NAME: ${{ inputs.project-name }}
+              run: npx tsx shared/pr-report-core.ts --ctrf "$CTRF_PATH" --project "$PROJECT_NAME"
             - name: Upload PR Report HTML
               if: always()
               uses: actions/upload-artifact@ea165f8
