@@ -1,6 +1,6 @@
 /** Test results — collect, parse, and report test results from CI artifacts to Jira. */
+import path from 'path';
 import { AdmZip, globSync } from '../shared/deps.js';
-import { sanitizePath } from '../shared/path-utils.js';
 import Config from '../shared/config.js';
 import JiraClient from '../shared/jira-client.js';
 import type { JiraMode } from '../shared/jira-auth.js';
@@ -26,7 +26,7 @@ function _resolveGlob(pattern: string): string | null {
     try {
         const matches = globSync(pattern);
         const m = matches[0];
-        return m ? sanitizePath(process.cwd(), m) : null;
+        return m ? path.resolve(m) : null;
     } catch (err) {
         warn('test-results: glob resolution failed: ' + (err instanceof Error ? err.message : String(err)));
         return null;
