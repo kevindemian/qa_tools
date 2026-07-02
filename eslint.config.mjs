@@ -2,6 +2,7 @@
 import { fileURLToPath } from 'node:url';
 import { dirname } from 'node:path';
 import eslint from '@eslint/js';
+import { defineConfig } from 'eslint/config';
 import tseslint from 'typescript-eslint';
 import prettier from 'eslint-config-prettier';
 import security from 'eslint-plugin-security';
@@ -12,7 +13,7 @@ import unusedImports from 'eslint-plugin-unused-imports';
 
 const tsconfigRootDir = dirname(fileURLToPath(import.meta.url));
 
-export default tseslint.config(
+export default defineConfig(
     // Global: set tsconfigRootDir to avoid ambiguity with .opencode/guard/backups/tsconfig.json
     {
         languageOptions: {
