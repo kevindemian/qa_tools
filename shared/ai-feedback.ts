@@ -11,6 +11,13 @@ import type { AiGenerationRecord, AiModification } from './types.js';
 
 const STORE_FILE = 'ai-feedback.json';
 
+/** Validate that a resolved path is within the expected store directory. */
+function isPathWithinStore(resolvedPath: string, storeDir: string): boolean {
+    const normalized = path.resolve(resolvedPath);
+    const normalizedBase = path.resolve(storeDir);
+    return normalized.startsWith(normalizedBase + path.sep) || normalized === normalizedBase;
+}
+
 function getStoreDir(config?: Config): string {
     const xdg = config ? config.get('xdgStateHome') : Config.get('xdgStateHome');
     const base = xdg ? path.join(xdg, 'qa-tools') : path.join(os.homedir(), '.local', 'state', 'qa-tools');
@@ -27,7 +34,12 @@ function tmpPath(config?: Config): string {
 
 function ensureDir(dir: string): void {
     try {
-        fs.mkdirSync(path.resolve(dir), { recursive: true });
+        const resolvedDir = path.resolve(dir);
+        if (!isPathWithinStore(resolvedDir, getStoreDir())) {
+            rootLogger.error('AI feedback: path traversal blocked');
+            return;
+        }
+        fs.mkdirSync(resolvedDir, { recursive: true });
     } catch (err) {
         rootLogger.error('Failed to create feedback directory: ' + formatErr(err));
     }
@@ -41,8 +53,14 @@ function loadStore(config?: Config): AiFeedbackStore {
     try {
         ensureDir(getStoreDir(config));
         const sp = storePath(config);
-        if (!fs.existsSync(path.resolve(sp))) return { records: [] };
-        const raw = fs.readFileSync(path.resolve(sp), 'utf8');
+        const resolvedSp = path.resolve(sp);
+        const storeDir = getStoreDir(config);
+        if (!isPathWithinStore(resolvedSp, storeDir)) {
+            rootLogger.warn('AI feedback: path traversal blocked for store');
+            return { records: [] };
+        }
+        if (!fs.existsSync(resolvedSp)) return { records: [] };
+        const raw = fs.readFileSync(resolvedSp, 'utf8');
         return safeParseJson<AiFeedbackStore>(raw, { records: [] });
     } catch (err) {
         rootLogger.warn('Failed to load AI feedback: ' + formatErr(err));
@@ -56,8 +74,13 @@ function saveStore(store: AiFeedbackStore, config?: Config): void {
         ensureDir(dir);
         const sp = storePath(config);
         const tp = tmpPath(config);
-        fs.writeFileSync(path.resolve(tp), JSON.stringify(store, null, 2), 'utf8');
-        fs.renameSync(path.resolve(tp), sp);
+        const resolvedTp = path.resolve(tp);
+        if (!isPathWithinStore(resolvedTp, dir)) {
+            rootLogger.error('AI feedback: path traversal blocked for tmp');
+            return;
+        }
+        fs.writeFileSync(resolvedTp, JSON.stringify(store, null, 2), 'utf8');
+        fs.renameSync(resolvedTp, sp);
     } catch (err) {
         rootLogger.error('Failed to save AI feedback: ' + formatErr(err));
         throw new Error('Failed to save AI feedback', { cause: err });

@@ -8,6 +8,13 @@ import { rootLogger } from './logger.js';
 
 const PROJECT_ROOT = resolve(import.meta.dirname, '..');
 
+/** Validate that a resolved path is within the expected base directory. */
+function isPathWithinBase(resolvedPath: string, baseDir: string): boolean {
+    const normalized = path.resolve(resolvedPath);
+    const normalizedBase = path.resolve(baseDir);
+    return normalized.startsWith(normalizedBase + path.sep) || normalized === normalizedBase;
+}
+
 function resolveEnvOrPath(envVar: string, defaultValue: string): string {
     return Config.get(envVar) ? resolve(Config.get(envVar)) : join(PROJECT_ROOT, defaultValue);
 }
@@ -34,7 +41,12 @@ export function writeReport(filename: string, content: string): string {
     const dateStr = formatDateISO();
     const targetDir = join(dir, dateStr);
     try {
-        mkdirSync(path.resolve(targetDir), { recursive: true });
+        const resolvedDir = path.resolve(targetDir);
+        if (!isPathWithinBase(resolvedDir, dir)) {
+            rootLogger.warn('writeReport: path traversal blocked');
+            throw new Error('Path traversal detected');
+        }
+        mkdirSync(resolvedDir, { recursive: true });
     } catch (err) {
         const msg = err instanceof Error ? err.message : String(err);
         rootLogger.warn(
@@ -44,7 +56,12 @@ export function writeReport(filename: string, content: string): string {
     }
     const filepath = join(targetDir, filename);
     try {
-        writeFileSync(path.resolve(filepath), content, 'utf8');
+        const resolvedFile = path.resolve(filepath);
+        if (!isPathWithinBase(resolvedFile, dir)) {
+            rootLogger.warn('writeReport: path traversal blocked');
+            throw new Error('Path traversal detected');
+        }
+        writeFileSync(resolvedFile, content, 'utf8');
     } catch (err) {
         const msg = err instanceof Error ? err.message : String(err);
         rootLogger.warn(`writeReport: failed to write ${filepath} (${msg}). Verify disk space and permissions.`);
@@ -57,7 +74,12 @@ export function writeReport(filename: string, content: string): string {
 export function writeEphemeral(category: string, filename: string, content: string): string {
     const dir = join(tempDir(), category);
     try {
-        mkdirSync(path.resolve(dir), { recursive: true });
+        const resolvedDir = path.resolve(dir);
+        if (!isPathWithinBase(resolvedDir, tempDir())) {
+            rootLogger.warn('writeEphemeral: path traversal blocked');
+            throw new Error('Path traversal detected');
+        }
+        mkdirSync(resolvedDir, { recursive: true });
     } catch (err) {
         const msg = err instanceof Error ? err.message : String(err);
         rootLogger.warn(
@@ -67,7 +89,12 @@ export function writeEphemeral(category: string, filename: string, content: stri
     }
     const filepath = join(dir, filename);
     try {
-        writeFileSync(path.resolve(filepath), content, 'utf8');
+        const resolvedFile = path.resolve(filepath);
+        if (!isPathWithinBase(resolvedFile, tempDir())) {
+            rootLogger.warn('writeEphemeral: path traversal blocked');
+            throw new Error('Path traversal detected');
+        }
+        writeFileSync(resolvedFile, content, 'utf8');
     } catch (err) {
         const msg = err instanceof Error ? err.message : String(err);
         rootLogger.warn(`writeEphemeral: failed to write ${filepath} (${msg}). Verify disk space and permissions.`);
@@ -92,7 +119,20 @@ export function ensureDirs(): void {
     ];
     for (const dir of dirs) {
         try {
-            mkdirSync(path.resolve(dir), { recursive: true });
+            const resolvedDir = path.resolve(dir);
+            let baseDir: string;
+            if (dir.includes('reports')) {
+                baseDir = reportsDir();
+            } else if (dir.includes('logs')) {
+                baseDir = logsDir();
+            } else {
+                baseDir = tempDir();
+            }
+            if (!isPathWithinBase(resolvedDir, baseDir)) {
+                rootLogger.warn(`ensureDirs: path traversal blocked for ${dir}`);
+                continue;
+            }
+            mkdirSync(resolvedDir, { recursive: true });
         } catch (err) {
             const msg = err instanceof Error ? err.message : String(err);
             rootLogger.warn(`ensureDirs: failed to create ${dir} (${msg}). Verify permissions and disk space.`);
@@ -109,7 +149,12 @@ export function cleanupTempDirs(): void {
     for (const sub of ['previews', 'vars', 'cache']) {
         const p = join(td, sub);
         try {
-            if (existsSync(path.resolve(p))) rmSync(p, { recursive: true, force: true });
+            const resolvedP = path.resolve(p);
+            if (!isPathWithinBase(resolvedP, td)) {
+                rootLogger.warn(`cleanupTempDirs: path traversal blocked for ${sub}`);
+                continue;
+            }
+            if (existsSync(resolvedP)) rmSync(resolvedP, { recursive: true, force: true });
         } catch (err) {
             if (err instanceof Error && 'code' in err && err.code === 'ENOENT') {
                 continue;
