@@ -53,27 +53,13 @@ else
   report "No warden audit log found (expected at $WARDEN_LOG)"
 fi
 
-# 2. Scan opencode session logs for secrets
+# 2. Scan opencode session logs for secrets (single pass, exclude logs)
 if [[ -d "$OPENDATA_DIR" ]]; then
-  SECRET_PATTERNS=(
-    'ghp_[a-zA-Z0-9]\{36\}'
-    'gho_[a-zA-Z0-9]\{36\}'
-    'ghu_[a-zA-Z0-9]\{36\}'
-    'ghs_[a-zA-Z0-9]\{36\}'
-    'sk-[a-zA-Z0-9]\{32,\}'
-    'AKIA[0-9A-Z]\{16\}'
-    '-----BEGIN .* PRIVATE KEY-----'
-  )
+  COMBINED_PATTERN='ghp_[a-zA-Z0-9]{36}|gho_[a-zA-Z0-9]{36}|ghu_[a-zA-Z0-9]{36}|ghs_[a-zA-Z0-9]{36}|sk-[a-zA-Z0-9]{32,}|AKIA[0-9A-Z]{16}|-----BEGIN .* PRIVATE KEY-----'
 
-  TOTAL_HITS=0
-  for pattern in "${SECRET_PATTERNS[@]}"; do
-    HITS=$(grep -rnE "$pattern" "$OPENDATA_DIR" 2>/dev/null | grep -v ".log:" | wc -l | tr -d '[:space:]' || echo 0)
-    if [[ "$HITS" =~ ^[0-9]+$ ]]; then
-      TOTAL_HITS=$((TOTAL_HITS + HITS))
-    fi
-  done
+  TOTAL_HITS=$(grep -rnE --include='*.json' --include='*.txt' --include='*.md' "$COMBINED_PATTERN" "$OPENDATA_DIR" 2>/dev/null | wc -l | tr -d '[:space:]' || echo 0)
 
-  if [[ "$TOTAL_HITS" -gt 0 ]]; then
+  if [[ "$TOTAL_HITS" =~ ^[0-9]+$ ]] && [[ "$TOTAL_HITS" -gt 0 ]]; then
     report "WARNING: $TOTAL_HITS potential secret leaks found in session logs"
     EXIT_CODE=1
   else
