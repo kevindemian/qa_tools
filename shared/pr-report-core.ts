@@ -723,8 +723,11 @@ export async function main(): Promise<void> {
 }
 
 // Self-exec guard: run main() only when invoked directly (not when imported by tests or modules).
-const runningEntry = process.argv[1]?.replace(/\\/g, '/');
-if (!process.env['VITEST'] && runningEntry?.includes('pr-report-core')) {
+// When running via tsx, process.argv[1] is the tsx binary — the script path is argv[2].
+const entryArg = (process.argv[1] ?? '').replace(/\\/g, '/');
+const scriptArg = (process.argv[2] ?? '').replace(/\\/g, '/');
+const isDirectExecution = entryArg.includes('pr-report-core') || scriptArg.includes('pr-report-core');
+if (!process.env['VITEST'] && isDirectExecution) {
     main().catch((err) => {
         rootLogger.error(`pr-report failed: ${String(err)}`);
         process.exit(1);
