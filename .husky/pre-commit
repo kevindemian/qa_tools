@@ -6,6 +6,12 @@ rm -f "$(git rev-parse --show-toplevel)/.git/COMMIT_EDITMSG"
 
 echo "=== Pre-commit checks ==="
 
+# Dependency update check (informational)
+if [ -f scripts/check-updates.sh ]; then
+    echo "--- Dependency updates ---"
+    bash scripts/check-updates.sh
+fi
+
 # Validation hook: self-test + staged diff check
 VALIDATION_HOOK="$HOME/.config/opencode/validation_hook.ts"
 if [ -f "$VALIDATION_HOOK" ]; then
