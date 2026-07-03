@@ -5,6 +5,8 @@ on:
         branches: [main]
     pull_request:
         branches: [main]
+    schedule:
+        - cron: 0 6 * * 1
 
 concurrency:
     group: ${{ github.workflow }}-${{ github.ref }}
@@ -16,7 +18,53 @@ permissions:
     pull-requests: write
 
 jobs:
+    quality:
+        name: Quality
+        if: github.event_name != 'schedule'
+        runs-on: ubuntu-latest
+        steps:
+            - uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683
+            - uses: actions/setup-node@39370e3970a6d050c480ffad4ff0ed4d3fdee5af
+              with:
+                  node-version-file: .node-version
+                  cache: npm
+            - run: npm ci
+            - run: npm run typecheck
+            - name: Security vigilant scan
+              run: |
+                  VIGILANT="npx tsx scripts/rule-vigilant.ts"
+                  FAIL=0
+                  for f in eslint.config.mjs .dependency-cruiser.js .gitleaks.toml AGENTS.md scripts/quality-check.ts; do
+                    if [ -f "$f" ]; then
+                      COUNT=$($VIGILANT --file "$f" --json | npx tsx -e "import { readFileSync } from 'fs'; const d = JSON.parse(readFileSync(0,'utf-8')); process.stdout.write(String(d.length));")
+                      echo "  $f: $COUNT warning(s)"
+                      [ "$COUNT" -gt 0 ] && FAIL=1
+                    fi
+                  done
+                  [ "$FAIL" -eq 0 ] || exit 1
+            - run: npm run lint
+            - run: npm run unused-exports
+            - run: npm run depcruise
+            - run: npm run type-coverage
+            - run: npm run gitleaks
+            - run: npm run osv-scan
+            - name: Snyk test
+              if: env.SNYK_TOKEN != ''
+              run: npm run snyk-test
+            - name: Validation hook (committed copy exists)
+              run: test -f .config/validation_hook.ts && echo "validation_hook.ts committed copy present"
+            - name: Validation hook (if installed)
+              run: |
+                  HOOK="$HOME/.config/opencode/validation_hook.ts"
+                  if [ -f "$HOOK" ]; then
+                    npx tsx "$HOOK" --test
+                  else
+                    echo "validation_hook.ts not found — skipping (only available on dev machines)"
+                  fi
+
     test:
+        name: Test (Node ${{ matrix.node-version }})
+        if: github.event_name != 'schedule'
         runs-on: ubuntu-latest
         strategy:
             matrix:
@@ -28,19 +76,6 @@ jobs:
                   node-version: ${{ matrix.node-version }}
                   cache: npm
             - run: npm ci
-            - run: npx tsc --noEmit
-            - run: npm run lint
-            - run: npm run unused-exports
-            - name: Validation hook (committed copy exists)
-              run: test -f .config/validation_hook.ts && echo "✅ validation_hook.ts committed copy present"
-            - name: Validation hook (if installed)
-              run: |
-                  HOOK="$HOME/.config/opencode/validation_hook.ts"
-                  if [ -f "$HOOK" ]; then
-                    npx tsx "$HOOK" --test
-                  else
-                    echo "⚠️ validation_hook.ts not found — skipping (only available on dev machines)"
-                  fi
             - run: npm audit --audit-level=high
             - name: Check outdated dependencies (warning only)
               run: npm outdated --json || true
@@ -50,11 +85,10 @@ jobs:
             - name: Tests without coverage (Node 24+)
               if: matrix.node-version != 22
               run: npx vitest run --testTimeout=120000
-            - name: E2E tests (separate CTRF output to avoid overwriting main suite report)
+            - name: E2E tests
               run: npx vitest run git_triggers/github-e2e.test.ts
               env:
                   CTRF_OUTPUT_FILE: ctrf-report-e2e.json
-
             - name: Upload CTRF report for post-processing
               if: always() && matrix.node-version == 22
               uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02
@@ -64,8 +98,34 @@ jobs:
                   if-no-files-found: warn
 
     post-process:
-        if: always()
+        if: always() && github.event_name != 'schedule'
         needs: test
         uses: ./.github/workflows/qa-post-process.yml
         with:
             project-name: qa_tools
+
+    codeql:
+        name: CodeQL
+        runs-on: ubuntu-latest
+        permissions:
+            security-events: write
+            packages: read
+            actions: read
+            contents: read
+        strategy:
+            fail-fast: false
+            matrix:
+                language: [javascript-typescript]
+        steps:
+            - uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683
+            - name: Initialize CodeQL
+              uses: github/codeql-action/init@48ab28a6f5dbc2a99bf1e0131198dd8f1df78169
+              with:
+                  languages: ${{ matrix.language }}
+                  queries: security-and-quality
+            - name: Autobuild
+              uses: github/codeql-action/autobuild@48ab28a6f5dbc2a99bf1e0131198dd8f1df78169
+            - name: Perform CodeQL Analysis
+              uses: github/codeql-action/analyze@48ab28a6f5dbc2a99bf1e0131198dd8f1df78169
+              with:
+                  category: /language:${{ matrix.language }}

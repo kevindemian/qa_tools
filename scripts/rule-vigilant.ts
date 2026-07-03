@@ -12,11 +12,20 @@ interface Warning {
     message: string;
 }
 
+function isMarkdownSkip(line: string, isMarkdown: boolean, inCodeFence: boolean): boolean {
+    if (!isMarkdown) return false;
+    if (inCodeFence) return true;
+    return /^\s*[-*]\s/.test(line);
+}
+
 function scanFile(filePath: string): Warning[] {
     if (!existsSync(path.resolve(filePath))) return [];
     const warnings: Warning[] = [];
     const content = readFileSync(path.resolve(filePath), 'utf-8');
     const lines = content.split('\n');
+
+    const isMarkdown = filePath.endsWith('.md');
+    let inCodeFence = false;
 
     const scanners: Array<{ rule: string; test: (line: string, _idx: number) => string | null }> = [
         {
@@ -83,6 +92,13 @@ function scanFile(filePath: string): Warning[] {
 
     for (let i = 0; i < lines.length; i++) {
         const line = (safeGet(lines, i) ?? '') as string;
+
+        if (isMarkdown && /^```/.test(line.trim())) {
+            inCodeFence = !inCodeFence;
+            continue;
+        }
+        if (isMarkdownSkip(line, isMarkdown, inCodeFence)) continue;
+
         for (const scanner of scanners) {
             const msg = scanner.test(line, i);
             if (msg) {
