@@ -46,6 +46,10 @@ jobs:
             - run: npm run unused-exports
             - run: npm run depcruise
             - run: npm run type-coverage
+            - name: Install gitleaks
+              run: |
+                  GITLEAKS_VERSION="8.24.3"
+                  curl -sSL "https://github.com/gitleaks/gitleaks/releases/download/v${GITLEAKS_VERSION}/gitleaks_${GITLEAKS_VERSION}_linux_x64.tar.gz" | sudo tar -xz -C /usr/local/bin gitleaks
             - run: npm run gitleaks
             - run: npm run osv-scan
             - name: Snyk test
