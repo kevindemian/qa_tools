@@ -3010,3 +3010,141 @@ Das 7 oportunidades, **3 são aplicáveis ao GitLab** com esforço similar ao Gi
 - [ ] Adicionar `madge --circular` ao CI
 - [ ] Adicionar `snyk monitor` ao CI
 - [ ] Adicionar `sonarqube-scanner` ao CI
+
+---
+
+## 🚀 Sprint CI Data Hub — Repositório Central de Métricas (Jul/2026)
+
+**Data:** 2026-07
+**Origem:** O projeto computa métricas localmente a partir do CTRF + MetricsStore, mas já tem infraestrutura completa para buscar dados reais do GitHub/GitLab APIs. Usar dados do CI é mais preciso, confiável e elimina recálculos. Bug: `runQualityGate()` recalcula health score sem coverage override.
+**Estratégia:** 19 fases — Fase 0 corrige bug imediato, Fases 1-3 completam Sprint C e criam CiDataHub, Fases 4-12 integram nos 21 consumidores, Fases 13-15 criam testes, Fase 16 sanitiza código deprecado, Fases 17-18 verificação e auditoria.
+**Regra absoluta:** zero workarounds, 100% teste para código novo, nenhum débito deixado.
+
+### Fase 0 — Correção imediata do quality gate
+
+| ID    | Item                                                                                                    | Arquivo(s)                       | Status |
+| ----- | ------------------------------------------------------------------------------------------------------- | -------------------------------- | ------ |
+| CDH-0 | 🔧 Bug fix: `runQualityGate()` aceita `coverageOverride?`, `generatePrReport()` passa coverage override | `shared/quality-gate.ts`, `shared/pr-report-core.ts` | ✅ |
+
+### Fase 1 — Completar GC-07 (metrics.ts usando Store)
+
+| ID    | Item                                                                                         | Arquivo(s)         | Status |
+| ----- | -------------------------------------------------------------------------------------------- | ------------------ | ------ |
+| CDH-1 | ♻️ Integrar `metrics.ts` com StoreBackend do Sprint C, corrigir GAP-3 (flush chamado)        | `shared/metrics.ts` | ✅ |
+
+### Fase 2 — Enriquecer tipos
+
+| ID    | Item                                                                                         | Arquivo(s)         | Status |
+| ----- | -------------------------------------------------------------------------------------------- | ------------------ | ------ |
+| CDH-2 | ✨ Adicionar `run_started_at`, `duration`, `started_at`, `finished_at` nos tipos CI/CD       | `shared/types/ci-cd.ts` | ✅ |
+
+### Fase 3 — Criar CI Data Hub
+
+| ID    | Item                                                                                         | Arquivo(s)         | Status |
+| ----- | -------------------------------------------------------------------------------------------- | ------------------ | ------ |
+| CDH-3 | ✨ Criar `shared/ci-data.ts` — repositório central de métricas do CI                         | `shared/ci-data.ts` | ✅ |
+
+### Fase 4 — Integrar no pr-report-core
+
+| ID    | Item                                                                                         | Arquivo(s)         | Status |
+| ----- | -------------------------------------------------------------------------------------------- | ------------------ | ------ |
+| CDH-4 | ♻️ `generatePrReport()` aceita `ciData?: CiDataHub`, fallback para MetricsStore              | `shared/pr-report-core.ts` | ✅ |
+
+### Fase 5 — Atualizar health-score.ts
+
+| ID    | Item                                                                                         | Arquivo(s)         | Status |
+| ----- | -------------------------------------------------------------------------------------------- | ------------------ | ------ |
+| CDH-5 | ♻️ `calculateHealthScore()` aceita `ciData?: CiDataHub`                                      | `shared/health-score.ts` | ✅ |
+
+### Fase 6 — Atualizar quality-gate.ts
+
+| ID    | Item                                                                                         | Arquivo(s)         | Status |
+| ----- | -------------------------------------------------------------------------------------------- | ------------------ | ------ |
+| CDH-6 | ♻️ `runQualityGate()` aceita `ciData?: CiDataHub` + `coverageOverride?`                      | `shared/quality-gate.ts` | ✅ |
+
+### Fase 7 — Atualizar pipeline-cost.ts
+
+| ID    | Item                                                                                         | Arquivo(s)         | Status |
+| ----- | -------------------------------------------------------------------------------------------- | ------------------ | ------ |
+| CDH-7 | ♻️ `calculatePipelineCost()` aceita `ciData?: CiDataHub`                                     | `shared/pipeline-cost.ts` | ✅ |
+
+### Fase 8 — Atualizar traceability-matrix.ts
+
+| ID    | Item                                                                                         | Arquivo(s)         | Status |
+| ----- | -------------------------------------------------------------------------------------------- | ------------------ | ------ |
+| CDH-8 | ♻️ `buildTraceabilityMatrix()` aceita `ciData?: CiDataHub`                                   | `shared/traceability-matrix.ts` | ✅ |
+
+### Fase 9 — Atualizar 13 dashboards do Grupo 2
+
+| ID    | Item                                                                                         | Arquivo(s)         | Status |
+| ----- | -------------------------------------------------------------------------------------------- | ------------------ | ------ |
+| CDH-9 | ♻️ Todos os 13 dashboards leem de CiDataHub quando disponível                                | `shared/flakiness-dashboard.ts`, `shared/defect-trend.ts`, `shared/defect-seasonality.ts`, `shared/silent-regression.ts`, `shared/cross-squad-benchmark.ts`, `shared/suite-optimization.ts`, `shared/developer-profile.ts`, `shared/backlog-health.ts`, `shared/impact-alert.ts` | ✅ |
+
+### Fase 10 — Atualizar test impact (Grupo 3)
+
+| ID    | Item                                                                                         | Arquivo(s)         | Status |
+| ----- | -------------------------------------------------------------------------------------------- | ------------------ | ------ |
+| CDH-10 | ♻️ `calculateQuarantine()` e `compareRuns()` aceitam `ciData?: CiDataHub`                    | `shared/quarantine.ts`, `shared/run-comparison.ts` | ✅ |
+
+### Fase 11 — Integrar git-artifact-downloader.ts
+
+| ID    | Item                                                                                         | Arquivo(s)         | Status |
+| ----- | -------------------------------------------------------------------------------------------- | ------------------ | ------ |
+| CDH-11 | ♻️ Torna-se parte da cadeia de fetch do CiDataHub                                            | `shared/git-artifact-downloader.ts` | ✅ |
+
+### Fase 12 — Atualizar report-sections.ts
+
+| ID    | Item                                                                                         | Arquivo(s)         | Status |
+| ----- | -------------------------------------------------------------------------------------------- | ------------------ | ------ |
+| CDH-12 | ♻️ `buildHealthSection()`, `buildTimeline()`, `buildFlakySection()` recebem CiDataHub         | `shared/report-sections.ts` | ✅ |
+
+### Fase 13 — Testes unitários do CiDataHub
+
+| ID    | Item                                                                                         | Arquivo(s)         | Status |
+| ----- | -------------------------------------------------------------------------------------------- | ------------------ | ------ |
+| CDH-13 | 🧪 13 cenários: factory, métricas derivadas, edge cases                                     | `shared/__tests__/ci-data.test.ts` | ✅ |
+
+### Fase 14 — Testes de integração do CiDataHub
+
+| ID    | Item                                                                                         | Arquivo(s)         | Status |
+| ----- | -------------------------------------------------------------------------------------------- | ------------------ | ------ |
+| CDH-14 | 🧪 10 cenários: API real, fallback, fluxo completo hub → consumers                          | `shared/__tests__/integration/ci-data.integration.test.ts` | ✅ |
+
+### Fase 15 — Testes de integração dos consumidores
+
+| ID    | Item                                                                                         | Arquivo(s)         | Status |
+| ----- | -------------------------------------------------------------------------------------------- | ------------------ | ------ |
+| CDH-15 | 🧪 Atualizar testes existentes para incluir cenários com CiDataHub                          | `shared/__tests__/integration/health-score.integration.test.ts`, `shared/__tests__/integration/quality-gate.integration.test.ts` | ✅ |
+
+### Fase 16 — Sanitização de estruturas deprecadas
+
+| ID    | Item                                                                                         | Arquivo(s)         | Status |
+| ----- | -------------------------------------------------------------------------------------------- | ------------------ | ------ |
+| CDH-16 | ♻️ Marcar estruturas com `@deprecated` quando CI disponível, manter como fallback              | múltiplos | ✅ |
+
+### Fase 17 — Verificação e Validação
+
+| ID    | Item                                                                                         | Critério           | Status |
+| ----- | -------------------------------------------------------------------------------------------- | ------------------ | ------ |
+| CDH-17 | 🔍 tsc + vitest + lint + unused-exports + depcruise + validação de dados e fallback          | 0 erros, 100% pass | ✅ |
+
+### Fase 18 — Auditoria pós-implementação
+
+| ID    | Item                                                                                         | Critério           | Status |
+| ----- | -------------------------------------------------------------------------------------------- | ------------------ | ------ |
+| CDH-18 | 🔍 Auditoria completa: integridade, contrato, cobertura, regressão                          | 21/21 consumers integrados, 100% coverage | ✅ |
+
+### Métricas Alvo
+
+| Métrica                              | Alvo                   |
+| ------------------------------------ | ---------------------- |
+| `tsc --noEmit`                       | **0 erros**            |
+| `vitest run`                         | **100% pass**          |
+| `npm run lint`                       | **0 violações**        |
+| `npm run unused-exports`             | **0 exports não utilizados** |
+| `npx depcruise`                      | **0 violações**        |
+| Health score no PR comment = check run | **idêntico**         |
+| Quality gate usa coverage override   | **sim**                |
+| 21 consumers integrados              | **21/21**              |
+| Cobertura CiDataHub                  | **≥90% statements**    |
+| Testes de integração                 | **10+ cenários**       |

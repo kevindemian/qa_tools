@@ -1,15 +1,16 @@
 {
-  "lastLabels": "e2e,automated",
+  "lastLabels": "e2e",
   "lastProject": "ECSPOL",
-  "lastCsvPath": "/home/kdemian/PROJETOS/qa_tools/qa_tools/e2e/fixtures/testes-simples.csv",
+  "lastCsvPath": "/tmp/qa-e2e-err-Plax7A/c7.csv",
   "_llmConfigSuggestions": {
     "pending": false,
     "qualitySignals": [],
-    "timestamp": "2026-07-03T13:03:20.803Z"
+    "timestamp": "2026-07-03T16:24:25.056Z"
   },
+  "_firstRunDone": true,
   "_checkpoint": {
     "project": "ECSPOL",
-    "ts": "2026-07-03T12:59:40.720Z",
+    "ts": "2026-07-03T16:24:22.623Z",
     "testCount": 1,
     "done": [
       {
@@ -17,6 +18,6 @@
         "title": "TC01"
       }
     ],
-    "csvPath": "/tmp/qa-e2e-err-vsoRiX/c7.csv"
+    "csvPath": "/tmp/qa-e2e-err-Plax7A/c7.csv"
   }
 }

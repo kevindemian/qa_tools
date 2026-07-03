@@ -64,6 +64,8 @@ export interface DiffComparison {
     flaky: FlatTest[];
 }
 
+import type { CiDataHub } from './ci-data.js';
+
 export interface PrReportCoreOptions {
     tests: FlatTest[];
     stats: PrReportStats;
@@ -76,6 +78,8 @@ export interface PrReportCoreOptions {
     diffComparison?: DiffComparison;
     /** CI environment context — used to render CI Context section in PR comment. */
     ciEnv?: { isCI: boolean; repo: string; runId: string; refName: string; serverUrl: string };
+    /** CI Data Hub — centralizado. Quando disponível, usa dados do CI em vez de MetricsStore local. */
+    ciData?: CiDataHub;
 }
 
 export interface PrReportResult {
@@ -337,9 +341,11 @@ function resolveCiUrls(): { workflowUrl?: string; artifactUrl?: string } {
 async function handleQualityGate(
     healthScore: ReturnType<typeof calculateHealthScore>,
     artifactUrl?: string,
+    coverageOverride?: number,
+    ciData?: CiDataHub,
 ): Promise<string | undefined> {
     try {
-        const qgResult = runQualityGate();
+        const qgResult = runQualityGate({ coverageOverride, ciData });
         const gradeStr = healthScore.grade.replace(/_/g, ' ').toUpperCase();
         const checkSummary = buildQGCHeckSummary(qgResult, gradeStr, artifactUrl);
 
@@ -452,6 +458,9 @@ export async function generatePrReport(options: PrReportCoreOptions): Promise<Pr
     const healthConfig = coverageResult ? { coverageOverride: coverageResult.coveragePct } : {};
     const healthScore = calculateHealthScore(store, healthConfig);
 
+    // Se CiDataHub disponível, passar para quality gate e后续 consumers
+    const ciData = options.ciData;
+
     const { workflowUrl, artifactUrl } = resolveCiUrls();
 
     const sections: string[] = [];
@@ -466,7 +475,7 @@ export async function generatePrReport(options: PrReportCoreOptions): Promise<Pr
     }
 
     if (!options.skipQuality) {
-        const qgSection = await handleQualityGate(healthScore, artifactUrl);
+        const qgSection = await handleQualityGate(healthScore, artifactUrl, coverageResult?.coveragePct, ciData);
         if (qgSection) sections.push(qgSection);
     }
 
