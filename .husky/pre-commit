@@ -15,7 +15,7 @@ if [ -f "$VALIDATION_HOOK" ]; then
     echo "--- Validation hook (diff check) ---"
     STAGED_DIFF=$(git diff --cached -- . ':!.config/validation_hook.ts' ':!.husky/' ':!BACKLOG.md')
     if [ -n "$STAGED_DIFF" ]; then
-        echo "$STAGED_DIFF" | grep '^[+]' | sed 's/^.//' | npx tsx "$VALIDATION_HOOK" --check --no-cache
+        printf '%s\n' "$STAGED_DIFF" | grep '^[+]' | sed 's/^.//' | npx tsx "$VALIDATION_HOOK" --check --no-cache
     else
         echo "  (no staged changes to validate)"
     fi

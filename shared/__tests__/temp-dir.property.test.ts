@@ -24,10 +24,10 @@ vi.mock('../config.js', () => ({
     },
 }));
 
-/** Valid filenames — no path separators, no null bytes, no empty */
+/** Valid filenames — no path separators, no null bytes, no empty, no dots or dot-paths */
 const FilenameArb = fc
     .string({ minLength: 1, maxLength: 50 })
-    .filter((s) => !s.includes('/') && !s.includes('\0') && !s.includes('\\'));
+    .filter((s) => !s.includes('/') && !s.includes('\0') && !s.includes('\\') && s !== '.' && s !== '..');
 const CategoryArb = fc.constantFrom('previews', 'vars', 'cache');
 const ContentArb = fc.string({ minLength: 0, maxLength: 200 });
 
