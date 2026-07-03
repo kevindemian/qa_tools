@@ -189,7 +189,7 @@ check "16" "Oracle Problem — expected adapted to output (git log)" \
 
 # ── 11. Blind snapshot update ───────────────────────────────────────────────────
 check "17" "Snapshot update sem review" \
-    "grep -rnP ${EXCLUDE_PATHS} 'jest\\s+(--updateSnapshot|-u)(?![^;]*after\\s+(review|inspect|check|verify))' ${ALL_SOURCE} ${ALL_TESTS} 2>/dev/null || true"
+    "grep -rnP ${EXCLUDE_PATHS} 'vitest\\s+(--update|-u)(?![^;]*after\\s+(review|inspect|check|verify))' ${ALL_SOURCE} ${ALL_TESTS} 2>/dev/null || true"
 
 # ── 12. Snapshot update as fix (git history) ────────────────────────────────────
 check "18" "Atualização de snapshot como fix (git log)" \

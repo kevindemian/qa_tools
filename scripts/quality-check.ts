@@ -251,7 +251,7 @@ export function checkThrowDoubleQuote(): CheckResult {
 export function checkViFnUnknown(): CheckResult {
     return checkNoPattern(
         'vi.fn<(...args: ...) => unknown> in test files',
-        /jest\.fn<\s*unknown\s*[,>]/,
+        /vi\.fn<\s*unknown\s*[,>]/,
         allTsFiles().filter((f) => f.endsWith('.test.ts') && f !== 'scripts/quality-check.test.ts'),
     );
 }
@@ -259,7 +259,7 @@ export function checkViFnUnknown(): CheckResult {
 export function checkViFnUnknownArray(): CheckResult {
     return checkNoPattern(
         'vi.fn<(...args: unknown[]) => ...> in test files',
-        /jest\.fn<[^)]*,\s*unknown\s*\[/,
+        /vi\.fn<[^)]*,\s*unknown\s*\[/,
         allTsFiles().filter((f) => f.endsWith('.test.ts') && f !== 'scripts/quality-check.test.ts'),
     );
 }

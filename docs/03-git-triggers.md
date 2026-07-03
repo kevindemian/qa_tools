@@ -367,7 +367,7 @@ npx tsx git_triggers/main.ts --batch --project qa_ibabs --branch release/v2
 Quando `--run-impacted-tests` é passado, o batch mode executa análise de impacto de testes após a coleta de resultados:
 
 1. Obtém diff de arquivos desde `HEAD~1` via `git diff --name-only`
-2. Executa análise de impacto em 3 tiers (jest `--findRelatedTests`, keyword matching, mapping explícito)
+2. Executa análise de impacto em 3 tiers (vitest `--findRelatedTests`, keyword matching, mapping explícito)
 3. Gera `reports/test-selection.json` com a lista de testes impactados
 
 **`test-selection.json`:**

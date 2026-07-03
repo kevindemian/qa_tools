@@ -686,10 +686,10 @@ Analisa o impacto potencial de alterações em código-fonte, identificando quai
 1. Solicita um range git (default: `HEAD~1`)
 2. Executa `git diff --name-only <range>` para listar arquivos alterados
 3. Analisa impacto em 3 tiers:
-    - **Tier 1 (jest):** `jest --findRelatedTests` descobre testes diretamente relacionados
+    - **Tier 1 (vitest):** `vitest --findRelatedTests` descobre testes diretamente relacionados
     - **Tier 2 (keyword):** Matching por segmento do path do arquivo contra títulos de teste
     - **Tier 3 (mapping):** Mapeamento explícito via `config/test-mapping.json` (se existir)
-4. Deduplica resultados (prioridade: mapping > jest > keyword)
+4. Deduplica resultados (prioridade: mapping > vitest > keyword)
 5. Exibe tabela com testes impactados, modo de match e nível de confiança
 6. Pré-carrega test keys para criação rápida de Test Execution (opção 13)
 7. Alerta se houver testes flaky entre os impactados
@@ -698,7 +698,7 @@ Analisa o impacto potencial de alterações em código-fonte, identificando quai
 
 | Confiança | Critério                                   |
 | --------- | ------------------------------------------ |
-| `high`    | Mapping explícito ou jest encontrou testes |
+| `high`    | Mapping explícito ou vitest encontrou testes |
 | `medium`  | Apenas keyword matching                    |
 | `low`     | Nenhum match encontrado                    |
 

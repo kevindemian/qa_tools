@@ -1,4 +1,4 @@
-/** Three-tier test impact analysis — jest, keyword, and explicit mapping. */
+/** Three-tier test impact analysis — vitest, keyword, and explicit mapping. */
 import { execFileSync } from 'child_process';
 import fs from 'fs';
 import path from 'path';
@@ -8,7 +8,7 @@ import { parseFileTestMappings } from './types/bugs.js';
 import type { TestImpactResult, ImpactedTest, TestSelectionJson } from './types.js';
 
 const GIT_BIN = '/usr/bin/git';
-const JEST_BIN = path.resolve('node_modules', '.bin', 'jest');
+const VITEST_BIN = path.resolve('node_modules', '.bin', 'vitest');
 
 // ---- helpers ----
 
@@ -29,9 +29,9 @@ function loadPackageJson(): { devDependencies?: Record<string, string> | undefin
     }
 }
 
-function hasJest(pkg: { devDependencies?: Record<string, string> | undefined } | null): boolean {
+function hasVitest(pkg: { devDependencies?: Record<string, string> | undefined } | null): boolean {
     if (!pkg?.devDependencies) return false;
-    return pkg.devDependencies['jest'] !== undefined;
+    return pkg.devDependencies['vitest'] !== undefined;
 }
 
 function parseDiffLines(diff: string): string[] {
@@ -41,24 +41,27 @@ function parseDiffLines(diff: string): string[] {
         .filter(Boolean);
 }
 
-interface JestResult {
+interface VitestResult {
     testFiles: string[];
     testTitles: string[];
 }
 
-function runJestFindRelated(changedFiles: string[]): JestResult | null {
+function listVitestRelated(): VitestResult | null {
     try {
-        const output = execFileSync(JEST_BIN, ['--listTests', '--findRelatedTests', ...changedFiles], {
+        const output = execFileSync(VITEST_BIN, ['list', '--changed', '--filesOnly'], {
             encoding: 'utf8',
-        }).trim();
-        const testFiles = output.split('\n').filter(Boolean);
+        });
+        const testFiles = output
+            .split('\n')
+            .map((s) => s.trim())
+            .filter(Boolean);
         const testTitles = testFiles.map((f) => {
             const base = path.basename(f);
             return base.replace(/\.(test|spec)\.(ts|js|tsx|jsx)$/, '').replace(/\.(ts|js)$/, '');
         });
         return { testFiles, testTitles };
     } catch (err: unknown) {
-        rootLogger.warn('jest --findRelatedTests failed', err);
+        rootLogger.warn('vitest list --changed failed', err);
         return null;
     }
 }
@@ -134,7 +137,7 @@ function getGitDiff(): string {
 
 function dedupImpactedTests(
     mappingTests: ImpactedTest[],
-    jestResult: JestResult | null,
+    vitestResult: VitestResult | null,
     keywordTests: ImpactedTest[],
 ): ImpactedTest[] {
     const seen = new Set<string>();
@@ -146,16 +149,16 @@ function dedupImpactedTests(
         result.push(test);
     };
     for (const t of mappingTests) add(t);
-    if (jestResult) {
-        const filesMap = new Map(jestResult.testFiles.map((f, idx) => [idx, f]));
-        const titlesMap = new Map(jestResult.testTitles.map((t, idx) => [idx, t]));
+    if (vitestResult) {
+        const filesMap = new Map(vitestResult.testFiles.map((f, idx) => [idx, f]));
+        const titlesMap = new Map(vitestResult.testTitles.map((t, idx) => [idx, t]));
         for (const [i, file] of filesMap.entries()) {
             if (!file) continue;
             const title = titlesMap.get(i) ?? file;
             add({
                 title,
-                reason: `Jest --findRelatedTests: ${file}`,
-                matchMode: 'jest_find_related',
+                reason: `Vitest list --changed: ${file}`,
+                matchMode: 'vitest_find_related',
                 filePattern: file,
             });
         }
@@ -166,10 +169,10 @@ function dedupImpactedTests(
 
 function computeConfidence(
     mappingTests: ImpactedTest[],
-    jestResult: JestResult | null,
+    vitestResult: VitestResult | null,
     keywordTests: ImpactedTest[],
 ): 'high' | 'medium' | 'low' {
-    if (mappingTests.length > 0 || (jestResult && jestResult.testFiles.length > 0)) {
+    if (mappingTests.length > 0 || (vitestResult && vitestResult.testFiles.length > 0)) {
         return 'high';
     }
     if (keywordTests.length > 0) {
@@ -184,7 +187,7 @@ export function analyzeTestImpact(
     diff?: string,
     options?: {
         mappingPath?: string;
-        jestEnabled?: boolean;
+        vitestEnabled?: boolean;
         testTitles?: string[];
     },
 ): TestImpactResult {
@@ -201,25 +204,25 @@ export function analyzeTestImpact(
     }
 
     const pkg = loadPackageJson();
-    const jestAvailable = options?.jestEnabled ?? hasJest(pkg);
+    const vitestAvailable = options?.vitestEnabled ?? hasVitest(pkg);
 
-    let jestResult: JestResult | null = null;
-    if (jestAvailable && changedFiles.length > 0) {
-        jestResult = runJestFindRelated(changedFiles);
+    let vitestResult: VitestResult | null = null;
+    // Tier 1 only when using default git diff (vitest list --changed detects changes from git)
+    if (vitestAvailable && changedFiles.length > 0 && diff === undefined) {
+        vitestResult = listVitestRelated();
     }
 
-    const allTitles = [...(options?.testTitles ?? []), ...(jestResult?.testTitles ?? [])];
+    const allTitles = [...(options?.testTitles ?? []), ...(vitestResult?.testTitles ?? [])];
 
     const keywordTests = keywordMatch(changedFiles, allTitles);
 
     const mappingTests = options?.mappingPath ? explicitMapping(changedFiles, options.mappingPath) : [];
 
-    const impactedTests = dedupImpactedTests(mappingTests, jestResult, keywordTests);
+    const impactedTests = dedupImpactedTests(mappingTests, vitestResult, keywordTests);
 
-    const confidence = computeConfidence(mappingTests, jestResult, keywordTests);
+    const confidence = computeConfidence(mappingTests, vitestResult, keywordTests);
 
-    const suggestedCommand =
-        jestAvailable && changedFiles.length > 0 ? `npx jest --findRelatedTests ${changedFiles.join(' ')}` : undefined;
+    const suggestedCommand = vitestAvailable && changedFiles.length > 0 ? 'npx vitest related --run' : undefined;
 
     return {
         changedFiles,

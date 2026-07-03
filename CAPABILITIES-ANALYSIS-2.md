@@ -196,12 +196,12 @@ O produto não executa testes, mas produz inteligência que potencializa outras 
 
 ### Para Pipelines CI
 
-| Informação produzida                                | Consumidor                       | Formato                               |
-| --------------------------------------------------- | -------------------------------- | ------------------------------------- |
-| `test-selection.json` — testes a rodar dado um diff | Pipeline (jest --selectProjects) | JSON (já existe)                      |
-| `qa-quarantine.json` — testes a excluir da execução | Pipeline (filter out)            | JSON (já existe)                      |
-| Coverage gap check — "pipeline pode continuar?"     | Pipeline gate                    | exit code 0/1 (já existe)             |
-| Health score — "qualidade está aceitável?"          | Pipeline gate                    | exit code 0/1 (existe, não integrado) |
+| Informação produzida                                | Consumidor                         | Formato                               |
+| --------------------------------------------------- | ---------------------------------- | ------------------------------------- |
+| `test-selection.json` — testes a rodar dado um diff | Pipeline (vitest --selectProjects) | JSON (já existe)                      |
+| `qa-quarantine.json` — testes a excluir da execução | Pipeline (filter out)              | JSON (já existe)                      |
+| Coverage gap check — "pipeline pode continuar?"     | Pipeline gate                      | exit code 0/1 (já existe)             |
+| Health score — "qualidade está aceitável?"          | Pipeline gate                      | exit code 0/1 (existe, não integrado) |
 
 ### Para LLMs (chain)
 

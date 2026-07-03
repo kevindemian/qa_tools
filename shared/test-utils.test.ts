@@ -46,7 +46,7 @@ describe('MakeMockCommandContext', () => {
         expect(ctx.base_url).toBe('https://jira.test.com');
     });
 
-    it('creates fresh jest mock functions each call', () => {
+    it('creates fresh vi mock functions each call', () => {
         const a = makeMockCommandContext();
         const b = makeMockCommandContext();
 

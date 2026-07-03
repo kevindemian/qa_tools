@@ -1,6 +1,6 @@
 import os from 'os';
 import path from 'path';
-// 1. Define mock factory values FIRST (before jest.mock)
+// 1. Define mock factory values FIRST (before vi.mock)
 const mockPrompt = vi.hoisted(() => ({
     success: vi.fn<(...args: [string]) => void>(),
     error: vi.fn<(...args: [string]) => void>(),
@@ -26,7 +26,7 @@ const mockPrompt = vi.hoisted(() => ({
     askFilePath: vi.fn<(...args: [string]) => Promise<string>>().mockResolvedValue('/fake/path.json'),
 }));
 
-// 2. jest.mock BEFORE any require that uses those modules
+// 2. vi.mock BEFORE any require that uses those modules
 vi.mock('../shared/prompt', () => mockPrompt);
 
 const mockFsMod = vi.hoisted(() => ({

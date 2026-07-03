@@ -3,12 +3,12 @@ import type { SetupContext } from '../context.js';
 
 const MOCK_CTX_BASIC: SetupContext = {
     projectName: 'test-proj',
-    framework: 'jest',
+    framework: 'vitest',
     ctrfReportPath: 'reports/ctrf-report.json',
     ctrfSource: 'cli-flag',
     nodeVersion: '20',
     installCmd: 'npm ci',
-    testCmd: 'npx jest --reporter ctrf',
+    testCmd: 'npx vitest run --reporter ctrf',
     gitProvider: 'gitlab',
     repoOwner: 'myorg',
     repoName: 'test-proj',
@@ -52,7 +52,7 @@ describe('GenerateGitLabCI', () => {
         const yaml = generateGitLabCI(MOCK_CTX_BASIC);
 
         expect(yaml).toContain('npm ci');
-        expect(yaml).toContain('npx jest --reporter ctrf');
+        expect(yaml).toContain('npx vitest run --reporter ctrf');
     });
 
     it('includes artifact paths', () => {
