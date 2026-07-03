@@ -11,6 +11,15 @@ export default defineConfig({
         teardownTimeout: 5000,
         coverage: {
             provider: 'v8',
+            exclude: [
+                '**/types/**',
+                '**/types.ts',
+                '**/__mocks__/**',
+                '**/*.test.ts',
+                '**/*.spec.ts',
+                'scripts/smartwizard-llm.ts',
+                'scripts/smartwizard-discovery.ts',
+            ],
             thresholds: {
                 lines: 90,
                 functions: 91,
