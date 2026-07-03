@@ -5,6 +5,8 @@ import { writeProjectsConfig, writeDotEnvExample, writePrePushHook } from './con
 import { generateCIWorkflow } from './templates/github-ci.js';
 import { generateGitLabCI } from './templates/gitlab-ci.js';
 import { generatePrePushHook } from './templates/pre-push-hook.js';
+import { generateQaPostProcessWorkflow } from './templates/qa-post-process-workflow.js';
+import { injectPostProcessJob } from '../shared/ci-injector.js';
 
 vi.mock('../shared/prompt', () => ({
     ask: vi.fn(),
@@ -35,6 +37,15 @@ vi.mock('./templates/gitlab-ci', () => ({
 vi.mock('./templates/pre-push-hook', () => ({
     generatePrePushHook: vi.fn(),
 }));
+vi.mock('./templates/qa-post-process-workflow', () => ({
+    generateQaPostProcessWorkflow: vi.fn(() => 'name: QA Post-Process\n'),
+}));
+vi.mock('../shared/ci-injector', () => ({
+    injectPostProcessJob: vi.fn((content: string) => content),
+}));
+vi.mock('../shared/state', () => ({
+    loadTypedState: vi.fn(() => ({ lastProject: '' })),
+}));
 vi.mock('../scripts/smartwizard-llm', () => ({
     main: vi.fn(),
 }));
@@ -48,6 +59,8 @@ const MockWriteHook = vi.mocked(writePrePushHook);
 const MockGenGithub = vi.mocked(generateCIWorkflow);
 const MockGenGitlab = vi.mocked(generateGitLabCI);
 const MockGenHook = vi.mocked(generatePrePushHook);
+const MockGenPostProcess = vi.mocked(generateQaPostProcessWorkflow);
+const MockInjectPostProcess = vi.mocked(injectPostProcessJob);
 const MockAsk = vi.spyOn(prompt, 'ask');
 const MockAskConfirm = vi.spyOn(prompt, 'askConfirm');
 
@@ -265,5 +278,126 @@ describe('Setup main', () => {
             expect.any(String),
             'utf8',
         );
+    });
+});
+
+describe('Setup main — pr-report workflow generation', () => {
+    beforeEach(() => {
+        vi.clearAllMocks();
+        MockAsk.mockReset();
+        MockAskConfirm.mockReset();
+        vi.spyOn(MockFs, 'existsSync').mockReturnValue(false);
+        vi.spyOn(MockFs, 'mkdirSync').mockImplementation(vi.fn());
+        vi.spyOn(MockFs, 'writeFileSync').mockImplementation(vi.fn());
+        vi.spyOn(MockFs, 'chmodSync').mockImplementation(vi.fn());
+        MockDetect.mockReturnValue({
+            framework: 'cypress',
+            testCmd: 'npx cypress run',
+            installCmd: 'npm ci',
+            ctrfReportPath: 'cypress/reports/ctrf-report.json',
+            nodeVersion: '20',
+            ctrfSource: 'cli-flag',
+        });
+        MockWriteProjects.mockReturnValue({
+            filesCreated: ['config/projects.json', 'config/providers.json'],
+            filesSkipped: [],
+        });
+        MockWriteEnv.mockReturnValue({ filesCreated: ['.env.example'], filesSkipped: [] });
+        MockWriteHook.mockReturnValue({ filesCreated: ['.git/hooks/pre-push'], filesSkipped: [] });
+        MockGenGithub.mockReturnValue('name: CI\n');
+        MockGenGitlab.mockReturnValue('stages:\n  - test\n');
+        MockGenHook.mockReturnValue('#!/bin/sh\necho "running"\n');
+        MockGenPostProcess.mockReturnValue('name: QA Post-Process\n');
+        MockInjectPostProcess.mockImplementation((content: string) => content);
+    });
+
+    it('generates qa-post-process.yml when prReport enabled', async () => {
+        expect.hasAssertions();
+
+        MockExtract.mockReturnValue({ owner: 'myorg', repo: 'my-repo' });
+        mockGitHubDetect();
+        mockAskForTests(true);
+
+        await main();
+
+        expect(MockGenPostProcess).toHaveBeenCalledTimes(1);
+        expect(MockFs.writeFileSync).toHaveBeenCalledWith(
+            expect.stringContaining('qa-post-process.yml'),
+            'name: QA Post-Process\n',
+            'utf8',
+        );
+    });
+
+    it('does not generate qa-post-process.yml when prReport disabled', async () => {
+        expect.hasAssertions();
+
+        MockExtract.mockReturnValue({ owner: 'myorg', repo: 'my-repo' });
+        mockGitHubDetect();
+        MockAsk.mockResolvedValueOnce('myapp')
+            .mockResolvedValueOnce('cypress')
+            .mockResolvedValueOnce('npx cypress run')
+            .mockResolvedValueOnce('npm ci')
+            .mockResolvedValueOnce('ctrf-report.json')
+            .mockResolvedValueOnce('20')
+            .mockResolvedValueOnce('github-actions');
+        MockAskConfirm.mockResolvedValueOnce(false) // prReport = false
+            .mockResolvedValueOnce(false)
+            .mockResolvedValueOnce(false)
+            .mockResolvedValueOnce(false)
+            .mockResolvedValueOnce(false)
+            .mockResolvedValueOnce(false);
+
+        await main();
+
+        expect(MockGenPostProcess).not.toHaveBeenCalled();
+    });
+
+    it('injects post-process job into existing ci.yml', async () => {
+        expect.hasAssertions();
+
+        MockExtract.mockReturnValue({ owner: 'myorg', repo: 'my-repo' });
+        mockGitHubDetect();
+        MockAsk.mockResolvedValueOnce('myapp')
+            .mockResolvedValueOnce('cypress')
+            .mockResolvedValueOnce('npx cypress run')
+            .mockResolvedValueOnce('npm ci')
+            .mockResolvedValueOnce('ctrf-report.json')
+            .mockResolvedValueOnce('20')
+            .mockResolvedValueOnce('github-actions');
+        MockAskConfirm.mockResolvedValueOnce(true) // prReport
+            .mockResolvedValueOnce(false)
+            .mockResolvedValueOnce(false)
+            .mockResolvedValueOnce(false)
+            .mockResolvedValueOnce(false)
+            .mockResolvedValueOnce(false);
+        vi.spyOn(MockFs, 'existsSync').mockImplementation((p: string | Buffer | URL) => {
+            return p.toString().includes('ci.yml');
+        });
+        vi.spyOn(MockFs, 'readFileSync').mockReturnValue('name: CI\n\njobs:\n  test:\n');
+
+        await main();
+
+        expect(MockInjectPostProcess).toHaveBeenCalledTimes(1);
+    });
+
+    it('passes correct context to generateQaPostProcessWorkflow', async () => {
+        expect.hasAssertions();
+
+        MockExtract.mockReturnValue({ owner: 'myorg', repo: 'my-repo' });
+        mockGitHubDetect();
+        mockAskForTests(true);
+
+        await main();
+
+        expect(MockGenPostProcess).toHaveBeenCalledTimes(1);
+
+        const ctx = MockGenPostProcess.mock.calls[0]?.[0];
+
+        expect(ctx).toBeDefined();
+        expect(ctx?.projectName).toBe('myapp');
+        expect(ctx?.nodeVersion).toBe('20');
+        expect(ctx?.installCmd).toBe('npm ci');
+        expect(ctx?.gitProvider).toBe('github');
+        expect(ctx?.repoOwner).toBe('myorg');
     });
 });

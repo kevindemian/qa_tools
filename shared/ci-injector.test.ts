@@ -5,9 +5,15 @@
  * - injectPostProcessJob: idempotency, injection correctness, edge cases
  * - generatePostProcessWorkflowYaml: output structure, overrides
  * - extractFirstJobName: extraction accuracy, fallback
+ * - Contract: deployed qa-post-process.yml must match generator output
+ * - Contract: ci-injector and setup wizard generators must produce equivalent YAML
  */
+import fs from 'node:fs';
+import path from 'node:path';
 import { describe, it, expect } from 'vitest';
 import { generatePostProcessWorkflowYaml, extractFirstJobName, injectPostProcessJob } from './ci-injector.js';
+import { generateQaPostProcessWorkflow } from '../setup/templates/qa-post-process-workflow.js';
+import type { SetupContext } from '../setup/context.js';
 /* ── Fixtures ──────────────────────────────────────────────────────────── */
 
 const SIMPLE_CI_YML =
@@ -214,5 +220,116 @@ describe('InjectPostProcessJob', () => {
 
         expect(result).toContain('post-process:');
         expect(result).toContain('needs: [test]');
+    });
+});
+
+/* ── Contract: deployed file = generator output ─────────────────────── */
+
+describe('Contract: deployed qa-post-process.yml matches generator', () => {
+    const ROOT = path.resolve(import.meta.dirname, '..');
+
+    it('deployed file is identical to generatePostProcessWorkflowYaml output', () => {
+        expect.hasAssertions();
+
+        const deployedPath = path.join(ROOT, '.github', 'workflows', 'qa-post-process.yml');
+        const deployed = fs.readFileSync(deployedPath, 'utf8');
+        const generated = generatePostProcessWorkflowYaml({ projectName: 'qa_tools' });
+
+        expect(deployed).toBe(generated);
+    });
+
+    it('deployed file contains shell guard for missing CTRF', () => {
+        expect.hasAssertions();
+
+        const deployedPath = path.join(ROOT, '.github', 'workflows', 'qa-post-process.yml');
+        const deployed = fs.readFileSync(deployedPath, 'utf8');
+
+        expect(deployed).toContain('if [ ! -f "${{ inputs.ctrf-path }}" ]; then');
+        expect(deployed).toContain('::warning::CTRF report not found');
+    });
+
+    it('deployed file does NOT contain manual steps (no drift)', () => {
+        expect.hasAssertions();
+
+        const deployedPath = path.join(ROOT, '.github', 'workflows', 'qa-post-process.yml');
+        const deployed = fs.readFileSync(deployedPath, 'utf8');
+
+        expect(deployed).not.toContain('Verify CTRF');
+        expect(deployed).not.toContain('continue-on-error');
+        expect(deployed).not.toContain('ls -la');
+    });
+
+    it('ci.yml upload artifact name matches qa-post-process.yml download name', () => {
+        expect.hasAssertions();
+
+        const ciPath = path.join(ROOT, '.github', 'workflows', 'ci.yml');
+        const ppPath = path.join(ROOT, '.github', 'workflows', 'qa-post-process.yml');
+        const ciYaml = fs.readFileSync(ciPath, 'utf8');
+        const ppYaml = fs.readFileSync(ppPath, 'utf8');
+
+        expect(ciYaml).toContain('name: ctrf-report');
+        expect(ppYaml).toContain('name: ctrf-report');
+    });
+});
+
+/* ── Contract: two generators produce equivalent YAML ───────────────── */
+
+describe('Contract: ci-injector and setup wizard generators are equivalent', () => {
+    function makeCtx(overrides: Partial<SetupContext> = {}): SetupContext {
+        return {
+            projectName: 'test-project',
+            framework: 'vitest',
+            ctrfReportPath: 'reports/ctrf-report.json',
+            ctrfSource: 'config-file',
+            nodeVersion: '22',
+            installCmd: 'npm ci',
+            testCmd: 'npx vitest run',
+            gitProvider: 'github',
+            repoOwner: 'owner',
+            repoName: 'repo',
+            workflowDir: '.github/workflows',
+            features: {
+                qualityGate: false,
+                flakinessDashboard: false,
+                aiFailureAnalysis: false,
+                prePushHook: false,
+                prReport: true,
+                prReportPublishTarget: 'github-actions',
+            },
+            ...overrides,
+        };
+    }
+
+    it('produce identical output for default options', () => {
+        expect.hasAssertions();
+
+        const fromInjector = generatePostProcessWorkflowYaml({ projectName: 'test-project' });
+        const fromWizard = generateQaPostProcessWorkflow(makeCtx());
+
+        expect(fromInjector).toBe(fromWizard);
+    });
+
+    it('both include shell guard for missing CTRF', () => {
+        expect.hasAssertions();
+
+        const fromInjector = generatePostProcessWorkflowYaml({ projectName: 'p' });
+        const fromWizard = generateQaPostProcessWorkflow(makeCtx({ projectName: 'p' }));
+
+        expect(fromInjector).toContain('if [ ! -f "${{ inputs.ctrf-path }}" ]; then');
+        expect(fromWizard).toContain('if [ ! -f "${{ inputs.ctrf-path }}" ]; then');
+    });
+
+    it('both use @v4 action versions (not pinned SHAs)', () => {
+        expect.hasAssertions();
+
+        const fromInjector = generatePostProcessWorkflowYaml({ projectName: 'p' });
+        const fromWizard = generateQaPostProcessWorkflow(makeCtx({ projectName: 'p' }));
+
+        for (const yaml of [fromInjector, fromWizard]) {
+            expect(yaml).toContain('actions/checkout@v4');
+            expect(yaml).toContain('actions/setup-node@v4');
+            expect(yaml).toContain('actions/download-artifact@v4');
+            expect(yaml).toContain('actions/upload-artifact@v4');
+        }
     });
 });
