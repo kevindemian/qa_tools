@@ -58,3 +58,4 @@ qa-quarantine.json
 .mimocode/
 .qwen/
 *.zip
+.scannerwork/
