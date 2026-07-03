@@ -237,7 +237,7 @@ O batch mode executa o pipeline, faz polling até conclusão, coleta resultados,
 
 ```bash
 npm run typecheck    # tsc --noEmit, zero erros esperado
-npm test             # jest, 100% dos testes
+npm test             # vitest, 100% dos testes
 npm run lint         # eslint --ext .ts
 ```
 

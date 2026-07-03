@@ -1,22 +1,22 @@
 {
-    "lastLabels": "e2e",
-    "lastProject": "ECSPOL",
-    "lastCsvPath": "/tmp/qa-e2e-err-8RcKqL/c7.csv",
-    "_llmConfigSuggestions": {
-        "pending": false,
-        "qualitySignals": [],
-        "timestamp": "2026-07-02T12:54:33.173Z"
-    },
-    "_checkpoint": {
-        "project": "ECSPOL",
-        "ts": "2026-07-02T12:54:31.902Z",
-        "testCount": 1,
-        "done": [
-            {
-                "key": "TEST-1",
-                "title": "TC01"
-            }
-        ],
-        "csvPath": "/tmp/qa-e2e-err-8RcKqL/c7.csv"
-    }
+  "lastLabels": "e2e",
+  "lastProject": "ECSPOL",
+  "lastCsvPath": "/tmp/qa-e2e-err-PcY1ku/c7.csv",
+  "_llmConfigSuggestions": {
+    "pending": false,
+    "qualitySignals": [],
+    "timestamp": "2026-07-02T23:02:19.772Z"
+  },
+  "_checkpoint": {
+    "project": "ECSPOL",
+    "ts": "2026-07-02T23:02:18.939Z",
+    "testCount": 1,
+    "done": [
+      {
+        "key": "TEST-1",
+        "title": "TC01"
+      }
+    ],
+    "csvPath": "/tmp/qa-e2e-err-PcY1ku/c7.csv"
+  }
 }

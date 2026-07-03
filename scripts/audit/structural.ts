@@ -71,12 +71,12 @@ class ConfigGetterPattern implements Pattern {
     }
 }
 
-class JestMockBoilerplate implements Pattern {
-    name = 'jest.mock boilerplate';
+class ViMockBoilerplate implements Pattern {
+    name = 'vi.mock boilerplate';
     severity = 'high' as const;
     detect(): Finding {
-        const promptFiles = grepFiles('jest\\.mock.*prompt', "-g '*.test.ts'");
-        const loggerFiles = grepFiles('jest\\.mock.*logger', "-g '*.test.ts'");
+        const promptFiles = grepFiles('vi\\.mock.*prompt', "-g '*.test.ts'");
+        const loggerFiles = grepFiles('vi\\.mock.*logger', "-g '*.test.ts'");
         return {
             pattern: this.name,
             severity: promptFiles.length > 5 || loggerFiles.length > 5 ? 'high' : 'medium',
@@ -173,7 +173,7 @@ class GitProviderTwins implements Pattern {
 
 const patterns: Pattern[] = [
     new ConfigGetterPattern(),
-    new JestMockBoilerplate(),
+    new ViMockBoilerplate(),
     new TryCatchPushHistory(),
     new HtmlWrapperBoilerplate(),
     new DarkModeInconsistency(),

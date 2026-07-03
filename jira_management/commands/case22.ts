@@ -38,7 +38,7 @@ function _showImpactedTests(result: ReturnType<typeof analyzeTestImpact>): void 
     const modeLabel: Record<string, string> = {
         mapping: 'mapping mode',
         keyword: 'keyword mode',
-        jest_find_related: 'high',
+        vitest_find_related: 'high',
     };
     const rows = result.impactedTests.map((t) => ({
         Key: t.testKey ?? '-',

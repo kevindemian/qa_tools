@@ -33,12 +33,12 @@ const mockExecFileSync = vi.mocked(execFileSync);
 const mockExistsSync = vi.mocked(existsSync);
 const mockReadFileSync = vi.mocked(readFileSync);
 
-function mockPackageJson(hasJest: boolean): void {
+function mockPackageJson(hasVitest: boolean): void {
     mockExistsSync.mockImplementation((p: PathLike) => typeof p === 'string' && p.includes('package.json'));
     mockReadFileSync.mockImplementation((p) => {
         if (typeof p === 'string' && p.includes('package.json')) {
             return JSON.stringify({
-                devDependencies: hasJest ? { jest: '^29.0.0' } : {},
+                devDependencies: hasVitest ? { vitest: '^1.0.0' } : {},
             });
         }
         return '';
@@ -51,36 +51,42 @@ describe('Test Impact', () => {
     });
 
     describe('AnalyzeTestImpact', () => {
-        describe('Tier 1 — jest --findRelatedTests', () => {
-            it('returns high confidence when jest finds tests', () => {
+        describe('Tier 1 — vitest list --changed', () => {
+            it('returns high confidence when vitest finds tests', () => {
                 mockPackageJson(true);
                 mockExecFileSync.mockImplementation((_cmd: string, args?: readonly string[]) => {
-                    if (args?.includes('--listTests')) {
-                        return '/path/to/login.test.ts\n/path/to/auth.test.ts';
+                    if (args?.includes('HEAD~1')) {
+                        return 'src/login.ts\nsrc/auth.ts\n';
+                    }
+                    if (args?.includes('list')) {
+                        return 'login.test.ts\nauth.test.ts\n';
                     }
                     return '';
                 });
 
-                const result = analyzeTestImpact('src/login.ts\nsrc/auth.ts');
+                const result = analyzeTestImpact();
 
                 expect(result.confidence).toBe('high');
                 expect(result.impactedTests).toHaveLength(2);
-                expect(nonNull(result.impactedTests[0]).matchMode).toBe('jest_find_related');
+                expect(nonNull(result.impactedTests[0]).matchMode).toBe('vitest_find_related');
                 expect(result.changedFiles).toStrictEqual(['src/login.ts', 'src/auth.ts']);
             });
 
-            it('generates suggested command when jest is available', () => {
+            it('generates suggested command when vitest is available', () => {
                 mockPackageJson(true);
                 mockExecFileSync.mockImplementation((_cmd: string, args?: readonly string[]) => {
-                    if (args?.includes('--listTests')) {
-                        return '/path/to/login.test.ts\n/path/to/auth.test.ts';
+                    if (args?.includes('HEAD~1')) {
+                        return 'src/login.ts\n';
+                    }
+                    if (args?.includes('list')) {
+                        return 'login.test.ts\n';
                     }
                     return '';
                 });
 
-                const result = analyzeTestImpact('src/login.ts');
+                const result = analyzeTestImpact();
 
-                expect(result.suggestedCommand).toBe('npx jest --findRelatedTests src/login.ts');
+                expect(result.suggestedCommand).toBe('npx vitest related --run');
             });
         });
 
@@ -136,7 +142,7 @@ describe('Test Impact', () => {
         });
 
         describe('All 3 tiers combined', () => {
-            it('deduplicates tests across tiers with priority mapping > jest > keyword', () => {
+            it('deduplicates tests across tiers with priority mapping > vitest > keyword', () => {
                 mockPackageJson(true);
                 mockExistsSync.mockImplementation((p: PathLike) => {
                     if (typeof p === 'string' && p.includes('package.json')) return true;
@@ -144,14 +150,17 @@ describe('Test Impact', () => {
                     return false;
                 });
                 mockExecFileSync.mockImplementation((_cmd: string, args?: readonly string[]) => {
-                    if (args?.includes('--listTests')) {
-                        return '/path/to/login.test.ts\n/path/to/auth.test.ts';
+                    if (args?.includes('HEAD~1')) {
+                        return 'src/login.ts\nsrc/auth.ts\nsrc/profile.ts\n';
+                    }
+                    if (args?.includes('list')) {
+                        return 'login.test.ts\nauth.test.ts\n';
                     }
                     return '';
                 });
                 mockReadFileSync.mockImplementation((p) => {
                     if (typeof p === 'string' && p.includes('package.json')) {
-                        return JSON.stringify({ devDependencies: { jest: '^29.0.0' } });
+                        return JSON.stringify({ devDependencies: { vitest: '^1.0.0' } });
                     }
                     if (typeof p === 'string' && p.includes('test-mapping.json')) {
                         return JSON.stringify([
@@ -172,17 +181,17 @@ describe('Test Impact', () => {
                     return '';
                 });
 
-                const result = analyzeTestImpact('src/login.ts\nsrc/auth.ts\nsrc/profile.ts', {
+                const result = analyzeTestImpact(undefined, {
                     mappingPath: 'config/test-mapping.json',
                     testTitles: ['Login test', 'Auth test', 'Profile page', 'Extra test'],
                 });
 
                 // Mapping: PROJ-42 (login), PROJ-50 (profile)
-                // Jest: login, auth
+                // Vitest: login, auth
                 // Keyword: login (via login segment), auth (via auth segment), profile (via profile segment), extra (not matched)
                 // Dedup: mapping takes priority for login & profile,
-                //        jest for auth,
-                //        keyword for anything not in mapping/jest
+                //        vitest for auth (key=auth is distinct from key=Auth test),
+                //        keyword for anything not in mapping/vitest
                 const titles = result.impactedTests.map((t) => t.title);
 
                 expect(titles).toContain('Login test');
@@ -197,7 +206,7 @@ describe('Test Impact', () => {
 
                 const authTest = result.impactedTests.find((t) => t.title === 'auth');
 
-                expect(nonNull(authTest).matchMode).toBe('jest_find_related');
+                expect(nonNull(authTest).matchMode).toBe('vitest_find_related');
             });
         });
 
@@ -257,13 +266,14 @@ describe('Test Impact', () => {
         });
 
         describe('Confidence labeling', () => {
-            it('sets high when jest found tests', () => {
+            it('sets high when vitest found tests', () => {
                 mockPackageJson(true);
                 mockExecFileSync.mockImplementation((_cmd: string, args?: readonly string[]) => {
-                    if (args?.includes('--listTests')) return 'test.test.ts';
+                    if (args?.includes('HEAD~1')) return 'src/file.ts\n';
+                    if (args?.includes('list')) return 'test.test.ts\n';
                     return '';
                 });
-                const result = analyzeTestImpact('src/file.ts');
+                const result = analyzeTestImpact();
 
                 expect(result.confidence).toBe('high');
             });
@@ -324,13 +334,13 @@ describe('Test Impact', () => {
                     {
                         title: 'Login test',
                         testKey: 'PROJ-42',
-                        reason: 'Jest --findRelatedTests: login.test.ts',
-                        matchMode: 'jest_find_related' as const,
+                        reason: 'Vitest related: login.test.ts',
+                        matchMode: 'vitest_find_related' as const,
                         filePattern: 'login.test.ts',
                     },
                 ],
                 unaffected: { total: 0, skippedDueTo: [] },
-                suggestedCommand: 'npx jest --findRelatedTests src/login.ts',
+                suggestedCommand: 'npx vitest related --run src/login.ts',
                 confidence: 'high' as const,
             };
 
@@ -340,8 +350,8 @@ describe('Test Impact', () => {
             expect(json.impactedTests).toHaveLength(1);
             expect(nonNull(json.impactedTests[0]).title).toBe('Login test');
             expect(nonNull(json.impactedTests[0]).testKey).toBe('PROJ-42');
-            expect(nonNull(json.impactedTests[0]).matchMode).toBe('jest_find_related');
-            expect(json.suggestedCommand).toBe('npx jest --findRelatedTests src/login.ts');
+            expect(nonNull(json.impactedTests[0]).matchMode).toBe('vitest_find_related');
+            expect(json.suggestedCommand).toBe('npx vitest related --run src/login.ts');
             expect(json.confidence).toBe('high');
             expect(json.conservative).toBeFalsy();
         });
@@ -353,13 +363,13 @@ describe('Test Impact', () => {
                     {
                         title: 'Login test',
                         testKey: 'PROJ-42',
-                        reason: 'Jest --findRelatedTests: login.test.ts',
-                        matchMode: 'jest_find_related' as const,
+                        reason: 'Vitest related: login.test.ts',
+                        matchMode: 'vitest_find_related' as const,
                         filePattern: 'login.test.ts',
                     },
                 ],
                 unaffected: { total: 0, skippedDueTo: [] },
-                suggestedCommand: 'npx jest --findRelatedTests src/login.ts',
+                suggestedCommand: 'npx vitest related --run src/login.ts',
                 confidence: 'high' as const,
             };
 

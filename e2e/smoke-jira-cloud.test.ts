@@ -3,7 +3,7 @@
  * Verifies that Jira Cloud auth (Basic base64) flows correctly through
  * the config schema, auth factory, JiraClient, and entry points.
  *
- * Run: JIRA_MODE=cloud npx jest e2e/smoke-jira-cloud --no-coverage
+ * Run: JIRA_MODE=cloud npx vitest run e2e/smoke-jira-cloud --no-coverage
  */
 
 import Config from '../shared/config.js';

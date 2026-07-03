@@ -386,20 +386,20 @@ describe('Quality-check unit tests', () => {
             expect(r.passed).toBeFalsy();
         });
 
-        it('checkViFnUnknown detects jest.fn<unknown', async () => {
+        it('checkViFnUnknown detects vi.fn<unknown', async () => {
             expect.hasAssertions();
 
-            vi.mocked(readFileSync).mockReturnValue('jest.fn<unknown, any>()\n');
+            vi.mocked(readFileSync).mockReturnValue('vi.fn<unknown, any>()\n');
             const { checkViFnUnknown } = await import('./quality-check.js');
             const r = checkViFnUnknown();
 
             expect(r.passed).toBeFalsy();
         });
 
-        it('checkViFnUnknownArray detects jest.fn<..., unknown[]', async () => {
+        it('checkViFnUnknownArray detects vi.fn<..., unknown[]', async () => {
             expect.hasAssertions();
 
-            vi.mocked(readFileSync).mockReturnValue('jest.fn<any, unknown[]>()->void\n');
+            vi.mocked(readFileSync).mockReturnValue('vi.fn<any, unknown[]>()->void\n');
             const { checkViFnUnknownArray } = await import('./quality-check.js');
             const r = checkViFnUnknownArray();
 

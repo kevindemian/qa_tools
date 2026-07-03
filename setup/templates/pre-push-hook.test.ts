@@ -3,12 +3,12 @@ import type { SetupContext } from '../context.js';
 
 const MOCK_CTX: SetupContext = {
     projectName: 'test-proj',
-    framework: 'jest',
+    framework: 'vitest',
     ctrfReportPath: 'reports/ctrf-report.json',
     ctrfSource: 'cli-flag',
     nodeVersion: '20',
     installCmd: 'npm ci',
-    testCmd: 'npx jest',
+    testCmd: 'npx vitest run',
     gitProvider: 'github',
     repoOwner: 'myorg',
     repoName: 'test-proj',

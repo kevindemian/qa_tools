@@ -52,7 +52,6 @@ SAFETY=(
   "$PROJECT_ROOT/tsconfig.json"
   "$PROJECT_ROOT/tsconfig.build.json"
   "$PROJECT_ROOT/vitest.config.ts"
-  "$PROJECT_ROOT/jest.config.js"
   "$PROJECT_ROOT/.github/workflows/ci.yml"
   "$PROJECT_ROOT/.github/workflows/publish.yml"
   "$PROJECT_ROOT/.github/dependabot.yml"
@@ -238,7 +237,7 @@ except Exception as e:
     *eslint.config*)
       analysis="Regras de lint alteradas"
       ;;
-    *vitest.config*|*jest.config*)
+    *vitest.config*)
       if grep -q 'coverage' "$file" 2>/dev/null; then
         analysis="Config de cobertura alterada"
       else

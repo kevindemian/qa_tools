@@ -232,7 +232,7 @@ Após cada lote, executar:
 ```bash
 # R6 completo
 npx tsc --noEmit
-npx jest --no-coverage
+npx vitest --no-coverage
 grep -rn "throw '" shared/ jira_management/ git_triggers/   # zero
 grep -rn ".only(" **/*.test.*                                # zero
 ```

@@ -1,6 +1,6 @@
 /**
  * Smoke test for XRAY_MODE=cloud — only runs when the env var is set.
- * Run: XRAY_MODE=cloud npx jest e2e/smoke-xray-cloud --no-coverage
+ * Run: XRAY_MODE=cloud npx vitest run e2e/smoke-xray-cloud --no-coverage
  */
 
 import Config from '../shared/config.js';

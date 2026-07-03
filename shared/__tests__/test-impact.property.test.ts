@@ -68,7 +68,7 @@ describe('AnalyzeTestImpact — property-based', () => {
         vi.clearAllMocks();
     });
 
-    it('confidence is low when nothing matches and jest unavailable', () => {
+    it('confidence is low when nothing matches and vitest unavailable', () => {
         expect.hasAssertions();
 
         fc.assert(

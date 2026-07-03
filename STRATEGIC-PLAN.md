@@ -96,7 +96,7 @@ qa-quality-gate --json    # saída JSON para pipeline processar
 
 **Código existente:**
 
-- `shared/test-impact.ts` → `analyzeTestImpact()` → 3 tiers (jest, keyword, mapping)
+- `shared/test-impact.ts` → `analyzeTestImpact()` → 3 tiers (vitest, keyword, mapping)
 - `shared/test-impact.ts` → `generateTestSelectionJson()` → JSON pipeline-ready
 - `setup/templates/pre-push-hook.ts` → template de hook (vazio)
 
@@ -106,7 +106,7 @@ Preencher o template com chamada real ao `analyzeTestImpact()` + `npm test -- --
 ```bash
 # .git/hooks/pre-push
 qa-test-impact --format=json | jq -r '.impactedTests | .[]' > /tmp/impacted.txt
-npx jest --listTests --findRelatedTests $(cat /tmp/impacted.txt) > /dev/null || exit 1
+npx vitest --listTests --findRelatedTests $(cat /tmp/impacted.txt) > /dev/null || exit 1
 qa-quality-gate || exit 1
 ```
 

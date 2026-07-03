@@ -31,7 +31,7 @@
 | Resultado de teste ↔ Issue Jira             | Fuzzy matching (exato, substring, alfanumérico normalizado) entre título do teste e chave Jira via mapping JSON | ⭐⭐⭐       |
 | Pipeline CI ↔ Artefatos ↔ Resultados ↔ Jira | Download de artefato → parse → match → criação/atualização de Test Execution + issue links                      | ⭐⭐⭐       |
 | Falha de teste ↔ Commits git                | Contexto opcional gitCommits + gitTrend + jiraIssues enviado ao LLM para análise de causa raiz                  | ⭐⭐         |
-| Código alterado ↔ Testes impactados         | 3 tiers: `jest --findRelatedTests`, keyword matching, mapping explícito; confiança high/medium/low              | ⭐⭐⭐       |
+| Código alterado ↔ Testes impactados         | 3 tiers: `vitest --findRelatedTests`, keyword matching, mapping explícito; confiança high/medium/low            | ⭐⭐⭐       |
 | Código alterado ↔ Descrição de PR           | LLM analisa diff e gera descrição em português destacando riscos                                                | ⭐⭐         |
 | Pre-conditions ↔ Test cases                 | Jaccard token overlap + dual-threshold assimétrico (0.5 admissão, 0.7 confirmação)                              | ⭐⭐⭐       |
 | Test cases ↔ Requisitos (linked issues)     | Issue links Jira entre test case e linkedIssues (stories, requirements)                                         | ⭐⭐⭐       |
@@ -173,12 +173,12 @@ O sistema tem histórico de execução. **Não analisa** padrões temporais: "ma
 
 ### 3.1 Test Impact Analysis — Uso Avançado
 
-| Aspecto              | Detalhe                                                                                                     |
-| -------------------- | ----------------------------------------------------------------------------------------------------------- |
-| **Uso original**     | Selecionar quais testes rodar em um PR específico                                                           |
-| **Uso avançado**     | Gerar `test-selection.json` e integrar no pipeline CI como `jest --selectProjects` ou filtro por test match |
-| **Uso não previsto** | Associar o diff com o mapping de coverage — "estes arquivos mudaram, que epics/requisitos estão em risco?"  |
-| **Valor**            | Reduz feedback loop de CI em 40-70% (só roda testes relevantes) + alerta de risco de regressão              |
+| Aspecto              | Detalhe                                                                                                       |
+| -------------------- | ------------------------------------------------------------------------------------------------------------- |
+| **Uso original**     | Selecionar quais testes rodar em um PR específico                                                             |
+| **Uso avançado**     | Gerar `test-selection.json` e integrar no pipeline CI como `vitest --selectProjects` ou filtro por test match |
+| **Uso não previsto** | Associar o diff com o mapping de coverage — "estes arquivos mudaram, que epics/requisitos estão em risco?"    |
+| **Valor**            | Reduz feedback loop de CI em 40-70% (só roda testes relevantes) + alerta de risco de regressão                |
 
 ### 3.2 Pre-condition Matching — Uso Avançado
 
