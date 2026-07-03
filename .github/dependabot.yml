@@ -2,46 +2,13 @@ version: 2
 updates:
     - package-ecosystem: 'npm'
       directory: '/'
+      open-pull-requests-limit: 0
       schedule:
           interval: 'weekly'
           day: 'monday'
           time: '09:00'
           timezone: 'America/Sao_Paulo'
-      cooldown:
-          default-days: 7
-      versioning-strategy: 'increase'
-      open-pull-requests-limit: 1
-      labels:
-          - 'dependencies'
-          - 'automated'
       commit-message:
           prefix: 'chore'
           prefix-development: 'chore'
           include: 'scope'
-      groups:
-          inquirer:
-              patterns:
-                  - '@inquirer/*'
-              update-types:
-                  - 'minor'
-                  - 'patch'
-          types:
-              patterns:
-                  - '@types/*'
-              update-types:
-                  - 'minor'
-                  - 'patch'
-          eslint:
-              patterns:
-                  - 'eslint*'
-                  - '@eslint/*'
-                  - 'typescript-eslint'
-              update-types:
-                  - 'minor'
-                  - 'patch'
-          all-dependencies:
-              patterns:
-                  - '*'
-              update-types:
-                  - 'minor'
-                  - 'patch'
