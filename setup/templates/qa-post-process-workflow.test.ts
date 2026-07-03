@@ -67,26 +67,27 @@ describe('GenerateQaPostProcessWorkflow', () => {
     it('downloads CTRF artifact with correct name', () => {
         const yaml = generateQaPostProcessWorkflow(MOCK_CTX);
 
-        expect(yaml).toContain('actions/download-artifact@v4');
+        expect(yaml).toContain('actions/download-artifact@v8');
         expect(yaml).toContain('name: ctrf-report');
+        expect(yaml).toContain('path: reports/');
     });
 
     it('uploads PR report HTML artifact', () => {
         const yaml = generateQaPostProcessWorkflow(MOCK_CTX);
 
-        expect(yaml).toContain('actions/upload-artifact@v4');
+        expect(yaml).toContain('actions/upload-artifact@v7');
         expect(yaml).toContain('name: pr-report-html');
         expect(yaml).toContain('path: reports/pr-report.html');
         expect(yaml).toContain('if-no-files-found: warn');
     });
 
-    it('uses @v4 action versions (not pinned SHAs)', () => {
+    it('uses modern action versions (not pinned SHAs)', () => {
         const yaml = generateQaPostProcessWorkflow(MOCK_CTX);
 
-        expect(yaml).toContain('actions/checkout@v4');
-        expect(yaml).toContain('actions/setup-node@v4');
-        expect(yaml).toContain('actions/download-artifact@v4');
-        expect(yaml).toContain('actions/upload-artifact@v4');
+        expect(yaml).toContain('actions/checkout@v5');
+        expect(yaml).toContain('actions/setup-node@v6');
+        expect(yaml).toContain('actions/download-artifact@v8');
+        expect(yaml).toContain('actions/upload-artifact@v7');
     });
 
     it('uses node version and install command from context', () => {
