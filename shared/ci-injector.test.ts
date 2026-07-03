@@ -26,7 +26,7 @@ const SIMPLE_CI_YML =
         '  test:',
         '    runs-on: ubuntu-latest',
         '    steps:',
-        '      - uses: actions/checkout@v4',
+        '      - uses: actions/checkout@v5',
         '      - run: npm ci',
         '      - run: npm test',
     ].join('\n') + '\n';
@@ -136,7 +136,7 @@ describe('GeneratePostProcessWorkflowYaml', () => {
     it('includes artifact upload step', () => {
         const yaml = generatePostProcessWorkflowYaml({ projectName: 'p' });
 
-        expect(yaml).toContain('actions/upload-artifact@v4');
+        expect(yaml).toContain('actions/upload-artifact@v7');
         expect(yaml).toContain('pr-report-html');
     });
 
@@ -193,7 +193,7 @@ describe('InjectPostProcessJob', () => {
         expect(result).toContain('name: CI');
         expect(result).toContain('on: [push]');
         expect(result).toContain('test:');
-        expect(result).toContain('actions/checkout@v4');
+        expect(result).toContain('actions/checkout@v5');
     });
 
     it('is idempotent — does not inject when post-process already exists', () => {
@@ -319,17 +319,17 @@ describe('Contract: ci-injector and setup wizard generators are equivalent', () 
         expect(fromWizard).toContain('if [ ! -f "${{ inputs.ctrf-path }}" ]; then');
     });
 
-    it('both use @v4 action versions (not pinned SHAs)', () => {
+    it('both use modern action versions (not pinned SHAs)', () => {
         expect.hasAssertions();
 
         const fromInjector = generatePostProcessWorkflowYaml({ projectName: 'p' });
         const fromWizard = generateQaPostProcessWorkflow(makeCtx({ projectName: 'p' }));
 
         for (const yaml of [fromInjector, fromWizard]) {
-            expect(yaml).toContain('actions/checkout@v4');
-            expect(yaml).toContain('actions/setup-node@v4');
-            expect(yaml).toContain('actions/download-artifact@v4');
-            expect(yaml).toContain('actions/upload-artifact@v4');
+            expect(yaml).toContain('actions/checkout@v5');
+            expect(yaml).toContain('actions/setup-node@v6');
+            expect(yaml).toContain('actions/download-artifact@v8');
+            expect(yaml).toContain('actions/upload-artifact@v7');
         }
     });
 });
