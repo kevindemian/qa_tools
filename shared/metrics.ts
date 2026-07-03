@@ -7,6 +7,7 @@ import { detectProjectGitDir, detectStoreBackend, FsStoreBackend } from './store
 import type { StoreBackend } from './store-backend.js';
 import type { ParseResult, FlatTest } from './result_parser.js';
 
+/** Represents a single test run with pass/fail/skip counts and individual test results. */
 export interface MetricsRun {
     timestamp: string;
     project: string;
@@ -33,6 +34,7 @@ export interface FailureClassification {
     project: string;
 }
 
+/** Persistent store of test run history, coverage snapshots, and failure classifications. */
 export interface MetricsStore {
     runs: MetricsRun[];
     coverageHistory?: CoverageSnapshot[];

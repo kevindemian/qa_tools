@@ -150,7 +150,7 @@ function _selectProject(): { projectName: string | null; names: string[] } {
     const allProjects = getProjects();
     const names = Object.keys(allProjects).sort((a, b) => a.localeCompare(b));
     displayProjects(names, state['lastProject'] as string);
-    const firstDefault = (state['lastProject'] as string) || '';
+    const firstDefault = typeof state['lastProject'] === 'string' ? state['lastProject'] : '';
     const firstChoice = prompt('Escolha um projeto', {
         hint: '1-' + names.length,
         default: firstDefault,
@@ -598,6 +598,72 @@ async function _dashboardCoverageGap(): Promise<void> {
     );
 }
 
+/**
+ * Display CI Data Hub summary in interactive mode.
+ *
+ * Fetches pipeline data from the CI provider and displays key metrics:
+ * - Pass rate, average duration, suite speed P95
+ * - Top failing jobs with failure rates
+ * - Flaky tests with oscillation rates
+ * - Branch breakdown with pass rates
+ *
+ * @param m - GitProvider instance for fetching CI data
+ */
+async function _showCiDataHubSummary(m: GitProvider): Promise<void> {
+    try {
+        const { createCiDataHub } = await import('../shared/ci-data.js');
+
+        info('Buscando dados do CI Data Hub...');
+        const hub = await createCiDataHub(m, currentProjectName);
+
+        if (hub.runs.length === 0) {
+            warn('Nenhum dado de pipeline encontrado para este repositório.');
+            return;
+        }
+
+        const lines = [
+            '',
+            '  === CI Data Hub — ' + currentProjectName + ' ===',
+            '',
+            '  Provider:          ' + hub.provider,
+            '  Repositório:       ' + hub.repo,
+            '  Runs analisadas:   ' + hub.recentRunsCount,
+            '  Pass Rate:         ' + hub.passRate + '%',
+            '  Duração média:     ' + Math.round(hub.avgDuration) + 's',
+            '  Suite Speed P95:   ' + hub.suiteSpeedP95 + 'ms',
+            '',
+        ];
+
+        if (hub.topFailingJobs.length > 0) {
+            lines.push('  Top Jobs com Falha:');
+            for (const job of hub.topFailingJobs.slice(0, 5)) {
+                lines.push('    - ' + job.name + ': ' + job.failureRate + '% (' + job.count + ' falhas)');
+            }
+            lines.push('');
+        }
+
+        if (hub.flakyTests.length > 0) {
+            lines.push('  Testes Flaky:');
+            for (const test of hub.flakyTests.slice(0, 5)) {
+                lines.push('    - ' + test.title + ': ' + test.rate + '% (' + test.runs + ' runs)');
+            }
+            lines.push('');
+        }
+
+        if (Object.keys(hub.branchBreakdown).length > 0) {
+            lines.push('  Pass Rate por Branch:');
+            for (const [branch, data] of Object.entries(hub.branchBreakdown)) {
+                lines.push('    - ' + branch + ': ' + data.passRate + '% (' + data.count + ' runs)');
+            }
+            lines.push('');
+        }
+
+        info(lines.join('\n'));
+    } catch (err) {
+        printError('CI Data Hub error', err);
+    }
+}
+
 async function _showDashboardMenu(): Promise<void> {
     const dashboards: DashboardDef[] = [
         { id: '1', label: 'Release Score', handler: _dashboardReleaseScore },
@@ -647,6 +713,10 @@ const ACTION_HANDLERS: Record<string, (m: GitProvider, pn: string, ns: string[])
     },
     d: async () => {
         await _showDashboardMenu();
+        return false;
+    },
+    h: async (m) => {
+        await _showCiDataHubSummary(m);
         return false;
     },
     e: () => {
@@ -712,8 +782,7 @@ async function _dispatchAction(
     if (finalChoice === '0' || cmd === '/exit' || cmd === '/sair') return _handleExit();
 
     const handlerFn = Reflect.get(ACTION_HANDLERS, finalChoice) as
-        | ((m: GitProvider, projectName: string, names: string[]) => boolean | Promise<boolean>)
-        | undefined;
+        ((m: GitProvider, projectName: string, names: string[]) => boolean | Promise<boolean>) | undefined;
     if (handlerFn !== undefined) return handlerFn(m, projectName, names);
     warn('Opção inválida.');
     return false;

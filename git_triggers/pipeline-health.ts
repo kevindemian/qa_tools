@@ -32,7 +32,7 @@ export interface PipelineJobExtended {
 }
 
 export interface PipelineRunExtended {
-    id?: string | number;
+    id?: string | number | undefined;
     status?: string;
     conclusion?: string;
     head_branch?: string;
