@@ -11,6 +11,21 @@ export default defineConfig({
         teardownTimeout: 5000,
         coverage: {
             provider: 'v8',
+            include: [
+                'shared/**/*.ts',
+                'jira_management/**/*.ts',
+                'git_triggers/**/*.ts',
+                'scripts/**/*.ts',
+                'setup/**/*.ts',
+            ],
+            exclude: [
+                'shared/types/**/*.ts',
+                'shared/__tests__/**/*.ts',
+                'shared/__mocks__/**/*.ts',
+                '**/*.test.ts',
+                '**/*.spec.ts',
+                '**/types.ts',
+            ],
             thresholds: {
                 lines: 90,
                 functions: 91,
