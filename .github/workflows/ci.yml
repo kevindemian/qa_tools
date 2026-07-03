@@ -23,8 +23,8 @@ jobs:
         if: github.event_name != 'schedule'
         runs-on: ubuntu-latest
         steps:
-            - uses: actions/checkout@v4
-            - uses: actions/setup-node@v4
+            - uses: actions/checkout@v5
+            - uses: actions/setup-node@v6
               with:
                   node-version-file: .node-version
                   cache: npm
@@ -74,8 +74,8 @@ jobs:
             matrix:
                 node-version: [22, 24]
         steps:
-            - uses: actions/checkout@v4
-            - uses: actions/setup-node@v4
+            - uses: actions/checkout@v5
+            - uses: actions/setup-node@v6
               with:
                   node-version: ${{ matrix.node-version }}
                   cache: npm
@@ -95,7 +95,7 @@ jobs:
                   CTRF_OUTPUT_FILE: ctrf-report-e2e.json
             - name: Upload CTRF report for post-processing
               if: always() && matrix.node-version == 22
-              uses: actions/upload-artifact@v4
+              uses: actions/upload-artifact@v7
               with:
                   name: ctrf-report
                   path: reports/ctrf-report.json
@@ -121,7 +121,7 @@ jobs:
             matrix:
                 language: [javascript-typescript]
         steps:
-            - uses: actions/checkout@v4
+            - uses: actions/checkout@v5
             - name: Initialize CodeQL
               uses: github/codeql-action/init@v3
               with:
