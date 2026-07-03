@@ -11,6 +11,7 @@ import { MetricCard, MetricGrid, DataTable } from './primitives/index.js';
 import type { TableColumn, TableRow } from './primitives/index.js';
 import { rootLogger } from './logger.js';
 import type { MetricsRun } from './metrics.js';
+import type { CiDataHub } from './ci-data.js';
 
 const DEFAULT_COST_PER_MINUTE = 0.01;
 
@@ -32,12 +33,59 @@ export interface PipelineCostResult {
     timestamp: string;
 }
 
+/** Mapeia conclusion do CI para status legível. */
+function mapConclusionToStatus(conclusion: string | undefined): 'passed' | 'failed' | 'unknown' {
+    if (conclusion === 'success') return 'passed';
+    if (conclusion === 'failure') return 'failed';
+    return 'unknown';
+}
+
 export function calculatePipelineCost(
     runs: MetricsRun[] | null | undefined,
     costPerMinute?: number,
+    ciData?: CiDataHub,
 ): PipelineCostResult {
     const cpm = costPerMinute ?? (Number(process.env['QA_COST_PER_COMPUTE_MINUTE']) || DEFAULT_COST_PER_MINUTE);
 
+    // Se CiDataHub disponível, usar dados reais do CI
+    if (ciData && ciData.runs.length > 0) {
+        const ciRuns = ciData.runs;
+        const costByRun: PipelineCostEntry[] = ciRuns.map((r) => {
+            const durationSec =
+                r.run_started_at && r.updated_at
+                    ? (new Date(r.updated_at).getTime() - new Date(r.run_started_at).getTime()) / 1000
+                    : 0;
+            return {
+                timestamp: r.created_at ?? new Date().toISOString(),
+                durationSec,
+                cost: (durationSec / 60) * cpm,
+                status: mapConclusionToStatus(r.conclusion),
+            };
+        });
+
+        const totalDurationSec = costByRun.reduce((s, e) => s + e.durationSec, 0);
+        const totalCost = costByRun.reduce((s, e) => s + e.cost, 0);
+        const sortedTimestamps = ciRuns
+            .map((r) => r.created_at ?? '')
+            .filter(Boolean)
+            .sort((a, b) => a.localeCompare(b));
+
+        return {
+            totalCost,
+            avgCostPerRun: costByRun.length > 0 ? totalCost / costByRun.length : 0,
+            totalDurationSec,
+            costPerMinute: cpm,
+            costByRun,
+            runCount: ciRuns.length,
+            period: {
+                from: sortedTimestamps[0] ?? '',
+                to: sortedTimestamps[sortedTimestamps.length - 1] ?? '',
+            },
+            timestamp: new Date().toISOString(),
+        };
+    }
+
+    // Fallback: usar MetricsStore local
     if (!runs || runs.length === 0) {
         const now = new Date().toISOString();
         return {

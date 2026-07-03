@@ -5,6 +5,7 @@ import { loadMetrics, calculateFlakiness } from './metrics.js';
 import type { MetricsRun } from './metrics.js';
 import { calculateHealthScore } from './health-score.js';
 import type { HealthScoreResult } from './types.js';
+import type { CiDataHub } from './ci-data.js';
 import { rootLogger } from './logger.js';
 
 /* ── Fixed thresholds — never overridable ─────────────────────────────── */
@@ -33,6 +34,10 @@ export interface QualityGateResult {
 
 export interface QualityGateOptions {
     project?: string;
+    /** Coverage override from Istanbul — used to match health score calculation in PR report. */
+    coverageOverride?: number | undefined;
+    /** CI Data Hub — quando disponível, usa dados do CI em vez de MetricsStore local. */
+    ciData?: CiDataHub | undefined;
 }
 
 /* ── Internal check item ──────────────────────────────────────────────── */
@@ -173,7 +178,9 @@ export function runQualityGate(options?: QualityGateOptions): QualityGateResult 
             return { overall: 'fail', checks, score: 0 };
         }
 
-        const health = calculateHealthScore({ ...store, runs }, {});
+        const healthConfig =
+            options?.coverageOverride !== undefined ? { coverageOverride: options.coverageOverride } : {};
+        const health = calculateHealthScore({ ...store, runs }, healthConfig);
         _buildChecks(checks, health, runs);
         return _aggregateResult(checks);
     } catch (err) {

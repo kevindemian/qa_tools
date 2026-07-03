@@ -240,7 +240,9 @@ describe('Pr Report Core', () => {
                 skipQuality: false,
             });
 
-            expect(mockQualityGate.runQualityGate).toHaveBeenCalledWith();
+            expect(mockQualityGate.runQualityGate).toHaveBeenCalledWith(
+                expect.objectContaining({ coverageOverride: undefined }),
+            );
             expect(mockCheckRun.createCheckRun).toHaveBeenCalledWith(
                 expect.objectContaining({
                     name: 'Quality Gate',

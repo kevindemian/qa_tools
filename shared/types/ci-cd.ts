@@ -64,6 +64,12 @@ export interface PipelineJob {
     stage: string;
     /** Execution status (conclusion from API). */
     status: string;
+    /** ISO timestamp when the job started. */
+    started_at?: string;
+    /** ISO timestamp when the job finished. */
+    finished_at?: string;
+    /** Job duration in seconds (computed from started_at/finished_at or from API). */
+    duration?: number;
     /** Individual step conclusions within the job (GitHub API). */
     stepConclusions?: Array<{ name: string; conclusion: string; number: number }>;
 }
@@ -172,6 +178,8 @@ export interface GitHubWorkflowRun {
     conclusion?: string;
     created_at?: string;
     updated_at?: string;
+    /** ISO timestamp when the workflow run started. */
+    run_started_at?: string;
     html_url?: string;
     event?: string;
     head_commit?: {
@@ -206,6 +214,12 @@ export interface GitLabJob {
     name: string;
     stage?: string;
     status?: string;
+    /** Job duration in seconds. */
+    duration?: number;
+    /** ISO timestamp when the job started. */
+    started_at?: string;
+    /** ISO timestamp when the job finished. */
+    finished_at?: string;
     artifacts_file?: { filename?: string };
     artifacts?: Array<{ file_type?: string }>;
 }

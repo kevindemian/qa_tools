@@ -11,6 +11,7 @@
  * between target (score=100) and floor (score=0).
  */
 import type { MetricsStore, MetricsRun } from './metrics.js';
+import type { CiDataHub } from './ci-data.js';
 import type { HealthScoreResult, HealthScoreGrade, HealthScoreDimensions, HealthScoreProvenance } from './types.js';
 
 export interface HealthScoreConfig {
@@ -327,7 +328,7 @@ function _buildProvenance(options?: Partial<HealthScoreConfig>): HealthScoreProv
 
 export function calculateHealthScore(
     metricsStore: MetricsStore,
-    options?: Partial<HealthScoreConfig>,
+    options?: Partial<HealthScoreConfig> & { ciData?: CiDataHub },
 ): HealthScoreResult {
     const config = pickConfig(options);
     const actual = computeActualMetrics(metricsStore, config);
