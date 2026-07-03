@@ -248,4 +248,84 @@ describe('CreateCiDataHub', () => {
         expect(hub.lastFetched.getTime()).toBeGreaterThanOrEqual(before);
         expect(hub.lastFetched.getTime()).toBeLessThanOrEqual(after);
     });
+
+    it('computes topFailureReasons from failed job logs', async () => {
+        expect.hasAssertions();
+
+        const runs = [makeRun({ id: 1 })];
+        const failedJob = makeJob({ id: 10, status: 'failure' });
+        const logText = 'Error: Connection timeout after 30s\nFailure: Assertion failed\nSomething else';
+        const provider = createMockProvider({
+            getRecentPipelines: vi.fn().mockResolvedValue(runs),
+            getPipelineJobs: vi.fn().mockResolvedValue([failedJob]),
+            downloadArtifact: vi.fn().mockResolvedValue({ buffer: Buffer.from(''), filename: logText }),
+        });
+
+        const hub = await createCiDataHub(provider, 'o/r');
+
+        expect(hub.topFailureReasons.length).toBeGreaterThan(0);
+        expect(hub.topFailureReasons[0]?.pattern).toContain('Error');
+    });
+
+    it('computes flakyTests from mixed job statuses across runs', async () => {
+        expect.hasAssertions();
+
+        const runs = [makeRun({ id: 1 }), makeRun({ id: 2 })];
+        const jobsForRun1 = [makeJob({ id: 10, name: 'flaky-test', status: 'success' })];
+        const jobsForRun2 = [makeJob({ id: 20, name: 'flaky-test', status: 'failure' })];
+        const provider = createMockProvider({
+            getRecentPipelines: vi.fn().mockResolvedValue(runs),
+            getPipelineJobs: vi.fn().mockResolvedValueOnce(jobsForRun1).mockResolvedValueOnce(jobsForRun2),
+        });
+
+        const hub = await createCiDataHub(provider, 'o/r');
+
+        expect(hub.flakyTests.length).toBeGreaterThan(0);
+        expect(hub.flakyTests[0]?.title).toBe('flaky-test');
+        expect(hub.flakyTests[0]?.rate).toBe(50);
+    });
+
+    it('handles runs with string IDs', async () => {
+        expect.hasAssertions();
+
+        const runs = [makeRun({ id: '123' })];
+        const provider = createMockProvider({
+            getRecentPipelines: vi.fn().mockResolvedValue(runs),
+            getPipelineJobs: vi.fn().mockResolvedValue([makeJob({ id: 10 })]),
+        });
+
+        const hub = await createCiDataHub(provider, 'o/r');
+
+        expect(hub.recentRunsCount).toBe(1);
+    });
+
+    it('handles runs with null id', async () => {
+        expect.hasAssertions();
+
+        const runs = [makeRun({ id: undefined })];
+        const provider = createMockProvider({
+            getRecentPipelines: vi.fn().mockResolvedValue(runs),
+        });
+
+        const hub = await createCiDataHub(provider, 'o/r');
+
+        expect(hub.recentRunsCount).toBe(1);
+    });
+
+    it('handles downloadArtifact failure for failed jobs gracefully', async () => {
+        expect.hasAssertions();
+
+        const runs = [makeRun({ id: 1 })];
+        const failedJob = makeJob({ id: 10, status: 'failure' });
+        const provider = createMockProvider({
+            getRecentPipelines: vi.fn().mockResolvedValue(runs),
+            getPipelineJobs: vi.fn().mockResolvedValue([failedJob]),
+            downloadArtifact: vi.fn().mockRejectedValue(new Error('Artifact not found')),
+        });
+
+        const hub = await createCiDataHub(provider, 'o/r');
+
+        expect(hub.runs).toHaveLength(1);
+        expect(hub.topFailureReasons).toHaveLength(0);
+    });
 });

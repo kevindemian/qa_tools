@@ -7,6 +7,152 @@
 
 ---
 
+## 🚀 Sprint CiDataHub Resumption — Correção de Gaps + Validação Completa (Jul/2026)
+
+**Data:** 2026-07-03
+**Origem:** Plano original (1783070272726-lucky-sailor) marcou CDH-0 a CDH-18 como ✅, mas auditoria identificou 6 gaps: auditoria pós-implementação não realizada, testes sistema/e2e ausentes, menu não verificado, e2e não verificado, TECHDOC não atualizado, D5.5/D6.4 gaps.
+**Estratégia:** 8 fases (R1-R8) — testes de integração consumidores → testes sistema → testes e2e → menu → docs → D5.5/D6.4 → auditoria → validação final.
+
+### Fase R1 — Testes de Integração Consumidores
+
+| ID    | Item                                                                              | Arquivo(s)                                                              | Status |
+| ----- | --------------------------------------------------------------------------------- | ----------------------------------------------------------------------- | ------ |
+| CDH-R1a | 📋 Adicionar cenários ciData em health-score.integration.test.ts                | `shared/__tests__/integration/health-score.integration.test.ts`        | ✅     |
+| CDH-R1b | 📋 Adicionar cenários ciData em quality-gate.integration.test.ts                | `shared/__tests__/integration/quality-gate.integration.test.ts`        | ✅     |
+| CDH-R1c | 📋 Adicionar cenários ciData em pr-report-core.integration.test.ts              | `shared/__tests__/integration/pr-report-core.integration.test.ts`      | ✅     |
+| CDH-R1d | 📋 Adicionar cenários ciData em pipeline-cost.integration.test.ts               | `shared/__tests__/integration/pipeline-cost.integration.test.ts`       | ✅     |
+| CDH-R1e | 📋 Adicionar cenários ciData em traceability-matrix.integration.test.ts         | `shared/__tests__/integration/traceability-matrix.integration.test.ts` | ✅     |
+| CDH-R1f | 📋 Adicionar cenários ciData em flakiness-dashboard.integration.test.ts         | `shared/__tests__/integration/flakiness-dashboard.integration.test.ts` | ⏭️ N/A (não aceita ciData diretamente) |
+| CDH-R1g | 📋 Adicionar cenários ciData em defect-trend.integration.test.ts                | `shared/__tests__/integration/defect-trend.integration.test.ts`        | ⏭️ N/A (não aceita ciData diretamente) |
+| CDH-R1h | 📋 Adicionar cenários ciData em quarantine.integration.test.ts                  | `shared/__tests__/integration/quarantine.integration.test.ts`          | ⏭️ N/A (não aceita ciData diretamente) |
+| CDH-R1i | 📋 Adicionar cenários ciData em run-comparison.integration.test.ts              | `shared/__tests__/integration/run-comparison.integration.test.ts`      | ⏭️ N/A (não aceita ciData diretamente) |
+
+### Fase R2 — Testes de Sistema
+
+| ID    | Item                                                                              | Arquivo(s)                                    | Status |
+| ----- | --------------------------------------------------------------------------------- | --------------------------------------------- | ------ |
+| CDH-R2a | 📋 Criar ci-data-system.test.ts — fluxo completo: GitProvider → hub → consumers  | `shared/__tests__/system/ci-data-system.test.ts` | ✅     |
+
+### Fase R3 — Testes E2E
+
+| ID    | Item                                                                              | Arquivo(s)                                    | Status |
+| ----- | --------------------------------------------------------------------------------- | --------------------------------------------- | ------ |
+| CDH-R3a | 📋 Criar ci-data-e2e.test.ts — pipeline completo: API → hub → report HTML        | `shared/__tests__/e2e/ci-data-e2e.test.ts`    | ✅     |
+
+### Fase R4 — Menu Integration
+
+| ID    | Item                                                                              | Arquivo(s)                                    | Status |
+| ----- | --------------------------------------------------------------------------------- | --------------------------------------------- | ------ |
+| CDH-R4a | 🔧 Verificar/criar entrada CiDataHub no menu interactive-mode                     | `git_triggers/interactive-mode.ts`            | ✅     |
+| CDH-R4b | 📋 Teste que valida opção existe no menu                                          | `shared/__tests__/integration/ci-menu.integration.test.ts` | ✅ (arquivo criado nesta sprint, 7 testes) |
+
+### Fase R5 — Documentação
+
+| ID    | Item                                                                              | Arquivo(s)                                    | Status |
+| ----- | --------------------------------------------------------------------------------- | --------------------------------------------- | ------ |
+| CDH-R5a | 📋 Atualizar TECHDOC.md com seção CiDataHub                                       | `docs/TECHDOC.md`                             | ✅     |
+
+### Fase R6 — Correções D5.5/D6.4
+
+| ID    | Item                                                                              | Arquivo(s)                                    | Status |
+| ----- | --------------------------------------------------------------------------------- | --------------------------------------------- | ------ |
+| CDH-R6a | 🔧 D5.5: outlier treatment em avgDuration (ceiling) + suiteSpeedP95 (P95), justificativa documentada | `shared/ci-data.ts` | ✅ |
+| CDH-R6b | 🔧 D6.4: progress feedback durante criação do CiDataHub                           | `shared/ci-data.ts`                           | ✅     |
+
+### Justificativa D5.5 — Outlier Treatment
+
+**Data:** 2026-07-03
+
+Outlier treatment foi implementado em `ci-data.ts` para as duas métricas que produzem valores contínuos com risco de outliers extremos:
+
+| Métrica | Tratamento | Justificativa |
+|---------|------------|---------------|
+| `avgDuration` | Ceiling em 86400s (24h) | Duração de run pode ser distorcida por jobs travados, retenções manuais, ou timeouts. Ceiling previne skewing da média |
+| `suiteSpeedP95` | Percentil P95 naturalmente ignora top 5% | P95 é definido como percentil — já filtra outliers por design |
+
+**Métricas que NÃO precisam de outlier treatment:**
+
+| Métrica | Justificativa |
+|---------|---------------|
+| `passRate` | Percentage (0-100). Valores extremos (0% ou 100%) são legítimos, não outliers |
+| `topFailingJobs` | Top-10 por taxa de falha. Já filtrado por ranking, não produz valores distorcidos |
+| `branchBreakdown` | Percentage por branch. Valores são legítimos (branch pode ter 0% ou 100%) |
+| `flakyTests` | Rate (0-100). Valores altos indicam flakiness real, não outliers |
+| `defectTrends` | Contagem por data. Valores altos indicam spike real de defeitos |
+| `costEstimate` | Baseado em minutos reais do CI. Valores altos refletem custo real |
+
+### Fase R7 — Auditoria Pós-Implementação
+
+| ID    | Item                                                                              | Status |
+| ----- | --------------------------------------------------------------------------------- | ------ |
+| CDH-R7a | 🔧 18.1 Auditoria integridade (5 consumers, fallback)                            | ✅     |
+| CDH-R7b | 🔧 18.2 Auditoria contrato (readonly, typing, flush)                             | ✅     |
+| CDH-R7c | 🔧 18.3 Auditoria cobertura (≥90% ci-data.ts)                                    | ✅     |
+| CDH-R7d | 🔧 18.4 Auditoria regressão (mesmo output CI vs fallback)                        | ✅     |
+
+### Fase R8 — Validação Final
+
+| ID    | Item                                                                              | Status |
+| ----- | --------------------------------------------------------------------------------- | ------ |
+| CDH-R8a | 🔧 npx tsc --noEmit = 0 erros                                                    | ✅     |
+| CDH-R8b | 🔧 npx vitest run = 100% pass                                                     | ✅     |
+| CDH-R8c | 🔧 npm run lint = 0 violações                                                     | ✅     |
+| CDH-R8d | 📋 Atualizar BACKLOG.md status CDH-R1 a CDH-R8                                    | ✅     |
+
+### Auditoria de Consumidores — Correção GAP-2
+
+**Data:** 2026-07-03
+**Resultado:** 6 arquivos de produção importam MetricsStore/MetricsRun. 5 aceitam ciData. 1 é N/A.
+
+| # | Arquivo | Importa | Aceita ciData | Justificativa |
+|---|---------|---------|---------------|---------------|
+| 1 | `shared/health-score.ts` | MetricsStore, MetricsRun | ✅ (line 331) | Usa dados de CI para score |
+| 2 | `shared/quality-gate.ts` | MetricsRun | ✅ (line 40) | Usa dados de CI para gate |
+| 3 | `shared/pr-report-core.ts` | CiDataHub | ✅ (line 82) | Fonte primária de dados CI |
+| 4 | `shared/pipeline-cost.ts` | MetricsRun | ✅ (line 46) | Usa runs para custo |
+| 5 | `shared/traceability-matrix.ts` | MetricsStore | ✅ (line 163) | Usa dados de CI para matriz |
+| 6 | `shared/run-comparison.ts` | MetricsRun | ❌ N/A | Usa MetricsRun como input para LLM (compara dois runs), não como fonte de dados CI. Não precisa de ciData porque recebe dados já processados |
+
+**run-comparison.ts é N/A porque:** A função `compareRuns()` recebe dois `MetricsRun` já existentes e gera uma comparação via LLM. Ela não busca nem processa dados do CI — apenas formata dados que já existem para análise. CiDataHub é uma fonte de dados, não um formatador de comparação.
+
+### Métricas Alvo
+
+| Métrica                            | Alvo      |
+| ---------------------------------- | --------- |
+| `npx tsc --noEmit`                 | **0**     |
+| `npx vitest run`                   | **100%**  |
+| `npm run lint`                     | **0**     |
+| Consumer tests com ciData          | **≥9**    |
+| System tests                       | **≥3**    |
+| E2E tests                          | **≥3**    |
+| Menu integration                   | **verificado** |
+| TECHDOC.md atualizado              | **sim**   |
+| Cobertura ci-data.ts               | **≥90%**  |
+| Auditoria 18.1-18.4                | **todos OK** |
+| Coverage geral                     | **≥90% stmts** ✅ 90.85% |
+
+### Resumo da Sessão de Correção (2026-07-03)
+
+**Objetivo:** Corrigir 8 gaps identificados na implementação original do CiDataHub.
+
+| Fase | Item | Resultado |
+|------|------|-----------|
+| A | Coverage verification | ✅ 90.85% stmts, 83.28% branches, 93.91% funcs, 91.81% lines |
+| B | Consumer audit | ✅ run-comparison.ts justificado como N/A |
+| C | Menu integration test | ✅ `ci-menu.integration.test.ts` criado (7 testes) |
+| D | E2E live tests | ✅ `ci-data-e2e-live.test.ts` criado (5 testes com API real) |
+| E | JSDoc documentation | ✅ `_showCiDataHubSummary` documentado |
+| F | @deprecated annotations | ❌ Removido — causa 221 violações lint (tipos ainda em uso ativo) |
+| G | Empty catch fix | ✅ `ci-data.ts:136` agora loga via rootLogger.debug |
+| H | D5.5 justification | ✅ Justificativa documentada por métrica |
+| I | BACKLOG corrections | ✅ Status CDH-R4b e CDH-R6a corrigidos |
+
+**Testes adicionados:** 12 novos testes (7 menu + 5 e2e live)
+**Coverage CiDataHub:** 99.38% stmts, 83.75% branches, 100% funcs, 100% lines
+**Validação final:** tsc=0, lint=pass, vitest=5835 pass
+
+---
+
 ## 🚀 Sprint Safety Restoration — Rollback + Dependências + CI Tools + Configs (Jun/2026)
 
 **Data:** 2026-06-21

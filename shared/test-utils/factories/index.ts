@@ -6,3 +6,4 @@ export type { MockConfigStatic } from './config-factory.js';
 export { createMockTestExecutionCreator } from './test-execution-creator-factory.js';
 export { createMockContext } from './context-factory.js';
 export { createMockResponse, createMockAxiosInstance } from './response-factory.js';
+export { createFlatTest, createFlatTests } from './flat-test-factory.js';

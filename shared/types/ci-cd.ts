@@ -102,8 +102,8 @@ export interface ArtifactInfo {
 
 /** A GitHub Actions / GitLab CI pipeline run summary. */
 export interface PipelineRun {
-    /** Pipeline run ID. */
-    id?: string | number;
+    /** Pipeline run ID. May be undefined when provider omits it. */
+    id?: string | number | undefined;
     /** Run number (GitHub Actions). */
     run_number?: string | number;
     /** Git ref the pipeline ran on. */

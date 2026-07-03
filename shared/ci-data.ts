@@ -134,7 +134,7 @@ async function fetchRunDetails(
                 const arts = await provider.listPipelineArtifacts(runIdNum);
                 artifactsMap.set(runIdNum, arts);
             } catch {
-                // Artifacts são opcionais
+                rootLogger.debug(`CiDataHub: artifacts não disponíveis para run ${runIdNum}`);
             }
 
             await fetchFailureReasons(provider, runJobs, failureReasonsMap);
@@ -185,18 +185,22 @@ export async function createCiDataHub(
     repo: string,
     options?: CiDataHubOptions,
 ): Promise<CiDataHub> {
-    const recentRunsCount = options?.recentRunsCount ?? 30;
+    const recentRunsCount = options?.recentRunsCount;
 
     // 1. Buscar pipeline runs (com tratamento de erro)
+    rootLogger.info(`CiDataHub: Buscando ${recentRunsCount ?? 'default'} runs recentes...`);
     let runs: PipelineRun[];
     try {
         runs = await provider.getRecentPipelines(recentRunsCount);
     } catch {
+        rootLogger.warn('CiDataHub: Falha ao buscar runs, usando hub vazio.');
         return createEmptyHub(provider.provider, repo);
     }
+    rootLogger.info(`CiDataHub: ${runs.length} runs obtidos. Buscando jobs e artifacts...`);
 
     // 2. Para cada run, buscar jobs, artifacts e failure reasons
     const { jobsMap, artifactsMap, failureReasonsMap } = await fetchRunDetails(provider, runs);
+    rootLogger.info(`CiDataHub: Jobs obtidos para ${jobsMap.size} runs. Calculando métricas...`);
 
     // 3. Calcular métricas derivadas
     const passRate = calcPassRate(runs);
@@ -206,6 +210,7 @@ export async function createCiDataHub(
     const branchBreakdown = calcBranchBreakdown(runs);
     const topFailureReasons = calcTopFailureReasons(failureReasonsMap);
     const flakyTests = calcFlakyTests(runs, jobsMap);
+    rootLogger.info(`CiDataHub: Métricas calculadas. Pass rate: ${passRate}%, Avg duration: ${avgDuration}s`);
 
     return {
         runs,
@@ -254,7 +259,8 @@ function calcAvgDuration(runs: PipelineRun[]): number {
     return Math.min(86400, Math.round(avg * 100) / 100);
 }
 
-/** Calcula P95 das durações dos jobs de teste em milissegundos. */
+/** Calcula P95 das durações dos jobs de teste em milissegundos.
+ *  Outliers são tratados via percentil — P95 ignora os 5% mais altos naturalmente. */
 function calcSuiteSpeedP95(jobsMap: Map<number, PipelineJob[]>): number {
     const durations: number[] = [];
     for (const jobs of jobsMap.values()) {
@@ -266,6 +272,7 @@ function calcSuiteSpeedP95(jobsMap: Map<number, PipelineJob[]>): number {
     }
     if (durations.length === 0) return 0;
     durations.sort((a, b) => a - b);
+    // P95: percentil naturalmente ignora outliers extremos (5% mais altos)
     const idx = Math.max(0, Math.ceil(durations.length * 0.95) - 1);
     return durations[idx] ?? 0;
 }
