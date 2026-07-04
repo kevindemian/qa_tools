@@ -6,6 +6,7 @@
  * report-html.ts:98, case17.ts:132, pipeline-health.ts:80, run-comparison.ts:13.
  *
  * @reference DORA State of DevOps 2025 — pass rate = success / total
+ * @reference D5.5 — outlier treatment via exponential weighting and NaN guards
  */
 import type { PipelineRun } from '../../types/ci-cd.js';
 import type { MetricsRun } from '../../metrics.js';
@@ -50,6 +51,13 @@ export function calcTestPassRate(run: MetricsRun): number {
  * Calculate aggregate pass rate from multiple MetricsRuns using exp-weighted average.
  * More recent runs have higher weight.
  *
+ * Outlier treatment (D5.5):
+ * - Exponential weighting naturally reduces impact of outlier runs
+ * - NaN/Infinity values are guarded via Number.isFinite()
+ * - Empty slices return 0 (no division by zero)
+ *
+ * Saturation (D5.8): Result clamped to [0, 100] to handle floating point errors.
+ *
  * @param runs - MetricsRun array (ordered oldest to newest)
  * @param windowSize - Number of recent runs to consider
  * @returns Percentage (0-100)
@@ -68,7 +76,8 @@ export function calcExpWeightedPassRate(runs: MetricsRun[], windowSize: number):
         weightedSum += value * weight;
         weightTotal += weight;
     }
-    return weightTotal > 0 ? weightedSum / weightTotal : 0;
+    const result = weightTotal > 0 ? weightedSum / weightTotal : 0;
+    return Math.min(100, Math.max(0, result));
 }
 
 /**
@@ -85,6 +94,12 @@ export function calcExecutionRate(run: MetricsRun): number {
 
 /**
  * Calculate exp-weighted execution rate from multiple MetricsRuns.
+ *
+ * Outlier treatment (D5.5):
+ * - Exponential weighting naturally reduces impact of outlier runs
+ * - NaN/Infinity values are guarded via Number.isFinite()
+ *
+ * Saturation (D5.8): Result clamped to [0, 100] to handle floating point errors.
  */
 export function calcExpWeightedExecutionRate(runs: MetricsRun[], windowSize: number): number {
     const slice = runs.slice(-windowSize);
@@ -99,5 +114,6 @@ export function calcExpWeightedExecutionRate(runs: MetricsRun[], windowSize: num
         weightedSum += value * weight;
         weightTotal += weight;
     }
-    return weightTotal > 0 ? weightedSum / weightTotal : 0;
+    const result = weightTotal > 0 ? weightedSum / weightTotal : 0;
+    return Math.min(100, Math.max(0, result));
 }
