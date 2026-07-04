@@ -95,6 +95,9 @@ export async function glGetPipelineJobs(
         name: j['name'] as string,
         stage: j['stage'] as string,
         status: j['status'] as string,
+        started_at: j['started_at'] as string | undefined,
+        finished_at: j['finished_at'] as string | undefined,
+        duration: j['duration'] as number | undefined,
     }));
 }
 

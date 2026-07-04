@@ -403,8 +403,24 @@ describe('GitLabManager', () => {
 
             expect(mockClient['get']).toHaveBeenCalledWith('/projects/project-123/pipelines/42/jobs');
             expect(result).toStrictEqual([
-                { id: 101, name: 'test', stage: 'test', status: 'success' },
-                { id: 102, name: 'build', stage: 'build', status: 'success' },
+                {
+                    id: 101,
+                    name: 'test',
+                    stage: 'test',
+                    status: 'success',
+                    started_at: undefined,
+                    finished_at: undefined,
+                    duration: undefined,
+                },
+                {
+                    id: 102,
+                    name: 'build',
+                    stage: 'build',
+                    status: 'success',
+                    started_at: undefined,
+                    finished_at: undefined,
+                    duration: undefined,
+                },
             ]);
         });
 
