@@ -165,4 +165,26 @@
 
 ---
 
-**Próxima fase: Fase 5 — Entry Points (Tasks 060-063)**
+### Fase 5 — Entry Points
+
+**Início:** 2026-07-04
+**Conclusão:** 2026-07-04
+
+| ID  | Tarefa                                   | Status | Data       |
+| --- | ---------------------------------------- | ------ | ---------- |
+| 060 | `session-state.ts` (ciData → dataHub)    | ✅     | 2026-07-04 |
+| 061 | `batch-mode.ts` (ciData → dataHub)       | ✅     | 2026-07-04 |
+| 062 | `interactive-mode.ts` (ciData → dataHub) | ✅     | 2026-07-04 |
+| 063 | `schedule-handler.ts` (ciData → dataHub) | ✅     | 2026-07-04 |
+
+**Nota:** Tasks 060, 062, 063 foram concluídas durante Fase 4. Task 061 (batch-mode.ts) concluída em separado.
+
+**Checkpoint:**
+
+- Commit: `e4c45a6a` (migrate batch-mode.ts)
+- `npx tsc --noEmit` = 0 errors ✅
+- `npx vitest run` = 420 files, 6085 tests, 0 failures ✅
+
+---
+
+**Próxima fase: Fase 6 — Dashboards (Tasks 070-082)**
