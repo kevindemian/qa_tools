@@ -12,7 +12,7 @@ import {
     generatePipelineQuarantine,
 } from '../shared/quarantine.js';
 import { aggregatePipelineHealth, renderPipelineHealthHtml } from './pipeline-health.js';
-import type { PipelineRunExtended, PipelineJobExtended } from './pipeline-health.js';
+import type { PipelineJobExtended } from './pipeline-health.js';
 import { exportTestsCsv, exportTestsJson } from '../shared/report-export.js';
 import { generateGitMetricsRuns, getLastGitLogError } from '../shared/git-metrics-adapter.js';
 import { analyzeTestImpact, generateTestSelectionJson } from '../shared/test-impact.js';
@@ -168,13 +168,10 @@ async function _collectPipelineResults(
         });
         if (parsed) {
             await offerPipelineFailureAnalysis(parsed);
-            // Create DataHub for PR report
             let dataHub: import('../shared/types/data-hub.js').DataHub | undefined;
             try {
-                const { getOrFetchCiDataHub } = await import('../shared/ci-data.js');
-                const { ciDataHubToDataHub } = await import('../shared/data-hub/adapter.js');
-                const ciHub = await getOrFetchCiDataHub(m, projectName);
-                dataHub = ciHub ? ciDataHubToDataHub(ciHub) : undefined;
+                const { getOrFetchDataHub } = await import('../shared/ci-data.js');
+                dataHub = await getOrFetchDataHub(m, projectName);
             } catch {
                 // Fallback: proceed without DataHub
             }
@@ -382,12 +379,18 @@ function generateTestExport(projectName: string): void {
 
 async function generatePipelineHealthReport(m: import('../shared/types.js').GitProvider): Promise<void> {
     try {
-        const runs: PipelineRunExtended[] = await m.getRecentPipelines(10);
-        if (runs.length === 0) return;
+        const { getOrFetchDataHub } = await import('../shared/ci-data.js');
+        const dataHub = await getOrFetchDataHub(m, currentProjectName);
+        if (!dataHub || dataHub.raw.runs.length === 0) return;
+
+        const runs = dataHub.raw.runs.slice(0, 10);
         const allJobs: PipelineJobExtended[][] = [];
         for (const run of runs) {
-            const jobs: PipelineJobExtended[] = await m.getPipelineJobs(run.id ?? '');
-            allJobs.push(jobs);
+            const runId = run.id;
+            if (runId == null) continue;
+            const runIdNum = typeof runId === 'string' ? parseInt(runId, 10) : runId;
+            const jobs = dataHub.raw.jobs.get(runIdNum) ?? [];
+            allJobs.push(jobs.map((j) => ({ id: j.id, name: j.name, status: j.status })));
         }
         const health = aggregatePipelineHealth(runs, allJobs, [], [], new Date());
         const html = renderPipelineHealthHtml(health, 'Pipeline Health \u2014 ' + currentProjectName);

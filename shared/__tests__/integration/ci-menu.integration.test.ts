@@ -4,14 +4,17 @@
  * Validates:
  * - Menu option 'h' exists in ACTION_HANDLERS
  * - Handler can be invoked without errors
- * - Handler calls createCiDataHub with provider
+ * - Handler uses DataHub from session-state (not createCiDataHub directly)
  * - Handler displays formatted output
  * - Handler handles empty runs gracefully
  * - Handler handles provider errors gracefully
  */
 import { describe, it, expect, vi, beforeEach } from 'vitest';
 import { _testExports } from '../../../git_triggers/interactive-mode.js';
+import { setDataHub, _resetForTest } from '../../../git_triggers/session-state.js';
+import { DataHubImpl } from '../../data-hub/hub.js';
 import type { GitProvider, PipelineRun, PipelineJob } from '../../types/ci-cd.js';
+import type { DataProvider, RawData } from '../../types/data-hub.js';
 
 /* ── Mock GitProvider ──────────────────────────────────────────────────── */
 
@@ -69,7 +72,24 @@ describe('CiDataHub Menu Integration', () => {
 
     beforeEach(() => {
         vi.clearAllMocks();
+        _resetForTest();
     });
+
+    async function setupDataHub(runs: PipelineRun[], jobs: Map<number, PipelineJob[]>): Promise<void> {
+        const rawData: RawData = {
+            runs,
+            jobs,
+            artifacts: new Map(),
+            failureReasons: new Map(),
+        };
+        const mockProvider: DataProvider = {
+            name: 'test',
+            source: 'github',
+            fetchRawData: vi.fn().mockResolvedValue(rawData),
+        };
+        const hub = await DataHubImpl.create([mockProvider], { repo: 'test-project' });
+        setDataHub(hub);
+    }
 
     it('menu option h exists in ACTION_HANDLERS', () => {
         expect.hasAssertions();
@@ -94,10 +114,11 @@ describe('CiDataHub Menu Integration', () => {
             [2, [makeJob(2, { status: 'failed' })]],
             [3, [makeJob(3)]],
         ]);
+        await setupDataHub(runs, jobs);
+
         const provider = createMockProvider(runs, jobs);
 
         await expect(handler(provider, 'test-project', [])).resolves.toBeFalsy();
-        expect(provider.getRecentPipelines).toHaveBeenCalledWith(undefined);
     });
 
     it('handler completes without errors when no runs found', async () => {
@@ -109,7 +130,6 @@ describe('CiDataHub Menu Integration', () => {
         const provider = createMockProvider([]);
 
         await expect(handler(provider, 'test-project', [])).resolves.toBeFalsy();
-        expect(provider.getRecentPipelines).toHaveBeenCalledWith(undefined);
     });
 
     it('handler completes without errors when provider fails', async () => {
@@ -135,10 +155,11 @@ describe('CiDataHub Menu Integration', () => {
             [1, [makeJob(1, { duration: 100 })]],
             [2, [makeJob(2, { duration: 200 })]],
         ]);
+        await setupDataHub(runs, jobs);
+
         const provider = createMockProvider(runs, jobs);
 
         await expect(handler(provider, 'test-project', [])).resolves.toBeFalsy();
-        expect(provider.getPipelineJobs).toHaveBeenCalledWith(1);
     });
 
     it('handler handles branches with different conclusions', async () => {

@@ -27,7 +27,6 @@ import {
     getLastGitLogError,
 } from '../shared/git-metrics-adapter.js';
 import { runQualityGate, formatQualityGateText } from '../shared/quality-gate.js';
-import { ciDataHubToDataHub } from '../shared/data-hub/adapter.js';
 
 import { writeReport } from '../shared/temp-dir.js';
 import {
@@ -42,7 +41,7 @@ import {
     setProjectId,
     setManager,
     getProjects,
-    getCiDataHub,
+    getDataHub,
 } from './session-state.js';
 import { update as updateState } from '../shared/state.js';
 
@@ -179,8 +178,7 @@ export function generateWeeklyQualityReport(): void {
 
         const effectiveStore = usingGitFallback ? { ...store, runs: projectRuns, failureClassifications } : store;
 
-        const _hub = getCiDataHub();
-        const dataHub = _hub ? ciDataHubToDataHub(_hub) : undefined;
+        const dataHub = getDataHub();
         const health = calculateHealthScore(effectiveStore, dataHub ? { dataHub } : undefined);
         const flaky = calculateFlakiness({ runs: projectRuns }, 2);
         const releaseScore = calculateReleaseScore(
@@ -218,8 +216,7 @@ export function generateWeeklyQualityReport(): void {
         const benchmark = computeCrossSquadBenchmark(
             projectNames.map((name) => {
                 const pRuns = store.runs.filter((r) => r.project === name);
-                const _pHub = getCiDataHub();
-                const pDataHub = _pHub ? ciDataHubToDataHub(_pHub) : undefined;
+                const pDataHub = getDataHub();
                 const pHealth = calculateHealthScore(
                     { ...store, runs: pRuns },
                     pDataHub ? { dataHub: pDataHub } : undefined,
@@ -269,8 +266,7 @@ export function generateWeeklyQualityReport(): void {
         const requirementScores = calculateRequirementScores([]);
 
         const sections: string[] = [];
-        const _qgHub = getCiDataHub();
-        const qgDataHub = _qgHub ? ciDataHubToDataHub(_qgHub) : undefined;
+        const qgDataHub = getDataHub();
         const qualityGate = runQualityGate({
             project: currentProjectName,
             ...(qgDataHub ? { dataHub: qgDataHub } : {}),

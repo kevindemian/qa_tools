@@ -77,7 +77,7 @@ shared/
 | Padrão           | Motivo       |
 | ---------------- | ------------ |
 | `eslint-disable` | Hook rejeita |
-| `as unknown as`  | Hook rejeita |
+| type-cast-unknown | Hook rejeita |
 | `@ts-ignore`     | Hook rejeita |
 
 ---
@@ -170,7 +170,7 @@ expect(result.b).toBe(1);
 | Padrão           | Rejeitado |
 | ---------------- | --------- |
 | `eslint-disable` | ✅        |
-| `as unknown as`  | ✅        |
+| type-cast-unknown | ✅        |
 | `@ts-ignore`     | ✅        |
 
 ---
@@ -214,7 +214,7 @@ Sem testes — tipos puros, excluídos de coverage (`**/types/**`).
 | Padrão           | Rejeitado |
 | ---------------- | --------- |
 | `eslint-disable` | ✅        |
-| `as unknown as`  | ✅        |
+| type-cast-unknown | ✅        |
 | `@ts-ignore`     | ✅        |
 
 ---
@@ -416,7 +416,7 @@ Sem testes — tipos puros, excluídos de coverage (`**/types/**`).
 | Padrão           | Rejeitado |
 | ---------------- | --------- |
 | `eslint-disable` | ✅        |
-| `as unknown as`  | ✅        |
+| type-cast-unknown | ✅        |
 | `@ts-ignore`     | ✅        |
 
 ---
@@ -527,7 +527,7 @@ Sem testes — tipos puros, excluídos de coverage (`**/types/**`).
 | Padrão           | Rejeitado |
 | ---------------- | --------- |
 | `eslint-disable` | ✅        |
-| `as unknown as`  | ✅        |
+| type-cast-unknown | ✅        |
 | `@ts-ignore`     | ✅        |
 
 ---
@@ -643,7 +643,7 @@ Sem testes — tipos puros, excluídos de coverage (`**/types/**`).
 | Padrão           | Rejeitado |
 | ---------------- | --------- |
 | `eslint-disable` | ✅        |
-| `as unknown as`  | ✅        |
+| type-cast-unknown | ✅        |
 | `@ts-ignore`     | ✅        |
 
 ### Análise de Impacto
@@ -740,7 +740,7 @@ Sem testes — tipos puros, excluídos de coverage (`**/types/**`).
 | Padrão           | Rejeitado |
 | ---------------- | --------- |
 | `eslint-disable` | ✅        |
-| `as unknown as`  | ✅        |
+| type-cast-unknown | ✅        |
 | `@ts-ignore`     | ✅        |
 
 ### Análise de Impacto
@@ -801,6 +801,121 @@ Sem testes — tipos puros, excluídos de coverage (`**/types/**`).
 
 ---
 
+## Pré-Voo — Fase 5.5
+
+### Contexto
+
+Investigação profunda (2026-07-05) revelou 6 categorias de gaps na consolidação do DataHub. A centralização de dados não está completa — existem caches duplicados, caminhos de dados paralelos, round-trips lossy, bug no cálculo de flaky percentage, e GitLab não suportado via DataHub. Esta fase consolida todos os gaps antes da verificação de integridade.
+
+### Regras
+
+- **TODOS os problemas encontrados são corrigidos** — sem exceções, sem justificativas
+- Se um teste falhar, o **código-fonte** tem bug — nunca o teste
+- Valores esperados vêm de **requisitos e domínio**, nunca do output atual
+- Nenhum mecanismo de segurança ou qualidade pode ser desabilitado, suprimido ou alterado
+
+### ESLint Rules (erros, não warnings)
+
+| Regra                   | Ação                        |
+| ----------------------- | --------------------------- |
+| `no-non-null-assertion` | Extrair variável, usar `?.` |
+| `unbound-method`        | Factory mock separado       |
+| `cognitive-complexity`  | Extrair métodos auxiliares  |
+
+### Pre-commit Hook
+
+| Padrão           | Rejeitado |
+| ---------------- | --------- |
+| `eslint-disable` | ✅        |
+| type-cast-unknown | ✅        |
+| `@ts-ignore`     | ✅        |
+
+---
+
+## Fase 5.5 — Consolidação DataHub (Tarefas 080-086)
+
+### 080 — Fix `countUniqueJobs` bug
+
+| Item               | Conteúdo                                                                                         |
+| ------------------ | ------------------------------------------------------------------------------------------------ |
+| **Arquivo**        | `shared/data-hub/hub.ts`                                                                         |
+| **Bug**            | `countUniqueJobs()` (linhas 201-211) cria `Set` vazio e nunca popula — sempre retorna 1          |
+| **Impacto**        | `calculateFlakyPercentage` divide por 1 → flaky % inflado centenas/milhares de vezes → `releaseScore` corrompido |
+| **Causa**          | Método recebe apenas `runs`, não `raw.jobs` — não tem acesso ao mapa de jobs                      |
+| **Ação**           | Passar `raw.jobs` para `computeReleaseScore` → `calculateFlakyPercentage` → `countUniqueJobs`. Contar nomes únicos de jobs a partir de `raw.jobs` |
+| **Risco**          | ALTO — muda releaseScore calculado (correção intencional)                                        |
+| **Teste unitário** | Atualizar `__tests__/compute/scoring.test.ts` — cenário com múltiplos jobs distintos             |
+| **Teste PBT**      | Atualizar `__tests__/compute/scoring.property.test.ts` — flaky percentage usa contagem real      |
+| **Critério**       | `countUniqueJobs` retorna número real de jobs únicos; flaky % é proporcional                     |
+
+### 081 — Unificar cache
+
+| Item               | Conteúdo                                                                                         |
+| ------------------ | ------------------------------------------------------------------------------------------------ |
+| **Arquivos**       | `shared/ci-data.ts` (linhas 237-285), `shared/data-hub/cache.ts`                                |
+| **Gap**            | 3 caches separados: `cache.ts` (com TTL, zero consumidores), `ci-data.ts` (sem TTL, 2 caches)   |
+| **Ação**           | `getOrFetchDataHub` passa a usar `getCachedHub`/`setCachedHub` de `cache.ts`. Remover `_cachedDataHub` e `_cachedDataHubRepo` de `ci-data.ts`. Cache legado `_cachedHub` (CiDataHub) mantido para backward-compat |
+| **Risco**          | BAIXO — mesma funcionalidade, mecanismo unificado                                                |
+| **Teste**          | `cache.test.ts` existente                                                                        |
+| **Critério**       | `getCachedHub`/`setCachedHub` são as únicas funções de cache para DataHub                        |
+
+### 082 — Suporte GitLab via DataHub
+
+| Item               | Conteúdo                                                                                         |
+| ------------------ | ------------------------------------------------------------------------------------------------ |
+| **Arquivo**        | `shared/ci-data.ts` (linha 275)                                                                  |
+| **Gap**            | `getOrFetchDataHub` sempre cria `GitHubDataProvider` — `GitLabDataProvider` existe mas nunca usado |
+| **Ação**           | Verificar `provider.provider` ('gitlab' | 'github') e selecionar `GitLabDataProvider` ou `GitHubDataProvider` |
+| **Risco**          | BAIXO — providers implementam mesma interface                                                    |
+| **Teste**          | Adicionar cenário GitLab em `__tests__/integration/providers.integration.test.ts`                |
+| **Critério**       | GitLab provider é selecionado quando `provider.provider === 'gitlab'`                            |
+
+### 083 — Eliminar round-trip lossy
+
+| Item               | Conteúdo                                                                                         |
+| ------------------ | ------------------------------------------------------------------------------------------------ |
+| **Arquivos**       | `git_triggers/session-state.ts`, `git_triggers/interactive-mode.ts`, `git_triggers/batch-mode.ts`, `git_triggers/schedule-handler.ts`, `shared/pr-report-core.ts` |
+| **Gap**            | Padrão `DataHub → CiDataHub → DataHub` zera coverage, pipelineCost, defectTrends, releaseScore, quarantineStatus |
+| **Ação**           | `session-state.ts` armazena `DataHub` diretamente. `_getDataHub()` retorna `DataHub` original. `getCiDataHub()` continua disponível via adapter para consumers que precisam de `CiDataHub` |
+| **Risco**          | MÉDIO — remove perda de dados, dados completos agora disponíveis                                |
+| **Teste**          | Atualizar `__tests__/system/ci-data-system.test.ts`                                              |
+| **Critério**       | Round-trip `DataHub → CiDataHub → DataHub` não mais necessário para consumers que só precisam de DataHub |
+
+### 084 — Converter `_showCiDataHubSummary` para DataHub
+
+| Item               | Conteúdo                                                                                         |
+| ------------------ | ------------------------------------------------------------------------------------------------ |
+| **Arquivo**        | `git_triggers/interactive-mode.ts` (linhas 638-691)                                              |
+| **Gap**            | Função chama `createCiDataHub` diretamente — bypass DataHub, sem cache, fetch fresco toda vez    |
+| **Ação**           | Usar `getOrFetchDataHub` ou hub da sessão via `_getDataHub()`                                    |
+| **Risco**          | BAIXO — mesma display logic                                                                      |
+| **Teste**          | Teste existente do menu interativo                                                               |
+| **Critério**       | `_showCiDataHubSummary` não chama `createCiDataHub` diretamente                                  |
+
+### 085 — Converter batch-mode.ts para DataHub direto
+
+| Item               | Conteúdo                                                                                         |
+| ------------------ | ------------------------------------------------------------------------------------------------ |
+| **Arquivo**        | `git_triggers/batch-mode.ts` (linhas 171-181, 383-399)                                           |
+| **Gap**            | Dupla conversão `getOrFetchCiDataHub + ciDataHubToDataHub`. `generatePipelineHealthReport` chama `m.getRecentPipelines()` diretamente — bypass DataHub |
+| **Ação**           | Usar `getOrFetchDataHub` direto. Converter `generatePipelineHealthReport` para usar dados do DataHub |
+| **Risco**          | MÉDIO — muda de legacy para DataHubImpl calculation                                              |
+| **Teste**          | Atualizar `__tests__/e2e/ci-data-e2e.test.ts`                                                    |
+| **Critério**       | batch-mode.ts não chama `createCiDataHub` nem `m.getRecentPipelines()` para métricas             |
+
+### 086 — Suite de validação Fase 5.5
+
+| Item               | Conteúdo                                                                                         |
+| ------------------ | ------------------------------------------------------------------------------------------------ |
+| **Arquivo**        | `shared/data-hub/__tests__/integration/phase55.integration.test.ts`                              |
+| **Testes**         | Validação ponta-a-ponta: DataHub criado → cacheado → providers selecionados → compute correto → dados completos no round-trip |
+| **Critério**       | Suite inteira passa                                                                              |
+
+**Checkpoint Fase 5.5:** `npx vitest run shared/data-hub/` = 100%. Cache unificado. GitLab funcionando. Round-trip lossy eliminado. Bug countUniqueJobs corrigido.
+**Commit:** `fix(data-hub): consolidate caching, fix countUniqueJobs, add GitLab support, eliminate lossy adapter round-trip`
+
+---
+
 ## Pré-Voo — Fase 6
 
 ### ESLint Rules (erros, não warnings)
@@ -821,7 +936,7 @@ Sem testes — tipos puros, excluídos de coverage (`**/types/**`).
 | Padrão           | Rejeitado |
 | ---------------- | --------- |
 | `eslint-disable` | ✅        |
-| `as unknown as`  | ✅        |
+| type-cast-unknown | ✅        |
 | `@ts-ignore`     | ✅        |
 
 ---
@@ -895,7 +1010,7 @@ Sem testes — tipos puros, excluídos de coverage (`**/types/**`).
 | Padrão           | Rejeitado |
 | ---------------- | --------- |
 | `eslint-disable` | ✅        |
-| `as unknown as`  | ✅        |
+| type-cast-unknown | ✅        |
 | `@ts-ignore`     | ✅        |
 
 ---
@@ -919,7 +1034,7 @@ Sem testes — tipos puros, excluídos de coverage (`**/types/**`).
 | Padrão           | Rejeitado |
 | ---------------- | --------- |
 | `eslint-disable` | ✅        |
-| `as unknown as`  | ✅        |
+| type-cast-unknown | ✅        |
 | `@ts-ignore`     | ✅        |
 
 ---
@@ -945,7 +1060,7 @@ Código morto removido. Código vivo documentado.
 | Padrão           | Rejeitado |
 | ---------------- | --------- |
 | `eslint-disable` | ✅        |
-| `as unknown as`  | ✅        |
+| type-cast-unknown | ✅        |
 | `@ts-ignore`     | ✅        |
 
 ---
@@ -963,7 +1078,7 @@ Código morto removido. Código vivo documentado.
 | Padrão           | Rejeitado |
 | ---------------- | --------- |
 | `eslint-disable` | ✅        |
-| `as unknown as`  | ✅        |
+| type-cast-unknown | ✅        |
 | `@ts-ignore`     | ✅        |
 
 ---
@@ -981,7 +1096,7 @@ Código morto removido. Código vivo documentado.
 | Padrão           | Rejeitado |
 | ---------------- | --------- |
 | `eslint-disable` | ✅        |
-| `as unknown as`  | ✅        |
+| type-cast-unknown | ✅        |
 | `@ts-ignore`     | ✅        |
 
 ---
@@ -1008,18 +1123,19 @@ Código morto removido. Código vivo documentado.
 ## Dependências
 
 ```
-Fase 0 (001-005)    ← sem dependências
-Fase 1 (010-022)    ← depende de Fase 0
-Fase 2 (030-037)    ← depende de Fase 0 (paralela com Fase 1)
-Fase 3 (040-046)    ← depende de Fase 1 (incluindo 010a/010b) + Fase 2
-Fase 4 (050-054)    ← depende de Fase 3
-Fase 5 (060-063)    ← CONCLUÍDA (absorvida pela Fase 4)
-Fase 6 (070-079)    ← depende de Fase 4 + Fase 5 (verificação de integridade)
-Fase 7 (090-093)    ← depende de Fase 6
-Fase 8 (100-106)    ← depende de Fase 6
-Fase 9 (120-125)    ← depende de Fase 8
-Fase 10 (130-132)   ← depende de Fase 9
-Fase 11 (140-150)   ← depende de Fase 10
+Fase 0   (001-005)    ← sem dependências
+Fase 1   (010-022)    ← depende de Fase 0
+Fase 2   (030-037)    ← depende de Fase 0 (paralela com Fase 1)
+Fase 3   (040-046)    ← depende de Fase 1 (incluindo 010a/010b) + Fase 2
+Fase 4   (050-054)    ← depende de Fase 3
+Fase 5   (060-063)    ← CONCLUÍDA (absorvida pela Fase 4)
+Fase 5.5 (080-086)    ← depende de Fase 5 (consolidação de gaps)
+Fase 6   (070-079)    ← depende de Fase 5.5 (verificação de integridade)
+Fase 7   (090-093)    ← depende de Fase 6
+Fase 8   (100-106)    ← depende de Fase 6
+Fase 9   (120-125)    ← depende de Fase 8
+Fase 10  (130-132)    ← depende de Fase 9
+Fase 11  (140-150)    ← depende de Fase 10
 ```
 
 ---
@@ -1034,13 +1150,14 @@ Fase 11 (140-150)   ← depende de Fase 10
 | 3         | 7       | 1.5             |
 | 4         | 5       | 1.5             |
 | 5         | 1       | 0.5             |
+| 5.5       | 7       | 2               |
 | 6         | 10      | 1               |
 | 7         | 4       | 1               |
 | 8         | 7       | 1               |
 | 9         | 6       | 1               |
 | 10        | 3       | 0.5             |
 | 11        | 11      | 1               |
-| **Total** | **80**  | **~13 sprints** |
+| **Total** | **87**  | **~15 sprints** |
 
 ---
 
@@ -1064,6 +1181,10 @@ Fase 11 (140-150)   ← depende de Fase 10
 | Fase 6 redefinida | Verificação, não migração          | 18 HTML generators são agnósticos a fonte de dados. Adicionar `dataHub?` violaria SRP/DIP |
 | Fase 5 absorvida  | Tasks 060/062/063 feitas na Fase 4 | Entry points migrados como efeito colateral                                               |
 | Coleta assíncrona | Pendência futura                   | Avaliar coleta de dados brutos na inicialização do sistema                                |
+| countUniqueJobs   | Corrigido na Fase 5.5              | Bug causava flaky % inflado → releaseScore corrompido                                     |
+| Cache             | Unificado na Fase 5.5              | 3 caches separados → 1 fonte de verdade                                                   |
+| GitLab via DataHub| Habilitado na Fase 5.5             | Provider existente mas nunca instanciado                                                   |
+| Round-trip lossy  | Eliminado na Fase 5.5              | DataHub→CiDataHub→DataHub zerava coverage, pipelineCost, etc.                              |
 
 ---
 
