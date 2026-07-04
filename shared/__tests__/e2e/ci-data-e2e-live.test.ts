@@ -117,6 +117,7 @@ function createGithubProvider(token: string, repo: string): GitProvider {
         getBranch: () => Promise.resolve({ name: '', commitSha: '' }),
         getPipeline: () => Promise.resolve({ id: 0, status: 'completed', state: 'success', ref: '', sha: '' }),
         getDiff: () => Promise.resolve(''),
+        getJobLogs: () => Promise.resolve(null),
     };
 }
 

@@ -28,6 +28,7 @@ function createMockProvider(overrides?: Partial<GitProvider>): GitProvider {
         getBranch: vi.fn(),
         getPipeline: vi.fn(),
         getDiff: vi.fn(),
+        getJobLogs: vi.fn(),
         provider: 'github' as const,
         ...overrides,
     };

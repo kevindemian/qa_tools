@@ -163,6 +163,7 @@ export interface GitProvider {
     getPipelineJobs: (pipelineId: string | number) => Promise<PipelineJob[]>;
     listPipelineArtifacts: (pipelineId: string | number) => Promise<ArtifactInfo[]>;
     downloadArtifact: (artifactId: string | number) => Promise<{ buffer: Buffer; filename: string }>;
+    getJobLogs: (jobId: string | number, maxBytes?: number) => Promise<string | null>;
     getDiff: (source: string, target: string) => Promise<string>;
     provider: 'gitlab' | 'github';
 }

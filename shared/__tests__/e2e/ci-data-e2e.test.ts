@@ -41,6 +41,7 @@ function createMockProvider(runs: PipelineRun[], jobsPerRun: Map<number, Pipelin
         getBranch: vi.fn(),
         getPipeline: vi.fn(),
         getDiff: vi.fn(),
+        getJobLogs: vi.fn(),
         provider: 'github' as const,
     };
 }
@@ -241,6 +242,7 @@ describe('E2E: CI Data Hub — Complete Pipeline Flow', () => {
                 getBranch: vi.fn(),
                 getPipeline: vi.fn(),
                 getDiff: vi.fn(),
+                getJobLogs: vi.fn(),
                 provider: 'github' as const,
             } as GitProvider;
 
