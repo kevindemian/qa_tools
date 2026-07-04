@@ -44,7 +44,7 @@ import {
     clearProjectCache,
     currentProjectName,
     ensureCiDataHub,
-    getCiDataHub,
+    getDataHub,
 } from './session-state.js';
 import {
     handleTriggerPipeline,
@@ -104,7 +104,6 @@ import { analyzePipelineImpact } from '../shared/impact-alert.js';
 import { calculatePipelineCost } from '../shared/pipeline-cost.js';
 import { calculateRequirementScores } from '../shared/requirement-score.js';
 import { writeReport } from '../shared/temp-dir.js';
-import { ciDataHubToDataHub } from '../shared/data-hub/adapter.js';
 import { runQualityGate, formatQualityGateText } from '../shared/quality-gate.js';
 import { openWithFallback } from '../shared/open.js';
 import { generateCoverageGapHtml } from '../shared/generate-coverage-gap-html.js';
@@ -137,8 +136,7 @@ const validateEnv = createValidateEnv([
 ]);
 
 function _getDataHub() {
-    const ciData = getCiDataHub();
-    return ciData ? ciDataHubToDataHub(ciData) : undefined;
+    return getDataHub();
 }
 
 async function handleHelp(): Promise<void> {
@@ -635,14 +633,13 @@ async function _dashboardCoverageGap(): Promise<void> {
  *
  * @param m - GitProvider instance for fetching CI data
  */
-async function _showCiDataHubSummary(m: GitProvider): Promise<void> {
+async function _showCiDataHubSummary(): Promise<void> {
     try {
-        const { createCiDataHub } = await import('../shared/ci-data.js');
-
         info('Buscando dados do CI Data Hub...');
-        const hub = await createCiDataHub(m, currentProjectName);
+        await ensureCiDataHub();
+        const hub = getDataHub();
 
-        if (hub.runs.length === 0) {
+        if (!hub || hub.raw.runs.length === 0) {
             warn('Nenhum dado de pipeline encontrado para este repositório.');
             return;
         }
@@ -653,32 +650,32 @@ async function _showCiDataHubSummary(m: GitProvider): Promise<void> {
             '',
             '  Provider:          ' + hub.provider,
             '  Repositório:       ' + hub.repo,
-            '  Runs analisadas:   ' + hub.recentRunsCount,
-            '  Pass Rate:         ' + hub.passRate + '%',
-            '  Duração média:     ' + Math.round(hub.avgDuration) + 's',
-            '  Suite Speed P95:   ' + hub.suiteSpeedP95 + 'ms',
+            '  Runs analisadas:   ' + hub.raw.runs.length,
+            '  Pass Rate:         ' + hub.computed.passRate + '%',
+            '  Duração média:     ' + Math.round(hub.computed.avgDuration) + 's',
+            '  Suite Speed P95:   ' + hub.computed.suiteSpeedP95 + 'ms',
             '',
         ];
 
-        if (hub.topFailingJobs.length > 0) {
+        if (hub.computed.topFailingJobs.length > 0) {
             lines.push('  Top Jobs com Falha:');
-            for (const job of hub.topFailingJobs.slice(0, 5)) {
+            for (const job of hub.computed.topFailingJobs.slice(0, 5)) {
                 lines.push('    - ' + job.name + ': ' + job.failureRate + '% (' + job.count + ' falhas)');
             }
             lines.push('');
         }
 
-        if (hub.flakyTests.length > 0) {
+        if (hub.computed.flakyRate.length > 0) {
             lines.push('  Testes Flaky:');
-            for (const test of hub.flakyTests.slice(0, 5)) {
+            for (const test of hub.computed.flakyRate.slice(0, 5)) {
                 lines.push('    - ' + test.title + ': ' + test.rate + '% (' + test.runs + ' runs)');
             }
             lines.push('');
         }
 
-        if (Object.keys(hub.branchBreakdown).length > 0) {
+        if (Object.keys(hub.computed.branchBreakdown).length > 0) {
             lines.push('  Pass Rate por Branch:');
-            for (const [branch, data] of Object.entries(hub.branchBreakdown)) {
+            for (const [branch, data] of Object.entries(hub.computed.branchBreakdown)) {
                 lines.push('    - ' + branch + ': ' + data.passRate + '% (' + data.count + ' runs)');
             }
             lines.push('');
@@ -741,8 +738,8 @@ const ACTION_HANDLERS: Record<string, (m: GitProvider, pn: string, ns: string[])
         await _showDashboardMenu();
         return false;
     },
-    h: async (m) => {
-        await _showCiDataHubSummary(m);
+    h: async (_m, _pn, _ns) => {
+        await _showCiDataHubSummary();
         return false;
     },
     e: () => {

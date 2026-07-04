@@ -256,28 +256,30 @@ export async function getOrFetchCiDataHub(provider: GitProvider, repo: string): 
 
 /* ── Helper com cache (novo tipo DataHub) ──────────────────────────────── */
 
-let _cachedDataHub: DataHub | undefined;
-let _cachedDataHubRepo: string | undefined;
-
 /**
  * Obtém DataHub (novo tipo) com cache por sessão.
- * Wrapper que usa DataHubImpl internamente.
+ * Wrapper que usa getCachedHub/setCachedHub de cache.ts (com TTL).
  * Em caso de falha, retorna undefined (fallback para MetricsStore).
  */
 export async function getOrFetchDataHub(provider: GitProvider, repo: string): Promise<DataHub | undefined> {
-    if (_cachedDataHub != null && _cachedDataHubRepo === repo) {
-        return _cachedDataHub;
-    }
+    const { getCachedHub, setCachedHub } = await import('./data-hub/cache.js');
+    const cached = getCachedHub(repo);
+    if (cached != null) return cached;
     try {
-        // Dynamic imports prevent circular dependencies with hub.ts.
-        // Static imports would create: ci-data.ts → hub.ts → providers → ...
         const { DataHubImpl } = await import('./data-hub/hub.js');
-        const { GitHubDataProvider } = await import('./data-hub/providers/github-provider.js');
 
-        const dataProvider = new GitHubDataProvider(provider);
-        _cachedDataHub = await DataHubImpl.create([dataProvider], { repo });
-        _cachedDataHubRepo = repo;
-        return _cachedDataHub;
+        let dataProvider;
+        if (provider.provider === 'gitlab') {
+            const { GitLabDataProvider } = await import('./data-hub/providers/gitlab-provider.js');
+            dataProvider = new GitLabDataProvider(provider);
+        } else {
+            const { GitHubDataProvider } = await import('./data-hub/providers/github-provider.js');
+            dataProvider = new GitHubDataProvider(provider);
+        }
+
+        const hub = await DataHubImpl.create([dataProvider], { repo });
+        setCachedHub(repo, hub);
+        return hub;
     } catch (err) {
         rootLogger.warn(`getOrFetchDataHub failed: ${String(err)}`);
         return undefined;

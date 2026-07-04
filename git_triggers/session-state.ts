@@ -13,6 +13,7 @@ import { palette } from '../shared/palette.js';
 import { loadMetrics, calculateFlakiness } from '../shared/metrics.js';
 import type { GitProvider, JsonObject, StateContainer } from '../shared/types.js';
 import type { CiDataHub } from '../shared/ci-data.js';
+import type { DataHub } from '../shared/types/data-hub.js';
 import GitLabManager from './gitlab_manager.js';
 import GitHubManager from './github_manager.js';
 
@@ -30,11 +31,22 @@ export let currentProvider: 'gitlab' | 'github' = 'gitlab';
 export let isBusy = false;
 export let manager: GitProvider | null = null;
 
-/** Central CiDataHub — created once per session, consumed by all dashboards and reports. */
+/** Central DataHub — created once per session, consumed by all dashboards and reports. */
+let _dataHub: DataHub | undefined;
 let _ciDataHub: CiDataHub | undefined;
+
+export function setDataHub(hub: DataHub | undefined): void {
+    _dataHub = hub;
+    _ciDataHub = undefined;
+}
+
+export function getDataHub(): DataHub | undefined {
+    return _dataHub;
+}
 
 export function setCiDataHub(hub: CiDataHub | undefined): void {
     _ciDataHub = hub;
+    _dataHub = undefined;
 }
 
 export function getCiDataHub(): CiDataHub | undefined {
@@ -42,12 +54,17 @@ export function getCiDataHub(): CiDataHub | undefined {
 }
 
 /**
- * Lazy-init: creates CiDataHub on first call, caches for session lifetime.
+ * Lazy-init: creates DataHub on first call, caches for session lifetime.
  * Returns undefined if provider is unavailable or creation fails.
  * Uses unified cache from data-hub/cache.ts.
  */
 export async function ensureCiDataHub(): Promise<CiDataHub | undefined> {
     if (_ciDataHub) return _ciDataHub;
+    if (_dataHub) {
+        const { dataHubToCiDataHub } = await import('../shared/data-hub/adapter.js');
+        _ciDataHub = dataHubToCiDataHub(_dataHub);
+        return _ciDataHub;
+    }
     if (!manager || !currentProjectName) return undefined;
     try {
         const { getOrFetchDataHub } = await import('../shared/ci-data.js');
@@ -55,6 +72,7 @@ export async function ensureCiDataHub(): Promise<CiDataHub | undefined> {
 
         const dataHub = await getOrFetchDataHub(manager, currentProjectName);
         if (dataHub) {
+            _dataHub = dataHub;
             _ciDataHub = dataHubToCiDataHub(dataHub);
         }
         return _ciDataHub;
@@ -218,6 +236,8 @@ export function _resetForTest(): void {
     currentProvider = 'gitlab';
     isBusy = false;
     manager = null;
+    _dataHub = undefined;
+    _ciDataHub = undefined;
     sessionContext.sessionCounters = [];
 }
 

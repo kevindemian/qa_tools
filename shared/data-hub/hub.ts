@@ -16,7 +16,7 @@ import type {
     ReleaseScoreResult,
     HealthDimensions,
 } from '../types/data-hub.js';
-import type { PipelineRun } from '../types/ci-cd.js';
+import type { PipelineRun, PipelineJob } from '../types/ci-cd.js';
 import {
     calcPipelinePassRate,
     calcAvgDuration,
@@ -144,7 +144,14 @@ export class DataHubImpl implements DataHub {
         const branchBreakdown = calcBranchBreakdown(raw.runs);
         const topFailingJobs = calcTopFailingJobs(raw.runs, raw.jobs);
         const topFailureReasons = calcTopFailureReasons(raw.failureReasons);
-        const releaseScore = DataHubImpl.computeReleaseScore(passRate, flakyRate, coverage, suiteSpeedP95, raw.runs);
+        const releaseScore = DataHubImpl.computeReleaseScore(
+            passRate,
+            flakyRate,
+            coverage,
+            suiteSpeedP95,
+            raw.runs,
+            raw.jobs,
+        );
         const quarantineStatus = calcQuarantineStatus(flakyRate);
 
         return {
@@ -175,8 +182,9 @@ export class DataHubImpl implements DataHub {
         coverage: number,
         suiteSpeedP95: number,
         runs: PipelineRun[],
+        jobs: Map<number, PipelineJob[]>,
     ): ReleaseScoreResult {
-        const flakyPercentage = DataHubImpl.calculateFlakyPercentage(flakyRate, runs);
+        const flakyPercentage = DataHubImpl.calculateFlakyPercentage(flakyRate, runs, jobs);
         const executionRate = DataHubImpl.calculateExecutionRate(runs);
 
         const dimensions: HealthDimensions = {
@@ -190,24 +198,28 @@ export class DataHubImpl implements DataHub {
         return calcReleaseScore(dimensions);
     }
 
-    private static calculateFlakyPercentage(flakyRate: FlakyResult[], runs: PipelineRun[]): number {
+    private static calculateFlakyPercentage(
+        flakyRate: FlakyResult[],
+        runs: PipelineRun[],
+        jobs: Map<number, PipelineJob[]>,
+    ): number {
         if (runs.length === 0 || flakyRate.length === 0) return 0;
         const flakyCount = flakyRate.length;
-        const totalJobs = DataHubImpl.countUniqueJobs(runs);
+        const totalJobs = DataHubImpl.countUniqueJobs(jobs);
         if (totalJobs === 0) return 0;
         return Math.round((flakyCount / totalJobs) * 100 * 100) / 100;
     }
 
-    private static countUniqueJobs(runs: PipelineRun[]): number {
+    private static countUniqueJobs(jobs: Map<number, PipelineJob[]>): number {
         const jobNames = new Set<string>();
-        for (const run of runs) {
-            if (run.id == null) continue;
-            const runIdNum = typeof run.id === 'string' ? parseInt(run.id, 10) : run.id;
-            if (isNaN(runIdNum)) continue;
-            // We can't access jobsMap here, so we return a placeholder
-            // The actual job count is computed in the metrics
+        for (const jobList of jobs.values()) {
+            for (const job of jobList) {
+                if (job.name) {
+                    jobNames.add(job.name);
+                }
+            }
         }
-        return jobNames.size || 1; // Avoid division by zero
+        return jobNames.size || 1;
     }
 
     private static calculateExecutionRate(runs: PipelineRun[]): number {

@@ -181,4 +181,56 @@ describe('Integration: DataHub', () => {
 
         expect(cached).toBe(hub);
     });
+
+    it('countUniqueJobs uses actual job names from raw.jobs, not empty Set', async () => {
+        expect.hasAssertions();
+
+        const runs = [
+            makeRun({ id: 1, conclusion: 'success' }),
+            makeRun({ id: 2, conclusion: 'success' }),
+            makeRun({ id: 3, conclusion: 'failure' }),
+        ];
+
+        const jobs = new Map<number, PipelineJob[]>([
+            [1, [makeJob({ id: 10, name: 'lint', status: 'success', duration: 5 })]],
+            [
+                2,
+                [
+                    makeJob({ id: 20, name: 'lint', status: 'success', duration: 5 }),
+                    makeJob({ id: 21, name: 'unit-test', status: 'success', duration: 30 }),
+                ],
+            ],
+            [
+                3,
+                [
+                    makeJob({ id: 30, name: 'lint', status: 'failure', duration: 5 }),
+                    makeJob({ id: 31, name: 'unit-test', status: 'success', duration: 30 }),
+                ],
+            ],
+        ]);
+
+        const rawData: RawData = {
+            runs,
+            jobs,
+            artifacts: new Map(),
+            failureReasons: new Map(),
+        };
+
+        const provider = makeProvider(rawData);
+        const hub = await DataHubImpl.create([provider], { repo: 'test/repo' });
+
+        expect(hub.computed.flakyRate).toHaveLength(1);
+
+        const firstFlaky = hub.computed.flakyRate[0];
+
+        expect(firstFlaky).toBeDefined();
+        expect(firstFlaky?.title).toBe('lint');
+
+        const flakyPct = hub.computed.releaseScore.dimensions.flakyRate;
+
+        expect(flakyPct.score).toBeGreaterThanOrEqual(0);
+        expect(flakyPct.score).toBeLessThanOrEqual(100);
+        expect(hub.computed.releaseScore.score).toBeGreaterThanOrEqual(0);
+        expect(hub.computed.releaseScore.score).toBeLessThanOrEqual(100);
+    });
 });
