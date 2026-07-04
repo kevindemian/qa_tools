@@ -78,6 +78,8 @@ vi.mock('./session-state', () => ({
     setCurrentProjectName: vi.fn(),
     setProjectId: vi.fn(),
     setManager: vi.fn(),
+    getCiDataHub: vi.fn(() => undefined),
+    ensureCiDataHub: vi.fn(() => undefined),
     get currentProjectName() {
         return mockSessionState.currentProjectName;
     },
