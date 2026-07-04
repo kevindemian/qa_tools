@@ -30,3 +30,6 @@ export {
 export type { Grade, ScoreResult } from './scoring.js';
 export { calcReleaseScore, makeDimensionScore } from './release-score.js';
 export { calcQuarantineStatus } from './quarantine-status.js';
+export { calcPipelineCost } from './pipeline-cost.js';
+export { calcDefectTrends } from './defect-trends.js';
+export type { DefectTrendPoint, DefectTrendResult } from './defect-trends.js';
