@@ -115,4 +115,54 @@
 
 ---
 
-### Fase 3 — Hub + Cache (próxima)
+### Fase 3 — Hub + Cache
+
+**Início:** 2026-07-04
+**Conclusão:** 2026-07-04
+
+| ID  | Tarefa                                   | Status | Data       |
+| --- | ---------------------------------------- | ------ | ---------- |
+| 040 | `DataHubImpl` class                      | ✅     | 2026-07-04 |
+| 041 | `cache.ts` (session cache)               | ✅     | 2026-07-04 |
+| 042 | `adapter.ts` (DataHub ↔ CiDataHub)       | ✅     | 2026-07-04 |
+| 043 | Barrel `index.ts` + `providers/index.ts` | ✅     | 2026-07-04 |
+| 044 | `ci-data.ts` (getOrFetchDataHub)         | ✅     | 2026-07-04 |
+| 045 | `session-state.ts` (ensureCiDataHub)     | ✅     | 2026-07-04 |
+| 046 | Integration test hub                     | ✅     | 2026-07-04 |
+
+**Checkpoint:**
+
+- Commit: `e8841245` (Hub + Cache + Adapter + Barrel + Integration)
+- Design decision commit: `f94755bc` (comments for adapter/cache/ci-data)
+- `npx vitest run shared/data-hub/` = 37 files, 238 tests, 0 failures ✅
+
+---
+
+### Fase 4 — Migrate 5 Core Consumers
+
+**Início:** 2026-07-04
+**Conclusão:** 2026-07-04
+
+| ID  | Tarefa                                      | Status | Data       |
+| --- | ------------------------------------------- | ------ | ---------- |
+| 050 | `health-score.ts` (ciData → dataHub)        | ✅     | 2026-07-04 |
+| 051 | `quality-gate.ts` (ciData → dataHub)        | ✅     | 2026-07-04 |
+| 052 | `pr-report-core.ts` (ciData → dataHub)      | ✅     | 2026-07-04 |
+| 053 | `pipeline-cost.ts` (ciData → dataHub)       | ✅     | 2026-07-04 |
+| 054 | `traceability-matrix.ts` (ciData → dataHub) | ✅     | 2026-07-04 |
+
+**Correções adicionais durante Fase 4:**
+
+- `interactive-mode.ts`: added `_getDataHub()` helper + adapter import
+- `schedule-handler.ts`: extract `resolveGitFallback()` + `extractTrendCategories()` helpers (reduced cognitive complexity 18→15)
+- Test files: converted CiDataHub → DataHub via adapter, removed unnecessary conditionals
+
+**Checkpoint:**
+
+- Commit: `01cece81` (refactor: migrate 5 core consumers from CiDataHub to DataHub)
+- `npx tsc --noEmit` = 0 errors ✅
+- `npx vitest run` = 420 files, 6085 tests, 0 failures ✅
+
+---
+
+**Próxima fase: Fase 5 — Entry Points (Tasks 060-063)**
