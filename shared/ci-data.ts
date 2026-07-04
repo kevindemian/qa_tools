@@ -269,6 +269,8 @@ export async function getOrFetchDataHub(provider: GitProvider, repo: string): Pr
         return _cachedDataHub;
     }
     try {
+        // Dynamic imports prevent circular dependencies with hub.ts.
+        // Static imports would create: ci-data.ts → hub.ts → providers → ...
         const { DataHubImpl } = await import('./data-hub/hub.js');
         const { GitHubDataProvider } = await import('./data-hub/providers/github-provider.js');
 

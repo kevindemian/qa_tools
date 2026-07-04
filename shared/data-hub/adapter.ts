@@ -47,6 +47,10 @@ export function dataHubToCiDataHub(hub: DataHub): CiDataHub {
 /**
  * Convert a CiDataHub (legacy) to DataHub (new).
  *
+ * NOTE: Legacy CiDataHub lacks coverage, pipelineCost, defectTrends,
+ * releaseScore, quarantineStatus. These are zeroed on conversion.
+ * Consumers needing these metrics should use DataHub directly.
+ *
  * @param ciData - Legacy CiDataHub instance.
  * @returns DataHub with new type structure.
  */
