@@ -6,6 +6,7 @@ import os from 'node:os';
 
 vi.mock('../../shared/prompt.js', () => ({
     ask: vi.fn(),
+    askMultiline: vi.fn(),
     askConfirm: vi.fn(),
     askFilePath: vi.fn(),
     warn: vi.fn(),
@@ -125,8 +126,9 @@ describe('Case03 — Create Version', () => {
     it('calls jiraResource.createVersion with correct args', async () => {
         expect.hasAssertions();
 
-        const { ask } = await import('../../shared/prompt.js');
-        vi.mocked(ask).mockResolvedValueOnce('v3.0.0').mockResolvedValueOnce('release notes');
+        const { ask, askMultiline } = await import('../../shared/prompt.js');
+        vi.mocked(ask).mockResolvedValueOnce('v3.0.0');
+        vi.mocked(askMultiline).mockResolvedValueOnce('release notes');
         const ctx = createMockContext();
         const spy = vi.spyOn(ctx.jiraResource, 'createVersion');
         const { default: case03 } = await import('../commands/case03.js');
@@ -150,9 +152,10 @@ describe('Case03 — Create Version', () => {
     it('calls safeJiraCall wrapping createVersion', async () => {
         expect.hasAssertions();
 
-        const { ask } = await import('../../shared/prompt.js');
+        const { ask, askMultiline } = await import('../../shared/prompt.js');
         const { safeJiraCall } = await import('../../shared/jira-helper.js');
-        vi.mocked(ask).mockResolvedValueOnce('v1.0').mockResolvedValueOnce('');
+        vi.mocked(ask).mockResolvedValueOnce('v1.0');
+        vi.mocked(askMultiline).mockResolvedValueOnce('');
         const ctx = createMockContext();
         const { default: case03 } = await import('../commands/case03.js');
         await case03.handler(ctx);

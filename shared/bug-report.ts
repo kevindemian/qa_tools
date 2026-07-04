@@ -2,7 +2,7 @@ import { formatErr } from './errors.js';
 import * as fs from 'fs';
 import * as path from 'path';
 import { sanitizePath } from './path-utils.js';
-import { ask, askConfirm, info, printError, title, warn } from './prompt.js';
+import { ask, askMultiline, askConfirm, info, printError, title, warn } from './prompt.js';
 import { rootLogger } from './logger.js';
 import { classifyFailure } from './failure-analysis.js';
 import { llmPrompt } from './llm-client.js';
@@ -125,10 +125,10 @@ export async function collectManual(): Promise<BugReport> {
     title('Bug Report Manual');
 
     const summary = await askWithRetry('Sumário do bug');
-    const description = await ask('Descrição detalhada');
-    const stepsToReproduceRaw = await ask('Passos para reproduzir (separados por vírgula)');
-    const expResult = await ask('Resultado esperado');
-    const actResult = await ask('Resultado atual');
+    const description = await askMultiline('Descrição detalhada');
+    const stepsToReproduceRaw = await askMultiline('Passos para reproduzir');
+    const expResult = await askMultiline('Resultado esperado');
+    const actResult = await askMultiline('Resultado atual');
     const env = await ask('Ambiente (ex: produção, staging)');
     const severity = normalizeSeverity(
         await ask('Severidade (trivial | minor | major | critical)', { default: 'minor' }),
@@ -141,7 +141,10 @@ export async function collectManual(): Promise<BugReport> {
         : undefined;
 
     const stepsToReproduce = stepsToReproduceRaw.trim()
-        ? stepsToReproduceRaw.split(',').map((s) => s.trim())
+        ? stepsToReproduceRaw
+              .split(/\r?\n/)
+              .filter((s) => s.trim())
+              .map((s) => s.trim())
         : undefined;
 
     let llmEnrichment: LLMEnrichment | undefined;

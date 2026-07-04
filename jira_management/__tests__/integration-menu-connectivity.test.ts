@@ -5,6 +5,7 @@ import { createMockContext } from '../../shared/test-utils/factories/context-fac
 
 vi.mock('../../shared/prompt.js', () => ({
     ask: vi.fn().mockResolvedValue('test-value'),
+    askMultiline: vi.fn().mockResolvedValue('test-value'),
     askConfirm: vi.fn().mockResolvedValue(true),
     askFilePath: vi.fn().mockResolvedValue(path.join(os.tmpdir(), 'qa-test.csv')),
     warn: vi.fn(),

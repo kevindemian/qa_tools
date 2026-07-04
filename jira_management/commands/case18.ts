@@ -14,7 +14,17 @@ import crypto from 'crypto';
 import fs from 'fs';
 import path from 'path';
 import { formatDateISO } from '../../shared/date-utils.js';
-import { ask, warn, info, printError, title, divider } from '../../shared/prompt.js';
+import {
+    ask,
+    askMultiline,
+    askConfirm,
+    showSelect,
+    warn,
+    info,
+    printError,
+    title,
+    divider,
+} from '../../shared/prompt.js';
 import { rootLogger } from '../../shared/logger.js';
 import { llmPrompt } from '../../shared/llm-client.js';
 import { sanitizeForLlm, sanitizeTerminal } from '../../shared/sanitize.js';
@@ -78,17 +88,22 @@ async function gatherInput(c: CommandContext): Promise<{
     project: string;
     system: string;
 } | null> {
-    const userStory = await ask('História do usuário (user story)', {
-        hint: 'descreva brevemente a funcionalidade',
-    });
+    const inputMethod = await showSelect('Como deseja fornecer a user story?', [
+        { name: 'Buscar pelo ID do Jira', value: 'jira' },
+        { name: 'Digitar manualmente', value: 'manual' },
+    ]);
+
+    const userStory =
+        inputMethod === 'jira'
+            ? await fetchUserStoryFromJira(c)
+            : await askMultiline('História do usuário (user story)');
+
     if (!userStory.trim()) {
         warn('História vazia. Operação cancelada.');
         return null;
     }
 
-    const acceptanceCriteria = await ask('Critérios de aceitação', {
-        hint: 'liste os cenários esperados',
-    });
+    const acceptanceCriteria = await askMultiline('Critérios de aceitação');
 
     const project = c.ctx.project_name || (await ask('Projeto Jira', { hint: 'ex: ECSPOL' }));
     if (!project.trim()) {
@@ -103,6 +118,50 @@ async function gatherInput(c: CommandContext): Promise<{
     } catch (err: unknown) {
         printError('Erro ao ler template de prompt', err);
         return null;
+    }
+}
+
+/** Fetch user story description from a Jira issue by ID.
+ *  Validates ID format, fetches issue, and previews description for confirmation. */
+async function fetchUserStoryFromJira(c: CommandContext): Promise<string> {
+    const issueId = await ask('ID do Jira (ex: PROJ-123)');
+    if (!issueId.trim()) {
+        warn('ID vazio. Operação cancelada.');
+        return '';
+    }
+
+    const idPattern = /^[A-Z]+-\d+$/i;
+    if (!idPattern.test(issueId.trim())) {
+        warn('Formato de ID inválido. Use o formato PROJ-123.');
+        return '';
+    }
+
+    try {
+        const issue = await c.jiraResource.getJiraResource<{
+            fields?: { description?: string; summary?: string };
+        }>(`issue/${issueId.trim()}?fields=description,summary`);
+
+        const description = issue.fields?.description ? issue.fields.description : '';
+        if (!description.trim()) {
+            warn('Issue sem descrição. Informe a user story manualmente.');
+            const fallback = await askMultiline('História do usuário (user story)');
+            return fallback;
+        }
+
+        const preview = description.length > 500 ? description.slice(0, 500) + '...' : description;
+        info(`\n=== Pré-visualização de ${issueId.trim()} ===\n${preview}\n`);
+
+        const useDescription = await askConfirm('Usar esta descrição?');
+        if (!useDescription) {
+            const fallback = await askMultiline('História do usuário (user story)');
+            return fallback;
+        }
+
+        return description;
+    } catch (err: unknown) {
+        warn(`Falha ao buscar issue ${issueId.trim()}: ${formatErr(err)}`);
+        info('Informe a user story manualmente.');
+        return askMultiline('História do usuário (user story)');
     }
 }
 

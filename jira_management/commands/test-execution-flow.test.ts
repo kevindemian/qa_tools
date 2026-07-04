@@ -8,6 +8,7 @@ import {
 vi.mock('../../shared/prompt', () => ({
     printError: vi.fn(),
     ask: vi.fn(),
+    askMultiline: vi.fn(),
     info: vi.fn(),
     warn: vi.fn(),
     success: vi.fn(),
@@ -32,7 +33,7 @@ vi.mock('../test-execution-creator', () => ({
     }),
 }));
 
-import { ask, printError } from '../../shared/prompt.js';
+import { ask, askMultiline, printError } from '../../shared/prompt.js';
 import TestExecutionCreator from '../test-execution-creator.js';
 
 describe('Test Execution Flow', () => {
@@ -67,8 +68,8 @@ describe('Test Execution Flow', () => {
                 vi.mocked(ask)
                     .mockResolvedValueOnce('1')
                     .mockResolvedValueOnce('exec-name')
-                    .mockResolvedValueOnce('exec-title')
-                    .mockResolvedValueOnce('exec-desc');
+                    .mockResolvedValueOnce('exec-title');
+                vi.mocked(askMultiline).mockResolvedValueOnce('exec-desc');
                 mockCreateTestExecutionWithLinks.mockResolvedValue({
                     key: 'TEST-TE-1',
                     summary: 'Test Execution 1',
@@ -91,8 +92,8 @@ describe('Test Execution Flow', () => {
                 vi.mocked(ask)
                     .mockResolvedValueOnce('1')
                     .mockResolvedValueOnce('exec-name')
-                    .mockResolvedValueOnce('exec-title')
-                    .mockResolvedValueOnce('exec-desc');
+                    .mockResolvedValueOnce('exec-title');
+                vi.mocked(askMultiline).mockResolvedValueOnce('exec-desc');
                 mockCreateTestExecutionWithLinks.mockRejectedValue(new Error('API error'));
                 const c = createMockContext();
                 const result = await offerTestExecutionAssociation(c, ['TEST-1'], 'src');

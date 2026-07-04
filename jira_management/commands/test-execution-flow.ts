@@ -2,7 +2,7 @@
  * plus a unified preview of created tests and their TE association.
  * Extracted to a single module per SRP: all creation handlers call this instead of duplicating prompts. */
 import { formatErr } from '../../shared/errors.js';
-import { printError, ask, info, warn, success, title, divider } from '../../shared/prompt.js';
+import { printError, ask, askMultiline, info, warn, success, title, divider } from '../../shared/prompt.js';
 import type { CommandContext } from './context.js';
 import type { TestExecutionSummary } from '../../shared/types.js';
 import TestExecutionCreator from '../test-execution-creator.js';
@@ -81,7 +81,7 @@ async function handleCreateNew(
     const nameInput = await ask('Nome da execução', { hint: 'Enter = ' + srcName });
     const csvName = nameInput.trim() || srcName;
     const execTitle = await ask('Título do Test Execution', { hint: 'Enter = ' + csvName });
-    const execDesc = await ask('Descrição (opcional)', { hint: 'ex: testes de regressão sprint 30' });
+    const execDesc = await askMultiline('Descrição (opcional)');
     try {
         const executor = new TestExecutionCreator(c.jiraResource, c.linkManager);
         const execResult = await createTests.createTestExecutionWithLinks({
