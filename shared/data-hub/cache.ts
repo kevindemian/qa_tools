@@ -14,7 +14,13 @@ interface CacheEntry {
     timestamp: number;
 }
 
-/** Cache TTL in milliseconds (5 minutes). */
+/**
+ * Cache TTL in milliseconds (5 minutes).
+ *
+ * NOTE: 5-minute TTL chosen as reasonable default for CLI sessions.
+ * If data freshness is critical, consider reducing TTL or exposing
+ * as configurable parameter via DataHubOptions.
+ */
 const CACHE_TTL_MS = 5 * 60 * 1000;
 
 /** Module-level cache vars. */
