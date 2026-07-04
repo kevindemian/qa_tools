@@ -103,6 +103,7 @@ async function _triggerPipeline(
 async function generatePrReportIfNeeded(
     parsed: import('../shared/result_parser.js').ParseResult,
     projectName: string,
+    dataHub?: import('../shared/types/data-hub.js').DataHub,
 ): Promise<void> {
     const prReportEnabled = isPrReportEnabled(projectName);
     if (!process.env['GITHUB_TOKEN'] || !prReportEnabled) return;
@@ -121,6 +122,7 @@ async function generatePrReportIfNeeded(
             skipQuality: prConfig.skipQuality ?? false,
             skipFlaky: prConfig.skipFlaky ?? false,
             htmlOutputPath: 'reports/pr-report.html',
+            ...(dataHub ? { dataHub } : {}),
         });
         if (reportResult.htmlPath) {
             success('PR report gerado: ' + reportResult.htmlPath);
@@ -166,7 +168,17 @@ async function _collectPipelineResults(
         });
         if (parsed) {
             await offerPipelineFailureAnalysis(parsed);
-            await generatePrReportIfNeeded(parsed, projectName);
+            // Create DataHub for PR report
+            let dataHub: import('../shared/types/data-hub.js').DataHub | undefined;
+            try {
+                const { getOrFetchCiDataHub } = await import('../shared/ci-data.js');
+                const { ciDataHubToDataHub } = await import('../shared/data-hub/adapter.js');
+                const ciHub = await getOrFetchCiDataHub(m, projectName);
+                dataHub = ciHub ? ciDataHubToDataHub(ciHub) : undefined;
+            } catch {
+                // Fallback: proceed without DataHub
+            }
+            await generatePrReportIfNeeded(parsed, projectName, dataHub);
         }
     }
     return false;
