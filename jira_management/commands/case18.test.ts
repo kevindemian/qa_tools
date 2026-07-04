@@ -1,6 +1,16 @@
 import { expect } from 'vitest';
 
-vi.mock('../../shared/prompt');
+vi.mock('../../shared/prompt', () => ({
+    ask: vi.fn(),
+    askMultiline: vi.fn(),
+    askConfirm: vi.fn(),
+    showSelect: vi.fn(),
+    warn: vi.fn(),
+    info: vi.fn(),
+    printError: vi.fn(),
+    title: vi.fn(),
+    divider: vi.fn(),
+}));
 vi.mock('../../shared/logger');
 
 vi.mock('../../shared/llm-client', () => ({
@@ -64,7 +74,10 @@ describe('Case18', () => {
             const llm = vi.mocked(llmClientModule);
             const fs = vi.mocked(fsModule);
 
-            prompt.ask.mockResolvedValueOnce('User wants to login').mockResolvedValueOnce('Must validate credentials');
+            prompt.showSelect.mockResolvedValueOnce('manual');
+            prompt.askMultiline
+                .mockResolvedValueOnce('User wants to login')
+                .mockResolvedValueOnce('Must validate credentials');
 
             fs.readFileSync.mockReturnValueOnce('You are a QA engineer.');
 
@@ -93,7 +106,8 @@ describe('Case18', () => {
             expect.hasAssertions();
 
             const prompt = vi.mocked(promptModule);
-            prompt.ask.mockResolvedValueOnce('');
+            prompt.showSelect.mockResolvedValueOnce('manual');
+            prompt.askMultiline.mockResolvedValueOnce('');
 
             const mod = case18Module;
             await mod.handler(baseContext);
@@ -108,7 +122,8 @@ describe('Case18', () => {
             const llm = vi.mocked(llmClientModule);
             const fs = vi.mocked(fsModule);
 
-            prompt.ask.mockResolvedValueOnce('User wants to login').mockResolvedValueOnce('Must validate');
+            prompt.showSelect.mockResolvedValueOnce('manual');
+            prompt.askMultiline.mockResolvedValueOnce('User wants to login').mockResolvedValueOnce('Must validate');
 
             fs.readFileSync.mockReturnValueOnce('template');
 
@@ -126,7 +141,8 @@ describe('Case18', () => {
             const prompt = vi.mocked(promptModule);
             const fs = vi.mocked(fsModule);
 
-            prompt.ask.mockResolvedValueOnce('User wants to login').mockResolvedValueOnce('Must validate');
+            prompt.showSelect.mockResolvedValueOnce('manual');
+            prompt.askMultiline.mockResolvedValueOnce('User wants to login').mockResolvedValueOnce('Must validate');
 
             fs.readFileSync.mockImplementationOnce(() => {
                 throw new Error('File not found');
@@ -145,7 +161,8 @@ describe('Case18', () => {
             const llm = vi.mocked(llmClientModule);
             const fs = vi.mocked(fsModule);
 
-            prompt.ask.mockResolvedValueOnce('User wants to login').mockResolvedValueOnce('Must validate');
+            prompt.showSelect.mockResolvedValueOnce('manual');
+            prompt.askMultiline.mockResolvedValueOnce('User wants to login').mockResolvedValueOnce('Must validate');
             fs.readFileSync.mockReturnValueOnce('You are a QA engineer.');
 
             llm.llmPrompt.mockResolvedValueOnce([
@@ -170,7 +187,8 @@ describe('Case18', () => {
             const prompt = vi.mocked(promptModule);
             const fs = vi.mocked(fsModule);
 
-            prompt.ask.mockResolvedValueOnce('User wants to login').mockResolvedValueOnce('Must validate');
+            prompt.showSelect.mockResolvedValueOnce('manual');
+            prompt.askMultiline.mockResolvedValueOnce('User wants to login').mockResolvedValueOnce('Must validate');
             fs.readFileSync.mockReturnValueOnce('You are a QA engineer.');
 
             llmPrompt.mockRejectedValueOnce(new Error('LLM response failed schema validation after retry'));
@@ -188,10 +206,9 @@ describe('Case18', () => {
             const origProjectName = baseContext.ctx.project_name;
             baseContext.ctx.project_name = '';
 
-            prompt.ask
-                .mockResolvedValueOnce('User story')
-                .mockResolvedValueOnce('Acceptance criteria')
-                .mockResolvedValueOnce('');
+            prompt.showSelect.mockResolvedValueOnce('manual');
+            prompt.askMultiline.mockResolvedValueOnce('User story').mockResolvedValueOnce('Acceptance criteria');
+            prompt.ask.mockResolvedValueOnce('');
 
             const mod = case18Module;
             await mod.handler(baseContext);
@@ -209,7 +226,10 @@ describe('Case18', () => {
             const fs = vi.mocked(fsModule);
             const listPrecondSpy = vi.spyOn(baseContext.linkManager, 'listPreconditions');
 
-            prompt.ask.mockResolvedValueOnce('User wants to login').mockResolvedValueOnce('Must validate credentials');
+            prompt.showSelect.mockResolvedValueOnce('manual');
+            prompt.askMultiline
+                .mockResolvedValueOnce('User wants to login')
+                .mockResolvedValueOnce('Must validate credentials');
             fs.readFileSync.mockReturnValue('You are a QA engineer.');
 
             listPrecondSpy.mockResolvedValue([{ key: 'PC-1', summary: 'User is logged in' }]);
@@ -238,7 +258,8 @@ describe('Case18', () => {
             const listPrecondSpy = vi.spyOn(baseContext.linkManager, 'listPreconditions');
             const createPrecondSpy = vi.spyOn(baseContext.linkManager, 'createPrecondition');
 
-            prompt.ask.mockResolvedValueOnce('User wants to login').mockResolvedValueOnce('Must validate');
+            prompt.showSelect.mockResolvedValueOnce('manual');
+            prompt.askMultiline.mockResolvedValueOnce('User wants to login').mockResolvedValueOnce('Must validate');
             fs.readFileSync.mockReturnValue('You are a QA engineer.');
 
             listPrecondSpy.mockResolvedValue([{ key: 'PC-1', summary: 'User must be logged in' }]);
@@ -281,7 +302,8 @@ describe('Case18', () => {
             const listPrecondSpy = vi.spyOn(baseContext.linkManager, 'listPreconditions');
             const createPrecondSpy = vi.spyOn(baseContext.linkManager, 'createPrecondition');
 
-            prompt.ask.mockResolvedValueOnce('User story').mockResolvedValueOnce('Criteria');
+            prompt.showSelect.mockResolvedValueOnce('manual');
+            prompt.askMultiline.mockResolvedValueOnce('User story').mockResolvedValueOnce('Criteria');
             fs.readFileSync.mockReturnValue('You are a QA engineer.');
 
             listPrecondSpy.mockResolvedValue([{ key: 'PC-1', summary: 'User must be logged in' }]);
@@ -319,7 +341,8 @@ describe('Case18', () => {
             const fs = vi.mocked(fsModule);
             const listPrecondSpy = vi.spyOn(baseContext.linkManager, 'listPreconditions');
 
-            prompt.ask.mockResolvedValueOnce('User story').mockResolvedValueOnce('Criteria');
+            prompt.showSelect.mockResolvedValueOnce('manual');
+            prompt.askMultiline.mockResolvedValueOnce('User story').mockResolvedValueOnce('Criteria');
             fs.readFileSync.mockReturnValue('You are a QA engineer.');
 
             listPrecondSpy.mockRejectedValue(new Error('Jira unavailable'));
@@ -346,7 +369,8 @@ describe('Case18', () => {
             const fs = vi.mocked(fsModule);
             const listPrecondSpy = vi.spyOn(baseContext.linkManager, 'listPreconditions');
 
-            prompt.ask.mockResolvedValueOnce('User wants to login').mockResolvedValueOnce('Must validate');
+            prompt.showSelect.mockResolvedValueOnce('manual');
+            prompt.askMultiline.mockResolvedValueOnce('User wants to login').mockResolvedValueOnce('Must validate');
             fs.readFileSync.mockReturnValue('You are a QA engineer.');
 
             listPrecondSpy.mockResolvedValue([]);
@@ -387,7 +411,8 @@ describe('Case18', () => {
             const listPrecondSpy = vi.spyOn(baseContext.linkManager, 'listPreconditions');
             const createPrecondSpy = vi.spyOn(baseContext.linkManager, 'createPrecondition');
 
-            prompt.ask.mockResolvedValueOnce('User story').mockResolvedValueOnce('Criteria');
+            prompt.showSelect.mockResolvedValueOnce('manual');
+            prompt.askMultiline.mockResolvedValueOnce('User story').mockResolvedValueOnce('Criteria');
             fs.readFileSync.mockReturnValue('You are a QA engineer.');
 
             listPrecondSpy.mockResolvedValue([{ key: 'PC-1', summary: 'User is logged in' }]);
@@ -424,7 +449,8 @@ describe('Case18', () => {
             const listPrecondSpy = vi.spyOn(baseContext.linkManager, 'listPreconditions');
             const createPrecondSpy = vi.spyOn(baseContext.linkManager, 'createPrecondition');
 
-            prompt.ask.mockResolvedValueOnce('User story').mockResolvedValueOnce('Criteria');
+            prompt.showSelect.mockResolvedValueOnce('manual');
+            prompt.askMultiline.mockResolvedValueOnce('User story').mockResolvedValueOnce('Criteria');
             fs.readFileSync.mockReturnValue('You are a QA engineer.');
 
             listPrecondSpy.mockResolvedValue([{ key: 'PC-1', summary: 'User is logged in' }]);
@@ -467,7 +493,8 @@ describe('Case18', () => {
             const listPrecondSpy = vi.spyOn(baseContext.linkManager, 'listPreconditions');
             const createPrecondSpy = vi.spyOn(baseContext.linkManager, 'createPrecondition');
 
-            prompt.ask.mockResolvedValueOnce('User story').mockResolvedValueOnce('Criteria');
+            prompt.showSelect.mockResolvedValueOnce('manual');
+            prompt.askMultiline.mockResolvedValueOnce('User story').mockResolvedValueOnce('Criteria');
             fs.readFileSync.mockReturnValue('You are a QA engineer.');
 
             listPrecondSpy.mockResolvedValue([]);
@@ -513,7 +540,8 @@ describe('Case18', () => {
             const listPrecondSpy = vi.spyOn(baseContext.linkManager, 'listPreconditions');
             const createPrecondSpy = vi.spyOn(baseContext.linkManager, 'createPrecondition');
 
-            prompt.ask.mockResolvedValueOnce('User story text').mockResolvedValueOnce('Some criteria');
+            prompt.showSelect.mockResolvedValueOnce('manual');
+            prompt.askMultiline.mockResolvedValueOnce('User story text').mockResolvedValueOnce('Some criteria');
             fs.readFileSync.mockReturnValue('You are a QA engineer.');
             listPrecondSpy.mockResolvedValue([]);
 
@@ -545,6 +573,68 @@ describe('Case18', () => {
                     ]) as Array<{ title: string; stepCount: number }>,
                 }),
             );
+        });
+
+        it('fetches user story from Jira successfully', async () => {
+            expect.hasAssertions();
+
+            const prompt = vi.mocked(promptModule);
+            const llm = vi.mocked(llmClientModule);
+            const fs = vi.mocked(fsModule);
+
+            prompt.showSelect.mockResolvedValueOnce('jira');
+            prompt.ask.mockResolvedValueOnce('PROJ-123');
+            const getJiraResourceMock = vi.fn().mockResolvedValueOnce({
+                fields: { description: 'As a user, I want to login', summary: 'Login feature' },
+            });
+            baseContext.jiraResource.getJiraResource = getJiraResourceMock;
+            prompt.askConfirm.mockResolvedValueOnce(true);
+            prompt.askMultiline.mockResolvedValueOnce('Must validate credentials');
+
+            fs.readFileSync.mockReturnValue('You are a QA engineer.');
+
+            llm.llmPrompt.mockResolvedValueOnce([
+                {
+                    title: 'Login test',
+                    steps: ['Step 1'],
+                    expectedResult: 'Expected result',
+                },
+            ]);
+
+            const mod = case18Module;
+            await mod.handler(baseContext);
+
+            expect(getJiraResourceMock).toHaveBeenCalledWith('issue/PROJ-123?fields=description,summary');
+            expect(baseContext.pushHistory).toHaveBeenCalledWith('ai-generate-tests', expect.any(String), 'ok');
+        });
+
+        it('falls back to manual input when Jira fetch fails', async () => {
+            expect.hasAssertions();
+
+            const prompt = vi.mocked(promptModule);
+            const llm = vi.mocked(llmClientModule);
+            const fs = vi.mocked(fsModule);
+
+            prompt.showSelect.mockResolvedValueOnce('jira');
+            prompt.ask.mockResolvedValueOnce('PROJ-456');
+            baseContext.jiraResource.getJiraResource = vi.fn().mockRejectedValueOnce(new Error('Issue not found'));
+            prompt.askMultiline.mockResolvedValueOnce('Manual user story').mockResolvedValueOnce('Criteria');
+
+            fs.readFileSync.mockReturnValue('You are a QA engineer.');
+
+            llm.llmPrompt.mockResolvedValueOnce([
+                {
+                    title: 'Test',
+                    steps: ['Step 1'],
+                    expectedResult: 'Expected result',
+                },
+            ]);
+
+            const mod = case18Module;
+            await mod.handler(baseContext);
+
+            expect(prompt.warn).toHaveBeenCalledWith(expect.stringContaining('Falha ao buscar issue'));
+            expect(baseContext.pushHistory).toHaveBeenCalledWith('ai-generate-tests', expect.any(String), 'ok');
         });
     });
 });

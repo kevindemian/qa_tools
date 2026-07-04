@@ -1,6 +1,6 @@
 /** Interactive bug-report flow — collect details and create Jira issue. */
 
-import { ask, askConfirm, info, printError, title } from '../../shared/prompt.js';
+import { ask, askMultiline, askConfirm, info, printError, title } from '../../shared/prompt.js';
 import { collectManual, generateBugReportFromDescription, interactiveBugReportFlow } from '../../shared/bug-report.js';
 import type { CommandContext } from './context.js';
 import type { BugReport } from '../../shared/types.js';
@@ -13,7 +13,7 @@ async function handler(c: CommandContext): Promise<boolean | void> {
         let report: BugReport;
 
         if (useAi) {
-            const raw = await ask('Descreva o bug em linguagem natural', { hint: 'ex: Ao clicar em salvar...' });
+            const raw = await askMultiline('Descreva o bug em linguagem natural');
             if (raw.trim().length < 20) {
                 const proceed = await askConfirm(
                     'Descrição muito curta. A IA pode não gerar um report preciso. Continuar?',

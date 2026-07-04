@@ -1,4 +1,11 @@
-vi.mock('../../shared/prompt');
+vi.mock('../../shared/prompt', () => ({
+    ask: vi.fn(),
+    askMultiline: vi.fn(),
+    askConfirm: vi.fn(),
+    info: vi.fn(),
+    printError: vi.fn(),
+    title: vi.fn(),
+}));
 
 vi.mock('../../shared/bug-report', () => ({
     collectManual: vi.fn(),
@@ -6,7 +13,7 @@ vi.mock('../../shared/bug-report', () => ({
     generateBugReportFromDescription: vi.fn(),
 }));
 
-import { printError, askConfirm, ask } from '../../shared/prompt.js';
+import { printError, askConfirm, ask, askMultiline } from '../../shared/prompt.js';
 import { collectManual, interactiveBugReportFlow, generateBugReportFromDescription } from '../../shared/bug-report.js';
 import type { CommandContext } from './context.js';
 import { nonNull } from '../../shared/test-utils.js';
@@ -18,6 +25,7 @@ const mockCollectManual = vi.mocked(collectManual);
 const mockInteractiveBugReportFlow = vi.mocked(interactiveBugReportFlow);
 const mockAskConfirm = vi.mocked(askConfirm);
 const mockAsk = vi.mocked(ask);
+const mockAskMultiline = vi.mocked(askMultiline);
 const mockGenerateAi = vi.mocked(generateBugReportFromDescription);
 
 function makeCtx(overrides: Partial<CommandContext> = {}): CommandContext {
@@ -128,9 +136,8 @@ describe('Case20 - Bug Report handler', () => {
         const ctx = makeCtx({ pushHistory });
 
         mockAskConfirm.mockResolvedValueOnce(true);
-        mockAsk
-            .mockResolvedValueOnce('Login button does nothing on Firefox 120 in production')
-            .mockResolvedValueOnce('');
+        mockAskMultiline.mockResolvedValueOnce('Login button does nothing on Firefox 120 in production');
+        mockAsk.mockResolvedValueOnce('');
         mockGenerateAi.mockResolvedValueOnce({
             summary: 'Login fails',
             description: 'desc',
@@ -161,7 +168,7 @@ describe('Case20 - Bug Report handler', () => {
         const ctx = makeCtx({ pushHistory });
 
         mockAskConfirm.mockResolvedValueOnce(true).mockResolvedValueOnce(false);
-        mockAsk.mockResolvedValueOnce('Too short');
+        mockAskMultiline.mockResolvedValueOnce('Too short');
 
         await case20.handler(ctx);
 
@@ -176,7 +183,8 @@ describe('Case20 - Bug Report handler', () => {
         const ctx = makeCtx({ pushHistory });
 
         mockAskConfirm.mockResolvedValueOnce(true).mockResolvedValueOnce(true);
-        mockAsk.mockResolvedValueOnce('Too short').mockResolvedValueOnce('');
+        mockAskMultiline.mockResolvedValueOnce('Too short');
+        mockAsk.mockResolvedValueOnce('');
         mockGenerateAi.mockResolvedValueOnce({
             summary: 'Short bug',
             description: 'desc',
@@ -206,9 +214,8 @@ describe('Case20 - Bug Report handler', () => {
         const ctx = makeCtx({ pushHistory });
 
         mockAskConfirm.mockResolvedValueOnce(true);
-        mockAsk
-            .mockResolvedValueOnce('Login button does nothing on Firefox 120 in production')
-            .mockResolvedValueOnce('PROJ-123, PROJ-456');
+        mockAskMultiline.mockResolvedValueOnce('Login button does nothing on Firefox 120 in production');
+        mockAsk.mockResolvedValueOnce('PROJ-123, PROJ-456');
         mockGenerateAi.mockResolvedValueOnce({
             summary: 'Login fails',
             description: 'desc',
@@ -245,7 +252,7 @@ describe('Case20 - Bug Report handler', () => {
         const ctx = makeCtx({ pushHistory });
 
         mockAskConfirm.mockResolvedValueOnce(true);
-        mockAsk.mockResolvedValueOnce('Checkout crashes on Safari when adding items to cart');
+        mockAskMultiline.mockResolvedValueOnce('Checkout crashes on Safari when adding items to cart');
         mockGenerateAi.mockResolvedValueOnce(null);
         mockCollectManual.mockResolvedValueOnce({
             summary: 'Manual fallback',

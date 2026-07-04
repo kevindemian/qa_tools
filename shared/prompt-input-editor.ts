@@ -85,7 +85,12 @@ function sentinelFallback(label: string, options: PromptOptions = {}): Promise<s
                 if (emptyCount >= 2) {
                     rl.close();
                     const result = lines.join('\n').trim();
-                    const resolved = result ? result : (options.default ? options.default : '');
+                    let resolved = '';
+                    if (result) {
+                        resolved = result;
+                    } else if (options.default) {
+                        resolved = options.default;
+                    }
                     resolve(resolved);
                     return;
                 }
@@ -100,7 +105,12 @@ function sentinelFallback(label: string, options: PromptOptions = {}): Promise<s
             if (closed) return;
             closed = true;
             const result = lines.join('\n').trim();
-            const resolved = result ? result : (options.default ? options.default : '');
+            let resolved = '';
+            if (result) {
+                resolved = result;
+            } else if (options.default) {
+                resolved = options.default;
+            }
             resolve(resolved);
         });
 

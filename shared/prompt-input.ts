@@ -11,3 +11,4 @@ export {
     __setInputMod,
     __setConfirmMod,
 } from './prompt-input-inquirer.js';
+export { askMultiline, __setEditorMod } from './prompt-input-editor.js';

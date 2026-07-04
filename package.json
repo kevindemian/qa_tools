@@ -35,6 +35,7 @@
     "type": "module",
     "dependencies": {
         "@inquirer/confirm": "^6.0.13",
+        "@inquirer/editor": "^5.2.2",
         "@inquirer/input": "^5.1.2",
         "@inquirer/select": "^5.1.5",
         "adm-zip": "^0.5.17",

@@ -1,5 +1,6 @@
 const mockPrompt = vi.hoisted(() => ({
     ask: vi.fn(),
+    askMultiline: vi.fn(),
     askConfirm: vi.fn(),
     info: vi.fn(),
     printError: vi.fn(),
@@ -54,7 +55,10 @@ describe('BugReport Service', () => {
             mockPrompt.ask
                 .mockResolvedValueOnce('') // 1st try
                 .mockResolvedValueOnce('Bug title') // 2nd try
-                .mockResolvedValue(''); // remaining fields
+                .mockResolvedValue(''); // remaining fields (env, severity, component, linkedIssues)
+
+            mockPrompt.askMultiline.mockResolvedValue(''); // description, steps, expected, actual
+
             mockPrompt.askConfirm.mockResolvedValue(false); // skip LLM
             const report = await collectManual();
 
@@ -67,14 +71,16 @@ describe('BugReport Service', () => {
 
             mockPrompt.ask
                 .mockResolvedValueOnce('Bug in login') // summary
-                .mockResolvedValueOnce('Cannot log in with valid credentials') // description
-                .mockResolvedValueOnce('step 1, step 2') // steps
-                .mockResolvedValueOnce('Dashboard displayed') // expected
-                .mockResolvedValueOnce('Error 500 displayed') // actual
                 .mockResolvedValueOnce('production') // env
                 .mockResolvedValueOnce('critical') // severity
                 .mockResolvedValueOnce('Auth') // component
                 .mockResolvedValueOnce('BUG-1, BUG-2'); // linked issues
+
+            mockPrompt.askMultiline
+                .mockResolvedValueOnce('Cannot log in with valid credentials') // description
+                .mockResolvedValueOnce('step 1\nstep 2') // steps
+                .mockResolvedValueOnce('Dashboard displayed') // expected
+                .mockResolvedValueOnce('Error 500 displayed'); // actual
 
             mockPrompt.askConfirm.mockResolvedValueOnce(false); // LLM classification opt-out
 
@@ -103,14 +109,16 @@ describe('BugReport Service', () => {
 
             mockPrompt.ask
                 .mockResolvedValueOnce('Bug in login') // summary
-                .mockResolvedValueOnce('Cannot log in') // description
-                .mockResolvedValueOnce('') // steps
-                .mockResolvedValueOnce('') // expected
-                .mockResolvedValueOnce('') // actual
                 .mockResolvedValueOnce('') // env
                 .mockResolvedValueOnce('minor') // severity
                 .mockResolvedValueOnce('') // component
                 .mockResolvedValueOnce(''); // linked issues (empty)
+
+            mockPrompt.askMultiline
+                .mockResolvedValueOnce('Cannot log in') // description
+                .mockResolvedValueOnce('') // steps
+                .mockResolvedValueOnce('') // expected
+                .mockResolvedValueOnce(''); // actual
 
             mockPrompt.askConfirm.mockResolvedValueOnce(true); // LLM classification opt-in
             mockFailureAnalysis.classifyFailure.mockResolvedValueOnce('AUTHENTICATION_ERROR');
@@ -127,14 +135,17 @@ describe('BugReport Service', () => {
 
             mockPrompt.ask
                 .mockResolvedValueOnce('Bug title')
-                .mockResolvedValueOnce('Description')
-                .mockResolvedValueOnce('')
-                .mockResolvedValueOnce('')
-                .mockResolvedValueOnce('')
                 .mockResolvedValueOnce('')
                 .mockResolvedValueOnce('minor')
                 .mockResolvedValueOnce('')
                 .mockResolvedValueOnce('');
+
+            mockPrompt.askMultiline
+                .mockResolvedValueOnce('Description')
+                .mockResolvedValueOnce('')
+                .mockResolvedValueOnce('')
+                .mockResolvedValueOnce('');
+
             mockPrompt.askConfirm.mockResolvedValueOnce(true);
             mockFailureAnalysis.classifyFailure.mockRejectedValueOnce(new Error('API timeout'));
 
@@ -149,13 +160,16 @@ describe('BugReport Service', () => {
             mockPrompt.ask
                 .mockResolvedValueOnce('Bug title')
                 .mockResolvedValueOnce('')
-                .mockResolvedValueOnce('')
-                .mockResolvedValueOnce('')
-                .mockResolvedValueOnce('')
-                .mockResolvedValueOnce('')
                 .mockResolvedValueOnce('unknown-severity')
                 .mockResolvedValueOnce('')
                 .mockResolvedValueOnce('');
+
+            mockPrompt.askMultiline
+                .mockResolvedValueOnce('')
+                .mockResolvedValueOnce('')
+                .mockResolvedValueOnce('')
+                .mockResolvedValueOnce('');
+
             mockPrompt.askConfirm.mockResolvedValueOnce(false);
 
             const report = await collectManual();
@@ -168,14 +182,17 @@ describe('BugReport Service', () => {
 
             mockPrompt.ask
                 .mockResolvedValueOnce('Bug title')
-                .mockResolvedValueOnce('Description')
-                .mockResolvedValueOnce('')
-                .mockResolvedValueOnce('')
-                .mockResolvedValueOnce('')
                 .mockResolvedValueOnce('')
                 .mockResolvedValueOnce('minor')
                 .mockResolvedValueOnce('')
                 .mockResolvedValueOnce('');
+
+            mockPrompt.askMultiline
+                .mockResolvedValueOnce('Description')
+                .mockResolvedValueOnce('')
+                .mockResolvedValueOnce('')
+                .mockResolvedValueOnce('');
+
             mockPrompt.askConfirm.mockResolvedValueOnce(true);
             mockFailureAnalysis.classifyFailure.mockResolvedValueOnce('');
 
@@ -519,13 +536,16 @@ describe('BugReport Service', () => {
             mockPrompt.ask
                 .mockResolvedValueOnce('Auto summary')
                 .mockResolvedValueOnce('')
-                .mockResolvedValueOnce('')
-                .mockResolvedValueOnce('')
-                .mockResolvedValueOnce('')
-                .mockResolvedValueOnce('')
                 .mockResolvedValueOnce('minor')
                 .mockResolvedValueOnce('')
                 .mockResolvedValueOnce('');
+
+            mockPrompt.askMultiline
+                .mockResolvedValueOnce('')
+                .mockResolvedValueOnce('')
+                .mockResolvedValueOnce('')
+                .mockResolvedValueOnce('');
+
             mockPrompt.askConfirm.mockResolvedValueOnce(false).mockResolvedValueOnce(true);
             mockJiraResource.postJiraResource.mockResolvedValueOnce({ key: 'PROJ-303' });
 

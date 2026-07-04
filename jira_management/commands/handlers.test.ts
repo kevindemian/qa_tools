@@ -182,6 +182,11 @@ describe('Handlers', () => {
     });
 
     describe('Case03 — create version', () => {
+        beforeEach(() => {
+            const prompt = vi.mocked(promptModule);
+            (prompt as { askMultiline: ReturnType<typeof vi.fn> }).askMultiline = vi.fn();
+        });
+
         it('returns early when name is empty', async () => {
             expect.hasAssertions();
 
@@ -197,7 +202,8 @@ describe('Handlers', () => {
             expect.hasAssertions();
 
             const prompt = vi.mocked(promptModule);
-            prompt.ask.mockResolvedValueOnce('v2.0.0').mockResolvedValueOnce('descricao');
+            prompt.ask.mockResolvedValueOnce('v2.0.0');
+            prompt.askMultiline.mockResolvedValueOnce('descricao');
             const mod = case03;
             await mod.handler(baseContext);
 
@@ -209,7 +215,8 @@ describe('Handlers', () => {
 
             const prompt = vi.mocked(promptModule);
             const logger = mockedSafe(vi.mocked(loggerModule));
-            prompt.ask.mockResolvedValueOnce('v2.0.0').mockResolvedValueOnce('');
+            prompt.ask.mockResolvedValueOnce('v2.0.0');
+            prompt.askMultiline.mockResolvedValueOnce('');
             mockJiraResource.createVersion.mockRejectedValueOnce(new Error('API error'));
             const mod = case03;
             await mod.handler(baseContext);

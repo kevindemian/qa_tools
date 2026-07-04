@@ -34,4 +34,6 @@ export {
     __setSelectMod,
     __setInputMod,
     __setConfirmMod,
+    askMultiline,
+    __setEditorMod,
 } from './prompt-input.js';

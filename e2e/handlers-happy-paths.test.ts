@@ -5,6 +5,7 @@ vi.mock('../shared/prompt', async () => {
         prompt: vi.fn<(...args: []) => string>().mockReturnValue(''),
         confirm: vi.fn<(...args: []) => boolean>().mockReturnValue(true),
         ask: vi.fn<(...args: []) => Promise<string>>().mockResolvedValue(''),
+        askMultiline: vi.fn<(...args: []) => Promise<string>>().mockResolvedValue(''),
         askConfirm: vi.fn<(...args: []) => Promise<boolean>>().mockResolvedValue(true),
         smartPrompt: vi.fn<(...args: []) => Promise<string>>().mockResolvedValue('v2.0.0'),
     };
