@@ -3,6 +3,8 @@ import os from 'node:os';
 import path from 'node:path';
 import { afterAll, afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import type { FlatTest } from '../../result_parser.js';
+import type { CiDataHub } from '../../ci-data.js';
+import type { PipelineRun } from '../../types/ci-cd.js';
 
 // ── Mock external boundaries ──────────────────────────────────────────────
 
@@ -484,6 +486,86 @@ describe('Pr Report Core.Integration', () => {
                 expect(diff.newPasses).toHaveLength(1);
                 expect(diff.newPasses[0]).toMatchObject({ title: 'T2' });
             });
+        });
+    });
+
+    describe('CiDataHub: passes ciData through to quality gate', () => {
+        function makeCiRun(overrides?: Partial<PipelineRun>): PipelineRun {
+            return {
+                id: 1,
+                conclusion: 'success',
+                head_branch: 'main',
+                created_at: '2026-07-01T10:00:00Z',
+                updated_at: '2026-07-01T10:05:00Z',
+                run_started_at: '2026-07-01T10:00:00Z',
+                ...overrides,
+            };
+        }
+
+        function makeCiHub(runs: PipelineRun[]): CiDataHub {
+            return {
+                runs,
+                jobs: new Map(),
+                failureReasons: new Map(),
+                artifacts: new Map(),
+                passRate: 85,
+                avgDuration: 300,
+                suiteSpeedP95: 120000,
+                topFailingJobs: [],
+                branchBreakdown: {},
+                topFailureReasons: [],
+                flakyTests: [],
+                lastFetched: new Date(),
+                provider: 'github',
+                repo: 'owner/repo',
+                recentRunsCount: runs.length,
+            };
+        }
+
+        it('accepts ciData and produces valid report', async () => {
+            expect.hasAssertions();
+
+            const { generatePrReport } = await import('../../pr-report-core.js');
+            const htmlPath = path.join(TEST_DIR, 'pr-report-cidata.html');
+            const hub = makeCiHub([makeCiRun()]);
+
+            const result = await generatePrReport({
+                tests: PASSING_TESTS,
+                stats: { passed: 5, failed: 0, skipped: 0, total: 5, duration: 1150 },
+                project: 'test-project',
+                skipAi: true,
+                skipQuality: true,
+                skipFlaky: true,
+                htmlOutputPath: htmlPath,
+                ciData: hub,
+            });
+
+            expect(result.healthScore.overall).toBeGreaterThanOrEqual(0);
+            expect(result.healthScore.overall).toBeLessThanOrEqual(100);
+            expect(fs.existsSync(path.resolve(htmlPath))).toBeTruthy();
+        });
+
+        it('ciData flows through to quality gate when skipQuality is false', async () => {
+            expect.hasAssertions();
+
+            const { generatePrReport } = await import('../../pr-report-core.js');
+            const htmlPath = path.join(TEST_DIR, 'pr-report-cidata-qg.html');
+            const hub = makeCiHub([makeCiRun()]);
+
+            const result = await generatePrReport({
+                tests: PASSING_TESTS,
+                stats: { passed: 5, failed: 0, skipped: 0, total: 5, duration: 1150 },
+                project: 'test-project',
+                skipAi: true,
+                skipQuality: false,
+                skipFlaky: true,
+                htmlOutputPath: htmlPath,
+                ciData: hub,
+            });
+
+            expect(result.healthScore).toBeDefined();
+            expect(result.passRate).toBe(100);
+            expect(fs.existsSync(path.resolve(htmlPath))).toBeTruthy();
         });
     });
 });

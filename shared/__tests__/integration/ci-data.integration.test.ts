@@ -28,6 +28,7 @@ function createMockProvider(runs: PipelineRun[], jobsPerRun: Map<number, Pipelin
         getBranch: vi.fn(),
         getPipeline: vi.fn(),
         getDiff: vi.fn(),
+        getJobLogs: vi.fn(),
         provider: 'github' as const,
     };
 }
@@ -114,8 +115,10 @@ describe('Integration: CI Data Hub', () => {
     });
 
     describe('Metrics Flow To Consumers', () => {
-        it('hub passRate can be used by health score', async () => {
+        it('health score uses ciData passRate instead of MetricsStore', async () => {
             expect.hasAssertions();
+
+            const { calculateHealthScore } = await import('../../health-score.js');
 
             const runs = [
                 makeRun(1, { conclusion: 'success' }),
@@ -125,49 +128,52 @@ describe('Integration: CI Data Hub', () => {
             const provider = createMockProvider(runs, new Map());
             const hub = await createCiDataHub(provider, 'owner/repo');
 
-            // Hub passRate = 66.67% (2 success / 3 total)
-            expect(hub.passRate).toBeCloseTo(66.67, 0);
+            // Hub passRate = 66.67% — store has 10% (10 passed, 90 failed)
+            const store = {
+                runs: [
+                    {
+                        timestamp: '2026-01-01',
+                        passed: 10,
+                        failed: 90,
+                        skipped: 0,
+                        total: 100,
+                        duration: 60,
+                        tests: [],
+                        project: 'test',
+                    },
+                ],
+                failureClassifications: [],
+            } as import('../../metrics.js').MetricsStore;
+            const withCi = calculateHealthScore(store, { ciData: hub });
+            const withoutCi = calculateHealthScore(store);
+
+            // ciData passRate (66.67%) should produce different result than store (10%)
+            expect(withCi.dimensions.passRate.score).not.toBe(withoutCi.dimensions.passRate.score);
         });
 
-        it('hub avgDuration can be used by pipeline cost', async () => {
+        it('quality gate uses ciData when forwarded', async () => {
             expect.hasAssertions();
 
+            const { runQualityGate } = await import('../../quality-gate.js');
+            const metrics = await import('../../metrics.js');
+
             const runs = [
-                makeRun(1, {
-                    run_started_at: '2026-07-01T10:00:00Z',
-                    updated_at: '2026-07-01T10:05:00Z', // 300s
-                }),
+                makeRun(1, { conclusion: 'success' }),
+                makeRun(2, { conclusion: 'success' }),
+                makeRun(3, { conclusion: 'success' }),
             ];
             const provider = createMockProvider(runs, new Map());
             const hub = await createCiDataHub(provider, 'owner/repo');
 
-            expect(hub.avgDuration).toBe(300);
-        });
+            // Mock store with low pass rate — ciData overrides to 100%
+            vi.spyOn(metrics, 'loadMetrics').mockReturnValue({
+                runs: [{ passed: 10, failed: 90, total: 100, tests: [], project: 'test' }],
+                failureClassifications: [],
+            } as never);
+            const withCi = runQualityGate({ ciData: hub });
+            const withoutCi = runQualityGate();
 
-        it('hub branchBreakdown can be used by dashboards', async () => {
-            expect.hasAssertions();
-
-            const runs = [
-                makeRun(1, { head_branch: 'main', conclusion: 'success' }),
-                makeRun(2, { head_branch: 'main', conclusion: 'failure' }),
-                makeRun(3, { head_branch: 'feature', conclusion: 'success' }),
-            ];
-            const provider = createMockProvider(runs, new Map());
-            const hub = await createCiDataHub(provider, 'owner/repo');
-
-            expect(hub.branchBreakdown['main']).toStrictEqual({ passRate: 50, count: 2 });
-            expect(hub.branchBreakdown['feature']).toStrictEqual({ passRate: 100, count: 1 });
-        });
-
-        it('hub topFailureReasons can be used by reports', async () => {
-            expect.hasAssertions();
-
-            const runs = [makeRun(1)];
-            const provider = createMockProvider(runs, new Map());
-            const hub = await createCiDataHub(provider, 'owner/repo');
-
-            expect(hub.topFailureReasons).toBeDefined();
-            expect(Array.isArray(hub.topFailureReasons)).toBeTruthy();
+            expect(withCi.score).not.toBe(withoutCi.score);
         });
     });
 
@@ -193,6 +199,7 @@ describe('Integration: CI Data Hub', () => {
                 getBranch: vi.fn(),
                 getPipeline: vi.fn(),
                 getDiff: vi.fn(),
+                getJobLogs: vi.fn(),
                 provider: 'github' as const,
             } as GitProvider;
 

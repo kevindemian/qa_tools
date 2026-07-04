@@ -7,12 +7,14 @@
  * - Individual checks: health-score, pass-rate, flaky-rate, coverage, suite-speed
  * - Project filtering
  * - formatQualityGateJson / formatQualityGateText output
+ * - CiDataHub parameter acceptance
  *
  * Uses vi.spyOn for loadMetrics (reads from disk) but keeps
  * calculateFlakiness real (pure function, no I/O).
  */
 import { afterEach, describe, expect, it, vi } from 'vitest';
 import type { MetricsRun } from '../../metrics.js';
+import type { CiDataHub } from '../../ci-data.js';
 import * as metrics from '../../metrics.js';
 
 async function loadModules() {
@@ -125,6 +127,59 @@ describe('Integration: Quality Gate', () => {
             expect(text).toContain('Quality Gate');
             expect(text).toContain('PASS');
             expect(text).toContain('health-score');
+        });
+    });
+
+    describe('CiDataHub: parameter acceptance', () => {
+        function makeCiHub(overrides?: Partial<CiDataHub>): CiDataHub {
+            return {
+                runs: [],
+                jobs: new Map(),
+                failureReasons: new Map(),
+                artifacts: new Map(),
+                passRate: 85,
+                avgDuration: 300,
+                suiteSpeedP95: 120000,
+                topFailingJobs: [],
+                branchBreakdown: {},
+                topFailureReasons: [],
+                flakyTests: [],
+                lastFetched: new Date(),
+                provider: 'github',
+                repo: 'o/r',
+                recentRunsCount: 0,
+                ...overrides,
+            };
+        }
+
+        it('accepts ciData parameter without throwing', async () => {
+            expect.hasAssertions();
+
+            vi.spyOn(metrics, 'loadMetrics').mockReturnValue({ runs: [] });
+            const { runQualityGate } = await loadModules();
+            const hub = makeCiHub({ passRate: 90 });
+            const result = runQualityGate({ ciData: hub });
+
+            expect(result.overall).toBe('fail');
+            expect(result.checks).toHaveLength(1);
+        });
+
+        it('ciData changes quality gate result when MetricsStore has low scores', async () => {
+            expect.hasAssertions();
+
+            // Store with runs that produce a failing health score
+            vi.spyOn(metrics, 'loadMetrics').mockReturnValue({
+                runs: [{ passed: 10, failed: 90, total: 100, tests: [], project: 'test' }],
+                failureClassifications: [],
+            } as never);
+            const { runQualityGate } = await loadModules();
+            const hub = makeCiHub({ passRate: 100 });
+
+            const withCi = runQualityGate({ ciData: hub });
+            const withoutCi = runQualityGate();
+
+            // ciData overrides passRate — scores must differ
+            expect(withCi.score).not.toBe(withoutCi.score);
         });
     });
 });

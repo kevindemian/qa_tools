@@ -81,3 +81,38 @@
 | 0.5 | Validar estado (tsc + vitest)            | ✅     | 2026-07-04 |
 
 **Checkpoint:** Working tree organizado. 1 TS error conhecido (gitlab-workflow.ts:93). 174/174 data-hub tests passam.
+
+---
+
+### Fase 2 — Providers
+
+**Início:** 2026-07-04
+**Conclusão:** 2026-07-04
+
+| ID  | Tarefa                                | Status | Data       |
+| --- | ------------------------------------- | ------ | ---------- |
+| 031 | `getJobLogs` na interface GitProvider | ✅     | 2026-07-04 |
+| 032 | GitHub Provider + 5 testes            | ✅     | 2026-07-04 |
+| 033 | GitLab Provider + 5 testes            | ✅     | 2026-07-04 |
+| 034 | Coverage Provider + 4 testes          | ✅     | 2026-07-04 |
+| 035 | Jira Provider + 4 testes              | ✅     | 2026-07-04 |
+| 036 | Composite Provider + 6 testes         | ✅     | 2026-07-04 |
+| 037 | Integration test providers            | ✅     | 2026-07-04 |
+
+**Correções de TS durante Fase 2:**
+
+- `PipelineJob`: campos de timing → `string | undefined` / `number | undefined` (exactOptionalPropertyTypes)
+- `coverage-provider.ts`: `coverage` propriedade omitida quando `undefined`
+- `jira-provider.ts`: `resolution` propriedade removida do objeto (usa omit pattern)
+- `gitlab-workflow.ts:93`: job mapping inclui timing mesmo quando undefined
+- Mock objects: adicionado `getJobLogs` em 7 arquivos de teste
+
+**Checkpoint:**
+
+- `npx tsc --noEmit` = 0 erros ✅
+- `npx vitest run shared/data-hub/` = 29 files, 202 tests, 0 failures ✅
+- `npx vitest run shared/data-hub/__tests__/integration/providers.integration.test.ts` = 4/4 ✅
+
+---
+
+### Fase 3 — Hub + Cache (próxima)

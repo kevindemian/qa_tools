@@ -8,11 +8,13 @@
  * - Provenance tracking (source, formula, thresholdBasis)
  * - Config overrides (weights, thresholds, grade boundaries)
  * - Edge cases: empty store, single run, high/low values
+ * - CiDataHub parameter acceptance
  *
  * Pure function — no filesystem dependencies.
  */
 import { describe, expect, it } from 'vitest';
 import type { CoverageSnapshot, MetricsRun, MetricsStore } from '../../metrics.js';
+import type { CiDataHub } from '../../ci-data.js';
 
 /** Helper to create a MetricsStore with controllable data. */
 function createStore(
@@ -231,6 +233,55 @@ describe('Integration: Health Score', () => {
 
             expect(Number.isNaN(result.dimensions.coverage.score)).toBeFalsy();
             expect(result.dimensions.coverage.score).toBe(0);
+        });
+    });
+
+    describe('CiDataHub: parameter acceptance', () => {
+        function makeCiHub(overrides?: Partial<CiDataHub>): CiDataHub {
+            return {
+                runs: [],
+                jobs: new Map(),
+                failureReasons: new Map(),
+                artifacts: new Map(),
+                passRate: 85,
+                avgDuration: 300,
+                suiteSpeedP95: 120000,
+                topFailingJobs: [],
+                branchBreakdown: {},
+                topFailureReasons: [],
+                flakyTests: [],
+                lastFetched: new Date(),
+                provider: 'github',
+                repo: 'o/r',
+                recentRunsCount: 0,
+                ...overrides,
+            };
+        }
+
+        it('accepts ciData parameter without throwing', async () => {
+            expect.hasAssertions();
+
+            const { calculateHealthScore } = await import('../../health-score.js');
+            const store = createStore({ passed: 90, failed: 10, skipped: 0, coveragePct: 80 });
+            const hub = makeCiHub({ passRate: 90 });
+            const result = calculateHealthScore(store, { ciData: hub });
+
+            expect(result.overall).toBeGreaterThanOrEqual(0);
+            expect(result.overall).toBeLessThanOrEqual(100);
+        });
+
+        it('ciData passRate overrides MetricsStore when provided', async () => {
+            expect.hasAssertions();
+
+            const { calculateHealthScore } = await import('../../health-score.js');
+            const store = createStore({ passed: 50, failed: 50, skipped: 0, coveragePct: 80 }); // 50% local
+            const hub = makeCiHub({ passRate: 90 }); // 90% from CI
+
+            const withCi = calculateHealthScore(store, { ciData: hub });
+            const withoutCi = calculateHealthScore(store, {});
+
+            // ciData should override passRate — results must differ
+            expect(withCi.dimensions.passRate.score).not.toBe(withoutCi.dimensions.passRate.score);
         });
     });
 });

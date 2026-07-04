@@ -4,11 +4,13 @@
  * Validates end-to-end flow:
  * - buildTraceabilityMatrix → generateTraceabilityHtml
  * - HTML output structure, tree rendering, error handling, custom title
+ * - CiDataHub path (uses flaky tests from CI when available)
  *
  * Pure function — no filesystem dependencies.
  */
 import { describe, expect, it, beforeEach, vi } from 'vitest';
 import type { MetricsStore } from '../../metrics.js';
+import type { CiDataHub } from '../../ci-data.js';
 
 vi.mock('../../logger', () => ({
     rootLogger: { error: vi.fn(), warn: vi.fn(), info: vi.fn(), child: vi.fn().mockReturnThis() },
@@ -166,6 +168,80 @@ describe('Traceability Matrix.Integration', () => {
 
                 expect(html).toContain('<title>Traceability Matrix</title>');
                 expect(html).toContain('<h1>Traceability Matrix</h1>');
+            });
+        });
+
+        describe('CiDataHub: uses flaky tests from CI when available', () => {
+            function makeCiHub(overrides?: Partial<CiDataHub>): CiDataHub {
+                return {
+                    runs: [],
+                    jobs: new Map(),
+                    failureReasons: new Map(),
+                    artifacts: new Map(),
+                    passRate: 0,
+                    avgDuration: 0,
+                    suiteSpeedP95: 0,
+                    topFailingJobs: [],
+                    branchBreakdown: {},
+                    topFailureReasons: [],
+                    flakyTests: [],
+                    lastFetched: new Date(),
+                    provider: 'github',
+                    repo: 'o/r',
+                    recentRunsCount: 0,
+                    ...overrides,
+                };
+            }
+
+            it('uses ciData.flakyTests for flakiness map when ciData provided', async () => {
+                expect.hasAssertions();
+
+                const { buildTraceabilityMatrix } = await import('../../traceability-matrix.js');
+                const metrics = singleRunMetrics([
+                    { title: 'TC-FLAKY', state: 'passed', duration: 100 },
+                    { title: 'TC-STABLE', state: 'passed', duration: 50 },
+                ]);
+                const hub = makeCiHub({
+                    flakyTests: [{ title: 'TC-FLAKY', rate: 50, runs: 4 }],
+                });
+                const coverageResult = {
+                    items: [
+                        {
+                            epic: 'EPIC-1',
+                            hasTest: true,
+                            linkedTestKeys: ['TC-FLAKY', 'TC-STABLE'],
+                            issueKey: 'STORY-1',
+                        },
+                    ],
+                    totals: { total: 1, covered: 1 },
+                    byEpic: { 'EPIC-1': { total: 1, covered: 1, rawPct: 100 } },
+                };
+
+                const result = buildTraceabilityMatrix(metrics, coverageResult, hub);
+
+                expect(result.nodes.length).toBeGreaterThan(0);
+
+                const story = result.nodes[0]?.stories[0];
+
+                expect(story).toBeDefined();
+                expect(story?.flakiness).toBe(25);
+            });
+
+            it('falls back to MetricsStore when ciData has no flaky tests', async () => {
+                expect.hasAssertions();
+
+                const { buildTraceabilityMatrix } = await import('../../traceability-matrix.js');
+                const metrics = singleRunMetrics([{ title: 'TC-001', state: 'passed', duration: 100 }]);
+                const hub = makeCiHub({ flakyTests: [] });
+                const coverageResult = {
+                    items: [{ epic: 'EPIC-1', hasTest: true, linkedTestKeys: ['TC-001'], issueKey: 'STORY-1' }],
+                    totals: { total: 1, covered: 1 },
+                    byEpic: { 'EPIC-1': { total: 1, covered: 1, rawPct: 100 } },
+                };
+
+                const result = buildTraceabilityMatrix(metrics, coverageResult, hub);
+
+                expect(result.nodes.length).toBeGreaterThan(0);
             });
         });
     });
