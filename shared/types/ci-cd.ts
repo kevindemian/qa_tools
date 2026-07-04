@@ -65,11 +65,11 @@ export interface PipelineJob {
     /** Execution status (conclusion from API). */
     status: string;
     /** ISO timestamp when the job started. */
-    started_at?: string;
+    started_at?: string | undefined;
     /** ISO timestamp when the job finished. */
-    finished_at?: string;
+    finished_at?: string | undefined;
     /** Job duration in seconds (computed from started_at/finished_at or from API). */
-    duration?: number;
+    duration?: number | undefined;
     /** Individual step conclusions within the job (GitHub API). */
     stepConclusions?: Array<{ name: string; conclusion: string; number: number }>;
 }
