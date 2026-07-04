@@ -12,6 +12,7 @@ import { error, print, title, warn } from '../shared/prompt.js';
 import { palette } from '../shared/palette.js';
 import { loadMetrics, calculateFlakiness } from '../shared/metrics.js';
 import type { GitProvider, JsonObject, StateContainer } from '../shared/types.js';
+import type { CiDataHub } from '../shared/ci-data.js';
 import GitLabManager from './gitlab_manager.js';
 import GitHubManager from './github_manager.js';
 
@@ -28,6 +29,40 @@ export let currentProjectName = '';
 export let currentProvider: 'gitlab' | 'github' = 'gitlab';
 export let isBusy = false;
 export let manager: GitProvider | null = null;
+
+/** Central CiDataHub — created once per session, consumed by all dashboards and reports. */
+let _ciDataHub: CiDataHub | undefined;
+
+export function setCiDataHub(hub: CiDataHub | undefined): void {
+    _ciDataHub = hub;
+}
+
+export function getCiDataHub(): CiDataHub | undefined {
+    return _ciDataHub;
+}
+
+/**
+ * Lazy-init: creates CiDataHub on first call, caches for session lifetime.
+ * Returns undefined if provider is unavailable or creation fails.
+ * Uses unified cache from data-hub/cache.ts.
+ */
+export async function ensureCiDataHub(): Promise<CiDataHub | undefined> {
+    if (_ciDataHub) return _ciDataHub;
+    if (!manager || !currentProjectName) return undefined;
+    try {
+        const { getOrFetchDataHub } = await import('../shared/ci-data.js');
+        const { dataHubToCiDataHub } = await import('../shared/data-hub/adapter.js');
+
+        const dataHub = await getOrFetchDataHub(manager, currentProjectName);
+        if (dataHub) {
+            _ciDataHub = dataHubToCiDataHub(dataHub);
+        }
+        return _ciDataHub;
+    } catch (err) {
+        rootLogger.debug(`ensureCiDataHub failed: ${String(err)}`);
+        return undefined;
+    }
+}
 
 export const apiToken: string = Config.get('gitToken') || '';
 export const gitlabBaseUrl: string = Config.get('gitBaseUrl') || '';
@@ -46,6 +81,10 @@ export function setIsBusy(v: boolean): void {
 }
 export function setManager(v: GitProvider | null): void {
     manager = v;
+}
+
+export function getManager(): GitProvider | null {
+    return manager;
 }
 
 export const MSG_OPERATION_CANCELED = 'Operação cancelada.';
@@ -93,12 +132,9 @@ function loadProjects(): Record<string, string> {
             }
         }
     } catch (err: unknown) {
-        rootLogger.error(
-            `Falha ao carregar configuração de projetos de "${PROJECTS_PATH}": ${formatErr(err)}`,
-            {
-                configPath: PROJECTS_PATH,
-            },
-        );
+        rootLogger.error(`Falha ao carregar configuração de projetos de "${PROJECTS_PATH}": ${formatErr(err)}`, {
+            configPath: PROJECTS_PATH,
+        });
         error(`Configuração inválida em "${PROJECTS_PATH}". Verifique o JSON.`);
         _projects = {};
     }
@@ -260,6 +296,7 @@ export function buildActionChoices(): JsonObject[] {
         { name: '      Dashboard flakiness (HTML)', value: 'a' },
         { name: '      Comparar execuções (HTML)', value: 'c' },
         { name: '      Dashboards individuais', value: 'd' },
+        { name: '      CI Data Hub (resumo)', value: 'h' },
         { name: '      Git Metrics Adapter (doc)', value: 'e' },
         { name: '      Bug Report Interativo', value: 'g' },
         { name: '      AI PR Description', value: 'i' },

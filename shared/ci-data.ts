@@ -17,6 +17,7 @@
  */
 import type { PipelineRun, PipelineJob, ArtifactInfo } from './types/ci-cd.js';
 import type { GitProvider } from './types/ci-cd.js';
+import type { DataHub } from './types/data-hub.js';
 import { rootLogger } from './logger.js';
 
 /* ── Interface pública ──────────────────────────────────────────────────── */
@@ -229,6 +230,56 @@ export async function createCiDataHub(
         repo,
         recentRunsCount: runs.length,
     };
+}
+
+/* ── Helper com cache ─────────────────────────────────────────────────── */
+
+let _cachedHub: CiDataHub | undefined;
+let _cachedRepo: string | undefined;
+
+/**
+ * Obtém CiDataHub com cache por sessão.
+ * Evita múltiplas chamadas à API quando vários consumers pedem os mesmos dados.
+ * Em caso de falha, retorna undefined (fallback para MetricsStore).
+ */
+export async function getOrFetchCiDataHub(provider: GitProvider, repo: string): Promise<CiDataHub | undefined> {
+    if (_cachedHub && _cachedRepo === repo) return _cachedHub;
+    try {
+        _cachedHub = await createCiDataHub(provider, repo);
+        _cachedRepo = repo;
+        return _cachedHub;
+    } catch (err) {
+        rootLogger.warn(`getOrFetchCiDataHub failed: ${String(err)}`);
+        return undefined;
+    }
+}
+
+/* ── Helper com cache (novo tipo DataHub) ──────────────────────────────── */
+
+let _cachedDataHub: DataHub | undefined;
+let _cachedDataHubRepo: string | undefined;
+
+/**
+ * Obtém DataHub (novo tipo) com cache por sessão.
+ * Wrapper que usa DataHubImpl internamente.
+ * Em caso de falha, retorna undefined (fallback para MetricsStore).
+ */
+export async function getOrFetchDataHub(provider: GitProvider, repo: string): Promise<DataHub | undefined> {
+    if (_cachedDataHub != null && _cachedDataHubRepo === repo) {
+        return _cachedDataHub;
+    }
+    try {
+        const { DataHubImpl } = await import('./data-hub/hub.js');
+        const { GitHubDataProvider } = await import('./data-hub/providers/github-provider.js');
+
+        const dataProvider = new GitHubDataProvider(provider);
+        _cachedDataHub = await DataHubImpl.create([dataProvider], { repo });
+        _cachedDataHubRepo = repo;
+        return _cachedDataHub;
+    } catch (err) {
+        rootLogger.warn(`getOrFetchDataHub failed: ${String(err)}`);
+        return undefined;
+    }
 }
 
 /* ── Funções de cálculo (puras) ────────────────────────────────────────── */

@@ -1,0 +1,184 @@
+/**
+ * Integration tests for DataHub.
+ *
+ * Tests the complete flow: providers → hub → compute → metrics.
+ *
+ * D5 Obrigatório:
+ * - D5.4: Agregação correta ao combinar resultados de múltiplas funções
+ * - D5.7: Guards zero/NaN preservados ao propagar resultados
+ * - D5.8: Clamp consistente ao agregar métricas
+ */
+import { describe, it, expect, vi, beforeEach } from 'vitest';
+import { DataHubImpl } from '../../hub.js';
+import { dataHubToCiDataHub, ciDataHubToDataHub } from '../../adapter.js';
+import { getCachedHub, setCachedHub, clearCache } from '../../cache.js';
+import type { DataProvider, RawData } from '../../../types/data-hub.js';
+import type { PipelineRun, PipelineJob } from '../../../types/ci-cd.js';
+
+/* ── Helpers ────────────────────────────────────────────────────────────── */
+
+let nextId = 1;
+
+function makeRun(overrides?: Partial<PipelineRun>): PipelineRun {
+    return {
+        id: nextId++,
+        conclusion: 'success',
+        run_started_at: '2026-01-01T10:00:00Z',
+        updated_at: '2026-01-01T10:10:00Z',
+        head_branch: 'main',
+        ...overrides,
+    };
+}
+
+function makeJob(overrides?: Partial<PipelineJob>): PipelineJob {
+    return {
+        id: nextId++,
+        name: 'test-job',
+        stage: 'test',
+        status: 'success',
+        duration: 10,
+        ...overrides,
+    };
+}
+
+function makeProvider(rawData: RawData): DataProvider {
+    return {
+        name: 'test-provider',
+        source: 'github' as const,
+        fetchRawData: vi.fn().mockResolvedValue(rawData),
+    };
+}
+
+/* ── Tests ──────────────────────────────────────────────────────────────── */
+
+describe('Integration: DataHub', () => {
+    beforeEach(() => {
+        clearCache();
+        nextId = 1;
+    });
+
+    it('d5.4: aggregates metrics from multiple compute functions', async () => {
+        expect.hasAssertions();
+
+        const runs = [
+            makeRun({ id: 1, conclusion: 'success', head_branch: 'main' }),
+            makeRun({ id: 2, conclusion: 'success', head_branch: 'main' }),
+            makeRun({ id: 3, conclusion: 'failure', head_branch: 'feature-x' }),
+        ];
+        const jobs = new Map<number, PipelineJob[]>([
+            [1, [makeJob({ id: 10, name: 'lint', status: 'success', duration: 5 })]],
+            [2, [makeJob({ id: 20, name: 'lint', status: 'success', duration: 5 })]],
+            [3, [makeJob({ id: 30, name: 'lint', status: 'failure', duration: 5 })]],
+        ]);
+
+        const rawData: RawData = {
+            runs,
+            jobs,
+            artifacts: new Map(),
+            failureReasons: new Map(),
+        };
+
+        const provider = makeProvider(rawData);
+        const hub = await DataHubImpl.create([provider], { repo: 'test/repo' });
+
+        expect(hub.computed.passRate).toBeCloseTo(66.67, 1);
+        expect(hub.computed.branchBreakdown).toHaveProperty('main');
+        expect(hub.computed.branchBreakdown).toHaveProperty('feature-x');
+        expect(hub.computed.topFailingJobs.length).toBeGreaterThanOrEqual(0);
+    });
+
+    it('d5.7: preserves zero/NaN guards in metrics', async () => {
+        expect.hasAssertions();
+
+        const rawData: RawData = {
+            runs: [],
+            jobs: new Map(),
+            artifacts: new Map(),
+            failureReasons: new Map(),
+        };
+
+        const provider = makeProvider(rawData);
+        const hub = await DataHubImpl.create([provider], { repo: 'test/repo' });
+
+        expect(hub.computed.passRate).toBe(0);
+        expect(hub.computed.avgDuration).toBe(0);
+        expect(hub.computed.suiteSpeedP95).toBe(0);
+        expect(hub.computed.coverage).toBe(0);
+        expect(hub.computed.pipelineCost.totalMinutes).toBe(0);
+        expect(hub.computed.pipelineCost.estimatedCost).toBe(0);
+        expect(Number.isNaN(hub.computed.passRate)).toBeFalsy();
+        expect(Number.isNaN(hub.computed.avgDuration)).toBeFalsy();
+    });
+
+    it('d5.8: clamps metrics consistently', async () => {
+        expect.hasAssertions();
+
+        const runs = Array.from({ length: 100 }, (_, i) =>
+            makeRun({
+                id: i + 1,
+                conclusion: i < 95 ? 'success' : 'failure',
+                run_started_at: `2026-01-01T${String(i % 24).padStart(2, '0')}:00:00Z`,
+                updated_at: `2026-01-01T${String(i % 24).padStart(2, '0')}:10:00Z`,
+            }),
+        );
+
+        const rawData: RawData = {
+            runs,
+            jobs: new Map(),
+            artifacts: new Map(),
+            failureReasons: new Map(),
+        };
+
+        const provider = makeProvider(rawData);
+        const hub = await DataHubImpl.create([provider], { repo: 'test/repo' });
+
+        expect(hub.computed.passRate).toBeGreaterThanOrEqual(0);
+        expect(hub.computed.passRate).toBeLessThanOrEqual(100);
+        expect(hub.computed.pipelineCost.totalMinutes).toBeGreaterThanOrEqual(0);
+    });
+
+    it('converts between DataHub and CiDataHub via adapter', async () => {
+        expect.hasAssertions();
+
+        const runs = [makeRun({ id: 1, conclusion: 'success' })];
+        const rawData: RawData = {
+            runs,
+            jobs: new Map(),
+            artifacts: new Map(),
+            failureReasons: new Map(),
+        };
+
+        const provider = makeProvider(rawData);
+        const hub = await DataHubImpl.create([provider], { repo: 'test/repo' });
+
+        const ciData = dataHubToCiDataHub(hub);
+
+        expect(ciData.runs).toBe(hub.raw.runs);
+        expect(ciData.passRate).toBe(hub.computed.passRate);
+
+        const hubBack = ciDataHubToDataHub(ciData);
+
+        expect(hubBack.raw.runs).toBe(ciData.runs);
+        expect(hubBack.computed.passRate).toBe(ciData.passRate);
+    });
+
+    it('caches DataHub in session cache', async () => {
+        expect.hasAssertions();
+
+        const runs = [makeRun({ id: 1, conclusion: 'success' })];
+        const rawData: RawData = {
+            runs,
+            jobs: new Map(),
+            artifacts: new Map(),
+            failureReasons: new Map(),
+        };
+
+        const provider = makeProvider(rawData);
+        const hub = await DataHubImpl.create([provider], { repo: 'test/repo' });
+
+        setCachedHub('test/repo', hub);
+        const cached = getCachedHub('test/repo');
+
+        expect(cached).toBe(hub);
+    });
+});
