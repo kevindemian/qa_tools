@@ -63,3 +63,21 @@
 | `npx vitest run` = 100%      | ✅     |
 | `npx vitest run` = 100% pass | ⏳     |
 | `npm run lint` = 0 violações | ⏳     |
+
+---
+
+## Sprint 2 — Reorganização + Correção de Bloqueadores
+
+**Início:** 2026-07-04
+
+### Fase 0 — Organização
+
+| ID  | Tarefa                                   | Status | Data       |
+| --- | ---------------------------------------- | ------ | ---------- |
+| 0.1 | Criar tarefas 010a/010b no plano         | ✅     | 2026-07-04 |
+| 0.2 | Stash do estado atual                    | ✅     | 2026-07-04 |
+| 0.3 | Verificar PROGRESS-DATA-HUB.md commitado | ✅     | 2026-07-04 |
+| 0.4 | Pop stash                                | ✅     | 2026-07-04 |
+| 0.5 | Validar estado (tsc + vitest)            | ✅     | 2026-07-04 |
+
+**Checkpoint:** Working tree organizado. 1 TS error conhecido (gitlab-workflow.ts:93). 174/174 data-hub tests passam.
