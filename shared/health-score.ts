@@ -11,7 +11,7 @@
  * between target (score=100) and floor (score=0).
  */
 import type { MetricsStore, MetricsRun } from './metrics.js';
-import type { CiDataHub } from './ci-data.js';
+import type { DataHub } from './types/data-hub.js';
 import type { HealthScoreResult, HealthScoreGrade, HealthScoreDimensions, HealthScoreProvenance } from './types.js';
 
 export interface HealthScoreConfig {
@@ -162,7 +162,7 @@ function _computeSuiteSpeed(runs: MetricsRun[]): number {
     return new Map(allDurations.map((v, i) => [i, v])).get(idx) ?? 0;
 }
 
-function computeActualMetrics(store: MetricsStore, config: HealthScoreConfig): ActualMetrics {
+function computeActualMetrics(store: MetricsStore, config: HealthScoreConfig, dataHub?: DataHub): ActualMetrics {
     const runs = store.runs.slice(-config.windowSize);
     const n = runs.length;
 
@@ -196,12 +196,22 @@ function computeActualMetrics(store: MetricsStore, config: HealthScoreConfig): A
         flakyPctResult = 0;
     }
 
+    // Override with DataHub values when available (CI data is more current than MetricsStore)
+    const passRate = dataHub?.computed.passRate ?? (Number.isFinite(actualPassRate) ? actualPassRate : 0);
+    const suiteSpeed = dataHub?.computed.suiteSpeedP95 ?? (Number.isFinite(actualSuiteSpeed) ? actualSuiteSpeed : 0);
+
+    // Compute flaky percentage from DataHub if available
+    let flakyFromCi: number | null = null;
+    if (dataHub?.computed.flakyRate && dataHub.computed.flakyRate.length > 0 && dataHub.raw.runs.length > 0) {
+        flakyFromCi = (dataHub.computed.flakyRate.length / dataHub.raw.runs.length) * 100;
+    }
+
     return {
-        passRate: Number.isFinite(actualPassRate) ? actualPassRate : 0,
-        flakyPct: flakyPctResult,
+        passRate,
+        flakyPct: flakyFromCi ?? flakyPctResult,
         coverage: Number.isFinite(actualCoverage) ? actualCoverage : 0,
         executionRate: Number.isFinite(actualExecutionRate) ? actualExecutionRate : 0,
-        suiteSpeed: Number.isFinite(actualSuiteSpeed) ? actualSuiteSpeed : 0,
+        suiteSpeed,
     };
 }
 
@@ -328,10 +338,10 @@ function _buildProvenance(options?: Partial<HealthScoreConfig>): HealthScoreProv
 
 export function calculateHealthScore(
     metricsStore: MetricsStore,
-    options?: Partial<HealthScoreConfig> & { ciData?: CiDataHub },
+    options?: Partial<HealthScoreConfig> & { dataHub?: DataHub },
 ): HealthScoreResult {
     const config = pickConfig(options);
-    const actual = computeActualMetrics(metricsStore, config);
+    const actual = computeActualMetrics(metricsStore, config, options?.dataHub);
     const runsEmpty = metricsStore.runs.length === 0;
 
     const scPassRate = runsEmpty ? 0 : scorePassRate(actual.passRate, config);

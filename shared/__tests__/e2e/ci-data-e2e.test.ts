@@ -10,6 +10,7 @@
 import { describe, expect, it, vi } from 'vitest';
 import type { GitProvider, PipelineRun, PipelineJob } from '../../types/ci-cd.js';
 import { createFlatTests } from '../../test-utils/factories/flat-test-factory.js';
+import { ciDataHubToDataHub } from '../../data-hub/adapter.js';
 
 vi.mock('../../logger.js', () => ({
     rootLogger: { error: vi.fn(), info: vi.fn(), warn: vi.fn(), debug: vi.fn(), child: vi.fn().mockReturnThis() },
@@ -106,11 +107,12 @@ describe('E2E: CI Data Hub — Complete Pipeline Flow', () => {
             ]);
 
             const provider = createMockProvider(runs, jobsMap);
-            const hub = await createCiDataHub(provider, 'owner/repo');
+            const ciHub = await createCiDataHub(provider, 'owner/repo');
+            const hub = ciDataHubToDataHub(ciHub);
             const costResult = calculatePipelineCost(null, 0.01, hub);
             const html = generatePipelineCostHtml(costResult);
 
-            expect(hub.passRate).toBeCloseTo(66.67, 0);
+            expect(hub.computed.passRate).toBeCloseTo(66.67, 0);
             expect(costResult.runCount).toBe(3);
             expect(costResult.totalDurationSec).toBe(1080);
             expect(html).toContain('<!DOCTYPE html>');
@@ -132,7 +134,8 @@ describe('E2E: CI Data Hub — Complete Pipeline Flow', () => {
                 makeRun(4, { conclusion: 'failure' }),
             ];
             const provider = createMockProvider(runs, new Map());
-            const hub = await createCiDataHub(provider, 'owner/repo');
+            const ciHub = await createCiDataHub(provider, 'owner/repo');
+            const hub = ciDataHubToDataHub(ciHub);
 
             const store = {
                 runs: [
@@ -158,7 +161,7 @@ describe('E2E: CI Data Hub — Complete Pipeline Flow', () => {
                 ],
             };
 
-            const result = calculateHealthScore(store, { ciData: hub });
+            const result = calculateHealthScore(store, { dataHub: hub });
 
             expect(result.overall).toBeGreaterThanOrEqual(0);
             expect(result.overall).toBeLessThanOrEqual(100);
@@ -180,7 +183,8 @@ describe('E2E: CI Data Hub — Complete Pipeline Flow', () => {
             ]);
 
             const provider = createMockProvider(runs, jobsMap);
-            const hub = await createCiDataHub(provider, 'owner/repo');
+            const ciHub = await createCiDataHub(provider, 'owner/repo');
+            const hub = ciDataHubToDataHub(ciHub);
 
             const metricsStore = {
                 runs: [
@@ -246,7 +250,8 @@ describe('E2E: CI Data Hub — Complete Pipeline Flow', () => {
                 provider: 'github' as const,
             } as GitProvider;
 
-            const hub = await createCiDataHub(provider, 'owner/repo');
+            const ciHub = await createCiDataHub(provider, 'owner/repo');
+            const hub = ciDataHubToDataHub(ciHub);
 
             const store = {
                 runs: [
@@ -264,9 +269,9 @@ describe('E2E: CI Data Hub — Complete Pipeline Flow', () => {
             };
 
             const costResult = calculatePipelineCost(store.runs, 0.01, hub);
-            const healthResult = calculateHealthScore(store, { ciData: hub });
+            const healthResult = calculateHealthScore(store, { dataHub: hub });
 
-            expect(hub.runs).toHaveLength(0);
+            expect(hub.raw.runs).toHaveLength(0);
             expect(costResult.runCount).toBe(1);
             expect(healthResult.overall).toBeGreaterThanOrEqual(0);
         });
@@ -286,10 +291,11 @@ describe('E2E: CI Data Hub — Complete Pipeline Flow', () => {
                 makeRun(5, { conclusion: 'success' }),
             ];
             const provider = createMockProvider(runs, new Map());
-            const hub = await createCiDataHub(provider, 'owner/repo');
+            const ciHub = await createCiDataHub(provider, 'owner/repo');
+            const hub = ciDataHubToDataHub(ciHub);
 
-            expect(hub.passRate).toBeCloseTo(60, 0);
-            expect(hub.recentRunsCount).toBe(5);
+            expect(hub.computed.passRate).toBeCloseTo(60, 0);
+            expect(hub.raw.runs).toHaveLength(5);
         });
     });
 });

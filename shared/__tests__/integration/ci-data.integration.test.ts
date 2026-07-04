@@ -6,6 +6,7 @@
 import { describe, it, expect, vi } from 'vitest';
 import { createCiDataHub } from '../../ci-data.js';
 import type { GitProvider, PipelineRun, PipelineJob } from '../../types/ci-cd.js';
+import { ciDataHubToDataHub } from '../../data-hub/adapter.js';
 
 /* ── Mock GitProvider ──────────────────────────────────────────────────── */
 
@@ -107,10 +108,11 @@ describe('Integration: CI Data Hub', () => {
             ]);
 
             const provider = createMockProvider(runs, jobsMap);
-            const hub = await createCiDataHub(provider, 'owner/repo');
+            const ciHub = await createCiDataHub(provider, 'owner/repo');
+            const hub = ciDataHubToDataHub(ciHub);
 
             // P95 of [10000, 20000, 30000] ms = 30000 ms
-            expect(hub.suiteSpeedP95).toBe(30000);
+            expect(hub.computed.suiteSpeedP95).toBe(30000);
         });
     });
 
@@ -126,7 +128,8 @@ describe('Integration: CI Data Hub', () => {
                 makeRun(3, { conclusion: 'failure' }),
             ];
             const provider = createMockProvider(runs, new Map());
-            const hub = await createCiDataHub(provider, 'owner/repo');
+            const ciHub = await createCiDataHub(provider, 'owner/repo');
+            const hub = ciDataHubToDataHub(ciHub);
 
             // Hub passRate = 66.67% — store has 10% (10 passed, 90 failed)
             const store = {
@@ -144,10 +147,10 @@ describe('Integration: CI Data Hub', () => {
                 ],
                 failureClassifications: [],
             } as import('../../metrics.js').MetricsStore;
-            const withCi = calculateHealthScore(store, { ciData: hub });
+            const withCi = calculateHealthScore(store, { dataHub: hub });
             const withoutCi = calculateHealthScore(store);
 
-            // ciData passRate (66.67%) should produce different result than store (10%)
+            // dataHub passRate (66.67%) should produce different result than store (10%)
             expect(withCi.dimensions.passRate.score).not.toBe(withoutCi.dimensions.passRate.score);
         });
 
@@ -163,14 +166,15 @@ describe('Integration: CI Data Hub', () => {
                 makeRun(3, { conclusion: 'success' }),
             ];
             const provider = createMockProvider(runs, new Map());
-            const hub = await createCiDataHub(provider, 'owner/repo');
+            const ciHub = await createCiDataHub(provider, 'owner/repo');
+            const hub = ciDataHubToDataHub(ciHub);
 
-            // Mock store with low pass rate — ciData overrides to 100%
+            // Mock store with low pass rate — dataHub overrides to 100%
             vi.spyOn(metrics, 'loadMetrics').mockReturnValue({
                 runs: [{ passed: 10, failed: 90, total: 100, tests: [], project: 'test' }],
                 failureClassifications: [],
             } as never);
-            const withCi = runQualityGate({ ciData: hub });
+            const withCi = runQualityGate({ dataHub: hub });
             const withoutCi = runQualityGate();
 
             expect(withCi.score).not.toBe(withoutCi.score);

@@ -10,6 +10,7 @@
 import { describe, expect, it, vi } from 'vitest';
 import type { GitProvider, PipelineRun, PipelineJob } from '../../types/ci-cd.js';
 import { createFlatTests } from '../../test-utils/factories/flat-test-factory.js';
+import { ciDataHubToDataHub } from '../../data-hub/adapter.js';
 
 vi.mock('../../logger.js', () => ({
     rootLogger: { error: vi.fn(), info: vi.fn(), warn: vi.fn(), debug: vi.fn(), child: vi.fn().mockReturnThis() },
@@ -100,11 +101,12 @@ describe('System: CI Data Hub — Full Pipeline Flow', () => {
 
             const { createCiDataHub } = await import('../../ci-data.js');
             const provider = createMockProvider([], new Map());
-            const hub = await createCiDataHub(provider, 'owner/repo');
+            const ciHub = await createCiDataHub(provider, 'owner/repo');
+            const hub = ciDataHubToDataHub(ciHub);
 
-            expect(hub.runs).toHaveLength(0);
-            expect(hub.passRate).toBe(0);
-            expect(hub.avgDuration).toBe(0);
+            expect(hub.raw.runs).toHaveLength(0);
+            expect(hub.computed.passRate).toBe(0);
+            expect(hub.computed.avgDuration).toBe(0);
         });
     });
 
@@ -116,7 +118,8 @@ describe('System: CI Data Hub — Full Pipeline Flow', () => {
             const { calculateHealthScore } = await import('../../health-score.js');
             const runs = [makeRun(1, { conclusion: 'success' }), makeRun(2, { conclusion: 'failure' })];
             const provider = createMockProvider(runs, new Map());
-            const hub = await createCiDataHub(provider, 'owner/repo');
+            const ciHub = await createCiDataHub(provider, 'owner/repo');
+            const hub = ciDataHubToDataHub(ciHub);
 
             const store = {
                 runs: [
@@ -133,7 +136,7 @@ describe('System: CI Data Hub — Full Pipeline Flow', () => {
                 ],
             };
 
-            const result = calculateHealthScore(store, { ciData: hub });
+            const result = calculateHealthScore(store, { dataHub: hub });
 
             expect(result.overall).toBeGreaterThanOrEqual(0);
             expect(result.overall).toBeLessThanOrEqual(100);
@@ -158,7 +161,8 @@ describe('System: CI Data Hub — Full Pipeline Flow', () => {
                 }),
             ];
             const provider = createMockProvider(runs, new Map());
-            const hub = await createCiDataHub(provider, 'owner/repo');
+            const ciHub = await createCiDataHub(provider, 'owner/repo');
+            const hub = ciDataHubToDataHub(ciHub);
 
             const result = calculatePipelineCost(null, 0.01, hub);
 
@@ -180,7 +184,8 @@ describe('System: CI Data Hub — Full Pipeline Flow', () => {
             ]);
 
             const provider = createMockProvider(runs, jobsMap);
-            const hub = await createCiDataHub(provider, 'owner/repo');
+            const ciHub = await createCiDataHub(provider, 'owner/repo');
+            const hub = ciDataHubToDataHub(ciHub);
 
             const metricsStore = {
                 runs: [
@@ -221,7 +226,8 @@ describe('System: CI Data Hub — Full Pipeline Flow', () => {
             const { calculatePipelineCost } = await import('../../pipeline-cost.js');
 
             const provider = createMockProvider([], new Map());
-            const hub = await createCiDataHub(provider, 'owner/repo');
+            const ciHub = await createCiDataHub(provider, 'owner/repo');
+            const hub = ciDataHubToDataHub(ciHub);
 
             const store = {
                 runs: [
@@ -238,7 +244,7 @@ describe('System: CI Data Hub — Full Pipeline Flow', () => {
                 ],
             };
 
-            const healthResult = calculateHealthScore(store, { ciData: hub });
+            const healthResult = calculateHealthScore(store, { dataHub: hub });
             const costResult = calculatePipelineCost(store.runs, 0.01, hub);
 
             expect(healthResult.overall).toBeGreaterThanOrEqual(0);
