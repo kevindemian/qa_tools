@@ -664,6 +664,28 @@ function parseArgs(args: string[]): CliOptions {
     return opts;
 }
 
+async function tryCreateCiDataHub(
+    ciEnv: ReturnType<typeof getCiEnv>,
+): Promise<import('./ci-data.js').CiDataHub | undefined> {
+    if (!ciEnv.isCI || !process.env['GITHUB_TOKEN']) return undefined;
+    try {
+        const { getOrFetchCiDataHub } = await import('./ci-data.js');
+        const { default: GitHubManager } = await import('../git_triggers/github_manager.js');
+        const token = process.env['GITHUB_TOKEN'];
+        const [owner, repoName] = ciEnv.repo.split('/');
+        if (!owner || !repoName) return undefined;
+        const provider = new GitHubManager(token, owner, repoName);
+        const ciData = await getOrFetchCiDataHub(provider, ciEnv.repo);
+        if (ciData) {
+            rootLogger.info(`CiDataHub created: ${ciData.runs.length} runs, passRate: ${ciData.passRate}%`);
+        }
+        return ciData;
+    } catch (err) {
+        rootLogger.warn(`CiDataHub creation failed (falling back to MetricsStore): ${String(err)}`);
+        return undefined;
+    }
+}
+
 export async function main(): Promise<void> {
     const opts = parseArgs(process.argv.slice(2));
 
@@ -706,6 +728,8 @@ export async function main(): Promise<void> {
     const previousRun = store.runs.length > 0 ? store.runs[store.runs.length - 1] : undefined;
     const diffComparison = previousRun ? computeDiffComparison(result.tests, previousRun.tests) : undefined;
 
+    const ciData = await tryCreateCiDataHub(ciEnv);
+
     const resultSummary = await generatePrReport({
         tests: result.tests,
         stats: {
@@ -720,6 +744,7 @@ export async function main(): Promise<void> {
         skipQuality,
         skipFlaky,
         ciEnv,
+        ...(ciData ? { ciData } : {}),
         ...(opts.htmlOutputPath ? { htmlOutputPath: opts.htmlOutputPath } : {}),
         ...(diffComparison ? { diffComparison } : {}),
     });
