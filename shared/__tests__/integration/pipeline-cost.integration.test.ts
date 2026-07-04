@@ -10,7 +10,7 @@
  */
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 import type { MetricsRun } from '../../metrics.js';
-import type { CiDataHub } from '../../ci-data.js';
+import type { DataHub } from '../../types/data-hub.js';
 import type { PipelineRun } from '../../types/ci-cd.js';
 
 vi.mock('../../logger.js', () => ({
@@ -94,7 +94,7 @@ describe('Integration: Pipeline Cost (FT-29)', () => {
         });
     });
 
-    describe('CiDataHub: uses real CI data when available', () => {
+    describe('DataHub: uses real CI data when available', () => {
         function makeCiRun(overrides?: Partial<PipelineRun>): PipelineRun {
             return {
                 id: 1,
@@ -107,27 +107,35 @@ describe('Integration: Pipeline Cost (FT-29)', () => {
             };
         }
 
-        function makeCiHub(runs: PipelineRun[]): CiDataHub {
+        function makeDataHub(runs: PipelineRun[]): DataHub {
             return {
-                runs,
-                jobs: new Map(),
-                failureReasons: new Map(),
-                artifacts: new Map(),
-                passRate: 75,
-                avgDuration: 300,
-                suiteSpeedP95: 120000,
-                topFailingJobs: [],
-                branchBreakdown: {},
-                topFailureReasons: [],
-                flakyTests: [],
-                lastFetched: new Date(),
+                raw: {
+                    runs,
+                    jobs: new Map(),
+                    failureReasons: new Map(),
+                    artifacts: new Map(),
+                },
+                computed: {
+                    passRate: 75,
+                    avgDuration: 300,
+                    suiteSpeedP95: 120000,
+                    flakyRate: [],
+                    coverage: 0,
+                    pipelineCost: { totalMinutes: 0, estimatedCost: 0 },
+                    defectTrends: [],
+                    branchBreakdown: {},
+                    topFailingJobs: [],
+                    topFailureReasons: [],
+                    releaseScore: { score: 0, dimensions: {} as never, grade: 'critical' },
+                    quarantineStatus: { flakyCount: 0, quarantinedCount: 0 },
+                },
+                timestamp: new Date(),
                 provider: 'github',
                 repo: 'owner/repo',
-                recentRunsCount: runs.length,
             };
         }
 
-        it('uses ciData.runs for cost calculation when ciData provided', async () => {
+        it('uses dataHub.raw.runs for cost calculation when dataHub provided', async () => {
             expect.hasAssertions();
 
             const { calculatePipelineCost } = await import('../../pipeline-cost.js');
@@ -143,7 +151,7 @@ describe('Integration: Pipeline Cost (FT-29)', () => {
                     updated_at: '2026-07-01T11:10:00Z', // 600s
                 }),
             ];
-            const hub = makeCiHub(ciRuns);
+            const hub = makeDataHub(ciRuns);
             const result = calculatePipelineCost(null, 0.01, hub);
 
             expect(result.runCount).toBe(2);
@@ -152,7 +160,7 @@ describe('Integration: Pipeline Cost (FT-29)', () => {
             expect(result.costByRun).toHaveLength(2);
         });
 
-        it('ciData path produces different result than MetricsStore fallback', async () => {
+        it('dataHub path produces different result than MetricsStore fallback', async () => {
             expect.hasAssertions();
 
             const { calculatePipelineCost } = await import('../../pipeline-cost.js');
@@ -174,15 +182,15 @@ describe('Integration: Pipeline Cost (FT-29)', () => {
                     updated_at: '2026-07-01T10:20:00Z', // 1200s (different from MetricsStore 120s)
                 }),
             ];
-            const hub = makeCiHub(ciRuns);
+            const hub = makeDataHub(ciRuns);
 
-            const withCi = calculatePipelineCost(metricsRuns, 0.01, hub);
-            const withoutCi = calculatePipelineCost(metricsRuns, 0.01);
+            const withHub = calculatePipelineCost(metricsRuns, 0.01, hub);
+            const withoutHub = calculatePipelineCost(metricsRuns, 0.01);
 
-            expect(withCi.totalDurationSec).not.toBe(withoutCi.totalDurationSec);
+            expect(withHub.totalDurationSec).not.toBe(withoutHub.totalDurationSec);
         });
 
-        it('falls back to MetricsStore when ciData has no runs', async () => {
+        it('falls back to MetricsStore when dataHub has no runs', async () => {
             expect.hasAssertions();
 
             const { calculatePipelineCost } = await import('../../pipeline-cost.js');
@@ -198,7 +206,7 @@ describe('Integration: Pipeline Cost (FT-29)', () => {
                     tests: [],
                 },
             ];
-            const hub = makeCiHub([]);
+            const hub = makeDataHub([]);
 
             const result = calculatePipelineCost(metricsRuns, 0.01, hub);
 

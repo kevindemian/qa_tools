@@ -3,7 +3,7 @@ import os from 'node:os';
 import path from 'node:path';
 import { afterAll, afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import type { FlatTest } from '../../result_parser.js';
-import type { CiDataHub } from '../../ci-data.js';
+import type { DataHub } from '../../types/data-hub.js';
 import type { PipelineRun } from '../../types/ci-cd.js';
 
 // ── Mock external boundaries ──────────────────────────────────────────────
@@ -489,7 +489,7 @@ describe('Pr Report Core.Integration', () => {
         });
     });
 
-    describe('CiDataHub: passes ciData through to quality gate', () => {
+    describe('DataHub: passes dataHub through to quality gate', () => {
         function makeCiRun(overrides?: Partial<PipelineRun>): PipelineRun {
             return {
                 id: 1,
@@ -502,32 +502,40 @@ describe('Pr Report Core.Integration', () => {
             };
         }
 
-        function makeCiHub(runs: PipelineRun[]): CiDataHub {
+        function makeDataHub(runs: PipelineRun[]): DataHub {
             return {
-                runs,
-                jobs: new Map(),
-                failureReasons: new Map(),
-                artifacts: new Map(),
-                passRate: 85,
-                avgDuration: 300,
-                suiteSpeedP95: 120000,
-                topFailingJobs: [],
-                branchBreakdown: {},
-                topFailureReasons: [],
-                flakyTests: [],
-                lastFetched: new Date(),
+                raw: {
+                    runs,
+                    jobs: new Map(),
+                    failureReasons: new Map(),
+                    artifacts: new Map(),
+                },
+                computed: {
+                    passRate: 85,
+                    avgDuration: 300,
+                    suiteSpeedP95: 120000,
+                    flakyRate: [],
+                    coverage: 0,
+                    pipelineCost: { totalMinutes: 0, estimatedCost: 0 },
+                    defectTrends: [],
+                    branchBreakdown: {},
+                    topFailingJobs: [],
+                    topFailureReasons: [],
+                    releaseScore: { score: 0, dimensions: {} as never, grade: 'critical' },
+                    quarantineStatus: { flakyCount: 0, quarantinedCount: 0 },
+                },
+                timestamp: new Date(),
                 provider: 'github',
                 repo: 'owner/repo',
-                recentRunsCount: runs.length,
             };
         }
 
-        it('accepts ciData and produces valid report', async () => {
+        it('accepts dataHub and produces valid report', async () => {
             expect.hasAssertions();
 
             const { generatePrReport } = await import('../../pr-report-core.js');
             const htmlPath = path.join(TEST_DIR, 'pr-report-cidata.html');
-            const hub = makeCiHub([makeCiRun()]);
+            const hub = makeDataHub([makeCiRun()]);
 
             const result = await generatePrReport({
                 tests: PASSING_TESTS,
@@ -537,7 +545,7 @@ describe('Pr Report Core.Integration', () => {
                 skipQuality: true,
                 skipFlaky: true,
                 htmlOutputPath: htmlPath,
-                ciData: hub,
+                dataHub: hub,
             });
 
             expect(result.healthScore.overall).toBeGreaterThanOrEqual(0);
@@ -545,12 +553,12 @@ describe('Pr Report Core.Integration', () => {
             expect(fs.existsSync(path.resolve(htmlPath))).toBeTruthy();
         });
 
-        it('ciData flows through to quality gate when skipQuality is false', async () => {
+        it('dataHub flows through to quality gate when skipQuality is false', async () => {
             expect.hasAssertions();
 
             const { generatePrReport } = await import('../../pr-report-core.js');
             const htmlPath = path.join(TEST_DIR, 'pr-report-cidata-qg.html');
-            const hub = makeCiHub([makeCiRun()]);
+            const hub = makeDataHub([makeCiRun()]);
 
             const result = await generatePrReport({
                 tests: PASSING_TESTS,
@@ -560,7 +568,7 @@ describe('Pr Report Core.Integration', () => {
                 skipQuality: false,
                 skipFlaky: true,
                 htmlOutputPath: htmlPath,
-                ciData: hub,
+                dataHub: hub,
             });
 
             expect(result.healthScore).toBeDefined();

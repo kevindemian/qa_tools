@@ -14,7 +14,7 @@
  */
 import { describe, expect, it } from 'vitest';
 import type { CoverageSnapshot, MetricsRun, MetricsStore } from '../../metrics.js';
-import type { CiDataHub } from '../../ci-data.js';
+import type { DataHub } from '../../types/data-hub.js';
 
 /** Helper to create a MetricsStore with controllable data. */
 function createStore(
@@ -236,52 +236,64 @@ describe('Integration: Health Score', () => {
         });
     });
 
-    describe('CiDataHub: parameter acceptance', () => {
-        function makeCiHub(overrides?: Partial<CiDataHub>): CiDataHub {
+    describe('DataHub: parameter acceptance', () => {
+        function makeDataHub(overrides?: {
+            computed?: Partial<DataHub['computed']>;
+            raw?: Partial<DataHub['raw']>;
+        }): DataHub {
             return {
-                runs: [],
-                jobs: new Map(),
-                failureReasons: new Map(),
-                artifacts: new Map(),
-                passRate: 85,
-                avgDuration: 300,
-                suiteSpeedP95: 120000,
-                topFailingJobs: [],
-                branchBreakdown: {},
-                topFailureReasons: [],
-                flakyTests: [],
-                lastFetched: new Date(),
+                raw: {
+                    runs: [],
+                    jobs: new Map(),
+                    failureReasons: new Map(),
+                    artifacts: new Map(),
+                    ...overrides?.raw,
+                },
+                computed: {
+                    passRate: 85,
+                    avgDuration: 300,
+                    suiteSpeedP95: 120000,
+                    flakyRate: [],
+                    coverage: 0,
+                    pipelineCost: { totalMinutes: 0, estimatedCost: 0 },
+                    defectTrends: [],
+                    branchBreakdown: {},
+                    topFailingJobs: [],
+                    topFailureReasons: [],
+                    releaseScore: { score: 0, dimensions: {} as never, grade: 'critical' },
+                    quarantineStatus: { flakyCount: 0, quarantinedCount: 0 },
+                    ...overrides?.computed,
+                },
+                timestamp: new Date(),
                 provider: 'github',
                 repo: 'o/r',
-                recentRunsCount: 0,
-                ...overrides,
             };
         }
 
-        it('accepts ciData parameter without throwing', async () => {
+        it('accepts dataHub parameter without throwing', async () => {
             expect.hasAssertions();
 
             const { calculateHealthScore } = await import('../../health-score.js');
             const store = createStore({ passed: 90, failed: 10, skipped: 0, coveragePct: 80 });
-            const hub = makeCiHub({ passRate: 90 });
-            const result = calculateHealthScore(store, { ciData: hub });
+            const hub = makeDataHub({ computed: { passRate: 90 } });
+            const result = calculateHealthScore(store, { dataHub: hub });
 
             expect(result.overall).toBeGreaterThanOrEqual(0);
             expect(result.overall).toBeLessThanOrEqual(100);
         });
 
-        it('ciData passRate overrides MetricsStore when provided', async () => {
+        it('dataHub passRate overrides MetricsStore when provided', async () => {
             expect.hasAssertions();
 
             const { calculateHealthScore } = await import('../../health-score.js');
             const store = createStore({ passed: 50, failed: 50, skipped: 0, coveragePct: 80 }); // 50% local
-            const hub = makeCiHub({ passRate: 90 }); // 90% from CI
+            const hub = makeDataHub({ computed: { passRate: 90 } }); // 90% from CI
 
-            const withCi = calculateHealthScore(store, { ciData: hub });
-            const withoutCi = calculateHealthScore(store, {});
+            const withHub = calculateHealthScore(store, { dataHub: hub });
+            const withoutHub = calculateHealthScore(store, {});
 
-            // ciData should override passRate — results must differ
-            expect(withCi.dimensions.passRate.score).not.toBe(withoutCi.dimensions.passRate.score);
+            // dataHub should override passRate — results must differ
+            expect(withHub.dimensions.passRate.score).not.toBe(withoutHub.dimensions.passRate.score);
         });
     });
 });

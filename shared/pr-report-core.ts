@@ -34,6 +34,7 @@ import { resolveCoverage } from './coverage-source.js';
 import { parseTestResultsFile } from './result_parser.js';
 import type { FlatTest, ParseResult } from './result_parser.js';
 import { getPrReportConfig } from './feature-config.js';
+import type { DataHub } from './types/data-hub.js';
 
 /**
  * Read CI-injected environment variables with typed fallbacks.
@@ -64,8 +65,6 @@ export interface DiffComparison {
     flaky: FlatTest[];
 }
 
-import type { CiDataHub } from './ci-data.js';
-
 export interface PrReportCoreOptions {
     tests: FlatTest[];
     stats: PrReportStats;
@@ -78,8 +77,8 @@ export interface PrReportCoreOptions {
     diffComparison?: DiffComparison;
     /** CI environment context — used to render CI Context section in PR comment. */
     ciEnv?: { isCI: boolean; repo: string; runId: string; refName: string; serverUrl: string };
-    /** CI Data Hub — centralizado. Quando disponível, usa dados do CI em vez de MetricsStore local. */
-    ciData?: CiDataHub;
+    /** Data Hub — centralizado. Quando disponível, usa dados do CI em vez de MetricsStore local. */
+    dataHub?: DataHub;
 }
 
 export interface PrReportResult {
@@ -342,10 +341,10 @@ async function handleQualityGate(
     healthScore: ReturnType<typeof calculateHealthScore>,
     artifactUrl?: string,
     coverageOverride?: number,
-    ciData?: CiDataHub,
+    dataHub?: DataHub,
 ): Promise<string | undefined> {
     try {
-        const qgResult = runQualityGate({ coverageOverride, ciData });
+        const qgResult = runQualityGate({ coverageOverride, dataHub });
         const gradeStr = healthScore.grade.replace(/_/g, ' ').toUpperCase();
         const checkSummary = buildQGCHeckSummary(qgResult, gradeStr, artifactUrl);
 
@@ -458,8 +457,8 @@ export async function generatePrReport(options: PrReportCoreOptions): Promise<Pr
     const healthConfig = coverageResult ? { coverageOverride: coverageResult.coveragePct } : {};
     const healthScore = calculateHealthScore(store, healthConfig);
 
-    // Se CiDataHub disponível, passar para quality gate e后续 consumers
-    const ciData = options.ciData;
+    // Se DataHub disponível, passar para quality gate e subsequentes consumers
+    const dataHub = options.dataHub;
 
     const { workflowUrl, artifactUrl } = resolveCiUrls();
 
@@ -475,7 +474,7 @@ export async function generatePrReport(options: PrReportCoreOptions): Promise<Pr
     }
 
     if (!options.skipQuality) {
-        const qgSection = await handleQualityGate(healthScore, artifactUrl, coverageResult?.coveragePct, ciData);
+        const qgSection = await handleQualityGate(healthScore, artifactUrl, coverageResult?.coveragePct, dataHub);
         if (qgSection) sections.push(qgSection);
     }
 
@@ -729,6 +728,7 @@ export async function main(): Promise<void> {
     const diffComparison = previousRun ? computeDiffComparison(result.tests, previousRun.tests) : undefined;
 
     const ciData = await tryCreateCiDataHub(ciEnv);
+    const dataHub = ciData ? (await import('./data-hub/adapter.js')).ciDataHubToDataHub(ciData) : undefined;
 
     const resultSummary = await generatePrReport({
         tests: result.tests,
@@ -744,7 +744,7 @@ export async function main(): Promise<void> {
         skipQuality,
         skipFlaky,
         ciEnv,
-        ...(ciData ? { ciData } : {}),
+        ...(dataHub ? { dataHub } : {}),
         ...(opts.htmlOutputPath ? { htmlOutputPath: opts.htmlOutputPath } : {}),
         ...(diffComparison ? { diffComparison } : {}),
     });

@@ -1,5 +1,5 @@
 import type { MetricsStore } from './metrics.js';
-import type { CiDataHub } from './ci-data.js';
+import type { DataHub } from './types/data-hub.js';
 import { rootLogger } from './logger.js';
 import { sanitizeHtml } from './escape.js';
 import { buildHtmlPage, buildErrorPage } from './html-factory.js';
@@ -160,14 +160,14 @@ function buildEpicNode(
 export function buildTraceabilityMatrix(
     metrics: MetricsStore,
     coverageResult?: CoverageGapResult,
-    ciData?: CiDataHub,
+    dataHub?: DataHub,
 ): TraceabilityResult {
     try {
         const { statusByTitle, durationByTitle } = extractLatestRunSnapshots(metrics);
-        // Se CiDataHub disponível, usar flakyTests do CI em vez de calcular do MetricsStore
+        // Se DataHub disponível, usar flakyRate do CI em vez de calcular do MetricsStore
         const flakinessByTitle =
-            ciData && ciData.flakyTests.length > 0
-                ? new Map(ciData.flakyTests.map((f) => [f.title, f.rate]))
+            dataHub && dataHub.computed.flakyRate.length > 0
+                ? new Map(dataHub.computed.flakyRate.map((f) => [f.title, f.rate]))
                 : buildFlakinessMap(metrics);
         const byEpic = coverageResult?.byEpic ?? {};
         const epicKeys = Object.keys(byEpic);

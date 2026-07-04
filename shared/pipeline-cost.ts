@@ -11,7 +11,7 @@ import { MetricCard, MetricGrid, DataTable } from './primitives/index.js';
 import type { TableColumn, TableRow } from './primitives/index.js';
 import { rootLogger } from './logger.js';
 import type { MetricsRun } from './metrics.js';
-import type { CiDataHub } from './ci-data.js';
+import type { DataHub } from './types/data-hub.js';
 
 const DEFAULT_COST_PER_MINUTE = 0.01;
 
@@ -43,13 +43,13 @@ function mapConclusionToStatus(conclusion: string | undefined): 'passed' | 'fail
 export function calculatePipelineCost(
     runs: MetricsRun[] | null | undefined,
     costPerMinute?: number,
-    ciData?: CiDataHub,
+    dataHub?: DataHub,
 ): PipelineCostResult {
     const cpm = costPerMinute ?? (Number(process.env['QA_COST_PER_COMPUTE_MINUTE']) || DEFAULT_COST_PER_MINUTE);
 
-    // Se CiDataHub disponível, usar dados reais do CI
-    if (ciData && ciData.runs.length > 0) {
-        const ciRuns = ciData.runs;
+    // Se DataHub disponível, usar dados reais do CI
+    if (dataHub && dataHub.raw.runs.length > 0) {
+        const ciRuns = dataHub.raw.runs;
         const costByRun: PipelineCostEntry[] = ciRuns.map((r) => {
             const durationSec =
                 r.run_started_at && r.updated_at

@@ -27,6 +27,7 @@ import {
     getLastGitLogError,
 } from '../shared/git-metrics-adapter.js';
 import { runQualityGate, formatQualityGateText } from '../shared/quality-gate.js';
+import { ciDataHubToDataHub } from '../shared/data-hub/adapter.js';
 
 import { writeReport } from '../shared/temp-dir.js';
 import {
@@ -41,6 +42,7 @@ import {
     setProjectId,
     setManager,
     getProjects,
+    getCiDataHub,
 } from './session-state.js';
 import { update as updateState } from '../shared/state.js';
 
@@ -124,6 +126,38 @@ function buildTestDurationMap(store: import('../shared/metrics.js').MetricsStore
     return testDurationMap;
 }
 
+interface GitFallbackResult {
+    projectRuns: import('../shared/metrics.js').MetricsRun[];
+    failureClassifications: import('../shared/metrics.js').FailureClassification[];
+}
+
+function resolveGitFallback(): GitFallbackResult | null {
+    info('Sem dados de pipeline — tentando fallback para git history...');
+    const gitRuns = generateGitMetricsRuns({ projectName: currentProjectName });
+    const gitError = getLastGitLogError();
+    if (gitRuns.length >= 2) {
+        const failureClassifications = generateGitFailureClassifications({ projectName: currentProjectName });
+        info('Usando ' + gitRuns.length + ' runs derivados do git history.');
+        return { projectRuns: gitRuns, failureClassifications };
+    }
+    if (gitError) {
+        warn('Não foi possível obter o git history. ' + gitError + ' Execute pipelines para gerar dados primeiro.');
+        return null;
+    }
+    warn('Menos de 2 execuções registradas. Execute pipelines primeiro.');
+    return null;
+}
+
+function extractTrendCategories(trends: { categories: Record<string, number> }[]): string[] {
+    const categories = new Set<string>();
+    for (const t of trends) {
+        for (const cat of Object.keys(t.categories)) {
+            categories.add(cat);
+        }
+    }
+    return [...categories];
+}
+
 export function generateWeeklyQualityReport(): void {
     try {
         if (!currentProjectName) {
@@ -136,37 +170,25 @@ export function generateWeeklyQualityReport(): void {
         let usingGitFallback = false;
 
         if (projectRuns.length < 2) {
-            info('Sem dados de pipeline — tentando fallback para git history...');
-            const gitRuns = generateGitMetricsRuns({ projectName: currentProjectName });
-            const gitError = getLastGitLogError();
-            if (gitRuns.length >= 2) {
-                projectRuns = gitRuns;
-                failureClassifications = generateGitFailureClassifications({ projectName: currentProjectName });
-                usingGitFallback = true;
-                info('Usando ' + gitRuns.length + ' runs derivados do git history.');
-            } else if (gitError) {
-                warn(
-                    'Não foi possível obter o git history. ' +
-                        gitError +
-                        ' Execute pipelines para gerar dados primeiro.',
-                );
-                return;
-            } else {
-                warn('Menos de 2 execuções registradas. Execute pipelines primeiro.');
-                return;
-            }
+            const fallback = resolveGitFallback();
+            if (!fallback) return;
+            projectRuns = fallback.projectRuns;
+            failureClassifications = fallback.failureClassifications;
+            usingGitFallback = true;
         }
 
         const effectiveStore = usingGitFallback ? { ...store, runs: projectRuns, failureClassifications } : store;
 
-        const health = calculateHealthScore(effectiveStore);
+        const _hub = getCiDataHub();
+        const dataHub = _hub ? ciDataHubToDataHub(_hub) : undefined;
+        const health = calculateHealthScore(effectiveStore, dataHub ? { dataHub } : undefined);
         const flaky = calculateFlakiness({ runs: projectRuns }, 2);
         const releaseScore = calculateReleaseScore(
             80,
             health.overall,
             health.overall >= 70 ? 'pass' : 'fail',
             70,
-            flaky.length > 0
+            flaky.filter((f) => f.rate > 0.3).length > 0
                 ? Math.min(100, Math.round((flaky.filter((f) => f.rate > 0.3).length / flaky.length) * 100))
                 : 0,
         );
@@ -193,20 +215,26 @@ export function generateWeeklyQualityReport(): void {
 
         /* Cross-squad benchmark: aggregate health across all projects */
         const projectNames = [...new Set(effectiveStore.runs.map((r) => r.project))];
-        const projectBenchmarks = projectNames.map((name) => {
-            const pRuns = store.runs.filter((r) => r.project === name);
-            const pHealth = calculateHealthScore({ ...store, runs: pRuns });
-            return {
-                name,
-                healthScore: pHealth.overall,
-                grade: pHealth.grade,
-                passRate: pHealth.dimensions.passRate.score,
-                flakyRate: pHealth.dimensions.flakyRate.score,
-                coveragePct: pHealth.dimensions.coverage.score,
-                runCount: pRuns.length,
-            };
-        });
-        const benchmark = computeCrossSquadBenchmark(projectBenchmarks);
+        const benchmark = computeCrossSquadBenchmark(
+            projectNames.map((name) => {
+                const pRuns = store.runs.filter((r) => r.project === name);
+                const _pHub = getCiDataHub();
+                const pDataHub = _pHub ? ciDataHubToDataHub(_pHub) : undefined;
+                const pHealth = calculateHealthScore(
+                    { ...store, runs: pRuns },
+                    pDataHub ? { dataHub: pDataHub } : undefined,
+                );
+                return {
+                    name,
+                    healthScore: pHealth.overall,
+                    grade: pHealth.grade,
+                    passRate: pHealth.dimensions.passRate.score,
+                    flakyRate: pHealth.dimensions.flakyRate.score,
+                    coveragePct: pHealth.dimensions.coverage.score,
+                    runCount: pRuns.length,
+                };
+            }),
+        );
 
         /* Fase 3 dashboards */
         const failRate =
@@ -227,17 +255,12 @@ export function generateWeeklyQualityReport(): void {
             health.overall,
         );
 
-        const trendCategories = new Set<string>();
-        for (const t of defects.trends) {
-            for (const cat of Object.keys(t.categories)) {
-                trendCategories.add(cat);
-            }
-        }
+        const trendCategories = extractTrendCategories(defects.trends);
 
         const impactAlert = analyzePipelineImpact(
             health.dimensions.passRate.score,
             projectRuns.filter((r) => r.failed > 0).length,
-            [...trendCategories].slice(0, 5),
+            trendCategories.slice(0, 5),
             health.dimensions.coverage.score,
             uncoveredEpics,
         );
@@ -246,7 +269,12 @@ export function generateWeeklyQualityReport(): void {
         const requirementScores = calculateRequirementScores([]);
 
         const sections: string[] = [];
-        const qualityGate = runQualityGate({ project: currentProjectName });
+        const _qgHub = getCiDataHub();
+        const qgDataHub = _qgHub ? ciDataHubToDataHub(_qgHub) : undefined;
+        const qualityGate = runQualityGate({
+            project: currentProjectName,
+            ...(qgDataHub ? { dataHub: qgDataHub } : {}),
+        });
         sections.push('<h2>Quality Gate</h2><pre>' + formatQualityGateText(qualityGate) + '</pre>');
         sections.push('<h2>Cross-Squad Benchmark</h2>' + generateBenchmarkHtml(benchmark));
         sections.push('<h2>Defect Seasonality</h2>' + generateSeasonalityHtml(seasonality));
