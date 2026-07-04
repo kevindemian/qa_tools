@@ -97,6 +97,8 @@ describe('AnalyzeBacklogHealth — property-based', () => {
                     expect(issue.type).toBe('Bug');
                     expect(issue.linkedTestCount).toBe(0);
                 }
+
+                expect(result.length).toBeLessThanOrEqual(issues.length);
             }),
             { numRuns: 50 },
         );
