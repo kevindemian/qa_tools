@@ -1,10 +1,10 @@
 /**
- * Integration test for CiDataHub menu entry in interactive-mode.
+ * Integration test for DataHub menu entry in interactive-mode.
  *
  * Validates:
  * - Menu option 'h' exists in ACTION_HANDLERS
  * - Handler can be invoked without errors
- * - Handler uses DataHub from session-state (not createCiDataHub directly)
+ * - Handler uses DataHub from session-state (via ensureDataHub)
  * - Handler displays formatted output
  * - Handler handles empty runs gracefully
  * - Handler handles provider errors gracefully
@@ -67,7 +67,7 @@ function makeJob(id: number, overrides?: Partial<PipelineJob>): PipelineJob {
 
 /* ── Tests ─────────────────────────────────────────────────────────────── */
 
-describe('CiDataHub Menu Integration', () => {
+describe('DataHub Menu Integration', () => {
     const { ACTION_HANDLERS } = _testExports;
 
     beforeEach(() => {

@@ -12,7 +12,6 @@ import { error, print, title, warn } from '../shared/prompt.js';
 import { palette } from '../shared/palette.js';
 import { loadMetrics, calculateFlakiness } from '../shared/metrics.js';
 import type { GitProvider, JsonObject, StateContainer } from '../shared/types.js';
-import type { CiDataHub } from '../shared/ci-data.js';
 import type { DataHub } from '../shared/types/data-hub.js';
 import GitLabManager from './gitlab_manager.js';
 import GitHubManager from './github_manager.js';
@@ -33,24 +32,13 @@ export let manager: GitProvider | null = null;
 
 /** Central DataHub — created once per session, consumed by all dashboards and reports. */
 let _dataHub: DataHub | undefined;
-let _ciDataHub: CiDataHub | undefined;
 
 export function setDataHub(hub: DataHub | undefined): void {
     _dataHub = hub;
-    _ciDataHub = undefined;
 }
 
 export function getDataHub(): DataHub | undefined {
     return _dataHub;
-}
-
-export function setCiDataHub(hub: CiDataHub | undefined): void {
-    _ciDataHub = hub;
-    _dataHub = undefined;
-}
-
-export function getCiDataHub(): CiDataHub | undefined {
-    return _ciDataHub;
 }
 
 /**
@@ -58,26 +46,19 @@ export function getCiDataHub(): CiDataHub | undefined {
  * Returns undefined if provider is unavailable or creation fails.
  * Uses unified cache from data-hub/cache.ts.
  */
-export async function ensureCiDataHub(): Promise<CiDataHub | undefined> {
-    if (_ciDataHub) return _ciDataHub;
-    if (_dataHub) {
-        const { dataHubToCiDataHub } = await import('../shared/data-hub/adapter.js');
-        _ciDataHub = dataHubToCiDataHub(_dataHub);
-        return _ciDataHub;
-    }
+export async function ensureDataHub(): Promise<DataHub | undefined> {
+    if (_dataHub) return _dataHub;
     if (!manager || !currentProjectName) return undefined;
     try {
         const { getOrFetchDataHub } = await import('../shared/ci-data.js');
-        const { dataHubToCiDataHub } = await import('../shared/data-hub/adapter.js');
 
         const dataHub = await getOrFetchDataHub(manager, currentProjectName);
         if (dataHub) {
             _dataHub = dataHub;
-            _ciDataHub = dataHubToCiDataHub(dataHub);
         }
-        return _ciDataHub;
+        return _dataHub;
     } catch (err) {
-        rootLogger.debug(`ensureCiDataHub failed: ${String(err)}`);
+        rootLogger.debug(`ensureDataHub failed: ${String(err)}`);
         return undefined;
     }
 }
@@ -237,7 +218,6 @@ export function _resetForTest(): void {
     isBusy = false;
     manager = null;
     _dataHub = undefined;
-    _ciDataHub = undefined;
     sessionContext.sessionCounters = [];
 }
 

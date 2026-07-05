@@ -33,8 +33,10 @@ shared_docker/.selected_project
 # === Generated output artifacts ===
 *.csv
 *.html
-*.csv:Zone.Identifier
 .audit/
+
+# === Runtime state ===
+shared/.local/
 
 # === Backup files ===
 *.bak
@@ -45,7 +47,7 @@ tmp/
 
 # === Generated AI code ===
 gemini-code-*
-:Zone.Identifier
+*:Zone.Identifier
 
 # === Container build context (local only, not part of the project) ===
 .container/

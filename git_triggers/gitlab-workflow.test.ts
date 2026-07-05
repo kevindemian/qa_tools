@@ -182,18 +182,42 @@ describe('Gitlab Workflow', () => {
     });
 
     describe('GlGetPipelineJobs', () => {
-        it('returns formatted jobs', async () => {
+        it('returns formatted jobs with timing fields', async () => {
             expect.hasAssertions();
 
             vi.mocked(apiGet).mockResolvedValue([
-                { id: 101, name: 'test', stage: 'test', status: 'success' },
-                { id: 102, name: 'build', stage: 'build', status: 'running' },
+                {
+                    id: 101,
+                    name: 'test',
+                    stage: 'test',
+                    status: 'success',
+                    started_at: '2026-07-01T10:00:00Z',
+                    finished_at: '2026-07-01T10:05:00Z',
+                    duration: 300,
+                },
+                { id: 102, name: 'build', stage: 'build', status: 'running', started_at: '2026-07-01T10:00:00Z' },
             ]);
             const result = await glGetPipelineJobs(mockClient, 'owner', 'repo', 42);
 
             expect(result).toStrictEqual([
-                { id: 101, name: 'test', stage: 'test', status: 'success' },
-                { id: 102, name: 'build', stage: 'build', status: 'running' },
+                {
+                    id: 101,
+                    name: 'test',
+                    stage: 'test',
+                    status: 'success',
+                    started_at: '2026-07-01T10:00:00Z',
+                    finished_at: '2026-07-01T10:05:00Z',
+                    duration: 300,
+                },
+                {
+                    id: 102,
+                    name: 'build',
+                    stage: 'build',
+                    status: 'running',
+                    started_at: '2026-07-01T10:00:00Z',
+                    finished_at: undefined,
+                    duration: undefined,
+                },
             ]);
             expect(apiGet).toHaveBeenCalledWith(mockClient, expect.stringContaining('/pipelines/42/jobs'), {
                 operation: 'listar jobs',

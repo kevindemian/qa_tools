@@ -7,7 +7,7 @@
  * - Individual checks: health-score, pass-rate, flaky-rate, coverage, suite-speed
  * - Project filtering
  * - formatQualityGateJson / formatQualityGateText output
- * - CiDataHub parameter acceptance
+ * - DataHub parameter acceptance
  *
  * Uses vi.spyOn for loadMetrics (reads from disk) but keeps
  * calculateFlakiness real (pure function, no I/O).

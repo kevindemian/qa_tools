@@ -1078,28 +1078,98 @@ grep -c "compute/" docs/TECHDOC.md  # deve ser > 0 (módulos documentados)
 
 ---
 
-## Pendência Futura — Coleta Assíncrona de Dados Brutos
+---
 
-> **PROPOSTA (2026-07-04):** Avaliar melhoria na coleta de dados brutos para DataHub.
+## Pré-Voo — Fase 13
+
+### Pre-commit Hook
+
+| Padrão           | Rejeitado |
+| ---------------- | --------- |
+| `eslint-disable` | ✅        |
+| type-cast-unknown | ✅        |
+| `@ts-ignore`     | ✅        |
+
+### Questões de Design
+
+| Questão | Solução |
+|---------|---------|
+| Rate limits (GitHub 5000/h, GitLab varies) | Throttling por provider, backoff exponencial, máximo 1 fetch por repo por 5 min |
+| Persistência | Usar cache existente (`cache.ts`) com TTL estendido (15 min em vez de 5 min) |
+| Repositório inacessível | Log warning, fallback para cache existente ou dados zerados |
+| Sincronização on-demand vs async | Async enriquece cache; on-demand usa cache se fresco, busca se stale |
+| Múltiplos repositórios | Filo por repo, máximo 3 concurrent fetches |
+
+---
+
+## Fase 13 — Coleta Assíncrona de Dados Brutos (Tarefas 160-165)
+
+> **Proposta (2026-07-04):** Coletar dados brutos assincronamente toda vez que o sistema é iniciado e está associado a um repositório/versãoador.
 >
-> **Estado atual:** Dados brutos são coletados apenas quando se dispara CI (on-demand via providers).
+> **Estado atual:** Dados brutos são coletados apenas on-demand (ao disparar CI). O DataHub busca via providers sob demanda.
 >
-> **Proposta:** Coletar dados assincronamente toda vez que o sistema é iniciado e está associado a um repositório ou versionador/gerenciador.
->
-> **Vantagens potenciais:**
->
-> - Dados sempre atualizados mesmo sem novo CI
-> - Métricas históricas mais completas
-> - Dashboard imediato ao abrir o sistema
->
-> **Questões a avaliar:**
->
-> - Impacto em APIs do GitHub/GitLab (rate limits)
-> - Cache e persistência dos dados coletados
-> - Comportamento quando repositório não está acessível
-> - Sincronização entre coleta assíncrona e uso on-demand
->
-> **Status:** DISCUTIR POSTERIORMENTE — não bloqueia Fases 6-11.
+> **Motivação:** Dashboard imediato ao abrir o sistema, métricas históricas mais completas, dados sempre atualizados mesmo sem novo CI.
+
+### 160 — Configuração de Coleta Assíncrona
+
+| Item               | Conteúdo                                                                                    |
+| ------------------ | ------------------------------------------------------------------------------------------- |
+| **Arquivo**        | `shared/data-hub/compute/types.ts` (adicionar tipos) + `shared/data-hub/async-collector.ts` (NOVO) |
+| **Tipos**          | `AsyncCollectionConfig { intervalMs, maxConcurrent, staleTtlMs }` + `CollectionStatus { repo, lastCollected, error? }` |
+| **Config default** | `{ intervalMs: 300_000 (5min), maxConcurrent: 3, staleTtlMs: 900_000 (15min) }`             |
+| **Critério**       | `tsc --noEmit` passa                                                                        |
+
+### 161 — AsyncCollector Class
+
+| Item               | Conteúdo                                                                                    |
+| ------------------ | ------------------------------------------------------------------------------------------- |
+| **Arquivo**        | `shared/data-hub/async-collector.ts` (NOVO)                                                 |
+| **Classe**         | `AsyncCollector` — gerencia ciclo de vida da coleta assíncrona                              |
+| **Métodos**        | `start(repos)`, `stop()`, `collectNow(repo)`, `getStatus()`                                |
+| **Lógica**         | Intervalo periódico → para cada repo → seleciona provider → busca dados → atualiza cache    |
+| **Throttling**     | `lastFetch` por repo, mínimo 5 min entre fetches                                           |
+| **Error handling** | Try/catch por repo, log warning, não interrompe ciclo                                       |
+| **Teste unitário** | `__tests__/async-collector.test.ts` — 6 cenários                                           |
+| **PBT**            | `__tests__/async-collector.property.test.ts` — status sempre válido                         |
+| **Critério**       | `npx vitest run shared/data-hub/__tests__/async-collector` = 100% pass                      |
+
+### 162 — Integração com Session State
+
+| Item               | Conteúdo                                                                                    |
+| ------------------ | ------------------------------------------------------------------------------------------- |
+| **Arquivo**        | `git_triggers/session-state.ts`                                                             |
+| **Ação**           | Criar/gerenciar instância `AsyncCollector` por sessão. `ensureDataHub()` continua lazy-init, mas async collector enriquece cache em background |
+| **Lifecycle**      | `startSession()` → `collector.start(repos)` / `endSession()` → `collector.stop()`           |
+| **Teste**          | Atualizar `__tests__/system/ci-data-system.test.ts`                                         |
+| **Critério**       | Todos os testes existentes continuam passando                                               |
+
+### 163 — Integração com Entry Points
+
+| Item               | Conteúdo                                                                                    |
+| ------------------ | ------------------------------------------------------------------------------------------- |
+| **Arquivos**       | `git_triggers/interactive-mode.ts`, `git_triggers/batch-mode.ts`, `git_triggers/schedule-handler.ts` |
+| **Ação**           | Iniciar collector no início da sessão. Dashboard mostra dados imediatamente do cache (mesmo que stale) enquanto background fetch atualiza |
+| **Teste**          | Atualizar `__tests__/e2e/ci-data-e2e.test.ts`                                               |
+| **Critério**       | Todos os testes existentes continuam passando                                               |
+
+### 164 — Barrel + Tipos Públicos
+
+| Item               | Conteúdo                                                                                    |
+| ------------------ | ------------------------------------------------------------------------------------------- |
+| **Arquivos**       | `shared/data-hub/index.ts`, `shared/types/data-hub.ts`                                     |
+| **Ação**           | Exportar `AsyncCollector`, `AsyncCollectionConfig`, `CollectionStatus`                       |
+| **Critério**       | `tsc --noEmit` passa                                                                        |
+
+### 165 — Suite de Integração
+
+| Item               | Conteúdo                                                                                    |
+| ------------------ | ------------------------------------------------------------------------------------------- |
+| **Arquivo**        | `shared/data-hub/__tests__/integration/async-collection.integration.test.ts`                |
+| **Testes**         | Mock provider → start collector → verify cache populated → stop collector                    |
+| **Critério**       | Suite inteira passa                                                                         |
+
+**Checkpoint Fase 13:** `npx vitest run shared/data-hub/` = 100%. AsyncCollector funcional. Cache enriquecido em background.
+**Commit:** `feat(data-hub): add async background data collection with throttling and session lifecycle`
 
 ---
 
@@ -1123,7 +1193,43 @@ grep -c "compute/" docs/TECHDOC.md  # deve ser > 0 (módulos documentados)
 
 ## Fase 7 — Corrigir Testes Teatro (Tarefas 090-093)
 
-**Commit:** `test: invert theater tests to verify DataHub actually changes behavior`
+> **CONCLUÍDA (2026-07-05):** 6 testes teatro invertidos. 2 bugs de produção encontrados e corrigidos. Refatoração de `computeActualMetrics` para reduzir complexidade cognitiva.
+
+### Bugs de Produção Encontrados
+
+| Bug | Arquivo:Linha | Impacto | Fix |
+|---|---|---|---|
+| `healthScore` calculado sem DataHub | `pr-report-core.ts:458` | PR report sempre retornava health score do MetricsStore, ignorando dados CI | Movido `dataHub` extração antes de `calculateHealthScore`, merged into `healthConfig` |
+| Empty DataHub sobrescrevia MetricsStore | `health-score.ts:200` | DataHub com 0 runs (`passRate=0`) mascarava dados reais devido ao operador `??` | Adicionado guard `hasCiRuns = dataHub.raw.runs.length > 0` |
+
+### Testes Teatro Invertidos
+
+| Teste | Antes | Depois |
+|---|---|---|
+| `health-score.integration.test.ts:273` | `expect(overall).toBeGreaterThanOrEqual(0)` | `expect(withHub.passRate.score).not.toBe(withoutHub.passRate.score)` |
+| `quality-gate.integration.test.ts:167` | `expect(overall).toBe('fail')` | `expect(withHub.score).not.toBe(withoutHub.score)` |
+| `ci-data-system.test.ts:114` | `expect(overall).toBeGreaterThanOrEqual(0)` | `expect(withHub.passRate.score).not.toBe(withoutHub.passRate.score)` |
+| `ci-data-system.test.ts:221` | `expect(overall).toBeGreaterThanOrEqual(0)` | `expect(withEmptyHub.overall).toBe(withoutHub.overall)` |
+| `pr-report-core.integration.test.ts:533` | `expect(overall).toBeGreaterThanOrEqual(0)` | `expect(withHub.passRate.score).not.toBe(withoutHub.passRate.score)` |
+| `pr-report-core.integration.test.ts:556` | `expect(healthScore).toBeDefined()` | `expect(withHub.passRate.score).not.toBe(withoutHub.passRate.score)` |
+
+### Refatoração `computeActualMetrics`
+
+Correção do bug em `health-score.ts` exigiu refatoração para reduzir complexidade cognitiva (18→15). Funções helper extraídas:
+
+- `_resolveCoverage` — resolution de cobertura (override > history > 0)
+- `_normalizeFlakyPct` — normalização de flaky percentage
+- `_resolvePassRate` — resolução de passRate (DataHub > MetricsStore > 0)
+- `_resolveSuiteSpeed` — resolução de suiteSpeed (DataHub > MetricsStore > 0)
+- `_computeFlakyFromCi` — cálculo de flaky rate a partir do DataHub
+
+### Helpers `makeDataHub` Padronizados
+
+Helpers de teste em 4 arquivos atualizados para incluir `raw.runs` realistas (consistente com `computed.passRate`). Antes: `raw.runs: []` com `computed.passRate: 85` — semanticamente inconsistente.
+
+**Commit:** `test: invert theater tests and fix DataHub integration bugs` (`178d25d7`)
+
+**Evidência:** Verificação completa: 420 files, 6086 tests, 0 failures, 0 lint violations, 0 tsc errors.
 
 ---
 
@@ -1147,9 +1253,190 @@ grep -c "compute/" docs/TECHDOC.md  # deve ser > 0 (módulos documentados)
 
 ## Fase 8 — Sanitização (Tarefas 100-106)
 
-Código morto removido. Código vivo documentado.
+> **Em execução (2026-07-05):** Remoção de código morto e migração de testes. Nenhum código deprecado/deferido/supersedido será mantido — portanto nenhuma documentação de justificativa é necessária.
 
-**Commit:** `refactor: remove dead code and inline calculations, document live code`
+### 100 — Remover `ensureCiDataHub` de `session-state.ts`
+
+Remover função deprecated (lines 70-80) + import de `dataHubToCiDataHub`. Zero chamadores em produção.
+
+**Arquivos:** `git_triggers/session-state.ts`
+
+### 101 — Remover `adapter.ts` e barrel export
+
+Remover `shared/data-hub/adapter.ts` inteiro + re-export de `dataHubToCiDataHub`/`ciDataHubToDataHub` em `shared/data-hub/index.ts`.
+
+**Arquivos:** `shared/data-hub/adapter.ts`, `shared/data-hub/index.ts`
+
+### 102 — Remover `createCiDataHub` de `ci-data.ts`
+
+Remover função (lines ~184-232). Zero chamadores em produção. Migrar todos os testes que dependem dela para criar `DataHub` diretamente via `DataHubImpl.create` ou mock direto.
+
+**Arquivos:** `shared/ci-data.ts`
+**Testes:** `ci-data.test.ts`, `ci-data-system.test.ts`, `ci-data-e2e.test.ts`, `ci-data-e2e-live.test.ts`, `ci-data.integration.test.ts`
+
+### 103 — Remover 16 compute functions legadas (MetricsRun API)
+
+Remover funções que testam API `MetricsRun` legada (não consumida em produção):
+
+| Função | Arquivo | Remover |
+|---|---|---|
+| `calcPipelineFailRate` | `pass-rate.ts` | ✅ |
+| `calcTestPassRate` | `pass-rate.ts` | ✅ |
+| `calcExpWeightedPassRate` | `pass-rate.ts` | ✅ |
+| `calcExecutionRate` | `pass-rate.ts` | ✅ |
+| `calcExpWeightedExecutionRate` | `pass-rate.ts` | ✅ |
+| `calcTestSuiteSpeed` | `suite-speed.ts` | ✅ |
+| `calcFlakyFromMetricsRuns` | `flaky-rate.ts` | ✅ |
+| `calcFlakyPercentage` | `flaky-rate.ts` | ✅ |
+| `calcTrendsFromPipelineRuns` | `trends.ts` | ✅ |
+| `calcTrendsFromMetricsRuns` | `trends.ts` | ✅ |
+| `calcDefectTrends` | `defect-trends.ts` | ✅ |
+| `scorePassRate` | `scoring.ts` | ✅ |
+| `scoreFlakyRate` | `scoring.ts` | ✅ |
+| `scoreCoverage` | `scoring.ts` | ✅ |
+| `scoreExecutionRate` | `scoring.ts` | ✅ |
+| `scoreSuiteSpeed` | `scoring.ts` | ✅ |
+
+**Manter:** `calcPipelinePassRate`, `calcAvgDuration`, `calcSuiteSpeedP95`, `calcFlakyFromPipelineRuns`, `calcTopFailureReasons`, `calcBranchBreakdown`, `calcTopFailingJobs`, `calcCoverageFromRaw`, `calcPipelineCost`, `calcReleaseScore`, `calcQuarantineStatus`, `makeDimensionScore`, `computeGrade`, `extractFailureReasons` (todas com consumidores em produção).
+
+**Barrel:** Atualizar `compute/index.ts` para remover exports das 16 funções.
+
+### 104 — Migrar invariantes PBT para funções produtivas
+
+Migrar propriedades matemáticas testadas pelas 16 funções legadas para testar as funções equivalentes que existem na produção. Se uma invariante não tem equivalente produtivo, remover (a invariante é dead code).
+
+**Arquivos de teste:** `pass-rate.property.test.ts`, `scoring.property.test.ts`, `flaky-rate.property.test.ts`, `trends.property.test.ts`, `defect-trends.property.test.ts`, `suite-speed.property.test.ts`
+
+### 105 — Remover testes de código morto
+
+Remover testes que testam funções removidas:
+
+| Arquivo | Ação |
+|---|---|
+| `adapter.test.ts` | Remover inteiro |
+| `ci-data.test.ts` | Reescrever (remover testes de `createCiDataHub`, manter testes de `getOrFetchDataHub`) |
+| `compute/pass-rate.test.ts` | Remover testes das 5 funções removidas |
+| `compute/suite-speed.test.ts` | Remover testes de `calcTestSuiteSpeed` |
+| `compute/flaky-rate.test.ts` | Remover testes de `calcFlakyFromMetricsRuns` e `calcFlakyPercentage` |
+| `compute/trends.test.ts` | Remover testes de `calcTrendsFromPipelineRuns` e `calcTrendsFromMetricsRuns` |
+| `compute/defect-trends.test.ts` | Remover inteiro (todas as funções testadas foram removidas) |
+| `compute/scoring.test.ts` | Remover testes das 5 scoring functions removidas |
+
+### 106 — Verificação final
+
+| Verificação | Critério |
+|---|---|
+| `npx tsc --noEmit` | 0 erros |
+| `npm run lint` | 0 violações |
+| `npx vitest run` | Todos os testes passam |
+| `grep -r "createCiDataHub" shared/` | 0 resultados em código de produção |
+| `grep -r "ciDataHubToDataHub" shared/` | 0 resultados em código de produção |
+| `grep -r "ensureCiDataHub" git_triggers/` | 0 resultados |
+| `grep -r "dataHubToCiDataHub" shared/` | 0 resultados em código de produção |
+
+**Commit:** `refactor: remove dead code, migrate tests and PBT invariants to production API`
+
+---
+
+## Pré-Voo — Fase 8.5
+
+### ESLint Rules (erros, não warnings)
+
+| Regra                   | Ação                        |
+| ----------------------- | --------------------------- |
+| `no-non-null-assertion` | Extrair variável, usar `?.` |
+| `unbound-method`        | Factory mock separado       |
+| `cognitive-complexity`  | Extrair métodos auxiliares  |
+
+### Pre-commit Hook
+
+| Padrão           | Rejeitado |
+| ---------------- | --------- |
+| `eslint-disable` | ✅        |
+| type-cast-unknown | ✅        |
+| `@ts-ignore`     | ✅        |
+
+---
+
+## Fase 8.5 — Fechamento de Gaps (Tarefas 085.1–085.7)
+
+> **Investigação (2026-07-05):** Auditoria identificou 6 gaps/riscos na implementação existente. Esta fase os corrige antes de prosseguir.
+
+### 085.1 — Remover interface `CiDataHub` (dead code)
+
+| Item               | Conteúdo                                                                                    |
+| ------------------ | ------------------------------------------------------------------------------------------- |
+| **Arquivo**        | `shared/ci-data.ts`                                                                         |
+| **Bug**            | Interface `CiDataHub` (linhas 25-78) exportada mas com **zero consumidores** em produção     |
+| **Impacto**        | Código morto, manutenção desnecessária, risco de confusão                                   |
+| **Ação**           | Remover interface + export. Verificar que `npx tsc --noEmit` passa                           |
+| **Risco**          | ZERO — nenhum arquivo importa `CiDataHub`                                                   |
+| **Critério**       | `grep -r "CiDataHub" shared/ --include="*.ts"` retorna 0 resultados em código de produção   |
+
+### 085.2 — Corrigir `tryCreateDataHub` para suportar GitLab
+
+| Item               | Conteúdo                                                                                    |
+| ------------------ | ------------------------------------------------------------------------------------------- |
+| **Arquivo**        | `shared/pr-report-core.ts` (linhas 667-687)                                                 |
+| **Bug**            | `tryCreateDataHub` hardcoded para GitHub — sempre instancia `GitHubManager`, requer `GITHUB_TOKEN` |
+| **Gap**            | Fase 5.5 habilitou GitLab via `getOrFetchDataHub`, mas `tryCreateDataHub` nunca o acessa     |
+| **Ação**           | Refatorar para detectar GitLab CI (`CI_JOB_TOKEN` + `CI_PROJECT_ID`) e instanciar `GitLabManager` |
+| **Dependência**    | `getOrFetchDataHub` em `ci-data.ts` já suporta ambos providers — `tryCreateDataHub` só precisa criar o `GitProvider` correto |
+| **Teste**          | Adicionar cenário GitLab em `__tests__/integration/pr-report-core.integration.test.ts`       |
+| **Critério**       | `npx vitest run shared/__tests__/integration/pr-report-core` = 100% pass                     |
+
+### 085.3 — Corrigir `.gitignore`
+
+| Item               | Conteúdo                                                                                    |
+| ------------------ | ------------------------------------------------------------------------------------------- |
+| **Arquivo**        | `.gitignore`                                                                                |
+| **Gaps**           | 1) `shared/.local/` não gitignored — `state.json` é artifact de runtime trackeado           |
+|                    | 2) Pattern `:Zone.Identifier` (linha 48) é literal — não matchea `foo.zip:Zone.Identifier`   |
+|                    | 3) `*.csv:Zone.Identifier` (linha 36) é redundante com pattern genérico                     |
+| **Ação**           | Adicionar `shared/.local/` + substituir `:Zone.Identifier` por `*:Zone.Identifier` + remover linha `*.csv:Zone.Identifier` |
+| **Ação adicional** | Remover `shared/.local/state/qa-tools/state.json` do índice git (`git rm --cached`)          |
+| **Risco**          | BAIXO — apenas limpeza de config                                                            |
+| **Critério**       | `git status` não mostra mais `state.json` nem `Zone.Identifier`                             |
+
+### 085.4 — Renomear `_showCiDataHubSummary` → `_showDataHubSummary`
+
+| Item               | Conteúdo                                                                                    |
+| ------------------ | ------------------------------------------------------------------------------------------- |
+| **Arquivo**        | `git_triggers/interactive-mode.ts` (definição: linha 636, chamada: linha 742)                |
+| **Gap**            | Nome contém "CiDataHub" mas implementação usa `DataHub`                                     |
+| **Ação**           | Renomear função e todas as referências                                                       |
+| **Teste**          | Verificar que `interactive-mode.test.ts` passa                                              |
+| **Critério**       | `grep "_showCiDataHubSummary" git_triggers/` = 0 resultados                                |
+
+### 085.5 — Atualizar comentários de teste
+
+| Item               | Conteúdo                                                                                    |
+| ------------------ | ------------------------------------------------------------------------------------------- |
+| **Arquivos**       | 5 arquivos de teste integração                                                              |
+| **Gap**            | Comentários e describe blocks ainda mencionam "CiDataHub"                                   |
+| **Ação**           | Substituir "CiDataHub" por "DataHub" nos comentários                                        |
+
+| Arquivo | Linhas |
+|---------|--------|
+| `shared/__tests__/integration/ci-menu.integration.test.ts` | 2, 7, 70 |
+| `shared/__tests__/integration/health-score.integration.test.ts` | 11 |
+| `shared/__tests__/integration/quality-gate.integration.test.ts` | 10 |
+| `shared/__tests__/integration/traceability-matrix.integration.test.ts` | 7 |
+| `shared/__tests__/integration/pipeline-cost.integration.test.ts` | 9 |
+
+| **Critério** | `grep -r "CiDataHub" shared/__tests__/` = 0 resultados |
+
+### 085.6 — Verificação final
+
+| Verificação | Critério |
+|---|---|
+| `npx tsc --noEmit` | 0 erros |
+| `npm run lint` | 0 violações |
+| `npx vitest run shared/data-hub/` | 100% pass |
+| `grep -r "CiDataHub" shared/ --include="*.ts"` | 0 resultados em código de produção |
+| `grep "_showCiDataHubSummary" git_triggers/` | 0 resultados |
+
+**Commit:** `fix(data-hub): remove dead CiDataHub interface, add GitLab support to PR report, fix gitignore`
 
 ---
 
@@ -1229,20 +1516,22 @@ Código morto removido. Código vivo documentado.
 ## Dependências
 
 ```
-Fase 0   (001-005)    ← sem dependências
-Fase 1   (010-022)    ← depende de Fase 0
-Fase 2   (030-037)    ← depende de Fase 0 (paralela com Fase 1)
-Fase 3   (040-046)    ← depende de Fase 1 (incluindo 010a/010b) + Fase 2
-Fase 4   (050-054)    ← depende de Fase 3
-Fase 5   (060-063)    ← CONCLUÍDA (absorvida pela Fase 4)
-Fase 5.5 (080-086)    ← depende de Fase 5 (consolidação de gaps)
-Fase 6   (070-079)    ← CONCLUÍDA (verificação de integridade)
-Fase 7   (090-093)    ← depende de Fase 6
-Fase 8   (100-106)    ← depende de Fase 6
-Fase 9   (120-125)    ← depende de Fase 8
-Fase 10  (130-132)    ← depende de Fase 9
-Fase 11  (140-150)    ← depende de Fase 10
-Fase 12  (151)        ← depende de Fase 11 (atualização TECHDOC.md)
+Fase 0    (001-005)    ← sem dependências                           ✅ CONCLUÍDA
+Fase 1    (010-022)    ← depende de Fase 0                          ✅ CONCLUÍDA
+Fase 2    (030-037)    ← depende de Fase 0 (paralela com Fase 1)    ✅ CONCLUÍDA
+Fase 3    (040-046)    ← depende de Fase 1 + Fase 2                 ✅ CONCLUÍDA
+Fase 4    (050-054)    ← depende de Fase 3                          ✅ CONCLUÍDA
+Fase 5    (060-063)    ← CONCLUÍDA (absorvida pela Fase 4)          ✅ CONCLUÍDA
+Fase 5.5  (080-086)    ← depende de Fase 5 (consolidação de gaps)   ✅ CONCLUÍDA
+Fase 6    (070-079)    ← CONCLUÍDA (verificação de integridade)     ✅ CONCLUÍDA
+Fase 7    (090-093)    ← depende de Fase 6                          ✅ CONCLUÍDA
+Fase 8    (100-106)    ← depende de Fase 6                          ✅ CONCLUÍDA
+Fase 8.5  (085.1-085.7)← depende de Fase 8 (fechamento de gaps)    ← PRÓXIMA
+Fase 9    (120-125)    ← depende de Fase 8.5
+Fase 10   (130-132)    ← depende de Fase 9
+Fase 11   (140-150)    ← depende de Fase 10
+Fase 12   (151)        ← depende de Fase 11 (atualização TECHDOC.md)
+Fase 13   (160-165)    ← depende de Fase 8.5 (paralela com 9-12)
 ```
 
 ---
@@ -1261,11 +1550,13 @@ Fase 12  (151)        ← depende de Fase 11 (atualização TECHDOC.md)
 | 6         | 10      | 0.5 (verificação) |
 | 7         | 4       | 1               |
 | 8         | 7       | 1               |
+| 8.5       | 7       | 1               |
 | 9         | 6       | 1               |
 | 10        | 3       | 0.5             |
 | 11        | 11      | 1               |
 | 12        | 1       | 0.5             |
-| **Total** | **88**  | **~15.5 sprints** |
+| 13        | 6       | 1.5             |
+| **Total** | **101** | **~17.5 sprints** |
 
 ---
 
@@ -1293,6 +1584,15 @@ Fase 12  (151)        ← depende de Fase 11 (atualização TECHDOC.md)
 | Cache             | Unificado na Fase 5.5              | 3 caches separados → 1 fonte de verdade                                                   |
 | GitLab via DataHub| Habilitado na Fase 5.5             | Provider existente mas nunca instanciado                                                   |
 | Round-trip lossy  | Eliminado na Fase 5.5              | DataHub→CiDataHub→DataHub zerava coverage, pipelineCost, etc.                              |
+| Theater tests     | Expuseram 2 bugs de produção       | Testes passivos codificavam bugs como features (Rule 19.4)                                |
+| Empty DataHub guard| `raw.runs.length > 0`             | DataHub com 0 runs (`passRate=0`) sobrescrevia MetricsStore devido ao `??`                 |
+| computeActualMetrics | Extraído em 5 helpers           | Reduziu complexidade cognitiva 18→15, eliminou nested ternaries                          |
+| makeDataHub padronizado | `raw.runs` realistas         | Helpers de teste agora incluem runs consistentes com `computed.passRate`                  |
+| CiDataHub interface    | Removida na Fase 8.5        | Zero consumidores — dead code desde migração Fase 4                                      |
+| tryCreateDataHub GitLab | Corrigido na Fase 8.5       | Hardcoded para GitHub, GitLab via DataHub nunca acessado                                |
+| .gitignore gaps        | Corrigido na Fase 8.5       | state.json trackeado, Zone.Identifier pattern quebrado                                   |
+| _showCiDataHubSummary  | Renomeado na Fase 8.5       | Nome legado, implementação já usava DataHub                                              |
+| Coleta assíncrona      | Implementada na Fase 13     | Dashboard imediato, cache enriquecido em background, throttling por repo                 |
 
 ---
 
@@ -1315,7 +1615,7 @@ Fase 12  (151)        ← depende de Fase 11 (atualização TECHDOC.md)
 
 - 20+ arquivos de teste
 
-### PRODUÇÃO REFRATORADOS (19+):
+### PRODUÇÃO REFRATORADOS (20+):
 
 `shared/ci-data.ts`, `shared/health-score.ts`, `shared/quality-gate.ts`,
 `shared/pr-report-core.ts`, `shared/pipeline-cost.ts`, `shared/traceability-matrix.ts`,
@@ -1326,6 +1626,6 @@ Fase 12  (151)        ← depende de Fase 11 (atualização TECHDOC.md)
 `git_triggers/gitlab-workflow.ts`,
 `jira_management/commands/case17.ts`, `jira_management/commands/case26.ts`
 
-### TESTES ATUALIZADOS (30+):
+### TESTES ATUALIZADOS (35+):
 
-Todos os arquivos de teste dos consumers refatorados.
+Todos os arquivos de teste dos consumers refatorados + 4 arquivos de theater tests invertidos.

@@ -8,7 +8,7 @@
  * - Provenance tracking (source, formula, thresholdBasis)
  * - Config overrides (weights, thresholds, grade boundaries)
  * - Edge cases: empty store, single run, high/low values
- * - CiDataHub parameter acceptance
+ * - DataHub parameter acceptance
  *
  * Pure function — no filesystem dependencies.
  */

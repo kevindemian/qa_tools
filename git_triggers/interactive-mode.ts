@@ -43,7 +43,7 @@ import {
     getProjects,
     clearProjectCache,
     currentProjectName,
-    ensureCiDataHub,
+    ensureDataHub,
     getDataHub,
 } from './session-state.js';
 import {
@@ -633,10 +633,10 @@ async function _dashboardCoverageGap(): Promise<void> {
  *
  * @param m - GitProvider instance for fetching CI data
  */
-async function _showCiDataHubSummary(): Promise<void> {
+async function _showDataHubSummary(): Promise<void> {
     try {
         info('Buscando dados do CI Data Hub...');
-        await ensureCiDataHub();
+        await ensureDataHub();
         const hub = getDataHub();
 
         if (!hub || hub.raw.runs.length === 0) {
@@ -739,7 +739,7 @@ const ACTION_HANDLERS: Record<string, (m: GitProvider, pn: string, ns: string[])
         return false;
     },
     h: async (_m, _pn, _ns) => {
-        await _showCiDataHubSummary();
+        await _showDataHubSummary();
         return false;
     },
     e: () => {
@@ -952,8 +952,8 @@ export async function runInteractiveMode(args: CliArgs): Promise<void> {
     if (!result) return;
     const { projectName, names, manager: m } = result;
 
-    // Create CiDataHub once for the entire session — all dashboards consume via getCiDataHub()
-    await ensureCiDataHub();
+    // Create DataHub once for the entire session — all dashboards consume via getDataHub()
+    await ensureDataHub();
 
     clearBreadcrumbs();
     pushBreadcrumb('GIT');
