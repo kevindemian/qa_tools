@@ -5,24 +5,30 @@
  * This factory is used by pr-report-core.ts to avoid layer violations.
  */
 import type { GitProvider } from '../shared/types/ci-cd.js';
+import GitLabManager from './gitlab_manager.js';
+import GitHubManager from './github_manager.js';
 
+/**
+ * Minimal CI environment shape required by createGitProvider.
+ * Compatible with both getCiEnv() output and CiEnvironment.
+ */
 export interface CiEnvironment {
     isCI: boolean;
     repo: string;
-    branch: string;
-    commit: string;
-    runId: string;
+    branch?: string;
+    commit?: string;
+    runId?: string;
     runUrl?: string;
     prNumber?: number;
     prUrl?: string;
-    isPullRequest: boolean;
+    isPullRequest?: boolean;
 }
 
 /**
  * Creates a GitProvider based on the CI environment.
  * Returns undefined if the CI environment cannot be detected.
  */
-export async function createGitProvider(ciEnv: CiEnvironment): Promise<GitProvider | undefined> {
+export function createGitProvider(ciEnv: CiEnvironment): GitProvider | undefined {
     if (!ciEnv.isCI) return undefined;
 
     // Detect GitLab CI
@@ -37,11 +43,9 @@ export async function createGitProvider(ciEnv: CiEnvironment): Promise<GitProvid
     if (!isGitLab && !isGitHub) return undefined;
 
     if (isGitLab && gitlabProjectId && gitlabToken) {
-        const { default: GitLabManager } = await import('./gitlab_manager.js');
         const gitlabBaseUrl = process.env['CI_SERVER_URL'] ?? 'https://gitlab.com';
         return new GitLabManager(gitlabProjectId, gitlabToken, gitlabBaseUrl);
     } else if (githubToken) {
-        const { default: GitHubManager } = await import('./github_manager.js');
         return new GitHubManager(ciEnv.repo, githubToken);
     }
 
