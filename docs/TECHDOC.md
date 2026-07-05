@@ -378,46 +378,72 @@ interface GitProvider {
 }
 ```
 
-### CI Data Hub (`shared/ci-data.ts`)
+### Data Hub (`shared/data-hub/`)
 
 Repositório central de métricas do CI/CD. Busca dados das APIs do GitHub/GitLab, calcula métricas derivadas uma única vez, e serve como ÚNICA fonte de dados para todos os scores, dashboards e relatórios do projeto.
 
-```typescript
-interface CiDataHub {
-    runs: PipelineRun[];
-    jobs: Map<number, PipelineJob[]>;
-    failureReasons: Map<number, string[]>;
-    artifacts: Map<number, ArtifactInfo[]>;
+**Arquitetura em camadas:**
 
-    // Métricas derivadas
-    passRate: number;           // % (0-100) — DORA State of DevOps
-    avgDuration: number;        // segundos — saturado [0, 86400]
-    suiteSpeedP95: number;      // milissegundos — Google SRE
-    topFailingJobs: Array<{ name: string; failureRate: number; count: number }>;
-    branchBreakdown: Record<string, { passRate: number; count: number }>;
-    topFailureReasons: Array<{ pattern: string; count: number }>;
-    flakyTests: Array<{ title: string; rate: number; runs: number }>;
-
-    // Metadados
-    lastFetched: Date;
-    provider: 'github' | 'gitlab';
-    repo: string;
-    recentRunsCount: number;
-}
-
-function createCiDataHub(
-    provider: GitProvider,
-    repo: string,
-    options?: { recentRunsCount?: number }  // default: 30
-): Promise<CiDataHub>;
+```
+shared/data-hub/
+├── hub.ts           ← DataHubImpl.create() — orchestration
+├── cache.ts         ← TTL-based session cache (getCachedHub/setCachedHub/clearCache)
+├── index.ts         ← barrel exports
+├── providers/       ← DataProvider adapters (GitHub, GitLab)
+│   ├── github-provider.ts
+│   └── gitlab-provider.ts
+└── compute/         ← pure metric functions (30+)
+    ├── pass-rate.ts
+    ├── suite-speed.ts
+    ├── flaky-rate.ts
+    ├── trends.ts
+    ├── scoring.ts
+    └── ...
 ```
 
-**Consumidores que usam CiDataHub:**
+**Core types (`shared/types/data-hub.ts`):**
+
+```typescript
+interface DataHub {
+    readonly raw: RawData;
+    readonly computed: ComputedMetrics;
+    readonly timestamp: Date;
+    readonly provider: 'github' | 'gitlab';
+    readonly repo: string;
+}
+
+interface DataProvider {
+    readonly name: string;
+    readonly source: 'github' | 'gitlab' | 'jira' | 'xray' | 'coverage';
+    fetchRawData(options: FetchOptions): Promise<RawData>;
+}
+```
+
+**Entry point (`shared/ci-data.ts`):**
+
+```typescript
+function getOrFetchDataHub(
+    provider: GitProvider,
+    repo: string
+): Promise<DataHub | undefined>;
+```
+
+**Cache (`shared/data-hub/cache.ts`):**
+
+```typescript
+function getCachedHub(repo: string): DataHub | undefined;
+function setCachedHub(repo: string, hub: DataHub): void;
+function clearCache(): void;
+// TTL: 5 minutes
+```
+
+**Consumidores:**
 - `shared/health-score.ts` — `calculateHealthScore(metricsStore, { ciData })`
 - `shared/quality-gate.ts` — `runQualityGate({ ciData })`
-- `shared/pr-report-core.ts` — `generatePrReport({ ciData })`
+- `shared/pr-report-core.ts` — `generatePrReport({ ciData })` via `getOrFetchDataHub()`
 - `shared/pipeline-cost.ts` — `calculatePipelineCost(runs, cpm, ciData)`
 - `shared/traceability-matrix.ts` — `buildTraceabilityMatrix(metrics, coverage, ciData)`
+- `git_triggers/interactive-mode.ts` — `ensureDataHub()` + `getDataHub()` for dashboards
 
 **Fallback:** Quando `ciData` não disponível ou vazio, consumidores usam `MetricsStore` local.
 
@@ -727,7 +753,11 @@ import { globSync } from 'glob'; // file globbing
 | `circuit-breaker.ts`            | Circuit breaker pattern                                | `CircuitBreaker` class                                                            |
 | `store.ts`                      | SHA-keyed git-backed report cache                      | `Store` class                                                                     |
 | `store-backend.ts`              | Git storage backend                                    | `StoreBackend` class                                                              |
-| `ci-data.ts`                    | CI Data Hub — central metrics repository               | `createCiDataHub()`, `CiDataHub` interface                                        |
+| `ci-data.ts`                    | CI Data Hub — entry point with cache                    | `getOrFetchDataHub()`                                                               |
+| `data-hub/hub.ts`              | DataHubImpl — orchestration & factory                    | `DataHubImpl.create()`, `DataHubImpl.createEmpty()`                                |
+| `data-hub/cache.ts`            | TTL-based session cache (5min)                          | `getCachedHub()`, `setCachedHub()`, `clearCache()`                                 |
+| `data-hub/providers/`          | DataProvider adapters (GitHub, GitLab)                   | `GitHubDataProvider`, `GitLabDataProvider`                                         |
+| `data-hub/compute/`            | Pure metric functions (30+)                             | `calcPassRate()`, `calcFlakyRate()`, `scorePassRate()`, etc.                       |
 | `metrics.ts`                    | Metrics collection & persistence                       | `loadMetrics()`, `saveMetrics()`                                                  |
 | `test-impact.ts`                | Three-tier test impact analysis                        | `analyzeTestImpact()`, `generateTestSelectionJson()`                              |
 | `git-metrics-adapter.ts`        | Git history → MetricsRun[] adapter                     | `generateGitMetricsRuns()`, `generateGitFailureClassifications()`                 |
