@@ -10,7 +10,6 @@
  */
 import { describe, it, expect, vi, beforeEach } from 'vitest';
 import { DataHubImpl } from '../../hub.js';
-import { dataHubToCiDataHub, ciDataHubToDataHub } from '../../adapter.js';
 import { getCachedHub, setCachedHub, clearCache } from '../../cache.js';
 import type { DataProvider, RawData } from '../../../types/data-hub.js';
 import type { PipelineRun, PipelineJob } from '../../../types/ci-cd.js';
@@ -137,7 +136,7 @@ describe('Integration: DataHub', () => {
         expect(hub.computed.pipelineCost.totalMinutes).toBeGreaterThanOrEqual(0);
     });
 
-    it('converts between DataHub and CiDataHub via adapter', async () => {
+    it('hub exposes raw and computed layers correctly', async () => {
         expect.hasAssertions();
 
         const runs = [makeRun({ id: 1, conclusion: 'success' })];
@@ -151,15 +150,9 @@ describe('Integration: DataHub', () => {
         const provider = makeProvider(rawData);
         const hub = await DataHubImpl.create([provider], { repo: 'test/repo' });
 
-        const ciData = dataHubToCiDataHub(hub);
-
-        expect(ciData.runs).toBe(hub.raw.runs);
-        expect(ciData.passRate).toBe(hub.computed.passRate);
-
-        const hubBack = ciDataHubToDataHub(ciData);
-
-        expect(hubBack.raw.runs).toBe(ciData.runs);
-        expect(hubBack.computed.passRate).toBe(ciData.passRate);
+        expect(hub.raw.runs).toStrictEqual(runs);
+        expect(hub.computed.passRate).toBeGreaterThanOrEqual(0);
+        expect(hub.computed.passRate).toBeLessThanOrEqual(100);
     });
 
     it('caches DataHub in session cache', async () => {

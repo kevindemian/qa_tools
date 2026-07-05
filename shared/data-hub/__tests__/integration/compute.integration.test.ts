@@ -6,15 +6,14 @@
  */
 import { describe, it, expect } from 'vitest';
 import type { PipelineRun, PipelineJob } from '../../../types/ci-cd.js';
-import type { MetricsRun } from '../../../metrics.js';
-import { calcPipelinePassRate, calcPipelineFailRate } from '../../compute/pass-rate.js';
+import { calcPipelinePassRate } from '../../compute/pass-rate.js';
 import { calcAvgDuration } from '../../compute/avg-duration.js';
 import { calcSuiteSpeedP95 } from '../../compute/suite-speed.js';
-import { calcFlakyFromPipelineRuns, calcFlakyPercentage } from '../../compute/flaky-rate.js';
+import { calcFlakyFromPipelineRuns } from '../../compute/flaky-rate.js';
 import { calcBranchBreakdown, calcTopFailingJobs } from '../../compute/branch-health.js';
 import { calcCoverageFromRaw } from '../../compute/coverage.js';
-import { calcTrendsFromPipelineRuns, calcTrendsFromMetricsRuns } from '../../compute/trends.js';
-import { scorePassRate, scoreFlakyRate, computeGrade } from '../../compute/scoring.js';
+import { calcTrendsFromPipelineRuns } from '../../compute/trends.js';
+import { computeGrade } from '../../compute/scoring.js';
 import { calcReleaseScore, makeDimensionScore } from '../../compute/release-score.js';
 import { calcQuarantineStatus } from '../../compute/quarantine-status.js';
 import type { HealthDimensions } from '../../../types/data-hub.js';
@@ -95,46 +94,11 @@ describe('Compute Layer Integration', () => {
         ],
     ]);
 
-    const metricsRuns: MetricsRun[] = [
-        {
-            timestamp: '2026-07-01',
-            project: 'test',
-            total: 100,
-            passed: 90,
-            failed: 5,
-            skipped: 5,
-            duration: 120,
-            tests: [],
-        },
-        {
-            timestamp: '2026-07-02',
-            project: 'test',
-            total: 100,
-            passed: 85,
-            failed: 10,
-            skipped: 5,
-            duration: 150,
-            tests: [],
-        },
-        {
-            timestamp: '2026-07-03',
-            project: 'test',
-            total: 100,
-            passed: 95,
-            failed: 3,
-            skipped: 2,
-            duration: 100,
-            tests: [],
-        },
-    ];
-
-    it('pipeline pass rate and fail rate are consistent', () => {
+    it('pipeline pass rate is computed correctly', () => {
         expect.hasAssertions();
 
         const passRate = calcPipelinePassRate(runs);
-        const failRate = calcPipelineFailRate(runs);
 
-        expect(Math.round((passRate + failRate) * 100) / 100).toBe(100);
         expect(passRate).toBe(60);
     });
 
@@ -155,14 +119,12 @@ describe('Compute Layer Integration', () => {
         expect(p95).toBeGreaterThanOrEqual(0);
     });
 
-    it('flaky jobs are detected with consistent rates', () => {
+    it('flaky jobs are detected', () => {
         expect.hasAssertions();
 
         const flaky = calcFlakyFromPipelineRuns(runs, jobsMap);
-        const percentage = calcFlakyPercentage(flaky, 5);
 
-        expect(percentage).toBeGreaterThanOrEqual(0);
-        expect(percentage).toBeLessThanOrEqual(100);
+        expect(Array.isArray(flaky)).toBeTruthy();
     });
 
     it('branch breakdown shows per-branch health', () => {
@@ -210,31 +172,6 @@ describe('Compute Layer Integration', () => {
             expect(point.passRate).toBeGreaterThanOrEqual(0);
             expect(point.passRate).toBeLessThanOrEqual(100);
         }
-    });
-
-    it('trends from metrics runs are within bounds', () => {
-        expect.hasAssertions();
-
-        const trends = calcTrendsFromMetricsRuns(metricsRuns, 10);
-
-        expect(trends.length).toBeLessThanOrEqual(10);
-
-        for (const point of trends) {
-            expect(point.passRate).toBeGreaterThanOrEqual(0);
-            expect(point.passRate).toBeLessThanOrEqual(100);
-        }
-    });
-
-    it('scoring functions produce valid scores', () => {
-        expect.hasAssertions();
-
-        const passScore = scorePassRate(85);
-        const flakyScore = scoreFlakyRate(2);
-
-        expect(passScore).toBeGreaterThanOrEqual(0);
-        expect(passScore).toBeLessThanOrEqual(100);
-        expect(flakyScore).toBeGreaterThanOrEqual(0);
-        expect(flakyScore).toBeLessThanOrEqual(100);
     });
 
     it('release score aggregates dimensions correctly', () => {

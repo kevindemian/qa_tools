@@ -1,36 +1,28 @@
 /**
  * Unit tests for CI Data Hub — repositório central de métricas do CI/CD.
  *
- * Tests the pure calculation functions and the factory with mocked GitProvider.
+ * Tests the DataHubImpl.create flow with mocked DataProvider.
  */
 import { describe, it, expect, vi } from 'vitest';
-import { createCiDataHub } from '../ci-data.js';
-import type { GitProvider, PipelineRun, PipelineJob } from '../types/ci-cd.js';
+import type { PipelineRun, PipelineJob } from '../types/ci-cd.js';
+import type { DataProvider, RawData } from '../types/data-hub.js';
+import { DataHubImpl } from '../data-hub/hub.js';
 
-/* ── Mock GitProvider ──────────────────────────────────────────────────── */
+/* ── Mock DataProvider ──────────────────────────────────────────────────── */
 
-function createMockProvider(overrides?: Partial<GitProvider>): GitProvider {
+function createMockProvider(rawData: RawData): DataProvider {
     return {
-        getRecentPipelines: vi.fn().mockResolvedValue([]),
-        getPipelineJobs: vi.fn().mockResolvedValue([]),
-        listPipelineArtifacts: vi.fn().mockResolvedValue([]),
-        downloadArtifact: vi.fn().mockResolvedValue({ buffer: Buffer.from(''), filename: '' }),
-        triggerPipeline: vi.fn(),
-        getSchedules: vi.fn(),
-        runSchedule: vi.fn(),
-        createMergeRequest: vi.fn(),
-        updateMergeRequest: vi.fn(),
-        getMergeRequest: vi.fn(),
-        searchMergeRequests: vi.fn(),
-        acceptMergeRequest: vi.fn(),
-        isApproved: vi.fn(),
-        getCICDVariables: vi.fn(),
-        getBranch: vi.fn(),
-        getPipeline: vi.fn(),
-        getDiff: vi.fn(),
-        getJobLogs: vi.fn(),
-        provider: 'github' as const,
-        ...overrides,
+        name: 'mock-github',
+        source: 'github',
+        fetchRawData: vi.fn().mockResolvedValue(rawData),
+    };
+}
+
+function createFailingProvider(error: Error): DataProvider {
+    return {
+        name: 'mock-failing',
+        source: 'github',
+        fetchRawData: vi.fn().mockRejectedValue(error),
     };
 }
 
@@ -59,19 +51,29 @@ function makeJob(overrides?: Partial<PipelineJob>): PipelineJob {
     };
 }
 
+function makeRawData(overrides?: Partial<RawData>): RawData {
+    return {
+        runs: [],
+        jobs: new Map(),
+        failureReasons: new Map(),
+        artifacts: new Map(),
+        ...overrides,
+    };
+}
+
 /* ── Tests ─────────────────────────────────────────────────────────────── */
 
-describe('CreateCiDataHub', () => {
+describe('DataHubImpl.create', () => {
     it('creates hub with empty runs', async () => {
         expect.hasAssertions();
 
-        const provider = createMockProvider();
-        const hub = await createCiDataHub(provider, 'owner/repo');
+        const provider = createMockProvider(makeRawData());
+        const hub = await DataHubImpl.create([provider], { repo: 'owner/repo' });
 
-        expect(hub.runs).toStrictEqual([]);
-        expect(hub.passRate).toBe(0);
-        expect(hub.avgDuration).toBe(0);
-        expect(hub.recentRunsCount).toBe(0);
+        expect(hub.raw.runs).toStrictEqual([]);
+        expect(hub.computed.passRate).toBe(0);
+        expect(hub.computed.avgDuration).toBe(0);
+        expect(hub.raw.runs).toHaveLength(0);
         expect(hub.provider).toBe('github');
         expect(hub.repo).toBe('owner/repo');
     });
@@ -85,27 +87,23 @@ describe('CreateCiDataHub', () => {
             makeRun({ id: 3, conclusion: 'failure' }),
             makeRun({ id: 4, conclusion: 'success' }),
         ];
-        const provider = createMockProvider({
-            getRecentPipelines: vi.fn().mockResolvedValue(runs),
-        });
+        const provider = createMockProvider(makeRawData({ runs }));
 
-        const hub = await createCiDataHub(provider, 'o/r');
+        const hub = await DataHubImpl.create([provider], { repo: 'o/r' });
 
-        expect(hub.passRate).toBe(75);
-        expect(hub.recentRunsCount).toBe(4);
+        expect(hub.computed.passRate).toBe(75);
+        expect(hub.raw.runs).toHaveLength(4);
     });
 
     it('computes passRate as 0 when no runs have success conclusion', async () => {
         expect.hasAssertions();
 
         const runs = [makeRun({ id: 1, conclusion: 'in_progress' }), makeRun({ id: 2, conclusion: 'in_progress' })];
-        const provider = createMockProvider({
-            getRecentPipelines: vi.fn().mockResolvedValue(runs),
-        });
+        const provider = createMockProvider(makeRawData({ runs }));
 
-        const hub = await createCiDataHub(provider, 'o/r');
+        const hub = await DataHubImpl.create([provider], { repo: 'o/r' });
 
-        expect(hub.passRate).toBe(0);
+        expect(hub.computed.passRate).toBe(0);
     });
 
     it('computes avgDuration from run_started_at and updated_at', async () => {
@@ -123,13 +121,11 @@ describe('CreateCiDataHub', () => {
                 updated_at: '2026-07-01T11:10:00Z', // 10 min = 600s
             }),
         ];
-        const provider = createMockProvider({
-            getRecentPipelines: vi.fn().mockResolvedValue(runs),
-        });
+        const provider = createMockProvider(makeRawData({ runs }));
 
-        const hub = await createCiDataHub(provider, 'o/r');
+        const hub = await DataHubImpl.create([provider], { repo: 'o/r' });
 
-        expect(hub.avgDuration).toBe(450); // (300 + 600) / 2
+        expect(hub.computed.avgDuration).toBe(450); // (300 + 600) / 2
     });
 
     it('computes suiteSpeedP95 from job durations', async () => {
@@ -140,50 +136,51 @@ describe('CreateCiDataHub', () => {
             makeJob({ id: 10, duration: 100 }), // 100s = 100000ms
             makeJob({ id: 11, duration: 200 }), // 200s = 200000ms
         ];
-        const provider = createMockProvider({
-            getRecentPipelines: vi.fn().mockResolvedValue(runs),
-            getPipelineJobs: vi.fn().mockResolvedValue(jobs),
-        });
+        const jobsMap = new Map<number, PipelineJob[]>([[1, jobs]]);
+        const provider = createMockProvider(makeRawData({ runs, jobs: jobsMap }));
 
-        const hub = await createCiDataHub(provider, 'o/r');
+        const hub = await DataHubImpl.create([provider], { repo: 'o/r' });
 
         // P95 of [100000, 200000] = 200000
-        expect(hub.suiteSpeedP95).toBe(200000);
+        expect(hub.computed.suiteSpeedP95).toBe(200000);
     });
 
     it('computes topFailingJobs sorted by failure rate', async () => {
         expect.hasAssertions();
 
         const runs = [makeRun({ id: 1 }), makeRun({ id: 2 }), makeRun({ id: 3 })];
-        const jobsForRun1 = [
-            makeJob({ id: 10, name: 'test', status: 'failure' }),
-            makeJob({ id: 11, name: 'lint', status: 'success' }),
-        ];
-        const jobsForRun2 = [
-            makeJob({ id: 20, name: 'test', status: 'failure' }),
-            makeJob({ id: 21, name: 'lint', status: 'failure' }),
-        ];
-        const jobsForRun3 = [
-            makeJob({ id: 30, name: 'test', status: 'success' }),
-            makeJob({ id: 31, name: 'lint', status: 'success' }),
-        ];
+        const jobsMap = new Map<number, PipelineJob[]>([
+            [
+                1,
+                [
+                    makeJob({ id: 10, name: 'test', status: 'failure' }),
+                    makeJob({ id: 11, name: 'lint', status: 'success' }),
+                ],
+            ],
+            [
+                2,
+                [
+                    makeJob({ id: 20, name: 'test', status: 'failure' }),
+                    makeJob({ id: 21, name: 'lint', status: 'failure' }),
+                ],
+            ],
+            [
+                3,
+                [
+                    makeJob({ id: 30, name: 'test', status: 'success' }),
+                    makeJob({ id: 31, name: 'lint', status: 'success' }),
+                ],
+            ],
+        ]);
 
-        const provider = createMockProvider({
-            getRecentPipelines: vi.fn().mockResolvedValue(runs),
-            getPipelineJobs: vi
-                .fn()
-                .mockResolvedValueOnce(jobsForRun1)
-                .mockResolvedValueOnce(jobsForRun2)
-                .mockResolvedValueOnce(jobsForRun3),
-        });
+        const provider = createMockProvider(makeRawData({ runs, jobs: jobsMap }));
+        const hub = await DataHubImpl.create([provider], { repo: 'o/r' });
 
-        const hub = await createCiDataHub(provider, 'o/r');
-
-        expect(hub.topFailingJobs.length).toBeGreaterThan(0);
+        expect(hub.computed.topFailingJobs.length).toBeGreaterThan(0);
 
         // test: 2 failures in 3 runs = 66.67%
         // lint: 1 failure in 3 runs = 33.33%
-        const topJob = hub.topFailingJobs[0];
+        const topJob = hub.computed.topFailingJobs[0];
 
         expect(topJob).toBeDefined();
         expect(topJob?.name).toBe('test');
@@ -198,135 +195,105 @@ describe('CreateCiDataHub', () => {
             makeRun({ id: 2, head_branch: 'main', conclusion: 'failure' }),
             makeRun({ id: 3, head_branch: 'feature', conclusion: 'success' }),
         ];
-        const provider = createMockProvider({
-            getRecentPipelines: vi.fn().mockResolvedValue(runs),
-        });
+        const provider = createMockProvider(makeRawData({ runs }));
 
-        const hub = await createCiDataHub(provider, 'o/r');
+        const hub = await DataHubImpl.create([provider], { repo: 'o/r' });
 
-        expect(hub.branchBreakdown['main']).toStrictEqual({ passRate: 50, count: 2 });
-        expect(hub.branchBreakdown['feature']).toStrictEqual({ passRate: 100, count: 1 });
+        expect(hub.computed.branchBreakdown['main']).toStrictEqual({ passRate: 50, count: 2 });
+        expect(hub.computed.branchBreakdown['feature']).toStrictEqual({ passRate: 100, count: 1 });
     });
 
     it('handles missing run IDs gracefully', async () => {
         expect.hasAssertions();
 
         const runs = [makeRun({ id: 1 }), makeRun({ id: 2 })];
-        const provider = createMockProvider({
-            getRecentPipelines: vi.fn().mockResolvedValue(runs),
-            getPipelineJobs: vi.fn().mockResolvedValue([makeJob()]),
-        });
+        const jobsMap = new Map<number, PipelineJob[]>([
+            [1, [makeJob()]],
+            [2, [makeJob()]],
+        ]);
+        const provider = createMockProvider(makeRawData({ runs, jobs: jobsMap }));
 
-        const hub = await createCiDataHub(provider, 'o/r');
+        const hub = await DataHubImpl.create([provider], { repo: 'o/r' });
 
-        expect(hub.recentRunsCount).toBe(2);
-        expect(hub.jobs.size).toBe(2); // both runs have jobs
+        expect(hub.raw.runs).toHaveLength(2);
+        expect(hub.raw.jobs.size).toBe(2); // both runs have jobs
     });
 
     it('handles provider errors gracefully', async () => {
         expect.hasAssertions();
 
-        const runs = [makeRun({ id: 1 })];
-        const provider = createMockProvider({
-            getRecentPipelines: vi.fn().mockResolvedValue(runs),
-            getPipelineJobs: vi.fn().mockRejectedValue(new Error('API error')),
-        });
+        const provider = createFailingProvider(new Error('API error'));
 
-        const hub = await createCiDataHub(provider, 'o/r');
+        const hub = await DataHubImpl.create([provider], { repo: 'o/r' });
 
-        expect(hub.runs).toHaveLength(1);
-        expect(hub.jobs.size).toBe(0);
+        expect(hub.raw.runs).toHaveLength(0);
+        expect(hub.raw.jobs.size).toBe(0);
     });
 
-    it('sets lastFetched to current time', async () => {
+    it('sets timestamp to current time', async () => {
         expect.hasAssertions();
 
         const before = Date.now();
-        const provider = createMockProvider();
-        const hub = await createCiDataHub(provider, 'o/r');
+        const provider = createMockProvider(makeRawData());
+        const hub = await DataHubImpl.create([provider], { repo: 'o/r' });
         const after = Date.now();
 
-        expect(hub.lastFetched.getTime()).toBeGreaterThanOrEqual(before);
-        expect(hub.lastFetched.getTime()).toBeLessThanOrEqual(after);
+        expect(hub.timestamp.getTime()).toBeGreaterThanOrEqual(before);
+        expect(hub.timestamp.getTime()).toBeLessThanOrEqual(after);
     });
 
-    it('computes topFailureReasons from failed job logs', async () => {
+    it('computes topFailureReasons from failure reasons', async () => {
         expect.hasAssertions();
 
         const runs = [makeRun({ id: 1 })];
-        const failedJob = makeJob({ id: 10, status: 'failure' });
-        const logText = 'Error: Connection timeout after 30s\nFailure: Assertion failed\nSomething else';
-        const provider = createMockProvider({
-            getRecentPipelines: vi.fn().mockResolvedValue(runs),
-            getPipelineJobs: vi.fn().mockResolvedValue([failedJob]),
-            downloadArtifact: vi.fn().mockResolvedValue({ buffer: Buffer.from(''), filename: logText }),
-        });
+        const failureReasons = new Map<number, string[]>([
+            [1, ['Error: Connection timeout', 'Failure: Assertion failed']],
+        ]);
+        const provider = createMockProvider(makeRawData({ runs, failureReasons }));
 
-        const hub = await createCiDataHub(provider, 'o/r');
+        const hub = await DataHubImpl.create([provider], { repo: 'o/r' });
 
-        expect(hub.topFailureReasons.length).toBeGreaterThan(0);
-        expect(hub.topFailureReasons[0]?.pattern).toContain('Error');
+        expect(hub.computed.topFailureReasons.length).toBeGreaterThan(0);
+        expect(hub.computed.topFailureReasons[0]?.pattern).toContain('Error');
     });
 
     it('computes flakyTests from mixed job statuses across runs', async () => {
         expect.hasAssertions();
 
         const runs = [makeRun({ id: 1 }), makeRun({ id: 2 })];
-        const jobsForRun1 = [makeJob({ id: 10, name: 'flaky-test', status: 'success' })];
-        const jobsForRun2 = [makeJob({ id: 20, name: 'flaky-test', status: 'failure' })];
-        const provider = createMockProvider({
-            getRecentPipelines: vi.fn().mockResolvedValue(runs),
-            getPipelineJobs: vi.fn().mockResolvedValueOnce(jobsForRun1).mockResolvedValueOnce(jobsForRun2),
-        });
+        const jobsMap = new Map<number, PipelineJob[]>([
+            [1, [makeJob({ id: 10, name: 'flaky-test', status: 'success' })]],
+            [2, [makeJob({ id: 20, name: 'flaky-test', status: 'failure' })]],
+        ]);
+        const provider = createMockProvider(makeRawData({ runs, jobs: jobsMap }));
 
-        const hub = await createCiDataHub(provider, 'o/r');
+        const hub = await DataHubImpl.create([provider], { repo: 'o/r' });
 
-        expect(hub.flakyTests.length).toBeGreaterThan(0);
-        expect(hub.flakyTests[0]?.title).toBe('flaky-test');
-        expect(hub.flakyTests[0]?.rate).toBe(50);
+        expect(hub.computed.flakyRate.length).toBeGreaterThan(0);
+        expect(hub.computed.flakyRate[0]?.title).toBe('flaky-test');
+        expect(hub.computed.flakyRate[0]?.rate).toBe(50);
     });
 
     it('handles runs with string IDs', async () => {
         expect.hasAssertions();
 
-        const runs = [makeRun({ id: '123' })];
-        const provider = createMockProvider({
-            getRecentPipelines: vi.fn().mockResolvedValue(runs),
-            getPipelineJobs: vi.fn().mockResolvedValue([makeJob({ id: 10 })]),
-        });
+        const runs = [makeRun({ id: 123 as number })];
+        const jobsMap = new Map<number, PipelineJob[]>([[123, [makeJob({ id: 10 })]]]);
+        const provider = createMockProvider(makeRawData({ runs, jobs: jobsMap }));
 
-        const hub = await createCiDataHub(provider, 'o/r');
+        const hub = await DataHubImpl.create([provider], { repo: 'o/r' });
 
-        expect(hub.recentRunsCount).toBe(1);
+        expect(hub.raw.runs).toHaveLength(1);
     });
 
     it('handles runs with null id', async () => {
         expect.hasAssertions();
 
         const runs = [makeRun({ id: undefined })];
-        const provider = createMockProvider({
-            getRecentPipelines: vi.fn().mockResolvedValue(runs),
-        });
+        const provider = createMockProvider(makeRawData({ runs }));
 
-        const hub = await createCiDataHub(provider, 'o/r');
+        const hub = await DataHubImpl.create([provider], { repo: 'o/r' });
 
-        expect(hub.recentRunsCount).toBe(1);
-    });
-
-    it('handles downloadArtifact failure for failed jobs gracefully', async () => {
-        expect.hasAssertions();
-
-        const runs = [makeRun({ id: 1 })];
-        const failedJob = makeJob({ id: 10, status: 'failure' });
-        const provider = createMockProvider({
-            getRecentPipelines: vi.fn().mockResolvedValue(runs),
-            getPipelineJobs: vi.fn().mockResolvedValue([failedJob]),
-            downloadArtifact: vi.fn().mockRejectedValue(new Error('Artifact not found')),
-        });
-
-        const hub = await createCiDataHub(provider, 'o/r');
-
-        expect(hub.runs).toHaveLength(1);
-        expect(hub.topFailureReasons).toHaveLength(0);
+        expect(hub.raw.runs).toHaveLength(1);
     });
 });
