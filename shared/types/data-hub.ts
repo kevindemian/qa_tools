@@ -11,11 +11,11 @@ import type { PipelineRun, PipelineJob, ArtifactInfo } from './ci-cd.js';
 export interface RawData {
     runs: PipelineRun[];
     jobs: Map<number, PipelineJob[]>;
+    /** Artifacts metadata — stored for future use (e.g., artifact size analysis, download trends). */
     artifacts: Map<number, ArtifactInfo[]>;
     failureReasons: Map<number, string[]>;
     coverage?: RawCoverage;
     jiraIssues?: RawJiraIssue[];
-    securityAlerts?: RawSecurityAlert[];
 }
 
 /** Coverage data from Istanbul/CTRF. */
@@ -35,17 +35,7 @@ export interface RawJiraIssue {
     labels: string[];
     created: string;
     updated: string;
-    resolution?: string;
-}
-
-/** Security alert from code scanning. */
-export interface RawSecurityAlert {
-    ruleId: string;
-    severity: 'critical' | 'high' | 'medium' | 'low' | 'info';
-    message: string;
-    file: string;
-    line?: number;
-    state: 'open' | 'dismissed' | 'fixed';
+    resolution?: string | undefined;
 }
 
 /** Options for fetching raw data from a provider. */
@@ -59,7 +49,7 @@ export interface FetchOptions {
 /** Strategy interface — each provider adapts one data source. */
 export interface DataProvider {
     readonly name: string;
-    readonly source: 'github' | 'gitlab' | 'jira' | 'xray' | 'coverage';
+    readonly source: 'github' | 'gitlab' | 'jira' | 'coverage';
     fetchRawData(options: FetchOptions): Promise<RawData>;
 }
 

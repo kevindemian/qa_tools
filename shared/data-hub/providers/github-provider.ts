@@ -6,6 +6,7 @@
  */
 import type { GitProvider, PipelineJob, ArtifactInfo } from '../../types/ci-cd.js';
 import type { DataProvider, FetchOptions, RawData } from '../../types/data-hub.js';
+import { rootLogger } from '../../logger.js';
 import { extractFailureReasons } from '../compute/failure-reasons.js';
 
 export class GitHubDataProvider implements DataProvider {
@@ -36,13 +37,13 @@ export class GitHubDataProvider implements DataProvider {
                 try {
                     const arts = await this.provider.listPipelineArtifacts(runIdNum);
                     artifactsMap.set(runIdNum, arts);
-                } catch {
-                    // Artifacts unavailable — non-fatal
+                } catch (err) {
+                    rootLogger.debug(`GitHub: artifacts fetch failed for run ${runIdNum}: ${String(err)}`);
                 }
 
                 await this.fetchFailureReasons(runJobs, failureReasonsMap);
-            } catch {
-                // Jobs unavailable — non-fatal
+            } catch (err) {
+                rootLogger.debug(`GitHub: jobs fetch failed for run ${runIdNum}: ${String(err)}`);
             }
         }
 
@@ -76,8 +77,8 @@ export class GitHubDataProvider implements DataProvider {
             if (!isNaN(jobIdNum)) {
                 failureReasonsMap.set(jobIdNum, reasons);
             }
-        } catch {
-            // Logs unavailable — non-fatal
+        } catch (err) {
+            rootLogger.debug(`GitHub: job logs fetch failed for job ${String(job.id)}: ${String(err)}`);
         }
     }
 }

@@ -6,6 +6,7 @@
  */
 import { readFile } from 'node:fs/promises';
 import type { DataProvider, FetchOptions, RawData, RawCoverage } from '../../types/data-hub.js';
+import { rootLogger } from '../../logger.js';
 
 /** Istanbul coverage summary format. */
 interface IstanbulFileEntry {
@@ -61,7 +62,8 @@ export class CoverageDataProvider implements DataProvider {
                 percentage: summary.total.lines.pct,
                 files,
             };
-        } catch {
+        } catch (err) {
+            rootLogger.debug(`Coverage: failed to read ${this.coveragePath}: ${String(err)}`);
             return undefined;
         }
     }

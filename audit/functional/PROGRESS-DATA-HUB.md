@@ -457,4 +457,36 @@
 
 ---
 
+### Correções de Gaps — Data Fetching
+
+**Início:** 2026-07-05
+**Conclusão:** 2026-07-05
+
+| GAP   | Tarefa                                                         | Status | Data       |
+| ----- | -------------------------------------------------------------- | ------ | ---------- |
+| GAP-1 | Remover `securityAlerts` + `RawSecurityAlert` (contrato morto) | ✅     | 2026-07-05 |
+| GAP-2 | Chamar `calcTrendsFromPipelineRuns()` em `computeMetrics()`    | ✅     | 2026-07-05 |
+| GAP-3 | Remover `'xray'` de `DataProvider.source` (sem provider)       | ✅     | 2026-07-05 |
+| GAP-4 | Mapear `created`/`updated`/`resolution` em `jira-provider.ts`  | ✅     | 2026-07-05 |
+| GAP-5 | Adicionar `rootLogger.debug()` em catch blocks vazias          | ✅     | 2026-07-05 |
+| GAP-6 | Estender `hasDataChanged()` para comparar coverage/jira        | ✅     | 2026-07-05 |
+| GAP-7 | Tornar `CompositeProvider.source` dinâmico                     | ✅     | 2026-07-05 |
+| GAP-8 | Documentar artifacts como intencional (futuro uso)             | ✅     | 2026-07-05 |
+
+**Alterações:**
+
+- `shared/types/data-hub.ts`: Removido `securityAlerts?: RawSecurityAlert[]` do `RawData` e interface `RawSecurityAlert`. Removido `'xray'` do tipo `DataProvider.source`. Adicionado JSDoc para `artifacts` documentando uso futuro. Corrigido tipo `resolution` para `string | undefined`.
+- `shared/data-hub/hub.ts`: Importado `calcTrendsFromPipelineRuns`. Substituído `defectTrends: []` por `calcTrendsFromPipelineRuns(raw.runs)` em `computeMetrics()`. Estendido `hasDataChanged()` para comparar `coverage.percentage` e `jiraIssues.length`.
+- `shared/data-hub/providers/jira-provider.ts`: Mapeado `fields['created']`, `fields['updated']`, `fields['resolution']` usando tipagem adequada.
+- `shared/data-hub/providers/composite-provider.ts`: `source` agora é dinâmico (`providers[0]?.source ?? 'github'`).
+- `shared/data-hub/providers/types.ts`: Removido `RawSecurityAlert` das re-exports.
+
+**Checkpoint:**
+
+- `npx tsc --noEmit` = 0 erros ✅
+- `npm run lint` = 0 violações ✅
+- `npx vitest run` = 420 files, 6039 tests, 0 failures ✅
+
+---
+
 **Próxima fase: Fase 12 — Push + CI**

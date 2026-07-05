@@ -8,9 +8,11 @@ import type { DataProvider, FetchOptions, RawData } from '../../types/data-hub.j
 
 export class CompositeProvider implements DataProvider {
     readonly name = 'composite';
-    readonly source = 'github' as const;
+    readonly source: 'github' | 'gitlab' | 'jira' | 'coverage';
 
-    constructor(private readonly providers: DataProvider[]) {}
+    constructor(private readonly providers: DataProvider[]) {
+        this.source = providers[0]?.source ?? 'github';
+    }
 
     async fetchRawData(options: FetchOptions): Promise<RawData> {
         const results = await Promise.allSettled(this.providers.map((p) => p.fetchRawData(options)));

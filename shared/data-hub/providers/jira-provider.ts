@@ -35,14 +35,17 @@ export class JiraDataProvider implements DataProvider {
 
     private mapIssue(issue: JiraIssue): RawJiraIssue {
         const { fields } = issue;
+        const created = fields['created'];
+        const updated = fields['updated'];
         return {
             key: issue.key,
             summary: fields.summary ?? '',
             status: fields.status?.name ?? '',
             type: fields.issuetype?.name ?? '',
             labels: fields.labels ?? [],
-            created: '',
-            updated: '',
+            created: typeof created === 'string' ? created : '',
+            updated: typeof updated === 'string' ? updated : '',
+            resolution: (fields['resolution'] as { name?: string } | undefined)?.name,
         };
     }
 }
