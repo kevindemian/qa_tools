@@ -211,6 +211,85 @@
 
 ---
 
+### Fase 7 — Corrigir Testes Teatro
+
+**Início:** 2026-07-05
+**Conclusão:** 2026-07-05
+
+| ID  | Tarefa                                     | Status | Data       |
+| --- | ------------------------------------------ | ------ | ---------- |
+| 090 | health-score.integration.test.ts:273       | ✅     | 2026-07-05 |
+| 091 | quality-gate.integration.test.ts:167       | ✅     | 2026-07-05 |
+| 092 | ci-data-system.test.ts:114,221             | ✅     | 2026-07-05 |
+| 093 | pr-report-core.integration.test.ts:533,556 | ✅     | 2026-07-05 |
+
+**Bugs de produção encontrados e corrigidos:**
+
+- `pr-report-core.ts:458` — healthScore calculado sem DataHub
+- `health-score.ts:200` — empty DataHub sobrescrevia MetricsStore
+
+**Refatoração:**
+
+- `computeActualMetrics` → 5 funções helper extraídas (cognitividade 18→15)
+- `makeDataHub` padronizado em 4 arquivos de teste
+
+**Commit:** `178d25d7` — test: invert theater tests and fix DataHub integration bugs
+
+**Checkpoint:**
+
+- `npx vitest run` = 420 files, 6086 tests, 0 failures ✅
+- `npx tsc --noEmit` = 0 erros ✅
+- `npm run lint` = 0 violações ✅
+
+---
+
+### Fase 8 — Sanitização
+
+**Início:** 2026-07-05
+**Conclusão:** 2026-07-05
+
+| ID  | Tarefa                                         | Status | Data       |
+| --- | ---------------------------------------------- | ------ | ---------- |
+| 100 | Remover ensureCiDataHub + \_ciDataHub          | ✅     | 2026-07-05 |
+| 101 | Remover adapter.ts + barrel export             | ✅     | 2026-07-05 |
+| 102 | Remover createCiDataHub + cálculos inline      | ✅     | 2026-07-05 |
+| 103 | Remover 16 compute functions legadas           | ✅     | 2026-07-05 |
+| 104 | Migrar invariantes PBT para funções produtivas | ✅ N/A | 2026-07-05 |
+| 105 | Remover testes de código morto                 | ✅     | 2026-07-05 |
+| 106 | Verificação final                              | ✅     | 2026-07-05 |
+
+**Remoções:**
+
+- `adapter.ts` (ciDataHubToDataHub, dataHubToCiDataHub)
+- `createCiDataHub` + cálculos inline de `ci-data.ts`
+- `ensureCiDataHub` + `_ciDataHub` de `session-state.ts`
+- 16 compute functions (MetricsRun API):
+    - pass-rate: calcPipelineFailRate, calcTestPassRate, calcExpWeightedPassRate, calcExecutionRate, calcExpWeightedExecutionRate
+    - suite-speed: calcTestSuiteSpeed
+    - flaky-rate: calcFlakyFromMetricsRuns, calcFlakyPercentage
+    - trends: calcTrendsFromMetricsRuns
+    - defect-trends: calcDefectTrends
+    - scoring: scorePassRate, scoreFlakyRate, scoreCoverage, scoreExecutionRate, scoreSuiteSpeed
+- `adapter.test.ts` (deleted)
+
+**Reescritas (7 arquivos de teste):**
+
+- ci-data.test.ts, ci-data-system.test.ts, ci-data-e2e.test.ts, ci-data-e2e-live.test.ts, ci-data.integration.test.ts
+- hub.integration.test.ts, compute.integration.test.ts
+- pass-rate.test.ts, pass-rate.property.test.ts, flaky-rate.test.ts, flaky-rate.property.test.ts
+- suite-speed.test.ts, trends.test.ts, trends.property.test.ts, scoring.test.ts, scoring.property.test.ts
+
+**Commit:** `927d5e9f` — refactor: remove dead code, migrate tests and PBT invariants to production API
+
+**Checkpoint:**
+
+- `npx vitest run` = 418 files, 6019 tests, 0 failures ✅
+- `npx tsc --noEmit` = 0 erros ✅
+- `npm run lint` = 0 violações ✅
+- `grep -r "createCiDataHub\|ciDataHubToDataHub\|ensureCiDataHub" shared/` = 0 resultados em código de produção ✅
+
+---
+
 ### Pendência Futura — Coleta Assíncrona
 
 - **Proposta:** Coletar dados brutos assincronamente na inicialização do sistema
@@ -219,4 +298,4 @@
 
 ---
 
-**Próxima fase: Fase 7 — Corrigir Testes Teatro**
+**Próxima fase: Fase 8 — Sanitização**
