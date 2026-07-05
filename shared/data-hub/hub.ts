@@ -17,6 +17,7 @@ import type {
     HealthDimensions,
 } from '../types/data-hub.js';
 import type { PipelineRun, PipelineJob } from '../types/ci-cd.js';
+import { rootLogger } from '../logger.js';
 import {
     calcPipelinePassRate,
     calcAvgDuration,
@@ -29,6 +30,7 @@ import {
     calcPipelineCost,
     calcReleaseScore,
     calcQuarantineStatus,
+    calcTrendsFromPipelineRuns,
     makeDimensionScore,
 } from './compute/index.js';
 
@@ -106,7 +108,10 @@ export class DataHubImpl implements DataHub {
         };
 
         for (const result of results) {
-            if (result.status === 'rejected') continue;
+            if (result.status === 'rejected') {
+                rootLogger.debug(`DataHub: provider fetch rejected: ${String(result.reason)}`);
+                continue;
+            }
             DataHubImpl.mergeRawData(merged, result.value);
         }
 
@@ -144,6 +149,7 @@ export class DataHubImpl implements DataHub {
         const branchBreakdown = calcBranchBreakdown(raw.runs);
         const topFailingJobs = calcTopFailingJobs(raw.runs, raw.jobs);
         const topFailureReasons = calcTopFailureReasons(raw.failureReasons);
+        const defectTrends = calcTrendsFromPipelineRuns(raw.runs);
         const releaseScore = DataHubImpl.computeReleaseScore(
             passRate,
             flakyRate,
@@ -161,7 +167,7 @@ export class DataHubImpl implements DataHub {
             flakyRate,
             coverage,
             pipelineCost,
-            defectTrends: [],
+            defectTrends,
             branchBreakdown,
             topFailingJobs,
             topFailureReasons,
@@ -247,12 +253,12 @@ export class DataHubImpl implements DataHub {
 /**
  * Check if new raw data has changed compared to a cached hub.
  *
- * Compares run IDs and update timestamps to detect new or updated runs.
+ * Compares run IDs, update timestamps, coverage, and jira issue counts.
  * Used by prefetch orchestrator to decide whether to rebuild the hub.
  *
  * @param cachedHub - Previously cached DataHub.
  * @param newRaw - Fresh raw data from provider.
- * @returns true if data has changed (new runs, updated runs, or different count).
+ * @returns true if data has changed.
  */
 export function hasDataChanged(cachedHub: DataHub, newRaw: RawData): boolean {
     const oldRuns = cachedHub.raw.runs;
@@ -273,6 +279,16 @@ export function hasDataChanged(cachedHub: DataHub, newRaw: RawData): boolean {
         if (oldRun == null) return true;
         if (oldRun.updated_at !== newRun.updated_at) return true;
     }
+
+    // Compare coverage percentage
+    const oldCoverage = cachedHub.raw.coverage?.percentage ?? 0;
+    const newCoverage = newRaw.coverage?.percentage ?? 0;
+    if (oldCoverage !== newCoverage) return true;
+
+    // Compare Jira issue count
+    const oldJiraCount = cachedHub.raw.jiraIssues?.length ?? 0;
+    const newJiraCount = newRaw.jiraIssues?.length ?? 0;
+    if (oldJiraCount !== newJiraCount) return true;
 
     return false;
 }
