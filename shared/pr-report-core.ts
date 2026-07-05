@@ -666,34 +666,17 @@ function parseArgs(args: string[]): CliOptions {
 
 async function tryCreateDataHub(
     ciEnv: ReturnType<typeof getCiEnv>,
+    providerFactory?: (ciEnv: ReturnType<typeof getCiEnv>) => import('./types/ci-cd.js').GitProvider | undefined,
 ): Promise<import('./types/data-hub.js').DataHub | undefined> {
     if (!ciEnv.isCI) return undefined;
 
-    // Detect GitLab CI
-    const gitlabToken = process.env['CI_JOB_TOKEN'];
-    const gitlabProjectId = process.env['CI_PROJECT_ID'];
-    const isGitLab = !!(gitlabToken && gitlabProjectId);
+    if (!providerFactory) return undefined;
 
-    // Detect GitHub Actions
-    const githubToken = process.env['GITHUB_TOKEN'];
-    const isGitHub = !!githubToken && !isGitLab;
-
-    if (!isGitLab && !isGitHub) return undefined;
+    const provider = providerFactory(ciEnv);
+    if (!provider) return undefined;
 
     try {
         const { getOrFetchDataHub } = await import('./ci-data.js');
-        let provider: import('./types/ci-cd.js').GitProvider;
-
-        if (isGitLab && gitlabProjectId && gitlabToken) {
-            const { default: GitLabManager } = await import('../git_triggers/gitlab_manager.js');
-            const gitlabBaseUrl = process.env['CI_SERVER_URL'] ?? 'https://gitlab.com';
-            provider = new GitLabManager(gitlabProjectId, gitlabToken, gitlabBaseUrl);
-        } else if (githubToken) {
-            const { default: GitHubManager } = await import('../git_triggers/github_manager.js');
-            provider = new GitHubManager(ciEnv.repo, githubToken);
-        } else {
-            return undefined;
-        }
 
         const dataHub = await getOrFetchDataHub(provider, ciEnv.repo);
         if (dataHub) {
@@ -708,7 +691,9 @@ async function tryCreateDataHub(
     }
 }
 
-export async function main(): Promise<void> {
+export async function main(
+    providerFactory?: (ciEnv: ReturnType<typeof getCiEnv>) => import('./types/ci-cd.js').GitProvider | undefined,
+): Promise<void> {
     const opts = parseArgs(process.argv.slice(2));
 
     if (!fs.existsSync(path.resolve(opts.ctrfPath))) {
@@ -750,7 +735,7 @@ export async function main(): Promise<void> {
     const previousRun = store.runs.length > 0 ? store.runs[store.runs.length - 1] : undefined;
     const diffComparison = previousRun ? computeDiffComparison(result.tests, previousRun.tests) : undefined;
 
-    const dataHub = await tryCreateDataHub(ciEnv);
+    const dataHub = await tryCreateDataHub(ciEnv, providerFactory);
 
     const resultSummary = await generatePrReport({
         tests: result.tests,
