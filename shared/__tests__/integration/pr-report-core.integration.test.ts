@@ -530,14 +530,14 @@ describe('Pr Report Core.Integration', () => {
             };
         }
 
-        it('accepts dataHub and produces valid report', async () => {
+        it('dataHub passRate overrides MetricsStore in health score', async () => {
             expect.hasAssertions();
 
             const { generatePrReport } = await import('../../pr-report-core.js');
             const htmlPath = path.join(TEST_DIR, 'pr-report-cidata.html');
             const hub = makeDataHub([makeCiRun()]);
 
-            const result = await generatePrReport({
+            const withHub = await generatePrReport({
                 tests: PASSING_TESTS,
                 stats: { passed: 5, failed: 0, skipped: 0, total: 5, duration: 1150 },
                 project: 'test-project',
@@ -548,21 +548,34 @@ describe('Pr Report Core.Integration', () => {
                 dataHub: hub,
             });
 
-            expect(result.healthScore.overall).toBeGreaterThanOrEqual(0);
-            expect(result.healthScore.overall).toBeLessThanOrEqual(100);
+            const htmlPath2 = path.join(TEST_DIR, 'pr-report-no-hub.html');
+            const withoutHub = await generatePrReport({
+                tests: PASSING_TESTS,
+                stats: { passed: 5, failed: 0, skipped: 0, total: 5, duration: 1150 },
+                project: 'test-project',
+                skipAi: true,
+                skipQuality: true,
+                skipFlaky: true,
+                htmlOutputPath: htmlPath2,
+            });
+
+            // DataHub with passRate=85 must produce different passRate score than MetricsStore
+            expect(withHub.healthScore.dimensions.passRate.score).not.toBe(
+                withoutHub.healthScore.dimensions.passRate.score,
+            );
             expect(fs.existsSync(path.resolve(htmlPath))).toBeTruthy();
         });
 
-        it('dataHub flows through to quality gate when skipQuality is false', async () => {
+        it('dataHub flows through to quality gate and changes result', async () => {
             expect.hasAssertions();
 
             const { generatePrReport } = await import('../../pr-report-core.js');
             const htmlPath = path.join(TEST_DIR, 'pr-report-cidata-qg.html');
             const hub = makeDataHub([makeCiRun()]);
 
-            const result = await generatePrReport({
-                tests: PASSING_TESTS,
-                stats: { passed: 5, failed: 0, skipped: 0, total: 5, duration: 1150 },
+            const withHub = await generatePrReport({
+                tests: MIXED_TESTS,
+                stats: MIXED_STATS,
                 project: 'test-project',
                 skipAi: true,
                 skipQuality: false,
@@ -571,8 +584,22 @@ describe('Pr Report Core.Integration', () => {
                 dataHub: hub,
             });
 
-            expect(result.healthScore).toBeDefined();
-            expect(result.passRate).toBe(100);
+            const htmlPath2 = path.join(TEST_DIR, 'pr-report-no-hub-qg.html');
+            const withoutHub = await generatePrReport({
+                tests: MIXED_TESTS,
+                stats: MIXED_STATS,
+                project: 'test-project',
+                skipAi: true,
+                skipQuality: false,
+                skipFlaky: true,
+                htmlOutputPath: htmlPath2,
+            });
+
+            // DataHub must flow through to quality gate and produce different health score
+            expect(withHub.healthScore.dimensions.passRate.score).not.toBe(
+                withoutHub.healthScore.dimensions.passRate.score,
+            );
+            expect(withHub.healthScore).toBeDefined();
             expect(fs.existsSync(path.resolve(htmlPath))).toBeTruthy();
         });
     });

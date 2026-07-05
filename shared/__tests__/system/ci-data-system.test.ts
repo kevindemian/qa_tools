@@ -111,7 +111,7 @@ describe('System: CI Data Hub — Full Pipeline Flow', () => {
     });
 
     describe('Hub data → health-score consumer', () => {
-        it('health score uses MetricsStore but accepts hub without error', async () => {
+        it('health score uses DataHub passRate instead of MetricsStore when provided', async () => {
             expect.hasAssertions();
 
             const { createCiDataHub } = await import('../../ci-data.js');
@@ -136,11 +136,11 @@ describe('System: CI Data Hub — Full Pipeline Flow', () => {
                 ],
             };
 
-            const result = calculateHealthScore(store, { dataHub: hub });
+            const withHub = calculateHealthScore(store, { dataHub: hub });
+            const withoutHub = calculateHealthScore(store, {});
 
-            expect(result.overall).toBeGreaterThanOrEqual(0);
-            expect(result.overall).toBeLessThanOrEqual(100);
-            expect(result.grade).toBeDefined();
+            // DataHub passRate (50%) must override MetricsStore passRate (90%)
+            expect(withHub.dimensions.passRate.score).not.toBe(withoutHub.dimensions.passRate.score);
         });
     });
 
@@ -218,12 +218,11 @@ describe('System: CI Data Hub — Full Pipeline Flow', () => {
     });
 
     describe('Fallback: hub empty → consumers use MetricsStore', () => {
-        it('all consumers work correctly when hub has no data', async () => {
+        it('empty DataHub produces same health score as no hub (clean degradation)', async () => {
             expect.hasAssertions();
 
             const { createCiDataHub } = await import('../../ci-data.js');
             const { calculateHealthScore } = await import('../../health-score.js');
-            const { calculatePipelineCost } = await import('../../pipeline-cost.js');
 
             const provider = createMockProvider([], new Map());
             const ciHub = await createCiDataHub(provider, 'owner/repo');
@@ -244,11 +243,13 @@ describe('System: CI Data Hub — Full Pipeline Flow', () => {
                 ],
             };
 
-            const healthResult = calculateHealthScore(store, { dataHub: hub });
-            const costResult = calculatePipelineCost(store.runs, 0.01, hub);
+            const withEmptyHub = calculateHealthScore(store, { dataHub: hub });
+            const withoutHub = calculateHealthScore(store, {});
 
-            expect(healthResult.overall).toBeGreaterThanOrEqual(0);
-            expect(costResult.runCount).toBe(1);
+            // Empty DataHub must not change the result — clean degradation
+            expect(withEmptyHub.overall).toBe(withoutHub.overall);
+            expect(withEmptyHub.grade).toBe(withoutHub.grade);
+            expect(withEmptyHub.dimensions.passRate.score).toBe(withoutHub.dimensions.passRate.score);
         });
     });
 

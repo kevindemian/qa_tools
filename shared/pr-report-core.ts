@@ -454,11 +454,12 @@ export async function generatePrReport(options: PrReportCoreOptions): Promise<Pr
 
     const store = loadMetrics();
     const coverageResult = resolveCoverage();
-    const healthConfig = coverageResult ? { coverageOverride: coverageResult.coveragePct } : {};
-    const healthScore = calculateHealthScore(store, healthConfig);
-
-    // Se DataHub disponível, passar para quality gate e subsequentes consumers
     const dataHub = options.dataHub;
+    const healthConfig = {
+        ...(coverageResult ? { coverageOverride: coverageResult.coveragePct } : {}),
+        ...(dataHub ? { dataHub } : {}),
+    };
+    const healthScore = calculateHealthScore(store, healthConfig);
 
     const { workflowUrl, artifactUrl } = resolveCiUrls();
 
@@ -663,24 +664,24 @@ function parseArgs(args: string[]): CliOptions {
     return opts;
 }
 
-async function tryCreateCiDataHub(
+async function tryCreateDataHub(
     ciEnv: ReturnType<typeof getCiEnv>,
-): Promise<import('./ci-data.js').CiDataHub | undefined> {
+): Promise<import('./types/data-hub.js').DataHub | undefined> {
     if (!ciEnv.isCI || !process.env['GITHUB_TOKEN']) return undefined;
     try {
-        const { getOrFetchCiDataHub } = await import('./ci-data.js');
+        const { getOrFetchDataHub } = await import('./ci-data.js');
         const { default: GitHubManager } = await import('../git_triggers/github_manager.js');
         const token = process.env['GITHUB_TOKEN'];
-        const [owner, repoName] = ciEnv.repo.split('/');
-        if (!owner || !repoName) return undefined;
-        const provider = new GitHubManager(token, owner, repoName);
-        const ciData = await getOrFetchCiDataHub(provider, ciEnv.repo);
-        if (ciData) {
-            rootLogger.info(`CiDataHub created: ${ciData.runs.length} runs, passRate: ${ciData.passRate}%`);
+        const provider = new GitHubManager(ciEnv.repo, token);
+        const dataHub = await getOrFetchDataHub(provider, ciEnv.repo);
+        if (dataHub) {
+            rootLogger.info(
+                `DataHub created: ${dataHub.raw.runs.length} runs, passRate: ${dataHub.computed.passRate}%`,
+            );
         }
-        return ciData;
+        return dataHub;
     } catch (err) {
-        rootLogger.warn(`CiDataHub creation failed (falling back to MetricsStore): ${String(err)}`);
+        rootLogger.warn(`DataHub creation failed (falling back to MetricsStore): ${String(err)}`);
         return undefined;
     }
 }
@@ -727,8 +728,7 @@ export async function main(): Promise<void> {
     const previousRun = store.runs.length > 0 ? store.runs[store.runs.length - 1] : undefined;
     const diffComparison = previousRun ? computeDiffComparison(result.tests, previousRun.tests) : undefined;
 
-    const ciData = await tryCreateCiDataHub(ciEnv);
-    const dataHub = ciData ? (await import('./data-hub/adapter.js')).ciDataHubToDataHub(ciData) : undefined;
+    const dataHub = await tryCreateDataHub(ciEnv);
 
     const resultSummary = await generatePrReport({
         tests: result.tests,

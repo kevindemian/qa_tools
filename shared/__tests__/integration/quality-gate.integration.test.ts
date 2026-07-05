@@ -137,7 +137,15 @@ describe('Integration: Quality Gate', () => {
         }): DataHub {
             return {
                 raw: {
-                    runs: [],
+                    runs: [
+                        {
+                            id: 1,
+                            conclusion: 'success',
+                            head_branch: 'main',
+                            created_at: '2026-07-01T10:00:00Z',
+                            updated_at: '2026-07-01T10:05:00Z',
+                        },
+                    ],
                     jobs: new Map(),
                     failureReasons: new Map(),
                     artifacts: new Map(),
@@ -164,16 +172,24 @@ describe('Integration: Quality Gate', () => {
             };
         }
 
-        it('accepts dataHub parameter without throwing', async () => {
+        it('dataHub overrides passRate in quality gate when MetricsStore has low scores', async () => {
             expect.hasAssertions();
 
-            vi.spyOn(metrics, 'loadMetrics').mockReturnValue({ runs: [] });
+            // Store with runs that produce a failing health score
+            vi.spyOn(metrics, 'loadMetrics').mockReturnValue({
+                runs: [{ passed: 10, failed: 90, total: 100, tests: [], project: 'test' }],
+                failureClassifications: [],
+            } as never);
             const { runQualityGate } = await loadModules();
-            const hub = makeDataHub({ computed: { passRate: 90 } });
-            const result = runQualityGate({ dataHub: hub });
+            const hub = makeDataHub({ computed: { passRate: 100 } });
 
-            expect(result.overall).toBe('fail');
-            expect(result.checks).toHaveLength(1);
+            const withHub = runQualityGate({ dataHub: hub });
+            const withoutHub = runQualityGate();
+
+            // DataHub overrides passRate — scores must differ
+            expect(withHub.score).not.toBe(withoutHub.score);
+            // DataHub with 100% passRate should produce a higher score than MetricsStore with 10%
+            expect(withHub.score).toBeGreaterThan(withoutHub.score);
         });
 
         it('dataHub changes quality gate result when MetricsStore has low scores', async () => {

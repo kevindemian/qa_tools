@@ -243,7 +243,15 @@ describe('Integration: Health Score', () => {
         }): DataHub {
             return {
                 raw: {
-                    runs: [],
+                    runs: [
+                        {
+                            id: 1,
+                            conclusion: 'success',
+                            head_branch: 'main',
+                            created_at: '2026-07-01T10:00:00Z',
+                            updated_at: '2026-07-01T10:05:00Z',
+                        },
+                    ],
                     jobs: new Map(),
                     failureReasons: new Map(),
                     artifacts: new Map(),
@@ -270,16 +278,20 @@ describe('Integration: Health Score', () => {
             };
         }
 
-        it('accepts dataHub parameter without throwing', async () => {
+        it('dataHub passRate overrides MetricsStore passRate when provided', async () => {
             expect.hasAssertions();
 
             const { calculateHealthScore } = await import('../../health-score.js');
-            const store = createStore({ passed: 90, failed: 10, skipped: 0, coveragePct: 80 });
-            const hub = makeDataHub({ computed: { passRate: 90 } });
-            const result = calculateHealthScore(store, { dataHub: hub });
+            const store = createStore({ passed: 50, failed: 50, skipped: 0, coveragePct: 80 }); // 50% local
+            const hub = makeDataHub({ computed: { passRate: 95 } }); // 95% from CI
 
-            expect(result.overall).toBeGreaterThanOrEqual(0);
-            expect(result.overall).toBeLessThanOrEqual(100);
+            const withHub = calculateHealthScore(store, { dataHub: hub });
+            const withoutHub = calculateHealthScore(store, {});
+
+            // DataHub passRate must override MetricsStore — passRate scores must differ
+            expect(withHub.dimensions.passRate.score).not.toBe(withoutHub.dimensions.passRate.score);
+            // DataHub passRate (95%) should produce a higher score than MetricsStore (50%)
+            expect(withHub.dimensions.passRate.score).toBeGreaterThan(withoutHub.dimensions.passRate.score);
         });
 
         it('dataHub passRate overrides MetricsStore when provided', async () => {
