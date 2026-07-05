@@ -191,7 +191,7 @@ export function generateWeeklyQualityReport(): void {
                 : 0,
         );
         const defects = aggregateDefectTrends(failureClassifications);
-        const matrix = buildTraceabilityMatrix(effectiveStore);
+        const matrix = buildTraceabilityMatrix(effectiveStore, undefined, dataHub);
         const aiResult = computeAiEffectiveness({ records: [] });
         const backlog = analyzeBacklogHealth([]);
 
@@ -216,10 +216,11 @@ export function generateWeeklyQualityReport(): void {
         const benchmark = computeCrossSquadBenchmark(
             projectNames.map((name) => {
                 const pRuns = store.runs.filter((r) => r.project === name);
+                const isCurrentProject = name === currentProjectName;
                 const pDataHub = getDataHub();
                 const pHealth = calculateHealthScore(
                     { ...store, runs: pRuns },
-                    pDataHub ? { dataHub: pDataHub } : undefined,
+                    isCurrentProject && pDataHub ? { dataHub: pDataHub } : undefined,
                 );
                 return {
                     name,
