@@ -339,4 +339,32 @@
 
 ---
 
-**Próxima fase: Fase 9 — Testes Atualizados**
+### Fase 9 — Testes Atualizados
+
+**Início:** 2026-07-05
+**Conclusão:** 2026-07-05
+
+| ID  | Tarefa                                               | Status | Data       |
+| --- | ---------------------------------------------------- | ------ | ---------- |
+| 120 | `ci-data-getOrFetch.integration.test.ts`             | ✅     | 2026-07-05 |
+| 121 | `session-state-ensureDataHub.integration.test.ts`    | ✅     | 2026-07-05 |
+| 122 | `interactive-showDataHubSummary.integration.test.ts` | ✅     | 2026-07-05 |
+| 123 | Export `_showDataHubSummary` for testing             | ✅     | 2026-07-05 |
+| 124 | Final verification                                   | ✅     | 2026-07-05 |
+| 125 | Commit                                               | ✅     | 2026-07-05 |
+
+**Notas:**
+
+- `getOrFetchDataHub` catches provider errors via `Promise.allSettled` in `fetchFromProviders` — returns hub with empty data, not `undefined`
+- `manager`/`currentProjectName` are `let` exports — use `setManager`/`setCurrentProjectName` setters in tests (namespace getters are read-only)
+- `_showDataHubSummary` tested as integration (completes without errors) rather than mocking prompt.js
+
+**Checkpoint:**
+
+- `npx tsc --noEmit` = 0 erros ✅
+- `npm run lint` = 0 violações ✅
+- `npx vitest run` = 419 files, 6023 tests, 0 failures ✅
+
+---
+
+**Próxima fase: Fase 10 — Documentação (TECHDOC, BACKLOG, INTEGRATED-PLAN)**

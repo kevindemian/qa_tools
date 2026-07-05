@@ -1050,4 +1050,5 @@ export const _testExports = {
     _dashboardIncidentReport,
     _dashboardImpactAlert,
     _dashboardCoverageGap,
+    _showDataHubSummary,
 };
