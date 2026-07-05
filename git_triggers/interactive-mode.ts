@@ -440,9 +440,10 @@ async function _dashboardBenchmark(): Promise<void> {
     const store = loadMetrics();
     const projectBenchmarks = projectNames.map((name) => {
         const pRuns = store.runs.filter((r) => r.project === name);
+        const isCurrentProject = name === currentProjectName;
         const pHealth = calculateHealthScore(
             { runs: pRuns, failureClassifications: data.failureClassifications },
-            ...(dataHub ? [{ dataHub }] : []),
+            ...(isCurrentProject && dataHub ? [{ dataHub }] : []),
         );
         return {
             name,
