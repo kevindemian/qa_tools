@@ -176,35 +176,13 @@ function computeActualMetrics(store: MetricsStore, config: HealthScoreConfig, da
         run.total > 0 ? ((run.passed + run.failed) / run.total) * 100 : 0,
     );
 
-    let actualCoverage: number;
-    if (config.coverageOverride !== undefined) {
-        actualCoverage = config.coverageOverride;
-    } else if (store.coverageHistory && store.coverageHistory.length > 0) {
-        actualCoverage = store.coverageHistory[store.coverageHistory.length - 1]?.coveragePct ?? 0;
-    } else {
-        actualCoverage = 0;
-    }
-
+    const actualCoverage = _resolveCoverage(config, store);
     const actualSuiteSpeed = _computeSuiteSpeed(runs);
-
-    let flakyPctResult: number | null;
-    if (actualFlakyPct === null) {
-        flakyPctResult = null;
-    } else if (Number.isFinite(actualFlakyPct)) {
-        flakyPctResult = actualFlakyPct;
-    } else {
-        flakyPctResult = 0;
-    }
-
-    // Override with DataHub values when available (CI data is more current than MetricsStore)
-    const passRate = dataHub?.computed.passRate ?? (Number.isFinite(actualPassRate) ? actualPassRate : 0);
-    const suiteSpeed = dataHub?.computed.suiteSpeedP95 ?? (Number.isFinite(actualSuiteSpeed) ? actualSuiteSpeed : 0);
-
-    // Compute flaky percentage from DataHub if available
-    let flakyFromCi: number | null = null;
-    if (dataHub?.computed.flakyRate && dataHub.computed.flakyRate.length > 0 && dataHub.raw.runs.length > 0) {
-        flakyFromCi = (dataHub.computed.flakyRate.length / dataHub.raw.runs.length) * 100;
-    }
+    const flakyPctResult = _normalizeFlakyPct(actualFlakyPct);
+    const hasCiRuns = dataHub !== undefined && dataHub.raw.runs.length > 0;
+    const passRate = _resolvePassRate(hasCiRuns, dataHub, actualPassRate);
+    const suiteSpeed = _resolveSuiteSpeed(hasCiRuns, dataHub, actualSuiteSpeed);
+    const flakyFromCi = _computeFlakyFromCi(dataHub);
 
     return {
         passRate,
@@ -213,6 +191,41 @@ function computeActualMetrics(store: MetricsStore, config: HealthScoreConfig, da
         executionRate: Number.isFinite(actualExecutionRate) ? actualExecutionRate : 0,
         suiteSpeed,
     };
+}
+
+function _resolveCoverage(config: HealthScoreConfig, store: MetricsStore): number {
+    if (config.coverageOverride !== undefined) {
+        return config.coverageOverride;
+    }
+    if (store.coverageHistory && store.coverageHistory.length > 0) {
+        return store.coverageHistory[store.coverageHistory.length - 1]?.coveragePct ?? 0;
+    }
+    return 0;
+}
+
+function _normalizeFlakyPct(actualFlakyPct: number | null): number | null {
+    if (actualFlakyPct === null) return null;
+    if (Number.isFinite(actualFlakyPct)) return actualFlakyPct;
+    return 0;
+}
+
+function _resolvePassRate(hasCiRuns: boolean, dataHub: DataHub | undefined, actualPassRate: number): number {
+    if (hasCiRuns && dataHub !== undefined) return dataHub.computed.passRate;
+    if (Number.isFinite(actualPassRate)) return actualPassRate;
+    return 0;
+}
+
+function _resolveSuiteSpeed(hasCiRuns: boolean, dataHub: DataHub | undefined, actualSuiteSpeed: number): number {
+    if (hasCiRuns && dataHub !== undefined) return dataHub.computed.suiteSpeedP95;
+    if (Number.isFinite(actualSuiteSpeed)) return actualSuiteSpeed;
+    return 0;
+}
+
+function _computeFlakyFromCi(dataHub: DataHub | undefined): number | null {
+    if (!dataHub?.computed.flakyRate) return null;
+    if (dataHub.computed.flakyRate.length === 0) return null;
+    if (dataHub.raw.runs.length === 0) return null;
+    return (dataHub.computed.flakyRate.length / dataHub.raw.runs.length) * 100;
 }
 
 function scorePassRate(actual: number, config: HealthScoreConfig): number {

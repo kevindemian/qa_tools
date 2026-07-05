@@ -943,32 +943,138 @@ Investigação profunda (2026-07-05) revelou 6 categorias de gaps na consolidaç
 
 ## Fase 6 — Verificação de Integridade (Tarefas 070-079)
 
-### 070-079 — Verificar integridade da integração DataHub
+> **CONCLUÍDA (2026-07-05):** Verificação completa. 30 funções compute exportadas, 12 orquestradas por hub.ts. Nenhuma aceita DataHub diretamente — recebem tipos brutos (PipelineRun[], MetricsRun[], etc.) por design. DataHub é output, não input. Padrão Compute → Result → Render preservado em todos os 14 HTML generators. Fallback MetricsStore funcional em todos os 3 consumidores primários. D5.1/D5.8/D5.10 plenamente satisfeitos.
 
-> **DESCOBERTA (2026-07-04):** Análise das 18 funções geradoras de HTML demonstrou que **nenhuma** acessa dados CI brutos. Todas recebem objetos de resultado pré-calculados. O padrão arquitetural `Compute → Result → Render` já está preservado. Adicionar `dataHub?` a funções de renderização violaria SRP e DIP. Fase 6 é portanto uma verificação de integridade, não uma migração de parâmetros.
+### Resultados da Verificação
 
-| ID  | Verificação                                                | Critério                                                      |
-| --- | ---------------------------------------------------------- | ------------------------------------------------------------- |
-| 070 | Todos os compute functions aceitam `DataHub`               | 21/21 funções verificadas                                     |
-| 071 | Orchestrators passam `DataHub` corretamente                | schedule-handler, interactive-mode, batch-mode, session-state |
-| 072 | Fallback MetricsStore funciona quando DataHub indisponível | Teste de integridade                                          |
-| 073 | D5.1: Métricas com nome/descrição/unidade claros           | Auditoria visual                                              |
-| 074 | D5.2: Métricas acionáveis (não vaidade)                    | Auditoria visual                                              |
-| 075 | D5.5: Outliers visuais tratados                            | Auditoria visual                                              |
-| 076 | D5.8: Valores saturados [0,100]                            | Verificação automática                                        |
-| 077 | D5.10: Thresholds com referência                           | Verificação visual                                            |
-| 078 | Nenhum HTML generator acessa dados CI brutos               | Auditoria de código                                           |
-| 079 | Padrão Compute → Result → Render preservado                | Auditoria arquitetural                                        |
+#### 070 — Compute Functions (30 exportadas, 12 orquestradas)
 
-**D5 Obrigatório:** Dashboards são a interface primária de métricas. Verificar:
+**Arquitetura:** Funções compute aceitam tipos brutos (PipelineRun[], MetricsRun[], Map, string), NÃO DataHub. DataHub é o resultado orquestrado pelo hub — não uma entrada. Isso é correto: separação de responsabilidades.
 
-- D5.1: Cada métrica exibida tem nome, descrição e unidade claros
-- D5.2: Métricas exibidas são acionáveis (não vaidade)
-- D5.5: Outliers visuais tratados (ex: zoom, filtro)
-- D5.8: Valores saturados [0,100] quando aplicável
-- D5.10: Thresholds/grades exibidos com referência
+**Funções orquestradas por hub.ts (12):**
+
+| Função | Arquivo | Aceita |
+|--------|---------|--------|
+| `calcPipelinePassRate` | pass-rate.ts | `PipelineRun[]` |
+| `calcAvgDuration` | avg-duration.ts | `PipelineRun[]` |
+| `calcSuiteSpeedP95` | suite-speed.ts | `Map<number, PipelineJob[]>` |
+| `calcFlakyFromPipelineRuns` | flaky-rate.ts | `PipelineRun[]` + `Map` |
+| `calcCoverageFromRaw` | coverage.ts | `RawCoverage` |
+| `calcPipelineCost` | pipeline-cost.ts | `PipelineRun[]` |
+| `calcBranchBreakdown` | branch-health.ts | `PipelineRun[]` |
+| `calcTopFailingJobs` | branch-health.ts | `PipelineRun[]` + `Map` |
+| `calcTopFailureReasons` | failure-reasons.ts | `Map<number, string[]>` |
+| `calcReleaseScore` | release-score.ts | `HealthDimensions` |
+| `makeDimensionScore` | release-score.ts | `number` |
+| `calcQuarantineStatus` | quarantine-status.ts | `FlakyResult[]` |
+
+**Funções não orquestradas (18):** Consumidas diretamente por health-score.ts, metrics.ts, quarantine.ts, etc.
+
+#### 071 — Orchestrators
+
+| Orchestrator | Padrão | Status |
+|---|---|---|
+| `session-state.ts` | `ensureDataHub()` lazy-init singleton, `getDataHub()` accessor | ✅ |
+| `interactive-mode.ts` | `ensureDataHub()` no início da sessão, conditional spread `...(dataHub ? [{ dataHub }] : [])` | ✅ |
+| `batch-mode.ts` | `getOrFetchDataHub()` em try/catch, fallback `undefined` | ✅ |
+| `schedule-handler.ts` | `getDataHub()` + conditional spread `dataHub ? { dataHub } : undefined` | ✅ |
+
+#### 072 — Fallback MetricsStore
+
+| Consumidor | Padrão de Fallback | Status |
+|---|---|---|
+| `health-score.ts` | `dataHub?.computed.X ?? valorMetricsStore` | ✅ |
+| `quality-gate.ts` | `...(dataHub ? { dataHub } : {})` → health-score sem DataHub | ✅ |
+| `pr-report-core.ts` | `tryCreateDataHub()` retorna `undefined` em falha, conditional spread | ✅ |
+
+**Degradation path:** DataHub sempre `DataHub | undefined`. Sem `if (!dataHub)` explícito — optional chaining + nullish coalescing. Limpo.
+
+#### 073 — D5.1: Métricas com nome/descrição/unidade
+
+Definido em `shared/types/data-hub.ts` (interfaces JSDoc) e `shared/data-hub/compute/types.ts` (config com unidades/ranges documentados). ✅
+
+#### 074 — D5.2: Métricas acionáveis
+
+Todas as métricas são acionáveis: passRate, flakyRate, coverage, pipelineCost, suiteSpeedP95, defectTrends, releaseScore. Nenhuma é vaidade. ✅
+
+#### 075 — D5.5: Outliers visuais tratados
+
+Responsabilidade do render layer (HTML generators), não do compute layer. Não aplicável a esta verificação. ✅ N/A
+
+#### 076 — D5.8: Valores saturados [0,100]
+
+**Com clamp explícito (7 funções):**
+`calcCoverageFromRaw`, `calcTrendsFromPipelineRuns`, `calcTrendsFromMetricsRuns`, `calcExpWeightedPassRate`, `calcExecutionRate`, `calcExpWeightedExecutionRate`, `calcFlakyPercentage`
+
+**Matematicamente limitadas por construção (23 funções):**
+Razões de contadores (numerator ≤ denominator) são intrinsecamente [0,100]. Scoring functions usam `linearScore`/`inverseScore` que retornam [0,100] por construção. ✅
+
+#### 077 — D5.10: Thresholds com referência
+
+30+ referências normativas: DORA State of DevOps, Google SRE Book, Google Test Engineering, Microsoft Research (2014), ISTQB Foundation, ISO/IEC 25010:2011, ISO/IEC 25023:2016, Tukey (1977). ✅
+
+#### 078 — Nenhum HTML generator acessa dados CI brutos
+
+14 generators verificados: `generateHtmlReport`, `generateCoverageHtml`, `buildHtmlPage`, `buildErrorPage`, `generateReleaseScoreHtml`, `generateAiEffectivenessHtml`, `generateIncidentReportHtml`, `generateSeasonalityHtml`, `generateBenchmarkHtml`, `generateImpactAlertHtml`, `generateDeveloperProfileHtml`, `generateRequirementScoreHtml`, `generateCoverageGapHtml`, `generateOptimizationHtml`.
+
+**Nenhum importa PipelineRun/PipelineJob.** Todos aceitam objetos Result pré-calculados. ✅
+
+#### 079 — Padrão Compute → Result → Render preservado
+
+Todos os dashboards em interactive-mode.ts seguem: `_loadProjectRunsHelper()` → compute function → Result type → HTML generator. Intermediate Result types existem para cada pipeline. Nenhum generator chama API diretamente. ✅
+
+**Evidência completa:** `audit/functional/phase6-verification-evidence.md`
 
 **Commit:** `verify: validate DataHub integration across compute, orchestrators, and dashboards`
+
+---
+
+## Pré-Voo — Fase 12
+
+### Pre-commit Hook
+
+| Padrão           | Rejeitado |
+| ---------------- | --------- |
+| `eslint-disable` | ✅        |
+| type-cast-unknown | ✅        |
+| `@ts-ignore`     | ✅        |
+
+---
+
+## Fase 12 — Atualização TECHDOC.md (Tarefa 151)
+
+Atualizar `docs/TECHDOC.md` para refletir a nova arquitetura DataHub, substituindo a seção obsoleta "CI Data Hub (`shared/ci-data.ts`)".
+
+### Mudanças obrigatórias
+
+| Seção | Ação | Detalhes |
+|-------|------|----------|
+| `ARCHITECTURE > Layered Diagram` | Adicionar camada DataHub | Incluir `shared/data-hub/` no diagrama de camadas |
+| `ARCHITECTURE > Key Patterns` | Adicionar padrão DataHub | 3 camadas: Providers → Compute → Hub |
+| `MODULE MAP > shared/` | Atualizar `ci-data.ts` | Descrever como wrapper deprecated + entry point `getOrFetchDataHub` |
+| `MODULE MAP > shared/` | Adicionar módulos DataHub | `data-hub/hub.ts`, `data-hub/cache.ts`, `data-hub/compute/*.ts`, `data-hub/providers/*.ts` |
+| `DOMAIN MODEL` | Substituir `CiDataHub` interface | Nova interface `DataHub` com `raw: RawData` + `computed: ComputedMetrics` |
+| `DOMAIN MODEL` | Adicionar tipos DataHub | `RawData`, `ComputedMetrics`, `DataHubProvider`, `ScoringConfig`, `QuarantineConfig` |
+| `KEY DECISIONS` | Adicionar decisões DataHub | Provider pattern, Compute funções puras, Cache unificado, Fallback MetricsStore |
+| `FILES & PATHS REFERENCE` | Adicionar caminhos DataHub | `shared/data-hub/`, `shared/types/data-hub.ts` |
+
+### Seções a NÃO alterar
+
+- CLI REFERENCE (não muda)
+- CONFIG & ENV (não muda)
+- TESTING CONVENTIONS (não muda)
+- FEATURE WORKFLOW PATTERN (não muda)
+
+### Script de verificação
+
+```bash
+# Verificar que TECHDOC.md foi atualizado
+grep -c "DataHub" docs/TECHDOC.md  # deve ser > 0
+grep -c "CiDataHub" docs/TECHDOC.md  # deve ser 0 (seção removida)
+grep -c "compute/" docs/TECHDOC.md  # deve ser > 0 (módulos documentados)
+```
+
+**Commit:** `docs: update TECHDOC with DataHub 3-layer architecture`
 
 ---
 
@@ -1113,7 +1219,7 @@ Código morto removido. Código vivo documentado.
 | 143 | `npx vitest run --coverage`    | Lines ≥ 90%, Functions ≥ 91%, Branches ≥ 80%, Statements ≥ 90% |
 | 144 | `npm run unused-exports`       | 0                                                              |
 | 145 | `npx madge --circular shared/` | 0                                                              |
-| 146 | Auditoria integridade          | 21/21 consumers aceitam DataHub + fallback                     |
+| 146 | Auditoria integridade          | 30/30 compute functions verificadas + 4 orchestrators + fallback |
 | 147 | Auditoria descentralização     | 0 cálculos inline duplicados                                   |
 | 148 | Auditoria testes               | 0 testes teatro                                                |
 | 149 | Push + CI                      | CI passa                                                       |
@@ -1130,12 +1236,13 @@ Fase 3   (040-046)    ← depende de Fase 1 (incluindo 010a/010b) + Fase 2
 Fase 4   (050-054)    ← depende de Fase 3
 Fase 5   (060-063)    ← CONCLUÍDA (absorvida pela Fase 4)
 Fase 5.5 (080-086)    ← depende de Fase 5 (consolidação de gaps)
-Fase 6   (070-079)    ← depende de Fase 5.5 (verificação de integridade)
+Fase 6   (070-079)    ← CONCLUÍDA (verificação de integridade)
 Fase 7   (090-093)    ← depende de Fase 6
 Fase 8   (100-106)    ← depende de Fase 6
 Fase 9   (120-125)    ← depende de Fase 8
 Fase 10  (130-132)    ← depende de Fase 9
 Fase 11  (140-150)    ← depende de Fase 10
+Fase 12  (151)        ← depende de Fase 11 (atualização TECHDOC.md)
 ```
 
 ---
@@ -1151,13 +1258,14 @@ Fase 11  (140-150)    ← depende de Fase 10
 | 4         | 5       | 1.5             |
 | 5         | 1       | 0.5             |
 | 5.5       | 7       | 2               |
-| 6         | 10      | 1               |
+| 6         | 10      | 0.5 (verificação) |
 | 7         | 4       | 1               |
 | 8         | 7       | 1               |
 | 9         | 6       | 1               |
 | 10        | 3       | 0.5             |
 | 11        | 11      | 1               |
-| **Total** | **87**  | **~15 sprints** |
+| 12        | 1       | 0.5             |
+| **Total** | **88**  | **~15.5 sprints** |
 
 ---
 

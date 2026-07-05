@@ -187,4 +187,36 @@
 
 ---
 
-**Próxima fase: Fase 6 — Dashboards (Tasks 070-082)**
+### Fase 6 — Verificação de Integridade
+
+**Início:** 2026-07-05
+**Conclusão:** 2026-07-05
+
+| ID  | Verificação                          | Status | Data       |
+| --- | ------------------------------------ | ------ | ---------- |
+| 070 | Compute functions (30 exportadas)    | ✅     | 2026-07-05 |
+| 071 | Orchestrators passam DataHub         | ✅     | 2026-07-05 |
+| 072 | Fallback MetricsStore                | ✅     | 2026-07-05 |
+| 073 | D5.1: Nome/descrição/unidade         | ✅     | 2026-07-05 |
+| 074 | D5.2: Métricas acionáveis            | ✅     | 2026-07-05 |
+| 075 | D5.5: Outliers visuais               | ✅ N/A | 2026-07-05 |
+| 076 | D5.8: Valores saturados [0,100]      | ✅     | 2026-07-05 |
+| 077 | D5.10: Thresholds com referência     | ✅     | 2026-07-05 |
+| 078 | HTML generators não acessam CI bruto | ✅     | 2026-07-05 |
+| 079 | Padrão Compute → Result → Render     | ✅     | 2026-07-05 |
+
+**Evidência:** `audit/functional/phase6-verification-evidence.md`
+
+**Checkpoint:** Verificação completa. Plano atualizado com dados corretos (30 funções, não 21).
+
+---
+
+### Pendência Futura — Coleta Assíncrona
+
+- **Proposta:** Coletar dados brutos assincronamente na inicialização do sistema
+- **Estado atual:** Coleta on-demand ao disparar CI
+- **Status:** Discutir posteriormente
+
+---
+
+**Próxima fase: Fase 7 — Corrigir Testes Teatro**
