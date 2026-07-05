@@ -243,3 +243,36 @@ export class DataHubImpl implements DataHub {
         return 'github';
     }
 }
+
+/**
+ * Check if new raw data has changed compared to a cached hub.
+ *
+ * Compares run IDs and update timestamps to detect new or updated runs.
+ * Used by prefetch orchestrator to decide whether to rebuild the hub.
+ *
+ * @param cachedHub - Previously cached DataHub.
+ * @param newRaw - Fresh raw data from provider.
+ * @returns true if data has changed (new runs, updated runs, or different count).
+ */
+export function hasDataChanged(cachedHub: DataHub, newRaw: RawData): boolean {
+    const oldRuns = cachedHub.raw.runs;
+    const newRuns = newRaw.runs;
+
+    if (oldRuns.length !== newRuns.length) return true;
+
+    const oldRunMap = new Map<string | number, PipelineRun>();
+    for (const run of oldRuns) {
+        if (run.id != null) {
+            oldRunMap.set(run.id, run);
+        }
+    }
+
+    for (const newRun of newRuns) {
+        if (newRun.id == null) return true;
+        const oldRun = oldRunMap.get(newRun.id);
+        if (oldRun == null) return true;
+        if (oldRun.updated_at !== newRun.updated_at) return true;
+    }
+
+    return false;
+}

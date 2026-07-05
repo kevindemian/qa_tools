@@ -45,6 +45,8 @@ import {
     currentProjectName,
     ensureDataHub,
     getDataHub,
+    prefetchAllProjects,
+    ensureDataHubSync,
 } from './session-state.js';
 import {
     handleTriggerPipeline,
@@ -938,6 +940,25 @@ async function _selectProjectAndCreateManager(): Promise<{
 }
 
 /**
+ * Initialize DataHub in background — fire-and-forget prefetch for all projects.
+ * For current project, ensures DataHub is ready before menu loop.
+ * In CI environments, blocks to guarantee fresh data.
+ */
+async function _initDataHubBackground(): Promise<void> {
+    // Launch async prefetch for ALL projects — does not block menu
+    prefetchAllProjects().catch((err: unknown) => {
+        rootLogger.debug(`prefetchAllProjects background failed: ${String(err)}`);
+    });
+
+    // For current project: ensure DataHub is ready (uses cache if prefetch already completed)
+    if (process.env['CI'] === 'true') {
+        await ensureDataHubSync();
+    } else {
+        await ensureDataHub();
+    }
+}
+
+/**
  * Runs the interactive mode — validates environment, shows splash, and enters menu loop.
  * @param args Parsed CLI arguments
  */
@@ -953,8 +974,7 @@ export async function runInteractiveMode(args: CliArgs): Promise<void> {
     if (!result) return;
     const { projectName, names, manager: m } = result;
 
-    // Create DataHub once for the entire session — all dashboards consume via getDataHub()
-    await ensureDataHub();
+    await _initDataHubBackground();
 
     clearBreadcrumbs();
     pushBreadcrumb('GIT');

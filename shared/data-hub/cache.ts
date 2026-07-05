@@ -2,6 +2,7 @@
  * Data Hub — Session Cache.
  *
  * Module-level cache to avoid redundant API fetches within a session.
+ * Supports multiple repos simultaneously via Map-based storage.
  * Used by hub.ts, ci-data.ts, and session-state.ts.
  *
  * Pattern: module-level vars (consistent with existing ci-data.ts pattern).
@@ -23,9 +24,8 @@ interface CacheEntry {
  */
 const CACHE_TTL_MS = 5 * 60 * 1000;
 
-/** Module-level cache vars. */
-let _cachedHub: CacheEntry | undefined;
-let _cachedRepo: string | undefined;
+/** Module-level cache — Map keyed by repo identifier. */
+const _cache = new Map<string, CacheEntry>();
 
 /**
  * Get cached DataHub for a repo if valid.
@@ -34,15 +34,16 @@ let _cachedRepo: string | undefined;
  * @returns Cached DataHub or undefined if cache miss/expired.
  */
 export function getCachedHub(repo: string): DataHub | undefined {
-    if (_cachedHub == null || _cachedRepo !== repo) return undefined;
+    const entry = _cache.get(repo);
+    if (entry == null) return undefined;
 
-    const age = Date.now() - _cachedHub.timestamp;
+    const age = Date.now() - entry.timestamp;
     if (age > CACHE_TTL_MS) {
-        clearCache();
+        _cache.delete(repo);
         return undefined;
     }
 
-    return _cachedHub.hub;
+    return entry.hub;
 }
 
 /**
@@ -52,16 +53,23 @@ export function getCachedHub(repo: string): DataHub | undefined {
  * @param hub - DataHub to cache.
  */
 export function setCachedHub(repo: string, hub: DataHub): void {
-    _cachedHub = { hub, timestamp: Date.now() };
-    _cachedRepo = repo;
+    _cache.set(repo, { hub, timestamp: Date.now() });
 }
 
 /**
- * Clear the session cache.
+ * Clear the entire session cache.
  */
 export function clearCache(): void {
-    _cachedHub = undefined;
-    _cachedRepo = undefined;
+    _cache.clear();
+}
+
+/**
+ * Clear cache entry for a specific repo.
+ *
+ * @param repo - Repository identifier to evict.
+ */
+export function clearRepoCache(repo: string): void {
+    _cache.delete(repo);
 }
 
 /**
@@ -71,8 +79,18 @@ export function clearCache(): void {
  * @returns true if cache hit, false if miss/expired.
  */
 export function isCacheValid(repo: string): boolean {
-    if (_cachedHub == null || _cachedRepo !== repo) return false;
+    const entry = _cache.get(repo);
+    if (entry == null) return false;
 
-    const age = Date.now() - _cachedHub.timestamp;
+    const age = Date.now() - entry.timestamp;
     return age <= CACHE_TTL_MS;
+}
+
+/**
+ * Get the number of cached repos (for diagnostics).
+ *
+ * @returns Count of active cache entries.
+ */
+export function getCacheSize(): number {
+    return _cache.size;
 }
