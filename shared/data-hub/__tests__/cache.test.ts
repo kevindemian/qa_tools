@@ -1,10 +1,10 @@
 /**
  * Unit tests for session cache.
  *
- * Tests cache get/set/clear/valid operations.
+ * Tests cache get/set/clear/valid operations for multi-project support.
  */
 import { describe, it, expect, beforeEach } from 'vitest';
-import { getCachedHub, setCachedHub, clearCache } from '../cache.js';
+import { getCachedHub, setCachedHub, clearCache, clearRepoCache, isCacheValid, getCacheSize } from '../cache.js';
 import type { DataHub } from '../../types/data-hub.js';
 
 /* ── Helpers ────────────────────────────────────────────────────────────── */
@@ -76,5 +76,76 @@ describe('Session Cache', () => {
         const result = getCachedHub('test/repo');
 
         expect(result).toBeUndefined();
+    });
+});
+
+/* ── Multi-project cache ────────────────────────────────────────────────── */
+
+describe('Multi-project Cache', () => {
+    beforeEach(() => {
+        clearCache();
+    });
+
+    it('stores multiple repos independently', () => {
+        const hubA = makeHub('repo-a');
+        const hubB = makeHub('repo-b');
+        setCachedHub('repo-a', hubA);
+        setCachedHub('repo-b', hubB);
+
+        expect(getCachedHub('repo-a')).toBe(hubA);
+        expect(getCachedHub('repo-b')).toBe(hubB);
+        expect(getCacheSize()).toBe(2);
+    });
+
+    it('clearRepoCache evicts only specified repo', () => {
+        const hubA = makeHub('repo-a');
+        const hubB = makeHub('repo-b');
+        setCachedHub('repo-a', hubA);
+        setCachedHub('repo-b', hubB);
+
+        clearRepoCache('repo-a');
+
+        expect(getCachedHub('repo-a')).toBeUndefined();
+        expect(getCachedHub('repo-b')).toBe(hubB);
+        expect(getCacheSize()).toBe(1);
+    });
+
+    it('isCacheValid returns correct status', () => {
+        expect(isCacheValid('repo-a')).toBeFalsy();
+
+        setCachedHub('repo-a', makeHub('repo-a'));
+
+        expect(isCacheValid('repo-a')).toBeTruthy();
+        expect(isCacheValid('repo-b')).toBeFalsy();
+    });
+
+    it('overwrites existing cache entry for same repo', () => {
+        const hubV1 = makeHub('repo-a');
+        const hubV2 = makeHub('repo-a');
+        setCachedHub('repo-a', hubV1);
+        setCachedHub('repo-a', hubV2);
+
+        expect(getCachedHub('repo-a')).toBe(hubV2);
+        expect(getCacheSize()).toBe(1);
+    });
+
+    it('getCacheSize returns accurate count', () => {
+        expect(getCacheSize()).toBe(0);
+
+        setCachedHub('a', makeHub('a'));
+
+        expect(getCacheSize()).toBe(1);
+
+        setCachedHub('b', makeHub('b'));
+
+        expect(getCacheSize()).toBe(2);
+
+        clearRepoCache('a');
+
+        expect(getCacheSize()).toBe(1);
+
+        clearCache();
+
+        expect(getCacheSize()).toBe(0);
     });
 });

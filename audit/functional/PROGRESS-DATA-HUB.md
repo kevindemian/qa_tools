@@ -421,4 +421,40 @@
 
 ---
 
+### Fase 13 — Async Data Collection
+
+**Início:** 2026-07-05
+**Conclusão:** 2026-07-05
+
+| ID  | Tarefa                                                               | Status | Data       |
+| --- | -------------------------------------------------------------------- | ------ | ---------- |
+| 160 | Multi-project cache (`cache.ts`) — Map por repo                      | ✅     | 2026-07-05 |
+| 161 | Version comparison (`hub.ts`) — `hasDataChanged()`                   | ✅     | 2026-07-05 |
+| 162 | Prefetch orchestrator (`session-state.ts`) — `prefetchAllProjects()` | ✅     | 2026-07-05 |
+| 163 | Async startup (`interactive-mode.ts`) — fire-and-forget prefetch     | ✅     | 2026-07-05 |
+| 164 | Sync on CI (`session-state.ts`) — blocking when `CI=true`            | ✅     | 2026-07-05 |
+| 165 | Tests + PBT (22 novos testes)                                        | ✅     | 2026-07-05 |
+
+**Alterações:**
+
+- `shared/data-hub/cache.ts`: Reescrito — `Map<string, CacheEntry>` para suporte multi-projeto. Novas funções: `clearRepoCache()`, `getCacheSize()`
+- `shared/data-hub/hub.ts`: Adicionado `hasDataChanged()` — compara run IDs + `updated_at` entre hub cacheado e dados novos
+- `git_triggers/session-state.ts`: Adicionado `prefetchAllProjects()` — busca paralela de todos os projetos configurados. `ensureDataHubSync()` — versão síncrona para CI
+- `git_triggers/interactive-mode.ts`: Startup agora lança `prefetchAllProjects()` como fire-and-forget. `ensureDataHub()` para projeto atual usa cache se prefetch já terminou
+
+**Compatibilidade:**
+
+- **GitHub**: `GitHubDataProvider` via `createManagerForProject()`
+- **GitLab**: `GitLabDataProvider` via `createManagerForProject()`
+- **Jira**: `JiraDataProvider` — disponível para prefetch futuro (atualmente sob demanda)
+- **Xray**: Integrado via Jira — mesmo padrão
+
+**Checkpoint:**
+
+- `npx tsc --noEmit` = 0 erros ✅
+- `npm run lint` = 0 violações ✅
+- `npx vitest run` = 419 files, 6035 tests, 0 failures ✅
+
+---
+
 **Próxima fase: Fase 12 — Push + CI**

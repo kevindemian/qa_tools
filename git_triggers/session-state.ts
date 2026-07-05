@@ -63,6 +63,78 @@ export async function ensureDataHub(): Promise<DataHub | undefined> {
     }
 }
 
+/**
+ * Prefetch DataHub for all configured projects in parallel.
+ *
+ * Fire-and-forget pattern: runs in background, does not block startup.
+ * For each project:
+ * 1. Create manager from config
+ * 2. Fetch DataHub (uses cache if valid)
+ * 3. If cache hit but data changed, rebuild hub
+ * 4. Store in multi-project cache
+ *
+ * Failures are isolated per project — one failing project does not affect others.
+ */
+export async function prefetchAllProjects(): Promise<void> {
+    const projects = getProjects();
+    const projectEntries = Object.entries(projects);
+
+    if (projectEntries.length === 0) {
+        rootLogger.debug('prefetchAllProjects: no projects configured');
+        return;
+    }
+
+    const { getOrFetchDataHub } = await import('../shared/ci-data.js');
+    const { getCachedHub, setCachedHub } = await import('../shared/data-hub/cache.js');
+    const { hasDataChanged } = await import('../shared/data-hub/hub.js');
+
+    const results = await Promise.allSettled(
+        projectEntries.map(async ([name, id]) => {
+            try {
+                const projectManager = createManagerForProject(name, id);
+                const cachedHub = getCachedHub(name);
+
+                if (cachedHub) {
+                    // Cache hit — check if data changed by doing a lightweight fetch
+                    const freshHub = await getOrFetchDataHub(projectManager, name);
+                    if (freshHub && hasDataChanged(cachedHub, freshHub.raw)) {
+                        setCachedHub(name, freshHub);
+                        rootLogger.debug(`prefetch: ${name} — data changed, cache updated`);
+                    } else {
+                        rootLogger.debug(`prefetch: ${name} — cache valid, no changes`);
+                    }
+                } else {
+                    // Cache miss — fetch fresh data
+                    const hub = await getOrFetchDataHub(projectManager, name);
+                    if (hub) {
+                        setCachedHub(name, hub);
+                        rootLogger.debug(`prefetch: ${name} — fetched and cached`);
+                    } else {
+                        rootLogger.debug(`prefetch: ${name} — no data available`);
+                    }
+                }
+            } catch (err) {
+                rootLogger.debug(`prefetch: ${name} — failed: ${String(err)}`);
+            }
+        }),
+    );
+
+    const succeeded = results.filter((r) => r.status === 'fulfilled').length;
+    const failed = results.filter((r) => r.status === 'rejected').length;
+    rootLogger.debug(`prefetchAllProjects: ${succeeded} succeeded, ${failed} failed`);
+}
+
+/**
+ * Synchronous DataHub fetch for CI environments.
+ *
+ * When CI=true, data must be fresh and available immediately.
+ * Blocks until DataHub is ready.
+ */
+export async function ensureDataHubSync(): Promise<DataHub | undefined> {
+    if (process.env['CI'] !== 'true') return undefined;
+    return ensureDataHub();
+}
+
 export const apiToken: string = Config.get('gitToken') || '';
 export const gitlabBaseUrl: string = Config.get('gitBaseUrl') || '';
 

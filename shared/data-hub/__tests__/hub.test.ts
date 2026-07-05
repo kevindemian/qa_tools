@@ -137,3 +137,102 @@ describe('DataHubImpl', () => {
         expect(hub.timestamp.getTime()).toBeLessThanOrEqual(Date.now());
     });
 });
+
+/* ── HasDataChanged ─────────────────────────────────────────────────────── */
+
+describe('HasDataChanged', () => {
+    it('returns false when runs are identical', async () => {
+        expect.hasAssertions();
+
+        const { hasDataChanged } = await import('../hub.js');
+        const runs = [makeRun({ id: 1 }), makeRun({ id: 2 })];
+        const raw: RawData = makeRawDataWithRuns(runs);
+        const provider = makeProvider(raw);
+        const hub = await DataHubImpl.create([provider], { repo: 'test' });
+
+        const newRaw: RawData = makeRawDataWithRuns([
+            makeRun({ id: 1, updated_at: '2026-01-01T10:10:00Z' }),
+            makeRun({ id: 2, updated_at: '2026-01-01T10:10:00Z' }),
+        ]);
+
+        expect(hasDataChanged(hub, newRaw)).toBeFalsy();
+    });
+
+    it('returns true when run count differs', async () => {
+        expect.hasAssertions();
+
+        const { hasDataChanged } = await import('../hub.js');
+        const raw: RawData = makeRawDataWithRuns([makeRun({ id: 1 })]);
+        const provider = makeProvider(raw);
+        const hub = await DataHubImpl.create([provider], { repo: 'test' });
+
+        const newRaw: RawData = makeRawDataWithRuns([makeRun({ id: 1 }), makeRun({ id: 3 })]);
+
+        expect(hasDataChanged(hub, newRaw)).toBeTruthy();
+    });
+
+    it('returns true when new run added', async () => {
+        expect.hasAssertions();
+
+        const { hasDataChanged } = await import('../hub.js');
+        const raw: RawData = makeRawDataWithRuns([makeRun({ id: 1 })]);
+        const provider = makeProvider(raw);
+        const hub = await DataHubImpl.create([provider], { repo: 'test' });
+
+        const newRaw: RawData = makeRawDataWithRuns([makeRun({ id: 1 }), makeRun({ id: 2 })]);
+
+        expect(hasDataChanged(hub, newRaw)).toBeTruthy();
+    });
+
+    it('returns true when run updated_at changes', async () => {
+        expect.hasAssertions();
+
+        const { hasDataChanged } = await import('../hub.js');
+        const raw: RawData = makeRawDataWithRuns([makeRun({ id: 1, updated_at: '2026-01-01T10:10:00Z' })]);
+        const provider = makeProvider(raw);
+        const hub = await DataHubImpl.create([provider], { repo: 'test' });
+
+        const newRaw: RawData = makeRawDataWithRuns([makeRun({ id: 1, updated_at: '2026-01-01T11:00:00Z' })]);
+
+        expect(hasDataChanged(hub, newRaw)).toBeTruthy();
+    });
+
+    it('returns true when run id missing in new data', async () => {
+        expect.hasAssertions();
+
+        const { hasDataChanged } = await import('../hub.js');
+        const raw: RawData = makeRawDataWithRuns([makeRun({ id: 1 }), makeRun({ id: 2 })]);
+        const provider = makeProvider(raw);
+        const hub = await DataHubImpl.create([provider], { repo: 'test' });
+
+        const newRaw: RawData = makeRawDataWithRuns([makeRun({ id: 1 })]);
+
+        expect(hasDataChanged(hub, newRaw)).toBeTruthy();
+    });
+
+    it('returns true when run has null id', async () => {
+        expect.hasAssertions();
+
+        const { hasDataChanged } = await import('../hub.js');
+        const raw: RawData = makeRawDataWithRuns([makeRun({ id: 1 })]);
+        const provider = makeProvider(raw);
+        const hub = await DataHubImpl.create([provider], { repo: 'test' });
+
+        const newRaw: RawData = makeRawDataWithRuns([makeRun({ id: undefined })]);
+
+        expect(hasDataChanged(hub, newRaw)).toBeTruthy();
+    });
+
+    it('returns true when both empty', async () => {
+        expect.hasAssertions();
+
+        const { hasDataChanged } = await import('../hub.js');
+        const raw: RawData = makeEmptyRawData();
+        const provider = makeProvider(raw);
+        const hub = await DataHubImpl.create([provider], { repo: 'test' });
+
+        const newRaw: RawData = makeEmptyRawData();
+
+        expect(hasDataChanged(hub, newRaw)).toBeFalsy();
+    });
+});
