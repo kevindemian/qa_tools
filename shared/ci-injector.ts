@@ -67,6 +67,12 @@ export function generatePostProcessWorkflowYaml(options: PostProcessWorkflowOpti
         '        with:',
         '          name: ctrf-report',
         '          path: reports/',
+        '      - name: Download coverage report',
+        '        uses: actions/download-artifact@v8',
+        '        with:',
+        '          name: coverage-report',
+        '          path: coverage/',
+        '          if-no-files-found: warn',
         '      - name: Run QA Tools Post-Processing',
         '        if: always()',
         '        run: |',
@@ -130,17 +136,18 @@ export function extractFirstJobName(ciYaml: string): string {
  * @param projectName - Project name to pass to the reusable workflow
  * @returns Modified ci.yml content with post-process job appended
  */
-export function injectPostProcessJob(ciYaml: string, projectName: string): string {
+export function injectPostProcessJob(ciYaml: string, projectName: string, excludeSchedule: boolean = true): string {
     // Idempotency guard: if post-process job already exists, do nothing
-    if (/^\s{2}post-process:/m.test(ciYaml)) return ciYaml;
+    if (/^\s{2,4}post-process:/m.test(ciYaml)) return ciYaml;
 
     const firstJob = extractFirstJobName(ciYaml);
     const needsList = firstJob === 'test' ? '[test]' : `[${firstJob}]`;
+    const ifCondition = excludeSchedule ? "always() && github.event_name != 'schedule'" : 'always()';
 
     // Build the post-process job YAML block with the same indentation (2 spaces)
     const postProcessBlock = [
         '  post-process:',
-        '    if: always()',
+        `    if: ${ifCondition}`,
         `    needs: ${needsList}`,
         '    uses: ./.github/workflows/qa-post-process.yml',
         '    with:',

@@ -11,7 +11,12 @@
 import fs from 'node:fs';
 import path from 'node:path';
 import { describe, it, expect } from 'vitest';
-import { generatePostProcessWorkflowYaml, extractFirstJobName, injectPostProcessJob } from './ci-injector.js';
+import {
+    generatePostProcessWorkflowYaml,
+    generatePostProcessWorkflowFromContext,
+    extractFirstJobName,
+    injectPostProcessJob,
+} from './ci-injector.js';
 import { generateQaPostProcessWorkflow } from '../setup/templates/qa-post-process-workflow.js';
 import type { SetupContext } from '../setup/context.js';
 /* ── Fixtures ──────────────────────────────────────────────────────────── */
@@ -140,6 +145,14 @@ describe('GeneratePostProcessWorkflowYaml', () => {
         expect(yaml).toContain('pr-report-html');
     });
 
+    it('downloads coverage artifact', () => {
+        const yaml = generatePostProcessWorkflowYaml({ projectName: 'p' });
+
+        expect(yaml).toContain('name: coverage-report');
+        expect(yaml).toContain('path: coverage/');
+        expect(yaml).toContain('if-no-files-found: warn');
+    });
+
     it('references git_triggers/pr-report-entry.ts in run command', () => {
         const yaml = generatePostProcessWorkflowYaml({ projectName: 'p' });
 
@@ -181,10 +194,18 @@ describe('InjectPostProcessJob', () => {
         const result = injectPostProcessJob(SIMPLE_CI_YML, 'my-project');
 
         expect(result).toContain('post-process:');
-        expect(result).toContain('if: always()');
+        expect(result).toContain("if: always() && github.event_name != 'schedule'");
         expect(result).toContain('needs: [test]');
         expect(result).toContain('qa-post-process.yml');
         expect(result).toContain('project-name: my-project');
+    });
+
+    it('injects post-process job without schedule exclusion when excludeSchedule=false', () => {
+        const result = injectPostProcessJob(SIMPLE_CI_YML, 'my-project', false);
+
+        expect(result).toContain('post-process:');
+        expect(result).toContain('if: always()');
+        expect(result).not.toContain("github.event_name != 'schedule'");
     });
 
     it('preserves all existing content', () => {
@@ -270,6 +291,18 @@ describe('Contract: deployed qa-post-process.yml matches generator', () => {
         expect(ciYaml).toContain('name: ctrf-report');
         expect(ppYaml).toContain('name: ctrf-report');
     });
+
+    it('ci.yml coverage artifact name matches qa-post-process.yml download name', () => {
+        expect.hasAssertions();
+
+        const ciPath = path.join(ROOT, '.github', 'workflows', 'ci.yml');
+        const ppPath = path.join(ROOT, '.github', 'workflows', 'qa-post-process.yml');
+        const ciYaml = fs.readFileSync(ciPath, 'utf8');
+        const ppYaml = fs.readFileSync(ppPath, 'utf8');
+
+        expect(ciYaml).toContain('name: coverage-report');
+        expect(ppYaml).toContain('name: coverage-report');
+    });
 });
 
 /* ── Contract: two generators produce equivalent YAML ───────────────── */
@@ -331,5 +364,63 @@ describe('Contract: ci-injector and setup wizard generators are equivalent', () 
             expect(yaml).toContain('actions/download-artifact@v8');
             expect(yaml).toContain('actions/upload-artifact@v7');
         }
+    });
+});
+
+/* ── generatePostProcessWorkflowFromContext overload ──────────────────── */
+
+describe('GeneratePostProcessWorkflowFromContext', () => {
+    function makeCtx(overrides: Partial<SetupContext> = {}): SetupContext {
+        return {
+            projectName: 'ctx-project',
+            framework: 'vitest',
+            ctrfReportPath: 'custom/ctrf.json',
+            ctrfSource: 'config-file',
+            nodeVersion: '20',
+            installCmd: 'pnpm install --frozen-lockfile',
+            testCmd: 'npx vitest run',
+            gitProvider: 'github',
+            repoOwner: 'owner',
+            repoName: 'repo',
+            workflowDir: '.github/workflows',
+            features: {
+                qualityGate: false,
+                flakinessDashboard: false,
+                aiFailureAnalysis: false,
+                prePushHook: false,
+                prReport: true,
+                prReportPublishTarget: 'github-actions',
+            },
+            ...overrides,
+        };
+    }
+
+    it('delegates to generatePostProcessWorkflowYaml with context values', () => {
+        expect.hasAssertions();
+
+        const ctx = makeCtx();
+        const result = generatePostProcessWorkflowFromContext(ctx);
+        const expected = generatePostProcessWorkflowYaml({
+            projectName: 'ctx-project',
+            ctrfPath: 'custom/ctrf.json',
+            nodeVersion: '20',
+            installCmd: 'pnpm install --frozen-lockfile',
+        });
+
+        expect(result).toBe(expected);
+    });
+
+    it('uses default values when context has defaults', () => {
+        expect.hasAssertions();
+
+        const ctx = makeCtx({
+            ctrfReportPath: 'reports/ctrf-report.json',
+            nodeVersion: '22',
+            installCmd: 'npm ci',
+        });
+        const result = generatePostProcessWorkflowFromContext(ctx);
+        const expected = generatePostProcessWorkflowYaml({ projectName: 'ctx-project' });
+
+        expect(result).toBe(expected);
     });
 });

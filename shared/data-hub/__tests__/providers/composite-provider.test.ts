@@ -9,10 +9,10 @@ import type { DataProvider, FetchOptions, RawData } from '../../../types/data-hu
 
 /* ── Mock DataProvider ─────────────────────────────────────────────────── */
 
-function createMockProvider(name: string, data: RawData): DataProvider {
+function createMockProvider(name: string, data: RawData, source: DataProvider['source'] = 'github'): DataProvider {
     return {
         name,
-        source: 'github' as const,
+        source,
         fetchRawData: vi.fn().mockResolvedValue(data),
     };
 }
@@ -133,5 +133,114 @@ describe('CompositeProvider', () => {
         const result = await composite.fetchRawData(options);
 
         expect(result.jobs.get(1)).toHaveLength(1);
+    });
+
+    it('source reflects first provider source', () => {
+        expect.hasAssertions();
+
+        const provider1 = createMockProvider('p1', makeRawData(), 'gitlab');
+        const provider2 = createMockProvider('p2', makeRawData(), 'github');
+
+        const composite = new CompositeProvider([provider1, provider2]);
+
+        expect(composite.source).toBe('gitlab');
+    });
+
+    it('source defaults to github when no providers', () => {
+        expect.hasAssertions();
+
+        const composite = new CompositeProvider([]);
+
+        expect(composite.source).toBe('github');
+    });
+
+    it('coverage merge: first writer wins', async () => {
+        expect.hasAssertions();
+
+        const provider1 = createMockProvider(
+            'p1',
+            makeRawData({
+                coverage: { total: 100, covered: 70, percentage: 70 },
+            }),
+        );
+        const provider2 = createMockProvider(
+            'p2',
+            makeRawData({
+                coverage: { total: 100, covered: 90, percentage: 90 },
+            }),
+        );
+
+        const composite = new CompositeProvider([provider1, provider2]);
+        const result = await composite.fetchRawData(options);
+
+        expect(result.coverage?.percentage).toBe(70);
+    });
+
+    it('jiraIssues merge: first writer wins', async () => {
+        expect.hasAssertions();
+
+        const provider1 = createMockProvider(
+            'p1',
+            makeRawData({
+                jiraIssues: [
+                    {
+                        key: 'T-1',
+                        summary: 'First',
+                        status: 'Open',
+                        type: 'Bug',
+                        labels: [],
+                        created: '2026-01-01',
+                        updated: '2026-01-02',
+                    },
+                ],
+            }),
+        );
+        const provider2 = createMockProvider(
+            'p2',
+            makeRawData({
+                jiraIssues: [
+                    {
+                        key: 'T-2',
+                        summary: 'Second',
+                        status: 'Done',
+                        type: 'Story',
+                        labels: [],
+                        created: '2026-01-03',
+                        updated: '2026-01-04',
+                    },
+                ],
+            }),
+        );
+
+        const composite = new CompositeProvider([provider1, provider2]);
+        const result = await composite.fetchRawData(options);
+
+        expect(result.jiraIssues).toHaveLength(1);
+        expect(result.jiraIssues?.[0]?.key).toBe('T-1');
+    });
+
+    it('order of providers matters for first-writer-wins fields', async () => {
+        expect.hasAssertions();
+
+        const providerA = createMockProvider(
+            'a',
+            makeRawData({
+                coverage: { total: 100, covered: 50, percentage: 50 },
+            }),
+        );
+        const providerB = createMockProvider(
+            'b',
+            makeRawData({
+                coverage: { total: 100, covered: 95, percentage: 95 },
+            }),
+        );
+
+        const composite1 = new CompositeProvider([providerA, providerB]);
+        const result1 = await composite1.fetchRawData(options);
+        expect(result1.coverage?.percentage).toBe(50);
+
+        const composite2 = new CompositeProvider([providerB, providerA]);
+        const result2 = await composite2.fetchRawData(options);
+        expect(result2.coverage?.percentage).toBe(95);
     });
 });

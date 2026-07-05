@@ -67,8 +67,21 @@ describe('GenerateCIWorkflow', () => {
     it('includes upload-artifact step when prReport enabled', () => {
         const yaml = generateCIWorkflow(MOCK_CTX_FULL);
 
-        expect(yaml).toContain('actions/upload-artifact@v4');
+        expect(yaml).toContain('actions/upload-artifact@v7');
         expect(yaml).toContain('ctrf-report');
+    });
+
+    it('includes coverage artifact upload when prReport enabled', () => {
+        const yaml = generateCIWorkflow(MOCK_CTX_FULL);
+
+        expect(yaml).toContain('coverage-report');
+        expect(yaml).toContain('path: coverage/');
+    });
+
+    it('does not include coverage artifact when prReport disabled', () => {
+        const yaml = generateCIWorkflow(MOCK_CTX_BASIC);
+
+        expect(yaml).not.toContain('coverage-report');
     });
 
     it('includes setup-node with correct version', () => {
@@ -101,7 +114,7 @@ describe('GenerateQaPostProcessAction', () => {
 
         expect(yaml).toContain('name: QA Tools Post-Process');
         expect(yaml).toContain('using: composite');
-        expect(yaml).toContain('shared/pr-report-core.ts');
+        expect(yaml).toContain('git_triggers/pr-report-entry.ts');
         expect(yaml).toContain('GITHUB_TOKEN');
     });
 
@@ -153,5 +166,52 @@ describe('GenerateQaPostProcessAction — HTML upload', () => {
         const yaml = generateQaPostProcessAction();
 
         expect(yaml).not.toContain('if: always()');
+    });
+});
+
+describe('GenerateCIWorkflow — contract: structure and versions', () => {
+    it('uses modern action versions (not pinned SHAs)', () => {
+        const yaml = generateCIWorkflow(MOCK_CTX_FULL);
+
+        expect(yaml).toContain('actions/checkout@v5');
+        expect(yaml).toContain('actions/setup-node@v6');
+        expect(yaml).toContain('actions/upload-artifact@v7');
+    });
+
+    it('includes schedule exclusion by default', () => {
+        const yaml = generateCIWorkflow(MOCK_CTX_FULL);
+
+        expect(yaml).toContain("always() && github.event_name != 'schedule'");
+    });
+
+    it('uses plain always() when excludeSchedule=false', () => {
+        const yaml = generateCIWorkflow(MOCK_CTX_FULL, false);
+
+        expect(yaml).toContain('if: always()');
+        expect(yaml).not.toContain("github.event_name != 'schedule'");
+    });
+
+    it('includes both CTRF and coverage upload when prReport enabled', () => {
+        const yaml = generateCIWorkflow(MOCK_CTX_FULL);
+
+        expect(yaml).toContain('name: ctrf-report');
+        expect(yaml).toContain('name: coverage-report');
+        expect(yaml).toContain('path: coverage/');
+    });
+
+    it('does not include upload steps when prReport disabled', () => {
+        const yaml = generateCIWorkflow(MOCK_CTX_BASIC);
+
+        expect(yaml).not.toContain('upload-artifact');
+        expect(yaml).not.toContain('ctrf-report');
+        expect(yaml).not.toContain('coverage-report');
+    });
+
+    it('has valid YAML structure with jobs section', () => {
+        const yaml = generateCIWorkflow(MOCK_CTX_FULL);
+
+        expect(yaml).toContain('jobs:');
+        expect(yaml).toContain('qa-tools:');
+        expect(yaml).toContain('post-process:');
     });
 });

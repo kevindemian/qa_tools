@@ -11,6 +11,7 @@
 import { describe, it, expect } from 'vitest';
 import { calculateHealthScore } from '../health-score.js';
 import type { MetricsStore } from '../metrics.js';
+import type { DataHub } from '../types/data-hub.js';
 
 describe('CalculateHealthScore — pass rate consistency', () => {
     it('pass rate excludes skipped tests from denominator', () => {
@@ -139,5 +140,81 @@ describe('CalculateHealthScore — quality gate unification', () => {
         const result = calculateHealthScore(store);
 
         expect(result.qualityGate).toMatch(/^(pass|fail)$/);
+    });
+});
+
+describe('CalculateHealthScore — coverage priority chain', () => {
+    function makeDataHub(overrides?: {
+        computed?: Partial<DataHub['computed']>;
+        raw?: Partial<DataHub['raw']>;
+    }): DataHub {
+        return {
+            raw: {
+                runs: [],
+                jobs: new Map(),
+                artifacts: new Map(),
+                failureReasons: new Map(),
+                ...overrides?.raw,
+            },
+            computed: {
+                passRate: 0,
+                avgDuration: 0,
+                suiteSpeedP95: 0,
+                flakyRate: [],
+                coverage: 0,
+                pipelineCost: { totalMinutes: 0, estimatedCost: 0 },
+                defectTrends: [],
+                branchBreakdown: {},
+                topFailingJobs: [],
+                topFailureReasons: [],
+                releaseScore: { score: 0, dimensions: {} as never, grade: 'critical' },
+                quarantineStatus: { flakyCount: 0, quarantinedCount: 0 },
+                ...overrides?.computed,
+            },
+            timestamp: new Date(),
+            provider: 'github',
+            repo: 'owner/repo',
+        };
+    }
+
+    it('coverage override takes priority over everything', () => {
+        const store: MetricsStore = {
+            runs: [],
+            coverageHistory: [
+                { timestamp: '2026-01-01', project: 'p', totalIssues: 100, mappedIssues: 50, coveragePct: 50 },
+            ],
+        };
+        const dataHub = makeDataHub({ computed: { coverage: 95 } });
+        const result = calculateHealthScore(store, { coverageOverride: 85, dataHub });
+
+        expect(result.dimensions.coverage.score).toBe(100);
+    });
+
+    it('coverage history takes priority over DataHub when override is absent', () => {
+        const store: MetricsStore = {
+            runs: [],
+            coverageHistory: [
+                { timestamp: '2026-01-01', project: 'p', totalIssues: 100, mappedIssues: 85, coveragePct: 85 },
+            ],
+        };
+        const dataHub = makeDataHub({ computed: { coverage: 95 } });
+        const result = calculateHealthScore(store, { dataHub });
+
+        expect(result.dimensions.coverage.score).toBe(100);
+    });
+
+    it('dataHub coverage is used when no override and no history', () => {
+        const store: MetricsStore = { runs: [] };
+        const dataHub = makeDataHub({ computed: { coverage: 75 } });
+        const result = calculateHealthScore(store, { dataHub });
+
+        expect(result.dimensions.coverage.score).toBeGreaterThan(0);
+    });
+
+    it('coverage is 0 when no override, no history, and no DataHub', () => {
+        const store: MetricsStore = { runs: [] };
+        const result = calculateHealthScore(store);
+
+        expect(result.dimensions.coverage.score).toBe(0);
     });
 });

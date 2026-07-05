@@ -16,7 +16,7 @@ const { main } = await import('../shared/pr-report-core.js');
 
 // Wrap main to inject the provider factory
 async function mainWithProvider(): Promise<void> {
-    return (main as (providerFactory?: unknown) => Promise<void>)(createGitProvider);
+    return main(createGitProvider);
 }
 
 mainWithProvider().catch((err: unknown) => {
