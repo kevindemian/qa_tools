@@ -46,7 +46,7 @@ export function generateQaPostProcessWorkflow(ctx: SetupContext): string {
         '            echo "::warning::CTRF report not found at ${{ inputs.ctrf-path }} — skipping post-processing"',
         '            exit 0',
         '          fi',
-        '          npx tsx shared/pr-report-core.ts --ctrf ${{ inputs.ctrf-path }} --project ${{ inputs.project-name }}',
+        '          npx tsx git_triggers/pr-report-entry.ts --ctrf ${{ inputs.ctrf-path }} --project ${{ inputs.project-name }}',
         '        env:',
         '          GITHUB_TOKEN: ${{ github.token }}',
         '      - name: Upload PR Report HTML',

@@ -56,10 +56,10 @@ describe('GenerateQaPostProcessWorkflow', () => {
         expect(yaml).toContain('exit 0');
     });
 
-    it('runs pr-report-core.ts with correct arguments', () => {
+    it('runs pr-report-entry.ts with correct arguments', () => {
         const yaml = generateQaPostProcessWorkflow(MOCK_CTX);
 
-        expect(yaml).toContain('shared/pr-report-core.ts');
+        expect(yaml).toContain('git_triggers/pr-report-entry.ts');
         expect(yaml).toContain('--ctrf ${{ inputs.ctrf-path }}');
         expect(yaml).toContain('--project ${{ inputs.project-name }}');
     });

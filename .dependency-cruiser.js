@@ -8,7 +8,7 @@ export default {
             severity: 'error',
             from: {
                 path: '^shared/',
-                pathNot: ['^shared/test-utils/'],
+                pathNot: ['^shared/test-utils/', '^shared/__tests__/'],
             },
             to: { path: '^(jira_management|git_triggers)/' },
         },
