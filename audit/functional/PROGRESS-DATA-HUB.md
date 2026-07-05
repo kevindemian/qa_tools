@@ -304,11 +304,11 @@
 
 | ID  | Gap                                             | Severidade | Status |
 | --- | ----------------------------------------------- | ---------- | ------ |
-| G1  | Interface `CiDataHub` é dead code               | BAIXA      | ⏳     |
-| G2  | `tryCreateDataHub` hardcoded para GitHub        | MÉDIA      | ⏳     |
-| G3  | `.gitignore` gaps (state.json, Zone.Identifier) | MÉDIA      | ⏳     |
-| G4  | `_showCiDataHubSummary` nome desatualizado      | BAIXA      | ⏳     |
-| G5  | Comentários de teste referenciam CiDataHub      | BAIXA      | ⏳     |
+| G1  | Interface `CiDataHub` é dead code               | BAIXA      | ✅     |
+| G2  | `tryCreateDataHub` hardcoded para GitHub        | MÉDIA      | ✅     |
+| G3  | `.gitignore` gaps (state.json, Zone.Identifier) | MÉDIA      | ✅     |
+| G4  | `_showCiDataHubSummary` nome desatualizado      | BAIXA      | ✅     |
+| G5  | Comentários de teste referenciam CiDataHub      | BAIXA      | ✅     |
 | G6  | TECHDOC.md desatualizado (CiDataHub)            | MÉDIA      | ⏳     |
 
 ---
@@ -316,19 +316,27 @@
 ### Fase 8.5 — Fechamento de Gaps
 
 **Início:** 2026-07-05
+**Conclusão:** 2026-07-05
 
-| ID    | Tarefa                                    | Status | Data |
-| ----- | ----------------------------------------- | ------ | ---- |
-| 085.1 | Remover interface `CiDataHub` (dead code) | ⏳     |      |
-| 085.2 | Corrigir `tryCreateDataHub` para GitLab   | ⏳     |      |
-| 085.3 | Corrigir `.gitignore`                     | ⏳     |      |
-| 085.4 | Renomear `_showCiDataHubSummary`          | ⏳     |      |
-| 085.5 | Atualizar comentários de teste            | ⏳     |      |
-| 085.6 | Verificação final                         | ⏳     |      |
-| 085.7 | Resolução do commit                       | ⏳     |      |
+| ID    | Tarefa                                    | Status | Data       |
+| ----- | ----------------------------------------- | ------ | ---------- |
+| 085.1 | Remover interface `CiDataHub` (dead code) | ✅     | 2026-07-05 |
+| 085.2 | Corrigir `tryCreateDataHub` para GitLab   | ✅     | 2026-07-05 |
+| 085.3 | Corrigir `.gitignore`                     | ✅     | 2026-07-05 |
+| 085.4 | Renomear `_showCiDataHubSummary`          | ✅     | 2026-07-05 |
+| 085.5 | Atualizar comentários de teste            | ✅     | 2026-07-05 |
+| 085.6 | Verificação final                         | ✅     | 2026-07-05 |
+| 085.7 | Resolução do commit                       | ✅     | 2026-07-05 |
 
-**Commit:** `fix(data-hub): remove dead CiDataHub interface, add GitLab support to PR report, fix gitignore`
+**Commit:** `84432101` — fix(data-hub): remove dead CiDataHub interface, add GitLab support to PR report, fix gitignore
+
+**Checkpoint:**
+
+- `npx tsc --noEmit` = 0 erros (session-state.ts depende do stash reaplicado) ✅
+- `npx vitest run shared/data-hub/` = 169/169 passam ✅
+- `grep -r "CiDataHub" shared/ --include="*.ts"` = 0 resultados em código de produção ✅
+- `grep "_showCiDataHubSummary" git_triggers/` = 0 resultados ✅
 
 ---
 
-**Próxima fase: Fase 8.5 — Fechamento de Gaps**
+**Próxima fase: Fase 9 — Testes Atualizados**
