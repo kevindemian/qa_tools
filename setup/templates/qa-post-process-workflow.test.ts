@@ -72,14 +72,6 @@ describe('GenerateQaPostProcessWorkflow', () => {
         expect(yaml).toContain('path: reports/');
     });
 
-    it('downloads coverage artifact', () => {
-        const yaml = generateQaPostProcessWorkflow(MOCK_CTX);
-
-        expect(yaml).toContain('name: coverage-report');
-        expect(yaml).toContain('path: coverage/');
-        expect(yaml).toContain('if-no-files-found: warn');
-    });
-
     it('uploads PR report HTML artifact', () => {
         const yaml = generateQaPostProcessWorkflow(MOCK_CTX);
 

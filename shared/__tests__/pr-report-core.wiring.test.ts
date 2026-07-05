@@ -89,7 +89,7 @@ const defaultHealthScore = {
     },
 };
 
-describe('tryCreateDataHub wiring', () => {
+describe('TryCreateDataHub wiring', () => {
     beforeEach(() => {
         vi.clearAllMocks();
         delete process.env['GITHUB_STEP_SUMMARY'];
@@ -130,16 +130,17 @@ describe('tryCreateDataHub wiring', () => {
         vi.mocked(fs.existsSync).mockReturnValue(true);
     });
 
-    describe('main() without providerFactory', () => {
+    describe('Main without providerFactory', () => {
         it('calls main without factory — fallback to MetricsStore', async () => {
             expect.hasAssertions();
 
             await main();
+
             expect(mockCiData.getOrFetchDataHub).not.toHaveBeenCalled();
         });
     });
 
-    describe('main() with providerFactory', () => {
+    describe('Main with providerFactory', () => {
         it('calls factory with ciEnv when CI is detected', async () => {
             expect.hasAssertions();
 
@@ -151,10 +152,12 @@ describe('tryCreateDataHub wiring', () => {
 
             await main(factory);
 
-            expect(factory).toHaveBeenCalledOnce();
+            expect(factory).toHaveBeenCalledTimes(1);
+
             const ciEnv = factory.mock.calls[0]?.[0] as { isCI: boolean } | undefined;
+
             expect(ciEnv).toBeDefined();
-            expect(ciEnv?.isCI).toBe(true);
+            expect(ciEnv?.isCI).toBeTruthy();
         });
 
         it('creates DataHub when factory returns GitProvider', async () => {
@@ -205,7 +208,7 @@ describe('tryCreateDataHub wiring', () => {
 
             await main(factory);
 
-            expect(mockPRComment.postPrComment).toHaveBeenCalled();
+            expect(mockPRComment.postPrComment).toHaveBeenCalledWith(expect.any(String));
         });
 
         it('does not call factory when isCI=false', async () => {

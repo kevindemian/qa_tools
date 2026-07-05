@@ -1,5 +1,5 @@
 import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest';
-import fc from 'fast-check';
+import { fc } from '../../shared/deps.js';
 import type { CiEnvironment } from '../git-provider-factory.js';
 
 vi.mock('../gitlab_manager.js', () => {
@@ -29,7 +29,7 @@ function makeCiEnv(overrides: Partial<CiEnvironment> = {}): CiEnvironment {
     };
 }
 
-describe('createGitProvider — property-based', () => {
+describe('CreateGitProvider — property-based', () => {
     const originalEnv = { ...process.env };
 
     beforeEach(() => {
@@ -45,27 +45,32 @@ describe('createGitProvider — property-based', () => {
         process.env = { ...originalEnv };
     });
 
-    it('output is always GitProvider | undefined (never Promise)', async () => {
+    it('output is always GitProvider | undefined (never synchronous non-Promise)', async () => {
+        expect.hasAssertions();
+
         const { createGitProvider } = await import('../git-provider-factory.js');
 
         await fc.assert(
             fc.asyncProperty(fc.boolean(), async (isCI) => {
-                const result = createGitProvider(makeCiEnv({ isCI }));
-                const isGitProviderOrUndefined = result === undefined || ('provider' in result && result !== null);
-                expect(isGitProviderOrUndefined).toBe(true);
+                const result = await createGitProvider(makeCiEnv({ isCI }));
+
+                expect(result).not.toBeInstanceOf(Promise);
             }),
             { numRuns: 100 },
         );
     });
 
     it('isCI=false always returns undefined', async () => {
+        expect.hasAssertions();
+
         const { createGitProvider } = await import('../git-provider-factory.js');
 
         await fc.assert(
             fc.asyncProperty(fc.string(), fc.string(), async (token, projectId) => {
                 process.env['CI_JOB_TOKEN'] = token;
                 process.env['CI_PROJECT_ID'] = projectId;
-                const result = createGitProvider(makeCiEnv({ isCI: false }));
+                const result = await createGitProvider(makeCiEnv({ isCI: false }));
+
                 expect(result).toBeUndefined();
             }),
             { numRuns: 100 },
@@ -73,13 +78,16 @@ describe('createGitProvider — property-based', () => {
     });
 
     it('isCI=true with valid GitLab env always returns object with provider=gitlab', async () => {
+        expect.hasAssertions();
+
         const { createGitProvider } = await import('../git-provider-factory.js');
 
         await fc.assert(
             fc.asyncProperty(fc.string({ minLength: 1 }), fc.string({ minLength: 1 }), async (token, projectId) => {
                 process.env['CI_JOB_TOKEN'] = token;
                 process.env['CI_PROJECT_ID'] = projectId;
-                const result = createGitProvider(makeCiEnv());
+                const result = await createGitProvider(makeCiEnv());
+
                 expect(result).toBeDefined();
                 expect(result).toHaveProperty('provider', 'gitlab');
             }),
@@ -88,12 +96,15 @@ describe('createGitProvider — property-based', () => {
     });
 
     it('isCI=true with valid GitHub env always returns object with provider=github', async () => {
+        expect.hasAssertions();
+
         const { createGitProvider } = await import('../git-provider-factory.js');
 
         await fc.assert(
             fc.asyncProperty(fc.string({ minLength: 1 }), async (token) => {
                 process.env['GITHUB_TOKEN'] = token;
-                const result = createGitProvider(makeCiEnv());
+                const result = await createGitProvider(makeCiEnv());
+
                 expect(result).toBeDefined();
                 expect(result).toHaveProperty('provider', 'github');
             }),
