@@ -367,4 +367,31 @@
 
 ---
 
-**Próxima fase: Fase 10 — Documentação (TECHDOC, BACKLOG, INTEGRATED-PLAN)**
+### Fase 10 — Documentação
+
+**Início:** 2026-07-05
+**Conclusão:** 2026-07-05
+
+| ID  | Tarefa                                           | Status | Data       |
+| --- | ------------------------------------------------ | ------ | ---------- |
+| 130 | Atualizar TECHDOC.md — seção Data Hub            | ✅     | 2026-07-05 |
+| 131 | Atualizar MODULE MAP — data-hub/\* entries       | ✅     | 2026-07-05 |
+| 132 | Verificar referências em BACKLOG/INTEGRATED-PLAN | ✅     | 2026-07-05 |
+
+**Alterações:**
+
+- `docs/TECHDOC.md`: replaced `CiDataHub` interface section with layered DataHub architecture (hub.ts, cache.ts, providers/, compute/)
+- `docs/TECHDOC.md`: added data-hub/\* entries to MODULE MAP table
+- `BACKLOG.md`: historical CiDataHub references kept as-is (historical record)
+- `INTEGRATED-PLAN.md`: no DataHub references (no changes needed)
+
+**Checkpoint:**
+
+- `npx tsc --noEmit` = 0 erros ✅
+- `npm run lint` = 0 violações ✅
+- `npx vitest run` = 419 files, 6023 tests, 0 failures ✅
+- `grep -r "CiDataHub" docs/` = 0 resultados ✅
+
+---
+
+**Próxima fase: Fase 11 — Auditoria Final**
