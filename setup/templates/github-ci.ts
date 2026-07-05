@@ -31,7 +31,7 @@ function generateQaPostProcessActionYaml(): string {
         '    - name: Run QA Tools Post-Processing',
         '      shell: bash',
         '      working-directory: ${{ github.workspace }}',
-        '      run: npx tsx git_triggers/pr-report-entry.ts --ctrf ${{ inputs.ctrf-path }} --project ${{ inputs.project-name }}',
+        '      run: npx tsx shared/pr-report-core.ts --ctrf ${{ inputs.ctrf-path }} --project ${{ inputs.project-name }}',
         '      env:',
         '        GITHUB_TOKEN: ${{ github.token }}',
     ].join('\n');
@@ -45,14 +45,14 @@ export function generateQaPostProcessAction(): string {
  * Generate a complete CI workflow for a GitHub project.
  * Used when no ci.yml exists yet.
  */
-export function generateCIWorkflow(ctx: SetupContext, excludeSchedule: boolean = true): string {
+export function generateCIWorkflow(ctx: SetupContext): string {
     const builder = new WorkflowBuilder('github', ctx.projectName);
     builder.setWorkflowName('CI');
     builder.setOn(['push', 'pull_request', 'workflow_dispatch']);
 
-    const checkoutStep: StepConfig = { uses: 'actions/checkout@v5' };
+    const checkoutStep: StepConfig = { uses: 'actions/checkout@v4' };
     const setupNodeStep: StepConfig = {
-        uses: 'actions/setup-node@v6',
+        uses: 'actions/setup-node@v4',
         with: { 'node-version': ctx.nodeVersion },
     };
     const installStep: StepConfig = { name: 'Install dependencies', run: ctx.installCmd };
@@ -62,19 +62,10 @@ export function generateCIWorkflow(ctx: SetupContext, excludeSchedule: boolean =
     if (ctx.features.prReport) {
         testSteps.push({
             name: 'Upload CTRF report',
-            uses: 'actions/upload-artifact@v7',
+            uses: 'actions/upload-artifact@v4',
             with: {
                 name: 'ctrf-report',
                 path: ctx.ctrfReportPath,
-                'if-no-files-found': 'warn',
-            },
-        });
-        testSteps.push({
-            name: 'Upload coverage report',
-            uses: 'actions/upload-artifact@v7',
-            with: {
-                name: 'coverage-report',
-                path: 'coverage/',
                 'if-no-files-found': 'warn',
             },
         });
@@ -88,9 +79,8 @@ export function generateCIWorkflow(ctx: SetupContext, excludeSchedule: boolean =
     builder.addJob('qa-tools', testJob);
 
     if (ctx.features.prReport) {
-        const ifCondition = excludeSchedule ? "always() && github.event_name != 'schedule'" : 'always()';
         const postProcessJob: JobConfig = {
-            if: ifCondition,
+            if: 'always()',
             needs: ['qa-tools'],
             uses: './.github/workflows/qa-post-process.yml',
             with: {

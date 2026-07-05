@@ -68,7 +68,7 @@ import fs from 'node:fs';
 import { main } from '../pr-report-core.js';
 import type { FlatTest } from '../result_parser.js';
 
-describe('tryCreateDataHub wiring — property-based', () => {
+describe('TryCreateDataHub wiring — property-based', () => {
     beforeEach(() => {
         vi.clearAllMocks();
         delete process.env['CI'];
@@ -126,26 +126,29 @@ describe('tryCreateDataHub wiring — property-based', () => {
     });
 
     it('factory is always called with a GitProvider-like object (never Promise)', async () => {
+        expect.hasAssertions();
+
         process.env['CI'] = 'true';
         process.env['GITHUB_ACTIONS'] = 'true';
         process.env['GITHUB_TOKEN'] = 'gh-token';
 
-        const factoryCalls: unknown[] = [];
-        const factory = vi.fn().mockImplementation((...args: unknown[]) => {
+        const factoryCalls: GitProvider[] = [];
+        const factory = vi.fn().mockImplementation((...args: [GitProvider]) => {
             factoryCalls.push(args[0]);
             return makeMockProvider();
         });
 
         await main(factory);
 
-        if (factoryCalls.length > 0) {
-            const arg = factoryCalls[0];
+        for (const arg of factoryCalls) {
             expect(arg).not.toBeInstanceOf(Promise);
             expect(typeof arg).toBe('object');
         }
     });
 
     it('main() always returns void (never throws)', async () => {
+        expect.hasAssertions();
+
         process.env['CI'] = 'true';
         process.env['GITHUB_ACTIONS'] = 'true';
         process.env['GITHUB_TOKEN'] = 'gh-token';
@@ -155,6 +158,7 @@ describe('tryCreateDataHub wiring — property-based', () => {
                 const factory = vi.fn().mockReturnValue(factoryReturnsProvider ? makeMockProvider() : undefined);
 
                 const result = await main(factory);
+
                 expect(result).toBeUndefined();
             }),
             { numRuns: 50 },
@@ -162,6 +166,8 @@ describe('tryCreateDataHub wiring — property-based', () => {
     });
 
     it('getOrFetchDataHub receives a GitProvider, not a Promise', async () => {
+        expect.hasAssertions();
+
         process.env['CI'] = 'true';
         process.env['GITHUB_ACTIONS'] = 'true';
         process.env['GITHUB_TOKEN'] = 'gh-token';
@@ -172,8 +178,11 @@ describe('tryCreateDataHub wiring — property-based', () => {
 
         await main(factory);
 
-        if (mockCiData.getOrFetchDataHub.mock.calls.length > 0) {
-            const firstArg = mockCiData.getOrFetchDataHub.mock.calls[0]?.[0];
+        const calls = mockCiData.getOrFetchDataHub.mock.calls as GitProvider[][];
+
+        for (const call of calls) {
+            const firstArg = call[0];
+
             expect(firstArg).not.toBeInstanceOf(Promise);
             expect(firstArg).toHaveProperty('provider');
         }

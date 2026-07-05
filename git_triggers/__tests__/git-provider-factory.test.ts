@@ -28,7 +28,7 @@ function makeCiEnv(overrides: Partial<CiEnvironment> = {}): CiEnvironment {
     };
 }
 
-describe('createGitProvider', () => {
+describe('CreateGitProvider', () => {
     const originalEnv = { ...process.env };
 
     beforeEach(() => {
@@ -45,63 +45,82 @@ describe('createGitProvider', () => {
     });
 
     it('returns undefined when ciEnv.isCI is false', async () => {
+        expect.hasAssertions();
+
         const { createGitProvider } = await import('../git-provider-factory.js');
-        const result = createGitProvider(makeCiEnv({ isCI: false }));
+        const result = await createGitProvider(makeCiEnv({ isCI: false }));
 
         expect(result).toBeUndefined();
     });
 
     it('returns undefined when no tokens are configured', async () => {
+        expect.hasAssertions();
+
         const { createGitProvider } = await import('../git-provider-factory.js');
-        const result = createGitProvider(makeCiEnv());
+        const result = await createGitProvider(makeCiEnv());
 
         expect(result).toBeUndefined();
     });
 
     it('returns undefined when CI_JOB_TOKEN is set but CI_PROJECT_ID is missing', async () => {
+        expect.hasAssertions();
+
         process.env['CI_JOB_TOKEN'] = 'gl-token-123';
+
         const { createGitProvider } = await import('../git-provider-factory.js');
-        const result = createGitProvider(makeCiEnv());
+        const result = await createGitProvider(makeCiEnv());
 
         expect(result).toBeUndefined();
     });
 
     it('creates GitLab provider when CI_JOB_TOKEN and CI_PROJECT_ID are set', async () => {
+        expect.hasAssertions();
+
         process.env['CI_JOB_TOKEN'] = 'gl-token-123';
         process.env['CI_PROJECT_ID'] = '12345';
+
         const { createGitProvider } = await import('../git-provider-factory.js');
-        const result = createGitProvider(makeCiEnv());
+        const result = await createGitProvider(makeCiEnv());
 
         expect(result).toBeDefined();
         expect(result).toHaveProperty('provider', 'gitlab');
     });
 
     it('creates GitHub provider when GITHUB_TOKEN is set and no GitLab vars', async () => {
+        expect.hasAssertions();
+
         process.env['GITHUB_TOKEN'] = 'gh-token-123';
+
         const { createGitProvider } = await import('../git-provider-factory.js');
-        const result = createGitProvider(makeCiEnv());
+        const result = await createGitProvider(makeCiEnv());
 
         expect(result).toBeDefined();
         expect(result).toHaveProperty('provider', 'github');
     });
 
     it('uses default GitLab URL when CI_SERVER_URL is absent', async () => {
+        expect.hasAssertions();
+
         process.env['CI_JOB_TOKEN'] = 'gl-token-123';
         process.env['CI_PROJECT_ID'] = '12345';
+
         const { createGitProvider } = await import('../git-provider-factory.js');
         const GitLabManager = (await import('../gitlab_manager.js')).default;
 
-        createGitProvider(makeCiEnv());
+        await createGitProvider(makeCiEnv());
 
         expect(GitLabManager).toHaveBeenCalledWith('12345', 'gl-token-123', 'https://gitlab.com');
     });
 
     it('prefers GitLab when both tokens are set', async () => {
+        expect.hasAssertions();
+
         process.env['CI_JOB_TOKEN'] = 'gl-token-123';
         process.env['CI_PROJECT_ID'] = '12345';
         process.env['GITHUB_TOKEN'] = 'gh-token-123';
+
         const { createGitProvider } = await import('../git-provider-factory.js');
-        const result = createGitProvider(makeCiEnv());
+        const result = await createGitProvider(makeCiEnv());
 
         expect(result).toBeDefined();
         expect(result).toHaveProperty('provider', 'gitlab');

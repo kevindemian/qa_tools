@@ -23,7 +23,7 @@ vi.mock('../github_manager.js', () => ({
     }),
 }));
 
-describe('pr-report-entry — factory type safety', () => {
+describe('PrReportEntry — factory type safety', () => {
     beforeEach(() => {
         vi.clearAllMocks();
         delete process.env['CI_JOB_TOKEN'];
@@ -31,11 +31,14 @@ describe('pr-report-entry — factory type safety', () => {
         delete process.env['GITHUB_TOKEN'];
     });
 
-    it('createGitProvider returns synchronous result (not Promise)', async () => {
+    it('createGitProvider returns Promise<GitProvider> (not synchronous)', async () => {
+        expect.hasAssertions();
+
         process.env['GITHUB_TOKEN'] = 'gh-token';
+
         const { createGitProvider } = await import('../git-provider-factory.js');
 
-        const result = createGitProvider({
+        const result = await createGitProvider({
             isCI: true,
             repo: 'owner/repo',
             branch: 'main',
@@ -44,14 +47,16 @@ describe('pr-report-entry — factory type safety', () => {
             isPullRequest: false,
         });
 
-        expect(result).not.toBeInstanceOf(Promise);
         expect(result).toBeDefined();
+        expect(result).toHaveProperty('provider', 'github');
     });
 
     it('createGitProvider returns undefined when isCI=false', async () => {
+        expect.hasAssertions();
+
         const { createGitProvider } = await import('../git-provider-factory.js');
 
-        const result = createGitProvider({
+        const result = await createGitProvider({
             isCI: false,
             repo: '',
             branch: '',
@@ -61,13 +66,14 @@ describe('pr-report-entry — factory type safety', () => {
         });
 
         expect(result).toBeUndefined();
-        expect(result).not.toBeInstanceOf(Promise);
     });
 
     it('createGitProvider returns undefined when no tokens', async () => {
+        expect.hasAssertions();
+
         const { createGitProvider } = await import('../git-provider-factory.js');
 
-        const result = createGitProvider({
+        const result = await createGitProvider({
             isCI: true,
             repo: 'owner/repo',
             branch: 'main',
