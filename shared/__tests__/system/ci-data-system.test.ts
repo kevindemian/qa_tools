@@ -1,44 +1,29 @@
 /**
  * System tests — CI Data Hub
  *
- * Tests the complete data flow: GitProvider → createCiDataHub → consumers.
- * Validates that CiDataHub data propagates correctly through the entire
- * consumer chain: health-score, quality-gate, pipeline-cost, traceability-matrix.
+ * Tests the complete data flow: DataProvider → DataHubImpl → consumers.
+ * Validates that DataHub data propagates correctly through the entire
+ * consumer chain: health-score, pipeline-cost, traceability-matrix.
  *
- * Uses mocked GitProvider to simulate CI API responses.
+ * Uses mocked DataProvider to simulate CI API responses.
  */
 import { describe, expect, it, vi } from 'vitest';
-import type { GitProvider, PipelineRun, PipelineJob } from '../../types/ci-cd.js';
+import type { PipelineRun, PipelineJob } from '../../types/ci-cd.js';
+import type { DataProvider, RawData } from '../../types/data-hub.js';
+import { DataHubImpl } from '../../data-hub/hub.js';
 import { createFlatTests } from '../../test-utils/factories/flat-test-factory.js';
-import { ciDataHubToDataHub } from '../../data-hub/adapter.js';
 
 vi.mock('../../logger.js', () => ({
     rootLogger: { error: vi.fn(), info: vi.fn(), warn: vi.fn(), debug: vi.fn(), child: vi.fn().mockReturnThis() },
 }));
 
-/* ── Mock GitProvider ──────────────────────────────────────────────────── */
+/* ── Mock DataProvider ──────────────────────────────────────────────────── */
 
-function createMockProvider(runs: PipelineRun[], jobsPerRun: Map<number, PipelineJob[]>): GitProvider {
+function createMockDataProvider(rawData: RawData): DataProvider {
     return {
-        getRecentPipelines: vi.fn().mockResolvedValue(runs),
-        getPipelineJobs: vi.fn().mockImplementation((id: number) => Promise.resolve(jobsPerRun.get(id) ?? [])),
-        listPipelineArtifacts: vi.fn().mockResolvedValue([]),
-        downloadArtifact: vi.fn().mockResolvedValue({ buffer: Buffer.from(''), filename: '' }),
-        triggerPipeline: vi.fn(),
-        getSchedules: vi.fn(),
-        runSchedule: vi.fn(),
-        createMergeRequest: vi.fn(),
-        updateMergeRequest: vi.fn(),
-        getMergeRequest: vi.fn(),
-        searchMergeRequests: vi.fn(),
-        acceptMergeRequest: vi.fn(),
-        isApproved: vi.fn(),
-        getCICDVariables: vi.fn(),
-        getBranch: vi.fn(),
-        getPipeline: vi.fn(),
-        getDiff: vi.fn(),
-        getJobLogs: vi.fn(),
-        provider: 'github' as const,
+        name: 'mock-github',
+        source: 'github',
+        fetchRawData: vi.fn().mockResolvedValue(rawData),
     };
 }
 
@@ -74,7 +59,6 @@ describe('System: CI Data Hub — Full Pipeline Flow', () => {
         it('creates hub with metrics derived from provider data', async () => {
             expect.hasAssertions();
 
-            const { createCiDataHub } = await import('../../ci-data.js');
             const runs = [
                 makeRun(1, { conclusion: 'success' }),
                 makeRun(2, { conclusion: 'success' }),
@@ -86,23 +70,23 @@ describe('System: CI Data Hub — Full Pipeline Flow', () => {
                 [3, [makeJob(30, { status: 'failure' }), makeJob(31, { name: 'lint', status: 'success' })]],
             ]);
 
-            const provider = createMockProvider(runs, jobsMap);
-            const hub = await createCiDataHub(provider, 'owner/repo');
+            const rawData: RawData = { runs, jobs: jobsMap, failureReasons: new Map(), artifacts: new Map() };
+            const provider = createMockDataProvider(rawData);
+            const hub = await DataHubImpl.create([provider], { repo: 'owner/repo' });
 
-            expect(hub.passRate).toBeCloseTo(66.67, 0);
-            expect(hub.recentRunsCount).toBe(3);
+            expect(hub.computed.passRate).toBeCloseTo(66.67, 0);
+            expect(hub.raw.runs).toHaveLength(3);
             expect(hub.provider).toBe('github');
-            expect(hub.jobs.size).toBe(3);
-            expect(hub.topFailingJobs.length).toBeGreaterThan(0);
+            expect(hub.raw.jobs.size).toBe(3);
+            expect(hub.computed.topFailingJobs.length).toBeGreaterThan(0);
         });
 
         it('handles provider returning empty runs', async () => {
             expect.hasAssertions();
 
-            const { createCiDataHub } = await import('../../ci-data.js');
-            const provider = createMockProvider([], new Map());
-            const ciHub = await createCiDataHub(provider, 'owner/repo');
-            const hub = ciDataHubToDataHub(ciHub);
+            const rawData: RawData = { runs: [], jobs: new Map(), failureReasons: new Map(), artifacts: new Map() };
+            const provider = createMockDataProvider(rawData);
+            const hub = await DataHubImpl.create([provider], { repo: 'owner/repo' });
 
             expect(hub.raw.runs).toHaveLength(0);
             expect(hub.computed.passRate).toBe(0);
@@ -114,12 +98,11 @@ describe('System: CI Data Hub — Full Pipeline Flow', () => {
         it('health score uses DataHub passRate instead of MetricsStore when provided', async () => {
             expect.hasAssertions();
 
-            const { createCiDataHub } = await import('../../ci-data.js');
             const { calculateHealthScore } = await import('../../health-score.js');
             const runs = [makeRun(1, { conclusion: 'success' }), makeRun(2, { conclusion: 'failure' })];
-            const provider = createMockProvider(runs, new Map());
-            const ciHub = await createCiDataHub(provider, 'owner/repo');
-            const hub = ciDataHubToDataHub(ciHub);
+            const rawData: RawData = { runs, jobs: new Map(), failureReasons: new Map(), artifacts: new Map() };
+            const provider = createMockDataProvider(rawData);
+            const hub = await DataHubImpl.create([provider], { repo: 'owner/repo' });
 
             const store = {
                 runs: [
@@ -145,10 +128,9 @@ describe('System: CI Data Hub — Full Pipeline Flow', () => {
     });
 
     describe('Hub data → pipeline-cost consumer', () => {
-        it('pipeline cost uses ciData.runs for real cost calculation', async () => {
+        it('pipeline cost uses DataHub runs for real cost calculation', async () => {
             expect.hasAssertions();
 
-            const { createCiDataHub } = await import('../../ci-data.js');
             const { calculatePipelineCost } = await import('../../pipeline-cost.js');
             const runs = [
                 makeRun(1, {
@@ -160,9 +142,9 @@ describe('System: CI Data Hub — Full Pipeline Flow', () => {
                     updated_at: '2026-07-01T11:10:00Z',
                 }),
             ];
-            const provider = createMockProvider(runs, new Map());
-            const ciHub = await createCiDataHub(provider, 'owner/repo');
-            const hub = ciDataHubToDataHub(ciHub);
+            const rawData: RawData = { runs, jobs: new Map(), failureReasons: new Map(), artifacts: new Map() };
+            const provider = createMockDataProvider(rawData);
+            const hub = await DataHubImpl.create([provider], { repo: 'owner/repo' });
 
             const result = calculatePipelineCost(null, 0.01, hub);
 
@@ -173,19 +155,18 @@ describe('System: CI Data Hub — Full Pipeline Flow', () => {
     });
 
     describe('Hub data → traceability-matrix consumer', () => {
-        it('traceability matrix uses ciData.flakyTests for flakiness', async () => {
+        it('traceability matrix uses DataHub flaky tests for flakiness', async () => {
             expect.hasAssertions();
 
-            const { createCiDataHub } = await import('../../ci-data.js');
             const { buildTraceabilityMatrix } = await import('../../traceability-matrix.js');
             const runs = [makeRun(1)];
             const jobsMap = new Map<number, PipelineJob[]>([
                 [1, [makeJob(10, { status: 'failure' }), makeJob(11, { status: 'success' })]],
             ]);
 
-            const provider = createMockProvider(runs, jobsMap);
-            const ciHub = await createCiDataHub(provider, 'owner/repo');
-            const hub = ciDataHubToDataHub(ciHub);
+            const rawData: RawData = { runs, jobs: jobsMap, failureReasons: new Map(), artifacts: new Map() };
+            const provider = createMockDataProvider(rawData);
+            const hub = await DataHubImpl.create([provider], { repo: 'owner/repo' });
 
             const metricsStore = {
                 runs: [
@@ -221,12 +202,11 @@ describe('System: CI Data Hub — Full Pipeline Flow', () => {
         it('empty DataHub produces same health score as no hub (clean degradation)', async () => {
             expect.hasAssertions();
 
-            const { createCiDataHub } = await import('../../ci-data.js');
             const { calculateHealthScore } = await import('../../health-score.js');
 
-            const provider = createMockProvider([], new Map());
-            const ciHub = await createCiDataHub(provider, 'owner/repo');
-            const hub = ciDataHubToDataHub(ciHub);
+            const rawData: RawData = { runs: [], jobs: new Map(), failureReasons: new Map(), artifacts: new Map() };
+            const provider = createMockDataProvider(rawData);
+            const hub = await DataHubImpl.create([provider], { repo: 'owner/repo' });
 
             const store = {
                 runs: [
@@ -257,54 +237,16 @@ describe('System: CI Data Hub — Full Pipeline Flow', () => {
         it('hub handles provider API errors gracefully', async () => {
             expect.hasAssertions();
 
-            const { createCiDataHub } = await import('../../ci-data.js');
-            const provider = {
-                getRecentPipelines: vi.fn().mockRejectedValue(new Error('API rate limit')),
-                getPipelineJobs: vi.fn(),
-                listPipelineArtifacts: vi.fn(),
-                downloadArtifact: vi.fn(),
-                triggerPipeline: vi.fn(),
-                getSchedules: vi.fn(),
-                runSchedule: vi.fn(),
-                createMergeRequest: vi.fn(),
-                updateMergeRequest: vi.fn(),
-                getMergeRequest: vi.fn(),
-                searchMergeRequests: vi.fn(),
-                acceptMergeRequest: vi.fn(),
-                isApproved: vi.fn(),
-                getCICDVariables: vi.fn(),
-                getBranch: vi.fn(),
-                getPipeline: vi.fn(),
-                getDiff: vi.fn(),
-                getJobLogs: vi.fn(),
-                provider: 'github' as const,
-            } as GitProvider;
+            const provider: DataProvider = {
+                name: 'mock-failing',
+                source: 'github',
+                fetchRawData: vi.fn().mockRejectedValue(new Error('API rate limit')),
+            };
 
-            const hub = await createCiDataHub(provider, 'owner/repo');
+            const hub = await DataHubImpl.create([provider], { repo: 'owner/repo' });
 
-            expect(hub.runs).toHaveLength(0);
-            expect(hub.passRate).toBe(0);
-        });
-
-        it('hub handles partial job fetch failures', async () => {
-            expect.hasAssertions();
-
-            const { createCiDataHub } = await import('../../ci-data.js');
-            const runs = [makeRun(1), makeRun(2)];
-            let callCount = 0;
-            const provider = createMockProvider(runs, new Map());
-            provider.getPipelineJobs = vi.fn().mockImplementation(() => {
-                callCount++;
-                if (callCount === 1) {
-                    return Promise.resolve([makeJob(10)]);
-                }
-                return Promise.reject(new Error('Job fetch failed'));
-            });
-
-            const hub = await createCiDataHub(provider, 'owner/repo');
-
-            expect(hub.runs).toHaveLength(2);
-            expect(hub.jobs.size).toBe(1);
+            expect(hub.raw.runs).toHaveLength(0);
+            expect(hub.computed.passRate).toBe(0);
         });
     });
 });

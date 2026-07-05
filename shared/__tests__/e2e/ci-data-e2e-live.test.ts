@@ -8,8 +8,8 @@
  * This ensures the tests don't fail in CI environments without credentials.
  */
 import { describe, expect, it, beforeAll } from 'vitest';
-import { createCiDataHub } from '../../ci-data.js';
-import type { GitProvider } from '../../types/ci-cd.js';
+import type { DataProvider, RawData, FetchOptions } from '../../types/data-hub.js';
+import { DataHubImpl } from '../../data-hub/hub.js';
 
 /* ── Skip condition ────────────────────────────────────────────────────── */
 
@@ -21,10 +21,9 @@ const hasGithubToken = Boolean(GITHUB_TOKEN);
 const hasGitlabToken = Boolean(GITLAB_TOKEN);
 const hasAnyToken = hasGithubToken || hasGitlabToken;
 
-/* ── Real GitHub Provider ──────────────────────────────────────────────── */
+/* ── Real GitHub DataProvider ──────────────────────────────────────────── */
 
-function createGithubProvider(token: string, repo: string): GitProvider {
-    const [owner, repoName] = repo.split('/');
+function createGithubDataProvider(token: string): DataProvider {
     const baseUrl = 'https://api.github.com';
     const headers = {
         Authorization: `token ${token}`,
@@ -32,12 +31,17 @@ function createGithubProvider(token: string, repo: string): GitProvider {
     };
 
     return {
-        provider: 'github',
-        getRecentPipelines: async (limit = 30) => {
-            const url = `${baseUrl}/repos/${owner}/${repoName}/actions/runs?per_page=${limit}`;
-            const res = await fetch(url, { headers });
-            if (!res.ok) throw new Error(`GitHub API error: ${res.status}`);
-            const data = (await res.json()) as {
+        name: 'github-e2e',
+        source: 'github',
+        fetchRawData: async (options: FetchOptions): Promise<RawData> => {
+            const [owner, repoName] = options.repo.split('/');
+            const limit = options.count ?? 30;
+
+            // Fetch runs
+            const runsUrl = `${baseUrl}/repos/${owner}/${repoName}/actions/runs?per_page=${limit}`;
+            const runsRes = await fetch(runsUrl, { headers });
+            if (!runsRes.ok) throw new Error(`GitHub API error: ${runsRes.status}`);
+            const runsData = (await runsRes.json()) as {
                 workflow_runs: Array<{
                     id: number;
                     conclusion: string | null;
@@ -47,7 +51,8 @@ function createGithubProvider(token: string, repo: string): GitProvider {
                     run_started_at?: string;
                 }>;
             };
-            return data.workflow_runs.map((r) => ({
+
+            const runs = runsData.workflow_runs.map((r) => ({
                 id: r.id,
                 conclusion: (r.conclusion ?? '') as 'success' | 'failure' | '',
                 head_branch: r.head_branch,
@@ -55,80 +60,74 @@ function createGithubProvider(token: string, repo: string): GitProvider {
                 updated_at: r.updated_at,
                 run_started_at: r.run_started_at || r.created_at,
             }));
-        },
-        getPipelineJobs: async (pipelineId: string | number) => {
-            const runId = Number(pipelineId);
-            const url = `${baseUrl}/repos/${owner}/${repoName}/actions/runs/${runId}/jobs`;
-            const res = await fetch(url, { headers });
-            if (!res.ok) throw new Error(`GitHub API error: ${res.status}`);
-            const data = (await res.json()) as {
-                jobs: Array<{
+
+            // Fetch jobs for each run
+            const jobs = new Map<
+                number,
+                Array<{
                     id: number;
                     name: string;
+                    stage: string;
                     status: string;
-                    started_at: string;
-                    completed_at: string | null;
-                }>;
-            };
-            return data.jobs.map((j) => {
-                const duration =
-                    j.completed_at && j.started_at
-                        ? (new Date(j.completed_at).getTime() - new Date(j.started_at).getTime()) / 1000
-                        : 0;
-                return {
-                    id: j.id,
-                    name: j.name,
-                    stage: 'test',
-                    status: j.status,
-                    started_at: j.started_at,
-                    finished_at: j.completed_at ?? '',
-                    duration,
+                    started_at?: string;
+                    finished_at?: string;
+                    duration?: number;
+                }>
+            >();
+
+            for (const run of runs) {
+                const jobsUrl = `${baseUrl}/repos/${owner}/${repoName}/actions/runs/${run.id}/jobs`;
+                const jobsRes = await fetch(jobsUrl, { headers });
+                if (!jobsRes.ok) continue;
+
+                const jobsData = (await jobsRes.json()) as {
+                    jobs: Array<{
+                        id: number;
+                        name: string;
+                        status: string;
+                        started_at: string;
+                        completed_at: string | null;
+                    }>;
                 };
-            });
+
+                jobs.set(
+                    run.id,
+                    jobsData.jobs.map((j) => {
+                        const duration =
+                            j.completed_at && j.started_at
+                                ? (new Date(j.completed_at).getTime() - new Date(j.started_at).getTime()) / 1000
+                                : 0;
+                        return {
+                            id: j.id,
+                            name: j.name,
+                            stage: 'test',
+                            status: j.status,
+                            started_at: j.started_at,
+                            finished_at: j.completed_at ?? '',
+                            duration,
+                        };
+                    }),
+                );
+            }
+
+            return {
+                runs,
+                jobs,
+                failureReasons: new Map(),
+                artifacts: new Map(),
+            };
         },
-        listPipelineArtifacts: () => Promise.resolve([]),
-        downloadArtifact: () => Promise.resolve({ buffer: Buffer.from(''), filename: '' }),
-        triggerPipeline: () => {
-            throw new Error('Not implemented in E2E tests');
-        },
-        getSchedules: () => Promise.resolve([]),
-        runSchedule: () => {
-            throw new Error('Not implemented in E2E tests');
-        },
-        createMergeRequest: () =>
-            Promise.resolve({ iid: 0, web_url: '', title: '', state: 'opened', source_branch: '', target_branch: '' }),
-        updateMergeRequest: () =>
-            Promise.resolve({ iid: 0, web_url: '', title: '', state: 'opened', source_branch: '', target_branch: '' }),
-        getMergeRequest: () =>
-            Promise.resolve({
-                iid: 0,
-                web_url: '',
-                title: '',
-                state: 'opened',
-                source_branch: '',
-                target_branch: '',
-                description: '',
-                labels: [],
-            }),
-        searchMergeRequests: () => Promise.resolve([]),
-        acceptMergeRequest: () => Promise.resolve(null),
-        isApproved: () => Promise.resolve(false),
-        getCICDVariables: () => Promise.resolve(null),
-        getBranch: () => Promise.resolve({ name: '', commitSha: '' }),
-        getPipeline: () => Promise.resolve({ id: 0, status: 'completed', state: 'success', ref: '', sha: '' }),
-        getDiff: () => Promise.resolve(''),
-        getJobLogs: () => Promise.resolve(null),
     };
 }
 
 /* ── Tests ─────────────────────────────────────────────────────────────── */
 
 describe.skipIf(!hasAnyToken)('E2E Live: CI Data Hub — Real API', () => {
-    let githubProvider: GitProvider | undefined;
+    let githubProvider: DataProvider | undefined;
 
     beforeAll(() => {
         if (hasGithubToken && GITHUB_TOKEN) {
-            githubProvider = createGithubProvider(GITHUB_TOKEN, GITHUB_REPO);
+            githubProvider = createGithubDataProvider(GITHUB_TOKEN);
         }
     });
 
@@ -137,13 +136,13 @@ describe.skipIf(!hasAnyToken)('E2E Live: CI Data Hub — Real API', () => {
 
         if (!githubProvider) return;
 
-        const hub = await createCiDataHub(githubProvider, GITHUB_REPO);
+        const hub = await DataHubImpl.create([githubProvider], { repo: GITHUB_REPO });
 
         expect(hub).toBeDefined();
         expect(hub.provider).toBe('github');
         expect(hub.repo).toBe(GITHUB_REPO);
-        expect(hub.passRate).toBeGreaterThanOrEqual(0);
-        expect(hub.passRate).toBeLessThanOrEqual(100);
+        expect(hub.computed.passRate).toBeGreaterThanOrEqual(0);
+        expect(hub.computed.passRate).toBeLessThanOrEqual(100);
     });
 
     it('hub has non-negative avg duration', async () => {
@@ -151,9 +150,9 @@ describe.skipIf(!hasAnyToken)('E2E Live: CI Data Hub — Real API', () => {
 
         if (!githubProvider) return;
 
-        const hub = await createCiDataHub(githubProvider, GITHUB_REPO);
+        const hub = await DataHubImpl.create([githubProvider], { repo: GITHUB_REPO });
 
-        expect(hub.avgDuration).toBeGreaterThanOrEqual(0);
+        expect(hub.computed.avgDuration).toBeGreaterThanOrEqual(0);
     });
 
     it('hub has valid suite speed P95', async () => {
@@ -161,9 +160,9 @@ describe.skipIf(!hasAnyToken)('E2E Live: CI Data Hub — Real API', () => {
 
         if (!githubProvider) return;
 
-        const hub = await createCiDataHub(githubProvider, GITHUB_REPO);
+        const hub = await DataHubImpl.create([githubProvider], { repo: GITHUB_REPO });
 
-        expect(hub.suiteSpeedP95).toBeGreaterThanOrEqual(0);
+        expect(hub.computed.suiteSpeedP95).toBeGreaterThanOrEqual(0);
     });
 
     it('hub branch breakdown has valid pass rates', async () => {
@@ -171,9 +170,9 @@ describe.skipIf(!hasAnyToken)('E2E Live: CI Data Hub — Real API', () => {
 
         if (!githubProvider) return;
 
-        const hub = await createCiDataHub(githubProvider, GITHUB_REPO);
+        const hub = await DataHubImpl.create([githubProvider], { repo: GITHUB_REPO });
 
-        for (const [, data] of Object.entries(hub.branchBreakdown)) {
+        for (const [, data] of Object.entries(hub.computed.branchBreakdown)) {
             expect(data.passRate).toBeGreaterThanOrEqual(0);
             expect(data.passRate).toBeLessThanOrEqual(100);
         }
