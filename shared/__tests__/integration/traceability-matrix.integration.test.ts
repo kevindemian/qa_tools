@@ -4,7 +4,7 @@
  * Validates end-to-end flow:
  * - buildTraceabilityMatrix → generateTraceabilityHtml
  * - HTML output structure, tree rendering, error handling, custom title
- * - CiDataHub path (uses flaky tests from CI when available)
+ * - DataHub path (uses flaky tests from CI when available)
  *
  * Pure function — no filesystem dependencies.
  */

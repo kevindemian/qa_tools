@@ -667,12 +667,34 @@ function parseArgs(args: string[]): CliOptions {
 async function tryCreateDataHub(
     ciEnv: ReturnType<typeof getCiEnv>,
 ): Promise<import('./types/data-hub.js').DataHub | undefined> {
-    if (!ciEnv.isCI || !process.env['GITHUB_TOKEN']) return undefined;
+    if (!ciEnv.isCI) return undefined;
+
+    // Detect GitLab CI
+    const gitlabToken = process.env['CI_JOB_TOKEN'];
+    const gitlabProjectId = process.env['CI_PROJECT_ID'];
+    const isGitLab = !!(gitlabToken && gitlabProjectId);
+
+    // Detect GitHub Actions
+    const githubToken = process.env['GITHUB_TOKEN'];
+    const isGitHub = !!githubToken && !isGitLab;
+
+    if (!isGitLab && !isGitHub) return undefined;
+
     try {
         const { getOrFetchDataHub } = await import('./ci-data.js');
-        const { default: GitHubManager } = await import('../git_triggers/github_manager.js');
-        const token = process.env['GITHUB_TOKEN'];
-        const provider = new GitHubManager(ciEnv.repo, token);
+        let provider: import('./types/ci-cd.js').GitProvider;
+
+        if (isGitLab && gitlabProjectId && gitlabToken) {
+            const { default: GitLabManager } = await import('../git_triggers/gitlab_manager.js');
+            const gitlabBaseUrl = process.env['CI_SERVER_URL'] ?? 'https://gitlab.com';
+            provider = new GitLabManager(gitlabProjectId, gitlabToken, gitlabBaseUrl);
+        } else if (githubToken) {
+            const { default: GitHubManager } = await import('../git_triggers/github_manager.js');
+            provider = new GitHubManager(ciEnv.repo, githubToken);
+        } else {
+            return undefined;
+        }
+
         const dataHub = await getOrFetchDataHub(provider, ciEnv.repo);
         if (dataHub) {
             rootLogger.info(

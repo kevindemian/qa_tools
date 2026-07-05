@@ -290,12 +290,45 @@
 
 ---
 
-### Pendência Futura — Coleta Assíncrona
+### Último commit conocional
 
-- **Proposta:** Coletar dados brutos assincronamente na inicialização do sistema
-- **Estado atual:** Coleta on-demand ao disparar CI
-- **Status:** Discutir posteriormente
+- `1a626393` — refactor: remove dead defect-trends function and tests
 
 ---
 
-**Próxima fase: Fase 8 — Sanitização**
+## Sprint 3 — Fechamento de Gaps + Fase 8.5
+
+**Início:** 2026-07-05
+
+### Auditoria de Gaps (2026-07-05)
+
+| ID  | Gap                                             | Severidade | Status |
+| --- | ----------------------------------------------- | ---------- | ------ |
+| G1  | Interface `CiDataHub` é dead code               | BAIXA      | ⏳     |
+| G2  | `tryCreateDataHub` hardcoded para GitHub        | MÉDIA      | ⏳     |
+| G3  | `.gitignore` gaps (state.json, Zone.Identifier) | MÉDIA      | ⏳     |
+| G4  | `_showCiDataHubSummary` nome desatualizado      | BAIXA      | ⏳     |
+| G5  | Comentários de teste referenciam CiDataHub      | BAIXA      | ⏳     |
+| G6  | TECHDOC.md desatualizado (CiDataHub)            | MÉDIA      | ⏳     |
+
+---
+
+### Fase 8.5 — Fechamento de Gaps
+
+**Início:** 2026-07-05
+
+| ID    | Tarefa                                    | Status | Data |
+| ----- | ----------------------------------------- | ------ | ---- |
+| 085.1 | Remover interface `CiDataHub` (dead code) | ⏳     |      |
+| 085.2 | Corrigir `tryCreateDataHub` para GitLab   | ⏳     |      |
+| 085.3 | Corrigir `.gitignore`                     | ⏳     |      |
+| 085.4 | Renomear `_showCiDataHubSummary`          | ⏳     |      |
+| 085.5 | Atualizar comentários de teste            | ⏳     |      |
+| 085.6 | Verificação final                         | ⏳     |      |
+| 085.7 | Resolução do commit                       | ⏳     |      |
+
+**Commit:** `fix(data-hub): remove dead CiDataHub interface, add GitLab support to PR report, fix gitignore`
+
+---
+
+**Próxima fase: Fase 8.5 — Fechamento de Gaps**

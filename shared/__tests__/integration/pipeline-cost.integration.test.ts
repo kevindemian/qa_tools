@@ -6,7 +6,7 @@
  * - Empty input
  * - Error fallback
  * - Custom title
- * - CiDataHub path (uses real CI data when available)
+ * - DataHub path (uses real CI data when available)
  */
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 import type { MetricsRun } from '../../metrics.js';
