@@ -134,9 +134,3 @@ jobs:
               with:
                   category: /language:${{ matrix.language }}
               continue-on-error: true
-  post-process:
-    if: always()
-    needs: [test]
-    uses: ./.github/workflows/qa-post-process.yml
-    with:
-      project-name: ECSPOL
