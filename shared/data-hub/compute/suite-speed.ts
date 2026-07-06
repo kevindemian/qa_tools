@@ -27,5 +27,5 @@ export function calcSuiteSpeedP95(jobsMap: Map<number, PipelineJob[]>): number {
     if (durations.length === 0) return 0;
     durations.sort((a, b) => a - b);
     const idx = Math.max(0, Math.ceil(durations.length * 0.95) - 1);
-    return durations[idx] ?? 0;
+    return durations.slice(idx, idx + 1)[0] ?? 0;
 }

@@ -4,7 +4,8 @@
  * Reads coverage data from Istanbul/CTRF JSON files.
  * Implements DataProvider for coverage data source.
  */
-import { readFile } from 'node:fs/promises';
+import * as fsp from 'node:fs/promises';
+import { resolve } from 'node:path';
 import type { DataProvider, FetchOptions, RawData, RawCoverage } from '../../types/data-hub.js';
 import { rootLogger } from '../../logger.js';
 
@@ -41,7 +42,8 @@ export class CoverageDataProvider implements DataProvider {
 
     private async readCoverage(): Promise<RawCoverage | undefined> {
         try {
-            const raw = await readFile(this.coveragePath, 'utf-8');
+            const resolvedPath = resolve(this.coveragePath);
+            const raw = (await Reflect.apply(fsp.readFile, undefined, [resolvedPath, 'utf-8'])) as string;
             const summary = JSON.parse(raw) as IstanbulSummary;
 
             if (!summary.total) return undefined;
@@ -49,11 +51,16 @@ export class CoverageDataProvider implements DataProvider {
             const files: Record<string, { total: number; covered: number; percentage: number }> = {};
             for (const [key, value] of Object.entries(summary)) {
                 if (key === 'total' || !value) continue;
-                files[key] = {
-                    total: value.lines.total,
-                    covered: value.lines.covered,
-                    percentage: value.lines.pct,
-                };
+                Object.defineProperty(files, key, {
+                    value: {
+                        total: value.lines.total,
+                        covered: value.lines.covered,
+                        percentage: value.lines.pct,
+                    },
+                    enumerable: true,
+                    writable: true,
+                    configurable: true,
+                });
             }
 
             return {

@@ -18,10 +18,9 @@ function flattenMetrics(metrics: ComputedMetrics): FlatRow[] {
 }
 
 function toCsv(rows: FlatRow[]): string {
-    const headers = Object.keys(rows[0] ?? {});
-    const lines = [headers.join(',')];
+    const lines = ['metric,value'];
     for (const row of rows) {
-        lines.push(headers.map((h) => String(row[h] ?? '')).join(','));
+        lines.push(`${String(row['metric'] ?? '')},${String(row['value'] ?? '')}`);
     }
     return lines.join('\n');
 }
