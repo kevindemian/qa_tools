@@ -31,6 +31,7 @@ function createMockGitProvider(runs: PipelineRun[], jobsPerRun: Map<number, Pipe
         getBranch: vi.fn(),
         getPipeline: vi.fn(),
         getDiff: vi.fn(),
+        getWorkflowRunTiming: vi.fn(),
         provider: 'github' as const,
     };
 }
@@ -137,6 +138,7 @@ describe('Integration: Data Hub Providers', () => {
             getBranch: vi.fn(),
             getPipeline: vi.fn(),
             getDiff: vi.fn(),
+            getWorkflowRunTiming: vi.fn(),
             provider: 'github' as const,
         };
 

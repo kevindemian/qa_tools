@@ -115,7 +115,14 @@ export async function glListPipelineArtifacts(
     const jobs = data ?? [];
     return jobs
         .filter((j) => j['artifacts_file'] || (j['artifacts'] && (j['artifacts'] as unknown[]).length > 0))
-        .map((j: JsonObject) => ({ id: j['id'] as string | number, name: j['name'] as string }));
+        .map((j: JsonObject) => {
+            const artFile = j['artifacts_file'] as { filename?: string; size?: number } | undefined;
+            return {
+                id: j['id'] as string | number,
+                name: j['name'] as string,
+                ...(artFile?.size != null && { size_in_bytes: artFile.size }),
+            };
+        });
 }
 
 export async function glGetCICDVariables(client: AxiosInstance, owner: string, repo: string): Promise<CICDVariable[]> {

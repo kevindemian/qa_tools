@@ -6,6 +6,10 @@ import type { createHttpClient } from '../shared/http-client.js';
 type HttpClient = ReturnType<typeof createHttpClient>;
 
 export abstract class GitProviderBase {
+    /** Default: timing not available. Override in GitHubManager. */
+    getWorkflowRunTiming(_runId: number): Promise<{ run_duration_ms: number } | null> {
+        return Promise.resolve(null);
+    }
     protected abstract client: HttpClient;
 
     protected async _get<T = JsonObject>(

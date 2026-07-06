@@ -38,6 +38,7 @@ function createMockProvider(runs: PipelineRun[], jobsPerRun: Map<number, Pipelin
         getPipeline: vi.fn(),
         getDiff: vi.fn(),
         getJobLogs: vi.fn(),
+        getWorkflowRunTiming: vi.fn(),
         provider: 'github' as const,
     };
 }

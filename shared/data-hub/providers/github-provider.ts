@@ -4,8 +4,9 @@
  * Adapts GitHubManager (GitProvider) to the DataProvider interface.
  * Fetches raw CI/CD data from GitHub Actions API.
  */
+import { humanizeError } from '../../prompt-errors.js';
 import type { GitProvider, PipelineJob, ArtifactInfo } from '../../types/ci-cd.js';
-import type { DataProvider, FetchOptions, RawData } from '../../types/data-hub.js';
+import type { DataProvider, FetchOptions, RawData, WorkflowRunTiming } from '../../types/data-hub.js';
 import { rootLogger } from '../../logger.js';
 import { extractFailureReasons } from '../compute/failure-reasons.js';
 
@@ -22,6 +23,7 @@ export class GitHubDataProvider implements DataProvider {
         const jobsMap = new Map<number, PipelineJob[]>();
         const artifactsMap = new Map<number, ArtifactInfo[]>();
         const failureReasonsMap = new Map<number, string[]>();
+        const timingMap = new Map<number, WorkflowRunTiming>();
 
         for (const run of runs) {
             const runId = run.id;
@@ -41,13 +43,24 @@ export class GitHubDataProvider implements DataProvider {
                     rootLogger.debug(`GitHub: artifacts fetch failed for run ${runIdNum}: ${String(err)}`);
                 }
 
+                try {
+                    const timing = await this.provider.getWorkflowRunTiming(runIdNum);
+                    if (timing != null) {
+                        timingMap.set(runIdNum, timing);
+                    }
+                } catch (err) {
+                    rootLogger.debug(
+                        `GitHub: timing fetch failed for run ${runIdNum}: ${humanizeError(String(err))?.msg ?? String(err)}`,
+                    );
+                }
+
                 await this.fetchFailureReasons(runJobs, failureReasonsMap);
             } catch (err) {
                 rootLogger.debug(`GitHub: jobs fetch failed for run ${runIdNum}: ${String(err)}`);
             }
         }
 
-        return { runs, jobs: jobsMap, artifacts: artifactsMap, failureReasons: failureReasonsMap };
+        return { runs, jobs: jobsMap, artifacts: artifactsMap, failureReasons: failureReasonsMap, timing: timingMap };
     }
 
     /**

@@ -42,6 +42,7 @@ import {
     wfGetCICDVariables,
     wfGetSchedules,
     wfRunSchedule,
+    wfGetWorkflowRunTiming,
 } from './github-workflow.js';
 import { getOpenIssues } from './github-issues.js';
 import { getBranch, getDiff } from './github-branch.js';
@@ -180,6 +181,10 @@ class GitHubManager extends GitProviderBase implements GitProvider {
 
     async getJobLogs(jobId: string | number, maxBytes = 10240): Promise<string | null> {
         return wfGetJobLogs(this.client, this.owner, this.repo, jobId, maxBytes);
+    }
+
+    override async getWorkflowRunTiming(runId: number): Promise<{ run_duration_ms: number } | null> {
+        return wfGetWorkflowRunTiming(this.client, this.owner, this.repo, runId);
     }
 
     async getSchedules(): Promise<ScheduleInfo[]> {
