@@ -176,7 +176,7 @@ function computeActualMetrics(store: MetricsStore, config: HealthScoreConfig, da
         run.total > 0 ? ((run.passed + run.failed) / run.total) * 100 : 0,
     );
 
-    const actualCoverage = _resolveCoverage(config, store, dataHub);
+    const actualCoverage = _resolveCoverage(config, store);
     const actualSuiteSpeed = _computeSuiteSpeed(runs);
     const flakyPctResult = _normalizeFlakyPct(actualFlakyPct);
     const hasCiRuns = dataHub !== undefined && dataHub.raw.runs.length > 0;
@@ -193,15 +193,13 @@ function computeActualMetrics(store: MetricsStore, config: HealthScoreConfig, da
     };
 }
 
-function _resolveCoverage(config: HealthScoreConfig, store: MetricsStore, dataHub?: DataHub): number {
+function _resolveCoverage(config: HealthScoreConfig, store: MetricsStore): number {
     if (config.coverageOverride !== undefined) {
         return config.coverageOverride;
     }
     if (store.coverageHistory && store.coverageHistory.length > 0) {
-        return store.coverageHistory[store.coverageHistory.length - 1]?.coveragePct ?? 0;
-    }
-    if (dataHub?.computed?.coverage !== undefined && dataHub.computed.coverage > 0) {
-        return dataHub.computed.coverage;
+        const lastEntry = store.coverageHistory[store.coverageHistory.length - 1];
+        return lastEntry?.coveragePct ?? 0;
     }
     return 0;
 }
