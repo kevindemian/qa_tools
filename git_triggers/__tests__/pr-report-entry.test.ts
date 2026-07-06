@@ -41,10 +41,7 @@ describe('PrReportEntry — factory type safety', () => {
         const result = createGitProvider({
             isCI: true,
             repo: 'owner/repo',
-            branch: 'main',
-            commit: 'abc',
             runId: '1',
-            isPullRequest: false,
         });
 
         expect(result).toBeDefined();
@@ -59,10 +56,7 @@ describe('PrReportEntry — factory type safety', () => {
         const result = createGitProvider({
             isCI: false,
             repo: '',
-            branch: '',
-            commit: '',
             runId: '',
-            isPullRequest: false,
         });
 
         expect(result).toBeUndefined();
@@ -76,10 +70,7 @@ describe('PrReportEntry — factory type safety', () => {
         const result = createGitProvider({
             isCI: true,
             repo: 'owner/repo',
-            branch: 'main',
-            commit: 'abc',
             runId: '1',
-            isPullRequest: false,
         });
 
         expect(result).toBeUndefined();
