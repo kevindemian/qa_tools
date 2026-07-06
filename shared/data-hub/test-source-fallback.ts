@@ -69,7 +69,8 @@ export function validateTestFile(filePath: string): FallbackResult {
 }
 
 function formatValidationSuccess(result: FallbackResult): string {
-    const stats = result.data!.stats;
+    if (!result.data) return 'Invalid result';
+    const stats = result.data.stats;
     const total = stats.total;
     const passed = stats.passed;
     const failed = stats.failed;
@@ -108,14 +109,14 @@ export async function askTestSource(): Promise<FallbackResult> {
         const formatted = formatValidationResult(result);
 
         if (formatted.success) {
-            console.log(formatted.message);
+            rootLogger.info(formatted.message);
             return result;
         }
 
-        console.log(formatted.message);
+        rootLogger.info(formatted.message);
 
         if (attempt < 2) {
-            console.log('Tente novamente ou pressione Enter sem digitar nada para pular.');
+            rootLogger.info('Tente novamente ou pressione Enter sem digitar nada para pular.');
         }
     }
 

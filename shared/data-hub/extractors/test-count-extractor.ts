@@ -30,7 +30,7 @@ function fromCtrf(
 ): { passed: number; failed: number; skipped: number; total: number } | null {
     if (!data?.results?.summary) return null;
     const s = data.results.summary;
-    if (s.total === undefined || s.total === null) return null;
+    if (s.total === undefined) return null;
     return {
         passed: s.passed ?? 0,
         failed: s.failed ?? 0,
@@ -53,9 +53,18 @@ function fromJunit(xml: string): { passed: number; failed: number; skipped: numb
 function fromCheckRunSummary(
     summary: string,
 ): { passed: number; failed: number; skipped: number; total: number } | null {
-    const m = summary.match(/Tests:\s*(\d+)\s+passed,\s*(\d+)\s+failed,\s*(\d+)\s+total/);
+    const m = /Tests:\s*(\d+)\s+passed,\s*(\d+)\s+failed,\s*(\d+)\s+total/.exec(summary);
     if (m) {
-        return { passed: parseInt(m[1]!, 10), failed: parseInt(m[2]!, 10), skipped: 0, total: parseInt(m[3]!, 10) };
+        const passedStr = m[1];
+        const failedStr = m[2];
+        const totalStr = m[3];
+        if (!passedStr || !failedStr || !totalStr) return null;
+        return {
+            passed: parseInt(passedStr, 10),
+            failed: parseInt(failedStr, 10),
+            skipped: 0,
+            total: parseInt(totalStr, 10),
+        };
     }
     return null;
 }
@@ -64,7 +73,7 @@ function fromMochawesome(
     data: TestCountInput['mochawesome'],
 ): { passed: number; failed: number; skipped: number; total: number } | null {
     const s = data?.stats;
-    if (!s || s.tests === undefined || s.tests === null) return null;
+    if (!s || s.tests === undefined) return null;
     return {
         passed: s.passes ?? 0,
         failed: s.failures ?? 0,

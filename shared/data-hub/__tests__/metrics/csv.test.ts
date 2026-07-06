@@ -28,36 +28,44 @@ const FAKE_METRICS: ComputedMetrics = {
     quarantineStatus: { flakyCount: 0, quarantinedCount: 0 },
 };
 
-describe('exportMetricsCsv', () => {
-    it('R1: exporta como CSV string', () => {
+describe('ExportMetricsCsv', () => {
+    it('r1: exporta como CSV string', () => {
         const csv = exportMetricsCsv(FAKE_METRICS);
+
         expect(csv).toContain('passRate');
         expect(csv).toContain('85');
     });
 
-    it('R2: CSV tem cabeçalho e ao menos uma linha de dados', () => {
+    it('r2: CSV tem cabeçalho e ao menos uma linha de dados', () => {
         const csv = exportMetricsCsv(FAKE_METRICS);
         const lines = csv.trim().split('\n');
+
         expect(lines.length).toBeGreaterThanOrEqual(2);
-        expect(lines[0]!).toContain('metric');
+        expect(lines[0] as string).toContain('metric');
     });
 });
 
-describe('importMetricsCsv', () => {
-    it('R3: importa CSV de volta para métricas', () => {
+describe('ImportMetricsCsv', () => {
+    it('r3: importa CSV de volta para métricas', () => {
         const csv = exportMetricsCsv(FAKE_METRICS);
         const result = importMetricsCsv(csv);
+
         expect(result).not.toBeNull();
-        expect(result!.passRate).toBe(85);
+
+        const r = result as ComputedMetrics;
+
+        expect(r.passRate).toBe(85);
     });
 
-    it('R4: CSV inválido → retorna null', () => {
+    it('r4: CSV inválido → retorna null', () => {
         const result = importMetricsCsv('');
+
         expect(result).toBeNull();
     });
 
-    it('R5: CSV sem cabeçalho esperado → retorna null', () => {
+    it('r5: CSV sem cabeçalho esperado → retorna null', () => {
         const result = importMetricsCsv('foo,bar\n1,2');
+
         expect(result).toBeNull();
     });
 });

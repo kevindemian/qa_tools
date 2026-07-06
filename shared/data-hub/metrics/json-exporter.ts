@@ -17,9 +17,9 @@ export function exportMetricsJson(metrics: ComputedMetrics): string {
 
 export function importMetricsJson(json: string): ComputedMetrics | null {
     try {
-        const parsed = JSON.parse(json);
+        const parsed: unknown = JSON.parse(json);
         if (!validateMetricsShape(parsed)) return null;
-        return parsed as ComputedMetrics;
+        return parsed;
     } catch {
         return null;
     }

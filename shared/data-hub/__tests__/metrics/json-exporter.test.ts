@@ -27,17 +27,19 @@ const FAKE_METRICS: ComputedMetrics = {
     quarantineStatus: { flakyCount: 0, quarantinedCount: 0 },
 };
 
-describe('exportMetricsJson', () => {
-    it('R1: exporta ComputedMetrics como JSON string', () => {
+describe('ExportMetricsJson', () => {
+    it('r1: exporta ComputedMetrics como JSON string', () => {
         const json = exportMetricsJson(FAKE_METRICS);
-        const parsed = JSON.parse(json);
+        const parsed = JSON.parse(json) as ComputedMetrics;
+
         expect(parsed.passRate).toBe(85);
         expect(parsed.pipelineCost.totalMinutes).toBe(100);
     });
 
-    it('R2: JSON resultante tem schema compatível', () => {
+    it('r2: JSON resultante tem schema compatível', () => {
         const json = exportMetricsJson(FAKE_METRICS);
-        const parsed = JSON.parse(json);
+        const parsed = JSON.parse(json) as ComputedMetrics;
+
         expect(parsed).toHaveProperty('passRate');
         expect(parsed).toHaveProperty('avgDuration');
         expect(parsed).toHaveProperty('coverage');
@@ -46,21 +48,27 @@ describe('exportMetricsJson', () => {
     });
 });
 
-describe('importMetricsJson', () => {
-    it('R3: importa JSON string de volta para ComputedMetrics', () => {
+describe('ImportMetricsJson', () => {
+    it('r3: importa JSON string de volta para ComputedMetrics', () => {
         const json = JSON.stringify(FAKE_METRICS);
         const result = importMetricsJson(json);
+
         expect(result).not.toBeNull();
-        expect(result!.passRate).toBe(85);
+
+        const r = result as ComputedMetrics;
+
+        expect(r.passRate).toBe(85);
     });
 
-    it('R4: JSON inválido → retorna null', () => {
+    it('r4: JSON inválido → retorna null', () => {
         const result = importMetricsJson('not valid json');
+
         expect(result).toBeNull();
     });
 
-    it('R5: JSON sem campos obrigatórios → retorna null', () => {
+    it('r5: JSON sem campos obrigatórios → retorna null', () => {
         const result = importMetricsJson('{"passRate":85}');
+
         expect(result).toBeNull();
     });
 });

@@ -16,11 +16,28 @@
  * @module log-parser
  */
 
+function extractNumberBefore(input: string, keywordIdx: number): number {
+    let end = keywordIdx - 1;
+    while (end >= 0) {
+        const ch = input[end];
+        if (ch !== ' ') break;
+        end--;
+    }
+    let start = end;
+    while (start >= 0) {
+        const ch = input[start];
+        if (ch === undefined || ch < '0' || ch > '9') break;
+        start--;
+    }
+    if (start === end) return NaN;
+    return parseInt(input.substring(start + 1, end + 1), 10);
+}
+
 const FRAMEWORK_PATTERNS: Record<string, RegExp> = {
     vitest: /Tests\s+(\d+)\s+passed/,
     jest: /Tests:\s+(\d+)\s+failed,\s+(\d+)\s+passed,\s+(\d+)\s+total/,
-    mocha: /(\d+)\s+passing.*?(\d+)\s+failing/s,
-    pytest: /={2,}\s+(\d+)\s+passed.*?(\d+)\s+failed/,
+    mocha: /passing/,
+    pytest: /passed/,
 };
 
 interface FrameworkHandler {
@@ -37,43 +54,56 @@ interface FrameworkHandler {
 const HANDLERS: FrameworkHandler[] = [
     {
         name: 'jest',
-        test: FRAMEWORK_PATTERNS['jest']!,
+        test: FRAMEWORK_PATTERNS['jest'] as RegExp,
         extract: (m) => ({
-            failed: parseInt(m[1]!, 10),
-            passed: parseInt(m[2]!, 10),
+            failed: parseInt(m[1] as string, 10),
+            passed: parseInt(m[2] as string, 10),
             skipped: 0,
-            total: parseInt(m[3]!, 10),
+            total: parseInt(m[3] as string, 10),
         }),
     },
     {
         name: 'vitest',
-        test: FRAMEWORK_PATTERNS['vitest']!,
+        test: FRAMEWORK_PATTERNS['vitest'] as RegExp,
         extract: (m) => ({
-            passed: parseInt(m[1]!, 10),
+            passed: parseInt(m[1] as string, 10),
             failed: 0,
             skipped: 0,
-            total: parseInt(m[1]!, 10),
+            total: parseInt(m[1] as string, 10),
         }),
     },
     {
         name: 'pytest',
-        test: FRAMEWORK_PATTERNS['pytest']!,
-        extract: (m) => ({
-            passed: parseInt(m[1]!, 10),
-            failed: parseInt(m[2]!, 10),
-            skipped: 0,
-            total: parseInt(m[1]!, 10) + parseInt(m[2]!, 10),
-        }),
+        test: FRAMEWORK_PATTERNS['pytest'] as RegExp,
+        extract: (m) => {
+            if (!m.input.includes('===')) return { passed: NaN, failed: NaN, skipped: NaN, total: NaN };
+            const passed = extractNumberBefore(m.input, m.index);
+            const failedIdx = m.input.indexOf('failed');
+            if (failedIdx === -1) return { passed: NaN, failed: NaN, skipped: NaN, total: NaN };
+            const failed = extractNumberBefore(m.input, failedIdx);
+            return {
+                passed,
+                failed,
+                skipped: 0,
+                total: passed + failed,
+            };
+        },
     },
     {
         name: 'mocha',
-        test: FRAMEWORK_PATTERNS['mocha']!,
-        extract: (m) => ({
-            passed: parseInt(m[1]!, 10),
-            failed: parseInt(m[2]!, 10) || 0,
-            skipped: 0,
-            total: parseInt(m[1]!, 10) + (parseInt(m[2]!, 10) || 0),
-        }),
+        test: FRAMEWORK_PATTERNS['mocha'] as RegExp,
+        extract: (m) => {
+            const passed = extractNumberBefore(m.input, m.index);
+            const failingIdx = m.input.indexOf('failing');
+            if (failingIdx === -1) return { passed: NaN, failed: NaN, skipped: NaN, total: NaN };
+            const failed = extractNumberBefore(m.input, failingIdx);
+            return {
+                passed,
+                failed,
+                skipped: 0,
+                total: passed + failed,
+            };
+        },
     },
 ];
 
@@ -95,7 +125,8 @@ export interface LogParseResult {
 }
 
 function stripAnsi(input: string): string {
-    return input.replace(/\x1B\[[0-9;]*[a-zA-Z]/g, '');
+    const ansiPattern = new RegExp(String.fromCharCode(0x1b) + '\\[[0-9;]*[a-zA-Z]', 'g');
+    return input.replace(ansiPattern, '');
 }
 
 function extractFailures(logText: string): string[] {

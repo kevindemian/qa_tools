@@ -78,14 +78,12 @@ function extractFirstAttributeValue(
     if (typeof item === 'string') return item;
     if (Array.isArray(item)) {
         for (const el of item) {
-            if (el !== null && typeof el !== 'string') {
-                const msg = (el as { [key: string]: unknown })['@_message'];
-                if (typeof msg === 'string') return msg;
-            }
+            const msg = el['@_message'];
+            if (typeof msg === 'string') return msg;
         }
         return undefined;
     }
-    return (item as { [key: string]: unknown })['@_message'] as string | undefined;
+    return item['@_message'] as string | undefined;
 }
 
 function extractStackTrace(
@@ -95,15 +93,14 @@ function extractStackTrace(
     if (typeof item === 'string') return item;
     if (Array.isArray(item)) {
         const texts = item
-            .filter((el): el is { [key: string]: unknown } => el !== null && typeof el !== 'string')
             .map((el) => {
-                const txt = (el as { [key: string]: unknown })['#text'];
+                const txt = el['#text'];
                 return typeof txt === 'string' ? txt : undefined;
             })
             .filter((s): s is string => s != null);
         return texts.length > 0 ? texts.join('\n') : undefined;
     }
-    const txt = (item as { [key: string]: unknown })['#text'];
+    const txt = item['#text'];
     return typeof txt === 'string' ? txt : undefined;
 }
 
