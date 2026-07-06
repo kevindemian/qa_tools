@@ -1,5 +1,6 @@
 import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest';
 import type { CiEnvironment } from '../git-provider-factory.js';
+import { createGitProvider } from '../git-provider-factory.js';
 
 vi.mock('../gitlab_manager.js', () => {
     const MockGitLab = vi.fn().mockImplementation(function MockGitLab(id: string, token: string, baseUrl: string) {
@@ -47,7 +48,6 @@ describe('CreateGitProvider', () => {
     it('returns undefined when ciEnv.isCI is false', async () => {
         expect.hasAssertions();
 
-        const { createGitProvider } = await import('../git-provider-factory.js');
         const result = await createGitProvider(makeCiEnv({ isCI: false }));
 
         expect(result).toBeUndefined();
@@ -56,7 +56,6 @@ describe('CreateGitProvider', () => {
     it('returns undefined when no tokens are configured', async () => {
         expect.hasAssertions();
 
-        const { createGitProvider } = await import('../git-provider-factory.js');
         const result = await createGitProvider(makeCiEnv());
 
         expect(result).toBeUndefined();
@@ -67,7 +66,6 @@ describe('CreateGitProvider', () => {
 
         process.env['CI_JOB_TOKEN'] = 'gl-token-123';
 
-        const { createGitProvider } = await import('../git-provider-factory.js');
         const result = await createGitProvider(makeCiEnv());
 
         expect(result).toBeUndefined();
@@ -79,7 +77,6 @@ describe('CreateGitProvider', () => {
         process.env['CI_JOB_TOKEN'] = 'gl-token-123';
         process.env['CI_PROJECT_ID'] = '12345';
 
-        const { createGitProvider } = await import('../git-provider-factory.js');
         const result = await createGitProvider(makeCiEnv());
 
         expect(result).toBeDefined();
@@ -91,7 +88,6 @@ describe('CreateGitProvider', () => {
 
         process.env['GITHUB_TOKEN'] = 'gh-token-123';
 
-        const { createGitProvider } = await import('../git-provider-factory.js');
         const result = await createGitProvider(makeCiEnv());
 
         expect(result).toBeDefined();
@@ -104,7 +100,6 @@ describe('CreateGitProvider', () => {
         process.env['CI_JOB_TOKEN'] = 'gl-token-123';
         process.env['CI_PROJECT_ID'] = '12345';
 
-        const { createGitProvider } = await import('../git-provider-factory.js');
         const GitLabManager = (await import('../gitlab_manager.js')).default;
 
         await createGitProvider(makeCiEnv());
@@ -119,7 +114,6 @@ describe('CreateGitProvider', () => {
         process.env['CI_PROJECT_ID'] = '12345';
         process.env['GITHUB_TOKEN'] = 'gh-token-123';
 
-        const { createGitProvider } = await import('../git-provider-factory.js');
         const result = await createGitProvider(makeCiEnv());
 
         expect(result).toBeDefined();

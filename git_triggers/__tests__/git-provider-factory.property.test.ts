@@ -1,6 +1,7 @@
 import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest';
 import { fc } from '../../shared/deps.js';
 import type { CiEnvironment } from '../git-provider-factory.js';
+import { createGitProvider } from '../git-provider-factory.js';
 
 vi.mock('../gitlab_manager.js', () => {
     const MockGitLab = vi.fn().mockImplementation(function MockGitLab(id: string, token: string, baseUrl: string) {
@@ -48,8 +49,6 @@ describe('CreateGitProvider — property-based', () => {
     it('output is always GitProvider | undefined (never synchronous non-Promise)', async () => {
         expect.hasAssertions();
 
-        const { createGitProvider } = await import('../git-provider-factory.js');
-
         await fc.assert(
             fc.asyncProperty(fc.boolean(), async (isCI) => {
                 const result = await createGitProvider(makeCiEnv({ isCI }));
@@ -62,8 +61,6 @@ describe('CreateGitProvider — property-based', () => {
 
     it('isCI=false always returns undefined', async () => {
         expect.hasAssertions();
-
-        const { createGitProvider } = await import('../git-provider-factory.js');
 
         await fc.assert(
             fc.asyncProperty(fc.string(), fc.string(), async (token, projectId) => {
@@ -80,8 +77,6 @@ describe('CreateGitProvider — property-based', () => {
     it('isCI=true with valid GitLab env always returns object with provider=gitlab', async () => {
         expect.hasAssertions();
 
-        const { createGitProvider } = await import('../git-provider-factory.js');
-
         await fc.assert(
             fc.asyncProperty(fc.string({ minLength: 1 }), fc.string({ minLength: 1 }), async (token, projectId) => {
                 process.env['CI_JOB_TOKEN'] = token;
@@ -97,8 +92,6 @@ describe('CreateGitProvider — property-based', () => {
 
     it('isCI=true with valid GitHub env always returns object with provider=github', async () => {
         expect.hasAssertions();
-
-        const { createGitProvider } = await import('../git-provider-factory.js');
 
         await fc.assert(
             fc.asyncProperty(fc.string({ minLength: 1 }), async (token) => {
