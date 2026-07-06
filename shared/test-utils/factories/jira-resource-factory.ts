@@ -1,5 +1,7 @@
 import type JiraResource from '../../../jira_management/jira_resource.js';
 import type { Mock, Mocked } from 'vitest';
+import type { LogContext } from '../../types/common.js';
+import { PROJECT_MANAGEMENT_PATH, TEST_CREDENTIALS } from '../constants.js';
 
 type MockProxy<T> = {
     [P in keyof T]: T[P] extends (...args: unknown[]) => unknown ? Mock : T[P] extends object ? MockProxy<T[P]> : T[P];
@@ -7,12 +9,12 @@ type MockProxy<T> = {
 
 export function createMockJiraResource(overrides?: Partial<MockProxy<JiraResource>>): Mocked<JiraResource> {
     const base = {
-        baseUrl: 'https://jira.test.com/rest/api/2',
-        originUrl: 'https://jira.test.com',
-        personalToken: 'fake-token',
+        baseUrl: PROJECT_MANAGEMENT_PATH.API_BASE,
+        originUrl: PROJECT_MANAGEMENT_PATH.BASE_URL,
+        personalToken: TEST_CREDENTIALS.PROJECT_MANAGEMENT,
         axiosInstance: {} as never,
         log: {
-            context: {} as Record<string, unknown>,
+            context: {} as LogContext,
             _logDir: null,
             _filePathCached: null,
             _fileError: false,

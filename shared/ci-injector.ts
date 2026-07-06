@@ -10,6 +10,7 @@
  * - `pr-report-setup-handler.ts` (PR Report config wizard)
  */
 import type { SetupContext } from '../setup/context.js';
+import { ACTION_VERSIONS } from './test-utils/constants.js';
 
 /* ── Constants ─────────────────────────────────────────────────────────── */
 
@@ -55,15 +56,15 @@ export function generatePostProcessWorkflowYaml(options: PostProcessWorkflowOpti
         '  post-process:',
         '    runs-on: ubuntu-latest',
         '    steps:',
-        '      - uses: actions/checkout@v5',
-        '      - uses: actions/setup-node@v6',
+        `      - uses: ${ACTION_VERSIONS.CHECKOUT}`,
+        `      - uses: ${ACTION_VERSIONS.SETUP_NODE}`,
         '        with:',
         '          node-version: ' + nodeVersion,
         '          cache: npm',
         '      - name: Install dependencies',
         '        run: ' + installCmd,
         '      - name: Download CTRF report',
-        '        uses: actions/download-artifact@v8',
+        `        uses: ${ACTION_VERSIONS.DOWNLOAD_ARTIFACT}`,
         '        with:',
         '          name: ctrf-report',
         '          path: reports/',
@@ -79,7 +80,7 @@ export function generatePostProcessWorkflowYaml(options: PostProcessWorkflowOpti
         '          GITHUB_TOKEN: ${{ github.token }}',
         '      - name: Upload PR Report HTML',
         '        if: always()',
-        '        uses: actions/upload-artifact@v7',
+        `        uses: ${ACTION_VERSIONS.UPLOAD_ARTIFACT}`,
         '        with:',
         '          name: pr-report-html',
         '          path: reports/pr-report.html',

@@ -7,3 +7,25 @@ export { createMockTestExecutionCreator } from './test-execution-creator-factory
 export { createMockContext } from './context-factory.js';
 export { createMockResponse, createMockAxiosInstance } from './response-factory.js';
 export { createFlatTest, createFlatTests } from './flat-test-factory.js';
+
+// Centralized semantic constants (purpose-based)
+export {
+    PROJECT_MANAGEMENT_PATH,
+    CI_CD_PATH,
+    CONTEXT_IDS,
+    TEST_CREDENTIALS,
+    ACTION_VERSIONS,
+    PAGINATION,
+} from '../constants.js';
+
+// Reusable mock module factories
+export {
+    mockLoggerModule,
+    mockPromptModule,
+    mockPromptModuleMinimal,
+    mockGitProviderError,
+    mockHttpClientModule,
+    mockSessionStateModule,
+    mockStateModule,
+    mockConfigModule,
+} from '../mock-modules.js';

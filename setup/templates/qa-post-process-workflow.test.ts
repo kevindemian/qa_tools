@@ -1,5 +1,6 @@
 import { describe, it, expect } from 'vitest';
 import { generateQaPostProcessWorkflow } from './qa-post-process-workflow.js';
+import { ACTION_VERSIONS } from '../../shared/test-utils/constants.js';
 import type { SetupContext } from '../context.js';
 
 const MOCK_CTX: SetupContext = {
@@ -67,7 +68,7 @@ describe('GenerateQaPostProcessWorkflow', () => {
     it('downloads CTRF artifact with correct name', () => {
         const yaml = generateQaPostProcessWorkflow(MOCK_CTX);
 
-        expect(yaml).toContain('actions/download-artifact@v8');
+        expect(yaml).toContain(ACTION_VERSIONS.DOWNLOAD_ARTIFACT);
         expect(yaml).toContain('name: ctrf-report');
         expect(yaml).toContain('path: reports/');
     });
@@ -75,7 +76,7 @@ describe('GenerateQaPostProcessWorkflow', () => {
     it('uploads PR report HTML artifact', () => {
         const yaml = generateQaPostProcessWorkflow(MOCK_CTX);
 
-        expect(yaml).toContain('actions/upload-artifact@v7');
+        expect(yaml).toContain(ACTION_VERSIONS.UPLOAD_ARTIFACT);
         expect(yaml).toContain('name: pr-report-html');
         expect(yaml).toContain('path: reports/pr-report.html');
         expect(yaml).toContain('if-no-files-found: warn');
@@ -84,10 +85,10 @@ describe('GenerateQaPostProcessWorkflow', () => {
     it('uses modern action versions (not pinned SHAs)', () => {
         const yaml = generateQaPostProcessWorkflow(MOCK_CTX);
 
-        expect(yaml).toContain('actions/checkout@v5');
-        expect(yaml).toContain('actions/setup-node@v6');
-        expect(yaml).toContain('actions/download-artifact@v8');
-        expect(yaml).toContain('actions/upload-artifact@v7');
+        expect(yaml).toContain(ACTION_VERSIONS.CHECKOUT);
+        expect(yaml).toContain(ACTION_VERSIONS.SETUP_NODE);
+        expect(yaml).toContain(ACTION_VERSIONS.DOWNLOAD_ARTIFACT);
+        expect(yaml).toContain(ACTION_VERSIONS.UPLOAD_ARTIFACT);
     });
 
     it('uses node version and install command from context', () => {
