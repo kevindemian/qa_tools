@@ -94,10 +94,20 @@ export interface Issue {
 
 /** A pipeline artifact reference. */
 export interface ArtifactInfo {
-    /** Artifact ID. */
+    /** Artifact ID (job ID for GitLab). */
     id: string | number;
     /** Artifact filename. */
     name: string;
+    /** Artifact size in bytes. */
+    size_in_bytes?: number | undefined;
+    /** ISO timestamp when the artifact was created. */
+    created_at?: string | undefined;
+    /** Whether the artifact has expired (GitLab). */
+    expired?: boolean | undefined;
+    /** URL to download the artifact archive. */
+    archive_download_url?: string | undefined;
+    /** Content digest hash. */
+    digest?: string | undefined;
 }
 
 /** A GitHub Actions / GitLab CI pipeline run summary. */
@@ -165,6 +175,8 @@ export interface GitProvider {
     downloadArtifact: (artifactId: string | number) => Promise<{ buffer: Buffer; filename: string }>;
     getJobLogs: (jobId: string | number, maxBytes?: number) => Promise<string | null>;
     getDiff: (source: string, target: string) => Promise<string>;
+    /** Fetch workflow run timing (GitHub-specific; GitLab returns null). */
+    getWorkflowRunTiming: (runId: number) => Promise<{ run_duration_ms: number } | null>;
     provider: 'gitlab' | 'github';
 }
 

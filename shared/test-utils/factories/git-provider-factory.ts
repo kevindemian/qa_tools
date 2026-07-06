@@ -22,6 +22,7 @@ export function createMockGitProvider(overrides?: Partial<Mocked<GitProvider>>):
         downloadArtifact: vi.fn(),
         getJobLogs: vi.fn(),
         getDiff: vi.fn(),
+        getWorkflowRunTiming: vi.fn(),
     };
     return { ...base, ...overrides };
 }

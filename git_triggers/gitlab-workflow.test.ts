@@ -12,6 +12,7 @@ import {
 } from './gitlab-workflow.js';
 import { apiGet, apiPost, projectPath } from './gitlab-api.js';
 import { createMockAxiosInstance } from '../shared/test-utils/factories/response-factory.js';
+import { nonNull } from '../shared/test-utils.js';
 vi.mock('./gitlab-api', () => ({
     apiGet: vi.fn(),
     apiPost: vi.fn(),
@@ -236,17 +237,31 @@ describe('Gitlab Workflow', () => {
     });
 
     describe('GlListPipelineArtifacts', () => {
-        it('returns jobs with artifacts_file', async () => {
+        it('returns jobs with artifacts_file including size', async () => {
             expect.hasAssertions();
 
             vi.mocked(apiGet).mockResolvedValue([
-                { id: 101, name: 'test', artifacts_file: { filename: 'results.zip' } },
+                { id: 101, name: 'test', artifacts_file: { filename: 'results.zip', size: 2048 } },
                 { id: 102, name: 'build', artifacts: [] },
                 { id: 103, name: 'lint' },
             ]);
             const result = await glListPipelineArtifacts(mockClient, 'owner', 'repo', 42);
 
-            expect(result).toStrictEqual([{ id: 101, name: 'test' }]);
+            expect(result).toHaveLength(1);
+            expect(nonNull(result[0])).toStrictEqual({ id: 101, name: 'test', size_in_bytes: 2048 });
+        });
+
+        it('returns jobs with artifacts_file without size', async () => {
+            expect.hasAssertions();
+
+            vi.mocked(apiGet).mockResolvedValue([
+                { id: 101, name: 'test', artifacts_file: { filename: 'results.zip' } },
+            ]);
+            const result = await glListPipelineArtifacts(mockClient, 'owner', 'repo', 42);
+
+            expect(result).toHaveLength(1);
+            expect(nonNull(result[0])).toStrictEqual({ id: 101, name: 'test' });
+            expect(nonNull(result[0]).size_in_bytes).toBeUndefined();
         });
 
         it('returns jobs with non-empty artifacts array', async () => {

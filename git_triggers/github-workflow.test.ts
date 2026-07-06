@@ -3,6 +3,7 @@ import type { Mock, Mocked } from 'vitest';
 import { nonNull } from '../shared/test-utils.js';
 import type { AxiosInstance } from '../shared/deps.js';
 import type { JsonObject } from '../shared/types.js';
+import { CONTEXT_IDS, CI_CD_PATH } from '../shared/test-utils/constants.js';
 import { apiGet, apiPost } from './github-api.js';
 import {
     wfTriggerPipeline,
@@ -15,6 +16,7 @@ import {
     wfGetCICDVariables,
     wfGetSchedules,
     wfRunSchedule,
+    wfGetWorkflowRunTiming,
 } from './github-workflow.js';
 
 vi.mock('./github-api', () => ({
@@ -63,11 +65,17 @@ describe('WfTriggerPipeline', () => {
         expect.hasAssertions();
 
         mockApiPost.mockResolvedValue({});
-        const result = await wfTriggerPipeline(client, 'myorg', 'myrepo', 'https://api.github.com', {
-            ref: 'main',
-            variables: [{ key: 'VAR', value: 'val' }],
-            workflow_id: '123',
-        });
+        const result = await wfTriggerPipeline(
+            client,
+            CONTEXT_IDS.ORGANIZATION,
+            CONTEXT_IDS.REPOSITORY,
+            CI_CD_PATH.GITHUB_API,
+            {
+                ref: 'main',
+                variables: [{ key: 'VAR', value: 'val' }],
+                workflow_id: '123',
+            },
+        );
 
         expect(mockApiPost).toHaveBeenCalledWith(
             client,
@@ -83,10 +91,16 @@ describe('WfTriggerPipeline', () => {
 
         mockApiGet.mockResolvedValue({ workflows: [{ id: 42, name: 'ci' }] });
         mockApiPost.mockResolvedValue({});
-        const result = await wfTriggerPipeline(client, 'myorg', 'myrepo', 'https://api.github.com', {
-            ref: 'dev',
-            variables: [],
-        });
+        const result = await wfTriggerPipeline(
+            client,
+            CONTEXT_IDS.ORGANIZATION,
+            CONTEXT_IDS.REPOSITORY,
+            CI_CD_PATH.GITHUB_API,
+            {
+                ref: 'dev',
+                variables: [],
+            },
+        );
 
         expect(mockApiGet).toHaveBeenCalledWith(client, '/repos/myorg/myrepo/actions/workflows', {
             operation: 'listar workflows',
@@ -106,10 +120,16 @@ describe('WfTriggerPipeline', () => {
         expect.hasAssertions();
 
         mockApiGet.mockResolvedValue({ workflows: [] });
-        const result = await wfTriggerPipeline(client, 'myorg', 'myrepo', 'https://api.github.com', {
-            ref: 'main',
-            variables: [],
-        });
+        const result = await wfTriggerPipeline(
+            client,
+            CONTEXT_IDS.ORGANIZATION,
+            CONTEXT_IDS.REPOSITORY,
+            CI_CD_PATH.GITHUB_API,
+            {
+                ref: 'main',
+                variables: [],
+            },
+        );
 
         expect(result).toBeUndefined();
     });
@@ -118,10 +138,16 @@ describe('WfTriggerPipeline', () => {
         expect.hasAssertions();
 
         mockApiGet.mockResolvedValue(null);
-        const result = await wfTriggerPipeline(client, 'myorg', 'myrepo', 'https://api.github.com', {
-            ref: 'main',
-            variables: [],
-        });
+        const result = await wfTriggerPipeline(
+            client,
+            CONTEXT_IDS.ORGANIZATION,
+            CONTEXT_IDS.REPOSITORY,
+            CI_CD_PATH.GITHUB_API,
+            {
+                ref: 'main',
+                variables: [],
+            },
+        );
 
         expect(result).toBeUndefined();
     });
@@ -132,7 +158,7 @@ describe('WfTriggerPipeline', () => {
         mockApiPost.mockRejectedValue(new Error('API error'));
 
         await expect(
-            wfTriggerPipeline(client, 'myorg', 'myrepo', 'https://api.github.com', {
+            wfTriggerPipeline(client, CONTEXT_IDS.ORGANIZATION, CONTEXT_IDS.REPOSITORY, CI_CD_PATH.GITHUB_API, {
                 ref: 'main',
                 variables: [],
                 workflow_id: '1',
@@ -157,7 +183,7 @@ describe('WfGetRecentPipelines', () => {
             { id: 2, run_number: 99, head_branch: 'dev', status: 'completed', conclusion: 'failure' },
         ];
         mockApiGet.mockResolvedValue({ workflow_runs: runs });
-        const result = await wfGetRecentPipelines(client, 'myorg', 'myrepo', 2);
+        const result = await wfGetRecentPipelines(client, CONTEXT_IDS.ORGANIZATION, CONTEXT_IDS.REPOSITORY, 2);
 
         expect(mockApiGet).toHaveBeenCalledWith(client, '/repos/myorg/myrepo/actions/runs', {
             operation: 'buscar runs',
@@ -171,7 +197,7 @@ describe('WfGetRecentPipelines', () => {
         expect.hasAssertions();
 
         mockApiGet.mockResolvedValue({ workflow_runs: [] });
-        await wfGetRecentPipelines(client, 'myorg', 'myrepo');
+        await wfGetRecentPipelines(client, CONTEXT_IDS.ORGANIZATION, CONTEXT_IDS.REPOSITORY);
 
         expect(mockApiGet).toHaveBeenCalledWith(client, '/repos/myorg/myrepo/actions/runs', {
             operation: 'buscar runs',
@@ -184,7 +210,7 @@ describe('WfGetRecentPipelines', () => {
         expect.hasAssertions();
 
         mockApiGet.mockResolvedValue(null);
-        const result = await wfGetRecentPipelines(client, 'myorg', 'myrepo');
+        const result = await wfGetRecentPipelines(client, CONTEXT_IDS.ORGANIZATION, CONTEXT_IDS.REPOSITORY);
 
         expect(result).toStrictEqual([]);
     });
@@ -202,7 +228,7 @@ describe('WfGetPipeline', () => {
         expect.hasAssertions();
 
         mockApiGet.mockResolvedValue({ id: 42, status: 'completed', conclusion: 'success' });
-        const result = await wfGetPipeline(client, 'myorg', 'myrepo', 42);
+        const result = await wfGetPipeline(client, CONTEXT_IDS.ORGANIZATION, CONTEXT_IDS.REPOSITORY, 42);
 
         expect(mockApiGet).toHaveBeenCalledWith(client, '/repos/myorg/myrepo/actions/runs/42', {
             operation: 'buscar run',
@@ -215,7 +241,7 @@ describe('WfGetPipeline', () => {
         expect.hasAssertions();
 
         mockApiGet.mockResolvedValue(null);
-        const result = await wfGetPipeline(client, 'myorg', 'myrepo', 999);
+        const result = await wfGetPipeline(client, CONTEXT_IDS.ORGANIZATION, CONTEXT_IDS.REPOSITORY, 999);
 
         expect(result).toBeNull();
     });
@@ -229,33 +255,154 @@ describe('WfGetPipelineJobs', () => {
         mockApiGet.mockClear();
     });
 
-    it('returns mapped jobs from API', async () => {
+    it('returns mapped jobs metadata from API', async () => {
         expect.hasAssertions();
 
         mockApiGet.mockResolvedValue({
             jobs: [
-                { id: 201, name: 'test (22)', runner_group_name: 'ubuntu', status: 'completed', conclusion: 'success' },
-                { id: 202, name: 'test (24)', runner_group_name: 'ubuntu', status: 'completed', conclusion: 'failure' },
+                {
+                    id: 201,
+                    name: 'test (22)',
+                    runner_group_name: 'ubuntu',
+                    status: 'completed',
+                    conclusion: 'success',
+                    started_at: '2025-01-15T10:00:00Z',
+                    completed_at: '2025-01-15T10:05:30Z',
+                    steps: [
+                        { name: 'Checkout', conclusion: 'success', number: 1 },
+                        { name: 'Run tests', conclusion: 'success', number: 2 },
+                    ],
+                },
+                {
+                    id: 202,
+                    name: 'test (24)',
+                    runner_group_name: 'ubuntu',
+                    status: 'completed',
+                    conclusion: 'failure',
+                    started_at: '2025-01-15T10:00:00Z',
+                    completed_at: '2025-01-15T10:03:00Z',
+                    steps: [
+                        { name: 'Checkout', conclusion: 'success', number: 1 },
+                        { name: 'Run tests', conclusion: 'failure', number: 2 },
+                    ],
+                },
             ],
         });
-        const result = await wfGetPipelineJobs(client, 'myorg', 'myrepo', 42);
+        const result = await wfGetPipelineJobs(client, CONTEXT_IDS.ORGANIZATION, CONTEXT_IDS.REPOSITORY, 42);
 
         expect(mockApiGet).toHaveBeenCalledWith(client, '/repos/myorg/myrepo/actions/runs/42/jobs', {
             operation: 'listar jobs',
             returnNull: true,
         });
         expect(result).toHaveLength(2);
-        expect(nonNull(result[0]).name).toBe('test (22)');
-        expect(nonNull(result[0]).stage).toBe('ubuntu');
-        expect(nonNull(result[0]).status).toBe('success');
-        expect(nonNull(result[1]).status).toBe('failure');
+    });
+
+    it('maps success job fields correctly', async () => {
+        expect.hasAssertions();
+
+        mockApiGet.mockResolvedValue({
+            jobs: [
+                {
+                    id: 201,
+                    name: 'test (22)',
+                    runner_group_name: 'ubuntu',
+                    status: 'completed',
+                    conclusion: 'success',
+                    started_at: '2025-01-15T10:00:00Z',
+                    completed_at: '2025-01-15T10:05:30Z',
+                    steps: [
+                        { name: 'Checkout', conclusion: 'success', number: 1 },
+                        { name: 'Run tests', conclusion: 'success', number: 2 },
+                    ],
+                },
+            ],
+        });
+        const result = await wfGetPipelineJobs(client, CONTEXT_IDS.ORGANIZATION, CONTEXT_IDS.REPOSITORY, 42);
+
+        const job0 = nonNull(nonNull(result)[0]);
+
+        expect(job0.name).toBe('test (22)');
+        expect(job0.stage).toBe('ubuntu');
+        expect(job0.status).toBe('success');
+        expect(job0.started_at).toBe('2025-01-15T10:00:00Z');
+        expect(job0.finished_at).toBe('2025-01-15T10:05:30Z');
+        expect(job0.duration).toBe(330);
+    });
+
+    it('maps success job step conclusions correctly', async () => {
+        expect.hasAssertions();
+
+        mockApiGet.mockResolvedValue({
+            jobs: [
+                {
+                    id: 201,
+                    name: 'test (22)',
+                    runner_group_name: 'ubuntu',
+                    status: 'completed',
+                    conclusion: 'success',
+                    started_at: '2025-01-15T10:00:00Z',
+                    completed_at: '2025-01-15T10:05:30Z',
+                    steps: [
+                        { name: 'Checkout', conclusion: 'success', number: 1 },
+                        { name: 'Run tests', conclusion: 'success', number: 2 },
+                    ],
+                },
+            ],
+        });
+        const result = await wfGetPipelineJobs(client, CONTEXT_IDS.ORGANIZATION, CONTEXT_IDS.REPOSITORY, 42);
+
+        const job0 = nonNull(nonNull(result)[0]);
+
+        expect(job0.stepConclusions).toHaveLength(2);
+        expect(nonNull(nonNull(job0.stepConclusions)[0])).toStrictEqual({
+            name: 'Checkout',
+            conclusion: 'success',
+            number: 1,
+        });
+        expect(nonNull(nonNull(job0.stepConclusions)[1])).toStrictEqual({
+            name: 'Run tests',
+            conclusion: 'success',
+            number: 2,
+        });
+    });
+
+    it('maps failure job fields correctly', async () => {
+        expect.hasAssertions();
+
+        mockApiGet.mockResolvedValue({
+            jobs: [
+                {
+                    id: 202,
+                    name: 'test (24)',
+                    runner_group_name: 'ubuntu',
+                    status: 'completed',
+                    conclusion: 'failure',
+                    started_at: '2025-01-15T10:00:00Z',
+                    completed_at: '2025-01-15T10:03:00Z',
+                    steps: [
+                        { name: 'Checkout', conclusion: 'success', number: 1 },
+                        { name: 'Run tests', conclusion: 'failure', number: 2 },
+                    ],
+                },
+            ],
+        });
+        const result = await wfGetPipelineJobs(client, CONTEXT_IDS.ORGANIZATION, CONTEXT_IDS.REPOSITORY, 42);
+
+        const job1 = nonNull(nonNull(result)[0]);
+
+        expect(job1.name).toBe('test (24)');
+        expect(job1.status).toBe('failure');
+        expect(job1.started_at).toBe('2025-01-15T10:00:00Z');
+        expect(job1.finished_at).toBe('2025-01-15T10:03:00Z');
+        expect(job1.duration).toBe(180);
+        expect(job1.stepConclusions).toHaveLength(2);
     });
 
     it('returns empty array when apiGet returns null', async () => {
         expect.hasAssertions();
 
         mockApiGet.mockResolvedValue(null);
-        const result = await wfGetPipelineJobs(client, 'myorg', 'myrepo', 42);
+        const result = await wfGetPipelineJobs(client, CONTEXT_IDS.ORGANIZATION, CONTEXT_IDS.REPOSITORY, 42);
 
         expect(result).toStrictEqual([]);
     });
@@ -264,7 +411,7 @@ describe('WfGetPipelineJobs', () => {
         expect.hasAssertions();
 
         mockApiGet.mockResolvedValue({});
-        const result = await wfGetPipelineJobs(client, 'myorg', 'myrepo', 42);
+        const result = await wfGetPipelineJobs(client, CONTEXT_IDS.ORGANIZATION, CONTEXT_IDS.REPOSITORY, 42);
 
         expect(result).toStrictEqual([]);
     });
@@ -275,9 +422,94 @@ describe('WfGetPipelineJobs', () => {
         mockApiGet.mockResolvedValue({
             jobs: [{ id: 1, name: 'job1', runner_group_name: '', status: 'in_progress' }],
         });
-        const result = await wfGetPipelineJobs(client, 'myorg', 'myrepo', 42);
+        const result = await wfGetPipelineJobs(client, CONTEXT_IDS.ORGANIZATION, CONTEXT_IDS.REPOSITORY, 42);
 
         expect(nonNull(result[0]).status).toBe('in_progress');
+    });
+
+    it('handles jobs without timestamps gracefully', async () => {
+        expect.hasAssertions();
+
+        mockApiGet.mockResolvedValue({
+            jobs: [
+                {
+                    id: 1,
+                    name: 'no-timestamps',
+                    runner_group_name: '',
+                    status: 'completed',
+                    conclusion: 'success',
+                },
+            ],
+        });
+        const result = await wfGetPipelineJobs(client, CONTEXT_IDS.ORGANIZATION, CONTEXT_IDS.REPOSITORY, 42);
+
+        expect(result).toHaveLength(1);
+
+        const job = nonNull(result[0]);
+
+        expect(job.started_at).toBeUndefined();
+        expect(job.finished_at).toBeUndefined();
+        expect(job.duration).toBeUndefined();
+        expect(job.stepConclusions).toBeUndefined();
+    });
+
+    it('handles jobs without steps gracefully', async () => {
+        expect.hasAssertions();
+
+        mockApiGet.mockResolvedValue({
+            jobs: [
+                {
+                    id: 1,
+                    name: 'no-steps',
+                    runner_group_name: '',
+                    status: 'completed',
+                    conclusion: 'success',
+                    started_at: '2025-01-15T10:00:00Z',
+                    completed_at: '2025-01-15T10:05:00Z',
+                },
+            ],
+        });
+        const result = await wfGetPipelineJobs(client, CONTEXT_IDS.ORGANIZATION, CONTEXT_IDS.REPOSITORY, 42);
+
+        expect(result).toHaveLength(1);
+
+        const job = nonNull(result[0]);
+
+        expect(job.started_at).toBe('2025-01-15T10:00:00Z');
+        expect(job.finished_at).toBe('2025-01-15T10:05:00Z');
+        expect(job.duration).toBe(300);
+        expect(job.stepConclusions).toBeUndefined();
+    });
+
+    it('handles jobs with null conclusion in steps', async () => {
+        expect.hasAssertions();
+
+        mockApiGet.mockResolvedValue({
+            jobs: [
+                {
+                    id: 1,
+                    name: 'partial-steps',
+                    runner_group_name: '',
+                    status: 'completed',
+                    conclusion: 'cancelled',
+                    started_at: '2025-01-15T10:00:00Z',
+                    completed_at: '2025-01-15T10:02:00Z',
+                    steps: [
+                        { name: 'Checkout', conclusion: 'success', number: 1 },
+                        { name: 'Run tests', conclusion: null, number: 2 },
+                        { name: 'Deploy', conclusion: null, number: 3 },
+                    ],
+                },
+            ],
+        });
+        const result = await wfGetPipelineJobs(client, CONTEXT_IDS.ORGANIZATION, CONTEXT_IDS.REPOSITORY, 42);
+
+        expect(result).toHaveLength(1);
+
+        const job = nonNull(result[0]);
+
+        expect(job.stepConclusions).toHaveLength(1);
+        expect(nonNull(job.stepConclusions)).toStrictEqual([{ name: 'Checkout', conclusion: 'success', number: 1 }]);
     });
 });
 
@@ -289,32 +521,47 @@ describe('WfListPipelineArtifacts', () => {
         mockApiGet.mockClear();
     });
 
-    it('returns artifacts from API', async () => {
+    it('returns artifacts from API with size and creation date', async () => {
         expect.hasAssertions();
 
         mockApiGet.mockResolvedValue({
             artifacts: [
-                { id: 301, name: 'mochawesome-report' },
-                { id: 302, name: 'coverage' },
+                { id: 301, name: 'mochawesome-report', size_in_bytes: 2048, created_at: '2025-01-15T10:00:00Z' },
+                { id: 302, name: 'coverage', size_in_bytes: 4096, created_at: '2025-01-15T10:05:00Z' },
             ],
         });
-        const result = await wfListPipelineArtifacts(client, 'myorg', 'myrepo', 42);
+        const result = await wfListPipelineArtifacts(client, CONTEXT_IDS.ORGANIZATION, CONTEXT_IDS.REPOSITORY, 42);
 
         expect(mockApiGet).toHaveBeenCalledWith(client, '/repos/myorg/myrepo/actions/runs/42/artifacts', {
             operation: 'listar artifacts',
             returnNull: true,
         });
         expect(result).toStrictEqual([
-            { id: 301, name: 'mochawesome-report' },
-            { id: 302, name: 'coverage' },
+            { id: 301, name: 'mochawesome-report', size_in_bytes: 2048, created_at: '2025-01-15T10:00:00Z' },
+            { id: 302, name: 'coverage', size_in_bytes: 4096, created_at: '2025-01-15T10:05:00Z' },
         ]);
+    });
+
+    it('handles artifacts without optional fields', async () => {
+        expect.hasAssertions();
+
+        mockApiGet.mockResolvedValue({
+            artifacts: [{ id: 301, name: 'old-artifact' }],
+        });
+        const result = await wfListPipelineArtifacts(client, CONTEXT_IDS.ORGANIZATION, CONTEXT_IDS.REPOSITORY, 42);
+
+        expect(result).toHaveLength(1);
+        expect(nonNull(result[0]).id).toBe(301);
+        expect(nonNull(result[0]).name).toBe('old-artifact');
+        expect(nonNull(result[0]).size_in_bytes).toBeUndefined();
+        expect(nonNull(result[0]).created_at).toBeUndefined();
     });
 
     it('returns empty array when apiGet returns null', async () => {
         expect.hasAssertions();
 
         mockApiGet.mockResolvedValue(null);
-        const result = await wfListPipelineArtifacts(client, 'myorg', 'myrepo', 42);
+        const result = await wfListPipelineArtifacts(client, CONTEXT_IDS.ORGANIZATION, CONTEXT_IDS.REPOSITORY, 42);
 
         expect(result).toStrictEqual([]);
     });
@@ -331,7 +578,7 @@ describe('WfDownloadArtifact', () => {
         expect.hasAssertions();
 
         const getSpy = vi.spyOn(client, 'get').mockResolvedValue({ data: Buffer.from('zip-data') });
-        const result = await wfDownloadArtifact(client, 'myorg', 'myrepo', '301');
+        const result = await wfDownloadArtifact(client, CONTEXT_IDS.ORGANIZATION, CONTEXT_IDS.REPOSITORY, '301');
 
         expect(getSpy).toHaveBeenCalledWith('/repos/myorg/myrepo/actions/artifacts/301/zip', {
             responseType: 'arraybuffer',
@@ -347,7 +594,9 @@ describe('WfDownloadArtifact', () => {
 
         vi.spyOn(client, 'get').mockRejectedValue(new Error('Download failed'));
 
-        await expect(wfDownloadArtifact(client, 'myorg', 'myrepo', '999')).rejects.toThrow('Download failed');
+        await expect(
+            wfDownloadArtifact(client, CONTEXT_IDS.ORGANIZATION, CONTEXT_IDS.REPOSITORY, '999'),
+        ).rejects.toThrow('Download failed');
     });
 });
 
@@ -362,7 +611,7 @@ describe('WfGetJobLogs', () => {
         expect.hasAssertions();
 
         const getSpy2 = vi.spyOn(client, 'get').mockResolvedValue({ data: 'line1\nline2\nline3\n' });
-        const result = await wfGetJobLogs(client, 'myorg', 'myrepo', 42, 100);
+        const result = await wfGetJobLogs(client, CONTEXT_IDS.ORGANIZATION, CONTEXT_IDS.REPOSITORY, 42, 100);
 
         expect(getSpy2).toHaveBeenCalledWith('/repos/myorg/myrepo/actions/jobs/42/logs', {
             responseType: 'text' as const,
@@ -375,7 +624,7 @@ describe('WfGetJobLogs', () => {
         expect.hasAssertions();
 
         vi.spyOn(client, 'get').mockResolvedValue({ data: 'a'.repeat(100) });
-        const result = await wfGetJobLogs(client, 'myorg', 'myrepo', 42, 10);
+        const result = await wfGetJobLogs(client, CONTEXT_IDS.ORGANIZATION, CONTEXT_IDS.REPOSITORY, 42, 10);
 
         expect(result).toBe('a'.repeat(10));
         expect(nonNull(result)).toHaveLength(10);
@@ -385,7 +634,7 @@ describe('WfGetJobLogs', () => {
         expect.hasAssertions();
 
         vi.spyOn(client, 'get').mockResolvedValue({ data: Buffer.from('text-data') });
-        const result = await wfGetJobLogs(client, 'myorg', 'myrepo', 42, 100);
+        const result = await wfGetJobLogs(client, CONTEXT_IDS.ORGANIZATION, CONTEXT_IDS.REPOSITORY, 42, 100);
 
         expect(result).toBe('text-data');
     });
@@ -395,7 +644,9 @@ describe('WfGetJobLogs', () => {
 
         vi.spyOn(client, 'get').mockRejectedValue(new Error('Log fetch error'));
 
-        await expect(wfGetJobLogs(client, 'myorg', 'myrepo', 42)).rejects.toThrow('Log fetch error');
+        await expect(wfGetJobLogs(client, CONTEXT_IDS.ORGANIZATION, CONTEXT_IDS.REPOSITORY, 42)).rejects.toThrow(
+            'Log fetch error',
+        );
     });
 });
 
@@ -416,7 +667,7 @@ describe('WfGetCICDVariables', () => {
                 { name: 'OTHER_VAR', value: 'other' },
             ],
         });
-        const result = await wfGetCICDVariables(client, 'myorg', 'myrepo');
+        const result = await wfGetCICDVariables(client, CONTEXT_IDS.ORGANIZATION, CONTEXT_IDS.REPOSITORY);
 
         expect(mockApiGet).toHaveBeenCalledWith(client, '/repos/myorg/myrepo/actions/variables', {
             operation: 'buscar variáveis',
@@ -433,7 +684,7 @@ describe('WfGetCICDVariables', () => {
         expect.hasAssertions();
 
         mockApiGet.mockResolvedValue(null);
-        const result = await wfGetCICDVariables(client, 'myorg', 'myrepo');
+        const result = await wfGetCICDVariables(client, CONTEXT_IDS.ORGANIZATION, CONTEXT_IDS.REPOSITORY);
 
         expect(result).toStrictEqual([]);
     });
@@ -442,7 +693,7 @@ describe('WfGetCICDVariables', () => {
         expect.hasAssertions();
 
         mockApiGet.mockResolvedValue({});
-        const result = await wfGetCICDVariables(client, 'myorg', 'myrepo');
+        const result = await wfGetCICDVariables(client, CONTEXT_IDS.ORGANIZATION, CONTEXT_IDS.REPOSITORY);
 
         expect(result).toStrictEqual([]);
     });
@@ -461,5 +712,49 @@ describe('WfGetSchedules', () => {
 describe('WfRunSchedule', () => {
     it('throws not-implemented error', () => {
         expect(() => wfRunSchedule('1')).toThrow('not available via REST API');
+    });
+});
+
+describe('WfGetWorkflowRunTiming', () => {
+    it('returns run_duration_ms from API', async () => {
+        expect.hasAssertions();
+
+        const mockTiming = { run_duration_ms: 123456 };
+        const client = createMockAxiosInstance();
+
+        vi.mocked(apiGet).mockResolvedValue(mockTiming);
+
+        const result = await wfGetWorkflowRunTiming(client, CONTEXT_IDS.ORGANIZATION, CONTEXT_IDS.REPOSITORY, 42);
+
+        expect(apiGet).toHaveBeenCalledWith(
+            client,
+            '/repos/' + CONTEXT_IDS.ORGANIZATION + '/' + CONTEXT_IDS.REPOSITORY + '/actions/runs/42/timing',
+            { operation: 'buscar run duration', returnNull: true },
+        );
+        expect(result).toStrictEqual({ run_duration_ms: 123456 });
+    });
+
+    it('returns null when apiGet returns null', async () => {
+        expect.hasAssertions();
+
+        const client = createMockAxiosInstance();
+
+        vi.mocked(apiGet).mockResolvedValue(null);
+
+        const result = await wfGetWorkflowRunTiming(client, CONTEXT_IDS.ORGANIZATION, CONTEXT_IDS.REPOSITORY, 99);
+
+        expect(result).toBeNull();
+    });
+
+    it('returns null when apiGet throws', async () => {
+        expect.hasAssertions();
+
+        const client = createMockAxiosInstance();
+
+        vi.mocked(apiGet).mockRejectedValue(new Error('API error'));
+
+        const result = await wfGetWorkflowRunTiming(client, CONTEXT_IDS.ORGANIZATION, CONTEXT_IDS.REPOSITORY, 55);
+
+        expect(result).toBeNull();
     });
 });

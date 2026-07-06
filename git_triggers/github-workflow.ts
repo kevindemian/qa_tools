@@ -118,18 +118,60 @@ export async function wfGetPipelineJobs(
     pipelineId: string | number,
 ): Promise<PipelineJob[]> {
     const data = await apiGet<{
-        jobs: Array<{ id: number; name: string; runner_group_name?: string; conclusion?: string; status?: string }>;
+        jobs: Array<{
+            id: number;
+            name: string;
+            runner_group_name?: string;
+            conclusion?: string;
+            status?: string;
+            started_at?: string;
+            completed_at?: string | null;
+            steps?: Array<{
+                name: string;
+                conclusion: string | null;
+                number: number;
+            }>;
+        }>;
     }>(client, '/repos/' + owner + '/' + repo + '/actions/runs/' + pipelineId + '/jobs', {
         operation: 'listar jobs',
         returnNull: true,
     });
     const jobs = data?.jobs || [];
-    return jobs.map((j) => ({
-        id: j.id,
-        name: j.name,
-        stage: j.runner_group_name || '',
-        status: j.conclusion || j.status || '',
-    }));
+    return jobs.map((j) => {
+        const duration = computeJobDurationSeconds(j.started_at, j.completed_at);
+        const steps = mapStepConclusions(j.steps);
+        return {
+            id: j.id,
+            name: j.name,
+            stage: j.runner_group_name ?? '',
+            status: j.conclusion ?? j.status ?? '',
+            ...(j.started_at != null && { started_at: j.started_at }),
+            ...(j.completed_at != null && { finished_at: j.completed_at }),
+            ...(duration != null && { duration }),
+            ...(steps != null && { stepConclusions: steps }),
+        } satisfies PipelineJob;
+    });
+}
+
+function computeJobDurationSeconds(startedAt?: string, completedAt?: string | null): number | undefined {
+    if (startedAt == null || completedAt == null) return undefined;
+    const startMs = Date.parse(startedAt);
+    const endMs = Date.parse(completedAt);
+    if (isNaN(startMs) || isNaN(endMs)) return undefined;
+    return Math.round((endMs - startMs) / 1000);
+}
+
+function mapStepConclusions(
+    steps?: Array<{ name: string; conclusion: string | null; number: number }>,
+): Array<{ name: string; conclusion: string; number: number }> | undefined {
+    if (steps == null || steps.length === 0) return undefined;
+    return steps
+        .filter((s) => s.conclusion != null)
+        .map((s) => ({
+            name: s.name,
+            conclusion: s.conclusion as string,
+            number: s.number,
+        }));
 }
 
 export async function wfListPipelineArtifacts(
@@ -138,16 +180,19 @@ export async function wfListPipelineArtifacts(
     repo: string,
     pipelineId: string | number,
 ): Promise<ArtifactInfo[]> {
-    const data = await apiGet<{ artifacts: Array<{ id: number; name: string }> }>(
-        client,
-        '/repos/' + owner + '/' + repo + '/actions/runs/' + pipelineId + '/artifacts',
-        {
-            operation: 'listar artifacts',
-            returnNull: true,
-        },
-    );
+    const data = await apiGet<{
+        artifacts: Array<{ id: number; name: string; size_in_bytes?: number; created_at?: string }>;
+    }>(client, '/repos/' + owner + '/' + repo + '/actions/runs/' + pipelineId + '/artifacts', {
+        operation: 'listar artifacts',
+        returnNull: true,
+    });
     const artifacts = data?.artifacts || [];
-    return artifacts.map((a) => ({ id: a.id, name: a.name }));
+    return artifacts.map((a) => ({
+        id: a.id,
+        name: a.name,
+        ...(a.size_in_bytes != null && { size_in_bytes: a.size_in_bytes }),
+        ...(a.created_at != null && { created_at: a.created_at }),
+    }));
 }
 
 export async function wfDownloadArtifact(
@@ -207,6 +252,31 @@ export async function wfGetCICDVariables(client: AxiosInstance, owner: string, r
         value: v.value,
         type: 'variable',
     }));
+}
+
+/**
+ * Fetch workflow run timing from the GitHub Actions API.
+ * Extracts run_duration_ms from the timing endpoint.
+ * Note: This endpoint is in the process of closing down
+ * (billable minutes migration) but still operational as of 2026.
+ */
+export async function wfGetWorkflowRunTiming(
+    client: AxiosInstance,
+    owner: string,
+    repo: string,
+    runId: number,
+): Promise<{ run_duration_ms: number } | null> {
+    try {
+        const timing = await apiGet<{ run_duration_ms: number }>(
+            client,
+            '/repos/' + owner + '/' + repo + '/actions/runs/' + runId + '/timing',
+            { operation: 'buscar run duration', returnNull: true },
+        );
+        if (timing == null) return null;
+        return { run_duration_ms: timing.run_duration_ms };
+    } catch (err) {
+        return handleError(err, { context: 'buscar run duration', returnNull: true });
+    }
 }
 
 export function wfGetSchedules(): Promise<ScheduleInfo[]> {

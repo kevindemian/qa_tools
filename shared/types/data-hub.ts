@@ -7,6 +7,12 @@
  */
 import type { PipelineRun, PipelineJob, ArtifactInfo } from './ci-cd.js';
 
+/** Timing data for a workflow run (from GitHub timing endpoint). */
+export interface WorkflowRunTiming {
+    /** Total run duration in milliseconds. */
+    run_duration_ms: number;
+}
+
 /** Raw data returned by providers. All fields optional to support partial data. */
 export interface RawData {
     runs: PipelineRun[];
@@ -16,6 +22,8 @@ export interface RawData {
     failureReasons: Map<number, string[]>;
     coverage?: RawCoverage;
     jiraIssues?: RawJiraIssue[];
+    /** Timing data for each run, keyed by run ID. */
+    timing?: Map<number, WorkflowRunTiming>;
 }
 
 /** Coverage data from Istanbul/CTRF. */

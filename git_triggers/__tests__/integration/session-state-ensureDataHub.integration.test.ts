@@ -42,6 +42,7 @@ function createMockGitProvider(): GitProvider {
         getPipeline: vi.fn(),
         getDiff: vi.fn(),
         getJobLogs: vi.fn(),
+        getWorkflowRunTiming: vi.fn(),
         provider: 'github',
     };
 }
