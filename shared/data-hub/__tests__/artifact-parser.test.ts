@@ -1,4 +1,6 @@
 import { describe, it, expect, vi, beforeEach } from 'vitest';
+import AdmZip from 'adm-zip';
+import type { ArtifactParseResult } from '../artifact-parser.js';
 
 const mockParseCtrfResults = vi.fn();
 const mockParseMochawesome = vi.fn();
@@ -29,7 +31,6 @@ const { parseArtifactBuffer, parseZipBuffer, isCTRF, isJUnit, isMochawesome } =
     await import('../../data-hub/artifact-parser.js');
 
 function createZipBuffer(files: Array<{ name: string; content: string }>): Buffer {
-    const AdmZip = require('adm-zip');
     const zip = new AdmZip();
     for (const f of files) {
         zip.addFile(f.name, Buffer.from(f.content, 'utf-8'));
@@ -37,55 +38,56 @@ function createZipBuffer(files: Array<{ name: string; content: string }>): Buffe
     return zip.toBuffer();
 }
 
-describe('isCTRF', () => {
+describe('IsCTRF', () => {
     it('detects CTRF JSON content', () => {
         const content = JSON.stringify({ results: { tests: [], summary: { tests: 0 } } });
-        expect(isCTRF(content)).toBe(true);
+
+        expect(isCTRF(content)).toBeTruthy();
     });
 
     it('rejects non-CTRF JSON', () => {
-        expect(isCTRF(JSON.stringify({ foo: 'bar' }))).toBe(false);
+        expect(isCTRF(JSON.stringify({ foo: 'bar' }))).toBeFalsy();
     });
 
     it('rejects non-JSON content', () => {
-        expect(isCTRF('not json')).toBe(false);
+        expect(isCTRF('not json')).toBeFalsy();
     });
 });
 
-describe('isJUnit', () => {
+describe('IsJUnit', () => {
     it('detects JUnit XML content', () => {
-        expect(isJUnit('<testsuite name="test"><testcase name="t1"/></testsuite>')).toBe(true);
+        expect(isJUnit('<testsuite name="test"><testcase name="t1"/></testsuite>')).toBeTruthy();
     });
 
     it('detects multiple testsuites', () => {
-        expect(isJUnit('<testsuites><testsuite name="t1"/></testsuites>')).toBe(true);
+        expect(isJUnit('<testsuites><testsuite name="t1"/></testsuites>')).toBeTruthy();
     });
 
     it('rejects non-XML content', () => {
-        expect(isJUnit('not xml')).toBe(false);
+        expect(isJUnit('not xml')).toBeFalsy();
     });
 
     it('rejects non-JUnit XML', () => {
-        expect(isJUnit('<html><body></body></html>')).toBe(false);
+        expect(isJUnit('<html><body></body></html>')).toBeFalsy();
     });
 });
 
-describe('isMochawesome', () => {
+describe('IsMochawesome', () => {
     it('detects Mochawesome JSON content', () => {
-        expect(isMochawesome(JSON.stringify({ stats: {}, results: [] }))).toBe(true);
+        expect(isMochawesome(JSON.stringify({ stats: {}, results: [] }))).toBeTruthy();
     });
 
     it('rejects non-Mochawesome JSON', () => {
-        expect(isMochawesome(JSON.stringify({ foo: 'bar' }))).toBe(false);
+        expect(isMochawesome(JSON.stringify({ foo: 'bar' }))).toBeFalsy();
     });
 });
 
-describe('parseArtifactBuffer', () => {
+describe('ParseArtifactBuffer', () => {
     beforeEach(() => {
         vi.clearAllMocks();
     });
 
-    it('R2: retorna ParseResult para CTRF buffer', () => {
+    it('r2: retorna ParseResult para CTRF buffer', () => {
         const content = JSON.stringify({
             results: {
                 tests: [],
@@ -99,12 +101,16 @@ describe('parseArtifactBuffer', () => {
         });
 
         const result = parseArtifactBuffer(buffer, 'report.json');
+
         expect(result).not.toBeNull();
-        expect(result!.fileName).toBe('report.json');
-        expect(result!.data.tests).toHaveLength(1);
+
+        const r = result as ArtifactParseResult;
+
+        expect(r.fileName).toBe('report.json');
+        expect(r.data.tests).toHaveLength(1);
     });
 
-    it('R3: retorna ParseResult para JUnit buffer', () => {
+    it('r3: retorna ParseResult para JUnit buffer', () => {
         const buffer = Buffer.from('<testsuite name="test"><testcase name="t1"/></testsuite>', 'utf-8');
         mockParseJUnitXml.mockReturnValue({
             tests: [{ title: 't1', state: 'passed', duration: 5 }],
@@ -112,18 +118,23 @@ describe('parseArtifactBuffer', () => {
         });
 
         const result = parseArtifactBuffer(buffer, 'results.xml');
+
         expect(result).not.toBeNull();
-        expect(result!.fileName).toBe('results.xml');
-        expect(result!.data.tests).toHaveLength(1);
+
+        const r = result as ArtifactParseResult;
+
+        expect(r.fileName).toBe('results.xml');
+        expect(r.data.tests).toHaveLength(1);
     });
 
-    it('R4: retorna null para buffer inválido', () => {
+    it('r4: retorna null para buffer inválido', () => {
         const buffer = Buffer.from('not a valid format', 'utf-8');
         const result = parseArtifactBuffer(buffer, 'unknown.txt');
+
         expect(result).toBeNull();
     });
 
-    it('R2: extrai CTRF de dentro de ZIP', () => {
+    it('r2: extrai CTRF de dentro de ZIP', () => {
         const ctrfContent = JSON.stringify({
             results: {
                 tests: [{ name: 't1', status: 'passed', duration: 10 }],
@@ -137,24 +148,28 @@ describe('parseArtifactBuffer', () => {
         });
 
         const result = parseArtifactBuffer(zipBuf, 'artifacts.zip');
+
         expect(result).not.toBeNull();
-        expect(result!.format).toBe('ctrf');
+
+        const r = result as ArtifactParseResult;
+
+        expect(r.format).toBe('ctrf');
     });
 });
 
-describe('parseZipBuffer', () => {
+describe('ParseZipBuffer', () => {
     beforeEach(() => {
         vi.clearAllMocks();
     });
 
-    it('R5: retorna array vazio para ZIP vazio', () => {
-        const AdmZip = require('adm-zip');
+    it('r5: retorna array vazio para ZIP vazio', () => {
         const zip = new AdmZip();
         const results = parseZipBuffer(zip.toBuffer());
-        expect(results).toEqual([]);
+
+        expect(results).toStrictEqual([]);
     });
 
-    it('R1: retorna resultados para ZIP com CTRF', () => {
+    it('r1: retorna resultados para ZIP com CTRF', () => {
         const ctrfContent = JSON.stringify({
             results: {
                 tests: [{ name: 't1', status: 'passed', duration: 10 }],
@@ -168,11 +183,15 @@ describe('parseZipBuffer', () => {
         });
 
         const results = parseZipBuffer(zipBuf);
+
         expect(results).toHaveLength(1);
-        expect(results[0]!.data.tests).toHaveLength(1);
+
+        const r0 = results[0] as ArtifactParseResult;
+
+        expect(r0.data.tests).toHaveLength(1);
     });
 
-    it('R6: processa ZIP com múltiplos formatos', () => {
+    it('r6: processa ZIP com múltiplos formatos', () => {
         const ctrfContent = JSON.stringify({
             results: {
                 tests: [{ name: 't1', status: 'passed', duration: 10 }],
@@ -193,6 +212,7 @@ describe('parseZipBuffer', () => {
         });
 
         const results = parseZipBuffer(zipBuf);
+
         expect(results).toHaveLength(2);
     });
 });

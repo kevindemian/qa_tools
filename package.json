@@ -45,7 +45,6 @@
         "cli-table3": "^0.6.5",
         "csv-parser": "^3.2.0",
         "dotenv": "^17.4.2",
-        "fast-xml-parser": "^5.9.3",
         "figlet": "^1.11.0",
         "glob": "^13.0.6",
         "gradient-string": "^3.0.0",

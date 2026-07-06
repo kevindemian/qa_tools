@@ -1,8 +1,8 @@
 import AdmZip from 'adm-zip';
-import { parseCtrfResults, parseMochawesome, isCtrfFormat } from '../result_parser.js';
+import { parseCtrfResults, parseTestResults, isCtrfFormat } from '../result_parser.js';
 import { parseJUnitXml } from '../junit-xml-parser.js';
 import { rootLogger } from '../logger.js';
-import type { ParseResult, FlatTest } from '../result_parser.js';
+import type { ParseResult, FlatTest, CtrfData } from '../result_parser.js';
 import type { JUnitParseResult } from '../junit-xml-parser.js';
 
 export interface ArtifactParseResult {
@@ -15,7 +15,7 @@ const JUNIT_TAGS = ['<testsuite', '<testsuites'];
 
 export function isCTRF(content: string): boolean {
     try {
-        const parsed = JSON.parse(content);
+        const parsed = JSON.parse(content) as { [key: string]: unknown };
         return isCtrfFormat(parsed);
     } catch {
         return false;
@@ -28,8 +28,8 @@ export function isJUnit(content: string): boolean {
 
 export function isMochawesome(content: string): boolean {
     try {
-        const parsed = JSON.parse(content);
-        return parsed !== null && Object.prototype.toString.call(parsed) === '[object Object]' && 'stats' in parsed;
+        const parsed = JSON.parse(content) as { [key: string]: unknown };
+        return 'stats' in parsed;
     } catch {
         return false;
     }
@@ -65,7 +65,7 @@ function junitToParseResult(junit: JUnitParseResult): ParseResult {
 
 function parseContent(content: string, fileName: string): ArtifactParseResult | null {
     if (isCTRF(content)) {
-        const parsed = parseCtrfResults(JSON.parse(content));
+        const parsed = parseCtrfResults(JSON.parse(content) as CtrfData);
         if (parsed.stats.total > 0 || parsed.tests.length > 0) {
             return { fileName, data: parsed, format: 'ctrf' };
         }
@@ -82,7 +82,7 @@ function parseContent(content: string, fileName: string): ArtifactParseResult | 
     }
 
     if (isMochawesome(content)) {
-        const parsed = parseMochawesome(JSON.parse(content));
+        const parsed = parseTestResults(JSON.parse(content) as unknown);
         if (parsed.stats.total > 0 || parsed.tests.length > 0) {
             return { fileName, data: parsed, format: 'mochawesome' };
         }
@@ -95,7 +95,7 @@ function parseContent(content: string, fileName: string): ArtifactParseResult | 
 export function parseArtifactBuffer(buffer: Buffer, fileName: string): ArtifactParseResult | null {
     if (fileName.endsWith('.zip') || fileName.endsWith('.ZIP')) {
         const results = parseZipBuffer(buffer);
-        return results.length > 0 ? results[0]! : null;
+        return results.length > 0 ? (results[0] as ArtifactParseResult) : null;
     }
 
     const content = buffer.toString('utf-8');
@@ -119,10 +119,8 @@ export function parseZipBuffer(buffer: Buffer): ArtifactParseResult[] {
             }
         }
     } catch (err) {
-        const msg =
-            typeof (err as { message?: unknown })?.message === 'string'
-                ? ((err as { message?: unknown }).message as string)
-                : String(err);
+        const errObj = err as { [key: string]: unknown };
+        const msg = typeof errObj['message'] === 'string' ? errObj['message'] : String(err);
         rootLogger.error(`artifact-parser: failed to parse ZIP: ${msg}`);
     }
 

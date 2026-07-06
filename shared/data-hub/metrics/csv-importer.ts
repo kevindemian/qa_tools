@@ -6,17 +6,17 @@ export function importMetricsCsv(csv: string): Partial<ComputedMetrics> | null {
     const lines = csv.trim().split('\n');
     if (lines.length < 2) return null;
 
-    const header = lines[0]!.trim().toLowerCase();
+    const header = (lines[0] as string).trim().toLowerCase();
     const expectedHeader = 'metric,value';
     if (header !== expectedHeader) return null;
 
     const result: Record<string, string | number> = {};
 
     for (let i = 1; i < lines.length; i++) {
-        const parts = lines[i]!.split(',');
+        const parts = (lines[i] as string).split(',');
         if (parts.length < 2) continue;
-        const metric = parts[0]!.trim();
-        const value = parts[1]!.trim();
+        const metric = (parts[0] as string).trim();
+        const value = (parts[1] as string).trim();
         const num = parseFloat(value);
         result[metric] = Number.isFinite(num) ? num : value;
     }
@@ -47,5 +47,5 @@ export function importMetricsCsv(csv: string): Partial<ComputedMetrics> | null {
             flakyCount: Number(result['quarantineStatus.flakyCount']) || 0,
             quarantinedCount: Number(result['quarantineStatus.quarantinedCount']) || 0,
         },
-    } as Partial<ComputedMetrics>;
+    } satisfies Partial<ComputedMetrics>;
 }

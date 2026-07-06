@@ -35,7 +35,8 @@ export function calculateMetrics(rawData: RawData): ComputedMetrics {
     const topFailureReasons = reasons.map((r) => ({ pattern: r.pattern, count: r.count }));
 
     const dimPassRate = compute.makeDimensionScore(passRate, DEFAULT_SCORING_CONFIG.passRateTarget);
-    const dimFlaky = compute.makeDimensionScore(100 - (flakyRate.length > 0 ? flakyRate[0]!.rate : 0), 100);
+    const firstFlaky = flakyRate[0];
+    const dimFlaky = compute.makeDimensionScore(100 - (firstFlaky ? firstFlaky.rate : 0), 100);
     const dimCoverage = compute.makeDimensionScore(coverage, DEFAULT_SCORING_CONFIG.coverageTarget);
     const dimSuiteSpeed = compute.makeDimensionScore(
         100 - Math.min((suiteSpeedP95 / DEFAULT_SCORING_CONFIG.suiteSpeedTarget) * 100, 100),

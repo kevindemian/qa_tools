@@ -2,6 +2,7 @@ import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest';
 import * as path from 'path';
 import * as fs from 'fs';
 import os from 'os';
+import crypto from 'crypto';
 
 const mockParseTestResultsFile = vi.fn();
 const mockAskFilePath = vi.fn();
@@ -37,12 +38,12 @@ const { validateTestFile, formatValidationResult, askTestSource, DATAHUB_ERRORS 
 let tmpDir: string;
 
 function createTmpFile(content: string, ext: string): string {
-    const filePath = path.join(tmpDir, `test-${Date.now()}-${Math.random().toString(36).slice(2)}${ext}`);
+    const filePath = path.join(tmpDir, `test-${crypto.randomUUID().slice(0, 8)}${ext}`);
     fs.writeFileSync(filePath, content, 'utf-8');
     return filePath;
 }
 
-describe('validateTestFile', () => {
+describe('ValidateTestFile', () => {
     beforeEach(() => {
         vi.clearAllMocks();
         tmpDir = fs.mkdtempSync(path.join(os.tmpdir(), 'tsf-test-'));
@@ -52,7 +53,9 @@ describe('validateTestFile', () => {
         fs.rmSync(tmpDir, { recursive: true, force: true });
     });
 
-    it('R5: retorna null para arquivo com extensão inválida', () => {
+    it('r5: retorna null para arquivo com extensão inválida', () => {
+        expect.hasAssertions();
+
         const result = validateTestFile('/fake/path/report.txt');
 
         expect(result.data).toBeNull();
@@ -60,7 +63,9 @@ describe('validateTestFile', () => {
         expect(result.source).toBe('/fake/path/report.txt');
     });
 
-    it('R5: retorna error quando arquivo não existe', () => {
+    it('r5: retorna error quando arquivo não existe', () => {
+        expect.hasAssertions();
+
         const result = validateTestFile('/fake/path/nonexistent.json');
 
         expect(result.data).toBeNull();
@@ -68,7 +73,9 @@ describe('validateTestFile', () => {
         expect(result.source).toBe('/fake/path/nonexistent.json');
     });
 
-    it('R3: retorna ParseResult válido para CTRF válido', () => {
+    it('r3: retorna ParseResult válido para CTRF válido', () => {
+        expect.hasAssertions();
+
         const filePath = createTmpFile('{"results":{"tests":[]}}', '.json');
         const fakeResult = {
             tests: [{ title: 'test1', state: 'passed' as const, duration: 100 }],
@@ -78,12 +85,14 @@ describe('validateTestFile', () => {
 
         const result = validateTestFile(filePath);
 
-        expect(result.data).toEqual(fakeResult);
+        expect(result.data).toStrictEqual(fakeResult);
         expect(result.error).toBeUndefined();
         expect(result.source).toBe(filePath);
     });
 
-    it('R4: retorna ParseResult válido para JUnit XML válido', () => {
+    it('r4: retorna ParseResult válido para JUnit XML válido', () => {
+        expect.hasAssertions();
+
         const filePath = createTmpFile('<testsuite></testsuite>', '.xml');
         const fakeResult = {
             tests: [{ title: 'test1', state: 'passed' as const, duration: 50 }],
@@ -93,12 +102,14 @@ describe('validateTestFile', () => {
 
         const result = validateTestFile(filePath);
 
-        expect(result.data).toEqual(fakeResult);
+        expect(result.data).toStrictEqual(fakeResult);
         expect(result.error).toBeUndefined();
         expect(result.source).toBe(filePath);
     });
 
-    it('R5: retorna error quando parse retorna erro', () => {
+    it('r5: retorna error quando parse retorna erro', () => {
+        expect.hasAssertions();
+
         const filePath = createTmpFile('{}', '.json');
         mockParseTestResultsFile.mockReturnValue({
             tests: [],
@@ -113,7 +124,9 @@ describe('validateTestFile', () => {
         expect(result.source).toBe(filePath);
     });
 
-    it('R5: retorna EMPTY_RESULT quando stats.total é 0', () => {
+    it('r5: retorna EMPTY_RESULT quando stats.total é 0', () => {
+        expect.hasAssertions();
+
         const filePath = createTmpFile('{}', '.json');
         mockParseTestResultsFile.mockReturnValue({
             tests: [],
@@ -128,8 +141,10 @@ describe('validateTestFile', () => {
     });
 });
 
-describe('formatValidationResult', () => {
+describe('FormatValidationResult', () => {
     it('retorna success=true para resultado válido', () => {
+        expect.hasAssertions();
+
         const result = {
             data: {
                 tests: [{ title: 't1', state: 'passed' as const, duration: 10 }],
@@ -140,12 +155,14 @@ describe('formatValidationResult', () => {
 
         const formatted = formatValidationResult(result);
 
-        expect(formatted.success).toBe(true);
+        expect(formatted.success).toBeTruthy();
         expect(formatted.message).toContain('1');
         expect(formatted.message).toContain('passed');
     });
 
     it('retorna success=false para resultado com erro', () => {
+        expect.hasAssertions();
+
         const result = {
             data: null,
             error: DATAHUB_ERRORS.FILE_NOT_FOUND,
@@ -154,12 +171,12 @@ describe('formatValidationResult', () => {
 
         const formatted = formatValidationResult(result);
 
-        expect(formatted.success).toBe(false);
+        expect(formatted.success).toBeFalsy();
         expect(formatted.message).toContain(DATAHUB_ERRORS.FILE_NOT_FOUND);
     });
 });
 
-describe('askTestSource', () => {
+describe('AskTestSource', () => {
     beforeEach(() => {
         vi.clearAllMocks();
         tmpDir = fs.mkdtempSync(path.join(os.tmpdir(), 'tsf-test-'));
@@ -169,7 +186,9 @@ describe('askTestSource', () => {
         fs.rmSync(tmpDir, { recursive: true, force: true });
     });
 
-    it('R2: retorna null quando não é TTY', async () => {
+    it('r2: retorna null quando não é TTY', async () => {
+        expect.hasAssertions();
+
         mockIsTTY.mockReturnValue(false);
         mockIsCI.mockReturnValue(false);
 
@@ -180,7 +199,9 @@ describe('askTestSource', () => {
         expect(mockAskFilePath).not.toHaveBeenCalled();
     });
 
-    it('R2: retorna null quando é CI', async () => {
+    it('r2: retorna null quando é CI', async () => {
+        expect.hasAssertions();
+
         mockIsTTY.mockReturnValue(true);
         mockIsCI.mockReturnValue(true);
 
@@ -191,7 +212,9 @@ describe('askTestSource', () => {
         expect(mockAskFilePath).not.toHaveBeenCalled();
     });
 
-    it('R6: retorna USER_SKIPPED quando usuário pula (path vazio)', async () => {
+    it('r6: retorna USER_SKIPPED quando usuário pula (path vazio)', async () => {
+        expect.hasAssertions();
+
         mockIsTTY.mockReturnValue(true);
         mockIsCI.mockReturnValue(false);
         mockAskFilePath.mockResolvedValue('');
@@ -202,7 +225,9 @@ describe('askTestSource', () => {
         expect(result.error).toBe(DATAHUB_ERRORS.USER_SKIPPED);
     });
 
-    it('R1: retorna resultado válido quando usuário fornece arquivo válido', async () => {
+    it('r1: retorna resultado válido quando usuário fornece arquivo válido', async () => {
+        expect.hasAssertions();
+
         const filePath = createTmpFile('{}', '.json');
         mockIsTTY.mockReturnValue(true);
         mockIsCI.mockReturnValue(false);
@@ -219,7 +244,9 @@ describe('askTestSource', () => {
         expect(result.source).toBe(filePath);
     });
 
-    it('R6: tenta até 3 vezes em caso de falha, depois retorna USER_SKIPPED', async () => {
+    it('r6: tenta até 3 vezes em caso de falha, depois retorna USER_SKIPPED', async () => {
+        expect.hasAssertions();
+
         const filePath = createTmpFile('{}', '.json');
         mockIsTTY.mockReturnValue(true);
         mockIsCI.mockReturnValue(false);

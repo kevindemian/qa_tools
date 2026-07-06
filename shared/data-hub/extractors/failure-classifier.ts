@@ -60,7 +60,9 @@ function fromLog(text: string): FailureEntry[] {
         pattern.lastIndex = 0;
         let match: RegExpExecArray | null;
         while ((match = pattern.exec(text)) !== null) {
-            const msg = match[1]!.trim();
+            const group = match[1];
+            if (!group) continue;
+            const msg = group.trim();
             if (msg && msg.length >= 10 && !seen.has(msg)) {
                 seen.add(msg);
                 failures.push({ message: msg });

@@ -17,7 +17,7 @@ export interface CoverageInput {
 function fromCtrf(data: CoverageInput['ctrf']): RawCoverage | null {
     if (!data) return null;
     const cov = data.results?.coverage;
-    if (!cov || cov.percentage === undefined) return null;
+    if (!cov) return null;
     return {
         total: cov.total ?? 0,
         covered: cov.covered ?? 0,
@@ -32,17 +32,23 @@ function fromGitlab(coverage: string): RawCoverage | null {
 }
 
 function fromLog(text: string): RawCoverage | null {
-    const matched = text.match(/Coverage:\s*([\d.]+)%\s*\((\d+)\/(\d+)\)/);
+    const matched = /Coverage:\s*([\d.]+)%\s*\((\d+)\/(\d+)\)/.exec(text);
     if (matched) {
+        const totalStr = matched[3];
+        const coveredStr = matched[2];
+        const pctStr = matched[1];
+        if (!totalStr || !coveredStr || !pctStr) return null;
         return {
-            total: parseInt(matched[3]!, 10),
-            covered: parseInt(matched[2]!, 10),
-            percentage: parseFloat(matched[1]!),
+            total: parseInt(totalStr, 10),
+            covered: parseInt(coveredStr, 10),
+            percentage: parseFloat(pctStr),
         };
     }
-    const simple = text.match(/(?:Line\s+)?[Cc]overage:\s*([\d.]+)%/);
+    const simple = /(?:Line\s+)?[Cc]overage:\s*([\d.]+)%/.exec(text);
     if (simple) {
-        return { total: 0, covered: 0, percentage: parseFloat(simple[1]!) };
+        const pctStr = simple[1];
+        if (!pctStr) return null;
+        return { total: 0, covered: 0, percentage: parseFloat(pctStr) };
     }
     return null;
 }
@@ -50,16 +56,18 @@ function fromLog(text: string): RawCoverage | null {
 function fromJson(data: { total: number; covered: number; percentage: number }): RawCoverage | null {
     if (!Number.isFinite(data.percentage)) return null;
     return {
-        total: data.total ?? 0,
-        covered: data.covered ?? 0,
+        total: data.total,
+        covered: data.covered,
         percentage: data.percentage,
     };
 }
 
 function fromCheckRunSummary(summary: string): RawCoverage | null {
-    const matched = summary.match(/(?:Line\s+)?[Cc]overage:\s*([\d.]+)%/);
+    const matched = /(?:Line\s+)?[Cc]overage:\s*([\d.]+)%/.exec(summary);
     if (matched) {
-        return { total: 0, covered: 0, percentage: parseFloat(matched[1]!) };
+        const pctStr = matched[1];
+        if (!pctStr) return null;
+        return { total: 0, covered: 0, percentage: parseFloat(pctStr) };
     }
     return null;
 }

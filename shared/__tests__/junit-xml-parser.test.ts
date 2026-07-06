@@ -1,8 +1,9 @@
 import { describe, it, expect } from 'vitest';
 import { parseJUnitXml } from '../junit-xml-parser.js';
+import type { JUnitParseResult, FlatTestEntry } from '../junit-xml-parser.js';
 
-describe('parseJUnitXml', () => {
-    it('R1: JUnit XML válido retorna FlatTest[] e stats', () => {
+describe('ParseJUnitXml', () => {
+    it('r1: JUnit XML válido retorna FlatTest[] e stats', () => {
         const xml = `<?xml version="1.0"?>
 <testsuite name="MySuite" tests="2" failures="1" errors="0" skipped="0" time="1.5">
   <testcase name="test1" classname="MyClass" time="0.5"/>
@@ -12,9 +13,13 @@ describe('parseJUnitXml', () => {
 </testsuite>`;
 
         const result = parseJUnitXml(xml);
+
         expect(result).not.toBeNull();
-        expect(result!.tests).toHaveLength(2);
-        expect(result!.stats).toEqual({
+
+        const r = result as JUnitParseResult;
+
+        expect(r.tests).toHaveLength(2);
+        expect(r.stats).toStrictEqual({
             passed: 1,
             failed: 1,
             skipped: 0,
@@ -23,7 +28,7 @@ describe('parseJUnitXml', () => {
         });
     });
 
-    it('R2: captura failure messages', () => {
+    it('r2: captura failure messages', () => {
         const xml = `<?xml version="1.0"?>
 <testsuite name="S" tests="1" failures="1" time="0.5">
   <testcase name="t1" classname="C" time="0.5">
@@ -32,12 +37,17 @@ describe('parseJUnitXml', () => {
 </testsuite>`;
 
         const result = parseJUnitXml(xml);
+
         expect(result).not.toBeNull();
-        expect(result!.tests[0]!.status).toBe('failed');
-        expect(result!.tests[0]!.message).toBe('Expected true, got false');
+
+        const r = result as JUnitParseResult;
+        const t0 = r.tests[0] as FlatTestEntry;
+
+        expect(t0.status).toBe('failed');
+        expect(t0.message).toBe('Expected true, got false');
     });
 
-    it('R3: conta skipped corretamente', () => {
+    it('r3: conta skipped corretamente', () => {
         const xml = `<?xml version="1.0"?>
 <testsuite name="S" tests="3" failures="0" errors="0" skipped="1" time="1.0">
   <testcase name="t1" classname="C" time="0.3"/>
@@ -48,8 +58,12 @@ describe('parseJUnitXml', () => {
 </testsuite>`;
 
         const result = parseJUnitXml(xml);
+
         expect(result).not.toBeNull();
-        expect(result!.stats).toEqual({
+
+        const r = result as JUnitParseResult;
+
+        expect(r.stats).toStrictEqual({
             passed: 2,
             failed: 0,
             skipped: 1,
@@ -58,19 +72,24 @@ describe('parseJUnitXml', () => {
         });
     });
 
-    it('R4: retorna null para XML inválido', () => {
+    it('r4: retorna null para XML inválido', () => {
         const result = parseJUnitXml('not valid xml');
+
         expect(result).toBeNull();
     });
 
-    it('R5: retorna stats zerados para XML vazio (0 testes)', () => {
+    it('r5: retorna stats zerados para XML vazio (0 testes)', () => {
         const xml = `<?xml version="1.0"?>
 <testsuite name="Empty" tests="0" failures="0" errors="0" skipped="0" time="0">
 </testsuite>`;
 
         const result = parseJUnitXml(xml);
+
         expect(result).not.toBeNull();
-        expect(result!.stats).toEqual({
+
+        const r = result as JUnitParseResult;
+
+        expect(r.stats).toStrictEqual({
             passed: 0,
             failed: 0,
             skipped: 0,
@@ -79,7 +98,7 @@ describe('parseJUnitXml', () => {
         });
     });
 
-    it('R6: merge de múltiplos testsuites', () => {
+    it('r6: merge de múltiplos testsuites', () => {
         const xml = `<?xml version="1.0"?>
 <testsuites>
   <testsuite name="S1" tests="1" failures="0" time="0.3">
@@ -91,13 +110,17 @@ describe('parseJUnitXml', () => {
 </testsuites>`;
 
         const result = parseJUnitXml(xml);
+
         expect(result).not.toBeNull();
-        expect(result!.tests).toHaveLength(2);
-        expect(result!.stats.total).toBe(2);
-        expect(result!.stats.duration).toBeCloseTo(1.0);
+
+        const r = result as JUnitParseResult;
+
+        expect(r.tests).toHaveLength(2);
+        expect(r.stats.total).toBe(2);
+        expect(r.stats.duration).toBeCloseTo(1.0);
     });
 
-    it('R7: attachment tags não crasham', () => {
+    it('r7: attachment tags não crasham', () => {
         const xml = `<?xml version="1.0"?>
 <testsuite name="S" tests="1" failures="0" time="0.5">
   <testcase name="t1" classname="C" time="0.5">
@@ -107,9 +130,13 @@ describe('parseJUnitXml', () => {
 </testsuite>`;
 
         const result = parseJUnitXml(xml);
+
         expect(result).not.toBeNull();
-        expect(result!.tests).toHaveLength(1);
-        expect(result!.tests[0]!.status).toBe('passed');
+
+        const r = result as JUnitParseResult;
+
+        expect(r.tests).toHaveLength(1);
+        expect((r.tests[0] as FlatTestEntry).status).toBe('passed');
     });
 
     it('classname ausente não crasha', () => {
@@ -119,9 +146,13 @@ describe('parseJUnitXml', () => {
 </testsuite>`;
 
         const result = parseJUnitXml(xml);
+
         expect(result).not.toBeNull();
-        expect(result!.tests).toHaveLength(1);
-        expect(result!.tests[0]!.classname).toBe('');
+
+        const r = result as JUnitParseResult;
+
+        expect(r.tests).toHaveLength(1);
+        expect((r.tests[0] as FlatTestEntry).classname).toBe('');
     });
 
     it('failure com stack trace', () => {
@@ -134,9 +165,14 @@ describe('parseJUnitXml', () => {
 </testsuite>`;
 
         const result = parseJUnitXml(xml);
+
         expect(result).not.toBeNull();
-        expect(result!.tests[0]!.status).toBe('failed');
-        expect(result!.tests[0]!.message).toBe('fail');
-        expect(result!.tests[0]!.stackTrace).toContain('Stack trace');
+
+        const r = result as JUnitParseResult;
+        const t0 = r.tests[0] as FlatTestEntry;
+
+        expect(t0.status).toBe('failed');
+        expect(t0.message).toBe('fail');
+        expect(t0.stackTrace).toContain('Stack trace');
     });
 });
