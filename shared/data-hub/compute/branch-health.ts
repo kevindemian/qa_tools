@@ -28,10 +28,12 @@ export function calcBranchBreakdown(runs: PipelineRun[]): Record<string, BranchH
 
     const result: Record<string, BranchHealth> = {};
     for (const [branch, stats] of branchStats) {
-        result[branch] = {
-            passRate: stats.total > 0 ? Math.round((stats.passed / stats.total) * 100 * 100) / 100 : 0,
-            count: stats.total,
-        };
+        Object.assign(result, {
+            [branch]: {
+                passRate: stats.total > 0 ? Math.round((stats.passed / stats.total) * 100 * 100) / 100 : 0,
+                count: stats.total,
+            },
+        });
     }
     return result;
 }

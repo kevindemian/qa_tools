@@ -44,11 +44,16 @@ function fromLog(text: string): RawCoverage | null {
             percentage: parseFloat(pctStr),
         };
     }
-    const simple = /(?:Line\s+)?[Cc]overage:\s*([\d.]+)%/.exec(text);
-    if (simple) {
-        const pctStr = simple[1];
-        if (!pctStr) return null;
-        return { total: 0, covered: 0, percentage: parseFloat(pctStr) };
+    const covIdx = text.search(/coverage:\s*/i);
+    if (covIdx !== -1) {
+        const after = text.slice(covIdx);
+        const pctExec = /\d[\d.]*/.exec(after);
+        if (pctExec && after.charAt(pctExec.index + pctExec[0].length) === '%') {
+            const pct = parseFloat(pctExec[0]);
+            if (Number.isFinite(pct)) {
+                return { total: 0, covered: 0, percentage: pct };
+            }
+        }
     }
     return null;
 }
@@ -63,11 +68,16 @@ function fromJson(data: { total: number; covered: number; percentage: number }):
 }
 
 function fromCheckRunSummary(summary: string): RawCoverage | null {
-    const matched = /(?:Line\s+)?[Cc]overage:\s*([\d.]+)%/.exec(summary);
-    if (matched) {
-        const pctStr = matched[1];
-        if (!pctStr) return null;
-        return { total: 0, covered: 0, percentage: parseFloat(pctStr) };
+    const covIdx = summary.search(/coverage:\s*/i);
+    if (covIdx !== -1) {
+        const after = summary.slice(covIdx);
+        const pctExec = /\d[\d.]*/.exec(after);
+        if (pctExec && after.charAt(pctExec.index + pctExec[0].length) === '%') {
+            const pct = parseFloat(pctExec[0]);
+            if (Number.isFinite(pct)) {
+                return { total: 0, covered: 0, percentage: pct };
+            }
+        }
     }
     return null;
 }

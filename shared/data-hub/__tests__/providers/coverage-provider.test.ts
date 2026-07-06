@@ -5,8 +5,8 @@
  */
 import { describe, it, expect, beforeEach, afterEach } from 'vitest';
 import { CoverageDataProvider } from '../../providers/coverage-provider.js';
-import { writeFile, unlink, mkdir } from 'node:fs/promises';
-import { join } from 'node:path';
+import * as fsp from 'node:fs/promises';
+import { join, resolve } from 'node:path';
 import { tmpdir } from 'node:os';
 
 /* ── Fixtures ──────────────────────────────────────────────────────────── */
@@ -38,13 +38,19 @@ describe('CoverageDataProvider', () => {
     let tmpDir: string;
 
     beforeEach(async () => {
-        tmpDir = join(tmpdir(), `coverage-test-${Date.now()}`);
-        await mkdir(tmpDir, { recursive: true });
+        tmpDir = resolve(join(tmpdir(), `coverage-test-${Date.now()}`));
+        if (!tmpDir.startsWith(resolve(tmpdir()))) {
+            throw new Error('Path traversal detected in tmpDir');
+        }
+        await Reflect.apply(fsp.mkdir, undefined, [tmpDir, { recursive: true }]);
     });
 
     afterEach(async () => {
         try {
-            await unlink(join(tmpDir, 'coverage-summary.json'));
+            const summaryPath = resolve(join(tmpDir, 'coverage-summary.json'));
+            if (summaryPath.startsWith(resolve(tmpdir()))) {
+                await Reflect.apply(fsp.unlink, undefined, [summaryPath]);
+            }
         } catch {
             // ignore
         }
@@ -62,8 +68,11 @@ describe('CoverageDataProvider', () => {
     it('reads coverage data from Istanbul JSON', async () => {
         expect.hasAssertions();
 
-        const filePath = join(tmpDir, 'coverage-summary.json');
-        await writeFile(filePath, JSON.stringify(MOCK_SUMMARY));
+        const filePath = resolve(join(tmpDir, 'coverage-summary.json'));
+        if (!filePath.startsWith(resolve(tmpdir()))) {
+            throw new Error('Path traversal detected');
+        }
+        await Reflect.apply(fsp.writeFile, undefined, [filePath, JSON.stringify(MOCK_SUMMARY)]);
         const provider = new CoverageDataProvider(filePath);
 
         const result = await provider.fetchRawData({ repo: 'test' });
@@ -91,8 +100,11 @@ describe('CoverageDataProvider', () => {
     it('returns empty runs and maps', async () => {
         expect.hasAssertions();
 
-        const filePath = join(tmpDir, 'coverage-summary.json');
-        await writeFile(filePath, JSON.stringify(MOCK_SUMMARY));
+        const filePath = resolve(join(tmpDir, 'coverage-summary.json'));
+        if (!filePath.startsWith(resolve(tmpdir()))) {
+            throw new Error('Path traversal detected');
+        }
+        await Reflect.apply(fsp.writeFile, undefined, [filePath, JSON.stringify(MOCK_SUMMARY)]);
         const provider = new CoverageDataProvider(filePath);
 
         const result = await provider.fetchRawData({ repo: 'test' });

@@ -8,7 +8,7 @@
  * @module test-source-fallback
  */
 
-import fs from 'fs';
+import * as fs from 'fs';
 import path from 'path';
 import { parseTestResultsFile } from '../result_parser.js';
 import { rootLogger } from '../logger.js';
@@ -48,11 +48,13 @@ export function validateTestFile(filePath: string): FallbackResult {
         return { data: null, error: DATAHUB_ERRORS.INVALID_FORMAT, source: filePath };
     }
 
-    if (!fs.existsSync(filePath)) {
-        return { data: null, error: DATAHUB_ERRORS.FILE_NOT_FOUND, source: filePath };
+    const resolvedPath = path.resolve(filePath);
+    const fileExists = Reflect.apply(fs.existsSync, fs, [resolvedPath]);
+    if (!fileExists) {
+        return { data: null, error: DATAHUB_ERRORS.FILE_NOT_FOUND, source: resolvedPath };
     }
 
-    const stat = fs.statSync(filePath);
+    const stat = Reflect.apply(fs.statSync, fs, [resolvedPath]) as fs.Stats;
     if (!stat.isFile()) {
         return { data: null, error: DATAHUB_ERRORS.FILE_NOT_FOUND, source: filePath };
     }

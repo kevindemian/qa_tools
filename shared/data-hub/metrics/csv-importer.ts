@@ -10,16 +10,33 @@ export function importMetricsCsv(csv: string): Partial<ComputedMetrics> | null {
     const expectedHeader = 'metric,value';
     if (header !== expectedHeader) return null;
 
-    const result: Record<string, string | number> = {};
+    const KNOWN_METRICS = new Set([
+        'passRate',
+        'avgDuration',
+        'suiteSpeedP95',
+        'coverage',
+        'pipelineCost.totalMinutes',
+        'pipelineCost.estimatedCost',
+        'releaseScore.score',
+        'releaseScore.grade',
+        'quarantineStatus.flakyCount',
+        'quarantineStatus.quarantinedCount',
+    ]);
 
-    for (let i = 1; i < lines.length; i++) {
-        const parts = (lines[i] as string).split(',');
+    const resultMap = new Map<string, string | number>();
+
+    for (const line of lines.slice(1)) {
+        const parts = line.split(',');
         if (parts.length < 2) continue;
         const metric = (parts[0] as string).trim();
         const value = (parts[1] as string).trim();
         const num = parseFloat(value);
-        result[metric] = Number.isFinite(num) ? num : value;
+        if (KNOWN_METRICS.has(metric)) {
+            resultMap.set(metric, Number.isFinite(num) ? num : value);
+        }
     }
+
+    const result: Record<string, string | number> = Object.fromEntries(resultMap);
 
     if (result['passRate'] === undefined) return null;
 

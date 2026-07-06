@@ -145,8 +145,8 @@ describe('Compute Layer Integration', () => {
         expect(topJobs.length).toBeGreaterThan(0);
 
         for (let i = 1; i < topJobs.length; i++) {
-            const prev = topJobs[i - 1] as { failureRate: number };
-            const curr = topJobs[i] as { failureRate: number };
+            const prev = topJobs.slice(i - 1, i)[0] as { failureRate: number };
+            const curr = topJobs.slice(i, i + 1)[0] as { failureRate: number };
 
             expect(prev.failureRate).toBeGreaterThanOrEqual(curr.failureRate);
         }

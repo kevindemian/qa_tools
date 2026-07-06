@@ -19,14 +19,14 @@
 function extractNumberBefore(input: string, keywordIdx: number): number {
     let end = keywordIdx - 1;
     while (end >= 0) {
-        const ch = input[end];
+        const ch = input.charAt(end);
         if (ch !== ' ') break;
         end--;
     }
     let start = end;
     while (start >= 0) {
-        const ch = input[start];
-        if (ch === undefined || ch < '0' || ch > '9') break;
+        const ch = input.charAt(start);
+        if (ch < '0' || ch > '9') break;
         start--;
     }
     if (start === end) return NaN;
@@ -125,8 +125,23 @@ export interface LogParseResult {
 }
 
 function stripAnsi(input: string): string {
-    const ansiPattern = new RegExp(String.fromCharCode(0x1b) + '\\[[0-9;]*[a-zA-Z]', 'g');
-    return input.replace(ansiPattern, '');
+    let result = '';
+    let i = 0;
+    while (i < input.length) {
+        if (input.charCodeAt(i) === 0x1b && input.charAt(i + 1) === '[') {
+            i += 2;
+            while (i < input.length) {
+                const c = input.charAt(i);
+                if ((c >= 'a' && c <= 'z') || (c >= 'A' && c <= 'Z')) break;
+                i++;
+            }
+            i++;
+        } else {
+            result += input.charAt(i);
+            i++;
+        }
+    }
+    return result;
 }
 
 function extractFailures(logText: string): string[] {

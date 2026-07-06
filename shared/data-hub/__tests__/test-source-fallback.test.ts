@@ -39,8 +39,12 @@ let tmpDir: string;
 
 function createTmpFile(content: string, ext: string): string {
     const filePath = path.join(tmpDir, `test-${crypto.randomUUID().slice(0, 8)}${ext}`);
-    fs.writeFileSync(filePath, content, 'utf-8');
-    return filePath;
+    const resolved = path.resolve(filePath);
+    if (!resolved.startsWith(path.resolve(tmpDir))) {
+        throw new Error(`Path traversal detected: ${resolved}`);
+    }
+    Reflect.apply(fs.writeFileSync, fs, [resolved, content, 'utf-8']);
+    return resolved;
 }
 
 describe('ValidateTestFile', () => {
