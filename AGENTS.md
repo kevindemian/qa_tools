@@ -663,3 +663,118 @@ No continuation, partial acceptance, or "let's proceed anyway" is permitted for 
 ### 22.5 Audit Trail in Output
 
 Each Phase result must be recorded in `audit/functional/PROGRESS.md` before the next Phase begins. The agent's output must contain the Phase header, each command result, and the final status for each item, so the user can verify compliance without reading files.\*\*
+
+---
+
+## 23. PROTECTED CONTENT & MERGE-FIRST RULE
+
+Before removing, deleting, replacing, or overwriting existing content, apply this rule.
+
+### 23.1 Hierarchy (Conflict Resolution)
+
+In case of conflict between this rule and others:
+
+1. **Safety Mechanism Immutability** (Rule 5) — ALWAYS prevails
+2. **Root Cause Invariant** (Rule 4) — ALWAYS prevails
+3. **This rule** — applies when no conflict with 1 or 2
+
+### 23.2 Tier Classification (Objective Criteria)
+
+| Tier              | Criterion                                                                               | Action                                       |
+| ----------------- | --------------------------------------------------------------------------------------- | -------------------------------------------- |
+| **1 — Free**      | Content I created in this session                                                       | Proceed freely                               |
+| **2 — Fluid**     | Rename, move, extract (same functionality preserved)                                    | Proceed + annotate inline                    |
+| **3 — Attention** | Removal of file/function with ≤2 consumers OR non-critical content                      | Quick confirmation                           |
+| **4 — Critical**  | Removal of file/function with >2 consumers, OR validation/assertions/tests/types/config | STOP + analyze + propose merge if applicable |
+
+### 23.3 Source Classification
+
+| Source         | Example                                          | Confidence             |
+| -------------- | ------------------------------------------------ | ---------------------- |
+| **Requested**  | User said "remove X" in their message            | HIGH — user decided    |
+| **Inferred**   | Agent deduced "X should be removed" from context | MEDIUM — agent decided |
+| **Incidental** | Editing Y causes removal of X as side effect     | LOW — unintended       |
+
+### 23.4 Decision Flow
+
+**Tier 1-2: PROCEED**
+
+- Brief inline annotation: `// removed: [reason]`
+- Mention in summary if significant
+
+**Tier 3 — Requested (quick confirmation):**
+
+```
+Agent: "You requested removal of A, B, C. Confirm?"
+User: "yes"
+Agent: executes
+```
+
+**Tier 3 — Inferred (explain + confirm):**
+
+```
+Agent: "I inferred need to remove A, B, C:
+  - A: [why it exists, why it can be removed]
+  - B: [same pattern]
+  - C: [same pattern]
+
+  Confirm?"
+User: "yes"
+Agent: executes
+```
+
+**Tier 4 — ALWAYS STOP:**
+
+```
+Agent: "STOP: I will remove [X]. This is Tier 4 because [reason].
+
+  Option A: Remove (original intent)
+  Option B: MERGE — combine [existing] + [new] → [result]
+
+  B is superior because:
+  ✓ Preserves [existing decision/functionality]
+  ✓ Smaller diff ([N] vs [M] lines)
+  ✓ No external behavior change
+  ✓ Reversible"
+User chooses
+Agent executes
+```
+
+### 23.5 Batch Confirmation
+
+For multiple removals in the same task, ask ONCE by highest tier in the batch:
+
+```
+"Removal of 5 files:
+  - 3 Tier 2 (rename/move)
+  - 2 Tier 4 (types with 8 consumers)
+
+  The 2 Tier 4 require analysis. Proceed?"
+```
+
+### 23.6 MERGE Proposal (Tier 4 Only)
+
+When removal is detected AND a merge option exists:
+
+1. Show: what exists + what was going to be added
+2. Propose: merged result combining both
+3. Explain with OBJECTIVE criteria:
+    - ✓ Preserves [specific decision/functionality]
+    - ✓ Smaller diff ([N] lines vs [M] lines)
+    - ✓ No external behavior change
+    - ✓ Reversible
+4. Let user choose: Original | Merge | Other
+
+### 23.7 Exceptions (No Confirmation Needed)
+
+- Removing my own edit from this session (reverting my mistake)
+- User explicitly said "remove all" / "delete everything"
+- Content is factually incorrect (clear evidence)
+- Tier 1 (always free)
+- Non-TTY mode: auto-confirm Tier 1-3; Tier 4 uses ON_ERROR config
+
+### 23.8 Rule of Gold
+
+> **Ask ONCE per task, not per file.**
+> If user confirmed "remove A, B, C", do not ask again for D
+> unless D is Tier 4 or different scope.

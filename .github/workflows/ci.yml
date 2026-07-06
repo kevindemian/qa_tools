@@ -100,13 +100,6 @@ jobs:
                   name: ctrf-report
                   path: reports/ctrf-report.json
                   if-no-files-found: warn
-            - name: Upload coverage report for post-processing
-              if: always() && matrix.node-version == 22
-              uses: actions/upload-artifact@v7
-              with:
-                  name: coverage-report
-                  path: coverage/
-                  if-no-files-found: warn
 
     post-process:
         if: always() && github.event_name != 'schedule'

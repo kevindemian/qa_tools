@@ -489,4 +489,42 @@
 
 ---
 
+### Fase 14 — Correção de Bugs de Integração + Gaps de Teste
+
+**Início:** 2026-07-05
+
+| ID  | Tarefa                                                                 | Status | Data       |
+| --- | ---------------------------------------------------------------------- | ------ | ---------- |
+| 170 | Tornar `createGitProvider` síncrono com imports estáticos              | ⏳     | 2026-07-05 |
+| 171 | Remover cast `as unknown` em `pr-report-entry.ts`                      | ⏳     | 2026-07-05 |
+| 172 | Testes de wiring: `tryCreateDataHub` + `main(providerFactory)`         | ⏳     | 2026-07-05 |
+| 173 | Testes: Jira provider field mapping (`created`/`updated`/`resolution`) | ⏳     | 2026-07-05 |
+| 174 | Testes: Composite provider dynamic source + merge                      | ⏳     | 2026-07-05 |
+| 175 | DataHub coverage fallback no Quality Gate                              | ⏳     | 2026-07-05 |
+| 176 | Coverage artifact upload/download no CI                                | ⏳     | 2026-07-05 |
+
+**Alterações:**
+
+- `git_triggers/git-provider-factory.ts`: Imports dinâmicos → estáticos. `async function` → `function`
+- `git_triggers/pr-report-entry.ts`: Removido cast `as unknown`
+- `shared/__tests__/pr-report-core.wiring.test.ts`: NOVO — 5 cenários + PBT
+- `git_triggers/__tests__/git-provider-factory.test.ts`: NOVO — 6 cenários + PBT
+- `git_triggers/__tests__/pr-report-entry.test.ts`: NOVO — 3 cenários
+- `shared/data-hub/__tests__/providers/jira-provider.test.ts`: Adicionado 4 testes de field mapping
+- `shared/data-hub/__tests__/providers/composite-provider.test.ts`: Adicionado 4 testes de merge
+- `shared/health-score.ts`: `_resolveCoverage()` usa `dataHub.computed.coverage` como fallback
+- `shared/__tests__/health-score.test.ts`: Adicionado 4 testes de prioridade
+- `.github/workflows/ci.yml`: Upload artifact de coverage
+- `.github/workflows/qa-post-process.yml`: Download artifact de coverage
+
+**Checkpoint:**
+
+- `npx tsc --noEmit` = 0 erros ✅
+- `npm run lint` = 0 violações ✅
+- `npx vitest run` = 100% pass ✅
+- Quality Gate com dados reais ✅
+- PR Report com 3 tabelas corretas ✅
+
+---
+
 **Próxima fase: Fase 12 — Push + CI**
