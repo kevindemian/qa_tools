@@ -31,14 +31,14 @@ describe('PrReportEntry — factory type safety', () => {
         delete process.env['GITHUB_TOKEN'];
     });
 
-    it('createGitProvider returns Promise<GitProvider> (not synchronous)', async () => {
+    it('createGitProvider returns GitProvider for GitHub', async () => {
         expect.hasAssertions();
 
         process.env['GITHUB_TOKEN'] = 'gh-token';
 
         const { createGitProvider } = await import('../git-provider-factory.js');
 
-        const result = await createGitProvider({
+        const result = createGitProvider({
             isCI: true,
             repo: 'owner/repo',
             branch: 'main',
@@ -56,7 +56,7 @@ describe('PrReportEntry — factory type safety', () => {
 
         const { createGitProvider } = await import('../git-provider-factory.js');
 
-        const result = await createGitProvider({
+        const result = createGitProvider({
             isCI: false,
             repo: '',
             branch: '',
@@ -73,7 +73,7 @@ describe('PrReportEntry — factory type safety', () => {
 
         const { createGitProvider } = await import('../git-provider-factory.js');
 
-        const result = await createGitProvider({
+        const result = createGitProvider({
             isCI: true,
             repo: 'owner/repo',
             branch: 'main',
