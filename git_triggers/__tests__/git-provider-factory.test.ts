@@ -22,11 +22,7 @@ function makeCiEnv(overrides: Partial<CiEnvironment> = {}): CiEnvironment {
     return {
         isCI: true,
         repo: 'owner/repo',
-        branch: 'main',
-        commit: 'abc123',
         runId: '1',
-        runUrl: 'https://example.com',
-        isPullRequest: false,
         ...overrides,
     };
 }

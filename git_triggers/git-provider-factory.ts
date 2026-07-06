@@ -11,13 +11,9 @@ import GitHubManager from './github_manager.js';
 export interface CiEnvironment {
     isCI: boolean;
     repo: string;
-    branch: string;
-    commit: string;
     runId: string;
-    runUrl?: string;
-    prNumber?: number;
-    prUrl?: string;
-    isPullRequest: boolean;
+    serverUrl?: string;
+    refName?: string;
 }
 
 /**
