@@ -1,0 +1,32 @@
+import type { ComputedMetrics } from '../../types/data-hub.js';
+
+type FlatRow = Record<string, string | number>;
+
+function flattenMetrics(metrics: ComputedMetrics): FlatRow[] {
+    const rows: FlatRow[] = [];
+    rows.push({ metric: 'passRate', value: metrics.passRate });
+    rows.push({ metric: 'avgDuration', value: metrics.avgDuration });
+    rows.push({ metric: 'suiteSpeedP95', value: metrics.suiteSpeedP95 });
+    rows.push({ metric: 'coverage', value: metrics.coverage });
+    rows.push({ metric: 'pipelineCost.totalMinutes', value: metrics.pipelineCost.totalMinutes });
+    rows.push({ metric: 'pipelineCost.estimatedCost', value: metrics.pipelineCost.estimatedCost });
+    rows.push({ metric: 'releaseScore.score', value: metrics.releaseScore.score });
+    rows.push({ metric: 'releaseScore.grade', value: metrics.releaseScore.grade });
+    rows.push({ metric: 'quarantineStatus.flakyCount', value: metrics.quarantineStatus.flakyCount });
+    rows.push({ metric: 'quarantineStatus.quarantinedCount', value: metrics.quarantineStatus.quarantinedCount });
+    return rows;
+}
+
+function toCsv(rows: FlatRow[]): string {
+    const headers = Object.keys(rows[0] ?? {});
+    const lines = [headers.join(',')];
+    for (const row of rows) {
+        lines.push(headers.map((h) => String(row[h] ?? '')).join(','));
+    }
+    return lines.join('\n');
+}
+
+export function exportMetricsCsv(metrics: ComputedMetrics): string {
+    const rows = flattenMetrics(metrics);
+    return toCsv(rows);
+}
