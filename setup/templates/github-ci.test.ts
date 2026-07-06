@@ -1,4 +1,5 @@
 import { generateCIWorkflow, generateQaPostProcessAction } from './github-ci.js';
+import { ACTION_VERSIONS } from '../../shared/test-utils/constants.js';
 import type { SetupContext } from '../context.js';
 
 const MOCK_CTX_BASIC: SetupContext = {
@@ -67,7 +68,7 @@ describe('GenerateCIWorkflow', () => {
     it('includes upload-artifact step when prReport enabled', () => {
         const yaml = generateCIWorkflow(MOCK_CTX_FULL);
 
-        expect(yaml).toContain('actions/upload-artifact@v4');
+        expect(yaml).toContain(ACTION_VERSIONS.UPLOAD_ARTIFACT);
         expect(yaml).toContain('ctrf-report');
     });
 

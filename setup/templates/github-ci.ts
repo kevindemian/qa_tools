@@ -11,6 +11,7 @@
  * 3. Keep ci.yml focused on testing only
  */
 import { WorkflowBuilder, type JobConfig, type StepConfig } from '../builder/workflow-builder.js';
+import { ACTION_VERSIONS } from '../../shared/test-utils/constants.js';
 import type { SetupContext } from '../context.js';
 
 function generateQaPostProcessActionYaml(): string {
@@ -50,9 +51,9 @@ export function generateCIWorkflow(ctx: SetupContext): string {
     builder.setWorkflowName('CI');
     builder.setOn(['push', 'pull_request', 'workflow_dispatch']);
 
-    const checkoutStep: StepConfig = { uses: 'actions/checkout@v4' };
+    const checkoutStep: StepConfig = { uses: ACTION_VERSIONS.CHECKOUT };
     const setupNodeStep: StepConfig = {
-        uses: 'actions/setup-node@v4',
+        uses: ACTION_VERSIONS.SETUP_NODE,
         with: { 'node-version': ctx.nodeVersion },
     };
     const installStep: StepConfig = { name: 'Install dependencies', run: ctx.installCmd };
@@ -62,7 +63,7 @@ export function generateCIWorkflow(ctx: SetupContext): string {
     if (ctx.features.prReport) {
         testSteps.push({
             name: 'Upload CTRF report',
-            uses: 'actions/upload-artifact@v4',
+            uses: ACTION_VERSIONS.UPLOAD_ARTIFACT,
             with: {
                 name: 'ctrf-report',
                 path: ctx.ctrfReportPath,

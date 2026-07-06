@@ -10,7 +10,7 @@ vi.mock('../shared/http-client', () => ({
 
 vi.mock('../shared/logger', () => ({
     Logger: vi.fn().mockImplementation(function () {
-        return { error: vi.fn() };
+        return { error: vi.fn(), warn: vi.fn() };
     }),
     rootLogger: { error: vi.fn(), warn: vi.fn() },
 }));

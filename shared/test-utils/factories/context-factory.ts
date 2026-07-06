@@ -1,7 +1,9 @@
 import type { CommandContext } from '../../../jira_management/commands/context.js';
 import type { Mock, Mocked } from 'vitest';
+import type { LogContext } from '../../types/common.js';
 import { createMockJiraResource } from './jira-resource-factory.js';
 import { createMockLinkManager } from './link-manager-factory.js';
+import { PROJECT_MANAGEMENT_PATH } from '../constants.js';
 
 type MockProxy<T> = {
     [P in keyof T]: T[P] extends (...args: unknown[]) => unknown ? Mock : T[P] extends object ? MockProxy<T[P]> : T[P];
@@ -43,9 +45,9 @@ export function createMockContext(overrides?: Partial<MockProxy<CommandContext>>
         },
         pushHistory: vi.fn(),
         printSessionSummary: vi.fn(),
-        base_url: 'https://jira.test.com',
+        base_url: PROJECT_MANAGEMENT_PATH.BASE_URL,
         sessionLog: {
-            context: {} as Record<string, unknown>,
+            context: {} as LogContext,
             _logDir: null,
             _filePathCached: null,
             _fileError: false,

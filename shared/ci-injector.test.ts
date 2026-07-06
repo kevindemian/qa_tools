@@ -13,6 +13,7 @@ import path from 'node:path';
 import { describe, it, expect } from 'vitest';
 import { generatePostProcessWorkflowYaml, extractFirstJobName, injectPostProcessJob } from './ci-injector.js';
 import { generateQaPostProcessWorkflow } from '../setup/templates/qa-post-process-workflow.js';
+import { ACTION_VERSIONS } from './test-utils/constants.js';
 import type { SetupContext } from '../setup/context.js';
 /* ── Fixtures ──────────────────────────────────────────────────────────── */
 
@@ -26,7 +27,7 @@ const SIMPLE_CI_YML =
         '  test:',
         '    runs-on: ubuntu-latest',
         '    steps:',
-        '      - uses: actions/checkout@v5',
+        `      - uses: ${ACTION_VERSIONS.CHECKOUT}`,
         '      - run: npm ci',
         '      - run: npm test',
     ].join('\n') + '\n';
@@ -136,7 +137,7 @@ describe('GeneratePostProcessWorkflowYaml', () => {
     it('includes artifact upload step', () => {
         const yaml = generatePostProcessWorkflowYaml({ projectName: 'p' });
 
-        expect(yaml).toContain('actions/upload-artifact@v7');
+        expect(yaml).toContain(ACTION_VERSIONS.UPLOAD_ARTIFACT);
         expect(yaml).toContain('pr-report-html');
     });
 
@@ -193,7 +194,7 @@ describe('InjectPostProcessJob', () => {
         expect(result).toContain('name: CI');
         expect(result).toContain('on: [push]');
         expect(result).toContain('test:');
-        expect(result).toContain('actions/checkout@v5');
+        expect(result).toContain(ACTION_VERSIONS.CHECKOUT);
     });
 
     it('is idempotent — does not inject when post-process already exists', () => {
@@ -326,10 +327,10 @@ describe('Contract: ci-injector and setup wizard generators are equivalent', () 
         const fromWizard = generateQaPostProcessWorkflow(makeCtx({ projectName: 'p' }));
 
         for (const yaml of [fromInjector, fromWizard]) {
-            expect(yaml).toContain('actions/checkout@v5');
-            expect(yaml).toContain('actions/setup-node@v6');
-            expect(yaml).toContain('actions/download-artifact@v8');
-            expect(yaml).toContain('actions/upload-artifact@v7');
+            expect(yaml).toContain(ACTION_VERSIONS.CHECKOUT);
+            expect(yaml).toContain(ACTION_VERSIONS.SETUP_NODE);
+            expect(yaml).toContain(ACTION_VERSIONS.DOWNLOAD_ARTIFACT);
+            expect(yaml).toContain(ACTION_VERSIONS.UPLOAD_ARTIFACT);
         }
     });
 });

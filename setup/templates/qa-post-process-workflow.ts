@@ -4,6 +4,7 @@
  * Called by ci.yml after tests complete. Runs pr-report-core.ts on the
  * CTRF report uploaded by the test job and uploads the resulting HTML.
  */
+import { ACTION_VERSIONS } from '../../shared/test-utils/constants.js';
 import type { SetupContext } from '../context.js';
 
 export function generateQaPostProcessWorkflow(ctx: SetupContext): string {
@@ -27,15 +28,15 @@ export function generateQaPostProcessWorkflow(ctx: SetupContext): string {
         '  post-process:',
         '    runs-on: ubuntu-latest',
         '    steps:',
-        '      - uses: actions/checkout@v5',
-        '      - uses: actions/setup-node@v6',
+        `      - uses: ${ACTION_VERSIONS.CHECKOUT}`,
+        `      - uses: ${ACTION_VERSIONS.SETUP_NODE}`,
         '        with:',
         '          node-version: ' + ctx.nodeVersion,
         '          cache: npm',
         '      - name: Install dependencies',
         '        run: ' + ctx.installCmd,
         '      - name: Download CTRF report',
-        '        uses: actions/download-artifact@v8',
+        `        uses: ${ACTION_VERSIONS.DOWNLOAD_ARTIFACT}`,
         '        with:',
         '          name: ctrf-report',
         '          path: reports/',
@@ -51,7 +52,7 @@ export function generateQaPostProcessWorkflow(ctx: SetupContext): string {
         '          GITHUB_TOKEN: ${{ github.token }}',
         '      - name: Upload PR Report HTML',
         '        if: always()',
-        '        uses: actions/upload-artifact@v7',
+        `        uses: ${ACTION_VERSIONS.UPLOAD_ARTIFACT}`,
         '        with:',
         '          name: pr-report-html',
         '          path: reports/pr-report.html',
