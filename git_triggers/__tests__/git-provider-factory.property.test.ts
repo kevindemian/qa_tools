@@ -34,7 +34,6 @@ describe('CreateGitProvider — property-based', () => {
     const originalEnv = { ...process.env };
 
     beforeEach(() => {
-        vi.resetModules();
         process.env = { ...originalEnv };
         delete process.env['CI_JOB_TOKEN'];
         delete process.env['CI_PROJECT_ID'];
@@ -46,12 +45,12 @@ describe('CreateGitProvider — property-based', () => {
         process.env = { ...originalEnv };
     });
 
-    it('output is always GitProvider | undefined (never synchronous non-Promise)', async () => {
+    it('output is always GitProvider | undefined (never synchronous non-Promise)', () => {
         expect.hasAssertions();
 
-        await fc.assert(
-            fc.asyncProperty(fc.boolean(), async (isCI) => {
-                const result = await createGitProvider(makeCiEnv({ isCI }));
+        fc.assert(
+            fc.property(fc.boolean(), (isCI) => {
+                const result = createGitProvider(makeCiEnv({ isCI }));
 
                 expect(result).not.toBeInstanceOf(Promise);
             }),
@@ -59,14 +58,14 @@ describe('CreateGitProvider — property-based', () => {
         );
     });
 
-    it('isCI=false always returns undefined', async () => {
+    it('isCI=false always returns undefined', () => {
         expect.hasAssertions();
 
-        await fc.assert(
-            fc.asyncProperty(fc.string(), fc.string(), async (token, projectId) => {
+        fc.assert(
+            fc.property(fc.string(), fc.string(), (token, projectId) => {
                 process.env['CI_JOB_TOKEN'] = token;
                 process.env['CI_PROJECT_ID'] = projectId;
-                const result = await createGitProvider(makeCiEnv({ isCI: false }));
+                const result = createGitProvider(makeCiEnv({ isCI: false }));
 
                 expect(result).toBeUndefined();
             }),
@@ -74,14 +73,14 @@ describe('CreateGitProvider — property-based', () => {
         );
     });
 
-    it('isCI=true with valid GitLab env always returns object with provider=gitlab', async () => {
+    it('isCI=true with valid GitLab env always returns object with provider=gitlab', () => {
         expect.hasAssertions();
 
-        await fc.assert(
-            fc.asyncProperty(fc.string({ minLength: 1 }), fc.string({ minLength: 1 }), async (token, projectId) => {
+        fc.assert(
+            fc.property(fc.string({ minLength: 1 }), fc.string({ minLength: 1 }), (token, projectId) => {
                 process.env['CI_JOB_TOKEN'] = token;
                 process.env['CI_PROJECT_ID'] = projectId;
-                const result = await createGitProvider(makeCiEnv());
+                const result = createGitProvider(makeCiEnv());
 
                 expect(result).toBeDefined();
                 expect(result).toHaveProperty('provider', 'gitlab');
@@ -90,13 +89,13 @@ describe('CreateGitProvider — property-based', () => {
         );
     });
 
-    it('isCI=true with valid GitHub env always returns object with provider=github', async () => {
+    it('isCI=true with valid GitHub env always returns object with provider=github', () => {
         expect.hasAssertions();
 
-        await fc.assert(
-            fc.asyncProperty(fc.string({ minLength: 1 }), async (token) => {
+        fc.assert(
+            fc.property(fc.string({ minLength: 1 }), (token) => {
                 process.env['GITHUB_TOKEN'] = token;
-                const result = await createGitProvider(makeCiEnv());
+                const result = createGitProvider(makeCiEnv());
 
                 expect(result).toBeDefined();
                 expect(result).toHaveProperty('provider', 'github');
