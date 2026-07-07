@@ -1006,10 +1006,8 @@ for (const run of runs) {
         if (isTestArtifact(art.name)) {
             try {
                 const { buffer, filename } = await this.provider.downloadArtifact(art.id);
-                const parsed = parseArtifactBuffer(buffer, filename);
-                if (parsed) {
-                    parsedArtifacts.push(parsed);
-                }
+                const parsed = parseArtifactBufferAll(buffer, filename);
+                parsedArtifacts.push(...parsed);
             } catch (err) {
                 rootLogger.debug(`GitHub: artifact download failed for ${art.name}: ${String(err)}`);
             }
@@ -1025,8 +1023,10 @@ for (const run of runs) {
 Já criado na Phase 0. Integrar no fluxo de download:
 
 1. `downloadArtifact(artifactId)` → Buffer
-2. `parseArtifactBuffer(buffer, filename)` → `ArtifactParseResult[]`
-3. Salvar em `parsedArtifacts`
+2. `parseArtifactBufferAll(buffer, filename)` → `ArtifactParseResult[]` (usar `parseArtifactBufferAll` para ZIPs com múltiplos resultados)
+3. Salvar em `parsedArtifacts` (flat array com spread)
+
+**Nota**: `parseArtifactBuffer()` (singular) retorna apenas o primeiro resultado. Usar `parseArtifactBufferAll()` para garantir que todos os resultados de ZIPs sejam capturados.
 
 #### 21.3 — `parsedArtifacts` no RawData
 
@@ -1035,7 +1035,7 @@ Já criado na Phase 0. Integrar no fluxo de download:
 ```typescript
 export interface RawData {
     // ... existing fields
-    /** Parsed artifact data (CTRF, JUnit, Mochawesome) */
+    /** Parsed artifact data (CTRF, JUnit, Mochawesome) — flat array de todos os resultados */
     parsedArtifacts?: ArtifactParseResult[];
 }
 ```
@@ -1337,6 +1337,30 @@ O acesso dinâmico `deps[dep]` no `detectFrameworkFromDeps` disparou `security/d
 ### 12. Integração test deve usar `toStrictEqual`
 
 O linter `vitest/prefer-strict-equal` exige `toStrictEqual` em vez de `toEqual` para objetos.
+
+### 13. parseArtifactBuffer — retorno único para ZIPs com múltiplos resultados
+
+**Problema**: `parseArtifactBuffer()` retornava apenas o primeiro resultado de um ZIP que pode conter múltiplos arquivos de teste (CTRF, JUnit, Mochawesome).
+
+**Correção**: Criada `parseArtifactBufferAll(buffer, fileName): ArtifactParseResult[]` que retorna todos os resultados. `parseArtifactBuffer()` agora delega para `parseArtifactBufferAll()` e retorna `[0]` ou null.
+
+**Registro**: Commit 9bb96064 (fix: lint auto-fix for Phase 20 test files).
+
+### 14. Metrics-run captura conteúdo WIP
+
+**Problema**: O script de métricas (`qa-tools: update metrics run`) commita automaticamente o working tree. Durante Phase 20, o conteúdo WIP foi capturado como commit `067871a9`.
+
+**Impacto**: Histórico de commits contém "metrics run" com código de features. Não há como limpar sem rebase interactivo (arriscado com 19+ commits à frente do origin).
+
+**Decisão**: Aceitar o estado atual. Registrar como limitação do processo de CI. Não reverter.
+
+### 15. Tree cache — TTL de 5 min pode ficar obsoleto
+
+**Problema**: O cache em memória (`wfGetRepoTreeCached`) usa TTL de 5 minutos. Se o repositório mudar durante uma sessão longa, dados desatualizados são retornados.
+
+**Impacto**: Baixo para sessões típicas (< 5 min). Médio para sessões longas com múltiplas consultas ao mesmo repo.
+
+**Decisão**: Documentar como limitação conhecida. Se necessário no futuro, adicionar `clearTreeCache()` antes de operações de longa duração ou expor opção `forceRefresh`.
 
 ---
 

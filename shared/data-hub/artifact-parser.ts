@@ -93,13 +93,18 @@ function parseContent(content: string, fileName: string): ArtifactParseResult | 
 }
 
 export function parseArtifactBuffer(buffer: Buffer, fileName: string): ArtifactParseResult | null {
+    const all = parseArtifactBufferAll(buffer, fileName);
+    return all.length > 0 ? (all[0] as ArtifactParseResult) : null;
+}
+
+export function parseArtifactBufferAll(buffer: Buffer, fileName: string): ArtifactParseResult[] {
     if (fileName.endsWith('.zip') || fileName.endsWith('.ZIP')) {
-        const results = parseZipBuffer(buffer);
-        return results.length > 0 ? (results[0] as ArtifactParseResult) : null;
+        return parseZipBuffer(buffer);
     }
 
     const content = buffer.toString('utf-8');
-    return parseContent(content, fileName);
+    const result = parseContent(content, fileName);
+    return result != null ? [result] : [];
 }
 
 export function parseZipBuffer(buffer: Buffer): ArtifactParseResult[] {
