@@ -1,5 +1,5 @@
 /** Base class for Git provider clients (GitHub/GitLab) — shared API call + error handling. */
-import type { JsonObject, DirEntry } from '../shared/types.js';
+import type { JsonObject, DirEntry, GitLabTestReport } from '../shared/types.js';
 import { handleError } from '../shared/git-provider-error.js';
 import type { createHttpClient } from '../shared/http-client.js';
 
@@ -16,6 +16,10 @@ export abstract class GitProviderBase {
     }
     /** Default: directory listing not available. Override in provider-specific managers. */
     listDirectory(_path: string, _ref?: string): Promise<DirEntry[] | null> {
+        return Promise.resolve(null);
+    }
+    /** Default: test report not available. Override in GitLab manager. */
+    getTestReport(_pipelineId: string | number): Promise<GitLabTestReport | null> {
         return Promise.resolve(null);
     }
     protected abstract client: HttpClient;

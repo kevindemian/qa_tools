@@ -199,6 +199,10 @@ class GitHubManager extends GitProviderBase implements GitProvider {
         return wfListDirectory(this.client, this.owner, this.repo, path, ref);
     }
 
+    override getTestReport(_pipelineId: string | number): Promise<null> {
+        return Promise.resolve(null);
+    }
+
     /** Get repo tree with caching (for framework detection). */
     async getRepoTree(ref: string): Promise<string[] | null> {
         return wfGetRepoTreeCached(this.client, this.owner, this.repo, ref);

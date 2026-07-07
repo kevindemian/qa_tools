@@ -32,6 +32,7 @@ function createMockProvider(): GitProvider {
         getWorkflowRunTiming: vi.fn(),
         getFileContents: vi.fn(),
         listDirectory: vi.fn(),
+        getTestReport: vi.fn(),
         provider: 'gitlab' as const,
     };
 }
