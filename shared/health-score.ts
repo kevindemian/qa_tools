@@ -10,8 +10,7 @@
  * ISO/IEC 25020:2019 Annex D: Normalized measurement function — linear interpolation
  * between target (score=100) and floor (score=0).
  */
-import type { MetricsStore, MetricsRun } from './metrics.js';
-import type { DataHub } from './types/data-hub.js';
+import type { MetricsStore, MetricsRun, DataHub } from './types/data-hub.js';
 import type { HealthScoreResult, HealthScoreGrade, HealthScoreDimensions, HealthScoreProvenance } from './types.js';
 
 export interface HealthScoreConfig {

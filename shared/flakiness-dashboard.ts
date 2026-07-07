@@ -7,7 +7,7 @@
  * @module flakiness-dashboard
  */
 
-import type { FlakinessEntry } from './metrics.js';
+import type { FlakinessEntry } from './types/data-hub.js';
 import { rootLogger } from './logger.js';
 import { sanitizeHtml } from './escape.js';
 import { buildHtmlPage, buildErrorPage } from './html-factory.js';

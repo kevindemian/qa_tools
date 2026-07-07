@@ -7,7 +7,7 @@
  * @reference D5.8 — saturation/clamp applied to all pass rate values
  */
 import type { PipelineRun } from '../../types/ci-cd.js';
-import type { TrendPoint } from '../../types/data-hub.js';
+import type { DateTrendPoint } from '../../types/data-hub.js';
 
 /**
  * Calculate pass rate trends from CI PipelineRuns.
@@ -16,9 +16,9 @@ import type { TrendPoint } from '../../types/data-hub.js';
  *
  * @param runs - PipelineRun[] ordered oldest to newest.
  * @param windowSize - Number of recent data points to include.
- * @returns TrendPoint[] with at most windowSize entries, sorted by date.
+ * @returns DateTrendPoint[] with at most windowSize entries, sorted by date.
  */
-export function calcTrendsFromPipelineRuns(runs: PipelineRun[], windowSize: number = 10): TrendPoint[] {
+export function calcTrendsFromPipelineRuns(runs: PipelineRun[], windowSize: number = 10): DateTrendPoint[] {
     const slice = runs.slice(-windowSize);
     return slice.map((run) => {
         const conclusion = run.conclusion;
