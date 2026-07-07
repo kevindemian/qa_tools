@@ -19,17 +19,24 @@ vi.mock('./deps.js', async () => {
 
 describe('CreateCheckRun', () => {
     const originalEnv = { ...process.env };
-    const penv = process.env;
+    const envKeys = ['GITHUB_TOKEN', 'GITHUB_REPOSITORY', 'GITHUB_SHA'] as const;
 
     beforeEach(() => {
         vi.clearAllMocks();
-        penv['GITHUB_TOKEN'] = 'test-token';
-        penv['GITHUB_REPOSITORY'] = 'owner/repo';
-        penv['GITHUB_SHA'] = 'abc123def456';
+        process.env['GITHUB_TOKEN'] = 'test-token';
+        process.env['GITHUB_REPOSITORY'] = 'owner/repo';
+        process.env['GITHUB_SHA'] = 'abc123def456';
     });
 
     afterEach(() => {
-        process.env = { ...originalEnv };
+        for (const key of envKeys) {
+            const orig = originalEnv[key];
+            if (orig === undefined) {
+                delete process.env[key];
+            } else {
+                process.env[key] = orig;
+            }
+        }
     });
 
     it('sends POST to correct GitHub API URL', async () => {
@@ -100,7 +107,7 @@ describe('CreateCheckRun', () => {
     it('returns null when GITHUB_TOKEN is missing', async () => {
         expect.assertions(2);
 
-        delete penv['GITHUB_TOKEN'];
+        delete process.env['GITHUB_TOKEN'];
 
         const result = await createCheckRun({
             name: 'Gate',
@@ -115,7 +122,7 @@ describe('CreateCheckRun', () => {
     it('returns null when GITHUB_REPOSITORY is missing', async () => {
         expect.assertions(2);
 
-        delete penv['GITHUB_REPOSITORY'];
+        delete process.env['GITHUB_REPOSITORY'];
 
         const result = await createCheckRun({
             name: 'Gate',
@@ -130,7 +137,7 @@ describe('CreateCheckRun', () => {
     it('returns null when GITHUB_SHA is missing', async () => {
         expect.assertions(2);
 
-        delete penv['GITHUB_SHA'];
+        delete process.env['GITHUB_SHA'];
 
         const result = await createCheckRun({
             name: 'Gate',

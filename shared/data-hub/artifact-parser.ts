@@ -11,6 +11,19 @@ export interface ArtifactParseResult {
     format: 'ctrf' | 'junit' | 'mochawesome';
 }
 
+const TEST_ARTIFACT_PATTERNS = ['ctrf', 'test-results', 'test-result', 'mochawesome', 'junit', 'e2e'];
+
+/**
+ * Checks if an artifact name matches known test artifact patterns.
+ *
+ * Matches: ctrf, test-results, test-result, mochawesome, junit, e2e.
+ * Excludes: generic 'test' alone (too broad, captures non-test artifacts).
+ */
+export function isTestArtifact(name: string): boolean {
+    const lower = name.toLowerCase();
+    return TEST_ARTIFACT_PATTERNS.some((p) => lower.includes(p));
+}
+
 const JUNIT_TAGS = ['<testsuite', '<testsuites'];
 
 export function isCTRF(content: string): boolean {

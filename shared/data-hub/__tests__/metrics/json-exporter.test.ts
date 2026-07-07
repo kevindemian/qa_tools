@@ -25,6 +25,9 @@ const FAKE_METRICS: ComputedMetrics = {
         },
     },
     quarantineStatus: { flakyCount: 0, quarantinedCount: 0 },
+    testPassRate: 0,
+    testCounts: { passed: 0, failed: 0, skipped: 0, total: 0 },
+    framework: 'unknown',
 };
 
 describe('ExportMetricsJson', () => {
