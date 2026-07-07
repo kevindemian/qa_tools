@@ -31,31 +31,37 @@ function createMockGitProvider(): GitProvider {
 
 describe('DetectFrameworkCascade', () => {
     let mockProvider: GitProvider;
+    let mockGetFileContents: ReturnType<typeof vi.fn>;
 
     beforeEach(() => {
         mockProvider = createMockGitProvider();
+        mockGetFileContents = vi.mocked(mockProvider.getFileContents);
     });
 
     it('returns vitest when package.json has vitest', async () => {
         expect.hasAssertions();
-        (mockProvider.getFileContents as ReturnType<typeof vi.fn>).mockResolvedValue(
-            JSON.stringify({ devDependencies: { vitest: '1.0.0' } }),
-        );
+
+        mockGetFileContents.mockResolvedValue(JSON.stringify({ devDependencies: { vitest: '1.0.0' } }));
         const result = await detectFrameworkCascade(mockProvider, 'main');
-        expect(result).toEqual({ framework: 'vitest', confidence: 0.9 });
+
+        expect(result).toStrictEqual({ framework: 'vitest', confidence: 0.9 });
     });
 
     it('returns unknown when package.json not found', async () => {
         expect.hasAssertions();
-        (mockProvider.getFileContents as ReturnType<typeof vi.fn>).mockResolvedValue(null);
+
+        mockGetFileContents.mockResolvedValue(null);
         const result = await detectFrameworkCascade(mockProvider, 'main');
-        expect(result).toEqual({ framework: 'unknown', confidence: 0 });
+
+        expect(result).toStrictEqual({ framework: 'unknown', confidence: 0 });
     });
 
     it('returns unknown on API error', async () => {
         expect.hasAssertions();
-        (mockProvider.getFileContents as ReturnType<typeof vi.fn>).mockRejectedValue(new Error('API error'));
+
+        mockGetFileContents.mockRejectedValue(new Error('API error'));
         const result = await detectFrameworkCascade(mockProvider, 'main');
-        expect(result).toEqual({ framework: 'unknown', confidence: 0 });
+
+        expect(result).toStrictEqual({ framework: 'unknown', confidence: 0 });
     });
 });
