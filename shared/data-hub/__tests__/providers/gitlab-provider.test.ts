@@ -126,7 +126,7 @@ describe('GitLabDataProvider', () => {
     });
 
     it('skips jobs with non-failure status for failure reasons', async () => {
-        expect.hasAssertions();
+        expect.assertions(2);
 
         const successJob = makeJob(301, { status: 'success' });
         const runs = [makeRun(1)];
@@ -136,7 +136,9 @@ describe('GitLabDataProvider', () => {
 
         const result = await provider.fetchRawData({ repo: 'group/project' });
 
-        expect(mockProvider.getJobLogs).not.toHaveBeenCalled();
+        // getJobLogs may be called for coverage extraction on success jobs
+        // but failure reasons must be empty
         expect(result.failureReasons.size).toBe(0);
+        expect(result.failureReasons.get(301)).toBeUndefined();
     });
 });

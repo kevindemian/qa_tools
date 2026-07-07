@@ -27,7 +27,7 @@ vi.mock('../../logger.js', () => ({
     rootLogger: mockRootLogger,
 }));
 
-const { parseArtifactBuffer, parseArtifactBufferAll, parseZipBuffer, isCTRF, isJUnit, isMochawesome } =
+const { parseArtifactBuffer, parseArtifactBufferAll, parseZipBuffer, isCTRF, isJUnit, isMochawesome, isTestArtifact } =
     await import('../../data-hub/artifact-parser.js');
 
 function createZipBuffer(files: Array<{ name: string; content: string }>): Buffer {
@@ -79,6 +79,45 @@ describe('IsMochawesome', () => {
 
     it('rejects non-Mochawesome JSON', () => {
         expect(isMochawesome(JSON.stringify({ foo: 'bar' }))).toBeFalsy();
+    });
+});
+
+describe('IsTestArtifact', () => {
+    it('matches ctrf artifacts', () => {
+        expect(isTestArtifact('ctrf-report.json')).toBeTruthy();
+    });
+
+    it('matches test-results artifacts', () => {
+        expect(isTestArtifact('test-results.zip')).toBeTruthy();
+    });
+
+    it('matches test-result artifacts', () => {
+        expect(isTestArtifact('test-result.json')).toBeTruthy();
+    });
+
+    it('matches mochawesome artifacts', () => {
+        expect(isTestArtifact('mochawesome-report.html')).toBeTruthy();
+    });
+
+    it('matches junit artifacts', () => {
+        expect(isTestArtifact('junit-results.xml')).toBeTruthy();
+    });
+
+    it('matches e2e artifacts', () => {
+        expect(isTestArtifact('e2e-results.json')).toBeTruthy();
+    });
+
+    it('rejects generic test alone', () => {
+        expect(isTestArtifact('test')).toBeFalsy();
+    });
+
+    it('rejects non-test artifacts', () => {
+        expect(isTestArtifact('build-output.log')).toBeFalsy();
+    });
+
+    it('is case insensitive', () => {
+        expect(isTestArtifact('CTRF-Report.JSON')).toBeTruthy();
+        expect(isTestArtifact('TEST-RESULTS.ZIP')).toBeTruthy();
     });
 });
 
