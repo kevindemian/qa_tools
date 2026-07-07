@@ -1,5 +1,14 @@
 import type { ComputedMetrics } from '../../types/data-hub.js';
 
+function safeNumber(value: string | number | undefined, fallback: number): number {
+    const num = Number(value);
+    return Number.isFinite(num) ? num : fallback;
+}
+
+function safeString(value: string | number | undefined, fallback: string): string {
+    return String(value ?? fallback);
+}
+
 export function importMetricsCsv(csv: string): Partial<ComputedMetrics> | null {
     if (!csv || csv.trim().length === 0) return null;
 
@@ -21,6 +30,12 @@ export function importMetricsCsv(csv: string): Partial<ComputedMetrics> | null {
         'releaseScore.grade',
         'quarantineStatus.flakyCount',
         'quarantineStatus.quarantinedCount',
+        'testPassRate',
+        'testCounts.passed',
+        'testCounts.failed',
+        'testCounts.skipped',
+        'testCounts.total',
+        'framework',
     ]);
 
     const resultMap = new Map<string, string | number>();
@@ -41,17 +56,17 @@ export function importMetricsCsv(csv: string): Partial<ComputedMetrics> | null {
     if (result['passRate'] === undefined) return null;
 
     return {
-        passRate: Number(result['passRate']) || 0,
-        avgDuration: Number(result['avgDuration']) || 0,
-        suiteSpeedP95: Number(result['suiteSpeedP95']) || 0,
-        coverage: Number(result['coverage']) || 0,
+        passRate: safeNumber(result['passRate'], 0),
+        avgDuration: safeNumber(result['avgDuration'], 0),
+        suiteSpeedP95: safeNumber(result['suiteSpeedP95'], 0),
+        coverage: safeNumber(result['coverage'], 0),
         pipelineCost: {
-            totalMinutes: Number(result['pipelineCost.totalMinutes']) || 0,
-            estimatedCost: Number(result['pipelineCost.estimatedCost']) || 0,
+            totalMinutes: safeNumber(result['pipelineCost.totalMinutes'], 0),
+            estimatedCost: safeNumber(result['pipelineCost.estimatedCost'], 0),
         },
         releaseScore: {
-            score: Number(result['releaseScore.score']) || 0,
-            grade: String(result['releaseScore.grade'] || 'F'),
+            score: safeNumber(result['releaseScore.score'], 0),
+            grade: safeString(result['releaseScore.grade'], 'F'),
             dimensions: {
                 passRate: { score: 0, status: 'fail' },
                 flakyRate: { score: 0, status: 'fail' },
@@ -61,8 +76,16 @@ export function importMetricsCsv(csv: string): Partial<ComputedMetrics> | null {
             },
         },
         quarantineStatus: {
-            flakyCount: Number(result['quarantineStatus.flakyCount']) || 0,
-            quarantinedCount: Number(result['quarantineStatus.quarantinedCount']) || 0,
+            flakyCount: safeNumber(result['quarantineStatus.flakyCount'], 0),
+            quarantinedCount: safeNumber(result['quarantineStatus.quarantinedCount'], 0),
         },
+        testPassRate: safeNumber(result['testPassRate'], 0),
+        testCounts: {
+            passed: safeNumber(result['testCounts.passed'], 0),
+            failed: safeNumber(result['testCounts.failed'], 0),
+            skipped: safeNumber(result['testCounts.skipped'], 0),
+            total: safeNumber(result['testCounts.total'], 0),
+        },
+        framework: safeString(result['framework'], 'unknown'),
     } satisfies Partial<ComputedMetrics>;
 }

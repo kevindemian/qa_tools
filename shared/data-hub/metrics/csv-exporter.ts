@@ -14,6 +14,12 @@ function flattenMetrics(metrics: ComputedMetrics): FlatRow[] {
     rows.push({ metric: 'releaseScore.grade', value: metrics.releaseScore.grade });
     rows.push({ metric: 'quarantineStatus.flakyCount', value: metrics.quarantineStatus.flakyCount });
     rows.push({ metric: 'quarantineStatus.quarantinedCount', value: metrics.quarantineStatus.quarantinedCount });
+    rows.push({ metric: 'testPassRate', value: metrics.testPassRate });
+    rows.push({ metric: 'testCounts.passed', value: metrics.testCounts.passed });
+    rows.push({ metric: 'testCounts.failed', value: metrics.testCounts.failed });
+    rows.push({ metric: 'testCounts.skipped', value: metrics.testCounts.skipped });
+    rows.push({ metric: 'testCounts.total', value: metrics.testCounts.total });
+    rows.push({ metric: 'framework', value: metrics.framework });
     return rows;
 }
 

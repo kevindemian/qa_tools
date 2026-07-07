@@ -5,7 +5,8 @@
  * metric types that consumers use. This is the public contract
  * between the hub and its consumers.
  */
-import type { PipelineRun, PipelineJob, ArtifactInfo } from './ci-cd.js';
+import type { PipelineRun, PipelineJob, ArtifactInfo, GitLabTestReport } from './ci-cd.js';
+import type { ArtifactParseResult } from '../data-hub/artifact-parser.js';
 
 /** Timing data for a workflow run (from GitHub timing endpoint). */
 export interface WorkflowRunTiming {
@@ -24,6 +25,12 @@ export interface RawData {
     jiraIssues?: RawJiraIssue[];
     /** Timing data for each run, keyed by run ID. */
     timing?: Map<number, WorkflowRunTiming>;
+    /** Parsed test artifacts (CTRF/JUnit/Mochawesome), keyed by run ID. */
+    parsedArtifacts?: Map<number, ArtifactParseResult[]>;
+    /** Detected test framework (e.g., 'vitest', 'jest', 'mocha'). */
+    framework?: string;
+    /** GitLab test report for the latest pipeline (GitLab-specific). */
+    gitlabTestReport?: GitLabTestReport;
 }
 
 /** Coverage data from Istanbul/CTRF. */
@@ -31,7 +38,7 @@ export interface RawCoverage {
     total: number;
     covered: number;
     percentage: number;
-    files?: Record<string, { total: number; covered: number; percentage: number }>;
+    files?: { [key: string]: { total: number; covered: number; percentage: number } };
 }
 
 /** Simplified Jira issue. */
@@ -150,14 +157,12 @@ export interface QuarantineStatus {
     quarantinedCount: number;
 }
 
-/** Security score result. */
-export interface SecurityResult {
-    /** Total alerts found. */
+/** Aggregated test counts from parsed artifacts. */
+export interface TestCounts {
+    passed: number;
+    failed: number;
+    skipped: number;
     total: number;
-    /** Alerts by severity. */
-    bySeverity: Record<string, number>;
-    /** Security score (0-100, higher is better = fewer issues). */
-    score: number;
 }
 
 /** All computed metrics from the hub. */
@@ -169,11 +174,17 @@ export interface ComputedMetrics {
     coverage: number;
     pipelineCost: CostEstimate;
     defectTrends: TrendPoint[];
-    branchBreakdown: Record<string, BranchHealth>;
+    branchBreakdown: { [key: string]: BranchHealth };
     topFailingJobs: FailingJob[];
     topFailureReasons: FailureReason[];
     releaseScore: ReleaseScoreResult;
     quarantineStatus: QuarantineStatus;
+    /** Test pass rate from parsed artifacts (0-100). 0 if no test data available. */
+    testPassRate: number;
+    /** Aggregated test counts from parsed artifacts. */
+    testCounts: TestCounts;
+    /** Detected test framework. */
+    framework: string;
 }
 
 /** The Data Hub — single source of truth. */
