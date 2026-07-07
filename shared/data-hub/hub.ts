@@ -16,6 +16,7 @@ import type {
     ReleaseScoreResult,
     HealthDimensions,
     TestCounts,
+    DataHubPersistence,
 } from '../types/data-hub.js';
 import type { PipelineRun, PipelineJob } from '../types/ci-cd.js';
 import type { ArtifactParseResult } from './artifact-parser.js';
@@ -36,6 +37,12 @@ import {
     calcQuarantineStatus,
     calcTrendsFromPipelineRuns,
     makeDimensionScore,
+    calcExecutionRate,
+    calcFlakyPercentage,
+    calcPerRunCosts,
+    convertToMetricsRuns,
+    calcFlakinessEntries,
+    calcMetricsTrends,
 } from './compute/index.js';
 
 /** Options for creating a DataHub. */
@@ -57,13 +64,21 @@ export interface DataHubOptions {
 export class DataHubImpl implements DataHub {
     readonly raw: RawData;
     readonly computed: ComputedMetrics;
+    readonly persistence?: DataHubPersistence | undefined;
     readonly timestamp: Date;
     readonly provider: 'github' | 'gitlab';
     readonly repo: string;
 
-    private constructor(raw: RawData, computed: ComputedMetrics, provider: 'github' | 'gitlab', repo: string) {
+    private constructor(
+        raw: RawData,
+        computed: ComputedMetrics,
+        provider: 'github' | 'gitlab',
+        repo: string,
+        persistence?: DataHubPersistence,
+    ) {
         this.raw = raw;
         this.computed = computed;
+        this.persistence = persistence;
         this.timestamp = new Date();
         this.provider = provider;
         this.repo = repo;
@@ -72,19 +87,45 @@ export class DataHubImpl implements DataHub {
     /**
      * Create a DataHub by fetching data from providers and computing metrics.
      *
+     * Layer 7 cascade: When no parsed artifacts are available after provider fetch,
+     * automatically prompts user for a local test file (TTY only, silent in CI).
+     *
      * @param providers - Data providers to fetch from.
      * @param options - Fetch and compute options.
+     * @param persistence - Optional persistence layer for historical data.
      * @returns DataHub with raw data and computed metrics.
      */
     static async create(
         providers: DataProvider[],
         options: FetchOptions & DataHubOptions = { repo: '' },
+        persistence?: DataHubPersistence,
     ): Promise<DataHubImpl> {
         const raw = await DataHubImpl.fetchFromProviders(providers, options);
+
+        // Layer 7: User fallback when no parsed artifacts available
+        if (raw.parsedArtifacts == null || raw.parsedArtifacts.size === 0) {
+            const fallback = await DataHubImpl.requestUserFallback();
+            if (fallback.data != null) {
+                raw.parsedArtifacts = new Map([
+                    [
+                        0,
+                        [
+                            {
+                                fileName: fallback.source ?? 'user-fallback',
+                                data: fallback.data,
+                                format: 'ctrf',
+                            },
+                        ],
+                    ],
+                ]);
+                raw.framework = raw.framework ?? 'unknown';
+            }
+        }
+
         const computed = DataHubImpl.computeMetrics(raw, options);
         const providerSource = DataHubImpl.determineProviderSource(providers);
 
-        return new DataHubImpl(raw, computed, providerSource, options.repo);
+        return new DataHubImpl(raw, computed, providerSource, options.repo, persistence);
     }
 
     /**
@@ -170,6 +211,12 @@ export class DataHubImpl implements DataHub {
         const topFailingJobs = calcTopFailingJobs(raw.runs, raw.jobs);
         const topFailureReasons = calcTopFailureReasons(raw.failureReasons);
         const defectTrends = calcTrendsFromPipelineRuns(raw.runs);
+        const executionRate = calcExecutionRate(raw.runs);
+        const flakyPercentage = calcFlakyPercentage(flakyRate, raw.runs, raw.jobs);
+        const perRunCosts = calcPerRunCosts(raw.runs, options.costPerMinute);
+        const metricsRuns = raw.parsedArtifacts != null ? convertToMetricsRuns(raw.parsedArtifacts) : [];
+        const flakinessEntries = calcFlakinessEntries(metricsRuns);
+        const metricsTrends = calcMetricsTrends(metricsRuns);
         const releaseScore = DataHubImpl.computeReleaseScore(
             passRate,
             flakyRate,
@@ -200,6 +247,12 @@ export class DataHubImpl implements DataHub {
             testPassRate,
             testCounts,
             framework,
+            executionRate,
+            flakyPercentage,
+            perRunCosts,
+            metricsRuns,
+            flakinessEntries,
+            metricsTrends,
         };
     }
 
@@ -231,8 +284,8 @@ export class DataHubImpl implements DataHub {
         runs: PipelineRun[],
         jobs: Map<number, PipelineJob[]>,
     ): ReleaseScoreResult {
-        const flakyPercentage = DataHubImpl.calculateFlakyPercentage(flakyRate, runs, jobs);
-        const executionRate = DataHubImpl.calculateExecutionRate(runs);
+        const flakyPercentage = calcFlakyPercentage(flakyRate, runs, jobs);
+        const executionRate = calcExecutionRate(runs);
 
         const dimensions: HealthDimensions = {
             passRate: makeDimensionScore(passRate, 95),
@@ -243,37 +296,6 @@ export class DataHubImpl implements DataHub {
         };
 
         return calcReleaseScore(dimensions);
-    }
-
-    private static calculateFlakyPercentage(
-        flakyRate: FlakyResult[],
-        runs: PipelineRun[],
-        jobs: Map<number, PipelineJob[]>,
-    ): number {
-        if (runs.length === 0 || flakyRate.length === 0) return 0;
-        const flakyCount = flakyRate.length;
-        const totalJobs = DataHubImpl.countUniqueJobs(jobs);
-        if (totalJobs === 0) return 0;
-        return Math.round((flakyCount / totalJobs) * 100 * 100) / 100;
-    }
-
-    private static countUniqueJobs(jobs: Map<number, PipelineJob[]>): number {
-        const jobNames = new Set<string>();
-        for (const jobList of jobs.values()) {
-            for (const job of jobList) {
-                if (job.name) {
-                    jobNames.add(job.name);
-                }
-            }
-        }
-        return jobNames.size || 1;
-    }
-
-    private static calculateExecutionRate(runs: PipelineRun[]): number {
-        const withConclusion = runs.filter((r) => r.conclusion != null);
-        if (withConclusion.length === 0) return 0;
-        const executed = withConclusion.filter((r) => r.conclusion !== 'cancelled').length;
-        return Math.round((executed / withConclusion.length) * 100 * 100) / 100;
     }
 
     private static normalizeSuiteSpeed(suiteSpeedP95: number): number {

@@ -3,7 +3,7 @@ import * as readline from 'readline';
 import { print, success, error, warn, info, divider, confirm } from './prompt.js';
 import { rootLogger } from './logger.js';
 import Config from './config.js';
-import { loadMetrics } from './metrics.js';
+import { createDataHubPersistence } from './data-hub/persistence.js';
 import { calculateHealthScore } from './health-score.js';
 import { ExitCode } from './types.js';
 import { cleanupTempDirs } from './temp-dir.js';
@@ -214,7 +214,8 @@ function _printLastOperations(history?: HistoryEntry[]): void {
 
 function _tryPrintHealthScore(): void {
     try {
-        const store = loadMetrics();
+        const persistence = createDataHubPersistence(Config.get('projectName'));
+        const store = persistence.loadMetricsStore();
         if (store.runs.length >= 5) {
             const hs = calculateHealthScore(store);
             let gradeIcon: string;

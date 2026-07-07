@@ -1,0 +1,190 @@
+/**
+ * DataHub Persistence Adapter.
+ *
+ * Implements DataHubPersistence by delegating to the existing Store backend
+ * (git-backed or filesystem-backed). This absorbs MetricsStore functionality
+ * into DataHub, making it the single interface for all data operations.
+ *
+ * @module persistence
+ */
+import { rootLogger } from '../logger.js';
+import { detectProjectGitDir, detectStoreBackend } from '../store-backend.js';
+import type { StoreBackend } from '../store-backend.js';
+import type {
+    DataHubPersistence,
+    MetricsRun,
+    MetricsStore,
+    CoverageSnapshot,
+    FailureClassification,
+} from '../types/data-hub.js';
+import { z } from '../deps.js';
+import { extractErrorMessage, humanizeError } from '../prompt-errors.js';
+
+const METRICS_FILE = 'metrics/global.json';
+
+const MetricsRunSchema = z.object({
+    timestamp: z.string(),
+    project: z.string(),
+    total: z.number().int().nonnegative(),
+    passed: z.number().int().nonnegative(),
+    failed: z.number().int().nonnegative(),
+    skipped: z.number().int().nonnegative(),
+    duration: z.number().nonnegative(),
+    tests: z.array(
+        z
+            .object({
+                title: z.string(),
+                state: z.union([z.literal('passed'), z.literal('failed'), z.literal('skipped')]),
+                duration: z.number().nonnegative(),
+                error: z.string().optional(),
+                fullTitle: z.string().optional(),
+            })
+            .loose(),
+    ),
+});
+
+const CoverageSnapshotSchema = z.object({
+    timestamp: z.string(),
+    project: z.string(),
+    totalIssues: z.number().int().nonnegative(),
+    mappedIssues: z.number().int().nonnegative(),
+    coveragePct: z.number().min(0).max(100),
+});
+
+const FailureClassificationSchema = z.object({
+    timestamp: z.string(),
+    testTitle: z.string(),
+    category: z.string(),
+    project: z.string(),
+});
+
+const MetricsStoreSchema = z.object({
+    runs: z.array(MetricsRunSchema),
+    coverageHistory: z.array(CoverageSnapshotSchema).optional(),
+    failureClassifications: z.array(FailureClassificationSchema).optional(),
+});
+
+/**
+ * Read JSON from the store backend with error handling.
+ */
+function readJson<T>(backend: StoreBackend, relPath: string): T | null {
+    try {
+        const buf = backend.read(relPath);
+        if (!buf) return null;
+        const parsed: unknown = JSON.parse(buf.toString('utf8'));
+        return parsed as T;
+    } catch (err: unknown) {
+        const raw = extractErrorMessage(err);
+        const known = humanizeError(raw);
+        rootLogger.warn(`data-hub-persistence: falha ao ler ${relPath} — ${known ? known.msg : raw}`);
+        return null;
+    }
+}
+
+/**
+ * Write JSON to the store backend with error handling.
+ */
+function writeJson<T>(backend: StoreBackend, relPath: string, data: T): void {
+    try {
+        backend.write(relPath, Buffer.from(JSON.stringify(data, null, 2), 'utf8'));
+    } catch (err: unknown) {
+        const raw = extractErrorMessage(err);
+        const known = humanizeError(raw);
+        rootLogger.error(`data-hub-persistence: falha ao escrever ${relPath} — ${known ? known.msg : raw}`);
+        throw err;
+    }
+}
+
+/**
+ * Create a DataHubPersistence instance backed by the existing Store infrastructure.
+ *
+ * @param project - Project name for scoping stored data.
+ * @param backend - Optional pre-initialized StoreBackend. If not provided, auto-detects.
+ * @returns DataHubPersistence implementation.
+ */
+export function createDataHubPersistence(_project: string, backend?: StoreBackend): DataHubPersistence {
+    const b =
+        backend ??
+        (() => {
+            const gitDir = detectProjectGitDir();
+            const storeBackend = detectStoreBackend(gitDir ?? undefined);
+            storeBackend.init();
+            return storeBackend;
+        })();
+
+    function loadMetricsStore(): MetricsStore {
+        const raw = readJson<unknown>(b, METRICS_FILE);
+        if (!raw) return { runs: [] };
+        try {
+            return MetricsStoreSchema.parse(raw) as MetricsStore;
+        } catch {
+            rootLogger.warn('data-hub-persistence: metrics store schema validation failed, returning empty store');
+            return { runs: [] };
+        }
+    }
+
+    function saveMetricsStore(store: MetricsStore): void {
+        writeJson(b, METRICS_FILE, store);
+    }
+
+    return {
+        saveRun(_sha: string, run: MetricsRun): void {
+            const store = loadMetricsStore();
+            store.runs.push(run);
+            const max = 50;
+            if (store.runs.length > max) {
+                store.runs = store.runs.slice(-max);
+            }
+            saveMetricsStore(store);
+        },
+
+        loadRun(_sha: string): MetricsRun | null {
+            // SHA-based lookup is not supported by MetricsRun data model.
+            // MetricsRun uses timestamp as identifier, not SHA.
+            // Consumers needing SHA-based lookup should use Store.loadReport() directly.
+            return null;
+        },
+
+        saveCoverageSnapshot(snapshot: CoverageSnapshot): void {
+            const store = loadMetricsStore();
+            if (!store.coverageHistory) store.coverageHistory = [];
+            store.coverageHistory.push(snapshot);
+            saveMetricsStore(store);
+        },
+
+        loadCoverageHistory(project: string): CoverageSnapshot[] {
+            const store = loadMetricsStore();
+            return (store.coverageHistory ?? []).filter((s) => s.project === project);
+        },
+
+        saveFailureClassification(classification: FailureClassification): void {
+            const store = loadMetricsStore();
+            if (!store.failureClassifications) store.failureClassifications = [];
+            store.failureClassifications.push(classification);
+            saveMetricsStore(store);
+        },
+
+        loadFailureClassifications(project: string): FailureClassification[] {
+            const store = loadMetricsStore();
+            return (store.failureClassifications ?? []).filter((c) => c.project === project);
+        },
+
+        saveMetricsStore(store: MetricsStore): void {
+            saveMetricsStore(store);
+        },
+
+        loadMetricsStore(): MetricsStore {
+            return loadMetricsStore();
+        },
+
+        flush(message: string): void {
+            try {
+                b.flush(message);
+            } catch (err: unknown) {
+                const raw = extractErrorMessage(err);
+                const known = humanizeError(raw);
+                rootLogger.warn(`data-hub-persistence: flush failed — ${known ? known.msg : raw}`);
+            }
+        },
+    };
+}
