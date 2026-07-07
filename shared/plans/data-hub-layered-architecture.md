@@ -1214,6 +1214,58 @@ O endpoint `GET /actions/runs/{run_id}/timing` está marcado como "closing down"
 
 ---
 
+## Learnings — Phase 18 (Data Extraction)
+
+Registros de aprendizado obtidos durante a execução da Phase 18, aplicáveis às fases futuras.
+
+### 1. Validation Hook: pipe-pipe empty-string rejeitado
+
+O pre-commit hook rejeita o padrão `pipe-pipe space empty-string` (ex: `field` + pipe pipe + space + two quotes).
+
+**Causa**: O validation hook bloqueia `pipe-pipe space empty-string` como prática insegura (converte falsy values como `0` ou `false` em string vazia).
+
+**Solução**: Usar operador de coalescência nula (`?? ''`) — trata apenas `null`/`undefined`, preservando outros falsy values legítimos (ex: `runner_group_name: ""`).
+
+**Impacto**: Aplica-se a toda fase que lida com campos opcionais de API de provider retornando `string | undefined`.
+
+### 2. Padrão de tratamento de erros: usar `humanizeError`, nunca criar classes de erro
+
+`shared/prompt-errors.ts` já contém `humanizeError()` (mapeia mensagens de erro conhecidas para `{ msg, hint }`), `extractErrorMessage()` e `printError()`.
+
+**Decisão**: Não criar classes de erro novas (ex: `HumanizedError`) — usar exclusivamente `humanizeError` de `shared/prompt-errors.ts` como única fonte de formatação de erros para o usuário.
+
+**Tech Debt Identificado**: `shared/errors.ts:formatErr` (extrai mensagem de qualquer Error) e `shared/prompt-errors.ts:extractErrorMessage` (extrai mensagem de AxiosError) têm sobreposição funcional. Consolidar em futura fase de cleanup.
+
+### 3. Custo de mock ao tornar método obrigatório na interface
+
+Adicionar `getWorkflowRunTiming` como obrigatório no `GitProvider` forçou atualização de 7 arquivos de teste (6 inline mocks + 1 factory).
+
+**Trade-off**: Método obrigatório = sem `?.` em consumidores, mas custo único de mock maintenance quando adicionado. Método opcional = `?.` em cada consumidor, mas sem churn de teste.
+
+**Recomendação**: Usar método obrigatório + default na base class (`GitProviderBase`) quando:
+
+- O método tem um fallback válido (ex: retornar `null`)
+- A maioria das implementações precisará do método (apenas 1 provedor faz exceção)
+- Os consumidores são poucos e conhecidos
+
+### 4. Provider-specific functionality via base class default + override
+
+Para funcionalidade que só existe em um provider (GitHub timing, GitLab test report):
+
+1. Adicionar à interface `GitProvider` como método obrigatório
+2. Implementar default em `GitProviderBase` retornando `null` ou valor sentinela
+3. Fazer `override` no provider específico que suporta a funcionalidade
+
+Isso evita type assertions, verificacoes de tipo em tempo de execucao, e `?.` nos consumidores.
+
+### 5. Endpoint de timing em extinção — tratamento graceful
+
+O endpoint `GET /actions/runs/{run_id}/timing` está oficialmente "closing down" mas ainda funcional.
+
+**Estratégia**: Extrair apenas `run_duration_ms`, tratar falhas gracefulmente (retornar `null` + log via `humanizeError`). Quando descontinuado: remover chamada → retornar null direto. Sem break de contrato porque o campo já é opcional no `RawData`.
+
+---
+
 ## Quality Gates por Phase
 
 | Phase | tsc --noEmit | lint        | vitest    | PBT        | Audit       |
@@ -1259,7 +1311,7 @@ O endpoint `GET /actions/runs/{run_id}/timing` está marcado como "closing down"
 ## Progress
 
 - [ ] Phase 0 — Cross-Cutting Modules
-- [ ] Phase 18 — Data Extraction
+- [x] Phase 18 — Data Extraction
 - [ ] Phase 20 — Contents API + Framework Detection
 - [ ] Phase 21 — Artifact Download + Parse
 - [ ] Phase 22 — Consumer Migration
