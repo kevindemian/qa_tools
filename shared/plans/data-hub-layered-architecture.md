@@ -837,6 +837,20 @@ export interface RawData {
 
 ---
 
+### NOTA: Phase 19 omitida (resolução)
+
+A Phase 19 foi originalmente omitida do plano. O conteúdo que deveria cobrir foi absorvido pelas fases existentes:
+
+| Conteúdo esperado             | Fase absorvedora | Justificativa                                                                  |
+| ----------------------------- | ---------------- | ------------------------------------------------------------------------------ |
+| Job Logs test summary (regex) | Phase 18.4       | `log-parser.ts` criado na Phase 0; extração de failure reasons já usa job logs |
+| Check Runs API (GitHub)       | Phase 21.5       | Anotações e publish-test-results integrados com artifact download              |
+| GitLab Test Report            | Phase 21.5       | `/pipelines/:id/test_report` integrado com artifact download                   |
+
+**Decisão**: Não renumerar (opção C). Manter numeração atual para preservar histórico de commits.
+
+---
+
 ### FASE 20 — Contents API + Framework Detection
 
 #### 20.1 — GitProvider extension
@@ -1055,6 +1069,56 @@ Tipos adicionados nos contratos (Phase 24), mas a integração nos providers é 
 - GitHub provider: fetch annotations via Check Runs API
 - GitLab provider: fetch test report via `/pipelines/:id/test_report`
 
+#### 21.6 — `isTestArtifact()` unificado
+
+**Arquivo**: `shared/data-hub/artifact-parser.ts`
+
+Criar função `isTestArtifact(name: string): boolean` com patterns unificados:
+
+```typescript
+const TEST_ARTIFACT_PATTERNS = ['ctrf', 'test-results', 'test-result', 'mochawesome', 'junit', 'e2e'];
+
+export function isTestArtifact(name: string): boolean {
+    const lower = name.toLowerCase();
+    return TEST_ARTIFACT_PATTERNS.some((p) => lower.includes(p));
+}
+```
+
+**Decisão**: Não incluir `'test'` sozinho — genérico demais, captura artifacts não-teste.
+
+**Nota**: Padrões existentes fragmentados em:
+
+- `git-artifact-downloader.ts:241` — `name.includes('ctrf') || name.includes('test-results')`
+- `git-artifact-downloader.ts:279` — `name.includes('test') || name.includes('e2e') || name.includes('ctrf')`
+- `test-results.ts:77` — `/mochawesome|test-result/i.test(a.name)`
+
+#### 21.7 — Limite de artifacts por run
+
+**Problema**: Downloads ilimitados podem causar timeouts em runs com muitos artifacts.
+
+**Decisão**: Adicionar parâmetro `maxArtifactsPerRun?: number` em `FetchOptions` (default: 5). Limita downloads por run.
+
+#### 21.8 — Atualizar testes existentes
+
+**Arquivos**: `github-provider.test.ts`, `gitlab-provider.test.ts`
+
+Inverter asserções existentes:
+
+```typescript
+// ANTES (comportamento antigo):
+expect(mockProvider.downloadArtifact).not.toHaveBeenCalled();
+
+// DEPOIS (comportamento novo):
+expect(mockProvider.downloadArtifact).toHaveBeenCalled();
+```
+
+Adicionar novos testes:
+
+- Teste de download + parse bem-sucedido
+- Teste de download com erro (não deve crashar)
+- Teste de filtro por `isTestArtifact()`
+- Teste de limite de artifacts por run
+
 ---
 
 ### FASE 22 — Consumer Migration (Incremental)
@@ -1173,6 +1237,47 @@ rg "@ts-ignore|@ts-expect-error" --include="*.ts"  # 0 ocorrências
 #### Output da Auditoria
 
 Relatório em `audit/functional/AUDIT-REPORT-REFACTORING.md`
+
+---
+
+### FASE 27 — TECHDOC.md Update
+
+Atualizar `docs/TECHDOC.md` com a nova arquitetura:
+
+#### 27.1 — Atualizar Diagrama de Arquitetura
+
+Atualizar seção "Layered Diagram" com:
+
+- DataHub layered architecture (7 camadas)
+- Novos módulos: `artifact-parser.ts`, `junit-xml-parser.ts`, `framework-detection.ts`
+- Novos providers: `github-provider.ts`, `gitlab-provider.ts`, `composite-provider.ts`
+- Novos extractors: `coverage-extractor.ts`, `failure-reasons.ts`, etc.
+
+#### 27.2 — Atualizar Variáveis e Constantes dos Testes
+
+Documentar padrões de testes:
+
+- Constantes centralizadas: `CONTEXT_IDS`, `MOCK_REPO`, `MOCK_OWNER`
+- Mock factories: `git-provider-factory.ts`
+- Padrões de mock: `vi.mocked()`, `createMockProvider()`
+
+#### 27.3 — Atualizar Tabela de Módulos
+
+Adicionar novos módulos:
+
+- `shared/data-hub/` — Data Hub core
+- `shared/data-hub/providers/` — Data providers
+- `shared/data-hub/extractors/` — Data extractors
+- `shared/data-hub/compute/` — Metrics computation
+- `shared/data-hub/metrics/` — Export/import
+
+#### 27.4 — Atualizar Dependências
+
+Documentar dependências npm:
+
+- `fast-xml-parser` — JUnit XML parsing
+- `adm-zip` — ZIP extraction
+- `fast-check` — Property-based testing
 
 ---
 
@@ -1393,7 +1498,8 @@ O linter `vitest/prefer-strict-equal` exige `toStrictEqual` em vez de `toEqual` 
 | 24        | Contract Updates                   | 4h      | Medium | 18            |
 | 25        | Testing + Quality Gates            | 4h      | Low    | 0, 20, 21, 24 |
 | 26        | Auditoria Final                    | 4h      | Medium | 22, 23, 25    |
-| **Total** |                                    | **58h** |        |               |
+| 27        | TECHDOC.md Update                  | 2h      | Low    | 26            |
+| **Total** |                                    | **60h** |        |               |
 
 ---
 
@@ -1417,3 +1523,4 @@ O linter `vitest/prefer-strict-equal` exige `toStrictEqual` em vez de `toEqual` 
 - [ ] Phase 24 — Contract Updates
 - [ ] Phase 25 — Testing + Quality Gates
 - [ ] Phase 26 — Auditoria Final de Qualidade
+- [ ] Phase 27 — TECHDOC.md Update
