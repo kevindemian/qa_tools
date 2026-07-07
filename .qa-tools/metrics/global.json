@@ -1,27 +1,6 @@
 {
   "runs": [
     {
-      "timestamp": "2026-07-05T19:05:30.287Z",
-      "project": "qa_tools",
-      "total": 2,
-      "passed": 2,
-      "failed": 0,
-      "skipped": 0,
-      "duration": 1000,
-      "tests": [
-        {
-          "title": "test A",
-          "state": "passed",
-          "duration": 100
-        },
-        {
-          "title": "test B",
-          "state": "passed",
-          "duration": 200
-        }
-      ]
-    },
-    {
       "timestamp": "2026-07-05T20:41:11.988Z",
       "project": "qa_tools",
       "total": 2,
@@ -1031,6 +1010,27 @@
     },
     {
       "timestamp": "2026-07-07T13:51:51.289Z",
+      "project": "qa_tools",
+      "total": 2,
+      "passed": 2,
+      "failed": 0,
+      "skipped": 0,
+      "duration": 1000,
+      "tests": [
+        {
+          "title": "test A",
+          "state": "passed",
+          "duration": 100
+        },
+        {
+          "title": "test B",
+          "state": "passed",
+          "duration": 200
+        }
+      ]
+    },
+    {
+      "timestamp": "2026-07-07T13:54:06.378Z",
       "project": "qa_tools",
       "total": 2,
       "passed": 2,
