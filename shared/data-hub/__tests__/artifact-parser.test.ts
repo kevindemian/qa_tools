@@ -27,7 +27,7 @@ vi.mock('../../logger.js', () => ({
     rootLogger: mockRootLogger,
 }));
 
-const { parseArtifactBuffer, parseZipBuffer, isCTRF, isJUnit, isMochawesome } =
+const { parseArtifactBuffer, parseArtifactBufferAll, parseZipBuffer, isCTRF, isJUnit, isMochawesome } =
     await import('../../data-hub/artifact-parser.js');
 
 function createZipBuffer(files: Array<{ name: string; content: string }>): Buffer {
@@ -212,6 +212,63 @@ describe('ParseZipBuffer', () => {
         });
 
         const results = parseZipBuffer(zipBuf);
+
+        expect(results).toHaveLength(2);
+    });
+});
+
+describe('ParseArtifactBufferAll', () => {
+    beforeEach(() => {
+        vi.clearAllMocks();
+    });
+
+    it('returns array with single result for text file', () => {
+        const content = JSON.stringify({
+            results: {
+                tests: [],
+                summary: { tests: 0, passed: 0, failed: 0, skipped: 0, pending: 0, other: 0, start: 0, stop: 0 },
+            },
+        });
+        const buffer = Buffer.from(content, 'utf-8');
+        mockParseCtrfResults.mockReturnValue({
+            tests: [{ title: 't1', state: 'passed', duration: 10 }],
+            stats: { passed: 1, failed: 0, skipped: 0, total: 1, duration: 10 },
+        });
+
+        const results = parseArtifactBufferAll(buffer, 'report.json');
+
+        expect(results).toHaveLength(1);
+        expect(results[0]).not.toBeNull();
+    });
+
+    it('returns empty array for invalid content', () => {
+        const buffer = Buffer.from('not a valid format', 'utf-8');
+        const results = parseArtifactBufferAll(buffer, 'unknown.txt');
+
+        expect(results).toStrictEqual([]);
+    });
+
+    it('returns all results from ZIP', () => {
+        const ctrfContent = JSON.stringify({
+            results: {
+                tests: [{ name: 't1', status: 'passed', duration: 10 }],
+                summary: { tests: 1, passed: 1, failed: 0, skipped: 0, pending: 0, other: 0, start: 100, stop: 200 },
+            },
+        });
+        const zipBuf = createZipBuffer([
+            { name: 'ctrf.json', content: ctrfContent },
+            { name: 'junit.xml', content: '<testsuite name="test"><testcase name="t2"/></testsuite>' },
+        ]);
+        mockParseCtrfResults.mockReturnValue({
+            tests: [{ title: 't1', state: 'passed', duration: 10 }],
+            stats: { passed: 1, failed: 0, skipped: 0, total: 1, duration: 100 },
+        });
+        mockParseJUnitXml.mockReturnValue({
+            tests: [{ title: 't2', state: 'passed', duration: 5 }],
+            stats: { passed: 1, failed: 0, skipped: 0, total: 1, duration: 5 },
+        });
+
+        const results = parseArtifactBufferAll(zipBuf, 'artifacts.zip');
 
         expect(results).toHaveLength(2);
     });
