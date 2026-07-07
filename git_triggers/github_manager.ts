@@ -20,6 +20,7 @@ import type {
     CICDVariable,
     Issue,
     JsonObject,
+    DirEntry,
 } from '../shared/types.js';
 import type { AxiosInstance } from '../shared/deps.js';
 import {
@@ -43,6 +44,9 @@ import {
     wfGetSchedules,
     wfRunSchedule,
     wfGetWorkflowRunTiming,
+    wfGetFileContents,
+    wfListDirectory,
+    wfGetRepoTreeCached,
 } from './github-workflow.js';
 import { getOpenIssues } from './github-issues.js';
 import { getBranch, getDiff } from './github-branch.js';
@@ -185,6 +189,19 @@ class GitHubManager extends GitProviderBase implements GitProvider {
 
     override async getWorkflowRunTiming(runId: number): Promise<{ run_duration_ms: number } | null> {
         return wfGetWorkflowRunTiming(this.client, this.owner, this.repo, runId);
+    }
+
+    override async getFileContents(path: string, ref?: string): Promise<string | null> {
+        return wfGetFileContents(this.client, this.owner, this.repo, path, ref);
+    }
+
+    override async listDirectory(path: string, ref?: string): Promise<DirEntry[] | null> {
+        return wfListDirectory(this.client, this.owner, this.repo, path, ref);
+    }
+
+    /** Get repo tree with caching (for framework detection). */
+    async getRepoTree(ref: string): Promise<string[] | null> {
+        return wfGetRepoTreeCached(this.client, this.owner, this.repo, ref);
     }
 
     async getSchedules(): Promise<ScheduleInfo[]> {

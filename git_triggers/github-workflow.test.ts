@@ -17,6 +17,11 @@ import {
     wfGetSchedules,
     wfRunSchedule,
     wfGetWorkflowRunTiming,
+    wfGetRepoTree,
+    wfGetFileContents,
+    wfListDirectory,
+    wfGetRepoTreeCached,
+    clearTreeCache,
 } from './github-workflow.js';
 
 vi.mock('./github-api', () => ({
@@ -756,5 +761,204 @@ describe('WfGetWorkflowRunTiming', () => {
         const result = await wfGetWorkflowRunTiming(client, CONTEXT_IDS.ORGANIZATION, CONTEXT_IDS.REPOSITORY, 55);
 
         expect(result).toBeNull();
+    });
+});
+
+describe('WfGetRepoTree', () => {
+    const TREE_RESPONSE = {
+        tree: [
+            { path: 'package.json', type: 'blob' },
+            { path: 'README.md', type: 'blob' },
+            { path: 'src', type: 'tree' },
+            { path: 'packages/a/package.json', type: 'blob' },
+            { path: 'requirements.txt', type: 'blob' },
+            { path: 'Gemfile.lock', type: 'blob' },
+        ],
+        truncated: false,
+    };
+
+    beforeEach(() => {
+        vi.mocked(apiGet).mockClear();
+        clearTreeCache();
+    });
+
+    it('returns manifest file paths from tree', async () => {
+        expect.hasAssertions();
+
+        const client = createMockAxiosInstance();
+        vi.mocked(apiGet).mockResolvedValue(TREE_RESPONSE);
+
+        const result = await wfGetRepoTree(client, CONTEXT_IDS.ORGANIZATION, CONTEXT_IDS.REPOSITORY, 'main');
+
+        expect(result).toStrictEqual(['package.json', 'packages/a/package.json', 'requirements.txt']);
+    });
+
+    it('returns empty array when no manifests found', async () => {
+        expect.hasAssertions();
+
+        const client = createMockAxiosInstance();
+        vi.mocked(apiGet).mockResolvedValue({
+            tree: [
+                { path: 'README.md', type: 'blob' },
+                { path: 'src/index.ts', type: 'blob' },
+            ],
+            truncated: false,
+        });
+
+        const result = await wfGetRepoTree(client, CONTEXT_IDS.ORGANIZATION, CONTEXT_IDS.REPOSITORY, 'main');
+
+        expect(result).toStrictEqual([]);
+    });
+
+    it('returns null on API error', async () => {
+        expect.hasAssertions();
+
+        const client = createMockAxiosInstance();
+        vi.mocked(apiGet).mockRejectedValue(new Error('API error'));
+
+        const result = await wfGetRepoTree(client, CONTEXT_IDS.ORGANIZATION, CONTEXT_IDS.REPOSITORY, 'main');
+
+        expect(result).toBeNull();
+    });
+});
+
+describe('WfGetFileContents', () => {
+    let client: Mocked<AxiosInstance>;
+
+    beforeEach(() => {
+        client = createMockAxiosInstance();
+    });
+
+    it('returns file content from Contents API', async () => {
+        expect.hasAssertions();
+
+        client.get.mockResolvedValue({ data: 'file content here' });
+
+        const result = await wfGetFileContents(
+            client,
+            CONTEXT_IDS.ORGANIZATION,
+            CONTEXT_IDS.REPOSITORY,
+            'package.json',
+            'main',
+        );
+
+        expect(client.get).toHaveBeenCalledWith(
+            '/repos/' + CONTEXT_IDS.ORGANIZATION + '/' + CONTEXT_IDS.REPOSITORY + '/contents/package.json?ref=main',
+            {
+                headers: { Accept: 'application/vnd.github.v3.raw' },
+                responseType: 'text',
+            },
+        );
+        expect(result).toBe('file content here');
+    });
+
+    it('returns null on 404', async () => {
+        expect.hasAssertions();
+
+        client.get.mockRejectedValue({ response: { status: 404 } });
+
+        const result = await wfGetFileContents(client, CONTEXT_IDS.ORGANIZATION, CONTEXT_IDS.REPOSITORY, 'missing.txt');
+
+        expect(result).toBeNull();
+    });
+
+    it('returns null on other API error', async () => {
+        expect.hasAssertions();
+
+        client.get.mockRejectedValue(new Error('API error'));
+
+        const result = await wfGetFileContents(
+            client,
+            CONTEXT_IDS.ORGANIZATION,
+            CONTEXT_IDS.REPOSITORY,
+            'package.json',
+        );
+
+        expect(result).toBeNull();
+    });
+});
+
+describe('WfListDirectory', () => {
+    let client: Mocked<AxiosInstance>;
+
+    beforeEach(() => {
+        client = createMockAxiosInstance();
+    });
+
+    it('returns directory entries from Contents API', async () => {
+        expect.hasAssertions();
+
+        client.get.mockResolvedValue({
+            data: [
+                { name: 'index.ts', path: 'src/index.ts', type: 'file' },
+                { name: 'utils', path: 'src/utils', type: 'dir' },
+            ],
+        });
+
+        const result = await wfListDirectory(client, CONTEXT_IDS.ORGANIZATION, CONTEXT_IDS.REPOSITORY, 'src');
+
+        expect(result).toStrictEqual([
+            { name: 'index.ts', path: 'src/index.ts', type: 'file' },
+            { name: 'utils', path: 'src/utils', type: 'dir' },
+        ]);
+    });
+
+    it('returns null on 404', async () => {
+        expect.hasAssertions();
+
+        client.get.mockRejectedValue({ response: { status: 404 } });
+
+        const result = await wfListDirectory(client, CONTEXT_IDS.ORGANIZATION, CONTEXT_IDS.REPOSITORY, 'missing');
+
+        expect(result).toBeNull();
+    });
+
+    it('returns null when response is not an array', async () => {
+        expect.hasAssertions();
+
+        client.get.mockResolvedValue({ data: { not: 'an array' } });
+
+        const result = await wfListDirectory(client, CONTEXT_IDS.ORGANIZATION, CONTEXT_IDS.REPOSITORY, 'file.json');
+
+        expect(result).toBeNull();
+    });
+
+    it('returns null on API error', async () => {
+        expect.hasAssertions();
+
+        client.get.mockRejectedValue(new Error('API error'));
+
+        const result = await wfListDirectory(
+            client,
+            CONTEXT_IDS.ORGANIZATION,
+            CONTEXT_IDS.REPOSITORY,
+            'test-file.json',
+        );
+
+        expect(result).toBeNull();
+    });
+});
+
+describe('WfGetRepoTreeCached', () => {
+    beforeEach(() => {
+        vi.mocked(apiGet).mockClear();
+        clearTreeCache();
+    });
+
+    it('caches and returns tree paths', async () => {
+        expect.hasAssertions();
+
+        const client = createMockAxiosInstance();
+        vi.mocked(apiGet).mockResolvedValue({
+            tree: [{ path: 'package.json', type: 'blob' }],
+            truncated: false,
+        });
+
+        const result1 = await wfGetRepoTreeCached(client, CONTEXT_IDS.ORGANIZATION, CONTEXT_IDS.REPOSITORY, 'main');
+        const result2 = await wfGetRepoTreeCached(client, CONTEXT_IDS.ORGANIZATION, CONTEXT_IDS.REPOSITORY, 'main');
+
+        expect(result1).toStrictEqual(['package.json']);
+        expect(result2).toStrictEqual(['package.json']);
+        expect(apiGet).toHaveBeenCalledTimes(1);
     });
 });

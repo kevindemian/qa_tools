@@ -14,6 +14,7 @@ import type {
     CICDVariable,
     Issue,
     JsonObject,
+    DirEntry,
 } from '../shared/types.js';
 import {
     glTriggerPipeline,
@@ -26,6 +27,9 @@ import {
     glGetJobLogs,
     glGetSchedules,
     glRunSchedule,
+    glGetFileContents,
+    glListDirectory,
+    glGetRepoTree,
 } from './gitlab-workflow.js';
 import {
     glCreateMergeRequest,
@@ -170,6 +174,19 @@ class GitLabManager extends GitProviderBase implements GitProvider {
 
     async getJobLogs(jobId: string | number, maxBytes = 10240): Promise<string | null> {
         return glGetJobLogs(this.client, this.owner, this.repo, jobId, maxBytes);
+    }
+
+    override async getFileContents(path: string, ref?: string): Promise<string | null> {
+        return glGetFileContents(this.client, this.owner, this.repo, path, ref);
+    }
+
+    override async listDirectory(path: string, ref?: string): Promise<DirEntry[] | null> {
+        return glListDirectory(this.client, this.owner, this.repo, path, ref);
+    }
+
+    /** Get repo tree (for framework detection). */
+    async getRepoTree(ref: string): Promise<string[] | null> {
+        return glGetRepoTree(this.client, this.owner, this.repo, ref);
     }
 }
 

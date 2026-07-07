@@ -9,6 +9,9 @@ import {
     glGetCICDVariables,
     glDownloadArtifact,
     glGetJobLogs,
+    glGetRepoTree,
+    glGetFileContents,
+    glListDirectory,
 } from './gitlab-workflow.js';
 import { apiGet, apiPost, projectPath } from './gitlab-api.js';
 import { createMockAxiosInstance } from '../shared/test-utils/factories/response-factory.js';
@@ -374,6 +377,113 @@ describe('Gitlab Workflow', () => {
 
             mockClient.get.mockRejectedValue(new Error('Log not found'));
             const result = await glGetJobLogs(mockClient, 'owner', 'repo', 999);
+
+            expect(result).toBeNull();
+        });
+    });
+
+    describe('GlGetRepoTree', () => {
+        it('returns manifest file paths from tree', async () => {
+            expect.hasAssertions();
+
+            vi.mocked(apiGet).mockResolvedValue([
+                { name: 'package.json', path: 'package.json', type: 'blob' },
+                { name: 'README.md', path: 'README.md', type: 'blob' },
+                { name: 'src', path: 'src', type: 'tree' },
+                { name: 'package.json', path: 'packages/a/package.json', type: 'blob' },
+            ]);
+
+            const result = await glGetRepoTree(mockClient, 'owner', 'repo', 'main');
+
+            expect(result).toStrictEqual(['package.json', 'packages/a/package.json']);
+        });
+
+        it('returns empty array when no manifests found', async () => {
+            expect.hasAssertions();
+
+            vi.mocked(apiGet).mockResolvedValue([{ name: 'README.md', path: 'README.md', type: 'blob' }]);
+
+            const result = await glGetRepoTree(mockClient, 'owner', 'repo', 'main');
+
+            expect(result).toStrictEqual([]);
+        });
+
+        it('returns null on API error', async () => {
+            expect.hasAssertions();
+
+            vi.mocked(apiGet).mockResolvedValue(null);
+
+            const result = await glGetRepoTree(mockClient, 'owner', 'repo', 'main');
+
+            expect(result).toBeNull();
+        });
+    });
+
+    describe('GlGetFileContents', () => {
+        it('returns file content from Repository Files API', async () => {
+            expect.hasAssertions();
+
+            mockClient.get.mockResolvedValue({ data: 'file content here' });
+
+            const result = await glGetFileContents(mockClient, 'owner', 'repo', 'package.json', 'main');
+
+            expect(result).toBe('file content here');
+        });
+
+        it('returns null on 404', async () => {
+            expect.hasAssertions();
+
+            mockClient.get.mockRejectedValue({ response: { status: 404 } });
+
+            const result = await glGetFileContents(mockClient, 'owner', 'repo', 'missing.txt');
+
+            expect(result).toBeNull();
+        });
+
+        it('returns null on API error', async () => {
+            expect.hasAssertions();
+
+            mockClient.get.mockRejectedValue(new Error('API error'));
+
+            const result = await glGetFileContents(mockClient, 'owner', 'repo', 'package.json');
+
+            expect(result).toBeNull();
+        });
+    });
+
+    describe('GlListDirectory', () => {
+        it('returns directory entries from Tree API', async () => {
+            expect.hasAssertions();
+
+            vi.mocked(apiGet).mockResolvedValue([
+                { name: 'index.ts', path: 'src/index.ts', type: 'blob' },
+                { name: 'utils', path: 'src/utils', type: 'tree' },
+            ]);
+
+            const result = await glListDirectory(mockClient, 'owner', 'repo', 'src');
+
+            expect(result).toStrictEqual([
+                { name: 'index.ts', path: 'src/index.ts', type: 'file' },
+                { name: 'utils', path: 'src/utils', type: 'dir' },
+            ]);
+        });
+
+        it('returns null when apiGet returns null', async () => {
+            expect.hasAssertions();
+
+            vi.mocked(apiGet).mockResolvedValue(null);
+
+            const result = await glListDirectory(mockClient, 'owner', 'repo', 'src');
+
+            expect(result).toBeNull();
+        });
+
+        it('returns null on API error', async () => {
+            expect.hasAssertions();
+
+            vi.mocked(apiGet).mockRejectedValue(new Error('API error'));
+
+            const result = await glListDirectory(mockClient, 'owner', 'repo', 'src');
 
             expect(result).toBeNull();
         });
