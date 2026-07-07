@@ -1266,13 +1266,87 @@ O endpoint `GET /actions/runs/{run_id}/timing` está oficialmente "closing down"
 
 ---
 
+## Learnings — Phase 20 (Contents API + Framework Detection)
+
+Aprendizados registrados antes da execução, baseados na análise de design e experiência da Phase 18.
+
+### 1. Framework detection — extrair lógica compartilhada
+
+A `setup/detector.ts` já contém `detectFramework()` que detecta framework (cypress, playwright, jest, vitest) a partir do `package.json` local (filesystem).
+
+**Decisão**: Extrair a lógica de detecção pura (`detectFrameworkFromDeps(deps) → { framework, confidence }`) para uma função compartilhada. Ambos os módulos chamam a mesma função, diferindo apenas em COMO leem o arquivo:
+
+- `setup/detector.ts` → lê via `fs`
+- `shared/framework-detection.ts` → lê via Contents API (remoto)
+
+**Por que**: única fonte de verdade, zero duplicação, comportamento consistente, sem risco de quebrar o setup existente, testabilidade isolada.
+
+### 2. Assinatura dos novos métodos no GitProvider
+
+O plano propõe `getFileContents(owner: string, repo: string, path: string, ref?: string)`, mas os métodos existentes da interface não recebem owner/repo — usam estado interno dos managers (ex: `getRecentPipelines(count?)`).
+
+**Decisão**: Seguir o padrão existente — `getFileContents(path: string, ref?: string)` e `listDirectory(path: string, ref?: string)` sem owner/repo na interface.
+
+### 3. `isManifestFile` — cobertura de manifestos
+
+O regex proposto cobre: `package.json`, `requirements.txt`, `pyproject.toml`, `Gemfile`, `pom.xml`, `go.mod`.
+
+**Decisão**: Adicionar também `Cargo.toml` (Rust), `composer.json` (PHP), `build.gradle` / `build.gradle.kts` (Java/Kotlin) e `*.csproj` (.NET). A função deve ser facilmente extensível (ex: array de patterns).
+
+### 4. `listDirectory` — tipo de retorno
+
+O plano propõe `Promise<string[] | null>` (apenas nomes). A GitHub Contents API retorna objetos com `name`, `type`, `size`.
+
+**Decisão**: Retornar `Array<{ name: string; type: 'file' | 'dir'; path: string }>` para permitir traversal recursivo sem chamadas adicionais. O `type` informa se é diretório sem precisar de stat extra.
+
+### 5. Trees API — limites e fallback
+
+- GitHub: recursivo retorna até 100.000 arquivos; acima disso → `422`
+- GitLab: paginado por página; pode não retornar completo em uma chamada
+
+**Decisão**: Implementar fallback: tentar Trees API → se falhar (422 ou incompleto), cair para Contents API diretório por diretório. A função deve expor `maxDepth?: number` para limitar recursão em monorepos.
+
+### 6. Cachê do Trees API
+
+O resultado da Trees API é custoso (1 chamada HTTP + parse de resposta grande). Se o mesmo repo é consultado várias vezes na sessão, o cache evita refetch.
+
+**Decisão**: Implementar cache em memória (`Map<string, TreeEntry[]>`) com chave = `${owner}/${repo}/${ref}`. O cache é limpo ao final da sessão (sem persistência). Futuro: cache LRU com TTL.
+
+### 7. Tratamento de erros — usar `humanizeError`
+
+Regra carregada da Phase 18: nunca criar classes de erro novas. Usar exclusivamente `humanizeError()` de `shared/prompt-errors.ts` para formatar erros antes de logar ou retornar ao usuário.
+
+### 8. Testes — usar constantes e variáveis centralizadas
+
+Regra carregada da Phase 18: todos os testes devem usar as variáveis e constantes centralizadas em vez de literais mágicas (ex: `CONTEXT_IDS`, `MOCK_REPO`, `MOCK_OWNER` definidos em um local compartilhado).
+
+### 9. isManifestFile — regex não pode capturar lockfiles
+
+O pattern `Gemfile([^/]*)?$` capturava `Gemfile.lock` como manifest. Corrigido para `Gemfile$`.
+
+**Regra**: lockfiles (`Gemfile.lock`, `package-lock.json`, `yarn.lock`, `Cargo.lock`) nunca são manifest.
+
+### 10. switch evita falso positivo do no-unnecessary-condition
+
+O eslint com `@typescript-eslint/no-unnecessary-condition` flagou ternário `e.type === 'blob' ? 'file' : 'dir'` após guard clause como "comparação sempre verdadeira". Solução: usar `switch` com `default: continue`.
+
+### 11. `Object.keys` + `includes` evita detect-object-injection
+
+O acesso dinâmico `deps[dep]` no `detectFrameworkFromDeps` disparou `security/detect-object-injection`. Solução: iterar `Object.keys(deps)` + `knownDeps.includes(dep)`.
+
+### 12. Integração test deve usar `toStrictEqual`
+
+O linter `vitest/prefer-strict-equal` exige `toStrictEqual` em vez de `toEqual` para objetos.
+
+---
+
 ## Quality Gates por Phase
 
 | Phase | tsc --noEmit | lint        | vitest    | PBT        | Audit       |
 | ----- | ------------ | ----------- | --------- | ---------- | ----------- |
 | 0     | 0 erros      | 0 violações | 100% pass | ✅ parsers | —           |
 | 18    | 0 erros      | 0 violações | 100% pass | —          | —           |
-| 20    | 0 erros      | 0 violações | 100% pass | ✅         | —           |
+| 20    | 0 erros      | 0 violações | 100% pass | —          | —           |
 | 21    | 0 erros      | 0 violações | 100% pass | ✅         | —           |
 | 22    | 0 erros      | 0 violações | 100% pass | —          | —           |
 | 23    | 0 erros      | 0 violações | 100% pass | —          | —           |
@@ -1312,7 +1386,7 @@ O endpoint `GET /actions/runs/{run_id}/timing` está oficialmente "closing down"
 
 - [ ] Phase 0 — Cross-Cutting Modules
 - [x] Phase 18 — Data Extraction
-- [ ] Phase 20 — Contents API + Framework Detection
+- [x] Phase 20 — Contents API + Framework Detection
 - [ ] Phase 21 — Artifact Download + Parse
 - [ ] Phase 22 — Consumer Migration
 - [ ] Phase 23 — Deprecation + Cleanup

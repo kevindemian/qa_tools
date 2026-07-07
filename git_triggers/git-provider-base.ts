@@ -1,5 +1,5 @@
 /** Base class for Git provider clients (GitHub/GitLab) — shared API call + error handling. */
-import type { JsonObject } from '../shared/types.js';
+import type { JsonObject, DirEntry } from '../shared/types.js';
 import { handleError } from '../shared/git-provider-error.js';
 import type { createHttpClient } from '../shared/http-client.js';
 
@@ -8,6 +8,14 @@ type HttpClient = ReturnType<typeof createHttpClient>;
 export abstract class GitProviderBase {
     /** Default: timing not available. Override in GitHubManager. */
     getWorkflowRunTiming(_runId: number): Promise<{ run_duration_ms: number } | null> {
+        return Promise.resolve(null);
+    }
+    /** Default: file contents not available. Override in provider-specific managers. */
+    getFileContents(_path: string, _ref?: string): Promise<string | null> {
+        return Promise.resolve(null);
+    }
+    /** Default: directory listing not available. Override in provider-specific managers. */
+    listDirectory(_path: string, _ref?: string): Promise<DirEntry[] | null> {
         return Promise.resolve(null);
     }
     protected abstract client: HttpClient;

@@ -136,6 +136,19 @@ export interface PipelineRun {
     run_started_at?: string;
 }
 
+/** Entry from a directory listing (Contents API or Trees API). */
+export interface DirEntry {
+    name: string;
+    path: string;
+    type: 'file' | 'dir';
+}
+
+/** Result from framework detection. */
+export interface FrameworkDetectionResult {
+    framework: string;
+    confidence: number;
+}
+
 /** Result returned after triggering a pipeline. */
 export interface PipelineTriggerResult {
     /** Triggered pipeline ID. */
@@ -177,6 +190,10 @@ export interface GitProvider {
     getDiff: (source: string, target: string) => Promise<string>;
     /** Fetch workflow run timing (GitHub-specific; GitLab returns null). */
     getWorkflowRunTiming: (runId: number) => Promise<{ run_duration_ms: number } | null>;
+    /** Read a file from the repository via Contents API. */
+    getFileContents: (path: string, ref?: string) => Promise<string | null>;
+    /** List a directory in the repository. */
+    listDirectory: (path: string, ref?: string) => Promise<DirEntry[] | null>;
     provider: 'gitlab' | 'github';
 }
 

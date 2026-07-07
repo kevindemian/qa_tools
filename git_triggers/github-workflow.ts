@@ -10,6 +10,7 @@ import type {
     ArtifactInfo,
     CICDVariable,
     JsonObject,
+    DirEntry,
 } from '../shared/types.js';
 import { apiGet, apiPost } from './github-api.js';
 
@@ -287,4 +288,137 @@ export function wfRunSchedule(_scheduleId: string | number): Promise<JsonObject>
     throw new Error(
         'GitHub Actions schedules not available via REST API. Use workflow_dispatch or repository_dispatch.',
     );
+}
+
+import { isManifestFile } from '../shared/framework-detection.js';
+
+interface GitHubTreeEntry {
+    path: string;
+    type: 'blob' | 'tree';
+}
+
+interface GitHubTreeResponse {
+    tree: GitHubTreeEntry[];
+    truncated: boolean;
+}
+
+/**
+ * Fetch the full repository tree via Git Trees API (recursive).
+ * Returns paths of all manifest files found, or null on error.
+ * Falls back gracefully on API failure (422 for very large repos, etc.).
+ */
+export async function wfGetRepoTree(
+    client: AxiosInstance,
+    owner: string,
+    repo: string,
+    branch: string,
+): Promise<string[] | null> {
+    try {
+        const data = await apiGet<GitHubTreeResponse>(
+            client,
+            `/repos/${owner}/${repo}/git/trees/${encodeURIComponent(branch)}?recursive=1`,
+            { operation: 'buscar árvore do repositório', returnNull: true },
+        );
+        if (data == null) return null;
+        const paths = data.tree
+            .filter((entry) => entry.type === 'blob' && isManifestFile(entry.path))
+            .map((entry) => entry.path);
+        if (data.truncated) {
+            rootLogger.warn(`GitHub: tree truncated for ${owner}/${repo}@${branch}`);
+        }
+        return paths.length > 0 ? paths : [];
+    } catch {
+        return null;
+    }
+}
+
+/**
+ * Read a file from the repository via GitHub Contents API.
+ * Returns raw file content as string, or null if not found.
+ */
+export async function wfGetFileContents(
+    client: AxiosInstance,
+    owner: string,
+    repo: string,
+    path: string,
+    ref?: string,
+): Promise<string | null> {
+    try {
+        const url =
+            `/repos/${owner}/${repo}/contents/${encodeURIComponent(path)}` +
+            (ref != null ? `?ref=${encodeURIComponent(ref)}` : '');
+        const response = await client.get<string>(url, {
+            headers: { Accept: 'application/vnd.github.v3.raw' },
+            responseType: 'text' as const,
+        });
+        return response.data;
+    } catch (err) {
+        const axiosErr = err as { response?: { status?: number } };
+        if (axiosErr.response?.status === 404) return null;
+        return handleError(err, { context: `ler arquivo ${path}`, returnNull: true });
+    }
+}
+
+/**
+ * List a directory in the repository via GitHub Contents API.
+ * Returns entries with name, path, and type, or null on error.
+ */
+export async function wfListDirectory(
+    client: AxiosInstance,
+    owner: string,
+    repo: string,
+    path: string,
+    ref?: string,
+): Promise<DirEntry[] | null> {
+    try {
+        const url =
+            `/repos/${owner}/${repo}/contents/${encodeURIComponent(path)}` +
+            (ref != null ? `?ref=${encodeURIComponent(ref)}` : '');
+        const response = await client.get<Array<{ name: string; path: string; type: string }>>(url);
+        const entries = response.data;
+        if (!Array.isArray(entries)) return null;
+        return entries
+            .filter((e) => e.type === 'file' || e.type === 'dir')
+            .map((e) => ({
+                name: e.name,
+                path: e.path,
+                type: e.type as 'file' | 'dir',
+            }));
+    } catch (err) {
+        const axiosErr = err as { response?: { status?: number } };
+        if (axiosErr.response?.status === 404) return null;
+        return handleError(err, { context: `listar diretório ${path}`, returnNull: true });
+    }
+}
+
+/**
+ * Cache for repository tree results to avoid repeated API calls.
+ * Keyed by `${owner}/${repo}/${ref}`.
+ */
+const treeCache = new Map<string, { timestamp: number; paths: string[] | null }>();
+const TREE_CACHE_TTL_MS = 300_000; // 5 minutes
+
+/**
+ * Get repository tree with in-memory caching.
+ * Returns cached result if available and within TTL, otherwise fetches from API.
+ */
+export async function wfGetRepoTreeCached(
+    client: AxiosInstance,
+    owner: string,
+    repo: string,
+    ref: string,
+): Promise<string[] | null> {
+    const cacheKey = `${owner}/${repo}/${ref}`;
+    const cached = treeCache.get(cacheKey);
+    if (cached != null && Date.now() - cached.timestamp < TREE_CACHE_TTL_MS) {
+        return cached.paths;
+    }
+    const paths = await wfGetRepoTree(client, owner, repo, ref);
+    treeCache.set(cacheKey, { timestamp: Date.now(), paths });
+    return paths;
+}
+
+/** Clear the tree cache (for testing). */
+export function clearTreeCache(): void {
+    treeCache.clear();
 }
