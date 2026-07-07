@@ -173,6 +173,7 @@ function createMockGitProvider(): GitProvider {
         getWorkflowRunTiming: vi.fn(),
         getFileContents: vi.fn<(...args: [path: string, ref?: string]) => Promise<string | null>>(),
         listDirectory: vi.fn(),
+        getTestReport: vi.fn(),
         provider: 'github',
     };
 }

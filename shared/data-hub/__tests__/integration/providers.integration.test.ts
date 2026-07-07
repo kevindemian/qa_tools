@@ -34,6 +34,7 @@ function createMockGitProvider(runs: PipelineRun[], jobsPerRun: Map<number, Pipe
         getWorkflowRunTiming: vi.fn(),
         getFileContents: vi.fn(),
         listDirectory: vi.fn(),
+        getTestReport: vi.fn(),
         provider: 'github' as const,
     };
 }
@@ -143,6 +144,7 @@ describe('Integration: Data Hub Providers', () => {
             getWorkflowRunTiming: vi.fn(),
             getFileContents: vi.fn(),
             listDirectory: vi.fn(),
+            getTestReport: vi.fn(),
             provider: 'github' as const,
         };
 

@@ -10,6 +10,7 @@
 
 import { axios } from './deps.js';
 import { rootLogger } from './logger.js';
+import type { CheckRunAnnotation } from './types/ci-cd.js';
 
 export interface CheckRunConfig {
     /** GitHub token with checks write permission. Default: process.env.GITHUB_TOKEN */
@@ -44,6 +45,187 @@ export interface CreateCheckRunParams {
     detailsUrl?: string;
 }
 
+/** A GitHub Check Run item fetched from the API. */
+export interface GitHubCheckRun {
+    id: number;
+    name: string;
+    status: string;
+    conclusion?: string | undefined;
+    annotations?: CheckRunAnnotation[];
+}
+
+/** GitHub API response for check runs list. */
+interface CheckRunsResponse {
+    check_runs?: Array<{
+        id: number;
+        name: string;
+        status: string;
+        conclusion?: string;
+    }>;
+    total_count?: number;
+}
+
+/** GitHub API response for annotations list. */
+interface AnnotationResponse {
+    path: string;
+    start_line: number;
+    end_line: number;
+    message: string;
+    annotation_level: string;
+}
+
+/** Extract HTTP status from error-like object. */
+function getErrorStatus(err: unknown): number | undefined {
+    try {
+        const errObj = err as { response?: { status?: number } };
+        return errObj.response?.status;
+    } catch {
+        return undefined;
+    }
+}
+
+/** Type guard for Error objects. */
+function isError(err: unknown): err is Error {
+    try {
+        const errObj = err as { message?: unknown };
+        return errObj.message !== undefined;
+    } catch {
+        return false;
+    }
+}
+
+/** Get environment variable value. */
+function getEnv(key: string): string | undefined {
+    return process.env[key];
+}
+
+/**
+ * Fetches Check Runs for a given commit SHA.
+ *
+ * @param commitSha - The commit SHA to fetch check runs for
+ * @param config - Optional config overrides
+ * @returns Array of check runs, or empty array on failure
+ */
+export async function getCheckRuns(commitSha: string, config: CheckRunConfig = {}): Promise<GitHubCheckRun[]> {
+    const token = config.token ?? getEnv('GITHUB_TOKEN');
+    const repository = config.repository ?? getEnv('GITHUB_REPOSITORY');
+    const apiBaseUrl = config.apiBaseUrl ?? getEnv('GITHUB_API_URL') ?? 'https://api.github.com';
+
+    if (!token || !repository) {
+        rootLogger.debug(`Skipping getCheckRuns: ${!token ? 'GITHUB_TOKEN' : 'GITHUB_REPOSITORY'} not set`);
+        return [];
+    }
+
+    try {
+        const allCheckRuns = await fetchAllCheckRuns(commitSha, token, repository, apiBaseUrl, config);
+        rootLogger.debug(`Fetched ${allCheckRuns.length} check runs for ${commitSha}`);
+        return allCheckRuns;
+    } catch (err) {
+        const status = getErrorStatus(err);
+        rootLogger.debug(
+            `getCheckRuns failed (HTTP ${status ?? 'error'}): ${isError(err) ? err.message : String(err)}`,
+        );
+        return [];
+    }
+}
+
+async function fetchAllCheckRuns(
+    commitSha: string,
+    token: string,
+    repository: string,
+    apiBaseUrl: string,
+    _config: CheckRunConfig,
+): Promise<GitHubCheckRun[]> {
+    const url = `${apiBaseUrl}/repos/${repository}/check-runs`;
+    const allCheckRuns: GitHubCheckRun[] = [];
+    let page = 1;
+
+    for (;;) {
+        const response = await axios.get(url, {
+            headers: {
+                Authorization: `Bearer ${token}`,
+                Accept: 'application/vnd.github.v3+json',
+            },
+            params: { head_sha: commitSha, per_page: 100, page },
+            timeout: 15000,
+        });
+
+        const data = response.data as CheckRunsResponse;
+        const checkRuns = data.check_runs ?? [];
+
+        for (const cr of checkRuns) {
+            const checkRun: GitHubCheckRun = {
+                id: cr.id,
+                name: cr.name,
+                status: cr.status,
+                conclusion: cr.conclusion,
+            };
+
+            const annotations = await fetchCheckRunAnnotations(cr.id, token, apiBaseUrl, repository);
+            if (annotations.length > 0) {
+                checkRun.annotations = annotations;
+            }
+
+            allCheckRuns.push(checkRun);
+        }
+
+        const totalCount = data.total_count ?? 0;
+        if (allCheckRuns.length >= totalCount || checkRuns.length < 100) {
+            break;
+        }
+        page++;
+    }
+
+    return allCheckRuns;
+}
+
+/**
+ * Fetches annotations for a specific check run.
+ */
+async function fetchCheckRunAnnotations(
+    checkRunId: number,
+    token: string,
+    apiBaseUrl: string,
+    repository: string,
+): Promise<CheckRunAnnotation[]> {
+    const url = `${apiBaseUrl}/repos/${repository}/check-runs/${checkRunId}/annotations`;
+    let page = 1;
+    const allAnnotations: CheckRunAnnotation[] = [];
+
+    try {
+        for (;;) {
+            const response = await axios.get(url, {
+                headers: {
+                    Authorization: `Bearer ${token}`,
+                    Accept: 'application/vnd.github.v3+json',
+                },
+                params: { per_page: 100, page },
+                timeout: 15000,
+            });
+
+            const annotations = response.data as AnnotationResponse[];
+            for (const a of annotations) {
+                allAnnotations.push({
+                    path: a.path,
+                    start_line: a.start_line,
+                    end_line: a.end_line,
+                    message: a.message,
+                    annotation_level: a.annotation_level,
+                });
+            }
+
+            if (annotations.length < 100) {
+                break;
+            }
+            page++;
+        }
+    } catch (err) {
+        rootLogger.debug(`fetchCheckRunAnnotations failed for check run ${checkRunId}: ${String(err)}`);
+    }
+
+    return allAnnotations;
+}
+
 /**
  * Creates a GitHub Check Run for a commit.
  *
@@ -55,11 +237,10 @@ export async function createCheckRun(
     params: CreateCheckRunParams,
     config: CheckRunConfig = {},
 ): Promise<{ id: number; html_url: string } | null> {
-    const env = process.env as Record<string, string | undefined>;
-    const token = config.token ?? env['GITHUB_TOKEN'];
-    const repository = config.repository ?? env['GITHUB_REPOSITORY'];
-    const headSha = params.headSha ?? env['GITHUB_SHA'];
-    const apiBaseUrl = config.apiBaseUrl ?? env['GITHUB_API_URL'] ?? 'https://api.github.com';
+    const token = config.token ?? getEnv('GITHUB_TOKEN');
+    const repository = config.repository ?? getEnv('GITHUB_REPOSITORY');
+    const headSha = params.headSha ?? getEnv('GITHUB_SHA');
+    const apiBaseUrl = config.apiBaseUrl ?? getEnv('GITHUB_API_URL') ?? 'https://api.github.com';
 
     if (!token) {
         rootLogger.debug('Skipping Check Run: GITHUB_TOKEN not set');
@@ -78,22 +259,29 @@ export async function createCheckRun(
 
     const url = `${apiBaseUrl}/repos/${repository}/check-runs`;
 
-    const body: Record<string, unknown> = {
+    const body: {
+        name: string;
+        head_sha: string;
+        status: string;
+        conclusion?: string;
+        output?: CheckRunOutput;
+        details_url?: string;
+    } = {
         name: params.name,
         head_sha: headSha,
         status: params.status,
     };
 
     if (params.conclusion) {
-        body['conclusion'] = params.conclusion;
+        body.conclusion = params.conclusion;
     }
 
     if (params.output) {
-        body['output'] = params.output;
+        body.output = params.output;
     }
 
     if (params.detailsUrl) {
-        body['details_url'] = params.detailsUrl;
+        body.details_url = params.detailsUrl;
     }
 
     try {
@@ -113,19 +301,13 @@ export async function createCheckRun(
             html_url: data.html_url,
         };
     } catch (err) {
-        const status =
-            err && typeof err === 'object' && 'response' in err
-                ? (err as { response?: { status?: number } }).response?.status
-                : undefined;
-        // D3 FIX: Add context about PAT limitations for Check Runs.
-        // GitHub Checks API requires `checks:write` permission.
-        // GITHUB_TOKEN (CI) has this by default. PATs need it explicitly.
+        const status = getErrorStatus(err);
         const hint =
             status === 403
                 ? ' (Check Runs require checks:write permission — GITHUB_TOKEN in CI has this, but PATs may not)'
                 : '';
         rootLogger.error(
-            `Failed to create Check Run (HTTP ${status ?? 'error'}): ${err instanceof Error ? err.message : String(err)}${hint}`,
+            `Failed to create Check Run (HTTP ${status ?? 'error'}): ${isError(err) ? err.message : String(err)}${hint}`,
         );
         return null;
     }

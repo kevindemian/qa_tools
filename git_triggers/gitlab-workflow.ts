@@ -10,6 +10,7 @@ import type {
     CICDVariable,
     JsonObject,
     DirEntry,
+    GitLabTestReport,
 } from '../shared/types.js';
 import { apiGet, apiPost, projectPath } from './gitlab-api.js';
 import { isManifestFile } from '../shared/framework-detection.js';
@@ -279,4 +280,17 @@ export async function glListDirectory(
     } catch {
         return null;
     }
+}
+
+export async function glGetTestReport(
+    client: AxiosInstance,
+    owner: string,
+    repo: string,
+    pipelineId: string | number,
+): Promise<GitLabTestReport | null> {
+    const base = projectPath(owner, repo);
+    return apiGet<GitLabTestReport>(client, base + `/pipelines/${pipelineId}/test_report`, {
+        operation: 'obter relatório de testes',
+        returnNull: true,
+    });
 }

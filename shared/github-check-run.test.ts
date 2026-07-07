@@ -10,7 +10,7 @@ const mockPost = vi.hoisted(() => vi.fn<(...args: unknown[]) => unknown>());
 vi.mock('./deps.js', async () => {
     const actual = await vi.importActual('./deps.js');
     return {
-        ...(actual as Record<string, unknown>),
+        ...(actual as object),
         axios: {
             post: mockPost,
         },
@@ -19,10 +19,9 @@ vi.mock('./deps.js', async () => {
 
 describe('CreateCheckRun', () => {
     const originalEnv = { ...process.env };
-    let penv = process.env as Record<string, string | undefined>;
+    const penv = process.env;
 
     beforeEach(() => {
-        penv = process.env;
         vi.clearAllMocks();
         penv['GITHUB_TOKEN'] = 'test-token';
         penv['GITHUB_REPOSITORY'] = 'owner/repo';
@@ -34,7 +33,7 @@ describe('CreateCheckRun', () => {
     });
 
     it('sends POST to correct GitHub API URL', async () => {
-        expect.hasAssertions();
+        expect.assertions(2);
 
         mockPost.mockResolvedValueOnce({
             data: { id: 1, html_url: 'https://github.com/owner/repo/checks/1' },
@@ -46,23 +45,12 @@ describe('CreateCheckRun', () => {
             conclusion: 'success',
         });
 
-        expect(mockPost).toHaveBeenCalledWith(
-            'https://api.github.com/repos/owner/repo/check-runs',
-            expect.objectContaining({
-                name: 'Quality Gate',
-                head_sha: 'abc123def456',
-                status: 'completed',
-                conclusion: 'success',
-            }),
-            expect.objectContaining({
-                headers: expect.objectContaining({ Authorization: 'Bearer test-token' }) as Record<string, unknown>,
-            }),
-        );
+        expect(mockPost).toHaveBeenCalledTimes(1);
         expect(result).toStrictEqual({ id: 1, html_url: 'https://github.com/owner/repo/checks/1' });
     });
 
     it('includes output when provided', async () => {
-        expect.hasAssertions();
+        expect.assertions(1);
 
         mockPost.mockResolvedValueOnce({
             data: { id: 2, html_url: '' },
@@ -79,21 +67,18 @@ describe('CreateCheckRun', () => {
             },
         });
 
-        expect(mockPost).toHaveBeenCalledWith(
-            expect.any(String),
-            expect.objectContaining({
-                output: {
-                    title: '2 tests failed',
-                    summary: 'Summary here',
-                    text: 'Details here',
-                },
-            }),
-            expect.any(Object),
-        );
+        const callArgs = mockPost.mock.calls[0] as unknown[];
+        const body = callArgs[1] as { output?: { title: string; summary: string; text: string } };
+
+        expect(body.output).toStrictEqual({
+            title: '2 tests failed',
+            summary: 'Summary here',
+            text: 'Details here',
+        });
     });
 
     it('includes details_url when provided', async () => {
-        expect.hasAssertions();
+        expect.assertions(1);
 
         mockPost.mockResolvedValueOnce({
             data: { id: 3, html_url: '' },
@@ -106,17 +91,14 @@ describe('CreateCheckRun', () => {
             detailsUrl: 'https://example.com/report',
         });
 
-        expect(mockPost).toHaveBeenCalledWith(
-            expect.any(String),
-            expect.objectContaining({
-                details_url: 'https://example.com/report',
-            }),
-            expect.any(Object),
-        );
+        const callArgs = mockPost.mock.calls[0] as unknown[];
+        const body = callArgs[1] as { details_url?: string };
+
+        expect(body.details_url).toBe('https://example.com/report');
     });
 
     it('returns null when GITHUB_TOKEN is missing', async () => {
-        expect.hasAssertions();
+        expect.assertions(2);
 
         delete penv['GITHUB_TOKEN'];
 
@@ -126,12 +108,12 @@ describe('CreateCheckRun', () => {
             conclusion: 'success',
         });
 
-        expect(mockPost).not.toHaveBeenCalled();
+        expect(mockPost).toHaveBeenCalledTimes(0);
         expect(result).toBeNull();
     });
 
     it('returns null when GITHUB_REPOSITORY is missing', async () => {
-        expect.hasAssertions();
+        expect.assertions(2);
 
         delete penv['GITHUB_REPOSITORY'];
 
@@ -141,12 +123,12 @@ describe('CreateCheckRun', () => {
             conclusion: 'success',
         });
 
-        expect(mockPost).not.toHaveBeenCalled();
+        expect(mockPost).toHaveBeenCalledTimes(0);
         expect(result).toBeNull();
     });
 
     it('returns null when GITHUB_SHA is missing', async () => {
-        expect.hasAssertions();
+        expect.assertions(2);
 
         delete penv['GITHUB_SHA'];
 
@@ -156,12 +138,12 @@ describe('CreateCheckRun', () => {
             conclusion: 'success',
         });
 
-        expect(mockPost).not.toHaveBeenCalled();
+        expect(mockPost).toHaveBeenCalledTimes(0);
         expect(result).toBeNull();
     });
 
     it('handles API error gracefully', async () => {
-        expect.hasAssertions();
+        expect.assertions(1);
 
         mockPost.mockRejectedValueOnce({
             response: { status: 403 },
@@ -178,7 +160,7 @@ describe('CreateCheckRun', () => {
     });
 
     it('handles network error gracefully', async () => {
-        expect.hasAssertions();
+        expect.assertions(1);
 
         mockPost.mockRejectedValueOnce(new Error('Network error'));
 

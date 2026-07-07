@@ -15,6 +15,7 @@ import type {
     Issue,
     JsonObject,
     DirEntry,
+    GitLabTestReport,
 } from '../shared/types.js';
 import {
     glTriggerPipeline,
@@ -30,6 +31,7 @@ import {
     glGetFileContents,
     glListDirectory,
     glGetRepoTree,
+    glGetTestReport,
 } from './gitlab-workflow.js';
 import {
     glCreateMergeRequest,
@@ -187,6 +189,10 @@ class GitLabManager extends GitProviderBase implements GitProvider {
     /** Get repo tree (for framework detection). */
     async getRepoTree(ref: string): Promise<string[] | null> {
         return glGetRepoTree(this.client, this.owner, this.repo, ref);
+    }
+
+    override async getTestReport(pipelineId: string | number): Promise<GitLabTestReport | null> {
+        return glGetTestReport(this.client, this.owner, this.repo, pipelineId);
     }
 }
 

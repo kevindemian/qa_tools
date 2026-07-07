@@ -194,6 +194,8 @@ export interface GitProvider {
     getFileContents: (path: string, ref?: string) => Promise<string | null>;
     /** List a directory in the repository. */
     listDirectory: (path: string, ref?: string) => Promise<DirEntry[] | null>;
+    /** Fetch test report for a pipeline (GitLab-specific; GitHub returns null). */
+    getTestReport: (pipelineId: string | number) => Promise<GitLabTestReport | null>;
     provider: 'gitlab' | 'github';
 }
 
@@ -236,6 +238,45 @@ export interface GitHubArtifact {
 /** GitHub Actions artifacts API response. */
 export interface GitHubArtifactsResponse {
     artifacts: GitHubArtifact[];
+}
+
+/** GitHub Check Run annotation. */
+export interface CheckRunAnnotation {
+    path: string;
+    start_line: number;
+    end_line: number;
+    message: string;
+    annotation_level: string;
+}
+
+/** GitLab Test Report for a pipeline. */
+export interface GitLabTestReport {
+    total_count: number;
+    success_count: number;
+    failed_count: number;
+    skipped_count: number;
+    error_count: number;
+    test_suites: GitLabTestSuite[];
+}
+
+/** GitLab Test Suite within a test report. */
+export interface GitLabTestSuite {
+    name: string;
+    total_count: number;
+    success_count: number;
+    failed_count: number;
+    skipped_count: number;
+    error_count: number;
+    test_cases: GitLabTestCase[];
+}
+
+/** GitLab Test Case within a test suite. */
+export interface GitLabTestCase {
+    status: 'success' | 'failed' | 'skipped' | 'error';
+    name: string;
+    classname?: string;
+    attachment_url?: string;
+    stack_trace?: string;
 }
 
 /** GitLab CI job item. */

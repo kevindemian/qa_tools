@@ -31,6 +31,7 @@ describe('Framework Detection Integration', () => {
             getWorkflowRunTiming: vi.fn(),
             getFileContents: vi.fn(),
             listDirectory: vi.fn(),
+            getTestReport: vi.fn(),
             provider: 'github',
         };
         return { ...base, ...overrides };
