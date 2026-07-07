@@ -408,14 +408,13 @@ Cada migração: RED test → GREEN implement → commit → validar → próxim
 ┌──────────────────────────────────────────────────────────────────────────┐
 │ FASE 21: ARTIFACT DOWNLOAD + PARSE (10h)                                │
 │                                                                          │
-│ 21.1 Adicionar downloadArtifact() nos providers do DataHub              │
-│ 21.2 Criar extractAndParseArtifact() com AdmZip                         │
-│ 21.3 Integrar artifact-parser.ts no fluxo de download                    │
-│ 21.4 Adicionar parsedArtifacts ao RawData                                │
-│ 21.5 npm install fast-xml-parser                                         │
-│ 21.6 Criar junit-xml-parser.ts (parser JUnit XML)                        │
-│ 21.7 Adicionar dispatch JUnit XML no artifact-parser                     │
-│ 21.8 Adicionar CheckRunAnnotation + gitlabTestReport no RawData          │
+│ 21.1 Criar isTestArtifact() em artifact-parser.ts (PRÉ-REQUISITO)      │
+│ 21.2 Adicionar parsedArtifacts ao RawData + import (PRÉ-REQUISITO)      │
+│ 21.3 Integrar download + parse em github-provider.ts (BLOQUEADO)       │
+│ 21.4 Integrar download + parse em gitlab-provider.ts (BLOQUEADO)       │
+│ 21.5 Check Runs + GitLab Test Report (OPCIONAL)                        │
+│ 21.6 Limite de artifacts por run (CONFIGURAÇÃO)                        │
+│ 21.7 Atualizar testes existentes (PÓS-IMPL)                            │
 ├──────────────────────────────────────────────────────────────────────────┤
 │ COMMIT: feat(data-hub): add artifact download + CTRF/JUnit parsers       │
 └──────────────────────────────────────────────────────────────────────────┘
@@ -1003,7 +1002,50 @@ Cascata de detecção: Trees API discovery → package.json → Config files →
 
 ### FASE 21 — Artifact Download + Parse
 
-#### 21.1 — Download artifacts in GitHub provider
+**Ordem de dependência**: 21.1 → 21.2 → 21.3/21.4 → 21.5/21.6/21.7
+
+#### 21.1 — `isTestArtifact()` (PRÉ-REQUISITO — compilação)
+
+**Arquivo**: `shared/data-hub/artifact-parser.ts`
+
+Criar função `isTestArtifact(name: string): boolean` com patterns unificados:
+
+```typescript
+const TEST_ARTIFACT_PATTERNS = ['ctrf', 'test-results', 'test-result', 'mochawesome', 'junit', 'e2e'];
+
+export function isTestArtifact(name: string): boolean {
+    const lower = name.toLowerCase();
+    return TEST_ARTIFACT_PATTERNS.some((p) => lower.includes(p));
+}
+```
+
+**Decisão**: Não incluir `'test'` sozinho — genérico demais, captura artifacts não-teste.
+
+**Nota**: Padrões existentes fragmentados em:
+
+- `git-artifact-downloader.ts:241` — `name.includes('ctrf') || name.includes('test-results')`
+- `git-artifact-downloader.ts:279` — `name.includes('test') || name.includes('e2e') || name.includes('ctrf')`
+- `test-results.ts:77` — `/mochawesome|test-result/i.test(a.name)`
+
+**Teste**: Adicionar testes unitários para `isTestArtifact()` em `artifact-parser.test.ts`.
+
+#### 21.2 — `parsedArtifacts` no RawData (PRÉ-REQUISITO — compilação)
+
+**Arquivo**: `shared/types/data-hub.ts`
+
+```typescript
+import type { ArtifactParseResult } from '../data-hub/artifact-parser.js';
+
+export interface RawData {
+    // ... existing fields
+    /** Parsed artifact data (CTRF, JUnit, Mochawesome) — flat array de todos os resultados */
+    parsedArtifacts?: ArtifactParseResult[];
+}
+```
+
+**Nota**: Dependência unidirecional (`data-hub.ts` → `artifact-parser.ts`). Sem risco circular.
+
+#### 21.3 — Download + Parse em GitHub Provider (BLOQUEADO por 21.1 + 21.2)
 
 **Arquivo**: `shared/data-hub/providers/github-provider.ts`
 
@@ -1030,75 +1072,33 @@ for (const run of runs) {
 }
 ```
 
-#### 21.2 — `extractAndParseArtifact()` com AdmZip
+**Nota**: Usar `parseArtifactBufferAll()` (não `parseArtifactBuffer()`) para capturar todos os resultados de ZIPs.
 
-**Arquivo**: `shared/data-hub/artifact-parser.ts`
+#### 21.4 — Download + Parse em GitLab Provider (BLOQUEADO por 21.1 + 21.2)
 
-Já criado na Phase 0. Integrar no fluxo de download:
+**Arquivo**: `shared/data-hub/providers/gitlab-provider.ts`
 
-1. `downloadArtifact(artifactId)` → Buffer
-2. `parseArtifactBufferAll(buffer, filename)` → `ArtifactParseResult[]` (usar `parseArtifactBufferAll` para ZIPs com múltiplos resultados)
-3. Salvar em `parsedArtifacts` (flat array com spread)
+Mesmo padrão do GitHub. Adaptar para GitLab API:
 
-**Nota**: `parseArtifactBuffer()` (singular) retorna apenas o primeiro resultado. Usar `parseArtifactBufferAll()` para garantir que todos os resultados de ZIPs sejam capturados.
+- `listPipelineArtifacts()` já implementado
+- `downloadArtifact()` retorna `{ buffer, filename }` com filename do Content-Disposition header
 
-#### 21.3 — `parsedArtifacts` no RawData
+#### 21.5 — Check Runs + GitLab Test Report (OPCIONAL)
+
+**Arquivos**: `github-provider.ts`, `gitlab-provider.ts`
+
+- GitHub: fetch annotations via Check Runs API
+- GitLab: fetch test report via `/pipelines/:id/test_report`
+
+**Nota**: Tipos adicionados na Phase 24. Integração dos providers aqui.
+
+#### 21.6 — Limite de artifacts por run (CONFIGURAÇÃO)
 
 **Arquivo**: `shared/types/data-hub.ts`
 
-```typescript
-export interface RawData {
-    // ... existing fields
-    /** Parsed artifact data (CTRF, JUnit, Mochawesome) — flat array de todos os resultados */
-    parsedArtifacts?: ArtifactParseResult[];
-}
-```
+Adicionar parâmetro `maxArtifactsPerRun?: number` em `FetchOptions` (default: 5). Limita downloads por run para evitar timeouts.
 
-#### 21.4 — JUnit XML Parser
-
-**Arquivo**: `shared/junit-xml-parser.ts` (criado na Phase 0)
-
-`npm install fast-xml-parser`
-
-Integrar no `artifact-parser.ts` como formato de saída reconhecido.
-
-#### 21.5 — CheckRunAnnotation + GitLabTestReport
-
-Tipos adicionados nos contratos (Phase 24), mas a integração nos providers é aqui:
-
-- GitHub provider: fetch annotations via Check Runs API
-- GitLab provider: fetch test report via `/pipelines/:id/test_report`
-
-#### 21.6 — `isTestArtifact()` unificado
-
-**Arquivo**: `shared/data-hub/artifact-parser.ts`
-
-Criar função `isTestArtifact(name: string): boolean` com patterns unificados:
-
-```typescript
-const TEST_ARTIFACT_PATTERNS = ['ctrf', 'test-results', 'test-result', 'mochawesome', 'junit', 'e2e'];
-
-export function isTestArtifact(name: string): boolean {
-    const lower = name.toLowerCase();
-    return TEST_ARTIFACT_PATTERNS.some((p) => lower.includes(p));
-}
-```
-
-**Decisão**: Não incluir `'test'` sozinho — genérico demais, captura artifacts não-teste.
-
-**Nota**: Padrões existentes fragmentados em:
-
-- `git-artifact-downloader.ts:241` — `name.includes('ctrf') || name.includes('test-results')`
-- `git-artifact-downloader.ts:279` — `name.includes('test') || name.includes('e2e') || name.includes('ctrf')`
-- `test-results.ts:77` — `/mochawesome|test-result/i.test(a.name)`
-
-#### 21.7 — Limite de artifacts por run
-
-**Problema**: Downloads ilimitados podem causar timeouts em runs com muitos artifacts.
-
-**Decisão**: Adicionar parâmetro `maxArtifactsPerRun?: number` em `FetchOptions` (default: 5). Limita downloads por run.
-
-#### 21.8 — Atualizar testes existentes
+#### 21.7 — Atualizar testes existentes (PÓS-IMPL)
 
 **Arquivos**: `github-provider.test.ts`, `gitlab-provider.test.ts`
 
@@ -1118,6 +1118,22 @@ Adicionar novos testes:
 - Teste de download com erro (não deve crashar)
 - Teste de filtro por `isTestArtifact()`
 - Teste de limite de artifacts por run
+
+#### 21.8 — Avaliação de Pré-requisitos (2026-07-07)
+
+| #   | Pré-requisito                                 | Status         | Ação                    |
+| --- | --------------------------------------------- | -------------- | ----------------------- |
+| 1   | `isTestArtifact()` em `artifact-parser.ts`    | **NÃO EXISTE** | Criar (21.1)            |
+| 2   | `parsedArtifacts` em `RawData`                | **NÃO EXISTE** | Adicionar campo (21.2)  |
+| 3   | Import `ArtifactParseResult` em `data-hub.ts` | **NÃO EXISTE** | Adicionar import (21.2) |
+| 4   | `parseArtifactBufferAll()`                    | ✅ EXISTE      | Nenhuma                 |
+| 5   | `fast-xml-parser` instalado                   | ✅ EXISTE      | Nenhuma                 |
+| 6   | `adm-zip` instalado                           | ✅ EXISTE      | Nenhuma                 |
+| 7   | `downloadArtifact()` no `GitProvider`         | ✅ EXISTE      | Nenhuma                 |
+| 8   | `downloadArtifact()` nos managers             | ✅ EXISTE      | Nenhuma                 |
+| 9   | Arquivos de teste                             | ✅ EXISTE      | Nenhuma                 |
+
+**Conclusão**: 3 de 9 pré-requisitos NÃO atendidos. Itens 1, 2 e 3 devem ser criados ANTES da Phase 21 executar.
 
 ---
 
