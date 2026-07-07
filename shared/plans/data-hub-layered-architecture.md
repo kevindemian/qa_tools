@@ -1121,19 +1121,19 @@ Adicionar novos testes:
 
 #### 21.8 — Avaliação de Pré-requisitos (2026-07-07)
 
-| #   | Pré-requisito                                 | Status    | Ação               |
-| --- | --------------------------------------------- | --------- | ------------------ |
-| 1   | `isTestArtifact()` em `artifact-parser.ts`    | ✅ EXISTE | Criado em 21.1     |
-| 2   | `parsedArtifacts` em `RawData`                | ✅ EXISTE | Adicionado em 21.2 |
-| 3   | Import `ArtifactParseResult` em `data-hub.ts` | ✅ EXISTE | Adicionado em 21.2 |
-| 4   | `parseArtifactBufferAll()`                    | ✅ EXISTE | Nenhuma            |
-| 5   | `fast-xml-parser` instalado                   | ✅ EXISTE | Nenhuma            |
-| 6   | `adm-zip` instalado                           | ✅ EXISTE | Nenhuma            |
-| 7   | `downloadArtifact()` no `GitProvider`         | ✅ EXISTE | Nenhuma            |
-| 8   | `downloadArtifact()` nos managers             | ✅ EXISTE | Nenhuma            |
-| 9   | Arquivos de teste                             | ✅ EXISTE | Nenhuma            |
+| #   | Pré-requisito                                 | Status        | Ação                 |
+| --- | --------------------------------------------- | ------------- | -------------------- |
+| 1   | `isTestArtifact()` em `artifact-parser.ts`    | ❌ NÃO EXISTE | Implementar (gap C1) |
+| 2   | `parsedArtifacts` em `RawData`                | ❌ NÃO EXISTE | Adicionar (gap C2)   |
+| 3   | Import `ArtifactParseResult` em `data-hub.ts` | ✅ EXISTE     | Adicionado em 21.2   |
+| 4   | `parseArtifactBufferAll()`                    | ✅ EXISTE     | Nenhuma              |
+| 5   | `fast-xml-parser` instalado                   | ✅ EXISTE     | Nenhuma              |
+| 6   | `adm-zip` instalado                           | ✅ EXISTE     | Nenhuma              |
+| 7   | `downloadArtifact()` no `GitProvider`         | ✅ EXISTE     | Nenhuma              |
+| 8   | `downloadArtifact()` nos managers             | ✅ EXISTE     | Nenhuma              |
+| 9   | Arquivos de teste                             | ✅ EXISTE     | Nenhuma              |
 
-**Conclusão**: 9 de 9 pré-requisitos atendidos. Phase 21 completa.
+**⚠️ ATENÇÃO**: Itens 1 e 2 foram marcados como existentes no commit `1764a54f`, mas investigação posterior (2026-07-07) revelou que NÃO existem. False positive na auditoria. Ver "Auditoria Pré-Phase 22" para gaps completos.
 
 #### 21.9 — Testes Unitários (PÓS-IMPL)
 
@@ -1277,18 +1277,89 @@ Testes adicionados:
 
 ### FASE 22 — Consumer Migration (Incremental)
 
-#### Ordem de Migração
+**Princípio**: DataHub é a ÚNICA fonte de verdade. Consumidores NÃO baixam, parseiam ou calculam — apenas leem de `DataHub.raw.*` e `DataHub.computed.*`.
 
-| Step | Consumer        | Arquivo                              | Risco |
-| ---- | --------------- | ------------------------------------ | ----- |
-| 22.1 | session-context | `shared/session-context.ts`          | Baixo |
-| 22.2 | test-results    | `git_triggers/test-results.ts`       | Baixo |
-| 22.3 | case17          | `jira_management/commands/case17.ts` | Médio |
-| 22.4 | batch-mode      | `git_triggers/batch-mode.ts`         | Médio |
-| 22.5 | pr-report-core  | `shared/pr-report-core.ts`           | Alto  |
-| 22.6 | metrics         | `shared/metrics.ts`                  | Baixo |
+#### Decisões Técnicas
 
-Cada step segue o padrão RED → GREEN → REFACTOR.
+| Decisão              | Escolha                                 | Justificativa                                          |
+| -------------------- | --------------------------------------- | ------------------------------------------------------ |
+| Ordem de migração    | Por dependência (foundation → complexo) | Validar padrão antes de consumers complexos            |
+| Escopo da migração   | Substituição completa (não augmentação) | DataHub é SSOT, não fonte adicional                    |
+| `test-results.ts`    | Ler de `DataHub.raw.parsedArtifacts`    | Consumer NÃO baixa artifacts — DataHub faz via cascade |
+| `session-context.ts` | Colapsar 4-step fallback no DataHub     | Cascade de 7 camadas superset do fallback atual        |
+| `metrics.ts`         | Não é consumer — é persistence adapter  | DataHub computa, MetricsStore persiste snapshots       |
+
+#### Ordem de Migração (revisada — por dependência)
+
+| Step | Consumer        | Arquivo                              | Complexidade | Rationale                                                            |
+| ---- | --------------- | ------------------------------------ | ------------ | -------------------------------------------------------------------- |
+| 22.1 | session-context | `shared/session-context.ts`          | Baixo        | Foundation — consumed by case17. Validate pattern                    |
+| 22.2 | test-results    | `git_triggers/test-results.ts`       | Médio        | Depends on session-context. Uses DataHub for artifact resolution     |
+| 22.3 | batch-mode      | `git_triggers/batch-mode.ts`         | Médio        | Already partially uses DataHub. Thread through pipeline collection   |
+| 22.4 | case17          | `jira_management/commands/case17.ts` | Alto         | Most complex. Depends on session-context (already migrated)          |
+| 22.5 | pr-report-core  | `shared/pr-report-core.ts`           | Baixo        | Already accepts DataHub param. Replace remaining loadMetrics() calls |
+| 22.6 | metrics         | `shared/metrics.ts`                  | Alto         | Restructure from data source → thin persistence adapter              |
+
+#### Padrão de Migração (RED → GREEN → REFACTOR)
+
+**ANTES (direct data source):**
+
+```typescript
+const result = await fetchLatestTestRun();
+const metrics = loadMetrics();
+```
+
+**DEPOIS (DataHub as SSOT):**
+
+```typescript
+const hub = await getOrFetchDataHub(provider, repo);
+const result = hub.raw.parsedArtifacts;
+const metrics = hub.computed;
+```
+
+#### Detalhamento por Step
+
+**22.1 session-context.ts:**
+
+- Substituir `resolveTestDataSource()` por leitura de `DataHub.raw.parsedArtifacts`
+- Colapsar 4-step fallback (SHA cache → CI download → branch baseline → null) no DataHub cascade
+- `Store` permanece como cache de sessão (evitar re-fetch)
+- `fetchLatestTestRun()` (de `git-artifact-downloader.ts`) NÃO é mais chamado
+
+**22.2 test-results.ts:**
+
+- Substituir `GitProvider.listPipelineArtifacts()` + `downloadArtifact()` por `DataHub.raw.parsedArtifacts`
+- `isTestArtifact()` filtra artifacts relevantes
+- Se `ArtifactParseResult` não contém dados suficientes para Jira TE → estender tipos (não reverter para API direta)
+- Jira API calls permanecem (DataHub não gerencia Jira)
+
+**22.3 batch-mode.ts:**
+
+- Já usa `getOrFetchDataHub()` para PR report e pipeline health
+- Thread DataHub através de `_collectPipelineResults()` → `collectTestResults()`
+- Substituir chamadas diretas a `GitProvider` para artifact operations
+
+**22.4 case17.ts:**
+
+- Substituir `resolveTestDataSource()` por DataHub
+- Substituir `fetchGitHistory()` por dados do DataHub (se disponível) ou manter chamada direta
+- Substituir `loadMetrics()` por `DataHub.computed.*`
+- Jira API, AI analysis, publish permanecem (fora do escopo do DataHub)
+
+**22.5 pr-report-core.ts:**
+
+- Já aceita `DataHub` como parâmetro opcional
+- Substituir `loadMetrics()` por `DataHub.computed.*`
+- Substituir `getTrends(store)` por `DataHub.computed.defectTrends`
+- Substituir `calculateFlakiness(store)` por `DataHub.computed.flakyRate`
+
+**22.6 metrics.ts:**
+
+- `MetricsStore` vira thin persistence adapter (não data source)
+- `loadMetrics()` → `@deprecated` (consumers usam `DataHub.computed.*`)
+- `saveMetrics()` → `persistDataHubSnapshot()` (armazena snapshot para historical comparison)
+- `calculateFlakiness()` → `DataHub.computed.flakyRate`
+- `getTrends()` → `DataHub.computed.defectTrends`
 
 ---
 
@@ -1665,6 +1736,86 @@ O linter `vitest/prefer-strict-equal` exige `toStrictEqual` em vez de `toEqual` 
 | `ctrf`            | NÃO instalar       | —         |
 | `adm-zip`         | Já instalado       | —         |
 | `fast-check`      | Já instalado (PBT) | —         |
+
+---
+
+## Auditoria Pré-Phase 22 — Gaps, Falhas e Riscos
+
+**Data da investigação**: 2026-07-07
+**Escopo**: Phases 0, 18, 20, 21 completadas
+**Bloqueadores para Phase 22**: 5 CRITICAL, 6 HIGH
+
+### Gaps CRITICAL (Bloqueiam Phase 22)
+
+| #   | Gap                                               | Arquivo                                    | Linha | Descrição                                                                                                                                                                                                | Evidência                                                                                                   |
+| --- | ------------------------------------------------- | ------------------------------------------ | ----- | -------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | ----------------------------------------------------------------------------------------------------------- |
+| C1  | `isTestArtifact()` não implementada               | `shared/data-hub/artifact-parser.ts`       | —     | Função declarada no plano (21.1) como pré-requisito, mas NÃO existe no código. Grep confirma: só aparece no plano e testes, não no módulo.                                                               | `rg "isTestArtifact" artifact-parser.ts` → 0 resultados                                                     |
+| C2  | `parsedArtifacts` ausente de `RawData`            | `shared/types/data-hub.ts:17-27`           | 17    | Campo declarado no plano (21.2) como pré-requisito, mas `RawData` não contém. Consumers não podem ler `hub.raw.parsedArtifacts`.                                                                         | Interface RawData: só tem `runs`, `jobs`, `artifacts`, `failureReasons`, `coverage`, `jiraIssues`, `timing` |
+| C3  | Extractors orfas — nunca conectadas aos providers | `shared/data-hub/extractors/*`             | —     | 4 módulos implementam cascata (coverage, test-count, failure-classifier, framework-detector) mas NUNCA são importados por providers. Só aparecem em testes.                                              | `rg "from.*extractors" providers/` → 0 resultados                                                           |
+| C4  | Providers implementam só 2 de 7 camadas           | `github-provider.ts`, `gitlab-provider.ts` | —     | Providers fazem: Layer 1 (CI API) + Layer 4 (job logs). Faltam: Layer 2 (artifacts parse), Layer 3 (check runs), Layer 5 (contents API/framework), Layer 6 (GitLab test report), Layer 7 (user fallback) | Código: sem chamadas a `getCheckRuns()`, `downloadArtifact()`, `getFileContents()`, `getTestReport()`       |
+| C5  | `ComputedMetrics` sem campos de teste             | `shared/types/data-hub.ts:164-177`         | 164   | `testPassRate`, `testCounts`, `framework` declarados no plano (24.5) mas ausentes. Consumers precisam de métricas de teste, não só de pipeline.                                                          | Interface: só tem `passRate` (pipeline), `avgDuration`, `suiteSpeedP95`, `flakyRate`, etc.                  |
+
+### Gaps HIGH (Devem ser corrigidos antes de Phase 22)
+
+| #   | Gap                                           | Arquivo                                    | Descrição                                                                                       |
+| --- | --------------------------------------------- | ------------------------------------------ | ----------------------------------------------------------------------------------------------- |
+| H1  | Check Runs nunca buscados                     | `github-provider.ts`                       | `getCheckRuns()` existe em `GitProvider` mas provider nunca chama. Layer 3 ausente.             |
+| H2  | GitLab test report nunca buscado              | `gitlab-provider.ts`                       | `getTestReport()` existe mas nunca chamado. Fonte mais confiável (95%) desperdiçada.            |
+| H3  | Timing data buscada mas não usada no compute  | `hub.ts:142-177`                           | `raw.timing` populada mas `computeMetrics()` usa timestamps de pipeline, não `run_duration_ms`. |
+| H4  | `framework-detector.ts` incompleto            | `extractors/framework-detector.ts`         | Só 1 de 4 níveis de cascata implementado. Retorna `unknown` se package.json não encontrado.     |
+| H5  | `SecurityResult` definido mas nunca consumido | `types/data-hub.ts:154-161`                | Tipo exportado mas não importado em nenhum lugar. Dead code.                                    |
+| H6  | Cobertura nunca extraída de nenhuma fonte     | `github-provider.ts`, `gitlab-provider.ts` | `RawData.coverage` sempre `undefined`. Extractor existe mas não é chamado.                      |
+
+### Gaps MEDIUM (Melhorias recomendadas)
+
+| #   | Gap                                              | Arquivo                    | Descrição                                                                                   |
+| --- | ------------------------------------------------ | -------------------------- | ------------------------------------------------------------------------------------------- |
+| M1  | `mergeRawData` first-wins para opcionais         | `hub.ts:134-139`           | Se múltiplos providers fornecem coverage, só o primeiro é mantido. Risco de perda de dados. |
+| M2  | `composite-provider` sem deduplicação            | `composite-provider.ts:31` | `runs.push(...)` sem checar IDs duplicados. Métricas podem ser infladas.                    |
+| M3  | `composite-provider` source derivado do primeiro | `composite-provider.ts:14` | `source = providers[0]?.source` — pode ser enganoso com providers mistos.                   |
+| M4  | JSON Schema validation ausente no import         | `json-importer.ts`         | Plano exige validação JSON Schema no import. Implementação atual não tem.                   |
+| M5  | `Record<string, T>` em 7 arquivos                | Diversos                   | Padrões que podem falhar no validation hook se enforced strictamente.                       |
+| M6  | `parseInt` silencia NaN                          | `github-provider.ts:32-33` | Jobs com IDs não-numéricos são dropped silenciosamente.                                     |
+
+### Checklist de Prerrequisitos para Phase 22
+
+| #   | Prerrequisito                       | Status    | Ação Necessária                                                          |
+| --- | ----------------------------------- | --------- | ------------------------------------------------------------------------ |
+| 1   | `isTestArtifact()` existe           | ❌ NÃO    | Implementar em `artifact-parser.ts` (Plano 21.1)                         |
+| 2   | `parsedArtifacts` em `RawData`      | ❌ NÃO    | Adicionar ao tipo em `data-hub.ts` (Plano 21.2)                          |
+| 3   | Extractors conectadas aos providers | ❌ NÃO    | Wiring: importar e chamar em `github-provider.ts` e `gitlab-provider.ts` |
+| 4   | `getCheckRuns()` no `GitProvider`   | ✅ EXISTE | Usar no GitHub provider                                                  |
+| 5   | `getTestReport()` no `GitProvider`  | ✅ EXISTE | Usar no GitLab provider                                                  |
+| 6   | `computed.testPassRate`             | ❌ NÃO    | Adicionar a `ComputedMetrics` + implementar cálculo                      |
+| 7   | `computed.testCounts`               | ❌ NÃO    | Adicionar a `ComputedMetrics` + implementar cálculo                      |
+| 8   | `computed.framework`                | ❌ NÃO    | Adicionar a `ComputedMetrics` + usar framework-detector                  |
+| 9   | `raw.framework`                     | ❌ NÃO    | Adicionar a `RawData` + popular via framework-detector                   |
+| 10  | Coverage extraída de alguma fonte   | ❌ NÃO    | Usar coverage-extractor nos providers                                    |
+| 11  | GitLab test report buscado          | ❌ NÃO    | Chamar `getTestReport()` no GitLab provider                              |
+| 12  | Timing usada no compute             | ❌ NÃO    | Passar `raw.timing` para `calcAvgDuration` e `calcSuiteSpeedP95`         |
+
+### Plano de Correção (Gap Closure)
+
+**Fase 21.12 — Gap Closure** (estimativa: 4h)
+
+| Step | Ação                                                                          | Arquivos                  | Bloqueado por |
+| ---- | ----------------------------------------------------------------------------- | ------------------------- | ------------- |
+| 1    | Implementar `isTestArtifact()`                                                | `artifact-parser.ts`      | Nenhum        |
+| 2    | Adicionar `parsedArtifacts` a `RawData`                                       | `types/data-hub.ts`       | Step 1        |
+| 3    | Adicionar `framework` a `RawData`                                             | `types/data-hub.ts`       | Nenhum        |
+| 4    | Adicionar `testPassRate`, `testCounts`, `framework` a `ComputedMetrics`       | `types/data-hub.ts`       | Nenhum        |
+| 5    | Implementar `isTestArtifact()` tests                                          | `artifact-parser.test.ts` | Step 1        |
+| 6    | Conectar coverage-extractor ao GitHub provider                                | `github-provider.ts`      | Nenhum        |
+| 7    | Conectar coverage-extractor ao GitLab provider                                | `gitlab-provider.ts`      | Nenhum        |
+| 8    | Chamar `getTestReport()` no GitLab provider                                   | `gitlab-provider.ts`      | Nenhum        |
+| 9    | Chamar `getCheckRuns()` no GitHub provider                                    | `github-provider.ts`      | Nenhum        |
+| 10   | Conectar framework-detector ao hub                                            | `hub.ts`                  | Steps 3-4     |
+| 11   | Usar `raw.timing` no compute                                                  | `hub.ts`                  | Nenhum        |
+| 12   | Atualizar `computed.testPassRate` no compute                                  | `hub.ts`                  | Steps 2, 4    |
+| 13   | Testes unitários para gaps                                                    | Vários                    | Steps 1-12    |
+| 14   | Commit: `feat(data-hub): close implementation gaps before consumer migration` | —                         | Todos         |
+
+---
 
 ## Progress
 
