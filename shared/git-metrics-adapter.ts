@@ -18,7 +18,7 @@ import { execFileSync } from 'child_process';
 import { rootLogger } from './logger.js';
 
 const GIT_BIN = '/usr/bin/git';
-import type { MetricsRun, FailureClassification } from './metrics.js';
+import type { MetricsRun, FailureClassification } from './types/data-hub.js';
 import type { FlatTest } from './result_parser.js';
 
 export interface GitCommitEntry {

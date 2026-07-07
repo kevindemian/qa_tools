@@ -98,8 +98,8 @@ export interface CostEstimate {
     estimatedCost: number;
 }
 
-/** A single trend data point. */
-export interface TrendPoint {
+/** A single date-based trend data point (CI pipeline pass rate per day). */
+export interface DateTrendPoint {
     /** Date string (YYYY-MM-DD). */
     date: string;
     /** Pass rate for this date (0-100). */
@@ -243,7 +243,7 @@ export interface FlakinessEntry {
  * A trend data point with label and detailed counts.
  * Equivalent to TrendPoint in shared/metrics.ts.
  */
-export interface MetricsTrendPoint {
+export interface TrendPoint {
     /** Date label (YYYY-MM-DD). */
     label: string;
     /** Pass rate (0-100). */
@@ -275,7 +275,7 @@ export interface ComputedMetrics {
     flakyRate: FlakyResult[];
     coverage: number;
     pipelineCost: CostEstimate;
-    defectTrends: TrendPoint[];
+    defectTrends: DateTrendPoint[];
     branchBreakdown: { [key: string]: BranchHealth };
     topFailingJobs: FailingJob[];
     topFailureReasons: FailureReason[];
@@ -301,7 +301,7 @@ export interface ComputedMetrics {
     /** Flakiness entries with pass/fail/skip breakdown. */
     flakinessEntries?: FlakinessEntry[];
     /** Metrics trend points with label, passRate, total, failed. */
-    metricsTrends?: MetricsTrendPoint[];
+    metricsTrends?: TrendPoint[];
 }
 
 /**

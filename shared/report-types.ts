@@ -36,7 +36,7 @@ export interface ReportOptions {
     qualityGate?: number;
     testCategories?: Record<string, string>;
     testHistory?: Record<string, TestHistoryRun[]>;
-    trends?: import('./metrics.js').TrendPoint[];
+    trends?: import('./types/data-hub.js').TrendPoint[];
     theme?: 'dark' | 'light';
     runs?: TestRunTab[];
     healthScore?: import('./types.js').HealthScoreResult;

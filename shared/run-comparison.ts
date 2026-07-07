@@ -2,7 +2,7 @@
  * Generates a concise narrative of changes in pass rate, failures, and trends.
  * Returns empty string on error (never throws). */
 
-import type { MetricsRun } from './metrics.js';
+import type { MetricsRun } from './types/data-hub.js';
 import { llmPrompt } from './llm-client.js';
 import { sanitizeForLlm } from './sanitize.js';
 import { rootLogger } from './logger.js';

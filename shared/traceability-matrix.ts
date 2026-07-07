@@ -1,5 +1,4 @@
-import type { MetricsStore } from './metrics.js';
-import type { DataHub } from './types/data-hub.js';
+import type { MetricsStore, DataHub } from './types/data-hub.js';
 import { rootLogger } from './logger.js';
 import { sanitizeHtml } from './escape.js';
 import { buildHtmlPage, buildErrorPage } from './html-factory.js';

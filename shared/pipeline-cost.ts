@@ -10,8 +10,7 @@ import { buildCss } from './report-styles.js';
 import { MetricCard, MetricGrid, DataTable } from './primitives/index.js';
 import type { TableColumn, TableRow } from './primitives/index.js';
 import { rootLogger } from './logger.js';
-import type { MetricsRun } from './metrics.js';
-import type { DataHub } from './types/data-hub.js';
+import type { MetricsRun, DataHub } from './types/data-hub.js';
 
 const DEFAULT_COST_PER_MINUTE = 0.01;
 

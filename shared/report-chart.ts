@@ -7,7 +7,7 @@
  * @module report-chart
  */
 
-import type { TrendPoint } from './metrics.js';
+import type { TrendPoint } from './types/data-hub.js';
 import type { ReportStats } from './report-types.js';
 import { BarChart, TrendChart, Card } from './primitives/index.js';
 import { tokens } from './theme-tokens.js';
