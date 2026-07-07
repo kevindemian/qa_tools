@@ -15,9 +15,13 @@ import type {
     FlakyResult,
     ReleaseScoreResult,
     HealthDimensions,
+    TestCounts,
 } from '../types/data-hub.js';
 import type { PipelineRun, PipelineJob } from '../types/ci-cd.js';
+import type { ArtifactParseResult } from './artifact-parser.js';
 import { rootLogger } from '../logger.js';
+import { askTestSource } from './test-source-fallback.js';
+import type { FallbackResult } from './test-source-fallback.js';
 import {
     calcPipelinePassRate,
     calcAvgDuration,
@@ -131,18 +135,34 @@ export class DataHubImpl implements DataHub {
             target.failureReasons.set(key, value);
         }
 
-        if (source.coverage != null && target.coverage == null) {
-            target.coverage = source.coverage;
+        DataHubImpl.mergeFirstNonNull(target, source);
+        DataHubImpl.mergeMaps(target, source);
+    }
+
+    private static mergeFirstNonNull(target: RawData, source: RawData): void {
+        if (source.coverage != null && target.coverage == null) target.coverage = source.coverage;
+        if (source.jiraIssues != null && target.jiraIssues == null) target.jiraIssues = source.jiraIssues;
+        if (source.framework != null && target.framework == null) target.framework = source.framework;
+        if (source.gitlabTestReport != null && target.gitlabTestReport == null) {
+            target.gitlabTestReport = source.gitlabTestReport;
         }
-        if (source.jiraIssues != null && target.jiraIssues == null) {
-            target.jiraIssues = source.jiraIssues;
+    }
+
+    private static mergeMaps(target: RawData, source: RawData): void {
+        if (source.timing != null) {
+            if (target.timing == null) target.timing = new Map();
+            for (const [key, value] of source.timing) target.timing.set(key, value);
+        }
+        if (source.parsedArtifacts != null) {
+            if (target.parsedArtifacts == null) target.parsedArtifacts = new Map();
+            for (const [key, value] of source.parsedArtifacts) target.parsedArtifacts.set(key, value);
         }
     }
 
     private static computeMetrics(raw: RawData, options: FetchOptions & DataHubOptions): ComputedMetrics {
         const passRate = calcPipelinePassRate(raw.runs);
-        const avgDuration = calcAvgDuration(raw.runs);
-        const suiteSpeedP95 = calcSuiteSpeedP95(raw.jobs);
+        const avgDuration = calcAvgDuration(raw.runs, raw.timing);
+        const suiteSpeedP95 = calcSuiteSpeedP95(raw.jobs, raw.timing);
         const flakyRate = calcFlakyFromPipelineRuns(raw.runs, raw.jobs);
         const coverage = DataHubImpl.computeCoverage(raw);
         const pipelineCost = calcPipelineCost(raw.runs, options.costPerMinute);
@@ -159,6 +179,10 @@ export class DataHubImpl implements DataHub {
             raw.jobs,
         );
         const quarantineStatus = calcQuarantineStatus(flakyRate);
+        const testCounts = DataHubImpl.aggregateTestCounts(raw.parsedArtifacts);
+        const testPassRate =
+            testCounts.total > 0 ? Math.round((testCounts.passed / testCounts.total) * 100 * 100) / 100 : 0;
+        const framework = raw.framework ?? 'unknown';
 
         return {
             passRate,
@@ -173,6 +197,9 @@ export class DataHubImpl implements DataHub {
             topFailureReasons,
             releaseScore,
             quarantineStatus,
+            testPassRate,
+            testCounts,
+            framework,
         };
     }
 
@@ -180,6 +207,20 @@ export class DataHubImpl implements DataHub {
         if (raw.coverage == null) return 0;
         const result = calcCoverageFromRaw(raw.coverage);
         return result.total;
+    }
+
+    private static aggregateTestCounts(parsedArtifacts: Map<number, ArtifactParseResult[]> | undefined): TestCounts {
+        const counts: TestCounts = { passed: 0, failed: 0, skipped: 0, total: 0 };
+        if (parsedArtifacts == null) return counts;
+        for (const artifacts of parsedArtifacts.values()) {
+            for (const artifact of artifacts) {
+                counts.passed += artifact.data.stats.passed;
+                counts.failed += artifact.data.stats.failed;
+                counts.skipped += artifact.data.stats.skipped;
+                counts.total += artifact.data.stats.total;
+            }
+        }
+        return counts;
     }
 
     private static computeReleaseScore(
@@ -247,6 +288,22 @@ export class DataHubImpl implements DataHub {
             if (p.source === 'gitlab') return 'gitlab';
         }
         return 'github';
+    }
+
+    /**
+     * Request user fallback for test data when hub has no parsed artifacts.
+     *
+     * Activates Layer 7 (User Fallback) — prompts user for a local test file
+     * in TTY mode. Returns null in CI (non-TTY).
+     *
+     * @returns FallbackResult with parsed data, or null if no fallback needed/available.
+     */
+    static async requestUserFallback(): Promise<FallbackResult> {
+        const result = await askTestSource();
+        if (result.data != null) {
+            rootLogger.debug(`User fallback: received data from ${result.source ?? 'unknown'}`);
+        }
+        return result;
     }
 }
 
