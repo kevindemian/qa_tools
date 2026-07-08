@@ -1,4 +1,4 @@
-import { loadMetrics } from '../../shared/metrics.js';
+import { createDataHubPersistence } from '../../shared/data-hub/persistence.js';
 import { buildTraceabilityMatrix, generateTraceabilityHtml } from '../../shared/traceability-matrix.js';
 import { info, warn, title, printError } from '../../shared/prompt.js';
 import { openWithFallback } from '../../shared/open.js';
@@ -14,7 +14,7 @@ async function handler(c: CommandContext): Promise<boolean | void> {
     }
 
     try {
-        const store = loadMetrics();
+        const store = createDataHubPersistence(projectName).loadMetricsStore();
         const matrix = buildTraceabilityMatrix(store);
 
         const html = generateTraceabilityHtml(matrix, 'Traceability Matrix — ' + projectName);

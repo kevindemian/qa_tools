@@ -20,7 +20,7 @@ import {
 import { rootLogger } from '../shared/logger.js';
 import { pushBreadcrumb, popBreadcrumb, clearBreadcrumbs } from '../shared/breadcrumbs.js';
 import { loadTypedState, update as updateState, getStatePath } from '../shared/state.js';
-import { loadMetrics } from '../shared/metrics.js';
+import { createDataHubPersistence } from '../shared/data-hub/persistence.js';
 import { palette, applyPalette } from '../shared/palette.js';
 import { SessionContext } from '../shared/session-context.js';
 import { ExitCode, type StateSchema } from '../shared/types.js';
@@ -96,7 +96,7 @@ function _isJiraConfigured(): boolean {
 }
 
 function _displayBadge(totalCount: number, project: string): void {
-    const metrics = loadMetrics();
+    const metrics = createDataHubPersistence(project).loadMetricsStore();
     const snapshot = metrics.coverageHistory?.filter((s) => s.project === project).pop();
     const pct = snapshot?.coveragePct;
     const gapCount = snapshot ? snapshot.totalIssues - snapshot.mappedIssues : null;
@@ -339,7 +339,8 @@ async function main(): Promise<void> {
 
     let healthScore: { score: number; grade: string } | undefined;
     try {
-        const store = loadMetrics();
+        const persistence = createDataHubPersistence(Config.get('jiraProject') ?? 'default');
+        const store = persistence.loadMetricsStore();
         const health = calculateHealthScore(store);
         healthScore = { score: health.overall, grade: health.grade };
     } catch (err) {

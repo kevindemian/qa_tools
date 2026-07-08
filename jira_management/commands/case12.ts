@@ -5,7 +5,7 @@ import { sanitizeUrl } from '../../shared/cli_base.js';
 import { rootLogger } from '../../shared/logger.js';
 import { palette } from '../../shared/palette.js';
 import { defaultOutput } from '../../shared/output.js';
-import { loadMetrics } from '../../shared/metrics.js';
+import { createDataHubPersistence } from '../../shared/data-hub/persistence.js';
 import type { CommandContext } from './context.js';
 
 async function handler(c: CommandContext): Promise<boolean | void> {
@@ -83,7 +83,7 @@ async function _runSingleDiagnostic(
 }
 
 function _checkHealthScore(projectName: string): { healthReady: boolean; healthMsg: string } {
-    const store = loadMetrics();
+    const store = createDataHubPersistence(projectName).loadMetricsStore();
     const projectRuns = store.runs.filter((r) => r.project === projectName);
     const coverageCount = store.coverageHistory?.length ?? 0;
     const healthReady = projectRuns.length >= 10 && coverageCount > 0;

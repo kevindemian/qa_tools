@@ -1,6 +1,6 @@
-import type { RawData, ComputedMetrics, HealthDimensions, TestCounts } from '../../types/data-hub.js';
-import type { ArtifactParseResult } from '../artifact-parser.js';
+import type { RawData, ComputedMetrics, HealthDimensions } from '../../types/data-hub.js';
 import * as compute from '../compute/index.js';
+import { extractTestCounts } from '../extractors/test-count-extractor.js';
 import {
     DEFAULT_SCORING_CONFIG,
     DEFAULT_PIPELINE_COST_CONFIG,
@@ -8,20 +8,6 @@ import {
     DEFAULT_QUARANTINE_CONFIG,
     DEFAULT_WEIGHTS,
 } from '../compute/types.js';
-
-function aggregateTestCounts(parsedArtifacts: Map<number, ArtifactParseResult[]> | undefined): TestCounts {
-    const counts: TestCounts = { passed: 0, failed: 0, skipped: 0, total: 0 };
-    if (parsedArtifacts == null) return counts;
-    for (const artifacts of parsedArtifacts.values()) {
-        for (const artifact of artifacts) {
-            counts.passed += artifact.data.stats.passed;
-            counts.failed += artifact.data.stats.failed;
-            counts.skipped += artifact.data.stats.skipped;
-            counts.total += artifact.data.stats.total;
-        }
-    }
-    return counts;
-}
 
 export function calculateMetrics(rawData: RawData): ComputedMetrics {
     const runs = rawData.runs.filter((r) => r.id !== undefined);
@@ -71,7 +57,7 @@ export function calculateMetrics(rawData: RawData): ComputedMetrics {
 
     const quarantineStatus = compute.calcQuarantineStatus(flakyRate, DEFAULT_QUARANTINE_CONFIG);
 
-    const testCounts = aggregateTestCounts(rawData.parsedArtifacts);
+    const testCounts = extractTestCounts({ parsedArtifacts: rawData.parsedArtifacts });
     const testPassRate =
         testCounts.total > 0 ? Math.round((testCounts.passed / testCounts.total) * 100 * 100) / 100 : 0;
     const framework = rawData.framework ?? 'unknown';

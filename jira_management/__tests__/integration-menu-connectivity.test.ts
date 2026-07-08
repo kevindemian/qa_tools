@@ -46,9 +46,13 @@ vi.mock('../../shared/state.js', () => ({
     load: vi.fn(() => ({})),
     loadState: vi.fn(() => ({})),
 }));
-vi.mock('../../shared/metrics.js', () => ({
-    loadMetrics: vi.fn(() => ({ runs: [] })),
-    calculateFlakiness: vi.fn(() => []),
+vi.mock('../../shared/data-hub/persistence.js', () => ({
+    createDataHubPersistence: vi.fn(() => ({
+        loadMetricsStore: vi.fn().mockReturnValue({ runs: [] }),
+    })),
+}));
+vi.mock('../../shared/data-hub/compute/flakiness-entries.js', () => ({
+    calcFlakinessEntries: vi.fn().mockReturnValue([]),
 }));
 vi.mock('../../shared/traceability-matrix.js', () => ({
     buildTraceabilityMatrix: vi.fn(() => ({
@@ -243,11 +247,13 @@ describe('Jira_management — case handlers are connected', () => {
         expect(handler).not.toBeNull();
 
         const ctx = createMockContext();
-        const { loadMetrics } = await import('../../shared/metrics.js');
-        vi.mocked(loadMetrics).mockReturnValue({ runs: [] });
+        const { createDataHubPersistence } = await import('../../shared/data-hub/persistence.js');
+        vi.mocked(createDataHubPersistence).mockReturnValue({
+            loadMetricsStore: vi.fn().mockReturnValue({ runs: [] }),
+        } as never);
         await (handler as (ctx: ReturnType<typeof createMockContext>) => Promise<boolean | void>)(ctx);
 
-        expect(vi.mocked(loadMetrics)).toHaveBeenCalledWith();
+        expect(vi.mocked(createDataHubPersistence)).toHaveBeenCalled();
     });
 
     it('case26 calculates release score', async () => {
@@ -258,11 +264,13 @@ describe('Jira_management — case handlers are connected', () => {
         expect(handler).not.toBeNull();
 
         const ctx = createMockContext();
-        const { loadMetrics } = await import('../../shared/metrics.js');
-        vi.mocked(loadMetrics).mockReturnValue({ runs: [] });
+        const { createDataHubPersistence } = await import('../../shared/data-hub/persistence.js');
+        vi.mocked(createDataHubPersistence).mockReturnValue({
+            loadMetricsStore: vi.fn().mockReturnValue({ runs: [] }),
+        } as never);
         await (handler as (ctx: ReturnType<typeof createMockContext>) => Promise<boolean | void>)(ctx);
 
-        expect(vi.mocked(loadMetrics)).toHaveBeenCalledWith();
+        expect(vi.mocked(createDataHubPersistence)).toHaveBeenCalled();
     });
 
     it('case27 analyzes coverage gaps', async () => {

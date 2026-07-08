@@ -27,6 +27,7 @@ function makeEntries(overrides?: Partial<FlakinessEntry>): FlakinessEntry[] {
     return [
         {
             title: overrides?.title ?? 'Login test',
+            project: overrides?.project ?? 'test',
             passCount: overrides?.passCount ?? 5,
             failCount: overrides?.failCount ?? 5,
             skipCount: overrides?.skipCount ?? 0,
@@ -63,7 +64,15 @@ describe('Integration: Flakiness Dashboard (FT-19)', () => {
 
             const { generateFlakinessHtml } = await import('../../flakiness-dashboard.js');
             const entries: FlakinessEntry[] = [
-                { title: 'Stable test', passCount: 99, failCount: 1, skipCount: 0, totalRuns: 100, rate: 0.01 },
+                {
+                    title: 'Stable test',
+                    project: 'test',
+                    passCount: 99,
+                    failCount: 1,
+                    skipCount: 0,
+                    totalRuns: 100,
+                    rate: 0.01,
+                },
             ];
             const html = generateFlakinessHtml(entries);
 
@@ -122,9 +131,33 @@ describe('Integration: Flakiness Dashboard (FT-19)', () => {
 
             const { generateFlakinessHtml } = await import('../../flakiness-dashboard.js');
             const entries: FlakinessEntry[] = [
-                { title: 'NaN-test', passCount: 0, failCount: 0, skipCount: 0, totalRuns: 1, rate: NaN },
-                { title: 'Inf-test', passCount: 0, failCount: 10, skipCount: 0, totalRuns: 10, rate: Infinity },
-                { title: 'NegInf-test', passCount: 10, failCount: 0, skipCount: 0, totalRuns: 10, rate: -Infinity },
+                {
+                    title: 'NaN-test',
+                    project: 'test',
+                    passCount: 0,
+                    failCount: 0,
+                    skipCount: 0,
+                    totalRuns: 1,
+                    rate: NaN,
+                },
+                {
+                    title: 'Inf-test',
+                    project: 'test',
+                    passCount: 0,
+                    failCount: 10,
+                    skipCount: 0,
+                    totalRuns: 10,
+                    rate: Infinity,
+                },
+                {
+                    title: 'NegInf-test',
+                    project: 'test',
+                    passCount: 10,
+                    failCount: 0,
+                    skipCount: 0,
+                    totalRuns: 10,
+                    rate: -Infinity,
+                },
             ];
             const html = generateFlakinessHtml(entries);
 

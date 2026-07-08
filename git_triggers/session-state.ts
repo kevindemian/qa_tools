@@ -10,7 +10,6 @@ import { printSessionSummary as sharedPrintSessionSummary } from '../shared/cli_
 import { providerLabel as _providerLabel } from './ui-helpers.js';
 import { error, print, title, warn } from '../shared/prompt.js';
 import { palette } from '../shared/palette.js';
-import { loadMetrics, calculateFlakiness } from '../shared/metrics.js';
 import type { GitProvider, JsonObject, StateContainer } from '../shared/types.js';
 import type { DataHub } from '../shared/types/data-hub.js';
 import GitLabManager from './gitlab_manager.js';
@@ -328,14 +327,11 @@ export async function displayRecentPipelines(m: GitProvider): Promise<void> {
             print('');
         }
         if (currentProjectName) {
-            const store = loadMetrics();
-            const projectRuns = store.runs.filter((r) => r.project === currentProjectName);
-            if (projectRuns.length >= 2) {
-                const flaky = calculateFlakiness({ runs: projectRuns }, 2);
-                const highFlakiness = flaky.filter((f: { rate: number }) => f.rate > 0.3);
-                if (highFlakiness.length > 0) {
-                    warn('  ⚠ ' + highFlakiness.length + ' teste(s) com flakiness >30% em ' + currentProjectName);
-                }
+            const hub = getDataHub();
+            const flakinessEntries = hub?.computed?.flakinessEntries ?? [];
+            const highFlakiness = flakinessEntries.filter((f) => f.project === currentProjectName && f.rate > 0.3);
+            if (highFlakiness.length > 0) {
+                warn('  ⚠ ' + highFlakiness.length + ' teste(s) com flakiness >30% em ' + currentProjectName);
             }
         }
     } catch (err) {

@@ -12,6 +12,7 @@ import {
     glGetRepoTree,
     glGetFileContents,
     glListDirectory,
+    glGetTestReport,
 } from './gitlab-workflow.js';
 import { apiGet, apiPost, projectPath } from './gitlab-api.js';
 import { createMockAxiosInstance } from '../shared/test-utils/factories/response-factory.js';
@@ -484,6 +485,46 @@ describe('Gitlab Workflow', () => {
             vi.mocked(apiGet).mockRejectedValue(new Error('API error'));
 
             const result = await glListDirectory(mockClient, 'owner', 'repo', 'src');
+
+            expect(result).toBeNull();
+        });
+    });
+
+    describe('GlGetTestReport', () => {
+        it('returns test report from Pipelines API', async () => {
+            expect.hasAssertions();
+
+            const report = {
+                total_count: 10,
+                success_count: 8,
+                failed_count: 2,
+                skipped_count: 0,
+                error_count: 0,
+                test_suites: [],
+            };
+            vi.mocked(apiGet).mockResolvedValue(report);
+
+            const result = await glGetTestReport(mockClient, 'owner', 'repo', 42);
+
+            expect(result).toStrictEqual(report);
+        });
+
+        it('returns null on 404', async () => {
+            expect.hasAssertions();
+
+            vi.mocked(apiGet).mockResolvedValue(null);
+
+            const result = await glGetTestReport(mockClient, 'owner', 'repo', 999);
+
+            expect(result).toBeNull();
+        });
+
+        it('returns null on API error', async () => {
+            expect.hasAssertions();
+
+            vi.mocked(apiGet).mockResolvedValue(null);
+
+            const result = await glGetTestReport(mockClient, 'owner', 'repo', 42);
 
             expect(result).toBeNull();
         });

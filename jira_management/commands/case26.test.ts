@@ -1,0 +1,183 @@
+/**
+ * Tests for case26 — Release Score.
+ *
+ * Validates handler export, project validation, release score calculation
+ * with sufficient/insufficient runs, and history recording.
+ *
+ * Mock strategy: vi.hoisted for all mocks to avoid unsafe casts.
+ */
+const {
+    mockLoadMetricsStore,
+    mockCalcFlakyEntries,
+    mockCalcHealth,
+    mockCalcRelease,
+    mockGenHtml,
+    mockOpen,
+    mockWriteReport,
+} = vi.hoisted(() => ({
+    mockLoadMetricsStore: vi.fn().mockReturnValue({ runs: [] }),
+    mockCalcFlakyEntries: vi.fn().mockReturnValue([]),
+    mockCalcHealth: vi.fn().mockReturnValue({ overall: 80, grade: 'B', details: {} }),
+    mockCalcRelease: vi.fn().mockReturnValue({ score: 85, label: 'B', details: {} }),
+    mockGenHtml: vi.fn().mockReturnValue('<html></html>'),
+    mockOpen: vi.fn(),
+    mockWriteReport: vi.fn().mockReturnValue('/tmp/qa-test/release-score.html'),
+}));
+
+vi.mock('../../shared/prompt', () => ({
+    info: vi.fn(),
+    warn: vi.fn(),
+    title: vi.fn(),
+    printError: vi.fn(),
+}));
+
+vi.mock('../../shared/logger', () => ({
+    rootLogger: { error: vi.fn(), warn: vi.fn(), info: vi.fn(), child: vi.fn().mockReturnThis() },
+}));
+
+vi.mock('../../shared/data-hub/persistence', () => ({
+    createDataHubPersistence: vi.fn().mockReturnValue({
+        loadMetricsStore: mockLoadMetricsStore,
+    }),
+}));
+
+vi.mock('../../shared/data-hub/compute/flakiness-entries', () => ({
+    calcFlakinessEntries: mockCalcFlakyEntries,
+}));
+
+vi.mock('../../shared/config', () => ({
+    default: { get: vi.fn().mockReturnValue('TEST') },
+}));
+
+vi.mock('../../shared/health-score', () => ({
+    calculateHealthScore: mockCalcHealth,
+}));
+
+vi.mock('../../shared/release-score', () => ({
+    calculateReleaseScore: mockCalcRelease,
+    generateReleaseScoreHtml: mockGenHtml,
+}));
+
+vi.mock('../../shared/open', () => ({
+    openWithFallback: mockOpen,
+}));
+
+vi.mock('../../shared/temp-dir', () => ({
+    writeReport: mockWriteReport,
+}));
+
+vi.mock('../../shared/output', () => ({
+    defaultOutput: { print: vi.fn() },
+}));
+
+import { warn, printError } from '../../shared/prompt.js';
+import { makeMockCommandContext } from '../../shared/test-utils.js';
+import case26 from './case26.js';
+
+function makeRun(
+    overrides?: Partial<{
+        project: string;
+        timestamp: string;
+        total: number;
+        passed: number;
+        failed: number;
+        skipped: number;
+        duration: number;
+        tests: Array<{ title: string; state: 'passed' | 'failed' | 'skipped'; duration: number }>;
+    }>,
+) {
+    return {
+        timestamp: overrides?.timestamp ?? '2026-01-01T00:00:00Z',
+        project: overrides?.project ?? 'TEST',
+        total: overrides?.total ?? 10,
+        passed: overrides?.passed ?? 8,
+        failed: overrides?.failed ?? 2,
+        skipped: overrides?.skipped ?? 0,
+        duration: overrides?.duration ?? 100,
+        tests: overrides?.tests ?? [],
+    };
+}
+
+describe('Case26', () => {
+    beforeEach(() => {
+        vi.clearAllMocks();
+        mockLoadMetricsStore.mockReturnValue({ runs: [] });
+        mockCalcFlakyEntries.mockReturnValue([]);
+        mockCalcHealth.mockReturnValue({ overall: 80, grade: 'B', details: {} });
+        mockCalcRelease.mockReturnValue({ score: 85, label: 'B', details: {} });
+        mockGenHtml.mockReturnValue('<html></html>');
+        mockWriteReport.mockReturnValue('/tmp/qa-test/release-score.html');
+    });
+
+    describe('Handler export', () => {
+        it('exports a handler function', () => {
+            expect(case26).toBeDefined();
+            expect(typeof case26.handler).toBe('function');
+        });
+    });
+
+    describe('Project validation', () => {
+        it('warns when no project selected', async () => {
+            expect.hasAssertions();
+
+            const ctx = makeMockCommandContext({ ctx: { project_name: '' } });
+            await case26.handler(ctx);
+
+            expect(warn).toHaveBeenCalledWith('Nenhum projeto Jira selecionado.');
+        });
+    });
+
+    describe('Release score calculation', () => {
+        it('calculates release score with sufficient runs', async () => {
+            expect.hasAssertions();
+
+            const runs = Array.from({ length: 5 }, () => makeRun({ project: 'TEST' }));
+            mockLoadMetricsStore.mockReturnValue({ runs });
+            mockCalcFlakyEntries.mockReturnValue([]);
+
+            const ctx = makeMockCommandContext({ projectName: 'TEST' });
+            await case26.handler(ctx);
+
+            expect(mockCalcHealth).toHaveBeenCalledWith({ runs });
+            expect(mockCalcFlakyEntries).toHaveBeenCalled();
+            expect(mockCalcRelease).toHaveBeenCalled();
+            expect(mockOpen).toHaveBeenCalledWith(expect.any(String), 'Release Score', expect.any(Function));
+        });
+
+        it('calculates release score with insufficient runs (< 2)', async () => {
+            expect.hasAssertions();
+
+            const runs = [makeRun({ project: 'TEST' })];
+            mockLoadMetricsStore.mockReturnValue({ runs });
+            mockCalcFlakyEntries.mockReturnValue([]);
+
+            const ctx = makeMockCommandContext({ projectName: 'TEST' });
+            await case26.handler(ctx);
+
+            expect(mockCalcFlakyEntries).toHaveBeenCalledWith([], 2);
+            expect(mockCalcRelease).toHaveBeenCalled();
+        });
+
+        it('records history on success', async () => {
+            expect.hasAssertions();
+
+            const ctx = makeMockCommandContext({ projectName: 'TEST' });
+            await case26.handler(ctx);
+
+            expect(ctx.pushHistory).toHaveBeenCalledWith('release-score', 'TEST', 'ok');
+        });
+
+        it('calls printError on failure', async () => {
+            expect.hasAssertions();
+
+            mockLoadMetricsStore.mockImplementation(() => {
+                throw new Error('store read failed');
+            });
+
+            const ctx = makeMockCommandContext({ projectName: 'TEST' });
+            await case26.handler(ctx);
+
+            expect(printError).toHaveBeenCalledWith('Erro ao gerar Release Score', expect.any(Error));
+        });
+    });
+});

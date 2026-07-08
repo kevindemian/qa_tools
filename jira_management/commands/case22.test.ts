@@ -15,13 +15,22 @@ vi.mock('fs', () => ({
     readFileSync: mockFsReadFileSync,
 }));
 vi.mock('../../shared/prompt');
-vi.mock('../../shared/logger');
+vi.mock('../../shared/config', () => ({
+    default: {
+        get: vi.fn(),
+        getAllPrefixed: vi.fn(() => ({})),
+    },
+}));
 vi.mock('../../shared/test-impact', () => ({
     analyzeTestImpact: vi.fn(),
 }));
-vi.mock('../../shared/metrics', () => ({
-    loadMetrics: vi.fn(),
-    calculateFlakiness: vi.fn(),
+vi.mock('../../shared/data-hub/persistence', () => ({
+    createDataHubPersistence: vi.fn().mockReturnValue({
+        loadMetricsStore: vi.fn().mockReturnValue({ runs: [] }),
+    } as never),
+}));
+vi.mock('../../shared/data-hub/compute/flakiness-entries', () => ({
+    calcFlakinessEntries: vi.fn().mockReturnValue([]),
 }));
 vi.mock('../../shared/logger', () => ({
     rootLogger: {
@@ -34,7 +43,8 @@ import { execFileSync } from 'child_process';
 import { existsSync, PathLike } from 'fs';
 import { ask, info, warn, title, printError } from '../../shared/prompt.js';
 import { analyzeTestImpact } from '../../shared/test-impact.js';
-import { loadMetrics, calculateFlakiness } from '../../shared/metrics.js';
+import { createDataHubPersistence } from '../../shared/data-hub/persistence.js';
+import { calcFlakinessEntries } from '../../shared/data-hub/compute/flakiness-entries.js';
 import { makeMockCommandContext } from '../../shared/test-utils.js';
 import case22Module from './case22.js';
 
@@ -42,14 +52,16 @@ const mockExecFileSync = vi.mocked(execFileSync);
 const mockExistsSync = vi.mocked(existsSync);
 const mockAsk = vi.mocked(ask);
 const mockAnalyzeTestImpact = vi.mocked(analyzeTestImpact);
-const mockLoadMetrics = vi.mocked(loadMetrics);
-const mockCalcFlaky = vi.mocked(calculateFlakiness);
+const mockCreateDataHubPersistence = vi.mocked(createDataHubPersistence);
+const mockCalcFlakinessEntries = vi.mocked(calcFlakinessEntries);
 
 describe('Case22', () => {
     beforeEach(() => {
         vi.clearAllMocks();
-        mockLoadMetrics.mockReturnValue({ runs: [] });
-        mockCalcFlaky.mockReturnValue([]);
+        mockCreateDataHubPersistence.mockReturnValue({
+            loadMetricsStore: vi.fn().mockReturnValue({ runs: [] }),
+        } as never);
+        mockCalcFlakinessEntries.mockReturnValue([]);
     });
 
     describe('Case22 — Test Impact Analysis', () => {
@@ -134,8 +146,10 @@ describe('Case22', () => {
             mockAsk.mockResolvedValue('HEAD~1');
             mockExecFileSync.mockReturnValue('src/login.ts\n');
             mockExistsSync.mockReturnValue(false);
-            mockLoadMetrics.mockReturnValue({ runs: [] });
-            mockCalcFlaky.mockReturnValue([]);
+            mockCreateDataHubPersistence.mockReturnValue({
+                loadMetricsStore: vi.fn().mockReturnValue({ runs: [] }),
+            } as never);
+            mockCalcFlakinessEntries.mockReturnValue([]);
             mockAnalyzeTestImpact.mockReturnValue({
                 changedFiles: ['src/login.ts'],
                 impactedTests: [
@@ -159,8 +173,10 @@ describe('Case22', () => {
             mockAsk.mockResolvedValue('HEAD~1');
             mockExecFileSync.mockReturnValue('src/unknown.ts\n');
             mockExistsSync.mockReturnValue(false);
-            mockLoadMetrics.mockReturnValue({ runs: [] });
-            mockCalcFlaky.mockReturnValue([]);
+            mockCreateDataHubPersistence.mockReturnValue({
+                loadMetricsStore: vi.fn().mockReturnValue({ runs: [] }),
+            } as never);
+            mockCalcFlakinessEntries.mockReturnValue([]);
             mockAnalyzeTestImpact.mockReturnValue({
                 changedFiles: ['src/unknown.ts'],
                 impactedTests: [
@@ -182,22 +198,32 @@ describe('Case22', () => {
             mockAsk.mockResolvedValue('HEAD~1');
             mockExecFileSync.mockReturnValue('src/login.ts\n');
             mockExistsSync.mockReturnValue(false);
-            mockLoadMetrics.mockReturnValue({
-                runs: [
-                    {
-                        timestamp: '2026-01-01T00:00:00.000Z',
-                        project: 'TEST',
-                        total: 10,
-                        passed: 5,
-                        failed: 5,
-                        skipped: 0,
-                        duration: 100,
-                        tests: [{ title: 'Login test', state: 'failed', duration: 100 }],
-                    },
-                ],
-            });
-            mockCalcFlaky.mockReturnValue([
-                { title: 'Login test', passCount: 1, failCount: 2, skipCount: 0, totalRuns: 3, rate: 0.66 },
+            mockCreateDataHubPersistence.mockReturnValue({
+                loadMetricsStore: vi.fn().mockReturnValue({
+                    runs: [
+                        {
+                            timestamp: '2026-01-01T00:00:00.000Z',
+                            project: 'TEST',
+                            total: 10,
+                            passed: 5,
+                            failed: 5,
+                            skipped: 0,
+                            duration: 100,
+                            tests: [{ title: 'Login test', state: 'failed', duration: 100 }],
+                        },
+                    ],
+                }),
+            } as never);
+            mockCalcFlakinessEntries.mockReturnValue([
+                {
+                    title: 'Login test',
+                    project: 'TEST',
+                    passCount: 1,
+                    failCount: 2,
+                    skipCount: 0,
+                    totalRuns: 3,
+                    rate: 0.66,
+                },
             ]);
             mockAnalyzeTestImpact.mockReturnValue({
                 changedFiles: ['src/login.ts'],

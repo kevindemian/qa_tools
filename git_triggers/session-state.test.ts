@@ -62,11 +62,6 @@ vi.mock('../shared/state', () => ({ update: vi.fn() }));
 
 vi.mock('../shared/cli_base', () => ({ printSessionSummary: vi.fn() }));
 
-vi.mock('../shared/metrics', () => ({
-    loadMetrics: vi.fn(() => ({ runs: [] })),
-    calculateFlakiness: vi.fn(() => []),
-}));
-
 vi.mock('../shared/flakiness-dashboard', () => ({ generateFlakinessHtml: vi.fn(() => '<html>') }));
 
 vi.mock('./gitlab_manager', () => {
@@ -95,7 +90,6 @@ vi.mock('./ui-helpers', () => ({ providerLabel: vi.fn(() => 'GitLab') }));
 
 import * as prompt from '../shared/prompt.js';
 import * as sessionState from './session-state.js';
-import { loadMetrics as _loadMetrics, calculateFlakiness as _calculateFlakiness } from '../shared/metrics.js';
 import { createMockGitProvider } from '../shared/test-utils/factories/index.js';
 import { update as stateUpdate } from '../shared/state.js';
 const pushHistorySpy = vi.spyOn(sessionState.sessionContext, 'pushHistory');
@@ -187,33 +181,25 @@ describe('Session-state', () => {
         it('warns about high flakiness tests', async () => {
             expect.hasAssertions();
 
-            vi.mocked(_loadMetrics).mockReturnValueOnce({
-                runs: [
-                    {
-                        project: 'qa_ibabs',
-                        timestamp: '2024-01-01',
-                        total: 0,
-                        passed: 0,
-                        failed: 0,
-                        skipped: 0,
-                        duration: 0,
-                        tests: [],
-                    },
-                    {
-                        project: 'qa_ibabs',
-                        timestamp: '2024-01-02',
-                        total: 0,
-                        passed: 0,
-                        failed: 0,
-                        skipped: 0,
-                        duration: 0,
-                        tests: [],
-                    },
-                ],
+            sessionState.setDataHub({
+                raw: {} as never,
+                computed: {
+                    flakinessEntries: [
+                        {
+                            title: 'flaky-test',
+                            project: 'qa_ibabs',
+                            rate: 0.5,
+                            passCount: 2,
+                            failCount: 2,
+                            skipCount: 0,
+                            totalRuns: 4,
+                        },
+                    ],
+                } as never,
+                timestamp: new Date(),
+                provider: 'gitlab',
+                repo: 'qa_ibabs',
             });
-            vi.mocked(_calculateFlakiness).mockReturnValueOnce([
-                { title: 'flaky-test', rate: 0.5, passCount: 2, failCount: 2, skipCount: 0, totalRuns: 4 },
-            ]);
 
             sessionState.setCurrentProjectName('qa_ibabs');
             const m = createMockGitProvider();
@@ -222,6 +208,7 @@ describe('Session-state', () => {
 
             expect(prompt.warn).toHaveBeenCalledWith(expect.stringContaining('flakiness'));
 
+            sessionState.setDataHub(undefined);
             sessionState.setCurrentProjectName('');
         });
     });

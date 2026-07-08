@@ -71,4 +71,62 @@ describe('ImportMetricsCsv', () => {
 
         expect(result).toBeNull();
     });
+
+    it('r6: round-trip preserva campos numéricos principais', () => {
+        const csv = exportMetricsCsv(FAKE_METRICS);
+        const result = importMetricsCsv(csv) as ComputedMetrics;
+
+        expect(result.passRate).toBe(85);
+        expect(result.avgDuration).toBe(120);
+        expect(result.suiteSpeedP95).toBe(500);
+        expect(result.coverage).toBe(72);
+        expect(result.pipelineCost.totalMinutes).toBe(100);
+        expect(result.pipelineCost.estimatedCost).toBe(0.8);
+        expect(result.testCounts.passed).toBe(0);
+        expect(result.testCounts.total).toBe(0);
+    });
+
+    it('r7: releaseScore.dimensions lost in round-trip (documented limitation)', () => {
+        const csv = exportMetricsCsv(FAKE_METRICS);
+        const result = importMetricsCsv(csv) as ComputedMetrics;
+
+        expect(result.releaseScore.dimensions.passRate.score).toBe(0);
+        expect(result.releaseScore.dimensions.passRate.status).toBe('fail');
+    });
+
+    it('r8: CSV with only header → returns null', () => {
+        const result = importMetricsCsv('metric,value');
+
+        expect(result).toBeNull();
+    });
+
+    it('r9: CSV with unknown metrics → those are ignored', () => {
+        const csv = 'metric,value\npassRate,90\nunknownMetric,100';
+        const result = importMetricsCsv(csv) as ComputedMetrics;
+
+        expect(result.passRate).toBe(90);
+    });
+
+    it('r10: export contains all expected metric rows', () => {
+        const csv = exportMetricsCsv(FAKE_METRICS);
+        const lines = csv.trim().split('\n');
+        const metrics = lines.slice(1).map((l) => (l as string).split(',')[0]);
+
+        expect(metrics).toContain('passRate');
+        expect(metrics).toContain('avgDuration');
+        expect(metrics).toContain('suiteSpeedP95');
+        expect(metrics).toContain('coverage');
+        expect(metrics).toContain('framework');
+        expect(metrics).toContain('testPassRate');
+        expect(metrics).toContain('pipelineCost.totalMinutes');
+        expect(metrics).toContain('releaseScore.score');
+        expect(metrics).toContain('quarantineStatus.flakyCount');
+    });
+
+    it('r11: NaN values become fallback defaults on import', () => {
+        const csv = 'metric,value\npassRate,not-a-number';
+        const result = importMetricsCsv(csv) as ComputedMetrics;
+
+        expect(result.passRate).toBe(0);
+    });
 });

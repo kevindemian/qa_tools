@@ -330,7 +330,15 @@ describe('Pr-report entry point — flaky detection with quarantine', () => {
 
         const metricsMod = await import('../metrics.js');
         const mockEntries = [
-            { title: 'flaky-test-1', rate: 0.5, passCount: 2, failCount: 2, skipCount: 1, totalRuns: 5 },
+            {
+                title: 'flaky-test-1',
+                project: 'test',
+                rate: 0.5,
+                passCount: 2,
+                failCount: 2,
+                skipCount: 1,
+                totalRuns: 5,
+            },
         ];
         vi.mocked(metricsMod.calculateFlakiness).mockImplementation(() => mockEntries);
 
@@ -360,7 +368,15 @@ describe('Pr-report entry point — flaky detection with quarantine', () => {
 
         const metricsMod = await import('../metrics.js');
         const mockEntries = [
-            { title: 'flaky-test-2', rate: 0.8, passCount: 1, failCount: 4, skipCount: 1, totalRuns: 6 },
+            {
+                title: 'flaky-test-2',
+                project: 'test',
+                rate: 0.8,
+                passCount: 1,
+                failCount: 4,
+                skipCount: 1,
+                totalRuns: 6,
+            },
         ];
         vi.mocked(metricsMod.calculateFlakiness).mockImplementation(() => mockEntries);
 
@@ -403,8 +419,24 @@ describe('Pr-report entry point — flaky detection with quarantine', () => {
 
         const metricsMod = await import('../metrics.js');
         const mockEntries: import('../metrics.js').FlakinessEntry[] = [
-            { title: 'new-flaky-1', rate: 0.4, passCount: 3, failCount: 3, skipCount: 1, totalRuns: 7 },
-            { title: 'new-flaky-2', rate: 0.35, passCount: 2, failCount: 3, skipCount: 1, totalRuns: 6 },
+            {
+                title: 'new-flaky-1',
+                project: 'test',
+                rate: 0.4,
+                passCount: 3,
+                failCount: 3,
+                skipCount: 1,
+                totalRuns: 7,
+            },
+            {
+                title: 'new-flaky-2',
+                project: 'test',
+                rate: 0.35,
+                passCount: 2,
+                failCount: 3,
+                skipCount: 1,
+                totalRuns: 6,
+            },
         ];
         vi.mocked(metricsMod.calculateFlakiness).mockImplementation(() => mockEntries);
 
@@ -434,7 +466,15 @@ describe('Pr-report entry point — flaky detection with quarantine', () => {
 
         const metricsMod = await import('../metrics.js');
         const mockEntries: import('../metrics.js').FlakinessEntry[] = [
-            { title: 'known-flaky', rate: 0.6, passCount: 2, failCount: 2, skipCount: 1, totalRuns: 5 },
+            {
+                title: 'known-flaky',
+                project: 'test',
+                rate: 0.6,
+                passCount: 2,
+                failCount: 2,
+                skipCount: 1,
+                totalRuns: 5,
+            },
         ];
         vi.mocked(metricsMod.calculateFlakiness).mockImplementation(() => mockEntries);
 
@@ -737,8 +777,8 @@ describe('Pr-report entry point — HTML report generation', () => {
 
         const metricsMod = await import('../metrics.js');
         vi.mocked(metricsMod.calculateFlakiness).mockReturnValue([
-            { title: 'flaky-1', rate: 0.5, passCount: 3, failCount: 3, skipCount: 1, totalRuns: 7 },
-            { title: 'flaky-2', rate: 0.33, passCount: 4, failCount: 2, skipCount: 1, totalRuns: 7 },
+            { title: 'flaky-1', project: 'test', rate: 0.5, passCount: 3, failCount: 3, skipCount: 1, totalRuns: 7 },
+            { title: 'flaky-2', project: 'test', rate: 0.33, passCount: 4, failCount: 2, skipCount: 1, totalRuns: 7 },
         ]);
 
         const { main } = await import('../pr-report-core.js');
