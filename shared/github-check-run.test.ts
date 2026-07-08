@@ -3,9 +3,10 @@
  */
 
 import { describe, expect, it, vi, beforeEach, afterEach } from 'vitest';
-import { createCheckRun } from './github-check-run.js';
+import { createCheckRun, getCheckRuns } from './github-check-run.js';
 
 const mockPost = vi.hoisted(() => vi.fn<(...args: unknown[]) => unknown>());
+const mockGet = vi.hoisted(() => vi.fn<(...args: unknown[]) => unknown>());
 
 vi.mock('./deps.js', async () => {
     const actual = await vi.importActual('./deps.js');
@@ -13,6 +14,7 @@ vi.mock('./deps.js', async () => {
         ...(actual as object),
         axios: {
             post: mockPost,
+            get: mockGet,
         },
     };
 });
@@ -178,5 +180,87 @@ describe('CreateCheckRun', () => {
         });
 
         expect(result).toBeNull();
+    });
+});
+
+describe('GetCheckRuns', () => {
+    const originalEnv = { ...process.env };
+
+    beforeEach(() => {
+        vi.clearAllMocks();
+        process.env['GITHUB_TOKEN'] = 'test-token';
+        process.env['GITHUB_REPOSITORY'] = 'owner/repo';
+        process.env['GITHUB_SHA'] = 'abc123def456';
+    });
+
+    afterEach(() => {
+        for (const key of ['GITHUB_TOKEN', 'GITHUB_REPOSITORY', 'GITHUB_SHA'] as const) {
+            const orig = originalEnv[key];
+            if (orig === undefined) {
+                delete process.env[key];
+            } else {
+                process.env[key] = orig;
+            }
+        }
+    });
+
+    it('returns check runs from API', async () => {
+        expect.assertions(3);
+
+        mockGet.mockResolvedValueOnce({
+            data: {
+                total_count: 1,
+                check_runs: [{ id: 1, name: 'Quality Gate', status: 'completed', conclusion: 'success' }],
+            },
+        });
+        mockGet.mockResolvedValueOnce({ data: [] });
+
+        const result = await getCheckRuns('abc123');
+
+        expect(mockGet).toHaveBeenCalledTimes(2);
+        expect(result).toHaveLength(1);
+        expect(result[0]?.name).toBe('Quality Gate');
+    });
+
+    it('returns empty array when GITHUB_TOKEN is missing', async () => {
+        expect.assertions(2);
+
+        delete process.env['GITHUB_TOKEN'];
+
+        const result = await getCheckRuns('abc123');
+
+        expect(mockGet).toHaveBeenCalledTimes(0);
+        expect(result).toStrictEqual([]);
+    });
+
+    it('returns empty array when GITHUB_REPOSITORY is missing', async () => {
+        expect.assertions(2);
+
+        delete process.env['GITHUB_REPOSITORY'];
+
+        const result = await getCheckRuns('abc123');
+
+        expect(mockGet).toHaveBeenCalledTimes(0);
+        expect(result).toStrictEqual([]);
+    });
+
+    it('returns empty array on API error', async () => {
+        expect.assertions(1);
+
+        mockGet.mockRejectedValueOnce({ response: { status: 403 }, message: 'Forbidden' });
+
+        const result = await getCheckRuns('abc123');
+
+        expect(result).toStrictEqual([]);
+    });
+
+    it('returns empty array on network error', async () => {
+        expect.assertions(1);
+
+        mockGet.mockRejectedValueOnce(new Error('Network error'));
+
+        const result = await getCheckRuns('abc123');
+
+        expect(result).toStrictEqual([]);
     });
 });

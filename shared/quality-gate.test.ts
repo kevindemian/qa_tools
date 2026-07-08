@@ -171,7 +171,7 @@ describe('RunQualityGate', () => {
             ],
         });
         mockCalcFlakiness.mockReturnValue([
-            { title: 'flaky-test-1', rate: 1, passCount: 1, failCount: 1, skipCount: 0, totalRuns: 2 },
+            { title: 'flaky-test-1', project: 'test', rate: 1, passCount: 1, failCount: 1, skipCount: 0, totalRuns: 2 },
         ]);
         const result = runQualityGate();
         const flakyCheck = result.checks.find((c) => c.name === 'flaky-rate');

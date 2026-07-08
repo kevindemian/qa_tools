@@ -22,31 +22,36 @@ export function calcFlakinessEntries(runs: MetricsRun[], minRuns = 2): Flakiness
     return buildFlakyEntries(testMap, minRuns);
 }
 
-function accumulateTestCounts(runs: MetricsRun[]): Map<string, { pass: number; fail: number; skip: number }> {
-    const testMap = new Map<string, { pass: number; fail: number; skip: number }>();
+function accumulateTestCounts(
+    runs: MetricsRun[],
+): Map<string, { pass: number; fail: number; skip: number; project: string }> {
+    const testMap = new Map<string, { pass: number; fail: number; skip: number; project: string }>();
     for (const run of runs) {
         for (const t of run.tests) {
-            const entry = testMap.get(t.title) || { pass: 0, fail: 0, skip: 0 };
+            const key = `${run.project}::${t.title}`;
+            const entry = testMap.get(key) || { pass: 0, fail: 0, skip: 0, project: run.project };
             if (t.state === 'passed') entry.pass++;
             else if (t.state === 'failed') entry.fail++;
             else entry.skip++;
-            testMap.set(t.title, entry);
+            testMap.set(key, entry);
         }
     }
     return testMap;
 }
 
 function buildFlakyEntries(
-    testMap: Map<string, { pass: number; fail: number; skip: number }>,
+    testMap: Map<string, { pass: number; fail: number; skip: number; project: string }>,
     minRuns: number,
 ): FlakinessEntry[] {
     const result: FlakinessEntry[] = [];
-    for (const [title, counts] of testMap) {
+    for (const [key, counts] of testMap) {
+        const title = key.split('::')[1] ?? key;
         const executedCount = counts.pass + counts.fail;
         if (executedCount < minRuns) continue;
         if (counts.fail > 0 && counts.pass > 0) {
             result.push({
                 title,
+                project: counts.project,
                 passCount: counts.pass,
                 failCount: counts.fail,
                 skipCount: counts.skip,

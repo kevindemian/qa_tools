@@ -5,7 +5,14 @@ vi.mock('../../shared/cli_base', () => ({
     sanitizeUrl: vi.fn((url: string) => url),
 }));
 
-const mockLoadMetrics = vi.hoisted(() => vi.fn<(...args: []) => object>().mockReturnValue({ runs: [] }));
+const mockLoadMetricsStore = vi.hoisted(() =>
+    vi.fn<() => { runs: object[]; coverageHistory?: object[] }>().mockReturnValue({ runs: [] }),
+);
+const mockCreateDataHubPersistence = vi.hoisted(() =>
+    vi
+        .fn<() => { loadMetricsStore: typeof mockLoadMetricsStore }>()
+        .mockReturnValue({ loadMetricsStore: mockLoadMetricsStore }),
+);
 const mockPrint = vi.hoisted(() => vi.fn<(...args: [string]) => void>());
 const mockPaletteYellow = vi.hoisted(() => vi.fn<(...args: [string]) => string>());
 
@@ -22,8 +29,8 @@ vi.mock('../../shared/output', () => ({
     defaultOutput: { print: mockPrint },
 }));
 
-vi.mock('../../shared/metrics', () => ({
-    loadMetrics: mockLoadMetrics,
+vi.mock('../../shared/data-hub/persistence', () => ({
+    createDataHubPersistence: mockCreateDataHubPersistence,
 }));
 
 import { tableView } from '../../shared/prompt.js';
@@ -61,7 +68,7 @@ describe('Case12', () => {
         it('shows health score warning when metrics and endpoints both fail', async () => {
             expect.hasAssertions();
 
-            mockLoadMetrics.mockReturnValueOnce({ runs: [], coverageHistory: [] });
+            mockLoadMetricsStore.mockReturnValueOnce({ runs: [], coverageHistory: [] });
 
             mockJiraResource.axiosInstance.get
                 .mockRejectedValueOnce(new Error('error 1'))
@@ -89,7 +96,7 @@ describe('Case12', () => {
                 duration: 100,
                 tests: [],
             }));
-            mockLoadMetrics.mockReturnValueOnce({
+            mockLoadMetricsStore.mockReturnValueOnce({
                 runs,
                 coverageHistory: [
                     {
@@ -125,7 +132,7 @@ describe('Case12', () => {
                 duration: 100,
                 tests: [],
             }));
-            mockLoadMetrics.mockReturnValueOnce({ runs });
+            mockLoadMetricsStore.mockReturnValueOnce({ runs });
 
             await case12.handler(mockContext);
 
@@ -144,7 +151,7 @@ describe('Case12', () => {
         it('shows health score with coverage but too few runs', async () => {
             expect.hasAssertions();
 
-            mockLoadMetrics.mockReturnValueOnce({
+            mockLoadMetricsStore.mockReturnValueOnce({
                 runs: [
                     {
                         timestamp: '2024-01-01T10:00:00Z',

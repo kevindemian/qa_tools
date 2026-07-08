@@ -29,6 +29,7 @@ const safeTitle = fc.string({ minLength: 1, maxLength: 20 }).map((s) => s.replac
 
 const nanEntry: FlakinessEntry = {
     title: 'NaN-rate',
+    project: 'test',
     passCount: 0,
     failCount: 0,
     skipCount: 0,
@@ -37,6 +38,7 @@ const nanEntry: FlakinessEntry = {
 };
 const infEntry: FlakinessEntry = {
     title: 'Inf-rate',
+    project: 'test',
     passCount: 0,
     failCount: 10,
     skipCount: 0,
@@ -45,6 +47,7 @@ const infEntry: FlakinessEntry = {
 };
 const negInfEntry: FlakinessEntry = {
     title: 'NegInf-rate',
+    project: 'test',
     passCount: 10,
     failCount: 0,
     skipCount: 0,
@@ -69,6 +72,7 @@ const flakyEntryArb: fc.Arbitrary<FlakinessEntry> = fc
         const totalRuns = passCount + failCount + skipCount || 1;
         return {
             title,
+            project: 'test',
             passCount,
             failCount,
             skipCount,

@@ -2,7 +2,7 @@ import os from 'os';
 import path from 'path';
 import { describe, it, expect, vi, beforeEach } from 'vitest';
 import { createMockContext } from '../shared/test-utils/factories/context-factory.js';
-import type { MetricsStore } from '../shared/metrics.js';
+import type { MetricsRun, MetricsStore } from '../shared/types/data-hub.js';
 import type { TraceabilityResult } from '../shared/traceability-matrix.js';
 import type { ReleaseScoreResult } from '../shared/release-score.js';
 
@@ -14,9 +14,13 @@ vi.mock('../shared/prompt.js', () => ({
     printError: vi.fn(),
     withSpinner: vi.fn((_msg: string, fn: () => unknown) => fn()),
 }));
-vi.mock('../shared/metrics.js', () => ({
-    loadMetrics: vi.fn(),
-    calculateFlakiness: vi.fn(),
+vi.mock('../shared/data-hub/persistence.js', () => ({
+    createDataHubPersistence: vi.fn(() => ({
+        loadMetricsStore: vi.fn().mockReturnValue({ runs: [] }),
+    })),
+}));
+vi.mock('../shared/data-hub/compute/flakiness-entries.js', () => ({
+    calcFlakinessEntries: vi.fn().mockReturnValue([]),
 }));
 vi.mock('../shared/temp-dir.js', () => ({
     writeReport: vi.fn(),
@@ -181,9 +185,11 @@ describe('Case-d — dashboard menu', () => {
 
         const { showSelect } = await import('../shared/prompt.js');
         vi.mocked(showSelect).mockResolvedValue('25');
-        const { loadMetrics } = await import('../shared/metrics.js');
+        const { createDataHubPersistence } = await import('../shared/data-hub/persistence.js');
+        vi.mocked(createDataHubPersistence).mockReturnValue({
+            loadMetricsStore: vi.fn().mockReturnValue({ runs: [] }),
+        } as never);
         const { writeReport } = await import('../shared/temp-dir.js');
-        vi.mocked(loadMetrics).mockReturnValue({ runs: [] });
         vi.mocked(writeReport).mockReturnValue(path.join(os.tmpdir(), 'qa-test-report.html'));
         const ctx = createMockContext();
         const { default: caseD } = await import('./commands/case-d.js');
@@ -197,13 +203,16 @@ describe('Case-d — dashboard menu', () => {
 
         const { showSelect } = await import('../shared/prompt.js');
         vi.mocked(showSelect).mockResolvedValue('26');
-        const { loadMetrics, calculateFlakiness } = await import('../shared/metrics.js');
+        const { createDataHubPersistence } = await import('../shared/data-hub/persistence.js');
+        const { calcFlakinessEntries } = await import('../shared/data-hub/compute/flakiness-entries.js');
         const { calculateHealthScore } = await import('../shared/health-score.js');
         const { calculateReleaseScore, generateReleaseScoreHtml } = await import('../shared/release-score.js');
         const { writeReport } = await import('../shared/temp-dir.js');
-        vi.mocked(loadMetrics).mockReturnValue({ runs: [{ project: 'TEST' }] } as MetricsStore);
-        vi.mocked(calculateFlakiness).mockReturnValue([
-            { title: 't1', passCount: 1, failCount: 1, skipCount: 0, totalRuns: 2, rate: 0.5 },
+        vi.mocked(createDataHubPersistence).mockReturnValue({
+            loadMetricsStore: vi.fn().mockReturnValue({ runs: [{ project: 'TEST' }] }),
+        } as never);
+        vi.mocked(calcFlakinessEntries).mockReturnValue([
+            { title: 't1', project: 'TEST', passCount: 1, failCount: 1, skipCount: 0, totalRuns: 2, rate: 0.5 },
         ]);
         vi.mocked(calculateHealthScore).mockReturnValue({
             overall: 80,
@@ -263,11 +272,13 @@ describe('Case25 — Traceability Matrix', () => {
     it('loads metrics from store', async () => {
         expect.hasAssertions();
 
-        const { loadMetrics } = await import('../shared/metrics.js');
+        const { createDataHubPersistence } = await import('../shared/data-hub/persistence.js');
         const { buildTraceabilityMatrix, generateTraceabilityHtml } = await import('../shared/traceability-matrix.js');
         const { writeReport } = await import('../shared/temp-dir.js');
         const store: MetricsStore = { runs: [makeRun('TEST')] };
-        vi.mocked(loadMetrics).mockReturnValue(store);
+        vi.mocked(createDataHubPersistence).mockReturnValue({
+            loadMetricsStore: vi.fn().mockReturnValue(store),
+        } as never);
         vi.mocked(buildTraceabilityMatrix).mockReturnValue(makeTraceabilityResult());
         vi.mocked(generateTraceabilityHtml).mockReturnValue(HTML_WITH_DOCTYPE);
         vi.mocked(writeReport).mockReturnValue(path.join(os.tmpdir(), 'qa-traceability-matrix-TEST.html'));
@@ -275,7 +286,7 @@ describe('Case25 — Traceability Matrix', () => {
         const { default: case25 } = await import('./commands/case25.js');
         await case25.handler(ctx);
 
-        expect(loadMetrics).toHaveBeenCalledTimes(1);
+        expect(createDataHubPersistence).toHaveBeenCalledTimes(1);
         expect(buildTraceabilityMatrix).toHaveBeenCalledWith(store);
     });
 
@@ -342,10 +353,12 @@ describe('Case25 — Traceability Matrix', () => {
     it('handles empty metrics store gracefully', async () => {
         expect.hasAssertions();
 
-        const { loadMetrics } = await import('../shared/metrics.js');
+        const { createDataHubPersistence } = await import('../shared/data-hub/persistence.js');
         const { buildTraceabilityMatrix } = await import('../shared/traceability-matrix.js');
         const { writeReport } = await import('../shared/temp-dir.js');
-        vi.mocked(loadMetrics).mockReturnValue({ runs: [] });
+        vi.mocked(createDataHubPersistence).mockReturnValue({
+            loadMetricsStore: vi.fn().mockReturnValue({ runs: [] }),
+        } as never);
         vi.mocked(buildTraceabilityMatrix).mockReturnValue(
             makeTraceabilityResult({ nodes: [], totalEpics: 0, totalTests: 0, overallCoverage: 0 }),
         );
@@ -360,8 +373,8 @@ describe('Case25 — Traceability Matrix', () => {
     it('handles loadMetrics error gracefully', async () => {
         expect.hasAssertions();
 
-        const { loadMetrics } = await import('../shared/metrics.js');
-        vi.mocked(loadMetrics).mockImplementation(() => {
+        const { createDataHubPersistence } = await import('../shared/data-hub/persistence.js');
+        vi.mocked(createDataHubPersistence).mockImplementation(() => {
             throw new Error('disk error');
         });
         const ctx = createMockContext();
@@ -405,14 +418,17 @@ describe('Case26 — Release Score', () => {
     it('filters runs by project name', async () => {
         expect.hasAssertions();
 
-        const { loadMetrics, calculateFlakiness } = await import('../shared/metrics.js');
+        const { createDataHubPersistence } = await import('../shared/data-hub/persistence.js');
+        const { calcFlakinessEntries } = await import('../shared/data-hub/compute/flakiness-entries.js');
         const { calculateHealthScore } = await import('../shared/health-score.js');
         const { calculateReleaseScore, generateReleaseScoreHtml } = await import('../shared/release-score.js');
         const { writeReport } = await import('../shared/temp-dir.js');
         const store: MetricsStore = {
             runs: [makeRun('OTHER'), makeRun('TEST'), makeRun('OTHER'), makeRun('TEST')],
         };
-        vi.mocked(loadMetrics).mockReturnValue(store);
+        vi.mocked(createDataHubPersistence).mockReturnValue({
+            loadMetricsStore: vi.fn().mockReturnValue(store),
+        } as never);
         vi.mocked(calculateHealthScore).mockReturnValue({
             overall: 80,
             grade: 'good',
@@ -421,18 +437,18 @@ describe('Case26 — Release Score', () => {
             runCount: 10,
             timestamp: '2026-06-14T10:00:00Z',
         });
-        vi.mocked(calculateFlakiness).mockReturnValue([]);
+        vi.mocked(calcFlakinessEntries).mockReturnValue([]);
         vi.mocked(calculateReleaseScore).mockReturnValue(makeReleaseScoreResult());
         vi.mocked(generateReleaseScoreHtml).mockReturnValue(HTML_WITH_DOCTYPE);
         vi.mocked(writeReport).mockReturnValue(path.join(os.tmpdir(), 'qa-test-report.html'));
         const ctx = createMockContext();
         const { default: case26 } = await import('./commands/case26.js');
         await case26.handler(ctx);
-        const receivedStore = vi.mocked(calculateFlakiness).mock.calls[0]?.[0] as MetricsStore;
+        const receivedRuns = vi.mocked(calcFlakinessEntries).mock.calls[0]?.[0] as MetricsRun[];
 
-        expect(receivedStore.runs).toHaveLength(2);
-        expect(receivedStore.runs[0]?.project).toBe('TEST');
-        expect(receivedStore.runs[1]?.project).toBe('TEST');
+        expect(receivedRuns).toHaveLength(2);
+        expect(receivedRuns[0]?.project).toBe('TEST');
+        expect(receivedRuns[1]?.project).toBe('TEST');
     });
 
     it('passes correct parameters to calculateReleaseScore', async () => {
@@ -528,8 +544,8 @@ describe('Case26 — Release Score', () => {
     it('handles loadMetrics error gracefully', async () => {
         expect.hasAssertions();
 
-        const { loadMetrics } = await import('../shared/metrics.js');
-        vi.mocked(loadMetrics).mockImplementation(() => {
+        const { createDataHubPersistence } = await import('../shared/data-hub/persistence.js');
+        vi.mocked(createDataHubPersistence).mockImplementation(() => {
             throw new Error('IO error');
         });
         const ctx = createMockContext();
@@ -560,12 +576,15 @@ describe('Case26 — Release Score', () => {
     it('uses health gate pass when health >= 70', async () => {
         expect.hasAssertions();
 
-        const { loadMetrics, calculateFlakiness } = await import('../shared/metrics.js');
+        const { createDataHubPersistence } = await import('../shared/data-hub/persistence.js');
+        const { calcFlakinessEntries } = await import('../shared/data-hub/compute/flakiness-entries.js');
         const { calculateHealthScore } = await import('../shared/health-score.js');
         const { calculateReleaseScore, generateReleaseScoreHtml } = await import('../shared/release-score.js');
         const { writeReport } = await import('../shared/temp-dir.js');
-        vi.mocked(loadMetrics).mockReturnValue({ runs: [makeRun('TEST')] });
-        vi.mocked(calculateFlakiness).mockReturnValue([]);
+        vi.mocked(createDataHubPersistence).mockReturnValue({
+            loadMetricsStore: vi.fn().mockReturnValue({ runs: [makeRun('TEST')] }),
+        } as never);
+        vi.mocked(calcFlakinessEntries).mockReturnValue([]);
         vi.mocked(calculateHealthScore).mockReturnValue({
             overall: 75,
             grade: 'good',
@@ -587,12 +606,15 @@ describe('Case26 — Release Score', () => {
     it('uses health gate fail when health < 70', async () => {
         expect.hasAssertions();
 
-        const { loadMetrics, calculateFlakiness } = await import('../shared/metrics.js');
+        const { createDataHubPersistence } = await import('../shared/data-hub/persistence.js');
+        const { calcFlakinessEntries } = await import('../shared/data-hub/compute/flakiness-entries.js');
         const { calculateHealthScore } = await import('../shared/health-score.js');
         const { calculateReleaseScore, generateReleaseScoreHtml } = await import('../shared/release-score.js');
         const { writeReport } = await import('../shared/temp-dir.js');
-        vi.mocked(loadMetrics).mockReturnValue({ runs: [makeRun('TEST')] });
-        vi.mocked(calculateFlakiness).mockReturnValue([]);
+        vi.mocked(createDataHubPersistence).mockReturnValue({
+            loadMetricsStore: vi.fn().mockReturnValue({ runs: [makeRun('TEST')] }),
+        } as never);
+        vi.mocked(calcFlakinessEntries).mockReturnValue([]);
         vi.mocked(calculateHealthScore).mockReturnValue({
             overall: 55,
             grade: 'needs_attention',

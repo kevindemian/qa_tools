@@ -404,7 +404,7 @@ describe('Schedule Handler', () => {
                 ],
             });
             mockCalculateFlakiness.mockReturnValue([
-                { title: 't1', rate: 0.5, passCount: 1, failCount: 0, skipCount: 0, totalRuns: 1 },
+                { title: 't1', project: 'test', rate: 0.5, passCount: 1, failCount: 0, skipCount: 0, totalRuns: 1 },
             ]);
 
             await handleFlakinessDashboard();

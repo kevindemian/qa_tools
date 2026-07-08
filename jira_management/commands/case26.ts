@@ -1,4 +1,5 @@
-import { loadMetrics, calculateFlakiness } from '../../shared/metrics.js';
+import { createDataHubPersistence } from '../../shared/data-hub/persistence.js';
+import { calcFlakinessEntries } from '../../shared/data-hub/compute/flakiness-entries.js';
 import { calculateHealthScore } from '../../shared/health-score.js';
 import { calculateReleaseScore, generateReleaseScoreHtml } from '../../shared/release-score.js';
 import { info, warn, title, printError } from '../../shared/prompt.js';
@@ -15,11 +16,12 @@ async function handler(c: CommandContext): Promise<boolean | void> {
     }
 
     try {
-        const store = loadMetrics();
+        const persistence = createDataHubPersistence(projectName);
+        const store = persistence.loadMetricsStore();
         const projectRuns = store.runs.filter((r) => r.project === projectName);
 
         const health = calculateHealthScore(store);
-        const flaky = calculateFlakiness(projectRuns.length >= 2 ? { runs: projectRuns } : { runs: [] }, 2);
+        const flaky = calcFlakinessEntries(projectRuns.length >= 2 ? projectRuns : [], 2);
 
         const releaseScore = calculateReleaseScore(
             80,

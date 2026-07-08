@@ -71,6 +71,8 @@ export interface FetchOptions {
     count?: number;
     branch?: string;
     since?: Date;
+    /** Max artifacts to download per run. Default: 5. */
+    maxArtifactsPerRun?: number;
 }
 
 /** Strategy interface — each provider adapts one data source. */
@@ -227,6 +229,8 @@ export interface FailureClassification {
 export interface FlakinessEntry {
     /** Test title. */
     title: string;
+    /** Project name. */
+    project: string;
     /** Number of passes. */
     passCount: number;
     /** Number of failures. */
@@ -344,7 +348,12 @@ export interface DataHub {
 export interface DataHubPersistence {
     /** Save a test run to history. */
     saveRun(sha: string, run: MetricsRun): void;
-    /** Load a test run by SHA. Returns null if not found. */
+    /**
+     * Load a test run by SHA. Currently always returns null because
+     * MetricsRun uses timestamp as identifier, not SHA.
+     * SHA-based lookup is available through the legacy Store class.
+     * Retained for interface completeness.
+     */
     loadRun(sha: string): MetricsRun | null;
     /** Save a coverage snapshot. */
     saveCoverageSnapshot(snapshot: CoverageSnapshot): void;

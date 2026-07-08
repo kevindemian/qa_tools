@@ -8,9 +8,25 @@ import type { FlakinessEntry } from './metrics.js';
 describe('FilterHighFlakiness', () => {
     it('filters entries above threshold', () => {
         const entries: FlakinessEntry[] = [
-            { title: 'Very Flaky', passCount: 1, failCount: 9, skipCount: 0, totalRuns: 10, rate: 0.9 },
-            { title: 'Stable', passCount: 9, failCount: 1, skipCount: 0, totalRuns: 10, rate: 0.1 },
-            { title: 'Borderline', passCount: 6, failCount: 4, skipCount: 0, totalRuns: 10, rate: 0.4 },
+            {
+                title: 'Very Flaky',
+                project: 'test',
+                passCount: 1,
+                failCount: 9,
+                skipCount: 0,
+                totalRuns: 10,
+                rate: 0.9,
+            },
+            { title: 'Stable', project: 'test', passCount: 9, failCount: 1, skipCount: 0, totalRuns: 10, rate: 0.1 },
+            {
+                title: 'Borderline',
+                project: 'test',
+                passCount: 6,
+                failCount: 4,
+                skipCount: 0,
+                totalRuns: 10,
+                rate: 0.4,
+            },
         ];
 
         const result = filterHighFlakiness(entries, 30);
@@ -22,7 +38,7 @@ describe('FilterHighFlakiness', () => {
 
     it('returns empty array when no entries exceed threshold', () => {
         const entries: FlakinessEntry[] = [
-            { title: 'Stable', passCount: 9, failCount: 1, skipCount: 0, totalRuns: 10, rate: 0.1 },
+            { title: 'Stable', project: 'test', passCount: 9, failCount: 1, skipCount: 0, totalRuns: 10, rate: 0.1 },
         ];
 
         expect(filterHighFlakiness(entries, 30)).toStrictEqual([]);
@@ -36,7 +52,15 @@ describe('FilterHighFlakiness', () => {
 describe('GenerateFlakinessHtml', () => {
     it('generates HTML with flaky test table', () => {
         const entries: FlakinessEntry[] = [
-            { title: 'Login Flaky', passCount: 5, failCount: 5, skipCount: 0, totalRuns: 10, rate: 0.5 },
+            {
+                title: 'Login Flaky',
+                project: 'test',
+                passCount: 5,
+                failCount: 5,
+                skipCount: 0,
+                totalRuns: 10,
+                rate: 0.5,
+            },
         ];
 
         const html = generateFlakinessHtml(entries);
@@ -49,7 +73,7 @@ describe('GenerateFlakinessHtml', () => {
 
     it('shows entries below 50% rate with warn badge', () => {
         const entries: FlakinessEntry[] = [
-            { title: 'Mild', passCount: 7, failCount: 3, skipCount: 0, totalRuns: 10, rate: 0.3 },
+            { title: 'Mild', project: 'test', passCount: 7, failCount: 3, skipCount: 0, totalRuns: 10, rate: 0.3 },
         ];
 
         const html = generateFlakinessHtml(entries);
@@ -62,6 +86,7 @@ describe('GenerateFlakinessHtml', () => {
     it('shows danger severity when more than 5 high-flakiness entries', () => {
         const entries: FlakinessEntry[] = Array.from({ length: 7 }, (_, i) => ({
             title: `Flaky#${i}`,
+            project: 'test',
             passCount: 1,
             failCount: 9,
             skipCount: 0,
@@ -77,7 +102,7 @@ describe('GenerateFlakinessHtml', () => {
 
     it('shows no-threshold message when all below threshold', () => {
         const entries: FlakinessEntry[] = [
-            { title: 'Stable', passCount: 9, failCount: 1, skipCount: 0, totalRuns: 10, rate: 0.1 },
+            { title: 'Stable', project: 'test', passCount: 9, failCount: 1, skipCount: 0, totalRuns: 10, rate: 0.1 },
         ];
 
         const html = generateFlakinessHtml(entries);
@@ -93,7 +118,15 @@ describe('GenerateFlakinessHtml', () => {
 
     it('escapes HTML in test titles', () => {
         const entries: FlakinessEntry[] = [
-            { title: '<script>alert(1)</script>', passCount: 5, failCount: 5, skipCount: 0, totalRuns: 10, rate: 0.5 },
+            {
+                title: '<script>alert(1)</script>',
+                project: 'test',
+                passCount: 5,
+                failCount: 5,
+                skipCount: 0,
+                totalRuns: 10,
+                rate: 0.5,
+            },
         ];
 
         const html = generateFlakinessHtml(entries);
@@ -104,7 +137,7 @@ describe('GenerateFlakinessHtml', () => {
 
     it('includes dark mode theme toggle script', () => {
         const entries: FlakinessEntry[] = [
-            { title: 'Test', passCount: 5, failCount: 5, skipCount: 0, totalRuns: 10, rate: 0.5 },
+            { title: 'Test', project: 'test', passCount: 5, failCount: 5, skipCount: 0, totalRuns: 10, rate: 0.5 },
         ];
         const html = generateFlakinessHtml(entries);
 

@@ -177,7 +177,15 @@ describe('Case19', () => {
             });
 
             metrics.calculateFlakiness.mockReturnValueOnce([
-                { title: 'Flaky Test', passCount: 1, failCount: 1, skipCount: 0, totalRuns: 2, rate: 0.5 },
+                {
+                    title: 'Flaky Test',
+                    project: 'test',
+                    passCount: 1,
+                    failCount: 1,
+                    skipCount: 0,
+                    totalRuns: 2,
+                    rate: 0.5,
+                },
             ]);
             metrics.getTrends.mockReturnValueOnce([{ label: '2024-01-15', total: 10, failed: 2, passRate: 80 }]);
 

@@ -15,7 +15,7 @@ import { detectFrameworkCascade } from '../extractors/framework-detector.js';
 import { classifyFailures, type StepConclusion, type FailureInput } from '../extractors/failure-classifier.js';
 import { getCheckRuns } from '../../github-check-run.js';
 
-const MAX_ARTIFACTS_PER_RUN = 5;
+const DEFAULT_MAX_ARTIFACTS_PER_RUN = 5;
 
 export class GitHubDataProvider implements DataProvider {
     readonly name = 'github';
@@ -32,10 +32,20 @@ export class GitHubDataProvider implements DataProvider {
         const parsedArtifactsMap = new Map<number, ArtifactParseResult[]>();
         let coverage: RawCoverage | undefined;
 
+        const maxArtifacts = options.maxArtifactsPerRun ?? DEFAULT_MAX_ARTIFACTS_PER_RUN;
+
         for (const run of runs) {
             const runIdNum = this.parseRunId(run.id);
             if (runIdNum == null) continue;
-            await this.processRun(runIdNum, jobsMap, artifactsMap, failureReasonsMap, timingMap, parsedArtifactsMap);
+            await this.processRun(
+                runIdNum,
+                jobsMap,
+                artifactsMap,
+                failureReasonsMap,
+                timingMap,
+                parsedArtifactsMap,
+                maxArtifacts,
+            );
             if (coverage == null) {
                 const runJobs = jobsMap.get(runIdNum);
                 if (runJobs) coverage = await this.extractCoverageFromJobs(runJobs);
@@ -69,11 +79,12 @@ export class GitHubDataProvider implements DataProvider {
         failureReasonsMap: Map<number, string[]>,
         timingMap: Map<number, WorkflowRunTiming>,
         parsedArtifactsMap: Map<number, ArtifactParseResult[]>,
+        maxArtifacts: number,
     ): Promise<void> {
         try {
             const runJobs = await this.provider.getPipelineJobs(runIdNum);
             jobsMap.set(runIdNum, runJobs);
-            await this.fetchArtifacts(runIdNum, artifactsMap, parsedArtifactsMap);
+            await this.fetchArtifacts(runIdNum, artifactsMap, parsedArtifactsMap, maxArtifacts);
             await this.fetchTiming(runIdNum, timingMap);
             await this.fetchFailureReasons(runJobs, failureReasonsMap);
         } catch (err) {
@@ -85,11 +96,12 @@ export class GitHubDataProvider implements DataProvider {
         runIdNum: number,
         artifactsMap: Map<number, ArtifactInfo[]>,
         parsedArtifactsMap: Map<number, ArtifactParseResult[]>,
+        maxArtifacts: number,
     ): Promise<void> {
         try {
             const arts = await this.provider.listPipelineArtifacts(runIdNum);
             artifactsMap.set(runIdNum, arts);
-            const parsed = await this.downloadTestArtifacts(arts);
+            const parsed = await this.downloadTestArtifacts(arts, maxArtifacts);
             if (parsed.length > 0) parsedArtifactsMap.set(runIdNum, parsed);
         } catch (err) {
             rootLogger.debug(`GitHub: artifacts fetch failed for run ${runIdNum}: ${String(err)}`);
@@ -122,15 +134,18 @@ export class GitHubDataProvider implements DataProvider {
 
     /**
      * Download and parse test artifacts for a run.
-     * Respects MAX_ARTIFACTS_PER_RUN limit.
+     * Respects maxArtifacts limit.
      */
-    private async downloadTestArtifacts(artifacts: ArtifactInfo[]): Promise<ArtifactParseResult[]> {
+    private async downloadTestArtifacts(
+        artifacts: ArtifactInfo[],
+        maxArtifacts: number,
+    ): Promise<ArtifactParseResult[]> {
         const testArtifacts = artifacts.filter((a) => isTestArtifact(a.name));
         const results: ArtifactParseResult[] = [];
         let downloaded = 0;
 
         for (const artifact of testArtifacts) {
-            if (downloaded >= MAX_ARTIFACTS_PER_RUN) break;
+            if (downloaded >= maxArtifacts) break;
 
             try {
                 const result = await this.provider.downloadArtifact(artifact.id);

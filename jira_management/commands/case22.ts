@@ -3,7 +3,8 @@ import { execFileSync } from 'child_process';
 import fs from 'fs';
 import { ask, info, warn, title, divider, tableView, printError } from '../../shared/prompt.js';
 import { analyzeTestImpact } from '../../shared/test-impact.js';
-import { loadMetrics, calculateFlakiness } from '../../shared/metrics.js';
+import { createDataHubPersistence } from '../../shared/data-hub/persistence.js';
+import { calcFlakinessEntries } from '../../shared/data-hub/compute/flakiness-entries.js';
 import type { CommandContext } from './context.js';
 
 const GIT_BIN = '/usr/bin/git';
@@ -57,8 +58,9 @@ function _preloadTestKeys(result: ReturnType<typeof analyzeTestImpact>, c: Comma
 }
 
 function _showFlakyWarning(result: ReturnType<typeof analyzeTestImpact>): void {
-    const store = loadMetrics();
-    const flakyTests = calculateFlakiness(store, 2);
+    const persistence = createDataHubPersistence('');
+    const store = persistence.loadMetricsStore();
+    const flakyTests = calcFlakinessEntries(store.runs, 2);
     const impactedTileSet = new Set(result.impactedTests.map((t) => t.title));
     const flakyHits = flakyTests.filter((f) => impactedTileSet.has(f.title));
     if (flakyHits.length === 0) return;

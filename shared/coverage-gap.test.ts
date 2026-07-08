@@ -1,16 +1,18 @@
 import { analyzeCoverageGaps } from './coverage-gap.js';
-import { loadMetrics } from './metrics.js';
+import { createDataHubPersistence } from './data-hub/persistence.js';
 import { nonNull } from './test-utils.js';
 
 vi.mock('./logger', () => ({
     rootLogger: { error: vi.fn(), warn: vi.fn(), info: vi.fn(), child: vi.fn().mockReturnThis() },
 }));
 
-vi.mock('./metrics', () => ({
-    loadMetrics: vi.fn(),
+vi.mock('./data-hub/persistence', () => ({
+    createDataHubPersistence: vi.fn().mockReturnValue({
+        loadMetricsStore: vi.fn().mockReturnValue({ runs: [] }),
+    } as never),
 }));
 
-const mockLoadMetrics = vi.mocked(loadMetrics);
+const mockCreateDataHubPersistence = vi.mocked(createDataHubPersistence);
 const mockSearch = vi.fn();
 const mockJiraResource = {
     getJiraResource: vi.fn(),
@@ -39,7 +41,9 @@ describe('Coverage Gap', () => {
         vi.clearAllMocks();
         mockSearch.mockReset();
         mockSearch.mockResolvedValue({ issues: [], total: 0 });
-        mockLoadMetrics.mockReturnValue({ runs: [], coverageHistory: [] });
+        mockCreateDataHubPersistence.mockReturnValue({
+            loadMetricsStore: vi.fn().mockReturnValue({ runs: [], coverageHistory: [] }),
+        } as never);
     });
 
     describe('AnalyzeCoverageGaps', () => {
@@ -339,18 +343,20 @@ describe('Coverage Gap', () => {
         it('loads trends from metrics store', async () => {
             expect.hasAssertions();
 
-            mockLoadMetrics.mockReturnValue({
-                runs: [],
-                coverageHistory: [
-                    {
-                        timestamp: '2026-01-01T00:00:00Z',
-                        project: 'PROJ',
-                        totalIssues: 10,
-                        mappedIssues: 5,
-                        coveragePct: 50,
-                    },
-                ],
-            });
+            mockCreateDataHubPersistence.mockReturnValue({
+                loadMetricsStore: vi.fn().mockReturnValue({
+                    runs: [],
+                    coverageHistory: [
+                        {
+                            timestamp: '2026-01-01T00:00:00Z',
+                            project: 'PROJ',
+                            totalIssues: 10,
+                            mappedIssues: 5,
+                            coveragePct: 50,
+                        },
+                    ],
+                }),
+            } as never);
             mockSearch
                 .mockResolvedValueOnce({ issues: [], total: 1 })
                 .mockResolvedValueOnce({ issues: [makeIssue('PROJ-1')], total: 1 })
