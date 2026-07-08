@@ -22,7 +22,9 @@
 import fs from 'node:fs';
 import path from 'path';
 import { rootLogger } from './logger.js';
-import { loadMetrics, saveParseResult, calculateFlakiness, getTrends } from './metrics.js';
+import { createDataHubPersistence } from './data-hub/persistence.js';
+import { calcFlakinessEntries } from './data-hub/compute/flakiness-entries.js';
+import { calcMetricsTrends } from './data-hub/compute/metrics-trends.js';
 import { runQualityGate } from './quality-gate.js';
 import { createCheckRun } from './github-check-run.js';
 import { postPrComment } from './github-pr-comment.js';
@@ -177,8 +179,9 @@ function buildFailureTable(tests: FlatTest[]): string {
 
 function buildFlakySection(): string {
     try {
-        const store = loadMetrics();
-        const flakyEntries = calculateFlakiness(store, MIN_FLAKINESS_RUNS);
+        const persistence = createDataHubPersistence('default');
+        const store = persistence.loadMetricsStore();
+        const flakyEntries = calcFlakinessEntries(store.runs, MIN_FLAKINESS_RUNS);
         const highFlaky = flakyEntries.filter((e) => e.rate >= 0.3);
 
         if (highFlaky.length === 0) return '';
@@ -326,7 +329,7 @@ function persistCurrentRun(tests: FlatTest[], stats: PrReportStats, project?: st
             duration: stats.duration,
         },
     };
-    saveParseResult(project, parseResult);
+    createDataHubPersistence(project).saveParseResult(project, parseResult);
 }
 
 function resolveCiUrls(): { workflowUrl?: string; artifactUrl?: string } {
@@ -369,7 +372,7 @@ function generateHtmlReportFile(
     tests: FlatTest[],
     stats: PrReportStats,
     options: PrReportCoreOptions,
-    store: ReturnType<typeof loadMetrics>,
+    store: ReturnType<typeof createDataHubPersistence> extends { loadMetricsStore: () => infer S } ? S : never,
     coverageResult: ReturnType<typeof resolveCoverage>,
     healthScore: ReturnType<typeof calculateHealthScore>,
     workflowUrl?: string,
@@ -377,7 +380,7 @@ function generateHtmlReportFile(
     try {
         const executed = stats.passed + stats.failed;
         const passRate = executed > 0 ? (stats.passed / executed) * 100 : 0;
-        const flakyEntries = calculateFlakiness(store, MIN_FLAKINESS_RUNS);
+        const flakyEntries = calcFlakinessEntries(store.runs, MIN_FLAKINESS_RUNS);
         const flakinessMap: Record<string, number> = {};
         for (const entry of flakyEntries) {
             flakinessMap[entry.title] = entry.rate;
@@ -390,7 +393,7 @@ function generateHtmlReportFile(
             title: `QA Tools — PR Report${branchLabel}`,
             qualityGate: Math.round(passRate),
             healthScore,
-            trends: getTrends(store),
+            trends: calcMetricsTrends(store.runs),
             includeChart: true,
             coverageSource,
             ...(workflowUrl ? { ciUrl: workflowUrl } : {}),
@@ -452,7 +455,9 @@ export async function generatePrReport(options: PrReportCoreOptions): Promise<Pr
 
     persistCurrentRun(tests, stats, options.project);
 
-    const store = loadMetrics();
+    const projectName = options.project ?? 'default';
+    const persistence = createDataHubPersistence(projectName);
+    const store = persistence.loadMetricsStore();
     const coverageResult = resolveCoverage();
     const dataHub = options.dataHub;
     const healthConfig = {
@@ -731,7 +736,9 @@ export async function main(
 
     // Load store before saveParseResult so the diff comparison uses the
     // previous run's data (before the current run is persisted).
-    const store = loadMetrics();
+    const projectName = project || 'default';
+    const persistence = createDataHubPersistence(projectName);
+    const store = persistence.loadMetricsStore();
     const previousRun = store.runs.length > 0 ? store.runs[store.runs.length - 1] : undefined;
     const diffComparison = previousRun ? computeDiffComparison(result.tests, previousRun.tests) : undefined;
 
