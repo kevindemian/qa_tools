@@ -8,7 +8,7 @@
  * - Dark mode
  */
 import { beforeEach, describe, expect, it, vi } from 'vitest';
-import type { FlakinessEntry } from '../../metrics.js';
+import type { FlakinessEntry } from '../../types/data-hub.js';
 
 vi.mock('../../logger.js', () => ({
     rootLogger: { error: vi.fn(), info: vi.fn(), child: vi.fn().mockReturnThis() },

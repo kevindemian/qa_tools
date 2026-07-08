@@ -1,5 +1,5 @@
 import { calculateHealthScore, evaluateQualityGate } from './health-score.js';
-import type { MetricsStore } from './metrics.js';
+import type { MetricsStore } from './types/data-hub.js';
 
 function makeStore(overrides?: Partial<MetricsStore>): MetricsStore {
     return {

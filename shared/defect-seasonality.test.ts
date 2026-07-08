@@ -3,7 +3,7 @@
  */
 
 import { aggregateDefectSeasonality, generateSeasonalityHtml, type SeasonalityResult } from './defect-seasonality.js';
-import type { FailureClassification } from './metrics.js';
+import type { FailureClassification } from './types/data-hub.js';
 import { nonNull } from './test-utils.js';
 import * as reportStyles from './report-styles.js';
 

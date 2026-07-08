@@ -334,7 +334,7 @@ async function handleBugReportFlow(_m: GitProvider): Promise<boolean> {
  */
 function _loadProjectRunsHelper(): {
     projectRuns: MetricsRun[];
-    failureClassifications: import('../shared/metrics.js').FailureClassification[];
+    failureClassifications: import('../shared/types/data-hub.js').FailureClassification[];
     usingGitFallback: boolean;
 } | null {
     if (!currentProjectName) {

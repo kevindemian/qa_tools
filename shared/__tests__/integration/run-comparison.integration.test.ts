@@ -1,5 +1,5 @@
 import { beforeEach, describe, expect, it, vi } from 'vitest';
-import type { MetricsRun } from '../../metrics.js';
+import type { MetricsRun } from '../../types/data-hub.js';
 import { nonNull } from '../../test-utils.js';
 
 vi.mock('../../llm-client.js', () => ({

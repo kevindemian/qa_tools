@@ -5,7 +5,7 @@
 import * as reportStyles from './report-styles.js';
 import { calculatePipelineCost, generatePipelineCostHtml } from './pipeline-cost.js';
 import type { PipelineCostResult } from './pipeline-cost.js';
-import type { MetricsRun } from './metrics.js';
+import type { MetricsRun } from './types/data-hub.js';
 import { nullAs, undefinedAs, nonNull } from './test-utils.js';
 
 function makeRun(overrides?: Partial<MetricsRun>): MetricsRun {

@@ -10,7 +10,7 @@
  */
 import { describe, it, expect } from 'vitest';
 import { calculateHealthScore } from '../health-score.js';
-import type { MetricsStore } from '../metrics.js';
+import type { MetricsStore } from '../types/data-hub.js';
 
 describe('CalculateHealthScore — pass rate consistency', () => {
     it('pass rate excludes skipped tests from denominator', () => {

@@ -114,7 +114,7 @@ export async function handleChangeProject(names: string[]): Promise<void> {
     }
 }
 
-function buildTestDurationMap(store: import('../shared/metrics.js').MetricsStore): Record<string, number[]> {
+function buildTestDurationMap(store: import('../shared/types/data-hub.js').MetricsStore): Record<string, number[]> {
     const testDurationMap: Record<string, number[]> = {};
     for (const run of store.runs) {
         for (const t of run.tests) {
@@ -127,8 +127,8 @@ function buildTestDurationMap(store: import('../shared/metrics.js').MetricsStore
 }
 
 interface GitFallbackResult {
-    projectRuns: import('../shared/metrics.js').MetricsRun[];
-    failureClassifications: import('../shared/metrics.js').FailureClassification[];
+    projectRuns: import('../shared/types/data-hub.js').MetricsRun[];
+    failureClassifications: import('../shared/types/data-hub.js').FailureClassification[];
 }
 
 function resolveGitFallback(): GitFallbackResult | null {

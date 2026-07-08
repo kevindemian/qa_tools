@@ -15,7 +15,8 @@ import {
     type TestRunTab,
     type ReportOptions,
 } from '../../shared/report-generator.js';
-import { loadMetrics, calculateFlakiness } from '../../shared/metrics.js';
+import { createDataHubPersistence } from '../../shared/data-hub/persistence.js';
+import { calcFlakinessEntries } from '../../shared/data-hub/compute/flakiness-entries.js';
 import { analyzeFailuresWithReport, type LlmContext } from '../../shared/failure-analysis.js';
 import { collectAutomated, interactiveBugReportFlow } from '../../shared/bug-report.js';
 import { openWithFallback } from '../../shared/open.js';
@@ -150,9 +151,10 @@ async function _postPrComment(stats: ParseResult['stats']): Promise<void> {
 
 function _loadFlakinessMap(c: CommandContext): Record<string, number> {
     try {
-        const store = loadMetrics();
+        const persistence = createDataHubPersistence(c.ctx.project_name);
+        const store = persistence.loadMetricsStore();
         const projectRuns = store.runs.filter((r) => r.project === c.ctx.project_name);
-        const flakyEntries = projectRuns.length >= 2 ? calculateFlakiness({ runs: projectRuns }, 2) : [];
+        const flakyEntries = projectRuns.length >= 2 ? calcFlakinessEntries(projectRuns) : [];
         const map: Record<string, number> = {};
         for (const entry of flakyEntries) {
             map[entry.title] = entry.rate;

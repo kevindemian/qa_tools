@@ -12,7 +12,7 @@
 import * as fc from 'fast-check';
 import { describe, expect, it } from 'vitest';
 import { buildTraceabilityMatrix, generateTraceabilityHtml } from '../traceability-matrix.js';
-import type { MetricsStore } from '../metrics.js';
+import type { MetricsStore } from '../types/data-hub.js';
 
 vi.mock('../logger', () => ({
     rootLogger: { error: vi.fn(), warn: vi.fn(), info: vi.fn(), child: vi.fn().mockReturnThis() },
