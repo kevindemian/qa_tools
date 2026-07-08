@@ -143,7 +143,7 @@ describe('Case19', () => {
                 baseContext.jiraResource,
                 baseContext.ctx.project_name,
             );
-            expect(prompt.tableView).toHaveBeenCalledWith();
+            expect(prompt.tableView).toHaveBeenCalledWith(expect.any(Array), expect.any(Array));
         });
 
         it('shows warning when no runs exist', async () => {

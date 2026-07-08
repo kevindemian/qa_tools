@@ -41,6 +41,28 @@ const mockCiData = vi.hoisted(() => ({
     persistCurrentRun: vi.fn(),
     ensureDataHubSync: vi.fn(),
 }));
+const mockPersistence = vi.hoisted(() => ({
+    createDataHubPersistence: vi.fn().mockReturnValue({
+        loadMetricsStore: vi.fn().mockReturnValue({ runs: [] }),
+        saveParseResult: vi.fn(),
+        saveRun: vi.fn(),
+        loadRun: vi.fn().mockReturnValue(null),
+        saveCoverageSnapshot: vi.fn(),
+        loadCoverageHistory: vi.fn().mockReturnValue([]),
+        saveFailureClassification: vi.fn(),
+        loadFailureClassifications: vi.fn().mockReturnValue([]),
+        saveMetricsStore: vi.fn(),
+        saveQualityMetrics: vi.fn(),
+        loadQualityMetricsHistory: vi.fn().mockReturnValue([]),
+        flush: vi.fn(),
+    }),
+}));
+const mockFlakiness = vi.hoisted(() => ({
+    calcFlakinessEntries: vi.fn().mockReturnValue([]),
+}));
+const mockTrends = vi.hoisted(() => ({
+    calcMetricsTrends: vi.fn().mockReturnValue([]),
+}));
 
 vi.mock('fs', () => ({
     default: { mkdirSync: vi.fn(), writeFileSync: vi.fn(), existsSync: vi.fn() },
@@ -63,6 +85,9 @@ vi.mock('../feature-config.js', () => ({
     isFlakySkipped: mockFeatureConfig.isFlakySkipped,
 }));
 vi.mock('../ci-data.js', () => mockCiData);
+vi.mock('../data-hub/persistence.js', () => mockPersistence);
+vi.mock('../data-hub/compute/flakiness-entries.js', () => mockFlakiness);
+vi.mock('../data-hub/compute/metrics-trends.js', () => mockTrends);
 
 import fs from 'node:fs';
 import { main } from '../pr-report-core.js';

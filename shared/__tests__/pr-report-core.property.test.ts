@@ -14,6 +14,29 @@ const mockPRComment = vi.hoisted(() => ({ postPrComment: vi.fn() }));
 const mockHtml = vi.hoisted(() => ({ generateHtmlReport: vi.fn() }));
 const mockCoverage = vi.hoisted(() => ({ resolveCoverage: vi.fn(), readIstanbulCoverage: vi.fn() }));
 
+const mockPersistence = vi.hoisted(() => ({
+    createDataHubPersistence: vi.fn().mockReturnValue({
+        loadMetricsStore: vi.fn().mockReturnValue({ runs: [] }),
+        saveParseResult: vi.fn(),
+        saveRun: vi.fn(),
+        loadRun: vi.fn().mockReturnValue(null),
+        saveCoverageSnapshot: vi.fn(),
+        loadCoverageHistory: vi.fn().mockReturnValue([]),
+        saveFailureClassification: vi.fn(),
+        loadFailureClassifications: vi.fn().mockReturnValue([]),
+        saveMetricsStore: vi.fn(),
+        saveQualityMetrics: vi.fn(),
+        loadQualityMetricsHistory: vi.fn().mockReturnValue([]),
+        flush: vi.fn(),
+    }),
+}));
+const mockFlakiness = vi.hoisted(() => ({
+    calcFlakinessEntries: vi.fn().mockReturnValue([]),
+}));
+const mockTrends = vi.hoisted(() => ({
+    calcMetricsTrends: vi.fn().mockReturnValue([]),
+}));
+
 vi.mock('fs', () => ({
     default: { mkdirSync: vi.fn(), writeFileSync: vi.fn() },
     mkdirSync: vi.fn(),
@@ -26,6 +49,9 @@ vi.mock('../github-check-run.js', () => mockCheckRun);
 vi.mock('../github-pr-comment.js', () => mockPRComment);
 vi.mock('../report-html.js', () => mockHtml);
 vi.mock('../coverage-source.js', () => mockCoverage);
+vi.mock('../data-hub/persistence.js', () => mockPersistence);
+vi.mock('../data-hub/compute/flakiness-entries.js', () => mockFlakiness);
+vi.mock('../data-hub/compute/metrics-trends.js', () => mockTrends);
 
 import { generatePrReport, computeDiffComparison } from '../pr-report-core.js';
 import type { FlatTest } from '../result_parser.js';
