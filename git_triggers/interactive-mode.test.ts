@@ -10,9 +10,15 @@ vi.mock('../shared/cli_base', () => ({
 }));
 vi.mock('../shared/config', () => ({ default: { get: vi.fn(() => '') }, __esModule: true }));
 vi.mock('../shared/splash', () => ({ showSplash: vi.fn() }));
-vi.mock('../shared/metrics', () => ({
-    loadMetrics: vi.fn(() => ({ runs: [] })),
-    calculateFlakiness: vi.fn(() => []),
+vi.mock('../shared/data-hub/persistence.js', () => ({
+    createDataHubPersistence: vi.fn().mockReturnValue({
+        loadMetricsStore: vi.fn().mockReturnValue({ runs: [] }),
+        saveMetricsStore: vi.fn(),
+    }),
+}));
+
+vi.mock('../shared/data-hub/compute/flakiness-entries.js', () => ({
+    calcFlakinessEntries: vi.fn().mockReturnValue([]),
 }));
 vi.mock('../shared/run-comparison', () => ({ compareRuns: vi.fn(() => '') }));
 vi.mock('../shared/health-score', () => ({
@@ -219,13 +225,14 @@ import { load } from '../shared/state.js';
 import { ensureDirs, registerCleanup } from '../shared/temp-dir.js';
 import { openWithFallback } from '../shared/open.js';
 import { showDashboardMenu } from '../shared/dashboard-menu.js';
-
+import { createDataHubPersistence } from '../shared/data-hub/persistence.js';
 const mockWarn = vi.mocked(warn);
 const mockPrintError = vi.mocked(printError);
 const mockLoad = vi.mocked(load);
 const mockOpenWithFallback = vi.mocked(openWithFallback);
 const mockSetupSigint = vi.mocked(setupSigint);
 const mockShowDashboardMenu = vi.mocked(showDashboardMenu);
+const mockPersistence = vi.mocked(createDataHubPersistence);
 
 describe('Interactive-mode test exports', () => {
     beforeEach(() => {
@@ -444,61 +451,63 @@ describe('Interactive-mode test exports', () => {
             expect(mockWarn).toHaveBeenCalledWith('Nenhum projeto selecionado.');
         });
 
-        it('returns data when project has runs', async () => {
+        it('returns data when project has runs', () => {
             expect.hasAssertions();
 
             mockSessionState.currentProjectName = 'proj1';
-            const metricsMod = await import('../shared/metrics.js');
-            (metricsMod.loadMetrics as ReturnType<typeof vi.fn>).mockReturnValue({
-                runs: [
-                    {
-                        project: 'proj1',
-                        timestamp: '2024-01-01',
-                        total: 1,
-                        passed: 1,
-                        failed: 0,
-                        skipped: 0,
-                        duration: 10,
-                        tests: [],
-                    },
-                    {
-                        project: 'proj1',
-                        timestamp: '2024-01-02',
-                        total: 1,
-                        passed: 1,
-                        failed: 0,
-                        skipped: 0,
-                        duration: 10,
-                        tests: [],
-                    },
-                ],
-                failureClassifications: [],
-            });
+            mockPersistence.mockReturnValue({
+                loadMetricsStore: vi.fn().mockReturnValue({
+                    runs: [
+                        {
+                            project: 'proj1',
+                            timestamp: '2024-01-01',
+                            total: 1,
+                            passed: 1,
+                            failed: 0,
+                            skipped: 0,
+                            duration: 10,
+                            tests: [],
+                        },
+                        {
+                            project: 'proj1',
+                            timestamp: '2024-01-02',
+                            total: 1,
+                            passed: 1,
+                            failed: 0,
+                            skipped: 0,
+                            duration: 10,
+                            tests: [],
+                        },
+                    ],
+                }),
+                saveMetricsStore: vi.fn(),
+            } as never);
             const result = _testExports._loadProjectRunsHelper();
 
             expect(result && result.projectRuns.length).toBe(2);
         });
 
-        it('returns null when git fallback has <2 runs', async () => {
+        it('returns null when git fallback has <2 runs', () => {
             expect.hasAssertions();
 
             mockSessionState.currentProjectName = 'proj1';
-            const metricsMod = await import('../shared/metrics.js');
-            (metricsMod.loadMetrics as ReturnType<typeof vi.fn>).mockReturnValue({
-                runs: [
-                    {
-                        project: 'proj1',
-                        timestamp: '',
-                        total: 0,
-                        passed: 0,
-                        failed: 0,
-                        skipped: 0,
-                        duration: 0,
-                        tests: [],
-                    },
-                ],
-                failureClassifications: [],
-            });
+            mockPersistence.mockReturnValue({
+                loadMetricsStore: vi.fn().mockReturnValue({
+                    runs: [
+                        {
+                            project: 'proj1',
+                            timestamp: '',
+                            total: 0,
+                            passed: 0,
+                            failed: 0,
+                            skipped: 0,
+                            duration: 0,
+                            tests: [],
+                        },
+                    ],
+                }),
+                saveMetricsStore: vi.fn(),
+            } as never);
             const result = _testExports._loadProjectRunsHelper();
 
             expect(result).toBeNull();
@@ -509,22 +518,23 @@ describe('Interactive-mode test exports', () => {
             expect.hasAssertions();
 
             mockSessionState.currentProjectName = 'proj1';
-            const metricsMod = await import('../shared/metrics.js');
-            (metricsMod.loadMetrics as ReturnType<typeof vi.fn>).mockReturnValue({
-                runs: [
-                    {
-                        project: 'proj1',
-                        timestamp: '',
-                        total: 0,
-                        passed: 0,
-                        failed: 0,
-                        skipped: 0,
-                        duration: 0,
-                        tests: [],
-                    },
-                ],
-                failureClassifications: [],
-            });
+            mockPersistence.mockReturnValue({
+                loadMetricsStore: vi.fn().mockReturnValue({
+                    runs: [
+                        {
+                            project: 'proj1',
+                            timestamp: '',
+                            total: 0,
+                            passed: 0,
+                            failed: 0,
+                            skipped: 0,
+                            duration: 0,
+                            tests: [],
+                        },
+                    ],
+                }),
+                saveMetricsStore: vi.fn(),
+            } as never);
             const gitMod = await import('../shared/git-metrics-adapter.js');
             (gitMod.generateGitMetricsRuns as ReturnType<typeof vi.fn>).mockReturnValue([
                 {
@@ -651,32 +661,33 @@ describe('Interactive-mode test exports', () => {
             expect.hasAssertions();
 
             mockSessionState.currentProjectName = 'proj1';
-            const metricsMod = await import('../shared/metrics.js');
-            (metricsMod.loadMetrics as ReturnType<typeof vi.fn>).mockReturnValue({
-                runs: [
-                    {
-                        project: 'proj1',
-                        timestamp: '2024-01-01',
-                        total: 1,
-                        passed: 1,
-                        failed: 0,
-                        skipped: 0,
-                        duration: 10,
-                        tests: [],
-                    },
-                    {
-                        project: 'proj1',
-                        timestamp: '2024-01-02',
-                        total: 1,
-                        passed: 1,
-                        failed: 0,
-                        skipped: 0,
-                        duration: 10,
-                        tests: [],
-                    },
-                ],
-                failureClassifications: [],
-            });
+            mockPersistence.mockReturnValue({
+                loadMetricsStore: vi.fn().mockReturnValue({
+                    runs: [
+                        {
+                            project: 'proj1',
+                            timestamp: '2024-01-01',
+                            total: 1,
+                            passed: 1,
+                            failed: 0,
+                            skipped: 0,
+                            duration: 10,
+                            tests: [],
+                        },
+                        {
+                            project: 'proj1',
+                            timestamp: '2024-01-02',
+                            total: 1,
+                            passed: 1,
+                            failed: 0,
+                            skipped: 0,
+                            duration: 10,
+                            tests: [],
+                        },
+                    ],
+                }),
+                saveMetricsStore: vi.fn(),
+            } as never);
             const runCompMod = await import('../shared/run-comparison.js');
             (runCompMod.compareRuns as ReturnType<typeof vi.fn>).mockReturnValue('comparison');
             const result = await _testExports.handleRunComparison();
@@ -688,22 +699,23 @@ describe('Interactive-mode test exports', () => {
             expect.hasAssertions();
 
             mockSessionState.currentProjectName = 'proj1';
-            const metricsMod = await import('../shared/metrics.js');
-            (metricsMod.loadMetrics as ReturnType<typeof vi.fn>).mockReturnValue({
-                runs: [
-                    {
-                        project: 'proj1',
-                        timestamp: '',
-                        total: 0,
-                        passed: 0,
-                        failed: 0,
-                        skipped: 0,
-                        duration: 0,
-                        tests: [],
-                    },
-                ],
-                failureClassifications: [],
-            });
+            mockPersistence.mockReturnValue({
+                loadMetricsStore: vi.fn().mockReturnValue({
+                    runs: [
+                        {
+                            project: 'proj1',
+                            timestamp: '',
+                            total: 0,
+                            passed: 0,
+                            failed: 0,
+                            skipped: 0,
+                            duration: 0,
+                            tests: [],
+                        },
+                    ],
+                }),
+                saveMetricsStore: vi.fn(),
+            } as never);
             const result = await _testExports.handleRunComparison();
 
             expect(result).toBeFalsy();
@@ -737,32 +749,33 @@ describe('Interactive-mode test exports', () => {
             expect.hasAssertions();
 
             mockSessionState.currentProjectName = 'proj1';
-            const metricsMod = await import('../shared/metrics.js');
-            (metricsMod.loadMetrics as ReturnType<typeof vi.fn>).mockReturnValue({
-                runs: [
-                    {
-                        project: 'proj1',
-                        timestamp: '2024-01-01',
-                        total: 1,
-                        passed: 1,
-                        failed: 0,
-                        skipped: 0,
-                        duration: 10,
-                        tests: [],
-                    },
-                    {
-                        project: 'proj1',
-                        timestamp: '2024-01-02',
-                        total: 1,
-                        passed: 1,
-                        failed: 0,
-                        skipped: 0,
-                        duration: 10,
-                        tests: [],
-                    },
-                ],
-                failureClassifications: [],
-            });
+            mockPersistence.mockReturnValue({
+                loadMetricsStore: vi.fn().mockReturnValue({
+                    runs: [
+                        {
+                            project: 'proj1',
+                            timestamp: '2024-01-01',
+                            total: 1,
+                            passed: 1,
+                            failed: 0,
+                            skipped: 0,
+                            duration: 10,
+                            tests: [],
+                        },
+                        {
+                            project: 'proj1',
+                            timestamp: '2024-01-02',
+                            total: 1,
+                            passed: 1,
+                            failed: 0,
+                            skipped: 0,
+                            duration: 10,
+                            tests: [],
+                        },
+                    ],
+                }),
+                saveMetricsStore: vi.fn(),
+            } as never);
             await _testExports._dashboardReleaseScore();
 
             expect(mockOpenWithFallback).toHaveBeenCalledWith(
@@ -826,32 +839,33 @@ describe('Interactive-mode test exports', () => {
             expect.hasAssertions();
 
             mockSessionState.currentProjectName = 'proj1';
-            const metricsMod = await import('../shared/metrics.js');
-            (metricsMod.loadMetrics as ReturnType<typeof vi.fn>).mockReturnValue({
-                runs: [
-                    {
-                        project: 'proj1',
-                        timestamp: '2024-01-01',
-                        total: 1,
-                        passed: 1,
-                        failed: 0,
-                        skipped: 0,
-                        duration: 10,
-                        tests: [],
-                    },
-                    {
-                        project: 'proj1',
-                        timestamp: '2024-01-02',
-                        total: 1,
-                        passed: 1,
-                        failed: 0,
-                        skipped: 0,
-                        duration: 10,
-                        tests: [],
-                    },
-                ],
-                failureClassifications: [],
-            });
+            mockPersistence.mockReturnValue({
+                loadMetricsStore: vi.fn().mockReturnValue({
+                    runs: [
+                        {
+                            project: 'proj1',
+                            timestamp: '2024-01-01',
+                            total: 1,
+                            passed: 1,
+                            failed: 0,
+                            skipped: 0,
+                            duration: 10,
+                            tests: [],
+                        },
+                        {
+                            project: 'proj1',
+                            timestamp: '2024-01-02',
+                            total: 1,
+                            passed: 1,
+                            failed: 0,
+                            skipped: 0,
+                            duration: 10,
+                            tests: [],
+                        },
+                    ],
+                }),
+                saveMetricsStore: vi.fn(),
+            } as never);
             await _testExports._dashboardPipelineCost();
 
             expect(mockOpenWithFallback).toHaveBeenCalledWith(
@@ -881,32 +895,33 @@ describe('Interactive-mode test exports', () => {
             expect.hasAssertions();
 
             mockSessionState.currentProjectName = 'proj1';
-            const metricsMod = await import('../shared/metrics.js');
-            (metricsMod.loadMetrics as ReturnType<typeof vi.fn>).mockReturnValue({
-                runs: [
-                    {
-                        project: 'proj1',
-                        timestamp: '',
-                        total: 0,
-                        passed: 0,
-                        failed: 0,
-                        skipped: 0,
-                        duration: 0,
-                        tests: [],
-                    },
-                    {
-                        project: 'proj1',
-                        timestamp: '',
-                        total: 0,
-                        passed: 0,
-                        failed: 0,
-                        skipped: 0,
-                        duration: 0,
-                        tests: [],
-                    },
-                ],
-                failureClassifications: [],
-            });
+            mockPersistence.mockReturnValue({
+                loadMetricsStore: vi.fn().mockReturnValue({
+                    runs: [
+                        {
+                            project: 'proj1',
+                            timestamp: '',
+                            total: 0,
+                            passed: 0,
+                            failed: 0,
+                            skipped: 0,
+                            duration: 0,
+                            tests: [],
+                        },
+                        {
+                            project: 'proj1',
+                            timestamp: '',
+                            total: 0,
+                            passed: 0,
+                            failed: 0,
+                            skipped: 0,
+                            duration: 0,
+                            tests: [],
+                        },
+                    ],
+                }),
+                saveMetricsStore: vi.fn(),
+            } as never);
             await _testExports._dashboardDefectTrends();
 
             expect(mockOpenWithFallback).toHaveBeenCalledWith(
@@ -922,32 +937,33 @@ describe('Interactive-mode test exports', () => {
             expect.hasAssertions();
 
             mockSessionState.currentProjectName = 'proj1';
-            const metricsMod = await import('../shared/metrics.js');
-            (metricsMod.loadMetrics as ReturnType<typeof vi.fn>).mockReturnValue({
-                runs: [
-                    {
-                        project: 'proj1',
-                        timestamp: '',
-                        total: 0,
-                        passed: 0,
-                        failed: 0,
-                        skipped: 0,
-                        duration: 0,
-                        tests: [],
-                    },
-                    {
-                        project: 'proj1',
-                        timestamp: '',
-                        total: 0,
-                        passed: 0,
-                        failed: 0,
-                        skipped: 0,
-                        duration: 0,
-                        tests: [],
-                    },
-                ],
-                failureClassifications: [],
-            });
+            mockPersistence.mockReturnValue({
+                loadMetricsStore: vi.fn().mockReturnValue({
+                    runs: [
+                        {
+                            project: 'proj1',
+                            timestamp: '',
+                            total: 0,
+                            passed: 0,
+                            failed: 0,
+                            skipped: 0,
+                            duration: 0,
+                            tests: [],
+                        },
+                        {
+                            project: 'proj1',
+                            timestamp: '',
+                            total: 0,
+                            passed: 0,
+                            failed: 0,
+                            skipped: 0,
+                            duration: 0,
+                            tests: [],
+                        },
+                    ],
+                }),
+                saveMetricsStore: vi.fn(),
+            } as never);
             await _testExports._dashboardTraceabilityMatrix();
 
             expect(mockOpenWithFallback).toHaveBeenCalledWith(
@@ -963,32 +979,33 @@ describe('Interactive-mode test exports', () => {
             expect.hasAssertions();
 
             mockSessionState.currentProjectName = 'proj1';
-            const metricsMod = await import('../shared/metrics.js');
-            (metricsMod.loadMetrics as ReturnType<typeof vi.fn>).mockReturnValue({
-                runs: [
-                    {
-                        project: 'proj1',
-                        timestamp: '',
-                        total: 0,
-                        passed: 0,
-                        failed: 0,
-                        skipped: 0,
-                        duration: 0,
-                        tests: [],
-                    },
-                    {
-                        project: 'proj1',
-                        timestamp: '',
-                        total: 0,
-                        passed: 0,
-                        failed: 0,
-                        skipped: 0,
-                        duration: 0,
-                        tests: [],
-                    },
-                ],
-                failureClassifications: [],
-            });
+            mockPersistence.mockReturnValue({
+                loadMetricsStore: vi.fn().mockReturnValue({
+                    runs: [
+                        {
+                            project: 'proj1',
+                            timestamp: '',
+                            total: 0,
+                            passed: 0,
+                            failed: 0,
+                            skipped: 0,
+                            duration: 0,
+                            tests: [],
+                        },
+                        {
+                            project: 'proj1',
+                            timestamp: '',
+                            total: 0,
+                            passed: 0,
+                            failed: 0,
+                            skipped: 0,
+                            duration: 0,
+                            tests: [],
+                        },
+                    ],
+                }),
+                saveMetricsStore: vi.fn(),
+            } as never);
             await _testExports._dashboardSeasonality();
 
             expect(mockOpenWithFallback).toHaveBeenCalledWith(
@@ -1004,32 +1021,33 @@ describe('Interactive-mode test exports', () => {
             expect.hasAssertions();
 
             mockSessionState.currentProjectName = 'proj1';
-            const metricsMod = await import('../shared/metrics.js');
-            (metricsMod.loadMetrics as ReturnType<typeof vi.fn>).mockReturnValue({
-                runs: [
-                    {
-                        project: 'proj1',
-                        timestamp: '',
-                        total: 0,
-                        passed: 0,
-                        failed: 0,
-                        skipped: 0,
-                        duration: 0,
-                        tests: [],
-                    },
-                    {
-                        project: 'proj1',
-                        timestamp: '',
-                        total: 0,
-                        passed: 0,
-                        failed: 0,
-                        skipped: 0,
-                        duration: 0,
-                        tests: [],
-                    },
-                ],
-                failureClassifications: [],
-            });
+            mockPersistence.mockReturnValue({
+                loadMetricsStore: vi.fn().mockReturnValue({
+                    runs: [
+                        {
+                            project: 'proj1',
+                            timestamp: '',
+                            total: 0,
+                            passed: 0,
+                            failed: 0,
+                            skipped: 0,
+                            duration: 0,
+                            tests: [],
+                        },
+                        {
+                            project: 'proj1',
+                            timestamp: '',
+                            total: 0,
+                            passed: 0,
+                            failed: 0,
+                            skipped: 0,
+                            duration: 0,
+                            tests: [],
+                        },
+                    ],
+                }),
+                saveMetricsStore: vi.fn(),
+            } as never);
             await _testExports._dashboardSilentRegression();
 
             expect(mockOpenWithFallback).toHaveBeenCalledWith(
@@ -1059,32 +1077,33 @@ describe('Interactive-mode test exports', () => {
             expect.hasAssertions();
 
             mockSessionState.currentProjectName = 'proj1';
-            const metricsMod = await import('../shared/metrics.js');
-            (metricsMod.loadMetrics as ReturnType<typeof vi.fn>).mockReturnValue({
-                runs: [
-                    {
-                        project: 'proj1',
-                        timestamp: '',
-                        total: 0,
-                        passed: 0,
-                        failed: 0,
-                        skipped: 0,
-                        duration: 0,
-                        tests: [],
-                    },
-                    {
-                        project: 'proj1',
-                        timestamp: '',
-                        total: 0,
-                        passed: 0,
-                        failed: 0,
-                        skipped: 0,
-                        duration: 0,
-                        tests: [],
-                    },
-                ],
-                failureClassifications: [],
-            });
+            mockPersistence.mockReturnValue({
+                loadMetricsStore: vi.fn().mockReturnValue({
+                    runs: [
+                        {
+                            project: 'proj1',
+                            timestamp: '',
+                            total: 0,
+                            passed: 0,
+                            failed: 0,
+                            skipped: 0,
+                            duration: 0,
+                            tests: [],
+                        },
+                        {
+                            project: 'proj1',
+                            timestamp: '',
+                            total: 0,
+                            passed: 0,
+                            failed: 0,
+                            skipped: 0,
+                            duration: 0,
+                            tests: [],
+                        },
+                    ],
+                }),
+                saveMetricsStore: vi.fn(),
+            } as never);
             await _testExports._dashboardBenchmark();
 
             expect(mockOpenWithFallback).toHaveBeenCalledWith(
@@ -1100,32 +1119,33 @@ describe('Interactive-mode test exports', () => {
             expect.hasAssertions();
 
             mockSessionState.currentProjectName = 'proj1';
-            const metricsMod = await import('../shared/metrics.js');
-            (metricsMod.loadMetrics as ReturnType<typeof vi.fn>).mockReturnValue({
-                runs: [
-                    {
-                        project: 'proj1',
-                        timestamp: '',
-                        total: 0,
-                        passed: 0,
-                        failed: 0,
-                        skipped: 0,
-                        duration: 0,
-                        tests: [],
-                    },
-                    {
-                        project: 'proj1',
-                        timestamp: '',
-                        total: 0,
-                        passed: 0,
-                        failed: 0,
-                        skipped: 0,
-                        duration: 0,
-                        tests: [],
-                    },
-                ],
-                failureClassifications: [{ testTitle: 't1', category: 'cat1', timestamp: '' }],
-            });
+            mockPersistence.mockReturnValue({
+                loadMetricsStore: vi.fn().mockReturnValue({
+                    runs: [
+                        {
+                            project: 'proj1',
+                            timestamp: '',
+                            total: 0,
+                            passed: 0,
+                            failed: 0,
+                            skipped: 0,
+                            duration: 0,
+                            tests: [],
+                        },
+                        {
+                            project: 'proj1',
+                            timestamp: '',
+                            total: 0,
+                            passed: 0,
+                            failed: 0,
+                            skipped: 0,
+                            duration: 0,
+                            tests: [],
+                        },
+                    ],
+                }),
+                saveMetricsStore: vi.fn(),
+            } as never);
             await _testExports._dashboardDeveloperProfile();
 
             expect(mockOpenWithFallback).toHaveBeenCalledWith(
@@ -1141,32 +1161,33 @@ describe('Interactive-mode test exports', () => {
             expect.hasAssertions();
 
             mockSessionState.currentProjectName = 'proj1';
-            const metricsMod = await import('../shared/metrics.js');
-            (metricsMod.loadMetrics as ReturnType<typeof vi.fn>).mockReturnValue({
-                runs: [
-                    {
-                        project: 'proj1',
-                        timestamp: '',
-                        total: 0,
-                        passed: 0,
-                        failed: 0,
-                        skipped: 0,
-                        duration: 0,
-                        tests: [],
-                    },
-                    {
-                        project: 'proj1',
-                        timestamp: '',
-                        total: 0,
-                        passed: 0,
-                        failed: 0,
-                        skipped: 0,
-                        duration: 0,
-                        tests: [],
-                    },
-                ],
-                failureClassifications: [],
-            });
+            mockPersistence.mockReturnValue({
+                loadMetricsStore: vi.fn().mockReturnValue({
+                    runs: [
+                        {
+                            project: 'proj1',
+                            timestamp: '',
+                            total: 0,
+                            passed: 0,
+                            failed: 0,
+                            skipped: 0,
+                            duration: 0,
+                            tests: [],
+                        },
+                        {
+                            project: 'proj1',
+                            timestamp: '',
+                            total: 0,
+                            passed: 0,
+                            failed: 0,
+                            skipped: 0,
+                            duration: 0,
+                            tests: [],
+                        },
+                    ],
+                }),
+                saveMetricsStore: vi.fn(),
+            } as never);
             await _testExports._dashboardSuiteOptimization();
 
             expect(mockOpenWithFallback).toHaveBeenCalledWith(
@@ -1182,32 +1203,33 @@ describe('Interactive-mode test exports', () => {
             expect.hasAssertions();
 
             mockSessionState.currentProjectName = 'proj1';
-            const metricsMod = await import('../shared/metrics.js');
-            (metricsMod.loadMetrics as ReturnType<typeof vi.fn>).mockReturnValue({
-                runs: [
-                    {
-                        project: 'proj1',
-                        timestamp: '',
-                        total: 0,
-                        passed: 0,
-                        failed: 0,
-                        skipped: 0,
-                        duration: 0,
-                        tests: [],
-                    },
-                    {
-                        project: 'proj1',
-                        timestamp: '',
-                        total: 0,
-                        passed: 0,
-                        failed: 0,
-                        skipped: 0,
-                        duration: 0,
-                        tests: [],
-                    },
-                ],
-                failureClassifications: [],
-            });
+            mockPersistence.mockReturnValue({
+                loadMetricsStore: vi.fn().mockReturnValue({
+                    runs: [
+                        {
+                            project: 'proj1',
+                            timestamp: '',
+                            total: 0,
+                            passed: 0,
+                            failed: 0,
+                            skipped: 0,
+                            duration: 0,
+                            tests: [],
+                        },
+                        {
+                            project: 'proj1',
+                            timestamp: '',
+                            total: 0,
+                            passed: 0,
+                            failed: 0,
+                            skipped: 0,
+                            duration: 0,
+                            tests: [],
+                        },
+                    ],
+                }),
+                saveMetricsStore: vi.fn(),
+            } as never);
             await _testExports._dashboardIncidentReport();
 
             expect(mockOpenWithFallback).toHaveBeenCalledWith(
@@ -1223,32 +1245,33 @@ describe('Interactive-mode test exports', () => {
             expect.hasAssertions();
 
             mockSessionState.currentProjectName = 'proj1';
-            const metricsMod = await import('../shared/metrics.js');
-            (metricsMod.loadMetrics as ReturnType<typeof vi.fn>).mockReturnValue({
-                runs: [
-                    {
-                        project: 'proj1',
-                        timestamp: '',
-                        total: 0,
-                        passed: 0,
-                        failed: 0,
-                        skipped: 0,
-                        duration: 0,
-                        tests: [],
-                    },
-                    {
-                        project: 'proj1',
-                        timestamp: '',
-                        total: 0,
-                        passed: 0,
-                        failed: 0,
-                        skipped: 0,
-                        duration: 0,
-                        tests: [],
-                    },
-                ],
-                failureClassifications: [],
-            });
+            mockPersistence.mockReturnValue({
+                loadMetricsStore: vi.fn().mockReturnValue({
+                    runs: [
+                        {
+                            project: 'proj1',
+                            timestamp: '',
+                            total: 0,
+                            passed: 0,
+                            failed: 0,
+                            skipped: 0,
+                            duration: 0,
+                            tests: [],
+                        },
+                        {
+                            project: 'proj1',
+                            timestamp: '',
+                            total: 0,
+                            passed: 0,
+                            failed: 0,
+                            skipped: 0,
+                            duration: 0,
+                            tests: [],
+                        },
+                    ],
+                }),
+                saveMetricsStore: vi.fn(),
+            } as never);
             await _testExports._dashboardImpactAlert();
 
             expect(mockOpenWithFallback).toHaveBeenCalledWith(
