@@ -1,18 +1,40 @@
 import { runQualityGate, formatQualityGateJson, formatQualityGateText } from './quality-gate.js';
 
-vi.mock('./metrics.js', () => ({
-    loadMetrics: vi.fn(),
-    calculateFlakiness: vi.fn(),
+vi.mock('./data-hub/persistence.js', () => ({
+    createDataHubPersistence: vi.fn(),
+}));
+
+vi.mock('./data-hub/compute/flakiness-entries.js', () => ({
+    calcFlakinessEntries: vi.fn(),
 }));
 
 vi.mock('./logger.js', () => ({
     rootLogger: { error: vi.fn() },
 }));
 
-import { loadMetrics, calculateFlakiness } from './metrics.js';
+import * as persistenceModule from './data-hub/persistence.js';
+import * as flakinessModule from './data-hub/compute/flakiness-entries.js';
 
-const mockLoadMetrics = vi.mocked(loadMetrics);
-const mockCalcFlakiness = vi.mocked(calculateFlakiness);
+const mockCreateDataHubPersistence = vi.mocked(persistenceModule.createDataHubPersistence);
+const mockCalcFlakinessEntries = vi.mocked(flakinessModule.calcFlakinessEntries);
+
+function createMockPersistence(overrides: Partial<ReturnType<typeof persistenceModule.createDataHubPersistence>> = {}) {
+    return {
+        saveRun: vi.fn(),
+        loadRun: vi.fn().mockReturnValue(null),
+        saveCoverageSnapshot: vi.fn(),
+        loadCoverageHistory: vi.fn().mockReturnValue([]),
+        saveFailureClassification: vi.fn(),
+        loadFailureClassifications: vi.fn().mockReturnValue([]),
+        saveMetricsStore: vi.fn(),
+        loadMetricsStore: vi.fn().mockReturnValue({ runs: [], coverageHistory: [] }),
+        saveParseResult: vi.fn(),
+        saveQualityMetrics: vi.fn(),
+        loadQualityMetricsHistory: vi.fn().mockReturnValue([]),
+        flush: vi.fn(),
+        ...overrides,
+    };
+}
 
 describe('RunQualityGate', () => {
     beforeEach(() => {
@@ -20,7 +42,11 @@ describe('RunQualityGate', () => {
     });
 
     it('returns fail when no metrics data exists', () => {
-        mockLoadMetrics.mockReturnValue({ runs: [] });
+        mockCreateDataHubPersistence.mockReturnValue(
+            createMockPersistence({
+                loadMetricsStore: vi.fn().mockReturnValue({ runs: [], coverageHistory: [] }),
+            }),
+        );
         const result = runQualityGate();
 
         expect(result.overall).toBe('fail');
@@ -31,33 +57,37 @@ describe('RunQualityGate', () => {
     });
 
     it('returns pass when all gates pass', () => {
-        mockLoadMetrics.mockReturnValue({
-            runs: [
-                {
-                    timestamp: '2025-01-01T00:00:00.000Z',
-                    project: 'test',
-                    total: 100,
-                    passed: 95,
-                    failed: 2,
-                    skipped: 3,
-                    duration: 10000,
-                    tests: [
-                        { title: 't1', state: 'passed', duration: 100 },
-                        { title: 't2', state: 'passed', duration: 100 },
+        mockCreateDataHubPersistence.mockReturnValue(
+            createMockPersistence({
+                loadMetricsStore: vi.fn().mockReturnValue({
+                    runs: [
+                        {
+                            timestamp: '2025-01-01T00:00:00.000Z',
+                            project: 'test',
+                            total: 100,
+                            passed: 95,
+                            failed: 2,
+                            skipped: 3,
+                            duration: 10000,
+                            tests: [
+                                { title: 't1', state: 'passed', duration: 100 },
+                                { title: 't2', state: 'passed', duration: 100 },
+                            ],
+                        },
                     ],
-                },
-            ],
-            coverageHistory: [
-                {
-                    timestamp: '2025-01-01T00:00:00.000Z',
-                    project: 'test',
-                    totalIssues: 10,
-                    mappedIssues: 8,
-                    coveragePct: 80,
-                },
-            ],
-        });
-        mockCalcFlakiness.mockReturnValue([]);
+                    coverageHistory: [
+                        {
+                            timestamp: '2025-01-01T00:00:00.000Z',
+                            project: 'test',
+                            totalIssues: 10,
+                            mappedIssues: 8,
+                            coveragePct: 80,
+                        },
+                    ],
+                }),
+            }),
+        );
+        mockCalcFlakinessEntries.mockReturnValue([]);
         const result = runQualityGate();
 
         expect(result.overall).toBe('pass');
@@ -69,33 +99,37 @@ describe('RunQualityGate', () => {
     });
 
     it('returns fail when pass rate is below threshold', () => {
-        mockLoadMetrics.mockReturnValue({
-            runs: [
-                {
-                    timestamp: '2025-01-01T00:00:00.000Z',
-                    project: 'test',
-                    total: 100,
-                    passed: 50,
-                    failed: 50,
-                    skipped: 0,
-                    duration: 10000,
-                    tests: [
-                        { title: 't1', state: 'failed', duration: 100 },
-                        { title: 't2', state: 'passed', duration: 100 },
+        mockCreateDataHubPersistence.mockReturnValue(
+            createMockPersistence({
+                loadMetricsStore: vi.fn().mockReturnValue({
+                    runs: [
+                        {
+                            timestamp: '2025-01-01T00:00:00.000Z',
+                            project: 'test',
+                            total: 100,
+                            passed: 50,
+                            failed: 50,
+                            skipped: 0,
+                            duration: 10000,
+                            tests: [
+                                { title: 't1', state: 'failed', duration: 100 },
+                                { title: 't2', state: 'passed', duration: 100 },
+                            ],
+                        },
                     ],
-                },
-            ],
-            coverageHistory: [
-                {
-                    timestamp: '2025-01-01T00:00:00.000Z',
-                    project: 'test',
-                    totalIssues: 10,
-                    mappedIssues: 8,
-                    coveragePct: 80,
-                },
-            ],
-        });
-        mockCalcFlakiness.mockReturnValue([]);
+                    coverageHistory: [
+                        {
+                            timestamp: '2025-01-01T00:00:00.000Z',
+                            project: 'test',
+                            totalIssues: 10,
+                            mappedIssues: 8,
+                            coveragePct: 80,
+                        },
+                    ],
+                }),
+            }),
+        );
+        mockCalcFlakinessEntries.mockReturnValue([]);
         const result = runQualityGate();
 
         expect(result.overall).toBe('fail');
@@ -106,71 +140,79 @@ describe('RunQualityGate', () => {
     });
 
     it('filters by project when project option is passed', () => {
-        mockLoadMetrics.mockReturnValue({
-            runs: [
-                {
-                    timestamp: '2025-01-01T00:00:00.000Z',
-                    project: 'test',
-                    total: 100,
-                    passed: 95,
-                    failed: 2,
-                    skipped: 3,
-                    duration: 10000,
-                    tests: [],
-                },
-            ],
-        });
-        mockCalcFlakiness.mockReturnValue([]);
+        mockCreateDataHubPersistence.mockReturnValue(
+            createMockPersistence({
+                loadMetricsStore: vi.fn().mockReturnValue({
+                    runs: [
+                        {
+                            timestamp: '2025-01-01T00:00:00.000Z',
+                            project: 'test',
+                            total: 100,
+                            passed: 95,
+                            failed: 2,
+                            skipped: 3,
+                            duration: 10000,
+                            tests: [],
+                        },
+                    ],
+                }),
+            }),
+        );
+        mockCalcFlakinessEntries.mockReturnValue([]);
         const result = runQualityGate({ project: 'nonexistent' });
 
         expect(result.checks.length).toBeGreaterThanOrEqual(1);
     });
 
     it('fails when flaky rate exceeds threshold', () => {
-        mockLoadMetrics.mockReturnValue({
-            runs: [
-                {
-                    timestamp: '2025-01-01T00:00:00.000Z',
-                    project: 'test',
-                    total: 10,
-                    passed: 8,
-                    failed: 1,
-                    skipped: 1,
-                    duration: 5000,
-                    tests: [
-                        { title: 'flaky-test-1', state: 'failed', duration: 100 },
-                        { title: 'flaky-test-1', state: 'passed', duration: 100 },
-                        { title: 'stable-test', state: 'passed', duration: 50 },
-                        { title: 'stable-test', state: 'passed', duration: 50 },
+        mockCreateDataHubPersistence.mockReturnValue(
+            createMockPersistence({
+                loadMetricsStore: vi.fn().mockReturnValue({
+                    runs: [
+                        {
+                            timestamp: '2025-01-01T00:00:00.000Z',
+                            project: 'test',
+                            total: 10,
+                            passed: 8,
+                            failed: 1,
+                            skipped: 1,
+                            duration: 5000,
+                            tests: [
+                                { title: 'flaky-test-1', state: 'failed', duration: 100 },
+                                { title: 'flaky-test-1', state: 'passed', duration: 100 },
+                                { title: 'stable-test', state: 'passed', duration: 50 },
+                                { title: 'stable-test', state: 'passed', duration: 50 },
+                            ],
+                        },
+                        {
+                            timestamp: '2025-01-01T01:00:00.000Z',
+                            project: 'test',
+                            total: 10,
+                            passed: 7,
+                            failed: 2,
+                            skipped: 1,
+                            duration: 5000,
+                            tests: [
+                                { title: 'flaky-test-1', state: 'failed', duration: 100 },
+                                { title: 'flaky-test-1', state: 'passed', duration: 100 },
+                                { title: 'stable-test', state: 'passed', duration: 50 },
+                                { title: 'stable-test', state: 'passed', duration: 50 },
+                            ],
+                        },
                     ],
-                },
-                {
-                    timestamp: '2025-01-01T01:00:00.000Z',
-                    project: 'test',
-                    total: 10,
-                    passed: 7,
-                    failed: 2,
-                    skipped: 1,
-                    duration: 5000,
-                    tests: [
-                        { title: 'flaky-test-1', state: 'failed', duration: 100 },
-                        { title: 'flaky-test-1', state: 'passed', duration: 100 },
-                        { title: 'stable-test', state: 'passed', duration: 50 },
-                        { title: 'stable-test', state: 'passed', duration: 50 },
+                    coverageHistory: [
+                        {
+                            timestamp: '2025-01-01T00:00:00.000Z',
+                            project: 'test',
+                            totalIssues: 10,
+                            mappedIssues: 8,
+                            coveragePct: 80,
+                        },
                     ],
-                },
-            ],
-            coverageHistory: [
-                {
-                    timestamp: '2025-01-01T00:00:00.000Z',
-                    project: 'test',
-                    totalIssues: 10,
-                    mappedIssues: 8,
-                    coveragePct: 80,
-                },
-            ],
-        });
-        mockCalcFlakiness.mockReturnValue([
+                }),
+            }),
+        );
+        mockCalcFlakinessEntries.mockReturnValue([
             { title: 'flaky-test-1', project: 'test', rate: 1, passCount: 1, failCount: 1, skipCount: 0, totalRuns: 2 },
         ]);
         const result = runQualityGate();
@@ -183,50 +225,54 @@ describe('RunQualityGate', () => {
     });
 
     it('passes flaky rate when no flaky tests exist', () => {
-        mockLoadMetrics.mockReturnValue({
-            runs: [
-                {
-                    timestamp: '2025-01-01T00:00:00.000Z',
-                    project: 'test',
-                    total: 10,
-                    passed: 9,
-                    failed: 0,
-                    skipped: 1,
-                    duration: 5000,
-                    tests: [
-                        { title: 't1', state: 'passed', duration: 100 },
-                        { title: 't1', state: 'passed', duration: 100 },
-                        { title: 't2', state: 'passed', duration: 50 },
-                        { title: 't2', state: 'passed', duration: 50 },
+        mockCreateDataHubPersistence.mockReturnValue(
+            createMockPersistence({
+                loadMetricsStore: vi.fn().mockReturnValue({
+                    runs: [
+                        {
+                            timestamp: '2025-01-01T00:00:00.000Z',
+                            project: 'test',
+                            total: 10,
+                            passed: 9,
+                            failed: 0,
+                            skipped: 1,
+                            duration: 5000,
+                            tests: [
+                                { title: 't1', state: 'passed', duration: 100 },
+                                { title: 't1', state: 'passed', duration: 100 },
+                                { title: 't2', state: 'passed', duration: 50 },
+                                { title: 't2', state: 'passed', duration: 50 },
+                            ],
+                        },
+                        {
+                            timestamp: '2025-01-01T01:00:00.000Z',
+                            project: 'test',
+                            total: 10,
+                            passed: 9,
+                            failed: 0,
+                            skipped: 1,
+                            duration: 5000,
+                            tests: [
+                                { title: 't1', state: 'passed', duration: 100 },
+                                { title: 't1', state: 'passed', duration: 100 },
+                                { title: 't2', state: 'passed', duration: 50 },
+                                { title: 't2', state: 'passed', duration: 50 },
+                            ],
+                        },
                     ],
-                },
-                {
-                    timestamp: '2025-01-01T01:00:00.000Z',
-                    project: 'test',
-                    total: 10,
-                    passed: 9,
-                    failed: 0,
-                    skipped: 1,
-                    duration: 5000,
-                    tests: [
-                        { title: 't1', state: 'passed', duration: 100 },
-                        { title: 't1', state: 'passed', duration: 100 },
-                        { title: 't2', state: 'passed', duration: 50 },
-                        { title: 't2', state: 'passed', duration: 50 },
+                    coverageHistory: [
+                        {
+                            timestamp: '2025-01-01T00:00:00.000Z',
+                            project: 'test',
+                            totalIssues: 10,
+                            mappedIssues: 8,
+                            coveragePct: 80,
+                        },
                     ],
-                },
-            ],
-            coverageHistory: [
-                {
-                    timestamp: '2025-01-01T00:00:00.000Z',
-                    project: 'test',
-                    totalIssues: 10,
-                    mappedIssues: 8,
-                    coveragePct: 80,
-                },
-            ],
-        });
-        mockCalcFlakiness.mockReturnValue([]);
+                }),
+            }),
+        );
+        mockCalcFlakinessEntries.mockReturnValue([]);
         const result = runQualityGate();
         const flakyCheck = result.checks.find((c) => c.name === 'flaky-rate');
 
@@ -235,7 +281,7 @@ describe('RunQualityGate', () => {
     });
 
     it('handles errors gracefully', () => {
-        mockLoadMetrics.mockImplementation(() => {
+        mockCreateDataHubPersistence.mockImplementation(() => {
             throw new Error('simulated error');
         });
         const result = runQualityGate();
@@ -245,33 +291,37 @@ describe('RunQualityGate', () => {
     });
 
     it('calculates score as average of check scores', () => {
-        mockLoadMetrics.mockReturnValue({
-            runs: [
-                {
-                    timestamp: '2025-01-01T00:00:00.000Z',
-                    project: 'test',
-                    total: 100,
-                    passed: 95,
-                    failed: 2,
-                    skipped: 3,
-                    duration: 10000,
-                    tests: [
-                        { title: 't1', state: 'passed', duration: 100 },
-                        { title: 't2', state: 'passed', duration: 100 },
+        mockCreateDataHubPersistence.mockReturnValue(
+            createMockPersistence({
+                loadMetricsStore: vi.fn().mockReturnValue({
+                    runs: [
+                        {
+                            timestamp: '2025-01-01T00:00:00.000Z',
+                            project: 'test',
+                            total: 100,
+                            passed: 95,
+                            failed: 2,
+                            skipped: 3,
+                            duration: 10000,
+                            tests: [
+                                { title: 't1', state: 'passed', duration: 100 },
+                                { title: 't2', state: 'passed', duration: 100 },
+                            ],
+                        },
                     ],
-                },
-            ],
-            coverageHistory: [
-                {
-                    timestamp: '2025-01-01T00:00:00.000Z',
-                    project: 'test',
-                    totalIssues: 10,
-                    mappedIssues: 8,
-                    coveragePct: 80,
-                },
-            ],
-        });
-        mockCalcFlakiness.mockReturnValue([]);
+                    coverageHistory: [
+                        {
+                            timestamp: '2025-01-01T00:00:00.000Z',
+                            project: 'test',
+                            totalIssues: 10,
+                            mappedIssues: 8,
+                            coveragePct: 80,
+                        },
+                    ],
+                }),
+            }),
+        );
+        mockCalcFlakinessEntries.mockReturnValue([]);
         const result = runQualityGate();
 
         expect(result.score).toBeGreaterThanOrEqual(0);

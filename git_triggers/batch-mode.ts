@@ -3,7 +3,8 @@
  * Uses unified CLI args from cli-args.ts.
  */
 import { success, error, info, printError, warn, withSpinner } from '../shared/prompt.js';
-import { loadMetrics, calculateFlakiness } from '../shared/metrics.js';
+import { createDataHubPersistence } from '../shared/data-hub/persistence.js';
+import { calcFlakinessEntries } from '../shared/data-hub/compute/flakiness-entries.js';
 import { generateFlakinessHtml } from '../shared/flakiness-dashboard.js';
 import {
     expireQuarantine,
@@ -207,7 +208,8 @@ async function triggerAndCollectBatchPipeline(
 
 function generateFlakinessDashboard(projectName: string, publishTarget?: string): void {
     if (!currentProjectName) return;
-    const store = loadMetrics();
+    const persistence = createDataHubPersistence(currentProjectName);
+    const store = persistence.loadMetricsStore();
     let projectRuns = store.runs.filter((r) => r.project === currentProjectName);
     if (projectRuns.length < 2) {
         const gitRuns = generateGitMetricsRuns({ projectName: currentProjectName });
@@ -222,7 +224,7 @@ function generateFlakinessDashboard(projectName: string, publishTarget?: string)
             return;
         }
     }
-    const flaky = calculateFlakiness({ runs: projectRuns }, 2);
+    const flaky = calcFlakinessEntries(projectRuns);
     const html = generateFlakinessHtml(flaky, 'Flakiness — ' + projectName);
     const outPath = writeReport('flakiness-' + projectName + '.html', html);
     success('Dashboard de flakiness gerado: ' + outPath);
@@ -349,7 +351,8 @@ function runQuarantineMaintenance(): void {
 
 function generateTestExport(projectName: string): void {
     try {
-        const store = loadMetrics();
+        const persistence = createDataHubPersistence(projectName);
+        const store = persistence.loadMetricsStore();
         let projectRuns = store.runs.filter((r) => r.project === projectName);
         if (projectRuns.length === 0) {
             const gitRuns = generateGitMetricsRuns({ projectName });
