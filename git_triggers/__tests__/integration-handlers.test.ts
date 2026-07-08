@@ -65,8 +65,7 @@ vi.mock('../../shared/open.js', () => ({
 vi.mock('../../shared/flakiness-dashboard.js', () => ({
     generateFlakinessHtml: vi.fn(() => '<html/>'),
 }));
-vi.mock('../pipeline-health.js', () => ({
-    aggregatePipelineHealth: vi.fn(),
+vi.mock('../pipeline-health-renderer.js', () => ({
     renderPipelineHealthHtml: vi.fn(() => '<html/>'),
 }));
 vi.mock('../../shared/quarantine.js', () => ({

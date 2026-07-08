@@ -52,7 +52,7 @@ vi.mock('../../shared/git-artifact-downloader', () => ({
     fetchGitHistory: vi.fn().mockResolvedValue({
         runs: [],
         commits: '',
-        flakyTests: '',
+        flakyEntries: [],
     }),
     fetchLatestTestRun: vi.fn().mockResolvedValue(null),
 }));

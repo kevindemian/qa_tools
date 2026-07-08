@@ -25,6 +25,7 @@ import { rootLogger } from './logger.js';
 import { createDataHubPersistence } from './data-hub/persistence.js';
 import { calcFlakinessEntries } from './data-hub/compute/flakiness-entries.js';
 import { calcMetricsTrends } from './data-hub/compute/metrics-trends.js';
+import { calcRunPassRate } from './data-hub/compute/run-pass-rate.js';
 import { runQualityGate } from './quality-gate.js';
 import { createCheckRun } from './github-check-run.js';
 import { postPrComment } from './github-pr-comment.js';
@@ -138,8 +139,7 @@ export function computeDiffComparison(current: FlatTest[], previous: FlatTest[])
 }
 
 function buildSummaryTable(stats: PrReportStats): string {
-    const executed = stats.passed + stats.failed;
-    const passRate = executed > 0 ? ((stats.passed / executed) * 100).toFixed(1) : '0.0';
+    const passRate = calcRunPassRate({ passed: stats.passed, failed: stats.failed }).toFixed(1);
     const durationSec = (stats.duration / 1000).toFixed(1);
 
     return [
@@ -294,8 +294,7 @@ function writeToJobSummary(stats: PrReportStats, htmlArtifactUrl?: string): void
     if (!stepSummaryPath) return;
 
     try {
-        const executed = stats.passed + stats.failed;
-        const passRate = executed > 0 ? ((stats.passed / executed) * 100).toFixed(1) : '0.0';
+        const passRate = calcRunPassRate({ passed: stats.passed, failed: stats.failed }).toFixed(1);
         const durationSec = (stats.duration / 1000).toFixed(1);
         const lines: string[] = [
             '## 📊 QA Tools — PR Report',
@@ -378,8 +377,7 @@ function generateHtmlReportFile(
     workflowUrl?: string,
 ): string | undefined {
     try {
-        const executed = stats.passed + stats.failed;
-        const passRate = executed > 0 ? (stats.passed / executed) * 100 : 0;
+        const passRate = calcRunPassRate({ passed: stats.passed, failed: stats.failed });
         const flakyEntries = calcFlakinessEntries(store.runs, MIN_FLAKINESS_RUNS);
         const flakinessMap: Record<string, number> = {};
         for (const entry of flakyEntries) {
@@ -496,8 +494,7 @@ export async function generatePrReport(options: PrReportCoreOptions): Promise<Pr
     const htmlArtifactUrl = workflowUrl ? `${workflowUrl}?pr=1#artifacts` : undefined;
     writeToJobSummary(stats, htmlArtifactUrl);
 
-    const executed = stats.passed + stats.failed;
-    const passRate = executed > 0 ? (stats.passed / executed) * 100 : 0;
+    const passRate = calcRunPassRate({ passed: stats.passed, failed: stats.failed });
     const commentBody = sections.join('\n');
     const postResult = await postPrComment(commentBody);
 

@@ -1,4 +1,5 @@
 import Config from './config.js';
+import type { FlakinessEntry } from './types/data-hub.js';
 
 export const GIT_HISTORY_RUNS = 5;
 
@@ -9,13 +10,12 @@ export interface RunStats {
     failed: number;
     skipped: number;
     total: number;
-    passRate: number;
 }
 
 export interface CiContext {
     commits: string;
     runs: RunStats[];
-    flakyTests: string;
+    flakyEntries: FlakinessEntry[];
 }
 
 export function isGitHubCi(): boolean {

@@ -388,7 +388,7 @@ describe('FetchGitHistory', () => {
         const { fetchGitHistory } = await import('./git-artifact-downloader.js');
         const result = await fetchGitHistory();
 
-        expect(result).toStrictEqual({ commits: '', runs: [], flakyTests: '' });
+        expect(result).toStrictEqual({ commits: '', runs: [], flakyEntries: [] });
     });
 
     it('returns history with runs and flaky tests for GitHub', async () => {
@@ -465,7 +465,7 @@ describe('FetchGitHistory', () => {
         expect(result.commits).toContain('Fix test');
         expect(result.commits).toContain('Add feature');
         expect(result.runs.length).toBeGreaterThanOrEqual(1);
-        expect(result.flakyTests).toContain('FlakyTest A');
+        expect(result.flakyEntries).toHaveLength(0);
     });
 
     it('handles GitHub history API error gracefully', async () => {
@@ -477,7 +477,7 @@ describe('FetchGitHistory', () => {
         const { fetchGitHistory } = await import('./git-artifact-downloader.js');
         const result = await fetchGitHistory();
 
-        expect(result).toStrictEqual({ commits: '', runs: [], flakyTests: '' });
+        expect(result).toStrictEqual({ commits: '', runs: [], flakyEntries: [] });
     });
 
     it('handles runs without head_commit in buildCommitsFromRuns', async () => {

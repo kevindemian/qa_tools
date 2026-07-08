@@ -1,5 +1,5 @@
 /**
- * Integration tests — Pipeline Health (pipeline-health)
+ * Integration tests — Pipeline Health HTML renderer
  *
  * Validates the Pipeline Health HTML report end-to-end:
  * - renderPipelineHealthHtml with data
@@ -8,7 +8,7 @@
  * - Dark mode and theme toggle
  */
 import { beforeEach, describe, expect, it, vi } from 'vitest';
-import type { PipelineHealth } from '../../pipeline-health.js';
+import type { PipelineHealthData } from '../../pipeline-health-renderer.js';
 
 vi.mock('../../shared/logger.js', () => ({
     rootLogger: { error: vi.fn(), info: vi.fn(), child: vi.fn().mockReturnThis() },
@@ -19,22 +19,18 @@ vi.mock('../../shared/config.js', () => ({
     get: vi.fn(() => ''),
 }));
 
-function makeHealth(overrides?: Partial<PipelineHealth>): PipelineHealth {
+function makeHealthData(overrides?: Partial<PipelineHealthData>): PipelineHealthData {
     return {
-        period: { from: '2026-06-01', to: '2026-06-07' },
         totalRuns: 30,
-        passedRuns: 20,
-        failedRuns: 10,
         passRate: 67,
         avgDurationSec: 150,
         topFailingJobs: [{ name: 'lint', failCount: 3, totalCount: 10, rate: 30 }],
-        failureReasons: [{ message: 'Module not found', count: 2 }],
-        failureByCategory: { code: 3, infrastructure: 1 },
-        branchBreakdown: [
-            { branch: 'main', passRate: 80, count: 20 },
-            { branch: 'develop', passRate: 50, count: 10 },
-        ],
-        openIssues: { total: 5, byLabel: { bug: 3, feature: 2 }, staleCount: 1 },
+        failureReasons: ['Module not found', 'Timeout: page did not load'],
+        branchBreakdown: {
+            main: { passRate: 80, count: 20 },
+            develop: { passRate: 50, count: 10 },
+        },
+        period: { from: '2026-06-01', to: '2026-06-07' },
         ...overrides,
     };
 }
@@ -48,8 +44,8 @@ describe('Integration: Pipeline Health', () => {
         it('produces complete HTML with summary cards, tables, and sections', async () => {
             expect.hasAssertions();
 
-            const { renderPipelineHealthHtml } = await import('../../pipeline-health.js');
-            const health = makeHealth();
+            const { renderPipelineHealthHtml } = await import('../../pipeline-health-renderer.js');
+            const health = makeHealthData();
             const html = renderPipelineHealthHtml(health, 'Pipeline Report');
 
             expect(html).toContain('Pipeline Report');
@@ -62,16 +58,15 @@ describe('Integration: Pipeline Health', () => {
             expect(html).toContain('Module not found');
         });
 
-        it('shows branch and category breakdown in HTML', async () => {
+        it('shows branch breakdown in HTML', async () => {
             expect.hasAssertions();
 
-            const { renderPipelineHealthHtml } = await import('../../pipeline-health.js');
-            const health = makeHealth();
+            const { renderPipelineHealthHtml } = await import('../../pipeline-health-renderer.js');
+            const health = makeHealthData();
             const html = renderPipelineHealthHtml(health, 'Pipeline Report');
 
             expect(html).toContain('main');
             expect(html).toContain('develop');
-            expect(html).toContain('bug');
         });
     });
 
@@ -79,8 +74,15 @@ describe('Integration: Pipeline Health', () => {
         it('shows zeros and no-failure messages', async () => {
             expect.hasAssertions();
 
-            const { aggregatePipelineHealth, renderPipelineHealthHtml } = await import('../../pipeline-health.js');
-            const health = aggregatePipelineHealth([], [], [], []);
+            const { renderPipelineHealthHtml } = await import('../../pipeline-health-renderer.js');
+            const health = makeHealthData({
+                totalRuns: 0,
+                passRate: 0,
+                avgDurationSec: 0,
+                topFailingJobs: [],
+                failureReasons: [],
+                branchBreakdown: {},
+            });
             const html = renderPipelineHealthHtml(health, 'Empty Report');
 
             expect(html).toContain('Empty Report');
@@ -93,8 +95,8 @@ describe('Integration: Pipeline Health', () => {
         it('includes theme toggle script and dark mode CSS', async () => {
             expect.hasAssertions();
 
-            const { renderPipelineHealthHtml } = await import('../../pipeline-health.js');
-            const html = renderPipelineHealthHtml(makeHealth());
+            const { renderPipelineHealthHtml } = await import('../../pipeline-health-renderer.js');
+            const html = renderPipelineHealthHtml(makeHealthData());
 
             expect(html).toContain('qa-report-theme');
             expect(html).toContain('html.dark');
@@ -105,8 +107,8 @@ describe('Integration: Pipeline Health', () => {
         it('uses CSS custom properties for colors', async () => {
             expect.hasAssertions();
 
-            const { renderPipelineHealthHtml } = await import('../../pipeline-health.js');
-            const html = renderPipelineHealthHtml(makeHealth());
+            const { renderPipelineHealthHtml } = await import('../../pipeline-health-renderer.js');
+            const html = renderPipelineHealthHtml(makeHealthData());
 
             expect(html).toContain('var(--color-surface-card)');
             expect(html).toContain('var(--color-border-default)');
@@ -118,8 +120,8 @@ describe('Integration: Pipeline Health', () => {
         it('contains footer with module name', async () => {
             expect.hasAssertions();
 
-            const { renderPipelineHealthHtml } = await import('../../pipeline-health.js');
-            const html = renderPipelineHealthHtml(makeHealth());
+            const { renderPipelineHealthHtml } = await import('../../pipeline-health-renderer.js');
+            const html = renderPipelineHealthHtml(makeHealthData());
 
             expect(html).toContain('Pipeline Health Dashboard');
         });
@@ -129,8 +131,8 @@ describe('Integration: Pipeline Health', () => {
         it('does not use border="1" or cellpadding="6"', async () => {
             expect.hasAssertions();
 
-            const { renderPipelineHealthHtml } = await import('../../pipeline-health.js');
-            const html = renderPipelineHealthHtml(makeHealth());
+            const { renderPipelineHealthHtml } = await import('../../pipeline-health-renderer.js');
+            const html = renderPipelineHealthHtml(makeHealthData());
 
             expect(html).not.toContain('border="1"');
             expect(html).not.toContain('cellpadding="6"');

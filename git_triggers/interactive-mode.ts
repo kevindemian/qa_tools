@@ -8,6 +8,8 @@ import Config from '../shared/config.js';
 import { showSplash } from '../shared/splash.js';
 import { createDataHubPersistence } from '../shared/data-hub/persistence.js';
 import { calcFlakinessEntries } from '../shared/data-hub/compute/flakiness-entries.js';
+import { calcTestDurationMap } from '../shared/data-hub/compute/test-duration-map.js';
+import { calcRunFailureRate } from '../shared/data-hub/compute/run-failure-rate.js';
 import type { MetricsRun } from '../shared/types/data-hub.js';
 import { compareRuns } from '../shared/run-comparison.js';
 import { calculateHealthScore } from '../shared/health-score.js';
@@ -421,14 +423,7 @@ async function _dashboardSeasonality(): Promise<void> {
 async function _dashboardSilentRegression(): Promise<void> {
     const data = _loadProjectRunsHelper();
     if (!data) return;
-    const testDurationMap: Record<string, number[]> = {};
-    for (const run of data.projectRuns) {
-        for (const t of run.tests) {
-            if (t.state === 'skipped') continue;
-            if (!testDurationMap[t.title]) testDurationMap[t.title] = [];
-            testDurationMap[t.title]?.push(t.duration);
-        }
-    }
+    const testDurationMap = calcTestDurationMap(data.projectRuns);
     const regression = detectSilentRegression(testDurationMap);
     await _generateAndOpenDashboard(generateSilentRegressionHtml(regression), 'silent-regression', 'Silent Regression');
 }
@@ -510,20 +505,10 @@ async function _dashboardIncidentReport(): Promise<void> {
         undefined,
         dataHub,
     );
-    const testDurationMap: Record<string, number[]> = {};
-    for (const run of data.projectRuns) {
-        for (const t of run.tests) {
-            if (t.state === 'skipped') continue;
-            if (!testDurationMap[t.title]) testDurationMap[t.title] = [];
-            testDurationMap[t.title]?.push(t.duration);
-        }
-    }
+    const testDurationMap = calcTestDurationMap(data.projectRuns);
     const regression = detectSilentRegression(testDurationMap);
     const seasonality = aggregateDefectSeasonality(data.failureClassifications);
-    const failRate =
-        data.projectRuns.length > 0
-            ? Math.round((data.projectRuns.filter((r) => r.failed > 0).length / data.projectRuns.length) * 100)
-            : 0;
+    const failRate = calcRunFailureRate(data.projectRuns);
     const uncoveredEpics = matrix.nodes.reduce((acc: string[], n) => {
         if (n.coverage < 100) acc.push(n.epic);
         return acc;

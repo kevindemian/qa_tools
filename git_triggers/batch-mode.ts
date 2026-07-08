@@ -12,8 +12,8 @@ import {
     quarantineRatio,
     generatePipelineQuarantine,
 } from '../shared/quarantine.js';
-import { aggregatePipelineHealth, renderPipelineHealthHtml } from './pipeline-health.js';
-import type { PipelineJobExtended } from './pipeline-health.js';
+import { renderPipelineHealthHtml } from './pipeline-health-renderer.js';
+import type { PipelineHealthData } from './pipeline-health-renderer.js';
 import { exportTestsCsv, exportTestsJson } from '../shared/report-export.js';
 import { generateGitMetricsRuns, getLastGitLogError } from '../shared/git-metrics-adapter.js';
 import { analyzeTestImpact, generateTestSelectionJson } from '../shared/test-impact.js';
@@ -386,17 +386,33 @@ async function generatePipelineHealthReport(m: import('../shared/types.js').GitP
         const dataHub = await getOrFetchDataHub(m, currentProjectName);
         if (!dataHub || dataHub.raw.runs.length === 0) return;
 
-        const runs = dataHub.raw.runs.slice(0, 10);
-        const allJobs: PipelineJobExtended[][] = [];
-        for (const run of runs) {
-            const runId = run.id;
-            if (runId == null) continue;
-            const runIdNum = typeof runId === 'string' ? parseInt(runId, 10) : runId;
-            const jobs = dataHub.raw.jobs.get(runIdNum) ?? [];
-            allJobs.push(jobs.map((j) => ({ id: j.id, name: j.name, status: j.status })));
-        }
-        const health = aggregatePipelineHealth(runs, allJobs, [], [], new Date());
-        const html = renderPipelineHealthHtml(health, 'Pipeline Health \u2014 ' + currentProjectName);
+        const runs = dataHub.raw.runs;
+        const computed = dataHub.computed;
+
+        const from = runs[0]?.created_at?.slice(0, 10) ?? new Date().toISOString().slice(0, 10);
+        const to = runs[runs.length - 1]?.created_at?.slice(0, 10) ?? new Date().toISOString().slice(0, 10);
+
+        const healthData: PipelineHealthData = {
+            totalRuns: runs.length,
+            passRate: computed.passRate,
+            avgDurationSec: computed.avgDuration,
+            topFailingJobs: computed.topFailingJobs.map((j) => ({
+                name: j.name,
+                failCount: j.count,
+                totalCount: Math.round((j.count * 100) / (j.failureRate || 1)),
+                rate: j.failureRate,
+            })),
+            failureReasons: computed.topFailureReasons.map((r) => r.pattern),
+            branchBreakdown: Object.fromEntries(
+                Object.entries(computed.branchBreakdown).map(([branch, info]) => [
+                    branch,
+                    { passRate: info.passRate, count: info.count },
+                ]),
+            ),
+            period: { from, to },
+        };
+
+        const html = renderPipelineHealthHtml(healthData, 'Pipeline Health \u2014 ' + currentProjectName);
         const outPath = writeReport('pipeline-health-' + currentProjectName + '.html', html);
         success('Pipeline health report gerado: ' + outPath);
     } catch (err) {
