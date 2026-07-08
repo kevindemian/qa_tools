@@ -7,7 +7,7 @@ import { createHistoryProvider, TestHistoryCache } from '../xray-history.js';
 import type { CommandContext } from './context.js';
 import { rootLogger } from '../../shared/logger.js';
 
-export { fetchGitHistory, fetchLatestTestRun } from '../../shared/git-artifact-downloader.js';
+export { fetchGitHistory } from '../../shared/git-artifact-downloader.js';
 
 function getMappingCandidates(): string[] {
     return [Config.get('QA_MAPPING_PATH'), sanitizePath(process.cwd(), 'mapping.json')];
