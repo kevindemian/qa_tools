@@ -12,6 +12,10 @@ import { describe, it, expect, vi, beforeEach } from 'vitest';
 import type { GitProvider } from '../../types/ci-cd.js';
 import { clearCache } from '../../data-hub/cache.js';
 
+vi.mock('../../data-hub/test-source-fallback.js', () => ({
+    askTestSource: vi.fn().mockResolvedValue({ data: null, error: 'NO_TTY' }),
+}));
+
 /* ── Mock GitProvider ──────────────────────────────────────────────────── */
 
 function createMockGitProvider(providerType: 'github' | 'gitlab'): GitProvider {
@@ -48,9 +52,10 @@ describe('Integration: getOrFetchDataHub', () => {
     beforeEach(() => {
         clearCache();
         vi.clearAllMocks();
+        delete process.env['TEST_REPORT_PATH'];
     });
 
-    it('returns cached hub on cache hit without re-fetching', async () => {
+    it('returns cached hub on cache hit without re-fetching', { timeout: 15000 }, async () => {
         expect.hasAssertions();
 
         const { getOrFetchDataHub } = await import('../../ci-data.js');

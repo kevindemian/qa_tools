@@ -42,7 +42,7 @@ export async function getOrFetchDataHub(provider: GitProvider, repo: string): Pr
             dataProvider = new GitHubDataProvider(provider);
         }
 
-        const hub = await DataHubImpl.create([dataProvider], { repo });
+        const { hub } = await DataHubImpl.create([dataProvider], { repo });
         setCachedHub(repo, hub);
         return hub;
     } catch (err) {

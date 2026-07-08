@@ -168,12 +168,10 @@ describe('JiraLinkManager', () => {
             expect(id).toBe('200');
         });
 
-        it('falls back to 11701 when no match', async () => {
+        it('throws when no match found', async () => {
             expect.hasAssertions();
 
-            const id = await manager.resolveLinkTypeId('nonexistent');
-
-            expect(id).toBe('11701');
+            await expect(manager.resolveLinkTypeId('nonexistent')).rejects.toThrow(/não encontrado/);
         });
     });
 

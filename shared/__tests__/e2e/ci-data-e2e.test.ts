@@ -100,7 +100,7 @@ describe('E2E: CI Data Hub — Complete Pipeline Flow', () => {
 
             const rawData: RawData = { runs, jobs: jobsMap, failureReasons: new Map(), artifacts: new Map() };
             const provider = createMockProvider(rawData);
-            const hub = await DataHubImpl.create([provider], { repo: 'owner/repo' });
+            const { hub } = await DataHubImpl.create([provider], { repo: 'owner/repo' });
             const costResult = calculatePipelineCost(null, 0.01, hub);
             const html = generatePipelineCostHtml(costResult);
 
@@ -126,7 +126,7 @@ describe('E2E: CI Data Hub — Complete Pipeline Flow', () => {
             ];
             const rawData: RawData = { runs, jobs: new Map(), failureReasons: new Map(), artifacts: new Map() };
             const provider = createMockProvider(rawData);
-            const hub = await DataHubImpl.create([provider], { repo: 'owner/repo' });
+            const { hub } = await DataHubImpl.create([provider], { repo: 'owner/repo' });
 
             const store = {
                 runs: [
@@ -174,7 +174,7 @@ describe('E2E: CI Data Hub — Complete Pipeline Flow', () => {
 
             const rawData: RawData = { runs, jobs: jobsMap, failureReasons: new Map(), artifacts: new Map() };
             const provider = createMockProvider(rawData);
-            const hub = await DataHubImpl.create([provider], { repo: 'owner/repo' });
+            const { hub } = await DataHubImpl.create([provider], { repo: 'owner/repo' });
 
             const metricsStore = {
                 runs: [
@@ -218,7 +218,7 @@ describe('E2E: CI Data Hub — Complete Pipeline Flow', () => {
             const { calculateHealthScore } = await import('../../health-score.js');
 
             const provider = createFailingProvider(new Error('Network error'));
-            const hub = await DataHubImpl.create([provider], { repo: 'owner/repo' });
+            const { hub } = await DataHubImpl.create([provider], { repo: 'owner/repo' });
 
             const store = {
                 runs: [
@@ -257,7 +257,7 @@ describe('E2E: CI Data Hub — Complete Pipeline Flow', () => {
             ];
             const rawData: RawData = { runs, jobs: new Map(), failureReasons: new Map(), artifacts: new Map() };
             const provider = createMockProvider(rawData);
-            const hub = await DataHubImpl.create([provider], { repo: 'owner/repo' });
+            const { hub } = await DataHubImpl.create([provider], { repo: 'owner/repo' });
 
             expect(hub.computed.passRate).toBeCloseTo(60, 0);
             expect(hub.raw.runs).toHaveLength(5);

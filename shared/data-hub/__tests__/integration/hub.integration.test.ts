@@ -78,7 +78,7 @@ describe('Integration: DataHub', () => {
         };
 
         const provider = makeProvider(rawData);
-        const hub = await DataHubImpl.create([provider], { repo: 'test/repo' });
+        const { hub } = await DataHubImpl.create([provider], { repo: 'test/repo' });
 
         expect(hub.computed.passRate).toBeCloseTo(66.67, 1);
         expect(hub.computed.branchBreakdown).toHaveProperty('main');
@@ -97,7 +97,7 @@ describe('Integration: DataHub', () => {
         };
 
         const provider = makeProvider(rawData);
-        const hub = await DataHubImpl.create([provider], { repo: 'test/repo' });
+        const { hub } = await DataHubImpl.create([provider], { repo: 'test/repo' });
 
         expect(hub.computed.passRate).toBe(0);
         expect(hub.computed.avgDuration).toBe(0);
@@ -129,7 +129,7 @@ describe('Integration: DataHub', () => {
         };
 
         const provider = makeProvider(rawData);
-        const hub = await DataHubImpl.create([provider], { repo: 'test/repo' });
+        const { hub } = await DataHubImpl.create([provider], { repo: 'test/repo' });
 
         expect(hub.computed.passRate).toBeGreaterThanOrEqual(0);
         expect(hub.computed.passRate).toBeLessThanOrEqual(100);
@@ -148,7 +148,7 @@ describe('Integration: DataHub', () => {
         };
 
         const provider = makeProvider(rawData);
-        const hub = await DataHubImpl.create([provider], { repo: 'test/repo' });
+        const { hub } = await DataHubImpl.create([provider], { repo: 'test/repo' });
 
         expect(hub.raw.runs).toStrictEqual(runs);
         expect(hub.computed.passRate).toBeGreaterThanOrEqual(0);
@@ -167,7 +167,7 @@ describe('Integration: DataHub', () => {
         };
 
         const provider = makeProvider(rawData);
-        const hub = await DataHubImpl.create([provider], { repo: 'test/repo' });
+        const { hub } = await DataHubImpl.create([provider], { repo: 'test/repo' });
 
         setCachedHub('test/repo', hub);
         const cached = getCachedHub('test/repo');
@@ -210,7 +210,7 @@ describe('Integration: DataHub', () => {
         };
 
         const provider = makeProvider(rawData);
-        const hub = await DataHubImpl.create([provider], { repo: 'test/repo' });
+        const { hub } = await DataHubImpl.create([provider], { repo: 'test/repo' });
 
         expect(hub.computed.flakyRate).toHaveLength(1);
 

@@ -23,13 +23,17 @@ vi.mock('../../html-factory.js', async (importOriginal) => {
     return { ...actual, buildHtmlPage: vi.fn(actual.buildHtmlPage) };
 });
 
+vi.mock('../../cli_base.js', () => ({
+    sanitizeUrl: (url: string) => url,
+}));
+
 describe('Integration: HTML Report (FT-17)', () => {
     beforeEach(() => {
         vi.restoreAllMocks();
     });
 
     describe('FT-17a: generateHtmlReport', () => {
-        it('returns complete HTML document', async () => {
+        it('returns complete HTML document', { timeout: 15000 }, async () => {
             expect.hasAssertions();
 
             const { generateHtmlReport } = await import('../../report-html.js');

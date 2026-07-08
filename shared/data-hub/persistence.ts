@@ -8,6 +8,7 @@
  * @module persistence
  */
 import { rootLogger } from '../logger.js';
+import { getErrorMessage } from '../errors.js';
 import { detectProjectGitDir, detectStoreBackend } from '../store-backend.js';
 import type { StoreBackend } from '../store-backend.js';
 import type {
@@ -78,8 +79,9 @@ export function createDataHubPersistence(_project: string, backend?: StoreBacken
         if (!raw) return { runs: [] };
         try {
             return MetricsStoreSchema.parse(raw) as MetricsStore;
-        } catch {
-            rootLogger.warn('data-hub-persistence: metrics store schema validation failed, returning empty store');
+        } catch (err: unknown) {
+            const rawError = getErrorMessage(err);
+            rootLogger.warn(`data-hub-persistence: metrics store schema validation failed — ${rawError}`);
             return { runs: [] };
         }
     }
@@ -178,6 +180,7 @@ export function createDataHubPersistence(_project: string, backend?: StoreBacken
                 const raw = extractErrorMessage(err);
                 const known = humanizeError(raw);
                 rootLogger.warn(`data-hub-persistence: flush failed — ${known ? known.msg : raw}`);
+                throw err;
             }
         },
     };

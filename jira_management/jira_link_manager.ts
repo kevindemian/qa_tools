@@ -108,12 +108,7 @@ class JiraLinkManager {
                     summary: issue.fields?.summary || '',
                 });
             } catch (err) {
-                rootLogger.warn(
-                    'JiraLinkManager: key not found: ' +
-                        key +
-                        ': ' +
-                        (err instanceof Error ? err.message : String(err)),
-                );
+                rootLogger.warn('JiraLinkManager: key not found: ' + key + ': ' + formatErr(err));
                 results.push({ key, summary: '(key not found)' });
             }
         }

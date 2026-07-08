@@ -369,6 +369,24 @@ export interface DataHub {
 }
 
 /**
+ * Result of DataHubImpl.create() — wraps the hub with status metadata.
+ *
+ * Consumers MUST destructure: `const { hub } = await DataHubImpl.create(...)`.
+ * The wrapper exists to surface provider failures, partial data, and Layer 7
+ * status without throwing exceptions.
+ */
+export interface DataHubResult {
+    /** The created DataHub instance (always present, even on partial failure). */
+    hub: DataHub;
+    /** Status of the creation operation. */
+    status: 'ok' | 'warning';
+    /** Warning details when status is 'warning'. Absent when status is 'ok'. */
+    warning?: { code: string; message: string };
+    /** Whether some providers failed but data is still partial. */
+    partialData?: boolean;
+}
+
+/**
  * Persistence interface for historical data operations.
  * Replaces direct access to MetricsStore / Store.
  */

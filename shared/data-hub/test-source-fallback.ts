@@ -14,13 +14,16 @@ import { parseTestResultsFile } from '../result_parser.js';
 import { rootLogger } from '../logger.js';
 import { askFilePath } from '../prompt-input-filepath.js';
 import { Output } from '../output.js';
+import { isCancelError, humanizeError } from '../errors.js';
 
 export const DATAHUB_ERRORS = {
     FILE_NOT_FOUND: 'Arquivo não encontrado.',
     INVALID_FORMAT: 'Formato não reconhecido. Use CTRF (.json), JUnit (.xml) ou Mochawesome (.json).',
     EMPTY_RESULT: 'Nenhum resultado de teste encontrado no arquivo.',
     USER_SKIPPED: 'Fallback manual ignorado pelo usuário.',
+    USER_CANCELLED: 'Usuário cancelou a seleção de arquivo de teste.',
     NO_TTY: 'Não é TTY — fallback manual ignorado.',
+    NO_DATA_SOURCE: 'Sem fonte de dados disponível — sem TEST_REPORT_PATH e sem TTY.',
 } as const;
 
 export interface FallbackResult {
@@ -93,15 +96,19 @@ export function formatValidationResult(result: FallbackResult): FormattedValidat
     return { success: true, message: formatValidationSuccess(result), result };
 }
 
-export async function askTestSource(): Promise<FallbackResult> {
-    if (!Output.isTTY() || Output.isCI()) {
-        return { data: null, error: DATAHUB_ERRORS.NO_TTY };
-    }
-
+async function promptUserForFile(): Promise<FallbackResult> {
     const label = 'Caminho do arquivo de resultados (CTRF, JUnit ou Mochawesome)';
 
     for (let attempt = 0; attempt < 3; attempt++) {
-        const filePath = await askFilePath(label, { extensions: ['.json', '.xml'] });
+        let filePath: string | null;
+        try {
+            filePath = await askFilePath(label, { extensions: ['.json', '.xml'] });
+        } catch (err) {
+            if (isCancelError(err)) {
+                return { data: null, error: DATAHUB_ERRORS.USER_CANCELLED };
+            }
+            return { data: null, error: humanizeError(err, 'Falha ao solicitar arquivo de teste') };
+        }
         if (!filePath) {
             rootLogger.debug('askTestSource: user skipped at file path prompt');
             return { data: null, error: DATAHUB_ERRORS.USER_SKIPPED };
@@ -123,4 +130,23 @@ export async function askTestSource(): Promise<FallbackResult> {
     }
 
     return { data: null, error: DATAHUB_ERRORS.USER_SKIPPED };
+}
+
+export async function askTestSource(): Promise<FallbackResult> {
+    // 1. Check TEST_REPORT_PATH env var (works in CI and TTY)
+    const envPath = process.env['TEST_REPORT_PATH'];
+    if (envPath) {
+        const result = validateTestFile(envPath);
+        if (result.data) return result;
+        // env var set but invalid — log and continue to prompt
+        rootLogger.warn(`TEST_REPORT_PATH set but invalid: ${result.error}`);
+    }
+
+    // 2. If TTY and not CI, prompt user
+    if (Output.isTTY() && !Output.isCI()) {
+        return promptUserForFile();
+    }
+
+    // 3. Not TTY or running in CI
+    return { data: null, error: DATAHUB_ERRORS.NO_TTY };
 }

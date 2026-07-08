@@ -62,7 +62,7 @@ describe('Integration: ensureDataHub', () => {
     it('returns cached _dataHub if already set', async () => {
         expect.hasAssertions();
 
-        const hub = await DataHubImpl.create([], { repo: 'test' });
+        const { hub } = await DataHubImpl.create([], { repo: 'test' });
         setDataHub(hub);
 
         const result = await ensureDataHub();

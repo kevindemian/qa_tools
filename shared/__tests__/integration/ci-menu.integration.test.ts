@@ -91,7 +91,7 @@ describe('DataHub Menu Integration', () => {
             source: 'github',
             fetchRawData: vi.fn().mockResolvedValue(rawData),
         };
-        const hub = await DataHubImpl.create([mockProvider], { repo: 'test-project' });
+        const { hub } = await DataHubImpl.create([mockProvider], { repo: 'test-project' });
         setDataHub(hub);
     }
 

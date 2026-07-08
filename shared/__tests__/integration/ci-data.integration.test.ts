@@ -64,7 +64,7 @@ describe('Integration: CI Data Hub', () => {
 
             const rawData: RawData = { runs, jobs: jobsMap, failureReasons: new Map(), artifacts: new Map() };
             const provider = createMockDataProvider(rawData);
-            const hub = await DataHubImpl.create([provider], { repo: 'owner/repo' });
+            const { hub } = await DataHubImpl.create([provider], { repo: 'owner/repo' });
 
             expect(hub.computed.passRate).toBeCloseTo(66.67, 0);
             expect(hub.computed.topFailingJobs.length).toBeGreaterThan(0);
@@ -76,7 +76,7 @@ describe('Integration: CI Data Hub', () => {
 
             const rawData: RawData = { runs: [], jobs: new Map(), failureReasons: new Map(), artifacts: new Map() };
             const provider = createMockDataProvider(rawData);
-            const hub = await DataHubImpl.create([provider], { repo: 'owner/repo' });
+            const { hub } = await DataHubImpl.create([provider], { repo: 'owner/repo' });
 
             expect(hub.raw.runs).toHaveLength(0);
             expect(hub.computed.passRate).toBe(0);
@@ -95,7 +95,7 @@ describe('Integration: CI Data Hub', () => {
 
             const rawData: RawData = { runs, jobs: jobsMap, failureReasons: new Map(), artifacts: new Map() };
             const provider = createMockDataProvider(rawData);
-            const hub = await DataHubImpl.create([provider], { repo: 'owner/repo' });
+            const { hub } = await DataHubImpl.create([provider], { repo: 'owner/repo' });
 
             // P95 of [10000, 20000, 30000] ms = 30000 ms
             expect(hub.computed.suiteSpeedP95).toBe(30000);
@@ -115,7 +115,7 @@ describe('Integration: CI Data Hub', () => {
             ];
             const rawData: RawData = { runs, jobs: new Map(), failureReasons: new Map(), artifacts: new Map() };
             const provider = createMockDataProvider(rawData);
-            const hub = await DataHubImpl.create([provider], { repo: 'owner/repo' });
+            const { hub } = await DataHubImpl.create([provider], { repo: 'owner/repo' });
 
             // Hub passRate = 66.67% — store has 10% (10 passed, 90 failed)
             const store = {
@@ -153,7 +153,7 @@ describe('Integration: CI Data Hub', () => {
             ];
             const rawData: RawData = { runs, jobs: new Map(), failureReasons: new Map(), artifacts: new Map() };
             const provider = createMockDataProvider(rawData);
-            const hub = await DataHubImpl.create([provider], { repo: 'owner/repo' });
+            const { hub } = await DataHubImpl.create([provider], { repo: 'owner/repo' });
 
             // Mock store with low pass rate — dataHub overrides to 100%
             vi.spyOn(persistenceModule, 'createDataHubPersistence').mockReturnValue({
@@ -190,7 +190,7 @@ describe('Integration: CI Data Hub', () => {
                 fetchRawData: vi.fn().mockRejectedValue(new Error('Network error')),
             };
 
-            const hub = await DataHubImpl.create([provider], { repo: 'owner/repo' });
+            const { hub } = await DataHubImpl.create([provider], { repo: 'owner/repo' });
 
             expect(hub.raw.runs).toHaveLength(0);
             expect(hub.computed.passRate).toBe(0);
