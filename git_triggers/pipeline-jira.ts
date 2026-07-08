@@ -6,7 +6,7 @@ import JiraClient from '../shared/jira-client.js';
 import { collectAutomated, fileToJira } from '../shared/bug-report.js';
 import { _jiraEnv } from './test-results.js';
 import { currentProvider, pushHistory } from './session-state.js';
-import { loadMetrics, saveMetrics, type MetricsStore } from '../shared/metrics.js';
+import { createDataHubPersistence } from '../shared/data-hub/persistence.js';
 import { classifyFailure } from '../shared/failure-analysis.js';
 import type { ParseResult } from '../shared/result_parser.js';
 import type { AnalysisReport } from '../shared/failure-analysis.js';
@@ -19,7 +19,8 @@ function isAutoBugEnabled(): boolean {
 
 async function persistFailureClassifications(parsed: ParseResult, backend: StoreBackend): Promise<void> {
     try {
-        const store: MetricsStore = loadMetrics(undefined, backend);
+        const persistence = createDataHubPersistence(Config.get('jiraProject') || 'unknown', backend);
+        const store = persistence.loadMetricsStore();
         if (!store.failureClassifications) {
             store.failureClassifications = [];
         }
@@ -33,7 +34,7 @@ async function persistFailureClassifications(parsed: ParseResult, backend: Store
                 project: Config.get('jiraProject') || 'unknown',
             });
         }
-        saveMetrics(store, undefined, backend);
+        persistence.saveMetricsStore(store);
     } catch (err) {
         rootLogger.warn('pipeline-jira: metrics save failed: ' + (err instanceof Error ? err.message : String(err)));
     }
