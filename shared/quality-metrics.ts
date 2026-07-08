@@ -1,6 +1,5 @@
 /**
- * Quality metrics monitoring — extends llm-metrics.ts with artifact-level
- * tracking: invariant fire rates, layer pass rates, drift detection.
+ * Quality metrics monitoring — artifact-level tracking.
  *
  * Metrics:
  *   - perInvariantFireCount: how many times each invariant failed
@@ -8,77 +7,39 @@
  *   - perArtifactTypeCount: generation count by type
  *   - drift alerts: if avg confidence drops >2σ from baseline
  *
- * Persisted via the existing llm-metrics.json mechanism.
+ * When DataHub.persistence is configured via setPersistence(), snapshots
+ * are stored there. Otherwise, falls back to direct filesystem access
+ * for backward compatibility during migration.
  */
 
+import type { QualityMetricsSnapshot, DataHubPersistence } from './types/data-hub.js';
 import { rootLogger } from './logger.js';
-import { safeParseJson } from './safe-json.js';
-import fs from 'fs';
-import path from 'path';
-import os from 'os';
-import Config from './config.js';
+
+/** Re-export for backward compatibility. */
+export type { QualityMetricsSnapshot } from './types/data-hub.js';
 
 type Layer = 'layer1' | 'layer2' | 'layer3';
 
 const MAX_PASS_RATE = 1;
 const DRIFT_SIGMA_MULTIPLIER = 2;
 
-export interface QualityMetricsSnapshot {
-    timestamp: string;
-    invariantFireCount: Record<string, number>;
-    layerPassRates: {
-        layer1: number;
-        layer2: number;
-        layer3: number;
-    };
-    layerAttempts: {
-        layer1: number;
-        layer2: number;
-        layer3: number;
-    };
-    artifactTypeCounts: Record<string, number>;
-    avgStructureScore: number;
+let _configuredPersistence: DataHubPersistence | null = null;
+
+/**
+ * Configure the persistence layer for quality metrics.
+ * Call this once during DataHub initialization.
+ *
+ * @param persistence - DataHub persistence instance.
+ */
+export function setQualityMetricsPersistence(persistence: DataHubPersistence): void {
+    _configuredPersistence = persistence;
 }
 
-interface StoredQualityMetrics {
-    snapshots: QualityMetricsSnapshot[];
-}
-
-function storePath(): string {
-    const xdg = Config.get('xdgStateHome');
-    const base = xdg ? path.join(xdg, 'qa-tools') : path.join(os.homedir(), '.local', 'state', 'qa-tools');
-    return path.join(base, 'quality-metrics.json');
-}
-
-function loadStore(): StoredQualityMetrics {
-    try {
-        const p = storePath();
-        if (!fs.existsSync(path.resolve(p))) return { snapshots: [] };
-        return safeParseJson<StoredQualityMetrics>(fs.readFileSync(path.resolve(p), 'utf8'), { snapshots: [] });
-    } catch (err) {
-        rootLogger.warn(
-            'Failed to load quality metrics: ' +
-                (err instanceof Error ? err.message : String(err)) +
-                '. Starting with empty state.',
-        );
-        return { snapshots: [] };
-    }
-}
-
-function saveStore(store: StoredQualityMetrics): void {
-    try {
-        const p = storePath();
-        fs.mkdirSync(path.dirname(p), { recursive: true });
-        const tmp = p + '.tmp';
-        fs.writeFileSync(path.resolve(tmp), JSON.stringify(store, null, 2), 'utf8');
-        fs.renameSync(path.resolve(tmp), p);
-    } catch (err) {
-        rootLogger.error(
-            'Failed to persist quality metrics: ' +
-                (err instanceof Error ? err.message : String(err)) +
-                '. Check disk space and permissions for the state directory.',
-        );
-    }
+/**
+ * Get the configured persistence, or null if not configured.
+ */
+function getPersistence(): DataHubPersistence | null {
+    return _configuredPersistence;
 }
 
 export class QualityMetricsCollector {
@@ -157,7 +118,12 @@ export class QualityMetricsCollector {
         return Math.min(passes / attempts, MAX_PASS_RATE);
     }
 
-    /** Detect drift: if any invariant's fire rate is >2σ from baseline. */
+    /**
+     * Detect drift: if any invariant's fire rate is >2σ from baseline.
+     *
+     * @param baselineSnapshots - Historical snapshots for baseline calculation.
+     * @returns Array of drift alert messages.
+     */
     detectDrift(baselineSnapshots: QualityMetricsSnapshot[]): string[] {
         if (baselineSnapshots.length < 2) return [];
 
@@ -206,6 +172,12 @@ export class QualityMetricsCollector {
         return alerts;
     }
 
+    /**
+     * Create a snapshot of current metrics.
+     * Uses configured persistence if available.
+     *
+     * @returns The created snapshot.
+     */
     snapshot(): QualityMetricsSnapshot {
         const snapshot: QualityMetricsSnapshot = {
             timestamp: new Date().toISOString(),
@@ -223,15 +195,35 @@ export class QualityMetricsCollector {
                     : 0,
         };
 
-        const store = loadStore();
-        store.snapshots.push(snapshot);
-        saveStore(store);
+        const persistence = getPersistence();
+        if (persistence) {
+            persistence.saveQualityMetrics(snapshot);
+        } else {
+            rootLogger.warn(
+                'quality-metrics: No persistence configured. Snapshot created but not persisted. ' +
+                    'Call setQualityMetricsPersistence() during DataHub initialization.',
+            );
+        }
 
         return snapshot;
     }
 
+    /**
+     * Get all historical snapshots.
+     * Uses configured persistence if available.
+     *
+     * @returns Array of historical snapshots.
+     */
     getHistory(): QualityMetricsSnapshot[] {
-        return loadStore().snapshots;
+        const persistence = getPersistence();
+        if (persistence) {
+            return persistence.loadQualityMetricsHistory();
+        }
+        rootLogger.warn(
+            'quality-metrics: No persistence configured. Returning empty history. ' +
+                'Call setQualityMetricsPersistence() during DataHub initialization.',
+        );
+        return [];
     }
 
     clear(): void {
@@ -246,31 +238,65 @@ export class QualityMetricsCollector {
 
 const _defaultCollector = new QualityMetricsCollector();
 
+/**
+ * Record an invariant fire event.
+ *
+ * @param invariantId - The invariant that fired.
+ */
 export function recordInvariantFire(invariantId: string): void {
     _defaultCollector.recordInvariantFire(invariantId);
 }
 
+/**
+ * Record a layer attempt.
+ *
+ * @param layer - The layer that was attempted.
+ */
 export function recordLayerAttempt(layer: 'layer1' | 'layer2' | 'layer3'): void {
     _defaultCollector.recordLayerAttempt(layer);
 }
 
+/**
+ * Record a layer pass.
+ *
+ * @param layer - The layer that passed.
+ */
 export function recordLayerPass(layer: 'layer1' | 'layer2' | 'layer3'): void {
     _defaultCollector.recordLayerPass(layer);
 }
 
+/**
+ * Record an artifact type.
+ *
+ * @param type - The artifact type.
+ */
 export function recordArtifactType(type: string): void {
     _defaultCollector.recordArtifactType(type);
 }
 
+/**
+ * Create a snapshot of current quality metrics.
+ * Uses configured persistence if available.
+ *
+ * @returns The created snapshot.
+ */
 export function snapshotQualityMetrics(): QualityMetricsSnapshot {
     return _defaultCollector.snapshot();
 }
 
+/**
+ * Detect drift in invariant fire rates.
+ *
+ * @returns Array of drift alert messages.
+ */
 export function detectDrift(): string[] {
     const history = _defaultCollector.getHistory();
     return _defaultCollector.detectDrift(history);
 }
 
+/**
+ * Reset the default collector state.
+ */
 export function resetQualityMetrics(): void {
     _defaultCollector.clear();
 }

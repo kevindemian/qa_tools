@@ -1,11 +1,11 @@
 /** Metrics persistence: run history, flakiness calculation, and coverage tracking.
  * Internal persistence uses StoreBackend (git-backed or fs-backed). */
-import { z } from './deps.js';
 import Config from './config.js';
 import { rootLogger } from './logger.js';
 import { detectProjectGitDir, detectStoreBackend, FsStoreBackend } from './store-backend.js';
 import type { StoreBackend } from './store-backend.js';
 import type { ParseResult, FlatTest } from './result_parser.js';
+import { MetricsStoreSchema } from './data-hub/schemas.js';
 
 /** Represents a single test run with pass/fail/skip counts and individual test results. */
 export interface MetricsRun {
@@ -40,49 +40,6 @@ export interface MetricsStore {
     coverageHistory?: CoverageSnapshot[];
     failureClassifications?: FailureClassification[];
 }
-
-const FlatTestSchema = z.object({
-    title: z.string(),
-    state: z.union([z.literal('passed'), z.literal('failed'), z.literal('skipped')]),
-    duration: z.number().nonnegative(),
-    error: z.string().optional(),
-    fullTitle: z.string().optional(),
-    steps: z.array(z.object({ action: z.string().optional(), expected: z.string().optional() }).loose()).optional(),
-    screenshots: z.array(z.object({ title: z.string(), dataUri: z.string() }).loose()).optional(),
-    logs: z.array(z.string()).optional(),
-});
-
-const MetricsRunSchema = z.object({
-    timestamp: z.string(),
-    project: z.string(),
-    total: z.number().int().nonnegative(),
-    passed: z.number().int().nonnegative(),
-    failed: z.number().int().nonnegative(),
-    skipped: z.number().int().nonnegative(),
-    duration: z.number().nonnegative(),
-    tests: z.array(FlatTestSchema),
-});
-
-const CoverageSnapshotSchema: z.ZodType<CoverageSnapshot> = z.object({
-    timestamp: z.string(),
-    project: z.string(),
-    totalIssues: z.number().int().nonnegative(),
-    mappedIssues: z.number().int().nonnegative(),
-    coveragePct: z.number().min(0).max(100),
-});
-
-const FailureClassificationSchema = z.object({
-    timestamp: z.string(),
-    testTitle: z.string(),
-    category: z.string(),
-    project: z.string(),
-});
-
-const MetricsStoreSchema = z.object({
-    runs: z.array(MetricsRunSchema),
-    coverageHistory: z.array(CoverageSnapshotSchema).optional(),
-    failureClassifications: z.array(FailureClassificationSchema).optional(),
-});
 
 export interface FlakinessEntry {
     title: string;

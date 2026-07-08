@@ -1281,23 +1281,30 @@ Testes adicionados:
 
 **Decisão Arquitetural (2026-07-07)**: DataHub é a ÚNICA fonte de verdade para aquisição, manipulação e exportação de dados. O fallback manual (Layer 7) é parte do creation flow do DataHub. Consumers RECEBEM DataHub como parâmetro OBRIGATÓRIO, nunca opcional.
 
-**Escopo real (2026-07-07)**: 68 arquivos importam de `shared/metrics.ts` — 28 production, 39 test, 1 mock. O plano original listava 24 consumers — faltavam `report-types.ts`, `run-comparison.ts`, `e2e/smoke-pipeline.ts` e todos os 39 test files.
+**Escopo real (2026-07-08)**: 76 arquivos afetados — 31 consumers de metrics.ts, 6 rogue calculators, 39 test files, 1 mock. Auditoria adicional identificou 15 arquivos que calculam métricas localmente sem usar metrics.ts ou DataHub — 3 são HIGH priority (pipeline-health.ts, git-artifact-downloader.ts, ci-detect.ts).
 
 #### Decisões Técnicas
 
-| Decisão             | Escolha                                                       | Justificativa                                                             |
-| ------------------- | ------------------------------------------------------------- | ------------------------------------------------------------------------- |
-| Fonte de dados      | DataHub é ÚNICA interface                                     | Elimina ambiguidade: onde buscar cada dado?                               |
-| Parâmetro `dataHub` | OBRIGATÓRIO (nunca opcional)                                  | Se é SSOT, não pode ser bypassável                                        |
-| Persistence         | DataHub absorve MetricsStore                                  | Histórico de runs, coverage, classifications ficam em `hub.persistence.*` |
-| Fallback manual     | Parte do creation flow                                        | `DataHub.create()` inclui Layer 7 como etapa do cascade                   |
-| Ordem de migração   | Por dependência + impacto                                     | Foundation primeiro, depois consumers complexos                           |
-| Escopo              | TODOS os consumers de metrics.ts                              | 68 arquivos — production + test + mock                                    |
-| Tipos migrados      | MetricsRun, FlakinessEntry, TrendPoint, FailureClassification | DataHub produz equivalentes compatíveis                                   |
-| Code paths          | ÚNICO caminho (sem fallback)                                  | Elimina código dual e condicionais                                        |
-| Deprecation         | NÃO usa @deprecated                                           | Código deprecado é eliminado. Se mantido, documentar motivo formalmente   |
+| Decisão              | Escolha                                                                               | Justificativa                                                                      |
+| -------------------- | ------------------------------------------------------------------------------------- | ---------------------------------------------------------------------------------- |
+| Fonte de dados       | DataHub é ÚNICA interface                                                             | Elimina ambiguidade: onde buscar cada dado?                                        |
+| Parâmetro `dataHub`  | OBRIGATÓRIO (nunca opcional)                                                          | Se é SSOT, não pode ser bypassável                                                 |
+| Persistence          | DataHub absorve MetricsStore + quality-metrics                                        | Histórico de runs, coverage, classifications, quality ficam em `hub.persistence.*` |
+| Fallback manual      | Parte do creation flow                                                                | `DataHub.create()` inclui Layer 7 como etapa do cascade                            |
+| Ordem de migração    | Por dependência + impacto                                                             | Foundation primeiro, depois rogue calculators, depois consumers                    |
+| Escopo               | TODOS consumers + rogue calculators                                                   | 76 arquivos — 31 metrics.ts + 6 rogue + 39 test + 1 mock                           |
+| Tipos migrados       | MetricsRun, FlakinessEntry, TrendPoint, FailureClassification, QualityMetricsSnapshot | DataHub produz equivalentes compatíveis                                            |
+| Code paths           | ÚNICO caminho (sem fallback)                                                          | Elimina código dual e condicionais                                                 |
+| Deprecation          | NÃO usa @deprecated                                                                   | Código deprecado é eliminado. Se mantido, documentar motivo formalmente            |
+| Rogue calculators    | DELETAR ou REFAZER                                                                    | pipeline-health.ts 100% coberto; detectFlakyTests usa algoritmo incorreto          |
+| quality-metrics      | ABSORVER (não deletar)                                                                | Collector stateful é válido; persistência migra para DataHub.persistence           |
+| Algoritmo flaky      | Rate threshold (metrics.ts)                                                           | Co-occurrence gera falsos positivos massivos                                       |
+| buildTestDurationMap | Extrair para shared (dedup 3 cópias)                                                  | Função idêntica copiada em 3 arquivos                                              |
+| passRate formula     | Consolidar em função shared                                                           | Mesma fórmula em 6+ locais                                                         |
 
-#### Ordem de Migração (revisada — subdividida em sub-fases)
+#### Ordem de Migração — Estratégia B+ (Agrupada Atômica)
+
+**Princípio**: Cada commit é uma unidade de risco independente, testável e rollback-safe. Agrupamento por tipo de mudança, não por quantidade de arquivos.
 
 **22.A — Foundation (tipos e persistence)** ✅ COMPLETO
 
@@ -1310,9 +1317,18 @@ Testes adicionados:
 | 22.A.5 | Atualizar `DataHub.create()` com Layer 7 | `data-hub/hub.ts`         | ✅     |
 | 22.A.6 | Testes para foundation                   | Vários                    | ✅     |
 
-**22.B.1 — Type-only + zero-metrics (10 consumers)**
+**22.A — Foundation (blockers)** — 3 commits separados (pré-requisitos):
 
-Trocar imports de tipo de `shared/metrics.ts` para `types/data-hub.ts`. Nenhuma função é chamada.
+| Step    | Ação                                          | Arquivo                                                     | Critério                                  | Status |
+| ------- | --------------------------------------------- | ----------------------------------------------------------- | ----------------------------------------- | ------ |
+| 22.A.7  | Criar `saveParseResult` em DataHubPersistence | `data-hub/persistence.ts`                                   | desbloqueia test-results + pr-report-core | ✅     |
+| 22.A.8  | Criar `calculateFlakyTestRate` em compute/    | `data-hub/compute/flakiness.ts`                             | desbloqueia quality-gate                  | ✅     |
+| 22.A.9  | Consolidar Zod schemas em `schemas.ts`        | `data-hub/schemas.ts`                                       | resolve dual type system                  | ✅     |
+| 22.A.10 | Absorber quality-metrics → DataHub            | `types/data-hub.ts`, `persistence.ts`, `quality-metrics.ts` | SSOT completo para quality engineering    | ✅     |
+
+**22.B — Type-only migrations** (1 commit, 10 consumers)
+
+Todas mudanças são import swaps — structural typing garante equivalência.
 
 | Consumer            | Arquivo                         | Tipo Importado                    |
 | ------------------- | ------------------------------- | --------------------------------- |
@@ -1327,9 +1343,7 @@ Trocar imports de tipo de `shared/metrics.ts` para `types/data-hub.ts`. Nenhuma 
 | flakiness-dashboard | `shared/flakiness-dashboard.ts` | FlakinessEntry (type)             |
 | git-metrics-adapter | `shared/git-metrics-adapter.ts` | MetricsRun, FailureClassification |
 
-**22.B.2 — loadMetrics-only (4 consumers)**
-
-Substituir `loadMetrics()` por `hub.persistence.loadMetricsStore()` ou `hub.computed.*`.
+**22.C — loadMetrics-only** (1 commit, 4 consumers)
 
 | Consumer             | Arquivo                              | Funções usadas |
 | -------------------- | ------------------------------------ | -------------- |
@@ -1338,9 +1352,7 @@ Substituir `loadMetrics()` por `hub.persistence.loadMetricsStore()` ou `hub.comp
 | case25               | `jira_management/commands/case25.ts` | loadMetrics    |
 | coverage-gap         | `shared/coverage-gap.ts`             | loadMetrics    |
 
-**22.B.3 — + calculateFlakiness (3 consumers)**
-
-Substituir `loadMetrics()` + `calculateFlakiness()` por `hub.computed.flakinessEntries`.
+**22.D — + calculateFlakiness** (1 commit, 3 consumers)
 
 | Consumer      | Arquivo                              | Funções usadas                  |
 | ------------- | ------------------------------------ | ------------------------------- |
@@ -1348,18 +1360,14 @@ Substituir `loadMetrics()` + `calculateFlakiness()` por `hub.computed.flakinessE
 | case26        | `jira_management/commands/case26.ts` | loadMetrics, calculateFlakiness |
 | session-state | `git_triggers/session-state.ts`      | loadMetrics, calculateFlakiness |
 
-**22.B.4 — + saveCoverageSnapshot (2 consumers)**
-
-Substituir `loadMetrics()` + `calculateFlakiness()` + `saveCoverageSnapshot()`.
+**22.E — + saveCoverageSnapshot** (1 commit, 2 consumers)
 
 | Consumer | Arquivo                              | Funções usadas                                                   |
 | -------- | ------------------------------------ | ---------------------------------------------------------------- |
 | case19   | `jira_management/commands/case19.ts` | loadMetrics, calculateFlakiness, getTrends, saveCoverageSnapshot |
 | case21   | `jira_management/commands/case21.ts` | loadMetrics, saveCoverageSnapshot                                |
 
-**22.B.5 — Medium chain (3 consumers)**
-
-Dependem entre si. Migrar em ordem: test-results → batch-mode → quality-gate.
+**22.F — Medium chain** (1 commit, 3 consumers, ordem fixa)
 
 | Consumer     | Arquivo                        | Funções usadas                                     |
 | ------------ | ------------------------------ | -------------------------------------------------- |
@@ -1367,18 +1375,14 @@ Dependem entre si. Migrar em ordem: test-results → batch-mode → quality-gate
 | batch-mode   | `git_triggers/batch-mode.ts`   | loadMetrics, calculateFlakiness                    |
 | quality-gate | `shared/quality-gate.ts`       | loadMetrics, calculateFlakiness, MetricsRun (type) |
 
-**22.B.6 — Complex chain (2 consumers)**
-
-Heavy consumers com múltiplas dependências.
+**22.G — Complex chain** (1 commit, 2 consumers)
 
 | Consumer       | Arquivo                              | Funções usadas                                              |
 | -------------- | ------------------------------------ | ----------------------------------------------------------- |
 | case17         | `jira_management/commands/case17.ts` | loadMetrics, calculateFlakiness                             |
 | pr-report-core | `shared/pr-report-core.ts`           | loadMetrics, saveParseResult, calculateFlakiness, getTrends |
 
-**22.B.7 — session-context group (3 consumers)**
-
-Não importam metrics.ts mas precisam de迁徙 arquitetural (resolveTestDataSource → DataHub).
+**22.H — session-context group** (1 commit, 3 consumers)
 
 | Consumer          | Arquivo                                         | Ação                                         |
 | ----------------- | ----------------------------------------------- | -------------------------------------------- |
@@ -1386,9 +1390,7 @@ Não importam metrics.ts mas precisam de迁徙 arquitetural (resolveTestDataSour
 | case15            | `jira_management/commands/case15.ts`            | Depende de session-context                   |
 | case17-test-utils | `jira_management/commands/case17-test-utils.ts` | Remover re-export                            |
 
-**22.B.8 — Heavy pipeline (3 consumers)**
-
-Mais complexos. Migrar por último.
+**22.I — Heavy pipeline** (1 commit, 3 consumers, mais complexos)
 
 | Consumer         | Arquivo                            | Funções usadas                                                    |
 | ---------------- | ---------------------------------- | ----------------------------------------------------------------- |
@@ -1396,13 +1398,34 @@ Mais complexos. Migrar por último.
 | schedule-handler | `git_triggers/schedule-handler.ts` | loadMetrics, calculateFlakiness + inline types                    |
 | interactive-mode | `git_triggers/interactive-mode.ts` | loadMetrics, calculateFlakiness, MetricsRun (type) + inline types |
 
-**22.B.9 — e2e (1 consumer)**
+**22.J — E2E** (1 commit, 1 consumer)
 
 | Consumer       | Arquivo                 | Funções usadas                  |
 | -------------- | ----------------------- | ------------------------------- |
 | smoke-pipeline | `e2e/smoke-pipeline.ts` | loadMetrics, calculateFlakiness |
 
-**22.C — Test files (39 files)**
+**22.M — HIGH priority rogue calculators** (1 commit, 3 arquivos)
+
+Arquivos que calculam métricas localmente sem usar metrics.ts ou DataHub. Prioridade HIGH por serem pipelines paralelos completos ou fontes de dados primárias.
+
+| #   | Arquivo                             | Problema                                                                                                                                                                                 | Ação                                                                   |
+| --- | ----------------------------------- | ---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | ---------------------------------------------------------------------- |
+| 1   | `git_triggers/pipeline-health.ts`   | Pipeline de métricas **completo e paralelo** — define `PipelineRunExtended`, `PipelineHealth`, calcula passRate, avgDuration, topFailingJobs, branchBreakdown, failureReasons localmente | **DELETAR** — DataHub já cobre 100%                                    |
+| 2   | `shared/git-artifact-downloader.ts` | Calcula `passRate` inline + implementa **algoritmo diferente** de detecção de flaky (`detectFlakyTests` usa co-occurrence, não rate threshold)                                           | **DELETAR** `detectFlakyTests()`, refatorar passRate para usar DataHub |
+| 3   | `shared/ci-detect.ts`               | Define tipo `RunStats` com `passRate` embutido — **raiz do bypass**                                                                                                                      | **REFAZER** `RunStats` para não incluir passRate derivado              |
+
+**22.N — MEDIUM priority rogue calculators** (1 commit, 6 arquivos)
+
+| #   | Arquivo                              | Problema                                                                               | Ação                                                                                      |
+| --- | ------------------------------------ | -------------------------------------------------------------------------------------- | ----------------------------------------------------------------------------------------- |
+| 1   | `shared/quality-gate.ts`             | **Recalcula** flakyPct e suiteSpeed p95 localmente em vez de ler de `DataHub.computed` | Refatorar para usar `DataHub.computed.flakyPercentage` e `DataHub.computed.suiteSpeedP95` |
+| 2   | `jira_management/commands/case17.ts` | Calcula passRate inline em 2 lugares (PR comment + report.stats.json)                  | Extrair para função shared ou usar DataHub                                                |
+| 3   | `git_triggers/schedule-handler.ts`   | Calcula `failRate` (% runs com falhas) + `buildTestDurationMap()` duplicado            | Extrair `buildTestDurationMap()` para shared, unificar failRate                           |
+| 4   | `git_triggers/interactive-mode.ts`   | Mesmo `failRate` + `buildTestDurationMap()` copiado 2x                                 | Usar função shared extraída                                                               |
+| 5   | `shared/cross-squad-benchmark.ts`    | Define `SquadBenchmark` com passRate/flakyRate/coveragePct — duplica DataHub.computed  | Refatorar para aceitar `ComputedMetrics` como input                                       |
+| 6   | `shared/report-utils.ts`             | `statsFromTests()` — terceira implementação de contagem passed/failed/skipped          | Consolidar com session-context.ts e case17.ts                                             |
+
+**22.K — Test files** (1 commit, batch)
 
 Atualizar todos os test files que importam de `shared/metrics.ts`:
 
@@ -1411,16 +1434,16 @@ Atualizar todos os test files que importam de `shared/metrics.ts`:
 - Atualizar mocks para DataHub mocks
 - Verificar que `rg "from.*metrics" --include="*.test.ts"` = zero
 
-**22.D — Delete metrics.ts**
+**22.L — Delete metrics.ts** (1 commit, limpeza final)
 
 | Step   | Ação                            | Arquivo                                                    | Critério                                        |
 | ------ | ------------------------------- | ---------------------------------------------------------- | ----------------------------------------------- |
-| 22.D.1 | Deletar metrics.ts              | `shared/metrics.ts`                                        | Nenhum import restante: `rg "from.*metrics.ts"` |
-| 22.D.2 | Deletar mock                    | `shared/__mocks__/metrics.ts`                              | Nenhum referência restante                      |
-| 22.D.3 | Verificar metrics.property.test | `shared/__tests__/metrics.property.test.ts`                | Migrar ou deletar                               |
-| 22.D.4 | Verificar metrics.test          | `shared/__tests__/metrics.test.ts`                         | Migrar ou deletar                               |
-| 22.D.5 | Verificar integration tests     | `shared/__tests__/integration/metrics.integration.test.ts` | Migrar ou deletar                               |
-| 22.D.6 | Verificação final               | `rg "shared/metrics"`                                      | Zero ocorrências em código production           |
+| 22.L.1 | Deletar metrics.ts              | `shared/metrics.ts`                                        | Nenhum import restante: `rg "from.*metrics.ts"` |
+| 22.L.2 | Deletar mock                    | `shared/__mocks__/metrics.ts`                              | Nenhum referência restante                      |
+| 22.L.3 | Verificar metrics.property.test | `shared/__tests__/metrics.property.test.ts`                | Migrar ou deletar                               |
+| 22.L.4 | Verificar metrics.test          | `shared/__tests__/metrics.test.ts`                         | Migrar ou deletar                               |
+| 22.L.5 | Verificar integration tests     | `shared/__tests__/integration/metrics.integration.test.ts` | Migrar ou deletar                               |
+| 22.L.6 | Verificação final               | `rg "shared/metrics"`                                      | Zero ocorrências em código production           |
 
 #### Padrão de Migração (RED → GREEN → REFACTOR)
 
@@ -1447,59 +1470,131 @@ const coverage = await hub.persistence.loadCoverageHistory(project);
 const previousRun = await hub.persistence.loadRun(previousSha);
 ```
 
+#### Critérios de Aceite por Commit
+
+```bash
+# Para cada commit:
+tsc --noEmit          # 0 erros
+eslint .              # 0 violações
+vitest run            # 100% pass
+git commit -m "refactor(data-hub): Phase 22.X migrate <group>"
+```
+
 #### Detalhamento por Step
 
-**22.B.1 — Type-only migration:**
+**22.A.7 — saveParseResult:**
+
+- Adicionar `saveParseResult(project, result: ParseResult): MetricsRun` à interface `DataHubPersistence`
+- Implementar: converter ParseResult → MetricsRun via `convertParseResultToMetricsRun()`
+- Delegar para `saveRun()` existente
+- Testes: unitários para conversão + round-trip
+
+**22.A.8 — calculateFlakyTestRate:**
+
+- Criar `calculateFlakyTestRate(store: MetricsStore, minRuns?: number): number` em `data-hub/compute/flakiness.ts`
+- Reutilizar `calcFlakinessEntries()` existente
+- Retornar flakyTests/qualifyingTests
+- Adicionar `testFlakyRate` ao `ComputedMetrics`
+- Testes: unitários com cenários edge (zero runs, all flaky, no flaky)
+
+**22.A.9 — Consolidate Zod schemas:**
+
+- Criar `shared/data-hub/schemas.ts` com schemas Zod como SSOT
+- `FlatTestSchema`: combinar campos explícitos + `.loose()` para forward compatibility
+- metrics.ts e persistence.ts importam de `schemas.ts`
+- Testes: round-trip serialization + validation
+
+**22.A.10 — Absorb quality-metrics → DataHub:**
+
+- Adicionar `QualityMetricsSnapshot` ao `types/data-hub.ts`
+- Adicionar persistência ao `DataHubPersistence`: `saveQualityMetrics()`, `loadQualityMetricsHistory()`
+- Refatorar `QualityMetricsCollector` para usar `DataHub.persistence` em vez de filesystem direto
+- Manter collector stateful (padrão válido de acumulação de contadores)
+- Atualizar consumers: `quality-suggester.ts`, `quality-check.ts`
+- Testes: unitários para persistência + round-trip
+
+**22.B — Type-only migration:**
 
 - Trocar `import { MetricsStore } from '../metrics.js'` por `import type { MetricsStore } from '../types/data-hub.js'`
 - Garantir que o shape do tipo é compatível
 - Rodar `npx tsc --noEmit` para verificar compilação
 - Rodar `npx vitest run` nos testes do módulo
 
-**22.B.2 — loadMetrics-only migration:**
+**22.C — loadMetrics-only migration:**
 
 - Substituir `const store = loadMetrics()` por `const store = hub.persistence.loadMetricsStore()`
 - DataHub vira parâmetro obrigatório da função
 - Atualizar chamadores para passar DataHub
 - Atualizar testes para mockar DataHub em vez de metrics
 
-**22.B.3 — calculateFlakiness migration:**
+**22.D — calculateFlakiness migration:**
 
 - Substituir `calculateFlakiness(store)` por `hub.computed.flakinessEntries`
 - Substituir `loadMetrics()` por leitura do DataHub
 - DataHub vira parâmetro obrigatório
 
-**22.B.4 — saveCoverageSnapshot migration:**
+**22.E — saveCoverageSnapshot migration:**
 
 - Substituir `saveCoverageSnapshot(snapshot)` por `hub.persistence.saveCoverageSnapshot(snapshot)`
 - Substituir `loadMetrics()` por `hub.persistence.loadMetricsStore()`
 
-**22.B.5 — Medium chain migration:**
+**22.F — Medium chain migration:**
 
 - Migrar em ordem: test-results → batch-mode → quality-gate
 - Cada um depende do anterior
 - Substituir `saveParseResult()` por `hub.persistence.saveRun()`
 - Substituir `loadMetrics()` + `calculateFlakiness()` por `hub.computed.*`
 
-**22.B.6 — Complex chain migration:**
+**22.G — Complex chain migration:**
 
 - case17: Substituir `resolveTestDataSource()` por DataHub, `_loadFlakinessMap()` por `hub.computed.flakinessEntries`
 - pr-report-core: Substituir 4 funções de metrics por equivalentes DataHub
 
-**22.B.7 — session-context group:**
+**22.H — session-context group:**
 
 - session-context: Substituir `resolveTestDataSource()` por `DataHub.raw.parsedArtifacts`
 - case15: Depende de session-context (já migrado)
 - case17-test-utils: Remover re-export de `fetchLatestTestRun()`
 
-**22.B.8 — Heavy pipeline migration:**
+**22.I — Heavy pipeline migration:**
 
 - Migrar por ordem: pipeline-jira → schedule-handler → interactive-mode
 - pipeline-jira: Substituir `saveMetrics()` por `hub.persistence.saveMetricsStore()`
 - schedule-handler: Heavy — substituir todas as chamadas de metrics
 - interactive-mode: Heavy — substituir todas as chamadas de metrics
 
-**22.D — Delete metrics.ts:**
+**22.M — HIGH priority rogue calculators:**
+
+- **22.M.1**: Deletar `git_triggers/pipeline-health.ts` (100% coberto por DataHub)
+    - Verificar que nenhum arquivo importa de `pipeline-health.ts`
+    - Migrar consumers para DataHub.computed
+    - Deletar arquivo e testes associados
+
+- **22.M.2**: Deletar `detectFlakyTests()` em `git-artifact-downloader.ts`
+    - Algoritmo co-occurrence é incorreto (gera falsos positivos)
+    - Substituir por `calculateFlakiness()` do DataHub
+    - Refatorar `addRunStatsFromSummary()` para não calcular passRate inline
+
+- **22.M.3**: Refatorar `RunStats` em `ci-detect.ts`
+    - Remover campo `passRate` do tipo (é dado derivado, não input)
+    - Consumers devem calcular passRate via DataHub quando necessário
+
+**22.N — MEDIUM priority rogue calculators:**
+
+- **22.N.1**: Refatorar `quality-gate.ts`
+    - Substituir `_flakyCheck()` por `DataHub.computed.flakyPercentage`
+    - Substituir `_suiteSpeedCheck()` por `DataHub.computed.suiteSpeedP95`
+    - Manter `_passRateCheck()` se não houver equivalente no DataHub
+
+- **22.N.2**: Extrair `buildTestDurationMap()` para shared
+    - Criar `shared/test-duration-utils.ts` com função única
+    - Substituir 3 cópias em schedule-handler.ts e interactive-mode.ts
+
+- **22.N.3**: Unificar fórmula passRate
+    - Consolidar `(passed / (passed + failed)) * 100` em função shared
+    - Substituir 6+ ocorrências inline
+
+**22.L — Delete metrics.ts:**
 
 - Verificar que NENHUM arquivo importa de `shared/metrics.ts`
 - Deletar `shared/metrics.ts`

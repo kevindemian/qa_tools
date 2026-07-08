@@ -11,8 +11,24 @@
  */
 import type { PipelineRun, PipelineJob, ArtifactInfo, GitLabTestReport } from './ci-cd.js';
 import type { ArtifactParseResult } from '../data-hub/artifact-parser.js';
-import type { FlatTest } from '../result_parser.js';
+import type { FlatTest, ParseResult } from '../result_parser.js';
 import type { CoverageSnapshot } from './coverage.js';
+
+/** Quality engineering metrics snapshot — invariant fire rates, layer pass rates, drift detection. */
+export interface QualityMetricsSnapshot {
+    /** ISO timestamp of the snapshot. */
+    timestamp: string;
+    /** Count of fires per invariant ID. */
+    invariantFireCount: Record<string, number>;
+    /** Pass rates per layer (0-1). */
+    layerPassRates: { layer1: number; layer2: number; layer3: number };
+    /** Total attempts per layer. */
+    layerAttempts: { layer1: number; layer2: number; layer3: number };
+    /** Count of artifacts by type. */
+    artifactTypeCounts: Record<string, number>;
+    /** Average structure score (0-1). */
+    avgStructureScore: number;
+}
 
 /** Re-export FlatTest for consumers that need test-level data. */
 export type { FlatTest } from '../result_parser.js';
@@ -367,6 +383,19 @@ export interface DataHubPersistence {
     saveMetricsStore(store: MetricsStore): void;
     /** Load the full MetricsStore. */
     loadMetricsStore(): MetricsStore;
+    /**
+     * Convert a ParseResult to MetricsRun and save it to history.
+     * This is the primary entry point for persisting test results from parsers.
+     *
+     * @param project - Project name for scoping.
+     * @param result - Parsed test results from CTRF/JUnit/Mochawesome.
+     * @returns The created MetricsRun for downstream use.
+     */
+    saveParseResult(project: string, result: ParseResult): MetricsRun;
+    /** Save a quality metrics snapshot. */
+    saveQualityMetrics(snapshot: QualityMetricsSnapshot): void;
+    /** Load all quality metrics snapshots. */
+    loadQualityMetricsHistory(): QualityMetricsSnapshot[];
     /** Flush changes to disk. */
     flush(message: string): void;
 }

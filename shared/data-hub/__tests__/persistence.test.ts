@@ -7,6 +7,7 @@ import { describe, it, expect, vi, beforeEach } from 'vitest';
 import { createDataHubPersistence } from '../persistence.js';
 import type { MetricsRun, MetricsStore, CoverageSnapshot, FailureClassification } from '../../types/data-hub.js';
 import type { StoreBackend } from '../../store-backend.js';
+import type { ParseResult } from '../../result_parser.js';
 
 /* ── Mock StoreBackend ──────────────────────────────────────────────────── */
 
@@ -57,6 +58,24 @@ function makeFailureClassification(overrides?: Partial<FailureClassification>): 
         testTitle: 'flaky test',
         category: 'FLAKY',
         project: 'test',
+        ...overrides,
+    };
+}
+
+function makeParseResult(overrides?: Partial<ParseResult>): ParseResult {
+    return {
+        tests: [
+            { title: 'test A', state: 'passed', duration: 100 },
+            { title: 'test B', state: 'failed', duration: 50, error: 'assertion error' },
+            { title: 'test C', state: 'skipped', duration: 0 },
+        ],
+        stats: {
+            passed: 1,
+            failed: 1,
+            skipped: 1,
+            total: 3,
+            duration: 150,
+        },
         ...overrides,
     };
 }
@@ -169,6 +188,107 @@ describe('DataHubPersistence', () => {
             expect.hasAssertions();
 
             expect(persistence.loadMetricsStore()).toStrictEqual({ runs: [] });
+        });
+    });
+
+    describe('SaveParseResult', () => {
+        it('saveParseResult converts ParseResult to MetricsRun', () => {
+            expect.hasAssertions();
+
+            const parseResult = makeParseResult();
+
+            const run = persistence.saveParseResult('my-project', parseResult);
+
+            expect(run.project).toBe('my-project');
+            expect(run.total).toBe(3);
+            expect(run.passed).toBe(1);
+            expect(run.failed).toBe(1);
+            expect(run.skipped).toBe(1);
+            expect(run.duration).toBe(150);
+            expect(run.tests).toHaveLength(3);
+            expect(run.timestamp).toBeTruthy();
+        });
+
+        it('saveParseResult persists run to metrics store', () => {
+            expect.hasAssertions();
+
+            const parseResult = makeParseResult();
+
+            persistence.saveParseResult('my-project', parseResult);
+
+            const stored = JSON.parse(
+                backend.data.get('metrics/global.json')?.toString('utf8') ?? '{}',
+            ) as MetricsStore;
+
+            expect(stored.runs).toHaveLength(1);
+            expect(stored.runs[0]?.project).toBe('my-project');
+        });
+
+        it('saveParseResult returns MetricsRun with correct shape', () => {
+            expect.hasAssertions();
+
+            const parseResult = makeParseResult({
+                stats: { passed: 10, failed: 2, skipped: 3, total: 15, duration: 500 },
+            });
+
+            const run = persistence.saveParseResult('proj', parseResult);
+
+            expect(run).toStrictEqual({
+                timestamp: expect.any(String) as string,
+                project: 'proj',
+                total: 15,
+                passed: 10,
+                failed: 2,
+                skipped: 3,
+                duration: 500,
+                tests: parseResult.tests,
+            });
+        });
+
+        it('saveParseResult appends to existing runs', () => {
+            expect.hasAssertions();
+
+            const result1 = makeParseResult({ stats: { passed: 5, failed: 0, skipped: 0, total: 5, duration: 100 } });
+            const result2 = makeParseResult({ stats: { passed: 8, failed: 2, skipped: 0, total: 10, duration: 200 } });
+
+            persistence.saveParseResult('proj', result1);
+            persistence.saveParseResult('proj', result2);
+
+            const stored = JSON.parse(
+                backend.data.get('metrics/global.json')?.toString('utf8') ?? '{}',
+            ) as MetricsStore;
+
+            expect(stored.runs).toHaveLength(2);
+            expect(stored.runs[0]?.total).toBe(5);
+            expect(stored.runs[1]?.total).toBe(10);
+        });
+
+        it('saveParseResult respects max runs limit (50)', () => {
+            expect.hasAssertions();
+
+            for (let i = 0; i < 55; i++) {
+                persistence.saveParseResult('proj', makeParseResult());
+            }
+
+            const stored = JSON.parse(
+                backend.data.get('metrics/global.json')?.toString('utf8') ?? '{}',
+            ) as MetricsStore;
+
+            expect(stored.runs).toHaveLength(50);
+        });
+
+        it('saveParseResult handles empty test list', () => {
+            expect.hasAssertions();
+
+            const parseResult = makeParseResult({
+                tests: [],
+                stats: { passed: 0, failed: 0, skipped: 0, total: 0, duration: 0 },
+            });
+
+            const run = persistence.saveParseResult('proj', parseResult);
+
+            expect(run.tests).toStrictEqual([]);
+            expect(run.total).toBe(0);
         });
     });
 
