@@ -1,6 +1,7 @@
 import * as fc from 'fast-check';
 import { describe, expect, it } from 'vitest';
 import { parseTestSummaryFromLogs } from '../log-parser.js';
+import { assertNullOr } from '../test-utils/assertions.js';
 
 describe('Log-parser — property-based', () => {
     it('output always has failures array', () => {
@@ -69,9 +70,16 @@ describe('Log-parser — property-based', () => {
         fc.assert(
             fc.property(fc.string({ maxLength: 2000 }), (log) => {
                 const result = parseTestSummaryFromLogs(log);
-                const tc = result.testCounts;
-
-                expect(tc === undefined || (tc.total >= 0 && tc.passed >= 0)).toBeTruthy();
+                assertNullOr(
+                    result.testCounts,
+                    (tc) => {
+                        expect(tc.total).toBeGreaterThanOrEqual(0);
+                        expect(tc.passed).toBeGreaterThanOrEqual(0);
+                    },
+                    () => {
+                        expect(result.testCounts == null).toBeTruthy();
+                    },
+                );
             }),
             { numRuns: 100 },
         );
