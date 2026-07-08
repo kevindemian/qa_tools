@@ -144,7 +144,7 @@ describe('Integration: CI Data Hub', () => {
             expect.hasAssertions();
 
             const { runQualityGate } = await import('../../quality-gate.js');
-            const metrics = await import('../../metrics.js');
+            const persistenceModule = await import('../../data-hub/persistence.js');
 
             const runs = [
                 makeRun(1, { conclusion: 'success' }),
@@ -156,10 +156,23 @@ describe('Integration: CI Data Hub', () => {
             const hub = await DataHubImpl.create([provider], { repo: 'owner/repo' });
 
             // Mock store with low pass rate — dataHub overrides to 100%
-            vi.spyOn(metrics, 'loadMetrics').mockReturnValue({
-                runs: [{ passed: 10, failed: 90, total: 100, tests: [], project: 'test' }],
-                failureClassifications: [],
-            } as never);
+            vi.spyOn(persistenceModule, 'createDataHubPersistence').mockReturnValue({
+                loadMetricsStore: vi.fn().mockReturnValue({
+                    runs: [{ passed: 10, failed: 90, total: 100, tests: [], project: 'test' }],
+                    failureClassifications: [],
+                }),
+                saveRun: vi.fn(),
+                loadRun: vi.fn().mockReturnValue(null),
+                saveCoverageSnapshot: vi.fn(),
+                loadCoverageHistory: vi.fn().mockReturnValue([]),
+                saveFailureClassification: vi.fn(),
+                loadFailureClassifications: vi.fn().mockReturnValue([]),
+                saveMetricsStore: vi.fn(),
+                saveParseResult: vi.fn(),
+                saveQualityMetrics: vi.fn(),
+                loadQualityMetricsHistory: vi.fn().mockReturnValue([]),
+                flush: vi.fn(),
+            });
             const withCi = runQualityGate({ dataHub: hub });
             const withoutCi = runQualityGate();
 

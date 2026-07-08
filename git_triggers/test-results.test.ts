@@ -88,8 +88,21 @@ vi.mock('../jira_management/result_reporter', () => ({
     createTestExecutionFromResults: mockCreateTestExecutionFromResults,
 }));
 
-vi.mock('../shared/metrics', () => ({
-    saveParseResult: mockSaveParseResult,
+vi.mock('../shared/data-hub/persistence.js', () => ({
+    createDataHubPersistence: vi.fn().mockReturnValue({
+        saveParseResult: mockSaveParseResult,
+        saveRun: vi.fn(),
+        loadRun: vi.fn().mockReturnValue(null),
+        saveCoverageSnapshot: vi.fn(),
+        loadCoverageHistory: vi.fn().mockReturnValue([]),
+        saveFailureClassification: vi.fn(),
+        loadFailureClassifications: vi.fn().mockReturnValue([]),
+        saveMetricsStore: vi.fn(),
+        loadMetricsStore: vi.fn().mockReturnValue({ runs: [], coverageHistory: [] }),
+        saveQualityMetrics: vi.fn(),
+        loadQualityMetricsHistory: vi.fn().mockReturnValue([]),
+        flush: vi.fn(),
+    }),
 }));
 
 vi.mock('../shared/jira-client', () => ({

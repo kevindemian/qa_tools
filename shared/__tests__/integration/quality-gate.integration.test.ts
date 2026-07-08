@@ -9,13 +9,13 @@
  * - formatQualityGateJson / formatQualityGateText output
  * - DataHub parameter acceptance
  *
- * Uses vi.spyOn for loadMetrics (reads from disk) but keeps
- * calculateFlakiness real (pure function, no I/O).
+ * Uses vi.spyOn for createDataHubPersistence (reads from disk) but keeps
+ * calcFlakinessEntries real (pure function, no I/O).
  */
 import { afterEach, describe, expect, it, vi } from 'vitest';
-import type { MetricsRun } from '../../metrics.js';
+import type { MetricsRun } from '../../types/data-hub.js';
 import type { DataHub } from '../../types/data-hub.js';
-import * as metrics from '../../metrics.js';
+import * as persistenceModule from '../../data-hub/persistence.js';
 
 async function loadModules() {
     const qg = await import('../../quality-gate.js');
@@ -35,7 +35,20 @@ describe('Integration: Quality Gate', () => {
         it('returns fail when no metrics data exists', async () => {
             expect.hasAssertions();
 
-            vi.spyOn(metrics, 'loadMetrics').mockReturnValue({ runs: [] });
+            vi.spyOn(persistenceModule, 'createDataHubPersistence').mockReturnValue({
+                loadMetricsStore: vi.fn().mockReturnValue({ runs: [], coverageHistory: [] }),
+                saveRun: vi.fn(),
+                loadRun: vi.fn().mockReturnValue(null),
+                saveCoverageSnapshot: vi.fn(),
+                loadCoverageHistory: vi.fn().mockReturnValue([]),
+                saveFailureClassification: vi.fn(),
+                loadFailureClassifications: vi.fn().mockReturnValue([]),
+                saveMetricsStore: vi.fn(),
+                saveParseResult: vi.fn(),
+                saveQualityMetrics: vi.fn(),
+                loadQualityMetricsHistory: vi.fn().mockReturnValue([]),
+                flush: vi.fn(),
+            });
             const { runQualityGate } = await loadModules();
             const result = runQualityGate();
 
@@ -78,17 +91,30 @@ describe('Integration: Quality Gate', () => {
                 }),
             }));
 
-            vi.spyOn(metrics, 'loadMetrics').mockReturnValue({
-                runs,
-                coverageHistory: [
-                    {
-                        timestamp: new Date().toISOString(),
-                        project: 'test-project',
-                        totalIssues: 100,
-                        mappedIssues: 85,
-                        coveragePct: 85,
-                    },
-                ],
+            vi.spyOn(persistenceModule, 'createDataHubPersistence').mockReturnValue({
+                loadMetricsStore: vi.fn().mockReturnValue({
+                    runs,
+                    coverageHistory: [
+                        {
+                            timestamp: new Date().toISOString(),
+                            project: 'test-project',
+                            totalIssues: 100,
+                            mappedIssues: 85,
+                            coveragePct: 85,
+                        },
+                    ],
+                }),
+                saveRun: vi.fn(),
+                loadRun: vi.fn().mockReturnValue(null),
+                saveCoverageSnapshot: vi.fn(),
+                loadCoverageHistory: vi.fn().mockReturnValue([]),
+                saveFailureClassification: vi.fn(),
+                loadFailureClassifications: vi.fn().mockReturnValue([]),
+                saveMetricsStore: vi.fn(),
+                saveParseResult: vi.fn(),
+                saveQualityMetrics: vi.fn(),
+                loadQualityMetricsHistory: vi.fn().mockReturnValue([]),
+                flush: vi.fn(),
             });
 
             const { runQualityGate } = await loadModules();
@@ -179,10 +205,23 @@ describe('Integration: Quality Gate', () => {
             expect.hasAssertions();
 
             // Store with runs that produce a failing health score
-            vi.spyOn(metrics, 'loadMetrics').mockReturnValue({
-                runs: [{ passed: 10, failed: 90, total: 100, tests: [], project: 'test' }],
-                failureClassifications: [],
-            } as never);
+            vi.spyOn(persistenceModule, 'createDataHubPersistence').mockReturnValue({
+                loadMetricsStore: vi.fn().mockReturnValue({
+                    runs: [{ passed: 10, failed: 90, total: 100, tests: [], project: 'test' }],
+                    failureClassifications: [],
+                }),
+                saveRun: vi.fn(),
+                loadRun: vi.fn().mockReturnValue(null),
+                saveCoverageSnapshot: vi.fn(),
+                loadCoverageHistory: vi.fn().mockReturnValue([]),
+                saveFailureClassification: vi.fn(),
+                loadFailureClassifications: vi.fn().mockReturnValue([]),
+                saveMetricsStore: vi.fn(),
+                saveParseResult: vi.fn(),
+                saveQualityMetrics: vi.fn(),
+                loadQualityMetricsHistory: vi.fn().mockReturnValue([]),
+                flush: vi.fn(),
+            });
             const { runQualityGate } = await loadModules();
             const hub = makeDataHub({ computed: { passRate: 100 } });
 
@@ -199,10 +238,23 @@ describe('Integration: Quality Gate', () => {
             expect.hasAssertions();
 
             // Store with runs that produce a failing health score
-            vi.spyOn(metrics, 'loadMetrics').mockReturnValue({
-                runs: [{ passed: 10, failed: 90, total: 100, tests: [], project: 'test' }],
-                failureClassifications: [],
-            } as never);
+            vi.spyOn(persistenceModule, 'createDataHubPersistence').mockReturnValue({
+                loadMetricsStore: vi.fn().mockReturnValue({
+                    runs: [{ passed: 10, failed: 90, total: 100, tests: [], project: 'test' }],
+                    failureClassifications: [],
+                }),
+                saveRun: vi.fn(),
+                loadRun: vi.fn().mockReturnValue(null),
+                saveCoverageSnapshot: vi.fn(),
+                loadCoverageHistory: vi.fn().mockReturnValue([]),
+                saveFailureClassification: vi.fn(),
+                loadFailureClassifications: vi.fn().mockReturnValue([]),
+                saveMetricsStore: vi.fn(),
+                saveParseResult: vi.fn(),
+                saveQualityMetrics: vi.fn(),
+                loadQualityMetricsHistory: vi.fn().mockReturnValue([]),
+                flush: vi.fn(),
+            });
             const { runQualityGate } = await loadModules();
             const hub = makeDataHub({ computed: { passRate: 100 } });
 

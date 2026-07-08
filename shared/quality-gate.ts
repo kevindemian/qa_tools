@@ -1,8 +1,9 @@
 /** Quality gate orchestrator — composes health, coverage, and flakiness thresholds into a single pass/fail decision.
  *  Thresholds are FIXED — no env var overrides permitted.
  *  No git fallback bypass: if no metrics data exists, the gate fails. */
-import { loadMetrics, calculateFlakiness } from './metrics.js';
-import type { MetricsRun } from './metrics.js';
+import { createDataHubPersistence } from './data-hub/persistence.js';
+import { calcFlakinessEntries } from './data-hub/compute/flakiness-entries.js';
+import type { MetricsRun } from './types/data-hub.js';
 import { calculateHealthScore } from './health-score.js';
 import type { HealthScoreResult } from './types.js';
 import type { DataHub } from './types/data-hub.js';
@@ -74,7 +75,7 @@ function _passRateCheck(health: HealthScoreResult): GateCheck {
 }
 
 function _flakyCheck(runs: MetricsRun[]): GateCheck {
-    const flakyEntries = calculateFlakiness({ runs }, THRESHOLDS.flakyMinRuns);
+    const flakyEntries = calcFlakinessEntries(runs, THRESHOLDS.flakyMinRuns);
 
     // Compute total unique tests that appear in at least 2 runs (same minRuns as calculateFlakiness).
     // This is the correct denominator: flaky rate = flaky tests / total stable tests with enough data.
@@ -163,7 +164,9 @@ function _aggregateResult(checks: GateCheck[]): QualityGateResult {
 export function runQualityGate(options?: QualityGateOptions): QualityGateResult {
     const checks: GateCheck[] = [];
     try {
-        const store = loadMetrics();
+        const projectName = options?.project ?? 'default';
+        const persistence = createDataHubPersistence(projectName);
+        const store = persistence.loadMetricsStore();
         const runs = options?.project ? store.runs.filter((r) => r.project === options.project) : store.runs;
 
         if (runs.length < 1) {
