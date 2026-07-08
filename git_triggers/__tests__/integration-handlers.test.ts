@@ -45,10 +45,6 @@ vi.mock('../../shared/state.js', () => ({
     update: vi.fn(),
     loadState: vi.fn(() => ({})),
 }));
-vi.mock('../../shared/metrics.js', () => ({
-    loadMetrics: vi.fn(),
-    calculateFlakiness: vi.fn(),
-}));
 vi.mock('../ai-pr-desc.js', () => ({
     generatePrDescription: vi.fn(),
 }));

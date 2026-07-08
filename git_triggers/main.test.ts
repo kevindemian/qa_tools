@@ -135,11 +135,6 @@ vi.mock('../jira_management/result_reporter', () => ({
     createTestExecutionFromResults: vi.fn(),
 }));
 
-vi.mock('../shared/metrics', () => ({
-    loadMetrics: vi.fn(() => ({ runs: [] })),
-    calculateFlakiness: vi.fn(() => []),
-}));
-
 vi.mock('../shared/http-client', () => ({
     sleep: vi.fn<(ms: number) => Promise<void>>(async () => {}),
 }));
