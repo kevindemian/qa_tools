@@ -328,7 +328,7 @@ export async function displayRecentPipelines(m: GitProvider): Promise<void> {
         }
         if (currentProjectName) {
             const hub = getDataHub();
-            const flakinessEntries = hub?.computed?.flakinessEntries ?? [];
+            const flakinessEntries = hub?.computed.flakinessEntries ?? [];
             const highFlakiness = flakinessEntries.filter((f) => f.project === currentProjectName && f.rate > 0.3);
             if (highFlakiness.length > 0) {
                 warn('  ⚠ ' + highFlakiness.length + ' teste(s) com flakiness >30% em ' + currentProjectName);

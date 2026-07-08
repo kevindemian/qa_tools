@@ -339,7 +339,7 @@ async function main(): Promise<void> {
 
     let healthScore: { score: number; grade: string } | undefined;
     try {
-        const persistence = createDataHubPersistence(Config.get('jiraProject') ?? 'default');
+        const persistence = createDataHubPersistence(Config.get('jiraProject') || 'default');
         const store = persistence.loadMetricsStore();
         const health = calculateHealthScore(store);
         healthScore = { score: health.overall, grade: health.grade };

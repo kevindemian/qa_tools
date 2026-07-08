@@ -9,7 +9,8 @@ describe('Log-parser — property-based', () => {
         fc.assert(
             fc.property(fc.string({ maxLength: 2000 }), (log) => {
                 const result = parseTestSummaryFromLogs(log);
-                expect(Array.isArray(result.failures)).toBe(true);
+
+                expect(Array.isArray(result.failures)).toBeTruthy();
             }),
             { numRuns: 100 },
         );
@@ -21,6 +22,7 @@ describe('Log-parser — property-based', () => {
         fc.assert(
             fc.property(fc.constant(''), (log) => {
                 const result = parseTestSummaryFromLogs(log);
+
                 expect(result.failures).toStrictEqual([]);
             }),
             { numRuns: 10 },
@@ -36,6 +38,7 @@ describe('Log-parser — property-based', () => {
                 const log = messages.join('\n');
                 const result = parseTestSummaryFromLogs(log);
                 const count = result.failures.filter((f) => f.includes(msg.substring(7))).length;
+
                 expect(count).toBeLessThanOrEqual(1);
             }),
             { numRuns: 50 },
@@ -49,7 +52,9 @@ describe('Log-parser — property-based', () => {
             fc.property(fc.string({ maxLength: 5 }), (shortStr) => {
                 const log = `Error: ${shortStr}`;
                 const result = parseTestSummaryFromLogs(log);
+
                 expect(result.failures.length).toBeGreaterThanOrEqual(0);
+
                 for (const f of result.failures) {
                     expect(f.length).toBeGreaterThanOrEqual(10);
                 }
@@ -64,12 +69,9 @@ describe('Log-parser — property-based', () => {
         fc.assert(
             fc.property(fc.string({ maxLength: 2000 }), (log) => {
                 const result = parseTestSummaryFromLogs(log);
-                if (result.testCounts) {
-                    expect(result.testCounts.total).toBeGreaterThanOrEqual(0);
-                    expect(result.testCounts.passed).toBeGreaterThanOrEqual(0);
-                } else {
-                    expect(result.testCounts).toBeUndefined();
-                }
+                const tc = result.testCounts;
+
+                expect(tc === undefined || (tc.total >= 0 && tc.passed >= 0)).toBeTruthy();
             }),
             { numRuns: 100 },
         );

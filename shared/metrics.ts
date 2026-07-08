@@ -171,6 +171,33 @@ export function saveParseResult(project: string, result: ParseResult, config?: C
     return run;
 }
 
+function accumulateTestState(entry: { pass: number; fail: number; skip: number }, state: string): void {
+    if (state === 'passed') entry.pass++;
+    else if (state === 'failed') entry.fail++;
+    else entry.skip++;
+}
+
+function buildFlakinessEntry(
+    key: string,
+    counts: { pass: number; fail: number; skip: number; project: string },
+    minRuns: number,
+): FlakinessEntry | null {
+    const title = key.split('::')[1] ?? key;
+    const executedCount = counts.pass + counts.fail;
+    if (executedCount < minRuns) return null;
+    const rate = executedCount > 0 ? counts.fail / executedCount : 0;
+    if (counts.fail <= 0 || counts.pass <= 0) return null;
+    return {
+        title,
+        project: counts.project,
+        passCount: counts.pass,
+        failCount: counts.fail,
+        skipCount: counts.skip,
+        totalRuns: executedCount,
+        rate,
+    };
+}
+
 export function calculateFlakiness(store: MetricsStore, minRuns = 2): FlakinessEntry[] {
     const testMap = new Map<string, { pass: number; fail: number; skip: number; project: string }>();
 
@@ -178,30 +205,15 @@ export function calculateFlakiness(store: MetricsStore, minRuns = 2): FlakinessE
         for (const t of run.tests) {
             const key = `${run.project}::${t.title}`;
             const entry = testMap.get(key) || { pass: 0, fail: 0, skip: 0, project: run.project };
-            if (t.state === 'passed') entry.pass++;
-            else if (t.state === 'failed') entry.fail++;
-            else entry.skip++;
+            accumulateTestState(entry, t.state);
             testMap.set(key, entry);
         }
     }
 
     const result: FlakinessEntry[] = [];
     for (const [key, counts] of testMap) {
-        const title = key.split('::')[1] ?? key;
-        const executedCount = counts.pass + counts.fail;
-        if (executedCount < minRuns) continue;
-        const rate = executedCount > 0 ? counts.fail / executedCount : 0;
-        if (counts.fail > 0 && counts.pass > 0) {
-            result.push({
-                title,
-                project: counts.project,
-                passCount: counts.pass,
-                failCount: counts.fail,
-                skipCount: counts.skip,
-                totalRuns: executedCount,
-                rate,
-            });
-        }
+        const entry = buildFlakinessEntry(key, counts, minRuns);
+        if (entry) result.push(entry);
     }
 
     result.sort((a, b) => b.rate - a.rate);

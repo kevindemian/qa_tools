@@ -1,15 +1,15 @@
 import * as fc from 'fast-check';
 import { describe, expect, it } from 'vitest';
 import { classifyFailures } from '../../extractors/failure-classifier.js';
-import type { FailureEntry } from '../../extractors/failure-classifier.js';
 
 describe('Failure-classifier — property-based', () => {
     it('empty input returns empty array', () => {
         expect.hasAssertions();
 
         fc.assert(
-            fc.property(fc.constant({} as Parameters<typeof classifyFailures>[0]), (input) => {
+            fc.property(fc.constant({}), (input) => {
                 const result = classifyFailures(input);
+
                 expect(result).toStrictEqual([]);
             }),
             { numRuns: 10 },
@@ -21,8 +21,9 @@ describe('Failure-classifier — property-based', () => {
 
         fc.assert(
             fc.property(fc.object({ maxDepth: 2 }), (input) => {
-                const result = classifyFailures(input as Parameters<typeof classifyFailures>[0]);
-                expect(Array.isArray(result)).toBe(true);
+                const result = classifyFailures(input);
+
+                expect(Array.isArray(result)).toBeTruthy();
             }),
             { numRuns: 100 },
         );
@@ -46,7 +47,7 @@ describe('Failure-classifier — property-based', () => {
                 (steps) => {
                     const result = classifyFailures({ githubSteps: steps });
                     for (const entry of result) {
-                        expect((entry as FailureEntry).reason).toBe('failure');
+                        expect(entry.reason).toBe('failure');
                     }
                 },
             ),
@@ -92,7 +93,8 @@ describe('Failure-classifier — property-based', () => {
                 const result = classifyFailures({ logText: log });
                 const msgs = result.map((e) => e.message).filter((m): m is string => m != null);
                 const unique = new Set(msgs);
-                expect(msgs.length).toBe(unique.size);
+
+                expect(msgs).toHaveLength(unique.size);
             }),
             { numRuns: 50 },
         );

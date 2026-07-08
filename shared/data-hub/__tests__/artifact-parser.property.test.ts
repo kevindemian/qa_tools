@@ -9,6 +9,7 @@ describe('Artifact-parser — property-based', () => {
         fc.assert(
             fc.property(fc.string({ minLength: 1, maxLength: 200 }), (name) => {
                 const result = isTestArtifact(name);
+
                 expect(typeof result).toBe('boolean');
             }),
             { numRuns: 100 },
@@ -22,7 +23,7 @@ describe('Artifact-parser — property-based', () => {
             fc.property(
                 fc.string({ minLength: 1, maxLength: 500 }).filter((s) => !s.trimStart().startsWith('{')),
                 (content) => {
-                    expect(isCTRF(content)).toBe(false);
+                    expect(isCTRF(content)).toBeFalsy();
                 },
             ),
             { numRuns: 100 },
@@ -36,7 +37,7 @@ describe('Artifact-parser — property-based', () => {
             fc.property(
                 fc.string({ maxLength: 500 }).filter((s) => !s.includes('<testsuite') && !s.includes('<testsuites')),
                 (content) => {
-                    expect(isJUnit(content)).toBe(false);
+                    expect(isJUnit(content)).toBeFalsy();
                 },
             ),
             { numRuns: 100 },
@@ -50,7 +51,7 @@ describe('Artifact-parser — property-based', () => {
             fc.property(
                 fc.string({ minLength: 1, maxLength: 500 }).filter((s) => !s.trimStart().startsWith('{')),
                 (content) => {
-                    expect(isMochawesome(content)).toBe(false);
+                    expect(isMochawesome(content)).toBeFalsy();
                 },
             ),
             { numRuns: 100 },
@@ -67,7 +68,8 @@ describe('Artifact-parser — property-based', () => {
                 (bytes, fileName) => {
                     const buffer = Buffer.from(bytes);
                     const result = parseArtifactBufferAll(buffer, fileName);
-                    expect(Array.isArray(result)).toBe(true);
+
+                    expect(Array.isArray(result)).toBeTruthy();
                 },
             ),
             { numRuns: 50 },

@@ -21,7 +21,7 @@ const {
     mockCalcRelease: vi.fn().mockReturnValue({ score: 85, label: 'B', details: {} }),
     mockGenHtml: vi.fn().mockReturnValue('<html></html>'),
     mockOpen: vi.fn(),
-    mockWriteReport: vi.fn().mockReturnValue('/tmp/qa-test/release-score.html'),
+    mockWriteReport: vi.fn().mockReturnValue('/test/qa-test/release-score.html'),
 }));
 
 vi.mock('../../shared/prompt', () => ({
@@ -106,7 +106,7 @@ describe('Case26', () => {
         mockCalcHealth.mockReturnValue({ overall: 80, grade: 'B', details: {} });
         mockCalcRelease.mockReturnValue({ score: 85, label: 'B', details: {} });
         mockGenHtml.mockReturnValue('<html></html>');
-        mockWriteReport.mockReturnValue('/tmp/qa-test/release-score.html');
+        mockWriteReport.mockReturnValue('/test/qa-test/release-score.html');
     });
 
     describe('Handler export', () => {
@@ -139,8 +139,14 @@ describe('Case26', () => {
             await case26.handler(ctx);
 
             expect(mockCalcHealth).toHaveBeenCalledWith({ runs });
-            expect(mockCalcFlakyEntries).toHaveBeenCalled();
-            expect(mockCalcRelease).toHaveBeenCalled();
+            expect(mockCalcFlakyEntries).toHaveBeenCalledWith(expect.anything(), expect.anything());
+            expect(mockCalcRelease).toHaveBeenCalledWith(
+                expect.anything(),
+                expect.anything(),
+                expect.anything(),
+                expect.anything(),
+                expect.anything(),
+            );
             expect(mockOpen).toHaveBeenCalledWith(expect.any(String), 'Release Score', expect.any(Function));
         });
 
@@ -155,7 +161,13 @@ describe('Case26', () => {
             await case26.handler(ctx);
 
             expect(mockCalcFlakyEntries).toHaveBeenCalledWith([], 2);
-            expect(mockCalcRelease).toHaveBeenCalled();
+            expect(mockCalcRelease).toHaveBeenCalledWith(
+                expect.anything(),
+                expect.anything(),
+                expect.anything(),
+                expect.anything(),
+                expect.anything(),
+            );
         });
 
         it('records history on success', async () => {
