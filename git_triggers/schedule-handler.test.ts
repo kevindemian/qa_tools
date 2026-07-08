@@ -32,9 +32,15 @@ vi.mock('./session-state', () => ({
     },
 }));
 
-vi.mock('../shared/metrics', () => ({
-    loadMetrics: vi.fn(() => ({ runs: [], failureClassifications: [] })),
-    calculateFlakiness: vi.fn(() => []),
+vi.mock('../shared/data-hub/persistence.js', () => ({
+    createDataHubPersistence: vi.fn().mockReturnValue({
+        loadMetricsStore: vi.fn().mockReturnValue({ runs: [], failureClassifications: [] }),
+        saveMetricsStore: vi.fn(),
+    }),
+}));
+
+vi.mock('../shared/data-hub/compute/flakiness-entries.js', () => ({
+    calcFlakinessEntries: vi.fn().mockReturnValue([]),
 }));
 
 vi.mock('../shared/health-score', () => ({
@@ -142,7 +148,8 @@ vi.mock('fs', () => ({
 
 import { success, warn, info, print, prompt, printError } from '../shared/prompt.js';
 import { pushHistory, getProjects } from './session-state.js';
-import { loadMetrics, calculateFlakiness } from '../shared/metrics.js';
+import { createDataHubPersistence } from '../shared/data-hub/persistence.js';
+import { calcFlakinessEntries } from '../shared/data-hub/compute/flakiness-entries.js';
 import { generateFlakinessHtml } from '../shared/flakiness-dashboard.js';
 import {
     handleListSchedules,
@@ -159,8 +166,8 @@ const mockPushHistory = vi.mocked(pushHistory);
 const mockPrintError = vi.mocked(printError);
 const mockWarn = vi.mocked(warn);
 const mockInfo = vi.mocked(info);
-const mockLoadMetrics = vi.mocked(loadMetrics);
-const mockCalculateFlakiness = vi.mocked(calculateFlakiness);
+const mockPersistence = vi.mocked(createDataHubPersistence);
+const mockCalcFlakinessEntries = vi.mocked(calcFlakinessEntries);
 const mockGenerateHtml = vi.mocked(generateFlakinessHtml);
 
 const mockManager = createMockGitProvider();
@@ -322,20 +329,23 @@ describe('Schedule Handler', () => {
 
         it('warns when less than 2 runs', () => {
             mockState.currentProjectName = 'proj1';
-            mockLoadMetrics.mockReturnValue({
-                runs: [
-                    {
-                        project: 'proj1',
-                        timestamp: '',
-                        total: 0,
-                        passed: 0,
-                        failed: 0,
-                        skipped: 0,
-                        duration: 0,
-                        tests: [],
-                    },
-                ],
-            });
+            mockPersistence.mockReturnValue({
+                loadMetricsStore: vi.fn().mockReturnValue({
+                    runs: [
+                        {
+                            project: 'proj1',
+                            timestamp: '',
+                            total: 0,
+                            passed: 0,
+                            failed: 0,
+                            skipped: 0,
+                            duration: 0,
+                            tests: [],
+                        },
+                    ],
+                }),
+                saveMetricsStore: vi.fn(),
+            } as never);
 
             void handleFlakinessDashboard();
 
@@ -344,31 +354,34 @@ describe('Schedule Handler', () => {
 
         it('informs when no flaky tests', () => {
             mockState.currentProjectName = 'proj1';
-            mockLoadMetrics.mockReturnValue({
-                runs: [
-                    {
-                        project: 'proj1',
-                        timestamp: '',
-                        total: 0,
-                        passed: 0,
-                        failed: 0,
-                        skipped: 0,
-                        duration: 0,
-                        tests: [],
-                    },
-                    {
-                        project: 'proj1',
-                        timestamp: '',
-                        total: 0,
-                        passed: 0,
-                        failed: 0,
-                        skipped: 0,
-                        duration: 0,
-                        tests: [],
-                    },
-                ],
-            });
-            mockCalculateFlakiness.mockReturnValue([]);
+            mockPersistence.mockReturnValue({
+                loadMetricsStore: vi.fn().mockReturnValue({
+                    runs: [
+                        {
+                            project: 'proj1',
+                            timestamp: '',
+                            total: 0,
+                            passed: 0,
+                            failed: 0,
+                            skipped: 0,
+                            duration: 0,
+                            tests: [],
+                        },
+                        {
+                            project: 'proj1',
+                            timestamp: '',
+                            total: 0,
+                            passed: 0,
+                            failed: 0,
+                            skipped: 0,
+                            duration: 0,
+                            tests: [],
+                        },
+                    ],
+                }),
+                saveMetricsStore: vi.fn(),
+            } as never);
+            mockCalcFlakinessEntries.mockReturnValue([]);
 
             void handleFlakinessDashboard();
 
@@ -379,31 +392,34 @@ describe('Schedule Handler', () => {
             expect.hasAssertions();
 
             mockState.currentProjectName = 'proj1';
-            mockLoadMetrics.mockReturnValue({
-                runs: [
-                    {
-                        project: 'proj1',
-                        timestamp: '',
-                        total: 0,
-                        passed: 0,
-                        failed: 0,
-                        skipped: 0,
-                        duration: 0,
-                        tests: [],
-                    },
-                    {
-                        project: 'proj1',
-                        timestamp: '',
-                        total: 0,
-                        passed: 0,
-                        failed: 0,
-                        skipped: 0,
-                        duration: 0,
-                        tests: [],
-                    },
-                ],
-            });
-            mockCalculateFlakiness.mockReturnValue([
+            mockPersistence.mockReturnValue({
+                loadMetricsStore: vi.fn().mockReturnValue({
+                    runs: [
+                        {
+                            project: 'proj1',
+                            timestamp: '',
+                            total: 0,
+                            passed: 0,
+                            failed: 0,
+                            skipped: 0,
+                            duration: 0,
+                            tests: [],
+                        },
+                        {
+                            project: 'proj1',
+                            timestamp: '',
+                            total: 0,
+                            passed: 0,
+                            failed: 0,
+                            skipped: 0,
+                            duration: 0,
+                            tests: [],
+                        },
+                    ],
+                }),
+                saveMetricsStore: vi.fn(),
+            } as never);
+            mockCalcFlakinessEntries.mockReturnValue([
                 { title: 't1', project: 'test', rate: 0.5, passCount: 1, failCount: 0, skipCount: 0, totalRuns: 1 },
             ]);
 
@@ -433,21 +449,24 @@ describe('Schedule Handler', () => {
 
         it('warns when less than 2 runs and git fallback fails', () => {
             mockState.currentProjectName = 'proj1';
-            mockLoadMetrics.mockReturnValue({
-                runs: [
-                    {
-                        project: 'proj1',
-                        timestamp: '',
-                        total: 0,
-                        passed: 0,
-                        failed: 0,
-                        skipped: 0,
-                        duration: 0,
-                        tests: [],
-                    },
-                ],
-                failureClassifications: [],
-            });
+            mockPersistence.mockReturnValue({
+                loadMetricsStore: vi.fn().mockReturnValue({
+                    runs: [
+                        {
+                            project: 'proj1',
+                            timestamp: '',
+                            total: 0,
+                            passed: 0,
+                            failed: 0,
+                            skipped: 0,
+                            duration: 0,
+                            tests: [],
+                        },
+                    ],
+                    failureClassifications: [],
+                }),
+                saveMetricsStore: vi.fn(),
+            } as never);
             generateWeeklyQualityReport();
 
             expect(mockWarn).toHaveBeenCalledWith(expect.stringContaining('Menos de 2'));

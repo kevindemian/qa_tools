@@ -1,7 +1,8 @@
 /** Scheduled tasks — run metrics, flakiness analysis, flaky auto-actions, and generate scheduled reports. */
 import { print, success, warn, info, prompt, printError, withSpinner } from '../shared/prompt.js';
 import type { GitProvider, StateContainer } from '../shared/types.js';
-import { loadMetrics, calculateFlakiness } from '../shared/metrics.js';
+import { createDataHubPersistence } from '../shared/data-hub/persistence.js';
+import { calcFlakinessEntries } from '../shared/data-hub/compute/flakiness-entries.js';
 import { calculateHealthScore } from '../shared/health-score.js';
 import { aggregateDefectTrends, generateDefectTrendHtml } from '../shared/defect-trend.js';
 import { calculateReleaseScore, generateReleaseScoreHtml } from '../shared/release-score.js';
@@ -163,7 +164,8 @@ export function generateWeeklyQualityReport(): void {
             warn('Nenhum projeto selecionado.');
             return;
         }
-        const store = loadMetrics();
+        const persistence = createDataHubPersistence(currentProjectName);
+        const store = persistence.loadMetricsStore();
         let projectRuns = store.runs.filter((r) => r.project === currentProjectName);
         let failureClassifications = store.failureClassifications ?? [];
         let usingGitFallback = false;
@@ -180,7 +182,7 @@ export function generateWeeklyQualityReport(): void {
 
         const dataHub = getDataHub();
         const health = calculateHealthScore(effectiveStore, dataHub ? { dataHub } : undefined);
-        const flaky = calculateFlakiness({ runs: projectRuns }, 2);
+        const flaky = calcFlakinessEntries(projectRuns, 2);
         const releaseScore = calculateReleaseScore(
             80,
             health.overall,
@@ -315,13 +317,14 @@ export async function handleFlakinessDashboard(): Promise<void> {
             warn('Nenhum projeto selecionado.');
             return;
         }
-        const store = loadMetrics();
+        const persistence = createDataHubPersistence(currentProjectName);
+        const store = persistence.loadMetricsStore();
         const projectRuns = store.runs.filter((r) => r.project === currentProjectName);
         if (projectRuns.length < 2) {
             warn('Menos de 2 execuções registradas para ' + currentProjectName + '. Execute pipelines primeiro.');
             return;
         }
-        const flaky = calculateFlakiness({ runs: projectRuns }, 2);
+        const flaky = calcFlakinessEntries(projectRuns, 2);
         if (flaky.length === 0) {
             info('Nenhum teste flaky detectado em ' + currentProjectName + '.');
             return;
