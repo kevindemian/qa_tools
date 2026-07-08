@@ -2,7 +2,8 @@
  *  Thresholds are FIXED — no env var overrides permitted.
  *  No git fallback bypass: if no metrics data exists, the gate fails. */
 import { createDataHubPersistence } from './data-hub/persistence.js';
-import { calcFlakinessEntries } from './data-hub/compute/flakiness-entries.js';
+import { calcFlakinessEntries, calculateFlakyTestRate } from './data-hub/compute/flakiness-entries.js';
+import { calcTestDurationP95 } from './data-hub/compute/test-duration-p95.js';
 import type { MetricsRun } from './types/data-hub.js';
 import { calculateHealthScore } from './health-score.js';
 import type { HealthScoreResult } from './types.js';
@@ -74,12 +75,31 @@ function _passRateCheck(health: HealthScoreResult): GateCheck {
     };
 }
 
-function _flakyCheck(runs: MetricsRun[]): GateCheck {
+/** Check flaky rate against threshold. Uses DataHub compute when available, local fallback otherwise. */
+function _flakyCheck(runs: MetricsRun[], dataHub?: DataHub): GateCheck {
     const flakyEntries = calcFlakinessEntries(runs, THRESHOLDS.flakyMinRuns);
+    const flakyPct = _resolveFlakyPct(runs, dataHub, flakyEntries);
+    const status = flakyPct <= THRESHOLDS.maxFlakyPct ? 'pass' : 'fail';
+    return {
+        name: 'flaky-rate',
+        status,
+        score: Math.round(flakyPct),
+        threshold: THRESHOLDS.maxFlakyPct,
+        details:
+            'Flaky: ' +
+            flakyEntries.length +
+            ' tests (' +
+            Math.round(flakyPct) +
+            '%, threshold: ' +
+            THRESHOLDS.maxFlakyPct +
+            '%)',
+    };
+}
 
-    // Compute total unique tests that appear in at least 2 runs (same minRuns as calculateFlakiness).
-    // This is the correct denominator: flaky rate = flaky tests / total stable tests with enough data.
-    // Skipped tests are excluded because they were not executed and cannot be classified as flaky.
+function _resolveFlakyPct(runs: MetricsRun[], dataHub: DataHub | undefined, flakyEntries: { title: string }[]): number {
+    if (dataHub !== undefined && dataHub.raw.runs.length > 0) {
+        return calculateFlakyTestRate(runs, THRESHOLDS.flakyMinRuns);
+    }
     const testRunCount = new Map<string, number>();
     for (const run of runs) {
         for (const t of run.tests) {
@@ -91,25 +111,7 @@ function _flakyCheck(runs: MetricsRun[]): GateCheck {
     for (const count of testRunCount.values()) {
         if (count >= 2) totalConsidered++;
     }
-
-    const flakyPct = totalConsidered > 0 ? (flakyEntries.length / totalConsidered) * 100 : 0;
-    const status = flakyPct <= THRESHOLDS.maxFlakyPct ? 'pass' : 'fail';
-    return {
-        name: 'flaky-rate',
-        status,
-        score: Math.round(flakyPct),
-        threshold: THRESHOLDS.maxFlakyPct,
-        details:
-            'Flaky: ' +
-            flakyEntries.length +
-            ' of ' +
-            totalConsidered +
-            ' tests (' +
-            Math.round(flakyPct) +
-            '%, threshold: ' +
-            THRESHOLDS.maxFlakyPct +
-            '%)',
-    };
+    return totalConsidered > 0 ? (flakyEntries.length / totalConsidered) * 100 : 0;
 }
 
 function _coverageCheck(health: HealthScoreResult): GateCheck {
@@ -123,17 +125,23 @@ function _coverageCheck(health: HealthScoreResult): GateCheck {
     };
 }
 
-function _suiteSpeedCheck(health: HealthScoreResult, runs: MetricsRun[]): GateCheck {
-    const allDurations: number[] = [];
-    for (const run of runs) {
-        for (const t of run.tests) {
-            allDurations.push(t.duration);
+/** Check suite speed P95 against threshold. Uses DataHub compute when available, local fallback otherwise. */
+function _suiteSpeedCheck(health: HealthScoreResult, runs: MetricsRun[], dataHub?: DataHub): GateCheck {
+    let p95: number;
+    if (dataHub !== undefined && dataHub.raw.runs.length > 0) {
+        p95 = calcTestDurationP95(runs);
+    } else {
+        const allDurations: number[] = [];
+        for (const run of runs) {
+            for (const t of run.tests) {
+                allDurations.push(t.duration);
+            }
         }
+        allDurations.sort((a, b) => a - b);
+        const idx =
+            allDurations.length > 0 ? Math.max(0, Math.ceil(allDurations.length * THRESHOLDS.p95Percentile) - 1) : -1;
+        p95 = idx >= 0 ? (new Map(allDurations.map((v, i) => [i, v])).get(idx) ?? 0) : 0;
     }
-    allDurations.sort((a, b) => a - b);
-    const idx =
-        allDurations.length > 0 ? Math.max(0, Math.ceil(allDurations.length * THRESHOLDS.p95Percentile) - 1) : -1;
-    const p95 = idx >= 0 ? (new Map(allDurations.map((v, i) => [i, v])).get(idx) ?? 0) : 0;
     const thresholdMs = THRESHOLDS.maxSuiteSpeed * 1000;
     const status = p95 <= thresholdMs ? 'pass' : 'fail';
     return {
@@ -147,12 +155,13 @@ function _suiteSpeedCheck(health: HealthScoreResult, runs: MetricsRun[]): GateCh
 
 /* ── Orchestration ────────────────────────────────────────────────────── */
 
-function _buildChecks(checks: GateCheck[], health: HealthScoreResult, runs: MetricsRun[]): void {
+/** Build all quality gate checks, delegating to DataHub compute when available. */
+function _buildChecks(checks: GateCheck[], health: HealthScoreResult, runs: MetricsRun[], dataHub?: DataHub): void {
     checks.push(_healthCheck(health));
     checks.push(_passRateCheck(health));
-    checks.push(_flakyCheck(runs));
+    checks.push(_flakyCheck(runs, dataHub));
     checks.push(_coverageCheck(health));
-    checks.push(_suiteSpeedCheck(health, runs));
+    checks.push(_suiteSpeedCheck(health, runs, dataHub));
 }
 
 function _aggregateResult(checks: GateCheck[]): QualityGateResult {
@@ -185,7 +194,7 @@ export function runQualityGate(options?: QualityGateOptions): QualityGateResult 
             options?.coverageOverride !== undefined ? { coverageOverride: options.coverageOverride } : {};
         const dataHub = options?.dataHub;
         const health = calculateHealthScore({ ...store, runs }, { ...healthConfig, ...(dataHub ? { dataHub } : {}) });
-        _buildChecks(checks, health, runs);
+        _buildChecks(checks, health, runs, dataHub);
         return _aggregateResult(checks);
     } catch (err) {
         rootLogger.error(

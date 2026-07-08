@@ -12,6 +12,8 @@
  */
 import type { MetricsStore, MetricsRun, DataHub } from './types/data-hub.js';
 import type { HealthScoreResult, HealthScoreGrade, HealthScoreDimensions, HealthScoreProvenance } from './types.js';
+import { calcTestDurationP95 } from './data-hub/compute/test-duration-p95.js';
+import { calculateFlakyTestRate } from './data-hub/compute/flakiness-entries.js';
 
 export interface HealthScoreConfig {
     weights: { passRate: number; flakyRate: number; coverage: number; executionRate: number; suiteSpeed: number };
@@ -161,31 +163,36 @@ function _computeSuiteSpeed(runs: MetricsRun[]): number {
     return new Map(allDurations.map((v, i) => [i, v])).get(idx) ?? 0;
 }
 
+/** Compute actual metrics with DataHub-first resolution. */
 function computeActualMetrics(store: MetricsStore, config: HealthScoreConfig, dataHub?: DataHub): ActualMetrics {
     const runs = store.runs.slice(-config.windowSize);
     const n = runs.length;
+    const hasCiRuns = dataHub !== undefined && dataHub.raw.runs.length > 0;
 
-    const actualPassRate = _computeExpWeighted(runs, n, (run) => {
-        const executed = run.passed + run.failed;
-        return executed > 0 ? (run.passed / executed) * 100 : 0;
-    });
-    const actualFlakyPct = _computeFlakyRate(runs, config);
+    const actualPassRate = hasCiRuns
+        ? dataHub.computed.passRate
+        : _computeExpWeighted(runs, n, (run) => {
+              const executed = run.passed + run.failed;
+              return executed > 0 ? (run.passed / executed) * 100 : 0;
+          });
+
+    const actualFlakyPct = hasCiRuns ? calculateFlakyTestRate(runs, config.minRuns) : _computeFlakyRate(runs, config);
 
     const actualExecutionRate = _computeExpWeighted(runs, n, (run) =>
         run.total > 0 ? ((run.passed + run.failed) / run.total) * 100 : 0,
     );
 
     const actualCoverage = _resolveCoverage(config, store);
-    const actualSuiteSpeed = _computeSuiteSpeed(runs);
+
+    const actualSuiteSpeed = hasCiRuns ? calcTestDurationP95(runs) : _computeSuiteSpeed(runs);
+
     const flakyPctResult = _normalizeFlakyPct(actualFlakyPct);
-    const hasCiRuns = dataHub !== undefined && dataHub.raw.runs.length > 0;
     const passRate = _resolvePassRate(hasCiRuns, dataHub, actualPassRate);
     const suiteSpeed = _resolveSuiteSpeed(hasCiRuns, dataHub, actualSuiteSpeed);
-    const flakyFromCi = _computeFlakyFromCi(dataHub);
 
     return {
         passRate,
-        flakyPct: flakyFromCi ?? flakyPctResult,
+        flakyPct: flakyPctResult,
         coverage: Number.isFinite(actualCoverage) ? actualCoverage : 0,
         executionRate: Number.isFinite(actualExecutionRate) ? actualExecutionRate : 0,
         suiteSpeed,
@@ -219,13 +226,6 @@ function _resolveSuiteSpeed(hasCiRuns: boolean, dataHub: DataHub | undefined, ac
     if (hasCiRuns && dataHub !== undefined) return dataHub.computed.suiteSpeedP95;
     if (Number.isFinite(actualSuiteSpeed)) return actualSuiteSpeed;
     return 0;
-}
-
-function _computeFlakyFromCi(dataHub: DataHub | undefined): number | null {
-    if (!dataHub?.computed.flakyRate) return null;
-    if (dataHub.computed.flakyRate.length === 0) return null;
-    if (dataHub.raw.runs.length === 0) return null;
-    return (dataHub.computed.flakyRate.length / dataHub.raw.runs.length) * 100;
 }
 
 function scorePassRate(actual: number, config: HealthScoreConfig): number {

@@ -73,7 +73,7 @@ describe('IsGitLabCi', () => {
 
 describe('BuildGitTrendHtml', () => {
     it('returns empty string when CI context is empty', () => {
-        expect(buildGitTrendHtml({ commits: '', runs: [], flakyTests: '' })).toBe('');
+        expect(buildGitTrendHtml({ commits: '', runs: [], flakyEntries: [] })).toBe('');
     });
 
     it('returns HTML with run bars when runs are present', () => {
@@ -87,32 +87,43 @@ describe('BuildGitTrendHtml', () => {
                     failed: 0,
                     skipped: 0,
                     total: 10,
-                    passRate: 100,
                 },
             ],
-            flakyTests: '',
+            flakyEntries: [],
         });
 
         expect(html).toContain('Git Pipeline Context');
         expect(html).toContain('100.0%');
     });
 
-    it('includes flaky tests section', () => {
+    it('includes flaky tests section with structured table', () => {
         const html = buildGitTrendHtml({
             commits: '',
             runs: [],
-            flakyTests: '- Test A: passed, failed\n',
+            flakyEntries: [
+                {
+                    title: 'Test A',
+                    project: 'test-project',
+                    passCount: 3,
+                    failCount: 2,
+                    skipCount: 0,
+                    totalRuns: 5,
+                    rate: 0.4,
+                },
+            ],
         });
 
         expect(html).toContain('Flaky Tests');
         expect(html).toContain('Test A');
+        expect(html).toContain('40.0%');
+        expect(html).toContain('<table');
     });
 
     it('includes commits section', () => {
         const html = buildGitTrendHtml({
             commits: '- fix login (user, 2024-01-15)',
             runs: [],
-            flakyTests: '',
+            flakyEntries: [],
         });
 
         expect(html).toContain('Recent Commits');

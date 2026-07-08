@@ -1,17 +1,16 @@
 /** GitHub e2e — exercises the real GitHub API with the token from .env.
  *  Fetches workflow runs, jobs, open PRs, issues, and branch info, then
- *  generates a consolidated health report HTML via the pure aggregation
- *  functions in pipeline-health.ts + writeReport().
- *  All tests are skipped when GITHUB_TOKEN is not set (CI-safe).
- *  Pure aggregation logic is tested separately in pipeline-health.test.ts. */
+ *  generates a consolidated health report HTML via the renderer.
+ *  All tests are skipped when GITHUB_TOKEN is not set (CI-safe). */
 import { dotenv } from '../shared/deps.js';
 import path from 'path';
 import fs from 'fs';
 import GitHubManager from './github_manager.js';
 import { nonNull } from '../shared/test-utils.js';
 import { writeReport } from '../shared/temp-dir.js';
-import { aggregatePipelineHealth, renderPipelineHealthHtml, extractErrorMessages } from './pipeline-health.js';
-import type { PipelineRun, PipelineJob, Issue } from '../shared/types.js';
+import { renderPipelineHealthHtml, extractErrorMessages } from './pipeline-health-renderer.js';
+import type { PipelineHealthData } from './pipeline-health-renderer.js';
+import type { PipelineRun, PipelineJob } from '../shared/types.js';
 
 dotenv.config({ path: path.resolve(import.meta.dirname, '../.env') });
 
@@ -26,7 +25,6 @@ describe.skipIf(!GITHUB_TOKEN)('GitHub e2e — real API', () => {
     let branchInfo: { name: string } | null;
     let allJobs: PipelineJob[][];
     let errorMessagesPerJob: string[][];
-    let issues: Issue[];
 
     beforeAll(async () => {
         manager = new GitHubManager(REPO, nonNull(GITHUB_TOKEN));
@@ -35,7 +33,6 @@ describe.skipIf(!GITHUB_TOKEN)('GitHub e2e — real API', () => {
         runs = await manager.getRecentPipelines(RUNS_TO_FETCH);
         prs = await manager.searchMergeRequests('', '', 'open');
         branchInfo = await manager.getBranch('main');
-        issues = await manager.getOpenIssues();
 
         /* For each run, fetch its jobs, and for each failed job try to get the log */
         allJobs = [];
@@ -103,19 +100,6 @@ describe.skipIf(!GITHUB_TOKEN)('GitHub e2e — real API', () => {
             }
         });
 
-        it('fetches open issues (excluding PRs)', () => {
-            expect.hasAssertions();
-            expect(Array.isArray(issues)).toBeTruthy();
-
-            for (const issue of issues) {
-                expect(issue).toHaveProperty('number');
-                expect(issue).toHaveProperty('title');
-                expect(issue).toHaveProperty('state');
-                expect(issue).toHaveProperty('labels');
-                expect(Array.isArray(issue.labels)).toBeTruthy();
-            }
-        });
-
         it('fetches branch information for main', () => {
             if (!branchInfo) return;
 
@@ -123,76 +107,105 @@ describe.skipIf(!GITHUB_TOKEN)('GitHub e2e — real API', () => {
         });
     });
 
-    describe('Data aggregation', () => {
-        let health: ReturnType<typeof aggregatePipelineHealth>;
-
-        beforeAll(() => {
-            health = aggregatePipelineHealth(runs, allJobs, errorMessagesPerJob, issues);
-        });
-
-        it('computes totals correctly', () => {
-            expect(health.totalRuns).toBe(runs.length);
-            expect(health.passedRuns + health.failedRuns).toBeLessThanOrEqual(health.totalRuns);
-            expect(health.passRate).toBeGreaterThanOrEqual(0);
-            expect(health.passRate).toBeLessThanOrEqual(100);
-        });
-
-        it('identifies top failing jobs when failures exist', () => {
-            expect.hasAssertions();
-            expect(Array.isArray(health.topFailingJobs)).toBeTruthy();
-
-            for (const j of health.topFailingJobs) {
-                expect(j.failCount).toBeGreaterThan(0);
-                expect(j.totalCount).toBeGreaterThan(0);
-                expect(j.rate).toBeGreaterThanOrEqual(0);
-            }
-        });
-
-        it('aggregates failure reasons from job logs', () => {
-            expect(Array.isArray(health.failureReasons)).toBeTruthy();
-        });
-
-        it('breaks down by branch', () => {
-            expect.hasAssertions();
-            expect(health.branchBreakdown.length).toBeGreaterThanOrEqual(1);
-
-            for (const b of health.branchBreakdown) {
-                expect(b).toHaveProperty('branch');
-                expect(b).toHaveProperty('passRate');
-                expect(b).toHaveProperty('count');
-            }
-        });
-
-        it('provides issue statistics', () => {
-            expect(health.openIssues.total).toBe(issues.length);
-            expect(typeof health.openIssues.staleCount).toBe('number');
-        });
-    });
-
     describe('HTML report', () => {
-        it('generates consolidated HTML health report', () => {
-            const health = aggregatePipelineHealth(runs, allJobs, errorMessagesPerJob, issues);
-            const html = renderPipelineHealthHtml(health, 'GitHub Health Report — e2e');
+        it('generates consolidated HTML health report from raw data', () => {
+            const totalRuns = runs.length;
+            const passedRuns = runs.filter((r) => r.conclusion === 'success').length;
+            const passRate = totalRuns > 0 ? Math.round((passedRuns / totalRuns) * 100) : 0;
+
+            const jobFailMap = new Map<string, { fail: number; total: number }>();
+            for (let i = 0; i < runs.length; i++) {
+                const jobs = allJobs[i] ?? [];
+                for (const job of jobs) {
+                    const entry = jobFailMap.get(job.name) ?? { fail: 0, total: 0 };
+                    entry.total++;
+                    if (job.status === 'failure') entry.fail++;
+                    jobFailMap.set(job.name, entry);
+                }
+            }
+            const topFailingJobs = [...jobFailMap.entries()]
+                .map(([name, counts]) => ({
+                    name,
+                    failCount: counts.fail,
+                    totalCount: counts.total,
+                    rate: counts.total > 0 ? Math.round((counts.fail / counts.total) * 100) : 0,
+                }))
+                .filter((j) => j.failCount > 0)
+                .sort((a, b) => b.rate - a.rate)
+                .slice(0, 10);
+
+            const branchMap = new Map<string, { pass: number; total: number }>();
+            for (const r of runs) {
+                const branch = r.head_branch ?? 'unknown';
+                const entry = branchMap.get(branch) ?? { pass: 0, total: 0 };
+                entry.total++;
+                if (r.conclusion === 'success') entry.pass++;
+                branchMap.set(branch, entry);
+            }
+            const branchBreakdown = Object.fromEntries(
+                [...branchMap.entries()].map(([branch, counts]) => [
+                    branch,
+                    {
+                        passRate: counts.total > 0 ? Math.round((counts.pass / counts.total) * 100) : 0,
+                        count: counts.total,
+                    },
+                ]),
+            );
+
+            const allErrors = errorMessagesPerJob.flat();
+            const reasonCount = new Map<string, number>();
+            for (const msg of allErrors) {
+                reasonCount.set(msg, (reasonCount.get(msg) ?? 0) + 1);
+            }
+            const failureReasons = [...reasonCount.entries()]
+                .sort((a, b) => b[1] - a[1])
+                .slice(0, 10)
+                .map(([pattern]) => pattern);
+
+            const from = runs[0]?.created_at?.slice(0, 10) ?? new Date().toISOString().slice(0, 10);
+            const to = runs[runs.length - 1]?.created_at?.slice(0, 10) ?? new Date().toISOString().slice(0, 10);
+
+            const healthData: PipelineHealthData = {
+                totalRuns,
+                passRate,
+                avgDurationSec: 0,
+                topFailingJobs,
+                failureReasons,
+                branchBreakdown,
+                period: { from, to },
+            };
+
+            const html = renderPipelineHealthHtml(healthData, 'GitHub Health Report \u2014 e2e');
 
             const outPath = writeReport('github-health-e2e.html', html);
 
             expect(fs.existsSync(path.resolve(outPath))).toBeTruthy();
 
             expect(html).toContain('GitHub Health Report');
-            expect(html).toContain(String(health.totalRuns));
-            expect(html).toContain(String(health.passRate));
+            expect(html).toContain(String(totalRuns));
+            expect(html).toContain(String(passRate));
             expect(html).toMatch(/^<!DOCTYPE html>/);
             expect(html).toContain('</html>');
 
-            expect(html).toContain(health.topFailingJobs.length > 0 ? 'Top Failing Jobs' : '');
+            expect(html).toContain(topFailingJobs.length > 0 ? 'Top Failing Jobs' : '');
         });
 
-        it('includes failure reasons and open issues sections', () => {
-            const health = aggregatePipelineHealth(runs, allJobs, errorMessagesPerJob, issues);
-            const html = renderPipelineHealthHtml(health, 'GitHub Health Report — e2e');
+        it('includes failure reasons section', () => {
+            const allErrors = errorMessagesPerJob.flat();
+            const hasErrors = allErrors.length > 0;
 
-            expect(html).toContain(health.failureReasons.length > 0 ? 'Failure Intelligence' : '');
-            expect(html).toContain(health.openIssues.total > 0 ? 'Open Issues' : '');
+            const healthData: PipelineHealthData = {
+                totalRuns: runs.length,
+                passRate: 0,
+                avgDurationSec: 0,
+                topFailingJobs: [],
+                failureReasons: allErrors.slice(0, 10),
+                branchBreakdown: {},
+            };
+
+            const html = renderPipelineHealthHtml(healthData, 'GitHub Health Report \u2014 e2e');
+
+            expect(html).toContain(hasErrors ? 'Failure Intelligence' : 'No failure reasons captured');
         });
     });
 });

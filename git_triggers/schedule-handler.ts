@@ -3,6 +3,8 @@ import { print, success, warn, info, prompt, printError, withSpinner } from '../
 import type { GitProvider, StateContainer } from '../shared/types.js';
 import { createDataHubPersistence } from '../shared/data-hub/persistence.js';
 import { calcFlakinessEntries } from '../shared/data-hub/compute/flakiness-entries.js';
+import { calcTestDurationMap } from '../shared/data-hub/compute/test-duration-map.js';
+import { calcRunFailureRate } from '../shared/data-hub/compute/run-failure-rate.js';
 import { calculateHealthScore } from '../shared/health-score.js';
 import { aggregateDefectTrends, generateDefectTrendHtml } from '../shared/defect-trend.js';
 import { calculateReleaseScore, generateReleaseScoreHtml } from '../shared/release-score.js';
@@ -114,18 +116,6 @@ export async function handleChangeProject(names: string[]): Promise<void> {
     }
 }
 
-function buildTestDurationMap(store: import('../shared/types/data-hub.js').MetricsStore): Record<string, number[]> {
-    const testDurationMap: Record<string, number[]> = {};
-    for (const run of store.runs) {
-        for (const t of run.tests) {
-            if (t.state === 'skipped') continue;
-            if (!testDurationMap[t.title]) testDurationMap[t.title] = [];
-            testDurationMap[t.title]?.push(t.duration);
-        }
-    }
-    return testDurationMap;
-}
-
 interface GitFallbackResult {
     projectRuns: import('../shared/types/data-hub.js').MetricsRun[];
     failureClassifications: import('../shared/types/data-hub.js').FailureClassification[];
@@ -199,7 +189,7 @@ export function generateWeeklyQualityReport(): void {
 
         /* Fase 2 dashboards */
         const seasonality = aggregateDefectSeasonality(failureClassifications);
-        const regression = detectSilentRegression(buildTestDurationMap(effectiveStore));
+        const regression = detectSilentRegression(calcTestDurationMap(effectiveStore.runs));
         const devProfile = buildDeveloperProfile(
             failureClassifications.map((fc) => ({
                 testTitle: fc.testTitle,
@@ -237,10 +227,7 @@ export function generateWeeklyQualityReport(): void {
         );
 
         /* Fase 3 dashboards */
-        const failRate =
-            projectRuns.length > 0
-                ? Math.round((projectRuns.filter((r) => r.failed > 0).length / projectRuns.length) * 100)
-                : 0;
+        const failRate = calcRunFailureRate(projectRuns);
 
         const uncoveredEpics: string[] = matrix.nodes.reduce((acc: string[], n) => {
             if (n.coverage < 100) acc.push(n.epic);

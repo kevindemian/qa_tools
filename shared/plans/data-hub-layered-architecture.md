@@ -1,4 +1,4 @@
-# Data Hub Layered Architecture — Multi-Source Data Extraction
+e# Data Hub Layered Architecture — Multi-Source Data Extraction
 
 ## Overview
 
@@ -1404,26 +1404,97 @@ Todas mudanças são import swaps — structural typing garante equivalência. T
 | -------------- | ----------------------- | ------------------------------- |
 | smoke-pipeline | `e2e/smoke-pipeline.ts` | loadMetrics, calculateFlakiness |
 
-**22.M — HIGH priority rogue calculators** (1 commit, 3 arquivos)
+**22.M — HIGH priority rogue calculators** (auditoria consolidada 2026-07-08)
 
-Arquivos que calculam métricas localmente sem usar metrics.ts ou DataHub. Prioridade HIGH por serem pipelines paralelos completos ou fontes de dados primárias.
+**Princípio**: DataHub é a ÚNICA fonte de verdade para TODA métrica, cálculo e dado. Qualquer cálculo fora de DataHub é um defeito a ser corrigido.
 
-| #   | Arquivo                             | Problema                                                                                                                                                                                 | Ação                                                                   |
-| --- | ----------------------------------- | ---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | ---------------------------------------------------------------------- |
-| 1   | `git_triggers/pipeline-health.ts`   | Pipeline de métricas **completo e paralelo** — define `PipelineRunExtended`, `PipelineHealth`, calcula passRate, avgDuration, topFailingJobs, branchBreakdown, failureReasons localmente | **DELETAR** — DataHub já cobre 100%                                    |
-| 2   | `shared/git-artifact-downloader.ts` | Calcula `passRate` inline + implementa **algoritmo diferente** de detecção de flaky (`detectFlakyTests` usa co-occurrence, não rate threshold)                                           | **DELETAR** `detectFlakyTests()`, refatorar passRate para usar DataHub |
-| 3   | `shared/ci-detect.ts`               | Define tipo `RunStats` com `passRate` embutido — **raiz do bypass**                                                                                                                      | **REFAZER** `RunStats` para não incluir passRate derivado              |
+| #   | Arquivo                             | Problema                                                                                                                               | Ação                                                             |
+| --- | ----------------------------------- | -------------------------------------------------------------------------------------------------------------------------------------- | ---------------------------------------------------------------- |
+| 1   | `git_triggers/pipeline-health.ts`   | Pipeline de métricas **completo e paralelo** — 5 cálculos duplicados + dead code (openIssues, failureByCategory, extractErrorMessages) | **DELETAR**, extrair renderer para `pipeline-health-renderer.ts` |
+| 2   | `shared/git-artifact-downloader.ts` | `detectFlakyTests()` — função duplicada, equivalente a `calcFlakinessEntries()` do DataHub, 1 consumer (case17 HTML)                   | **DELETAR** — consumer usa `FlakinessEntry[]` do DataHub         |
+| 3   | `shared/ci-detect.ts`               | `RunStats.passRate` — campo derivado redundante                                                                                        | **REMOVER** — consumers calculam via `calcRunPassRate()`         |
 
-**22.N — MEDIUM priority rogue calculators** (1 commit, 6 arquivos)
+**Decisão Técnica — 22.M.1 (pipeline-health.ts):**
 
-| #   | Arquivo                              | Problema                                                                               | Ação                                                                                      |
-| --- | ------------------------------------ | -------------------------------------------------------------------------------------- | ----------------------------------------------------------------------------------------- |
-| 1   | `shared/quality-gate.ts`             | **Recalcula** flakyPct e suiteSpeed p95 localmente em vez de ler de `DataHub.computed` | Refatorar para usar `DataHub.computed.flakyPercentage` e `DataHub.computed.suiteSpeedP95` |
-| 2   | `jira_management/commands/case17.ts` | Calcula passRate inline em 2 lugares (PR comment + report.stats.json)                  | Extrair para função shared ou usar DataHub                                                |
-| 3   | `git_triggers/schedule-handler.ts`   | Calcula `failRate` (% runs com falhas) + `buildTestDurationMap()` duplicado            | Extrair `buildTestDurationMap()` para shared, unificar failRate                           |
-| 4   | `git_triggers/interactive-mode.ts`   | Mesmo `failRate` + `buildTestDurationMap()` copiado 2x                                 | Usar função shared extraída                                                               |
-| 5   | `shared/cross-squad-benchmark.ts`    | Define `SquadBenchmark` com passRate/flakyRate/coveragePct — duplica DataHub.computed  | Refatorar para aceitar `ComputedMetrics` como input                                       |
-| 6   | `shared/report-utils.ts`             | `statsFromTests()` — terceira implementação de contagem passed/failed/skipped          | Consolidar com session-context.ts e case17.ts                                             |
+- DataHub cobre 100% do compute (pass rate, avg duration, top failing jobs, failure reasons, branch breakdown) — módulos existem em `data-hub/compute/`
+- `failureByCategory` é dead code (tipo definido mas nunca populado, sempre `{}`)
+- `openIssues` é dead code em produção (batch-mode.ts passa `[]` sempre)
+- `extractErrorMessages()` é dead code em produção
+- `renderPipelineHealthHtml()` é apresentação — extrair para `pipeline-health-renderer.ts`
+- Tipos `PipelineRunExtended`/`PipelineJobExtended` são subsets redundantes — deletar
+- `aggregatePipelineHealth()` deletada — batch-mode.ts usa `dataHub.computed.*` diretamente
+
+**Decisão Técnica — 22.M.2 (detectFlakyTests):**
+
+- `detectFlakyTests()` usa co-occurrence (pass>0 AND fail>0) — equivalente ao `calcFlakinessEntries()` do DataHub
+- Algoritmo NÃO é incorreto (afirmação do plano original era errada). A razão correta para deletar é SSOT: DataHub é a ÚNICA fonte
+- Output é `string` (texto puro) vs `FlakinessEntry[]` (estruturado) — DataHub é estritamente superior
+- 1 único consumer: `buildGitTrendHtml()` em case17-helpers.ts — refatorar para renderizar `FlakinessEntry[]`
+
+**Decisão Técnica — 22.M.3 (RunStats.passRate):**
+
+- `passRate = passed / (passed + failed) * 100` — campo derivado redundante
+- `RunStats` já contém `passed` e `failed` — consumers calculam via `calcRunPassRate()`
+- Consumers: case17-helpers.ts (4 usos), case17.ts (1 uso)
+
+**22.N — MEDIUM priority rogue calculators** (reescrito — versão anterior tinha erros conceituais)
+
+**Correções em relação ao plano original:**
+
+- 22.N.1 original dizia "usar DataHub.computed.flakyPercentage e suiteSpeedP95" — **ERRADO**, são semânticas diferentes (jobs vs tests). Correção: expandir DataHub com `calcTestDurationP95()` e wire `calculateFlakyTestRate()`
+- 22.N.5 original dizia "refatorar cross-squad-benchmark para aceitar ComputedMetrics" — **ERRADO**, inputs já são health score dimensions. Manter como está
+- 22.N.2 original dizia "extrair para shared" — **INFERIOR**, shared não é SSOT. Correção: absorver em DataHub compute
+
+| #   | Arquivo                                         | Problema                                                                    | Ação                                                                                      |
+| --- | ----------------------------------------------- | --------------------------------------------------------------------------- | ----------------------------------------------------------------------------------------- |
+| 1   | `shared/quality-gate.ts`                        | Recalcula flakyPct e suiteSpeed p95 localmente                              | Usar `DataHub.computed.flakyTestRate` e `DataHub.computed.testDurationP95` (novos campos) |
+| 2   | `jira_management/commands/case17.ts`            | Calcula passRate inline em 3 lugares                                        | Usar `calcRunPassRate()` de DataHub                                                       |
+| 3   | `git_triggers/schedule-handler.ts`              | `buildTestDurationMap()` duplicado + `failRate` inline                      | Usar `calcTestDurationMap()` e `calcRunFailureRate()` de DataHub                          |
+| 4   | `git_triggers/interactive-mode.ts`              | `buildTestDurationMap()` duplicado (2x) + `failRate` inline                 | Usar `calcTestDurationMap()` e `calcRunFailureRate()` de DataHub                          |
+| 5   | `shared/cross-squad-benchmark.ts`               | Inputs são health score dimensions (0-100), NÃO métricas brutas             | **MANTER** — contrato correto com calculateHealthScore()                                  |
+| 6   | `shared/report-utils.ts`                        | `statsFromTests()` — função canônica de contagem                            | **MANTER** como SSOT. Eliminar duplicatas em session-context.ts e case17.ts               |
+| 7   | `shared/pr-report-core.ts`                      | 4x fórmula passRate inline                                                  | Usar `calcRunPassRate()` de DataHub                                                       |
+| 8   | `shared/report-html.ts`                         | passRate inline                                                             | Usar `calcRunPassRate()` de DataHub                                                       |
+| 9   | `shared/run-comparison.ts`                      | passRate inline                                                             | Usar `calcRunPassRate()` de DataHub                                                       |
+| 10  | `jira_management/commands/case19.ts`            | passRate inline                                                             | Usar `calcRunPassRate()` de DataHub                                                       |
+| 11  | `shared/health-score.ts`                        | 3 fallback paths para MetricsStore (passRate, flakyRate, suiteSpeed)        | Eliminar fallbacks — ler de `DataHub.computed.*` diretamente                              |
+| 12  | `shared/data-hub/metrics/metrics-calculator.ts` | Bugs (executionRate usa passRate, faltam 6 campos) + parcialmente duplicado | **DELETAR** — hub.computeMetrics() é o canônico                                           |
+
+**Novas funções DataHub (5):**
+
+| #   | Função                   | Arquivo                        | Assinatura                                       | Alimenta                                                    |
+| --- | ------------------------ | ------------------------------ | ------------------------------------------------ | ----------------------------------------------------------- |
+| N1  | `calcRunPassRate`        | `compute/run-pass-rate.ts`     | `(passed: number, failed: number): number`       | case17, pr-report-core, report-html, run-comparison, case19 |
+| N2  | `calcTestDurationP95`    | `compute/test-duration-p95.ts` | `(runs: MetricsRun[]): number`                   | quality-gate, health-score                                  |
+| N3  | `calcRunFailureRate`     | `compute/run-failure-rate.ts`  | `(runs: MetricsRun[]): number`                   | schedule-handler, interactive-mode                          |
+| N4  | `calcTestDurationMap`    | `compute/test-duration-map.ts` | `(runs: MetricsRun[]): Record<string, number[]>` | schedule-handler, interactive-mode                          |
+| N5  | `calculateFlakyTestRate` | `compute/flakiness-entries.ts` | Já existe — **exportar** + wire no DataHub       | quality-gate, health-score                                  |
+
+**Novos campos em ComputedMetrics (5):**
+
+```typescript
+export interface ComputedMetrics {
+    // ... campos existentes ...
+    runPassRate?: number; // N1 — test-level pass rate
+    testDurationP95?: number; // N2 — P95 de duração individual de testes
+    runFailureRate?: number; // N3 — % runs com >=1 falha
+    testDurationMap?: Record<string, number[]>; // N4 — agregação de duração por teste
+    flakyTestRate?: number; // N5 — % flaky test-level
+}
+```
+
+**Sítios de defeito corrigidos (34 sítios em 13 arquivos):** ver auditoria completa em `audit/functional/DEFECT-AUDIT-22MN.md`
+
+**Ordem de execução — 6 fases:**
+
+1. **Fase 1** — Expandir DataHub Compute (5 commits): criar 4 funções + wire 1 existente
+2. **Fase 2** — pipeline-health.ts (3 commits): extrair renderer, reescrever batch-mode, deletar
+3. **Fase 3** — Migrar rogue calculators (5 commits): quality-gate, schedule+interactive, case17, pr-report-core, health-score
+4. **Fase 4** — detectFlakyTests + CiContext.flakyTests (1 commit): eliminar, usar FlakinessEntry[]
+5. **Fase 5** — RunStats.passRate + statsFromTests (2 commits): eliminar derivados, consolidar counting
+6. **Fase 6** — metrics-calculator.ts + auditoria final (2 commits): deletar duplicado, verificação SSOT
+
+**Total: 18 commits. Zero fontes de verdade duplicadas.**
 
 **22.K — Test files** (1 commit, batch)
 
@@ -1563,36 +1634,53 @@ git commit -m "refactor(data-hub): Phase 22.X migrate <group>"
 - schedule-handler: Heavy — substituir todas as chamadas de metrics
 - interactive-mode: Heavy — substituir todas as chamadas de metrics
 
-**22.M — HIGH priority rogue calculators:**
+**22.M — HIGH priority rogue calculators (corrigido 2026-07-08):**
 
-- **22.M.1**: Deletar `git_triggers/pipeline-health.ts` (100% coberto por DataHub)
-    - Verificar que nenhum arquivo importa de `pipeline-health.ts`
-    - Migrar consumers para DataHub.computed
-    - Deletar arquivo e testes associados
+- **22.M.1**: Deletar `git_triggers/pipeline-health.ts` + extrair renderer
+    - Criar `git_triggers/pipeline-health-renderer.ts` — extrair `renderPipelineHealthHtml()`, CSS, helpers
+    - Reescrever `batch-mode.ts:generatePipelineHealthReport()` — usar `dataHub.computed.*` + renderer
+    - Deletar `git_triggers/pipeline-health.ts`
+    - Atualizar todos os testes
 
-- **22.M.2**: Deletar `detectFlakyTests()` em `git-artifact-downloader.ts`
-    - Algoritmo co-occurrence é incorreto (gera falsos positivos)
-    - Substituir por `calculateFlakiness()` do DataHub
-    - Refatorar `addRunStatsFromSummary()` para não calcular passRate inline
+- **22.M.2**: Deletar `detectFlakyTests()` — absorvido por `calcFlakinessEntries()` do DataHub
+    - `CiContext.flakyTests: string` → `CiContext.flakyEntries: FlakinessEntry[]`
+    - `buildGitTrendHtml()` renderiza tabela estruturada em vez de `<pre>` texto
+    - Deletar `detectFlakyTests()` de `git-artifact-downloader.ts`
 
-- **22.M.3**: Refatorar `RunStats` em `ci-detect.ts`
-    - Remover campo `passRate` do tipo (é dado derivado, não input)
-    - Consumers devem calcular passRate via DataHub quando necessário
+- **22.M.3**: Remover `RunStats.passRate` — campo derivado redundante
+    - Remover de `ci-detect.ts`
+    - Remover cálculos em `git-artifact-downloader.ts`
+    - Consumers usam `calcRunPassRate()` de DataHub
 
-**22.N — MEDIUM priority rogue calculators:**
+**22.N — MEDIUM priority rogue calculators (reescrito — versão anterior tinha erros conceituais):**
 
-- **22.N.1**: Refatorar `quality-gate.ts`
-    - Substituir `_flakyCheck()` por `DataHub.computed.flakyPercentage`
-    - Substituir `_suiteSpeedCheck()` por `DataHub.computed.suiteSpeedP95`
-    - Manter `_passRateCheck()` se não houver equivalente no DataHub
+- **22.N.1**: quality-gate.ts — delegar para DataHub
+    - `_flakyCheck()` → usar `DataHub.computed.flakyTestRate`
+    - `_suiteSpeedCheck()` → usar `DataHub.computed.testDurationP95`
+    - NÃO usar `flakyPercentage` (job-level) nem `suiteSpeedP95` (job-level) — semânticas diferentes
 
-- **22.N.2**: Extrair `buildTestDurationMap()` para shared
-    - Criar `shared/test-duration-utils.ts` com função única
-    - Substituir 3 cópias em schedule-handler.ts e interactive-mode.ts
+- **22.N.2**: schedule-handler + interactive-mode — absorver em DataHub
+    - Eliminar `buildTestDurationMap()` (3 cópias) → usar `calcTestDurationMap()` de DataHub
+    - Eliminar `failRate` inline (2 cópias) → usar `calcRunFailureRate()` de DataHub
 
-- **22.N.3**: Unificar fórmula passRate
-    - Consolidar `(passed / (passed + failed)) * 100` em função shared
-    - Substituir 6+ ocorrências inline
+- **22.N.3**: passRate — consolidar em DataHub
+    - Criar `calcRunPassRate()` em DataHub
+    - Substituir 10+ ocorrências inline (case17, pr-report-core, report-html, run-comparison, case19)
+
+- **22.N.4**: detectFlakyTests + CiContext — eliminar duplicata
+    - Ver 22.M.2
+
+- **22.N.5**: cross-squad-benchmark — MANTER (inputs são health score dimensions, não métricas brutas)
+
+- **22.N.6**: report-utils.ts statsFromTests() — MANTER como canônico, eliminar duplicatas em session-context e case17
+
+- **22.N.7**: health-score.ts — eliminar 3 fallback paths
+
+- **22.N.8**: metrics-calculator.ts — DELETAR (parcialmente duplicado com bugs)
+
+- **22.N.9**: pr-report-core.ts — substituir 4x passRate por calcRunPassRate()
+
+- **22.N.10**: report-html.ts, run-comparison.ts, case19.ts — substituir passRate por calcRunPassRate()
 
 **22.L — Delete metrics.ts:**
 
@@ -2125,11 +2213,26 @@ O linter `vitest/prefer-strict-equal` exige `toStrictEqual` em vez de `toEqual` 
 - [x] Phase 21 — Artifact Download + Parse (commit `1764a54f`)
 - [x] Phase 21.12 — Gap Closure (commits `43f6d0c0` + `a48cbd24`)
 - [x] Phase 0 Gap Closure — G1-G3, T1-T7 (commit `b661d7d7`)
-- [ ] Phase 22 — Consumer Migration (SSOT Centralization)
-    - [ ] 22.A — Foundation (tipos, persistence, compute)
-    - [ ] 22.B — Consumers (24 arquivos)
-    - [ ] 22.C — Type-only imports (5 arquivos)
-    - [ ] 22.D — Eliminação de metrics.ts
+- [x] Phase 22 — Consumer Migration (SSOT Centralization)
+    - [x] 22.A — Foundation (tipos, persistence, compute)
+    - [x] 22.B — Type-only imports (10 consumers)
+    - [x] 22.C — loadMetrics-only (4 consumers)
+    - [x] 22.D — + calculateFlakiness (3 consumers)
+    - [x] 22.E — + saveCoverageSnapshot (2 consumers)
+    - [x] 22.F — Medium chain (3 consumers)
+    - [x] 22.G — Complex chain (2 consumers)
+    - [x] 22.H — session-context group (3 consumers)
+    - [x] 22.I — Heavy pipeline (3 consumers)
+    - [x] 22.J — E2E (1 consumer)
+    - [x] 22.K — Test files
+    - [x] 22.L — Delete metrics.ts
+    - [ ] 22.M — HIGH rogue calculators + DataHub expansion
+        - [ ] Fase 1 — Expandir DataHub Compute (5 commits)
+        - [ ] Fase 2 — pipeline-health.ts delete + renderer (3 commits)
+        - [ ] Fase 3 — Migrar rogue calculators (5 commits)
+        - [ ] Fase 4 — detectFlakyTests + CiContext (1 commit)
+        - [ ] Fase 5 — RunStats.passRate + statsFromTests (2 commits)
+        - [ ] Fase 6 — metrics-calculator.ts + auditoria (2 commits)
 - [ ] Phase 23 — Deprecation + Cleanup
 - [ ] Phase 24 — Contract Updates
 - [ ] Phase 25 — Testing + Quality Gates

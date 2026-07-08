@@ -21,6 +21,7 @@ import { Store, type ReportMeta } from './store.js';
 import { fetchLatestTestRun } from './git-artifact-downloader.js';
 import type { ParseResult } from './result_parser.js';
 import { rootLogger } from './logger.js';
+import { statsFromTests } from './report-utils.js';
 
 interface SessionCountersItem {
     op: string;
@@ -128,13 +129,11 @@ function tryLoadFromCache(sha: string | null, store: Store): { result: ParseResu
         const cached = store.loadReport(sha);
         if (cached && Array.isArray(cached.tests) && cached.tests.length > 0) {
             const tests = cached.tests;
-            const passed = tests.filter((t) => t.state === 'passed').length;
-            const failed = tests.filter((t) => t.state === 'failed').length;
-            const skipped = tests.filter((t) => t.state === 'skipped').length;
+            const stats = statsFromTests(tests);
             return {
                 result: {
                     tests,
-                    stats: { passed, failed, skipped, total: tests.length, duration: 0 },
+                    stats: { ...stats, duration: 0 },
                 },
                 source: 'cache',
             };

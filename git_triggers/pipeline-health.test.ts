@@ -1,106 +1,29 @@
-/** Pipeline health — pure function tests with fixture data. */
-import { aggregatePipelineHealth, extractErrorMessages, renderPipelineHealthHtml } from './pipeline-health.js';
-import type { PipelineRunExtended, PipelineJobExtended } from './pipeline-health.js';
-import { nonNull } from '../shared/test-utils.js';
+/** Pipeline health renderer — pure function tests with fixture data. */
+import { renderPipelineHealthHtml, extractErrorMessages, formatDuration } from './pipeline-health-renderer.js';
+import type { PipelineHealthData } from './pipeline-health-renderer.js';
 
 /* ------------------------------------------------------------------ */
 /*  Fixtures                                                           */
 /* ------------------------------------------------------------------ */
 
-const sampleRuns: PipelineRunExtended[] = [
-    {
-        id: 1,
-        status: 'completed',
-        conclusion: 'success',
-        head_branch: 'main',
-        created_at: '2026-05-28T10:00:00Z',
-        run_started_at: '2026-05-28T10:00:00Z',
-        updated_at: '2026-05-28T10:04:00Z',
-    },
-    {
-        id: 2,
-        status: 'completed',
-        conclusion: 'success',
-        head_branch: 'main',
-        created_at: '2026-05-28T11:00:00Z',
-        run_started_at: '2026-05-28T11:00:00Z',
-        updated_at: '2026-05-28T11:05:00Z',
-    },
-    {
-        id: 3,
-        status: 'completed',
-        conclusion: 'failure',
-        head_branch: 'develop',
-        created_at: '2026-05-28T12:00:00Z',
-        run_started_at: '2026-05-28T12:00:00Z',
-        updated_at: '2026-05-28T12:03:00Z',
-    },
-    {
-        id: 4,
-        status: 'completed',
-        conclusion: 'failure',
-        head_branch: 'main',
-        created_at: '2026-05-28T13:00:00Z',
-        run_started_at: '2026-05-28T13:00:00Z',
-        updated_at: '2026-05-28T13:06:00Z',
-    },
-    {
-        id: 5,
-        status: 'completed',
-        conclusion: 'success',
-        head_branch: 'main',
-        created_at: '2026-05-28T14:00:00Z',
-        run_started_at: '2026-05-28T14:00:00Z',
-        updated_at: '2026-05-28T14:03:30Z',
-    },
-];
-
-const sampleJobs: PipelineJobExtended[][] = [
-    /* run 1 — all pass */
-    [
-        { id: 101, name: 'lint', status: 'success' },
-        { id: 102, name: 'test', status: 'success' },
-        { id: 103, name: 'build', status: 'success' },
+const sampleHealthData: PipelineHealthData = {
+    totalRuns: 5,
+    passRate: 60,
+    avgDurationSec: 240,
+    topFailingJobs: [
+        { name: 'lint', failCount: 1, totalCount: 5, rate: 20 },
+        { name: 'test', failCount: 1, totalCount: 4, rate: 25 },
     ],
-    /* run 2 — all pass */
-    [
-        { id: 201, name: 'lint', status: 'success' },
-        { id: 202, name: 'test', status: 'success' },
-    ],
-    /* run 3 — lint fails */
-    [
-        { id: 301, name: 'lint', status: 'failure' },
-        { id: 302, name: 'test', status: 'success' },
-    ],
-    /* run 4 — test fails */
-    [
-        { id: 401, name: 'lint', status: 'success' },
-        { id: 402, name: 'test', status: 'failure' },
-        { id: 403, name: 'build', status: 'failure' },
-    ],
-    /* run 5 — all pass */
-    [
-        { id: 501, name: 'lint', status: 'success' },
-        { id: 502, name: 'test', status: 'success' },
-    ],
-];
-
-const sampleErrors: string[][] = [
-    [] /* run 1 — no errors */,
-    [] /* run 2 — no errors */,
-    ["Module not found: 'foo'", 'SyntaxError: Unexpected token'] /* run 3 — lint */,
-    ['Timeout: page did not load', 'Cannot connect to Docker daemon'] /* run 4 — test + build */,
-    [] /* run 5 — no errors */,
-];
-
-const sampleIssues: Array<{ labels: string[]; updated_at: string; created_at: string }> = [
-    { labels: ['bug', 'frontend'], updated_at: '2026-05-20T10:00:00Z', created_at: '2026-05-01T10:00:00Z' },
-    { labels: ['enhancement'], updated_at: '2026-04-01T10:00:00Z', created_at: '2026-03-01T10:00:00Z' },
-    { labels: ['bug'], updated_at: '2026-05-25T10:00:00Z', created_at: '2026-05-10T10:00:00Z' },
-];
+    failureReasons: ["Module not found: 'foo'", 'Timeout: page did not load', 'Cannot connect to Docker daemon'],
+    branchBreakdown: {
+        main: { passRate: 75, count: 4 },
+        develop: { passRate: 0, count: 1 },
+    },
+    period: { from: '2026-05-28', to: '2026-05-28' },
+};
 
 /* ------------------------------------------------------------------ */
-/*  Tests                                                              */
+/*  Tests — ExtractErrorMessages                                       */
 /* ------------------------------------------------------------------ */
 
 describe('ExtractErrorMessages', () => {
@@ -130,97 +53,42 @@ FATAL: OOMKilled`;
     });
 });
 
-describe('AggregatePipelineHealth', () => {
-    const now = new Date('2026-05-29T00:00:00Z');
-    const health = aggregatePipelineHealth(sampleRuns, sampleJobs, sampleErrors, sampleIssues, now);
+/* ------------------------------------------------------------------ */
+/*  Tests — FormatDuration                                             */
+/* ------------------------------------------------------------------ */
 
-    it('computes pass rate correctly', () => {
-        expect(health.totalRuns).toBe(5);
-        expect(health.passedRuns).toBe(3);
-        expect(health.failedRuns).toBe(2);
-        expect(health.passRate).toBe(60);
+describe('FormatDuration', () => {
+    it('formats seconds only', () => {
+        expect(formatDuration(30)).toBe('30s');
     });
 
-    it('computes average duration', () => {
-        expect(health.avgDurationSec).toBeGreaterThan(0);
+    it('formats minutes and seconds', () => {
+        expect(formatDuration(125)).toBe('2m 5s');
     });
 
-    it('identifies top failing jobs', () => {
-        expect(health.topFailingJobs.length).toBeGreaterThanOrEqual(2);
-
-        const lint = health.topFailingJobs.find((j) => j.name === 'lint');
-
-        expect(lint).toBeDefined();
-        expect(nonNull(lint).failCount).toBe(1);
-        expect(nonNull(lint).totalCount).toBe(5);
-
-        /* test appears in 4 runs (not in run3) */
-        const test = health.topFailingJobs.find((j) => j.name === 'test');
-
-        expect(test).toBeDefined();
+    it('formats hours and minutes', () => {
+        expect(formatDuration(3660)).toBe('1h 1m');
     });
 
-    it('aggregates failure reasons', () => {
-        expect(health.failureReasons.length).toBeGreaterThanOrEqual(3);
-
-        const moduleNotFound = health.failureReasons.find((r) => r.message.includes('Module not found'));
-
-        expect(moduleNotFound).toBeDefined();
-        expect(nonNull(moduleNotFound).count).toBe(1);
-    });
-
-    it('breaks down by branch', () => {
-        const main = health.branchBreakdown.find((b) => b.branch === 'main');
-
-        expect(main).toBeDefined();
-        expect(nonNull(main).count).toBe(4);
-        expect(nonNull(main).passRate).toBe(75);
-
-        const develop = health.branchBreakdown.find((b) => b.branch === 'develop');
-
-        expect(develop).toBeDefined();
-        expect(nonNull(develop).count).toBe(1);
-        expect(nonNull(develop).passRate).toBe(0);
-    });
-
-    it('counts open issues by label', () => {
-        expect(health.openIssues.total).toBe(3);
-        expect(health.openIssues.byLabel['bug']).toBe(2);
-        expect(health.openIssues.byLabel['frontend']).toBe(1);
-    });
-
-    it('detects stale issues (30d+ no update)', () => {
-        expect(health.openIssues.staleCount).toBe(1);
-    });
-
-    it('returns zero pass rate for empty runs', () => {
-        const empty = aggregatePipelineHealth([], [], [], [], now);
-
-        expect(empty.totalRuns).toBe(0);
-        expect(empty.passRate).toBe(0);
-    });
-
-    it('handles runs without duration data', () => {
-        const noDurationRuns: PipelineRunExtended[] = [
-            { id: 1, status: 'completed', conclusion: 'success', head_branch: 'main' },
-        ];
-        const h = aggregatePipelineHealth(noDurationRuns, [[]], [], [], now);
-
-        expect(h.avgDurationSec).toBe(0);
-        expect(h.passRate).toBe(100);
+    it('handles zero', () => {
+        expect(formatDuration(0)).toBe('0s');
     });
 });
 
-describe('RenderPipelineHealthHtml', () => {
-    const now = new Date('2026-05-29T00:00:00Z');
-    const health = aggregatePipelineHealth(sampleRuns, sampleJobs, sampleErrors, sampleIssues, now);
-    const html = renderPipelineHealthHtml(health, 'Test Report');
+/* ------------------------------------------------------------------ */
+/*  Tests — RenderPipelineHealthHtml                                   */
+/* ------------------------------------------------------------------ */
 
+describe('RenderPipelineHealthHtml', () => {
     it('contains title', () => {
+        const html = renderPipelineHealthHtml(sampleHealthData, 'Test Report');
+
         expect(html).toContain('Test Report');
     });
 
     it('contains summary cards', () => {
+        const html = renderPipelineHealthHtml(sampleHealthData);
+
         expect(html).toContain('Total Runs');
         expect(html).toContain('Passed');
         expect(html).toContain('Failed');
@@ -229,65 +97,95 @@ describe('RenderPipelineHealthHtml', () => {
     });
 
     it('contains top failing jobs table', () => {
+        const html = renderPipelineHealthHtml(sampleHealthData);
+
         expect(html).toContain('Top Failing Jobs');
         expect(html).toContain('lint');
         expect(html).toContain('test');
     });
 
     it('contains failure intelligence section', () => {
+        const html = renderPipelineHealthHtml(sampleHealthData);
+
         expect(html).toContain('Failure Intelligence');
         expect(html).toContain('Module not found');
     });
 
     it('contains branch breakdown', () => {
+        const html = renderPipelineHealthHtml(sampleHealthData);
+
         expect(html).toContain('Branch Breakdown');
         expect(html).toContain('main');
     });
 
-    it('contains open issues section', () => {
-        expect(html).toContain('Open Issues');
-        expect(html).toContain('bug');
-    });
-
     it('is valid HTML document', () => {
+        const html = renderPipelineHealthHtml(sampleHealthData);
+
         expect(html).toMatch(/^<!DOCTYPE html>/);
         expect(html).toContain('</html>');
     });
 
     it('uses buildCss design tokens', () => {
+        const html = renderPipelineHealthHtml(sampleHealthData);
+
         expect(html).toContain('--color-surface-page');
         expect(html).toContain('--color-text-primary');
         expect(html).toContain('--color-text-muted');
     });
 
     it('includes theme toggle script', () => {
+        const html = renderPipelineHealthHtml(sampleHealthData);
+
         expect(html).toContain('qa-report-theme');
         expect(html).toContain('prefers-color-scheme');
     });
 
     it('includes dark mode CSS', () => {
+        const html = renderPipelineHealthHtml(sampleHealthData);
+
         expect(html).toContain('html.dark');
     });
 
     it('includes footer', () => {
+        const html = renderPipelineHealthHtml(sampleHealthData);
+
         expect(html).toContain('Pipeline Health Dashboard');
     });
 
     it('uses design-token CSS variables for card borders', () => {
+        const html = renderPipelineHealthHtml(sampleHealthData);
+
         expect(html).toContain('var(--color-surface-card)');
         expect(html).toContain('var(--color-border-default)');
     });
 
     it('uses TABLE_CSS without legacy border="1" / cellpadding', () => {
+        const html = renderPipelineHealthHtml(sampleHealthData);
+
         expect(html).not.toContain('border="1"');
         expect(html).not.toContain('cellpadding="6"');
         expect(html).not.toContain('background:#f3f4f6');
     });
 
     it('renders empty state gracefully', () => {
-        const emptyHtml = renderPipelineHealthHtml(aggregatePipelineHealth([], [], [], [], now), 'Empty Report');
+        const emptyData: PipelineHealthData = {
+            totalRuns: 0,
+            passRate: 0,
+            avgDurationSec: 0,
+            topFailingJobs: [],
+            failureReasons: [],
+            branchBreakdown: {},
+        };
+        const html = renderPipelineHealthHtml(emptyData, 'Empty Report');
 
-        expect(emptyHtml).toContain('Empty Report');
-        expect(emptyHtml).toContain('0');
+        expect(html).toContain('Empty Report');
+        expect(html).toContain('0');
+    });
+
+    it('computes passed/failed counts from passRate', () => {
+        const html = renderPipelineHealthHtml(sampleHealthData);
+
+        expect(html).toContain('3');
+        expect(html).toContain('2');
     });
 });

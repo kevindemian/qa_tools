@@ -8,6 +8,12 @@ import { parseTestResults } from './result_parser.js';
 import type { GitHubWorkflowRun, GitHubWorkflowRunsResponse, GitHubArtifactsResponse, GitLabJob } from './types.js';
 import { isGitHubCi, isGitLabCi, GIT_HISTORY_RUNS, type CiContext, type RunStats } from './ci-detect.js';
 
+/**
+ * Extracts pass/fail/skip counts from a CTRF summary and appends a RunStats entry.
+ * @param summary - CTRF results summary with test counts.
+ * @param run - GitHub workflow run metadata.
+ * @param runStats - Accumulator array for run statistics.
+ */
 function addRunStatsFromSummary(
     summary: NonNullable<Partial<CtrfData>['results']>['summary'],
     run: GitHubWorkflowRun,
@@ -21,45 +27,35 @@ function addRunStatsFromSummary(
         failed: summary.failed,
         skipped: summary.skipped,
         total: summary.tests,
-        passRate: summary.passed + summary.failed > 0 ? (summary.passed / (summary.passed + summary.failed)) * 100 : 0,
     });
 }
 
-function trackTestStatuses(
-    tests: Array<{ name: string; status: string }> | undefined,
-    allTestsByTitleMap: Map<string, { states: string[] }>,
-): void {
-    for (const t of tests ?? []) {
-        const name = t.name;
-        const existing = allTestsByTitleMap.get(name);
-        if (!existing) {
-            allTestsByTitleMap.set(name, { states: [t.status] });
-        } else {
-            existing.states.push(t.status);
-        }
-    }
-}
-
-function parseGitHubZipEntries(
-    zip: AdmZip,
-    run: GitHubWorkflowRun,
-    runStats: RunStats[],
-    allTestsByTitleMap: Map<string, { states: string[] }>,
-): void {
+/**
+ * Parses JSON entries from a GitHub Actions artifact ZIP, extracting run stats.
+ * @param zip - AdmZip instance containing the artifact.
+ * @param run - GitHub workflow run metadata.
+ * @param runStats - Accumulator array for run statistics.
+ */
+function parseGitHubZipEntries(zip: AdmZip, run: GitHubWorkflowRun, runStats: RunStats[]): void {
     for (const entry of zip.getEntries()) {
         if (!entry.name.endsWith('.json')) continue;
         const parsed: Partial<CtrfData> = JSON.parse(entry.getData().toString('utf8')) as Partial<CtrfData>;
         addRunStatsFromSummary(parsed.results?.summary, run, runStats);
-        trackTestStatuses(parsed.results?.tests, allTestsByTitleMap);
     }
 }
 
+/**
+ * Downloads and parses a single GitHub workflow run's CTRF artifact.
+ * @param repo - GitHub repository in owner/repo format.
+ * @param client - HTTP client for API calls.
+ * @param run - GitHub workflow run metadata.
+ * @param runStats - Accumulator array for run statistics.
+ */
 async function processGitHubRun(
     repo: string,
     client: ReturnType<typeof createHttpClient>,
     run: GitHubWorkflowRun,
     runStats: RunStats[],
-    allTestsByTitleMap: Map<string, { states: string[] }>,
 ): Promise<void> {
     const artResp = await client.get<GitHubArtifactsResponse>(
         `/repos/${repo}/actions/runs/${String(run.id)}/artifacts`,
@@ -74,28 +70,39 @@ async function processGitHubRun(
         responseType: 'arraybuffer' as const,
     });
     const zip = new AdmZip(Buffer.from(zipResp.data));
-    parseGitHubZipEntries(zip, run, runStats, allTestsByTitleMap);
+    parseGitHubZipEntries(zip, run, runStats);
 }
 
+/**
+ * Processes multiple GitHub workflow runs, downloading and parsing their CTRF artifacts.
+ * @param repo - GitHub repository in owner/repo format.
+ * @param client - HTTP client for API calls.
+ * @param runs - Array of workflow runs to process.
+ * @returns Array of RunStats from all successfully parsed runs.
+ */
 async function processGitHubArtifacts(
     repo: string,
     client: ReturnType<typeof createHttpClient>,
     runs: GitHubWorkflowRun[],
-): Promise<{ runStats: RunStats[]; allTestsByTitle: Record<string, { states: string[] }> }> {
+): Promise<RunStats[]> {
     const runStats: RunStats[] = [];
-    const allTestsByTitleMap = new Map<string, { states: string[] }>();
     for (const run of runs.slice(0, GIT_HISTORY_RUNS)) {
         try {
-            await processGitHubRun(repo, client, run, runStats, allTestsByTitleMap);
+            await processGitHubRun(repo, client, run, runStats);
         } catch (err) {
             rootLogger.debug(
                 'git-artifact-downloader: skip individual run: ' + (err instanceof Error ? err.message : String(err)),
             );
         }
     }
-    return { runStats, allTestsByTitle: Object.fromEntries(allTestsByTitleMap) };
+    return runStats;
 }
 
+/**
+ * Builds a newline-delimited string of recent commit messages from workflow runs.
+ * @param runs - GitHub workflow run metadata.
+ * @returns Formatted commit log string.
+ */
 function buildCommitsFromRuns(runs: GitHubWorkflowRun[]): string {
     let commits = '';
     for (const run of runs.slice(0, GIT_HISTORY_RUNS)) {
@@ -110,19 +117,11 @@ function buildCommitsFromRuns(runs: GitHubWorkflowRun[]): string {
     return commits;
 }
 
-function detectFlakyTests(allTestsByTitle: Record<string, { states: string[] }>): string {
-    let flakyTests = '';
-    for (const [testName, data] of Object.entries(allTestsByTitle)) {
-        if (data.states.length >= 2) {
-            const unique = new Set(data.states);
-            if (unique.has('passed') && unique.has('failed')) {
-                flakyTests += `- ${testName}: ${data.states.join(', ')}\n`;
-            }
-        }
-    }
-    return flakyTests;
-}
-
+/**
+ * Fetches recent GitHub CI history (runs, commits, and flakiness entries).
+ * Flakiness data is sourced from DataHub, not from CI artifacts.
+ * @returns CiContext with commits, run stats, and empty flakyEntries.
+ */
 async function fetchGitHubHistory(): Promise<CiContext> {
     const token = Config.getDefault().get('githubToken');
     const repo = Config.get('GITHUB_REPOSITORY');
@@ -135,16 +134,22 @@ async function fetchGitHubHistory(): Promise<CiContext> {
             `/repos/${repo}/actions/runs?per_page=${GIT_HISTORY_RUNS}&status=success&status=failure`,
         );
         const runs = runsResp.data.workflow_runs;
-        const { runStats, allTestsByTitle } = await processGitHubArtifacts(repo, client, runs);
+        const runStats = await processGitHubArtifacts(repo, client, runs);
         const commits = buildCommitsFromRuns(runs);
-        const flakyTests = detectFlakyTests(allTestsByTitle);
-        return { commits, runs: runStats, flakyTests };
+        return { commits, runs: runStats, flakyEntries: [] };
     } catch (err: unknown) {
         rootLogger.error('fetchGitHubHistory failed: ' + (err instanceof Error ? err.message : String(err)));
-        return { commits: '', runs: [], flakyTests: '' };
+        return { commits: '', runs: [], flakyEntries: [] };
     }
 }
 
+/**
+ * Downloads and parses CTRF artifacts from a GitLab pipeline's test job.
+ * @param projectId - GitLab project ID.
+ * @param pipeline - GitLab pipeline metadata.
+ * @param client - HTTP client for API calls.
+ * @returns Array of RunStats from the pipeline's test artifacts.
+ */
 async function processGitLabPipelineArtifacts(
     projectId: string,
     pipeline: Record<string, unknown>,
@@ -176,10 +181,6 @@ async function processGitLabPipelineArtifacts(
                 failed: summary.failed,
                 skipped: summary.skipped,
                 total: summary.tests,
-                passRate:
-                    summary.passed + summary.failed > 0
-                        ? (summary.passed / (summary.passed + summary.failed)) * 100
-                        : 0,
             });
         }
     }
@@ -209,10 +210,10 @@ async function fetchGitLabHistory(): Promise<CiContext> {
                 );
             }
         }
-        return { commits: '', runs: runStats, flakyTests: '' };
+        return { commits: '', runs: runStats, flakyEntries: [] };
     } catch (err: unknown) {
         rootLogger.warn('fetchGitLabHistory failed: ' + formatErr(err));
-        return { commits: '', runs: [], flakyTests: '' };
+        return { commits: '', runs: [], flakyEntries: [] };
     }
 }
 
@@ -300,7 +301,7 @@ async function downloadAndParseLatestGitLabRun(): Promise<ParseResult | null> {
 export async function fetchGitHistory(): Promise<CiContext> {
     if (isGitHubCi()) return fetchGitHubHistory();
     if (isGitLabCi()) return fetchGitLabHistory();
-    return { commits: '', runs: [], flakyTests: '' };
+    return { commits: '', runs: [], flakyEntries: [] };
 }
 
 export async function fetchLatestTestRun(): Promise<ParseResult | null> {

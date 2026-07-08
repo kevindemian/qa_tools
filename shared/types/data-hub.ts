@@ -322,6 +322,17 @@ export interface ComputedMetrics {
     flakinessEntries?: FlakinessEntry[];
     /** Metrics trend points with label, passRate, total, failed. */
     metricsTrends?: TrendPoint[];
+    // ─── SSOT expansion (Fase 22.M/22.N) ──────────────────────────────────
+    /** Test-level pass rate: passed / (passed + failed) * 100. Computed from metricsRuns. */
+    runPassRate?: number;
+    /** P95 of individual test durations in milliseconds (test-level). */
+    testDurationP95?: number;
+    /** Percentage of runs with at least 1 failed test (0-100). */
+    runFailureRate?: number;
+    /** Per-test title duration map: title → duration array across runs (ms). */
+    testDurationMap?: Record<string, number[]>;
+    /** Test-level flaky percentage: flaky tests / qualifying tests (0-100). */
+    flakyTestRate?: number;
 }
 
 /**

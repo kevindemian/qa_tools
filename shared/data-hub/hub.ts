@@ -43,6 +43,10 @@ import {
     convertToMetricsRuns,
     calcFlakinessEntries,
     calcMetricsTrends,
+    calculateFlakyTestRate,
+    calcTestDurationP95,
+    calcRunFailureRate,
+    calcTestDurationMap,
 } from './compute/index.js';
 
 /** Options for creating a DataHub. */
@@ -217,6 +221,14 @@ export class DataHubImpl implements DataHub {
         const metricsRuns = raw.parsedArtifacts != null ? convertToMetricsRuns(raw.parsedArtifacts) : [];
         const flakinessEntries = calcFlakinessEntries(metricsRuns);
         const metricsTrends = calcMetricsTrends(metricsRuns);
+        // ─── SSOT expansion — test-level metrics ────────────────────────────
+        const flakyTestRate = metricsRuns.length > 0 ? calculateFlakyTestRate(metricsRuns) : 0;
+        const testDurationP95 = metricsRuns.length > 0 ? calcTestDurationP95(metricsRuns) : 0;
+        const runFailureRate = metricsRuns.length > 0 ? calcRunFailureRate(metricsRuns) : 0;
+        const testDurationMap =
+            metricsRuns.length > 0
+                ? calcTestDurationMap(metricsRuns)
+                : (Object.create(null) as Record<string, number[]>);
         const releaseScore = DataHubImpl.computeReleaseScore(
             passRate,
             flakyRate,
@@ -253,6 +265,10 @@ export class DataHubImpl implements DataHub {
             metricsRuns,
             flakinessEntries,
             metricsTrends,
+            flakyTestRate,
+            testDurationP95,
+            runFailureRate,
+            testDurationMap,
         };
     }
 

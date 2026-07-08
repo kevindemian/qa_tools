@@ -17,6 +17,8 @@ import {
 } from '../../shared/report-generator.js';
 import { createDataHubPersistence } from '../../shared/data-hub/persistence.js';
 import { calcFlakinessEntries } from '../../shared/data-hub/compute/flakiness-entries.js';
+import { calcRunPassRate } from '../../shared/data-hub/compute/run-pass-rate.js';
+import { statsFromTests } from '../../shared/report-utils.js';
 import { analyzeFailuresWithReport, type LlmContext } from '../../shared/failure-analysis.js';
 import { collectAutomated, interactiveBugReportFlow } from '../../shared/bug-report.js';
 import { openWithFallback } from '../../shared/open.js';
@@ -129,8 +131,7 @@ async function _postPrComment(stats: ParseResult['stats']): Promise<void> {
 
     if (!githubToken || !repo || !prNumber) return;
 
-    const executed = stats.passed + stats.failed;
-    const passRate = executed > 0 ? ((stats.passed / executed) * 100).toFixed(1) : '0.0';
+    const passRate = calcRunPassRate({ passed: stats.passed, failed: stats.failed }).toFixed(1);
     const body =
         `### 🤖 QA Tools — Test Report\n\n` +
         `**${stats.passed} ✅ passed** | **${stats.failed} ❌ failed** | **${stats.skipped} ⏭ skipped** | **${stats.total} total**\n\n` +
@@ -237,7 +238,7 @@ async function _runAiAnalysis(
         llmContext.gitTrend = ciContext.runs
             .map(
                 (r) =>
-                    `Run ${r.runId} (${(r.createdAt || '').slice(0, 10)}): ${r.passRate.toFixed(1)}% (${r.passed}/${r.total})`,
+                    `Run ${r.runId} (${r.createdAt.slice(0, 10)}): ${calcRunPassRate({ passed: r.passed, failed: r.failed }).toFixed(1)}% (${r.passed}/${r.total})`,
             )
             .join('\n');
     }
@@ -281,7 +282,7 @@ async function _handleQualityGateCheck(
     if (
         !isNaN(qualityGateThreshold) &&
         result.stats.passed + result.stats.failed > 0 &&
-        (result.stats.passed / (result.stats.passed + result.stats.failed)) * 100 < qualityGateThreshold
+        calcRunPassRate({ passed: result.stats.passed, failed: result.stats.failed }) < qualityGateThreshold
     ) {
         printError('Quality Gate', new Error(`Pass rate below threshold (${qualityGateThreshold}%)`));
         return false;
@@ -351,9 +352,8 @@ async function handler(c: CommandContext): Promise<boolean | void> {
     const resolvedPath = await _writeReportFile(html, c.ctx.project_name);
 
     const htmlDir = path.dirname(resolvedPath);
-    const passed = result.tests.filter((t) => t.state === 'passed').length;
-    const failed = result.tests.filter((t) => t.state === 'failed').length;
-    const skipped = result.tests.filter((t) => t.state === 'skipped').length;
+    const testStats = statsFromTests(result.tests);
+    const { passed, failed, skipped } = testStats;
     fs.writeFileSync(
         sanitizePath(htmlDir, 'report.ctrf.json'),
         JSON.stringify(
@@ -374,7 +374,7 @@ async function handler(c: CommandContext): Promise<boolean | void> {
                 passed,
                 failed,
                 skipped,
-                passRate: passed + failed > 0 ? ((passed / (passed + failed)) * 100).toFixed(1) : '0.0',
+                passRate: calcRunPassRate({ passed, failed }).toFixed(1),
             },
             null,
             2,

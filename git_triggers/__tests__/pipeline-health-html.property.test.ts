@@ -1,5 +1,5 @@
 /**
- * Property-based tests — Pipeline Health HTML (pipeline-health)
+ * Property-based tests — Pipeline Health HTML renderer
  *
  * Invariants:
  * - renderPipelineHealthHtml always produces valid HTML
@@ -13,8 +13,8 @@
  */
 import { fc } from '../../shared/deps.js';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
-import { aggregatePipelineHealth, renderPipelineHealthHtml } from '../pipeline-health.js';
-import type { PipelineRunExtended, PipelineJobExtended } from '../pipeline-health.js';
+import { renderPipelineHealthHtml } from '../pipeline-health-renderer.js';
+import type { PipelineHealthData } from '../pipeline-health-renderer.js';
 
 vi.mock('../../shared/logger.js', () => ({
     rootLogger: { error: vi.fn(), info: vi.fn(), child: vi.fn().mockReturnThis() },
@@ -26,36 +26,30 @@ vi.mock('../../shared/config.js', () => ({
 }));
 
 const branchArb = fc.constantFrom('main', 'develop', 'feature/foo', 'hotfix/bar', 'release/1.0');
-const statusArb = fc.constantFrom('success', 'failure', 'cancelled', 'neutral');
 const nameArb = fc.string({ minLength: 1, maxLength: 8 }).map((s) => s.replace(/[^a-zA-Z0-9_-]/g, '_'));
 
-const runArb: fc.Arbitrary<PipelineRunExtended> = fc
-    .record({
-        id: fc.nat({ max: 100 }),
-        status: fc.constant('completed'),
-        conclusion: statusArb,
-        head_branch: branchArb,
-        created_at: fc.constant(new Date().toISOString()),
-        run_started_at: fc.constant(new Date().toISOString()),
-        updated_at: fc.constant(new Date().toISOString()),
-    })
-    .map((r) => r);
-
-const jobArb: fc.Arbitrary<PipelineJobExtended> = fc
-    .record({
-        id: fc.nat({ max: 100 }),
-        name: nameArb,
-        status: statusArb,
-    })
-    .map((j) => j);
-
-const issueArb = fc
-    .record({
-        labels: fc.array(nameArb, { minLength: 0, maxLength: 3 }),
-        updated_at: fc.constant(new Date().toISOString()),
-        created_at: fc.constant(new Date().toISOString()),
-    })
-    .map((i) => i);
+const healthDataArb: fc.Arbitrary<PipelineHealthData> = fc.record({
+    totalRuns: fc.nat({ max: 100 }),
+    passRate: fc.integer({ min: 0, max: 100 }),
+    avgDurationSec: fc.nat({ max: 3600 }),
+    topFailingJobs: fc.array(
+        fc.record({
+            name: nameArb,
+            failCount: fc.nat({ max: 50 }),
+            totalCount: fc.integer({ min: 1, max: 100 }),
+            rate: fc.integer({ min: 0, max: 100 }),
+        }),
+        { minLength: 0, maxLength: 5 },
+    ),
+    failureReasons: fc.array(fc.string({ minLength: 1, maxLength: 20 }), { minLength: 0, maxLength: 5 }),
+    branchBreakdown: fc.dictionary(
+        branchArb,
+        fc.record({
+            passRate: fc.integer({ min: 0, max: 100 }),
+            count: fc.nat({ max: 50 }),
+        }),
+    ),
+});
 
 describe('RenderPipelineHealthHtml — property-based', () => {
     beforeEach(() => {
@@ -66,19 +60,12 @@ describe('RenderPipelineHealthHtml — property-based', () => {
         expect.hasAssertions();
 
         fc.assert(
-            fc.property(
-                fc.array(runArb, { minLength: 0, maxLength: 5 }),
-                fc.array(fc.array(jobArb, { minLength: 0, maxLength: 3 }), { minLength: 0, maxLength: 5 }),
-                fc.array(fc.array(fc.string(), { minLength: 0, maxLength: 2 }), { minLength: 0, maxLength: 5 }),
-                fc.array(issueArb, { minLength: 0, maxLength: 3 }),
-                (runs, jobs, errs, issues) => {
-                    const health = aggregatePipelineHealth(runs, jobs, errs, issues);
-                    const html = renderPipelineHealthHtml(health);
+            fc.property(healthDataArb, (data) => {
+                const html = renderPipelineHealthHtml(data);
 
-                    expect(html).toContain('<!DOCTYPE html>');
-                    expect(html).toContain('</html>');
-                },
-            ),
+                expect(html).toContain('<!DOCTYPE html>');
+                expect(html).toContain('</html>');
+            }),
             { numRuns: 30 },
         );
     });
@@ -90,8 +77,15 @@ describe('RenderPipelineHealthHtml — property-based', () => {
             fc.property(
                 fc.string({ minLength: 1, maxLength: 20 }).map((s) => s.replace(/[^a-zA-Z0-9 _-]/g, '')),
                 (title) => {
-                    const health = aggregatePipelineHealth([], [], [], []);
-                    const html = renderPipelineHealthHtml(health, title);
+                    const data: PipelineHealthData = {
+                        totalRuns: 0,
+                        passRate: 0,
+                        avgDurationSec: 0,
+                        topFailingJobs: [],
+                        failureReasons: [],
+                        branchBreakdown: {},
+                    };
+                    const html = renderPipelineHealthHtml(data, title);
 
                     expect(html).toContain(title);
                 },
@@ -104,19 +98,12 @@ describe('RenderPipelineHealthHtml — property-based', () => {
         expect.hasAssertions();
 
         fc.assert(
-            fc.property(
-                fc.array(runArb, { minLength: 0, maxLength: 5 }),
-                fc.array(fc.array(jobArb, { minLength: 0, maxLength: 3 }), { minLength: 0, maxLength: 5 }),
-                fc.array(fc.array(fc.string(), { minLength: 0, maxLength: 2 }), { minLength: 0, maxLength: 5 }),
-                fc.array(issueArb, { minLength: 0, maxLength: 3 }),
-                (runs, jobs, errs, issues) => {
-                    const health = aggregatePipelineHealth(runs, jobs, errs, issues);
-                    const html = renderPipelineHealthHtml(health);
+            fc.property(healthDataArb, (data) => {
+                const html = renderPipelineHealthHtml(data);
 
-                    expect(html).toContain('--color-surface-page');
-                    expect(html).toContain('--color-text-primary');
-                },
-            ),
+                expect(html).toContain('--color-surface-page');
+                expect(html).toContain('--color-text-primary');
+            }),
             { numRuns: 10 },
         );
     });
@@ -125,9 +112,8 @@ describe('RenderPipelineHealthHtml — property-based', () => {
         expect.hasAssertions();
 
         fc.assert(
-            fc.property(fc.array(runArb, { minLength: 0, maxLength: 3 }), (runs) => {
-                const health = aggregatePipelineHealth(runs, [], [], []);
-                const html = renderPipelineHealthHtml(health);
+            fc.property(healthDataArb, (data) => {
+                const html = renderPipelineHealthHtml(data);
 
                 expect(html).toContain('qa-report-theme');
             }),
@@ -139,9 +125,8 @@ describe('RenderPipelineHealthHtml — property-based', () => {
         expect.hasAssertions();
 
         fc.assert(
-            fc.property(fc.array(runArb, { minLength: 0, maxLength: 3 }), (runs) => {
-                const health = aggregatePipelineHealth(runs, [], [], []);
-                const html = renderPipelineHealthHtml(health);
+            fc.property(healthDataArb, (data) => {
+                const html = renderPipelineHealthHtml(data);
 
                 expect(html).toContain('Pipeline Health Dashboard');
             }),
@@ -153,20 +138,13 @@ describe('RenderPipelineHealthHtml — property-based', () => {
         expect.hasAssertions();
 
         fc.assert(
-            fc.property(
-                fc.array(runArb, { minLength: 0, maxLength: 5 }),
-                fc.array(fc.array(jobArb, { minLength: 0, maxLength: 3 }), { minLength: 0, maxLength: 5 }),
-                fc.array(fc.array(fc.string(), { minLength: 0, maxLength: 2 }), { minLength: 0, maxLength: 5 }),
-                fc.array(issueArb, { minLength: 0, maxLength: 3 }),
-                (runs, jobs, errs, issues) => {
-                    const health = aggregatePipelineHealth(runs, jobs, errs, issues);
-                    const html = renderPipelineHealthHtml(health);
+            fc.property(healthDataArb, (data) => {
+                const html = renderPipelineHealthHtml(data);
 
-                    expect(html).not.toContain('border="1"');
-                    expect(html).not.toContain('cellpadding="6"');
-                    expect(html).not.toContain('background:#f3f4f6');
-                },
-            ),
+                expect(html).not.toContain('border="1"');
+                expect(html).not.toContain('cellpadding="6"');
+                expect(html).not.toContain('background:#f3f4f6');
+            }),
             { numRuns: 10 },
         );
     });
