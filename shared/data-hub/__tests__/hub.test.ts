@@ -56,7 +56,7 @@ describe('DataHubImpl', () => {
         const runs = [makeRun({ id: 1, conclusion: 'success' }), makeRun({ id: 2, conclusion: 'failure' })];
         const provider = makeProvider(makeRawDataWithRuns(runs));
 
-        const hub = await DataHubImpl.create([provider], { repo: 'test/repo' });
+        const { hub } = await DataHubImpl.create([provider], { repo: 'test/repo' });
 
         expect(hub).toBeDefined();
         expect(hub.raw.runs).toHaveLength(2);
@@ -74,7 +74,7 @@ describe('DataHubImpl', () => {
         ];
         const provider = makeProvider(makeRawDataWithRuns(runs));
 
-        const hub = await DataHubImpl.create([provider], { repo: 'test/repo' });
+        const { hub } = await DataHubImpl.create([provider], { repo: 'test/repo' });
 
         expect(hub.computed.passRate).toBeCloseTo(66.67, 1);
     });
@@ -87,7 +87,7 @@ describe('DataHubImpl', () => {
         const provider1 = makeProvider(makeRawDataWithRuns(runs1), 'provider1');
         const provider2 = makeProvider(makeRawDataWithRuns(runs2), 'provider2');
 
-        const hub = await DataHubImpl.create([provider1, provider2], {
+        const { hub } = await DataHubImpl.create([provider1, provider2], {
             repo: 'test/repo',
         });
 
@@ -105,7 +105,7 @@ describe('DataHubImpl', () => {
             fetchRawData: vi.fn().mockRejectedValue(new Error('API error')),
         };
 
-        const hub = await DataHubImpl.create([failingProvider, workingProvider], {
+        const { hub } = await DataHubImpl.create([failingProvider, workingProvider], {
             repo: 'test/repo',
         });
 
@@ -131,7 +131,7 @@ describe('DataHubImpl', () => {
         const before = Date.now();
         const provider = makeProvider(makeEmptyRawData());
 
-        const hub = await DataHubImpl.create([provider], { repo: 'test/repo' });
+        const { hub } = await DataHubImpl.create([provider], { repo: 'test/repo' });
 
         expect(hub.timestamp.getTime()).toBeGreaterThanOrEqual(before);
         expect(hub.timestamp.getTime()).toBeLessThanOrEqual(Date.now());
@@ -148,7 +148,7 @@ describe('HasDataChanged', () => {
         const runs = [makeRun({ id: 1 }), makeRun({ id: 2 })];
         const raw: RawData = makeRawDataWithRuns(runs);
         const provider = makeProvider(raw);
-        const hub = await DataHubImpl.create([provider], { repo: 'test' });
+        const { hub } = await DataHubImpl.create([provider], { repo: 'test' });
 
         const newRaw: RawData = makeRawDataWithRuns([
             makeRun({ id: 1, updated_at: '2026-01-01T10:10:00Z' }),
@@ -164,7 +164,7 @@ describe('HasDataChanged', () => {
         const { hasDataChanged } = await import('../hub.js');
         const raw: RawData = makeRawDataWithRuns([makeRun({ id: 1 })]);
         const provider = makeProvider(raw);
-        const hub = await DataHubImpl.create([provider], { repo: 'test' });
+        const { hub } = await DataHubImpl.create([provider], { repo: 'test' });
 
         const newRaw: RawData = makeRawDataWithRuns([makeRun({ id: 1 }), makeRun({ id: 3 })]);
 
@@ -177,7 +177,7 @@ describe('HasDataChanged', () => {
         const { hasDataChanged } = await import('../hub.js');
         const raw: RawData = makeRawDataWithRuns([makeRun({ id: 1 })]);
         const provider = makeProvider(raw);
-        const hub = await DataHubImpl.create([provider], { repo: 'test' });
+        const { hub } = await DataHubImpl.create([provider], { repo: 'test' });
 
         const newRaw: RawData = makeRawDataWithRuns([makeRun({ id: 1 }), makeRun({ id: 2 })]);
 
@@ -190,7 +190,7 @@ describe('HasDataChanged', () => {
         const { hasDataChanged } = await import('../hub.js');
         const raw: RawData = makeRawDataWithRuns([makeRun({ id: 1, updated_at: '2026-01-01T10:10:00Z' })]);
         const provider = makeProvider(raw);
-        const hub = await DataHubImpl.create([provider], { repo: 'test' });
+        const { hub } = await DataHubImpl.create([provider], { repo: 'test' });
 
         const newRaw: RawData = makeRawDataWithRuns([makeRun({ id: 1, updated_at: '2026-01-01T11:00:00Z' })]);
 
@@ -203,7 +203,7 @@ describe('HasDataChanged', () => {
         const { hasDataChanged } = await import('../hub.js');
         const raw: RawData = makeRawDataWithRuns([makeRun({ id: 1 }), makeRun({ id: 2 })]);
         const provider = makeProvider(raw);
-        const hub = await DataHubImpl.create([provider], { repo: 'test' });
+        const { hub } = await DataHubImpl.create([provider], { repo: 'test' });
 
         const newRaw: RawData = makeRawDataWithRuns([makeRun({ id: 1 })]);
 
@@ -216,7 +216,7 @@ describe('HasDataChanged', () => {
         const { hasDataChanged } = await import('../hub.js');
         const raw: RawData = makeRawDataWithRuns([makeRun({ id: 1 })]);
         const provider = makeProvider(raw);
-        const hub = await DataHubImpl.create([provider], { repo: 'test' });
+        const { hub } = await DataHubImpl.create([provider], { repo: 'test' });
 
         const newRaw: RawData = makeRawDataWithRuns([makeRun({ id: undefined })]);
 
@@ -229,7 +229,7 @@ describe('HasDataChanged', () => {
         const { hasDataChanged } = await import('../hub.js');
         const raw: RawData = makeEmptyRawData();
         const provider = makeProvider(raw);
-        const hub = await DataHubImpl.create([provider], { repo: 'test' });
+        const { hub } = await DataHubImpl.create([provider], { repo: 'test' });
 
         const newRaw: RawData = makeEmptyRawData();
 

@@ -1,19 +1,10 @@
 import Config from '../shared/config.js';
 import { showSplash } from '../shared/splash.js';
 import { defaultOutput } from '../shared/output.js';
-import {
-    warn,
-    helpLine,
-    title,
-    divider,
-    prompt,
-    printError,
-    showSelect,
-    tableView,
-    CancelError,
-} from '../shared/prompt.js';
+import { warn, helpLine, title, divider, prompt, printError, showSelect, tableView } from '../shared/prompt.js';
 import { palette } from '../shared/palette.js';
 import { rootLogger } from '../shared/logger.js';
+import { isCancelError } from '../shared/errors.js';
 import { loadTypedState, getStatePath } from '../shared/state.js';
 import { getHandler } from './commands/index.js';
 import { SessionContext } from '../shared/session-context.js';
@@ -127,7 +118,7 @@ export function showHelpLoop(): void {
         try {
             input = prompt('Digite /help <topico>, /help search <termo>, ou /back para voltar');
         } catch (e) {
-            if (e instanceof CancelError) return;
+            if (isCancelError(e)) return;
             throw e;
         }
         const trimmed = input.trim();
@@ -186,7 +177,7 @@ export async function dispatchChoice(choice: string, cmdCtx: CommandContext): Pr
         try {
             result = await cmdHandler(cmdCtx);
         } catch (e) {
-            if ((e as Error).name === 'CancelError') return 'continue';
+            if (isCancelError(e)) return 'continue';
             printError('Erro no handler', e);
             return 'continue';
         }
@@ -253,7 +244,7 @@ export async function getAndResolveChoice(level: string, ctx: SessionContext): P
     try {
         choice = await getUserChoice(level, ctx.project_name, ctx);
     } catch (e) {
-        if (e instanceof CancelError) choice = '/menu';
+        if (isCancelError(e)) choice = '/menu';
         else return '__exit__';
     }
     if (choice === '/exit' || choice === '/sair' || choice === '/quit') choice = '0';

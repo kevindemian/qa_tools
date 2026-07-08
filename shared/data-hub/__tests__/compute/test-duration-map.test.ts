@@ -19,11 +19,15 @@ function makeRun(tests: FlatTest[]): MetricsRun {
     };
 }
 
+function toPlain(obj: Record<string, unknown[]>): Record<string, unknown[]> {
+    return Object.assign({}, obj);
+}
+
 describe('Compute/test-duration-map', () => {
     describe('CalcTestDurationMap', () => {
         it('returns empty object for empty runs', () => {
             expect.hasAssertions();
-            expect(calcTestDurationMap([])).toStrictEqual({});
+            expect(toPlain(calcTestDurationMap([]))).toStrictEqual({});
         });
 
         it('maps single test to its duration', () => {
@@ -31,7 +35,7 @@ describe('Compute/test-duration-map', () => {
 
             const runs = [makeRun([makeTest('test-A', 100)])];
 
-            expect(calcTestDurationMap(runs)).toStrictEqual({ 'test-A': [100] });
+            expect(toPlain(calcTestDurationMap(runs))).toStrictEqual({ 'test-A': [100] });
         });
 
         it('aggregates durations across runs', () => {
@@ -41,7 +45,7 @@ describe('Compute/test-duration-map', () => {
                 makeRun([makeTest('test-A', 100), makeTest('test-B', 200)]),
                 makeRun([makeTest('test-A', 150), makeTest('test-B', 250)]),
             ];
-            const result = calcTestDurationMap(runs);
+            const result = toPlain(calcTestDurationMap(runs));
 
             expect(result['test-A']).toStrictEqual([100, 150]);
             expect(result['test-B']).toStrictEqual([200, 250]);
@@ -53,7 +57,7 @@ describe('Compute/test-duration-map', () => {
             const runs = [
                 makeRun([makeTest('test-A', 100), makeTest('test-B', 0, 'skipped'), makeTest('test-C', 300)]),
             ];
-            const result = calcTestDurationMap(runs);
+            const result = toPlain(calcTestDurationMap(runs));
 
             expect(result['test-A']).toStrictEqual([100]);
             expect(result['test-B']).toBeUndefined();
@@ -64,7 +68,7 @@ describe('Compute/test-duration-map', () => {
             expect.hasAssertions();
 
             const runs = [makeRun([makeTest('test-A', 100), makeTest('test-B', 0), makeTest('test-C', -50)])];
-            const result = calcTestDurationMap(runs);
+            const result = toPlain(calcTestDurationMap(runs));
 
             expect(result['test-A']).toStrictEqual([100]);
             expect(result['test-B']).toBeUndefined();
@@ -76,7 +80,7 @@ describe('Compute/test-duration-map', () => {
 
             const runs = [makeRun([makeTest('test-A', 0, 'skipped'), makeTest('test-B', 0, 'skipped')])];
 
-            expect(calcTestDurationMap(runs)).toStrictEqual({});
+            expect(toPlain(calcTestDurationMap(runs))).toStrictEqual({});
         });
     });
 });

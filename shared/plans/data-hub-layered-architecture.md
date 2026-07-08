@@ -973,9 +973,7 @@ const FRAMEWORK_SIGNATURES: Record<
         configFiles: string[];
         cliPatterns: string[];
     }
-> = {
-    /* vitest, jest, playwright, cypress, mocha, pytest */
-};
+> = {/* vitest, jest, playwright, cypress, mocha, pytest */};
 
 export async function detectFrameworkFromAPI(
     gitProvider: GitProvider,

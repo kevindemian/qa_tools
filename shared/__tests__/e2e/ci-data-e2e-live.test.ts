@@ -136,7 +136,7 @@ describe.skipIf(!hasAnyToken)('E2E Live: CI Data Hub — Real API', () => {
 
         if (!githubProvider) return;
 
-        const hub = await DataHubImpl.create([githubProvider], { repo: GITHUB_REPO });
+        const { hub } = await DataHubImpl.create([githubProvider], { repo: GITHUB_REPO });
 
         expect(hub).toBeDefined();
         expect(hub.provider).toBe('github');
@@ -150,7 +150,7 @@ describe.skipIf(!hasAnyToken)('E2E Live: CI Data Hub — Real API', () => {
 
         if (!githubProvider) return;
 
-        const hub = await DataHubImpl.create([githubProvider], { repo: GITHUB_REPO });
+        const { hub } = await DataHubImpl.create([githubProvider], { repo: GITHUB_REPO });
 
         expect(hub.computed.avgDuration).toBeGreaterThanOrEqual(0);
     });
@@ -160,7 +160,7 @@ describe.skipIf(!hasAnyToken)('E2E Live: CI Data Hub — Real API', () => {
 
         if (!githubProvider) return;
 
-        const hub = await DataHubImpl.create([githubProvider], { repo: GITHUB_REPO });
+        const { hub } = await DataHubImpl.create([githubProvider], { repo: GITHUB_REPO });
 
         expect(hub.computed.suiteSpeedP95).toBeGreaterThanOrEqual(0);
     });
@@ -170,11 +170,13 @@ describe.skipIf(!hasAnyToken)('E2E Live: CI Data Hub — Real API', () => {
 
         if (!githubProvider) return;
 
-        const hub = await DataHubImpl.create([githubProvider], { repo: GITHUB_REPO });
+        const { hub } = await DataHubImpl.create([githubProvider], { repo: GITHUB_REPO });
 
         for (const [, data] of Object.entries(hub.computed.branchBreakdown)) {
-            expect(data.passRate).toBeGreaterThanOrEqual(0);
-            expect(data.passRate).toBeLessThanOrEqual(100);
+            const branch = data;
+
+            expect(branch.passRate).toBeGreaterThanOrEqual(0);
+            expect(branch.passRate).toBeLessThanOrEqual(100);
         }
     });
 });

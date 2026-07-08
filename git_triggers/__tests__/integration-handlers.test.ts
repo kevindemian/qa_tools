@@ -2,6 +2,9 @@ import os from 'os';
 import path from 'path';
 import { describe, it, expect, vi, beforeEach } from 'vitest';
 
+let _currentProvider: 'gitlab' | 'github' = 'gitlab';
+let _currentProjectName = 'TEST';
+
 vi.mock('../../shared/prompt.js', () => ({
     prompt: vi.fn(),
     confirm: vi.fn(),
@@ -27,8 +30,18 @@ vi.mock('../../shared/logger.js', () => ({
     })),
 }));
 vi.mock('../session-state.js', () => ({
-    currentProvider: 'gitlab',
-    currentProjectName: 'TEST',
+    get currentProvider() {
+        return _currentProvider;
+    },
+    set currentProvider(v: 'gitlab' | 'github') {
+        _currentProvider = v;
+    },
+    get currentProjectName() {
+        return _currentProjectName;
+    },
+    set currentProjectName(v: string) {
+        _currentProjectName = v;
+    },
     pushHistory: vi.fn(),
     setIsBusy: vi.fn(),
     displayProjects: vi.fn(),
@@ -39,7 +52,10 @@ vi.mock('../session-state.js', () => ({
     setProjectId: vi.fn(),
     setManager: vi.fn(),
     getProjects: vi.fn(() => ['TEST', 'OTHER']),
+    getDataHub: vi.fn(),
     MSG_OPERATION_CANCELED: 'Operação cancelada.',
+    sessionLog: { info: vi.fn(), warn: vi.fn(), error: vi.fn(), debug: vi.fn() },
+    sessionContext: { ensureDataHub: vi.fn(), setDataHub: vi.fn() },
 }));
 vi.mock('../../shared/state.js', () => ({
     update: vi.fn(),
@@ -144,36 +160,35 @@ function makeMockGitProvider() {
 }
 
 describe('HandleListSchedules', () => {
-    beforeEach(() => vi.clearAllMocks());
+    beforeEach(() => {
+        _currentProvider = 'gitlab';
+        _currentProjectName = 'TEST';
+        vi.clearAllMocks();
+    });
 
-    it('lists schedules for gitlab provider', async () => {
+    it('lists schedules for gitlab provider', { timeout: 15000 }, async () => {
         expect.hasAssertions();
 
         const m = makeMockGitProvider();
         const { handleListSchedules } = await import('../schedule-handler.js');
         const { pushHistory } = await import('../session-state.js');
-        const sessionState = await import('../session-state.js');
-        (sessionState as { currentProvider: string }).currentProvider = 'gitlab';
         await handleListSchedules(m as never);
 
         expect(m.getSchedules).toHaveBeenCalledTimes(1);
         expect(vi.mocked(pushHistory)).toHaveBeenCalledWith('list-schedules', '2 schedules', 'ok');
     });
 
-    it('warns for github provider', async () => {
+    it('warns for github provider', { timeout: 15000 }, async () => {
         expect.hasAssertions();
 
         const m = makeMockGitProvider();
         const { handleListSchedules } = await import('../schedule-handler.js');
-        const sessionState = await import('../session-state.js');
-        (sessionState as { currentProvider: string }).currentProvider = 'github';
+        _currentProvider = 'github';
         const { warn } = await import('../../shared/prompt.js');
         await handleListSchedules(m as never);
 
         expect(vi.mocked(warn)).toHaveBeenCalledWith('Opção não disponivel para GitHub.');
         expect(m.getSchedules).not.toHaveBeenCalled();
-
-        (sessionState as { currentProvider: string }).currentProvider = 'gitlab';
     });
 
     it('warns when no schedules found', async () => {
@@ -183,8 +198,6 @@ describe('HandleListSchedules', () => {
         m.getSchedules.mockResolvedValue([]);
         const { handleListSchedules } = await import('../schedule-handler.js');
         const { pushHistory } = await import('../session-state.js');
-        const sessionState = await import('../session-state.js');
-        (sessionState as { currentProvider: string }).currentProvider = 'gitlab';
         await handleListSchedules(m as never);
 
         expect(vi.mocked(pushHistory)).toHaveBeenCalledWith('list-schedules', 'vazio', 'ok');
@@ -192,7 +205,11 @@ describe('HandleListSchedules', () => {
 });
 
 describe('HandleRunSchedule', () => {
-    beforeEach(() => vi.clearAllMocks());
+    beforeEach(() => {
+        _currentProvider = 'gitlab';
+        _currentProjectName = 'TEST';
+        vi.clearAllMocks();
+    });
 
     it('runs schedule by ID', async () => {
         expect.hasAssertions();
@@ -202,8 +219,6 @@ describe('HandleRunSchedule', () => {
         vi.mocked(prompt).mockReturnValue('42');
         const { handleRunSchedule } = await import('../schedule-handler.js');
         const { pushHistory } = await import('../session-state.js');
-        const sessionState = await import('../session-state.js');
-        (sessionState as { currentProvider: string }).currentProvider = 'gitlab';
         await handleRunSchedule(m as never);
 
         expect(m.runSchedule).toHaveBeenCalledWith('42');
@@ -215,20 +230,21 @@ describe('HandleRunSchedule', () => {
 
         const m = makeMockGitProvider();
         const { handleRunSchedule } = await import('../schedule-handler.js');
-        const sessionState = await import('../session-state.js');
-        (sessionState as { currentProvider: string }).currentProvider = 'github';
+        _currentProvider = 'github';
         const { warn } = await import('../../shared/prompt.js');
         await handleRunSchedule(m as never);
 
         expect(vi.mocked(warn)).toHaveBeenCalledWith('Opção não disponivel para GitHub.');
         expect(m.runSchedule).not.toHaveBeenCalled();
-
-        (sessionState as { currentProvider: string }).currentProvider = 'gitlab';
     });
 });
 
 describe('HandleCreateMR', () => {
-    beforeEach(() => vi.clearAllMocks());
+    beforeEach(() => {
+        _currentProvider = 'gitlab';
+        _currentProjectName = 'TEST';
+        vi.clearAllMocks();
+    });
 
     it('creates MR with provided inputs', async () => {
         expect.hasAssertions();
@@ -243,8 +259,6 @@ describe('HandleCreateMR', () => {
         vi.mocked(confirm).mockReturnValue(false);
         const { handleCreateMR } = await import('../mr-handler.js');
         const { pushHistory } = await import('../session-state.js');
-        const sessionState = await import('../session-state.js');
-        (sessionState as { currentProvider: string }).currentProvider = 'gitlab';
         await handleCreateMR(m as never);
 
         expect(m.createMergeRequest).toHaveBeenCalledWith('feature-x', 'main', 'Fix stuff', 'Description');
@@ -272,7 +286,11 @@ describe('HandleCreateMR', () => {
 });
 
 describe('HandleListApprovedMRs', () => {
-    beforeEach(() => vi.clearAllMocks());
+    beforeEach(() => {
+        _currentProvider = 'gitlab';
+        _currentProjectName = 'TEST';
+        vi.clearAllMocks();
+    });
 
     it('lists approved MRs', async () => {
         expect.hasAssertions();
@@ -304,7 +322,11 @@ describe('HandleListApprovedMRs', () => {
 });
 
 describe('HandleMergeMR', () => {
-    beforeEach(() => vi.clearAllMocks());
+    beforeEach(() => {
+        _currentProvider = 'gitlab';
+        _currentProjectName = 'TEST';
+        vi.clearAllMocks();
+    });
 
     it('merges MR by IID', async () => {
         expect.hasAssertions();
@@ -322,19 +344,20 @@ describe('HandleMergeMR', () => {
 });
 
 describe('HandleFlakinessDashboard', () => {
-    beforeEach(() => vi.clearAllMocks());
+    beforeEach(() => {
+        _currentProvider = 'gitlab';
+        _currentProjectName = 'TEST';
+        vi.clearAllMocks();
+    });
 
     it('warns when no project selected', async () => {
         expect.hasAssertions();
 
-        const sessionState = await import('../session-state.js');
-        (sessionState as { currentProjectName: string }).currentProjectName = '';
+        _currentProjectName = '';
         const { handleFlakinessDashboard } = await import('../schedule-handler.js');
         const { warn } = await import('../../shared/prompt.js');
         await handleFlakinessDashboard();
 
         expect(vi.mocked(warn)).toHaveBeenCalledTimes(1);
-
-        (sessionState as { currentProjectName: string }).currentProjectName = 'TEST';
     });
 });

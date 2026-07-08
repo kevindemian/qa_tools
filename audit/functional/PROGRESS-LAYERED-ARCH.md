@@ -167,48 +167,121 @@
 
 ---
 
-## Phase 23 — Integration + Cascade Wiring
+## Gap Correction Sprint (G1-G7) — Post-Phase-22 Audit
 
-| #    | Task                            | Status     | Date | Tests | Notes      |
-| ---- | ------------------------------- | ---------- | ---- | ----- | ---------- |
-| 23.1 | Cascade in test-count-extractor | 🔜 Pending | —    | —     | Full chain |
-| 23.2 | Cascade in coverage-extractor   | 🔜 Pending | —    | —     | Full chain |
-| 23.3 | Cascade in failure-classifier   | 🔜 Pending | —    | —     | Full chain |
-| 23.4 | Integration tests               | 🔜 Pending | —    | —     | End-to-end |
+**Started:** 2026-07-08
+**Trigger:** PROGRESS-LAYERED-ARCH.md declared Phase 22 complete, but code audit found 6 categories of gaps: broken tests, inline calculations, un-deleted legacy modules, unmigrated session-context, duplicated fallbacks, and missing types.
+
+### G1 — DataHubResult Type + Test Factories (65 failures)
+
+| #    | Task                                     | Status     | Date | Tests | Notes                            |
+| ---- | ---------------------------------------- | ---------- | ---- | ----- | -------------------------------- |
+| G1.1 | Add `DataHubResult` interface            | 🔜 Pending | —    | —     | Missing from `types/data-hub.ts` |
+| G1.2 | Create `createTestHub()` factory         | 🔜 Pending | —    | —     | `shared/__mocks__/data-hub.ts`   |
+| G1.3 | Fix `ci-data.test.ts` (14 tests)         | 🔜 Pending | —    | —     | Destructure `const { hub } =`    |
+| G1.4 | Fix `hub.integration.test.ts` (5 tests)  | 🔜 Pending | —    | —     | Destructure pattern              |
+| G1.5 | Fix `ci-data-e2e.test.ts` (5 tests)      | 🔜 Pending | —    | —     | Destructure pattern              |
+| G1.6 | Fix `ci-data-e2e-live.test.ts` (4 tests) | 🔜 Pending | —    | —     | Destructure + TS18046 fix        |
+| G1.7 | Fix remaining failing tests (17 tests)   | 🔜 Pending | —    | —     | Various files                    |
+
+### G2 — SSOT: Eliminate Inline Calculations (9 sites)
+
+| #     | Task                                             | Status     | Date | Notes                                |
+| ----- | ------------------------------------------------ | ---------- | ---- | ------------------------------------ |
+| G2.1  | `metrics-trends.ts:20` — inline passRate         | 🔜 Pending | —    | → `calcRunPassRate(r)`               |
+| G2.2  | `report-html.ts:98` — inline passRate            | 🔜 Pending | —    | → `calcRunPassRate()`                |
+| G2.3  | `case19.ts:21` — inline passRate                 | 🔜 Pending | —    | → `calcRunPassRate(r)`               |
+| G2.4  | `health-score.ts:176` — inline passRate fallback | 🔜 Pending | —    | → `calcRunPassRate()`                |
+| G2.5  | `run-comparison.ts:13` — inline passRate         | 🔜 Pending | —    | → `calcRunPassRate()`                |
+| G2.6  | `health-score.ts:181` — inline executionRate     | 🔜 Pending | —    | → new `calcTestExecutionRate()`      |
+| G2.7  | `health-score.ts:153` — `_computeSuiteSpeed` dup | 🔜 Pending | —    | Delete, use `calcTestDurationP95`    |
+| G2.8  | `health-score.ts:108-137` — `_computeFlakyRate`  | 🔜 Pending | —    | Delete, use `calculateFlakyTestRate` |
+| G2.9  | `quality-gate.ts:99-115` — `_resolveFlakyPct`    | 🔜 Pending | —    | Delete, use `calculateFlakyTestRate` |
+| G2.10 | New module: `calcTestExecutionRate`              | 🔜 Pending | —    | `compute/test-execution-rate.ts`     |
+| G2.11 | Add to barrel `compute/index.ts`                 | 🔜 Pending | —    | + PBT + unit tests                   |
+
+### G3 — DataProvider Commit Log (Option A: technical superiority)
+
+| #    | Task                                                    | Status     | Date | Notes                              |
+| ---- | ------------------------------------------------------- | ---------- | ---- | ---------------------------------- |
+| G3.1 | Add `commitLog?: string` to `RawData`                   | 🔜 Pending | —    | types/data-hub.ts                  |
+| G3.2 | Add `fetchCommitLog()` to `DataProvider`                | 🔜 Pending | —    | Default empty for compat           |
+| G3.3 | Implement in GitHub provider                            | 🔜 Pending | —    | Reuse fetchGitHubHistory logic     |
+| G3.4 | Implement in GitLab provider                            | 🔜 Pending | —    | Reuse fetchGitLabHistory logic     |
+| G3.5 | Merge commitLog in hub.ts                               | 🔜 Pending | —    | mergeRawData                       |
+| G3.6 | Migrate case17.ts to hub.raw.commitLog                  | 🔜 Pending | —    | Replace fetchGitHistory()          |
+| G3.7 | Migrate case17-helpers.ts                               | 🔜 Pending | —    | Accept string instead of CiContext |
+| G3.8 | Remove fetchGitHistory re-export from case17-test-utils | 🔜 Pending | —    | barrel cleanup                     |
+
+### G4 — session-context.ts Migration
+
+| #    | Task                                         | Status     | Date | Notes                             |
+| ---- | -------------------------------------------- | ---------- | ---- | --------------------------------- |
+| G4.1 | Extend DataHubPersistence with SHA-keyed ops | 🔜 Pending | —    | saveReport, loadReport, branches  |
+| G4.2 | Rewrite resolveTestDataSource()              | 🔜 Pending | —    | Use DataHub persistence           |
+| G4.3 | Simplify resolveSessionContext()             | 🔜 Pending | —    | Remove store field                |
+| G4.4 | Migrate case15.ts                            | 🔜 Pending | —    | Use DataHub persistence           |
+| G4.5 | Migrate case17.ts                            | 🔜 Pending | —    | Use DataHub persistence           |
+| G4.6 | Update tests                                 | 🔜 Pending | —    | session-context + case15 + case17 |
+
+### G5 — coverage-source.ts → DataHub
+
+| #    | Task                                           | Status     | Date | Notes                                    |
+| ---- | ---------------------------------------------- | ---------- | ---- | ---------------------------------------- |
+| G5.1 | Replace resolveCoverage() in pr-report-core.ts | 🔜 Pending | —    | Use hub.raw.coverage + Istanbul fallback |
+| G5.2 | Update mocks in 5 pr-report-core test files    | 🔜 Pending | —    | Remove coverage-source mocks             |
+| G5.3 | Delete coverage-source.ts                      | 🔜 Pending | —    | + 3 test files                           |
+
+### G6 — Silent Errors Audit
+
+| #    | Task                                              | Status     | Date | Notes                                   |
+| ---- | ------------------------------------------------- | ---------- | ---- | --------------------------------------- |
+| G6.1 | Audit all catch blocks in data-hub/               | 🔜 Pending | —    | Zero tolerance for silent errors        |
+| G6.2 | Fix run-comparison.ts:54                          | 🔜 Pending | —    | Add extractErrorMessage + humanizeError |
+| G6.3 | Fix report-html.ts:116                            | 🔜 Pending | —    | Add rootLogger.error                    |
+| G6.4 | Verify zero empty catch blocks in production code | 🔜 Pending | —    | grep + validate                         |
+
+### G7 — Documentation + Final Verification
+
+| #    | Task                                 | Status     | Date | Notes                      |
+| ---- | ------------------------------------ | ---------- | ---- | -------------------------- |
+| G7.1 | Update PROGRESS-LAYERED-ARCH.md      | 🔜 Pending | —    | Correct Phase 22/23 status |
+| G7.2 | Final: `npx tsc --noEmit` = 0        | 🔜 Pending | —    | Must pass                  |
+| G7.3 | Final: `npm run lint` = 0            | 🔜 Pending | —    | Must pass                  |
+| G7.4 | Final: `npx vitest run` = 0 failures | 🔜 Pending | —    | Must pass                  |
 
 ---
 
-## Phase 24 — Migration Consumers (remaining)
+## Phase 23 — Deprecation + Cleanup (deferred to after Gaps)
 
-| #    | Task               | Status  | Date | Tests | Notes                  |
-| ---- | ------------------ | ------- | ---- | ----- | ---------------------- |
-| 24.1 | session-context.ts | ✅ Done | —    | —     | Migrated in Phase 22.A |
-| 24.2 | test-results.ts    | ✅ Done | —    | —     | Migrated in Phase 22.F |
-| 24.3 | case17.ts          | ✅ Done | —    | —     | Migrated in Phase 22.G |
-| 24.4 | batch-mode.ts      | ✅ Done | —    | —     | Migrated in Phase 22.A |
-| 24.5 | pr-report-core.ts  | ✅ Done | —    | —     | Migrated in Phase 22.G |
+| #    | Task                           | Status     | Date | Tests | Notes       |
+| ---- | ------------------------------ | ---------- | ---- | ----- | ----------- |
+| 23.1 | Delete git-artifact-downloader | 🔜 Pending | —    | —     | After G3+G4 |
+| 23.2 | Delete case17-test-utils       | 🔜 Pending | —    | —     | After G3    |
+| 23.3 | Delete coverage-source         | 🔜 Pending | —    | —     | After G5    |
+| 23.4 | Final legacy module audit      | 🔜 Pending | —    | —     | After all   |
 
 ---
 
-## Phase 25 — Tests
+## Phase 24 — Tests
 
 | #    | Task                       | Status     | Date | Tests | Notes                |
 | ---- | -------------------------- | ---------- | ---- | ----- | -------------------- |
-| 25.1 | Unit tests Phase 0 modules | 🔜 Pending | —    | —     | 8 new modules        |
-| 25.2 | Unit tests Phases 18-23    | 🔜 Pending | —    | —     | Providers + cascades |
-| 25.3 | Integration tests          | 🔜 Pending | —    | —     | Cross-layer flows    |
-| 25.4 | System tests               | 🔜 Pending | —    | —     | End-to-end data flow |
-| 25.5 | Property-based tests       | 🔜 Pending | —    | —     | Critical logic       |
+| 24.1 | Unit tests Phase 0 modules | 🔜 Pending | —    | —     | 8 new modules        |
+| 24.2 | Unit tests Phases 18-23    | 🔜 Pending | —    | —     | Providers + cascades |
+| 24.3 | Integration tests          | 🔜 Pending | —    | —     | Cross-layer flows    |
+| 24.4 | System tests               | 🔜 Pending | —    | —     | End-to-end data flow |
+| 24.5 | Property-based tests       | 🔜 Pending | —    | —     | Critical logic       |
 
 ---
 
-## Phase 26 — Quality Audit
+## Phase 25 — Quality Audit
 
 | #    | Task                    | Status     | Date | Tests | Notes                        |
 | ---- | ----------------------- | ---------- | ---- | ----- | ---------------------------- |
-| 26.1 | Code quality audit      | 🔜 Pending | —    | —     | All new modules              |
-| 26.2 | Architecture compliance | 🔜 Pending | —    | —     | Verify plan adherence        |
-| 26.3 | Final verification      | 🔜 Pending | —    | —     | tsc + lint + test + coverage |
+| 25.1 | Code quality audit      | 🔜 Pending | —    | —     | All new modules              |
+| 25.2 | Architecture compliance | 🔜 Pending | —    | —     | Verify plan adherence        |
+| 25.3 | Final verification      | 🔜 Pending | —    | —     | tsc + lint + test + coverage |
 
 ---
 

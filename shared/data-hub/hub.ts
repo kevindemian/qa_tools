@@ -8,6 +8,7 @@
  */
 import type {
     DataHub,
+    DataHubResult,
     DataProvider,
     FetchOptions,
     RawData,
@@ -97,39 +98,126 @@ export class DataHubImpl implements DataHub {
      * @param providers - Data providers to fetch from.
      * @param options - Fetch and compute options.
      * @param persistence - Optional persistence layer for historical data.
-     * @returns DataHub with raw data and computed metrics.
+     * @returns DataHubResult with hub, status, and optional warning.
      */
+    private static async applyLayer7Fallback(raw: RawData): Promise<{ skipped: boolean; noFile: boolean }> {
+        if (raw.parsedArtifacts != null && raw.parsedArtifacts.size > 0) {
+            return { skipped: false, noFile: false };
+        }
+        const fallback = await DataHubImpl.requestUserFallback();
+        if (fallback.data != null) {
+            raw.parsedArtifacts = new Map([
+                [
+                    0,
+                    [
+                        {
+                            fileName: fallback.source ?? 'user-fallback',
+                            data: fallback.data,
+                            format: 'ctrf',
+                        },
+                    ],
+                ],
+            ]);
+            raw.framework = raw.framework ?? 'unknown';
+            return { skipped: false, noFile: false };
+        }
+        if (fallback.error === 'NO_TTY' || fallback.error === 'NO_DATA_SOURCE') {
+            return { skipped: true, noFile: false };
+        }
+        return { skipped: false, noFile: true };
+    }
+
+    private static buildResult(
+        hub: DataHubImpl,
+        status: 'ok' | 'warning',
+        warning?: { code: string; message: string },
+        partialData = false,
+    ): DataHubResult {
+        const result: DataHubResult = { hub, status };
+        if (warning) result.warning = warning;
+        if (partialData) result.partialData = true;
+        return result;
+    }
+
     static async create(
         providers: DataProvider[],
         options: FetchOptions & DataHubOptions = { repo: '' },
         persistence?: DataHubPersistence,
-    ): Promise<DataHubImpl> {
-        const raw = await DataHubImpl.fetchFromProviders(providers, options);
+    ): Promise<DataHubResult> {
+        const { raw, providerFailures } = await DataHubImpl.fetchFromProviders(providers, options);
+        const allProvidersFailed = providerFailures > 0 && providerFailures >= providers.length;
+        const someProvidersFailed = providerFailures > 0 && !allProvidersFailed;
 
-        // Layer 7: User fallback when no parsed artifacts available
-        if (raw.parsedArtifacts == null || raw.parsedArtifacts.size === 0) {
-            const fallback = await DataHubImpl.requestUserFallback();
-            if (fallback.data != null) {
-                raw.parsedArtifacts = new Map([
-                    [
-                        0,
-                        [
-                            {
-                                fileName: fallback.source ?? 'user-fallback',
-                                data: fallback.data,
-                                format: 'ctrf',
-                            },
-                        ],
-                    ],
-                ]);
-                raw.framework = raw.framework ?? 'unknown';
-            }
-        }
+        const { skipped: layer7Skipped, noFile: layer7NoFile } = await DataHubImpl.applyLayer7Fallback(raw);
 
         const computed = DataHubImpl.computeMetrics(raw, options);
         const providerSource = DataHubImpl.determineProviderSource(providers);
+        const hub = new DataHubImpl(raw, computed, providerSource, options.repo, persistence);
 
-        return new DataHubImpl(raw, computed, providerSource, options.repo, persistence);
+        const hasData = raw.runs.length > 0 || (raw.parsedArtifacts != null && raw.parsedArtifacts.size > 0);
+        if (!hasData) {
+            return DataHubImpl.buildResult(
+                hub,
+                'warning',
+                {
+                    code: allProvidersFailed ? 'PROVIDERS_ALL_FAILED' : 'PROVIDERS_PARTIAL',
+                    message: allProvidersFailed
+                        ? 'All providers failed — no CI data available'
+                        : 'Some providers failed — data may be partial',
+                },
+                someProvidersFailed,
+            );
+        }
+
+        if (allProvidersFailed) {
+            return DataHubImpl.buildResult(
+                hub,
+                'warning',
+                {
+                    code: 'PROVIDERS_ALL_FAILED',
+                    message: 'All providers failed — using fallback data',
+                },
+                true,
+            );
+        }
+
+        if (layer7Skipped) {
+            return DataHubImpl.buildResult(
+                hub,
+                'warning',
+                {
+                    code: 'LAYER7_SKIPPED',
+                    message: 'Layer 7 skipped — no TTY available and no TEST_REPORT_PATH set',
+                },
+                someProvidersFailed,
+            );
+        }
+
+        if (layer7NoFile) {
+            return DataHubImpl.buildResult(
+                hub,
+                'warning',
+                {
+                    code: 'LAYER7_NO_FILE',
+                    message: 'Layer 7 requested file but no valid file was provided',
+                },
+                someProvidersFailed,
+            );
+        }
+
+        if (someProvidersFailed) {
+            return DataHubImpl.buildResult(
+                hub,
+                'ok',
+                {
+                    code: 'PROVIDERS_PARTIAL',
+                    message: 'Some providers failed — data may be partial',
+                },
+                true,
+            );
+        }
+
+        return DataHubImpl.buildResult(hub, 'ok');
     }
 
     /**
@@ -146,7 +234,10 @@ export class DataHubImpl implements DataHub {
         return new DataHubImpl(raw, computed, provider, repo);
     }
 
-    private static async fetchFromProviders(providers: DataProvider[], options: FetchOptions): Promise<RawData> {
+    private static async fetchFromProviders(
+        providers: DataProvider[],
+        options: FetchOptions,
+    ): Promise<{ raw: RawData; providerFailures: number }> {
         const results = await Promise.allSettled(providers.map((p) => p.fetchRawData(options)));
 
         const merged: RawData = {
@@ -156,15 +247,17 @@ export class DataHubImpl implements DataHub {
             failureReasons: new Map(),
         };
 
+        let providerFailures = 0;
         for (const result of results) {
             if (result.status === 'rejected') {
-                rootLogger.debug(`DataHub: provider fetch rejected: ${String(result.reason)}`);
+                rootLogger.warn(`DataHub: provider fetch rejected: ${String(result.reason)}`);
+                providerFailures++;
                 continue;
             }
             DataHubImpl.mergeRawData(merged, result.value);
         }
 
-        return merged;
+        return { raw: merged, providerFailures };
     }
 
     private static mergeRawData(target: RawData, source: RawData): void {

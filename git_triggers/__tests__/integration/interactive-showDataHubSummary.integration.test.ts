@@ -55,7 +55,8 @@ async function createDataHubWithRuns(runs: PipelineRun[]): Promise<DataHub> {
         source: 'github' as const,
         fetchRawData: vi.fn().mockResolvedValue(rawData),
     };
-    return DataHubImpl.create([mockProvider], { repo: 'test' });
+    const { hub } = await DataHubImpl.create([mockProvider], { repo: 'test' });
+    return hub;
 }
 
 /* ── Tests ─────────────────────────────────────────────────────────────── */

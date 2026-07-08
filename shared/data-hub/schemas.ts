@@ -8,6 +8,8 @@
  */
 import { z } from '../deps.js';
 import type { MetricsRun, MetricsStore, CoverageSnapshot } from '../types/data-hub.js';
+import { rootLogger } from '../logger.js';
+import { getErrorMessage } from '../errors.js';
 
 /**
  * FlatTest schema with explicit fields + .loose() for forward compatibility.
@@ -80,7 +82,9 @@ export const MetricsStoreSchema = z.object({
 export function parseMetricsRun(data: unknown): MetricsRun | null {
     try {
         return MetricsRunSchema.parse(data) as MetricsRun;
-    } catch {
+    } catch (err: unknown) {
+        const rawError = getErrorMessage(err);
+        rootLogger.warn(`schemas: MetricsRun validation failed — ${rawError}`);
         return null;
     }
 }
@@ -92,7 +96,9 @@ export function parseMetricsRun(data: unknown): MetricsRun | null {
 export function parseMetricsStore(data: unknown): MetricsStore | null {
     try {
         return MetricsStoreSchema.parse(data) as MetricsStore;
-    } catch {
+    } catch (err: unknown) {
+        const rawError = getErrorMessage(err);
+        rootLogger.warn(`schemas: MetricsStore validation failed — ${rawError}`);
         return null;
     }
 }

@@ -73,7 +73,8 @@ export class LinkTypeManager {
                 (t.outward && t.outward.toLowerCase() === lowerName),
         );
         if (match) return match.id;
-        rootLogger.warn(`Tipo de link '${linkTypeName}' não encontrado, usando 'relates to' como fallback`);
-        return '11701';
+        throw new Error(
+            `Tipo de link '${linkTypeName}' não encontrado. Disponíveis: ${types.map((t) => t.name).join(', ')}`,
+        );
     }
 }
