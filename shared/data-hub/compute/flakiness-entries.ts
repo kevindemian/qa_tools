@@ -3,10 +3,9 @@
  *
  * Identifies flaky tests by analyzing pass/fail patterns across runs.
  * Equivalent to calculateFlakiness in metrics.ts, but accepts MetricsRun[].
- * Used by flakiness-dashboard.ts and failure-analysis.ts.
+ * Used by flakiness-dashboard.ts, failure-analysis.ts, and quality-gate.ts.
  */
-import type { FlakinessEntry } from '../../types/data-hub.js';
-import type { MetricsRun } from '../../types/data-hub.js';
+import type { FlakinessEntry, MetricsRun } from '../../types/data-hub.js';
 
 /**
  * Calculate flakiness entries from metrics runs.
@@ -62,4 +61,33 @@ function buildFlakyEntries(
     }
     result.sort((a, b) => b.rate - a.rate);
     return result;
+}
+
+/**
+ * Calculate the flaky test rate as a percentage (0-100).
+ *
+ * Returns: (number of flaky tests / number of qualifying tests) * 100
+ *
+ * A "qualifying test" is one that has been executed at least `minRuns` times.
+ * A "flaky test" is a qualifying test that has both passed and failed.
+ *
+ * @param runs - Metrics runs to analyze.
+ * @param minRuns - Minimum number of executions to qualify (default: 2).
+ * @returns Flaky percentage (0-100). Returns 0 if no qualifying tests.
+ */
+export function calculateFlakyTestRate(runs: MetricsRun[], minRuns = 2): number {
+    const entries = calcFlakinessEntries(runs, minRuns);
+
+    // Count qualifying tests (tests with enough runs)
+    const testMap = accumulateTestCounts(runs);
+    let qualifyingCount = 0;
+    for (const [, counts] of testMap) {
+        const executedCount = counts.pass + counts.fail;
+        if (executedCount >= minRuns) {
+            qualifyingCount++;
+        }
+    }
+
+    if (qualifyingCount === 0) return 0;
+    return (entries.length / qualifyingCount) * 100;
 }

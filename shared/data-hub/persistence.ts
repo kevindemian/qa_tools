@@ -16,53 +16,14 @@ import type {
     MetricsStore,
     CoverageSnapshot,
     FailureClassification,
+    QualityMetricsSnapshot,
 } from '../types/data-hub.js';
-import { z } from '../deps.js';
+import type { ParseResult } from '../result_parser.js';
 import { extractErrorMessage, humanizeError } from '../prompt-errors.js';
+import { MetricsStoreSchema } from './schemas.js';
 
 const METRICS_FILE = 'metrics/global.json';
-
-const MetricsRunSchema = z.object({
-    timestamp: z.string(),
-    project: z.string(),
-    total: z.number().int().nonnegative(),
-    passed: z.number().int().nonnegative(),
-    failed: z.number().int().nonnegative(),
-    skipped: z.number().int().nonnegative(),
-    duration: z.number().nonnegative(),
-    tests: z.array(
-        z
-            .object({
-                title: z.string(),
-                state: z.union([z.literal('passed'), z.literal('failed'), z.literal('skipped')]),
-                duration: z.number().nonnegative(),
-                error: z.string().optional(),
-                fullTitle: z.string().optional(),
-            })
-            .loose(),
-    ),
-});
-
-const CoverageSnapshotSchema = z.object({
-    timestamp: z.string(),
-    project: z.string(),
-    totalIssues: z.number().int().nonnegative(),
-    mappedIssues: z.number().int().nonnegative(),
-    coveragePct: z.number().min(0).max(100),
-});
-
-const FailureClassificationSchema = z.object({
-    timestamp: z.string(),
-    testTitle: z.string(),
-    category: z.string(),
-    project: z.string(),
-});
-
-const MetricsStoreSchema = z.object({
-    runs: z.array(MetricsRunSchema),
-    coverageHistory: z.array(CoverageSnapshotSchema).optional(),
-    failureClassifications: z.array(FailureClassificationSchema).optional(),
-});
+const QUALITY_METRICS_FILE = 'metrics/quality-metrics.json';
 
 /**
  * Read JSON from the store backend with error handling.
@@ -175,6 +136,39 @@ export function createDataHubPersistence(_project: string, backend?: StoreBacken
 
         loadMetricsStore(): MetricsStore {
             return loadMetricsStore();
+        },
+
+        saveParseResult(project: string, result: ParseResult): MetricsRun {
+            const run: MetricsRun = {
+                timestamp: new Date().toISOString(),
+                project,
+                total: result.stats.total,
+                passed: result.stats.passed,
+                failed: result.stats.failed,
+                skipped: result.stats.skipped,
+                duration: result.stats.duration,
+                tests: result.tests,
+            };
+            const store = loadMetricsStore();
+            store.runs.push(run);
+            const max = 50;
+            if (store.runs.length > max) {
+                store.runs = store.runs.slice(-max);
+            }
+            saveMetricsStore(store);
+            return run;
+        },
+
+        saveQualityMetrics(snapshot: QualityMetricsSnapshot): void {
+            const existing = readJson<{ snapshots: QualityMetricsSnapshot[] }>(b, QUALITY_METRICS_FILE);
+            const store = existing ?? { snapshots: [] };
+            store.snapshots.push(snapshot);
+            writeJson(b, QUALITY_METRICS_FILE, store);
+        },
+
+        loadQualityMetricsHistory(): QualityMetricsSnapshot[] {
+            const existing = readJson<{ snapshots: QualityMetricsSnapshot[] }>(b, QUALITY_METRICS_FILE);
+            return existing?.snapshots ?? [];
         },
 
         flush(message: string): void {
