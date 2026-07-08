@@ -1937,6 +1937,14 @@ O linter `vitest/prefer-strict-equal` exige `toStrictEqual` em vez de `toEqual` 
 | --- | ------------------------------------------------------------ | --------------------------------------------------------------------------------------------------------------------------------------------------------- |
 | D1  | `expect.any(Type)` é o padrão correto para matching por tipo | API oficial do vitest, sem alternativa. Falso positivo do ESLint é regressão do plugin v1.6.21 (PR #920). Fix no upstream (PR #925), aguardando v1.6.22+. |
 | D2  | Downgrade `@vitest/eslint-plugin` para 1.6.20                | Regressão na v1.6.21 confunde `expect.any()` com flag Chai. Mesma abordagem do projeto `univ-lehavre/atlas`.                                              |
+| D3  | Criar helper `assertNullOr()` para PBT                       | Preserva qualidade de erro em testes property-based sem violar `vitest/no-conditional-expect`.                                                            |
+
+### Débito Técnico Pendente
+
+| #   | Item                                        | Ação                                     | Quando                       |
+| --- | ------------------------------------------- | ---------------------------------------- | ---------------------------- |
+| DT1 | `@vitest/eslint-plugin` 1.6.20 (downgraded) | `npm update @vitest/eslint-plugin`       | Quando v1.6.22+ for liberado |
+| DT2 | Verificar se D1/D2 podem ser revertidos     | Testar `expect.any()` sem falso positivo | Após upgrade do plugin       |
 
 ### Novos Requisitos para Phase 22 (SSOT Centralization)
 
