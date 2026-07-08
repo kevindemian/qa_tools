@@ -1,7 +1,8 @@
 import type JiraClient from '../shared/jira-client.js';
 import type JiraLinkManager from '../jira_management/jira_link_manager.js';
 import { createGitHubSmokeManager } from './smoke-shared.js';
-import { loadMetrics, calculateFlakiness } from '../shared/metrics.js';
+import { createDataHubPersistence } from '../shared/data-hub/persistence.js';
+import { calcFlakinessEntries } from '../shared/data-hub/compute/flakiness-entries.js';
 import { generateFlakinessHtml } from '../shared/flakiness-dashboard.js';
 import { pollPipeline } from '../git_triggers/pipeline-handler.js';
 import { collectTestResults } from '../git_triggers/test-results.js';
@@ -106,11 +107,12 @@ async function collectAndReportResults(gh: ReturnType<typeof createGitHubSmokeMa
 
     await offerPipelineFailureAnalysis(parsed);
 
-    const metrics = loadMetrics();
-    assert(metrics, 'loadMetrics returned undefined');
+    const persistence = createDataHubPersistence('qa_tools_e2e');
+    const metrics = persistence.loadMetricsStore();
+    assert(metrics, 'loadMetricsStore returned undefined');
     const projectRuns = metrics.runs.filter((r: { project: string }) => r.project === 'qa_tools_e2e');
     if (projectRuns.length >= 2) {
-        const flaky = calculateFlakiness({ runs: projectRuns }, 2);
+        const flaky = calcFlakinessEntries(projectRuns, 2);
         const html = generateFlakinessHtml(flaky, 'Flakiness — qa_tools_e2e');
         assert(html, 'generateFlakinessHtml returned empty');
         assert(html.length > 0, 'Flakiness dashboard HTML is empty');
