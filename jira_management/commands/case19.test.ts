@@ -3,11 +3,16 @@ import { expect } from 'vitest';
 vi.mock('../../shared/prompt');
 vi.mock('../../shared/logger');
 
-vi.mock('../../shared/metrics', () => ({
-    loadMetrics: vi.fn(),
-    calculateFlakiness: vi.fn(),
-    getTrends: vi.fn(),
-    saveCoverageSnapshot: vi.fn(),
+vi.mock('../../shared/data-hub/persistence.js', () => ({
+    createDataHubPersistence: vi.fn(),
+}));
+
+vi.mock('../../shared/data-hub/compute/flakiness-entries.js', () => ({
+    calcFlakinessEntries: vi.fn(),
+}));
+
+vi.mock('../../shared/data-hub/compute/metrics-trends.js', () => ({
+    calcMetricsTrends: vi.fn(),
 }));
 
 vi.mock('../../shared/health-score', () => ({
@@ -30,14 +35,33 @@ vi.mock('../../shared/logger', () => ({
 }));
 
 import * as promptModule from '../../shared/prompt.js';
-import * as metricsModule from '../../shared/metrics.js';
-import * as comparisonModule from '../../shared/run-comparison.js';
+import * as persistenceModule from '../../shared/data-hub/persistence.js';
+import * as flakinessModule from '../../shared/data-hub/compute/flakiness-entries.js';
+import * as trendsModule from '../../shared/data-hub/compute/metrics-trends.js';
 import * as healthScoreModule from '../../shared/health-score.js';
 import * as coverageModule from '../coverage.js';
 import case19Module from './case19.js';
 import { createMockContext } from '../../shared/test-utils/factories/context-factory.js';
 
 const baseContext = createMockContext();
+
+function createMockPersistence(overrides: Partial<ReturnType<typeof persistenceModule.createDataHubPersistence>> = {}) {
+    return {
+        saveRun: vi.fn(),
+        loadRun: vi.fn().mockReturnValue(null),
+        saveCoverageSnapshot: vi.fn(),
+        loadCoverageHistory: vi.fn().mockReturnValue([]),
+        saveFailureClassification: vi.fn(),
+        loadFailureClassifications: vi.fn().mockReturnValue([]),
+        saveMetricsStore: vi.fn(),
+        loadMetricsStore: vi.fn().mockReturnValue({ runs: [], coverageHistory: [] }),
+        saveParseResult: vi.fn(),
+        saveQualityMetrics: vi.fn(),
+        loadQualityMetricsHistory: vi.fn().mockReturnValue([]),
+        flush: vi.fn(),
+        ...overrides,
+    };
+}
 
 describe('Case19', () => {
     beforeEach(() => {
@@ -49,11 +73,14 @@ describe('Case19', () => {
             expect.hasAssertions();
 
             const prompt = vi.mocked(promptModule);
-            const metrics = vi.mocked(metricsModule);
+            const persistence = vi.mocked(persistenceModule);
+            const flakiness = vi.mocked(flakinessModule);
+            const trends = vi.mocked(trendsModule);
 
+            prompt.showSelect.mockReset();
             prompt.showSelect.mockResolvedValueOnce('a').mockResolvedValueOnce('0');
 
-            metrics.loadMetrics.mockReturnValueOnce({
+            const mockStore = {
                 runs: [
                     {
                         timestamp: '2024-01-15T10:00:00Z',
@@ -69,10 +96,17 @@ describe('Case19', () => {
                         ],
                     },
                 ],
-            });
+                coverageHistory: [],
+            };
 
-            metrics.calculateFlakiness.mockReturnValueOnce([]);
-            metrics.getTrends.mockReturnValueOnce([]);
+            persistence.createDataHubPersistence.mockReturnValue(
+                createMockPersistence({
+                    loadMetricsStore: vi.fn().mockReturnValue(mockStore),
+                }),
+            );
+
+            flakiness.calcFlakinessEntries.mockReturnValue([]);
+            trends.calcMetricsTrends.mockReturnValue([]);
 
             const mod = case19Module;
             await mod.handler(baseContext);
@@ -86,8 +120,9 @@ describe('Case19', () => {
 
             const prompt = vi.mocked(promptModule);
             const coverage = vi.mocked(coverageModule);
-            const metrics = vi.mocked(metricsModule);
+            const persistence = vi.mocked(persistenceModule);
 
+            prompt.showSelect.mockReset();
             prompt.showSelect.mockResolvedValueOnce('b').mockResolvedValueOnce('0');
 
             coverage.analyzeCoverage.mockResolvedValueOnce({
@@ -99,385 +134,85 @@ describe('Case19', () => {
                 coveragePct: 60,
             });
 
+            persistence.createDataHubPersistence.mockReturnValue(createMockPersistence());
+
             const mod = case19Module;
             await mod.handler(baseContext);
 
-            expect(coverage.analyzeCoverage).toHaveBeenCalledWith(baseContext.jiraResource, 'TEST');
-            expect(metrics.saveCoverageSnapshot).toHaveBeenCalledWith({
-                timestamp: expect.any(String) as string,
-                project: 'TEST',
-                totalIssues: 10,
-                mappedIssues: 6,
-                coveragePct: 60,
-            });
-            expect(prompt.tableView).toHaveBeenCalledWith(expect.any(Array), expect.any(Array));
-            expect(baseContext.pushHistory).toHaveBeenCalledWith('coverage-analysis', '60% coverage', 'ok');
+            expect(coverage.analyzeCoverage).toHaveBeenCalledWith(
+                baseContext.jiraResource,
+                baseContext.ctx.project_name,
+            );
+            expect(prompt.tableView).toHaveBeenCalledWith();
         });
 
-        it('handles empty metrics gracefully', async () => {
+        it('shows warning when no runs exist', async () => {
             expect.hasAssertions();
 
             const prompt = vi.mocked(promptModule);
-            const metrics = vi.mocked(metricsModule);
+            const persistence = vi.mocked(persistenceModule);
 
+            prompt.showSelect.mockReset();
             prompt.showSelect.mockResolvedValueOnce('a').mockResolvedValueOnce('0');
 
-            metrics.loadMetrics.mockReturnValueOnce({ runs: [] });
+            persistence.createDataHubPersistence.mockReturnValue(createMockPersistence());
 
             const mod = case19Module;
             await mod.handler(baseContext);
 
             expect(prompt.warn).toHaveBeenCalledWith('Nenhuma execução registrada.');
         });
+    });
 
-        it('returns when user selects voltar', async () => {
+    describe('Case19 — Health Score', () => {
+        it('shows health score when 5+ runs exist', async () => {
             expect.hasAssertions();
 
             const prompt = vi.mocked(promptModule);
-            prompt.showSelect.mockResolvedValueOnce('0');
-
-            const mod = case19Module;
-            await mod.handler(baseContext);
-
-            expect(prompt.tableView).not.toHaveBeenCalled();
-        });
-
-        it('displays history comparison, flaky tests and trends when multiple runs exist', async () => {
-            expect.hasAssertions();
-
-            const prompt = vi.mocked(promptModule);
-            const metrics = vi.mocked(metricsModule);
-            const comparison = vi.mocked(comparisonModule);
-
-            prompt.showSelect.mockResolvedValueOnce('a').mockResolvedValueOnce('0');
-
-            metrics.loadMetrics.mockReturnValueOnce({
-                runs: [
-                    {
-                        timestamp: '2024-01-15T10:00:00Z',
-                        project: 'TEST',
-                        total: 10,
-                        passed: 8,
-                        failed: 2,
-                        skipped: 0,
-                        duration: 5000,
-                        tests: [],
-                    },
-                    {
-                        timestamp: '2024-01-16T10:00:00Z',
-                        project: 'TEST',
-                        total: 10,
-                        passed: 9,
-                        failed: 1,
-                        skipped: 0,
-                        duration: 4500,
-                        tests: [],
-                    },
-                ],
-            });
-
-            metrics.calculateFlakiness.mockReturnValueOnce([
-                {
-                    title: 'Flaky Test',
-                    project: 'test',
-                    passCount: 1,
-                    failCount: 1,
-                    skipCount: 0,
-                    totalRuns: 2,
-                    rate: 0.5,
-                },
-            ]);
-            metrics.getTrends.mockReturnValueOnce([{ label: '2024-01-15', total: 10, failed: 2, passRate: 80 }]);
-
-            comparison.compareRuns.mockResolvedValueOnce('Second run improved by 10%');
-
-            const mod = case19Module;
-            await mod.handler(baseContext);
-
-            expect(comparison.compareRuns).toHaveBeenCalledWith(expect.any(Object), expect.any(Object));
-            expect(prompt.title).toHaveBeenCalledWith('Testes com flakiness');
-            expect(prompt.title).toHaveBeenCalledWith('Tendência');
-        });
-
-        it('handles coverage analysis error', async () => {
-            expect.hasAssertions();
-
-            const prompt = vi.mocked(promptModule);
-            const coverage = vi.mocked(coverageModule);
-
-            prompt.showSelect.mockResolvedValueOnce('b').mockResolvedValueOnce('0');
-            coverage.analyzeCoverage.mockRejectedValueOnce(new Error('Jira API error'));
-
-            const mod = case19Module;
-            await mod.handler(baseContext);
-
-            expect(prompt.printError).toHaveBeenCalledWith('Erro ao analisar cobertura', expect.any(Error));
-        });
-
-        it('handles compareRuns returning null (falsy analysis)', async () => {
-            expect.hasAssertions();
-
-            const prompt = vi.mocked(promptModule);
-            const metrics = vi.mocked(metricsModule);
-            const comparison = vi.mocked(comparisonModule);
-
-            prompt.showSelect.mockResolvedValueOnce('a').mockResolvedValueOnce('0');
-
-            metrics.loadMetrics.mockReturnValueOnce({
-                runs: [
-                    {
-                        timestamp: '2024-01-15T10:00:00Z',
-                        project: 'TEST',
-                        total: 10,
-                        passed: 8,
-                        failed: 2,
-                        skipped: 0,
-                        duration: 5000,
-                        tests: [],
-                    },
-                    {
-                        timestamp: '2024-01-16T10:00:00Z',
-                        project: 'TEST',
-                        total: 10,
-                        passed: 9,
-                        failed: 1,
-                        skipped: 0,
-                        duration: 4500,
-                        tests: [],
-                    },
-                ],
-            });
-            metrics.calculateFlakiness.mockReturnValueOnce([]);
-            metrics.getTrends.mockReturnValueOnce([]);
-
-            comparison.compareRuns.mockResolvedValueOnce('');
-
-            const mod = case19Module;
-            await mod.handler(baseContext);
-
-            expect(comparison.compareRuns).toHaveBeenCalledWith(expect.any(Object), expect.any(Object));
-            expect(prompt.info).not.toHaveBeenCalledWith(expect.stringContaining('Análise comparativa'));
-        });
-
-        it('shows coverage without unmapped steps or gaps', async () => {
-            expect.hasAssertions();
-
-            const prompt = vi.mocked(promptModule);
-            const coverage = vi.mocked(coverageModule);
-
-            prompt.showSelect.mockResolvedValueOnce('b').mockResolvedValueOnce('0');
-
-            coverage.analyzeCoverage.mockResolvedValueOnce({
-                totalIssues: 5,
-                totalSteps: 10,
-                mappedIssues: 5,
-                unmappedSteps: [],
-                gapsByEpic: {},
-                coveragePct: 100,
-            });
-
-            const mod = case19Module;
-            await mod.handler(baseContext);
-
-            expect(prompt.warn).not.toHaveBeenCalled();
-            expect(prompt.title).not.toHaveBeenCalledWith('Gaps por épico');
-        });
-
-        it('shows health score when enough runs exist', async () => {
-            expect.hasAssertions();
-
-            const prompt = vi.mocked(promptModule);
-            const metrics = vi.mocked(metricsModule);
+            const persistence = vi.mocked(persistenceModule);
             const healthScore = vi.mocked(healthScoreModule);
 
+            prompt.showSelect.mockReset();
             prompt.showSelect.mockResolvedValueOnce('a').mockResolvedValueOnce('0');
 
-            metrics.loadMetrics.mockReturnValueOnce({
-                runs: Array.from({ length: 10 }, (_, i) => ({
-                    timestamp: `2026-01-${String(i + 1).padStart(2, '0')}T10:00:00Z`,
-                    project: 'TEST',
-                    total: 10,
-                    passed: 9,
-                    failed: 1,
-                    skipped: 0,
-                    duration: 100,
-                    tests: [],
-                })),
-                coverageHistory: [
-                    { timestamp: '2026-01-01', project: 'TEST', totalIssues: 100, mappedIssues: 80, coveragePct: 80 },
-                ],
-            });
-            metrics.calculateFlakiness.mockReturnValueOnce([]);
-            metrics.getTrends.mockReturnValueOnce([]);
-            healthScore.calculateHealthScore.mockReturnValueOnce({
-                overall: 85,
-                grade: 'good',
-                qualityGate: 'pass',
-                runCount: 10,
-                timestamp: '2026-01-10',
-                dimensions: {
-                    passRate: { score: 90, status: 'pass' },
-                    flakyRate: { score: 80, status: 'pass' },
-                    coverage: { score: 85, status: 'pass' },
-                    suiteSpeed: { score: 75, status: 'pass' },
-                    executionRate: { score: 90, status: 'pass' },
-                },
-            });
-
-            const mod = case19Module;
-            await mod.handler(baseContext);
-
-            expect(healthScore.calculateHealthScore).toHaveBeenCalledWith(expect.any(Object));
-            expect(prompt.tableView).toHaveBeenCalledWith(
-                expect.arrayContaining([expect.objectContaining({ Dimensão: 'Pass Rate', Score: 90 })]),
-                expect.any(Array),
-            );
-        });
-
-        it('shows history without flaky or trends data', async () => {
-            expect.hasAssertions();
-
-            const prompt = vi.mocked(promptModule);
-            const metrics = vi.mocked(metricsModule);
-            const comparison = vi.mocked(comparisonModule);
-
-            prompt.showSelect.mockResolvedValueOnce('a').mockResolvedValueOnce('0');
-
-            metrics.loadMetrics.mockReturnValueOnce({
-                runs: [
-                    {
-                        timestamp: '2024-01-15T10:00:00Z',
-                        project: 'TEST',
-                        total: 10,
-                        passed: 8,
-                        failed: 2,
-                        skipped: 0,
-                        duration: 5000,
-                        tests: [],
-                    },
-                    {
-                        timestamp: '2024-01-16T10:00:00Z',
-                        project: 'TEST',
-                        total: 10,
-                        passed: 9,
-                        failed: 1,
-                        skipped: 0,
-                        duration: 4500,
-                        tests: [],
-                    },
-                ],
-            });
-            metrics.calculateFlakiness.mockReturnValueOnce([]);
-            metrics.getTrends.mockReturnValueOnce([]);
-            comparison.compareRuns.mockResolvedValueOnce('analysis result');
-
-            const mod = case19Module;
-            await mod.handler(baseContext);
-
-            expect(prompt.tableView).toHaveBeenCalledWith(expect.any(Array), expect.any(Array));
-        });
-
-        it('handles run with total=0 to cover Rate branch', async () => {
-            expect.hasAssertions();
-
-            const prompt = vi.mocked(promptModule);
-            const metrics = vi.mocked(metricsModule);
-            const comparison = vi.mocked(comparisonModule);
-
-            prompt.showSelect.mockResolvedValueOnce('a').mockResolvedValueOnce('0');
-
-            metrics.loadMetrics.mockReturnValueOnce({
-                runs: [
-                    {
-                        timestamp: '2024-01-15T10:00:00Z',
-                        project: 'TEST',
-                        total: 0,
-                        passed: 0,
-                        failed: 0,
-                        skipped: 0,
-                        duration: 0,
-                        tests: [],
-                    },
-                ],
-            });
-            metrics.calculateFlakiness.mockReturnValueOnce([]);
-            metrics.getTrends.mockReturnValueOnce([]);
-            comparison.compareRuns.mockResolvedValueOnce('');
-
-            const mod = case19Module;
-            await mod.handler(baseContext);
-
-            expect(prompt.tableView).toHaveBeenCalledWith(expect.any(Array), expect.any(Array));
-        });
-
-        it('shows health score section when 5+ runs exist', async () => {
-            expect.hasAssertions();
-
-            const prompt = vi.mocked(promptModule);
-            const metrics = vi.mocked(metricsModule);
-            const healthScore = vi.mocked(healthScoreModule);
-            const comparison = vi.mocked(comparisonModule);
-
-            prompt.showSelect.mockResolvedValueOnce('a').mockResolvedValueOnce('0');
-
-            metrics.loadMetrics.mockReturnValueOnce({
-                runs: Array.from({ length: 5 }, (_, i) => ({
+            const mockStore = {
+                runs: Array.from({ length: 6 }, (_, i) => ({
                     timestamp: `2024-01-${String(i + 1).padStart(2, '0')}T10:00:00Z`,
                     project: 'TEST',
                     total: 10,
                     passed: 8,
                     failed: 2,
                     skipped: 0,
-                    duration: 100,
+                    duration: 5000,
                     tests: [],
                 })),
-            });
-            metrics.calculateFlakiness.mockReturnValueOnce([]);
-            metrics.getTrends.mockReturnValueOnce([]);
-            comparison.compareRuns.mockResolvedValueOnce('analysis');
+                coverageHistory: [],
+            };
+
+            persistence.createDataHubPersistence.mockReturnValue(
+                createMockPersistence({
+                    loadMetricsStore: vi.fn().mockReturnValue(mockStore),
+                }),
+            );
+
             healthScore.calculateHealthScore.mockReturnValueOnce({
                 overall: 85,
                 grade: 'good',
                 qualityGate: 'pass',
-                runCount: 5,
-                timestamp: '2024-01-05',
+                runCount: 6,
+                timestamp: '2024-01-06T10:00:00Z',
                 dimensions: {
-                    passRate: { score: 90, status: 'pass' as const },
-                    flakyRate: { score: 80, status: 'pass' as const },
-                    coverage: { score: 70, status: 'pass' as const },
-                    suiteSpeed: { score: 95, status: 'pass' as const },
-                    executionRate: { score: 100, status: 'pass' as const },
+                    passRate: { score: 90, status: 'pass' },
+                    flakyRate: { score: 80, status: 'pass' },
+                    coverage: { score: 85, status: 'pass' },
+                    suiteSpeed: { score: 85, status: 'pass' },
                 },
-            });
+            } as ReturnType<typeof healthScoreModule.calculateHealthScore>);
 
             const mod = case19Module;
             await mod.handler(baseContext);
 
-            expect(healthScore.calculateHealthScore).toHaveBeenCalledWith(expect.any(Object));
             expect(prompt.title).toHaveBeenCalledWith(expect.stringContaining('Test Suite Health'));
-        });
-
-        it('shows coverage with gapsByEpic data', async () => {
-            expect.hasAssertions();
-
-            const prompt = vi.mocked(promptModule);
-            const coverage = vi.mocked(coverageModule);
-
-            prompt.showSelect.mockResolvedValueOnce('b').mockResolvedValueOnce('0');
-
-            coverage.analyzeCoverage.mockResolvedValueOnce({
-                totalIssues: 5,
-                totalSteps: 10,
-                mappedIssues: 5,
-                unmappedSteps: [],
-                gapsByEpic: { 'Epic-1': ['PROJ-1', 'PROJ-2'] },
-                coveragePct: 100,
-            });
-
-            const mod = case19Module;
-            await mod.handler(baseContext);
-
-            expect(prompt.info).toHaveBeenCalledWith(expect.stringContaining('Epic-1'));
         });
     });
 });

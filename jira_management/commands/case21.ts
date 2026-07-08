@@ -15,7 +15,7 @@ import {
 import { analyzeCoverageGaps } from '../../shared/coverage-gap.js';
 import { openWithFallback } from '../../shared/open.js';
 import { generateCoverageGapHtml } from '../../shared/generate-coverage-gap-html.js';
-import { loadMetrics, saveCoverageSnapshot } from '../../shared/metrics.js';
+import { createDataHubPersistence } from '../../shared/data-hub/persistence.js';
 import { rootLogger } from '../../shared/logger.js';
 import fs from 'fs';
 import path from 'path';
@@ -31,7 +31,8 @@ function handlerCiGate(result: CoverageGapResult, project: string): boolean {
     const currentGap = result.totals.gap;
     const coveragePct = result.totals.rawCoveragePct;
 
-    saveCoverageSnapshot({
+    const persistence = createDataHubPersistence(project);
+    persistence.saveCoverageSnapshot({
         timestamp: new Date().toISOString(),
         project,
         totalIssues: result.totals.totalIssues,
@@ -39,7 +40,7 @@ function handlerCiGate(result: CoverageGapResult, project: string): boolean {
         coveragePct,
     });
 
-    const store = loadMetrics();
+    const store = persistence.loadMetricsStore();
     const history = (store.coverageHistory ?? []).filter((s) => s.project === project);
     const previous = history.length >= 2 ? history[history.length - 2] : null;
 
