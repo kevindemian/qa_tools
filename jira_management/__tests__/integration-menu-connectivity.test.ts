@@ -253,7 +253,7 @@ describe('Jira_management — case handlers are connected', () => {
         } as never);
         await (handler as (ctx: ReturnType<typeof createMockContext>) => Promise<boolean | void>)(ctx);
 
-        expect(vi.mocked(createDataHubPersistence)).toHaveBeenCalled();
+        expect(vi.mocked(createDataHubPersistence)).toHaveBeenCalledWith(expect.anything());
     });
 
     it('case26 calculates release score', async () => {
@@ -270,7 +270,7 @@ describe('Jira_management — case handlers are connected', () => {
         } as never);
         await (handler as (ctx: ReturnType<typeof createMockContext>) => Promise<boolean | void>)(ctx);
 
-        expect(vi.mocked(createDataHubPersistence)).toHaveBeenCalled();
+        expect(vi.mocked(createDataHubPersistence)).toHaveBeenCalledWith(expect.anything());
     });
 
     it('case27 analyzes coverage gaps', async () => {

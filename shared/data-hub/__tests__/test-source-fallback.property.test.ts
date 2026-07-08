@@ -9,10 +9,10 @@ describe('Test-source-fallback — property-based', () => {
         fc.assert(
             fc.property(fc.string({ minLength: 1, maxLength: 200 }), (filePath) => {
                 const result = validateTestFile(filePath);
+
                 expect(result).toHaveProperty('data');
-                if (result.data === null) {
-                    expect(typeof result.error).toBe('string');
-                }
+
+                expect(result.data !== null || typeof result.error === 'string').toBeTruthy();
             }),
             { numRuns: 100 },
         );
@@ -24,6 +24,7 @@ describe('Test-source-fallback — property-based', () => {
         fc.assert(
             fc.property(fc.constantFrom('.txt', '.log', '.csv', '.yaml', '.yml', '.toml'), (ext) => {
                 const result = validateTestFile(`file${ext}`);
+
                 expect(result.data).toBeNull();
                 expect(result.error).toBeDefined();
             }),

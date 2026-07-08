@@ -9,7 +9,7 @@ vi.mock('./logger', () => ({
 vi.mock('./data-hub/persistence', () => ({
     createDataHubPersistence: vi.fn().mockReturnValue({
         loadMetricsStore: vi.fn().mockReturnValue({ runs: [] }),
-    } as never),
+    }),
 }));
 
 const mockCreateDataHubPersistence = vi.mocked(createDataHubPersistence);

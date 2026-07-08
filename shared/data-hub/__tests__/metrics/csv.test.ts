@@ -81,7 +81,7 @@ describe('ImportMetricsCsv', () => {
         expect(result.suiteSpeedP95).toBe(500);
         expect(result.coverage).toBe(72);
         expect(result.pipelineCost.totalMinutes).toBe(100);
-        expect(result.pipelineCost.estimatedCost).toBe(0.8);
+        expect(result.pipelineCost.estimatedCost).toBeCloseTo(0.8);
         expect(result.testCounts.passed).toBe(0);
         expect(result.testCounts.total).toBe(0);
     });
@@ -107,16 +107,23 @@ describe('ImportMetricsCsv', () => {
         expect(result.passRate).toBe(90);
     });
 
-    it('r10: export contains all expected metric rows', () => {
+    it('r10: export contains all expected metric rows (part 1)', () => {
         const csv = exportMetricsCsv(FAKE_METRICS);
         const lines = csv.trim().split('\n');
-        const metrics = lines.slice(1).map((l) => (l as string).split(',')[0]);
+        const metrics = lines.slice(1).map((l) => l.split(',')[0]);
 
         expect(metrics).toContain('passRate');
         expect(metrics).toContain('avgDuration');
         expect(metrics).toContain('suiteSpeedP95');
         expect(metrics).toContain('coverage');
         expect(metrics).toContain('framework');
+    });
+
+    it('r10b: export contains all expected metric rows (part 2)', () => {
+        const csv = exportMetricsCsv(FAKE_METRICS);
+        const lines = csv.trim().split('\n');
+        const metrics = lines.slice(1).map((l) => l.split(',')[0]);
+
         expect(metrics).toContain('testPassRate');
         expect(metrics).toContain('pipelineCost.totalMinutes');
         expect(metrics).toContain('releaseScore.score');

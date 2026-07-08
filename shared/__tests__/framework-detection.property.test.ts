@@ -11,6 +11,7 @@ describe('Framework-detection — property-based', () => {
                 fc.object({ maxKeys: 10, key: fc.string({ maxLength: 30 }), values: [fc.string({ maxLength: 10 })] }),
                 (deps) => {
                     const result = detectFrameworkFromDeps(deps as Record<string, string>);
+
                     expect(result.confidence).toBeGreaterThanOrEqual(0);
                     expect(result.confidence).toBeLessThanOrEqual(1);
                 },
@@ -25,6 +26,7 @@ describe('Framework-detection — property-based', () => {
         fc.assert(
             fc.property(fc.string({ minLength: 1, maxLength: 200 }), (path) => {
                 const result = isManifestFile(path);
+
                 expect(typeof result).toBe('boolean');
             }),
             { numRuns: 100 },
@@ -37,6 +39,7 @@ describe('Framework-detection — property-based', () => {
         fc.assert(
             fc.property(fc.constant({}), (deps) => {
                 const result = detectFrameworkFromDeps(deps);
+
                 expect(result.framework).toBe('unknown');
                 expect(result.confidence).toBe(0);
             }),
@@ -59,6 +62,7 @@ describe('Framework-detection — property-based', () => {
         for (const fw of frameworks) {
             const deps = { [fw.key]: '1.0.0' };
             const result = detectFrameworkFromDeps(deps);
+
             expect(result.framework).toBe(fw.name);
             expect(result.confidence).toBe(fw.conf);
         }
