@@ -9,7 +9,7 @@
  * Pure function — no filesystem dependencies.
  */
 import { describe, expect, it, beforeEach, vi } from 'vitest';
-import type { MetricsStore } from '../../metrics.js';
+import type { MetricsStore } from '../../types/data-hub.js';
 import type { DataHub } from '../../types/data-hub.js';
 
 vi.mock('../../logger', () => ({

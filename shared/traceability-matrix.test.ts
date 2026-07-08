@@ -1,5 +1,5 @@
 import { buildTraceabilityMatrix, generateTraceabilityHtml } from './traceability-matrix.js';
-import type { MetricsStore } from './metrics.js';
+import type { MetricsStore } from './types/data-hub.js';
 import { rootLogger } from './logger.js';
 import { nonNull } from './test-utils.js';
 

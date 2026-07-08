@@ -3,7 +3,7 @@
  */
 
 import { aggregateDefectTrends, generateDefectTrendHtml, sanitizeTrendResult } from './defect-trend.js';
-import type { FailureClassification } from './metrics.js';
+import type { FailureClassification } from './types/data-hub.js';
 
 describe('AggregateDefectTrends', () => {
     it('returns empty result for empty array', () => {

@@ -9,7 +9,7 @@
  * - DataHub path (uses real CI data when available)
  */
 import { beforeEach, describe, expect, it, vi } from 'vitest';
-import type { MetricsRun } from '../../metrics.js';
+import type { MetricsRun } from '../../types/data-hub.js';
 import type { DataHub } from '../../types/data-hub.js';
 import type { PipelineRun } from '../../types/ci-cd.js';
 

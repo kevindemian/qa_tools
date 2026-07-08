@@ -132,7 +132,7 @@ describe('Integration: CI Data Hub', () => {
                     },
                 ],
                 failureClassifications: [],
-            } as import('../../metrics.js').MetricsStore;
+            } as import('../../types/data-hub.js').MetricsStore;
             const withCi = calculateHealthScore(store, { dataHub: hub });
             const withoutCi = calculateHealthScore(store);
 

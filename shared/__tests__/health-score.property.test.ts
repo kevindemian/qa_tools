@@ -13,7 +13,7 @@
  */
 import * as fc from 'fast-check';
 import { describe, expect, it } from 'vitest';
-import type { MetricsStore, MetricsRun } from '../metrics.js';
+import type { MetricsStore, MetricsRun } from '../types/data-hub.js';
 import { calculateHealthScore } from '../health-score.js';
 
 /* ──────────────────────────────────────────────────────────────

@@ -10,7 +10,7 @@
 import fc from 'fast-check';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 import { aggregateDefectTrends, generateDefectTrendHtml } from '../defect-trend.js';
-import type { FailureClassification } from '../metrics.js';
+import type { FailureClassification } from '../types/data-hub.js';
 
 vi.mock('../logger.js', () => ({
     rootLogger: { error: vi.fn(), info: vi.fn(), child: vi.fn().mockReturnThis() },

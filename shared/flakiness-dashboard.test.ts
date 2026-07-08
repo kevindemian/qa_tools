@@ -3,7 +3,7 @@
  */
 
 import { filterHighFlakiness, generateFlakinessHtml } from './flakiness-dashboard.js';
-import type { FlakinessEntry } from './metrics.js';
+import type { FlakinessEntry } from './types/data-hub.js';
 
 describe('FilterHighFlakiness', () => {
     it('filters entries above threshold', () => {

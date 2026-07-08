@@ -13,7 +13,7 @@
  * Pure function — no filesystem dependencies.
  */
 import { describe, expect, it } from 'vitest';
-import type { CoverageSnapshot, MetricsRun, MetricsStore } from '../../metrics.js';
+import type { CoverageSnapshot, MetricsRun, MetricsStore } from '../../types/data-hub.js';
 import type { DataHub } from '../../types/data-hub.js';
 
 /** Helper to create a MetricsStore with controllable data. */

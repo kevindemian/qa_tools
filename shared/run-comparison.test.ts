@@ -20,7 +20,7 @@ import { llmPrompt } from './llm-client.js';
 import { compareRuns } from './run-comparison.js';
 import { sanitizeForLlm } from './sanitize.js';
 import { nonNull } from './test-utils.js';
-import type { MetricsRun } from './metrics.js';
+import type { MetricsRun } from './types/data-hub.js';
 
 const mockLlmPrompt = vi.mocked(llmPrompt);
 

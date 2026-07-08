@@ -1,6 +1,6 @@
 import * as fc from 'fast-check';
 import { describe, expect, it, vi, beforeEach } from 'vitest';
-import type { MetricsRun } from '../metrics.js';
+import type { MetricsRun } from '../types/data-hub.js';
 import { nonNull } from '../test-utils.js';
 
 vi.mock('../llm-client.js', () => ({

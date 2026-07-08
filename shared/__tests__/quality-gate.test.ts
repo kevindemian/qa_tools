@@ -6,7 +6,7 @@
  */
 import { describe, it, expect } from 'vitest';
 import { calculateHealthScore } from '../health-score.js';
-import type { MetricsStore } from '../metrics.js';
+import type { MetricsStore } from '../types/data-hub.js';
 
 describe('Quality gate thresholds via health score', () => {
     it('quality gate passes with good metrics', () => {

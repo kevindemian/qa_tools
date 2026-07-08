@@ -1,5 +1,5 @@
 import { beforeEach, describe, expect, it, vi } from 'vitest';
-import type { FailureClassification } from '../../metrics.js';
+import type { FailureClassification } from '../../types/data-hub.js';
 import type { SeasonalityResult } from '../../defect-seasonality.js';
 import * as reportStyles from '../../report-styles.js';
 
