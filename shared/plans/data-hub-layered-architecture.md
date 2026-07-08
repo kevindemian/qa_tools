@@ -1894,10 +1894,10 @@ O linter `vitest/prefer-strict-equal` exige `toStrictEqual` em vez de `toEqual` 
 
 ---
 
-## Auditoria Pré-Phase 22 — Estado Atual (2026-07-07)
+## Auditoria Pré-Phase 22 — Estado Atual (2026-07-08)
 
-**Data da investigação**: 2026-07-07
-**Escopo**: Phases 0, 18, 20, 21 completadas + Gap Closure (C1-C5, H1-H5)
+**Data da investigação**: 2026-07-08
+**Escopo**: Phases 0, 18, 20, 21 completadas + Gap Closure (C1-C6, H1-H6) + Phase 0 Gap Closure (G1-G3, T1-T7)
 **Bloqueadores para Phase 22**: 0 CRITICAL, 0 HIGH (todos fechados)
 
 ### Gaps Anteriores — Status Atual
@@ -1909,12 +1909,34 @@ O linter `vitest/prefer-strict-equal` exige `toStrictEqual` em vez de `toEqual` 
 | C3  | Extractors orfas                        | **FECHADO** | Commit `43f6d0c0` — failure-classifier conectado                            |
 | C4  | Providers implementam só 2 de 7 camadas | **FECHADO** | Commits `43f6d0c0` + `a48cbd24` — check runs, test report, timing           |
 | C5  | `ComputedMetrics` sem campos de teste   | **FECHADO** | Commit `43f6d0c0` — testPassRate, testCounts, framework                     |
+| C6  | `FlakinessEntry` sem campo `project`    | **FECHADO** | Commit `b661d7d7` — campo adicionado em 29 locations + dead code removido   |
 | H1  | Check Runs nunca buscados               | **FECHADO** | Commit `43f6d0c0` — github-provider chama getCheckRuns()                    |
 | H2  | GitLab test report nunca buscado        | **FECHADO** | Commit `43f6d0c0` — gitlab-provider chama getTestReport()                   |
 | H3  | Timing data não usada no compute        | **FECHADO** | Commit `43f6d0c0` — timing passado para calcAvgDuration e calcSuiteSpeedP95 |
 | H4  | framework-detector incompleto           | **FECHADO** | Implementado com cascade completo                                           |
 | H5  | SecurityResult dead code                | **FECHADO** | Removido em commit `43f6d0c0`                                               |
 | H6  | Coverage nunca extraída                 | **FECHADO** | Coverage extractor conectado nos providers                                  |
+
+### Phase 0 Gap Closure — Status Atual (2026-07-08)
+
+| #   | Gap                                                   | Status      | Evidência                                                                                                                                        |
+| --- | ----------------------------------------------------- | ----------- | ------------------------------------------------------------------------------------------------------------------------------------------------ |
+| G1  | `test-count-extractor` embutido no metrics-calculator | **FECHADO** | Commit `b661d7d7` — extraído como módulo independente                                                                                            |
+| G2  | `loadRun(sha)` sem documentação de limitação          | **FECHADO** | Commit `b661d7d7` — JSDoc documentando que loadRun por SHA não é suportado                                                                       |
+| G3  | `maxArtifactsPerRun` hardcoded                        | **FECHADO** | Commit `b661d7d7` — tornado configurável via `FetchOptions`                                                                                      |
+| T1  | 7 módulos sem PBT                                     | **FECHADO** | PBT adicionado: artifact-parser, junit-xml-parser, log-parser, framework-detection, coverage-extractor, failure-classifier, test-source-fallback |
+| T2  | CSV export/import round-trip sem testes               | **FECHADO** | Testes de round-trip + edge cases adicionados                                                                                                    |
+| T3  | `getCheckRuns` sem unit test                          | **FECHADO** | Testes unitários adicionados em `github-check-run.test.ts`                                                                                       |
+| T4  | `glGetTestReport` sem unit test                       | **FECHADO** | Testes unitários adicionados em `gitlab-workflow.test.ts`                                                                                        |
+| T5  | metrics-calculator com cobertura parcial              | **FECHADO** | Expandido de 6 para 13 testes (coverage, timing, framework)                                                                                      |
+| T6  | `accumulateTestFlakiness` dead code                   | **FECHADO** | Removido em commit `b661d7d7`                                                                                                                    |
+
+### Decisões Arquiteturais Tomadas (2026-07-08)
+
+| #   | Decisão                                                      | Justificativa                                                                                                                                             |
+| --- | ------------------------------------------------------------ | --------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| D1  | `expect.any(Type)` é o padrão correto para matching por tipo | API oficial do vitest, sem alternativa. Falso positivo do ESLint é regressão do plugin v1.6.21 (PR #920). Fix no upstream (PR #925), aguardando v1.6.22+. |
+| D2  | Downgrade `@vitest/eslint-plugin` para 1.6.20                | Regressão na v1.6.21 confunde `expect.any()` com flag Chai. Mesma abordagem do projeto `univ-lehavre/atlas`.                                              |
 
 ### Novos Requisitos para Phase 22 (SSOT Centralization)
 
@@ -1999,6 +2021,7 @@ O linter `vitest/prefer-strict-equal` exige `toStrictEqual` em vez de `toEqual` 
 - [x] Phase 20 — Contents API + Framework Detection
 - [x] Phase 21 — Artifact Download + Parse (commit `1764a54f`)
 - [x] Phase 21.12 — Gap Closure (commits `43f6d0c0` + `a48cbd24`)
+- [x] Phase 0 Gap Closure — G1-G3, T1-T7 (commit `b661d7d7`)
 - [ ] Phase 22 — Consumer Migration (SSOT Centralization)
     - [ ] 22.A — Foundation (tipos, persistence, compute)
     - [ ] 22.B — Consumers (24 arquivos)
