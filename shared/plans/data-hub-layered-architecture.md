@@ -2226,13 +2226,24 @@ O linter `vitest/prefer-strict-equal` exige `toStrictEqual` em vez de `toEqual` 
     - [x] 22.J — E2E (1 consumer)
     - [x] 22.K — Test files
     - [x] 22.L — Delete metrics.ts
-    - [ ] 22.M — HIGH rogue calculators + DataHub expansion
-        - [ ] Fase 1 — Expandir DataHub Compute (5 commits)
-        - [ ] Fase 2 — pipeline-health.ts delete + renderer (3 commits)
-        - [ ] Fase 3 — Migrar rogue calculators (5 commits)
-        - [ ] Fase 4 — detectFlakyTests + CiContext (1 commit)
-        - [ ] Fase 5 — RunStats.passRate + statsFromTests (2 commits)
-        - [ ] Fase 6 — metrics-calculator.ts + auditoria (2 commits)
+    - [x] 22.M — HIGH rogue calculators + DataHub expansion (commit `6332199b`)
+        - [x] Fase 1 — Expandir DataHub Compute
+        - [x] Fase 2 — pipeline-health.ts delete + renderer
+        - [x] Fase 3 — Migrar rogue calculators
+        - [x] Fase 4 — detectFlakyTests + CiContext
+        - [x] Fase 5 — RunStats.passRate + statsFromTests
+        - [x] Fase 6 — metrics-calculator.ts + auditoria SSOT
+    - [x] 22.N — MEDIUM rogue calculators + ESLint corrections (commit `6332199b`)
+        - [x] 22.N.1 — quality-gate.ts → DataHub
+        - [x] 22.N.2 — schedule-handler + interactive-mode → DataHub
+        - [x] 22.N.3 — passRate consolidation
+        - [x] 22.N.4 — detectFlakyTests + CiContext elimination
+        - [x] 22.N.5 — cross-squad-benchmark MANTER (inputs são health dimensions)
+        - [x] 22.N.6 — statsFromTests consolidation
+        - [x] 22.N.7 — health-score.ts DataHub-first
+        - [x] 22.N.8 — metrics-calculator.ts deleted
+        - [x] 22.N.9 — pr-report-core.ts calcRunPassRate
+        - [x] 22.N.10 — 26 ESLint errors fixed
 - [ ] Phase 23 — Deprecation + Cleanup
 - [ ] Phase 24 — Contract Updates
 - [ ] Phase 25 — Testing + Quality Gates
