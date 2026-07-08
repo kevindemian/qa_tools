@@ -1326,9 +1326,9 @@ Testes adicionados:
 | 22.A.9  | Consolidar Zod schemas em `schemas.ts`        | `data-hub/schemas.ts`                                       | resolve dual type system                  | ✅     |
 | 22.A.10 | Absorber quality-metrics → DataHub            | `types/data-hub.ts`, `persistence.ts`, `quality-metrics.ts` | SSOT completo para quality engineering    | ✅     |
 
-**22.B — Type-only migrations** (1 commit, 10 consumers)
+**22.B — Type-only migrations** (1 commit, 10 consumers) ✅ COMPLETO
 
-Todas mudanças são import swaps — structural typing garante equivalência.
+Todas mudanças são import swaps — structural typing garante equivalência. Todos os 10 consumers já importam de `types/data-hub.js`.
 
 | Consumer            | Arquivo                         | Tipo Importado                    |
 | ------------------- | ------------------------------- | --------------------------------- |
@@ -1343,7 +1343,7 @@ Todas mudanças são import swaps — structural typing garante equivalência.
 | flakiness-dashboard | `shared/flakiness-dashboard.ts` | FlakinessEntry (type)             |
 | git-metrics-adapter | `shared/git-metrics-adapter.ts` | MetricsRun, FailureClassification |
 
-**22.C — loadMetrics-only** (1 commit, 4 consumers)
+**22.C — loadMetrics-only** (1 commit, 4 consumers) ✅ COMPLETO
 
 | Consumer             | Arquivo                              | Funções usadas |
 | -------------------- | ------------------------------------ | -------------- |
@@ -1352,7 +1352,7 @@ Todas mudanças são import swaps — structural typing garante equivalência.
 | case25               | `jira_management/commands/case25.ts` | loadMetrics    |
 | coverage-gap         | `shared/coverage-gap.ts`             | loadMetrics    |
 
-**22.D — + calculateFlakiness** (1 commit, 3 consumers)
+**22.D — + calculateFlakiness** (1 commit, 3 consumers) ✅ COMPLETO
 
 | Consumer      | Arquivo                              | Funções usadas                  |
 | ------------- | ------------------------------------ | ------------------------------- |
