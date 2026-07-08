@@ -63,11 +63,6 @@ vi.mock('./llm-pipeline', () => ({ offerPipelineFailureAnalysis: vi.fn() }));
 
 vi.mock('./test-results', () => ({ collectTestResults: vi.fn(() => null) }));
 
-vi.mock('../shared/metrics', () => ({
-    loadMetrics: vi.fn(() => ({ runs: [] })),
-    calculateFlakiness: vi.fn(() => []),
-}));
-
 vi.mock('../shared/flakiness-dashboard', () => ({ generateFlakinessHtml: vi.fn(() => '<html>') }));
 
 vi.mock('fs', () => ({
