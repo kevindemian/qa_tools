@@ -28,6 +28,54 @@
 - Fase só é concluída quando checkpoint passa 100%
 - Checkpoints incluem: `npx tsc --noEmit`, `npx vitest run`, `rg` de verificação
 - Nenhum item pode ser marcado como ✅ sem evidência do checkpoint
+- **Progresso NÃO é registrado no plano.** O agente deve verificar cada fase independentemente, sem confiar em marcadores. Marcadores de progresso criam falsa sensação de conclusão e impedem detecção de gaps.
+
+---
+
+## CONTEXTO E RACIONAL
+
+### Por que DataHub é incondicional
+
+DataHub não é uma "opção melhor". É a única arquitetura correta. Antes do DataHub, cada consumidor baixava, parseava e calculava dados por conta própria —resultando em 35 bypasses mapeados em 28 arquivos. O DataHub consolida toda essa lógica em um único lugar. Quando DataHub existe, ele É a fonte de verdade. Sem fallback. Sem "quando possível".
+
+### Por que `dataHub?` é transitório
+
+A assinatura `dataHub?: DataHub` existe porque 6 chamadores ainda não foram migrados:
+
+- `jira_management/main.ts:344`
+- `jira_management/commands/case26.ts:23`
+- `jira_management/commands/case19.ts:70`
+- `shared/cli_base.ts:220`
+- `shared/pr-report-core.ts:487`
+- `shared/quality-gate.ts:196`
+
+Esses chamadores são consumidores silenciosos — o plano os lista na Fase 9.1. Quando todos forem migrados, `dataHub` pode (e deve) se tornar obrigatório. A opção `?` é uma necessidade transitória, não um design.
+
+### Por que a Fase 8 deleta módulos
+
+A Fase 8 deleta `ci-test-downloader`, `coverage-source`, `commit-log` — módulos que fazem download direto de artefatos CI, leitura de arquivos Istanbul, e chamadas diretas à API CI. O DataHub já faz tudo isso via `DataProvider`s. Manter esses módulos cria risco de bypass acidental. Deletar consolida a arquitetura.
+
+### O que acontece se uma fase falhar
+
+Não há rollback automático. Se uma fase falhar:
+
+1. **Parar** — não pular para a próxima fase
+2. **Diagnosticar** — qual checkpoint falhou e por quê
+3. **Corrigir** — causa raiz, não workaround
+4. **Reexecutar** — o checkpoint inteiro, não apenas o item que falhou
+
+Nunca "contornar" um erro para fazer o checkpoint passar. Se o checkpoint falha, há um defeito real.
+
+### Cadeia de dependências
+
+```
+Fase 0 (fundação) → Fase 1 (health-score) → Fase 2 (quality-gate) → Fase 3 (pr-report-core)
+→ Fase 4 (git_triggers) → Fase 5 (error-handling) → Fase 6 (shared restantes)
+→ Fase 7 (auditoria pós-migração) → Fase 8 (deletar fontes alternativas)
+→ Fase 9 (consumidores silenciosos) → Fase 10 (ESLint enforcement)
+```
+
+Cada fase depende da anterior. Não é possível pular fases.
 
 ---
 
@@ -1044,11 +1092,16 @@ npx eslint . --max-warnings=0
 
 #### Tarefa 8.1 — Delete alternative modules
 
-**Preparação:**
+**Preparação (OBRIGATÓRIA — executar ANTES de deletar):**
 
 ```bash
-# Verificar que Fase 7 passou 100%
-grep "CHECKPOINT: Fase 7 complete" shared/plans/data-hub-ssot-enforcement.md
+# Verificar que Fase 7 passou — executar os comandos de verificação da Fase 7 manualmente
+
+# CRÍTICO: Verificar que NENHUM consumidor ainda importa os módulos a deletar
+rg "ci-test-downloader|coverage-source|commit-log" --include="*.ts" \
+  -g '!__tests__' -g '!*.test.ts' -g '!shared/data-hub/**' -g '!docs' -g '!plans'
+# Esperado: 0 resultados
+# Se retornar resultados: PARAR. Migrar consumidores antes de deletar.
 ```
 
 **GREEN:**
@@ -1337,48 +1390,129 @@ rg "test-count-extractor" --include="*.ts"           # Só em plano/docs
 npx vitest run --reporter=verbose                    # 100% pass
 ```
 
-<!-- CHECKPOINT: Fase 0 complete -->
-
 ---
 
 ### Fase 1 — health-score.ts SSOT Enforcement (1-2 dias)
 
 **Objetivo:** Todas as 5 dimensões do health score lêem de `dataHub.computed.*`. DataHub é obrigatório.
 
-#### 1.1 — Migrar dimensões bypassadas
+#### 1.1 — RED: Tests that expose health-score bypasses
 
-| Item  | Bypass          | Linha Atual                                             | Mudança                          |
-| ----- | --------------- | ------------------------------------------------------- | -------------------------------- |
-| 1.1.1 | `coverage`      | 200-208 `_resolveCoverage(config, store)`               | `dataHub.computed.coverage`      |
-| 1.1.2 | `executionRate` | 179 `_computeExpWeighted(runs, n, ...)`                 | `dataHub.computed.executionRate` |
-| 1.1.3 | `flakyRate`     | 177 `calculateFlakyTestRate(runs, ...)` em MetricsStore | `dataHub.computed.flakyTestRate` |
+**Objetivo:** Criar testes que FALHAM expondo os 3 bypasses em health-score.ts.
 
-#### 1.2 — Tornar DataHub obrigatório na assinatura
+**Preparação:**
 
-| Item  | Assinatura Atual                        | Nova Assinatura                                               |
-| ----- | --------------------------------------- | ------------------------------------------------------------- |
-| 1.2.1 | `calculateHealthScore(store, options?)` | `calculateHealthScore(store, options & { dataHub: DataHub })` |
+```bash
+cat shared/health-score.ts | grep -n "store\.\|coverageHistory\|_computeExpWeighted\|calculateFlakyTestRate"
+# Mapear: L177 (flaky), L179-181 (executionRate), L200-208 (coverage)
+```
+
+**RED:**
+
+```bash
+# Criar testes que FALHAM: shared/__tests__/health-score.test.ts
+# 3 testes novos no bloco "DataHub SSOT enforcement":
+# - coverage: store.coverageHistory vs dataHub.computed.coverage
+# - executionRate: _computeExpWeighted vs dataHub.computed.executionRate
+# - flakyPercentage: _computeFlakyRate vs dataHub.computed.flakyPercentage
+# Cada teste deve:
+#   1. Criar hub com valor DIFERENTE da store
+#   2. Chamar calculateHealthScore(store, { dataHub: hub })
+#   3. Asserir que o score reflete o valor do hub, NÃO da store
+```
+
+**Checkpoint:**
+
+```bash
+npx vitest run shared/__tests__/health-score.test.ts -t "DataHub SSOT" --reporter=verbose 2>&1 | grep "FAIL"
+# Esperado: 3 testes FALHAM (expondo os bypasses)
+```
+
+**Commit:** `test(health-score): add failing tests that expose DataHub bypasses (RED phase)`
+
+---
+
+#### 1.2 — GREEN: Migrate health-score.ts to DataHub
+
+**Objetivo:** Fazer os 3 testes RED passarem. DataHub incondicional — sem `hasCiRuns`.
+
+**GREEN:**
+
+- Remover `hasCiRuns` de `computeActualMetrics()` (L171)
+- Substituir `_resolveCoverage(config, store)` por `dataHub !== undefined ? dataHub.computed.coverage : _resolveCoverage(config, store)` (L183)
+- Substituir `_computeExpWeighted(runs, n, ...)` por `dataHub !== undefined ? dataHub.computed.executionRate : _computeExpWeighted(...)` (L179-181)
+- Substituir `calculateFlakyTestRate(runs, config.minRuns)` / `_computeFlakyRate(runs, config)` por `dataHub !== undefined ? dataHub.computed.flakyPercentage ?? 0 : _computeFlakyRate(runs, config)` (L177)
+- Substituir `calcTestDurationP95(runs)` / `_computeSuiteSpeed(runs)` por `dataHub !== undefined ? dataHub.computed.suiteSpeedP95 : _computeSuiteSpeed(runs)` (L185)
+- Atualizar `_resolvePassRate` e `_resolveSuiteSpeed`: remover parâmetro `hasCiRuns`, usar `dataHub !== undefined`
+- Remover imports não utilizados: `calcTestDurationP95`, `calculateFlakyTestRate`
+
+**Checkpoint:**
+
+```bash
+npx tsc --noEmit                                    # 0 erros
+npx vitest run shared/__tests__/health-score.test.ts -t "DataHub SSOT" --reporter=verbose
+# Esperado: 3 testes PASSAM (GREEN)
+rg "hasCiRuns" shared/health-score.ts               # 0 ocorrências
+rg "store\.coverageHistory" shared/health-score.ts   # 0 ocorrências
+```
+
+**Commit:** `refactor(health-score): enforce DataHub as unconditional SSOT — coverage, executionRate, flaky, suiteSpeed`
+
+---
 
 #### 1.3 — Atualizar callers de health-score.ts
 
-| Caller                                    | Arquivo                              | Ação                                 |
-| ----------------------------------------- | ------------------------------------ | ------------------------------------ |
-| `cli_base.ts:220`                         | `shared/cli_base.ts`                 | Criar ou receber DataHub             |
-| `main.ts:344`                             | `jira_management/main.ts`            | Usar `c.dataHub` (adicionado em 0.3) |
-| `case26.ts:23`                            | `jira_management/commands/case26.ts` | Usar `c.dataHub`                     |
-| `case19.ts:70`                            | `jira_management/commands/case19.ts` | Usar `c.dataHub`                     |
-| `quality-gate.ts:196`                     | `shared/quality-gate.ts`             | DataHub obrigatório — ver Fase 2     |
-| `pr-report-core.ts:487`                   | `shared/pr-report-core.ts`           | DataHub obrigatório — ver Fase 3     |
-| `schedule-handler.ts:174,213`             | `git_triggers/schedule-handler.ts`   | DataHub obrigatório — já tem         |
-| `interactive-mode.ts:378,446,496,538,856` | `git_triggers/interactive-mode.ts`   | DataHub obrigatório — já tem         |
+**Por que ANTES de tornar obrigatório:** Se tornarmos `dataHub` obrigatório antes de migrar callers, `tsc --noEmit` quebra imediatamente. A ordem correta é: migrar callers primeiro, depois tornar obrigatório.
 
-#### 1.4 — Testes
+**Caller Map:**
+
+| Caller                                    | Arquivo                              | Passa DataHub? | Ação                                      |
+| ----------------------------------------- | ------------------------------------ | -------------- | ----------------------------------------- |
+| `cli_base.ts:220`                         | `shared/cli_base.ts`                 | NÃO            | Criar DataHub e passar                    |
+| `main.ts:344`                             | `jira_management/main.ts`            | NÃO            | Usar `c.dataHub` (adicionado em Fase 0.3) |
+| `case26.ts:23`                            | `jira_management/commands/case26.ts` | NÃO            | Usar `c.dataHub`                          |
+| `case19.ts:70`                            | `jira_management/commands/case19.ts` | NÃO            | Usar `c.dataHub`                          |
+| `quality-gate.ts:196`                     | `shared/quality-gate.ts`             | Condicional    | Manter condicional por ora — Fase 2 migra |
+| `pr-report-core.ts:487`                   | `shared/pr-report-core.ts`           | Condicional    | Manter condicional por ora — Fase 3 migra |
+| `schedule-handler.ts:174,213`             | `git_triggers/schedule-handler.ts`   | Condicional    | Manter condicional por ora — Fase 4 migra |
+| `interactive-mode.ts:378,446,496,538,856` | `git_triggers/interactive-mode.ts`   | Condicional    | Manter condicional por ora — Fase 4 migra |
+
+**Checkpoint:**
+
+```bash
+npx tsc --noEmit                                    # 0 erros
+# Verificar que os 4 callers NÃO-condicionais agora passam DataHub:
+grep -A2 "calculateHealthScore" shared/cli_base.ts jira_management/main.ts jira_management/commands/case26.ts jira_management/commands/case19.ts
+```
+
+**Commit:** `refactor(callers): migrate 4 non-conditional health-score callers to DataHub`
+
+---
+
+#### 1.4 — Tornar DataHub obrigatório na assinatura
+
+**Dependência:** 1.3 completa (todos os callers NÃO-condicionais migrados).
+
+| Item  | Assinatura Atual                        | Nova Assinatura                                               |
+| ----- | --------------------------------------- | ------------------------------------------------------------- |
+| 1.4.1 | `calculateHealthScore(store, options?)` | `calculateHealthScore(store, options & { dataHub: DataHub })` |
+
+**Checkpoint:**
+
+```bash
+npx tsc --noEmit                                    # 0 erros
+rg "dataHub\?" shared/health-score.ts               # 0 (obrigatório)
+```
+
+---
+
+#### 1.5 — Testes
 
 | Item  | Teste                                                           | Ação                                  |
 | ----- | --------------------------------------------------------------- | ------------------------------------- |
-| 1.4.1 | `shared/__tests__/health-score.test.ts`                         | Atualizar mocks — DataHub obrigatório |
-| 1.4.2 | `shared/__tests__/health-score.property.test.ts`                | Atualizar PBT — DataHub obrigatório   |
-| 1.4.3 | `shared/__tests__/integration/health-score.integration.test.ts` | Atualizar integration test            |
+| 1.5.1 | `shared/__tests__/health-score.test.ts`                         | Atualizar mocks — DataHub obrigatório |
+| 1.5.2 | `shared/__tests__/health-score.property.test.ts`                | Atualizar PBT — DataHub obrigatório   |
+| 1.5.3 | `shared/__tests__/integration/health-score.integration.test.ts` | Atualizar integration test            |
 
 **Checkpoint Fase 1:**
 
@@ -1387,10 +1521,9 @@ npx tsc --noEmit                                    # 0 erros
 npx vitest run shared/health-score.test.ts           # 100% pass
 npx vitest run shared/__tests__/health-score.property.test.ts  # 100% pass
 npx vitest run shared/integration/health-score.integration.test.ts  # 100% pass
-rg "store.coverageHistory\|store\.runs" shared/health-score.ts  # 0 ocorrências
+rg "store.coverageHistory|store\.runs" shared/health-score.ts  # 0 ocorrências
+rg "hasCiRuns" shared/health-score.ts               # 0 ocorrências
 ```
-
-<!-- CHECKPOINT: Fase 1 complete -->
 
 ---
 
@@ -1432,8 +1565,6 @@ npx vitest run shared/quality-gate.test.ts           # 100% pass
 npx vitest run shared/integration/quality-gate.integration.test.ts  # 100% pass
 rg "loadMetricsStore" shared/quality-gate.ts         # 0 ocorrências
 ```
-
-<!-- CHECKPOINT: Fase 2 complete -->
 
 ---
 
@@ -1484,8 +1615,6 @@ rg "readIstanbulCoverage\|parseTestResultsFile\|isQuarantined" shared/pr-report-
 rg "store\.runs" shared/pr-report-core.ts             # 0 ocorrências
 ```
 
-<!-- CHECKPOINT: Fase 3 complete -->
-
 ---
 
 ### Fase 4 — Jira Command Handlers (1-2 dias)
@@ -1527,8 +1656,6 @@ npx vitest run jira_management/commands/case22.test.ts  # 100% pass
 npx vitest run jira_management/commands/case26.test.ts  # 100% pass
 rg "loadMetricsStore" jira_management/commands/       # 0 ocorrências
 ```
-
-<!-- CHECKPOINT: Fase 4 complete -->
 
 ---
 
@@ -1597,8 +1724,6 @@ rg "loadMetricsStore" git_triggers/                   # 0 ocorrências
 rg "store\.runs" git_triggers/                        # 0 ocorrências
 ```
 
-<!-- CHECKPOINT: Fase 5 complete -->
-
 ---
 
 ### Fase 6 — Shared Consumers Restantes (1 dia)
@@ -1624,8 +1749,6 @@ npx vitest run shared/traceability-matrix.test.ts    # 100% pass
 npx vitest run e2e/smoke-pipeline.test.ts            # 100% pass
 rg "loadMetricsStore" shared/                         # Só em data-hub/persistence.ts
 ```
-
-<!-- CHECKPOINT: Fase 6 complete -->
 
 ---
 
@@ -1683,8 +1806,6 @@ npx eslint . --max-warnings=0                        # 0 violações
 
 **Checkpoint Fase 7:**
 TODOS os comandos acima retornam zero resultados + `npx tsc --noEmit` = 0 erros.
-
-<!-- CHECKPOINT: Fase 7 complete -->
 
 ---
 
@@ -1746,8 +1867,6 @@ npx eslint . --max-warnings=0                        # 0 violações
 rg "ci-test-downloader\|coverage-source\|commit-log" --include="*.ts" -g '!docs' -g '!plans'  # Só em docs/plans
 ```
 
-<!-- CHECKPOINT: Fase 8 complete -->
-
 ---
 
 ### Fase 9 — Pegar Consumidores Silenciosos (1-2 dias)
@@ -1776,8 +1895,6 @@ Para cada erro de compilação ou teste falhando:
 npx tsc --noEmit                                    # 0 erros
 npx vitest run --reporter=verbose                    # 100% pass
 ```
-
-<!-- CHECKPOINT: Fase 9 complete -->
 
 ---
 
@@ -1836,8 +1953,6 @@ echo "6. Nenhum store.runs fora do data-hub:" && \
 ✅ zero type assertions em produção
 ✅ zero @ts-ignore/@ts-expect-error em produção
 ```
-
-<!-- CHECKPOINT: Fase 10 complete -->
 
 ---
 
