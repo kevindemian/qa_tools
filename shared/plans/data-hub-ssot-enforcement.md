@@ -76,6 +76,30 @@ Se uma função existe no plano de arquitetura, ela existe por uma razão: consu
 
 ---
 
+## LIÇÕES APRENDIDAS
+
+### Fase 0.5 — loadFromStore
+
+1. **Mapeamento direto > conversão** — Round-trips (MetricsRun → PipelineRun → MetricsRun) perdem dados. Mapeamento direto preserva timestamps, campos e metadados originais.
+2. **Contratos de tipo são imutáveis** — `PipelineRun` não tem `duration` nem `tests`. Não inventar campos que não existem no tipo.
+3. **Documentar decisões arquiteturais** — O porquê de uma decisão é tão importante quanto a decisão em si.
+
+### Fase 0.6 — Persistência SSOT
+
+1. **ESLint hooks são rigorosos** — Três rodadas de correção antes do commit:
+    - `@typescript-eslint/unbound-method` — não passar `mock.method` diretamente
+    - `vitest/prefer-strict-equal` — `toStrictEqual` obrigatório
+    - `vitest/valid-title` — describe blocks com maiúscula
+    - **Padrão aceito:** `satisfies MockPersistence` + `as DataHubPersistence`
+
+2. **Behavior testing > Property testing** — Testar `hub.saveRun()` delega corretamente é melhor que testar `hub.persistence === mockPersistence`. Não depende de implementação interna.
+
+3. **Erros silenciosos são ALWAYS violations** — Cada método lança erro explícito quando persistence não está configurado. Zero no-ops. Consistente com regra de que erros silenciosos são defeitos de segurança.
+
+4. **Documentar o "POR QUE" evita retrocesso** — Seção CONTEXTO FUNDAMENTAL previne que futuros agentes tentem reverter decisões arquiteturais com argumentos de conveniência.
+
+---
+
 ## CONTEXTO E RACIONAL
 
 ### Por que DataHub é incondicional
