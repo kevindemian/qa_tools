@@ -372,7 +372,7 @@ Cada migração: RED test → GREEN implement → commit → validar → próxim
 │ 0.4 log-parser.ts             (2h) — Test summary from job logs         │
 │ 0.5 extractors/               (5h) — coverage + test-count + failure    │
 │ 0.6 metrics/                  (4h) — calculator + json-exporter + json-importer + csv-export │
-│ 0.7 Fix `as any` (3) + `@ts-ignore` (3) em shared/data-hub/             │
+│ 0.7 Fix type assertions (3) + @ts-ignore (3) em shared/data-hub/             │
 │ 0.8 Research `gary-quinn/actions-usage` integração (0.5h)               │
 ├──────────────────────────────────────────────────────────────────────────┤
 │ COMMIT: feat(data-hub): add cross-cutting modules (fallback, parsers,   │
@@ -480,7 +480,7 @@ Cada migração: RED test → GREEN implement → commit → validar → próxim
 │ FASE 26: AUDITORIA FINAL DE QUALIDADE (4h)                              │
 │                                                                          │
 │ 26.1 Migração completa — nenhum consumidor lê dados locais               │
-│ 26.2 Type Safety — 0 `as any`, 0 `@ts-ignore`, 0 `eslint-disable`       │
+│ 26.2 Type Safety — 0 type assertions, 0 @ts-ignore, 0 eslint-disable       │
 │ 26.3 Cobertura — ≥ 100%, PBT presente                                   │
 │ 26.4 Performance — Contents API < 2s, artifact download < 5s             │
 │ 26.5 Relatório em audit/functional/AUDIT-REPORT-REFACTORING.md           │
@@ -680,7 +680,7 @@ O `metrics-calculator.ts` pode opcionalmente delegar aggregation para `npx actio
 
 Corrigir antes de adicionar código novo:
 
-- 3 `as any` em `shared/data-hub/`
+- 3 type assertions em `shared/data-hub/`
 - 3 `@ts-ignore` / `@ts-expect-error` em `shared/data-hub/`
 
 #### 0.8 — Research `gary-quinn/actions-usage` Integration
@@ -973,7 +973,9 @@ const FRAMEWORK_SIGNATURES: Record<
         configFiles: string[];
         cliPatterns: string[];
     }
-> = {/* vitest, jest, playwright, cypress, mocha, pytest */};
+> = {
+    /* vitest, jest, playwright, cypress, mocha, pytest */
+};
 
 export async function detectFrameworkFromAPI(
     gitProvider: GitProvider,
@@ -1757,7 +1759,7 @@ npx vitest run --reporter=verbose          # 100% pass
 npx vitest run --coverage                 # ≥ 100%
 npx eslint . --max-warnings=0             # 0 violações
 npx tsc --noEmit                          # 0 erros
-rg "as any" --include="*.ts"              # 0 ocorrências
+rg --pcre2 "as\s+any" --include="*.ts"              # 0 ocorrências
 rg "@ts-ignore|@ts-expect-error" --include="*.ts"  # 0 ocorrências
 ```
 
@@ -1778,12 +1780,12 @@ rg "@ts-ignore|@ts-expect-error" --include="*.ts"  # 0 ocorrências
 
 #### 26.2 — Verificar Type Safety
 
-| #   | Verificação           | Comando            | Esperado      |
-| --- | --------------------- | ------------------ | ------------- |
-| 1   | `npx tsc --noEmit`    | TypeScript         | 0 erros       |
-| 2   | `rg "as any"`         | Type safety        | 0 ocorrências |
-| 3   | `rg "!\."`            | Non-null assertion | 0 ocorrências |
-| 4   | `rg "eslint-disable"` | Lint bypass        | 0 ocorrências |
+| #   | Verificação             | Comando            | Esperado      |
+| --- | ----------------------- | ------------------ | ------------- |
+| 1   | `npx tsc --noEmit`      | TypeScript         | 0 erros       |
+| 2   | `rg --pcre2 "as\s+any"` | Type safety        | 0 ocorrências |
+| 3   | `rg "!\."`              | Non-null assertion | 0 ocorrências |
+| 4   | `rg "eslint-disable"`   | Lint bypass        | 0 ocorrências |
 
 #### 26.3 — Verificar Cobertura
 
@@ -2247,3 +2249,105 @@ O linter `vitest/prefer-strict-equal` exige `toStrictEqual` em vez de `toEqual` 
 - [ ] Phase 25 — Testing + Quality Gates
 - [ ] Phase 26 — Auditoria Final de Qualidade
 - [ ] Phase 27 — TECHDOC.md Update
+
+---
+
+## Consolidated Correction Execution Plan (2026-07-09)
+
+Base: codebase audit findings (100% codebase-driven, not doc-dependent)
+Principle: zero silent errors. SSOT for all calculations. No best-effort.
+
+| Phase     | Description                          | Est.    |
+| --------- | ------------------------------------ | ------- |
+| A         | TrendPoint resolution                | 1h      |
+| B         | Error handling — zero silent catches | 2h      |
+| C         | passRate SSOT consolidation          | 1h      |
+| D         | session-context → ci-test-downloader | 2h      |
+| E         | coverage-source migration            | 2h      |
+| F         | commitLog in DataHub + case17        | 3h      |
+| G         | Delete legacy modules                | 1h      |
+| H         | Verification + Commit + Push + CI    | 1h      |
+| **Total** |                                      | **13h** |
+
+### Fase A — TrendPoint Resolution
+
+| #   | Task                                                 | Status     |
+| --- | ---------------------------------------------------- | ---------- |
+| A.1 | Rename `primitives/chart.ts` TrendPoint → ChartPoint | ✅ Done    |
+| A.2 | Update `primitives/index.ts` re-export               | ✅ Done    |
+| A.3 | Verify zero duplicate interfaces                     | 🔜 Pending |
+
+### Fase B — Error Handling (zero silent catch blocks)
+
+| #    | File                       | Line | Status     |
+| ---- | -------------------------- | ---- | ---------- |
+| B.1  | artifact-parser.ts         | 30   | 🔜 Pending |
+| B.2  | artifact-parser.ts         | 43   | 🔜 Pending |
+| B.3  | json-exporter.ts           | 20   | 🔜 Pending |
+| B.4  | github-provider.ts         | 170  | 🔜 Pending |
+| B.5  | github-provider.ts         | 230  | 🔜 Pending |
+| B.6  | gitlab-provider.ts         | 170  | 🔜 Pending |
+| B.7  | gitlab-provider.ts         | 200  | 🔜 Pending |
+| B.8  | junit-xml-parser.ts        | 170  | 🔜 Pending |
+| B.9  | github-check-run.ts        | 78   | 🔜 Pending |
+| B.10 | prompt-input-editor.ts     | 16   | 🔜 Pending |
+| B.11 | Verify zero silent catches | —    | 🔜 Pending |
+
+### Fase C — passRate SSOT Consolidation
+
+| #   | File                        | Line | Status     |
+| --- | --------------------------- | ---- | ---------- |
+| C.1 | metrics-trends.ts           | 17   | 🔜 Pending |
+| C.2 | report-html.ts              | 98   | 🔜 Pending |
+| C.3 | health-score.ts             | 174  | 🔜 Pending |
+| C.4 | Verify zero inline passRate | —    | 🔜 Pending |
+
+### Fase D — session-context Migration
+
+| #   | Task                              | Status     |
+| --- | --------------------------------- | ---------- |
+| D.1 | Create `ci-test-downloader.ts`    | 🔜 Pending |
+| D.2 | Migrate session-context.ts import | 🔜 Pending |
+| D.3 | Tests for ci-test-downloader.ts   | 🔜 Pending |
+
+### Fase E — coverage-source Migration
+
+| #   | Task                                                   | Status     |
+| --- | ------------------------------------------------------ | ---------- |
+| E.1 | Create resolveCoverageForReport() in pr-report-core.ts | 🔜 Pending |
+| E.2 | Replace resolveCoverage() call                         | 🔜 Pending |
+| E.3 | Update 5 pr-report-core mocks                          | 🔜 Pending |
+
+### Fase F — commitLog no DataHub
+
+| #   | Task                                   | Status     |
+| --- | -------------------------------------- | ---------- |
+| F.1 | Add commitLog?: string to RawData      | 🔜 Pending |
+| F.2 | Add fetchCommitLog?() to DataProvider  | 🔜 Pending |
+| F.3 | Implement in GitHubDataProvider        | 🔜 Pending |
+| F.4 | Implement in GitLabDataProvider        | 🔜 Pending |
+| F.5 | Merge commitLog in hub.ts              | 🔜 Pending |
+| F.6 | Migrate case17.ts to hub.raw.commitLog | 🔜 Pending |
+| F.7 | Migrate case17-helpers.ts              | 🔜 Pending |
+| F.8 | Update case17 tests                    | 🔜 Pending |
+
+### Fase G — Delete Legacy Modules
+
+| #   | Task                                              | Status     |
+| --- | ------------------------------------------------- | ---------- |
+| G.1 | Delete git-artifact-downloader.ts + mocks + tests | 🔜 Pending |
+| G.2 | Delete case17-test-utils.ts                       | 🔜 Pending |
+| G.3 | Verify zero legacy imports                        | 🔜 Pending |
+
+### Fase H — Final Verification
+
+| #   | Check                                             | Status     |
+| --- | ------------------------------------------------- | ---------- |
+| H.1 | npx tsc --noEmit = 0                              | 🔜 Pending |
+| H.2 | npx eslint . --max-warnings=0 = 0                 | 🔜 Pending |
+| H.3 | npx vitest run = 100% pass                        | 🔜 Pending |
+| H.4 | rg --pcre2 "as\s+any" = 0                         | 🔜 Pending |
+| H.5 | rg "@ts-ignore\|@ts-expect-error" = 0             | 🔜 Pending |
+| H.6 | rg "git-artifact-downloader\|coverage-source" = 0 | 🔜 Pending |
+| H.7 | rg "\.passed._\/._\+.\*\.failed" non-test = 0     | 🔜 Pending |
+| H.8 | git commit + push + monitor CI                    | 🔜 Pending |
