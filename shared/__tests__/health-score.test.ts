@@ -180,6 +180,10 @@ describe('CalculateHealthScore — DataHub SSOT enforcement', () => {
             timestamp: new Date(),
             provider: 'github',
             repo: 'test/repo',
+            saveRun: vi.fn(),
+            saveCoverageSnapshot: vi.fn(),
+            saveFailureClassification: vi.fn(),
+            flush: vi.fn(),
         };
     }
 
