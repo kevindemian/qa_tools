@@ -832,7 +832,8 @@ describe('WfGetFileContents', () => {
     it('returns file content from Contents API', async () => {
         expect.hasAssertions();
 
-        client.get.mockResolvedValue({ data: 'file content here' });
+        const mockGet = vi.fn().mockResolvedValue({ data: 'file content here' });
+        client.get = mockGet;
 
         const result = await wfGetFileContents(
             client,
@@ -842,7 +843,7 @@ describe('WfGetFileContents', () => {
             'main',
         );
 
-        expect(client.get).toHaveBeenCalledWith(
+        expect(mockGet).toHaveBeenCalledWith(
             '/repos/' + CONTEXT_IDS.ORGANIZATION + '/' + CONTEXT_IDS.REPOSITORY + '/contents/package.json?ref=main',
             {
                 headers: { Accept: 'application/vnd.github.v3.raw' },
