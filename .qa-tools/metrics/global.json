@@ -1,43 +1,6 @@
 {
   "runs": [
     {
-      "timestamp": "2026-07-08T21:34:54.970Z",
-      "project": "test-proj",
-      "total": 1,
-      "passed": 1,
-      "failed": 0,
-      "skipped": 0,
-      "duration": 100,
-      "tests": [
-        {
-          "title": "should work",
-          "state": "passed",
-          "duration": 100
-        }
-      ]
-    },
-    {
-      "timestamp": "2026-07-08T21:36:29.845Z",
-      "project": "qa_tools",
-      "total": 2,
-      "passed": 2,
-      "failed": 0,
-      "skipped": 0,
-      "duration": 1000,
-      "tests": [
-        {
-          "title": "test A",
-          "state": "passed",
-          "duration": 100
-        },
-        {
-          "title": "test B",
-          "state": "passed",
-          "duration": 200
-        }
-      ]
-    },
-    {
       "timestamp": "2026-07-08T21:36:37.041Z",
       "project": "test-proj",
       "total": 1,
@@ -906,6 +869,43 @@
     },
     {
       "timestamp": "2026-07-09T13:03:18.729Z",
+      "project": "test-proj",
+      "total": 1,
+      "passed": 1,
+      "failed": 0,
+      "skipped": 0,
+      "duration": 100,
+      "tests": [
+        {
+          "title": "should work",
+          "state": "passed",
+          "duration": 100
+        }
+      ]
+    },
+    {
+      "timestamp": "2026-07-09T13:25:57.420Z",
+      "project": "qa_tools",
+      "total": 2,
+      "passed": 2,
+      "failed": 0,
+      "skipped": 0,
+      "duration": 1000,
+      "tests": [
+        {
+          "title": "test A",
+          "state": "passed",
+          "duration": 100
+        },
+        {
+          "title": "test B",
+          "state": "passed",
+          "duration": 200
+        }
+      ]
+    },
+    {
+      "timestamp": "2026-07-09T13:26:02.175Z",
       "project": "test-proj",
       "total": 1,
       "passed": 1,
