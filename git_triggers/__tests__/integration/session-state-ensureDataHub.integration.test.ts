@@ -7,11 +7,14 @@
  * - Missing manager returns undefined
  * - Missing project name returns undefined
  * - Error handling returns hub with empty data (resilient design)
+ * - Global-hub delegation: setDataHub/ensureDataHub affect global-hub
  */
 import { describe, it, expect, vi, beforeEach } from 'vitest';
+import type { DataHub } from '../../../shared/types/data-hub.js';
 import type { GitProvider } from '../../../shared/types/ci-cd.js';
 import { DataHubImpl } from '../../../shared/data-hub/hub.js';
 import { clearCache } from '../../../shared/data-hub/cache.js';
+import { getDataHub as getGlobalHub } from '../../../shared/data-hub/global-hub.js';
 import {
     ensureDataHub,
     setDataHub,
@@ -19,6 +22,50 @@ import {
     setManager,
     setCurrentProjectName,
 } from '../../../git_triggers/session-state.js';
+
+/* ── Mock DataHub ─────────────────────────────────────────────────────── */
+
+function makeMockHub(): DataHub {
+    return {
+        raw: { runs: [], jobs: new Map(), artifacts: new Map(), failureReasons: new Map() },
+        computed: {
+            passRate: 50,
+            avgDuration: 1000,
+            suiteSpeedP95: 500,
+            flakyRate: [],
+            coverage: 80,
+            pipelineCost: { totalMinutes: 0, estimatedCost: 0 },
+            defectTrends: [],
+            branchBreakdown: {},
+            topFailingJobs: [],
+            topFailureReasons: [],
+            releaseScore: {
+                score: 0,
+                dimensions: {
+                    passRate: { score: 0, status: 'fail' },
+                    flakyRate: { score: 0, status: 'fail' },
+                    coverage: { score: 0, status: 'fail' },
+                    executionRate: { score: 0, status: 'fail' },
+                    suiteSpeed: { score: 0, status: 'fail' },
+                },
+                grade: 'F',
+            },
+            quarantineStatus: { flakyCount: 0, quarantinedCount: 0 },
+            testPassRate: 50,
+            testCounts: { passed: 50, failed: 50, skipped: 0, total: 100 },
+            framework: 'vitest',
+            executionRate: 77,
+            flakyPercentage: 12,
+        },
+        timestamp: new Date(),
+        provider: 'github',
+        repo: 'test/repo',
+        saveRun: vi.fn(),
+        saveCoverageSnapshot: vi.fn(),
+        saveFailureClassification: vi.fn(),
+        flush: vi.fn(),
+    };
+}
 
 /* ── Mock GitProvider ──────────────────────────────────────────────────── */
 
@@ -121,5 +168,50 @@ describe('Integration: ensureDataHub', () => {
         // Provider errors are caught by Promise.allSettled — hub created with empty data
         expect(result).toBeDefined();
         expect(result?.raw.runs).toStrictEqual([]);
+    });
+});
+
+/* ── Global-hub delegation tests (0.7.9 RED) ─────────────────────────── */
+
+describe('Global-hub delegation', () => {
+    beforeEach(() => {
+        _resetForTest();
+        clearCache();
+        vi.clearAllMocks();
+    });
+
+    it('setDataHub in session-state affects global-hub', () => {
+        expect.hasAssertions();
+
+        const hub = makeMockHub();
+        setDataHub(hub);
+
+        expect(getGlobalHub()).toBe(hub);
+    });
+
+    it('ensureDataHub delegates to global-hub', async () => {
+        expect.hasAssertions();
+
+        setManager(createMockGitProvider());
+        setCurrentProjectName('test-project');
+
+        const result = await ensureDataHub();
+
+        expect(result).toBeDefined();
+        expect(getGlobalHub()).toBe(result);
+    });
+
+    it('global-hub and session-state share same state', async () => {
+        expect.hasAssertions();
+
+        const hub = makeMockHub();
+        setDataHub(hub);
+
+        expect(getGlobalHub()).toBe(hub);
+
+        // Reading back from session-state should return the same hub
+        const { getDataHub } = await import('../../../git_triggers/session-state.js');
+
+        expect(getDataHub()).toBe(hub);
     });
 });
