@@ -7,7 +7,7 @@
  * - `detectFrameworkFromAPI()` — uses GitProvider to read package.json via Contents API
  */
 import type { GitProvider, FrameworkDetectionResult } from './types/ci-cd.js';
-import { humanizeError } from './prompt-errors.js';
+import { extractErrorMessage, humanizeError } from './prompt-errors.js';
 import { rootLogger } from './logger.js';
 
 const MANIFEST_PATTERN =
@@ -77,8 +77,8 @@ export async function detectFrameworkFromAPI(gitProvider: GitProvider, ref: stri
         let pkg: { [key: string]: unknown };
         try {
             pkg = JSON.parse(content) as { [key: string]: unknown };
-        } catch {
-            rootLogger.debug('Framework detection: invalid package.json');
+        } catch (err) {
+            rootLogger.debug(`Framework detection: invalid package.json — ${extractErrorMessage(err)}`);
             return { framework: 'unknown', confidence: 0 };
         }
 

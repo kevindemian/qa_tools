@@ -52,13 +52,13 @@ ${label}`;
     </svg>`;
 }
 
-export interface TrendPoint {
+export interface ChartPoint {
     passRate: number;
     label?: string;
 }
 
 export interface TrendChartProps {
-    points: TrendPoint[];
+    points: ChartPoint[];
     width?: number;
     height?: number;
     refLine?: number;

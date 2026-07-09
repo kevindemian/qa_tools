@@ -284,6 +284,10 @@ export class DataHubImpl implements DataHub {
         if (source.gitlabTestReport != null && target.gitlabTestReport == null) {
             target.gitlabTestReport = source.gitlabTestReport;
         }
+        if (source.commitLog && !target.commitLog) target.commitLog = source.commitLog;
+        if (source.ciRuns && source.ciRuns.length > 0 && (!target.ciRuns || target.ciRuns.length === 0)) {
+            target.ciRuns = source.ciRuns;
+        }
     }
 
     private static mergeMaps(target: RawData, source: RawData): void {

@@ -11,7 +11,7 @@ vi.mock('./store-backend.js', () => ({
     detectProjectGitDir: vi.fn(),
 }));
 
-vi.mock('./git-artifact-downloader.js', () => ({
+vi.mock('./ci-test-downloader.js', () => ({
     fetchLatestTestRun: vi.fn(),
 }));
 
@@ -25,7 +25,7 @@ vi.mock('./store.js', async () => {
 
 import { getHeadSha, getCurrentBranch } from './git-sha.js';
 import { detectStoreBackend, detectProjectGitDir } from './store-backend.js';
-import { fetchLatestTestRun } from './git-artifact-downloader.js';
+import { fetchLatestTestRun } from './ci-test-downloader.js';
 
 function createMockStore() {
     return {

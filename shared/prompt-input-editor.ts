@@ -3,6 +3,8 @@
 import * as readline from 'readline';
 import { NAV_CMDS, isTTY, type PromptOptions } from './prompt-input-base.js';
 import { CancelError } from './prompt-ui.js';
+import { rootLogger } from './logger.js';
+import { extractErrorMessage } from './prompt-errors.js';
 
 let _editorMod: unknown = null;
 
@@ -16,7 +18,8 @@ async function _loadEditor(): Promise<unknown> {
     try {
         _editorMod = await import('@inquirer/editor');
         return _editorMod;
-    } catch {
+    } catch (err) {
+        rootLogger.debug(`editor import: ${extractErrorMessage(err)}`);
         _editorMod = false;
         return false;
     }

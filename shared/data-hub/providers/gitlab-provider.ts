@@ -5,13 +5,15 @@
  * Fetches raw CI/CD data from GitLab CI API.
  */
 import type { GitProvider, PipelineJob, ArtifactInfo, GitLabTestReport, PipelineRun } from '../../types/ci-cd.js';
-import type { DataProvider, FetchOptions, RawData, RawCoverage } from '../../types/data-hub.js';
+import type { DataProvider, FetchOptions, RawData, RawCoverage, CiRunStats } from '../../types/data-hub.js';
 import type { ArtifactParseResult } from '../artifact-parser.js';
 import { rootLogger } from '../../logger.js';
+import { extractErrorMessage } from '../../prompt-errors.js';
 import { extractCoverage } from '../extractors/coverage-extractor.js';
 import { isTestArtifact, parseArtifactBufferAll } from '../artifact-parser.js';
 import { detectFrameworkCascade } from '../extractors/framework-detector.js';
 import { classifyFailures, type FailureInput } from '../extractors/failure-classifier.js';
+import { buildCommitLog } from '../../commit-log.js';
 
 const DEFAULT_MAX_ARTIFACTS_PER_RUN = 5;
 
@@ -45,13 +47,12 @@ export class GitLabDataProvider implements DataProvider {
                 maxArtifacts,
             );
             if (gitlabTestReport == null && report != null) gitlabTestReport = report;
-            if (coverage == null) {
-                const runJobs = jobsMap.get(runIdNum);
-                if (runJobs) coverage = await this.extractCoverageFromJobs(runJobs);
-            }
+            coverage = await this.extractCoverageIfNeeded(coverage, jobsMap, runIdNum);
         }
 
         const framework = await this.detectFrameworkFromFirstRun(runs);
+        const commitLog = buildCommitLog(runs);
+        const ciRuns = this.deriveCiRuns(runs, parsedArtifactsMap);
 
         return {
             runs,
@@ -62,7 +63,20 @@ export class GitLabDataProvider implements DataProvider {
             ...(coverage != null ? { coverage } : {}),
             ...(framework != null ? { framework } : {}),
             ...(gitlabTestReport != null ? { gitlabTestReport } : {}),
+            ...(commitLog ? { commitLog } : {}),
+            ...(ciRuns.length > 0 ? { ciRuns } : {}),
         };
+    }
+
+    private async extractCoverageIfNeeded(
+        coverage: RawCoverage | undefined,
+        jobsMap: Map<number, PipelineJob[]>,
+        runIdNum: number,
+    ): Promise<RawCoverage | undefined> {
+        if (coverage != null) return coverage;
+        const runJobs = jobsMap.get(runIdNum);
+        if (!runJobs) return coverage;
+        return this.extractCoverageFromJobs(runJobs);
     }
 
     private parseRunId(id: string | number | undefined): number | undefined {
@@ -172,8 +186,8 @@ export class GitLabDataProvider implements DataProvider {
 
                 const coverage = extractCoverage({ logText });
                 if (coverage != null) return coverage;
-            } catch {
-                // Ignore — coverage extraction is best-effort
+            } catch (err) {
+                rootLogger.debug(`coverage extraction: ${extractErrorMessage(err)}`);
             }
         }
         return undefined;
@@ -204,8 +218,8 @@ export class GitLabDataProvider implements DataProvider {
             try {
                 const logs = await this.provider.getJobLogs(job.id);
                 if (logs) return logs;
-            } catch {
-                // Ignore — log fetch is best-effort
+            } catch (err) {
+                rootLogger.debug(`log fetch: ${extractErrorMessage(err)}`);
             }
         }
         return undefined;
@@ -226,5 +240,34 @@ export class GitLabDataProvider implements DataProvider {
                 break;
             }
         }
+    }
+
+    private deriveCiRuns(runs: PipelineRun[], parsedArtifacts: Map<number, ArtifactParseResult[]>): CiRunStats[] {
+        const ciRuns: CiRunStats[] = [];
+        for (const run of runs) {
+            const runIdNum = this.parseRunId(run.id);
+            if (runIdNum == null) continue;
+            const artifacts = parsedArtifacts.get(runIdNum);
+            if (!artifacts || artifacts.length === 0) continue;
+            let passed = 0;
+            let failed = 0;
+            let skipped = 0;
+            let total = 0;
+            for (const artifact of artifacts) {
+                passed += artifact.data.stats.passed;
+                failed += artifact.data.stats.failed;
+                skipped += artifact.data.stats.skipped;
+                total += artifact.data.stats.total;
+            }
+            ciRuns.push({
+                runId: runIdNum,
+                createdAt: run.created_at ?? '',
+                passed,
+                failed,
+                skipped,
+                total,
+            });
+        }
+        return ciRuns;
     }
 }

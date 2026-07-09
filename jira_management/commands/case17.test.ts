@@ -44,17 +44,29 @@ vi.mock('../../shared/git-sha', () => ({
 }));
 
 vi.mock('../../shared/store-backend', () => ({
-    detectStoreBackend: vi.fn(),
+    detectStoreBackend: vi.fn().mockReturnValue({
+        init: vi.fn(),
+        read: vi.fn().mockReturnValue(null),
+        write: vi.fn(),
+    }),
     detectProjectGitDir: vi.fn().mockReturnValue(null),
 }));
 
-vi.mock('../../shared/git-artifact-downloader', () => ({
-    fetchGitHistory: vi.fn().mockResolvedValue({
-        runs: [],
-        commits: '',
-        flakyEntries: [],
+vi.mock('../../shared/commit-log', () => ({
+    fetchCommitLog: vi.fn().mockResolvedValue(''),
+}));
+
+vi.mock('../../shared/session-context', () => ({
+    resolveTestDataSource: vi.fn().mockResolvedValue(null),
+    resolveSessionContext: vi.fn().mockReturnValue({
+        sha: null,
+        branch: null,
+        store: {
+            loadReport: vi.fn().mockReturnValue(null),
+            loadMetrics: vi.fn(() => loadMetricsValue),
+            saveMetrics: vi.fn(),
+        },
     }),
-    fetchLatestTestRun: vi.fn().mockResolvedValue(null),
 }));
 
 let loadMetricsValue: unknown = null;
@@ -103,10 +115,10 @@ import * as reportGenModule from '../../shared/report-generator.js';
 import * as analysisModule from '../../shared/failure-analysis.js';
 import * as publishModule from '../../shared/publish.js';
 import * as openModule from '../../shared/open.js';
-import * as gitArtifactDownloaderModule from '../../shared/git-artifact-downloader.js';
 import fs from 'fs';
 import case17Module from './case17.js';
 import { createMockContext } from '../../shared/test-utils/factories/context-factory.js';
+import { resolveTestDataSource } from '../../shared/session-context.js';
 
 const baseContext = createMockContext();
 
@@ -160,14 +172,16 @@ describe('Case17', () => {
 
             const prompt = vi.mocked(promptModule);
             const reportGen = vi.mocked(reportGenModule);
-            const gitDownloader = vi.mocked(gitArtifactDownloaderModule);
 
-            gitDownloader.fetchLatestTestRun.mockResolvedValueOnce({
-                tests: [
-                    { title: 'Test A', state: 'passed', duration: 100, fullTitle: 'Test A' },
-                    { title: 'Test B', state: 'failed', duration: 50, fullTitle: 'Test B', error: 'fail' },
-                ],
-                stats: { passed: 1, failed: 1, skipped: 0, total: 2, duration: 150 },
+            vi.mocked(resolveTestDataSource).mockResolvedValueOnce({
+                result: {
+                    tests: [
+                        { title: 'Test A', state: 'passed', duration: 100, fullTitle: 'Test A' },
+                        { title: 'Test B', state: 'failed', duration: 50, fullTitle: 'Test B', error: 'fail' },
+                    ],
+                    stats: { passed: 1, failed: 1, skipped: 0, total: 2, duration: 150 },
+                },
+                source: 'cache',
             });
 
             prompt.ask.mockResolvedValueOnce('');
@@ -192,16 +206,18 @@ describe('Case17', () => {
 
             const prompt = vi.mocked(promptModule);
             const reportGen = vi.mocked(reportGenModule);
-            const gitDownloader = vi.mocked(gitArtifactDownloaderModule);
 
             process.env['QA_AUTO_BUG'] = 'true';
 
-            gitDownloader.fetchLatestTestRun.mockResolvedValueOnce({
-                tests: [
-                    { title: 'Pass', state: 'passed', duration: 100, fullTitle: 'Pass' },
-                    { title: 'Fail', state: 'failed', duration: 50, fullTitle: 'Fail', error: 'Timeout' },
-                ],
-                stats: { passed: 1, failed: 1, skipped: 0, total: 2, duration: 150 },
+            vi.mocked(resolveTestDataSource).mockResolvedValueOnce({
+                result: {
+                    tests: [
+                        { title: 'Pass', state: 'passed', duration: 100, fullTitle: 'Pass' },
+                        { title: 'Fail', state: 'failed', duration: 50, fullTitle: 'Fail', error: 'Timeout' },
+                    ],
+                    stats: { passed: 1, failed: 1, skipped: 0, total: 2, duration: 150 },
+                },
+                source: 'cache',
             });
 
             prompt.ask.mockResolvedValueOnce('');

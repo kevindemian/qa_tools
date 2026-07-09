@@ -1,3 +1,5 @@
+import { rootLogger } from '../../logger.js';
+import { extractErrorMessage } from '../../prompt-errors.js';
 import type { ComputedMetrics } from '../../types/data-hub.js';
 
 const REQUIRED_TOP_KEYS = ['passRate', 'avgDuration', 'coverage', 'pipelineCost', 'releaseScore'] as const;
@@ -20,7 +22,8 @@ export function importMetricsJson(json: string): ComputedMetrics | null {
         const parsed: unknown = JSON.parse(json);
         if (!validateMetricsShape(parsed)) return null;
         return parsed;
-    } catch {
+    } catch (err) {
+        rootLogger.debug(`importMetricsJson: ${extractErrorMessage(err)}`);
         return null;
     }
 }

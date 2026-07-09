@@ -12,6 +12,8 @@
  */
 
 import { XMLParser } from 'fast-xml-parser';
+import { rootLogger } from './logger.js';
+import { extractErrorMessage } from './prompt-errors.js';
 
 interface JUnitTestcase {
     '@_name'?: string;
@@ -171,7 +173,8 @@ export function parseJUnitXml(xmlContent: string): JUnitParseResult | null {
         }
 
         return null;
-    } catch {
+    } catch (err) {
+        rootLogger.debug(`parseJUnitXml: ${extractErrorMessage(err)}`);
         return null;
     }
 }

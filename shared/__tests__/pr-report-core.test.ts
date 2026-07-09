@@ -135,7 +135,7 @@ describe('Pr Report Core', () => {
         mockCheckRun.createCheckRun.mockResolvedValue(undefined);
         mockPRComment.postPrComment.mockResolvedValue(undefined);
         mockHtml.generateHtmlReport.mockReturnValue('<html>mock report</html>');
-        mockCoverage.resolveCoverage.mockReturnValue(undefined);
+        mockCoverage.readIstanbulCoverage.mockReturnValue(undefined);
     });
 
     afterAll(() => {
@@ -182,13 +182,10 @@ describe('Pr Report Core', () => {
         it('includes coverage source in HTML options when coverage is resolved', async () => {
             expect.hasAssertions();
 
-            mockCoverage.resolveCoverage.mockReturnValue({
+            mockCoverage.readIstanbulCoverage.mockReturnValue({
                 source: 'istanbul',
                 coveragePct: 85,
-                lines: 85,
-                statements: 85,
-                functions: 85,
-                branches: 80,
+                detail: 'lines 85.0%',
             });
 
             const result = await generatePrReport({
@@ -308,13 +305,10 @@ describe('Pr Report Core', () => {
         it('handles health score with coverage override', async () => {
             expect.hasAssertions();
 
-            mockCoverage.resolveCoverage.mockReturnValue({
+            mockCoverage.readIstanbulCoverage.mockReturnValue({
                 source: 'istanbul',
                 coveragePct: 92,
-                lines: 92,
-                statements: 92,
-                functions: 90,
-                branches: 88,
+                detail: 'lines 92.0%',
             });
 
             await generatePrReport({

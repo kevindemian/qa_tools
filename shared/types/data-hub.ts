@@ -59,6 +59,20 @@ export interface RawData {
     framework?: string;
     /** GitLab test report for the latest pipeline (GitLab-specific). */
     gitlabTestReport?: GitLabTestReport;
+    /** Commit log — formatted string of recent commits from CI workflow runs. */
+    commitLog?: string;
+    /** CI run statistics derived from workflow runs — pass/fail/skip counts per run. */
+    ciRuns?: CiRunStats[];
+}
+
+/** CI pipeline run statistics — derived from workflow run artifacts. */
+export interface CiRunStats {
+    runId: number | string;
+    createdAt: string;
+    passed: number;
+    failed: number;
+    skipped: number;
+    total: number;
 }
 
 /** Coverage data from Istanbul/CTRF. */
@@ -96,6 +110,8 @@ export interface DataProvider {
     readonly name: string;
     readonly source: 'github' | 'gitlab' | 'jira' | 'coverage';
     fetchRawData(options: FetchOptions): Promise<RawData>;
+    /** Fetch recent commit log from CI workflow runs. Optional — providers that don't support this return undefined. */
+    fetchCommitLog?(): Promise<string | undefined>;
 }
 
 /** Flaky test/job detected across runs. */

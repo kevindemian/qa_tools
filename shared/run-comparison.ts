@@ -3,14 +3,14 @@
  * Returns empty string on error (never throws). */
 
 import type { MetricsRun } from './types/data-hub.js';
+import { calcRunPassRate } from './data-hub/compute/run-pass-rate.js';
 import { llmPrompt } from './llm-client.js';
 import { sanitizeForLlm } from './sanitize.js';
 import { rootLogger } from './logger.js';
 
 function runSummary(run: MetricsRun): string {
     const date = run.timestamp.slice(0, 10);
-    const executed = run.passed + run.failed;
-    const rate = executed > 0 ? Math.round((run.passed / executed) * 100) : 0;
+    const rate = Math.round(calcRunPassRate(run));
     return [
         `Date: ${date}`,
         `Project: ${run.project}`,
