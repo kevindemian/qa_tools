@@ -14,13 +14,14 @@
 1. DataHub é a **única interface** para operações de dados (leitura e escrita)
 2. Consumidores NUNCA baixam, parseiam, calculam ou persistem dados por conta própria
 3. `DataHub.computed.*` cobre TODAS as métricas — toda computação local é um bypass
-4. `DataHubPersistence.*` cobre TODA persistência — todo acesso direto a `MetricsStore`/`Store` é um bypass
+4. `DataHubPersistence` será absorvido pelo DataHub — todo acesso direto a `MetricsStore`/`Store` é um bypass
 5. Qualquer módulo que leia de `MetricsStore.runs`, `MetricsStore.coverageHistory`, `MetricsStore.failureClassifications` ou `Store` (fora de `shared/data-hub/`) viola SSOT
 6. Qualquer módulo que faça chamada direta a API CI (GitHub/GitLab) fora dos `DataProvider`s viola SSOT
 7. Nenhuma função de cálculo de métricas (`passed / total * 100`, `flaky`, `P95`) deve existir fora de `shared/data-hub/compute/`
 8. `health-score.ts`, `quality-gate.ts`, `pr-report-core.ts` — DataHub é **obrigatório**, nunca opcional
 9. Nenhum `catch` block pode retornar `undefined`/`null` sem logar. Todo `catch` DEVE usar `extractErrorMessage()` + `humanizeError()`. Erros silenciosos = defeito de segurança.
 10. Nenhuma degradação graciosa ou tratamento eufêmico de falhas. Se uma operação falha, o consumidor DEVE ser notificado explicitamente. Never silently swallow errors.
+11. `MetricsStore` será deletado — toda persistência passa pelo DataHub internamente.
 
 **Regras para este plano:**
 
@@ -55,6 +56,19 @@ Esses chamadores são consumidores silenciosos — o plano os lista na Fase 9.1.
 
 A Fase 8 deleta `ci-test-downloader`, `coverage-source`, `commit-log` — módulos que fazem download direto de artefatos CI, leitura de arquivos Istanbul, e chamadas diretas à API CI. O DataHub já faz tudo isso via `DataProvider`s. Manter esses módulos cria risco de bypass acidental. Deletar consolida a arquitetura.
 
+### Por que precisamos construir infraestrutura antes de migrar consumidores
+
+Atualmente, DataHub só pode ser criado via `DataHubImpl.create(providers)` — que precisa de provedores CI. Mas 23 arquivos usam `persistence.loadMetricsStore()` sem acesso a provedores. Esses callers não podem migrar para DataHub se DataHub não for acessível de seus contextos.
+
+**Solução:** Construir infraestrutura (Fases 0.5-0.8) que permite:
+
+1. Criar DataHub a partir de dados persistidos (`loadFromStore`)
+2. DataHub salvar/carregar dados internamente (persistência integrada)
+3. Qualquer caller obter um DataHub (`global-hub.ts`)
+4. DataHub ser obrigatório (sem `persistence?` opcional)
+
+Essas fases são PREREQUISITO para todas as migrações de consumidores.
+
 ### O que acontece se uma fase falhar
 
 Não há rollback automático. Se uma fase falhar:
@@ -69,7 +83,8 @@ Nunca "contornar" um erro para fazer o checkpoint passar. Se o checkpoint falha,
 ### Cadeia de dependências
 
 ```
-Fase 0 (fundação) → Fase 1 (health-score) → Fase 2 (quality-gate) → Fase 3 (pr-report-core)
+Fase 0 (fundação) → Fase 0.5 (loadFromStore) → Fase 0.6 (persistência) → Fase 0.7 (global-hub)
+→ Fase 0.8 (obrigatório) → Fase 1 (health-score) → Fase 2 (quality-gate) → Fase 3 (pr-report-core)
 → Fase 4 (git_triggers) → Fase 5 (error-handling) → Fase 6 (shared restantes)
 → Fase 7 (auditoria pós-migração) → Fase 8 (deletar fontes alternativas)
 → Fase 9 (consumidores silenciosos) → Fase 10 (ESLint enforcement)
@@ -391,6 +406,188 @@ npx vitest run jira_management/                      # 100% pass
 ```
 
 **Commit:** `feat(data-hub): add dataHub to CommandContext for Jira command handlers`
+
+---
+
+## DATAHUB INFRASTRUCTURE
+
+### Princípio
+
+DataHub é o ÚNICO ponto de acesso a dados. Toda coleta, persistência e manipulação passa por ele. MetricsStore será absorvido/deletado. DataHubPersistence será absorvido/deletado.
+
+### O que falta construir
+
+Atualmente, DataHub só pode ser criado via `DataHubImpl.create(providers)` — que precisa de provedores CI. Mas existem 23 arquivos que usam `persistence.loadMetricsStore()` sem acesso a provedores. Esses callers precisam de uma forma de obter um DataHub.
+
+**Solução:** Construir a infraestrutura para que DataHub seja acessível de qualquer contexto, sem depender de provedores CI.
+
+### Cadeia de dependências (atualizada)
+
+```
+Fase 0 (fundação) → Fase 0.5 (loadFromStore) → Fase 0.6 (persistência) → Fase 0.7 (global-hub)
+→ Fase 0.8 (obrigatório) → Fase 1 (health-score) → Fase 2 (quality-gate) → ...
+```
+
+---
+
+### FASE 0.5 — DataHub Core: loadFromStore (1 tarefa)
+
+---
+
+#### Tarefa 0.5.1 — Adicionar factory method `loadFromStore()` ao DataHub
+
+**Objetivo:** Criar DataHub a partir de dados persistidos (MetricsStore + CoverageHistory + FailureClassifications), sem precisar de provedores CI.
+
+**Interface:**
+
+```typescript
+// Em shared/data-hub/hub.ts:
+static loadFromStore(
+  store: MetricsStore,
+  coverageHistory: CoverageSnapshot[],
+  failureClassifications: FailureClassification[],
+  repo: string,
+  persistence?: DataHubPersistence,
+): DataHubImpl;
+```
+
+**Implementação:**
+
+1. Converter `MetricsRun[]` → `PipelineRun[]`:
+    - `run.timestamp` → `created_at`
+    - `run.project` → `head_branch` (ou `'unknown'`)
+    - `run.total` → `total` (tests)
+    - `run.passed` → `passed`
+    - `run.failed` → `failed`
+    - `run.skipped` → `skipped`
+    - `run.duration` → `run_duration_ms`
+    - `run.tests` → `tests` (FlatTest[] já é compatível)
+
+2. Criar `RawData` com:
+    - `runs`: PipelineRun[] (convertidos)
+    - `jobs`: Map vazio (não persistido)
+    - `artifacts`: Map vazio (não persistido)
+    - `failureReasons`: Map vazio (não persistido)
+    - `coverage`: converter `CoverageSnapshot[]` → `RawCoverage` (último snapshot)
+    - `parsedArtifacts`: converter `MetricsRun[]` → `Map<number, ArtifactParseResult[]>` (opcional)
+
+3. Chamar `DataHubImpl.computeMetrics(raw, { repo })` → `ComputedMetrics`
+
+4. Retornar `new DataHubImpl(raw, computed, 'github', repo, persistence)`
+
+**Checkpoint:**
+
+```bash
+npx tsc --noEmit                                    # 0 erros
+# Teste unitário: DataHub.loadFromStore cria hub com dados corretos
+npx vitest run shared/data-hub/__tests__/hub.test.ts --reporter=verbose
+# Esperado: novo teste passa
+```
+
+**Commit:** `feat(data-hub): add loadFromStore factory — create DataHub from persisted data`
+
+---
+
+### FASE 0.6 — DataHub Core: Persistência Interna (1 tarefa)
+
+---
+
+#### Tarefa 0.6.1 — Adicionar métodos de persistência ao DataHub
+
+**Objetivo:** DataHub salva e recupera dados internamente. Consumidores não acessam `hub.persistence` diretamente.
+
+**Interface adicional ao DataHub:**
+
+```typescript
+// Métodos de persistência:
+save(): void;
+saveRun(sha: string, run: MetricsRun): void;
+saveCoverageSnapshot(snapshot: CoverageSnapshot): void;
+saveFailureClassification(classification: FailureClassification): void;
+flush(message: string): void;
+```
+
+**Implementação:**
+
+Cada método delega para `this.persistence` internamente. Se `this.persistence` é `undefined`, lança erro claro.
+
+**Checkpoint:**
+
+```bash
+npx tsc --noEmit                                    # 0 erros
+npx vitest run shared/data-hub/__tests__/hub.test.ts --reporter=verbose
+# Esperado: testes de persistência passam
+```
+
+**Commit:** `feat(data-hub): add persistence methods — save, saveRun, flush`
+
+---
+
+### FASE 0.7 — DataHub Global: Acessibilidade (1 tarefa)
+
+---
+
+#### Tarefa 0.7.1 — Criar `shared/data-hub/global-hub.ts`
+
+**Objetivo:** Qualquer caller pode obter um DataHub, não só `git_triggers`.
+
+**Interface:**
+
+```typescript
+// shared/data-hub/global-hub.ts
+export function getDataHub(): DataHub | undefined;
+export function setDataHub(hub: DataHub): void;
+export async function ensureDataHub(project: string, repo: string): Promise<DataHub | undefined>;
+```
+
+**Implementação:**
+
+- `getDataHub()`: retorna hub global (ou undefined)
+- `setDataHub(hub)`: define hub global
+- `ensureDataHub(project, repo)`: se hub existe, retorna; senão, cria via `DataHub.loadFromStore()` usando dados persistidos
+
+**Migrar `git_triggers/session-state.ts`:**
+
+- `getDataHub()` e `setDataHub()` delegam para `shared/data-hub/global-hub.ts`
+- `ensureDataHub()` usa `shared/data-hub/global-hub.ts`
+
+**Checkpoint:**
+
+```bash
+npx tsc --noEmit                                    # 0 erros
+npx vitest run shared/data-hub/__tests__/global-hub.test.ts --reporter=verbose
+npx vitest run git_triggers/__tests__/integration/session-state-ensureDataHub.integration.test.ts
+# Esperado: todos passam
+```
+
+**Commit:** `feat(data-hub): add global-hub — accessible DataHub from any context`
+
+---
+
+### FASE 0.8 — DataHub Core: Obrigar Persistence (1 tarefa)
+
+---
+
+#### Tarefa 0.8.1 — Tornar persistence obrigatório no construtor
+
+**Objetivo:** DataHub SEMPRE tem persistência. Sem `persistence?: DataHubPersistence | undefined`.
+
+**Mudanças:**
+
+1. `DataHubImpl` constructor: `persistence: DataHubPersistence` (sem `?`)
+2. `DataHubImpl.create()`: `persistence` obrigatório (ou criar um default)
+3. `DataHubImpl.loadFromStore()`: `persistence` obrigatório
+4. Interface `DataHub`: `readonly persistence: DataHubPersistence` (sem `?`)
+
+**Checkpoint:**
+
+```bash
+npx tsc --noEmit                                    # 0 erros — erros de tipo onde persistence era opcional
+# Corrigir todos os call sites que não passam persistence
+npx vitest run --reporter=verbose | tail -10         # 100% pass
+```
+
+**Commit:** `refactor(data-hub): make persistence mandatory — no optional DataHubPersistence`
 
 ---
 
@@ -1389,6 +1586,64 @@ rg "git-artifact-downloader" --include="*.ts" -g '!__mocks__'  # Só em mocks
 rg "test-count-extractor" --include="*.ts"           # Só em plano/docs
 npx vitest run --reporter=verbose                    # 100% pass
 ```
+
+---
+
+### Fase 0.5 — DataHub Core: loadFromStore (0.5 dia)
+
+**Objetivo:** DataHub pode ser criado a partir de dados persistidos, sem provedores CI.
+
+#### 0.5.1 — Adicionar factory method `loadFromStore()`
+
+| Item  | Ação                                                       | Arquivo                                 |
+| ----- | ---------------------------------------------------------- | --------------------------------------- |
+| 0.5.1 | Adicionar `static loadFromStore()` ao `DataHubImpl`        | `shared/data-hub/hub.ts`                |
+| 0.5.2 | Implementar conversão `MetricsRun[]` → `PipelineRun[]`     | `shared/data-hub/hub.ts`                |
+| 0.5.3 | Implementar conversão `CoverageSnapshot[]` → `RawCoverage` | `shared/data-hub/hub.ts`                |
+| 0.5.4 | Criar teste unitário para `loadFromStore`                  | `shared/data-hub/__tests__/hub.test.ts` |
+
+---
+
+### Fase 0.6 — DataHub Core: Persistência Interna (0.5 dia)
+
+**Objetivo:** DataHub salva e recupera dados internamente. Consumidores não acessam `hub.persistence` diretamente.
+
+#### 0.6.1 — Adicionar métodos de persistência ao DataHub
+
+| Item  | Ação                                                  | Arquivo                                 |
+| ----- | ----------------------------------------------------- | --------------------------------------- |
+| 0.6.1 | Adicionar `save()`, `saveRun()`, `flush()` ao DataHub | `shared/data-hub/hub.ts`                |
+| 0.6.2 | Cada método delega para `this.persistence`            | `shared/data-hub/hub.ts`                |
+| 0.6.3 | Criar testes para métodos de persistência             | `shared/data-hub/__tests__/hub.test.ts` |
+
+---
+
+### Fase 0.7 — DataHub Global: Acessibilidade (0.5 dia)
+
+**Objetivo:** Qualquer caller pode obter um DataHub, não só `git_triggers`.
+
+#### 0.7.1 — Criar `shared/data-hub/global-hub.ts`
+
+| Item  | Ação                                                        | Arquivo                                        |
+| ----- | ----------------------------------------------------------- | ---------------------------------------------- |
+| 0.7.1 | Criar `getDataHub()`, `setDataHub()`, `ensureDataHub()`     | `shared/data-hub/global-hub.ts`                |
+| 0.7.2 | Migrar `session-state.ts` para delegar para `global-hub.ts` | `git_triggers/session-state.ts`                |
+| 0.7.3 | Criar testes para `global-hub.ts`                           | `shared/data-hub/__tests__/global-hub.test.ts` |
+
+---
+
+### Fase 0.8 — DataHub Core: Obrigar Persistence (0.5 dia)
+
+**Objetivo:** DataHub SEMPRE tem persistência. Sem `persistence?: DataHubPersistence | undefined`.
+
+#### 0.8.1 — Tornar persistence obrigatório
+
+| Item  | Ação                                                            | Arquivo                    |
+| ----- | --------------------------------------------------------------- | -------------------------- |
+| 0.8.1 | `DataHubImpl` constructor: `persistence` obrigatório            | `shared/data-hub/hub.ts`   |
+| 0.8.1 | `DataHubImpl.create()`: persistence obrigatório                 | `shared/data-hub/hub.ts`   |
+| 0.8.2 | Interface `DataHub`: `readonly persistence: DataHubPersistence` | `shared/types/data-hub.ts` |
+| 0.8.3 | Corrigir call sites que não passam persistence                  | Vários arquivos            |
 
 ---
 
