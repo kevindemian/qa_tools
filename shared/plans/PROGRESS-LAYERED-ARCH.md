@@ -21,16 +21,16 @@
 
 ## Phase 0 — Cross-Cutting Modules
 
-| #   | Task                                  | Status  | Date       | Tests            | Notes                           |
-| --- | ------------------------------------- | ------- | ---------- | ---------------- | ------------------------------- |
-| 0.1 | test-source-fallback.ts               | ✅ Done | 2026-07-06 | 13/13 pass       | User Fallback (Layer 7)         |
-| 0.2 | artifact-parser.ts                    | ✅ Done | 2026-07-06 | 16/16 pass       | ZIP + CTRF/JUnit/Mochawesome    |
-| 0.3 | junit-xml-parser.ts                   | ✅ Done | 2026-07-06 | 9/9 pass         | JUnit XML via fast-xml-parser   |
-| 0.4 | log-parser.ts                         | ✅ Done | 2026-07-06 | 8/8 pass         | Test summary from job logs      |
-| 0.5 | extractors/                           | ✅ Done | 2026-07-06 | 20/20 pass       | coverage + test-count + failure |
-| 0.6 | metrics/                              | ✅ Done | 2026-07-06 | 16/16 pass       | calculator + json + csv         |
-| 0.7 | Fix type safety (as any / @ts-ignore) | ✅ Done | 2026-07-06 | 0 TS errors      | 24 → 0 errors                   |
-| 0.8 | Research actions-usage                | ✅ Done | 2026-07-06 | Decisão: Opção C | Manter cálculo manual puro      |
+| #   | Task                                           | Status  | Date       | Tests            | Notes                           |
+| --- | ---------------------------------------------- | ------- | ---------- | ---------------- | ------------------------------- |
+| 0.1 | test-source-fallback.ts                        | ✅ Done | 2026-07-06 | 13/13 pass       | User Fallback (Layer 7)         |
+| 0.2 | artifact-parser.ts                             | ✅ Done | 2026-07-06 | 16/16 pass       | ZIP + CTRF/JUnit/Mochawesome    |
+| 0.3 | junit-xml-parser.ts                            | ✅ Done | 2026-07-06 | 9/9 pass         | JUnit XML via fast-xml-parser   |
+| 0.4 | log-parser.ts                                  | ✅ Done | 2026-07-06 | 8/8 pass         | Test summary from job logs      |
+| 0.5 | extractors/                                    | ✅ Done | 2026-07-06 | 20/20 pass       | coverage + test-count + failure |
+| 0.6 | metrics/                                       | ✅ Done | 2026-07-06 | 16/16 pass       | calculator + json + csv         |
+| 0.7 | Fix type safety (type assertions / @ts-ignore) | ✅ Done | 2026-07-06 | 0 TS errors      | 24 → 0 errors                   |
+| 0.8 | Research actions-usage                         | ✅ Done | 2026-07-06 | Decisão: Opção C | Manter cálculo manual puro      |
 
 ---
 
