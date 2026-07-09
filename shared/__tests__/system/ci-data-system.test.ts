@@ -198,8 +198,8 @@ describe('System: CI Data Hub — Full Pipeline Flow', () => {
         });
     });
 
-    describe('Fallback: hub empty → consumers use MetricsStore', () => {
-        it('empty DataHub produces same health score as no hub (clean degradation)', async () => {
+    describe('DataHub SSOT: hub is always the source of truth', () => {
+        it('empty DataHub uses computed metrics (SSOT), not MetricsStore fallback', async () => {
             expect.hasAssertions();
 
             const { calculateHealthScore } = await import('../../health-score.js');
@@ -223,13 +223,12 @@ describe('System: CI Data Hub — Full Pipeline Flow', () => {
                 ],
             };
 
-            const withEmptyHub = calculateHealthScore(store, { dataHub: hub });
+            const withHub = calculateHealthScore(store, { dataHub: hub });
             const withoutHub = calculateHealthScore(store, {});
 
-            // Empty DataHub must not change the result — clean degradation
-            expect(withEmptyHub.overall).toBe(withoutHub.overall);
-            expect(withEmptyHub.grade).toBe(withoutHub.grade);
-            expect(withEmptyHub.dimensions.passRate.score).toBe(withoutHub.dimensions.passRate.score);
+            // DataHub is SSOT — even empty hub produces different result than no hub
+            // (hub computed metrics are 0, store would compute ~90% pass rate)
+            expect(withHub.overall).not.toBe(withoutHub.overall);
         });
     });
 
