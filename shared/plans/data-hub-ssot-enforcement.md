@@ -421,6 +421,44 @@ Atualmente, DataHub só pode ser criado via `DataHubImpl.create(providers)` — 
 
 **Solução:** Construir a infraestrutura para que DataHub seja acessível de qualquer contexto, sem depender de provedores CI.
 
+### Decisão Arquitetural: Mapeamento Direto vs Conversão
+
+**Problema identificado:** MetricsStore armazena `MetricsRun[]` (com testes individuais), mas `RawData.runs` é `PipelineRun[]` (sem testes). Uma conversão simples seria lossy:
+
+1. **Perda de timestamps:** `convertToMetricsRuns()` usa `new Date().toISOString()` em vez do timestamp original
+2. **Perda de FailureClassification:** Dados que existem no MetricsStore seriam perdidos no DataHub
+3. **Campos inexistentes:** Adicionar `tests` e `run_duration_ms` a `PipelineRun` viola o contrato de tipo
+4. **Round-trip lossy:** `MetricsRun[] → ArtifactParseResult[] → convertToMetricsRuns() → MetricsRun[]` perde dados
+
+**Solução adotada: Mapeamento Direto**
+
+```
+MetricsStore.runs (MetricsRun[])
+    │
+    ├──→ raw.parsedArtifacts (Map<number, ArtifactParseResult[]>)
+    │    ←MetricsRun vira ArtifactParseResult DIRETAMENTE (sem round-trip)
+    │    ←preserva timestamp original, tests, stats
+    │
+    ├──→ raw.runs (PipelineRun[])
+    │    ←extrai SÓ metadados: conclusion, head_branch, created_at
+    │    ←usa timestamp do MetricsRun (NÃO new Date())
+    │
+    └──→ NOVO CAMPO: raw.failureClassifications (FailureClassification[])
+         ←preserva dados originais para aggregateDefectTrends/Seasonality
+
+MetricsStore.coverageHistory (CoverageSnapshot[])
+    │
+    └──→ raw.coverage (RawCoverage)
+         ←mapeamento direto: totalIssues→total, mappedIssues→covered, coveragePct→percentage
+```
+
+**Vantagens:**
+
+- Nenhuma perda de dados
+- Timestamps preservados
+- FailureClassification disponível para consumers atuais
+- Sem violação de contratos de tipo
+
 ### Cadeia de dependências (atualizada)
 
 ```
@@ -453,27 +491,39 @@ static loadFromStore(
 
 **Implementação:**
 
-1. Converter `MetricsRun[]` → `PipelineRun[]`:
-    - `run.timestamp` → `created_at`
-    - `run.project` → `head_branch` (ou `'unknown'`)
-    - `run.total` → `total` (tests)
-    - `run.passed` → `passed`
-    - `run.failed` → `failed`
-    - `run.skipped` → `skipped`
-    - `run.duration` → `run_duration_ms`
-    - `run.tests` → `tests` (FlatTest[] já é compatível)
+1. **Adicionar campo `failureClassifications` ao `RawData`:**
 
-2. Criar `RawData` com:
-    - `runs`: PipelineRun[] (convertidos)
-    - `jobs`: Map vazio (não persistido)
-    - `artifacts`: Map vazio (não persistido)
-    - `failureReasons`: Map vazio (não persistido)
-    - `coverage`: converter `CoverageSnapshot[]` → `RawCoverage` (último snapshot)
-    - `parsedArtifacts`: converter `MetricsRun[]` → `Map<number, ArtifactParseResult[]>` (opcional)
+    ```typescript
+    interface RawData {
+        // ... campos existentes
+        failureClassifications?: FailureClassification[]; // NOVO
+    }
+    ```
 
-3. Chamar `DataHubImpl.computeMetrics(raw, { repo })` → `ComputedMetrics`
+2. **Mapear `MetricsRun[]` → `parsedArtifacts` (DIRETO, sem round-trip):**
+    - Cada `MetricsRun` vira um `ArtifactParseResult` com:
+        - `fileName: 'metrics-store'`
+        - `data: { tests: m.tests, stats: { passed, failed, skipped, total, duration } }`
+        - `format: 'ctrf'`
+    - Armazenar em `Map<number, ArtifactParseResult[]>` com chave = índice
 
-4. Retornar `new DataHubImpl(raw, computed, 'github', repo, persistence)`
+3. **Mapear `MetricsRun[]` → `PipelineRun[]` (só metadados):**
+    - `m.timestamp` → `created_at` (timestamp ORIGINAL, não `new Date()`)
+    - `m.project` → `head_branch` (ou `'unknown'`)
+    - `conclusion`: `m.passed > m.failed ? 'success' : 'failure'`
+    - `status: 'completed'` (dados históricos sempre completos)
+    - NÃO adicionar campos inexistentes (`tests`, `run_duration_ms`)
+
+4. **Mapear `CoverageSnapshot[]` → `RawCoverage`:**
+    - Usar ÚLTIMO snapshot
+    - `totalIssues` → `total`, `mappedIssues` → `covered`, `coveragePct` → `percentage`
+
+5. **Mapear `FailureClassification[]` → `raw.failureClassifications`:**
+    - Copiar array diretamente (preserva dados para `aggregateDefectTrends`/`aggregateDefectSeasonality`)
+
+6. **Chamar `DataHubImpl.computeMetrics(raw, { repo })` → `ComputedMetrics`**
+
+7. **Retornar `new DataHubImpl(raw, computed, 'github', repo, persistence)`**
 
 **Checkpoint:**
 
