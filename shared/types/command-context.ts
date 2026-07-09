@@ -1,5 +1,6 @@
 import type { SessionContext } from '../session-context.js';
 import type { Logger } from '../logger.js';
+import type { DataHub } from './data-hub.js';
 
 export interface CommandContext {
     jiraResource: unknown;
@@ -13,4 +14,5 @@ export interface CommandContext {
     printSessionSummary: () => void;
     base_url: string;
     sessionLog: Logger;
+    dataHub?: DataHub;
 }
