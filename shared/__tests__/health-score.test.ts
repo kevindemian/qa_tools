@@ -11,7 +11,7 @@
  */
 import { describe, it, expect } from 'vitest';
 import { calculateHealthScore } from '../health-score.js';
-import type { MetricsStore, DataHub, ComputedMetrics } from '../types/data-hub.js';
+import type { MetricsStore, MetricsRun, DataHub, ComputedMetrics } from '../types/data-hub.js';
 
 describe('CalculateHealthScore — pass rate consistency', () => {
     it('pass rate excludes skipped tests from denominator', () => {
@@ -183,24 +183,31 @@ describe('CalculateHealthScore — DataHub SSOT enforcement', () => {
         };
     }
 
-    function createStoreWithDifferentData(): MetricsStore {
-        return {
-            runs: [
-                {
-                    timestamp: '2026-01-01',
-                    project: 'p',
-                    total: 100,
-                    passed: 95,
-                    failed: 5,
-                    skipped: 0,
-                    duration: 1000,
-                    tests: Array.from({ length: 20 }, (_, i) => ({
-                        title: `t${i}`,
-                        state: 'passed' as const,
-                        duration: 50,
-                    })),
-                },
+    function createStoreWithHighFlaky(): MetricsStore {
+        // 3 runs, test "flaky_test" always fails → 100% flaky for that test
+        // Other tests always pass
+        const makeRun = (flakyState: 'passed' | 'failed'): MetricsRun => ({
+            timestamp: '2026-01-01',
+            project: 'p',
+            total: 10,
+            passed: flakyState === 'passed' ? 10 : 9,
+            failed: flakyState === 'passed' ? 0 : 1,
+            skipped: 0,
+            duration: 1000,
+            tests: [
+                { title: 'flaky_test', state: flakyState, duration: 50 },
+                ...Array.from({ length: 9 }, (_, i) => ({
+                    title: `stable_${i}`,
+                    state: 'passed' as const,
+                    duration: 50,
+                })),
             ],
+        });
+        return {
+            // flaky_test appears 3 times (>= minRuns=2), always fails → 100% flaky for that test
+            // _computeFlakyRate: flakyCount=1, totalConsidered=10 → 10% flaky
+            // scoreFlakyRate(10, config): 10 >= maxFlakyGate(10) → score = 0
+            runs: [makeRun('failed'), makeRun('passed'), makeRun('failed')],
             coverageHistory: [
                 { timestamp: '2026-01-01', project: 'p', totalIssues: 100, mappedIssues: 90, coveragePct: 90 },
             ],
@@ -209,7 +216,7 @@ describe('CalculateHealthScore — DataHub SSOT enforcement', () => {
 
     it('uses dataHub.computed.coverage instead of store.coverageHistory', () => {
         const hub = createTestHub({ coverage: 42 });
-        const store = createStoreWithDifferentData(); // store has coveragePct: 90
+        const store = createStoreWithHighFlaky(); // store has coveragePct: 90
 
         const result = calculateHealthScore(store, { dataHub: hub });
 
@@ -221,7 +228,7 @@ describe('CalculateHealthScore — DataHub SSOT enforcement', () => {
 
     it('uses dataHub.computed.executionRate instead of computing from raw runs', () => {
         const hub = createTestHub({ executionRate: 30 });
-        const store = createStoreWithDifferentData(); // store runs have 100% execution (all tests executed)
+        const store = createStoreWithHighFlaky(); // store runs have 100% execution (all tests executed)
 
         const result = calculateHealthScore(store, { dataHub: hub });
 
@@ -231,13 +238,15 @@ describe('CalculateHealthScore — DataHub SSOT enforcement', () => {
     });
 
     it('uses dataHub.computed.flakyPercentage instead of computing from raw runs', () => {
-        const hub = createTestHub({ flakyPercentage: 25 });
-        const store = createStoreWithDifferentData(); // store runs have 0% flaky (all passed)
+        // DataHub flaky=5% → score should be ~43 (interpolated between threshold=3 and maxFlakyGate=10)
+        // Store flaky=10% → score would be 0 (10 >= maxFlakyGate)
+        // If code reads from store instead of DataHub, score=0≠43 → test FAILS (RED)
+        const hub = createTestHub({ flakyPercentage: 5 });
+        const store = createStoreWithHighFlaky(); // store has 10% flaky → score 0
 
         const result = calculateHealthScore(store, { dataHub: hub });
 
-        // If DataHub SSOT is enforced, flaky should be 25%, not 0%
-        // Flaky 25% with threshold 3% should result in a low score
-        expect(result.dimensions.flakyRate.score).toBeLessThan(50);
+        // DataHub flaky=5% → scoreFlakyRate(5, {flakyThreshold:3, maxFlakyGate:10}) ≈ 43
+        expect(result.dimensions.flakyRate.score).toBe(43);
     });
 });
