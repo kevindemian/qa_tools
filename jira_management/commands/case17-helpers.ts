@@ -1,17 +1,18 @@
 import type { FlatTest, CtrfData } from '../../shared/result_parser.js';
-import type { CiContext, RunStats } from '../../shared/ci-detect.js';
-import type { FlakinessEntry } from '../../shared/types/data-hub.js';
+import type { FlakinessEntry, MetricsRun } from '../../shared/types/data-hub.js';
 import { calcRunPassRate } from '../../shared/data-hub/compute/run-pass-rate.js';
+import { calcFlakinessEntries } from '../../shared/data-hub/compute/flakiness-entries.js';
 
 export { isGitHubCi, isGitLabCi } from '../../shared/ci-detect.js';
-export type { CiContext, RunStats } from '../../shared/ci-detect.js';
 
-function buildRunsBarChartHtml(runs: RunStats[]): string {
+function buildRunsBarChartHtml(runs: MetricsRun[]): string {
     let html = '<div style="margin-bottom:8px">';
     html +=
         '<div style="font-size:0.8rem;color:#6b7280;margin-bottom:4px">Pass Rate — Last ' + runs.length + ' Runs</div>';
     html += '<div style="display:flex;gap:4px;align-items:flex-end;height:50px;padding:4px 0">';
-    for (const run of runs) {
+    for (let i = 0; i < runs.length; i++) {
+        const run = runs[i];
+        if (!run) continue;
         const passRate = calcRunPassRate({ passed: run.passed, failed: run.failed });
         const h = Math.max(4, (passRate / 100) * 46);
         let color: string;
@@ -22,6 +23,7 @@ function buildRunsBarChartHtml(runs: RunStats[]): string {
         } else {
             color = '#ef4444';
         }
+        const runLabel = `Run ${i + 1}`;
         html +=
             '<div style="display:flex;flex-direction:column;align-items:center;gap:2px;flex:1">' +
             '<div style="width:100%;height:' +
@@ -29,8 +31,7 @@ function buildRunsBarChartHtml(runs: RunStats[]): string {
             'px;background:' +
             color +
             ';border-radius:3px 3px 0 0;min-height:4px" title="' +
-            'Run ' +
-            run.runId +
+            runLabel +
             ': ' +
             passRate.toFixed(1) +
             '% (' +
@@ -40,7 +41,7 @@ function buildRunsBarChartHtml(runs: RunStats[]): string {
             ')"' +
             '></div>' +
             '<span style="font-size:0.6rem;color:#6b7280">' +
-            (run.createdAt || '').slice(5, 10) +
+            run.timestamp.slice(5, 10) +
             '</span>' +
             '</div>';
     }
@@ -105,20 +106,23 @@ function buildHtmlDetailsSection(flakyEntries: FlakinessEntry[], commits: string
 
 /**
  * Builds the git pipeline context HTML section with run chart, flaky entries, and commits.
- * @param ci - CI context with run stats, commits, and flakiness entries.
+ * Flaky entries are computed from store runs (not received as parameter).
+ * @param commitLog - Formatted commit log string.
+ * @param storeRuns - MetricsRun[] from MetricsStore (persisted test run history).
  * @returns HTML string for the git pipeline context section.
  */
-export function buildGitTrendHtml(ci: CiContext): string {
-    if (ci.runs.length === 0 && !ci.commits && ci.flakyEntries.length === 0) return '';
+export function buildGitTrendHtml(commitLog: string, storeRuns: MetricsRun[]): string {
+    const flakyEntries = storeRuns.length >= 2 ? calcFlakinessEntries(storeRuns) : [];
+    if (storeRuns.length === 0 && !commitLog && flakyEntries.length === 0) return '';
 
     let html = '<div class="chart-box" style="border-left:4px solid #6366f1;margin-bottom:12px">';
     html += '<div class="label" style="margin-bottom:6px">📈 Git Pipeline Context</div>';
 
-    if (ci.runs.length > 0) {
-        html += buildRunsBarChartHtml(ci.runs);
+    if (storeRuns.length > 0) {
+        html += buildRunsBarChartHtml(storeRuns);
     }
 
-    html += buildHtmlDetailsSection(ci.flakyEntries, ci.commits);
+    html += buildHtmlDetailsSection(flakyEntries, commitLog);
     html += '</div>';
     return html;
 }
