@@ -758,11 +758,187 @@ npx vitest run shared/data-hub/__tests__/hub.test.ts --reporter=verbose
 
 ---
 
-### FASE 0.7 — DataHub Global: Acessibilidade (2 tarefas)
+### FASE 0.7 — DataHub Global: Acessibilidade e Resiliência (10 tarefas)
 
 ---
 
+## CONTEXTO FUNDAMENTAL — FASE 0.7
+
+### Gaps Encontrados na Análise do Código
+
+Durante a análise do código, identificamos **8 gaps**. Cada um foi documentado com análise e decisão.
+
+#### Gap #1: Cache Duplicado (`_dataHub` vs `_cache`)
+
+**Problema identificado:** Dois caches parecem existir:
+
+- `_dataHub` em `session-state.ts` (linha 33)
+- `_cache` em `cache.ts` (linha 21)
+
+**Análise:**
+
+- `_dataHub` = referência ao projeto atual (session-scoped)
+- `_cache` = cache de todos os projetos (multi-project cache)
+- Propósitos diferentes: um é "projeto atual", outro é "cache de múltiplos projetos"
+
+**Decisão:** NÃO É PROBLEMA
+
+**Justificativa:** São camadas diferentes com propósitos distintos. `_dataHub` é uma conveniência para acesso rápido ao projeto atual. `_cache` é o armazenamento persistente multi-projeto. Coexistência é intencional.
+
+**Ação:** Nenhuma necessária.
+
+---
+
+#### Gap #2: `loadFromStore` Não Usado
+
+**Problema identificado:** `DataHub.loadFromStore()` existe mas não é chamado por ninguém.
+
+**Análise:**
+
+- É um factory interno para futura migração
+- `ensureDataHub()` chama `getOrFetchDataHub()` (CI API) — não `loadFromStore()`
+- `loadFromStore()` será usado quando migração para persistence estiver completa
+
+**Decisão:** OK — CÓDIGO VÁLIDO
+
+**Justificativa:** É uma factory para uso futuro. Manter código morto é aceitável quando há um caso de uso planejado.
+
+**Ação:** Nenhuma necessária.
+
+---
+
+#### Gap #3: Persistence Opcional
+
+**Problema identificado:** `DataHub.persistence` é opcional (`persistence?: DataHubPersistence | undefined`).
+
+**Análise:**
+
+- Fase 0.6 adicionou `saveRun()`, `saveCoverageSnapshot()`, `saveFailureClassification()`
+- Todos os métodos lançam exceção se `persistence` é undefined
+- Fase 0.8 planejada para tornar `persistence` obrigatório
+
+**Decisão:** TRANSITÓRIO — RESOLVER NA FASE 0.8
+
+**Justificativa:** A opção intencional permite migração incremental. Fase 0.8 resolve.
+
+**Ação:** Fase 0.8 tornará `persistence` obrigatório.
+
+---
+
+#### Gap #4: Race Condition no Prefetch
+
+**Problema identificado:** `prefetchAllDataHubs()` usa `Promise.allSettled()` para buscar múltiplos projetos. Se o cache não é atômico, fetches duplicados podem ocorrer.
+
+**Análise:**
+
+- `Promise.allSettled()` inicia todas as buscas simultaneamente
+- Se cache é verificado antes da busca, mas busca é lenta, outro chamador pode iniciar busca paralela
+- Resultado: múltiplas buscas para o mesmo projeto
+
+**Decisão:** CORRIGIR
+
+**Justificativa:** Race condition é bug real. Pode causar requisições HTTP desnecessárias e consumo de recursos.
+
+**Ação:** Criar `getOrFetchWithLock()` — mutex pattern.
+
+---
+
+#### Gap #5: TTL Fixo vs Freshness
+
+**Problema identificado:** Cache expira após 5 minutos fixos (`CACHE_TTL_MS`). Se dados mudaram antes de 5 minutos, usa dados desatualizados.
+
+**Análise:**
+
+- `isCacheValid()` retorna true se idade < 5 minutos
+- Não verifica se dados reais mudaram
+- Se CI atualizou dados, cache ainda é "válido"
+
+**Decisão:** CORRIGIR
+
+**Justificativa:** Usar dados desatualizados viola o princípio de SSOT. O cache deve ser invalidado quando dados mudam, não apenas quando tempo expira.
+
+**Ação:** Adicionar `hasDataChanged()` ao `ensureDataHub()`.
+
+---
+
+#### Gap #6: `loadRun` Sempre Retorna null
+
+**Problema identificado:** `DataHubPersistence.loadRun(sha)` existe mas sempre retorna null.
+
+**Análise:**
+
+- Interface declara: `loadRun(sha: string): MetricsRun | null`
+- Implementação em `persistence.ts`: retorna null sempre
+- Código morto — ninguém chama este método
+
+**Decisão:** CORRIGIR
+
+**Justificativa:** Código morto confunde desenvolvedores. Se o método não tem implementação, não deve existir na interface.
+
+**Ação:** Remover `loadRun` da interface e implementação.
+
+---
+
+#### Gap #7: Cache Sem Disco
+
+**Problema identificado:** Cache em memória (`_cache`) não persiste entre execuções CLI.
+
+**Análise:**
+
+- CLI é execução curta (segundos)
+- Cache em memória é suficiente para sessão
+- Persistência entre sessões é responsabilidade de `MetricsStore` (interno)
+- Re-fetch a cada execução CLI é aceitável (CI API é rápida)
+
+**Decisão:** NÃO É PROBLEMA
+
+**Justificativa:** Cache em memória é suficiente para CLI. Persistência entre sessões não é requisito.
+
+**Ação:** Nenhuma necessária.
+
+---
+
+#### Gap #8: Contradições no Plano
+
+**Problema identificado:** Plano original diz:
+
+- "MetricsStore será deletado" (linha 28)
+- Mas Fase 0.8 "só remove interface" (remove `loadRun`, `persistence`)
+
+**Análise:**
+
+- Plano original promete deletar MetricsStore completamente
+- Mas Fase 0.8 mantém MetricsStore como implementação interna
+- Contradição: "deletado" vs "mantido internamente"
+
+**Decisão:** CORRIGIR O PLANO
+
+**Justificativa:** Transparência é mais importante quepromessas ambíguas. O plano deve refletir a realidade.
+
+**Ação:** Atualizar措辞 do plano para refletir que MetricsStore é mantido internamente.
+
+---
+
+### Resumo das Decisões
+
+| Gap                        | Decisão            | Ação                 | Tarefa      |
+| -------------------------- | ------------------ | -------------------- | ----------- |
+| #1 Cache duplicado         | NÃO É PROBLEMA     | Nenhuma              | —           |
+| #2 loadFromStore não usado | OK — CÓDIGO VÁLIDO | Nenhuma              | —           |
+| #3 Persistence opcional    | TRANSITÓRIO        | Fase 0.8 resolve     | —           |
+| #4 Race condition          | CORRIGIR           | Criar mutex          | 0.7.3-0.7.4 |
+| #5 TTL fixo                | CORRIGIR           | Adicionar freshness  | 0.7.5-0.7.6 |
+| #6 loadRun null            | CORRIGIR           | Remover código morto | 0.7.7-0.7.8 |
+| #7 Cache sem disco         | NÃO É PROBLEMA     | Nenhuma              | —           |
+| #8 Contradições no plano   | CORRIGIR           | Atualizar措辞        | 0.7.1-0.7.2 |
+
+---
+
+## TAREFAS
+
 #### Tarefa 0.7.1 — Criar `shared/data-hub/global-hub.ts` (RED)
+
+**Gap atacado:** #8 — Contradições no plano
 
 **Objetivo:** Qualquer caller pode obter um DataHub, não só `git_triggers`. Usa injeção de dependência para flexibilidade.
 
@@ -848,6 +1024,8 @@ describe('GlobalHub', () => {
 
 #### Tarefa 0.7.2 — Criar `shared/data-hub/global-hub.ts` (GREEN)
 
+**Gap atacado:** #8 — Contradições no plano
+
 **Implementação:**
 
 ```typescript
@@ -908,6 +1086,8 @@ npx vitest run shared/data-hub/__tests__/global-hub.test.ts --reporter=verbose
 ---
 
 #### Tarefa 0.7.3 — Adicionar `getOrFetchWithLock` ao cache (RED)
+
+**Gap atacado:** #4 — Race Condition no Prefetch
 
 **Objetivo:** Prevenir race conditions no prefetch.
 
@@ -976,6 +1156,8 @@ describe('getOrFetchWithLock', () => {
 
 #### Tarefa 0.7.4 — Adicionar `getOrFetchWithLock` ao cache (GREEN)
 
+**Gap atacado:** #4 — Race Condition no Prefetch
+
 **Implementação em `shared/data-hub/cache.ts`:**
 
 ```typescript
@@ -1034,7 +1216,130 @@ npx vitest run shared/data-hub/__tests__/cache.test.ts --reporter=verbose
 
 ---
 
-#### Tarefa 0.7.5 — Migrar `git_triggers/session-state.ts` (RED)
+#### Tarefa 0.7.5 — Adicionar freshness check ao `ensureDataHub` (RED)
+
+**Gap atacado:** #5 — TTL Fixo vs Freshness
+
+**Problema:** Cache expira após 5 minutos fixos. Se dados mudaram antes de 5 minutos, usa dados desatualizados.
+
+**Solução:** `ensureDataHub` deve verificar `hasDataChanged()` quando cache existe.
+
+**RED — Testes que FALHAM:**
+
+```typescript
+// shared/data-hub/__tests__/global-hub.test.ts — ADICIONAR
+describe('ensureDataHub with freshness check', () => {
+    it('re-fetches when data changed', async () => {
+        const hubV1 = makeMockHub({ repo: 'test-v1' });
+        const hubV2 = makeMockHub({ repo: 'test-v2' });
+        setDataHub(hubV1);
+
+        const fetchFn = vi.fn().mockResolvedValue(hubV2);
+        const hasDataChanged = vi.fn().mockReturnValue(true);
+
+        const result = await ensureDataHub(fetchFn, { hasDataChanged, cachedHub: hubV1 });
+
+        expect(hasDataChanged).toHaveBeenCalledWith(hubV1, hubV2.raw);
+        expect(fetchFn).toHaveBeenCalledTimes(1);
+        expect(result).toBe(hubV2);
+    });
+
+    it('does not re-fetch when data unchanged', async () => {
+        const hubV1 = makeMockHub({ repo: 'test' });
+        setDataHub(hubV1);
+
+        const fetchFn = vi.fn();
+        const hasDataChanged = vi.fn().mockReturnValue(false);
+
+        const result = await ensureDataHub(fetchFn, { hasDataChanged, cachedHub: hubV1 });
+
+        expect(fetchFn).not.toHaveBeenCalled();
+        expect(result).toBe(hubV1);
+    });
+});
+```
+
+---
+
+#### Tarefa 0.7.6 — Implementar freshness check (GREEN)
+
+**Gap atacado:** #5 — TTL Fixo vs Freshness
+
+**Implementação em `shared/data-hub/global-hub.ts`:**
+
+```typescript
+interface FreshnessOptions {
+    hasDataChanged: (cached: DataHub, newRaw: RawData) => boolean;
+    cachedHub: DataHub;
+}
+
+export async function ensureDataHub(
+    fetchFn: () => Promise<DataHub | undefined>,
+    options?: FreshnessOptions,
+): Promise<DataHub | undefined> {
+    if (_dataHub) {
+        // Se opções de freshness fornecidas, verificar se dados mudaram
+        if (options?.hasDataChanged && options?.cachedHub) {
+            try {
+                const freshHub = await fetchFn();
+                if (freshHub && options.hasDataChanged(options.cachedHub, freshHub.raw)) {
+                    _dataHub = freshHub;
+                    return _dataHub;
+                }
+                // Dados não mudaram, manter cache
+                return _dataHub;
+            } catch {
+                // Fetch falhou, manter cache existente
+                return _dataHub;
+            }
+        }
+        return _dataHub;
+    }
+
+    // Cache miss — buscar dados
+    try {
+        const hub = await fetchFn();
+        if (hub) {
+            _dataHub = hub;
+        }
+        return _dataHub;
+    } catch {
+        return undefined;
+    }
+}
+```
+
+---
+
+#### Tarefa 0.7.7 — Remover `loadRun` da interface (RED)
+
+**Gap atacado:** #6 — `loadRun` Sempre Retorna null
+
+**Problema:** `DataHubPersistence.loadRun(sha)` existe mas sempre retorna null. Código morto.
+
+**RED — Testes que FALHAM:**
+
+```typescript
+// shared/data-hub/__tests__/persistence.test.ts — VERIFICAR
+// Testes que usam loadRun devem falhar após remoção
+```
+
+---
+
+#### Tarefa 0.7.8 — Remover `loadRun` da interface (GREEN)
+
+**Gap atacado:** #6 — `loadRun` Sempre Retorna null
+
+**Mudanças:**
+
+1. `shared/types/data-hub.ts`: Remover `loadRun(sha: string): MetricsRun | null` da interface
+2. `shared/data-hub/persistence.ts`: Remover implementação de `loadRun`
+
+---
+
+#### Tarefa 0.7.9 — Migrar `git_triggers/session-state.ts` (RED)
+
+**Gap atacado:** #8 — Contradições no plano
 
 **Objetivo:** Delegar para `global-hub.ts`, remover lógica duplicada.
 
@@ -1059,7 +1364,9 @@ describe('Integration: ensureDataHub — global-hub migration', () => {
 
 ---
 
-#### Tarefa 0.7.6 — Migrar `git_triggers/session-state.ts` (GREEN)
+#### Tarefa 0.7.10 — Migrar `git_triggers/session-state.ts` (GREEN)
+
+**Gap atacado:** #8 — Contradições no plano
 
 **Mudanças:**
 
@@ -1105,26 +1412,148 @@ npx vitest run git_triggers/__tests__/integration/session-state-ensureDataHub.in
 
 ---
 
-### FASE 0.8 — DataHub Core: Obrigar Persistence (1 tarefa)
+### FASE 0.8 — DataHub Core: Resiliência e Persistence (4 tarefas)
 
 ---
 
-#### Tarefa 0.8.1 — Tornar persistence obrigatório no construtor
+#### Tarefa 0.8.1 — Adicionar retry com exponential backoff (RED)
 
-**Objetivo:** DataHub SEMPRE tem persistência. Sem `persistence?: DataHubPersistence | undefined`.
+**Gap atacado:** Falha de Requisição
+
+**Problema:** `ensureDataHub()` retorna `undefined` em falha. Sem retry, sem fallback, sem log.
+
+**Solução:** Retry com exponential backoff + fallback para persistence.
+
+**RED — Testes que FALHAM:**
+
+```typescript
+// shared/data-hub/__tests__/global-hub.test.ts — ADICIONAR
+describe('ensureDataHub with retry', () => {
+    it('retries on transient failure', async () => {
+        const mockHub = { raw: {}, computed: {} } as any;
+        const fetchFn = vi.fn().mockRejectedValueOnce(new Error('network error')).mockResolvedValueOnce(mockHub);
+        const result = await ensureDataHub(fetchFn, { maxRetries: 2 });
+        expect(fetchFn).toHaveBeenCalledTimes(2);
+        expect(result).toBe(mockHub);
+    });
+
+    it('throws after maxRetries exhausted', async () => {
+        const fetchFn = vi.fn().mockRejectedValue(new Error('persistent error'));
+        await expect(ensureDataHub(fetchFn, { maxRetries: 2 })).rejects.toThrow('persistent error');
+    });
+});
+```
+
+---
+
+#### Tarefa 0.8.2 — Implementar retry com exponential backoff (GREEN)
+
+**Gap atacado:** Falha de Requisição
+
+**Implementação em `shared/data-hub/global-hub.ts`:**
+
+```typescript
+interface EnsureOptions {
+    maxRetries?: number;
+    baseDelay?: number;
+    persistence?: DataHubPersistence;
+    maxStalenessMs?: number;
+    hasDataChanged?: (cached: DataHub, newRaw: RawData) => boolean;
+    cachedHub?: DataHub;
+}
+
+export async function ensureDataHub(
+    fetchFn: () => Promise<DataHub | undefined>,
+    options?: EnsureOptions,
+): Promise<DataHub | undefined> {
+    const maxRetries = options?.maxRetries ?? 3;
+    const baseDelay = options?.baseDelay ?? 1000;
+    const maxStaleness = options?.maxStalenessMs ?? 5 * 60 * 1000;
+
+    if (_dataHub) {
+        const age = Date.now() - _dataHub.timestamp.getTime();
+        if (age > maxStaleness) {
+            for (let attempt = 0; attempt < maxRetries; attempt++) {
+                try {
+                    const freshHub = await fetchFn();
+                    if (freshHub && hasDataChanged(_dataHub, freshHub.raw)) {
+                        _dataHub = freshHub;
+                        return _dataHub;
+                    }
+                    return _dataHub;
+                } catch (err) {
+                    if (attempt < maxRetries - 1) {
+                        await new Promise((r) => setTimeout(r, baseDelay * Math.pow(2, attempt)));
+                    }
+                }
+            }
+            return _dataHub;
+        }
+        return _dataHub;
+    }
+
+    for (let attempt = 0; attempt < maxRetries; attempt++) {
+        try {
+            const hub = await fetchFn();
+            if (hub) {
+                _dataHub = hub;
+                return _dataHub;
+            }
+        } catch (err) {
+            if (attempt < maxRetries - 1) {
+                await new Promise((r) => setTimeout(r, baseDelay * Math.pow(2, attempt)));
+            }
+        }
+    }
+
+    if (options?.persistence) {
+        try {
+            const persistedData = options.persistence.loadMetricsStore();
+            if (persistedData && persistedData.runs.length > 0) {
+                const hub = DataHubImpl.loadFromStore(persistedData, 'unknown', options.persistence);
+                _dataHub = hub;
+                return _dataHub;
+            }
+        } catch {
+            // Persistence fallback failed
+        }
+    }
+
+    throw new Error('DataHub unavailable: API failed and no persistence fallback');
+}
+```
+
+---
+
+#### Tarefa 0.8.3 — Tornar persistence obrigatório no construtor (RED)
+
+**Gap atacado:** #3 — Persistence Opcional
+
+**Problema:** `DataHub.persistence` é opcional. Se não existe, métodos `save*` lançam exceção.
+
+**RED — Testes que FALHAM:**
+
+```typescript
+// Testes que criam DataHubImpl sem persistence devem falhar
+```
+
+---
+
+#### Tarefa 0.8.4 — Tornar persistence obrigatório no construtor (GREEN)
+
+**Gap atacado:** #3 — Persistence Opcional
 
 **Mudanças:**
 
 1. `DataHubImpl` constructor: `persistence: DataHubPersistence` (sem `?`)
-2. `DataHubImpl.create()`: `persistence` obrigatório (ou criar um default)
+2. `DataHubImpl.create()`: `persistence` obrigatório
 3. `DataHubImpl.loadFromStore()`: `persistence` obrigatório
 4. Interface `DataHub`: `readonly persistence: DataHubPersistence` (sem `?`)
 
 **Checkpoint:**
 
 ```bash
-npx tsc --noEmit                                    # 0 erros — erros de tipo onde persistence era opcional
-# Corrigir todos os call sites que não passam persistence
+npx tsc --noEmit                                    # 0 erros
 npx vitest run --reporter=verbose | tail -10         # 100% pass
 ```
 

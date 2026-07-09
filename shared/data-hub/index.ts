@@ -5,6 +5,6 @@
  */
 export { DataHubImpl } from './hub.js';
 export type { DataHubOptions } from './hub.js';
-export { getCachedHub, setCachedHub, clearCache, isCacheValid } from './cache.js';
+export { getCachedHub, setCachedHub, clearCache, isCacheValid, getOrFetchWithLock } from './cache.js';
 export * from './providers/index.js';
 export * from './compute/index.js';

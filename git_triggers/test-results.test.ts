@@ -92,7 +92,6 @@ vi.mock('../shared/data-hub/persistence.js', () => ({
     createDataHubPersistence: vi.fn().mockReturnValue({
         saveParseResult: mockSaveParseResult,
         saveRun: vi.fn(),
-        loadRun: vi.fn().mockReturnValue(null),
         saveCoverageSnapshot: vi.fn(),
         loadCoverageHistory: vi.fn().mockReturnValue([]),
         saveFailureClassification: vi.fn(),

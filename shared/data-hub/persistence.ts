@@ -101,13 +101,6 @@ export function createDataHubPersistence(_project: string, backend?: StoreBacken
             saveMetricsStore(store);
         },
 
-        loadRun(_sha: string): MetricsRun | null {
-            // SHA-based lookup is not supported by MetricsRun data model.
-            // MetricsRun uses timestamp as identifier, not SHA.
-            // Consumers needing SHA-based lookup should use Store.loadReport() directly.
-            return null;
-        },
-
         saveCoverageSnapshot(snapshot: CoverageSnapshot): void {
             const store = loadMetricsStore();
             if (!store.coverageHistory) store.coverageHistory = [];
