@@ -63,6 +63,8 @@ export interface RawData {
     commitLog?: string;
     /** CI run statistics derived from workflow runs — pass/fail/skip counts per run. */
     ciRuns?: CiRunStats[];
+    /** Failure classifications from MetricsStore — preserved for aggregateDefectTrends/Seasonality. */
+    failureClassifications?: FailureClassification[];
 }
 
 /** CI pipeline run statistics — derived from workflow run artifacts. */
