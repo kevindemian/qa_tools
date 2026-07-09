@@ -690,7 +690,6 @@ describe('Pr-report entry point — HTML report generation', () => {
                 ],
             }),
             saveRun: vi.fn(),
-            loadRun: vi.fn().mockReturnValue(null),
             saveCoverageSnapshot: vi.fn(),
             loadCoverageHistory: vi.fn().mockReturnValue([]),
             saveFailureClassification: vi.fn(),

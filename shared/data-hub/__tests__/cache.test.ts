@@ -156,3 +156,68 @@ describe('Multi-project Cache', () => {
         expect(getCacheSize()).toBe(0);
     });
 });
+
+describe('GetOrFetchWithLock', () => {
+    beforeEach(() => {
+        clearCache();
+    });
+
+    it('returns cached hub if exists', async () => {
+        expect.hasAssertions();
+
+        const { getOrFetchWithLock } = await import('../cache.js');
+        const mockHub = makeHub('test');
+        setCachedHub('test', mockHub);
+        const fetchFn = vi.fn();
+        const result = await getOrFetchWithLock('test', fetchFn);
+
+        expect(fetchFn).not.toHaveBeenCalled();
+        expect(result).toBe(mockHub);
+    });
+
+    it('calls fetchFn on cache miss', async () => {
+        expect.hasAssertions();
+
+        const { getOrFetchWithLock } = await import('../cache.js');
+        const mockHub = makeHub('test');
+        const fetchFn = vi.fn().mockResolvedValue(mockHub);
+        const result = await getOrFetchWithLock('test', fetchFn);
+
+        expect(fetchFn).toHaveBeenCalledTimes(1);
+        expect(result).toBe(mockHub);
+    });
+
+    it('prevents duplicate concurrent fetches', async () => {
+        expect.hasAssertions();
+
+        const { getOrFetchWithLock } = await import('../cache.js');
+        const mockHub = makeHub('test');
+        const fetchFn = vi.fn().mockImplementation(async () => {
+            await new Promise((resolve) => setTimeout(resolve, 50));
+            return mockHub;
+        });
+        const [result1, result2] = await Promise.all([
+            getOrFetchWithLock('test', fetchFn),
+            getOrFetchWithLock('test', fetchFn),
+        ]);
+
+        expect(fetchFn).toHaveBeenCalledTimes(1);
+        expect(result1).toBe(mockHub);
+        expect(result2).toBe(mockHub);
+    });
+
+    it('allows fetch after lock released', async () => {
+        expect.hasAssertions();
+
+        const { getOrFetchWithLock } = await import('../cache.js');
+        const mockHub1 = makeHub('test');
+        const mockHub2 = makeHub('test');
+        const fetchFn = vi.fn().mockResolvedValueOnce(mockHub1).mockResolvedValueOnce(mockHub2);
+        await getOrFetchWithLock('test', fetchFn);
+        clearRepoCache('test');
+        const result = await getOrFetchWithLock('test', fetchFn);
+
+        expect(fetchFn).toHaveBeenCalledTimes(2);
+        expect(result).toBe(mockHub2);
+    });
+});

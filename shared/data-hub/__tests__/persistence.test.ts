@@ -106,12 +106,6 @@ describe('DataHubPersistence', () => {
             expect(stored.runs).toHaveLength(1);
             expect(stored.runs[0]?.passed).toBe(8);
         });
-
-        it('loadRun returns null (SHA-based lookup not supported)', () => {
-            expect.hasAssertions();
-
-            expect(persistence.loadRun('abc123')).toBeNull();
-        });
     });
 
     describe('SaveCoverageSnapshot / LoadCoverageHistory', () => {

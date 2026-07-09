@@ -381,7 +381,6 @@ describe('DataHubImpl.loadFromStore', () => {
         const store = makeMetricsStore();
         const mockPersistence = {
             saveRun: vi.fn(),
-            loadRun: vi.fn(),
             saveCoverageSnapshot: vi.fn(),
             loadCoverageHistory: vi.fn(),
             saveFailureClassification: vi.fn(),
@@ -517,7 +516,6 @@ describe('DataHubImpl — SSOT Persistence', () => {
             const store = makeMetricsStore();
             const mockPersistence = {
                 saveRun: vi.fn(),
-                loadRun: vi.fn(),
                 saveCoverageSnapshot: vi.fn(),
                 loadCoverageHistory: vi.fn(),
                 saveFailureClassification: vi.fn(),
@@ -562,7 +560,6 @@ describe('DataHubImpl — SSOT Persistence', () => {
             const store = makeMetricsStore();
             const mockPersistence = {
                 saveRun: vi.fn(),
-                loadRun: vi.fn(),
                 saveCoverageSnapshot: vi.fn(),
                 loadCoverageHistory: vi.fn(),
                 saveFailureClassification: vi.fn(),
@@ -604,7 +601,6 @@ describe('DataHubImpl — SSOT Persistence', () => {
             const store = makeMetricsStore();
             const mockPersistence = {
                 saveRun: vi.fn(),
-                loadRun: vi.fn(),
                 saveCoverageSnapshot: vi.fn(),
                 loadCoverageHistory: vi.fn(),
                 saveFailureClassification: vi.fn(),
@@ -643,7 +639,6 @@ describe('DataHubImpl — SSOT Persistence', () => {
             const store = makeMetricsStore();
             const mockPersistence = {
                 saveRun: vi.fn(),
-                loadRun: vi.fn(),
                 saveCoverageSnapshot: vi.fn(),
                 loadCoverageHistory: vi.fn(),
                 saveFailureClassification: vi.fn(),

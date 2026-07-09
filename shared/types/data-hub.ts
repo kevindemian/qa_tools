@@ -428,7 +428,6 @@ export interface DataHubPersistence {
      * SHA-based lookup is available through the legacy Store class.
      * Retained for interface completeness.
      */
-    loadRun(sha: string): MetricsRun | null;
     /** Save a coverage snapshot. */
     saveCoverageSnapshot(snapshot: CoverageSnapshot): void;
     /** Load coverage history for a project. */

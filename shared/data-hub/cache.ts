@@ -94,3 +94,51 @@ export function isCacheValid(repo: string): boolean {
 export function getCacheSize(): number {
     return _cache.size;
 }
+
+interface LockEntry {
+    promise: Promise<DataHub | undefined>;
+    timestamp: number;
+}
+
+const _locks = new Map<string, LockEntry>();
+const LOCK_TIMEOUT_MS = 30_000;
+const LOCK_CLEANUP_INTERVAL_MS = 60_000;
+
+let _cleanupInterval: ReturnType<typeof setInterval> | null = null;
+
+function startCleanup(): void {
+    if (_cleanupInterval) return;
+    _cleanupInterval = setInterval(() => {
+        const now = Date.now();
+        for (const [repo, entry] of _locks) {
+            if (now - entry.timestamp > LOCK_TIMEOUT_MS) _locks.delete(repo);
+        }
+    }, LOCK_CLEANUP_INTERVAL_MS);
+}
+
+export async function getOrFetchWithLock(
+    repo: string,
+    fetchFn: () => Promise<DataHub | undefined>,
+): Promise<DataHub | undefined> {
+    startCleanup();
+    const cached = getCachedHub(repo);
+    if (cached) return cached;
+    const existingLock = _locks.get(repo);
+    if (existingLock) {
+        return Promise.race([
+            existingLock.promise,
+            new Promise<DataHub | undefined>((resolve, reject) => {
+                setTimeout(() => reject(new Error(`Lock timeout for ${repo}`)), LOCK_TIMEOUT_MS);
+                return resolve;
+            }),
+        ]);
+    }
+    const lockPromise = fetchFn()
+        .then((hub) => {
+            if (hub) setCachedHub(repo, hub);
+            return hub;
+        })
+        .finally(() => _locks.delete(repo));
+    _locks.set(repo, { promise: lockPromise, timestamp: Date.now() });
+    return lockPromise;
+}

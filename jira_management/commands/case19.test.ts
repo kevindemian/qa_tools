@@ -48,7 +48,6 @@ const baseContext = createMockContext();
 function createMockPersistence(overrides: Partial<ReturnType<typeof persistenceModule.createDataHubPersistence>> = {}) {
     return {
         saveRun: vi.fn(),
-        loadRun: vi.fn().mockReturnValue(null),
         saveCoverageSnapshot: vi.fn(),
         loadCoverageHistory: vi.fn().mockReturnValue([]),
         saveFailureClassification: vi.fn(),
