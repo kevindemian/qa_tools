@@ -7,6 +7,49 @@
 
 ---
 
+## CONTEXTO FUNDAMENTAL
+
+### O que estamos fazendo
+
+Estamos **construindo uma nova arquitetura** de dados. Não estamos mantendo uma existente. O DataHub é o novo ponto central que substituirá TODAS as fontes alternativas de dados (MetricsStore, acesso direto a APIs CI, cálculos locais).
+
+### Por que estamos fazendo
+
+O estado atual é caótico: 35 bypasses mapeados em 28 arquivos. Cada consumidor baixa, parseia e calcula dados por conta própria. Isso gera:
+
+- Inconsistência (cálculos diferentes em lugares diferentes)
+- Duplicação (mesma lógica implementada N vezes)
+- Manutenção impossível (mudar um cálculo requer mudar N arquivos)
+- Impossibilidade de escalar (cada novo consumidor duplica trabalho)
+
+### Nosso objetivo final
+
+**MetricsStore será deletado.** Toda persistência passa pelo DataHub internamente. Consumidores NÃO acessam persistence diretamente — chamam métodos do DataHub que encapsulam a persistência.
+
+### Por que "manutenção de arquitetura" não é argumento válido
+
+Estamos em **construção**, não manutenção. Argumentos como "isso quebra o padrão existente" ou "não há consumidores para essa função" são inválidos porque:
+
+- O padrão existente É o problema que estamos resolvendo
+- Funções sem consumidores são assim PORQUE estamos no meio da construção
+- O fato de algo não existir hoje não é argumento para não construir
+
+### Por que "consumidores não usam função" não é argumento para deleção
+
+Se uma função existe no plano de arquitetura, ela existe por uma razão: consumidores a usarão quando a migração estiver completa. Argumentar para deletar uma função porque "ninguém a chama hoje" é sabotagem do plano que estamos executando. O custo de migração JÁ ESTÁ NO ORÇAMENTO do plano.
+
+### Regra de decisão
+
+**A ÚNICA justificativa para qualquer ação é SUPERIORIDADE TÉCNICA ou SEGURANÇA.** Não:
+
+- "Manutenção de padrão"
+- "Simplicidade"
+- "Esforço de implementação"
+- "Não há consumidores"
+- "Custo de migração"
+
+---
+
 ## SYSTEM MODEL
 
 **Invariantes absolutos:**
@@ -459,6 +502,18 @@ MetricsStore.coverageHistory (CoverageSnapshot[])
 - FailureClassification disponível para consumers atuais
 - Sem violação de contratos de tipo
 
+### Lições Aprendidas — Fase 0.5
+
+1. **Análise adversarial é crítica** — Soluções iniciais podem ter defeitos arquiteturais graves que só são expostos sob escrutínio adversarial. Sempre questionar: "O que pode dar errado?"
+
+2. **Mapeamento direto > Conversão** — Quando dois tipos são fundamentalmente diferentes (`MetricsRun` vs `PipelineRun`), não tente converter entre eles. Mapeie diretamente para onde cada dado pertence.
+
+3. **Contratos de tipo são imutáveis** — Não inventar campos que não existem em um tipo. Adicionar `tests` e `run_duration_ms` a `PipelineRun` cria objetos "Frankenstein" que quebram expectativas na cadeia de consumo.
+
+4. **Documentar decisões arquiteturais** — Registrar o "porquê" (não apenas o "o quê") ajuda futuros desenvolvedores a não repetirem erros.
+
+5. **Preservar dados originais** — Dados que existem na fonte devem ser preservados no destino. FailureClassification não poderia ser ignorado sem quebrar `aggregateDefectTrends`.
+
 ### Cadeia de dependências (atualizada)
 
 ```
@@ -538,38 +593,132 @@ npx vitest run shared/data-hub/__tests__/hub.test.ts --reporter=verbose
 
 ---
 
-### FASE 0.6 — DataHub Core: Persistência Interna (1 tarefa)
+### FASE 0.6 — DataHub Core: Persistência Interna (SSOT) (1 tarefa)
 
 ---
 
-#### Tarefa 0.6.1 — Adicionar métodos de persistência ao DataHub
+#### Tarefa 0.6.1 — Remover `persistence` da interface `DataHub`
 
-**Objetivo:** DataHub salva e recupera dados internamente. Consumidores não acessam `hub.persistence` diretamente.
+**Objetivo:** `persistence` NÃO pode estar exposto na interface. Consumidores não podem acessar diretamente.
 
-**Interface adicional ao DataHub:**
+**Mudança em `shared/types/data-hub.ts`:**
 
 ```typescript
-// Métodos de persistência:
-save(): void;
-saveRun(sha: string, run: MetricsRun): void;
-saveCoverageSnapshot(snapshot: CoverageSnapshot): void;
-saveFailureClassification(classification: FailureClassification): void;
-flush(message: string): void;
+// ANTES:
+interface DataHub {
+    readonly raw: RawData;
+    readonly computed: ComputedMetrics;
+    readonly persistence?: DataHubPersistence | undefined; // ← REMOVER
+    readonly timestamp: Date;
+    readonly provider: 'github' | 'gitlab';
+    readonly repo: string;
+}
+
+// DEPOIS:
+interface DataHub {
+    readonly raw: RawData;
+    readonly computed: ComputedMetrics;
+    readonly timestamp: Date;
+    readonly provider: 'github' | 'gitlab';
+    readonly repo: string;
+}
 ```
 
-**Implementação:**
+---
 
-Cada método delega para `this.persistence` internamente. Se `this.persistence` é `undefined`, lança erro claro.
+#### Tarefa 0.6.2 — Adicionar métodos de persistência à interface `DataHub`
+
+**Objetivo:** Consumidores chamam `hub.saveRun()`, não `hub.persistence.saveRun()`.
+
+**Mudança em `shared/types/data-hub.ts`:**
+
+```typescript
+interface DataHub {
+    // ... propriedades existentes ...
+
+    // Operações de persistência (SSOT)
+    saveRun(sha: string, run: MetricsRun): void;
+    saveCoverageSnapshot(snapshot: CoverageSnapshot): void;
+    saveFailureClassification(classification: FailureClassification): void;
+    flush(message: string): void;
+}
+```
+
+---
+
+#### Tarefa 0.6.3 — Implementar métodos em `DataHubImpl`
+
+**Objetivo:** Cada método delega para `this.persistence`. Se `persistence` é `undefined`, lança erro (NUNCA no-op silencioso).
+
+**Mudança em `shared/data-hub/hub.ts`:**
+
+```typescript
+class DataHubImpl implements DataHub {
+    // persistence é PRIVADO — não exposto
+    private readonly persistence?: DataHubPersistence;
+
+    saveRun(sha: string, run: MetricsRun): void {
+        if (this.persistence == null) {
+            throw new Error('DataHub: persistence not configured');
+        }
+        this.persistence.saveRun(sha, run);
+    }
+
+    saveCoverageSnapshot(snapshot: CoverageSnapshot): void {
+        if (this.persistence == null) {
+            throw new Error('DataHub: persistence not configured');
+        }
+        this.persistence.saveCoverageSnapshot(snapshot);
+    }
+
+    saveFailureClassification(classification: FailureClassification): void {
+        if (this.persistence == null) {
+            throw new Error('DataHub: persistence not configured');
+        }
+        this.persistence.saveFailureClassification(classification);
+    }
+
+    flush(message: string): void {
+        if (this.persistence == null) {
+            throw new Error('DataHub: persistence not configured');
+        }
+        this.persistence.flush(message);
+    }
+}
+```
+
+---
+
+#### Tarefa 0.6.4 — Corrigir testes
+
+**Problema:** Apenas 1 teste acessa `hub.persistence` diretamente (`shared/data-hub/__tests__/hub.test.ts:384`).
+
+**Solução:** Reescrever teste para verificar comportamento dos métodos, não acesso à propriedade.
+
+---
+
+#### Tarefa 0.6.5 — Testes SSOT
+
+| Teste                                                    | Verifica  |
+| -------------------------------------------------------- | --------- |
+| `saveRun()` lança erro sem persistence                   | SEGURANÇA |
+| `saveRun()` delega para persistence                      | CORREÇÃO  |
+| `saveCoverageSnapshot()` lança erro sem persistence      | SEGURANÇA |
+| `saveCoverageSnapshot()` delega para persistence         | CORREÇÃO  |
+| `saveFailureClassification()` lança erro sem persistence | SEGURANÇA |
+| `saveFailureClassification()` delega para persistence    | CORREÇÃO  |
+| `flush()` lança erro sem persistence                     | SEGURANÇA |
+| `flush()` delega para persistence                        | CORREÇÃO  |
 
 **Checkpoint:**
 
 ```bash
 npx tsc --noEmit                                    # 0 erros
 npx vitest run shared/data-hub/__tests__/hub.test.ts --reporter=verbose
-# Esperado: testes de persistência passam
+# Esperado: todos os testes passam
 ```
 
-**Commit:** `feat(data-hub): add persistence methods — save, saveRun, flush`
+**Commit:** `feat(data-hub): add SSOT persistence methods — encapsulate persistence in DataHub`
 
 ---
 
