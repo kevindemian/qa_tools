@@ -383,4 +383,93 @@ describe('DataHubImpl.loadFromStore', () => {
 
         expect(hub.persistence).toBe(mockPersistence);
     });
+
+    it('creates parsedArtifacts from MetricsRun', () => {
+        const store = makeMetricsStore({
+            runs: [
+                {
+                    timestamp: '2026-01-01T10:00:00Z',
+                    project: 'main',
+                    total: 100,
+                    passed: 95,
+                    failed: 3,
+                    skipped: 2,
+                    duration: 5000,
+                    tests: [{ title: 'test1', state: 'passed', duration: 100 }],
+                },
+            ],
+        });
+        const hub = DataHubImpl.loadFromStore(store, 'test-repo');
+
+        expect(hub.raw.parsedArtifacts).toBeDefined();
+        expect(hub.raw.parsedArtifacts?.size).toBe(1);
+
+        const artifacts = hub.raw.parsedArtifacts?.get(0);
+
+        expect(artifacts).toBeDefined();
+        expect(artifacts).toHaveLength(1);
+        expect(artifacts?.[0]?.fileName).toBe('metrics-store');
+        expect(artifacts?.[0]?.format).toBe('ctrf');
+        expect(artifacts?.[0]?.data.tests).toHaveLength(1);
+        expect(artifacts?.[0]?.data.stats).toStrictEqual({
+            passed: 95,
+            failed: 3,
+            skipped: 2,
+            total: 100,
+            duration: 5000,
+        });
+    });
+
+    it('preserves failureClassifications', () => {
+        const classifications = [
+            { timestamp: '2026-01-01T10:00:00Z', testTitle: 'flaky test', category: 'FLAKY', project: 'main' },
+        ];
+        const store = makeMetricsStore({ failureClassifications: classifications });
+        const hub = DataHubImpl.loadFromStore(store, 'test-repo');
+
+        expect(hub.raw.failureClassifications).toBeDefined();
+        expect(hub.raw.failureClassifications).toHaveLength(1);
+        expect(hub.raw.failureClassifications?.[0]?.testTitle).toBe('flaky test');
+    });
+
+    it('does not set failureClassifications when empty', () => {
+        const store = makeMetricsStore({ failureClassifications: [] });
+        const hub = DataHubImpl.loadFromStore(store, 'test-repo');
+
+        expect(hub.raw.failureClassifications).toBeUndefined();
+    });
+
+    it('preserves original timestamps in PipelineRun', () => {
+        const store = makeMetricsStore({
+            runs: [
+                {
+                    timestamp: '2025-12-25T08:30:00Z',
+                    project: 'main',
+                    total: 50,
+                    passed: 50,
+                    failed: 0,
+                    skipped: 0,
+                    duration: 3000,
+                    tests: [],
+                },
+            ],
+        });
+        const hub = DataHubImpl.loadFromStore(store, 'test-repo');
+
+        expect(hub.raw.runs[0]?.created_at).toBe('2025-12-25T08:30:00Z');
+    });
+
+    it('does not add non-existent fields to PipelineRun', () => {
+        const store = makeMetricsStore();
+        const hub = DataHubImpl.loadFromStore(store, 'test-repo');
+
+        const run = hub.raw.runs[0];
+
+        expect(run).toBeDefined();
+        expect(run?.id).toBe(0);
+        expect(run?.run_number).toBe(0);
+        expect(run?.head_branch).toBe('main');
+        expect(run?.status).toBe('completed');
+        expect(run?.conclusion).toBe('success');
+    });
 });

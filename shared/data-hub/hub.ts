@@ -238,21 +238,48 @@ export class DataHubImpl implements DataHub {
     /**
      * Create a DataHub from persisted MetricsStore data.
      *
-     * Converts MetricsRun[] → PipelineRun[] and CoverageSnapshot[] → RawCoverage,
-     * then computes all metrics. No CI providers needed — data comes from persistence.
+     * Direct mapping (no round-trip):
+     * - MetricsRun[] → parsedArtifacts (ArtifactParseResult directly)
+     * - MetricsRun[] → PipelineRun[] (metadata only, correct timestamps)
+     * - CoverageSnapshot[] → RawCoverage
+     * - FailureClassification[] → raw.failureClassifications
      */
     static loadFromStore(store: MetricsStore, repo: string, persistence?: DataHubPersistence): DataHubImpl {
-        const runs: PipelineRun[] = store.runs.map((m, i) => ({
-            id: i,
-            run_number: i,
-            head_branch: m.project || 'unknown',
-            status: 'completed',
-            conclusion: m.passed > m.failed ? 'success' : 'failure',
-            created_at: m.timestamp,
-            event: 'push',
-            tests: m.tests,
-            run_duration_ms: m.duration,
-        }));
+        const parsedArtifacts = new Map<number, ArtifactParseResult[]>();
+        const runs: PipelineRun[] = [];
+        const runsArray = Array.isArray(store.runs) ? store.runs : [];
+
+        for (let i = 0; i < runsArray.length; i++) {
+            const m = runsArray[i];
+            if (m == null) continue;
+
+            parsedArtifacts.set(i, [
+                {
+                    fileName: 'metrics-store',
+                    data: {
+                        tests: m.tests,
+                        stats: {
+                            passed: m.passed,
+                            failed: m.failed,
+                            skipped: m.skipped,
+                            total: m.total,
+                            duration: m.duration,
+                        },
+                    },
+                    format: 'ctrf',
+                },
+            ]);
+
+            runs.push({
+                id: i,
+                run_number: i,
+                head_branch: m.project || 'unknown',
+                status: 'completed',
+                conclusion: m.passed > m.failed ? 'success' : 'failure',
+                created_at: m.timestamp,
+                event: 'push',
+            });
+        }
 
         const coverageHistory = store.coverageHistory ?? [];
         const lastSnapshot = coverageHistory[coverageHistory.length - 1];
@@ -270,9 +297,13 @@ export class DataHubImpl implements DataHub {
             jobs: new Map(),
             artifacts: new Map(),
             failureReasons: new Map(),
+            parsedArtifacts,
         };
         if (coverage != null) {
             raw.coverage = coverage;
+        }
+        if (store.failureClassifications != null && store.failureClassifications.length > 0) {
+            raw.failureClassifications = store.failureClassifications;
         }
 
         const computed = DataHubImpl.computeMetrics(raw, { repo });
@@ -360,7 +391,7 @@ export class DataHubImpl implements DataHub {
         const executionRate = calcExecutionRate(raw.runs);
         const flakyPercentage = calcFlakyPercentage(flakyRate, raw.runs, raw.jobs);
         const perRunCosts = calcPerRunCosts(raw.runs, options.costPerMinute);
-        const metricsRuns = raw.parsedArtifacts != null ? convertToMetricsRuns(raw.parsedArtifacts) : [];
+        const metricsRuns = raw.parsedArtifacts != null ? convertToMetricsRuns(raw.parsedArtifacts, raw.runs) : [];
         const flakinessEntries = calcFlakinessEntries(metricsRuns);
         const metricsTrends = calcMetricsTrends(metricsRuns);
         // ─── SSOT expansion — test-level metrics ────────────────────────────
