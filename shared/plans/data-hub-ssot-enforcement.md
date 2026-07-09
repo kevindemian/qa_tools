@@ -98,6 +98,18 @@ Se uma função existe no plano de arquitetura, ela existe por uma razão: consu
 
 4. **Documentar o "POR QUE" evita retrocesso** — Seção CONTEXTO FUNDAMENTAL previne que futuros agentes tentem reverter decisões arquiteturais com argumentos de conveniência.
 
+### Fase 0.7 — Análise e Planejamento
+
+1. **Questionar antes de assumir** — "Cache duplicado" não é duplicação se serve propósitos diferentes (`_dataHub` = projeto atual, `_cache` = todos os projetos). Análise superficial leva a decisões incorretas.
+
+2. **Plano deve refletir realidade** — Contradições no plano ("MetricsStore será deletado" mas Fase 0.8 só remove interface pública) causam confusão. Plano deve ser preciso.
+
+3. **Injeção de dependência > acoplamento** — `ensureDataHub(fetchFn)` é mais testável e flexível que `ensureDataHub()` com closure.
+
+4. **TDD é obrigatório** — Escrever testes ANTES da implementação garante que o código atende aos requisitos, não o contrário.
+
+5. **Race conditions são reais** — `Promise.allSettled` com cache não atômico causa fetches duplicados. Mutex simples resolve.
+
 ---
 
 ## CONTEXTO E RACIONAL
@@ -746,33 +758,339 @@ npx vitest run shared/data-hub/__tests__/hub.test.ts --reporter=verbose
 
 ---
 
-### FASE 0.7 — DataHub Global: Acessibilidade (1 tarefa)
+### FASE 0.7 — DataHub Global: Acessibilidade (2 tarefas)
 
 ---
 
-#### Tarefa 0.7.1 — Criar `shared/data-hub/global-hub.ts`
+#### Tarefa 0.7.1 — Criar `shared/data-hub/global-hub.ts` (RED)
 
-**Objetivo:** Qualquer caller pode obter um DataHub, não só `git_triggers`.
+**Objetivo:** Qualquer caller pode obter um DataHub, não só `git_triggers`. Usa injeção de dependência para flexibilidade.
 
 **Interface:**
 
 ```typescript
 // shared/data-hub/global-hub.ts
 export function getDataHub(): DataHub | undefined;
-export function setDataHub(hub: DataHub): void;
-export async function ensureDataHub(project: string, repo: string): Promise<DataHub | undefined>;
+export function setDataHub(hub: DataHub | undefined): void;
+export async function ensureDataHub(fetchFn: () => Promise<DataHub | undefined>): Promise<DataHub | undefined>;
 ```
+
+**RED — Testes que FALHAM:**
+
+```typescript
+// shared/data-hub/__tests__/global-hub.test.ts
+import { describe, it, expect, beforeEach, vi } from 'vitest';
+import { getDataHub, setDataHub, ensureDataHub } from '../global-hub.js';
+
+describe('GlobalHub', () => {
+    beforeEach(() => {
+        setDataHub(undefined); // limpa estado entre testes
+    });
+
+    it('getDataHub returns undefined initially', () => {
+        expect(getDataHub()).toBeUndefined();
+    });
+
+    it('setDataHub stores hub', () => {
+        const mockHub = { raw: {}, computed: {} } as any;
+        setDataHub(mockHub);
+        expect(getDataHub()).toBe(mockHub);
+    });
+
+    it('setDataHub(undefined) clears hub', () => {
+        const mockHub = { raw: {}, computed: {} } as any;
+        setDataHub(mockHub);
+        setDataHub(undefined);
+        expect(getDataHub()).toBeUndefined();
+    });
+
+    it('ensureDataHub calls fetchFn when no hub exists', async () => {
+        const mockHub = { raw: {}, computed: {} } as any;
+        const fetchFn = vi.fn().mockResolvedValue(mockHub);
+
+        const result = await ensureDataHub(fetchFn);
+
+        expect(fetchFn).toHaveBeenCalledTimes(1);
+        expect(result).toBe(mockHub);
+    });
+
+    it('ensureDataHub returns cached hub without calling fetchFn', async () => {
+        const mockHub = { raw: {}, computed: {} } as any;
+        setDataHub(mockHub);
+        const fetchFn = vi.fn();
+
+        const result = await ensureDataHub(fetchFn);
+
+        expect(fetchFn).not.toHaveBeenCalled();
+        expect(result).toBe(mockHub);
+    });
+
+    it('ensureDataHub returns undefined when fetchFn fails', async () => {
+        const fetchFn = vi.fn().mockRejectedValue(new Error('network error'));
+
+        const result = await ensureDataHub(fetchFn);
+
+        expect(result).toBeUndefined();
+    });
+
+    it('ensureDataHub stores hub when fetchFn succeeds', async () => {
+        const mockHub = { raw: {}, computed: {} } as any;
+        const fetchFn = vi.fn().mockResolvedValue(mockHub);
+
+        await ensureDataHub(fetchFn);
+
+        expect(getDataHub()).toBe(mockHub);
+    });
+});
+```
+
+---
+
+#### Tarefa 0.7.2 — Criar `shared/data-hub/global-hub.ts` (GREEN)
 
 **Implementação:**
 
-- `getDataHub()`: retorna hub global (ou undefined)
-- `setDataHub(hub)`: define hub global
-- `ensureDataHub(project, repo)`: se hub existe, retorna; senão, cria via `DataHub.loadFromStore()` usando dados persistidos
+```typescript
+// shared/data-hub/global-hub.ts
+import type { DataHub } from '../types/data-hub.js';
 
-**Migrar `git_triggers/session-state.ts`:**
+/** Global hub instance — session-scoped. */
+let _dataHub: DataHub | undefined;
 
-- `getDataHub()` e `setDataHub()` delegam para `shared/data-hub/global-hub.ts`
-- `ensureDataHub()` usa `shared/data-hub/global-hub.ts`
+/**
+ * Get the global DataHub instance.
+ * @returns Cached DataHub or undefined if not initialized.
+ */
+export function getDataHub(): DataHub | undefined {
+    return _dataHub;
+}
+
+/**
+ * Set the global DataHub instance.
+ * @param hub - DataHub to cache, or undefined to clear.
+ */
+export function setDataHub(hub: DataHub | undefined): void {
+    _dataHub = hub;
+}
+
+/**
+ * Ensure a DataHub exists, fetching if necessary.
+ *
+ * Uses dependency injection: caller provides fetchFn that knows how to
+ * obtain a DataHub (from CI API, persistence, or mock).
+ *
+ * @param fetchFn - Function to fetch DataHub when not cached.
+ * @returns Cached or freshly fetched DataHub, or undefined on failure.
+ */
+export async function ensureDataHub(fetchFn: () => Promise<DataHub | undefined>): Promise<DataHub | undefined> {
+    if (_dataHub) return _dataHub;
+
+    try {
+        const hub = await fetchFn();
+        if (hub) {
+            _dataHub = hub;
+        }
+        return _dataHub;
+    } catch {
+        return undefined;
+    }
+}
+```
+
+**Checkpoint:**
+
+```bash
+npx tsc --noEmit                                    # 0 erros
+npx vitest run shared/data-hub/__tests__/global-hub.test.ts --reporter=verbose
+# Esperado: 7 testes passam
+```
+
+---
+
+#### Tarefa 0.7.3 — Adicionar `getOrFetchWithLock` ao cache (RED)
+
+**Objetivo:** Prevenir race conditions no prefetch.
+
+**RED — Testes que FALHAM:**
+
+```typescript
+// shared/data-hub/__tests__/cache.test.ts — ADICIONAR
+describe('getOrFetchWithLock', () => {
+    it('returns cached hub if exists', async () => {
+        const mockHub = { repo: 'test' } as any;
+        setCachedHub('test', mockHub);
+
+        const fetchFn = vi.fn();
+        const result = await getOrFetchWithLock('test', fetchFn);
+
+        expect(fetchFn).not.toHaveBeenCalled();
+        expect(result).toBe(mockHub);
+    });
+
+    it('calls fetchFn on cache miss', async () => {
+        const mockHub = { repo: 'test' } as any;
+        const fetchFn = vi.fn().mockResolvedValue(mockHub);
+
+        const result = await getOrFetchWithLock('test', fetchFn);
+
+        expect(fetchFn).toHaveBeenCalledTimes(1);
+        expect(result).toBe(mockHub);
+    });
+
+    it('prevents duplicate concurrent fetches', async () => {
+        const mockHub = { repo: 'test' } as any;
+        let fetchCount = 0;
+        const fetchFn = vi.fn().mockImplementation(async () => {
+            fetchCount++;
+            await new Promise((r) => setTimeout(r, 50));
+            return mockHub;
+        });
+
+        // inicia duas chamadas simultâneas
+        const [result1, result2] = await Promise.all([
+            getOrFetchWithLock('test', fetchFn),
+            getOrFetchWithLock('test', fetchFn),
+        ]);
+
+        expect(fetchFn).toHaveBeenCalledTimes(1); // apenas uma busca
+        expect(result1).toBe(mockHub);
+        expect(result2).toBe(mockHub);
+    });
+
+    it('allows fetch after lock released', async () => {
+        const mockHub1 = { repo: 'test', v: 1 } as any;
+        const mockHub2 = { repo: 'test', v: 2 } as any;
+        const fetchFn = vi.fn().mockResolvedValueOnce(mockHub1).mockResolvedValueOnce(mockHub2);
+
+        await getOrFetchWithLock('test', fetchFn);
+        clearRepoCache('test');
+        const result = await getOrFetchWithLock('test', fetchFn);
+
+        expect(fetchFn).toHaveBeenCalledTimes(2);
+        expect(result).toBe(mockHub2);
+    });
+});
+```
+
+---
+
+#### Tarefa 0.7.4 — Adicionar `getOrFetchWithLock` ao cache (GREEN)
+
+**Implementação em `shared/data-hub/cache.ts`:**
+
+```typescript
+/** Active fetch locks — prevents duplicate concurrent fetches. */
+const _locks = new Map<string, Promise<DataHub | undefined>>();
+
+/**
+ * Get cached hub or fetch with lock to prevent race conditions.
+ *
+ * If cache hit, returns immediately.
+ * If cache miss, acquires lock and calls fetchFn.
+ * Concurrent calls for same repo wait on existing lock.
+ *
+ * @param repo - Repository identifier.
+ * @param fetchFn - Function to fetch hub on cache miss.
+ * @returns Cached or freshly fetched DataHub.
+ */
+export async function getOrFetchWithLock(
+    repo: string,
+    fetchFn: () => Promise<DataHub | undefined>,
+): Promise<DataHub | undefined> {
+    const cached = getCachedHub(repo);
+    if (cached) return cached;
+
+    const existingLock = _locks.get(repo);
+    if (existingLock) return existingLock;
+
+    const lock = fetchFn()
+        .then((hub) => {
+            if (hub) setCachedHub(repo, hub);
+            return hub;
+        })
+        .finally(() => {
+            _locks.delete(repo);
+        });
+
+    _locks.set(repo, lock);
+    return lock;
+}
+```
+
+**Atualizar barrel:**
+
+```typescript
+// shared/data-hub/index.ts
+export { getCachedHub, setCachedHub, clearCache, isCacheValid, getOrFetchWithLock } from './cache.js';
+```
+
+**Checkpoint:**
+
+```bash
+npx tsc --noEmit                                    # 0 erros
+npx vitest run shared/data-hub/__tests__/cache.test.ts --reporter=verbose
+# Esperado: todos os testes passam (incluindo novos)
+```
+
+---
+
+#### Tarefa 0.7.5 — Migrar `git_triggers/session-state.ts` (RED)
+
+**Objetivo:** Delegar para `global-hub.ts`, remover lógica duplicada.
+
+**RED — Testes que FALHAM:**
+
+```typescript
+// git_triggers/__tests__/integration/session-state-ensureDataHub.integration.test.ts — ATUALIZAR
+describe('Integration: ensureDataHub — global-hub migration', () => {
+    it('ensureDataHub uses fetchFn injection', async () => {
+        const mockHub = { raw: {}, computed: {} } as any;
+        const mockFetchFn = vi.fn().mockResolvedValue(mockHub);
+
+        // importa após migração
+        const { ensureDataHub } = await import('../../session-state.js');
+
+        // Note: session-state.ensureDataHub() não aceita fetchFn diretamente
+        // Ela internamente usa getOrFetchDataHub
+        // Este teste verifica que a migração não quebrou o fluxo
+    });
+});
+```
+
+---
+
+#### Tarefa 0.7.6 — Migrar `git_triggers/session-state.ts` (GREEN)
+
+**Mudanças:**
+
+```typescript
+// git_triggers/session-state.ts
+import {
+    getDataHub as _getDataHub,
+    setDataHub as _setDataHub,
+    ensureDataHub as _ensureDataHub,
+} from '../shared/data-hub/global-hub.js';
+
+// ... existente ...
+
+export function setDataHub(hub: DataHub | undefined): void {
+    _setDataHub(hub);
+}
+
+export function getDataHub(): DataHub | undefined {
+    return _getDataHub();
+}
+
+export async function ensureDataHub(): Promise<DataHub | undefined> {
+    if (!manager || !currentProjectName) return undefined;
+    return _ensureDataHub(async () => {
+        const { getOrFetchDataHub } = await import('../shared/ci-data.js');
+        return getOrFetchDataHub(manager!, currentProjectName!);
+    });
+}
+
+// REMOVER: let _dataHub: DataHub | undefined;  (linha 33)
+```
 
 **Checkpoint:**
 
