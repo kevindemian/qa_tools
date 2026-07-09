@@ -1339,25 +1339,35 @@ export async function ensureDataHub(
 
 #### Tarefa 0.7.9 — Migrar `git_triggers/session-state.ts` (RED)
 
-**Gap atacado:** #8 — Contradições no plano
+**Gap atacado:** #8 — Contradições no plano + 3 stores sobrepostos (violação SRP)
 
-**Objetivo:** Delegar para `global-hub.ts`, remover lógica duplicada.
+**Análise de Arquitetura (2026-07-09):**
 
-**RED — Testes que FALHAM:**
+- `session-state._dataHub` duplica `global-hub._dataHub` — mesmas semânticas, sem sincronização
+- `prefetchAllProjects` linhas 96-104 é **no-op**: `getOrFetchDataHub` internamente chama `getCachedHub`, retorna mesmo objeto → `hasDataChanged(same, same.raw)` sempre `false`
+- Race condition: `Promise.allSettled` sem `getOrFetchWithLock`
+- `hasDataChanged` importado mas não funcional no contexto de prefetch
+
+**RED — Testes que FALHAM (verificam delegação):**
 
 ```typescript
-// git_triggers/__tests__/integration/session-state-ensureDataHub.integration.test.ts — ATUALIZAR
-describe('Integration: ensureDataHub — global-hub migration', () => {
-    it('ensureDataHub uses fetchFn injection', async () => {
-        const mockHub = { raw: {}, computed: {} } as any;
-        const mockFetchFn = vi.fn().mockResolvedValue(mockHub);
+// git_triggers/__tests__/integration/session-state-ensureDataHub.integration.test.ts — ADICIONAR
 
-        // importa após migração
-        const { ensureDataHub } = await import('../../session-state.js');
+import { getDataHub as getGlobalHub } from '../../../shared/data-hub/global-hub.js';
 
-        // Note: session-state.ensureDataHub() não aceita fetchFn diretamente
-        // Ela internamente usa getOrFetchDataHub
-        // Este teste verifica que a migração não quebrou o fluxo
+describe('Global-hub delegation', () => {
+    it('setDataHub in session-state affects global-hub', () => {
+        const hub = makeMockHub();
+        setDataHub(hub); // session-state re-export
+        expect(getGlobalHub()).toBe(hub); // global-hub source of truth
+    });
+
+    it('ensureDataHub delegates to global-hub with fetchFn', async () => {
+        setManager(createMockProvider());
+        setCurrentProjectName('test');
+        const result = await ensureDataHub();
+        expect(result).toBeDefined();
+        expect(getGlobalHub()).toBe(result);
     });
 });
 ```
@@ -1366,20 +1376,25 @@ describe('Integration: ensureDataHub — global-hub migration', () => {
 
 #### Tarefa 0.7.10 — Migrar `git_triggers/session-state.ts` (GREEN)
 
-**Gap atacado:** #8 — Contradições no plano
+**Gap atacado:** #8 — Contradições no plano + correção de bugs latentes
 
-**Mudanças:**
+**Mudanças em `session-state.ts`:**
+
+1. **Adicionar import de global-hub:**
 
 ```typescript
-// git_triggers/session-state.ts
 import {
     getDataHub as _getDataHub,
     setDataHub as _setDataHub,
     ensureDataHub as _ensureDataHub,
 } from '../shared/data-hub/global-hub.js';
+```
 
-// ... existente ...
+2. **REMOVER:** `let _dataHub: DataHub | undefined;` (linha 33)
 
+3. **Substituir funções:**
+
+```typescript
 export function setDataHub(hub: DataHub | undefined): void {
     _setDataHub(hub);
 }
@@ -1395,20 +1410,25 @@ export async function ensureDataHub(): Promise<DataHub | undefined> {
         return getOrFetchDataHub(manager!, currentProjectName!);
     });
 }
-
-// REMOVER: let _dataHub: DataHub | undefined;  (linha 33)
 ```
+
+4. **Simplificar `prefetchAllProjects`:** Remover branch de cache-hit redundante (linhas 96-104),
+   remover import de `hasDataChanged`, usar `getOrFetchWithLock` para corrigir race condition.
+
+5. **Atualizar `_resetForTest`:** Chamar `_setDataHub(undefined)` em vez de limpar `_dataHub` local.
 
 **Checkpoint:**
 
 ```bash
 npx tsc --noEmit                                    # 0 erros
-npx vitest run shared/data-hub/__tests__/global-hub.test.ts --reporter=verbose
-npx vitest run git_triggers/__tests__/integration/session-state-ensureDataHub.integration.test.ts
-# Esperado: todos passam
+rg "_dataHub" git_triggers/session-state.ts         # 0 resultados
+rg "hasDataChanged" git_triggers/session-state.ts   # 0 resultados
+npx vitest run git_triggers/                         # 100% pass
+npx vitest run shared/__tests__/integration/         # 100% pass
+npx eslint git_triggers/session-state.ts             # 0 erros
 ```
 
-**Commit:** `feat(data-hub): add global-hub — accessible DataHub from any context`
+**Commit:** `refactor(data-hub): migrate session-state to delegate to global-hub`
 
 ---
 

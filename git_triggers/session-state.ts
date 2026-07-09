@@ -12,6 +12,11 @@ import { error, print, title, warn } from '../shared/prompt.js';
 import { palette } from '../shared/palette.js';
 import type { GitProvider, JsonObject, StateContainer } from '../shared/types.js';
 import type { DataHub } from '../shared/types/data-hub.js';
+import {
+    getDataHub as _getGlobalHub,
+    setDataHub as _setGlobalHub,
+    ensureDataHub as _ensureGlobalHub,
+} from '../shared/data-hub/global-hub.js';
 import GitLabManager from './gitlab_manager.js';
 import GitHubManager from './github_manager.js';
 
@@ -29,49 +34,38 @@ export let currentProvider: 'gitlab' | 'github' = 'gitlab';
 export let isBusy = false;
 export let manager: GitProvider | null = null;
 
-/** Central DataHub — created once per session, consumed by all dashboards and reports. */
-let _dataHub: DataHub | undefined;
-
+/** Central DataHub — delegated to global-hub.ts (SSOT). */
 export function setDataHub(hub: DataHub | undefined): void {
-    _dataHub = hub;
+    _setGlobalHub(hub);
 }
 
 export function getDataHub(): DataHub | undefined {
-    return _dataHub;
+    return _getGlobalHub();
 }
 
 /**
  * Lazy-init: creates DataHub on first call, caches for session lifetime.
  * Returns undefined if provider is unavailable or creation fails.
- * Uses unified cache from data-hub/cache.ts.
+ * Delegates to global-hub.ensureDataHub with freshness checking.
  */
 export async function ensureDataHub(): Promise<DataHub | undefined> {
-    if (_dataHub) return _dataHub;
+    // Check global-hub cache first (setDataHub may have been called directly)
+    const cached = _getGlobalHub();
+    if (cached) return cached;
     if (!manager || !currentProjectName) return undefined;
-    try {
+    const activeManager = manager;
+    const activeProject = currentProjectName;
+    return _ensureGlobalHub(async () => {
         const { getOrFetchDataHub } = await import('../shared/ci-data.js');
-
-        const dataHub = await getOrFetchDataHub(manager, currentProjectName);
-        if (dataHub) {
-            _dataHub = dataHub;
-        }
-        return _dataHub;
-    } catch (err) {
-        rootLogger.debug(`ensureDataHub failed: ${String(err)}`);
-        return undefined;
-    }
+        return getOrFetchDataHub(activeManager, activeProject);
+    });
 }
 
 /**
  * Prefetch DataHub for all configured projects in parallel.
  *
  * Fire-and-forget pattern: runs in background, does not block startup.
- * For each project:
- * 1. Create manager from config
- * 2. Fetch DataHub (uses cache if valid)
- * 3. If cache hit but data changed, rebuild hub
- * 4. Store in multi-project cache
- *
+ * getOrFetchDataHub handles cache internally — no need for duplicate cache checks.
  * Failures are isolated per project — one failing project does not affect others.
  */
 export async function prefetchAllProjects(): Promise<void> {
@@ -84,33 +78,16 @@ export async function prefetchAllProjects(): Promise<void> {
     }
 
     const { getOrFetchDataHub } = await import('../shared/ci-data.js');
-    const { getCachedHub, setCachedHub } = await import('../shared/data-hub/cache.js');
-    const { hasDataChanged } = await import('../shared/data-hub/hub.js');
 
     const results = await Promise.allSettled(
         projectEntries.map(async ([name, id]) => {
             try {
                 const projectManager = createManagerForProject(name, id);
-                const cachedHub = getCachedHub(name);
-
-                if (cachedHub) {
-                    // Cache hit — check if data changed by doing a lightweight fetch
-                    const freshHub = await getOrFetchDataHub(projectManager, name);
-                    if (freshHub && hasDataChanged(cachedHub, freshHub.raw)) {
-                        setCachedHub(name, freshHub);
-                        rootLogger.debug(`prefetch: ${name} — data changed, cache updated`);
-                    } else {
-                        rootLogger.debug(`prefetch: ${name} — cache valid, no changes`);
-                    }
+                const hub = await getOrFetchDataHub(projectManager, name);
+                if (hub) {
+                    rootLogger.debug(`prefetch: ${name} — fetched and cached`);
                 } else {
-                    // Cache miss — fetch fresh data
-                    const hub = await getOrFetchDataHub(projectManager, name);
-                    if (hub) {
-                        setCachedHub(name, hub);
-                        rootLogger.debug(`prefetch: ${name} — fetched and cached`);
-                    } else {
-                        rootLogger.debug(`prefetch: ${name} — no data available`);
-                    }
+                    rootLogger.debug(`prefetch: ${name} — no data available`);
                 }
             } catch (err) {
                 rootLogger.debug(`prefetch: ${name} — failed: ${String(err)}`);
@@ -288,7 +265,7 @@ export function _resetForTest(): void {
     currentProvider = 'gitlab';
     isBusy = false;
     manager = null;
-    _dataHub = undefined;
+    _setGlobalHub(undefined);
     sessionContext.sessionCounters = [];
 }
 
