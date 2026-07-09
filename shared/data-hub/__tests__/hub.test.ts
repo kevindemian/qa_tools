@@ -5,7 +5,7 @@
  */
 import { describe, it, expect, vi } from 'vitest';
 import { DataHubImpl } from '../hub.js';
-import type { DataProvider, RawData } from '../../types/data-hub.js';
+import type { DataProvider, RawData, MetricsStore, DataHubPersistence } from '../../types/data-hub.js';
 import type { PipelineRun } from '../../types/ci-cd.js';
 
 /* ── Helpers ────────────────────────────────────────────────────────────── */
@@ -234,5 +234,153 @@ describe('HasDataChanged', () => {
         const newRaw: RawData = makeEmptyRawData();
 
         expect(hasDataChanged(hub, newRaw)).toBeFalsy();
+    });
+});
+
+/* ── loadFromStore tests ─────────────────────────────────────────────────── */
+
+describe('DataHubImpl.loadFromStore', () => {
+    function makeMetricsStore(overrides?: Partial<MetricsStore>): MetricsStore {
+        return {
+            runs: [
+                {
+                    timestamp: '2026-01-01T10:00:00Z',
+                    project: 'main',
+                    total: 100,
+                    passed: 95,
+                    failed: 3,
+                    skipped: 2,
+                    duration: 5000,
+                    tests: [],
+                },
+                {
+                    timestamp: '2026-01-02T10:00:00Z',
+                    project: 'main',
+                    total: 100,
+                    passed: 98,
+                    failed: 1,
+                    skipped: 1,
+                    duration: 4500,
+                    tests: [],
+                },
+            ],
+            ...overrides,
+        };
+    }
+
+    it('creates DataHub from MetricsStore with runs', () => {
+        const store = makeMetricsStore();
+        const hub = DataHubImpl.loadFromStore(store, 'test-repo');
+
+        expect(hub).toBeDefined();
+        expect(hub.raw.runs).toHaveLength(2);
+        expect(hub.provider).toBe('github');
+        expect(hub.repo).toBe('test-repo');
+    });
+
+    it('converts MetricsRun to PipelineRun correctly', () => {
+        const store = makeMetricsStore();
+        const hub = DataHubImpl.loadFromStore(store, 'test-repo');
+
+        const run = hub.raw.runs[0];
+
+        expect(run).toBeDefined();
+        expect(run?.id).toBe(0);
+        expect(run?.run_number).toBe(0);
+        expect(run?.head_branch).toBe('main');
+        expect(run?.status).toBe('completed');
+        expect(run?.conclusion).toBe('success');
+        expect(run?.created_at).toBe('2026-01-01T10:00:00Z');
+    });
+
+    it('sets conclusion to failure when failed > passed', () => {
+        const store = makeMetricsStore({
+            runs: [
+                {
+                    timestamp: '2026-01-01T10:00:00Z',
+                    project: 'main',
+                    total: 100,
+                    passed: 50,
+                    failed: 50,
+                    skipped: 0,
+                    duration: 5000,
+                    tests: [],
+                },
+            ],
+        });
+        const hub = DataHubImpl.loadFromStore(store, 'test-repo');
+
+        expect(hub.raw.runs[0]?.conclusion).toBe('failure');
+    });
+
+    it('converts last CoverageSnapshot to RawCoverage', () => {
+        const store = makeMetricsStore({
+            coverageHistory: [
+                { timestamp: '2026-01-01', project: 'main', totalIssues: 100, mappedIssues: 80, coveragePct: 80 },
+                { timestamp: '2026-01-02', project: 'main', totalIssues: 100, mappedIssues: 85, coveragePct: 85 },
+            ],
+        });
+        const hub = DataHubImpl.loadFromStore(store, 'test-repo');
+
+        expect(hub.raw.coverage).toBeDefined();
+        expect(hub.raw.coverage?.total).toBe(100);
+        expect(hub.raw.coverage?.covered).toBe(85);
+        expect(hub.raw.coverage?.percentage).toBe(85);
+    });
+
+    it('sets coverage to undefined when no history', () => {
+        const store = makeMetricsStore({ coverageHistory: [] });
+        const hub = DataHubImpl.loadFromStore(store, 'test-repo');
+
+        expect(hub.raw.coverage).toBeUndefined();
+    });
+
+    it('uses "unknown" when project is empty', () => {
+        const store = makeMetricsStore({
+            runs: [
+                {
+                    timestamp: '2026-01-01T10:00:00Z',
+                    project: '',
+                    total: 100,
+                    passed: 100,
+                    failed: 0,
+                    skipped: 0,
+                    duration: 5000,
+                    tests: [],
+                },
+            ],
+        });
+        const hub = DataHubImpl.loadFromStore(store, 'test-repo');
+
+        expect(hub.raw.runs[0]?.head_branch).toBe('unknown');
+    });
+
+    it('computes metrics from converted data', () => {
+        const store = makeMetricsStore();
+        const hub = DataHubImpl.loadFromStore(store, 'test-repo');
+
+        expect(hub.computed.passRate).toBeDefined();
+        expect(typeof hub.computed.passRate).toBe('number');
+    });
+
+    it('accepts optional persistence', () => {
+        const store = makeMetricsStore();
+        const mockPersistence: DataHubPersistence = {
+            saveRun: vi.fn(),
+            loadRun: vi.fn(),
+            saveCoverageSnapshot: vi.fn(),
+            loadCoverageHistory: vi.fn(),
+            saveFailureClassification: vi.fn(),
+            loadFailureClassifications: vi.fn(),
+            saveMetricsStore: vi.fn(),
+            loadMetricsStore: vi.fn(),
+            saveParseResult: vi.fn(),
+            saveQualityMetrics: vi.fn(),
+            loadQualityMetricsHistory: vi.fn(),
+            flush: vi.fn(),
+        };
+        const hub = DataHubImpl.loadFromStore(store, 'test-repo', mockPersistence);
+
+        expect(hub.persistence).toBe(mockPersistence);
     });
 });
