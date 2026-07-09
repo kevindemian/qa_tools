@@ -135,6 +135,10 @@ describe('Integration: Pipeline Cost (FT-29)', () => {
                 timestamp: new Date(),
                 provider: 'github',
                 repo: 'owner/repo',
+                saveRun: vi.fn(),
+                saveCoverageSnapshot: vi.fn(),
+                saveFailureClassification: vi.fn(),
+                flush: vi.fn(),
             };
         }
 

@@ -19,6 +19,9 @@ import type {
     TestCounts,
     DataHubPersistence,
     MetricsStore,
+    MetricsRun,
+    CoverageSnapshot,
+    FailureClassification,
 } from '../types/data-hub.js';
 import type { PipelineRun, PipelineJob } from '../types/ci-cd.js';
 import type { ArtifactParseResult } from './artifact-parser.js';
@@ -70,7 +73,7 @@ export interface DataHubOptions {
 export class DataHubImpl implements DataHub {
     readonly raw: RawData;
     readonly computed: ComputedMetrics;
-    readonly persistence?: DataHubPersistence | undefined;
+    private readonly persistence: DataHubPersistence | undefined;
     readonly timestamp: Date;
     readonly provider: 'github' | 'gitlab';
     readonly repo: string;
@@ -88,6 +91,38 @@ export class DataHubImpl implements DataHub {
         this.timestamp = new Date();
         this.provider = provider;
         this.repo = repo;
+    }
+
+    // ─── SSOT Persistence Operations ───────────────────────────────────────
+    // Consumers MUST use these methods instead of accessing persistence directly.
+    // Persistence is encapsulated — private, not exposed on the interface.
+
+    saveRun(sha: string, run: MetricsRun): void {
+        if (this.persistence == null) {
+            throw new Error('DataHub: persistence not configured — cannot saveRun()');
+        }
+        this.persistence.saveRun(sha, run);
+    }
+
+    saveCoverageSnapshot(snapshot: CoverageSnapshot): void {
+        if (this.persistence == null) {
+            throw new Error('DataHub: persistence not configured — cannot saveCoverageSnapshot()');
+        }
+        this.persistence.saveCoverageSnapshot(snapshot);
+    }
+
+    saveFailureClassification(classification: FailureClassification): void {
+        if (this.persistence == null) {
+            throw new Error('DataHub: persistence not configured — cannot saveFailureClassification()');
+        }
+        this.persistence.saveFailureClassification(classification);
+    }
+
+    flush(message: string): void {
+        if (this.persistence == null) {
+            throw new Error('DataHub: persistence not configured — cannot flush()');
+        }
+        this.persistence.flush(message);
     }
 
     /**

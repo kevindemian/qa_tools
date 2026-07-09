@@ -5,8 +5,22 @@
  */
 import { describe, it, expect, vi } from 'vitest';
 import { DataHubImpl } from '../hub.js';
-import type { DataProvider, RawData, MetricsStore, DataHubPersistence } from '../../types/data-hub.js';
+import type {
+    DataProvider,
+    RawData,
+    MetricsStore,
+    DataHubPersistence,
+    MetricsRun,
+    CoverageSnapshot,
+    FailureClassification,
+} from '../../types/data-hub.js';
 import type { PipelineRun } from '../../types/ci-cd.js';
+
+/* ── Helpers ────────────────────────────────────────────────────────────── */
+
+type MockPersistence = {
+    [K in keyof DataHubPersistence]: ReturnType<typeof vi.fn>;
+};
 
 /* ── Helpers ────────────────────────────────────────────────────────────── */
 
@@ -44,6 +58,34 @@ function makeRawDataWithRuns(runs: PipelineRun[]): RawData {
         jobs: new Map(),
         artifacts: new Map(),
         failureReasons: new Map(),
+    };
+}
+
+function makeMetricsStore(overrides?: Partial<MetricsStore>): MetricsStore {
+    return {
+        runs: [
+            {
+                timestamp: '2026-01-01T10:00:00Z',
+                project: 'main',
+                total: 100,
+                passed: 95,
+                failed: 3,
+                skipped: 2,
+                duration: 5000,
+                tests: [],
+            },
+            {
+                timestamp: '2026-01-02T10:00:00Z',
+                project: 'main',
+                total: 100,
+                passed: 98,
+                failed: 1,
+                skipped: 1,
+                duration: 4500,
+                tests: [],
+            },
+        ],
+        ...overrides,
     };
 }
 
@@ -240,34 +282,6 @@ describe('HasDataChanged', () => {
 /* ── loadFromStore tests ─────────────────────────────────────────────────── */
 
 describe('DataHubImpl.loadFromStore', () => {
-    function makeMetricsStore(overrides?: Partial<MetricsStore>): MetricsStore {
-        return {
-            runs: [
-                {
-                    timestamp: '2026-01-01T10:00:00Z',
-                    project: 'main',
-                    total: 100,
-                    passed: 95,
-                    failed: 3,
-                    skipped: 2,
-                    duration: 5000,
-                    tests: [],
-                },
-                {
-                    timestamp: '2026-01-02T10:00:00Z',
-                    project: 'main',
-                    total: 100,
-                    passed: 98,
-                    failed: 1,
-                    skipped: 1,
-                    duration: 4500,
-                    tests: [],
-                },
-            ],
-            ...overrides,
-        };
-    }
-
     it('creates DataHub from MetricsStore with runs', () => {
         const store = makeMetricsStore();
         const hub = DataHubImpl.loadFromStore(store, 'test-repo');
@@ -365,7 +379,7 @@ describe('DataHubImpl.loadFromStore', () => {
 
     it('accepts optional persistence', () => {
         const store = makeMetricsStore();
-        const mockPersistence: DataHubPersistence = {
+        const mockPersistence = {
             saveRun: vi.fn(),
             loadRun: vi.fn(),
             saveCoverageSnapshot: vi.fn(),
@@ -378,10 +392,24 @@ describe('DataHubImpl.loadFromStore', () => {
             saveQualityMetrics: vi.fn(),
             loadQualityMetricsHistory: vi.fn(),
             flush: vi.fn(),
-        };
-        const hub = DataHubImpl.loadFromStore(store, 'test-repo', mockPersistence);
+        } satisfies MockPersistence;
+        const hub = DataHubImpl.loadFromStore(store, 'test-repo', mockPersistence as DataHubPersistence);
 
-        expect(hub.persistence).toBe(mockPersistence);
+        // Verify persistence is configured by testing that saveRun() delegates correctly
+        const testRun = {
+            timestamp: '2026-01-01T10:00:00Z',
+            project: 'main',
+            total: 100,
+            passed: 100,
+            failed: 0,
+            skipped: 0,
+            duration: 5000,
+            tests: [],
+        };
+        hub.saveRun('abc123', testRun);
+
+        expect(mockPersistence.saveRun).toHaveBeenCalledTimes(1);
+        expect(mockPersistence.saveRun.mock.calls[0]).toStrictEqual(['abc123', testRun]);
     });
 
     it('creates parsedArtifacts from MetricsRun', () => {
@@ -471,5 +499,168 @@ describe('DataHubImpl.loadFromStore', () => {
         expect(run?.head_branch).toBe('main');
         expect(run?.status).toBe('completed');
         expect(run?.conclusion).toBe('success');
+    });
+});
+
+describe('DataHubImpl — SSOT Persistence', () => {
+    describe('SaveRun()', () => {
+        it('throws error when persistence is not configured', () => {
+            const store = makeMetricsStore();
+            const hub = DataHubImpl.loadFromStore(store, 'test-repo');
+
+            expect(() => hub.saveRun('sha', {} as MetricsRun)).toThrow(
+                'DataHub: persistence not configured — cannot saveRun()',
+            );
+        });
+
+        it('delegates to persistence when configured', () => {
+            const store = makeMetricsStore();
+            const mockPersistence = {
+                saveRun: vi.fn(),
+                loadRun: vi.fn(),
+                saveCoverageSnapshot: vi.fn(),
+                loadCoverageHistory: vi.fn(),
+                saveFailureClassification: vi.fn(),
+                loadFailureClassifications: vi.fn(),
+                saveMetricsStore: vi.fn(),
+                loadMetricsStore: vi.fn(),
+                saveParseResult: vi.fn(),
+                saveQualityMetrics: vi.fn(),
+                loadQualityMetricsHistory: vi.fn(),
+                flush: vi.fn(),
+            } satisfies MockPersistence;
+            const hub = DataHubImpl.loadFromStore(store, 'test-repo', mockPersistence as DataHubPersistence);
+            const testRun = {
+                timestamp: '2026-01-01T10:00:00Z',
+                project: 'main',
+                total: 100,
+                passed: 100,
+                failed: 0,
+                skipped: 0,
+                duration: 5000,
+                tests: [],
+            };
+
+            hub.saveRun('abc123', testRun);
+
+            expect(mockPersistence.saveRun).toHaveBeenCalledTimes(1);
+            expect(mockPersistence.saveRun.mock.calls[0]).toStrictEqual(['abc123', testRun]);
+        });
+    });
+
+    describe('SaveCoverageSnapshot()', () => {
+        it('throws error when persistence is not configured', () => {
+            const store = makeMetricsStore();
+            const hub = DataHubImpl.loadFromStore(store, 'test-repo');
+
+            expect(() => hub.saveCoverageSnapshot({} as CoverageSnapshot)).toThrow(
+                'DataHub: persistence not configured — cannot saveCoverageSnapshot()',
+            );
+        });
+
+        it('delegates to persistence when configured', () => {
+            const store = makeMetricsStore();
+            const mockPersistence = {
+                saveRun: vi.fn(),
+                loadRun: vi.fn(),
+                saveCoverageSnapshot: vi.fn(),
+                loadCoverageHistory: vi.fn(),
+                saveFailureClassification: vi.fn(),
+                loadFailureClassifications: vi.fn(),
+                saveMetricsStore: vi.fn(),
+                loadMetricsStore: vi.fn(),
+                saveParseResult: vi.fn(),
+                saveQualityMetrics: vi.fn(),
+                loadQualityMetricsHistory: vi.fn(),
+                flush: vi.fn(),
+            } satisfies MockPersistence;
+            const hub = DataHubImpl.loadFromStore(store, 'test-repo', mockPersistence as DataHubPersistence);
+            const snapshot: CoverageSnapshot = {
+                timestamp: '2026-01-01',
+                project: 'main',
+                totalIssues: 100,
+                mappedIssues: 80,
+                coveragePct: 80,
+            };
+
+            hub.saveCoverageSnapshot(snapshot);
+
+            expect(mockPersistence.saveCoverageSnapshot).toHaveBeenCalledTimes(1);
+            expect(mockPersistence.saveCoverageSnapshot.mock.calls[0]).toStrictEqual([snapshot]);
+        });
+    });
+
+    describe('SaveFailureClassification()', () => {
+        it('throws error when persistence is not configured', () => {
+            const store = makeMetricsStore();
+            const hub = DataHubImpl.loadFromStore(store, 'test-repo');
+
+            expect(() => hub.saveFailureClassification({} as FailureClassification)).toThrow(
+                'DataHub: persistence not configured — cannot saveFailureClassification()',
+            );
+        });
+
+        it('delegates to persistence when configured', () => {
+            const store = makeMetricsStore();
+            const mockPersistence = {
+                saveRun: vi.fn(),
+                loadRun: vi.fn(),
+                saveCoverageSnapshot: vi.fn(),
+                loadCoverageHistory: vi.fn(),
+                saveFailureClassification: vi.fn(),
+                loadFailureClassifications: vi.fn(),
+                saveMetricsStore: vi.fn(),
+                loadMetricsStore: vi.fn(),
+                saveParseResult: vi.fn(),
+                saveQualityMetrics: vi.fn(),
+                loadQualityMetricsHistory: vi.fn(),
+                flush: vi.fn(),
+            } satisfies MockPersistence;
+            const hub = DataHubImpl.loadFromStore(store, 'test-repo', mockPersistence as DataHubPersistence);
+            const classification: FailureClassification = {
+                timestamp: '2026-01-01T10:00:00Z',
+                testTitle: 'test failure',
+                category: 'REVERT',
+                project: 'main',
+            };
+
+            hub.saveFailureClassification(classification);
+
+            expect(mockPersistence.saveFailureClassification).toHaveBeenCalledTimes(1);
+            expect(mockPersistence.saveFailureClassification.mock.calls[0]).toStrictEqual([classification]);
+        });
+    });
+
+    describe('Flush()', () => {
+        it('throws error when persistence is not configured', () => {
+            const store = makeMetricsStore();
+            const hub = DataHubImpl.loadFromStore(store, 'test-repo');
+
+            expect(() => hub.flush('commit message')).toThrow('DataHub: persistence not configured — cannot flush()');
+        });
+
+        it('delegates to persistence when configured', () => {
+            const store = makeMetricsStore();
+            const mockPersistence = {
+                saveRun: vi.fn(),
+                loadRun: vi.fn(),
+                saveCoverageSnapshot: vi.fn(),
+                loadCoverageHistory: vi.fn(),
+                saveFailureClassification: vi.fn(),
+                loadFailureClassifications: vi.fn(),
+                saveMetricsStore: vi.fn(),
+                loadMetricsStore: vi.fn(),
+                saveParseResult: vi.fn(),
+                saveQualityMetrics: vi.fn(),
+                loadQualityMetricsHistory: vi.fn(),
+                flush: vi.fn(),
+            } satisfies MockPersistence;
+            const hub = DataHubImpl.loadFromStore(store, 'test-repo', mockPersistence as DataHubPersistence);
+
+            hub.flush('test commit');
+
+            expect(mockPersistence.flush).toHaveBeenCalledTimes(1);
+            expect(mockPersistence.flush.mock.calls[0]).toStrictEqual(['test commit']);
+        });
     });
 });

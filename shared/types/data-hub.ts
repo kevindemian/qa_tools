@@ -376,14 +376,25 @@ export interface DataHub {
     readonly raw: RawData;
     /** Computed metrics. */
     readonly computed: ComputedMetrics;
-    /** Persistence layer for historical data. Optional during migration. */
-    readonly persistence?: DataHubPersistence | undefined;
     /** When the hub was created. */
     readonly timestamp: Date;
     /** Provider source. */
     readonly provider: 'github' | 'gitlab';
     /** Repository identifier. */
     readonly repo: string;
+
+    // ─── SSOT Persistence Operations ───────────────────────────────────────
+    // Consumers MUST use these methods instead of accessing persistence directly.
+    // Persistence is encapsulated — not exposed on the interface.
+
+    /** Save a test run to persistence. Throws if persistence not configured. */
+    saveRun(sha: string, run: MetricsRun): void;
+    /** Save a coverage snapshot to persistence. Throws if persistence not configured. */
+    saveCoverageSnapshot(snapshot: CoverageSnapshot): void;
+    /** Save a failure classification to persistence. Throws if persistence not configured. */
+    saveFailureClassification(classification: FailureClassification): void;
+    /** Flush all pending changes to disk (git commit). Throws if persistence not configured. */
+    flush(message: string): void;
 }
 
 /**

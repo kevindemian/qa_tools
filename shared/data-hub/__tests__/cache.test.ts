@@ -3,7 +3,7 @@
  *
  * Tests cache get/set/clear/valid operations for multi-project support.
  */
-import { describe, it, expect, beforeEach } from 'vitest';
+import { describe, it, expect, beforeEach, vi } from 'vitest';
 import { getCachedHub, setCachedHub, clearCache, clearRepoCache, isCacheValid, getCacheSize } from '../cache.js';
 import type { DataHub } from '../../types/data-hub.js';
 
@@ -37,6 +37,10 @@ function makeHub(repo = 'test/repo'): DataHub {
         timestamp: new Date(),
         provider: 'github',
         repo,
+        saveRun: vi.fn(),
+        saveCoverageSnapshot: vi.fn(),
+        saveFailureClassification: vi.fn(),
+        flush: vi.fn(),
     };
 }
 

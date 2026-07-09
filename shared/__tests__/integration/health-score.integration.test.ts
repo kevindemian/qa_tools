@@ -278,6 +278,10 @@ describe('Integration: Health Score', () => {
                 timestamp: new Date(),
                 provider: 'github',
                 repo: 'o/r',
+                saveRun: vi.fn(),
+                saveCoverageSnapshot: vi.fn(),
+                saveFailureClassification: vi.fn(),
+                flush: vi.fn(),
             };
         }
 

@@ -199,6 +199,10 @@ describe('Session-state', () => {
                 timestamp: new Date(),
                 provider: 'gitlab',
                 repo: 'qa_ibabs',
+                saveRun: vi.fn(),
+                saveCoverageSnapshot: vi.fn(),
+                saveFailureClassification: vi.fn(),
+                flush: vi.fn(),
             });
 
             sessionState.setCurrentProjectName('qa_ibabs');
