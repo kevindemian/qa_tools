@@ -134,6 +134,13 @@ export interface PipelineRun {
     updated_at?: string;
     /** ISO timestamp of run start. */
     run_started_at?: string;
+    /** Head commit info (GitHub Actions — from workflow run response). */
+    head_commit?: {
+        message?: string;
+        author?: { name?: string };
+    };
+    /** Pipeline title — GitLab commit message (GitLab pipelines). */
+    title?: string;
 }
 
 /** Entry from a directory listing (Contents API or Trees API). */

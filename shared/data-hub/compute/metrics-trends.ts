@@ -6,6 +6,7 @@
  * Used by flakiness-dashboard.ts and report-chart.ts.
  */
 import type { MetricsRun, TrendPoint } from '../../types/data-hub.js';
+import { calcRunPassRate } from './run-pass-rate.js';
 
 /**
  * Calculate trend points from metrics runs.
@@ -17,7 +18,7 @@ import type { MetricsRun, TrendPoint } from '../../types/data-hub.js';
 export function calcMetricsTrends(runs: MetricsRun[], window = 10): TrendPoint[] {
     return runs.slice(-window).map((r) => ({
         label: r.timestamp.slice(0, 10),
-        passRate: r.passed + r.failed > 0 ? (r.passed / (r.passed + r.failed)) * 100 : 0,
+        passRate: calcRunPassRate({ passed: r.passed, failed: r.failed }),
         total: r.total,
         failed: r.failed,
     }));

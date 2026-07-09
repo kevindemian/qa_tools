@@ -10,6 +10,7 @@
 import { rootLogger } from './logger.js';
 import { sanitizeUrl } from './cli_base.js';
 import { escapeHtml, statsFromTests } from './report-utils.js';
+import { calcRunPassRate } from './data-hub/compute/run-pass-rate.js';
 import type { FlatTest } from './result_parser.js';
 import type { CoverageEpic, ReportOptions } from './report-types.js';
 import { DEFAULT_TITLE } from './report-types.js';
@@ -94,8 +95,7 @@ export function generateReportWithFallback(tests: FlatTest[], options?: ReportOp
     try {
         const stats = statsFromTests(tests);
         const title = options?.title || DEFAULT_TITLE;
-        const executed = stats.passed + stats.failed;
-        const passRate = executed > 0 ? (stats.passed / executed) * 100 : 0;
+        const passRate = calcRunPassRate(stats);
         const categories = options?.testCategories || precomputeCategories(tests);
 
         let bodyContent = '<h1>' + title + '</h1>';

@@ -10,6 +10,7 @@
 
 import { axios } from './deps.js';
 import { rootLogger } from './logger.js';
+import { extractErrorMessage } from './prompt-errors.js';
 import type { CheckRunAnnotation } from './types/ci-cd.js';
 
 export interface CheckRunConfig {
@@ -79,7 +80,8 @@ function getErrorStatus(err: unknown): number | undefined {
     try {
         const errObj = err as { response?: { status?: number } };
         return errObj.response?.status;
-    } catch {
+    } catch (innerErr) {
+        rootLogger.debug(`getErrorStatus: ${extractErrorMessage(innerErr)}`);
         return undefined;
     }
 }
@@ -89,7 +91,8 @@ function isError(err: unknown): err is Error {
     try {
         const errObj = err as { message?: unknown };
         return errObj.message !== undefined;
-    } catch {
+    } catch (innerErr) {
+        rootLogger.debug(`isError: ${extractErrorMessage(innerErr)}`);
         return false;
     }
 }

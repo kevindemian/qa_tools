@@ -29,7 +29,7 @@ export { BarChart, TrendChart, Sparkline, ProgressBar } from './chart.js';
 export type {
     BarSegment,
     BarChartProps,
-    TrendPoint,
+    ChartPoint,
     TrendChartProps,
     SparklineProps,
     ProgressBarProps,

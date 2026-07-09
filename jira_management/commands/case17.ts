@@ -26,8 +26,10 @@ import { publishReport } from '../../shared/publish.js';
 import { TestHistoryCache } from '../xray-history.js';
 import type { CommandContext } from './context.js';
 import { buildGitTrendHtml, buildJiraContextHtml, injectAnalysisSection, parseCliExtra } from './case17-helpers.js';
-import { computeDiff, fetchGitHistory, resolveTestHistory } from './case17-test-utils.js';
+import { computeDiff, resolveTestHistory } from './case17-test-utils.js';
 import { resolveTestDataSource, resolveSessionContext } from '../../shared/session-context.js';
+import { fetchCommitLog } from '../../shared/commit-log.js';
+import type { MetricsRun } from '../../shared/types/data-hub.js';
 
 import Config from '../../shared/config.js';
 
@@ -210,9 +212,12 @@ async function _enrichHtmlWithContext(
     html: string,
     c: CommandContext,
     failedTests: FlatTest[],
-): Promise<{ html: string; ciContext: Awaited<ReturnType<typeof fetchGitHistory>>; jiraContext: string }> {
-    const ciContext = await fetchGitHistory();
-    const gitHtml = buildGitTrendHtml(ciContext);
+): Promise<{ html: string; commitLog: string; storeRuns: MetricsRun[]; jiraContext: string }> {
+    const commitLog = await fetchCommitLog();
+    const persistence = createDataHubPersistence(c.ctx.project_name);
+    const store = persistence.loadMetricsStore();
+    const storeRuns = store.runs;
+    const gitHtml = buildGitTrendHtml(commitLog, storeRuns);
     let enriched = html;
     if (gitHtml) {
         enriched = enriched.replace('</body>', gitHtml + '</body>');
@@ -223,22 +228,23 @@ async function _enrichHtmlWithContext(
     if (jiraHtml) {
         enriched = enriched.replace('</body>', jiraHtml + '</body>');
     }
-    return { html: enriched, ciContext, jiraContext };
+    return { html: enriched, commitLog, storeRuns, jiraContext };
 }
 
 async function _runAiAnalysis(
     html: string,
     result: ParseResult,
-    ciContext: Awaited<ReturnType<typeof fetchGitHistory>>,
+    commitLog: string,
+    storeRuns: MetricsRun[],
     jiraContext: string,
 ): Promise<string> {
     const llmContext: LlmContext = {};
-    if (ciContext.commits) llmContext.gitCommits = ciContext.commits;
-    if (ciContext.runs.length > 0) {
-        llmContext.gitTrend = ciContext.runs
+    if (commitLog) llmContext.gitCommits = commitLog;
+    if (storeRuns.length > 0) {
+        llmContext.gitTrend = storeRuns
             .map(
                 (r) =>
-                    `Run ${r.runId} (${r.createdAt.slice(0, 10)}): ${calcRunPassRate({ passed: r.passed, failed: r.failed }).toFixed(1)}% (${r.passed}/${r.total})`,
+                    `Run ${r.timestamp.slice(0, 10)}: ${calcRunPassRate({ passed: r.passed, failed: r.failed }).toFixed(1)}% (${r.passed}/${r.total})`,
             )
             .join('\n');
     }
@@ -347,7 +353,7 @@ async function handler(c: CommandContext): Promise<boolean | void> {
     const failedTests = result.tests.filter((t) => t.state === 'failed');
     const enriched = await _enrichHtmlWithContext(html, c, failedTests);
     html = enriched.html;
-    html = await _runAiAnalysis(html, result, enriched.ciContext, enriched.jiraContext);
+    html = await _runAiAnalysis(html, result, enriched.commitLog, enriched.storeRuns, enriched.jiraContext);
 
     const resolvedPath = await _writeReportFile(html, c.ctx.project_name);
 

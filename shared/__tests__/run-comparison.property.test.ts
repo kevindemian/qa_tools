@@ -2,6 +2,7 @@ import * as fc from 'fast-check';
 import { describe, expect, it, vi, beforeEach } from 'vitest';
 import type { MetricsRun } from '../types/data-hub.js';
 import { nonNull } from '../test-utils.js';
+import { calcRunPassRate } from '../data-hub/compute/run-pass-rate.js';
 
 vi.mock('../llm-client.js', () => ({
     llmPrompt: vi.fn().mockResolvedValue('analysis'),
@@ -86,13 +87,11 @@ describe('Run Comparison.Property', () => {
                     expect(mockLlmPrompt).toHaveBeenCalledTimes(1);
 
                     const callArg = nonNull(mockLlmPrompt.mock.calls[0])[0];
-                    const execA = runA.passed + runA.failed;
-                    const rateA = execA > 0 ? Math.round((runA.passed / execA) * 100) : 0;
+                    const rateA = Math.round(calcRunPassRate(runA));
 
                     expect(callArg.user).toContain(`Pass rate: ${rateA}%`);
 
-                    const execB = runB.passed + runB.failed;
-                    const rateB = execB > 0 ? Math.round((runB.passed / execB) * 100) : 0;
+                    const rateB = Math.round(calcRunPassRate(runB));
 
                     expect(callArg.user).toContain(`Pass rate: ${rateB}%`);
                 }),

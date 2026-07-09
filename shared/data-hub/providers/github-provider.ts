@@ -4,9 +4,16 @@
  * Adapts GitHubManager (GitProvider) to the DataProvider interface.
  * Fetches raw CI/CD data from GitHub Actions API.
  */
-import { humanizeError } from '../../prompt-errors.js';
-import type { GitProvider, PipelineJob, ArtifactInfo, CheckRunAnnotation } from '../../types/ci-cd.js';
-import type { DataProvider, FetchOptions, RawData, WorkflowRunTiming, RawCoverage } from '../../types/data-hub.js';
+import { extractErrorMessage, humanizeError } from '../../prompt-errors.js';
+import type { GitProvider, PipelineJob, ArtifactInfo, CheckRunAnnotation, PipelineRun } from '../../types/ci-cd.js';
+import type {
+    DataProvider,
+    FetchOptions,
+    RawData,
+    WorkflowRunTiming,
+    RawCoverage,
+    CiRunStats,
+} from '../../types/data-hub.js';
 import type { ArtifactParseResult } from '../artifact-parser.js';
 import { rootLogger } from '../../logger.js';
 import { extractCoverage } from '../extractors/coverage-extractor.js';
@@ -14,6 +21,7 @@ import { isTestArtifact, parseArtifactBufferAll } from '../artifact-parser.js';
 import { detectFrameworkCascade } from '../extractors/framework-detector.js';
 import { classifyFailures, type StepConclusion, type FailureInput } from '../extractors/failure-classifier.js';
 import { getCheckRuns } from '../../github-check-run.js';
+import { buildCommitLog } from '../../commit-log.js';
 
 const DEFAULT_MAX_ARTIFACTS_PER_RUN = 5;
 
@@ -53,6 +61,8 @@ export class GitHubDataProvider implements DataProvider {
         }
 
         const framework = await this.detectFrameworkFromFirstRun(runs);
+        const commitLog = buildCommitLog(runs);
+        const ciRuns = this.deriveCiRuns(runs, parsedArtifactsMap);
 
         return {
             runs,
@@ -63,6 +73,8 @@ export class GitHubDataProvider implements DataProvider {
             ...(parsedArtifactsMap.size > 0 ? { parsedArtifacts: parsedArtifactsMap } : {}),
             ...(coverage != null ? { coverage } : {}),
             ...(framework != null ? { framework } : {}),
+            ...(commitLog ? { commitLog } : {}),
+            ...(ciRuns.length > 0 ? { ciRuns } : {}),
         };
     }
 
@@ -172,8 +184,8 @@ export class GitHubDataProvider implements DataProvider {
 
                 const coverage = extractCoverage({ logText });
                 if (coverage != null) return coverage;
-            } catch {
-                // Ignore — coverage extraction is best-effort
+            } catch (err) {
+                rootLogger.debug(`coverage extraction: ${extractErrorMessage(err)}`);
             }
         }
         return undefined;
@@ -232,8 +244,8 @@ export class GitHubDataProvider implements DataProvider {
             try {
                 const logs = await this.provider.getJobLogs(job.id);
                 if (logs) return logs;
-            } catch {
-                // Ignore — log fetch is best-effort
+            } catch (err) {
+                rootLogger.debug(`log fetch: ${extractErrorMessage(err)}`);
             }
         }
         return undefined;
@@ -254,5 +266,34 @@ export class GitHubDataProvider implements DataProvider {
                 break;
             }
         }
+    }
+
+    private deriveCiRuns(runs: PipelineRun[], parsedArtifacts: Map<number, ArtifactParseResult[]>): CiRunStats[] {
+        const ciRuns: CiRunStats[] = [];
+        for (const run of runs) {
+            const runIdNum = this.parseRunId(run.id);
+            if (runIdNum == null) continue;
+            const artifacts = parsedArtifacts.get(runIdNum);
+            if (!artifacts || artifacts.length === 0) continue;
+            let passed = 0;
+            let failed = 0;
+            let skipped = 0;
+            let total = 0;
+            for (const artifact of artifacts) {
+                passed += artifact.data.stats.passed;
+                failed += artifact.data.stats.failed;
+                skipped += artifact.data.stats.skipped;
+                total += artifact.data.stats.total;
+            }
+            ciRuns.push({
+                runId: runIdNum,
+                createdAt: run.created_at ?? '',
+                passed,
+                failed,
+                skipped,
+                total,
+            });
+        }
+        return ciRuns;
     }
 }

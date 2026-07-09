@@ -96,7 +96,7 @@ describe('Pr Report Core.Property', () => {
         mockCheckRun.createCheckRun.mockResolvedValue(undefined);
         mockPRComment.postPrComment.mockResolvedValue(undefined);
         mockHtml.generateHtmlReport.mockReturnValue('<html>mock</html>');
-        mockCoverage.resolveCoverage.mockReturnValue(undefined);
+        mockCoverage.readIstanbulCoverage.mockReturnValue(undefined);
     });
 
     afterAll(() => {

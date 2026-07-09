@@ -33,7 +33,7 @@ import { isQuarantined } from './quarantine.js';
 import { generateHtmlReport } from './report-html.js';
 import type { ReportOptions } from './report-types.js';
 import { calculateHealthScore } from './health-score.js';
-import { resolveCoverage } from './coverage-source.js';
+import { readIstanbulCoverage } from './coverage-source.js';
 import { parseTestResultsFile } from './result_parser.js';
 import type { FlatTest, ParseResult } from './result_parser.js';
 import { getPrReportConfig } from './feature-config.js';
@@ -367,12 +367,34 @@ async function handleQualityGate(
     }
 }
 
+/**
+ * Resolve coverage for the PR report using layered priority:
+ *   1. DataHub.raw.coverage (CI-parsed, highest priority)
+ *   2. Istanbul standalone coverage-summary.json (fallback)
+ *   3. undefined (no source)
+ *
+ * Replaces the standalone `resolveCoverage()` call to ensure DataHub-first resolution.
+ */
+function resolveCoverageForReport(
+    dataHub?: DataHub,
+): { coveragePct: number; source: string; detail?: string } | undefined {
+    const dataHubCoverage = dataHub?.raw.coverage;
+    if (dataHubCoverage !== undefined) {
+        return {
+            coveragePct: dataHubCoverage.percentage,
+            source: 'datahub',
+            detail: `datahub ${dataHubCoverage.percentage.toFixed(1)}% (${dataHubCoverage.covered}/${dataHubCoverage.total})`,
+        };
+    }
+    return readIstanbulCoverage() ?? undefined;
+}
+
 function generateHtmlReportFile(
     tests: FlatTest[],
     stats: PrReportStats,
     options: PrReportCoreOptions,
     store: ReturnType<typeof createDataHubPersistence> extends { loadMetricsStore: () => infer S } ? S : never,
-    coverageResult: ReturnType<typeof resolveCoverage>,
+    coverageResult: ReturnType<typeof resolveCoverageForReport>,
     healthScore: ReturnType<typeof calculateHealthScore>,
     workflowUrl?: string,
 ): string | undefined {
@@ -456,8 +478,8 @@ export async function generatePrReport(options: PrReportCoreOptions): Promise<Pr
     const projectName = options.project ?? 'default';
     const persistence = createDataHubPersistence(projectName);
     const store = persistence.loadMetricsStore();
-    const coverageResult = resolveCoverage();
     const dataHub = options.dataHub;
+    const coverageResult = resolveCoverageForReport(dataHub);
     const healthConfig = {
         ...(coverageResult ? { coverageOverride: coverageResult.coveragePct } : {}),
         ...(dataHub ? { dataHub } : {}),

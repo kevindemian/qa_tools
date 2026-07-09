@@ -18,7 +18,7 @@ import { withSpinner } from './prompt.js';
 import { getHeadSha, getCurrentBranch } from './git-sha.js';
 import { detectStoreBackend, detectProjectGitDir } from './store-backend.js';
 import { Store, type ReportMeta } from './store.js';
-import { fetchLatestTestRun } from './git-artifact-downloader.js';
+import { fetchLatestTestRun } from './ci-test-downloader.js';
 import type { ParseResult } from './result_parser.js';
 import { rootLogger } from './logger.js';
 import { statsFromTests } from './report-utils.js';

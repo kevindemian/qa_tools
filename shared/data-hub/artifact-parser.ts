@@ -2,6 +2,7 @@ import AdmZip from 'adm-zip';
 import { parseCtrfResults, parseTestResults, isCtrfFormat } from '../result_parser.js';
 import { parseJUnitXml } from '../junit-xml-parser.js';
 import { rootLogger } from '../logger.js';
+import { extractErrorMessage } from '../prompt-errors.js';
 import type { ParseResult, FlatTest, CtrfData } from '../result_parser.js';
 import type { JUnitParseResult } from '../junit-xml-parser.js';
 
@@ -30,7 +31,8 @@ export function isCTRF(content: string): boolean {
     try {
         const parsed = JSON.parse(content) as { [key: string]: unknown };
         return isCtrfFormat(parsed);
-    } catch {
+    } catch (err) {
+        rootLogger.debug(`isCTRF: ${extractErrorMessage(err)}`);
         return false;
     }
 }
@@ -43,7 +45,8 @@ export function isMochawesome(content: string): boolean {
     try {
         const parsed = JSON.parse(content) as { [key: string]: unknown };
         return 'stats' in parsed;
-    } catch {
+    } catch (err) {
+        rootLogger.debug(`isMochawesome: ${extractErrorMessage(err)}`);
         return false;
     }
 }

@@ -12,6 +12,7 @@
  */
 import type { MetricsStore, MetricsRun, DataHub } from './types/data-hub.js';
 import type { HealthScoreResult, HealthScoreGrade, HealthScoreDimensions, HealthScoreProvenance } from './types.js';
+import { calcRunPassRate } from './data-hub/compute/run-pass-rate.js';
 import { calcTestDurationP95 } from './data-hub/compute/test-duration-p95.js';
 import { calculateFlakyTestRate } from './data-hub/compute/flakiness-entries.js';
 
@@ -171,10 +172,7 @@ function computeActualMetrics(store: MetricsStore, config: HealthScoreConfig, da
 
     const actualPassRate = hasCiRuns
         ? dataHub.computed.passRate
-        : _computeExpWeighted(runs, n, (run) => {
-              const executed = run.passed + run.failed;
-              return executed > 0 ? (run.passed / executed) * 100 : 0;
-          });
+        : _computeExpWeighted(runs, n, (run) => calcRunPassRate(run));
 
     const actualFlakyPct = hasCiRuns ? calculateFlakyTestRate(runs, config.minRuns) : _computeFlakyRate(runs, config);
 

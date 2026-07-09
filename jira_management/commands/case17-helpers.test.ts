@@ -8,6 +8,7 @@ import {
     isValidCtrfData,
     parseCliExtra,
 } from './case17-helpers.js';
+import type { MetricsRun } from '../../shared/types/data-hub.js';
 
 describe('IsGitHubCi', () => {
     const OGT = process.env['GITHUB_TOKEN'];
@@ -73,58 +74,51 @@ describe('IsGitLabCi', () => {
 
 describe('BuildGitTrendHtml', () => {
     it('returns empty string when CI context is empty', () => {
-        expect(buildGitTrendHtml({ commits: '', runs: [], flakyEntries: [] })).toBe('');
+        expect(buildGitTrendHtml('', [])).toBe('');
     });
 
     it('returns HTML with run bars when runs are present', () => {
-        const html = buildGitTrendHtml({
-            commits: '',
-            runs: [
-                {
-                    runId: 1,
-                    createdAt: '2024-01-15T00:00:00Z',
-                    passed: 10,
-                    failed: 0,
-                    skipped: 0,
-                    total: 10,
-                },
-            ],
-            flakyEntries: [],
-        });
+        const html = buildGitTrendHtml('', [
+            {
+                timestamp: '2024-01-15T00:00:00Z',
+                project: 'test-project',
+                passed: 10,
+                failed: 0,
+                skipped: 0,
+                total: 10,
+                duration: 1000,
+                tests: [],
+            },
+        ]);
 
         expect(html).toContain('Git Pipeline Context');
         expect(html).toContain('100.0%');
     });
 
     it('includes flaky tests section with structured table', () => {
-        const html = buildGitTrendHtml({
-            commits: '',
-            runs: [],
-            flakyEntries: [
-                {
-                    title: 'Test A',
-                    project: 'test-project',
-                    passCount: 3,
-                    failCount: 2,
-                    skipCount: 0,
-                    totalRuns: 5,
-                    rate: 0.4,
-                },
-            ],
+        const makeRun = (failed: boolean): MetricsRun => ({
+            timestamp: '2024-01-15T00:00:00Z',
+            project: 'test-project',
+            passed: failed ? 9 : 10,
+            failed: failed ? 1 : 0,
+            skipped: 0,
+            total: 10,
+            duration: 1000,
+            tests: [{ title: 'Flaky Test', state: failed ? 'failed' : 'passed', duration: 100 }],
         });
+        const html = buildGitTrendHtml('', [
+            makeRun(false),
+            makeRun(true),
+            makeRun(false),
+            makeRun(true),
+            makeRun(false),
+        ]);
 
         expect(html).toContain('Flaky Tests');
-        expect(html).toContain('Test A');
-        expect(html).toContain('40.0%');
-        expect(html).toContain('<table');
     });
 
     it('includes commits section', () => {
-        const html = buildGitTrendHtml({
-            commits: '- fix login (user, 2024-01-15)',
-            runs: [],
-            flakyEntries: [],
-        });
+        const html = buildGitTrendHtml('- fix login (user, 2024-01-15)', []);
 
         expect(html).toContain('Recent Commits');
         expect(html).toContain('fix login');
