@@ -460,7 +460,7 @@ describe('Quality-check unit tests', () => {
             vi.mocked(readFileSync).mockImplementation((path: PathOrFileDescriptor) => {
                 const p = String(path);
                 if (p === 'scripts/quality-check.ts') {
-                    return 'some content\n/* HASH:1111111111111111111111111111111111111111111111111111111111111111 */\n';
+                    return 'some content\n';
                 }
                 if (p.endsWith('.ts')) {
                     return (
