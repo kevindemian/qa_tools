@@ -238,15 +238,15 @@ describe('CalculateHealthScore — DataHub SSOT enforcement', () => {
     });
 
     it('uses dataHub.computed.flakyPercentage instead of computing from raw runs', () => {
-        // DataHub flaky=5% → score should be ~43 (interpolated between threshold=3 and maxFlakyGate=10)
-        // Store flaky=10% → score would be 0 (10 >= maxFlakyGate)
-        // If code reads from store instead of DataHub, score=0≠43 → test FAILS (RED)
-        const hub = createTestHub({ flakyPercentage: 5 });
+        // DataHub flaky=4% → scoreFlakyRate(4, {flakyThreshold:3, maxFlakyGate:5}) = 50
+        // Store flaky=10% → scoreFlakyRate(10, {maxFlakyGate:5}) = 0
+        // If code reads from store instead of DataHub, score=0≠50 → test FAILS (RED)
+        const hub = createTestHub({ flakyPercentage: 4 });
         const store = createStoreWithHighFlaky(); // store has 10% flaky → score 0
 
         const result = calculateHealthScore(store, { dataHub: hub });
 
-        // DataHub flaky=5% → scoreFlakyRate(5, {flakyThreshold:3, maxFlakyGate:10}) ≈ 43
-        expect(result.dimensions.flakyRate.score).toBe(43);
+        // DataHub flaky=4% → 100 - ((4-3)/(5-3))*100 = 50
+        expect(result.dimensions.flakyRate.score).toBe(50);
     });
 });
