@@ -18,6 +18,7 @@ import type {
     HealthDimensions,
     TestCounts,
     DataHubPersistence,
+    MetricsStore,
 } from '../types/data-hub.js';
 import type { PipelineRun, PipelineJob } from '../types/ci-cd.js';
 import type { ArtifactParseResult } from './artifact-parser.js';
@@ -232,6 +233,50 @@ export class DataHubImpl implements DataHub {
         };
         const computed = DataHubImpl.computeMetrics(raw, { repo });
         return new DataHubImpl(raw, computed, provider, repo);
+    }
+
+    /**
+     * Create a DataHub from persisted MetricsStore data.
+     *
+     * Converts MetricsRun[] → PipelineRun[] and CoverageSnapshot[] → RawCoverage,
+     * then computes all metrics. No CI providers needed — data comes from persistence.
+     */
+    static loadFromStore(store: MetricsStore, repo: string, persistence?: DataHubPersistence): DataHubImpl {
+        const runs: PipelineRun[] = store.runs.map((m, i) => ({
+            id: i,
+            run_number: i,
+            head_branch: m.project || 'unknown',
+            status: 'completed',
+            conclusion: m.passed > m.failed ? 'success' : 'failure',
+            created_at: m.timestamp,
+            event: 'push',
+            tests: m.tests,
+            run_duration_ms: m.duration,
+        }));
+
+        const coverageHistory = store.coverageHistory ?? [];
+        const lastSnapshot = coverageHistory[coverageHistory.length - 1];
+        const coverage =
+            lastSnapshot != null
+                ? {
+                      total: lastSnapshot.totalIssues,
+                      covered: lastSnapshot.mappedIssues,
+                      percentage: lastSnapshot.coveragePct,
+                  }
+                : undefined;
+
+        const raw: RawData = {
+            runs,
+            jobs: new Map(),
+            artifacts: new Map(),
+            failureReasons: new Map(),
+        };
+        if (coverage != null) {
+            raw.coverage = coverage;
+        }
+
+        const computed = DataHubImpl.computeMetrics(raw, { repo });
+        return new DataHubImpl(raw, computed, 'github', repo, persistence);
     }
 
     private static async fetchFromProviders(
