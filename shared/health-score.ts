@@ -120,7 +120,9 @@ function computeActualMetrics(dataHub: DataHub): ActualMetrics {
     const c = dataHub.computed;
 
     const passRate = Number.isFinite(c.passRate) ? c.passRate : 0;
-    const flakyPct = _normalizeFlakyPct(c.flakyPercentage ?? null);
+    // flakyPercentage is always a number from calcFlakyPercentage (0 when no flaky jobs).
+    // Treat 0 as "no flaky data" → passing condition, not failing.
+    const flakyPct = _normalizeFlakyPct(c.flakyPercentage ?? 0);
     const coverage = Number.isFinite(c.coverage) ? c.coverage : 0;
     const executionRate = Number.isFinite(c.executionRate ?? 0) ? (c.executionRate ?? 0) : 0;
     const suiteSpeed = Number.isFinite(c.suiteSpeedP95) ? c.suiteSpeedP95 : 0;
@@ -130,8 +132,9 @@ function computeActualMetrics(dataHub: DataHub): ActualMetrics {
 
 function _normalizeFlakyPct(actualFlakyPct: number | null): number | null {
     if (actualFlakyPct === null) return null;
-    if (Number.isFinite(actualFlakyPct)) return actualFlakyPct;
-    return null;
+    if (!Number.isFinite(actualFlakyPct)) return null;
+    // 0 means no flaky jobs detected → valid value, not missing data
+    return actualFlakyPct;
 }
 
 function scorePassRate(actual: number, config: HealthScoreConfig): number {

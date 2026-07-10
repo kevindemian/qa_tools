@@ -502,9 +502,22 @@ export class DataHubImpl implements DataHub {
     }
 
     private static computeCoverage(raw: RawData): number {
-        if (raw.coverage == null) return 0;
-        const result = calcCoverageFromRaw(raw.coverage);
-        return result.total;
+        // First, try to get coverage from raw.coverage (extracted from job logs)
+        if (raw.coverage != null) {
+            const result = calcCoverageFromRaw(raw.coverage);
+            if (result.total > 0) return result.total;
+        }
+        // Fallback: extract coverage from parsed CTRF artifacts
+        if (raw.parsedArtifacts != null) {
+            for (const artifacts of raw.parsedArtifacts.values()) {
+                for (const artifact of artifacts) {
+                    if (artifact.coverage != null && artifact.coverage.percentage > 0) {
+                        return artifact.coverage.percentage;
+                    }
+                }
+            }
+        }
+        return 0;
     }
 
     private static aggregateTestCounts(parsedArtifacts: Map<number, ArtifactParseResult[]> | undefined): TestCounts {
