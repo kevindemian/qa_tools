@@ -233,7 +233,7 @@ describe('Jira_management — case handlers are connected', () => {
     });
 
     it('case09 updates project name', async () => {
-        expect.assertions(1);
+        expect.assertions(2);
 
         const handler = getHandler('9');
 
