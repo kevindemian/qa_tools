@@ -62,11 +62,11 @@ export function generateCIWorkflow(ctx: SetupContext): string {
 
     if (ctx.features.prReport) {
         testSteps.push({
-            name: 'Upload CTRF report',
+            name: 'Upload test report',
             uses: ACTION_VERSIONS.UPLOAD_ARTIFACT,
             with: {
-                name: 'ctrf-report',
-                path: ctx.ctrfReportPath,
+                name: ctx.artifactName,
+                path: ctx.testReportPath,
                 'if-no-files-found': 'warn',
             },
         });
