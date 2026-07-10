@@ -69,7 +69,7 @@ export interface DiffComparison {
 export interface PrReportCoreOptions {
     tests: FlatTest[];
     stats: PrReportStats;
-    /** Project name used to persist the current run to MetricsStore before health score calculation. */
+    /** Project name used to persist the current run before health score calculation. */
     project?: string;
     skipAi?: boolean;
     skipQuality?: boolean;
@@ -78,7 +78,7 @@ export interface PrReportCoreOptions {
     diffComparison?: DiffComparison;
     /** CI environment context — used to render CI Context section in PR comment. */
     ciEnv?: { isCI: boolean; repo: string; runId: string; refName: string; serverUrl: string };
-    /** Data Hub — centralizado. Quando disponível, usa dados do CI em vez de MetricsStore local. */
+    /** Data Hub — centralizado. Quando disponível, usa dados do CI. */
     dataHub?: DataHub;
 }
 

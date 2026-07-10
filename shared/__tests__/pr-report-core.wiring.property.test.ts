@@ -17,19 +17,11 @@ function makeMockProvider(overrides?: Partial<GitProvider>): GitProvider {
     } as GitProvider;
 }
 
-const mockMetrics = vi.hoisted(() => ({
-    loadMetrics: vi.fn(),
-    saveParseResult: vi.fn(),
-    calculateFlakiness: vi.fn(),
-    getTrends: vi.fn(),
-}));
 const mockHealthScore = vi.hoisted(() => ({ calculateHealthScore: vi.fn() }));
 const mockQualityGate = vi.hoisted(() => ({ runQualityGate: vi.fn() }));
 const mockCheckRun = vi.hoisted(() => ({ createCheckRun: vi.fn() }));
 const mockPRComment = vi.hoisted(() => ({ postPrComment: vi.fn() }));
 const mockHtml = vi.hoisted(() => ({ generateHtmlReport: vi.fn() }));
-const mockCoverage = vi.hoisted(() => ({ resolveCoverage: vi.fn(), readIstanbulCoverage: vi.fn() }));
-const mockParseResult = vi.hoisted(() => vi.fn());
 const mockGetConfig = vi.hoisted(() => vi.fn());
 const mockFeatureConfig = vi.hoisted(() => ({
     isAiSkipped: vi.fn(),
@@ -43,7 +35,6 @@ const mockCiData = vi.hoisted(() => ({
 }));
 const mockGlobalHub = vi.hoisted(() => ({
     getDataHub: vi.fn().mockReturnValue({
-        loadMetricsStore: vi.fn().mockReturnValue({ runs: [] }),
         saveParseResult: vi.fn(),
         saveRun: vi.fn(),
         loadRun: vi.fn().mockReturnValue(null),
@@ -51,7 +42,6 @@ const mockGlobalHub = vi.hoisted(() => ({
         loadCoverageHistory: vi.fn().mockReturnValue([]),
         saveFailureClassification: vi.fn(),
         loadFailureClassifications: vi.fn().mockReturnValue([]),
-        saveMetricsStore: vi.fn(),
         saveQualityMetrics: vi.fn(),
         loadQualityMetricsHistory: vi.fn().mockReturnValue([]),
         flush: vi.fn(),
@@ -95,14 +85,11 @@ vi.mock('fs', () => ({
     writeFileSync: vi.fn(),
     existsSync: vi.fn(),
 }));
-vi.mock('../metrics.js', () => mockMetrics);
 vi.mock('../health-score.js', () => mockHealthScore);
 vi.mock('../quality-gate.js', () => mockQualityGate);
 vi.mock('../github-check-run.js', () => mockCheckRun);
 vi.mock('../github-pr-comment.js', () => mockPRComment);
 vi.mock('../report-html.js', () => mockHtml);
-vi.mock('../coverage-source.js', () => mockCoverage);
-vi.mock('../result_parser.js', () => ({ parseTestResultsFile: mockParseResult }));
 vi.mock('../feature-config.js', () => ({
     getPrReportConfig: mockGetConfig,
     isAiSkipped: mockFeatureConfig.isAiSkipped,
@@ -116,7 +103,6 @@ vi.mock('../data-hub/compute/metrics-trends.js', () => mockTrends);
 
 import fs from 'node:fs';
 import { main } from '../pr-report-core.js';
-import type { FlatTest } from '../result_parser.js';
 
 describe('TryCreateDataHub wiring — property-based', () => {
     beforeEach(() => {
@@ -125,9 +111,6 @@ describe('TryCreateDataHub wiring — property-based', () => {
         delete process.env['GITHUB_ACTIONS'];
         delete process.env['GITHUB_TOKEN'];
 
-        mockMetrics.loadMetrics.mockReturnValue({ runs: [] });
-        mockMetrics.calculateFlakiness.mockReturnValue([]);
-        mockMetrics.getTrends.mockReturnValue({ direction: 'stable' as const, change: 0 });
         mockHealthScore.calculateHealthScore.mockReturnValue({
             score: 80,
             grade: 'B' as const,
@@ -153,7 +136,6 @@ describe('TryCreateDataHub wiring — property-based', () => {
         mockCheckRun.createCheckRun.mockResolvedValue(undefined);
         mockPRComment.postPrComment.mockResolvedValue(undefined);
         mockHtml.generateHtmlReport.mockReturnValue('<html>mock</html>');
-        mockCoverage.readIstanbulCoverage.mockReturnValue(undefined);
         mockGetConfig.mockReturnValue({
             enabled: true,
             publishTarget: 'github-ci',
@@ -164,11 +146,6 @@ describe('TryCreateDataHub wiring — property-based', () => {
         mockFeatureConfig.isAiSkipped.mockReturnValue(false);
         mockFeatureConfig.isQualitySkipped.mockReturnValue(false);
         mockFeatureConfig.isFlakySkipped.mockReturnValue(false);
-        mockParseResult.mockReturnValue({
-            tests: [] satisfies FlatTest[],
-            stats: { passed: 0, failed: 0, skipped: 0, total: 0, duration: 0 },
-            error: undefined,
-        });
         mockCiData.getOrFetchDataHub.mockResolvedValue(null);
         mockCiData.persistCurrentRun.mockResolvedValue(undefined);
         mockCiData.ensureDataHubSync.mockResolvedValue(undefined);

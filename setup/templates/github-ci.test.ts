@@ -7,8 +7,7 @@ const MOCK_CTX_BASIC: SetupContext = {
     framework: 'cypress',
     testReportPath: 'cypress/reports/ctrf-report.json',
     artifactName: 'test-report',
-    ctrfReportPath: 'cypress/reports/ctrf-report.json',
-    ctrfSource: 'cli-flag',
+    testReportSource: 'cli-flag',
     nodeVersion: '20',
     installCmd: 'npm ci',
     testCmd: 'npx cypress run --reporter ctrf',
@@ -71,7 +70,7 @@ describe('GenerateCIWorkflow', () => {
         const yaml = generateCIWorkflow(MOCK_CTX_FULL);
 
         expect(yaml).toContain(ACTION_VERSIONS.UPLOAD_ARTIFACT);
-        expect(yaml).toContain('ctrf-report');
+        expect(yaml).toContain('test-report');
     });
 
     it('includes setup-node with correct version', () => {
@@ -104,15 +103,8 @@ describe('GenerateQaPostProcessAction', () => {
 
         expect(yaml).toContain('name: QA Tools Post-Process');
         expect(yaml).toContain('using: composite');
-        expect(yaml).toContain('shared/pr-report-core.ts');
+        expect(yaml).toContain('git_triggers/pr-report-entry.ts');
         expect(yaml).toContain('GITHUB_TOKEN');
-    });
-
-    it('includes ctrf-path input with default', () => {
-        const yaml = generateQaPostProcessAction();
-
-        expect(yaml).toContain('ctrf-path');
-        expect(yaml).toContain('reports/ctrf-report.json');
     });
 
     it('includes project-name input (required)', () => {
@@ -126,6 +118,13 @@ describe('GenerateQaPostProcessAction', () => {
         const yaml = generateQaPostProcessAction();
 
         expect(yaml).toContain('--project ${{ inputs.project-name }}');
+    });
+
+    it('does not include ctrf-path input', () => {
+        const yaml = generateQaPostProcessAction();
+
+        expect(yaml).not.toContain('ctrf-path');
+        expect(yaml).not.toContain('--ctrf');
     });
 });
 
