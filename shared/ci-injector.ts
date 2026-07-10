@@ -5,6 +5,11 @@
  * 1. INJECT: Add a post-process job to an existing ci.yml WITHOUT destroying it
  * 2. GENERATE: Produce the reusable workflow YAML (qa-post-process.yml) dynamically
  *
+ * The generated workflow:
+ * - Uploads test report artifacts from the external project's test job
+ * - Runs pr-report-entry.ts which uses DataHub (fetches artifacts via GitHub API)
+ * - No CTRF file downloads — DataHub is the SSOT for test data
+ *
  * Used by both:
  * - `setup/main.ts` (full setup wizard)
  * - `pr-report-setup-handler.ts` (PR Report config wizard)
@@ -14,7 +19,8 @@ import { ACTION_VERSIONS } from './test-utils/constants.js';
 
 /* ── Constants ─────────────────────────────────────────────────────────── */
 
-const CTRF_DEFAULT = 'reports/ctrf-report.json';
+const DEFAULT_TEST_REPORT_PATH = 'reports/';
+const DEFAULT_ARTIFACT_NAME = 'test-report';
 const NODE_DEFAULT = '22';
 const INSTALL_DEFAULT = 'npm ci';
 
@@ -22,7 +28,10 @@ const INSTALL_DEFAULT = 'npm ci';
 
 export interface PostProcessWorkflowOptions {
     projectName: string;
-    ctrfPath?: string;
+    /** Path to test report files (CTRF/JUnit/Mochawesome). Uploaded as artifact. Default: 'reports/' */
+    testReportPath?: string;
+    /** Name of the artifact to upload test reports as. Default: 'test-report' */
+    artifactName?: string;
     nodeVersion?: string;
     installCmd?: string;
 }
@@ -30,9 +39,16 @@ export interface PostProcessWorkflowOptions {
 /**
  * Generate the reusable workflow YAML for QA Tools post-processing.
  * Written to `.github/workflows/qa-post-process.yml`.
+ *
+ * The generated workflow:
+ * 1. Checks out qa_tools
+ * 2. Installs dependencies
+ * 3. Runs pr-report-entry.ts (DataHub fetches artifacts via GitHub API)
+ * 4. Uploads PR report HTML as artifact
  */
 export function generatePostProcessWorkflowYaml(options: PostProcessWorkflowOptions): string {
-    const ctrfPath = options.ctrfPath ?? CTRF_DEFAULT;
+    const testReportPath = options.testReportPath ?? DEFAULT_TEST_REPORT_PATH;
+    const artifactName = options.artifactName ?? DEFAULT_ARTIFACT_NAME;
     const nodeVersion = options.nodeVersion ?? NODE_DEFAULT;
     const installCmd = options.installCmd ?? INSTALL_DEFAULT;
 
@@ -46,10 +62,15 @@ export function generatePostProcessWorkflowYaml(options: PostProcessWorkflowOpti
         '        description: Project name for feature config lookup',
         '        required: true',
         '        type: string',
-        '      ctrf-path:',
-        '        description: Path to CTRF report JSON',
+        '      test-report-path:',
+        '        description: Path to test report files (CTRF/JUnit/Mochawesome)',
         '        required: false',
-        '        default: ' + ctrfPath,
+        '        default: ' + testReportPath,
+        '        type: string',
+        '      artifact-name:',
+        '        description: Name of the test report artifact',
+        '        required: false',
+        '        default: ' + artifactName,
         '        type: string',
         '',
         'jobs:',
@@ -63,19 +84,9 @@ export function generatePostProcessWorkflowYaml(options: PostProcessWorkflowOpti
         '          cache: npm',
         '      - name: Install dependencies',
         '        run: ' + installCmd,
-        '      - name: Download CTRF report',
-        `        uses: ${ACTION_VERSIONS.DOWNLOAD_ARTIFACT}`,
-        '        with:',
-        '          name: ctrf-report',
-        '          path: reports/',
         '      - name: Run QA Tools Post-Processing',
         '        if: always()',
-        '        run: |',
-        '          if [ ! -f "${{ inputs.ctrf-path }}" ]; then',
-        '            echo "::warning::CTRF report not found at ${{ inputs.ctrf-path }} — skipping post-processing"',
-        '            exit 0',
-        '          fi',
-        '          npx tsx git_triggers/pr-report-entry.ts --ctrf ${{ inputs.ctrf-path }} --project ${{ inputs.project-name }}',
+        '        run: npx tsx git_triggers/pr-report-entry.ts --project ${{ inputs.project-name }}',
         '        env:',
         '          GITHUB_TOKEN: ${{ github.token }}',
         '      - name: Upload PR Report HTML',
@@ -90,11 +101,13 @@ export function generatePostProcessWorkflowYaml(options: PostProcessWorkflowOpti
 
 /**
  * Convenience overload: accept SetupContext (full setup wizard).
+ * Maps SetupContext fields to PostProcessWorkflowOptions.
  */
 export function generatePostProcessWorkflowFromContext(ctx: SetupContext): string {
     return generatePostProcessWorkflowYaml({
         projectName: ctx.projectName,
-        ctrfPath: ctx.ctrfReportPath,
+        testReportPath: ctx.testReportPath,
+        artifactName: ctx.artifactName,
         nodeVersion: ctx.nodeVersion,
         installCmd: ctx.installCmd,
     });

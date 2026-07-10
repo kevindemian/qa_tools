@@ -19,6 +19,11 @@ const mockFeatureConfig = vi.hoisted(() => ({
     isQualitySkipped: vi.fn(),
     isFlakySkipped: vi.fn(),
 }));
+const mockDataHub = vi.hoisted(() => ({
+    getDataHub: vi.fn(),
+    isDataHubInitialized: vi.fn(),
+    setDataHub: vi.fn(),
+}));
 
 vi.mock('fs', () => ({
     default: { mkdirSync: vi.fn(), writeFileSync: vi.fn(), existsSync: vi.fn() },
@@ -40,6 +45,7 @@ vi.mock('../feature-config.js', () => ({
     isQualitySkipped: mockFeatureConfig.isQualitySkipped,
     isFlakySkipped: mockFeatureConfig.isFlakySkipped,
 }));
+vi.mock('../data-hub/global-hub.js', () => mockDataHub);
 
 import fs from 'node:fs';
 import { main } from '../pr-report-core.js';
@@ -96,6 +102,32 @@ describe('Pr Report Core.Main', () => {
             error: undefined,
         });
         vi.mocked(fs.existsSync).mockReturnValue(true);
+
+        // Mock DataHub with test data
+        mockDataHub.getDataHub.mockReturnValue({
+            saveParseResult: vi.fn(),
+            raw: {
+                coverage: undefined,
+            },
+            computed: {
+                metricsRuns: [
+                    {
+                        tests: [{ title: 'test-1', state: 'passed', duration: 100 }],
+                        total: 1,
+                        passed: 1,
+                        failed: 0,
+                        skipped: 0,
+                        duration: 100,
+                    },
+                ],
+                testCounts: { passed: 1, failed: 0, skipped: 0, total: 1 },
+            },
+            timestamp: new Date(),
+            provider: 'github',
+            repo: 'test/repo',
+        });
+        mockDataHub.isDataHubInitialized.mockReturnValue(true);
+        mockDataHub.setDataHub.mockReturnValue(undefined);
     });
 
     afterAll(() => {
@@ -103,19 +135,32 @@ describe('Pr Report Core.Main', () => {
     });
 
     describe('Main', () => {
-        it('returns early when CTRF file does not exist', async () => {
+        it('returns early when DataHub has no test data', async () => {
             expect.hasAssertions();
 
-            vi.mocked(fs.existsSync).mockReturnValue(false);
+            mockDataHub.getDataHub.mockReturnValue({
+                saveParseResult: vi.fn(),
+                raw: { coverage: undefined },
+                computed: {
+                    metricsRuns: [],
+                    testCounts: { passed: 0, failed: 0, skipped: 0, total: 0 },
+                },
+                timestamp: new Date(),
+                provider: 'github',
+                repo: 'test/repo',
+            });
+
             await main();
 
             expect(mockPRComment.postPrComment).not.toHaveBeenCalled();
         });
 
-        it('returns early when CTRF parsing fails', async () => {
+        it('returns early when DataHub is not initialized', async () => {
             expect.hasAssertions();
 
-            mockParseResult.mockReturnValue({ error: 'Invalid JSON' });
+            mockDataHub.isDataHubInitialized.mockReturnValue(false);
+            mockDataHub.getDataHub.mockReturnValue(undefined);
+
             await main();
 
             expect(mockPRComment.postPrComment).not.toHaveBeenCalled();

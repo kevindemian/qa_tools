@@ -92,21 +92,21 @@ describe('GeneratePostProcessWorkflowYaml', () => {
         expect(yaml).toContain('project-name:');
     });
 
-    it('uses defaults for CTRF path, node version, install command', () => {
+    it('uses defaults for test report path, node version, install command', () => {
         const yaml = generatePostProcessWorkflowYaml({ projectName: 'p' });
 
-        expect(yaml).toContain('reports/ctrf-report.json');
+        expect(yaml).toContain('reports/');
         expect(yaml).toContain('node-version: 22');
         expect(yaml).toContain('npm ci');
     });
 
-    it('accepts custom CTRF path', () => {
+    it('accepts custom test report path', () => {
         const yaml = generatePostProcessWorkflowYaml({
             projectName: 'p',
-            ctrfPath: 'custom/ctrf.json',
+            testReportPath: 'custom/test-results/',
         });
 
-        expect(yaml).toContain('custom/ctrf.json');
+        expect(yaml).toContain('custom/test-results/');
     });
 
     it('accepts custom node version', () => {
@@ -127,11 +127,11 @@ describe('GeneratePostProcessWorkflowYaml', () => {
         expect(yaml).toContain('pnpm install --frozen-lockfile');
     });
 
-    it('includes the CTRF existence check shell guard', () => {
+    it('includes test-report-path and artifact-name inputs', () => {
         const yaml = generatePostProcessWorkflowYaml({ projectName: 'p' });
 
-        expect(yaml).toContain('if [ ! -f "${{ inputs.ctrf-path }}" ]; then');
-        expect(yaml).toContain('::warning::CTRF report not found');
+        expect(yaml).toContain('test-report-path:');
+        expect(yaml).toContain('artifact-name:');
     });
 
     it('includes artifact upload step', () => {
@@ -233,20 +233,20 @@ describe('Contract: deployed qa-post-process.yml matches generator', () => {
         expect.hasAssertions();
 
         const deployedPath = path.join(ROOT, '.github', 'workflows', 'qa-post-process.yml');
-        const deployed = fs.readFileSync(deployedPath, 'utf8');
-        const generated = generatePostProcessWorkflowYaml({ projectName: 'qa_tools' });
+        const deployed = fs.readFileSync(deployedPath, 'utf8').trim();
+        const generated = generatePostProcessWorkflowYaml({ projectName: 'qa_tools' }).trim();
 
         expect(deployed).toBe(generated);
     });
 
-    it('deployed file contains shell guard for missing CTRF', () => {
+    it('deployed file contains test-report-path and artifact-name inputs', () => {
         expect.hasAssertions();
 
         const deployedPath = path.join(ROOT, '.github', 'workflows', 'qa-post-process.yml');
         const deployed = fs.readFileSync(deployedPath, 'utf8');
 
-        expect(deployed).toContain('if [ ! -f "${{ inputs.ctrf-path }}" ]; then');
-        expect(deployed).toContain('::warning::CTRF report not found');
+        expect(deployed).toContain('test-report-path:');
+        expect(deployed).toContain('artifact-name:');
     });
 
     it('deployed file does NOT contain manual steps (no drift)', () => {
@@ -260,16 +260,13 @@ describe('Contract: deployed qa-post-process.yml matches generator', () => {
         expect(deployed).not.toContain('ls -la');
     });
 
-    it('ci.yml upload artifact name matches qa-post-process.yml download name', () => {
+    it('ci.yml upload artifact name is test-report', () => {
         expect.hasAssertions();
 
         const ciPath = path.join(ROOT, '.github', 'workflows', 'ci.yml');
-        const ppPath = path.join(ROOT, '.github', 'workflows', 'qa-post-process.yml');
         const ciYaml = fs.readFileSync(ciPath, 'utf8');
-        const ppYaml = fs.readFileSync(ppPath, 'utf8');
 
-        expect(ciYaml).toContain('name: ctrf-report');
-        expect(ppYaml).toContain('name: ctrf-report');
+        expect(ciYaml).toContain('name: test-report');
     });
 });
 
@@ -280,6 +277,8 @@ describe('Contract: ci-injector and setup wizard generators are equivalent', () 
         return {
             projectName: 'test-project',
             framework: 'vitest',
+            testReportPath: 'reports/ctrf-report.json',
+            artifactName: 'test-report',
             ctrfReportPath: 'reports/ctrf-report.json',
             ctrfSource: 'config-file',
             nodeVersion: '22',
@@ -310,14 +309,16 @@ describe('Contract: ci-injector and setup wizard generators are equivalent', () 
         expect(fromInjector).toBe(fromWizard);
     });
 
-    it('both include shell guard for missing CTRF', () => {
+    it('both include test-report-path and artifact-name inputs', () => {
         expect.hasAssertions();
 
         const fromInjector = generatePostProcessWorkflowYaml({ projectName: 'p' });
         const fromWizard = generateQaPostProcessWorkflow(makeCtx({ projectName: 'p' }));
 
-        expect(fromInjector).toContain('if [ ! -f "${{ inputs.ctrf-path }}" ]; then');
-        expect(fromWizard).toContain('if [ ! -f "${{ inputs.ctrf-path }}" ]; then');
+        expect(fromInjector).toContain('test-report-path:');
+        expect(fromWizard).toContain('test-report-path:');
+        expect(fromInjector).toContain('artifact-name:');
+        expect(fromWizard).toContain('artifact-name:');
     });
 
     it('both use modern action versions (not pinned SHAs)', () => {
@@ -329,7 +330,6 @@ describe('Contract: ci-injector and setup wizard generators are equivalent', () 
         for (const yaml of [fromInjector, fromWizard]) {
             expect(yaml).toContain(ACTION_VERSIONS.CHECKOUT);
             expect(yaml).toContain(ACTION_VERSIONS.SETUP_NODE);
-            expect(yaml).toContain(ACTION_VERSIONS.DOWNLOAD_ARTIFACT);
             expect(yaml).toContain(ACTION_VERSIONS.UPLOAD_ARTIFACT);
         }
     });

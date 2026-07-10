@@ -1,6 +1,13 @@
 import { describe, expect, it, vi, beforeEach } from 'vitest';
 import type { GitProvider } from '../types/ci-cd.js';
-import { setDataHub } from '../data-hub/global-hub.js';
+
+const mockGlobalHub = vi.hoisted(() => ({
+    setDataHub: vi.fn(),
+    getDataHub: vi.fn(),
+    isDataHubInitialized: vi.fn().mockReturnValue(false),
+}));
+
+vi.mock('../data-hub/global-hub.js', () => mockGlobalHub);
 
 function makeMockProvider(overrides?: Partial<GitProvider>): GitProvider {
     return {
@@ -23,7 +30,6 @@ const mockMetrics = vi.hoisted(() => ({
     calculateFlakiness: vi.fn(),
     getTrends: vi.fn(),
 }));
-const mockHealthScore = vi.hoisted(() => ({ calculateHealthScore: vi.fn() }));
 const mockQualityGate = vi.hoisted(() => ({ runQualityGate: vi.fn() }));
 const mockCheckRun = vi.hoisted(() => ({ createCheckRun: vi.fn() }));
 const mockPRComment = vi.hoisted(() => ({ postPrComment: vi.fn() }));
@@ -49,7 +55,6 @@ vi.mock('fs', () => ({
     existsSync: vi.fn(),
 }));
 vi.mock('../metrics.js', () => mockMetrics);
-vi.mock('../health-score.js', () => mockHealthScore);
 vi.mock('../quality-gate.js', () => mockQualityGate);
 vi.mock('../github-check-run.js', () => mockCheckRun);
 vi.mock('../github-pr-comment.js', () => mockPRComment);
@@ -68,32 +73,11 @@ import fs from 'node:fs';
 import { main } from '../pr-report-core.js';
 import type { FlatTest } from '../result_parser.js';
 
-const defaultHealthScore = {
-    score: 80,
-    grade: 'B' as const,
-    passRate: 80,
-    metrics: {
-        passRate: 80,
-        failRate: 10,
-        skipRate: 10,
-        flakyRate: 0,
-        quarantineRate: 0,
-        stability: 100,
-        trend: 0,
-        passRateScore: 80,
-        failRateScore: 90,
-        skipRateScore: 90,
-        flakyRateScore: 100,
-        quarantineRatioScore: 100,
-        stabilityScore: 100,
-        trendScore: 100,
-    },
-};
-
 describe('TryCreateDataHub wiring', () => {
     beforeEach(() => {
         vi.clearAllMocks();
-        setDataHub(undefined);
+        mockGlobalHub.setDataHub.mockClear();
+        mockGlobalHub.isDataHubInitialized.mockReturnValue(false);
         delete process.env['GITHUB_STEP_SUMMARY'];
         delete process.env['CI'];
         delete process.env['GITHUB_ACTIONS'];
@@ -105,7 +89,6 @@ describe('TryCreateDataHub wiring', () => {
         mockMetrics.loadMetrics.mockReturnValue({ runs: [] });
         mockMetrics.calculateFlakiness.mockReturnValue([]);
         mockMetrics.getTrends.mockReturnValue({ direction: 'stable' as const, change: 0 });
-        mockHealthScore.calculateHealthScore.mockReturnValue(defaultHealthScore);
         mockQualityGate.runQualityGate.mockReturnValue(null);
         mockCheckRun.createCheckRun.mockResolvedValue(undefined);
         mockPRComment.postPrComment.mockResolvedValue(undefined);
@@ -174,7 +157,7 @@ describe('TryCreateDataHub wiring', () => {
             const factory = vi.fn().mockReturnValue(mockProvider);
             const mockDataHub = {
                 raw: { runs: [], pipelineRuns: [] },
-                computed: { passRate: 85, coverage: 75 },
+                computed: { passRate: 85, coverage: 75, executionRate: 77, flakyPercentage: 12, suiteSpeedP95: 500 },
                 loadMetricsStore: vi.fn().mockReturnValue({ runs: [] }),
                 saveParseResult: vi.fn().mockReturnValue({}),
                 saveRun: vi.fn(),
@@ -192,6 +175,7 @@ describe('TryCreateDataHub wiring', () => {
             await main(factory);
 
             expect(mockCiData.getOrFetchDataHub).toHaveBeenCalledWith(mockProvider, expect.any(String));
+            expect(mockGlobalHub.setDataHub).toHaveBeenCalledWith(mockDataHub);
         });
 
         it('falls back to MetricsStore when factory returns undefined', async () => {
@@ -208,7 +192,7 @@ describe('TryCreateDataHub wiring', () => {
             expect(mockCiData.getOrFetchDataHub).not.toHaveBeenCalled();
         });
 
-        it('falls back to MetricsStore when getOrFetchDataHub throws', async () => {
+        it('returns early when getOrFetchDataHub throws', async () => {
             expect.hasAssertions();
 
             process.env['CI'] = 'true';
@@ -221,7 +205,7 @@ describe('TryCreateDataHub wiring', () => {
 
             await main(factory);
 
-            expect(mockPRComment.postPrComment).toHaveBeenCalledWith(expect.any(String));
+            expect(mockPRComment.postPrComment).not.toHaveBeenCalled();
         });
 
         it('does not call factory when isCI=false', async () => {

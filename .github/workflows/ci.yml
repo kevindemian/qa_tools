@@ -93,12 +93,12 @@ jobs:
               run: npx vitest run git_triggers/github-e2e.test.ts
               env:
                   CTRF_OUTPUT_FILE: ctrf-report-e2e.json
-            - name: Upload CTRF report for post-processing
+            - name: Upload test report for post-processing
               if: always() && matrix.node-version == 22
               uses: actions/upload-artifact@v7
               with:
-                  name: ctrf-report
-                  path: reports/ctrf-report.json
+                  name: test-report
+                  path: reports/
                   if-no-files-found: warn
 
     post-process:

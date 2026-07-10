@@ -4,6 +4,8 @@ import type { SetupContext } from '../context.js';
 const MOCK_CTX_BASIC: SetupContext = {
     projectName: 'test-proj',
     framework: 'vitest',
+    testReportPath: 'reports/ctrf-report.json',
+    artifactName: 'test-report',
     ctrfReportPath: 'reports/ctrf-report.json',
     ctrfSource: 'cli-flag',
     nodeVersion: '20',
