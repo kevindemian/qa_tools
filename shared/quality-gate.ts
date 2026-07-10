@@ -173,7 +173,18 @@ function _aggregateResult(checks: GateCheck[]): QualityGateResult {
 export function runQualityGate(options?: QualityGateOptions): QualityGateResult {
     const checks: GateCheck[] = [];
     try {
-        const hub = getDataHub();
+        // Prefer global singleton; fall back to options.dataHub for CI paths
+        // where the hub was created locally but not registered globally.
+        let hub: import('./types/data-hub.js').DataHub;
+        try {
+            hub = getDataHub();
+        } catch {
+            if (options?.dataHub) {
+                hub = options.dataHub;
+            } else {
+                throw new Error('DataHub not initialized and no dataHub option provided');
+            }
+        }
         const store = hub.loadMetricsStore();
         const runs = options?.project ? store.runs.filter((r) => r.project === options.project) : store.runs;
 

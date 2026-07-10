@@ -1,5 +1,6 @@
 import { describe, expect, it, vi, beforeEach } from 'vitest';
 import type { GitProvider } from '../types/ci-cd.js';
+import { setDataHub } from '../data-hub/global-hub.js';
 
 function makeMockProvider(overrides?: Partial<GitProvider>): GitProvider {
     return {
@@ -92,6 +93,7 @@ const defaultHealthScore = {
 describe('TryCreateDataHub wiring', () => {
     beforeEach(() => {
         vi.clearAllMocks();
+        setDataHub(undefined);
         delete process.env['GITHUB_STEP_SUMMARY'];
         delete process.env['CI'];
         delete process.env['GITHUB_ACTIONS'];
@@ -173,6 +175,17 @@ describe('TryCreateDataHub wiring', () => {
             const mockDataHub = {
                 raw: { runs: [], pipelineRuns: [] },
                 computed: { passRate: 85, coverage: 75 },
+                loadMetricsStore: vi.fn().mockReturnValue({ runs: [] }),
+                saveParseResult: vi.fn().mockReturnValue({}),
+                saveRun: vi.fn(),
+                saveCoverageSnapshot: vi.fn(),
+                saveFailureClassification: vi.fn(),
+                flush: vi.fn(),
+                loadCoverageHistory: vi.fn().mockReturnValue([]),
+                loadFailureClassifications: vi.fn().mockReturnValue([]),
+                saveMetricsStore: vi.fn(),
+                saveQualityMetrics: vi.fn(),
+                loadQualityMetricsHistory: vi.fn().mockReturnValue([]),
             };
             mockCiData.getOrFetchDataHub.mockResolvedValue(mockDataHub);
 

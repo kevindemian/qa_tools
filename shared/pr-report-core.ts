@@ -22,7 +22,7 @@
 import fs from 'node:fs';
 import path from 'path';
 import { rootLogger } from './logger.js';
-import { getDataHub, isDataHubInitialized } from './data-hub/global-hub.js';
+import { getDataHub, setDataHub, isDataHubInitialized } from './data-hub/global-hub.js';
 import { calcFlakinessEntries } from './data-hub/compute/flakiness-entries.js';
 import { calcMetricsTrends } from './data-hub/compute/metrics-trends.js';
 import { calcRunPassRate } from './data-hub/compute/run-pass-rate.js';
@@ -763,6 +763,12 @@ export async function main(
     const diffComparison = previousRun ? computeDiffComparison(result.tests, previousRun.tests) : undefined;
 
     const dataHub = await tryCreateDataHub(ciEnv, providerFactory);
+
+    // Register DataHub in the global singleton so downstream consumers
+    // (quality-gate, health-score, flakiness) can access it via getDataHub().
+    if (dataHub) {
+        setDataHub(dataHub);
+    }
 
     const resultSummary = await generatePrReport({
         tests: result.tests,
