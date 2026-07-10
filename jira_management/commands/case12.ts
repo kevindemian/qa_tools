@@ -87,9 +87,8 @@ function _checkHealthScore(projectName: string): { healthReady: boolean; healthM
         return { healthReady: false, healthMsg: 'insuficiente (DataHub não inicializado)' };
     }
     const hub = getDataHub();
-    const store = hub.loadMetricsStore();
-    const projectRuns = store.runs.filter((r) => r.project === projectName);
-    const coverageCount = store.coverageHistory?.length ?? 0;
+    const projectRuns = (hub.computed.metricsRuns ?? []).filter((r) => r.project === projectName);
+    const coverageCount = hub.raw.coverageHistory?.length ?? 0;
     const healthReady = projectRuns.length >= 10 && coverageCount > 0;
     let healthMsg = healthReady ? 'pronto' : 'insuficiente';
     if (!healthReady) {

@@ -96,8 +96,8 @@ function _isJiraConfigured(): boolean {
 }
 
 function _displayBadge(totalCount: number, project: string): void {
-    const metrics = getDataHub().loadMetricsStore();
-    const snapshot = metrics.coverageHistory?.filter((s) => s.project === project).pop();
+    const dataHub = getDataHub();
+    const snapshot = dataHub.raw.coverageHistory?.filter((s) => s.project === project).pop();
     const pct = snapshot?.coveragePct;
     const gapCount = snapshot ? snapshot.totalIssues - snapshot.mappedIssues : null;
     let color: (s: string) => string;
@@ -232,6 +232,7 @@ function buildCommandContext(res: RuntimeResources): CommandContext {
         printSessionSummary,
         base_url,
         sessionLog,
+        dataHub: getDataHub(),
     };
 }
 

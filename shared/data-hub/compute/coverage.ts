@@ -27,9 +27,9 @@ export interface CoverageResult {
  * @returns Normalized CoverageResult.
  */
 export function calcCoverageFromRaw(raw: RawCoverage): CoverageResult {
-    const total = Math.min(100, Math.max(0, raw.total));
+    const percentage = Math.min(100, Math.max(0, raw.percentage));
     const result: CoverageResult = {
-        total,
+        total: percentage,
         covered: raw.covered,
         statements: raw.total,
     };

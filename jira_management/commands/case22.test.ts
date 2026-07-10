@@ -26,7 +26,7 @@ vi.mock('../../shared/test-impact', () => ({
 }));
 vi.mock('../../shared/data-hub/global-hub.js', () => ({
     getDataHub: vi.fn().mockReturnValue({
-        loadMetricsStore: vi.fn().mockReturnValue({ runs: [] }),
+        computed: { metricsRuns: [] },
     }),
 }));
 vi.mock('../../shared/data-hub/compute/flakiness-entries', () => ({
@@ -59,7 +59,7 @@ describe('Case22', () => {
     beforeEach(() => {
         vi.clearAllMocks();
         mockGetDataHub.mockReturnValue({
-            loadMetricsStore: vi.fn().mockReturnValue({ runs: [] }),
+            computed: { metricsRuns: [] },
         } as never);
         mockCalcFlakinessEntries.mockReturnValue([]);
     });
@@ -147,7 +147,7 @@ describe('Case22', () => {
             mockExecFileSync.mockReturnValue('src/login.ts\n');
             mockExistsSync.mockReturnValue(false);
             mockGetDataHub.mockReturnValue({
-                loadMetricsStore: vi.fn().mockReturnValue({ runs: [] }),
+                computed: { metricsRuns: [] },
             } as never);
             mockCalcFlakinessEntries.mockReturnValue([]);
             mockAnalyzeTestImpact.mockReturnValue({
@@ -174,7 +174,7 @@ describe('Case22', () => {
             mockExecFileSync.mockReturnValue('src/unknown.ts\n');
             mockExistsSync.mockReturnValue(false);
             mockGetDataHub.mockReturnValue({
-                loadMetricsStore: vi.fn().mockReturnValue({ runs: [] }),
+                computed: { metricsRuns: [] },
             } as never);
             mockCalcFlakinessEntries.mockReturnValue([]);
             mockAnalyzeTestImpact.mockReturnValue({
@@ -199,8 +199,8 @@ describe('Case22', () => {
             mockExecFileSync.mockReturnValue('src/login.ts\n');
             mockExistsSync.mockReturnValue(false);
             mockGetDataHub.mockReturnValue({
-                loadMetricsStore: vi.fn().mockReturnValue({
-                    runs: [
+                computed: {
+                    metricsRuns: [
                         {
                             timestamp: '2026-01-01T00:00:00.000Z',
                             project: 'TEST',
@@ -212,7 +212,7 @@ describe('Case22', () => {
                             tests: [{ title: 'Login test', state: 'failed', duration: 100 }],
                         },
                     ],
-                }),
+                },
             } as never);
             mockCalcFlakinessEntries.mockReturnValue([
                 {

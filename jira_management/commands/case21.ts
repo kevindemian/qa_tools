@@ -40,8 +40,7 @@ function handlerCiGate(result: CoverageGapResult, project: string): boolean {
         coveragePct,
     });
 
-    const store = hub.loadMetricsStore();
-    const history = (store.coverageHistory ?? []).filter((s) => s.project === project);
+    const history = (hub.raw.coverageHistory ?? []).filter((s) => s.project === project);
     const previous = history.length >= 2 ? history[history.length - 2] : null;
 
     if (previous) {

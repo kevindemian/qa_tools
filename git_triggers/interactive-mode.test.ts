@@ -12,8 +12,7 @@ vi.mock('../shared/config', () => ({ default: { get: vi.fn(() => '') }, __esModu
 vi.mock('../shared/splash', () => ({ showSplash: vi.fn() }));
 vi.mock('../shared/data-hub/global-hub.js', () => ({
     getDataHub: vi.fn().mockReturnValue({
-        loadMetricsStore: vi.fn().mockReturnValue({ runs: [] }),
-        saveMetricsStore: vi.fn(),
+        computed: { metricsRuns: [] },
     }),
 }));
 
@@ -85,8 +84,7 @@ vi.mock('./session-state', () => ({
     setProjectId: vi.fn(),
     setManager: vi.fn(),
     getDataHub: vi.fn().mockReturnValue({
-        loadMetricsStore: vi.fn().mockReturnValue({ runs: [] }),
-        saveMetricsStore: vi.fn(),
+        computed: { metricsRuns: [] },
     }),
     setDataHub: vi.fn(),
     ensureDataHub: vi.fn(() => undefined),
@@ -459,8 +457,8 @@ describe('Interactive-mode test exports', () => {
 
             mockSessionState.currentProjectName = 'proj1';
             mockGetDataHub.mockReturnValue({
-                loadMetricsStore: vi.fn().mockReturnValue({
-                    runs: [
+                computed: {
+                    metricsRuns: [
                         {
                             project: 'proj1',
                             timestamp: '2024-01-01',
@@ -482,8 +480,10 @@ describe('Interactive-mode test exports', () => {
                             tests: [],
                         },
                     ],
-                }),
-                saveMetricsStore: vi.fn(),
+                },
+                raw: {
+                    failureClassifications: [],
+                },
             } as never);
             const result = _testExports._loadProjectRunsHelper();
 
@@ -495,8 +495,8 @@ describe('Interactive-mode test exports', () => {
 
             mockSessionState.currentProjectName = 'proj1';
             mockGetDataHub.mockReturnValue({
-                loadMetricsStore: vi.fn().mockReturnValue({
-                    runs: [
+                computed: {
+                    metricsRuns: [
                         {
                             project: 'proj1',
                             timestamp: '',
@@ -508,8 +508,10 @@ describe('Interactive-mode test exports', () => {
                             tests: [],
                         },
                     ],
-                }),
-                saveMetricsStore: vi.fn(),
+                },
+                raw: {
+                    failureClassifications: [],
+                },
             } as never);
             const result = _testExports._loadProjectRunsHelper();
 
@@ -522,8 +524,8 @@ describe('Interactive-mode test exports', () => {
 
             mockSessionState.currentProjectName = 'proj1';
             mockGetDataHub.mockReturnValue({
-                loadMetricsStore: vi.fn().mockReturnValue({
-                    runs: [
+                computed: {
+                    metricsRuns: [
                         {
                             project: 'proj1',
                             timestamp: '',
@@ -535,8 +537,10 @@ describe('Interactive-mode test exports', () => {
                             tests: [],
                         },
                     ],
-                }),
-                saveMetricsStore: vi.fn(),
+                },
+                raw: {
+                    failureClassifications: [],
+                },
             } as never);
             const gitMod = await import('../shared/git-metrics-adapter.js');
             (gitMod.generateGitMetricsRuns as ReturnType<typeof vi.fn>).mockReturnValue([
@@ -665,8 +669,8 @@ describe('Interactive-mode test exports', () => {
 
             mockSessionState.currentProjectName = 'proj1';
             mockGetDataHub.mockReturnValue({
-                loadMetricsStore: vi.fn().mockReturnValue({
-                    runs: [
+                computed: {
+                    metricsRuns: [
                         {
                             project: 'proj1',
                             timestamp: '2024-01-01',
@@ -688,8 +692,10 @@ describe('Interactive-mode test exports', () => {
                             tests: [],
                         },
                     ],
-                }),
-                saveMetricsStore: vi.fn(),
+                },
+                raw: {
+                    failureClassifications: [],
+                },
             } as never);
             const runCompMod = await import('../shared/run-comparison.js');
             (runCompMod.compareRuns as ReturnType<typeof vi.fn>).mockReturnValue('comparison');
@@ -703,8 +709,8 @@ describe('Interactive-mode test exports', () => {
 
             mockSessionState.currentProjectName = 'proj1';
             mockGetDataHub.mockReturnValue({
-                loadMetricsStore: vi.fn().mockReturnValue({
-                    runs: [
+                computed: {
+                    metricsRuns: [
                         {
                             project: 'proj1',
                             timestamp: '',
@@ -716,8 +722,10 @@ describe('Interactive-mode test exports', () => {
                             tests: [],
                         },
                     ],
-                }),
-                saveMetricsStore: vi.fn(),
+                },
+                raw: {
+                    failureClassifications: [],
+                },
             } as never);
             const result = await _testExports.handleRunComparison();
 
@@ -753,8 +761,8 @@ describe('Interactive-mode test exports', () => {
 
             mockSessionState.currentProjectName = 'proj1';
             mockGetDataHub.mockReturnValue({
-                loadMetricsStore: vi.fn().mockReturnValue({
-                    runs: [
+                computed: {
+                    metricsRuns: [
                         {
                             project: 'proj1',
                             timestamp: '2024-01-01',
@@ -776,8 +784,10 @@ describe('Interactive-mode test exports', () => {
                             tests: [],
                         },
                     ],
-                }),
-                saveMetricsStore: vi.fn(),
+                },
+                raw: {
+                    failureClassifications: [],
+                },
             } as never);
             await _testExports._dashboardReleaseScore();
 
@@ -843,8 +853,8 @@ describe('Interactive-mode test exports', () => {
 
             mockSessionState.currentProjectName = 'proj1';
             mockGetDataHub.mockReturnValue({
-                loadMetricsStore: vi.fn().mockReturnValue({
-                    runs: [
+                computed: {
+                    metricsRuns: [
                         {
                             project: 'proj1',
                             timestamp: '2024-01-01',
@@ -866,8 +876,10 @@ describe('Interactive-mode test exports', () => {
                             tests: [],
                         },
                     ],
-                }),
-                saveMetricsStore: vi.fn(),
+                },
+                raw: {
+                    failureClassifications: [],
+                },
             } as never);
             await _testExports._dashboardPipelineCost();
 
@@ -899,8 +911,8 @@ describe('Interactive-mode test exports', () => {
 
             mockSessionState.currentProjectName = 'proj1';
             mockGetDataHub.mockReturnValue({
-                loadMetricsStore: vi.fn().mockReturnValue({
-                    runs: [
+                computed: {
+                    metricsRuns: [
                         {
                             project: 'proj1',
                             timestamp: '',
@@ -922,8 +934,10 @@ describe('Interactive-mode test exports', () => {
                             tests: [],
                         },
                     ],
-                }),
-                saveMetricsStore: vi.fn(),
+                },
+                raw: {
+                    failureClassifications: [],
+                },
             } as never);
             await _testExports._dashboardDefectTrends();
 
@@ -941,8 +955,8 @@ describe('Interactive-mode test exports', () => {
 
             mockSessionState.currentProjectName = 'proj1';
             mockGetDataHub.mockReturnValue({
-                loadMetricsStore: vi.fn().mockReturnValue({
-                    runs: [
+                computed: {
+                    metricsRuns: [
                         {
                             project: 'proj1',
                             timestamp: '',
@@ -964,8 +978,10 @@ describe('Interactive-mode test exports', () => {
                             tests: [],
                         },
                     ],
-                }),
-                saveMetricsStore: vi.fn(),
+                },
+                raw: {
+                    failureClassifications: [],
+                },
             } as never);
             await _testExports._dashboardTraceabilityMatrix();
 
@@ -983,8 +999,8 @@ describe('Interactive-mode test exports', () => {
 
             mockSessionState.currentProjectName = 'proj1';
             mockGetDataHub.mockReturnValue({
-                loadMetricsStore: vi.fn().mockReturnValue({
-                    runs: [
+                computed: {
+                    metricsRuns: [
                         {
                             project: 'proj1',
                             timestamp: '',
@@ -1006,8 +1022,10 @@ describe('Interactive-mode test exports', () => {
                             tests: [],
                         },
                     ],
-                }),
-                saveMetricsStore: vi.fn(),
+                },
+                raw: {
+                    failureClassifications: [],
+                },
             } as never);
             await _testExports._dashboardSeasonality();
 
@@ -1025,8 +1043,8 @@ describe('Interactive-mode test exports', () => {
 
             mockSessionState.currentProjectName = 'proj1';
             mockGetDataHub.mockReturnValue({
-                loadMetricsStore: vi.fn().mockReturnValue({
-                    runs: [
+                computed: {
+                    metricsRuns: [
                         {
                             project: 'proj1',
                             timestamp: '',
@@ -1048,8 +1066,10 @@ describe('Interactive-mode test exports', () => {
                             tests: [],
                         },
                     ],
-                }),
-                saveMetricsStore: vi.fn(),
+                },
+                raw: {
+                    failureClassifications: [],
+                },
             } as never);
             await _testExports._dashboardSilentRegression();
 
@@ -1081,8 +1101,8 @@ describe('Interactive-mode test exports', () => {
 
             mockSessionState.currentProjectName = 'proj1';
             mockGetDataHub.mockReturnValue({
-                loadMetricsStore: vi.fn().mockReturnValue({
-                    runs: [
+                computed: {
+                    metricsRuns: [
                         {
                             project: 'proj1',
                             timestamp: '',
@@ -1104,8 +1124,10 @@ describe('Interactive-mode test exports', () => {
                             tests: [],
                         },
                     ],
-                }),
-                saveMetricsStore: vi.fn(),
+                },
+                raw: {
+                    failureClassifications: [],
+                },
             } as never);
             await _testExports._dashboardBenchmark();
 
@@ -1123,8 +1145,8 @@ describe('Interactive-mode test exports', () => {
 
             mockSessionState.currentProjectName = 'proj1';
             mockGetDataHub.mockReturnValue({
-                loadMetricsStore: vi.fn().mockReturnValue({
-                    runs: [
+                computed: {
+                    metricsRuns: [
                         {
                             project: 'proj1',
                             timestamp: '',
@@ -1146,8 +1168,10 @@ describe('Interactive-mode test exports', () => {
                             tests: [],
                         },
                     ],
-                }),
-                saveMetricsStore: vi.fn(),
+                },
+                raw: {
+                    failureClassifications: [],
+                },
             } as never);
             await _testExports._dashboardDeveloperProfile();
 
@@ -1165,8 +1189,8 @@ describe('Interactive-mode test exports', () => {
 
             mockSessionState.currentProjectName = 'proj1';
             mockGetDataHub.mockReturnValue({
-                loadMetricsStore: vi.fn().mockReturnValue({
-                    runs: [
+                computed: {
+                    metricsRuns: [
                         {
                             project: 'proj1',
                             timestamp: '',
@@ -1188,8 +1212,10 @@ describe('Interactive-mode test exports', () => {
                             tests: [],
                         },
                     ],
-                }),
-                saveMetricsStore: vi.fn(),
+                },
+                raw: {
+                    failureClassifications: [],
+                },
             } as never);
             await _testExports._dashboardSuiteOptimization();
 
@@ -1207,8 +1233,8 @@ describe('Interactive-mode test exports', () => {
 
             mockSessionState.currentProjectName = 'proj1';
             mockGetDataHub.mockReturnValue({
-                loadMetricsStore: vi.fn().mockReturnValue({
-                    runs: [
+                computed: {
+                    metricsRuns: [
                         {
                             project: 'proj1',
                             timestamp: '',
@@ -1230,8 +1256,10 @@ describe('Interactive-mode test exports', () => {
                             tests: [],
                         },
                     ],
-                }),
-                saveMetricsStore: vi.fn(),
+                },
+                raw: {
+                    failureClassifications: [],
+                },
             } as never);
             await _testExports._dashboardIncidentReport();
 
@@ -1249,8 +1277,8 @@ describe('Interactive-mode test exports', () => {
 
             mockSessionState.currentProjectName = 'proj1';
             mockGetDataHub.mockReturnValue({
-                loadMetricsStore: vi.fn().mockReturnValue({
-                    runs: [
+                computed: {
+                    metricsRuns: [
                         {
                             project: 'proj1',
                             timestamp: '',
@@ -1272,8 +1300,10 @@ describe('Interactive-mode test exports', () => {
                             tests: [],
                         },
                     ],
-                }),
-                saveMetricsStore: vi.fn(),
+                },
+                raw: {
+                    failureClassifications: [],
+                },
             } as never);
             await _testExports._dashboardImpactAlert();
 

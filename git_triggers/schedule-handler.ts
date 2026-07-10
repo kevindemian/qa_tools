@@ -154,20 +154,17 @@ export function generateWeeklyQualityReport(): void {
             return;
         }
         const hub = getDataHub();
-        const store = hub.loadMetricsStore();
-        let projectRuns = store.runs.filter((r) => r.project === currentProjectName);
-        let failureClassifications = store.failureClassifications ?? [];
-        let usingGitFallback = false;
+        let projectRuns = (hub.computed.metricsRuns ?? []).filter((r) => r.project === currentProjectName);
+        let failureClassifications = hub.raw.failureClassifications ?? [];
 
         if (projectRuns.length < 2) {
             const fallback = resolveGitFallback();
             if (!fallback) return;
             projectRuns = fallback.projectRuns;
             failureClassifications = fallback.failureClassifications;
-            usingGitFallback = true;
         }
 
-        const effectiveStore = usingGitFallback ? { ...store, runs: projectRuns, failureClassifications } : store;
+        const effectiveRuns = projectRuns;
 
         const dataHub = getDataHub();
         const health = calculateHealthScore({ dataHub });
@@ -182,13 +179,13 @@ export function generateWeeklyQualityReport(): void {
                 : 0,
         );
         const defects = aggregateDefectTrends(failureClassifications);
-        const matrix = buildTraceabilityMatrix(effectiveStore, undefined, dataHub);
+        const matrix = buildTraceabilityMatrix(effectiveRuns, undefined, dataHub);
         const aiResult = computeAiEffectiveness({ records: [] });
         const backlog = analyzeBacklogHealth([]);
 
         /* Fase 2 dashboards */
         const seasonality = aggregateDefectSeasonality(failureClassifications);
-        const regression = detectSilentRegression(calcTestDurationMap(effectiveStore.runs));
+        const regression = detectSilentRegression(calcTestDurationMap(effectiveRuns));
         const devProfile = buildDeveloperProfile(
             failureClassifications.map((fc) => ({
                 testTitle: fc.testTitle,
@@ -203,10 +200,10 @@ export function generateWeeklyQualityReport(): void {
         const optimization = analyzeSuiteOptimization(flatTests);
 
         /* Cross-squad benchmark: aggregate health across all projects */
-        const projectNames = [...new Set(effectiveStore.runs.map((r) => r.project))];
+        const projectNames = [...new Set(effectiveRuns.map((r) => r.project))];
         const benchmark = computeCrossSquadBenchmark(
             projectNames.map((name) => {
-                const pRuns = store.runs.filter((r) => r.project === name);
+                const pRuns = (hub.computed.metricsRuns ?? []).filter((r) => r.project === name);
                 const pDataHub = getDataHub();
                 const pHealth = calculateHealthScore({ dataHub: pDataHub });
                 return {
@@ -300,8 +297,7 @@ export async function handleFlakinessDashboard(): Promise<void> {
             return;
         }
         const hub = getDataHub();
-        const store = hub.loadMetricsStore();
-        const projectRuns = store.runs.filter((r) => r.project === currentProjectName);
+        const projectRuns = (hub.computed.metricsRuns ?? []).filter((r) => r.project === currentProjectName);
         if (projectRuns.length < 2) {
             warn('Menos de 2 execuções registradas para ' + currentProjectName + '. Execute pipelines primeiro.');
             return;

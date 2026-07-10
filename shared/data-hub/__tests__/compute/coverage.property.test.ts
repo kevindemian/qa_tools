@@ -4,12 +4,12 @@ import type { RawCoverage } from '../../../types/data-hub.js';
 import { calcCoverageFromRaw } from '../../compute/coverage.js';
 
 describe('Compute/coverage — property-based', () => {
-    it('coverage total is always 0-100', () => {
+    it('coverage total is always 0-100 (from percentage field)', () => {
         expect.hasAssertions();
 
         fc.assert(
-            fc.property(fc.integer({ min: -1000, max: 2000 }), (total) => {
-                const raw: RawCoverage = { total, covered: 0, percentage: 0 };
+            fc.property(fc.integer({ min: -1000, max: 2000 }), fc.nat({ max: 200 }), (total, percentage) => {
+                const raw: RawCoverage = { total, covered: 0, percentage };
                 const result = calcCoverageFromRaw(raw);
 
                 expect(result.total).toBeGreaterThanOrEqual(0);
@@ -19,7 +19,7 @@ describe('Compute/coverage — property-based', () => {
         );
     });
 
-    it('statements always equals raw total', () => {
+    it('statements always equals raw total (count, not percentage)', () => {
         expect.hasAssertions();
 
         fc.assert(
@@ -39,7 +39,7 @@ describe('Compute/coverage — property-based', () => {
         fc.assert(
             fc.property(fc.nat({ max: 100 }), (pct) => {
                 const files = { 'a.ts': { total: 100, covered: pct, percentage: pct } };
-                const raw: RawCoverage = { total: pct, covered: pct, percentage: pct, files };
+                const raw: RawCoverage = { total: 500, covered: pct, percentage: pct, files };
                 const result = calcCoverageFromRaw(raw);
 
                 expect(result.files).toStrictEqual(files);

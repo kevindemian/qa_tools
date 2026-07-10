@@ -2,7 +2,7 @@ import os from 'os';
 import path from 'path';
 import { describe, it, expect, vi, beforeEach } from 'vitest';
 import { createMockContext } from '../shared/test-utils/factories/context-factory.js';
-import type { MetricsRun, MetricsStore } from '../shared/types/data-hub.js';
+import type { MetricsRun } from '../shared/types/data-hub.js';
 import type { TraceabilityResult } from '../shared/traceability-matrix.js';
 import type { ReleaseScoreResult } from '../shared/release-score.js';
 
@@ -16,7 +16,7 @@ vi.mock('../shared/prompt.js', () => ({
 }));
 vi.mock('../shared/data-hub/global-hub.js', () => ({
     getDataHub: vi.fn(() => ({
-        loadMetricsStore: vi.fn().mockReturnValue({ runs: [] }),
+        computed: { metricsRuns: [] },
     })),
 }));
 vi.mock('../shared/data-hub/compute/flakiness-entries.js', () => ({
@@ -187,7 +187,7 @@ describe('Case-d — dashboard menu', () => {
         vi.mocked(showSelect).mockResolvedValue('25');
         const { getDataHub } = await import('../shared/data-hub/global-hub.js');
         vi.mocked(getDataHub).mockReturnValue({
-            loadMetricsStore: vi.fn().mockReturnValue({ runs: [] }),
+            computed: { metricsRuns: [] },
         } as never);
         const { writeReport } = await import('../shared/temp-dir.js');
         vi.mocked(writeReport).mockReturnValue(path.join(os.tmpdir(), 'qa-test-report.html'));
@@ -209,7 +209,7 @@ describe('Case-d — dashboard menu', () => {
         const { calculateReleaseScore, generateReleaseScoreHtml } = await import('../shared/release-score.js');
         const { writeReport } = await import('../shared/temp-dir.js');
         vi.mocked(getDataHub).mockReturnValue({
-            loadMetricsStore: vi.fn().mockReturnValue({ runs: [{ project: 'TEST' }] }),
+            computed: { metricsRuns: [{ project: 'TEST' }] },
         } as never);
         vi.mocked(calcFlakinessEntries).mockReturnValue([
             { title: 't1', project: 'TEST', passCount: 1, failCount: 1, skipCount: 0, totalRuns: 2, rate: 0.5 },
@@ -275,9 +275,9 @@ describe('Case25 — Traceability Matrix', () => {
         const { getDataHub } = await import('../shared/data-hub/global-hub.js');
         const { buildTraceabilityMatrix, generateTraceabilityHtml } = await import('../shared/traceability-matrix.js');
         const { writeReport } = await import('../shared/temp-dir.js');
-        const store: MetricsStore = { runs: [makeRun('TEST')] };
+        const runs = [makeRun('TEST')];
         vi.mocked(getDataHub).mockReturnValue({
-            loadMetricsStore: vi.fn().mockReturnValue(store),
+            computed: { metricsRuns: runs },
         } as never);
         vi.mocked(buildTraceabilityMatrix).mockReturnValue(makeTraceabilityResult());
         vi.mocked(generateTraceabilityHtml).mockReturnValue(HTML_WITH_DOCTYPE);
@@ -287,7 +287,7 @@ describe('Case25 — Traceability Matrix', () => {
         await case25.handler(ctx);
 
         expect(getDataHub).toHaveBeenCalledWith();
-        expect(buildTraceabilityMatrix).toHaveBeenCalledWith(store);
+        expect(buildTraceabilityMatrix).toHaveBeenCalledWith(runs, undefined, expect.anything());
     });
 
     it('generates HTML with project name in title', async () => {
@@ -357,7 +357,7 @@ describe('Case25 — Traceability Matrix', () => {
         const { buildTraceabilityMatrix } = await import('../shared/traceability-matrix.js');
         const { writeReport } = await import('../shared/temp-dir.js');
         vi.mocked(getDataHub).mockReturnValue({
-            loadMetricsStore: vi.fn().mockReturnValue({ runs: [] }),
+            computed: { metricsRuns: [] },
         } as never);
         vi.mocked(buildTraceabilityMatrix).mockReturnValue(
             makeTraceabilityResult({ nodes: [], totalEpics: 0, totalTests: 0, overallCoverage: 0 }),
@@ -423,11 +423,9 @@ describe('Case26 — Release Score', () => {
         const { calculateHealthScore } = await import('../shared/health-score.js');
         const { calculateReleaseScore, generateReleaseScoreHtml } = await import('../shared/release-score.js');
         const { writeReport } = await import('../shared/temp-dir.js');
-        const store: MetricsStore = {
-            runs: [makeRun('OTHER'), makeRun('TEST'), makeRun('OTHER'), makeRun('TEST')],
-        };
+        const allRuns = [makeRun('OTHER'), makeRun('TEST'), makeRun('OTHER'), makeRun('TEST')];
         vi.mocked(getDataHub).mockReturnValue({
-            loadMetricsStore: vi.fn().mockReturnValue(store),
+            computed: { metricsRuns: allRuns },
         } as never);
         vi.mocked(calculateHealthScore).mockReturnValue({
             overall: 80,
@@ -582,7 +580,7 @@ describe('Case26 — Release Score', () => {
         const { calculateReleaseScore, generateReleaseScoreHtml } = await import('../shared/release-score.js');
         const { writeReport } = await import('../shared/temp-dir.js');
         vi.mocked(getDataHub).mockReturnValue({
-            loadMetricsStore: vi.fn().mockReturnValue({ runs: [makeRun('TEST')] }),
+            computed: { metricsRuns: [makeRun('TEST')] },
         } as never);
         vi.mocked(calcFlakinessEntries).mockReturnValue([]);
         vi.mocked(calculateHealthScore).mockReturnValue({
@@ -612,7 +610,7 @@ describe('Case26 — Release Score', () => {
         const { calculateReleaseScore, generateReleaseScoreHtml } = await import('../shared/release-score.js');
         const { writeReport } = await import('../shared/temp-dir.js');
         vi.mocked(getDataHub).mockReturnValue({
-            loadMetricsStore: vi.fn().mockReturnValue({ runs: [makeRun('TEST')] }),
+            computed: { metricsRuns: [makeRun('TEST')] },
         } as never);
         vi.mocked(calcFlakinessEntries).mockReturnValue([]);
         vi.mocked(calculateHealthScore).mockReturnValue({

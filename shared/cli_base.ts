@@ -216,8 +216,7 @@ function _printLastOperations(history?: HistoryEntry[]): void {
 function _tryPrintHealthScore(): void {
     try {
         const hub = getDataHub();
-        const store = hub.loadMetricsStore();
-        if (store.runs.length < 5) return;
+        if ((hub.computed.metricsRuns ?? []).length < 5) return;
         const hs = calculateHealthScore({ dataHub: hub });
         let gradeIcon: string;
         if (hs.grade === 'excellent') {

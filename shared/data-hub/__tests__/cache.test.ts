@@ -44,7 +44,6 @@ function makeHub(repo = 'test/repo'): DataHub {
         loadCoverageHistory: vi.fn().mockReturnValue([]),
         loadFailureClassifications: vi.fn().mockReturnValue([]),
         saveMetricsStore: vi.fn(),
-        loadMetricsStore: vi.fn().mockReturnValue({ runs: [] }),
         saveParseResult: vi.fn().mockReturnValue({
             timestamp: new Date().toISOString(),
             project: '',

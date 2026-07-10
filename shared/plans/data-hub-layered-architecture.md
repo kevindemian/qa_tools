@@ -2351,3 +2351,134 @@ Principle: zero silent errors. SSOT for all calculations. No best-effort.
 | H.6 | rg "git-artifact-downloader\|coverage-source" = 0 | 🔜 Pending |
 | H.7 | rg "\.passed._\/._\+.\*\.failed" non-test = 0     | 🔜 Pending |
 | H.8 | git commit + push + monitor CI                    | 🔜 Pending |
+
+---
+
+## Design Gaps — Not Covered by Existing Phases (2026-07-10)
+
+> **Origin:** Code analysis during gap assessment. These are design deficiencies that
+> neither the SSOT enforcement plan nor the layered architecture plan address.
+> Each gap compromises DataHub solidity independently.
+
+### Gap 1 — Input Validation on Provider Output (RawData)
+
+**Problem:** `RawData` has no Zod schema. Provider output flows directly into compute
+functions without validation. If GitHub/GitLab API response shape changes (field rename,
+removal, type change), the data enters compute silently and produces wrong metrics.
+
+**Current state:** `schemas.ts` validates `MetricsRun` and `MetricsStore` (output/storage),
+but NOT `RawData` or `PipelineRun` (input from CI APIs).
+
+**Impact:** Silent wrong metrics. No error, no warning, no detection.
+
+**Fix:** Add `RawDataSchema` and `PipelineRunSchema` Zod schemas. Validate at provider
+boundary (`fetchRawData` return). Reject malformed data explicitly.
+
+| #    | Task                                               | Est. |
+| ---- | -------------------------------------------------- | ---- |
+| G1.1 | Create `PipelineRunSchema` Zod in `schemas.ts`     | 1h   |
+| G1.2 | Create `RawDataSchema` Zod in `schemas.ts`         | 2h   |
+| G1.3 | Validate in `GitHubDataProvider.fetchRawData()`    | 1h   |
+| G1.4 | Validate in `GitLabDataProvider.fetchRawData()`    | 1h   |
+| G1.5 | Tests: malformed API responses rejected explicitly | 1h   |
+
+### Gap 2 — Data Provenance & Confidence Metadata
+
+**Problem:** Computed metrics don't indicate which data source produced them or how
+reliable that source is. Coverage from CTRF artifact (100% confidence) is treated
+identically to coverage from job log regex (60% confidence). Quality-gate decisions
+based on low-confidence data are risky.
+
+**Current state:** No provenance tracking. `RawCoverage` has no `source` field.
+`ComputedMetrics` has no `confidence` or `provenance` fields.
+
+**Impact:** Quality-gate pass/fail decisions based on unreliable data with no way
+for consumers to assess risk.
+
+**Fix:** Add `DataSource` type and `provenance` map to `RawData`. Each metric
+computed from a specific source carries metadata: source name, confidence level,
+timestamp of extraction.
+
+| #    | Task                                                  | Est. |
+| ---- | ----------------------------------------------------- | ---- |
+| G2.1 | Define `DataSource` type (source, confidence, ts)     | 0.5h |
+| G2.2 | Add `provenance?: Map<string, DataSource>` to RawData | 0.5h |
+| G2.3 | Populate provenance in `GitHubDataProvider`           | 1h   |
+| G2.4 | Populate provenance in `GitLabDataProvider`           | 1h   |
+| G2.5 | Expose `provenance` on `DataHub` interface            | 0.5h |
+| G2.6 | Tests: provenance tracked for each data source        | 1h   |
+
+### Gap 3 — Branch-Aware Metrics
+
+**Problem:** `raw.runs` mixes all branches. `calcPipelinePassRate` computes a global
+average. If `main` has 99% pass rate and `feature-x` has 50%, the consumer receives
+~75% which represents neither branch accurately.
+
+**Current state:** No branch filtering in compute functions. `FetchOptions` has
+`branch?: string` but it's not used for filtering — it's passed to the API for
+fetching (different semantics).
+
+**Impact:** Misleading metrics for projects with heterogeneous branch health.
+Quality-gate decisions based on cross-branch averages.
+
+**Fix:** Add `branchFilter` to `FetchOptions`. Compute functions accept optional
+branch parameter. `RawData` carries branch metadata per run. Consumers can request
+metrics for a specific branch or the default branch.
+
+| #    | Task                                                 | Est. |
+| ---- | ---------------------------------------------------- | ---- |
+| G3.1 | Add `branch` field to `PipelineRun` (if not present) | 0.5h |
+| G3.2 | Add `branchFilter?: string` to `FetchOptions`        | 0.5h |
+| G3.3 | Filter in `GitHubDataProvider` by branch             | 1h   |
+| G3.4 | Filter in `GitLabDataProvider` by branch             | 1h   |
+| G3.5 | Add `branch` param to `calcPipelinePassRate`         | 1h   |
+| G3.6 | Add `branch` param to `calcFlakyFromPipelineRuns`    | 1h   |
+| G3.7 | Expose branch-filtered view on `DataHub`             | 1h   |
+| G3.8 | Tests: branch filtering for each compute function    | 2h   |
+
+### Gap 4 — Incremental Updates
+
+**Problem:** `DataHubImpl.create()` fetches ALL data from scratch every time.
+For projects with 30+ runs, this is slow and wastes CI API quota.
+
+**Current state:** Cache (`cache.ts`) stores the final DataHub but doesn't support
+delta updates. `hasDataChanged()` detects changes but doesn't enable partial fetch.
+
+**Impact:** Slow DataHub creation for large projects. Unnecessary API calls.
+Potential rate limiting.
+
+**Fix:** Add `since` parameter to provider fetch (fetch only runs since last known
+run). Merge new runs into existing `RawData`. Recompute only affected metrics.
+
+| #    | Task                                             | Est. |
+| ---- | ------------------------------------------------ | ---- |
+| G4.1 | Add `since?: string` to `FetchOptions`           | 0.5h |
+| G4.2 | Pass `since` to GitHub API (`created >=`)        | 1h   |
+| G4.3 | Pass `since` to GitLab API (`created_after`)     | 1h   |
+| G4.4 | Add `mergeIncremental()` to `DataHubImpl`        | 2h   |
+| G4.5 | Update `ensureDataHub` to use incremental path   | 1h   |
+| G4.6 | Tests: incremental merge preserves existing data | 2h   |
+| G4.7 | Tests: incremental merge adds new runs correctly | 1h   |
+
+---
+
+### Dependency Order
+
+```
+Gap 1 (validation) → Gap 2 (provenance) → Gap 3 (branch) → Gap 4 (incremental)
+```
+
+- Gap 1 is prerequisite: validation must exist before provenance can be attached
+- Gap 2 is prerequisite: provenance metadata needed for branch-aware confidence
+- Gap 3 depends on Gap 1: branch filtering requires validated input
+- Gap 4 depends on all: incremental updates merge into validated, provenance-tracked, branch-aware data
+
+### Total Estimate
+
+| Gap       | Est.    |
+| --------- | ------- |
+| 1         | 6h      |
+| 2         | 5h      |
+| 3         | 8h      |
+| 4         | 8h      |
+| **Total** | **27h** |

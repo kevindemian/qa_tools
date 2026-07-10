@@ -14,5 +14,5 @@ export interface CommandContext {
     printSessionSummary: () => void;
     base_url: string;
     sessionLog: Logger;
-    dataHub?: DataHub;
+    dataHub: DataHub;
 }

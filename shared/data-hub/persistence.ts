@@ -129,10 +129,6 @@ export function createDataHubPersistence(_project: string, backend?: StoreBacken
             saveMetricsStore(store);
         },
 
-        loadMetricsStore(): MetricsStore {
-            return loadMetricsStore();
-        },
-
         saveParseResult(project: string, result: ParseResult): MetricsRun {
             const run: MetricsRun = {
                 timestamp: new Date().toISOString(),

@@ -141,6 +141,7 @@ describe('Handlers Happy Paths', () => {
             printSessionSummary: vi.fn<(...args: []) => () => void>(),
             base_url: HOST,
             sessionLog: rootLogger.child({ session: 'e2e-hp' }),
+            dataHub: { computed: { metricsRuns: [] } as never, raw: {} as never, saveMetricsStore: vi.fn() } as never,
         };
     }
 

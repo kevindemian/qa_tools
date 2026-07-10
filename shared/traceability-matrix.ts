@@ -1,4 +1,4 @@
-import type { MetricsStore, DataHub } from './types/data-hub.js';
+import type { MetricsRun, DataHub } from './types/data-hub.js';
 import { rootLogger } from './logger.js';
 import { sanitizeHtml } from './escape.js';
 import { buildHtmlPage, buildErrorPage } from './html-factory.js';
@@ -47,11 +47,11 @@ export interface TraceabilityResult {
     timestamp: string;
 }
 
-function buildFlakinessMap(metrics: MetricsStore): Map<string, number> {
+function buildFlakinessMap(runs: MetricsRun[]): Map<string, number> {
     const failCounts = new Map<string, number>();
-    const totalRuns = metrics.runs.length;
+    const totalRuns = runs.length;
     if (totalRuns === 0) return failCounts;
-    for (const run of metrics.runs) {
+    for (const run of runs) {
         const seen = new Set<string>();
         for (const t of run.tests) {
             if (seen.has(t.title)) continue;
@@ -70,13 +70,13 @@ function buildFlakinessMap(metrics: MetricsStore): Map<string, number> {
     return failCounts;
 }
 
-function extractLatestRunSnapshots(metrics: MetricsStore): {
+function extractLatestRunSnapshots(runs: MetricsRun[]): {
     statusByTitle: Map<string, TestStatus>;
     durationByTitle: Map<string, number>;
 } {
     const statusByTitle = new Map<string, TestStatus>();
     const durationByTitle = new Map<string, number>();
-    const latestRun = metrics.runs.length > 0 ? metrics.runs[metrics.runs.length - 1] : null;
+    const latestRun = runs.length > 0 ? runs[runs.length - 1] : null;
     if (latestRun) {
         for (const t of latestRun.tests) {
             statusByTitle.set(t.title, t.state);
@@ -157,17 +157,17 @@ function buildEpicNode(
 }
 
 export function buildTraceabilityMatrix(
-    metrics: MetricsStore,
+    runs: MetricsRun[],
     coverageResult?: CoverageGapResult,
     dataHub?: DataHub,
 ): TraceabilityResult {
     try {
-        const { statusByTitle, durationByTitle } = extractLatestRunSnapshots(metrics);
+        const { statusByTitle, durationByTitle } = extractLatestRunSnapshots(runs);
         // Se DataHub disponível, usar flakyRate do CI em vez de calcular do MetricsStore
         const flakinessByTitle =
             dataHub && dataHub.computed.flakyRate.length > 0
                 ? new Map(dataHub.computed.flakyRate.map((f) => [f.title, f.rate]))
-                : buildFlakinessMap(metrics);
+                : buildFlakinessMap(runs);
         const byEpic = coverageResult?.byEpic ?? {};
         const epicKeys = Object.keys(byEpic);
         const itemsByEpic = groupItemsByEpic(coverageResult?.items);

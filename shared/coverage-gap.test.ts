@@ -8,7 +8,8 @@ vi.mock('./logger', () => ({
 
 vi.mock('./data-hub/global-hub.js', () => ({
     getDataHub: vi.fn().mockReturnValue({
-        loadMetricsStore: vi.fn().mockReturnValue({ runs: [] }),
+        computed: { metricsRuns: [] },
+        raw: { coverageHistory: [] },
     }),
 }));
 
@@ -42,7 +43,8 @@ describe('Coverage Gap', () => {
         mockSearch.mockReset();
         mockSearch.mockResolvedValue({ issues: [], total: 0 });
         mockGetDataHub.mockReturnValue({
-            loadMetricsStore: vi.fn().mockReturnValue({ runs: [], coverageHistory: [] }),
+            computed: { metricsRuns: [] },
+            raw: { coverageHistory: [] },
         } as never);
     });
 
@@ -344,8 +346,8 @@ describe('Coverage Gap', () => {
             expect.hasAssertions();
 
             mockGetDataHub.mockReturnValue({
-                loadMetricsStore: vi.fn().mockReturnValue({
-                    runs: [],
+                computed: { metricsRuns: [] },
+                raw: {
                     coverageHistory: [
                         {
                             timestamp: '2026-01-01T00:00:00Z',
@@ -355,7 +357,7 @@ describe('Coverage Gap', () => {
                             coveragePct: 50,
                         },
                     ],
-                }),
+                },
             } as never);
             mockSearch
                 .mockResolvedValueOnce({ issues: [], total: 1 })

@@ -4007,6 +4007,214 @@ echo "6. Nenhum store.runs fora do data-hub:" && \
 | 2026-07-10 | ci-injector gera YAML genérico — sem auto-referenciamento a qa_tools                      | Projeto gerenciado ≠ qa_tools; workflow deve ser genérico                | Usuário |
 | 2026-07-10 | Wizard pergunta testReportPath + artifactName — info explicitamente pedida ao usuário     | ci-injector precisa desses dados; wizard deve coletá-los                 | Usuário |
 | 2026-07-10 | ci-injector injeta upload de artifact no test job (Opção A) — fluxo completo e automático | External project não precisa configurar upload manualmente               | Usuário |
+| 2026-07-10 | loadMetricsStore() é bypass legítimo para dados raw — ELIMINAR, migrar 18 consumers       | loadMetricsStore expõe persistence diretamente, viola SSOT               | Usuário |
+| 2026-07-10 | CommandContext.dataHub DEVE ser obrigatório — eliminate 7 ocorrências de `?`              | `?` opcional herda optionality para todos os downstream                  | Usuário |
+| 2026-07-10 | Design Gaps 1-2 (Validação Zod + Provenance) planejados para esta sessão                  | Dados sem validação = metrics incorretas silenciosamente                 | Usuário |
+
+---
+
+## PHASE 0.8 EXTENDED — ATOMIC TASK PLAN (2026-07-10)
+
+> **Escopo:** Eliminar loadMetricsStore(), tornar CommandContext.dataHub obrigatório,
+> tornar persistence obrigatório, implementar Design Gaps 1-2.
+> **Princípio:** Tarefas atômicas sequenciais. Cada tarefa completa antes da próxima.
+> **Zero paralelismo.**
+
+### Tarefa 1 — Adicionar `coverageHistory` ao `RawData`
+
+| Item       | Detalhe                                                                             |
+| ---------- | ----------------------------------------------------------------------------------- |
+| Arquivo    | `shared/types/data-hub.ts`                                                          |
+| Mudança    | Adicionar `coverageHistory?: CoverageSnapshot[]` ao `RawData`                       |
+| Efeito     | `loadFromStore()` em `hub.ts` deve popular o campo; `mergeRawData()` deve mergeá-lo |
+| Checkpoint | `npx tsc --noEmit` = 0 erros                                                        |
+
+### Tarefa 2 — Migrar `jira_management/main.ts:99`
+
+| Item       | Detalhe                                                             |
+| ---------- | ------------------------------------------------------------------- |
+| Arquivo    | `jira_management/main.ts`                                           |
+| Atual      | `getDataHub().loadMetricsStore()` → lê `coverageHistory` para badge |
+| Novo       | `getDataHub().raw.coverageHistory`                                  |
+| Checkpoint | tsc + `vitest run jira_management/main.test.ts`                     |
+
+### Tarefa 3 — Migrar `jira_management/commands/case12.ts:90`
+
+| Item       | Detalhe                                                                         |
+| ---------- | ------------------------------------------------------------------------------- |
+| Atual      | `hub.loadMetricsStore()` → `store.runs.length`, `store.coverageHistory?.length` |
+| Novo       | `hub.computed.metricsRuns?.length`, `hub.raw.coverageHistory?.length`           |
+| Checkpoint | tsc + vitest case12                                                             |
+
+### Tarefa 4 — Migrar `jira_management/commands/case17.ts:159,219`
+
+| Item       | Detalhe                                                                            |
+| ---------- | ---------------------------------------------------------------------------------- |
+| Atual      | `_loadFlakinessMap`: `hub.loadMetricsStore()` / `_enrichHtmlWithContext`: nullable |
+| Novo       | `hub.computed.metricsRuns` / nullable `dataHub?.computed.metricsRuns`              |
+| Checkpoint | tsc + vitest case17                                                                |
+
+### Tarefa 5 — Migrar `jira_management/commands/case19.ts:100`
+
+| Item       | Detalhe                                                        |
+| ---------- | -------------------------------------------------------------- |
+| Atual      | `hub.loadMetricsStore()` → passa store inteiro para 5 funções  |
+| Novo       | Criar `MetricsStore` local de `dataHub.computed + dataHub.raw` |
+| Checkpoint | tsc + vitest case19                                            |
+
+### Tarefa 6 — Migrar `jira_management/commands/case21.ts:43`
+
+| Item       | Detalhe                                     |
+| ---------- | ------------------------------------------- |
+| Atual      | `store.coverageHistory` → compara snapshots |
+| Novo       | `dataHub.raw.coverageHistory`               |
+| Checkpoint | tsc + vitest case21                         |
+
+### Tarefa 7 — Migrar `jira_management/commands/case22.ts:62`
+
+| Item       | Detalhe                               |
+| ---------- | ------------------------------------- |
+| Atual      | `store.runs` → `calcFlakinessEntries` |
+| Novo       | `dataHub.computed.metricsRuns`        |
+| Checkpoint | tsc + vitest case22                   |
+
+### Tarefa 8 — Migrar `jira_management/commands/case25.ts:17`
+
+| Item       | Detalhe                                                 |
+| ---------- | ------------------------------------------------------- |
+| Atual      | `getDataHub().loadMetricsStore()` → passa store inteiro |
+| Novo       | Criar `MetricsStore` local                              |
+| Checkpoint | tsc + vitest case25                                     |
+
+### Tarefa 9 — Migrar `jira_management/commands/case26.ts:20`
+
+| Item       | Detalhe                                             |
+| ---------- | --------------------------------------------------- |
+| Atual      | `hub.loadMetricsStore()` → flakiness + health score |
+| Novo       | `dataHub.computed.metricsRuns`                      |
+| Checkpoint | tsc + vitest case26                                 |
+
+### Tarefa 10 — Migrar `shared/cli_base.ts:219`
+
+| Item       | Detalhe                            |
+| ---------- | ---------------------------------- |
+| Atual      | `store.runs.length` como gate      |
+| Novo       | `hub.computed.metricsRuns?.length` |
+| Checkpoint | tsc + vitest cli_base              |
+
+### Tarefa 11 — Migrar `shared/coverage-gap.ts:105`
+
+| Item       | Detalhe                              |
+| ---------- | ------------------------------------ |
+| Atual      | `store.coverageHistory` → tendências |
+| Novo       | `dataHub.raw.coverageHistory`        |
+| Checkpoint | tsc + vitest coverage-gap            |
+
+### Tarefa 12 — Migrar `git_triggers/pipeline-jira.ts:24`
+
+| Item       | Detalhe                                         |
+| ---------- | ----------------------------------------------- |
+| Atual      | **WRITE** — mutação de `failureClassifications` |
+| Novo       | `dataHub.saveFailureClassification()`           |
+| Checkpoint | tsc + vitest pipeline-jira                      |
+
+### Tarefa 13 — Migrar `git_triggers/schedule-handler.ts:157,303`
+
+| Item       | Detalhe                                                               |
+| ---------- | --------------------------------------------------------------------- |
+| Atual      | 2 call sites, o primeiro é complexo (múltiplas funções downstream)    |
+| Novo       | `dataHub.computed.metricsRuns` + `dataHub.raw.failureClassifications` |
+| Checkpoint | tsc + vitest schedule-handler                                         |
+
+### Tarefa 14 — Migrar `git_triggers/batch-mode.ts:217,360`
+
+| Item       | Detalhe                                    |
+| ---------- | ------------------------------------------ |
+| Atual      | 2 call sites — flakiness + export de tests |
+| Novo       | `dataHub.computed.metricsRuns`             |
+| Checkpoint | tsc + vitest batch-mode                    |
+
+### Tarefa 15 — Migrar `git_triggers/interactive-mode.ts:254,343,434`
+
+| Item       | Detalhe                                                               |
+| ---------- | --------------------------------------------------------------------- |
+| Atual      | 3 call sites, o mais complexo                                         |
+| Novo       | `dataHub.computed.metricsRuns` + `dataHub.raw.failureClassifications` |
+| Checkpoint | tsc + vitest interactive-mode                                         |
+
+### Tarefa 16 — Remover `loadMetricsStore()` da interface e impl
+
+| Item       | Detalhe                                                           |
+| ---------- | ----------------------------------------------------------------- |
+| Arquivos   | `types/data-hub.ts`, `data-hub/hub.ts`, `data-hub/persistence.ts` |
+| Mudança    | Remover de `DataHub`, `DataHubImpl`, `DataHubPersistence`         |
+| Checkpoint | `npx tsc --noEmit` = 0 erros                                      |
+
+### Tarefa 17 — Corrigir todos os testes afetados
+
+| Item       | Detalhe                                                  |
+| ---------- | -------------------------------------------------------- |
+| Escopo     | ~40 arquivos de teste que referenciam `loadMetricsStore` |
+| Checkpoint | `npx vitest run` = 0 falhas                              |
+
+### Tarefa 18 — Tornar `CommandContext.dataHub` obrigatório
+
+| Item       | Detalhe                                  |
+| ---------- | ---------------------------------------- |
+| Arquivo    | `types/command-context.ts`               |
+| Mudança    | `dataHub?: DataHub` → `dataHub: DataHub` |
+| Checkpoint | tsc = 0 erros                            |
+
+### Tarefa 19 — Tornar persistence obrigatório
+
+| Item       | Detalhe                                                                   |
+| ---------- | ------------------------------------------------------------------------- |
+| Arquivos   | `types/data-hub.ts`, `data-hub/hub.ts`, `data-hub/factory.ts`             |
+| Mudança    | Remover `?` de persistence; remover `createDataHubPersistence` de exports |
+| Checkpoint | tsc = 0 erros                                                             |
+
+### Tarefa 20 — Design Gap 1: Input Validation
+
+| Item       | Detalhe                                                                      |
+| ---------- | ---------------------------------------------------------------------------- |
+| Arquivo    | `data-hub/schemas.ts`                                                        |
+| Mudança    | `PipelineRunSchema` Zod + `RawDataSchema` Zod (com transforms para Map)      |
+| Validação  | Em `GitHubDataProvider.fetchRawData()` e `GitLabDataProvider.fetchRawData()` |
+| Checkpoint | tsc + novos testes passam                                                    |
+
+### Tarefa 21 — Design Gap 2: Data Provenance
+
+| Item       | Detalhe                                                                |
+| ---------- | ---------------------------------------------------------------------- |
+| Tipo       | `DataSource { confidence: number; source: string; timestamp: string }` |
+| Campo      | `provenance?: Map<string, DataSource>` em `RawData`                    |
+| População  | Em ambos providers                                                     |
+| Checkpoint | tsc + novos testes passam                                              |
+
+### Tarefa 22 — Suite de testes completo
+
+| Item     | Detalhe                 |
+| -------- | ----------------------- |
+| Comando  | `npx vitest run`        |
+| Esperado | 0 falhas em 451+ suites |
+
+### Tarefa 23 — Auditoria completa
+
+| Item        | Detalhe                                   |
+| ----------- | ----------------------------------------- |
+| Verificação | Nenhum `loadMetricsStore()` em produção   |
+| Verificação | Nenhum `createDataHubPersistence` externo |
+| Verificação | `CommandContext.dataHub` obrigatório      |
+| Verificação | Validação Zod nos providers               |
+| Verificação | Provenance populada                       |
+
+### Tarefa 24 — Commit, push, monitor CI
+
+| Item    | Detalhe                               |
+| ------- | ------------------------------------- |
+| Comando | `git add . && git commit && git push` |
+| Push    | timeout >=300s                        |
+| Monitor | GitHub API com Bearer token           |
 
 ---
 

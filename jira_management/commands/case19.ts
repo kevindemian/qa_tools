@@ -6,12 +6,12 @@ import { calcMetricsTrends } from '../../shared/data-hub/compute/metrics-trends.
 import { calculateHealthScore } from '../../shared/health-score.js';
 import { analyzeCoverage } from '../coverage.js';
 import { compareRuns } from '../../shared/run-comparison.js';
-import type { MetricsStore } from '../../shared/types/data-hub.js';
+import type { MetricsRun } from '../../shared/types/data-hub.js';
 import type { CommandContext } from './context.js';
 
-function _showRunHistory(store: MetricsStore): void {
+function _showRunHistory(runs: MetricsRun[]): void {
     title('Histórico de execuções');
-    const recent = store.runs.slice(-10).reverse();
+    const recent = runs.slice(-10).reverse();
     const rows = recent.map((r) => ({
         Data: r.timestamp.slice(0, 10),
         Projeto: r.project,
@@ -23,21 +23,18 @@ function _showRunHistory(store: MetricsStore): void {
     tableView(rows, ['Data', 'Projeto', 'Total', 'Pass', 'Fail', 'Rate']);
 }
 
-async function _compareLastTwoRuns(store: MetricsStore): Promise<void> {
-    if (store.runs.length < 2) return;
+async function _compareLastTwoRuns(runs: MetricsRun[]): Promise<void> {
+    if (runs.length < 2) return;
     divider();
-    const lastTwo = store.runs.slice(-2);
+    const lastTwo = runs.slice(-2);
     const analysis = await withSpinner('Comparando últimas execuções (IA)...', () =>
-        compareRuns(
-            lastTwo[0] as NonNullable<(typeof store)['runs'][0]>,
-            lastTwo[1] as NonNullable<(typeof store)['runs'][0]>,
-        ),
+        compareRuns(lastTwo[0] ?? null, lastTwo[1] ?? null),
     );
     if (analysis) info('Análise comparativa: ' + analysis);
 }
 
-function _handleFlakySection(store: MetricsStore): void {
-    const flaky = calcFlakinessEntries(store.runs);
+function _handleFlakySection(runs: MetricsRun[]): void {
+    const flaky = calcFlakinessEntries(runs);
     if (flaky.length === 0) return;
     divider();
     title('Testes com flakiness');
@@ -50,8 +47,8 @@ function _handleFlakySection(store: MetricsStore): void {
     tableView(flakyRows, ['Teste', 'Pass', 'Fail', 'Rate']);
 }
 
-function _showTrends(store: MetricsStore): void {
-    const trends = calcMetricsTrends(store.runs, 10);
+function _showTrends(runs: MetricsRun[]): void {
+    const trends = calcMetricsTrends(runs, 10);
     if (trends.length === 0) return;
     divider();
     title('Tendência');
@@ -64,8 +61,8 @@ function _showTrends(store: MetricsStore): void {
     tableView(trendRows, ['Data', 'Total', 'Falhas', 'Pass Rate']);
 }
 
-function _showHealthScore(store: MetricsStore): void {
-    if (store.runs.length < 5) return;
+function _showHealthScore(runs: MetricsRun[]): void {
+    if (runs.length < 5) return;
     divider();
     const health = calculateHealthScore({ dataHub: getDataHub() });
     const qcIcon = health.qualityGate === 'pass' ? '✅' : '❌';
@@ -97,16 +94,16 @@ function _showHealthScore(store: MetricsStore): void {
 
 async function showHistory(): Promise<void> {
     const hub = getDataHub();
-    const store = hub.loadMetricsStore();
-    if (store.runs.length === 0) {
+    const runs = hub.computed.metricsRuns ?? [];
+    if (runs.length === 0) {
         warn('Nenhuma execução registrada.');
         return;
     }
-    _showRunHistory(store);
-    await _compareLastTwoRuns(store);
-    _handleFlakySection(store);
-    _showTrends(store);
-    _showHealthScore(store);
+    _showRunHistory(runs);
+    await _compareLastTwoRuns(runs);
+    _handleFlakySection(runs);
+    _showTrends(runs);
+    _showHealthScore(runs);
 }
 
 async function showCoverage(c: CommandContext): Promise<void> {

@@ -156,8 +156,7 @@ function _loadFlakinessMap(c: CommandContext): Record<string, number> {
     try {
         if (!isDataHubInitialized()) return {};
         const hub = getDataHub();
-        const store = hub.loadMetricsStore();
-        const projectRuns = store.runs.filter((r) => r.project === c.ctx.project_name);
+        const projectRuns = (hub.computed.metricsRuns ?? []).filter((r) => r.project === c.ctx.project_name);
         const flakyEntries = projectRuns.length >= 2 ? calcFlakinessEntries(projectRuns) : [];
         const map: Record<string, number> = {};
         for (const entry of flakyEntries) {
@@ -216,8 +215,7 @@ async function _enrichHtmlWithContext(
 ): Promise<{ html: string; commitLog: string; storeRuns: MetricsRun[]; jiraContext: string }> {
     const commitLog = await fetchCommitLog();
     const hub = isDataHubInitialized() ? getDataHub() : undefined;
-    const store = hub?.loadMetricsStore();
-    const storeRuns = store?.runs ?? [];
+    const storeRuns = hub?.computed.metricsRuns ?? [];
     const gitHtml = buildGitTrendHtml(commitLog, storeRuns);
     let enriched = html;
     if (gitHtml) {

@@ -21,21 +21,23 @@ function isAutoBugEnabled(): boolean {
 async function persistFailureClassifications(parsed: ParseResult, _backend: StoreBackend): Promise<void> {
     try {
         const hub = getDataHub();
-        const store = hub.loadMetricsStore();
-        if (!store.failureClassifications) {
-            store.failureClassifications = [];
-        }
         const failed = parsed.tests.filter((t) => t.state === 'failed');
         for (const test of failed) {
             const category = await classifyFailure(test.title, test.error || '');
-            store.failureClassifications.push({
+            if (!hub.raw.failureClassifications) {
+                hub.raw.failureClassifications = [];
+            }
+            hub.raw.failureClassifications.push({
                 timestamp: new Date().toISOString(),
                 testTitle: test.title,
                 category,
                 project: Config.get('jiraProject') || 'unknown',
             });
         }
-        hub.saveMetricsStore(store);
+        hub.saveMetricsStore({
+            runs: hub.computed.metricsRuns ?? [],
+            failureClassifications: hub.raw.failureClassifications ?? [],
+        });
     } catch (err) {
         rootLogger.warn('pipeline-jira: metrics save failed: ' + extractErrorMessage(err));
     }

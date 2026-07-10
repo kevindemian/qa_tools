@@ -59,8 +59,7 @@ function _preloadTestKeys(result: ReturnType<typeof analyzeTestImpact>, c: Comma
 
 function _showFlakyWarning(result: ReturnType<typeof analyzeTestImpact>): void {
     const hub = getDataHub();
-    const store = hub.loadMetricsStore();
-    const flakyTests = calcFlakinessEntries(store.runs, 2);
+    const flakyTests = calcFlakinessEntries(hub.computed.metricsRuns ?? [], 2);
     const impactedTileSet = new Set(result.impactedTests.map((t) => t.title));
     const flakyHits = flakyTests.filter((f) => impactedTileSet.has(f.title));
     if (flakyHits.length === 0) return;

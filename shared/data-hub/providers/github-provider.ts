@@ -6,6 +6,7 @@
  */
 import { extractErrorMessage, humanizeError } from '../../prompt-errors.js';
 import type { GitProvider, PipelineJob, ArtifactInfo, CheckRunAnnotation, PipelineRun } from '../../types/ci-cd.js';
+import { parsePipelineRun } from '../schemas.js';
 import type {
     DataProvider,
     FetchOptions,
@@ -13,6 +14,7 @@ import type {
     WorkflowRunTiming,
     RawCoverage,
     CiRunStats,
+    DataSource,
 } from '../../types/data-hub.js';
 import type { ArtifactParseResult } from '../artifact-parser.js';
 import { rootLogger } from '../../logger.js';
@@ -32,7 +34,8 @@ export class GitHubDataProvider implements DataProvider {
     constructor(private readonly provider: GitProvider) {}
 
     async fetchRawData(options: FetchOptions): Promise<RawData> {
-        const runs = await this.provider.getRecentPipelines(options.count);
+        const rawRuns = await this.provider.getRecentPipelines(options.count);
+        const runs = this.validateRuns(rawRuns);
         const jobsMap = new Map<number, PipelineJob[]>();
         const artifactsMap = new Map<number, ArtifactInfo[]>();
         const failureReasonsMap = new Map<number, string[]>();
@@ -63,6 +66,7 @@ export class GitHubDataProvider implements DataProvider {
         const framework = await this.detectFrameworkFromFirstRun(runs);
         const commitLog = buildCommitLog(runs);
         const ciRuns = this.deriveCiRuns(runs, parsedArtifactsMap);
+        const provenance = this.buildProvenance(coverage, framework);
 
         return {
             runs,
@@ -75,7 +79,27 @@ export class GitHubDataProvider implements DataProvider {
             ...(framework != null ? { framework } : {}),
             ...(commitLog ? { commitLog } : {}),
             ...(ciRuns.length > 0 ? { ciRuns } : {}),
+            provenance,
         };
+    }
+
+    private validateRuns(rawRuns: unknown[]): PipelineRun[] {
+        const runs: PipelineRun[] = [];
+        for (const raw of rawRuns) {
+            const parsed = parsePipelineRun(raw);
+            if (parsed) runs.push(parsed);
+        }
+        return runs;
+    }
+
+    private buildProvenance(coverage: RawCoverage | undefined, framework: string | undefined): Map<string, DataSource> {
+        const now = new Date().toISOString();
+        const provenance = new Map<string, DataSource>();
+        provenance.set('runs', { confidence: 1, source: 'github-api', timestamp: now });
+        if (coverage)
+            provenance.set('coverage', { confidence: 0.9, source: 'github-actions-artifacts', timestamp: now });
+        if (framework) provenance.set('framework', { confidence: 0.8, source: 'local-detection', timestamp: now });
+        return provenance;
     }
 
     private parseRunId(id: string | number | undefined): number | undefined {
