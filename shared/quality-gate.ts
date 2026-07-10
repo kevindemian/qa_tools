@@ -1,7 +1,7 @@
 /** Quality gate orchestrator — composes health, coverage, and flakiness thresholds into a single pass/fail decision.
  *  Thresholds are FIXED — no env var overrides permitted.
  *  No git fallback bypass: if no metrics data exists, the gate fails. */
-import { createDataHubPersistence } from './data-hub/persistence.js';
+import { getDataHub } from './data-hub/global-hub.js';
 import { calcFlakinessEntries, calculateFlakyTestRate } from './data-hub/compute/flakiness-entries.js';
 import { calcTestDurationP95 } from './data-hub/compute/test-duration-p95.js';
 import type { MetricsRun } from './types/data-hub.js';
@@ -173,9 +173,8 @@ function _aggregateResult(checks: GateCheck[]): QualityGateResult {
 export function runQualityGate(options?: QualityGateOptions): QualityGateResult {
     const checks: GateCheck[] = [];
     try {
-        const projectName = options?.project ?? 'default';
-        const persistence = createDataHubPersistence(projectName);
-        const store = persistence.loadMetricsStore();
+        const hub = getDataHub();
+        const store = hub.loadMetricsStore();
         const runs = options?.project ? store.runs.filter((r) => r.project === options.project) : store.runs;
 
         if (runs.length < 1) {

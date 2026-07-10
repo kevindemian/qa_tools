@@ -10,8 +10,8 @@ vi.mock('../shared/cli_base', () => ({
 }));
 vi.mock('../shared/config', () => ({ default: { get: vi.fn(() => '') }, __esModule: true }));
 vi.mock('../shared/splash', () => ({ showSplash: vi.fn() }));
-vi.mock('../shared/data-hub/persistence.js', () => ({
-    createDataHubPersistence: vi.fn().mockReturnValue({
+vi.mock('../shared/data-hub/global-hub.js', () => ({
+    getDataHub: vi.fn().mockReturnValue({
         loadMetricsStore: vi.fn().mockReturnValue({ runs: [] }),
         saveMetricsStore: vi.fn(),
     }),
@@ -84,7 +84,10 @@ vi.mock('./session-state', () => ({
     setCurrentProjectName: vi.fn(),
     setProjectId: vi.fn(),
     setManager: vi.fn(),
-    getDataHub: vi.fn(() => undefined),
+    getDataHub: vi.fn().mockReturnValue({
+        loadMetricsStore: vi.fn().mockReturnValue({ runs: [] }),
+        saveMetricsStore: vi.fn(),
+    }),
     setDataHub: vi.fn(),
     ensureDataHub: vi.fn(() => undefined),
     get currentProjectName() {
@@ -225,14 +228,14 @@ import { load } from '../shared/state.js';
 import { ensureDirs, registerCleanup } from '../shared/temp-dir.js';
 import { openWithFallback } from '../shared/open.js';
 import { showDashboardMenu } from '../shared/dashboard-menu.js';
-import { createDataHubPersistence } from '../shared/data-hub/persistence.js';
+import { getDataHub as getSessionDataHub } from './session-state.js';
 const mockWarn = vi.mocked(warn);
 const mockPrintError = vi.mocked(printError);
 const mockLoad = vi.mocked(load);
 const mockOpenWithFallback = vi.mocked(openWithFallback);
 const mockSetupSigint = vi.mocked(setupSigint);
 const mockShowDashboardMenu = vi.mocked(showDashboardMenu);
-const mockPersistence = vi.mocked(createDataHubPersistence);
+const mockGetDataHub = vi.mocked(getSessionDataHub);
 
 describe('Interactive-mode test exports', () => {
     beforeEach(() => {
@@ -455,7 +458,7 @@ describe('Interactive-mode test exports', () => {
             expect.hasAssertions();
 
             mockSessionState.currentProjectName = 'proj1';
-            mockPersistence.mockReturnValue({
+            mockGetDataHub.mockReturnValue({
                 loadMetricsStore: vi.fn().mockReturnValue({
                     runs: [
                         {
@@ -491,7 +494,7 @@ describe('Interactive-mode test exports', () => {
             expect.hasAssertions();
 
             mockSessionState.currentProjectName = 'proj1';
-            mockPersistence.mockReturnValue({
+            mockGetDataHub.mockReturnValue({
                 loadMetricsStore: vi.fn().mockReturnValue({
                     runs: [
                         {
@@ -518,7 +521,7 @@ describe('Interactive-mode test exports', () => {
             expect.hasAssertions();
 
             mockSessionState.currentProjectName = 'proj1';
-            mockPersistence.mockReturnValue({
+            mockGetDataHub.mockReturnValue({
                 loadMetricsStore: vi.fn().mockReturnValue({
                     runs: [
                         {
@@ -661,7 +664,7 @@ describe('Interactive-mode test exports', () => {
             expect.hasAssertions();
 
             mockSessionState.currentProjectName = 'proj1';
-            mockPersistence.mockReturnValue({
+            mockGetDataHub.mockReturnValue({
                 loadMetricsStore: vi.fn().mockReturnValue({
                     runs: [
                         {
@@ -699,7 +702,7 @@ describe('Interactive-mode test exports', () => {
             expect.hasAssertions();
 
             mockSessionState.currentProjectName = 'proj1';
-            mockPersistence.mockReturnValue({
+            mockGetDataHub.mockReturnValue({
                 loadMetricsStore: vi.fn().mockReturnValue({
                     runs: [
                         {
@@ -749,7 +752,7 @@ describe('Interactive-mode test exports', () => {
             expect.hasAssertions();
 
             mockSessionState.currentProjectName = 'proj1';
-            mockPersistence.mockReturnValue({
+            mockGetDataHub.mockReturnValue({
                 loadMetricsStore: vi.fn().mockReturnValue({
                     runs: [
                         {
@@ -839,7 +842,7 @@ describe('Interactive-mode test exports', () => {
             expect.hasAssertions();
 
             mockSessionState.currentProjectName = 'proj1';
-            mockPersistence.mockReturnValue({
+            mockGetDataHub.mockReturnValue({
                 loadMetricsStore: vi.fn().mockReturnValue({
                     runs: [
                         {
@@ -895,7 +898,7 @@ describe('Interactive-mode test exports', () => {
             expect.hasAssertions();
 
             mockSessionState.currentProjectName = 'proj1';
-            mockPersistence.mockReturnValue({
+            mockGetDataHub.mockReturnValue({
                 loadMetricsStore: vi.fn().mockReturnValue({
                     runs: [
                         {
@@ -937,7 +940,7 @@ describe('Interactive-mode test exports', () => {
             expect.hasAssertions();
 
             mockSessionState.currentProjectName = 'proj1';
-            mockPersistence.mockReturnValue({
+            mockGetDataHub.mockReturnValue({
                 loadMetricsStore: vi.fn().mockReturnValue({
                     runs: [
                         {
@@ -979,7 +982,7 @@ describe('Interactive-mode test exports', () => {
             expect.hasAssertions();
 
             mockSessionState.currentProjectName = 'proj1';
-            mockPersistence.mockReturnValue({
+            mockGetDataHub.mockReturnValue({
                 loadMetricsStore: vi.fn().mockReturnValue({
                     runs: [
                         {
@@ -1021,7 +1024,7 @@ describe('Interactive-mode test exports', () => {
             expect.hasAssertions();
 
             mockSessionState.currentProjectName = 'proj1';
-            mockPersistence.mockReturnValue({
+            mockGetDataHub.mockReturnValue({
                 loadMetricsStore: vi.fn().mockReturnValue({
                     runs: [
                         {
@@ -1077,7 +1080,7 @@ describe('Interactive-mode test exports', () => {
             expect.hasAssertions();
 
             mockSessionState.currentProjectName = 'proj1';
-            mockPersistence.mockReturnValue({
+            mockGetDataHub.mockReturnValue({
                 loadMetricsStore: vi.fn().mockReturnValue({
                     runs: [
                         {
@@ -1119,7 +1122,7 @@ describe('Interactive-mode test exports', () => {
             expect.hasAssertions();
 
             mockSessionState.currentProjectName = 'proj1';
-            mockPersistence.mockReturnValue({
+            mockGetDataHub.mockReturnValue({
                 loadMetricsStore: vi.fn().mockReturnValue({
                     runs: [
                         {
@@ -1161,7 +1164,7 @@ describe('Interactive-mode test exports', () => {
             expect.hasAssertions();
 
             mockSessionState.currentProjectName = 'proj1';
-            mockPersistence.mockReturnValue({
+            mockGetDataHub.mockReturnValue({
                 loadMetricsStore: vi.fn().mockReturnValue({
                     runs: [
                         {
@@ -1203,7 +1206,7 @@ describe('Interactive-mode test exports', () => {
             expect.hasAssertions();
 
             mockSessionState.currentProjectName = 'proj1';
-            mockPersistence.mockReturnValue({
+            mockGetDataHub.mockReturnValue({
                 loadMetricsStore: vi.fn().mockReturnValue({
                     runs: [
                         {
@@ -1245,7 +1248,7 @@ describe('Interactive-mode test exports', () => {
             expect.hasAssertions();
 
             mockSessionState.currentProjectName = 'proj1';
-            mockPersistence.mockReturnValue({
+            mockGetDataHub.mockReturnValue({
                 loadMetricsStore: vi.fn().mockReturnValue({
                     runs: [
                         {

@@ -1432,152 +1432,174 @@ npx eslint git_triggers/session-state.ts             # 0 erros
 
 ---
 
-### FASE 0.8 — DataHub Core: Resiliência e Persistence (4 tarefas)
+### FASE 0.8 — DataHub Core: Interface Expandida + Factory + Persistence (10 tarefas)
+
+> **Revisado:** 2026-07-09 — Expansão da interface + factory centralizado em vez de tornar persistence obrigatório diretamente.
+>
+> **Achados da auditoria:**
+>
+> - `DataHub` interface expõe 4 de 11 métodos de `DataHubPersistence`
+> - 30+ call sites criam `createDataHubPersistence()` separadamente porque `DataHub` não expõe `loadMetricsStore()`
+> - `quality-metrics.ts` tem persistence dead code — `setQualityMetricsPersistence()` nunca foi chamado, drift detection nunca funcionou
+> - `createEmpty()` tem 0 call sites em produção — não precisa de persistence
+> - O plano original (tornar persistence obrigatório) ignora os 30+ bypasses — correção parcial
+
+**Decisão:** Expandir `DataHub` interface para TODOS os 11 métodos → criar factory `createDataHub()` → migrar consumers → tornar persistence obrigatório no final.
 
 ---
 
-#### Tarefa 0.8.1 — Adicionar retry com exponential backoff (RED)
+#### Tarefa 0.8.1 — Expandir `DataHub` interface (RED)
 
-**Gap atacado:** Falha de Requisição
-
-**Problema:** `ensureDataHub()` retorna `undefined` em falha. Sem retry, sem fallback, sem log.
-
-**Solução:** Retry com exponential backoff + fallback para persistence.
+**Gap atacado:** Interface incompleta força 30+ bypasses
 
 **RED — Testes que FALHAM:**
 
 ```typescript
-// shared/data-hub/__tests__/global-hub.test.ts — ADICIONAR
-describe('ensureDataHub with retry', () => {
-    it('retries on transient failure', async () => {
-        const mockHub = { raw: {}, computed: {} } as any;
-        const fetchFn = vi.fn().mockRejectedValueOnce(new Error('network error')).mockResolvedValueOnce(mockHub);
-        const result = await ensureDataHub(fetchFn, { maxRetries: 2 });
-        expect(fetchFn).toHaveBeenCalledTimes(2);
-        expect(result).toBe(mockHub);
+// shared/data-hub/__tests__/hub.test.ts — ADICIONAR
+describe('DataHub expanded persistence interface', () => {
+    it('loadMetricsStore delegates to persistence', async () => {
+        const mockStore: MetricsStore = {
+            runs: [
+                {
+                    sha: 'abc',
+                    timestamp: new Date().toISOString(),
+                    passed: 10,
+                    failed: 1,
+                    skipped: 0,
+                    duration: 1000,
+                    tests: [],
+                },
+            ],
+        };
+        const mockPersistence = createMockPersistence({ loadMetricsStore: vi.fn().mockReturnValue(mockStore) });
+        const { hub } = await DataHubImpl.create([], { repo: 'test' }, mockPersistence);
+        expect(hub.loadMetricsStore()).toBe(mockStore);
     });
-
-    it('throws after maxRetries exhausted', async () => {
-        const fetchFn = vi.fn().mockRejectedValue(new Error('persistent error'));
-        await expect(ensureDataHub(fetchFn, { maxRetries: 2 })).rejects.toThrow('persistent error');
+    it('saveParseResult delegates and returns MetricsRun', async () => {
+        const mockRun: MetricsRun = {
+            sha: 'abc',
+            timestamp: new Date().toISOString(),
+            passed: 10,
+            failed: 0,
+            skipped: 0,
+            duration: 500,
+            tests: [],
+        };
+        const mockPersistence = createMockPersistence({ saveParseResult: vi.fn().mockReturnValue(mockRun) });
+        const { hub } = await DataHubImpl.create([], { repo: 'test' }, mockPersistence);
+        const result = hub.saveParseResult('project', {
+            stats: { total: 10, passed: 10, failed: 0, skipped: 0, duration: 500 },
+            tests: [],
+        });
+        expect(result).toBe(mockRun);
+    });
+    it('throws when persistence not configured', async () => {
+        const { hub } = await DataHubImpl.create([], { repo: 'test' });
+        expect(() => hub.loadMetricsStore()).toThrow('persistence not configured');
     });
 });
 ```
 
 ---
 
-#### Tarefa 0.8.2 — Implementar retry com exponential backoff (GREEN)
+#### Tarefa 0.8.2 — Implementar delegates em `DataHubImpl` (GREEN)
 
-**Gap atacado:** Falha de Requisição
-
-**Implementação em `shared/data-hub/global-hub.ts`:**
-
-```typescript
-interface EnsureOptions {
-    maxRetries?: number;
-    baseDelay?: number;
-    persistence?: DataHubPersistence;
-    maxStalenessMs?: number;
-    hasDataChanged?: (cached: DataHub, newRaw: RawData) => boolean;
-    cachedHub?: DataHub;
-}
-
-export async function ensureDataHub(
-    fetchFn: () => Promise<DataHub | undefined>,
-    options?: EnsureOptions,
-): Promise<DataHub | undefined> {
-    const maxRetries = options?.maxRetries ?? 3;
-    const baseDelay = options?.baseDelay ?? 1000;
-    const maxStaleness = options?.maxStalenessMs ?? 5 * 60 * 1000;
-
-    if (_dataHub) {
-        const age = Date.now() - _dataHub.timestamp.getTime();
-        if (age > maxStaleness) {
-            for (let attempt = 0; attempt < maxRetries; attempt++) {
-                try {
-                    const freshHub = await fetchFn();
-                    if (freshHub && hasDataChanged(_dataHub, freshHub.raw)) {
-                        _dataHub = freshHub;
-                        return _dataHub;
-                    }
-                    return _dataHub;
-                } catch (err) {
-                    if (attempt < maxRetries - 1) {
-                        await new Promise((r) => setTimeout(r, baseDelay * Math.pow(2, attempt)));
-                    }
-                }
-            }
-            return _dataHub;
-        }
-        return _dataHub;
-    }
-
-    for (let attempt = 0; attempt < maxRetries; attempt++) {
-        try {
-            const hub = await fetchFn();
-            if (hub) {
-                _dataHub = hub;
-                return _dataHub;
-            }
-        } catch (err) {
-            if (attempt < maxRetries - 1) {
-                await new Promise((r) => setTimeout(r, baseDelay * Math.pow(2, attempt)));
-            }
-        }
-    }
-
-    if (options?.persistence) {
-        try {
-            const persistedData = options.persistence.loadMetricsStore();
-            if (persistedData && persistedData.runs.length > 0) {
-                const hub = DataHubImpl.loadFromStore(persistedData, 'unknown', options.persistence);
-                _dataHub = hub;
-                return _dataHub;
-            }
-        } catch {
-            // Persistence fallback failed
-        }
-    }
-
-    throw new Error('DataHub unavailable: API failed and no persistence fallback');
-}
-```
-
----
-
-#### Tarefa 0.8.3 — Tornar persistence obrigatório no construtor (RED)
-
-**Gap atacado:** #3 — Persistence Opcional
-
-**Problema:** `DataHub.persistence` é opcional. Se não existe, métodos `save*` lançam exceção.
-
-**RED — Testes que FALHAM:**
-
-```typescript
-// Testes que criam DataHubImpl sem persistence devem falhar
-```
-
----
-
-#### Tarefa 0.8.4 — Tornar persistence obrigatório no construtor (GREEN)
-
-**Gap atacado:** #3 — Persistence Opcional
+**Gap atacado:** Interface incompleta
 
 **Mudanças:**
 
-1. `DataHubImpl` constructor: `persistence: DataHubPersistence` (sem `?`)
-2. `DataHubImpl.create()`: `persistence` obrigatório
-3. `DataHubImpl.loadFromStore()`: `persistence` obrigatório
-4. Interface `DataHub`: `readonly persistence: DataHubPersistence` (sem `?`)
+1. `shared/types/data-hub.ts` — Adicionar 7 métodos à interface `DataHub`
+2. `shared/data-hub/hub.ts` — Implementar 7 delegates + import `ParseResult`
 
 **Checkpoint:**
 
 ```bash
-npx tsc --noEmit                                    # 0 erros
-npx vitest run --reporter=verbose | tail -10         # 100% pass
+npx tsc --noEmit    # 0 erros
+npx vitest run shared/data-hub/__tests__/hub.test.ts  # 100% pass
 ```
 
-**Commit:** `refactor(data-hub): make persistence mandatory — no optional DataHubPersistence`
+---
+
+#### Tarefa 0.8.3 — Criar `createDataHub()` factory (RED)
+
+**Gap atacado:** 30+ call sites criam persistence separadamente
+
+**RED — Testes que FALHAM:**
+
+```typescript
+// shared/data-hub/__tests__/factory.test.ts — NOVO
+describe('createDataHub factory', () => {
+    it('creates hub with persistence injected', async () => { ... });
+    it('retries on transient failure', async () => { ... });
+    it('throws after maxRetries exhausted', async () => { ... });
+    it('returns cached hub on subsequent calls', async () => { ... });
+});
+```
+
+---
+
+#### Tarefa 0.8.4 — Implementar factory com retry + backoff (GREEN)
+
+**Gap atacado:** Criação centralizada + resiliência
+
+**Novo arquivo:** `shared/data-hub/factory.ts`
+
+**Checkpoint:**
+
+```bash
+npx vitest run shared/data-hub/__tests__/factory.test.ts  # 100% pass
+```
+
+---
+
+#### Tarefa 0.8.5 — Migrar `ci-data.ts` para factory
+
+**Mudança:** `getOrFetchDataHub()` chama `createDataHub()` em vez de `DataHubImpl.create()` diretamente.
+
+---
+
+#### Tarefa 0.8.6 — Migrar `quality-metrics.ts` (remover dead code, ativar drift)
+
+**Achado:** `setQualityMetricsPersistence()` nunca foi chamado. Drift detection nunca funcionou.
+
+**Mudança:** Remover padrão paralelo, injetar via DataHub persistence.
+
+---
+
+#### Tarefa 0.8.7 — Migrar 30+ consumers em cascata
+
+Cada consumer que chama `createDataHubPersistence().loadMetricsStore()` passa a chamar `hub.loadMetricsStore()`.
+
+---
+
+#### Tarefa 0.8.8 — Atualizar testes (mocks)
+
+Mecânico — adicionar mock persistence onde necessário.
+
+---
+
+#### Tarefa 0.8.9 — Tornar persistence obrigatório
+
+**Agora seguro** — todos passam via factory. Sem bypasses restantes.
+
+---
+
+#### Tarefa 0.8.10 — Remover `createDataHubPersistence` exports
+
+Não é mais necessário externamente.
+
+---
+
+**Checkpoint Final:**
+
+```bash
+npx tsc --noEmit                                    # 0 erros
+npx eslint shared/data-hub/ git_triggers/           # 0 erros
+npx vitest run                                      # 100% pass
+rg "createDataHubPersistence" --include='*.ts'      # 0 resultados em produção
+```
+
+**Commit:** `refactor(data-hub): expand interface, add factory, migrate 30+ consumers to DataHub SSOT`
 
 ---
 

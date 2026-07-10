@@ -18,6 +18,31 @@ function createMockDataProvider(rawData: RawData): DataProvider {
     };
 }
 
+/* ── Mock Persistence ──────────────────────────────────────────────────── */
+
+const mockPersistence = {
+    loadMetricsStore: vi.fn().mockReturnValue({ runs: [] }),
+    saveMetricsStore: vi.fn(),
+    loadCoverageHistory: vi.fn().mockReturnValue([]),
+    saveCoverageSnapshot: vi.fn(),
+    loadFailureClassifications: vi.fn().mockReturnValue([]),
+    saveFailureClassification: vi.fn(),
+    saveRun: vi.fn(),
+    saveParseResult: vi.fn().mockReturnValue({
+        timestamp: new Date().toISOString(),
+        project: '',
+        total: 0,
+        passed: 0,
+        failed: 0,
+        skipped: 0,
+        duration: 0,
+        tests: [],
+    }),
+    saveQualityMetrics: vi.fn(),
+    loadQualityMetricsHistory: vi.fn().mockReturnValue([]),
+    flush: vi.fn(),
+};
+
 /* ── Fixtures ──────────────────────────────────────────────────────────── */
 
 function makeRun(id: number, overrides?: Partial<PipelineRun>): PipelineRun {
@@ -64,7 +89,7 @@ describe('Integration: CI Data Hub', () => {
 
             const rawData: RawData = { runs, jobs: jobsMap, failureReasons: new Map(), artifacts: new Map() };
             const provider = createMockDataProvider(rawData);
-            const { hub } = await DataHubImpl.create([provider], { repo: 'owner/repo' });
+            const { hub } = await DataHubImpl.create([provider], { repo: 'owner/repo' }, mockPersistence);
 
             expect(hub.computed.passRate).toBeCloseTo(66.67, 0);
             expect(hub.computed.topFailingJobs.length).toBeGreaterThan(0);
@@ -76,7 +101,7 @@ describe('Integration: CI Data Hub', () => {
 
             const rawData: RawData = { runs: [], jobs: new Map(), failureReasons: new Map(), artifacts: new Map() };
             const provider = createMockDataProvider(rawData);
-            const { hub } = await DataHubImpl.create([provider], { repo: 'owner/repo' });
+            const { hub } = await DataHubImpl.create([provider], { repo: 'owner/repo' }, mockPersistence);
 
             expect(hub.raw.runs).toHaveLength(0);
             expect(hub.computed.passRate).toBe(0);
@@ -95,7 +120,7 @@ describe('Integration: CI Data Hub', () => {
 
             const rawData: RawData = { runs, jobs: jobsMap, failureReasons: new Map(), artifacts: new Map() };
             const provider = createMockDataProvider(rawData);
-            const { hub } = await DataHubImpl.create([provider], { repo: 'owner/repo' });
+            const { hub } = await DataHubImpl.create([provider], { repo: 'owner/repo' }, mockPersistence);
 
             // P95 of [10000, 20000, 30000] ms = 30000 ms
             expect(hub.computed.suiteSpeedP95).toBe(30000);
@@ -115,7 +140,7 @@ describe('Integration: CI Data Hub', () => {
             ];
             const rawData: RawData = { runs, jobs: new Map(), failureReasons: new Map(), artifacts: new Map() };
             const provider = createMockDataProvider(rawData);
-            const { hub } = await DataHubImpl.create([provider], { repo: 'owner/repo' });
+            const { hub } = await DataHubImpl.create([provider], { repo: 'owner/repo' }, mockPersistence);
 
             // Hub passRate = 66.67% — store has 10% (10 passed, 90 failed)
             const store = {
@@ -144,7 +169,7 @@ describe('Integration: CI Data Hub', () => {
             expect.hasAssertions();
 
             const { runQualityGate } = await import('../../quality-gate.js');
-            const persistenceModule = await import('../../data-hub/persistence.js');
+            const globalHubModule = await import('../../data-hub/global-hub.js');
 
             const runs = [
                 makeRun(1, { conclusion: 'success' }),
@@ -153,10 +178,10 @@ describe('Integration: CI Data Hub', () => {
             ];
             const rawData: RawData = { runs, jobs: new Map(), failureReasons: new Map(), artifacts: new Map() };
             const provider = createMockDataProvider(rawData);
-            const { hub } = await DataHubImpl.create([provider], { repo: 'owner/repo' });
+            const { hub } = await DataHubImpl.create([provider], { repo: 'owner/repo' }, mockPersistence);
 
             // Mock store with low pass rate — dataHub overrides to 100%
-            vi.spyOn(persistenceModule, 'createDataHubPersistence').mockReturnValue({
+            vi.spyOn(globalHubModule, 'getDataHub').mockReturnValue({
                 loadMetricsStore: vi.fn().mockReturnValue({
                     runs: [{ passed: 10, failed: 90, total: 100, tests: [], project: 'test' }],
                     failureClassifications: [],
@@ -171,7 +196,7 @@ describe('Integration: CI Data Hub', () => {
                 saveQualityMetrics: vi.fn(),
                 loadQualityMetricsHistory: vi.fn().mockReturnValue([]),
                 flush: vi.fn(),
-            });
+            } as never);
             const withCi = runQualityGate({ dataHub: hub });
             const withoutCi = runQualityGate();
 
@@ -189,7 +214,7 @@ describe('Integration: CI Data Hub', () => {
                 fetchRawData: vi.fn().mockRejectedValue(new Error('Network error')),
             };
 
-            const { hub } = await DataHubImpl.create([provider], { repo: 'owner/repo' });
+            const { hub } = await DataHubImpl.create([provider], { repo: 'owner/repo' }, mockPersistence);
 
             expect(hub.raw.runs).toHaveLength(0);
             expect(hub.computed.passRate).toBe(0);

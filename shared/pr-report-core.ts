@@ -22,7 +22,7 @@
 import fs from 'node:fs';
 import path from 'path';
 import { rootLogger } from './logger.js';
-import { createDataHubPersistence } from './data-hub/persistence.js';
+import { getDataHub, isDataHubInitialized } from './data-hub/global-hub.js';
 import { calcFlakinessEntries } from './data-hub/compute/flakiness-entries.js';
 import { calcMetricsTrends } from './data-hub/compute/metrics-trends.js';
 import { calcRunPassRate } from './data-hub/compute/run-pass-rate.js';
@@ -37,7 +37,7 @@ import { readIstanbulCoverage } from './coverage-source.js';
 import { parseTestResultsFile } from './result_parser.js';
 import type { FlatTest, ParseResult } from './result_parser.js';
 import { getPrReportConfig } from './feature-config.js';
-import type { DataHub } from './types/data-hub.js';
+import type { DataHub, MetricsStore } from './types/data-hub.js';
 
 /**
  * Read CI-injected environment variables with typed fallbacks.
@@ -179,8 +179,9 @@ function buildFailureTable(tests: FlatTest[]): string {
 
 function buildFlakySection(): string {
     try {
-        const persistence = createDataHubPersistence('default');
-        const store = persistence.loadMetricsStore();
+        if (!isDataHubInitialized()) return '';
+        const hub = getDataHub();
+        const store = hub.loadMetricsStore();
         const flakyEntries = calcFlakinessEntries(store.runs, MIN_FLAKINESS_RUNS);
         const highFlaky = flakyEntries.filter((e) => e.rate >= 0.3);
 
@@ -318,6 +319,7 @@ function writeToJobSummary(stats: PrReportStats, htmlArtifactUrl?: string): void
 
 function persistCurrentRun(tests: FlatTest[], stats: PrReportStats, project?: string): void {
     if (!project) return;
+    if (!isDataHubInitialized()) return;
     const parseResult: ParseResult = {
         tests,
         stats: {
@@ -328,7 +330,8 @@ function persistCurrentRun(tests: FlatTest[], stats: PrReportStats, project?: st
             duration: stats.duration,
         },
     };
-    createDataHubPersistence(project).saveParseResult(project, parseResult);
+    const hub = getDataHub();
+    hub.saveParseResult(project, parseResult);
 }
 
 function resolveCiUrls(): { workflowUrl?: string; artifactUrl?: string } {
@@ -393,7 +396,7 @@ function generateHtmlReportFile(
     tests: FlatTest[],
     stats: PrReportStats,
     options: PrReportCoreOptions,
-    store: ReturnType<typeof createDataHubPersistence> extends { loadMetricsStore: () => infer S } ? S : never,
+    store: MetricsStore,
     coverageResult: ReturnType<typeof resolveCoverageForReport>,
     healthScore: ReturnType<typeof calculateHealthScore>,
     workflowUrl?: string,
@@ -475,9 +478,8 @@ export async function generatePrReport(options: PrReportCoreOptions): Promise<Pr
 
     persistCurrentRun(tests, stats, options.project);
 
-    const projectName = options.project ?? 'default';
-    const persistence = createDataHubPersistence(projectName);
-    const store = persistence.loadMetricsStore();
+    const hub = isDataHubInitialized() ? getDataHub() : undefined;
+    const store = hub?.loadMetricsStore() ?? { runs: [] };
     const dataHub = options.dataHub;
     const coverageResult = resolveCoverageForReport(dataHub);
     const healthConfig = {
@@ -755,9 +757,8 @@ export async function main(
 
     // Load store before saveParseResult so the diff comparison uses the
     // previous run's data (before the current run is persisted).
-    const projectName = project || 'default';
-    const persistence = createDataHubPersistence(projectName);
-    const store = persistence.loadMetricsStore();
+    const hub = isDataHubInitialized() ? getDataHub() : undefined;
+    const store = hub?.loadMetricsStore() ?? { runs: [] };
     const previousRun = store.runs.length > 0 ? store.runs[store.runs.length - 1] : undefined;
     const diffComparison = previousRun ? computeDiffComparison(result.tests, previousRun.tests) : undefined;
 

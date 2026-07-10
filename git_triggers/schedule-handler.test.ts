@@ -24,6 +24,10 @@ vi.mock('./session-state', () => ({
     setProjectId: vi.fn(),
     setManager: vi.fn(),
     getProjects: vi.fn(() => ({})),
+    getDataHub: vi.fn().mockReturnValue({
+        loadMetricsStore: vi.fn().mockReturnValue({ runs: [], failureClassifications: [] }),
+        saveMetricsStore: vi.fn(),
+    }),
     get currentProvider() {
         return mockState.currentProvider;
     },
@@ -32,8 +36,8 @@ vi.mock('./session-state', () => ({
     },
 }));
 
-vi.mock('../shared/data-hub/persistence.js', () => ({
-    createDataHubPersistence: vi.fn().mockReturnValue({
+vi.mock('../shared/data-hub/global-hub.js', () => ({
+    getDataHub: vi.fn().mockReturnValue({
         loadMetricsStore: vi.fn().mockReturnValue({ runs: [], failureClassifications: [] }),
         saveMetricsStore: vi.fn(),
     }),
@@ -147,8 +151,7 @@ vi.mock('fs', () => ({
 }));
 
 import { success, warn, info, print, prompt, printError } from '../shared/prompt.js';
-import { pushHistory, getProjects } from './session-state.js';
-import { createDataHubPersistence } from '../shared/data-hub/persistence.js';
+import { pushHistory, getProjects, getDataHub as getSessionDataHub } from './session-state.js';
 import { calcFlakinessEntries } from '../shared/data-hub/compute/flakiness-entries.js';
 import { generateFlakinessHtml } from '../shared/flakiness-dashboard.js';
 import {
@@ -166,7 +169,7 @@ const mockPushHistory = vi.mocked(pushHistory);
 const mockPrintError = vi.mocked(printError);
 const mockWarn = vi.mocked(warn);
 const mockInfo = vi.mocked(info);
-const mockPersistence = vi.mocked(createDataHubPersistence);
+const mockGetDataHub = vi.mocked(getSessionDataHub);
 const mockCalcFlakinessEntries = vi.mocked(calcFlakinessEntries);
 const mockGenerateHtml = vi.mocked(generateFlakinessHtml);
 
@@ -329,7 +332,7 @@ describe('Schedule Handler', () => {
 
         it('warns when less than 2 runs', () => {
             mockState.currentProjectName = 'proj1';
-            mockPersistence.mockReturnValue({
+            mockGetDataHub.mockReturnValue({
                 loadMetricsStore: vi.fn().mockReturnValue({
                     runs: [
                         {
@@ -354,7 +357,7 @@ describe('Schedule Handler', () => {
 
         it('informs when no flaky tests', () => {
             mockState.currentProjectName = 'proj1';
-            mockPersistence.mockReturnValue({
+            mockGetDataHub.mockReturnValue({
                 loadMetricsStore: vi.fn().mockReturnValue({
                     runs: [
                         {
@@ -392,7 +395,7 @@ describe('Schedule Handler', () => {
             expect.hasAssertions();
 
             mockState.currentProjectName = 'proj1';
-            mockPersistence.mockReturnValue({
+            mockGetDataHub.mockReturnValue({
                 loadMetricsStore: vi.fn().mockReturnValue({
                     runs: [
                         {
@@ -449,7 +452,7 @@ describe('Schedule Handler', () => {
 
         it('warns when less than 2 runs and git fallback fails', () => {
             mockState.currentProjectName = 'proj1';
-            mockPersistence.mockReturnValue({
+            mockGetDataHub.mockReturnValue({
                 loadMetricsStore: vi.fn().mockReturnValue({
                     runs: [
                         {

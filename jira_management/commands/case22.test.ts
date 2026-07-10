@@ -24,8 +24,8 @@ vi.mock('../../shared/config', () => ({
 vi.mock('../../shared/test-impact', () => ({
     analyzeTestImpact: vi.fn(),
 }));
-vi.mock('../../shared/data-hub/persistence', () => ({
-    createDataHubPersistence: vi.fn().mockReturnValue({
+vi.mock('../../shared/data-hub/global-hub.js', () => ({
+    getDataHub: vi.fn().mockReturnValue({
         loadMetricsStore: vi.fn().mockReturnValue({ runs: [] }),
     }),
 }));
@@ -43,7 +43,7 @@ import { execFileSync } from 'child_process';
 import { existsSync, PathLike } from 'fs';
 import { ask, info, warn, title, printError } from '../../shared/prompt.js';
 import { analyzeTestImpact } from '../../shared/test-impact.js';
-import { createDataHubPersistence } from '../../shared/data-hub/persistence.js';
+import { getDataHub } from '../../shared/data-hub/global-hub.js';
 import { calcFlakinessEntries } from '../../shared/data-hub/compute/flakiness-entries.js';
 import { makeMockCommandContext } from '../../shared/test-utils.js';
 import case22Module from './case22.js';
@@ -52,13 +52,13 @@ const mockExecFileSync = vi.mocked(execFileSync);
 const mockExistsSync = vi.mocked(existsSync);
 const mockAsk = vi.mocked(ask);
 const mockAnalyzeTestImpact = vi.mocked(analyzeTestImpact);
-const mockCreateDataHubPersistence = vi.mocked(createDataHubPersistence);
+const mockGetDataHub = vi.mocked(getDataHub);
 const mockCalcFlakinessEntries = vi.mocked(calcFlakinessEntries);
 
 describe('Case22', () => {
     beforeEach(() => {
         vi.clearAllMocks();
-        mockCreateDataHubPersistence.mockReturnValue({
+        mockGetDataHub.mockReturnValue({
             loadMetricsStore: vi.fn().mockReturnValue({ runs: [] }),
         } as never);
         mockCalcFlakinessEntries.mockReturnValue([]);
@@ -146,7 +146,7 @@ describe('Case22', () => {
             mockAsk.mockResolvedValue('HEAD~1');
             mockExecFileSync.mockReturnValue('src/login.ts\n');
             mockExistsSync.mockReturnValue(false);
-            mockCreateDataHubPersistence.mockReturnValue({
+            mockGetDataHub.mockReturnValue({
                 loadMetricsStore: vi.fn().mockReturnValue({ runs: [] }),
             } as never);
             mockCalcFlakinessEntries.mockReturnValue([]);
@@ -173,7 +173,7 @@ describe('Case22', () => {
             mockAsk.mockResolvedValue('HEAD~1');
             mockExecFileSync.mockReturnValue('src/unknown.ts\n');
             mockExistsSync.mockReturnValue(false);
-            mockCreateDataHubPersistence.mockReturnValue({
+            mockGetDataHub.mockReturnValue({
                 loadMetricsStore: vi.fn().mockReturnValue({ runs: [] }),
             } as never);
             mockCalcFlakinessEntries.mockReturnValue([]);
@@ -198,7 +198,7 @@ describe('Case22', () => {
             mockAsk.mockResolvedValue('HEAD~1');
             mockExecFileSync.mockReturnValue('src/login.ts\n');
             mockExistsSync.mockReturnValue(false);
-            mockCreateDataHubPersistence.mockReturnValue({
+            mockGetDataHub.mockReturnValue({
                 loadMetricsStore: vi.fn().mockReturnValue({
                     runs: [
                         {

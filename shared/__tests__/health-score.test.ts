@@ -184,6 +184,22 @@ describe('CalculateHealthScore — DataHub SSOT enforcement', () => {
             saveCoverageSnapshot: vi.fn(),
             saveFailureClassification: vi.fn(),
             flush: vi.fn(),
+            loadCoverageHistory: vi.fn().mockReturnValue([]),
+            loadFailureClassifications: vi.fn().mockReturnValue([]),
+            saveMetricsStore: vi.fn(),
+            loadMetricsStore: vi.fn().mockReturnValue({ runs: [] }),
+            saveParseResult: vi.fn().mockReturnValue({
+                timestamp: new Date().toISOString(),
+                project: '',
+                total: 0,
+                passed: 0,
+                failed: 0,
+                skipped: 0,
+                duration: 0,
+                tests: [],
+            }),
+            saveQualityMetrics: vi.fn(),
+            loadQualityMetricsHistory: vi.fn().mockReturnValue([]),
         };
     }
 

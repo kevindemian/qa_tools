@@ -1,18 +1,18 @@
 import { analyzeCoverageGaps } from './coverage-gap.js';
-import { createDataHubPersistence } from './data-hub/persistence.js';
+import { getDataHub } from './data-hub/global-hub.js';
 import { nonNull } from './test-utils.js';
 
 vi.mock('./logger', () => ({
     rootLogger: { error: vi.fn(), warn: vi.fn(), info: vi.fn(), child: vi.fn().mockReturnThis() },
 }));
 
-vi.mock('./data-hub/persistence', () => ({
-    createDataHubPersistence: vi.fn().mockReturnValue({
+vi.mock('./data-hub/global-hub.js', () => ({
+    getDataHub: vi.fn().mockReturnValue({
         loadMetricsStore: vi.fn().mockReturnValue({ runs: [] }),
     }),
 }));
 
-const mockCreateDataHubPersistence = vi.mocked(createDataHubPersistence);
+const mockGetDataHub = vi.mocked(getDataHub);
 const mockSearch = vi.fn();
 const mockJiraResource = {
     getJiraResource: vi.fn(),
@@ -41,7 +41,7 @@ describe('Coverage Gap', () => {
         vi.clearAllMocks();
         mockSearch.mockReset();
         mockSearch.mockResolvedValue({ issues: [], total: 0 });
-        mockCreateDataHubPersistence.mockReturnValue({
+        mockGetDataHub.mockReturnValue({
             loadMetricsStore: vi.fn().mockReturnValue({ runs: [], coverageHistory: [] }),
         } as never);
     });
@@ -343,7 +343,7 @@ describe('Coverage Gap', () => {
         it('loads trends from metrics store', async () => {
             expect.hasAssertions();
 
-            mockCreateDataHubPersistence.mockReturnValue({
+            mockGetDataHub.mockReturnValue({
                 loadMetricsStore: vi.fn().mockReturnValue({
                     runs: [],
                     coverageHistory: [

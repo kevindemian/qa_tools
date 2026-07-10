@@ -16,6 +16,7 @@ import {
     getDataHub as _getGlobalHub,
     setDataHub as _setGlobalHub,
     ensureDataHub as _ensureGlobalHub,
+    isDataHubInitialized as _isGlobalHubInitialized,
 } from '../shared/data-hub/global-hub.js';
 import GitLabManager from './gitlab_manager.js';
 import GitHubManager from './github_manager.js';
@@ -50,8 +51,10 @@ export function getDataHub(): DataHub | undefined {
  */
 export async function ensureDataHub(): Promise<DataHub | undefined> {
     // Check global-hub cache first (setDataHub may have been called directly)
-    const cached = _getGlobalHub();
-    if (cached) return cached;
+    if (_isGlobalHubInitialized()) {
+        const cached = _getGlobalHub();
+        return cached;
+    }
     if (!manager || !currentProjectName) return undefined;
     const activeManager = manager;
     const activeProject = currentProjectName;

@@ -6,7 +6,6 @@ import { pushBreadcrumb, clearBreadcrumbs } from '../shared/breadcrumbs.js';
 import { createValidateEnv, offerEnvSetup, setupSigint } from '../shared/cli_base.js';
 import Config from '../shared/config.js';
 import { showSplash } from '../shared/splash.js';
-import { createDataHubPersistence } from '../shared/data-hub/persistence.js';
 import { calcFlakinessEntries } from '../shared/data-hub/compute/flakiness-entries.js';
 import { calcTestDurationMap } from '../shared/data-hub/compute/test-duration-map.js';
 import { calcRunFailureRate } from '../shared/data-hub/compute/run-failure-rate.js';
@@ -254,8 +253,9 @@ async function handleRunComparison(): Promise<boolean> {
         warn('Nenhum projeto selecionado.');
         return false;
     }
-    const persistence = createDataHubPersistence(project);
-    const store = persistence.loadMetricsStore();
+    const hub = getDataHub();
+    const store = hub?.loadMetricsStore();
+    if (!store) return false;
     const projectRuns = store.runs
         .filter((r) => r.project === project)
         .sort((a, b) => new Date(a.timestamp).getTime() - new Date(b.timestamp).getTime());
@@ -343,8 +343,12 @@ function _loadProjectRunsHelper(): {
         warn('Nenhum projeto selecionado.');
         return null;
     }
-    const persistence = createDataHubPersistence(currentProjectName);
-    const store = persistence.loadMetricsStore();
+    const hub = getDataHub();
+    const store = hub?.loadMetricsStore();
+    if (!store) {
+        warn('Nenhum projeto selecionado.');
+        return null;
+    }
     let projectRuns = store.runs.filter((r) => r.project === currentProjectName);
     let failureClassifications = store.failureClassifications ?? [];
     let usingGitFallback = false;
@@ -438,8 +442,8 @@ async function _dashboardBenchmark(): Promise<void> {
     if (!data) return;
     const dataHub = _getDataHub();
     const projectNames = [...new Set(data.projectRuns.map((r) => r.project))];
-    const persistence = createDataHubPersistence(currentProjectName);
-    const store = persistence.loadMetricsStore();
+    const hub = getDataHub();
+    const store = hub?.loadMetricsStore() ?? { runs: [] };
     const projectBenchmarks = projectNames.map((name) => {
         const pRuns = store.runs.filter((r) => r.project === name);
         const isCurrentProject = name === currentProjectName;
@@ -850,8 +854,8 @@ async function _initEnvironment(): Promise<void> {
     }
     let healthScore: { score: number; grade: string } | undefined;
     try {
-        const persistence = createDataHubPersistence(currentProjectName);
-        const store = persistence.loadMetricsStore();
+        const hub = getDataHub();
+        const store = hub?.loadMetricsStore() ?? { runs: [] };
         const _hub = _getDataHub();
         const health = calculateHealthScore(store, _hub ? { dataHub: _hub } : undefined);
         healthScore = { score: health.overall, grade: health.grade };

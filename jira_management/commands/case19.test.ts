@@ -3,8 +3,8 @@ import { expect } from 'vitest';
 vi.mock('../../shared/prompt');
 vi.mock('../../shared/logger');
 
-vi.mock('../../shared/data-hub/persistence.js', () => ({
-    createDataHubPersistence: vi.fn(),
+vi.mock('../../shared/data-hub/global-hub.js', () => ({
+    getDataHub: vi.fn(),
 }));
 
 vi.mock('../../shared/data-hub/compute/flakiness-entries.js', () => ({
@@ -35,7 +35,7 @@ vi.mock('../../shared/logger', () => ({
 }));
 
 import * as promptModule from '../../shared/prompt.js';
-import * as persistenceModule from '../../shared/data-hub/persistence.js';
+import * as globalHubModule from '../../shared/data-hub/global-hub.js';
 import * as flakinessModule from '../../shared/data-hub/compute/flakiness-entries.js';
 import * as trendsModule from '../../shared/data-hub/compute/metrics-trends.js';
 import * as healthScoreModule from '../../shared/health-score.js';
@@ -45,7 +45,7 @@ import { createMockContext } from '../../shared/test-utils/factories/context-fac
 
 const baseContext = createMockContext();
 
-function createMockPersistence(overrides: Partial<ReturnType<typeof persistenceModule.createDataHubPersistence>> = {}) {
+function createMockHub(overrides: Record<string, unknown> = {}) {
     return {
         saveRun: vi.fn(),
         saveCoverageSnapshot: vi.fn(),
@@ -72,7 +72,7 @@ describe('Case19', () => {
             expect.hasAssertions();
 
             const prompt = vi.mocked(promptModule);
-            const persistence = vi.mocked(persistenceModule);
+            const persistence = vi.mocked(globalHubModule);
             const flakiness = vi.mocked(flakinessModule);
             const trends = vi.mocked(trendsModule);
 
@@ -98,10 +98,10 @@ describe('Case19', () => {
                 coverageHistory: [],
             };
 
-            persistence.createDataHubPersistence.mockReturnValue(
-                createMockPersistence({
+            persistence.getDataHub.mockReturnValue(
+                createMockHub({
                     loadMetricsStore: vi.fn().mockReturnValue(mockStore),
-                }),
+                }) as never,
             );
 
             flakiness.calcFlakinessEntries.mockReturnValue([]);
@@ -119,7 +119,7 @@ describe('Case19', () => {
 
             const prompt = vi.mocked(promptModule);
             const coverage = vi.mocked(coverageModule);
-            const persistence = vi.mocked(persistenceModule);
+            const persistence = vi.mocked(globalHubModule);
 
             prompt.showSelect.mockReset();
             prompt.showSelect.mockResolvedValueOnce('b').mockResolvedValueOnce('0');
@@ -133,7 +133,7 @@ describe('Case19', () => {
                 coveragePct: 60,
             });
 
-            persistence.createDataHubPersistence.mockReturnValue(createMockPersistence());
+            persistence.getDataHub.mockReturnValue(createMockHub() as never);
 
             const mod = case19Module;
             await mod.handler(baseContext);
@@ -149,12 +149,12 @@ describe('Case19', () => {
             expect.hasAssertions();
 
             const prompt = vi.mocked(promptModule);
-            const persistence = vi.mocked(persistenceModule);
+            const persistence = vi.mocked(globalHubModule);
 
             prompt.showSelect.mockReset();
             prompt.showSelect.mockResolvedValueOnce('a').mockResolvedValueOnce('0');
 
-            persistence.createDataHubPersistence.mockReturnValue(createMockPersistence());
+            persistence.getDataHub.mockReturnValue(createMockHub() as never);
 
             const mod = case19Module;
             await mod.handler(baseContext);
@@ -168,7 +168,7 @@ describe('Case19', () => {
             expect.hasAssertions();
 
             const prompt = vi.mocked(promptModule);
-            const persistence = vi.mocked(persistenceModule);
+            const persistence = vi.mocked(globalHubModule);
             const healthScore = vi.mocked(healthScoreModule);
 
             prompt.showSelect.mockReset();
@@ -188,10 +188,10 @@ describe('Case19', () => {
                 coverageHistory: [],
             };
 
-            persistence.createDataHubPersistence.mockReturnValue(
-                createMockPersistence({
+            persistence.getDataHub.mockReturnValue(
+                createMockHub({
                     loadMetricsStore: vi.fn().mockReturnValue(mockStore),
-                }),
+                }) as never,
             );
 
             healthScore.calculateHealthScore.mockReturnValueOnce({

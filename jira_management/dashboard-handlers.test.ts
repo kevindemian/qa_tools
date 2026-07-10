@@ -14,8 +14,8 @@ vi.mock('../shared/prompt.js', () => ({
     printError: vi.fn(),
     withSpinner: vi.fn((_msg: string, fn: () => unknown) => fn()),
 }));
-vi.mock('../shared/data-hub/persistence.js', () => ({
-    createDataHubPersistence: vi.fn(() => ({
+vi.mock('../shared/data-hub/global-hub.js', () => ({
+    getDataHub: vi.fn(() => ({
         loadMetricsStore: vi.fn().mockReturnValue({ runs: [] }),
     })),
 }));
@@ -185,8 +185,8 @@ describe('Case-d — dashboard menu', () => {
 
         const { showSelect } = await import('../shared/prompt.js');
         vi.mocked(showSelect).mockResolvedValue('25');
-        const { createDataHubPersistence } = await import('../shared/data-hub/persistence.js');
-        vi.mocked(createDataHubPersistence).mockReturnValue({
+        const { getDataHub } = await import('../shared/data-hub/global-hub.js');
+        vi.mocked(getDataHub).mockReturnValue({
             loadMetricsStore: vi.fn().mockReturnValue({ runs: [] }),
         } as never);
         const { writeReport } = await import('../shared/temp-dir.js');
@@ -203,12 +203,12 @@ describe('Case-d — dashboard menu', () => {
 
         const { showSelect } = await import('../shared/prompt.js');
         vi.mocked(showSelect).mockResolvedValue('26');
-        const { createDataHubPersistence } = await import('../shared/data-hub/persistence.js');
+        const { getDataHub } = await import('../shared/data-hub/global-hub.js');
         const { calcFlakinessEntries } = await import('../shared/data-hub/compute/flakiness-entries.js');
         const { calculateHealthScore } = await import('../shared/health-score.js');
         const { calculateReleaseScore, generateReleaseScoreHtml } = await import('../shared/release-score.js');
         const { writeReport } = await import('../shared/temp-dir.js');
-        vi.mocked(createDataHubPersistence).mockReturnValue({
+        vi.mocked(getDataHub).mockReturnValue({
             loadMetricsStore: vi.fn().mockReturnValue({ runs: [{ project: 'TEST' }] }),
         } as never);
         vi.mocked(calcFlakinessEntries).mockReturnValue([
@@ -272,11 +272,11 @@ describe('Case25 — Traceability Matrix', () => {
     it('loads metrics from store', async () => {
         expect.hasAssertions();
 
-        const { createDataHubPersistence } = await import('../shared/data-hub/persistence.js');
+        const { getDataHub } = await import('../shared/data-hub/global-hub.js');
         const { buildTraceabilityMatrix, generateTraceabilityHtml } = await import('../shared/traceability-matrix.js');
         const { writeReport } = await import('../shared/temp-dir.js');
         const store: MetricsStore = { runs: [makeRun('TEST')] };
-        vi.mocked(createDataHubPersistence).mockReturnValue({
+        vi.mocked(getDataHub).mockReturnValue({
             loadMetricsStore: vi.fn().mockReturnValue(store),
         } as never);
         vi.mocked(buildTraceabilityMatrix).mockReturnValue(makeTraceabilityResult());
@@ -286,7 +286,7 @@ describe('Case25 — Traceability Matrix', () => {
         const { default: case25 } = await import('./commands/case25.js');
         await case25.handler(ctx);
 
-        expect(createDataHubPersistence).toHaveBeenCalledTimes(1);
+        expect(getDataHub).toHaveBeenCalledWith();
         expect(buildTraceabilityMatrix).toHaveBeenCalledWith(store);
     });
 
@@ -353,10 +353,10 @@ describe('Case25 — Traceability Matrix', () => {
     it('handles empty metrics store gracefully', async () => {
         expect.hasAssertions();
 
-        const { createDataHubPersistence } = await import('../shared/data-hub/persistence.js');
+        const { getDataHub } = await import('../shared/data-hub/global-hub.js');
         const { buildTraceabilityMatrix } = await import('../shared/traceability-matrix.js');
         const { writeReport } = await import('../shared/temp-dir.js');
-        vi.mocked(createDataHubPersistence).mockReturnValue({
+        vi.mocked(getDataHub).mockReturnValue({
             loadMetricsStore: vi.fn().mockReturnValue({ runs: [] }),
         } as never);
         vi.mocked(buildTraceabilityMatrix).mockReturnValue(
@@ -373,8 +373,8 @@ describe('Case25 — Traceability Matrix', () => {
     it('handles loadMetrics error gracefully', async () => {
         expect.hasAssertions();
 
-        const { createDataHubPersistence } = await import('../shared/data-hub/persistence.js');
-        vi.mocked(createDataHubPersistence).mockImplementation(() => {
+        const { getDataHub } = await import('../shared/data-hub/global-hub.js');
+        vi.mocked(getDataHub).mockImplementation(() => {
             throw new Error('disk error');
         });
         const ctx = createMockContext();
@@ -418,7 +418,7 @@ describe('Case26 — Release Score', () => {
     it('filters runs by project name', async () => {
         expect.hasAssertions();
 
-        const { createDataHubPersistence } = await import('../shared/data-hub/persistence.js');
+        const { getDataHub } = await import('../shared/data-hub/global-hub.js');
         const { calcFlakinessEntries } = await import('../shared/data-hub/compute/flakiness-entries.js');
         const { calculateHealthScore } = await import('../shared/health-score.js');
         const { calculateReleaseScore, generateReleaseScoreHtml } = await import('../shared/release-score.js');
@@ -426,7 +426,7 @@ describe('Case26 — Release Score', () => {
         const store: MetricsStore = {
             runs: [makeRun('OTHER'), makeRun('TEST'), makeRun('OTHER'), makeRun('TEST')],
         };
-        vi.mocked(createDataHubPersistence).mockReturnValue({
+        vi.mocked(getDataHub).mockReturnValue({
             loadMetricsStore: vi.fn().mockReturnValue(store),
         } as never);
         vi.mocked(calculateHealthScore).mockReturnValue({
@@ -544,8 +544,8 @@ describe('Case26 — Release Score', () => {
     it('handles loadMetrics error gracefully', async () => {
         expect.hasAssertions();
 
-        const { createDataHubPersistence } = await import('../shared/data-hub/persistence.js');
-        vi.mocked(createDataHubPersistence).mockImplementation(() => {
+        const { getDataHub } = await import('../shared/data-hub/global-hub.js');
+        vi.mocked(getDataHub).mockImplementation(() => {
             throw new Error('IO error');
         });
         const ctx = createMockContext();
@@ -576,12 +576,12 @@ describe('Case26 — Release Score', () => {
     it('uses health gate pass when health >= 70', async () => {
         expect.hasAssertions();
 
-        const { createDataHubPersistence } = await import('../shared/data-hub/persistence.js');
+        const { getDataHub } = await import('../shared/data-hub/global-hub.js');
         const { calcFlakinessEntries } = await import('../shared/data-hub/compute/flakiness-entries.js');
         const { calculateHealthScore } = await import('../shared/health-score.js');
         const { calculateReleaseScore, generateReleaseScoreHtml } = await import('../shared/release-score.js');
         const { writeReport } = await import('../shared/temp-dir.js');
-        vi.mocked(createDataHubPersistence).mockReturnValue({
+        vi.mocked(getDataHub).mockReturnValue({
             loadMetricsStore: vi.fn().mockReturnValue({ runs: [makeRun('TEST')] }),
         } as never);
         vi.mocked(calcFlakinessEntries).mockReturnValue([]);
@@ -606,12 +606,12 @@ describe('Case26 — Release Score', () => {
     it('uses health gate fail when health < 70', async () => {
         expect.hasAssertions();
 
-        const { createDataHubPersistence } = await import('../shared/data-hub/persistence.js');
+        const { getDataHub } = await import('../shared/data-hub/global-hub.js');
         const { calcFlakinessEntries } = await import('../shared/data-hub/compute/flakiness-entries.js');
         const { calculateHealthScore } = await import('../shared/health-score.js');
         const { calculateReleaseScore, generateReleaseScoreHtml } = await import('../shared/release-score.js');
         const { writeReport } = await import('../shared/temp-dir.js');
-        vi.mocked(createDataHubPersistence).mockReturnValue({
+        vi.mocked(getDataHub).mockReturnValue({
             loadMetricsStore: vi.fn().mockReturnValue({ runs: [makeRun('TEST')] }),
         } as never);
         vi.mocked(calcFlakinessEntries).mockReturnValue([]);

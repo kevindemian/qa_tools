@@ -1,7 +1,7 @@
 /** Coverage gap analysis: fetch Jira issues, detect which have linked tests,
  *  calculate weighted coverage, build hierarchy rollup, and determine quality gate. */
 import { rootLogger } from './logger.js';
-import { createDataHubPersistence } from './data-hub/persistence.js';
+import { getDataHub } from './data-hub/global-hub.js';
 import type {
     JiraIssueFields,
     JiraIssueLink,
@@ -101,7 +101,8 @@ async function fetchLinkedTestsBatch(
 }
 
 function loadCoverageTrends(project: string): CoverageSnapshot[] {
-    const store = createDataHubPersistence(project).loadMetricsStore();
+    const hub = getDataHub();
+    const store = hub.loadMetricsStore();
     if (!store.coverageHistory) return [];
     return store.coverageHistory.filter((s) => s.project === project).slice(-20);
 }

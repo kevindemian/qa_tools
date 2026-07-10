@@ -1,7 +1,6 @@
 /** Scheduled tasks — run metrics, flakiness analysis, flaky auto-actions, and generate scheduled reports. */
 import { print, success, warn, info, prompt, printError, withSpinner } from '../shared/prompt.js';
 import type { GitProvider, StateContainer } from '../shared/types.js';
-import { createDataHubPersistence } from '../shared/data-hub/persistence.js';
 import { calcFlakinessEntries } from '../shared/data-hub/compute/flakiness-entries.js';
 import { calcTestDurationMap } from '../shared/data-hub/compute/test-duration-map.js';
 import { calcRunFailureRate } from '../shared/data-hub/compute/run-failure-rate.js';
@@ -154,8 +153,8 @@ export function generateWeeklyQualityReport(): void {
             warn('Nenhum projeto selecionado.');
             return;
         }
-        const persistence = createDataHubPersistence(currentProjectName);
-        const store = persistence.loadMetricsStore();
+        const hub = getDataHub();
+        const store = hub?.loadMetricsStore() ?? { runs: [] };
         let projectRuns = store.runs.filter((r) => r.project === currentProjectName);
         let failureClassifications = store.failureClassifications ?? [];
         let usingGitFallback = false;
@@ -304,8 +303,9 @@ export async function handleFlakinessDashboard(): Promise<void> {
             warn('Nenhum projeto selecionado.');
             return;
         }
-        const persistence = createDataHubPersistence(currentProjectName);
-        const store = persistence.loadMetricsStore();
+        const hub = getDataHub();
+        const store = hub?.loadMetricsStore();
+        if (!store) return;
         const projectRuns = store.runs.filter((r) => r.project === currentProjectName);
         if (projectRuns.length < 2) {
             warn('Menos de 2 execuções registradas para ' + currentProjectName + '. Execute pipelines primeiro.');

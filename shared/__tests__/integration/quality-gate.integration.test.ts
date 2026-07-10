@@ -9,13 +9,13 @@
  * - formatQualityGateJson / formatQualityGateText output
  * - DataHub parameter acceptance
  *
- * Uses vi.spyOn for createDataHubPersistence (reads from disk) but keeps
+ * Uses vi.spyOn for getDataHub (reads from disk) but keeps
  * calcFlakinessEntries real (pure function, no I/O).
  */
 import { afterEach, describe, expect, it, vi } from 'vitest';
 import type { MetricsRun } from '../../types/data-hub.js';
 import type { DataHub } from '../../types/data-hub.js';
-import * as persistenceModule from '../../data-hub/persistence.js';
+import * as globalHubModule from '../../data-hub/global-hub.js';
 
 async function loadModules() {
     const qg = await import('../../quality-gate.js');
@@ -35,7 +35,7 @@ describe('Integration: Quality Gate', () => {
         it('returns fail when no metrics data exists', async () => {
             expect.hasAssertions();
 
-            vi.spyOn(persistenceModule, 'createDataHubPersistence').mockReturnValue({
+            vi.spyOn(globalHubModule, 'getDataHub').mockReturnValue({
                 loadMetricsStore: vi.fn().mockReturnValue({ runs: [], coverageHistory: [] }),
                 saveRun: vi.fn(),
                 saveCoverageSnapshot: vi.fn(),
@@ -47,7 +47,7 @@ describe('Integration: Quality Gate', () => {
                 saveQualityMetrics: vi.fn(),
                 loadQualityMetricsHistory: vi.fn().mockReturnValue([]),
                 flush: vi.fn(),
-            });
+            } as never);
             const { runQualityGate } = await loadModules();
             const result = runQualityGate();
 
@@ -90,7 +90,7 @@ describe('Integration: Quality Gate', () => {
                 }),
             }));
 
-            vi.spyOn(persistenceModule, 'createDataHubPersistence').mockReturnValue({
+            vi.spyOn(globalHubModule, 'getDataHub').mockReturnValue({
                 loadMetricsStore: vi.fn().mockReturnValue({
                     runs,
                     coverageHistory: [
@@ -113,7 +113,7 @@ describe('Integration: Quality Gate', () => {
                 saveQualityMetrics: vi.fn(),
                 loadQualityMetricsHistory: vi.fn().mockReturnValue([]),
                 flush: vi.fn(),
-            });
+            } as never);
 
             const { runQualityGate } = await loadModules();
             const result = runQualityGate({ project: 'test-project' });
@@ -200,6 +200,22 @@ describe('Integration: Quality Gate', () => {
                 saveCoverageSnapshot: vi.fn(),
                 saveFailureClassification: vi.fn(),
                 flush: vi.fn(),
+                loadCoverageHistory: vi.fn().mockReturnValue([]),
+                loadFailureClassifications: vi.fn().mockReturnValue([]),
+                saveMetricsStore: vi.fn(),
+                loadMetricsStore: vi.fn().mockReturnValue({ runs: [] }),
+                saveParseResult: vi.fn().mockReturnValue({
+                    timestamp: new Date().toISOString(),
+                    project: '',
+                    total: 0,
+                    passed: 0,
+                    failed: 0,
+                    skipped: 0,
+                    duration: 0,
+                    tests: [],
+                }),
+                saveQualityMetrics: vi.fn(),
+                loadQualityMetricsHistory: vi.fn().mockReturnValue([]),
             };
         }
 
@@ -207,7 +223,7 @@ describe('Integration: Quality Gate', () => {
             expect.hasAssertions();
 
             // Store with runs that produce a failing health score
-            vi.spyOn(persistenceModule, 'createDataHubPersistence').mockReturnValue({
+            vi.spyOn(globalHubModule, 'getDataHub').mockReturnValue({
                 loadMetricsStore: vi.fn().mockReturnValue({
                     runs: [{ passed: 10, failed: 90, total: 100, tests: [], project: 'test' }],
                     failureClassifications: [],
@@ -222,7 +238,7 @@ describe('Integration: Quality Gate', () => {
                 saveQualityMetrics: vi.fn(),
                 loadQualityMetricsHistory: vi.fn().mockReturnValue([]),
                 flush: vi.fn(),
-            });
+            } as never);
             const { runQualityGate } = await loadModules();
             const hub = makeDataHub({ computed: { passRate: 100 } });
 
@@ -239,7 +255,7 @@ describe('Integration: Quality Gate', () => {
             expect.hasAssertions();
 
             // Store with runs that produce a failing health score
-            vi.spyOn(persistenceModule, 'createDataHubPersistence').mockReturnValue({
+            vi.spyOn(globalHubModule, 'getDataHub').mockReturnValue({
                 loadMetricsStore: vi.fn().mockReturnValue({
                     runs: [{ passed: 10, failed: 90, total: 100, tests: [], project: 'test' }],
                     failureClassifications: [],
@@ -254,7 +270,7 @@ describe('Integration: Quality Gate', () => {
                 saveQualityMetrics: vi.fn(),
                 loadQualityMetricsHistory: vi.fn().mockReturnValue([]),
                 flush: vi.fn(),
-            });
+            } as never);
             const { runQualityGate } = await loadModules();
             const hub = makeDataHub({ computed: { passRate: 100 } });
 

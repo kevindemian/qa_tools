@@ -139,6 +139,16 @@ vi.mock('../shared/http-client', () => ({
     sleep: vi.fn<(ms: number) => Promise<void>>(async () => {}),
 }));
 
+vi.mock('../shared/data-hub/global-hub.js', () => ({
+    getDataHub: vi.fn().mockReturnValue({
+        loadMetricsStore: vi.fn().mockReturnValue({ runs: [] }),
+        saveMetricsStore: vi.fn(),
+    }),
+    isDataHubInitialized: vi.fn().mockReturnValue(false),
+    setDataHub: vi.fn(),
+    ensureDataHub: vi.fn().mockResolvedValue(undefined),
+}));
+
 vi.mock('../shared/jira-client', () => ({
     __esModule: true,
     default: vi.fn(),

@@ -27,6 +27,31 @@ function createMockDataProvider(rawData: RawData): DataProvider {
     };
 }
 
+/* ── Mock Persistence ──────────────────────────────────────────────────── */
+
+const mockPersistence = {
+    loadMetricsStore: vi.fn().mockReturnValue({ runs: [] }),
+    saveMetricsStore: vi.fn(),
+    loadCoverageHistory: vi.fn().mockReturnValue([]),
+    saveCoverageSnapshot: vi.fn(),
+    loadFailureClassifications: vi.fn().mockReturnValue([]),
+    saveFailureClassification: vi.fn(),
+    saveRun: vi.fn(),
+    saveParseResult: vi.fn().mockReturnValue({
+        timestamp: new Date().toISOString(),
+        project: '',
+        total: 0,
+        passed: 0,
+        failed: 0,
+        skipped: 0,
+        duration: 0,
+        tests: [],
+    }),
+    saveQualityMetrics: vi.fn(),
+    loadQualityMetricsHistory: vi.fn().mockReturnValue([]),
+    flush: vi.fn(),
+};
+
 /* ── Fixtures ──────────────────────────────────────────────────────────── */
 
 function makeRun(id: number, overrides?: Partial<PipelineRun>): PipelineRun {
@@ -72,7 +97,7 @@ describe('System: CI Data Hub — Full Pipeline Flow', () => {
 
             const rawData: RawData = { runs, jobs: jobsMap, failureReasons: new Map(), artifacts: new Map() };
             const provider = createMockDataProvider(rawData);
-            const { hub } = await DataHubImpl.create([provider], { repo: 'owner/repo' });
+            const { hub } = await DataHubImpl.create([provider], { repo: 'owner/repo' }, mockPersistence);
 
             expect(hub.computed.passRate).toBeCloseTo(66.67, 0);
             expect(hub.raw.runs).toHaveLength(3);
@@ -86,7 +111,7 @@ describe('System: CI Data Hub — Full Pipeline Flow', () => {
 
             const rawData: RawData = { runs: [], jobs: new Map(), failureReasons: new Map(), artifacts: new Map() };
             const provider = createMockDataProvider(rawData);
-            const { hub } = await DataHubImpl.create([provider], { repo: 'owner/repo' });
+            const { hub } = await DataHubImpl.create([provider], { repo: 'owner/repo' }, mockPersistence);
 
             expect(hub.raw.runs).toHaveLength(0);
             expect(hub.computed.passRate).toBe(0);
@@ -102,7 +127,7 @@ describe('System: CI Data Hub — Full Pipeline Flow', () => {
             const runs = [makeRun(1, { conclusion: 'success' }), makeRun(2, { conclusion: 'failure' })];
             const rawData: RawData = { runs, jobs: new Map(), failureReasons: new Map(), artifacts: new Map() };
             const provider = createMockDataProvider(rawData);
-            const { hub } = await DataHubImpl.create([provider], { repo: 'owner/repo' });
+            const { hub } = await DataHubImpl.create([provider], { repo: 'owner/repo' }, mockPersistence);
 
             const store = {
                 runs: [
@@ -144,7 +169,7 @@ describe('System: CI Data Hub — Full Pipeline Flow', () => {
             ];
             const rawData: RawData = { runs, jobs: new Map(), failureReasons: new Map(), artifacts: new Map() };
             const provider = createMockDataProvider(rawData);
-            const { hub } = await DataHubImpl.create([provider], { repo: 'owner/repo' });
+            const { hub } = await DataHubImpl.create([provider], { repo: 'owner/repo' }, mockPersistence);
 
             const result = calculatePipelineCost(null, 0.01, hub);
 
@@ -166,7 +191,7 @@ describe('System: CI Data Hub — Full Pipeline Flow', () => {
 
             const rawData: RawData = { runs, jobs: jobsMap, failureReasons: new Map(), artifacts: new Map() };
             const provider = createMockDataProvider(rawData);
-            const { hub } = await DataHubImpl.create([provider], { repo: 'owner/repo' });
+            const { hub } = await DataHubImpl.create([provider], { repo: 'owner/repo' }, mockPersistence);
 
             const metricsStore = {
                 runs: [
@@ -206,7 +231,7 @@ describe('System: CI Data Hub — Full Pipeline Flow', () => {
 
             const rawData: RawData = { runs: [], jobs: new Map(), failureReasons: new Map(), artifacts: new Map() };
             const provider = createMockDataProvider(rawData);
-            const { hub } = await DataHubImpl.create([provider], { repo: 'owner/repo' });
+            const { hub } = await DataHubImpl.create([provider], { repo: 'owner/repo' }, mockPersistence);
 
             const store = {
                 runs: [
@@ -242,7 +267,7 @@ describe('System: CI Data Hub — Full Pipeline Flow', () => {
                 fetchRawData: vi.fn().mockRejectedValue(new Error('API rate limit')),
             };
 
-            const { hub } = await DataHubImpl.create([provider], { repo: 'owner/repo' });
+            const { hub } = await DataHubImpl.create([provider], { repo: 'owner/repo' }, mockPersistence);
 
             expect(hub.raw.runs).toHaveLength(0);
             expect(hub.computed.passRate).toBe(0);

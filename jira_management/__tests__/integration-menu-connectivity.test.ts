@@ -46,8 +46,8 @@ vi.mock('../../shared/state.js', () => ({
     load: vi.fn(() => ({})),
     loadState: vi.fn(() => ({})),
 }));
-vi.mock('../../shared/data-hub/persistence.js', () => ({
-    createDataHubPersistence: vi.fn(() => ({
+vi.mock('../../shared/data-hub/global-hub.js', () => ({
+    getDataHub: vi.fn(() => ({
         loadMetricsStore: vi.fn().mockReturnValue({ runs: [] }),
     })),
 }));
@@ -133,6 +133,8 @@ describe('Jira_management — getHandler registry', () => {
     beforeEach(() => vi.clearAllMocks());
 
     it('returns handler for case01', () => {
+        expect.hasAssertions();
+
         const handler = getHandler('1');
 
         expect(handler).toBeDefined();
@@ -179,12 +181,16 @@ describe('Jira_management — getHandler registry', () => {
     });
 
     it('returns handler for caseD (dashboards)', () => {
+        expect.hasAssertions();
+
         const handler = getHandler('d');
 
         expect(handler).toBeDefined();
     });
 
     it('returns null for unknown case', () => {
+        expect.hasAssertions();
+
         const handler = getHandler('99');
 
         expect(handler).toBeNull();
@@ -218,6 +224,8 @@ describe('Jira_management — case handlers are connected', () => {
     beforeEach(() => vi.clearAllMocks());
 
     it('case01 is registered and returns a handler', () => {
+        expect.hasAssertions();
+
         const handler = getHandler('1');
 
         expect(handler).toBeDefined();
@@ -225,7 +233,7 @@ describe('Jira_management — case handlers are connected', () => {
     });
 
     it('case09 updates project name', async () => {
-        expect.hasAssertions();
+        expect.assertions(1);
 
         const handler = getHandler('9');
 
@@ -247,13 +255,13 @@ describe('Jira_management — case handlers are connected', () => {
         expect(handler).not.toBeNull();
 
         const ctx = createMockContext();
-        const { createDataHubPersistence } = await import('../../shared/data-hub/persistence.js');
-        vi.mocked(createDataHubPersistence).mockReturnValue({
+        const { getDataHub } = await import('../../shared/data-hub/global-hub.js');
+        vi.mocked(getDataHub).mockReturnValue({
             loadMetricsStore: vi.fn().mockReturnValue({ runs: [] }),
         } as never);
         await (handler as (ctx: ReturnType<typeof createMockContext>) => Promise<boolean | void>)(ctx);
 
-        expect(vi.mocked(createDataHubPersistence)).toHaveBeenCalledWith(expect.anything());
+        expect(vi.mocked(getDataHub)).toHaveBeenCalledWith();
     });
 
     it('case26 calculates release score', async () => {
@@ -264,13 +272,13 @@ describe('Jira_management — case handlers are connected', () => {
         expect(handler).not.toBeNull();
 
         const ctx = createMockContext();
-        const { createDataHubPersistence } = await import('../../shared/data-hub/persistence.js');
-        vi.mocked(createDataHubPersistence).mockReturnValue({
+        const { getDataHub } = await import('../../shared/data-hub/global-hub.js');
+        vi.mocked(getDataHub).mockReturnValue({
             loadMetricsStore: vi.fn().mockReturnValue({ runs: [] }),
         } as never);
         await (handler as (ctx: ReturnType<typeof createMockContext>) => Promise<boolean | void>)(ctx);
 
-        expect(vi.mocked(createDataHubPersistence)).toHaveBeenCalledWith(expect.anything());
+        expect(vi.mocked(getDataHub)).toHaveBeenCalledWith();
     });
 
     it('case27 analyzes coverage gaps', async () => {

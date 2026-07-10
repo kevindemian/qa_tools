@@ -15,7 +15,7 @@ import {
     type TestRunTab,
     type ReportOptions,
 } from '../../shared/report-generator.js';
-import { createDataHubPersistence } from '../../shared/data-hub/persistence.js';
+import { getDataHub, isDataHubInitialized } from '../../shared/data-hub/global-hub.js';
 import { calcFlakinessEntries } from '../../shared/data-hub/compute/flakiness-entries.js';
 import { calcRunPassRate } from '../../shared/data-hub/compute/run-pass-rate.js';
 import { statsFromTests } from '../../shared/report-utils.js';
@@ -154,8 +154,9 @@ async function _postPrComment(stats: ParseResult['stats']): Promise<void> {
 
 function _loadFlakinessMap(c: CommandContext): Record<string, number> {
     try {
-        const persistence = createDataHubPersistence(c.ctx.project_name);
-        const store = persistence.loadMetricsStore();
+        if (!isDataHubInitialized()) return {};
+        const hub = getDataHub();
+        const store = hub.loadMetricsStore();
         const projectRuns = store.runs.filter((r) => r.project === c.ctx.project_name);
         const flakyEntries = projectRuns.length >= 2 ? calcFlakinessEntries(projectRuns) : [];
         const map: Record<string, number> = {};
@@ -214,9 +215,9 @@ async function _enrichHtmlWithContext(
     failedTests: FlatTest[],
 ): Promise<{ html: string; commitLog: string; storeRuns: MetricsRun[]; jiraContext: string }> {
     const commitLog = await fetchCommitLog();
-    const persistence = createDataHubPersistence(c.ctx.project_name);
-    const store = persistence.loadMetricsStore();
-    const storeRuns = store.runs;
+    const hub = isDataHubInitialized() ? getDataHub() : undefined;
+    const store = hub?.loadMetricsStore();
+    const storeRuns = store?.runs ?? [];
     const gitHtml = buildGitTrendHtml(commitLog, storeRuns);
     let enriched = html;
     if (gitHtml) {

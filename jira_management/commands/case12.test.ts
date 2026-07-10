@@ -8,7 +8,7 @@ vi.mock('../../shared/cli_base', () => ({
 const mockLoadMetricsStore = vi.hoisted(() =>
     vi.fn<() => { runs: object[]; coverageHistory?: object[] }>().mockReturnValue({ runs: [] }),
 );
-const mockCreateDataHubPersistence = vi.hoisted(() =>
+const mockGetDataHubFn = vi.hoisted(() =>
     vi
         .fn<() => { loadMetricsStore: typeof mockLoadMetricsStore }>()
         .mockReturnValue({ loadMetricsStore: mockLoadMetricsStore }),
@@ -29,8 +29,9 @@ vi.mock('../../shared/output', () => ({
     defaultOutput: { print: mockPrint },
 }));
 
-vi.mock('../../shared/data-hub/persistence', () => ({
-    createDataHubPersistence: mockCreateDataHubPersistence,
+vi.mock('../../shared/data-hub/global-hub.js', () => ({
+    getDataHub: mockGetDataHubFn,
+    isDataHubInitialized: vi.fn().mockReturnValue(true),
 }));
 
 import { tableView } from '../../shared/prompt.js';

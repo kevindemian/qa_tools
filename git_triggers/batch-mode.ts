@@ -3,7 +3,7 @@
  * Uses unified CLI args from cli-args.ts.
  */
 import { success, error, info, printError, warn, withSpinner } from '../shared/prompt.js';
-import { createDataHubPersistence } from '../shared/data-hub/persistence.js';
+import { getDataHub } from '../shared/data-hub/global-hub.js';
 import { calcFlakinessEntries } from '../shared/data-hub/compute/flakiness-entries.js';
 import { generateFlakinessHtml } from '../shared/flakiness-dashboard.js';
 import {
@@ -208,8 +208,8 @@ async function triggerAndCollectBatchPipeline(
 
 function generateFlakinessDashboard(projectName: string, publishTarget?: string): void {
     if (!currentProjectName) return;
-    const persistence = createDataHubPersistence(currentProjectName);
-    const store = persistence.loadMetricsStore();
+    const hub = getDataHub();
+    const store = hub.loadMetricsStore();
     let projectRuns = store.runs.filter((r) => r.project === currentProjectName);
     if (projectRuns.length < 2) {
         const gitRuns = generateGitMetricsRuns({ projectName: currentProjectName });
@@ -351,8 +351,8 @@ function runQuarantineMaintenance(): void {
 
 function generateTestExport(projectName: string): void {
     try {
-        const persistence = createDataHubPersistence(projectName);
-        const store = persistence.loadMetricsStore();
+        const hub = getDataHub();
+        const store = hub.loadMetricsStore();
         let projectRuns = store.runs.filter((r) => r.project === projectName);
         if (projectRuns.length === 0) {
             const gitRuns = generateGitMetricsRuns({ projectName });
