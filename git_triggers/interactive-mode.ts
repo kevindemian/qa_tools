@@ -48,6 +48,7 @@ import {
     currentProjectName,
     ensureDataHub,
     getDataHub,
+    isDataHubInitialized,
     prefetchAllProjects,
     ensureDataHubSync,
 } from './session-state.js';
@@ -139,10 +140,6 @@ const validateEnv = createValidateEnv([
         example: 'GITHUB_TOKEN=seu-token-github',
     },
 ]);
-
-function _getDataHub() {
-    return getDataHub();
-}
 
 async function handleHelp(): Promise<void> {
     await _handleHelp();
@@ -254,8 +251,7 @@ async function handleRunComparison(): Promise<boolean> {
         return false;
     }
     const hub = getDataHub();
-    const store = hub?.loadMetricsStore();
-    if (!store) return false;
+    const store = hub.loadMetricsStore();
     const projectRuns = store.runs
         .filter((r) => r.project === project)
         .sort((a, b) => new Date(a.timestamp).getTime() - new Date(b.timestamp).getTime());
@@ -344,11 +340,7 @@ function _loadProjectRunsHelper(): {
         return null;
     }
     const hub = getDataHub();
-    const store = hub?.loadMetricsStore();
-    if (!store) {
-        warn('Nenhum projeto selecionado.');
-        return null;
-    }
+    const store = hub.loadMetricsStore();
     let projectRuns = store.runs.filter((r) => r.project === currentProjectName);
     let failureClassifications = store.failureClassifications ?? [];
     let usingGitFallback = false;
@@ -378,10 +370,10 @@ async function _generateAndOpenDashboard(html: string, suffix: string, label: st
 async function _dashboardReleaseScore(): Promise<void> {
     const data = _loadProjectRunsHelper();
     if (!data) return;
-    const dataHub = _getDataHub();
+    const dataHub = getDataHub();
     const health = calculateHealthScore(
         { runs: data.projectRuns, failureClassifications: data.failureClassifications },
-        ...(dataHub ? [{ dataHub }] : []),
+        { dataHub },
     );
     const flaky = calcFlakinessEntries(data.projectRuns, 2);
     const releaseScore = calculateReleaseScore(
@@ -406,7 +398,7 @@ async function _dashboardDefectTrends(): Promise<void> {
 async function _dashboardTraceabilityMatrix(): Promise<void> {
     const data = _loadProjectRunsHelper();
     if (!data) return;
-    const dataHub = _getDataHub();
+    const dataHub = getDataHub();
     const effectiveStore = { runs: data.projectRuns, failureClassifications: data.failureClassifications };
     const matrix = buildTraceabilityMatrix(effectiveStore, undefined, dataHub);
     await _generateAndOpenDashboard(generateTraceabilityHtml(matrix), 'traceability', 'Traceability Matrix');
@@ -440,16 +432,15 @@ async function _dashboardAiComparison(): Promise<void> {
 async function _dashboardBenchmark(): Promise<void> {
     const data = _loadProjectRunsHelper();
     if (!data) return;
-    const dataHub = _getDataHub();
+    const dataHub = getDataHub();
     const projectNames = [...new Set(data.projectRuns.map((r) => r.project))];
-    const hub = getDataHub();
-    const store = hub?.loadMetricsStore() ?? { runs: [] };
+    const store = dataHub.loadMetricsStore();
     const projectBenchmarks = projectNames.map((name) => {
         const pRuns = store.runs.filter((r) => r.project === name);
         const isCurrentProject = name === currentProjectName;
         const pHealth = calculateHealthScore(
             { runs: pRuns, failureClassifications: data.failureClassifications },
-            ...(isCurrentProject && dataHub ? [{ dataHub }] : []),
+            ...(isCurrentProject ? [{ dataHub }] : []),
         );
         return {
             name,
@@ -496,10 +487,10 @@ async function _dashboardBacklogHealth(): Promise<void> {
 async function _dashboardIncidentReport(): Promise<void> {
     const data = _loadProjectRunsHelper();
     if (!data) return;
-    const dataHub = _getDataHub();
+    const dataHub = getDataHub();
     const health = calculateHealthScore(
         { runs: data.projectRuns, failureClassifications: data.failureClassifications },
-        ...(dataHub ? [{ dataHub }] : []),
+        { dataHub },
     );
     const matrix = buildTraceabilityMatrix(
         {
@@ -530,7 +521,7 @@ async function _dashboardIncidentReport(): Promise<void> {
 async function _dashboardPipelineCost(): Promise<void> {
     const data = _loadProjectRunsHelper();
     if (!data) return;
-    const dataHub = _getDataHub();
+    const dataHub = getDataHub();
     const pipelineCost = calculatePipelineCost(data.projectRuns, undefined, dataHub);
     await _generateAndOpenDashboard(generatePipelineCostHtml(pipelineCost), 'pipeline-cost', 'Pipeline Cost');
 }
@@ -538,10 +529,10 @@ async function _dashboardPipelineCost(): Promise<void> {
 async function _dashboardImpactAlert(): Promise<void> {
     const data = _loadProjectRunsHelper();
     if (!data) return;
-    const dataHub = _getDataHub();
+    const dataHub = getDataHub();
     const health = calculateHealthScore(
         { runs: data.projectRuns, failureClassifications: data.failureClassifications },
-        ...(dataHub ? [{ dataHub }] : []),
+        { dataHub },
     );
     const defects = aggregateDefectTrends(data.failureClassifications);
     const matrix = buildTraceabilityMatrix(
@@ -586,8 +577,8 @@ async function _dashboardQualityGate(): Promise<void> {
         warn('Nenhum projeto selecionado.');
         return;
     }
-    const dataHub = _getDataHub();
-    const qualityGate = runQualityGate({ project: currentProjectName, ...(dataHub ? { dataHub } : {}) });
+    const dataHub = getDataHub();
+    const qualityGate = runQualityGate({ project: currentProjectName, dataHub });
     const html = '<html><body><h1>Quality Gate</h1><pre>' + formatQualityGateText(qualityGate) + '</pre></body></html>';
     await _generateAndOpenDashboard(html, 'quality-gate', 'Quality Gate');
 }
@@ -634,9 +625,14 @@ async function _showDataHubSummary(): Promise<void> {
     try {
         info('Buscando dados do CI Data Hub...');
         await ensureDataHub();
+
+        if (!isDataHubInitialized()) {
+            warn('Nenhum dado de pipeline encontrado para este repositório.');
+            return;
+        }
         const hub = getDataHub();
 
-        if (!hub || hub.raw.runs.length === 0) {
+        if (hub.raw.runs.length === 0) {
             warn('Nenhum dado de pipeline encontrado para este repositório.');
             return;
         }
@@ -855,9 +851,8 @@ async function _initEnvironment(): Promise<void> {
     let healthScore: { score: number; grade: string } | undefined;
     try {
         const hub = getDataHub();
-        const store = hub?.loadMetricsStore() ?? { runs: [] };
-        const _hub = _getDataHub();
-        const health = calculateHealthScore(store, _hub ? { dataHub: _hub } : undefined);
+        const store = hub.loadMetricsStore();
+        const health = calculateHealthScore(store, { dataHub: hub });
         healthScore = { score: health.overall, grade: health.grade };
     } catch (err) {
         rootLogger.debug('Health score failed: ' + _getErrorMessage(err));
