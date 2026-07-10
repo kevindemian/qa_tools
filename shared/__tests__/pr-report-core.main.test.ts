@@ -1,18 +1,10 @@
 import { describe, expect, it, vi, beforeEach, afterAll } from 'vitest';
 
-const mockMetrics = vi.hoisted(() => ({
-    loadMetrics: vi.fn(),
-    saveParseResult: vi.fn(),
-    calculateFlakiness: vi.fn(),
-    getTrends: vi.fn(),
-}));
 const mockHealthScore = vi.hoisted(() => ({ calculateHealthScore: vi.fn() }));
 const mockQualityGate = vi.hoisted(() => ({ runQualityGate: vi.fn() }));
 const mockCheckRun = vi.hoisted(() => ({ createCheckRun: vi.fn() }));
 const mockPRComment = vi.hoisted(() => ({ postPrComment: vi.fn() }));
 const mockHtml = vi.hoisted(() => ({ generateHtmlReport: vi.fn() }));
-const mockCoverage = vi.hoisted(() => ({ resolveCoverage: vi.fn(), readIstanbulCoverage: vi.fn() }));
-const mockParseResult = vi.hoisted(() => vi.fn());
 const mockGetConfig = vi.hoisted(() => vi.fn());
 const mockFeatureConfig = vi.hoisted(() => ({
     isAiSkipped: vi.fn(),
@@ -31,14 +23,11 @@ vi.mock('fs', () => ({
     writeFileSync: vi.fn(),
     existsSync: vi.fn(),
 }));
-vi.mock('../metrics.js', () => mockMetrics);
 vi.mock('../health-score.js', () => mockHealthScore);
 vi.mock('../quality-gate.js', () => mockQualityGate);
 vi.mock('../github-check-run.js', () => mockCheckRun);
 vi.mock('../github-pr-comment.js', () => mockPRComment);
 vi.mock('../report-html.js', () => mockHtml);
-vi.mock('../coverage-source.js', () => mockCoverage);
-vi.mock('../result_parser.js', () => ({ parseTestResultsFile: mockParseResult }));
 vi.mock('../feature-config.js', () => ({
     getPrReportConfig: mockGetConfig,
     isAiSkipped: mockFeatureConfig.isAiSkipped,
@@ -49,7 +38,6 @@ vi.mock('../data-hub/global-hub.js', () => mockDataHub);
 
 import fs from 'node:fs';
 import { main } from '../pr-report-core.js';
-import type { FlatTest } from '../result_parser.js';
 
 const defaultHealthScore = {
     score: 80,
@@ -77,15 +65,11 @@ describe('Pr Report Core.Main', () => {
     beforeEach(() => {
         vi.clearAllMocks();
         delete process.env['GITHUB_STEP_SUMMARY'];
-        mockMetrics.loadMetrics.mockReturnValue({ runs: [] });
-        mockMetrics.calculateFlakiness.mockReturnValue([]);
-        mockMetrics.getTrends.mockReturnValue({ direction: 'stable' as const, change: 0 });
         mockHealthScore.calculateHealthScore.mockReturnValue(defaultHealthScore);
         mockQualityGate.runQualityGate.mockReturnValue(null);
         mockCheckRun.createCheckRun.mockResolvedValue(undefined);
         mockPRComment.postPrComment.mockResolvedValue(undefined);
         mockHtml.generateHtmlReport.mockReturnValue('<html>mock</html>');
-        mockCoverage.readIstanbulCoverage.mockReturnValue(undefined);
         mockGetConfig.mockReturnValue({
             enabled: true,
             publishTarget: 'github-ci',
@@ -96,11 +80,6 @@ describe('Pr Report Core.Main', () => {
         mockFeatureConfig.isAiSkipped.mockReturnValue(false);
         mockFeatureConfig.isQualitySkipped.mockReturnValue(false);
         mockFeatureConfig.isFlakySkipped.mockReturnValue(false);
-        mockParseResult.mockReturnValue({
-            tests: [] satisfies FlatTest[],
-            stats: { passed: 0, failed: 0, skipped: 0, total: 0, duration: 0 },
-            error: undefined,
-        });
         vi.mocked(fs.existsSync).mockReturnValue(true);
 
         // Mock DataHub with test data
@@ -184,11 +163,6 @@ describe('Pr Report Core.Main', () => {
         it('calls generatePrReport and posts comment on success', async () => {
             expect.hasAssertions();
 
-            mockParseResult.mockReturnValue({
-                tests: [{ title: 'test-1', state: 'passed', duration: 100 }],
-                stats: { passed: 1, failed: 0, skipped: 0, total: 1, duration: 100 },
-                error: undefined,
-            });
             mockQualityGate.runQualityGate.mockReturnValue({
                 overall: 'pass' as const,
                 score: 100,
@@ -205,11 +179,6 @@ describe('Pr Report Core.Main', () => {
         it('handles no comment URL gracefully', async () => {
             expect.hasAssertions();
 
-            mockParseResult.mockReturnValue({
-                tests: [{ title: 'test-1', state: 'passed', duration: 100 }],
-                stats: { passed: 1, failed: 0, skipped: 0, total: 1, duration: 100 },
-                error: undefined,
-            });
             mockQualityGate.runQualityGate.mockReturnValue({
                 overall: 'pass' as const,
                 score: 100,

@@ -1,22 +1,14 @@
 import * as fc from 'fast-check';
 import { describe, expect, it, vi, beforeEach, afterAll } from 'vitest';
 
-const mockMetrics = vi.hoisted(() => ({
-    loadMetrics: vi.fn(),
-    saveParseResult: vi.fn(),
-    calculateFlakiness: vi.fn(),
-    getTrends: vi.fn(),
-}));
 const mockHealthScore = vi.hoisted(() => ({ calculateHealthScore: vi.fn() }));
 const mockQualityGate = vi.hoisted(() => ({ runQualityGate: vi.fn() }));
 const mockCheckRun = vi.hoisted(() => ({ createCheckRun: vi.fn() }));
 const mockPRComment = vi.hoisted(() => ({ postPrComment: vi.fn() }));
 const mockHtml = vi.hoisted(() => ({ generateHtmlReport: vi.fn() }));
-const mockCoverage = vi.hoisted(() => ({ resolveCoverage: vi.fn(), readIstanbulCoverage: vi.fn() }));
 
 const mockGlobalHub = vi.hoisted(() => ({
     getDataHub: vi.fn().mockReturnValue({
-        loadMetricsStore: vi.fn().mockReturnValue({ runs: [] }),
         saveParseResult: vi.fn(),
         saveRun: vi.fn(),
         loadRun: vi.fn().mockReturnValue(null),
@@ -24,7 +16,6 @@ const mockGlobalHub = vi.hoisted(() => ({
         loadCoverageHistory: vi.fn().mockReturnValue([]),
         saveFailureClassification: vi.fn(),
         loadFailureClassifications: vi.fn().mockReturnValue([]),
-        saveMetricsStore: vi.fn(),
         saveQualityMetrics: vi.fn(),
         loadQualityMetricsHistory: vi.fn().mockReturnValue([]),
         flush: vi.fn(),
@@ -67,13 +58,11 @@ vi.mock('fs', () => ({
     mkdirSync: vi.fn(),
     writeFileSync: vi.fn(),
 }));
-vi.mock('../metrics.js', () => mockMetrics);
 vi.mock('../health-score.js', () => mockHealthScore);
 vi.mock('../quality-gate.js', () => mockQualityGate);
 vi.mock('../github-check-run.js', () => mockCheckRun);
 vi.mock('../github-pr-comment.js', () => mockPRComment);
 vi.mock('../report-html.js', () => mockHtml);
-vi.mock('../coverage-source.js', () => mockCoverage);
 vi.mock('../data-hub/global-hub.js', () => mockGlobalHub);
 vi.mock('../data-hub/compute/flakiness-entries.js', () => mockFlakiness);
 vi.mock('../data-hub/compute/metrics-trends.js', () => mockTrends);
@@ -113,15 +102,11 @@ describe('Pr Report Core.Property', () => {
     beforeEach(() => {
         vi.clearAllMocks();
         delete process.env['GITHUB_STEP_SUMMARY'];
-        mockMetrics.loadMetrics.mockReturnValue({ runs: [] });
-        mockMetrics.calculateFlakiness.mockReturnValue([]);
-        mockMetrics.getTrends.mockReturnValue({ direction: 'stable' as const, change: 0 });
         mockHealthScore.calculateHealthScore.mockReturnValue(defaultHealthScore);
         mockQualityGate.runQualityGate.mockReturnValue(null);
         mockCheckRun.createCheckRun.mockResolvedValue(undefined);
         mockPRComment.postPrComment.mockResolvedValue(undefined);
         mockHtml.generateHtmlReport.mockReturnValue('<html>mock</html>');
-        mockCoverage.readIstanbulCoverage.mockReturnValue(undefined);
     });
 
     afterAll(() => {

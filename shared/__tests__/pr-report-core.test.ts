@@ -24,13 +24,6 @@ vi.mock('fs', async (importOriginal) => {
     };
 });
 
-const mockMetrics = vi.hoisted(() => ({
-    loadMetrics: vi.fn(),
-    saveParseResult: vi.fn(),
-    calculateFlakiness: vi.fn(),
-    getTrends: vi.fn(),
-}));
-
 const mockHealthScore = vi.hoisted(() => ({
     calculateHealthScore: vi.fn(),
 }));
@@ -51,21 +44,13 @@ const mockHtml = vi.hoisted(() => ({
     generateHtmlReport: vi.fn(),
 }));
 
-const mockCoverage = vi.hoisted(() => ({
-    resolveCoverage: vi.fn(),
-    readIstanbulCoverage: vi.fn(),
-}));
-
-vi.mock('../metrics.js', () => mockMetrics);
 vi.mock('../health-score.js', () => mockHealthScore);
 vi.mock('../quality-gate.js', () => mockQualityGate);
 vi.mock('../github-check-run.js', () => mockCheckRun);
 vi.mock('../github-pr-comment.js', () => mockPRComment);
 vi.mock('../report-html.js', () => mockHtml);
-vi.mock('../coverage-source.js', () => mockCoverage);
 vi.mock('../data-hub/global-hub.js', () => ({
     getDataHub: vi.fn().mockReturnValue({
-        loadMetricsStore: vi.fn().mockReturnValue({ runs: [] }),
         saveParseResult: vi.fn(),
         saveRun: vi.fn(),
         loadRun: vi.fn().mockReturnValue(null),
@@ -73,7 +58,6 @@ vi.mock('../data-hub/global-hub.js', () => ({
         loadCoverageHistory: vi.fn().mockReturnValue([]),
         saveFailureClassification: vi.fn(),
         loadFailureClassifications: vi.fn().mockReturnValue([]),
-        saveMetricsStore: vi.fn(),
         saveQualityMetrics: vi.fn(),
         loadQualityMetricsHistory: vi.fn().mockReturnValue([]),
         flush: vi.fn(),
@@ -175,15 +159,11 @@ describe('Pr Report Core', () => {
     beforeEach(() => {
         vi.clearAllMocks();
         delete process.env['GITHUB_STEP_SUMMARY'];
-        mockMetrics.loadMetrics.mockReturnValue({ runs: [] });
-        mockMetrics.calculateFlakiness.mockReturnValue([]);
-        mockMetrics.getTrends.mockReturnValue({ direction: 'stable' as const, change: 0 });
         mockHealthScore.calculateHealthScore.mockReturnValue(defaultHealthScore);
         mockQualityGate.runQualityGate.mockReturnValue(null);
         mockCheckRun.createCheckRun.mockResolvedValue(undefined);
         mockPRComment.postPrComment.mockResolvedValue(undefined);
         mockHtml.generateHtmlReport.mockReturnValue('<html>mock report</html>');
-        mockCoverage.readIstanbulCoverage.mockReturnValue(undefined);
     });
 
     afterAll(() => {
@@ -329,10 +309,6 @@ describe('Pr Report Core', () => {
 
         it('skips flaky section when skipFlaky is true', async () => {
             expect.hasAssertions();
-
-            mockMetrics.calculateFlakiness.mockReturnValue([
-                { title: 'flaky test', rate: 0.5, passCount: 3, totalRuns: 6 },
-            ]);
 
             await generatePrReport({
                 tests: [sampleTest],

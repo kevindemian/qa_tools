@@ -1,14 +1,14 @@
 import fs from 'fs';
 import path from 'path';
-import type { CtrfSource, Framework } from './context.js';
+import type { TestReportSource, Framework } from './context.js';
 
 export interface DetectionResult {
     framework: Framework;
     testCmd: string;
     installCmd: string;
-    ctrfReportPath: string;
+    testReportPath: string;
     nodeVersion: string;
-    ctrfSource: CtrfSource;
+    testReportSource: TestReportSource;
 }
 
 const DEFAULTS: Record<Framework, DetectionResult> = {
@@ -16,41 +16,41 @@ const DEFAULTS: Record<Framework, DetectionResult> = {
         framework: 'cypress',
         testCmd: 'npx cypress run --reporter ctrf',
         installCmd: 'npm ci',
-        ctrfReportPath: 'cypress/reports/ctrf-report.json',
+        testReportPath: 'cypress/reports/ctrf-report.json',
         nodeVersion: '20',
-        ctrfSource: 'cli-flag',
+        testReportSource: 'cli-flag',
     },
     playwright: {
         framework: 'playwright',
         testCmd: 'npx playwright test --reporter ctrf',
         installCmd: 'npm ci && npx playwright install --with-deps',
-        ctrfReportPath: 'playwright-report/ctrf-report.json',
+        testReportPath: 'playwright-report/ctrf-report.json',
         nodeVersion: '20',
-        ctrfSource: 'cli-flag',
+        testReportSource: 'cli-flag',
     },
     jest: {
         framework: 'jest',
         testCmd: 'npx jest --reporter ctrf',
         installCmd: 'npm ci',
-        ctrfReportPath: 'reports/ctrf-report.json',
+        testReportPath: 'reports/ctrf-report.json',
         nodeVersion: '20',
-        ctrfSource: 'cli-flag',
+        testReportSource: 'cli-flag',
     },
     vitest: {
         framework: 'vitest',
         testCmd: 'npx vitest run',
         installCmd: 'npm ci',
-        ctrfReportPath: 'reports/ctrf-report.json',
+        testReportPath: 'reports/ctrf-report.json',
         nodeVersion: '20',
-        ctrfSource: 'missing',
+        testReportSource: 'missing',
     },
     generic: {
         framework: 'generic',
         testCmd: 'npm test',
         installCmd: 'npm ci',
-        ctrfReportPath: 'reports/ctrf-report.json',
+        testReportPath: 'reports/ctrf-report.json',
         nodeVersion: '20',
-        ctrfSource: 'missing',
+        testReportSource: 'missing',
     },
 };
 
@@ -66,30 +66,30 @@ const VITEST_CONFIG_NAMES = [
 ];
 
 /**
- * Pattern to detect CTRF reporter usage in a vitest/vite config file.
- * Matches:
- *   - VitestCtrfReporter
- *   - 'vitest-ctrf-json-reporter'
- *   - '@d2t/vitest-ctrf-json-reporter'
- *   - 'ctrf-json-reporter'
- *   - './shared/vitest-ctrf-reporter'
+ * Pattern to detect reporter usage in a vitest/vite config file.
+ * Matches CTRF, JUnit, and Mochawesome reporters.
  */
-const CTRF_REPORTER_PATTERN =
-    /vitest[-@]?ctrf|@[\w-]+\/vitest-ctrf|ctrf-json|\.\/.*?ctrf.*?reporter|VitestCtrfReporter/i;
+const REPORTER_PATTERNS = [
+    /vitest[-@]?ctrf|@[\w-]+\/vitest-ctrf|ctrf-json|\.\/.*?ctrf.*?reporter|VitestCtrfReporter/i,
+    /@d2t\/vitest-junit|vitest-junit-reporter|junit/i,
+    /mochawesome/i,
+];
 
 /**
- * Scans project root for a vitest/vite config file and checks if a CTRF reporter
+ * Scans project root for a vitest/vite config file and checks if a test reporter
  * is already configured. Returns true if found.
  */
-export function detectConfigCtrf(projectRoot?: string): boolean {
+export function detectTestReporter(projectRoot?: string): boolean {
     const dir = projectRoot || process.cwd();
     for (const name of VITEST_CONFIG_NAMES) {
         const configPath = path.join(dir, name);
         try {
             if (fs.existsSync(path.resolve(configPath))) {
                 const content = fs.readFileSync(path.resolve(configPath), 'utf8');
-                if (CTRF_REPORTER_PATTERN.test(content)) {
-                    return true;
+                for (const pattern of REPORTER_PATTERNS) {
+                    if (pattern.test(content)) {
+                        return true;
+                    }
                 }
             }
         } catch {
@@ -113,11 +113,11 @@ function detectFromPkg(pkg: { [key: string]: unknown }): Framework {
 }
 
 /**
- * Detect framework and CTRF configuration from a project's package.json and config files.
+ * Detect framework and test reporter configuration from a project's package.json and config files.
  *
- * For vitest projects, checks if a CTRF reporter is already configured in vitest.config.ts/vite.config.ts.
- * If found, sets ctrfSource to 'config-file' and keeps the existing test command.
- * If not found, sets ctrfSource to 'missing' (the wizard will suggest installation).
+ * For vitest projects, checks if a reporter is already configured in vitest.config.ts/vite.config.ts.
+ * If found, sets testReportSource to 'config-file' and keeps the existing test command.
+ * If not found, sets testReportSource to 'missing' (the wizard will suggest installation).
  *
  * For other frameworks, defaults to 'cli-flag' (--reporter ctrf).
  */
@@ -131,8 +131,8 @@ export function detectFramework(packageJsonPath?: string): DetectionResult {
 
         if (framework === 'vitest' || framework === 'generic') {
             const projectRoot = packageJsonPath ? path.dirname(packageJsonPath) : process.cwd();
-            if (detectConfigCtrf(projectRoot)) {
-                defaults.ctrfSource = 'config-file';
+            if (detectTestReporter(projectRoot)) {
+                defaults.testReportSource = 'config-file';
             }
         }
 

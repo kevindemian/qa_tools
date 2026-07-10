@@ -106,9 +106,9 @@ describe('Setup main', () => {
             framework: 'cypress',
             testCmd: 'npx cypress run',
             installCmd: 'npm ci',
-            ctrfReportPath: 'cypress/reports/ctrf-report.json',
+            testReportPath: 'cypress/reports/ctrf-report.json',
             nodeVersion: '20',
-            ctrfSource: 'cli-flag',
+            testReportSource: 'cli-flag',
         });
         MockWriteProjects.mockReturnValue({
             filesCreated: ['config/projects.json', 'config/providers.json'],
@@ -299,9 +299,9 @@ describe('Setup main — pr-report workflow generation', () => {
             framework: 'cypress',
             testCmd: 'npx cypress run',
             installCmd: 'npm ci',
-            ctrfReportPath: 'cypress/reports/ctrf-report.json',
+            testReportPath: 'cypress/reports/ctrf-report.json',
             nodeVersion: '20',
-            ctrfSource: 'cli-flag',
+            testReportSource: 'cli-flag',
         });
         MockWriteProjects.mockReturnValue({
             filesCreated: ['config/projects.json', 'config/providers.json'],

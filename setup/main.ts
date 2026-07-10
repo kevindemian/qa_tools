@@ -60,8 +60,8 @@ async function gatherSetupContext(): Promise<SetupContext> {
     })) as Framework;
     const testCmd = await ask('Test command [' + detection.testCmd + ']', { default: detection.testCmd });
     const installCmd = await ask('Install command [' + detection.installCmd + ']', { default: detection.installCmd });
-    const testReportPath = await ask('Test report path [' + detection.ctrfReportPath + ']', {
-        default: detection.ctrfReportPath,
+    const testReportPath = await ask('Test report path [' + detection.testReportPath + ']', {
+        default: detection.testReportPath,
         hint: 'Path to CTRF/JUnit/Mochawesome report files',
     });
     const artifactName = await ask('Artifact name [test-report]', {
@@ -95,14 +95,14 @@ async function gatherSetupContext(): Promise<SetupContext> {
     };
 
     if (
-        detection.ctrfSource === 'missing' &&
+        detection.testReportSource === 'missing' &&
         (features.qualityGate || features.flakinessDashboard || features.aiFailureAnalysis)
     ) {
         info(
-            '⚠️  Nenhum reporter CTRF detectado. O pipeline gerado usará o comando de teste existente,' +
+            '⚠️  Nenhum reporter de teste detectado. O pipeline gerado usará o comando de teste existente,' +
                 ' mas o PR report pode não ter dados de teste completos.',
         );
-        info('   Considere adicionar um reporter CTRF ao seu framework de testes.');
+        info('   Considere adicionar um reporter (CTRF, JUnit, etc.) ao seu framework de testes.');
         divider();
     }
 
@@ -111,8 +111,7 @@ async function gatherSetupContext(): Promise<SetupContext> {
         framework,
         testReportPath,
         artifactName,
-        ctrfReportPath: testReportPath, // backward compatibility
-        ctrfSource: detection.ctrfSource,
+        testReportSource: detection.testReportSource,
         nodeVersion,
         installCmd,
         testCmd,

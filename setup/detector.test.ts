@@ -1,4 +1,4 @@
-import { detectFramework, detectConfigCtrf, extractRepoFromGit } from './detector.js';
+import { detectFramework, detectTestReporter, extractRepoFromGit } from './detector.js';
 import fs from 'fs';
 
 const mockReadFileSync = vi.hoisted(() => vi.fn());
@@ -85,7 +85,7 @@ describe('Detector', () => {
         });
     });
 
-    describe('DetectConfigCtrf', () => {
+    describe('DetectTestReporter', () => {
         function mockPathEndsWith(suffix: string): (p: fs.PathLike) => boolean {
             return (p: fs.PathLike) => String(p).endsWith(suffix);
         }
@@ -107,7 +107,7 @@ describe('Detector', () => {
                 ),
             );
 
-            expect(detectConfigCtrf('/fake/project')).toBeTruthy();
+            expect(detectTestReporter('/fake/project')).toBeTruthy();
         });
 
         it('returns true when vite.config.ts contains ctrf reporter import', () => {
@@ -120,7 +120,7 @@ describe('Detector', () => {
                 ),
             );
 
-            expect(detectConfigCtrf('/fake/project')).toBeTruthy();
+            expect(detectTestReporter('/fake/project')).toBeTruthy();
         });
 
         it('returns true for @d2t/vitest-ctrf-json-reporter in config', () => {
@@ -129,7 +129,7 @@ describe('Detector', () => {
                 mockReadFileWith('vitest.config.ts', `reporters: [['@d2t/vitest-ctrf-json-reporter', {}]]`),
             );
 
-            expect(detectConfigCtrf('/fake/project')).toBeTruthy();
+            expect(detectTestReporter('/fake/project')).toBeTruthy();
         });
 
         it('returns true for vitest-ctrf-json-reporter in config', () => {
@@ -138,13 +138,13 @@ describe('Detector', () => {
                 mockReadFileWith('vitest.config.ts', `reporters: ['vitest-ctrf-json-reporter']`),
             );
 
-            expect(detectConfigCtrf('/fake/project')).toBeTruthy();
+            expect(detectTestReporter('/fake/project')).toBeTruthy();
         });
 
         it('returns false when no config file exists', () => {
             mockFsExistsSync.mockReturnValue(false);
 
-            expect(detectConfigCtrf('/fake/project')).toBeFalsy();
+            expect(detectTestReporter('/fake/project')).toBeFalsy();
         });
 
         it('returns false when config file exists but no CTRF reporter', () => {
@@ -156,7 +156,7 @@ describe('Detector', () => {
                 ),
             );
 
-            expect(detectConfigCtrf('/fake/project')).toBeFalsy();
+            expect(detectTestReporter('/fake/project')).toBeFalsy();
         });
 
         it('returns false when config file read fails', () => {
@@ -165,7 +165,7 @@ describe('Detector', () => {
                 throw new Error('ENOENT');
             });
 
-            expect(detectConfigCtrf('/fake/project')).toBeFalsy();
+            expect(detectTestReporter('/fake/project')).toBeFalsy();
         });
 
         it('returns true for ctrf-json-reporter in config', () => {
@@ -174,35 +174,35 @@ describe('Detector', () => {
                 mockReadFileWith('vitest.config.ts', `reporters: ['ctrf-json-reporter']`),
             );
 
-            expect(detectConfigCtrf('/fake/project')).toBeTruthy();
+            expect(detectTestReporter('/fake/project')).toBeTruthy();
         });
     });
 
-    describe('DetectFrameworkCtrf', () => {
-        it('returns ctrfSource=cli-flag for cypress', () => {
+    describe('DetectFrameworkTestReportSource', () => {
+        it('returns testReportSource=cli-flag for cypress', () => {
             mockFsReadFileSync.mockReturnValueOnce(JSON.stringify({ devDependencies: { cypress: '^13.0' } }));
             const result = detectFramework('/fake/package.json');
 
-            expect(result.ctrfSource).toBe('cli-flag');
+            expect(result.testReportSource).toBe('cli-flag');
         });
 
-        it('returns ctrfSource=cli-flag for playwright', () => {
+        it('returns testReportSource=cli-flag for playwright', () => {
             mockFsReadFileSync.mockReturnValueOnce(
                 JSON.stringify({ devDependencies: { '@playwright/test': '^1.40' } }),
             );
             const result = detectFramework('/fake/package.json');
 
-            expect(result.ctrfSource).toBe('cli-flag');
+            expect(result.testReportSource).toBe('cli-flag');
         });
 
-        it('returns ctrfSource=cli-flag for jest', () => {
+        it('returns testReportSource=cli-flag for jest', () => {
             mockFsReadFileSync.mockReturnValueOnce(JSON.stringify({ devDependencies: { jest: '^29.0' } }));
             const result = detectFramework('/fake/package.json');
 
-            expect(result.ctrfSource).toBe('cli-flag');
+            expect(result.testReportSource).toBe('cli-flag');
         });
 
-        it('returns ctrfSource=config-file for vitest when CTRF found in config', () => {
+        it('returns testReportSource=config-file for vitest when reporter found in config', () => {
             mockFsReadFileSync.mockReturnValueOnce(JSON.stringify({ devDependencies: { vitest: '^1.0' } }));
             mockFsExistsSync.mockImplementation((p: fs.PathLike) => String(p).endsWith('vitest.config.ts'));
             mockFsReadFileSync.mockImplementation((p: fs.PathOrFileDescriptor) => {
@@ -213,15 +213,15 @@ describe('Detector', () => {
             });
             const result = detectFramework('/fake/package.json');
 
-            expect(result.ctrfSource).toBe('config-file');
+            expect(result.testReportSource).toBe('config-file');
         });
 
-        it('returns ctrfSource=missing for vitest when no CTRF in config', () => {
+        it('returns testReportSource=missing for vitest when no reporter in config', () => {
             mockFsReadFileSync.mockReturnValueOnce(JSON.stringify({ devDependencies: { vitest: '^1.0' } }));
             mockFsExistsSync.mockReturnValue(false);
             const result = detectFramework('/fake/package.json');
 
-            expect(result.ctrfSource).toBe('missing');
+            expect(result.testReportSource).toBe('missing');
         });
 
         it('vitest testCmd does not include --reporter ctrf', () => {

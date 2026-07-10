@@ -5,7 +5,7 @@
  * This script is the entry point for generating PR reports.
  * It imports main() from shared/pr-report-core.ts and passes the provider factory.
  *
- * Usage: npx tsx git_triggers/pr-report-entry.ts --ctrf <path> --project <name>
+ * Usage: npx tsx git_triggers/pr-report-entry.ts --project <name>
  */
 import { createGitProvider } from './git-provider-factory.js';
 import { rootLogger } from '../shared/logger.js';

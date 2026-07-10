@@ -24,18 +24,10 @@ function makeMockProvider(overrides?: Partial<GitProvider>): GitProvider {
     } as GitProvider;
 }
 
-const mockMetrics = vi.hoisted(() => ({
-    loadMetrics: vi.fn(),
-    saveParseResult: vi.fn(),
-    calculateFlakiness: vi.fn(),
-    getTrends: vi.fn(),
-}));
 const mockQualityGate = vi.hoisted(() => ({ runQualityGate: vi.fn() }));
 const mockCheckRun = vi.hoisted(() => ({ createCheckRun: vi.fn() }));
 const mockPRComment = vi.hoisted(() => ({ postPrComment: vi.fn() }));
 const mockHtml = vi.hoisted(() => ({ generateHtmlReport: vi.fn() }));
-const mockCoverage = vi.hoisted(() => ({ resolveCoverage: vi.fn(), readIstanbulCoverage: vi.fn() }));
-const mockParseResult = vi.hoisted(() => vi.fn());
 const mockGetConfig = vi.hoisted(() => vi.fn());
 const mockFeatureConfig = vi.hoisted(() => ({
     isAiSkipped: vi.fn(),
@@ -54,13 +46,10 @@ vi.mock('fs', () => ({
     writeFileSync: vi.fn(),
     existsSync: vi.fn(),
 }));
-vi.mock('../metrics.js', () => mockMetrics);
 vi.mock('../quality-gate.js', () => mockQualityGate);
 vi.mock('../github-check-run.js', () => mockCheckRun);
 vi.mock('../github-pr-comment.js', () => mockPRComment);
 vi.mock('../report-html.js', () => mockHtml);
-vi.mock('../coverage-source.js', () => mockCoverage);
-vi.mock('../result_parser.js', () => ({ parseTestResultsFile: mockParseResult }));
 vi.mock('../feature-config.js', () => ({
     getPrReportConfig: mockGetConfig,
     isAiSkipped: mockFeatureConfig.isAiSkipped,
@@ -71,7 +60,6 @@ vi.mock('../ci-data.js', () => mockCiData);
 
 import fs from 'node:fs';
 import { main } from '../pr-report-core.js';
-import type { FlatTest } from '../result_parser.js';
 
 describe('TryCreateDataHub wiring', () => {
     beforeEach(() => {
@@ -86,14 +74,10 @@ describe('TryCreateDataHub wiring', () => {
         delete process.env['CI_JOB_TOKEN'];
         delete process.env['CI_PROJECT_ID'];
 
-        mockMetrics.loadMetrics.mockReturnValue({ runs: [] });
-        mockMetrics.calculateFlakiness.mockReturnValue([]);
-        mockMetrics.getTrends.mockReturnValue({ direction: 'stable' as const, change: 0 });
         mockQualityGate.runQualityGate.mockReturnValue(null);
         mockCheckRun.createCheckRun.mockResolvedValue(undefined);
         mockPRComment.postPrComment.mockResolvedValue(undefined);
         mockHtml.generateHtmlReport.mockReturnValue('<html>mock</html>');
-        mockCoverage.readIstanbulCoverage.mockReturnValue(undefined);
         mockGetConfig.mockReturnValue({
             enabled: true,
             publishTarget: 'github-ci',
@@ -104,11 +88,6 @@ describe('TryCreateDataHub wiring', () => {
         mockFeatureConfig.isAiSkipped.mockReturnValue(false);
         mockFeatureConfig.isQualitySkipped.mockReturnValue(false);
         mockFeatureConfig.isFlakySkipped.mockReturnValue(false);
-        mockParseResult.mockReturnValue({
-            tests: [] satisfies FlatTest[],
-            stats: { passed: 0, failed: 0, skipped: 0, total: 0, duration: 0 },
-            error: undefined,
-        });
         mockCiData.getOrFetchDataHub.mockResolvedValue(null);
         mockCiData.persistCurrentRun.mockResolvedValue(undefined);
         mockCiData.ensureDataHubSync.mockResolvedValue(undefined);
@@ -116,7 +95,7 @@ describe('TryCreateDataHub wiring', () => {
     });
 
     describe('Main without providerFactory', () => {
-        it('calls main without factory — fallback to MetricsStore', async () => {
+        it('calls main without factory — no DataHub fetch', async () => {
             expect.hasAssertions();
 
             await main();
@@ -158,7 +137,6 @@ describe('TryCreateDataHub wiring', () => {
             const mockDataHub = {
                 raw: { runs: [], pipelineRuns: [] },
                 computed: { passRate: 85, coverage: 75, executionRate: 77, flakyPercentage: 12, suiteSpeedP95: 500 },
-                loadMetricsStore: vi.fn().mockReturnValue({ runs: [] }),
                 saveParseResult: vi.fn().mockReturnValue({}),
                 saveRun: vi.fn(),
                 saveCoverageSnapshot: vi.fn(),
@@ -166,7 +144,6 @@ describe('TryCreateDataHub wiring', () => {
                 flush: vi.fn(),
                 loadCoverageHistory: vi.fn().mockReturnValue([]),
                 loadFailureClassifications: vi.fn().mockReturnValue([]),
-                saveMetricsStore: vi.fn(),
                 saveQualityMetrics: vi.fn(),
                 loadQualityMetricsHistory: vi.fn().mockReturnValue([]),
             };
@@ -178,7 +155,7 @@ describe('TryCreateDataHub wiring', () => {
             expect(mockGlobalHub.setDataHub).toHaveBeenCalledWith(mockDataHub);
         });
 
-        it('falls back to MetricsStore when factory returns undefined', async () => {
+        it('does not fetch DataHub when factory returns undefined', async () => {
             expect.hasAssertions();
 
             process.env['CI'] = 'true';

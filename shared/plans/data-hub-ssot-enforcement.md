@@ -3526,7 +3526,9 @@ rg "loadMetricsStore" shared/quality-gate.ts         # 0 ocorrências
 
 **Objetivo:** `generatePrReport()` usa exclusivamente DataHub. CTRF direto é removido (self-reference bug). ci-injector gera workflow genérico sem auto-referenciamento. Wizard pergunta `testReportPath` e `artifactName`.
 
-**Problema:** CTRF report é produzido pela suite de testes do qa_tools. `pr-report-core.ts` lê esse CTRF diretamente — gerando relatório sobre si mesmo em vez do projeto externo. DataHub já busca artifacts via GitHub API (`github-provider.ts:48-56`) e parseia CTRF/JUnit/Mochawesome (`artifact-parser.ts`). pr-report NUNCA deve tocar CTRF no filesystem.
+**Status (2026-07-10):** Produção já migrada. Resta limpeza de mocks mortos, refatoração do detector para genérico, substituição de `CtrfSource` por `TestReportSource`, e atualização de composite action.
+
+**Problema original:** CTRF report é produzido pela suite de testes do qa_tools. `pr-report-core.ts` lê esse CTRF diretamente — gerando relatório sobre si mesmo em vez do projeto externo. DataHub já busca artifacts via GitHub API (`github-provider.ts:48-56`) e parseia CTRF/JUnit/Mochawesome (`artifact-parser.ts`). pr-report NUNCA deve tocar CTRF no filesystem.
 
 **Fluxo correto:**
 
@@ -3536,76 +3538,142 @@ Projeto externo: CI produz CTRF/JUnit/Mochawesome → upload como artifact
 → main() lê de dataHub.computed.metricsRuns → generatePrReport()
 ```
 
-#### 3.1 — Remover CTRF de pr-report-core.ts
+#### 3.1 — Remover CTRF de pr-report-core.ts (JÁ FEITO na Fase 0.8+)
 
-| Item   | Linha   | Bypass                                    | Mudança                                             |
-| ------ | ------- | ----------------------------------------- | --------------------------------------------------- |
-| 3.1.1  | 36      | `import { readIstanbulCoverage }`         | Remover import                                      |
-| 3.1.2  | 37      | `import { parseTestResultsFile }`         | Remover import                                      |
-| 3.1.3  | 38      | `import type { ParseResult }`             | Remover `ParseResult` do import (manter `FlatTest`) |
-| 3.1.4  | 643     | `ctrfPath: string` em CliOptions          | Remover campo                                       |
-| 3.1.5  | 653     | `ctrfPath: 'reports/ctrf-report.json'`    | Remover default                                     |
-| 3.1.6  | 673-674 | `--ctrf` help text                        | Remover                                             |
-| 3.1.7  | 684-685 | `--ctrf` case em parseArgs                | Remover                                             |
-| 3.1.8  | 745-748 | `if (!fs.existsSync(opts.ctrfPath))`      | Remover check                                       |
-| 3.1.9  | 750-754 | `parseTestResultsFile(opts.ctrfPath)`     | Remover parsing                                     |
-| 3.1.10 | 791-792 | `store.runs` diff comparison via CTRF     | Usar `dataHub.computed.metricsRuns`                 |
-| 3.1.11 | 795-801 | `result.tests` / `result.stats` from CTRF | Extrair de `dataHub.computed.metricsRuns[0]`        |
+| Item   | Linha   | Bypass                                    | Status  |
+| ------ | ------- | ----------------------------------------- | ------- |
+| 3.1.1  | 36      | `import { readIstanbulCoverage }`         | ✅ Done |
+| 3.1.2  | 37      | `import { parseTestResultsFile }`         | ✅ Done |
+| 3.1.3  | 38      | `import type { ParseResult }`             | ✅ Done |
+| 3.1.4  | 643     | `ctrfPath: string` em CliOptions          | ✅ Done |
+| 3.1.5  | 653     | `ctrfPath: 'reports/ctrf-report.json'`    | ✅ Done |
+| 3.1.6  | 673-674 | `--ctrf` help text                        | ✅ Done |
+| 3.1.7  | 684-685 | `--ctrf` case em parseArgs                | ✅ Done |
+| 3.1.8  | 745-748 | `if (!fs.existsSync(opts.ctrfPath))`      | ✅ Done |
+| 3.1.9  | 750-754 | `parseTestResultsFile(opts.ctrfPath)`     | ✅ Done |
+| 3.1.10 | 791-792 | `store.runs` diff comparison via CTRF     | ✅ Done |
+| 3.1.11 | 795-801 | `result.tests` / `result.stats` from CTRF | ✅ Done |
 
-#### 3.2 — Migrar funções para DataHub
+#### 3.2 — Migrar funções para DataHub (JÁ FEITO na Fase 0.8+)
 
-| Item  | Função                       | Linha | Mudança                                                                                                                |
-| ----- | ---------------------------- | ----- | ---------------------------------------------------------------------------------------------------------------------- |
-| 3.2.1 | `resolveCoverageForReport()` | 393   | Remover `readIstanbulCoverage()` fallback → `return undefined`                                                         |
-| 3.2.2 | `buildFlakySection()`        | 180   | Nova assinatura: `buildFlakySection(dataHub?: DataHub)` — usar `dataHub?.computed.flakinessEntries`                    |
-| 3.2.3 | `generateHtmlReportFile()`   | 396   | Substituir `store: MetricsStore` por `dataHub?: DataHub` — usar `computed.flakinessEntries` e `computed.metricsTrends` |
-| 3.2.4 | `generatePrReport()`         | 494   | Remover `const store = hub?.loadMetricsStore()` — passar `dataHub` para funções auxiliares                             |
+| Item  | Função                       | Status  |
+| ----- | ---------------------------- | ------- |
+| 3.2.1 | `resolveCoverageForReport()` | ✅ Done |
+| 3.2.2 | `buildFlakySection()`        | ✅ Done |
+| 3.2.3 | `generateHtmlReportFile()`   | ✅ Done |
+| 3.2.4 | `generatePrReport()`         | ✅ Done |
 
-#### 3.3 — Remover imports mortos
+#### 3.3 — Atualizar ci-injector.ts (JÁ FEITO na Fase 0.8+)
 
-| Item  | Import                                  | Ação                        |
-| ----- | --------------------------------------- | --------------------------- |
-| 3.3.1 | `import { readIstanbulCoverage }` (L36) | Remover                     |
-| 3.3.2 | `import { parseTestResultsFile }` (L37) | Remover                     |
-| 3.3.3 | `import type { ParseResult }` (L38)     | Remover (manter `FlatTest`) |
+| Item        | Status  |
+| ----------- | ------- |
+| 3.4.1-3.4.8 | ✅ Done |
 
-#### 3.4 — Atualizar ci-injector.ts (gerador de YAML)
+#### 3.4 — Atualizar wizard (JÁ FEITO na Fase 0.8+)
 
-| Item  | Linha  | Mudança                                                                                                                                                                |
-| ----- | ------ | ---------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| 3.4.1 | 17     | Remover `const CTRF_DEFAULT = 'reports/ctrf-report.json'`                                                                                                              |
-| 3.4.2 | 23-28  | Substituir `ctrfPath?: string` por `testReportPath: string` + `artifactName: string` em `PostProcessWorkflowOptions`                                                   |
-| 3.4.3 | 35     | Substituir `ctrfPath` por `testReportPath`                                                                                                                             |
-| 3.4.4 | 49-53  | Substituir input `ctrf-path` por `test-report-path` (default: testReportPath)                                                                                          |
-| 3.4.5 | —      | Adicionar input `artifact-name` (default: artifactName)                                                                                                                |
-| 3.4.6 | 66-70  | Substituir "Download CTRF report" por "Upload test report" — `actions/upload-artifact` com `name: ${{ inputs.artifact-name }}`, `path: ${{ inputs.test-report-path }}` |
-| 3.4.7 | 74-78  | Remover check `if [ ! -f ... ]` e `--ctrf` — run simplificado: `npx tsx git_triggers/pr-report-entry.ts --project ${{ inputs.project-name }}`                          |
-| 3.4.8 | 94-101 | Atualizar `generatePostProcessWorkflowFromContext` — usar `ctx.testReportPath` e `ctx.artifactName`                                                                    |
+| Item        | Status  |
+| ----------- | ------- |
+| 3.5.1-3.5.7 | ✅ Done |
 
-#### 3.5 — Atualizar wizard (setup/main.ts + setup/context.ts)
+#### 3.5 — Limpar mocks mortos em 5 testes pr-report-core
 
-| Item  | Arquivo            | Mudança                                                                       |
-| ----- | ------------------ | ----------------------------------------------------------------------------- |
-| 3.5.1 | `context.ts`       | Substituir `ctrfReportPath: string` por `testReportPath: string`              |
-| 3.5.2 | `context.ts`       | Adicionar `artifactName: string`                                              |
-| 3.5.3 | `main.ts:63-65`    | Renomear pergunta para "Test report path" (default: detection.ctrfReportPath) |
-| 3.5.4 | `main.ts`          | Adicionar pergunta: "Artifact name ['test-report']" (default: `test-report`)  |
-| 3.5.5 | `main.ts:104-117`  | Atualizar return para incluir `testReportPath` e `artifactName`               |
-| 3.5.6 | `config-writer.ts` | Atualizar `writeFeaturesConfig` se referenciar `ctrfReportPath`               |
-| 3.5.7 | `detector.ts`      | Manter detecção (ctrfReportPath é usado como default para testReportPath)     |
+| Item  | Arquivo                                                   | Ação                                                                                                                                  | Checkpoint  |
+| ----- | --------------------------------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------- | ----------- |
+| 3.5.1 | `shared/__tests__/pr-report-core.test.ts`                 | Remover mocks `../metrics.js`, `../coverage-source.js`, `readIstanbulCoverage`, `loadMetricsStore`/`saveMetricsStore` do DataHub mock | vitest pass |
+| 3.5.2 | `shared/__tests__/pr-report-core.property.test.ts`        | Mesmos mocks mortos                                                                                                                   | vitest pass |
+| 3.5.3 | `shared/__tests__/pr-report-core.wiring.property.test.ts` | Mesmos + mock `parseTestResultsFile`                                                                                                  | vitest pass |
+| 3.5.4 | `shared/__tests__/pr-report-core.wiring.test.ts`          | Mesmos + mock `parseTestResultsFile` + renomear testes "MetricsStore"                                                                 | vitest pass |
+| 3.5.5 | `shared/__tests__/pr-report-core.main.test.ts`            | Mocks `../metrics.js`, `../coverage-source.js`, `parseTestResultsFile`                                                                | vitest pass |
 
-#### 3.6 — Testes
+#### 3.6 — Remover `loadMetricsStore`/`saveMetricsStore` de todos os mocks DataHub
 
-| Item  | Teste                                                     | Ação                                                                                    |
-| ----- | --------------------------------------------------------- | --------------------------------------------------------------------------------------- |
-| 3.6.1 | `shared/__tests__/pr-report-core.test.ts`                 | Remover mocks readIstanbulCoverage/parseTestResultsFile, adicionar computed.metricsRuns |
-| 3.6.2 | `shared/__tests__/pr-report-core.property.test.ts`        | Mesmo                                                                                   |
-| 3.6.3 | `shared/__tests__/pr-report-core.wiring.property.test.ts` | Mesmo                                                                                   |
-| 3.6.4 | `shared/__tests__/pr-report-core.wiring.test.ts`          | Remover parseTestResultsFile mock                                                       |
-| 3.6.5 | `shared/__tests__/pr-report-core.main.test.ts`            | Reescrever — remover mocks CTRF, testar fluxo DataHub                                   |
-| 3.6.6 | `shared/ci-injector.test.ts`                              | Atualizar para novos inputs (testReportPath, artifactName)                              |
-| 3.6.7 | `setup/main.test.ts`                                      | Atualizar mocks para testReportPath/artifactName                                        |
-| 3.6.8 | `setup/detector.test.ts`                                  | Manter (detecção não muda)                                                              |
+| Item  | Arquivo                                                   | Ação                                                          |
+| ----- | --------------------------------------------------------- | ------------------------------------------------------------- |
+| 3.6.1 | `shared/__tests__/pr-report-core.test.ts`                 | Remover `loadMetricsStore`/`saveMetricsStore` do mock DataHub |
+| 3.6.2 | `shared/__tests__/pr-report-core.property.test.ts`        | Idem                                                          |
+| 3.6.3 | `shared/__tests__/pr-report-core.wiring.property.test.ts` | Idem                                                          |
+| 3.6.4 | `shared/__tests__/pr-report-core.wiring.test.ts`          | Idem                                                          |
+| 3.6.5 | `shared/__tests__/pr-report.test.ts`                      | Remover dos 2 DataHub mocks (L105, L113, L714, L720)          |
+
+#### 3.7 — Atualizar `setup/templates/github-ci.ts` composite action
+
+| Item  | Linha | Ação                                                                                              |
+| ----- | ----- | ------------------------------------------------------------------------------------------------- |
+| 3.7.1 | 22    | Substituir `ctrf-path:` por `test-report-path:`                                                   |
+| 3.7.2 | 23-25 | Atualizar description + default                                                                   |
+| 3.7.3 | 35    | Substituir `--ctrf ${{ inputs.ctrf-path }}` por `$ {{ inputs.test-report-path }}` (sem flag CTRF) |
+| 3.7.4 | 35    | Substituir `shared/pr-report-core.ts` por `git_triggers/pr-report-entry.ts`                       |
+| 3.7.5 | —     | Adicionar input `artifact-name:` com default `test-report`                                        |
+
+#### 3.8 — Atualizar testes de `github-ci.ts`
+
+| Item  | Arquivo                             | Ação                                                                      |
+| ----- | ----------------------------------- | ------------------------------------------------------------------------- |
+| 3.8.1 | `setup/templates/github-ci.test.ts` | Atualizar asserts para novos inputs (`test-report-path`, `artifact-name`) |
+
+#### 3.9 — Refatorar `detector.ts` para genérico
+
+| Item  | Ação                                                                                |
+| ----- | ----------------------------------------------------------------------------------- |
+| 3.9.1 | Renomear `ctrfReportPath` → `testReportPath` em `DetectionResult`                   |
+| 3.9.2 | Renomear `ctrfSource: CtrfSource` → `testReportSource: TestReportSource`            |
+| 3.9.3 | Renomear `detectConfigCtrf()` → `detectTestReporter()`                              |
+| 3.9.4 | Expandir `CTRF_REPORTER_PATTERN` para patterns genéricos (CTRF, JUnit, Mochawesome) |
+| 3.9.5 | Atualizar DEFAULTS para usar novos nomes                                            |
+
+#### 3.10 — Substituir `CtrfSource` por `TestReportSource` em `context.ts`
+
+| Item   | Ação                                                                     |
+| ------ | ------------------------------------------------------------------------ |
+| 3.10.1 | Renomear `CtrfSource` → `TestReportSource`                               |
+| 3.10.2 | Remover `@deprecated ctrfReportPath` (L19-20)                            |
+| 3.10.3 | Renomear `ctrfSource: CtrfSource` → `testReportSource: TestReportSource` |
+
+#### 3.11 — Atualizar `main.ts` para usar novos campos
+
+| Item   | Linha | Ação                                                                                             |
+| ------ | ----- | ------------------------------------------------------------------------------------------------ |
+| 3.11.1 | 63-64 | Substituir `detection.ctrfReportPath` por `detection.testReportPath`                             |
+| 3.11.2 | 98    | Substituir `detection.ctrfSource` por `detection.testReportSource`                               |
+| 3.11.3 | 114   | Remover `ctrfReportPath: testReportPath, // backward compatibility`                              |
+| 3.11.4 | 115   | Substituir `ctrfSource: detection.ctrfSource` por `testReportSource: detection.testReportSource` |
+
+#### 3.12 — Limpar comentários stale
+
+| Item   | Arquivo                           | Linha | Ação                                      |
+| ------ | --------------------------------- | ----- | ----------------------------------------- |
+| 3.12.1 | `shared/pr-report-core.ts`        | 72    | "MetricsStore" → "DataHub"                |
+| 3.12.2 | `shared/pr-report-core.ts`        | 81    | Remover referência a "MetricsStore local" |
+| 3.12.3 | `git_triggers/pr-report-entry.ts` | 8     | Remover `--ctrf` do usage comment         |
+
+#### 3.13 — Atualizar mocks `SetupContext` em 6 arquivos de teste
+
+| Item   | Arquivo                                            | Ação                                                 |
+| ------ | -------------------------------------------------- | ---------------------------------------------------- |
+| 3.13.1 | `shared/ci-injector.test.ts`                       | Remover `ctrfReportPath` do mock (L282)              |
+| 3.13.2 | `setup/templates/github-ci.test.ts`                | Remover `ctrfReportPath` (L10)                       |
+| 3.13.3 | `setup/templates/gitlab-ci.test.ts`                | Remover `ctrfReportPath` (L9)                        |
+| 3.13.4 | `setup/templates/qa-post-process-workflow.test.ts` | Remover `ctrfReportPath` (L11)                       |
+| 3.13.5 | `setup/templates/pre-push-hook.test.ts`            | Remover `ctrfReportPath` (L9)                        |
+| 3.13.6 | `setup/main.test.ts`                               | Atualizar mocks para `testReportSource` (L109, L302) |
+
+#### 3.14 — Atualizar `detector.test.ts`
+
+| Item   | Ação                                                         |
+| ------ | ------------------------------------------------------------ |
+| 3.14.1 | Renomear todos `ctrfSource` → `testReportSource` nos asserts |
+| 3.14.2 | Renomear `ctrfReportPath` → `testReportPath` nos asserts     |
+| 3.14.3 | Renomear testes que mencionam "CTRF" para genéricos          |
+
+#### 3.15 — Testes
+
+| Item   | Teste                                      | Ação                               |
+| ------ | ------------------------------------------ | ---------------------------------- |
+| 3.15.1 | `shared/__tests__/pr-report-core*.test.ts` | Todos passam com mocks limpos      |
+| 3.15.2 | `shared/ci-injector.test.ts`               | Passa com novos inputs             |
+| 3.15.3 | `setup/main.test.ts`                       | Passa com novos campos             |
+| 3.15.4 | `setup/detector.test.ts`                   | Passa com `TestReportSource`       |
+| 3.15.5 | `setup/templates/*.test.ts`                | Todos passam com mocks atualizados |
 
 **Checkpoint Fase 3:**
 
@@ -3613,22 +3681,24 @@ Projeto externo: CI produz CTRF/JUnit/Mochawesome → upload como artifact
 # TypeScript
 npx tsc --noEmit                                    # 0 erros
 
-# Testes
-npx vitest run shared/__tests__/pr-report-core*       # 100% pass
-npx vitest run shared/__tests__/pr-report.test.ts     # 100% pass
-npx vitest run shared/ci-injector.test.ts             # 100% pass
-npx vitest run setup/main.test.ts                     # 100% pass
+# Testes pr-report-core
+npx vitest run shared/__tests__/pr-report-core*     # 100% pass
+npx vitest run shared/__tests__/pr-report.test.ts   # 100% pass
 
-# Nenhum CTRF direto em pr-report-core
-rg "readIstanbulCoverage|parseTestResultsFile" shared/pr-report-core.ts  # 0 ocorrências
-rg "ctrf" shared/pr-report-core.ts                                     # 0 ocorrências
-rg "store\.runs" shared/pr-report-core.ts                              # 0 ocorrências
+# Testes ci-injector
+npx vitest run shared/ci-injector.test.ts           # 100% pass
 
-# ci-injector sem CTRF
-rg "ctrf" shared/ci-injector.ts                                        # 0 ocorrências
+# Testes setup
+npx vitest run setup/                               # 100% pass
 
-# Wizard com novos campos
-rg "testReportPath|artifactName" setup/context.ts                      # >= 2 ocorrências
+# Nenhum ctrfPath em código (excluindo detector, vitest-ctrf-reporter, coverage-source)
+rg "ctrfPath" --type ts -l | grep -v "vitest-ctrf\|coverage-source\|result_parser\|__tests__"  # 0
+
+# Nenhum loadMetricsStore restante em mocks de teste
+rg "loadMetricsStore" shared/__tests__/ -l          # 0
+
+# Nenhum CtrfSource em produção
+rg "CtrfSource" --type ts -l | grep -v "__tests__\|vitest-ctrf\|result_parser"  # 0
 ```
 
 ---
@@ -3991,25 +4061,28 @@ echo "6. Nenhum store.runs fora do data-hub:" && \
 
 ## AUDIT TRAIL
 
-| Data       | Decisão                                                                                   | Motivo                                                                   | Autor   |
-| ---------- | ----------------------------------------------------------------------------------------- | ------------------------------------------------------------------------ | ------- |
-| 2026-07-09 | Inverter ordem: migrar primeiro, deletar depois                                           | Menos traumático, eficiente, consumidores silenciosos aparecem em testes | Usuário |
-| 2026-07-09 | Adicionar `dataHub?: DataHub` ao `CommandContext`                                         | Desbloqueia 6 case handlers de uma vez                                   | Plano   |
-| 2026-07-09 | Manter `store.ts` como implementação interna do DataHub                                   | `persistence.ts` depende dele; não é bypass se for interno               | Plano   |
-| 2026-07-09 | Tornar DataHub obrigatório (nunca opcional) em health-score, quality-gate, pr-report-core | Elimina caminhos de fallback que escondem bypasses                       | Plano   |
-| 2026-07-09 | Checkpoint testável obrigatório para cada fase                                            | Evitar repetir o falso "✅" do Phase 22                                  | Usuário |
-| 2026-07-09 | Zero erros silenciosos — catch blocks DEVE usar `extractErrorMessage` + `humanizeError`   | Erros silenciosos = defeito de segurança. Tratamento eufêmico é proibido | Usuário |
-| 2026-07-09 | humanizeError DEVE cobrir padrões de erro de CI/GitHub/GitLab antes da migração           | Padrões insuficientes para o domínio DataHub                             | Plano   |
-| 2026-07-09 | Test factories são ÚNICA fonte de dados de teste — copies de saída proibidas              | Copiar output = codificar bugs como features                             | Usuário |
-| 2026-07-09 | Integration tests + PBT têm prioridade sobre unit tests para DataHub                      | DataHub é cross-camada — unit tests não cobrem o fluxo real              | Usuário |
-| 2026-07-09 | BadTesting (`toBeDefined()` sozinho) = teatro → corrigir ou deletar                       | Testes que passam sem verificar comportamento são pior que sem teste     | Usuário |
-| 2026-07-10 | CTRF em pr-report é self-reference bug — remover, DataHub lê artifacts via API            | pr-report gerava relatório sobre si próprio, não sobre projeto externo   | Usuário |
-| 2026-07-10 | ci-injector gera YAML genérico — sem auto-referenciamento a qa_tools                      | Projeto gerenciado ≠ qa_tools; workflow deve ser genérico                | Usuário |
-| 2026-07-10 | Wizard pergunta testReportPath + artifactName — info explicitamente pedida ao usuário     | ci-injector precisa desses dados; wizard deve coletá-los                 | Usuário |
-| 2026-07-10 | ci-injector injeta upload de artifact no test job (Opção A) — fluxo completo e automático | External project não precisa configurar upload manualmente               | Usuário |
-| 2026-07-10 | loadMetricsStore() é bypass legítimo para dados raw — ELIMINAR, migrar 18 consumers       | loadMetricsStore expõe persistence diretamente, viola SSOT               | Usuário |
-| 2026-07-10 | CommandContext.dataHub DEVE ser obrigatório — eliminate 7 ocorrências de `?`              | `?` opcional herda optionality para todos os downstream                  | Usuário |
-| 2026-07-10 | Design Gaps 1-2 (Validação Zod + Provenance) planejados para esta sessão                  | Dados sem validação = metrics incorretas silenciosamente                 | Usuário |
+| Data       | Decisão                                                                                   | Motivo                                                                   | Autor    |
+| ---------- | ----------------------------------------------------------------------------------------- | ------------------------------------------------------------------------ | -------- |
+| 2026-07-09 | Inverter ordem: migrar primeiro, deletar depois                                           | Menos traumático, eficiente, consumidores silenciosos aparecem em testes | Usuário  |
+| 2026-07-09 | Adicionar `dataHub?: DataHub` ao `CommandContext`                                         | Desbloqueia 6 case handlers de uma vez                                   | Plano    |
+| 2026-07-09 | Manter `store.ts` como implementação interna do DataHub                                   | `persistence.ts` depende dele; não é bypass se for interno               | Plano    |
+| 2026-07-09 | Tornar DataHub obrigatório (nunca opcional) em health-score, quality-gate, pr-report-core | Elimina caminhos de fallback que escondem bypasses                       | Plano    |
+| 2026-07-09 | Checkpoint testável obrigatório para cada fase                                            | Evitar repetir o falso "✅" do Phase 22                                  | Usuário  |
+| 2026-07-09 | Zero erros silenciosos — catch blocks DEVE usar `extractErrorMessage` + `humanizeError`   | Erros silenciosos = defeito de segurança. Tratamento eufêmico é proibido | Usuário  |
+| 2026-07-09 | humanizeError DEVE cobrir padrões de erro de CI/GitHub/GitLab antes da migração           | Padrões insuficientes para o domínio DataHub                             | Plano    |
+| 2026-07-09 | Test factories são ÚNICA fonte de dados de teste — copies de saída proibidas              | Copiar output = codificar bugs como features                             | Usuário  |
+| 2026-07-09 | Integration tests + PBT têm prioridade sobre unit tests para DataHub                      | DataHub é cross-camada — unit tests não cobrem o fluxo real              | Usuário  |
+| 2026-07-09 | BadTesting (`toBeDefined()` sozinho) = teatro → corrigir ou deletar                       | Testes que passam sem verificar comportamento são pior que sem teste     | Usuário  |
+| 2026-07-10 | CTRF em pr-report é self-reference bug — remover, DataHub lê artifacts via API            | pr-report gerava relatório sobre si próprio, não sobre projeto externo   | Usuário  |
+| 2026-07-10 | ci-injector gera YAML genérico — sem auto-referenciamento a qa_tools                      | Projeto gerenciado ≠ qa_tools; workflow deve ser genérico                | Usuário  |
+| 2026-07-10 | Wizard pergunta testReportPath + artifactName — info explicitamente pedida ao usuário     | ci-injector precisa desses dados; wizard deve coletá-los                 | Usuário  |
+| 2026-07-10 | ci-injector injeta upload de artifact no test job (Opção A) — fluxo completo e automático | External project não precisa configurar upload manualmente               | Usuário  |
+| 2026-07-10 | loadMetricsStore() é bypass legítimo para dados raw — ELIMINAR, migrar 18 consumers       | loadMetricsStore expõe persistence diretamente, viola SSOT               | Usuário  |
+| 2026-07-10 | CommandContext.dataHub DEVE ser obrigatório — eliminate 7 ocorrências de `?`              | `?` opcional herda optionality para todos os downstream                  | Usuário  |
+| 2026-07-10 | Design Gaps 1-2 (Validação Zod + Provenance) planejados para esta sessão                  | Dados sem validação = metrics incorretas silenciosamente                 | Usuário  |
+| 2026-07-10 | CtrfSource → TestReportSource — detector format-agnóstico, não CTRF-específico            | detector deve detectar "tem reporter?" sem assumir formato               | Usuário  |
+| 2026-07-10 | Detecção de reporter: Fase 3 usa regex (renomeação); Fase 11 usa AST/híbrido              | regex é insuficiente para detecção confiável; AST é superior             | Usuário  |
+| 2026-07-10 | Duas detecções separadas: capacidade (wizard) vs formato (parser) — não conflitar         | Wizard detecta de config; parser detecta de conteúdo                     | Pesquisa |
 
 ---
 
@@ -4218,23 +4291,64 @@ echo "6. Nenhum store.runs fora do data-hub:" && \
 
 ---
 
-## PROGRESS TRACKING
+### Fase 11 — Detecção de Reporter: AST/Híbrido (pesquisa + implementação)
 
-> **Status atual:** 🟢 PRONTO PARA IMPLEMENTAÇÃO
-> **Início:** 2026-07-09
-> **Previsão de conclusão:** 10-12 dias úteis
-> **Contrato:** 10 invariantes (System Model) + 8 regras de erro (EH) + 10 regras de teste (TD)
+**Objetivo:** Substituir a detecção regex-only por uma abordagem superior que combine package.json dependency check, config file analysis e (opcionalmente) AST parsing para detecção confiável de reporters de teste.
 
-| Fase | Descrição                                                    | Status      | Data       | Checkpoint                                                                              |
-| ---- | ------------------------------------------------------------ | ----------- | ---------- | --------------------------------------------------------------------------------------- |
-| 0    | Foundation (TS2307 + CommandContext)                         | ✅ Completo | 2026-07-09 | `npx tsc --noEmit` = 0                                                                  |
-| 1    | health-score + quality-gate SSOT + Dim5 (13 tarefas)         | ✅ Completo | 2026-07-09 | 13 checkpoints + 8 verificações Dimension 5                                             |
-| 2    | quality-gate.ts SSOT                                         | ✅ Completo | 2026-07-09 | `rg "loadMetricsStore" quality-gate.ts` = 0                                             |
-| 3    | pr-report-core.ts SSOT + CTRF removal + ci-injector + wizard | 🔜 Pendente | —          | `rg "readIstanbulCoverage\|ctrf" pr-report-core.ts` = 0, `rg "ctrf" ci-injector.ts` = 0 |
-| 4    | Jira Command Handlers (6 cases)                              | 🔜 Pendente | —          | `rg "loadMetricsStore" jira_management/commands/` = 0                                   |
-| 5    | git_triggers Consumers (5 arquivos)                          | 🔜 Pendente | —          | `rg "loadMetricsStore\|store\.runs" git_triggers/` = 0                                  |
-| 6    | Shared Consumers Restantes (4 arquivos)                      | 🔜 Pendente | —          | `rg "loadMetricsStore" shared/` = só data-hub/                                          |
-| 7    | Auditoria Pós-Migração                                       | 🔜 Pendente | —          | 9 verificações rg = 0                                                                   |
-| 8    | Deletar Fontes Alternativas                                  | 🔜 Pendente | —          | `npx tsc --noEmit` = 0                                                                  |
-| 9    | Pegar Consumidores Silenciosos                               | 🔜 Pendente | —          | `npx tsc --noEmit` = 0                                                                  |
-| 10   | Prevenção Final (ESLint + TECHDOC)                           | 🔜 Pendente | —          | Verificação final completa                                                              |
+**Problema:** A detecção atual (`detectConfigCtrf` / `detectTestReporter`) usa apenas regex em arquivos de config. Limitações:
+
+- Falsos positivos em comments/strings
+- Só verifica vitest/vite configs (não jest, cypress, playwright)
+- Não verifica package.json dependencies
+- Só detecta CTRF, não JUnit/Mochawesome
+
+**NOTA:** Antes de implementar, fazer pesquisa compreensiva sobre:
+
+1. Viabilidade de AST parsing em TypeScript (ts-morph, jscodeshift, esbuild)
+2. Custo-benefício vs package.json + regex expandida
+3. Se há bibliotecas prontas para detecção de reporters
+4. Se o hybrid (package.json deps + regex configs) é suficiente ou se AST é necessário
+
+**Abordagem recomendada (hipótese a validar na pesquisa):**
+
+- **Nível 1 (package.json):** Verificar se reporter está em `devDependencies`/`dependencies`
+- **Nível 2 (config files):** Verificar se reporter é importado/configurado em config files
+- **Nível 3 (AST):** Se necessário, usar AST parsing para entender a estrutura real do config
+
+**Dependência:** Fase 3 (renomeação de `detectConfigCtrf` → `detectTestReporter` e `CtrfSource` → `TestReportSource`)
+
+#### 11.1 — Pesquisa
+
+| Item       | Detalhe                                                         |
+| ---------- | --------------------------------------------------------------- |
+| Escopo     | Viabilidade de AST parsing, package.json check, regex expandida |
+| Entregável | Documento de decisão: qual abordagem implementar e por quê      |
+| Checkpoint | Decisão documentada no plano                                    |
+
+#### 11.2 — Implementação (depende da pesquisa)
+
+| Item       | Detalhe                                                 |
+| ---------- | ------------------------------------------------------- |
+| Escopo     | Substituir `detectTestReporter` por abordagem escolhida |
+| Frameworks | Todos: vitest, jest, cypress, playwright, generic       |
+| Formatos   | CTRF, JUnit, Mochawesome (e futuros)                    |
+| Checkpoint | `npx vitest run setup/detector.test.ts` = 0 falhas      |
+
+#### 11.3 — Testes
+
+| Item        | Detalhe                                                            |
+| ----------- | ------------------------------------------------------------------ |
+| Unit        | Testar detecção para cada framework + cada formato                 |
+| Integration | Testar fluxo completo wizard → config escrita com reporter correto |
+| Checkpoint  | `npx vitest run setup/` = 0 falhas                                 |
+
+**Checkpoint Fase 11:**
+
+```bash
+npx tsc --noEmit                                    # 0 erros
+npx vitest run setup/                               # 0 falhas
+# Detecção funciona para: vitest+CTRF, vitest+JUnit, jest+JUnit, cypress+CTRF, playwright+CTRF
+# package.json check: reporter em devDependencies → detectado
+# config check: reporter em vitest.config → detectado
+# Falsos positivos em comments → eliminados
+```
