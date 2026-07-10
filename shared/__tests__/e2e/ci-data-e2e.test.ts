@@ -153,31 +153,7 @@ describe('E2E: CI Data Hub — Complete Pipeline Flow', () => {
             const provider = createMockProvider(rawData);
             const { hub } = await DataHubImpl.create([provider], { repo: 'owner/repo' }, mockPersistence);
 
-            const store = {
-                runs: [
-                    {
-                        timestamp: '2026-07-01T10:00:00Z',
-                        project: 'test',
-                        total: 100,
-                        passed: 75,
-                        failed: 25,
-                        skipped: 0,
-                        duration: 5000,
-                        tests: createFlatTests(100, { failCount: 25, duration: 50 }),
-                    },
-                ],
-                coverageHistory: [
-                    {
-                        timestamp: '2026-07-01T10:00:00Z',
-                        project: 'test',
-                        totalIssues: 100,
-                        mappedIssues: 80,
-                        coveragePct: 80,
-                    },
-                ],
-            };
-
-            const result = calculateHealthScore(store, { dataHub: hub });
+            const result = calculateHealthScore({ dataHub: hub });
 
             expect(result.overall).toBeGreaterThanOrEqual(0);
             expect(result.overall).toBeLessThanOrEqual(100);
@@ -261,7 +237,7 @@ describe('E2E: CI Data Hub — Complete Pipeline Flow', () => {
             };
 
             const costResult = calculatePipelineCost(store.runs, 0.01, hub);
-            const healthResult = calculateHealthScore(store, { dataHub: hub });
+            const healthResult = calculateHealthScore({ dataHub: hub });
 
             expect(hub.raw.runs).toHaveLength(0);
             expect(costResult.runCount).toBe(1);

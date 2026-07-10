@@ -203,7 +203,7 @@ vi.mock('../shared/requirement-score', () => ({
     calculateRequirementScores: vi.fn(() => []),
 }));
 vi.mock('../shared/quality-gate', () => ({
-    runQualityGate: vi.fn(() => ({ passed: true })),
+    runQualityGate: vi.fn(() => ({ overall: 'pass', checks: [], score: 85 })),
     formatQualityGateText: vi.fn(() => ''),
 }));
 vi.mock('../shared/open', () => ({ openWithFallback: vi.fn() }));

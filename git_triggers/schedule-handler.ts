@@ -170,7 +170,7 @@ export function generateWeeklyQualityReport(): void {
         const effectiveStore = usingGitFallback ? { ...store, runs: projectRuns, failureClassifications } : store;
 
         const dataHub = getDataHub();
-        const health = calculateHealthScore(effectiveStore, { dataHub });
+        const health = calculateHealthScore({ dataHub });
         const flaky = calcFlakinessEntries(projectRuns, 2);
         const releaseScore = calculateReleaseScore(
             80,
@@ -207,12 +207,8 @@ export function generateWeeklyQualityReport(): void {
         const benchmark = computeCrossSquadBenchmark(
             projectNames.map((name) => {
                 const pRuns = store.runs.filter((r) => r.project === name);
-                const isCurrentProject = name === currentProjectName;
                 const pDataHub = getDataHub();
-                const pHealth = calculateHealthScore(
-                    { ...store, runs: pRuns },
-                    isCurrentProject ? { dataHub: pDataHub } : undefined,
-                );
+                const pHealth = calculateHealthScore({ dataHub: pDataHub });
                 return {
                     name,
                     healthScore: pHealth.overall,

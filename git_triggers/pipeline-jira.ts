@@ -12,7 +12,7 @@ import type { ParseResult } from '../shared/result_parser.js';
 import type { AnalysisReport } from '../shared/failure-analysis.js';
 import type { StoreBackend } from '../shared/store-backend.js';
 import { rootLogger } from '../shared/logger.js';
-import { formatErr } from '../shared/errors.js';
+import { extractErrorMessage } from '../shared/prompt-errors.js';
 
 function isAutoBugEnabled(): boolean {
     return Config.get('QA_AUTO_BUG') === 'true' || process.env['QA_AUTO_BUG'] === 'true';
@@ -37,7 +37,7 @@ async function persistFailureClassifications(parsed: ParseResult, _backend: Stor
         }
         hub.saveMetricsStore(store);
     } catch (err) {
-        rootLogger.warn('pipeline-jira: metrics save failed: ' + formatErr(err));
+        rootLogger.warn('pipeline-jira: metrics save failed: ' + extractErrorMessage(err));
     }
 }
 

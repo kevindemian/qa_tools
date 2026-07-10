@@ -1,5 +1,7 @@
 import type { AxiosInstance } from '../shared/deps.js';
 import { handleError } from '../shared/git-provider-error.js';
+import { extractErrorMessage } from '../shared/prompt-errors.js';
+import { rootLogger } from '../shared/logger.js';
 import type {
     PipelineTriggerResult,
     ScheduleInfo,
@@ -207,7 +209,8 @@ export async function glGetRepoTree(
             .map((entry) => entry.path)
             .filter(isManifestFile);
         return paths.length > 0 ? paths : [];
-    } catch {
+    } catch (err: unknown) {
+        rootLogger.warn(`gitlab-workflow: listManifestPaths failed — ${extractErrorMessage(err)}`);
         return null;
     }
 }
