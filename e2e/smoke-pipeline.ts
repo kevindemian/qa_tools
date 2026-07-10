@@ -1,7 +1,7 @@
 import type JiraClient from '../shared/jira-client.js';
 import type JiraLinkManager from '../jira_management/jira_link_manager.js';
 import { createGitHubSmokeManager } from './smoke-shared.js';
-import { getDataHub } from '../shared/data-hub/global-hub.js';
+import { getDataHub, isDataHubInitialized } from '../shared/data-hub/global-hub.js';
 import { calcFlakinessEntries } from '../shared/data-hub/compute/flakiness-entries.js';
 import { generateFlakinessHtml } from '../shared/flakiness-dashboard.js';
 import { pollPipeline } from '../git_triggers/pipeline-handler.js';
@@ -107,6 +107,10 @@ async function collectAndReportResults(gh: ReturnType<typeof createGitHubSmokeMa
 
     await offerPipelineFailureAnalysis(parsed);
 
+    if (!isDataHubInitialized()) {
+        rootLogger.info('  DataHub not initialized — skipping flakiness calculation');
+        return;
+    }
     const hub = getDataHub();
     const metrics = hub.loadMetricsStore();
     assert(metrics, 'loadMetricsStore returned undefined');

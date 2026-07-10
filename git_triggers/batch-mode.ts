@@ -3,7 +3,7 @@
  * Uses unified CLI args from cli-args.ts.
  */
 import { success, error, info, printError, warn, withSpinner } from '../shared/prompt.js';
-import { getDataHub } from '../shared/data-hub/global-hub.js';
+import { getDataHub, setDataHub } from '../shared/data-hub/global-hub.js';
 import { calcFlakinessEntries } from '../shared/data-hub/compute/flakiness-entries.js';
 import { generateFlakinessHtml } from '../shared/flakiness-dashboard.js';
 import {
@@ -175,6 +175,11 @@ async function _collectPipelineResults(
                 dataHub = await getOrFetchDataHub(m, projectName);
             } catch {
                 // Fallback: proceed without DataHub
+            }
+            // Register DataHub in the global singleton so downstream consumers
+            // (quality-gate, health-score, flakiness) can access it via getDataHub().
+            if (dataHub) {
+                setDataHub(dataHub);
             }
             await generatePrReportIfNeeded(parsed, projectName, dataHub);
         }
