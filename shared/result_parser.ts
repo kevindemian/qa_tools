@@ -116,6 +116,8 @@ export interface CtrfResults {
     summary: CtrfSummary | null | undefined;
     /** Array of individual test results. */
     tests: CtrfTest[];
+    /** Coverage data (optional, present in some CTRF reports). */
+    coverage?: { total?: number; covered?: number; percentage?: number };
     /** Environment context. */
     environment?: CtrfEnvironment;
 }

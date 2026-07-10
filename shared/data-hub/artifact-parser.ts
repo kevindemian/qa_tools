@@ -5,11 +5,14 @@ import { rootLogger } from '../logger.js';
 import { extractErrorMessage } from '../prompt-errors.js';
 import type { ParseResult, FlatTest, CtrfData } from '../result_parser.js';
 import type { JUnitParseResult } from '../junit-xml-parser.js';
+import type { RawCoverage } from '../types/data-hub.js';
 
 export interface ArtifactParseResult {
     fileName: string;
     data: ParseResult;
     format: 'ctrf' | 'junit' | 'mochawesome';
+    /** Coverage data extracted from CTRF reports (optional). */
+    coverage?: RawCoverage;
 }
 
 const TEST_ARTIFACT_PATTERNS = ['ctrf', 'test-results', 'test-result', 'mochawesome', 'junit', 'e2e'];
@@ -81,9 +84,14 @@ function junitToParseResult(junit: JUnitParseResult): ParseResult {
 
 function parseContent(content: string, fileName: string): ArtifactParseResult | null {
     if (isCTRF(content)) {
-        const parsed = parseCtrfResults(JSON.parse(content) as CtrfData);
+        const jsonData = JSON.parse(content) as CtrfData;
+        const parsed = parseCtrfResults(jsonData);
         if (parsed.stats.total > 0 || parsed.tests.length > 0) {
-            return { fileName, data: parsed, format: 'ctrf' };
+            // Extract coverage from CTRF if present
+            const coverage = extractCtrfCoverage(jsonData);
+            const result: ArtifactParseResult = { fileName, data: parsed, format: 'ctrf' };
+            if (coverage != null) result.coverage = coverage;
+            return result;
         }
         rootLogger.debug(`artifact-parser: CTRF file ${fileName} has 0 tests, skipping`);
         return null;
@@ -106,6 +114,21 @@ function parseContent(content: string, fileName: string): ArtifactParseResult | 
     }
 
     return null;
+}
+
+/**
+ * Extract coverage data from CTRF JSON if present.
+ * CTRF format may include coverage in results.coverage.
+ */
+function extractCtrfCoverage(jsonData: CtrfData): RawCoverage | null {
+    const cov = jsonData.results?.coverage;
+    if (cov == null) return null;
+    if (typeof cov.percentage !== 'number' || !Number.isFinite(cov.percentage)) return null;
+    return {
+        total: typeof cov.total === 'number' ? cov.total : 0,
+        covered: typeof cov.covered === 'number' ? cov.covered : 0,
+        percentage: cov.percentage,
+    };
 }
 
 export function parseArtifactBuffer(buffer: Buffer, fileName: string): ArtifactParseResult | null {

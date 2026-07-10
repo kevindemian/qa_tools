@@ -157,15 +157,16 @@ describe('CalculateHealthScore', () => {
         });
 
         it('scores 0 when 20% or more tests are flaky', () => {
-            const result = calculateHealthScore({ minRuns: 2, dataHub: createTestHub() });
+            const result = calculateHealthScore({ minRuns: 2, dataHub: createTestHub({ flakyPercentage: 20 }) });
 
             expect(result.dimensions.flakyRate.score).toBeLessThanOrEqual(0);
         });
 
         it('interpolates linearly for intermediate flaky rates', () => {
-            const result = calculateHealthScore({ minRuns: 2, dataHub: createTestHub() });
+            const result = calculateHealthScore({ minRuns: 2, dataHub: createTestHub({ flakyPercentage: 4 }) });
 
-            expect(result.dimensions.flakyRate.score).toBe(0);
+            // flakyThreshold=3, maxFlakyGate=5, actual=4 → 100 - ((4-3)/(5-3))*100 = 50
+            expect(result.dimensions.flakyRate.score).toBe(50);
         });
     });
 
@@ -264,10 +265,16 @@ describe('CalculateHealthScore', () => {
         });
 
         it('fails when flaky rate exceeds gate', () => {
-            const result = calculateHealthScore({ minRuns: 2, dataHub: createTestHub() });
+            const result = calculateHealthScore({ minRuns: 2, dataHub: createTestHub({ flakyPercentage: 10 }) });
 
             expect(result.qualityGate).toBe('fail');
             expect(result.dimensions.flakyRate.status).toBe('fail');
+        });
+
+        it('passes when flaky rate is 0 (no flaky data)', () => {
+            const result = calculateHealthScore({ minRuns: 2, dataHub: createTestHub({ flakyPercentage: 0 }) });
+
+            expect(result.dimensions.flakyRate.status).toBe('pass');
         });
 
         it('fails when coverage is below gate', () => {
