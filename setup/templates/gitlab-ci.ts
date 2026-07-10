@@ -19,7 +19,6 @@ export function generateGitLabCI(ctx: SetupContext): string {
             ctx.features.aiFailureAnalysis ? '' : '--no-ai',
             ctx.features.flakinessDashboard ? '' : '--no-flaky',
             ctx.features.qualityGate ? '' : '--no-quality',
-            '--ctrf ' + ctx.ctrfReportPath,
         ]
             .filter(Boolean)
             .join(' ');
@@ -31,7 +30,7 @@ export function generateGitLabCI(ctx: SetupContext): string {
         image: 'node:' + ctx.nodeVersion,
         script: scriptLines,
         artifacts: {
-            paths: [ctx.ctrfReportPath],
+            paths: [ctx.testReportPath],
             reports: {
                 junit: ['reports/junit.xml'],
             },

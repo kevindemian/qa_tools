@@ -105,11 +105,10 @@ describe('GenerateGitLabCI', () => {
         expect(yaml).toContain('--no-quality');
     });
 
-    it('includes --ctrf flag with correct path', () => {
+    it('does not include --ctrf flag (removed in Phase 3)', () => {
         const yaml = generateGitLabCI(MOCK_CTX_WITH_FEATURES);
 
-        expect(yaml).toContain('--ctrf');
-        expect(yaml).toContain('reports/ctrf-report.json');
+        expect(yaml).not.toContain('--ctrf');
     });
 
     it('omits --no-ai when aiFailureAnalysis enabled', () => {

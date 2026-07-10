@@ -17,7 +17,20 @@ const {
 } = vi.hoisted(() => ({
     mockLoadMetricsStore: vi.fn().mockReturnValue({ runs: [] }),
     mockCalcFlakyEntries: vi.fn().mockReturnValue([]),
-    mockCalcHealth: vi.fn().mockReturnValue({ overall: 80, grade: 'B', details: {} }),
+    mockCalcHealth: vi.fn<typeof calculateHealthScore>().mockReturnValue({
+        overall: 80,
+        grade: 'good',
+        qualityGate: 'pass',
+        dimensions: {
+            passRate: { score: 90, status: 'pass' },
+            flakyRate: { score: 80, status: 'pass' },
+            coverage: { score: 70, status: 'pass' },
+            suiteSpeed: { score: 85, status: 'pass' },
+            executionRate: { score: 75, status: 'pass' },
+        },
+        runCount: 5,
+        timestamp: new Date().toISOString(),
+    }),
     mockCalcRelease: vi.fn().mockReturnValue({ score: 85, label: 'B', details: {} }),
     mockGenHtml: vi.fn().mockReturnValue('<html></html>'),
     mockOpen: vi.fn(),
@@ -72,6 +85,7 @@ vi.mock('../../shared/output', () => ({
 
 import { warn, printError } from '../../shared/prompt.js';
 import { makeMockCommandContext } from '../../shared/test-utils.js';
+import type { calculateHealthScore } from '../../shared/health-score.js';
 import case26 from './case26.js';
 
 function makeRun(
@@ -103,7 +117,20 @@ describe('Case26', () => {
         vi.clearAllMocks();
         mockLoadMetricsStore.mockReturnValue({ runs: [] });
         mockCalcFlakyEntries.mockReturnValue([]);
-        mockCalcHealth.mockReturnValue({ overall: 80, grade: 'B', details: {} });
+        mockCalcHealth.mockReturnValue({
+            overall: 80,
+            grade: 'good',
+            qualityGate: 'pass',
+            dimensions: {
+                passRate: { score: 90, status: 'pass' },
+                flakyRate: { score: 80, status: 'pass' },
+                coverage: { score: 70, status: 'pass' },
+                suiteSpeed: { score: 85, status: 'pass' },
+                executionRate: { score: 75, status: 'pass' },
+            },
+            runCount: 5,
+            timestamp: new Date().toISOString(),
+        });
         mockCalcRelease.mockReturnValue({ score: 85, label: 'B', details: {} });
         mockGenHtml.mockReturnValue('<html></html>');
         mockWriteReport.mockReturnValue('/test/qa-test/release-score.html');
@@ -138,14 +165,23 @@ describe('Case26', () => {
             const ctx = makeMockCommandContext({ projectName: 'TEST' });
             await case26.handler(ctx);
 
-            expect(mockCalcHealth).toHaveBeenCalledWith({ runs });
-            expect(mockCalcFlakyEntries).toHaveBeenCalledWith(expect.anything(), expect.anything());
+            expect(mockCalcHealth).toHaveBeenCalledTimes(1);
+
+            const healthCallArgs = mockCalcHealth.mock.calls[0];
+
+            expect(healthCallArgs).toBeDefined();
+
+            expect(healthCallArgs?.[0]).toHaveProperty('dataHub');
+
+            expect(healthCallArgs?.[0]?.dataHub).toHaveProperty('loadMetricsStore');
+
+            expect(mockCalcFlakyEntries).toHaveBeenCalledWith(runs, 2);
             expect(mockCalcRelease).toHaveBeenCalledWith(
-                expect.anything(),
-                expect.anything(),
-                expect.anything(),
-                expect.anything(),
-                expect.anything(),
+                80,
+                expect.any(Number),
+                expect.stringMatching(/^(pass|fail)$/),
+                70,
+                expect.any(Number),
             );
             expect(mockOpen).toHaveBeenCalledWith(expect.any(String), 'Release Score', expect.any(Function));
         });
@@ -162,11 +198,11 @@ describe('Case26', () => {
 
             expect(mockCalcFlakyEntries).toHaveBeenCalledWith([], 2);
             expect(mockCalcRelease).toHaveBeenCalledWith(
-                expect.anything(),
-                expect.anything(),
-                expect.anything(),
-                expect.anything(),
-                expect.anything(),
+                80,
+                expect.any(Number),
+                expect.stringMatching(/^(pass|fail)$/),
+                70,
+                expect.any(Number),
             );
         });
 
