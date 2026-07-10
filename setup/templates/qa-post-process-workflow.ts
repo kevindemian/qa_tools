@@ -2,7 +2,7 @@
  * GitHub Actions reusable workflow for QA Tools post-processing.
  *
  * Called by ci.yml after tests complete. Runs pr-report-core.ts on the
- * CTRF report uploaded by the test job and uploads the resulting HTML.
+ * test report uploaded by the test job and uploads the resulting HTML.
  */
 import { ACTION_VERSIONS } from '../../shared/test-utils/constants.js';
 import type { SetupContext } from '../context.js';
@@ -18,10 +18,15 @@ export function generateQaPostProcessWorkflow(ctx: SetupContext): string {
         '        description: Project name for feature config lookup',
         '        required: true',
         '        type: string',
-        '      ctrf-path:',
-        '        description: Path to CTRF report JSON',
+        '      test-report-path:',
+        '        description: Path to test report files (CTRF/JUnit/Mochawesome)',
         '        required: false',
-        '        default: reports/ctrf-report.json',
+        '        default: reports/',
+        '        type: string',
+        '      artifact-name:',
+        '        description: Name of the test report artifact',
+        '        required: false',
+        '        default: ' + ctx.artifactName,
         '        type: string',
         '',
         'jobs:',
@@ -35,19 +40,9 @@ export function generateQaPostProcessWorkflow(ctx: SetupContext): string {
         '          cache: npm',
         '      - name: Install dependencies',
         '        run: ' + ctx.installCmd,
-        '      - name: Download CTRF report',
-        `        uses: ${ACTION_VERSIONS.DOWNLOAD_ARTIFACT}`,
-        '        with:',
-        '          name: ctrf-report',
-        '          path: reports/',
         '      - name: Run QA Tools Post-Processing',
         '        if: always()',
-        '        run: |',
-        '          if [ ! -f "${{ inputs.ctrf-path }}" ]; then',
-        '            echo "::warning::CTRF report not found at ${{ inputs.ctrf-path }} — skipping post-processing"',
-        '            exit 0',
-        '          fi',
-        '          npx tsx git_triggers/pr-report-entry.ts --ctrf ${{ inputs.ctrf-path }} --project ${{ inputs.project-name }}',
+        '        run: npx tsx git_triggers/pr-report-entry.ts --project ${{ inputs.project-name }}',
         '        env:',
         '          GITHUB_TOKEN: ${{ github.token }}',
         '      - name: Upload PR Report HTML',

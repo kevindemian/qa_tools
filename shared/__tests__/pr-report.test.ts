@@ -64,6 +64,42 @@ vi.mock('../report-html.js', () => ({
     generateHtmlReport: mockGenerateHtmlReport,
 }));
 
+const mockDataHubComputed = {
+    metricsRuns: [
+        {
+            tests: [
+                { title: 'should pass', state: 'passed', duration: 100 },
+                { title: 'should fail', state: 'failed', duration: 200, error: 'expected 1 to equal 2' },
+                { title: 'should skip', state: 'skipped', duration: 0 },
+            ],
+            total: 3,
+            passed: 1,
+            failed: 1,
+            skipped: 1,
+            duration: 300,
+        },
+    ],
+    passRate: 80,
+    avgDuration: 1000,
+    suiteSpeedP95: 500,
+    flakyRate: [],
+    flakinessEntries: [] as import('../types/data-hub.js').FlakinessEntry[],
+    metricsTrends: [] as Array<{ label: string; passRate: number; total: number; failed: number }>,
+    coverage: 85,
+    pipelineCost: { totalMinutes: 0, estimatedCost: 0 },
+    defectTrends: [],
+    branchBreakdown: {},
+    topFailingJobs: [],
+    topFailureReasons: [],
+    releaseScore: { score: 0, dimensions: {} as never, grade: 'critical' },
+    quarantineStatus: { flakyCount: 0, quarantinedCount: 0 },
+    testPassRate: 80,
+    testCounts: { passed: 1, failed: 1, skipped: 1, total: 3 },
+    framework: 'vitest',
+    executionRate: 90,
+    flakyPercentage: 1,
+};
+
 vi.mock('../data-hub/global-hub.js', () => ({
     getDataHub: vi.fn().mockReturnValue({
         loadMetricsStore: vi.fn().mockReturnValue({ runs: [], coverageHistory: [] }),
@@ -78,8 +114,14 @@ vi.mock('../data-hub/global-hub.js', () => ({
         saveQualityMetrics: vi.fn(),
         loadQualityMetricsHistory: vi.fn().mockReturnValue([]),
         flush: vi.fn(),
+        raw: { runs: [], jobs: new Map(), artifacts: new Map(), failureReasons: new Map() },
+        computed: mockDataHubComputed,
+        timestamp: new Date(),
+        provider: 'github',
+        repo: 'test/repo',
     }),
     isDataHubInitialized: vi.fn().mockReturnValue(true),
+    setDataHub: vi.fn(),
 }));
 
 vi.mock('../data-hub/compute/flakiness-entries.js', () => ({
@@ -347,7 +389,6 @@ describe('Pr-report entry point — flaky detection with quarantine', () => {
     it('adds quarantine column when flaky tests exist', async () => {
         expect.hasAssertions();
 
-        const flakinessModule = await import('../data-hub/compute/flakiness-entries.js');
         const mockEntries = [
             {
                 title: 'flaky-test-1',
@@ -359,7 +400,7 @@ describe('Pr-report entry point — flaky detection with quarantine', () => {
                 totalRuns: 5,
             },
         ];
-        vi.mocked(flakinessModule.calcFlakinessEntries).mockImplementation(() => mockEntries);
+        mockDataHubComputed.flakinessEntries = mockEntries;
 
         createCtrfFixture([{ name: 'pass-1', status: 'passed', duration: 100 }]);
 
@@ -385,7 +426,6 @@ describe('Pr-report entry point — flaky detection with quarantine', () => {
     it('shows quarantined status for quarantined flaky tests', async () => {
         expect.hasAssertions();
 
-        const flakinessModule = await import('../data-hub/compute/flakiness-entries.js');
         const mockEntries = [
             {
                 title: 'flaky-test-2',
@@ -397,7 +437,7 @@ describe('Pr-report entry point — flaky detection with quarantine', () => {
                 totalRuns: 6,
             },
         ];
-        vi.mocked(flakinessModule.calcFlakinessEntries).mockImplementation(() => mockEntries);
+        mockDataHubComputed.flakinessEntries = mockEntries;
 
         const quarantineMod = await import('../quarantine.js');
         vi.mocked(quarantineMod.isQuarantined).mockImplementation((title: string) =>
@@ -436,7 +476,6 @@ describe('Pr-report entry point — flaky detection with quarantine', () => {
     it('only shows suggestion when there are new (non-quarantined) flaky tests', async () => {
         expect.hasAssertions();
 
-        const flakinessModule = await import('../data-hub/compute/flakiness-entries.js');
         const mockEntries: import('../types/data-hub.js').FlakinessEntry[] = [
             {
                 title: 'new-flaky-1',
@@ -457,7 +496,7 @@ describe('Pr-report entry point — flaky detection with quarantine', () => {
                 totalRuns: 6,
             },
         ];
-        vi.mocked(flakinessModule.calcFlakinessEntries).mockImplementation(() => mockEntries);
+        mockDataHubComputed.flakinessEntries = mockEntries;
 
         const quarantineMod = await import('../quarantine.js');
         vi.mocked(quarantineMod.isQuarantined).mockReturnValue(undefined);
@@ -529,8 +568,7 @@ describe('Pr-report entry point — flaky detection with quarantine', () => {
     it('handles flaky section when calculateFlakiness returns empty', async () => {
         expect.hasAssertions();
 
-        const flakinessModule = await import('../data-hub/compute/flakiness-entries.js');
-        vi.mocked(flakinessModule.calcFlakinessEntries).mockImplementation(() => []);
+        mockDataHubComputed.flakinessEntries = [];
 
         createCtrfFixture([{ name: 'pass-1', status: 'passed', duration: 100 }]);
 
@@ -673,8 +711,34 @@ describe('Pr-report entry point — HTML report generation', () => {
 
         const globalHubModule = await import('../data-hub/global-hub.js');
         vi.mocked(globalHubModule.getDataHub).mockReturnValueOnce({
-            loadMetricsStore: vi.fn().mockReturnValue({
-                runs: [
+            loadMetricsStore: vi.fn().mockReturnValue({ runs: [] }),
+            saveRun: vi.fn(),
+            saveCoverageSnapshot: vi.fn(),
+            loadCoverageHistory: vi.fn().mockReturnValue([]),
+            saveFailureClassification: vi.fn(),
+            loadFailureClassifications: vi.fn().mockReturnValue([]),
+            saveMetricsStore: vi.fn(),
+            saveParseResult: vi.fn(),
+            saveQualityMetrics: vi.fn(),
+            loadQualityMetricsHistory: vi.fn().mockReturnValue([]),
+            flush: vi.fn(),
+            raw: { runs: [], jobs: new Map(), artifacts: new Map(), failureReasons: new Map() },
+            computed: {
+                ...mockDataHubComputed,
+                metricsRuns: [
+                    {
+                        timestamp: '2026-06-13T12:00:00.000Z',
+                        project: 'qa_tools',
+                        total: 2,
+                        passed: 1,
+                        failed: 1,
+                        skipped: 0,
+                        duration: 300,
+                        tests: [
+                            { title: 'stable-test', state: 'passed', duration: 100 },
+                            { title: 'regression-test', state: 'failed', duration: 200, error: 'Expected 5 got 4' },
+                        ],
+                    },
                     {
                         timestamp: '2026-06-12T12:00:00.000Z',
                         project: 'qa_tools',
@@ -689,17 +753,11 @@ describe('Pr-report entry point — HTML report generation', () => {
                         ],
                     },
                 ],
-            }),
-            saveRun: vi.fn(),
-            saveCoverageSnapshot: vi.fn(),
-            loadCoverageHistory: vi.fn().mockReturnValue([]),
-            saveFailureClassification: vi.fn(),
-            loadFailureClassifications: vi.fn().mockReturnValue([]),
-            saveMetricsStore: vi.fn(),
-            saveParseResult: vi.fn(),
-            saveQualityMetrics: vi.fn(),
-            loadQualityMetricsHistory: vi.fn().mockReturnValue([]),
-            flush: vi.fn(),
+                testCounts: { passed: 1, failed: 1, skipped: 0, total: 2 },
+            },
+            timestamp: new Date(),
+            provider: 'github',
+            repo: 'test/repo',
         } as never);
 
         const { main } = await import('../pr-report-core.js');
@@ -745,11 +803,10 @@ describe('Pr-report entry point — HTML report generation', () => {
 
         createCtrfFixture([{ name: 'pass-1', status: 'passed', duration: 100 }]);
 
-        const trendsModule = await import('../data-hub/compute/metrics-trends.js');
-        vi.mocked(trendsModule.calcMetricsTrends).mockReturnValue([
+        mockDataHubComputed.metricsTrends = [
             { label: '2026-06-11', passRate: 92, total: 100, failed: 8 },
             { label: '2026-06-12', passRate: 95, total: 100, failed: 5 },
-        ]);
+        ];
 
         const { main } = await import('../pr-report-core.js');
         const exitSpy = vi.spyOn(process, 'exit').mockImplementation(() => undefined as never);
@@ -806,11 +863,10 @@ describe('Pr-report entry point — HTML report generation', () => {
 
         createCtrfFixture([{ name: 'pass-1', status: 'passed', duration: 100 }]);
 
-        const flakinessModule = await import('../data-hub/compute/flakiness-entries.js');
-        vi.mocked(flakinessModule.calcFlakinessEntries).mockReturnValue([
+        mockDataHubComputed.flakinessEntries = [
             { title: 'flaky-1', project: 'test', rate: 0.5, passCount: 3, failCount: 3, skipCount: 1, totalRuns: 7 },
             { title: 'flaky-2', project: 'test', rate: 0.33, passCount: 4, failCount: 2, skipCount: 1, totalRuns: 7 },
-        ]);
+        ];
 
         const { main } = await import('../pr-report-core.js');
         const exitSpy = vi.spyOn(process, 'exit').mockImplementation(() => undefined as never);

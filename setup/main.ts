@@ -60,8 +60,13 @@ async function gatherSetupContext(): Promise<SetupContext> {
     })) as Framework;
     const testCmd = await ask('Test command [' + detection.testCmd + ']', { default: detection.testCmd });
     const installCmd = await ask('Install command [' + detection.installCmd + ']', { default: detection.installCmd });
-    const ctrfReportPath = await ask('CTRF report path [' + detection.ctrfReportPath + ']', {
+    const testReportPath = await ask('Test report path [' + detection.ctrfReportPath + ']', {
         default: detection.ctrfReportPath,
+        hint: 'Path to CTRF/JUnit/Mochawesome report files',
+    });
+    const artifactName = await ask('Artifact name [test-report]', {
+        default: 'test-report',
+        hint: 'Name for uploaded test report artifact (DataHub uses this)',
     });
     const nodeVersion = await ask('Node version [' + detection.nodeVersion + ']', { default: detection.nodeVersion });
 
@@ -104,7 +109,9 @@ async function gatherSetupContext(): Promise<SetupContext> {
     return {
         projectName,
         framework,
-        ctrfReportPath,
+        testReportPath,
+        artifactName,
+        ctrfReportPath: testReportPath, // backward compatibility
         ctrfSource: detection.ctrfSource,
         nodeVersion,
         installCmd,

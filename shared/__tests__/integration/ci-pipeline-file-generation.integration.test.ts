@@ -73,35 +73,13 @@ it('passes', () => { expect(1 + 1).toBe(2); });`,
         expect(content.results.summary.tests).toBeGreaterThanOrEqual(1);
     });
 
-    it('pr-report-core cli generates html from ctrf file', () => {
+    it('pr-report-core cli returns early when no DataHub data available', () => {
         expect.hasAssertions();
 
         const reportDir = path.join(TMPDIR, 'reports');
-        const ctrfFile = path.join(reportDir, 'ctrf-report.json');
         const htmlFile = path.join(reportDir, 'pr-report.html');
 
         fs.mkdirSync(reportDir, { recursive: true });
-
-        const ctrf = {
-            results: {
-                tool: { name: 'vitest' },
-                summary: {
-                    tests: 2,
-                    passed: 2,
-                    failed: 0,
-                    skipped: 0,
-                    pending: 0,
-                    other: 0,
-                    start: Date.now() - 1000,
-                    stop: Date.now(),
-                },
-                tests: [
-                    { name: 'test A', status: 'passed', duration: 100 },
-                    { name: 'test B', status: 'passed', duration: 200 },
-                ],
-            },
-        };
-        fs.writeFileSync(ctrfFile, JSON.stringify(ctrf, null, 2));
 
         // Set up feature config so main() doesn't skip execution
         const configDir = path.join(ROOT, 'config');
@@ -131,8 +109,6 @@ it('passes', () => { expect(1 + 1).toBe(2); });`,
             [
                 TSX_BIN,
                 'shared/pr-report-core.ts',
-                '--ctrf',
-                ctrfFile,
                 '--project',
                 'qa_tools',
                 '--no-ai',
@@ -149,12 +125,9 @@ it('passes', () => { expect(1 + 1).toBe(2); });`,
             },
         );
 
-        expect(fs.existsSync(htmlFile)).toBeTruthy();
-
-        const html = fs.readFileSync(htmlFile, 'utf8');
-
-        expect(html).toContain('<!DOCTYPE html>');
-        expect(html).toContain('</html>');
+        // main() should return early when DataHub has no test data
+        // HTML file should NOT be generated
+        expect(fs.existsSync(htmlFile)).toBeFalsy();
 
         // Restore original config file
         if (configBackup !== null) {

@@ -163,11 +163,13 @@ Nunca "contornar" um erro para fazer o checkpoint passar. Se o checkpoint falha,
 
 ```
 Fase 0 (fundação) → Fase 0.5 (loadFromStore) → Fase 0.6 (persistência) → Fase 0.7 (global-hub)
-→ Fase 0.8 (obrigatório) → Fase 1 (health-score) → Fase 2 (quality-gate) → Fase 3 (pr-report-core)
+→ Fase 0.8 (obrigatório) → Fase 1 (health-score + quality-gate SSOT) → Fase 3 (pr-report-core)
 → Fase 4 (git_triggers) → Fase 5 (error-handling) → Fase 6 (shared restantes)
 → Fase 7 (auditoria pós-migração) → Fase 8 (deletar fontes alternativas)
 → Fase 9 (consumidores silenciosos) → Fase 10 (ESLint enforcement)
 ```
+
+> **Nota (2026-07-10):** Fase 2 (quality-gate) absorvida pela Fase 1.
 
 Cada fase depende da anterior. Não é possível pular fases.
 
@@ -444,6 +446,111 @@ npx vitest run shared/data-hub/                      # 100% pass
 
 ---
 
+#### Tarefa 0.2.1 — Add humanizeError Patterns 10-17
+
+**Objetivo:** Adicionar 8 padrões novos de erros conhecidos em `shared/prompt-errors.ts`. Pré-requisito para Fases 3-5 — providers (`github-provider.ts`, `gitlab-provider.ts`, `coverage-provider.ts`) chamam `humanizeError(String(err))`. Sem esses padrões, erros de conexão GitHub/GitLab passam sem contexto.
+
+**Mudança em `shared/prompt-errors.ts`:**
+
+Após a linha 64 (último padrão existente `already exists`), antes da função `humanizeError`, adicionar:
+
+```typescript
+// Padrões CI/GitHub/GitLab (Fase 3-5 do SSOT plan)
+{ test: /EPIPE|ECONNRESET.*GitHub/i, msg: 'Conexão com GitHub perdida', hint: 'Verifique sua conexão de rede e tente novamente.' },
+{ test: /artifact.*expired|not found.*artifact/i, msg: 'Artefato CI expirado ou ausente', hint: 'O artefato pode ter expirado. Tente re-executar o pipeline.' },
+{ test: /invalid.*json|unexpected.*token/i, msg: 'Arquivo de dados corrompido', hint: 'O arquivo de resultado parece estar corrompido. Re-execute.' },
+{ test: /ENOENT.*coverage|ENOTDIR.*coverage/i, msg: 'Arquivo de coverage não encontrado', hint: 'Verifique se o pipeline gerou o relatório de coverage.' },
+{ test: /rate.*limit.*github|abuse.*detection/i, msg: 'Rate limit do GitHub', hint: 'Muitas requisições. Aguarde e tente novamente.' },
+{ test: /ETIMEDOUT.*api\.github/i, msg: 'Timeout na API do GitHub', hint: 'API do GitHub lenta. Tente novamente em alguns minutos.' },
+{ test: /403.*github.*secondary.*rate/i, msg: 'Secondary rate limit GitHub', hint: 'GitHub bloqueou temporariamente. Aguarde 60s.' },
+{ test: /invalid.*xml|not well-formed/i, msg: 'Arquivo XML inválido', hint: 'O arquivo JUnit XML está mal formatado.' },
+```
+
+**Testes:**
+
+Adicionar em `shared/__tests__/prompt-errors.test.ts` (ou criar se não existir):
+
+```typescript
+describe('humanizeError — patterns 10-17', () => {
+    it('returns hint for EPIPE GitHub', () => {
+        const result = humanizeError('write EPIPE');
+        expect(result).toEqual(expect.objectContaining({ msg: expect.any(String) }));
+    });
+    it('returns hint for expired artifact', () => {
+        const result = humanizeError('artifact expired 404');
+        expect(result).toEqual(expect.objectContaining({ msg: expect.any(String) }));
+    });
+    it('returns hint for invalid JSON', () => {
+        const result = humanizeError('invalid JSON response');
+        expect(result).toEqual(expect.objectContaining({ msg: expect.any(String) }));
+    });
+    it('returns hint for ENOENT coverage', () => {
+        const result = humanizeError('ENOENT: no such file or directory coverage/report.json');
+        expect(result).toEqual(expect.objectContaining({ msg: expect.any(String) }));
+    });
+    it('returns hint for GitHub rate limit abuse', () => {
+        const result = humanizeError('GitHub abuse detection triggered');
+        expect(result).toEqual(expect.objectContaining({ msg: expect.any(String) }));
+    });
+    it('returns hint for ETIMEDOUT GitHub API', () => {
+        const result = humanizeError('connect ETIMEDOUT api.github.com');
+        expect(result).toEqual(expect.objectContaining({ msg: expect.any(String) }));
+    });
+    it('returns hint for secondary rate limit', () => {
+        const result = humanizeError('403 secondary rate limit');
+        expect(result).toEqual(expect.objectContaining({ msg: expect.any(String) }));
+    });
+    it('returns hint for invalid XML', () => {
+        const result = humanizeError('invalid XML: not well-formed');
+        expect(result).toEqual(expect.objectContaining({ msg: expect.any(String) }));
+    });
+});
+```
+
+**Checkpoint:**
+
+```bash
+npx vitest run shared/prompt-errors.test.ts           # 100% pass
+rg "EPIPE|ECONNRESET.*GitHub" shared/prompt-errors.ts # >= 1 ocorrência
+rg "artifact.*expired" shared/prompt-errors.ts        # >= 1 ocorrência
+```
+
+**Commit:** `feat(prompt-errors): add humanizeError patterns 10-17 for CI/GitHub/GitLab`
+
+---
+
+#### Tarefa 0.2.2 — Fix Silent Errors (EH-7, 12 files)
+
+**Objetivo:** Eliminar todos os `bare catch { return null; }` e `String(err)` em produção. Regra EH-7: todo catch DEVE usar `extractErrorMessage(err)`.
+
+**Arquivos e ações:**
+
+| Arquivo                 | Linha(s)               | Padrão Atual                      | Correção                                                                           |
+| ----------------------- | ---------------------- | --------------------------------- | ---------------------------------------------------------------------------------- |
+| `github-workflow.ts`    | 330-331                | `catch { return null; }`          | `catch (err: unknown) { rootLogger.warn(extractErrorMessage(err)); return null; }` |
+| `gitlab-workflow.ts`    | 210-211                | `catch { return null; }`          | `catch (err: unknown) { rootLogger.warn(extractErrorMessage(err)); return null; }` |
+| `git-provider-error.ts` | `handleError()`        | `handleError()` sem humanizeError | Usar `extractErrorMessage(err)` + `humanizeError(raw)`                             |
+| `github-provider.ts`    | 102,118,127,141,187    | `String(err)` (5×)                | `extractErrorMessage(err)`                                                         |
+| `gitlab-provider.ts`    | 96,113,122,135,161,181 | `String(err)` (6×)                | `extractErrorMessage(err)`                                                         |
+| `coverage-provider.ts`  | 72                     | `String(err)`                     | `extractErrorMessage(err)`                                                         |
+| `cypress_resource.ts`   | 33                     | `axiosErr.message` manual         | `extractErrorMessage(err)`                                                         |
+| `incident-report.ts`    | 256                    | `formatErr(err)` needed           | `formatErr(err)`                                                                   |
+| `suite-optimization.ts` | 213                    | `formatErr(err)` needed           | `formatErr(err)`                                                                   |
+| `pipeline-jira.ts`      | 39                     | `formatErr(err)` needed           | `formatErr(err)`                                                                   |
+| `artifact-parser.ts`    | 142                    | `typeof errObj['message']` manual | `extractErrorMessage(err)`                                                         |
+
+**Checkpoint:**
+
+```bash
+rg "catch \{" git_triggers/github-workflow.ts git_triggers/gitlab-workflow.ts  # 0 bare catches
+rg "String\(err\)" shared/data-hub/providers/  # 0 resultados
+rg "axiosErr\.message" shared/cypress_resource.ts  # 0 resultados
+```
+
+**Commit:** `fix: eliminate silent error catches — EH-7 compliance across 12 files`
+
+---
+
 #### Tarefa 0.3 — Add DataHub to CommandContext
 
 **Preparação:**
@@ -554,8 +661,10 @@ MetricsStore.coverageHistory (CoverageSnapshot[])
 
 ```
 Fase 0 (fundação) → Fase 0.5 (loadFromStore) → Fase 0.6 (persistência) → Fase 0.7 (global-hub)
-→ Fase 0.8 (obrigatório) → Fase 1 (health-score) → Fase 2 (quality-gate) → ...
+→ Fase 0.8 (obrigatório) → Fase 1 (health-score + quality-gate SSOT) → ...
 ```
+
+> **Nota (2026-07-10):** Fase 2 (quality-gate) absorvida pela Fase 1.
 
 ---
 
@@ -755,6 +864,10 @@ npx vitest run shared/data-hub/__tests__/hub.test.ts --reporter=verbose
 ```
 
 **Commit:** `feat(data-hub): add SSOT persistence methods — encapsulate persistence in DataHub`
+
+> **Nota sobre `loadMetricsStore()`:** A interface `DataHub` expõe `loadMetricsStore()` como operação pública (linha ~410 do contrato). Isso contradiz a intenção de Tarefa 0.6.1 ("consumidores NUNCA acessam persistence diretamente"). `loadMetricsStore()` é essencialmente `persistence.loadMetricsStore()` exposto via alias público.
+>
+> **Resolução:** `loadMetricsStore()` será removido em Fase 1 (Tarefa 1.3.1) quando `health-score.ts` e `quality-gate.ts` passarem a ler exclusivamente de `DataHub.raw.*` e `DataHub.computed.*`. Até lá, `loadMetricsStore()` permanece como ponte documentada — seu uso é restrito a `quality-gate.ts:188` e `health-score.ts` (assinatura híbrida).
 
 ---
 
@@ -1603,192 +1716,276 @@ rg "createDataHubPersistence" --include='*.ts'      # 0 resultados em produção
 
 ---
 
-### FASE 1 — health-score.ts SSOT (4 tarefas)
+### FASE 1 — health-score.ts + quality-gate.ts SSOT + Dimension 5 Compliance (13 tarefas)
+
+> **Atualizado:** 2026-07-10 — Expandido para incluir correção de TODOS os 28 gaps parciais da Dimensão 5.
+> **Razão:** Auditoria Dimension 5 revelou 28 inconformidades parciais em 15 arquivos. Todas devem ser endereçadas.
+
+#### Pré-requisitos verificados (2026-07-10)
+
+- Fase 0.8 completa (interface expandida, factory, persistência obrigatória, consumidores migrados)
+- NaN guards implementados em health-score.ts
+- `runsEmpty` respeita DataHub
+- `setDataHub()` chamado corretamente em pr-report-core.ts e batch-mode.ts
+- VITEST guards em createCheckRun/getCheckRuns
+
+#### Auditoria Dimension 5 — Resumo dos Gaps
+
+| #   | Arquivo                    | Gap                                                                                         | Dimensão  | Severidade |
+| --- | -------------------------- | ------------------------------------------------------------------------------------------- | --------- | ---------- |
+| 1   | `quality-gate.ts`          | `_resolveFlakyPct` recalcula localmente em vez de usar `dataHub.computed.flakyPercentage`   | SSOT      | CRÍTICO    |
+| 2   | `quality-gate.ts`          | `_suiteSpeedCheck` recalcula P95 localmente em vez de usar `dataHub.computed.suiteSpeedP95` | SSOT      | CRÍTICO    |
+| 3   | `quality-gate.ts`          | `hub.loadMetricsStore()` carrega store bruto desnecessariamente                             | SSOT      | CRÍTICO    |
+| 4   | `release-score.ts`         | Pesos (TASKS_W=0.25, HEALTH_W=0.3, COVERAGE_W=0.25, FLAKINESS_W=0.2) sem justificativa      | 5c.2      | Médio      |
+| 5   | `release-score.ts`         | THRESHOLD=70 sem base documentada                                                           | 5c.6      | Médio      |
+| 6   | `release-score.ts`         | Sem referências normativas                                                                  | 5d.1      | Médio      |
+| 7   | `release-score.ts`         | Sem documentação de proveniência                                                            | 5e.1/5e.2 | Médio      |
+| 8   | `requirement-score.ts`     | Pesos (0.5, 0.3, 0.2) sem justificativa                                                     | 5c.2      | Médio      |
+| 9   | `requirement-score.ts`     | Thresholds de grade (90, 75, 60, 40) sem documentação                                       | 5c.6      | Médio      |
+| 10  | `requirement-score.ts`     | Sem referência normativa                                                                    | 5d.1      | Médio      |
+| 11  | `backlog-health.ts`        | Pesos (35, 30, 35) sem justificativa                                                        | 5c.2      | Médio      |
+| 12  | `backlog-health.ts`        | Thresholds (80, 50) sem documentação                                                        | 5c.6      | Médio      |
+| 13  | `backlog-health.ts`        | Sem referência normativa                                                                    | 5d.1      | Médio      |
+| 14  | `silent-regression.ts`     | Thresholds de z-score (1, 2, 3, 5) sem base estatística documentada                         | 5c.6      | Médio      |
+| 15  | `silent-regression.ts`     | Sem referência normativa                                                                    | 5d.1      | Médio      |
+| 16  | `quality-metrics.ts`       | Threshold 2-sigma para drift detection sem referência                                       | 5d.1      | Baixo      |
+| 17  | `cross-squad-benchmark.ts` | Sem referência normativa                                                                    | 5d.1      | Baixo      |
+| 18  | `impact-alert.ts`          | Thresholds (70, 80) sem referência normativa                                                | 5d.1      | Baixo      |
+| 19  | `health-score.ts`          | Sem trilha de auditoria de versão de cálculo                                                | 5e.3      | Baixo      |
+| 20  | `health-score.ts`          | Sem testes de comparação com ferramentas externas                                           | 5f.3      | Baixo      |
+| 21  | `health-score.ts`          | Sem tratamento explícito de outliers para coverage                                          | 5b.4      | Baixo      |
+| 22  | `quality-gate.ts`          | Sem detecção de stale data                                                                  | 5e.4      | Baixo      |
+
+#### Callers que NÃO passam DataHub (obrigatório migrar)
+
+| Arquivo                              | Linha           | Chamada                            | Status            |
+| ------------------------------------ | --------------- | ---------------------------------- | ----------------- |
+| `jira_management/main.ts`            | 344             | `calculateHealthScore(store)`      | NÃO passa dataHub |
+| `jira_management/commands/case26.ts` | 23              | `calculateHealthScore(store)`      | NÃO passa dataHub |
+| `jira_management/commands/case19.ts` | 70              | `calculateHealthScore(store)`      | NÃO passa dataHub |
+| `git_triggers/interactive-mode.ts`   | 374,441,491,533 | `calculateHealthScore(store, ...)` | ALGUNS NÃO passam |
+| `shared/cli_base.ts`                 | 221             | `calculateHealthScore(store)`      | NÃO passa dataHub |
+
+#### Callers que JÁ passam DataHub
+
+| Arquivo                            | Linha   | Chamada                                                 | Status |
+| ---------------------------------- | ------- | ------------------------------------------------------- | ------ |
+| `git_triggers/schedule-handler.ts` | 173,213 | `calculateHealthScore(store, { dataHub })`              | OK     |
+| `git_triggers/interactive-mode.ts` | 855     | `calculateHealthScore(store, { dataHub: hub })`         | OK     |
+| `shared/pr-report-core.ts`         | 489     | `calculateHealthScore(store, healthConfig)`             | OK     |
+| `shared/quality-gate.ts`           | 215     | `calculateHealthScore({ ...store, runs }, { dataHub })` | OK     |
 
 ---
 
-#### Tarefa 1.1 — RED: Tests that expose health-score bypasses
+#### Tarefa 1.1 — Tornar `dataHub` obrigatório em `calculateHealthScore`
 
-**Preparação:**
+**Objetivo:** Eliminar o caminho de fallback local. DataHub é a ÚNICA fonte de métricas.
 
-```bash
-cat shared/health-score.ts | grep -n "store\.\|coverageHistory\|_computeExpWeighted\|calculateFlakyTestRate"
-# Mapear: L177 (flaky), L179-181 (executionRate), L200-208 (coverage)
+**Mudança em `shared/health-score.ts`:**
+
+```typescript
+// ANTES:
+export function calculateHealthScore(
+    metricsStore: MetricsStore,
+    options?: Partial<HealthScoreConfig> & { dataHub?: DataHub },
+): HealthScoreResult {
+
+// DEPOIS:
+export function calculateHealthScore(
+    metricsStore: MetricsStore,
+    options: Partial<HealthScoreConfig> & { dataHub: DataHub },
+): HealthScoreResult {
 ```
 
-**RED:**
+**Mudança em `computeActualMetrics`:**
 
-```bash
-# Criar test que FALHA: health-score.test.ts
-# it('uses dataHub.computed.coverage when available', () => {
-#   const dataHub = createTestHub({ computed: { coverage: 85 } });
-#   const result = calculateHealthScore(store, { dataHub });
-#   expect(result.dimensions.coverage.score).toBe(85);
-# });
-# Esperado: FALHA — health-score ignora dataHub.computed.coverage
+```typescript
+// ANTES:
+function computeActualMetrics(store: MetricsStore, config: HealthScoreConfig, dataHub?: DataHub): ActualMetrics {
+
+// DEPOIS (Tarefa 1.1 — dataHub obrigatório):
+function computeActualMetrics(store: MetricsStore, config: HealthScoreConfig, dataHub: DataHub): ActualMetrics {
+
+// DEPOIS (Tarefa 1.5 — store removido, DataHub é SSOT):
+function computeActualMetrics(config: HealthScoreConfig, dataHub: DataHub): ActualMetrics {
 ```
 
-**GREEN:** (próxima tarefa)
+**Efeito cascata:** Todos os callers que não passam `dataHub` agora falham na compilação.
 
 **Checkpoint:**
 
 ```bash
-npx vitest run shared/__tests__/health-score.test.ts --reporter=verbose 2>&1 | grep "FAIL"
-# Esperado: pelo menos 1 teste FALHA (expondo o bypass)
+npx tsc --noEmit 2>&1 | grep "not assignable"
+# Esperado: ~8 erros de callers que não passam dataHub
 ```
 
-**Commit:** `test(health-score): add failing tests that expose DataHub bypasses (RED phase)`
+**Commit:** `refactor(health-score): make dataHub mandatory in calculateHealthScore signature`
 
 ---
 
-#### Tarefa 1.2 — GREEN: Migrate health-score.ts to DataHub
+#### Tarefa 1.2 — Remover funções de cálculo local em health-score.ts
 
-**Preparação:**
+**Objetivo:** Eliminar TODA computação local. DataHub.computed é a ÚNICA fonte.
 
-```bash
-cat shared/health-score.ts | grep -n "dataHub\?\|dataHub:"
-# Mapear assinatura atual: calculateHealthScore(store, options?)
+**Remover funções:**
+
+- `_computeFlakyRate` (linha 129-136)
+- `_computeExpWeighted` (linha 142-150)
+- `_computeSuiteSpeed` (linha 156-163)
+- `_resolveCoverage` (linha 199-208)
+- `_resolvePassRate` (linha 220-227) — substituir por acesso direto
+- `_resolveSuiteSpeed` (linha 229-236) — substituir por acesso direto
+
+**Simplificar `computeActualMetrics`:**
+
+```typescript
+function computeActualMetrics(store: MetricsStore, config: HealthScoreConfig, dataHub: DataHub): ActualMetrics {
+    const passRate = Number.isFinite(dataHub.computed.passRate) ? dataHub.computed.passRate : 0;
+    const flakyPct = _normalizeFlakyPct(dataHub.computed.flakyPercentage);
+    const coverage = Number.isFinite(dataHub.computed.coverage) ? dataHub.computed.coverage : 0;
+    const executionRate = Number.isFinite(dataHub.computed.executionRate) ? dataHub.computed.executionRate : 0;
+    const suiteSpeed = Number.isFinite(dataHub.computed.suiteSpeedP95) ? dataHub.computed.suiteSpeedP95 : 0;
+
+    return { passRate, flakyPct, coverage, executionRate, suiteSpeed };
+}
 ```
 
-**GREEN:**
+**Remover imports não utilizados:**
 
-- `_resolveCoverage()` (L200-208): substituir `store.coverageHistory` por `dataHub.computed.coverage`
-- `_computeExpWeighted()` (L179-181): substituir por `dataHub.computed.executionRate`
-- `calculateFlakyTestRate(runs)` (L177): substituir por `dataHub.computed.flakyTestRate`
-- Tornar `dataHub` obrigatório na assinatura: `dataHub: DataHub` em vez de `dataHub?: DataHub`
-
-**Integração:**
-
-```bash
-npx vitest run shared/__tests__/health-score.test.ts --reporter=verbose
-# Esperado: todos passam (incluindo os novos da tarefa 1.1)
-npx vitest run shared/__tests__/health-score.property.test.ts --reporter=verbose
-# Esperado: PBT passam
-npx vitest run shared/integration/health-score.integration.test.ts --reporter=verbose
-# Esperado: integration passa
-```
+- `calcRunPassRate` (se não mais usado)
 
 **Checkpoint:**
 
 ```bash
 npx tsc --noEmit                                    # 0 erros
-rg "store\.coverageHistory" shared/health-score.ts   # 0 ocorrências
 rg "_computeExpWeighted" shared/health-score.ts      # 0 ocorrências
-rg "calculateFlakyTestRate" shared/health-score.ts   # 0 ocorrências (usa dataHub.computed)
+rg "_computeFlakyRate" shared/health-score.ts        # 0 ocorrências
+rg "_computeSuiteSpeed" shared/health-score.ts       # 0 ocorrências
+rg "_resolveCoverage" shared/health-score.ts         # 0 ocorrências
+rg "_resolvePassRate" shared/health-score.ts         # 0 ocorrências
+rg "_resolveSuiteSpeed" shared/health-score.ts       # 0 ocorrências
+rg "store\.coverageHistory" shared/health-score.ts   # 0 ocorrências
 npx vitest run shared/__tests__/health-score*         # 100% pass
 ```
 
-**Commit:** `refactor(health-score): enforce DataHub as mandatory — coverage, executionRate, flakyTestRate`
+**Commit:** `refactor(health-score): remove local computation — DataHub.computed is the only source`
 
 ---
 
-#### Tarefa 1.3 — Update health-score callers (4 arquivos)
+#### Tarefa 1.3 — Tornar `dataHub` obrigatório em `runQualityGate` + Corrigir Dual Calculation (EXPANDIDO)
 
-**Preparação:**
+**Objetivo:** quality-gate.ts não recalcula nada — usa exclusivamente DataHub.computed.
 
-```bash
-grep -rn "calculateHealthScore" --include="*.ts" | grep -v "test\|node_modules\|shared/health-score.ts"
-# Mapear: quality-gate.ts, pr-report-core.ts, cli_base.ts, main.ts, case26.ts, case19.ts, schedule-handler.ts, interactive-mode.ts
+**Mudança em `shared/quality-gate.ts`:**
+
+```typescript
+// ANTES:
+export interface QualityGateOptions {
+    project?: string;
+    coverageOverride?: number | undefined;
+    dataHub?: DataHub | undefined;
+}
+
+// DEPOIS:
+export interface QualityGateOptions {
+    project?: string;
+    coverageOverride?: number | undefined;
+    dataHub: DataHub; // obrigatório
+}
 ```
 
-**RED:**
+**Remover de `runQualityGate`:**
 
-```bash
-npx tsc --noEmit 2>&1 | grep "Argument.*not assignable"
-# Esperado: callers que não passam DataHub agora falham na compilação
+- `hub.loadMetricsStore()` (linha 188) — não mais necessário
+- `store.runs` — não mais passado para checks
+- Fallback `getDataHub()` com catch — usar `options.dataHub` diretamente
+- `let hub` local — usar `options.dataHub` diretamente
+
+**Simplificar `_flakyCheck`:**
+
+```typescript
+// ANTES: recalcula localmente via calculateFlakyTestRate
+function _flakyCheck(runs: MetricsRun[], dataHub?: DataHub): GateCheck {
+    const flakyEntries = calcFlakinessEntries(runs, THRESHOLDS.flakyMinRuns);
+    const flakyPct = _resolveFlakyPct(runs, dataHub, flakyEntries);
+    // ...
+}
+
+// DEPOIS: usa DataHub.computed
+function _flakyCheck(dataHub: DataHub): GateCheck {
+    const flakyPct = dataHub.computed.flakyPercentage ?? 0;
+    const status = flakyPct <= THRESHOLDS.maxFlakyPct ? 'pass' : 'fail';
+    return {
+        name: 'flaky-rate',
+        status,
+        score: Math.round(flakyPct),
+        threshold: THRESHOLDS.maxFlakyPct,
+        details: `Flaky: ${Math.round(flakyPct)}% (threshold: ${THRESHOLDS.maxFlakyPct}%)`,
+    };
+}
 ```
 
-**GREEN:**
+**Simplificar `_suiteSpeedCheck`:**
 
-- `shared/cli_base.ts:220`: criar DataHub e passar
-- `jira_management/main.ts:344`: usar `c.dataHub`
-- `jira_management/commands/case26.ts:23`: usar `c.dataHub`
-- `jira_management/commands/case19.ts:70`: usar `c.dataHub`
-- Verificar que callers que já passam DataHub continuam funcionando
+```typescript
+// ANTES: recalcula P95 localmente via calcTestDurationP95
+function _suiteSpeedCheck(health: HealthScoreResult, runs: MetricsRun[], dataHub?: DataHub): GateCheck {
+    let p95: number;
+    if (dataHub !== undefined && dataHub.raw.runs.length > 0) {
+        p95 = calcTestDurationP95(runs);
+    } else {
+        // ... 20 linhas de recálculo local
+    }
+    // ...
+}
 
-**Checkpoint:**
-
-```bash
-npx tsc --noEmit                                    # 0 erros
-npx vitest run shared/                               # 100% pass
-npx vitest run jira_management/                      # 100% pass
+// DEPOIS: usa DataHub.computed
+function _suiteSpeedCheck(health: HealthScoreResult, dataHub: DataHub): GateCheck {
+    const p95 = dataHub.computed.suiteSpeedP95;
+    const thresholdMs = THRESHOLDS.maxSuiteSpeed * 1000;
+    const status = p95 <= thresholdMs ? 'pass' : 'fail';
+    return {
+        name: 'suite-speed',
+        status,
+        score: health.dimensions.suiteSpeed.score,
+        threshold: THRESHOLDS.maxSuiteSpeed,
+        details: `Suite speed p95: ${p95}ms (threshold: ${THRESHOLDS.maxSuiteSpeed}s)`,
+    };
+}
 ```
 
-**Commit:** `refactor(health-score): update all callers to pass DataHub (mandatory)`
+**Remover `_resolveFlakyPct`** (função auxiliar não mais necessária).
 
----
+**Remover imports não utilizados:**
 
-#### Tarefa 1.4 — Error Handling: health-score.ts
+- `calcFlakinessEntries`
+- `calculateFlakyTestRate`
+- `calcTestDurationP95`
 
-**Preparação:**
+**Adicionar error handling no catch block:**
 
-```bash
-grep -n "catch" shared/health-score.ts
-# Mapear catch blocks existentes
+O catch block de `runQualityGate` (linha ~226) usa `String(err)`. Deve usar `extractErrorMessage` + `humanizeError`:
+
+```typescript
+// ANTES (código real):
+catch (err) {
+    rootLogger.error(`quality-gate: falha — ${String(err)}`);
+}
+
+// DEPOIS:
+catch (err: unknown) {
+    const raw = extractErrorMessage(err);
+    const known = humanizeError(raw);
+    rootLogger.error(`quality-gate: falha — ${known ? known.msg : raw}`);
+}
 ```
 
-**RED:**
+Adicionar imports:
 
-```bash
-# Teste que expõe: se DataHub.computed tem valor inválido (NaN), health-score deve logar
-# it('logs warning when DataHub.computed has invalid values', () => { ... })
-# Esperado: FALHA — health-score não valida/trata erros de DataHub
+```typescript
+import { extractErrorMessage } from './errors.js';
+import { humanizeError } from './prompt-errors.js';
 ```
-
-**GREEN:**
-
-- Adicionar `extractErrorMessage` + `humanizeError` em catch blocks de health-score
-- Validar que `dataHub.computed.*` não tem NaN antes de usar
-
-**Checkpoint:**
-
-```bash
-rg "extractErrorMessage" shared/health-score.ts      # >= 1 ocorrência
-rg "humanizeError" shared/health-score.ts             # >= 1 ocorrência
-npx vitest run shared/__tests__/health-score*          # 100% pass
-```
-
-**Commit:** `fix(health-score): add proper error handling with humanizeError`
-
----
-
-### FASE 2 — quality-gate.ts SSOT (3 tarefas)
-
----
-
-#### Tarefa 2.1 — RED: Tests that expose quality-gate bypasses
-
-**Preparação:**
-
-```bash
-grep -n "calculateFlakyTestRate\|calcTestDurationP95\|loadMetricsStore" shared/quality-gate.ts
-# Mapear: L99-115 (flaky), L129-154 (suiteSpeed), L177-179 (loadMetricsStore)
-```
-
-**RED:**
-
-```bash
-# Criar test que FALHA:
-# it('uses dataHub.computed.flakyTestRate instead of recalculating', () => {
-#   const dataHub = createTestHub({ computed: { flakyTestRate: 5.2 } });
-#   const result = runQualityGate({ dataHub });
-#   expect(result.checks.find(c => c.name === 'flaky').actual).toBe(5.2);
-# });
-# Esperado: FALHA — quality-gate recalcula em vez de usar DataHub
-```
-
-**Commit:** `test(quality-gate): add failing tests that expose DataHub bypasses (RED phase)`
-
----
-
-#### Tarefa 2.2 — GREEN: Migrate quality-gate.ts to DataHub
-
-**GREEN:**
-
-- `_flakyCheck()` (L99-115): substituir `calculateFlakyTestRate(runs)` por `dataHub.computed.flakyTestRate`
-- `_suiteSpeedCheck()` (L129-154): substituir `calcTestDurationP95(runs)` por `dataHub.computed.testDurationP95`
-- `runQualityGate()` (L173): tornar `dataHub` obrigatório
-- Remover `createDataHubPersistence().loadMetricsStore()` (L177-179)
 
 **Checkpoint:**
 
@@ -1797,29 +1994,469 @@ npx tsc --noEmit                                    # 0 erros
 rg "loadMetricsStore" shared/quality-gate.ts        # 0 ocorrências
 rg "calculateFlakyTestRate" shared/quality-gate.ts  # 0 ocorrências
 rg "calcTestDurationP95" shared/quality-gate.ts     # 0 ocorrências
+rg "calcFlakinessEntries" shared/quality-gate.ts    # 0 ocorrências
+rg "_resolveFlakyPct" shared/quality-gate.ts        # 0 ocorrências
+rg "String\(err\)" shared/quality-gate.ts           # 0 ocorrências (catch block)
+rg "extractErrorMessage" shared/quality-gate.ts     # >= 1 ocorrência
+rg "humanizeError" shared/quality-gate.ts           # >= 1 ocorrência
 npx vitest run shared/__tests__/quality-gate*        # 100% pass
-npx vitest run shared/integration/quality-gate*      # 100% pass
+npx vitest run shared/__tests__/integration/quality-gate*  # 100% pass
 ```
 
-**Commit:** `refactor(quality-gate): enforce DataHub as mandatory — flaky, suiteSpeed, remove loadMetricsStore`
+**Commit:** `refactor(quality-gate): make dataHub mandatory — remove loadMetricsStore and all local recalculation`
 
 ---
 
-#### Tarefa 2.3 — Update quality-gate callers
+#### Tarefa 1.4 — Migrar callers que não passam DataHub
 
-**GREEN:**
+**Objetivo:** Todos os callers de `calculateHealthScore` e `runQualityGate` passam DataHub.
 
-- Verificar que todos os callers já passam DataHub (pr-report-core, interactive-mode, schedule-handler)
-- Se algum não passa, atualizar
+**Callers a migrar:**
+
+| Arquivo                              | Linha           | Ação                                            |
+| ------------------------------------ | --------------- | ----------------------------------------------- |
+| `jira_management/main.ts`            | 344             | Criar DataHub no bootstrap, passar via contexto |
+| `jira_management/commands/case26.ts` | 23              | Usar `c.dataHub` do CommandContext              |
+| `jira_management/commands/case19.ts` | 70              | Usar `c.dataHub` do CommandContext              |
+| `git_triggers/interactive-mode.ts`   | 374,441,491,533 | Passar `hub` (já disponível no escopo)          |
+| `shared/cli_base.ts`                 | 221             | Criar DataHub via `getOrFetchDataHub`           |
+
+**Callers de `runQualityGate` (verificar):**
+
+| Arquivo                            | Linha | Ação                         |
+| ---------------------------------- | ----- | ---------------------------- |
+| `git_triggers/interactive-mode.ts` | 581   | Já passa dataHub — verificar |
+| `git_triggers/schedule-handler.ts` | 259   | Já passa dataHub — verificar |
+| `shared/pr-report-core.ts`         | 352   | Já passa dataHub — verificar |
 
 **Checkpoint:**
 
 ```bash
 npx tsc --noEmit                                    # 0 erros
 npx vitest run shared/                               # 100% pass
+npx vitest run jira_management/                      # 100% pass
+npx vitest run git_triggers/                         # 100% pass
 ```
 
-**Commit:** `refactor(quality-gate): verify all callers pass DataHub`
+**Commit:** `refactor: update all callers to pass DataHub (mandatory)`
+
+> **Nota: Fallback Tripartido em quality-gate.ts**
+>
+> `quality-gate.ts:173-187` implementa fallback de 3 níveis: `getDataHub()` → `options.dataHub` → `throw`. Esse padrão não está documentado em nenhuma fase e compete com `ensureDataHub()`.
+>
+> **Resolução:** Após Tarefa 1.3 (remoção de `loadMetricsStore`), o fallback será simplificado:
+>
+> ```typescript
+> // ANTES (código real — fallback tripartido):
+> try {
+>     hub = getDataHub();
+> } catch {
+>     if (options?.dataHub) {
+>         hub = options.dataHub;
+>     } else {
+>         throw new Error('DataHub not initialized...');
+>     }
+> }
+>
+> // DEPOIS (consolidado):
+> const hub = options?.dataHub ?? getDataHub();
+> if (!hub) throw new Error('DataHub not initialized — run setup first');
+> ```
+>
+> `ensureDataHub()` é a função correta para inicialização. O fallback tripartido será consolidado em uma única chamada.
+
+---
+
+#### Tarefa 1.5 — Error Handling + Refatoração de Assinatura: health-score.ts + quality-gate.ts
+
+**Objetivo:** Tratamento de erros explícito — nenhum erro silencioso. Refatorar `calculateHealthScore` para aceitar apenas `DataHub` como fonte.
+
+**Adicionar em `shared/health-score.ts`:**
+
+```typescript
+import { extractErrorMessage } from './errors.js';
+import { humanizeError } from './prompt-errors.js';
+import { rootLogger } from './logger.js';
+```
+
+**Refatorar assinatura de `computeActualMetrics` — remover `store: MetricsStore`:**
+
+A assinatura atual aceita ambos `MetricsStore` e `DataHub`. Isso viola SSOT — `MetricsStore` deve ser eliminado como parâmetro. `dataHub.raw.runs` substitui `metricsStore.runs`.
+
+```typescript
+// ANTES (plano original — incorreto):
+function computeActualMetrics(store: MetricsStore, config: HealthScoreConfig, dataHub: DataHub): ActualMetrics {
+    const runCount = store.runs.length;
+    // ...
+}
+
+// DEPOIS (corrigido):
+function computeActualMetrics(config: HealthScoreConfig, dataHub: DataHub): ActualMetrics {
+    const runCount = dataHub.raw.runs.length;
+    const c = dataHub.computed;
+    if (!Number.isFinite(c.passRate) && !Number.isFinite(c.coverage) && !Number.isFinite(c.executionRate)) {
+        rootLogger.warn('health-score: DataHub.computed has mostly invalid values — results may be unreliable');
+    }
+    // ... resto via c.passRate, c.coverage, c.executionRate
+}
+```
+
+**Refatorar assinatura de `calculateHealthScore` — remover `metricsStore: MetricsStore`:**
+
+```typescript
+// ANTES:
+export function calculateHealthScore(
+    metricsStore: MetricsStore,
+    options: Partial<HealthScoreConfig> & { dataHub: DataHub },
+): HealthScoreResult {
+
+// DEPOIS:
+export function calculateHealthScore(
+    options: Partial<HealthScoreConfig> & { dataHub: DataHub },
+): HealthScoreResult {
+```
+
+**Efeito cascata:** Todos os callers de `calculateHealthScore` que passam `metricsStore` como primeiro argumento devem ser atualizados. Os callers já passam `dataHub` via options (Tarefa 1.4), então a mudança é: remover o primeiro argumento.
+
+**Efeito em `_buildChecks` e funções auxiliares:** Todas as funções que recebem `MetricsStore` como parâmetro devem ser refatoradas para ler de `dataHub.raw.*` e `dataHub.computed.*`.
+
+**Adicionar em `shared/quality-gate.ts`:**
+
+```typescript
+// No catch block de runQualityGate:
+catch (err: unknown) {
+    const raw = extractErrorMessage(err);
+    const known = humanizeError(raw);
+    rootLogger.error(`quality-gate: ${known ? known.msg : raw}`);
+    // ...
+}
+```
+
+**Checkpoint:**
+
+```bash
+rg "extractErrorMessage" shared/health-score.ts      # >= 1 ocorrência
+rg "humanizeError" shared/health-score.ts             # >= 1 ocorrência
+rg "MetricsStore" shared/health-score.ts              # 0 parâmetros de função (apenas imports se necessário)
+rg "store\.runs" shared/health-score.ts               # 0 ocorrências (usar dataHub.raw.runs)
+rg "extractErrorMessage" shared/quality-gate.ts      # >= 1 ocorrência
+rg "humanizeError" shared/quality-gate.ts             # >= 1 ocorrência
+npx vitest run shared/__tests__/health-score*          # 100% pass
+npx vitest run shared/__tests__/quality-gate*          # 100% pass
+```
+
+**Commit:** `fix(health-score,quality-gate): remove MetricsStore param — DataHub is sole source + add error handling`
+
+---
+
+#### Tarefa 1.6 — Dimension 5: release-score.ts — Proveniência e Referências
+
+**Objetivo:** Documentar proveniência, adicionar referências normativas, justificar pesos e thresholds.
+
+**Mudanças em `shared/release-score.ts`:**
+
+1. Adicionar PROVENANCE_DIMENSIONS (similar ao health-score.ts):
+
+```typescript
+const RELEASE_SCORE_PROVENANCE = {
+    weights: {
+        tasks: { value: 0.25, source: 'Product management best practice', standard: 'Internal' },
+        health: { value: 0.3, source: 'Quality gate composite', standard: 'Internal' },
+        coverage: { value: 0.25, source: 'ISO/IEC 25023:2016', standard: 'ISO/IEC 25023:2016' },
+        flakiness: { value: 0.2, source: 'DORA State of DevOps 2025', standard: 'DORA' },
+    },
+    threshold: { value: 70, source: 'Release readiness industry standard', standard: 'Internal' },
+};
+```
+
+2. Adicionar JSDoc com referências normativas
+3. Validar pesos com `Number.isFinite` + soma = 1.0
+4. Adicionar validação de threshold >= 0
+
+**Checkpoint:**
+
+```bash
+rg "PROVENANCE\|standard:" shared/release-score.ts   # >= 1 ocorrência
+rg "ISO\|DORA\|ISTQB" shared/release-score.ts        # >= 1 referência
+npx vitest run shared/__tests__/release-score*         # 100% pass
+```
+
+**Commit:** `docs(release-score): add Dimension 5 provenance — weights, threshold, normative references`
+
+---
+
+#### Tarefa 1.7 — Dimension 5: requirement-score.ts — Proveniência e Referências
+
+**Objetivo:** Documentar proveniência, adicionar referências normativas, justificar pesos e thresholds.
+
+**Mudanças em `shared/requirement-score.ts`:**
+
+1. Adicionar REQUIREMENT_SCORE_PROVENANCE:
+
+```typescript
+const REQUIREMENT_SCORE_PROVENANCE = {
+    weights: {
+        acceptance: { value: 0.5, source: 'AI acceptance rate importance', standard: 'Internal' },
+        retention: { value: 0.3, source: 'Requirement retention metric', standard: 'Internal' },
+        volume: { value: 0.2, source: 'Volume normalization factor', standard: 'Internal' },
+    },
+    gradeThresholds: {
+        A: { min: 90, source: 'Industry standard grading', standard: 'Internal' },
+        B: { min: 75, source: 'Industry standard grading', standard: 'Internal' },
+        C: { min: 60, source: 'Industry standard grading', standard: 'Internal' },
+        D: { min: 40, source: 'Industry standard grading', standard: 'Internal' },
+    },
+};
+```
+
+2. Adicionar JSDoc com referências
+3. Validar pesos com `Number.isFinite` + soma = 1.0
+4. Validar thresholds com `Number.isFinite` + ordem crescente
+
+**Checkpoint:**
+
+```bash
+rg "PROVENANCE\|standard:" shared/requirement-score.ts   # >= 1 ocorrência
+npx vitest run shared/__tests__/requirement-score*         # 100% pass
+```
+
+**Commit:** `docs(requirement-score): add Dimension 5 provenance — weights, thresholds, normative references`
+
+---
+
+#### Tarefa 1.8 — Dimension 5: backlog-health.ts — Proveniência e Referências
+
+**Objetivo:** Documentar proveniência, adicionar referências normativas.
+
+**Mudanças em `shared/backlog-health.ts`:**
+
+1. Adicionar BACKLOG_HEALTH_PROVENANCE:
+
+```typescript
+const BACKLOG_HEALTH_PROVENANCE = {
+    weights: {
+        stale: { value: 35, source: 'Backlog hygiene best practice', standard: 'Internal' },
+        unassigned: { value: 30, source: 'Resource allocation importance', standard: 'Internal' },
+        bugNoTest: { value: 35, source: 'Test coverage gap importance', standard: 'Internal' },
+    },
+    thresholds: {
+        healthy: { value: 80, source: 'Backlog health target', standard: 'Internal' },
+        warning: { value: 50, source: 'Backlog health warning', standard: 'Internal' },
+    },
+};
+```
+
+2. Adicionar JSDoc com referências
+3. Validar pesos com `Number.isFinite`
+4. Validar thresholds com `Number.isFinite`
+
+**Checkpoint:**
+
+```bash
+rg "PROVENANCE\|standard:" shared/backlog-health.ts   # >= 1 ocorrência
+npx vitest run shared/__tests__/backlog-health*         # 100% pass
+```
+
+**Commit:** `docs(backlog-health): add Dimension 5 provenance — weights, thresholds, normative references`
+
+---
+
+#### Tarefa 1.9 — Dimension 5: silent-regression.ts — Proveniência e Referências
+
+**Objetivo:** Documentar base estatística dos thresholds de z-score.
+
+**Mudanças em `shared/silent-regression.ts`:**
+
+1. Adicionar SILENT_REGRESSION_PROVENANCE:
+
+```typescript
+const SILENT_REGRESSION_PROVENANCE = {
+    severityThresholds: {
+        LOW: { zScore: 1, source: 'Statistical process control (1-sigma)', standard: 'ISO 3534-2' },
+        MEDIUM: { zScore: 2, source: 'Statistical process control (2-sigma)', standard: 'ISO 3534-2' },
+        HIGH: { zScore: 3, source: 'Statistical process control (3-sigma)', standard: 'ISO 3534-2' },
+        CRITICAL: { zScore: 5, source: 'Extreme outlier detection (5-sigma)', standard: 'ISO 3534-2' },
+    },
+};
+```
+
+2. Adicionar JSDoc com referência ISO 3534-2
+3. Validar thresholds com `Number.isFinite` + ordem crescente
+
+**Checkpoint:**
+
+```bash
+rg "ISO 3534\|PROVENANCE" shared/silent-regression.ts   # >= 1 ocorrência
+npx vitest run shared/__tests__/silent-regression*         # 100% pass
+```
+
+**Commit:** `docs(silent-regression): add Dimension 5 provenance — z-score thresholds, ISO 3534-2 reference`
+
+---
+
+#### Tarefa 1.10 — Dimension 5: quality-metrics.ts — Proveniência
+
+**Objetivo:** Documentar threshold 2-sigma para drift detection.
+
+**Mudanças em `shared/quality-metrics.ts`:**
+
+1. Adicionar DRIFT_DETECTION_PROVENANCE:
+
+```typescript
+const DRIFT_DETECTION_PROVENANCE = {
+    sigmaThreshold: {
+        value: 2,
+        source: 'Statistical process control (2-sigma rule)',
+        standard: 'ISO 3534-2',
+    },
+};
+```
+
+2. Adicionar JSDoc com referência
+
+**Checkpoint:**
+
+```bash
+rg "ISO 3534\|PROVENANCE" shared/quality-metrics.ts   # >= 1 ocorrência
+npx vitest run shared/__tests__/quality-metrics*         # 100% pass
+```
+
+**Commit:** `docs(quality-metrics): add Dimension 5 provenance — drift detection threshold, ISO 3534-2`
+
+---
+
+#### Tarefa 1.11 — Dimension 5: cross-squad-benchmark.ts — Proveniência
+
+**Objetivo:** Documentar metodologia de benchmark.
+
+**Mudanças em `shared/cross-squad-benchmark.ts`:**
+
+1. Adicionar BENCHMARK_PROVENANCE:
+
+```typescript
+const BENCHMARK_PROVENANCE = {
+    methodology: {
+        source: 'Cross-team benchmarking best practice',
+        standard: 'DORA / Internal',
+    },
+};
+```
+
+2. Adicionar JSDoc com referência
+
+**Checkpoint:**
+
+```bash
+rg "PROVENANCE\|DORA" shared/cross-squad-benchmark.ts   # >= 1 ocorrência
+npx vitest run shared/__tests__/cross-squad-benchmark*     # 100% pass
+```
+
+**Commit:** `docs(cross-squad-benchmark): add Dimension 5 provenance — benchmark methodology reference`
+
+---
+
+#### Tarefa 1.12 — Dimension 5: impact-alert.ts — Proveniência
+
+**Objetivo:** Documentar thresholds de alerta.
+
+**Mudanças em `shared/impact-alert.ts`:**
+
+1. Adicionar IMPACT_ALERT_PROVENANCE:
+
+```typescript
+const IMPACT_ALERT_PROVENANCE = {
+    thresholds: {
+        low: { value: 70, source: 'Quality gate minimum threshold', standard: 'Internal' },
+        high: { value: 80, source: 'Quality gate target threshold', standard: 'Internal' },
+    },
+};
+```
+
+2. Adicionar JSDoc com referência
+
+**Checkpoint:**
+
+```bash
+rg "PROVENANCE" shared/impact-alert.ts   # >= 1 ocorrência
+npx vitest run shared/__tests__/impact-alert*  # 100% pass
+```
+
+**Commit:** `docs(impact-alert): add Dimension 5 provenance — alert thresholds reference`
+
+---
+
+#### Tarefa 1.13 — Testes Dimension 5: PBT + Integration
+
+**Objetivo:** Garantir que todos os novos PROVENANCE_DIMENSIONS são validados por testes.
+
+**Novos testes:**
+
+1. **release-score.property.test.ts** — PBT: pesos somam 1.0, thresholds >= 0
+2. **requirement-score.property.test.ts** — PBT: pesos somam 1.0, thresholds em ordem crescente
+3. **backlog-health.property.test.ts** — PBT: pesos >= 0, thresholds >= 0
+4. **silent-regression.property.test.ts** — PBT: z-scores em ordem crescente
+5. **integration/dimension5-validation.integration.test.ts** — Valida que TODOS os módulos têm PROVENANCE_DIMENSIONS
+
+**Checkpoint:**
+
+```bash
+npx vitest run shared/__tests__/dimension5*              # 100% pass
+npx vitest run shared/__tests__/integration/dimension5*  # 100% pass
+```
+
+**Commit:** `test(dimension5): add PBT and integration tests for all provenance documentation`
+
+---
+
+### Checkpoint Final da Fase 1
+
+```bash
+# 1. TypeScript
+npx tsc --noEmit                                    # 0 erros
+
+# 2. Sem bypasses em health-score.ts
+rg "_computeExpWeighted|_computeFlakyRate|_computeSuiteSpeed|_resolveCoverage|store\.coverageHistory|_resolvePassRate|_resolveSuiteSpeed" shared/health-score.ts  # 0
+
+# 3. Sem bypasses em quality-gate.ts
+rg "loadMetricsStore|calculateFlakyTestRate|calcTestDurationP95|calcFlakinessEntries|_resolveFlakyPct" shared/quality-gate.ts  # 0
+
+# 4. dataHub obrigatório
+rg "dataHub\?" shared/health-score.ts               # 0 (era opcional, agora é obrigatório)
+rg "dataHub\?" shared/quality-gate.ts               # 0 (era opcional, agora é obrigatório)
+
+# 5. Error handling
+rg "extractErrorMessage" shared/health-score.ts     # >= 1
+rg "humanizeError" shared/health-score.ts            # >= 1
+
+# 6. Dimension 5 Provenance
+rg "PROVENANCE" shared/release-score.ts              # >= 1
+rg "PROVENANCE" shared/requirement-score.ts          # >= 1
+rg "PROVENANCE" shared/backlog-health.ts             # >= 1
+rg "PROVENANCE" shared/silent-regression.ts          # >= 1
+rg "PROVENANCE" shared/quality-metrics.ts            # >= 1
+rg "PROVENANCE" shared/cross-squad-benchmark.ts      # >= 1
+rg "PROVENANCE" shared/impact-alert.ts               # >= 1
+
+# 7. Normative References
+rg "ISO.*25023\|DORA\|ISTQB\|ISO 3534" shared/release-score.ts  # >= 1
+rg "ISO.*25023\|DORA\|ISTQB\|ISO 3534" shared/requirement-score.ts  # >= 1
+
+# 8. Testes
+npx vitest run shared/__tests__/health-score*         # 100% pass
+npx vitest run shared/__tests__/quality-gate*         # 100% pass
+npx vitest run shared/__tests__/integration/quality-gate*  # 100% pass
+npx vitest run shared/__tests__/dimension5*           # 100% pass
+npx vitest run jira_management/                       # 100% pass
+npx vitest run git_triggers/                          # 100% pass
+```
+
+---
+
+### FASE 2 — QUALITY-GATE COMPLETAMENTE ABSORVIDO PELA FASE 1
+
+> **Nota (2026-07-10):** A Fase 2 original (quality-gate.ts SSOT) foi **absorvida pela Fase 1, Tarefa 1.3**.
+> As 3 tarefas originais da Fase 2 (RED, GREEN, callers) estão cobertas pela Tarefa 1.3.
+> Nenhuma ação adicional necessária nesta fase.
 
 ---
 
@@ -1827,96 +2464,146 @@ npx vitest run shared/                               # 100% pass
 
 ---
 
-#### Tarefa 3.1 — RED: Tests that expose pr-report-core bypasses
+#### Tarefa 3.1 — Remover CTRF de pr-report-core.ts
 
 **Preparação:**
 
 ```bash
-grep -n "readIstanbulCoverage\|parseTestResultsFile\|isQuarantined\|store\.runs\|calcMetricsTrends" shared/pr-report-core.ts
-# Mapear: L389 (istanbul), L728 (ctrf), L190/200 (quarantine), L184/403/416/761 (store.runs)
+grep -n "readIstanbulCoverage\|parseTestResultsFile\|ctrf\|store\.runs" shared/pr-report-core.ts
+# Mapear: L36 (istanbul import), L37 (parseTestResultsFile import), L38 (ParseResult type)
+# L643 (ctrfPath CliOptions), L653 (ctrfPath default), L684-685 (--ctrf case)
+# L745-748 (CTRF file check), L750-754 (CTRF parsing), L791-792 (store.runs diff)
+# L795-801 (result.tests/stats from CTRF)
 ```
-
-**RED:**
-
-```bash
-# Criar test que FALHA:
-# it('uses dataHub.computed.quarantineStatus instead of isQuarantined()', () => {
-#   const dataHub = createTestHub({ computed: { quarantineStatus: { flakyCount: 3, quarantinedCount: 1 } } });
-#   const result = await generatePrReport({ dataHub, ... });
-#   expect(result.flakySection).toContain('1');
-# });
-# Esperado: FALHA — pr-report-core ainda chama isQuarantined() diretamente
-```
-
-**Commit:** `test(pr-report-core): add failing tests that expose DataHub bypasses (RED phase)`
-
----
-
-#### Tarefa 3.2 — GREEN: Migrate pr-report-core.ts to DataHub
 
 **GREEN:**
 
-- `resolveCoverageForReport()` (L389): remover `readIstanbulCoverage()` fallback → usar `dataHub.computed.coverage`
-- `buildFlakySection()` (L180): adicionar `dataHub?: DataHub` parâmetro → usar `dataHub.computed.flakinessEntries`
-- `isQuarantined()` (L190, 200): substituir por `dataHub.computed.quarantineStatus`
-- `store.runs` (L184, 403, 416, 761): substituir por `dataHub.computed.metricsRuns` ou `dataHub.raw.runs`
-- `parseTestResultsFile()` (L728): substituir por `dataHub.raw.parsedArtifacts`
-- `calcMetricsTrends(store.runs)` (L416): substituir por `dataHub.computed.metricsTrends`
-- `generatePrReport()` (L472): tornar `dataHub` obrigatório
+1. Remover `import { readIstanbulCoverage }` (L36)
+2. Remover `import { parseTestResultsFile }` (L37)
+3. Remover `ParseResult` do import type (L38) — manter `FlatTest`
+4. Remover `ctrfPath: string` de `CliOptions` (L643)
+5. Remover default `ctrfPath: 'reports/ctrf-report.json'` (L653)
+6. Remover help text `--ctrf` (L673-674)
+7. Remover case `--ctrf` em `parseArgs` (L684-685)
+8. Remover `if (!fs.existsSync(opts.ctrfPath))` (L745-748)
+9. Remover `parseTestResultsFile(opts.ctrfPath)` + error check (L750-754)
+10. Substituir diff comparison: `store.runs` → `dataHub?.computed.metricsRuns` (L791-792)
+11. Substituir `result.tests`/`result.stats` → extrair de `dataHub?.computed.metricsRuns[0]` (L795-801)
 
 **Checkpoint:**
 
 ```bash
 npx tsc --noEmit                                    # 0 erros
-rg "readIstanbulCoverage" shared/pr-report-core.ts   # 0 ocorrências
-rg "parseTestResultsFile" shared/pr-report-core.ts   # 0 ocorrências
-rg "isQuarantined" shared/pr-report-core.ts          # 0 ocorrências
-rg "store\.runs" shared/pr-report-core.ts            # 0 ocorrências
-npx vitest run shared/__tests__/pr-report-core*       # 100% pass
-npx vitest run shared/__tests__/pr-report.test.ts     # 100% pass
+rg "readIstanbulCoverage|parseTestResultsFile" shared/pr-report-core.ts  # 0
+rg "ctrf" shared/pr-report-core.ts                 # 0
+rg "store\.runs" shared/pr-report-core.ts          # 0
 ```
 
-**Commit:** `refactor(pr-report-core): enforce DataHub as mandatory — coverage, flaky, quarantine, trends`
+**Commit:** `refactor(pr-report-core): remove CTRF direct reads — use DataHub as SSOT`
 
 ---
 
-#### Tarefa 3.3 — Error Handling: pr-report-core.ts
+#### Tarefa 3.2 — Migrar funções para DataHub
 
 **GREEN:**
 
-- Substituir `String(err)` por `extractErrorMessage(err)` em catch blocks
-- Adicionar `humanizeError` com contexto `pr-report-core`
-- Substituir `_getErrorMessage` por `formatErr` se existir
+1. `resolveCoverageForReport()` (L393): substituir `return readIstanbulCoverage() ?? undefined` → `return undefined`
+2. `buildFlakySection()` (L180-221):
+    - Remover `isDataHubInitialized()`/`getDataHub()`/`hub.loadMetricsStore()`/`store.runs`
+    - Nova assinatura: `buildFlakySection(dataHub?: DataHub): string`
+    - Usar `dataHub?.computed.flakinessEntries ?? []`
+3. `generateHtmlReportFile()` (L396-439):
+    - Substituir `store: MetricsStore` por `dataHub?: DataHub`
+    - L407: `calcFlakinessEntries(store.runs, ...)` → `dataHub?.computed.flakinessEntries ?? []`
+    - L420: `calcMetricsTrends(store.runs)` → `dataHub?.computed.metricsTrends ?? []`
+4. `generatePrReport()` (L494-551):
+    - Remover `const store = hub?.loadMetricsStore() ?? { runs: [] }` (L501)
+    - L530: `buildFlakySection()` → `buildFlakySection(dataHub)`
+    - L534: `generateHtmlReportFile(..., store, ...)` → `generateHtmlReportFile(..., dataHub, ...)`
 
 **Checkpoint:**
 
 ```bash
-rg "extractErrorMessage" shared/pr-report-core.ts    # >= 1 ocorrência
-rg "humanizeError" shared/pr-report-core.ts           # >= 1 ocorrência
-rg "String(err)" shared/pr-report-core.ts             # 0 ocorrências
-npx vitest run shared/__tests__/pr-report-core*        # 100% pass
+npx tsc --noEmit                                    # 0 erros
+rg "loadMetricsStore|store\." shared/pr-report-core.ts  # 0
+npx vitest run shared/__tests__/pr-report-core*     # 100% pass
 ```
 
-**Commit:** `fix(pr-report-core): add proper error handling with humanizeError`
+**Commit:** `refactor(pr-report-core): migrate buildFlakySection, generateHtmlReportFile to DataHub`
 
 ---
 
-#### Tarefa 3.4 — PBT: pr-report-core invariants
+#### Tarefa 3.3 — Atualizar ci-injector.ts (gerador de YAML)
 
 **GREEN:**
 
-- Criar `shared/__tests__/pr-report-core.property.test.ts` se não existe
-- Propriedades: passRate ∈ [0,100], coverage ∈ [0,100], flakyRate ∈ [0,100]
-- `expect.hasAssertions()` no topo
+1. Remover `const CTRF_DEFAULT` (L17)
+2. Substituir `ctrfPath?: string` por `testReportPath: string` + `artifactName: string` em `PostProcessWorkflowOptions` (L23-28)
+3. Substituir `ctrfPath` por `testReportPath` (L35)
+4. Substituir input `ctrf-path` por `test-report-path` no YAML gerado (L49-53)
+5. Adicionar input `artifact-name` no YAML gerado
+6. Substituir step "Download CTRF report" por "Upload test report" — `actions/upload-artifact` com `name: ${{ inputs.artifact-name }}`, `path: ${{ inputs.test-report-path }}`
+7. Remover shell check `if [ ! -f ... ]` e `--ctrf` no run command (L74-78)
+8. Run simplificado: `npx tsx git_triggers/pr-report-entry.ts --project ${{ inputs.project-name }}`
+9. Atualizar `generatePostProcessWorkflowFromContext` (L94-101) — usar `ctx.testReportPath` e `ctx.artifactName`
 
 **Checkpoint:**
 
 ```bash
-npx vitest run shared/__tests__/pr-report-core.property.test.ts --reporter=verbose
-# Esperado: todos passam
+npx tsc --noEmit                                    # 0 erros
+rg "ctrf" shared/ci-injector.ts                    # 0
+npx vitest run shared/ci-injector.test.ts           # 100% pass
 ```
 
-**Commit:** `test(pr-report-core): add property-based tests for SSOT invariants`
+**Commit:** `refactor(ci-injector): replace CTRF with generic testReportPath + artifactName`
+
+---
+
+#### Tarefa 3.4 — Atualizar wizard (setup/main.ts + setup/context.ts)
+
+**GREEN:**
+
+1. `setup/context.ts`: substituir `ctrfReportPath: string` por `testReportPath: string`
+2. `setup/context.ts`: adicionar `artifactName: string`
+3. `setup/main.ts:63-65`: renomear pergunta para "Test report path" (default: detection.ctrfReportPath)
+4. `setup/main.ts`: adicionar pergunta "Artifact name ['test-report']" (default: `test-report`)
+5. `setup/main.ts:104-117`: atualizar return para incluir `testReportPath` e `artifactName`
+6. `setup/config-writer.ts`: atualizar se referenciar `ctrfReportPath`
+
+**Checkpoint:**
+
+```bash
+npx tsc --noEmit                                    # 0 erros
+rg "testReportPath|artifactName" setup/context.ts  # >= 2
+rg "ctrfReportPath" setup/context.ts               # 0
+npx vitest run setup/main.test.ts                   # 100% pass
+```
+
+**Commit:** `refactor(wizard): replace ctrfReportPath with testReportPath + artifactName`
+
+---
+
+#### Tarefa 3.5 — Testes
+
+**GREEN:**
+
+| Item  | Teste                                                     | Mudanças principais                                                                            |
+| ----- | --------------------------------------------------------- | ---------------------------------------------------------------------------------------------- |
+| 3.5.1 | `shared/__tests__/pr-report-core.test.ts`                 | Remover mocks readIstanbulCoverage/parseTestResultsFile, mock DataHub com computed.metricsRuns |
+| 3.5.2 | `shared/__tests__/pr-report-core.property.test.ts`        | Mesmo                                                                                          |
+| 3.5.3 | `shared/__tests__/pr-report-core.wiring.property.test.ts` | Mesmo                                                                                          |
+| 3.5.4 | `shared/__tests__/pr-report-core.wiring.test.ts`          | Remover parseTestResultsFile mock                                                              |
+| 3.5.5 | `shared/__tests__/pr-report-core.main.test.ts`            | Reescrever — remover mocks CTRF, testar fluxo DataHub                                          |
+| 3.5.6 | `shared/ci-injector.test.ts`                              | Atualizar para novos inputs (testReportPath, artifactName)                                     |
+| 3.5.7 | `setup/main.test.ts`                                      | Atualizar mocks para testReportPath/artifactName                                               |
+
+**Checkpoint:**
+
+```bash
+npx vitest run shared/__tests__/pr-report-core* shared/__tests__/pr-report.test.ts shared/ci-injector.test.ts setup/main.test.ts  # 100% pass
+```
+
+**Commit:** `test(pr-report-core, ci-injector, wizard): update mocks for DataHub SSOT`
 
 ---
 
@@ -2835,51 +3522,113 @@ rg "loadMetricsStore" shared/quality-gate.ts         # 0 ocorrências
 
 ---
 
-### Fase 3 — pr-report-core.ts SSOT Enforcement (1 dia)
+### Fase 3 — pr-report-core.ts SSOT + CTRF Removal + ci-injector (1.5 dias)
 
-**Objetivo:** `generatePrReport()` usa exclusivamente DataHub. Nenhum fallback para file reads.
+**Objetivo:** `generatePrReport()` usa exclusivamente DataHub. CTRF direto é removido (self-reference bug). ci-injector gera workflow genérico sem auto-referenciamento. Wizard pergunta `testReportPath` e `artifactName`.
 
-#### 3.1 — Migrar 5 bypasses
+**Problema:** CTRF report é produzido pela suite de testes do qa_tools. `pr-report-core.ts` lê esse CTRF diretamente — gerando relatório sobre si mesmo em vez do projeto externo. DataHub já busca artifacts via GitHub API (`github-provider.ts:48-56`) e parseia CTRF/JUnit/Mochawesome (`artifact-parser.ts`). pr-report NUNCA deve tocar CTRF no filesystem.
 
-| Item  | Bypass                       | Linha Atual                           | Mudança                                  |
-| ----- | ---------------------------- | ------------------------------------- | ---------------------------------------- |
-| 3.1.1 | `resolveCoverageForReport()` | 389 `readIstanbulCoverage()` fallback | Usar `dataHub.computed.coverage`         |
-| 3.1.2 | `store.runs` flaky           | 184                                   | Usar `dataHub.computed.metricsRuns`      |
-| 3.1.3 | `store.runs` trends          | 416                                   | Usar `dataHub.computed.metricsTrends`    |
-| 3.1.4 | `store.runs` HTML            | 761                                   | Usar `dataHub.raw.runs`                  |
-| 3.1.5 | `isQuarantined()`            | 190, 200                              | Usar `dataHub.computed.quarantineStatus` |
-| 3.1.6 | `parseTestResultsFile()`     | 728                                   | Usar `dataHub.raw.parsedArtifacts`       |
+**Fluxo correto:**
 
-#### 3.2 — buildFlakySection() — adicionar DataHub
+```
+Projeto externo: CI produz CTRF/JUnit/Mochawesome → upload como artifact
+→ DataHub busca artifacts via GitHub API → DataHub parseia → computed.metricsRuns
+→ main() lê de dataHub.computed.metricsRuns → generatePrReport()
+```
 
-| Item  | Assinatura Atual                 | Nova Assinatura                                        |
-| ----- | -------------------------------- | ------------------------------------------------------ |
-| 3.2.1 | `buildFlakySection()` (0 params) | `buildFlakySection(project: string, dataHub: DataHub)` |
+#### 3.1 — Remover CTRF de pr-report-core.ts
 
-#### 3.3 — Tornar DataHub obrigatório
+| Item   | Linha   | Bypass                                    | Mudança                                             |
+| ------ | ------- | ----------------------------------------- | --------------------------------------------------- |
+| 3.1.1  | 36      | `import { readIstanbulCoverage }`         | Remover import                                      |
+| 3.1.2  | 37      | `import { parseTestResultsFile }`         | Remover import                                      |
+| 3.1.3  | 38      | `import type { ParseResult }`             | Remover `ParseResult` do import (manter `FlatTest`) |
+| 3.1.4  | 643     | `ctrfPath: string` em CliOptions          | Remover campo                                       |
+| 3.1.5  | 653     | `ctrfPath: 'reports/ctrf-report.json'`    | Remover default                                     |
+| 3.1.6  | 673-674 | `--ctrf` help text                        | Remover                                             |
+| 3.1.7  | 684-685 | `--ctrf` case em parseArgs                | Remover                                             |
+| 3.1.8  | 745-748 | `if (!fs.existsSync(opts.ctrfPath))`      | Remover check                                       |
+| 3.1.9  | 750-754 | `parseTestResultsFile(opts.ctrfPath)`     | Remover parsing                                     |
+| 3.1.10 | 791-792 | `store.runs` diff comparison via CTRF     | Usar `dataHub.computed.metricsRuns`                 |
+| 3.1.11 | 795-801 | `result.tests` / `result.stats` from CTRF | Extrair de `dataHub.computed.metricsRuns[0]`        |
 
-| Item  | Assinatura Atual             | Nova Assinatura                                    |
-| ----- | ---------------------------- | -------------------------------------------------- |
-| 3.3.1 | `generatePrReport(options?)` | `generatePrReport(options & { dataHub: DataHub })` |
+#### 3.2 — Migrar funções para DataHub
 
-#### 3.4 — Testes
+| Item  | Função                       | Linha | Mudança                                                                                                                |
+| ----- | ---------------------------- | ----- | ---------------------------------------------------------------------------------------------------------------------- |
+| 3.2.1 | `resolveCoverageForReport()` | 393   | Remover `readIstanbulCoverage()` fallback → `return undefined`                                                         |
+| 3.2.2 | `buildFlakySection()`        | 180   | Nova assinatura: `buildFlakySection(dataHub?: DataHub)` — usar `dataHub?.computed.flakinessEntries`                    |
+| 3.2.3 | `generateHtmlReportFile()`   | 396   | Substituir `store: MetricsStore` por `dataHub?: DataHub` — usar `computed.flakinessEntries` e `computed.metricsTrends` |
+| 3.2.4 | `generatePrReport()`         | 494   | Remover `const store = hub?.loadMetricsStore()` — passar `dataHub` para funções auxiliares                             |
 
-| Item  | Teste                                                     | Ação      |
-| ----- | --------------------------------------------------------- | --------- |
-| 3.4.1 | `shared/__tests__/pr-report-core.test.ts`                 | Atualizar |
-| 3.4.2 | `shared/__tests__/pr-report-core.property.test.ts`        | Atualizar |
-| 3.4.3 | `shared/__tests__/pr-report-core.wiring.property.test.ts` | Atualizar |
-| 3.4.4 | `shared/__tests__/pr-report-core.wiring.test.ts`          | Atualizar |
-| 3.4.5 | `shared/__tests__/pr-report-core.main.test.ts`            | Atualizar |
+#### 3.3 — Remover imports mortos
+
+| Item  | Import                                  | Ação                        |
+| ----- | --------------------------------------- | --------------------------- |
+| 3.3.1 | `import { readIstanbulCoverage }` (L36) | Remover                     |
+| 3.3.2 | `import { parseTestResultsFile }` (L37) | Remover                     |
+| 3.3.3 | `import type { ParseResult }` (L38)     | Remover (manter `FlatTest`) |
+
+#### 3.4 — Atualizar ci-injector.ts (gerador de YAML)
+
+| Item  | Linha  | Mudança                                                                                                                                                                |
+| ----- | ------ | ---------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| 3.4.1 | 17     | Remover `const CTRF_DEFAULT = 'reports/ctrf-report.json'`                                                                                                              |
+| 3.4.2 | 23-28  | Substituir `ctrfPath?: string` por `testReportPath: string` + `artifactName: string` em `PostProcessWorkflowOptions`                                                   |
+| 3.4.3 | 35     | Substituir `ctrfPath` por `testReportPath`                                                                                                                             |
+| 3.4.4 | 49-53  | Substituir input `ctrf-path` por `test-report-path` (default: testReportPath)                                                                                          |
+| 3.4.5 | —      | Adicionar input `artifact-name` (default: artifactName)                                                                                                                |
+| 3.4.6 | 66-70  | Substituir "Download CTRF report" por "Upload test report" — `actions/upload-artifact` com `name: ${{ inputs.artifact-name }}`, `path: ${{ inputs.test-report-path }}` |
+| 3.4.7 | 74-78  | Remover check `if [ ! -f ... ]` e `--ctrf` — run simplificado: `npx tsx git_triggers/pr-report-entry.ts --project ${{ inputs.project-name }}`                          |
+| 3.4.8 | 94-101 | Atualizar `generatePostProcessWorkflowFromContext` — usar `ctx.testReportPath` e `ctx.artifactName`                                                                    |
+
+#### 3.5 — Atualizar wizard (setup/main.ts + setup/context.ts)
+
+| Item  | Arquivo            | Mudança                                                                       |
+| ----- | ------------------ | ----------------------------------------------------------------------------- |
+| 3.5.1 | `context.ts`       | Substituir `ctrfReportPath: string` por `testReportPath: string`              |
+| 3.5.2 | `context.ts`       | Adicionar `artifactName: string`                                              |
+| 3.5.3 | `main.ts:63-65`    | Renomear pergunta para "Test report path" (default: detection.ctrfReportPath) |
+| 3.5.4 | `main.ts`          | Adicionar pergunta: "Artifact name ['test-report']" (default: `test-report`)  |
+| 3.5.5 | `main.ts:104-117`  | Atualizar return para incluir `testReportPath` e `artifactName`               |
+| 3.5.6 | `config-writer.ts` | Atualizar `writeFeaturesConfig` se referenciar `ctrfReportPath`               |
+| 3.5.7 | `detector.ts`      | Manter detecção (ctrfReportPath é usado como default para testReportPath)     |
+
+#### 3.6 — Testes
+
+| Item  | Teste                                                     | Ação                                                                                    |
+| ----- | --------------------------------------------------------- | --------------------------------------------------------------------------------------- |
+| 3.6.1 | `shared/__tests__/pr-report-core.test.ts`                 | Remover mocks readIstanbulCoverage/parseTestResultsFile, adicionar computed.metricsRuns |
+| 3.6.2 | `shared/__tests__/pr-report-core.property.test.ts`        | Mesmo                                                                                   |
+| 3.6.3 | `shared/__tests__/pr-report-core.wiring.property.test.ts` | Mesmo                                                                                   |
+| 3.6.4 | `shared/__tests__/pr-report-core.wiring.test.ts`          | Remover parseTestResultsFile mock                                                       |
+| 3.6.5 | `shared/__tests__/pr-report-core.main.test.ts`            | Reescrever — remover mocks CTRF, testar fluxo DataHub                                   |
+| 3.6.6 | `shared/ci-injector.test.ts`                              | Atualizar para novos inputs (testReportPath, artifactName)                              |
+| 3.6.7 | `setup/main.test.ts`                                      | Atualizar mocks para testReportPath/artifactName                                        |
+| 3.6.8 | `setup/detector.test.ts`                                  | Manter (detecção não muda)                                                              |
 
 **Checkpoint Fase 3:**
 
 ```bash
+# TypeScript
 npx tsc --noEmit                                    # 0 erros
+
+# Testes
 npx vitest run shared/__tests__/pr-report-core*       # 100% pass
 npx vitest run shared/__tests__/pr-report.test.ts     # 100% pass
-rg "readIstanbulCoverage\|parseTestResultsFile\|isQuarantined" shared/pr-report-core.ts  # 0 ocorrências
-rg "store\.runs" shared/pr-report-core.ts             # 0 ocorrências
+npx vitest run shared/ci-injector.test.ts             # 100% pass
+npx vitest run setup/main.test.ts                     # 100% pass
+
+# Nenhum CTRF direto em pr-report-core
+rg "readIstanbulCoverage|parseTestResultsFile" shared/pr-report-core.ts  # 0 ocorrências
+rg "ctrf" shared/pr-report-core.ts                                     # 0 ocorrências
+rg "store\.runs" shared/pr-report-core.ts                              # 0 ocorrências
+
+# ci-injector sem CTRF
+rg "ctrf" shared/ci-injector.ts                                        # 0 ocorrências
+
+# Wizard com novos campos
+rg "testReportPath|artifactName" setup/context.ts                      # >= 2 ocorrências
 ```
 
 ---
@@ -3254,6 +4003,10 @@ echo "6. Nenhum store.runs fora do data-hub:" && \
 | 2026-07-09 | Test factories são ÚNICA fonte de dados de teste — copies de saída proibidas              | Copiar output = codificar bugs como features                             | Usuário |
 | 2026-07-09 | Integration tests + PBT têm prioridade sobre unit tests para DataHub                      | DataHub é cross-camada — unit tests não cobrem o fluxo real              | Usuário |
 | 2026-07-09 | BadTesting (`toBeDefined()` sozinho) = teatro → corrigir ou deletar                       | Testes que passam sem verificar comportamento são pior que sem teste     | Usuário |
+| 2026-07-10 | CTRF em pr-report é self-reference bug — remover, DataHub lê artifacts via API            | pr-report gerava relatório sobre si próprio, não sobre projeto externo   | Usuário |
+| 2026-07-10 | ci-injector gera YAML genérico — sem auto-referenciamento a qa_tools                      | Projeto gerenciado ≠ qa_tools; workflow deve ser genérico                | Usuário |
+| 2026-07-10 | Wizard pergunta testReportPath + artifactName — info explicitamente pedida ao usuário     | ci-injector precisa desses dados; wizard deve coletá-los                 | Usuário |
+| 2026-07-10 | ci-injector injeta upload de artifact no test job (Opção A) — fluxo completo e automático | External project não precisa configurar upload manualmente               | Usuário |
 
 ---
 
@@ -3264,16 +4017,16 @@ echo "6. Nenhum store.runs fora do data-hub:" && \
 > **Previsão de conclusão:** 10-12 dias úteis
 > **Contrato:** 10 invariantes (System Model) + 8 regras de erro (EH) + 10 regras de teste (TD)
 
-| Fase | Descrição                               | Status      | Data | Checkpoint                                                     |
-| ---- | --------------------------------------- | ----------- | ---- | -------------------------------------------------------------- |
-| 0    | Foundation (TS2307 + CommandContext)    | 🔜 Pendente | —    | `npx tsc --noEmit` = 0                                         |
-| 1    | health-score.ts SSOT                    | 🔜 Pendente | —    | `rg "store.coverageHistory\|store\.runs" health-score.ts` = 0  |
-| 2    | quality-gate.ts SSOT                    | 🔜 Pendente | —    | `rg "loadMetricsStore" quality-gate.ts` = 0                    |
-| 3    | pr-report-core.ts SSOT                  | 🔜 Pendente | —    | `rg "readIstanbulCoverage\|store\.runs" pr-report-core.ts` = 0 |
-| 4    | Jira Command Handlers (6 cases)         | 🔜 Pendente | —    | `rg "loadMetricsStore" jira_management/commands/` = 0          |
-| 5    | git_triggers Consumers (5 arquivos)     | 🔜 Pendente | —    | `rg "loadMetricsStore\|store\.runs" git_triggers/` = 0         |
-| 6    | Shared Consumers Restantes (4 arquivos) | 🔜 Pendente | —    | `rg "loadMetricsStore" shared/` = só data-hub/                 |
-| 7    | Auditoria Pós-Migração                  | 🔜 Pendente | —    | 9 verificações rg = 0                                          |
-| 8    | Deletar Fontes Alternativas             | 🔜 Pendente | —    | `npx tsc --noEmit` = 0                                         |
-| 9    | Pegar Consumidores Silenciosos          | 🔜 Pendente | —    | `npx tsc --noEmit` = 0                                         |
-| 10   | Prevenção Final (ESLint + TECHDOC)      | 🔜 Pendente | —    | Verificação final completa                                     |
+| Fase | Descrição                                                    | Status      | Data       | Checkpoint                                                                              |
+| ---- | ------------------------------------------------------------ | ----------- | ---------- | --------------------------------------------------------------------------------------- |
+| 0    | Foundation (TS2307 + CommandContext)                         | ✅ Completo | 2026-07-09 | `npx tsc --noEmit` = 0                                                                  |
+| 1    | health-score + quality-gate SSOT + Dim5 (13 tarefas)         | ✅ Completo | 2026-07-09 | 13 checkpoints + 8 verificações Dimension 5                                             |
+| 2    | quality-gate.ts SSOT                                         | ✅ Completo | 2026-07-09 | `rg "loadMetricsStore" quality-gate.ts` = 0                                             |
+| 3    | pr-report-core.ts SSOT + CTRF removal + ci-injector + wizard | 🔜 Pendente | —          | `rg "readIstanbulCoverage\|ctrf" pr-report-core.ts` = 0, `rg "ctrf" ci-injector.ts` = 0 |
+| 4    | Jira Command Handlers (6 cases)                              | 🔜 Pendente | —          | `rg "loadMetricsStore" jira_management/commands/` = 0                                   |
+| 5    | git_triggers Consumers (5 arquivos)                          | 🔜 Pendente | —          | `rg "loadMetricsStore\|store\.runs" git_triggers/` = 0                                  |
+| 6    | Shared Consumers Restantes (4 arquivos)                      | 🔜 Pendente | —          | `rg "loadMetricsStore" shared/` = só data-hub/                                          |
+| 7    | Auditoria Pós-Migração                                       | 🔜 Pendente | —          | 9 verificações rg = 0                                                                   |
+| 8    | Deletar Fontes Alternativas                                  | 🔜 Pendente | —          | `npx tsc --noEmit` = 0                                                                  |
+| 9    | Pegar Consumidores Silenciosos                               | 🔜 Pendente | —          | `npx tsc --noEmit` = 0                                                                  |
+| 10   | Prevenção Final (ESLint + TECHDOC)                           | 🔜 Pendente | —          | Verificação final completa                                                              |

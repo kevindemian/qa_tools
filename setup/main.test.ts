@@ -83,7 +83,8 @@ function mockAskForTests(prePush: boolean) {
         .mockResolvedValueOnce('cypress')
         .mockResolvedValueOnce('npx cypress run')
         .mockResolvedValueOnce('npm ci')
-        .mockResolvedValueOnce('ctrf-report.json')
+        .mockResolvedValueOnce('ctrf-report.json') // testReportPath
+        .mockResolvedValueOnce('test-report') // artifactName
         .mockResolvedValueOnce('20')
         .mockResolvedValueOnce('github-actions');
     MockAskConfirm.mockResolvedValueOnce(true) // prReport
@@ -147,7 +148,8 @@ describe('Setup main', () => {
             .mockResolvedValueOnce('cypress')
             .mockResolvedValueOnce('npx cypress run')
             .mockResolvedValueOnce('npm ci')
-            .mockResolvedValueOnce('ctrf-report.json')
+            .mockResolvedValueOnce('ctrf-report.json') // testReportPath
+            .mockResolvedValueOnce('test-report') // artifactName
             .mockResolvedValueOnce('20')
             .mockResolvedValueOnce('gitlab-ci');
         MockAskConfirm.mockResolvedValueOnce(true) // prReport
@@ -208,7 +210,8 @@ describe('Setup main', () => {
             .mockResolvedValueOnce('cypress')
             .mockResolvedValueOnce('npx cypress run')
             .mockResolvedValueOnce('npm ci')
-            .mockResolvedValueOnce('ctrf-report.json')
+            .mockResolvedValueOnce('ctrf-report.json') // testReportPath
+            .mockResolvedValueOnce('test-report') // artifactName
             .mockResolvedValueOnce('20')
             .mockResolvedValueOnce('github-actions');
         MockAskConfirm.mockResolvedValueOnce(true) // prReport
@@ -232,7 +235,8 @@ describe('Setup main', () => {
             .mockResolvedValueOnce('cypress')
             .mockResolvedValueOnce('npx cypress run')
             .mockResolvedValueOnce('npm ci')
-            .mockResolvedValueOnce('ctrf-report.json')
+            .mockResolvedValueOnce('ctrf-report.json') // testReportPath
+            .mockResolvedValueOnce('test-report') // artifactName
             .mockResolvedValueOnce('20')
             .mockResolvedValueOnce('github-actions');
         MockAskConfirm.mockResolvedValueOnce(true) // prReport
@@ -257,7 +261,8 @@ describe('Setup main', () => {
             .mockResolvedValueOnce('cypress')
             .mockResolvedValueOnce('npx cypress run')
             .mockResolvedValueOnce('npm ci')
-            .mockResolvedValueOnce('ctrf-report.json')
+            .mockResolvedValueOnce('ctrf-report.json') // testReportPath
+            .mockResolvedValueOnce('test-report') // artifactName
             .mockResolvedValueOnce('20')
             .mockResolvedValueOnce('gitlab-ci');
         MockAskConfirm.mockResolvedValueOnce(true) // prReport
@@ -337,7 +342,8 @@ describe('Setup main — pr-report workflow generation', () => {
             .mockResolvedValueOnce('cypress')
             .mockResolvedValueOnce('npx cypress run')
             .mockResolvedValueOnce('npm ci')
-            .mockResolvedValueOnce('ctrf-report.json')
+            .mockResolvedValueOnce('ctrf-report.json') // testReportPath
+            .mockResolvedValueOnce('test-report') // artifactName
             .mockResolvedValueOnce('20')
             .mockResolvedValueOnce('github-actions');
         MockAskConfirm.mockResolvedValueOnce(false) // prReport = false
@@ -361,7 +367,8 @@ describe('Setup main — pr-report workflow generation', () => {
             .mockResolvedValueOnce('cypress')
             .mockResolvedValueOnce('npx cypress run')
             .mockResolvedValueOnce('npm ci')
-            .mockResolvedValueOnce('ctrf-report.json')
+            .mockResolvedValueOnce('ctrf-report.json') // testReportPath
+            .mockResolvedValueOnce('test-report') // artifactName
             .mockResolvedValueOnce('20')
             .mockResolvedValueOnce('github-actions');
         MockAskConfirm.mockResolvedValueOnce(true) // prReport

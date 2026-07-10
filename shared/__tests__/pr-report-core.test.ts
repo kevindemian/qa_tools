@@ -63,6 +63,47 @@ vi.mock('../github-check-run.js', () => mockCheckRun);
 vi.mock('../github-pr-comment.js', () => mockPRComment);
 vi.mock('../report-html.js', () => mockHtml);
 vi.mock('../coverage-source.js', () => mockCoverage);
+vi.mock('../data-hub/global-hub.js', () => ({
+    getDataHub: vi.fn().mockReturnValue({
+        loadMetricsStore: vi.fn().mockReturnValue({ runs: [] }),
+        saveParseResult: vi.fn(),
+        saveRun: vi.fn(),
+        loadRun: vi.fn().mockReturnValue(null),
+        saveCoverageSnapshot: vi.fn(),
+        loadCoverageHistory: vi.fn().mockReturnValue([]),
+        saveFailureClassification: vi.fn(),
+        loadFailureClassifications: vi.fn().mockReturnValue([]),
+        saveMetricsStore: vi.fn(),
+        saveQualityMetrics: vi.fn(),
+        loadQualityMetricsHistory: vi.fn().mockReturnValue([]),
+        flush: vi.fn(),
+        raw: { runs: [], jobs: new Map(), artifacts: new Map(), failureReasons: new Map() },
+        computed: {
+            passRate: 80,
+            avgDuration: 1000,
+            suiteSpeedP95: 500,
+            flakyRate: [],
+            coverage: 85,
+            pipelineCost: { totalMinutes: 0, estimatedCost: 0 },
+            defectTrends: [],
+            branchBreakdown: {},
+            topFailingJobs: [],
+            topFailureReasons: [],
+            releaseScore: { score: 0, dimensions: {} as never, grade: 'critical' },
+            quarantineStatus: { flakyCount: 0, quarantinedCount: 0 },
+            testPassRate: 80,
+            testCounts: { passed: 8, failed: 1, skipped: 1, total: 10 },
+            framework: 'vitest',
+            executionRate: 90,
+            flakyPercentage: 1,
+        },
+        timestamp: new Date(),
+        provider: 'github',
+        repo: 'test/repo',
+    }),
+    isDataHubInitialized: vi.fn().mockReturnValue(true),
+    setDataHub: vi.fn(),
+}));
 
 const sampleTest: FlatTest = {
     title: 'should work',
@@ -82,6 +123,13 @@ const skippedTest: FlatTest = {
     state: 'skipped',
     duration: 0,
 };
+
+// Generate tests array that matches defaultStats (8 passed, 1 failed, 1 skipped)
+const defaultTests: FlatTest[] = [
+    ...Array.from({ length: 8 }, (_, i) => ({ ...sampleTest, title: `test ${i + 1}` })),
+    failedTest,
+    skippedTest,
+];
 
 const defaultStats = {
     passed: 8,
@@ -147,7 +195,7 @@ describe('Pr Report Core', () => {
             expect.hasAssertions();
 
             const result = await generatePrReport({
-                tests: [sampleTest, failedTest, skippedTest],
+                tests: defaultTests,
                 stats: defaultStats,
             });
 
@@ -182,20 +230,25 @@ describe('Pr Report Core', () => {
         it('includes coverage source in HTML options when coverage is resolved', async () => {
             expect.hasAssertions();
 
-            mockCoverage.readIstanbulCoverage.mockReturnValue({
-                source: 'istanbul',
-                coveragePct: 85,
-                detail: 'lines 85.0%',
-            });
+            // Mock DataHub with coverage data
+            const mockDataHubWithCoverage = {
+                raw: {
+                    coverage: { percentage: 85, covered: 85, total: 100 },
+                },
+                computed: {
+                    testCounts: { passed: 1, failed: 0, skipped: 0, total: 1 },
+                },
+            };
 
             const result = await generatePrReport({
                 tests: [sampleTest],
                 stats: { passed: 1, failed: 0, skipped: 0, total: 1, duration: 100 },
+                dataHub: mockDataHubWithCoverage as never,
             });
 
             expect(mockHtml.generateHtmlReport).toHaveBeenCalledWith(
                 expect.any(Array),
-                expect.objectContaining({ coverageSource: 'istanbul' }),
+                expect.objectContaining({ coverageSource: 'datahub' }),
             );
             expect(result.healthScore).toStrictEqual(defaultHealthScore);
         });
@@ -210,7 +263,7 @@ describe('Pr Report Core', () => {
             };
 
             await generatePrReport({
-                tests: [sampleTest, failedTest],
+                tests: defaultTests,
                 stats: defaultStats,
                 diffComparison: diff,
             });
@@ -265,7 +318,7 @@ describe('Pr Report Core', () => {
             expect.hasAssertions();
 
             const result = await generatePrReport({
-                tests: [sampleTest, failedTest],
+                tests: defaultTests,
                 stats: defaultStats,
                 skipAi: true,
             });
@@ -305,19 +358,23 @@ describe('Pr Report Core', () => {
         it('handles health score with coverage override', async () => {
             expect.hasAssertions();
 
-            mockCoverage.readIstanbulCoverage.mockReturnValue({
-                source: 'istanbul',
-                coveragePct: 92,
-                detail: 'lines 92.0%',
-            });
+            // Mock DataHub with coverage data
+            const mockDataHubWithCoverage = {
+                raw: {
+                    coverage: { percentage: 92, covered: 92, total: 100 },
+                },
+                computed: {
+                    testCounts: { passed: 1, failed: 0, skipped: 0, total: 1 },
+                },
+            };
 
             await generatePrReport({
                 tests: [sampleTest],
                 stats: { passed: 1, failed: 0, skipped: 0, total: 1, duration: 100 },
+                dataHub: mockDataHubWithCoverage as never,
             });
 
             expect(mockHealthScore.calculateHealthScore).toHaveBeenCalledWith(
-                expect.any(Object),
                 expect.objectContaining({ coverageOverride: 92 }),
             );
         });
@@ -367,7 +424,7 @@ describe('Pr Report Core', () => {
             expect.hasAssertions();
 
             await generatePrReport({
-                tests: [sampleTest],
+                tests: defaultTests,
                 stats: defaultStats,
                 ciEnv: {
                     isCI: true,
@@ -391,7 +448,7 @@ describe('Pr Report Core', () => {
             expect.hasAssertions();
 
             await generatePrReport({
-                tests: [sampleTest],
+                tests: defaultTests,
                 stats: defaultStats,
                 ciEnv: {
                     isCI: false,
@@ -418,7 +475,7 @@ describe('Pr Report Core', () => {
 
             try {
                 await generatePrReport({
-                    tests: [sampleTest],
+                    tests: defaultTests,
                     stats: defaultStats,
                     ciEnv: {
                         isCI: true,
@@ -455,7 +512,7 @@ describe('Pr Report Core', () => {
 
             try {
                 await generatePrReport({
-                    tests: [sampleTest],
+                    tests: defaultTests,
                     stats: defaultStats,
                     ciEnv: {
                         isCI: true,
@@ -484,7 +541,7 @@ describe('Pr Report Core', () => {
 
             try {
                 const result = await generatePrReport({
-                    tests: [sampleTest],
+                    tests: defaultTests,
                     stats: defaultStats,
                 });
 

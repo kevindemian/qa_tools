@@ -5,6 +5,8 @@ import type { SetupContext } from '../context.js';
 const MOCK_CTX_BASIC: SetupContext = {
     projectName: 'test-proj',
     framework: 'cypress',
+    testReportPath: 'cypress/reports/ctrf-report.json',
+    artifactName: 'test-report',
     ctrfReportPath: 'cypress/reports/ctrf-report.json',
     ctrfSource: 'cli-flag',
     nodeVersion: '20',

@@ -2,7 +2,7 @@
  * PR Report core — self-contained module for generating PR test reports.
  *
  * An entry point (`main()`) with self-exec guard enables direct CLI usage:
- *   npx tsx shared/pr-report-core.ts [--ctrf <path>] [--no-ai] [--no-quality] [--no-flaky]
+ *   npx tsx shared/pr-report-core.ts [--no-ai] [--no-quality] [--no-flaky] [--project <name>]
  *
  * Programmatic API:
  *   import { generatePrReport, computeDiffComparison } from './pr-report-core.js'
@@ -12,19 +12,19 @@
  *   2. Pipeline (git_triggers/batch-mode.ts) — post-test-collection
  *   3. Tests — invocação direta
  *
- * Layered data sources:
- *   - Coverage: Istanbul standalone > CTRF > Jira coverage history > 0
- *   - Flaky rate: MetricsStore (cross-run history) — no Jira dependency
- *   - Trends: MetricsStore pass rate history — no Jira dependency
+ * Data sources (all via DataHub — SSOT):
+ *   - Coverage: DataHub.raw.coverage (Istanbul/CTRF/JUnit from external project artifacts)
+ *   - Flaky rate: DataHub.computed.flakinessEntries (pre-computed from parsedArtifacts)
+ *   - Trends: DataHub.computed.metricsTrends (pre-computed from parsedArtifacts)
+ *   - Test data: DataHub.computed.metricsRuns (parsed from external project CI artifacts)
  *
- * Accepts parsed test data directly (no filesystem dependency on CTRF).
+ * CTRF/junit/mochawesome files are NEVER read directly — DataHub fetches and parses
+ * artifacts via GitHub/GitLab API. This avoids self-referencing (qa_tools reading its own test output).
  */
 import fs from 'node:fs';
 import path from 'path';
 import { rootLogger } from './logger.js';
 import { getDataHub, setDataHub, isDataHubInitialized } from './data-hub/global-hub.js';
-import { calcFlakinessEntries } from './data-hub/compute/flakiness-entries.js';
-import { calcMetricsTrends } from './data-hub/compute/metrics-trends.js';
 import { calcRunPassRate } from './data-hub/compute/run-pass-rate.js';
 import { runQualityGate } from './quality-gate.js';
 import { createCheckRun } from './github-check-run.js';
@@ -33,11 +33,9 @@ import { isQuarantined } from './quarantine.js';
 import { generateHtmlReport } from './report-html.js';
 import type { ReportOptions } from './report-types.js';
 import { calculateHealthScore } from './health-score.js';
-import { readIstanbulCoverage } from './coverage-source.js';
-import { parseTestResultsFile } from './result_parser.js';
 import type { FlatTest, ParseResult } from './result_parser.js';
 import { getPrReportConfig } from './feature-config.js';
-import type { DataHub, MetricsStore } from './types/data-hub.js';
+import type { DataHub, MetricsRun } from './types/data-hub.js';
 
 /**
  * Read CI-injected environment variables with typed fallbacks.
@@ -177,12 +175,17 @@ function buildFailureTable(tests: FlatTest[]): string {
     ].join('\n');
 }
 
-function buildFlakySection(): string {
+/**
+ * Build flaky tests section for PR comment.
+ * Uses DataHub.computed.flakinessEntries as SSOT — no direct MetricsStore access.
+ * Quarantine status comes from quarantine store (separate concern, not CTRF).
+ *
+ * @param dataHub - DataHub instance with pre-computed flakiness entries
+ * @returns Markdown section string, or empty string if no high-flaky tests found
+ */
+function buildFlakySection(dataHub?: DataHub): string {
     try {
-        if (!isDataHubInitialized()) return '';
-        const hub = getDataHub();
-        const store = hub.loadMetricsStore();
-        const flakyEntries = calcFlakinessEntries(store.runs, MIN_FLAKINESS_RUNS);
+        const flakyEntries = dataHub?.computed.flakinessEntries ?? [];
         const highFlaky = flakyEntries.filter((e) => e.rate >= 0.3);
 
         if (highFlaky.length === 0) return '';
@@ -348,6 +351,7 @@ async function handleQualityGate(
     coverageOverride?: number,
     dataHub?: DataHub,
 ): Promise<string | undefined> {
+    if (!dataHub) return undefined;
     try {
         const qgResult = runQualityGate({ coverageOverride, dataHub });
         const gradeStr = healthScore.grade.replace(/_/g, ' ').toUpperCase();
@@ -371,12 +375,12 @@ async function handleQualityGate(
 }
 
 /**
- * Resolve coverage for the PR report using layered priority:
- *   1. DataHub.raw.coverage (CI-parsed, highest priority)
- *   2. Istanbul standalone coverage-summary.json (fallback)
- *   3. undefined (no source)
+ * Resolve coverage for the PR report from DataHub.
+ * DataHub.raw.coverage is populated from Istanbul/CTRF/JUnit artifacts via GitHub API.
+ * No filesystem fallback — DataHub is the SSOT.
  *
- * Replaces the standalone `resolveCoverage()` call to ensure DataHub-first resolution.
+ * @param dataHub - DataHub instance (optional for graceful degradation)
+ * @returns Coverage data with percentage and source, or undefined if unavailable
  */
 function resolveCoverageForReport(
     dataHub?: DataHub,
@@ -389,21 +393,34 @@ function resolveCoverageForReport(
             detail: `datahub ${dataHubCoverage.percentage.toFixed(1)}% (${dataHubCoverage.covered}/${dataHubCoverage.total})`,
         };
     }
-    return readIstanbulCoverage() ?? undefined;
+    return undefined;
 }
 
+/**
+ * Generate HTML report file from test data.
+ * Uses DataHub.computed for flakiness entries and trends — no MetricsStore dependency.
+ *
+ * @param tests - FlatTest array from external project
+ * @param stats - Test statistics
+ * @param options - PR report options
+ * @param dataHub - DataHub instance with pre-computed metrics (optional)
+ * @param coverageResult - Coverage data from resolveCoverageForReport
+ * @param healthScore - Health score from calculateHealthScore
+ * @param workflowUrl - CI workflow URL for linking
+ * @returns Path to generated HTML file, or undefined on failure
+ */
 function generateHtmlReportFile(
     tests: FlatTest[],
     stats: PrReportStats,
     options: PrReportCoreOptions,
-    store: MetricsStore,
+    dataHub: DataHub | undefined,
     coverageResult: ReturnType<typeof resolveCoverageForReport>,
     healthScore: ReturnType<typeof calculateHealthScore>,
     workflowUrl?: string,
 ): string | undefined {
     try {
         const passRate = calcRunPassRate({ passed: stats.passed, failed: stats.failed });
-        const flakyEntries = calcFlakinessEntries(store.runs, MIN_FLAKINESS_RUNS);
+        const flakyEntries = dataHub?.computed.flakinessEntries ?? [];
         const flakinessMap: Record<string, number> = {};
         for (const entry of flakyEntries) {
             flakinessMap[entry.title] = entry.rate;
@@ -416,7 +433,7 @@ function generateHtmlReportFile(
             title: `QA Tools — PR Report${branchLabel}`,
             qualityGate: Math.round(passRate),
             healthScore,
-            trends: calcMetricsTrends(store.runs),
+            trends: dataHub?.computed.metricsTrends ?? [],
             includeChart: true,
             coverageSource,
             ...(workflowUrl ? { ciUrl: workflowUrl } : {}),
@@ -467,11 +484,33 @@ function validatePrReportStats(tests: FlatTest[], stats: PrReportStats): void {
     }
 }
 
-/** Minimum number of runs required to compute flakiness metrics. */
-const MIN_FLAKINESS_RUNS = 2;
 /** Maximum length for error messages in markdown tables. */
 const MAX_ERROR_LENGTH = 200;
 
+/** Default health score when no DataHub is available. */
+function _defaultHealthScore(): ReturnType<typeof calculateHealthScore> {
+    return {
+        overall: 0,
+        grade: 'critical',
+        qualityGate: 'fail',
+        dimensions: {
+            passRate: { score: 0, status: 'fail' },
+            flakyRate: { score: 0, status: 'fail' },
+            coverage: { score: 0, status: 'fail' },
+            suiteSpeed: { score: 0, status: 'fail' },
+            executionRate: { score: 0, status: 'fail' },
+        },
+        runCount: 0,
+        timestamp: new Date().toISOString(),
+    };
+}
+
+/**
+ * Generate and post a PR report from parsed test data.
+ * All data comes from DataHub (SSOT) — no direct MetricsStore or CTRF access.
+ *
+ * @returns Result summary with HTML path, check run ID, and comment URL (when applicable).
+ */
 export async function generatePrReport(options: PrReportCoreOptions): Promise<PrReportResult> {
     const { tests, stats } = options;
     validatePrReportStats(tests, stats);
@@ -479,14 +518,14 @@ export async function generatePrReport(options: PrReportCoreOptions): Promise<Pr
     persistCurrentRun(tests, stats, options.project);
 
     const hub = isDataHubInitialized() ? getDataHub() : undefined;
-    const store = hub?.loadMetricsStore() ?? { runs: [] };
-    const dataHub = options.dataHub;
+    const dataHub = options.dataHub ?? hub;
     const coverageResult = resolveCoverageForReport(dataHub);
-    const healthConfig = {
-        ...(coverageResult ? { coverageOverride: coverageResult.coveragePct } : {}),
-        ...(dataHub ? { dataHub } : {}),
-    };
-    const healthScore = calculateHealthScore(store, healthConfig);
+    const healthScore = dataHub
+        ? calculateHealthScore({
+              ...(coverageResult ? { coverageOverride: coverageResult.coveragePct } : {}),
+              dataHub,
+          })
+        : _defaultHealthScore();
 
     const { workflowUrl, artifactUrl } = resolveCiUrls();
 
@@ -507,11 +546,11 @@ export async function generatePrReport(options: PrReportCoreOptions): Promise<Pr
     }
 
     if (!options.skipFlaky) {
-        const flakySection = buildFlakySection();
+        const flakySection = buildFlakySection(dataHub);
         if (flakySection) sections.push(flakySection);
     }
 
-    const htmlPath = generateHtmlReportFile(tests, stats, options, store, coverageResult, healthScore, workflowUrl);
+    const htmlPath = generateHtmlReportFile(tests, stats, options, dataHub, coverageResult, healthScore, workflowUrl);
 
     sections.push(buildFooter(artifactUrl, workflowUrl, healthScore));
 
@@ -620,7 +659,6 @@ function buildFooter(
 // ─── CLI entry point ─────────────────────────────────────────────────────────
 
 interface CliOptions {
-    ctrfPath: string;
     htmlOutputPath?: string;
     skipAi: boolean;
     skipQuality: boolean;
@@ -630,7 +668,6 @@ interface CliOptions {
 
 function parseArgs(args: string[]): CliOptions {
     const opts: CliOptions = {
-        ctrfPath: 'reports/ctrf-report.json',
         skipAi: false,
         skipQuality: false,
         skipFlaky: false,
@@ -650,7 +687,6 @@ function parseArgs(args: string[]): CliOptions {
                         'Uso: npx tsx shared/pr-report-core.ts [opções]',
                         '',
                         'Opções:',
-                        '  --ctrf <path>          Caminho do CTRF (default: reports/ctrf-report.json)',
                         '  --html-output <path>   Caminho do HTML (default: reports/pr-report.html)',
                         '  --project <name>       Nome do projeto (default: GITHUB_REPOSITORY env)',
                         '  --no-ai                Pular análise de IA',
@@ -660,9 +696,6 @@ function parseArgs(args: string[]): CliOptions {
                     ].join('\n'),
                 );
                 process.exit(0);
-                break;
-            case '--ctrf':
-                opts.ctrfPath = args[++idx] ?? opts.ctrfPath;
                 break;
             case '--html-output':
                 {
@@ -690,6 +723,14 @@ function parseArgs(args: string[]): CliOptions {
     return opts;
 }
 
+/**
+ * Attempt to create DataHub from CI environment.
+ * DataHub fetches artifacts via GitHub/GitLab API — no local file access.
+ *
+ * @param ciEnv - CI environment variables
+ * @param providerFactory - Optional factory to create GitProvider
+ * @returns DataHub instance, or undefined if not in CI or creation fails
+ */
 async function tryCreateDataHub(
     ciEnv: ReturnType<typeof getCiEnv>,
     providerFactory?: (ciEnv: ReturnType<typeof getCiEnv>) => import('./types/ci-cd.js').GitProvider | undefined,
@@ -712,26 +753,20 @@ async function tryCreateDataHub(
         }
         return dataHub;
     } catch (err) {
-        rootLogger.warn(`DataHub creation failed (falling back to MetricsStore): ${String(err)}`);
+        rootLogger.warn(`DataHub creation failed: ${String(err)}`);
         return undefined;
     }
 }
 
+/**
+ * CLI entry point for PR report generation.
+ * Test data comes from DataHub (parsed from external project CI artifacts).
+ * No CTRF file reading — DataHub fetches artifacts via GitHub/GitLab API.
+ */
 export async function main(
     providerFactory?: (ciEnv: ReturnType<typeof getCiEnv>) => import('./types/ci-cd.js').GitProvider | undefined,
 ): Promise<void> {
     const opts = parseArgs(process.argv.slice(2));
-
-    if (!fs.existsSync(path.resolve(opts.ctrfPath))) {
-        rootLogger.warn(`CTRF report not found: ${opts.ctrfPath}. Skipping PR comment.`);
-        return;
-    }
-
-    const result = parseTestResultsFile(opts.ctrfPath);
-    if (result.error) {
-        rootLogger.warn(`Error parsing CTRF report: ${result.error}. Skipping PR comment.`);
-        return;
-    }
 
     const project = opts.projectName;
     const ciEnv = getCiEnv();
@@ -755,13 +790,8 @@ export async function main(
     const skipQuality = opts.skipQuality || (featureConfig.skipQuality ?? false);
     const skipFlaky = opts.skipFlaky || (featureConfig.skipFlaky ?? false);
 
-    // Load store before saveParseResult so the diff comparison uses the
-    // previous run's data (before the current run is persisted).
-    const hub = isDataHubInitialized() ? getDataHub() : undefined;
-    const store = hub?.loadMetricsStore() ?? { runs: [] };
-    const previousRun = store.runs.length > 0 ? store.runs[store.runs.length - 1] : undefined;
-    const diffComparison = previousRun ? computeDiffComparison(result.tests, previousRun.tests) : undefined;
-
+    // Create DataHub FIRST so downstream consumers can access it.
+    // DataHub fetches CI artifacts (CTRF/JUnit/Mochawesome) via GitHub/GitLab API.
     const dataHub = await tryCreateDataHub(ciEnv, providerFactory);
 
     // Register DataHub in the global singleton so downstream consumers
@@ -770,14 +800,28 @@ export async function main(
         setDataHub(dataHub);
     }
 
+    // Get test data from DataHub — parsed from external project CI artifacts.
+    const hub = isDataHubInitialized() ? getDataHub() : undefined;
+    const metricsRuns = hub?.computed.metricsRuns ?? [];
+    const latestRun: MetricsRun | undefined = metricsRuns[0];
+
+    if (!latestRun) {
+        rootLogger.warn('No test data available from DataHub. Skipping PR comment.');
+        return;
+    }
+
+    // Diff comparison uses the previous run's data (before the current run is persisted).
+    const previousRun: MetricsRun | undefined = metricsRuns[1];
+    const diffComparison = previousRun ? computeDiffComparison(latestRun.tests, previousRun.tests) : undefined;
+
     const resultSummary = await generatePrReport({
-        tests: result.tests,
+        tests: latestRun.tests,
         stats: {
-            passed: result.stats.passed,
-            failed: result.stats.failed,
-            skipped: result.stats.skipped,
-            total: result.stats.total,
-            duration: result.stats.duration,
+            passed: latestRun.passed,
+            failed: latestRun.failed,
+            skipped: latestRun.skipped,
+            total: latestRun.total,
+            duration: latestRun.duration,
         },
         project,
         skipAi,

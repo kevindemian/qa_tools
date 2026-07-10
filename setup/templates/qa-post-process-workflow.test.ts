@@ -6,6 +6,8 @@ import type { SetupContext } from '../context.js';
 const MOCK_CTX: SetupContext = {
     projectName: 'test-proj',
     framework: 'vitest',
+    testReportPath: 'reports/ctrf-report.json',
+    artifactName: 'test-report',
     ctrfReportPath: 'reports/ctrf-report.json',
     ctrfSource: 'config-file',
     nodeVersion: '22',
@@ -40,37 +42,21 @@ describe('GenerateQaPostProcessWorkflow', () => {
         expect(yaml).toContain('workflow_call:');
     });
 
-    it('accepts project-name and ctrf-path inputs', () => {
+    it('accepts project-name, test-report-path, and artifact-name inputs', () => {
         const yaml = generateQaPostProcessWorkflow(MOCK_CTX);
 
         expect(yaml).toContain('project-name:');
         expect(yaml).toContain('required: true');
-        expect(yaml).toContain('ctrf-path:');
-        expect(yaml).toContain('default: reports/ctrf-report.json');
-    });
-
-    it('includes shell guard for missing CTRF file', () => {
-        const yaml = generateQaPostProcessWorkflow(MOCK_CTX);
-
-        expect(yaml).toContain('if [ ! -f "${{ inputs.ctrf-path }}" ]; then');
-        expect(yaml).toContain('::warning::CTRF report not found');
-        expect(yaml).toContain('exit 0');
+        expect(yaml).toContain('test-report-path:');
+        expect(yaml).toContain('artifact-name:');
+        expect(yaml).toContain('default: reports/');
     });
 
     it('runs pr-report-entry.ts with correct arguments', () => {
         const yaml = generateQaPostProcessWorkflow(MOCK_CTX);
 
         expect(yaml).toContain('git_triggers/pr-report-entry.ts');
-        expect(yaml).toContain('--ctrf ${{ inputs.ctrf-path }}');
         expect(yaml).toContain('--project ${{ inputs.project-name }}');
-    });
-
-    it('downloads CTRF artifact with correct name', () => {
-        const yaml = generateQaPostProcessWorkflow(MOCK_CTX);
-
-        expect(yaml).toContain(ACTION_VERSIONS.DOWNLOAD_ARTIFACT);
-        expect(yaml).toContain('name: ctrf-report');
-        expect(yaml).toContain('path: reports/');
     });
 
     it('uploads PR report HTML artifact', () => {
@@ -87,7 +73,6 @@ describe('GenerateQaPostProcessWorkflow', () => {
 
         expect(yaml).toContain(ACTION_VERSIONS.CHECKOUT);
         expect(yaml).toContain(ACTION_VERSIONS.SETUP_NODE);
-        expect(yaml).toContain(ACTION_VERSIONS.DOWNLOAD_ARTIFACT);
         expect(yaml).toContain(ACTION_VERSIONS.UPLOAD_ARTIFACT);
     });
 
