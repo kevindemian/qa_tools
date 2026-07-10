@@ -154,7 +154,7 @@ export function generateWeeklyQualityReport(): void {
             return;
         }
         const hub = getDataHub();
-        const store = hub?.loadMetricsStore() ?? { runs: [] };
+        const store = hub.loadMetricsStore();
         let projectRuns = store.runs.filter((r) => r.project === currentProjectName);
         let failureClassifications = store.failureClassifications ?? [];
         let usingGitFallback = false;
@@ -170,7 +170,7 @@ export function generateWeeklyQualityReport(): void {
         const effectiveStore = usingGitFallback ? { ...store, runs: projectRuns, failureClassifications } : store;
 
         const dataHub = getDataHub();
-        const health = calculateHealthScore(effectiveStore, dataHub ? { dataHub } : undefined);
+        const health = calculateHealthScore(effectiveStore, { dataHub });
         const flaky = calcFlakinessEntries(projectRuns, 2);
         const releaseScore = calculateReleaseScore(
             80,
@@ -211,7 +211,7 @@ export function generateWeeklyQualityReport(): void {
                 const pDataHub = getDataHub();
                 const pHealth = calculateHealthScore(
                     { ...store, runs: pRuns },
-                    isCurrentProject && pDataHub ? { dataHub: pDataHub } : undefined,
+                    isCurrentProject ? { dataHub: pDataHub } : undefined,
                 );
                 return {
                     name,
@@ -258,7 +258,7 @@ export function generateWeeklyQualityReport(): void {
         const qgDataHub = getDataHub();
         const qualityGate = runQualityGate({
             project: currentProjectName,
-            ...(qgDataHub ? { dataHub: qgDataHub } : {}),
+            dataHub: qgDataHub,
         });
         sections.push('<h2>Quality Gate</h2><pre>' + formatQualityGateText(qualityGate) + '</pre>');
         sections.push('<h2>Cross-Squad Benchmark</h2>' + generateBenchmarkHtml(benchmark));
@@ -304,8 +304,7 @@ export async function handleFlakinessDashboard(): Promise<void> {
             return;
         }
         const hub = getDataHub();
-        const store = hub?.loadMetricsStore();
-        if (!store) return;
+        const store = hub.loadMetricsStore();
         const projectRuns = store.runs.filter((r) => r.project === currentProjectName);
         if (projectRuns.length < 2) {
             warn('Menos de 2 execuções registradas para ' + currentProjectName + '. Execute pipelines primeiro.');

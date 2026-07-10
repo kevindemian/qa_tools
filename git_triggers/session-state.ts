@@ -40,8 +40,12 @@ export function setDataHub(hub: DataHub | undefined): void {
     _setGlobalHub(hub);
 }
 
-export function getDataHub(): DataHub | undefined {
+export function getDataHub(): DataHub {
     return _getGlobalHub();
+}
+
+export function isDataHubInitialized(): boolean {
+    return _isGlobalHubInitialized();
 }
 
 /**
@@ -308,7 +312,7 @@ export async function displayRecentPipelines(m: GitProvider): Promise<void> {
         }
         if (currentProjectName) {
             const hub = getDataHub();
-            const flakinessEntries = hub?.computed.flakinessEntries ?? [];
+            const flakinessEntries = hub.computed.flakinessEntries ?? [];
             const highFlakiness = flakinessEntries.filter((f) => f.project === currentProjectName && f.rate > 0.3);
             if (highFlakiness.length > 0) {
                 warn('  ⚠ ' + highFlakiness.length + ' teste(s) com flakiness >30% em ' + currentProjectName);
