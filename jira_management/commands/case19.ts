@@ -67,7 +67,7 @@ function _showTrends(store: MetricsStore): void {
 function _showHealthScore(store: MetricsStore): void {
     if (store.runs.length < 5) return;
     divider();
-    const health = calculateHealthScore(store);
+    const health = calculateHealthScore({ dataHub: getDataHub() });
     const qcIcon = health.qualityGate === 'pass' ? '✅' : '❌';
     title('Test Suite Health — ' + health.overall + '/100 (' + health.grade.replace(/_/g, ' ') + ') ' + qcIcon);
     const dimEntries = Object.entries(health.dimensions) as Array<[string, { score: number; status: string }]>;

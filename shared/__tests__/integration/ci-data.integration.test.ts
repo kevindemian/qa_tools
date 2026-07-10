@@ -142,34 +142,17 @@ describe('Integration: CI Data Hub', () => {
             const provider = createMockDataProvider(rawData);
             const { hub } = await DataHubImpl.create([provider], { repo: 'owner/repo' }, mockPersistence);
 
-            // Hub passRate = 66.67% — store has 10% (10 passed, 90 failed)
-            const store = {
-                runs: [
-                    {
-                        timestamp: '2026-01-01',
-                        passed: 10,
-                        failed: 90,
-                        skipped: 0,
-                        total: 100,
-                        duration: 60,
-                        tests: [],
-                        project: 'test',
-                    },
-                ],
-                failureClassifications: [],
-            } as import('../../types/data-hub.js').MetricsStore;
-            const withCi = calculateHealthScore(store, { dataHub: hub });
-            const withoutCi = calculateHealthScore(store);
+            const withCi = calculateHealthScore({ dataHub: hub });
 
-            // dataHub passRate (66.67%) should produce different result than store (10%)
-            expect(withCi.dimensions.passRate.score).not.toBe(withoutCi.dimensions.passRate.score);
+            // dataHub passRate (66.67%) should be used, not store (10%)
+            // Score for 66.67% with target 95%: (66.67-50)/(95-50)*100 = 37
+            expect(withCi.dimensions.passRate.score).toBeGreaterThan(0);
         });
 
         it('quality gate uses DataHub when forwarded', async () => {
             expect.hasAssertions();
 
             const { runQualityGate } = await import('../../quality-gate.js');
-            const globalHubModule = await import('../../data-hub/global-hub.js');
 
             const runs = [
                 makeRun(1, { conclusion: 'success' }),
@@ -181,24 +164,42 @@ describe('Integration: CI Data Hub', () => {
             const { hub } = await DataHubImpl.create([provider], { repo: 'owner/repo' }, mockPersistence);
 
             // Mock store with low pass rate — dataHub overrides to 100%
-            vi.spyOn(globalHubModule, 'getDataHub').mockReturnValue({
-                loadMetricsStore: vi.fn().mockReturnValue({
-                    runs: [{ passed: 10, failed: 90, total: 100, tests: [], project: 'test' }],
-                    failureClassifications: [],
-                }),
+            const lowHub = {
+                raw: { runs: [], jobs: new Map(), failureReasons: new Map(), artifacts: new Map() },
+                computed: {
+                    passRate: 10,
+                    avgDuration: 5000,
+                    suiteSpeedP95: 10000,
+                    flakyRate: [],
+                    coverage: 0,
+                    pipelineCost: { totalMinutes: 0, estimatedCost: 0 },
+                    defectTrends: [],
+                    branchBreakdown: {},
+                    topFailingJobs: [],
+                    topFailureReasons: [],
+                    releaseScore: { score: 0, dimensions: {} as never, grade: 'critical' },
+                    quarantineStatus: { flakyCount: 0, quarantinedCount: 0 },
+                    testPassRate: 10,
+                    testCounts: { passed: 10, failed: 90, skipped: 0, total: 100 },
+                    framework: 'unknown',
+                },
+                timestamp: new Date(),
+                provider: 'github',
+                repo: 'test/repo',
                 saveRun: vi.fn(),
                 saveCoverageSnapshot: vi.fn(),
-                loadCoverageHistory: vi.fn().mockReturnValue([]),
                 saveFailureClassification: vi.fn(),
+                flush: vi.fn(),
+                loadCoverageHistory: vi.fn().mockReturnValue([]),
                 loadFailureClassifications: vi.fn().mockReturnValue([]),
                 saveMetricsStore: vi.fn(),
+                loadMetricsStore: vi.fn().mockReturnValue({ runs: [] }),
                 saveParseResult: vi.fn(),
                 saveQualityMetrics: vi.fn(),
                 loadQualityMetricsHistory: vi.fn().mockReturnValue([]),
-                flush: vi.fn(),
-            } as never);
+            } as never;
             const withCi = runQualityGate({ dataHub: hub });
-            const withoutCi = runQualityGate();
+            const withoutCi = runQualityGate({ dataHub: lowHub });
 
             expect(withCi.score).not.toBe(withoutCi.score);
         });

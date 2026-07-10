@@ -371,10 +371,7 @@ async function _dashboardReleaseScore(): Promise<void> {
     const data = _loadProjectRunsHelper();
     if (!data) return;
     const dataHub = getDataHub();
-    const health = calculateHealthScore(
-        { runs: data.projectRuns, failureClassifications: data.failureClassifications },
-        { dataHub },
-    );
+    const health = calculateHealthScore({ dataHub });
     const flaky = calcFlakinessEntries(data.projectRuns, 2);
     const releaseScore = calculateReleaseScore(
         80,
@@ -437,11 +434,7 @@ async function _dashboardBenchmark(): Promise<void> {
     const store = dataHub.loadMetricsStore();
     const projectBenchmarks = projectNames.map((name) => {
         const pRuns = store.runs.filter((r) => r.project === name);
-        const isCurrentProject = name === currentProjectName;
-        const pHealth = calculateHealthScore(
-            { runs: pRuns, failureClassifications: data.failureClassifications },
-            ...(isCurrentProject ? [{ dataHub }] : []),
-        );
+        const pHealth = calculateHealthScore({ dataHub });
         return {
             name,
             healthScore: pHealth.overall,
@@ -488,10 +481,7 @@ async function _dashboardIncidentReport(): Promise<void> {
     const data = _loadProjectRunsHelper();
     if (!data) return;
     const dataHub = getDataHub();
-    const health = calculateHealthScore(
-        { runs: data.projectRuns, failureClassifications: data.failureClassifications },
-        { dataHub },
-    );
+    const health = calculateHealthScore({ dataHub });
     const matrix = buildTraceabilityMatrix(
         {
             runs: data.projectRuns,
@@ -530,10 +520,7 @@ async function _dashboardImpactAlert(): Promise<void> {
     const data = _loadProjectRunsHelper();
     if (!data) return;
     const dataHub = getDataHub();
-    const health = calculateHealthScore(
-        { runs: data.projectRuns, failureClassifications: data.failureClassifications },
-        { dataHub },
-    );
+    const health = calculateHealthScore({ dataHub });
     const defects = aggregateDefectTrends(data.failureClassifications);
     const matrix = buildTraceabilityMatrix(
         {
@@ -851,8 +838,7 @@ async function _initEnvironment(): Promise<void> {
     let healthScore: { score: number; grade: string } | undefined;
     try {
         const hub = getDataHub();
-        const store = hub.loadMetricsStore();
-        const health = calculateHealthScore(store, { dataHub: hub });
+        const health = calculateHealthScore({ dataHub: hub });
         healthScore = { score: health.overall, grade: health.grade };
     } catch (err) {
         rootLogger.debug('Health score failed: ' + _getErrorMessage(err));

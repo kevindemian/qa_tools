@@ -11,7 +11,6 @@ import { describe, expect, it, vi } from 'vitest';
 import type { PipelineRun, PipelineJob } from '../../types/ci-cd.js';
 import type { DataProvider, RawData } from '../../types/data-hub.js';
 import { DataHubImpl } from '../../data-hub/hub.js';
-import { createFlatTests } from '../../test-utils/factories/flat-test-factory.js';
 
 vi.mock('../../logger.js', () => ({
     rootLogger: { error: vi.fn(), info: vi.fn(), warn: vi.fn(), debug: vi.fn(), child: vi.fn().mockReturnThis() },
@@ -129,26 +128,11 @@ describe('System: CI Data Hub — Full Pipeline Flow', () => {
             const provider = createMockDataProvider(rawData);
             const { hub } = await DataHubImpl.create([provider], { repo: 'owner/repo' }, mockPersistence);
 
-            const store = {
-                runs: [
-                    {
-                        timestamp: '2026-07-01T10:00:00Z',
-                        project: 'test',
-                        total: 10,
-                        passed: 9,
-                        failed: 1,
-                        skipped: 0,
-                        duration: 5000,
-                        tests: createFlatTests(10, { failFirst: true }),
-                    },
-                ],
-            };
+            const withHub = calculateHealthScore({ dataHub: hub });
 
-            const withHub = calculateHealthScore(store, { dataHub: hub });
-            const withoutHub = calculateHealthScore(store, {});
-
-            // DataHub passRate (50%) must override MetricsStore passRate (90%)
-            expect(withHub.dimensions.passRate.score).not.toBe(withoutHub.dimensions.passRate.score);
+            // DataHub passRate (50%) is used instead of store (90%)
+            // Score for 50% with target 95%: (50-50)/(95-50)*100 = 0
+            expect(withHub.dimensions.passRate.score).toBe(0);
         });
     });
 
@@ -233,27 +217,11 @@ describe('System: CI Data Hub — Full Pipeline Flow', () => {
             const provider = createMockDataProvider(rawData);
             const { hub } = await DataHubImpl.create([provider], { repo: 'owner/repo' }, mockPersistence);
 
-            const store = {
-                runs: [
-                    {
-                        timestamp: '2026-07-01T10:00:00Z',
-                        project: 'test',
-                        total: 10,
-                        passed: 9,
-                        failed: 1,
-                        skipped: 0,
-                        duration: 5000,
-                        tests: createFlatTests(10, { failFirst: true }),
-                    },
-                ],
-            };
+            const withHub = calculateHealthScore({ dataHub: hub });
 
-            const withHub = calculateHealthScore(store, { dataHub: hub });
-            const withoutHub = calculateHealthScore(store, {});
-
-            // DataHub is SSOT — even empty hub produces different result than no hub
-            // (hub computed metrics are 0, store would compute ~90% pass rate)
-            expect(withHub.overall).not.toBe(withoutHub.overall);
+            // DataHub is SSOT — hub computed metrics are used (0 passRate from empty hub)
+            // Store would compute ~90% pass rate, but hub overrides
+            expect(withHub.dimensions.passRate.score).toBe(0);
         });
     });
 

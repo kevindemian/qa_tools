@@ -340,8 +340,7 @@ async function main(): Promise<void> {
     let healthScore: { score: number; grade: string } | undefined;
     try {
         const hub = getDataHub();
-        const store = hub.loadMetricsStore();
-        const health = calculateHealthScore(store);
+        const health = calculateHealthScore({ dataHub: hub });
         healthScore = { score: health.overall, grade: health.grade };
     } catch (err) {
         rootLogger.debug('Health score failed: ' + String(err));

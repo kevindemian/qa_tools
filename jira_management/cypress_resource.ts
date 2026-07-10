@@ -3,6 +3,7 @@ import { createHttpClient } from '../shared/http-client.js';
 import { rootLogger } from '../shared/logger.js';
 import { info, warn, success } from '../shared/prompt.js';
 import { sanitizeUrl } from '../shared/cli_base.js';
+import { extractErrorMessage } from '../shared/prompt-errors.js';
 import type { JsonObject } from '../shared/types.js';
 
 interface CypressReportOptions {
@@ -30,8 +31,7 @@ class CypressResource {
             const response = await this.client.get(resourceUrl, config);
             return response.data;
         } catch (err: unknown) {
-            const axiosErr = err as { message: string };
-            rootLogger.error(`Erro HTTP GET ${sanitizeUrl(resourceUrl)}: ${axiosErr.message}`, {
+            rootLogger.error(`Erro HTTP GET ${sanitizeUrl(resourceUrl)}: ${extractErrorMessage(err)}`, {
                 resourceUrl: sanitizeUrl(resourceUrl),
             });
             return null;

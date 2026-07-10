@@ -131,7 +131,7 @@ vi.mock('../shared/git-metrics-adapter', () => ({
     clearGitLogError: vi.fn(),
 }));
 vi.mock('../shared/quality-gate', () => ({
-    runQualityGate: vi.fn(() => ({ passed: true })),
+    runQualityGate: vi.fn(() => ({ overall: 'pass', checks: [], score: 85 })),
     formatQualityGateText: vi.fn(() => ''),
 }));
 vi.mock('../shared/temp-dir', () => ({ writeReport: vi.fn((name: string) => sanitizePath(os.tmpdir(), name)) }));

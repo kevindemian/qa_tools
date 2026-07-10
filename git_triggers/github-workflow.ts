@@ -1,6 +1,7 @@
 import type { AxiosInstance } from '../shared/deps.js';
 import { rootLogger } from '../shared/logger.js';
 import { handleError } from '../shared/git-provider-error.js';
+import { extractErrorMessage } from '../shared/prompt-errors.js';
 import type {
     PipelineTriggerResult,
     ScheduleInfo,
@@ -327,7 +328,8 @@ export async function wfGetRepoTree(
             rootLogger.warn(`GitHub: tree truncated for ${owner}/${repo}@${branch}`);
         }
         return paths.length > 0 ? paths : [];
-    } catch {
+    } catch (err: unknown) {
+        rootLogger.warn(`github-workflow: listManifestPaths failed — ${extractErrorMessage(err)}`);
         return null;
     }
 }
