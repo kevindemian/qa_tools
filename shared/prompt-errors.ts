@@ -62,6 +62,47 @@ const KNOWN_ERRORS: KnownError[] = [
     },
     { test: /version.*not found/i, msg: 'Versão não encontrada', hint: 'Verifique se o nome da versão está correto.' },
     { test: /already exists/i, msg: 'Item ja existe', hint: 'Escolha um nome diferente.' },
+    // Padrões CI/GitHub/GitLab (Fase 3-5 do SSOT plan)
+    {
+        test: /EPIPE|ECONNRESET.*GitHub/i,
+        msg: 'Conexão com GitHub perdida',
+        hint: 'Verifique sua conexão de rede e tente novamente.',
+    },
+    {
+        test: /artifact.*expired|not found.*artifact/i,
+        msg: 'Artefato CI expirado ou ausente',
+        hint: 'O artefato pode ter expirado. Tente re-executar o pipeline.',
+    },
+    {
+        test: /invalid.*json|unexpected.*token/i,
+        msg: 'Arquivo de dados corrompido',
+        hint: 'O arquivo de resultado parece estar corrompido. Re-execute.',
+    },
+    {
+        test: /ENOENT.*coverage|ENOTDIR.*coverage/i,
+        msg: 'Arquivo de coverage não encontrado',
+        hint: 'Verifique se o pipeline gerou o relatório de coverage.',
+    },
+    {
+        test: /rate.*limit.*github|abuse.*detection/i,
+        msg: 'Rate limit do GitHub',
+        hint: 'Muitas requisições. Aguarde e tente novamente.',
+    },
+    {
+        test: /ETIMEDOUT.*api\.github/i,
+        msg: 'Timeout na API do GitHub',
+        hint: 'API do GitHub lenta. Tente novamente em alguns minutos.',
+    },
+    {
+        test: /403.*github.*secondary.*rate/i,
+        msg: 'Secondary rate limit GitHub',
+        hint: 'GitHub bloqueou temporariamente. Aguarde 60s.',
+    },
+    {
+        test: /invalid.*xml|not well-formed/i,
+        msg: 'Arquivo XML inválido',
+        hint: 'O arquivo JUnit XML está mal formatado.',
+    },
 ];
 
 export function humanizeError(message: string | null | undefined): { msg: string; hint: string } | null {

@@ -2,6 +2,9 @@
  * Health score calculation: 0-100 composite of pass rate, flaky rate, coverage,
  * execution rate, and suite speed — aligned with DORA, ISO 25023, and ISTQB standards.
  *
+ * DataHub is the SOLE source of truth for all metrics.
+ * MetricsStore is NOT used — all data comes from DataHub.computed.*.
+ *
  * DORA State of DevOps 2025: Pass Rate Elite threshold ≥95%
  * ISO/IEC 25023:2016: Coverage measures framework
  * ISTQB CTFL: Execution Rate formula: (passed+failed)/total
@@ -10,9 +13,8 @@
  * ISO/IEC 25020:2019 Annex D: Normalized measurement function — linear interpolation
  * between target (score=100) and floor (score=0).
  */
-import type { MetricsStore, MetricsRun, DataHub } from './types/data-hub.js';
+import type { DataHub } from './types/data-hub.js';
 import type { HealthScoreResult, HealthScoreGrade, HealthScoreDimensions, HealthScoreProvenance } from './types.js';
-import { calcRunPassRate } from './data-hub/compute/run-pass-rate.js';
 
 export interface HealthScoreConfig {
     weights: { passRate: number; flakyRate: number; coverage: number; executionRate: number; suiteSpeed: number };
@@ -30,7 +32,7 @@ export interface HealthScoreConfig {
     maxSuiteSpeedGate: number;
     /** Floor below which coverage score is 0. Default 30. */
     coverageFloor: number;
-    /** If set, overrides coverage from MetricsStore. Used for layered coverage resolution. */
+    /** If set, overrides coverage from DataHub.computed. Used for layered coverage resolution. */
     coverageOverride?: number;
     /** Override grade boundaries: { excellent: 90, good: 80, needs_attention: 70, poor: 60 } */
     gradeBoundaries?: Record<HealthScoreGrade, number>;
@@ -79,15 +81,19 @@ const PENALTY_CAP = 60;
 function pickConfig(options?: Partial<HealthScoreConfig>): HealthScoreConfig {
     const w = DEFAULTS.weights;
     const ow = options?.weights;
+    const clamp = (v: number | undefined, fallback: number) => {
+        const n = v ?? fallback;
+        return Number.isFinite(n) && n >= 0 ? n : fallback;
+    };
     return {
         ...DEFAULTS,
         ...options,
         weights: {
-            passRate: ow?.passRate ?? w.passRate,
-            flakyRate: ow?.flakyRate ?? w.flakyRate,
-            coverage: ow?.coverage ?? w.coverage,
-            executionRate: ow?.executionRate ?? w.executionRate,
-            suiteSpeed: ow?.suiteSpeed ?? w.suiteSpeed,
+            passRate: clamp(ow?.passRate, w.passRate),
+            flakyRate: clamp(ow?.flakyRate, w.flakyRate),
+            coverage: clamp(ow?.coverage, w.coverage),
+            executionRate: clamp(ow?.executionRate, w.executionRate),
+            suiteSpeed: clamp(ow?.suiteSpeed, w.suiteSpeed),
         },
     };
 }
@@ -101,128 +107,31 @@ export function evaluateQualityGate(
     config?: Partial<HealthScoreConfig>,
 ): 'pass' | 'fail' {
     const cfg = pickConfig(config);
-    if (passRate < cfg.minPassRateGate) return 'fail';
-    if (flakyPct > cfg.maxFlakyGate) return 'fail';
-    if (coverage < cfg.minCoverageGate) return 'fail';
-    if (executionRate < cfg.minExecutionRateGate) return 'fail';
-    if (suiteSpeed > cfg.maxSuiteSpeedGate) return 'fail';
+    if (!Number.isFinite(passRate) || passRate < cfg.minPassRateGate) return 'fail';
+    if (!Number.isFinite(flakyPct) || flakyPct > cfg.maxFlakyGate) return 'fail';
+    if (!Number.isFinite(coverage) || coverage < cfg.minCoverageGate) return 'fail';
+    if (!Number.isFinite(executionRate) || executionRate < cfg.minExecutionRateGate) return 'fail';
+    if (!Number.isFinite(suiteSpeed) || suiteSpeed > cfg.maxSuiteSpeedGate) return 'fail';
     return 'pass';
 }
 
-function _buildTestCounts(runs: MetricsRun[]): Map<string, { pass: number; fail: number }> {
-    const testMap = new Map<string, { pass: number; fail: number }>();
-    for (const run of runs) {
-        for (const t of run.tests) {
-            const entry = testMap.get(t.title) || { pass: 0, fail: 0 };
-            if (t.state === 'passed') entry.pass++;
-            else if (t.state === 'failed') entry.fail++;
-            testMap.set(t.title, entry);
-        }
-    }
-    return testMap;
-}
+/** Compute actual metrics — DataHub.computed is the ONLY source. */
+function computeActualMetrics(dataHub: DataHub): ActualMetrics {
+    const c = dataHub.computed;
 
-function _computeFlakyRate(runs: MetricsRun[], config: HealthScoreConfig): number | null {
-    const testMap = _buildTestCounts(runs);
-    let flakyCount = 0;
-    let totalConsidered = 0;
-    for (const [, counts] of testMap) {
-        const totalAppearances = counts.pass + counts.fail;
-        if (totalAppearances < config.minRuns) continue;
-        totalConsidered++;
-        if (counts.fail > 0 && counts.pass > 0) flakyCount++;
-    }
-    return totalConsidered > 0 ? (flakyCount / totalConsidered) * 100 : null;
-}
+    const passRate = Number.isFinite(c.passRate) ? c.passRate : 0;
+    const flakyPct = _normalizeFlakyPct(c.flakyPercentage ?? null);
+    const coverage = Number.isFinite(c.coverage) ? c.coverage : 0;
+    const executionRate = Number.isFinite(c.executionRate ?? 0) ? (c.executionRate ?? 0) : 0;
+    const suiteSpeed = Number.isFinite(c.suiteSpeedP95) ? c.suiteSpeedP95 : 0;
 
-function _computeExpWeighted(runs: MetricsRun[], n: number, getValue: (run: MetricsRun) => number): number {
-    let weightedSum = 0;
-    let weightTotal = 0;
-    const runsSlice = runs.slice(0, n);
-    for (const [i, run] of runsSlice.entries()) {
-        const raw = getValue(run);
-        const value = Number.isFinite(raw) ? raw : 0;
-        const weight = Math.exp((i - n + 1) / Math.max(n / 2, 1));
-        weightedSum += value * weight;
-        weightTotal += weight;
-    }
-    return weightTotal > 0 ? weightedSum / weightTotal : 0;
-}
-
-function _computeSuiteSpeed(runs: MetricsRun[]): number {
-    const allDurations: number[] = [];
-    for (const run of runs) {
-        for (const t of run.tests) {
-            if (Number.isFinite(t.duration)) allDurations.push(t.duration);
-        }
-    }
-    if (allDurations.length === 0) return 0;
-    allDurations.sort((a, b) => a - b);
-    const idx = Math.max(0, Math.ceil(allDurations.length * 0.95) - 1);
-    return new Map(allDurations.map((v, i) => [i, v])).get(idx) ?? 0;
-}
-
-/** Compute actual metrics with DataHub-first resolution. */
-function computeActualMetrics(store: MetricsStore, config: HealthScoreConfig, dataHub?: DataHub): ActualMetrics {
-    const runs = store.runs.slice(-config.windowSize);
-    const n = runs.length;
-
-    const actualPassRate =
-        dataHub !== undefined ? dataHub.computed.passRate : _computeExpWeighted(runs, n, (run) => calcRunPassRate(run));
-    const actualFlakyPct =
-        dataHub !== undefined ? (dataHub.computed.flakyPercentage ?? 0) : _computeFlakyRate(runs, config);
-
-    const actualExecutionRate =
-        dataHub !== undefined
-            ? (dataHub.computed.executionRate ?? 0)
-            : _computeExpWeighted(runs, n, (run) =>
-                  run.total > 0 ? ((run.passed + run.failed) / run.total) * 100 : 0,
-              );
-
-    const actualCoverage = dataHub !== undefined ? dataHub.computed.coverage : _resolveCoverage(config, store);
-
-    const actualSuiteSpeed = dataHub !== undefined ? dataHub.computed.suiteSpeedP95 : _computeSuiteSpeed(runs);
-
-    const flakyPctResult = _normalizeFlakyPct(actualFlakyPct);
-    const passRate = _resolvePassRate(dataHub, actualPassRate);
-    const suiteSpeed = _resolveSuiteSpeed(dataHub, actualSuiteSpeed);
-
-    return {
-        passRate,
-        flakyPct: flakyPctResult,
-        coverage: Number.isFinite(actualCoverage) ? actualCoverage : 0,
-        executionRate: Number.isFinite(actualExecutionRate) ? actualExecutionRate : 0,
-        suiteSpeed,
-    };
-}
-
-function _resolveCoverage(config: HealthScoreConfig, store: MetricsStore): number {
-    if (config.coverageOverride !== undefined) {
-        return config.coverageOverride;
-    }
-    if (store.coverageHistory && store.coverageHistory.length > 0) {
-        const lastEntry = store.coverageHistory[store.coverageHistory.length - 1];
-        return lastEntry?.coveragePct ?? 0;
-    }
-    return 0;
+    return { passRate, flakyPct, coverage, executionRate, suiteSpeed };
 }
 
 function _normalizeFlakyPct(actualFlakyPct: number | null): number | null {
     if (actualFlakyPct === null) return null;
     if (Number.isFinite(actualFlakyPct)) return actualFlakyPct;
-    return 0;
-}
-
-function _resolvePassRate(dataHub: DataHub | undefined, actualPassRate: number): number {
-    if (dataHub !== undefined) return dataHub.computed.passRate;
-    if (Number.isFinite(actualPassRate)) return actualPassRate;
-    return 0;
-}
-
-function _resolveSuiteSpeed(dataHub: DataHub | undefined, actualSuiteSpeed: number): number {
-    if (dataHub !== undefined) return dataHub.computed.suiteSpeedP95;
-    if (Number.isFinite(actualSuiteSpeed)) return actualSuiteSpeed;
-    return 0;
+    return null;
 }
 
 function scorePassRate(actual: number, config: HealthScoreConfig): number {
@@ -296,6 +205,8 @@ const PROVENANCE_DIMENSIONS: Array<{
         standard: 'Industry Best Practice',
         formula: '(tests with both pass and fail outcomes) / (total tests with ≥minRuns appearances)×100',
         thresholdBasis: 'Action threshold >5%, target <3%',
+        targetKey: 'flakyThreshold',
+        gateKey: 'maxFlakyGate',
     },
     {
         key: 'coverage',
@@ -346,19 +257,22 @@ function _buildProvenance(options?: Partial<HealthScoreConfig>): HealthScoreProv
     });
 }
 
-export function calculateHealthScore(
-    metricsStore: MetricsStore,
-    options?: Partial<HealthScoreConfig> & { dataHub?: DataHub },
-): HealthScoreResult {
+/**
+ * Calculate composite health score from DataHub metrics.
+ *
+ * @param options - Configuration overrides AND DataHub (required). DataHub is the sole source of truth.
+ * @returns HealthScoreResult with overall score, grade, dimensions, and provenance.
+ */
+export function calculateHealthScore(options: Partial<HealthScoreConfig> & { dataHub: DataHub }): HealthScoreResult {
     const config = pickConfig(options);
-    const actual = computeActualMetrics(metricsStore, config, options?.dataHub);
-    const runsEmpty = metricsStore.runs.length === 0;
+    const dataHub = options.dataHub;
+    const actual = computeActualMetrics(dataHub);
 
-    const scPassRate = runsEmpty ? 0 : scorePassRate(actual.passRate, config);
-    const scFlakyRate = runsEmpty || actual.flakyPct === null ? 0 : scoreFlakyRate(actual.flakyPct, config);
+    const scPassRate = scorePassRate(actual.passRate, config);
+    const scFlakyRate = actual.flakyPct === null ? 0 : scoreFlakyRate(actual.flakyPct, config);
     const scCoverage = scoreCoverage(actual.coverage, config);
-    const scExecutionRate = runsEmpty ? 0 : scoreExecutionRate(actual.executionRate, config);
-    const scSuiteSpeed = runsEmpty ? 0 : scoreSuiteSpeed(actual.suiteSpeed, config);
+    const scExecutionRate = scoreExecutionRate(actual.executionRate, config);
+    const scSuiteSpeed = scoreSuiteSpeed(actual.suiteSpeed, config);
 
     let overallWeight = 0;
     let overallNum = 0;
@@ -374,8 +288,7 @@ export function calculateHealthScore(
     addDim(scExecutionRate, config.weights.executionRate);
     addDim(scSuiteSpeed, config.weights.suiteSpeed);
 
-    const effectiveTotal = overallWeight > 0 ? overallWeight : 100;
-    let overall = effectiveTotal > 0 ? overallNum / effectiveTotal : 0;
+    let overall = overallWeight > 0 ? overallNum / overallWeight : 0;
     if (!Number.isFinite(overall)) overall = 0;
 
     const dimCheck = [scPassRate, scCoverage, scExecutionRate, scSuiteSpeed];
@@ -417,7 +330,7 @@ export function calculateHealthScore(
         ),
         dimensions: dims,
         provenance: _buildProvenance(options),
-        runCount: metricsStore.runs.length,
+        runCount: dataHub.raw.runs.length,
         timestamp: new Date().toISOString(),
     };
 }

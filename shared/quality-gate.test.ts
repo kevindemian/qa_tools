@@ -12,10 +12,8 @@ vi.mock('./logger.js', () => ({
     rootLogger: { error: vi.fn() },
 }));
 
-import * as globalHubModule from './data-hub/global-hub.js';
 import * as flakinessModule from './data-hub/compute/flakiness-entries.js';
 
-const mockGetDataHub = vi.mocked(globalHubModule.getDataHub);
 const mockCalcFlakinessEntries = vi.mocked(flakinessModule.calcFlakinessEntries);
 
 function createMockHub(overrides: Record<string, unknown> = {}) {
@@ -32,6 +30,27 @@ function createMockHub(overrides: Record<string, unknown> = {}) {
         saveQualityMetrics: vi.fn(),
         loadQualityMetricsHistory: vi.fn().mockReturnValue([]),
         flush: vi.fn(),
+        raw: { runs: [], jobs: new Map(), artifacts: new Map(), failureReasons: new Map() },
+        computed: {
+            passRate: 0,
+            avgDuration: 0,
+            suiteSpeedP95: 0,
+            flakyRate: [],
+            coverage: 0,
+            pipelineCost: { totalMinutes: 0, estimatedCost: 0 },
+            defectTrends: [],
+            branchBreakdown: {},
+            topFailingJobs: [],
+            topFailureReasons: [],
+            releaseScore: { score: 0, dimensions: {} as never, grade: 'critical' },
+            quarantineStatus: { flakyCount: 0, quarantinedCount: 0 },
+            testPassRate: 0,
+            testCounts: { passed: 0, failed: 0, skipped: 0, total: 0 },
+            framework: 'unknown',
+        },
+        timestamp: new Date(),
+        provider: 'github' as const,
+        repo: 'test/repo',
         ...overrides,
     };
 }
@@ -42,12 +61,10 @@ describe('RunQualityGate', () => {
     });
 
     it('returns fail when no metrics data exists', () => {
-        mockGetDataHub.mockReturnValue(
-            createMockHub({
-                loadMetricsStore: vi.fn().mockReturnValue({ runs: [], coverageHistory: [] }),
-            }) as never,
-        );
-        const result = runQualityGate();
+        const mockHub = createMockHub({
+            loadMetricsStore: vi.fn().mockReturnValue({ runs: [], coverageHistory: [] }),
+        }) as never;
+        const result = runQualityGate({ dataHub: mockHub });
 
         expect(result.overall).toBe('fail');
         expect(result.checks).toHaveLength(1);
@@ -57,38 +74,43 @@ describe('RunQualityGate', () => {
     });
 
     it('returns pass when all gates pass', () => {
-        mockGetDataHub.mockReturnValue(
-            createMockHub({
-                loadMetricsStore: vi.fn().mockReturnValue({
-                    runs: [
-                        {
-                            timestamp: '2025-01-01T00:00:00.000Z',
-                            project: 'test',
-                            total: 100,
-                            passed: 95,
-                            failed: 2,
-                            skipped: 3,
-                            duration: 10000,
-                            tests: [
-                                { title: 't1', state: 'passed', duration: 100 },
-                                { title: 't2', state: 'passed', duration: 100 },
-                            ],
-                        },
-                    ],
-                    coverageHistory: [
-                        {
-                            timestamp: '2025-01-01T00:00:00.000Z',
-                            project: 'test',
-                            totalIssues: 10,
-                            mappedIssues: 8,
-                            coveragePct: 80,
-                        },
-                    ],
-                }),
-            }) as never,
-        );
         mockCalcFlakinessEntries.mockReturnValue([]);
-        const result = runQualityGate();
+        const mockHub = createMockHub({
+            raw: {
+                runs: [
+                    {
+                        id: 1,
+                        conclusion: 'success',
+                        head_branch: 'test',
+                        created_at: '2025-01-01T00:00:00.000Z',
+                        updated_at: '2025-01-01T00:00:00.000Z',
+                    },
+                ],
+                jobs: new Map(),
+                artifacts: new Map(),
+                failureReasons: new Map(),
+            },
+            computed: {
+                passRate: 95,
+                avgDuration: 10000,
+                suiteSpeedP95: 500,
+                flakyRate: [],
+                coverage: 85,
+                pipelineCost: { totalMinutes: 0, estimatedCost: 0 },
+                defectTrends: [],
+                branchBreakdown: {},
+                topFailingJobs: [],
+                topFailureReasons: [],
+                releaseScore: { score: 0, dimensions: {} as never, grade: 'critical' },
+                quarantineStatus: { flakyCount: 0, quarantinedCount: 0 },
+                testPassRate: 95,
+                testCounts: { passed: 95, failed: 2, skipped: 3, total: 100 },
+                framework: 'vitest',
+                executionRate: 97,
+                flakyPercentage: 1,
+            },
+        }) as never;
+        const result = runQualityGate({ dataHub: mockHub });
 
         expect(result.overall).toBe('pass');
         expect(result.checks.length).toBeGreaterThan(1);
@@ -99,38 +121,43 @@ describe('RunQualityGate', () => {
     });
 
     it('returns fail when pass rate is below threshold', () => {
-        mockGetDataHub.mockReturnValue(
-            createMockHub({
-                loadMetricsStore: vi.fn().mockReturnValue({
-                    runs: [
-                        {
-                            timestamp: '2025-01-01T00:00:00.000Z',
-                            project: 'test',
-                            total: 100,
-                            passed: 50,
-                            failed: 50,
-                            skipped: 0,
-                            duration: 10000,
-                            tests: [
-                                { title: 't1', state: 'failed', duration: 100 },
-                                { title: 't2', state: 'passed', duration: 100 },
-                            ],
-                        },
-                    ],
-                    coverageHistory: [
-                        {
-                            timestamp: '2025-01-01T00:00:00.000Z',
-                            project: 'test',
-                            totalIssues: 10,
-                            mappedIssues: 8,
-                            coveragePct: 80,
-                        },
-                    ],
-                }),
-            }) as never,
-        );
         mockCalcFlakinessEntries.mockReturnValue([]);
-        const result = runQualityGate();
+        const mockHub = createMockHub({
+            raw: {
+                runs: [
+                    {
+                        id: 1,
+                        conclusion: 'failure',
+                        head_branch: 'test',
+                        created_at: '2025-01-01T00:00:00.000Z',
+                        updated_at: '2025-01-01T00:00:00.000Z',
+                    },
+                ],
+                jobs: new Map(),
+                artifacts: new Map(),
+                failureReasons: new Map(),
+            },
+            computed: {
+                passRate: 50,
+                avgDuration: 10000,
+                suiteSpeedP95: 500,
+                flakyRate: [],
+                coverage: 85,
+                pipelineCost: { totalMinutes: 0, estimatedCost: 0 },
+                defectTrends: [],
+                branchBreakdown: {},
+                topFailingJobs: [],
+                topFailureReasons: [],
+                releaseScore: { score: 0, dimensions: {} as never, grade: 'critical' },
+                quarantineStatus: { flakyCount: 0, quarantinedCount: 0 },
+                testPassRate: 50,
+                testCounts: { passed: 50, failed: 50, skipped: 0, total: 100 },
+                framework: 'vitest',
+                executionRate: 50,
+                flakyPercentage: 1,
+            },
+        }) as never;
+        const result = runQualityGate({ dataHub: mockHub });
 
         expect(result.overall).toBe('fail');
 
@@ -140,82 +167,94 @@ describe('RunQualityGate', () => {
     });
 
     it('filters by project when project option is passed', () => {
-        mockGetDataHub.mockReturnValue(
-            createMockHub({
-                loadMetricsStore: vi.fn().mockReturnValue({
-                    runs: [
-                        {
-                            timestamp: '2025-01-01T00:00:00.000Z',
-                            project: 'test',
-                            total: 100,
-                            passed: 95,
-                            failed: 2,
-                            skipped: 3,
-                            duration: 10000,
-                            tests: [],
-                        },
-                    ],
-                }),
-            }) as never,
-        );
         mockCalcFlakinessEntries.mockReturnValue([]);
-        const result = runQualityGate({ project: 'nonexistent' });
+        const mockHub = createMockHub({
+            raw: {
+                runs: [
+                    {
+                        id: 1,
+                        conclusion: 'success',
+                        head_branch: 'test',
+                        created_at: '2025-01-01T00:00:00.000Z',
+                        updated_at: '2025-01-01T00:00:00.000Z',
+                    },
+                ],
+                jobs: new Map(),
+                artifacts: new Map(),
+                failureReasons: new Map(),
+            },
+            computed: {
+                passRate: 95,
+                avgDuration: 10000,
+                suiteSpeedP95: 500,
+                flakyRate: [],
+                coverage: 80,
+                pipelineCost: { totalMinutes: 0, estimatedCost: 0 },
+                defectTrends: [],
+                branchBreakdown: {},
+                topFailingJobs: [],
+                topFailureReasons: [],
+                releaseScore: { score: 0, dimensions: {} as never, grade: 'critical' },
+                quarantineStatus: { flakyCount: 0, quarantinedCount: 0 },
+                testPassRate: 95,
+                testCounts: { passed: 95, failed: 2, skipped: 3, total: 100 },
+                framework: 'vitest',
+                executionRate: 97,
+                flakyPercentage: 1,
+            },
+        }) as never;
+        const result = runQualityGate({ project: 'nonexistent', dataHub: mockHub });
 
         expect(result.checks.length).toBeGreaterThanOrEqual(1);
     });
 
     it('fails when flaky rate exceeds threshold', () => {
-        mockGetDataHub.mockReturnValue(
-            createMockHub({
-                loadMetricsStore: vi.fn().mockReturnValue({
-                    runs: [
-                        {
-                            timestamp: '2025-01-01T00:00:00.000Z',
-                            project: 'test',
-                            total: 10,
-                            passed: 8,
-                            failed: 1,
-                            skipped: 1,
-                            duration: 5000,
-                            tests: [
-                                { title: 'flaky-test-1', state: 'failed', duration: 100 },
-                                { title: 'flaky-test-1', state: 'passed', duration: 100 },
-                                { title: 'stable-test', state: 'passed', duration: 50 },
-                                { title: 'stable-test', state: 'passed', duration: 50 },
-                            ],
-                        },
-                        {
-                            timestamp: '2025-01-01T01:00:00.000Z',
-                            project: 'test',
-                            total: 10,
-                            passed: 7,
-                            failed: 2,
-                            skipped: 1,
-                            duration: 5000,
-                            tests: [
-                                { title: 'flaky-test-1', state: 'failed', duration: 100 },
-                                { title: 'flaky-test-1', state: 'passed', duration: 100 },
-                                { title: 'stable-test', state: 'passed', duration: 50 },
-                                { title: 'stable-test', state: 'passed', duration: 50 },
-                            ],
-                        },
-                    ],
-                    coverageHistory: [
-                        {
-                            timestamp: '2025-01-01T00:00:00.000Z',
-                            project: 'test',
-                            totalIssues: 10,
-                            mappedIssues: 8,
-                            coveragePct: 80,
-                        },
-                    ],
-                }),
-            }) as never,
-        );
         mockCalcFlakinessEntries.mockReturnValue([
             { title: 'flaky-test-1', project: 'test', rate: 1, passCount: 1, failCount: 1, skipCount: 0, totalRuns: 2 },
         ]);
-        const result = runQualityGate();
+        const mockHub = createMockHub({
+            raw: {
+                runs: [
+                    {
+                        id: 1,
+                        conclusion: 'success',
+                        head_branch: 'test',
+                        created_at: '2025-01-01T00:00:00.000Z',
+                        updated_at: '2025-01-01T00:00:00.000Z',
+                    },
+                    {
+                        id: 2,
+                        conclusion: 'success',
+                        head_branch: 'test',
+                        created_at: '2025-01-01T01:00:00.000Z',
+                        updated_at: '2025-01-01T01:00:00.000Z',
+                    },
+                ],
+                jobs: new Map(),
+                artifacts: new Map(),
+                failureReasons: new Map(),
+            },
+            computed: {
+                passRate: 80,
+                avgDuration: 5000,
+                suiteSpeedP95: 500,
+                flakyRate: [],
+                coverage: 80,
+                pipelineCost: { totalMinutes: 0, estimatedCost: 0 },
+                defectTrends: [],
+                branchBreakdown: {},
+                topFailingJobs: [],
+                topFailureReasons: [],
+                releaseScore: { score: 0, dimensions: {} as never, grade: 'critical' },
+                quarantineStatus: { flakyCount: 0, quarantinedCount: 0 },
+                testPassRate: 80,
+                testCounts: { passed: 8, failed: 1, skipped: 1, total: 10 },
+                framework: 'vitest',
+                executionRate: 90,
+                flakyPercentage: 50,
+            },
+        }) as never;
+        const result = runQualityGate({ dataHub: mockHub });
         const flakyCheck = result.checks.find((c) => c.name === 'flaky-rate');
 
         expect(flakyCheck).toBeDefined();
@@ -225,55 +264,50 @@ describe('RunQualityGate', () => {
     });
 
     it('passes flaky rate when no flaky tests exist', () => {
-        mockGetDataHub.mockReturnValue(
-            createMockHub({
-                loadMetricsStore: vi.fn().mockReturnValue({
-                    runs: [
-                        {
-                            timestamp: '2025-01-01T00:00:00.000Z',
-                            project: 'test',
-                            total: 10,
-                            passed: 9,
-                            failed: 0,
-                            skipped: 1,
-                            duration: 5000,
-                            tests: [
-                                { title: 't1', state: 'passed', duration: 100 },
-                                { title: 't1', state: 'passed', duration: 100 },
-                                { title: 't2', state: 'passed', duration: 50 },
-                                { title: 't2', state: 'passed', duration: 50 },
-                            ],
-                        },
-                        {
-                            timestamp: '2025-01-01T01:00:00.000Z',
-                            project: 'test',
-                            total: 10,
-                            passed: 9,
-                            failed: 0,
-                            skipped: 1,
-                            duration: 5000,
-                            tests: [
-                                { title: 't1', state: 'passed', duration: 100 },
-                                { title: 't1', state: 'passed', duration: 100 },
-                                { title: 't2', state: 'passed', duration: 50 },
-                                { title: 't2', state: 'passed', duration: 50 },
-                            ],
-                        },
-                    ],
-                    coverageHistory: [
-                        {
-                            timestamp: '2025-01-01T00:00:00.000Z',
-                            project: 'test',
-                            totalIssues: 10,
-                            mappedIssues: 8,
-                            coveragePct: 80,
-                        },
-                    ],
-                }),
-            }) as never,
-        );
         mockCalcFlakinessEntries.mockReturnValue([]);
-        const result = runQualityGate();
+        const mockHub = createMockHub({
+            raw: {
+                runs: [
+                    {
+                        id: 1,
+                        conclusion: 'success',
+                        head_branch: 'test',
+                        created_at: '2025-01-01T00:00:00.000Z',
+                        updated_at: '2025-01-01T00:00:00.000Z',
+                    },
+                    {
+                        id: 2,
+                        conclusion: 'success',
+                        head_branch: 'test',
+                        created_at: '2025-01-01T01:00:00.000Z',
+                        updated_at: '2025-01-01T01:00:00.000Z',
+                    },
+                ],
+                jobs: new Map(),
+                artifacts: new Map(),
+                failureReasons: new Map(),
+            },
+            computed: {
+                passRate: 90,
+                avgDuration: 5000,
+                suiteSpeedP95: 500,
+                flakyRate: [],
+                coverage: 80,
+                pipelineCost: { totalMinutes: 0, estimatedCost: 0 },
+                defectTrends: [],
+                branchBreakdown: {},
+                topFailingJobs: [],
+                topFailureReasons: [],
+                releaseScore: { score: 0, dimensions: {} as never, grade: 'critical' },
+                quarantineStatus: { flakyCount: 0, quarantinedCount: 0 },
+                testPassRate: 90,
+                testCounts: { passed: 9, failed: 0, skipped: 1, total: 10 },
+                framework: 'vitest',
+                executionRate: 90,
+                flakyPercentage: 0,
+            },
+        }) as never;
+        const result = runQualityGate({ dataHub: mockHub });
         const flakyCheck = result.checks.find((c) => c.name === 'flaky-rate');
 
         expect(flakyCheck).toBeDefined();
@@ -281,48 +315,53 @@ describe('RunQualityGate', () => {
     });
 
     it('handles errors gracefully', () => {
-        mockGetDataHub.mockImplementation(() => {
-            throw new Error('simulated error');
-        });
-        const result = runQualityGate();
+        const mockHub = createMockHub({
+            raw: undefined,
+        }) as never;
+        const result = runQualityGate({ dataHub: mockHub });
 
         expect(result.overall).toBe('fail');
         expect(result.checks[0]?.name).toBe('error');
     });
 
     it('calculates score as average of check scores', () => {
-        mockGetDataHub.mockReturnValue(
-            createMockHub({
-                loadMetricsStore: vi.fn().mockReturnValue({
-                    runs: [
-                        {
-                            timestamp: '2025-01-01T00:00:00.000Z',
-                            project: 'test',
-                            total: 100,
-                            passed: 95,
-                            failed: 2,
-                            skipped: 3,
-                            duration: 10000,
-                            tests: [
-                                { title: 't1', state: 'passed', duration: 100 },
-                                { title: 't2', state: 'passed', duration: 100 },
-                            ],
-                        },
-                    ],
-                    coverageHistory: [
-                        {
-                            timestamp: '2025-01-01T00:00:00.000Z',
-                            project: 'test',
-                            totalIssues: 10,
-                            mappedIssues: 8,
-                            coveragePct: 80,
-                        },
-                    ],
-                }),
-            }) as never,
-        );
         mockCalcFlakinessEntries.mockReturnValue([]);
-        const result = runQualityGate();
+        const mockHub = createMockHub({
+            raw: {
+                runs: [
+                    {
+                        id: 1,
+                        conclusion: 'success',
+                        head_branch: 'test',
+                        created_at: '2025-01-01T00:00:00.000Z',
+                        updated_at: '2025-01-01T00:00:00.000Z',
+                    },
+                ],
+                jobs: new Map(),
+                artifacts: new Map(),
+                failureReasons: new Map(),
+            },
+            computed: {
+                passRate: 95,
+                avgDuration: 10000,
+                suiteSpeedP95: 500,
+                flakyRate: [],
+                coverage: 85,
+                pipelineCost: { totalMinutes: 0, estimatedCost: 0 },
+                defectTrends: [],
+                branchBreakdown: {},
+                topFailingJobs: [],
+                topFailureReasons: [],
+                releaseScore: { score: 0, dimensions: {} as never, grade: 'critical' },
+                quarantineStatus: { flakyCount: 0, quarantinedCount: 0 },
+                testPassRate: 95,
+                testCounts: { passed: 95, failed: 2, skipped: 3, total: 100 },
+                framework: 'vitest',
+                executionRate: 97,
+                flakyPercentage: 1,
+            },
+        }) as never;
+        const result = runQualityGate({ dataHub: mockHub });
 
         expect(result.score).toBeGreaterThanOrEqual(0);
         expect(result.score).toBeLessThanOrEqual(100);

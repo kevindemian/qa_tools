@@ -100,7 +100,7 @@ export class GitHubDataProvider implements DataProvider {
             await this.fetchTiming(runIdNum, timingMap);
             await this.fetchFailureReasons(runJobs, failureReasonsMap);
         } catch (err) {
-            rootLogger.debug(`GitHub: jobs fetch failed for run ${runIdNum}: ${String(err)}`);
+            rootLogger.debug(`GitHub: jobs fetch failed for run ${runIdNum}: ${extractErrorMessage(err)}`);
         }
     }
 
@@ -116,7 +116,7 @@ export class GitHubDataProvider implements DataProvider {
             const parsed = await this.downloadTestArtifacts(arts, maxArtifacts);
             if (parsed.length > 0) parsedArtifactsMap.set(runIdNum, parsed);
         } catch (err) {
-            rootLogger.debug(`GitHub: artifacts fetch failed for run ${runIdNum}: ${String(err)}`);
+            rootLogger.debug(`GitHub: artifacts fetch failed for run ${runIdNum}: ${extractErrorMessage(err)}`);
         }
     }
 
@@ -126,7 +126,7 @@ export class GitHubDataProvider implements DataProvider {
             if (timing != null) timingMap.set(runIdNum, timing);
         } catch (err) {
             rootLogger.debug(
-                `GitHub: timing fetch failed for run ${runIdNum}: ${humanizeError(String(err))?.msg ?? String(err)}`,
+                `GitHub: timing fetch failed for run ${runIdNum}: ${humanizeError(extractErrorMessage(err))?.msg ?? extractErrorMessage(err)}`,
             );
         }
     }
@@ -139,7 +139,7 @@ export class GitHubDataProvider implements DataProvider {
             const detected = await detectFrameworkCascade(this.provider, branch);
             return detected.framework !== 'unknown' ? detected.framework : undefined;
         } catch (err) {
-            rootLogger.debug(`GitHub: framework detection failed: ${String(err)}`);
+            rootLogger.debug(`GitHub: framework detection failed: ${extractErrorMessage(err)}`);
             return undefined;
         }
     }
@@ -165,7 +165,9 @@ export class GitHubDataProvider implements DataProvider {
                 results.push(...parsed);
                 downloaded++;
             } catch (err) {
-                rootLogger.debug(`GitHub: artifact download failed for ${String(artifact.name)}: ${String(err)}`);
+                rootLogger.debug(
+                    `GitHub: artifact download failed for ${String(artifact.name)}: ${extractErrorMessage(err)}`,
+                );
             }
         }
 

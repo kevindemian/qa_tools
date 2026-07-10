@@ -218,7 +218,7 @@ function _tryPrintHealthScore(): void {
         const hub = getDataHub();
         const store = hub.loadMetricsStore();
         if (store.runs.length < 5) return;
-        const hs = calculateHealthScore(store);
+        const hs = calculateHealthScore({ dataHub: hub });
         let gradeIcon: string;
         if (hs.grade === 'excellent') {
             gradeIcon = '🟢';

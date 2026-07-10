@@ -102,7 +102,7 @@ export class GitLabDataProvider implements DataProvider {
             await this.fetchFailureReasons(runJobs, failureReasonsMap, run);
             return testReport;
         } catch (err) {
-            rootLogger.debug(`GitLab: jobs fetch failed for run ${runIdNum}: ${String(err)}`);
+            rootLogger.debug(`GitLab: jobs fetch failed for run ${runIdNum}: ${extractErrorMessage(err)}`);
             return undefined;
         }
     }
@@ -119,7 +119,7 @@ export class GitLabDataProvider implements DataProvider {
             const parsed = await this.downloadTestArtifacts(arts, maxArtifacts);
             if (parsed.length > 0) parsedArtifactsMap.set(runIdNum, parsed);
         } catch (err) {
-            rootLogger.debug(`GitLab: artifacts fetch failed for run ${runIdNum}: ${String(err)}`);
+            rootLogger.debug(`GitLab: artifacts fetch failed for run ${runIdNum}: ${extractErrorMessage(err)}`);
         }
     }
 
@@ -128,7 +128,7 @@ export class GitLabDataProvider implements DataProvider {
             const report = await this.provider.getTestReport(runIdNum);
             return report != null && report.total_count > 0 ? report : undefined;
         } catch (err) {
-            rootLogger.debug(`GitLab: test report fetch failed for run ${runIdNum}: ${String(err)}`);
+            rootLogger.debug(`GitLab: test report fetch failed for run ${runIdNum}: ${extractErrorMessage(err)}`);
             return undefined;
         }
     }
@@ -141,7 +141,7 @@ export class GitLabDataProvider implements DataProvider {
             const detected = await detectFrameworkCascade(this.provider, branch);
             return detected.framework !== 'unknown' ? detected.framework : undefined;
         } catch (err) {
-            rootLogger.debug(`GitLab: framework detection failed: ${String(err)}`);
+            rootLogger.debug(`GitLab: framework detection failed: ${extractErrorMessage(err)}`);
             return undefined;
         }
     }
@@ -167,7 +167,9 @@ export class GitLabDataProvider implements DataProvider {
                 results.push(...parsed);
                 downloaded++;
             } catch (err) {
-                rootLogger.debug(`GitLab: artifact download failed for ${String(artifact.name)}: ${String(err)}`);
+                rootLogger.debug(
+                    `GitLab: artifact download failed for ${String(artifact.name)}: ${extractErrorMessage(err)}`,
+                );
             }
         }
 

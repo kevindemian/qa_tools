@@ -139,10 +139,8 @@ export function parseZipBuffer(buffer: Buffer): ArtifactParseResult[] {
                 results.push(result);
             }
         }
-    } catch (err) {
-        const errObj = err as { [key: string]: unknown };
-        const msg = typeof errObj['message'] === 'string' ? errObj['message'] : String(err);
-        rootLogger.error(`artifact-parser: failed to parse ZIP: ${msg}`);
+    } catch (err: unknown) {
+        rootLogger.error(`artifact-parser: failed to parse ZIP: ${extractErrorMessage(err)}`);
     }
 
     return results;

@@ -12,63 +12,66 @@
  *
  * Pure function — no filesystem dependencies.
  */
-import { describe, expect, it } from 'vitest';
-import type { CoverageSnapshot, MetricsRun, MetricsStore } from '../../types/data-hub.js';
-import type { DataHub } from '../../types/data-hub.js';
+import { describe, expect, it, vi } from 'vitest';
+import type { DataHub, ComputedMetrics } from '../../types/data-hub.js';
 
-/** Helper to create a MetricsStore with controllable data. */
-function createStore(
-    overrides: Partial<{
-        totalRuns: number;
-        totalTests: number;
-        passed: number;
-        failed: number;
-        skipped: number;
-        flakyTests: number;
-        duration: number;
-        coveragePct: number;
-    }> = {},
-): MetricsStore {
-    const {
-        totalRuns = 10,
-        totalTests = 100,
-        passed = 90,
-        failed = 8,
-        skipped = 2,
-        flakyTests = 1,
-        duration = 5000,
-        coveragePct,
-    } = overrides;
-    const testsPerRun = Math.floor(totalTests / totalRuns);
-    const flakyPerRun = Math.min(flakyTests, testsPerRun);
-
-    const runs: MetricsRun[] = Array.from({ length: totalRuns }, (_, i) => ({
-        timestamp: new Date(Date.now() + i * 60000).toISOString(),
-        project: 'test-project',
-        total: testsPerRun,
-        passed: Math.floor((passed / totalTests) * testsPerRun),
-        failed: Math.floor((failed / totalTests) * testsPerRun),
-        skipped: Math.floor((skipped / totalTests) * testsPerRun),
-        duration,
-        tests: Array.from({ length: testsPerRun }, (_, j) => {
-            const state: 'passed' | 'failed' = j < flakyPerRun && i % 2 === 0 ? 'failed' : 'passed';
-            return { title: `test-${j}`, state, duration: Math.floor(duration / testsPerRun) };
-        }),
-    }));
-
-    const store: MetricsStore = { runs };
-    if (coveragePct !== undefined) {
-        store.coverageHistory = [
-            {
-                timestamp: new Date().toISOString(),
-                project: 'test-project',
-                totalIssues: 100,
-                mappedIssues: Math.round((coveragePct / 100) * 100),
-                coveragePct,
+function createTestHub(overrides: Partial<ComputedMetrics> = {}): DataHub {
+    return {
+        raw: { runs: [], jobs: new Map(), artifacts: new Map(), failureReasons: new Map() },
+        computed: {
+            passRate: 50,
+            avgDuration: 1000,
+            suiteSpeedP95: 500,
+            flakyRate: [],
+            coverage: 42,
+            pipelineCost: { totalMinutes: 0, estimatedCost: 0 },
+            defectTrends: [],
+            branchBreakdown: {},
+            topFailingJobs: [],
+            topFailureReasons: [],
+            releaseScore: {
+                score: 0,
+                dimensions: {
+                    passRate: { score: 0, status: 'fail' },
+                    flakyRate: { score: 0, status: 'fail' },
+                    coverage: { score: 0, status: 'fail' },
+                    executionRate: { score: 0, status: 'fail' },
+                    suiteSpeed: { score: 0, status: 'fail' },
+                },
+                grade: 'F',
             },
-        ];
-    }
-    return store;
+            quarantineStatus: { flakyCount: 0, quarantinedCount: 0 },
+            testPassRate: 50,
+            testCounts: { passed: 50, failed: 50, skipped: 0, total: 100 },
+            framework: 'vitest',
+            executionRate: 77,
+            flakyPercentage: 12,
+            ...overrides,
+        },
+        timestamp: new Date(),
+        provider: 'github',
+        repo: 'test/repo',
+        saveRun: vi.fn(),
+        saveCoverageSnapshot: vi.fn(),
+        saveFailureClassification: vi.fn(),
+        flush: vi.fn(),
+        loadCoverageHistory: vi.fn().mockReturnValue([]),
+        loadFailureClassifications: vi.fn().mockReturnValue([]),
+        saveMetricsStore: vi.fn(),
+        loadMetricsStore: vi.fn().mockReturnValue({ runs: [] }),
+        saveParseResult: vi.fn().mockReturnValue({
+            timestamp: new Date().toISOString(),
+            project: '',
+            total: 0,
+            passed: 0,
+            failed: 0,
+            skipped: 0,
+            duration: 0,
+            tests: [],
+        }),
+        saveQualityMetrics: vi.fn(),
+        loadQualityMetricsHistory: vi.fn().mockReturnValue([]),
+    };
 }
 
 describe('Integration: Health Score', () => {
@@ -77,8 +80,7 @@ describe('Integration: Health Score', () => {
             expect.hasAssertions();
 
             const { calculateHealthScore } = await import('../../health-score.js');
-            const store = createStore({ passed: 95, failed: 5, skipped: 0 });
-            const result = calculateHealthScore(store, {});
+            const result = calculateHealthScore({ dataHub: createTestHub() });
 
             expect(result.overall).toBeGreaterThanOrEqual(0);
             expect(result.overall).toBeLessThanOrEqual(100);
@@ -89,15 +91,25 @@ describe('Integration: Health Score', () => {
 
             const { calculateHealthScore } = await import('../../health-score.js');
             // excellent: near-perfect pass rate + good coverage
-            const excellent = calculateHealthScore(
-                createStore({ passed: 99, failed: 1, skipped: 0, flakyTests: 0, coveragePct: 80 }),
-                {},
-            );
-            // poor: balanced pass/fail + good coverage
-            const poor = calculateHealthScore(
-                createStore({ passed: 50, failed: 50, skipped: 0, flakyTests: 0, coveragePct: 80 }),
-                {},
-            );
+            const excellent = calculateHealthScore({
+                dataHub: createTestHub({
+                    passRate: 98,
+                    coverage: 90,
+                    executionRate: 98,
+                    suiteSpeedP95: 200,
+                    flakyPercentage: 0,
+                }),
+            });
+            // poor: moderate metrics that produce overall score in [60,69]
+            const poor = calculateHealthScore({
+                dataHub: createTestHub({
+                    passRate: 80,
+                    coverage: 60,
+                    executionRate: 80,
+                    suiteSpeedP95: 2000,
+                    flakyPercentage: 4,
+                }),
+            });
 
             expect(excellent.grade).toBe('excellent');
             expect(poor.grade).toBe('poor');
@@ -109,7 +121,7 @@ describe('Integration: Health Score', () => {
             expect.hasAssertions();
 
             const { calculateHealthScore } = await import('../../health-score.js');
-            const result = calculateHealthScore(createStore(), {});
+            const result = calculateHealthScore({ dataHub: createTestHub() });
 
             expect(result.dimensions).toBeDefined();
             expect(result.dimensions.passRate).toBeDefined();
@@ -123,7 +135,7 @@ describe('Integration: Health Score', () => {
             expect.hasAssertions();
 
             const { calculateHealthScore } = await import('../../health-score.js');
-            const result = calculateHealthScore(createStore({ passed: 95, failed: 5, skipped: 0 }), {});
+            const result = calculateHealthScore({ dataHub: createTestHub({ passRate: 95 }) });
 
             expect(result.dimensions.passRate.score).toBeGreaterThanOrEqual(80);
         });
@@ -134,7 +146,7 @@ describe('Integration: Health Score', () => {
             expect.hasAssertions();
 
             const { calculateHealthScore } = await import('../../health-score.js');
-            const result = calculateHealthScore(createStore(), {});
+            const result = calculateHealthScore({ dataHub: createTestHub() });
 
             expect(result.provenance).toBeDefined();
             expect(result.provenance).toHaveLength(5);
@@ -144,7 +156,7 @@ describe('Integration: Health Score', () => {
             expect.hasAssertions();
 
             const { calculateHealthScore } = await import('../../health-score.js');
-            const result = calculateHealthScore(createStore(), {});
+            const result = calculateHealthScore({ dataHub: createTestHub() });
 
             for (const p of result.provenance ?? []) {
                 expect(p.source.length).toBeGreaterThan(0);
@@ -159,10 +171,15 @@ describe('Integration: Health Score', () => {
             expect.hasAssertions();
 
             const { calculateHealthScore } = await import('../../health-score.js');
-            const result = calculateHealthScore(
-                createStore({ passed: 95, failed: 5, skipped: 0, flakyTests: 0, coveragePct: 80 }),
-                {},
-            );
+            const result = calculateHealthScore({
+                dataHub: createTestHub({
+                    passRate: 95,
+                    coverage: 85,
+                    executionRate: 95,
+                    suiteSpeedP95: 500,
+                    flakyPercentage: 1,
+                }),
+            });
 
             expect(result.qualityGate).toBe('pass');
         });
@@ -171,7 +188,7 @@ describe('Integration: Health Score', () => {
             expect.hasAssertions();
 
             const { calculateHealthScore } = await import('../../health-score.js');
-            const result = calculateHealthScore(createStore({ passed: 95, failed: 5, skipped: 0 }), {});
+            const result = calculateHealthScore({ dataHub: createTestHub() });
 
             expect(result.qualityGate).toBe('fail');
         });
@@ -182,12 +199,13 @@ describe('Integration: Health Score', () => {
             expect.hasAssertions();
 
             const { calculateHealthScore } = await import('../../health-score.js');
-            const store = createStore({ passed: 95, failed: 5, skipped: 0, flakyTests: 0, coveragePct: 100 });
-            const low = calculateHealthScore(store, {
+            const low = calculateHealthScore({
                 gradeBoundaries: { excellent: 0, good: 0, needs_attention: 0, poor: 0, critical: 0 },
+                dataHub: createTestHub(),
             });
-            const high = calculateHealthScore(store, {
+            const high = calculateHealthScore({
                 gradeBoundaries: { excellent: 100, good: 100, needs_attention: 100, poor: 100, critical: 0 },
+                dataHub: createTestHub(),
             });
 
             expect(low.grade).toBe('excellent');
@@ -200,8 +218,7 @@ describe('Integration: Health Score', () => {
             expect.hasAssertions();
 
             const { calculateHealthScore } = await import('../../health-score.js');
-            const store = createStore({ totalRuns: 1, passed: 10, failed: 0, skipped: 0 });
-            const result = calculateHealthScore(store, {});
+            const result = calculateHealthScore({ dataHub: createTestHub() });
 
             expect(result.overall).toBeGreaterThanOrEqual(0);
         });
@@ -210,8 +227,14 @@ describe('Integration: Health Score', () => {
             expect.hasAssertions();
 
             const { calculateHealthScore } = await import('../../health-score.js');
-            const store: MetricsStore = { runs: [] };
-            const result = calculateHealthScore(store, {});
+            const result = calculateHealthScore({
+                dataHub: createTestHub({
+                    passRate: 0,
+                    coverage: 0,
+                    executionRate: 0,
+                    suiteSpeedP95: 5000,
+                }),
+            });
 
             expect(result.overall).toBe(0);
             expect(result.grade).toBe('critical');
@@ -225,11 +248,7 @@ describe('Integration: Health Score', () => {
             expect.hasAssertions();
 
             const { calculateHealthScore } = await import('../../health-score.js');
-            const store: MetricsStore = {
-                runs: [],
-                coverageHistory: [{ timestamp: '', project: '', totalIssues: 0, mappedIssues: 0 } as CoverageSnapshot],
-            };
-            const result = calculateHealthScore(store);
+            const result = calculateHealthScore({ dataHub: createTestHub({ coverage: 0 }) });
 
             expect(Number.isNaN(result.dimensions.coverage.score)).toBeFalsy();
             expect(result.dimensions.coverage.score).toBe(0);
@@ -305,30 +324,26 @@ describe('Integration: Health Score', () => {
             expect.hasAssertions();
 
             const { calculateHealthScore } = await import('../../health-score.js');
-            const store = createStore({ passed: 50, failed: 50, skipped: 0, coveragePct: 80 }); // 50% local
             const hub = makeDataHub({ computed: { passRate: 95 } }); // 95% from CI
 
-            const withHub = calculateHealthScore(store, { dataHub: hub });
-            const withoutHub = calculateHealthScore(store, {});
+            const withHub = calculateHealthScore({ dataHub: hub });
 
-            // DataHub passRate must override MetricsStore — passRate scores must differ
-            expect(withHub.dimensions.passRate.score).not.toBe(withoutHub.dimensions.passRate.score);
-            // DataHub passRate (95%) should produce a higher score than MetricsStore (50%)
-            expect(withHub.dimensions.passRate.score).toBeGreaterThan(withoutHub.dimensions.passRate.score);
+            // DataHub passRate (95%) should produce a higher score than store (50%)
+            // Score for 95% with target 95%: (95-50)/(95-50)*100 = 100
+            expect(withHub.dimensions.passRate.score).toBe(100);
         });
 
         it('dataHub passRate overrides MetricsStore when provided', async () => {
             expect.hasAssertions();
 
             const { calculateHealthScore } = await import('../../health-score.js');
-            const store = createStore({ passed: 50, failed: 50, skipped: 0, coveragePct: 80 }); // 50% local
             const hub = makeDataHub({ computed: { passRate: 90 } }); // 90% from CI
 
-            const withHub = calculateHealthScore(store, { dataHub: hub });
-            const withoutHub = calculateHealthScore(store, {});
+            const withHub = calculateHealthScore({ dataHub: hub });
 
-            // dataHub should override passRate — results must differ
-            expect(withHub.dimensions.passRate.score).not.toBe(withoutHub.dimensions.passRate.score);
+            // DataHub passRate (90%) should produce a higher score than store (50%)
+            // Score for 90% with target 95%: (90-50)/(95-50)*100 = 88
+            expect(withHub.dimensions.passRate.score).toBeGreaterThan(50);
         });
     });
 });
