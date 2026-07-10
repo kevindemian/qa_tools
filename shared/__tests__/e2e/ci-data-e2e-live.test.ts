@@ -7,7 +7,7 @@
  * When no token is available, tests are skipped with a descriptive message.
  * This ensures the tests don't fail in CI environments without credentials.
  */
-import { describe, expect, it, beforeAll } from 'vitest';
+import { describe, expect, it, beforeAll, vi } from 'vitest';
 import type { DataProvider, RawData, FetchOptions } from '../../types/data-hub.js';
 import { DataHubImpl } from '../../data-hub/hub.js';
 
@@ -125,6 +125,29 @@ function createGithubDataProvider(token: string): DataProvider {
 describe.skipIf(!hasAnyToken)('E2E Live: CI Data Hub — Real API', () => {
     let githubProvider: DataProvider | undefined;
 
+    const mockPersistence = {
+        loadMetricsStore: vi.fn().mockReturnValue({ runs: [] }),
+        saveMetricsStore: vi.fn(),
+        loadCoverageHistory: vi.fn().mockReturnValue([]),
+        saveCoverageSnapshot: vi.fn(),
+        loadFailureClassifications: vi.fn().mockReturnValue([]),
+        saveFailureClassification: vi.fn(),
+        saveRun: vi.fn(),
+        saveParseResult: vi.fn().mockReturnValue({
+            timestamp: new Date().toISOString(),
+            project: '',
+            total: 0,
+            passed: 0,
+            failed: 0,
+            skipped: 0,
+            duration: 0,
+            tests: [],
+        }),
+        saveQualityMetrics: vi.fn(),
+        loadQualityMetricsHistory: vi.fn().mockReturnValue([]),
+        flush: vi.fn(),
+    };
+
     beforeAll(() => {
         if (hasGithubToken && GITHUB_TOKEN) {
             githubProvider = createGithubDataProvider(GITHUB_TOKEN);
@@ -136,7 +159,7 @@ describe.skipIf(!hasAnyToken)('E2E Live: CI Data Hub — Real API', () => {
 
         if (!githubProvider) return;
 
-        const { hub } = await DataHubImpl.create([githubProvider], { repo: GITHUB_REPO });
+        const { hub } = await DataHubImpl.create([githubProvider], { repo: GITHUB_REPO }, mockPersistence);
 
         expect(hub).toBeDefined();
         expect(hub.provider).toBe('github');
@@ -150,7 +173,7 @@ describe.skipIf(!hasAnyToken)('E2E Live: CI Data Hub — Real API', () => {
 
         if (!githubProvider) return;
 
-        const { hub } = await DataHubImpl.create([githubProvider], { repo: GITHUB_REPO });
+        const { hub } = await DataHubImpl.create([githubProvider], { repo: GITHUB_REPO }, mockPersistence);
 
         expect(hub.computed.avgDuration).toBeGreaterThanOrEqual(0);
     });
@@ -160,7 +183,7 @@ describe.skipIf(!hasAnyToken)('E2E Live: CI Data Hub — Real API', () => {
 
         if (!githubProvider) return;
 
-        const { hub } = await DataHubImpl.create([githubProvider], { repo: GITHUB_REPO });
+        const { hub } = await DataHubImpl.create([githubProvider], { repo: GITHUB_REPO }, mockPersistence);
 
         expect(hub.computed.suiteSpeedP95).toBeGreaterThanOrEqual(0);
     });
@@ -170,7 +193,7 @@ describe.skipIf(!hasAnyToken)('E2E Live: CI Data Hub — Real API', () => {
 
         if (!githubProvider) return;
 
-        const { hub } = await DataHubImpl.create([githubProvider], { repo: GITHUB_REPO });
+        const { hub } = await DataHubImpl.create([githubProvider], { repo: GITHUB_REPO }, mockPersistence);
 
         for (const [, data] of Object.entries(hub.computed.branchBreakdown)) {
             const branch = data;

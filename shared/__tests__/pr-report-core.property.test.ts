@@ -14,8 +14,8 @@ const mockPRComment = vi.hoisted(() => ({ postPrComment: vi.fn() }));
 const mockHtml = vi.hoisted(() => ({ generateHtmlReport: vi.fn() }));
 const mockCoverage = vi.hoisted(() => ({ resolveCoverage: vi.fn(), readIstanbulCoverage: vi.fn() }));
 
-const mockPersistence = vi.hoisted(() => ({
-    createDataHubPersistence: vi.fn().mockReturnValue({
+const mockGlobalHub = vi.hoisted(() => ({
+    getDataHub: vi.fn().mockReturnValue({
         loadMetricsStore: vi.fn().mockReturnValue({ runs: [] }),
         saveParseResult: vi.fn(),
         saveRun: vi.fn(),
@@ -29,6 +29,7 @@ const mockPersistence = vi.hoisted(() => ({
         loadQualityMetricsHistory: vi.fn().mockReturnValue([]),
         flush: vi.fn(),
     }),
+    isDataHubInitialized: vi.fn().mockReturnValue(true),
 }));
 const mockFlakiness = vi.hoisted(() => ({
     calcFlakinessEntries: vi.fn().mockReturnValue([]),
@@ -49,7 +50,7 @@ vi.mock('../github-check-run.js', () => mockCheckRun);
 vi.mock('../github-pr-comment.js', () => mockPRComment);
 vi.mock('../report-html.js', () => mockHtml);
 vi.mock('../coverage-source.js', () => mockCoverage);
-vi.mock('../data-hub/persistence.js', () => mockPersistence);
+vi.mock('../data-hub/global-hub.js', () => mockGlobalHub);
 vi.mock('../data-hub/compute/flakiness-entries.js', () => mockFlakiness);
 vi.mock('../data-hub/compute/metrics-trends.js', () => mockTrends);
 

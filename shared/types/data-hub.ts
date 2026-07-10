@@ -395,6 +395,28 @@ export interface DataHub {
     saveFailureClassification(classification: FailureClassification): void;
     /** Flush all pending changes to disk (git commit). Throws if persistence not configured. */
     flush(message: string): void;
+
+    // ─── SSOT Persistence Operations (expanded) ────────────────────────────
+    // These methods complete the DataHub persistence surface.
+    // They eliminate the need for consumers to call createDataHubPersistence() directly.
+
+    /** Load coverage history for a project. Throws if persistence not configured. */
+    loadCoverageHistory(project: string): CoverageSnapshot[];
+    /** Load all failure classifications for a project. Throws if persistence not configured. */
+    loadFailureClassifications(project: string): FailureClassification[];
+    /** Save the full MetricsStore. Throws if persistence not configured. */
+    saveMetricsStore(store: MetricsStore): void;
+    /** Load the full MetricsStore. Throws if persistence not configured. */
+    loadMetricsStore(): MetricsStore;
+    /**
+     * Convert a ParseResult to MetricsRun and save it to history.
+     * Throws if persistence not configured.
+     */
+    saveParseResult(project: string, result: ParseResult): MetricsRun;
+    /** Save a quality metrics snapshot. Throws if persistence not configured. */
+    saveQualityMetrics(snapshot: QualityMetricsSnapshot): void;
+    /** Load all quality metrics snapshots. Throws if persistence not configured. */
+    loadQualityMetricsHistory(): QualityMetricsSnapshot[];
 }
 
 /**

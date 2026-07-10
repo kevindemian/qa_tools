@@ -7,13 +7,12 @@
  *   - perArtifactTypeCount: generation count by type
  *   - drift alerts: if avg confidence drops >2σ from baseline
  *
- * When DataHub.persistence is configured via setPersistence(), snapshots
- * are stored there. Otherwise, falls back to direct filesystem access
- * for backward compatibility during migration.
+ * Persistence is handled by DataHub. Callers should use
+ * hub.saveQualityMetrics(snapshot) and hub.loadQualityMetricsHistory()
+ * directly.
  */
 
-import type { QualityMetricsSnapshot, DataHubPersistence } from './types/data-hub.js';
-import { rootLogger } from './logger.js';
+import type { QualityMetricsSnapshot } from './types/data-hub.js';
 
 /** Re-export for backward compatibility. */
 export type { QualityMetricsSnapshot } from './types/data-hub.js';
@@ -22,25 +21,6 @@ type Layer = 'layer1' | 'layer2' | 'layer3';
 
 const MAX_PASS_RATE = 1;
 const DRIFT_SIGMA_MULTIPLIER = 2;
-
-let _configuredPersistence: DataHubPersistence | null = null;
-
-/**
- * Configure the persistence layer for quality metrics.
- * Call this once during DataHub initialization.
- *
- * @param persistence - DataHub persistence instance.
- */
-export function setQualityMetricsPersistence(persistence: DataHubPersistence): void {
-    _configuredPersistence = persistence;
-}
-
-/**
- * Get the configured persistence, or null if not configured.
- */
-function getPersistence(): DataHubPersistence | null {
-    return _configuredPersistence;
-}
 
 export class QualityMetricsCollector {
     private readonly _invariantFireCount = new Map<string, number>();
@@ -174,12 +154,13 @@ export class QualityMetricsCollector {
 
     /**
      * Create a snapshot of current metrics.
-     * Uses configured persistence if available.
+     * Persistence is handled by DataHub — callers should use
+     * hub.saveQualityMetrics(snapshot) directly.
      *
      * @returns The created snapshot.
      */
     snapshot(): QualityMetricsSnapshot {
-        const snapshot: QualityMetricsSnapshot = {
+        return {
             timestamp: new Date().toISOString(),
             invariantFireCount: Object.fromEntries(this._invariantFireCount),
             layerPassRates: {
@@ -194,35 +175,16 @@ export class QualityMetricsCollector {
                     ? Math.round((this._structureScoreSum / this._structureScoreCount) * 100) / 100
                     : 0,
         };
-
-        const persistence = getPersistence();
-        if (persistence) {
-            persistence.saveQualityMetrics(snapshot);
-        } else {
-            rootLogger.warn(
-                'quality-metrics: No persistence configured. Snapshot created but not persisted. ' +
-                    'Call setQualityMetricsPersistence() during DataHub initialization.',
-            );
-        }
-
-        return snapshot;
     }
 
     /**
      * Get all historical snapshots.
-     * Uses configured persistence if available.
+     * Persistence is handled by DataHub — callers should use
+     * hub.loadQualityMetricsHistory() directly.
      *
-     * @returns Array of historical snapshots.
+     * @returns Empty array (historical data lives in DataHub).
      */
     getHistory(): QualityMetricsSnapshot[] {
-        const persistence = getPersistence();
-        if (persistence) {
-            return persistence.loadQualityMetricsHistory();
-        }
-        rootLogger.warn(
-            'quality-metrics: No persistence configured. Returning empty history. ' +
-                'Call setQualityMetricsPersistence() during DataHub initialization.',
-        );
         return [];
     }
 

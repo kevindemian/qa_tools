@@ -64,8 +64,8 @@ vi.mock('../report-html.js', () => ({
     generateHtmlReport: mockGenerateHtmlReport,
 }));
 
-vi.mock('../data-hub/persistence.js', () => ({
-    createDataHubPersistence: vi.fn().mockReturnValue({
+vi.mock('../data-hub/global-hub.js', () => ({
+    getDataHub: vi.fn().mockReturnValue({
         loadMetricsStore: vi.fn().mockReturnValue({ runs: [], coverageHistory: [] }),
         saveParseResult: vi.fn(),
         saveRun: vi.fn(),
@@ -79,6 +79,7 @@ vi.mock('../data-hub/persistence.js', () => ({
         loadQualityMetricsHistory: vi.fn().mockReturnValue([]),
         flush: vi.fn(),
     }),
+    isDataHubInitialized: vi.fn().mockReturnValue(true),
 }));
 
 vi.mock('../data-hub/compute/flakiness-entries.js', () => ({
@@ -670,8 +671,8 @@ describe('Pr-report entry point — HTML report generation', () => {
             { name: 'regression-test', status: 'failed', duration: 200, message: 'Expected 5 got 4' },
         ]);
 
-        const persistenceModule = await import('../data-hub/persistence.js');
-        vi.mocked(persistenceModule.createDataHubPersistence).mockReturnValueOnce({
+        const globalHubModule = await import('../data-hub/global-hub.js');
+        vi.mocked(globalHubModule.getDataHub).mockReturnValueOnce({
             loadMetricsStore: vi.fn().mockReturnValue({
                 runs: [
                     {
@@ -699,7 +700,7 @@ describe('Pr-report entry point — HTML report generation', () => {
             saveQualityMetrics: vi.fn(),
             loadQualityMetricsHistory: vi.fn().mockReturnValue([]),
             flush: vi.fn(),
-        });
+        } as never);
 
         const { main } = await import('../pr-report-core.js');
         const exitSpy = vi.spyOn(process, 'exit').mockImplementation(() => undefined as never);

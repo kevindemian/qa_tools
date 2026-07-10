@@ -2,8 +2,9 @@ import chalk from 'chalk';
 import * as readline from 'readline';
 import { print, success, error, warn, info, divider, confirm } from './prompt.js';
 import { rootLogger } from './logger.js';
+import { formatErr } from './errors.js';
 import Config from './config.js';
-import { createDataHubPersistence } from './data-hub/persistence.js';
+import { getDataHub } from './data-hub/global-hub.js';
 import { calculateHealthScore } from './health-score.js';
 import { ExitCode } from './types.js';
 import { cleanupTempDirs } from './temp-dir.js';
@@ -214,25 +215,24 @@ function _printLastOperations(history?: HistoryEntry[]): void {
 
 function _tryPrintHealthScore(): void {
     try {
-        const persistence = createDataHubPersistence(Config.get('projectName'));
-        const store = persistence.loadMetricsStore();
-        if (store.runs.length >= 5) {
-            const hs = calculateHealthScore(store);
-            let gradeIcon: string;
-            if (hs.grade === 'excellent') {
-                gradeIcon = '🟢';
-            } else if (hs.grade === 'good') {
-                gradeIcon = '🟡';
-            } else if (hs.grade === 'needs_attention') {
-                gradeIcon = '🟠';
-            } else {
-                gradeIcon = '🔴';
-            }
-            const gateIcon = hs.qualityGate === 'pass' ? '✓' : '✗';
-            info(`Saúde: ${hs.overall}/100 ${gradeIcon} · Quality Gate: ${gateIcon}`);
+        const hub = getDataHub();
+        const store = hub.loadMetricsStore();
+        if (store.runs.length < 5) return;
+        const hs = calculateHealthScore(store);
+        let gradeIcon: string;
+        if (hs.grade === 'excellent') {
+            gradeIcon = '🟢';
+        } else if (hs.grade === 'good') {
+            gradeIcon = '🟡';
+        } else if (hs.grade === 'needs_attention') {
+            gradeIcon = '🟠';
+        } else {
+            gradeIcon = '🔴';
         }
+        const gateIcon = hs.qualityGate === 'pass' ? '✓' : '✗';
+        info(`Saúde: ${hs.overall}/100 ${gradeIcon} · Quality Gate: ${gateIcon}`);
     } catch (err) {
-        rootLogger.debug('Health score unavailable: ' + (err instanceof Error ? err.message : String(err)));
+        rootLogger.debug('Health score unavailable: ' + formatErr(err));
     }
 }
 

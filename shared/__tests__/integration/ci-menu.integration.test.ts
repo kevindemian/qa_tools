@@ -91,7 +91,29 @@ describe('DataHub Menu Integration', () => {
             source: 'github',
             fetchRawData: vi.fn().mockResolvedValue(rawData),
         };
-        const { hub } = await DataHubImpl.create([mockProvider], { repo: 'test-project' });
+        const mockPersistence = {
+            loadMetricsStore: vi.fn().mockReturnValue({ runs: [] }),
+            saveMetricsStore: vi.fn(),
+            loadCoverageHistory: vi.fn().mockReturnValue([]),
+            saveCoverageSnapshot: vi.fn(),
+            loadFailureClassifications: vi.fn().mockReturnValue([]),
+            saveFailureClassification: vi.fn(),
+            saveRun: vi.fn(),
+            saveParseResult: vi.fn().mockReturnValue({
+                timestamp: new Date().toISOString(),
+                project: '',
+                total: 0,
+                passed: 0,
+                failed: 0,
+                skipped: 0,
+                duration: 0,
+                tests: [],
+            }),
+            saveQualityMetrics: vi.fn(),
+            loadQualityMetricsHistory: vi.fn().mockReturnValue([]),
+            flush: vi.fn(),
+        };
+        const { hub } = await DataHubImpl.create([mockProvider], { repo: 'test-project' }, mockPersistence);
         setDataHub(hub);
     }
 

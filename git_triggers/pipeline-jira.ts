@@ -6,21 +6,22 @@ import JiraClient from '../shared/jira-client.js';
 import { collectAutomated, fileToJira } from '../shared/bug-report.js';
 import { _jiraEnv } from './test-results.js';
 import { currentProvider, pushHistory } from './session-state.js';
-import { createDataHubPersistence } from '../shared/data-hub/persistence.js';
+import { getDataHub } from '../shared/data-hub/global-hub.js';
 import { classifyFailure } from '../shared/failure-analysis.js';
 import type { ParseResult } from '../shared/result_parser.js';
 import type { AnalysisReport } from '../shared/failure-analysis.js';
 import type { StoreBackend } from '../shared/store-backend.js';
 import { rootLogger } from '../shared/logger.js';
+import { formatErr } from '../shared/errors.js';
 
 function isAutoBugEnabled(): boolean {
     return Config.get('QA_AUTO_BUG') === 'true' || process.env['QA_AUTO_BUG'] === 'true';
 }
 
-async function persistFailureClassifications(parsed: ParseResult, backend: StoreBackend): Promise<void> {
+async function persistFailureClassifications(parsed: ParseResult, _backend: StoreBackend): Promise<void> {
     try {
-        const persistence = createDataHubPersistence(Config.get('jiraProject') || 'unknown', backend);
-        const store = persistence.loadMetricsStore();
+        const hub = getDataHub();
+        const store = hub.loadMetricsStore();
         if (!store.failureClassifications) {
             store.failureClassifications = [];
         }
@@ -34,9 +35,9 @@ async function persistFailureClassifications(parsed: ParseResult, backend: Store
                 project: Config.get('jiraProject') || 'unknown',
             });
         }
-        persistence.saveMetricsStore(store);
+        hub.saveMetricsStore(store);
     } catch (err) {
-        rootLogger.warn('pipeline-jira: metrics save failed: ' + (err instanceof Error ? err.message : String(err)));
+        rootLogger.warn('pipeline-jira: metrics save failed: ' + formatErr(err));
     }
 }
 

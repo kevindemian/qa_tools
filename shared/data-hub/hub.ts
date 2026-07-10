@@ -22,9 +22,11 @@ import type {
     MetricsRun,
     CoverageSnapshot,
     FailureClassification,
+    QualityMetricsSnapshot,
 } from '../types/data-hub.js';
 import type { PipelineRun, PipelineJob } from '../types/ci-cd.js';
 import type { ArtifactParseResult } from './artifact-parser.js';
+import type { ParseResult } from '../result_parser.js';
 import { rootLogger } from '../logger.js';
 import { askTestSource } from './test-source-fallback.js';
 import type { FallbackResult } from './test-source-fallback.js';
@@ -73,7 +75,7 @@ export interface DataHubOptions {
 export class DataHubImpl implements DataHub {
     readonly raw: RawData;
     readonly computed: ComputedMetrics;
-    private readonly persistence: DataHubPersistence | undefined;
+    private readonly persistence: DataHubPersistence;
     readonly timestamp: Date;
     readonly provider: 'github' | 'gitlab';
     readonly repo: string;
@@ -83,7 +85,7 @@ export class DataHubImpl implements DataHub {
         computed: ComputedMetrics,
         provider: 'github' | 'gitlab',
         repo: string,
-        persistence?: DataHubPersistence,
+        persistence: DataHubPersistence,
     ) {
         this.raw = raw;
         this.computed = computed;
@@ -98,31 +100,50 @@ export class DataHubImpl implements DataHub {
     // Persistence is encapsulated — private, not exposed on the interface.
 
     saveRun(sha: string, run: MetricsRun): void {
-        if (this.persistence == null) {
-            throw new Error('DataHub: persistence not configured — cannot saveRun()');
-        }
         this.persistence.saveRun(sha, run);
     }
 
     saveCoverageSnapshot(snapshot: CoverageSnapshot): void {
-        if (this.persistence == null) {
-            throw new Error('DataHub: persistence not configured — cannot saveCoverageSnapshot()');
-        }
         this.persistence.saveCoverageSnapshot(snapshot);
     }
 
     saveFailureClassification(classification: FailureClassification): void {
-        if (this.persistence == null) {
-            throw new Error('DataHub: persistence not configured — cannot saveFailureClassification()');
-        }
         this.persistence.saveFailureClassification(classification);
     }
 
     flush(message: string): void {
-        if (this.persistence == null) {
-            throw new Error('DataHub: persistence not configured — cannot flush()');
-        }
         this.persistence.flush(message);
+    }
+
+    // ─── SSOT Persistence Operations (expanded) ────────────────────────────
+    // Pure delegates — identical pattern to the 4 above.
+
+    loadCoverageHistory(project: string): CoverageSnapshot[] {
+        return this.persistence.loadCoverageHistory(project);
+    }
+
+    loadFailureClassifications(project: string): FailureClassification[] {
+        return this.persistence.loadFailureClassifications(project);
+    }
+
+    saveMetricsStore(store: MetricsStore): void {
+        this.persistence.saveMetricsStore(store);
+    }
+
+    loadMetricsStore(): MetricsStore {
+        return this.persistence.loadMetricsStore();
+    }
+
+    saveParseResult(project: string, result: ParseResult): MetricsRun {
+        return this.persistence.saveParseResult(project, result);
+    }
+
+    saveQualityMetrics(snapshot: QualityMetricsSnapshot): void {
+        this.persistence.saveQualityMetrics(snapshot);
+    }
+
+    loadQualityMetricsHistory(): QualityMetricsSnapshot[] {
+        return this.persistence.loadQualityMetricsHistory();
     }
 
     /**
@@ -178,7 +199,7 @@ export class DataHubImpl implements DataHub {
     static async create(
         providers: DataProvider[],
         options: FetchOptions & DataHubOptions = { repo: '' },
-        persistence?: DataHubPersistence,
+        persistence: DataHubPersistence,
     ): Promise<DataHubResult> {
         const { raw, providerFailures } = await DataHubImpl.fetchFromProviders(providers, options);
         const allProvidersFailed = providerFailures > 0 && providerFailures >= providers.length;
@@ -259,7 +280,7 @@ export class DataHubImpl implements DataHub {
     /**
      * Create an empty DataHub (fallback when fetch fails).
      */
-    static createEmpty(provider: 'github' | 'gitlab', repo: string): DataHubImpl {
+    static createEmpty(provider: 'github' | 'gitlab', repo: string, persistence: DataHubPersistence): DataHubImpl {
         const raw: RawData = {
             runs: [],
             jobs: new Map(),
@@ -267,7 +288,7 @@ export class DataHubImpl implements DataHub {
             failureReasons: new Map(),
         };
         const computed = DataHubImpl.computeMetrics(raw, { repo });
-        return new DataHubImpl(raw, computed, provider, repo);
+        return new DataHubImpl(raw, computed, provider, repo, persistence);
     }
 
     /**
@@ -279,7 +300,7 @@ export class DataHubImpl implements DataHub {
      * - CoverageSnapshot[] → RawCoverage
      * - FailureClassification[] → raw.failureClassifications
      */
-    static loadFromStore(store: MetricsStore, repo: string, persistence?: DataHubPersistence): DataHubImpl {
+    static loadFromStore(store: MetricsStore, repo: string, persistence: DataHubPersistence): DataHubImpl {
         const parsedArtifacts = new Map<number, ArtifactParseResult[]>();
         const runs: PipelineRun[] = [];
         const runsArray = Array.isArray(store.runs) ? store.runs : [];

@@ -10,7 +10,7 @@ import { reportsDir } from '../shared/temp-dir.js';
 import { parseTestResults as detectAndParseTestResults } from '../shared/result_parser.js';
 import type { ParseResult } from '../shared/result_parser.js';
 import { matchResultsToTests, createTestExecutionFromResults } from '../jira_management/result_reporter.js';
-import { createDataHubPersistence } from '../shared/data-hub/persistence.js';
+import { getDataHub } from '../shared/data-hub/global-hub.js';
 import type { GitProvider } from '../shared/types.js';
 
 function _jiraEnv(): { base: string; token: string; xray: string; mode: JiraMode } | null {
@@ -229,7 +229,7 @@ async function collectTestResults(opts: CollectTestResultsOptions): Promise<Pars
     const parsed = await downloadTestArtifacts(m, pipelineId);
     if (!parsed) return null;
 
-    createDataHubPersistence(projectName).saveParseResult(projectName, parsed);
+    getDataHub().saveParseResult(projectName, parsed);
 
     const mapping = await parseTestResults(parsed);
     if (!mapping) return parsed;

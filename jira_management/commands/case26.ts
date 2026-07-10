@@ -1,4 +1,4 @@
-import { createDataHubPersistence } from '../../shared/data-hub/persistence.js';
+import { getDataHub } from '../../shared/data-hub/global-hub.js';
 import { calcFlakinessEntries } from '../../shared/data-hub/compute/flakiness-entries.js';
 import { calculateHealthScore } from '../../shared/health-score.js';
 import { calculateReleaseScore, generateReleaseScoreHtml } from '../../shared/release-score.js';
@@ -16,8 +16,8 @@ async function handler(c: CommandContext): Promise<boolean | void> {
     }
 
     try {
-        const persistence = createDataHubPersistence(projectName);
-        const store = persistence.loadMetricsStore();
+        const hub = getDataHub();
+        const store = hub.loadMetricsStore();
         const projectRuns = store.runs.filter((r) => r.project === projectName);
 
         const health = calculateHealthScore(store);

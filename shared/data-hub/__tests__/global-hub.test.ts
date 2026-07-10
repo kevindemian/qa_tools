@@ -41,6 +41,22 @@ function makeMockHub(overrides: Partial<DataHub> = {}): DataHub {
         saveCoverageSnapshot: vi.fn(),
         saveFailureClassification: vi.fn(),
         flush: vi.fn(),
+        loadCoverageHistory: vi.fn().mockReturnValue([]),
+        loadFailureClassifications: vi.fn().mockReturnValue([]),
+        saveMetricsStore: vi.fn(),
+        loadMetricsStore: vi.fn().mockReturnValue({ runs: [] }),
+        saveParseResult: vi.fn().mockReturnValue({
+            timestamp: new Date().toISOString(),
+            project: '',
+            total: 0,
+            passed: 0,
+            failed: 0,
+            skipped: 0,
+            duration: 0,
+            tests: [],
+        }),
+        saveQualityMetrics: vi.fn(),
+        loadQualityMetricsHistory: vi.fn().mockReturnValue([]),
         ...overrides,
     };
 }
@@ -50,8 +66,8 @@ describe('GlobalHub', () => {
         setDataHub(undefined);
     });
 
-    it('getDataHub returns undefined initially', () => {
-        expect(getDataHub()).toBeUndefined();
+    it('getDataHub throws when not initialized', () => {
+        expect(() => getDataHub()).toThrow('DataHub not initialized');
     });
 
     it('setDataHub stores hub', () => {
@@ -66,7 +82,7 @@ describe('GlobalHub', () => {
         setDataHub(mockHub);
         setDataHub(undefined);
 
-        expect(getDataHub()).toBeUndefined();
+        expect(() => getDataHub()).toThrow('DataHub not initialized');
     });
 
     it('ensureDataHub calls fetchFn when no hub exists', async () => {
@@ -92,13 +108,12 @@ describe('GlobalHub', () => {
         expect(result).toBe(mockHub);
     });
 
-    it('ensureDataHub returns undefined when fetchFn fails', async () => {
+    it('ensureDataHub throws when fetchFn fails', async () => {
         expect.hasAssertions();
 
         const fetchFn = vi.fn().mockRejectedValue(new Error('network error'));
-        const result = await ensureDataHub(fetchFn);
 
-        expect(result).toBeUndefined();
+        await expect(ensureDataHub(fetchFn)).rejects.toThrow('network error');
     });
 
     it('ensureDataHub stores hub when fetchFn succeeds', async () => {

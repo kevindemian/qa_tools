@@ -61,6 +61,31 @@ function makeRawData(overrides?: Partial<RawData>): RawData {
     };
 }
 
+/* ── Mock Persistence ──────────────────────────────────────────────────── */
+
+const mockPersistence = {
+    loadMetricsStore: vi.fn().mockReturnValue({ runs: [] }),
+    saveMetricsStore: vi.fn(),
+    loadCoverageHistory: vi.fn().mockReturnValue([]),
+    saveCoverageSnapshot: vi.fn(),
+    loadFailureClassifications: vi.fn().mockReturnValue([]),
+    saveFailureClassification: vi.fn(),
+    saveRun: vi.fn(),
+    saveParseResult: vi.fn().mockReturnValue({
+        timestamp: new Date().toISOString(),
+        project: '',
+        total: 0,
+        passed: 0,
+        failed: 0,
+        skipped: 0,
+        duration: 0,
+        tests: [],
+    }),
+    saveQualityMetrics: vi.fn(),
+    loadQualityMetricsHistory: vi.fn().mockReturnValue([]),
+    flush: vi.fn(),
+};
+
 /* ── Tests ─────────────────────────────────────────────────────────────── */
 
 describe('DataHubImpl.create', () => {
@@ -68,7 +93,7 @@ describe('DataHubImpl.create', () => {
         expect.hasAssertions();
 
         const provider = createMockProvider(makeRawData());
-        const { hub } = await DataHubImpl.create([provider], { repo: 'owner/repo' });
+        const { hub } = await DataHubImpl.create([provider], { repo: 'owner/repo' }, mockPersistence);
 
         expect(hub.raw.runs).toStrictEqual([]);
         expect(hub.computed.passRate).toBe(0);
@@ -89,7 +114,7 @@ describe('DataHubImpl.create', () => {
         ];
         const provider = createMockProvider(makeRawData({ runs }));
 
-        const { hub } = await DataHubImpl.create([provider], { repo: 'o/r' });
+        const { hub } = await DataHubImpl.create([provider], { repo: 'o/r' }, mockPersistence);
 
         expect(hub.computed.passRate).toBe(75);
         expect(hub.raw.runs).toHaveLength(4);
@@ -101,7 +126,7 @@ describe('DataHubImpl.create', () => {
         const runs = [makeRun({ id: 1, conclusion: 'in_progress' }), makeRun({ id: 2, conclusion: 'in_progress' })];
         const provider = createMockProvider(makeRawData({ runs }));
 
-        const { hub } = await DataHubImpl.create([provider], { repo: 'o/r' });
+        const { hub } = await DataHubImpl.create([provider], { repo: 'o/r' }, mockPersistence);
 
         expect(hub.computed.passRate).toBe(0);
     });
@@ -123,7 +148,7 @@ describe('DataHubImpl.create', () => {
         ];
         const provider = createMockProvider(makeRawData({ runs }));
 
-        const { hub } = await DataHubImpl.create([provider], { repo: 'o/r' });
+        const { hub } = await DataHubImpl.create([provider], { repo: 'o/r' }, mockPersistence);
 
         expect(hub.computed.avgDuration).toBe(450); // (300 + 600) / 2
     });
@@ -139,7 +164,7 @@ describe('DataHubImpl.create', () => {
         const jobsMap = new Map<number, PipelineJob[]>([[1, jobs]]);
         const provider = createMockProvider(makeRawData({ runs, jobs: jobsMap }));
 
-        const { hub } = await DataHubImpl.create([provider], { repo: 'o/r' });
+        const { hub } = await DataHubImpl.create([provider], { repo: 'o/r' }, mockPersistence);
 
         // P95 of [100000, 200000] = 200000
         expect(hub.computed.suiteSpeedP95).toBe(200000);
@@ -174,7 +199,7 @@ describe('DataHubImpl.create', () => {
         ]);
 
         const provider = createMockProvider(makeRawData({ runs, jobs: jobsMap }));
-        const { hub } = await DataHubImpl.create([provider], { repo: 'o/r' });
+        const { hub } = await DataHubImpl.create([provider], { repo: 'o/r' }, mockPersistence);
 
         expect(hub.computed.topFailingJobs.length).toBeGreaterThan(0);
 
@@ -197,7 +222,7 @@ describe('DataHubImpl.create', () => {
         ];
         const provider = createMockProvider(makeRawData({ runs }));
 
-        const { hub } = await DataHubImpl.create([provider], { repo: 'o/r' });
+        const { hub } = await DataHubImpl.create([provider], { repo: 'o/r' }, mockPersistence);
 
         expect(hub.computed.branchBreakdown['main']).toStrictEqual({ passRate: 50, count: 2 });
         expect(hub.computed.branchBreakdown['feature']).toStrictEqual({ passRate: 100, count: 1 });
@@ -213,7 +238,7 @@ describe('DataHubImpl.create', () => {
         ]);
         const provider = createMockProvider(makeRawData({ runs, jobs: jobsMap }));
 
-        const { hub } = await DataHubImpl.create([provider], { repo: 'o/r' });
+        const { hub } = await DataHubImpl.create([provider], { repo: 'o/r' }, mockPersistence);
 
         expect(hub.raw.runs).toHaveLength(2);
         expect(hub.raw.jobs.size).toBe(2); // both runs have jobs
@@ -224,7 +249,7 @@ describe('DataHubImpl.create', () => {
 
         const provider = createFailingProvider(new Error('API error'));
 
-        const { hub } = await DataHubImpl.create([provider], { repo: 'o/r' });
+        const { hub } = await DataHubImpl.create([provider], { repo: 'o/r' }, mockPersistence);
 
         expect(hub.raw.runs).toHaveLength(0);
         expect(hub.raw.jobs.size).toBe(0);
@@ -235,7 +260,7 @@ describe('DataHubImpl.create', () => {
 
         const before = Date.now();
         const provider = createMockProvider(makeRawData());
-        const { hub } = await DataHubImpl.create([provider], { repo: 'o/r' });
+        const { hub } = await DataHubImpl.create([provider], { repo: 'o/r' }, mockPersistence);
         const after = Date.now();
 
         expect(hub.timestamp.getTime()).toBeGreaterThanOrEqual(before);
@@ -251,7 +276,7 @@ describe('DataHubImpl.create', () => {
         ]);
         const provider = createMockProvider(makeRawData({ runs, failureReasons }));
 
-        const { hub } = await DataHubImpl.create([provider], { repo: 'o/r' });
+        const { hub } = await DataHubImpl.create([provider], { repo: 'o/r' }, mockPersistence);
 
         expect(hub.computed.topFailureReasons.length).toBeGreaterThan(0);
         expect(hub.computed.topFailureReasons[0]?.pattern).toContain('Error');
@@ -267,7 +292,7 @@ describe('DataHubImpl.create', () => {
         ]);
         const provider = createMockProvider(makeRawData({ runs, jobs: jobsMap }));
 
-        const { hub } = await DataHubImpl.create([provider], { repo: 'o/r' });
+        const { hub } = await DataHubImpl.create([provider], { repo: 'o/r' }, mockPersistence);
 
         expect(hub.computed.flakyRate.length).toBeGreaterThan(0);
         expect(hub.computed.flakyRate[0]?.title).toBe('flaky-test');
@@ -281,7 +306,7 @@ describe('DataHubImpl.create', () => {
         const jobsMap = new Map<number, PipelineJob[]>([[123, [makeJob({ id: 10 })]]]);
         const provider = createMockProvider(makeRawData({ runs, jobs: jobsMap }));
 
-        const { hub } = await DataHubImpl.create([provider], { repo: 'o/r' });
+        const { hub } = await DataHubImpl.create([provider], { repo: 'o/r' }, mockPersistence);
 
         expect(hub.raw.runs).toHaveLength(1);
     });
@@ -292,7 +317,7 @@ describe('DataHubImpl.create', () => {
         const runs = [makeRun({ id: undefined })];
         const provider = createMockProvider(makeRawData({ runs }));
 
-        const { hub } = await DataHubImpl.create([provider], { repo: 'o/r' });
+        const { hub } = await DataHubImpl.create([provider], { repo: 'o/r' }, mockPersistence);
 
         expect(hub.raw.runs).toHaveLength(1);
     });

@@ -1,7 +1,7 @@
 import type JiraClient from '../shared/jira-client.js';
 import type JiraLinkManager from '../jira_management/jira_link_manager.js';
 import { createGitHubSmokeManager } from './smoke-shared.js';
-import { createDataHubPersistence } from '../shared/data-hub/persistence.js';
+import { getDataHub } from '../shared/data-hub/global-hub.js';
 import { calcFlakinessEntries } from '../shared/data-hub/compute/flakiness-entries.js';
 import { generateFlakinessHtml } from '../shared/flakiness-dashboard.js';
 import { pollPipeline } from '../git_triggers/pipeline-handler.js';
@@ -107,8 +107,8 @@ async function collectAndReportResults(gh: ReturnType<typeof createGitHubSmokeMa
 
     await offerPipelineFailureAnalysis(parsed);
 
-    const persistence = createDataHubPersistence('qa_tools_e2e');
-    const metrics = persistence.loadMetricsStore();
+    const hub = getDataHub();
+    const metrics = hub.loadMetricsStore();
     assert(metrics, 'loadMetricsStore returned undefined');
     const projectRuns = metrics.runs.filter((r: { project: string }) => r.project === 'qa_tools_e2e');
     if (projectRuns.length >= 2) {

@@ -23,28 +23,14 @@ import { rootLogger } from './logger.js';
 
 /**
  * Obtém DataHub (novo tipo) com cache por sessão.
- * Wrapper que usa getCachedHub/setCachedHub de cache.ts (com TTL).
+ * Usa createDataHub() factory com retry + persistence injection.
  * Em caso de falha, retorna undefined (fallback para MetricsStore).
  */
 export async function getOrFetchDataHub(provider: GitProvider, repo: string): Promise<DataHub | undefined> {
-    const { getCachedHub, setCachedHub } = await import('./data-hub/cache.js');
-    const cached = getCachedHub(repo);
-    if (cached != null) return cached;
+    const { createDataHub } = await import('./data-hub/factory.js');
     try {
-        const { DataHubImpl } = await import('./data-hub/hub.js');
-
-        let dataProvider;
-        if (provider.provider === 'gitlab') {
-            const { GitLabDataProvider } = await import('./data-hub/providers/gitlab-provider.js');
-            dataProvider = new GitLabDataProvider(provider);
-        } else {
-            const { GitHubDataProvider } = await import('./data-hub/providers/github-provider.js');
-            dataProvider = new GitHubDataProvider(provider);
-        }
-
-        const { hub } = await DataHubImpl.create([dataProvider], { repo });
-        setCachedHub(repo, hub);
-        return hub;
+        const result = await createDataHub(provider, repo);
+        return result.hub;
     } catch (err) {
         rootLogger.warn(`getOrFetchDataHub failed: ${String(err)}`);
         return undefined;

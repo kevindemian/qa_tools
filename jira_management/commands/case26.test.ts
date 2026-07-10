@@ -35,8 +35,8 @@ vi.mock('../../shared/logger', () => ({
     rootLogger: { error: vi.fn(), warn: vi.fn(), info: vi.fn(), child: vi.fn().mockReturnThis() },
 }));
 
-vi.mock('../../shared/data-hub/persistence', () => ({
-    createDataHubPersistence: vi.fn().mockReturnValue({
+vi.mock('../../shared/data-hub/global-hub.js', () => ({
+    getDataHub: vi.fn().mockReturnValue({
         loadMetricsStore: mockLoadMetricsStore,
     }),
 }));

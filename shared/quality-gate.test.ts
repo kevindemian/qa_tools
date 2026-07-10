@@ -1,7 +1,7 @@
 import { runQualityGate, formatQualityGateJson, formatQualityGateText } from './quality-gate.js';
 
-vi.mock('./data-hub/persistence.js', () => ({
-    createDataHubPersistence: vi.fn(),
+vi.mock('./data-hub/global-hub.js', () => ({
+    getDataHub: vi.fn(),
 }));
 
 vi.mock('./data-hub/compute/flakiness-entries.js', () => ({
@@ -12,13 +12,13 @@ vi.mock('./logger.js', () => ({
     rootLogger: { error: vi.fn() },
 }));
 
-import * as persistenceModule from './data-hub/persistence.js';
+import * as globalHubModule from './data-hub/global-hub.js';
 import * as flakinessModule from './data-hub/compute/flakiness-entries.js';
 
-const mockCreateDataHubPersistence = vi.mocked(persistenceModule.createDataHubPersistence);
+const mockGetDataHub = vi.mocked(globalHubModule.getDataHub);
 const mockCalcFlakinessEntries = vi.mocked(flakinessModule.calcFlakinessEntries);
 
-function createMockPersistence(overrides: Partial<ReturnType<typeof persistenceModule.createDataHubPersistence>> = {}) {
+function createMockHub(overrides: Record<string, unknown> = {}) {
     return {
         saveRun: vi.fn(),
         loadRun: vi.fn().mockReturnValue(null),
@@ -42,10 +42,10 @@ describe('RunQualityGate', () => {
     });
 
     it('returns fail when no metrics data exists', () => {
-        mockCreateDataHubPersistence.mockReturnValue(
-            createMockPersistence({
+        mockGetDataHub.mockReturnValue(
+            createMockHub({
                 loadMetricsStore: vi.fn().mockReturnValue({ runs: [], coverageHistory: [] }),
-            }),
+            }) as never,
         );
         const result = runQualityGate();
 
@@ -57,8 +57,8 @@ describe('RunQualityGate', () => {
     });
 
     it('returns pass when all gates pass', () => {
-        mockCreateDataHubPersistence.mockReturnValue(
-            createMockPersistence({
+        mockGetDataHub.mockReturnValue(
+            createMockHub({
                 loadMetricsStore: vi.fn().mockReturnValue({
                     runs: [
                         {
@@ -85,7 +85,7 @@ describe('RunQualityGate', () => {
                         },
                     ],
                 }),
-            }),
+            }) as never,
         );
         mockCalcFlakinessEntries.mockReturnValue([]);
         const result = runQualityGate();
@@ -99,8 +99,8 @@ describe('RunQualityGate', () => {
     });
 
     it('returns fail when pass rate is below threshold', () => {
-        mockCreateDataHubPersistence.mockReturnValue(
-            createMockPersistence({
+        mockGetDataHub.mockReturnValue(
+            createMockHub({
                 loadMetricsStore: vi.fn().mockReturnValue({
                     runs: [
                         {
@@ -127,7 +127,7 @@ describe('RunQualityGate', () => {
                         },
                     ],
                 }),
-            }),
+            }) as never,
         );
         mockCalcFlakinessEntries.mockReturnValue([]);
         const result = runQualityGate();
@@ -140,8 +140,8 @@ describe('RunQualityGate', () => {
     });
 
     it('filters by project when project option is passed', () => {
-        mockCreateDataHubPersistence.mockReturnValue(
-            createMockPersistence({
+        mockGetDataHub.mockReturnValue(
+            createMockHub({
                 loadMetricsStore: vi.fn().mockReturnValue({
                     runs: [
                         {
@@ -156,7 +156,7 @@ describe('RunQualityGate', () => {
                         },
                     ],
                 }),
-            }),
+            }) as never,
         );
         mockCalcFlakinessEntries.mockReturnValue([]);
         const result = runQualityGate({ project: 'nonexistent' });
@@ -165,8 +165,8 @@ describe('RunQualityGate', () => {
     });
 
     it('fails when flaky rate exceeds threshold', () => {
-        mockCreateDataHubPersistence.mockReturnValue(
-            createMockPersistence({
+        mockGetDataHub.mockReturnValue(
+            createMockHub({
                 loadMetricsStore: vi.fn().mockReturnValue({
                     runs: [
                         {
@@ -210,7 +210,7 @@ describe('RunQualityGate', () => {
                         },
                     ],
                 }),
-            }),
+            }) as never,
         );
         mockCalcFlakinessEntries.mockReturnValue([
             { title: 'flaky-test-1', project: 'test', rate: 1, passCount: 1, failCount: 1, skipCount: 0, totalRuns: 2 },
@@ -225,8 +225,8 @@ describe('RunQualityGate', () => {
     });
 
     it('passes flaky rate when no flaky tests exist', () => {
-        mockCreateDataHubPersistence.mockReturnValue(
-            createMockPersistence({
+        mockGetDataHub.mockReturnValue(
+            createMockHub({
                 loadMetricsStore: vi.fn().mockReturnValue({
                     runs: [
                         {
@@ -270,7 +270,7 @@ describe('RunQualityGate', () => {
                         },
                     ],
                 }),
-            }),
+            }) as never,
         );
         mockCalcFlakinessEntries.mockReturnValue([]);
         const result = runQualityGate();
@@ -281,7 +281,7 @@ describe('RunQualityGate', () => {
     });
 
     it('handles errors gracefully', () => {
-        mockCreateDataHubPersistence.mockImplementation(() => {
+        mockGetDataHub.mockImplementation(() => {
             throw new Error('simulated error');
         });
         const result = runQualityGate();
@@ -291,8 +291,8 @@ describe('RunQualityGate', () => {
     });
 
     it('calculates score as average of check scores', () => {
-        mockCreateDataHubPersistence.mockReturnValue(
-            createMockPersistence({
+        mockGetDataHub.mockReturnValue(
+            createMockHub({
                 loadMetricsStore: vi.fn().mockReturnValue({
                     runs: [
                         {
@@ -319,7 +319,7 @@ describe('RunQualityGate', () => {
                         },
                     ],
                 }),
-            }),
+            }) as never,
         );
         mockCalcFlakinessEntries.mockReturnValue([]);
         const result = runQualityGate();

@@ -64,6 +64,22 @@ function makeMockHub(): DataHub {
         saveCoverageSnapshot: vi.fn(),
         saveFailureClassification: vi.fn(),
         flush: vi.fn(),
+        loadCoverageHistory: vi.fn().mockReturnValue([]),
+        loadFailureClassifications: vi.fn().mockReturnValue([]),
+        saveMetricsStore: vi.fn(),
+        loadMetricsStore: vi.fn().mockReturnValue({ runs: [] }),
+        saveParseResult: vi.fn().mockReturnValue({
+            timestamp: new Date().toISOString(),
+            project: '',
+            total: 0,
+            passed: 0,
+            failed: 0,
+            skipped: 0,
+            duration: 0,
+            tests: [],
+        }),
+        saveQualityMetrics: vi.fn(),
+        loadQualityMetricsHistory: vi.fn().mockReturnValue([]),
     };
 }
 
@@ -109,7 +125,29 @@ describe('Integration: ensureDataHub', () => {
     it('returns cached _dataHub if already set', async () => {
         expect.hasAssertions();
 
-        const { hub } = await DataHubImpl.create([], { repo: 'test' });
+        const mockPersistence = {
+            loadMetricsStore: vi.fn().mockReturnValue({ runs: [] }),
+            saveMetricsStore: vi.fn(),
+            loadCoverageHistory: vi.fn().mockReturnValue([]),
+            saveCoverageSnapshot: vi.fn(),
+            loadFailureClassifications: vi.fn().mockReturnValue([]),
+            saveFailureClassification: vi.fn(),
+            saveRun: vi.fn(),
+            saveParseResult: vi.fn().mockReturnValue({
+                timestamp: new Date().toISOString(),
+                project: '',
+                total: 0,
+                passed: 0,
+                failed: 0,
+                skipped: 0,
+                duration: 0,
+                tests: [],
+            }),
+            saveQualityMetrics: vi.fn(),
+            loadQualityMetricsHistory: vi.fn().mockReturnValue([]),
+            flush: vi.fn(),
+        };
+        const { hub } = await DataHubImpl.create([], { repo: 'test' }, mockPersistence);
         setDataHub(hub);
 
         const result = await ensureDataHub();

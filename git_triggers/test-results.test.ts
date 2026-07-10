@@ -88,8 +88,8 @@ vi.mock('../jira_management/result_reporter', () => ({
     createTestExecutionFromResults: mockCreateTestExecutionFromResults,
 }));
 
-vi.mock('../shared/data-hub/persistence.js', () => ({
-    createDataHubPersistence: vi.fn().mockReturnValue({
+vi.mock('../shared/data-hub/global-hub.js', () => ({
+    getDataHub: vi.fn().mockReturnValue({
         saveParseResult: mockSaveParseResult,
         saveRun: vi.fn(),
         saveCoverageSnapshot: vi.fn(),
