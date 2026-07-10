@@ -778,3 +778,119 @@ When removal is detected AND a merge option exists:
 > **Ask ONCE per task, not per file.**
 > If user confirmed "remove A, B, C", do not ask again for D
 > unless D is Tier 4 or different scope.
+
+---
+
+## 24. SAFEGUARD CLAUSES (NON-NEGOTIABLE)
+
+### 24.1 Mandatory Safeguard Clauses
+
+Every function that processes external input, numeric data, or API responses MUST include explicit safeguard clauses. These are NOT optional — their absence is a defect.
+
+Required safeguards:
+
+- **NaN/Infinity guards**: Every numeric comparison, scoring function, and threshold check MUST validate `Number.isFinite(value)` BEFORE comparison. NaN must NEVER silently pass a quality gate or scoring threshold.
+- **Null/undefined guards**: Every property access on nullable types MUST be guarded. `?.` is insufficient when the absence of data changes business logic.
+- **Empty collection guards**: Every function that operates on collections MUST handle empty arrays/maps explicitly. Empty MUST NOT be treated as equivalent to "no data available."
+- **Boundary guards**: Every numeric threshold MUST be validated against the full domain (negative values, zero, NaN, Infinity, MAX_SAFE_INTEGER). Negative weights, negative scores, and negative thresholds MUST be caught and rejected.
+
+### 24.2 Guard Pattern
+
+Every guard MUST follow this pattern:
+
+```typescript
+// CORRECT: explicit guard
+if (!Number.isFinite(value) || value < threshold) return 'fail';
+
+// PROHIBITED: NaN passes silently
+if (value < threshold) return 'fail'; // NaN < threshold → false → passes!
+```
+
+### 24.3 Guard Placement
+
+Guards MUST be placed at the earliest point in the data flow where the invariant is violated. Guarding downstream is insufficient — the defect must be caught at origin.
+
+---
+
+## 25. ZERO SILENCING (NON-NEGOTIABLE)
+
+### 25.1 Absolute Prohibition
+
+The following are ABSOLUTELY PROHIBITED under any justification:
+
+- Silent error swallowing (empty catch blocks, catch-and-ignore)
+- Graceful degradation that hides failures from consumers
+- Default values that mask missing data (returning 0 when data is actually missing)
+- Fallback paths that circumvent validation
+- "Best effort" patterns that suppress errors
+- Logging errors without failing the operation
+- Returning partial results when full results are expected
+- Catching exceptions and returning success
+- Using nullish coalescing or logical OR with zero when the fallback should be an error, not a default value
+- Any pattern where a consumer CANNOT distinguish between "data is 0" and "data is missing"
+
+### 25.2 Explicit vs Silent
+
+Every error path MUST be explicit. A consumer receiving a result MUST be able to determine:
+
+- Did this operation succeed or fail?
+- Is the data complete or partial?
+- Are there missing fields, and which ones?
+- Were all validations performed?
+
+### 25.3 Quality Gate Specific
+
+Quality gates, health scores, and scoring functions are SAFETY MECHANISMS. They MUST:
+
+- Fail explicitly on invalid input (NaN, null, undefined, empty)
+- NEVER return "pass" when data is missing
+- NEVER return a score when input is invalid
+- ALWAYS report exactly which check failed and why
+- NEVER suppress warnings about data quality issues
+
+### 25.4 Testing Implications
+
+Tests MUST:
+
+- Verify that errors are NOT silenced (assert that errors are thrown/logged)
+- Verify that missing data produces EXPLICIT failure, not silent defaults
+- Verify that NaN/Infinity inputs produce EXPLICIT failure, not silent passes
+- NEVER use try/catch to hide test failures
+- NEVER assert that silent degradation is acceptable
+
+---
+
+## 26. MOCK INTEGRITY (NON-NEGOTIABLE)
+
+### 26.1 Mock Shape Fidelity
+
+Every mock MUST match the exact shape of the real implementation. Mocking a function that returns `{ overall: 'pass', checks: [], score: number }` with `{ passed: true }` is a defect — it creates a test that passes with an invalid implementation.
+
+### 26.2 Mock Boundary
+
+Mocks MUST be placed at the correct boundary:
+
+- **Unit tests**: Mock external dependencies (HTTP, filesystem, APIs). Do NOT mock the code under test.
+- **Integration tests**: Mock only external systems. Do NOT mock internal modules that are part of the integration.
+- **Wiring tests**: Mock only external systems. Let internal modules execute their real logic.
+
+### 26.3 Mock Verification
+
+Every test that mocks a function MUST verify that the mock was called (or not called) as expected. Unverified mocks are untested code paths.
+
+### 26.4 Prohibited Mock Patterns
+
+- Mocking the function under test (hides defects in that function)
+- Mocking to return hardcoded good results (verifies mock, not logic)
+- Mocking to return null when the real function returns data (hides empty-store bugs)
+- Partial mocks that omit fields present in the real return type
+
+---
+
+## 27. FINAL INVARIANT
+
+No rule may be reinterpreted, weakened, bypassed or combined to violate another rule.
+
+If ambiguity, uncertainty, contradiction or insufficient authority exists:
+
+STOP.
