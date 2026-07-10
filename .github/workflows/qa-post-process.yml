@@ -18,6 +18,10 @@ on:
         default: test-report
         type: string
 
+permissions:
+    contents: read
+    actions: read
+
 jobs:
   post-process:
     runs-on: ubuntu-latest
