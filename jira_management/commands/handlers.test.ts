@@ -152,6 +152,7 @@ const baseContext = {
     printSessionSummary: vi.fn(),
     base_url: 'https://jira.test.com',
     sessionLog: new loggerModule.Logger(),
+    dataHub: { computed: { metricsRuns: [] } as never, raw: {} as never, saveMetricsStore: vi.fn() } as never,
 };
 
 describe('Handlers', () => {

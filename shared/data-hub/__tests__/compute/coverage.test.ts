@@ -12,23 +12,23 @@ describe('Compute/coverage', () => {
         });
     });
 
-    it('returns correct coverage', () => {
+    it('returns correct coverage using percentage field', () => {
         expect.hasAssertions();
-        expect(calcCoverageFromRaw({ total: 80, covered: 80, percentage: 80 })).toStrictEqual({
+        expect(calcCoverageFromRaw({ total: 5000, covered: 4000, percentage: 80 })).toStrictEqual({
             total: 80,
-            covered: 80,
-            statements: 80,
+            covered: 4000,
+            statements: 5000,
         });
     });
 
-    it('clamps to 100 when over 100', () => {
+    it('clamps to 100 when percentage over 100', () => {
         expect.hasAssertions();
-        expect(calcCoverageFromRaw({ total: 150, covered: 150, percentage: 150 }).total).toBe(100);
+        expect(calcCoverageFromRaw({ total: 100, covered: 100, percentage: 150 }).total).toBe(100);
     });
 
-    it('clamps to 0 when negative', () => {
+    it('clamps to 0 when percentage negative', () => {
         expect.hasAssertions();
-        expect(calcCoverageFromRaw({ total: -10, covered: 0, percentage: -10 }).total).toBe(0);
+        expect(calcCoverageFromRaw({ total: 100, covered: 0, percentage: -10 }).total).toBe(0);
     });
 
     it('preserves per-file data', () => {

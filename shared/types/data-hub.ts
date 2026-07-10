@@ -42,6 +42,16 @@ export interface WorkflowRunTiming {
     run_duration_ms: number;
 }
 
+/** Data provenance — tracks where data came from and confidence level. */
+export interface DataSource {
+    /** Confidence level (0-1) in the data quality. */
+    confidence: number;
+    /** Source identifier (e.g., 'github-api', 'gitlab-api', 'local-parse'). */
+    source: string;
+    /** ISO timestamp when data was fetched. */
+    timestamp: string;
+}
+
 /** Raw data returned by providers. All fields optional to support partial data. */
 export interface RawData {
     runs: PipelineRun[];
@@ -50,6 +60,8 @@ export interface RawData {
     artifacts: Map<number, ArtifactInfo[]>;
     failureReasons: Map<number, string[]>;
     coverage?: RawCoverage;
+    /** Historical coverage snapshots — enables coverage trend analysis without loadMetricsStore(). */
+    coverageHistory?: CoverageSnapshot[];
     jiraIssues?: RawJiraIssue[];
     /** Timing data for each run, keyed by run ID. */
     timing?: Map<number, WorkflowRunTiming>;
@@ -65,6 +77,8 @@ export interface RawData {
     ciRuns?: CiRunStats[];
     /** Failure classifications from MetricsStore — preserved for aggregateDefectTrends/Seasonality. */
     failureClassifications?: FailureClassification[];
+    /** Data provenance — tracks source and confidence for each data category. */
+    provenance?: Map<string, DataSource>;
 }
 
 /** CI pipeline run statistics — derived from workflow run artifacts. */
@@ -406,8 +420,6 @@ export interface DataHub {
     loadFailureClassifications(project: string): FailureClassification[];
     /** Save the full MetricsStore. Throws if persistence not configured. */
     saveMetricsStore(store: MetricsStore): void;
-    /** Load the full MetricsStore. Throws if persistence not configured. */
-    loadMetricsStore(): MetricsStore;
     /**
      * Convert a ParseResult to MetricsRun and save it to history.
      * Throws if persistence not configured.
@@ -460,8 +472,6 @@ export interface DataHubPersistence {
     loadFailureClassifications(project: string): FailureClassification[];
     /** Save the full MetricsStore. */
     saveMetricsStore(store: MetricsStore): void;
-    /** Load the full MetricsStore. */
-    loadMetricsStore(): MetricsStore;
     /**
      * Convert a ParseResult to MetricsRun and save it to history.
      * This is the primary entry point for persisting test results from parsers.

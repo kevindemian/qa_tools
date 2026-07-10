@@ -214,8 +214,7 @@ async function triggerAndCollectBatchPipeline(
 function generateFlakinessDashboard(projectName: string, publishTarget?: string): void {
     if (!currentProjectName) return;
     const hub = getDataHub();
-    const store = hub.loadMetricsStore();
-    let projectRuns = store.runs.filter((r) => r.project === currentProjectName);
+    let projectRuns = (hub.computed.metricsRuns ?? []).filter((r) => r.project === currentProjectName);
     if (projectRuns.length < 2) {
         const gitRuns = generateGitMetricsRuns({ projectName: currentProjectName });
         const gitError = getLastGitLogError();
@@ -357,8 +356,7 @@ function runQuarantineMaintenance(): void {
 function generateTestExport(projectName: string): void {
     try {
         const hub = getDataHub();
-        const store = hub.loadMetricsStore();
-        let projectRuns = store.runs.filter((r) => r.project === projectName);
+        let projectRuns = (hub.computed.metricsRuns ?? []).filter((r) => r.project === projectName);
         if (projectRuns.length === 0) {
             const gitRuns = generateGitMetricsRuns({ projectName });
             const gitError = getLastGitLogError();

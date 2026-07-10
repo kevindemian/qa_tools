@@ -141,7 +141,10 @@ vi.mock('../shared/http-client', () => ({
 
 vi.mock('../shared/data-hub/global-hub.js', () => ({
     getDataHub: vi.fn().mockReturnValue({
-        loadMetricsStore: vi.fn().mockReturnValue({ runs: [] }),
+        get computed() {
+            return { metricsRuns: [] };
+        },
+        raw: {},
         saveMetricsStore: vi.fn(),
     }),
     isDataHubInitialized: vi.fn().mockReturnValue(false),

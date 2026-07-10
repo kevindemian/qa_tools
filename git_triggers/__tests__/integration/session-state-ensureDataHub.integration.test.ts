@@ -67,7 +67,6 @@ function makeMockHub(): DataHub {
         loadCoverageHistory: vi.fn().mockReturnValue([]),
         loadFailureClassifications: vi.fn().mockReturnValue([]),
         saveMetricsStore: vi.fn(),
-        loadMetricsStore: vi.fn().mockReturnValue({ runs: [] }),
         saveParseResult: vi.fn().mockReturnValue({
             timestamp: new Date().toISOString(),
             project: '',
@@ -126,7 +125,6 @@ describe('Integration: ensureDataHub', () => {
         expect.hasAssertions();
 
         const mockPersistence = {
-            loadMetricsStore: vi.fn().mockReturnValue({ runs: [] }),
             saveMetricsStore: vi.fn(),
             loadCoverageHistory: vi.fn().mockReturnValue([]),
             saveCoverageSnapshot: vi.fn(),

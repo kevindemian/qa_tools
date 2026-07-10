@@ -155,7 +155,7 @@ describe('Compute Layer Integration', () => {
     it('coverage is normalized to 0-100', () => {
         expect.hasAssertions();
 
-        const coverage = calcCoverageFromRaw({ total: 75, covered: 75, percentage: 75 });
+        const coverage = calcCoverageFromRaw({ total: 5000, covered: 3750, percentage: 75 });
 
         expect(coverage.total).toBeGreaterThanOrEqual(0);
         expect(coverage.total).toBeLessThanOrEqual(100);

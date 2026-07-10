@@ -112,9 +112,9 @@ async function collectAndReportResults(gh: ReturnType<typeof createGitHubSmokeMa
         return;
     }
     const hub = getDataHub();
-    const metrics = hub.loadMetricsStore();
-    assert(metrics, 'loadMetricsStore returned undefined');
-    const projectRuns = metrics.runs.filter((r: { project: string }) => r.project === 'qa_tools_e2e');
+    const projectRuns = (hub.computed.metricsRuns ?? []).filter(
+        (r: { project: string }) => r.project === 'qa_tools_e2e',
+    );
     if (projectRuns.length >= 2) {
         const flaky = calcFlakinessEntries(projectRuns, 2);
         const html = generateFlakinessHtml(flaky, 'Flakiness — qa_tools_e2e');

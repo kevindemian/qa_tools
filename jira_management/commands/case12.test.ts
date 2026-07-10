@@ -5,13 +5,17 @@ vi.mock('../../shared/cli_base', () => ({
     sanitizeUrl: vi.fn((url: string) => url),
 }));
 
-const mockLoadMetricsStore = vi.hoisted(() =>
-    vi.fn<() => { runs: object[]; coverageHistory?: object[] }>().mockReturnValue({ runs: [] }),
-);
+const mockMetricsRuns = vi.hoisted(() => vi.fn<() => object[]>().mockReturnValue([]));
+const mockCoverageHistory = vi.hoisted(() => vi.fn<() => object[]>().mockReturnValue([]));
 const mockGetDataHubFn = vi.hoisted(() =>
-    vi
-        .fn<() => { loadMetricsStore: typeof mockLoadMetricsStore }>()
-        .mockReturnValue({ loadMetricsStore: mockLoadMetricsStore }),
+    vi.fn<() => { computed: { metricsRuns: object[] }; raw: { coverageHistory: object[] } }>().mockReturnValue({
+        get computed() {
+            return { metricsRuns: mockMetricsRuns() };
+        },
+        get raw() {
+            return { coverageHistory: mockCoverageHistory() };
+        },
+    }),
 );
 const mockPrint = vi.hoisted(() => vi.fn<(...args: [string]) => void>());
 const mockPaletteYellow = vi.hoisted(() => vi.fn<(...args: [string]) => string>());
@@ -69,7 +73,7 @@ describe('Case12', () => {
         it('shows health score warning when metrics and endpoints both fail', async () => {
             expect.hasAssertions();
 
-            mockLoadMetricsStore.mockReturnValueOnce({ runs: [], coverageHistory: [] });
+            mockMetricsRuns.mockReturnValueOnce([]);
 
             mockJiraResource.axiosInstance.get
                 .mockRejectedValueOnce(new Error('error 1'))
@@ -97,18 +101,16 @@ describe('Case12', () => {
                 duration: 100,
                 tests: [],
             }));
-            mockLoadMetricsStore.mockReturnValueOnce({
-                runs,
-                coverageHistory: [
-                    {
-                        timestamp: '2024-01-01T00:00:00Z',
-                        project: 'TEST',
-                        totalIssues: 0,
-                        mappedIssues: 0,
-                        coveragePct: 80,
-                    },
-                ],
-            });
+            mockMetricsRuns.mockReturnValueOnce(runs);
+            mockCoverageHistory.mockReturnValueOnce([
+                {
+                    timestamp: '2024-01-01T00:00:00Z',
+                    project: 'TEST',
+                    totalIssues: 0,
+                    mappedIssues: 0,
+                    coveragePct: 80,
+                },
+            ]);
 
             mockJiraResource.axiosInstance.get
                 .mockResolvedValueOnce({ status: 200 })
@@ -133,7 +135,7 @@ describe('Case12', () => {
                 duration: 100,
                 tests: [],
             }));
-            mockLoadMetricsStore.mockReturnValueOnce({ runs });
+            mockMetricsRuns.mockReturnValueOnce(runs);
 
             await case12.handler(mockContext);
 
@@ -152,29 +154,27 @@ describe('Case12', () => {
         it('shows health score with coverage but too few runs', async () => {
             expect.hasAssertions();
 
-            mockLoadMetricsStore.mockReturnValueOnce({
-                runs: [
-                    {
-                        timestamp: '2024-01-01T10:00:00Z',
-                        project: 'TEST',
-                        total: 10,
-                        passed: 8,
-                        failed: 2,
-                        skipped: 0,
-                        duration: 100,
-                        tests: [],
-                    },
-                ],
-                coverageHistory: [
-                    {
-                        timestamp: '2024-01-01T00:00:00Z',
-                        project: 'TEST',
-                        totalIssues: 0,
-                        mappedIssues: 0,
-                        coveragePct: 80,
-                    },
-                ],
-            });
+            mockMetricsRuns.mockReturnValueOnce([
+                {
+                    timestamp: '2024-01-01T10:00:00Z',
+                    project: 'TEST',
+                    total: 10,
+                    passed: 8,
+                    failed: 2,
+                    skipped: 0,
+                    duration: 100,
+                    tests: [],
+                },
+            ]);
+            mockCoverageHistory.mockReturnValueOnce([
+                {
+                    timestamp: '2024-01-01T00:00:00Z',
+                    project: 'TEST',
+                    totalIssues: 0,
+                    mappedIssues: 0,
+                    coveragePct: 80,
+                },
+            ]);
 
             await case12.handler(mockContext);
 

@@ -130,10 +130,6 @@ export class DataHubImpl implements DataHub {
         this.persistence.saveMetricsStore(store);
     }
 
-    loadMetricsStore(): MetricsStore {
-        return this.persistence.loadMetricsStore();
-    }
-
     saveParseResult(project: string, result: ParseResult): MetricsRun {
         return this.persistence.saveParseResult(project, result);
     }
@@ -355,6 +351,9 @@ export class DataHubImpl implements DataHub {
             failureReasons: new Map(),
             parsedArtifacts,
         };
+        if (coverageHistory.length > 0) {
+            raw.coverageHistory = coverageHistory;
+        }
         if (coverage != null) {
             raw.coverage = coverage;
         }
@@ -411,15 +410,21 @@ export class DataHubImpl implements DataHub {
 
     private static mergeFirstNonNull(target: RawData, source: RawData): void {
         if (source.coverage != null && target.coverage == null) target.coverage = source.coverage;
-        if (source.jiraIssues != null && target.jiraIssues == null) target.jiraIssues = source.jiraIssues;
-        if (source.framework != null && target.framework == null) target.framework = source.framework;
-        if (source.gitlabTestReport != null && target.gitlabTestReport == null) {
-            target.gitlabTestReport = source.gitlabTestReport;
+        if (source.coverageHistory != null && source.coverageHistory.length > 0) {
+            if (target.coverageHistory == null) target.coverageHistory = [];
+            target.coverageHistory.push(...source.coverageHistory);
         }
+        DataHubImpl.assignIfNull(target, 'jiraIssues', source.jiraIssues);
+        DataHubImpl.assignIfNull(target, 'framework', source.framework);
+        DataHubImpl.assignIfNull(target, 'gitlabTestReport', source.gitlabTestReport);
         if (source.commitLog && !target.commitLog) target.commitLog = source.commitLog;
         if (source.ciRuns && source.ciRuns.length > 0 && (!target.ciRuns || target.ciRuns.length === 0)) {
             target.ciRuns = source.ciRuns;
         }
+    }
+
+    private static assignIfNull<K extends keyof RawData>(target: RawData, key: K, value: RawData[K]): void {
+        if (value != null && target[key] == null) target[key] = value;
     }
 
     private static mergeMaps(target: RawData, source: RawData): void {

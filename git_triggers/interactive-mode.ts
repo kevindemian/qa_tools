@@ -251,8 +251,7 @@ async function handleRunComparison(): Promise<boolean> {
         return false;
     }
     const hub = getDataHub();
-    const store = hub.loadMetricsStore();
-    const projectRuns = store.runs
+    const projectRuns = (hub.computed.metricsRuns ?? [])
         .filter((r) => r.project === project)
         .sort((a, b) => new Date(a.timestamp).getTime() - new Date(b.timestamp).getTime());
     if (projectRuns.length < 2) {
@@ -340,9 +339,8 @@ function _loadProjectRunsHelper(): {
         return null;
     }
     const hub = getDataHub();
-    const store = hub.loadMetricsStore();
-    let projectRuns = store.runs.filter((r) => r.project === currentProjectName);
-    let failureClassifications = store.failureClassifications ?? [];
+    let projectRuns = (hub.computed.metricsRuns ?? []).filter((r) => r.project === currentProjectName);
+    let failureClassifications = hub.raw.failureClassifications ?? [];
     let usingGitFallback = false;
     if (projectRuns.length < 2) {
         const gitRuns = generateGitMetricsRuns({ projectName: currentProjectName });
@@ -396,8 +394,7 @@ async function _dashboardTraceabilityMatrix(): Promise<void> {
     const data = _loadProjectRunsHelper();
     if (!data) return;
     const dataHub = getDataHub();
-    const effectiveStore = { runs: data.projectRuns, failureClassifications: data.failureClassifications };
-    const matrix = buildTraceabilityMatrix(effectiveStore, undefined, dataHub);
+    const matrix = buildTraceabilityMatrix(data.projectRuns, undefined, dataHub);
     await _generateAndOpenDashboard(generateTraceabilityHtml(matrix), 'traceability', 'Traceability Matrix');
 }
 
@@ -431,9 +428,8 @@ async function _dashboardBenchmark(): Promise<void> {
     if (!data) return;
     const dataHub = getDataHub();
     const projectNames = [...new Set(data.projectRuns.map((r) => r.project))];
-    const store = dataHub.loadMetricsStore();
     const projectBenchmarks = projectNames.map((name) => {
-        const pRuns = store.runs.filter((r) => r.project === name);
+        const pRuns = (dataHub.computed.metricsRuns ?? []).filter((r) => r.project === name);
         const pHealth = calculateHealthScore({ dataHub });
         return {
             name,
@@ -482,14 +478,7 @@ async function _dashboardIncidentReport(): Promise<void> {
     if (!data) return;
     const dataHub = getDataHub();
     const health = calculateHealthScore({ dataHub });
-    const matrix = buildTraceabilityMatrix(
-        {
-            runs: data.projectRuns,
-            failureClassifications: data.failureClassifications,
-        },
-        undefined,
-        dataHub,
-    );
+    const matrix = buildTraceabilityMatrix(data.projectRuns, undefined, dataHub);
     const testDurationMap = calcTestDurationMap(data.projectRuns);
     const regression = detectSilentRegression(testDurationMap);
     const seasonality = aggregateDefectSeasonality(data.failureClassifications);
@@ -522,14 +511,7 @@ async function _dashboardImpactAlert(): Promise<void> {
     const dataHub = getDataHub();
     const health = calculateHealthScore({ dataHub });
     const defects = aggregateDefectTrends(data.failureClassifications);
-    const matrix = buildTraceabilityMatrix(
-        {
-            runs: data.projectRuns,
-            failureClassifications: data.failureClassifications,
-        },
-        undefined,
-        dataHub,
-    );
+    const matrix = buildTraceabilityMatrix(data.projectRuns, undefined, dataHub);
     const uncoveredEpics = matrix.nodes.reduce((acc: string[], n) => {
         if (n.coverage < 100) acc.push(n.epic);
         return acc;

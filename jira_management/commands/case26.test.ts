@@ -7,7 +7,7 @@
  * Mock strategy: vi.hoisted for all mocks to avoid unsafe casts.
  */
 const {
-    mockLoadMetricsStore,
+    mockMetricsRuns,
     mockCalcFlakyEntries,
     mockCalcHealth,
     mockCalcRelease,
@@ -15,7 +15,7 @@ const {
     mockOpen,
     mockWriteReport,
 } = vi.hoisted(() => ({
-    mockLoadMetricsStore: vi.fn().mockReturnValue({ runs: [] }),
+    mockMetricsRuns: vi.fn().mockReturnValue([]),
     mockCalcFlakyEntries: vi.fn().mockReturnValue([]),
     mockCalcHealth: vi.fn<typeof calculateHealthScore>().mockReturnValue({
         overall: 80,
@@ -50,7 +50,10 @@ vi.mock('../../shared/logger', () => ({
 
 vi.mock('../../shared/data-hub/global-hub.js', () => ({
     getDataHub: vi.fn().mockReturnValue({
-        loadMetricsStore: mockLoadMetricsStore,
+        get computed() {
+            return { metricsRuns: mockMetricsRuns() as import('../../shared/types/data-hub.js').MetricsRun[] };
+        },
+        raw: {},
     }),
 }));
 
@@ -115,7 +118,7 @@ function makeRun(
 describe('Case26', () => {
     beforeEach(() => {
         vi.clearAllMocks();
-        mockLoadMetricsStore.mockReturnValue({ runs: [] });
+        mockMetricsRuns.mockReturnValue([]);
         mockCalcFlakyEntries.mockReturnValue([]);
         mockCalcHealth.mockReturnValue({
             overall: 80,
@@ -159,7 +162,7 @@ describe('Case26', () => {
             expect.hasAssertions();
 
             const runs = Array.from({ length: 5 }, () => makeRun({ project: 'TEST' }));
-            mockLoadMetricsStore.mockReturnValue({ runs });
+            mockMetricsRuns.mockReturnValue(runs);
             mockCalcFlakyEntries.mockReturnValue([]);
 
             const ctx = makeMockCommandContext({ projectName: 'TEST' });
@@ -173,7 +176,7 @@ describe('Case26', () => {
 
             expect(healthCallArgs?.[0]).toHaveProperty('dataHub');
 
-            expect(healthCallArgs?.[0]?.dataHub).toHaveProperty('loadMetricsStore');
+            expect(healthCallArgs?.[0]?.dataHub).toHaveProperty('computed');
 
             expect(mockCalcFlakyEntries).toHaveBeenCalledWith(runs, 2);
             expect(mockCalcRelease).toHaveBeenCalledWith(
@@ -190,7 +193,7 @@ describe('Case26', () => {
             expect.hasAssertions();
 
             const runs = [makeRun({ project: 'TEST' })];
-            mockLoadMetricsStore.mockReturnValue({ runs });
+            mockMetricsRuns.mockReturnValue(runs);
             mockCalcFlakyEntries.mockReturnValue([]);
 
             const ctx = makeMockCommandContext({ projectName: 'TEST' });
@@ -218,7 +221,7 @@ describe('Case26', () => {
         it('calls printError on failure', async () => {
             expect.hasAssertions();
 
-            mockLoadMetricsStore.mockImplementation(() => {
+            mockMetricsRuns.mockImplementation(() => {
                 throw new Error('store read failed');
             });
 

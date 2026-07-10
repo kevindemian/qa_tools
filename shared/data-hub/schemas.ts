@@ -8,6 +8,7 @@
  */
 import { z } from '../deps.js';
 import type { MetricsRun, MetricsStore, CoverageSnapshot } from '../types/data-hub.js';
+import type { PipelineRun } from '../types/ci-cd.js';
 import { rootLogger } from '../logger.js';
 import { getErrorMessage } from '../errors.js';
 
@@ -99,6 +100,47 @@ export function parseMetricsStore(data: unknown): MetricsStore | null {
     } catch (err: unknown) {
         const rawError = getErrorMessage(err);
         rootLogger.warn(`schemas: MetricsStore validation failed — ${rawError}`);
+        return null;
+    }
+}
+
+/**
+ * PipelineRun schema — validates CI/CD pipeline run data from providers.
+ * All fields are optional since providers may omit them.
+ */
+export const PipelineRunSchema = z
+    .object({
+        id: z.union([z.string(), z.number()]).optional(),
+        run_number: z.union([z.string(), z.number()]).optional(),
+        ref: z.string().optional(),
+        head_branch: z.string().optional(),
+        status: z.string().optional(),
+        conclusion: z.string().optional(),
+        web_url: z.string().optional(),
+        event: z.string().optional(),
+        created_at: z.string().optional(),
+        updated_at: z.string().optional(),
+        run_started_at: z.string().optional(),
+        head_commit: z
+            .object({
+                message: z.string().optional(),
+                author: z.object({ name: z.string().optional() }).optional(),
+            })
+            .optional(),
+        title: z.string().optional(),
+    })
+    .loose();
+
+/**
+ * Parse and validate PipelineRun data.
+ * Returns null if validation fails.
+ */
+export function parsePipelineRun(data: unknown): PipelineRun | null {
+    try {
+        return PipelineRunSchema.parse(data) as PipelineRun;
+    } catch (err: unknown) {
+        const rawError = getErrorMessage(err);
+        rootLogger.warn(`schemas: PipelineRun validation failed — ${rawError}`);
         return null;
     }
 }

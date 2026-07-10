@@ -177,12 +177,6 @@ describe('DataHubPersistence', () => {
 
             expect(stored.runs).toHaveLength(1);
         });
-
-        it('loadMetricsStore returns empty store when no data', () => {
-            expect.hasAssertions();
-
-            expect(persistence.loadMetricsStore()).toStrictEqual({ runs: [] });
-        });
     });
 
     describe('SaveParseResult', () => {

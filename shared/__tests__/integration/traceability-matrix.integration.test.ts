@@ -9,7 +9,7 @@
  * Pure function — no filesystem dependencies.
  */
 import { describe, expect, it, beforeEach, vi } from 'vitest';
-import type { MetricsStore } from '../../types/data-hub.js';
+import type { MetricsRun } from '../../types/data-hub.js';
 import type { DataHub } from '../../types/data-hub.js';
 
 vi.mock('../../logger', () => ({
@@ -23,21 +23,19 @@ describe('Traceability Matrix.Integration', () => {
 
     function singleRunMetrics(
         tests: Array<{ title: string; state: 'passed' | 'failed' | 'skipped'; duration: number }>,
-    ): MetricsStore {
-        return {
-            runs: [
-                {
-                    timestamp: '2026-06-01T00:00:00.000Z',
-                    project: 'test',
-                    total: tests.length,
-                    passed: tests.filter((t) => t.state === 'passed').length,
-                    failed: tests.filter((t) => t.state === 'failed').length,
-                    skipped: tests.filter((t) => t.state === 'skipped').length,
-                    duration: tests.reduce((s, t) => s + t.duration, 0),
-                    tests: tests.map((t) => ({ title: t.title, state: t.state, duration: t.duration })),
-                },
-            ],
-        };
+    ): MetricsRun[] {
+        return [
+            {
+                timestamp: '2026-06-01T00:00:00.000Z',
+                project: 'test',
+                total: tests.length,
+                passed: tests.filter((t) => t.state === 'passed').length,
+                failed: tests.filter((t) => t.state === 'failed').length,
+                skipped: tests.filter((t) => t.state === 'skipped').length,
+                duration: tests.reduce((s, t) => s + t.duration, 0),
+                tests: tests.map((t) => ({ title: t.title, state: t.state, duration: t.duration })),
+            },
+        ];
     }
 
     describe('Integration: Traceability Matrix', () => {
@@ -113,7 +111,7 @@ describe('Traceability Matrix.Integration', () => {
 
                 const { buildTraceabilityMatrix, generateTraceabilityHtml } =
                     await import('../../traceability-matrix.js');
-                const metrics: MetricsStore = { runs: [] };
+                const metrics: MetricsRun[] = [];
                 const result = buildTraceabilityMatrix(metrics);
                 const html = generateTraceabilityHtml(result);
 
@@ -212,7 +210,6 @@ describe('Traceability Matrix.Integration', () => {
                     loadCoverageHistory: vi.fn().mockReturnValue([]),
                     loadFailureClassifications: vi.fn().mockReturnValue([]),
                     saveMetricsStore: vi.fn(),
-                    loadMetricsStore: vi.fn().mockReturnValue({ runs: [] }),
                     saveParseResult: vi.fn().mockReturnValue({
                         timestamp: new Date().toISOString(),
                         project: '',

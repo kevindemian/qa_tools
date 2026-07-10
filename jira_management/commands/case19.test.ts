@@ -53,11 +53,12 @@ function createMockHub(overrides: Record<string, unknown> = {}) {
         saveFailureClassification: vi.fn(),
         loadFailureClassifications: vi.fn().mockReturnValue([]),
         saveMetricsStore: vi.fn(),
-        loadMetricsStore: vi.fn().mockReturnValue({ runs: [], coverageHistory: [] }),
         saveParseResult: vi.fn(),
         saveQualityMetrics: vi.fn(),
         loadQualityMetricsHistory: vi.fn().mockReturnValue([]),
         flush: vi.fn(),
+        computed: { metricsRuns: [] },
+        raw: { coverageHistory: [] },
         ...overrides,
     };
 }
@@ -100,7 +101,7 @@ describe('Case19', () => {
 
             persistence.getDataHub.mockReturnValue(
                 createMockHub({
-                    loadMetricsStore: vi.fn().mockReturnValue(mockStore),
+                    computed: { metricsRuns: mockStore.runs },
                 }) as never,
             );
 
@@ -190,7 +191,7 @@ describe('Case19', () => {
 
             persistence.getDataHub.mockReturnValue(
                 createMockHub({
-                    loadMetricsStore: vi.fn().mockReturnValue(mockStore),
+                    computed: { metricsRuns: mockStore.runs },
                 }) as never,
             );
 

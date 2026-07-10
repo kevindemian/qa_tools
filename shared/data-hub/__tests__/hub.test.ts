@@ -89,7 +89,6 @@ function createMockPersistence(overrides?: Partial<DataHubPersistence>): DataHub
         saveFailureClassification: vi.fn(),
         loadFailureClassifications: vi.fn().mockReturnValue([]),
         saveMetricsStore: vi.fn(),
-        loadMetricsStore: vi.fn().mockReturnValue({ runs: [] }),
         saveParseResult: vi.fn().mockReturnValue({
             timestamp: new Date().toISOString(),
             project: '',

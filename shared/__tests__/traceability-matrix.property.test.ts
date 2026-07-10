@@ -12,7 +12,7 @@
 import * as fc from 'fast-check';
 import { describe, expect, it } from 'vitest';
 import { buildTraceabilityMatrix, generateTraceabilityHtml } from '../traceability-matrix.js';
-import type { MetricsStore } from '../types/data-hub.js';
+import type { MetricsRun } from '../types/data-hub.js';
 
 vi.mock('../logger', () => ({
     rootLogger: { error: vi.fn(), warn: vi.fn(), info: vi.fn(), child: vi.fn().mockReturnThis() },
@@ -37,9 +37,7 @@ const MetricsRunArb = fc.record({
     tests: fc.array(FlatTestArb, { minLength: 0, maxLength: 10 }),
 });
 
-const MetricsStoreArb: fc.Arbitrary<MetricsStore> = fc.record({
-    runs: fc.array(MetricsRunArb, { minLength: 0, maxLength: 5 }),
-});
+const MetricsRunArrayArb: fc.Arbitrary<MetricsRun[]> = fc.array(MetricsRunArb, { minLength: 0, maxLength: 5 });
 
 const EpicKeyArb = fc
     .string({ minLength: 1, maxLength: 10 })
@@ -89,7 +87,7 @@ describe('BuildTraceabilityMatrix — property-based', () => {
         expect.hasAssertions();
 
         fc.assert(
-            fc.property(MetricsStoreArb, CoverageResultArb, (metrics, coverage) => {
+            fc.property(MetricsRunArrayArb, CoverageResultArb, (metrics, coverage) => {
                 const result = buildTraceabilityMatrix(metrics, coverage);
 
                 expect(result.nodes).toHaveLength(result.totalEpics);
@@ -102,7 +100,7 @@ describe('BuildTraceabilityMatrix — property-based', () => {
         expect.hasAssertions();
 
         fc.assert(
-            fc.property(MetricsStoreArb, CoverageResultArb, (metrics, coverage) => {
+            fc.property(MetricsRunArrayArb, CoverageResultArb, (metrics, coverage) => {
                 const result = buildTraceabilityMatrix(metrics, coverage);
 
                 expect(result.overallCoverage).toBeGreaterThanOrEqual(0);
@@ -116,7 +114,7 @@ describe('BuildTraceabilityMatrix — property-based', () => {
         expect.hasAssertions();
 
         fc.assert(
-            fc.property(MetricsStoreArb, CoverageResultArb, (metrics, coverage) => {
+            fc.property(MetricsRunArrayArb, CoverageResultArb, (metrics, coverage) => {
                 const result = buildTraceabilityMatrix(metrics, coverage);
 
                 expect(result.totalTests).toBeGreaterThanOrEqual(0);
@@ -130,7 +128,7 @@ describe('BuildTraceabilityMatrix — property-based', () => {
         expect.hasAssertions();
 
         fc.assert(
-            fc.property(MetricsStoreArb, CoverageResultArb, (metrics, coverage) => {
+            fc.property(MetricsRunArrayArb, CoverageResultArb, (metrics, coverage) => {
                 const result = buildTraceabilityMatrix(metrics, coverage);
                 for (const node of result.nodes) {
                     expect(typeof node.epic).toBe('string');
@@ -150,7 +148,7 @@ describe('BuildTraceabilityMatrix — property-based', () => {
         expect.hasAssertions();
 
         fc.assert(
-            fc.property(MetricsStoreArb, CoverageResultArb, (metrics, coverage) => {
+            fc.property(MetricsRunArrayArb, CoverageResultArb, (metrics, coverage) => {
                 const result = buildTraceabilityMatrix(metrics, coverage);
 
                 expect(result.timestamp).toMatch(/^\d{4}-\d{2}-\d{2}T/);
@@ -160,7 +158,7 @@ describe('BuildTraceabilityMatrix — property-based', () => {
     });
 
     it('empty metrics returns empty result', () => {
-        const empty: MetricsStore = { runs: [] };
+        const empty: MetricsRun[] = [];
         const result = buildTraceabilityMatrix(empty);
 
         expect(result.nodes).toStrictEqual([]);
@@ -175,7 +173,7 @@ describe('GenerateTraceabilityHtml — property-based', () => {
         expect.hasAssertions();
 
         fc.assert(
-            fc.property(MetricsStoreArb, CoverageResultArb, (metrics, coverage) => {
+            fc.property(MetricsRunArrayArb, CoverageResultArb, (metrics, coverage) => {
                 const result = buildTraceabilityMatrix(metrics, coverage);
                 const html = generateTraceabilityHtml(result);
 

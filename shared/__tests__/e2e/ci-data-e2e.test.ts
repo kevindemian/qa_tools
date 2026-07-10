@@ -43,7 +43,6 @@ function createFailingProvider(error: Error): DataProvider {
 /* ── Mock Persistence ──────────────────────────────────────────────────── */
 
 const mockPersistence = {
-    loadMetricsStore: vi.fn().mockReturnValue({ runs: [] }),
     saveMetricsStore: vi.fn(),
     loadCoverageHistory: vi.fn().mockReturnValue([]),
     saveCoverageSnapshot: vi.fn(),
@@ -177,23 +176,21 @@ describe('E2E: CI Data Hub — Complete Pipeline Flow', () => {
             const provider = createMockProvider(rawData);
             const { hub } = await DataHubImpl.create([provider], { repo: 'owner/repo' }, mockPersistence);
 
-            const metricsStore = {
-                runs: [
-                    {
-                        timestamp: '2026-07-01T10:00:00Z',
-                        project: 'test',
-                        total: 2,
-                        passed: 1,
-                        failed: 1,
-                        skipped: 0,
-                        duration: 1000,
-                        tests: [
-                            { title: 'TC-001', state: 'passed' as const, duration: 500 },
-                            { title: 'TC-002', state: 'failed' as const, duration: 500 },
-                        ],
-                    },
-                ],
-            };
+            const metrics = [
+                {
+                    timestamp: '2026-07-01T10:00:00Z',
+                    project: 'test',
+                    total: 2,
+                    passed: 1,
+                    failed: 1,
+                    skipped: 0,
+                    duration: 1000,
+                    tests: [
+                        { title: 'TC-001', state: 'passed' as const, duration: 500 },
+                        { title: 'TC-002', state: 'failed' as const, duration: 500 },
+                    ],
+                },
+            ];
 
             const coverageResult = {
                 items: [{ epic: 'EPIC-1', hasTest: true, linkedTestKeys: ['TC-001', 'TC-002'], issueKey: 'STORY-1' }],
@@ -201,7 +198,7 @@ describe('E2E: CI Data Hub — Complete Pipeline Flow', () => {
                 byEpic: { 'EPIC-1': { total: 1, covered: 1, rawPct: 100 } },
             };
 
-            const result = buildTraceabilityMatrix(metricsStore, coverageResult, hub);
+            const result = buildTraceabilityMatrix(metrics, coverageResult, hub);
             const html = generateTraceabilityHtml(result);
 
             expect(html).toContain('<!DOCTYPE html>');

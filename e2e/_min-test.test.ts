@@ -74,6 +74,7 @@ describe('Case04', () => {
             printSessionSummary: vi.fn(),
             base_url: 'http://localhost:1999',
             sessionLog: createMockLogger(),
+            dataHub: { computed: { metricsRuns: [] } as never, raw: {} as never, saveMetricsStore: vi.fn() } as never,
         };
 
         const mod = (

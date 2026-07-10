@@ -102,9 +102,8 @@ async function fetchLinkedTestsBatch(
 
 function loadCoverageTrends(project: string): CoverageSnapshot[] {
     const hub = getDataHub();
-    const store = hub.loadMetricsStore();
-    if (!store.coverageHistory) return [];
-    return store.coverageHistory.filter((s) => s.project === project).slice(-20);
+    if (!hub.raw.coverageHistory) return [];
+    return hub.raw.coverageHistory.filter((s) => s.project === project).slice(-20);
 }
 
 function createEpicNode(item: CoverageGapItem, epicNodes: Map<string, CoverageHierarchyNode>): CoverageHierarchyNode {

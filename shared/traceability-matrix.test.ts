@@ -1,33 +1,31 @@
 import { buildTraceabilityMatrix, generateTraceabilityHtml } from './traceability-matrix.js';
-import type { MetricsStore } from './types/data-hub.js';
+import type { MetricsRun } from './types/data-hub.js';
 import { rootLogger } from './logger.js';
 import { nonNull } from './test-utils.js';
 
-function emptyMetrics(): MetricsStore {
-    return { runs: [] };
+function emptyMetrics(): MetricsRun[] {
+    return [];
 }
 
 function singleRunMetrics(
     tests: Array<{ title: string; state: 'passed' | 'failed' | 'skipped'; duration: number }>,
-): MetricsStore {
-    return {
-        runs: [
-            {
-                timestamp: '2026-01-01T00:00:00.000Z',
-                project: 'test',
-                total: tests.length,
-                passed: tests.filter((t) => t.state === 'passed').length,
-                failed: tests.filter((t) => t.state === 'failed').length,
-                skipped: tests.filter((t) => t.state === 'skipped').length,
-                duration: tests.reduce((s, t) => s + t.duration, 0),
-                tests: tests.map((t) => ({
-                    title: t.title,
-                    state: t.state,
-                    duration: t.duration,
-                })),
-            },
-        ],
-    };
+): MetricsRun[] {
+    return [
+        {
+            timestamp: '2026-01-01T00:00:00.000Z',
+            project: 'test',
+            total: tests.length,
+            passed: tests.filter((t) => t.state === 'passed').length,
+            failed: tests.filter((t) => t.state === 'failed').length,
+            skipped: tests.filter((t) => t.state === 'skipped').length,
+            duration: tests.reduce((s, t) => s + t.duration, 0),
+            tests: tests.map((t) => ({
+                title: t.title,
+                state: t.state,
+                duration: t.duration,
+            })),
+        },
+    ];
 }
 
 describe('BuildTraceabilityMatrix', () => {
@@ -179,23 +177,21 @@ describe('BuildTraceabilityMatrix', () => {
     });
 
     it('handles duplicate test titles in the same run', () => {
-        const metrics: MetricsStore = {
-            runs: [
-                {
-                    timestamp: '2026-01-01T00:00:00.000Z',
-                    project: 'test',
-                    total: 2,
-                    passed: 1,
-                    failed: 1,
-                    skipped: 0,
-                    duration: 150,
-                    tests: [
-                        { title: 'TC-001', state: 'passed', duration: 100 },
-                        { title: 'TC-001', state: 'passed', duration: 50 },
-                    ],
-                },
-            ],
-        };
+        const metrics: MetricsRun[] = [
+            {
+                timestamp: '2026-01-01T00:00:00.000Z',
+                project: 'test',
+                total: 2,
+                passed: 1,
+                failed: 1,
+                skipped: 0,
+                duration: 150,
+                tests: [
+                    { title: 'TC-001', state: 'passed', duration: 100 },
+                    { title: 'TC-001', state: 'passed', duration: 50 },
+                ],
+            },
+        ];
         const result = buildTraceabilityMatrix(metrics, {
             items: [{ epic: 'EPIC-1', hasTest: true, linkedTestKeys: ['TC-001'], issueKey: 'STORY-1' }],
             totals: { total: 1, covered: 1 },
@@ -264,7 +260,7 @@ describe('BuildTraceabilityMatrix', () => {
 
     it('handles error gracefully when metrics store is malformed', () => {
         vi.spyOn(rootLogger, 'error').mockImplementation(() => {});
-        const result = buildTraceabilityMatrix({} as MetricsStore);
+        const result = buildTraceabilityMatrix({} as MetricsRun[]);
 
         expect(result.nodes).toStrictEqual([]);
         expect(result.totalEpics).toBe(0);
@@ -273,30 +269,28 @@ describe('BuildTraceabilityMatrix', () => {
     });
 
     it('has progress on flakiness from multiple runs', () => {
-        const metrics: MetricsStore = {
-            runs: [
-                {
-                    timestamp: '2026-01-01T00:00:00.000Z',
-                    project: 'test',
-                    total: 1,
-                    passed: 0,
-                    failed: 1,
-                    skipped: 0,
-                    duration: 50,
-                    tests: [{ title: 'TC-001', state: 'failed', duration: 50 }],
-                },
-                {
-                    timestamp: '2026-01-02T00:00:00.000Z',
-                    project: 'test',
-                    total: 1,
-                    passed: 1,
-                    failed: 0,
-                    skipped: 0,
-                    duration: 100,
-                    tests: [{ title: 'TC-001', state: 'passed', duration: 100 }],
-                },
-            ],
-        };
+        const metrics: MetricsRun[] = [
+            {
+                timestamp: '2026-01-01T00:00:00.000Z',
+                project: 'test',
+                total: 1,
+                passed: 0,
+                failed: 1,
+                skipped: 0,
+                duration: 50,
+                tests: [{ title: 'TC-001', state: 'failed', duration: 50 }],
+            },
+            {
+                timestamp: '2026-01-02T00:00:00.000Z',
+                project: 'test',
+                total: 1,
+                passed: 1,
+                failed: 0,
+                skipped: 0,
+                duration: 100,
+                tests: [{ title: 'TC-001', state: 'passed', duration: 100 }],
+            },
+        ];
         const result = buildTraceabilityMatrix(metrics, {
             items: [{ epic: 'EPIC-1', hasTest: true, linkedTestKeys: ['TC-001'], issueKey: 'STORY-1' }],
             totals: { total: 1, covered: 1 },

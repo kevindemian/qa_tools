@@ -17,8 +17,7 @@ async function handler(c: CommandContext): Promise<boolean | void> {
 
     try {
         const hub = getDataHub();
-        const store = hub.loadMetricsStore();
-        const projectRuns = store.runs.filter((r) => r.project === projectName);
+        const projectRuns = (hub.computed.metricsRuns ?? []).filter((r) => r.project === projectName);
 
         const health = calculateHealthScore({ dataHub: hub });
         const flaky = calcFlakinessEntries(projectRuns.length >= 2 ? projectRuns : [], 2);

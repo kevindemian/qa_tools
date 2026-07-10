@@ -42,7 +42,6 @@ function createTestHub(overrides: Partial<ComputedMetrics> = {}): DataHub {
         loadCoverageHistory: vi.fn().mockReturnValue([]),
         loadFailureClassifications: vi.fn().mockReturnValue([]),
         saveMetricsStore: vi.fn(),
-        loadMetricsStore: () => ({ runs: [] }),
         saveParseResult: () => ({
             timestamp: new Date().toISOString(),
             project: '',

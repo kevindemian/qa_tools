@@ -25,8 +25,8 @@ vi.mock('./session-state', () => ({
     setManager: vi.fn(),
     getProjects: vi.fn(() => ({})),
     getDataHub: vi.fn().mockReturnValue({
-        loadMetricsStore: vi.fn().mockReturnValue({ runs: [], failureClassifications: [] }),
-        saveMetricsStore: vi.fn(),
+        computed: { metricsRuns: [] },
+        raw: { failureClassifications: [] },
     }),
     get currentProvider() {
         return mockState.currentProvider;
@@ -38,8 +38,8 @@ vi.mock('./session-state', () => ({
 
 vi.mock('../shared/data-hub/global-hub.js', () => ({
     getDataHub: vi.fn().mockReturnValue({
-        loadMetricsStore: vi.fn().mockReturnValue({ runs: [], failureClassifications: [] }),
-        saveMetricsStore: vi.fn(),
+        computed: { metricsRuns: [] },
+        raw: { failureClassifications: [] },
     }),
 }));
 
@@ -333,8 +333,8 @@ describe('Schedule Handler', () => {
         it('warns when less than 2 runs', () => {
             mockState.currentProjectName = 'proj1';
             mockGetDataHub.mockReturnValue({
-                loadMetricsStore: vi.fn().mockReturnValue({
-                    runs: [
+                computed: {
+                    metricsRuns: [
                         {
                             project: 'proj1',
                             timestamp: '',
@@ -346,8 +346,8 @@ describe('Schedule Handler', () => {
                             tests: [],
                         },
                     ],
-                }),
-                saveMetricsStore: vi.fn(),
+                },
+                raw: { failureClassifications: [] },
             } as never);
 
             void handleFlakinessDashboard();
@@ -358,8 +358,8 @@ describe('Schedule Handler', () => {
         it('informs when no flaky tests', () => {
             mockState.currentProjectName = 'proj1';
             mockGetDataHub.mockReturnValue({
-                loadMetricsStore: vi.fn().mockReturnValue({
-                    runs: [
+                computed: {
+                    metricsRuns: [
                         {
                             project: 'proj1',
                             timestamp: '',
@@ -381,8 +381,8 @@ describe('Schedule Handler', () => {
                             tests: [],
                         },
                     ],
-                }),
-                saveMetricsStore: vi.fn(),
+                },
+                raw: { failureClassifications: [] },
             } as never);
             mockCalcFlakinessEntries.mockReturnValue([]);
 
@@ -396,8 +396,8 @@ describe('Schedule Handler', () => {
 
             mockState.currentProjectName = 'proj1';
             mockGetDataHub.mockReturnValue({
-                loadMetricsStore: vi.fn().mockReturnValue({
-                    runs: [
+                computed: {
+                    metricsRuns: [
                         {
                             project: 'proj1',
                             timestamp: '',
@@ -419,8 +419,8 @@ describe('Schedule Handler', () => {
                             tests: [],
                         },
                     ],
-                }),
-                saveMetricsStore: vi.fn(),
+                },
+                raw: { failureClassifications: [] },
             } as never);
             mockCalcFlakinessEntries.mockReturnValue([
                 { title: 't1', project: 'test', rate: 0.5, passCount: 1, failCount: 0, skipCount: 0, totalRuns: 1 },
@@ -453,8 +453,8 @@ describe('Schedule Handler', () => {
         it('warns when less than 2 runs and git fallback fails', () => {
             mockState.currentProjectName = 'proj1';
             mockGetDataHub.mockReturnValue({
-                loadMetricsStore: vi.fn().mockReturnValue({
-                    runs: [
+                computed: {
+                    metricsRuns: [
                         {
                             project: 'proj1',
                             timestamp: '',
@@ -466,9 +466,8 @@ describe('Schedule Handler', () => {
                             tests: [],
                         },
                     ],
-                    failureClassifications: [],
-                }),
-                saveMetricsStore: vi.fn(),
+                },
+                raw: { failureClassifications: [] },
             } as never);
             generateWeeklyQualityReport();
 

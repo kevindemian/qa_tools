@@ -36,7 +36,6 @@ describe('Integration: Quality Gate', () => {
             expect.hasAssertions();
 
             vi.spyOn(globalHubModule, 'getDataHub').mockReturnValue({
-                loadMetricsStore: vi.fn().mockReturnValue({ runs: [], coverageHistory: [] }),
                 saveRun: vi.fn(),
                 saveCoverageSnapshot: vi.fn(),
                 loadCoverageHistory: vi.fn().mockReturnValue([]),
@@ -50,7 +49,6 @@ describe('Integration: Quality Gate', () => {
             } as never);
             const { runQualityGate } = await loadModules();
             const mockHub = {
-                loadMetricsStore: vi.fn().mockReturnValue({ runs: [], coverageHistory: [] }),
                 saveRun: vi.fn(),
                 saveCoverageSnapshot: vi.fn(),
                 loadCoverageHistory: vi.fn().mockReturnValue([]),
@@ -125,18 +123,6 @@ describe('Integration: Quality Gate', () => {
             }));
 
             vi.spyOn(globalHubModule, 'getDataHub').mockReturnValue({
-                loadMetricsStore: vi.fn().mockReturnValue({
-                    runs,
-                    coverageHistory: [
-                        {
-                            timestamp: new Date().toISOString(),
-                            project: 'test-project',
-                            totalIssues: 100,
-                            mappedIssues: 85,
-                            coveragePct: 85,
-                        },
-                    ],
-                }),
                 saveRun: vi.fn(),
                 saveCoverageSnapshot: vi.fn(),
                 loadCoverageHistory: vi.fn().mockReturnValue([]),
@@ -151,18 +137,6 @@ describe('Integration: Quality Gate', () => {
 
             const { runQualityGate } = await loadModules();
             const mockHub = {
-                loadMetricsStore: vi.fn().mockReturnValue({
-                    runs,
-                    coverageHistory: [
-                        {
-                            timestamp: new Date().toISOString(),
-                            project: 'test-project',
-                            totalIssues: 100,
-                            mappedIssues: 85,
-                            coveragePct: 85,
-                        },
-                    ],
-                }),
                 saveRun: vi.fn(),
                 saveCoverageSnapshot: vi.fn(),
                 loadCoverageHistory: vi.fn().mockReturnValue([]),
@@ -295,7 +269,6 @@ describe('Integration: Quality Gate', () => {
                 loadCoverageHistory: vi.fn().mockReturnValue([]),
                 loadFailureClassifications: vi.fn().mockReturnValue([]),
                 saveMetricsStore: vi.fn(),
-                loadMetricsStore: vi.fn().mockReturnValue({ runs: [] }),
                 saveParseResult: vi.fn().mockReturnValue({
                     timestamp: new Date().toISOString(),
                     project: '',
@@ -341,7 +314,6 @@ describe('Integration: Quality Gate', () => {
                 loadCoverageHistory: vi.fn().mockReturnValue([]),
                 loadFailureClassifications: vi.fn().mockReturnValue([]),
                 saveMetricsStore: vi.fn(),
-                loadMetricsStore: vi.fn().mockReturnValue({ runs: [] }),
                 saveParseResult: vi.fn().mockReturnValue({
                     timestamp: new Date().toISOString(),
                     project: '',

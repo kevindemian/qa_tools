@@ -46,6 +46,11 @@ export function createMockContext(overrides?: Partial<MockProxy<CommandContext>>
         pushHistory: vi.fn(),
         printSessionSummary: vi.fn(),
         base_url: PROJECT_MANAGEMENT_PATH.BASE_URL,
+        dataHub: {
+            computed: { metricsRuns: [] } as never,
+            raw: {} as never,
+            saveMetricsStore: vi.fn(),
+        } as never,
         sessionLog: {
             context: {} as LogContext,
             _logDir: null,
