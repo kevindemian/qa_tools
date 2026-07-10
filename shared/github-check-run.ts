@@ -110,6 +110,7 @@ function getEnv(key: string): string | undefined {
  * @returns Array of check runs, or empty array on failure
  */
 export async function getCheckRuns(commitSha: string, config: CheckRunConfig = {}): Promise<GitHubCheckRun[]> {
+    if (process.env['VITEST']) return [];
     const token = config.token ?? getEnv('GITHUB_TOKEN');
     const repository = config.repository ?? getEnv('GITHUB_REPOSITORY');
     const apiBaseUrl = config.apiBaseUrl ?? getEnv('GITHUB_API_URL') ?? 'https://api.github.com';
@@ -240,6 +241,7 @@ export async function createCheckRun(
     params: CreateCheckRunParams,
     config: CheckRunConfig = {},
 ): Promise<{ id: number; html_url: string } | null> {
+    if (process.env['VITEST']) return null;
     const token = config.token ?? getEnv('GITHUB_TOKEN');
     const repository = config.repository ?? getEnv('GITHUB_REPOSITORY');
     const headSha = params.headSha ?? getEnv('GITHUB_SHA');

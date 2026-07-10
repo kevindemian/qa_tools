@@ -13,6 +13,7 @@ import { Badge, SeverityBadge } from './primitives/badge.js';
 import { DataTable, type TableColumn, type TableRow } from './primitives/table.js';
 import { buildCss } from './report-styles.js';
 import { rootLogger } from './logger.js';
+import { extractErrorMessage } from './prompt-errors.js';
 
 export type OptimizationAction = 'parallelize' | 'quarantine' | 'speed_up' | 'split' | 'remove_wait' | 'none';
 
@@ -210,11 +211,10 @@ export function generateOptimizationHtml(result: OptimizationResult, title?: str
             styles,
             bodyContent,
         });
-    } catch (err) {
-        const msg = err instanceof Error ? err.message : String(err);
+    } catch (err: unknown) {
         rootLogger.error(
             'Failed to generate optimization HTML: ' +
-                msg +
+                extractErrorMessage(err) +
                 '. Verify that all dependencies (html-factory, report-styles, layout) and input data are valid.',
         );
         return buildErrorPage(

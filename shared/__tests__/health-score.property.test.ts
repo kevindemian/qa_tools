@@ -12,9 +12,68 @@
  * - Empty store → 0, critical, fail
  */
 import * as fc from 'fast-check';
-import { describe, expect, it } from 'vitest';
-import type { MetricsStore, MetricsRun } from '../types/data-hub.js';
+import { describe, expect, it, vi } from 'vitest';
+import type { MetricsStore, MetricsRun, DataHub, ComputedMetrics } from '../types/data-hub.js';
 import { calculateHealthScore } from '../health-score.js';
+
+function createTestHub(overrides: Partial<ComputedMetrics> = {}): DataHub {
+    return {
+        raw: { runs: [], jobs: new Map(), artifacts: new Map(), failureReasons: new Map() },
+        computed: {
+            passRate: 50,
+            avgDuration: 1000,
+            suiteSpeedP95: 500,
+            flakyRate: [],
+            coverage: 42,
+            pipelineCost: { totalMinutes: 0, estimatedCost: 0 },
+            defectTrends: [],
+            branchBreakdown: {},
+            topFailingJobs: [],
+            topFailureReasons: [],
+            releaseScore: {
+                score: 0,
+                dimensions: {
+                    passRate: { score: 0, status: 'fail' },
+                    flakyRate: { score: 0, status: 'fail' },
+                    coverage: { score: 0, status: 'fail' },
+                    executionRate: { score: 0, status: 'fail' },
+                    suiteSpeed: { score: 0, status: 'fail' },
+                },
+                grade: 'F',
+            },
+            quarantineStatus: { flakyCount: 0, quarantinedCount: 0 },
+            testPassRate: 50,
+            testCounts: { passed: 50, failed: 50, skipped: 0, total: 100 },
+            framework: 'vitest',
+            executionRate: 77,
+            flakyPercentage: 12,
+            ...overrides,
+        },
+        timestamp: new Date(),
+        provider: 'github',
+        repo: 'test/repo',
+        saveRun: vi.fn(),
+        saveCoverageSnapshot: vi.fn(),
+        saveFailureClassification: vi.fn(),
+        flush: vi.fn(),
+        loadCoverageHistory: vi.fn().mockReturnValue([]),
+        loadFailureClassifications: vi.fn().mockReturnValue([]),
+        saveMetricsStore: vi.fn(),
+        loadMetricsStore: vi.fn().mockReturnValue({ runs: [] }),
+        saveParseResult: vi.fn().mockReturnValue({
+            timestamp: new Date().toISOString(),
+            project: '',
+            total: 0,
+            passed: 0,
+            failed: 0,
+            skipped: 0,
+            duration: 0,
+            tests: [],
+        }),
+        saveQualityMetrics: vi.fn(),
+        loadQualityMetricsHistory: vi.fn().mockReturnValue([]),
+    };
+}
 
 /* ──────────────────────────────────────────────────────────────
  * Arbitraries
@@ -84,8 +143,8 @@ describe('CalculateHealthScore — property-based', () => {
         expect.hasAssertions();
 
         fc.assert(
-            fc.property(MetricsStoreArb, (store) => {
-                const result = calculateHealthScore(store);
+            fc.property(MetricsStoreArb, (_store) => {
+                const result = calculateHealthScore({ dataHub: createTestHub() });
 
                 expect(result.overall).toBeGreaterThanOrEqual(0);
                 expect(result.overall).toBeLessThanOrEqual(100);
@@ -98,8 +157,8 @@ describe('CalculateHealthScore — property-based', () => {
         expect.hasAssertions();
 
         fc.assert(
-            fc.property(MetricsStoreArb, (store) => {
-                const result = calculateHealthScore(store);
+            fc.property(MetricsStoreArb, (_store) => {
+                const result = calculateHealthScore({ dataHub: createTestHub() });
                 const score = result.overall;
                 let expectedGrade: string;
                 if (score >= 90) {
@@ -124,8 +183,8 @@ describe('CalculateHealthScore — property-based', () => {
         expect.hasAssertions();
 
         fc.assert(
-            fc.property(MetricsStoreArb, (store) => {
-                const result = calculateHealthScore(store);
+            fc.property(MetricsStoreArb, (_store) => {
+                const result = calculateHealthScore({ dataHub: createTestHub() });
 
                 expect(result.dimensions).toBeDefined();
                 expect(result.dimensions.passRate).toBeDefined();
@@ -142,8 +201,8 @@ describe('CalculateHealthScore — property-based', () => {
         expect.hasAssertions();
 
         fc.assert(
-            fc.property(MetricsStoreArb, (store) => {
-                const result = calculateHealthScore(store);
+            fc.property(MetricsStoreArb, (_store) => {
+                const result = calculateHealthScore({ dataHub: createTestHub() });
                 const dims = result.dimensions;
                 const dimScores = [
                     dims.passRate.score,
@@ -165,8 +224,8 @@ describe('CalculateHealthScore — property-based', () => {
         expect.hasAssertions();
 
         fc.assert(
-            fc.property(MetricsStoreArb, (store) => {
-                const result = calculateHealthScore(store);
+            fc.property(MetricsStoreArb, (_store) => {
+                const result = calculateHealthScore({ dataHub: createTestHub() });
 
                 expect(result.provenance).toHaveLength(5);
 
@@ -182,8 +241,14 @@ describe('CalculateHealthScore — property-based', () => {
     });
 
     it('empty store returns overall=0, grade=critical, qualityGate=fail', () => {
-        const store: MetricsStore = { runs: [] };
-        const result = calculateHealthScore(store);
+        const result = calculateHealthScore({
+            dataHub: createTestHub({
+                passRate: 0,
+                coverage: 0,
+                executionRate: 0,
+                suiteSpeedP95: 5000,
+            }),
+        });
 
         expect(result.overall).toBe(0);
         expect(result.grade).toBe('critical');
@@ -195,9 +260,11 @@ describe('CalculateHealthScore — property-based', () => {
         expect.hasAssertions();
 
         fc.assert(
-            fc.property(MetricsStoreArb, PercentageArb, fc.boolean(), (store, passRateTarget, useOverride) => {
-                const options = useOverride ? { passRateTarget: Math.round(passRateTarget) } : {};
-                const result = calculateHealthScore(store, options);
+            fc.property(PercentageArb, fc.boolean(), (passRateTarget, useOverride) => {
+                const options = useOverride
+                    ? { passRateTarget: Math.round(passRateTarget), dataHub: createTestHub() }
+                    : { dataHub: createTestHub() };
+                const result = calculateHealthScore(options);
                 const passRateProvenance = result.provenance?.find((p) => p.dimension === 'passRate');
 
                 expect(passRateProvenance).toBeDefined();
@@ -213,12 +280,11 @@ describe('CalculateHealthScore — property-based', () => {
 
         fc.assert(
             fc.property(
-                MetricsStoreArb,
                 fc.nat({ max: 100 }),
                 fc.nat({ max: 100 }),
                 fc.nat({ max: 100 }),
                 fc.nat({ max: 100 }),
-                (store, excellent, good, needs, poor) => {
+                (excellent, good, needs, poor) => {
                     const sorted = [excellent, good, needs, poor].sort((a, b) => b - a);
                     const boundaries = {
                         excellent: Math.max(sorted[0] ?? excellent, 10),
@@ -227,7 +293,10 @@ describe('CalculateHealthScore — property-based', () => {
                         poor: Math.max(sorted[3] ?? poor, 1),
                         critical: 0,
                     };
-                    const result = calculateHealthScore(store, { gradeBoundaries: boundaries });
+                    const result = calculateHealthScore({
+                        gradeBoundaries: boundaries,
+                        dataHub: createTestHub(),
+                    });
                     const score = result.overall;
                     let expectedGrade: string;
                     if (score >= boundaries.excellent) {

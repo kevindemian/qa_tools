@@ -28,6 +28,7 @@ describe('CreateCheckRun', () => {
         process.env['GITHUB_TOKEN'] = 'test-token';
         process.env['GITHUB_REPOSITORY'] = 'owner/repo';
         process.env['GITHUB_SHA'] = 'abc123def456';
+        delete process.env['VITEST'];
     });
 
     afterEach(() => {
@@ -191,6 +192,7 @@ describe('GetCheckRuns', () => {
         process.env['GITHUB_TOKEN'] = 'test-token';
         process.env['GITHUB_REPOSITORY'] = 'owner/repo';
         process.env['GITHUB_SHA'] = 'abc123def456';
+        delete process.env['VITEST'];
     });
 
     afterEach(() => {
@@ -262,5 +264,50 @@ describe('GetCheckRuns', () => {
         const result = await getCheckRuns('abc123');
 
         expect(result).toStrictEqual([]);
+    });
+});
+
+describe('VITEST guard', () => {
+    const originalEnv = { ...process.env };
+
+    beforeEach(() => {
+        vi.clearAllMocks();
+        process.env['GITHUB_TOKEN'] = 'test-token';
+        process.env['GITHUB_REPOSITORY'] = 'owner/repo';
+        process.env['GITHUB_SHA'] = 'abc123def456';
+        process.env['VITEST'] = 'true';
+    });
+
+    afterEach(() => {
+        for (const key of ['GITHUB_TOKEN', 'GITHUB_REPOSITORY', 'GITHUB_SHA', 'VITEST'] as const) {
+            const orig = originalEnv[key];
+            if (orig === undefined) {
+                delete process.env[key];
+            } else {
+                process.env[key] = orig;
+            }
+        }
+    });
+
+    it('createCheckRun returns null without making API calls', async () => {
+        expect.assertions(2);
+
+        const result = await createCheckRun({
+            name: 'Test',
+            status: 'completed',
+            conclusion: 'success',
+        });
+
+        expect(result).toBeNull();
+        expect(mockPost).not.toHaveBeenCalled();
+    });
+
+    it('getCheckRuns returns empty array without making API calls', async () => {
+        expect.assertions(2);
+
+        const result = await getCheckRuns('abc123');
+
+        expect(result).toStrictEqual([]);
+        expect(mockGet).not.toHaveBeenCalled();
     });
 });

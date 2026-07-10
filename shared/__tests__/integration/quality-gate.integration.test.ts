@@ -49,7 +49,41 @@ describe('Integration: Quality Gate', () => {
                 flush: vi.fn(),
             } as never);
             const { runQualityGate } = await loadModules();
-            const result = runQualityGate();
+            const mockHub = {
+                loadMetricsStore: vi.fn().mockReturnValue({ runs: [], coverageHistory: [] }),
+                saveRun: vi.fn(),
+                saveCoverageSnapshot: vi.fn(),
+                loadCoverageHistory: vi.fn().mockReturnValue([]),
+                saveFailureClassification: vi.fn(),
+                loadFailureClassifications: vi.fn().mockReturnValue([]),
+                saveMetricsStore: vi.fn(),
+                saveParseResult: vi.fn(),
+                saveQualityMetrics: vi.fn(),
+                loadQualityMetricsHistory: vi.fn().mockReturnValue([]),
+                flush: vi.fn(),
+                raw: { runs: [], jobs: new Map(), artifacts: new Map(), failureReasons: new Map() },
+                computed: {
+                    passRate: 0,
+                    avgDuration: 0,
+                    suiteSpeedP95: 0,
+                    flakyRate: [],
+                    coverage: 0,
+                    pipelineCost: { totalMinutes: 0, estimatedCost: 0 },
+                    defectTrends: [],
+                    branchBreakdown: {},
+                    topFailingJobs: [],
+                    topFailureReasons: [],
+                    releaseScore: { score: 0, dimensions: {} as never, grade: 'critical' },
+                    quarantineStatus: { flakyCount: 0, quarantinedCount: 0 },
+                    testPassRate: 0,
+                    testCounts: { passed: 0, failed: 0, skipped: 0, total: 0 },
+                    framework: 'unknown',
+                },
+                timestamp: new Date(),
+                provider: 'github',
+                repo: 'test/repo',
+            } as never;
+            const result = runQualityGate({ dataHub: mockHub });
 
             expect(result.overall).toBe('fail');
             expect(result.checks).toHaveLength(1);
@@ -116,7 +150,65 @@ describe('Integration: Quality Gate', () => {
             } as never);
 
             const { runQualityGate } = await loadModules();
-            const result = runQualityGate({ project: 'test-project' });
+            const mockHub = {
+                loadMetricsStore: vi.fn().mockReturnValue({
+                    runs,
+                    coverageHistory: [
+                        {
+                            timestamp: new Date().toISOString(),
+                            project: 'test-project',
+                            totalIssues: 100,
+                            mappedIssues: 85,
+                            coveragePct: 85,
+                        },
+                    ],
+                }),
+                saveRun: vi.fn(),
+                saveCoverageSnapshot: vi.fn(),
+                loadCoverageHistory: vi.fn().mockReturnValue([]),
+                saveFailureClassification: vi.fn(),
+                loadFailureClassifications: vi.fn().mockReturnValue([]),
+                saveMetricsStore: vi.fn(),
+                saveParseResult: vi.fn(),
+                saveQualityMetrics: vi.fn(),
+                loadQualityMetricsHistory: vi.fn().mockReturnValue([]),
+                flush: vi.fn(),
+                raw: {
+                    runs: runs.map((r, i) => ({
+                        id: i + 1,
+                        conclusion: 'success',
+                        head_branch: 'test-project',
+                        created_at: r.timestamp,
+                        updated_at: r.timestamp,
+                    })),
+                    jobs: new Map(),
+                    failureReasons: new Map(),
+                    artifacts: new Map(),
+                },
+                computed: {
+                    passRate: 98,
+                    avgDuration: 5000,
+                    suiteSpeedP95: 2000,
+                    flakyRate: [],
+                    coverage: 85,
+                    pipelineCost: { totalMinutes: 0, estimatedCost: 0 },
+                    defectTrends: [],
+                    branchBreakdown: {},
+                    topFailingJobs: [],
+                    topFailureReasons: [],
+                    releaseScore: { score: 0, dimensions: {} as never, grade: 'critical' },
+                    quarantineStatus: { flakyCount: 0, quarantinedCount: 0 },
+                    testPassRate: 98,
+                    testCounts: { passed: 98, failed: 1, skipped: 1, total: 100 },
+                    framework: 'unknown',
+                    executionRate: 98,
+                    flakyPercentage: 1,
+                },
+                timestamp: new Date(),
+                provider: 'github',
+                repo: 'test/repo',
+            } as never;
+            const result = runQualityGate({ project: 'test-project', dataHub: mockHub });
 
             expect(result.overall).toBe('pass');
             expect(result.checks).toHaveLength(5);
@@ -219,63 +311,77 @@ describe('Integration: Quality Gate', () => {
             };
         }
 
+        function makeLowScoreDataHub(): DataHub {
+            return {
+                raw: { runs: [], jobs: new Map(), failureReasons: new Map(), artifacts: new Map() },
+                computed: {
+                    passRate: 10,
+                    avgDuration: 5000,
+                    suiteSpeedP95: 5000,
+                    flakyRate: [],
+                    coverage: 0,
+                    pipelineCost: { totalMinutes: 0, estimatedCost: 0 },
+                    defectTrends: [],
+                    branchBreakdown: {},
+                    topFailingJobs: [],
+                    topFailureReasons: [],
+                    releaseScore: { score: 0, dimensions: {} as never, grade: 'critical' },
+                    quarantineStatus: { flakyCount: 0, quarantinedCount: 0 },
+                    testPassRate: 10,
+                    testCounts: { passed: 10, failed: 90, skipped: 0, total: 100 },
+                    framework: 'unknown',
+                },
+                timestamp: new Date(),
+                provider: 'github',
+                repo: 'test/repo',
+                saveRun: vi.fn(),
+                saveCoverageSnapshot: vi.fn(),
+                saveFailureClassification: vi.fn(),
+                flush: vi.fn(),
+                loadCoverageHistory: vi.fn().mockReturnValue([]),
+                loadFailureClassifications: vi.fn().mockReturnValue([]),
+                saveMetricsStore: vi.fn(),
+                loadMetricsStore: vi.fn().mockReturnValue({ runs: [] }),
+                saveParseResult: vi.fn().mockReturnValue({
+                    timestamp: new Date().toISOString(),
+                    project: '',
+                    total: 0,
+                    passed: 0,
+                    failed: 0,
+                    skipped: 0,
+                    duration: 0,
+                    tests: [],
+                }),
+                saveQualityMetrics: vi.fn(),
+                loadQualityMetricsHistory: vi.fn().mockReturnValue([]),
+            };
+        }
+
         it('dataHub overrides passRate in quality gate when MetricsStore has low scores', async () => {
             expect.hasAssertions();
 
-            // Store with runs that produce a failing health score
-            vi.spyOn(globalHubModule, 'getDataHub').mockReturnValue({
-                loadMetricsStore: vi.fn().mockReturnValue({
-                    runs: [{ passed: 10, failed: 90, total: 100, tests: [], project: 'test' }],
-                    failureClassifications: [],
-                }),
-                saveRun: vi.fn(),
-                saveCoverageSnapshot: vi.fn(),
-                loadCoverageHistory: vi.fn().mockReturnValue([]),
-                saveFailureClassification: vi.fn(),
-                loadFailureClassifications: vi.fn().mockReturnValue([]),
-                saveMetricsStore: vi.fn(),
-                saveParseResult: vi.fn(),
-                saveQualityMetrics: vi.fn(),
-                loadQualityMetricsHistory: vi.fn().mockReturnValue([]),
-                flush: vi.fn(),
-            } as never);
             const { runQualityGate } = await loadModules();
             const hub = makeDataHub({ computed: { passRate: 100 } });
+            const lowHub = makeLowScoreDataHub();
 
             const withHub = runQualityGate({ dataHub: hub });
-            const withoutHub = runQualityGate();
+            const withoutHub = runQualityGate({ dataHub: lowHub });
 
             // DataHub overrides passRate — scores must differ
             expect(withHub.score).not.toBe(withoutHub.score);
-            // DataHub with 100% passRate should produce a higher score than MetricsStore with 10%
+            // DataHub with 100% passRate should produce a higher score than low-score DataHub with 10%
             expect(withHub.score).toBeGreaterThan(withoutHub.score);
         });
 
         it('dataHub changes quality gate result when MetricsStore has low scores', async () => {
             expect.hasAssertions();
 
-            // Store with runs that produce a failing health score
-            vi.spyOn(globalHubModule, 'getDataHub').mockReturnValue({
-                loadMetricsStore: vi.fn().mockReturnValue({
-                    runs: [{ passed: 10, failed: 90, total: 100, tests: [], project: 'test' }],
-                    failureClassifications: [],
-                }),
-                saveRun: vi.fn(),
-                saveCoverageSnapshot: vi.fn(),
-                loadCoverageHistory: vi.fn().mockReturnValue([]),
-                saveFailureClassification: vi.fn(),
-                loadFailureClassifications: vi.fn().mockReturnValue([]),
-                saveMetricsStore: vi.fn(),
-                saveParseResult: vi.fn(),
-                saveQualityMetrics: vi.fn(),
-                loadQualityMetricsHistory: vi.fn().mockReturnValue([]),
-                flush: vi.fn(),
-            } as never);
             const { runQualityGate } = await loadModules();
             const hub = makeDataHub({ computed: { passRate: 100 } });
+            const lowHub = makeLowScoreDataHub();
 
             const withHub = runQualityGate({ dataHub: hub });
-            const withoutHub = runQualityGate();
+            const withoutHub = runQualityGate({ dataHub: lowHub });
 
             // dataHub overrides passRate — scores must differ
             expect(withHub.score).not.toBe(withoutHub.score);
