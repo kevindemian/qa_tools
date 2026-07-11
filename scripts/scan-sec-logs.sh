@@ -53,17 +53,26 @@ else
   report "No warden audit log found (expected at $WARDEN_LOG)"
 fi
 
-# 2. Scan opencode data for secrets (exclude session diffs — git patches with test fixtures)
+# 2. Scan opencode SESSION ARTIFACTS for leaked secrets.
+# Scope is limited to tool output and logs (where session secrets actually land),
+# never opencode's own credential store (auth.json / account.json) or internal DB.
+# This detects real leaks without false-positiving on opencode's own credentials.
 if [[ -d "$OPENDATA_DIR" ]]; then
   COMBINED_PATTERN='ghp_[a-zA-Z0-9]{36}|gho_[a-zA-Z0-9]{36}|ghu_[a-zA-Z0-9]{36}|ghs_[a-zA-Z0-9]{36}|sk-[a-zA-Z0-9]{32,}|AKIA[0-9A-Z]{16}|-----BEGIN .* PRIVATE KEY-----'
 
-  TOTAL_HITS=$(grep -rnE --include='*.json' --include='*.txt' --include='*.md' --exclude-dir='storage' "$COMBINED_PATTERN" "$OPENDATA_DIR" 2>/dev/null | wc -l | tr -d '[:space:]' || echo 0)
+  TOTAL_HITS=0
+  for SCAN_DIR in "$OPENDATA_DIR/tool-output" "$OPENDATA_DIR/log"; do
+    if [[ -d "$SCAN_DIR" ]]; then
+      HITS=$(grep -rnE --exclude='auth.json' --exclude='account.json' --exclude-dir='storage' "$COMBINED_PATTERN" "$SCAN_DIR" 2>/dev/null | wc -l | tr -d '[:space:]' || echo 0)
+      TOTAL_HITS=$((TOTAL_HITS + ${HITS:-0}))
+    fi
+  done
 
   if [[ "$TOTAL_HITS" =~ ^[0-9]+$ ]] && [[ "$TOTAL_HITS" -gt 0 ]]; then
-    report "WARNING: $TOTAL_HITS potential secret leaks found in opencode data"
+    report "WARNING: $TOTAL_HITS potential secret leaks found in opencode session artifacts"
     EXIT_CODE=1
   else
-    report "No secret leaks detected in opencode data"
+    report "No secret leaks detected in opencode session artifacts"
   fi
 fi
 
