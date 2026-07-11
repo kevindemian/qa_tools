@@ -1,5 +1,6 @@
 import { describe, it, expect, vi, beforeEach } from 'vitest';
 import { detectFrameworkCascade } from '../../extractors/framework-detector.js';
+import { rootLogger } from '../../../logger.js';
 import type { GitProvider } from '../../../types/ci-cd.js';
 
 function createMockGitProvider(): GitProvider {
@@ -64,5 +65,18 @@ describe('DetectFrameworkCascade', () => {
         const result = await detectFrameworkCascade(mockProvider, 'main');
 
         expect(result).toStrictEqual({ framework: 'unknown', confidence: 0 });
+    });
+
+    it('logs the error instead of swallowing it silently on API error', async () => {
+        expect.hasAssertions();
+
+        const debugSpy = vi.spyOn(rootLogger, 'debug').mockImplementation(() => undefined);
+        mockGetFileContents.mockRejectedValue(new Error('API error'));
+
+        await detectFrameworkCascade(mockProvider, 'main');
+
+        expect(debugSpy).toHaveBeenCalledWith(expect.stringContaining('API error'));
+
+        debugSpy.mockRestore();
     });
 });

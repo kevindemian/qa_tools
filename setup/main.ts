@@ -16,6 +16,8 @@ import { generateGitLabCI } from './templates/gitlab-ci.js';
 import { generatePrePushHook } from './templates/pre-push-hook.js';
 import type { SetupContext, Framework, GitProvider } from './context.js';
 import { main as configureLlm } from '../scripts/smartwizard-llm.js';
+import { rootLogger } from '../shared/logger.js';
+import { getErrorMessage } from '../shared/errors.js';
 
 function detectGitProvider(): GitProvider {
     try {
@@ -23,8 +25,8 @@ function detectGitProvider(): GitProvider {
         const gitConfig = fs.readFileSync(path.join(projectRoot, '.git/config'), 'utf8');
         if (gitConfig.includes('github.com')) return 'github';
         if (gitConfig.includes('gitlab.com')) return 'gitlab';
-    } catch {
-        /* not a git repo — default to github */
+    } catch (err) {
+        rootLogger.debug('detectGitProvider: not a git repo, defaulting to github: ' + getErrorMessage(err));
     }
     return 'github';
 }

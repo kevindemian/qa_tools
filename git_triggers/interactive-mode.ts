@@ -15,6 +15,7 @@ import { calculateHealthScore } from '../shared/health-score.js';
 import { palette } from '../shared/palette.js';
 import { defaultOutput } from '../shared/output.js';
 import { rootLogger } from '../shared/logger.js';
+import { formatErr } from '../shared/errors.js';
 import {
     success,
     warn,
@@ -790,7 +791,7 @@ async function _ensureProjectsConfigured(): Promise<boolean> {
                 projs = getProjects();
             }
         } catch (err) {
-            rootLogger.debug('Project setup cancelled: ' + _getErrorMessage(err));
+            rootLogger.debug('Project setup cancelled: ' + formatErr(err));
         }
         if (Object.keys(projs).length === 0) {
             warn('É necessário configurar ao menos um projeto. Configure projects.json ou execute o setup wizard.');
@@ -811,11 +812,11 @@ async function _initEnvironment(): Promise<void> {
             try {
                 await _handleSetupWizard();
             } catch (err) {
-                rootLogger.debug('Setup wizard failed: ' + _getErrorMessage(err));
+                rootLogger.debug('Setup wizard failed: ' + formatErr(err));
             }
         }
     } catch (err) {
-        rootLogger.debug('Env setup failed: ' + _getErrorMessage(err));
+        rootLogger.debug('Env setup failed: ' + formatErr(err));
     }
     let healthScore: { score: number; grade: string } | undefined;
     try {
@@ -823,26 +824,15 @@ async function _initEnvironment(): Promise<void> {
         const health = calculateHealthScore({ dataHub: hub });
         healthScore = { score: health.overall, grade: health.grade };
     } catch (err) {
-        rootLogger.debug('Health score failed: ' + _getErrorMessage(err));
+        rootLogger.debug('Health score failed: ' + formatErr(err));
     }
     try {
         await showSplash(undefined, undefined, undefined, undefined, healthScore);
     } catch (err) {
-        rootLogger.debug('Splash failed: ' + _getErrorMessage(err));
+        rootLogger.debug('Splash failed: ' + formatErr(err));
         defaultOutput.print('🔧 QA Tools  v1.0.0 — Gestão de Testes & Automação de CI/CD');
     }
     sessionLog.info('Sessão iniciada');
-}
-
-function _hasMessage(err: unknown): err is { message: string } {
-    return err !== null && err !== undefined && 'message' in (err as never);
-}
-
-function _getErrorMessage(err: unknown): string {
-    if (_hasMessage(err)) {
-        return err.message;
-    }
-    return String(err);
 }
 
 function _getStateHint(): string {
@@ -866,7 +856,7 @@ async function _handleMissingToken(projectName: string): Promise<GitProvider | n
         clearProjectCache();
         return createManagerForProject(projectName, projectId);
     } catch (err) {
-        rootLogger.debug('Create manager for project failed: ' + _getErrorMessage(err));
+        rootLogger.debug('Create manager for project failed: ' + formatErr(err));
         return null;
     }
 }

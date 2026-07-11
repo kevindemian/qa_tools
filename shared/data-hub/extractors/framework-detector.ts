@@ -11,6 +11,7 @@
 import type { GitProvider, FrameworkDetectionResult } from '../../types/ci-cd.js';
 import { detectFrameworkFromAPI } from '../../framework-detection.js';
 import { rootLogger } from '../../logger.js';
+import { getErrorMessage } from '../../errors.js';
 
 /**
  * Framework Detector — runs the full cascade to detect test framework.
@@ -33,7 +34,7 @@ export async function detectFrameworkCascade(gitProvider: GitProvider, ref: stri
         rootLogger.debug('Framework detection cascade: package.json failed, returning unknown');
         return { framework: 'unknown', confidence: 0 };
     } catch (err) {
-        rootLogger.debug(`Framework detection cascade failed: ${String(err)}`);
+        rootLogger.debug(`Framework detection cascade failed: ${getErrorMessage(err)}`);
         return { framework: 'unknown', confidence: 0 };
     }
 }

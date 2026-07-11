@@ -1,5 +1,6 @@
 import fs from 'fs';
 import path from 'path';
+import { rootLogger } from '../shared/logger.js';
 import { writeProjectsConfig, writeDotEnvExample, writeFeaturesConfig } from './config-writer.js';
 
 vi.mock('fs');
@@ -29,6 +30,28 @@ describe('WriteProjectsConfig', () => {
         expect(result.filesCreated).toHaveLength(2);
         expect(result.filesSkipped).toHaveLength(0);
         expect(MockFs.writeFileSync).toHaveBeenCalledTimes(2);
+    });
+
+    it('warns instead of swallowing when existing config is unreadable', () => {
+        expect.hasAssertions();
+
+        const warnSpy = vi.spyOn(rootLogger, 'warn').mockImplementation(() => undefined);
+        MockFs.existsSync.mockReturnValue(true);
+        MockFs.readFileSync.mockImplementation(() => {
+            throw new Error('not json');
+        });
+
+        const result = writeProjectsConfig({
+            projectName: 'myapp',
+            gitProvider: 'github',
+            repoName: 'myapp',
+            repoOwner: 'myorg',
+        });
+
+        expect(result.filesCreated.length).toBeGreaterThan(0);
+        expect(warnSpy).toHaveBeenCalledWith(expect.stringContaining('not json'));
+
+        warnSpy.mockRestore();
     });
 
     it('appends new project to existing projects.json', () => {
