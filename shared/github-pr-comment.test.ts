@@ -30,6 +30,12 @@ describe('PostPrComment', () => {
         penv['GITHUB_TOKEN'] = 'test-token';
         penv['GITHUB_REPOSITORY'] = 'owner/repo';
         penv['GITHUB_PR_NUMBER'] = '42';
+        // Isolate from CI environment: a PR CI context sets GITHUB_REF to
+        // "refs/pull/{n}/merge" (and may set CI_PR_NUMBER), which would leak a
+        // PR number into tests that assert "PR number missing". Tests that need
+        // these sources set them explicitly.
+        delete penv['GITHUB_REF'];
+        delete penv['CI_PR_NUMBER'];
     });
 
     afterEach(() => {
