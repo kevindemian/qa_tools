@@ -3448,9 +3448,41 @@ FASE F — Limpeza
     ```
 - Commit: `feat(setup): hybrid reporter detection (package.json + config + AST)`
 
-### FASE L4 — Robustez da Camada 4 (Job Logs) — zero-dep (G19)
+### FASE L4 — Robustez da Camada 4 (Job Logs) — zero-dep + estruturado-first (G19)
 
-**Contexto:** Camada 4 (`shared/log-parser.ts`) é o último recurso da cascata de extração. Estado atual: ANSI já é stripado; porém (1) **NaN vaza para métricas** — `failed`/`skipped` não são validados (AGENTS §24.1 violado); (2) **Vitest com falhas não é capturado** (`/Tests\s+(\d+)\s+passed/` exige "passed" após o número; `total = passed` está errado); (3) sem detecção de truncamento; (4) sem `confidence`/`evidence`; (5) localização não tratada; (6) stack traces multi-linha truncados. Decisão (aprovada): **redesign zero-dependência, eficiência equivalente**.
+**Contexto e Evidência de Pesquisa (2026-07-11):**
+
+Camada 4 (`shared/log-parser.ts`) é o **último recurso** da cascata de extração (após Camadas 1–6 estruturadas). Estado atual: ANSI já é stripado; porém há 6 defeitos de implementação (listados em Gaps) e, mais grave, **a Camada 4 estava concebida como fonte de counts**, o que é incorreto: com token de versionador disponível, Camadas 1/2/3/6 fornecem **dados estruturados** (runs/jobs/artifacts/check-runs/GitLab native), e o GitHub expõe `test-summary` em **CSV** via artifact — parsing estruturado é o caminho primário para counts.
+
+Pesquisa externa (fontes indicadas pelo usuário) confirma esse ecossistema:
+
+- **gh-ci-artifacts** (jmchilton): "Download and parse GitHub Actions CI artifacts and logs for LLM analysis. Artifact type detection powered by **artifact-detective**, which identifies and validates **20+ test framework and linter output formats**." Saída normalizada: `catalog.json`, `converted/` (NDJSON/JSON), `logs/`.
+- **artifact-detective**: valida 20+ formatos de test/linter (CTRF, JUnit, Mochawesome, etc.).
+- **testing_artifact_detector**: detecção de artifacts de teste em CI.
+
+→ Conclusão: counts pertencem à **Camada 2+ (ingestão estruturada via token)**, não a regex de log. A Camada 4 é **camada de detalhe de falha + cross-reference**.
+
+**Gaps Encontrados (pesquisa + auditoria de código):**
+
+| #     | Gap                                          | Evidência                                                                                                                                        | Decisão                                                                                   |
+| ----- | -------------------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------ | ----------------------------------------------------------------------------------------- | ---------------- |
+| L4-G1 | 2 páginas de métricas do repo não acessíveis | `GET …/actions/metrics/performance` e `…/usage` retornaram **404** (não públicas; exigem sessão autenticada da UI do GitHub). Não inspecionadas. | REGISTRAR limitação; não bloqueia (CSV de test-summary é fonte estruturada independente). |
+| L4-G2 | Camada 4 escopada como fonte de counts       | `log-parser.ts` tratado como produtor de métricas; com token, counts vêm de Camada 2+.                                                           | CORRIGIR — redefinir papel (L4.0).                                                        |
+| L4-G3 | **NaN vaza para métricas**                   | `failed`/`skipped` não validados (AGENTS §24.1 violado) em `log-parser.ts`.                                                                      | CORRIGIR (L4.1).                                                                          |
+| L4-G4 | **Vitest com falhas não capturado**          | regex `/Tests\s+(\d+)\s+passed/` exige "passed" após o número; Vitest `A failed                                                                  | B passed` mal interpretado (`total = passed` errado).                                     | CORRIGIR (L4.2). |
+| L4-G5 | Sem detecção de truncamento                  | logs grandes podem vir truncados sem sinalização.                                                                                                | CORRIGIR (L4.3).                                                                          |
+| L4-G6 | Sem `confidence`/`evidence`                  | consumidor não distingue dado robusto de chute.                                                                                                  | CORRIGIR (L4.4).                                                                          |
+| L4-G7 | Localização não tratada                      | pytest/mocha em pt-BR quebram extração baseada em keyword inglês.                                                                                | CORRIGIR (L4.5).                                                                          |
+| L4-G8 | Stack traces multi-linha truncados           | captura single-line `.{10,200}` perde contexto.                                                                                                  | CORRIGIR (L4.4).                                                                          |
+| L4-G9 | Divergência Camada 7 (superficial na L4)     | `applyLayer7Fallback` retorna `warning`/skipped em NO_TTY; decisão exige ERRO quando a fase de solicitação é pulada.                             | Já coberto por E1; não reimplementar aqui.                                                |
+
+**L4.0 — Redefinição de papel (estruturado-first)**
+
+- **Camada 2+ (primário, via token):** `metrics/csv-importer.ts` (GitHub test-summary CSV, já com NaN-guard `safeNumber`/`safeString`), `junit-xml-parser.ts` (fast-xml-parser), `artifact-parser.ts` (CTRF/Mochawesome/JSON). Alimentam `dataHub.testResults`/`computed` com `confidence: 'high'`.
+- **Camada 4 (job logs) — redefinida:**
+    1. _Primário:_ extrair **mensagens de falha, stack traces, contexto de erro** (robusto, estruturado por framework).
+    2. _Cross-reference:_ comparar totais derivados de log vs totais estruturados; **divergência é warning explícito de qualidade (nunca silencioso)**.
+    3. _Last-resort:_ SOMENTE quando **nenhum** artifact estruturado existe, tentar extração conservadora de totais via regex com `confidence: 'low'` + `evidence` (linhas casadas); **abster-se (retornar `counts: null`) se ambíguo**.
 
 **L4.1 — Fundação segura (NaN-guard obrigatório)**
 
@@ -3484,13 +3516,15 @@ FASE F — Limpeza
 **L4.7 — Testes**
 
 - `shared/__tests__/log-parser.test.ts` + `log-parser.property.test.ts`: vitest v1/v2/v3 (com/sem falhas), jest dot/spec, mocha, pytest localizado, go, truncamento, ANSI, **propriedade: nenhum count finito jamais é NaN**, stack trace multi-linha.
+- Casos de cross-reference: divergência log × estruturado → warning explícito (nunca silencioso).
+- Casos de abstencion: log ambíguo sem artifact estruturado → `counts: null` + `confidence: 'low'`.
 - Checkpoint:
     ```bash
     npx tsc --noEmit
     npx vitest run shared/__tests__/log-parser.test.ts shared/__tests__/log-parser.property.test.ts shared/data-hub/__tests__/extractors/
     rg "NaN" shared/log-parser.ts                                   # 0 (nenhum NaN propagado)
     ```
-- Commit: `refactor(data-hub): harden Layer 4 log parser — zero-dep, NaN-safe, framework/version registry`
+- Commit: `refactor(data-hub): harden Layer 4 log parser — zero-dep, NaN-safe, structured-first, framework/version registry`
 
 ### FASE F — Limpeza
 
