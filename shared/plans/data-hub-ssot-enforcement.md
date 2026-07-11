@@ -3356,7 +3356,8 @@ FASE F — Limpeza
 
 **C1 — Migrar `buildCommitLog` p/ dentro de `data-hub` (N8 / R2 — PRÉ-REQUISITO)**
 
-- Ação: mover `buildCommitLog` para `shared/data-hub/extractors/commit-log-extractor.ts` (ou absorver nos providers); atualizar `github-provider.ts:26`, `gitlab-provider.ts:17`.
+- **Decisão de design (2026-07-11):** OPÇÃO A — novo `shared/data-hub/extractors/commit-log-extractor.ts`. Justificativa técnica: (1) SRP — providers buscam dados brutos da API; `buildCommitLog` é transformação pura (runs→log), ortogonal a I/O. (2) Consistência com `extractors/` existente (`framework-detector`, `failure-classifier`, `coverage-extractor`). (3) Testabilidade — função pura isolada, sem instanciar provider. (4) DIP — extractor não depende de provider; provider depende do extractor. (Opções B=absorver no provider e C=base class foram rejeitadas: duplicação/SRP violado e over-engineering/acoplamento por herança, respectivamente.)
+- Ação: mover `buildCommitLog` (e os tipos/helpers de que depende) para `shared/data-hub/extractors/commit-log-extractor.ts`; atualizar `github-provider.ts`, `gitlab-provider.ts` para importar de `../extractors/commit-log-extractor.js`.
 - Checkpoint:
     ```bash
     rg "from.*commit-log" shared/data-hub/providers/             # 0
@@ -3389,16 +3390,22 @@ FASE F — Limpeza
 
 ### FASE E — Invariant 8 + Auditoria + Docs
 
-**E1 — `dataHub` obrigatório em `pr-report-core.ts` (N3-A / Invariant 8)**
+**E1 — `dataHub` obrigatório em `pr-report-core.ts` (N3-A / Invariant 8) + alinhamento Camada 7**
 
-- Ação: tornar `dataHub: DataHub` (não opcional) em `pr-report-core.ts` (L82,186,352,386); atualizar callers; remover fallbacks.
+- Ação: tornar `dataHub: DataHub` (não opcional) em `pr-report-core.ts` (L82,186,352,386); atualizar callers; remover fallbacks (`?? []`, `?? undefined`).
+- **Alinhamento com a decisão arquitetural das 7 camadas (Camada 7 / fallback manual):** o `main()` de `pr-report-core` DEVE usar o fallback do `DataHub.create` (Camada 7: `applyLayer7Fallback` → `askTestSource`) em vez do atual `warn + return` quando os dados são insuficientes. Três desfechos obrigatórios:
+    1. **Interativo (TTY, não-CI) + usuário fornece arquivo** → `askTestSource()` injeta `parsedArtifacts` via `parseTestResultsFile`; `generatePrReport` recebe `dataHub` obrigatório real.
+    2. **Interativo + usuário declina** (`USER_SKIPPED`/`USER_CANCELLED`) → `rootLogger.warn('PR Report não gerado: dados de teste insuficientes (usuário declinou o relatório manual).')` + `return` (aviso explícito, sem silêncio, sem parcial).
+    3. **Não-interativo (CI / sem TTY / sem `TEST_REPORT_PATH`)** → **erro explícito**: `throw new Error('Falha ao obter dados de teste: sem dados do versionador/Jira e solicitação de relatório manual indisponível em contexto não-interativo.')`. (Corrige divergência: `applyLayer7Fallback` hoje retorna `warning` LAYER7_SKIPPED; a decisão exige ERRO quando a fase de solicitação é pulada.)
+- **Correção em `applyLayer7Fallback` (hub.ts):** quando `fallback.error === 'NO_TTY' || 'NO_DATA_SOURCE'` e não há outra fonte de dados, propagar erro (não apenas `skipped: true`).
 - Checkpoint:
     ```bash
     rg "dataHub\?: DataHub" shared/pr-report-core.ts            # 0
     npx tsc --noEmit
     npx vitest run shared/__tests__/pr-report*                   # 100% pass
+    # testes dos 3 desfechos (forneceu / declinou / não-interativo→erro)
     ```
-- Commit: `refactor(pr-report-core): make dataHub mandatory (Invariant 8)`
+- Commit: `refactor(pr-report-core): make dataHub mandatory + wire Camada 7 manual fallback (Invariant 8)`
 
 **E2 — Débito ESLint pré-existente (N2-B)**
 
@@ -3440,6 +3447,50 @@ FASE F — Limpeza
     npx vitest run setup/                                        # 0 falhas
     ```
 - Commit: `feat(setup): hybrid reporter detection (package.json + config + AST)`
+
+### FASE L4 — Robustez da Camada 4 (Job Logs) — zero-dep (G19)
+
+**Contexto:** Camada 4 (`shared/log-parser.ts`) é o último recurso da cascata de extração. Estado atual: ANSI já é stripado; porém (1) **NaN vaza para métricas** — `failed`/`skipped` não são validados (AGENTS §24.1 violado); (2) **Vitest com falhas não é capturado** (`/Tests\s+(\d+)\s+passed/` exige "passed" após o número; `total = passed` está errado); (3) sem detecção de truncamento; (4) sem `confidence`/`evidence`; (5) localização não tratada; (6) stack traces multi-linha truncados. Decisão (aprovada): **redesign zero-dependência, eficiência equivalente**.
+
+**L4.1 — Fundação segura (NaN-guard obrigatório)**
+
+- Toda extração de count valida `Number.isFinite`; não-finito → aquele source retorna `counts: null` (nunca NaN).
+- Invariante de consistência: rejeitar `total !== passed+failed+skipped` (tolerância) → abstém em vez de emitir parcial.
+
+**L4.2 — Registry de parsers por framework/versão (zero-dep)**
+
+- `LogParserRegistry`: vitest v1/v2/v3, jest (spec/dot), mocha (spec/dot), pytest, go, dotnet.
+- Cada parser: detecta markers do framework, faz **scan de linhas (máquina de estados)** usando `extractNumberBefore` (já seguro, sem backtracking), extrai passed/failed/skipped/total.
+- Vitest correto: `Tests A failed | B passed | C skipped` → `passed=B, failed=A, skipped=C, total=A+B+C`.
+
+**L4.3 — Entrada higiênica + truncamento**
+
+- `stripAnsi` endurecido (CSI + OSC + outros escapes).
+- Cap de tamanho de input; detectar linha final incompleta / ausência de terminador conhecido → `confidence` baixa ou abstém counts.
+
+**L4.4 — Falhas multi-linha + confidence/evidence**
+
+- Captura de stack traces com **janela limitada** (ex.: 40 linhas) em vez de `.{10,200}` single-line.
+- Retornar `LogParseResult` com `{ counts, failures, framework, confidence, evidence }`.
+
+**L4.5 — Localização best-effort**
+
+- pytest/mocha: capturar **layout numérico posicional** do framework (não keyword em inglês); documentar que output 100% localizado está fora de escopo garantido (caso comum ainda capturado).
+
+**L4.6 — Consumidores**
+
+- `failure-classifier.ts`, `test-count-extractor`: absorvem `confidence`; abstêm quando `counts === null`. Forma atual preservada (campos adicionais opcionais).
+
+**L4.7 — Testes**
+
+- `shared/__tests__/log-parser.test.ts` + `log-parser.property.test.ts`: vitest v1/v2/v3 (com/sem falhas), jest dot/spec, mocha, pytest localizado, go, truncamento, ANSI, **propriedade: nenhum count finito jamais é NaN**, stack trace multi-linha.
+- Checkpoint:
+    ```bash
+    npx tsc --noEmit
+    npx vitest run shared/__tests__/log-parser.test.ts shared/__tests__/log-parser.property.test.ts shared/data-hub/__tests__/extractors/
+    rg "NaN" shared/log-parser.ts                                   # 0 (nenhum NaN propagado)
+    ```
+- Commit: `refactor(data-hub): harden Layer 4 log parser — zero-dep, NaN-safe, framework/version registry`
 
 ### FASE F — Limpeza
 
