@@ -23,7 +23,7 @@ import { isTestArtifact, parseArtifactBufferAll } from '../artifact-parser.js';
 import { detectFrameworkCascade } from '../extractors/framework-detector.js';
 import { classifyFailures, type StepConclusion, type FailureInput } from '../extractors/failure-classifier.js';
 import { getCheckRuns } from '../../github-check-run.js';
-import { buildCommitLog } from '../../commit-log.js';
+import { buildCommitLog } from '../extractors/commit-log-extractor.js';
 
 const DEFAULT_MAX_ARTIFACTS_PER_RUN = 5;
 
