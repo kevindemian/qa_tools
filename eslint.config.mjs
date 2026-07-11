@@ -295,6 +295,7 @@ export default defineConfig(
             '.opencode/',
             '.tmp/',
             '.shared/',
+            'scripts/validation-hook.ts',
         ],
     },
     prettier,

@@ -19,7 +19,7 @@ if [ -f "$VALIDATION_HOOK" ]; then
     npx tsx "$VALIDATION_HOOK" --test
 
     echo "--- Validation hook (diff check) ---"
-    STAGED_DIFF=$(git diff --cached -- . ':!.config/validation_hook.ts' ':!.husky/' ':!BACKLOG.md' ':!shared/plans/')
+    STAGED_DIFF=$(git diff --cached -- . ':!.config/validation_hook.ts' ':!.husky/')
     if [ -n "$STAGED_DIFF" ]; then
         printf '%s\n' "$STAGED_DIFF" | grep '^[+]' | sed 's/^.//' | npx tsx "$VALIDATION_HOOK" --check --no-cache
     else

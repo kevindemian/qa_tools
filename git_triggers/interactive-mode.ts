@@ -9,7 +9,7 @@ import { showSplash } from '../shared/splash.js';
 import { calcFlakinessEntries } from '../shared/data-hub/compute/flakiness-entries.js';
 import { calcTestDurationMap } from '../shared/data-hub/compute/test-duration-map.js';
 import { calcRunFailureRate } from '../shared/data-hub/compute/run-failure-rate.js';
-import type { MetricsRun } from '../shared/types/data-hub.js';
+import type { MetricsRun, RawXrayData } from '../shared/types/data-hub.js';
 import { compareRuns } from '../shared/run-comparison.js';
 import { calculateHealthScore } from '../shared/health-score.js';
 import { palette } from '../shared/palette.js';
@@ -644,10 +644,45 @@ async function _showDataHubSummary(): Promise<void> {
             lines.push('');
         }
 
+        if (hub.raw.jiraIssues?.length) {
+            lines.push('  Jira Issues:       ' + hub.raw.jiraIssues.length);
+            lines.push('');
+        }
+
+        if (hub.raw.xray) {
+            lines.push(...buildXraySummaryLines(hub.raw.xray));
+        }
+
         info(lines.join('\n'));
     } catch (err) {
         printError('CI Data Hub error', err);
     }
+}
+
+/** Constrói as linhas de resumo de dados Xray (test executions + test runs). */
+function buildXraySummaryLines(xray: RawXrayData): string[] {
+    const lines: string[] = [];
+    const totalRuns = xray.testRuns.length;
+    const passed = xray.testRuns.filter((r) => r.status === 'PASSED').length;
+    const failed = xray.testRuns.filter((r) => r.status === 'FAILED').length;
+    const skipped = xray.testRuns.filter((r) => r.status === 'SKIPPED').length;
+    lines.push('  Xray — Test Executions: ' + xray.testExecutions.length);
+    lines.push('    Test Runs: ' + totalRuns + ' (pass ' + passed + ' / fail ' + failed + ' / skip ' + skipped + ')');
+    for (const exec of xray.testExecutions.slice(0, 5)) {
+        lines.push(
+            '    - ' +
+                exec.key +
+                ': ' +
+                (exec.status ?? '?') +
+                ' (' +
+                (exec.passed ?? 0) +
+                '/' +
+                (exec.total ?? 0) +
+                ' pass)',
+        );
+    }
+    lines.push('');
+    return lines;
 }
 
 async function _showDashboardMenu(): Promise<void> {

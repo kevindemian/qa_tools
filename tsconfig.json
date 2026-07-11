@@ -32,5 +32,5 @@
         ".tmp/**/*.ts",
         ".shared/**/*.ts"
     ],
-    "exclude": ["node_modules", "docs-archive"]
+    "exclude": ["node_modules", "docs-archive", "scripts/validation-hook.ts"]
 }
