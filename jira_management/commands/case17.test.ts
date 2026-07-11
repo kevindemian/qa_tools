@@ -52,10 +52,6 @@ vi.mock('../../shared/store-backend', () => ({
     detectProjectGitDir: vi.fn().mockReturnValue(null),
 }));
 
-vi.mock('../../shared/commit-log', () => ({
-    fetchCommitLog: vi.fn().mockResolvedValue(''),
-}));
-
 vi.mock('../../shared/session-context', () => ({
     resolveTestDataSource: vi.fn().mockResolvedValue(null),
     resolveSessionContext: vi.fn().mockReturnValue({
