@@ -7,10 +7,11 @@
  * Consumers call `createDataHub(provider, repo)` instead of `DataHubImpl.create()` directly.
  */
 import type { GitProvider } from '../types/ci-cd.js';
-import type { DataHub, DataHubPersistence } from '../types/data-hub.js';
+import type { DataHub, DataHubPersistence, DataProvider } from '../types/data-hub.js';
 import type { ParseResult } from '../result_parser.js';
 import { rootLogger } from '../logger.js';
 import { formatErr } from '../errors.js';
+import Config from '../config.js';
 // `createDataHubPersistence` is an internal data-hub factory (see persistence.ts).
 // It is consumed ONLY within `shared/data-hub/` (here, by `createDataHub`).
 import { createDataHubPersistence } from './persistence.js';
@@ -68,17 +69,10 @@ export async function createDataHub(
         try {
             const { DataHubImpl } = await import('./hub.js');
 
-            let dataProvider;
-            if (provider.provider === 'gitlab') {
-                const { GitLabDataProvider } = await import('./providers/gitlab-provider.js');
-                dataProvider = new GitLabDataProvider(provider);
-            } else {
-                const { GitHubDataProvider } = await import('./providers/github-provider.js');
-                dataProvider = new GitHubDataProvider(provider);
-            }
+            const dataProviders = await buildDataProviders(provider);
 
             const result = await DataHubImpl.create(
-                [dataProvider],
+                dataProviders,
                 { repo, allowEmpty: options?.allowEmpty ?? false },
                 persistence,
             );
@@ -116,4 +110,38 @@ function sleep(ms: number): Promise<void> {
     return new Promise((resolve) => {
         setTimeout(resolve, ms);
     });
+}
+
+/**
+ * Constrói a lista de DataProviders para um repositório.
+ * GitHub/GitLab sempre presentes; Xray Cloud é opcional e config-gated.
+ * Falhas do Xray NUNCA bloqueiam os dados de CI (provider isolado por try/catch).
+ */
+async function buildDataProviders(provider: GitProvider): Promise<DataProvider[]> {
+    const dataProviders: DataProvider[] = [];
+
+    if (provider.provider === 'gitlab') {
+        const { GitLabDataProvider } = await import('./providers/gitlab-provider.js');
+        dataProviders.push(new GitLabDataProvider(provider));
+    } else {
+        const { GitHubDataProvider } = await import('./providers/github-provider.js');
+        dataProviders.push(new GitHubDataProvider(provider));
+    }
+
+    const xrayClientId = Config.get('xrayClientId');
+    const xrayClientSecret = Config.get('xrayClientSecret');
+    const jiraProject = Config.get('jiraProject');
+    if (xrayClientId && xrayClientSecret && jiraProject) {
+        try {
+            const { XrayDataProvider } = await import('./providers/xray-provider.js');
+            const { XrayCloudClient } = await import('../xray-cloud-client.js');
+            dataProviders.push(
+                new XrayDataProvider(new XrayCloudClient(), xrayClientId, xrayClientSecret, jiraProject),
+            );
+        } catch (err) {
+            rootLogger.warn(`createDataHub: Xray provider indisponível — ${formatErr(err)}`);
+        }
+    }
+
+    return dataProviders;
 }

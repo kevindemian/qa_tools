@@ -18,6 +18,10 @@ export interface FailureEntry {
     message?: string;
     file?: string;
     line?: number;
+    /** Annotation/test level (failure, warning, notice). */
+    level?: string;
+    /** End line when available (e.g. check-run annotations). */
+    endLine?: number;
 }
 
 export interface FailureInput {
@@ -42,11 +46,13 @@ function fromSteps(steps: StepConclusion[]): FailureEntry[] {
 
 function fromAnnotations(annotations: CheckRunAnnotation[]): FailureEntry[] {
     return annotations
-        .filter((a) => a.annotation_level === 'failure')
+        .filter((a) => a.annotation_level === 'failure' || a.annotation_level === 'warning')
         .map((a) => ({
             message: a.message,
             file: a.path,
             line: a.start_line,
+            endLine: a.end_line,
+            level: a.annotation_level,
         }));
 }
 

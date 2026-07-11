@@ -79,6 +79,8 @@ export interface RawData {
     failureClassifications?: FailureClassification[];
     /** Data provenance — tracks source and confidence for each data category. */
     provenance?: Map<string, DataSource>;
+    /** Xray Cloud test execution data (raw, mapped from GraphQL). */
+    xray?: RawXrayData;
 }
 
 /** CI pipeline run statistics — derived from workflow run artifacts. */
@@ -99,16 +101,76 @@ export interface RawCoverage {
     files?: { [key: string]: { total: number; covered: number; percentage: number } };
 }
 
-/** Simplified Jira issue. */
+/** Simplified Jira issue — deep extraction (última gota do SSOT).
+ *  Campos opcionais preservam compatibilidade com consumidores existentes. */
 export interface RawJiraIssue {
     key: string;
     summary: string;
     status: string;
+    /** Categoria de status (ex.: 'Done', 'In Progress') quando disponível. */
+    statusCategory?: string | undefined;
     type: string;
+    /** Prioridade (ex.: 'High', 'Medium'). */
+    priority?: string | undefined;
+    /** Usuário assignee (displayName). */
+    assignee?: string | undefined;
+    /** Usuário reporter (displayName). */
+    reporter?: string | undefined;
+    /** Componentes do issue. */
+    components: string[];
+    /** Versões alvo (fix versions). */
+    fixVersions: string[];
+    /** Sprint (nome) quando presente. */
+    sprint?: string | undefined;
+    /** Story points quando presentes. */
+    storyPoints?: number | undefined;
+    /** Issue pai (epic/Parent) quando presente. */
+    parentKey?: string | undefined;
     labels: string[];
     created: string;
     updated: string;
     resolution?: string | undefined;
+    /** Data de resolução (resolutiondate) quando resolvido. */
+    resolutionDate?: string | undefined;
+}
+
+/** A single Xray Cloud test run (within a test execution). */
+export interface RawXrayTestRun {
+    /** Xray test run ID. */
+    id: string;
+    /** Linked test issue key (e.g. CALC-123). */
+    testKey?: string | undefined;
+    /** Execution status (PASSED / FAILED / SKIPPED / EXECUTING / PENDING). */
+    status: string;
+    /** Parent test execution key. */
+    testExecutionKey?: string | undefined;
+    /** ISO timestamp when the run started. */
+    startedOn?: string | undefined;
+    /** ISO timestamp when the run finished. */
+    finishedOn?: string | undefined;
+    /** Free-text comment / evidence. */
+    comment?: string | undefined;
+}
+
+/** A single Xray Cloud test execution (aggregates test runs). */
+export interface RawXrayTestExecution {
+    /** Test Execution issue key (e.g. CALC-456). */
+    key: string;
+    summary?: string | undefined;
+    status?: string | undefined;
+    startedOn?: string | undefined;
+    finishedOn?: string | undefined;
+    testRunCount?: number | undefined;
+    passed?: number | undefined;
+    failed?: number | undefined;
+    skipped?: number | undefined;
+    total?: number | undefined;
+}
+
+/** Raw Xray Cloud data mapped from GraphQL. */
+export interface RawXrayData {
+    testExecutions: RawXrayTestExecution[];
+    testRuns: RawXrayTestRun[];
 }
 
 /** Options for fetching raw data from a provider. */
@@ -124,7 +186,7 @@ export interface FetchOptions {
 /** Strategy interface — each provider adapts one data source. */
 export interface DataProvider {
     readonly name: string;
-    readonly source: 'github' | 'gitlab' | 'jira' | 'coverage';
+    readonly source: 'github' | 'gitlab' | 'jira' | 'coverage' | 'xray';
     fetchRawData(options: FetchOptions): Promise<RawData>;
 }
 

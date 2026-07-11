@@ -7,4 +7,5 @@ export { GitHubDataProvider } from './github-provider.js';
 export { GitLabDataProvider } from './gitlab-provider.js';
 export { JiraDataProvider } from './jira-provider.js';
 export { CoverageDataProvider } from './coverage-provider.js';
+export { XrayDataProvider } from './xray-provider.js';
 export { CompositeProvider } from './composite-provider.js';

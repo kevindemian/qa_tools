@@ -524,6 +524,28 @@ export class DataHubImpl implements DataHub {
         if (source.ciRuns && source.ciRuns.length > 0 && (!target.ciRuns || target.ciRuns.length === 0)) {
             target.ciRuns = source.ciRuns;
         }
+        DataHubImpl.mergeXray(target, source);
+    }
+
+    private static mergeXray(target: RawData, source: RawData): void {
+        if (source.xray == null) return;
+        if (target.xray == null) {
+            target.xray = { testExecutions: [], testRuns: [] };
+        }
+        const seenExec = new Set(target.xray.testExecutions.map((e) => e.key).filter(Boolean));
+        for (const exec of source.xray.testExecutions) {
+            if (exec.key && !seenExec.has(exec.key)) {
+                seenExec.add(exec.key);
+                target.xray.testExecutions.push(exec);
+            }
+        }
+        const seenRuns = new Set(target.xray.testRuns.map((r) => r.id).filter(Boolean));
+        for (const run of source.xray.testRuns) {
+            if (run.id && !seenRuns.has(run.id)) {
+                seenRuns.add(run.id);
+                target.xray.testRuns.push(run);
+            }
+        }
     }
 
     private static assignIfNull<K extends keyof RawData>(target: RawData, key: K, value: RawData[K]): void {

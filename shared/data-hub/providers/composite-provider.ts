@@ -8,7 +8,7 @@ import type { DataProvider, FetchOptions, RawData } from '../../types/data-hub.j
 
 export class CompositeProvider implements DataProvider {
     readonly name = 'composite';
-    readonly source: 'github' | 'gitlab' | 'jira' | 'coverage';
+    readonly source: 'github' | 'gitlab' | 'jira' | 'coverage' | 'xray';
 
     constructor(private readonly providers: DataProvider[]) {
         this.source = providers[0]?.source ?? 'github';
@@ -49,6 +49,7 @@ export class CompositeProvider implements DataProvider {
         CompositeProvider.mergeMap(target.failureReasons, source.failureReasons);
         CompositeProvider.mergeFirstNonNull(target, source);
         CompositeProvider.mergeOptionalMaps(target, source);
+        CompositeProvider.mergeXray(target, source);
     }
 
     private static mergeMap<K, V>(target: Map<K, V>, source: Map<K, V>): void {
@@ -69,6 +70,35 @@ export class CompositeProvider implements DataProvider {
         if (source.parsedArtifacts != null) {
             if (target.parsedArtifacts == null) target.parsedArtifacts = new Map();
             for (const [key, value] of source.parsedArtifacts) target.parsedArtifacts.set(key, value);
+        }
+    }
+
+    /**
+     * Merge Xray data (test executions + test runs) by concatenating and
+     * de-duplicating on key/id. Never throws on partial data.
+     */
+    private static mergeXray(target: RawData, source: RawData): void {
+        if (source.xray == null) return;
+        if (target.xray == null) {
+            target.xray = {
+                testExecutions: [...source.xray.testExecutions],
+                testRuns: [...source.xray.testRuns],
+            };
+            return;
+        }
+        const seenExec = new Set(target.xray.testExecutions.map((e) => e.key).filter(Boolean));
+        for (const exec of source.xray.testExecutions) {
+            if (exec.key && !seenExec.has(exec.key)) {
+                seenExec.add(exec.key);
+                target.xray.testExecutions.push(exec);
+            }
+        }
+        const seenRuns = new Set(target.xray.testRuns.map((r) => r.id).filter(Boolean));
+        for (const run of source.xray.testRuns) {
+            if (run.id && !seenRuns.has(run.id)) {
+                seenRuns.add(run.id);
+                target.xray.testRuns.push(run);
+            }
         }
     }
 }
