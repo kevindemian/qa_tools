@@ -126,8 +126,6 @@ export interface DataProvider {
     readonly name: string;
     readonly source: 'github' | 'gitlab' | 'jira' | 'coverage';
     fetchRawData(options: FetchOptions): Promise<RawData>;
-    /** Fetch recent commit log from CI workflow runs. Optional — providers that don't support this return undefined. */
-    fetchCommitLog?(): Promise<string | undefined>;
 }
 
 /** Flaky test/job detected across runs. */
