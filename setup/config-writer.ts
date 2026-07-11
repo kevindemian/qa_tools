@@ -2,6 +2,8 @@ import fs from 'fs';
 import path from 'path';
 import type { SetupContext } from './context.js';
 import { setPrReportConfig } from '../shared/feature-config.js';
+import { rootLogger } from '../shared/logger.js';
+import { getErrorMessage } from '../shared/errors.js';
 
 interface WriterResult {
     filesCreated: string[];
@@ -34,7 +36,10 @@ function writeJsonConfig(
             fs.writeFileSync(path.resolve(filePath), JSON.stringify(existing, null, 2) + '\n', 'utf8');
             result.filesCreated.push(filePath);
         }
-    } catch {
+    } catch (err) {
+        rootLogger.warn(
+            'writeJsonConfig: failed to merge existing config, writing fresh entry: ' + getErrorMessage(err),
+        );
         fs.writeFileSync(
             path.resolve(filePath),
             JSON.stringify({ [ctx.projectName]: makeEntry(ctx) }, null, 2) + '\n',

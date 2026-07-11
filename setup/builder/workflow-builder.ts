@@ -1,4 +1,6 @@
 import { Document, type Node, YAMLMap, YAMLSeq, Scalar, Pair, isMap, parseDocument } from '../../shared/deps.js';
+import { rootLogger } from '../../shared/logger.js';
+import { getErrorMessage } from '../../shared/errors.js';
 
 export interface StepConfig {
     name?: string;
@@ -79,8 +81,10 @@ export class WorkflowBuilder {
             if (parsed.contents && isMap(parsed.contents)) {
                 this.doc = parsed;
             }
-        } catch {
-            // ignore parse errors — start fresh
+        } catch (err) {
+            rootLogger.debug(
+                'WorkflowBuilder.parseExisting: ignoring unparseable YAML, starting fresh: ' + getErrorMessage(err),
+            );
         }
         return this;
     }

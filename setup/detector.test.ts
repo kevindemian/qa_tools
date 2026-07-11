@@ -1,4 +1,5 @@
 import { detectFramework, detectTestReporter, extractRepoFromGit } from './detector.js';
+import { rootLogger } from '../shared/logger.js';
 import fs from 'fs';
 
 const mockReadFileSync = vi.hoisted(() => vi.fn());
@@ -12,6 +13,25 @@ vi.mock('fs', () => ({
 
 const mockFsReadFileSync = vi.spyOn(fs, 'readFileSync');
 const mockFsExistsSync = vi.spyOn(fs, 'existsSync');
+
+describe('Error-handling: no silent catches', () => {
+    it('logs (does not swallow) when a config file cannot be read', () => {
+        expect.hasAssertions();
+
+        const debugSpy = vi.spyOn(rootLogger, 'debug').mockImplementation(() => undefined);
+        mockFsExistsSync.mockReturnValue(true);
+        mockFsReadFileSync.mockImplementation(() => {
+            throw new Error('read failed');
+        });
+
+        const result = detectTestReporter('/fake/project');
+
+        expect(result).toBeFalsy();
+        expect(debugSpy).toHaveBeenCalledWith(expect.stringContaining('read failed'));
+
+        debugSpy.mockRestore();
+    });
+});
 
 describe('Detector', () => {
     beforeEach(() => {

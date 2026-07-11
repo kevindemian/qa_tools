@@ -3247,3 +3247,209 @@ npx vitest run setup/                               # 0 falhas
 | 2026-07-10 | CtrfSource → TestReportSource — detector format-agnóstico, não CTRF-específico            | detector deve detectar "tem reporter?" sem assumir formato               | Usuário  |
 | 2026-07-10 | Detecção de reporter: Fase 3 usa regex (renomeação); Fase 11 usa AST/híbrido              | regex é insuficiente para detecção confiável; AST é superior             | Usuário  |
 | 2026-07-10 | Duas detecções separadas: capacidade (wizard) vs formato (parser) — não conflitar         | Wizard detecta de config; parser detecta de conteúdo                     | Pesquisa |
+
+---
+
+## PLANO DE RETOMADA — Consolidado (2026-07-11)
+
+> **Base:** reavaliação direta de código (`tsc`/`vitest`/`eslint`/grep) do plano + correção do plano obsoleto `.mimocode/plans/1783732539632-shiny-wolf.md`
+> **Estado verificado:** `tsc --noEmit` = 0 erros · `vitest run` = 6343 pass / 9 skip · Fases 0–6, 10.1 (ESLint) e Dimension 5 = concluídas
+> **Gaps ainda abertos:** G4, G12, G13, G14, G16, G18 + novos N1, N2, N3, N4, N5, N6, N7
+
+### PRINCÍPIOS
+
+- Cada tarefa é atômica, testável, verificável (comando exato) e commitável isoladamente.
+- Fases são sequenciais onde há dependência; Blocos independentes podem ser paralelizados.
+- Nenhum checkpoint passa por workaround/suppress de regra de segurança.
+
+### DECISÕES REGISTRADAS (2026-07-11)
+
+- **N3 = (A)** `dataHub` obrigatório em `pr-report-core.ts` (Invariant 8). Escopo estrito: só `pr-report-core`; `traceability-matrix`/`pipeline-cost` ficam como estão (não citados no invariante).
+- **N2 = (B)** Reescopar checkpoint de auditoria para validar apenas as regras SSOT (que passam); os 426 warnings `security/detect-non-literal-fs-filename` viram **débito separado e agendado** (tarefa dedicada fora deste plano). Regra de segurança NÃO é suprimida. Se o CI usar `eslint --max-warnings=0`, ele permanece vermelho até o débito ser resolvido.
+- **EH-2** (`String(err)` ~50 sítios) = débito à parte, fora do escopo SSOT.
+- **TECHDOC.md** será atualizado (tarefa E4).
+- **Phase 9** executada APÓS a deleção total dos produtores deprecados (C4).
+- **Phase 11** executada por ÚLTIMO (pendências antigas antes de novas).
+- Plano `.mimocode/plans/1783732539632-shiny-wolf.md` marcado como **SUPERSEDED**.
+
+### ORDEM DE EXECUÇÃO
+
+```
+FASE A — Error Handling (EH-6/EH-7)        [novo, não coberto antes]
+  A1 interactive-mode: _getErrorMessage → formatErr
+  A2 setup/*: corrigir catch{} silenciosos
+  A3 framework-detector: String(err) → extractErrorMessage
+FASE B — Interface/Export (G4)
+  B1 remover export de createDataHubPersistence
+FASE C — Deleção fontes alternativas (G12/G13/G14)
+  C1 migrar buildCommitLog p/ data-hub  (PRÉ-REQUISITO de C2 — R2)
+  C2 deletar commit-log.ts
+  C3 deletar ci-test-downloader.ts
+  C4 deletar coverage-source.ts
+FASE 9 — Consumidores silenciosos (após C4)
+  9.1 tsc --noEmit + vitest run full; corrigir o que quebrar
+FASE E — Invariant 8 + Auditoria + Docs
+  E1 pr-report-core: dataHub obrigatório (N3-A)
+  E2 reescopar checkpoint eslint p/ regras SSOT; abrir PR débito 426 (N2-B)
+  E3 auditoria Fase 7 (comandos A–J) → PROGRESS.md (G18)
+  E4 atualizar docs/TECHDOC.md (Phase 10.2)
+FASE D — Phase 11 Reporter Detection (G16)
+  D1 pesquisa viabilidade AST/híbrido
+  D2 implementar detecção híbrida
+FASE F — Limpeza
+  F1 remover mocks mortos (N6)
+  F2 corrigir inconsistência EH-8 no plano (N7)
+  F3 marcar .mimocode/plans/1783732539632-shiny-wolf.md como SUPERSEDED
+```
+
+### FASE A — Error Handling (EH-6 / EH-7) — CHECKPOINTS
+
+**A1 — `interactive-mode.ts`: `_getErrorMessage` → `formatErr` (N1 / EH-6)**
+
+- Ação: substituir as 14 ocorrências de `_getErrorMessage(err)` por `formatErr(err)`; deletar a função (def L841). NUNCA catch vazio; `formatErr` já faz `extractErrorMessage`+`humanizeError`.
+- Checkpoint:
+    ```bash
+    rg "_getErrorMessage" git_triggers/interactive-mode.ts           # 0
+    npx tsc --noEmit
+    npx vitest run git_triggers/interactive-mode.test.ts            # 100% pass
+    ```
+- Commit: `fix(error-handling): replace _getErrorMessage with formatErr in interactive-mode (EH-6)`
+
+**A2 — `setup/*`: verificar e corrigir `catch {}` silenciosos (N4 / EH-7)**
+
+- Ação: `setup/detector.ts:95,140,154`, `setup/main.ts:26`, `setup/builder/workflow-builder.ts:82`, `setup/config-writer.ts:37` — inspecionar corpo; onde não loga, adicionar `rootLogger.warn(extractErrorMessage(err))`. Proibir catch vazio.
+- Checkpoint:
+    ```bash
+    npx vitest run setup/                                          # 100% pass
+    ```
+- Commit: `fix(error-handling): eliminate silent catches in setup modules (EH-7)`
+
+**A3 — `framework-detector.ts`: `String(err)` → `extractErrorMessage` (N5)**
+
+- Ação: `shared/data-hub/extractors/framework-detector.ts:36` usar `extractErrorMessage(err)`.
+- Checkpoint:
+    ```bash
+    rg "String\(err\)" shared/data-hub/extractors/                 # 0
+    npx vitest run shared/data-hub/__tests__/extractors/          # 100% pass
+    ```
+- Commit: `fix(error-handling): use extractErrorMessage in framework-detector`
+
+### FASE B — Interface/Export (G4)
+
+**B1 — Remover export público de `createDataHubPersistence`**
+
+- Ação: `shared/data-hub/persistence.ts:67` remover `export`; confirmar `factory.ts:55` (dynamic import) continua funcionando.
+- Checkpoint:
+    ```bash
+    npx tsc --noEmit
+    rg "createDataHubPersistence" --include='*.ts' -g '!__tests__' -g '!*.test.ts' -g '!shared/data-hub/**'  # 0
+    npx vitest run shared/data-hub/                              # 100% pass
+    ```
+- Commit: `refactor(data-hub): remove public export of createDataHubPersistence`
+
+### FASE C — Deleção de Fontes Alternativas (G12/G13/G14) — ORDEM CRÍTICA
+
+**C1 — Migrar `buildCommitLog` p/ dentro de `data-hub` (N8 / R2 — PRÉ-REQUISITO)**
+
+- Ação: mover `buildCommitLog` para `shared/data-hub/extractors/commit-log-extractor.ts` (ou absorver nos providers); atualizar `github-provider.ts:26`, `gitlab-provider.ts:17`.
+- Checkpoint:
+    ```bash
+    rg "from.*commit-log" shared/data-hub/providers/             # 0
+    npx tsc --noEmit
+    npx vitest run shared/data-hub/__tests__/providers/          # 100% pass
+    ```
+- Commit: `refactor(data-hub): internalize buildCommitLog — unblock commit-log deletion`
+
+**C2 — Deletar `shared/commit-log.ts` (G14)**
+
+- Checkpoint: `rg "commit-log" --include='*.ts' -g '!__tests__' -g '!*.test.ts' -g '!docs' -g '!plans' # 0` ; `npx vitest run`
+- Commit: `refactor(data-hub): delete commit-log alternative source`
+
+**C3 — Deletar `shared/ci-test-downloader.ts` (G12)**
+
+- Pré: confirmar 0 consumidores de produção (`session-context.ts` já migrado — comentário L21).
+- Checkpoint: `rg "ci-test-downloader" --include='*.ts' -g '!__tests__' -g '!*.test.ts' -g '!docs' -g '!plans' # 0` ; `npx vitest run`
+- Commit: `refactor(data-hub): delete ci-test-downloader alternative source`
+
+**C4 — Deletar `shared/coverage-source.ts` (+ testes) (G13)**
+
+- Pré: `coverage-source` sem consumidores de produção (só testes).
+- Checkpoint: `rg "coverage-source" --include='*.ts' -g '!docs' -g '!plans' # 0` ; `npx vitest run`
+- Commit: `refactor(data-hub): delete coverage-source alternative source`
+
+### FASE 9 — Consumidores Silenciosos (após C4)
+
+- 9.1 Rodar `npx tsc --noEmit` + `npx vitest run` full; corrigir qualquer consumidor revelado.
+- Commit: `fix(data-hub): migrate silent consumers revealed by source deletion`
+
+### FASE E — Invariant 8 + Auditoria + Docs
+
+**E1 — `dataHub` obrigatório em `pr-report-core.ts` (N3-A / Invariant 8)**
+
+- Ação: tornar `dataHub: DataHub` (não opcional) em `pr-report-core.ts` (L82,186,352,386); atualizar callers; remover fallbacks.
+- Checkpoint:
+    ```bash
+    rg "dataHub\?: DataHub" shared/pr-report-core.ts            # 0
+    npx tsc --noEmit
+    npx vitest run shared/__tests__/pr-report*                   # 100% pass
+    ```
+- Commit: `refactor(pr-report-core): make dataHub mandatory (Invariant 8)`
+
+**E2 — Débito ESLint pré-existente (N2-B)**
+
+- Ação: reescopar checkpoint de auditoria para validar apenas regras SSOT; abrir PR dedicado para os 426 warnings `security/detect-non-literal-fs-filename` (não suprimir a regra).
+- Checkpoint (SSOT gate): regras `no-restricted-syntax`/`no-restricted-imports` do `eslint.config.mjs` = 0 violações.
+- Commit: `chore(eslint): scope audit checkpoint to SSOT rules; open fs-warning debt PR`
+
+**E3 — Auditoria pós-migração (Fase 7) (G18)**
+
+- Ação: executar TODOS os comandos A–J da Fase 7.1; registrar em `audit/functional/PROGRESS.md`.
+- Checkpoint:
+    ```bash
+    npx tsc --noEmit
+    npx vitest run --reporter=verbose | tail -10
+    rg "loadMetricsStore" --include='*.ts' -g '!__tests__' -g '!*.test.ts' -g '!shared/data-hub/**'  # 0
+    rg "store\.runs" --include='*.ts' -g '!__tests__' -g '!*.test.ts' -g '!shared/data-hub/**'        # 0
+    rg "dataHub\?: DataHub" shared/health-score.ts shared/quality-gate.ts shared/pr-report-core.ts   # 0
+    ```
+- Commit: `audit(ssot): post-migration verification — zero bypasses confirmed`
+
+**E4 — Atualizar `docs/TECHDOC.md` (Phase 10.2)**
+
+- Ação: documentar DataHub como SSOT obrigatório; nenhum módulo fora `data-hub/` acessa MetricsStore/Store.
+- Commit: `docs(techdoc): update SSOT architecture — DataHub as mandatory source of truth`
+
+### FASE D — Phase 11 Reporter Detection (G16)
+
+**D1 — Pesquisa de viabilidade**
+
+- Ação: avaliar AST (ts-morph/jscodeshift/esbuild) × package.json deps × regex expandida; documentar decisão.
+- Checkpoint: decisão registrada no plano.
+
+**D2 — Implementar detecção híbrida**
+
+- Ação: `setup/detector.ts` — package.json (devDeps) + config files + AST opcional; frameworks vitest/jest/cypress/playwright; formatos CTRF/JUnit/Mochawesome.
+- Checkpoint:
+    ```bash
+    npx tsc --noEmit
+    npx vitest run setup/                                        # 0 falhas
+    ```
+- Commit: `feat(setup): hybrid reporter detection (package.json + config + AST)`
+
+### FASE F — Limpeza
+
+**F1 — Remover mocks mortos (N6)**
+
+- Ação: `case17.test.ts` (`vi.mock('../../shared/commit-log')`); `loadRun` mocks residuais em testes.
+- Checkpoint: `npx vitest run jira_management/ shared/`
+- Commit: `test: remove dead mocks (commit-log, loadRun)`
+
+**F2 — Corrigir inconsistência EH-8 no plano (N7)**
+
+- Ação: documentar que `formatErr(err: unknown): string` é a assinatura correta; código já conforme.
+- Commit: `docs(plan): clarify EH-8 — formatErr(err: unknown) is correct signature`
+
+**F3 — Marcar `.mimocode/plans/1783732539632-shiny-wolf.md` como SUPERSEDED**
+
+- Ação: adicionar cabeçalho `> SUPERSEDED — ver PLANO DE RETOMADA no data-hub-ssot-enforcement.md`.
+- Commit: `docs(plan): mark stale corrective plan as SUPERSEDED`

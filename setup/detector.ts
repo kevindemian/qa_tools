@@ -1,6 +1,8 @@
 import fs from 'fs';
 import path from 'path';
 import type { TestReportSource, Framework } from './context.js';
+import { rootLogger } from '../shared/logger.js';
+import { getErrorMessage } from '../shared/errors.js';
 
 export interface DetectionResult {
     framework: Framework;
@@ -92,7 +94,8 @@ export function detectTestReporter(projectRoot?: string): boolean {
                     }
                 }
             }
-        } catch {
+        } catch (err) {
+            rootLogger.debug('detectTestReporter: failed to read config, skipping: ' + getErrorMessage(err));
             continue;
         }
     }
@@ -137,7 +140,8 @@ export function detectFramework(packageJsonPath?: string): DetectionResult {
         }
 
         return defaults;
-    } catch {
+    } catch (err) {
+        rootLogger.debug('detectFramework: fell back to generic defaults: ' + getErrorMessage(err));
         return { ...DEFAULTS.generic };
     }
 }
@@ -151,8 +155,8 @@ export function extractRepoFromGit(): { owner: string; repo: string } {
             const repo = String(match[2] ?? '');
             return { owner, repo: repo.replace(/\.git$/, '') };
         }
-    } catch {
-        // not a git repo or no remote
+    } catch (err) {
+        rootLogger.debug('extractRepoFromGit: not a git repo or no remote: ' + getErrorMessage(err));
     }
     return { owner: '', repo: '' };
 }
