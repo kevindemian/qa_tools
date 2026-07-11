@@ -58,7 +58,14 @@ function writeJson<T>(backend: StoreBackend, relPath: string, data: T): void {
 }
 
 /**
- * Create a DataHubPersistence instance backed by the existing Store infrastructure.
+ * Internal data-hub factory: build a DataHubPersistence instance backed by the
+ * existing Store infrastructure.
+ *
+ * NOTE: This is an INTERNAL factory of `shared/data-hub/`. Its sole production
+ * consumer is `createDataHub` in `factory.ts` (same package). It is intentionally
+ * NOT part of the public DataHub API surface — callers must use `createDataHub`
+ * rather than constructing persistence directly. Do not consume it from outside
+ * `shared/data-hub/`, as that would bypass the centralized creation/retry path.
  *
  * @param project - Project name for scoping stored data.
  * @param backend - Optional pre-initialized StoreBackend. If not provided, auto-detects.
