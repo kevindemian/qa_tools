@@ -3456,15 +3456,26 @@ FASE F — Limpeza
 
 **Contexto e Evidência de Pesquisa (2026-07-11):**
 
-Camada 4 (`shared/log-parser.ts`) é o **último recurso** da cascata de extração (após Camadas 1–6 estruturadas). Estado atual: ANSI já é stripado; porém há 6 defeitos de implementação (listados em Gaps) e, mais grave, **a Camada 4 estava concebida como fonte de counts**, o que é incorreto: com token de versionador disponível, Camadas 1/2/3/6 fornecem **dados estruturados** (runs/jobs/artifacts/check-runs/GitLab native), e o GitHub expõe `test-summary` em **CSV** via artifact — parsing estruturado é o caminho primário para counts.
+Camada 4 (`shared/log-parser.ts`) é o **último recurso** da cascata de extração (após Camadas 1–6 estruturadas). Estado atual: ANSI já é stripado; porém há 6 defeitos de implementação (listados em Gaps) e, mais grave, **a Camada 4 estava concebida como fonte de counts**, o que é incorreto: com token de versionador disponível, Camadas 1/2/3/6 fornecem **dados estruturados** (runs/jobs/artifacts/check-runs/GitLab native). O GitHub expõe resultados de teste em **JSON/JUnit XML** (via artifact) e o GitLab em **JUnit XML**; CSV de test-summary só existe via reporter custom do usuário — não é nativo do GitHub/GitLab. Parsing estruturado (já consumido por `junit-xml-parser.ts` + `artifact-parser.ts`, alimentando `confidence: 'high'`) é o caminho primário para counts.
 
 Pesquisa externa (fontes indicadas pelo usuário) confirma esse ecossistema:
+
+**Detecção/ingestão estruturada (camadas primárias):**
 
 - **gh-ci-artifacts** (jmchilton): "Download and parse GitHub Actions CI artifacts and logs for LLM analysis. Artifact type detection powered by **artifact-detective**, which identifies and validates **20+ test framework and linter output formats**." Saída normalizada: `catalog.json`, `converted/` (NDJSON/JSON), `logs/`.
 - **artifact-detective**: valida 20+ formatos de test/linter (CTRF, JUnit, Mochawesome, etc.).
 - **testing_artifact_detector**: detecção de artifacts de teste em CI.
 
-→ Conclusão: counts pertencem à **Camada 2+ (ingestão estruturada via token)**, não a regex de log. A Camada 4 é **camada de detalhe de falha + cross-reference**.
+**Padrão-ouro de normalização/extração de falha (modelo para a Camada 4):**
+
+- **CTRF** (Common Test Report Format): schema normalizado por teste — campos `name, status (passed/failed/skipped/pending/other), duration, message, trace, suite, rawStatus, filepath, retries, flaky, extra`. Alvo canônico de normalização de `FailureRecord`.
+- **Allure**: `statusDetails.{known, muted, flaky, message, trace}`; distinção **`failed` (produto) vs `broken` (infra/ambiente)**; `retriesCount/isRetry`; `severity` (blocker→trivial); `categories` por `messageRegex`/`traceRegex` (buckets de causa-raiz).
+- **testmcp**: adapter por framework com **fallback em camadas** (JSON nativo → JUnit XML → stdout regex); Vitest adapter trata **v1 (tasks) e v2+ (jest-style)**; `enrichment/source-context` = parser de stack trace + trecho de código do repo.
+- **failure-packager** (`michaelko`): detecta framework, extrai **blocos de falha, assertions, stacks, file references, summary lines**, contexto de ambiente sanitizado, e **trunca log por `--max-log-chars`**. Modelo de "máximo valor para AI" a partir do log.
+- **sift**: heurísticas locais primeiro → **buckets de causa-raiz** com âncora e dica de fix; só cai no modelo se heurística incerta ("traceback bruto = last resort").
+- **Vitest/pytest**: Vitest auto-detecta AI agent → reporter `minimal` (só falhas); `--reporter=json`/`junit`; formatos **v1≠v2**. Pytest `-r` summary, `-v` por-linha, `--tb=short/long`.
+
+→ Conclusão: counts pertencem à **Camada 2+ (ingestão estruturada via token)**, não a regex de log. A Camada 4 é **camada de detalhe de falha + cross-reference**, alinhada a CTRF/Allure/failure-packager.
 
 **Gaps Encontrados (pesquisa + auditoria de código):**
 
@@ -3482,7 +3493,7 @@ Pesquisa externa (fontes indicadas pelo usuário) confirma esse ecossistema:
 
 **L4.0 — Redefinição de papel (estruturado-first)**
 
-- **Camada 2+ (primário, via token):** `metrics/csv-importer.ts` (GitHub test-summary CSV, já com NaN-guard `safeNumber`/`safeString`), `junit-xml-parser.ts` (fast-xml-parser), `artifact-parser.ts` (CTRF/Mochawesome/JSON). Alimentam `dataHub.testResults`/`computed` com `confidence: 'high'`.
+- **Camada 2+ (primário, via token):** `junit-xml-parser.ts` (fast-xml-parser — GitHub JSON/JUnit XML, GitLab JUnit XML), `artifact-parser.ts` (CTRF/Mochawesome/JSON). Alimentam `dataHub.testResults`/`computed` com `confidence: 'high'`. CSV de test-summary (se houver) é reporter custom do versionador, não nativo do GitHub/GitLab; consumido pelo mesmo path estruturado se presente. `csv-importer.ts` real importa `ComputedMetrics` (preocupação distinta, irrelevante para contagens).
 - **Camada 4 (job logs) — redefinida:**
     1. _Primário:_ extrair **mensagens de falha, stack traces, contexto de erro** (robusto, estruturado por framework).
     2. _Cross-reference:_ comparar totais derivados de log vs totais estruturados; **divergência é warning explícito de qualidade (nunca silencioso)**.
@@ -3504,10 +3515,14 @@ Pesquisa externa (fontes indicadas pelo usuário) confirma esse ecossistema:
 - `stripAnsi` endurecido (CSI + OSC + outros escapes).
 - Cap de tamanho de input; detectar linha final incompleta / ausência de terminador conhecido → `confidence` baixa ou abstém counts.
 
-**L4.4 — Falhas multi-linha + confidence/evidence**
+**L4.4 — Falhas multi-linha + confidence/evidence + classificação (CTRF/Allure-aligned)**
 
 - Captura de stack traces com **janela limitada** (ex.: 40 linhas) em vez de `.{10,200}` single-line.
-- Retornar `LogParseResult` com `{ counts, failures, framework, confidence, evidence }`.
+- **`FailureRecord` (forma CTRF/Allure):** `{ name, suite, status (failed|broken|skipped), message, trace, file?, line?, duration?, retries?, flaky?, category, confidence }`. `file`/`line` já previstos (nullable) para o enrichment futuro (ver deferimento abaixo).
+- **Classificação em buckets de causa-raiz** (padrão Allure Categories / sift): `assertion`, `timeout`, `network`, `panic/segfault`, `known-bug` (`known`), `environment` (`broken`≠`failed`). Emitir `category` + `confidence`.
+- **Detecção de retry/flaky:** marcadores `retried`/`flaky`/`RERUN` → flip GREEN→RED no run.
+- Retornar `LogParseResult` com `{ counts, failures, framework, confidence, evidence, truncated, source: 'log' }`.
+- **Deferido (documentado, não silencioso — BACKLOG `CDH-L4X1`):** _source-enrichment_ (mapear frame superior do stack → trecho de código do repo, estilo testmcp `enrichment/source-context`). Diferido para manter `log-parser.ts` **desacoplado** (consome só `string`; sem acesso a FS do repo alvo). O `FailureRecord.file?`/`line?` já acomoda o preenchimento posterior sem quebrar contrato.
 
 **L4.5 — Localização best-effort**
 
@@ -3547,3 +3562,85 @@ Pesquisa externa (fontes indicadas pelo usuário) confirma esse ecossistema:
 
 - Ação: adicionar cabeçalho `> SUPERSEDED — ver PLANO DE RETOMADA no data-hub-ssot-enforcement.md`.
 - Commit: `docs(plan): mark stale corrective plan as SUPERSEDED`
+
+---
+
+## FASE EXPAND + STORE — Extração Máxima + Persistência Quality-Gated (2026-07-11)
+
+**Mandato (decisão do usuário):** extrair a **última gota** de **toda ferramenta conectada**, quality-gate por provenance/confidence/validação, **persistir** (store JSON + migração não-destrutiva) e expor para consumo pelas features. Baixa qualidade → rotulada, nunca dropada. Toda informação é valor agregado; o único filtro é **boa qualidade**.
+
+### Inventário de ferramentas (verificado no código)
+
+| Ferramenta   | Conexão atual                                                       | "Last drop" a extrair                                                                                                                                                                                                                                                                     |
+| ------------ | ------------------------------------------------------------------- | ----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| **GitHub**   | `github-provider.ts`, `github-check-run.ts`, `github-pr-comment.ts` | CI runs/jobs/attempts/`usage`(custo real)/timing; Check Run annotations (todos níveis, file:line+stack); artifacts CTRF/JUnit/Mochawesome/Playwright; **Issues**; **PRs/reviews**; **Security**: code-scanning/secret-scanning/Dependabot; **Deployments/Environments/Releases** (→ DORA) |
+| **GitLab**   | `gitlab-provider.ts`                                                | pipelines/jobs/`failure_reason`/`queued_duration`/`source`; `test_report`+`test_report_summary`(stack_trace); coverage; **Issues**; **MRs/approvals**; **Security**: SAST/dependency/container/secret (pipeline reports); **DORA** `/dora/metrics`; Environments                          |
+| **Jira**     | `jira-client.ts` (`JiraResourceLike`)                               | Issues enriquecidos: components, priority, fixVersions, **sprint**, issueLinks, epic/parent, storyPoints, statusCategory, labels, assignee/reporter                                                                                                                                       |
+| **Xray**     | `xray-cloud-client.ts` + `types/xray.ts`                            | Test Plans, Test Executions, Test Runs, cobertura de requisitos, defects linkados                                                                                                                                                                                                         |
+| **Coverage** | `coverage-provider.ts`                                              | Istanbul/Cobertura/JaCoCo → por arquivo: lines/branches/functions                                                                                                                                                                                                                         |
+
+> Sonar: apenas `sonar-project.properties` (sem client vivo) — **fora do escopo**.
+
+### Dimensões transversais (extração obrigatória em TODA ferramenta)
+
+| Dimensão        | O que extrair (last drop)                                                                                                                                                                                                   | Categoria de destino                                                                                               |
+| --------------- | --------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | ------------------------------------------------------------------------------------------------------------------ |
+| **QUALIDADE**   | Test results (pass/fail/skip/total), `FailureRecord` (file/line/stack/categoria), coverage (lines/branches/functions), flakiness/quarantine, failure-classification, test-retries/flaky (CTRF), requirement coverage (Xray) | `parsedArtifacts`, `failureRecords`, `coverage.files`, `flakinessEntries`, `xrayData`                              |
+| **SEGURANÇA**   | SAST, DAST, dependency-scanning, container-scanning, secret-detection, code-scanning, Dependabot/renovate, license compliance                                                                                               | `securityFindings` (por ferramenta)                                                                                |
+| **PERFORMANCE** | CI pipeline duration, queue/wait, runner utilization, billable minutes/custo real (`usage`), per-test duration (P95/P95 de `testDurationMap`), suite speed, build cache                                                     | `perRunCosts`/`pipelineCost`, `testDurationP95`/`testDurationMap`, `suiteSpeedP95`, `timing`, `performanceMetrics` |
+
+### EIXO A — EXPAND (por ferramenta, "last drop")
+
+**FASE LA — Versionadores (`CDH-LA1`–`LA5`)**
+
+- **LA-1** Camada 3: `CheckRunAnnotation` (`ci-cd.ts`) estendido p/ `end_line, start_column, end_column, title, raw_details, blob_href`; `getCheckRuns` traz esses campos; `fromAnnotations` (`failure-classifier.ts`) mapeia todos os níveis → `FailureRecord` CTRF/Allure `{ status(failed|broken), message, trace:raw_details, file, line, column, level, category, confidence:'high', source:'check-run-annotation' }`; `classifyFailures` faz **merge** de fontes (não first-wins). Desbloqueia parte do `CDH-L4X1` (file:line) sem acesso a FS.
+- **LA-2** Camada 1: `GET /actions/runs/{id}/usage` → minutos faturáveis reais (precisão `pipelineCost`/`perRunCosts`); fallback estimativa se 404 (nunca NaN); `attempts` → re-run detection → `retries`/`flaky`.
+- **LA-3** Camada 6 (GitLab): `test_report_summary` (rápido) p/ counts; `test_report` completo → `stack_trace`/`system_output` em `FailureRecord.trace`; DORA `/dora/metrics` → `doraMetrics` (guard de tier ULTIMATE; ausência explícita).
+- **LA-4** Camada 2: CTRF `flaky/retries/environment.userAgent/tool.name/version/calculations`; Playwright `file/line` por teste.
+- **LA-5** Camada 5: reporter-prediction (ler workflow CI → detectar jest-junit/vitest json/pytest junitxml → prever artifact) + **Security** nativa (GitHub/GitLab) + **Performance** (queue/duration/runner) + **Deployments/Environments/Releases** (→ DORA) + **PRs/MRs** (reviews/approvals).
+
+**FASE PM — Gerenciadores (`CDH-PM0`–`PM4`)**
+
+- **PM-0** Contrato `ProjectManagerProvider` (espelho de `DataProvider`); `RawData.pmIssues` genérico + `RawIssue` canônico.
+- **PM-1** Jira (FECHA GAP profundidade): `mapIssue` + components/priority/fixVersions/sprint/issueLinks/epic/parent/storyPoints/statusCategory; paginação `startAt`; guards p/ campos ausentes (`undefined` explícito).
+- **PM-2** GitHub Issues (token existente): `GET /repos/{o}/{r}/issues` → `RawIssue`; vincular issues↔PRs↔runs.
+- **PM-3** GitLab Issues (token existente): `GET /projects/:id/issues` (epic/iteration).
+- **PM-4** Composição em `composite-provider.ts` (CI + PMs em paralelo, merge c/ provenance).
+
+**FASE XR — Xray (`CDH-XR1`–`XR2`)**
+
+- Extrair Test Plans/Executions/Runs + cobertura de requisitos + defects → `RawData.xrayData` (com provenance/confidence).
+
+**FASE COV — Coverage detalhado (`CDH-COV`)**
+
+- Por arquivo/branch/function → `coverage.files`.
+
+### EIXO B — STORE (persistência quality-gated) — fundação
+
+**FASE STORE (`CDH-ST1`–`ST3`)**
+
+- **ST-1** Estender `RawData` + `DataHubPersistence` p/ todas as categorias: `failureRecords, securityFindings, deployments, releases, doraMetrics, prs/mrs, pmIssues(github/gitlab), xrayData, coverageFiles, performanceMetrics`.
+- **ST-2** Camada de Qualidade `validateAndScore(rawCategory)`: schema validation (JSON Schema já usado no export); NaN/empty guards (AGENTS §24.1); confidence por fonte (estruturado=`high`, regex log=`low`, manual=`medium`); dedup por chave natural; provenance obrigatória. Baixa qualidade → `quality:{valid,issues}` tag, não drop.
+- **ST-3** Migração não-destrutiva do `MetricsStore` atual; novas categorias adicionadas; dados históricos preservados.
+
+### EIXO C — SERVE (consumo)
+
+- Features (health-score, quality-gate, traceability, flakiness, failure-analysis, bug-report, pr-report) consomem do modelo único armazenado, cientes de `confidence`/`quality`.
+- `DataHub` expõe acessores tipados por categoria (sem acesso direto a persistence).
+
+### Ordem de execução
+
+`ST-1 → ST-2 → ST-3` (fundação) → `L4` → `LA-1` → `LA-2/3/4/5` → `PM-0..4` → `XR` → `COV`. Commits granulares por fase.
+
+### Invariantes
+
+SEM NaN · ZERO silenciamento · sem `instanceof`/`typeof==='object'`/`toThrow()` sem msg · `preserve-caught-error`/`only-throw-error` · **Test-First** (property p/ NaN; integração p/ shape real; mocks estritos) · migração não-destrutiva.
+
+### Checkpoints por fase
+
+```bash
+npx tsc --noEmit
+npx vitest run shared/data-hub/__tests__ shared/__tests__/integration
+rg "NaN" shared/data-hub shared/data-hub/providers   # 0
+npm run lint                                        # 0 errors
+```
