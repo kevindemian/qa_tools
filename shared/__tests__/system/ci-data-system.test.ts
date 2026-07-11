@@ -154,7 +154,7 @@ describe('System: CI Data Hub — Full Pipeline Flow', () => {
             const provider = createMockDataProvider(rawData);
             const { hub } = await DataHubImpl.create([provider], { repo: 'owner/repo' }, mockPersistence);
 
-            const result = calculatePipelineCost(null, 0.01, hub);
+            const result = calculatePipelineCost(0.01, hub);
 
             expect(result.runCount).toBe(2);
             expect(result.totalDurationSec).toBe(900);

@@ -47,29 +47,6 @@ export interface TraceabilityResult {
     timestamp: string;
 }
 
-function buildFlakinessMap(runs: MetricsRun[]): Map<string, number> {
-    const failCounts = new Map<string, number>();
-    const totalRuns = runs.length;
-    if (totalRuns === 0) return failCounts;
-    for (const run of runs) {
-        const seen = new Set<string>();
-        for (const t of run.tests) {
-            if (seen.has(t.title)) continue;
-            seen.add(t.title);
-            if (t.state === 'failed') {
-                failCounts.set(t.title, (failCounts.get(t.title) ?? 0) + 1);
-            }
-            if (!failCounts.has(t.title)) {
-                failCounts.set(t.title, 0);
-            }
-        }
-    }
-    for (const [title, fails] of failCounts) {
-        failCounts.set(title, fails / totalRuns);
-    }
-    return failCounts;
-}
-
 function extractLatestRunSnapshots(runs: MetricsRun[]): {
     statusByTitle: Map<string, TestStatus>;
     durationByTitle: Map<string, number>;
@@ -158,16 +135,14 @@ function buildEpicNode(
 
 export function buildTraceabilityMatrix(
     runs: MetricsRun[],
-    coverageResult?: CoverageGapResult,
-    dataHub?: DataHub,
+    coverageResult: CoverageGapResult | undefined,
+    dataHub: DataHub,
 ): TraceabilityResult {
     try {
         const { statusByTitle, durationByTitle } = extractLatestRunSnapshots(runs);
-        // Se DataHub disponível, usar flakyRate do CI em vez de calcular do MetricsStore
-        const flakinessByTitle =
-            dataHub && dataHub.computed.flakyRate.length > 0
-                ? new Map(dataHub.computed.flakyRate.map((f) => [f.title, f.rate]))
-                : buildFlakinessMap(runs);
+        // FlakyRate é SSOT do DataHub (Camada 1–6); sem fallback silencioso ao MetricsStore.
+        // FlakyResult.rate é 0–100; normalizado para 0–1 (contrato de exibição via *100).
+        const flakinessByTitle = new Map(dataHub.computed.flakyRate.map((f) => [f.title, f.rate / 100]));
         const byEpic = coverageResult?.byEpic ?? {};
         const epicKeys = Object.keys(byEpic);
         const itemsByEpic = groupItemsByEpic(coverageResult?.items);

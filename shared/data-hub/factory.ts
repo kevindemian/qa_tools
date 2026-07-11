@@ -8,11 +8,13 @@
  */
 import type { GitProvider } from '../types/ci-cd.js';
 import type { DataHub, DataHubPersistence } from '../types/data-hub.js';
+import type { ParseResult } from '../result_parser.js';
 import { rootLogger } from '../logger.js';
 import { formatErr } from '../errors.js';
 // `createDataHubPersistence` is an internal data-hub factory (see persistence.ts).
 // It is consumed ONLY within `shared/data-hub/` (here, by `createDataHub`).
 import { createDataHubPersistence } from './persistence.js';
+import { DataHubImpl } from './hub.js';
 
 export interface CreateDataHubOptions {
     /** Maximum retry attempts for transient failures. Default: 3. */
@@ -21,6 +23,11 @@ export interface CreateDataHubOptions {
     baseDelay?: number;
     /** Pre-created persistence instance. If not provided, auto-creates. */
     persistence?: DataHubPersistence;
+    /**
+     * Resilient mode: no-data (Camada 7) returns an empty hub instead of throwing.
+     * Used by dashboard/metric consumers. PR report generation must NOT set this.
+     */
+    allowEmpty?: boolean;
 }
 
 export interface CreateDataHubResult {
@@ -70,10 +77,17 @@ export async function createDataHub(
                 dataProvider = new GitHubDataProvider(provider);
             }
 
-            const result = await DataHubImpl.create([dataProvider], { repo }, persistence);
+            const result = await DataHubImpl.create(
+                [dataProvider],
+                { repo, allowEmpty: options?.allowEmpty ?? false },
+                persistence,
+            );
             setCachedHub(repo, result.hub);
             return result;
         } catch (err) {
+            // Erro não-recuperável da Camada 7 (contexto não-interativo, sem dados):
+            // NÃO retry — propaga imediatamente para falha explícita.
+            if (err instanceof DataHubImpl.Layer7UnavailableError) throw err;
             const isLastAttempt = attempt === maxRetries - 1;
             rootLogger.warn(`createDataHub attempt ${attempt + 1}/${maxRetries} failed: ${formatErr(err)}`);
             if (!isLastAttempt) {
@@ -84,6 +98,18 @@ export async function createDataHub(
     }
 
     throw new Error(`DataHub creation failed after ${maxRetries} attempts for repo "${repo}"`);
+}
+
+/**
+ * Cria um DataHub a partir de um `ParseResult` fornecido manualmente (Camada 7).
+ * Encapsula a criação de persistência — consumidores nunca criam `DataHubPersistence`.
+ *
+ * @param parseResult - Resultado de `parseTestResultsFile` (CTRF/JUnit/Mochawesome).
+ * @param repo - Nome do repositório.
+ */
+export function createDataHubFromParseResult(parseResult: ParseResult, repo: string): DataHub {
+    const persistence = createDataHubPersistence(repo);
+    return DataHubImpl.createFromParseResult(parseResult, repo, persistence);
 }
 
 function sleep(ms: number): Promise<void> {

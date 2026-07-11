@@ -24,6 +24,7 @@
 import fs from 'node:fs';
 import path from 'path';
 import { rootLogger } from './logger.js';
+import { formatErr } from './errors.js';
 import { getDataHub, setDataHub, isDataHubInitialized } from './data-hub/global-hub.js';
 import { calcRunPassRate } from './data-hub/compute/run-pass-rate.js';
 import { runQualityGate } from './quality-gate.js';
@@ -36,6 +37,9 @@ import { calculateHealthScore } from './health-score.js';
 import type { FlatTest, ParseResult } from './result_parser.js';
 import { getPrReportConfig } from './feature-config.js';
 import type { DataHub, MetricsRun } from './types/data-hub.js';
+import { askTestSource, DATAHUB_ERRORS } from './data-hub/test-source-fallback.js';
+import { createDataHubFromParseResult } from './data-hub/factory.js';
+import { DataHubImpl } from './data-hub/hub.js';
 
 /**
  * Read CI-injected environment variables with typed fallbacks.
@@ -78,8 +82,8 @@ export interface PrReportCoreOptions {
     diffComparison?: DiffComparison;
     /** CI environment context — used to render CI Context section in PR comment. */
     ciEnv?: { isCI: boolean; repo: string; runId: string; refName: string; serverUrl: string };
-    /** Data Hub — centralizado. Quando disponível, usa dados do CI. */
-    dataHub?: DataHub;
+    /** Data Hub — SSOT obrigatório. Toda métrica vem do DataHub; nunca opcional. */
+    dataHub: DataHub;
 }
 
 export interface PrReportResult {
@@ -183,9 +187,9 @@ function buildFailureTable(tests: FlatTest[]): string {
  * @param dataHub - DataHub instance with pre-computed flakiness entries
  * @returns Markdown section string, or empty string if no high-flaky tests found
  */
-function buildFlakySection(dataHub?: DataHub): string {
+function buildFlakySection(dataHub: DataHub): string {
     try {
-        const flakyEntries = dataHub?.computed.flakinessEntries ?? [];
+        const flakyEntries = dataHub.computed.flakinessEntries ?? [];
         const highFlaky = flakyEntries.filter((e) => e.rate >= 0.3);
 
         if (highFlaky.length === 0) return '';
@@ -347,11 +351,10 @@ function resolveCiUrls(): { workflowUrl?: string; artifactUrl?: string } {
 
 async function handleQualityGate(
     healthScore: ReturnType<typeof calculateHealthScore>,
+    dataHub: DataHub,
     artifactUrl?: string,
     coverageOverride?: number,
-    dataHub?: DataHub,
 ): Promise<string | undefined> {
-    if (!dataHub) return undefined;
     try {
         const qgResult = runQualityGate({ coverageOverride, dataHub });
         const gradeStr = healthScore.grade.replace(/_/g, ' ').toUpperCase();
@@ -379,13 +382,13 @@ async function handleQualityGate(
  * DataHub.raw.coverage is populated from Istanbul/CTRF/JUnit artifacts via GitHub API.
  * No filesystem fallback — DataHub is the SSOT.
  *
- * @param dataHub - DataHub instance (optional for graceful degradation)
+ * @param dataHub - DataHub instance (SSOT obrigatório)
  * @returns Coverage data with percentage and source, or undefined if unavailable
  */
 function resolveCoverageForReport(
-    dataHub?: DataHub,
+    dataHub: DataHub,
 ): { coveragePct: number; source: string; detail?: string } | undefined {
-    const dataHubCoverage = dataHub?.raw.coverage;
+    const dataHubCoverage = dataHub.raw.coverage;
     if (dataHubCoverage !== undefined) {
         return {
             coveragePct: dataHubCoverage.percentage,
@@ -403,7 +406,7 @@ function resolveCoverageForReport(
  * @param tests - FlatTest array from external project
  * @param stats - Test statistics
  * @param options - PR report options
- * @param dataHub - DataHub instance with pre-computed metrics (optional)
+ * @param dataHub - DataHub instance with pre-computed metrics (SSOT obrigatório)
  * @param coverageResult - Coverage data from resolveCoverageForReport
  * @param healthScore - Health score from calculateHealthScore
  * @param workflowUrl - CI workflow URL for linking
@@ -413,14 +416,14 @@ function generateHtmlReportFile(
     tests: FlatTest[],
     stats: PrReportStats,
     options: PrReportCoreOptions,
-    dataHub: DataHub | undefined,
+    dataHub: DataHub,
     coverageResult: ReturnType<typeof resolveCoverageForReport>,
     healthScore: ReturnType<typeof calculateHealthScore>,
     workflowUrl?: string,
 ): string | undefined {
     try {
         const passRate = calcRunPassRate({ passed: stats.passed, failed: stats.failed });
-        const flakyEntries = dataHub?.computed.flakinessEntries ?? [];
+        const flakyEntries = dataHub.computed.flakinessEntries ?? [];
         const flakinessMap: Record<string, number> = {};
         for (const entry of flakyEntries) {
             flakinessMap[entry.title] = entry.rate;
@@ -433,7 +436,7 @@ function generateHtmlReportFile(
             title: `QA Tools — PR Report${branchLabel}`,
             qualityGate: Math.round(passRate),
             healthScore,
-            trends: dataHub?.computed.metricsTrends ?? [],
+            trends: dataHub.computed.metricsTrends ?? [],
             includeChart: true,
             coverageSource,
             ...(workflowUrl ? { ciUrl: workflowUrl } : {}),
@@ -487,24 +490,6 @@ function validatePrReportStats(tests: FlatTest[], stats: PrReportStats): void {
 /** Maximum length for error messages in markdown tables. */
 const MAX_ERROR_LENGTH = 200;
 
-/** Default health score when no DataHub is available. */
-function _defaultHealthScore(): ReturnType<typeof calculateHealthScore> {
-    return {
-        overall: 0,
-        grade: 'critical',
-        qualityGate: 'fail',
-        dimensions: {
-            passRate: { score: 0, status: 'fail' },
-            flakyRate: { score: 0, status: 'fail' },
-            coverage: { score: 0, status: 'fail' },
-            suiteSpeed: { score: 0, status: 'fail' },
-            executionRate: { score: 0, status: 'fail' },
-        },
-        runCount: 0,
-        timestamp: new Date().toISOString(),
-    };
-}
-
 /**
  * Generate and post a PR report from parsed test data.
  * All data comes from DataHub (SSOT) — no direct MetricsStore or CTRF access.
@@ -517,15 +502,13 @@ export async function generatePrReport(options: PrReportCoreOptions): Promise<Pr
 
     persistCurrentRun(tests, stats, options.project);
 
-    const hub = isDataHubInitialized() ? getDataHub() : undefined;
-    const dataHub = options.dataHub ?? hub;
+    // DataHub é SSOT obrigatório (Invariant 8 / E1): sem fallback silencioso.
+    const dataHub = options.dataHub;
     const coverageResult = resolveCoverageForReport(dataHub);
-    const healthScore = dataHub
-        ? calculateHealthScore({
-              ...(coverageResult ? { coverageOverride: coverageResult.coveragePct } : {}),
-              dataHub,
-          })
-        : _defaultHealthScore();
+    const healthScore = calculateHealthScore({
+        ...(coverageResult ? { coverageOverride: coverageResult.coveragePct } : {}),
+        dataHub,
+    });
 
     const { workflowUrl, artifactUrl } = resolveCiUrls();
 
@@ -541,7 +524,7 @@ export async function generatePrReport(options: PrReportCoreOptions): Promise<Pr
     }
 
     if (!options.skipQuality) {
-        const qgSection = await handleQualityGate(healthScore, artifactUrl, coverageResult?.coveragePct, dataHub);
+        const qgSection = await handleQualityGate(healthScore, dataHub, artifactUrl, coverageResult?.coveragePct);
         if (qgSection) sections.push(qgSection);
     }
 
@@ -724,38 +707,136 @@ function parseArgs(args: string[]): CliOptions {
 }
 
 /**
- * Attempt to create DataHub from CI environment.
+ * Attempt to create DataHub from CI environment (Camada 1–6).
  * DataHub fetches artifacts via GitHub/GitLab API — no local file access.
+ *
+ * Em caso de erro NÃO-recuperável da Camada 7 (contexto não-interativo, sem
+ * dados), relança `Layer7UnavailableError` para que `main()` falhe explicitamente.
+ * Outros erros de criação são absorvidos (retorna undefined) para que `main()`
+ * acione o fallback manual (Camada 7) explicitamente.
  *
  * @param ciEnv - CI environment variables
  * @param providerFactory - Optional factory to create GitProvider
- * @returns DataHub instance, or undefined if not in CI or creation fails
+ * @returns DataHub instance, or undefined if no provider or creation fails (non-Layer7)
  */
 async function tryCreateDataHub(
     ciEnv: ReturnType<typeof getCiEnv>,
     providerFactory?: (ciEnv: ReturnType<typeof getCiEnv>) => import('./types/ci-cd.js').GitProvider | undefined,
 ): Promise<import('./types/data-hub.js').DataHub | undefined> {
-    if (!ciEnv.isCI) return undefined;
-
     if (!providerFactory) return undefined;
 
     const provider = providerFactory(ciEnv);
     if (!provider) return undefined;
 
     try {
-        const { getOrFetchDataHub } = await import('./ci-data.js');
-
-        const dataHub = await getOrFetchDataHub(provider, ciEnv.repo);
-        if (dataHub) {
-            rootLogger.info(
-                `DataHub created: ${dataHub.raw.runs.length} runs, passRate: ${dataHub.computed.passRate}%`,
-            );
-        }
-        return dataHub;
+        const { createDataHub } = await import('./data-hub/factory.js');
+        const result = await createDataHub(provider, ciEnv.repo);
+        rootLogger.info(
+            `DataHub created: ${result.hub.raw.runs.length} runs, passRate: ${result.hub.computed.passRate}%`,
+        );
+        return result.hub;
     } catch (err) {
-        rootLogger.warn(`DataHub creation failed: ${String(err)}`);
+        if (DataHubImpl.isLayer7UnavailableError(err)) throw err;
+        rootLogger.warn(`DataHub creation failed: ${formatErr(err)}`);
         return undefined;
     }
+}
+
+/**
+ * Verifica se o DataHub contém dados utilizáveis (Camada 1–6 ou arquivo manual).
+ */
+function hasUsableData(hub: import('./types/data-hub.js').DataHub): boolean {
+    const raw = hub.raw;
+    return (
+        raw.runs.length > 0 ||
+        (raw.parsedArtifacts != null && raw.parsedArtifacts.size > 0) ||
+        (hub.computed.metricsRuns?.length ?? 0) > 0
+    );
+}
+
+/**
+ * Obtém o DataHub para geração do relatório, aplicando os 3 desfechos da
+ * Camada 7:
+ *  - Caso 1: hub já em memória com dados utilizáveis, ou dados do versionador
+ *    (CI) via `tryCreateDataHub`, ou arquivo manual fornecido pelo usuário.
+ *  - Caso 2: usuário declinou o fallback manual (TTY) ou hub sem dados → log e retorno.
+ *  - Caso 3: sem dados E sem TTY para solicitar (não-interativo) → erro explícito.
+ * Nunca silencia a ausência de dados: o chamador recebe um hub ou uma exceção.
+ */
+async function acquireReportDataHub(
+    ciEnv: ReturnType<typeof getCiEnv>,
+    providerFactory?: (ciEnv: ReturnType<typeof getCiEnv>) => import('./types/ci-cd.js').GitProvider | undefined,
+): Promise<DataHub> {
+    const explicitError = (): never => {
+        throw new Error(
+            'Falha ao obter dados de teste: sem dados do versionador/Jira e solicitação de relatório manual indisponível em contexto não-interativo.',
+        );
+    };
+
+    // Reusa um DataHub já carregado em memória com dados utilizáveis (orquestração/testes).
+    if (isDataHubInitialized()) {
+        const existing = getDataHub();
+
+        if (hasUsableData(existing)) {
+            setDataHub(existing);
+
+            return existing;
+        }
+    }
+
+    // Create DataHub from CI (Camada 1–6) apenas em contexto CI. Em execução
+    // local (sem CI), pula para o fallback manual (Camada 7).
+    let dataHub: DataHub | undefined;
+
+    if (ciEnv.isCI) {
+        try {
+            dataHub = await tryCreateDataHub(ciEnv, providerFactory);
+        } catch (err) {
+            if (DataHubImpl.isLayer7UnavailableError(err)) {
+                throw new Error(
+                    'Falha ao obter dados de teste: sem dados do versionador/Jira e solicitação de relatório manual indisponível em contexto não-interativo.',
+                    { cause: err },
+                );
+            }
+
+            rootLogger.warn(`Falha ao criar DataHub via CI: ${formatErr(err)}`);
+        }
+    }
+
+    if (dataHub) {
+        // Armazena o hub obtido (Camada 1–6) para disponibilidade global.
+        setDataHub(dataHub);
+    }
+
+    if (dataHub && !hasUsableData(dataHub)) {
+        // Caso 2 (TTY): usuário declinou o fallback manual ou hub sem dados.
+        rootLogger.warn('PR Report não gerado: dados de teste insuficientes (usuário declinou o relatório manual).');
+
+        return dataHub;
+    }
+
+    if (dataHub) return dataHub;
+
+    // Sem dados do versionador/Jira: acionar fallback manual (Camada 7) explicitamente.
+    const fallback = await askTestSource();
+
+    if (fallback.data) {
+        // Caso 1 (TTY): usuário forneceu arquivo de resultado.
+        const hub = createDataHubFromParseResult(fallback.data, ciEnv.repo);
+
+        setDataHub(hub);
+
+        return hub;
+    }
+
+    if (fallback.error === DATAHUB_ERRORS.USER_SKIPPED || fallback.error === DATAHUB_ERRORS.USER_CANCELLED) {
+        // Caso 2 (TTY): usuário declinou explicitamente.
+        rootLogger.warn('PR Report não gerado: dados de teste insuficientes (usuário declinou o relatório manual).');
+        throw new Error('PR Report não gerado: usuário declinou o relatório manual.');
+    }
+
+    // Caso 3 (não-interativo): sem dados e sem TTY para solicitar — erro explícito.
+    return explicitError();
 }
 
 /**
@@ -773,8 +854,10 @@ export async function main(
 
     // Read feature config for runtime toggles. CLI flags override config values.
     const featureConfig = getPrReportConfig(project);
+
     if (!featureConfig.enabled) {
         rootLogger.info('PR Report disabled in config. Skipping.');
+
         return;
     }
 
@@ -790,23 +873,15 @@ export async function main(
     const skipQuality = opts.skipQuality || (featureConfig.skipQuality ?? false);
     const skipFlaky = opts.skipFlaky || (featureConfig.skipFlaky ?? false);
 
-    // Create DataHub FIRST so downstream consumers can access it.
-    // DataHub fetches CI artifacts (CTRF/JUnit/Mochawesome) via GitHub/GitLab API.
-    const dataHub = await tryCreateDataHub(ciEnv, providerFactory);
+    const dataHub = await acquireReportDataHub(ciEnv, providerFactory);
 
-    // Register DataHub in the global singleton so downstream consumers
-    // (quality-gate, health-score, flakiness) can access it via getDataHub().
-    if (dataHub) {
-        setDataHub(dataHub);
-    }
-
-    // Get test data from DataHub — parsed from external project CI artifacts.
-    const hub = isDataHubInitialized() ? getDataHub() : undefined;
-    const metricsRuns = hub?.computed.metricsRuns ?? [];
+    // Get test data from DataHub — parsed from external project CI artifacts or manual file.
+    const metricsRuns = dataHub.computed.metricsRuns ?? [];
     const latestRun: MetricsRun | undefined = metricsRuns[0];
 
     if (!latestRun) {
         rootLogger.warn('No test data available from DataHub. Skipping PR comment.');
+
         return;
     }
 
@@ -828,7 +903,7 @@ export async function main(
         skipQuality,
         skipFlaky,
         ciEnv,
-        ...(dataHub ? { dataHub } : {}),
+        dataHub,
         ...(opts.htmlOutputPath ? { htmlOutputPath: opts.htmlOutputPath } : {}),
         ...(diffComparison ? { diffComparison } : {}),
     });

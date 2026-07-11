@@ -13,10 +13,18 @@ import * as fc from 'fast-check';
 import { describe, expect, it } from 'vitest';
 import { buildTraceabilityMatrix, generateTraceabilityHtml } from '../traceability-matrix.js';
 import type { MetricsRun } from '../types/data-hub.js';
+import { createTestHub } from './test-hub.js';
 
 vi.mock('../logger', () => ({
     rootLogger: { error: vi.fn(), warn: vi.fn(), info: vi.fn(), child: vi.fn().mockReturnThis() },
 }));
+
+function matrix(
+    metrics: MetricsRun[],
+    coverage?: Parameters<typeof buildTraceabilityMatrix>[1],
+): ReturnType<typeof buildTraceabilityMatrix> {
+    return buildTraceabilityMatrix(metrics, coverage, createTestHub());
+}
 
 const TestStateArb = fc.constantFrom('passed' as const, 'failed' as const, 'skipped' as const);
 
@@ -88,7 +96,7 @@ describe('BuildTraceabilityMatrix — property-based', () => {
 
         fc.assert(
             fc.property(MetricsRunArrayArb, CoverageResultArb, (metrics, coverage) => {
-                const result = buildTraceabilityMatrix(metrics, coverage);
+                const result = matrix(metrics, coverage);
 
                 expect(result.nodes).toHaveLength(result.totalEpics);
             }),
@@ -101,7 +109,7 @@ describe('BuildTraceabilityMatrix — property-based', () => {
 
         fc.assert(
             fc.property(MetricsRunArrayArb, CoverageResultArb, (metrics, coverage) => {
-                const result = buildTraceabilityMatrix(metrics, coverage);
+                const result = matrix(metrics, coverage);
 
                 expect(result.overallCoverage).toBeGreaterThanOrEqual(0);
                 expect(result.overallCoverage).toBeLessThanOrEqual(100);
@@ -115,7 +123,7 @@ describe('BuildTraceabilityMatrix — property-based', () => {
 
         fc.assert(
             fc.property(MetricsRunArrayArb, CoverageResultArb, (metrics, coverage) => {
-                const result = buildTraceabilityMatrix(metrics, coverage);
+                const result = matrix(metrics, coverage);
 
                 expect(result.totalTests).toBeGreaterThanOrEqual(0);
                 expect(result.totalEpics).toBeGreaterThanOrEqual(0);
@@ -129,7 +137,7 @@ describe('BuildTraceabilityMatrix — property-based', () => {
 
         fc.assert(
             fc.property(MetricsRunArrayArb, CoverageResultArb, (metrics, coverage) => {
-                const result = buildTraceabilityMatrix(metrics, coverage);
+                const result = matrix(metrics, coverage);
                 for (const node of result.nodes) {
                     expect(typeof node.epic).toBe('string');
                     expect(node.coverage).toBeGreaterThanOrEqual(0);
@@ -149,7 +157,7 @@ describe('BuildTraceabilityMatrix — property-based', () => {
 
         fc.assert(
             fc.property(MetricsRunArrayArb, CoverageResultArb, (metrics, coverage) => {
-                const result = buildTraceabilityMatrix(metrics, coverage);
+                const result = matrix(metrics, coverage);
 
                 expect(result.timestamp).toMatch(/^\d{4}-\d{2}-\d{2}T/);
             }),
@@ -159,7 +167,7 @@ describe('BuildTraceabilityMatrix — property-based', () => {
 
     it('empty metrics returns empty result', () => {
         const empty: MetricsRun[] = [];
-        const result = buildTraceabilityMatrix(empty);
+        const result = matrix(empty);
 
         expect(result.nodes).toStrictEqual([]);
         expect(result.totalEpics).toBe(0);
@@ -174,7 +182,7 @@ describe('GenerateTraceabilityHtml — property-based', () => {
 
         fc.assert(
             fc.property(MetricsRunArrayArb, CoverageResultArb, (metrics, coverage) => {
-                const result = buildTraceabilityMatrix(metrics, coverage);
+                const result = matrix(metrics, coverage);
                 const html = generateTraceabilityHtml(result);
 
                 expect(html).toContain('<!DOCTYPE html>');

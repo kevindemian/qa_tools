@@ -11,7 +11,6 @@ import { describe, expect, it, vi } from 'vitest';
 import type { PipelineRun, PipelineJob } from '../../types/ci-cd.js';
 import type { DataProvider, RawData } from '../../types/data-hub.js';
 import { DataHubImpl } from '../../data-hub/hub.js';
-import { createFlatTests } from '../../test-utils/factories/flat-test-factory.js';
 
 vi.mock('../../logger.js', () => ({
     rootLogger: { error: vi.fn(), info: vi.fn(), warn: vi.fn(), debug: vi.fn(), child: vi.fn().mockReturnThis() },
@@ -125,7 +124,7 @@ describe('E2E: CI Data Hub — Complete Pipeline Flow', () => {
             const rawData: RawData = { runs, jobs: jobsMap, failureReasons: new Map(), artifacts: new Map() };
             const provider = createMockProvider(rawData);
             const { hub } = await DataHubImpl.create([provider], { repo: 'owner/repo' }, mockPersistence);
-            const costResult = calculatePipelineCost(null, 0.01, hub);
+            const costResult = calculatePipelineCost(0.01, hub);
             const html = generatePipelineCostHtml(costResult);
 
             expect(hub.computed.passRate).toBeCloseTo(66.67, 0);
@@ -218,26 +217,11 @@ describe('E2E: CI Data Hub — Complete Pipeline Flow', () => {
             const provider = createFailingProvider(new Error('Network error'));
             const { hub } = await DataHubImpl.create([provider], { repo: 'owner/repo' }, mockPersistence);
 
-            const store = {
-                runs: [
-                    {
-                        timestamp: '2026-07-01T10:00:00Z',
-                        project: 'test',
-                        total: 10,
-                        passed: 9,
-                        failed: 1,
-                        skipped: 0,
-                        duration: 5000,
-                        tests: createFlatTests(10, { failFirst: true }),
-                    },
-                ],
-            };
-
-            const costResult = calculatePipelineCost(store.runs, 0.01, hub);
+            const costResult = calculatePipelineCost(0.01, hub);
             const healthResult = calculateHealthScore({ dataHub: hub });
 
             expect(hub.raw.runs).toHaveLength(0);
-            expect(costResult.runCount).toBe(1);
+            expect(costResult.runCount).toBe(0);
             expect(healthResult.overall).toBeGreaterThanOrEqual(0);
         });
     });

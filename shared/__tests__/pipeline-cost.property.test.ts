@@ -1,19 +1,21 @@
 /**
  * Property-Based Tests — Pipeline Cost (FT-29)
  *
- * Invariants:
+ * Invariants (SSOT: custo derivado de dataHub.raw.runs / PipelineRun do CI):
  * - calculatePipelineCost: cost = (durationSec / 60) * costPerMinute
  * - totalCost = sum of entry costs
  * - totalDurationSec = sum of durations
  * - avgCostPerRun = totalCost / runCount
- * - status logic: failed > 0 → 'failed', passed === total → 'passed', else 'partial'
- * - null/undefined/empty → zeroed result
+ * - status logic: conclusion success → 'passed', failure → 'failed', else 'unknown'
+ * - DataHub sem runs → resultado zerado
  * - generatePipelineCostHtml always produces valid HTML with DOCTYPE
  */
 import * as fc from 'fast-check';
 import { describe, expect, it, vi } from 'vitest';
 import { calculatePipelineCost, generatePipelineCostHtml } from '../pipeline-cost.js';
-import type { FlatTest } from '../result_parser.js';
+import type { DataHub } from '../types/data-hub.js';
+import type { PipelineRun } from '../types/ci-cd.js';
+import { createTestHub } from './test-hub.js';
 
 vi.mock('../logger.js', () => ({
     rootLogger: { error: vi.fn(), info: vi.fn(), child: vi.fn().mockReturnThis() },
@@ -28,34 +30,30 @@ vi.mock('../config.js', () => ({
 
 const costPerMinuteArb: fc.Arbitrary<number> = fc.integer({ min: 1, max: 100 }).map((n) => n / 100);
 
-const emptyTests: FlatTest[] = [];
-
-const metricsRunArb = fc
+const ciRunArb = fc
     .record({
-        timestamp: fc.integer({ min: 1577836800000, max: 1814400000000 }).map((ts) => new Date(ts).toISOString()),
-        project: fc.constant('test'),
-        total: fc.nat({ max: 100 }),
-        passed: fc.nat({ max: 100 }),
-        failed: fc.nat({ max: 100 }),
-        skipped: fc.nat({ max: 100 }),
-        duration: fc.nat({ max: 36000 }),
-        tests: fc.constant(emptyTests),
+        createdAt: fc.integer({ min: 1577836800000, max: 1814400000000 }).map((ts) => new Date(ts).toISOString()),
+        durationSec: fc.nat({ max: 36000 }),
+        conclusion: fc.option(fc.constantFrom('success', 'failure', 'cancelled'), { nil: undefined }),
     })
-    .filter((r) => r.passed + r.failed + r.skipped <= r.total || r.total === 0)
-    .map(
-        (
-            r,
-        ): {
-            timestamp: string;
-            project: string;
-            total: number;
-            passed: number;
-            failed: number;
-            skipped: number;
-            duration: number;
-            tests: FlatTest[];
-        } => r,
-    );
+    .map((r): PipelineRun => {
+        const run: PipelineRun = {
+            id: 1,
+            created_at: r.createdAt,
+            run_started_at: r.createdAt,
+            updated_at: new Date(new Date(r.createdAt).getTime() + r.durationSec * 1000).toISOString(),
+        };
+        if (r.conclusion !== undefined) {
+            run.conclusion = r.conclusion;
+        }
+        return run;
+    });
+
+function makeHub(ciRuns: PipelineRun[]): DataHub {
+    const hub = createTestHub();
+    hub.raw.runs = ciRuns;
+    return hub;
+}
 
 /* ── Tests ───────────────────────────────────────────────────── */
 
@@ -64,8 +62,8 @@ describe('CalculatePipelineCost — property-based', () => {
         expect.hasAssertions();
 
         fc.assert(
-            fc.property(fc.array(metricsRunArb, { minLength: 1, maxLength: 20 }), costPerMinuteArb, (runs, cpm) => {
-                const result = calculatePipelineCost(runs, cpm);
+            fc.property(fc.array(ciRunArb, { minLength: 1, maxLength: 20 }), costPerMinuteArb, (runs, cpm) => {
+                const result = calculatePipelineCost(cpm, makeHub(runs));
                 for (const entry of result.costByRun) {
                     const expected = (entry.durationSec / 60) * cpm;
 
@@ -80,8 +78,8 @@ describe('CalculatePipelineCost — property-based', () => {
         expect.hasAssertions();
 
         fc.assert(
-            fc.property(fc.array(metricsRunArb, { minLength: 1, maxLength: 20 }), costPerMinuteArb, (runs, cpm) => {
-                const result = calculatePipelineCost(runs, cpm);
+            fc.property(fc.array(ciRunArb, { minLength: 1, maxLength: 20 }), costPerMinuteArb, (runs, cpm) => {
+                const result = calculatePipelineCost(cpm, makeHub(runs));
                 const sum = result.costByRun.reduce((s, e) => s + e.cost, 0);
 
                 expect(result.totalCost).toBeCloseTo(sum, 5);
@@ -94,8 +92,8 @@ describe('CalculatePipelineCost — property-based', () => {
         expect.hasAssertions();
 
         fc.assert(
-            fc.property(fc.array(metricsRunArb, { minLength: 1, maxLength: 20 }), costPerMinuteArb, (runs, cpm) => {
-                const result = calculatePipelineCost(runs, cpm);
+            fc.property(fc.array(ciRunArb, { minLength: 1, maxLength: 20 }), costPerMinuteArb, (runs, cpm) => {
+                const result = calculatePipelineCost(cpm, makeHub(runs));
                 const sum = result.costByRun.reduce((s, e) => s + e.durationSec, 0);
 
                 expect(result.totalDurationSec).toBe(sum);
@@ -108,8 +106,8 @@ describe('CalculatePipelineCost — property-based', () => {
         expect.hasAssertions();
 
         fc.assert(
-            fc.property(fc.array(metricsRunArb, { minLength: 1, maxLength: 20 }), costPerMinuteArb, (runs, cpm) => {
-                const result = calculatePipelineCost(runs, cpm);
+            fc.property(fc.array(ciRunArb, { minLength: 1, maxLength: 20 }), costPerMinuteArb, (runs, cpm) => {
+                const result = calculatePipelineCost(cpm, makeHub(runs));
                 const expected = result.totalCost / result.runCount;
 
                 expect(result.avgCostPerRun).toBeCloseTo(expected, 5);
@@ -118,26 +116,24 @@ describe('CalculatePipelineCost — property-based', () => {
         );
     });
 
-    it('status: failed > 0 → failed, passed === total → passed, else partial', () => {
+    it('status: success → passed, failure → failed, else unknown', () => {
         expect.hasAssertions();
 
         fc.assert(
-            fc.property(fc.array(metricsRunArb, { minLength: 1, maxLength: 20 }), costPerMinuteArb, (runs, cpm) => {
-                const result = calculatePipelineCost(runs, cpm);
-                const sortedRuns = [...runs].sort((a, b) => b.timestamp.localeCompare(a.timestamp));
+            fc.property(fc.array(ciRunArb, { minLength: 1, maxLength: 20 }), costPerMinuteArb, (runs, cpm) => {
+                const result = calculatePipelineCost(cpm, makeHub(runs));
+                const sortedRuns = [...runs].sort((a, b) => (b.created_at ?? '').localeCompare(a.created_at ?? ''));
                 for (let i = 0; i < result.costByRun.length; i++) {
                     const entry = Reflect.get(result.costByRun, i) as { status: string; timestamp: string } | undefined;
-                    const run = Reflect.get(sortedRuns, i) as
-                        | { failed: number; passed: number; total: number; timestamp: string }
-                        | undefined;
+                    const run = Reflect.get(sortedRuns, i) as { conclusion?: string; created_at?: string } | undefined;
                     if (!entry || !run) continue;
                     let expectedStatus: string;
-                    if (run.failed > 0) {
-                        expectedStatus = 'failed';
-                    } else if (run.passed === run.total) {
+                    if (run.conclusion === 'success') {
                         expectedStatus = 'passed';
+                    } else if (run.conclusion === 'failure') {
+                        expectedStatus = 'failed';
                     } else {
-                        expectedStatus = 'partial';
+                        expectedStatus = 'unknown';
                     }
 
                     expect(entry.status).toBe(expectedStatus);
@@ -151,8 +147,8 @@ describe('CalculatePipelineCost — property-based', () => {
         expect.hasAssertions();
 
         fc.assert(
-            fc.property(fc.array(metricsRunArb, { minLength: 1, maxLength: 20 }), costPerMinuteArb, (runs, cpm) => {
-                const result = calculatePipelineCost(runs, cpm);
+            fc.property(fc.array(ciRunArb, { minLength: 1, maxLength: 20 }), costPerMinuteArb, (runs, cpm) => {
+                const result = calculatePipelineCost(cpm, makeHub(runs));
                 for (let i = 1; i < result.costByRun.length; i++) {
                     const prev = Reflect.get(result.costByRun, i - 1) as { timestamp: string } | undefined;
                     const curr = Reflect.get(result.costByRun, i) as { timestamp: string } | undefined;
@@ -169,9 +165,9 @@ describe('CalculatePipelineCost — property-based', () => {
         expect.hasAssertions();
 
         fc.assert(
-            fc.property(fc.array(metricsRunArb, { minLength: 1, maxLength: 20 }), costPerMinuteArb, (runs, cpm) => {
-                const result = calculatePipelineCost(runs, cpm);
-                const timestamps = runs.map((r) => r.timestamp).sort((a, b) => a.localeCompare(b));
+            fc.property(fc.array(ciRunArb, { minLength: 1, maxLength: 20 }), costPerMinuteArb, (runs, cpm) => {
+                const result = calculatePipelineCost(cpm, makeHub(runs));
+                const timestamps = runs.map((r) => r.created_at ?? '').sort((a, b) => a.localeCompare(b));
 
                 expect(result.period.from).toBe(timestamps[0]);
                 expect(result.period.to).toBe(timestamps[timestamps.length - 1]);
@@ -180,44 +176,12 @@ describe('CalculatePipelineCost — property-based', () => {
         );
     });
 
-    it('returns zeroed result for null input', () => {
+    it('returns zeroed result when DataHub has no runs', () => {
         expect.hasAssertions();
 
         fc.assert(
             fc.property(fc.boolean(), () => {
-                const result = calculatePipelineCost(null);
-
-                expect(result.totalCost).toBe(0);
-                expect(result.runCount).toBe(0);
-                expect(result.totalDurationSec).toBe(0);
-                expect(result.costByRun).toStrictEqual([]);
-            }),
-            { numRuns: 10 },
-        );
-    });
-
-    it('returns zeroed result for undefined input', () => {
-        expect.hasAssertions();
-
-        fc.assert(
-            fc.property(fc.boolean(), () => {
-                const result = calculatePipelineCost(undefined);
-
-                expect(result.totalCost).toBe(0);
-                expect(result.runCount).toBe(0);
-                expect(result.totalDurationSec).toBe(0);
-                expect(result.costByRun).toStrictEqual([]);
-            }),
-            { numRuns: 10 },
-        );
-    });
-
-    it('returns zeroed result for empty array', () => {
-        expect.hasAssertions();
-
-        fc.assert(
-            fc.property(fc.boolean(), () => {
-                const result = calculatePipelineCost([]);
+                const result = calculatePipelineCost(undefined, makeHub([]));
 
                 expect(result.totalCost).toBe(0);
                 expect(result.runCount).toBe(0);
@@ -232,8 +196,8 @@ describe('CalculatePipelineCost — property-based', () => {
         expect.hasAssertions();
 
         fc.assert(
-            fc.property(fc.array(metricsRunArb, { minLength: 1, maxLength: 10 }), (runs) => {
-                const result = calculatePipelineCost(runs);
+            fc.property(fc.array(ciRunArb, { minLength: 1, maxLength: 10 }), (runs) => {
+                const result = calculatePipelineCost(undefined, makeHub(runs));
 
                 expect(result.costPerMinute).toBeCloseTo(0.01);
             }),
@@ -248,11 +212,11 @@ describe('GeneratePipelineCostHtml — property-based', () => {
 
         fc.assert(
             fc.property(
-                fc.array(metricsRunArb, { maxLength: 10 }),
+                fc.array(ciRunArb, { maxLength: 10 }),
                 fc.option(fc.string({ minLength: 0, maxLength: 20 }), { nil: undefined }),
                 costPerMinuteArb,
                 (runs, customTitle, cpm) => {
-                    const result = calculatePipelineCost(runs, cpm);
+                    const result = calculatePipelineCost(cpm, makeHub(runs));
                     const html = generatePipelineCostHtml(result, customTitle ?? undefined);
 
                     expect(html).toContain('<!DOCTYPE html>');
@@ -267,8 +231,8 @@ describe('GeneratePipelineCostHtml — property-based', () => {
         expect.hasAssertions();
 
         fc.assert(
-            fc.property(fc.array(metricsRunArb, { maxLength: 10 }), costPerMinuteArb, (runs, cpm) => {
-                const result = calculatePipelineCost(runs, cpm);
+            fc.property(fc.array(ciRunArb, { maxLength: 10 }), costPerMinuteArb, (runs, cpm) => {
+                const result = calculatePipelineCost(cpm, makeHub(runs));
                 const html = generatePipelineCostHtml(result);
 
                 expect(html).toContain('Total Cost');

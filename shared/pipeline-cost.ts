@@ -10,7 +10,7 @@ import { buildCss } from './report-styles.js';
 import { MetricCard, MetricGrid, DataTable } from './primitives/index.js';
 import type { TableColumn, TableRow } from './primitives/index.js';
 import { rootLogger } from './logger.js';
-import type { MetricsRun, DataHub } from './types/data-hub.js';
+import type { DataHub } from './types/data-hub.js';
 
 const DEFAULT_COST_PER_MINUTE = 0.01;
 
@@ -39,99 +39,45 @@ function mapConclusionToStatus(conclusion: string | undefined): 'passed' | 'fail
     return 'unknown';
 }
 
-export function calculatePipelineCost(
-    runs: MetricsRun[] | null | undefined,
-    costPerMinute?: number,
-    dataHub?: DataHub,
-): PipelineCostResult {
+export function calculatePipelineCost(costPerMinute: number | undefined, dataHub: DataHub): PipelineCostResult {
     const cpm = costPerMinute ?? (Number(process.env['QA_COST_PER_COMPUTE_MINUTE']) || DEFAULT_COST_PER_MINUTE);
 
-    // Se DataHub disponível, usar dados reais do CI
-    if (dataHub && dataHub.raw.runs.length > 0) {
-        const ciRuns = dataHub.raw.runs;
-        const costByRun: PipelineCostEntry[] = ciRuns.map((r) => {
-            const durationSec =
-                r.run_started_at && r.updated_at
-                    ? (new Date(r.updated_at).getTime() - new Date(r.run_started_at).getTime()) / 1000
-                    : 0;
-            return {
-                timestamp: r.created_at ?? new Date().toISOString(),
-                durationSec,
-                cost: (durationSec / 60) * cpm,
-                status: mapConclusionToStatus(r.conclusion),
-            };
-        });
-
-        const totalDurationSec = costByRun.reduce((s, e) => s + e.durationSec, 0);
-        const totalCost = costByRun.reduce((s, e) => s + e.cost, 0);
-        const sortedTimestamps = ciRuns
-            .map((r) => r.created_at ?? '')
-            .filter(Boolean)
-            .sort((a, b) => a.localeCompare(b));
-
+    // SSOT: custo de pipeline vem exclusivamente do DataHub (Camadas 1–6 do CI).
+    const ciRuns = dataHub.raw.runs;
+    const costByRun: PipelineCostEntry[] = ciRuns.map((r) => {
+        const durationSec =
+            r.run_started_at && r.updated_at
+                ? (new Date(r.updated_at).getTime() - new Date(r.run_started_at).getTime()) / 1000
+                : 0;
+        const safeDuration = Number.isFinite(durationSec) && durationSec >= 0 ? durationSec : 0;
         return {
-            totalCost,
-            avgCostPerRun: costByRun.length > 0 ? totalCost / costByRun.length : 0,
-            totalDurationSec,
-            costPerMinute: cpm,
-            costByRun,
-            runCount: ciRuns.length,
-            period: {
-                from: sortedTimestamps[0] ?? '',
-                to: sortedTimestamps[sortedTimestamps.length - 1] ?? '',
-            },
-            timestamp: new Date().toISOString(),
-        };
-    }
-
-    // Fallback: usar MetricsStore local
-    if (!runs || runs.length === 0) {
-        const now = new Date().toISOString();
-        return {
-            totalCost: 0,
-            avgCostPerRun: 0,
-            totalDurationSec: 0,
-            costPerMinute: cpm,
-            costByRun: [],
-            runCount: 0,
-            period: { from: '', to: '' },
-            timestamp: now,
-        };
-    }
-
-    const costByRun: PipelineCostEntry[] = runs.map((r) => {
-        const safeDuration = Number.isFinite(r.duration) ? r.duration : 0;
-        return {
-            timestamp: r.timestamp,
+            timestamp: r.created_at ?? new Date().toISOString(),
             durationSec: safeDuration,
             cost: (safeDuration / 60) * cpm,
-            status: (() => {
-                if (r.failed > 0) return 'failed';
-                if (r.passed === r.total) return 'passed';
-                return 'partial';
-            })(),
+            status: mapConclusionToStatus(r.conclusion),
         };
     });
 
     costByRun.sort((a, b) => b.timestamp.localeCompare(a.timestamp));
 
-    const totalCost = costByRun.reduce((sum, e) => sum + e.cost, 0);
-    const totalDurationSec = costByRun.reduce((sum, e) => sum + e.durationSec, 0);
-
-    const sortedTimestamps = runs.map((r) => r.timestamp).sort((a, b) => a.localeCompare(b));
-    const period = {
-        from: sortedTimestamps[0] ?? '',
-        to: sortedTimestamps[sortedTimestamps.length - 1] ?? '',
-    };
+    const totalDurationSec = costByRun.reduce((s, e) => s + e.durationSec, 0);
+    const totalCost = costByRun.reduce((s, e) => s + e.cost, 0);
+    const sortedTimestamps = ciRuns
+        .map((r) => r.created_at ?? '')
+        .filter(Boolean)
+        .sort((a, b) => a.localeCompare(b));
 
     return {
         totalCost,
-        avgCostPerRun: totalCost / runs.length,
+        avgCostPerRun: costByRun.length > 0 ? totalCost / costByRun.length : 0,
         totalDurationSec,
         costPerMinute: cpm,
         costByRun,
-        runCount: runs.length,
-        period,
+        runCount: ciRuns.length,
+        period: {
+            from: sortedTimestamps[0] ?? '',
+            to: sortedTimestamps[sortedTimestamps.length - 1] ?? '',
+        },
         timestamp: new Date().toISOString(),
     };
 }

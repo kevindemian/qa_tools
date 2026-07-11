@@ -69,6 +69,13 @@ vi.mock('../data-hub/compute/metrics-trends.js', () => mockTrends);
 
 import { generatePrReport, computeDiffComparison } from '../pr-report-core.js';
 import type { FlatTest } from '../result_parser.js';
+import type { PrReportCoreOptions } from '../pr-report-core.js';
+import type { DataHub } from '../types/data-hub.js';
+import { createTestHub } from './test-hub.js';
+
+const report = (
+    opts: Omit<PrReportCoreOptions, 'dataHub'> & { dataHub?: DataHub },
+): ReturnType<typeof generatePrReport> => generatePrReport({ ...opts, dataHub: opts.dataHub ?? createTestHub() });
 
 const FlatTestArb: fc.Arbitrary<FlatTest> = fc.record({
     title: fc.string({ minLength: 1, maxLength: 20 }),
@@ -126,7 +133,7 @@ describe('Pr Report Core.Property', () => {
                     async (tests, passed, failed, skipped) => {
                         const total = passed + failed + skipped;
                         if (total === 0) return;
-                        const result = await generatePrReport({
+                        const result = await report({
                             tests,
                             stats: { passed, failed, skipped, total, duration: 1000 },
                             skipAi: true,
@@ -150,7 +157,7 @@ describe('Pr Report Core.Property', () => {
                     fc.array(FlatTestArb, { minLength: 1, maxLength: 5 }),
                     fc.integer({ min: 1, max: 100 }),
                     async (tests, passed) => {
-                        const result = await generatePrReport({
+                        const result = await report({
                             tests,
                             stats: { passed, failed: 0, skipped: 0, total: passed, duration: 1000 },
                             skipAi: true,
@@ -173,7 +180,7 @@ describe('Pr Report Core.Property', () => {
                     fc.array(FlatTestArb, { minLength: 1, maxLength: 5 }),
                     fc.integer({ min: 1, max: 100 }),
                     async (tests, failed) => {
-                        const result = await generatePrReport({
+                        const result = await report({
                             tests,
                             stats: { passed: 0, failed, skipped: 0, total: failed, duration: 1000 },
                             skipAi: true,
@@ -196,7 +203,7 @@ describe('Pr Report Core.Property', () => {
                     fc.array(FlatTestArb, { minLength: 1, maxLength: 5 }),
                     fc.integer({ min: 1, max: 50 }),
                     async (tests, n) => {
-                        const result = await generatePrReport({
+                        const result = await report({
                             tests,
                             stats: { passed: n, failed: n, skipped: 0, total: n * 2, duration: 1000 },
                             skipAi: true,
