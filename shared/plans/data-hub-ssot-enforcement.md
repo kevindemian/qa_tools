@@ -3336,16 +3336,21 @@ FASE F — Limpeza
 
 ### FASE B — Interface/Export (G4)
 
-**B1 — Remover export público de `createDataHubPersistence`**
+**B1 — `createDataHubPersistence`: confirmar ausência de consumidor externo + documentar como factory interno**
 
-- Ação: `shared/data-hub/persistence.ts:67` remover `export`; confirmar `factory.ts:55` (dynamic import) continua funcionando.
-- Checkpoint:
+- **Correção de curso (2026-07-11):** o plano original dizia "remover o `export`". Verificado que `factory.ts:55` obtém `createDataHubPersistence` via `(await import('./persistence.js')).createDataHubPersistence(repo)` — o que **exige** o `export`. Remover o `export` quebra `tsc` e runtime (TypeError na criação de todo DataHub). Em ESM, um módulo não pode chamar função não-exportada de outro módulo no mesmo pacote.
+- **Verificação (grep):** `createDataHubPersistence` só é referenciado em `persistence.ts` (def), `factory.ts:55` (dynamic import, DENTRO de `shared/data-hub/`), e em testes. **Zero consumidor de produção fora de `shared/data-hub/`.** Logo o defeito real do G4 (vazamento externo) **não existe**.
+- **Ação (root-cause, sem quebrar origem):**
+    1. Manter `createDataHubPersistence` exportado — é API interna de `shared/data-hub/`, usada unicamente por `createDataHub` (factory.ts).
+    2. Adicionar JSDoc explicitando que é o factory de persistence interno do DataHub, não parte da API pública.
+    3. `factory.ts:55`: tornar o acoplamento interno explícito (import estático em vez de dynamic import), sem alterar comportamento.
+- **Checkpoint:**
     ```bash
     npx tsc --noEmit
-    rg "createDataHubPersistence" --include='*.ts' -g '!__tests__' -g '!*.test.ts' -g '!shared/data-hub/**'  # 0
+    rg "createDataHubPersistence" --include='*.ts' -g '!__tests__' -g '!*.test.ts' -g '!shared/data-hub/**'  # 0 (sem consumidor externo)
     npx vitest run shared/data-hub/                              # 100% pass
     ```
-- Commit: `refactor(data-hub): remove public export of createDataHubPersistence`
+- Commit: `refactor(data-hub): document createDataHubPersistence as internal factory; no external consumer (G4)`
 
 ### FASE C — Deleção de Fontes Alternativas (G12/G13/G14) — ORDEM CRÍTICA
 

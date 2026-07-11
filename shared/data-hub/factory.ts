@@ -10,6 +10,9 @@ import type { GitProvider } from '../types/ci-cd.js';
 import type { DataHub, DataHubPersistence } from '../types/data-hub.js';
 import { rootLogger } from '../logger.js';
 import { formatErr } from '../errors.js';
+// `createDataHubPersistence` is an internal data-hub factory (see persistence.ts).
+// It is consumed ONLY within `shared/data-hub/` (here, by `createDataHub`).
+import { createDataHubPersistence } from './persistence.js';
 
 export interface CreateDataHubOptions {
     /** Maximum retry attempts for transient failures. Default: 3. */
@@ -52,7 +55,7 @@ export async function createDataHub(
         return { hub: cached, status: 'ok' };
     }
 
-    const persistence = options?.persistence ?? (await import('./persistence.js')).createDataHubPersistence(repo);
+    const persistence = options?.persistence ?? createDataHubPersistence(repo);
 
     for (let attempt = 0; attempt < maxRetries; attempt++) {
         try {
