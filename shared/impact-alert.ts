@@ -13,6 +13,16 @@ import { buildCss } from './report-styles.js';
 import { MetricCard, MetricGrid, Card } from './primitives/index.js';
 import { rootLogger } from './logger.js';
 
+/**
+ * Dimension 5 Provenance — documents the source and justification for alert thresholds.
+ */
+export const IMPACT_ALERT_PROVENANCE = {
+    thresholds: {
+        low: { value: 70, source: 'Quality gate minimum threshold', standard: 'Internal' },
+        high: { value: 80, source: 'Quality gate target threshold', standard: 'Internal' },
+    },
+} as const;
+
 export type AlertSeverity = 'critical' | 'warning' | 'info';
 
 export interface ImpactAlert {

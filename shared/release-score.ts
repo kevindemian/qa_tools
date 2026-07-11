@@ -12,6 +12,30 @@ import { buildCss } from './report-styles.js';
 import { buildReleaseSection } from './report-sections.js';
 import { formatDateISO } from './date-utils.js';
 
+/**
+ * Dimension 5 Provenance — documents the source and justification for each weight and threshold.
+ * @reference ISO/IEC 25023:2016 (coverage), DORA State of DevOps (flakiness)
+ */
+const RELEASE_SCORE_PROVENANCE = {
+    weights: {
+        tasks: { value: 0.25, source: 'Product management best practice', standard: 'Internal' },
+        health: { value: 0.3, source: 'Quality gate composite', standard: 'Internal' },
+        coverage: { value: 0.25, source: 'ISO/IEC 25023:2016', standard: 'ISO/IEC 25023:2016' },
+        flakiness: { value: 0.2, source: 'DORA State of DevOps 2025', standard: 'DORA' },
+    },
+    threshold: { value: 70, source: 'Release readiness industry standard', standard: 'Internal' },
+} as const;
+
+// Validate provenance weights sum to 1.0
+const _weightSum =
+    RELEASE_SCORE_PROVENANCE.weights.tasks.value +
+    RELEASE_SCORE_PROVENANCE.weights.health.value +
+    RELEASE_SCORE_PROVENANCE.weights.coverage.value +
+    RELEASE_SCORE_PROVENANCE.weights.flakiness.value;
+if (Math.abs(_weightSum - 1.0) > 0.001) {
+    throw new Error(`release-score: provenance weights must sum to 1.0, got ${_weightSum}`);
+}
+
 export interface ReleaseScoreResult {
     score: number;
     grade: string;

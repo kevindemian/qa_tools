@@ -203,6 +203,11 @@ export default defineConfig(
                     message:
                         'execFileSync argument 0 must not be a template literal — use an argv array with literal command.',
                 },
+                {
+                    selector: 'MemberExpression[property.name="loadMetricsStore"]',
+                    message:
+                        'SSOT violation: loadMetricsStore is internal to DataHub. Use DataHub.computed.* or DataHub.raw.* instead.',
+                },
             ],
         },
     },

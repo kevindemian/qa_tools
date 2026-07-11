@@ -280,7 +280,8 @@ export async function glListDirectory(
             dirEntries.push({ name: e.name, path: e.path, type: entryType });
         }
         return dirEntries;
-    } catch {
+    } catch (err: unknown) {
+        rootLogger.warn(`gitlab-workflow: listDirEntries failed — ${extractErrorMessage(err)}`);
         return null;
     }
 }

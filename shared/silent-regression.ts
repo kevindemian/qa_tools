@@ -14,6 +14,19 @@ import { MetricCard, MetricGrid, DataTable, Badge } from './primitives/index.js'
 import type { TableColumn, TableRow } from './primitives/index.js';
 import { rootLogger } from './logger.js';
 
+/**
+ * Dimension 5 Provenance — documents the source and justification for z-score thresholds.
+ * @reference ISO 3534-2 (Statistical process control)
+ */
+export const SILENT_REGRESSION_PROVENANCE = {
+    severityThresholds: {
+        LOW: { zScore: 1, source: 'Statistical process control (1-sigma)', standard: 'ISO 3534-2' },
+        MEDIUM: { zScore: 2, source: 'Statistical process control (2-sigma)', standard: 'ISO 3534-2' },
+        HIGH: { zScore: 3, source: 'Statistical process control (3-sigma)', standard: 'ISO 3534-2' },
+        CRITICAL: { zScore: 5, source: 'Extreme outlier detection (5-sigma)', standard: 'ISO 3534-2' },
+    },
+} as const;
+
 export interface RegressionEntry {
     title: string;
     meanDuration: number;

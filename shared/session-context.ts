@@ -18,7 +18,8 @@ import { withSpinner } from './prompt.js';
 import { getHeadSha, getCurrentBranch } from './git-sha.js';
 import { detectStoreBackend, detectProjectGitDir } from './store-backend.js';
 import { Store, type ReportMeta } from './store.js';
-import { fetchLatestTestRun } from './ci-test-downloader.js';
+// ci-test-downloader removed — DataHub.raw.parsedArtifacts is SSOT (Invariant 6)
+import { isDataHubInitialized, getDataHub } from './data-hub/global-hub.js';
 import type { ParseResult } from './result_parser.js';
 import { rootLogger } from './logger.js';
 import { statsFromTests } from './report-utils.js';
@@ -168,6 +169,30 @@ function trySaveCiResult(
     store.flush(`qa-tools: auto-cache ${sha.slice(0, 7)}`);
 }
 
+/**
+ * Get latest test result from DataHub.parsedArtifacts (SSOT).
+ * Returns null when DataHub is not initialized or has no parsed artifacts.
+ * Replaces fetchLatestTestRun() which made direct CI API calls (Invariant 6).
+ */
+function _getLatestTestResultFromDataHub(): ParseResult | null {
+    if (!isDataHubInitialized()) return null;
+    const hub = getDataHub();
+    const artifacts = hub.raw.parsedArtifacts;
+    if (!artifacts || artifacts.size === 0) return null;
+    // Iterate runs in reverse order (latest first) and return first valid result
+    const runIds = Array.from(artifacts.keys()).sort((a, b) => b - a);
+    for (const runId of runIds) {
+        const results = artifacts.get(runId);
+        if (!results) continue;
+        for (const artifact of results) {
+            if (artifact.data.stats.total > 0) {
+                return artifact.data;
+            }
+        }
+    }
+    return null;
+}
+
 function resolveFromBranch(
     projectName: string,
     branch: string | null,
@@ -199,7 +224,8 @@ export async function resolveTestDataSource(
     const cached = tryLoadFromCache(sha, store);
     if (cached) return cached;
 
-    const downloaded = await fetchLatestTestRun();
+    // DataHub SSOT: read parsed artifacts instead of downloading directly (Invariant 6)
+    const downloaded = _getLatestTestResultFromDataHub();
     if (downloaded && downloaded.stats.total > 0) {
         trySaveCiResult(downloaded, sha, branch, projectName, store);
         return { result: downloaded, source: 'ci' };

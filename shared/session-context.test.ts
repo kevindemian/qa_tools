@@ -11,8 +11,9 @@ vi.mock('./store-backend.js', () => ({
     detectProjectGitDir: vi.fn(),
 }));
 
-vi.mock('./ci-test-downloader.js', () => ({
-    fetchLatestTestRun: vi.fn(),
+vi.mock('./data-hub/global-hub.js', () => ({
+    isDataHubInitialized: vi.fn(),
+    getDataHub: vi.fn(),
 }));
 
 vi.mock('./store.js', async () => {
@@ -25,7 +26,7 @@ vi.mock('./store.js', async () => {
 
 import { getHeadSha, getCurrentBranch } from './git-sha.js';
 import { detectStoreBackend, detectProjectGitDir } from './store-backend.js';
-import { fetchLatestTestRun } from './ci-test-downloader.js';
+import { isDataHubInitialized, getDataHub } from './data-hub/global-hub.js';
 
 function createMockStore() {
     return {
@@ -238,7 +239,7 @@ describe('ResolveTestDataSource', () => {
         const { resolveTestDataSource } = await import('./session-context.js');
         const store = createMockStore();
         vi.spyOn(store, 'loadReport').mockReturnValue(null);
-        vi.mocked(fetchLatestTestRun).mockResolvedValue(null);
+        vi.mocked(isDataHubInitialized).mockReturnValue(false);
 
         const result = await resolveTestDataSource('project', null, null, store as never);
 
@@ -251,12 +252,26 @@ describe('ResolveTestDataSource', () => {
         const { resolveTestDataSource } = await import('./session-context.js');
         const store = createMockStore();
         vi.spyOn(store, 'loadReport').mockReturnValue(null);
-        vi.mocked(fetchLatestTestRun).mockResolvedValue({
-            tests: [
-                { title: 'T1', state: 'passed', duration: 100 },
-                { title: 'T2', state: 'failed', duration: 50, error: 'fail' },
-            ],
-            stats: { passed: 1, failed: 1, skipped: 0, total: 2, duration: 150 },
+        vi.mocked(isDataHubInitialized).mockReturnValue(true);
+        vi.mocked(getDataHub).mockReturnValue({
+            raw: {
+                parsedArtifacts: new Map([
+                    [
+                        1,
+                        [
+                            {
+                                data: {
+                                    tests: [
+                                        { title: 'T1', state: 'passed', duration: 100 },
+                                        { title: 'T2', state: 'failed', duration: 50, error: 'fail' },
+                                    ],
+                                    stats: { passed: 1, failed: 1, skipped: 0, total: 2, duration: 150 },
+                                },
+                            },
+                        ],
+                    ],
+                ]),
+            },
         } as never);
 
         const result = await resolveTestDataSource('project', 'sha456', 'main', store as never);
@@ -279,7 +294,7 @@ describe('ResolveTestDataSource', () => {
         const { resolveTestDataSource } = await import('./session-context.js');
         const store = createMockStore();
         vi.spyOn(store, 'loadReport').mockReturnValue(null);
-        vi.mocked(fetchLatestTestRun).mockResolvedValue(null);
+        vi.mocked(isDataHubInitialized).mockReturnValue(false);
         vi.spyOn(store, 'getBranch').mockReturnValue([{ sha: 'baseline-sha', timestamp: 1000 }] as never);
         vi.spyOn(store, 'loadReport')
             .mockReturnValueOnce(null)
@@ -317,9 +332,23 @@ describe('ResolveTestDataSource', () => {
         const { resolveTestDataSource } = await import('./session-context.js');
         const store = createMockStore();
         vi.spyOn(store, 'loadReport').mockReturnValue(null);
-        vi.mocked(fetchLatestTestRun).mockResolvedValue({
-            tests: [{ title: 'T1', state: 'passed', duration: 100 }],
-            stats: { passed: 1, failed: 0, skipped: 0, total: 1, duration: 100 },
+        vi.mocked(isDataHubInitialized).mockReturnValue(true);
+        vi.mocked(getDataHub).mockReturnValue({
+            raw: {
+                parsedArtifacts: new Map([
+                    [
+                        1,
+                        [
+                            {
+                                data: {
+                                    tests: [{ title: 'T1', state: 'passed', duration: 100 }],
+                                    stats: { passed: 1, failed: 0, skipped: 0, total: 1, duration: 100 },
+                                },
+                            },
+                        ],
+                    ],
+                ]),
+            },
         } as never);
 
         await resolveTestDataSource('project', 'sha-abc', 'feature-x', store as never);
@@ -341,9 +370,23 @@ describe('ResolveTestDataSource', () => {
         const { resolveTestDataSource } = await import('./session-context.js');
         const store = createMockStore();
         vi.spyOn(store, 'loadReport').mockReturnValue(null);
-        vi.mocked(fetchLatestTestRun).mockResolvedValue({
-            tests: [{ title: 'T1', state: 'passed', duration: 100 }],
-            stats: { passed: 1, failed: 0, skipped: 0, total: 1, duration: 100 },
+        vi.mocked(isDataHubInitialized).mockReturnValue(true);
+        vi.mocked(getDataHub).mockReturnValue({
+            raw: {
+                parsedArtifacts: new Map([
+                    [
+                        1,
+                        [
+                            {
+                                data: {
+                                    tests: [{ title: 'T1', state: 'passed', duration: 100 }],
+                                    stats: { passed: 1, failed: 0, skipped: 0, total: 1, duration: 100 },
+                                },
+                            },
+                        ],
+                    ],
+                ]),
+            },
         } as never);
 
         await resolveTestDataSource('project', 'sha-abc', null, store as never);
@@ -362,9 +405,23 @@ describe('ResolveTestDataSource', () => {
         const { resolveTestDataSource } = await import('./session-context.js');
         const store = createMockStore();
         vi.spyOn(store, 'loadReport').mockReturnValue(null);
-        vi.mocked(fetchLatestTestRun).mockResolvedValue({
-            tests: [{ title: 'T1', state: 'passed', duration: 100 }],
-            stats: { passed: 1, failed: 0, skipped: 0, total: 1, duration: 100 },
+        vi.mocked(isDataHubInitialized).mockReturnValue(true);
+        vi.mocked(getDataHub).mockReturnValue({
+            raw: {
+                parsedArtifacts: new Map([
+                    [
+                        1,
+                        [
+                            {
+                                data: {
+                                    tests: [{ title: 'T1', state: 'passed', duration: 100 }],
+                                    stats: { passed: 1, failed: 0, skipped: 0, total: 1, duration: 100 },
+                                },
+                            },
+                        ],
+                    ],
+                ]),
+            },
         } as never);
 
         const result = await resolveTestDataSource('project', null, null, store as never);
@@ -382,7 +439,7 @@ describe('ResolveTestDataSource', () => {
         const { resolveTestDataSource } = await import('./session-context.js');
         const store = createMockStore();
         vi.spyOn(store, 'loadReport').mockReturnValue({ tests: 'not-an-array' });
-        vi.mocked(fetchLatestTestRun).mockResolvedValue(null);
+        vi.mocked(isDataHubInitialized).mockReturnValue(false);
 
         const result = await resolveTestDataSource('project', 'sha123', 'main', store as never);
 
@@ -395,7 +452,7 @@ describe('ResolveTestDataSource', () => {
         const { resolveTestDataSource } = await import('./session-context.js');
         const store = createMockStore();
         vi.spyOn(store, 'loadReport').mockReturnValue({ tests: [] });
-        vi.mocked(fetchLatestTestRun).mockResolvedValue(null);
+        vi.mocked(isDataHubInitialized).mockReturnValue(false);
 
         const result = await resolveTestDataSource('project', 'sha123', 'main', store as never);
 
@@ -408,7 +465,7 @@ describe('ResolveTestDataSource', () => {
         const { resolveTestDataSource } = await import('./session-context.js');
         const store = createMockStore();
         vi.spyOn(store, 'loadReport').mockReturnValue(null);
-        vi.mocked(fetchLatestTestRun).mockResolvedValue(null);
+        vi.mocked(isDataHubInitialized).mockReturnValue(false);
         vi.spyOn(store, 'getBranch').mockReturnValue([{ sha: null, timestamp: 1000 }] as never);
 
         const result = await resolveTestDataSource('project', 'sha789', 'main', store as never);

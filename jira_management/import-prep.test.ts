@@ -196,7 +196,6 @@ describe('ValidateImportBatch', () => {
         }));
         const result = validateImportBatch(testsWithWarnings, '/path.csv', 'csv', 'TESTPROJ');
 
-        expect(result).toBeDefined();
         expect(nonNull(result).resumeFrom).toBe(0);
         expect(PROMPT.warn).toHaveBeenCalledWith(expect.stringContaining('Avisos'));
     });

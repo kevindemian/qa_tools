@@ -28,7 +28,7 @@ import type { CommandContext } from './context.js';
 import { buildGitTrendHtml, buildJiraContextHtml, injectAnalysisSection, parseCliExtra } from './case17-helpers.js';
 import { computeDiff, resolveTestHistory } from './case17-test-utils.js';
 import { resolveTestDataSource, resolveSessionContext } from '../../shared/session-context.js';
-import { fetchCommitLog } from '../../shared/commit-log.js';
+// commit-log removed — DataHub.raw.commitLog is SSOT (Invariant 6)
 import type { MetricsRun } from '../../shared/types/data-hub.js';
 
 import Config from '../../shared/config.js';
@@ -213,8 +213,8 @@ async function _enrichHtmlWithContext(
     c: CommandContext,
     failedTests: FlatTest[],
 ): Promise<{ html: string; commitLog: string; storeRuns: MetricsRun[]; jiraContext: string }> {
-    const commitLog = await fetchCommitLog();
     const hub = isDataHubInitialized() ? getDataHub() : undefined;
+    const commitLog = hub?.raw.commitLog ?? '';
     const storeRuns = hub?.computed.metricsRuns ?? [];
     const gitHtml = buildGitTrendHtml(commitLog, storeRuns);
     let enriched = html;

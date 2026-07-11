@@ -1,4 +1,4 @@
-# DataHub SSOT Enforcement — Migration & Prevention Plan
+    # DataHub SSOT Enforcement — Migration & Prevention Plan
 
 > **Criado:** 2026-07-09
 > **Baseado em auditoria exaustiva de 35 consumidores em 28 arquivos de produção**
@@ -73,42 +73,6 @@ Se uma função existe no plano de arquitetura, ela existe por uma razão: consu
 - Checkpoints incluem: `npx tsc --noEmit`, `npx vitest run`, `rg` de verificação
 - Nenhum item pode ser marcado como ✅ sem evidência do checkpoint
 - **Progresso NÃO é registrado no plano.** O agente deve verificar cada fase independentemente, sem confiar em marcadores. Marcadores de progresso criam falsa sensação de conclusão e impedem detecção de gaps.
-
----
-
-## LIÇÕES APRENDIDAS
-
-### Fase 0.5 — loadFromStore
-
-1. **Mapeamento direto > conversão** — Round-trips (MetricsRun → PipelineRun → MetricsRun) perdem dados. Mapeamento direto preserva timestamps, campos e metadados originais.
-2. **Contratos de tipo são imutáveis** — `PipelineRun` não tem `duration` nem `tests`. Não inventar campos que não existem no tipo.
-3. **Documentar decisões arquiteturais** — O porquê de uma decisão é tão importante quanto a decisão em si.
-
-### Fase 0.6 — Persistência SSOT
-
-1. **ESLint hooks são rigorosos** — Três rodadas de correção antes do commit:
-    - `@typescript-eslint/unbound-method` — não passar `mock.method` diretamente
-    - `vitest/prefer-strict-equal` — `toStrictEqual` obrigatório
-    - `vitest/valid-title` — describe blocks com maiúscula
-    - **Padrão aceito:** `satisfies MockPersistence` + `as DataHubPersistence`
-
-2. **Behavior testing > Property testing** — Testar `hub.saveRun()` delega corretamente é melhor que testar `hub.persistence === mockPersistence`. Não depende de implementação interna.
-
-3. **Erros silenciosos são ALWAYS violations** — Cada método lança erro explícito quando persistence não está configurado. Zero no-ops. Consistente com regra de que erros silenciosos são defeitos de segurança.
-
-4. **Documentar o "POR QUE" evita retrocesso** — Seção CONTEXTO FUNDAMENTAL previne que futuros agentes tentem reverter decisões arquiteturais com argumentos de conveniência.
-
-### Fase 0.7 — Análise e Planejamento
-
-1. **Questionar antes de assumir** — "Cache duplicado" não é duplicação se serve propósitos diferentes (`_dataHub` = projeto atual, `_cache` = todos os projetos). Análise superficial leva a decisões incorretas.
-
-2. **Plano deve refletir realidade** — Contradições no plano ("MetricsStore será deletado" mas Fase 0.8 só remove interface pública) causam confusão. Plano deve ser preciso.
-
-3. **Injeção de dependência > acoplamento** — `ensureDataHub(fetchFn)` é mais testável e flexível que `ensureDataHub()` com closure.
-
-4. **TDD é obrigatório** — Escrever testes ANTES da implementação garante que o código atende aos requisitos, não o contrário.
-
-5. **Race conditions são reais** — `Promise.allSettled` com cache não atômico causa fetches duplicados. Mutex simples resolve.
 
 ---
 
@@ -351,16 +315,10 @@ expect(result).toEqual(
 
 ---
 
-## ATOMIC TASK BREAKDOWN
+## FASES
 
-> **Padrão:** Cada tarefa segue RED → GREEN → Integração → Checkpoint → Commit.
-> **RED:** Teste que FALHA contra código atual (expõe o bypass).
-> **GREEN:** Correção no código para o teste passar.
-> **Integração:** Verificar que consumidores existentes continuam funcionando.
-> **Checkpoint:** Comandos exatos que devem passar.
-> **Commit:** Mensagem atômica no padrão `refactor(data-hub): <descrição>`.
-
----
+> **Seção principal do plano.** Cada fase é sequencial e dependente da anterior.
+> Fase 2 foi absorvida pela Fase 1 (quality-gate integrado ao health-score SSOT).
 
 ### FASE 0 — Foundation (3 tarefas)
 
@@ -595,79 +553,6 @@ npx vitest run jira_management/                      # 100% pass
 
 ---
 
-## DATAHUB INFRASTRUCTURE
-
-### Princípio
-
-DataHub é o ÚNICO ponto de acesso a dados. Toda coleta, persistência e manipulação passa por ele. MetricsStore será absorvido/deletado. DataHubPersistence será absorvido/deletado.
-
-### O que falta construir
-
-Atualmente, DataHub só pode ser criado via `DataHubImpl.create(providers)` — que precisa de provedores CI. Mas existem 23 arquivos que usam `persistence.loadMetricsStore()` sem acesso a provedores. Esses callers precisam de uma forma de obter um DataHub.
-
-**Solução:** Construir a infraestrutura para que DataHub seja acessível de qualquer contexto, sem depender de provedores CI.
-
-### Decisão Arquitetural: Mapeamento Direto vs Conversão
-
-**Problema identificado:** MetricsStore armazena `MetricsRun[]` (com testes individuais), mas `RawData.runs` é `PipelineRun[]` (sem testes). Uma conversão simples seria lossy:
-
-1. **Perda de timestamps:** `convertToMetricsRuns()` usa `new Date().toISOString()` em vez do timestamp original
-2. **Perda de FailureClassification:** Dados que existem no MetricsStore seriam perdidos no DataHub
-3. **Campos inexistentes:** Adicionar `tests` e `run_duration_ms` a `PipelineRun` viola o contrato de tipo
-4. **Round-trip lossy:** `MetricsRun[] → ArtifactParseResult[] → convertToMetricsRuns() → MetricsRun[]` perde dados
-
-**Solução adotada: Mapeamento Direto**
-
-```
-MetricsStore.runs (MetricsRun[])
-    │
-    ├──→ raw.parsedArtifacts (Map<number, ArtifactParseResult[]>)
-    │    ←MetricsRun vira ArtifactParseResult DIRETAMENTE (sem round-trip)
-    │    ←preserva timestamp original, tests, stats
-    │
-    ├──→ raw.runs (PipelineRun[])
-    │    ←extrai SÓ metadados: conclusion, head_branch, created_at
-    │    ←usa timestamp do MetricsRun (NÃO new Date())
-    │
-    └──→ NOVO CAMPO: raw.failureClassifications (FailureClassification[])
-         ←preserva dados originais para aggregateDefectTrends/Seasonality
-
-MetricsStore.coverageHistory (CoverageSnapshot[])
-    │
-    └──→ raw.coverage (RawCoverage)
-         ←mapeamento direto: totalIssues→total, mappedIssues→covered, coveragePct→percentage
-```
-
-**Vantagens:**
-
-- Nenhuma perda de dados
-- Timestamps preservados
-- FailureClassification disponível para consumers atuais
-- Sem violação de contratos de tipo
-
-### Lições Aprendidas — Fase 0.5
-
-1. **Análise adversarial é crítica** — Soluções iniciais podem ter defeitos arquiteturais graves que só são expostos sob escrutínio adversarial. Sempre questionar: "O que pode dar errado?"
-
-2. **Mapeamento direto > Conversão** — Quando dois tipos são fundamentalmente diferentes (`MetricsRun` vs `PipelineRun`), não tente converter entre eles. Mapeie diretamente para onde cada dado pertence.
-
-3. **Contratos de tipo são imutáveis** — Não inventar campos que não existem em um tipo. Adicionar `tests` e `run_duration_ms` a `PipelineRun` cria objetos "Frankenstein" que quebram expectativas na cadeia de consumo.
-
-4. **Documentar decisões arquiteturais** — Registrar o "porquê" (não apenas o "o quê") ajuda futuros desenvolvedores a não repetirem erros.
-
-5. **Preservar dados originais** — Dados que existem na fonte devem ser preservados no destino. FailureClassification não poderia ser ignorado sem quebrar `aggregateDefectTrends`.
-
-### Cadeia de dependências (atualizada)
-
-```
-Fase 0 (fundação) → Fase 0.5 (loadFromStore) → Fase 0.6 (persistência) → Fase 0.7 (global-hub)
-→ Fase 0.8 (obrigatório) → Fase 1 (health-score + quality-gate SSOT) → ...
-```
-
-> **Nota (2026-07-10):** Fase 2 (quality-gate) absorvida pela Fase 1.
-
----
-
 ### FASE 0.5 — DataHub Core: loadFromStore (1 tarefa)
 
 ---
@@ -875,9 +760,7 @@ npx vitest run shared/data-hub/__tests__/hub.test.ts --reporter=verbose
 
 ---
 
-## CONTEXTO FUNDAMENTAL — FASE 0.7
-
-### Gaps Encontrados na Análise do Código
+#### Contexto — Gaps Encontrados na Análise do Código
 
 Durante a análise do código, identificamos **8 gaps**. Cada um foi documentado com análise e decisão.
 
@@ -1032,7 +915,7 @@ Durante a análise do código, identificamos **8 gaps**. Cada um foi documentado
 
 ---
 
-### Resumo das Decisões
+#### Resumo das Decisões
 
 | Gap                        | Decisão            | Ação                 | Tarefa      |
 | -------------------------- | ------------------ | -------------------- | ----------- |
@@ -1046,8 +929,6 @@ Durante a análise do código, identificamos **8 gaps**. Cada um foi documentado
 | #8 Contradições no plano   | CORRIGIR           | Atualizar措辞        | 0.7.1-0.7.2 |
 
 ---
-
-## TAREFAS
 
 #### Tarefa 0.7.1 — Criar `shared/data-hub/global-hub.ts` (RED)
 
@@ -1558,6 +1439,20 @@ npx eslint git_triggers/session-state.ts             # 0 erros
 > - O plano original (tornar persistence obrigatório) ignora os 30+ bypasses — correção parcial
 
 **Decisão:** Expandir `DataHub` interface para TODOS os 11 métodos → criar factory `createDataHub()` → migrar consumers → tornar persistence obrigatório no final.
+
+#### Lições aprendidas (fases 0.5-0.7)
+
+1. **Mapeamento direto > conversão** — Round-trips (MetricsRun → PipelineRun → MetricsRun) perdem dados. Mapeamento direto preserva timestamps, campos e metadados originais.
+2. **Contratos de tipo são imutáveis** — `PipelineRun` não tem `duration` nem `tests`. Não inventar campos que não existem no tipo.
+3. **Documentar decisões arquiteturais** — O porquê de uma decisão é tão importante quanto a decisão em si.
+4. **ESLint hooks são rigorosos** — Três rodadas de correção antes do commit: `@typescript-eslint/unbound-method`, `vitest/prefer-strict-equal`, `vitest/valid-title`. Padrão aceito: `satisfies MockPersistence` + `as DataHubPersistence`.
+5. **Behavior testing > Property testing** — Testar `hub.saveRun()` delega corretamente é melhor que testar `hub.persistence === mockPersistence`.
+6. **Erros silenciosos são ALWAYS violations** — Cada método lança erro explícito quando persistence não está configurado. Zero no-ops.
+7. **Questionar antes de assumir** — "Cache duplicado" não é duplicação se serve propósitos diferentes (`_dataHub` = projeto atual, `_cache` = todos os projetos).
+8. **Plano deve refletir realidade** — Contradições no plano causam confusão. Plano deve ser preciso.
+9. **Injeção de dependência > acoplamento** — `ensureDataHub(fetchFn)` é mais testável e flexível que `ensureDataHub()` com closure.
+10. **TDD é obrigatório** — Escrever testes ANTES da implementação garante que o código atende aos requisitos.
+11. **Race conditions são reais** — `Promise.allSettled` com cache não atômico causa fetches duplicados. Mutex simples resolve.
 
 ---
 
@@ -2452,7 +2347,7 @@ npx vitest run git_triggers/                          # 100% pass
 
 ---
 
-### FASE 2 — QUALITY-GATE COMPLETAMENTE ABSORVIDO PELA FASE 1
+### Fase 2 — quality-gate.ts SSOT (absorvida pela Fase 1)
 
 > **Nota (2026-07-10):** A Fase 2 original (quality-gate.ts SSOT) foi **absorvida pela Fase 1, Tarefa 1.3**.
 > As 3 tarefas originais da Fase 2 (RED, GREEN, callers) estão cobertas pela Tarefa 1.3.
@@ -3114,6 +3009,68 @@ echo "6. Nenhum store.runs fora do data-hub:" && \
 
 ---
 
+### Fase 11 — Detecção de Reporter: AST/Híbrido (pesquisa + implementação)
+
+**Objetivo:** Substituir a detecção regex-only por uma abordagem superior que combine package.json dependency check, config file analysis e (opcionalmente) AST parsing para detecção confiável de reporters de teste.
+
+**Problema:** A detecção atual (`detectConfigCtrf` / `detectTestReporter`) usa apenas regex em arquivos de config. Limitações:
+
+- Falsos positivos em comments/strings
+- Só verifica vitest/vite configs (não jest, cypress, playwright)
+- Não verifica package.json dependencies
+- Só detecta CTRF, não JUnit/Mochawesome
+
+**NOTA:** Antes de implementar, fazer pesquisa compreensiva sobre:
+
+1. Viabilidade de AST parsing em TypeScript (ts-morph, jscodeshift, esbuild)
+2. Custo-benefício vs package.json + regex expandida
+3. Se há bibliotecas prontas para detecção de reporters
+4. Se o hybrid (package.json deps + regex configs) é suficiente ou se AST é necessário
+
+**Abordagem recomendada (hipótese a validar na pesquisa):**
+
+- **Nível 1 (package.json):** Verificar se reporter está em `devDependencies`/`dependencies`
+- **Nível 2 (config files):** Verificar se reporter é importado/configurado em config files
+- **Nível 3 (AST):** Se necessário, usar AST parsing para entender a estrutura real do config
+
+**Dependência:** Fase 3 (renomeação de `detectConfigCtrf` → `detectTestReporter` e `CtrfSource` → `TestReportSource`)
+
+#### 11.1 — Pesquisa
+
+| Item       | Detalhe                                                         |
+| ---------- | --------------------------------------------------------------- |
+| Escopo     | Viabilidade de AST parsing, package.json check, regex expandida |
+| Entregável | Documento de decisão: qual abordagem implementar e por quê      |
+| Checkpoint | Decisão documentada no plano                                    |
+
+#### 11.2 — Implementação (depende da pesquisa)
+
+| Item       | Detalhe                                                 |
+| ---------- | ------------------------------------------------------- |
+| Escopo     | Substituir `detectTestReporter` por abordagem escolhida |
+| Frameworks | Todos: vitest, jest, cypress, playwright, generic       |
+| Formatos   | CTRF, JUnit, Mochawesome (e futuros)                    |
+| Checkpoint | `npx vitest run setup/detector.test.ts` = 0 falhas      |
+
+#### 11.3 — Testes
+
+| Item        | Detalhe                                                            |
+| ----------- | ------------------------------------------------------------------ |
+| Unit        | Testar detecção para cada framework + cada formato                 |
+| Integration | Testar fluxo completo wizard → config escrita com reporter correto |
+| Checkpoint  | `npx vitest run setup/` = 0 falhas                                 |
+
+**Checkpoint Fase 11:**
+
+```bash
+npx tsc --noEmit                                    # 0 erros
+npx vitest run setup/                               # 0 falhas
+# Detecção funciona para: vitest+CTRF, vitest+JUnit, jest+JUnit, cypress+CTRF, playwright+CTRF
+# package.json check: reporter em devDependencies → detectado
+# config check: reporter em vitest.config → detectado
+# Falsos positivos em comments → eliminados
+```
+
 ## COMPLETE BYPASS INVENTORY
 
 ### Categoria A — DataHub.computed Available but Ignored (5 itens)
@@ -3249,799 +3206,6 @@ echo "6. Nenhum store.runs fora do data-hub:" && \
 
 ---
 
-## MIGRATION PLAN
-
-### Fase 0 — Foundation (1 dia)
-
-**Objetivo:** Desbloquear a migração — fixar TS2307, adicionar DataHub ao CommandContext.
-
-#### 0.1 — Fix TS2307 Blocker
-
-| Item  | Ação                                              | Arquivo                | Linha |
-| ----- | ------------------------------------------------- | ---------------------- | ----- |
-| 0.1.1 | Remover re-export de `git-artifact-downloader.ts` | `case17-test-utils.ts` | 10    |
-
-`export { fetchGitHistory } from '../../shared/git-artifact-downloader.js'` — deletar linha. Nenhum consumidor importa `fetchGitHistory` deste módulo.
-
-#### 0.2 — Dead Code Cleanup
-
-| Item  | Ação                            | Arquivo                                                             |
-| ----- | ------------------------------- | ------------------------------------------------------------------- |
-| 0.2.1 | Deletar extractor nunca chamado | `shared/data-hub/extractors/test-count-extractor.ts`                |
-| 0.2.2 | Deletar teste órfão             | `shared/data-hub/__tests__/extractors/test-count-extractor.test.ts` |
-
-#### 0.3 — Add DataHub to CommandContext
-
-| Item  | Ação                                                             | Arquivo                           |
-| ----- | ---------------------------------------------------------------- | --------------------------------- |
-| 0.3.1 | Adicionar `dataHub?: DataHub`                                    | `shared/types/command-context.ts` |
-| 0.3.2 | Atualizar `jira_management/main.ts` para criar DataHub e injetar | `jira_management/main.ts`         |
-
-**Checkpoint Fase 0:**
-
-```bash
-npx tsc --noEmit                                    # 0 erros
-rg "git-artifact-downloader" --include="*.ts" -g '!__mocks__'  # Só em mocks
-rg "test-count-extractor" --include="*.ts"           # Só em plano/docs
-npx vitest run --reporter=verbose                    # 100% pass
-```
-
----
-
-### Fase 0.5 — DataHub Core: loadFromStore (0.5 dia)
-
-**Objetivo:** DataHub pode ser criado a partir de dados persistidos, sem provedores CI.
-
-#### 0.5.1 — Adicionar factory method `loadFromStore()`
-
-| Item  | Ação                                                       | Arquivo                                 |
-| ----- | ---------------------------------------------------------- | --------------------------------------- |
-| 0.5.1 | Adicionar `static loadFromStore()` ao `DataHubImpl`        | `shared/data-hub/hub.ts`                |
-| 0.5.2 | Implementar conversão `MetricsRun[]` → `PipelineRun[]`     | `shared/data-hub/hub.ts`                |
-| 0.5.3 | Implementar conversão `CoverageSnapshot[]` → `RawCoverage` | `shared/data-hub/hub.ts`                |
-| 0.5.4 | Criar teste unitário para `loadFromStore`                  | `shared/data-hub/__tests__/hub.test.ts` |
-
----
-
-### Fase 0.6 — DataHub Core: Persistência Interna (0.5 dia)
-
-**Objetivo:** DataHub salva e recupera dados internamente. Consumidores não acessam `hub.persistence` diretamente.
-
-#### 0.6.1 — Adicionar métodos de persistência ao DataHub
-
-| Item  | Ação                                                  | Arquivo                                 |
-| ----- | ----------------------------------------------------- | --------------------------------------- |
-| 0.6.1 | Adicionar `save()`, `saveRun()`, `flush()` ao DataHub | `shared/data-hub/hub.ts`                |
-| 0.6.2 | Cada método delega para `this.persistence`            | `shared/data-hub/hub.ts`                |
-| 0.6.3 | Criar testes para métodos de persistência             | `shared/data-hub/__tests__/hub.test.ts` |
-
----
-
-### Fase 0.7 — DataHub Global: Acessibilidade (0.5 dia)
-
-**Objetivo:** Qualquer caller pode obter um DataHub, não só `git_triggers`.
-
-#### 0.7.1 — Criar `shared/data-hub/global-hub.ts`
-
-| Item  | Ação                                                        | Arquivo                                        |
-| ----- | ----------------------------------------------------------- | ---------------------------------------------- |
-| 0.7.1 | Criar `getDataHub()`, `setDataHub()`, `ensureDataHub()`     | `shared/data-hub/global-hub.ts`                |
-| 0.7.2 | Migrar `session-state.ts` para delegar para `global-hub.ts` | `git_triggers/session-state.ts`                |
-| 0.7.3 | Criar testes para `global-hub.ts`                           | `shared/data-hub/__tests__/global-hub.test.ts` |
-
----
-
-### Fase 0.8 — DataHub Core: Obrigar Persistence (0.5 dia)
-
-**Objetivo:** DataHub SEMPRE tem persistência. Sem `persistence?: DataHubPersistence | undefined`.
-
-#### 0.8.1 — Tornar persistence obrigatório
-
-| Item  | Ação                                                            | Arquivo                    |
-| ----- | --------------------------------------------------------------- | -------------------------- |
-| 0.8.1 | `DataHubImpl` constructor: `persistence` obrigatório            | `shared/data-hub/hub.ts`   |
-| 0.8.1 | `DataHubImpl.create()`: persistence obrigatório                 | `shared/data-hub/hub.ts`   |
-| 0.8.2 | Interface `DataHub`: `readonly persistence: DataHubPersistence` | `shared/types/data-hub.ts` |
-| 0.8.3 | Corrigir call sites que não passam persistence                  | Vários arquivos            |
-
----
-
-### Fase 1 — health-score.ts SSOT Enforcement (1-2 dias)
-
-**Objetivo:** Todas as 5 dimensões do health score lêem de `dataHub.computed.*`. DataHub é obrigatório.
-
-#### 1.1 — RED: Tests that expose health-score bypasses
-
-**Objetivo:** Criar testes que FALHAM expondo os 3 bypasses em health-score.ts.
-
-**Preparação:**
-
-```bash
-cat shared/health-score.ts | grep -n "store\.\|coverageHistory\|_computeExpWeighted\|calculateFlakyTestRate"
-# Mapear: L177 (flaky), L179-181 (executionRate), L200-208 (coverage)
-```
-
-**RED:**
-
-```bash
-# Criar testes que FALHAM: shared/__tests__/health-score.test.ts
-# 3 testes novos no bloco "DataHub SSOT enforcement":
-# - coverage: store.coverageHistory vs dataHub.computed.coverage
-# - executionRate: _computeExpWeighted vs dataHub.computed.executionRate
-# - flakyPercentage: _computeFlakyRate vs dataHub.computed.flakyPercentage
-# Cada teste deve:
-#   1. Criar hub com valor DIFERENTE da store
-#   2. Chamar calculateHealthScore(store, { dataHub: hub })
-#   3. Asserir que o score reflete o valor do hub, NÃO da store
-```
-
-**Checkpoint:**
-
-```bash
-npx vitest run shared/__tests__/health-score.test.ts -t "DataHub SSOT" --reporter=verbose 2>&1 | grep "FAIL"
-# Esperado: 3 testes FALHAM (expondo os bypasses)
-```
-
-**Commit:** `test(health-score): add failing tests that expose DataHub bypasses (RED phase)`
-
----
-
-#### 1.2 — GREEN: Migrate health-score.ts to DataHub
-
-**Objetivo:** Fazer os 3 testes RED passarem. DataHub incondicional — sem `hasCiRuns`.
-
-**GREEN:**
-
-- Remover `hasCiRuns` de `computeActualMetrics()` (L171)
-- Substituir `_resolveCoverage(config, store)` por `dataHub !== undefined ? dataHub.computed.coverage : _resolveCoverage(config, store)` (L183)
-- Substituir `_computeExpWeighted(runs, n, ...)` por `dataHub !== undefined ? dataHub.computed.executionRate : _computeExpWeighted(...)` (L179-181)
-- Substituir `calculateFlakyTestRate(runs, config.minRuns)` / `_computeFlakyRate(runs, config)` por `dataHub !== undefined ? dataHub.computed.flakyPercentage ?? 0 : _computeFlakyRate(runs, config)` (L177)
-- Substituir `calcTestDurationP95(runs)` / `_computeSuiteSpeed(runs)` por `dataHub !== undefined ? dataHub.computed.suiteSpeedP95 : _computeSuiteSpeed(runs)` (L185)
-- Atualizar `_resolvePassRate` e `_resolveSuiteSpeed`: remover parâmetro `hasCiRuns`, usar `dataHub !== undefined`
-- Remover imports não utilizados: `calcTestDurationP95`, `calculateFlakyTestRate`
-
-**Checkpoint:**
-
-```bash
-npx tsc --noEmit                                    # 0 erros
-npx vitest run shared/__tests__/health-score.test.ts -t "DataHub SSOT" --reporter=verbose
-# Esperado: 3 testes PASSAM (GREEN)
-rg "hasCiRuns" shared/health-score.ts               # 0 ocorrências
-rg "store\.coverageHistory" shared/health-score.ts   # 0 ocorrências
-```
-
-**Commit:** `refactor(health-score): enforce DataHub as unconditional SSOT — coverage, executionRate, flaky, suiteSpeed`
-
----
-
-#### 1.3 — Atualizar callers de health-score.ts
-
-**Por que ANTES de tornar obrigatório:** Se tornarmos `dataHub` obrigatório antes de migrar callers, `tsc --noEmit` quebra imediatamente. A ordem correta é: migrar callers primeiro, depois tornar obrigatório.
-
-**Caller Map:**
-
-| Caller                                    | Arquivo                              | Passa DataHub? | Ação                                      |
-| ----------------------------------------- | ------------------------------------ | -------------- | ----------------------------------------- |
-| `cli_base.ts:220`                         | `shared/cli_base.ts`                 | NÃO            | Criar DataHub e passar                    |
-| `main.ts:344`                             | `jira_management/main.ts`            | NÃO            | Usar `c.dataHub` (adicionado em Fase 0.3) |
-| `case26.ts:23`                            | `jira_management/commands/case26.ts` | NÃO            | Usar `c.dataHub`                          |
-| `case19.ts:70`                            | `jira_management/commands/case19.ts` | NÃO            | Usar `c.dataHub`                          |
-| `quality-gate.ts:196`                     | `shared/quality-gate.ts`             | Condicional    | Manter condicional por ora — Fase 2 migra |
-| `pr-report-core.ts:487`                   | `shared/pr-report-core.ts`           | Condicional    | Manter condicional por ora — Fase 3 migra |
-| `schedule-handler.ts:174,213`             | `git_triggers/schedule-handler.ts`   | Condicional    | Manter condicional por ora — Fase 4 migra |
-| `interactive-mode.ts:378,446,496,538,856` | `git_triggers/interactive-mode.ts`   | Condicional    | Manter condicional por ora — Fase 4 migra |
-
-**Checkpoint:**
-
-```bash
-npx tsc --noEmit                                    # 0 erros
-# Verificar que os 4 callers NÃO-condicionais agora passam DataHub:
-grep -A2 "calculateHealthScore" shared/cli_base.ts jira_management/main.ts jira_management/commands/case26.ts jira_management/commands/case19.ts
-```
-
-**Commit:** `refactor(callers): migrate 4 non-conditional health-score callers to DataHub`
-
----
-
-#### 1.4 — Tornar DataHub obrigatório na assinatura
-
-**Dependência:** 1.3 completa (todos os callers NÃO-condicionais migrados).
-
-| Item  | Assinatura Atual                        | Nova Assinatura                                               |
-| ----- | --------------------------------------- | ------------------------------------------------------------- |
-| 1.4.1 | `calculateHealthScore(store, options?)` | `calculateHealthScore(store, options & { dataHub: DataHub })` |
-
-**Checkpoint:**
-
-```bash
-npx tsc --noEmit                                    # 0 erros
-rg "dataHub\?" shared/health-score.ts               # 0 (obrigatório)
-```
-
----
-
-#### 1.5 — Testes
-
-| Item  | Teste                                                           | Ação                                  |
-| ----- | --------------------------------------------------------------- | ------------------------------------- |
-| 1.5.1 | `shared/__tests__/health-score.test.ts`                         | Atualizar mocks — DataHub obrigatório |
-| 1.5.2 | `shared/__tests__/health-score.property.test.ts`                | Atualizar PBT — DataHub obrigatório   |
-| 1.5.3 | `shared/__tests__/integration/health-score.integration.test.ts` | Atualizar integration test            |
-
-**Checkpoint Fase 1:**
-
-```bash
-npx tsc --noEmit                                    # 0 erros
-npx vitest run shared/health-score.test.ts           # 100% pass
-npx vitest run shared/__tests__/health-score.property.test.ts  # 100% pass
-npx vitest run shared/integration/health-score.integration.test.ts  # 100% pass
-rg "store.coverageHistory|store\.runs" shared/health-score.ts  # 0 ocorrências
-rg "hasCiRuns" shared/health-score.ts               # 0 ocorrências
-```
-
----
-
-### Fase 2 — quality-gate.ts SSOT Enforcement (0.5 dia)
-
-**Objetivo:** `runQualityGate()` usa `dataHub.computed.*` em vez de recalcular. DataHub obrigatório.
-
-#### 2.1 — Migrar flakyCheck e suiteSpeedCheck
-
-| Item  | Bypass               | Atual                                                             | Mudança                            |
-| ----- | -------------------- | ----------------------------------------------------------------- | ---------------------------------- |
-| 2.1.1 | `_flakyCheck()`      | `calculateFlakyTestRate(runs, THRESHOLDS.flakyMinRuns)` (L99-115) | `dataHub.computed.flakyTestRate`   |
-| 2.1.2 | `_suiteSpeedCheck()` | `calcTestDurationP95(runs)` (L129-154)                            | `dataHub.computed.testDurationP95` |
-
-#### 2.2 — Remover loadMetricsStore() interno
-
-| Item  | Linha   | Ação                                                                              |
-| ----- | ------- | --------------------------------------------------------------------------------- |
-| 2.2.1 | 177-179 | Remover `createDataHubPersistence().loadMetricsStore()` — usar `dataHub.raw.runs` |
-
-#### 2.3 — Tornar DataHub obrigatório
-
-| Item  | Assinatura Atual           | Nova Assinatura                                  |
-| ----- | -------------------------- | ------------------------------------------------ |
-| 2.3.1 | `runQualityGate(options?)` | `runQualityGate(options & { dataHub: DataHub })` |
-
-#### 2.4 — Testes
-
-| Item  | Teste                                                 | Ação                       |
-| ----- | ----------------------------------------------------- | -------------------------- |
-| 2.4.1 | `shared/quality-gate.test.ts`                         | Atualizar mocks            |
-| 2.4.2 | `shared/integration/quality-gate.integration.test.ts` | Atualizar integration test |
-
-**Checkpoint Fase 2:**
-
-```bash
-npx tsc --noEmit                                    # 0 erros
-npx vitest run shared/quality-gate.test.ts           # 100% pass
-npx vitest run shared/integration/quality-gate.integration.test.ts  # 100% pass
-rg "loadMetricsStore" shared/quality-gate.ts         # 0 ocorrências
-```
-
----
-
-### Fase 3 — pr-report-core.ts SSOT + CTRF Removal + ci-injector (1.5 dias)
-
-**Objetivo:** `generatePrReport()` usa exclusivamente DataHub. CTRF direto é removido (self-reference bug). ci-injector gera workflow genérico sem auto-referenciamento. Wizard pergunta `testReportPath` e `artifactName`.
-
-**Status (2026-07-10):** Produção já migrada. Resta limpeza de mocks mortos, refatoração do detector para genérico, substituição de `CtrfSource` por `TestReportSource`, e atualização de composite action.
-
-**Problema original:** CTRF report é produzido pela suite de testes do qa_tools. `pr-report-core.ts` lê esse CTRF diretamente — gerando relatório sobre si mesmo em vez do projeto externo. DataHub já busca artifacts via GitHub API (`github-provider.ts:48-56`) e parseia CTRF/JUnit/Mochawesome (`artifact-parser.ts`). pr-report NUNCA deve tocar CTRF no filesystem.
-
-**Fluxo correto:**
-
-```
-Projeto externo: CI produz CTRF/JUnit/Mochawesome → upload como artifact
-→ DataHub busca artifacts via GitHub API → DataHub parseia → computed.metricsRuns
-→ main() lê de dataHub.computed.metricsRuns → generatePrReport()
-```
-
-#### 3.1 — Remover CTRF de pr-report-core.ts (JÁ FEITO na Fase 0.8+)
-
-| Item   | Linha   | Bypass                                    | Status  |
-| ------ | ------- | ----------------------------------------- | ------- |
-| 3.1.1  | 36      | `import { readIstanbulCoverage }`         | ✅ Done |
-| 3.1.2  | 37      | `import { parseTestResultsFile }`         | ✅ Done |
-| 3.1.3  | 38      | `import type { ParseResult }`             | ✅ Done |
-| 3.1.4  | 643     | `ctrfPath: string` em CliOptions          | ✅ Done |
-| 3.1.5  | 653     | `ctrfPath: 'reports/ctrf-report.json'`    | ✅ Done |
-| 3.1.6  | 673-674 | `--ctrf` help text                        | ✅ Done |
-| 3.1.7  | 684-685 | `--ctrf` case em parseArgs                | ✅ Done |
-| 3.1.8  | 745-748 | `if (!fs.existsSync(opts.ctrfPath))`      | ✅ Done |
-| 3.1.9  | 750-754 | `parseTestResultsFile(opts.ctrfPath)`     | ✅ Done |
-| 3.1.10 | 791-792 | `store.runs` diff comparison via CTRF     | ✅ Done |
-| 3.1.11 | 795-801 | `result.tests` / `result.stats` from CTRF | ✅ Done |
-
-#### 3.2 — Migrar funções para DataHub (JÁ FEITO na Fase 0.8+)
-
-| Item  | Função                       | Status  |
-| ----- | ---------------------------- | ------- |
-| 3.2.1 | `resolveCoverageForReport()` | ✅ Done |
-| 3.2.2 | `buildFlakySection()`        | ✅ Done |
-| 3.2.3 | `generateHtmlReportFile()`   | ✅ Done |
-| 3.2.4 | `generatePrReport()`         | ✅ Done |
-
-#### 3.3 — Atualizar ci-injector.ts (JÁ FEITO na Fase 0.8+)
-
-| Item        | Status  |
-| ----------- | ------- |
-| 3.4.1-3.4.8 | ✅ Done |
-
-#### 3.4 — Atualizar wizard (JÁ FEITO na Fase 0.8+)
-
-| Item        | Status  |
-| ----------- | ------- |
-| 3.5.1-3.5.7 | ✅ Done |
-
-#### 3.5 — Limpar mocks mortos em 5 testes pr-report-core
-
-| Item  | Arquivo                                                   | Ação                                                                                                                                  | Checkpoint  |
-| ----- | --------------------------------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------- | ----------- |
-| 3.5.1 | `shared/__tests__/pr-report-core.test.ts`                 | Remover mocks `../metrics.js`, `../coverage-source.js`, `readIstanbulCoverage`, `loadMetricsStore`/`saveMetricsStore` do DataHub mock | vitest pass |
-| 3.5.2 | `shared/__tests__/pr-report-core.property.test.ts`        | Mesmos mocks mortos                                                                                                                   | vitest pass |
-| 3.5.3 | `shared/__tests__/pr-report-core.wiring.property.test.ts` | Mesmos + mock `parseTestResultsFile`                                                                                                  | vitest pass |
-| 3.5.4 | `shared/__tests__/pr-report-core.wiring.test.ts`          | Mesmos + mock `parseTestResultsFile` + renomear testes "MetricsStore"                                                                 | vitest pass |
-| 3.5.5 | `shared/__tests__/pr-report-core.main.test.ts`            | Mocks `../metrics.js`, `../coverage-source.js`, `parseTestResultsFile`                                                                | vitest pass |
-
-#### 3.6 — Remover `loadMetricsStore`/`saveMetricsStore` de todos os mocks DataHub
-
-| Item  | Arquivo                                                   | Ação                                                          |
-| ----- | --------------------------------------------------------- | ------------------------------------------------------------- |
-| 3.6.1 | `shared/__tests__/pr-report-core.test.ts`                 | Remover `loadMetricsStore`/`saveMetricsStore` do mock DataHub |
-| 3.6.2 | `shared/__tests__/pr-report-core.property.test.ts`        | Idem                                                          |
-| 3.6.3 | `shared/__tests__/pr-report-core.wiring.property.test.ts` | Idem                                                          |
-| 3.6.4 | `shared/__tests__/pr-report-core.wiring.test.ts`          | Idem                                                          |
-| 3.6.5 | `shared/__tests__/pr-report.test.ts`                      | Remover dos 2 DataHub mocks (L105, L113, L714, L720)          |
-
-#### 3.7 — Atualizar `setup/templates/github-ci.ts` composite action
-
-| Item  | Linha | Ação                                                                                              |
-| ----- | ----- | ------------------------------------------------------------------------------------------------- |
-| 3.7.1 | 22    | Substituir `ctrf-path:` por `test-report-path:`                                                   |
-| 3.7.2 | 23-25 | Atualizar description + default                                                                   |
-| 3.7.3 | 35    | Substituir `--ctrf ${{ inputs.ctrf-path }}` por `$ {{ inputs.test-report-path }}` (sem flag CTRF) |
-| 3.7.4 | 35    | Substituir `shared/pr-report-core.ts` por `git_triggers/pr-report-entry.ts`                       |
-| 3.7.5 | —     | Adicionar input `artifact-name:` com default `test-report`                                        |
-
-#### 3.8 — Atualizar testes de `github-ci.ts`
-
-| Item  | Arquivo                             | Ação                                                                      |
-| ----- | ----------------------------------- | ------------------------------------------------------------------------- |
-| 3.8.1 | `setup/templates/github-ci.test.ts` | Atualizar asserts para novos inputs (`test-report-path`, `artifact-name`) |
-
-#### 3.9 — Refatorar `detector.ts` para genérico
-
-| Item  | Ação                                                                                |
-| ----- | ----------------------------------------------------------------------------------- |
-| 3.9.1 | Renomear `ctrfReportPath` → `testReportPath` em `DetectionResult`                   |
-| 3.9.2 | Renomear `ctrfSource: CtrfSource` → `testReportSource: TestReportSource`            |
-| 3.9.3 | Renomear `detectConfigCtrf()` → `detectTestReporter()`                              |
-| 3.9.4 | Expandir `CTRF_REPORTER_PATTERN` para patterns genéricos (CTRF, JUnit, Mochawesome) |
-| 3.9.5 | Atualizar DEFAULTS para usar novos nomes                                            |
-
-#### 3.10 — Substituir `CtrfSource` por `TestReportSource` em `context.ts`
-
-| Item   | Ação                                                                     |
-| ------ | ------------------------------------------------------------------------ |
-| 3.10.1 | Renomear `CtrfSource` → `TestReportSource`                               |
-| 3.10.2 | Remover `@deprecated ctrfReportPath` (L19-20)                            |
-| 3.10.3 | Renomear `ctrfSource: CtrfSource` → `testReportSource: TestReportSource` |
-
-#### 3.11 — Atualizar `main.ts` para usar novos campos
-
-| Item   | Linha | Ação                                                                                             |
-| ------ | ----- | ------------------------------------------------------------------------------------------------ |
-| 3.11.1 | 63-64 | Substituir `detection.ctrfReportPath` por `detection.testReportPath`                             |
-| 3.11.2 | 98    | Substituir `detection.ctrfSource` por `detection.testReportSource`                               |
-| 3.11.3 | 114   | Remover `ctrfReportPath: testReportPath, // backward compatibility`                              |
-| 3.11.4 | 115   | Substituir `ctrfSource: detection.ctrfSource` por `testReportSource: detection.testReportSource` |
-
-#### 3.12 — Limpar comentários stale
-
-| Item   | Arquivo                           | Linha | Ação                                      |
-| ------ | --------------------------------- | ----- | ----------------------------------------- |
-| 3.12.1 | `shared/pr-report-core.ts`        | 72    | "MetricsStore" → "DataHub"                |
-| 3.12.2 | `shared/pr-report-core.ts`        | 81    | Remover referência a "MetricsStore local" |
-| 3.12.3 | `git_triggers/pr-report-entry.ts` | 8     | Remover `--ctrf` do usage comment         |
-
-#### 3.13 — Atualizar mocks `SetupContext` em 6 arquivos de teste
-
-| Item   | Arquivo                                            | Ação                                                 |
-| ------ | -------------------------------------------------- | ---------------------------------------------------- |
-| 3.13.1 | `shared/ci-injector.test.ts`                       | Remover `ctrfReportPath` do mock (L282)              |
-| 3.13.2 | `setup/templates/github-ci.test.ts`                | Remover `ctrfReportPath` (L10)                       |
-| 3.13.3 | `setup/templates/gitlab-ci.test.ts`                | Remover `ctrfReportPath` (L9)                        |
-| 3.13.4 | `setup/templates/qa-post-process-workflow.test.ts` | Remover `ctrfReportPath` (L11)                       |
-| 3.13.5 | `setup/templates/pre-push-hook.test.ts`            | Remover `ctrfReportPath` (L9)                        |
-| 3.13.6 | `setup/main.test.ts`                               | Atualizar mocks para `testReportSource` (L109, L302) |
-
-#### 3.14 — Atualizar `detector.test.ts`
-
-| Item   | Ação                                                         |
-| ------ | ------------------------------------------------------------ |
-| 3.14.1 | Renomear todos `ctrfSource` → `testReportSource` nos asserts |
-| 3.14.2 | Renomear `ctrfReportPath` → `testReportPath` nos asserts     |
-| 3.14.3 | Renomear testes que mencionam "CTRF" para genéricos          |
-
-#### 3.15 — Testes
-
-| Item   | Teste                                      | Ação                               |
-| ------ | ------------------------------------------ | ---------------------------------- |
-| 3.15.1 | `shared/__tests__/pr-report-core*.test.ts` | Todos passam com mocks limpos      |
-| 3.15.2 | `shared/ci-injector.test.ts`               | Passa com novos inputs             |
-| 3.15.3 | `setup/main.test.ts`                       | Passa com novos campos             |
-| 3.15.4 | `setup/detector.test.ts`                   | Passa com `TestReportSource`       |
-| 3.15.5 | `setup/templates/*.test.ts`                | Todos passam com mocks atualizados |
-
-**Checkpoint Fase 3:**
-
-```bash
-# TypeScript
-npx tsc --noEmit                                    # 0 erros
-
-# Testes pr-report-core
-npx vitest run shared/__tests__/pr-report-core*     # 100% pass
-npx vitest run shared/__tests__/pr-report.test.ts   # 100% pass
-
-# Testes ci-injector
-npx vitest run shared/ci-injector.test.ts           # 100% pass
-
-# Testes setup
-npx vitest run setup/                               # 100% pass
-
-# Nenhum ctrfPath em código (excluindo detector, vitest-ctrf-reporter, coverage-source)
-rg "ctrfPath" --type ts -l | grep -v "vitest-ctrf\|coverage-source\|result_parser\|__tests__"  # 0
-
-# Nenhum loadMetricsStore restante em mocks de teste
-rg "loadMetricsStore" shared/__tests__/ -l          # 0
-
-# Nenhum CtrfSource em produção
-rg "CtrfSource" --type ts -l | grep -v "__tests__\|vitest-ctrf\|result_parser"  # 0
-```
-
----
-
-### Fase 4 — Jira Command Handlers (1-2 dias)
-
-**Objetivo:** Todos os 6 case handlers (case12, case17, case19, case21, case22, case26) usam `CommandContext.dataHub` em vez de `createDataHubPersistence().loadMetricsStore()`.
-
-#### 4.1 — Migrar cada handler
-
-| Case   | Bypass                                                                                      | Substituir por                                                                           |
-| ------ | ------------------------------------------------------------------------------------------- | ---------------------------------------------------------------------------------------- |
-| case12 | `persistence.loadMetricsStore()` → `store.runs`, `store.coverageHistory`                    | `c.dataHub.computed.metricsRuns`, `c.dataHub.computed.coverage`                          |
-| case17 | `persistence.loadMetricsStore()` → `store.runs` (L158, 218)                                 | `c.dataHub.computed.metricsRuns`                                                         |
-| case19 | `persistence.loadMetricsStore()` → `store.runs` (L100 + L14-68)                             | `c.dataHub.computed.metricsRuns`                                                         |
-| case19 | `(r.passed / (r.passed + r.failed)) * 100` (L21)                                            | `calcRunPassRate(r)` (já disponível via import)                                          |
-| case21 | `persistence.loadMetricsStore()` → `store.coverageHistory` (L43)                            | `c.dataHub.computed.coverage`                                                            |
-| case22 | `persistence.loadMetricsStore()` → `store.runs` (L62)                                       | `c.dataHub.computed.flakinessEntries`                                                    |
-| case26 | `persistence.loadMetricsStore()` → `store.runs` (L20) + `calculateHealthScore(store)` (L23) | `c.dataHub.computed.metricsRuns` + `calculateHealthScore(store, { dataHub: c.dataHub })` |
-
-#### 4.2 — Testes
-
-| Case | Arquivo de Teste                          |
-| ---- | ----------------------------------------- |
-| 12   | `jira_management/commands/case12.test.ts` |
-| 17   | `jira_management/commands/case17.test.ts` |
-| 19   | `jira_management/commands/case19.test.ts` |
-| 21   | `jira_management/commands/case21.test.ts` |
-| 22   | `jira_management/commands/case22.test.ts` |
-| 26   | `jira_management/commands/case26.test.ts` |
-
-**Checkpoint Fase 4:**
-
-```bash
-npx tsc --noEmit                                    # 0 erros
-npx vitest run jira_management/commands/case12.test.ts  # 100% pass
-npx vitest run jira_management/commands/case17.test.ts  # 100% pass
-npx vitest run jira_management/commands/case19.test.ts  # 100% pass
-npx vitest run jira_management/commands/case21.test.ts  # 100% pass
-npx vitest run jira_management/commands/case22.test.ts  # 100% pass
-npx vitest run jira_management/commands/case26.test.ts  # 100% pass
-rg "loadMetricsStore" jira_management/commands/       # 0 ocorrências
-```
-
----
-
-### Fase 5 — git_triggers Consumers (2 dias)
-
-**Objetivo:** interactive-mode, schedule-handler, batch-mode, pipeline-jira, session-context — todos usam DataHub em vez de MetricsStore direto.
-
-#### 5.1 — interactive-mode.ts
-
-| Item  | Linha   | Atual                                                                | Substituir                                |
-| ----- | ------- | -------------------------------------------------------------------- | ----------------------------------------- |
-| 5.1.1 | 258-259 | `loadMetricsStore()` → `store.runs`                                  | `dataHub.raw.runs`                        |
-| 5.1.2 | 347-349 | `loadMetricsStore()` → `store.runs` + `store.failureClassifications` | `dataHub.raw.runs` + `dataHub.computed.*` |
-| 5.1.3 | 442-444 | `loadMetricsStore()` → `store.runs`                                  | `dataHub.computed.metricsRuns`            |
-| 5.1.4 | 854-856 | `loadMetricsStore()` → `store.runs`                                  | `dataHub.computed.metricsRuns`            |
-
-#### 5.2 — schedule-handler.ts
-
-| Item  | Linha   | Atual                                                                | Substituir                                |
-| ----- | ------- | -------------------------------------------------------------------- | ----------------------------------------- |
-| 5.2.1 | 158-160 | `loadMetricsStore()` → `store.runs` + `store.failureClassifications` | `dataHub.raw.runs` + `dataHub.computed.*` |
-| 5.2.2 | 210     | `store.runs`                                                         | `dataHub.raw.runs`                        |
-| 5.2.3 | 308-309 | `loadMetricsStore()` → `store.runs`                                  | `dataHub.computed.metricsRuns`            |
-| 5.2.4 | 255     | `calculatePipelineCost(runs)` sem DataHub                            | Passar `dataHub`                          |
-
-#### 5.3 — batch-mode.ts
-
-| Item  | Linha   | Atual                               | Substituir                     |
-| ----- | ------- | ----------------------------------- | ------------------------------ |
-| 5.3.1 | 212-213 | `loadMetricsStore()` → `store.runs` | `dataHub.raw.runs`             |
-| 5.3.2 | 355-356 | `loadMetricsStore()` → `store.runs` | `dataHub.computed.metricsRuns` |
-
-#### 5.4 — pipeline-jira.ts
-
-| Item  | Linha | Atual                                                             | Substituir                                  |
-| ----- | ----- | ----------------------------------------------------------------- | ------------------------------------------- |
-| 5.4.1 | 22-30 | `persistence.loadMetricsStore()` → `store.failureClassifications` | `dataHub.computed.*` ou persistence methods |
-
-#### 5.5 — session-context.ts (refatoração maior)
-
-| Item  | Linha | Atual                                       | Substituir                         |
-| ----- | ----- | ------------------------------------------- | ---------------------------------- |
-| 5.5.1 | 117   | `new Store(backend, projectName)`           | Usar `DataHubPersistence`          |
-| 5.5.2 | 202   | `fetchLatestTestRun()` (ci-test-downloader) | Usar `DataHub.raw.parsedArtifacts` |
-| 5.5.3 | 129   | `store.loadReport(sha)`                     | `DataHubPersistence.loadRun(sha)`  |
-| 5.5.4 | 178   | `store.getBranch(branch)`                   | `DataHubPersistence` equivalent    |
-
-#### 5.6 — Testes
-
-| Item  | Arquivo de Teste                        |
-| ----- | --------------------------------------- |
-| 5.6.1 | `git_triggers/interactive-mode.test.ts` |
-| 5.6.2 | `git_triggers/schedule-handler.test.ts` |
-| 5.6.3 | `git_triggers/batch-mode.test.ts`       |
-| 5.6.4 | `git_triggers/integration/`             |
-| 5.6.5 | `shared/session-context.test.ts`        |
-
-**Checkpoint Fase 5:**
-
-```bash
-npx tsc --noEmit                                    # 0 erros
-npx vitest run git_triggers/                          # 100% pass
-npx vitest run shared/session-context.test.ts         # 100% pass
-npx vitest run shared/__tests__/integration/          # 100% pass (opcional)
-rg "loadMetricsStore" git_triggers/                   # 0 ocorrências
-rg "store\.runs" git_triggers/                        # 0 ocorrências
-```
-
----
-
-### Fase 6 — Shared Consumers Restantes (1 dia)
-
-**Objetivo:** cli_base, coverage-gap, traceability-matrix, pipeline-cost, smoke-pipeline — todos migrados.
-
-#### 6.1 — Migrar restantes
-
-| Arquivo                                  | Bypass                                       | Substituir                             |
-| ---------------------------------------- | -------------------------------------------- | -------------------------------------- |
-| `shared/cli_base.ts:218`                 | `store.runs` + `calculateHealthScore(store)` | Criar DataHub e passar                 |
-| `shared/coverage-gap.ts:104`             | `store.coverageHistory`                      | `dataHub.computed.coverage`            |
-| `shared/traceability-matrix.ts:52,54,79` | `metrics.runs` (parâmetro)                   | `dataHub.computed.*` (já tem fallback) |
-| `e2e/smoke-pipeline.ts:111`              | `metrics.runs`                               | `dataHub.computed.metricsRuns`         |
-
-**Checkpoint Fase 6:**
-
-```bash
-npx tsc --noEmit                                    # 0 erros
-npx vitest run shared/cli_base.test.ts               # 100% pass
-npx vitest run shared/coverage-gap.test.ts           # 100% pass
-npx vitest run shared/traceability-matrix.test.ts    # 100% pass
-npx vitest run e2e/smoke-pipeline.test.ts            # 100% pass
-rg "loadMetricsStore" shared/                         # Só em data-hub/persistence.ts
-```
-
----
-
-### Fase 7 — Auditoria Pós-Migração (1 dia)
-
-**Objetivo:** Verificar que TODOS os bypasses conhecidos foram eliminados.
-
-#### 7.1 — Verificações automáticas
-
-```bash
-# ===== A. Nenhum loadMetricsStore em produção (fora data-hub/) =====
-rg "loadMetricsStore" --include="*.ts" -g '!__tests__' -g '!*.test.ts' -g '!*.spec.ts' -g '!shared/data-hub/**'
-if [ $? -eq 0 ]; then echo "FALHA: loadMetricsStore encontrado fora de data-hub/"; fi
-
-# ===== B. Nenhum readIstanbulCoverage em produção =====
-rg "readIstanbulCoverage" --include="*.ts" -g '!__tests__' -g '!*.test.ts'
-if [ $? -eq 0 ]; then echo "FALHA: readIstanbulCoverage encontrado"; fi
-
-# ===== C. Nenhum parseTestResultsFile em produção (fora data-hub/) =====
-rg "parseTestResultsFile" --include="*.ts" -g '!__tests__' -g '!*.test.ts' -g '!shared/data-hub/**'
-if [ $? -eq 0 ]; then echo "FALHA: parseTestResultsFile encontrado fora de data-hub/"; fi
-
-# ===== D. Nenhum isQuarantined em produção (fora quarantine.ts) =====
-rg "isQuarantined" --include="*.ts" -g '!__tests__' -g '!*.test.ts' -g '!shared/quarantine.ts'
-if [ $? -eq 0 ]; then echo "FALHA: isQuarantined encontrado fora de quarantine.ts"; fi
-
-# ===== E. Nenhum import de store.ts em produção (fora data-hub/) =====
-rg "from.*shared/store" --include="*.ts" -g '!__tests__' -g '!*.test.ts' -g '!shared/data-hub/**'
-if [ $? -eq 0 ]; then echo "FALHA: import de store.ts encontrado fora de data-hub/"; fi
-
-# ===== F. Nenhum store.runs em produção (fora data-hub/) =====
-rg "store\.runs" --include="*.ts" -g '!__tests__' -g '!*.test.ts' -g '!shared/data-hub/**'
-if [ $? -eq 0 ]; then echo "FALHA: store.runs encontrado fora de data-hub/"; fi
-
-# ===== G. Nenhum MetricsStore em produção (fora data-hub/) =====
-rg "MetricsStore" --include="*.ts" -g '!__tests__' -g '!*.test.ts' -g '!shared/data-hub/**' -g '!shared/types/**'
-if [ $? -eq 0 ]; then echo "FALHA: MetricsStore encontrado fora de data-hub/"; fi
-
-# ===== H. DataHub é obrigatório em health-score, quality-gate, pr-report-core =====
-rg "dataHub\?: DataHub" shared/health-score.ts shared/quality-gate.ts shared/pr-report-core.ts
-if [ $? -eq 0 ]; then echo "FALHA: DataHub ainda é opcional"; fi
-
-# ===== I. Type safety =====
-npx tsc --noEmit
-rg --pcre2 "as\s+any" --include="*.ts" -g '!__tests__' -g '!*.test.ts'
-rg "@ts-ignore\|@ts-expect-error" --include="*.ts" -g '!__tests__' -g '!*.test.ts'
-```
-
-#### 7.2 — Verificações manuais
-
-```bash
-npx vitest run --reporter=verbose                    # 100% pass
-npx eslint . --max-warnings=0                        # 0 violações
-```
-
-**Checkpoint Fase 7:**
-TODOS os comandos acima retornam zero resultados + `npx tsc --noEmit` = 0 erros.
-
----
-
-### Fase 8 — Deletar Fontes Alternativas (2 dias)
-
-**Objetivo:** Só executar SE Fase 7 passou 100%. Deletar fontes para que consumidores silenciosos apareçam.
-
-#### 8.1 — Deletar módulos alternativos
-
-| Item  | Deletar                                                  | Motivo                                            |
-| ----- | -------------------------------------------------------- | ------------------------------------------------- |
-| 8.1.1 | `shared/ci-test-downloader.ts`                           | CI API direta — DataHub providers têm equivalente |
-| 8.1.2 | `shared/coverage-source.ts`                              | Istanbul file read — DataHub tem `raw.coverage`   |
-| 8.1.3 | `shared/commit-log.ts`                                   | CI API direta — DataHub tem `raw.commitLog`       |
-| 8.1.4 | `shared/coverage-source.test.ts`                         | Teste de módulo deletado                          |
-| 8.1.5 | `shared/coverage-source.property.test.ts`                | Teste de módulo deletado                          |
-| 8.1.6 | `shared/integration/coverage-source.integration.test.ts` | Teste de módulo deletado                          |
-| 8.1.7 | `shared/ci-test-downloader.test.ts`                      | Teste de módulo deletado                          |
-| 8.1.8 | `shared/commit-log.test.ts`                              | Teste de módulo deletado                          |
-
-#### 8.2 — Remover `loadMetricsStore()` da interface pública
-
-| Item  | Ação                                                                                          | Arquivo                          |
-| ----- | --------------------------------------------------------------------------------------------- | -------------------------------- |
-| 8.2.1 | Mover `loadMetricsStore()` de `DataHubPersistence` para implementação privada                 | `shared/types/data-hub.ts`       |
-| 8.2.2 | Criar métodos específicos: `getRuns()`, `getCoverageHistory()`, `getFailureClassifications()` | `shared/data-hub/persistence.ts` |
-| 8.2.3 | Remover `saveMetricsStore()` da interface pública                                             | `shared/types/data-hub.ts`       |
-
-#### 8.3 — ESLint: Bloquear imports de módulos deletados
-
-Adicionar ao `eslint.config.mjs`:
-
-```javascript
-{
-  name: 'ssot-enforcement',
-  files: ['**/*.ts', '**/*.js'],
-  ignores: ['**/__tests__/**', '**/*.test.ts', '**/*.spec.ts'],
-  rules: {
-    'no-restricted-imports': ['error', {
-      paths: [
-        { name: '../shared/ci-test-downloader.js', message: 'DELETED — Use DataHub' },
-        { name: '../../shared/ci-test-downloader.js', message: 'DELETED — Use DataHub' },
-        { name: '../shared/coverage-source.js', message: 'DELETED — Use DataHub.computed.coverage' },
-        { name: '../../shared/coverage-source.js', message: 'DELETED — Use DataHub.computed.coverage' },
-        { name: '../shared/commit-log.js', message: 'DELETED — Use DataHub.raw.commitLog' },
-        { name: '../../shared/commit-log.js', message: 'DELETED — Use DataHub.raw.commitLog' },
-      ],
-    }],
-  },
-}
-```
-
-**Checkpoint Fase 8:**
-
-```bash
-npx tsc --noEmit                                    # 0 erros — sem consumidores quebrados
-npx vitest run --reporter=verbose                    # 100% pass
-npx eslint . --max-warnings=0                        # 0 violações
-rg "ci-test-downloader\|coverage-source\|commit-log" --include="*.ts" -g '!docs' -g '!plans'  # Só em docs/plans
-```
-
----
-
-### Fase 9 — Pegar Consumidores Silenciosos (1-2 dias)
-
-**Objetivo:** Só executar SE Fase 8 revelou quebras. Migrar consumidores que só apareceram após deleção.
-
-#### 9.1 — Identificar quebras
-
-```bash
-npx tsc --noEmit 2>&1 | rg "Cannot find module"  # Erros de import
-npx vitest run 2>&1 | rg "FAIL"                   # Testes falhando
-```
-
-#### 9.2 — Migrar cada consumidor quebrado
-
-Para cada erro de compilação ou teste falhando:
-
-1. Mapear arquivo e import quebrado
-2. Criar DataHub no caller ou usar `CommandContext.dataHub`
-3. Substituir chamada de função deletada por equivalente DataHub
-4. Rodar `npx tsc --noEmit` e `npx vitest run` até 0 erros
-
-**Checkpoint Fase 9:**
-
-```bash
-npx tsc --noEmit                                    # 0 erros
-npx vitest run --reporter=verbose                    # 100% pass
-```
-
----
-
-### Fase 10 — Prevenção Final (1 dia)
-
-**Objetivo:** Bloquear permanentemente novos bypasses.
-
-#### 10.1 — ESLint: Bloquear loadMetricsStore externo
-
-```javascript
-{
-  name: 'ssot-block-loadMetricsStore',
-  files: ['**/*.ts', '**/*.js'],
-  ignores: ['**/__tests__/**', '**/*.test.ts', '**/*.spec.ts', '**/data-hub/**'],
-  rules: {
-    'no-restricted-syntax': ['error', {
-      selector: 'CallExpression[callee.name="loadMetricsStore"]',
-      message: 'Use DataHub.computed.* instead of loadMetricsStore()',
-    }, {
-      selector: 'CallExpression[callee.property.name="loadMetricsStore"]',
-      message: 'Use DataHub.computed.* instead of loadMetricsStore()',
-    }],
-  },
-}
-```
-
-#### 10.2 — Atualizar TECHDOC.md
-
-- DataHub como SSOT obrigatório
-- Nenhum módulo fora de `data-hub/` pode acessar `MetricsStore`, `Store`, `loadMetricsStore`
-- Padrão: `CommandContext.dataHub` é a fonte única para todos os handlers
-
-#### 10.3 — Verificação final completa
-
-```bash
-echo "=== VERIFICAÇÃO FINAL SSOT ==="
-echo "1. Compilação:" && npx tsc --noEmit && echo "   ✅"
-echo "2. Lint:" && npx eslint . --max-warnings=0 && echo "   ✅"
-echo "3. Testes:" && npx vitest run && echo "   ✅"
-echo "4. Cobertura:" && npx vitest run --coverage && echo "   ✅"
-echo "5. Nenhum loadMetricsStore fora do data-hub:" && \
-  rg "loadMetricsStore" --include="*.ts" -g '!__tests__' -g '!*.test.ts' -g '!shared/data-hub/**' | wc -l
-echo "6. Nenhum store.runs fora do data-hub:" && \
-  rg "store\.runs" --include="*.ts" -g '!__tests__' -g '!*.test.ts' -g '!shared/data-hub/**' | wc -l
-```
-
-**Checkpoint Fase 10:**
-
-```
-✅ npx tsc --noEmit = 0 erros
-✅ npx eslint . --max-warnings=0
-✅ npx vitest run = 100% pass
-✅ npx vitest run --coverage = threshold atingido
-✅ zero loadMetricsStore fora de shared/data-hub/
-✅ zero store.runs fora de shared/data-hub/
-✅ zero type assertions em produção
-✅ zero @ts-ignore/@ts-expect-error em produção
-```
-
----
-
 ## RISK REGISTER
 
 | ID  | Risco                                                                                                    | Impacto | Probabilidade | Mitigação                                                                                                         |
@@ -4083,272 +3247,3 @@ echo "6. Nenhum store.runs fora do data-hub:" && \
 | 2026-07-10 | CtrfSource → TestReportSource — detector format-agnóstico, não CTRF-específico            | detector deve detectar "tem reporter?" sem assumir formato               | Usuário  |
 | 2026-07-10 | Detecção de reporter: Fase 3 usa regex (renomeação); Fase 11 usa AST/híbrido              | regex é insuficiente para detecção confiável; AST é superior             | Usuário  |
 | 2026-07-10 | Duas detecções separadas: capacidade (wizard) vs formato (parser) — não conflitar         | Wizard detecta de config; parser detecta de conteúdo                     | Pesquisa |
-
----
-
-## PHASE 0.8 EXTENDED — ATOMIC TASK PLAN (2026-07-10)
-
-> **Escopo:** Eliminar loadMetricsStore(), tornar CommandContext.dataHub obrigatório,
-> tornar persistence obrigatório, implementar Design Gaps 1-2.
-> **Princípio:** Tarefas atômicas sequenciais. Cada tarefa completa antes da próxima.
-> **Zero paralelismo.**
-
-### Tarefa 1 — Adicionar `coverageHistory` ao `RawData`
-
-| Item       | Detalhe                                                                             |
-| ---------- | ----------------------------------------------------------------------------------- |
-| Arquivo    | `shared/types/data-hub.ts`                                                          |
-| Mudança    | Adicionar `coverageHistory?: CoverageSnapshot[]` ao `RawData`                       |
-| Efeito     | `loadFromStore()` em `hub.ts` deve popular o campo; `mergeRawData()` deve mergeá-lo |
-| Checkpoint | `npx tsc --noEmit` = 0 erros                                                        |
-
-### Tarefa 2 — Migrar `jira_management/main.ts:99`
-
-| Item       | Detalhe                                                             |
-| ---------- | ------------------------------------------------------------------- |
-| Arquivo    | `jira_management/main.ts`                                           |
-| Atual      | `getDataHub().loadMetricsStore()` → lê `coverageHistory` para badge |
-| Novo       | `getDataHub().raw.coverageHistory`                                  |
-| Checkpoint | tsc + `vitest run jira_management/main.test.ts`                     |
-
-### Tarefa 3 — Migrar `jira_management/commands/case12.ts:90`
-
-| Item       | Detalhe                                                                         |
-| ---------- | ------------------------------------------------------------------------------- |
-| Atual      | `hub.loadMetricsStore()` → `store.runs.length`, `store.coverageHistory?.length` |
-| Novo       | `hub.computed.metricsRuns?.length`, `hub.raw.coverageHistory?.length`           |
-| Checkpoint | tsc + vitest case12                                                             |
-
-### Tarefa 4 — Migrar `jira_management/commands/case17.ts:159,219`
-
-| Item       | Detalhe                                                                            |
-| ---------- | ---------------------------------------------------------------------------------- |
-| Atual      | `_loadFlakinessMap`: `hub.loadMetricsStore()` / `_enrichHtmlWithContext`: nullable |
-| Novo       | `hub.computed.metricsRuns` / nullable `dataHub?.computed.metricsRuns`              |
-| Checkpoint | tsc + vitest case17                                                                |
-
-### Tarefa 5 — Migrar `jira_management/commands/case19.ts:100`
-
-| Item       | Detalhe                                                        |
-| ---------- | -------------------------------------------------------------- |
-| Atual      | `hub.loadMetricsStore()` → passa store inteiro para 5 funções  |
-| Novo       | Criar `MetricsStore` local de `dataHub.computed + dataHub.raw` |
-| Checkpoint | tsc + vitest case19                                            |
-
-### Tarefa 6 — Migrar `jira_management/commands/case21.ts:43`
-
-| Item       | Detalhe                                     |
-| ---------- | ------------------------------------------- |
-| Atual      | `store.coverageHistory` → compara snapshots |
-| Novo       | `dataHub.raw.coverageHistory`               |
-| Checkpoint | tsc + vitest case21                         |
-
-### Tarefa 7 — Migrar `jira_management/commands/case22.ts:62`
-
-| Item       | Detalhe                               |
-| ---------- | ------------------------------------- |
-| Atual      | `store.runs` → `calcFlakinessEntries` |
-| Novo       | `dataHub.computed.metricsRuns`        |
-| Checkpoint | tsc + vitest case22                   |
-
-### Tarefa 8 — Migrar `jira_management/commands/case25.ts:17`
-
-| Item       | Detalhe                                                 |
-| ---------- | ------------------------------------------------------- |
-| Atual      | `getDataHub().loadMetricsStore()` → passa store inteiro |
-| Novo       | Criar `MetricsStore` local                              |
-| Checkpoint | tsc + vitest case25                                     |
-
-### Tarefa 9 — Migrar `jira_management/commands/case26.ts:20`
-
-| Item       | Detalhe                                             |
-| ---------- | --------------------------------------------------- |
-| Atual      | `hub.loadMetricsStore()` → flakiness + health score |
-| Novo       | `dataHub.computed.metricsRuns`                      |
-| Checkpoint | tsc + vitest case26                                 |
-
-### Tarefa 10 — Migrar `shared/cli_base.ts:219`
-
-| Item       | Detalhe                            |
-| ---------- | ---------------------------------- |
-| Atual      | `store.runs.length` como gate      |
-| Novo       | `hub.computed.metricsRuns?.length` |
-| Checkpoint | tsc + vitest cli_base              |
-
-### Tarefa 11 — Migrar `shared/coverage-gap.ts:105`
-
-| Item       | Detalhe                              |
-| ---------- | ------------------------------------ |
-| Atual      | `store.coverageHistory` → tendências |
-| Novo       | `dataHub.raw.coverageHistory`        |
-| Checkpoint | tsc + vitest coverage-gap            |
-
-### Tarefa 12 — Migrar `git_triggers/pipeline-jira.ts:24`
-
-| Item       | Detalhe                                         |
-| ---------- | ----------------------------------------------- |
-| Atual      | **WRITE** — mutação de `failureClassifications` |
-| Novo       | `dataHub.saveFailureClassification()`           |
-| Checkpoint | tsc + vitest pipeline-jira                      |
-
-### Tarefa 13 — Migrar `git_triggers/schedule-handler.ts:157,303`
-
-| Item       | Detalhe                                                               |
-| ---------- | --------------------------------------------------------------------- |
-| Atual      | 2 call sites, o primeiro é complexo (múltiplas funções downstream)    |
-| Novo       | `dataHub.computed.metricsRuns` + `dataHub.raw.failureClassifications` |
-| Checkpoint | tsc + vitest schedule-handler                                         |
-
-### Tarefa 14 — Migrar `git_triggers/batch-mode.ts:217,360`
-
-| Item       | Detalhe                                    |
-| ---------- | ------------------------------------------ |
-| Atual      | 2 call sites — flakiness + export de tests |
-| Novo       | `dataHub.computed.metricsRuns`             |
-| Checkpoint | tsc + vitest batch-mode                    |
-
-### Tarefa 15 — Migrar `git_triggers/interactive-mode.ts:254,343,434`
-
-| Item       | Detalhe                                                               |
-| ---------- | --------------------------------------------------------------------- |
-| Atual      | 3 call sites, o mais complexo                                         |
-| Novo       | `dataHub.computed.metricsRuns` + `dataHub.raw.failureClassifications` |
-| Checkpoint | tsc + vitest interactive-mode                                         |
-
-### Tarefa 16 — Remover `loadMetricsStore()` da interface e impl
-
-| Item       | Detalhe                                                           |
-| ---------- | ----------------------------------------------------------------- |
-| Arquivos   | `types/data-hub.ts`, `data-hub/hub.ts`, `data-hub/persistence.ts` |
-| Mudança    | Remover de `DataHub`, `DataHubImpl`, `DataHubPersistence`         |
-| Checkpoint | `npx tsc --noEmit` = 0 erros                                      |
-
-### Tarefa 17 — Corrigir todos os testes afetados
-
-| Item       | Detalhe                                                  |
-| ---------- | -------------------------------------------------------- |
-| Escopo     | ~40 arquivos de teste que referenciam `loadMetricsStore` |
-| Checkpoint | `npx vitest run` = 0 falhas                              |
-
-### Tarefa 18 — Tornar `CommandContext.dataHub` obrigatório
-
-| Item       | Detalhe                                  |
-| ---------- | ---------------------------------------- |
-| Arquivo    | `types/command-context.ts`               |
-| Mudança    | `dataHub?: DataHub` → `dataHub: DataHub` |
-| Checkpoint | tsc = 0 erros                            |
-
-### Tarefa 19 — Tornar persistence obrigatório
-
-| Item       | Detalhe                                                                   |
-| ---------- | ------------------------------------------------------------------------- |
-| Arquivos   | `types/data-hub.ts`, `data-hub/hub.ts`, `data-hub/factory.ts`             |
-| Mudança    | Remover `?` de persistence; remover `createDataHubPersistence` de exports |
-| Checkpoint | tsc = 0 erros                                                             |
-
-### Tarefa 20 — Design Gap 1: Input Validation
-
-| Item       | Detalhe                                                                      |
-| ---------- | ---------------------------------------------------------------------------- |
-| Arquivo    | `data-hub/schemas.ts`                                                        |
-| Mudança    | `PipelineRunSchema` Zod + `RawDataSchema` Zod (com transforms para Map)      |
-| Validação  | Em `GitHubDataProvider.fetchRawData()` e `GitLabDataProvider.fetchRawData()` |
-| Checkpoint | tsc + novos testes passam                                                    |
-
-### Tarefa 21 — Design Gap 2: Data Provenance
-
-| Item       | Detalhe                                                                |
-| ---------- | ---------------------------------------------------------------------- |
-| Tipo       | `DataSource { confidence: number; source: string; timestamp: string }` |
-| Campo      | `provenance?: Map<string, DataSource>` em `RawData`                    |
-| População  | Em ambos providers                                                     |
-| Checkpoint | tsc + novos testes passam                                              |
-
-### Tarefa 22 — Suite de testes completo
-
-| Item     | Detalhe                 |
-| -------- | ----------------------- |
-| Comando  | `npx vitest run`        |
-| Esperado | 0 falhas em 451+ suites |
-
-### Tarefa 23 — Auditoria completa
-
-| Item        | Detalhe                                   |
-| ----------- | ----------------------------------------- |
-| Verificação | Nenhum `loadMetricsStore()` em produção   |
-| Verificação | Nenhum `createDataHubPersistence` externo |
-| Verificação | `CommandContext.dataHub` obrigatório      |
-| Verificação | Validação Zod nos providers               |
-| Verificação | Provenance populada                       |
-
-### Tarefa 24 — Commit, push, monitor CI
-
-| Item    | Detalhe                               |
-| ------- | ------------------------------------- |
-| Comando | `git add . && git commit && git push` |
-| Push    | timeout >=300s                        |
-| Monitor | GitHub API com Bearer token           |
-
----
-
-### Fase 11 — Detecção de Reporter: AST/Híbrido (pesquisa + implementação)
-
-**Objetivo:** Substituir a detecção regex-only por uma abordagem superior que combine package.json dependency check, config file analysis e (opcionalmente) AST parsing para detecção confiável de reporters de teste.
-
-**Problema:** A detecção atual (`detectConfigCtrf` / `detectTestReporter`) usa apenas regex em arquivos de config. Limitações:
-
-- Falsos positivos em comments/strings
-- Só verifica vitest/vite configs (não jest, cypress, playwright)
-- Não verifica package.json dependencies
-- Só detecta CTRF, não JUnit/Mochawesome
-
-**NOTA:** Antes de implementar, fazer pesquisa compreensiva sobre:
-
-1. Viabilidade de AST parsing em TypeScript (ts-morph, jscodeshift, esbuild)
-2. Custo-benefício vs package.json + regex expandida
-3. Se há bibliotecas prontas para detecção de reporters
-4. Se o hybrid (package.json deps + regex configs) é suficiente ou se AST é necessário
-
-**Abordagem recomendada (hipótese a validar na pesquisa):**
-
-- **Nível 1 (package.json):** Verificar se reporter está em `devDependencies`/`dependencies`
-- **Nível 2 (config files):** Verificar se reporter é importado/configurado em config files
-- **Nível 3 (AST):** Se necessário, usar AST parsing para entender a estrutura real do config
-
-**Dependência:** Fase 3 (renomeação de `detectConfigCtrf` → `detectTestReporter` e `CtrfSource` → `TestReportSource`)
-
-#### 11.1 — Pesquisa
-
-| Item       | Detalhe                                                         |
-| ---------- | --------------------------------------------------------------- |
-| Escopo     | Viabilidade de AST parsing, package.json check, regex expandida |
-| Entregável | Documento de decisão: qual abordagem implementar e por quê      |
-| Checkpoint | Decisão documentada no plano                                    |
-
-#### 11.2 — Implementação (depende da pesquisa)
-
-| Item       | Detalhe                                                 |
-| ---------- | ------------------------------------------------------- |
-| Escopo     | Substituir `detectTestReporter` por abordagem escolhida |
-| Frameworks | Todos: vitest, jest, cypress, playwright, generic       |
-| Formatos   | CTRF, JUnit, Mochawesome (e futuros)                    |
-| Checkpoint | `npx vitest run setup/detector.test.ts` = 0 falhas      |
-
-#### 11.3 — Testes
-
-| Item        | Detalhe                                                            |
-| ----------- | ------------------------------------------------------------------ |
-| Unit        | Testar detecção para cada framework + cada formato                 |
-| Integration | Testar fluxo completo wizard → config escrita com reporter correto |
-| Checkpoint  | `npx vitest run setup/` = 0 falhas                                 |
-
-**Checkpoint Fase 11:**
-
-```bash
-npx tsc --noEmit                                    # 0 erros
-npx vitest run setup/                               # 0 falhas
-# Detecção funciona para: vitest+CTRF, vitest+JUnit, jest+JUnit, cypress+CTRF, playwright+CTRF
-# package.json check: reporter em devDependencies → detectado
-# config check: reporter em vitest.config → detectado
-# Falsos positivos em comments → eliminados
-```
