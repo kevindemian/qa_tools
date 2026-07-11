@@ -640,6 +640,8 @@ export function parseTestSummaryFromLogs(logText: string): LogParseResult;
 
 > **⚠️ RegEx Log Parsing — Fallback Degradado**
 >
+> **Status:** hardening planejado — ver **FASE L4** em `data-hub-ssot-enforcement.md` (zero-dep, NaN-safe, registry por framework/versão; corrige vazamento de NaN, Vitest com falhas, truncamento e captura multi-linha).
+>
 > O log-parser é o **último recurso** na cascata de extração de dados, ativado apenas quando fontes estruturadas (CTRF, JUnit, Check Runs) não estão disponíveis.
 >
 > **Limitações conhecidas** (confidence real: ~60-70% no melhor caso):
