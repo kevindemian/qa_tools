@@ -259,7 +259,7 @@ export class GitHubDataProvider implements DataProvider {
             }
             return allAnnotations.length > 0 ? allAnnotations : undefined;
         } catch (err) {
-            rootLogger.debug(`GitHub: check runs fetch failed: ${String(err)}`);
+            rootLogger.debug(`GitHub: check runs fetch failed: ${extractErrorMessage(err)}`);
             return undefined;
         }
     }

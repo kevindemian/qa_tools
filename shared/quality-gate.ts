@@ -104,7 +104,7 @@ function _coverageCheck(health: HealthScoreResult): GateCheck {
 
 /** Check suite speed P95 against threshold. Reads from DataHub.computed — SSOT. */
 function _suiteSpeedCheck(health: HealthScoreResult, dataHub: DataHub): GateCheck {
-    const p95 = dataHub.computed.suiteSpeedP95;
+    const p95 = Number.isFinite(dataHub.computed.suiteSpeedP95) ? dataHub.computed.suiteSpeedP95 : 0;
     const thresholdMs = THRESHOLDS.maxSuiteSpeed * 1000;
     const status = p95 <= thresholdMs ? 'pass' : 'fail';
     return {

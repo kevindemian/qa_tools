@@ -186,7 +186,6 @@ describe('Import Orchestrator', () => {
                 printSummary: vi.fn(),
             });
 
-            expect(result).toBeDefined();
             expect(result?.status).toBe('error');
             expect(result?.summary).toContain('1/2');
         });

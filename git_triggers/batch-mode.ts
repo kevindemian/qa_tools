@@ -3,6 +3,7 @@
  * Uses unified CLI args from cli-args.ts.
  */
 import { success, error, info, printError, warn, withSpinner } from '../shared/prompt.js';
+import { extractErrorMessage } from '../shared/prompt-errors.js';
 import { getDataHub, setDataHub } from '../shared/data-hub/global-hub.js';
 import { calcFlakinessEntries } from '../shared/data-hub/compute/flakiness-entries.js';
 import { generateFlakinessHtml } from '../shared/flakiness-dashboard.js';
@@ -173,8 +174,8 @@ async function _collectPipelineResults(
             try {
                 const { getOrFetchDataHub } = await import('../shared/ci-data.js');
                 dataHub = await getOrFetchDataHub(m, projectName);
-            } catch {
-                // Fallback: proceed without DataHub
+            } catch (err: unknown) {
+                warn('batch-mode: DataHub fetch failed — ' + extractErrorMessage(err));
             }
             // Register DataHub in the global singleton so downstream consumers
             // (quality-gate, health-score, flakiness) can access it via getDataHub().

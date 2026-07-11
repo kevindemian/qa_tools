@@ -668,7 +668,6 @@ describe('CreateTestsFromJson', () => {
         );
         const result = await createTestsFromJson(BASE_PARAMS());
 
-        expect(result).toBeDefined();
         expect(nonNull(result).summary).toContain('2');
         expect(nonNull(result).sourcePath).toBe('/fake/path.json');
     });
@@ -684,7 +683,6 @@ describe('CreateTestsFromJson', () => {
         );
         const result = await createTestsFromJson(BASE_PARAMS());
 
-        expect(result).toBeDefined();
         expect(nonNull(result).summary).toContain('1');
     });
 
@@ -699,7 +697,6 @@ describe('CreateTestsFromJson', () => {
         );
         const result = await createTestsFromJson(BASE_PARAMS());
 
-        expect(result).toBeDefined();
         expect(nonNull(result).summary).toContain('1');
     });
 
@@ -716,7 +713,6 @@ describe('CreateTestsFromJson', () => {
         );
         const result = await createTestsFromJson(BASE_PARAMS());
 
-        expect(result).toBeDefined();
         expect(nonNull(result).summary).toContain('1');
     });
 });
@@ -833,7 +829,6 @@ describe('CreateTestsFromCsv', () => {
         csvResource.readBulkCsv.mockResolvedValue([{ title: 'TC1', steps: [{ fields: { Action: 'Click' } }] }]);
         const result = await createTestsFromCsv(makeFullArgs());
 
-        expect(result).toBeDefined();
         expect(nonNull(result).summary).toContain('1');
     });
 });

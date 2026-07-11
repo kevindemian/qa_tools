@@ -16,6 +16,17 @@ import { Card, MetricCard, MetricGrid, Badge, DataTable } from './primitives/ind
 import type { TableColumn, TableRow } from './primitives/index.js';
 import { rootLogger } from './logger.js';
 
+/**
+ * Dimension 5 Provenance — documents the source and justification for benchmark methodology.
+ * @reference DORA / Internal cross-team benchmarking best practice
+ */
+export const BENCHMARK_PROVENANCE = {
+    methodology: {
+        source: 'Cross-team benchmarking best practice',
+        standard: 'DORA / Internal',
+    },
+} as const;
+
 type Trend = 'up' | 'down' | 'stable';
 
 export interface SquadBenchmark {

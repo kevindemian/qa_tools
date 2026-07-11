@@ -7,6 +7,21 @@
 import { sanitizeHtml } from './escape.js';
 import { Card, MetricCard, MetricGrid, Badge } from './primitives/index.js';
 
+/**
+ * Dimension 5 Provenance — documents the source and justification for each weight and threshold.
+ */
+export const BACKLOG_HEALTH_PROVENANCE = {
+    weights: {
+        stale: { value: 35, source: 'Backlog hygiene best practice', standard: 'Internal' },
+        unassigned: { value: 30, source: 'Resource allocation importance', standard: 'Internal' },
+        bugNoTest: { value: 35, source: 'Test coverage gap importance', standard: 'Internal' },
+    },
+    thresholds: {
+        healthy: { value: 80, source: 'Backlog health target', standard: 'Internal' },
+        warning: { value: 50, source: 'Backlog health warning', standard: 'Internal' },
+    },
+} as const;
+
 export interface BacklogHealthIssue {
     key: string;
     summary: string;
@@ -47,7 +62,9 @@ const SCORE_THRESHOLD_WARN = 50;
 function daysSince(dateStr: string): number {
     const updated = new Date(dateStr);
     const now = new Date();
-    return Math.floor((now.getTime() - updated.getTime()) / (1000 * 60 * 60 * 24));
+    const diff = now.getTime() - updated.getTime();
+    if (!Number.isFinite(diff)) return 0;
+    return Math.floor(diff / (1000 * 60 * 60 * 24));
 }
 
 export function analyzeUnassignedIssues(issues: BacklogHealthIssue[]): BacklogHealthIssue[] {
@@ -73,18 +90,21 @@ export function calculateBacklogScore(result: BacklogHealthResult): number {
         ...result.bugsWithoutTests.map((i) => i.key),
     ]).size;
 
-    const totalIssues = result.densityByEpic.reduce((sum, e) => sum + e.bugCount, 0);
+    const totalIssues = result.densityByEpic.reduce(
+        (sum, e) => sum + (Number.isFinite(e.bugCount) ? e.bugCount : 0),
+        0,
+    );
     const effective = Math.max(totalIssues, totalFlagged, 1);
 
     const unassignScore = Math.max(0, 100 - (result.unassignedIssues.length / effective) * 100);
     const staleScore = Math.max(0, 100 - (result.staleIssues.length / effective) * 100);
     const bugNoTestScore = Math.max(0, 100 - (result.bugsWithoutTests.length / effective) * 100);
 
-    return Math.round(
+    const raw =
         unassignScore * (UNASSIGNED_WEIGHT / 100) +
-            staleScore * (STALE_WEIGHT / 100) +
-            bugNoTestScore * (BUG_NO_TEST_WEIGHT / 100),
-    );
+        staleScore * (STALE_WEIGHT / 100) +
+        bugNoTestScore * (BUG_NO_TEST_WEIGHT / 100);
+    return Number.isFinite(raw) ? Math.round(raw) : 0;
 }
 
 export function analyzeBacklogHealth(

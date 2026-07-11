@@ -3,6 +3,26 @@
  *
  * RULE: Every error MUST produce a human-readable message.
  * No silent failures. No empty strings. No `undefined` as error.
+ *
+ * ERROR HANDLING PATTERNS (silent-degradation-fix.md):
+ *
+ * 1. Safeguard Clauses (input validation):
+ *    throw new DataIntegrityError('functionName: description of invalid state');
+ *
+ * 2. I/O failure propagation:
+ *    throw new DataFetchError(`operation failed: ${msg}`, { cause: err });
+ *
+ * 3. Catch block must re-throw:
+ *    catch (err) {
+ *        const msg = formatErr(err);
+ *        rootLogger.error(`module: failed — ${humanizeError(msg, 'context')}`);
+ *        throw err; // or throw new DataFetchError(msg, { cause: err })
+ *    }
+ *
+ * PROIBIDO:
+ *    return 0 / return null / return [] / return {} / return undefined em catch blocks
+ *    bare catch sem bind de erro (violacao EH-7)
+ *    ?? 0 em funções de métricas
  */
 
 // ─── LLM Error Classes ─────────────────────────────────────────────────────
@@ -46,6 +66,27 @@ export class LlmAuthError extends LlmError {
     constructor(message: string) {
         super(message);
         this.name = 'LlmAuthError';
+    }
+}
+
+// ─── Data Integrity Errors ──────────────────────────────────────────────────
+
+/** Thrown when data fails integrity validation.
+ * Use for: NaN inputs, empty arrays where non-empty expected, out-of-bounds values,
+ * corrupted data, missing required fields. */
+export class DataIntegrityError extends Error {
+    constructor(message: string) {
+        super(message);
+        this.name = 'DataIntegrityError';
+    }
+}
+
+/** Thrown when an I/O operation fails (API call, file read, parsing).
+ * Use for: network errors, filesystem errors, JSON parse errors, HTTP errors. */
+export class DataFetchError extends Error {
+    constructor(message: string, options?: ErrorOptions) {
+        super(message, options);
+        this.name = 'DataFetchError';
     }
 }
 

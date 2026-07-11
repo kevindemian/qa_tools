@@ -21,8 +21,12 @@ export interface ScoreResult {
  * Compute grade from score using boundaries.
  * @param score - Weighted composite score (0-100).
  * @param boundaries - Grade boundaries.
+ * @throws Error if score is NaN or Infinity (Rule 24 — NaN must never silently pass).
  */
 export function computeGrade(score: number, boundaries: GradeBoundaries = DEFAULT_GRADE_BOUNDARIES): Grade {
+    if (!Number.isFinite(score)) {
+        throw new Error(`scoring: computeGrade received invalid score ${score} — upstream bug`);
+    }
     if (score >= boundaries.excellent) return 'excellent';
     if (score >= boundaries.good) return 'good';
     if (score >= boundaries.needs_attention) return 'needs_attention';

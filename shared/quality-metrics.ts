@@ -17,6 +17,18 @@ import type { QualityMetricsSnapshot } from './types/data-hub.js';
 /** Re-export for backward compatibility. */
 export type { QualityMetricsSnapshot } from './types/data-hub.js';
 
+/**
+ * Dimension 5 Provenance — documents the source and justification for drift detection threshold.
+ * @reference ISO 3534-2 (Statistical process control — 2-sigma rule)
+ */
+export const DRIFT_DETECTION_PROVENANCE = {
+    sigmaThreshold: {
+        value: 2,
+        source: 'Statistical process control (2-sigma rule)',
+        standard: 'ISO 3534-2',
+    },
+} as const;
+
 type Layer = 'layer1' | 'layer2' | 'layer3';
 
 const MAX_PASS_RATE = 1;

@@ -14,6 +14,32 @@ import type { TableColumn, TableRow } from './primitives/index.js';
 import { rootLogger } from './logger.js';
 import type { AiGenerationRecord } from './types/llm.js';
 
+/**
+ * Dimension 5 Provenance — documents the source and justification for each weight and threshold.
+ */
+const REQUIREMENT_SCORE_PROVENANCE = {
+    weights: {
+        acceptance: { value: 0.5, source: 'AI acceptance rate importance', standard: 'Internal' },
+        retention: { value: 0.3, source: 'Requirement retention metric', standard: 'Internal' },
+        volume: { value: 0.2, source: 'Volume normalization factor', standard: 'Internal' },
+    },
+    gradeThresholds: {
+        A: { min: 90, source: 'Industry standard grading', standard: 'Internal' },
+        B: { min: 75, source: 'Industry standard grading', standard: 'Internal' },
+        C: { min: 60, source: 'Industry standard grading', standard: 'Internal' },
+        D: { min: 40, source: 'Industry standard grading', standard: 'Internal' },
+    },
+} as const;
+
+// Validate provenance weights sum to 1.0
+const _reqWeightSum =
+    REQUIREMENT_SCORE_PROVENANCE.weights.acceptance.value +
+    REQUIREMENT_SCORE_PROVENANCE.weights.retention.value +
+    REQUIREMENT_SCORE_PROVENANCE.weights.volume.value;
+if (Math.abs(_reqWeightSum - 1.0) > 0.001) {
+    throw new Error(`requirement-score: provenance weights must sum to 1.0, got ${_reqWeightSum}`);
+}
+
 export interface RequirementScoreEntry {
     requirementId: string;
     userStory: string;
@@ -48,6 +74,7 @@ const USER_STORY_TRUNCATE_LENGTH = 120;
 const VOLUME_NORMALIZATION_DIVISOR = 10;
 
 function calculateGrade(score: number): 'A' | 'B' | 'C' | 'D' | 'F' {
+    if (!Number.isFinite(score)) return 'F';
     if (score >= GRADE_A_THRESHOLD) return 'A';
     if (score >= GRADE_B_THRESHOLD) return 'B';
     if (score >= GRADE_C_THRESHOLD) return 'C';
@@ -60,14 +87,13 @@ function computeEntryScore(entry: Omit<RequirementScoreEntry, 'score' | 'scoreGr
     const retentionWeight = 0.3;
     const volumeWeight = 0.2;
 
-    const normalizedAcceptance = entry.acceptanceRate;
+    const normalizedAcceptance = Number.isFinite(entry.acceptanceRate) ? entry.acceptanceRate : 0;
     const retentionRate =
         entry.totalTests > 0 ? Math.min(100, ((entry.keptTests + entry.modifiedTests) / entry.totalTests) * 100) : 0;
     const volumeScore = Math.min(100, (entry.totalTests / VOLUME_NORMALIZATION_DIVISOR) * 100);
 
-    const score = Math.round(
-        normalizedAcceptance * acceptanceWeight + retentionRate * retentionWeight + volumeScore * volumeWeight,
-    );
+    const raw = normalizedAcceptance * acceptanceWeight + retentionRate * retentionWeight + volumeScore * volumeWeight;
+    const score = Number.isFinite(raw) ? Math.round(raw) : 0;
 
     return {
         ...entry,
@@ -134,15 +160,15 @@ export function calculateRequirementScores(records: AiGenerationRecord[] | null 
     entries.sort((a, b) => b.score - a.score);
 
     const totalRequirements = entries.length;
-    const totalGenerated = entries.reduce((s, e) => s + e.totalTests, 0);
-    const totalKept = entries.reduce((s, e) => s + e.keptTests, 0);
-    const totalModified = entries.reduce((s, e) => s + e.modifiedTests, 0);
-    const totalDeleted = entries.reduce((s, e) => s + e.deletedTests, 0);
-    const averageAcceptanceRate =
-        totalRequirements > 0 ? Math.round(entries.reduce((s, e) => s + e.acceptanceRate, 0) / totalRequirements) : 0;
+    const totalGenerated = entries.reduce((s, e) => s + (Number.isFinite(e.totalTests) ? e.totalTests : 0), 0);
+    const totalKept = entries.reduce((s, e) => s + (Number.isFinite(e.keptTests) ? e.keptTests : 0), 0);
+    const totalModified = entries.reduce((s, e) => s + (Number.isFinite(e.modifiedTests) ? e.modifiedTests : 0), 0);
+    const totalDeleted = entries.reduce((s, e) => s + (Number.isFinite(e.deletedTests) ? e.deletedTests : 0), 0);
+    const acceptanceSum = entries.reduce((s, e) => s + (Number.isFinite(e.acceptanceRate) ? e.acceptanceRate : 0), 0);
+    const averageAcceptanceRate = totalRequirements > 0 ? Math.round(acceptanceSum / totalRequirements) : 0;
 
-    const overallScore =
-        totalRequirements > 0 ? Math.round(entries.reduce((s, e) => s + e.score, 0) / totalRequirements) : 0;
+    const scoreSum = entries.reduce((s, e) => s + (Number.isFinite(e.score) ? e.score : 0), 0);
+    const overallScore = totalRequirements > 0 ? Math.round(scoreSum / totalRequirements) : 0;
     const overallGrade = calculateGrade(overallScore);
 
     return {
