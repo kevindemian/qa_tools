@@ -9,6 +9,23 @@ const mockGlobalHub = vi.hoisted(() => ({
 
 vi.mock('../data-hub/global-hub.js', () => mockGlobalHub);
 
+const mockFactory = vi.hoisted(() => ({
+    createDataHub: vi.fn(),
+    createDataHubFromParseResult: vi.fn(),
+}));
+vi.mock('../data-hub/factory.js', () => mockFactory);
+
+const mockTestSource = vi.hoisted(() => ({
+    askTestSource: vi.fn(),
+    DATAHUB_ERRORS: {
+        USER_SKIPPED: 'USER_SKIPPED',
+        USER_CANCELLED: 'USER_CANCELLED',
+        NO_TTY: 'NO_TTY',
+        NO_DATA_SOURCE: 'NO_DATA_SOURCE',
+    },
+}));
+vi.mock('../data-hub/test-source-fallback.js', () => mockTestSource);
+
 function makeMockProvider(overrides?: Partial<GitProvider>): GitProvider {
     return {
         provider: 'github',
@@ -34,11 +51,6 @@ const mockFeatureConfig = vi.hoisted(() => ({
     isQualitySkipped: vi.fn(),
     isFlakySkipped: vi.fn(),
 }));
-const mockCiData = vi.hoisted(() => ({
-    getOrFetchDataHub: vi.fn(),
-    persistCurrentRun: vi.fn(),
-    ensureDataHubSync: vi.fn(),
-}));
 
 vi.mock('fs', () => ({
     default: { mkdirSync: vi.fn(), writeFileSync: vi.fn(), existsSync: vi.fn() },
@@ -56,16 +68,35 @@ vi.mock('../feature-config.js', () => ({
     isQualitySkipped: mockFeatureConfig.isQualitySkipped,
     isFlakySkipped: mockFeatureConfig.isFlakySkipped,
 }));
-vi.mock('../ci-data.js', () => mockCiData);
 
 import fs from 'node:fs';
 import { main } from '../pr-report-core.js';
+
+function makeFetchedHub(): Record<string, unknown> {
+    return {
+        raw: { runs: [], jobs: new Map(), artifacts: new Map(), failureReasons: new Map() },
+        computed: {},
+        timestamp: new Date(),
+        provider: 'github',
+        repo: 'owner/repo',
+        saveParseResult: vi.fn(),
+        saveRun: vi.fn(),
+        flush: vi.fn(),
+        loadCoverageHistory: vi.fn().mockReturnValue([]),
+        loadFailureClassifications: vi.fn().mockReturnValue([]),
+        saveQualityMetrics: vi.fn(),
+        loadQualityMetricsHistory: vi.fn().mockReturnValue([]),
+    };
+}
 
 describe('TryCreateDataHub wiring', () => {
     beforeEach(() => {
         vi.clearAllMocks();
         mockGlobalHub.setDataHub.mockClear();
         mockGlobalHub.isDataHubInitialized.mockReturnValue(false);
+        mockFactory.createDataHub.mockReset();
+        mockFactory.createDataHubFromParseResult.mockReset();
+        mockTestSource.askTestSource.mockReset();
         delete process.env['GITHUB_STEP_SUMMARY'];
         delete process.env['CI'];
         delete process.env['GITHUB_ACTIONS'];
@@ -88,9 +119,9 @@ describe('TryCreateDataHub wiring', () => {
         mockFeatureConfig.isAiSkipped.mockReturnValue(false);
         mockFeatureConfig.isQualitySkipped.mockReturnValue(false);
         mockFeatureConfig.isFlakySkipped.mockReturnValue(false);
-        mockCiData.getOrFetchDataHub.mockResolvedValue(null);
-        mockCiData.persistCurrentRun.mockResolvedValue(undefined);
-        mockCiData.ensureDataHubSync.mockResolvedValue(undefined);
+        mockFactory.createDataHub.mockResolvedValue({ hub: makeFetchedHub(), status: 'ok' });
+        mockFactory.createDataHubFromParseResult.mockResolvedValue(makeFetchedHub());
+        mockTestSource.askTestSource.mockResolvedValue({ data: undefined, error: undefined });
         vi.mocked(fs.existsSync).mockReturnValue(true);
     });
 
@@ -98,9 +129,9 @@ describe('TryCreateDataHub wiring', () => {
         it('calls main without factory — no DataHub fetch', async () => {
             expect.hasAssertions();
 
-            await main();
+            await expect(main()).rejects.toThrow(/sem dados do versionador/);
 
-            expect(mockCiData.getOrFetchDataHub).not.toHaveBeenCalled();
+            expect(mockFactory.createDataHub).not.toHaveBeenCalled();
         });
     });
 
@@ -122,6 +153,7 @@ describe('TryCreateDataHub wiring', () => {
 
             expect(ciEnv).toBeDefined();
             expect(ciEnv?.isCI).toBeTruthy();
+            expect(mockFactory.createDataHub).toHaveBeenCalledTimes(1);
         });
 
         it('creates DataHub when factory returns GitProvider', async () => {
@@ -134,25 +166,11 @@ describe('TryCreateDataHub wiring', () => {
 
             const mockProvider = makeMockProvider();
             const factory = vi.fn().mockReturnValue(mockProvider);
-            const mockDataHub = {
-                raw: { runs: [], pipelineRuns: [] },
-                computed: { passRate: 85, coverage: 75, executionRate: 77, flakyPercentage: 12, suiteSpeedP95: 500 },
-                saveParseResult: vi.fn().mockReturnValue({}),
-                saveRun: vi.fn(),
-                saveCoverageSnapshot: vi.fn(),
-                saveFailureClassification: vi.fn(),
-                flush: vi.fn(),
-                loadCoverageHistory: vi.fn().mockReturnValue([]),
-                loadFailureClassifications: vi.fn().mockReturnValue([]),
-                saveQualityMetrics: vi.fn(),
-                loadQualityMetricsHistory: vi.fn().mockReturnValue([]),
-            };
-            mockCiData.getOrFetchDataHub.mockResolvedValue(mockDataHub);
 
             await main(factory);
 
-            expect(mockCiData.getOrFetchDataHub).toHaveBeenCalledWith(mockProvider, expect.any(String));
-            expect(mockGlobalHub.setDataHub).toHaveBeenCalledWith(mockDataHub);
+            expect(mockFactory.createDataHub).toHaveBeenCalledWith(mockProvider, 'owner/repo');
+            expect(mockGlobalHub.setDataHub).toHaveBeenCalledTimes(1);
         });
 
         it('does not fetch DataHub when factory returns undefined', async () => {
@@ -164,12 +182,12 @@ describe('TryCreateDataHub wiring', () => {
 
             const factory = vi.fn().mockReturnValue(undefined);
 
-            await main(factory);
+            await expect(main(factory)).rejects.toThrow(/sem dados do versionador/);
 
-            expect(mockCiData.getOrFetchDataHub).not.toHaveBeenCalled();
+            expect(mockFactory.createDataHub).not.toHaveBeenCalled();
         });
 
-        it('returns early when getOrFetchDataHub throws', async () => {
+        it('throws explicit error when createDataHub fails (no fallback data)', async () => {
             expect.hasAssertions();
 
             process.env['CI'] = 'true';
@@ -178,9 +196,9 @@ describe('TryCreateDataHub wiring', () => {
 
             const mockProvider = makeMockProvider();
             const factory = vi.fn().mockReturnValue(mockProvider);
-            mockCiData.getOrFetchDataHub.mockRejectedValue(new Error('network error'));
+            mockFactory.createDataHub.mockRejectedValue(new Error('network error'));
 
-            await main(factory);
+            await expect(main(factory)).rejects.toThrow(/sem dados do versionador/);
 
             expect(mockPRComment.postPrComment).not.toHaveBeenCalled();
         });
@@ -188,11 +206,12 @@ describe('TryCreateDataHub wiring', () => {
         it('does not call factory when isCI=false', async () => {
             expect.hasAssertions();
 
-            const factory = vi.fn().mockReturnValue(undefined);
+            const factory = vi.fn().mockReturnValue(makeMockProvider());
 
-            await main(factory);
+            await expect(main(factory)).rejects.toThrow(/sem dados do versionador/);
 
             expect(factory).not.toHaveBeenCalled();
+            expect(mockFactory.createDataHub).not.toHaveBeenCalled();
         });
     });
 });

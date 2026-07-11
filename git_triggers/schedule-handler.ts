@@ -244,7 +244,7 @@ export function generateWeeklyQualityReport(): void {
             uncoveredEpics,
         );
 
-        const pipelineCost = calculatePipelineCost(projectRuns);
+        const pipelineCost = calculatePipelineCost(undefined, getDataHub());
         const requirementScores = calculateRequirementScores([]);
 
         const sections: string[] = [];

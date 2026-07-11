@@ -105,7 +105,7 @@ async function _triggerPipeline(
 async function generatePrReportIfNeeded(
     parsed: import('../shared/result_parser.js').ParseResult,
     projectName: string,
-    dataHub?: import('../shared/types/data-hub.js').DataHub,
+    dataHub: import('../shared/types/data-hub.js').DataHub,
 ): Promise<void> {
     const prReportEnabled = isPrReportEnabled(projectName);
     if (!process.env['GITHUB_TOKEN'] || !prReportEnabled) return;
@@ -124,7 +124,7 @@ async function generatePrReportIfNeeded(
             skipQuality: prConfig.skipQuality ?? false,
             skipFlaky: prConfig.skipFlaky ?? false,
             htmlOutputPath: 'reports/pr-report.html',
-            ...(dataHub ? { dataHub } : {}),
+            dataHub,
         });
         if (reportResult.htmlPath) {
             success('PR report gerado: ' + reportResult.htmlPath);
@@ -175,14 +175,16 @@ async function _collectPipelineResults(
                 const { getOrFetchDataHub } = await import('../shared/ci-data.js');
                 dataHub = await getOrFetchDataHub(m, projectName);
             } catch (err: unknown) {
-                warn('batch-mode: DataHub fetch failed — ' + extractErrorMessage(err));
+                error('batch-mode: DataHub fetch failed — ' + extractErrorMessage(err));
             }
             // Register DataHub in the global singleton so downstream consumers
             // (quality-gate, health-score, flakiness) can access it via getDataHub().
             if (dataHub) {
                 setDataHub(dataHub);
+                await generatePrReportIfNeeded(parsed, projectName, dataHub);
+            } else {
+                error('batch-mode: PR report não gerado — DataHub indisponível após falha de fetch.');
             }
-            await generatePrReportIfNeeded(parsed, projectName, dataHub);
         }
     }
     return false;

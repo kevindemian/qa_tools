@@ -1,7 +1,17 @@
 import { buildTraceabilityMatrix, generateTraceabilityHtml } from './traceability-matrix.js';
-import type { MetricsRun } from './types/data-hub.js';
+import type { MetricsRun, FlakyResult } from './types/data-hub.js';
 import { rootLogger } from './logger.js';
 import { nonNull } from './test-utils.js';
+import { createTestHub } from './__tests__/test-hub.js';
+
+/** Wrapper que injeta DataHub (SSOT) obrigatório, com flakyRate opcional. */
+function matrix(
+    metrics: MetricsRun[],
+    coverage?: Parameters<typeof buildTraceabilityMatrix>[1],
+    flakyRate?: FlakyResult[],
+): ReturnType<typeof buildTraceabilityMatrix> {
+    return buildTraceabilityMatrix(metrics, coverage, createTestHub({ flakyRate: flakyRate ?? [] }));
+}
 
 function emptyMetrics(): MetricsRun[] {
     return [];
@@ -30,7 +40,7 @@ function singleRunMetrics(
 
 describe('BuildTraceabilityMatrix', () => {
     it('returns empty result for empty metrics', () => {
-        const result = buildTraceabilityMatrix(emptyMetrics());
+        const result = matrix(emptyMetrics());
 
         expect(result.nodes).toStrictEqual([]);
         expect(result.totalEpics).toBe(0);
@@ -41,7 +51,7 @@ describe('BuildTraceabilityMatrix', () => {
 
     it('returns empty result when no coverage data provided', () => {
         const metrics = singleRunMetrics([{ title: 'Test A', state: 'passed', duration: 100 }]);
-        const result = buildTraceabilityMatrix(metrics);
+        const result = matrix(metrics);
 
         expect(result.nodes).toStrictEqual([]);
         expect(result.totalEpics).toBe(0);
@@ -52,7 +62,7 @@ describe('BuildTraceabilityMatrix', () => {
             { title: 'TC-001', state: 'passed', duration: 200 },
             { title: 'TC-002', state: 'passed', duration: 150 },
         ]);
-        const result = buildTraceabilityMatrix(metrics, {
+        const result = matrix(metrics, {
             items: [{ epic: 'EPIC-1', hasTest: true, linkedTestKeys: ['TC-001', 'TC-002'], issueKey: 'STORY-1' }],
             totals: { total: 1, covered: 1 },
             byEpic: { 'EPIC-1': { total: 1, covered: 1, rawPct: 100 } },
@@ -75,7 +85,7 @@ describe('BuildTraceabilityMatrix', () => {
             { title: 'TC-002', state: 'failed', duration: 50 },
             { title: 'TC-003', state: 'passed', duration: 75 },
         ]);
-        const result = buildTraceabilityMatrix(metrics, {
+        const result = matrix(metrics, {
             items: [
                 { epic: 'EPIC-1', hasTest: true, linkedTestKeys: ['TC-001', 'TC-002', 'TC-003'], issueKey: 'STORY-1' },
             ],
@@ -95,7 +105,7 @@ describe('BuildTraceabilityMatrix', () => {
             { title: 'TC-001', state: 'passed', duration: 100 },
             { title: 'TC-002', state: 'skipped', duration: 0 },
         ]);
-        const result = buildTraceabilityMatrix(metrics, {
+        const result = matrix(metrics, {
             items: [{ epic: 'EPIC-1', hasTest: true, linkedTestKeys: ['TC-001', 'TC-002'], issueKey: 'STORY-1' }],
             totals: { total: 1, covered: 1 },
             byEpic: { 'EPIC-1': { total: 1, covered: 1, rawPct: 100 } },
@@ -114,7 +124,7 @@ describe('BuildTraceabilityMatrix', () => {
             { title: 'TC-A2', state: 'passed', duration: 200 },
             { title: 'TC-B1', state: 'failed', duration: 50 },
         ]);
-        const result = buildTraceabilityMatrix(metrics, {
+        const result = matrix(metrics, {
             items: [
                 { epic: 'EPIC-A', hasTest: true, linkedTestKeys: ['TC-A1', 'TC-A2'], issueKey: 'STORY-A1' },
                 { epic: 'EPIC-B', hasTest: true, linkedTestKeys: ['TC-B1'], issueKey: 'STORY-B1' },
@@ -140,7 +150,7 @@ describe('BuildTraceabilityMatrix', () => {
 
     it('handles stories with no linked tests gracefully', () => {
         const metrics = singleRunMetrics([]);
-        const result = buildTraceabilityMatrix(metrics, {
+        const result = matrix(metrics, {
             items: [{ epic: 'EPIC-1', hasTest: false, linkedTestKeys: [] }],
             totals: { total: 1, covered: 0 },
             byEpic: { 'EPIC-1': { total: 1, covered: 0, rawPct: 0 } },
@@ -155,7 +165,7 @@ describe('BuildTraceabilityMatrix', () => {
 
     it('handles coverage result with no items array', () => {
         const metrics = singleRunMetrics([{ title: 'TC-001', state: 'passed', duration: 100 }]);
-        const result = buildTraceabilityMatrix(metrics, {
+        const result = matrix(metrics, {
             byEpic: { 'EPIC-1': { total: 1, covered: 1, rawPct: 100 } },
         });
 
@@ -166,7 +176,7 @@ describe('BuildTraceabilityMatrix', () => {
 
     it('handles unmatched test keys gracefully', () => {
         const metrics = singleRunMetrics([{ title: 'TC-001', state: 'passed', duration: 100 }]);
-        const result = buildTraceabilityMatrix(metrics, {
+        const result = matrix(metrics, {
             items: [{ epic: 'EPIC-1', hasTest: true, linkedTestKeys: ['UNKNOWN-TEST'] }],
             totals: { total: 1, covered: 1 },
             byEpic: { 'EPIC-1': { total: 1, covered: 1, rawPct: 100 } },
@@ -192,7 +202,7 @@ describe('BuildTraceabilityMatrix', () => {
                 ],
             },
         ];
-        const result = buildTraceabilityMatrix(metrics, {
+        const result = matrix(metrics, {
             items: [{ epic: 'EPIC-1', hasTest: true, linkedTestKeys: ['TC-001'], issueKey: 'STORY-1' }],
             totals: { total: 1, covered: 1 },
             byEpic: { 'EPIC-1': { total: 1, covered: 1, rawPct: 100 } },
@@ -208,7 +218,7 @@ describe('BuildTraceabilityMatrix', () => {
             { title: 'TC-001', state: 'passed', duration: 100 },
             { title: 'TC-002', state: 'failed', duration: 50 },
         ]);
-        const result = buildTraceabilityMatrix(metrics, {
+        const result = matrix(metrics, {
             items: [
                 { epic: 'EPIC-1', hasTest: true, linkedTestKeys: ['TC-001'], issueKey: 'STORY-1' },
                 { epic: 'EPIC-1', hasTest: true, linkedTestKeys: ['TC-002'], issueKey: 'STORY-2' },
@@ -224,7 +234,7 @@ describe('BuildTraceabilityMatrix', () => {
 
     it('handles item where hasTest is false but tests exist', () => {
         const metrics = singleRunMetrics([{ title: 'TC-001', state: 'passed', duration: 100 }]);
-        const result = buildTraceabilityMatrix(metrics, {
+        const result = matrix(metrics, {
             items: [{ epic: 'EPIC-1', hasTest: false, linkedTestKeys: ['TC-001'], issueKey: 'STORY-1' }],
             totals: { total: 1, covered: 0 },
             byEpic: { 'EPIC-1': { total: 1, covered: 0, rawPct: 0 } },
@@ -237,7 +247,7 @@ describe('BuildTraceabilityMatrix', () => {
 
     it('handles item without linkedTestKeys', () => {
         const metrics = singleRunMetrics([{ title: 'TC-001', state: 'passed', duration: 100 }]);
-        const result = buildTraceabilityMatrix(metrics, {
+        const result = matrix(metrics, {
             items: [{ epic: 'EPIC-1', hasTest: true }],
             totals: { total: 1, covered: 1 },
             byEpic: { 'EPIC-1': { total: 1, covered: 1, rawPct: 100 } },
@@ -248,7 +258,7 @@ describe('BuildTraceabilityMatrix', () => {
 
     it('handles item without issueKey', () => {
         const metrics = singleRunMetrics([{ title: 'TC-001', state: 'passed', duration: 100 }]);
-        const result = buildTraceabilityMatrix(metrics, {
+        const result = matrix(metrics, {
             items: [{ epic: 'EPIC-1', hasTest: true, linkedTestKeys: ['TC-001'] }],
             totals: { total: 1, covered: 1 },
             byEpic: { 'EPIC-1': { total: 1, covered: 1, rawPct: 100 } },
@@ -260,7 +270,7 @@ describe('BuildTraceabilityMatrix', () => {
 
     it('handles error gracefully when metrics store is malformed', () => {
         vi.spyOn(rootLogger, 'error').mockImplementation(() => {});
-        const result = buildTraceabilityMatrix({} as MetricsRun[]);
+        const result = matrix({} as MetricsRun[]);
 
         expect(result.nodes).toStrictEqual([]);
         expect(result.totalEpics).toBe(0);
@@ -291,11 +301,15 @@ describe('BuildTraceabilityMatrix', () => {
                 tests: [{ title: 'TC-001', state: 'passed', duration: 100 }],
             },
         ];
-        const result = buildTraceabilityMatrix(metrics, {
-            items: [{ epic: 'EPIC-1', hasTest: true, linkedTestKeys: ['TC-001'], issueKey: 'STORY-1' }],
-            totals: { total: 1, covered: 1 },
-            byEpic: { 'EPIC-1': { total: 1, covered: 1, rawPct: 100 } },
-        });
+        const result = matrix(
+            metrics,
+            {
+                items: [{ epic: 'EPIC-1', hasTest: true, linkedTestKeys: ['TC-001'], issueKey: 'STORY-1' }],
+                totals: { total: 1, covered: 1 },
+                byEpic: { 'EPIC-1': { total: 1, covered: 1, rawPct: 100 } },
+            },
+            [{ title: 'TC-001', rate: 50, runs: 2 }],
+        );
 
         const firstTest = nonNull(nonNull(result.nodes[0]).stories[0]).tests[0];
 
@@ -306,7 +320,7 @@ describe('BuildTraceabilityMatrix', () => {
 
 describe('GenerateTraceabilityHtml', () => {
     it('generates valid HTML with summary cards', () => {
-        const result = buildTraceabilityMatrix(emptyMetrics(), {
+        const result = matrix(emptyMetrics(), {
             byEpic: { 'EPIC-1': { total: 1, covered: 1, rawPct: 100 } },
             items: [{ epic: 'EPIC-1', hasTest: true, linkedTestKeys: [], issueKey: 'STORY-1' }],
             totals: { total: 1, covered: 1 },
@@ -322,7 +336,7 @@ describe('GenerateTraceabilityHtml', () => {
 
     it('contains tree structure with epic nodes', () => {
         const metrics = singleRunMetrics([{ title: 'TC-001', state: 'passed', duration: 100 }]);
-        const result = buildTraceabilityMatrix(metrics, {
+        const result = matrix(metrics, {
             items: [{ epic: 'EPIC-1', hasTest: true, linkedTestKeys: ['TC-001'], issueKey: 'STORY-1' }],
             totals: { total: 1, covered: 1 },
             byEpic: { 'EPIC-1': { total: 1, covered: 1, rawPct: 100 } },
@@ -343,7 +357,7 @@ describe('GenerateTraceabilityHtml', () => {
             { title: 'TC-FAIL', state: 'failed', duration: 50 },
             { title: 'TC-SKIP', state: 'skipped', duration: 0 },
         ]);
-        const result = buildTraceabilityMatrix(metrics, {
+        const result = matrix(metrics, {
             items: [
                 {
                     epic: 'EPIC-1',
@@ -366,7 +380,7 @@ describe('GenerateTraceabilityHtml', () => {
     });
 
     it('shows empty state when no nodes', () => {
-        const result = buildTraceabilityMatrix(emptyMetrics());
+        const result = matrix(emptyMetrics());
         const html = generateTraceabilityHtml(result);
 
         expect(html).toContain('No traceability data available');
@@ -374,7 +388,7 @@ describe('GenerateTraceabilityHtml', () => {
     });
 
     it('uses custom title', () => {
-        const result = buildTraceabilityMatrix(emptyMetrics());
+        const result = matrix(emptyMetrics());
         const html = generateTraceabilityHtml(result, 'My Traceability');
 
         expect(html).toContain('My Traceability');
@@ -382,7 +396,7 @@ describe('GenerateTraceabilityHtml', () => {
     });
 
     it('includes theme script and footer', () => {
-        const result = buildTraceabilityMatrix(emptyMetrics());
+        const result = matrix(emptyMetrics());
         const html = generateTraceabilityHtml(result);
 
         expect(html).toContain('qa-report-theme');
@@ -462,7 +476,7 @@ describe('GenerateTraceabilityHtml', () => {
 
     it('includes health bar for nodes with stories', () => {
         const metrics = singleRunMetrics([{ title: 'TC-001', state: 'passed', duration: 100 }]);
-        const result = buildTraceabilityMatrix(metrics, {
+        const result = matrix(metrics, {
             items: [{ epic: 'EPIC-1', hasTest: true, linkedTestKeys: ['TC-001'], issueKey: 'STORY-1' }],
             totals: { total: 1, covered: 1 },
             byEpic: { 'EPIC-1': { total: 1, covered: 1, rawPct: 100 } },
@@ -478,7 +492,7 @@ describe('GenerateTraceabilityHtml', () => {
             { title: 'TC-001', state: 'passed', duration: 100 },
             { title: 'TC-002', state: 'failed', duration: 50 },
         ]);
-        const result = buildTraceabilityMatrix(metrics, {
+        const result = matrix(metrics, {
             items: [{ epic: 'EPIC-1', hasTest: true, linkedTestKeys: ['TC-001', 'TC-002'], issueKey: 'STORY-1' }],
             totals: { total: 1, covered: 1 },
             byEpic: { 'EPIC-1': { total: 1, covered: 1, rawPct: 100 } },

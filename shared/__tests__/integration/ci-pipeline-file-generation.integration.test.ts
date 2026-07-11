@@ -73,7 +73,7 @@ it('passes', () => { expect(1 + 1).toBe(2); });`,
         expect(content.results.summary.tests).toBeGreaterThanOrEqual(1);
     });
 
-    it('pr-report-core cli returns early when no DataHub data available', () => {
+    it('pr-report-core cli fails explicitly when no DataHub data available (non-interactive)', () => {
         expect.hasAssertions();
 
         const reportDir = path.join(TMPDIR, 'reports');
@@ -104,29 +104,32 @@ it('passes', () => { expect(1 + 1).toBe(2); });`,
             }),
         );
 
-        execFileSync(
-            NODE_BIN,
-            [
-                TSX_BIN,
-                'shared/pr-report-core.ts',
-                '--project',
-                'qa_tools',
-                '--no-ai',
-                '--no-quality',
-                '--no-flaky',
-                '--html-output',
-                htmlFile,
-            ],
-            {
-                cwd: ROOT,
-                timeout: 60_000,
-                stdio: 'pipe',
-                env: { ...process.env, VITEST: undefined },
-            },
-        );
+        // Sem dados do versionador/Jira e sem TEST_REPORT_PATH em contexto não-
+        // interativo: main() deve FALHAR explicitamente (exit != 0), nunca silenciar.
+        expect(() =>
+            execFileSync(
+                NODE_BIN,
+                [
+                    TSX_BIN,
+                    'shared/pr-report-core.ts',
+                    '--project',
+                    'qa_tools',
+                    '--no-ai',
+                    '--no-quality',
+                    '--no-flaky',
+                    '--html-output',
+                    htmlFile,
+                ],
+                {
+                    cwd: ROOT,
+                    timeout: 60_000,
+                    stdio: 'pipe',
+                    env: { ...process.env, VITEST: undefined },
+                },
+            ),
+        ).toThrow(/sem dados do versionador/);
 
-        // main() should return early when DataHub has no test data
-        // HTML file should NOT be generated
+        // Em falha explícita, o arquivo HTML NÃO é gerado.
         expect(fs.existsSync(htmlFile)).toBeFalsy();
 
         // Restore original config file

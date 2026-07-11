@@ -11,10 +11,20 @@
 import { describe, expect, it, beforeEach, vi } from 'vitest';
 import type { MetricsRun } from '../../types/data-hub.js';
 import type { DataHub } from '../../types/data-hub.js';
+import { buildTraceabilityMatrix } from '../../traceability-matrix.js';
+import { createTestHub } from '../test-hub.js';
 
 vi.mock('../../logger', () => ({
     rootLogger: { error: vi.fn(), warn: vi.fn(), info: vi.fn(), child: vi.fn().mockReturnThis() },
 }));
+
+function matrix(
+    metrics: MetricsRun[],
+    coverage?: Parameters<typeof buildTraceabilityMatrix>[1],
+    hub?: DataHub,
+): ReturnType<typeof buildTraceabilityMatrix> {
+    return buildTraceabilityMatrix(metrics, coverage, hub ?? createTestHub());
+}
 
 describe('Traceability Matrix.Integration', () => {
     beforeEach(() => {
@@ -43,13 +53,12 @@ describe('Traceability Matrix.Integration', () => {
             it('generates valid HTML from matrix data with epic tree', async () => {
                 expect.hasAssertions();
 
-                const { buildTraceabilityMatrix, generateTraceabilityHtml } =
-                    await import('../../traceability-matrix.js');
+                const { generateTraceabilityHtml } = await import('../../traceability-matrix.js');
                 const metrics = singleRunMetrics([
                     { title: 'TC-001', state: 'passed', duration: 200 },
                     { title: 'TC-002', state: 'passed', duration: 150 },
                 ]);
-                const result = buildTraceabilityMatrix(metrics, {
+                const result = matrix(metrics, {
                     items: [
                         { epic: 'EPIC-1', hasTest: true, linkedTestKeys: ['TC-001', 'TC-002'], issueKey: 'STORY-1' },
                     ],
@@ -78,13 +87,12 @@ describe('Traceability Matrix.Integration', () => {
             it('renders health bars and status badges', async () => {
                 expect.hasAssertions();
 
-                const { buildTraceabilityMatrix, generateTraceabilityHtml } =
-                    await import('../../traceability-matrix.js');
+                const { generateTraceabilityHtml } = await import('../../traceability-matrix.js');
                 const metrics = singleRunMetrics([
                     { title: 'TC-PASS', state: 'passed', duration: 100 },
                     { title: 'TC-FAIL', state: 'failed', duration: 50 },
                 ]);
-                const result = buildTraceabilityMatrix(metrics, {
+                const result = matrix(metrics, {
                     items: [
                         {
                             epic: 'EPIC-1',
@@ -109,10 +117,9 @@ describe('Traceability Matrix.Integration', () => {
             it('generates HTML with no-data message when no epics exist', async () => {
                 expect.hasAssertions();
 
-                const { buildTraceabilityMatrix, generateTraceabilityHtml } =
-                    await import('../../traceability-matrix.js');
+                const { generateTraceabilityHtml } = await import('../../traceability-matrix.js');
                 const metrics: MetricsRun[] = [];
-                const result = buildTraceabilityMatrix(metrics);
+                const result = matrix(metrics);
                 const html = generateTraceabilityHtml(result);
 
                 expect(html).toContain('<!DOCTYPE html>');
@@ -145,10 +152,9 @@ describe('Traceability Matrix.Integration', () => {
             it('uses custom title in HTML and page title', async () => {
                 expect.hasAssertions();
 
-                const { buildTraceabilityMatrix, generateTraceabilityHtml } =
-                    await import('../../traceability-matrix.js');
+                const { generateTraceabilityHtml } = await import('../../traceability-matrix.js');
                 const metrics = singleRunMetrics([]);
-                const result = buildTraceabilityMatrix(metrics);
+                const result = matrix(metrics);
                 const html = generateTraceabilityHtml(result, 'Release 3.0 Traceability');
 
                 expect(html).toContain('<title>Release 3.0 Traceability</title>');
@@ -158,10 +164,9 @@ describe('Traceability Matrix.Integration', () => {
             it('defaults to Traceability Matrix when no title given', async () => {
                 expect.hasAssertions();
 
-                const { buildTraceabilityMatrix, generateTraceabilityHtml } =
-                    await import('../../traceability-matrix.js');
+                const { generateTraceabilityHtml } = await import('../../traceability-matrix.js');
                 const metrics = singleRunMetrics([]);
-                const result = buildTraceabilityMatrix(metrics);
+                const result = matrix(metrics);
                 const html = generateTraceabilityHtml(result);
 
                 expect(html).toContain('<title>Traceability Matrix</title>');
@@ -225,10 +230,9 @@ describe('Traceability Matrix.Integration', () => {
                 };
             }
 
-            it('uses dataHub.computed.flakyRate for flakiness map when dataHub provided', async () => {
+            it('uses dataHub.computed.flakyRate for flakiness map when dataHub provided', () => {
                 expect.hasAssertions();
 
-                const { buildTraceabilityMatrix } = await import('../../traceability-matrix.js');
                 const metrics = singleRunMetrics([
                     { title: 'TC-FLAKY', state: 'passed', duration: 100 },
                     { title: 'TC-STABLE', state: 'passed', duration: 50 },
@@ -249,20 +253,20 @@ describe('Traceability Matrix.Integration', () => {
                     byEpic: { 'EPIC-1': { total: 1, covered: 1, rawPct: 100 } },
                 };
 
-                const result = buildTraceabilityMatrix(metrics, coverageResult, hub);
+                const result = matrix(metrics, coverageResult, hub);
 
                 expect(result.nodes.length).toBeGreaterThan(0);
 
                 const story = result.nodes[0]?.stories[0];
 
                 expect(story).toBeDefined();
-                expect(story?.flakiness).toBe(25);
+                // rate 50 (0–100) normalizado para 0–1 → TC-FLAKY 0.5; média com TC-STABLE (0) → 0.25 (25%).
+                expect(story?.flakiness).toBeCloseTo(0.25, 5);
             });
 
-            it('falls back to MetricsStore when dataHub has no flaky tests', async () => {
+            it('falls back to MetricsStore when dataHub has no flaky tests', () => {
                 expect.hasAssertions();
 
-                const { buildTraceabilityMatrix } = await import('../../traceability-matrix.js');
                 const metrics = singleRunMetrics([{ title: 'TC-001', state: 'passed', duration: 100 }]);
                 const hub = makeDataHub({ computed: { flakyRate: [] } });
                 const coverageResult = {
@@ -271,7 +275,7 @@ describe('Traceability Matrix.Integration', () => {
                     byEpic: { 'EPIC-1': { total: 1, covered: 1, rawPct: 100 } },
                 };
 
-                const result = buildTraceabilityMatrix(metrics, coverageResult, hub);
+                const result = matrix(metrics, coverageResult, hub);
 
                 expect(result.nodes.length).toBeGreaterThan(0);
             });

@@ -62,6 +62,12 @@ export interface DataHubOptions {
     count?: number;
     /** Cost per minute for pipeline cost estimation. */
     costPerMinute?: number;
+    /**
+     * When true, a no-data (Camada 7) result returns a resilient empty hub
+     * instead of throwing Layer7UnavailableError. Used by resilient consumers
+     * (dashboards/metrics). PR report generation must NOT set this.
+     */
+    allowEmpty?: boolean;
 }
 
 /**
@@ -153,6 +159,28 @@ export class DataHubImpl implements DataHub {
      * @param persistence - Optional persistence layer for historical data.
      * @returns DataHubResult with hub, status, and optional warning.
      */
+    /**
+     * Erro não-recuperável lançado quando a Camada 7 (fallback manual do usuário)
+     * é a única fonte possível mas está indisponível (contexto não-interativo).
+     * É explicitamente NÃO silencioso: obriga o chamador a falhar em vez de
+     * produzir relatório parcial/vazio.
+     */
+    static readonly Layer7UnavailableError = class Layer7UnavailableError extends Error {
+        constructor(message: string) {
+            super(message);
+            this.name = 'Layer7UnavailableError';
+        }
+    };
+
+    /**
+     * Verifica se um erro desconhecido é o `Layer7UnavailableError`, sem depender
+     * de identidade de classe (evita acoplamento de tipo em diffs/linters).
+     * O nome é definido no construtor da classe acima.
+     */
+    static isLayer7UnavailableError(err: unknown): boolean {
+        return (err as { name?: unknown } | null)?.name === 'Layer7UnavailableError';
+    }
+
     private static async applyLayer7Fallback(raw: RawData): Promise<{ skipped: boolean; noFile: boolean }> {
         if (raw.parsedArtifacts != null && raw.parsedArtifacts.size > 0) {
             return { skipped: false, noFile: false };
@@ -175,9 +203,36 @@ export class DataHubImpl implements DataHub {
             return { skipped: false, noFile: false };
         }
         if (fallback.error === 'NO_TTY' || fallback.error === 'NO_DATA_SOURCE') {
-            return { skipped: true, noFile: false };
+            // Contexto não-interativo (CI/sem TTY) sem fonte de dados: falha explícita.
+            // Nunca silencia como `skipped: true` — contrário à decisão arquitetural das 7 camadas.
+            throw new DataHubImpl.Layer7UnavailableError(
+                `Camada 7 indisponível (${fallback.error}): sem dados do versionador/Jira e sem relatório manual em contexto não-interativo.`,
+            );
         }
         return { skipped: false, noFile: true };
+    }
+
+    /**
+     * Cria um DataHub a partir de um `ParseResult` fornecido manualmente (Camada 7).
+     * Usado quando o versionador/Jira não dispõe de dados e o usuário fornece um arquivo.
+     *
+     * @param parseResult - Resultado de `parseTestResultsFile` (CTRF/JUnit/Mochawesome).
+     * @param repo - Nome do repositório (contexto).
+     * @param persistence - Camada de persistência (encapsulada, obrigatória).
+     */
+    static createFromParseResult(parseResult: ParseResult, repo: string, persistence: DataHubPersistence): DataHubImpl {
+        const parsedArtifacts = new Map<number, ArtifactParseResult[]>([
+            [0, [{ fileName: 'user-fallback', data: parseResult, format: 'ctrf' }]],
+        ]);
+        const raw: RawData = {
+            runs: [],
+            jobs: new Map(),
+            artifacts: new Map(),
+            failureReasons: new Map(),
+            parsedArtifacts,
+        };
+        const computed = DataHubImpl.computeMetrics(raw, { repo });
+        return new DataHubImpl(raw, computed, 'github', repo, persistence);
     }
 
     private static buildResult(
@@ -192,6 +247,42 @@ export class DataHubImpl implements DataHub {
         return result;
     }
 
+    /**
+     * Resolve Layer 7 fallback. Returns an empty-hub result when no data is
+     * available and `allowEmpty` is set (resilient consumers: dashboards/metrics).
+     * Otherwise rethrows Camada 7 explicitly — the PR report (main) does NOT set
+     * allowEmpty and must fail explicitly on missing data.
+     */
+    private static async resolveLayer7(
+        raw: RawData,
+        providerSource: 'github' | 'gitlab',
+        repo: string,
+        persistence: DataHubPersistence,
+        allowEmpty: boolean,
+    ): Promise<{ kind: 'ok'; skipped: boolean; noFile: boolean } | { kind: 'empty'; result: DataHubResult }> {
+        try {
+            const layer7 = await DataHubImpl.applyLayer7Fallback(raw);
+
+            return { kind: 'ok', skipped: layer7.skipped, noFile: layer7.noFile };
+        } catch (err) {
+            if (DataHubImpl.isLayer7UnavailableError(err) && allowEmpty) {
+                return {
+                    kind: 'empty',
+                    result: DataHubImpl.buildResult(
+                        DataHubImpl.createEmpty(providerSource, repo, persistence),
+                        'warning',
+                        {
+                            code: 'NO_DATA',
+                            message: 'No test data available — resilient empty hub',
+                        },
+                        false,
+                    ),
+                };
+            }
+            throw err;
+        }
+    }
+
     static async create(
         providers: DataProvider[],
         options: FetchOptions & DataHubOptions = { repo: '' },
@@ -201,10 +292,22 @@ export class DataHubImpl implements DataHub {
         const allProvidersFailed = providerFailures > 0 && providerFailures >= providers.length;
         const someProvidersFailed = providerFailures > 0 && !allProvidersFailed;
 
-        const { skipped: layer7Skipped, noFile: layer7NoFile } = await DataHubImpl.applyLayer7Fallback(raw);
+        const providerSource = DataHubImpl.determineProviderSource(providers);
+
+        const layer7Resolution = await DataHubImpl.resolveLayer7(
+            raw,
+            providerSource,
+            options.repo,
+            persistence,
+            options.allowEmpty ?? false,
+        );
+        if (layer7Resolution.kind === 'empty') {
+            return layer7Resolution.result;
+        }
+        const layer7Skipped = layer7Resolution.skipped;
+        const layer7NoFile = layer7Resolution.noFile;
 
         const computed = DataHubImpl.computeMetrics(raw, options);
-        const providerSource = DataHubImpl.determineProviderSource(providers);
         const hub = new DataHubImpl(raw, computed, providerSource, options.repo, persistence);
 
         const hasData = raw.runs.length > 0 || (raw.parsedArtifacts != null && raw.parsedArtifacts.size > 0);

@@ -86,6 +86,7 @@ describe('Pr Report Core.Main', () => {
         mockDataHub.getDataHub.mockReturnValue({
             saveParseResult: vi.fn(),
             raw: {
+                runs: [],
                 coverage: undefined,
             },
             computed: {
@@ -114,12 +115,12 @@ describe('Pr Report Core.Main', () => {
     });
 
     describe('Main', () => {
-        it('returns early when DataHub has no test data', async () => {
+        it('throws explicit error when DataHub has no test data (non-interactive)', async () => {
             expect.hasAssertions();
 
             mockDataHub.getDataHub.mockReturnValue({
                 saveParseResult: vi.fn(),
-                raw: { coverage: undefined },
+                raw: { runs: [], coverage: undefined },
                 computed: {
                     metricsRuns: [],
                     testCounts: { passed: 0, failed: 0, skipped: 0, total: 0 },
@@ -129,19 +130,17 @@ describe('Pr Report Core.Main', () => {
                 repo: 'test/repo',
             });
 
-            await main();
-
+            await expect(main()).rejects.toThrow(/sem dados do versionador/);
             expect(mockPRComment.postPrComment).not.toHaveBeenCalled();
         });
 
-        it('returns early when DataHub is not initialized', async () => {
+        it('throws explicit error when DataHub is not initialized (non-interactive)', async () => {
             expect.hasAssertions();
 
             mockDataHub.isDataHubInitialized.mockReturnValue(false);
             mockDataHub.getDataHub.mockReturnValue(undefined);
 
-            await main();
-
+            await expect(main()).rejects.toThrow(/sem dados do versionador/);
             expect(mockPRComment.postPrComment).not.toHaveBeenCalled();
         });
 

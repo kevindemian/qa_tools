@@ -24,12 +24,14 @@ import { rootLogger } from './logger.js';
 /**
  * Obtém DataHub (novo tipo) com cache por sessão.
  * Usa createDataHub() factory com retry + persistence injection.
- * Em caso de falha, retorna undefined (fallback para MetricsStore).
+ * Consumidor resiliente (dashboards/metrics): em caso de ausência de dados
+ * (Camada 7), retorna um hub vazio (warning) em vez de propagar erro — o
+ * relatório de PR (pr-report-core main) relança o erro explicitamente.
  */
 export async function getOrFetchDataHub(provider: GitProvider, repo: string): Promise<DataHub | undefined> {
     const { createDataHub } = await import('./data-hub/factory.js');
     try {
-        const result = await createDataHub(provider, repo);
+        const result = await createDataHub(provider, repo, { allowEmpty: true });
         return result.hub;
     } catch (err) {
         rootLogger.warn(`getOrFetchDataHub failed: ${String(err)}`);

@@ -502,7 +502,7 @@ async function _dashboardPipelineCost(): Promise<void> {
     const data = _loadProjectRunsHelper();
     if (!data) return;
     const dataHub = getDataHub();
-    const pipelineCost = calculatePipelineCost(data.projectRuns, undefined, dataHub);
+    const pipelineCost = calculatePipelineCost(undefined, dataHub);
     await _generateAndOpenDashboard(generatePipelineCostHtml(pipelineCost), 'pipeline-cost', 'Pipeline Cost');
 }
 

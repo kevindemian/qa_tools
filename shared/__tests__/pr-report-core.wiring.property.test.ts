@@ -28,48 +28,22 @@ const mockFeatureConfig = vi.hoisted(() => ({
     isQualitySkipped: vi.fn(),
     isFlakySkipped: vi.fn(),
 }));
-const mockCiData = vi.hoisted(() => ({
-    getOrFetchDataHub: vi.fn(),
-    persistCurrentRun: vi.fn(),
-    ensureDataHubSync: vi.fn(),
+const mockFactory = vi.hoisted(() => ({
+    createDataHub: vi.fn(),
+    createDataHubFromParseResult: vi.fn(),
+}));
+const mockTestSource = vi.hoisted(() => ({
+    askTestSource: vi.fn(),
+    DATAHUB_ERRORS: {
+        USER_SKIPPED: 'USER_SKIPPED',
+        USER_CANCELLED: 'USER_CANCELLED',
+        NO_TTY: 'NO_TTY',
+        NO_DATA_SOURCE: 'NO_DATA_SOURCE',
+    },
 }));
 const mockGlobalHub = vi.hoisted(() => ({
-    getDataHub: vi.fn().mockReturnValue({
-        saveParseResult: vi.fn(),
-        saveRun: vi.fn(),
-        loadRun: vi.fn().mockReturnValue(null),
-        saveCoverageSnapshot: vi.fn(),
-        loadCoverageHistory: vi.fn().mockReturnValue([]),
-        saveFailureClassification: vi.fn(),
-        loadFailureClassifications: vi.fn().mockReturnValue([]),
-        saveQualityMetrics: vi.fn(),
-        loadQualityMetricsHistory: vi.fn().mockReturnValue([]),
-        flush: vi.fn(),
-        raw: { runs: [], jobs: new Map(), artifacts: new Map(), failureReasons: new Map() },
-        computed: {
-            passRate: 80,
-            avgDuration: 1000,
-            suiteSpeedP95: 500,
-            flakyRate: [],
-            coverage: 85,
-            pipelineCost: { totalMinutes: 0, estimatedCost: 0 },
-            defectTrends: [],
-            branchBreakdown: {},
-            topFailingJobs: [],
-            topFailureReasons: [],
-            releaseScore: { score: 0, dimensions: {} as never, grade: 'critical' },
-            quarantineStatus: { flakyCount: 0, quarantinedCount: 0 },
-            testPassRate: 80,
-            testCounts: { passed: 8, failed: 1, skipped: 1, total: 10 },
-            framework: 'vitest',
-            executionRate: 90,
-            flakyPercentage: 1,
-        },
-        timestamp: new Date(),
-        provider: 'github',
-        repo: 'test/repo',
-    }),
-    isDataHubInitialized: vi.fn().mockReturnValue(true),
+    getDataHub: vi.fn(),
+    isDataHubInitialized: vi.fn().mockReturnValue(false),
     setDataHub: vi.fn(),
 }));
 const mockFlakiness = vi.hoisted(() => ({
@@ -96,7 +70,8 @@ vi.mock('../feature-config.js', () => ({
     isQualitySkipped: mockFeatureConfig.isQualitySkipped,
     isFlakySkipped: mockFeatureConfig.isFlakySkipped,
 }));
-vi.mock('../ci-data.js', () => mockCiData);
+vi.mock('../data-hub/factory.js', () => mockFactory);
+vi.mock('../data-hub/test-source-fallback.js', () => mockTestSource);
 vi.mock('../data-hub/global-hub.js', () => mockGlobalHub);
 vi.mock('../data-hub/compute/flakiness-entries.js', () => mockFlakiness);
 vi.mock('../data-hub/compute/metrics-trends.js', () => mockTrends);
@@ -107,6 +82,7 @@ import { main } from '../pr-report-core.js';
 describe('TryCreateDataHub wiring — property-based', () => {
     beforeEach(() => {
         vi.clearAllMocks();
+        mockGlobalHub.isDataHubInitialized.mockReturnValue(false);
         delete process.env['CI'];
         delete process.env['GITHUB_ACTIONS'];
         delete process.env['GITHUB_TOKEN'];
@@ -146,26 +122,26 @@ describe('TryCreateDataHub wiring — property-based', () => {
         mockFeatureConfig.isAiSkipped.mockReturnValue(false);
         mockFeatureConfig.isQualitySkipped.mockReturnValue(false);
         mockFeatureConfig.isFlakySkipped.mockReturnValue(false);
-        mockCiData.getOrFetchDataHub.mockResolvedValue(null);
-        mockCiData.persistCurrentRun.mockResolvedValue(undefined);
-        mockCiData.ensureDataHubSync.mockResolvedValue(undefined);
+        mockFactory.createDataHub.mockResolvedValue({ hub: {}, status: 'ok' });
+        mockFactory.createDataHubFromParseResult.mockResolvedValue({});
+        mockTestSource.askTestSource.mockResolvedValue({ data: undefined, error: undefined });
         vi.mocked(fs.existsSync).mockReturnValue(true);
     });
 
-    it('factory is always called with a GitProvider-like object (never Promise)', async () => {
+    it('factory is always called with a ciEnv object (never Promise)', async () => {
         expect.hasAssertions();
 
         process.env['CI'] = 'true';
         process.env['GITHUB_ACTIONS'] = 'true';
         process.env['GITHUB_TOKEN'] = 'gh-token';
 
-        const factoryCalls: GitProvider[] = [];
+        const factoryCalls: unknown[] = [];
         const factory = vi.fn().mockImplementation((...args: [GitProvider]) => {
             factoryCalls.push(args[0]);
             return makeMockProvider();
         });
 
-        await main(factory);
+        await expect(main(factory)).rejects.toThrow(/sem dados do versionador/);
 
         for (const arg of factoryCalls) {
             expect(arg).not.toBeInstanceOf(Promise);
@@ -173,7 +149,30 @@ describe('TryCreateDataHub wiring — property-based', () => {
         }
     });
 
-    it('main() always returns void (never throws)', async () => {
+    it('createDataHub (factory) receives a GitProvider, not a Promise', async () => {
+        expect.hasAssertions();
+
+        process.env['CI'] = 'true';
+        process.env['GITHUB_ACTIONS'] = 'true';
+        process.env['GITHUB_TOKEN'] = 'gh-token';
+
+        const mockProvider = makeMockProvider();
+        const factory = vi.fn().mockReturnValue(mockProvider);
+        mockFactory.createDataHub.mockRejectedValue(new Error('network error'));
+
+        await expect(main(factory)).rejects.toThrow(/sem dados do versionador/);
+
+        const calls = mockFactory.createDataHub.mock.calls as [GitProvider, string][];
+
+        for (const call of calls) {
+            const firstArg = call[0];
+
+            expect(firstArg).not.toBeInstanceOf(Promise);
+            expect(firstArg).toHaveProperty('provider');
+        }
+    });
+
+    it('main throws explicit error when no usable test data is available (no silent skip)', async () => {
         expect.hasAssertions();
 
         process.env['CI'] = 'true';
@@ -183,35 +182,11 @@ describe('TryCreateDataHub wiring — property-based', () => {
         await fc.assert(
             fc.asyncProperty(fc.boolean(), async (factoryReturnsProvider) => {
                 const factory = vi.fn().mockReturnValue(factoryReturnsProvider ? makeMockProvider() : undefined);
+                mockFactory.createDataHub.mockRejectedValue(new Error('network error'));
 
-                const result = await main(factory);
-
-                expect(result).toBeUndefined();
+                await expect(main(factory)).rejects.toThrow(/sem dados do versionador/);
             }),
             { numRuns: 50 },
         );
-    });
-
-    it('getOrFetchDataHub receives a GitProvider, not a Promise', async () => {
-        expect.hasAssertions();
-
-        process.env['CI'] = 'true';
-        process.env['GITHUB_ACTIONS'] = 'true';
-        process.env['GITHUB_TOKEN'] = 'gh-token';
-
-        const mockProvider = makeMockProvider();
-        const factory = vi.fn().mockReturnValue(mockProvider);
-        mockCiData.getOrFetchDataHub.mockResolvedValue(null);
-
-        await main(factory);
-
-        const calls = mockCiData.getOrFetchDataHub.mock.calls as GitProvider[][];
-
-        for (const call of calls) {
-            const firstArg = call[0];
-
-            expect(firstArg).not.toBeInstanceOf(Promise);
-            expect(firstArg).toHaveProperty('provider');
-        }
     });
 });

@@ -3,6 +3,13 @@ import path from 'path';
 import { describe, it, expect, vi, beforeEach, afterAll } from 'vitest';
 import { generatePrReport } from '../pr-report-core.js';
 import type { FlatTest } from '../result_parser.js';
+import type { PrReportCoreOptions } from '../pr-report-core.js';
+import type { DataHub } from '../types/data-hub.js';
+import { createTestHub } from './test-hub.js';
+
+const report = (
+    opts: Omit<PrReportCoreOptions, 'dataHub'> & { dataHub?: DataHub },
+): ReturnType<typeof generatePrReport> => generatePrReport({ ...opts, dataHub: opts.dataHub ?? createTestHub() });
 
 vi.mock('fs', async (importOriginal) => {
     const actual = await importOriginal<typeof import('node:fs')>();
@@ -174,7 +181,7 @@ describe('Pr Report Core', () => {
         it('returns healthScore and passRate for basic test data', async () => {
             expect.hasAssertions();
 
-            const result = await generatePrReport({
+            const result = await report({
                 tests: defaultTests,
                 stats: defaultStats,
             });
@@ -186,7 +193,7 @@ describe('Pr Report Core', () => {
         it('generates HTML report at default path when no htmlOutputPath given', async () => {
             expect.hasAssertions();
 
-            const result = await generatePrReport({
+            const result = await report({
                 tests: [sampleTest],
                 stats: { passed: 1, failed: 0, skipped: 0, total: 1, duration: 100 },
             });
@@ -198,7 +205,7 @@ describe('Pr Report Core', () => {
         it('uses custom htmlOutputPath when provided', async () => {
             expect.hasAssertions();
 
-            const result = await generatePrReport({
+            const result = await report({
                 tests: [sampleTest],
                 stats: { passed: 1, failed: 0, skipped: 0, total: 1, duration: 100 },
                 htmlOutputPath: path.join(os.tmpdir(), 'qa-custom-report.html'),
@@ -220,7 +227,7 @@ describe('Pr Report Core', () => {
                 },
             };
 
-            const result = await generatePrReport({
+            const result = await report({
                 tests: [sampleTest],
                 stats: { passed: 1, failed: 0, skipped: 0, total: 1, duration: 100 },
                 dataHub: mockDataHubWithCoverage as never,
@@ -242,7 +249,7 @@ describe('Pr Report Core', () => {
                 flaky: [],
             };
 
-            await generatePrReport({
+            await report({
                 tests: defaultTests,
                 stats: defaultStats,
                 diffComparison: diff,
@@ -264,7 +271,7 @@ describe('Pr Report Core', () => {
             };
             mockQualityGate.runQualityGate.mockReturnValue(qgResult);
 
-            await generatePrReport({
+            await report({
                 tests: [sampleTest],
                 stats: { passed: 1, failed: 0, skipped: 0, total: 1, duration: 100 },
                 skipQuality: false,
@@ -284,7 +291,7 @@ describe('Pr Report Core', () => {
         it('skips quality gate when skipQuality is true', async () => {
             expect.hasAssertions();
 
-            await generatePrReport({
+            await report({
                 tests: [sampleTest],
                 stats: { passed: 1, failed: 0, skipped: 0, total: 1, duration: 100 },
                 skipQuality: true,
@@ -297,7 +304,7 @@ describe('Pr Report Core', () => {
         it('skips AI section when skipAi is true', async () => {
             expect.hasAssertions();
 
-            const result = await generatePrReport({
+            const result = await report({
                 tests: defaultTests,
                 stats: defaultStats,
                 skipAi: true,
@@ -310,7 +317,7 @@ describe('Pr Report Core', () => {
         it('skips flaky section when skipFlaky is true', async () => {
             expect.hasAssertions();
 
-            await generatePrReport({
+            await report({
                 tests: [sampleTest],
                 stats: { passed: 1, failed: 0, skipped: 0, total: 1, duration: 100 },
                 skipFlaky: true,
@@ -322,7 +329,7 @@ describe('Pr Report Core', () => {
         it('survives empty test list', async () => {
             expect.hasAssertions();
 
-            const result = await generatePrReport({
+            const result = await report({
                 tests: [],
                 stats: { passed: 0, failed: 0, skipped: 0, total: 0, duration: 0 },
             });
@@ -344,7 +351,7 @@ describe('Pr Report Core', () => {
                 },
             };
 
-            await generatePrReport({
+            await report({
                 tests: [sampleTest],
                 stats: { passed: 1, failed: 0, skipped: 0, total: 1, duration: 100 },
                 dataHub: mockDataHubWithCoverage as never,
@@ -382,7 +389,7 @@ describe('Pr Report Core', () => {
                 html_url: 'https://github.com/owner/repo/pull/42#issuecomment-1',
             });
 
-            await generatePrReport({
+            await report({
                 tests: [sampleTest],
                 stats: { passed: 1, failed: 0, skipped: 0, total: 1, duration: 100 },
                 project: 'test-proj',
@@ -399,7 +406,7 @@ describe('Pr Report Core', () => {
         it('includes CI Context section when ciEnv.isCI is true', async () => {
             expect.hasAssertions();
 
-            await generatePrReport({
+            await report({
                 tests: defaultTests,
                 stats: defaultStats,
                 ciEnv: {
@@ -423,7 +430,7 @@ describe('Pr Report Core', () => {
         it('does not include CI Context section when ciEnv.isCI is false', async () => {
             expect.hasAssertions();
 
-            await generatePrReport({
+            await report({
                 tests: defaultTests,
                 stats: defaultStats,
                 ciEnv: {
@@ -450,7 +457,7 @@ describe('Pr Report Core', () => {
             process.env['GITHUB_STEP_SUMMARY'] = summaryPath;
 
             try {
-                await generatePrReport({
+                await report({
                     tests: defaultTests,
                     stats: defaultStats,
                     ciEnv: {
@@ -487,7 +494,7 @@ describe('Pr Report Core', () => {
             process.env['GITHUB_STEP_SUMMARY'] = summaryPath;
 
             try {
-                await generatePrReport({
+                await report({
                     tests: defaultTests,
                     stats: defaultStats,
                     ciEnv: {
@@ -516,7 +523,7 @@ describe('Pr Report Core', () => {
             delete process.env['GITHUB_STEP_SUMMARY'];
 
             try {
-                const result = await generatePrReport({
+                const result = await report({
                     tests: defaultTests,
                     stats: defaultStats,
                 });
