@@ -3383,12 +3383,16 @@ FASE F — Limpeza
 - Checkpoint: `rg "coverage-source" --include='*.ts' -g '!docs' -g '!plans' # 0` ; `npx vitest run`
 - Commit: `refactor(data-hub): delete coverage-source alternative source`
 
-### FASE 9 — Consumidores Silenciosos (após C4)
+### FASE 9 — Consumidores Silenciosos (após E1)
 
-- 9.1 Rodar `npx tsc --noEmit` + `npx vitest run` full; corrigir qualquer consumidor revelado.
-- Commit: `fix(data-hub): migrate silent consumers revealed by source deletion`
+> **Ordem (dependency-ordered):** executada APÓS **E1**. `batch-mode.generatePrReportIfNeeded` é chamador de `generatePrReport` (`pr-report-core`), cujo contrato obrigatório (DataHub mandatório + Camada 7) é estabelecido em E1. Logo **E1 precede FASE 9** — não o contrário.
+
+- 9.1 Migrar consumidores silenciosos (`batch-mode`, `traceability-matrix`, `pipeline-cost`) para `dataHub: DataHub` obrigatório; remover fallbacks silenciosos; injetar `getDataHub()` onde o caller não o tem; deletar código obsoleto (`buildFlakinessMap`, branch `runs` do MetricsStore).
+- Commit: `fix(data-hub): migrate silent consumers to mandatory DataHub (SSOT)`
 
 ### FASE E — Invariant 8 + Auditoria + Docs
+
+> **Execução imediata (após C):** **E1 vem ANTES de FASE 9** (dependência de contrato — ver stub de FASE 9). E2/E3/E4 permanecem como fases posteriores de E, executadas em seu momento.
 
 **E1 — `dataHub` obrigatório em `pr-report-core.ts` (N3-A / Invariant 8) + alinhamento Camada 7**
 
