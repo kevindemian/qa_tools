@@ -20,6 +20,7 @@
  */
 import { z } from '../deps.js';
 import type {
+    RawData,
     FailureRecord,
     SecurityFinding,
     Deployment,
@@ -404,4 +405,71 @@ export function validateAndScorePerformanceMetrics(metrics: PerformanceMetrics |
     }
 
     return { value, quality: { valid: issues.length === 0, issues } };
+}
+
+/* ───────────────────────────────────────────────────────────────────────────
+ * Ingest gate — whole-payload quality enforcement (ST-3)
+ * ─────────────────────────────────────────────────────────────────────────── */
+
+/** The 8 quality-gated ST-1 categories. */
+export type QualityCategory =
+    | 'failureRecords'
+    | 'securityFindings'
+    | 'deployments'
+    | 'releases'
+    | 'pmIssues'
+    | 'coverageFiles'
+    | 'doraMetrics'
+    | 'performanceMetrics';
+
+/** Per-category quality reports, keyed by QualityCategory. */
+export type QualityCategoryMap = Record<QualityCategory, QualityReport>;
+
+/**
+ * Gate an entire `RawData` payload at the INGEST boundary (the funnel through
+ * which every external/user payload becomes the trusted in-memory model).
+ *
+ * Every ST-1 category is validated, NaN/Infinity/negative confidence normalized,
+ * deduped by natural key and provenance-checked. Invalid / low-quality data is
+ * TAGGED via the returned `quality` report — it is NEVER dropped (AGENTS §25:
+ * zero silenciamento, não drop). All other `RawData` fields are preserved
+ * untouched so the shape consumed by compute/features is unchanged.
+ *
+ * This is the authoritative gate for `hub.raw` (the served model). The store
+ * layer applies the same per-category wrappers as a defense-in-depth backstop.
+ */
+export function gateRawData(raw: RawData): { raw: RawData; quality: QualityCategoryMap } {
+    const failureRecords = validateAndScoreFailureRecords(raw.failureRecords);
+    const securityFindings = validateAndScoreSecurityFindings(raw.securityFindings);
+    const deployments = validateAndScoreDeployments(raw.deployments);
+    const releases = validateAndScoreReleases(raw.releases);
+    const pmIssues = validateAndScorePmIssues(raw.pmIssues);
+    const coverageFiles = validateAndScoreCoverageFiles(raw.coverageFiles);
+    const doraMetrics = validateAndScoreDoraMetrics(raw.doraMetrics);
+    const performanceMetrics = validateAndScorePerformanceMetrics(raw.performanceMetrics);
+
+    const gated: RawData = {
+        ...raw,
+        failureRecords: failureRecords.items,
+        securityFindings: securityFindings.items,
+        deployments: deployments.items,
+        releases: releases.items,
+        pmIssues: pmIssues.items,
+        coverageFiles: coverageFiles.items,
+    };
+    if (doraMetrics.value != null) gated.doraMetrics = doraMetrics.value;
+    if (performanceMetrics.value != null) gated.performanceMetrics = performanceMetrics.value;
+
+    const quality: QualityCategoryMap = {
+        failureRecords: failureRecords.quality,
+        securityFindings: securityFindings.quality,
+        deployments: deployments.quality,
+        releases: releases.quality,
+        pmIssues: pmIssues.quality,
+        coverageFiles: coverageFiles.quality,
+        doraMetrics: doraMetrics.quality,
+        performanceMetrics: performanceMetrics.quality,
+    };
+
+    return { raw: gated, quality };
 }

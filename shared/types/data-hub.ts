@@ -13,6 +13,7 @@ import type { PipelineRun, PipelineJob, ArtifactInfo, GitLabTestReport } from '.
 import type { ArtifactParseResult } from '../data-hub/artifact-parser.js';
 import type { FlatTest, ParseResult } from '../result_parser.js';
 import type { CoverageSnapshot } from './coverage.js';
+import type { QualityReport, QualityCategory } from '../data-hub/quality.js';
 
 /** Quality engineering metrics snapshot — invariant fire rates, layer pass rates, drift detection. */
 export interface QualityMetricsSnapshot {
@@ -672,6 +673,12 @@ export interface DataHub {
     savePerformanceMetrics(metrics: PerformanceMetrics): void;
     /** Load latest performance metrics. Throws if persistence not configured. */
     loadPerformanceMetrics(): PerformanceMetrics | null;
+    /**
+     * Quality report for a gated ST-1 category, computed at the ingest boundary.
+     * Reflects the trustworthy in-memory model (hub.raw), not the durable store.
+     * Returns undefined for an unknown category.
+     */
+    getQuality(category: QualityCategory): QualityReport | undefined;
 }
 
 /**

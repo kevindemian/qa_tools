@@ -30,6 +30,16 @@ import type {
 import type { ParseResult } from '../result_parser.js';
 import { extractErrorMessage, humanizeError } from '../prompt-errors.js';
 import { MetricsStoreSchema } from './schemas.js';
+import {
+    validateAndScoreFailureRecords,
+    validateAndScoreSecurityFindings,
+    validateAndScoreDeployments,
+    validateAndScoreReleases,
+    validateAndScorePmIssues,
+    validateAndScoreCoverageFiles,
+    validateAndScoreDoraMetrics,
+    validateAndScorePerformanceMetrics,
+} from './quality.js';
 
 const METRICS_FILE = 'metrics/global.json';
 const QUALITY_METRICS_FILE = 'metrics/quality-metrics.json';
@@ -199,51 +209,55 @@ export function createDataHubPersistence(_project: string, backend?: StoreBacken
             return existing?.snapshots ?? [];
         },
 
-        // ─── ST-1 new categories ────────────────────────────────────────────
+        // ─── ST-1 new categories (quality-gated at the store trust boundary) ─
+        // Defense-in-depth: the in-memory model is already gated at ingest; this
+        // backstop guarantees the durable store never holds schema-invalid,
+        // NaN/Infinity, or un-deduped data. Invalid/low-quality data is TAGGED
+        // (stored as-is), never dropped (AGENTS §25: zero silenciamento).
         saveFailureRecords(records: FailureRecord[]): void {
-            saveCategoryArray(FAILURE_RECORDS_FILE, records);
+            saveCategoryArray(FAILURE_RECORDS_FILE, validateAndScoreFailureRecords(records).items);
         },
         loadFailureRecords(): FailureRecord[] {
             return loadCategoryArray<FailureRecord>(FAILURE_RECORDS_FILE);
         },
         saveSecurityFindings(findings: SecurityFinding[]): void {
-            saveCategoryArray(SECURITY_FINDINGS_FILE, findings);
+            saveCategoryArray(SECURITY_FINDINGS_FILE, validateAndScoreSecurityFindings(findings).items);
         },
         loadSecurityFindings(): SecurityFinding[] {
             return loadCategoryArray<SecurityFinding>(SECURITY_FINDINGS_FILE);
         },
         saveDeployments(deployments: Deployment[]): void {
-            saveCategoryArray(DEPLOYMENTS_FILE, deployments);
+            saveCategoryArray(DEPLOYMENTS_FILE, validateAndScoreDeployments(deployments).items);
         },
         loadDeployments(): Deployment[] {
             return loadCategoryArray<Deployment>(DEPLOYMENTS_FILE);
         },
         saveReleases(releases: Release[]): void {
-            saveCategoryArray(RELEASES_FILE, releases);
+            saveCategoryArray(RELEASES_FILE, validateAndScoreReleases(releases).items);
         },
         loadReleases(): Release[] {
             return loadCategoryArray<Release>(RELEASES_FILE);
         },
         saveDoraMetrics(metrics: DoraMetrics): void {
-            saveCategoryObject(DORA_FILE, metrics);
+            saveCategoryObject(DORA_FILE, validateAndScoreDoraMetrics(metrics).value);
         },
         loadDoraMetrics(): DoraMetrics | null {
             return loadCategoryObject<DoraMetrics>(DORA_FILE);
         },
         savePmIssues(issues: RawIssue[]): void {
-            saveCategoryArray(PM_ISSUES_FILE, issues);
+            saveCategoryArray(PM_ISSUES_FILE, validateAndScorePmIssues(issues).items);
         },
         loadPmIssues(): RawIssue[] {
             return loadCategoryArray<RawIssue>(PM_ISSUES_FILE);
         },
         saveCoverageFiles(files: CoverageFile[]): void {
-            saveCategoryArray(COVERAGE_FILES_FILE, files);
+            saveCategoryArray(COVERAGE_FILES_FILE, validateAndScoreCoverageFiles(files).items);
         },
         loadCoverageFiles(): CoverageFile[] {
             return loadCategoryArray<CoverageFile>(COVERAGE_FILES_FILE);
         },
         savePerformanceMetrics(metrics: PerformanceMetrics): void {
-            saveCategoryObject(PERFORMANCE_FILE, metrics);
+            saveCategoryObject(PERFORMANCE_FILE, validateAndScorePerformanceMetrics(metrics).value);
         },
         loadPerformanceMetrics(): PerformanceMetrics | null {
             return loadCategoryObject<PerformanceMetrics>(PERFORMANCE_FILE);

@@ -3479,17 +3479,17 @@ Pesquisa externa (fontes indicadas pelo usuário) confirma esse ecossistema:
 
 **Gaps Encontrados (pesquisa + auditoria de código):**
 
-| # | Gap | Evidência | Decisão |
+| #     | Gap                                          | Evidência                                                                                                                                        | Decisão                                                                                   |
 | ----- | -------------------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------ | ----------------------------------------------------------------------------------------- | ---------------- |
 | L4-G1 | 2 páginas de métricas do repo não acessíveis | `GET …/actions/metrics/performance` e `…/usage` retornaram **404** (não públicas; exigem sessão autenticada da UI do GitHub). Não inspecionadas. | REGISTRAR limitação; não bloqueia (CSV de test-summary é fonte estruturada independente). |
-| L4-G2 | Camada 4 escopada como fonte de counts | `log-parser.ts` tratado como produtor de métricas; com token, counts vêm de Camada 2+. | CORRIGIR — redefinir papel (L4.0). |
-| L4-G3 | **NaN vaza para métricas** | `failed`/`skipped` não validados (AGENTS §24.1 violado) em `log-parser.ts`. | CORRIGIR (L4.1). |
-| L4-G4 | **Vitest com falhas não capturado** | regex `/Tests\s+(\d+)\s+passed/` exige "passed" após o número; Vitest `A failed                                                                  | B passed` mal interpretado (`total = passed` errado). | CORRIGIR (L4.2). |
-| L4-G5 | Sem detecção de truncamento | logs grandes podem vir truncados sem sinalização. | CORRIGIR (L4.3). |
-| L4-G6 | Sem `confidence`/`evidence` | consumidor não distingue dado robusto de chute. | CORRIGIR (L4.4). |
-| L4-G7 | Localização não tratada | pytest/mocha em pt-BR quebram extração baseada em keyword inglês. | CORRIGIR (L4.5). |
-| L4-G8 | Stack traces multi-linha truncados | captura single-line `.{10,200}` perde contexto. | CORRIGIR (L4.4). |
-| L4-G9 | Divergência Camada 7 (superficial na L4) | `applyLayer7Fallback` retorna `warning`/skipped em NO_TTY; decisão exige ERRO quando a fase de solicitação é pulada. | Já coberto por E1; não reimplementar aqui. |
+| L4-G2 | Camada 4 escopada como fonte de counts       | `log-parser.ts` tratado como produtor de métricas; com token, counts vêm de Camada 2+.                                                           | CORRIGIR — redefinir papel (L4.0).                                                        |
+| L4-G3 | **NaN vaza para métricas**                   | `failed`/`skipped` não validados (AGENTS §24.1 violado) em `log-parser.ts`.                                                                      | CORRIGIR (L4.1).                                                                          |
+| L4-G4 | **Vitest com falhas não capturado**          | regex `/Tests\s+(\d+)\s+passed/` exige "passed" após o número; Vitest `A failed                                                                  | B passed` mal interpretado (`total = passed` errado).                                     | CORRIGIR (L4.2). |
+| L4-G5 | Sem detecção de truncamento                  | logs grandes podem vir truncados sem sinalização.                                                                                                | CORRIGIR (L4.3).                                                                          |
+| L4-G6 | Sem `confidence`/`evidence`                  | consumidor não distingue dado robusto de chute.                                                                                                  | CORRIGIR (L4.4).                                                                          |
+| L4-G7 | Localização não tratada                      | pytest/mocha em pt-BR quebram extração baseada em keyword inglês.                                                                                | CORRIGIR (L4.5).                                                                          |
+| L4-G8 | Stack traces multi-linha truncados           | captura single-line `.{10,200}` perde contexto.                                                                                                  | CORRIGIR (L4.4).                                                                          |
+| L4-G9 | Divergência Camada 7 (superficial na L4)     | `applyLayer7Fallback` retorna `warning`/skipped em NO_TTY; decisão exige ERRO quando a fase de solicitação é pulada.                             | Já coberto por E1; não reimplementar aqui.                                                |
 
 **L4.0 — Redefinição de papel (estruturado-first)**
 
@@ -3690,3 +3690,79 @@ npm run lint                                        # 0 errors
 
 Cada provider entrega o máximo de campos suportados pela API; campos ausentes são ignorados por
 safeguard clauses (nunca lançam, nunca silenciam). `tsc --noEmit` 0 erros; suíte data-hub verde.
+
+---
+
+## FASE ST-3 — Quality Enforcement nas Fronteiras de Confiança
+
+> **Executada:** 2026-07-12
+> **Escopo:** Wire da camada de qualidade (ST-2 `validateAndScore`) nas DUAS fronteiras de
+> confiança do DataHub — ingest (modelo em memória servido) e store (modelo durável) — de forma
+> que a invariante "SEM NaN · ZERO silenciamento · quality tag, não drop" valha de fato.
+> **Autorização:** usuário (build mode) — implementar tudo conforme planejado, sem deferir.
+
+### Decisão arquitetural (avaliação adversarial)
+
+A alternativa ingênua "gate no `saveXxx` do Hub" foi **rejeitada** por análise adversarial:
+
+1. `DataHubImpl.create` NUNCA chama `saveXxx` — provider data flui
+   `fetchFromProviders → mergeRawData (in-memory) → computeMetrics` e é servido via
+   `hub.raw` / `hub.computed`. Os únicos callers de `saveXxx` são testes. Logo, gatear `saveXxx`
+   protege um caminho frio; o modelo servido (`hub.raw`) continuaria ungated → NaN/inválidos
+   alcançariam `hub.computed` e os consumidores. Viola "SEM NaN".
+2. Mesmo para o store, `saveXxx` é opcional e dependente de caller → não é funil.
+
+O modelo de fato SSOT e servido é o **`hub.raw` em memória**, construído em 3 pontos
+(`create`/`fetchFromProviders`, `loadFromStore`, `createFromParseResult`). O funil real é a
+construção do `raw`. Solução tecnicamente superior (defesa em profundidade, AGENTS §5/§8):
+
+- **Gate de ingest** (`gateRawData` em `quality.ts`): funnel obrigatório; `hub.raw` e `hub.computed`
+  tornam-se NaN-free, dedup, normalizado e provenance-checado NA ORIGEM (AGENTS §4).
+- **Gate de store** (backstop em `persistence.ts`): toda escrita em `persistence.saveXxx` aplica
+  `validateAndScoreXxx` antes de armazenar. Como `hub.persistence` é público e é a fronteira
+  durável, garante que NENHUMA escrita (features futuras, migrações, `saveXxx`) produza dado
+  inválido no store. Mesmo módulo → zero duplicação; dois pontos de enforcement independentes.
+- **Tag, não drop:** inválido/baixa-qualidade é armazenado + taggeado (`quality` report), nunca
+  descartado (AGENTS §25).
+- **Sem dessincronia:** o `quality` report é derivado/guardado no hub (não duplicado no store);
+  `getQuality(category)` o expõe. Recomputável, sem segunda fonte de verdade.
+- **Autoridade de dedup:** `mergeCategoryArrays` faz merge entre providers (reconciliação de
+  campos); `validateAndScore` faz o dedup estrutural autoritativo na fronteira de confiança,
+  rodando sobre o `merged` já fundido → complementares, sem divergência.
+
+### Itens implementados
+
+| ID     | Item                                                                                                                  | Arquivo                                                                                                                                                        |
+| ------ | --------------------------------------------------------------------------------------------------------------------- | -------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| ST-3.1 | `gateRawData(raw)`, `QualityCategory`, `QualityCategoryMap`                                                           | `shared/data-hub/quality.ts` (NOVO)                                                                                                                            |
+| ST-3.2 | `create`/`loadFromStore`/`createFromParseResult`/`createEmpty` aplicam `gateRawData`; `getQuality` no hub + interface | `shared/data-hub/hub.ts`, `shared/types/data-hub.ts`                                                                                                           |
+| ST-3.3 | `persistence.saveXxx` (8 categorias) aplicam `validateAndScoreXxx` (backstop)                                         | `shared/data-hub/persistence.ts`                                                                                                                               |
+| MOCK   | `getQuality` adicionado aos mocks centrais + 3 mocks inline de teste                                                  | `shared/test-utils/factories/data-hub-mock.ts`, `session-state.test.ts`, `session-state-ensureDataHub.integration.test.ts`, `health-score.integration.test.ts` |
+
+### Testes (Test-First, mocks estritos)
+
+- `shared/data-hub/__tests__/quality.test.ts` — `validateAndScore` por categoria (schema, NaN,
+  dedup, provenance, confidence-by-source); objetos nullable.
+- `shared/data-hub/__tests__/quality-ingest.test.ts` — `gateRawData` (NaN normalizado, dedup,
+  inválido taggeado, provenance faltante, campos não-gateados preservados, mapa de 8 chaves).
+- `shared/data-hub/__tests__/hub-ingest-gate.test.ts` — `DataHubImpl.create` gateia provider raw
+  antes de `computeMetrics` (fim-a-fim: provider → merge → gate → compute → hub); `createEmpty`
+  também gateado.
+- `shared/data-hub/__tests__/persistence-st3.test.ts` — backstop de store (NaN normalizado,
+  dedup, inválido armazenado taggeado; objeto nullable).
+
+### Checkpoints (por fase)
+
+```
+npx tsc --noEmit                                   # 0 erros  ✓
+npx vitest run shared/data-hub shared/__tests__/integration   # 111 files / 832 tests  ✓
+rg "NaN" shared/data-hub shared/data-hub/providers  # 0 em dados servidos
+  (matches restantes são guards defensivos isNaN e comentários — corretos, não vazamento)
+npm run lint                                       # 0 errors nos arquivos ST-3  ✓
+```
+
+### Condição de "done"
+
+`quality.ts` deixa de ser dead code; `hub.raw`/`hub.computed` servidos são quality-gated na
+origem; o store é backstop não-contornável; consumidores leem qualidade via `getQuality`.
+Invariante "SEM NaN / ZERO silenciamento / quality tag, não drop" válida de fato.

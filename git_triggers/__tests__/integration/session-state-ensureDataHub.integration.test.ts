@@ -97,6 +97,7 @@ function makeMockHub(): DataHub {
         loadCoverageFiles: vi.fn().mockReturnValue([]),
         savePerformanceMetrics: vi.fn(),
         loadPerformanceMetrics: vi.fn().mockReturnValue(null),
+        getQuality: vi.fn(),
     };
 }
 

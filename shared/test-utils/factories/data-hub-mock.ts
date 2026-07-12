@@ -24,6 +24,7 @@ import type {
     FlakinessEntry,
     TrendPoint,
 } from '../../types/data-hub.js';
+import type { QualityReport, QualityCategory } from '../../data-hub/quality.js';
 
 /** Default `computed` metrics — all zeros/empty so overrides can be partial. */
 const defaultComputed: ComputedMetrics = {
@@ -164,5 +165,6 @@ export function makeDataHubMock(
         loadCoverageFiles: vi.fn().mockReturnValue([]),
         savePerformanceMetrics: vi.fn(),
         loadPerformanceMetrics: vi.fn().mockReturnValue(null),
+        getQuality: vi.fn<(category: QualityCategory) => QualityReport | undefined>(),
     };
 }
