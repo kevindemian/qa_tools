@@ -3794,6 +3794,8 @@ lint/tsc clean está metrificamente atendido; não há débito de correção nes
 
 ## PRÓXIMA FASE — Migração de Consumidores (SSOT) — RE-ESCOPADA POR AUDITORIA (2026-07-12)
 
+> **SUPERSEDED (2026-07-12):** a re-auditoria fresca (seção "RE-AUDITORIA FRESCA + PLANO AJUSTADO" no fim do documento) provou que os consumidores de leitura (FASE 1/3/4/5/6) **já estão SSOT em código**. O inventário "23 arquivos / 30+ call sites" desta seção estava obsoleto. O gap real remanescente é a **fonte alternativa legada (`Store`, `shared/store.ts`)**, tratado na seção nova. Esta seção é mantida como histórico de auditoria, não como pendência.
+
 > **Re-escopo por auditoria read-only:** uma re-auditoria fresca (grep/tsc/leitura de código) revelou
 > que o inventário "COMPLETE BYPASS INVENTORY" (Categorias A–G) e a "Retomada" estavam **largamente
 > já executados** no estado atual do código. O plano anterior (Blocos 1–4) estava obsoleto. Esta seção
@@ -3909,3 +3911,69 @@ continuam apontando para o hub (já SSOT).
 ### Conclusão do track "EXPAND+STORE"
 
 ST-1, ST-2, ST-3, L4 e a migração de consumidores re-escopada (quarentena SSOT) estão **concluídas e verificadas**, com CI verde. Nenhum bypass de SSOT, nenhuma supressão de mecanismo de segurança, equivalência de comportamento preservada. Track encerrado.
+
+---
+
+## RE-AUDITORIA FRESCA + PLANO AJUSTADO (2026-07-12, autorizado)
+
+> Re-auditoria read-only (grep + leitura de código + `tsc`) executada após a conclusão da fase de quarentena. O objetivo foi enumerar os gaps reais de SSOT, não confiar no narrativo de "próximas fases" do plano (que se provou obsoleto, igual ao inventário de consumidores).
+
+### 1. Re-auditoria — achados (evidência)
+
+| Alegação do plano (FASE 1/3/4/5/6)                                | Estado REAL (código)                                                                             |
+| :---------------------------------------------------------------- | :----------------------------------------------------------------------------------------------- |
+| "23 arquivos usam `persistence.loadMetricsStore()`"               | **FALSO** — zero chamadores executáveis fora de `data-hub/`.                                     |
+| "30+ call sites criam `createDataHubPersistence()`"               | **FALSO** — zero em produção.                                                                    |
+| "quality-gate/health-score têm assinatura híbrida `MetricsStore`" | **FALSO** — `quality-gate.ts:9` _"MetricsStore is NOT used"_; `runQualityGate(options.dataHub)`. |
+| "18 sites acessam `store.runs` direto"                            | **FALSO** — todos leem `dataHub.raw.*` / `dataHub.computed.*`.                                   |
+| `loadMetricsStore()` exposto na interface pública                 | **JÁ REMOVIDO** — só existe em `persistence.ts` (dono).                                          |
+
+**Leituras SSOT verificadas:** `quality-gate` (`dataHub.raw/computed`), `pr-report-core` (inclusive `getQuarantine()`), `case12`/`case21`/`main.ts` (`hub.raw`), `case17` (`hub.computed.metricsRuns`, `hub.raw.commitLog`), `git_triggers` (zero bypass), `coverage-gap`/`pipeline-cost` (`hub.raw`).
+
+**Gap real remanescente — fonte alternativa legada (`Store`):**
+
+- Classe `Store` em `shared/store.ts`. Instanciada em produção em **2 pontos**: `shared/session-context.ts:118` (`new Store(...)`) e `git_triggers/pipeline-handler.ts`.
+- Importada em `session-context.ts` e `pipeline-handler.ts`; mock em `shared/__mocks__/store.ts`.
+- Papel: **cache de resultados de teste SHA-keyed** (arquivo). Em `resolveTestDataSource` (`session-context.ts:200`): Passo 1 lê do legacy `Store` (`tryLoadFromCache`); Passo 2 lê do **DataHub** (`_getLatestTestResultFromDataHub` → `hub.raw.parsedArtifacts`) e, se achar, também escreve no legacy `Store` (`trySaveCiResult`). DataHub é fonte primária; legacy `Store` é cache secundário + único escritor dos arquivos `.qa-store`.
+- **DataHub JÁ possui o equivalente**: `hub.ts` popula `raw.parsedArtifacts` (linhas 269–316, 484–542) e deriva `computed.metricsRuns`. Logo a leitura do legacy `Store` é **redundante — desde que o DataHub esteja inicializado nos pontos de chamada**.
+
+**Conclusão:** FASE 1/3/4/5/6 (leitura SSOT) concluídas. O trabalho restante real não é "migrar 23 consumidores" — é **FASE 8/C + FASE 9: eliminar a fonte alternativa legada (`Store`)**, com verificação de causa raiz prévia (cobertura do cache pelo DataHub).
+
+### 2. Plano ajustado ordenado (até a conclusão do track)
+
+| Ordem | Item                                            | Escopo principal                                                                                                                                                                                                                                                                         | Autorização                                                                    |
+| :---- | :---------------------------------------------- | :--------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | :----------------------------------------------------------------------------- |
+| 0     | Verificação de causa raiz (read-only)           | Confirmar que `isDataHubInitialized()` é verdadeiro em **todos** os callers de `resolveTestDataSource` (case15, case17, pipeline-handler) — define se o cache legado é redundante                                                                                                        | —                                                                              |
+| 1     | **FASE 8/C + FASE 9 — Eliminar `Store` legado** | Mover leitura de cache 100% para `hub.raw.parsedArtifacts`; remover `new Store(` em `session-context.ts`/`pipeline-handler.ts`, deletar `shared/store.ts` + `shared/__mocks__/store.ts` + imports; tratar `tryLoadFromCache`/`trySaveCiResult`/`resolveFromBranch`                       | Root-cause (§4): não deletar sem equivalência comprovada no passo 0            |
+| 2     | **WS2 — Guarda contínua**                       | Estender `eslint.config.mjs:212` para bloquear `new Store(` / `import ...store.js` fora de `data-hub/` (trava a eliminação do passo 1)                                                                                                                                                   | Adição de mecanismo de segurança (§5) — ok                                     |
+| 3     | **WS3 — Lint N2-B**                             | Corrigir `security/detect-non-literal-fs-filename` em `shared/quarantine.ts` (validar caminho contra base permitida; **sem** `eslint-disable`)                                                                                                                                           | Obrigatório (§4/§25)                                                           |
+| 4     | **WS1 — Contrato (autorizado)**                 | Remover `saveMetricsStore(store: MetricsStore): void` da interface pública `DataHub` (manter em `DataHubPersistence`); podar o campo dos mocks (`data-hub-mock.ts`, `context-factory.ts`, `pr-report.test.ts`, `quality-gate.integration.test.ts`, `hub-st1.test.ts`, `factory.test.ts`) | **Autorizado expressamente pelo usuário em 2026-07-12, sem reservas (§6/§18)** |
+| 5     | **WS4 — Reconciliar planos (este item)**        | Atualizar `data-hub-ssot-enforcement.md` (feito aqui) e sinalizar `data-hub-layered-architecture.md` como obsoleto no narrativo de consumidores                                                                                                                                          | Item de execução                                                               |
+
+> `data-hub-layered-architecture.md` e `PROGRESS-LAYERED-ARCH.md` contêm narrativo de "próximas fases" igualmente obsoleto (claim de 18/23 call sites). Estão **superseded** por esta seção; reconcile detalhado fica para WS4-final (ou edição pontual posterior).
+
+### 3. Solução tecnicamente superior (registrada por decisão)
+
+- **WS1 (Q1):** autorizar remoção de `saveMetricsStore` da interface pública — zero consumidores de produção, elimina contract rot, reforça o invariante "consumidores não tocam persistence", e corrige defeito de mock-shape (campo extra nos mocks). Condições de §6 satisfeitas; autorização do usuário obtida.
+- **Ordem (Q2):** FASE 8/C primeiro (núcleo do plano = fonte alternativa real), precedida da verificação de causa raiz e **emparelhada com WS2** (guarda que trava regressão). WS3 não é primeiro: é débito de segurança independente, só warning, não desbloqueia o objetivo de domínio (§8).
+
+### 4. Checkpoints de execução (retomada)
+
+```
+[CHECKPOINT 0] Verificação read-only: isDataHubInitialized() em todos os callers de resolveTestDataSource.
+              → Se algum caller não garante DataHub, implementar inicialização antes de deletar o cache legado.
+[CHECKPOINT 1] FASE 8/C + WS2 concluídos:
+              - zero `new Store(` / `import ...store.js` fora de data-hub/ (grep prova)
+              - `shared/store.ts` e `__mocks__/store.ts` deletados
+              - ESLint guarda em eslint.config.mjs:212 estendida
+              - tsc 0, vitest 0 failures, lint 0 (pre-push green), CI green
+[CHECKPOINT 2] WS3 concluído: quarantine.ts sem warnings detect-non-literal-fs-filename (corrigido na origem)
+[CHECKPOINT 3] WS1 concluído: saveMetricsStore fora da interface pública DataHub; mocks podados; tsc/lint green
+[CHECKPOINT 4] WS4-final: planos reconciliados; STATUS DO TRACK atualizado
+```
+
+### 5. Estado de prontidão para retomada
+
+- Branch: `feat/ssot-gap-corrections`. Último commit de código: `d49c6ac0` (quarentena SSOT). Último commit de docs: `7782ec62`.
+- Débito N2-B e exposição `saveMetricsStore` agora **autorizados para correção** na próxima fase (não mais "fora de escopo").
+- Próxima ação ao retomar: executar **CHECKPOINT 0** (verificação read-only de `isDataHubInitialized()` nos callers), depois **CHECKPOINT 1** (FASE 8/C + WS2).
