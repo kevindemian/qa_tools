@@ -36,6 +36,7 @@ import type { PipelineRun, PipelineJob } from '../types/ci-cd.js';
 import type { ArtifactParseResult } from './artifact-parser.js';
 import type { ParseResult } from '../result_parser.js';
 import { mergeCategoryArrays } from './raw-merge.js';
+import { gateRawData, type QualityReport, type QualityCategory, type QualityCategoryMap } from './quality.js';
 import { rootLogger } from '../logger.js';
 import { askTestSource } from './test-source-fallback.js';
 import type { FallbackResult } from './test-source-fallback.js';
@@ -94,6 +95,7 @@ export class DataHubImpl implements DataHub {
     readonly timestamp: Date;
     readonly provider: 'github' | 'gitlab';
     readonly repo: string;
+    private readonly quality: QualityCategoryMap;
 
     private constructor(
         raw: RawData,
@@ -101,6 +103,7 @@ export class DataHubImpl implements DataHub {
         provider: 'github' | 'gitlab',
         repo: string,
         persistence: DataHubPersistence,
+        quality: QualityCategoryMap,
     ) {
         this.raw = raw;
         this.computed = computed;
@@ -108,6 +111,7 @@ export class DataHubImpl implements DataHub {
         this.timestamp = new Date();
         this.provider = provider;
         this.repo = repo;
+        this.quality = quality;
     }
 
     // ─── SSOT Persistence Operations ───────────────────────────────────────
@@ -209,6 +213,14 @@ export class DataHubImpl implements DataHub {
     }
 
     /**
+     * Quality report for a gated ST-1 category, computed at the ingest boundary.
+     * Reflects the trustworthy in-memory model (hub.raw), never the durable store.
+     */
+    getQuality(category: QualityCategory): QualityReport | undefined {
+        return this.quality[category];
+    }
+
+    /**
      * Create a DataHub by fetching data from providers and computing metrics.
      *
      * Layer 7 cascade: When no parsed artifacts are available after provider fetch,
@@ -291,8 +303,9 @@ export class DataHubImpl implements DataHub {
             failureReasons: new Map(),
             parsedArtifacts,
         };
-        const computed = DataHubImpl.computeMetrics(raw, { repo });
-        return new DataHubImpl(raw, computed, 'github', repo, persistence);
+        const gated = gateRawData(raw);
+        const computed = DataHubImpl.computeMetrics(gated.raw, { repo });
+        return new DataHubImpl(gated.raw, computed, 'github', repo, persistence, gated.quality);
     }
 
     private static buildResult(
@@ -367,8 +380,9 @@ export class DataHubImpl implements DataHub {
         const layer7Skipped = layer7Resolution.skipped;
         const layer7NoFile = layer7Resolution.noFile;
 
-        const computed = DataHubImpl.computeMetrics(raw, options);
-        const hub = new DataHubImpl(raw, computed, providerSource, options.repo, persistence);
+        const gated = gateRawData(raw);
+        const computed = DataHubImpl.computeMetrics(gated.raw, options);
+        const hub = new DataHubImpl(gated.raw, computed, providerSource, options.repo, persistence, gated.quality);
 
         const hasData = raw.runs.length > 0 || (raw.parsedArtifacts != null && raw.parsedArtifacts.size > 0);
         if (!hasData) {
@@ -446,8 +460,9 @@ export class DataHubImpl implements DataHub {
             artifacts: new Map(),
             failureReasons: new Map(),
         };
-        const computed = DataHubImpl.computeMetrics(raw, { repo });
-        return new DataHubImpl(raw, computed, provider, repo, persistence);
+        const gated = gateRawData(raw);
+        const computed = DataHubImpl.computeMetrics(gated.raw, { repo });
+        return new DataHubImpl(gated.raw, computed, provider, repo, persistence, gated.quality);
     }
 
     /**
@@ -524,8 +539,9 @@ export class DataHubImpl implements DataHub {
             raw.failureClassifications = store.failureClassifications;
         }
 
-        const computed = DataHubImpl.computeMetrics(raw, { repo });
-        return new DataHubImpl(raw, computed, 'github', repo, persistence);
+        const gated = gateRawData(raw);
+        const computed = DataHubImpl.computeMetrics(gated.raw, { repo });
+        return new DataHubImpl(gated.raw, computed, 'github', repo, persistence, gated.quality);
     }
 
     private static async fetchFromProviders(

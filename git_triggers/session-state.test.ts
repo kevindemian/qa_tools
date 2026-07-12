@@ -235,6 +235,7 @@ describe('Session-state', () => {
                 loadCoverageFiles: vi.fn().mockReturnValue([]),
                 savePerformanceMetrics: vi.fn(),
                 loadPerformanceMetrics: vi.fn().mockReturnValue(null),
+                getQuality: vi.fn(),
             });
 
             sessionState.setCurrentProjectName('qa_ibabs');
