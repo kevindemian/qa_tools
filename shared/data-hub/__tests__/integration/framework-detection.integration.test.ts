@@ -99,7 +99,7 @@ describe('Framework Detection Integration', () => {
         expect(result).toStrictEqual({ framework: 'unknown', confidence: 0 });
     });
 
-    it('handles API errors gracefully', async () => {
+    it('propagates API errors instead of swallowing them', async () => {
         expect.hasAssertions();
 
         const mockProvider = createMockProvider({
@@ -108,8 +108,6 @@ describe('Framework Detection Integration', () => {
                 .mockRejectedValue(new Error('Network error')),
         });
 
-        const result = await detectFrameworkFromAPI(mockProvider, 'main');
-
-        expect(result).toStrictEqual({ framework: 'unknown', confidence: 0 });
+        await expect(detectFrameworkFromAPI(mockProvider, 'main')).rejects.toThrow('Network error');
     });
 });

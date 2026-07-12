@@ -1,6 +1,7 @@
 import type { AxiosInstance } from '../shared/deps.js';
 import { rootLogger } from '../shared/logger.js';
 import { handleError } from '../shared/git-provider-error.js';
+import { classifyGitError } from '../shared/errors.js';
 import { extractErrorMessage } from '../shared/prompt-errors.js';
 import type {
     PipelineTriggerResult,
@@ -357,7 +358,11 @@ export async function wfGetFileContents(
     } catch (err) {
         const axiosErr = err as { response?: { status?: number } };
         if (axiosErr.response?.status === 404) return null;
-        return handleError(err, { context: `ler arquivo ${path}`, returnNull: true });
+        throw classifyGitError(err, {
+            operation: 'ler arquivo',
+            scope: 'contents:read',
+            resource: path,
+        });
     }
 }
 
@@ -389,7 +394,11 @@ export async function wfListDirectory(
     } catch (err) {
         const axiosErr = err as { response?: { status?: number } };
         if (axiosErr.response?.status === 404) return null;
-        return handleError(err, { context: `listar diretório ${path}`, returnNull: true });
+        throw classifyGitError(err, {
+            operation: 'listar diretório',
+            scope: 'contents:read',
+            resource: path,
+        });
     }
 }
 

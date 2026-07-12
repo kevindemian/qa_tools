@@ -7,7 +7,7 @@
  * - `detectFrameworkFromAPI()` — uses GitProvider to read package.json via Contents API
  */
 import type { GitProvider, FrameworkDetectionResult } from './types/ci-cd.js';
-import { extractErrorMessage, humanizeError } from './prompt-errors.js';
+import { extractErrorMessage } from './prompt-errors.js';
 import { rootLogger } from './logger.js';
 
 const MANIFEST_PATTERN =
@@ -60,36 +60,34 @@ export function detectFrameworkFromDeps(deps: Record<string, string>): Framework
 /**
  * Detect test framework from a repository via Contents API.
  * Attempts to read package.json, parse it, and detect framework from dependencies.
- * Falls back gracefully: returns unknown on any error.
+ *
+ * - 404 (arquivo ausente) → retorna unknown (soft, arquivo genuinamente inexistente).
+ * - Erro de auth/permissão/rede/servidor → propaga `ExternalError` para a camada
+ *   consumidora apresentar ao usuário (não silencia).
  *
  * @param gitProvider - GitProvider instance with getFileContents
  * @param ref - Git ref (branch, tag, or SHA) to read from
  * @returns Detected framework and confidence level
  */
 export async function detectFrameworkFromAPI(gitProvider: GitProvider, ref: string): Promise<FrameworkDetectionResult> {
-    try {
-        const content = await gitProvider.getFileContents('package.json', ref);
-        if (content == null) {
-            rootLogger.debug('Framework detection: package.json not found');
-            return { framework: 'unknown', confidence: 0 };
-        }
-
-        let pkg: { [key: string]: unknown };
-        try {
-            pkg = JSON.parse(content) as { [key: string]: unknown };
-        } catch (err) {
-            rootLogger.debug(`Framework detection: invalid package.json — ${extractErrorMessage(err)}`);
-            return { framework: 'unknown', confidence: 0 };
-        }
-
-        const deps: { [key: string]: string } = {
-            ...(pkg['dependencies'] as { [key: string]: string }),
-            ...(pkg['devDependencies'] as { [key: string]: string }),
-        };
-
-        return detectFrameworkFromDeps(deps);
-    } catch (err) {
-        rootLogger.debug(`Framework detection failed: ${humanizeError(String(err))?.msg ?? String(err)}`);
+    const content = await gitProvider.getFileContents('package.json', ref);
+    if (content == null) {
+        rootLogger.debug('Framework detection: package.json not found');
         return { framework: 'unknown', confidence: 0 };
     }
+
+    let pkg: { [key: string]: unknown };
+    try {
+        pkg = JSON.parse(content) as { [key: string]: unknown };
+    } catch (err) {
+        rootLogger.debug(`Framework detection: invalid package.json — ${extractErrorMessage(err)}`);
+        return { framework: 'unknown', confidence: 0 };
+    }
+
+    const deps: { [key: string]: string } = {
+        ...(pkg['dependencies'] as { [key: string]: string }),
+        ...(pkg['devDependencies'] as { [key: string]: string }),
+    };
+
+    return detectFrameworkFromDeps(deps);
 }

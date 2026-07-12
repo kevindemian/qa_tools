@@ -4,6 +4,7 @@ import { nonNull } from '../shared/test-utils.js';
 import type { AxiosInstance } from '../shared/deps.js';
 import type { JsonObject } from '../shared/types.js';
 import { CONTEXT_IDS, CI_CD_PATH } from '../shared/test-utils/constants.js';
+import { ExternalError } from '../shared/errors.js';
 import { apiGet, apiPost } from './github-api.js';
 import {
     wfTriggerPipeline,
@@ -863,19 +864,14 @@ describe('WfGetFileContents', () => {
         expect(result).toBeNull();
     });
 
-    it('returns null on other API error', async () => {
+    it('throws ExternalError on other API error (not silently null)', async () => {
         expect.hasAssertions();
 
         client.get.mockRejectedValue(new Error('API error'));
 
-        const result = await wfGetFileContents(
-            client,
-            CONTEXT_IDS.ORGANIZATION,
-            CONTEXT_IDS.REPOSITORY,
-            'package.json',
-        );
-
-        expect(result).toBeNull();
+        await expect(
+            wfGetFileContents(client, CONTEXT_IDS.ORGANIZATION, CONTEXT_IDS.REPOSITORY, 'package.json'),
+        ).rejects.toBeInstanceOf(ExternalError);
     });
 });
 
@@ -924,19 +920,14 @@ describe('WfListDirectory', () => {
         expect(result).toBeNull();
     });
 
-    it('returns null on API error', async () => {
+    it('throws ExternalError on API error (not silently null)', async () => {
         expect.hasAssertions();
 
         client.get.mockRejectedValue(new Error('API error'));
 
-        const result = await wfListDirectory(
-            client,
-            CONTEXT_IDS.ORGANIZATION,
-            CONTEXT_IDS.REPOSITORY,
-            'test-file.json',
-        );
-
-        expect(result).toBeNull();
+        await expect(
+            wfListDirectory(client, CONTEXT_IDS.ORGANIZATION, CONTEXT_IDS.REPOSITORY, 'test-file.json'),
+        ).rejects.toBeInstanceOf(ExternalError);
     });
 });
 

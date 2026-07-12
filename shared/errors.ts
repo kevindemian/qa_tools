@@ -4,7 +4,7 @@
  * RULE: Every error MUST produce a human-readable message.
  * No silent failures. No empty strings. No `undefined` as error.
  *
- * ERROR HANDLING PATTERNS (silent-degradation-fix.md):
+ * ERROR HANDLING PATTERNS (error-handling-enforcement.md):
  *
  * 1. Safeguard Clauses (input validation):
  *    throw new DataIntegrityError('functionName: description of invalid state');
@@ -88,6 +88,122 @@ export class DataFetchError extends Error {
         super(message, options);
         this.name = 'DataFetchError';
     }
+}
+
+// ─── External (typed) error: exact, non-silent failure info ────────────
+// Substitui o `handleError(... returnNull)` que colapsava 401/403/404/500
+// num `null` indistinguível. Qualquer erro externo vira um `ExternalError` com
+// kind/status/scope/resource/operation/remediation explícitos.
+
+export type ExternalErrorKind = 'auth' | 'permission' | 'notFound' | 'rateLimit' | 'network' | 'server' | 'unknown';
+
+export interface ExternalErrorContext {
+    operation: string;
+    status?: number | undefined;
+    scope?: string | undefined;
+    resource?: string | undefined;
+    remediation?: string | undefined;
+}
+
+export class ExternalError extends Error {
+    readonly kind: ExternalErrorKind;
+    readonly status?: number | undefined;
+    readonly scope?: string | undefined;
+    readonly resource?: string | undefined;
+    readonly operation: string;
+    readonly remediation?: string | undefined;
+    constructor(kind: ExternalErrorKind, message: string, ctx: ExternalErrorContext) {
+        super(message);
+        this.name = 'ExternalError';
+        this.kind = kind;
+        this.status = ctx.status;
+        this.scope = ctx.scope;
+        this.resource = ctx.resource;
+        this.operation = ctx.operation;
+        this.remediation = ctx.remediation;
+    }
+}
+
+const NETWORK_CODES = new Set([
+    'ECONNRESET',
+    'ECONNREFUSED',
+    'ENOTFOUND',
+    'ETIMEDOUT',
+    'ECONNABORTED',
+    'EPIPE',
+    'ECONNRESET',
+]);
+
+interface AxiosLikeErr {
+    response?: { status?: number; data?: unknown };
+    message?: string;
+    code?: string;
+    config?: { url?: string };
+}
+
+/**
+ * Classifica um erro de provedor git (GitHub/GitLab) em `ExternalError` com
+ * informação exata. 401/403 recebem scope/remediation para que o usuário saiba
+ * exatamente o que está faltando (ex.: "token sem contents:read").
+ */
+export function classifyGitError(err: unknown, ctx: ExternalErrorContext): ExternalError {
+    const e = err as AxiosLikeErr;
+    const status = e.response?.status;
+    const url = e.config?.url;
+    const base = `operação "${ctx.operation}" falhou`;
+    if (status === 401) {
+        return new ExternalError('auth', `${base}: token inválido ou expirado (HTTP 401)`, {
+            ...ctx,
+            status,
+            resource: url,
+            remediation: 'Token inválido ou expirado. Reconfigure via /setup ou edite o arquivo .env.',
+        });
+    }
+    if (status === 403) {
+        const scopeNote = ctx.scope ? ` para ${ctx.scope}` : '';
+        return new ExternalError('permission', `${base}: token sem permissão${scopeNote} (HTTP 403)`, {
+            ...ctx,
+            status,
+            resource: url,
+            remediation: ctx.scope
+                ? `O token não possui o escopo "${ctx.scope}". Conceda o escopo necessário ou use um token com acesso ao recurso.`
+                : 'O token não tem permissão para esta operação. Conceda o escopo necessário ou use um token com acesso.',
+        });
+    }
+    if (status === 404) {
+        return new ExternalError('notFound', `${base}: recurso não encontrado (HTTP 404)`, {
+            ...ctx,
+            status,
+            resource: url,
+        });
+    }
+    if (status === 429) {
+        return new ExternalError('rateLimit', `${base}: rate limit atingido (HTTP 429)`, {
+            ...ctx,
+            status,
+            resource: url,
+            remediation: 'Muitas requisições. Aguarde e tente novamente.',
+        });
+    }
+    if (status !== undefined && status >= 500) {
+        return new ExternalError('server', `${base}: erro no servidor (HTTP ${status})`, {
+            ...ctx,
+            status,
+            resource: url,
+        });
+    }
+    if (e.code && NETWORK_CODES.has(e.code)) {
+        return new ExternalError('network', `${base}: erro de rede (${e.code})`, {
+            ...ctx,
+            resource: url,
+            remediation: 'Verifique a conexão de rede e tente novamente.',
+        });
+    }
+    return new ExternalError('unknown', `${base}: ${e.message || 'erro desconhecido'}`, {
+        ...ctx,
+        status,
+        resource: url,
+    });
 }
 
 // ─── Type Guard ─────────────────────────────────────────────────────────────

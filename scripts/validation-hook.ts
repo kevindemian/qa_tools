@@ -1744,8 +1744,17 @@ async function runCheckCommitMsg(quiet = false): Promise<CheckResult> {
                 stats: { linesValidated: 1, timeMs: 0 },
             };
         }
-    } catch {
-        return { valid: true, issues: [], requiresReview: false, stats: { linesValidated: 0, timeMs: 0 } };
+    } catch (err) {
+        const errMsg = err instanceof Error ? err.message : String(err);
+        process.stderr.write(
+            `[validation_hook] runCheckCommitMsg falhou: ${errMsg} — falha de validação NÃO silenciada (fail-closed)\n`,
+        );
+        return {
+            valid: false,
+            issues: [{ line: 0, error: `erro interno de validação: ${errMsg}`, severity: 'block' }],
+            requiresReview: false,
+            stats: { linesValidated: 0, timeMs: 0 },
+        };
     }
     return { valid: true, issues: [], requiresReview: false, stats: { linesValidated: 0, timeMs: 0 } };
 }

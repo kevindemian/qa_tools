@@ -214,12 +214,11 @@ describe('DetectFrameworkFromAPI', () => {
         expect(result).toStrictEqual({ framework: 'unknown', confidence: 0 });
     });
 
-    it('returns unknown on API error', async () => {
+    it('propagates API error instead of swallowing it', async () => {
         expect.hasAssertions();
 
         mockGetFileContents.mockRejectedValue(new Error('API error'));
-        const result = await detectFrameworkFromAPI(mockProvider, 'main');
 
-        expect(result).toStrictEqual({ framework: 'unknown', confidence: 0 });
+        await expect(detectFrameworkFromAPI(mockProvider, 'main')).rejects.toThrow('API error');
     });
 });
