@@ -30,7 +30,6 @@ import { calcRunPassRate } from './data-hub/compute/run-pass-rate.js';
 import { runQualityGate } from './quality-gate.js';
 import { createCheckRun } from './github-check-run.js';
 import { postPrComment } from './github-pr-comment.js';
-import { isQuarantined } from './quarantine.js';
 import { generateHtmlReport } from './report-html.js';
 import type { ReportOptions } from './report-types.js';
 import { calculateHealthScore } from './health-score.js';
@@ -195,7 +194,7 @@ function buildFlakySection(dataHub: DataHub): string {
         if (highFlaky.length === 0) return '';
 
         const rows = highFlaky.map((t) => {
-            const quarantined = isQuarantined(t.title);
+            const quarantined = dataHub.getQuarantine().entries.some((e) => e.testTitle === t.title);
             const status = quarantined ? '🔒 Quarantined' : '⚠️ New';
             return [
                 `| ${t.title.replace(/\|/g, '\\|')}`,
@@ -205,7 +204,7 @@ function buildFlakySection(dataHub: DataHub): string {
             ].join(' | ');
         });
 
-        const newFlaky = highFlaky.filter((t) => !isQuarantined(t.title));
+        const newFlaky = highFlaky.filter((t) => !dataHub.getQuarantine().entries.some((e) => e.testTitle === t.title));
         const suggestion =
             newFlaky.length > 0
                 ? `\n> 💡 ${newFlaky.length} flaky test(s) not yet quarantined. Consider adding them to quarantine to reduce CI noise.\n`

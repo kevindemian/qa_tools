@@ -8,6 +8,7 @@ import fs from 'node:fs';
 import path from 'node:path';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import { parseTestResultsFile } from '../result_parser.js';
+import type { QuarantineStore } from '../quarantine.js';
 
 vi.mock('../github-pr-comment.js', () => ({
     postPrComment: vi.fn().mockResolvedValue({
@@ -119,6 +120,7 @@ vi.mock('../data-hub/global-hub.js', () => ({
         timestamp: new Date(),
         provider: 'github',
         repo: 'test/repo',
+        getQuarantine: vi.fn(() => ({ entries: [] })),
     }),
     isDataHubInitialized: vi.fn().mockReturnValue(true),
     setDataHub: vi.fn(),
@@ -439,21 +441,22 @@ describe('Pr-report entry point — flaky detection with quarantine', () => {
         ];
         mockDataHubComputed.flakinessEntries = mockEntries;
 
-        const quarantineMod = await import('../quarantine.js');
-        vi.mocked(quarantineMod.isQuarantined).mockImplementation((title: string) =>
-            title === 'flaky-test-2'
-                ? {
-                      testTitle: 'flaky-test-2',
-                      reason: 'known',
-                      quarantinedBy: 'system',
-                      date: '',
-                      expiresAt: '',
-                      flakyRate: 0.8,
-                      reviewRequired: false,
-                      permanent: false,
-                  }
-                : undefined,
-        );
+        const globalHubModule = await import('../data-hub/global-hub.js');
+        const hub = globalHubModule.getDataHub();
+        hub.getQuarantine = vi.fn<() => QuarantineStore>(() => ({
+            entries: [
+                {
+                    testTitle: 'flaky-test-2',
+                    reason: 'known',
+                    quarantinedBy: 'system',
+                    date: '',
+                    expiresAt: '',
+                    flakyRate: 0.8,
+                    reviewRequired: false,
+                    permanent: false,
+                },
+            ],
+        }));
 
         createCtrfFixture([{ name: 'pass-1', status: 'passed', duration: 100 }]);
 
@@ -470,6 +473,7 @@ describe('Pr-report entry point — flaky detection with quarantine', () => {
         expect(commentBody).toContain('🔒 Quarantined');
         expect(commentBody).not.toContain('⚠️ New');
 
+        hub.getQuarantine = vi.fn<() => QuarantineStore>(() => ({ entries: [] }));
         exitSpy.mockRestore();
     });
 
@@ -534,19 +538,25 @@ describe('Pr-report entry point — flaky detection with quarantine', () => {
                 totalRuns: 5,
             },
         ];
+        mockDataHubComputed.flakinessEntries = mockEntries;
         vi.mocked(flakinessModule.calcFlakinessEntries).mockImplementation(() => mockEntries);
 
-        const quarantineMod = await import('../quarantine.js');
-        vi.mocked(quarantineMod.isQuarantined).mockReturnValue({
-            testTitle: 'known-flaky',
-            reason: 'known',
-            quarantinedBy: 'system',
-            date: '',
-            expiresAt: '',
-            flakyRate: 0.6,
-            reviewRequired: false,
-            permanent: false,
-        });
+        const globalHubModule = await import('../data-hub/global-hub.js');
+        const hub = globalHubModule.getDataHub();
+        hub.getQuarantine = vi.fn<() => QuarantineStore>(() => ({
+            entries: [
+                {
+                    testTitle: 'known-flaky',
+                    reason: 'known',
+                    quarantinedBy: 'system',
+                    date: '',
+                    expiresAt: '',
+                    flakyRate: 0.6,
+                    reviewRequired: false,
+                    permanent: false,
+                },
+            ],
+        }));
 
         createCtrfFixture([{ name: 'pass-1', status: 'passed', duration: 100 }]);
 
@@ -562,6 +572,7 @@ describe('Pr-report entry point — flaky detection with quarantine', () => {
 
         expect(commentBody).not.toContain('not yet quarantined');
 
+        hub.getQuarantine = vi.fn<() => QuarantineStore>(() => ({ entries: [] }));
         exitSpy.mockRestore();
     });
 
@@ -758,6 +769,7 @@ describe('Pr-report entry point — HTML report generation', () => {
             timestamp: new Date(),
             provider: 'github',
             repo: 'test/repo',
+            getQuarantine: vi.fn(() => ({ entries: [] })),
         } as never);
 
         const { main } = await import('../pr-report-core.js');

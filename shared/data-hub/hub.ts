@@ -37,6 +37,7 @@ import type { ArtifactParseResult } from './artifact-parser.js';
 import type { ParseResult } from '../result_parser.js';
 import { mergeCategoryArrays } from './raw-merge.js';
 import { gateRawData, type QualityReport, type QualityCategory, type QualityCategoryMap } from './quality.js';
+import { loadQuarantine, type QuarantineStore } from '../quarantine.js';
 import { rootLogger } from '../logger.js';
 import { askTestSource } from './test-source-fallback.js';
 import type { FallbackResult } from './test-source-fallback.js';
@@ -96,6 +97,7 @@ export class DataHubImpl implements DataHub {
     readonly provider: 'github' | 'gitlab';
     readonly repo: string;
     private readonly quality: QualityCategoryMap;
+    private readonly quarantine: QuarantineStore;
 
     private constructor(
         raw: RawData,
@@ -112,6 +114,7 @@ export class DataHubImpl implements DataHub {
         this.provider = provider;
         this.repo = repo;
         this.quality = quality;
+        this.quarantine = loadQuarantine();
     }
 
     // ─── SSOT Persistence Operations ───────────────────────────────────────
@@ -218,6 +221,15 @@ export class DataHubImpl implements DataHub {
      */
     getQuality(category: QualityCategory): QualityReport | undefined {
         return this.quality[category];
+    }
+
+    /**
+     * Quarantine store owned by the hub (SSOT for the quarantined-test list).
+     * Loaded once at construction; consumers MUST read via this instead of
+     * calling `isQuarantined()` directly (which reads quarantine.json itself).
+     */
+    getQuarantine(): QuarantineStore {
+        return this.quarantine;
     }
 
     /**

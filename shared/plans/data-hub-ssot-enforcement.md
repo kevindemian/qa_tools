@@ -3766,3 +3766,104 @@ npm run lint                                       # 0 errors nos arquivos ST-3 
 `quality.ts` deixa de ser dead code; `hub.raw`/`hub.computed` servidos são quality-gated na
 origem; o store é backstop não-contornável; consumidores leem qualidade via `getQuality`.
 Invariante "SEM NaN / ZERO silenciamento / quality tag, não drop" válida de fato.
+
+---
+
+## STATUS DO TRACK (2026-07-12)
+
+| Fase                       | Commit     | Estado                         |
+| -------------------------- | ---------- | ------------------------------ |
+| ST-1 (FUNDAÇÃO)            | `c196203f` | ✅ concluída                   |
+| ST-2 (CAMADA DE QUALIDADE) | `30f8e6b7` | ✅ concluída                   |
+| ST-3 (QUALITY ENFORCEMENT) | `3f2c1166` | ✅ concluída (CI green)        |
+| L4 (LINTER ENFORCEMENT)    | —          | ✅ **SATISFEITO** — ver abaixo |
+
+### L4 — encerrada como satisfeita
+
+`tsc --noEmit` = **0 erros** e `npm run lint` = **0 violações** (config ativa). O objetivo de
+lint/tsc clean está metrificamente atendido; não há débito de correção nessa dimensão.
+
+- O bucket "613 erros tsc" do audit trail histórico refere-se a `noPropertyAccessFromIndexSignature`,
+  que **já está ativa** em `tsconfig.json:17` e compila limpo (0 erros). O audit trail §15 de
+  `AGENTS.md` (que dizia "DEFERIDO / não reativar") estava **obsoleto e contradizia o estado real**;
+  foi reconciliado em 2026-07-12 para refletir a regra ativa e complacente.
+- Nenhuma nova regra de lint/tsc será habilitada sem autoridade explícita (modelo de autoridade,
+  AGENTS §1) — habilitar regras especulativas seria esforço sem ganho de correção (veto §21).
+
+---
+
+## PRÓXIMA FASE — Migração de Consumidores (SSOT) — RE-ESCOPADA POR AUDITORIA (2026-07-12)
+
+> **Re-escopo por auditoria read-only:** uma re-auditoria fresca (grep/tsc/leitura de código) revelou
+> que o inventário "COMPLETE BYPASS INVENTORY" (Categorias A–G) e a "Retomada" estavam **largamente
+> já executados** no estado atual do código. O plano anterior (Blocos 1–4) estava obsoleto. Esta seção
+> registra o estado VERIFICADO e o único gap genuíno restante, com prova de equivalência (AGENTS §10).
+
+### Estado VERIFICADO (evidência, não suposição)
+
+| Item (inventário)                                               | Estado              | Evidência                                                                                                                                                                                                                                 |
+| --------------------------------------------------------------- | ------------------- | ----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| C1 `commit-log.ts`                                              | **JÁ EXECUTADO**    | arquivo inexistente; `github/gitlab-provider` importam `buildCommitLog` de `extractors/commit-log-extractor.ts`                                                                                                                           |
+| C3 `ci-test-downloader.ts`                                      | **JÁ EXECUTADO**    | arquivo inexistente; `session-context.ts:21` confirma remoção                                                                                                                                                                             |
+| C4 `coverage-source.ts`                                         | **JÁ EXECUTADO**    | arquivo inexistente; `github-provider` popula `raw.coverage`                                                                                                                                                                              |
+| A1/A2/A3 `health-score.ts`                                      | **JÁ EXECUTADO**    | `health-score.ts` não referencia `store.coverageHistory`/`_computeExpWeighted`                                                                                                                                                            |
+| A4 `quality-gate.ts`                                            | **JÁ EXECUTADO**    | usa `dataHub.computed.coverage`                                                                                                                                                                                                           |
+| A5 `pr-report-core` metricsTrends                               | **JÁ EXECUTADO**    | `pr-report-core` usa `dataHub.computed.*` (linhas 192, 426)                                                                                                                                                                               |
+| Categoria D (loadMetricsStore direto)                           | **JÁ EXECUTADO**    | zero callers de produção; regra ESLint SSOT (`eslint.config.mjs:212`) sinaliza violação                                                                                                                                                   |
+| `storeRuns` (case17)                                            | **JÁ SSOT**         | `case17.ts:218` = `hub?.computed.metricsRuns ?? []`                                                                                                                                                                                       |
+| `calcFlakinessEntries(projectRuns)` / `calcMetricsTrends(runs)` | **JÁ SSOT (dados)** | todos os sítios recebem `hub.computed.metricsRuns` (filtrado por projeto). O hub já chama `calcFlakinessEntries`/`calcMetricsTrends` internamente (`hub.ts:658-659`). Recomputar localmente é _scoping por projeto_, não bypass de dados. |
+
+### Único gap genuíno: lista de quarentena (B4)
+
+`isQuarantined(testTitle)` (`shared/quarantine.ts:201`) lê `quarantine.json` **diretamente** via
+`loadAndExpire()`; o `DataHub` **não é dono** desse dado. O `computed.quarantineStatus` do hub é
+**derivado de flaky-rate** (`calcQuarantineStatus(flakyRate)`), portanto **NÃO é equivalente** à
+lista de quarentena (B4 do inventário estava incorreto ao equiparar os dois). O único consumidor de
+produção de `isQuarantined` é `pr-report-core.ts` (linhas 198, 208).
+
+**Correção na origem (root-cause, AGENTS §4):**
+
+1. O hub passa a **ser dono** da quarentena: `DataHubImpl` carrega `loadQuarantine()` em todos os 4
+   pontos de construção e expõe `getQuarantine(): QuarantineStore`.
+2. `pr-report-core.buildFlakySection(dataHub)` passa a ler `dataHub.getQuarantine().entries` (caminho
+   de produção 100% SSOT). `isQuarantined` permanece como loader canônico (usado em testes/standalone),
+   sem comportamento alterado.
+
+**Prova de equivalência:** `getQuarantine()` retorna o mesmo `QuarantineStore` que `isQuarantined`
+lia (`loadQuarantine()` lê o mesmo arquivo; a expiração é responsabilidade de `loadAndExpire`/cron e
+não afeta a leitura de produção). `pr-report-core` obtém `boolean` idêntico via `.entries.some(...)`.
+
+### Preservações deliberadas (NÃO são bypass de SSOT)
+
+- **`e2e/gen-report-complete.ts`** — scaffolding de fixture (lê `fixtures/ctrf-report.json`, sem hub).
+  Ferramenta de teste, não fluxo de dados de produção. Forçar hub é over-engineering (AGENTS §21).
+- **`case17.ts --extra-run file`** — arquivo de report fornecido explicitamente via CLI como entrada
+  discreta (`TestRunTab`). O fluxo primário do `case17` já usa `getDataHub()` (linha 158/216). Entrada
+  de usuário ≠ fonte que o hub deve possuir.
+
+### Implementação (escopo real)
+
+```
+data-hub/quarantine-ssot:
+  shared/types/data-hub.ts        → interface DataHub: + getQuarantine(): QuarantineStore
+  shared/data-hub/hub.ts          → DataHubImpl carrega loadQuarantine() nos 4 construtores; getQuarantine()
+  shared/pr-report-core.ts        → buildFlakySection usa dataHub.getQuarantine().entries (remove isQuarantined)
+  shared/test-utils/.../data-hub-mock.ts → + getQuarantine no makeDataHubMock
+  teste                           → hub.getQuarantine() retorna QuarantineStore; pr-report roteia pelo hub
+```
+
+### Checkpoints / critérios de auditoria
+
+```bash
+npx tsc --noEmit                                                       # 0 erros
+npx vitest run shared/data-hub shared/__tests__/integration shared/pr-report*   # 100% pass
+rg -rn "loadAndExpire\(|loadMetricsStore\(" shared --glob '!**/*.test.ts' \
+   --glob '!**/__tests__/**' | rg -v "data-hub/|eslint.config|audit/|BACKLOG|PROGRESS|SHA.md|plans/|.md:"  # 0 (fora de quarantine.ts)
+rg -n "isQuarantined\(" shared --glob '!**/*.test.ts' --glob '!**/__tests__/**' | rg -v "quarantine.ts:"   # apenas pr-report (agora via hub) ou 0
+npm run lint                                                         # 0 violações
+```
+
+Auditoria final (manual, além de testes): confirmar que (a) `getQuarantine` existe em interface+impl+mock;
+(b) `pr-report-core` não importa mais `isQuarantined`; (c) nenhum leitor direto de Store/quarantine.json
+resta fora de `quarantine.ts`; (d) os sítios de `calcFlakinessEntries` sobre `hub.computed.metricsRuns`
+continuam apontando para o hub (já SSOT).
