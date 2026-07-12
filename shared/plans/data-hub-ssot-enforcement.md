@@ -911,7 +911,7 @@ Durante a análise do código, identificamos **8 gaps**. Cada um foi documentado
 
 **Justificativa:** Transparência é mais importante quepromessas ambíguas. O plano deve refletir a realidade.
 
-**Ação:** Atualizar措辞 do plano para refletir que MetricsStore é mantido internamente.
+**Ação:** Atualizar do plano para refletir que MetricsStore é mantido internamente.
 
 ---
 
@@ -3479,17 +3479,17 @@ Pesquisa externa (fontes indicadas pelo usuário) confirma esse ecossistema:
 
 **Gaps Encontrados (pesquisa + auditoria de código):**
 
-| #     | Gap                                          | Evidência                                                                                                                                        | Decisão                                                                                   |
+| # | Gap | Evidência | Decisão |
 | ----- | -------------------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------ | ----------------------------------------------------------------------------------------- | ---------------- |
 | L4-G1 | 2 páginas de métricas do repo não acessíveis | `GET …/actions/metrics/performance` e `…/usage` retornaram **404** (não públicas; exigem sessão autenticada da UI do GitHub). Não inspecionadas. | REGISTRAR limitação; não bloqueia (CSV de test-summary é fonte estruturada independente). |
-| L4-G2 | Camada 4 escopada como fonte de counts       | `log-parser.ts` tratado como produtor de métricas; com token, counts vêm de Camada 2+.                                                           | CORRIGIR — redefinir papel (L4.0).                                                        |
-| L4-G3 | **NaN vaza para métricas**                   | `failed`/`skipped` não validados (AGENTS §24.1 violado) em `log-parser.ts`.                                                                      | CORRIGIR (L4.1).                                                                          |
-| L4-G4 | **Vitest com falhas não capturado**          | regex `/Tests\s+(\d+)\s+passed/` exige "passed" após o número; Vitest `A failed                                                                  | B passed` mal interpretado (`total = passed` errado).                                     | CORRIGIR (L4.2). |
-| L4-G5 | Sem detecção de truncamento                  | logs grandes podem vir truncados sem sinalização.                                                                                                | CORRIGIR (L4.3).                                                                          |
-| L4-G6 | Sem `confidence`/`evidence`                  | consumidor não distingue dado robusto de chute.                                                                                                  | CORRIGIR (L4.4).                                                                          |
-| L4-G7 | Localização não tratada                      | pytest/mocha em pt-BR quebram extração baseada em keyword inglês.                                                                                | CORRIGIR (L4.5).                                                                          |
-| L4-G8 | Stack traces multi-linha truncados           | captura single-line `.{10,200}` perde contexto.                                                                                                  | CORRIGIR (L4.4).                                                                          |
-| L4-G9 | Divergência Camada 7 (superficial na L4)     | `applyLayer7Fallback` retorna `warning`/skipped em NO_TTY; decisão exige ERRO quando a fase de solicitação é pulada.                             | Já coberto por E1; não reimplementar aqui.                                                |
+| L4-G2 | Camada 4 escopada como fonte de counts | `log-parser.ts` tratado como produtor de métricas; com token, counts vêm de Camada 2+. | CORRIGIR — redefinir papel (L4.0). |
+| L4-G3 | **NaN vaza para métricas** | `failed`/`skipped` não validados (AGENTS §24.1 violado) em `log-parser.ts`. | CORRIGIR (L4.1). |
+| L4-G4 | **Vitest com falhas não capturado** | regex `/Tests\s+(\d+)\s+passed/` exige "passed" após o número; Vitest `A failed                                                                  | B passed` mal interpretado (`total = passed` errado). | CORRIGIR (L4.2). |
+| L4-G5 | Sem detecção de truncamento | logs grandes podem vir truncados sem sinalização. | CORRIGIR (L4.3). |
+| L4-G6 | Sem `confidence`/`evidence` | consumidor não distingue dado robusto de chute. | CORRIGIR (L4.4). |
+| L4-G7 | Localização não tratada | pytest/mocha em pt-BR quebram extração baseada em keyword inglês. | CORRIGIR (L4.5). |
+| L4-G8 | Stack traces multi-linha truncados | captura single-line `.{10,200}` perde contexto. | CORRIGIR (L4.4). |
+| L4-G9 | Divergência Camada 7 (superficial na L4) | `applyLayer7Fallback` retorna `warning`/skipped em NO_TTY; decisão exige ERRO quando a fase de solicitação é pulada. | Já coberto por E1; não reimplementar aqui. |
 
 **L4.0 — Redefinição de papel (estruturado-first)**
 
@@ -3668,16 +3668,16 @@ npm run lint                                        # 0 errors
 
 ### Itens implementados
 
-| ID  | Item                                                            | Arquivo                                                      |
-| --- | --------------------------------------------------------------- | ----------------------------------------------------------- |
-| ST-1| `RawData.xray?: RawXrayData` + `RawXrayTestRun/Execution/Data`; `source` union + `'xray'` | `shared/types/data-hub.ts`                                  |
-| PM-1| `mapIssue` profundo (priority/assignee/reporter/components/fixVersions/sprint/storyPoints/parentKey/statusCategory/resolutionDate) | `shared/data-hub/providers/jira-provider.ts`                |
-| LA-1| `fromAnnotations` captura `level` + `endLine` + nível `warning` | `shared/data-hub/extractors/failure-classifier.ts`          |
-| XR-1| `XrayDataProvider` sobre `XrayCloudClient` (GraphQL, mapeamento defensivo) | `shared/data-hub/providers/xray-provider.ts` (NOVO)         |
-| PM-4| `CompositeProvider` + `DataHubImpl.mergeRawData` fundem `xray` (dedupe por key/id) | `composite-provider.ts`, `hub.ts`                           |
-| ST-3| `raw.xray` é payload por fetch (não persistido); `persistence.ts` já persiste MetricsRun/coverage/failure | `shared/data-hub/persistence.ts` (revalidado — já satisfeito) |
-| MENU| `_showDataHubSummary` renderiza `jiraIssues` + `xray` (execuções/test runs) | `git_triggers/interactive-mode.ts`                          |
-| WIRE| `createDataHub` monta `[gitProvider, XrayDataProvider?]` (config-gated, nunca bloqueia CI) | `shared/data-hub/factory.ts`                                |
+| ID   | Item                                                                                                                               | Arquivo                                                       |
+| ---- | ---------------------------------------------------------------------------------------------------------------------------------- | ------------------------------------------------------------- |
+| ST-1 | `RawData.xray?: RawXrayData` + `RawXrayTestRun/Execution/Data`; `source` union + `'xray'`                                          | `shared/types/data-hub.ts`                                    |
+| PM-1 | `mapIssue` profundo (priority/assignee/reporter/components/fixVersions/sprint/storyPoints/parentKey/statusCategory/resolutionDate) | `shared/data-hub/providers/jira-provider.ts`                  |
+| LA-1 | `fromAnnotations` captura `level` + `endLine` + nível `warning`                                                                    | `shared/data-hub/extractors/failure-classifier.ts`            |
+| XR-1 | `XrayDataProvider` sobre `XrayCloudClient` (GraphQL, mapeamento defensivo)                                                         | `shared/data-hub/providers/xray-provider.ts` (NOVO)           |
+| PM-4 | `CompositeProvider` + `DataHubImpl.mergeRawData` fundem `xray` (dedupe por key/id)                                                 | `composite-provider.ts`, `hub.ts`                             |
+| ST-3 | `raw.xray` é payload por fetch (não persistido); `persistence.ts` já persiste MetricsRun/coverage/failure                          | `shared/data-hub/persistence.ts` (revalidado — já satisfeito) |
+| MENU | `_showDataHubSummary` renderiza `jiraIssues` + `xray` (execuções/test runs)                                                        | `git_triggers/interactive-mode.ts`                            |
+| WIRE | `createDataHub` monta `[gitProvider, XrayDataProvider?]` (config-gated, nunca bloqueia CI)                                         | `shared/data-hub/factory.ts`                                  |
 
 ### Testes
 
