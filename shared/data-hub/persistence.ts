@@ -18,6 +18,14 @@ import type {
     CoverageSnapshot,
     FailureClassification,
     QualityMetricsSnapshot,
+    FailureRecord,
+    SecurityFinding,
+    Deployment,
+    Release,
+    DoraMetrics,
+    RawIssue,
+    CoverageFile,
+    PerformanceMetrics,
 } from '../types/data-hub.js';
 import type { ParseResult } from '../result_parser.js';
 import { extractErrorMessage, humanizeError } from '../prompt-errors.js';
@@ -25,6 +33,16 @@ import { MetricsStoreSchema } from './schemas.js';
 
 const METRICS_FILE = 'metrics/global.json';
 const QUALITY_METRICS_FILE = 'metrics/quality-metrics.json';
+
+// ─── ST-1 category files (quality-gated, one file per category) ─────────────
+const FAILURE_RECORDS_FILE = 'metrics/failure-records.json';
+const SECURITY_FINDINGS_FILE = 'metrics/security-findings.json';
+const DEPLOYMENTS_FILE = 'metrics/deployments.json';
+const RELEASES_FILE = 'metrics/releases.json';
+const DORA_FILE = 'metrics/dora-metrics.json';
+const PM_ISSUES_FILE = 'metrics/pm-issues.json';
+const COVERAGE_FILES_FILE = 'metrics/coverage-files.json';
+const PERFORMANCE_FILE = 'metrics/performance-metrics.json';
 
 /**
  * Read JSON from the store backend with error handling.
@@ -97,6 +115,18 @@ export function createDataHubPersistence(_project: string, backend?: StoreBacken
         writeJson(b, METRICS_FILE, store);
     }
 
+    // ─── ST-1 category helpers (quality-gated; never silently drop) ─────────
+    const saveCategoryArray = <T>(relPath: string, data: T[]): void => writeJson(b, relPath, data);
+    const loadCategoryArray = <T>(relPath: string): T[] => {
+        const data = readJson<T[]>(b, relPath);
+        return Array.isArray(data) ? data : [];
+    };
+    const saveCategoryObject = <T>(relPath: string, data: T): void => writeJson(b, relPath, data);
+    const loadCategoryObject = <T>(relPath: string): T | null => {
+        const data = readJson<T>(b, relPath);
+        return data ?? null;
+    };
+
     return {
         saveRun(_sha: string, run: MetricsRun): void {
             const store = loadMetricsStore();
@@ -167,6 +197,56 @@ export function createDataHubPersistence(_project: string, backend?: StoreBacken
         loadQualityMetricsHistory(): QualityMetricsSnapshot[] {
             const existing = readJson<{ snapshots: QualityMetricsSnapshot[] }>(b, QUALITY_METRICS_FILE);
             return existing?.snapshots ?? [];
+        },
+
+        // ─── ST-1 new categories ────────────────────────────────────────────
+        saveFailureRecords(records: FailureRecord[]): void {
+            saveCategoryArray(FAILURE_RECORDS_FILE, records);
+        },
+        loadFailureRecords(): FailureRecord[] {
+            return loadCategoryArray<FailureRecord>(FAILURE_RECORDS_FILE);
+        },
+        saveSecurityFindings(findings: SecurityFinding[]): void {
+            saveCategoryArray(SECURITY_FINDINGS_FILE, findings);
+        },
+        loadSecurityFindings(): SecurityFinding[] {
+            return loadCategoryArray<SecurityFinding>(SECURITY_FINDINGS_FILE);
+        },
+        saveDeployments(deployments: Deployment[]): void {
+            saveCategoryArray(DEPLOYMENTS_FILE, deployments);
+        },
+        loadDeployments(): Deployment[] {
+            return loadCategoryArray<Deployment>(DEPLOYMENTS_FILE);
+        },
+        saveReleases(releases: Release[]): void {
+            saveCategoryArray(RELEASES_FILE, releases);
+        },
+        loadReleases(): Release[] {
+            return loadCategoryArray<Release>(RELEASES_FILE);
+        },
+        saveDoraMetrics(metrics: DoraMetrics): void {
+            saveCategoryObject(DORA_FILE, metrics);
+        },
+        loadDoraMetrics(): DoraMetrics | null {
+            return loadCategoryObject<DoraMetrics>(DORA_FILE);
+        },
+        savePmIssues(issues: RawIssue[]): void {
+            saveCategoryArray(PM_ISSUES_FILE, issues);
+        },
+        loadPmIssues(): RawIssue[] {
+            return loadCategoryArray<RawIssue>(PM_ISSUES_FILE);
+        },
+        saveCoverageFiles(files: CoverageFile[]): void {
+            saveCategoryArray(COVERAGE_FILES_FILE, files);
+        },
+        loadCoverageFiles(): CoverageFile[] {
+            return loadCategoryArray<CoverageFile>(COVERAGE_FILES_FILE);
+        },
+        savePerformanceMetrics(metrics: PerformanceMetrics): void {
+            saveCategoryObject(PERFORMANCE_FILE, metrics);
+        },
+        loadPerformanceMetrics(): PerformanceMetrics | null {
+            return loadCategoryObject<PerformanceMetrics>(PERFORMANCE_FILE);
         },
 
         flush(message: string): void {

@@ -13,6 +13,7 @@ import type { MetricsRun } from '../../types/data-hub.js';
 import type { DataHub } from '../../types/data-hub.js';
 import { buildTraceabilityMatrix } from '../../traceability-matrix.js';
 import { createTestHub } from '../test-hub.js';
+import { makeDataHubMock } from '../../test-utils/factories/data-hub-mock.js';
 
 vi.mock('../../logger', () => ({
     rootLogger: { error: vi.fn(), warn: vi.fn(), info: vi.fn(), child: vi.fn().mockReturnThis() },
@@ -179,7 +180,7 @@ describe('Traceability Matrix.Integration', () => {
                 computed?: Partial<DataHub['computed']>;
                 raw?: Partial<DataHub['raw']>;
             }): DataHub {
-                return {
+                return makeDataHubMock({
                     raw: {
                         runs: [],
                         jobs: new Map(),
@@ -191,43 +192,14 @@ describe('Traceability Matrix.Integration', () => {
                         passRate: 0,
                         avgDuration: 0,
                         suiteSpeedP95: 0,
-                        flakyRate: [],
                         coverage: 0,
-                        pipelineCost: { totalMinutes: 0, estimatedCost: 0 },
-                        defectTrends: [],
-                        branchBreakdown: {},
-                        topFailingJobs: [],
-                        topFailureReasons: [],
-                        releaseScore: { score: 0, dimensions: {} as never, grade: 'critical' },
-                        quarantineStatus: { flakyCount: 0, quarantinedCount: 0 },
                         testPassRate: 0,
                         testCounts: { passed: 0, failed: 0, skipped: 0, total: 0 },
                         framework: 'unknown',
                         ...overrides?.computed,
                     },
-                    timestamp: new Date(),
-                    provider: 'github',
                     repo: 'o/r',
-                    saveRun: vi.fn(),
-                    saveCoverageSnapshot: vi.fn(),
-                    saveFailureClassification: vi.fn(),
-                    flush: vi.fn(),
-                    loadCoverageHistory: vi.fn().mockReturnValue([]),
-                    loadFailureClassifications: vi.fn().mockReturnValue([]),
-                    saveMetricsStore: vi.fn(),
-                    saveParseResult: vi.fn().mockReturnValue({
-                        timestamp: new Date().toISOString(),
-                        project: '',
-                        total: 0,
-                        passed: 0,
-                        failed: 0,
-                        skipped: 0,
-                        duration: 0,
-                        tests: [],
-                    }),
-                    saveQualityMetrics: vi.fn(),
-                    loadQualityMetricsHistory: vi.fn().mockReturnValue([]),
-                };
+                });
             }
 
             it('uses dataHub.computed.flakyRate for flakiness map when dataHub provided', () => {

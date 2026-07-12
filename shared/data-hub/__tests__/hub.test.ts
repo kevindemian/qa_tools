@@ -6,6 +6,7 @@
 import { describe, it, expect, vi } from 'vitest';
 import { mockedSafe } from '../../test-utils/mock-types.js';
 import { DataHubImpl } from '../hub.js';
+import { makeDataHubPersistenceMock } from '../../test-utils/factories/data-hub-mock.js';
 import type {
     DataProvider,
     RawData,
@@ -82,28 +83,7 @@ function makeMetricsStore(overrides?: Partial<MetricsStore>): MetricsStore {
 }
 
 function createMockPersistence(overrides?: Partial<DataHubPersistence>): DataHubPersistence {
-    return {
-        saveRun: vi.fn(),
-        saveCoverageSnapshot: vi.fn(),
-        loadCoverageHistory: vi.fn().mockReturnValue([]),
-        saveFailureClassification: vi.fn(),
-        loadFailureClassifications: vi.fn().mockReturnValue([]),
-        saveMetricsStore: vi.fn(),
-        saveParseResult: vi.fn().mockReturnValue({
-            timestamp: new Date().toISOString(),
-            project: '',
-            total: 0,
-            passed: 0,
-            failed: 0,
-            skipped: 0,
-            duration: 0,
-            tests: [],
-        }),
-        saveQualityMetrics: vi.fn(),
-        loadQualityMetricsHistory: vi.fn().mockReturnValue([]),
-        flush: vi.fn(),
-        ...overrides,
-    };
+    return { ...makeDataHubPersistenceMock(), ...overrides };
 }
 
 /* ── Tests ──────────────────────────────────────────────────────────────── */

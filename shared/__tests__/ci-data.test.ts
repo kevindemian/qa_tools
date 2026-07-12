@@ -7,6 +7,7 @@ import { describe, it, expect, vi } from 'vitest';
 import type { PipelineRun, PipelineJob } from '../types/ci-cd.js';
 import type { DataProvider, RawData } from '../types/data-hub.js';
 import { DataHubImpl } from '../data-hub/hub.js';
+import { makeDataHubPersistenceMock } from '../test-utils/factories/data-hub-mock.js';
 
 /* ── Mock DataProvider ──────────────────────────────────────────────────── */
 
@@ -63,28 +64,7 @@ function makeRawData(overrides?: Partial<RawData>): RawData {
 
 /* ── Mock Persistence ──────────────────────────────────────────────────── */
 
-const mockPersistence = {
-    loadMetricsStore: vi.fn().mockReturnValue({ runs: [] }),
-    saveMetricsStore: vi.fn(),
-    loadCoverageHistory: vi.fn().mockReturnValue([]),
-    saveCoverageSnapshot: vi.fn(),
-    loadFailureClassifications: vi.fn().mockReturnValue([]),
-    saveFailureClassification: vi.fn(),
-    saveRun: vi.fn(),
-    saveParseResult: vi.fn().mockReturnValue({
-        timestamp: new Date().toISOString(),
-        project: '',
-        total: 0,
-        passed: 0,
-        failed: 0,
-        skipped: 0,
-        duration: 0,
-        tests: [],
-    }),
-    saveQualityMetrics: vi.fn(),
-    loadQualityMetricsHistory: vi.fn().mockReturnValue([]),
-    flush: vi.fn(),
-};
+const mockPersistence = makeDataHubPersistenceMock();
 
 /* ── Tests ─────────────────────────────────────────────────────────────── */
 

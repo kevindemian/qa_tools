@@ -218,6 +218,23 @@ describe('Session-state', () => {
                 }),
                 saveQualityMetrics: vi.fn(),
                 loadQualityMetricsHistory: vi.fn().mockReturnValue([]),
+                // ─── ST-1 categories ───────────────────────────────────────────
+                saveFailureRecords: vi.fn(),
+                loadFailureRecords: vi.fn().mockReturnValue([]),
+                saveSecurityFindings: vi.fn(),
+                loadSecurityFindings: vi.fn().mockReturnValue([]),
+                saveDeployments: vi.fn(),
+                loadDeployments: vi.fn().mockReturnValue([]),
+                saveReleases: vi.fn(),
+                loadReleases: vi.fn().mockReturnValue([]),
+                saveDoraMetrics: vi.fn(),
+                loadDoraMetrics: vi.fn().mockReturnValue(null),
+                savePmIssues: vi.fn(),
+                loadPmIssues: vi.fn().mockReturnValue([]),
+                saveCoverageFiles: vi.fn(),
+                loadCoverageFiles: vi.fn().mockReturnValue([]),
+                savePerformanceMetrics: vi.fn(),
+                loadPerformanceMetrics: vi.fn().mockReturnValue(null),
             });
 
             sessionState.setCurrentProjectName('qa_ibabs');

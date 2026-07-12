@@ -16,6 +16,7 @@ import { afterEach, describe, expect, it, vi } from 'vitest';
 import type { MetricsRun } from '../../types/data-hub.js';
 import type { DataHub } from '../../types/data-hub.js';
 import * as globalHubModule from '../../data-hub/global-hub.js';
+import { makeDataHubMock } from '../../test-utils/factories/data-hub-mock.js';
 
 async function loadModules() {
     const qg = await import('../../quality-gate.js');
@@ -225,7 +226,7 @@ describe('Integration: Quality Gate', () => {
             computed?: Partial<DataHub['computed']>;
             raw?: Partial<DataHub['raw']>;
         }): DataHub {
-            return {
+            return makeDataHubMock({
                 raw: {
                     runs: [
                         {
@@ -245,88 +246,29 @@ describe('Integration: Quality Gate', () => {
                     passRate: 85,
                     avgDuration: 300,
                     suiteSpeedP95: 120000,
-                    flakyRate: [],
                     coverage: 0,
-                    pipelineCost: { totalMinutes: 0, estimatedCost: 0 },
-                    defectTrends: [],
-                    branchBreakdown: {},
-                    topFailingJobs: [],
-                    topFailureReasons: [],
-                    releaseScore: { score: 0, dimensions: {} as never, grade: 'critical' },
-                    quarantineStatus: { flakyCount: 0, quarantinedCount: 0 },
                     testPassRate: 0,
                     testCounts: { passed: 0, failed: 0, skipped: 0, total: 0 },
                     framework: 'unknown',
                     ...overrides?.computed,
                 },
-                timestamp: new Date(),
-                provider: 'github',
                 repo: 'o/r',
-                saveRun: vi.fn(),
-                saveCoverageSnapshot: vi.fn(),
-                saveFailureClassification: vi.fn(),
-                flush: vi.fn(),
-                loadCoverageHistory: vi.fn().mockReturnValue([]),
-                loadFailureClassifications: vi.fn().mockReturnValue([]),
-                saveMetricsStore: vi.fn(),
-                saveParseResult: vi.fn().mockReturnValue({
-                    timestamp: new Date().toISOString(),
-                    project: '',
-                    total: 0,
-                    passed: 0,
-                    failed: 0,
-                    skipped: 0,
-                    duration: 0,
-                    tests: [],
-                }),
-                saveQualityMetrics: vi.fn(),
-                loadQualityMetricsHistory: vi.fn().mockReturnValue([]),
-            };
+            });
         }
 
         function makeLowScoreDataHub(): DataHub {
-            return {
-                raw: { runs: [], jobs: new Map(), failureReasons: new Map(), artifacts: new Map() },
+            return makeDataHubMock({
                 computed: {
                     passRate: 10,
                     avgDuration: 5000,
                     suiteSpeedP95: 5000,
-                    flakyRate: [],
                     coverage: 0,
-                    pipelineCost: { totalMinutes: 0, estimatedCost: 0 },
-                    defectTrends: [],
-                    branchBreakdown: {},
-                    topFailingJobs: [],
-                    topFailureReasons: [],
-                    releaseScore: { score: 0, dimensions: {} as never, grade: 'critical' },
-                    quarantineStatus: { flakyCount: 0, quarantinedCount: 0 },
                     testPassRate: 10,
                     testCounts: { passed: 10, failed: 90, skipped: 0, total: 100 },
                     framework: 'unknown',
                 },
-                timestamp: new Date(),
-                provider: 'github',
                 repo: 'test/repo',
-                saveRun: vi.fn(),
-                saveCoverageSnapshot: vi.fn(),
-                saveFailureClassification: vi.fn(),
-                flush: vi.fn(),
-                loadCoverageHistory: vi.fn().mockReturnValue([]),
-                loadFailureClassifications: vi.fn().mockReturnValue([]),
-                saveMetricsStore: vi.fn(),
-                saveParseResult: vi.fn().mockReturnValue({
-                    timestamp: new Date().toISOString(),
-                    project: '',
-                    total: 0,
-                    passed: 0,
-                    failed: 0,
-                    skipped: 0,
-                    duration: 0,
-                    tests: [],
-                }),
-                saveQualityMetrics: vi.fn(),
-                loadQualityMetricsHistory: vi.fn().mockReturnValue([]),
-            };
+            });
         }
 
         it('dataHub overrides passRate in quality gate when MetricsStore has low scores', async () => {

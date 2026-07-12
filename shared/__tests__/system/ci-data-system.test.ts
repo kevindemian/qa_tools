@@ -11,6 +11,7 @@ import { describe, expect, it, vi } from 'vitest';
 import type { PipelineRun, PipelineJob } from '../../types/ci-cd.js';
 import type { DataProvider, RawData } from '../../types/data-hub.js';
 import { DataHubImpl } from '../../data-hub/hub.js';
+import { makeDataHubPersistenceMock } from '../../test-utils/factories/data-hub-mock.js';
 
 vi.mock('../../logger.js', () => ({
     rootLogger: { error: vi.fn(), info: vi.fn(), warn: vi.fn(), debug: vi.fn(), child: vi.fn().mockReturnThis() },
@@ -28,27 +29,7 @@ function createMockDataProvider(rawData: RawData): DataProvider {
 
 /* ── Mock Persistence ──────────────────────────────────────────────────── */
 
-const mockPersistence = {
-    saveMetricsStore: vi.fn(),
-    loadCoverageHistory: vi.fn().mockReturnValue([]),
-    saveCoverageSnapshot: vi.fn(),
-    loadFailureClassifications: vi.fn().mockReturnValue([]),
-    saveFailureClassification: vi.fn(),
-    saveRun: vi.fn(),
-    saveParseResult: vi.fn().mockReturnValue({
-        timestamp: new Date().toISOString(),
-        project: '',
-        total: 0,
-        passed: 0,
-        failed: 0,
-        skipped: 0,
-        duration: 0,
-        tests: [],
-    }),
-    saveQualityMetrics: vi.fn(),
-    loadQualityMetricsHistory: vi.fn().mockReturnValue([]),
-    flush: vi.fn(),
-};
+const mockPersistence = makeDataHubPersistenceMock();
 
 /* ── Fixtures ──────────────────────────────────────────────────────────── */
 
