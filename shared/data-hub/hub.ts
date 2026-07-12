@@ -23,10 +23,19 @@ import type {
     CoverageSnapshot,
     FailureClassification,
     QualityMetricsSnapshot,
+    FailureRecord,
+    SecurityFinding,
+    Deployment,
+    Release,
+    DoraMetrics,
+    RawIssue,
+    CoverageFile,
+    PerformanceMetrics,
 } from '../types/data-hub.js';
 import type { PipelineRun, PipelineJob } from '../types/ci-cd.js';
 import type { ArtifactParseResult } from './artifact-parser.js';
 import type { ParseResult } from '../result_parser.js';
+import { mergeCategoryArrays } from './raw-merge.js';
 import { rootLogger } from '../logger.js';
 import { askTestSource } from './test-source-fallback.js';
 import type { FallbackResult } from './test-source-fallback.js';
@@ -146,6 +155,57 @@ export class DataHubImpl implements DataHub {
 
     loadQualityMetricsHistory(): QualityMetricsSnapshot[] {
         return this.persistence.loadQualityMetricsHistory();
+    }
+
+    // ─── SSOT Expansion (ST-1): new data categories ─────────────────────────
+    // Pure delegates — identical pattern to the persistence operations above.
+    saveFailureRecords(records: FailureRecord[]): void {
+        this.persistence.saveFailureRecords(records);
+    }
+    loadFailureRecords(): FailureRecord[] {
+        return this.persistence.loadFailureRecords();
+    }
+    saveSecurityFindings(findings: SecurityFinding[]): void {
+        this.persistence.saveSecurityFindings(findings);
+    }
+    loadSecurityFindings(): SecurityFinding[] {
+        return this.persistence.loadSecurityFindings();
+    }
+    saveDeployments(deployments: Deployment[]): void {
+        this.persistence.saveDeployments(deployments);
+    }
+    loadDeployments(): Deployment[] {
+        return this.persistence.loadDeployments();
+    }
+    saveReleases(releases: Release[]): void {
+        this.persistence.saveReleases(releases);
+    }
+    loadReleases(): Release[] {
+        return this.persistence.loadReleases();
+    }
+    saveDoraMetrics(metrics: DoraMetrics): void {
+        this.persistence.saveDoraMetrics(metrics);
+    }
+    loadDoraMetrics(): DoraMetrics | null {
+        return this.persistence.loadDoraMetrics();
+    }
+    savePmIssues(issues: RawIssue[]): void {
+        this.persistence.savePmIssues(issues);
+    }
+    loadPmIssues(): RawIssue[] {
+        return this.persistence.loadPmIssues();
+    }
+    saveCoverageFiles(files: CoverageFile[]): void {
+        this.persistence.saveCoverageFiles(files);
+    }
+    loadCoverageFiles(): CoverageFile[] {
+        return this.persistence.loadCoverageFiles();
+    }
+    savePerformanceMetrics(metrics: PerformanceMetrics): void {
+        this.persistence.savePerformanceMetrics(metrics);
+    }
+    loadPerformanceMetrics(): PerformanceMetrics | null {
+        return this.persistence.loadPerformanceMetrics();
     }
 
     /**
@@ -509,6 +569,7 @@ export class DataHubImpl implements DataHub {
 
         DataHubImpl.mergeFirstNonNull(target, source);
         DataHubImpl.mergeMaps(target, source);
+        mergeCategoryArrays(target, source);
     }
 
     private static mergeFirstNonNull(target: RawData, source: RawData): void {

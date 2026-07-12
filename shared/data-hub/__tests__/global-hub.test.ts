@@ -1,61 +1,23 @@
 import { describe, it, expect, beforeEach, vi } from 'vitest';
 import type { DataHub } from '../../types/data-hub.js';
 import { getDataHub, setDataHub, ensureDataHub } from '../global-hub.js';
+import { makeDataHubMock } from '../../test-utils/factories/data-hub-mock.js';
 
 function makeMockHub(overrides: Partial<DataHub> = {}): DataHub {
     return {
-        raw: { runs: [], jobs: new Map(), artifacts: new Map(), failureReasons: new Map() },
-        computed: {
-            passRate: 50,
-            avgDuration: 1000,
-            suiteSpeedP95: 500,
-            flakyRate: [],
-            coverage: 80,
-            pipelineCost: { totalMinutes: 0, estimatedCost: 0 },
-            defectTrends: [],
-            branchBreakdown: {},
-            topFailingJobs: [],
-            topFailureReasons: [],
-            releaseScore: {
-                score: 0,
-                dimensions: {
-                    passRate: { score: 0, status: 'fail' },
-                    flakyRate: { score: 0, status: 'fail' },
-                    coverage: { score: 0, status: 'fail' },
-                    executionRate: { score: 0, status: 'fail' },
-                    suiteSpeed: { score: 0, status: 'fail' },
-                },
-                grade: 'F',
+        ...makeDataHubMock({
+            computed: {
+                passRate: 50,
+                avgDuration: 1000,
+                suiteSpeedP95: 500,
+                coverage: 80,
+                testPassRate: 50,
+                testCounts: { passed: 50, failed: 50, skipped: 0, total: 100 },
+                framework: 'vitest',
+                executionRate: 77,
+                flakyPercentage: 12,
             },
-            quarantineStatus: { flakyCount: 0, quarantinedCount: 0 },
-            testPassRate: 50,
-            testCounts: { passed: 50, failed: 50, skipped: 0, total: 100 },
-            framework: 'vitest',
-            executionRate: 77,
-            flakyPercentage: 12,
-        },
-        timestamp: new Date(),
-        provider: 'github',
-        repo: 'test/repo',
-        saveRun: vi.fn(),
-        saveCoverageSnapshot: vi.fn(),
-        saveFailureClassification: vi.fn(),
-        flush: vi.fn(),
-        loadCoverageHistory: vi.fn().mockReturnValue([]),
-        loadFailureClassifications: vi.fn().mockReturnValue([]),
-        saveMetricsStore: vi.fn(),
-        saveParseResult: vi.fn().mockReturnValue({
-            timestamp: new Date().toISOString(),
-            project: '',
-            total: 0,
-            passed: 0,
-            failed: 0,
-            skipped: 0,
-            duration: 0,
-            tests: [],
         }),
-        saveQualityMetrics: vi.fn(),
-        loadQualityMetricsHistory: vi.fn().mockReturnValue([]),
         ...overrides,
     };
 }

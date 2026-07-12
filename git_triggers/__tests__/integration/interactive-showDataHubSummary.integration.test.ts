@@ -10,6 +10,7 @@ import { describe, it, expect, vi, beforeEach } from 'vitest';
 import type { PipelineRun, PipelineJob } from '../../../shared/types/ci-cd.js';
 import type { DataHub, RawData } from '../../../shared/types/data-hub.js';
 import { DataHubImpl } from '../../../shared/data-hub/hub.js';
+import { makeDataHubPersistenceMock } from '../../../shared/test-utils/factories/data-hub-mock.js';
 import { setDataHub, _resetForTest } from '../../../git_triggers/session-state.js';
 import { _testExports } from '../../../git_triggers/interactive-mode.js';
 
@@ -55,28 +56,7 @@ async function createDataHubWithRuns(runs: PipelineRun[]): Promise<DataHub> {
         source: 'github' as const,
         fetchRawData: vi.fn().mockResolvedValue(rawData),
     };
-    const mockPersistence = {
-        loadMetricsStore: vi.fn().mockReturnValue({ runs: [] }),
-        saveMetricsStore: vi.fn(),
-        loadCoverageHistory: vi.fn().mockReturnValue([]),
-        saveCoverageSnapshot: vi.fn(),
-        loadFailureClassifications: vi.fn().mockReturnValue([]),
-        saveFailureClassification: vi.fn(),
-        saveRun: vi.fn(),
-        saveParseResult: vi.fn().mockReturnValue({
-            timestamp: new Date().toISOString(),
-            project: '',
-            total: 0,
-            passed: 0,
-            failed: 0,
-            skipped: 0,
-            duration: 0,
-            tests: [],
-        }),
-        saveQualityMetrics: vi.fn(),
-        loadQualityMetricsHistory: vi.fn().mockReturnValue([]),
-        flush: vi.fn(),
-    };
+    const mockPersistence = makeDataHubPersistenceMock();
     const { hub } = await DataHubImpl.create([mockProvider], { repo: 'test' }, mockPersistence);
     return hub;
 }

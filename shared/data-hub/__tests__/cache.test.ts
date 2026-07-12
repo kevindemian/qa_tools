@@ -6,57 +6,12 @@
 import { describe, it, expect, beforeEach, vi } from 'vitest';
 import { getCachedHub, setCachedHub, clearCache, clearRepoCache, isCacheValid, getCacheSize } from '../cache.js';
 import type { DataHub } from '../../types/data-hub.js';
+import { makeDataHubMock } from '../../test-utils/factories/data-hub-mock.js';
 
 /* ── Helpers ────────────────────────────────────────────────────────────── */
 
 function makeHub(repo = 'test/repo'): DataHub {
-    return {
-        raw: {
-            runs: [],
-            jobs: new Map(),
-            artifacts: new Map(),
-            failureReasons: new Map(),
-        },
-        computed: {
-            passRate: 0,
-            avgDuration: 0,
-            suiteSpeedP95: 0,
-            flakyRate: [],
-            coverage: 0,
-            pipelineCost: { totalMinutes: 0, estimatedCost: 0 },
-            defectTrends: [],
-            branchBreakdown: {},
-            topFailingJobs: [],
-            topFailureReasons: [],
-            releaseScore: { score: 0, dimensions: {} as never, grade: 'critical' },
-            quarantineStatus: { flakyCount: 0, quarantinedCount: 0 },
-            testPassRate: 0,
-            testCounts: { passed: 0, failed: 0, skipped: 0, total: 0 },
-            framework: 'unknown',
-        },
-        timestamp: new Date(),
-        provider: 'github',
-        repo,
-        saveRun: vi.fn(),
-        saveCoverageSnapshot: vi.fn(),
-        saveFailureClassification: vi.fn(),
-        flush: vi.fn(),
-        loadCoverageHistory: vi.fn().mockReturnValue([]),
-        loadFailureClassifications: vi.fn().mockReturnValue([]),
-        saveMetricsStore: vi.fn(),
-        saveParseResult: vi.fn().mockReturnValue({
-            timestamp: new Date().toISOString(),
-            project: '',
-            total: 0,
-            passed: 0,
-            failed: 0,
-            skipped: 0,
-            duration: 0,
-            tests: [],
-        }),
-        saveQualityMetrics: vi.fn(),
-        loadQualityMetricsHistory: vi.fn().mockReturnValue([]),
-    };
+    return makeDataHubMock({ repo });
 }
 
 /* ── Tests ──────────────────────────────────────────────────────────────── */

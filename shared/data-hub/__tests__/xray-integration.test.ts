@@ -2,9 +2,10 @@
  * Integration tests — Xray data flows through CompositeProvider and DataHub.
  * Verifies end-to-end merge of RawXrayData into RawData (PM-4 + hub merge path).
  */
-import { describe, it, expect, vi } from 'vitest';
+import { describe, it, expect } from 'vitest';
 import { CompositeProvider } from '../providers/composite-provider.js';
 import { DataHubImpl } from '../hub.js';
+import { makeDataHubPersistenceMock } from '../../test-utils/factories/data-hub-mock.js';
 import type { DataProvider, RawData, RawXrayData, DataHubPersistence, FetchOptions } from '../../types/data-hub.js';
 
 function fakeProvider(name: string, source: 'github' | 'xray', xray?: RawXrayData): DataProvider {
@@ -31,27 +32,7 @@ const SAMPLE_XRAY: RawXrayData = {
     testRuns: [{ id: 'r1', testKey: 'CALC-1', status: 'PASSED', testExecutionKey: 'CALC-456' }],
 };
 
-const persistence: DataHubPersistence = {
-    saveRun: vi.fn(),
-    saveCoverageSnapshot: vi.fn(),
-    loadCoverageHistory: vi.fn(() => []),
-    saveFailureClassification: vi.fn(),
-    loadFailureClassifications: vi.fn(() => []),
-    saveMetricsStore: vi.fn(),
-    saveParseResult: vi.fn(() => ({
-        timestamp: '',
-        project: '',
-        total: 0,
-        passed: 0,
-        failed: 0,
-        skipped: 0,
-        duration: 0,
-        tests: [],
-    })),
-    saveQualityMetrics: vi.fn(),
-    loadQualityMetricsHistory: vi.fn(() => []),
-    flush: vi.fn(),
-};
+const persistence: DataHubPersistence = makeDataHubPersistenceMock();
 
 describe('Integration: Xray merge', () => {
     it('compositeProvider merges xray from the xray provider', async () => {

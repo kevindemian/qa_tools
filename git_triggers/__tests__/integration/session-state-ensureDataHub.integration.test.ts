@@ -13,6 +13,7 @@ import { describe, it, expect, vi, beforeEach } from 'vitest';
 import type { DataHub } from '../../../shared/types/data-hub.js';
 import type { GitProvider } from '../../../shared/types/ci-cd.js';
 import { DataHubImpl } from '../../../shared/data-hub/hub.js';
+import { makeDataHubPersistenceMock } from '../../../shared/test-utils/factories/data-hub-mock.js';
 import { clearCache } from '../../../shared/data-hub/cache.js';
 import { getDataHub as getGlobalHub } from '../../../shared/data-hub/global-hub.js';
 import {
@@ -79,6 +80,23 @@ function makeMockHub(): DataHub {
         }),
         saveQualityMetrics: vi.fn(),
         loadQualityMetricsHistory: vi.fn().mockReturnValue([]),
+        // ─── ST-1 categories ───────────────────────────────────────────────
+        saveFailureRecords: vi.fn(),
+        loadFailureRecords: vi.fn().mockReturnValue([]),
+        saveSecurityFindings: vi.fn(),
+        loadSecurityFindings: vi.fn().mockReturnValue([]),
+        saveDeployments: vi.fn(),
+        loadDeployments: vi.fn().mockReturnValue([]),
+        saveReleases: vi.fn(),
+        loadReleases: vi.fn().mockReturnValue([]),
+        saveDoraMetrics: vi.fn(),
+        loadDoraMetrics: vi.fn().mockReturnValue(null),
+        savePmIssues: vi.fn(),
+        loadPmIssues: vi.fn().mockReturnValue([]),
+        saveCoverageFiles: vi.fn(),
+        loadCoverageFiles: vi.fn().mockReturnValue([]),
+        savePerformanceMetrics: vi.fn(),
+        loadPerformanceMetrics: vi.fn().mockReturnValue(null),
     };
 }
 
@@ -124,27 +142,7 @@ describe('Integration: ensureDataHub', () => {
     it('returns cached _dataHub if already set', async () => {
         expect.hasAssertions();
 
-        const mockPersistence = {
-            saveMetricsStore: vi.fn(),
-            loadCoverageHistory: vi.fn().mockReturnValue([]),
-            saveCoverageSnapshot: vi.fn(),
-            loadFailureClassifications: vi.fn().mockReturnValue([]),
-            saveFailureClassification: vi.fn(),
-            saveRun: vi.fn(),
-            saveParseResult: vi.fn().mockReturnValue({
-                timestamp: new Date().toISOString(),
-                project: '',
-                total: 0,
-                passed: 0,
-                failed: 0,
-                skipped: 0,
-                duration: 0,
-                tests: [],
-            }),
-            saveQualityMetrics: vi.fn(),
-            loadQualityMetricsHistory: vi.fn().mockReturnValue([]),
-            flush: vi.fn(),
-        };
+        const mockPersistence = makeDataHubPersistenceMock();
         const { hub } = await DataHubImpl.create([], { repo: 'test' }, mockPersistence);
         setDataHub(hub);
 

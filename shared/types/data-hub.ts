@@ -81,6 +81,22 @@ export interface RawData {
     provenance?: Map<string, DataSource>;
     /** Xray Cloud test execution data (raw, mapped from GraphQL). */
     xray?: RawXrayData;
+    /** Structured failure records (CTRF/Allure-aligned) — replaces string failureReasons for analysis. */
+    failureRecords?: FailureRecord[];
+    /** Security findings (SAST/DAST/dependency/container/secret/code-scanning/Dependabot). */
+    securityFindings?: SecurityFinding[];
+    /** Deployments to environments. */
+    deployments?: Deployment[];
+    /** Releases/tags published from the versionador. */
+    releases?: Release[];
+    /** DORA metrics. */
+    doraMetrics?: DoraMetrics;
+    /** Generic project-manager issues (GitHub Issues / GitLab Issues). */
+    pmIssues?: RawIssue[];
+    /** Per-file coverage breakdown. */
+    coverageFiles?: CoverageFile[];
+    /** Performance metrics extracted from CI. */
+    performanceMetrics?: PerformanceMetrics;
 }
 
 /** CI pipeline run statistics — derived from workflow run artifacts. */
@@ -171,6 +187,140 @@ export interface RawXrayTestExecution {
 export interface RawXrayData {
     testExecutions: RawXrayTestExecution[];
     testRuns: RawXrayTestRun[];
+}
+
+/**
+ * Failure record — CTRF/Allure-aligned canonical form for a single test failure.
+ * Replaces ad-hoc string-based failure reasons. `confidence`/`source` enforce the
+ * SSOT quality gate (AGENTS §24.1 / §25): every failure carries provenance.
+ */
+export interface FailureRecord {
+    /** Test name. */
+    name: string;
+    /** Suite/path the test belongs to. */
+    suite?: string | undefined;
+    /** CTRF status: failed (product defect) vs broken (infra/environment). */
+    status: 'failed' | 'broken' | 'skipped';
+    /** Human-readable failure message. */
+    message?: string | undefined;
+    /** Full stack trace. */
+    trace?: string | undefined;
+    /** Source file (nullable — future enrichment may populate). */
+    file?: string | undefined;
+    /** Line number in source file. */
+    line?: number | undefined;
+    /** Duration in ms. */
+    duration?: number | undefined;
+    /** Retry count (CTRF flaky detection). */
+    retries?: number | undefined;
+    /** Whether the test is flaky (CTRF/Allure). */
+    flaky?: boolean | undefined;
+    /** Root-cause bucket (assertion | timeout | network | panic | known-bug | environment). */
+    category?: string | undefined;
+    /** Confidence in the extraction (0-1). */
+    confidence: number;
+    /** Provenance source (e.g., 'check-run-annotation', 'junit', 'log'). */
+    source: string;
+}
+
+/** Severity of a security finding. */
+export type SecuritySeverity = 'critical' | 'high' | 'medium' | 'low' | 'info';
+
+/** A single security finding (SAST/DAST/dependency/container/secret/code-scanning/Dependabot). */
+export interface SecurityFinding {
+    /** Tool that produced the finding. */
+    tool: string;
+    severity: SecuritySeverity;
+    /** Rule ID (e.g., CWE, gitleaks rule). */
+    rule?: string | undefined;
+    title: string;
+    description?: string | undefined;
+    file?: string | undefined;
+    line?: number | undefined;
+    /** Deep-link to the finding. */
+    url?: string | undefined;
+    /** open | dismissed | fixed. */
+    state?: string | undefined;
+    cwe?: string | undefined;
+    /** Confidence in the extraction (0-1). */
+    confidence: number;
+}
+
+/** A deployment to an environment. */
+export interface Deployment {
+    id: string;
+    environment: string;
+    /** success | failure | in_progress. */
+    status: string;
+    sha?: string | undefined;
+    ref?: string | undefined;
+    createdAt: string;
+    updatedAt?: string | undefined;
+    url?: string | undefined;
+    /** Confidence in the extraction (0-1). */
+    confidence: number;
+}
+
+/** A release/tag published from the versionador. */
+export interface Release {
+    id: string;
+    tag: string;
+    draft: boolean;
+    prerelease: boolean;
+    createdAt: string;
+    name?: string | undefined;
+    publishedAt?: string | undefined;
+    author?: string | undefined;
+    url?: string | undefined;
+    confidence: number;
+}
+
+/** DORA metrics (deployment frequency, lead time, MTTR, change failure rate). */
+export interface DoraMetrics {
+    deploymentFrequency?: number | undefined;
+    leadTimeForChanges?: number | undefined;
+    meanTimeToRecovery?: number | undefined;
+    changeFailureRate?: number | undefined;
+    /** Provenance source (e.g., 'github', 'gitlab'). */
+    source?: string | undefined;
+    confidence: number;
+}
+
+/** Generic project-manager issue (GitHub Issues / GitLab Issues). */
+export interface RawIssue {
+    source: 'github' | 'gitlab';
+    id: string | number;
+    /** iid (GitLab) or number (GitHub). */
+    key?: string | number | undefined;
+    title: string;
+    state: string;
+    author?: string | undefined;
+    labels: string[];
+    createdAt: string;
+    updatedAt?: string | undefined;
+    url?: string | undefined;
+    assignees?: string[] | undefined;
+    confidence: number;
+}
+
+/** Per-file coverage breakdown. */
+export interface CoverageFile {
+    file: string;
+    lines: { total: number; covered: number; percentage: number };
+    branches?: { total: number; covered: number; percentage: number } | undefined;
+    functions?: { total: number; covered: number; percentage: number } | undefined;
+    confidence: number;
+}
+
+/** Performance metrics extracted from CI (duration, queue, cost, per-test). */
+export interface PerformanceMetrics {
+    pipelineDurationMs?: number | undefined;
+    queueWaitMs?: number | undefined;
+    runnerUtilization?: number | undefined;
+    billableMinutes?: number | undefined;
+    perTestP95Ms?: number | undefined;
+    suiteSpeedP95Ms?: number | undefined;
+    confidence: number;
 }
 
 /** Options for fetching raw data from a provider. */
@@ -489,6 +639,39 @@ export interface DataHub {
     saveQualityMetrics(snapshot: QualityMetricsSnapshot): void;
     /** Load all quality metrics snapshots. Throws if persistence not configured. */
     loadQualityMetricsHistory(): QualityMetricsSnapshot[];
+    // ─── SSOT Expansion (ST-1): new data categories (consumer-facing) ────────
+    /** Save failure records. Throws if persistence not configured. */
+    saveFailureRecords(records: FailureRecord[]): void;
+    /** Load all failure records. Throws if persistence not configured. */
+    loadFailureRecords(): FailureRecord[];
+    /** Save security findings. Throws if persistence not configured. */
+    saveSecurityFindings(findings: SecurityFinding[]): void;
+    /** Load all security findings. Throws if persistence not configured. */
+    loadSecurityFindings(): SecurityFinding[];
+    /** Save deployments. Throws if persistence not configured. */
+    saveDeployments(deployments: Deployment[]): void;
+    /** Load all deployments. Throws if persistence not configured. */
+    loadDeployments(): Deployment[];
+    /** Save releases. Throws if persistence not configured. */
+    saveReleases(releases: Release[]): void;
+    /** Load all releases. Throws if persistence not configured. */
+    loadReleases(): Release[];
+    /** Save DORA metrics. Throws if persistence not configured. */
+    saveDoraMetrics(metrics: DoraMetrics): void;
+    /** Load latest DORA metrics. Throws if persistence not configured. */
+    loadDoraMetrics(): DoraMetrics | null;
+    /** Save project-manager issues. Throws if persistence not configured. */
+    savePmIssues(issues: RawIssue[]): void;
+    /** Load all project-manager issues. Throws if persistence not configured. */
+    loadPmIssues(): RawIssue[];
+    /** Save per-file coverage. Throws if persistence not configured. */
+    saveCoverageFiles(files: CoverageFile[]): void;
+    /** Load all per-file coverage. Throws if persistence not configured. */
+    loadCoverageFiles(): CoverageFile[];
+    /** Save performance metrics. Throws if persistence not configured. */
+    savePerformanceMetrics(metrics: PerformanceMetrics): void;
+    /** Load latest performance metrics. Throws if persistence not configured. */
+    loadPerformanceMetrics(): PerformanceMetrics | null;
 }
 
 /**
@@ -545,6 +728,42 @@ export interface DataHubPersistence {
     saveQualityMetrics(snapshot: QualityMetricsSnapshot): void;
     /** Load all quality metrics snapshots. */
     loadQualityMetricsHistory(): QualityMetricsSnapshot[];
+    // ─── SSOT Expansion (ST-1): new data categories ──────────────────────────
+    // Every category is persisted to its own quality-gated JSON file. Save
+    // replaces the category entirely (latest extract wins); load returns []/null
+    // when absent. No category is ever silently dropped (AGENTS §25).
+    /** Save failure records. */
+    saveFailureRecords(records: FailureRecord[]): void;
+    /** Load all failure records. */
+    loadFailureRecords(): FailureRecord[];
+    /** Save security findings. */
+    saveSecurityFindings(findings: SecurityFinding[]): void;
+    /** Load all security findings. */
+    loadSecurityFindings(): SecurityFinding[];
+    /** Save deployments. */
+    saveDeployments(deployments: Deployment[]): void;
+    /** Load all deployments. */
+    loadDeployments(): Deployment[];
+    /** Save releases. */
+    saveReleases(releases: Release[]): void;
+    /** Load all releases. */
+    loadReleases(): Release[];
+    /** Save DORA metrics. */
+    saveDoraMetrics(metrics: DoraMetrics): void;
+    /** Load latest DORA metrics (null when none). */
+    loadDoraMetrics(): DoraMetrics | null;
+    /** Save project-manager issues. */
+    savePmIssues(issues: RawIssue[]): void;
+    /** Load all project-manager issues. */
+    loadPmIssues(): RawIssue[];
+    /** Save per-file coverage. */
+    saveCoverageFiles(files: CoverageFile[]): void;
+    /** Load all per-file coverage. */
+    loadCoverageFiles(): CoverageFile[];
+    /** Save performance metrics. */
+    savePerformanceMetrics(metrics: PerformanceMetrics): void;
+    /** Load latest performance metrics (null when none). */
+    loadPerformanceMetrics(): PerformanceMetrics | null;
     /** Flush changes to disk. */
     flush(message: string): void;
 }

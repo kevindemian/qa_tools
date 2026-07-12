@@ -14,33 +14,15 @@
  */
 import { describe, expect, it, vi } from 'vitest';
 import type { DataHub, ComputedMetrics } from '../../types/data-hub.js';
+import { makeDataHubMock } from '../../test-utils/factories/data-hub-mock.js';
 
 function createTestHub(overrides: Partial<ComputedMetrics> = {}): DataHub {
-    return {
-        raw: { runs: [], jobs: new Map(), artifacts: new Map(), failureReasons: new Map() },
+    return makeDataHubMock({
         computed: {
             passRate: 50,
             avgDuration: 1000,
             suiteSpeedP95: 500,
-            flakyRate: [],
             coverage: 42,
-            pipelineCost: { totalMinutes: 0, estimatedCost: 0 },
-            defectTrends: [],
-            branchBreakdown: {},
-            topFailingJobs: [],
-            topFailureReasons: [],
-            releaseScore: {
-                score: 0,
-                dimensions: {
-                    passRate: { score: 0, status: 'fail' },
-                    flakyRate: { score: 0, status: 'fail' },
-                    coverage: { score: 0, status: 'fail' },
-                    executionRate: { score: 0, status: 'fail' },
-                    suiteSpeed: { score: 0, status: 'fail' },
-                },
-                grade: 'F',
-            },
-            quarantineStatus: { flakyCount: 0, quarantinedCount: 0 },
             testPassRate: 50,
             testCounts: { passed: 50, failed: 50, skipped: 0, total: 100 },
             framework: 'vitest',
@@ -48,29 +30,7 @@ function createTestHub(overrides: Partial<ComputedMetrics> = {}): DataHub {
             flakyPercentage: 12,
             ...overrides,
         },
-        timestamp: new Date(),
-        provider: 'github',
-        repo: 'test/repo',
-        saveRun: vi.fn(),
-        saveCoverageSnapshot: vi.fn(),
-        saveFailureClassification: vi.fn(),
-        flush: vi.fn(),
-        loadCoverageHistory: vi.fn().mockReturnValue([]),
-        loadFailureClassifications: vi.fn().mockReturnValue([]),
-        saveMetricsStore: vi.fn(),
-        saveParseResult: vi.fn().mockReturnValue({
-            timestamp: new Date().toISOString(),
-            project: '',
-            total: 0,
-            passed: 0,
-            failed: 0,
-            skipped: 0,
-            duration: 0,
-            tests: [],
-        }),
-        saveQualityMetrics: vi.fn(),
-        loadQualityMetricsHistory: vi.fn().mockReturnValue([]),
-    };
+    });
 }
 
 describe('Integration: Health Score', () => {
@@ -315,6 +275,23 @@ describe('Integration: Health Score', () => {
                 }),
                 saveQualityMetrics: vi.fn(),
                 loadQualityMetricsHistory: vi.fn().mockReturnValue([]),
+                // ─── ST-1 categories ───────────────────────────────────────────
+                saveFailureRecords: vi.fn(),
+                loadFailureRecords: vi.fn().mockReturnValue([]),
+                saveSecurityFindings: vi.fn(),
+                loadSecurityFindings: vi.fn().mockReturnValue([]),
+                saveDeployments: vi.fn(),
+                loadDeployments: vi.fn().mockReturnValue([]),
+                saveReleases: vi.fn(),
+                loadReleases: vi.fn().mockReturnValue([]),
+                saveDoraMetrics: vi.fn(),
+                loadDoraMetrics: vi.fn().mockReturnValue(null),
+                savePmIssues: vi.fn(),
+                loadPmIssues: vi.fn().mockReturnValue([]),
+                saveCoverageFiles: vi.fn(),
+                loadCoverageFiles: vi.fn().mockReturnValue([]),
+                savePerformanceMetrics: vi.fn(),
+                loadPerformanceMetrics: vi.fn().mockReturnValue(null),
             };
         }
 
