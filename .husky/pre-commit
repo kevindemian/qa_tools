@@ -38,6 +38,21 @@ if [ -f "$VIGILANT" ]; then
     done
 fi
 
+# Catraca (turnstile): arquivos modificados não podem silenciar erro (returnNull: true).
+# Só linhas adicionadas/modificadas são checadas — migração gradual, não traumática.
+echo "--- Catraca (no silent error: returnNull:true) ---"
+STAGED_TS=$(git diff --cached --name-only --diff-filter=d -- '*.ts' ':!.husky/' ':!.config/' 2>/dev/null || true)
+if [ -n "$STAGED_TS" ]; then
+    VIOLATIONS=$(printf '%s\n' "$STAGED_TS" | xargs -I{} git diff --cached -U0 -- {} 2>/dev/null | grep -E '^\+[^+]' | grep -E 'returnNull:[[:space:]]*true' || true)
+    if [ -n "$VIOLATIONS" ]; then
+        echo "::error::Catraca: arquivos modificados ainda silenciam erro via 'returnNull: true':"
+        echo "$VIOLATIONS"
+        echo "::error::Migre para a arquitetura tipada (ExternalError) — veja shared/plans/error-handling-enforcement.md"
+        exit 1
+    fi
+fi
+echo "  catraca OK"
+
 # Typecheck
 echo "--- Typecheck ---"
 npx tsc --noEmit

@@ -1,5 +1,6 @@
 import type { AxiosInstance } from '../shared/deps.js';
 import { handleError } from '../shared/git-provider-error.js';
+import { classifyGitError } from '../shared/errors.js';
 import { extractErrorMessage } from '../shared/prompt-errors.js';
 import { rootLogger } from '../shared/logger.js';
 import type {
@@ -238,7 +239,11 @@ export async function glGetFileContents(
     } catch (err) {
         const axiosErr = err as { response?: { status?: number } };
         if (axiosErr.response?.status === 404) return null;
-        return handleError(err, { context: `ler arquivo ${path}`, returnNull: true });
+        throw classifyGitError(err, {
+            operation: 'ler arquivo',
+            scope: 'read_repository',
+            resource: path,
+        });
     }
 }
 

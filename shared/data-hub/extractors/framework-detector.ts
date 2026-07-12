@@ -11,13 +11,15 @@
 import type { GitProvider, FrameworkDetectionResult } from '../../types/ci-cd.js';
 import { detectFrameworkFromAPI } from '../../framework-detection.js';
 import { rootLogger } from '../../logger.js';
-import { getErrorMessage } from '../../errors.js';
+import { ExternalError, getErrorMessage } from '../../errors.js';
+import { warn } from '../../prompt-format.js';
 
 /**
  * Framework Detector — runs the full cascade to detect test framework.
  *
  * Uses Trees API to discover files, then reads package.json for dependencies.
- * Falls back to unknown on any error.
+ * 404 (arquivo ausente) cai para unknown. Erros de auth/permissão/rede/servidor
+ * são apresentados ao usuário via `warn` (TUI) — não silenciados.
  *
  * @param gitProvider - GitProvider with getFileContents and listDirectory
  * @param ref - Git ref (branch, tag, or SHA)
@@ -34,7 +36,19 @@ export async function detectFrameworkCascade(gitProvider: GitProvider, ref: stri
         rootLogger.debug('Framework detection cascade: package.json failed, returning unknown');
         return { framework: 'unknown', confidence: 0 };
     } catch (err) {
-        rootLogger.debug(`Framework detection cascade failed: ${getErrorMessage(err)}`);
+        if (
+            err instanceof ExternalError &&
+            (err.kind === 'auth' ||
+                err.kind === 'permission' ||
+                err.kind === 'rateLimit' ||
+                err.kind === 'network' ||
+                err.kind === 'server')
+        ) {
+            const remediation = err.remediation ? ` — ${err.remediation}` : '';
+            warn(`Falha ao ler arquivo do repositório (${err.kind}): ${err.message}${remediation}`);
+        } else {
+            rootLogger.debug(`Framework detection cascade failed: ${getErrorMessage(err)}`);
+        }
         return { framework: 'unknown', confidence: 0 };
     }
 }

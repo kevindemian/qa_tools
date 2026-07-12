@@ -15,6 +15,7 @@ import {
     glGetTestReport,
 } from './gitlab-workflow.js';
 import { apiGet, apiPost, projectPath } from './gitlab-api.js';
+import { ExternalError } from '../shared/errors.js';
 import { createMockAxiosInstance } from '../shared/test-utils/factories/response-factory.js';
 import { nonNull } from '../shared/test-utils.js';
 vi.mock('./gitlab-api', () => ({
@@ -441,14 +442,14 @@ describe('Gitlab Workflow', () => {
             expect(result).toBeNull();
         });
 
-        it('returns null on API error', async () => {
+        it('throws ExternalError on API error (not silently null)', async () => {
             expect.hasAssertions();
 
             mockClient.get.mockRejectedValue(new Error('API error'));
 
-            const result = await glGetFileContents(mockClient, 'owner', 'repo', 'package.json');
-
-            expect(result).toBeNull();
+            await expect(glGetFileContents(mockClient, 'owner', 'repo', 'package.json')).rejects.toBeInstanceOf(
+                ExternalError,
+            );
         });
     });
 

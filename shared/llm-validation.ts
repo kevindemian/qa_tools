@@ -26,11 +26,13 @@ async function _getValidator(): Promise<(response: string) => ValidationResult> 
             validate = mod.sanitizeAndReject;
         } catch (err) {
             const errMsg = err instanceof Error ? err.message : String(err);
-            rootLogger.warn(
-                `[llm-validation] validation_hook not found at ${VALIDATION_HOOK_PATH} (${errMsg}) — validation disabled`,
+            rootLogger.error(
+                `[llm-validation] validation_hook falhou ao carregar em ${VALIDATION_HOOK_PATH} (${errMsg}) — validação INDISPONÍVEL; rejeitando respostas por segurança (fail-closed, não silenciado)`,
             );
             validate = (response: string): ValidationResult => ({
-                valid: true,
+                valid: false,
+                error: `validation hook indisponível em ${VALIDATION_HOOK_PATH}: ${errMsg}`,
+                requiresHumanReview: true,
                 response,
             });
         }

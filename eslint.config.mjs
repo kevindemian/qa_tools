@@ -10,6 +10,7 @@ import promise from 'eslint-plugin-promise';
 import vitest from '@vitest/eslint-plugin';
 import sonarjs from 'eslint-plugin-sonarjs';
 import unusedImports from 'eslint-plugin-unused-imports';
+import localResult from './scripts/eslint-plugins/result-catraca.cjs';
 
 const tsconfigRootDir = dirname(fileURLToPath(import.meta.url));
 
@@ -170,6 +171,7 @@ export default defineConfig(
         },
         plugins: {
             'unused-imports': unusedImports,
+            'local-result': localResult,
         },
         rules: {
             'prefer-const': 'error',
@@ -192,6 +194,9 @@ export default defineConfig(
             '@typescript-eslint/no-unsafe-member-access': 'error',
             '@typescript-eslint/no-unsafe-argument': 'error',
             '@typescript-eslint/no-unsafe-return': 'error',
+            // Catraca (turnstile): obriga tratamento de Result (port de Rust #[must_use]).
+            // Só morde valores do tipo neverthrow.Result, logo é zero-falso-positivo em código legado.
+            'local-result/must-use-result': 'error',
             'no-restricted-syntax': [
                 'error',
                 {
