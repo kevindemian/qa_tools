@@ -296,6 +296,7 @@ export default defineConfig(
             'eslint.config.mjs',
             '**/*.js',
             '**/*.mjs',
+            '**/*.cjs',
             '.config/',
             '.opencode/',
             '.tmp/',
