@@ -5,6 +5,22 @@
 
 ---
 
+## 📋 Decisões de Arquitetura (EXPAND — 2026-07-12)
+
+Resoluções técnicas para a retomada do EXPAND, validadas entre agente e usuário:
+
+| #   | Questão               | Decisão                                                                                        | Justificativa (evidência)                                                                                                                                                                                                                                                                                                                                 |
+| --- | --------------------- | ---------------------------------------------------------------------------------------------- | --------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| 1   | **L4X1 (enrichment)** | **ENTRA no escopo do L4**                                                                      | `log-parser.ts` emite `FailureRecord` com `file?`/`line?` nullable; enrichment é etapa posterior (pós-parser) que preenche os campos. Acoplamento zero (parser consome `string`, enrichment consome `FailureRecord` + `repoPath`).                                                                                                                        |
+| 2   | **LA-5 subdivisão**   | **Subdividir em LA-5a..5e**                                                                    | 5 domínios independentes (Security, Performance, Deployments, PRs/MRs, Reporter-Prediction); APIs, tipos e providers diferentes. Reduz risco e permite commit granular.                                                                                                                                                                                   |
+| 3   | **PM-0 contract**     | **Estender `source` union** (`'github-issues' \| 'gitlab-issues'`), **NÃO** interface separada | `ProjectManagerProvider` seria 100% idêntica a `DataProvider` (mesma assinatura, mesmo retorno `RawData`) — duplicação sem ganho de type safety (TS é estrutural). Colisão real: `GitHubDataProvider` já usa `source='github'`; issues provider precisa de source distinto. `JiraDataProvider` já é `DataProvider` com `source='jira'` — padrão a seguir. |
+| 4   | **Xray API**          | **Cloud v2 (GraphQL)**                                                                         | Implementação atual é production-grade (retry/throttle/TLS, extração defensiva). Cloud v2 é plataforma ativa da Atlassian com GraphQL rico; Server usa REST legado.                                                                                                                                                                                       |
+| 5   | **COV strategy**      | **Estender** `readCoverage()` (~20 linhas), **NÃO** reescrever                                 | Provider tem 78 linhas (adaptador fino). Pipeline `CoverageFile` já existe completo (type, Zod schema, persistence, merge, gate). Gap = mapear `IstanbulFileEntry → CoverageFile` (branches/functions presentes no source, descartados no mapeamento). Rewrite quebra contrato `RawCoverage` (12+ consumers) sem ganho arquitetural.                      |
+
+**Ordem de execução (do plano Cap 6):** `ST (feito) → L4 → LA-1 → LA-2 → LA-3 → LA-4 → LA-5a..5e → PM-0..4 → XR-1/2 → COV`
+
+---
+
 ## 🚀 Sprint DataHub — FASE L4 (Camada 4 / Job Logs) + FASE 9 (Jul/2026)
 
 **Data:** 2026-07-11
@@ -15,28 +31,28 @@
 
 > Papel: **último recurso** da cascata (após Camadas 1–6 estruturadas). Primário = detalhe de falha + cross-reference; last-resort = counts por regex só sem artifact.
 
-| ID      | Item                                                                                                 | Arquivo(s)                                                                 | Status |
-| ------- | ---------------------------------------------------------------------------------------------------- | -------------------------------------------------------------------------- | ------ |
-| CDH-L4a | 🔧 L4.0 Redefinir papel (estruturado-first; last-resort em counts)                                   | `shared/log-parser.ts`                                                     | 📋     |
-| CDH-L4b | 🔧 L4.1 NaN-guard obrigatório; invariante total; `counts:null` em não-finito/ambíguo                 | `shared/log-parser.ts`                                                     | 📋     |
-| CDH-L4c | 🔧 L4.2 Registry por framework/versão (vitest v1/v2/v3, jest, mocha, pytest, go, dotnet)             | `shared/data-hub/extractors/` (novo)                                       | 📋     |
-| CDH-L4d | 🔧 L4.3 `stripAnsi` endurecido (CSI+OSC) + truncamento (cap + detecção)                              | `shared/log-parser.ts`                                                     | 📋     |
-| CDH-L4e | 🔧 L4.4 Falhas multi-linha + stack traces (janela) + `confidence`/`evidence` + buckets de causa-raiz | `shared/log-parser.ts`, `shared/data-hub/extractors/`                      | 📋     |
-| CDH-L4f | 🔧 L4.5 Localização best-effort (layout posicional)                                                  | `shared/data-hub/extractors/`                                              | 📋     |
-| CDH-L4g | 🔧 L4.6 Consumidores absorvem `confidence`/`category`/`evidence`; abstêm em `null`                   | `shared/failure-classifier.ts`, `shared/data-hub/.../test-count-extractor` | 📋     |
-| CDH-L4h | 📋 L4.7 Testes (Test-First): `log-parser.test.ts`, `log-parser.property.test.ts`, `extractors/`      | `shared/__tests__/`, `shared/data-hub/__tests__/extractors/`               | 📋     |
+| ID      | Item                                                                                                                       | Arquivo(s)                                                                     | Status |
+| ------- | -------------------------------------------------------------------------------------------------------------------------- | ------------------------------------------------------------------------------ | ------ |
+| CDH-L4a | 🔧 L4.0 Redefinir papel (estruturado-first; last-resort em counts)                                                         | `shared/log-parser.ts`                                                         | ✅     |
+| CDH-L4b | 🔧 L4.1 NaN-guard obrigatório; invariante total; `counts:null` em não-finito/ambíguo                                       | `shared/log-parser.ts`                                                         | ✅     |
+| CDH-L4c | 🔧 L4.2 Registry por framework/versão (vitest/jest/mocha/pytest/go/dotnet) via `detectFrameworkVersion`                    | `shared/log-parser.ts`                                                         | ✅     |
+| CDH-L4d | 🔧 L4.3 `stripAnsi` endurecido (CSI+OSC, idempotente, sem throw em truncamento)                                            | `shared/log-parser.ts` (skipOsc/skipCsi)                                       | ✅     |
+| CDH-L4e | 🔧 L4.4 Falhas multi-linha + stack traces (janela) + `confidence`/`evidence` + buckets de causa-raiz (`categorizeFailure`) | `shared/log-parser.ts` (`parseFailureRecordsFromLogs`, `extractFailureBlocks`) | ✅     |
+| CDH-L4f | 🔧 L4.5 Localização best-effort (file/line a partir do trace) via `detectFileLine`                                         | `shared/log-parser.ts`                                                         | ✅     |
+| CDH-L4g | 🔧 L4.6 Consumidores absorvem `confidence`/`category`/`evidence`; abstêm em `null`                                         | `shared/failure-classifier.ts`, `shared/data-hub/.../test-count-extractor`     | 📋     |
+| CDH-L4h | 📋 L4.7 Testes (Test-First): `log-parser.test.ts` (28), `log-parser.property.test.ts` (6 PBT), existente                   | `shared/__tests__/`                                                            | ✅     |
 
 ### Fase LA — Versionadores, extração máxima (GitHub + GitLab)
 
 > Princípio: extrair a ÚLTIMA GOTA de cada ferramenta; quality-gate por provenance/confidence/validação; persistir (Fase STORE); baixa qualidade → rotulada, nunca dropada.
 
-| ID      | Item                                                                                                                                                                                                                                | Arquivo(s)                                                                                                | Status |
-| ------- | ----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | --------------------------------------------------------------------------------------------------------- | ------ |
-| CDH-LA1 | 🔧 Camada 3: annotations → `FailureRecord` rico (file/line/col/stack, todos níveis)                                                                                                                                                 | `shared/data-hub/extractors/failure-classifier.ts`, `shared/types/ci-cd.ts`, `shared/github-check-run.ts` | 📋     |
-| CDH-LA2 | 🔧 Camada 1: custo real (`usage`) + `attempts`→flaky/retry                                                                                                                                                                          | `shared/data-hub/providers/github-provider.ts`, `shared/data-hub/compute/*`                               | 📋     |
-| CDH-LA3 | 🔧 Camada 6 (GitLab): `test_report_summary` + `stack_trace` + **DORA**                                                                                                                                                              | `shared/data-hub/providers/gitlab-provider.ts`, `shared/types/ci-cd.ts`                                   | 📋     |
-| CDH-LA4 | 🔧 Camada 2: CTRF `flaky/retries/environment/tool`; Playwright `file/line`                                                                                                                                                          | `shared/data-hub/artifact-parser.ts`                                                                      | 📋     |
-| CDH-LA5 | 🔧 Camada 5: reporter-prediction + **Segurança** (GitHub code-scanning/secret-scanning/Dependabot; GitLab SAST/dependency/container/secret) + **Performance** (queue/duration/runner) + **Deployments/Releases/DORA** + **PRs/MRs** | `shared/data-hub/providers/*`, `shared/github-pr-comment.ts`                                              | 📋     |
+| ID      | Item                                                                                                                                                                                                                                | Arquivo(s)                                                                                                  | Status |
+| ------- | ----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | ----------------------------------------------------------------------------------------------------------- | ------ |
+| CDH-LA1 | 🔧 Camada 3: annotations → `FailureRecord` rico (file/line/col/stack, todos níveis)                                                                                                                                                 | `shared/data-hub/extractors/annotations-extractor.ts` (novo); consome `CheckRunAnnotation`/`GitLabTestCase` | ✅     |
+| CDH-LA2 | 🔧 Camada 1: custo real (`usage`) + `attempts`→flaky/retry                                                                                                                                                                          | `shared/data-hub/providers/github-provider.ts`, `shared/data-hub/compute/*`                                 | 📋     |
+| CDH-LA3 | 🔧 Camada 6 (GitLab): `test_report_summary` + `stack_trace` + **DORA**                                                                                                                                                              | `shared/data-hub/providers/gitlab-provider.ts`, `shared/types/ci-cd.ts`                                     | 📋     |
+| CDH-LA4 | 🔧 Camada 2: CTRF `flaky/retries/environment/tool`; Playwright `file/line`                                                                                                                                                          | `shared/data-hub/artifact-parser.ts`                                                                        | 📋     |
+| CDH-LA5 | 🔧 Camada 5: reporter-prediction + **Segurança** (GitHub code-scanning/secret-scanning/Dependabot; GitLab SAST/dependency/container/secret) + **Performance** (queue/duration/runner) + **Deployments/Releases/DORA** + **PRs/MRs** | `shared/data-hub/providers/*`, `shared/github-pr-comment.ts`                                                | 📋     |
 
 ### Fase PM — Gerenciadores de Projeto
 
@@ -65,9 +81,9 @@
 
 | ID      | Item                                                                                                                                                                                                        | Arquivo(s)                                                   | Status |
 | ------- | ----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | ------------------------------------------------------------ | ------ |
-| CDH-ST1 | 🔧 Estender `RawData` + `DataHubPersistence` p/ todas as categorias (failureRecords, securityFindings, deployments, releases, doraMetrics, prs/mrs, pmIssues, xrayData, coverage.files, performanceMetrics) | `shared/types/data-hub.ts`, `shared/data-hub/persistence.ts` | 📋     |
-| CDH-ST2 | 🔧 Camada de Qualidade `validateAndScore()`: schema validation + NaN/empty guards + confidence por fonte + dedup + provenance obrigatória; baixa qualidade → tag, não drop                                  | `shared/data-hub/quality.ts` (novo)                          | 📋     |
-| CDH-ST3 | 🔧 Migração não-destrutiva do `MetricsStore` atual; novas categorias adicionadas; dados históricos preservados                                                                                              | `shared/data-hub/persistence.ts`                             | 📋     |
+| CDH-ST1 | 🔧 Estender `RawData` + `DataHubPersistence` p/ todas as categorias (failureRecords, securityFindings, deployments, releases, doraMetrics, prs/mrs, pmIssues, xrayData, coverage.files, performanceMetrics) | `shared/types/data-hub.ts`, `shared/data-hub/persistence.ts` | ✅     |
+| CDH-ST2 | 🔧 Camada de Qualidade `validateAndScore()`: schema validation + NaN/empty guards + confidence por fonte + dedup + provenance obrigatória; baixa qualidade → tag, não drop                                  | `shared/data-hub/quality.ts` (novo)                          | ✅     |
+| CDH-ST3 | 🔧 Migração não-destrutiva do `MetricsStore` atual; novas categorias adicionadas; dados históricos preservados                                                                                              | `shared/data-hub/persistence.ts`                             | ✅     |
 
 ### Melhoria Posterior (Diferida da FASE L4)
 
