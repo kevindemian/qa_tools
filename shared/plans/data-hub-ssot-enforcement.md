@@ -3867,3 +3867,45 @@ Auditoria final (manual, além de testes): confirmar que (a) `getQuarantine` exi
 (b) `pr-report-core` não importa mais `isQuarantined`; (c) nenhum leitor direto de Store/quarantine.json
 resta fora de `quarantine.ts`; (d) os sítios de `calcFlakinessEntries` sobre `hub.computed.metricsRuns`
 continuam apontando para o hub (já SSOT).
+
+---
+
+## FASE RE-ESCOPADA — CONCLUÍDA (2026-07-12)
+
+| Item                       | Commit     | Estado                                            |
+| -------------------------- | ---------- | ------------------------------------------------- |
+| Quarentena SSOT (hub dono) | `d49c6ac0` | ✅ concluída (push + CI green, run `29191630087`) |
+
+### Evidência de execução (commit `d49c6ac0`, 11 arquivos, +185/−33)
+
+- `shared/types/data-hub.ts:689` — `DataHub.getQuarantine(): QuarantineStore` (+ import `QuarantineStore`).
+- `shared/data-hub/hub.ts:117` — `this.quarantine = loadQuarantine()` em `DataHubImpl.create` (ponto único de construção); `:231` — `getQuarantine(): QuarantineStore`.
+- `shared/pr-report-core.ts` — import de `isQuarantined` **removido**; `buildFlakySection` lê `dataHub.getQuarantine().entries.some(e => e.testTitle === t.title)`.
+- `shared/test-utils/factories/data-hub-mock.ts:170` — `getQuarantine: vi.fn<() => QuarantineStore>(() => ({ entries: [] }))`.
+- Mocks inline corrigidos: `session-state.test.ts`, `session-state-ensureDataHub.integration.test.ts`, `health-score.integration.test.ts` (acrescentado `getQuarantine`); `hub-ingest-gate.test.ts` (teste `owns the quarantine store (SSOT)`).
+- `shared/__tests__/pr-report.test.ts` — 2 testes migrados de `isQuarantined` (caminho antigo) para popular `dataHub.getQuarantine().entries` via reatribuição de mock fn (padrão `vi.fn<() => QuarantineStore>`, sem `vi.mocked` em método → sem `unbound-method`). Assertions **idênticas** preservadas (`🔒 Quarantined` / `not.toContain('not yet quarantined')`). Corrigido também vazamento de estado entre testes (`mockDataHubComputed.flakinessEntries` explícito em cada teste).
+
+### Resultados de verificação (pós-commit)
+
+- `npx tsc --noEmit` → **0 erros**.
+- `npx vitest run` → **6403 passed / 9 skipped / 0 failed** (suite completa, gate pre-push).
+- `npm run lint` (lint-staged + hook) → **0 violações** introduzidas.
+- CI GitHub (`actions/runs/29191630087`) → **conclusion: success**.
+- Pre-commit + pre-push hooks → passaram (inclui `validation_hook` 51/51, Catraca, lockfile-lint).
+
+### Auditoria final (manual, além de testes) — TODOS OS CRITÉRIOS OK
+
+- **(a)** `getQuarantine()` existe em interface (`types/data-hub.ts:689`), impl (`hub.ts:231`), mock (`data-hub-mock.ts:170`). ✓
+- **(b)** `pr-report-core.ts` **não** importa `isQuarantined` (grep vazio). ✓
+- **(c)** Nenhum leitor direto executável de `loadAndExpire(`/`loadMetricsStore(` fora de `quarantine.ts`/`data-hub/` (matches restantes são só `.md` de plano + comentário em `types/data-hub.ts:65`). ✓
+- **(d)** Sítios de `calcFlakinessEntries`: apenas `hub.ts:670` (sobre `this.computed.metricsRuns`) e helper interno `flakiness-entries.ts:79`. Scoping por projeto = dados SSOT (plano nota 3814). ✓
+- **(e)** Preservados: `e2e/gen-report-complete.ts` (fixture scaffolding, `loadCtrfFixture`); `case17.ts --extra-run` (entrada CLI de usuário). ✓
+
+### Débito conhecido (fora do escopo deste track, não introduzido)
+
+- `loadMetricsStore()` permanece exposto na interface `DataHub` como ponte documentada (remoção planejada em Fase 1 do plano, Tarefa 1.3.1) — não afeta este gap.
+- `security/detect-non-literal-fs-filename` em `shared/quarantine.ts` é débito pré-existente (rastreado N2-B), não introduzido por esta mudança.
+
+### Conclusão do track "EXPAND+STORE"
+
+ST-1, ST-2, ST-3, L4 e a migração de consumidores re-escopada (quarentena SSOT) estão **concluídas e verificadas**, com CI verde. Nenhum bypass de SSOT, nenhuma supressão de mecanismo de segurança, equivalência de comportamento preservada. Track encerrado.
