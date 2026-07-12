@@ -25,7 +25,10 @@ vi.mock('../config.js', () => ({
     get: vi.fn(() => ''),
 }));
 
-const safeTitle = fc.string({ minLength: 1, maxLength: 20 }).map((s) => s.replace(/[^a-zA-Z0-9 _.-]/g, '_'));
+const safeTitle = fc
+    .string({ minLength: 1, maxLength: 20 })
+    .map((s) => s.replace(/[^a-zA-Z0-9 _.-]/g, '_'))
+    .filter((s) => !/nan|infinity/i.test(s));
 
 const nanEntry: FlakinessEntry = {
     title: 'NaN-rate',
