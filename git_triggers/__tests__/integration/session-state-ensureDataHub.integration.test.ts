@@ -98,6 +98,7 @@ function makeMockHub(): DataHub {
         savePerformanceMetrics: vi.fn(),
         loadPerformanceMetrics: vi.fn().mockReturnValue(null),
         getQuality: vi.fn(),
+        getQuarantine: vi.fn(() => ({ entries: [] })),
     };
 }
 

@@ -14,6 +14,7 @@ import type { ArtifactParseResult } from '../data-hub/artifact-parser.js';
 import type { FlatTest, ParseResult } from '../result_parser.js';
 import type { CoverageSnapshot } from './coverage.js';
 import type { QualityReport, QualityCategory } from '../data-hub/quality.js';
+import type { QuarantineStore } from '../quarantine.js';
 
 /** Quality engineering metrics snapshot — invariant fire rates, layer pass rates, drift detection. */
 export interface QualityMetricsSnapshot {
@@ -679,6 +680,13 @@ export interface DataHub {
      * Returns undefined for an unknown category.
      */
     getQuality(category: QualityCategory): QualityReport | undefined;
+
+    /**
+     * Quarantine store owned by the hub (single source of truth for the
+     * quarantined-test list). Loaded once at construction from quarantine.json.
+     * Replaces direct `isQuarantined()` file reads in consumers (SSOT).
+     */
+    getQuarantine(): QuarantineStore;
 }
 
 /**

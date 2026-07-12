@@ -236,6 +236,7 @@ describe('Session-state', () => {
                 savePerformanceMetrics: vi.fn(),
                 loadPerformanceMetrics: vi.fn().mockReturnValue(null),
                 getQuality: vi.fn(),
+                getQuarantine: vi.fn(() => ({ entries: [] })),
             });
 
             sessionState.setCurrentProjectName('qa_ibabs');

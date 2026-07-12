@@ -7,6 +7,7 @@
 import { describe, it, expect, vi } from 'vitest';
 import type { DataProvider, RawData, FailureRecord } from '../../types/data-hub.js';
 import type { PipelineRun } from '../../types/ci-cd.js';
+import { loadQuarantine } from '../../quarantine.js';
 import { DataHubImpl } from '../hub.js';
 import { makeDataHubPersistenceMock } from '../../test-utils/factories/data-hub-mock.js';
 
@@ -112,5 +113,17 @@ describe('DataHubImpl.create: ingest gate', () => {
         expect(hub.getQuality('doraMetrics')?.valid).toBeTruthy();
 
         expect(hub.getQuality('performanceMetrics')?.valid).toBeTruthy();
+    });
+
+    it('owns the quarantine store (SSOT) — getQuarantine returns the loaded QuarantineStore', () => {
+        const persistence = makeDataHubPersistenceMock();
+
+        const hub = DataHubImpl.createEmpty('github', 'r', persistence);
+
+        const loaded = loadQuarantine();
+
+        expect(Array.isArray(hub.getQuarantine().entries)).toBeTruthy();
+
+        expect(hub.getQuarantine()).toStrictEqual(loaded);
     });
 });
