@@ -29,6 +29,7 @@ import type {
     RawIssue,
     CoverageFile,
     PerformanceMetrics,
+    RawPullRequest,
 } from '../types/data-hub.js';
 
 /** Result of scoring a category: whether it is fully valid + human-readable issues. */
@@ -147,7 +148,7 @@ export const CoverageFileSchema: z.ZodType<CoverageFile> = z
         lines: z.object({
             total: finite(z.number().int().nonnegative()),
             covered: finite(z.number().int().nonnegative()),
-            percentage: finite(z.number().min(0).max(100)),
+            percentage: finite(z.number().min(0).max(100)).optional(),
         }),
         branches: z
             .object({
@@ -175,6 +176,23 @@ export const PerformanceMetricsSchema: z.ZodType<PerformanceMetrics> = z
         billableMinutes: finite(z.number().nonnegative()).optional(),
         perTestP95Ms: finite(z.number().nonnegative()).optional(),
         suiteSpeedP95Ms: finite(z.number().nonnegative()).optional(),
+        confidence: finite(z.number().min(0).max(1)),
+    })
+    .loose();
+
+export const RawPullRequestSchema: z.ZodType<RawPullRequest> = z
+    .object({
+        id: finite(z.number().int().nonnegative()),
+        number: finite(z.number().int().nonnegative()),
+        title: z.string().optional(),
+        state: z.enum(['open', 'closed', 'merged']).optional(),
+        url: z.string().optional(),
+        draft: z.boolean().optional(),
+        merged: z.boolean().optional(),
+        mergedAt: z.string().optional(),
+        author: z.string().optional(),
+        labels: z.array(z.string()).optional(),
+        reviewStates: z.array(z.string()).optional(),
         confidence: finite(z.number().min(0).max(1)),
     })
     .loose();
@@ -349,6 +367,16 @@ export function validateAndScoreCoverageFiles(items: CoverageFile[] | undefined)
     });
 }
 
+export function validateAndScorePullRequests(items: RawPullRequest[] | undefined): {
+    items: RawPullRequest[];
+    quality: QualityReport;
+} {
+    return validateAndScore(items, RawPullRequestSchema, {
+        key: (p) => String(p.id),
+        sourceOf: (p) => p.author,
+    });
+}
+
 /* ───────────────────────────────────────────────────────────────────────────
  * Object-category scorers (DORA / Performance)
  * ─────────────────────────────────────────────────────────────────────────── */
@@ -420,7 +448,8 @@ export type QualityCategory =
     | 'pmIssues'
     | 'coverageFiles'
     | 'doraMetrics'
-    | 'performanceMetrics';
+    | 'performanceMetrics'
+    | 'pullRequests';
 
 /** Per-category quality reports, keyed by QualityCategory. */
 export type QualityCategoryMap = Record<QualityCategory, QualityReport>;
@@ -447,6 +476,7 @@ export function gateRawData(raw: RawData): { raw: RawData; quality: QualityCateg
     const coverageFiles = validateAndScoreCoverageFiles(raw.coverageFiles);
     const doraMetrics = validateAndScoreDoraMetrics(raw.doraMetrics);
     const performanceMetrics = validateAndScorePerformanceMetrics(raw.performanceMetrics);
+    const pullRequests = validateAndScorePullRequests(raw.pullRequests);
 
     const gated: RawData = {
         ...raw,
@@ -456,6 +486,7 @@ export function gateRawData(raw: RawData): { raw: RawData; quality: QualityCateg
         releases: releases.items,
         pmIssues: pmIssues.items,
         coverageFiles: coverageFiles.items,
+        ...(pullRequests.items.length > 0 ? { pullRequests: pullRequests.items } : {}),
     };
     if (doraMetrics.value != null) gated.doraMetrics = doraMetrics.value;
     if (performanceMetrics.value != null) gated.performanceMetrics = performanceMetrics.value;
@@ -469,6 +500,7 @@ export function gateRawData(raw: RawData): { raw: RawData; quality: QualityCateg
         coverageFiles: coverageFiles.quality,
         doraMetrics: doraMetrics.quality,
         performanceMetrics: performanceMetrics.quality,
+        pullRequests: pullRequests.quality,
     };
 
     return { raw: gated, quality };

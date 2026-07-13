@@ -22,6 +22,11 @@ import type {
     JsonObject,
     DirEntry,
     WorkflowUsage,
+    GitHubDeploymentRaw,
+    GitHubReleaseRaw,
+    GitHubSecurityAlertRaw,
+    GitHubPullRequestRaw,
+    GitHubIssueRaw,
 } from '../shared/types.js';
 import type { AxiosInstance } from '../shared/deps.js';
 import {
@@ -220,6 +225,60 @@ class GitHubManager extends GitProviderBase implements GitProvider {
 
     async runSchedule(scheduleId: string | number): Promise<JsonObject> {
         return wfRunSchedule(scheduleId);
+    }
+
+    /** LA-5 — Fetch deployments (GitHub Environments). Returns [] when null. */
+    async getDeployments(): Promise<GitHubDeploymentRaw[]> {
+        const data = await this._get<GitHubDeploymentRaw[]>(this._repoPath + '/deployments', {
+            operation: 'buscar deployments',
+        });
+        return Array.isArray(data) ? data : [];
+    }
+
+    /** LA-5 — Fetch releases/tags. Returns [] when null. */
+    async getReleases(): Promise<GitHubReleaseRaw[]> {
+        const data = await this._get<GitHubReleaseRaw[]>(this._repoPath + '/releases', {
+            operation: 'buscar releases',
+        });
+        return Array.isArray(data) ? data : [];
+    }
+
+    /** LA-5 — Fetch security alerts (code-scanning + secret-scanning). Returns [] when null. */
+    async getSecurityAlerts(): Promise<GitHubSecurityAlertRaw[]> {
+        const codeScanning = await this._get<GitHubSecurityAlertRaw[]>(this._repoPath + '/code-scanning/alerts', {
+            operation: 'buscar code-scanning alerts',
+        });
+        const secretScanning = await this._get<GitHubSecurityAlertRaw[]>(this._repoPath + '/secret-scanning/alerts', {
+            operation: 'buscar secret-scanning alerts',
+        });
+        const combined = [
+            ...(Array.isArray(codeScanning) ? codeScanning : []),
+            ...(Array.isArray(secretScanning) ? secretScanning : []),
+        ];
+        return combined;
+    }
+
+    /** LA-5 — Fetch pull requests (reviews/approvals). Returns [] when null. */
+    async getPullRequests(state?: string): Promise<GitHubPullRequestRaw[]> {
+        const params: JsonObject = {};
+        if (typeof state === 'string' && state.length > 0) params['state'] = state;
+        const data = await this._get<GitHubPullRequestRaw[]>(this._repoPath + '/pulls', {
+            operation: 'buscar pull requests',
+            ...(state != null ? { params } : {}),
+        });
+        return Array.isArray(data) ? data : [];
+    }
+
+    /** PM-2 — Fetch issues (GitHub Issues), excluding pull requests. Returns [] when null. */
+    async getIssues(state?: string): Promise<GitHubIssueRaw[]> {
+        const params: JsonObject = {};
+        if (typeof state === 'string' && state.length > 0) params['state'] = state;
+        const data = await this._get<GitHubIssueRaw[]>(this._repoPath + '/issues', {
+            operation: 'buscar issues',
+            ...(state != null ? { params } : {}),
+        });
+        if (!Array.isArray(data)) return [];
+        return data.filter((i) => (i as GitHubIssueRaw & { pull_request?: unknown }).pull_request == null);
     }
 }
 

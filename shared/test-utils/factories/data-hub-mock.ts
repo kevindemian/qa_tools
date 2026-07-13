@@ -108,6 +108,8 @@ export function makeDataHubPersistenceMock(): DataHubPersistence {
         loadCoverageFiles: vi.fn().mockReturnValue([]),
         savePerformanceMetrics: vi.fn(),
         loadPerformanceMetrics: vi.fn().mockReturnValue(null),
+        savePullRequests: vi.fn(),
+        loadPullRequests: vi.fn().mockReturnValue([]),
         // ─── Test-result cache (SHA-keyed) — owned by DataHub (replaces legacy Store) ─
         loadReport: vi.fn<(sha: string) => { tests: FlatTest[] } | null>().mockReturnValue(null),
         saveReport: vi.fn<(sha: string, tests: FlatTest[]) => void>(),
@@ -177,6 +179,8 @@ export function makeDataHubMock(
         loadCoverageFiles: vi.fn().mockReturnValue([]),
         savePerformanceMetrics: vi.fn(),
         loadPerformanceMetrics: vi.fn().mockReturnValue(null),
+        savePullRequests: vi.fn(),
+        loadPullRequests: vi.fn().mockReturnValue([]),
         getQuality: vi.fn<(category: QualityCategory) => QualityReport | undefined>(),
         getQuarantine: vi.fn<() => QuarantineStore>(() => ({ entries: [] })),
         getBranchPassRate: (branch: string): number => calcPipelinePassRate(raw.runs, branch),

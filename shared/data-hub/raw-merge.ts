@@ -33,6 +33,7 @@ export function mergeCategoryArrays(target: RawData, source: RawData): void {
     target.releases = appendDedup(target.releases, source.releases, (r) => String(r.id));
     target.pmIssues = appendDedup(target.pmIssues, source.pmIssues, (i) => `${i.source}|${i.id}`);
     target.coverageFiles = appendDedup(target.coverageFiles, source.coverageFiles, (c) => c.file);
+    target.pullRequests = appendDedup(target.pullRequests, source.pullRequests, (p) => String(p.id));
     if (source.doraMetrics != null && target.doraMetrics == null) target.doraMetrics = source.doraMetrics;
     if (source.performanceMetrics != null && target.performanceMetrics == null) {
         target.performanceMetrics = source.performanceMetrics;

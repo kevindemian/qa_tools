@@ -36,6 +36,7 @@ import type {
     RawIssue,
     CoverageFile,
     PerformanceMetrics,
+    RawPullRequest,
     FlatTest,
     ReportMeta,
     BranchEntry,
@@ -223,6 +224,12 @@ export class DataHubImpl implements DataHub {
     }
     loadPerformanceMetrics(): PerformanceMetrics | null {
         return this.persistence.loadPerformanceMetrics();
+    }
+    savePullRequests(pullRequests: RawPullRequest[]): void {
+        this.persistence.savePullRequests(pullRequests);
+    }
+    loadPullRequests(): RawPullRequest[] {
+        return this.persistence.loadPullRequests();
     }
 
     /**

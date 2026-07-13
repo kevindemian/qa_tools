@@ -16,6 +16,10 @@ import type {
     JsonObject,
     DirEntry,
     GitLabTestReport,
+    GitLabDoraRaw,
+    GitLabDeploymentRaw,
+    GitLabReleaseRaw,
+    GitLabIssueRaw,
 } from '../shared/types.js';
 import {
     glTriggerPipeline,
@@ -193,6 +197,43 @@ class GitLabManager extends GitProviderBase implements GitProvider {
 
     override async getTestReport(pipelineId: string | number): Promise<GitLabTestReport | null> {
         return glGetTestReport(this.client, this.owner, this.repo, pipelineId);
+    }
+
+    /** Encode the project id into a GitLab API project path segment. */
+    private projectPath(): string {
+        return '/projects/' + encodeURIComponent(this.projectId);
+    }
+
+    /** LA-3 — GitLab DORA metrics (`/dora/metrics`, tier ULTIMATE). */
+    async getDoraMetrics(): Promise<GitLabDoraRaw | null> {
+        const url = this.projectPath() + '/dora/metrics';
+        const data = await this._get<GitLabDoraRaw>(url, { operation: 'obter métricas DORA' });
+        return data ?? null;
+    }
+
+    /** LA-5 — GitLab deployments. */
+    async getDeployments(): Promise<GitLabDeploymentRaw[]> {
+        const url = this.projectPath() + '/deployments';
+        const data = await this._get<GitLabDeploymentRaw[]>(url, { operation: 'obter deployments' });
+        return data ?? [];
+    }
+
+    /** LA-5 — GitLab releases. */
+    async getReleases(): Promise<GitLabReleaseRaw[]> {
+        const url = this.projectPath() + '/releases';
+        const data = await this._get<GitLabReleaseRaw[]>(url, { operation: 'obter releases' });
+        return data ?? [];
+    }
+
+    /** PM-3 — GitLab issues. */
+    async getIssues(state?: string): Promise<GitLabIssueRaw[]> {
+        const params = state != null ? { state } : undefined;
+        const url = this.projectPath() + '/issues';
+        const data = await this._get<GitLabIssueRaw[]>(url, {
+            operation: 'obter issues',
+            ...(params ? { params } : {}),
+        });
+        return data ?? [];
     }
 }
 
