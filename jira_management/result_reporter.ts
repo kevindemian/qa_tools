@@ -160,6 +160,47 @@ async function linkTestsToTe(
     }
 }
 
+const RAVEN_IMPORT_STATUS: Record<string, string> = {
+    passed: 'PASS',
+    failed: 'FAIL',
+    skipped: 'SKIPPED',
+};
+
+/** Import execution results into Xray via the raven 2.0 REST API.
+ *  Attaches PASS/FAIL/SKIPPED outcomes to the created Test Execution.
+ *  Fails loud: errors are logged explicitly (never swallowed). */
+export async function importExecutionResults(
+    jiraResource: JiraResourceLike,
+    testExecutionKey: string,
+    matchedResults: Array<{ key: string; status: string; duration: number }>,
+): Promise<void> {
+    if (typeof jiraResource.postToApiRoot !== 'function') {
+        rootLogger.error('Result import (C0) requires postToApiRoot support on the Jira resource; skipping import.');
+        return;
+    }
+    const tests = matchedResults
+        .filter((m) => m.status !== 'skipped')
+        .map((m) => ({
+            testKey: m.key,
+            status: RAVEN_IMPORT_STATUS[m.status] ?? 'TODO',
+            comment: m.status === 'failed' ? 'Failed via qa_tools pipeline' : 'Passed via qa_tools pipeline',
+        }));
+    if (tests.length === 0) return;
+
+    const payload = {
+        info: { testExecutionKey },
+        tests,
+    };
+
+    try {
+        rootLogger.info('Importando resultados de execução (raven 2.0) para ' + testExecutionKey + '...');
+        await jiraResource.postToApiRoot('rest/raven/2.0/api/import/execution/json', payload);
+        rootLogger.info('Resultados importados para Xray: ' + testExecutionKey);
+    } catch (err) {
+        rootLogger.error('Falha ao importar resultados para Xray (' + testExecutionKey + '): ' + formatErr(err));
+    }
+}
+
 async function createTestExecutionFromResults(opts: CreateTeOpts): Promise<TestExecResult> {
     const { testKeys } = _buildExecutionPayload(opts.matchedResults, opts.csvName, opts.pipelineInfo);
 
@@ -184,6 +225,10 @@ async function createTestExecutionFromResults(opts: CreateTeOpts): Promise<TestE
         if (te && te.key && opts.matchedResults.length > 0) {
             await linkTestsToTe(opts.matchedResults, te, opts.linkManager);
         }
+    }
+
+    if (te && te.key) {
+        await importExecutionResults(opts.jiraResource, te.key, opts.matchedResults);
     }
 
     const passed = opts.matchedResults.filter((m) => m.status === 'passed').length;

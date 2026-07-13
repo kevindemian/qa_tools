@@ -123,6 +123,7 @@ const mockJiraResource = {
     addTasksToSprint: vi.fn(),
     putJiraResource: vi.fn(),
     getFromOriginPath: vi.fn(),
+    postToApiRoot: vi.fn(),
 };
 
 const mockSessionContext: SessionContext = Object.assign(new SessionContext(), {
