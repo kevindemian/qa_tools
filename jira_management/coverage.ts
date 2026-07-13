@@ -2,6 +2,7 @@
 import { formatErr } from '../shared/errors.js';
 import type { JsonObject } from '../shared/types.js';
 import { rootLogger } from '../shared/logger.js';
+import Config from '../shared/config.js';
 import type JiraResource from './jira_resource.js';
 
 interface CoverageResult {
@@ -26,6 +27,18 @@ function getEpicFromIssue(fields: JsonObject): string | null {
 function issueHasSteps(fields: JsonObject): boolean {
     const steps = fields['steps'];
     return Array.isArray(steps) && steps.length > 0;
+}
+
+/** Cloud (Xray for Jira) stores steps in Xray, not the Jira `steps` field.
+ *  Query the raven 2.0 steps endpoint. Errors are reported explicitly (never silent). */
+async function issueHasStepsCloud(jiraResource: JiraResource, key: string): Promise<boolean> {
+    try {
+        const data = await jiraResource.getFromOriginPath<Array<unknown>>('rest/raven/2.0/api/test/' + key + '/steps');
+        return Array.isArray(data) && data.length > 0;
+    } catch (err) {
+        rootLogger.warn('Cloud coverage: não foi possível obter steps de ' + key + ': ' + formatErr(err));
+        return false;
+    }
 }
 
 function trackUnmappedIssue(issue: { key: string; fields: JsonObject }, gapsByEpicMap: Map<string, string[]>): void {
@@ -61,9 +74,16 @@ export async function analyzeCoverage(jiraResource: JiraResource, project: strin
     const gapsByEpicMap = new Map<string, string[]>();
     let mappedCount = 0;
     let totalStepCount = 0;
+    let isCloud: boolean;
+    try {
+        isCloud = Config.getDefault().get('jiraMode') === 'cloud';
+    } catch {
+        isCloud = false;
+    }
 
     for (const issue of issues) {
-        if (issueHasSteps(issue.fields)) {
+        const hasSteps = isCloud ? await issueHasStepsCloud(jiraResource, issue.key) : issueHasSteps(issue.fields);
+        if (hasSteps) {
             mappedCount++;
             const steps = issue.fields['steps'];
             if (Array.isArray(steps)) totalStepCount += steps.length;

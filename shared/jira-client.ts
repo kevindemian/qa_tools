@@ -12,7 +12,9 @@ import { formatErr } from './errors.js';
 import { createHttpClient } from './http-client.js';
 import { extractErrorMessage } from './prompt.js';
 import { rootLogger } from './logger.js';
-import { createJiraAuthHeader, type JiraMode } from './jira-auth.js';
+import { createJiraAuthHeader, isAtlassianCloudGateway, type JiraMode } from './jira-auth.js';
+import { parseProxyUrl, resolveProxyUrl } from './proxy-config.js';
+import Config from './config.js';
 import { checkCircuitBreaker, recordCircuitFailure, recordCircuitSuccess } from './circuit-breaker.js';
 import type { JsonObject, JiraResourceLike, SearchIssuesResponse } from './types.js';
 
@@ -41,10 +43,59 @@ class JiraClient implements JiraResourceLike {
             rootLogger.debug('Failed to parse Jira base URL: ' + (err instanceof Error ? err.message : String(err)));
             this.originUrl = '';
         }
+
+        const gateway = isAtlassianCloudGateway(baseUrl);
+        let effectiveToken = personalToken;
+        if (this.jiraMode === 'cloud' && !gateway) {
+            let email: string | undefined;
+            try {
+                email = Config.getDefault().get('jiraUserEmail');
+            } catch {
+                email = undefined;
+            }
+            if (email && !personalToken.includes(':')) {
+                effectiveToken = `${email}:${personalToken}`;
+            }
+        }
+        const scheme: 'auto' | 'bearer' | 'basic' = gateway ? 'bearer' : 'auto';
         this.axiosInstance = createHttpClient({
             baseUrl,
-            authHeader: createJiraAuthHeader(personalToken, this.jiraMode),
+            authHeader: createJiraAuthHeader(effectiveToken, this.jiraMode, scheme),
         });
+
+        let configured: string | undefined;
+        try {
+            configured = Config.getDefault().get('proxyUrl');
+        } catch {
+            configured = undefined;
+        }
+        const resolved = resolveProxyUrl(configured);
+        if (resolved) {
+            try {
+                this.axiosInstance.defaults.proxy = parseProxyUrl(resolved);
+                rootLogger.debug('Egress proxy applied to Jira client: ' + resolved);
+            } catch (err) {
+                rootLogger.error('Invalid proxy configuration for ' + baseUrl + ': ' + formatErr(err));
+                throw err;
+            }
+        }
+    }
+
+    /** POST to an absolute URL rooted at the Jira API root (base URL with
+     *  `/rest/api/2` stripped). Enables Cloud-specific endpoints such as
+     *  `/rest/agile/1.0/...` that live outside the `/rest/api/2` namespace. */
+    async postToApiRoot(relativePath: string, data: unknown): Promise<JsonObject | null> {
+        const root = this.baseUrl.replace(/\/rest\/api\/2\/?$/i, '');
+        const url = root + '/' + relativePath.replace(/^\//, '');
+        try {
+            const response = await this.axiosInstance.post<JsonObject>(url, data);
+            return response.status === 204 ? null : response.data;
+        } catch (err: unknown) {
+            const axiosErr = err as { response?: { status?: number }; code?: string };
+            if (!axiosErr.response) recordCircuitFailure('jira-client');
+            rootLogger.error('POST ' + url + ' failed: ' + formatErr(err));
+            throw err;
+        }
     }
 
     async getJiraResource<T = JsonObject>(resourceUrl: string): Promise<T> {

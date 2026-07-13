@@ -2,6 +2,7 @@
 import { formatErr } from '../shared/errors.js';
 import { rootLogger } from '../shared/logger.js';
 import { success, info, withSpinner } from '../shared/prompt.js';
+import Config from '../shared/config.js';
 import type { JiraResourceLike } from '../shared/types.js';
 import type JiraLinkManager from './jira_link_manager.js';
 import {
@@ -17,13 +18,22 @@ interface TestExecutionResult {
     summary: string;
 }
 
-class TestExecutionCreator {
+export class TestExecutionCreator {
     jiraResource: JiraResourceLike;
     linkManager: JiraLinkManager;
 
     constructor(jiraResource: JiraResourceLike, linkManager: JiraLinkManager) {
         this.jiraResource = jiraResource;
         this.linkManager = linkManager;
+    }
+
+    /** True when running against Jira Cloud (Xray Cloud app model). */
+    private _isCloud(): boolean {
+        try {
+            return Config.getDefault().get('jiraMode') === 'cloud';
+        } catch {
+            return false;
+        }
     }
 
     /** Search for an existing Test Execution with matching summary to ensure idempotency.
@@ -63,16 +73,17 @@ class TestExecutionCreator {
         if (!issueType) return null;
 
         const testField = await this._resolveTestField();
-        if (!testField) return null;
+        if (!testField && !this._isCloud()) return null;
 
-        const payload: JsonObject = {
-            fields: {
-                project: { key: projectName },
-                summary,
-                issuetype: { id: issueType.id },
-                [testField.id]: testKeys,
-            },
+        const fields: JsonObject = {
+            project: { key: projectName },
+            summary,
+            issuetype: { id: issueType.id },
         };
+        if (testField) {
+            fields[testField.id] = testKeys;
+        }
+        const payload: JsonObject = { fields };
 
         const created = await this.jiraResource.postJiraResource<JsonObject>('issue', payload);
         success('Test Execution criado: ' + String(created['key']) + ' — ' + summary);
@@ -109,6 +120,12 @@ class TestExecutionCreator {
     }
 
     private async _resolveTestField(): Promise<{ id: string } | null> {
+        if (this._isCloud()) {
+            rootLogger.info(
+                'Cloud mode: Xray Cloud stores Test associations natively (issue links). Skipping Server custom field lookup.',
+            );
+            return null;
+        }
         const execLog = rootLogger.child({ operation: 'create-testexec' });
         execLog.info('Descobrindo custom field para tests...');
         const fields =
@@ -206,19 +223,22 @@ class TestExecutionCreator {
         const testField = fields.find(
             (f) => f.schema?.custom === 'com.xpandit.plugins.xray:testexec-tests-custom-field',
         );
-        if (!testField) {
+
+        if (testField) {
+            const currentTests = (teIssue.fields as Record<string, unknown>)[testField.id] as string[] | undefined;
+            const merged = [...new Set([...(currentTests || []), ...testKeys])];
+
+            const payload: JsonObject = {};
+            payload[testField.id] = merged;
+            await this.jiraResource.putJiraResource('issue/' + teKey, { fields: payload });
+
+            execLog.info('Tests adicionados à TE: ' + teKey + ' (' + merged.length + ' total)');
+        } else if (!this._isCloud()) {
             rootLogger.error(CUSTOM_FIELD_NOT_FOUND);
             return null;
+        } else {
+            execLog.info('Cloud mode: associando testes à TE via issue links (Xray Cloud nativo).');
         }
-
-        const currentTests = (teIssue.fields as Record<string, unknown>)[testField.id] as string[] | undefined;
-        const merged = [...new Set([...(currentTests || []), ...testKeys])];
-
-        const payload: JsonObject = {};
-        payload[testField.id] = merged;
-        await this.jiraResource.putJiraResource('issue/' + teKey, { fields: payload });
-
-        execLog.info('Tests adicionados à TE: ' + teKey + ' (' + merged.length + ' total)');
 
         const { linked, failed } = await this._linkTestsToExecution(teKey, testKeys);
 
