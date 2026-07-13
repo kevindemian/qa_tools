@@ -24,7 +24,8 @@ export class XrayCloudClient {
 
     constructor(baseUrl?: string) {
         this.baseUrl = baseUrl ?? Config.getDefault().get('xrayCloudUrl');
-        this.httpClient = createThrottledClient({ baseUrl: this.baseUrl, maxConcurrency: 3 });
+        const proxyUrl = Config.getDefault().get('proxyUrl');
+        this.httpClient = createThrottledClient({ baseUrl: this.baseUrl, maxConcurrency: 3, proxyUrl });
     }
 
     /** Authenticate with Xray Cloud and cache the token.
