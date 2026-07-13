@@ -1,10 +1,16 @@
 vi.mock('../shared/prompt', () => ({
     info: vi.fn(),
     warn: vi.fn(),
+    extractErrorMessage: vi.fn((err: unknown) => String(err)),
 }));
 
 vi.mock('../shared/logger', () => ({
     rootLogger: { info: vi.fn(), warn: vi.fn(), error: vi.fn() },
+}));
+
+const mockConfigGet = vi.fn<(key: string) => string | undefined>();
+vi.mock('../shared/config', () => ({
+    default: { getDefault: () => ({ get: (key: string) => mockConfigGet(key) }) },
 }));
 
 import { PreconditionHandler } from './precondition-importer.js';
@@ -23,6 +29,7 @@ describe('PreconditionHandler', () => {
 
     beforeEach(() => {
         vi.clearAllMocks();
+        mockConfigGet.mockReturnValue(undefined);
         mockJiraResource = {
             getJiraResource: vi.fn(),
             postJiraResource: vi.fn(),

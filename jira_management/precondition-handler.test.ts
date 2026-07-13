@@ -8,11 +8,17 @@ vi.mock('../shared/logger', () => ({
     rootLogger: { info: vi.fn(), warn: vi.fn(), error: vi.fn() },
 }));
 
+const mockConfigGet = vi.fn<(key: string) => string | undefined>();
+vi.mock('../shared/config', () => ({
+    default: { getDefault: () => ({ get: (key: string) => mockConfigGet(key) }) },
+}));
+
 import {
     PreconditionHandler,
     matchPreconditionByTokenOverlap,
     matchPreconditionByDualThreshold,
 } from './precondition-handler.js';
+import type JiraLinkManager from './jira_link_manager.js';
 
 describe('PreconditionHandler', () => {
     let mockJiraResource: {
@@ -27,6 +33,7 @@ describe('PreconditionHandler', () => {
 
     beforeEach(() => {
         vi.clearAllMocks();
+        mockConfigGet.mockReturnValue(undefined);
         mockJiraResource = {
             getJiraResource: vi.fn(),
             postJiraResource: vi.fn(),
@@ -434,5 +441,70 @@ describe('MatchPreconditionByDualThreshold', () => {
         const result = matchPreconditionByDualThreshold('Network connectivity must be available', candidates);
 
         expect(result.matchType).toBe('create');
+    });
+});
+
+describe('PreconditionHandler (Cloud mode)', () => {
+    let mockJiraResource: {
+        getJiraResource: Mock;
+        postJiraResource: Mock;
+        putJiraResource: Mock;
+        searchJiraIssues: Mock;
+        getTransitionsForIssue: Mock;
+        transitionIssue: Mock;
+    };
+    let mockLinkManager: JiraLinkManager;
+    let createIssueLinkMock: Mock;
+    let handler: PreconditionHandler;
+
+    beforeEach(() => {
+        vi.clearAllMocks();
+        mockConfigGet.mockImplementation((key: string) => (key === 'jiraMode' ? 'cloud' : undefined));
+        mockJiraResource = {
+            getJiraResource: vi.fn(),
+            postJiraResource: vi.fn(),
+            putJiraResource: vi.fn(),
+            searchJiraIssues: vi.fn(),
+            getTransitionsForIssue: vi.fn(),
+            transitionIssue: vi.fn(),
+        };
+        createIssueLinkMock = vi.fn().mockResolvedValue(undefined);
+        mockLinkManager = { createIssueLink: createIssueLinkMock } as unknown as JiraLinkManager;
+        handler = new PreconditionHandler(mockJiraResource, mockLinkManager);
+    });
+
+    it('associates precondition via issue link and returns null', async () => {
+        expect.hasAssertions();
+
+        const result = await handler.associatePrecondition('TEST-1', 'PRE-1');
+
+        expect(result).toBeNull();
+        expect(createIssueLinkMock).toHaveBeenCalledTimes(1);
+        expect(createIssueLinkMock).toHaveBeenCalledWith('TEST-1', 'PRE-1', 'Pre-Condition');
+        expect(mockJiraResource.putJiraResource).not.toHaveBeenCalled();
+    });
+
+    it('does not use the Server custom field in cloud mode', async () => {
+        expect.hasAssertions();
+
+        await handler.associatePrecondition('TEST-1', 'PRE-1');
+
+        expect(mockJiraResource.getJiraResource).not.toHaveBeenCalled();
+    });
+
+    it('throws when no link manager is provided in cloud mode', async () => {
+        expect.hasAssertions();
+
+        const orphan = new PreconditionHandler(mockJiraResource);
+
+        await expect(orphan.associatePrecondition('TEST-1', 'PRE-1')).rejects.toThrow(/JiraLinkManager/);
+    });
+
+    it('throws when resolving the Server precondition field id in cloud mode', async () => {
+        expect.hasAssertions();
+
+        await expect(handler._getPreconditionFieldId()).rejects.toThrow(
+            /does not use the Jira Server precondition custom field/,
+        );
     });
 });
