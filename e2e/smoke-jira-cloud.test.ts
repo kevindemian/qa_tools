@@ -7,9 +7,10 @@
  */
 
 import Config from '../shared/config.js';
-import { createJiraAuthHeader } from '../shared/jira-auth.js';
+import { createJiraAuthHeader, isAtlassianCloudGateway } from '../shared/jira-auth.js';
 import type JiraClientType from '../shared/jira-client.js';
 import { CONFIG_SCHEMA } from '../shared/config-schema.js';
+import { resolveProxyUrl } from '../shared/proxy-config.js';
 
 const mockCreateHttpClient = vi.fn(() => ({
     get: vi.fn().mockResolvedValue({ data: {} }),
@@ -89,6 +90,46 @@ describe('Smoke Jira Cloud', () => {
 
             expect(f?.defaultVal).toBe('server');
             expect(f?.description).toMatch(/server.*cloud/i);
+        });
+
+        it.runIf(process.env['JIRA_MODE'] === 'cloud')('detects Atlassian Cloud gateway URL', () => {
+            expect(isAtlassianCloudGateway('https://api.atlassian.com/ex/jira/abc123/rest/api/2')).toBeTruthy();
+            expect(isAtlassianCloudGateway('https://example.atlassian.net/rest/api/2')).toBeFalsy();
+            expect(isAtlassianCloudGateway('https://jira.corp.cloud.int/rest/api/2')).toBeFalsy();
+        });
+
+        it.runIf(process.env['JIRA_MODE'] === 'cloud')(
+            'createJiraAuthHeader produces Bearer auth for gateway service-account scheme',
+            () => {
+                const header = createJiraAuthHeader('svc-account-token', 'cloud', 'bearer');
+
+                expect(header.Authorization).toMatch(/^Bearer /);
+                expect(header.Authorization).toBe('Bearer svc-account-token');
+            },
+        );
+
+        it.runIf(process.env['JIRA_MODE'] === 'cloud')('resolves egress proxy from HTTPS_PROXY config', () => {
+            const saved: Record<string, string | undefined> = {
+                QA_PROXY_URL: process.env['QA_PROXY_URL'],
+                HTTPS_PROXY: process.env['HTTPS_PROXY'],
+                HTTP_PROXY: process.env['HTTP_PROXY'],
+                https_proxy: process.env['https_proxy'],
+                http_proxy: process.env['http_proxy'],
+            };
+            process.env['HTTPS_PROXY'] = 'https://corp-proxy.internal:8080';
+            delete process.env['HTTP_PROXY'];
+            delete process.env['https_proxy'];
+            delete process.env['http_proxy'];
+            delete process.env['QA_PROXY_URL'];
+            try {
+                expect(resolveProxyUrl()).toBe('https://corp-proxy.internal:8080');
+            } finally {
+                for (const key of Object.keys(saved)) {
+                    const value = saved[key];
+                    if (value === undefined) delete process.env[key];
+                    else process.env[key] = value;
+                }
+            }
         });
     });
 });

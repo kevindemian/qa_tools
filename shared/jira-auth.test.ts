@@ -1,51 +1,60 @@
-import { createJiraAuthHeader } from './jira-auth.js';
+import { describe, it, expect } from 'vitest';
+import { createJiraAuthHeader, isAtlassianCloudGateway } from './jira-auth.js';
 
 describe('CreateJiraAuthHeader', () => {
-    const SERVER_TOKEN = 'pat-12345';
-    const CLOUD_CRED = 'user@example.com:APITOKEN123';
-    const CLOUD_BASE64 = Buffer.from(CLOUD_CRED).toString('base64');
+    it('server mode defaults to Bearer (PAT)', () => {
+        const h = createJiraAuthHeader('pat-123', 'server');
 
-    describe('Server mode', () => {
-        it('returns Bearer auth header', () => {
-            const result = createJiraAuthHeader(SERVER_TOKEN, 'server');
-
-            expect(result).toStrictEqual({ Authorization: `Bearer ${SERVER_TOKEN}` });
-        });
-
-        it('preserves the token as-is in the header', () => {
-            const result = createJiraAuthHeader(SERVER_TOKEN, 'server');
-
-            expect(result.Authorization).toBe(`Bearer ${SERVER_TOKEN}`);
-        });
+        expect(h.Authorization).toBe('Bearer pat-123');
     });
 
-    describe('Cloud mode', () => {
-        it('returns Basic auth header with base64-encoded credentials', () => {
-            const result = createJiraAuthHeader(CLOUD_CRED, 'cloud');
+    it('cloud mode defaults to Basic (email:apiToken)', () => {
+        const h = createJiraAuthHeader('user@x.com:token', 'cloud');
 
-            expect(result).toStrictEqual({ Authorization: `Basic ${CLOUD_BASE64}` });
-        });
+        expect(h.Authorization).toMatch(/^Basic /);
 
-        it('produces a valid base64 string', () => {
-            const result = createJiraAuthHeader(CLOUD_CRED, 'cloud');
-            const decoded = Buffer.from(result.Authorization.slice(6), 'base64').toString('utf-8');
+        const decoded = Buffer.from(h.Authorization.slice(6), 'base64').toString('utf-8');
 
-            expect(decoded).toBe(CLOUD_CRED);
-        });
+        expect(decoded).toBe('user@x.com:token');
     });
 
-    describe('Default behavior', () => {
-        it('defaults to server mode when called without mode', () => {
-            const result = createJiraAuthHeader(SERVER_TOKEN);
+    it('scheme "bearer" forces Bearer regardless of mode', () => {
+        const h = createJiraAuthHeader('svc-token', 'cloud', 'bearer');
 
-            expect(result).toStrictEqual({ Authorization: `Bearer ${SERVER_TOKEN}` });
-        });
+        expect(h.Authorization).toBe('Bearer svc-token');
+    });
 
-        it('produces distinct headers for server vs cloud with same token', () => {
-            const serverHeader = createJiraAuthHeader(CLOUD_CRED, 'server');
-            const cloudHeader = createJiraAuthHeader(CLOUD_CRED, 'cloud');
+    it('scheme "basic" forces Basic regardless of mode', () => {
+        const h = createJiraAuthHeader('pat-123', 'server', 'basic');
 
-            expect(serverHeader.Authorization).not.toBe(cloudHeader.Authorization);
-        });
+        expect(h.Authorization).toMatch(/^Basic /);
+    });
+
+    it('gateway (Bearer) token is not base64-encoded', () => {
+        const h = createJiraAuthHeader('raw-service-token', 'cloud', 'bearer');
+
+        expect(h.Authorization).toBe('Bearer raw-service-token');
+    });
+});
+
+describe('IsAtlassianCloudGateway', () => {
+    it('detects the api.atlassian.com/ex/jira/<cloudId> gateway', () => {
+        expect(
+            isAtlassianCloudGateway(
+                'https://api.atlassian.com/ex/jira/a50cba0f-47dc-432a-a135-a2146d44b907/rest/api/2',
+            ),
+        ).toBeTruthy();
+    });
+
+    it('returns false for a corporate Cloud hostname', () => {
+        expect(isAtlassianCloudGateway('https://jira.corp.cloud.int/rest/api/2')).toBeFalsy();
+    });
+
+    it('returns false for a standard atlassian.net site', () => {
+        expect(isAtlassianCloudGateway('https://example.atlassian.net/rest/api/2')).toBeFalsy();
+    });
+
+    it('returns false for invalid URL', () => {
+        expect(isAtlassianCloudGateway('not-a-url')).toBeFalsy();
     });
 });

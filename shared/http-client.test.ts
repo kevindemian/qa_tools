@@ -27,6 +27,19 @@ import { rootLogger } from './logger.js';
 import { HostSemaphore } from './host-semaphore.js';
 import axios from 'axios';
 import { nonNull } from './test-utils.js';
+import { parseProxyUrl, resolveProxyUrl } from './proxy-config.js';
+
+/** Restore proxy env vars without coercing `undefined` into the string `'undefined'`.
+ *  `process.env[key] = undefined` silently converts to the literal string `'undefined'`,
+ *  which would poison `resolveProxyUrl` in later tests. Only assign defined values. */
+const PROXY_ENV_KEYS = ['HTTPS_PROXY', 'HTTP_PROXY', 'https_proxy', 'http_proxy', 'QA_PROXY_URL'];
+function restoreProxyEnv(saved: Record<string, string | undefined>): void {
+    for (const key of PROXY_ENV_KEYS) {
+        const value = saved[key];
+        if (value === undefined) delete process.env[key];
+        else process.env[key] = value;
+    }
+}
 
 describe('HTTP Client', () => {
     let httpClient: typeof import('./http-client.js');
@@ -103,6 +116,154 @@ describe('HTTP Client', () => {
             await expect(promise).resolves.toBeUndefined();
 
             httpClient.setTestSleep(() => Promise.resolve());
+        });
+
+        it('applies parsed proxy config when proxyUrl is provided', () => {
+            const createSpy = vi.spyOn(axios, 'create');
+
+            httpClient.createHttpClient({
+                baseUrl: 'https://api.test.com',
+                proxyUrl: 'ftps://proxy.internal:8080',
+            });
+
+            expect(createSpy).toHaveBeenCalledWith(
+                expect.objectContaining({
+                    proxy: { protocol: 'http', host: 'proxy.internal', port: 8080 },
+                }),
+            );
+        });
+
+        it('throws when proxyUrl cannot be parsed', () => {
+            expect.hasAssertions();
+
+            expect(() =>
+                httpClient.createHttpClient({
+                    baseUrl: 'https://api.test.com',
+                    proxyUrl: 'not-a-valid-url',
+                }),
+            ).toThrow(/Invalid proxy URL/);
+        });
+
+        it('defaults proxy to false when no proxyUrl and no proxy env vars', () => {
+            const saved: Record<string, string | undefined> = {
+                HTTPS_PROXY: process.env['HTTPS_PROXY'],
+                HTTP_PROXY: process.env['HTTP_PROXY'],
+                https_proxy: process.env['https_proxy'],
+                http_proxy: process.env['http_proxy'],
+                QA_PROXY_URL: process.env['QA_PROXY_URL'],
+            };
+            delete process.env['HTTPS_PROXY'];
+            delete process.env['HTTP_PROXY'];
+            delete process.env['https_proxy'];
+            delete process.env['http_proxy'];
+            delete process.env['QA_PROXY_URL'];
+            try {
+                const createSpy = vi.spyOn(axios, 'create');
+
+                httpClient.createHttpClient({ baseUrl: 'https://api.test.com' });
+
+                expect(createSpy).toHaveBeenCalledWith(expect.objectContaining({ proxy: false }));
+            } finally {
+                restoreProxyEnv(saved);
+            }
+        });
+
+        it('falls back to HTTPS_PROXY env var when proxyUrl is omitted', () => {
+            const saved: Record<string, string | undefined> = {
+                HTTPS_PROXY: process.env['HTTPS_PROXY'],
+                HTTP_PROXY: process.env['HTTP_PROXY'],
+                https_proxy: process.env['https_proxy'],
+                http_proxy: process.env['http_proxy'],
+                QA_PROXY_URL: process.env['QA_PROXY_URL'],
+            };
+            delete process.env['HTTP_PROXY'];
+            delete process.env['https_proxy'];
+            delete process.env['http_proxy'];
+            delete process.env['QA_PROXY_URL'];
+            process.env['HTTPS_PROXY'] = 'ftps://envproxy.corp:3128';
+            try {
+                const createSpy = vi.spyOn(axios, 'create');
+
+                httpClient.createHttpClient({ baseUrl: 'https://api.test.com' });
+
+                expect(createSpy).toHaveBeenCalledWith(
+                    expect.objectContaining({
+                        proxy: { protocol: 'http', host: 'envproxy.corp', port: 3128 },
+                    }),
+                );
+            } finally {
+                restoreProxyEnv(saved);
+            }
+        });
+    });
+
+    describe('Proxy config (C-proxy)', () => {
+        const saveProxyEnv = (): Record<string, string | undefined> => {
+            const saved: Record<string, string | undefined> = {};
+            for (const key of PROXY_ENV_KEYS) saved[key] = process.env[key];
+            return saved;
+        };
+
+        it('parseProxyUrl returns protocol/host/port for http', () => {
+            expect(parseProxyUrl('ftps://proxy:8080')).toStrictEqual({
+                protocol: 'http',
+                host: 'proxy',
+                port: 8080,
+            });
+        });
+
+        it('parseProxyUrl returns https protocol and decoded auth when present', () => {
+            const cfg = parseProxyUrl('https://user:pass@proxy:443');
+
+            expect(cfg).toMatchObject({
+                protocol: 'https',
+                host: 'proxy',
+                port: 443,
+                auth: { username: 'user', password: 'pass' },
+            });
+        });
+
+        it('parseProxyUrl defaults port from protocol when omitted', () => {
+            expect(parseProxyUrl('ftps://proxy').port).toBe(80);
+            expect(parseProxyUrl('https://proxy').port).toBe(443);
+        });
+
+        it('parseProxyUrl throws on missing host', () => {
+            expect.hasAssertions();
+            expect(() => parseProxyUrl('ftps://')).toThrow(/Invalid proxy URL/);
+        });
+
+        it('resolveProxyUrl prefers explicit proxy over env vars', () => {
+            const saved = saveProxyEnv();
+            process.env['HTTPS_PROXY'] = 'https://env:1';
+            try {
+                expect(resolveProxyUrl('https://explicit:2')).toBe('https://explicit:2');
+            } finally {
+                restoreProxyEnv(saved);
+            }
+        });
+
+        it('resolveProxyUrl falls back to env proxy vars when explicit omitted', () => {
+            const saved = saveProxyEnv();
+            delete process.env['HTTPS_PROXY'];
+            delete process.env['http_proxy'];
+            delete process.env['QA_PROXY_URL'];
+            process.env['HTTP_PROXY'] = 'https://envfallback:9';
+            try {
+                expect(resolveProxyUrl()).toBe('https://envfallback:9');
+            } finally {
+                restoreProxyEnv(saved);
+            }
+        });
+
+        it('resolveProxyUrl returns undefined when no proxy configured', () => {
+            const saved = saveProxyEnv();
+            for (const key of PROXY_ENV_KEYS) delete process.env[key];
+            try {
+                expect(resolveProxyUrl()).toBeUndefined();
+            } finally {
+                restoreProxyEnv(saved);
+            }
         });
     });
 

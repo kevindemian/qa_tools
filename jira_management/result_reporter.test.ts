@@ -22,8 +22,10 @@ vi.mock('axios', () => ({
 vi.mock('../shared/logger', () => ({
     rootLogger: {
         debug: vi.fn(),
+        info: vi.fn(),
         warn: vi.fn(),
-        child: () => ({ debug: vi.fn(), info: vi.fn(), warn: vi.fn() }),
+        error: vi.fn(),
+        child: () => ({ debug: vi.fn(), info: vi.fn(), warn: vi.fn(), error: vi.fn() }),
     },
     Logger: vi.fn(function () {
         return { error: vi.fn(), warn: vi.fn(), info: vi.fn() };

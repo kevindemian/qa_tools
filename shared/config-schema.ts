@@ -30,7 +30,15 @@ export const CONFIG_SCHEMA: ConfigField[] = [
         envVar: 'JIRA_PERSONAL_TOKEN',
         type: 'string',
         category: 'jira',
-        description: 'Jira personal token (PAT para server, email:apiToken base64 para cloud)',
+        description: 'Jira personal token (PAT para server, apiToken para cloud)',
+    },
+    {
+        key: 'jiraUserEmail',
+        envVar: 'JIRA_USER_EMAIL',
+        type: 'string',
+        category: 'jira',
+        description:
+            'Jira user email (cloud only) — combined with JIRA_PERSONAL_TOKEN as email:apiToken for Basic auth',
     },
     {
         key: 'jiraMode',
@@ -40,6 +48,14 @@ export const CONFIG_SCHEMA: ConfigField[] = [
         category: 'jira',
         allowedValues: ['server', 'cloud'],
         description: 'Jira mode (server|cloud)',
+    },
+    {
+        key: 'proxyUrl',
+        envVar: 'QA_PROXY_URL',
+        type: 'string',
+        category: 'jira',
+        description:
+            'Egress proxy URL (e.g. http://127.0.0.1:9000 for Zscaler). Falls back to HTTPS_PROXY/HTTP_PROXY env',
     },
     { key: 'xrayBaseUrl', envVar: 'XRAY_BASE_URL', type: 'string', category: 'jira', description: 'Xray base URL' },
     {

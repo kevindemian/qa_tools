@@ -1,3 +1,12 @@
+vi.mock('../shared/config', async (importOriginal) => {
+    const mod = await importOriginal<typeof import('../shared/config.js')>();
+    const inst = mod.default.getDefault();
+    const realGet = inst.get.bind(inst);
+    inst.get = ((key: string): string | undefined =>
+        key === 'jiraMode' ? undefined : realGet(key)) as typeof inst.get;
+    return mod;
+});
+
 import nock from 'nock';
 import JiraResource from '../jira_management/jira_resource.js';
 import JiraLinkManager from '../jira_management/jira_link_manager.js';
