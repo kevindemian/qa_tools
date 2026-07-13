@@ -76,6 +76,8 @@ function makeMockPersistence(): DataHubPersistence {
         loadCoverageFiles: vi.fn().mockReturnValue([]),
         savePerformanceMetrics: vi.fn(),
         loadPerformanceMetrics: vi.fn().mockReturnValue(null),
+        savePullRequests: vi.fn(),
+        loadPullRequests: vi.fn().mockReturnValue([]),
         // ─── Test-result cache (SHA-keyed) — owned by DataHub (replaces legacy Store) ─
         loadReport: vi.fn().mockReturnValue(null),
         saveReport: vi.fn(),

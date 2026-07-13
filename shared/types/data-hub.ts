@@ -104,6 +104,8 @@ export interface RawData {
     coverageFiles?: CoverageFile[];
     /** Performance metrics extracted from CI. */
     performanceMetrics?: PerformanceMetrics;
+    /** Pull/merge requests (GitHub PR / GitLab MR) with review state (LA-5). */
+    pullRequests?: RawPullRequest[];
 }
 
 /** CI pipeline run statistics — derived from workflow run artifacts. */
@@ -194,6 +196,38 @@ export interface RawXrayTestExecution {
 export interface RawXrayData {
     testExecutions: RawXrayTestExecution[];
     testRuns: RawXrayTestRun[];
+    /** Requirement coverage (XR-2): requirements linked to tests. */
+    requirementCoverage?: XrayRequirementCoverage[];
+    /** Defects linked to tests (XR-2). */
+    defects?: XrayDefect[];
+}
+
+/** Xray requirement coverage entry (XR-2). */
+export interface XrayRequirementCoverage {
+    /** Requirement/TEST key (e.g. CALC-123). */
+    requirementKey: string;
+    /** Linked test execution/run key. */
+    testKey?: string | undefined;
+    /** Coverage status (COVERED / NOT_COVERED / PARTIALLY). */
+    status: string;
+    /** Linked defects count. */
+    defectsCount?: number | undefined;
+    /** Confidence 0-1 that payload is well-formed. */
+    confidence: number;
+}
+
+/** Xray defect linked to a test (XR-2). */
+export interface XrayDefect {
+    /** Defect id. */
+    id: string;
+    /** Linked test issue key. */
+    testKey?: string | undefined;
+    /** Defect title/summary. */
+    title?: string | undefined;
+    /** Defect status. */
+    status?: string | undefined;
+    /** Confidence 0-1 that payload is well-formed. */
+    confidence: number;
 }
 
 /**
@@ -310,10 +344,36 @@ export interface RawIssue {
     confidence: number;
 }
 
+/** A pull/merge request (GitHub PR / GitLab MR) with review state (LA-5). */
+export interface RawPullRequest {
+    /** Numeric id (GitHub `number` / GitLab `id`). */
+    id: number;
+    /** PR/MR number (GitHub `number`) or GitLab `iid`. */
+    number: number;
+    title?: string | undefined;
+    /** open | closed | merged. */
+    state?: 'open' | 'closed' | 'merged' | undefined;
+    url?: string | undefined;
+    draft?: boolean | undefined;
+    merged?: boolean | undefined;
+    mergedAt?: string | undefined;
+    author?: string | undefined;
+    labels?: string[] | undefined;
+    /** Aggregated review states (approved / changes_requested / requested). */
+    reviewStates?: string[] | undefined;
+    /** Confidence 0-1 that payload is well-formed. */
+    confidence: number;
+}
+
 /** Per-file coverage breakdown. */
 export interface CoverageFile {
     file: string;
-    lines: { total: number; covered: number; percentage: number };
+    /**
+     * Line coverage. `percentage` is omitted (absent) when it is not computable
+     * — i.e. `total === 0` (0/0 is undefined) or the ratio is non-finite. It is
+     * NEVER stored as NaN/Infinity and NEVER fabricated as 0 (AGENTS §24/§25).
+     */
+    lines: { total: number; covered: number; percentage?: number | undefined };
     branches?: { total: number; covered: number; percentage: number } | undefined;
     functions?: { total: number; covered: number; percentage: number } | undefined;
     confidence: number;
@@ -722,8 +782,12 @@ export interface DataHub {
     loadCoverageFiles(): CoverageFile[];
     /** Save performance metrics. Throws if persistence not configured. */
     savePerformanceMetrics(metrics: PerformanceMetrics): void;
-    /** Load latest performance metrics. Throws if persistence not configured. */
+    /** Load latest performance metrics (null when none). */
     loadPerformanceMetrics(): PerformanceMetrics | null;
+    /** Save pull/merge requests. Throws if persistence not configured. */
+    savePullRequests(pullRequests: RawPullRequest[]): void;
+    /** Load all pull/merge requests. */
+    loadPullRequests(): RawPullRequest[];
     /**
      * Quality report for a gated ST-1 category, computed at the ingest boundary.
      * Reflects the trustworthy in-memory model (hub.raw), not the durable store.
@@ -883,6 +947,10 @@ export interface DataHubPersistence {
     savePerformanceMetrics(metrics: PerformanceMetrics): void;
     /** Load latest performance metrics (null when none). */
     loadPerformanceMetrics(): PerformanceMetrics | null;
+    /** Save pull/merge requests. Throws if persistence not configured. */
+    savePullRequests(pullRequests: RawPullRequest[]): void;
+    /** Load all pull/merge requests. */
+    loadPullRequests(): RawPullRequest[];
 
     // ─── Test-result cache (SHA-keyed) — owned by DataHub (replaces legacy Store) ─
     // The persistence layer holds the same Git/FS-backed files the legacy Store used

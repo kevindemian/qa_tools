@@ -220,6 +220,24 @@ export interface GitProvider {
     listDirectory: (path: string, ref?: string) => Promise<DirEntry[] | null>;
     /** Fetch test report for a pipeline (GitLab-specific; GitHub returns null). */
     getTestReport: (pipelineId: string | number) => Promise<GitLabTestReport | null>;
+    /**
+     * LA-3 — Fetch GitLab DORA metrics (`/dora/metrics`, tier ULTIMATE).
+     * Returns null when unavailable (non-ULTIMATE or error). GitHub returns null.
+     */
+    getDoraMetrics?: () => Promise<GitLabDoraRaw | null>;
+    /**
+     * LA-5 — Fetch deployments (GitHub Environments / GitLab deployments).
+     * Optional: providers that don't support it return [].
+     */
+    getDeployments?: () => Promise<GitHubDeploymentRaw[] | GitLabDeploymentRaw[]>;
+    /** LA-5 — Fetch releases/tags. */
+    getReleases?: () => Promise<GitHubReleaseRaw[] | GitLabReleaseRaw[]>;
+    /** LA-5 — Fetch security alerts (code-scanning + secret-scanning). */
+    getSecurityAlerts?: () => Promise<GitHubSecurityAlertRaw[]>;
+    /** LA-5 — Fetch pull requests (reviews/approvals). */
+    getPullRequests?: (state?: string) => Promise<GitHubPullRequestRaw[]>;
+    /** PM-2/PM-3 — Fetch issues (GitHub Issues / GitLab Issues). */
+    getIssues?: (state?: string) => Promise<GitHubIssueRaw[] | GitLabIssueRaw[]>;
     provider: 'gitlab' | 'github';
 }
 
@@ -317,6 +335,123 @@ export interface WorkflowUsage {
     run_duration_ms?: number;
     /** Billable time per runner OS (UBUNTU/MACOS/WINDOWS/...). */
     billable?: Record<string, WorkflowBillable>;
+}
+
+/* ─── Expanded extraction raw shapes (FASE EXPAND + STORE — EIXO A) ───────────
+ * Returned by GitProvider methods and mapped to data-hub types by the
+ * providers. Defined here (not in data-hub.ts) to avoid a circular import
+ * (data-hub.ts already imports ci-cd.ts). Providers own the mapping.
+ */
+
+/** GitHub deployment (LA-5). */
+export interface GitHubDeploymentRaw {
+    id: number;
+    environment?: string | { name?: string };
+    state?: string;
+    sha?: string;
+    ref?: string;
+    created_at?: string;
+    updated_at?: string;
+    html_url?: string;
+}
+
+/** GitHub release/tag (LA-5). */
+export interface GitHubReleaseRaw {
+    id: number;
+    tag_name?: string;
+    draft?: boolean;
+    prerelease?: boolean;
+    created_at?: string;
+    name?: string;
+    published_at?: string;
+    author?: { login?: string };
+    html_url?: string;
+}
+
+/** GitHub code-scanning / secret-scanning security alert (LA-5). */
+export interface GitHubSecurityAlertRaw {
+    number?: number;
+    state?: string;
+    html_url?: string;
+    security_advisory?: {
+        ghsa_id?: string;
+        cve_id?: string;
+        severity?: string;
+        summary?: string;
+        description?: string;
+    };
+    security_vulnerability?: { severity?: string };
+}
+
+/** GitHub pull request (LA-5). */
+export interface GitHubPullRequestRaw {
+    number: number;
+    title?: string;
+    state?: string;
+    html_url?: string;
+    draft?: boolean;
+    merged?: boolean;
+    merged_at?: string;
+    user?: { login?: string };
+    labels?: Array<{ name: string }>;
+    requested_reviewers?: Array<{ login?: string }>;
+    reviews?: Array<{ state?: string; user?: { login?: string } }>;
+}
+
+/** GitHub issue (PM-2). */
+export interface GitHubIssueRaw {
+    number: number;
+    title?: string;
+    state?: string;
+    html_url?: string;
+    user?: { login?: string };
+    labels?: Array<{ name: string }>;
+    created_at?: string;
+    updated_at?: string;
+}
+
+/** GitLab DORA metrics (LA-3). */
+export interface GitLabDoraRaw {
+    lead_time_for_changes?: number;
+    time_to_restore_service?: number;
+    change_failure_rate?: number;
+    deployment_frequency?: number;
+}
+
+/** GitLab deployment (LA-5). */
+export interface GitLabDeploymentRaw {
+    id: number;
+    environment?: { name?: string };
+    status?: string;
+    created_at?: string;
+    updated_at?: string;
+    url?: string;
+    sha?: string;
+    ref?: string;
+}
+
+/** GitLab release (LA-5). */
+export interface GitLabReleaseRaw {
+    id?: number;
+    tag_name?: string;
+    name?: string;
+    released_at?: string;
+    created_at?: string;
+    upcoming?: boolean;
+    _links?: { self?: string };
+}
+
+/** GitLab issue (PM-3). */
+export interface GitLabIssueRaw {
+    id: number;
+    iid?: number;
+    title?: string;
+    state?: string;
+    web_url?: string;
+    author?: { username?: string };
+    labels?: string[];
+    created_at?: string;
+    updated_at?: string;
 }
 
 /** GitLab CI job item. */

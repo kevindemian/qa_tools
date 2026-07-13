@@ -26,6 +26,7 @@ import type {
     RawIssue,
     CoverageFile,
     PerformanceMetrics,
+    RawPullRequest,
     ReportMeta,
     BranchEntry,
 } from '../types/data-hub.js';
@@ -41,6 +42,7 @@ import {
     validateAndScoreCoverageFiles,
     validateAndScoreDoraMetrics,
     validateAndScorePerformanceMetrics,
+    validateAndScorePullRequests,
 } from './quality.js';
 
 const METRICS_FILE = 'metrics/global.json';
@@ -55,6 +57,7 @@ const DORA_FILE = 'metrics/dora-metrics.json';
 const PM_ISSUES_FILE = 'metrics/pm-issues.json';
 const COVERAGE_FILES_FILE = 'metrics/coverage-files.json';
 const PERFORMANCE_FILE = 'metrics/performance-metrics.json';
+const PULL_REQUESTS_FILE = 'metrics/pull-requests.json';
 
 /**
  * Read JSON from the store backend with error handling.
@@ -267,6 +270,12 @@ export function createDataHubPersistence(_project: string, backend?: StoreBacken
         },
         loadPerformanceMetrics(): PerformanceMetrics | null {
             return loadCategoryObject<PerformanceMetrics>(PERFORMANCE_FILE);
+        },
+        savePullRequests(pullRequests: RawPullRequest[]): void {
+            saveCategoryArray(PULL_REQUESTS_FILE, validateAndScorePullRequests(pullRequests).items);
+        },
+        loadPullRequests(): RawPullRequest[] {
+            return loadCategoryArray<RawPullRequest>(PULL_REQUESTS_FILE);
         },
 
         // ─── Test-result cache (SHA-keyed) — owned by DataHub (replaces legacy Store) ─

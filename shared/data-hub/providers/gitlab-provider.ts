@@ -4,7 +4,16 @@
  * Adapts GitLabManager (GitProvider) to the DataProvider interface.
  * Fetches raw CI/CD data from GitLab CI API.
  */
-import type { GitProvider, PipelineJob, ArtifactInfo, GitLabTestReport, PipelineRun } from '../../types/ci-cd.js';
+import type {
+    GitProvider,
+    PipelineJob,
+    ArtifactInfo,
+    GitLabTestReport,
+    PipelineRun,
+    GitLabDeploymentRaw,
+    GitLabReleaseRaw,
+    GitLabIssueRaw,
+} from '../../types/ci-cd.js';
 import type {
     DataProvider,
     FetchOptions,
@@ -13,6 +22,10 @@ import type {
     CiRunStats,
     DataSource,
     FailureRecord,
+    Deployment,
+    Release,
+    RawIssue,
+    DoraMetrics,
 } from '../../types/data-hub.js';
 import type { ArtifactParseResult } from '../artifact-parser.js';
 import { parsePipelineRun, validateRawDataOrThrow } from '../schemas.js';
@@ -100,6 +113,11 @@ export class GitLabDataProvider implements DataProvider {
             provenance,
         };
 
+        // EIXO A (FASE EXPAND+STORE): GitLab-side DORA / deployments / releases / issues.
+        // Only populated when the provider exposes the optional methods (guarded separately
+        // so a missing method on a non-GitLab provider never breaks extraction).
+        await this.collectExpandedData(rawData);
+
         // Gap 1: reject malformed provider output explicitly at the boundary.
         return validateRawDataOrThrow(rawData);
     }
@@ -111,6 +129,119 @@ export class GitLabDataProvider implements DataProvider {
             if (parsed) runs.push(parsed);
         }
         return runs;
+    }
+
+    /**
+     * EIXO A (FASE EXPAND+STORE) — populate raw.doraMetrics / deployments / releases /
+     * pmIssues from GitLab-specific GitProvider methods, but ONLY when each optional
+     * method is actually present on the provider (typeof === 'function'). Each category
+     * is guarded independently so a missing method never breaks the others. Each populated
+     * category records a provenance entry at confidence 0.9.
+     */
+    private async collectExpandedData(rawData: RawData): Promise<void> {
+        const now = new Date().toISOString();
+        const provenance = rawData.provenance ?? new Map<string, DataSource>();
+        rawData.provenance = provenance;
+
+        await this.collectDora(rawData, provenance, now);
+        await this.collectDeployments(rawData, provenance, now);
+        await this.collectReleases(rawData, provenance, now);
+        await this.collectPmIssues(rawData, provenance, now);
+    }
+
+    /** LA-3 — map GitLabDoraRaw → DoraMetrics. Non-finite values are omitted (never coerced). */
+    private async collectDora(rawData: RawData, provenance: Map<string, DataSource>, now: string): Promise<void> {
+        if (typeof this.provider.getDoraMetrics !== 'function') return;
+        const doraRaw = await this.provider.getDoraMetrics();
+        if (doraRaw == null) return;
+
+        const dora: DoraMetrics = { source: 'gitlab', confidence: 0.9 };
+        if (Number.isFinite(doraRaw.deployment_frequency)) dora.deploymentFrequency = doraRaw.deployment_frequency;
+        if (Number.isFinite(doraRaw.lead_time_for_changes)) dora.leadTimeForChanges = doraRaw.lead_time_for_changes;
+        if (Number.isFinite(doraRaw.time_to_restore_service)) dora.meanTimeToRecovery = doraRaw.time_to_restore_service;
+        if (Number.isFinite(doraRaw.change_failure_rate)) dora.changeFailureRate = doraRaw.change_failure_rate;
+
+        rawData.doraMetrics = dora;
+        provenance.set('doraMetrics', { confidence: 0.9, source: 'gitlab-api', timestamp: now });
+    }
+
+    /** LA-5 — map GitLabDeploymentRaw[] → Deployment[]. */
+    private async collectDeployments(
+        rawData: RawData,
+        provenance: Map<string, DataSource>,
+        now: string,
+    ): Promise<void> {
+        if (typeof this.provider.getDeployments !== 'function') return;
+        const deploysRaw = (await this.provider.getDeployments()) as GitLabDeploymentRaw[];
+        const deployments: Deployment[] = [];
+        for (const d of deploysRaw) {
+            deployments.push({
+                id: String(d.id),
+                environment: d.environment?.name ?? '',
+                status: d.status ?? '',
+                sha: d.sha,
+                ref: d.ref,
+                createdAt: d.created_at ?? '',
+                updatedAt: d.updated_at,
+                url: d.url,
+                confidence: 0.9,
+            });
+        }
+        if (deployments.length > 0) {
+            rawData.deployments = deployments;
+            provenance.set('deployments', { confidence: 0.9, source: 'gitlab-api', timestamp: now });
+        }
+    }
+
+    /** LA-5 — map GitLabReleaseRaw[] → Release[]. */
+    private async collectReleases(rawData: RawData, provenance: Map<string, DataSource>, now: string): Promise<void> {
+        if (typeof this.provider.getReleases !== 'function') return;
+        const releasesRaw = (await this.provider.getReleases()) as GitLabReleaseRaw[];
+        const releases: Release[] = [];
+        for (const r of releasesRaw) {
+            releases.push({
+                id: r.id != null ? String(r.id) : (r.tag_name ?? ''),
+                tag: r.tag_name ?? '',
+                draft: false,
+                prerelease: Boolean(r.upcoming),
+                createdAt: r.released_at ?? r.created_at ?? '',
+                name: r.name,
+                url: r._links?.self,
+                confidence: 0.9,
+            });
+        }
+        if (releases.length > 0) {
+            rawData.releases = releases;
+            provenance.set('releases', { confidence: 0.9, source: 'gitlab-api', timestamp: now });
+        }
+    }
+
+    /** PM-3 — map GitLabIssueRaw[] → RawIssue[]. Issues missing id/title/state are dropped. */
+    private async collectPmIssues(rawData: RawData, provenance: Map<string, DataSource>, now: string): Promise<void> {
+        if (typeof this.provider.getIssues !== 'function') return;
+        const issuesRaw = (await this.provider.getIssues()) as GitLabIssueRaw[];
+        const pmIssues: RawIssue[] = [];
+        for (const i of issuesRaw) {
+            const rawId = (i as { id?: number | null }).id;
+            if (rawId == null || !i.title || !i.state) continue;
+            pmIssues.push({
+                source: 'gitlab',
+                id: String(rawId),
+                key: i.iid,
+                title: i.title,
+                state: i.state,
+                author: i.author?.username,
+                labels: i.labels || [],
+                createdAt: i.created_at ?? '',
+                updatedAt: i.updated_at,
+                url: i.web_url,
+                confidence: 0.9,
+            });
+        }
+        if (pmIssues.length > 0) {
+            rawData.pmIssues = pmIssues;
+            provenance.set('pmIssues', { confidence: 0.9, source: 'gitlab-api', timestamp: now });
+        }
     }
 
     private async collectFromRuns(

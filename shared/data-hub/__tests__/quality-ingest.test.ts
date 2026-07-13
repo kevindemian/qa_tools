@@ -108,7 +108,7 @@ describe('GateRawData: object categories', () => {
 });
 
 describe('GateRawData: quality map shape', () => {
-    it('exposes all 8 category reports', () => {
+    it('exposes all 9 category reports', () => {
         const { quality } = gateRawData(baseRaw());
 
         const keys = Object.keys(quality) as QualityCategory[];
@@ -122,6 +122,7 @@ describe('GateRawData: quality map shape', () => {
             'coverageFiles',
             'doraMetrics',
             'performanceMetrics',
+            'pullRequests',
         ]);
     });
 });

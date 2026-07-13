@@ -134,6 +134,9 @@ async function buildDataProviders(provider: GitProvider): Promise<DataProvider[]
         dataProviders.push(new GitHubDataProvider(provider));
     }
 
+    const { CoverageDataProvider } = await import('./providers/coverage-provider.js');
+    dataProviders.push(new CoverageDataProvider('', provider));
+
     const xrayClientId = Config.get('xrayClientId');
     const xrayClientSecret = Config.get('xrayClientSecret');
     const jiraProject = Config.get('jiraProject');
