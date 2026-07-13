@@ -1,6 +1,13 @@
 import { createHttpClient } from '../shared/http-client.js';
 import { createMockAxiosInstance } from '../shared/test-utils/factories/response-factory.js';
 
+vi.mock('../shared/config', () => ({
+    default: {
+        get: () => undefined,
+        getDefault: () => ({ get: () => undefined }),
+    },
+}));
+
 vi.mock('../shared/http-client', () => ({ createHttpClient: vi.fn() }));
 
 vi.mock('../shared/logger', () => ({

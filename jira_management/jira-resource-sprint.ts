@@ -1,6 +1,7 @@
 /** Jira sprint management: add tasks to active sprint. */
 import { formatErr } from '../shared/errors.js';
 import { success, info, warn, extractErrorMessage } from '../shared/prompt.js';
+import Config from '../shared/config.js';
 import type { JiraResourceLike } from './jira-resource-types.js';
 import {
     addingTasksToSprint,
@@ -23,10 +24,20 @@ interface TransitionData {
 
 export async function addTasksToSprint(resource: JiraResourceLike, taskIds: string[], sprintId: string): Promise<void> {
     const payload = { issues: taskIds };
+    const isCloud = Config.getDefault().get('jiraMode') === 'cloud';
 
     try {
         info(addingTasksToSprint(taskIds.length, sprintId));
-        await resource.postJiraResource(`sprint/${sprintId}/issue`, payload);
+        if (isCloud) {
+            if (typeof resource.postToApiRoot !== 'function') {
+                throw new Error(
+                    'Jira Cloud sprint association requires postToApiRoot (Cloud agile API). Resource does not support it.',
+                );
+            }
+            await resource.postToApiRoot(`rest/agile/1.0/sprint/${sprintId}/issue`, payload);
+        } else {
+            await resource.postJiraResource(`sprint/${sprintId}/issue`, payload);
+        }
         success(TASKS_ADDED_TO_SPRINT);
     } catch (err: unknown) {
         const axiosErr = err as { response?: { status?: number } };

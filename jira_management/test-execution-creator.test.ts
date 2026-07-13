@@ -11,9 +11,14 @@ vi.mock('../shared/logger', () => ({
 vi.mock('../shared/prompt', () => ({
     success: vi.fn(),
     info: vi.fn(),
+    extractErrorMessage: vi.fn((err: unknown) => String(err)),
     withSpinner: vi.fn(async (_label: string, fn: () => Promise<void>) => {
         await fn();
     }),
+}));
+
+vi.mock('../shared/config', () => ({
+    default: { getDefault: () => ({ get: () => undefined }) },
 }));
 
 import { createMockJiraResource } from '../shared/test-utils/factories/jira-resource-factory.js';

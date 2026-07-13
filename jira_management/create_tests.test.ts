@@ -24,10 +24,20 @@ const mockPrompt = vi.hoisted(() => ({
         .mockImplementation(async (_label: string, fn: () => Promise<void>) => fn()),
     print: vi.fn<(...args: [string]) => void>(),
     askFilePath: vi.fn<(...args: [string]) => Promise<string>>().mockResolvedValue('/fake/path.json'),
+    extractErrorMessage: vi.fn<(...args: [unknown]) => string>((err: unknown) => String(err)),
 }));
 
 // 2. vi.mock BEFORE any require that uses those modules
 vi.mock('../shared/prompt', () => mockPrompt);
+
+vi.mock('../shared/config', async (importOriginal) => {
+    const mod = await importOriginal<typeof import('../shared/config.js')>();
+    const inst = mod.default.getDefault();
+    const realGet = inst.get.bind(inst);
+    inst.get = ((key: string): string | undefined =>
+        key === 'jiraMode' ? undefined : realGet(key)) as typeof inst.get;
+    return mod;
+});
 
 const mockFsMod = vi.hoisted(() => ({
     readFileSync:

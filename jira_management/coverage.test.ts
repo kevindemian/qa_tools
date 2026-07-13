@@ -1,3 +1,10 @@
+vi.mock('../shared/config', () => ({
+    default: {
+        get: () => undefined,
+        getDefault: () => ({ get: () => undefined }),
+    },
+}));
+
 import { createMockJiraResource } from '../shared/test-utils/factories/jira-resource-factory.js';
 import { analyzeCoverage } from './coverage.js';
 

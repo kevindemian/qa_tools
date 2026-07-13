@@ -77,6 +77,8 @@ export interface JiraResourceLike {
     searchJiraIssues(jql: string, maxResults?: number): Promise<SearchIssuesResponse>;
     getTransitionsForIssue(issueKey: string): Promise<Record<string, string>>;
     transitionIssue(issueId: string, transitionId: string): Promise<void>;
+    /** Optional: POST to a Cloud-specific API root (e.g. /rest/agile/1.0). Present on real JiraResource. */
+    postToApiRoot?: (relativePath: string, data: unknown) => Promise<unknown>;
 }
 
 /** Minimal shape returned by Jira issue search. */

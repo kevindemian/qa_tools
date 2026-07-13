@@ -97,11 +97,14 @@ describe('Config', () => {
     });
 
     describe('EnsureDotenv', () => {
-        it('calls dotenv.config twice on module load (.env.local + .env)', () => {
+        it('loads .env.test (sandbox) instead of .env.local when running under vitest', () => {
             __resetDotenvLoaded();
             Config.load();
 
-            expect(mockDotenvConfig).toHaveBeenCalledTimes(2);
+            const calls = mockDotenvConfig.mock.calls.map((c) => (c[0] as { path: string }).path);
+
+            expect(calls.some((p) => p.endsWith('.env.test'))).toBeTruthy();
+            expect(calls.some((p) => p.endsWith('.env.local'))).toBeFalsy();
         });
 
         it('does not call dotenv.config again when accessing getters', () => {
