@@ -1,5 +1,5 @@
 /** Base class for Git provider clients (GitHub/GitLab) — shared API call + error handling. */
-import type { JsonObject, DirEntry, GitLabTestReport } from '../shared/types.js';
+import type { JsonObject, DirEntry, GitLabTestReport, WorkflowUsage } from '../shared/types.js';
 import { handleError } from '../shared/git-provider-error.js';
 import type { createHttpClient } from '../shared/http-client.js';
 
@@ -20,6 +20,10 @@ export abstract class GitProviderBase {
     }
     /** Default: test report not available. Override in GitLab manager. */
     getTestReport(_pipelineId: string | number): Promise<GitLabTestReport | null> {
+        return Promise.resolve(null);
+    }
+    /** LA-2 — Default: usage/billing not available. Override in GitHubManager. */
+    getWorkflowUsage(_runId: number): Promise<WorkflowUsage | null> {
         return Promise.resolve(null);
     }
     protected abstract client: HttpClient;

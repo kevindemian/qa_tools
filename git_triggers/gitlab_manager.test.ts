@@ -1,5 +1,6 @@
 import { createThrottledClient } from '../shared/http-client.js';
 import GitLabManager from './gitlab_manager.js';
+import { ExternalError } from '../shared/errors.js';
 import { createMockAxiosInstance } from '../shared/test-utils/factories/response-factory.js';
 import { nonNull } from '../shared/test-utils.js';
 
@@ -89,13 +90,12 @@ describe('GitLabManager', () => {
             expect(result).toStrictEqual([{ id: 1, description: 'Daily' }]);
         });
 
-        it('returns [] on API error (read)', async () => {
+        it('throws ExternalError on API error (read)', async () => {
             expect.hasAssertions();
 
             mockClient.get.mockRejectedValue(new Error('API error'));
-            const result = await manager.getSchedules();
 
-            expect(result).toStrictEqual([]);
+            await expect(manager.getSchedules()).rejects.toBeInstanceOf(ExternalError);
         });
     });
 
@@ -329,13 +329,12 @@ describe('GitLabManager', () => {
             });
         });
 
-        it('returns [] on API error', async () => {
+        it('throws on API error', async () => {
             expect.hasAssertions();
 
             mockClient.get.mockRejectedValue(new Error('API error'));
-            const result = await manager.getRecentPipelines();
 
-            expect(result).toStrictEqual([]);
+            await expect(manager.getRecentPipelines()).rejects.toThrow('API error');
         });
     });
 
@@ -350,13 +349,12 @@ describe('GitLabManager', () => {
             expect(result).toStrictEqual({ id: 42, status: 'success', web_url: 'https://...' });
         });
 
-        it('returns null on API error', async () => {
+        it('throws ExternalError on API error', async () => {
             expect.hasAssertions();
 
             mockClient.get.mockRejectedValue(new Error('Not found'));
-            const result = await manager.getPipeline('999');
 
-            expect(result).toBeNull();
+            await expect(manager.getPipeline('999')).rejects.toBeInstanceOf(ExternalError);
         });
     });
 
@@ -424,13 +422,12 @@ describe('GitLabManager', () => {
             ]);
         });
 
-        it('returns [] on API error', async () => {
+        it('throws on API error', async () => {
             expect.hasAssertions();
 
             mockClient.get.mockRejectedValue(new Error('API error'));
-            const result = await manager.getPipelineJobs('42');
 
-            expect(result).toStrictEqual([]);
+            await expect(manager.getPipelineJobs('42')).rejects.toThrow('API error');
         });
     });
 
@@ -456,13 +453,12 @@ describe('GitLabManager', () => {
             expect(result).toStrictEqual([{ id: 101, name: 'test' }]);
         });
 
-        it('returns [] on API error', async () => {
+        it('throws on API error', async () => {
             expect.hasAssertions();
 
             mockClient.get.mockRejectedValue(new Error('API error'));
-            const result = await manager.listPipelineArtifacts('42');
 
-            expect(result).toStrictEqual([]);
+            await expect(manager.listPipelineArtifacts('42')).rejects.toThrow('API error');
         });
     });
 
@@ -547,13 +543,12 @@ describe('GitLabManager', () => {
             expect(result).toStrictEqual([{ key: 'VAR1', value: 'val1' }]);
         });
 
-        it('returns [] on API error (read)', async () => {
+        it('throws on API error (read)', async () => {
             expect.hasAssertions();
 
             mockClient.get.mockRejectedValue(new Error('API error'));
-            const result = await manager.getCICDVariables();
 
-            expect(result).toStrictEqual([]);
+            await expect(manager.getCICDVariables()).rejects.toThrow('API error');
         });
     });
 
@@ -690,13 +685,12 @@ describe('GitLabManager', () => {
             expect(result).toBe('a'.repeat(10));
         });
 
-        it('returns null on API error', async () => {
+        it('throws ExternalError on API error', async () => {
             expect.hasAssertions();
 
             mockClient.get.mockRejectedValue(new Error('Log not found'));
-            const result = await manager.getJobLogs(999);
 
-            expect(result).toBeNull();
+            await expect(manager.getJobLogs(999)).rejects.toBeInstanceOf(ExternalError);
         });
     });
 });

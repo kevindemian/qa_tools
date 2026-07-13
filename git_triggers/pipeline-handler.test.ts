@@ -40,27 +40,9 @@ vi.mock('../shared/store-backend.js', () => ({
     detectStoreBackend: vi.fn(),
     detectProjectGitDir: vi.fn().mockReturnValue('/project'),
 }));
-vi.mock('../shared/store.js', () => {
-    function makeMockStore() {
-        return {
-            lookup: vi.fn(),
-            put: vi.fn(),
-            listByProject: vi.fn().mockReturnValue([]),
-            saveReport: vi.fn(),
-            loadReport: vi.fn(),
-            loadMetrics: vi.fn(),
-            saveMetrics: vi.fn(),
-            appendBranch: vi.fn(),
-            getBranch: vi.fn().mockReturnValue([]),
-            flush: vi.fn(),
-        };
-    }
-    return {
-        Store: vi.fn(function () {
-            return makeMockStore();
-        }),
-    };
-});
+vi.mock('../shared/data-hub/global-hub.js', () => ({
+    getDataHub: vi.fn(),
+}));
 
 vi.mock('../shared/config', () => ({
     __esModule: true,
@@ -114,6 +96,8 @@ import type JiraLinkManager from '../jira_management/jira_link_manager.js';
 import type { AnalysisReport } from '../shared/failure-analysis.js';
 import type { ParseResult } from '../shared/result_parser.js';
 import { createMockGitProvider } from '../shared/test-utils/factories/index.js';
+import { makeDataHubMock } from '../shared/test-utils/factories/data-hub-mock.js';
+import { getDataHub } from '../shared/data-hub/global-hub.js';
 import * as testResultsModule from './test-results.js';
 import * as stateModule from '../shared/state.js';
 import * as llmModule from './llm-pipeline.js';
@@ -132,6 +116,7 @@ const mockM = createMockGitProvider();
 describe('Pipeline Handler', () => {
     beforeEach(() => {
         vi.clearAllMocks();
+        vi.mocked(getDataHub).mockReturnValue(makeDataHubMock());
     });
 
     describe('IsComplete', () => {

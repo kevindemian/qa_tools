@@ -23,6 +23,7 @@ export function createMockGitProvider(overrides?: Partial<Mocked<GitProvider>>):
         getJobLogs: vi.fn(),
         getDiff: vi.fn(),
         getWorkflowRunTiming: vi.fn(),
+        getWorkflowUsage: vi.fn(),
         getFileContents: vi.fn(),
         listDirectory: vi.fn(),
         getTestReport: vi.fn(),

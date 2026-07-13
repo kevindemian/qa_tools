@@ -1,5 +1,5 @@
 import { describe, it, expect } from 'vitest';
-import { parseTestSummaryFromLogs } from '../log-parser.js';
+import { parseTestSummaryFromLogs, detectFileLine } from '../log-parser.js';
 
 describe('ParseTestSummaryFromLogs', () => {
     it('r1: vitest output → counts corretos', () => {
@@ -131,5 +131,42 @@ FAIL	github.com/user/repo/failing	1.234s
 
         expect(result.testCounts).toBeDefined();
         expect(result.framework).toBe('goTest');
+    });
+});
+
+describe('DetectFileLine', () => {
+    it('parses V8 frames without parentheses (e.g. GitLab test-report stack)', () => {
+        expect.hasAssertions();
+
+        const loc = detectFileLine('Error: expected 4 got 5\n    at src/math.ts:42:10');
+
+        expect(loc.file).toBe('src/math.ts');
+        expect(loc.line).toBe(42);
+    });
+
+    it('parses "at async" frames without parentheses', () => {
+        expect.hasAssertions();
+
+        const loc = detectFileLine('    at async src/service.ts:7:3');
+
+        expect(loc.file).toBe('src/service.ts');
+        expect(loc.line).toBe(7);
+    });
+
+    it('still parses parenthesized frames', () => {
+        expect.hasAssertions();
+
+        const loc = detectFileLine('    at Object.<anonymous> (test.js:20:5)');
+
+        expect(loc.file).toBe('test.js');
+        expect(loc.line).toBe(20);
+    });
+
+    it('does NOT return the error message as a file (regression for bug)', () => {
+        expect.hasAssertions();
+
+        const loc = detectFileLine('Error: expected 4 got 5');
+
+        expect(loc.file).toBeUndefined();
     });
 });

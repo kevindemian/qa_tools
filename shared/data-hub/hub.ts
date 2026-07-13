@@ -5,6 +5,11 @@
  * metrics. Returns a DataHub object with raw data and computed metrics.
  *
  * @reference SOLID — Single Responsibility: only orchestrates, does not compute
+ *
+ * N2-B (warning debt, not suppressed): lines 223/503/649 trigger
+ * `security/detect-object-injection` on pre-existing `Map.get(key)` / `obj[key]`
+ * access with runtime-derived keys. Dynamic-key access is required by the
+ * map-backed API surface; not corrected (no eslint-disable, config untouched).
  */
 import type {
     DataHub,
@@ -31,6 +36,9 @@ import type {
     RawIssue,
     CoverageFile,
     PerformanceMetrics,
+    FlatTest,
+    ReportMeta,
+    BranchEntry,
 } from '../types/data-hub.js';
 import type { PipelineRun, PipelineJob } from '../types/ci-cd.js';
 import type { ArtifactParseResult } from './artifact-parser.js';
@@ -65,6 +73,8 @@ import {
     calcTestDurationP95,
     calcRunFailureRate,
     calcTestDurationMap,
+    calcRetryFlaky,
+    calcComputeCost,
 } from './compute/index.js';
 
 /** Options for creating a DataHub. */
@@ -91,9 +101,9 @@ export interface DataHubOptions {
  */
 export class DataHubImpl implements DataHub {
     readonly raw: RawData;
-    readonly computed: ComputedMetrics;
+    computed: ComputedMetrics;
     private readonly persistence: DataHubPersistence;
-    readonly timestamp: Date;
+    timestamp: Date;
     readonly provider: 'github' | 'gitlab';
     readonly repo: string;
     private readonly quality: QualityCategoryMap;
@@ -230,6 +240,59 @@ export class DataHubImpl implements DataHub {
      */
     getQuarantine(): QuarantineStore {
         return this.quarantine;
+    }
+
+    // ─── Test-result cache (SHA-keyed) — SSOT, delegates to persistence ───────
+
+    loadReport(sha: string): { tests: FlatTest[] } | null {
+        return this.persistence.loadReport(sha);
+    }
+
+    saveReport(sha: string, tests: FlatTest[]): void {
+        this.persistence.saveReport(sha, tests);
+    }
+
+    put(sha: string, meta: ReportMeta): void {
+        this.persistence.put(sha, meta);
+    }
+
+    getBranch(branch: string): BranchEntry[] {
+        return this.persistence.getBranch(branch);
+    }
+
+    loadMetrics<T = Record<string, unknown>>(): T | null {
+        return this.persistence.loadMetrics<T>();
+    }
+
+    saveMetrics<T = Record<string, unknown>>(data: T): void {
+        this.persistence.saveMetrics(data);
+    }
+
+    /**
+     * Pipeline pass rate for a single branch (Gap 3 — branch-aware metrics).
+     * Filters `raw.runs` to `branch` (head_branch ?? ref) before computing.
+     */
+    getBranchPassRate(branch: string): number {
+        return calcPipelinePassRate(this.raw.runs, branch);
+    }
+
+    /**
+     * Gap 4 (G4.4): merge newly-fetched raw data into this hub incrementally.
+     *
+     * Existing runs (by id) are preserved; only runs not already present are added.
+     * Maps and category arrays are merged with the same dedup semantics used when
+     * combining providers (no silent drops, no duplicates — AGENTS §25).
+     * Recomputes `computed` and refreshes `timestamp`.
+     */
+    mergeIncremental(incoming: RawData): void {
+        const seen = new Set(this.raw.runs.map((r) => r.id));
+        const deduped: RawData = {
+            ...incoming,
+            runs: incoming.runs.filter((r) => !seen.has(r.id)),
+        };
+        DataHubImpl.mergeRawData(this.raw, deduped);
+        this.computed = DataHubImpl.computeMetrics(this.raw, { repo: this.repo });
+        this.timestamp = new Date();
     }
 
     /**
@@ -673,6 +736,8 @@ export class DataHubImpl implements DataHub {
         const flakyTestRate = metricsRuns.length > 0 ? calculateFlakyTestRate(metricsRuns) : 0;
         const testDurationP95 = metricsRuns.length > 0 ? calcTestDurationP95(metricsRuns) : 0;
         const runFailureRate = metricsRuns.length > 0 ? calcRunFailureRate(metricsRuns) : 0;
+        const retryFlaky = calcRetryFlaky(raw.runs);
+        const computeCost = calcComputeCost(raw.runs, raw.timing);
         const testDurationMap =
             metricsRuns.length > 0
                 ? calcTestDurationMap(metricsRuns)
@@ -717,6 +782,8 @@ export class DataHubImpl implements DataHub {
             testDurationP95,
             runFailureRate,
             testDurationMap,
+            retryFlaky,
+            computeCost,
         };
     }
 

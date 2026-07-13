@@ -1,5 +1,6 @@
 import { createThrottledClient } from '../shared/http-client.js';
 import GitHubManager from './github_manager.js';
+import { ExternalError } from '../shared/errors.js';
 import { nonNull, nullAs } from '../shared/test-utils.js';
 import { createMockAxiosInstance } from '../shared/test-utils/factories/response-factory.js';
 
@@ -523,13 +524,12 @@ describe('GitHubManager', () => {
             expect(nonNull(result[1]).status).toBe('failure');
         });
 
-        it('returns [] on API error', async () => {
+        it('throws on API error', async () => {
             expect.hasAssertions();
 
             mockClient.get.mockRejectedValue(new Error('API error'));
-            const result = await manager.getPipelineJobs('42');
 
-            expect(result).toStrictEqual([]);
+            await expect(manager.getPipelineJobs('42')).rejects.toThrow('API error');
         });
     });
 
@@ -548,13 +548,12 @@ describe('GitHubManager', () => {
             expect(result).toStrictEqual([{ id: 301, name: 'mochawesome-report' }]);
         });
 
-        it('returns [] on API error', async () => {
+        it('throws on API error', async () => {
             expect.hasAssertions();
 
             mockClient.get.mockRejectedValue(new Error('API error'));
-            const result = await manager.listPipelineArtifacts('42');
 
-            expect(result).toStrictEqual([]);
+            await expect(manager.listPipelineArtifacts('42')).rejects.toThrow('API error');
         });
     });
 
@@ -598,13 +597,12 @@ describe('GitHubManager', () => {
             expect(result).toStrictEqual([{ key: 'MY_VAR', value: 'myval', type: 'variable' }]);
         });
 
-        it('returns [] on API error', async () => {
+        it('throws on API error', async () => {
             expect.hasAssertions();
 
             mockClient.get.mockRejectedValue(new Error('API error'));
-            const result = await manager.getCICDVariables();
 
-            expect(result).toStrictEqual([]);
+            await expect(manager.getCICDVariables()).rejects.toThrow('API error');
         });
     });
 
@@ -711,13 +709,12 @@ describe('GitHubManager', () => {
             });
         });
 
-        it('returns [] on API error', async () => {
+        it('throws ExternalError on API error', async () => {
             expect.hasAssertions();
 
             mockClient.get.mockRejectedValue(new Error('API error'));
-            const result = await manager.getRecentPipelines();
 
-            expect(result).toStrictEqual([]);
+            await expect(manager.getRecentPipelines()).rejects.toBeInstanceOf(ExternalError);
         });
     });
 
@@ -761,13 +758,12 @@ describe('GitHubManager', () => {
             expect(result).toStrictEqual({ id: 42, status: 'completed', conclusion: 'success' });
         });
 
-        it('returns null on API error', async () => {
+        it('throws ExternalError on API error', async () => {
             expect.hasAssertions();
 
             mockClient.get.mockRejectedValue(new Error('Not found'));
-            const result = await manager.getPipeline('999');
 
-            expect(result).toBeNull();
+            await expect(manager.getPipeline('999')).rejects.toBeInstanceOf(ExternalError);
         });
     });
 
@@ -884,6 +880,23 @@ describe('GitHubManager', () => {
             mockClient.get.mockRejectedValue(new Error('Log fetch error'));
 
             await expect(manager.getJobLogs(42)).rejects.toThrow('Log fetch error');
+        });
+    });
+
+    describe('GetWorkflowUsage', () => {
+        it('lA-2: delegates to wfGetWorkflowUsage and returns run_duration_ms + billable', async () => {
+            expect.hasAssertions();
+
+            mockClient.get.mockResolvedValue({
+                data: { run_duration_ms: 90000, billable: { UBUNTU: { total_ms: 60000, jobs: 1 } } },
+            });
+
+            const result = await manager.getWorkflowUsage(42);
+
+            expect(result).not.toBeNull();
+            expect(result?.run_duration_ms).toBe(90000);
+            expect(result?.billable?.['UBUNTU']?.total_ms).toBe(60000);
+            expect(mockClient['get']).toHaveBeenCalledWith('/repos/myorg/myrepo/actions/runs/42/timing');
         });
     });
 });

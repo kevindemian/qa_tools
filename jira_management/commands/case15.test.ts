@@ -38,28 +38,17 @@ vi.mock('../../shared/session-context', () => ({
     resolveTestDataSource: vi.fn(),
 }));
 
-import type { FlatTest } from '../../shared/result_parser.js';
-import type { ReportMeta, BranchEntry, Store } from '../../shared/store.js';
+import type { DataHub } from '../../shared/types/data-hub.js';
 import { describe, expect, it, vi, beforeEach } from 'vitest';
 import case15 from './case15.js';
 import { makeMockCommandContext } from '../../shared/test-utils.js';
 import { resolveSessionContext, resolveTestDataSource } from '../../shared/session-context.js';
+import { makeDataHubMock } from '../../shared/test-utils/factories/data-hub-mock.js';
 import createTests from '../create_tests.js';
 import { showResults, offerTestExecutionAssociation } from './test-execution-flow.js';
 
-function mockStore(): Store {
-    return {
-        lookup: vi.fn<(sha: string) => ReportMeta | null>().mockReturnValue(null),
-        put: vi.fn<(sha: string, meta: ReportMeta) => void>(),
-        saveReport: vi.fn<(sha: string, data: FlatTest[]) => void>(),
-        flush: vi.fn<(message: string) => void>(),
-        loadReport: vi.fn<(sha: string) => { tests: FlatTest[] } | null>().mockReturnValue(null),
-        getBranch: vi.fn<(branch: string) => BranchEntry[]>().mockReturnValue([]),
-        appendBranch: vi.fn<(branch: string, entry: BranchEntry) => void>(),
-        listByProject: vi.fn<() => ReportMeta[]>().mockReturnValue([]),
-        loadMetrics: vi.fn<() => Record<string, unknown> | null>().mockReturnValue(null),
-        saveMetrics: vi.fn<(data: Record<string, unknown>) => void>(),
-    } as unknown as Store; // structural: Store has private fields, literal can't satisfy Class type
+function mockStore(): DataHub {
+    return makeDataHubMock();
 }
 
 const mockContext = makeMockCommandContext();

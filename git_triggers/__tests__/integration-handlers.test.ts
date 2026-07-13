@@ -116,14 +116,6 @@ vi.mock('../../shared/http-client.js', () => ({
 vi.mock('../../shared/git-sha.js', () => ({
     getHeadSha: vi.fn(() => 'abc123'),
 }));
-vi.mock('../../shared/store.js', () => ({
-    Store: vi.fn().mockImplementation(() => ({
-        put: vi.fn(),
-        lookup: vi.fn(),
-        runs: [],
-    })),
-    detectStoreBackend: vi.fn(),
-}));
 vi.mock('../../shared/cli_base.js', () => ({
     confirmDestructiveAction: vi.fn(),
 }));

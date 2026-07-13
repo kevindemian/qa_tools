@@ -5,6 +5,20 @@
 > **Objetivo:** Eliminar TODAS as fontes alternativas de dados — DataHub é a ÚNICA fonte de verdade (SSOT)
 > **Status:** 🟢 PRONTO PARA IMPLEMENTAÇÃO
 
+> ## ⚠️ SUPERSEDED (2026-07-12)
+>
+> Este documento foi **reorganizado** em documentos dedicados por tarefa. O conteúdo abaixo é preservado para auditoria, mas a fonte de verdade por tarefa agora é:
+>
+> - **`SSOT-INDEX.md`** — ponto de entrada (invariantes + mapa mestre de tarefas + grafo de dependências)
+> - **`TASK-22-consumer-migration.md`** — Fases 1, 3, 4, 5, 6, 7, 8, 9, 10 + pendências do plano de 7 camadas
+> - **`TASK-7layer-foundation.md`** — Fase 0, 0.5, 0.6, 0.7, 0.8, EXPAND+STORE, ST-3 + Design Gaps 1-4
+> - **`TASK-7layer-logparser.md`** — Fase L4 (Camada 4 / Job Logs)
+> - **`TASK-7layer-reporter.md`** — Fase 11 / FASE D (Detecção de Reporter AST/Híbrido)
+> - **`TASK-22-corrections.md`** — Retomada, Re-escopo, Re-auditoria + WS2/WS3/Store
+> - **`SSOT-CHANGELOG.md`** — registros históricos (inventários, matrizes, riscos, audit trail, status)
+>
+> **Nenhuma tarefa foi omitida:** cada `##`/`###` deste documento foi migrado verbatim para um dos arquivos acima.
+
 ---
 
 ## CONTEXTO FUNDAMENTAL
@@ -3960,16 +3974,54 @@ ST-1, ST-2, ST-3, L4 e a migração de consumidores re-escopada (quarentena SSOT
 ### 4. Checkpoints de execução (retomada)
 
 ```
-[CHECKPOINT 0] Verificação read-only: isDataHubInitialized() em todos os callers de resolveTestDataSource.
-              → Se algum caller não garante DataHub, implementar inicialização antes de deletar o cache legado.
-[CHECKPOINT 1] FASE 8/C + WS2 concluídos:
-              - zero `new Store(` / `import ...store.js` fora de data-hub/ (grep prova)
-              - `shared/store.ts` e `__mocks__/store.ts` deletados
-              - ESLint guarda em eslint.config.mjs:212 estendida
-              - tsc 0, vitest 0 failures, lint 0 (pre-push green), CI green
-[CHECKPOINT 2] WS3 concluído: quarantine.ts sem warnings detect-non-literal-fs-filename (corrigido na origem)
-[CHECKPOINT 3] WS1 concluído: saveMetricsStore fora da interface pública DataHub; mocks podados; tsc/lint green
-[CHECKPOINT 4] WS4-final: planos reconciliados; STATUS DO TRACK atualizado
+[CHECKPOINT 0] Verificação (read-only) de isDataHubInitialized() nos callers de resolveTestDataSource:
+              callers: case15.ts, case17.ts, pipeline-handler.ts (+ recursão resolveFromBranch).
+              FINDING C1: case15.ts importa SÓ resolveSessionContext e chama resolveTestDataSource sem
+              garantir DataHub → legacy Store era o único fallback de cache.
+              FINDING C2: DESCOBERTA CRÍTICA — múltiplos arquivos têm flag imutável `chattr +i`,
+              inclusive `jira_management/commands/case15.ts` e `eslint.config.mjs` (mecanismo de segurança,
+              AGENTS §5/§18). NÃO se remove a flag sem autorização explícita do usuário.
+              DECISÃO (Opção A, autorizada pelo usuário): DataHubPersistence ASSUME o cache por-SHA do
+              legacy Store (preservando os NOMES de método públicos: loadReport/saveReport/put/getBranch/
+              loadMetrics/saveMetrics), e o legacy Store é deletado. Assim o imutável case15.ts (que chama
+              store.saveReport/store.put) compila INALTERADO — a causa raiz (fonte alternativa) é eliminada
+              sem violar a imutabilidade (§4/§5/§18). O cache NÃO migra para hub.raw (evita exigir DataHub
+              inicializado nos callers; resolve C1 sem tocar arquivo imutável).
+[CHECKPOINT 1] FASE 8/C — CONCLUÍDO (Opção A). Pendente: WS2 (ver CHECKPOINT 1b).
+              (a) Tipos ReportMeta/BranchEntry relocados de store.ts → shared/types/data-hub.ts (C2 atendido).
+              (b) DataHubPersistence (interface + impl em persistence.ts) assume o cache por-SHA;
+                  formato de arquivo reports/... idêntico ao legacy (§9 zero regressão).
+                  Métodos públicos legados preservados: loadReport, saveReport, put, getBranch,
+                  loadMetrics, saveMetrics. factory createDataHubPersistence chama backend.init() (idempotente).
+              (c) session-context.ts: resolveSessionContext retorna DataHubPersistence via
+                  createDataHubPersistence(projectName, detectStoreBackend(detectProjectGitDir()));
+                  tryLoadFromCache→store.loadReport(sha); trySaveCiResult→store.saveReport/put/flush;
+                  resolveFromBranch→store.getBranch(branch).
+              (d) pipeline-handler.ts: createDataHubPersistence + saveReport/put/flush (substitui new Store).
+              (e) case17.ts + case17-test-utils.ts: saveMetrics/loadMetrics em DataHubPersistence.
+              (f) DELETADO: shared/store.ts, shared/__mocks__/store.ts, shared/store.test.ts,
+                  shared/__tests__/store.property.test.ts.
+              (g) Testes migrados: persistence-cache.test.ts (novo, de store.test.ts),
+                  store.integration.test.ts (reescrito), mocks atualizados (data-hub-mock.ts,
+                  factory.test.ts, hub-st1.test.ts, session-context.test.ts, pipeline-handler.test.ts,
+                  case17.test.ts — remoção de mocks mortos de store.js).
+              (h) Verificação: `npx tsc --noEmit` = 0 erros (inclui case15.ts imutável);
+                  `npx vitest run` = 6376 passed / 0 failures.
+              (i) grep prova: zero `new Store(`; zero import de shared/store.js fora de data-hub/
+                  (o único consumer imutável usa os métodos preservados em DataHubPersistence).
+[CHECKPOINT 1b] WS2 — BLOQUEADO (não concluído): estender eslint.config.mjs:212 (no-restricted-syntax)
+              para bloquear NewExpression[callee.name="Store"] / import store.js fora de data-hub/.
+              MOTIVO: eslint.config.mjs é IMMUTÁVEL (`chattr +i`). Adicionar o guard exige remover a flag,
+              que é mecanismo de segurança (AGENTS §5/§18) — requer autorização EXPLÍCITA do usuário.
+              Ação: solicitar ao usuário autorização para remover a imutabilidade de eslint.config.mjs,
+              ou aceitar WS2 como dívida de segurança temporária (a eliminação do Store já é comprovada por
+              grep+tsc, mas sem guarda contínua a regressão não é travada automaticamente).
+[CHECKPOINT 2] WS3 — NÃO CONCLUÍDO nesta sessão (escopo separado: quarantine.ts
+              detect-non-literal-fs-filename). Status: pendente.
+[CHECKPOINT 3] WS1 — estado preservado (concluído em sessão anterior: saveMetricsStore fora da interface
+              pública DataHub; mocks podados). Sem regressão por esta sessão.
+[CHECKPOINT 4] WS4-final — PARCIAL: este documento atualizado (CHECKPOINTS). STATUS DO TRACK pendente de
+              consolidação final quando o usuário reavaliar o track.
 ```
 
 ### 5. Estado de prontidão para retomada

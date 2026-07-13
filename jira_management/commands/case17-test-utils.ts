@@ -78,7 +78,7 @@ export async function resolveTestHistory(
 }
 
 function loadLastTests(
-    store?: import('../../shared/store.js').Store,
+    store?: import('../../shared/types/data-hub.js').DataHub,
     project?: string,
 ): Array<{ name: string; status: string }> {
     if (!store || !project) return [];
@@ -93,7 +93,7 @@ function loadLastTests(
 
 export function computeDiff(
     current: FlatTest[],
-    store?: import('../../shared/store.js').Store,
+    store?: import('../../shared/types/data-hub.js').DataHub,
     project?: string,
 ): {
     newFailures: FlatTest[];

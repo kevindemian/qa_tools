@@ -6,7 +6,7 @@
  */
 import { extractErrorMessage, humanizeError } from '../../prompt-errors.js';
 import type { GitProvider, PipelineJob, ArtifactInfo, CheckRunAnnotation, PipelineRun } from '../../types/ci-cd.js';
-import { parsePipelineRun } from '../schemas.js';
+import { parsePipelineRun, validateRawDataOrThrow } from '../schemas.js';
 import type {
     DataProvider,
     FetchOptions,
@@ -15,17 +15,34 @@ import type {
     RawCoverage,
     CiRunStats,
     DataSource,
+    FailureRecord,
 } from '../../types/data-hub.js';
 import type { ArtifactParseResult } from '../artifact-parser.js';
 import { rootLogger } from '../../logger.js';
 import { extractCoverage } from '../extractors/coverage-extractor.js';
 import { isTestArtifact, parseArtifactBufferAll } from '../artifact-parser.js';
 import { detectFrameworkCascade } from '../extractors/framework-detector.js';
-import { classifyFailures, type StepConclusion, type FailureInput } from '../extractors/failure-classifier.js';
+import {
+    classifyFailures,
+    failureEntryToRecord,
+    type StepConclusion,
+    type FailureInput,
+} from '../extractors/failure-classifier.js';
 import { getCheckRuns } from '../../github-check-run.js';
 import { buildCommitLog } from '../extractors/commit-log-extractor.js';
 
 const DEFAULT_MAX_ARTIFACTS_PER_RUN = 5;
+
+/** Extract the branch a raw pipeline run belongs to (GitHub: head_branch, GitLab: ref). */
+function rawRunBranch(raw: unknown): string | undefined {
+    if (raw == null || typeof raw !== 'object') return undefined;
+    const r = raw as Record<string, unknown>;
+    const headBranch = r['head_branch'];
+    if (typeof headBranch === 'string') return headBranch;
+    const ref = r['ref'];
+    if (typeof ref === 'string') return ref;
+    return undefined;
+}
 
 export class GitHubDataProvider implements DataProvider {
     readonly name = 'github';
@@ -34,11 +51,16 @@ export class GitHubDataProvider implements DataProvider {
     constructor(private readonly provider: GitProvider) {}
 
     async fetchRawData(options: FetchOptions): Promise<RawData> {
-        const rawRuns = await this.provider.getRecentPipelines(options.count);
+        const branch = options.branchFilter ?? options.branch;
+        const fetched = options.since
+            ? await this.provider.getRecentPipelines(options.count, options.since)
+            : await this.provider.getRecentPipelines(options.count);
+        const rawRuns = branch == null ? fetched : fetched.filter((r) => rawRunBranch(r) === branch);
         const runs = this.validateRuns(rawRuns);
         const jobsMap = new Map<number, PipelineJob[]>();
         const artifactsMap = new Map<number, ArtifactInfo[]>();
         const failureReasonsMap = new Map<number, string[]>();
+        const failureRecords: FailureRecord[] = [];
         const timingMap = new Map<number, WorkflowRunTiming>();
         const parsedArtifactsMap = new Map<number, ArtifactParseResult[]>();
         let coverage: RawCoverage | undefined;
@@ -53,6 +75,7 @@ export class GitHubDataProvider implements DataProvider {
                 jobsMap,
                 artifactsMap,
                 failureReasonsMap,
+                failureRecords,
                 timingMap,
                 parsedArtifactsMap,
                 maxArtifacts,
@@ -68,7 +91,7 @@ export class GitHubDataProvider implements DataProvider {
         const ciRuns = this.deriveCiRuns(runs, parsedArtifactsMap);
         const provenance = this.buildProvenance(coverage, framework);
 
-        return {
+        const rawData: RawData = {
             runs,
             jobs: jobsMap,
             artifacts: artifactsMap,
@@ -79,8 +102,12 @@ export class GitHubDataProvider implements DataProvider {
             ...(framework != null ? { framework } : {}),
             ...(commitLog ? { commitLog } : {}),
             ...(ciRuns.length > 0 ? { ciRuns } : {}),
+            failureRecords,
             provenance,
         };
+
+        // Gap 1: reject malformed provider output explicitly at the boundary.
+        return validateRawDataOrThrow(rawData);
     }
 
     private validateRuns(rawRuns: unknown[]): PipelineRun[] {
@@ -113,6 +140,7 @@ export class GitHubDataProvider implements DataProvider {
         jobsMap: Map<number, PipelineJob[]>,
         artifactsMap: Map<number, ArtifactInfo[]>,
         failureReasonsMap: Map<number, string[]>,
+        failureRecords: FailureRecord[],
         timingMap: Map<number, WorkflowRunTiming>,
         parsedArtifactsMap: Map<number, ArtifactParseResult[]>,
         maxArtifacts: number,
@@ -122,7 +150,7 @@ export class GitHubDataProvider implements DataProvider {
             jobsMap.set(runIdNum, runJobs);
             await this.fetchArtifacts(runIdNum, artifactsMap, parsedArtifactsMap, maxArtifacts);
             await this.fetchTiming(runIdNum, timingMap);
-            await this.fetchFailureReasons(runJobs, failureReasonsMap);
+            await this.fetchFailureReasons(runJobs, failureReasonsMap, failureRecords);
         } catch (err) {
             rootLogger.debug(`GitHub: jobs fetch failed for run ${runIdNum}: ${extractErrorMessage(err)}`);
         }
@@ -146,11 +174,19 @@ export class GitHubDataProvider implements DataProvider {
 
     private async fetchTiming(runIdNum: number, timingMap: Map<number, WorkflowRunTiming>): Promise<void> {
         try {
-            const timing = await this.provider.getWorkflowRunTiming(runIdNum);
-            if (timing != null) timingMap.set(runIdNum, timing);
+            // LA-2: use getWorkflowUsage — the same GitHub endpoint returns BOTH
+            // run_duration_ms and billable minutes (real compute cost). Never
+            // estimate or drop billable.
+            const usage = await this.provider.getWorkflowUsage(runIdNum);
+            if (usage == null) return;
+            if (!Number.isFinite(usage.run_duration_ms)) return;
+            timingMap.set(runIdNum, {
+                run_duration_ms: usage.run_duration_ms as number,
+                ...(usage.billable != null ? { billable: usage.billable } : {}),
+            });
         } catch (err) {
             rootLogger.debug(
-                `GitHub: timing fetch failed for run ${runIdNum}: ${humanizeError(extractErrorMessage(err))?.msg ?? extractErrorMessage(err)}`,
+                `GitHub: usage fetch failed for run ${runIdNum}: ${humanizeError(extractErrorMessage(err))?.msg ?? extractErrorMessage(err)}`,
             );
         }
     }
@@ -221,7 +257,11 @@ export class GitHubDataProvider implements DataProvider {
      * Fetch failure reasons using multi-source classification:
      * GitHub step conclusions + Check Runs annotations + job log regex.
      */
-    private async fetchFailureReasons(jobs: PipelineJob[], failureReasonsMap: Map<number, string[]>): Promise<void> {
+    private async fetchFailureReasons(
+        jobs: PipelineJob[],
+        failureReasonsMap: Map<number, string[]>,
+        failureRecords: FailureRecord[],
+    ): Promise<void> {
         const githubSteps = this.collectStepConclusions(jobs);
         const checkRunAnnotations = await this.collectCheckRunAnnotations();
         const logText = await this.collectFirstFailedJobLog(jobs);
@@ -233,6 +273,9 @@ export class GitHubDataProvider implements DataProvider {
 
         const classified = classifyFailures(input);
         this.mapClassifiedToFirstFailedJob(classified, jobs, failureReasonsMap);
+        for (const entry of classified) {
+            failureRecords.push(failureEntryToRecord(entry));
+        }
     }
 
     private collectStepConclusions(jobs: PipelineJob[]): StepConclusion[] {

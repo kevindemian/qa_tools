@@ -28,6 +28,7 @@ function makeMockProvider(): GitProvider {
         getJobLogs: vi.fn().mockResolvedValue(null),
         getDiff: vi.fn().mockResolvedValue(''),
         getWorkflowRunTiming: vi.fn().mockResolvedValue(null),
+        getWorkflowUsage: vi.fn().mockResolvedValue(null),
         getFileContents: vi.fn().mockResolvedValue(null),
         listDirectory: vi.fn().mockResolvedValue(null),
         getTestReport: vi.fn().mockResolvedValue(null),
@@ -75,6 +76,13 @@ function makeMockPersistence(): DataHubPersistence {
         loadCoverageFiles: vi.fn().mockReturnValue([]),
         savePerformanceMetrics: vi.fn(),
         loadPerformanceMetrics: vi.fn().mockReturnValue(null),
+        // ─── Test-result cache (SHA-keyed) — owned by DataHub (replaces legacy Store) ─
+        loadReport: vi.fn().mockReturnValue(null),
+        saveReport: vi.fn(),
+        put: vi.fn(),
+        getBranch: vi.fn().mockReturnValue([]),
+        loadMetrics: vi.fn().mockReturnValue(null),
+        saveMetrics: vi.fn(),
         flush: vi.fn(),
     };
 }

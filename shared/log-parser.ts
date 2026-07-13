@@ -210,19 +210,13 @@ function statusForCategory(category: string): 'failed' | 'broken' {
 // ===== L4.5 — Localizacao best-effort (file/line a partir do trace) =====
 
 const PY_FRAME_RE = /File "([^"]+)", line (\d+)/;
-const GENERIC_FRAME_RE = /([^\s]*)/;
+// JS/V8 stack frame without parentheses, e.g. "    at src/math.ts:42:10"
+// or "    at async src/math.ts:42:10".
+const JS_FRAME_RE = /(?:^|\s)at\s+(?:async\s+)?(\S+?):(\d+)(?::\d+)?/;
 
 interface FrameLoc {
     file?: string;
     line?: number;
-}
-
-function lineFromToken(token: string): FrameLoc {
-    const digitMatch = /\d+/.exec(token);
-    if (!digitMatch) return { file: token };
-    const file = token.slice(0, digitMatch.index).replace(/:$/, '');
-    if (file.length === 0) return { file: token };
-    return { file, line: safeInt(digitMatch[0]) };
 }
 
 export function detectFileLine(trace: string): FrameLoc {
@@ -239,10 +233,10 @@ export function detectFileLine(trace: string): FrameLoc {
         }
         return { file: inner };
     }
+    const js = JS_FRAME_RE.exec(trace);
+    if (js && js[1]) return { file: js[1], line: safeInt(js[2]) };
     const py = PY_FRAME_RE.exec(trace);
     if (py && py[1]) return { file: py[1], line: safeInt(py[2]) };
-    const gen = GENERIC_FRAME_RE.exec(trace);
-    if (gen && gen[1]) return lineFromToken(gen[1]);
     return {};
 }
 

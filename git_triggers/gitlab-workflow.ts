@@ -1,8 +1,5 @@
 import type { AxiosInstance } from '../shared/deps.js';
-import { handleError } from '../shared/git-provider-error.js';
 import { classifyGitError } from '../shared/errors.js';
-import { extractErrorMessage } from '../shared/prompt-errors.js';
-import { rootLogger } from '../shared/logger.js';
 import type {
     PipelineTriggerResult,
     ScheduleInfo,
@@ -37,12 +34,15 @@ export async function glTriggerPipeline(
 
 export async function glGetSchedules(client: AxiosInstance, owner: string, repo: string): Promise<ScheduleInfo[]> {
     const base = projectPath(owner, repo);
-    const data = await apiGet<ScheduleInfo[]>(client, base + '/pipeline_schedules', {
-        operation: 'listar schedules',
-        params: { per_page: SCHEDULES_PAGE_SIZE },
-        returnNull: true,
-    });
-    return data ?? [];
+    try {
+        const data = await apiGet<ScheduleInfo[]>(client, base + '/pipeline_schedules', {
+            operation: 'listar schedules',
+            params: { per_page: SCHEDULES_PAGE_SIZE },
+        });
+        return data ?? [];
+    } catch (err) {
+        throw classifyGitError(err, { operation: 'listar schedules' });
+    }
 }
 
 export async function glRunSchedule(
@@ -62,14 +62,19 @@ export async function glGetRecentPipelines(
     owner: string,
     repo: string,
     count = DEFAULT_PIPELINE_COUNT,
+    since?: Date,
 ): Promise<PipelineRun[]> {
     const base = projectPath(owner, repo);
+    const params: Record<string, unknown> = { per_page: count, order_by: 'updated_at' };
+    // Gap 4 (G4.3): fetch only pipelines created at/after `since` (ISO8601) for incremental updates.
+    if (since) params['created_after'] = since.toISOString();
     const data = await apiGet<PipelineRun[]>(client, base + '/pipelines', {
         operation: 'buscar pipelines',
-        params: { per_page: count, order_by: 'updated_at' },
-        returnNull: true,
+        params,
     });
-    return data ?? [];
+    // GitLab list API exposes `retried` (boolean) on each pipeline. Plumb it
+    // explicitly (LA-2) so retry detection is not lost in the passthrough cast.
+    return (data ?? []).map((p) => (p.retried === true ? { ...p, retried: true } : p));
 }
 
 export async function glGetPipeline(
@@ -79,10 +84,15 @@ export async function glGetPipeline(
     pipelineId: string | number,
 ): Promise<PipelineInfo | null> {
     const base = projectPath(owner, repo);
-    return apiGet<PipelineInfo>(client, base + `/pipelines/${pipelineId}`, {
-        operation: 'buscar pipeline',
-        returnNull: true,
-    });
+    try {
+        return await apiGet<PipelineInfo>(client, base + `/pipelines/${pipelineId}`, {
+            operation: 'buscar pipeline',
+        });
+    } catch (err) {
+        const e = classifyGitError(err, { operation: 'buscar pipeline' });
+        if (e.kind === 'notFound') return null;
+        throw e;
+    }
 }
 
 export async function glGetPipelineJobs(
@@ -94,7 +104,6 @@ export async function glGetPipelineJobs(
     const base = projectPath(owner, repo);
     const data = await apiGet<JsonObject[]>(client, base + `/pipelines/${pipelineId}/jobs`, {
         operation: 'listar jobs',
-        returnNull: true,
     });
     return (data ?? []).map((j: JsonObject) => ({
         id: j['id'] as string | number,
@@ -116,7 +125,6 @@ export async function glListPipelineArtifacts(
     const base = projectPath(owner, repo);
     const data = await apiGet<JsonObject[]>(client, base + `/pipelines/${pipelineId}/jobs`, {
         operation: 'listar artifacts',
-        returnNull: true,
     });
     const jobs = data ?? [];
     return jobs
@@ -136,7 +144,6 @@ export async function glGetCICDVariables(client: AxiosInstance, owner: string, r
     const data = await apiGet<CICDVariable[]>(client, base + '/variables', {
         operation: 'buscar variáveis CI/CD',
         params: { per_page: VARIABLES_PAGE_SIZE },
-        returnNull: true,
     });
     return data ?? [];
 }
@@ -158,7 +165,7 @@ export async function glDownloadArtifact(
         const filename = match ? (match[1] ?? 'artifacts.zip') : 'artifacts.zip';
         return { buffer: Buffer.from(response.data), filename };
     } catch (err) {
-        return handleError(err, { context: 'baixar artifact' });
+        throw classifyGitError(err, { operation: 'baixar artifact' });
     }
 }
 
@@ -177,7 +184,9 @@ export async function glGetJobLogs(
         const raw = String(response.data);
         return raw.slice(0, maxBytes);
     } catch (err) {
-        return handleError(err, { context: 'baixar log do job', returnNull: true });
+        const axiosErr = err as { response?: { status?: number } };
+        if (axiosErr.response?.status === 404) return null;
+        throw classifyGitError(err, { operation: 'baixar log do job' });
     }
 }
 
@@ -202,7 +211,7 @@ export async function glGetRepoTree(
         const data = await apiGet<GitLabTreeEntry[]>(
             client,
             base + `/repository/tree?recursive=true&ref=${encodeURIComponent(ref)}`,
-            { operation: 'buscar árvore do repositório', returnNull: true },
+            { operation: 'buscar árvore do repositório' },
         );
         if (data == null) return null;
         const paths = data
@@ -211,8 +220,9 @@ export async function glGetRepoTree(
             .filter(isManifestFile);
         return paths.length > 0 ? paths : [];
     } catch (err: unknown) {
-        rootLogger.warn(`gitlab-workflow: listManifestPaths failed — ${extractErrorMessage(err)}`);
-        return null;
+        const e = classifyGitError(err, { operation: 'buscar árvore do repositório' });
+        if (e.kind === 'notFound') return null;
+        throw e;
     }
 }
 
@@ -266,7 +276,6 @@ export async function glListDirectory(
             (ref != null ? `&ref=${encodeURIComponent(ref)}` : '');
         const data = await apiGet<GitLabTreeEntry[]>(client, url, {
             operation: `listar diretório ${path}`,
-            returnNull: true,
         });
         if (data == null) return null;
         const dirEntries: DirEntry[] = [];
@@ -286,8 +295,9 @@ export async function glListDirectory(
         }
         return dirEntries;
     } catch (err: unknown) {
-        rootLogger.warn(`gitlab-workflow: listDirEntries failed — ${extractErrorMessage(err)}`);
-        return null;
+        const e = classifyGitError(err, { operation: `listar diretório ${path}` });
+        if (e.kind === 'notFound') return null;
+        throw e;
     }
 }
 
@@ -298,8 +308,13 @@ export async function glGetTestReport(
     pipelineId: string | number,
 ): Promise<GitLabTestReport | null> {
     const base = projectPath(owner, repo);
-    return apiGet<GitLabTestReport>(client, base + `/pipelines/${pipelineId}/test_report`, {
-        operation: 'obter relatório de testes',
-        returnNull: true,
-    });
+    try {
+        return await apiGet<GitLabTestReport>(client, base + `/pipelines/${pipelineId}/test_report`, {
+            operation: 'obter relatório de testes',
+        });
+    } catch (err) {
+        const e = classifyGitError(err, { operation: 'obter relatório de testes' });
+        if (e.kind === 'notFound') return null;
+        throw e;
+    }
 }

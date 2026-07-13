@@ -10,6 +10,7 @@
  * @module data-hub-mock
  */
 import { vi } from 'vitest';
+import { calcPipelinePassRate } from '../../data-hub/compute/pass-rate.js';
 import type {
     DataHub,
     DataHubPersistence,
@@ -23,6 +24,9 @@ import type {
     MetricsRun,
     FlakinessEntry,
     TrendPoint,
+    FlatTest,
+    ReportMeta,
+    BranchEntry,
 } from '../../types/data-hub.js';
 import type { QualityReport, QualityCategory } from '../../data-hub/quality.js';
 import type { QuarantineStore } from '../../quarantine.js';
@@ -104,6 +108,13 @@ export function makeDataHubPersistenceMock(): DataHubPersistence {
         loadCoverageFiles: vi.fn().mockReturnValue([]),
         savePerformanceMetrics: vi.fn(),
         loadPerformanceMetrics: vi.fn().mockReturnValue(null),
+        // ─── Test-result cache (SHA-keyed) — owned by DataHub (replaces legacy Store) ─
+        loadReport: vi.fn<(sha: string) => { tests: FlatTest[] } | null>().mockReturnValue(null),
+        saveReport: vi.fn<(sha: string, tests: FlatTest[]) => void>(),
+        put: vi.fn<(sha: string, meta: ReportMeta) => void>(),
+        getBranch: vi.fn<(branch: string) => BranchEntry[]>().mockReturnValue([]),
+        loadMetrics: vi.fn().mockReturnValue(null),
+        saveMetrics: vi.fn(),
         flush: vi.fn(),
     };
 }
@@ -168,5 +179,15 @@ export function makeDataHubMock(
         loadPerformanceMetrics: vi.fn().mockReturnValue(null),
         getQuality: vi.fn<(category: QualityCategory) => QualityReport | undefined>(),
         getQuarantine: vi.fn<() => QuarantineStore>(() => ({ entries: [] })),
+        getBranchPassRate: (branch: string): number => calcPipelinePassRate(raw.runs, branch),
+        mergeIncremental: vi.fn<(incoming: RawData) => void>(),
+        // ─── Test-result cache (SHA-keyed) ─────────────────────────────────────
+        loadReport: vi.fn<(sha: string) => { tests: FlatTest[] } | null>().mockReturnValue(null),
+        saveReport: vi.fn<(sha: string, tests: FlatTest[]) => void>(),
+        put: vi.fn<(sha: string, meta: ReportMeta) => void>(),
+        getBranch: vi.fn<(branch: string) => BranchEntry[]>().mockReturnValue([]),
+        // ─── Legacy metrics blob ───────────────────────────────────────────────
+        loadMetrics: vi.fn(),
+        saveMetrics: vi.fn(),
     };
 }

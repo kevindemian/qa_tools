@@ -24,6 +24,7 @@ function createMockGitProvider(): GitProvider {
         getJobLogs: vi.fn(),
         getDiff: vi.fn(),
         getWorkflowRunTiming: vi.fn(),
+        getWorkflowUsage: vi.fn(),
         getFileContents: vi.fn<(...args: [path: string, ref?: string]) => Promise<string | null>>(),
         listDirectory: vi.fn(),
         getTestReport: vi.fn(),

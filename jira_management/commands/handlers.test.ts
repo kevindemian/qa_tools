@@ -35,6 +35,8 @@ import { createMockAxiosInstance } from '../../shared/test-utils/factories/respo
 import JiraLinkManager from '../jira_link_manager.js';
 import CsvResource from '../csv_resource.js';
 import { SessionContext } from '../../shared/session-context.js';
+import { setDataHub } from '../../shared/data-hub/global-hub.js';
+import { makeDataHubMock } from '../../shared/test-utils/factories/data-hub-mock.js';
 
 const mockConfigMod: { [key: string]: unknown } = vi.hoisted(() => {
     return {};
@@ -159,6 +161,8 @@ describe('Handlers', () => {
     beforeEach(() => {
         vi.clearAllMocks();
         vi.restoreAllMocks();
+        // Phase 0.8: handlers resolve a DataHub via resolveSessionContext(); provide one.
+        setDataHub(makeDataHubMock());
         mockSessionContext.project_name = 'TEST';
         mockSessionContext.inMemoryTasksId = [];
         mockSessionContext.inMemoryTasksText = [];

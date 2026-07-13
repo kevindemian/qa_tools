@@ -141,6 +141,17 @@ export interface PipelineRun {
     };
     /** Pipeline title — GitLab commit message (GitLab pipelines). */
     title?: string;
+    /**
+     * Attempt index for this run (1-based). GitHub Actions exposes `run_attempt`
+     * (exact per-run retry count). GitLab has no pipeline-level attempt number,
+     * so this stays undefined for GitLab — use `retried` instead.
+     */
+    run_attempt?: number;
+    /**
+     * GitLab pipelines: the pipeline was retried (from the list API `retried`
+     * boolean). GitHub does not use this field — `run_attempt > 1` implies retry.
+     */
+    retried?: boolean;
 }
 
 /** Entry from a directory listing (Contents API or Trees API). */
@@ -187,7 +198,7 @@ export interface GitProvider {
     acceptMergeRequest: (iid: string | number, removeSourceBranch?: boolean) => Promise<MergeRequestInfo | null>;
     isApproved: (id: string | number) => Promise<boolean>;
     getCICDVariables: () => Promise<CICDVariable[] | null>;
-    getRecentPipelines: (count?: number) => Promise<PipelineRun[]>;
+    getRecentPipelines: (count?: number, since?: Date) => Promise<PipelineRun[]>;
     getBranch: (branch: string) => Promise<{ name: string } | null>;
     getPipeline: (id: string | number) => Promise<PipelineInfo | null>;
     getPipelineJobs: (pipelineId: string | number) => Promise<PipelineJob[]>;
@@ -197,6 +208,12 @@ export interface GitProvider {
     getDiff: (source: string, target: string) => Promise<string>;
     /** Fetch workflow run timing (GitHub-specific; GitLab returns null). */
     getWorkflowRunTiming: (runId: number) => Promise<{ run_duration_ms: number } | null>;
+    /**
+     * LA-2 — Fetch workflow run usage/billing (GitHub-specific; GitLab returns null).
+     * Returns real compute cost: total run duration plus billable minutes per
+     * runner OS. This is the authoritative billing signal (never estimated).
+     */
+    getWorkflowUsage: (runId: number) => Promise<WorkflowUsage | null>;
     /** Read a file from the repository via Contents API. */
     getFileContents: (path: string, ref?: string) => Promise<string | null>;
     /** List a directory in the repository. */
@@ -284,6 +301,22 @@ export interface GitLabTestCase {
     classname?: string;
     attachment_url?: string;
     stack_trace?: string;
+}
+
+/** GitHub Actions billable usage per runner OS (from the run usage endpoint). */
+export interface WorkflowBillable {
+    /** Total billable time for this OS in milliseconds. */
+    total_ms: number;
+    /** Number of billable jobs for this OS. */
+    jobs: number;
+}
+
+/** GitHub Actions run usage (LA-2) — real compute cost, never estimated. */
+export interface WorkflowUsage {
+    /** Total run duration in milliseconds. */
+    run_duration_ms?: number;
+    /** Billable time per runner OS (UBUNTU/MACOS/WINDOWS/...). */
+    billable?: Record<string, WorkflowBillable>;
 }
 
 /** GitLab CI job item. */

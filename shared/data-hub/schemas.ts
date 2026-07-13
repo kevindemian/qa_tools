@@ -7,7 +7,7 @@
  * @module schemas
  */
 import { z } from '../deps.js';
-import type { MetricsRun, MetricsStore, CoverageSnapshot } from '../types/data-hub.js';
+import type { MetricsRun, MetricsStore, CoverageSnapshot, RawData } from '../types/data-hub.js';
 import type { PipelineRun } from '../types/ci-cd.js';
 import { rootLogger } from '../logger.js';
 import { getErrorMessage } from '../errors.js';
@@ -128,6 +128,8 @@ export const PipelineRunSchema = z
             })
             .optional(),
         title: z.string().optional(),
+        run_attempt: z.union([z.string(), z.number()]).optional(),
+        retried: z.boolean().optional(),
     })
     .loose();
 
@@ -141,6 +143,66 @@ export function parsePipelineRun(data: unknown): PipelineRun | null {
     } catch (err: unknown) {
         const rawError = getErrorMessage(err);
         rootLogger.warn(`schemas: PipelineRun validation failed — ${rawError}`);
+        return null;
+    }
+}
+
+/**
+ * RawData schema — validates the aggregated provider output at the fetchRawData
+ * boundary (Gap 1). `runs` is fully validated as PipelineRun[] (the primary CI
+ * API output). Map/array-derived fields are structurally validated (key type +
+ * value shape where cheap) via .loose(); deep validation of derived inner types
+ * is out of scope (those originate from already-typed GitProvider methods, not
+ * raw API JSON). The purpose is to REJECT malformed CI API data explicitly so it
+ * can never silently flow into compute and produce wrong metrics.
+ */
+export const RawDataSchema = z
+    .object({
+        runs: z.array(PipelineRunSchema),
+        jobs: z.map(z.number(), z.unknown()).optional(),
+        artifacts: z.map(z.number(), z.unknown()).optional(),
+        failureReasons: z.map(z.number(), z.array(z.string())).optional(),
+        timing: z.map(z.number(), z.unknown()).optional(),
+        parsedArtifacts: z.map(z.number(), z.unknown()).optional(),
+        provenance: z.map(z.string(), z.unknown()).optional(),
+        coverage: z.unknown().optional(),
+        coverageHistory: z.array(CoverageSnapshotSchema).optional(),
+        ciRuns: z.array(z.unknown()).optional(),
+        jiraIssues: z.array(z.unknown()).optional(),
+        failureClassifications: z.array(z.unknown()).optional(),
+        failureRecords: z.array(z.unknown()).optional(),
+        securityFindings: z.array(z.unknown()).optional(),
+        deployments: z.array(z.unknown()).optional(),
+        releases: z.array(z.unknown()).optional(),
+        pmIssues: z.array(z.unknown()).optional(),
+        coverageFiles: z.array(z.unknown()).optional(),
+        performanceMetrics: z.unknown().optional(),
+        doraMetrics: z.unknown().optional(),
+        gitlabTestReport: z.unknown().optional(),
+        xray: z.unknown().optional(),
+        framework: z.string().optional(),
+        commitLog: z.string().optional(),
+    })
+    .loose();
+
+/**
+ * Validate RawData at the boundary. THROWS on malformed data (explicit rejection
+ * per Gap 1) — never returns a partially-invalid object.
+ */
+export function validateRawDataOrThrow(data: unknown): RawData {
+    return RawDataSchema.parse(data) as RawData;
+}
+
+/**
+ * Parse and validate RawData. Lenient variant: returns null on failure
+ * (used where a null result must be distinguishable from a thrown error).
+ */
+export function parseRawData(data: unknown): RawData | null {
+    try {
+        return RawDataSchema.parse(data) as RawData;
+    } catch (err: unknown) {
+        const rawError = getErrorMessage(err);
+        rootLogger.warn(`schemas: RawData validation failed — ${rawError}`);
         return null;
     }
 }

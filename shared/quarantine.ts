@@ -9,6 +9,16 @@ import { z } from 'zod';
 import { rootLogger } from './logger.js';
 import Config from './config.js';
 
+// N2-B (security/detect-non-literal-fs-filename): the 6 FS calls below wrap their
+// path args in path.resolve(...)/path.join(...) over Config-derived paths
+// (getDataDir() -> Config.get('xdgStateHome') / os.homedir()). These are CORRECT,
+// non-attacker-controlled paths. The rule's isStaticExpression does not treat
+// Config.get()/os.homedir() as static (by design — accepting arbitrary function
+// returns as "static" would be a security hole), so it reports false positives.
+// Severity: warning (1), not error (2); the lint gate (scripts/quality-check.ts)
+// only fails on severity-2, so CI is unaffected. Documented debt, no code/config
+// change. See TASK-22-corrections.md CHECKPOINT 2.
+
 export interface QuarantineEntry {
     testTitle: string;
     reason: string;

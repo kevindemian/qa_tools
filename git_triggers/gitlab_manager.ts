@@ -134,8 +134,8 @@ class GitLabManager extends GitProviderBase implements GitProvider {
         return glAcceptMergeRequest(this.client, this.owner, this.repo, iid, shouldRemoveSourceBranch);
     }
 
-    async getRecentPipelines(count = 5): Promise<PipelineRun[]> {
-        return glGetRecentPipelines(this.client, this.owner, this.repo, count);
+    async getRecentPipelines(count = 5, since?: Date): Promise<PipelineRun[]> {
+        return glGetRecentPipelines(this.client, this.owner, this.repo, count, since);
     }
 
     async getPipeline(pipelineId: string | number): Promise<PipelineInfo | null> {

@@ -38,10 +38,15 @@ export type { FlatTest } from '../result_parser.js';
 /** Re-export CoverageSnapshot for consumers that need coverage history. */
 export type { CoverageSnapshot } from './coverage.js';
 
-/** Timing data for a workflow run (from GitHub timing endpoint). */
+/** Timing data for a workflow run (from GitHub timing/usage endpoint). */
 export interface WorkflowRunTiming {
     /** Total run duration in milliseconds. */
     run_duration_ms: number;
+    /**
+     * LA-2 — Billable usage per runner OS (UBUNTU/MACOS/WINDOWS/...). The
+     * authoritative billing signal from GitHub; absent for non-GitHub sources.
+     */
+    billable?: Record<string, { total_ms: number; jobs: number }>;
 }
 
 /** Data provenance — tracks where data came from and confidence level. */
@@ -330,6 +335,8 @@ export interface FetchOptions {
     repo: string;
     count?: number;
     branch?: string;
+    /** Filter the fetched/computed data to a single branch (Gap 3). Falls back to `branch` when unset. */
+    branchFilter?: string;
     since?: Date;
     /** Max artifacts to download per run. Default: 5. */
     maxArtifactsPerRun?: number;
@@ -350,6 +357,30 @@ export interface FlakyResult {
     rate: number;
     /** Number of runs analyzed. */
     runs: number;
+}
+
+/**
+ * LA-2 — Retry/flaky rollup derived from run-attempt signals.
+ *
+ * A run exhibits retry-flakiness when it required more than one attempt to pass
+ * (GitHub `run_attempt > 1`, or GitLab `retried === true`) AND eventually
+ * succeeded — i.e. an earlier attempt failed and the retry recovered, which is
+ * the signature of a flaky test/suite.
+ */
+export interface RetryFlakyResult {
+    /** Runs retried (attempt>1 or retried flag) that eventually passed. */
+    flakyRetryRuns: number;
+    /** Total runs that were retried (attempt>1 or retried flag). */
+    retriedRuns: number;
+    /** Total runs analyzed. */
+    totalRuns: number;
+    /** Highest attempt index observed (1 when no attempt data). */
+    maxAttempts: number;
+    /**
+     * Flaky/retry rate (0-100): flakyRetryRuns / totalRuns.
+     * NaN when totalRuns === 0 — empty input is NEVER reported as a passing 0.
+     */
+    rate: number;
 }
 
 /** Pipeline cost estimate. */
@@ -577,6 +608,25 @@ export interface ComputedMetrics {
     testDurationMap?: Record<string, number[]>;
     /** Test-level flaky percentage: flaky tests / qualifying tests (0-100). */
     flakyTestRate?: number;
+    /** LA-2 — retry/flaky rollup derived from run-attempt signals. */
+    retryFlaky?: RetryFlakyResult;
+    /** LA-2 — real compute cost aggregated from run timing + GitHub billable. */
+    computeCost?: ComputeCostResult;
+}
+
+/**
+ * LA-2 — Real CI compute cost aggregated from run timing + GitHub billable usage.
+ * This is authoritative cost data from the provider API (never estimated).
+ */
+export interface ComputeCostResult {
+    /** Number of runs that contributed duration data. */
+    runCount: number;
+    /** Sum of run_duration_ms across runs (real compute time). */
+    totalDurationMs: number;
+    /** Sum of billable total_ms across runs and runner OSes (real billing). */
+    totalBillableMs: number;
+    /** Billable minutes (totalBillableMs / 60000). */
+    billableMinutes: number;
 }
 
 /**
@@ -600,10 +650,10 @@ export interface PerRunCost {
 export interface DataHub {
     /** Raw data from providers. */
     readonly raw: RawData;
-    /** Computed metrics. */
-    readonly computed: ComputedMetrics;
-    /** When the hub was created. */
-    readonly timestamp: Date;
+    /** Computed metrics (recomputed by mergeIncremental on incremental refresh). */
+    computed: ComputedMetrics;
+    /** When the hub was created or last refreshed (incremental merge updates this). */
+    timestamp: Date;
     /** Provider source. */
     readonly provider: 'github' | 'gitlab';
     /** Repository identifier. */
@@ -682,11 +732,46 @@ export interface DataHub {
     getQuality(category: QualityCategory): QualityReport | undefined;
 
     /**
+     * Pipeline pass rate for a single branch (Gap 3 — branch-aware metrics).
+     * Filters `raw.runs` to `branch` (head_branch ?? ref) before computing.
+     * Returns 0 when no runs match the branch.
+     */
+    getBranchPassRate(branch: string): number;
+
+    /**
+     * Gap 4 (G4.4): merge newly-fetched raw data into this hub incrementally.
+     * Runs already present (by id) are preserved; only new runs are added.
+     * Maps/arrays are merged via the same dedup semantics as provider merge.
+     * Recomputes `computed` and refreshes `timestamp`.
+     * Used by the incremental-refresh path to avoid a full refetch.
+     */
+    mergeIncremental(incoming: RawData): void;
+
+    /**
      * Quarantine store owned by the hub (single source of truth for the
      * quarantined-test list). Loaded once at construction from quarantine.json.
      * Replaces direct `isQuarantined()` file reads in consumers (SSOT).
      */
     getQuarantine(): QuarantineStore;
+
+    // ─── Test-result cache (SHA-keyed) — owned by DataHub (SSOT) ─────────────
+    // Consumers use these instead of constructing DataHubPersistence directly.
+    // Method names match DataHubPersistence so the migration is drop-in.
+
+    /** Load a SHA-keyed cached test report. Returns null when not cached. */
+    loadReport(sha: string): { tests: FlatTest[] } | null;
+    /** Save a SHA-keyed test report to the cache. */
+    saveReport(sha: string, tests: FlatTest[]): void;
+    /** Record report metadata index entry for a SHA (global + project indexes). */
+    put(sha: string, meta: ReportMeta): void;
+    /** Load branch→SHA index entries for a branch (may be empty). */
+    getBranch(branch: string): BranchEntry[];
+
+    // ─── Legacy metrics blob (quality-gated) — owned by DataHub (SSOT) ───────
+    /** Load project metrics blob (legacy metrics.json). */
+    loadMetrics<T = Record<string, unknown>>(): T | null;
+    /** Save project metrics blob (legacy metrics.json). */
+    saveMetrics<T = Record<string, unknown>>(data: T): void;
 }
 
 /**
@@ -696,6 +781,25 @@ export interface DataHub {
  * The wrapper exists to surface provider failures, partial data, and Layer 7
  * status without throwing exceptions.
  */
+/** Metadata recorded for a cached report, indexed by SHA. */
+export interface ReportMeta {
+    sha: string;
+    project: string;
+    timestamp: number;
+    tool: string;
+    branch: string;
+    total: number;
+    passed: number;
+    failed: number;
+    skipped: number;
+}
+
+/** A single branch→SHA index entry. */
+export interface BranchEntry {
+    sha: string;
+    timestamp: number;
+}
+
 export interface DataHubResult {
     /** The created DataHub instance (always present, even on partial failure). */
     hub: DataHub;
@@ -779,6 +883,28 @@ export interface DataHubPersistence {
     savePerformanceMetrics(metrics: PerformanceMetrics): void;
     /** Load latest performance metrics (null when none). */
     loadPerformanceMetrics(): PerformanceMetrics | null;
+
+    // ─── Test-result cache (SHA-keyed) — owned by DataHub (replaces legacy Store) ─
+    // The persistence layer holds the same Git/FS-backed files the legacy Store used
+    // (reports/<project>/<sha>.json, reports/index.json, reports/<project>/index.json,
+    // reports/<project>/branch-index.json, reports/<project>/metrics.json), so existing
+    // cache state stays valid (Invariant 9: no behavior regression on delete).
+    // Method names intentionally match the legacy Store public API consumed by
+    // immutable callers (e.g. case15.ts): the Store CLASS is deleted, its contract
+    // survives on DataHubPersistence (no safety-mechanism bypass — AGENTS §5/§18).
+    /** Load a SHA-keyed cached test report. Returns null when not cached. */
+    loadReport(sha: string): { tests: import('../result_parser.js').FlatTest[] } | null;
+    /** Save a SHA-keyed test report to the cache. */
+    saveReport(sha: string, tests: import('../result_parser.js').FlatTest[]): void;
+    /** Record report metadata index entry for a SHA (global + project indexes). */
+    put(sha: string, meta: ReportMeta): void;
+    /** Load branch→SHA index entries for a branch (may be empty). */
+    getBranch(branch: string): BranchEntry[];
+    /** Load project metrics blob (legacy metrics.json). */
+    loadMetrics<T = Record<string, unknown>>(): T | null;
+    /** Save project metrics blob (legacy metrics.json). */
+    saveMetrics<T = Record<string, unknown>>(data: T): void;
+
     /** Flush changes to disk. */
     flush(message: string): void;
 }

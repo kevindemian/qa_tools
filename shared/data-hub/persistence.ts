@@ -26,8 +26,10 @@ import type {
     RawIssue,
     CoverageFile,
     PerformanceMetrics,
+    ReportMeta,
+    BranchEntry,
 } from '../types/data-hub.js';
-import type { ParseResult } from '../result_parser.js';
+import type { ParseResult, FlatTest } from '../result_parser.js';
 import { extractErrorMessage, humanizeError } from '../prompt-errors.js';
 import { MetricsStoreSchema } from './schemas.js';
 import {
@@ -108,6 +110,10 @@ export function createDataHubPersistence(_project: string, backend?: StoreBacken
             storeBackend.init();
             return storeBackend;
         })();
+    // Legacy Store.ensure() initialized the backend before the first write.
+    // init() is idempotent (mkdir + conditional git init), so calling it here
+    // restores that behavior when a pre-built backend is supplied by callers.
+    b.init();
 
     function loadMetricsStore(): MetricsStore {
         const raw = readJson<unknown>(b, METRICS_FILE);
@@ -261,6 +267,42 @@ export function createDataHubPersistence(_project: string, backend?: StoreBacken
         },
         loadPerformanceMetrics(): PerformanceMetrics | null {
             return loadCategoryObject<PerformanceMetrics>(PERFORMANCE_FILE);
+        },
+
+        // ─── Test-result cache (SHA-keyed) — owned by DataHub (replaces legacy Store) ─
+        loadReport(sha: string): { tests: FlatTest[] } | null {
+            return readJson<{ tests: FlatTest[] }>(b, `reports/${_project}/${sha}.json`);
+        },
+
+        saveReport(sha: string, tests: FlatTest[]): void {
+            writeJson(b, `reports/${_project}/${sha}.json`, { tests });
+        },
+
+        put(sha: string, meta: ReportMeta): void {
+            const globalIndex = readJson<Record<string, ReportMeta>>(b, 'reports/index.json') ?? {};
+            const globalEntries = Object.entries(globalIndex).filter(([k]) => k !== sha);
+            globalEntries.push([sha, meta]);
+            writeJson(b, 'reports/index.json', Object.fromEntries(globalEntries));
+
+            const projIndex = readJson<Record<string, ReportMeta>>(b, `reports/${_project}/index.json`) ?? {};
+            const projEntries = Object.entries(projIndex).filter(([k]) => k !== sha);
+            projEntries.push([sha, meta]);
+            writeJson(b, `reports/${_project}/index.json`, Object.fromEntries(projEntries));
+        },
+
+        getBranch(branch: string): BranchEntry[] {
+            const raw = readJson<Record<string, unknown>>(b, `reports/${_project}/branch-index.json`) ?? {};
+            const entry = Object.entries(raw).find(([k]) => k === branch);
+            const value = entry?.[1];
+            return Array.isArray(value) ? (value as BranchEntry[]) : [];
+        },
+
+        loadMetrics<T = Record<string, unknown>>(): T | null {
+            return readJson<T>(b, `reports/${_project}/metrics.json`);
+        },
+
+        saveMetrics<T = Record<string, unknown>>(data: T): void {
+            writeJson(b, `reports/${_project}/metrics.json`, data);
         },
 
         flush(message: string): void {

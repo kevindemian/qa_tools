@@ -294,6 +294,14 @@ describe('Integration: Health Score', () => {
                 loadPerformanceMetrics: vi.fn().mockReturnValue(null),
                 getQuality: vi.fn(),
                 getQuarantine: vi.fn(() => ({ entries: [] })),
+                getBranchPassRate: vi.fn(),
+                mergeIncremental: vi.fn(),
+                loadReport: vi.fn(),
+                saveReport: vi.fn(),
+                put: vi.fn(),
+                getBranch: vi.fn(),
+                loadMetrics: vi.fn(),
+                saveMetrics: vi.fn(),
             };
         }
 

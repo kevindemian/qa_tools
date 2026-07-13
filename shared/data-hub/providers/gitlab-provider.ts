@@ -5,18 +5,43 @@
  * Fetches raw CI/CD data from GitLab CI API.
  */
 import type { GitProvider, PipelineJob, ArtifactInfo, GitLabTestReport, PipelineRun } from '../../types/ci-cd.js';
-import type { DataProvider, FetchOptions, RawData, RawCoverage, CiRunStats, DataSource } from '../../types/data-hub.js';
+import type {
+    DataProvider,
+    FetchOptions,
+    RawData,
+    RawCoverage,
+    CiRunStats,
+    DataSource,
+    FailureRecord,
+} from '../../types/data-hub.js';
 import type { ArtifactParseResult } from '../artifact-parser.js';
-import { parsePipelineRun } from '../schemas.js';
+import { parsePipelineRun, validateRawDataOrThrow } from '../schemas.js';
 import { rootLogger } from '../../logger.js';
 import { extractErrorMessage } from '../../prompt-errors.js';
 import { extractCoverage } from '../extractors/coverage-extractor.js';
 import { isTestArtifact, parseArtifactBufferAll } from '../artifact-parser.js';
 import { detectFrameworkCascade } from '../extractors/framework-detector.js';
-import { classifyFailures, type FailureInput } from '../extractors/failure-classifier.js';
+import { classifyFailures, failureEntryToRecord, type FailureInput } from '../extractors/failure-classifier.js';
+import { gitlabTestCasesToFailureRecords } from '../extractors/annotations-extractor.js';
 import { buildCommitLog } from '../extractors/commit-log-extractor.js';
 
 const DEFAULT_MAX_ARTIFACTS_PER_RUN = 5;
+
+/** Extract the branch a raw pipeline run belongs to (GitHub: head_branch, GitLab: ref). */
+function rawRunBranch(raw: unknown): string | undefined {
+    if (raw == null || typeof raw !== 'object') return undefined;
+    const r = raw as Record<string, unknown>;
+    const headBranch = r['head_branch'];
+    if (typeof headBranch === 'string') return headBranch;
+    const ref = r['ref'];
+    if (typeof ref === 'string') return ref;
+    return undefined;
+}
+
+/** Keep only runs whose branch matches `branch` (no-op when `branch` is undefined). */
+function filterRunsByBranch(fetched: unknown[], branch: string | undefined): unknown[] {
+    return branch == null ? fetched : fetched.filter((r) => rawRunBranch(r) === branch);
+}
 
 export class GitLabDataProvider implements DataProvider {
     readonly name = 'gitlab';
@@ -24,44 +49,43 @@ export class GitLabDataProvider implements DataProvider {
 
     constructor(private readonly provider: GitProvider) {}
 
-    async fetchRawData(options: FetchOptions): Promise<RawData> {
-        const rawRuns = await this.provider.getRecentPipelines(options.count);
-        const runs: PipelineRun[] = [];
-        for (const raw of rawRuns) {
-            const parsed = parsePipelineRun(raw);
-            if (parsed) runs.push(parsed);
+    /** Fetch recent pipeline runs, threading `since` only when present (G4.2/G4.3). */
+    private async fetchRuns(options: FetchOptions): Promise<unknown[]> {
+        if (options.since) {
+            return this.provider.getRecentPipelines(options.count, options.since);
         }
+        return this.provider.getRecentPipelines(options.count);
+    }
+
+    async fetchRawData(options: FetchOptions): Promise<RawData> {
+        const branch = options.branchFilter ?? options.branch;
+        const fetched = await this.fetchRuns(options);
+        const rawRuns = filterRunsByBranch(fetched, branch);
+        const runs = this.parseRuns(rawRuns);
         const jobsMap = new Map<number, PipelineJob[]>();
         const artifactsMap = new Map<number, ArtifactInfo[]>();
         const failureReasonsMap = new Map<number, string[]>();
+        const failureRecords: FailureRecord[] = [];
         const parsedArtifactsMap = new Map<number, ArtifactParseResult[]>();
-        let coverage: RawCoverage | undefined;
-        let gitlabTestReport: GitLabTestReport | undefined;
 
         const maxArtifacts = options.maxArtifactsPerRun ?? DEFAULT_MAX_ARTIFACTS_PER_RUN;
-
-        for (const run of runs) {
-            const runIdNum = this.parseRunId(run.id);
-            if (runIdNum == null) continue;
-            const report = await this.processRun(
-                runIdNum,
-                jobsMap,
-                artifactsMap,
-                failureReasonsMap,
-                parsedArtifactsMap,
-                run,
-                maxArtifacts,
-            );
-            if (gitlabTestReport == null && report != null) gitlabTestReport = report;
-            coverage = await this.extractCoverageIfNeeded(coverage, jobsMap, runIdNum);
-        }
+        const { gitlabTestReport, coverage } = await this.collectFromRuns(
+            runs,
+            jobsMap,
+            artifactsMap,
+            failureReasonsMap,
+            failureRecords,
+            parsedArtifactsMap,
+            maxArtifacts,
+        );
+        this.appendGitLabTestReportFailures(failureRecords, gitlabTestReport);
 
         const framework = await this.detectFrameworkFromFirstRun(runs);
         const commitLog = buildCommitLog(runs);
         const ciRuns = this.deriveCiRuns(runs, parsedArtifactsMap);
         const provenance = this.buildProvenance(coverage, framework, gitlabTestReport);
 
-        return {
+        const rawData: RawData = {
             runs,
             jobs: jobsMap,
             artifacts: artifactsMap,
@@ -72,8 +96,60 @@ export class GitLabDataProvider implements DataProvider {
             ...(gitlabTestReport != null ? { gitlabTestReport } : {}),
             ...(commitLog ? { commitLog } : {}),
             ...(ciRuns.length > 0 ? { ciRuns } : {}),
+            failureRecords,
             provenance,
         };
+
+        // Gap 1: reject malformed provider output explicitly at the boundary.
+        return validateRawDataOrThrow(rawData);
+    }
+
+    private parseRuns(rawRuns: unknown[]): PipelineRun[] {
+        const runs: PipelineRun[] = [];
+        for (const raw of rawRuns) {
+            const parsed = parsePipelineRun(raw);
+            if (parsed) runs.push(parsed);
+        }
+        return runs;
+    }
+
+    private async collectFromRuns(
+        runs: PipelineRun[],
+        jobsMap: Map<number, PipelineJob[]>,
+        artifactsMap: Map<number, ArtifactInfo[]>,
+        failureReasonsMap: Map<number, string[]>,
+        failureRecords: FailureRecord[],
+        parsedArtifactsMap: Map<number, ArtifactParseResult[]>,
+        maxArtifacts: number,
+    ): Promise<{ gitlabTestReport: GitLabTestReport | undefined; coverage: RawCoverage | undefined }> {
+        let coverage: RawCoverage | undefined;
+        let gitlabTestReport: GitLabTestReport | undefined;
+        for (const run of runs) {
+            const runIdNum = this.parseRunId(run.id);
+            if (runIdNum == null) continue;
+            const report = await this.processRun(
+                runIdNum,
+                jobsMap,
+                artifactsMap,
+                failureReasonsMap,
+                failureRecords,
+                parsedArtifactsMap,
+                run,
+                maxArtifacts,
+            );
+            if (gitlabTestReport == null && report != null) gitlabTestReport = report;
+            coverage = await this.extractCoverageIfNeeded(coverage, jobsMap, runIdNum);
+        }
+        return { gitlabTestReport, coverage };
+    }
+
+    private appendGitLabTestReportFailures(failureRecords: FailureRecord[], gitlabTestReport?: GitLabTestReport): void {
+        if (gitlabTestReport && Array.isArray(gitlabTestReport.test_suites)) {
+            const testCases = gitlabTestReport.test_suites.flatMap((s) => s.test_cases);
+            if (testCases.length > 0) {
+                failureRecords.push(...gitlabTestCasesToFailureRecords(testCases));
+            }
+        }
     }
 
     private buildProvenance(
@@ -112,6 +188,7 @@ export class GitLabDataProvider implements DataProvider {
         jobsMap: Map<number, PipelineJob[]>,
         artifactsMap: Map<number, ArtifactInfo[]>,
         failureReasonsMap: Map<number, string[]>,
+        failureRecords: FailureRecord[],
         parsedArtifactsMap: Map<number, ArtifactParseResult[]>,
         run: PipelineRun,
         maxArtifacts: number,
@@ -121,7 +198,7 @@ export class GitLabDataProvider implements DataProvider {
             jobsMap.set(runIdNum, runJobs);
             await this.fetchArtifacts(runIdNum, artifactsMap, parsedArtifactsMap, maxArtifacts);
             const testReport = await this.fetchTestReport(runIdNum);
-            await this.fetchFailureReasons(runJobs, failureReasonsMap, run);
+            await this.fetchFailureReasons(runJobs, failureReasonsMap, failureRecords, run);
             return testReport;
         } catch (err) {
             rootLogger.debug(`GitLab: jobs fetch failed for run ${runIdNum}: ${extractErrorMessage(err)}`);
@@ -224,6 +301,7 @@ export class GitLabDataProvider implements DataProvider {
     private async fetchFailureReasons(
         jobs: PipelineJob[],
         failureReasonsMap: Map<number, string[]>,
+        failureRecords: FailureRecord[],
         run: PipelineRun,
     ): Promise<void> {
         const logText = await this.collectFirstFailedJobLog(jobs);
@@ -234,6 +312,9 @@ export class GitLabDataProvider implements DataProvider {
 
         const classified = classifyFailures(input);
         this.mapClassifiedToFirstFailedJob(classified, jobs, failureReasonsMap);
+        for (const entry of classified) {
+            failureRecords.push(failureEntryToRecord(entry));
+        }
     }
 
     private async collectFirstFailedJobLog(jobs: PipelineJob[]): Promise<string | undefined> {
