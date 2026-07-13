@@ -6,6 +6,9 @@
 import Config from '../shared/config.js';
 import JiraResource from '../jira_management/jira_resource.js';
 import { createStepImporter } from '../jira_management/xray-client.js';
+import { importExecutionResults } from '../jira_management/result_reporter.js';
+import { resolveProxyUrl } from '../shared/proxy-config.js';
+import type { JiraResourceLike } from '../shared/types.js';
 
 vi.mock('../shared/prompt', async () => {
     const actual = await vi.importActual<typeof import('../shared/prompt.js')>('../shared/prompt');
@@ -53,4 +56,56 @@ describe('Smoke-xray-cloud', () => {
         expect(jira.baseUrl).toContain('atlassian.net');
         expect(jira.baseUrl).toMatch(/^https/);
     });
+
+    it.runIf(process.env['XRAY_MODE'] === 'cloud')('resolves egress proxy from HTTPS_PROXY config', () => {
+        const saved: Record<string, string | undefined> = {
+            QA_PROXY_URL: process.env['QA_PROXY_URL'],
+            HTTPS_PROXY: process.env['HTTPS_PROXY'],
+            HTTP_PROXY: process.env['HTTP_PROXY'],
+            https_proxy: process.env['https_proxy'],
+            http_proxy: process.env['http_proxy'],
+        };
+        process.env['HTTPS_PROXY'] = 'https://corp-proxy.internal:8080';
+        delete process.env['HTTP_PROXY'];
+        delete process.env['https_proxy'];
+        delete process.env['http_proxy'];
+        delete process.env['QA_PROXY_URL'];
+        try {
+            expect(resolveProxyUrl()).toBe('https://corp-proxy.internal:8080');
+        } finally {
+            for (const key of Object.keys(saved)) {
+                const value = saved[key];
+                if (value === undefined) delete process.env[key];
+                else process.env[key] = value;
+            }
+        }
+    });
+
+    it.runIf(process.env['XRAY_MODE'] === 'cloud')(
+        'importExecutionResults posts to raven 2.0 cloud import endpoint',
+        async () => {
+            expect.hasAssertions();
+
+            const resource: JiraResourceLike = {
+                getJiraResource: vi.fn().mockResolvedValue({}),
+                postJiraResource: vi.fn().mockResolvedValue({}),
+                putJiraResource: vi.fn().mockResolvedValue(null),
+                searchJiraIssues: vi.fn().mockResolvedValue({ issues: [] }),
+                getTransitionsForIssue: vi.fn().mockResolvedValue({}),
+                transitionIssue: vi.fn().mockResolvedValue(undefined),
+                postToApiRoot: vi.fn().mockResolvedValue(null),
+            };
+
+            const matched = [
+                { key: 'ECSPOL-1', status: 'passed', duration: 10 },
+                { key: 'ECSPOL-2', status: 'failed', duration: 20 },
+            ];
+
+            await importExecutionResults(resource, 'ECSPOL-1255', matched);
+
+            const mock = resource.postToApiRoot as ReturnType<typeof vi.fn>;
+
+            expect(mock).toHaveBeenCalledWith('rest/raven/2.0/api/import/execution/json', expect.any(Object));
+        },
+    );
 });
