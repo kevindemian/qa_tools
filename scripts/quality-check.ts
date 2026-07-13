@@ -60,7 +60,11 @@ function grepLines(file: string, pattern: RegExp): Array<{ line: number; content
 }
 
 function allTsFiles(): string[] {
-    return globSync('**/*.ts', { ignore: ['node_modules/**'] });
+    // Normalize to forward slashes so path filters (startsWith('scripts/'),
+    // f !== 'scripts/quality-check.test.ts') work on Windows too, where
+    // globSync returns backslash-separated paths. Without this, the intended
+    // exclusions silently fail and the script scans its own source/fixtures.
+    return globSync('**/*.ts', { ignore: ['node_modules/**'] }).map((f) => f.replace(/\\/g, '/'));
 }
 
 export function checkNoPattern(name: string, pattern: RegExp, files: string[], excludePattern?: RegExp): CheckResult {
@@ -444,7 +448,7 @@ export function checkIntegrity(): CheckResult {
         const selfContent = readFileSync('scripts/quality-check.ts', 'utf-8');
         const contentWithoutHash = selfContent.replace(/\/\* HASH:[0-9a-f]{64} \*\//g, '');
         const currentHash = createHash('sha256').update(contentWithoutHash, 'utf-8').digest('hex');
-        /* HASH:c65e28a4aed01f106f7ae96e838fee433397a7aa765c3358584f7fefb6202a3b */
+        /* HASH:b1ae977a14b4bd12869e765c05f6cad08a3185fcd8ef5f8dbb46499d2a474c86 */
         const match = /\/\* HASH:([0-9a-f]{64}) \*\//.exec(selfContent);
         if (!match) {
             violations.push({ file: 'scripts/quality-check.ts', line: 1, content: 'Missing HASH comment' });
