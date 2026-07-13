@@ -3955,14 +3955,14 @@ ST-1, ST-2, ST-3, L4 e a migração de consumidores re-escopada (quarentena SSOT
 
 ### 2. Plano ajustado ordenado (até a conclusão do track)
 
-| Ordem | Item                                            | Escopo principal                                                                                                                                                                                                                                                                         | Autorização                                                                    |
-| :---- | :---------------------------------------------- | :--------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | :----------------------------------------------------------------------------- |
-| 0     | Verificação de causa raiz (read-only)           | Confirmar que `isDataHubInitialized()` é verdadeiro em **todos** os callers de `resolveTestDataSource` (case15, case17, pipeline-handler) — define se o cache legado é redundante                                                                                                        | —                                                                              |
-| 1     | **FASE 8/C + FASE 9 — Eliminar `Store` legado** | Mover leitura de cache 100% para `hub.raw.parsedArtifacts`; remover `new Store(` em `session-context.ts`/`pipeline-handler.ts`, deletar `shared/store.ts` + `shared/__mocks__/store.ts` + imports; tratar `tryLoadFromCache`/`trySaveCiResult`/`resolveFromBranch`                       | Root-cause (§4): não deletar sem equivalência comprovada no passo 0            |
-| 2     | **WS2 — Guarda contínua**                       | Estender `eslint.config.mjs:212` para bloquear `new Store(` / `import ...store.js` fora de `data-hub/` (trava a eliminação do passo 1)                                                                                                                                                   | Adição de mecanismo de segurança (§5) — ok                                     |
-| 3     | **WS3 — Lint N2-B**                             | Corrigir `security/detect-non-literal-fs-filename` em `shared/quarantine.ts` (validar caminho contra base permitida; **sem** `eslint-disable`)                                                                                                                                           | Obrigatório (§4/§25)                                                           |
-| 4     | **WS1 — Contrato (autorizado)**                 | Remover `saveMetricsStore(store: MetricsStore): void` da interface pública `DataHub` (manter em `DataHubPersistence`); podar o campo dos mocks (`data-hub-mock.ts`, `context-factory.ts`, `pr-report.test.ts`, `quality-gate.integration.test.ts`, `hub-st1.test.ts`, `factory.test.ts`) | **Autorizado expressamente pelo usuário em 2026-07-12, sem reservas (§6/§18)** |
-| 5     | **WS4 — Reconciliar planos (este item)**        | Atualizar `data-hub-ssot-enforcement.md` (feito aqui) e sinalizar `data-hub-layered-architecture.md` como obsoleto no narrativo de consumidores                                                                                                                                          | Item de execução                                                               |
+| Ordem | Item                                            | Escopo principal                                                                                                                                                                                                                                                                                                                                                                | Autorização                                                         |
+| :---- | :---------------------------------------------- | :------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------ | :------------------------------------------------------------------ |
+| 0     | Verificação de causa raiz (read-only)           | Confirmar que `isDataHubInitialized()` é verdadeiro em **todos** os callers de `resolveTestDataSource` (case15, case17, pipeline-handler) — define se o cache legado é redundante                                                                                                                                                                                               | —                                                                   |
+| 1     | **FASE 8/C + FASE 9 — Eliminar `Store` legado** | Mover leitura de cache 100% para `hub.raw.parsedArtifacts`; remover `new Store(` em `session-context.ts`/`pipeline-handler.ts`, deletar `shared/store.ts` + `shared/__mocks__/store.ts` + imports; tratar `tryLoadFromCache`/`trySaveCiResult`/`resolveFromBranch`                                                                                                              | Root-cause (§4): não deletar sem equivalência comprovada no passo 0 |
+| 2     | **WS2 — Guarda contínua**                       | Estender `eslint.config.mjs:212` para bloquear `new Store(` / `import ...store.js` fora de `data-hub/` (trava a eliminação do passo 1)                                                                                                                                                                                                                                          | Adição de mecanismo de segurança (§5) — ok                          |
+| 3     | **WS3 — Lint N2-B**                             | Corrigir `security/detect-non-literal-fs-filename` em `shared/quarantine.ts` (validar caminho contra base permitida; **sem** `eslint-disable`)                                                                                                                                                                                                                                  | Obrigatório (§4/§25)                                                |
+| 4     | **WS1 — Contrato (SUPERSEDED)**                 | ~~Remover `saveMetricsStore` da interface `DataHub`~~ SUPERSEDED 2026-07-13: mantido como facade delegate (persistence é `private` — `hub.ts:105`; `types/data-hub.ts:663` proíbe acesso direto à camada de persistência). Remoção reabriria encapsulamento ou forçaria `createDataHubPersistence()` direto (anti-padrão do facade). Track concluído — sem alteração de código. | Decisão de design (facade) — sem código                             |
+| 5     | **WS4 — Reconciliar planos (este item)**        | Atualizar `data-hub-ssot-enforcement.md` (feito aqui) e sinalizar `data-hub-layered-architecture.md` como obsoleto no narrativo de consumidores                                                                                                                                                                                                                                 | Item de execução                                                    |
 
 > `data-hub-layered-architecture.md` e `PROGRESS-LAYERED-ARCH.md` contêm narrativo de "próximas fases" igualmente obsoleto (claim de 18/23 call sites). Estão **superseded** por esta seção; reconcile detalhado fica para WS4-final (ou edição pontual posterior).
 
@@ -4018,8 +4018,11 @@ ST-1, ST-2, ST-3, L4 e a migração de consumidores re-escopada (quarentena SSOT
               grep+tsc, mas sem guarda contínua a regressão não é travada automaticamente).
 [CHECKPOINT 2] WS3 — NÃO CONCLUÍDO nesta sessão (escopo separado: quarantine.ts
               detect-non-literal-fs-filename). Status: pendente.
-[CHECKPOINT 3] WS1 — estado preservado (concluído em sessão anterior: saveMetricsStore fora da interface
-              pública DataHub; mocks podados). Sem regressão por esta sessão.
+[CHECKPOINT 3] WS1 — **SUPERSEDED (2026-07-13)** — `saveMetricsStore` NÃO removido da interface `DataHub`.
+               Motivo: `DataHub.persistence` é `private` (`hub.ts:105`) e a interface proíbe acesso direto à
+               persistência (`types/data-hub.ts:663`); os métodos de persistência na interface são um facade
+               deliberado (comentário :676). Remover só `saveMetricsStore` seria assimétrico e forçaria
+               bypass do facade. SSOT já satisfeito (única camada `persistence` encapsulada). Sem alteração de código.
 [CHECKPOINT 4] WS4-final — PARCIAL: este documento atualizado (CHECKPOINTS). STATUS DO TRACK pendente de
               consolidação final quando o usuário reavaliar o track.
 ```
@@ -4029,3 +4032,18 @@ ST-1, ST-2, ST-3, L4 e a migração de consumidores re-escopada (quarentena SSOT
 - Branch: `feat/ssot-gap-corrections`. Último commit de código: `d49c6ac0` (quarentena SSOT). Último commit de docs: `7782ec62`.
 - Débito N2-B e exposição `saveMetricsStore` agora **autorizados para correção** na próxima fase (não mais "fora de escopo").
 - Próxima ação ao retomar: executar **CHECKPOINT 0** (verificação read-only de `isDataHubInitialized()` nos callers), depois **CHECKPOINT 1** (FASE 8/C + WS2).
+
+---
+
+## RETOMADA — 2026-07-13 (WS4 FINAL)
+
+Track FASE EXPAND + STORE retomado e **concluído**:
+
+- **FASE 8/C (eliminação do `Store` legado):** ✅ em `main` (`df702ef4`); `shared/store.ts` ausente.
+- **WS2 (guarda `no-restricted-syntax` p/ `new Store(`/`store.js`):** ✅ em `main` (`eslint.config.mjs:217`).
+- **WS3 (débito N2-B `quarantine.ts`):** ✅ documentado em `shared/quarantine.ts:12` (severity-1, CI não afetado; regra não suprimida).
+- **Quarentena SSOT:** ✅ em `main` (`d49c6ac0`).
+- **WS1 (remover `saveMetricsStore` da interface `DataHub`):** **SUPERSEDED** — mantido como facade delegate; `persistence` é `private` (`hub.ts:105`) e a interface proíbe acesso direto (`types/data-hub.ts:663`). Remoção reabriria encapsulamento ou forçaria `createDataHubPersistence()` direto (anti-padrão do facade). SSOT já atendido por única camada de persistência encapsulada. **Sem alteração de código.**
+- `stash@{0}` (WIP obsoleto em `feat/ssot-gap-corrections`, base `dd3931ec`): conteúdo já em `main`; **dropado** (2026-07-13) para evitar misapplication.
+
+**Conclusão:** track encerrado. Nenhuma pendência executável de código. Planos reconciliados (WS1 = SUPERSEDED).

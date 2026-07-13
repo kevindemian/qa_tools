@@ -2,7 +2,7 @@
 
 > **Parte do plano DataHub SSOT.** Reorganizado de `data-hub-ssot-enforcement.md` (2026-07-12).
 > Documento original preservado (marcado SUPERSEDED). Este é o documento de verdade para as correções da Fase 22.
-> **STATUS: 📋 DOCUMENTO DE REFERÊNCIA (tracking).** FASE 8/C = ✅ CONCLUÍDO · WS1 = ✅ CONCLUÍDO · WS2 = ✅ CONCLUÍDO (2026-07-12: guarda `no-restricted-syntax` estendida em `eslint.config.mjs` para `new Store(` + `import store.js`; verificada por probe) · WS3 = ✅ RESOLVIDO (2026-07-12: débito N2-B documentado em `quarantine.ts` como false positive; severity-1, CI não afetado). Não há tarefa executável livre neste doc.
+> **STATUS: 📋 DOCUMENTO DE REFERÊNCIA (tracking).** FASE 8/C = ✅ CONCLUÍDO · WS1 = SUPERSEDED (2026-07-13: `saveMetricsStore` retido na interface `DataHub` como facade delegate; `persistence` é `private` — `hub.ts:105`; `types/data-hub.ts:663` proíbe acesso direto. Remoção reabriria encapsulamento ou forçaria `createDataHubPersistence()` direto — anti-padrão do facade. Sem alteração de código.) · WS2 = ✅ CONCLUÍDO (2026-07-12: guarda `no-restricted-syntax` estendida em `eslint.config.mjs` para `new Store(` + `import store.js`; verificada por probe) · WS3 = ✅ RESOLVIDO (2026-07-12: débito N2-B documentado em `quarantine.ts` como false positive; severity-1, CI não afetado). Não há tarefa executável livre neste doc.
 
 ## PLANO DE RETOMADA — Consolidado (2026-07-11)
 
