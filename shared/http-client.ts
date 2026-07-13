@@ -5,6 +5,7 @@ import crypto from 'crypto';
 import { createAgent } from './tls.js';
 import { rootLogger } from './logger.js';
 import { extractHost, HostSemaphore } from './host-semaphore.js';
+import { parseProxyUrl, resolveProxyUrl } from './proxy-config.js';
 
 /** Configuration for {@link createHttpClient}. */
 export interface HttpClientConfig {
@@ -17,6 +18,8 @@ export interface HttpClientConfig {
     /** Maximum retry attempts for GET/PUT on 5xx/429/network errors (default: 10).
      *  Set lower for non-critical requests like status badges. */
     maxRetries?: number;
+    /** Egress proxy URL override. Falls back to QA_PROXY_URL / HTTPS_PROXY / HTTP_PROXY env vars when omitted. */
+    proxyUrl?: string;
 }
 
 /** Número máximo de tentativas para GET/PUT.
@@ -208,16 +211,23 @@ export function createHttpClient({
     authHeader,
     timeout = DEFAULT_HTTP_TIMEOUT_MS,
     maxRetries,
+    proxyUrl,
 }: HttpClientConfig): AxiosInstance {
+    const resolvedProxy = resolveProxyUrl(proxyUrl);
     const instance = axios.create({
         baseURL: baseUrl,
         timeout,
         httpsAgent: createAgent(),
+        proxy: resolvedProxy ? parseProxyUrl(resolvedProxy) : false,
         headers: {
             'Content-Type': 'application/json',
             ...(authHeader || {}),
         },
     });
+
+    if (resolvedProxy) {
+        rootLogger.debug('Egress proxy applied to HTTP client: ' + resolvedProxy);
+    }
 
     _setupResponseInterceptor(instance, maxRetries ?? HTTP_MAX_RETRIES);
 

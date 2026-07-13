@@ -8,7 +8,6 @@ import {
     matchPreconditionByTokenOverlap,
     matchPreconditionByDualThreshold,
 } from './precondition-handler.js';
-import { createPreconditionHandler } from './precondition-handler-factory.js';
 
 export { matchPreconditionByTokenOverlap, matchPreconditionByDualThreshold };
 
@@ -22,7 +21,7 @@ class JiraLinkManager {
         this.jiraResource = jiraResource;
         this.linkTypeManager = new LinkTypeManager(jiraResource);
         this.linkOperations = new LinkOperations(jiraResource, this.linkTypeManager);
-        this.preconditionHandler = createPreconditionHandler(jiraResource, this);
+        this.preconditionHandler = new PreconditionHandler(jiraResource, this);
     }
 
     get linkTypesCache() {

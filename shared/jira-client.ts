@@ -13,7 +13,6 @@ import { createHttpClient } from './http-client.js';
 import { extractErrorMessage } from './prompt.js';
 import { rootLogger } from './logger.js';
 import { createJiraAuthHeader, isAtlassianCloudGateway, type JiraMode } from './jira-auth.js';
-import { parseProxyUrl, resolveProxyUrl } from './proxy-config.js';
 import Config from './config.js';
 import { checkCircuitBreaker, recordCircuitFailure, recordCircuitSuccess } from './circuit-breaker.js';
 import type { JsonObject, JiraResourceLike, SearchIssuesResponse } from './types.js';
@@ -58,27 +57,20 @@ class JiraClient implements JiraResourceLike {
             }
         }
         const scheme: 'auto' | 'bearer' | 'basic' = gateway ? 'bearer' : 'auto';
-        this.axiosInstance = createHttpClient({
+        let proxyUrl: string | undefined;
+        try {
+            proxyUrl = Config.getDefault().get('proxyUrl');
+        } catch {
+            proxyUrl = undefined;
+        }
+        const clientConfig: Parameters<typeof createHttpClient>[0] = {
             baseUrl,
             authHeader: createJiraAuthHeader(effectiveToken, this.jiraMode, scheme),
-        });
-
-        let configured: string | undefined;
-        try {
-            configured = Config.getDefault().get('proxyUrl');
-        } catch {
-            configured = undefined;
+        };
+        if (proxyUrl) {
+            clientConfig.proxyUrl = proxyUrl;
         }
-        const resolved = resolveProxyUrl(configured);
-        if (resolved) {
-            try {
-                this.axiosInstance.defaults.proxy = parseProxyUrl(resolved);
-                rootLogger.debug('Egress proxy applied to Jira client: ' + resolved);
-            } catch (err) {
-                rootLogger.error('Invalid proxy configuration for ' + baseUrl + ': ' + formatErr(err));
-                throw err;
-            }
-        }
+        this.axiosInstance = createHttpClient(clientConfig);
     }
 
     /** POST to an absolute URL rooted at the Jira API root (base URL with

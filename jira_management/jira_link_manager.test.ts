@@ -9,6 +9,14 @@ vi.mock('../shared/logger', () => ({
 
 vi.mock('fs');
 
+const mockConfigGet = vi.fn<(key: string) => string | undefined>();
+vi.mock('../shared/config', () => ({
+    default: {
+        get: (key: string) => mockConfigGet(key),
+        getDefault: () => ({ get: (key: string) => mockConfigGet(key) }),
+    },
+}));
+
 import fs from 'fs';
 import type { Mock } from 'vitest';
 import path from 'path';
@@ -38,6 +46,7 @@ describe('JiraLinkManager', () => {
 
     beforeEach(() => {
         vi.clearAllMocks();
+        mockConfigGet.mockReturnValue(undefined);
         mockJiraResource = {
             getJiraResource: vi.fn(),
             postJiraResource: vi.fn(),
@@ -290,6 +299,36 @@ describe('JiraLinkManager', () => {
             expect(mockJiraResource.putJiraResource).toHaveBeenCalledWith('issue/TEST-1', {
                 fields: { custom_99: ['PRE-1', 'PRE-2'] },
             });
+        });
+    });
+
+    describe('AssociatePrecondition (Cloud mode)', () => {
+        let cloudManager: InstanceType<typeof JiraLinkManager>;
+        let createIssueLinkSpy: ReturnType<typeof vi.spyOn>;
+
+        beforeEach(() => {
+            mockConfigGet.mockImplementation((key: string) => (key === 'jiraMode' ? 'cloud' : undefined));
+            cloudManager = new JiraLinkManager(mockJiraResource);
+            createIssueLinkSpy = vi.spyOn(cloudManager, 'createIssueLink').mockResolvedValue({ id: 'link-1' });
+        });
+
+        it('associates precondition via native issue link when in cloud mode', async () => {
+            expect.hasAssertions();
+
+            const result = await cloudManager.associatePrecondition('TEST-1', 'PRE-1');
+
+            expect(result).toBeNull();
+            expect(createIssueLinkSpy).toHaveBeenCalledTimes(1);
+            expect(createIssueLinkSpy).toHaveBeenCalledWith('TEST-1', 'PRE-1', 'Pre-Condition');
+            expect(mockJiraResource.putJiraResource).not.toHaveBeenCalled();
+        });
+
+        it('does not use the Server precondition custom field in cloud mode', async () => {
+            expect.hasAssertions();
+
+            await cloudManager.associatePrecondition('TEST-1', 'PRE-1');
+
+            expect(mockJiraResource.getJiraResource).not.toHaveBeenCalled();
         });
     });
 

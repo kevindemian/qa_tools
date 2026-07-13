@@ -1,7 +1,9 @@
 import { formatErr } from '../shared/errors.js';
 import { info } from '../shared/prompt.js';
 import { rootLogger } from '../shared/logger.js';
+import Config from '../shared/config.js';
 import type { JsonObject, PreConditionSummary, JiraResourceLike } from '../shared/types.js';
+import type JiraLinkManager from './jira_link_manager.js';
 
 interface IssueField {
     id: string;
@@ -13,12 +15,28 @@ export class PreconditionHandler {
     jiraResource: JiraResourceLike;
     _preconditionFieldId?: string;
     _preconditionIssueTypeId: string | undefined;
+    private readonly _linkManager: JiraLinkManager | undefined;
 
-    constructor(jiraResource: JiraResourceLike) {
+    constructor(jiraResource: JiraResourceLike, linkManager?: JiraLinkManager) {
         this.jiraResource = jiraResource;
+        this._linkManager = linkManager;
+    }
+
+    private _isCloud(): boolean {
+        try {
+            return Config.getDefault().get('jiraMode') === 'cloud';
+        } catch {
+            return false;
+        }
     }
 
     async _getPreconditionFieldId(): Promise<string> {
+        if (this._isCloud()) {
+            throw new Error(
+                'Cloud mode: Xray Cloud does not use the Jira Server precondition custom field. ' +
+                    'Preconditions are associated via native issue links.',
+            );
+        }
         if (this._preconditionFieldId) return this._preconditionFieldId;
         try {
             const fields = await this.jiraResource.getJiraResource<IssueField[]>('field');
@@ -33,8 +51,7 @@ export class PreconditionHandler {
             }
         } catch (err: unknown) {
             rootLogger.warn(
-                'Não foi possível descobrir field ID para pre-condition, usando fallback 13708: ' +
-                    formatErr(err),
+                'Não foi possível descobrir field ID para pre-condition, usando fallback 13708: ' + formatErr(err),
             );
         }
         this._preconditionFieldId = 'customfield_13708';
@@ -42,6 +59,14 @@ export class PreconditionHandler {
     }
 
     async associatePrecondition(testKey: string, preconditionKey: string): Promise<JsonObject | null> {
+        if (this._isCloud()) {
+            if (!this._linkManager) {
+                throw new Error('Cloud precondition association requires a JiraLinkManager; none was provided.');
+            }
+            info(`Associando pre-condition ${preconditionKey} ao teste ${testKey} via issue link (Cloud)...`);
+            await this._linkManager.createIssueLink(testKey, preconditionKey, 'Pre-Condition');
+            return null;
+        }
         const fieldId = await this._getPreconditionFieldId();
         info(`Associando pre-condition ${preconditionKey} ao teste ${testKey}...`);
         const testIssue = await this.jiraResource.getJiraResource<{ fields?: JsonObject }>(`issue/${testKey}`);
