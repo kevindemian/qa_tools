@@ -60,6 +60,7 @@ function makeMockHub(): DataHub {
         },
         timestamp: new Date(),
         provider: 'github',
+        mergeIncremental: vi.fn(),
         repo: 'test/repo',
         saveRun: vi.fn(),
         saveCoverageSnapshot: vi.fn(),
@@ -99,6 +100,13 @@ function makeMockHub(): DataHub {
         loadPerformanceMetrics: vi.fn().mockReturnValue(null),
         getQuality: vi.fn(),
         getQuarantine: vi.fn(() => ({ entries: [] })),
+        getBranchPassRate: vi.fn(),
+        loadReport: vi.fn(),
+        saveReport: vi.fn(),
+        put: vi.fn(),
+        getBranch: vi.fn(),
+        loadMetrics: vi.fn(),
+        saveMetrics: vi.fn(),
     };
 }
 
@@ -125,6 +133,7 @@ function createMockGitProvider(): GitProvider {
         getDiff: vi.fn(),
         getJobLogs: vi.fn(),
         getWorkflowRunTiming: vi.fn(),
+        getWorkflowUsage: vi.fn(),
         getFileContents: vi.fn(),
         listDirectory: vi.fn(),
         getTestReport: vi.fn(),

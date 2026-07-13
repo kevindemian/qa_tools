@@ -7,8 +7,8 @@ import type { PipelineTriggerResult, StateContainer } from '../shared/types.js';
 import type { GitProvider } from '../shared/types.js';
 import { writeEphemeral } from '../shared/temp-dir.js';
 import { getHeadSha } from '../shared/git-sha.js';
+import { getDataHub } from '../shared/data-hub/global-hub.js';
 import { detectStoreBackend } from '../shared/store-backend.js';
-import { Store } from '../shared/store.js';
 import {
     collectTestResults as _collectTestResults,
     createTestExecution as _createTestExecution,
@@ -158,7 +158,7 @@ async function _postPipeline(
     if (parsed) {
         const sha = getHeadSha() || 'no-sha';
         const backend = detectStoreBackend();
-        const store = new Store(backend, projectName);
+        const store = getDataHub();
         store.saveReport(sha, parsed.tests);
         store.put(sha, {
             sha,
@@ -188,8 +188,7 @@ async function resumePendingPipeline(
 ): Promise<string | null> {
     const savedState = loadState();
     const pending = savedState['pendingPipeline'] as
-        | { branch?: string; pipelineId?: string; projectName?: string }
-        | undefined;
+        { branch?: string; pipelineId?: string; projectName?: string } | undefined;
     if (!pending || pending.projectName !== projectName || !pending.pipelineId) return null;
 
     if (

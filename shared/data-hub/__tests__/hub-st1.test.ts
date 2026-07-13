@@ -21,8 +21,10 @@ import type {
     FailureClassification,
     QualityMetricsSnapshot,
     MetricsRun,
+    ReportMeta,
+    BranchEntry,
 } from '../../types/data-hub.js';
-import type { ParseResult } from '../../result_parser.js';
+import type { ParseResult, FlatTest } from '../../result_parser.js';
 import { DataHubImpl } from '../hub.js';
 
 const failureRecords: FailureRecord[] = [{ name: 'a', status: 'failed', confidence: 1, source: 'junit' }];
@@ -65,6 +67,13 @@ describe('ST-1 hub delegates to persistence', () => {
         const loadCoverageFiles = vi.fn<() => CoverageFile[]>().mockReturnValue([]);
         const savePerformanceMetrics = vi.fn<(metrics: PerformanceMetrics) => void>();
         const loadPerformanceMetrics = vi.fn<() => PerformanceMetrics | null>().mockReturnValue(null);
+        // ─── Test-result cache (SHA-keyed) — owned by DataHub (replaces legacy Store) ─
+        const loadReport = vi.fn<(sha: string) => { tests: FlatTest[] } | null>().mockReturnValue(null);
+        const saveReport = vi.fn<(sha: string, tests: FlatTest[]) => void>();
+        const put = vi.fn<(sha: string, meta: ReportMeta) => void>();
+        const getBranch = vi.fn<(branch: string) => BranchEntry[]>().mockReturnValue([]);
+        const loadMetrics = vi.fn<() => null>().mockReturnValue(null);
+        const saveMetrics = vi.fn<(data: unknown) => void>();
         const flush = vi.fn<(message: string) => void>();
 
         const persistence: DataHubPersistence = {
@@ -93,6 +102,12 @@ describe('ST-1 hub delegates to persistence', () => {
             loadCoverageFiles,
             savePerformanceMetrics,
             loadPerformanceMetrics,
+            loadReport,
+            saveReport,
+            put,
+            getBranch,
+            loadMetrics,
+            saveMetrics,
             flush,
         };
 

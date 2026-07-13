@@ -2,7 +2,7 @@
  * Each command handler receives a {@link SessionContext} to track progress and build context lines.
  *
  * Sprint C extension: resolveTestDataSource() replaces manual path with
- * SHA-keyed cache lookup + CI auto-download via Store. */
+ * SHA-keyed cache lookup (DataHub-owned) + CI auto-download. */
 
 function isNonNullObject(val: unknown): val is Record<string, unknown> {
     return val != null && Object.getPrototypeOf(val) !== null;
@@ -16,8 +16,7 @@ function getErrorMessage(err: unknown): string {
 }
 import { withSpinner } from './prompt.js';
 import { getHeadSha, getCurrentBranch } from './git-sha.js';
-import { detectStoreBackend, detectProjectGitDir } from './store-backend.js';
-import { Store, type ReportMeta } from './store.js';
+import type { DataHub, ReportMeta } from './types/data-hub.js';
 // ci-test-downloader removed — DataHub.raw.parsedArtifacts is SSOT (Invariant 6)
 import { isDataHubInitialized, getDataHub } from './data-hub/global-hub.js';
 import type { ParseResult } from './result_parser.js';
@@ -53,8 +52,8 @@ export class SessionContext {
     sha: string | null;
     /** Current Git branch (populated by resolveSessionContext). */
     branch: string | null;
-    /** Store instance for cache access (populated by resolveSessionContext). */
-    store: Store | null;
+    /** DataHub cache (SHA-keyed) for test-result access (populated by resolveSessionContext). */
+    store: DataHub | null;
 
     constructor() {
         this.isBusy = false;
@@ -106,16 +105,21 @@ export class SessionContext {
     }
 }
 
-/** Resolve Git SHA, branch, and initialize Store for the given project. */
+/** Resolve Git SHA, branch, and the DataHub-owned report cache.
+ * `_projectName` is retained for API compatibility with immutable callers
+ * (case15.ts is `chattr +i`-guarded); the cache is keyed by the global
+ * DataHub's repo, not by projectName. */
 export function resolveSessionContext(
     ctx: SessionContext,
-    projectName: string,
-): { sha: string | null; branch: string | null; store: Store } {
+    _projectName: string,
+): {
+    sha: string | null;
+    branch: string | null;
+    store: DataHub;
+} {
     const sha = getHeadSha();
     const branch = getCurrentBranch();
-    const gitDir = detectProjectGitDir();
-    const backend = detectStoreBackend(gitDir ?? undefined);
-    const store = new Store(backend, projectName);
+    const store = getDataHub();
 
     ctx.sha = sha;
     ctx.branch = branch;
@@ -124,7 +128,7 @@ export function resolveSessionContext(
     return { sha, branch, store };
 }
 
-function tryLoadFromCache(sha: string | null, store: Store): { result: ParseResult; source: 'cache' } | null {
+function tryLoadFromCache(sha: string | null, store: DataHub): { result: ParseResult; source: 'cache' } | null {
     if (!sha) return null;
     try {
         const cached = store.loadReport(sha);
@@ -150,7 +154,7 @@ function trySaveCiResult(
     sha: string | null,
     branch: string | null,
     projectName: string,
-    store: Store,
+    store: DataHub,
 ): void {
     if (!sha) return;
     store.saveReport(sha, downloaded.tests);
@@ -197,7 +201,7 @@ function resolveFromBranch(
     projectName: string,
     branch: string | null,
     sha: string | null,
-    store: Store,
+    store: DataHub,
 ): Promise<{ result: ParseResult; source: 'cache' | 'ci' | 'branch' } | null> | null {
     if (!branch || !sha) return null;
     const entries = store.getBranch(branch);
@@ -219,7 +223,7 @@ export async function resolveTestDataSource(
     projectName: string,
     sha: string | null,
     branch: string | null,
-    store: Store,
+    store: DataHub,
 ): Promise<{ result: ParseResult; source: 'cache' | 'ci' | 'branch' } | null> {
     const cached = tryLoadFromCache(sha, store);
     if (cached) return cached;

@@ -67,29 +67,6 @@ vi.mock('../../shared/session-context', () => ({
 
 let loadMetricsValue: unknown = null;
 
-vi.mock('../../shared/store', () => {
-    function makeMockStore() {
-        const store = {
-            lookup: vi.fn(),
-            put: vi.fn(),
-            listByProject: vi.fn().mockReturnValue([]),
-            saveReport: vi.fn(),
-            loadReport: vi.fn().mockReturnValue(null),
-            loadMetrics: vi.fn(() => loadMetricsValue),
-            saveMetrics: vi.fn(),
-            appendBranch: vi.fn(),
-            getBranch: vi.fn().mockReturnValue([]),
-            flush: vi.fn(),
-        };
-        return store;
-    }
-    return {
-        Store: vi.fn(function () {
-            return makeMockStore();
-        }),
-    };
-});
-
 vi.mock('../../shared/logger', () => ({
     rootLogger: {
         error: vi.fn(),

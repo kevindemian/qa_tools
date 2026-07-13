@@ -54,10 +54,17 @@ export function isDataHubInitialized(): boolean {
  * Delegates to global-hub.ensureDataHub with freshness checking.
  */
 export async function ensureDataHub(): Promise<DataHub | undefined> {
-    // Check global-hub cache first (setDataHub may have been called directly)
     if (_isGlobalHubInitialized()) {
         const cached = _getGlobalHub();
-        return cached;
+        // Cached hub present: return it immediately when we lack the context to refresh.
+        if (!manager || !currentProjectName) return cached;
+        // Gap 4 (G4.5): refresh incrementally (no full refetch) when stale.
+        const activeManager = manager;
+        const activeProject = currentProjectName;
+        return _ensureGlobalHub(async () => {
+            const { getOrFetchDataHub } = await import('../shared/ci-data.js');
+            return getOrFetchDataHub(activeManager, activeProject, cached);
+        });
     }
     if (!manager || !currentProjectName) return undefined;
     const activeManager = manager;

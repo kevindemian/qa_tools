@@ -39,6 +39,7 @@ function createMockGitProvider(providerType: 'github' | 'gitlab'): GitProvider {
         getDiff: vi.fn(),
         getJobLogs: vi.fn(),
         getWorkflowRunTiming: vi.fn(),
+        getWorkflowUsage: vi.fn(),
         getFileContents: vi.fn(),
         listDirectory: vi.fn(),
         getTestReport: vi.fn(),

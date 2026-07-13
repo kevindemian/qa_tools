@@ -27,3 +27,6 @@ export { calcRunPassRate } from './run-pass-rate.js';
 export { calcTestDurationP95 } from './test-duration-p95.js';
 export { calcRunFailureRate } from './run-failure-rate.js';
 export { calcTestDurationMap } from './test-duration-map.js';
+export { calcRetryFlaky } from './retry-flaky.js';
+export { calcComputeCost } from './compute-cost.js';
+export type { RetryFlakyResult, ComputeCostResult } from '../../types/data-hub.js';

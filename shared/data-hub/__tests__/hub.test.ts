@@ -118,6 +118,23 @@ describe('DataHubImpl', () => {
         expect(hub.computed.passRate).toBeCloseTo(66.67, 1);
     });
 
+    it('getBranchPassRate returns branch-scoped pass rate (Gap 3)', async () => {
+        expect.hasAssertions();
+
+        const runs = [
+            makeRun({ id: 1, head_branch: 'main', conclusion: 'success' }),
+            makeRun({ id: 2, head_branch: 'main', conclusion: 'success' }),
+            makeRun({ id: 3, head_branch: 'feature/x', conclusion: 'failure' }),
+        ];
+        const provider = makeProvider(makeRawDataWithRuns(runs));
+
+        const { hub } = await DataHubImpl.create([provider], { repo: 'test/repo' }, createMockPersistence());
+
+        expect(hub.getBranchPassRate('main')).toBe(100);
+
+        expect(hub.getBranchPassRate('feature/x')).toBe(0);
+    });
+
     it('merges data from multiple providers', async () => {
         expect.hasAssertions();
 
@@ -182,6 +199,98 @@ describe('DataHubImpl', () => {
 
         expect(hub.timestamp.getTime()).toBeGreaterThanOrEqual(before);
         expect(hub.timestamp.getTime()).toBeLessThanOrEqual(Date.now());
+    });
+});
+
+describe('DataHubImpl — mergeIncremental (Gap 4)', () => {
+    function makeHub(): DataHubImpl {
+        return DataHubImpl.createEmpty('github', 'test/repo', createMockPersistence());
+    }
+
+    it('preserves existing runs and ignores duplicate ids when merging (G4.6)', () => {
+        expect.hasAssertions();
+
+        const hub = makeHub();
+        hub.raw.runs.push(makeRun({ id: 1, conclusion: 'success' }));
+
+        const incoming: RawData = makeRawDataWithRuns([
+            makeRun({ id: 1, conclusion: 'failure' }), // duplicate id -> ignored
+            makeRun({ id: 2, conclusion: 'failure' }),
+        ]);
+        hub.mergeIncremental(incoming);
+
+        expect(hub.raw.runs).toHaveLength(2);
+
+        const ids = hub.raw.runs.map((r) => r.id).sort((a, b) => Number(a) - Number(b));
+
+        expect(ids).toStrictEqual([1, 2]);
+
+        // existing run's original data is preserved (not overwritten by incoming dup)
+        const existing = hub.raw.runs.find((r) => r.id === 1);
+
+        expect(existing?.conclusion).toBe('success');
+    });
+
+    it('adds only new runs correctly (G4.7)', () => {
+        expect.hasAssertions();
+
+        const hub = makeHub();
+        hub.raw.runs.push(makeRun({ id: 1, conclusion: 'success' }));
+
+        const incoming: RawData = makeRawDataWithRuns([
+            makeRun({ id: 2, conclusion: 'failure' }),
+            makeRun({ id: 3, conclusion: 'success' }),
+        ]);
+        hub.mergeIncremental(incoming);
+
+        expect(hub.raw.runs).toHaveLength(3);
+
+        const ids = hub.raw.runs.map((r) => r.id).sort((a, b) => Number(a) - Number(b));
+
+        expect(ids).toStrictEqual([1, 2, 3]);
+    });
+
+    it('recomputes computed metrics after merge (no stale values)', () => {
+        expect.hasAssertions();
+
+        const hub = makeHub();
+        hub.raw.runs.push(makeRun({ id: 1, conclusion: 'success' }));
+
+        hub.mergeIncremental(makeRawDataWithRuns([makeRun({ id: 2, conclusion: 'failure' })]));
+
+        // 1 success + 1 failure out of 2 -> 50% pass rate
+        expect(hub.computed.passRate).toBe(50);
+    });
+
+    it('refreshes timestamp on merge', () => {
+        expect.hasAssertions();
+
+        const hub = makeHub();
+        const before = new Date(Date.now() - 100000);
+        hub.timestamp = before;
+
+        hub.mergeIncremental(makeRawDataWithRuns([makeRun({ id: 99, conclusion: 'success' })]));
+
+        expect(hub.timestamp.getTime()).toBeGreaterThan(before.getTime());
+    });
+
+    it('merges job/artifact maps by run id without clobbering existing entries', () => {
+        expect.hasAssertions();
+
+        const hub = makeHub();
+        const existingJobs = new Map<number, unknown>();
+        existingJobs.set(1, [{ id: 1 }]);
+        hub.raw.jobs = existingJobs as never;
+
+        const incoming: RawData = makeRawDataWithRuns([makeRun({ id: 2 })]);
+        const incomingJobs = new Map<number, unknown>();
+        incomingJobs.set(2, [{ id: 2 }]);
+        incoming.jobs = incomingJobs as never;
+
+        hub.mergeIncremental(incoming);
+
+        expect(hub.raw.jobs.has(1)).toBeTruthy();
+        expect(hub.raw.jobs.has(2)).toBeTruthy();
     });
 });
 

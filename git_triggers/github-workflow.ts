@@ -1,8 +1,6 @@
 import type { AxiosInstance } from '../shared/deps.js';
 import { rootLogger } from '../shared/logger.js';
-import { handleError } from '../shared/git-provider-error.js';
 import { classifyGitError } from '../shared/errors.js';
-import { extractErrorMessage } from '../shared/prompt-errors.js';
 import type {
     PipelineTriggerResult,
     ScheduleInfo,
@@ -13,6 +11,7 @@ import type {
     CICDVariable,
     JsonObject,
     DirEntry,
+    WorkflowUsage,
 } from '../shared/types.js';
 import { apiGet, apiPost } from './github-api.js';
 
@@ -36,16 +35,19 @@ async function listWorkflows(
     owner: string,
     repo: string,
 ): Promise<Array<{ id: number; name: string }>> {
-    const data = await apiGet<{ workflows: Array<{ id: number; name: string }> }>(
-        client,
-        '/repos/' + owner + '/' + repo + '/actions/workflows',
-        {
-            operation: 'listar workflows',
-            params: { per_page: LIST_WORKFLOWS_PAGE_SIZE },
-            returnNull: true,
-        },
-    );
-    return data?.workflows || [];
+    try {
+        const data = await apiGet<{ workflows: Array<{ id: number; name: string }> }>(
+            client,
+            '/repos/' + owner + '/' + repo + '/actions/workflows',
+            {
+                operation: 'listar workflows',
+                params: { per_page: LIST_WORKFLOWS_PAGE_SIZE },
+            },
+        );
+        return data?.workflows || [];
+    } catch (err) {
+        throw classifyGitError(err, { operation: 'listar workflows' });
+    }
 }
 
 export async function wfTriggerPipeline(
@@ -80,7 +82,7 @@ export async function wfTriggerPipeline(
         );
         return { id: workflowId, web_url: apiUrl + '/' + owner + '/' + repo + '/actions/runs' };
     } catch (err) {
-        return handleError(err, { context: 'disparar workflow' });
+        throw classifyGitError(err, { operation: 'disparar workflow' });
     }
 }
 
@@ -89,17 +91,25 @@ export async function wfGetRecentPipelines(
     owner: string,
     repo: string,
     count = DEFAULT_PIPELINE_COUNT,
+    since?: Date,
 ): Promise<PipelineRun[]> {
-    const data = await apiGet<{ workflow_runs: PipelineRun[] }>(
-        client,
-        '/repos/' + owner + '/' + repo + '/actions/runs',
-        {
-            operation: 'buscar runs',
-            params: { per_page: count },
-            returnNull: true,
-        },
-    );
-    return data?.workflow_runs || [];
+    const params: Record<string, unknown> = { per_page: count };
+    // Gap 4 (G4.2): fetch only runs created at/after `since` to enable incremental updates.
+    // GitHub `created` param accepts a date-range (search syntax); `>=` includes the boundary.
+    if (since) params['created'] = '>=' + since.toISOString();
+    try {
+        const data = await apiGet<{ workflow_runs: PipelineRun[] }>(
+            client,
+            '/repos/' + owner + '/' + repo + '/actions/runs',
+            {
+                operation: 'buscar runs',
+                params,
+            },
+        );
+        return data?.workflow_runs || [];
+    } catch (err) {
+        throw classifyGitError(err, { operation: 'buscar runs' });
+    }
 }
 
 export async function wfGetPipeline(
@@ -108,10 +118,17 @@ export async function wfGetPipeline(
     repo: string,
     runId: string | number,
 ): Promise<PipelineInfo | null> {
-    return apiGet<PipelineInfo>(client, '/repos/' + owner + '/' + repo + '/actions/runs/' + runId, {
-        operation: 'buscar run',
-        returnNull: true,
-    });
+    try {
+        return (
+            (await apiGet<PipelineInfo>(client, '/repos/' + owner + '/' + repo + '/actions/runs/' + runId, {
+                operation: 'buscar run',
+            })) || null
+        );
+    } catch (err) {
+        const e = classifyGitError(err, { operation: 'buscar run' });
+        if (e.kind === 'notFound') return null;
+        throw e;
+    }
 }
 
 export async function wfGetPipelineJobs(
@@ -137,7 +154,6 @@ export async function wfGetPipelineJobs(
         }>;
     }>(client, '/repos/' + owner + '/' + repo + '/actions/runs/' + pipelineId + '/jobs', {
         operation: 'listar jobs',
-        returnNull: true,
     });
     const jobs = data?.jobs || [];
     return jobs.map((j) => {
@@ -187,7 +203,6 @@ export async function wfListPipelineArtifacts(
         artifacts: Array<{ id: number; name: string; size_in_bytes?: number; created_at?: string }>;
     }>(client, '/repos/' + owner + '/' + repo + '/actions/runs/' + pipelineId + '/artifacts', {
         operation: 'listar artifacts',
-        returnNull: true,
     });
     const artifacts = data?.artifacts || [];
     return artifacts.map((a) => ({
@@ -214,7 +229,7 @@ export async function wfDownloadArtifact(
         );
         return { buffer: Buffer.from(response.data), filename: 'artifact.zip' };
     } catch (err) {
-        return handleError(err, { context: 'baixar artifact' });
+        throw classifyGitError(err, { operation: 'baixar artifact' });
     }
 }
 
@@ -235,7 +250,7 @@ export async function wfGetJobLogs(
     } catch (err) {
         const axiosErr = err as { response?: { status?: number } };
         if (axiosErr.response?.status === 404) return null;
-        return handleError(err, { context: 'baixar log do job' });
+        throw classifyGitError(err, { operation: 'baixar log do job' });
     }
 }
 
@@ -246,7 +261,6 @@ export async function wfGetCICDVariables(client: AxiosInstance, owner: string, r
         {
             operation: 'buscar variáveis',
             params: { per_page: VARIABLES_PAGE_SIZE },
-            returnNull: true,
         },
     );
     const variables = data?.variables || [];
@@ -273,12 +287,51 @@ export async function wfGetWorkflowRunTiming(
         const timing = await apiGet<{ run_duration_ms: number }>(
             client,
             '/repos/' + owner + '/' + repo + '/actions/runs/' + runId + '/timing',
-            { operation: 'buscar run duration', returnNull: true },
+            { operation: 'buscar run duration' },
         );
         if (timing == null) return null;
         return { run_duration_ms: timing.run_duration_ms };
     } catch (err) {
-        return handleError(err, { context: 'buscar run duration', returnNull: true });
+        const e = classifyGitError(err, { operation: 'buscar run duration' });
+        if (e.kind === 'notFound') return null;
+        throw e;
+    }
+}
+
+/**
+ * LA-2 — Fetch workflow run usage/billing from the GitHub Actions API.
+ *
+ * The `/actions/runs/{id}/timing` endpoint is the authoritative source for BOTH
+ * `run_duration_ms` and `billable` minutes per runner OS. The previously-deferred
+ * "billable minutes migration" is now consumed here (no deferral): billable is
+ * the real compute cost and must never be estimated or silently dropped.
+ */
+export async function wfGetWorkflowUsage(
+    client: AxiosInstance,
+    owner: string,
+    repo: string,
+    runId: number,
+): Promise<WorkflowUsage | null> {
+    try {
+        const data = await apiGet<{
+            run_duration_ms?: number;
+            billable?: Record<string, { total_ms: number; jobs: number }>;
+        }>(client, '/repos/' + owner + '/' + repo + '/actions/runs/' + runId + '/timing', {
+            operation: 'buscar run usage',
+        });
+        if (data == null) return null;
+        const usage: WorkflowUsage = {};
+        if (data.run_duration_ms != null && Number.isFinite(data.run_duration_ms)) {
+            usage.run_duration_ms = data.run_duration_ms;
+        }
+        if (data.billable != null) {
+            usage.billable = data.billable;
+        }
+        return usage;
+    } catch (err) {
+        const e = classifyGitError(err, { operation: 'buscar run usage' });
+        if (e.kind === 'notFound') return null;
+        throw e;
     }
 }
 
@@ -319,7 +372,7 @@ export async function wfGetRepoTree(
         const data = await apiGet<GitHubTreeResponse>(
             client,
             `/repos/${owner}/${repo}/git/trees/${encodeURIComponent(branch)}?recursive=1`,
-            { operation: 'buscar árvore do repositório', returnNull: true },
+            { operation: 'buscar árvore do repositório' },
         );
         if (data == null) return null;
         const paths = data.tree
@@ -330,8 +383,9 @@ export async function wfGetRepoTree(
         }
         return paths.length > 0 ? paths : [];
     } catch (err: unknown) {
-        rootLogger.warn(`github-workflow: listManifestPaths failed — ${extractErrorMessage(err)}`);
-        return null;
+        const e = classifyGitError(err, { operation: 'buscar árvore do repositório' });
+        if (e.kind === 'notFound') return null;
+        throw e;
     }
 }
 

@@ -29,6 +29,12 @@ export interface CreateDataHubOptions {
      * Used by dashboard/metric consumers. PR report generation must NOT set this.
      */
     allowEmpty?: boolean;
+    /**
+     * Gap 4 (G4.5): fetch only runs created at/after this timestamp. Enables
+     * incremental updates — pass the existing hub's latest run timestamp to avoid
+     * refetching all data. Undefined = full fetch (backward compatible).
+     */
+    since?: Date;
 }
 
 export interface CreateDataHubResult {
@@ -73,7 +79,7 @@ export async function createDataHub(
 
             const result = await DataHubImpl.create(
                 dataProviders,
-                { repo, allowEmpty: options?.allowEmpty ?? false },
+                { repo, allowEmpty: options?.allowEmpty ?? false, ...(options?.since ? { since: options.since } : {}) },
                 persistence,
             );
             setCachedHub(repo, result.hub);

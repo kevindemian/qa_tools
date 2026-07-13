@@ -71,5 +71,21 @@ describe('Compute/pass-rate', () => {
             expect(calcPipelinePassRate([makeRun({ conclusion: 'success' })])).toBe(100);
             expect(calcPipelinePassRate([makeRun({ conclusion: 'failure' })])).toBe(0);
         });
+
+        it('filters by branch when branch param provided (Gap 3)', () => {
+            expect.hasAssertions();
+
+            const runs = [
+                makeRun({ head_branch: 'main', conclusion: 'success' }),
+                makeRun({ id: 2, head_branch: 'main', conclusion: 'success' }),
+                makeRun({ id: 3, head_branch: 'feature/x', conclusion: 'failure' }),
+            ];
+
+            expect(calcPipelinePassRate(runs, 'main')).toBe(100);
+
+            expect(calcPipelinePassRate(runs, 'feature/x')).toBe(0);
+
+            expect(calcPipelinePassRate(runs)).toBeCloseTo(66.67, 2);
+        });
     });
 });

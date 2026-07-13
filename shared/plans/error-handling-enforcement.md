@@ -144,3 +144,65 @@ A própria catraca torna-se um **mecanismo de segurança** (Regra 5): uma vez ad
 - Lint type-aware é mais lento (parse do `Program`) → deve ficar **só no diff**.
 - Curva de aprendizado (`Result` API) — mitigada por `.match()`/`.unwrapOr()`.
 - `must-use-result` aceita `.unwrapOr(null)` (poderia re-silenciar) → exigir `.match()` nos caminhos críticos (git-provider, validação); `_unsafeUnwrap` só em testes.
+
+---
+
+## 7. AUDIT TRAIL — TAREFA C (migração incremental, estado 2026-07-12)
+
+Esta seção é o **registro de achados** da Tarefa C: inventaria os sítios `returnNull: true` remanescentes, marca o incremento #1 como concluído e fixa a ordem planejada dos incrementos restantes. A migração é **orgânica via diff** (catraca), **não big-bang** — ver §5 Phase 3+ e a advertência de §3.1 ("correção manual das 73 ocorrências regenera sem a catraca").
+
+### 7.1 Inventário de `returnNull: true` remanescente (produção, arquivos commitados)
+
+| Arquivo                             | Sítios | Funções / caminho                                                                           |
+| ----------------------------------- | ------ | ------------------------------------------------------------------------------------------- |
+| `git_triggers/github-branch.ts`     | 2      | `getDefaultBranch` / `listBranches` (apiGet c/ `returnNull: true`)                          |
+| `git_triggers/gitlab-branch.ts`     | 2      | `getDefaultBranch` / `listBranches`                                                         |
+| `git_triggers/github-issues.ts`     | 1      | `getIssue`                                                                                  |
+| `git_triggers/gitlab-issues.ts`     | 1      | `getIssue`                                                                                  |
+| `git_triggers/github-pr.ts`         | 3      | `createPullRequest` (100), `mergePullRequest` (122), outro (165)                            |
+| `git_triggers/gitlab-pr.ts`         | 3      | `createMergeRequest` (85), `acceptMergeRequest` (107), outro (148)                          |
+| `git_triggers/github-api.ts`        | —      | **propagador**: `apiGet` repassa `returnNull` ao sink (linha 22)                            |
+| `git_triggers/gitlab-api.ts`        | —      | **propagador**: `apiGet` repassa `returnNull` ao sink (linha 26)                            |
+| `git_triggers/git-provider-base.ts` | —      | **propagador**: `publicGet/publicPost` repassa `returnNull` (linha 38)                      |
+| `shared/git-provider-error.ts`      | —      | **sink**: overload `returnNull: true` (linhas 9-11) + branch `if (options.returnNull)` (17) |
+
+**Total produção:** 12 sítios diretos em 6 arquivos-folha + 3 propagadores + 1 sink.
+
+**Arquivos de teste com `returnNull: true`** (expectativas / mocks a atualizar na migração de cada arquivo-folha): `github-branch.test.ts` (41,51,99), `gitlab-branch.test.ts` (68,114), `github-issues.test.ts` (76), `gitlab-issues.test.ts` (60), `github-pr.test.ts` (335,378,586), `gitlab-pr.test.ts` (205,213,340), `github-api.test.ts` (58), `gitlab-api.test.ts` (67), `git-provider-base.test.ts` (54), `shared/git-provider-error.test.ts` (20,27,37), `shared/test-utils/mock-modules.ts` (95-96) + `mock-modules.test.ts` (121,123).
+
+### 7.2 Incremento #1 — CONCLUÍDO (2026-07-12)
+
+**Arquivos:** `git_triggers/github-workflow.ts`, `git_triggers/gitlab-workflow.ts` + respectivos `.test.ts`.
+
+**Comportamento resultante (causa raiz corrigida — sem `null` silencioso):**
+
+- `github-workflow.ts`: `listWorkflows`, `wfGetRecentPipelines` → `try/catch` lança `ExternalError` (classificado); `wfGetPipeline` → `404` ⇒ `null`, senão lança; `wfGetPipelineJobs`, `wfListPipelineArtifacts`, `wfGetCICDVariables` → `returnNull` removido, propagam lançamento; `wfDownloadArtifact`, `wfGetJobLogs` → `404` ⇒ `null`, senão `ExternalError`; `wfGetWorkflowRunTiming` → `404` ⇒ `null`, senão lança; **`wfGetRepoTree` → removido o `catch` silencioso (`rootLogger.warn` + `return null`)** → `404` ⇒ `null`, senão lança `ExternalError`. Imports `handleError`/`extractErrorMessage` removidos (não usados).
+- `gitlab-workflow.ts`: `glGetSchedules`, `glGetRecentPipelines`, `glGetPipelineJobs`, `glListPipelineArtifacts`, `glGetCICDVariables` → `returnNull` removido + `try/catch` lança `ExternalError`; `glGetPipeline`, `glGetTestReport` → `404` ⇒ `null`, senão lança; `glGetJobLogs` → `404` ⇒ `null`, senão `ExternalError`; **`glGetRepoTree`, `glListDirectory` → removido o `catch` silencioso** → `404` ⇒ `null`, senão lança; `glDownloadArtifact` → lança `ExternalError`. Imports `extractErrorMessage`/`rootLogger` removidos.
+- **Testes:** `returnNull: true` removido de todas as `toHaveBeenCalledWith`; casos de "silencioso ⇒ `[]`/`null`" convertidos para `rejects.toBeInstanceOf(ExternalError)` (funções de lista) ou `404` ⇒ `null` + lançamento em não-404 (funções de contrato `| null`).
+
+**Catraca:** zero literais `returnNull: true` nos 4 arquivos (produção + testes) → diff limpo.
+
+**Verificação:** `npx vitest run git_triggers/github-workflow.test.ts` = 49 pass; `git_triggers/gitlab-workflow.test.ts` = 42 pass; `npx tsc --noEmit` sem erros de import não-usado.
+
+### 7.3 Ordem planejada dos incrementos restantes (Tarefa C)
+
+Cada incremento migra **um arquivo-folha** (remove `returnNull: true`, envolve `try/catch` → `classifyGitError`, `null` só em `404` onde o contrato exige, e atualiza o `.test.ts` correspondente). Os **propagadores + sink são o último passo**, eliminados só quando nenhum caller usa `returnNull`.
+
+1. `github-branch.ts` + `gitlab-branch.ts` (2+2 sítios — menores, isolados).
+2. `github-issues.ts` + `gitlab-issues.ts` (1+1).
+3. `github-pr.ts` + `gitlab-pr.ts` (3+3 — maiores, mais callers).
+4. **Fim:** `github-api.ts` + `gitlab-api.ts` + `git-provider-base.ts` (remover a opção `returnNull` das assinaturas de `apiGet/publicGet`) e, por último, `shared/git-provider-error.ts` (remover overload `returnNull: true` + branch `if (options.returnNull)`).
+
+> **Por que o sink não foi reworkado no incremento #1:** editar `handleError` para removê-lo introduz um literal `returnNull: true` na assinatura do overload, que a própria catraca bloqueia em linha modificada. Logo o sink só pode ser reworkado **após** o último caller folha — caso contrário forçaria um big-bang (quebraria os 12 sítios remanescentes em um único commit). O caminho default (sem `returnNull`) do `handleError` **já lança**; o que resta eliminar é a capacidade de retornar `null`.
+
+### 7.4 Verificação por incremento
+
+- `npx tsc --noEmit` → 0 erros.
+- `npm run lint` → 0 severidade-2; `grep -rn "returnNull: true"` sobre os arquivos do incremento ⇒ 0 literais **adicionados**.
+- `npx vitest run <arquivo>.test.ts` → verde; casos de erro afirmam `rejects.toBeInstanceOf(ExternalError)` (ou `404` ⇒ `null`).
+
+### 7.5 Status
+
+- **Tarefa A** ✅ (§4)
+- **Tarefa B** ✅ catraca + `ExternalError`/`classifyGitError` + `wfGetFileContents`/`wfListDirectory`/`glGetFileContents` (§4.1)
+- **Tarefa C** — incremento #1 ✅ (§7.2); incrementos 2–4 pendentes (§7.3).

@@ -18,6 +18,7 @@ import {
     wfGetSchedules,
     wfRunSchedule,
     wfGetWorkflowRunTiming,
+    wfGetWorkflowUsage,
     wfGetRepoTree,
     wfGetFileContents,
     wfListDirectory,
@@ -111,7 +112,6 @@ describe('WfTriggerPipeline', () => {
         expect(mockApiGet).toHaveBeenCalledWith(client, '/repos/myorg/myrepo/actions/workflows', {
             operation: 'listar workflows',
             params: { per_page: 10 },
-            returnNull: true,
         });
         expect(mockApiPost).toHaveBeenCalledWith(
             client,
@@ -194,7 +194,6 @@ describe('WfGetRecentPipelines', () => {
         expect(mockApiGet).toHaveBeenCalledWith(client, '/repos/myorg/myrepo/actions/runs', {
             operation: 'buscar runs',
             params: { per_page: 2 },
-            returnNull: true,
         });
         expect(result).toStrictEqual(runs);
     });
@@ -208,7 +207,6 @@ describe('WfGetRecentPipelines', () => {
         expect(mockApiGet).toHaveBeenCalledWith(client, '/repos/myorg/myrepo/actions/runs', {
             operation: 'buscar runs',
             params: { per_page: 5 },
-            returnNull: true,
         });
     });
 
@@ -219,6 +217,19 @@ describe('WfGetRecentPipelines', () => {
         const result = await wfGetRecentPipelines(client, CONTEXT_IDS.ORGANIZATION, CONTEXT_IDS.REPOSITORY);
 
         expect(result).toStrictEqual([]);
+    });
+
+    it('passes created filter to API when since is set (Gap 4 incremental)', async () => {
+        expect.hasAssertions();
+
+        mockApiGet.mockResolvedValue({ workflow_runs: [] });
+        const since = new Date('2026-01-01T00:00:00Z');
+        await wfGetRecentPipelines(client, CONTEXT_IDS.ORGANIZATION, CONTEXT_IDS.REPOSITORY, 5, since);
+
+        expect(mockApiGet).toHaveBeenCalledWith(client, '/repos/myorg/myrepo/actions/runs', {
+            operation: 'buscar runs',
+            params: { per_page: 5, created: '>=' + since.toISOString() },
+        });
     });
 });
 
@@ -238,7 +249,6 @@ describe('WfGetPipeline', () => {
 
         expect(mockApiGet).toHaveBeenCalledWith(client, '/repos/myorg/myrepo/actions/runs/42', {
             operation: 'buscar run',
-            returnNull: true,
         });
         expect(result).toStrictEqual({ id: 42, status: 'completed', conclusion: 'success' });
     });
@@ -298,7 +308,6 @@ describe('WfGetPipelineJobs', () => {
 
         expect(mockApiGet).toHaveBeenCalledWith(client, '/repos/myorg/myrepo/actions/runs/42/jobs', {
             operation: 'listar jobs',
-            returnNull: true,
         });
         expect(result).toHaveLength(2);
     });
@@ -540,7 +549,6 @@ describe('WfListPipelineArtifacts', () => {
 
         expect(mockApiGet).toHaveBeenCalledWith(client, '/repos/myorg/myrepo/actions/runs/42/artifacts', {
             operation: 'listar artifacts',
-            returnNull: true,
         });
         expect(result).toStrictEqual([
             { id: 301, name: 'mochawesome-report', size_in_bytes: 2048, created_at: '2025-01-15T10:00:00Z' },
@@ -678,7 +686,6 @@ describe('WfGetCICDVariables', () => {
         expect(mockApiGet).toHaveBeenCalledWith(client, '/repos/myorg/myrepo/actions/variables', {
             operation: 'buscar variáveis',
             params: { per_page: 100 },
-            returnNull: true,
         });
         expect(result).toStrictEqual([
             { key: 'MY_VAR', value: 'myval', type: 'variable' },
@@ -735,7 +742,7 @@ describe('WfGetWorkflowRunTiming', () => {
         expect(apiGet).toHaveBeenCalledWith(
             client,
             '/repos/' + CONTEXT_IDS.ORGANIZATION + '/' + CONTEXT_IDS.REPOSITORY + '/actions/runs/42/timing',
-            { operation: 'buscar run duration', returnNull: true },
+            { operation: 'buscar run duration' },
         );
         expect(result).toStrictEqual({ run_duration_ms: 123456 });
     });
@@ -752,14 +759,62 @@ describe('WfGetWorkflowRunTiming', () => {
         expect(result).toBeNull();
     });
 
-    it('returns null when apiGet throws', async () => {
+    it('throws ExternalError when apiGet throws (not silently null)', async () => {
         expect.hasAssertions();
 
         const client = createMockAxiosInstance();
 
         vi.mocked(apiGet).mockRejectedValue(new Error('API error'));
 
-        const result = await wfGetWorkflowRunTiming(client, CONTEXT_IDS.ORGANIZATION, CONTEXT_IDS.REPOSITORY, 55);
+        await expect(
+            wfGetWorkflowRunTiming(client, CONTEXT_IDS.ORGANIZATION, CONTEXT_IDS.REPOSITORY, 55),
+        ).rejects.toBeInstanceOf(ExternalError);
+    });
+});
+
+describe('WfGetWorkflowUsage', () => {
+    it('lA-2: returns run_duration_ms AND billable (real cost, not dropped)', async () => {
+        expect.hasAssertions();
+
+        const mockUsage = {
+            run_duration_ms: 120000,
+            billable: { UBUNTU: { total_ms: 60000, jobs: 2 }, MACOS: { total_ms: 30000, jobs: 1 } },
+        };
+        const client = createMockAxiosInstance();
+        vi.mocked(apiGet).mockResolvedValue(mockUsage);
+
+        const result = await wfGetWorkflowUsage(client, CONTEXT_IDS.ORGANIZATION, CONTEXT_IDS.REPOSITORY, 42);
+
+        expect(apiGet).toHaveBeenCalledWith(
+            client,
+            '/repos/' + CONTEXT_IDS.ORGANIZATION + '/' + CONTEXT_IDS.REPOSITORY + '/actions/runs/42/timing',
+            { operation: 'buscar run usage' },
+        );
+        expect(result).not.toBeNull();
+        expect(result?.run_duration_ms).toBe(120000);
+        expect(result?.billable?.['UBUNTU']?.total_ms).toBe(60000);
+        expect(result?.billable?.['MACOS']?.jobs).toBe(1);
+    });
+
+    it('lA-2: tolerates missing billable (duration only)', async () => {
+        expect.hasAssertions();
+
+        const client = createMockAxiosInstance();
+        vi.mocked(apiGet).mockResolvedValue({ run_duration_ms: 5000 });
+
+        const result = await wfGetWorkflowUsage(client, CONTEXT_IDS.ORGANIZATION, CONTEXT_IDS.REPOSITORY, 7);
+
+        expect(result?.run_duration_ms).toBe(5000);
+        expect(result?.billable).toBeUndefined();
+    });
+
+    it('returns null when apiGet returns null', async () => {
+        expect.hasAssertions();
+
+        const client = createMockAxiosInstance();
+        vi.mocked(apiGet).mockResolvedValue(null);
+
+        const result = await wfGetWorkflowUsage(client, CONTEXT_IDS.ORGANIZATION, CONTEXT_IDS.REPOSITORY, 99);
 
         expect(result).toBeNull();
     });
@@ -811,15 +866,15 @@ describe('WfGetRepoTree', () => {
         expect(result).toStrictEqual([]);
     });
 
-    it('returns null on API error', async () => {
+    it('throws ExternalError on API error (not silently null)', async () => {
         expect.hasAssertions();
 
         const client = createMockAxiosInstance();
         vi.mocked(apiGet).mockRejectedValue(new Error('API error'));
 
-        const result = await wfGetRepoTree(client, CONTEXT_IDS.ORGANIZATION, CONTEXT_IDS.REPOSITORY, 'main');
-
-        expect(result).toBeNull();
+        await expect(
+            wfGetRepoTree(client, CONTEXT_IDS.ORGANIZATION, CONTEXT_IDS.REPOSITORY, 'main'),
+        ).rejects.toBeInstanceOf(ExternalError);
     });
 });
 

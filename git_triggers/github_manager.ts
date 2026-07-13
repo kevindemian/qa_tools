@@ -21,6 +21,7 @@ import type {
     Issue,
     JsonObject,
     DirEntry,
+    WorkflowUsage,
 } from '../shared/types.js';
 import type { AxiosInstance } from '../shared/deps.js';
 import {
@@ -44,6 +45,7 @@ import {
     wfGetSchedules,
     wfRunSchedule,
     wfGetWorkflowRunTiming,
+    wfGetWorkflowUsage,
     wfGetFileContents,
     wfListDirectory,
     wfGetRepoTreeCached,
@@ -143,8 +145,8 @@ class GitHubManager extends GitProviderBase implements GitProvider {
         return prAcceptMergeRequest(this.client, this.owner, this.repo, iid, shouldRemoveSourceBranch);
     }
 
-    async getRecentPipelines(count = 5): Promise<PipelineRun[]> {
-        return wfGetRecentPipelines(this.client, this.owner, this.repo, count);
+    async getRecentPipelines(count = 5, since?: Date): Promise<PipelineRun[]> {
+        return wfGetRecentPipelines(this.client, this.owner, this.repo, count, since);
     }
 
     async getPipeline(runId: string | number): Promise<PipelineInfo | null> {
@@ -189,6 +191,10 @@ class GitHubManager extends GitProviderBase implements GitProvider {
 
     override async getWorkflowRunTiming(runId: number): Promise<{ run_duration_ms: number } | null> {
         return wfGetWorkflowRunTiming(this.client, this.owner, this.repo, runId);
+    }
+
+    override async getWorkflowUsage(runId: number): Promise<WorkflowUsage | null> {
+        return wfGetWorkflowUsage(this.client, this.owner, this.repo, runId);
     }
 
     override async getFileContents(path: string, ref?: string): Promise<string | null> {

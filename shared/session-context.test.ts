@@ -16,17 +16,9 @@ vi.mock('./data-hub/global-hub.js', () => ({
     getDataHub: vi.fn(),
 }));
 
-vi.mock('./store.js', async () => {
-    const actual = await vi.importActual('./store.js');
-    return {
-        ...actual,
-        Store: vi.fn(),
-    };
-});
-
 import { getHeadSha, getCurrentBranch } from './git-sha.js';
-import { detectStoreBackend, detectProjectGitDir } from './store-backend.js';
 import { isDataHubInitialized, getDataHub } from './data-hub/global-hub.js';
+import { makeDataHubMock } from './test-utils/factories/data-hub-mock.js';
 
 function createMockStore() {
     return {
@@ -164,14 +156,7 @@ describe('ResolveSessionContext', () => {
         const { resolveSessionContext } = await import('./session-context.js');
         vi.mocked(getHeadSha).mockReturnValue('abc123def456');
         vi.mocked(getCurrentBranch).mockReturnValue('main');
-        vi.mocked(detectProjectGitDir).mockReturnValue('/project');
-        vi.mocked(detectStoreBackend).mockReturnValue({
-            init: vi.fn(),
-            read: vi.fn(() => null),
-            write: vi.fn(),
-            exists: vi.fn(() => false),
-            flush: vi.fn(),
-        });
+        vi.mocked(getDataHub).mockReturnValue(makeDataHubMock());
 
         const ctx = new SessionContext();
         const result = resolveSessionContext(ctx, 'test-project');
@@ -182,7 +167,6 @@ describe('ResolveSessionContext', () => {
         expect(ctx.sha).toBe('abc123def456');
         expect(ctx.branch).toBe('main');
         expect(ctx.store).toBeDefined();
-        expect(detectStoreBackend).toHaveBeenCalledWith('/project');
     });
 
     it('returns null sha when git is unavailable', async () => {
@@ -191,7 +175,7 @@ describe('ResolveSessionContext', () => {
         const { resolveSessionContext } = await import('./session-context.js');
         vi.mocked(getHeadSha).mockReturnValue(null);
         vi.mocked(getCurrentBranch).mockReturnValue(null);
-        vi.mocked(detectProjectGitDir).mockReturnValue(null);
+        vi.mocked(getDataHub).mockReturnValue(makeDataHubMock());
 
         const ctx = new SessionContext();
         const result = resolveSessionContext(ctx, 'test-project');

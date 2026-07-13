@@ -213,6 +213,16 @@ export default defineConfig(
                     message:
                         'SSOT violation: loadMetricsStore is internal to DataHub. Use DataHub.computed.* or DataHub.raw.* instead.',
                 },
+                {
+                    selector: 'NewExpression[callee.name="Store"]',
+                    message:
+                        'SSOT violation: the legacy Store class is deleted. Use DataHubPersistence (DataHub.raw/computed) instead of new Store().',
+                },
+                {
+                    selector: 'ImportDeclaration[source.value=/\\/store\\.js$/]',
+                    message:
+                        'SSOT violation: direct import of the deleted legacy Store module is forbidden. Use DataHubPersistence instead.',
+                },
             ],
         },
     },

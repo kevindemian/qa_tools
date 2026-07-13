@@ -77,17 +77,15 @@ describe('Gitlab Workflow', () => {
             expect(apiGet).toHaveBeenCalledWith(mockClient, expect.stringContaining('/pipeline_schedules'), {
                 operation: 'listar schedules',
                 params: { per_page: 100 },
-                returnNull: true,
             });
         });
 
-        it('returns [] when apiGet returns null', async () => {
+        it('throws when apiGet fails (not silently [])', async () => {
             expect.hasAssertions();
 
-            vi.mocked(apiGet).mockResolvedValue(null);
-            const result = await glGetSchedules(mockClient, 'owner', 'repo');
+            vi.mocked(apiGet).mockRejectedValue(new Error('API error'));
 
-            expect(result).toStrictEqual([]);
+            await expect(glGetSchedules(mockClient, 'owner', 'repo')).rejects.toThrow('API error');
         });
     });
 
@@ -136,7 +134,6 @@ describe('Gitlab Workflow', () => {
             expect(apiGet).toHaveBeenCalledWith(mockClient, expect.stringContaining('/pipelines'), {
                 operation: 'buscar pipelines',
                 params: { per_page: 3, order_by: 'updated_at' },
-                returnNull: true,
             });
         });
 
@@ -153,13 +150,41 @@ describe('Gitlab Workflow', () => {
             );
         });
 
-        it('returns [] when apiGet returns null', async () => {
+        it('lA-2: plumbs retried flag from GitLab list API', async () => {
             expect.hasAssertions();
 
-            vi.mocked(apiGet).mockResolvedValue(null);
-            const result = await glGetRecentPipelines(mockClient, 'owner', 'repo');
+            vi.mocked(apiGet).mockResolvedValue([
+                { id: 1, ref: 'main', status: 'success', retried: true },
+                { id: 2, ref: 'main', status: 'success', retried: false },
+            ]);
+            const result = await glGetRecentPipelines(mockClient, 'owner', 'repo', 3);
 
-            expect(result).toStrictEqual([]);
+            expect(result[0]?.retried).toBeTruthy();
+            expect(result[1]?.retried).toBeFalsy();
+        });
+
+        it('throws when apiGet fails (not silently [])', async () => {
+            expect.hasAssertions();
+
+            vi.mocked(apiGet).mockRejectedValue(new Error('API error'));
+
+            await expect(glGetRecentPipelines(mockClient, 'owner', 'repo')).rejects.toThrow('API error');
+        });
+
+        it('passes created_after filter to API when since is set (Gap 4 incremental)', async () => {
+            expect.hasAssertions();
+
+            vi.mocked(apiGet).mockResolvedValue([]);
+            const since = new Date('2026-01-01T00:00:00Z');
+            await glGetRecentPipelines(mockClient, 'owner', 'repo', 5, since);
+
+            expect(apiGet).toHaveBeenCalledWith(
+                mockClient,
+                expect.stringContaining('/pipelines'),
+                expect.objectContaining({
+                    params: { per_page: 5, order_by: 'updated_at', created_after: since.toISOString() },
+                }),
+            );
         });
     });
 
@@ -173,17 +198,24 @@ describe('Gitlab Workflow', () => {
             expect(result).toStrictEqual({ id: 42, status: 'success', web_url: 'https://...' });
             expect(apiGet).toHaveBeenCalledWith(mockClient, expect.stringContaining('/pipelines/42'), {
                 operation: 'buscar pipeline',
-                returnNull: true,
             });
         });
 
-        it('returns null when apiGet returns null', async () => {
+        it('returns null when pipeline not found (404)', async () => {
             expect.hasAssertions();
 
-            vi.mocked(apiGet).mockResolvedValue(null);
+            vi.mocked(apiGet).mockRejectedValue({ response: { status: 404 } });
             const result = await glGetPipeline(mockClient, 'owner', 'repo', 42);
 
             expect(result).toBeNull();
+        });
+
+        it('throws ExternalError on non-404 API error', async () => {
+            expect.hasAssertions();
+
+            vi.mocked(apiGet).mockRejectedValue(new Error('API error'));
+
+            await expect(glGetPipeline(mockClient, 'owner', 'repo', 42)).rejects.toBeInstanceOf(ExternalError);
         });
     });
 
@@ -227,17 +259,15 @@ describe('Gitlab Workflow', () => {
             ]);
             expect(apiGet).toHaveBeenCalledWith(mockClient, expect.stringContaining('/pipelines/42/jobs'), {
                 operation: 'listar jobs',
-                returnNull: true,
             });
         });
 
-        it('returns [] when apiGet returns null', async () => {
+        it('throws when apiGet fails (not silently [])', async () => {
             expect.hasAssertions();
 
-            vi.mocked(apiGet).mockResolvedValue(null);
-            const result = await glGetPipelineJobs(mockClient, 'owner', 'repo', 42);
+            vi.mocked(apiGet).mockRejectedValue(new Error('API error'));
 
-            expect(result).toStrictEqual([]);
+            await expect(glGetPipelineJobs(mockClient, 'owner', 'repo', 42)).rejects.toThrow('API error');
         });
     });
 
@@ -278,13 +308,12 @@ describe('Gitlab Workflow', () => {
             expect(result).toStrictEqual([{ id: 201, name: 'deploy' }]);
         });
 
-        it('returns [] when apiGet returns null', async () => {
+        it('throws when apiGet fails (not silently [])', async () => {
             expect.hasAssertions();
 
-            vi.mocked(apiGet).mockResolvedValue(null);
-            const result = await glListPipelineArtifacts(mockClient, 'owner', 'repo', 42);
+            vi.mocked(apiGet).mockRejectedValue(new Error('API error'));
 
-            expect(result).toStrictEqual([]);
+            await expect(glListPipelineArtifacts(mockClient, 'owner', 'repo', 42)).rejects.toThrow('API error');
         });
     });
 
@@ -299,17 +328,15 @@ describe('Gitlab Workflow', () => {
             expect(apiGet).toHaveBeenCalledWith(mockClient, expect.stringContaining('/variables'), {
                 operation: 'buscar variáveis CI/CD',
                 params: { per_page: 100 },
-                returnNull: true,
             });
         });
 
-        it('returns [] when apiGet returns null', async () => {
+        it('throws when apiGet fails (not silently [])', async () => {
             expect.hasAssertions();
 
-            vi.mocked(apiGet).mockResolvedValue(null);
-            const result = await glGetCICDVariables(mockClient, 'owner', 'repo');
+            vi.mocked(apiGet).mockRejectedValue(new Error('API error'));
 
-            expect(result).toStrictEqual([]);
+            await expect(glGetCICDVariables(mockClient, 'owner', 'repo')).rejects.toThrow('API error');
         });
     });
 
@@ -374,13 +401,21 @@ describe('Gitlab Workflow', () => {
             expect(result).toBe('a'.repeat(10));
         });
 
-        it('returns null on API error', async () => {
+        it('returns null when job log not found (404)', async () => {
             expect.hasAssertions();
 
-            mockClient.get.mockRejectedValue(new Error('Log not found'));
+            mockClient.get.mockRejectedValue({ response: { status: 404 } });
             const result = await glGetJobLogs(mockClient, 'owner', 'repo', 999);
 
             expect(result).toBeNull();
+        });
+
+        it('throws ExternalError on non-404 API error', async () => {
+            expect.hasAssertions();
+
+            mockClient.get.mockRejectedValue(new Error('Log not found'));
+
+            await expect(glGetJobLogs(mockClient, 'owner', 'repo', 999)).rejects.toBeInstanceOf(ExternalError);
         });
     });
 
@@ -410,14 +445,22 @@ describe('Gitlab Workflow', () => {
             expect(result).toStrictEqual([]);
         });
 
-        it('returns null on API error', async () => {
+        it('returns null when tree not found (404)', async () => {
             expect.hasAssertions();
 
-            vi.mocked(apiGet).mockResolvedValue(null);
+            vi.mocked(apiGet).mockRejectedValue({ response: { status: 404 } });
 
             const result = await glGetRepoTree(mockClient, 'owner', 'repo', 'main');
 
             expect(result).toBeNull();
+        });
+
+        it('throws ExternalError on non-404 API error', async () => {
+            expect.hasAssertions();
+
+            vi.mocked(apiGet).mockRejectedValue(new Error('API error'));
+
+            await expect(glGetRepoTree(mockClient, 'owner', 'repo', 'main')).rejects.toBeInstanceOf(ExternalError);
         });
     });
 
@@ -470,24 +513,22 @@ describe('Gitlab Workflow', () => {
             ]);
         });
 
-        it('returns null when apiGet returns null', async () => {
+        it('returns null when directory not found (404)', async () => {
             expect.hasAssertions();
 
-            vi.mocked(apiGet).mockResolvedValue(null);
+            vi.mocked(apiGet).mockRejectedValue({ response: { status: 404 } });
 
             const result = await glListDirectory(mockClient, 'owner', 'repo', 'src');
 
             expect(result).toBeNull();
         });
 
-        it('returns null on API error', async () => {
+        it('throws ExternalError on non-404 API error', async () => {
             expect.hasAssertions();
 
             vi.mocked(apiGet).mockRejectedValue(new Error('API error'));
 
-            const result = await glListDirectory(mockClient, 'owner', 'repo', 'src');
-
-            expect(result).toBeNull();
+            await expect(glListDirectory(mockClient, 'owner', 'repo', 'src')).rejects.toBeInstanceOf(ExternalError);
         });
     });
 
@@ -510,24 +551,22 @@ describe('Gitlab Workflow', () => {
             expect(result).toStrictEqual(report);
         });
 
-        it('returns null on 404', async () => {
+        it('returns null when test report not found (404)', async () => {
             expect.hasAssertions();
 
-            vi.mocked(apiGet).mockResolvedValue(null);
+            vi.mocked(apiGet).mockRejectedValue({ response: { status: 404 } });
 
             const result = await glGetTestReport(mockClient, 'owner', 'repo', 999);
 
             expect(result).toBeNull();
         });
 
-        it('returns null on API error', async () => {
+        it('throws ExternalError on non-404 API error', async () => {
             expect.hasAssertions();
 
-            vi.mocked(apiGet).mockResolvedValue(null);
+            vi.mocked(apiGet).mockRejectedValue(new Error('API error'));
 
-            const result = await glGetTestReport(mockClient, 'owner', 'repo', 42);
-
-            expect(result).toBeNull();
+            await expect(glGetTestReport(mockClient, 'owner', 'repo', 42)).rejects.toBeInstanceOf(ExternalError);
         });
     });
 });

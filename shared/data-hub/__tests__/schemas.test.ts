@@ -170,6 +170,33 @@ describe('Schemas', () => {
 
             expect(result.success).toBeTruthy();
         });
+
+        it('lA-2: maps GitHub run_attempt into run_attempt', () => {
+            expect.hasAssertions();
+
+            const parsed = parsePipelineRun({
+                id: 1,
+                run_number: 42,
+                run_attempt: 3,
+                conclusion: 'success',
+            });
+
+            expect(parsed).not.toBeNull();
+            expect(parsed?.run_attempt).toBe(3);
+        });
+
+        it('lA-2: maps GitLab retried boolean into retried', () => {
+            expect.hasAssertions();
+
+            const parsed = parsePipelineRun({
+                id: 1,
+                retried: true,
+                conclusion: 'success',
+            });
+
+            expect(parsed).not.toBeNull();
+            expect(parsed?.retried).toBeTruthy();
+        });
     });
 
     describe('ParseMetricsRun', () => {

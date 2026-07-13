@@ -82,5 +82,29 @@ describe('Compute/flaky-rate', () => {
 
             expect(result[0]?.title).toBe('high');
         });
+
+        it('filters by branch when branch param provided (Gap 3)', () => {
+            expect.hasAssertions();
+
+            const mainRun1 = { ...makePipelineRun(1), head_branch: 'main' };
+            const mainRun2 = { ...makePipelineRun(2), head_branch: 'main' };
+            const featureRun1 = { ...makePipelineRun(3), head_branch: 'feature/x' };
+            const featureRun2 = { ...makePipelineRun(4), head_branch: 'feature/x' };
+            const jobsMap = new Map([
+                [1, [makeJob('test', 'success')]],
+                [2, [makeJob('test', 'success')]],
+                [3, [makeJob('test', 'success')]],
+                [4, [makeJob('test', 'failure')]],
+            ]);
+
+            // main: 'test' consistent (success, success) → not flaky.
+            const mainOnly = calcFlakyFromPipelineRuns([mainRun1, mainRun2], jobsMap, 'main');
+            // feature/x: 'test' mixed (success, failure) → flaky.
+            const featureOnly = calcFlakyFromPipelineRuns([featureRun1, featureRun2], jobsMap, 'feature/x');
+
+            expect(mainOnly).toStrictEqual([]);
+
+            expect(featureOnly).toHaveLength(1);
+        });
     });
 });

@@ -45,6 +45,8 @@ import JiraLinkManager from '../jira_management/jira_link_manager.js';
 import CsvResource from '../jira_management/csv_resource.js';
 import { rootLogger } from '../shared/logger.js';
 import { SessionContext } from '../shared/session-context.js';
+import { setDataHub } from '../shared/data-hub/global-hub.js';
+import { makeDataHubMock } from '../shared/test-utils/factories/data-hub-mock.js';
 import case02 from '../jira_management/commands/case02.js';
 import case03 from '../jira_management/commands/case03.js';
 import case04 from '../jira_management/commands/case04.js';
@@ -80,6 +82,8 @@ describe('Handlers Happy Paths', () => {
     beforeEach(() => {
         vi.clearAllMocks();
         vi.restoreAllMocks();
+        // Phase 0.8: handlers resolve a DataHub via resolveSessionContext(); provide one.
+        setDataHub(makeDataHubMock());
         nock.cleanAll();
         // Clear mockResolvedValueOnce queue (clearAllMocks does NOT clear it)
         getPrompt().ask.mockReset();

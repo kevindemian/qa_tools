@@ -18,8 +18,13 @@ import type { FlakyResult } from '../../types/data-hub.js';
  *
  * @returns FlakyResult[] sorted by rate descending.
  */
-export function calcFlakyFromPipelineRuns(runs: PipelineRun[], jobsMap: Map<number, PipelineJob[]>): FlakyResult[] {
-    const jobHistory = buildJobHistory(runs, jobsMap);
+export function calcFlakyFromPipelineRuns(
+    runs: PipelineRun[],
+    jobsMap: Map<number, PipelineJob[]>,
+    branch?: string,
+): FlakyResult[] {
+    const scoped = branch == null ? runs : runs.filter((r) => (r.head_branch ?? r.ref) === branch);
+    const jobHistory = buildJobHistory(scoped, jobsMap);
     return detectFlakyFromHistory(jobHistory);
 }
 
