@@ -3627,7 +3627,7 @@ Pesquisa externa (fontes indicadas pelo usuário) confirma esse ecossistema:
 
 **FASE COV — Coverage detalhado (`CDH-COV`)**
 
-- Por arquivo/branch/function → `coverage.files`. **✅ CONCLUÍDO 2026-07-13**: `coverage-files-extractor.ts` (Istanbul/Cobertura/JaCoCo) + `CoverageDataProvider` injeta `GitProvider` → `raw.coverageFiles`; wiring em `factory.ts:buildDataProviders`.
+- Por arquivo/branch/function → `coverage.files`. **✅ CONCLUÍDO 2026-07-13**: `coverage-files-extractor.ts` (Istanbul/Cobertura/JaCoCo) → `raw.coverageFiles`. Extração integrada NO PASSO DE DOWNLOAD DE ARTEFATOS dos providers GitHub/GitLab (`downloadCoverageArtifacts`), eliminando fetch duplicado de pipelines (SSOT: 1 `getRecentPipelines` por provider). `CoverageDataProvider` (classe separada) REMOVIDO — era provider paralelo que re-buscava `getRecentPipelines`, violando single-fetch + quebrando o teste de cache `ci-data-getOrFetch.integration.test.ts`.
 
 ### EIXO B — STORE (persistência quality-gated) — fundação
 
@@ -4057,9 +4057,13 @@ Após WS4, a FASE EXPAND + STORE (EIXO A — "última gota") estava NAO executad
 - **LA-3/4/5** ✅ (GitLab DORA/deployments/releases/issues, GitHub security/deployments/releases/PRs/issues/perf, CTRF flaky/retries/file:line, reporter-prediction)
 - **PM-0/1/2/3/4** ✅ (`RawIssue` canônico + `pmIssues` via GitHub/GitLab `getIssues`; Jira em `jiraIssues`; CompositeProvider funde)
 - **XR-1/2** ✅ (Test Executions/Runs + requirement coverage + defects)
-- **COV** ✅ (`coverageFiles` via artefatos CI; `CoverageDataProvider` injetado no `factory`)
+- **COV** ✅ (`coverageFiles` via artefatos CI; extraído em `downloadCoverageArtifacts` nos providers GitHub/GitLab — sem fetch duplicado de pipelines)
 - **ST-1/2/3** ✅ (fundação — `pullRequests` adicionado: `RawPullRequest`, `validateAndScorePullRequests`, `QualityCategory`, `gateRawData`, `persistence`, `raw-merge`, `hub`)
 
 Verificação: `npx tsc --noEmit`=0; `npm run lint`=0; `npx vitest run shared/data-hub git_triggers`=1347 pass; `rg "NaN"` nos providers=0. Pendência conhecida: XR-2 live exige `XRAY_CLIENT_ID`/`XRAY_CLIENT_SECRET` (vazios em `.env.local`) — implementado + teste mockado; validação live pendente de creds.
+
+### Correção de CI pós-push (mesma data)
+
+CI run `29287396947` (Test Node 24) FALHOU: `ci-data-getOrFetch.integration.test.ts` — contagem de `getRecentPipelines` dobrou (1→2, 2→4). Root cause: `CoverageDataProvider` era provider paralelo em `factory.buildDataProviders` que re-buscava pipelines (`readCoverageFiles` → `getRecentPipelines`) já buscados pelo provider principal — fetch duplicado (viola single-fetch SSOT). Fix em origem: extração de coverage por arquivo integrada no passo de download de artefatos de `github-provider.ts`/`gitlab-provider.ts` (`downloadCoverageArtifacts`, em `fetchArtifacts` — mesmo `listPipelineArtifacts`, sem `getRecentPipelines` extra); `CoverageDataProvider` + testes específicos REMOVIDOS; `coverage-files-extractor.ts` preservado e coberto por novo teste unitário `coverage-files-extractor.test.ts`. Após fix: 600 testes `data-hub`+`git_triggers` pass; `getOrFetch` volta a 1 fetch/provider (cache validado).
 
 **Conclusão 2:** FASE EXPAND + STORE (EIXO A) CONCLUÍDA. Código em `main` via push GitHub API.

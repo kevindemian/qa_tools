@@ -26,12 +26,14 @@ import type {
     Release,
     RawIssue,
     DoraMetrics,
+    CoverageFile,
 } from '../../types/data-hub.js';
 import type { ArtifactParseResult } from '../artifact-parser.js';
 import { parsePipelineRun, validateRawDataOrThrow } from '../schemas.js';
 import { rootLogger } from '../../logger.js';
 import { extractErrorMessage } from '../../prompt-errors.js';
 import { extractCoverage } from '../extractors/coverage-extractor.js';
+import { extractCoverageFiles, isCoverageArtifact } from '../extractors/coverage-files-extractor.js';
 import { isTestArtifact, parseArtifactBufferAll } from '../artifact-parser.js';
 import { detectFrameworkCascade } from '../extractors/framework-detector.js';
 import { classifyFailures, failureEntryToRecord, type FailureInput } from '../extractors/failure-classifier.js';
@@ -80,6 +82,7 @@ export class GitLabDataProvider implements DataProvider {
         const failureReasonsMap = new Map<number, string[]>();
         const failureRecords: FailureRecord[] = [];
         const parsedArtifactsMap = new Map<number, ArtifactParseResult[]>();
+        const coverageFiles: CoverageFile[] = [];
 
         const maxArtifacts = options.maxArtifactsPerRun ?? DEFAULT_MAX_ARTIFACTS_PER_RUN;
         const { gitlabTestReport, coverage } = await this.collectFromRuns(
@@ -90,13 +93,17 @@ export class GitLabDataProvider implements DataProvider {
             failureRecords,
             parsedArtifactsMap,
             maxArtifacts,
+            coverageFiles,
         );
         this.appendGitLabTestReportFailures(failureRecords, gitlabTestReport);
 
         const framework = await this.detectFrameworkFromFirstRun(runs);
         const commitLog = buildCommitLog(runs);
         const ciRuns = this.deriveCiRuns(runs, parsedArtifactsMap);
+        const now = new Date().toISOString();
         const provenance = this.buildProvenance(coverage, framework, gitlabTestReport);
+        if (coverageFiles.length > 0)
+            provenance.set('coverageFiles', { confidence: 0.85, source: 'gitlab-ci-artifacts', timestamp: now });
 
         const rawData: RawData = {
             runs,
@@ -109,6 +116,7 @@ export class GitLabDataProvider implements DataProvider {
             ...(gitlabTestReport != null ? { gitlabTestReport } : {}),
             ...(commitLog ? { commitLog } : {}),
             ...(ciRuns.length > 0 ? { ciRuns } : {}),
+            ...(coverageFiles.length > 0 ? { coverageFiles } : {}),
             failureRecords,
             provenance,
         };
@@ -252,6 +260,7 @@ export class GitLabDataProvider implements DataProvider {
         failureRecords: FailureRecord[],
         parsedArtifactsMap: Map<number, ArtifactParseResult[]>,
         maxArtifacts: number,
+        coverageFiles: CoverageFile[],
     ): Promise<{ gitlabTestReport: GitLabTestReport | undefined; coverage: RawCoverage | undefined }> {
         let coverage: RawCoverage | undefined;
         let gitlabTestReport: GitLabTestReport | undefined;
@@ -267,6 +276,7 @@ export class GitLabDataProvider implements DataProvider {
                 parsedArtifactsMap,
                 run,
                 maxArtifacts,
+                coverageFiles,
             );
             if (gitlabTestReport == null && report != null) gitlabTestReport = report;
             coverage = await this.extractCoverageIfNeeded(coverage, jobsMap, runIdNum);
@@ -323,11 +333,12 @@ export class GitLabDataProvider implements DataProvider {
         parsedArtifactsMap: Map<number, ArtifactParseResult[]>,
         run: PipelineRun,
         maxArtifacts: number,
+        coverageFiles: CoverageFile[],
     ): Promise<GitLabTestReport | undefined> {
         try {
             const runJobs = await this.provider.getPipelineJobs(runIdNum);
             jobsMap.set(runIdNum, runJobs);
-            await this.fetchArtifacts(runIdNum, artifactsMap, parsedArtifactsMap, maxArtifacts);
+            await this.fetchArtifacts(runIdNum, artifactsMap, parsedArtifactsMap, maxArtifacts, coverageFiles);
             const testReport = await this.fetchTestReport(runIdNum);
             await this.fetchFailureReasons(runJobs, failureReasonsMap, failureRecords, run);
             return testReport;
@@ -342,15 +353,48 @@ export class GitLabDataProvider implements DataProvider {
         artifactsMap: Map<number, ArtifactInfo[]>,
         parsedArtifactsMap: Map<number, ArtifactParseResult[]>,
         maxArtifacts: number,
+        coverageFiles: CoverageFile[],
     ): Promise<void> {
         try {
             const arts = await this.provider.listPipelineArtifacts(runIdNum);
             artifactsMap.set(runIdNum, arts);
             const parsed = await this.downloadTestArtifacts(arts, maxArtifacts);
             if (parsed.length > 0) parsedArtifactsMap.set(runIdNum, parsed);
+            const cov = await this.downloadCoverageArtifacts(arts, maxArtifacts);
+            if (cov.length > 0) coverageFiles.push(...cov);
         } catch (err) {
             rootLogger.debug(`GitLab: artifacts fetch failed for run ${runIdNum}: ${extractErrorMessage(err)}`);
         }
+    }
+
+    /**
+     * Download coverage-report artifacts and decode them into per-file coverage.
+     * Runs in the SAME artifact pass as test artifacts — no extra pipeline fetch.
+     */
+    private async downloadCoverageArtifacts(artifacts: ArtifactInfo[], maxArtifacts: number): Promise<CoverageFile[]> {
+        const coverageArtifacts = artifacts.filter((a) => isCoverageArtifact(a.name));
+        const files: CoverageFile[] = [];
+        let downloaded = 0;
+
+        for (const artifact of coverageArtifacts) {
+            if (downloaded >= maxArtifacts) break;
+            try {
+                const result = await this.provider.downloadArtifact(artifact.id);
+                const extracted = extractCoverageFiles(artifact.name, result.buffer);
+                if (extracted.errors.length > 0)
+                    rootLogger.debug(
+                        `GitLab: coverage artifact ${String(artifact.name)} had ${extracted.errors.length} parse error(s)`,
+                    );
+                files.push(...extracted.files);
+                downloaded++;
+            } catch (err) {
+                rootLogger.debug(
+                    `GitLab: coverage artifact download failed for ${String(artifact.name)}: ${extractErrorMessage(err)}`,
+                );
+            }
+        }
+
+        return files;
     }
 
     private async fetchTestReport(runIdNum: number): Promise<GitLabTestReport | undefined> {

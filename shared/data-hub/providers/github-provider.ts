@@ -34,6 +34,7 @@ import type {
     RawIssue,
     RawPullRequest,
     PerformanceMetrics,
+    CoverageFile,
 } from '../../types/data-hub.js';
 import type { ArtifactParseResult } from '../artifact-parser.js';
 import type { FlatTest } from '../../result_parser.js';
@@ -66,6 +67,7 @@ function detectReporterInWorkflow(content: string): string | undefined {
 }
 import { rootLogger } from '../../logger.js';
 import { extractCoverage } from '../extractors/coverage-extractor.js';
+import { extractCoverageFiles, isCoverageArtifact } from '../extractors/coverage-files-extractor.js';
 import { isTestArtifact, parseArtifactBufferAll } from '../artifact-parser.js';
 import { detectFrameworkCascade } from '../extractors/framework-detector.js';
 import {
@@ -109,6 +111,7 @@ export class GitHubDataProvider implements DataProvider {
         const failureRecords: FailureRecord[] = [];
         const timingMap = new Map<number, WorkflowRunTiming>();
         const parsedArtifactsMap = new Map<number, ArtifactParseResult[]>();
+        const coverageFiles: CoverageFile[] = [];
         let coverage: RawCoverage | undefined;
 
         const maxArtifacts = options.maxArtifactsPerRun ?? DEFAULT_MAX_ARTIFACTS_PER_RUN;
@@ -125,6 +128,7 @@ export class GitHubDataProvider implements DataProvider {
                 timingMap,
                 parsedArtifactsMap,
                 maxArtifacts,
+                coverageFiles,
             );
             if (coverage == null) {
                 const runJobs = jobsMap.get(runIdNum);
@@ -167,6 +171,7 @@ export class GitHubDataProvider implements DataProvider {
             pmIssues,
             pullRequests,
             performanceMetrics,
+            coverageFiles,
         });
 
         const rawData = this.buildExpandRawData({
@@ -186,6 +191,7 @@ export class GitHubDataProvider implements DataProvider {
             pmIssues,
             pullRequests,
             performanceMetrics,
+            coverageFiles,
             failureRecords,
             provenance,
         });
@@ -213,6 +219,7 @@ export class GitHubDataProvider implements DataProvider {
             pmIssues: RawIssue[];
             pullRequests: RawPullRequest[];
             performanceMetrics: PerformanceMetrics | undefined;
+            coverageFiles: CoverageFile[];
         },
     ): void {
         if (data.deployments.length > 0)
@@ -227,6 +234,8 @@ export class GitHubDataProvider implements DataProvider {
             provenance.set('pullRequests', { confidence: 0.9, source: 'github-api', timestamp: now });
         if (data.performanceMetrics != null)
             provenance.set('performanceMetrics', { confidence: 0.9, source: 'github-api', timestamp: now });
+        if (data.coverageFiles.length > 0)
+            provenance.set('coverageFiles', { confidence: 0.85, source: 'github-actions-artifacts', timestamp: now });
     }
 
     private buildExpandRawData(params: {
@@ -246,6 +255,7 @@ export class GitHubDataProvider implements DataProvider {
         pmIssues: RawIssue[];
         pullRequests: RawPullRequest[];
         performanceMetrics: PerformanceMetrics | undefined;
+        coverageFiles: CoverageFile[];
         failureRecords: FailureRecord[];
         provenance: Map<string, DataSource>;
     }): RawData {
@@ -266,6 +276,7 @@ export class GitHubDataProvider implements DataProvider {
             pmIssues,
             pullRequests,
             performanceMetrics,
+            coverageFiles,
             failureRecords,
             provenance,
         } = params;
@@ -286,6 +297,7 @@ export class GitHubDataProvider implements DataProvider {
             ...(pmIssues.length > 0 ? { pmIssues } : {}),
             ...(pullRequests.length > 0 ? { pullRequests } : {}),
             ...(performanceMetrics != null ? { performanceMetrics } : {}),
+            ...(coverageFiles.length > 0 ? { coverageFiles } : {}),
             failureRecords,
             provenance,
         };
@@ -316,11 +328,12 @@ export class GitHubDataProvider implements DataProvider {
         timingMap: Map<number, WorkflowRunTiming>,
         parsedArtifactsMap: Map<number, ArtifactParseResult[]>,
         maxArtifacts: number,
+        coverageFiles: CoverageFile[],
     ): Promise<void> {
         try {
             const runJobs = await this.provider.getPipelineJobs(runIdNum);
             jobsMap.set(runIdNum, runJobs);
-            await this.fetchArtifacts(runIdNum, artifactsMap, parsedArtifactsMap, maxArtifacts);
+            await this.fetchArtifacts(runIdNum, artifactsMap, parsedArtifactsMap, maxArtifacts, coverageFiles);
             await this.fetchTiming(runIdNum, timingMap);
             await this.fetchFailureReasons(runJobs, failureReasonsMap, failureRecords);
         } catch (err) {
@@ -333,15 +346,48 @@ export class GitHubDataProvider implements DataProvider {
         artifactsMap: Map<number, ArtifactInfo[]>,
         parsedArtifactsMap: Map<number, ArtifactParseResult[]>,
         maxArtifacts: number,
+        coverageFiles: CoverageFile[],
     ): Promise<void> {
         try {
             const arts = await this.provider.listPipelineArtifacts(runIdNum);
             artifactsMap.set(runIdNum, arts);
             const parsed = await this.downloadTestArtifacts(arts, maxArtifacts);
             if (parsed.length > 0) parsedArtifactsMap.set(runIdNum, parsed);
+            const cov = await this.downloadCoverageArtifacts(arts, maxArtifacts);
+            if (cov.length > 0) coverageFiles.push(...cov);
         } catch (err) {
             rootLogger.debug(`GitHub: artifacts fetch failed for run ${runIdNum}: ${extractErrorMessage(err)}`);
         }
+    }
+
+    /**
+     * Download coverage-report artifacts and decode them into per-file coverage.
+     * Runs in the SAME artifact pass as test artifacts — no extra pipeline fetch.
+     */
+    private async downloadCoverageArtifacts(artifacts: ArtifactInfo[], maxArtifacts: number): Promise<CoverageFile[]> {
+        const coverageArtifacts = artifacts.filter((a) => isCoverageArtifact(a.name));
+        const files: CoverageFile[] = [];
+        let downloaded = 0;
+
+        for (const artifact of coverageArtifacts) {
+            if (downloaded >= maxArtifacts) break;
+            try {
+                const result = await this.provider.downloadArtifact(artifact.id);
+                const extracted = extractCoverageFiles(artifact.name, result.buffer);
+                if (extracted.errors.length > 0)
+                    rootLogger.debug(
+                        `GitHub: coverage artifact ${String(artifact.name)} had ${extracted.errors.length} parse error(s)`,
+                    );
+                files.push(...extracted.files);
+                downloaded++;
+            } catch (err) {
+                rootLogger.debug(
+                    `GitHub: coverage artifact download failed for ${String(artifact.name)}: ${extractErrorMessage(err)}`,
+                );
+            }
+        }
+
+        return files;
     }
 
     private async fetchTiming(runIdNum: number, timingMap: Map<number, WorkflowRunTiming>): Promise<void> {
