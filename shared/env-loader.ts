@@ -71,6 +71,14 @@ export function ensureDotenv(): void {
     if (dotenvLoaded) return;
     const projectRoot = path.resolve(import.meta.dirname, '..');
 
+    const isTest = process.env['VITEST'] === 'true' || process.env['NODE_ENV'] === 'test';
+
+    if (isTest) {
+        loadTestEnv(projectRoot);
+        dotenvLoaded = true;
+        return;
+    }
+
     const localPath = path.join(projectRoot, '.env.local');
     const envPath = path.join(projectRoot, '.env');
 
@@ -95,6 +103,32 @@ export function ensureDotenv(): void {
     warnSecretsInFile(envPath, '.env');
 
     dotenvLoaded = true;
+}
+
+/**
+ * Test-mode env loading: prefer the hermetic `.env.test` sandbox so automated
+ * tests never read production URLs/tokens from `.env.local`. `.env.test.local`
+ * (gitignored, local-only overrides) takes priority over `.env.test` when present.
+ */
+function loadTestEnv(projectRoot: string): void {
+    const testLocalPath = path.join(projectRoot, '.env.test.local');
+    const testPath = path.join(projectRoot, '.env.test');
+
+    for (const filePath of [testLocalPath, testPath]) {
+        try {
+            dotenv.config({ path: filePath });
+        } catch (err) {
+            process.stderr.write(
+                '[env-loader] Failed to load ' +
+                    filePath +
+                    ' (optional): ' +
+                    (err instanceof Error ? err.message : String(err)) +
+                    '\n',
+            );
+        }
+    }
+
+    warnSecretsInFile(testPath, '.env.test');
 }
 
 /** Read an env var with optional fallback. Calls `ensureDotenv` on each read. */

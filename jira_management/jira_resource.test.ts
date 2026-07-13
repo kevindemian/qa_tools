@@ -2,6 +2,13 @@ import { nonNull } from '../shared/test-utils.js';
 import type { Mock } from 'vitest';
 import { createHttpClient } from '../shared/http-client.js';
 
+vi.mock('../shared/config', () => ({
+    default: {
+        get: () => undefined,
+        getDefault: () => ({ get: () => undefined }),
+    },
+}));
+
 vi.mock('../shared/http-client', () => ({ createHttpClient: vi.fn() }));
 
 vi.mock('../shared/logger', () => ({

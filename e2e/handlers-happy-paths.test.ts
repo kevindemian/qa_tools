@@ -535,18 +535,11 @@ describe('Handlers Happy Paths', () => {
             expect.hasAssertions();
 
             const { api } = freshScope();
-            // createTestExecution → findExistingTe(GET /search), GET /issuetype, GET /field, POST /issue
+            // createTestExecution → findExistingTe(GET /search), GET /issuetype, POST /issue
             api.get('/search').query(true).reply(200, { issues: [], total: 0 });
             api.get('/issuetype').reply(200, [
                 { id: '11200', name: 'Epic' },
                 { id: '11802', name: 'Test Execution' },
-            ]);
-            api.get('/field').reply(200, [
-                {
-                    id: 'cf_13715',
-                    name: 'Tests association',
-                    schema: { custom: 'com.xpandit.plugins.xray:testexec-tests-custom-field' },
-                },
             ]);
             api.post('/issue').reply(201, { key: 'EXEC-1', id: '20001' });
             // createWithLinks → GET /issue/EXEC-1 to check existing links
@@ -619,13 +612,6 @@ describe('Handlers Happy Paths', () => {
             api.get('/issuetype').reply(200, [
                 { id: '11200', name: 'Epic' },
                 { id: '11802', name: 'Test Execution' },
-            ]);
-            api.get('/field').reply(200, [
-                {
-                    id: 'cf_13715',
-                    name: 'Tests association',
-                    schema: { custom: 'com.xpandit.plugins.xray:testexec-tests-custom-field' },
-                },
             ]);
             api.post('/issue').reply(201, { key: 'EXEC-1', id: '20001' });
             api.get('/issue/EXEC-1').reply(200, { key: 'EXEC-1', fields: { issuelinks: [] } });

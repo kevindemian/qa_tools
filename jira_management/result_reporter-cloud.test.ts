@@ -42,7 +42,7 @@ describe('ImportExecutionResults (C0)', () => {
 
         const mock = resource.postToApiRoot as ReturnType<typeof vi.fn>;
 
-        expect(mock).toHaveBeenCalledWith();
+        expect(mock).toHaveBeenCalledWith('rest/raven/2.0/api/import/execution/json', expect.any(Object));
 
         const calls = mock.mock.calls;
 
@@ -82,6 +82,6 @@ describe('ImportExecutionResults (C0)', () => {
         mock.mockRejectedValueOnce(new Error('401 Unauthorized'));
 
         await expect(importExecutionResults(resource, 'EXEC-1', matched)).resolves.toBeUndefined();
-        expect(mock).toHaveBeenCalledWith();
+        expect(mock).toHaveBeenCalledWith('rest/raven/2.0/api/import/execution/json', expect.any(Object));
     });
 });

@@ -11,6 +11,7 @@ import createTests from '../jira_management/create_tests.js';
 import { rootLogger } from '../shared/logger.js';
 import { nonNull } from '../shared/test-utils.js';
 import { setupHandlers, resetHandlers } from './handlers.js';
+import { setTestSleep } from '../shared/http-client.js';
 
 const { createTestsFromCsv } = createTests;
 
@@ -21,6 +22,10 @@ const tmpHome = fs.mkdtempSync(path.join(os.tmpdir(), 'qa-e2e-'));
 describe('E2E: CSV Import', () => {
     beforeAll(() => {
         nock.cleanAll();
+        setTestSleep(() => Promise.resolve());
+        // This test builds JiraResource without an explicit mode (defaults to
+        // 'server'), so pin the config mode to match for a consistent flow.
+        process.env['JIRA_MODE'] = 'server';
         process.env['HOME'] = tmpHome;
         process.env['JIRA_BASE_URL'] = 'http://localhost:9999/jira';
         process.env['JIRA_PERSONAL_TOKEN'] = E2E_TOKEN;
@@ -36,6 +41,43 @@ describe('E2E: CSV Import', () => {
     beforeEach(() => {
         vi.spyOn(console, 'log').mockImplementation(() => {});
         vi.spyOn(process.stdout, 'write').mockImplementation(() => true);
+        nock.cleanAll();
+        nock.disableNetConnect();
+        const jira = nock('http://localhost:9999/jira/rest/api/2');
+        jira.persist().get('/search').query(true).reply(200, { issues: [] });
+        let issueCount = 0;
+        jira.post('/issue')
+            .times(2)
+            .reply(201, () => {
+                issueCount++;
+                return { key: 'TEST-' + issueCount, id: '' + (10000 + issueCount) };
+            });
+        jira.get('/field').reply(200, [
+            {
+                id: 'customfield_13708',
+                name: 'Pre-Conditions association',
+                schema: { custom: 'com.xpandit.plugins.xray:test-precondition-custom-field' },
+            },
+        ]);
+        jira.persist()
+            .get('/issue/TEST-1')
+            .reply(200, { key: 'TEST-1', fields: { description: '', customfield_13708: [] } });
+        jira.persist().put('/issue/TEST-1').reply(200, {});
+        jira.persist()
+            .get('/issue/TEST-2')
+            .reply(200, { key: 'TEST-2', fields: { description: '', customfield_13708: [] } });
+        jira.persist().put('/issue/TEST-2').reply(200, {});
+        jira.get('/issueLinkType').reply(200, {
+            issueLinkTypes: [
+                { id: '10201', name: 'Tests', inward: 'is tested by', outward: 'tests' },
+                { id: '10202', name: 'Pre-Condition', inward: 'is pre-condition of', outward: 'has pre-condition' },
+            ],
+        });
+        jira.persist().post('/issueLink').reply(201, {});
+        const xray = nock('http://localhost:9999/xray');
+        xray.persist()
+            .post(/\/test\/TEST-\d+\/steps/)
+            .reply(201);
     });
 
     afterEach(() => {
