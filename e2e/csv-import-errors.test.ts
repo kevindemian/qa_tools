@@ -80,6 +80,7 @@ describe('E2E: CSV Import - Error Paths', () => {
         nock.cleanAll();
         nock.enableNetConnect();
         process.env['ON_ERROR'] = 'skip';
+        process.env['JIRA_MODE'] = 'cloud';
     });
 
     afterAll(() => {
@@ -108,6 +109,7 @@ describe('E2E: CSV Import - Error Paths', () => {
         );
 
         const jira = nock(BASE);
+        jira.get('/search').query(true).reply(200, { issues: [] });
         jira.post('/issue').reply(500, { errorMessages: ['Internal error'] });
         jira.post('/issue').reply(201, () => ({ key: 'TEST-2', id: '10002' }));
         const xray = nock(XRAY);
@@ -140,6 +142,7 @@ describe('E2E: CSV Import - Error Paths', () => {
         );
 
         const jira = nock(BASE);
+        jira.get('/search').query(true).reply(200, { issues: [] });
         jira.post('/issue').reply(500, { errorMessages: ['Internal error'] });
 
         const result = nonNull(await createTestsFromCsv(makeState()));
@@ -170,6 +173,7 @@ describe('E2E: CSV Import - Error Paths', () => {
 
         let issueCount = 0;
         const jira = nock(BASE);
+        jira.get('/search').query(true).reply(200, { issues: [] });
         jira.post('/issue')
             .times(2)
             .reply(201, () => {
@@ -212,6 +216,7 @@ describe('E2E: CSV Import - Error Paths', () => {
 
         let issueCount = 0;
         const jira = nock(BASE);
+        jira.get('/search').query(true).reply(200, { issues: [] });
         jira.post('/issue')
             .times(2)
             .reply(201, () => {
@@ -236,12 +241,17 @@ describe('E2E: CSV Import - Error Paths', () => {
     it('c5: Precondition PUT 500 — erro pos-criacao, testErrors path', async () => {
         expect.hasAssertions();
 
+        // c5 exercises the SERVER-mode precondition path (custom-field PUT),
+        // which differs from the cloud issue-link path. Pin mode per-test.
+        process.env['JIRA_MODE'] = 'server';
+
         process.env['CSV_PATH'] = writeCsv(
             'c5',
             ['Title: TC01', 'Pre-condition: KEY-100', 'Action,Data,Expected Result', 'Step1,,R1'].join('\n'),
         );
 
         const jira = nock(BASE);
+        jira.get('/search').query(true).reply(200, { issues: [] });
         jira.post('/issue').reply(201, () => ({ key: 'TEST-1', id: '10001' }));
         jira.get('/field').reply(200, [
             {
@@ -284,6 +294,7 @@ describe('E2E: CSV Import - Error Paths', () => {
 
         let issueCount = 0;
         const jira = nock(BASE);
+        jira.get('/search').query(true).reply(200, { issues: [] });
         jira.post('/issue')
             .times(2)
             .reply(201, () => {
@@ -317,6 +328,7 @@ describe('E2E: CSV Import - Error Paths', () => {
         );
 
         const jira = nock(BASE);
+        jira.get('/search').query(true).reply(200, { issues: [] });
         jira.post('/issue').reply(201, () => ({ key: 'TEST-1', id: '10001' }));
         const xray = nock(XRAY);
         xray.post('/test/TEST-1/steps').reply(500);

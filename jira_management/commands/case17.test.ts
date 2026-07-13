@@ -79,6 +79,7 @@ vi.mock('fs');
 
 vi.mock('../../shared/http-client', () => ({
     createHttpClient: vi.fn(),
+    createThrottledClient: vi.fn(),
     setTestSleep: vi.fn(),
 }));
 
