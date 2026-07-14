@@ -137,7 +137,7 @@ export function runQualityGate(options: QualityGateOptions): QualityGateResult {
     const checks: GateCheck[] = [];
     try {
         const hub = options.dataHub;
-        const runs = options.project ? hub.raw.runs.filter((r) => r.head_branch === options.project) : hub.raw.runs;
+        const runs = options.project ? hub.getRuns().filter((r) => r.head_branch === options.project) : hub.getRuns();
 
         if (runs.length < 1) {
             const hasComputedData =
