@@ -1,6 +1,7 @@
 import { calculateHealthScore, evaluateQualityGate } from './health-score.js';
 import type { DataHub, ComputedMetrics } from './types/data-hub.js';
 import { makeDataHubMock } from './test-utils/factories/data-hub-mock.js';
+import { rootLogger } from './logger.js';
 
 function createTestHub(overrides: Partial<ComputedMetrics> = {}): DataHub {
     return makeDataHubMock({
@@ -553,5 +554,20 @@ describe('CalculateHealthScore', () => {
 
             expect(resultWithThreshold.dimensions.flakyRate.score).toBe(100);
         });
+    });
+});
+
+describe('CalculateHealthScore error handling (Fase 1.5)', () => {
+    it('logs an explicit error and rethrows when DataHub is malformed (no silent failure)', () => {
+        const errorSpy = vi.spyOn(rootLogger, 'error').mockImplementation(() => {});
+        // Hub missing getRuns() → _computeHealthScore throws a TypeError on dataHub.getRuns().
+        const malformedHub = { computed: {} } as unknown as DataHub;
+
+        expect(() => calculateHealthScore({ dataHub: malformedHub })).toThrow(/is not a function/);
+
+        expect(errorSpy).toHaveBeenCalledTimes(1);
+        expect(errorSpy).toHaveBeenCalledWith(expect.stringContaining('Health score error'));
+
+        errorSpy.mockRestore();
     });
 });
