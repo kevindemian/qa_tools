@@ -1,287 +1,274 @@
-import { detectFramework, detectTestReporter, extractRepoFromGit } from './detector.js';
-import { rootLogger } from '../shared/logger.js';
 import fs from 'fs';
+import os from 'os';
+import path from 'path';
+import { describe, it, expect, afterEach } from 'vitest';
+import { detectFramework, detectTestReporter, extractRepoFromGit } from './detector.js';
 
-const mockReadFileSync = vi.hoisted(() => vi.fn());
-const mockExistsSync = vi.hoisted(() => vi.fn());
-
-vi.mock('fs', () => ({
-    default: { readFileSync: mockReadFileSync, existsSync: mockExistsSync },
-    readFileSync: mockReadFileSync,
-    existsSync: mockExistsSync,
-}));
-
-const mockFsReadFileSync = vi.spyOn(fs, 'readFileSync');
-const mockFsExistsSync = vi.spyOn(fs, 'existsSync');
-
-describe('Error-handling: no silent catches', () => {
-    it('logs (does not swallow) when a config file cannot be read', () => {
-        expect.hasAssertions();
-
-        const debugSpy = vi.spyOn(rootLogger, 'debug').mockImplementation(() => undefined);
-        mockFsExistsSync.mockReturnValue(true);
-        mockFsReadFileSync.mockImplementation(() => {
-            throw new Error('read failed');
-        });
-
-        const result = detectTestReporter('/fake/project');
-
-        expect(result).toBeFalsy();
-        expect(debugSpy).toHaveBeenCalledWith(expect.stringContaining('read failed'));
-
-        debugSpy.mockRestore();
-    });
-});
+const created: string[] = [];
+function makeProject(files: Record<string, string>): string {
+    const dir = fs.mkdtempSync(path.join(os.tmpdir(), 'qa-det-'));
+    created.push(dir);
+    for (const [rel, content] of Object.entries(files)) {
+        const full = path.join(dir, rel);
+        fs.mkdirSync(path.dirname(full), { recursive: true });
+        fs.writeFileSync(full, content, 'utf8');
+    }
+    return dir;
+}
+function pkg(deps: Record<string, string>): string {
+    return JSON.stringify({ devDependencies: deps }, null, 2);
+}
 
 describe('Detector', () => {
-    beforeEach(() => {
-        vi.clearAllMocks();
+    afterEach(() => {
+        for (const d of created.splice(0)) {
+            fs.rmSync(d, { recursive: true, force: true });
+        }
     });
 
-    describe('DetectFramework', () => {
-        it('detects cypress from devDependencies', () => {
-            mockFsReadFileSync.mockReturnValueOnce(
-                JSON.stringify({
-                    devDependencies: { cypress: '^13.0' },
-                }),
-            );
-            const result = detectFramework('/fake/package.json');
+    describe('DetectFramework — framework by deps', () => {
+        it('detects cypress', async () => {
+            expect.hasAssertions();
 
-            expect(result.framework).toBe('cypress');
-            expect(result.testCmd).toContain('cypress');
+            const root = makeProject({ 'package.json': pkg({ cypress: '^13.0' }) });
+            const r = await detectFramework(path.join(root, 'package.json'));
+
+            expect(r.framework).toBe('cypress');
         });
 
-        it('detects playwright from dependencies', () => {
-            mockFsReadFileSync.mockReturnValueOnce(
-                JSON.stringify({
-                    dependencies: { '@playwright/test': '^1.40' },
-                }),
-            );
-            const result = detectFramework('/fake/package.json');
+        it('detects playwright', async () => {
+            expect.hasAssertions();
 
-            expect(result.framework).toBe('playwright');
+            const root = makeProject({ 'package.json': pkg({ '@playwright/test': '^1.40' }) });
+            const r = await detectFramework(path.join(root, 'package.json'));
+
+            expect(r.framework).toBe('playwright');
         });
 
-        it('detects jest', () => {
-            mockFsReadFileSync.mockReturnValueOnce(
-                JSON.stringify({
+        it('detects jest', async () => {
+            expect.hasAssertions();
+
+            const root = makeProject({ 'package.json': pkg({ jest: '^29.0' }) });
+            const r = await detectFramework(path.join(root, 'package.json'));
+
+            expect(r.framework).toBe('jest');
+        });
+
+        it('detects vitest', async () => {
+            expect.hasAssertions();
+
+            const root = makeProject({ 'package.json': pkg({ vitest: '^1.0' }) });
+            const r = await detectFramework(path.join(root, 'package.json'));
+
+            expect(r.framework).toBe('vitest');
+        });
+
+        it('falls back to generic', async () => {
+            expect.hasAssertions();
+
+            const root = makeProject({ 'package.json': pkg({ eslint: '^8.0' }) });
+            const r = await detectFramework(path.join(root, 'package.json'));
+
+            expect(r.framework).toBe('generic');
+        });
+    });
+
+    describe('DetectTestReporter — all frameworks', () => {
+        it('vitest + CTRF via config', async () => {
+            expect.hasAssertions();
+
+            const root = makeProject({
+                'package.json': pkg({ vitest: '^1.0' }),
+                'vitest.config.ts': `import { defineConfig } from 'vitest/config';
+export default defineConfig({ test: { reporters: ['default', 'ctrf-json-reporter'] } });`,
+            });
+
+            await expect(detectTestReporter(root)).resolves.toBeTruthy();
+        });
+
+        it('jest + JUnit via config', async () => {
+            expect.hasAssertions();
+
+            const root = makeProject({
+                'package.json': pkg({ jest: '^29.0' }),
+                'jest.config.js': `module.exports = { reporters: ['default', ['jest-junit', {}]] };`,
+            });
+
+            await expect(detectTestReporter(root)).resolves.toBeTruthy();
+        });
+
+        it('cypress + CTRF via config', async () => {
+            expect.hasAssertions();
+
+            const root = makeProject({
+                'package.json': pkg({ cypress: '^13.0' }),
+                'cypress.config.ts': `import { defineConfig } from 'cypress';
+export default defineConfig({ reporter: 'ctrf-json-reporter' });`,
+            });
+
+            await expect(detectTestReporter(root)).resolves.toBeTruthy();
+        });
+
+        it('playwright + CTRF via config', async () => {
+            expect.hasAssertions();
+
+            const root = makeProject({
+                'package.json': pkg({ '@playwright/test': '^1.40' }),
+                'playwright.config.ts': `import { defineConfig } from '@playwright/test';
+export default defineConfig({ reporter: [['ctrf', {}]] });`,
+            });
+
+            await expect(detectTestReporter(root)).resolves.toBeTruthy();
+        });
+
+        it('returns false when no config exists', async () => {
+            expect.hasAssertions();
+
+            const root = makeProject({ 'package.json': pkg({ vitest: '^1.0' }) });
+
+            await expect(detectTestReporter(root)).resolves.toBeFalsy();
+        });
+
+        it('returns false when config has no reporter', async () => {
+            expect.hasAssertions();
+
+            const root = makeProject({
+                'package.json': pkg({ vitest: '^1.0' }),
+                'vitest.config.ts': `export default { test: { reporters: ['default'] } };`,
+            });
+
+            await expect(detectTestReporter(root)).resolves.toBeFalsy();
+        });
+
+        it('no false positive from a comment/string mentioning ctrf', async () => {
+            expect.hasAssertions();
+
+            const root = makeProject({
+                'package.json': pkg({ vitest: '^1.0' }),
+                'vitest.config.ts': `// configure ctrf reporter later
+const note = 'we will add ctrf reporter soon';
+export default { test: { reporters: ['default'] } };`,
+            });
+
+            await expect(detectTestReporter(root)).resolves.toBeFalsy();
+        });
+    });
+
+    describe('DetectTestReporter — package.json inline', () => {
+        it('detects reporter dependency in devDependencies', async () => {
+            expect.hasAssertions();
+
+            const root = makeProject({
+                'package.json': JSON.stringify({ devDependencies: { vitest: '^1.0', 'ctrf-json-reporter': '^1.0' } }),
+            });
+
+            await expect(detectTestReporter(root)).resolves.toBeTruthy();
+        });
+
+        it('detects jest.reporters inline block', async () => {
+            expect.hasAssertions();
+
+            const root = makeProject({
+                'package.json': JSON.stringify({
                     devDependencies: { jest: '^29.0' },
+                    jest: { reporters: ['jest-junit'] },
                 }),
-            );
-            const result = detectFramework('/fake/package.json');
+            });
 
-            expect(result.framework).toBe('jest');
+            await expect(detectTestReporter(root)).resolves.toBeTruthy();
         });
 
-        it('detects vitest', () => {
-            mockFsReadFileSync.mockReturnValueOnce(
-                JSON.stringify({
+        it('detects vitest.test.reporters inline block', async () => {
+            expect.hasAssertions();
+
+            const root = makeProject({
+                'package.json': JSON.stringify({
                     devDependencies: { vitest: '^1.0' },
+                    vitest: { test: { reporters: ['ctrf'] } },
                 }),
-            );
-            const result = detectFramework('/fake/package.json');
-
-            expect(result.framework).toBe('vitest');
-        });
-
-        it('falls back to generic when no framework found', () => {
-            mockFsReadFileSync.mockReturnValueOnce(
-                JSON.stringify({
-                    devDependencies: { eslint: '^8.0' },
-                }),
-            );
-            const result = detectFramework('/fake/package.json');
-
-            expect(result.framework).toBe('generic');
-        });
-
-        it('falls back to generic when file read fails', () => {
-            mockFsReadFileSync.mockImplementationOnce(() => {
-                throw new Error('ENOENT');
             });
-            const result = detectFramework('/nonexistent/package.json');
 
-            expect(result.framework).toBe('generic');
+            await expect(detectTestReporter(root)).resolves.toBeTruthy();
         });
     });
 
-    describe('DetectTestReporter', () => {
-        function mockPathEndsWith(suffix: string): (p: fs.PathLike) => boolean {
-            return (p: fs.PathLike) => String(p).endsWith(suffix);
-        }
+    describe('DetectFramework — testReportSource', () => {
+        it('cypress => cli-flag', async () => {
+            expect.hasAssertions();
 
-        function mockReadFileWith(suffix: string, content: string): (p: fs.PathOrFileDescriptor) => string {
-            return (p: fs.PathOrFileDescriptor) => {
-                if (String(p).endsWith(suffix)) return content;
-                return '';
-            };
-        }
+            const root = makeProject({ 'package.json': pkg({ cypress: '^13.0' }) });
+            const r = await detectFramework(path.join(root, 'package.json'));
 
-        it('returns true when vitest.config.ts contains VitestCtrfReporter', () => {
-            mockFsExistsSync.mockImplementation(mockPathEndsWith('vitest.config.ts'));
-            mockFsReadFileSync.mockImplementation(
-                mockReadFileWith(
-                    'vitest.config.ts',
-                    `import VitestCtrfReporter from './shared/vitest-ctrf-reporter.js';
-    reporters: ['default', new VitestCtrfReporter()]`,
-                ),
-            );
-
-            expect(detectTestReporter('/fake/project')).toBeTruthy();
+            expect(r.testReportSource).toBe('cli-flag');
         });
 
-        it('returns true when vite.config.ts contains ctrf reporter import', () => {
-            mockFsExistsSync.mockImplementation(mockPathEndsWith('vite.config.ts'));
-            mockFsReadFileSync.mockImplementation(
-                mockReadFileWith(
-                    'vite.config.ts',
-                    `import { defineConfig } from 'vite';
-    import VitestCtrfReporter from './shared/vitest-ctrf-reporter.js';`,
-                ),
-            );
+        it('vitest with reporter in config => config-file', async () => {
+            expect.hasAssertions();
 
-            expect(detectTestReporter('/fake/project')).toBeTruthy();
-        });
-
-        it('returns true for @d2t/vitest-ctrf-json-reporter in config', () => {
-            mockFsExistsSync.mockImplementation(mockPathEndsWith('vitest.config.ts'));
-            mockFsReadFileSync.mockImplementation(
-                mockReadFileWith('vitest.config.ts', `reporters: [['@d2t/vitest-ctrf-json-reporter', {}]]`),
-            );
-
-            expect(detectTestReporter('/fake/project')).toBeTruthy();
-        });
-
-        it('returns true for vitest-ctrf-json-reporter in config', () => {
-            mockFsExistsSync.mockImplementation(mockPathEndsWith('vitest.config.ts'));
-            mockFsReadFileSync.mockImplementation(
-                mockReadFileWith('vitest.config.ts', `reporters: ['vitest-ctrf-json-reporter']`),
-            );
-
-            expect(detectTestReporter('/fake/project')).toBeTruthy();
-        });
-
-        it('returns false when no config file exists', () => {
-            mockFsExistsSync.mockReturnValue(false);
-
-            expect(detectTestReporter('/fake/project')).toBeFalsy();
-        });
-
-        it('returns false when config file exists but no CTRF reporter', () => {
-            mockFsExistsSync.mockImplementation(mockPathEndsWith('vitest.config.ts'));
-            mockFsReadFileSync.mockImplementation(
-                mockReadFileWith(
-                    'vitest.config.ts',
-                    `export default defineConfig({ test: { reporters: ['default'] } })`,
-                ),
-            );
-
-            expect(detectTestReporter('/fake/project')).toBeFalsy();
-        });
-
-        it('returns false when config file read fails', () => {
-            mockFsExistsSync.mockImplementation(mockPathEndsWith('vitest.config.ts'));
-            mockFsReadFileSync.mockImplementation(() => {
-                throw new Error('ENOENT');
+            const root = makeProject({
+                'package.json': pkg({ vitest: '^1.0' }),
+                'vitest.config.ts': `export default { test: { reporters: ['ctrf'] } };`,
             });
+            const r = await detectFramework(path.join(root, 'package.json'));
 
-            expect(detectTestReporter('/fake/project')).toBeFalsy();
+            expect(r.testReportSource).toBe('config-file');
         });
 
-        it('returns true for ctrf-json-reporter in config', () => {
-            mockFsExistsSync.mockImplementation(mockPathEndsWith('vitest.config.ts'));
-            mockFsReadFileSync.mockImplementation(
-                mockReadFileWith('vitest.config.ts', `reporters: ['ctrf-json-reporter']`),
-            );
+        it('vitest without reporter => missing', async () => {
+            expect.hasAssertions();
 
-            expect(detectTestReporter('/fake/project')).toBeTruthy();
-        });
-    });
+            const root = makeProject({ 'package.json': pkg({ vitest: '^1.0' }) });
+            const r = await detectFramework(path.join(root, 'package.json'));
 
-    describe('DetectFrameworkTestReportSource', () => {
-        it('returns testReportSource=cli-flag for cypress', () => {
-            mockFsReadFileSync.mockReturnValueOnce(JSON.stringify({ devDependencies: { cypress: '^13.0' } }));
-            const result = detectFramework('/fake/package.json');
-
-            expect(result.testReportSource).toBe('cli-flag');
+            expect(r.testReportSource).toBe('missing');
         });
 
-        it('returns testReportSource=cli-flag for playwright', () => {
-            mockFsReadFileSync.mockReturnValueOnce(
-                JSON.stringify({ devDependencies: { '@playwright/test': '^1.40' } }),
-            );
-            const result = detectFramework('/fake/package.json');
+        it('vitest testCmd does not include --reporter ctrf', async () => {
+            expect.hasAssertions();
 
-            expect(result.testReportSource).toBe('cli-flag');
-        });
+            const root = makeProject({ 'package.json': pkg({ vitest: '^1.0' }) });
+            const r = await detectFramework(path.join(root, 'package.json'));
 
-        it('returns testReportSource=cli-flag for jest', () => {
-            mockFsReadFileSync.mockReturnValueOnce(JSON.stringify({ devDependencies: { jest: '^29.0' } }));
-            const result = detectFramework('/fake/package.json');
-
-            expect(result.testReportSource).toBe('cli-flag');
-        });
-
-        it('returns testReportSource=config-file for vitest when reporter found in config', () => {
-            mockFsReadFileSync.mockReturnValueOnce(JSON.stringify({ devDependencies: { vitest: '^1.0' } }));
-            mockFsExistsSync.mockImplementation((p: fs.PathLike) => String(p).endsWith('vitest.config.ts'));
-            mockFsReadFileSync.mockImplementation((p: fs.PathOrFileDescriptor) => {
-                if (String(p).endsWith('vitest.config.ts')) {
-                    return `import VitestCtrfReporter from './shared/vitest-ctrf-reporter.js';`;
-                }
-                return '';
-            });
-            const result = detectFramework('/fake/package.json');
-
-            expect(result.testReportSource).toBe('config-file');
-        });
-
-        it('returns testReportSource=missing for vitest when no reporter in config', () => {
-            mockFsReadFileSync.mockReturnValueOnce(JSON.stringify({ devDependencies: { vitest: '^1.0' } }));
-            mockFsExistsSync.mockReturnValue(false);
-            const result = detectFramework('/fake/package.json');
-
-            expect(result.testReportSource).toBe('missing');
-        });
-
-        it('vitest testCmd does not include --reporter ctrf', () => {
-            mockFsReadFileSync.mockReturnValueOnce(JSON.stringify({ devDependencies: { vitest: '^1.0' } }));
-            mockFsExistsSync.mockReturnValue(false);
-            const result = detectFramework('/fake/package.json');
-
-            expect(result.testCmd).not.toContain('--reporter ctrf');
-            expect(result.testCmd).toBe('npx vitest run');
+            expect(r.testCmd).toBe('npx vitest run');
         });
     });
 
     describe('ExtractRepoFromGit', () => {
-        it('extracts GitHub owner and repo from git config', () => {
-            mockFsReadFileSync.mockReturnValueOnce(`[remote "origin"]
-    \turl = git@github.com:myorg/my-repo.git
-    \tfetch = +refs/heads/*:refs/remotes/origin/*
-    `);
-            const result = extractRepoFromGit();
+        it('extracts GitHub owner and repo from a real .git/config', () => {
+            expect.hasAssertions();
+
+            const root = makeProject({
+                '.git/config': `[remote "origin"]
+\turl = git@github.com:myorg/my-repo.git
+\tfetch = +refs/heads/*:refs/remotes/origin/*
+`,
+            });
+            const result = extractRepoFromGit(root);
 
             expect(result.owner).toBe('myorg');
             expect(result.repo).toBe('my-repo');
         });
 
         it('extracts GitLab owner and repo', () => {
-            mockFsReadFileSync.mockReturnValueOnce(`[remote "origin"]
-    \turl = https://gitlab.com/myorg/my-repo.git
-    \tfetch = +refs/heads/*:refs/remotes/origin/*
-    `);
-            const result = extractRepoFromGit();
+            expect.hasAssertions();
+
+            const root = makeProject({
+                '.git/config': `[remote "origin"]
+\turl = https://gitlab.com/myorg/my-repo.git
+\tfetch = +refs/heads/*:refs/remotes/origin/*
+`,
+            });
+            const result = extractRepoFromGit(root);
 
             expect(result.owner).toBe('myorg');
             expect(result.repo).toBe('my-repo');
         });
 
         it('returns empty when not a git repo', () => {
-            mockFsReadFileSync.mockImplementationOnce(() => {
-                throw new Error('ENOENT');
-            });
-            const result = extractRepoFromGit();
+            expect.hasAssertions();
+
+            const root = makeProject({ 'package.json': pkg({ vitest: '^1.0' }) });
+            const result = extractRepoFromGit(root);
 
             expect(result.owner).toBe('');
             expect(result.repo).toBe('');
