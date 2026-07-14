@@ -137,6 +137,7 @@ export function makeDataHubGetters(): Pick<
     | 'getDoraMetrics'
     | 'getPmIssues'
     | 'getCoverageFiles'
+    | 'getCoverage'
     | 'getPerformanceMetrics'
     | 'getPullRequests'
     | 'getProvenance'
@@ -173,6 +174,10 @@ export function makeDataHubGetters(): Pick<
         getCoverageFiles(this: DataHub) {
             const raw = this.raw as RawData | undefined;
             return raw?.coverageFiles ?? [];
+        },
+        getCoverage(this: DataHub) {
+            const raw = this.raw as RawData | undefined;
+            return raw?.coverage;
         },
         getPerformanceMetrics(this: DataHub) {
             const raw = this.raw as RawData | undefined;
