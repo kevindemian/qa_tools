@@ -43,6 +43,9 @@ import type { ParseResult } from '../shared/result_parser.js';
 import type { AnalysisReport } from '../shared/failure-analysis.js';
 import type JiraClient from '../shared/jira-client.js';
 import { FsStoreBackend } from '../shared/store-backend.js';
+import { setDataHub } from '../shared/data-hub/global-hub.js';
+import { makeDataHubMock } from '../shared/test-utils/factories/data-hub-mock.js';
+import type { DataHub } from '../shared/types/data-hub.js';
 
 const mockParseResult: ParseResult = {
     tests: [
@@ -69,12 +72,19 @@ const mockBugReport = {
 const mockJiraResource = {} as JiraClient;
 
 let testBackend: FsStoreBackend;
+let testHub: DataHub;
 
 describe('Pipeline Jira', () => {
     beforeEach(() => {
         vi.clearAllMocks();
         testBackend = new FsStoreBackend(path.join(os.tmpdir(), 'qa-tools-test-jira'));
         testBackend.init();
+        testHub = makeDataHubMock();
+        setDataHub(testHub);
+    });
+
+    afterEach(() => {
+        setDataHub(undefined);
     });
 
     describe('HandleBugCreation', () => {
@@ -93,11 +103,15 @@ describe('Pipeline Jira', () => {
 
             await handleBugCreation(mockParseResult, 42, 'main', mockAnalysisReport, mockJiraResource, testBackend);
 
-            expect(collectAutomated).toHaveBeenCalledWith(mockParseResult, {
-                pipelineId: '42',
-                branch: 'main',
-                provider: currentProvider,
-            });
+            expect(collectAutomated).toHaveBeenCalledWith(
+                mockParseResult,
+                {
+                    pipelineId: '42',
+                    branch: 'main',
+                    provider: currentProvider,
+                },
+                { dataHub: testHub },
+            );
             expect(fileToJira).toHaveBeenCalledWith(
                 mockJiraResource,
                 { ...mockBugReport, description: mockAnalysisReport.content },
@@ -224,11 +238,15 @@ describe('Pipeline Jira', () => {
 
             await handleBugCreation(mockParseResult, 7, 'bugfix', mockAnalysisReport, mockJiraResource, testBackend);
 
-            expect(collectAutomated).toHaveBeenCalledWith(mockParseResult, {
-                pipelineId: '7',
-                branch: 'bugfix',
-                provider: currentProvider,
-            });
+            expect(collectAutomated).toHaveBeenCalledWith(
+                mockParseResult,
+                {
+                    pipelineId: '7',
+                    branch: 'bugfix',
+                    provider: currentProvider,
+                },
+                { dataHub: testHub },
+            );
         });
     });
 });
