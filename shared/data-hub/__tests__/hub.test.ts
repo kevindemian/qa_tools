@@ -6,6 +6,7 @@
 import { describe, it, expect, vi } from 'vitest';
 import { mockedSafe } from '../../test-utils/mock-types.js';
 import { DataHubImpl } from '../hub.js';
+import type { ArtifactParseResult } from '../artifact-parser.js';
 import { makeDataHubPersistenceMock } from '../../test-utils/factories/data-hub-mock.js';
 import type {
     DataProvider,
@@ -133,6 +134,31 @@ describe('DataHubImpl', () => {
         expect(hub.getBranchPassRate('main')).toBe(100);
 
         expect(hub.getBranchPassRate('feature/x')).toBe(0);
+    });
+
+    it('populates ComputedMetrics.runPassRate from parsed artifact test counts (DEF-1)', async () => {
+        expect.hasAssertions();
+
+        const runs = [makeRun({ id: 1, conclusion: 'success' })];
+        const parsedArtifacts = new Map<number, ArtifactParseResult[]>([
+            [
+                1,
+                [
+                    {
+                        fileName: 'ctrf.json',
+                        format: 'ctrf',
+                        data: { tests: [], stats: { passed: 8, failed: 2, skipped: 0, total: 10, duration: 0 } },
+                    },
+                ],
+            ],
+        ]);
+        const raw: RawData = { ...makeRawDataWithRuns(runs), parsedArtifacts };
+        const provider = makeProvider(raw);
+
+        const { hub } = await DataHubImpl.create([provider], { repo: 'test/repo' }, createMockPersistence());
+
+        expect(hub.computed.runPassRate).toBeDefined();
+        expect(hub.computed.runPassRate).toBeCloseTo(80, 5);
     });
 
     it('merges data from multiple providers', async () => {

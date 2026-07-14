@@ -115,6 +115,9 @@ export class GitHubDataProvider implements DataProvider {
         let coverage: RawCoverage | undefined;
 
         const maxArtifacts = options.maxArtifactsPerRun ?? DEFAULT_MAX_ARTIFACTS_PER_RUN;
+        // Collect Check Run annotations ONCE (commit-level) and thread into both
+        // failure classification and RawData.annotations. Avoids duplicate API calls.
+        const checkRunAnnotations = await this.collectCheckRunAnnotations();
 
         for (const run of runs) {
             const runIdNum = this.parseRunId(run.id);
@@ -129,6 +132,7 @@ export class GitHubDataProvider implements DataProvider {
                 parsedArtifactsMap,
                 maxArtifacts,
                 coverageFiles,
+                checkRunAnnotations,
             );
             if (coverage == null) {
                 const runJobs = jobsMap.get(runIdNum);
@@ -194,6 +198,7 @@ export class GitHubDataProvider implements DataProvider {
             coverageFiles,
             failureRecords,
             provenance,
+            annotations: checkRunAnnotations,
         });
 
         // Gap 1: reject malformed provider output explicitly at the boundary.
@@ -257,6 +262,7 @@ export class GitHubDataProvider implements DataProvider {
         performanceMetrics: PerformanceMetrics | undefined;
         coverageFiles: CoverageFile[];
         failureRecords: FailureRecord[];
+        annotations: CheckRunAnnotation[] | undefined;
         provenance: Map<string, DataSource>;
     }): RawData {
         const {
@@ -278,6 +284,7 @@ export class GitHubDataProvider implements DataProvider {
             performanceMetrics,
             coverageFiles,
             failureRecords,
+            annotations,
             provenance,
         } = params;
         return {
@@ -298,6 +305,7 @@ export class GitHubDataProvider implements DataProvider {
             ...(pullRequests.length > 0 ? { pullRequests } : {}),
             ...(performanceMetrics != null ? { performanceMetrics } : {}),
             ...(coverageFiles.length > 0 ? { coverageFiles } : {}),
+            ...(annotations != null && annotations.length > 0 ? { annotations } : {}),
             failureRecords,
             provenance,
         };
@@ -329,13 +337,14 @@ export class GitHubDataProvider implements DataProvider {
         parsedArtifactsMap: Map<number, ArtifactParseResult[]>,
         maxArtifacts: number,
         coverageFiles: CoverageFile[],
+        checkRunAnnotations: CheckRunAnnotation[] | undefined,
     ): Promise<void> {
         try {
             const runJobs = await this.provider.getPipelineJobs(runIdNum);
             jobsMap.set(runIdNum, runJobs);
             await this.fetchArtifacts(runIdNum, artifactsMap, parsedArtifactsMap, maxArtifacts, coverageFiles);
             await this.fetchTiming(runIdNum, timingMap);
-            await this.fetchFailureReasons(runJobs, failureReasonsMap, failureRecords);
+            await this.fetchFailureReasons(runJobs, failureReasonsMap, failureRecords, checkRunAnnotations);
         } catch (err) {
             rootLogger.debug(`GitHub: jobs fetch failed for run ${runIdNum}: ${extractErrorMessage(err)}`);
         }
@@ -479,9 +488,9 @@ export class GitHubDataProvider implements DataProvider {
         jobs: PipelineJob[],
         failureReasonsMap: Map<number, string[]>,
         failureRecords: FailureRecord[],
+        checkRunAnnotations: CheckRunAnnotation[] | undefined,
     ): Promise<void> {
         const githubSteps = this.collectStepConclusions(jobs);
-        const checkRunAnnotations = await this.collectCheckRunAnnotations();
         const logText = await this.collectFirstFailedJobLog(jobs);
 
         const input: FailureInput = {};

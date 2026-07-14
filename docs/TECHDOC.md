@@ -758,7 +758,7 @@ import { globSync } from 'glob'; // file globbing
 | `data-hub/cache.ts`            | TTL-based session cache (5min)                          | `getCachedHub()`, `setCachedHub()`, `clearCache()`                                 |
 | `data-hub/providers/`          | DataProvider adapters (GitHub, GitLab)                   | `GitHubDataProvider`, `GitLabDataProvider`                                         |
 | `data-hub/compute/`            | Pure metric functions (30+)                             | `calcPassRate()`, `calcFlakyRate()`, `scorePassRate()`, etc.                       |
-| `metrics.ts`                    | Metrics collection & persistence                       | `loadMetrics()`, `saveMetrics()`                                                  |
+| `data-hub/persistence.ts`       | Metrics persistence (SSOT — replaces legacy `metrics.ts`) | `loadMetrics()`, `saveMetrics()` (delegated by `DataHub`)                     |
 | `test-impact.ts`                | Three-tier test impact analysis                        | `analyzeTestImpact()`, `generateTestSelectionJson()`                              |
 | `git-metrics-adapter.ts`        | Git history → MetricsRun[] adapter                     | `generateGitMetricsRuns()`, `generateGitFailureClassifications()`                 |
 | `coverage-verifier.ts`          | Coverage recalculation (Layer 3)                       | `recalculateCoverage()`                                                           |
