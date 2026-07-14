@@ -43,7 +43,7 @@ export function calculatePipelineCost(costPerMinute: number | undefined, dataHub
     const cpm = costPerMinute ?? (Number(process.env['QA_COST_PER_COMPUTE_MINUTE']) || DEFAULT_COST_PER_MINUTE);
 
     // SSOT: custo de pipeline vem exclusivamente do DataHub (Camadas 1–6 do CI).
-    const ciRuns = dataHub.raw.runs;
+    const ciRuns = dataHub.getRuns();
     const costByRun: PipelineCostEntry[] = ciRuns.map((r) => {
         const durationSec =
             r.run_started_at && r.updated_at

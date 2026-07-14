@@ -333,7 +333,7 @@ export function calculateHealthScore(options: Partial<HealthScoreConfig> & { dat
         ),
         dimensions: dims,
         provenance: _buildProvenance(options),
-        runCount: dataHub.raw.runs.length,
+        runCount: dataHub.getRuns().length,
         timestamp: new Date().toISOString(),
     };
 }

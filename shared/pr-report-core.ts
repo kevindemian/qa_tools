@@ -731,7 +731,7 @@ async function tryCreateDataHub(
         const { createDataHub } = await import('./data-hub/factory.js');
         const result = await createDataHub(provider, ciEnv.repo);
         rootLogger.info(
-            `DataHub created: ${result.hub.raw.runs.length} runs, passRate: ${result.hub.computed.passRate}%`,
+            `DataHub created: ${result.hub.getRuns().length} runs, passRate: ${result.hub.computed.passRate}%`,
         );
         return result.hub;
     } catch (err) {
