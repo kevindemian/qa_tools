@@ -66,7 +66,10 @@ async function _fetchJiraContext(
 }
 
 async function _addAiAnalysis(html: string, tests: ParseResult['tests'], context?: LlmContext): Promise<string> {
-    const analysis = await withSpinner('Analisando falhas com IA...', () => analyzeFailuresWithReport(tests, context));
+    const hub = isDataHubInitialized() ? getDataHub() : undefined;
+    const analysis = await withSpinner('Analisando falhas com IA...', () =>
+        analyzeFailuresWithReport(tests, context, { dataHub: hub }),
+    );
     if (!analysis.content) return html;
     return injectAnalysisSection(html, analysis.content);
 }
