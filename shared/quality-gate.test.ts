@@ -13,11 +13,13 @@ vi.mock('./logger.js', () => ({
 }));
 
 import * as flakinessModule from './data-hub/compute/flakiness-entries.js';
+import { makeDataHubGetters } from './test-utils/factories/data-hub-mock.js';
 
 const mockCalcFlakinessEntries = vi.mocked(flakinessModule.calcFlakinessEntries);
 
 function createMockHub(overrides: Record<string, unknown> = {}) {
     return {
+        ...makeDataHubGetters(),
         saveRun: vi.fn(),
         loadRun: vi.fn().mockReturnValue(null),
         saveCoverageSnapshot: vi.fn(),
@@ -321,7 +323,9 @@ describe('RunQualityGate', () => {
         const result = runQualityGate({ dataHub: mockHub });
 
         expect(result.overall).toBe('fail');
-        expect(result.checks[0]?.name).toBe('error');
+        // Defensive accessor (getRuns) prevents an unsafe raw access crash;
+        // a degraded hub with no runs/computed data yields a metrics-data fail.
+        expect(result.checks[0]?.name).toBe('metrics-data');
     });
 
     it('calculates score as average of check scores', () => {

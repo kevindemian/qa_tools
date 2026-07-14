@@ -305,7 +305,7 @@ describe('Integration: Health Score', () => {
                 getBranch: vi.fn(),
                 loadMetrics: vi.fn(),
                 saveMetrics: vi.fn(),
-                ...makeDataHubGetters(raw),
+                ...makeDataHubGetters(),
             };
         }
 

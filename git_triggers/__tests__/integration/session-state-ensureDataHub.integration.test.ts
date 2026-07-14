@@ -110,7 +110,7 @@ function makeMockHub(): DataHub {
         getBranch: vi.fn(),
         loadMetrics: vi.fn(),
         saveMetrics: vi.fn(),
-        ...makeDataHubGetters(raw),
+        ...makeDataHubGetters(),
     };
 }
 

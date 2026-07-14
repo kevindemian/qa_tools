@@ -1,5 +1,6 @@
 import { describe, expect, it, vi, beforeEach } from 'vitest';
 import type { GitProvider } from '../types/ci-cd.js';
+import { makeDataHubGetters } from '../test-utils/factories/data-hub-mock.js';
 
 const mockGlobalHub = vi.hoisted(() => ({
     setDataHub: vi.fn(),
@@ -74,6 +75,7 @@ import { main } from '../pr-report-core.js';
 
 function makeFetchedHub(): Record<string, unknown> {
     return {
+        ...makeDataHubGetters(),
         raw: { runs: [], jobs: new Map(), artifacts: new Map(), failureReasons: new Map() },
         computed: {},
         timestamp: new Date(),
