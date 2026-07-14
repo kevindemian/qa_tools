@@ -46,12 +46,12 @@ async function promptProjectName(detected: string, existing?: string): Promise<s
 async function gatherSetupContext(): Promise<SetupContext> {
     const state = loadTypedState();
     const lastProject = state.lastProject || '';
-    const detection = await detectFramework();
+    const detection = await detectFramework(path.join(process.cwd(), 'package.json'));
 
     info('Framework detectado: ' + detection.framework);
     info('Comando de teste: ' + detection.testCmd);
 
-    const gitInfo = extractRepoFromGit();
+    const gitInfo = extractRepoFromGit(process.cwd());
     const projectName = await promptProjectName(gitInfo.repo || 'meu-projeto', lastProject);
     const gitProvider = gitInfo.owner ? detectGitProvider() : await promptGitProvider();
     const repoOwner = gitInfo.owner || (await ask('Repo owner (user/org)', { default: '' }));

@@ -172,9 +172,9 @@ function detectFromPkg(pkg: Record<string, unknown>): Framework {
  * framework default (`cli-flag` for cypress/playwright/jest, `missing` for
  * vitest/generic).
  */
-export async function detectFramework(packageJsonPath?: string): Promise<DetectionResult> {
-    const resolvedPath = packageJsonPath ?? path.join(process.cwd(), 'package.json');
-    const projectRoot = packageJsonPath ? path.dirname(path.resolve(packageJsonPath)) : process.cwd();
+export async function detectFramework(packageJsonPath: string): Promise<DetectionResult> {
+    const resolvedPath = packageJsonPath;
+    const projectRoot = path.dirname(path.resolve(packageJsonPath));
 
     let pkg: Record<string, unknown> = {};
     const pkgContent = await readConfigFileSafe(projectRoot, path.basename(resolvedPath));
@@ -204,8 +204,8 @@ function asRecord(value: unknown): Record<string, unknown> | undefined {
     return undefined;
 }
 
-export function extractRepoFromGit(projectRoot?: string): { owner: string; repo: string } {
-    const root = projectRoot ?? process.cwd();
+export function extractRepoFromGit(projectRoot: string): { owner: string; repo: string } {
+    const root = projectRoot;
     try {
         const gitConfig = fs.readFileSync(path.resolve(root, '.git', 'config'), 'utf8');
         const match = /url\s*=\s*\S+(?:github\.com|gitlab\.com)[/:]([^/]+)\/([^/\s]+?)(?:\.git)?\s/.exec(gitConfig);
