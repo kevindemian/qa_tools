@@ -303,7 +303,8 @@ async function _handleInteractiveBugReport(c: CommandContext, result: ParseResul
         result.stats.failed > 0 &&
         (await askConfirm('Deseja criar um relatório de bug (Bug Report) no Jira para as falhas?', false))
     ) {
-        const automatedReport = collectAutomated(result);
+        const hub = isDataHubInitialized() ? getDataHub() : undefined;
+        const automatedReport = collectAutomated(result, undefined, { dataHub: hub });
         await interactiveBugReportFlow(c.jiraResource, c.ctx.project_name, automatedReport, c.linkManager);
     }
 }

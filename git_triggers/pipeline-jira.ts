@@ -6,7 +6,7 @@ import JiraClient from '../shared/jira-client.js';
 import { collectAutomated, fileToJira } from '../shared/bug-report.js';
 import { _jiraEnv } from './test-results.js';
 import { currentProvider, pushHistory } from './session-state.js';
-import { getDataHub } from '../shared/data-hub/global-hub.js';
+import { getDataHub, isDataHubInitialized } from '../shared/data-hub/global-hub.js';
 import { classifyFailure } from '../shared/failure-analysis.js';
 import type { ParseResult } from '../shared/result_parser.js';
 import type { AnalysisReport } from '../shared/failure-analysis.js';
@@ -56,11 +56,15 @@ export async function handleBugCreation(
     if (!jira) return;
     if (!autoBug && !confirm('Criar bug no Jira com o resumo das falhas?', false)) return;
     try {
-        const bugReport = collectAutomated(parsed, {
-            pipelineId: String(pipelineId),
-            branch,
-            provider: currentProvider,
-        });
+        const bugReport = collectAutomated(
+            parsed,
+            {
+                pipelineId: String(pipelineId),
+                branch,
+                provider: currentProvider,
+            },
+            { dataHub: isDataHubInitialized() ? getDataHub() : undefined },
+        );
         bugReport.description = analysisReport.content;
         const key = await fileToJira(jiraResource, bugReport, Config.get('jiraProject'));
         success('Bug criado: ' + jira.base + '/browse/' + key);
