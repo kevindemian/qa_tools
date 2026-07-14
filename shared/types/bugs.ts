@@ -36,6 +36,10 @@ export interface BugReport {
         branch?: string;
         commitSha?: string;
         provider?: string;
+        /** EIXO C awareness: confidence (0-1) of the failure-records source feeding this report. */
+        dataQualityConfidence?: number | null;
+        /** EIXO C awareness: number of failed tests matched to prior failure records. */
+        priorFailureCount?: number;
     };
 }
 
