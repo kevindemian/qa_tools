@@ -144,10 +144,12 @@ function _aggregateResult(checks: GateCheck[]): QualityGateResult {
  */
 const EXTENDED_QUALITY_CATEGORIES: QualityCategory[] = [
     'securityFindings',
+    'failureRecords',
     'deployments',
     'releases',
     'doraMetrics',
     'pmIssues',
+    'coverageFiles',
     'performanceMetrics',
 ];
 
@@ -155,6 +157,8 @@ function _categoryItemCount(hub: DataHub, category: QualityCategory): number {
     switch (category) {
         case 'securityFindings':
             return hub.getSecurityFindings()?.length ?? 0;
+        case 'failureRecords':
+            return hub.getFailureRecords()?.length ?? 0;
         case 'deployments':
             return hub.getDeployments()?.length ?? 0;
         case 'releases':
@@ -163,6 +167,8 @@ function _categoryItemCount(hub: DataHub, category: QualityCategory): number {
             return hub.getDoraMetrics() ? 1 : 0;
         case 'pmIssues':
             return hub.getPmIssues()?.length ?? 0;
+        case 'coverageFiles':
+            return hub.getCoverageFiles()?.length ?? 0;
         case 'performanceMetrics':
             return hub.getPerformanceMetrics() ? 1 : 0;
         default:
