@@ -2,7 +2,7 @@
 
 > **Parte do plano DataHub SSOT.** Reorganizado de `data-hub-ssot-enforcement.md` (2026-07-12).
 > Documento original preservado (marcado SUPERSEDED). Este é o documento de verdade para a detecção de reporter.
-> **STATUS: ⏳ PENDENTE — tarefa não executada.** Fase 11 (detecção de reporter AST/híbrido) ainda não iniciada. Requer pré-requisito Fase 3 (renomeação `detectConfigCtrf`→`detectTestReporter`, `CtrfSource`→`TestReportSource`) conforme dependência documentada.
+> **STATUS: ✅ CONCLUÍDO — Fase 11 (detecção de reporter Isolate-first + AST-fallback) implementada e verificada (2026-07-14).** Requisito Fase 3 (renomeação `detectConfigCtrf`→`detectTestReporter`, `CtrfSource`→`TestReportSource`) atendido em TASK-22.
 
 ## Fase 11 — Detecção de Reporter: AST/Híbrido (pesquisa + implementação)
 
@@ -166,3 +166,16 @@ falha, `extractReportersAst` (ts-morph/typescript). AST é a rede de segurança 
 - Segurança do isolate é **condicional** ao correto wiring de zero-host-bindings; se o lib/wiring falhar → RCE. Mitigado por: só dado serializável cruza, sem módulos host, timeout, fallback AST.
 
 <!-- CHECKPOINT: Plano Consolidado registrado (2026-07-14) — Isolate-first + AST-fallback -->
+
+<!-- CHECKPOINT: Fase 11 COMPLETA (2026-07-14)
+  - Fase A: removido default interno de process.cwd(); detectFramework(packageJsonPath: string)
+    e extractRepoFromGit(projectRoot: string) agora exigem argumento explícito. Caller
+    (setup/main.ts) passa process.cwd()/package.json explicitamente.
+  - Fase B: extractInlinePkgReporters cobre deps + blocos jest/vitest inline.
+  - Fase C/D/E: executeConfigInIsolate (QuickJS-WASM) + extractReportersAst (ts-morph) +
+    REPORTER_REGISTRY (ctrf/junit/mochawesome) + detectTestReporter (isolate->AST).
+  - Fase F: testes unit/security/negative (44) + detector.integration.test.ts (3, detecção
+    real -> CI). Suite setup: 123 passa; suite total: 6592 passa.
+  - Fase G: STATUS flipado PENDENTE -> CONCLUÍDO neste checkpoint.
+  Verificação: tsc --noEmit = 0 | eslint setup/ = 0 erros | vitest run = 0 falhas.
+-->
