@@ -439,46 +439,22 @@ describe('GenerateTraceabilityHtml', () => {
         vi.restoreAllMocks();
     });
 
-    it('shows error severity for coverage below 50', () => {
+    it.each([
+        { coverage: 30, severity: 'error', title: 'shows error severity for coverage below 50' },
+        { coverage: 65, severity: 'warn', title: 'shows warn severity for coverage between 50 and 80' },
+        { coverage: 95, severity: 'success', title: 'shows success severity for coverage above 80' },
+    ])('$title', ({ coverage, severity }) => {
         const result: ReturnType<typeof buildTraceabilityMatrix> = {
             nodes: [],
             totalEpics: 0,
             totalTests: 0,
-            overallCoverage: 30,
+            overallCoverage: coverage,
             timestamp: '2026-01-01T00:00:00.000Z',
             awareness: { categories: [], minConfidence: null },
         };
         const html = generateTraceabilityHtml(result);
 
-        expect(html).toContain('data-severity="error"');
-    });
-
-    it('shows warn severity for coverage between 50 and 80', () => {
-        const result: ReturnType<typeof buildTraceabilityMatrix> = {
-            nodes: [],
-            totalEpics: 0,
-            totalTests: 0,
-            overallCoverage: 65,
-            timestamp: '2026-01-01T00:00:00.000Z',
-            awareness: { categories: [], minConfidence: null },
-        };
-        const html = generateTraceabilityHtml(result);
-
-        expect(html).toContain('data-severity="warn"');
-    });
-
-    it('shows success severity for coverage above 80', () => {
-        const result: ReturnType<typeof buildTraceabilityMatrix> = {
-            nodes: [],
-            totalEpics: 0,
-            totalTests: 0,
-            overallCoverage: 95,
-            timestamp: '2026-01-01T00:00:00.000Z',
-            awareness: { categories: [], minConfidence: null },
-        };
-        const html = generateTraceabilityHtml(result);
-
-        expect(html).toContain('data-severity="success"');
+        expect(html).toContain(`data-severity="${severity}"`);
     });
 
     it('includes health bar for nodes with stories', () => {

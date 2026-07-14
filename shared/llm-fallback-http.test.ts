@@ -122,32 +122,16 @@ describe('Llm Fallback Http', () => {
             return r;
         }
 
-        it('parses seconds from Retry-After header', () => {
-            const resp = mockResponseWithHeader('Retry-After', '30');
+        it.each([
+            { name: 'parses seconds from Retry-After header', header: '30', expected: 10000 },
+            { name: 'returns default when no Retry-After header', header: null, expected: 2000 },
+            { name: 'returns default for invalid Retry-After value', header: 'invalid', expected: 2000 },
+            { name: 'caps at 10000ms', header: '999', expected: 10000 },
+        ])('$name', ({ header, expected }) => {
+            const resp = mockResponseWithHeader('Retry-After', header);
             const result = parseRetryAfter(resp, 2000);
 
-            expect(result).toBe(10000);
-        });
-
-        it('returns default when no Retry-After header', () => {
-            const resp = mockResponseWithHeader('Retry-After', null);
-            const result = parseRetryAfter(resp, 2000);
-
-            expect(result).toBe(2000);
-        });
-
-        it('returns default for invalid Retry-After value', () => {
-            const resp = mockResponseWithHeader('Retry-After', 'invalid');
-            const result = parseRetryAfter(resp, 2000);
-
-            expect(result).toBe(2000);
-        });
-
-        it('caps at 10000ms', () => {
-            const resp = mockResponseWithHeader('Retry-After', '999');
-            const result = parseRetryAfter(resp, 2000);
-
-            expect(result).toBe(10000);
+            expect(result).toBe(expected);
         });
     });
 

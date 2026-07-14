@@ -424,24 +424,12 @@ describe('CLI Base', () => {
     describe('CreateValidateEnv edge cases', () => {
         const config = [{ key: 'TOKEN_A', label: 'Token A', example: 'TOKEN_A=abc' }];
 
-        it('does not warn when long value contains "seu-"', () => {
-            process.env['TOKEN_A'] = 'este-eh-seu-token-aqui-amigo-12345678';
-            const validate = cliBase.createValidateEnv(config);
-            validate();
-
-            expect(mockRootLogger.warn).not.toHaveBeenCalled();
-        });
-
-        it('does not warn when long value contains "your-"', () => {
-            process.env['TOKEN_A'] = 'this-is-your-token-here-friend-1234567';
-            const validate = cliBase.createValidateEnv(config);
-            validate();
-
-            expect(mockRootLogger.warn).not.toHaveBeenCalled();
-        });
-
-        it('does not warn when long value contains "placeholder"', () => {
-            process.env['TOKEN_A'] = 'this-is-a-placeholder-value-for-test-123';
+        it.each([
+            ['seu-', 'este-eh-seu-token-aqui-amigo-12345678'],
+            ['your-', 'this-is-your-token-here-friend-1234567'],
+            ['placeholder', 'this-is-a-placeholder-value-for-test-123'],
+        ])('does not warn when long value contains "%s"', (_placeholder, value) => {
+            process.env['TOKEN_A'] = value;
             const validate = cliBase.createValidateEnv(config);
             validate();
 

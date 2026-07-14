@@ -1078,86 +1078,48 @@ describe('Main', () => {
             vi.spyOn(outputMod.defaultOutput, 'box').mockImplementation(() => {});
         });
 
-        it('handles /help and returns false', async () => {
+        const falsyDispatchCases = [
+            { command: '/help', label: 'handles /help and returns false' },
+            { command: '/history', label: 'handles /history and returns false' },
+            { command: '/back', label: 'handles /back and returns false' },
+            { command: '/menu', label: 'handles /menu and returns false' },
+            { command: '1', label: 'dispatches to action handler and returns false' },
+        ];
+
+        it.each(falsyDispatchCases)('$label', async ({ command }) => {
             expect.hasAssertions();
 
-            const result = await mainModule._dispatchAction('/help', mockM, pn, ns);
+            const result = await mainModule._dispatchAction(command, mockM, pn, ns);
 
             expect(result).toBeFalsy();
         });
 
-        it('handles /history and returns false', async () => {
+        const falsyWarnDispatchCases = [
+            { command: '/docs', label: 'handles /docs and returns false' },
+            { command: '/d', label: 'handles /d and returns false' },
+        ];
+
+        it.each(falsyWarnDispatchCases)('$label', async ({ command }) => {
             expect.hasAssertions();
 
-            const result = await mainModule._dispatchAction('/history', mockM, pn, ns);
-
-            expect(result).toBeFalsy();
-        });
-
-        it('handles /docs and returns false', async () => {
-            expect.hasAssertions();
-
-            const result = await mainModule._dispatchAction('/docs', mockM, pn, ns);
-
-            expect(result).toBeFalsy();
-            expect(prompt.warn).not.toHaveBeenCalledWith('Documentação disponível apenas no módulo Jira.');
-        });
-
-        it('handles /d and returns false', async () => {
-            expect.hasAssertions();
-
-            const result = await mainModule._dispatchAction('/d', mockM, pn, ns);
+            const result = await mainModule._dispatchAction(command, mockM, pn, ns);
 
             expect(result).toBeFalsy();
             expect(prompt.warn).not.toHaveBeenCalledWith('Documentação disponível apenas no módulo Jira.');
         });
 
-        it('handles /back and returns false', async () => {
+        const truthyDispatchCases = [
+            { command: '/exit', label: 'handles /exit and returns true via _handleExit' },
+            { command: '/sair', label: 'handles /sair and returns true via _handleExit' },
+            { command: '0', label: 'handles option 0 and returns true via _handleExit' },
+        ];
+
+        it.each(truthyDispatchCases)('$label', async ({ command }) => {
             expect.hasAssertions();
 
-            const result = await mainModule._dispatchAction('/back', mockM, pn, ns);
-
-            expect(result).toBeFalsy();
-        });
-
-        it('handles /menu and returns false', async () => {
-            expect.hasAssertions();
-
-            const result = await mainModule._dispatchAction('/menu', mockM, pn, ns);
-
-            expect(result).toBeFalsy();
-        });
-
-        it('handles /exit and returns true via _handleExit', async () => {
-            expect.hasAssertions();
-
-            const result = await mainModule._dispatchAction('/exit', mockM, pn, ns);
+            const result = await mainModule._dispatchAction(command, mockM, pn, ns);
 
             expect(result).toBeTruthy();
-        });
-
-        it('handles /sair and returns true via _handleExit', async () => {
-            expect.hasAssertions();
-
-            const result = await mainModule._dispatchAction('/sair', mockM, pn, ns);
-
-            expect(result).toBeTruthy();
-        });
-
-        it('handles option 0 and returns true via _handleExit', async () => {
-            expect.hasAssertions();
-
-            const result = await mainModule._dispatchAction('0', mockM, pn, ns);
-
-            expect(result).toBeTruthy();
-        });
-
-        it('dispatches to action handler and returns false', async () => {
-            expect.hasAssertions();
-
-            const result = await mainModule._dispatchAction('1', mockM, pn, ns);
-
-            expect(result).toBeFalsy();
         });
 
         it('warns for invalid option', async () => {
@@ -1304,26 +1266,16 @@ describe('Main', () => {
             ns = ['proj-a', 'proj-b'];
         });
 
-        it('handler 9 calls handleChangeProject', async () => {
+        const handlerCases = [
+            { choice: '9', label: 'handler 9 calls handleChangeProject' },
+            { choice: 'a', label: 'handler a calls handleFlakinessDashboard (void)' },
+            { choice: '00', label: 'handler 00 calls handleSetupWizard' },
+        ];
+
+        it.each(handlerCases)('$label', async ({ choice }) => {
             expect.hasAssertions();
 
-            const result = await mainModule._dispatchAction('9', mockProvider, pn, ns);
-
-            expect(result).toBeFalsy();
-        });
-
-        it('handler a calls handleFlakinessDashboard (void)', async () => {
-            expect.hasAssertions();
-
-            const result = await mainModule._dispatchAction('a', mockProvider, pn, ns);
-
-            expect(result).toBeFalsy();
-        });
-
-        it('handler 00 calls handleSetupWizard', async () => {
-            expect.hasAssertions();
-
-            const result = await mainModule._dispatchAction('00', mockProvider, pn, ns);
+            const result = await mainModule._dispatchAction(choice, mockProvider, pn, ns);
 
             expect(result).toBeFalsy();
         });

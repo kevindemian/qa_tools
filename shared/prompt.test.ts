@@ -320,25 +320,15 @@ describe('Prompt', () => {
             expect(bar.current).toBe(3);
         });
 
-        it('renders full bar in non-TTY output', () => {
+        it.each([
+            { value: 10, expected: '100%', title: 'renders full bar in non-TTY output' },
+            { value: 0, expected: '0%', title: 'renders empty bar in non-TTY output' },
+            { value: 5, expected: '50%', title: 'renders partial bar in non-TTY output' },
+        ])('$title', ({ value, expected }) => {
             const bar = new prompt.ProgressBar(10, { width: 5 });
-            bar.update(10);
+            bar.update(value);
 
-            expect(mockLog).toHaveBeenCalledWith(expect.stringContaining('100%'));
-        });
-
-        it('renders empty bar in non-TTY output', () => {
-            const bar = new prompt.ProgressBar(10, { width: 5 });
-            bar.update(0);
-
-            expect(mockLog).toHaveBeenCalledWith(expect.stringContaining('0%'));
-        });
-
-        it('renders partial bar in non-TTY output', () => {
-            const bar = new prompt.ProgressBar(10, { width: 5 });
-            bar.update(5);
-
-            expect(mockLog).toHaveBeenCalledWith(expect.stringContaining('50%'));
+            expect(mockLog).toHaveBeenCalledWith(expect.stringContaining(expected));
         });
 
         it('stops with current at 0', () => {
@@ -700,26 +690,14 @@ describe('Prompt', () => {
             expect(result).toBe('');
         });
 
-        it('throws CancelError for /back navigation command', async () => {
+        it.each([
+            { command: '/back', title: 'throws CancelError for /back navigation command' },
+            { command: '/exit', title: 'throws CancelError for /exit navigation command' },
+            { command: '/menu', title: 'throws CancelError for /menu navigation command' },
+        ])('$title', async ({ command }) => {
             expect.hasAssertions();
 
-            vi.spyOn(readlineSync, 'question').mockReturnValue('/back');
-
-            await expect(prompt.smartPrompt('Enter')).rejects.toThrow(prompt.CancelError);
-        });
-
-        it('throws CancelError for /exit navigation command', async () => {
-            expect.hasAssertions();
-
-            vi.spyOn(readlineSync, 'question').mockReturnValue('/exit');
-
-            await expect(prompt.smartPrompt('Enter')).rejects.toThrow(prompt.CancelError);
-        });
-
-        it('throws CancelError for /menu navigation command', async () => {
-            expect.hasAssertions();
-
-            vi.spyOn(readlineSync, 'question').mockReturnValue('/menu');
+            vi.spyOn(readlineSync, 'question').mockReturnValue(command);
 
             await expect(prompt.smartPrompt('Enter')).rejects.toThrow(prompt.CancelError);
         });
