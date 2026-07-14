@@ -121,6 +121,40 @@ export function makeDataHubPersistenceMock(): DataHubPersistence {
     };
 }
 
+/**
+ * SSOT category getters for DataHub mocks (EIXO C). Returns the gated in-memory
+ * model (`raw.*`) so mocks mirror `DataHubImpl`'s serving surface without
+ * duplicating the real implementation.
+ */
+export function makeDataHubGetters(
+    raw: RawData,
+): Pick<
+    DataHub,
+    | 'getRuns'
+    | 'getFailureRecords'
+    | 'getSecurityFindings'
+    | 'getDeployments'
+    | 'getReleases'
+    | 'getDoraMetrics'
+    | 'getPmIssues'
+    | 'getCoverageFiles'
+    | 'getPerformanceMetrics'
+    | 'getPullRequests'
+> {
+    return {
+        getRuns: () => raw.runs,
+        getFailureRecords: () => raw.failureRecords,
+        getSecurityFindings: () => raw.securityFindings,
+        getDeployments: () => raw.deployments,
+        getReleases: () => raw.releases,
+        getDoraMetrics: () => raw.doraMetrics,
+        getPmIssues: () => raw.pmIssues,
+        getCoverageFiles: () => raw.coverageFiles,
+        getPerformanceMetrics: () => raw.performanceMetrics,
+        getPullRequests: () => raw.pullRequests,
+    };
+}
+
 /** Build a fully-satisfied `DataHub` mock with overridable raw/computed. */
 export function makeDataHubMock(
     overrides: {
@@ -183,6 +217,7 @@ export function makeDataHubMock(
         loadPullRequests: vi.fn().mockReturnValue([]),
         getQuality: vi.fn<(category: QualityCategory) => QualityReport | undefined>(),
         getQuarantine: vi.fn<() => QuarantineStore>(() => ({ entries: [] })),
+        ...makeDataHubGetters(raw),
         getBranchPassRate: (branch: string): number => calcPipelinePassRate(raw.runs, branch),
         mergeIncremental: vi.fn<(incoming: RawData) => void>(),
         // ─── Test-result cache (SHA-keyed) ─────────────────────────────────────
