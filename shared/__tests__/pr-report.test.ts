@@ -9,6 +9,7 @@ import path from 'node:path';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import { parseTestResultsFile } from '../result_parser.js';
 import type { QuarantineStore } from '../quarantine.js';
+import { makeDataHubGetters } from '../test-utils/factories/data-hub-mock.js';
 
 vi.mock('../github-pr-comment.js', () => ({
     postPrComment: vi.fn().mockResolvedValue({
@@ -121,6 +122,8 @@ vi.mock('../data-hub/global-hub.js', () => ({
         provider: 'github',
         repo: 'test/repo',
         getQuarantine: vi.fn(() => ({ entries: [] })),
+        ...makeDataHubGetters(),
+        getQuality: vi.fn(),
     }),
     isDataHubInitialized: vi.fn().mockReturnValue(true),
     setDataHub: vi.fn(),
@@ -770,6 +773,8 @@ describe('Pr-report entry point — HTML report generation', () => {
             provider: 'github',
             repo: 'test/repo',
             getQuarantine: vi.fn(() => ({ entries: [] })),
+            ...makeDataHubGetters(),
+            getQuality: vi.fn(),
         } as never);
 
         const { main } = await import('../pr-report-core.js');

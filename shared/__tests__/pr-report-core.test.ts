@@ -6,6 +6,7 @@ import type { FlatTest } from '../result_parser.js';
 import type { PrReportCoreOptions } from '../pr-report-core.js';
 import type { DataHub } from '../types/data-hub.js';
 import { createTestHub } from './test-hub.js';
+import { makeDataHubMock } from '../test-utils/factories/data-hub-mock.js';
 
 const report = (
     opts: Omit<PrReportCoreOptions, 'dataHub'> & { dataHub?: DataHub },
@@ -218,19 +219,23 @@ describe('Pr Report Core', () => {
             expect.hasAssertions();
 
             // Mock DataHub with coverage data
-            const mockDataHubWithCoverage = {
+            const mockDataHubWithCoverage = makeDataHubMock({
                 raw: {
+                    runs: [],
+                    jobs: new Map(),
+                    artifacts: new Map(),
+                    failureReasons: new Map(),
                     coverage: { percentage: 85, covered: 85, total: 100 },
                 },
                 computed: {
                     testCounts: { passed: 1, failed: 0, skipped: 0, total: 1 },
                 },
-            };
+            });
 
             const result = await report({
                 tests: [sampleTest],
                 stats: { passed: 1, failed: 0, skipped: 0, total: 1, duration: 100 },
-                dataHub: mockDataHubWithCoverage as never,
+                dataHub: mockDataHubWithCoverage,
             });
 
             expect(mockHtml.generateHtmlReport).toHaveBeenCalledWith(
@@ -342,19 +347,23 @@ describe('Pr Report Core', () => {
             expect.hasAssertions();
 
             // Mock DataHub with coverage data
-            const mockDataHubWithCoverage = {
+            const mockDataHubWithCoverage = makeDataHubMock({
                 raw: {
+                    runs: [],
+                    jobs: new Map(),
+                    artifacts: new Map(),
+                    failureReasons: new Map(),
                     coverage: { percentage: 92, covered: 92, total: 100 },
                 },
                 computed: {
                     testCounts: { passed: 1, failed: 0, skipped: 0, total: 1 },
                 },
-            };
+            });
 
             await report({
                 tests: [sampleTest],
                 stats: { passed: 1, failed: 0, skipped: 0, total: 1, duration: 100 },
-                dataHub: mockDataHubWithCoverage as never,
+                dataHub: mockDataHubWithCoverage,
             });
 
             expect(mockHealthScore.calculateHealthScore).toHaveBeenCalledWith(
