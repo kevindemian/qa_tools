@@ -821,6 +821,12 @@ export interface DataHub {
     getQuality(category: QualityCategory): QualityReport | undefined;
 
     /**
+     * Data provenance — source + confidence per data category (EIXO C awareness).
+     * Reflects the trustworthy in-memory model (hub.raw), not the durable store.
+     */
+    getProvenance(): Map<string, DataSource> | undefined;
+
+    /**
      * Pipeline pass rate for a single branch (Gap 3 — branch-aware metrics).
      * Filters `raw.runs` to `branch` (head_branch ?? ref) before computing.
      * Returns 0 when no runs match the branch.

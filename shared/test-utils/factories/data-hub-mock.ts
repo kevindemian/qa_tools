@@ -138,6 +138,7 @@ export function makeDataHubGetters(): Pick<
     | 'getCoverageFiles'
     | 'getPerformanceMetrics'
     | 'getPullRequests'
+    | 'getProvenance'
 > {
     return {
         getRuns(this: DataHub) {
@@ -179,6 +180,10 @@ export function makeDataHubGetters(): Pick<
         getPullRequests(this: DataHub) {
             const raw = this.raw as RawData | undefined;
             return raw?.pullRequests ?? [];
+        },
+        getProvenance(this: DataHub) {
+            const raw = this.raw as RawData | undefined;
+            return raw?.provenance;
         },
     };
 }
