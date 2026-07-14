@@ -38,6 +38,7 @@ vi.mock('../data-hub/global-hub.js', () => mockDataHub);
 
 import fs from 'node:fs';
 import { main } from '../pr-report-core.js';
+import { makeDataHubMock } from '../test-utils/factories/data-hub-mock.js';
 
 const defaultHealthScore = {
     score: 80,
@@ -83,29 +84,33 @@ describe('Pr Report Core.Main', () => {
         vi.mocked(fs.existsSync).mockReturnValue(true);
 
         // Mock DataHub with test data
-        mockDataHub.getDataHub.mockReturnValue({
-            saveParseResult: vi.fn(),
-            raw: {
-                runs: [],
-                coverage: undefined,
-            },
-            computed: {
-                metricsRuns: [
-                    {
-                        tests: [{ title: 'test-1', state: 'passed', duration: 100 }],
-                        total: 1,
-                        passed: 1,
-                        failed: 0,
-                        skipped: 0,
-                        duration: 100,
-                    },
-                ],
-                testCounts: { passed: 1, failed: 0, skipped: 0, total: 1 },
-            },
-            timestamp: new Date(),
-            provider: 'github',
-            repo: 'test/repo',
-        });
+        mockDataHub.getDataHub.mockReturnValue(
+            makeDataHubMock({
+                raw: {
+                    runs: [],
+                    jobs: new Map(),
+                    artifacts: new Map(),
+                    failureReasons: new Map(),
+                },
+                computed: {
+                    metricsRuns: [
+                        {
+                            timestamp: new Date().toISOString(),
+                            project: 'test/repo',
+                            tests: [{ title: 'test-1', state: 'passed', duration: 100 }],
+                            total: 1,
+                            passed: 1,
+                            failed: 0,
+                            skipped: 0,
+                            duration: 100,
+                        },
+                    ],
+                    testCounts: { passed: 1, failed: 0, skipped: 0, total: 1 },
+                },
+                provider: 'github',
+                repo: 'test/repo',
+            }),
+        );
         mockDataHub.isDataHubInitialized.mockReturnValue(true);
         mockDataHub.setDataHub.mockReturnValue(undefined);
     });

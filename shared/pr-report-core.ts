@@ -39,6 +39,8 @@ import type { DataHub, MetricsRun } from './types/data-hub.js';
 import { askTestSource, DATAHUB_ERRORS } from './data-hub/test-source-fallback.js';
 import { createDataHubFromParseResult } from './data-hub/factory.js';
 import { DataHubImpl } from './data-hub/hub.js';
+import { summarizeDataQuality } from './data-quality.js';
+import type { DataQualitySummary } from './data-quality.js';
 
 /**
  * Read CI-injected environment variables with typed fallbacks.
@@ -91,6 +93,8 @@ export interface PrReportResult {
     commentUrl?: string;
     healthScore: ReturnType<typeof calculateHealthScore>;
     passRate: number;
+    /** EIXO C awareness: data-quality summary of the unified model consumed by this report. */
+    dataQuality?: DataQualitySummary;
 }
 
 /**
@@ -503,6 +507,7 @@ export async function generatePrReport(options: PrReportCoreOptions): Promise<Pr
 
     // DataHub é SSOT obrigatório (Invariant 8 / E1): sem fallback silencioso.
     const dataHub = options.dataHub;
+    const dataQuality = summarizeDataQuality(dataHub);
     const coverageResult = resolveCoverageForReport(dataHub);
     const healthScore = calculateHealthScore({
         ...(coverageResult ? { coverageOverride: coverageResult.coveragePct } : {}),
@@ -534,6 +539,9 @@ export async function generatePrReport(options: PrReportCoreOptions): Promise<Pr
 
     const htmlPath = generateHtmlReportFile(tests, stats, options, dataHub, coverageResult, healthScore, workflowUrl);
 
+    const dqSection = buildDataQualitySection(dataQuality);
+    if (dqSection) sections.push(dqSection);
+
     sections.push(buildFooter(artifactUrl, workflowUrl, healthScore));
 
     const htmlArtifactUrl = workflowUrl ? `${workflowUrl}?pr=1#artifacts` : undefined;
@@ -547,6 +555,7 @@ export async function generatePrReport(options: PrReportCoreOptions): Promise<Pr
         ...(htmlPath ? { htmlPath } : {}),
         healthScore,
         passRate,
+        dataQuality,
         ...(postResult?.html_url ? { commentUrl: postResult.html_url } : {}),
     };
 }
@@ -617,6 +626,39 @@ function _buildProvenanceMd(healthScore: ReturnType<typeof calculateHealthScore>
         ...rows,
         '',
     ].join('\n');
+}
+
+/**
+ * Render the EIXO C data-quality awareness section for the PR report.
+ * Surfaces confidence/provenance/quality of the unified model consumed by this report.
+ *
+ * @param dataQuality - Summary from `summarizeDataQuality(hub)`.
+ * @returns Markdown section, or undefined when there is nothing to report.
+ */
+function buildDataQualitySection(dataQuality: DataQualitySummary): string | undefined {
+    const { status, minConfidence, notes } = dataQuality;
+    if (status === 'missing' && notes.length === 0) return undefined;
+
+    let icon: string;
+    if (status === 'ok') icon = '✅';
+    else if (status === 'degraded') icon = '⚠️';
+    else icon = 'ℹ️';
+
+    const confidenceLabel = minConfidence == null ? '_n/a_' : `${(minConfidence * 100).toFixed(0)}%`;
+    const parts: string[] = [
+        `### ${icon} Data Quality`,
+        '',
+        `- **Status:** \`${status}\``,
+        `- **Min. confidence:** ${confidenceLabel}`,
+    ];
+
+    if (notes.length > 0) {
+        parts.push('', '**Observações:**');
+        for (const note of notes) parts.push(`- ${note}`);
+    }
+
+    parts.push('');
+    return parts.join('\n');
 }
 
 function buildFooter(
