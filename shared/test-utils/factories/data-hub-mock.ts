@@ -126,9 +126,7 @@ export function makeDataHubPersistenceMock(): DataHubPersistence {
  * model (`raw.*`) so mocks mirror `DataHubImpl`'s serving surface without
  * duplicating the real implementation.
  */
-export function makeDataHubGetters(
-    raw: RawData,
-): Pick<
+export function makeDataHubGetters(): Pick<
     DataHub,
     | 'getRuns'
     | 'getFailureRecords'
@@ -142,16 +140,46 @@ export function makeDataHubGetters(
     | 'getPullRequests'
 > {
     return {
-        getRuns: () => raw.runs,
-        getFailureRecords: () => raw.failureRecords,
-        getSecurityFindings: () => raw.securityFindings,
-        getDeployments: () => raw.deployments,
-        getReleases: () => raw.releases,
-        getDoraMetrics: () => raw.doraMetrics,
-        getPmIssues: () => raw.pmIssues,
-        getCoverageFiles: () => raw.coverageFiles,
-        getPerformanceMetrics: () => raw.performanceMetrics,
-        getPullRequests: () => raw.pullRequests,
+        getRuns(this: DataHub) {
+            const raw = this.raw as RawData | undefined;
+            return raw?.runs ?? [];
+        },
+        getFailureRecords(this: DataHub) {
+            const raw = this.raw as RawData | undefined;
+            return raw?.failureRecords ?? [];
+        },
+        getSecurityFindings(this: DataHub) {
+            const raw = this.raw as RawData | undefined;
+            return raw?.securityFindings ?? [];
+        },
+        getDeployments(this: DataHub) {
+            const raw = this.raw as RawData | undefined;
+            return raw?.deployments ?? [];
+        },
+        getReleases(this: DataHub) {
+            const raw = this.raw as RawData | undefined;
+            return raw?.releases ?? [];
+        },
+        getDoraMetrics(this: DataHub) {
+            const raw = this.raw as RawData | undefined;
+            return raw?.doraMetrics;
+        },
+        getPmIssues(this: DataHub) {
+            const raw = this.raw as RawData | undefined;
+            return raw?.pmIssues ?? [];
+        },
+        getCoverageFiles(this: DataHub) {
+            const raw = this.raw as RawData | undefined;
+            return raw?.coverageFiles ?? [];
+        },
+        getPerformanceMetrics(this: DataHub) {
+            const raw = this.raw as RawData | undefined;
+            return raw?.performanceMetrics;
+        },
+        getPullRequests(this: DataHub) {
+            const raw = this.raw as RawData | undefined;
+            return raw?.pullRequests ?? [];
+        },
     };
 }
 
@@ -217,7 +245,7 @@ export function makeDataHubMock(
         loadPullRequests: vi.fn().mockReturnValue([]),
         getQuality: vi.fn<(category: QualityCategory) => QualityReport | undefined>(),
         getQuarantine: vi.fn<() => QuarantineStore>(() => ({ entries: [] })),
-        ...makeDataHubGetters(raw),
+        ...makeDataHubGetters(),
         getBranchPassRate: (branch: string): number => calcPipelinePassRate(raw.runs, branch),
         mergeIncremental: vi.fn<(incoming: RawData) => void>(),
         // ─── Test-result cache (SHA-keyed) ─────────────────────────────────────
