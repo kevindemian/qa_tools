@@ -54,6 +54,7 @@ import { askTestSource } from './test-source-fallback.js';
 import type { FallbackResult } from './test-source-fallback.js';
 import {
     calcPipelinePassRate,
+    calcRunPassRate,
     calcAvgDuration,
     calcSuiteSpeedP95,
     calcFlakyFromPipelineRuns,
@@ -817,6 +818,7 @@ export class DataHubImpl implements DataHub {
         const testCounts = DataHubImpl.aggregateTestCounts(raw.parsedArtifacts);
         const testPassRate =
             testCounts.total > 0 ? Math.round((testCounts.passed / testCounts.total) * 100 * 100) / 100 : 0;
+        const runPassRate = calcRunPassRate({ passed: testCounts.passed, failed: testCounts.failed });
         const framework = raw.framework ?? 'unknown';
 
         return {
@@ -845,6 +847,7 @@ export class DataHubImpl implements DataHub {
             testDurationP95,
             runFailureRate,
             testDurationMap,
+            runPassRate,
             retryFlaky,
             computeCost,
         };

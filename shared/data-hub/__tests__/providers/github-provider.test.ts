@@ -24,6 +24,13 @@ import type {
     PerformanceMetrics,
 } from '../../../types/data-hub.js';
 
+import { getCheckRuns } from '../../../github-check-run.js';
+import type { CheckRunAnnotation } from '../../../types/ci-cd.js';
+
+vi.mock('../../../github-check-run.js', () => ({
+    getCheckRuns: vi.fn(),
+}));
+
 /* ── Mock GitProvider ──────────────────────────────────────────────────── */
 
 function createMockProvider(): GitProvider {
@@ -141,6 +148,30 @@ describe('GitHubDataProvider', () => {
         const result = await provider.fetchRawData({ repo: 'owner/repo', count: 10 });
 
         expect(result.runs[0]?.run_attempt).toBe(2);
+    });
+
+    it('populates RawData.annotations from Check Run annotations (DEF-2)', async () => {
+        expect.hasAssertions();
+
+        const runs = [makeRun(1)];
+        vi.mocked(mockProvider.getRecentPipelines).mockResolvedValue(runs);
+        vi.mocked(mockProvider.getPipelineJobs).mockResolvedValue([makeJob(101)]);
+        vi.mocked(mockProvider.listPipelineArtifacts).mockResolvedValue([]);
+
+        const annotations: CheckRunAnnotation[] = [
+            { path: 'src/foo.test.ts', start_line: 10, end_line: 12, annotation_level: 'failure', message: 'boom' },
+        ];
+        process.env['GITHUB_SHA'] = 'abc123';
+        vi.mocked(getCheckRuns).mockResolvedValue([{ id: 1, annotations } as never]);
+
+        const result = await provider.fetchRawData({ repo: 'owner/repo', count: 10 });
+
+        expect(result.annotations).toBeDefined();
+        expect(result.annotations).toHaveLength(1);
+        expect(result.annotations?.[0]?.path).toBe('src/foo.test.ts');
+        expect(result.annotations?.[0]?.message).toBe('boom');
+
+        delete process.env['GITHUB_SHA'];
     });
 
     it('lA-2: fetchRawData captures billable usage into timing (real cost)', async () => {

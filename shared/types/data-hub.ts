@@ -9,7 +9,7 @@
  * Consumers NEVER download, parse, calculate, or persist — they only read
  * from DataHub.raw.*, DataHub.computed.*, and DataHub.persistence.*.
  */
-import type { PipelineRun, PipelineJob, ArtifactInfo, GitLabTestReport } from './ci-cd.js';
+import type { PipelineRun, PipelineJob, ArtifactInfo, GitLabTestReport, CheckRunAnnotation } from './ci-cd.js';
 import type { ArtifactParseResult } from '../data-hub/artifact-parser.js';
 import type { FlatTest, ParseResult } from '../result_parser.js';
 import type { CoverageSnapshot } from './coverage.js';
@@ -78,6 +78,8 @@ export interface RawData {
     framework?: string;
     /** GitLab test report for the latest pipeline (GitLab-specific). */
     gitlabTestReport?: GitLabTestReport;
+    /** GitHub Check Run annotations (file/line/message) aggregated from the analyzed commit. */
+    annotations?: CheckRunAnnotation[];
     /** Commit log — formatted string of recent commits from CI workflow runs. */
     commitLog?: string;
     /** CI run statistics derived from workflow runs — pass/fail/skip counts per run. */
@@ -658,7 +660,7 @@ export interface ComputedMetrics {
     /** Metrics trend points with label, passRate, total, failed. */
     metricsTrends?: TrendPoint[];
     // ─── SSOT expansion (Fase 22.M/22.N) ──────────────────────────────────
-    /** Test-level pass rate: passed / (passed + failed) * 100. Computed from metricsRuns. */
+    /** Test-level pass rate: passed / (passed + failed) * 100. Computed from parsed artifact test counts. */
     runPassRate?: number;
     /** P95 of individual test durations in milliseconds (test-level). */
     testDurationP95?: number;

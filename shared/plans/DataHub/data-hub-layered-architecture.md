@@ -2246,11 +2246,21 @@ O linter `vitest/prefer-strict-equal` exige `toStrictEqual` em vez de `toEqual` 
         - [x] 22.N.8 — metrics-calculator.ts deleted
         - [x] 22.N.9 — pr-report-core.ts calcRunPassRate
         - [x] 22.N.10 — 26 ESLint errors fixed
-- [ ] Phase 23 — Deprecation + Cleanup
-- [ ] Phase 24 — Contract Updates
-- [ ] Phase 25 — Testing + Quality Gates
-- [ ] Phase 26 — Auditoria Final de Qualidade
-- [ ] Phase 27 — TECHDOC.md Update
+- [x] Phase 23 — Deprecation + Cleanup
+    - [x] Delete `metrics.ts`, `metrics-extension.ts`, `metrics-calculator.ts`, `quality/gates.ts`, `quality/scoring.ts`
+    - [x] Delete `case17-test-utils.ts` (logic inlined into `case17.ts`) — DEF-3
+- [x] Phase 24 — Contract Updates
+    - [x] `ComputedMetrics.runPassRate` producer wired (`hub.ts` `computeMetrics`) — DEF-1
+    - [x] `RawData.annotations` declared + populated from GitHub Check Runs — DEF-2
+    - [x] `CheckRunAnnotation`/`GitLabTestReport` types present
+- [x] Phase 25 — Testing + Quality Gates
+    - [x] 78 test files, 61 property-based; regression tests added for DEF-1 (`runPassRate`) and DEF-2 (`RawData.annotations`)
+    - [x] `tsc --noEmit` 0 errors; `eslint . --quiet` 0 errors
+- [x] Phase 26 — Auditoria Final de Qualidade
+    - [x] `audit/functional/DEFECT-AUDIT-22MN.md` + `audit/functional/AUDIT-REPORT-REFACTORING.md`
+    - [x] 0 suppressions; 0 silent catches introduced; cosmetic items DEF-5a/DEF-5b rejected (AGENTS §2/§6)
+- [x] Phase 27 — TECHDOC.md Update
+    - [x] `docs/TECHDOC.md` stale `metrics.ts` reference → `data-hub/persistence.ts`
 
 ---
 
