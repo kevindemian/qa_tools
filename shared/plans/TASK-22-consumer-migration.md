@@ -2,7 +2,7 @@
 
 > **Parte do plano DataHub SSOT.** Reorganizado de `data-hub-ssot-enforcement.md` (2026-07-12).
 > Documento original preservado (marcado SUPERSEDED). Este é o documento de verdade para a migração de consumidores (Fases 1,3,4,5,6,7,8,9,10).
-> **STATUS: 📋 ESPECIFICAÇÃO DE REFERÊNCIA.** Re-auditoria (TASK-22-corrections.md §3, 2026-07-12) confirmou que **Fases 1–7 (caminhos de leitura SSOT) e Fase 8 (deleção de fontes alternativas, commit `d49c6ac0`) já estão CONCLUÍDAS em código**; Fase 9 (consumidores silenciosos) concluída via FASE 8/C; Fase 10.1 (regra ESLint SSOT em `eslint.config.mjs:212`) presente. O trabalho **genuinamente pendente** deste doc (Capítulo 11: C.1–C.4, E.1–E.3, F.1–F.8) está delegado aos docs de tarefa dedicados (TASK-22-corrections WS2/WS3, TASK-7layer-foundation, TASK-7layer-reporter). Nenhuma tarefa executável livre resta neste doc isoladamente.
+> **STATUS: 📋 ESPECIFICAÇÃO DE REFERÊNCIA.** Re-auditoria (TASK-22-corrections.md §3, 2026-07-12) confirmou que **Fases 1–7 (caminhos de leitura SSOT) e Fase 8 (deleção de fontes alternativas, commit `d49c6ac0`) já estão CONCLUÍDAS em código**; Fase 9 (consumidores silenciosos) concluída via FASE 8/C; Fase 10.1 (regra ESLint SSOT em `eslint.config.mjs:212`) presente. Capítulo 11 (C.1–C.4, E.1–E.3, F.1–F.8) **verificado CONCLUÍDO em código em 2026-07-14** (via docs delegados TASK-22-corrections, TASK-7layer-foundation e TASK-7layer-reporter, e integração `commit-log-extractor` → `raw.commitLog`). Os marcadores 🔜 Pending do Capítulo 11 foram reconciliados para ✅ nesta data. Nenhuma tarefa executável livre resta neste doc.
 
 ## FASE 1 — health-score.ts + quality-gate.ts SSOT + Dimension 5 Compliance (13 tarefas)
 
@@ -1388,50 +1388,60 @@ echo "6. Nenhum store.runs fora do data-hub:" && \
 
 **Commit:** `docs(techdoc): update SSOT architecture — DataHub as mandatory single source of truth`
 
-## Capítulo 11 — PENDING (do plano de 7 camadas, não coberto pelo SSOT original)
+## Capítulo 11 — ✅ VERIFICADO CONCLUÍDO (2026-07-14, via docs delegados)
 
 ### 11.1 passRate SSOT (C.1-C.4)
 
-| #    | File                       | Line | Status     |
-| ---- | -------------------------- | ---- | ---------- |
-| B.1  | artifact-parser.ts         | 30   | 🔜 Pending |
-| B.2  | artifact-parser.ts         | 43   | 🔜 Pending |
-| B.3  | json-exporter.ts           | 20   | 🔜 Pending |
-| B.4  | github-provider.ts         | 170  | 🔜 Pending |
-| B.5  | github-provider.ts         | 230  | 🔜 Pending |
-| B.6  | gitlab-provider.ts         | 170  | 🔜 Pending |
-| B.7  | gitlab-provider.ts         | 200  | 🔜 Pending |
-| B.8  | junit-xml-parser.ts        | 170  | 🔜 Pending |
-| B.9  | github-check-run.ts        | 78   | 🔜 Pending |
-| B.10 | prompt-input-editor.ts     | 16   | 🔜 Pending |
-| B.11 | Verify zero silent catches | —    | 🔜 Pending |
+| #    | File                       | Line | Status       |
+| ---- | -------------------------- | ---- | ------------ |
+| B.1  | artifact-parser.ts         | 30   | ✅ Concluído |
+| B.2  | artifact-parser.ts         | 43   | ✅ Concluído |
+| B.3  | json-exporter.ts           | 20   | ✅ Concluído |
+| B.4  | github-provider.ts         | 170  | ✅ Concluído |
+| B.5  | github-provider.ts         | 230  | ✅ Concluído |
+| B.6  | gitlab-provider.ts         | 170  | ✅ Concluído |
+| B.7  | gitlab-provider.ts         | 200  | ✅ Concluído |
+| B.8  | junit-xml-parser.ts        | 170  | ✅ Concluído |
+| B.9  | github-check-run.ts        | 78   | ✅ Concluído |
+| B.10 | prompt-input-editor.ts     | 16   | ✅ Concluído |
+| B.11 | Verify zero silent catches | —    | ✅ Concluído |
 
 ### Fase C — passRate SSOT Consolidation
 
-| #   | File                        | Line | Status     |
-| --- | --------------------------- | ---- | ---------- |
-| C.1 | metrics-trends.ts           | 17   | 🔜 Pending |
-| C.2 | report-html.ts              | 98   | 🔜 Pending |
-| C.3 | health-score.ts             | 174  | 🔜 Pending |
-| C.4 | Verify zero inline passRate | —    | 🔜 Pending |
+| #   | File                        | Line | Status       |
+| --- | --------------------------- | ---- | ------------ |
+| C.1 | metrics-trends.ts           | 17   | ✅ Concluído |
+| C.2 | report-html.ts              | 98   | ✅ Concluído |
+| C.3 | health-score.ts             | 174  | ✅ Concluído |
+| C.4 | Verify zero inline passRate | —    | ✅ Concluído |
 
 ### 11.2 coverage-source migration (E.1-E.3)
 
-| E.1 | Create resolveCoverageForReport() in pr-report-core.ts | 🔜 Pending |
-| E.2 | Replace resolveCoverage() call | 🔜 Pending |
-| E.3 | Update 5 pr-report-core mocks | 🔜 Pending |
+| E.1 | Create resolveCoverageForReport() in pr-report-core.ts | ✅ Concluído |
+| E.2 | Replace resolveCoverage() call | ✅ Concluído |
+| E.3 | Update 5 pr-report-core mocks | ✅ Concluído |
 
 ### Fase F — commitLog no DataHub
 
 ### 11.3 CommitLog em DataHub + case17 (F.1-F.8)
 
-| #   | Task                                   | Status     |
-| --- | -------------------------------------- | ---------- |
-| F.1 | Add commitLog?: string to RawData      | 🔜 Pending |
-| F.2 | Add fetchCommitLog?() to DataProvider  | 🔜 Pending |
-| F.3 | Implement in GitHubDataProvider        | 🔜 Pending |
-| F.4 | Implement in GitLabDataProvider        | 🔜 Pending |
-| F.5 | Merge commitLog in hub.ts              | 🔜 Pending |
-| F.6 | Migrate case17.ts to hub.raw.commitLog | 🔜 Pending |
-| F.7 | Migrate case17-helpers.ts              | 🔜 Pending |
-| F.8 | Update case17 tests                    | 🔜 Pending |
+| #   | Task                                   | Status                                                                                          |
+| --- | -------------------------------------- | ----------------------------------------------------------------------------------------------- |
+| F.1 | Add commitLog?: string to RawData      | ✅ Concluído                                                                                    |
+| F.2 | Add fetchCommitLog?() to DataProvider  | ✅ Concluído (superseded: `buildCommitLog(runs)` integrado em `fetchRawData` → `raw.commitLog`) |
+| F.3 | Implement in GitHubDataProvider        | ✅ Concluído (via `fetchRawData` em github-provider.ts:144/186/292)                             |
+| F.4 | Implement in GitLabDataProvider        | ✅ Concluído (via `fetchRawData` em gitlab-provider.ts)                                         |
+| F.5 | Merge commitLog in hub.ts              | ✅ Concluído (hub.ts:742)                                                                       |
+| F.6 | Migrate case17.ts to hub.raw.commitLog | ✅ Concluído (case17.ts:220)                                                                    |
+| F.7 | Migrate case17-helpers.ts              | ✅ Concluído (case17-helpers.ts:114)                                                            |
+| F.8 | Update case17 tests                    | ✅ Concluído (case17.test.ts / case17-helpers.test.ts)                                          |
+
+### 11.4 Reconciliação de marcadores (2026-07-14)
+
+Verificação read-only (tsc 0 errors + greps de checkpoint do próprio plano) confirmou que **todas as tarefas do Capítulo 11 já estavam CONCLUÍDAS em código** — os marcadores 🔜 Pending estavam obsoletos. Evidências:
+
+- **C.1–C.4 (passRate SSOT):** nenhum recompute inline de `passRate` em código de produção (canônico em `shared/data-hub/compute/run-pass-rate.ts` `calcRunPassRate`; `report-html.ts:98` e `health-score.ts` usam funções de score dedicadas). `rg "passRate\s*=\s*.*\* 100"` fora de `data-hub/compute` = 0.
+- **E.1–E.3 (coverage-source):** `resolveCoverageForReport()` existe em `pr-report-core.ts:391` e é chamada em `:511`; o `resolveCoverage()` antigo foi removido do código (0 ocorrências `.ts`). Mocks de `pr-report-core` atualizados.
+- **F.1–F.8 (commitLog):** `RawData.commitLog?: string` (`types/data-hub.ts:82`); providers popular `raw.commitLog` via `buildCommitLog(runs)` em `fetchRawData` (github/gitlab); `hub.ts:742` faz merge; `case17.ts:220` consome `hub.raw.commitLog`; `case17-helpers.ts:114` `buildGitTrendHtml(commitLog, …)`. F.2–F.4 foram superseded pela integração em `fetchRawData` + `commit-log-extractor` (mecanismo equivalente, sem `fetchCommitLog?()` isolado).
+
+<!-- CHECKPOINT: Capítulo 11 reconciliado — todos os itens C/E/F marcados ✅ Concluído (2026-07-14) -->
