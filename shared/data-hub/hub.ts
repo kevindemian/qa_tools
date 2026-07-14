@@ -26,6 +26,7 @@ import type {
     MetricsStore,
     MetricsRun,
     CoverageSnapshot,
+    DataSource,
     FailureClassification,
     QualityMetricsSnapshot,
     FailureRecord,
@@ -284,6 +285,10 @@ export class DataHubImpl implements DataHub {
 
     getPullRequests(): RawPullRequest[] | undefined {
         return this.raw.pullRequests;
+    }
+
+    getProvenance(): Map<string, DataSource> | undefined {
+        return this.raw.provenance;
     }
 
     /**
