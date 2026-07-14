@@ -237,7 +237,9 @@ export class DataHubImpl implements DataHub {
      * Reflects the trustworthy in-memory model (hub.raw), never the durable store.
      */
     getQuality(category: QualityCategory): QualityReport | undefined {
-        return this.quality[category];
+        const entry = Object.entries(this.quality).find(([key]) => key === category);
+
+        return entry ? entry[1] : undefined;
     }
 
     // ─── SSOT Serving (EIXO C): typed category accessors ────────────────────
@@ -605,10 +607,7 @@ export class DataHubImpl implements DataHub {
         const runs: PipelineRun[] = [];
         const runsArray = Array.isArray(store.runs) ? store.runs : [];
 
-        for (let i = 0; i < runsArray.length; i++) {
-            const m = runsArray[i];
-            if (m == null) continue;
-
+        for (const [i, m] of runsArray.entries()) {
             parsedArtifacts.set(i, [
                 {
                     fileName: 'metrics-store',
@@ -715,15 +714,21 @@ export class DataHubImpl implements DataHub {
         mergeProvenance(target, source);
     }
 
-    private static mergeFirstNonNull(target: RawData, source: RawData): void {
+    private static mergeCoverage(target: RawData, source: RawData): void {
         if (source.coverage != null && target.coverage == null) target.coverage = source.coverage;
         if (source.coverageHistory != null && source.coverageHistory.length > 0) {
             if (target.coverageHistory == null) target.coverageHistory = [];
             target.coverageHistory.push(...source.coverageHistory);
         }
-        DataHubImpl.assignIfNull(target, 'jiraIssues', source.jiraIssues);
-        DataHubImpl.assignIfNull(target, 'framework', source.framework);
-        DataHubImpl.assignIfNull(target, 'gitlabTestReport', source.gitlabTestReport);
+    }
+
+    private static mergeFirstNonNull(target: RawData, source: RawData): void {
+        DataHubImpl.mergeCoverage(target, source);
+        if (source.jiraIssues != null && target.jiraIssues == null) target.jiraIssues = source.jiraIssues;
+        if (source.framework != null && target.framework == null) target.framework = source.framework;
+        if (source.gitlabTestReport != null && target.gitlabTestReport == null) {
+            target.gitlabTestReport = source.gitlabTestReport;
+        }
         if (source.commitLog && !target.commitLog) target.commitLog = source.commitLog;
         if (source.ciRuns && source.ciRuns.length > 0 && (!target.ciRuns || target.ciRuns.length === 0)) {
             target.ciRuns = source.ciRuns;
@@ -750,10 +755,6 @@ export class DataHubImpl implements DataHub {
                 target.xray.testRuns.push(run);
             }
         }
-    }
-
-    private static assignIfNull<K extends keyof RawData>(target: RawData, key: K, value: RawData[K]): void {
-        if (value != null && target[key] == null) target[key] = value;
     }
 
     private static mergeMaps(target: RawData, source: RawData): void {
