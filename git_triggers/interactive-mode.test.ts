@@ -312,52 +312,21 @@ describe('Interactive-mode test exports', () => {
     });
 
     describe('DispatchAction', () => {
-        it('handles /help command', async () => {
+        const dispatchCases = [
+            { command: '/help', expected: false },
+            { command: '/history', expected: false },
+            { command: '/docs', expected: false },
+            { command: '/back', expected: false },
+            { command: '0', expected: true },
+            { command: '/exit', expected: true },
+        ];
+
+        it.each(dispatchCases)('handles $command command', async ({ command, expected }) => {
             expect.hasAssertions();
 
-            const result = await _testExports._dispatchAction('/help', {} as never, 'proj', []);
+            const result = await _testExports._dispatchAction(command, {} as never, 'proj', []);
 
-            expect(result).toBeFalsy();
-        });
-
-        it('handles /history command', async () => {
-            expect.hasAssertions();
-
-            const result = await _testExports._dispatchAction('/history', {} as never, 'proj', []);
-
-            expect(result).toBeFalsy();
-        });
-
-        it('handles /docs command', async () => {
-            expect.hasAssertions();
-
-            const result = await _testExports._dispatchAction('/docs', {} as never, 'proj', []);
-
-            expect(result).toBeFalsy();
-        });
-
-        it('handles /back command', async () => {
-            expect.hasAssertions();
-
-            const result = await _testExports._dispatchAction('/back', {} as never, 'proj', []);
-
-            expect(result).toBeFalsy();
-        });
-
-        it('handles exit command 0', async () => {
-            expect.hasAssertions();
-
-            const result = await _testExports._dispatchAction('0', {} as never, 'proj', []);
-
-            expect(result).toBeTruthy();
-        });
-
-        it('handles /exit command', async () => {
-            expect.hasAssertions();
-
-            const result = await _testExports._dispatchAction('/exit', {} as never, 'proj', []);
-
-            expect(result).toBeTruthy();
+            expect(result).toBe(expected);
         });
 
         it('warns on invalid option', async () => {

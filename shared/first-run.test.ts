@@ -54,28 +54,29 @@ describe('First Run', () => {
     });
 
     describe('IsFirstRun', () => {
-        it('returns false when CI=true', async () => {
+        it.each([
+            {
+                name: 'CI',
+                setup: () => {
+                    process.env['CI'] = 'true';
+                },
+            },
+            {
+                name: 'AUTO_CONFIRM',
+                setup: () => {
+                    process.env['AUTO_CONFIRM'] = 'true';
+                },
+            },
+            {
+                name: 'SKIP_FIRST_RUN',
+                setup: () => {
+                    process.env['SKIP_FIRST_RUN'] = 'true';
+                },
+            },
+        ])('returns false when $name=true', async ({ setup }) => {
             expect.hasAssertions();
 
-            process.env['CI'] = 'true';
-            const { isFirstRun } = await loadModule();
-
-            expect(isFirstRun()).toBeFalsy();
-        });
-
-        it('returns false when AUTO_CONFIRM=true', async () => {
-            expect.hasAssertions();
-
-            process.env['AUTO_CONFIRM'] = 'true';
-            const { isFirstRun } = await loadModule();
-
-            expect(isFirstRun()).toBeFalsy();
-        });
-
-        it('returns false when SKIP_FIRST_RUN=true', async () => {
-            expect.hasAssertions();
-
-            process.env['SKIP_FIRST_RUN'] = 'true';
+            setup();
             const { isFirstRun } = await loadModule();
 
             expect(isFirstRun()).toBeFalsy();

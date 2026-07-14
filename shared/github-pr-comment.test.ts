@@ -64,32 +64,14 @@ describe('PostPrComment', () => {
         });
     });
 
-    it('returns null when GITHUB_TOKEN is missing', async () => {
+    it.each<[string, () => void]>([
+        ['GITHUB_TOKEN is missing', () => delete penv['GITHUB_TOKEN']],
+        ['GITHUB_REPOSITORY is missing', () => delete penv['GITHUB_REPOSITORY']],
+        ['PR number is missing', () => delete penv['GITHUB_PR_NUMBER']],
+    ])('returns null when %s', async (_desc, removeEnv) => {
         expect.hasAssertions();
 
-        delete penv['GITHUB_TOKEN'];
-
-        const result = await postPrComment('body');
-
-        expect(mockPost).not.toHaveBeenCalled();
-        expect(result).toBeNull();
-    });
-
-    it('returns null when GITHUB_REPOSITORY is missing', async () => {
-        expect.hasAssertions();
-
-        delete penv['GITHUB_REPOSITORY'];
-
-        const result = await postPrComment('body');
-
-        expect(mockPost).not.toHaveBeenCalled();
-        expect(result).toBeNull();
-    });
-
-    it('returns null when PR number is missing', async () => {
-        expect.hasAssertions();
-
-        delete penv['GITHUB_PR_NUMBER'];
+        removeEnv();
 
         const result = await postPrComment('body');
 

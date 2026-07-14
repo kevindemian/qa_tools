@@ -110,61 +110,30 @@ describe('GetProviderProfile', () => {
 });
 
 describe('InferProviderFromKey', () => {
-    it('detects OpenRouter keys', async () => {
+    it.each([
+        { name: 'OpenRouter keys', input: 'sk-or-v1-abc123', expected: 'openrouter' },
+        { name: 'Anthropic keys', input: 'sk-ant-abc123', expected: 'anthropic' },
+        { name: 'Groq keys', input: 'gsk_abc123', expected: 'groq' },
+        { name: 'Gemini keys', input: 'AIzaSyABC123', expected: 'gemini' },
+        { name: 'NVIDIA NIM keys', input: 'nvapi-abc123', expected: 'nvidia-nim' },
+        { name: 'OpenAI keys', input: 'sk-abc123', expected: 'openai' },
+    ])('detects $name', async ({ input, expected }) => {
         expect.hasAssertions();
 
         const { inferProviderFromKey } = await import('./llm-provider-profiles.js');
 
-        expect(inferProviderFromKey('sk-or-v1-abc123')).toBe('openrouter');
+        expect(inferProviderFromKey(input)).toBe(expected);
     });
 
-    it('detects Anthropic keys', async () => {
+    it.each([
+        { name: 'unknown key patterns', input: 'unknown-key-format' },
+        { name: 'empty string', input: '' },
+    ])('returns null for $name', async ({ input }) => {
         expect.hasAssertions();
 
         const { inferProviderFromKey } = await import('./llm-provider-profiles.js');
 
-        expect(inferProviderFromKey('sk-ant-abc123')).toBe('anthropic');
-    });
-
-    it('detects Groq keys', async () => {
-        expect.hasAssertions();
-
-        const { inferProviderFromKey } = await import('./llm-provider-profiles.js');
-
-        expect(inferProviderFromKey('gsk_abc123')).toBe('groq');
-    });
-
-    it('detects Gemini keys', async () => {
-        expect.hasAssertions();
-
-        const { inferProviderFromKey } = await import('./llm-provider-profiles.js');
-
-        expect(inferProviderFromKey('AIzaSyABC123')).toBe('gemini');
-    });
-
-    it('detects NVIDIA NIM keys', async () => {
-        expect.hasAssertions();
-
-        const { inferProviderFromKey } = await import('./llm-provider-profiles.js');
-
-        expect(inferProviderFromKey('nvapi-abc123')).toBe('nvidia-nim');
-    });
-
-    it('detects OpenAI keys', async () => {
-        expect.hasAssertions();
-
-        const { inferProviderFromKey } = await import('./llm-provider-profiles.js');
-
-        expect(inferProviderFromKey('sk-abc123')).toBe('openai');
-    });
-
-    it('returns null for unknown key patterns', async () => {
-        expect.hasAssertions();
-
-        const { inferProviderFromKey } = await import('./llm-provider-profiles.js');
-
-        expect(inferProviderFromKey('unknown-key-format')).toBeNull();
-        expect(inferProviderFromKey('')).toBeNull();
+        expect(inferProviderFromKey(input)).toBeNull();
     });
 });
 
