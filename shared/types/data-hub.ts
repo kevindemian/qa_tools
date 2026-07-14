@@ -788,6 +788,31 @@ export interface DataHub {
     savePullRequests(pullRequests: RawPullRequest[]): void;
     /** Load all pull/merge requests. */
     loadPullRequests(): RawPullRequest[];
+    // ─── SSOT Serving (EIXO C): typed category accessors ─────────────────────
+    // Consumers read the unified model via these getters — never `raw.*` directly,
+    // never `persistence.*` directly. Each returns the gated in-memory SSOT
+    // (`hub.raw`), mirroring `getQuality` for the same category. `undefined`
+    // means the category was not fetched (NOT an empty result).
+    /** Pipeline runs (gated SSOT). */
+    getRuns(): PipelineRun[];
+    /** Failure records (gated SSOT). */
+    getFailureRecords(): FailureRecord[] | undefined;
+    /** Security findings (gated SSOT). */
+    getSecurityFindings(): SecurityFinding[] | undefined;
+    /** Deployments (gated SSOT). */
+    getDeployments(): Deployment[] | undefined;
+    /** Releases (gated SSOT). */
+    getReleases(): Release[] | undefined;
+    /** DORA metrics (gated SSOT). */
+    getDoraMetrics(): DoraMetrics | undefined;
+    /** Project-manager issues (gated SSOT). */
+    getPmIssues(): RawIssue[] | undefined;
+    /** Per-file coverage (gated SSOT). */
+    getCoverageFiles(): CoverageFile[] | undefined;
+    /** Performance metrics (gated SSOT). */
+    getPerformanceMetrics(): PerformanceMetrics | undefined;
+    /** Pull/merge requests (gated SSOT). */
+    getPullRequests(): RawPullRequest[] | undefined;
     /**
      * Quality report for a gated ST-1 category, computed at the ingest boundary.
      * Reflects the trustworthy in-memory model (hub.raw), not the durable store.

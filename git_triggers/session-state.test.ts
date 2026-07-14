@@ -1,3 +1,6 @@
+import { makeDataHubGetters } from '../shared/test-utils/factories/data-hub-mock.js';
+import type { RawData } from '../shared/types/data-hub.js';
+
 vi.mock('../shared/prompt', () => ({
     print: vi.fn(),
     success: vi.fn(),
@@ -239,6 +242,7 @@ describe('Session-state', () => {
                 loadPullRequests: vi.fn().mockReturnValue([]),
                 getQuality: vi.fn(),
                 getQuarantine: vi.fn(() => ({ entries: [] })),
+                ...makeDataHubGetters({} as unknown as RawData),
                 getBranchPassRate: vi.fn(),
                 mergeIncremental: vi.fn(),
                 loadReport: vi.fn(),

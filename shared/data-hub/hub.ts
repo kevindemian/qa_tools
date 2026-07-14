@@ -240,6 +240,50 @@ export class DataHubImpl implements DataHub {
         return this.quality[category];
     }
 
+    // ─── SSOT Serving (EIXO C): typed category accessors ────────────────────
+    // Return the gated in-memory model (hub.raw). Never expose persistence here.
+    // `undefined` means the category was not fetched — never an empty sentinel.
+
+    getRuns(): PipelineRun[] {
+        return this.raw.runs;
+    }
+
+    getFailureRecords(): FailureRecord[] | undefined {
+        return this.raw.failureRecords;
+    }
+
+    getSecurityFindings(): SecurityFinding[] | undefined {
+        return this.raw.securityFindings;
+    }
+
+    getDeployments(): Deployment[] | undefined {
+        return this.raw.deployments;
+    }
+
+    getReleases(): Release[] | undefined {
+        return this.raw.releases;
+    }
+
+    getDoraMetrics(): DoraMetrics | undefined {
+        return this.raw.doraMetrics;
+    }
+
+    getPmIssues(): RawIssue[] | undefined {
+        return this.raw.pmIssues;
+    }
+
+    getCoverageFiles(): CoverageFile[] | undefined {
+        return this.raw.coverageFiles;
+    }
+
+    getPerformanceMetrics(): PerformanceMetrics | undefined {
+        return this.raw.performanceMetrics;
+    }
+
+    getPullRequests(): RawPullRequest[] | undefined {
+        return this.raw.pullRequests;
+    }
+
     /**
      * Quarantine store owned by the hub (SSOT for the quarantined-test list).
      * Loaded once at construction; consumers MUST read via this instead of
