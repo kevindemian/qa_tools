@@ -46,7 +46,7 @@ async function promptProjectName(detected: string, existing?: string): Promise<s
 async function gatherSetupContext(): Promise<SetupContext> {
     const state = loadTypedState();
     const lastProject = state.lastProject || '';
-    const detection = detectFramework();
+    const detection = await detectFramework();
 
     info('Framework detectado: ' + detection.framework);
     info('Comando de teste: ' + detection.testCmd);

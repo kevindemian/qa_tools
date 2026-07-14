@@ -102,7 +102,7 @@ describe('Setup main', () => {
         vi.spyOn(MockFs, 'mkdirSync').mockImplementation(vi.fn());
         vi.spyOn(MockFs, 'writeFileSync').mockImplementation(vi.fn());
         vi.spyOn(MockFs, 'chmodSync').mockImplementation(vi.fn());
-        MockDetect.mockReturnValue({
+        MockDetect.mockResolvedValue({
             framework: 'cypress',
             testCmd: 'npx cypress run',
             installCmd: 'npm ci',
@@ -295,7 +295,7 @@ describe('Setup main — pr-report workflow generation', () => {
         vi.spyOn(MockFs, 'mkdirSync').mockImplementation(vi.fn());
         vi.spyOn(MockFs, 'writeFileSync').mockImplementation(vi.fn());
         vi.spyOn(MockFs, 'chmodSync').mockImplementation(vi.fn());
-        MockDetect.mockReturnValue({
+        MockDetect.mockResolvedValue({
             framework: 'cypress',
             testCmd: 'npx cypress run',
             installCmd: 'npm ci',
