@@ -36,6 +36,7 @@ import type {
     DoraMetrics,
     RawIssue,
     CoverageFile,
+    RawCoverage,
     PerformanceMetrics,
     RawPullRequest,
     FlatTest,
@@ -277,6 +278,10 @@ export class DataHubImpl implements DataHub {
 
     getCoverageFiles(): CoverageFile[] | undefined {
         return this.raw.coverageFiles;
+    }
+
+    getCoverage(): RawCoverage | undefined {
+        return this.raw.coverage;
     }
 
     getPerformanceMetrics(): PerformanceMetrics | undefined {

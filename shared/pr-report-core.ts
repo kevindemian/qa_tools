@@ -382,7 +382,7 @@ async function handleQualityGate(
 
 /**
  * Resolve coverage for the PR report from DataHub.
- * DataHub.raw.coverage is populated from Istanbul/CTRF/JUnit artifacts via GitHub API.
+ * DataHub.getCoverage() is populated from Istanbul/CTRF/JUnit artifacts via GitHub API.
  * No filesystem fallback — DataHub is the SSOT.
  *
  * @param dataHub - DataHub instance (SSOT obrigatório)
@@ -391,7 +391,7 @@ async function handleQualityGate(
 function resolveCoverageForReport(
     dataHub: DataHub,
 ): { coveragePct: number; source: string; detail?: string } | undefined {
-    const dataHubCoverage = dataHub.raw.coverage;
+    const dataHubCoverage = dataHub.getCoverage();
     if (dataHubCoverage !== undefined) {
         return {
             coveragePct: dataHubCoverage.percentage,
@@ -787,10 +787,9 @@ async function tryCreateDataHub(
  * Verifica se o DataHub contém dados utilizáveis (Camada 1–6 ou arquivo manual).
  */
 function hasUsableData(hub: import('./types/data-hub.js').DataHub): boolean {
-    const raw = hub.raw;
     return (
-        raw.runs.length > 0 ||
-        (raw.parsedArtifacts != null && raw.parsedArtifacts.size > 0) ||
+        hub.getRuns().length > 0 ||
+        (hub.raw.parsedArtifacts != null && hub.raw.parsedArtifacts.size > 0) ||
         (hub.computed.metricsRuns?.length ?? 0) > 0
     );
 }

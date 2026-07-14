@@ -123,17 +123,20 @@ describe('Pr Report Core.Main', () => {
         it('throws explicit error when DataHub has no test data (non-interactive)', async () => {
             expect.hasAssertions();
 
-            mockDataHub.getDataHub.mockReturnValue({
-                saveParseResult: vi.fn(),
-                raw: { runs: [], coverage: undefined },
-                computed: {
-                    metricsRuns: [],
-                    testCounts: { passed: 0, failed: 0, skipped: 0, total: 0 },
-                },
-                timestamp: new Date(),
-                provider: 'github',
-                repo: 'test/repo',
-            });
+            mockDataHub.getDataHub.mockReturnValue(
+                makeDataHubMock({
+                    raw: {
+                        runs: [],
+                        jobs: new Map(),
+                        artifacts: new Map(),
+                        failureReasons: new Map(),
+                    },
+                    computed: {
+                        metricsRuns: [],
+                        testCounts: { passed: 0, failed: 0, skipped: 0, total: 0 },
+                    },
+                }),
+            );
 
             await expect(main()).rejects.toThrow(/sem dados do versionador/);
             expect(mockPRComment.postPrComment).not.toHaveBeenCalled();

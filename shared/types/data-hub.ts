@@ -809,6 +809,8 @@ export interface DataHub {
     getPmIssues(): RawIssue[] | undefined;
     /** Per-file coverage (gated SSOT). */
     getCoverageFiles(): CoverageFile[] | undefined;
+    /** Aggregate coverage summary (gated SSOT). */
+    getCoverage(): RawCoverage | undefined;
     /** Performance metrics (gated SSOT). */
     getPerformanceMetrics(): PerformanceMetrics | undefined;
     /** Pull/merge requests (gated SSOT). */
