@@ -11,6 +11,7 @@
 import { calculateHealthScore } from './health-score.js';
 import type { HealthScoreResult } from './types.js';
 import type { DataHub } from './types/data-hub.js';
+import type { QualityCategory } from './data-hub/quality.js';
 import { rootLogger } from './logger.js';
 import { extractErrorMessage } from './prompt-errors.js';
 import { humanizeError } from './prompt-errors.js';
@@ -35,6 +36,8 @@ export interface QualityGateResult {
         details: string;
     }>;
     score: number;
+    /** EIXO C awareness: data categories expected but absent from the unified model. */
+    incompleteItems?: string[];
 }
 
 export interface QualityGateOptions {
@@ -130,11 +133,70 @@ function _buildChecks(checks: GateCheck[], health: HealthScoreResult, dataHub: D
 function _aggregateResult(checks: GateCheck[]): QualityGateResult {
     const overall = checks.every((c) => c.status === 'pass') ? 'pass' : 'fail';
     const score = Math.round(checks.reduce((s, c) => s + c.score, 0) / checks.length);
-    return { overall, checks, score };
+    return { overall, checks, score, incompleteItems: [] };
+}
+
+/**
+ * EIXO C awareness: extend the gate to the ST-1 data categories consumed via the
+ * typed accessor surface. Each present category is gated by its `getQuality()`
+ * validity and its provenance confidence; absent categories are reported in
+ * `incompleteItems` (their absence does not by itself fail the gate).
+ */
+const EXTENDED_QUALITY_CATEGORIES: QualityCategory[] = [
+    'securityFindings',
+    'deployments',
+    'releases',
+    'doraMetrics',
+    'pmIssues',
+    'performanceMetrics',
+];
+
+function _categoryItemCount(hub: DataHub, category: QualityCategory): number {
+    switch (category) {
+        case 'securityFindings':
+            return hub.getSecurityFindings()?.length ?? 0;
+        case 'deployments':
+            return hub.getDeployments()?.length ?? 0;
+        case 'releases':
+            return hub.getReleases()?.length ?? 0;
+        case 'doraMetrics':
+            return hub.getDoraMetrics() ? 1 : 0;
+        case 'pmIssues':
+            return hub.getPmIssues()?.length ?? 0;
+        case 'performanceMetrics':
+            return hub.getPerformanceMetrics() ? 1 : 0;
+        default:
+            return 0;
+    }
+}
+
+function _buildCategoryChecks(checks: GateCheck[], incompleteItems: string[], hub: DataHub): void {
+    for (const category of EXTENDED_QUALITY_CATEGORIES) {
+        const count = _categoryItemCount(hub, category);
+        if (count === 0) {
+            incompleteItems.push(category);
+            continue;
+        }
+        const report = hub.getQuality(category);
+        const valid = report ? report.valid : true;
+        const provenance = hub.getProvenance()?.get(category);
+        const confidence = provenance && Number.isFinite(provenance.confidence) ? provenance.confidence : 1;
+        const score = valid ? Math.round(confidence * 100) : 0;
+        checks.push({
+            name: `data-quality:${category}`,
+            status: valid ? 'pass' : 'fail',
+            score,
+            threshold: 100,
+            details: valid
+                ? `${category}: ${count} item(s), confidence ${Math.round(confidence * 100)}%`
+                : `${category}: quality issues — ${(report?.issues ?? []).join('; ') || 'invalid'}`,
+        });
+    }
 }
 
 export function runQualityGate(options: QualityGateOptions): QualityGateResult {
     const checks: GateCheck[] = [];
+    const incompleteItems: string[] = [];
     try {
         const hub = options.dataHub;
         const runs = options.project ? hub.getRuns().filter((r) => r.head_branch === options.project) : hub.getRuns();
@@ -154,7 +216,7 @@ export function runQualityGate(options: QualityGateOptions): QualityGateResult {
                     details:
                         'Sem dados históricos — gate não aplicável. Execute uma pipeline de testes para gerar métricas.',
                 });
-                return { overall: 'fail', checks, score: 0 };
+                return { overall: 'fail', checks, score: 0, incompleteItems: [] };
             }
         }
 
@@ -164,7 +226,9 @@ export function runQualityGate(options: QualityGateOptions): QualityGateResult {
                 : { dataHub: hub };
         const health = calculateHealthScore(healthConfig);
         _buildChecks(checks, health, hub);
-        return _aggregateResult(checks);
+        _buildCategoryChecks(checks, incompleteItems, hub);
+        const result = _aggregateResult(checks);
+        return { ...result, incompleteItems };
     } catch (err: unknown) {
         const raw = extractErrorMessage(err);
         const known = humanizeError(raw);
@@ -177,7 +241,7 @@ export function runQualityGate(options: QualityGateOptions): QualityGateResult {
             threshold: 0,
             details: 'Erro no quality gate — verifique permissões e dados de métricas: ' + errorMsg,
         });
-        return { overall: 'fail', checks, score: 0 };
+        return { overall: 'fail', checks, score: 0, incompleteItems: [] };
     }
 }
 
