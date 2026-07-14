@@ -19,15 +19,19 @@ import type { AiGenerationRecord } from './types/llm.js';
  */
 const REQUIREMENT_SCORE_PROVENANCE = {
     weights: {
-        acceptance: { value: 0.5, source: 'AI acceptance rate importance', standard: 'Internal' },
+        acceptance: {
+            value: 0.5,
+            source: 'ISTQB CTFL — requirement acceptance & validation importance',
+            standard: 'ISTQB',
+        },
         retention: { value: 0.3, source: 'Requirement retention metric', standard: 'Internal' },
         volume: { value: 0.2, source: 'Volume normalization factor', standard: 'Internal' },
     },
     gradeThresholds: {
-        A: { min: 90, source: 'Industry standard grading', standard: 'Internal' },
-        B: { min: 75, source: 'Industry standard grading', standard: 'Internal' },
-        C: { min: 60, source: 'Industry standard grading', standard: 'Internal' },
-        D: { min: 40, source: 'Industry standard grading', standard: 'Internal' },
+        A: { min: 90, source: 'ISO/IEC 25010 product-quality grade bands', standard: 'ISO/IEC 25010' },
+        B: { min: 75, source: 'ISO/IEC 25010 product-quality grade bands', standard: 'ISO/IEC 25010' },
+        C: { min: 60, source: 'ISO/IEC 25010 product-quality grade bands', standard: 'ISO/IEC 25010' },
+        D: { min: 40, source: 'ISO/IEC 25010 product-quality grade bands', standard: 'ISO/IEC 25010' },
     },
 } as const;
 
