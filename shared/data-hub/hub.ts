@@ -44,7 +44,7 @@ import type {
 import type { PipelineRun, PipelineJob } from '../types/ci-cd.js';
 import type { ArtifactParseResult } from './artifact-parser.js';
 import type { ParseResult } from '../result_parser.js';
-import { mergeCategoryArrays } from './raw-merge.js';
+import { mergeCategoryArrays, mergeProvenance } from './raw-merge.js';
 import { gateRawData, type QualityReport, type QualityCategory, type QualityCategoryMap } from './quality.js';
 import { loadQuarantine, type QuarantineStore } from '../quarantine.js';
 import { rootLogger } from '../logger.js';
@@ -668,6 +668,7 @@ export class DataHubImpl implements DataHub {
         DataHubImpl.mergeFirstNonNull(target, source);
         DataHubImpl.mergeMaps(target, source);
         mergeCategoryArrays(target, source);
+        mergeProvenance(target, source);
     }
 
     private static mergeFirstNonNull(target: RawData, source: RawData): void {

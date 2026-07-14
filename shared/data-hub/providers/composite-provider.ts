@@ -5,7 +5,7 @@
  * Providers that fail are skipped — failures never crash the composite.
  */
 import type { DataProvider, FetchOptions, RawData } from '../../types/data-hub.js';
-import { mergeCategoryArrays } from '../raw-merge.js';
+import { mergeCategoryArrays, mergeProvenance } from '../raw-merge.js';
 
 export class CompositeProvider implements DataProvider {
     readonly name = 'composite';
@@ -52,6 +52,7 @@ export class CompositeProvider implements DataProvider {
         CompositeProvider.mergeOptionalMaps(target, source);
         CompositeProvider.mergeXray(target, source);
         mergeCategoryArrays(target, source);
+        mergeProvenance(target, source);
     }
 
     private static mergeMap<K, V>(target: Map<K, V>, source: Map<K, V>): void {

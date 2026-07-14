@@ -5,7 +5,7 @@
  */
 import { describe, it, expect } from 'vitest';
 import type { RawData } from '../../types/data-hub.js';
-import { mergeCategoryArrays } from '../raw-merge.js';
+import { mergeCategoryArrays, mergeProvenance } from '../raw-merge.js';
 
 function emptyRaw(): RawData {
     return { runs: [], jobs: new Map(), artifacts: new Map(), failureReasons: new Map() };
@@ -133,5 +133,55 @@ describe('ST-1 mergeCategoryArrays: object categories (first-non-null)', () => {
         mergeCategoryArrays(target, { ...emptyRaw(), performanceMetrics: { pipelineDurationMs: 999, confidence: 1 } });
 
         expect(target.performanceMetrics?.pipelineDurationMs).toBe(100);
+    });
+});
+
+describe('ST-1 mergeProvenance: trust channel preserved across providers', () => {
+    function withProvenance(entries: Record<string, number>): RawData {
+        const map = new Map<string, { confidence: number; source: string; timestamp: string }>();
+        for (const [key, confidence] of Object.entries(entries)) {
+            map.set(key, { confidence, source: `${key}-src`, timestamp: '2026-01-01T00:00:00Z' });
+        }
+        return { ...emptyRaw(), provenance: map };
+    }
+
+    it('unions distinct provenance keys from source into target', () => {
+        const target = withProvenance({ runs: 1 });
+        const source = withProvenance({ deployments: 0.9, doraMetrics: 0.9 });
+
+        mergeProvenance(target, source);
+
+        expect(target.provenance?.has('runs')).toBeTruthy();
+        expect(target.provenance?.has('deployments')).toBeTruthy();
+        expect(target.provenance?.has('doraMetrics')).toBeTruthy();
+        expect(target.provenance?.get('deployments')?.confidence).toBeCloseTo(0.9, 5);
+    });
+
+    it('target keeps priority for an already-present key (no clobber)', () => {
+        const target = withProvenance({ runs: 1 });
+        const source = withProvenance({ runs: 0.2 });
+
+        mergeProvenance(target, source);
+
+        expect(target.provenance?.get('runs')?.confidence).toBeCloseTo(1, 5);
+    });
+
+    it('initializes target.provenance when target has none', () => {
+        const target = emptyRaw();
+        const source = withProvenance({ runs: 1 });
+
+        mergeProvenance(target, source);
+
+        expect(target.provenance).toBeDefined();
+        expect(target.provenance?.get('runs')?.confidence).toBeCloseTo(1, 5);
+    });
+
+    it('no-op when source has no provenance (never drops/throws)', () => {
+        const target = withProvenance({ runs: 1 });
+
+        mergeProvenance(target, emptyRaw());
+
+        expect(target.provenance?.has('runs')).toBeTruthy();
+        expect(target.provenance).toHaveLength(1);
     });
 });

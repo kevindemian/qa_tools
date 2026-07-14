@@ -3639,8 +3639,52 @@ Pesquisa externa (fontes indicadas pelo usuário) confirma esse ecossistema:
 
 ### EIXO C — SERVE (consumo)
 
-- Features (health-score, quality-gate, traceability, flakiness, failure-analysis, bug-report, pr-report) consomem do modelo único armazenado, cientes de `confidence`/`quality`.
-- `DataHub` expõe acessores tipados por categoria (sem acesso direto a persistence).
+**Escopo total, ZERO deferral.** Todas as 7 features (health-score, quality-gate, traceability, flakiness, failure-analysis, bug-report, pr-report) consomem o modelo único, cientes de `confidence`/`quality`/`provenance`. `DataHub` expõe acessores tipados por categoria (sem acesso direto a persistence). Fonte de leitura = `hub.raw.<cat>` (SSOT gated).
+
+#### C-0 — Fix prévio bloqueante (defeito, não deferral)
+
+`mergeRawData` (`hub.ts:655`) **não mergeia `raw.provenance`** → perda silenciosa de provenance em multi-provider (viola ZERO-silenciamento). Union dos maps `provenance` + teste de merge multi-provider.
+
+#### C-1 — Acessores tipados (mudança de contrato)
+
+Adicionar à interface `DataHub` (`shared/types/data-hub.ts`) getters que leem `hub.raw.<cat>` e expõem `getQuality(name)`:
+`getRuns()`, `getFailureRecords()`, `getSecurityFindings()`, `getDeployments()`, `getReleases()`, `getDoraMetrics()`, `getPmIssues()`, `getCoverageFiles()`, `getPerformanceMetrics()`, `getPullRequests()`.
+Implementação em `hub.ts` (delega `this.raw.<cat>`); `persistence` permanece encapsulado. (AGENTS §2/§6: produtores = `DataHubImpl`+`factory`; consumidores = 7 features + leituras existentes.)
+
+#### C-2 — Migrar leituras diretas para getters
+
+Substituir acessos `hub.raw.*`/`hub.computed.*` por getters em todos os consumidores atuais (health-score, quality-gate, traceability, pr-report, flakiness) + testes.
+
+#### C-3 — Wire das 8 categorias não servidas + awareness (todas 7)
+
+**Grupo 1 (já recebem DataHub):**
+
+- **C-3a health-score:** consumir `getDeployments/Releases/DoraMetrics/CoverageFiles`; weight/annotate por `confidence` (per-record + `DataSource`) e superfícies `getQuality()` gaps.
+- **C-3b quality-gate:** `runQualityGate` (já obrigatório `dataHub`) incorpora `getQuality(category)` no pass/fail + reporta `incompleteItems`; estende checagens a securityFindings/deployments/releases/doraMetrics/coverage/pmIssues/performanceMetrics.
+- **C-3c traceability:** consumir `getPmIssues/getPullRequests/getFailureRecords/getSecurityFindings`; renderizar `provenance` + `confidence` por entidade (hoje só `runs`/`jiraIssues`).
+- **C-3d flakiness:** já consome `computed.flakyTests`; superfícies `confidence`/`source` dos entries + `getQuality('failureRecords')`.
+- **C-3e pr-report:** já constrói hub (`pr-report-core.ts:824`); superfícies `quality`/`confidence`/`provenance` no relatório.
+
+**Grupo 2 (não recebem DataHub — full scope):**
+
+- **C-3f failure-analysis** (`analyzeFailuresWithReport` `shared/failure-analysis.ts:116`): param opcional `hub?`. No `case17` (`:355`) garantir hub via `createDataHubFromParseResult(result, …)` (padrão `pr-report-core.ts:824`, após `result` em `:346`); cross-reference `FlatTest[]` × `getFailureRecords()/getSecurityFindings()` por fingerprint; anexar `confidence`/`provenance`/`source` ao `AnalysisReport`.
+- **C-3g bug-report** (`collectAutomated` `shared/bug-report.ts:178`): construir/consumir hub do `ParseResult` (`createDataHubFromParseResult`) e anexar `confidence`/`provenance` ao `BugReport`. Path free-text (`generateBugReportFromDescription`, case20) sem dados estruturados → **limitação documentada, não deferral**. Garantir hub em `git_triggers/pipeline-jira.ts`.
+
+#### C-4 — Eliminar acessos diretos a `GitProvider`/`*Manager`
+
+Redirecionar features que ainda batem em providers/manager direto para `hub.get*()` (SSOT).
+
+#### C-5 — 4 warnings severity-1 (`hub.ts` `security/detect-object-injection`)
+
+Antes diferidos; agora incorporados. Ao adicionar getters (C-1), corrigir acessos indexados inseguros (chaves `as const`/`Object.hasOwn`/`Map`) → 0 warnings. (ZERO TOLERÂNCIA.)
+
+#### C-6 — Verificação
+
+- Test-First: cada feature ganha teste que **ASSERTE** leitura de `confidence`/`quality`/`provenance` (mocks estritos, shapes completas); negative/edge cases prioritários; property test p/ NaN bounds.
+- Contract tests dos getters (`hub.raw.<cat>` + `getQuality`).
+- Checkpoints abaixo. Commits granulares por fase.
+
+> **Risco a verificar/fixar em C-3f:** `jira_management/main.ts:235` chama `getDataHub()` incondicionalmente mas **não inicializa o hub** (sem `ensureDataHub`/`setDataHub` na árvore `jira_management/`, exceto testes). `case17` via `git_triggers` funciona (hub inicializado em `interactive-mode.ts:960`), mas o path standalone `jira_management/main.ts` pode quebrar. C-3f garante o hub via `createDataHubFromParseResult(result)` independente do singleton — corrige o gap.
 
 ### Ordem de execução
 

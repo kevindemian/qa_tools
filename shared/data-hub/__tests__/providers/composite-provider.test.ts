@@ -134,4 +134,23 @@ describe('CompositeProvider', () => {
 
         expect(result.jobs.get(1)).toHaveLength(1);
     });
+
+    it('unions provenance from multiple providers (no silent loss)', async () => {
+        expect.hasAssertions();
+
+        const prov1 = new Map<string, { confidence: number; source: string; timestamp: string }>();
+        prov1.set('runs', { confidence: 1, source: 'github-api', timestamp: '2026-01-01T00:00:00Z' });
+        const provider1 = createMockProvider('github', makeRawData({ provenance: prov1 }));
+
+        const prov2 = new Map<string, { confidence: number; source: string; timestamp: string }>();
+        prov2.set('deployments', { confidence: 0.9, source: 'gitlab-api', timestamp: '2026-01-01T00:00:00Z' });
+        const provider2 = createMockProvider('gitlab', makeRawData({ provenance: prov2 }));
+
+        const composite = new CompositeProvider([provider1, provider2]);
+        const result = await composite.fetchRawData(options);
+
+        expect(result.provenance?.has('runs')).toBeTruthy();
+        expect(result.provenance?.has('deployments')).toBeTruthy();
+        expect(result.provenance?.get('deployments')?.source).toBe('gitlab-api');
+    });
 });
