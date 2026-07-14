@@ -128,6 +128,9 @@ export interface ConfigOverrides {
     logDir?: string;
     logMaxSize?: string | number;
     xdgStateHome?: string;
+    qaCurrentProject?: string;
+    qaProjectDir?: string;
+    xdgConfigHome?: string;
     llmProvider?: string;
     llmFallbackProvider?: string;
     llmApiKey?: string;
