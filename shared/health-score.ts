@@ -16,6 +16,8 @@
 import type { DataHub } from './types/data-hub.js';
 import type { HealthScoreResult, HealthScoreGrade, HealthScoreDimensions, HealthScoreProvenance } from './types.js';
 import { summarizeDataQuality } from './data-quality.js';
+import { extractErrorMessage, humanizeError } from './prompt-errors.js';
+import { rootLogger } from './logger.js';
 
 export interface HealthScoreConfig {
     weights: { passRate: number; flakyRate: number; coverage: number; executionRate: number; suiteSpeed: number };
@@ -268,6 +270,18 @@ function _buildProvenance(options?: Partial<HealthScoreConfig>): HealthScoreProv
  * @returns HealthScoreResult with overall score, grade, dimensions, and provenance.
  */
 export function calculateHealthScore(options: Partial<HealthScoreConfig> & { dataHub: DataHub }): HealthScoreResult {
+    try {
+        return _computeHealthScore(options);
+    } catch (err: unknown) {
+        const raw = extractErrorMessage(err);
+        const known = humanizeError(raw);
+        const errorMsg = known ? known.msg : raw;
+        rootLogger.error('Health score error — falha ao computar métricas do DataHub: ' + errorMsg);
+        throw err;
+    }
+}
+
+function _computeHealthScore(options: Partial<HealthScoreConfig> & { dataHub: DataHub }): HealthScoreResult {
     const config = pickConfig(options);
     const dataHub = options.dataHub;
     const actual = computeActualMetrics(dataHub);
