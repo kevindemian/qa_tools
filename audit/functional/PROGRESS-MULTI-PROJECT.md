@@ -5,28 +5,33 @@
 
 ## Estado
 
-| Fase | Escopo                                   | Status     |
-| ---- | ---------------------------------------- | ---------- |
-| 0    | Fundação (001–006)                       | 🔜 Pending |
-| 1    | Project Registry CRUD (010–013)          | 🔜 Pending |
-| 2    | Project Context + .env overlay (020–024) | 🔜 Pending |
-| 3    | State per project (030–032)              | 🔜 Pending |
-| 4    | Report/Artifact isolation (040–047)      | 🔜 Pending |
-| 5    | Entry Menu (050–055)                     | 🔜 Pending |
-| 6    | Module Integration (060–065)             | 🔜 Pending |
-| 7    | Setup Wizard (070–075)                   | 🔜 Pending |
-| 8    | Migração única (080–082)                 | 🔜 Pending |
-| 9    | Verificação (090–099)                    | 🔜 Pending |
+| Fase | Escopo                                   | Status             |
+| ---- | ---------------------------------------- | ------------------ |
+| 0    | Fundação (001–006)                       | ✅ Done (cc52806b) |
+| 1    | Project Registry CRUD (010–013)          | 🔜 Pending         |
+| 2    | Project Context + .env overlay (020–024) | 🔜 Pending         |
+| 3    | State per project (030–032)              | 🔜 Pending         |
+| 4    | Report/Artifact isolation (040–047)      | 🔜 Pending         |
+| 5    | Entry Menu (050–055)                     | 🔜 Pending         |
+| 6    | Module Integration (060–065)             | 🔜 Pending         |
+| 7    | Setup Wizard (070–075)                   | 🔜 Pending         |
+| 8    | Migração única (080–082)                 | 🔜 Pending         |
+| 9    | Verificação (090–099)                    | 🔜 Pending         |
 
 ## Checkpoints
 
 <!-- CHECKPOINT: Phase 0 complete -->
-<!-- CHECKPOINT: Phase 1 complete -->
-<!-- CHECKPOINT: Phase 2 complete -->
-<!-- CHECKPOINT: Phase 3 complete -->
-<!-- CHECKPOINT: Phase 4 complete -->
-<!-- CHECKPOINT: Phase 5 complete -->
-<!-- CHECKPOINT: Phase 6 complete -->
-<!-- CHECKPOINT: Phase 7 complete -->
-<!-- CHECKPOINT: Phase 8 complete -->
-<!-- CHECKPOINT: Phase 9 complete -->
+
+- Commit: `cc52806b` — feat(multi-project): Fase 0 foundation — types, config schema, project meta
+- CI: run `29373877755` (head `cc52806b`) → **success**
+- `tsc --noEmit` = 0; `vitest run` = 6605 passed / 18 skipped
+- Tarefas: 001 types(Zod,dir obrigatório) · 002 CONFIG_SCHEMA(qaCurrentProject/qaProjectDir/xdgConfigHome) · 003 ConfigOverrides · 004 barrel · 005 shared/**tests** (já existia) · 006 meta qa-project + teste
+    <!-- CHECKPOINT: Phase 1 complete -->
+    <!-- CHECKPOINT: Phase 2 complete -->
+    <!-- CHECKPOINT: Phase 3 complete -->
+    <!-- CHECKPOINT: Phase 4 complete -->
+    <!-- CHECKPOINT: Phase 5 complete -->
+    <!-- CHECKPOINT: Phase 6 complete -->
+    <!-- CHECKPOINT: Phase 7 complete -->
+    <!-- CHECKPOINT: Phase 8 complete -->
+    <!-- CHECKPOINT: Phase 9 complete -->
