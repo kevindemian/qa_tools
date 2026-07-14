@@ -9,9 +9,9 @@
  * - DataHub SSOT enforcement (RED phase: expose bypasses)
  * - Edge cases
  */
-import { describe, it, expect } from 'vitest';
+import { describe, it, expect, vi } from 'vitest';
 import { calculateHealthScore } from '../health-score.js';
-import type { DataHub, ComputedMetrics } from '../types/data-hub.js';
+import type { DataHub, ComputedMetrics, RawData, DataSource } from '../types/data-hub.js';
 import { makeDataHubMock } from '../test-utils/factories/data-hub-mock.js';
 
 function createTestHub(overrides: Partial<ComputedMetrics> = {}): DataHub {
@@ -125,5 +125,51 @@ describe('CalculateHealthScore — DataHub SSOT enforcement', () => {
 
         // DataHub flaky=4% → 100 - ((4-3)/(5-3))*100 = 50
         expect(result.dimensions.flakyRate.score).toBe(50);
+    });
+});
+
+describe('EIXO C — data-quality awareness (C-3a)', () => {
+    it('surfaces an ok data-quality summary when categories carry confident data', () => {
+        expect.hasAssertions();
+
+        const raw: RawData = {
+            runs: [],
+            jobs: new Map(),
+            artifacts: new Map(),
+            failureReasons: new Map(),
+            failureRecords: [{ name: 't1', status: 'failed', confidence: 0.95, source: 'junit' }],
+            provenance: new Map<string, DataSource>([
+                ['failureRecords', { confidence: 0.95, source: 'github-api', timestamp: new Date().toISOString() }],
+            ]),
+        };
+        const hub = makeDataHubMock({ raw });
+
+        const result = calculateHealthScore({ dataHub: hub });
+
+        expect(result.dataQuality).toBeDefined();
+        expect(result.dataQuality?.status).toBe('ok');
+        expect(result.dataQuality?.minConfidence).toBeCloseTo(0.95);
+    });
+
+    it('surfaces degraded data-quality when a category has quality issues', () => {
+        expect.hasAssertions();
+
+        const raw: RawData = {
+            runs: [],
+            jobs: new Map(),
+            artifacts: new Map(),
+            failureReasons: new Map(),
+            failureRecords: [{ name: 't1', status: 'failed', confidence: 0.95, source: 'junit' }],
+            provenance: new Map<string, DataSource>([
+                ['failureRecords', { confidence: 0.95, source: 'github-api', timestamp: new Date().toISOString() }],
+            ]),
+        };
+        const hub = makeDataHubMock({ raw });
+        hub.getQuality = vi.fn().mockReturnValue({ valid: false, issues: ['schema violation'] });
+
+        const result = calculateHealthScore({ dataHub: hub });
+
+        expect(result.dataQuality?.status).toBe('degraded');
+        expect(result.dataQuality?.notes.join(' ')).toContain('failureRecords');
     });
 });

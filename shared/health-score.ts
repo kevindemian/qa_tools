@@ -15,6 +15,7 @@
  */
 import type { DataHub } from './types/data-hub.js';
 import type { HealthScoreResult, HealthScoreGrade, HealthScoreDimensions, HealthScoreProvenance } from './types.js';
+import { summarizeDataQuality } from './data-quality.js';
 
 export interface HealthScoreConfig {
     weights: { passRate: number; flakyRate: number; coverage: number; executionRate: number; suiteSpeed: number };
@@ -270,6 +271,7 @@ export function calculateHealthScore(options: Partial<HealthScoreConfig> & { dat
     const config = pickConfig(options);
     const dataHub = options.dataHub;
     const actual = computeActualMetrics(dataHub);
+    const dataQuality = summarizeDataQuality(dataHub);
 
     const scPassRate = scorePassRate(actual.passRate, config);
     const scFlakyRate = actual.flakyPct === null ? 0 : scoreFlakyRate(actual.flakyPct, config);
@@ -335,5 +337,6 @@ export function calculateHealthScore(options: Partial<HealthScoreConfig> & { dat
         provenance: _buildProvenance(options),
         runCount: dataHub.getRuns().length,
         timestamp: new Date().toISOString(),
+        dataQuality,
     };
 }
