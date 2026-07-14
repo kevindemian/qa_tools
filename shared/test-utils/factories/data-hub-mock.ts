@@ -29,6 +29,7 @@ import type {
     BranchEntry,
 } from '../../types/data-hub.js';
 import type { QualityReport, QualityCategory } from '../../data-hub/quality.js';
+import type { DataSource } from '../../types/data-hub.js';
 import type { QuarantineStore } from '../../quarantine.js';
 
 /** Default `computed` metrics — all zeros/empty so overrides can be partial. */
@@ -195,13 +196,18 @@ export function makeDataHubMock(
         computed?: Partial<ComputedMetrics>;
         provider?: 'github' | 'gitlab';
         repo?: string;
+        provenance?: Map<string, DataSource>;
+        quality?: Partial<Record<QualityCategory, QualityReport>>;
     } = {},
 ): DataHub {
-    const raw: RawData = overrides.raw ?? {
-        runs: [],
-        jobs: new Map(),
-        artifacts: new Map(),
-        failureReasons: new Map(),
+    const raw: RawData = {
+        ...(overrides.raw ?? {
+            runs: [],
+            jobs: new Map(),
+            artifacts: new Map(),
+            failureReasons: new Map(),
+        }),
+        ...(overrides.provenance ? { provenance: overrides.provenance } : {}),
     };
     const computed: ComputedMetrics = { ...defaultComputed, ...overrides.computed };
     return {
@@ -248,7 +254,9 @@ export function makeDataHubMock(
         loadPerformanceMetrics: vi.fn().mockReturnValue(null),
         savePullRequests: vi.fn(),
         loadPullRequests: vi.fn().mockReturnValue([]),
-        getQuality: vi.fn<(category: QualityCategory) => QualityReport | undefined>(),
+        getQuality: vi.fn<(category: QualityCategory) => QualityReport | undefined>(
+            overrides.quality ? (category: QualityCategory) => overrides.quality?.[category] : undefined,
+        ),
         getQuarantine: vi.fn<() => QuarantineStore>(() => ({ entries: [] })),
         ...makeDataHubGetters(),
         getBranchPassRate: (branch: string): number => calcPipelinePassRate(raw.runs, branch),

@@ -80,6 +80,7 @@ function makeTraceabilityResult(overrides?: Partial<TraceabilityResult>): Tracea
         totalTests: 10,
         overallCoverage: 85,
         timestamp: '2026-06-14T10:00:00Z',
+        awareness: { categories: [], minConfidence: null },
         ...overrides,
     };
 }

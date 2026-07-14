@@ -1,4 +1,5 @@
 import type { MetricsRun, DataHub } from './types/data-hub.js';
+import type { QualityCategory } from './data-hub/quality.js';
 import { rootLogger } from './logger.js';
 import { sanitizeHtml } from './escape.js';
 import { buildHtmlPage, buildErrorPage } from './html-factory.js';
@@ -45,6 +46,25 @@ export interface TraceabilityResult {
     totalTests: number;
     overallCoverage: number;
     timestamp: string;
+    /** EIXO C awareness: cross-referenced unified-model categories with provenance confidence + quality. */
+    awareness: TraceabilityAwareness;
+}
+
+/** Per-entity data-quality signal consumed from the unified model via typed accessors. */
+export interface TraceabilityAwarenessEntity {
+    id: string;
+    confidence: number | null;
+    valid: boolean;
+}
+
+export interface TraceabilityAwarenessCategory {
+    category: QualityCategory;
+    entities: TraceabilityAwarenessEntity[];
+}
+
+export interface TraceabilityAwareness {
+    categories: TraceabilityAwarenessCategory[];
+    minConfidence: number | null;
 }
 
 function extractLatestRunSnapshots(runs: MetricsRun[]): {
@@ -75,6 +95,50 @@ function groupItemsByEpic(items?: CoverageGapItem[]): Map<string, CoverageGapIte
         }
     }
     return itemsByEpic;
+}
+
+const AWARENESS_CATEGORIES: QualityCategory[] = ['pmIssues', 'pullRequests', 'failureRecords', 'securityFindings'];
+
+function _awarenessEntityIds(dataHub: DataHub, category: QualityCategory): string[] {
+    switch (category) {
+        case 'pmIssues':
+            return (dataHub.getPmIssues() ?? []).map((i) => String(i.key ?? i.id));
+        case 'pullRequests':
+            return (dataHub.getPullRequests() ?? []).map((p) => String(p.number));
+        case 'failureRecords':
+            return (dataHub.getFailureRecords() ?? []).map((f) => String(f.name));
+        case 'securityFindings':
+            return (dataHub.getSecurityFindings() ?? []).map((s) => String(s.title));
+        default:
+            return [];
+    }
+}
+
+function buildAwareness(dataHub: DataHub): TraceabilityAwareness {
+    const provenance = dataHub.getProvenance();
+    const categories: TraceabilityAwarenessCategory[] = [];
+    for (const category of AWARENESS_CATEGORIES) {
+        const ids = _awarenessEntityIds(dataHub, category);
+        if (ids.length === 0) continue;
+        const report = dataHub.getQuality(category);
+        const valid = report ? report.valid : true;
+        const confidence = provenance?.get(category)?.confidence ?? null;
+        categories.push({
+            category,
+            entities: ids.map((id) => ({ id, confidence, valid })),
+        });
+    }
+    let min = 1;
+    let has = false;
+    for (const c of categories) {
+        for (const e of c.entities) {
+            if (e.confidence != null && Number.isFinite(e.confidence)) {
+                min = Math.min(min, e.confidence);
+                has = true;
+            }
+        }
+    }
+    return { categories, minConfidence: has ? min : null };
 }
 
 function buildStoryNode(
@@ -182,6 +246,7 @@ export function buildTraceabilityMatrix(
             totalTests,
             overallCoverage,
             timestamp: new Date().toISOString(),
+            awareness: buildAwareness(dataHub),
         };
     } catch (err) {
         rootLogger.error('Failed to build traceability matrix: ' + (err instanceof Error ? err.message : String(err)));
@@ -191,6 +256,7 @@ export function buildTraceabilityMatrix(
             totalTests: 0,
             overallCoverage: 0,
             timestamp: new Date().toISOString(),
+            awareness: { categories: [], minConfidence: null },
         };
     }
 }
@@ -265,7 +331,36 @@ function buildEpicNodeHtml(node: TraceabilityNode): string {
     </div>`;
 }
 
+function buildAwarenessHtml(awareness: TraceabilityAwareness): string {
+    if (!awareness.categories.length) {
+        return '';
+    }
+    const rows = awareness.categories
+        .map((c) => {
+            const entities = c.entities
+                .map((e) => {
+                    const conf = e.confidence == null ? 'n/a' : Math.round(e.confidence * 100) + '%';
+                    const flag = !e.valid ? ' ⚠ invalid' : '';
+                    return `<li class="aware-entity">${sanitizeHtml(e.id)} <span class="aware-conf">${conf}</span>${flag}</li>`;
+                })
+                .join('');
+            return `<div class="aware-cat"><span class="aware-cat-name">${sanitizeHtml(c.category)}</span> (${c.entities.length})<ul>${entities}</ul></div>`;
+        })
+        .join('');
+    const minLine =
+        awareness.minConfidence == null
+            ? ''
+            : `<div class="aware-min">min confidence: ${Math.round(awareness.minConfidence * 100)}%</div>`;
+    return `<section class="awareness-panel"><h2>Cross-References &amp; Data Quality</h2>${rows}${minLine}</section>`;
+}
+
 const TRACEABILITY_CSS = `
+.awareness-panel{margin-top:20px;background:var(--color-surface-card);border-radius:8px;padding:14px 16px;box-shadow:0 1px 3px rgba(0,0,0,0.1)}
+.aware-cat{margin:8px 0}
+.aware-cat-name{font-weight:600;text-transform:capitalize}
+.aware-entity{font-size:0.8rem;color:var(--color-text-secondary);margin:2px 0}
+.aware-conf{color:var(--color-text-muted);font-size:0.72rem;margin-left:6px}
+.aware-min{margin-top:8px;font-size:0.78rem;color:var(--color-text-muted)}
 .tree{margin-top:16px}
 .epic-node{margin-bottom:12px;background:var(--color-surface-card);border-radius:8px;box-shadow:0 1px 3px rgba(0,0,0,0.1);overflow:hidden}
 .epic-header,.story-header{display:flex;align-items:center;gap:8px;padding:10px 14px;cursor:pointer;user-select:none;transition:background 0.15s;flex-wrap:wrap}
@@ -331,7 +426,8 @@ export function generateTraceabilityHtml(result: TraceabilityResult | null | und
             sanitizeHtml(result.timestamp) +
             '</div>' +
             summaryCards +
-            treeHtml;
+            treeHtml +
+            buildAwarenessHtml(result.awareness);
 
         return buildHtmlPage({
             title: pageTitle,
