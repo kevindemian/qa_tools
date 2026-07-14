@@ -24,6 +24,7 @@ import { validateJsonSchema, validateJsonArray, validateClassify } from './bench
 import { computeCoverageMetrics, type BenchmarkMetrics } from './benchmark-metrics.js';
 import { checkQualitySignals } from './quality-suggester.js';
 import type { QualitySignal } from './quality-suggester.js';
+import { calcRunPassRate } from './data-hub/compute/run-pass-rate.js';
 
 const PROMPT_DIR = import.meta.dirname + '/prompts';
 
@@ -180,7 +181,7 @@ function printResults(results: BenchmarkResult[]): void {
             ' | Failed: ' +
             failed +
             ' | Rate: ' +
-            Math.round((passed / total) * 100) +
+            calcRunPassRate({ passed, failed: total - passed }) +
             '%',
     );
     defaultOutput.print('');
@@ -271,22 +272,24 @@ export async function runBenchmark(): Promise<void> {
     // SW-15: Feed benchmark results into quality signal engine
     const total = results.length;
     const passCount = results.filter((r) => r.passed).length;
-    const passRate = total > 0 ? passCount / total : 1;
     const benchmarkSignals: QualitySignal[] = [];
-    if (passRate < 0.5) {
-        benchmarkSignals.push({
-            severity: 'critical',
-            source: 'benchmark',
-            message: `Benchmark pass rate ${(passRate * 100).toFixed(0)}% (${passCount}/${total}) abaixo do esperado.`,
-            suggestedAction: 'Verifique a qualidade das respostas do modelo ou considere trocar de provedor.',
-        });
-    } else if (passRate < 0.8) {
-        benchmarkSignals.push({
-            severity: 'warning',
-            source: 'benchmark',
-            message: `Benchmark pass rate ${(passRate * 100).toFixed(0)}% (${passCount}/${total}) abaixo do ideal.`,
-            suggestedAction: 'Monitore os resultados e considere revisar as configurações do modelo.',
-        });
+    if (total > 0) {
+        const passRate = calcRunPassRate({ passed: passCount, failed: total - passCount });
+        if (passRate < 50) {
+            benchmarkSignals.push({
+                severity: 'critical',
+                source: 'benchmark',
+                message: `Benchmark pass rate ${passRate.toFixed(0)}% (${passCount}/${total}) abaixo do esperado.`,
+                suggestedAction: 'Verifique a qualidade das respostas do modelo ou considere trocar de provedor.',
+            });
+        } else if (passRate < 80) {
+            benchmarkSignals.push({
+                severity: 'warning',
+                source: 'benchmark',
+                message: `Benchmark pass rate ${passRate.toFixed(0)}% (${passCount}/${total}) abaixo do ideal.`,
+                suggestedAction: 'Monitore os resultados e considere revisar as configurações do modelo.',
+            });
+        }
     }
     checkQualitySignals(benchmarkSignals);
 }
