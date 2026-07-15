@@ -61,3 +61,5 @@ qa-quarantine.json
 .qwen/
 *.zip
 .scannerwork/
+.eslintcache
+.prettier-cache/
