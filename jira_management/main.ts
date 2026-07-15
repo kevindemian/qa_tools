@@ -29,6 +29,8 @@ import { ensureDirs, registerCleanup } from '../shared/temp-dir.js';
 import { CATEGORY_IDS, CATEGORY_TITLES } from './menu-data.js';
 import { dispatchChoice, getAndResolveChoice } from './ui-helpers.js';
 import { maybeRunFirstRunWizard } from '../shared/first-run.js';
+import { setCurrentProject } from '../shared/project-context.js';
+import { parseProjectFlag } from '../shared/parse-project-flag.js';
 
 /** Type-safe wrapper around `updateState` that provides a `StateSchema` callback. */
 function updateStateTyped(fn: (state: StateSchema) => void): void {
@@ -334,6 +336,8 @@ async function main(): Promise<void> {
     if (process.stdout.isTTY && !_shouldNoClear()) {
         process.stdout.write('\x1b[2J\x1b[H\x1b[3J');
     }
+    const projectName = parseProjectFlag(process.argv);
+    if (projectName) setCurrentProject(projectName);
     const envResult = validateEnv();
     ensureDirs();
     registerCleanup();

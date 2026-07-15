@@ -4,6 +4,7 @@ import os from 'os';
 import { execFileSync } from 'child_process';
 import { rootLogger } from './logger.js';
 import { sanitizePath } from './path-utils.js';
+import Config from './config.js';
 
 const GIT_BIN = '/usr/bin/git';
 
@@ -128,8 +129,16 @@ export class FsStoreBackend implements StoreBackend {
     }
 }
 
+/**
+ * Find the nearest ancestor directory containing a `.git` folder, walking up from `startDir`.
+ * Quando `startDir` não é informado, usa (em ordem): `qaProjectDir` (Config, definido por `setCurrentProject`
+ * na Fase 2) → `QA_PROJECT_DIR` (env) → `process.cwd()`. Isso faz o DataHub store respeitar o projeto ativo (T7).
+ */
 export function detectProjectGitDir(startDir?: string): string | null {
-    let dir = startDir ? path.resolve(startDir) : process.cwd();
+    let dir = startDir
+        ? path.resolve(startDir)
+        : Config.get('qaProjectDir') || process.env['QA_PROJECT_DIR'] || process.cwd();
+    dir = path.resolve(dir);
     for (;;) {
         if (fs.existsSync(path.join(dir, '.git'))) return dir;
         const parent = path.dirname(dir);
@@ -138,13 +147,33 @@ export function detectProjectGitDir(startDir?: string): string | null {
     }
 }
 
+/**
+ * Detect the appropriate StoreBackend for persisting DataHub data.
+ *
+ * Precedência (T7 — store por projeto):
+ * - Se `projectDir` explícito fornecido: comporta-se como antes (git repo → GitStoreBackend no projeto;
+ *   senão cai no fallback XDG, preservando testes existentes).
+ * - Se nenhum `projectDir` e um projeto está ativo (`qaProjectDir`/`QA_PROJECT_DIR`): o store vive em
+ *   `<eff>/.qa-tools` (GitStoreBackend se `<eff>` for git repo, senão FsStoreBackend).
+ * - Caso contrário: fallback XDG global (comportamento legado, inalterado).
+ */
 export function detectStoreBackend(projectDir?: string): StoreBackend {
     const xdgBase = process.env['XDG_STATE_HOME'] || path.join(os.homedir(), '.local', 'state');
     const xdgDir = path.join(xdgBase, 'qa-tools');
 
     if (projectDir) {
-        if (fs.existsSync(path.join(projectDir, '.git'))) {
-            return new GitStoreBackend(projectDir, '.qa-tools');
+        const pd = path.resolve(projectDir);
+        if (fs.existsSync(path.join(pd, '.git'))) {
+            return new GitStoreBackend(pd, '.qa-tools');
+        }
+    } else {
+        const eff = Config.get('qaProjectDir') || process.env['QA_PROJECT_DIR'];
+        if (eff) {
+            const effDir = path.resolve(eff);
+            if (fs.existsSync(path.join(effDir, '.git'))) {
+                return new GitStoreBackend(effDir, '.qa-tools');
+            }
+            return new FsStoreBackend(path.join(effDir, '.qa-tools'));
         }
     }
 

@@ -57,11 +57,11 @@
     },
     "lint-staged": {
         "*.ts": [
-            "eslint --fix",
-            "prettier --write"
+            "eslint --fix --cache",
+            "prettier --write --cache"
         ],
         "*.js": [
-            "prettier --write"
+            "prettier --write --cache"
         ]
     },
     "devDependencies": {

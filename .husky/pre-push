@@ -1,9 +1,19 @@
 #!/usr/bin/env sh
-# Pre-push hook: --no-verify detection + CI checks + validation hook + security scan
+# Pre-push hook: --no-verify detection + CI-equivalent checks.
+#
+# Optimization (no safety loss): if pre-commit left a fresh attestation marker
+# recording the EXACT tree being pushed, the checks that pre-commit already ran
+# on that same content (typecheck, validation, check-updates, full test suite)
+# are skipped. Only the pre-push-unique gate (quality-check / unused-exports /
+# handlers) and the security log scan run in normal flow.
+#
+# If no matching marker exists (commit was --no-verify'd, amended, or rebased),
+# the FULL set runs as a backstop — every safety mechanism still executes.
 set -e
 
 PROJECT_ROOT="$(cd "$(dirname "$0")/.." && pwd)"
 AUDIT_LOG="$PROJECT_ROOT/.opencode/warden/audit.log"
+GITDIR="$(git rev-parse --git-dir)"
 
 # ─── Security: --no-verify detection ────────────────────────────────────
 if [ "${GIT_PUSH_NO_VERIFY:-0}" = "1" ]; then
@@ -34,43 +44,95 @@ BLOCK
   fi
 fi
 
-# ─── CI Checks ──────────────────────────────────────────────────────────
 echo "=== Pre-push checks ==="
 
-echo "--- Typecheck ---"
-npm run typecheck
+# ---- Parallel runner (backstop path) --------------------------------------
+PAR_LOGS="$(mktemp -d)"
+PAR_LABELS=""
 
-echo "--- Quality enforcement ---"
-npm run lint
+queue_job() {
+    local label="$1"; shift
+    PAR_LABELS="$PAR_LABELS $label"
+    (
+        "$@" > "$PAR_LOGS/$label.out" 2>&1
+        echo "$?" > "$PAR_LOGS/$label.rc"
+    ) &
+}
 
-# Dependency update check before push
-if [ -f scripts/check-updates.sh ]; then
-    echo "--- Dependency updates ---"
-    bash scripts/check-updates.sh
-fi
+run_parallel() {
+    wait || true
+    local fail=0
+    for label in $PAR_LABELS; do
+        local rc
+        rc="$(cat "$PAR_LOGS/$label.rc" 2>/dev/null || echo 1)"
+        if [ "$rc" != "0" ]; then
+            echo "::error::pre-push check '$label' failed (rc=$rc)"
+            echo "----- output -----"
+            cat "$PAR_LOGS/$label.out" 2>/dev/null
+            echo "------------------"
+            fail=1
+        fi
+    done
+    PAR_LABELS=""
+    return $fail
+}
 
-# Validation hook: self-test + staged diff check
-VALIDATION_HOOK="$HOME/.config/opencode/validation_hook.ts"
-if [ -f "$VALIDATION_HOOK" ]; then
-  echo "--- Validation hook (self-test) ---"
-  npx tsx "$VALIDATION_HOOK" --test
+MARKER="$GITDIR/validated-commit"
+HEAD_TREE="$(git rev-parse HEAD^{tree})"
 
-  echo "--- Validation hook (diff check) ---"
-  DIFF=$(git diff --cached)
-  if [ -n "$DIFF" ]; then
-    echo "$DIFF" | grep -v '^-[^-]' | npx tsx "$VALIDATION_HOOK" --check
-  else
-    echo "  (no staged changes to check)"
+if [ -f "$MARKER" ] && [ "$(cat "$MARKER" 2>/dev/null)" = "$HEAD_TREE" ]; then
+  echo "--- Reusing pre-commit attestation for tree $HEAD_TREE (skipping typecheck/validation/check-updates/tests) ---"
+
+  # Unique pre-push gate: unused-exports / handlers enforcement.
+  echo "--- Quality enforcement ---"
+  npm run lint
+
+  # Security log scan.
+  if [ -x "$PROJECT_ROOT/scripts/scan-sec-logs.sh" ]; then
+    echo "--- Security log scan ---"
+    "$PROJECT_ROOT/scripts/scan-sec-logs.sh" --quiet
   fi
-fi
+else
+  echo "--- No fresh attestation (commit bypassed/amended/rebased); running full backstop ---"
 
-echo "--- Tests ---"
-npm test
+  # Typecheck (duplicate of pre-commit, kept as backstop)
+  echo "--- Typecheck ---"
+  queue_job "typecheck" npm run typecheck
 
-# Security log scan
-if [ -x "$PROJECT_ROOT/scripts/scan-sec-logs.sh" ]; then
-  echo "--- Security log scan ---"
-  "$PROJECT_ROOT/scripts/scan-sec-logs.sh" --quiet
+  # Quality enforcement (unused-exports / handlers)
+  echo "--- Quality enforcement ---"
+  queue_job "quality" npm run lint
+
+  # Dependency update check (informational)
+  if [ -f scripts/check-updates.sh ]; then
+    echo "--- Dependency updates ---"
+    queue_job "check-updates" bash scripts/check-updates.sh
+  fi
+
+  # Validation hook: self-test + staged diff check
+  VALIDATION_HOOK="$HOME/.config/opencode/validation_hook.ts"
+  if [ -f "$VALIDATION_HOOK" ]; then
+    echo "--- Validation hook ---"
+    queue_job "validation" sh -c '
+      npx tsx "$HOME/.config/opencode/validation_hook.ts" --test
+      DIFF=$(git diff --cached)
+      if [ -n "$DIFF" ]; then
+        printf "%s\n" "$DIFF" | grep -v "^-[^-]" | npx tsx "$HOME/.config/opencode/validation_hook.ts" --check
+      fi
+    '
+  fi
+
+  # Full test suite (duplicate of CI; backstop only)
+  echo "--- Tests ---"
+  queue_job "tests" npm test
+
+  # Security log scan
+  if [ -x "$PROJECT_ROOT/scripts/scan-sec-logs.sh" ]; then
+    echo "--- Security log scan ---"
+    queue_job "sec-log-scan" "$PROJECT_ROOT/scripts/scan-sec-logs.sh" --quiet
+  fi
+
+  run_parallel || exit 1
 fi
 
 echo "=== All pre-push checks passed ==="
