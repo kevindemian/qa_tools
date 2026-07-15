@@ -88,10 +88,6 @@ export interface ValidationResult {
     response?: string;
     requiresHumanReview?: boolean;
 }
-interface ViolationEntry {
-    pattern: string;
-    severity: 'block' | 'review';
-}
 
 export interface Warning {
     section: string;
@@ -128,12 +124,6 @@ interface ExternalConfig {
     forbiddenConstructors?: string[];
     forbiddenImports?: string[];
     projectPatterns?: string[];
-}
-interface DiffLine {
-    lineNumber: number;
-    content: string;
-    type: 'added' | 'removed' | 'context';
-    originalLineNumber: number;
 }
 interface ValidationIssue {
     line: number;
@@ -298,20 +288,6 @@ function isNegated(text: string, matchIndex: number): boolean {
 // ============================================================================
 // VALIDAÇÃO COM CONTEXTO
 // ============================================================================
-
-function checkWithContext(text: string, patterns: RegExp[]): string[] {
-    const violations: string[] = [];
-    for (const pattern of patterns) {
-        const re = new RegExp(pattern.source, 'i');
-        const match = re.exec(text);
-        if (!match) continue;
-        const idx = match.index;
-        if (isNegated(text, idx)) continue;
-        if (isInCorrectiveContext(text, idx)) continue;
-        violations.push(pattern.source);
-    }
-    return violations;
-}
 
 // ============================================================================
 // CAMADA 1 — PADRÕES DE PROPOSIÇÃO
@@ -1460,19 +1436,19 @@ export default async () => ({
         output: { args?: { [key: string]: unknown } },
     ) => {
         if (input.tool === 'bash') {
-            const command = output?.args?.command;
+            const command = output?.args?.['command'];
             if (typeof command === 'string' && command.length > 0) {
                 validateHard(command);
             }
         }
         if (input.tool === 'write' || input.tool === 'edit') {
-            const content = input.tool === 'write' ? output?.args?.content : output?.args?.newString;
+            const content = input.tool === 'write' ? output?.args?.['content'] : output?.args?.['newString'];
             if (typeof content === 'string' && content.length > 0) {
                 validateHard(content);
             }
         }
         if (input.tool === 'read' || input.tool === 'glob' || input.tool === 'grep') {
-            const p = output?.args?.filePath ?? output?.args?.path ?? output?.args?.pattern;
+            const p = output?.args?.['filePath'] ?? output?.args?.['path'] ?? output?.args?.['pattern'];
             if (typeof p === 'string' && p.length > 0) {
                 validatePath(p);
             }
@@ -1582,54 +1558,8 @@ function readStdinSync(): string {
 }
 
 // ============================================================================
-// PARSE DE DIFF GIT
+// VALIDADOR POR EXTENSÃO
 // ============================================================================
-
-function parseGitDiff(diff: string): DiffLine[] {
-    const lines: DiffLine[] = [];
-    const rawLines = diff.split('\n');
-    let cur = 0;
-    let inHunk = false;
-    for (let n = 0; n < rawLines.length; n++) {
-        const raw = rawLines[n];
-        if (raw == null) continue;
-        if (raw.startsWith('@@')) {
-            inHunk = true;
-            const m = raw.match(/@@ -\d+(?:,\d+)? \+(\d+)(?:,\d+)? @@/);
-            if (m) cur = parseInt(m[1] as string, 10) - 1;
-            lines.push({ lineNumber: n, content: raw, type: 'context', originalLineNumber: 0 });
-            continue;
-        }
-        if (!inHunk) {
-            if (raw.startsWith('+++') || raw.startsWith('---'))
-                lines.push({ lineNumber: n, content: raw, type: 'context', originalLineNumber: 0 });
-            continue;
-        }
-        if (raw.startsWith('+') && !raw.startsWith('+++'))
-            lines.push({ lineNumber: n, content: raw.substring(1), type: 'added', originalLineNumber: ++cur });
-        else if (raw.startsWith('-') && !raw.startsWith('---'))
-            lines.push({ lineNumber: n, content: raw.substring(1), type: 'removed', originalLineNumber: 0 });
-        else if (raw.startsWith(' '))
-            lines.push({ lineNumber: n, content: raw.substring(1), type: 'context', originalLineNumber: ++cur });
-    }
-    return lines;
-}
-
-function buildOriginalLineIndex(lines: DiffLine[]): Map<number, number> {
-    const idx = new Map<number, number>();
-    for (let i = 0; i < lines.length; i++) {
-        const l = lines[i];
-        if (l && l.originalLineNumber > 0) idx.set(l.originalLineNumber, i);
-    }
-    return idx;
-}
-
-function getContextWindow(lines: DiffLine[], i: number, w = 3): string {
-    return lines
-        .slice(Math.max(0, i - w), Math.min(lines.length, i + w + 1))
-        .map((l) => l.content)
-        .join('\n');
-}
 
 /**
  * Mapeia extensão de arquivo → validador de linha de código.
@@ -1680,7 +1610,7 @@ function isCodeValidator(path: string): ((line: string) => string[]) | null {
  * arquivos de código; documentação (.md etc.) é ignorada. Foco em bypass/supressão
  * reais no código, não em texto.
  */
-function runCheck(diff: string, quiet = false): CheckResult {
+function runCheck(diff: string): CheckResult {
     const t0 = Date.now();
     const issues: ValidationIssue[] = [];
     let currentFile = '';
@@ -1720,7 +1650,7 @@ function runCheck(diff: string, quiet = false): CheckResult {
     };
 }
 
-async function runCheckCommitMsg(quiet = false): Promise<CheckResult> {
+async function runCheckCommitMsg(): Promise<CheckResult> {
     const p = join(process.cwd(), '.git', 'COMMIT_EDITMSG');
     if (!existsSync(p))
         return { valid: true, issues: [], requiresReview: false, stats: { linesValidated: 0, timeMs: 0 } };
@@ -1793,8 +1723,8 @@ async function runHook(): Promise<void> {
                 process.exit(1);
             }
         }
-        const dr = runCheck(diff, quiet);
-        const cr = await runCheckCommitMsg(quiet);
+        const dr = runCheck(diff);
+        const cr = await runCheckCommitMsg();
         const all = [...dr.issues, ...cr.issues];
         const hasBlock = all.some((i) => i.severity === 'block');
         const hasReview = all.some((i) => i.severity === 'review');
