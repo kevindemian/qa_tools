@@ -5,6 +5,7 @@ import { mkdirSync, writeFileSync, existsSync, rmSync } from 'fs';
 import Config from './config.js';
 import { formatDateISO } from './date-utils.js';
 import { rootLogger } from './logger.js';
+import { getCurrentProjectDir } from './project-context.js';
 
 const PROJECT_ROOT = resolve(import.meta.dirname, '..');
 
@@ -19,16 +20,49 @@ function resolveEnvOrPath(envVar: string, defaultValue: string): string {
     return Config.get(envVar) ? resolve(Config.get(envVar)) : join(PROJECT_ROOT, defaultValue);
 }
 
-/** Absolute path to the reports directory (overridable via `QA_TOOLS_REPORTS_DIR`). */
+/**
+ * Resolve `<projectDir>/.qa-tools/<sub>` quando um projeto está ativo (selecionado na Fase 2).
+ * Retorna `undefined` em modo legado (sem projeto) para que o caller aplique seu fallback.
+ * Safeguard: ignora `qaProjectDir` não-absoluto (nunca deve ocorrer — validado por `setCurrentProject`).
+ */
+function projectScopedDir(sub: string): string | undefined {
+    const d = getCurrentProjectDir();
+    if (!d || !path.isAbsolute(d)) return undefined;
+    return join(d, '.qa-tools', sub);
+}
+
+/**
+ * Absolute path to the reports directory.
+ * Precedência (alternativa tecnicamente superior, Regra 25 — zero silenciamento): o env-override
+ * explícito do operador (`QA_TOOLS_REPORTS_DIR`) vence o diretório do projeto ativo, que vence o
+ * default `PROJECT_ROOT/reports`. Isso preserva escolha explícita do operador sem regressão silenciosa.
+ */
 export function reportsDir(): string {
-    return resolveEnvOrPath('QA_TOOLS_REPORTS_DIR', 'reports');
+    const env = Config.get('QA_TOOLS_REPORTS_DIR');
+    if (env) return resolve(env);
+    return projectScopedDir('reports') ?? join(PROJECT_ROOT, 'reports');
 }
 
 /** @internal Not part of public API. Logging uses `rootLogger` directly. */
-/** Absolute path to the logs directory (overridable via `LOG_DIR` or `QA_TOOLS_LOGS_DIR`). */
+/**
+ * Absolute path to the logs directory.
+ * Precedência: env-override (`QA_TOOLS_LOGS_DIR`) vence o projeto ativo, que vence `LOG_DIR`/`PROJECT_ROOT/logs`.
+ */
 export function logsDir(): string {
-    if (Config.get('QA_TOOLS_LOGS_DIR')) return resolve(Config.get('QA_TOOLS_LOGS_DIR'));
-    return resolveEnvOrPath('LOG_DIR', 'logs');
+    const env = Config.get('QA_TOOLS_LOGS_DIR');
+    if (env) return resolve(env);
+    return projectScopedDir('logs') ?? resolveEnvOrPath('LOG_DIR', 'logs');
+}
+
+/**
+ * Absolute path to the artifacts directory (CI/test artifacts).
+ * Precedência: env-override (`QA_TOOLS_ARTIFACTS_DIR`) vence o projeto ativo (`<proj>/.qa-tools/artifacts`),
+ * que vence o default `PROJECT_ROOT/artifacts`.
+ */
+export function artifactsDir(): string {
+    const env = Config.get('QA_TOOLS_ARTIFACTS_DIR');
+    if (env) return resolve(env);
+    return projectScopedDir('artifacts') ?? join(PROJECT_ROOT, 'artifacts');
 }
 
 function tempDir(): string {
