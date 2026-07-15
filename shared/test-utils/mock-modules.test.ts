@@ -154,7 +154,6 @@ describe('Mock Modules', () => {
             expect(mock).toHaveProperty('pushHistory');
             expect(mock).toHaveProperty('printSessionSummary');
             expect(mock).toHaveProperty('createManagerForProject');
-            expect(mock).toHaveProperty('setCurrentProjectName');
             expect(mock).toHaveProperty('setProjectId');
             expect(mock).toHaveProperty('setManager');
             expect(mock).toHaveProperty('getProjects');
@@ -163,14 +162,13 @@ describe('Mock Modules', () => {
         it('has default values', () => {
             const mock = mockSessionStateModule();
 
-            expect(mock.currentProjectName).toBe('');
             expect(mock.currentProvider).toBe('gitlab');
         });
 
         it('supports overrides', () => {
-            const mock = mockSessionStateModule({ currentProjectName: 'custom' });
+            const mock = mockSessionStateModule({ currentProvider: 'custom' });
 
-            expect(mock.currentProjectName).toBe('custom');
+            expect(mock.currentProvider).toBe('custom');
         });
     });
 

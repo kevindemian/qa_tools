@@ -34,15 +34,19 @@ const mockManager = vi.hoisted(() => ({
     getDiff: vi.fn(),
 }));
 
+vi.mock('../shared/project-context', () => ({
+    getCurrentProject: vi.fn(() => 'proj1'),
+    setCurrentProject: vi.fn(),
+    clearCurrentProject: vi.fn(),
+}));
+
 vi.mock('./session-state', () => ({
     pushHistory: vi.fn(),
     printSessionSummary: vi.fn(),
     createManagerForProject: vi.fn(() => mockManager),
-    setCurrentProjectName: vi.fn(),
     setProjectId: vi.fn(),
     setManager: vi.fn(),
     getProjects: vi.fn(() => ({})),
-    currentProjectName: '',
     currentProvider: 'gitlab',
 }));
 
@@ -64,6 +68,14 @@ vi.mock('./llm-pipeline', () => ({ offerPipelineFailureAnalysis: vi.fn() }));
 vi.mock('./test-results', () => ({ collectTestResults: vi.fn(() => null) }));
 
 vi.mock('../shared/flakiness-dashboard', () => ({ generateFlakinessHtml: vi.fn(() => '<html>') }));
+
+vi.mock('../shared/data-hub/global-hub.js', () => ({
+    getDataHub: vi.fn(() => ({
+        computed: { metricsRuns: [] },
+        raw: { failureClassifications: [] },
+    })),
+    setDataHub: vi.fn(),
+}));
 
 vi.mock('fs', () => ({
     default: { writeFileSync: vi.fn(), mkdirSync: vi.fn(), existsSync: vi.fn(() => false) },

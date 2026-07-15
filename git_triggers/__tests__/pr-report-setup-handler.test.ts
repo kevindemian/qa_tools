@@ -11,7 +11,7 @@ const mocks = vi.hoisted(() => ({
     mockTitle: vi.fn(),
     mockDivider: vi.fn(),
     mockPushHistory: vi.fn(),
-    mockCurrentProjectName: 'test-project',
+    mockGetCurrentProject: vi.fn(() => 'test-project'),
     mockExistsSync: vi.fn(),
     mockReadFileSync: vi.fn(),
     mockWriteFileSync: vi.fn(),
@@ -37,9 +37,12 @@ vi.mock('../../shared/prompt.js', () => ({
 
 vi.mock('../session-state.js', () => ({
     pushHistory: mocks.mockPushHistory,
-    get currentProjectName() {
-        return mocks.mockCurrentProjectName;
-    },
+}));
+
+vi.mock('../../shared/project-context.js', () => ({
+    getCurrentProject: mocks.mockGetCurrentProject,
+    setCurrentProject: vi.fn(),
+    clearCurrentProject: vi.fn(),
 }));
 
 vi.mock('node:fs', () => ({
@@ -65,12 +68,12 @@ import { handlePrReportReconfig } from '../pr-report-setup-handler.js';
 describe('Pr Report Setup Handler', () => {
     beforeEach(() => {
         vi.clearAllMocks();
-        mocks.mockCurrentProjectName = 'test-project';
+        mocks.mockGetCurrentProject.mockReturnValue('test-project');
     });
 
     describe('HandlePrReportReconfig', () => {
         it('shows warning when no project is selected', () => {
-            mocks.mockCurrentProjectName = '';
+            mocks.mockGetCurrentProject.mockReturnValue('');
 
             handlePrReportReconfig();
 

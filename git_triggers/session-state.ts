@@ -1,14 +1,11 @@
 /** Session state — persist/load session context as JSON for the git_triggers lifecycle. */
-import { formatErr } from '../shared/errors.js';
-import fs from 'fs';
-import path from 'path';
 import Config from '../shared/config.js';
 import { rootLogger } from '../shared/logger.js';
 import { SessionContext } from '../shared/session-context.js';
 import { load as loadState, update as updateState } from '../shared/state.js';
 import { printSessionSummary as sharedPrintSessionSummary } from '../shared/cli_base.js';
 import { providerLabel as _providerLabel } from './ui-helpers.js';
-import { error, print, title, warn } from '../shared/prompt.js';
+import { print, title, warn } from '../shared/prompt.js';
 import { palette } from '../shared/palette.js';
 import type { GitProvider, JsonObject, StateContainer } from '../shared/types.js';
 import type { DataHub } from '../shared/types/data-hub.js';
@@ -20,17 +17,13 @@ import {
 } from '../shared/data-hub/global-hub.js';
 import GitLabManager from './gitlab_manager.js';
 import GitHubManager from './github_manager.js';
-
-interface ProviderConfig {
-    provider: string;
-    repo: string;
-}
+import { getCurrentProject } from '../shared/project-context.js';
+import { listProjects, getProject } from '../shared/project-registry.js';
 
 export const sessionLog = rootLogger.child({ session: 'gitlab' });
 export const sessionContext = new SessionContext();
 
 export let projectId: string;
-export let currentProjectName = '';
 export let currentProvider: 'gitlab' | 'github' = 'gitlab';
 export let isBusy = false;
 export let manager: GitProvider | null = null;
@@ -54,21 +47,20 @@ export function isDataHubInitialized(): boolean {
  * Delegates to global-hub.ensureDataHub with freshness checking.
  */
 export async function ensureDataHub(): Promise<DataHub | undefined> {
+    const activeProject = getCurrentProject() ?? '';
     if (_isGlobalHubInitialized()) {
         const cached = _getGlobalHub();
         // Cached hub present: return it immediately when we lack the context to refresh.
-        if (!manager || !currentProjectName) return cached;
+        if (!manager || !activeProject) return cached;
         // Gap 4 (G4.5): refresh incrementally (no full refetch) when stale.
         const activeManager = manager;
-        const activeProject = currentProjectName;
         return _ensureGlobalHub(async () => {
             const { getOrFetchDataHub } = await import('../shared/ci-data.js');
             return getOrFetchDataHub(activeManager, activeProject, cached);
         });
     }
-    if (!manager || !currentProjectName) return undefined;
+    if (!manager || !activeProject) return undefined;
     const activeManager = manager;
-    const activeProject = currentProjectName;
     return _ensureGlobalHub(async () => {
         const { getOrFetchDataHub } = await import('../shared/ci-data.js');
         return getOrFetchDataHub(activeManager, activeProject);
@@ -131,9 +123,6 @@ export const gitlabBaseUrl: string = Config.get('gitBaseUrl') || '';
 export function setCurrentProvider(v: 'gitlab' | 'github'): void {
     currentProvider = v;
 }
-export function setCurrentProjectName(v: string): void {
-    currentProjectName = v;
-}
 export function setProjectId(v: string): void {
     projectId = v;
 }
@@ -158,62 +147,25 @@ export class MissingTokenError extends Error {
     }
 }
 
-const PROVIDERS_PATH = path.resolve(import.meta.dirname, '../config/providers.json');
-const PROJECTS_PATH = path.resolve(import.meta.dirname, '../config/projects.json');
-
-let _providersConfig: Record<string, ProviderConfig> | undefined;
-let _projects: Record<string, string> | undefined;
-
-function loadProvidersConfig(): Record<string, ProviderConfig> {
-    if (_providersConfig) return _providersConfig;
-    try {
-        const parsed: Record<string, ProviderConfig> = JSON.parse(fs.readFileSync(PROVIDERS_PATH, 'utf8')) as Record<
-            string,
-            ProviderConfig
-        >;
-        _providersConfig = parsed;
-    } catch (err: unknown) {
-        rootLogger.warn('Falha ao carregar providers.json: ' + formatErr(err) + '. Usando GitLab como padrao.');
-        _providersConfig = {};
-    }
-    return _providersConfig;
-}
-
-function loadProjects(): Record<string, string> {
-    if (_projects) return _projects;
-    try {
-        _projects = JSON.parse(fs.readFileSync(PROJECTS_PATH, 'utf8')) as Record<string, string>;
-    } catch (err: unknown) {
-        rootLogger.error(`Falha ao carregar configuração de projetos de "${PROJECTS_PATH}": ${formatErr(err)}`, {
-            configPath: PROJECTS_PATH,
-        });
-        error(`Configuração inválida em "${PROJECTS_PATH}". Verifique o JSON.`);
-        _projects = {};
-    }
-    return _projects;
-}
-
+/** List all projects (name → projectId) from the single source of truth: the XDG registry. */
 export function getProjects(): Record<string, string> {
-    return loadProjects();
+    const projects = listProjects();
+    const result: Record<string, string> = {};
+    for (const p of projects) result[p.name] = p.projectId ?? '';
+    return result;
 }
 
+/** Resolve the CI provider for a project from the registry (single source of truth). */
 export function getProviderForProject(projectName: string): 'gitlab' | 'github' {
-    const providers = loadProvidersConfig();
-    const entries = Object.entries(providers);
-    const entry = entries.find(([k]) => k === projectName);
-    const cfg = entry?.[1];
-    return cfg?.provider === 'github' ? 'github' : 'gitlab';
+    const entry = getProject(projectName);
+    return entry?.provider === 'github' ? 'github' : 'gitlab';
 }
 
 export function createManagerForProject(projectName: string, id: string): GitProvider {
     const provider = getProviderForProject(projectName);
     currentProvider = provider;
     if (provider === 'github') {
-        const providers = loadProvidersConfig();
-        const entries = Object.entries(providers);
-        const entry = entries.find(([k]) => k === projectName);
-        const cfg = entry?.[1];
-        const repo = cfg?.repo ?? id;
+        const repo = getProject(projectName)?.projectId ?? id;
         const ghToken = Config.get('githubToken') || Config.get('gitToken') || '';
         if (!ghToken) throw new MissingTokenError('GitHub', 'GITHUB_TOKEN ou GIT_TOKEN');
         const ghApiUrl = Config.get('githubApiUrl') || 'https://api.github.com';
@@ -256,17 +208,8 @@ export function providerLabel(): string {
     return _providerLabel(currentProvider);
 }
 
-/** Clear the cached projects/config so the next `getProjects()` call re-reads from disk.
- *  Used after the setup wizard creates new projects. */
-export function clearProjectCache(): void {
-    _providersConfig = undefined;
-    _projects = undefined;
-}
-
 /** Reset internal caches and mutable state for test isolation. @internal */
 export function _resetForTest(): void {
-    clearProjectCache();
-    currentProjectName = '';
     currentProvider = 'gitlab';
     isBusy = false;
     manager = null;
@@ -275,7 +218,7 @@ export function _resetForTest(): void {
 }
 
 export function displayProjects(names?: string[], lastProject?: string): void {
-    const projs = loadProjects();
+    const projs = getProjects();
     title('Projetos');
     const keys = names ?? Object.keys(projs).sort((a, b) => a.localeCompare(b));
     keys.forEach((name, i) => {
@@ -308,16 +251,17 @@ export async function displayRecentPipelines(m: GitProvider): Promise<void> {
             });
             print('');
         }
-        if (currentProjectName) {
+        const activeProject = getCurrentProject() ?? '';
+        if (activeProject) {
             const hub = getDataHub();
             const flakinessEntries = hub.computed.flakinessEntries ?? [];
-            const highFlakiness = flakinessEntries.filter((f) => f.project === currentProjectName && f.rate > 0.3);
+            const highFlakiness = flakinessEntries.filter((f) => f.project === activeProject && f.rate > 0.3);
             if (highFlakiness.length > 0) {
-                warn('  ⚠ ' + highFlakiness.length + ' teste(s) com flakiness >30% em ' + currentProjectName);
+                warn('  ⚠ ' + highFlakiness.length + ' teste(s) com flakiness >30% em ' + activeProject);
             }
         }
     } catch (err) {
-        rootLogger.warn('Flakiness check failed: ' + formatErr(err));
+        rootLogger.warn('Flakiness check failed: ' + (err instanceof Error ? err.message : String(err)));
     }
 }
 

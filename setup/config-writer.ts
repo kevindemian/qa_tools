@@ -53,12 +53,6 @@ function makeProjectEntry(ctx: ConfigCtx): unknown {
     return ctx.gitProvider === 'github' ? ctx.repoName : ctx.projectName;
 }
 
-function makeProviderEntry(ctx: ConfigCtx): unknown {
-    return ctx.gitProvider === 'github'
-        ? { provider: 'github', repo: ctx.repoOwner + '/' + ctx.repoName }
-        : { provider: 'gitlab' };
-}
-
 function ensureConfigDir(): string {
     const configDir = path.resolve(process.cwd(), 'config');
     fs.mkdirSync(path.resolve(configDir), { recursive: true });
@@ -70,7 +64,6 @@ export function writeProjectsConfig(ctx: ConfigCtx): WriterResult {
     const configDir = ensureConfigDir();
 
     writeJsonConfig(path.join(configDir, 'projects.json'), ctx, makeProjectEntry, result);
-    writeJsonConfig(path.join(configDir, 'providers.json'), ctx, makeProviderEntry, result);
 
     return result;
 }

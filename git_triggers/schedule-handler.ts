@@ -33,18 +33,17 @@ import { runQualityGate, formatQualityGateText } from '../shared/quality-gate.js
 import { writeReport } from '../shared/temp-dir.js';
 import {
     currentProvider,
-    currentProjectName,
     pushHistory,
     displayProjects,
     displayRecentPipelines,
     createManagerForProject,
     getProviderForProject,
-    setCurrentProjectName,
     setProjectId,
     setManager,
     getProjects,
     getDataHub,
 } from './session-state.js';
+import { getCurrentProject, setCurrentProject } from '../shared/project-context.js';
 import { update as updateState } from '../shared/state.js';
 
 export async function handleListSchedules(m: GitProvider): Promise<void> {
@@ -100,7 +99,7 @@ export async function handleChangeProject(names: string[]): Promise<void> {
     const newIdx = parseInt(newChoice, 10);
     if (!isNaN(newIdx) && newIdx >= 1 && newIdx <= names.length) {
         const newName = names[newIdx - 1] as string;
-        setCurrentProjectName(newName);
+        setCurrentProject(newName);
         setProjectId(Reflect.get(getProjects(), newName));
         const newManager = createManagerForProject(newName, Reflect.get(getProjects(), newName));
         setManager(newManager);
@@ -122,10 +121,12 @@ interface GitFallbackResult {
 
 function resolveGitFallback(): GitFallbackResult | null {
     info('Sem dados de pipeline — tentando fallback para git history...');
-    const gitRuns = generateGitMetricsRuns({ projectName: currentProjectName });
+    const gitRuns = generateGitMetricsRuns({ projectName: getCurrentProject() ?? '' });
     const gitError = getLastGitLogError();
     if (gitRuns.length >= 2) {
-        const failureClassifications = generateGitFailureClassifications({ projectName: currentProjectName });
+        const failureClassifications = generateGitFailureClassifications({
+            projectName: getCurrentProject() ?? '',
+        });
         info('Usando ' + gitRuns.length + ' runs derivados do git history.');
         return { projectRuns: gitRuns, failureClassifications };
     }
@@ -149,12 +150,12 @@ function extractTrendCategories(trends: { categories: Record<string, number> }[]
 
 export function generateWeeklyQualityReport(): void {
     try {
-        if (!currentProjectName) {
+        if (!getCurrentProject()) {
             warn('Nenhum projeto selecionado.');
             return;
         }
         const hub = getDataHub();
-        let projectRuns = (hub.computed.metricsRuns ?? []).filter((r) => r.project === currentProjectName);
+        let projectRuns = (hub.computed.metricsRuns ?? []).filter((r) => r.project === (getCurrentProject() ?? ''));
         let failureClassifications = hub.raw.failureClassifications ?? [];
 
         if (projectRuns.length < 2) {
@@ -250,7 +251,7 @@ export function generateWeeklyQualityReport(): void {
         const sections: string[] = [];
         const qgDataHub = getDataHub();
         const qualityGate = runQualityGate({
-            project: currentProjectName,
+            project: getCurrentProject() ?? '',
             dataHub: qgDataHub,
         });
         sections.push('<h2>Quality Gate</h2><pre>' + formatQualityGateText(qualityGate) + '</pre>');
@@ -272,19 +273,19 @@ export function generateWeeklyQualityReport(): void {
 
         const html =
             '<!DOCTYPE html><html lang="en"><head><meta charset="UTF-8"><title>Weekly Quality Report — ' +
-            currentProjectName +
+            (getCurrentProject() ?? '') +
             '</title><style>body{font-family:system-ui,sans-serif;max-width:1200px;margin:0 auto;padding:2rem}section{border:1px solid #e5e7eb;border-radius:8px;padding:1.5rem;margin-bottom:1.5rem}</style></head><body>' +
             '<h1>Weekly Quality Report — ' +
-            currentProjectName +
+            (getCurrentProject() ?? '') +
             '</h1><p style="color:#6b7280">Generated: ' +
             new Date().toISOString().slice(0, 10) +
             '</p>' +
             sections.join('') +
             '</body></html>';
 
-        const outPath = writeReport('weekly-quality-' + currentProjectName + '.html', html);
+        const outPath = writeReport('weekly-quality-' + (getCurrentProject() ?? '') + '.html', html);
         success('Weekly quality report saved: ' + outPath);
-        pushHistory('weekly-quality-report', currentProjectName, 'ok');
+        pushHistory('weekly-quality-report', getCurrentProject() ?? '', 'ok');
     } catch (err) {
         printError('Falha ao gerar relatório semanal de qualidade', err);
     }
@@ -292,27 +293,31 @@ export function generateWeeklyQualityReport(): void {
 
 export async function handleFlakinessDashboard(): Promise<void> {
     try {
-        if (!currentProjectName) {
+        if (!getCurrentProject()) {
             warn('Nenhum projeto selecionado.');
             return;
         }
         const hub = getDataHub();
-        const projectRuns = (hub.computed.metricsRuns ?? []).filter((r) => r.project === currentProjectName);
+        const projectRuns = (hub.computed.metricsRuns ?? []).filter((r) => r.project === (getCurrentProject() ?? ''));
         if (projectRuns.length < 2) {
-            warn('Menos de 2 execuções registradas para ' + currentProjectName + '. Execute pipelines primeiro.');
+            warn(
+                'Menos de 2 execuções registradas para ' +
+                    (getCurrentProject() ?? '') +
+                    '. Execute pipelines primeiro.',
+            );
             return;
         }
         const flaky = calcFlakinessEntries(projectRuns, 2);
         if (flaky.length === 0) {
-            info('Nenhum teste flaky detectado em ' + currentProjectName + '.');
+            info('Nenhum teste flaky detectado em ' + (getCurrentProject() ?? '') + '.');
             return;
         }
-        const html = generateFlakinessHtml(flaky, 'Flakiness — ' + currentProjectName);
-        const outPath = writeReport('flakiness-' + currentProjectName + '.html', html);
+        const html = generateFlakinessHtml(flaky, 'Flakiness — ' + (getCurrentProject() ?? ''));
+        const outPath = writeReport('flakiness-' + (getCurrentProject() ?? '') + '.html', html);
         await openWithFallback(outPath, 'Dashboard de flaky', info);
         pushHistory(
             'flakiness',
-            currentProjectName + ' (' + flaky.filter((f: { rate: number }) => f.rate > 0.3).length + ' >30%)',
+            (getCurrentProject() ?? '') + ' (' + flaky.filter((f: { rate: number }) => f.rate > 0.3).length + ' >30%)',
             'ok',
         );
     } catch (err) {

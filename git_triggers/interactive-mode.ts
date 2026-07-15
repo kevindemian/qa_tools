@@ -5,6 +5,7 @@
 import { pushBreadcrumb, clearBreadcrumbs } from '../shared/breadcrumbs.js';
 import { createValidateEnv, offerEnvSetup, setupSigint } from '../shared/cli_base.js';
 import Config from '../shared/config.js';
+import { getCurrentProject, setCurrentProject } from '../shared/project-context.js';
 import { showSplash } from '../shared/splash.js';
 import { calcFlakinessEntries } from '../shared/data-hub/compute/flakiness-entries.js';
 import { calcTestDurationMap } from '../shared/data-hub/compute/test-duration-map.js';
@@ -40,13 +41,10 @@ import {
     getProviderForProject,
     createManagerForProject,
     pushHistory,
-    setCurrentProjectName,
     setProjectId,
     setManager,
     projectId,
     getProjects,
-    clearProjectCache,
-    currentProjectName,
     ensureDataHub,
     getDataHub,
     isDataHubInitialized,
@@ -155,6 +153,16 @@ function buildContextLine(): string {
 }
 
 function _selectProject(): { projectName: string | null; names: string[] } {
+    const envProject = process.env['QA_CURRENT_PROJECT'];
+    const activeProject = getCurrentProject();
+    if (envProject && envProject.length > 0 && activeProject) {
+        setProjectId(Reflect.get(getProjects(), activeProject));
+        updateState((s: StateContainer) => {
+            s['lastProject'] = activeProject;
+        });
+        success('Projeto selecionado (env): ' + activeProject + ' (' + getProviderForProject(activeProject) + ')');
+        return { projectName: activeProject, names: [] };
+    }
     const state = loadState();
     const allProjects = getProjects();
     const names = Object.keys(allProjects).sort((a, b) => a.localeCompare(b));
@@ -170,7 +178,7 @@ function _selectProject(): { projectName: string | null; names: string[] } {
         return { projectName: null, names };
     }
     const projectName = names[firstIdx - 1] as string;
-    setCurrentProjectName(projectName);
+    setCurrentProject(projectName);
     setProjectId(Reflect.get(allProjects, projectName));
     updateState((s: StateContainer) => {
         s['lastProject'] = projectName;
@@ -246,7 +254,7 @@ function withErrorHandling(
  * Handler for run comparison — compares the two most recent runs for the current project.
  */
 async function handleRunComparison(): Promise<boolean> {
-    const project = currentProjectName;
+    const project = getCurrentProject() ?? '';
     if (!project) {
         warn('Nenhum projeto selecionado.');
         return false;
@@ -335,20 +343,22 @@ function _loadProjectRunsHelper(): {
     failureClassifications: import('../shared/types/data-hub.js').FailureClassification[];
     usingGitFallback: boolean;
 } | null {
-    if (!currentProjectName) {
+    if (!getCurrentProject()) {
         warn('Nenhum projeto selecionado.');
         return null;
     }
     const hub = getDataHub();
-    let projectRuns = (hub.computed.metricsRuns ?? []).filter((r) => r.project === currentProjectName);
+    let projectRuns = (hub.computed.metricsRuns ?? []).filter((r) => r.project === (getCurrentProject() ?? ''));
     let failureClassifications = hub.raw.failureClassifications ?? [];
     let usingGitFallback = false;
     if (projectRuns.length < 2) {
-        const gitRuns = generateGitMetricsRuns({ projectName: currentProjectName });
+        const gitRuns = generateGitMetricsRuns({ projectName: getCurrentProject() ?? '' });
         const gitError = getLastGitLogError();
         if (gitRuns.length >= 2) {
             projectRuns = gitRuns;
-            failureClassifications = generateGitFailureClassifications({ projectName: currentProjectName });
+            failureClassifications = generateGitFailureClassifications({
+                projectName: getCurrentProject() ?? '',
+            });
             usingGitFallback = true;
         } else if (gitError) {
             warn('Não foi possível obter o git history. ' + gitError + ' Execute pipelines para gerar dados primeiro.');
@@ -362,7 +372,7 @@ function _loadProjectRunsHelper(): {
 }
 
 async function _generateAndOpenDashboard(html: string, suffix: string, label: string): Promise<void> {
-    const outPath = writeReport('dashboard-' + suffix + '-' + currentProjectName + '.html', html);
+    const outPath = writeReport('dashboard-' + suffix + '-' + (getCurrentProject() ?? '') + '.html', html);
     await openWithFallback(outPath, label, info);
 }
 
@@ -543,18 +553,18 @@ async function _dashboardRequirementScore(): Promise<void> {
 }
 
 async function _dashboardQualityGate(): Promise<void> {
-    if (!currentProjectName) {
+    if (!getCurrentProject()) {
         warn('Nenhum projeto selecionado.');
         return;
     }
     const dataHub = getDataHub();
-    const qualityGate = runQualityGate({ project: currentProjectName, dataHub });
+    const qualityGate = runQualityGate({ project: getCurrentProject() ?? '', dataHub });
     const html = '<html><body><h1>Quality Gate</h1><pre>' + formatQualityGateText(qualityGate) + '</pre></body></html>';
     await _generateAndOpenDashboard(html, 'quality-gate', 'Quality Gate');
 }
 
 async function _dashboardCoverageGap(): Promise<void> {
-    if (!currentProjectName) {
+    if (!getCurrentProject()) {
         warn('Nenhum projeto selecionado.');
         return;
     }
@@ -574,7 +584,7 @@ async function _dashboardCoverageGap(): Promise<void> {
     );
     const result = await analyzeCoverageGaps(jiraResource, projectKey);
     await _generateAndOpenDashboard(
-        generateCoverageGapHtml(result, 'Coverage Gap — ' + currentProjectName),
+        generateCoverageGapHtml(result, 'Coverage Gap — ' + (getCurrentProject() ?? '')),
         'coverage-gap',
         'Coverage Gap',
     );
@@ -609,7 +619,7 @@ async function _showDataHubSummary(): Promise<void> {
 
         const lines = [
             '',
-            '  === CI Data Hub — ' + currentProjectName + ' ===',
+            '  === CI Data Hub — ' + (getCurrentProject() ?? '') + ' ===',
             '',
             '  Provider:          ' + hub.provider,
             '  Repositório:       ' + hub.repo,
@@ -705,7 +715,7 @@ async function _showDashboardMenu(): Promise<void> {
         { id: '16', label: 'Quality Gate', handler: _dashboardQualityGate },
         { id: '17', label: 'Coverage Gap', handler: _dashboardCoverageGap },
     ];
-    await showDashboardMenu(currentProjectName, dashboards);
+    await showDashboardMenu(getCurrentProject() ?? '', dashboards);
 }
 
 const ACTION_HANDLERS: Record<string, (m: GitProvider, pn: string, ns: string[]) => Promise<boolean>> = {
@@ -822,7 +832,6 @@ async function _ensureProjectsConfigured(): Promise<boolean> {
             const wantsSetup = promptConfirm('Deseja configurar um projeto agora?');
             if (wantsSetup) {
                 await _handleSetupWizard();
-                clearProjectCache();
                 projs = getProjects();
             }
         } catch (err) {
@@ -888,7 +897,6 @@ async function _handleMissingToken(projectName: string): Promise<GitProvider | n
     }
     try {
         await _handleSetupWizard();
-        clearProjectCache();
         return createManagerForProject(projectName, projectId);
     } catch (err) {
         rootLogger.debug('Create manager for project failed: ' + formatErr(err));

@@ -118,16 +118,14 @@ export function mockHttpClientModule() {
  * @param overrides - Partial overrides to apply to the default mock
  * @returns Object with session state functions
  */
-export function mockSessionStateModule(overrides?: Partial<{ currentProjectName: string; currentProvider: string }>) {
+export function mockSessionStateModule(overrides?: Partial<{ currentProvider: string }>) {
     return {
         pushHistory: vi.fn(),
         printSessionSummary: vi.fn(),
         createManagerForProject: vi.fn(),
-        setCurrentProjectName: vi.fn(),
         setProjectId: vi.fn(),
         setManager: vi.fn(),
         getProjects: vi.fn(() => ({})),
-        currentProjectName: '',
         currentProvider: 'gitlab',
         ...overrides,
     };

@@ -60,6 +60,40 @@ vi.mock('../shared/config', () => {
     return { __esModule: true, default: cfg };
 });
 
+vi.mock('../shared/project-registry', () => ({
+    listProjects: vi.fn(() => [
+        { name: 'proj-a', projectId: '111', dir: path.join(os.tmpdir(), 'proj-a'), provider: 'github', valid: true },
+        { name: 'proj-b', projectId: '222', dir: path.join(os.tmpdir(), 'proj-b'), provider: 'gitlab', valid: true },
+    ]),
+    getProject: vi.fn((name: string) => {
+        if (name === 'proj-a') {
+            return {
+                name: 'proj-a',
+                projectId: '111',
+                dir: path.join(os.tmpdir(), 'proj-a'),
+                provider: 'github',
+                valid: true,
+            };
+        }
+        if (name === 'proj-b') {
+            return {
+                name: 'proj-b',
+                projectId: '222',
+                dir: path.join(os.tmpdir(), 'proj-b'),
+                provider: 'gitlab',
+                valid: true,
+            };
+        }
+        return undefined;
+    }),
+}));
+
+vi.mock('../shared/project-context', () => ({
+    getCurrentProject: vi.fn(() => 'proj-a'),
+    setCurrentProject: vi.fn(),
+    clearCurrentProject: vi.fn(),
+}));
+
 vi.mock('../shared/prompt', () => ({
     print: vi.fn(),
     success: vi.fn(),

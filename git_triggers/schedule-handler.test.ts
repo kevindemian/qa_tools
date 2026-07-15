@@ -12,7 +12,13 @@ vi.mock('../shared/prompt', () => ({
     withSpinner: vi.fn(<T>(_: string, fn: () => Promise<T>) => fn()),
 }));
 
-const mockState = { currentProvider: 'gitlab', currentProjectName: '' };
+const mockState = { currentProvider: 'gitlab' };
+
+vi.mock('../shared/project-context', () => ({
+    getCurrentProject: vi.fn(() => ''),
+    setCurrentProject: vi.fn(),
+    clearCurrentProject: vi.fn(),
+}));
 
 vi.mock('./session-state', () => ({
     pushHistory: vi.fn(),
@@ -20,7 +26,6 @@ vi.mock('./session-state', () => ({
     displayRecentPipelines: vi.fn(),
     createManagerForProject: vi.fn(() => mockManager),
     getProviderForProject: vi.fn(() => 'gitlab'),
-    setCurrentProjectName: vi.fn(),
     setProjectId: vi.fn(),
     setManager: vi.fn(),
     getProjects: vi.fn(() => ({})),
@@ -30,9 +35,6 @@ vi.mock('./session-state', () => ({
     }),
     get currentProvider() {
         return mockState.currentProvider;
-    },
-    get currentProjectName() {
-        return mockState.currentProjectName;
     },
 }));
 
@@ -151,7 +153,14 @@ vi.mock('fs', () => ({
 }));
 
 import { success, warn, info, print, prompt, printError } from '../shared/prompt.js';
-import { pushHistory, getProjects, getDataHub as getSessionDataHub } from './session-state.js';
+import { getCurrentProject, setCurrentProject } from '../shared/project-context.js';
+import {
+    pushHistory,
+    getProjects,
+    setProjectId,
+    setManager,
+    getDataHub as getSessionDataHub,
+} from './session-state.js';
 import { calcFlakinessEntries } from '../shared/data-hub/compute/flakiness-entries.js';
 import { generateFlakinessHtml } from '../shared/flakiness-dashboard.js';
 import {
@@ -162,7 +171,6 @@ import {
     generateWeeklyQualityReport,
 } from './schedule-handler.js';
 import { createMockGitProvider } from '../shared/test-utils/factories/index.js';
-import type { GitProvider } from '../shared/types.js';
 
 const mockPrompt = vi.mocked(prompt);
 const mockPushHistory = vi.mocked(pushHistory);
@@ -186,7 +194,7 @@ describe('Schedule Handler', () => {
     beforeEach(() => {
         vi.clearAllMocks();
         mockState.currentProvider = 'gitlab';
-        mockState.currentProjectName = '';
+        vi.mocked(getCurrentProject).mockReturnValue('');
     });
 
     describe('HandleListSchedules', () => {
@@ -286,17 +294,7 @@ describe('Schedule Handler', () => {
 
             await handleChangeProject(names);
 
-            const {
-                setCurrentProjectName,
-                setProjectId,
-                setManager,
-            }: {
-                setCurrentProjectName: (name: string) => void;
-                setProjectId: (id: string) => void;
-                setManager: (v: GitProvider | null) => void;
-            } = await import('./session-state.js');
-
-            expect(setCurrentProjectName).toHaveBeenCalledWith('proj1');
+            expect(setCurrentProject).toHaveBeenCalledWith('proj1');
             expect(setProjectId).toHaveBeenCalledWith('1');
             expect(setManager).toHaveBeenCalledWith(expect.anything());
             expect(success).toHaveBeenCalledWith(expect.stringContaining('proj1'));
@@ -331,7 +329,7 @@ describe('Schedule Handler', () => {
         });
 
         it('warns when less than 2 runs', () => {
-            mockState.currentProjectName = 'proj1';
+            vi.mocked(getCurrentProject).mockReturnValue('proj1');
             mockGetDataHub.mockReturnValue({
                 computed: {
                     metricsRuns: [
@@ -356,7 +354,7 @@ describe('Schedule Handler', () => {
         });
 
         it('informs when no flaky tests', () => {
-            mockState.currentProjectName = 'proj1';
+            vi.mocked(getCurrentProject).mockReturnValue('proj1');
             mockGetDataHub.mockReturnValue({
                 computed: {
                     metricsRuns: [
@@ -394,7 +392,7 @@ describe('Schedule Handler', () => {
         it('generates dashboard HTML and opens browser', async () => {
             expect.hasAssertions();
 
-            mockState.currentProjectName = 'proj1';
+            vi.mocked(getCurrentProject).mockReturnValue('proj1');
             mockGetDataHub.mockReturnValue({
                 computed: {
                     metricsRuns: [
@@ -444,14 +442,14 @@ describe('Schedule Handler', () => {
 
     describe('GenerateWeeklyQualityReport', () => {
         it('warns when no project selected', () => {
-            mockState.currentProjectName = '';
+            vi.mocked(getCurrentProject).mockReturnValue('');
             generateWeeklyQualityReport();
 
             expect(mockWarn).toHaveBeenCalledWith(expect.stringContaining('Nenhum projeto'));
         });
 
         it('warns when less than 2 runs and git fallback fails', () => {
-            mockState.currentProjectName = 'proj1';
+            vi.mocked(getCurrentProject).mockReturnValue('proj1');
             mockGetDataHub.mockReturnValue({
                 computed: {
                     metricsRuns: [

@@ -19,7 +19,7 @@ describe('WriteProjectsConfig', () => {
         vi.spyOn(MockFs, 'writeFileSync').mockImplementation(vi.fn());
     });
 
-    it('creates projects.json and providers.json when neither exists', () => {
+    it('creates projects.json when neither exists', () => {
         const result = writeProjectsConfig({
             projectName: 'myapp',
             gitProvider: 'github',
@@ -27,9 +27,9 @@ describe('WriteProjectsConfig', () => {
             repoOwner: 'myorg',
         });
 
-        expect(result.filesCreated).toHaveLength(2);
+        expect(result.filesCreated).toHaveLength(1);
         expect(result.filesSkipped).toHaveLength(0);
-        expect(MockFs.writeFileSync).toHaveBeenCalledTimes(2);
+        expect(MockFs.writeFileSync).toHaveBeenCalledTimes(1);
     });
 
     it('warns instead of swallowing when existing config is unreadable', () => {
@@ -65,7 +65,7 @@ describe('WriteProjectsConfig', () => {
             repoOwner: 'myorg',
         });
 
-        expect(result.filesCreated).toHaveLength(2);
+        expect(result.filesCreated).toHaveLength(1);
 
         const writeCalls = MockFs.writeFileSync.mock.calls;
         const lastProjectsWrite = (writeCalls[0]?.[1] ?? '') as string;
@@ -85,7 +85,7 @@ describe('WriteProjectsConfig', () => {
             repoOwner: 'myorg',
         });
 
-        expect(result.filesSkipped).toHaveLength(2);
+        expect(result.filesSkipped).toHaveLength(1);
     });
 
     it('handles corrupt existing file by overwriting', () => {
@@ -99,7 +99,7 @@ describe('WriteProjectsConfig', () => {
             repoOwner: 'myorg',
         });
 
-        expect(result.filesCreated).toHaveLength(2);
+        expect(result.filesCreated).toHaveLength(1);
     });
 });
 

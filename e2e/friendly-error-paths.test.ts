@@ -14,6 +14,36 @@ import { loadTypedState as _loadTypedState } from '../shared/state.js';
 const mockConfirm = vi.mocked(_confirm);
 const mockLoadTypedState = vi.mocked(_loadTypedState);
 
+vi.mock('../shared/project-registry', () => ({
+    getProject: vi.fn((name: string) => {
+        if (name === 'qa_tools_e2e') {
+            return {
+                name: 'qa_tools_e2e',
+                projectId: '456',
+                dir: path.join(os.tmpdir(), 'qa_tools_e2e'),
+                provider: 'github',
+                valid: true,
+            };
+        }
+        if (name === 'qa_tools') {
+            return {
+                name: 'qa_tools',
+                projectId: '123',
+                dir: path.join(os.tmpdir(), 'qa_tools'),
+                provider: 'gitlab',
+                valid: true,
+            };
+        }
+        return undefined;
+    }),
+    listProjects: vi.fn(() => []),
+    addProject: vi.fn(),
+    updateProject: vi.fn(),
+    removeProject: vi.fn(),
+    loadRegistry: vi.fn(() => ({ version: 1, projects: {} })),
+    saveRegistry: vi.fn(),
+}));
+
 vi.mock('../shared/prompt', () => ({
     print: vi.fn(),
     success: vi.fn(),

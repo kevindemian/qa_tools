@@ -29,16 +29,15 @@ import JiraLinkManager from '../jira_management/jira_link_manager.js';
 import { writeReport } from '../shared/temp-dir.js';
 import { publishReport } from '../shared/publish.js';
 import {
-    currentProjectName,
     currentProvider,
     pushHistory,
     printSessionSummary,
     createManagerForProject,
-    setCurrentProjectName,
     setProjectId,
     setManager,
     getProjects,
 } from './session-state.js';
+import { getCurrentProject, setCurrentProject } from '../shared/project-context.js';
 import { pollPipeline } from './pipeline-handler.js';
 import type { BatchCliArgs } from './cli-args.js';
 import { parseCliArgs } from './cli-args.js';
@@ -68,7 +67,7 @@ async function setupBatchProject(batch: BatchCliArgs): Promise<{
         return null;
     }
 
-    setCurrentProjectName(projectName);
+    setCurrentProject(projectName);
     setProjectId(projectEntry[1]);
     const m = createManagerForProject(projectName, projectEntry[1]);
     setManager(m);
@@ -215,11 +214,11 @@ async function triggerAndCollectBatchPipeline(
 }
 
 function generateFlakinessDashboard(projectName: string, publishTarget?: string): void {
-    if (!currentProjectName) return;
+    if (!projectName) return;
     const hub = getDataHub();
-    let projectRuns = (hub.computed.metricsRuns ?? []).filter((r) => r.project === currentProjectName);
+    let projectRuns = (hub.computed.metricsRuns ?? []).filter((r) => r.project === projectName);
     if (projectRuns.length < 2) {
-        const gitRuns = generateGitMetricsRuns({ projectName: currentProjectName });
+        const gitRuns = generateGitMetricsRuns({ projectName });
         const gitError = getLastGitLogError();
         if (gitRuns.length >= 2) {
             projectRuns = gitRuns;
@@ -389,7 +388,7 @@ function generateTestExport(projectName: string): void {
 async function generatePipelineHealthReport(m: import('../shared/types.js').GitProvider): Promise<void> {
     try {
         const { getOrFetchDataHub } = await import('../shared/ci-data.js');
-        const dataHub = await getOrFetchDataHub(m, currentProjectName);
+        const dataHub = await getOrFetchDataHub(m, getCurrentProject() ?? '');
         if (!dataHub || dataHub.raw.runs.length === 0) return;
 
         const runs = dataHub.raw.runs;
@@ -418,8 +417,8 @@ async function generatePipelineHealthReport(m: import('../shared/types.js').GitP
             period: { from, to },
         };
 
-        const html = renderPipelineHealthHtml(healthData, 'Pipeline Health \u2014 ' + currentProjectName);
-        const outPath = writeReport('pipeline-health-' + currentProjectName + '.html', html);
+        const html = renderPipelineHealthHtml(healthData, 'Pipeline Health \u2014 ' + (getCurrentProject() ?? ''));
+        const outPath = writeReport('pipeline-health-' + (getCurrentProject() ?? '') + '.html', html);
         success('Pipeline health report gerado: ' + outPath);
     } catch (err) {
         printError('Falha ao gerar pipeline health', err);

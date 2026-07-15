@@ -29,7 +29,7 @@ import { ensureDirs, registerCleanup } from '../shared/temp-dir.js';
 import { CATEGORY_IDS, CATEGORY_TITLES } from './menu-data.js';
 import { dispatchChoice, getAndResolveChoice } from './ui-helpers.js';
 import { maybeRunFirstRunWizard } from '../shared/first-run.js';
-import { setCurrentProject } from '../shared/project-context.js';
+import { setCurrentProject, getCurrentProject, loadProjectConfig } from '../shared/project-context.js';
 import { parseProjectFlag } from '../shared/parse-project-flag.js';
 
 /** Type-safe wrapper around `updateState` that provides a `StateSchema` callback. */
@@ -127,7 +127,7 @@ const base_url: string = Config.get('jiraBaseUrl');
 const personal_token: string = Config.get('jiraPersonalToken');
 const xray_url: string = Config.get('xrayBaseUrl');
 const jira_mode = Config.get<JiraMode>('jiraMode');
-const default_project = '';
+const default_project = getCurrentProject() ?? '';
 
 const sessionLog = rootLogger.child({ session: 'jira' });
 
@@ -167,6 +167,7 @@ async function initializeSession() {
     try {
         ctx.project_name = (
             Config.get('jiraProject') ||
+            (getCurrentProject() ? loadProjectConfig(getCurrentProject() as string).jiraKey : undefined) ||
             prompt('Nome do projeto Jira', { default: state.lastProject || default_project })
         ).toUpperCase();
     } catch (err) {

@@ -1,9 +1,9 @@
 import os from 'os';
 import path from 'path';
 import { describe, it, expect, vi, beforeEach } from 'vitest';
+import { getCurrentProject } from '../../shared/project-context.js';
 
 let _currentProvider: 'gitlab' | 'github' = 'gitlab';
-let _currentProjectName = 'TEST';
 
 vi.mock('../../shared/prompt.js', () => ({
     prompt: vi.fn(),
@@ -29,6 +29,11 @@ vi.mock('../../shared/logger.js', () => ({
         child: vi.fn().mockReturnThis(),
     })),
 }));
+vi.mock('../../shared/project-context.js', () => ({
+    getCurrentProject: vi.fn(() => 'TEST'),
+    setCurrentProject: vi.fn(),
+    clearCurrentProject: vi.fn(),
+}));
 vi.mock('../session-state.js', () => ({
     get currentProvider() {
         return _currentProvider;
@@ -36,19 +41,12 @@ vi.mock('../session-state.js', () => ({
     set currentProvider(v: 'gitlab' | 'github') {
         _currentProvider = v;
     },
-    get currentProjectName() {
-        return _currentProjectName;
-    },
-    set currentProjectName(v: string) {
-        _currentProjectName = v;
-    },
     pushHistory: vi.fn(),
     setIsBusy: vi.fn(),
     displayProjects: vi.fn(),
     displayRecentPipelines: vi.fn(),
     createManagerForProject: vi.fn(),
     getProviderForProject: vi.fn(),
-    setCurrentProjectName: vi.fn(),
     setProjectId: vi.fn(),
     setManager: vi.fn(),
     getProjects: vi.fn(() => ['TEST', 'OTHER']),
@@ -154,7 +152,7 @@ function makeMockGitProvider() {
 describe('HandleListSchedules', () => {
     beforeEach(() => {
         _currentProvider = 'gitlab';
-        _currentProjectName = 'TEST';
+        vi.mocked(getCurrentProject).mockReturnValue('TEST');
         vi.clearAllMocks();
     });
 
@@ -199,7 +197,7 @@ describe('HandleListSchedules', () => {
 describe('HandleRunSchedule', () => {
     beforeEach(() => {
         _currentProvider = 'gitlab';
-        _currentProjectName = 'TEST';
+        vi.mocked(getCurrentProject).mockReturnValue('TEST');
         vi.clearAllMocks();
     });
 
@@ -234,7 +232,7 @@ describe('HandleRunSchedule', () => {
 describe('HandleCreateMR', () => {
     beforeEach(() => {
         _currentProvider = 'gitlab';
-        _currentProjectName = 'TEST';
+        vi.mocked(getCurrentProject).mockReturnValue('TEST');
         vi.clearAllMocks();
     });
 
@@ -280,7 +278,7 @@ describe('HandleCreateMR', () => {
 describe('HandleListApprovedMRs', () => {
     beforeEach(() => {
         _currentProvider = 'gitlab';
-        _currentProjectName = 'TEST';
+        vi.mocked(getCurrentProject).mockReturnValue('TEST');
         vi.clearAllMocks();
     });
 
@@ -316,7 +314,7 @@ describe('HandleListApprovedMRs', () => {
 describe('HandleMergeMR', () => {
     beforeEach(() => {
         _currentProvider = 'gitlab';
-        _currentProjectName = 'TEST';
+        vi.mocked(getCurrentProject).mockReturnValue('TEST');
         vi.clearAllMocks();
     });
 
@@ -338,14 +336,14 @@ describe('HandleMergeMR', () => {
 describe('HandleFlakinessDashboard', () => {
     beforeEach(() => {
         _currentProvider = 'gitlab';
-        _currentProjectName = 'TEST';
+        vi.mocked(getCurrentProject).mockReturnValue('TEST');
         vi.clearAllMocks();
     });
 
     it('warns when no project selected', async () => {
         expect.hasAssertions();
 
-        _currentProjectName = '';
+        vi.mocked(getCurrentProject).mockReturnValue('');
         const { handleFlakinessDashboard } = await import('../schedule-handler.js');
         const { warn } = await import('../../shared/prompt.js');
         await handleFlakinessDashboard();

@@ -65,9 +65,13 @@ vi.mock('../shared/prompt', () => {
 });
 vi.mock('../shared/state', () => ({ load: vi.fn(() => ({})), update: vi.fn() }));
 const mockSessionState = {
-    currentProjectName: '',
     currentProvider: 'gitlab',
 };
+vi.mock('../shared/project-context', () => ({
+    getCurrentProject: vi.fn(() => ''),
+    setCurrentProject: vi.fn(),
+    clearCurrentProject: vi.fn(),
+}));
 vi.mock('./session-state', () => ({
     sessionLog: { info: vi.fn(), error: vi.fn() },
     sessionContext: { sessionCounters: [], buildContextLine: vi.fn(() => 'ctx') },
@@ -80,7 +84,6 @@ vi.mock('./session-state', () => ({
     getProviderForProject: vi.fn(() => 'gitlab'),
     getProjects: vi.fn(() => ({})),
     pushHistory: vi.fn(),
-    setCurrentProjectName: vi.fn(),
     setProjectId: vi.fn(),
     setManager: vi.fn(),
     getDataHub: vi.fn().mockReturnValue({
@@ -88,9 +91,6 @@ vi.mock('./session-state', () => ({
     }),
     setDataHub: vi.fn(),
     ensureDataHub: vi.fn(() => undefined),
-    get currentProjectName() {
-        return mockSessionState.currentProjectName;
-    },
     get currentProvider() {
         return mockSessionState.currentProvider;
     },
@@ -227,6 +227,7 @@ import { ensureDirs, registerCleanup } from '../shared/temp-dir.js';
 import { openWithFallback } from '../shared/open.js';
 import { showDashboardMenu } from '../shared/dashboard-menu.js';
 import { getDataHub as getSessionDataHub } from './session-state.js';
+import { getCurrentProject } from '../shared/project-context.js';
 const mockWarn = vi.mocked(warn);
 const mockPrintError = vi.mocked(printError);
 const mockLoad = vi.mocked(load);
@@ -405,7 +406,7 @@ describe('Interactive-mode test exports', () => {
 
             const sessionState = await import('./session-state.js');
             (sessionState.getProjects as ReturnType<typeof vi.fn>).mockReturnValue({});
-            mockSessionState.currentProjectName = '';
+            vi.mocked(getCurrentProject).mockReturnValue('');
             const result = await _testExports._selectProjectAndCreateManager();
 
             expect(result).toBeNull();
@@ -414,7 +415,7 @@ describe('Interactive-mode test exports', () => {
 
     describe('LoadProjectRunsHelper', () => {
         it('returns null when no project selected', () => {
-            mockSessionState.currentProjectName = '';
+            vi.mocked(getCurrentProject).mockReturnValue('');
             const result = _testExports._loadProjectRunsHelper();
 
             expect(result).toBeNull();
@@ -424,7 +425,7 @@ describe('Interactive-mode test exports', () => {
         it('returns data when project has runs', () => {
             expect.hasAssertions();
 
-            mockSessionState.currentProjectName = 'proj1';
+            vi.mocked(getCurrentProject).mockReturnValue('proj1');
             mockGetDataHub.mockReturnValue({
                 computed: {
                     metricsRuns: [
@@ -462,7 +463,7 @@ describe('Interactive-mode test exports', () => {
         it('returns null when git fallback has <2 runs', () => {
             expect.hasAssertions();
 
-            mockSessionState.currentProjectName = 'proj1';
+            vi.mocked(getCurrentProject).mockReturnValue('proj1');
             mockGetDataHub.mockReturnValue({
                 computed: {
                     metricsRuns: [
@@ -491,7 +492,7 @@ describe('Interactive-mode test exports', () => {
         it('uses git fallback when metrics has <2 runs but git has >=2', async () => {
             expect.hasAssertions();
 
-            mockSessionState.currentProjectName = 'proj1';
+            vi.mocked(getCurrentProject).mockReturnValue('proj1');
             mockGetDataHub.mockReturnValue({
                 computed: {
                     metricsRuns: [
@@ -547,7 +548,7 @@ describe('Interactive-mode test exports', () => {
         it('writes report and opens browser', async () => {
             expect.hasAssertions();
 
-            mockSessionState.currentProjectName = 'proj1';
+            vi.mocked(getCurrentProject).mockReturnValue('proj1');
             await _testExports._generateAndOpenDashboard('<html>', 'test', 'Test');
             const openMod = await import('../shared/open.js');
 
@@ -626,7 +627,7 @@ describe('Interactive-mode test exports', () => {
         it('warns when no project selected', async () => {
             expect.hasAssertions();
 
-            mockSessionState.currentProjectName = '';
+            vi.mocked(getCurrentProject).mockReturnValue('');
             const result = await _testExports.handleRunComparison();
 
             expect(result).toBeFalsy();
@@ -636,7 +637,7 @@ describe('Interactive-mode test exports', () => {
         it('compares when runs exist', async () => {
             expect.hasAssertions();
 
-            mockSessionState.currentProjectName = 'proj1';
+            vi.mocked(getCurrentProject).mockReturnValue('proj1');
             mockGetDataHub.mockReturnValue({
                 computed: {
                     metricsRuns: [
@@ -676,7 +677,7 @@ describe('Interactive-mode test exports', () => {
         it('warns when <2 runs exist', async () => {
             expect.hasAssertions();
 
-            mockSessionState.currentProjectName = 'proj1';
+            vi.mocked(getCurrentProject).mockReturnValue('proj1');
             mockGetDataHub.mockReturnValue({
                 computed: {
                     metricsRuns: [
@@ -707,7 +708,7 @@ describe('Interactive-mode test exports', () => {
         it('shows dashboard menu', async () => {
             expect.hasAssertions();
 
-            mockSessionState.currentProjectName = 'proj1';
+            vi.mocked(getCurrentProject).mockReturnValue('proj1');
             await _testExports._showDashboardMenu();
 
             expect(mockShowDashboardMenu).toHaveBeenCalledWith(expect.any(String), expect.any(Array));
@@ -728,7 +729,7 @@ describe('Interactive-mode test exports', () => {
         it('generates release score dashboard', async () => {
             expect.hasAssertions();
 
-            mockSessionState.currentProjectName = 'proj1';
+            vi.mocked(getCurrentProject).mockReturnValue('proj1');
             mockGetDataHub.mockReturnValue({
                 computed: {
                     metricsRuns: [
@@ -772,7 +773,7 @@ describe('Interactive-mode test exports', () => {
         it('warns when no project selected', async () => {
             expect.hasAssertions();
 
-            mockSessionState.currentProjectName = '';
+            vi.mocked(getCurrentProject).mockReturnValue('');
             await _testExports._dashboardQualityGate();
 
             expect(mockWarn).toHaveBeenCalledWith('Nenhum projeto selecionado.');
@@ -781,7 +782,7 @@ describe('Interactive-mode test exports', () => {
         it('generates quality gate dashboard', async () => {
             expect.hasAssertions();
 
-            mockSessionState.currentProjectName = 'proj1';
+            vi.mocked(getCurrentProject).mockReturnValue('proj1');
             await _testExports._dashboardQualityGate();
 
             expect(mockOpenWithFallback).toHaveBeenCalledWith(expect.any(String), 'Quality Gate', expect.any(Function));
@@ -820,7 +821,7 @@ describe('Interactive-mode test exports', () => {
         it('generates pipeline cost dashboard', async () => {
             expect.hasAssertions();
 
-            mockSessionState.currentProjectName = 'proj1';
+            vi.mocked(getCurrentProject).mockReturnValue('proj1');
             mockGetDataHub.mockReturnValue({
                 computed: {
                     metricsRuns: [
@@ -878,7 +879,7 @@ describe('Interactive-mode test exports', () => {
         it('generates defect trends dashboard', async () => {
             expect.hasAssertions();
 
-            mockSessionState.currentProjectName = 'proj1';
+            vi.mocked(getCurrentProject).mockReturnValue('proj1');
             mockGetDataHub.mockReturnValue({
                 computed: {
                     metricsRuns: [
@@ -922,7 +923,7 @@ describe('Interactive-mode test exports', () => {
         it('generates traceability matrix dashboard', async () => {
             expect.hasAssertions();
 
-            mockSessionState.currentProjectName = 'proj1';
+            vi.mocked(getCurrentProject).mockReturnValue('proj1');
             mockGetDataHub.mockReturnValue({
                 computed: {
                     metricsRuns: [
@@ -966,7 +967,7 @@ describe('Interactive-mode test exports', () => {
         it('generates seasonality dashboard', async () => {
             expect.hasAssertions();
 
-            mockSessionState.currentProjectName = 'proj1';
+            vi.mocked(getCurrentProject).mockReturnValue('proj1');
             mockGetDataHub.mockReturnValue({
                 computed: {
                     metricsRuns: [
@@ -1010,7 +1011,7 @@ describe('Interactive-mode test exports', () => {
         it('generates silent regression dashboard', async () => {
             expect.hasAssertions();
 
-            mockSessionState.currentProjectName = 'proj1';
+            vi.mocked(getCurrentProject).mockReturnValue('proj1');
             mockGetDataHub.mockReturnValue({
                 computed: {
                     metricsRuns: [
@@ -1068,7 +1069,7 @@ describe('Interactive-mode test exports', () => {
         it('generates benchmark dashboard', async () => {
             expect.hasAssertions();
 
-            mockSessionState.currentProjectName = 'proj1';
+            vi.mocked(getCurrentProject).mockReturnValue('proj1');
             mockGetDataHub.mockReturnValue({
                 computed: {
                     metricsRuns: [
@@ -1112,7 +1113,7 @@ describe('Interactive-mode test exports', () => {
         it('generates developer profile dashboard', async () => {
             expect.hasAssertions();
 
-            mockSessionState.currentProjectName = 'proj1';
+            vi.mocked(getCurrentProject).mockReturnValue('proj1');
             mockGetDataHub.mockReturnValue({
                 computed: {
                     metricsRuns: [
@@ -1156,7 +1157,7 @@ describe('Interactive-mode test exports', () => {
         it('generates suite optimization dashboard', async () => {
             expect.hasAssertions();
 
-            mockSessionState.currentProjectName = 'proj1';
+            vi.mocked(getCurrentProject).mockReturnValue('proj1');
             mockGetDataHub.mockReturnValue({
                 computed: {
                     metricsRuns: [
@@ -1200,7 +1201,7 @@ describe('Interactive-mode test exports', () => {
         it('generates incident report dashboard', async () => {
             expect.hasAssertions();
 
-            mockSessionState.currentProjectName = 'proj1';
+            vi.mocked(getCurrentProject).mockReturnValue('proj1');
             mockGetDataHub.mockReturnValue({
                 computed: {
                     metricsRuns: [
@@ -1244,7 +1245,7 @@ describe('Interactive-mode test exports', () => {
         it('generates impact alert dashboard', async () => {
             expect.hasAssertions();
 
-            mockSessionState.currentProjectName = 'proj1';
+            vi.mocked(getCurrentProject).mockReturnValue('proj1');
             mockGetDataHub.mockReturnValue({
                 computed: {
                     metricsRuns: [
@@ -1288,7 +1289,7 @@ describe('Interactive-mode test exports', () => {
         it('warns when no project selected', async () => {
             expect.hasAssertions();
 
-            mockSessionState.currentProjectName = '';
+            vi.mocked(getCurrentProject).mockReturnValue('');
             await _testExports._dashboardCoverageGap();
 
             expect(mockWarn).toHaveBeenCalledWith('Nenhum projeto selecionado.');
@@ -1297,7 +1298,7 @@ describe('Interactive-mode test exports', () => {
         it('generates coverage gap dashboard', async () => {
             expect.hasAssertions();
 
-            mockSessionState.currentProjectName = 'proj1';
+            vi.mocked(getCurrentProject).mockReturnValue('proj1');
             const configMod = await import('../shared/config.js');
             (configMod.default.get as ReturnType<typeof vi.fn>).mockReturnValue('configured');
             await _testExports._dashboardCoverageGap();

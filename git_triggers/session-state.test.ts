@@ -1,3 +1,4 @@
+import os from 'os';
 import { makeDataHubGetters } from '../shared/test-utils/factories/data-hub-mock.js';
 
 vi.mock('../shared/prompt', () => ({
@@ -64,6 +65,31 @@ vi.mock('../shared/state', () => ({ update: vi.fn() }));
 
 vi.mock('../shared/cli_base', () => ({ printSessionSummary: vi.fn() }));
 
+vi.mock('../shared/project-registry', () => ({
+    listProjects: vi.fn(() => [
+        {
+            name: 'qa_tools',
+            projectId: '62689551',
+            dir: os.tmpdir() + '/qa-tools-test',
+            provider: 'gitlab',
+            valid: true,
+        },
+    ]),
+    getProject: vi.fn(() => ({
+        name: 'qa_tools',
+        projectId: '62689551',
+        dir: os.tmpdir() + '/qa-tools-test',
+        provider: 'gitlab',
+        valid: true,
+    })),
+}));
+
+vi.mock('../shared/project-context', () => ({
+    getCurrentProject: vi.fn(() => undefined),
+    setCurrentProject: vi.fn(),
+    clearCurrentProject: vi.fn(),
+}));
+
 vi.mock('../shared/flakiness-dashboard', () => ({ generateFlakinessHtml: vi.fn(() => '<html>') }));
 
 vi.mock('./gitlab_manager', () => {
@@ -92,6 +118,7 @@ vi.mock('./ui-helpers', () => ({ providerLabel: vi.fn(() => 'GitLab') }));
 
 import * as prompt from '../shared/prompt.js';
 import * as sessionState from './session-state.js';
+import { getCurrentProject } from '../shared/project-context.js';
 import { createMockGitProvider } from '../shared/test-utils/factories/index.js';
 import { update as stateUpdate } from '../shared/state.js';
 const pushHistorySpy = vi.spyOn(sessionState.sessionContext, 'pushHistory');
@@ -103,7 +130,7 @@ describe('Session-state', () => {
 
     describe('Module-level exports', () => {
         it('has default values', () => {
-            expect(sessionState.currentProjectName).toBe('');
+            expect(getCurrentProject()).toBeUndefined();
             expect(sessionState.currentProvider).toBe('gitlab');
             expect(sessionState.isBusy).toBeFalsy();
             expect(sessionState.manager).toBeNull();
@@ -116,12 +143,6 @@ describe('Session-state', () => {
             sessionState.setCurrentProvider('github');
 
             expect(sessionState.currentProvider).toBe('github');
-        });
-
-        it('setCurrentProjectName updates value', () => {
-            sessionState.setCurrentProjectName('my-project');
-
-            expect(sessionState.currentProjectName).toBe('my-project');
         });
 
         it('setProjectId updates value', () => {
@@ -170,8 +191,8 @@ describe('Session-state', () => {
         });
     });
 
-    describe('GetProjects — PROJECT_ID_ hack removed', () => {
-        it('ignores PROJECT_ID_<NAME> env overrides (single source = projects.json)', () => {
+    describe('GetProjects — single source = registry', () => {
+        it('reads projects from the registry (ignores PROJECT_ID_<NAME> env overrides)', () => {
             expect.hasAssertions();
 
             process.env['PROJECT_ID_QA_TOOLS'] = 'ENV_OVERRIDE_SHOULD_BE_IGNORED';
@@ -267,7 +288,7 @@ describe('Session-state', () => {
                 saveMetrics: vi.fn(),
             });
 
-            sessionState.setCurrentProjectName('qa_ibabs');
+            vi.mocked(getCurrentProject).mockReturnValue('qa_ibabs');
             const m = createMockGitProvider();
             vi.spyOn(m, 'getRecentPipelines').mockResolvedValue([]);
             await sessionState.displayRecentPipelines(m);
@@ -275,7 +296,7 @@ describe('Session-state', () => {
             expect(prompt.warn).toHaveBeenCalledWith(expect.stringContaining('flakiness'));
 
             sessionState.setDataHub(undefined);
-            sessionState.setCurrentProjectName('');
+            vi.mocked(getCurrentProject).mockReturnValue(undefined);
         });
     });
 });

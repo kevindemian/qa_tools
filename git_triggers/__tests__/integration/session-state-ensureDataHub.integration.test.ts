@@ -16,13 +16,14 @@ import { DataHubImpl } from '../../../shared/data-hub/hub.js';
 import { makeDataHubPersistenceMock, makeDataHubGetters } from '../../../shared/test-utils/factories/data-hub-mock.js';
 import { clearCache } from '../../../shared/data-hub/cache.js';
 import { getDataHub as getGlobalHub } from '../../../shared/data-hub/global-hub.js';
-import {
-    ensureDataHub,
-    setDataHub,
-    _resetForTest,
-    setManager,
-    setCurrentProjectName,
-} from '../../../git_triggers/session-state.js';
+import { ensureDataHub, setDataHub, _resetForTest, setManager } from '../../../git_triggers/session-state.js';
+import { getCurrentProject } from '../../../shared/project-context.js';
+
+vi.mock('../../../shared/project-context', () => ({
+    getCurrentProject: vi.fn(() => undefined),
+    setCurrentProject: vi.fn(),
+    clearCurrentProject: vi.fn(),
+}));
 
 /* ── Mock DataHub ─────────────────────────────────────────────────────── */
 
@@ -152,6 +153,7 @@ describe('Integration: ensureDataHub', () => {
         _resetForTest();
         clearCache();
         vi.clearAllMocks();
+        vi.mocked(getCurrentProject).mockReturnValue(undefined);
     });
 
     it('returns cached _dataHub if already set', async () => {
@@ -170,7 +172,7 @@ describe('Integration: ensureDataHub', () => {
         expect.hasAssertions();
 
         // manager is null after _resetForTest
-        setCurrentProjectName('test-project');
+        vi.mocked(getCurrentProject).mockReturnValue('test-project');
 
         const result = await ensureDataHub();
 
@@ -192,7 +194,7 @@ describe('Integration: ensureDataHub', () => {
         expect.hasAssertions();
 
         setManager(createMockGitProvider());
-        setCurrentProjectName('test-project');
+        vi.mocked(getCurrentProject).mockReturnValue('test-project');
 
         const result1 = await ensureDataHub();
 
@@ -210,7 +212,7 @@ describe('Integration: ensureDataHub', () => {
         const mockProvider = createMockGitProvider();
         mockProvider.getRecentPipelines = vi.fn().mockRejectedValue(new Error('Network error')) as never;
         setManager(mockProvider);
-        setCurrentProjectName('error-project');
+        vi.mocked(getCurrentProject).mockReturnValue('error-project');
 
         const result = await ensureDataHub();
 
@@ -227,6 +229,7 @@ describe('Global-hub delegation', () => {
         _resetForTest();
         clearCache();
         vi.clearAllMocks();
+        vi.mocked(getCurrentProject).mockReturnValue(undefined);
     });
 
     it('setDataHub in session-state affects global-hub', () => {
@@ -242,7 +245,7 @@ describe('Global-hub delegation', () => {
         expect.hasAssertions();
 
         setManager(createMockGitProvider());
-        setCurrentProjectName('test-project');
+        vi.mocked(getCurrentProject).mockReturnValue('test-project');
 
         const result = await ensureDataHub();
 
