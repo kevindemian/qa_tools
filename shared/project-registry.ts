@@ -1,21 +1,17 @@
 import fs from 'node:fs';
-import os from 'node:os';
 import path from 'node:path';
 import { rootLogger } from './logger.js';
 import { projectEntrySchema, projectRegistrySchema } from './types/project.js';
 import type { ProjectEntry, ProjectRegistry } from './types/project.js';
+import { isValidProjectName, projectConfigDir, projectEnvPath, registryDir } from './project-paths.js';
+
+export { isValidProjectName, projectConfigDir, projectEnvPath };
 
 /** A project as listed, augmented with a computed `valid` flag (dir exists on disk). */
 export type ListedProject = ProjectEntry & { valid: boolean };
 
 function hasOwn(reg: object, name: string): boolean {
     return Object.prototype.hasOwnProperty.call(reg, name);
-}
-
-function registryDir(): string {
-    const xdg = process.env['XDG_CONFIG_HOME'];
-    const base = xdg ? path.join(xdg, 'qa-tools') : path.join(os.homedir(), '.config', 'qa-tools');
-    return base;
 }
 
 function registryPath(): string {
