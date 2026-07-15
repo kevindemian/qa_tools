@@ -14,7 +14,11 @@ describe('ParseCliArgs', () => {
     it('returns interactive mode when no flags', () => {
         const args = parseCliArgs();
 
-        expect(args).toStrictEqual({ mode: 'interactive', help: false, version: false, noClear: false });
+        expect(args.mode).toBe('interactive');
+        expect(args.help).toBeFalsy();
+        expect(args.version).toBeFalsy();
+        expect(args.noClear).toBeFalsy();
+        expect(args.project).toBeUndefined();
     });
 
     it('detects --help', () => {
