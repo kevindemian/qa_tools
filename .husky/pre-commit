@@ -1,72 +1,124 @@
 #!/usr/bin/env sh
+# Pre-commit hook: validates the staged tree ONCE, then writes an attestation
+# marker (tree sha) so pre-push can skip the duplicate, same-content checks.
+#
+# Safety mechanisms preserved (each runs at least once per change):
+#   check-updates, validation_hook, rule-vigilant, catraca (returnNull),
+#   typecheck (tsc), lint-staged (eslint+prettier), lockfile-lint,
+#   exclusive-test detection.
+#
+# Independent READ-ONLY checks run in parallel; the index-mutating lint-staged
+# runs last (sequentially) to avoid racing the diff-reading checks.
 set -e
 
+ROOT="$(git rev-parse --show-toplevel)"
+GITDIR="$(git rev-parse --git-dir)"
+
 # Clear stale COMMIT_EDITMSG from previous commit.
-rm -f "$(git rev-parse --show-toplevel)/.git/COMMIT_EDITMSG"
+rm -f "$ROOT/.git/COMMIT_EDITMSG"
+
+# ---- Parallel runner (read-only checks) -----------------------------------
+PAR_LOGS="$(mktemp -d)"
+PAR_LABELS=""
+
+queue_job() {
+    # $1 = label, rest = command
+    local label="$1"; shift
+    PAR_LABELS="$PAR_LABELS $label"
+    (
+        "$@" > "$PAR_LOGS/$label.out" 2>&1
+        echo "$?" > "$PAR_LOGS/$label.rc"
+    ) &
+}
+
+run_parallel() {
+    # Waits for queued jobs; prints failures; returns 0 only if all passed.
+    wait || true
+    local fail=0
+    for label in $PAR_LABELS; do
+        local rc
+        rc="$(cat "$PAR_LOGS/$label.rc" 2>/dev/null || echo 1)"
+        if [ "$rc" != "0" ]; then
+            echo "::error::pre-commit check '$label' failed (rc=$rc)"
+            echo "----- output -----"
+            cat "$PAR_LOGS/$label.out" 2>/dev/null
+            echo "------------------"
+            fail=1
+        fi
+    done
+    PAR_LABELS=""
+    return $fail
+}
 
 echo "=== Pre-commit checks ==="
 
-# Dependency update check (informational)
+# Dependency update check (informational — never blocks)
 if [ -f scripts/check-updates.sh ]; then
     echo "--- Dependency updates ---"
-    bash scripts/check-updates.sh
+    queue_job "check-updates" bash scripts/check-updates.sh
 fi
 
-# Validation hook: self-test + staged diff check
+# Validation hook: self-test + staged diff check (secret/pattern scan)
 VALIDATION_HOOK="$HOME/.config/opencode/validation_hook.ts"
 if [ -f "$VALIDATION_HOOK" ]; then
-    echo "--- Validation hook (self-test) ---"
-    npx tsx "$VALIDATION_HOOK" --test
-
-    echo "--- Validation hook (diff check) ---"
-    STAGED_DIFF=$(git diff --cached -- . ':!.config/validation_hook.ts' ':!.husky/')
-    if [ -n "$STAGED_DIFF" ]; then
-        printf '%s\n' "$STAGED_DIFF" | grep '^[+]' | sed 's/^.//' | npx tsx "$VALIDATION_HOOK" --check --no-cache
-    else
-        echo "  (no staged changes to validate)"
-    fi
+    echo "--- Validation hook ---"
+    queue_job "validation" sh -c '
+        npx tsx "$HOME/.config/opencode/validation_hook.ts" --test
+        STAGED_DIFF=$(git diff --cached -- . ":!.config/validation_hook.ts" ":!.husky/")
+        if [ -n "$STAGED_DIFF" ]; then
+            printf "%s\n" "$STAGED_DIFF" | grep "^[+]" | sed "s/^.//" | npx tsx "$HOME/.config/opencode/validation_hook.ts" --check --no-cache
+        fi
+    '
 fi
 
-# Rule-vigilant: scan security-critical config files
+# Rule-vigilant: scan security-critical config files (warning-only)
 VIGILANT="scripts/rule-vigilant.ts"
 if [ -f "$VIGILANT" ]; then
     echo "--- Rule-vigilant scan ---"
-    for f in eslint.config.mjs .dependency-cruiser.js .gitleaks.toml AGENTS.md scripts/quality-check.ts; do
-        if [ -f "$f" ]; then
-            npx tsx "$VIGILANT" --file "$f" --quiet || echo "  [vigilant] warnings in $f"
-        fi
-    done
+    queue_job "rule-vigilant" sh -c '
+        for f in eslint.config.mjs .dependency-cruiser.js .gitleaks.toml AGENTS.md scripts/quality-check.ts; do
+            [ -f "$f" ] && npx tsx scripts/rule-vigilant.ts --file "$f" --quiet || echo "  [vigilant] warnings in $f"
+        done
+    '
 fi
 
-# Catraca (turnstile): arquivos modificados não podem silenciar erro (returnNull: true).
-# Só linhas adicionadas/modificadas são checadas — migração gradual, não traumática.
+# Catraca (turnstile): modified files must not silence errors via returnNull:true
 echo "--- Catraca (no silent error: returnNull:true) ---"
-STAGED_TS=$(git diff --cached --name-only --diff-filter=d -- '*.ts' ':!.husky/' ':!.config/' 2>/dev/null || true)
-if [ -n "$STAGED_TS" ]; then
-    VIOLATIONS=$(printf '%s\n' "$STAGED_TS" | xargs -I{} git diff --cached -U0 -- {} 2>/dev/null | grep -E '^\+[^+]' | grep -E 'returnNull:[[:space:]]*true' || true)
-    if [ -n "$VIOLATIONS" ]; then
-        echo "::error::Catraca: arquivos modificados ainda silenciam erro via 'returnNull: true':"
-        echo "$VIOLATIONS"
-        echo "::error::Migre para a arquitetura tipada (ExternalError) — veja shared/plans/error-handling-enforcement.md"
-        exit 1
+queue_job "catraca" sh -c '
+    STAGED_TS=$(git diff --cached --name-only --diff-filter=d -- "*.ts" ":!.husky/" ":!.config/" 2>/dev/null || true)
+    if [ -n "$STAGED_TS" ]; then
+        VIOLATIONS=$(printf "%s\n" "$STAGED_TS" | xargs -I{} git diff --cached -U0 -- {} 2>/dev/null | grep -E "^\+[^+]" | grep -E "returnNull:[[:space:]]*true" || true)
+        if [ -n "$VIOLATIONS" ]; then
+            echo "::error::Catraca: arquivos modificados ainda silenciam erro via returnNull: true:"
+            echo "$VIOLATIONS"
+            echo "::error::Migre para a arquitetura tipada (ExternalError) — veja shared/plans/error-handling-enforcement.md"
+            exit 1
+        fi
     fi
-fi
-echo "  catraca OK"
+'
 
 # Typecheck
 echo "--- Typecheck ---"
-npx tsc --noEmit
-
-# Lint-staged (ESLint + Prettier on staged files)
-echo "--- Lint-staged ---"
-npx lint-staged
+queue_job "typecheck" npx tsc --noEmit
 
 # Lockfile integrity
 echo "--- Lockfile lint ---"
-npx lockfile-lint --path package-lock.json --type npm --allow-ssh
+queue_job "lockfile" npx lockfile-lint --path package-lock.json --type npm --allow-ssh
 
-# exclusive test detection in test files
+# Exclusive test detection (.only)
 echo "--- Checking for exclusive tests ---"
-! grep -rn '[.]only(' --include='*.test.*' --exclude-dir=node_modules --exclude-dir=.git .
+queue_job "exclusive" sh -c '! grep -rn "[.]only(" --include="*.test.*" --exclude-dir=node_modules --exclude-dir=.git .'
 
-echo "=== Pre-commit checks passed ==="
+run_parallel || exit 1
+
+# Lint-staged (ESLint + Prettier): mutates the index, so run AFTER the
+# diff-reading checks above have completed.
+echo "--- Lint-staged ---"
+npx lint-staged
+
+# Attestation: record the exact tree that will be committed so pre-push can
+# skip the duplicate, same-content checks. Computed AFTER lint-staged so the
+# staged tree matches what commit will use.
+TREE_SHA="$(git write-tree)"
+printf '%s' "$TREE_SHA" > "$GITDIR/validated-commit"
+echo "=== Pre-commit checks passed (validated tree $TREE_SHA) ==="
