@@ -3,6 +3,7 @@
  * Supports both interactive and batch modes with discriminated union.
  */
 import { defaultOutput } from '../shared/output.js';
+import { parseProjectFlag } from '../shared/parse-project-flag.js';
 export type CliMode = 'interactive' | 'batch' | 'help' | 'version';
 
 export interface BaseCliArgs {
@@ -10,11 +11,13 @@ export interface BaseCliArgs {
     help: boolean;
     version: boolean;
     noClear: boolean;
+    /** Project name from `--project`/`-p` (available in all modes, Fase 5 / 055). */
+    project?: string;
 }
 
 export interface BatchCliArgs extends BaseCliArgs {
     mode: 'batch';
-    project: string | undefined;
+    project?: string;
     branch: string | undefined;
     auto: boolean;
     publish: string | undefined;
@@ -43,6 +46,11 @@ export type CliArgs = BatchCliArgs | InteractiveCliArgs | HelpCliArgs | VersionC
  */
 function _nextArg(args: string[], i: number): string | undefined {
     return i + 1 < args.length ? args[i + 1] : undefined;
+}
+
+/** Scan the full argv for a global `--project`/`-p` flag (055). Available in all modes. */
+export function _extractProject(args: string[]): string | undefined {
+    return parseProjectFlag(args);
 }
 
 /**
@@ -120,12 +128,13 @@ export function parseCliArgs(): CliArgs {
     const help = args.includes('--help') || args.includes('-h');
     const version = args.includes('--version');
     const noClear = args.includes('--no-clear');
+    const project = _extractProject(args);
 
     if (help) {
-        return { mode: 'help', help: true, version: false, noClear: false };
+        return { mode: 'help', help: true, version: false, noClear: false, ...(project ? { project } : {}) };
     }
     if (version) {
-        return { mode: 'version', help: false, version: true, noClear: false };
+        return { mode: 'version', help: false, version: true, noClear: false, ...(project ? { project } : {}) };
     }
 
     if (hasBatchFlag) {
@@ -134,7 +143,7 @@ export function parseCliArgs(): CliArgs {
             help: false,
             version: false,
             noClear,
-            project: undefined,
+            ...(project ? { project } : {}),
             branch: undefined,
             auto: false,
             publish: undefined,
@@ -162,6 +171,7 @@ export function parseCliArgs(): CliArgs {
         help: false,
         version: false,
         noClear,
+        ...(project ? { project } : {}),
     };
 }
 

@@ -12,7 +12,7 @@
 import { formatErr } from './errors.js';
 import { spawn } from 'child_process';
 import { showSplash } from './splash.js';
-import { showSelect, confirm, info, warn, divider } from './prompt.js';
+import { showSelect, confirm, info, warn, divider, smartPrompt } from './prompt.js';
 import { Output, defaultOutput } from './output.js';
 import { rootLogger } from './logger.js';
 import { ExitCode } from './types.js';
@@ -21,21 +21,192 @@ import { join, resolve } from 'path';
 import { gracefulExit } from './cli_base.js';
 import { loadTypedState, updateTyped } from './state.js';
 import { checkQualitySignals } from './quality-suggester.js';
+import { setCurrentProject, getCurrentProject, getCurrentProjectDir, isProjectSelected } from './project-context.js';
+import { listProjects, updateProject, removeProject, type ListedProject } from './project-registry.js';
 
 const root = join(import.meta.dirname, '..');
 const TSX_BIN = join(root, 'node_modules', '.bin', 'tsx');
 const RETRY_DELAY_BASE_MS = 60_000;
 const MAX_ATTEMPTS = 3;
 
+/** True when a project entry is protected against edit/removal (migrated from legacy, D-U4). */
+export function isProjectProtected(entry: ListedProject): boolean {
+    return entry.migrated === true;
+}
+
+/** Render the project list with validity and migration flags (D-U1). */
+function displayProjects(projects: ListedProject[]): void {
+    if (projects.length === 0) {
+        info('Nenhum projeto registrado.');
+        return;
+    }
+    projects.forEach((p, i) => {
+        const flags = [!p.valid ? '[INVÁLIDO]' : '', isProjectProtected(p) ? '[MIGRADO]' : '']
+            .filter(Boolean)
+            .join(' ');
+        defaultOutput.print(`  ${String(i + 1).padStart(2, ' ')}. ${p.name}  (${p.dir})${flags ? '  ' + flags : ''}`);
+    });
+}
+
+/**
+ * Seleção de projeto antes do módulo (D-U2). Mostra lista numerada (D-U1), auto-seleciona se 1,
+ * oferece setup se 0, e lista "Adicionar"/"Gerenciar" se N. Entradas inválidas marcadas [INVÁLIDO].
+ * Retorna true se um projeto foi selecionado (ou já estava ativo).
+ */
+export async function selectProject(): Promise<boolean> {
+    const projects = listProjects();
+    if (projects.length === 0) return selectFromNone();
+    if (projects.length === 1) {
+        const single = projects[0];
+        if (single) return selectSingle(single);
+    }
+    return selectFromMany(projects);
+}
+
+async function selectFromNone(): Promise<boolean> {
+    const choice = await showSelect('Nenhum projeto registrado', [
+        { name: 'A — Adicionar projeto (setup)', value: '__add__' },
+        { name: 'Continuar sem projeto (modo legado)', value: '__legacy__' },
+    ]);
+    if (choice === '__add__') {
+        await addProjectFlow();
+        return isProjectSelected();
+    }
+    return false;
+}
+
+function selectSingle(p: ListedProject): boolean {
+    if (!p.valid) warn(`Projeto "${p.name}" tem diretório inválido: ${p.dir}`);
+    setCurrentProject(p.name);
+    return true;
+}
+
+async function selectFromMany(projects: ListedProject[]): Promise<boolean> {
+    for (;;) {
+        displayProjects(projects);
+        const choices = projects.map((p) => ({ name: p.name, value: p.name }));
+        choices.push({ name: 'A — Adicionar projeto', value: '__add__' });
+        choices.push({ name: 'G — Gerenciar projetos', value: '__manage__' });
+        const choice = await showSelect('Selecione o projeto ativo', choices);
+
+        if (choice === '__add__') {
+            await addProjectFlow();
+            continue;
+        }
+        if (choice === '__manage__') {
+            await manageProjectsFlow();
+            continue;
+        }
+        if (!choice) return false;
+        const p = projects.find((x) => x.name === choice);
+        if (!p) return false;
+        if (!p.valid) warn(`Diretório inválido: ${p.dir}`);
+        setCurrentProject(choice);
+        return true;
+    }
+}
+
+/** Spawn the setup wizard pointing at a specific directory (051). */
+async function spawnSetupWithDir(dir: string): Promise<void> {
+    return new Promise<void>((resolve, reject) => {
+        const child = spawn(process.execPath, [TSX_BIN, join(root, 'setup/main.ts'), '--dir', dir], {
+            stdio: 'inherit',
+            cwd: root,
+        });
+        child.on('exit', (code) => {
+            if (code === 0) resolve();
+            else reject(new Error('Setup encerrou com código ' + code));
+        });
+        child.on('error', reject);
+    });
+}
+
+/** "A — Adicionar": prompt do diretório e disparo do setup (051). */
+async function addProjectFlow(): Promise<void> {
+    const dir = (await smartPrompt('Caminho do diretório do projeto:', { default: process.cwd() })).trim();
+    if (!dir) {
+        warn('Diretório vazio — nenhum projeto adicionado.');
+        return;
+    }
+    const resolved = resolve(dir);
+    try {
+        await spawnSetupWithDir(resolved);
+    } catch (err: unknown) {
+        rootLogger.error('Falha ao adicionar projeto: ' + formatErr(err));
+    }
+}
+
+/** "G — Gerenciar": listar/editar/remover com proteção para `migrated:true` (052, D-U4). */
+async function manageProjectsFlow(): Promise<void> {
+    for (;;) {
+        const projects = listProjects();
+        if (projects.length === 0) {
+            info('Nenhum projeto para gerenciar.');
+            return;
+        }
+        const choices = projects.map((p) => ({ name: p.name, value: p.name }));
+        choices.push({ name: 'Voltar', value: '__back__' });
+        const choice = await showSelect('Gerenciar projetos — selecione', choices);
+        if (choice === '__back__') return;
+
+        const p = projects.find((x) => x.name === choice);
+        if (!p) continue;
+        if (isProjectProtected(p)) {
+            warn(`Projeto "${p.name}" é migrado e protegido contra edição/remoção (D-U4).`);
+            continue;
+        }
+        await manageOneProject(p);
+    }
+}
+
+/** Editar/remover um projeto específico (proteção migrated já validada pelo chamador). */
+async function manageOneProject(p: ListedProject): Promise<void> {
+    const action = await showSelect(`Projeto "${p.name}" — ação`, [
+        { name: 'Editar diretório', value: 'edit' },
+        { name: 'Remover', value: 'remove' },
+        { name: 'Voltar', value: '__back__' },
+    ]);
+    if (action === '__back__') return;
+
+    if (action === 'edit') {
+        const newDir = (await smartPrompt('Novo diretório do projeto:', { default: p.dir })).trim();
+        if (!newDir) {
+            warn('Diretório vazio — edição cancelada.');
+            return;
+        }
+        const resolvedDir = resolve(newDir);
+        updateProject(p.name, { dir: resolvedDir });
+        if (getCurrentProject() === p.name) setCurrentProject(p.name);
+        info(`Projeto "${p.name}" atualizado.`);
+        return;
+    }
+
+    if (action === 'remove') {
+        const ok = removeProject(p.name);
+        info(ok ? `Projeto "${p.name}" removido.` : `Falha ao remover "${p.name}".`);
+    }
+}
+
+/** Environment to pass to spawned modules: propaga o projeto ativo (053). */
+export function moduleEnv(): NodeJS.ProcessEnv {
+    return {
+        ...process.env,
+        QA_CURRENT_PROJECT: getCurrentProject() ?? '',
+        QA_PROJECT_DIR: getCurrentProjectDir() ?? '',
+    };
+}
+
 /** Spawn a module as a child process. Each module (`jira` or `git`) runs in
  * its own process with inherited stdio and isolated state. Resolves on clean
- * exit (code 0), rejects on non-zero exit or spawn error. */
+ * exit (code 0), rejects on non-zero exit or spawn error. Propaga o projeto
+ * ativo via `QA_CURRENT_PROJECT`/`QA_PROJECT_DIR` (053). */
 export async function runModule(module: 'jira' | 'git'): Promise<void> {
     const script = module === 'jira' ? 'jira_management/main.ts' : 'git_triggers/main.ts';
     return new Promise<void>((resolve, reject) => {
         const child = spawn(process.execPath, [TSX_BIN, join(root, script)], {
             stdio: 'inherit',
             cwd: root,
+            env: moduleEnv(),
         });
         child.on('exit', (code) => {
             if (code === 0) resolve();
@@ -176,6 +347,17 @@ function handleModuleChoice(choice: string): Promise<void> | null {
     return null;
 }
 
+/** Prompt the project-selection menu once per session when projects exist and none is active (050/D-U2). */
+async function maybePromptProject(projectPrompted: boolean): Promise<boolean> {
+    if (projectPrompted) return true;
+    const projects = listProjects();
+    if (projects.length > 0 && !isProjectSelected()) {
+        await selectProject();
+        return true;
+    }
+    return false;
+}
+
 export async function main(): Promise<void> {
     const isTTY = Output.isTTY() && !Output.isCI();
 
@@ -187,8 +369,10 @@ export async function main(): Promise<void> {
 
     checkQualitySignals();
 
+    let projectPrompted = false;
     for (;;) {
         if (process.stdout.isTTY) process.stdout.write('\x1Bc');
+        projectPrompted = await maybePromptProject(projectPrompted);
         await checkPreMenu();
         await showSplash();
 
