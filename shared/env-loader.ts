@@ -1,6 +1,7 @@
 import dotenv from 'dotenv';
 import * as path from 'path';
 import * as fs from 'fs';
+import { isValidProjectName, projectEnvPath } from './project-paths.js';
 
 let _rootLogger: { warn: (msg: string) => void; info: (msg: string) => void; error: (msg: string) => void } | null =
     null;
@@ -102,6 +103,20 @@ export function ensureDotenv(): void {
 
     warnSecretsInFile(envPath, '.env');
 
+    // Per-project `.env` overlay (D-E1/D-E3): project-specific values win over globals.
+    const current = process.env['QA_CURRENT_PROJECT'];
+    if (current && isValidProjectName(current)) {
+        applyProjectEnvOverlay(current);
+    } else if (current) {
+        getRootLogger()
+            .then((l) => l.warn('[env-loader] QA_CURRENT_PROJECT inválido, overlay ignorado: ' + current))
+            .catch((err: unknown) => {
+                process.stderr.write(
+                    '[env-loader] Logger init failed: ' + (err instanceof Error ? err.message : String(err)) + '\n',
+                );
+            });
+    }
+
     dotenvLoaded = true;
 }
 
@@ -165,4 +180,40 @@ export function reloadDotenv(): void {
 /** Reset dotenv loaded flag for testing. */
 export function __resetDotenvLoaded(): void {
     dotenvLoaded = false;
+}
+
+/**
+ * Apply the per-project `.env` overlay (D-E1/D-E3) for the given project. Project-specific values win over
+ * globals. No-op (explicit, never silent) when the project name is empty/invalid or the overlay file is absent.
+ * A malformed overlay file is an explicit error (not swallowed).
+ */
+export function applyProjectEnvOverlay(name: string): void {
+    if (!name) return;
+    if (!isValidProjectName(name)) throw new Error('Nome de projeto inválido (path traversal): ' + name);
+
+    const filePath = projectEnvPath(name);
+    if (!fs.existsSync(filePath)) return;
+
+    try {
+        const parsed = dotenv.parse(fs.readFileSync(filePath, 'utf8'));
+        for (const [k, v] of Object.entries(parsed)) {
+            process.env[k] = v;
+        }
+    } catch (err: unknown) {
+        getRootLogger()
+            .then((l) =>
+                l.error(
+                    '[env-loader] Falha ao aplicar overlay do projeto "' +
+                        name +
+                        '": ' +
+                        (err instanceof Error ? err.message : String(err)),
+                ),
+            )
+            .catch((e2: unknown) => {
+                process.stderr.write(
+                    '[env-loader] Logger init failed: ' + (e2 instanceof Error ? e2.message : String(e2)) + '\n',
+                );
+            });
+        throw err;
+    }
 }
