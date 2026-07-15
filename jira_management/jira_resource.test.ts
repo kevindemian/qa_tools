@@ -401,14 +401,12 @@ describe('Jira_resource', () => {
             expect(result.total).toBe(2);
         });
 
-        it('returns empty result on API error', async () => {
+        it('throws on API error (fail loud, no silent empty result)', async () => {
             expect.hasAssertions();
 
             mockClient.get.mockRejectedValue(new Error('Search failed'));
 
-            const result = await jiraResource.searchJiraIssues('project = TEST');
-
-            expect(result).toStrictEqual({ issues: [], total: 0 });
+            await expect(jiraResource.searchJiraIssues('project = TEST')).rejects.toThrow('Search failed');
         });
 
         it('handles empty issues in response', async () => {

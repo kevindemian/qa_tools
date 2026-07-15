@@ -75,6 +75,9 @@ async function fetchSearchPage(
     return { issues: data.issues, total: data.total, isLast: false };
 }
 
+const MAX_PAGES = 1000;
+const MAX_TOTAL = 10000;
+
 export async function searchJiraIssuesCore(
     resource: JiraResourceLike,
     log: Logger,
@@ -82,32 +85,20 @@ export async function searchJiraIssuesCore(
     maxResults = 200,
 ): Promise<SearchResponse> {
     try {
-        const MAX_PAGES = 1000;
-        const MAX_TOTAL = 10000;
         const allIssues: JiraIssue[] = [];
         let startAt = 0;
         let total: number | null = null;
         let pages = 0;
 
         while (pages < MAX_PAGES && allIssues.length < MAX_TOTAL) {
-            pages++;
             const page = await fetchSearchPage(resource, jql, startAt, maxResults);
+            pages++;
 
-            if (page.total !== null) {
-                total = page.total;
-            } else if (page.isLast) {
-                total = allIssues.length + page.issues.length;
-            }
-
-            if (total !== null && total > 0 && pages === 1) {
-                log.info(`Buscando ${total} issues...`);
-            }
-            if (total !== null && total > MAX_TOTAL) {
-                log.warn(`Total (${total}) excede limite de ${MAX_TOTAL}, truncando.`);
-            }
-
+            const decision = classifySearchPage(page, startAt, maxResults, allIssues, total, log);
+            total = decision.total;
             allIssues.push(...page.issues);
-            if (page.isLast || (total !== null && startAt >= total)) break;
+            if (decision.stop) break;
+
             startAt += maxResults;
         }
 
@@ -117,6 +108,35 @@ export async function searchJiraIssuesCore(
         log.error(`Erro searchJiraIssues: ${extractErrorMessage(err)}`);
         throw err;
     }
+}
+
+interface SearchPageDecision {
+    total: number | null;
+    stop: boolean;
+}
+
+function classifySearchPage(
+    page: SearchPage,
+    startAt: number,
+    maxResults: number,
+    collected: JiraIssue[],
+    priorTotal: number | null,
+    log: Logger,
+): SearchPageDecision {
+    let total = priorTotal;
+    if (page.total !== null) {
+        total = page.total;
+    } else if (page.isLast) {
+        total = collected.length + page.issues.length;
+    }
+
+    if (total !== null && total > MAX_TOTAL) {
+        log.warn(`Total (${total}) excede limite de ${MAX_TOTAL}, truncando.`);
+    }
+
+    const stop = page.isLast || page.issues.length < maxResults || (total !== null && startAt + maxResults >= total);
+
+    return { total, stop };
 }
 
 export async function getProjectId(resource: JiraResourceLike, projectName: string): Promise<string> {
