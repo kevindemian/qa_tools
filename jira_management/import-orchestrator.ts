@@ -193,10 +193,10 @@ async function postProcessCheckpoint(opts: PostProcessCheckpointOptions): Promis
 
 function testCreationSetup(
     jiraResource: JiraResourceLike,
-    jiraResourceXray: JiraResourceLike,
+    _jiraResourceXray: JiraResourceLike,
     linkManager: JiraLinkManager,
 ): { stepImporter: XrayStepImporter; factory: TestCaseFactory; linker: IssueLinker; results: TestResult[] } {
-    const stepImporter = createStepImporter(jiraResourceXray, Config.get('xrayMode'));
+    const stepImporter = createStepImporter(jiraResource, Config.get('xrayMode'));
     return {
         stepImporter,
         factory: new TestCaseFactory(jiraResource, stepImporter),

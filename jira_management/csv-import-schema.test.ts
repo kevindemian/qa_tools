@@ -47,13 +47,13 @@ describe('TestCaseSchema', () => {
             title: 'Full test',
             description: 'Description text',
             steps: [{ fields: { Action: 'Click' } }],
-            precondition: { type: 'inline' as const, value: 'User exists' },
+            precondition: [{ type: 'inline' as const, value: 'User exists' }],
             group: 'smoke',
             linkedIssues: [{ key: 'PROJ-1', linkType: 'Tests' }],
         };
         const result = TestCaseSchema.parse(data);
 
-        expect(result.precondition?.type).toBe('inline');
+        expect(result.precondition?.[0]?.type).toBe('inline');
         expect(result.linkedIssues).toHaveLength(1);
     });
 });

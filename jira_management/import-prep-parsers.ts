@@ -13,6 +13,31 @@ import { z } from '../shared/validation.js';
 
 type JsonTestItem = z.infer<typeof ImportJsonItemSchema>;
 
+type PreconditionItem = { type: 'reference' | 'inline'; value: string };
+
+function classifyPrecondition(raw: string): PreconditionItem {
+    const trimmed = raw.trim();
+    return isPreconditionKey(trimmed) ? { type: 'reference', value: trimmed } : { type: 'inline', value: trimmed };
+}
+
+function jsonPreconditionsToItems(value: string | string[]): PreconditionItem[] {
+    const raws: string[] = Array.isArray(value) ? value : [value];
+    if (raws.length === 1) {
+        const single = raws[0];
+        if (!single) return [];
+        const trimmed = single.trim();
+        const parts = trimmed
+            .split(',')
+            .map((p) => p.trim())
+            .filter(Boolean);
+        if (parts.length > 1 && parts.every((p) => isPreconditionKey(p))) {
+            return parts.map((p) => ({ type: 'reference' as const, value: p }));
+        }
+        return [classifyPrecondition(trimmed)];
+    }
+    return raws.map((r) => classifyPrecondition(r));
+}
+
 const csvDefaultPath = Config.get('csvDefaultPath') || path.join(import.meta.dirname, 'test_steps.csv');
 
 export function handleDryRun(
@@ -133,13 +158,7 @@ export function parseJsonTests(jsonPath: string): TestCase[] {
                 },
             };
         }),
-        ...(item.precondition
-            ? {
-                  precondition: isPreconditionKey(item.precondition)
-                      ? { type: 'reference' as const, value: item.precondition }
-                      : { type: 'inline' as const, value: item.precondition },
-              }
-            : {}),
+        ...(item.precondition ? { precondition: jsonPreconditionsToItems(item.precondition) } : {}),
         group: item.group || '',
         linkedIssues: Array.isArray(item.linkedIssues)
             ? item.linkedIssues.map((li) => {

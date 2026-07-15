@@ -502,7 +502,7 @@ describe('GenerateMappingFiles', async () => {
             {
                 title: 'TC3',
                 description: 'Desc',
-                precondition: { type: 'inline', value: 'User must be logged in' },
+                precondition: [{ type: 'inline', value: 'User must be logged in' }],
                 steps: makeSteps('Click login'),
             },
         ];

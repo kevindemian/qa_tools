@@ -1,4 +1,5 @@
 /** Xray Cloud (GraphQL authentication + step import) and Server (REST) client. */
+import { formatErr } from '../shared/errors.js';
 import type { JiraResourceLike } from '../shared/types.js';
 import type { TestStep } from '../shared/types.js';
 import Config from '../shared/config.js';
@@ -21,9 +22,11 @@ class ServerStepImporter implements XrayStepImporter {
 
 class CloudStepImporter implements XrayStepImporter {
     private readonly cloudClient: XrayCloudClient;
+    private readonly jiraResource: JiraResourceLike | undefined;
 
-    constructor() {
+    constructor(jiraResource?: JiraResourceLike) {
         this.cloudClient = new XrayCloudClient();
+        this.jiraResource = jiraResource;
     }
 
     private _getCredentials(): { clientId: string; clientSecret: string } {
@@ -36,18 +39,36 @@ class CloudStepImporter implements XrayStepImporter {
         return { clientId, clientSecret };
     }
 
-    async importStep(issueKey: string, stepIndex: number, step: TestStep): Promise<void> {
+    /** Xray Cloud GraphQL identifies tests by the numeric Jira issue id (not the key). */
+    private async _resolveNumericId(issueKey: string): Promise<string> {
+        if (!this.jiraResource) {
+            throw new Error('CloudStepImporter requires a JiraResource to resolve issue key to numeric id');
+        }
+        try {
+            const issue = await this.jiraResource.getJiraResource<{ id?: string }>('issue/' + issueKey);
+            if (!issue.id) {
+                throw new Error('issue has no numeric id');
+            }
+            return issue.id;
+        } catch (err) {
+            throw new Error('Failed to resolve Jira issue key ' + issueKey + ' to numeric id: ' + formatErr(err), {
+                cause: err,
+            });
+        }
+    }
+
+    async importStep(issueKey: string, _stepIndex: number, step: TestStep): Promise<void> {
         const { clientId, clientSecret } = this._getCredentials();
+        const issueId = await this._resolveNumericId(issueKey);
         const mutation = `
-            mutation AddTestStep($issueId: String!, $index: Int!, $step: TestStepInput!) {
-                addTestStep(issueId: $issueId, index: $index, step: $step) {
+            mutation AddTestStep($issueId: String!, $step: CreateStepInput!) {
+                addTestStep(issueId: $issueId, step: $step) {
                     id
                 }
             }
         `;
         const variables = {
-            issueId: issueKey,
-            index: stepIndex,
+            issueId,
             step: {
                 action: step.fields.Action ?? '',
                 result: step.fields['Expected Result'] ?? '',
@@ -59,5 +80,5 @@ class CloudStepImporter implements XrayStepImporter {
 }
 
 export function createStepImporter(jiraResource: JiraResourceLike, mode: 'server' | 'cloud'): XrayStepImporter {
-    return mode === 'cloud' ? new CloudStepImporter() : new ServerStepImporter(jiraResource);
+    return mode === 'cloud' ? new CloudStepImporter(jiraResource) : new ServerStepImporter(jiraResource);
 }

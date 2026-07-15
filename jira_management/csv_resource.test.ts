@@ -32,47 +32,56 @@ describe('CsvResource', () => {
         });
     });
 
-    describe('ParsePrecondition', () => {
+    describe('ParsePreconditions', () => {
         it('detects reference type for Jira keys', () => {
-            expect(csvResource.parsePrecondition('ECSPOL-PRE-42')).toStrictEqual({
-                type: 'reference',
-                value: 'ECSPOL-PRE-42',
-            });
+            expect(csvResource.parsePreconditions('ECSPOL-PRE-42')).toStrictEqual([
+                { type: 'reference', value: 'ECSPOL-PRE-42' },
+            ]);
         });
 
         it('detects inline type for plain text', () => {
-            expect(csvResource.parsePrecondition('User must be logged in')).toStrictEqual({
-                type: 'inline',
-                value: 'User must be logged in',
-            });
+            expect(csvResource.parsePreconditions('User must be logged in')).toStrictEqual([
+                { type: 'inline', value: 'User must be logged in' },
+            ]);
         });
 
-        it('returns null for null/undefined/empty', () => {
-            expect(csvResource.parsePrecondition(null)).toBeNull();
-            expect(csvResource.parsePrecondition(undefined)).toBeNull();
-            expect(csvResource.parsePrecondition('')).toBeNull();
-            expect(csvResource.parsePrecondition('   ')).toBeNull();
+        it('returns empty array for null/undefined/empty', () => {
+            expect(csvResource.parsePreconditions(null)).toStrictEqual([]);
+            expect(csvResource.parsePreconditions(undefined)).toStrictEqual([]);
+            expect(csvResource.parsePreconditions('')).toStrictEqual([]);
+            expect(csvResource.parsePreconditions('   ')).toStrictEqual([]);
         });
 
         it('extracts key from KEY-100 (descricao)', () => {
-            expect(csvResource.parsePrecondition('ECSPOL-PRE-42 (descricao do pre-cond)')).toStrictEqual({
-                type: 'reference',
-                value: 'ECSPOL-PRE-42',
-            });
+            expect(csvResource.parsePreconditions('ECSPOL-PRE-42 (descricao do pre-cond)')).toStrictEqual([
+                { type: 'reference', value: 'ECSPOL-PRE-42' },
+            ]);
         });
 
         it('extracts key from KEY-100 (with extra parenthetical info)', () => {
-            expect(csvResource.parsePrecondition('ABC-123 (some context here)')).toStrictEqual({
-                type: 'reference',
-                value: 'ABC-123',
-            });
+            expect(csvResource.parsePreconditions('ABC-123 (some context here)')).toStrictEqual([
+                { type: 'reference', value: 'ABC-123' },
+            ]);
         });
 
         it('returns inline for multi-line text (already extracted)', () => {
-            expect(csvResource.parsePrecondition('User must be logged in\nwith admin privileges')).toStrictEqual({
-                type: 'inline',
-                value: 'User must be logged in\nwith admin privileges',
-            });
+            expect(csvResource.parsePreconditions('User must be logged in\nwith admin privileges')).toStrictEqual([
+                { type: 'inline', value: 'User must be logged in\nwith admin privileges' },
+            ]);
+        });
+
+        it('splits comma-separated references into multiple items', () => {
+            expect(csvResource.parsePreconditions('ECSPOL-809, ECSPOL-810, ECSPOL-811')).toStrictEqual([
+                { type: 'reference', value: 'ECSPOL-809' },
+                { type: 'reference', value: 'ECSPOL-810' },
+                { type: 'reference', value: 'ECSPOL-811' },
+            ]);
+        });
+
+        it('treats inline text containing a comma as a single inline item', () => {
+            expect(csvResource.parsePreconditions('must be logged in, then click login')).toStrictEqual([
+                { type: 'inline', value: 'must be logged in, then click login' },
+            ]);
         });
     });
 
@@ -96,10 +105,12 @@ describe('CsvResource', () => {
             );
             const results = await csvResource.readBulkCsv(tmp);
 
-            expect(nonNull(results[0]).precondition).toStrictEqual({
-                type: 'inline',
-                value: 'User must be logged in\nwith admin privileges\nand valid SSL cert',
-            });
+            expect(nonNull(results[0]).precondition).toStrictEqual([
+                {
+                    type: 'inline',
+                    value: 'User must be logged in\nwith admin privileges\nand valid SSL cert',
+                },
+            ]);
             expect(nonNull(results[0]).steps).toHaveLength(1);
 
             unlinkSync(path.resolve(tmp));
@@ -122,10 +133,12 @@ describe('CsvResource', () => {
             );
             const results = await csvResource.readBulkCsv(tmp);
 
-            expect(nonNull(results[0]).precondition).toStrictEqual({
-                type: 'inline',
-                value: 'User must be logged in',
-            });
+            expect(nonNull(results[0]).precondition).toStrictEqual([
+                {
+                    type: 'inline',
+                    value: 'User must be logged in',
+                },
+            ]);
 
             unlinkSync(path.resolve(tmp));
         });
@@ -147,10 +160,12 @@ describe('CsvResource', () => {
             );
             const results = await csvResource.readBulkCsv(tmp);
 
-            expect(nonNull(results[0]).precondition).toStrictEqual({
-                type: 'inline',
-                value: 'User must be logged in',
-            });
+            expect(nonNull(results[0]).precondition).toStrictEqual([
+                {
+                    type: 'inline',
+                    value: 'User must be logged in',
+                },
+            ]);
 
             unlinkSync(path.resolve(tmp));
         });

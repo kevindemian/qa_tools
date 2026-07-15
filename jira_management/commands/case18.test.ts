@@ -483,6 +483,75 @@ describe('Case18', () => {
             expect(createPrecondSpy).toHaveBeenCalledWith('TEST', 'Newly created PC');
         });
 
+        it('preserves multiple pre-conditions per test case in converted output', async () => {
+            expect.hasAssertions();
+
+            const prompt = vi.mocked(promptModule);
+            const llm = vi.mocked(llmClientModule);
+            const jiraLM = vi.mocked(jiraLinkManagerModule);
+            const fs = vi.mocked(fsModule);
+            const listPrecondSpy = vi.spyOn(baseContext.linkManager, 'listPreconditions');
+            const createPrecondSpy = vi.spyOn(baseContext.linkManager, 'createPrecondition');
+
+            prompt.showSelect.mockResolvedValueOnce('manual');
+
+            prompt.askMultiline.mockResolvedValueOnce('User story').mockResolvedValueOnce('Criteria');
+
+            fs.readFileSync.mockReturnValue('You are a QA engineer.');
+
+            listPrecondSpy.mockResolvedValue([]);
+
+            llm.llmPrompt.mockResolvedValue([
+                {
+                    title: 'Test with multiple preconditions',
+                    steps: ['Step 1'],
+                    expectedResult: 'Expected result text for validation here',
+                    preConditions: [
+                        { type: 'create', summary: 'First precondition' },
+                        { type: 'create', summary: 'Second precondition' },
+                    ],
+                },
+            ]);
+
+            jiraLM.matchPreconditionByDualThreshold.mockReturnValue({
+                key: '__create__',
+                summary: 'any',
+                matchType: 'create',
+            });
+
+            createPrecondSpy.mockResolvedValueOnce('PC-NEW-1').mockResolvedValueOnce('PC-NEW-2');
+
+            const mod = case18Module;
+
+            await mod.handler(baseContext);
+
+            const writeCall = (fs.writeFileSync as ReturnType<typeof vi.fn>).mock.calls.find(
+                (call) => typeof call[0] === 'string' && call[0].endsWith('llm-generated-tests.json'),
+            );
+
+            expect(writeCall).toBeDefined();
+
+            const content = (writeCall ? writeCall[1] : '') as string;
+
+            const written = JSON.parse(content) as Array<{
+                title: string;
+                precondition?: Array<{ type: string; value: string }>;
+            }>;
+
+            const converted = written.find((t) => t.title === 'Test with multiple preconditions');
+
+            expect(converted).toBeDefined();
+
+            expect(converted?.precondition).toBeDefined();
+
+            expect(converted?.precondition).toHaveLength(2);
+
+            expect(converted?.precondition).toStrictEqual([
+                { type: 'reference', value: 'PC-NEW-1' },
+                { type: 'reference', value: 'PC-NEW-2' },
+            ]);
+        });
+
         it('deduplicates identical summaries across test cases', async () => {
             expect.hasAssertions();
 

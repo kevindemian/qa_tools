@@ -21,12 +21,58 @@ import {
     NO_UNRELEASED_VERSIONS,
 } from './constants.js';
 import type { JsonObject } from '../shared/types.js';
+import Config from '../shared/config.js';
+import { normalizeJqlForCloud } from '../shared/jira-client.js';
+
+function _isCloudMode(): boolean {
+    try {
+        return Config.getDefault().get('jiraMode') === 'cloud';
+    } catch {
+        return false;
+    }
+}
 
 function sanitizeJqlValue(value: string): string {
     if (!value || typeof value !== 'string') {
         throw new Error('Valor inválido para consulta JQL.');
     }
     return value.replace(/[^\w\s.:/-]/g, '');
+}
+
+interface SearchPage {
+    issues: JiraIssue[];
+    isLast: boolean;
+    total: number | null;
+}
+
+/**
+ * Fetch a single page of search results.
+ *
+ * Jira Cloud's POST /rest/api/3/search/jql rejects `startAt` inside the request body
+ * (HTTP 400 "Invalid request payload"); it must be supplied as a query parameter. The
+ * Cloud response also signals the last page via `isLast` (not `total`).
+ */
+async function fetchSearchPage(
+    resource: JiraResourceLike,
+    jql: string,
+    startAt: number,
+    maxResults: number,
+): Promise<SearchPage> {
+    if (_isCloudMode() && typeof resource.postToApiRoot === 'function') {
+        const res = await resource.postToApiRoot(`/rest/api/3/search/jql?startAt=${startAt}`, {
+            jql: normalizeJqlForCloud(jql),
+            maxResults,
+        });
+        const page = (res ?? { issues: [] }) as { issues?: JiraIssue[]; isLast?: boolean; total?: number };
+        return {
+            issues: page.issues ?? [],
+            isLast: page.isLast === true,
+            total: typeof page.total === 'number' ? page.total : null,
+        };
+    }
+    const url = `search?jql=${encodeURIComponent(jql)}&maxResults=${maxResults}&startAt=${startAt}`;
+    const data = await resource.getJiraResource<SearchResponse>(url);
+    return { issues: data.issues, total: data.total, isLast: false };
 }
 
 export async function searchJiraIssuesCore(
@@ -38,30 +84,38 @@ export async function searchJiraIssuesCore(
     try {
         const MAX_PAGES = 1000;
         const MAX_TOTAL = 10000;
-        let allIssues: JiraIssue[] = [];
+        const allIssues: JiraIssue[] = [];
         let startAt = 0;
         let total: number | null = null;
         let pages = 0;
 
-        while ((total === null || startAt < total) && pages < MAX_PAGES && allIssues.length < MAX_TOTAL) {
+        while (pages < MAX_PAGES && allIssues.length < MAX_TOTAL) {
             pages++;
-            const url = `search?jql=${encodeURIComponent(jql)}&maxResults=${maxResults}&startAt=${startAt}`;
-            const data = await resource.getJiraResource<SearchResponse>(url);
+            const page = await fetchSearchPage(resource, jql, startAt, maxResults);
 
-            if (total === null) {
-                total = data.total;
-                if (total > 0) log.info(`Buscando ${total} issues...`);
-                if (total > MAX_TOTAL) log.warn(`Total (${total}) excede limite de ${MAX_TOTAL}, truncando.`);
+            if (page.total !== null) {
+                total = page.total;
+            } else if (page.isLast) {
+                total = allIssues.length + page.issues.length;
             }
 
-            allIssues = allIssues.concat(data.issues);
+            if (total !== null && total > 0 && pages === 1) {
+                log.info(`Buscando ${total} issues...`);
+            }
+            if (total !== null && total > MAX_TOTAL) {
+                log.warn(`Total (${total}) excede limite de ${MAX_TOTAL}, truncando.`);
+            }
+
+            allIssues.push(...page.issues);
+            if (page.isLast || (total !== null && startAt >= total)) break;
             startAt += maxResults;
         }
 
         return { issues: allIssues, total: allIssues.length };
     } catch (err: unknown) {
+        // Fail loud: never return a silent empty result (would hide data loss / search bugs).
         log.error(`Erro searchJiraIssues: ${extractErrorMessage(err)}`);
-        return { issues: [], total: 0 };
+        throw err;
     }
 }
 

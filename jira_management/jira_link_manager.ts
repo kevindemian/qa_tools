@@ -21,7 +21,7 @@ class JiraLinkManager {
         this.jiraResource = jiraResource;
         this.linkTypeManager = new LinkTypeManager(jiraResource);
         this.linkOperations = new LinkOperations(jiraResource, this.linkTypeManager);
-        this.preconditionHandler = new PreconditionHandler(jiraResource, this);
+        this.preconditionHandler = new PreconditionHandler(jiraResource);
     }
 
     get linkTypesCache() {

@@ -13,12 +13,28 @@ vi.mock('../shared/config', () => ({
     default: { getDefault: () => ({ get: (key: string) => mockConfigGet(key) }) },
 }));
 
+const hoistedXray = vi.hoisted(() => ({
+    addPreconditionsToTest: vi.fn(),
+}));
+vi.mock('../shared/xray-cloud-client', () => ({
+    XrayCloudClient: class {
+        graphqlMutation() {
+            return Promise.resolve({ data: {} });
+        }
+        graphql() {
+            return Promise.resolve({});
+        }
+        addPreconditionsToTest(...args: unknown[]) {
+            return (hoistedXray.addPreconditionsToTest as unknown as (...a: unknown[]) => unknown)(...args);
+        }
+    },
+}));
+
 import {
     PreconditionHandler,
     matchPreconditionByTokenOverlap,
     matchPreconditionByDualThreshold,
 } from './precondition-handler.js';
-import type JiraLinkManager from './jira_link_manager.js';
 
 describe('PreconditionHandler', () => {
     let mockJiraResource: {
@@ -453,8 +469,6 @@ describe('PreconditionHandler (Cloud mode)', () => {
         getTransitionsForIssue: Mock;
         transitionIssue: Mock;
     };
-    let mockLinkManager: JiraLinkManager;
-    let createIssueLinkMock: Mock;
     let handler: PreconditionHandler;
 
     beforeEach(() => {
@@ -468,36 +482,62 @@ describe('PreconditionHandler (Cloud mode)', () => {
             getTransitionsForIssue: vi.fn(),
             transitionIssue: vi.fn(),
         };
-        createIssueLinkMock = vi.fn().mockResolvedValue(undefined);
-        mockLinkManager = { createIssueLink: createIssueLinkMock } as unknown as JiraLinkManager;
-        handler = new PreconditionHandler(mockJiraResource, mockLinkManager);
+        handler = new PreconditionHandler(mockJiraResource);
     });
 
-    it('associates precondition via issue link and returns null', async () => {
+    function withCredentials() {
+        mockConfigGet.mockImplementation((key: string) => {
+            if (key === 'jiraMode') return 'cloud';
+            if (key === 'xrayClientId') return 'cid';
+            if (key === 'xrayClientSecret') return 'csecret';
+            return undefined;
+        });
+    }
+
+    it('associates pre-condition via Xray Cloud GraphQL addPreconditionsToTest using numeric ids', async () => {
         expect.hasAssertions();
 
-        const result = await handler.associatePrecondition('TEST-1', 'PRE-1');
+        withCredentials();
 
-        expect(result).toBeNull();
-        expect(createIssueLinkMock).toHaveBeenCalledTimes(1);
-        expect(createIssueLinkMock).toHaveBeenCalledWith('TEST-1', 'PRE-1', 'Pre-Condition');
-        expect(mockJiraResource.putJiraResource).not.toHaveBeenCalled();
+        mockJiraResource.getJiraResource.mockImplementation((url: string) => {
+            if (url.includes('PRE-1')) return Promise.resolve({ id: 'prec1id' });
+            if (url.includes('TEST-1')) return Promise.resolve({ id: 'test1id' });
+            return Promise.resolve({ id: 'x' });
+        });
+
+        await expect(handler.associatePrecondition('TEST-1', 'PRE-1')).resolves.toBeNull();
+
+        expect(hoistedXray.addPreconditionsToTest).toHaveBeenCalledWith('test1id', ['prec1id'], 'cid', 'csecret');
     });
 
-    it('does not use the Server custom field in cloud mode', async () => {
+    it('associates multiple pre-conditions via a single GraphQL call', async () => {
         expect.hasAssertions();
 
-        await handler.associatePrecondition('TEST-1', 'PRE-1');
+        withCredentials();
 
-        expect(mockJiraResource.getJiraResource).not.toHaveBeenCalled();
+        mockJiraResource.getJiraResource.mockImplementation((url: string) => {
+            if (url.includes('PRE-1')) return Promise.resolve({ id: 'prec1id' });
+            if (url.includes('PRE-2')) return Promise.resolve({ id: 'prec2id' });
+            if (url.includes('TEST-1')) return Promise.resolve({ id: 'test1id' });
+            return Promise.resolve({ id: 'x' });
+        });
+
+        await expect(handler.associatePrecondition('TEST-1', ['PRE-1', 'PRE-2'])).resolves.toBeNull();
+
+        expect(hoistedXray.addPreconditionsToTest).toHaveBeenCalledWith(
+            'test1id',
+            ['prec1id', 'prec2id'],
+            'cid',
+            'csecret',
+        );
     });
 
-    it('throws when no link manager is provided in cloud mode', async () => {
+    it('throws when Xray credentials are missing', async () => {
         expect.hasAssertions();
 
-        const orphan = new PreconditionHandler(mockJiraResource);
-
-        await expect(orphan.associatePrecondition('TEST-1', 'PRE-1')).rejects.toThrow(/JiraLinkManager/);
+        await expect(handler.associatePrecondition('TEST-1', 'PRE-1')).rejects.toThrow(
+            'XRAY_CLIENT_ID and XRAY_CLIENT_SECRET must be set',
+        );
     });
 
     it('throws when resolving the Server precondition field id in cloud mode', async () => {

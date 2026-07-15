@@ -2,8 +2,8 @@ import { formatErr } from '../shared/errors.js';
 import { info } from '../shared/prompt.js';
 import { rootLogger } from '../shared/logger.js';
 import Config from '../shared/config.js';
+import { XrayCloudClient } from '../shared/xray-cloud-client.js';
 import type { JsonObject, PreConditionSummary, JiraResourceLike } from '../shared/types.js';
-import type JiraLinkManager from './jira_link_manager.js';
 
 interface IssueField {
     id: string;
@@ -15,11 +15,9 @@ export class PreconditionHandler {
     jiraResource: JiraResourceLike;
     _preconditionFieldId?: string;
     _preconditionIssueTypeId: string | undefined;
-    private readonly _linkManager: JiraLinkManager | undefined;
 
-    constructor(jiraResource: JiraResourceLike, linkManager?: JiraLinkManager) {
+    constructor(jiraResource: JiraResourceLike) {
         this.jiraResource = jiraResource;
-        this._linkManager = linkManager;
     }
 
     private _isCloud(): boolean {
@@ -27,6 +25,28 @@ export class PreconditionHandler {
             return Config.getDefault().get('jiraMode') === 'cloud';
         } catch {
             return false;
+        }
+    }
+
+    private _xrayClient?: XrayCloudClient;
+
+    private _getXrayClient(): XrayCloudClient {
+        if (!this._xrayClient) this._xrayClient = new XrayCloudClient();
+        return this._xrayClient;
+    }
+
+    /** Xray Cloud identifies issues by their numeric id (not the key). */
+    private async _resolveNumericId(issueKey: string): Promise<string> {
+        try {
+            const issue = await this.jiraResource.getJiraResource<{ id?: string }>('issue/' + issueKey);
+            if (!issue.id) {
+                throw new Error('issue has no numeric id');
+            }
+            return issue.id;
+        } catch (err) {
+            throw new Error('Failed to resolve Jira issue key ' + issueKey + ' to numeric id: ' + formatErr(err), {
+                cause: err,
+            });
         }
     }
 
@@ -58,21 +78,31 @@ export class PreconditionHandler {
         return this._preconditionFieldId;
     }
 
-    async associatePrecondition(testKey: string, preconditionKey: string): Promise<JsonObject | null> {
+    async associatePrecondition(testKey: string, preconditionKey: string | string[]): Promise<JsonObject | null> {
+        const keys = Array.isArray(preconditionKey) ? preconditionKey : [preconditionKey];
         if (this._isCloud()) {
-            if (!this._linkManager) {
-                throw new Error('Cloud precondition association requires a JiraLinkManager; none was provided.');
+            const clientId = Config.getDefault().get('xrayClientId');
+            const clientSecret = Config.getDefault().get('xrayClientSecret');
+            if (!clientId || !clientSecret) {
+                throw new Error('XRAY_CLIENT_ID and XRAY_CLIENT_SECRET must be set for Xray Cloud mode');
             }
-            info(`Associando pre-condition ${preconditionKey} ao teste ${testKey} via issue link (Cloud)...`);
-            await this._linkManager.createIssueLink(testKey, preconditionKey, 'Pre-Condition');
+            const testId = await this._resolveNumericId(testKey);
+            const precIds = await Promise.all(keys.map((k) => this._resolveNumericId(k)));
+            info(
+                `Associando pre-conditions ${keys.join(', ')} (ids ${precIds.join(', ')}) ao teste ${testKey} ` +
+                    `(id ${testId}) via Xray Cloud GraphQL addPreconditionsToTest...`,
+            );
+            await this._getXrayClient().addPreconditionsToTest(testId, precIds, clientId, clientSecret);
             return null;
         }
         const fieldId = await this._getPreconditionFieldId();
-        info(`Associando pre-condition ${preconditionKey} ao teste ${testKey}...`);
+        info(`Associando pre-conditions ${keys.join(', ')} ao teste ${testKey}...`);
         const testIssue = await this.jiraResource.getJiraResource<{ fields?: JsonObject }>(`issue/${testKey}`);
         const current = (Reflect.get(testIssue.fields ?? {}, fieldId) ?? []) as string[];
-        if (!current.includes(preconditionKey)) {
-            current.push(preconditionKey);
+        for (const k of keys) {
+            if (!current.includes(k)) {
+                current.push(k);
+            }
         }
         const payload: JsonObject = {};
         Reflect.set(payload, fieldId, current);
@@ -82,7 +112,10 @@ export class PreconditionHandler {
     async _resolvePreconditionIssueTypeId(): Promise<string> {
         if (this._preconditionIssueTypeId) return this._preconditionIssueTypeId;
         const types = await this.jiraResource.getJiraResource<Array<{ id: string; name: string }>>('issuetype');
-        const match = types.find((t) => t.name.toLowerCase() === 'pre-condition');
+        const match = types.find((t) => {
+            const norm = (t.name || '').toLowerCase().replace(/[-_]/g, '');
+            return norm === 'precondition';
+        });
         if (!match) {
             throw new Error('Issue type "Pre-condition" não encontrado no Jira');
         }

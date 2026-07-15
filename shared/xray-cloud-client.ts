@@ -11,6 +11,7 @@ const GRAPHQL_PATH = '/api/v2/graphql';
 
 export interface GraphqlResponse {
     data?: Record<string, unknown>;
+    errors?: Array<{ message: string }>;
 }
 
 /** Resilient HTTP client for Xray Cloud API.
@@ -96,14 +97,44 @@ export class XrayCloudClient {
             throw new Error('Xray Cloud authentication failed — cannot execute mutation');
         }
         try {
-            await this.httpClient.post(
+            const res = await this.httpClient.post<GraphqlResponse>(
                 GRAPHQL_PATH,
                 { query, variables },
                 { headers: { Authorization: 'Bearer ' + token } },
             );
+            const errors = res.data.errors;
+            if (errors && errors.length > 0) {
+                const msgs = errors.map((e) => e.message).join('; ');
+                throw new Error('Xray Cloud GraphQL mutation failed: ' + msgs);
+            }
         } catch (err) {
             const msg = err instanceof Error ? err.message : String(err);
             throw new Error('Xray Cloud GraphQL mutation failed: ' + msg, { cause: err });
         }
+    }
+
+    /** Associate one or more Pre-condition issues to a Test in Xray Cloud.
+     *  Uses the native GraphQL `addPreconditionsToTest` mutation (numeric issue ids),
+     *  which does NOT depend on the Jira "Pre-Condition" issue link type.
+     *  Throws on failure (GraphQL errors are surfaced by graphqlMutation). */
+    async addPreconditionsToTest(
+        testIssueId: string,
+        preconditionIssueIds: string[],
+        clientId: string,
+        clientSecret: string,
+    ): Promise<void> {
+        if (!testIssueId) throw new Error('addPreconditionsToTest requires a test issue id');
+        if (!Array.isArray(preconditionIssueIds) || preconditionIssueIds.length === 0) {
+            throw new Error('addPreconditionsToTest requires at least one precondition issue id');
+        }
+        const mutation = `
+            mutation AddPreconditionsToTest($testIssueId: String!, $preconditionIssueIds: [String!]!) {
+                addPreconditionsToTest(issueId: $testIssueId, preconditionIssueIds: $preconditionIssueIds) {
+                    addedPreconditions
+                    warning
+                }
+            }
+        `;
+        await this.graphqlMutation(mutation, { testIssueId, preconditionIssueIds }, clientId, clientSecret);
     }
 }

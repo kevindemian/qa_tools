@@ -13,6 +13,30 @@ vi.mock('../shared/config', () => ({
     default: { getDefault: () => ({ get: (key: string) => mockConfigGet(key) }) },
 }));
 
+const hoistedXray = vi.hoisted(() => ({
+    addPreconditionsToTest: vi.fn().mockResolvedValue(undefined),
+    graphql: vi.fn().mockResolvedValue(null),
+    graphqlMutation: vi.fn().mockResolvedValue(undefined),
+    authenticate: vi.fn().mockResolvedValue('tok'),
+}));
+vi.mock('../shared/xray-cloud-client', () => {
+    class XrayCloudClientMock {
+        addPreconditionsToTest(...args: unknown[]) {
+            return (hoistedXray.addPreconditionsToTest as unknown as (...a: unknown[]) => unknown)(...args);
+        }
+        graphql(...args: unknown[]) {
+            return (hoistedXray.graphql as unknown as (...a: unknown[]) => unknown)(...args);
+        }
+        graphqlMutation(...args: unknown[]) {
+            return (hoistedXray.graphqlMutation as unknown as (...a: unknown[]) => unknown)(...args);
+        }
+        authenticate(...args: unknown[]) {
+            return (hoistedXray.authenticate as unknown as (...a: unknown[]) => unknown)(...args);
+        }
+    }
+    return { XrayCloudClient: XrayCloudClientMock };
+});
+
 import { PreconditionHandler } from './precondition-importer.js';
 import type { Mock } from 'vitest';
 
@@ -259,6 +283,65 @@ describe('PreconditionHandler', () => {
 
             expect(key).toBe('PREC-EXISTING');
             expect(mockJiraResource.postJiraResource).not.toHaveBeenCalled();
+        });
+    });
+
+    describe('AssociatePrecondition (cloud)', () => {
+        it('associates via Xray Cloud GraphQL addPreconditionsToTest using numeric ids', async () => {
+            expect.hasAssertions();
+
+            mockConfigGet.mockImplementation((key: string) => {
+                if (key === 'jiraMode') return 'cloud';
+                if (key === 'xrayClientId') return 'cid';
+                if (key === 'xrayClientSecret') return 'csecret';
+                return undefined;
+            });
+            mockJiraResource.getJiraResource.mockImplementation((url: string) => {
+                if (url.includes('ECSPOL-809')) return { id: '809id' };
+                if (url.includes('ECSPOL-810')) return { id: '810id' };
+                if (url.includes('TEST-1')) return { id: 'test1id' };
+                return { id: 'x' };
+            });
+
+            await expect(handler.associatePrecondition('TEST-1', 'ECSPOL-809')).resolves.toBeNull();
+
+            expect(hoistedXray.addPreconditionsToTest).toHaveBeenCalledWith('test1id', ['809id'], 'cid', 'csecret');
+        });
+
+        it('associates multiple pre-conditions via a single GraphQL call', async () => {
+            expect.hasAssertions();
+
+            mockConfigGet.mockImplementation((key: string) => {
+                if (key === 'jiraMode') return 'cloud';
+                if (key === 'xrayClientId') return 'cid';
+                if (key === 'xrayClientSecret') return 'csecret';
+                return undefined;
+            });
+            mockJiraResource.getJiraResource.mockImplementation((url: string) => {
+                if (url.includes('ECSPOL-809')) return { id: '809id' };
+                if (url.includes('ECSPOL-810')) return { id: '810id' };
+                if (url.includes('TEST-1')) return { id: 'test1id' };
+                return { id: 'x' };
+            });
+
+            await expect(handler.associatePrecondition('TEST-1', ['ECSPOL-809', 'ECSPOL-810'])).resolves.toBeNull();
+
+            expect(hoistedXray.addPreconditionsToTest).toHaveBeenCalledWith(
+                'test1id',
+                ['809id', '810id'],
+                'cid',
+                'csecret',
+            );
+        });
+
+        it('throws when Xray credentials are missing', async () => {
+            expect.hasAssertions();
+
+            mockConfigGet.mockImplementation((key: string) => (key === 'jiraMode' ? 'cloud' : undefined));
+
+            await expect(handler.associatePrecondition('TEST-1', 'ECSPOL-809')).rejects.toThrow(
+                'XRAY_CLIENT_ID and XRAY_CLIENT_SECRET must be set',
+            );
         });
     });
 });

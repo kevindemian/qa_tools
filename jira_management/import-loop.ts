@@ -95,7 +95,7 @@ async function linkTestRelations(opts: LinkTestRelationsOptions): Promise<LinkRe
     const { linker, test, createdTestIssue, factory, opLog, testTitle, results } = opts;
     let errored = false;
 
-    if (test.precondition && test.precondition.type === 'reference') {
+    if (test.precondition && test.precondition.some((p) => p.type === 'reference')) {
         const precResult = await linker.associatePrecondition(test, createdTestIssue.key, opLog);
         if (precResult) {
             if (precResult.action === 'abort') {
@@ -125,8 +125,11 @@ async function linkTestRelations(opts: LinkTestRelationsOptions): Promise<LinkRe
 
 function buildTestData(test: TestCase, projectName: string, jiraLabels: string[]): TestDataPayload {
     let description = test.description || '';
-    if (test.precondition && test.precondition.type === 'inline') {
-        description += (description ? '\n\n' : '') + 'Pre-condition: ' + test.precondition.value;
+    if (test.precondition && test.precondition.length > 0) {
+        const inline = test.precondition.filter((p) => p.type === 'inline').map((p) => p.value);
+        if (inline.length > 0) {
+            description += (description ? '\n\n' : '') + 'Pre-condition: ' + inline.join('\n');
+        }
     }
 
     return JiraPayloadSchema.parse({

@@ -137,7 +137,7 @@ describe('MappingFileGenerator', () => {
                 {
                     title: 't',
                     steps: [],
-                    precondition: { type: 'inline', value: 'must login' },
+                    precondition: [{ type: 'inline', value: 'must login' }],
                 },
             ],
         );

@@ -56,7 +56,11 @@ describe('IssueLinker', () => {
             expect.hasAssertions();
 
             mockLinkManager.associatePrecondition.mockResolvedValue(null);
-            const test: TestCase = { title: 'Test', steps: [], precondition: { type: 'reference', value: 'PREC-001' } };
+            const test: TestCase = {
+                title: 'Test',
+                steps: [],
+                precondition: [{ type: 'reference', value: 'PREC-001' }],
+            };
             const result = await linker.associatePrecondition(test, 'TEST-1', opLog);
 
             expect(result).toBeNull();
@@ -68,7 +72,11 @@ describe('IssueLinker', () => {
 
             mockLinkManager.associatePrecondition.mockResolvedValue(null);
             mockPrompt.isQuiet.mockReturnValue(false);
-            const test: TestCase = { title: 'Test', steps: [], precondition: { type: 'reference', value: 'PREC-001' } };
+            const test: TestCase = {
+                title: 'Test',
+                steps: [],
+                precondition: [{ type: 'reference', value: 'PREC-001' }],
+            };
             await linker.associatePrecondition(test, 'TEST-1', opLog);
 
             expect(mockPrompt.success).toHaveBeenCalledWith('  Pre-condition PREC-001 associada');
@@ -79,7 +87,11 @@ describe('IssueLinker', () => {
 
             mockLinkManager.associatePrecondition.mockRejectedValue(new Error('API error'));
             mockPrompt.onError.mockReturnValue('abort');
-            const test: TestCase = { title: 'Test', steps: [], precondition: { type: 'reference', value: 'PREC-001' } };
+            const test: TestCase = {
+                title: 'Test',
+                steps: [],
+                precondition: [{ type: 'reference', value: 'PREC-001' }],
+            };
             const result = await linker.associatePrecondition(test, 'TEST-1', opLog);
 
             expect(result).toStrictEqual({ action: 'abort' });

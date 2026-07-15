@@ -2,7 +2,7 @@
  * values (spanning CSV rows), and escaped quotes (""). Used by csv_resource.ts
  * to parse CSV fields that may contain commas, newlines, or special characters. */
 
-const PRECONDITION_KEY_PATTERN = '[A-Z][A-Z0-9]+(?:-[A-Z0-9]+)*\\-\\d+';
+export const PRECONDITION_KEY_PATTERN = '[A-Z][A-Z0-9]+(?:-[A-Z0-9]+)*\\-\\d+';
 
 const PRECONDITION_KEY_RE = new RegExp('^' + PRECONDITION_KEY_PATTERN + '$');
 
