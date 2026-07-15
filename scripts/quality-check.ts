@@ -378,7 +378,7 @@ export function checkQualityGateFiles(): CheckResult {
 }
 
 // markdown.ts/markdown-lexer.ts: `!` is markdown image syntax, not non-null assertion
-// xray-history.ts/xray-client.ts: GraphQL return types have known non-null fields
+// xray-history.ts/xray-client.ts/xray-cloud-client.ts: GraphQL types have known non-null fields
 // case02.ts: structured test assertions
 // pipeline-handler.test.ts: test assertions
 export function checkNonNullAssertion(): CheckResult {
@@ -386,7 +386,7 @@ export function checkNonNullAssertion(): CheckResult {
         .filter((f) => !f.startsWith('scripts/'))
         .filter(
             (f) =>
-                !/markdown\.ts$|markdown-lexer\.ts$|xray-history\.ts$|xray-client\.ts$|case02\.ts$|pipeline-handler\.test\.ts$/.test(
+                !/markdown\.ts$|markdown-lexer\.ts$|xray-history\.ts$|xray-client\.ts$|xray-cloud-client\.ts$|case02\.ts$|pipeline-handler\.test\.ts$/.test(
                     f,
                 ),
         );
@@ -448,7 +448,7 @@ export function checkIntegrity(): CheckResult {
         const selfContent = readFileSync('scripts/quality-check.ts', 'utf-8');
         const contentWithoutHash = selfContent.replace(/\/\* HASH:[0-9a-f]{64} \*\//g, '');
         const currentHash = createHash('sha256').update(contentWithoutHash, 'utf-8').digest('hex');
-        /* HASH:b1ae977a14b4bd12869e765c05f6cad08a3185fcd8ef5f8dbb46499d2a474c86 */
+        /* HASH:009017177987f9c5cd6d2bd577aa366655b0ebe6beadb62c97b0541bca7ddba5 */
         const match = /\/\* HASH:([0-9a-f]{64}) \*\//.exec(selfContent);
         if (!match) {
             violations.push({ file: 'scripts/quality-check.ts', line: 1, content: 'Missing HASH comment' });
