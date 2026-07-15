@@ -65,6 +65,16 @@ vi.mock('../../shared/session-context', () => ({
     }),
 }));
 
+const { hubState } = vi.hoisted(() => {
+    const state: { hub: unknown } = { hub: undefined };
+    return { hubState: state };
+});
+
+vi.mock('../../shared/data-hub/global-hub', () => ({
+    isDataHubInitialized: () => hubState.hub !== undefined,
+    getDataHub: () => hubState.hub,
+}));
+
 let loadMetricsValue: unknown = null;
 
 vi.mock('../../shared/logger', () => ({
@@ -93,6 +103,7 @@ import fs from 'fs';
 import case17Module from './case17.js';
 import { createMockContext } from '../../shared/test-utils/factories/context-factory.js';
 import { resolveTestDataSource } from '../../shared/session-context.js';
+import * as case17Helpers from './case17-helpers.js';
 
 const baseContext = createMockContext();
 
@@ -106,6 +117,7 @@ describe('Case17', () => {
     beforeEach(() => {
         vi.clearAllMocks();
         loadMetricsValue = null;
+        hubState.hub = undefined;
         // Ensure withSpinner invokes the callback (auto-mock returns undefined otherwise)
         vi.mocked(promptModule).withSpinner.mockImplementation(async (_label: string, fn: () => Promise<unknown>) =>
             fn(),
@@ -720,6 +732,38 @@ describe('Case17', () => {
             );
 
             process.argv = origArgv;
+        });
+    });
+
+    describe('Case17 — commitLog wiring', () => {
+        it('threads hub.raw.commitLog into buildGitTrendHtml', async () => {
+            expect.hasAssertions();
+
+            const prompt = vi.mocked(promptModule);
+            const reportGen = vi.mocked(reportGenModule);
+            const spy = vi.spyOn(case17Helpers, 'buildGitTrendHtml');
+
+            hubState.hub = {
+                raw: { commitLog: 'KNOWN_COMMIT_LOG' },
+                computed: { metricsRuns: [] },
+            };
+
+            vi.mocked(resolveTestDataSource).mockResolvedValueOnce({
+                result: {
+                    tests: [{ title: 'T', state: 'passed', duration: 10, fullTitle: 'T' }],
+                    stats: { passed: 1, failed: 0, skipped: 0, total: 1, duration: 10 },
+                },
+                source: 'cache',
+            });
+
+            prompt.ask.mockResolvedValueOnce('');
+            reportGen.generateHtmlReport.mockReturnValueOnce('<html>report</html>');
+
+            await case17Module.handler(baseContext);
+
+            expect(spy).toHaveBeenCalledWith('KNOWN_COMMIT_LOG', expect.any(Array));
+
+            spy.mockRestore();
         });
     });
 });

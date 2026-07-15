@@ -17,6 +17,7 @@ import type {
     RawIssue,
     CoverageFile,
     PerformanceMetrics,
+    RawPullRequest,
     CoverageSnapshot,
     FailureClassification,
     QualityMetricsSnapshot,
@@ -67,6 +68,8 @@ describe('ST-1 hub delegates to persistence', () => {
         const loadCoverageFiles = vi.fn<() => CoverageFile[]>().mockReturnValue([]);
         const savePerformanceMetrics = vi.fn<(metrics: PerformanceMetrics) => void>();
         const loadPerformanceMetrics = vi.fn<() => PerformanceMetrics | null>().mockReturnValue(null);
+        const savePullRequests = vi.fn<(pullRequests: RawPullRequest[]) => void>();
+        const loadPullRequests = vi.fn<() => RawPullRequest[]>().mockReturnValue([]);
         // ─── Test-result cache (SHA-keyed) — owned by DataHub (replaces legacy Store) ─
         const loadReport = vi.fn<(sha: string) => { tests: FlatTest[] } | null>().mockReturnValue(null);
         const saveReport = vi.fn<(sha: string, tests: FlatTest[]) => void>();
@@ -102,6 +105,8 @@ describe('ST-1 hub delegates to persistence', () => {
             loadCoverageFiles,
             savePerformanceMetrics,
             loadPerformanceMetrics,
+            savePullRequests,
+            loadPullRequests,
             loadReport,
             saveReport,
             put,
@@ -131,6 +136,8 @@ describe('ST-1 hub delegates to persistence', () => {
             loadCoverageFiles,
             savePerformanceMetrics,
             loadPerformanceMetrics,
+            savePullRequests,
+            loadPullRequests,
         };
     }
 

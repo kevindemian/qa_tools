@@ -1,3 +1,5 @@
+import { makeDataHubGetters } from '../shared/test-utils/factories/data-hub-mock.js';
+
 vi.mock('../shared/prompt', () => ({
     print: vi.fn(),
     success: vi.fn(),
@@ -168,6 +170,21 @@ describe('Session-state', () => {
         });
     });
 
+    describe('GetProjects — PROJECT_ID_ hack removed', () => {
+        it('ignores PROJECT_ID_<NAME> env overrides (single source = projects.json)', () => {
+            expect.hasAssertions();
+
+            process.env['PROJECT_ID_QA_TOOLS'] = 'ENV_OVERRIDE_SHOULD_BE_IGNORED';
+
+            const projects = sessionState.getProjects();
+
+            expect(projects['qa_tools']).toBe('62689551');
+            expect(projects['qa_tools']).not.toBe('ENV_OVERRIDE_SHOULD_BE_IGNORED');
+
+            delete process.env['PROJECT_ID_QA_TOOLS'];
+        });
+    });
+
     describe('CreateManagerForProject', () => {
         it('creates GitLabManager when provider is gitlab', () => {
             const mgr = sessionState.createManagerForProject('qa_ibabs', '47849962');
@@ -235,8 +252,11 @@ describe('Session-state', () => {
                 loadCoverageFiles: vi.fn().mockReturnValue([]),
                 savePerformanceMetrics: vi.fn(),
                 loadPerformanceMetrics: vi.fn().mockReturnValue(null),
+                savePullRequests: vi.fn(),
+                loadPullRequests: vi.fn().mockReturnValue([]),
                 getQuality: vi.fn(),
                 getQuarantine: vi.fn(() => ({ entries: [] })),
+                ...makeDataHubGetters(),
                 getBranchPassRate: vi.fn(),
                 mergeIncremental: vi.fn(),
                 loadReport: vi.fn(),

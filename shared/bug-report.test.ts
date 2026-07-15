@@ -10,11 +10,13 @@ const mockPrompt = vi.hoisted(() => ({
 
 vi.mock('./prompt', () => mockPrompt);
 
-const mockFailureAnalysis = vi.hoisted(() => ({
-    classifyFailure: vi.fn(),
-}));
-
-vi.mock('./failure-analysis', () => mockFailureAnalysis);
+vi.mock('./failure-analysis', async (importOriginal) => {
+    const actual = await importOriginal<typeof import('./failure-analysis.js')>();
+    return {
+        ...actual,
+        classifyFailure: vi.fn(actual.classifyFailure),
+    };
+});
 
 vi.mock('./logger');
 
@@ -29,10 +31,14 @@ vi.mock('./config', () => ({
 }));
 
 import { collectManual, collectAutomated, compose, fileToJira, interactiveBugReportFlow } from './bug-report.js';
+import { classifyFailure } from './failure-analysis.js';
 import type { Mock } from 'vitest';
 import type { ParseResult } from './result_parser.js';
 import type { BugReport } from './types.js';
 import { nonNull } from './test-utils.js';
+import { makeDataHubMock } from './test-utils/factories/data-hub-mock.js';
+import type { DataSource, FailureRecord } from './types/data-hub.js';
+import type { QualityCategory, QualityReport } from './data-hub/quality.js';
 
 describe('BugReport Service', () => {
     beforeEach(() => {
@@ -121,7 +127,7 @@ describe('BugReport Service', () => {
                 .mockResolvedValueOnce(''); // actual
 
             mockPrompt.askConfirm.mockResolvedValueOnce(true); // LLM classification opt-in
-            mockFailureAnalysis.classifyFailure.mockResolvedValueOnce('AUTHENTICATION_ERROR');
+            vi.mocked(classifyFailure).mockResolvedValueOnce('AUTHENTICATION_ERROR');
 
             const report = await collectManual();
 
@@ -147,7 +153,7 @@ describe('BugReport Service', () => {
                 .mockResolvedValueOnce('');
 
             mockPrompt.askConfirm.mockResolvedValueOnce(true);
-            mockFailureAnalysis.classifyFailure.mockRejectedValueOnce(new Error('API timeout'));
+            vi.mocked(classifyFailure).mockRejectedValueOnce(new Error('API timeout'));
 
             const report = await collectManual();
 
@@ -194,7 +200,7 @@ describe('BugReport Service', () => {
                 .mockResolvedValueOnce('');
 
             mockPrompt.askConfirm.mockResolvedValueOnce(true);
-            mockFailureAnalysis.classifyFailure.mockResolvedValueOnce('');
+            vi.mocked(classifyFailure).mockResolvedValueOnce('');
 
             const report = await collectManual();
 
@@ -262,6 +268,57 @@ describe('BugReport Service', () => {
 
             expect(report.description).toContain('*Fails silently*');
             expect(report.description).not.toContain('Error:');
+        });
+
+        it('attaches data-quality confidence + prior-failure count from unified model (C-3g)', () => {
+            expect.hasAssertions();
+
+            const mockResult: ParseResult = {
+                tests: [
+                    { title: 'Login fails', state: 'failed', duration: 100, error: 'boom' },
+                    { title: 'Logout succeeds', state: 'passed', duration: 50 },
+                ],
+                stats: { passed: 1, failed: 1, skipped: 0, total: 2, duration: 150 },
+            };
+            const records: FailureRecord[] = [
+                { name: 'Login fails', status: 'failed', category: 'assertion', confidence: 0.9, source: 'junit' },
+            ];
+            const provenance = new Map<string, DataSource>([
+                ['failureRecords', { source: 'github', confidence: 0.8, timestamp: '2026-01-01T00:00:00.000Z' }],
+            ]);
+            const quality: Partial<Record<QualityCategory, QualityReport>> = {
+                failureRecords: { valid: true, issues: [] },
+            };
+            const hub = makeDataHubMock({
+                raw: {
+                    runs: [],
+                    jobs: new Map(),
+                    artifacts: new Map(),
+                    failureReasons: new Map(),
+                    failureRecords: records,
+                },
+                provenance,
+                quality,
+            });
+
+            const report = collectAutomated(mockResult, { pipelineId: '456' }, { dataHub: hub });
+
+            expect(report.metadata?.dataQualityConfidence).toBeCloseTo(0.8);
+            expect(report.metadata?.priorFailureCount).toBe(1);
+            expect(report.metadata?.pipelineId).toBe('456');
+        });
+
+        it('leaves data-quality fields absent when no hub provided', () => {
+            expect.hasAssertions();
+
+            const mockResult: ParseResult = {
+                tests: [{ title: 'Fails silently', state: 'failed', duration: 50 }],
+                stats: { passed: 0, failed: 1, skipped: 0, total: 1, duration: 50 },
+            };
+            const report = collectAutomated(mockResult);
+
+            expect(report.metadata?.dataQualityConfidence).toBeUndefined();
+            expect(report.metadata?.priorFailureCount).toBeUndefined();
         });
     });
 

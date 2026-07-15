@@ -10,10 +10,10 @@
  * - Global-hub delegation: setDataHub/ensureDataHub affect global-hub
  */
 import { describe, it, expect, vi, beforeEach } from 'vitest';
-import type { DataHub } from '../../../shared/types/data-hub.js';
+import type { DataHub, RawData } from '../../../shared/types/data-hub.js';
 import type { GitProvider } from '../../../shared/types/ci-cd.js';
 import { DataHubImpl } from '../../../shared/data-hub/hub.js';
-import { makeDataHubPersistenceMock } from '../../../shared/test-utils/factories/data-hub-mock.js';
+import { makeDataHubPersistenceMock, makeDataHubGetters } from '../../../shared/test-utils/factories/data-hub-mock.js';
 import { clearCache } from '../../../shared/data-hub/cache.js';
 import { getDataHub as getGlobalHub } from '../../../shared/data-hub/global-hub.js';
 import {
@@ -27,8 +27,9 @@ import {
 /* ── Mock DataHub ─────────────────────────────────────────────────────── */
 
 function makeMockHub(): DataHub {
+    const raw: RawData = { runs: [], jobs: new Map(), artifacts: new Map(), failureReasons: new Map() };
     return {
-        raw: { runs: [], jobs: new Map(), artifacts: new Map(), failureReasons: new Map() },
+        raw,
         computed: {
             passRate: 50,
             avgDuration: 1000,
@@ -98,6 +99,8 @@ function makeMockHub(): DataHub {
         loadCoverageFiles: vi.fn().mockReturnValue([]),
         savePerformanceMetrics: vi.fn(),
         loadPerformanceMetrics: vi.fn().mockReturnValue(null),
+        savePullRequests: vi.fn(),
+        loadPullRequests: vi.fn().mockReturnValue([]),
         getQuality: vi.fn(),
         getQuarantine: vi.fn(() => ({ entries: [] })),
         getBranchPassRate: vi.fn(),
@@ -107,6 +110,7 @@ function makeMockHub(): DataHub {
         getBranch: vi.fn(),
         loadMetrics: vi.fn(),
         saveMetrics: vi.fn(),
+        ...makeDataHubGetters(),
     };
 }
 

@@ -4,6 +4,9 @@
 
 import { filterHighFlakiness, generateFlakinessHtml } from './flakiness-dashboard.js';
 import type { FlakinessEntry } from './types/data-hub.js';
+import type { QualityCategory, QualityReport } from './data-hub/quality.js';
+import type { DataSource } from './types/data-hub.js';
+import { makeDataHubMock } from './test-utils/factories/data-hub-mock.js';
 
 describe('FilterHighFlakiness', () => {
     it('filters entries above threshold', () => {
@@ -150,5 +153,31 @@ describe('GenerateFlakinessHtml', () => {
 
         expect(html).toContain('--color-surface-page');
         expect(html).toContain('html.dark');
+    });
+
+    it('renders failure-records quality + provenance confidence when dataHub provided (C-3d)', () => {
+        expect.hasAssertions();
+
+        const provenance = new Map<string, DataSource>([
+            ['failureRecords', { source: 'github', confidence: 0.7, timestamp: '2026-01-01T00:00:00.000Z' }],
+        ]);
+        const quality: Partial<Record<QualityCategory, QualityReport>> = {
+            failureRecords: { valid: false, issues: ['missing classification for TC-1'] },
+        };
+        const hub = makeDataHubMock({ provenance, quality });
+
+        const html = generateFlakinessHtml([], 'Flakiness', { dataHub: hub });
+
+        expect(html).toContain('<div class="src-banner">');
+        expect(html).toContain('failure-records source confidence: 70%');
+        expect(html).toContain('failure-records quality issues: missing classification for TC-1');
+    });
+
+    it('omits the source banner when no dataHub provided', () => {
+        expect.hasAssertions();
+
+        const html = generateFlakinessHtml([], 'Flakiness');
+
+        expect(html).not.toContain('<div class="src-banner">');
     });
 });

@@ -107,40 +107,14 @@ describe('CreateCheckRun', () => {
         expect(body.details_url).toBe('https://example.com/report');
     });
 
-    it('returns null when GITHUB_TOKEN is missing', async () => {
+    it.each<[string, () => void]>([
+        ['GITHUB_TOKEN', () => delete process.env['GITHUB_TOKEN']],
+        ['GITHUB_REPOSITORY', () => delete process.env['GITHUB_REPOSITORY']],
+        ['GITHUB_SHA', () => delete process.env['GITHUB_SHA']],
+    ])('returns null when %s is missing', async (_envKey, removeEnv) => {
         expect.assertions(2);
 
-        delete process.env['GITHUB_TOKEN'];
-
-        const result = await createCheckRun({
-            name: 'Gate',
-            status: 'completed',
-            conclusion: 'success',
-        });
-
-        expect(mockPost).toHaveBeenCalledTimes(0);
-        expect(result).toBeNull();
-    });
-
-    it('returns null when GITHUB_REPOSITORY is missing', async () => {
-        expect.assertions(2);
-
-        delete process.env['GITHUB_REPOSITORY'];
-
-        const result = await createCheckRun({
-            name: 'Gate',
-            status: 'completed',
-            conclusion: 'success',
-        });
-
-        expect(mockPost).toHaveBeenCalledTimes(0);
-        expect(result).toBeNull();
-    });
-
-    it('returns null when GITHUB_SHA is missing', async () => {
-        expect.assertions(2);
-
-        delete process.env['GITHUB_SHA'];
+        removeEnv();
 
         const result = await createCheckRun({
             name: 'Gate',

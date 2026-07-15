@@ -3,76 +3,32 @@ import { isManifestFile, detectFrameworkFromDeps, detectFrameworkFromAPI } from 
 import type { GitProvider } from '../types/ci-cd.js';
 
 describe('IsManifestFile', () => {
-    it('detects package.json at root', () => {
+    it.each([
+        { name: 'package.json at root', file: 'package.json' },
+        { name: 'package.json in subdirectory', file: 'packages/a/package.json' },
+        { name: 'requirements.txt', file: 'requirements.txt' },
+        { name: 'pyproject.toml', file: 'pyproject.toml' },
+        { name: 'Gemfile', file: 'Gemfile' },
+        { name: 'pom.xml', file: 'pom.xml' },
+        { name: 'go.mod', file: 'go.mod' },
+        { name: 'Cargo.toml', file: 'Cargo.toml' },
+        { name: 'composer.json', file: 'composer.json' },
+        { name: 'build.gradle', file: 'build.gradle' },
+        { name: 'build.gradle.kts', file: 'build.gradle.kts' },
+        { name: '.csproj files', file: 'MyApp.csproj' },
+    ])('detects $name', ({ file }) => {
         expect.hasAssertions();
-        expect(isManifestFile('package.json')).toBeTruthy();
+        expect(isManifestFile(file)).toBeTruthy();
     });
 
-    it('detects package.json in subdirectory', () => {
+    it.each([
+        { name: 'README.md', file: 'README.md' },
+        { name: 'src/index.ts', file: 'src/index.ts' },
+        { name: '.gitignore', file: '.gitignore' },
+        { name: 'package-lock.json', file: 'package-lock.json' },
+    ])('rejects $name', ({ file }) => {
         expect.hasAssertions();
-        expect(isManifestFile('packages/a/package.json')).toBeTruthy();
-    });
-
-    it('detects requirements.txt', () => {
-        expect.hasAssertions();
-        expect(isManifestFile('requirements.txt')).toBeTruthy();
-    });
-
-    it('detects pyproject.toml', () => {
-        expect.hasAssertions();
-        expect(isManifestFile('pyproject.toml')).toBeTruthy();
-    });
-
-    it('detects Gemfile', () => {
-        expect.hasAssertions();
-        expect(isManifestFile('Gemfile')).toBeTruthy();
-    });
-
-    it('detects pom.xml', () => {
-        expect.hasAssertions();
-        expect(isManifestFile('pom.xml')).toBeTruthy();
-    });
-
-    it('detects go.mod', () => {
-        expect.hasAssertions();
-        expect(isManifestFile('go.mod')).toBeTruthy();
-    });
-
-    it('detects Cargo.toml', () => {
-        expect.hasAssertions();
-        expect(isManifestFile('Cargo.toml')).toBeTruthy();
-    });
-
-    it('detects composer.json', () => {
-        expect.hasAssertions();
-        expect(isManifestFile('composer.json')).toBeTruthy();
-    });
-
-    it('detects build.gradle', () => {
-        expect.hasAssertions();
-        expect(isManifestFile('build.gradle')).toBeTruthy();
-    });
-
-    it('detects build.gradle.kts', () => {
-        expect.hasAssertions();
-        expect(isManifestFile('build.gradle.kts')).toBeTruthy();
-    });
-
-    it('detects .csproj files', () => {
-        expect.hasAssertions();
-        expect(isManifestFile('MyApp.csproj')).toBeTruthy();
-    });
-
-    it('rejects non-manifest files', () => {
-        expect.hasAssertions();
-        expect(isManifestFile('README.md')).toBeFalsy();
-        expect(isManifestFile('src/index.ts')).toBeFalsy();
-        expect(isManifestFile('.gitignore')).toBeFalsy();
-    });
-
-    it('rejects package-lock.json', () => {
-        expect.hasAssertions();
-        expect(isManifestFile('package-lock.json')).toBeFalsy();
+        expect(isManifestFile(file)).toBeFalsy();
     });
 });
 

@@ -42,6 +42,8 @@ vi.mock('../shared/store-backend.js', () => ({
 }));
 vi.mock('../shared/data-hub/global-hub.js', () => ({
     getDataHub: vi.fn(),
+    isDataHubInitialized: vi.fn(() => false),
+    setDataHub: vi.fn(),
 }));
 
 vi.mock('../shared/config', () => ({

@@ -18,37 +18,14 @@ describe('Compute/failure-reasons', () => {
             expect(result[0]).toContain('Error');
         });
 
-        it('extracts Failure pattern', () => {
+        it.each([
+            ['Failure', 'Failure: assertion failed at line 42'],
+            ['Timeout', 'Timeout: operation exceeded 30s limit'],
+            ['Exception', 'Exception: NullPointerException in handler'],
+            ['FATAL', 'FATAL: database connection refused'],
+        ])('extracts %s pattern', (_name, log) => {
             expect.hasAssertions();
 
-            const log = 'Failure: assertion failed at line 42';
-            const result = extractFailureReasons(log);
-
-            expect(result).toHaveLength(1);
-        });
-
-        it('extracts Timeout pattern', () => {
-            expect.hasAssertions();
-
-            const log = 'Timeout: operation exceeded 30s limit';
-            const result = extractFailureReasons(log);
-
-            expect(result).toHaveLength(1);
-        });
-
-        it('extracts Exception pattern', () => {
-            expect.hasAssertions();
-
-            const log = 'Exception: NullPointerException in handler';
-            const result = extractFailureReasons(log);
-
-            expect(result).toHaveLength(1);
-        });
-
-        it('extracts FATAL pattern', () => {
-            expect.hasAssertions();
-
-            const log = 'FATAL: database connection refused';
             const result = extractFailureReasons(log);
 
             expect(result).toHaveLength(1);

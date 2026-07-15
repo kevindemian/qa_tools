@@ -13,8 +13,8 @@
  * Pure function — no filesystem dependencies.
  */
 import { describe, expect, it, vi } from 'vitest';
-import type { DataHub, ComputedMetrics } from '../../types/data-hub.js';
-import { makeDataHubMock } from '../../test-utils/factories/data-hub-mock.js';
+import type { DataHub, ComputedMetrics, RawData } from '../../types/data-hub.js';
+import { makeDataHubMock, makeDataHubGetters } from '../../test-utils/factories/data-hub-mock.js';
 
 function createTestHub(overrides: Partial<ComputedMetrics> = {}): DataHub {
     return makeDataHubMock({
@@ -219,22 +219,23 @@ describe('Integration: Health Score', () => {
             computed?: Partial<DataHub['computed']>;
             raw?: Partial<DataHub['raw']>;
         }): DataHub {
+            const raw: RawData = {
+                runs: [
+                    {
+                        id: 1,
+                        conclusion: 'success',
+                        head_branch: 'main',
+                        created_at: '2026-07-01T10:00:00Z',
+                        updated_at: '2026-07-01T10:05:00Z',
+                    },
+                ],
+                jobs: new Map(),
+                failureReasons: new Map(),
+                artifacts: new Map(),
+                ...overrides?.raw,
+            };
             return {
-                raw: {
-                    runs: [
-                        {
-                            id: 1,
-                            conclusion: 'success',
-                            head_branch: 'main',
-                            created_at: '2026-07-01T10:00:00Z',
-                            updated_at: '2026-07-01T10:05:00Z',
-                        },
-                    ],
-                    jobs: new Map(),
-                    failureReasons: new Map(),
-                    artifacts: new Map(),
-                    ...overrides?.raw,
-                },
+                raw,
                 computed: {
                     passRate: 85,
                     avgDuration: 300,
@@ -292,6 +293,8 @@ describe('Integration: Health Score', () => {
                 loadCoverageFiles: vi.fn().mockReturnValue([]),
                 savePerformanceMetrics: vi.fn(),
                 loadPerformanceMetrics: vi.fn().mockReturnValue(null),
+                savePullRequests: vi.fn(),
+                loadPullRequests: vi.fn().mockReturnValue([]),
                 getQuality: vi.fn(),
                 getQuarantine: vi.fn(() => ({ entries: [] })),
                 getBranchPassRate: vi.fn(),
@@ -302,6 +305,7 @@ describe('Integration: Health Score', () => {
                 getBranch: vi.fn(),
                 loadMetrics: vi.fn(),
                 saveMetrics: vi.fn(),
+                ...makeDataHubGetters(),
             };
         }
 

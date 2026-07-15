@@ -16,7 +16,7 @@ import { afterEach, describe, expect, it, vi } from 'vitest';
 import type { MetricsRun } from '../../types/data-hub.js';
 import type { DataHub } from '../../types/data-hub.js';
 import * as globalHubModule from '../../data-hub/global-hub.js';
-import { makeDataHubMock } from '../../test-utils/factories/data-hub-mock.js';
+import { makeDataHubMock, makeDataHubGetters } from '../../test-utils/factories/data-hub-mock.js';
 
 async function loadModules() {
     const qg = await import('../../quality-gate.js');
@@ -50,6 +50,7 @@ describe('Integration: Quality Gate', () => {
             } as never);
             const { runQualityGate } = await loadModules();
             const mockHub = {
+                ...makeDataHubGetters(),
                 saveRun: vi.fn(),
                 saveCoverageSnapshot: vi.fn(),
                 loadCoverageHistory: vi.fn().mockReturnValue([]),
@@ -138,6 +139,7 @@ describe('Integration: Quality Gate', () => {
 
             const { runQualityGate } = await loadModules();
             const mockHub = {
+                ...makeDataHubGetters(),
                 saveRun: vi.fn(),
                 saveCoverageSnapshot: vi.fn(),
                 loadCoverageHistory: vi.fn().mockReturnValue([]),

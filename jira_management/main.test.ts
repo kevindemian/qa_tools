@@ -503,29 +503,26 @@ describe('Main.ts', () => {
             expect(warn).toHaveBeenCalledWith(expect.stringContaining('inválida'));
         });
 
-        it("dispatches to handler and returns 'exit' when handler returns false for choice '1'", async () => {
-            expect.hasAssertions();
+        const dispatchHandlerCases = [
+            { choice: '1', handlerReturn: false, expected: 'exit' },
+            { choice: '7', handlerReturn: false, expected: 'exit' },
+            { choice: '1', handlerReturn: true, expected: 'continue' },
+        ];
 
-            const handler = vi.fn().mockResolvedValue(false);
-            vi.spyOn(commandsModule, 'getHandler').mockReturnValue(handler);
+        it.each(dispatchHandlerCases)(
+            'dispatches choice $choice (handler returns $handlerReturn) → $expected',
+            async ({ choice, handlerReturn, expected }) => {
+                expect.hasAssertions();
 
-            const result = await mod.dispatchChoice('1', minimalCtx);
+                const handler = vi.fn().mockResolvedValue(handlerReturn);
+                vi.spyOn(commandsModule, 'getHandler').mockReturnValue(handler);
 
-            expect(result).toBe('exit');
-            expect(handler).toHaveBeenCalledWith(minimalCtx);
-        });
+                const result = await mod.dispatchChoice(choice, minimalCtx);
 
-        it("dispatches to handler and returns 'exit' when handler returns false for choice '7'", async () => {
-            expect.hasAssertions();
-
-            const handler = vi.fn().mockResolvedValue(false);
-            vi.spyOn(commandsModule, 'getHandler').mockReturnValue(handler);
-
-            const result = await mod.dispatchChoice('7', minimalCtx);
-
-            expect(result).toBe('exit');
-            expect(handler).toHaveBeenCalledWith(minimalCtx);
-        });
+                expect(result).toBe(expected);
+                expect(handler).toHaveBeenCalledWith(minimalCtx);
+            },
+        );
 
         it("shows docs and returns 'continue' for 'd'", async () => {
             expect.hasAssertions();
@@ -550,18 +547,6 @@ describe('Main.ts', () => {
 
             expect(result).toBe('continue');
             expect(warn).toHaveBeenCalledWith(expect.stringContaining('inválida'));
-        });
-
-        it('handler returning true triggers continue properly', async () => {
-            expect.hasAssertions();
-
-            const handler = vi.fn().mockResolvedValue(true);
-            vi.spyOn(commandsModule, 'getHandler').mockReturnValue(handler);
-
-            const result = await mod.dispatchChoice('1', minimalCtx);
-
-            expect(result).toBe('continue');
-            expect(handler).toHaveBeenCalledWith(minimalCtx);
         });
 
         it("handler that throws CancelError returns 'continue'", async () => {

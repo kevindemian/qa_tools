@@ -26,6 +26,7 @@ import type {
     MetricsStore,
     MetricsRun,
     CoverageSnapshot,
+    DataSource,
     FailureClassification,
     QualityMetricsSnapshot,
     FailureRecord,
@@ -35,7 +36,9 @@ import type {
     DoraMetrics,
     RawIssue,
     CoverageFile,
+    RawCoverage,
     PerformanceMetrics,
+    RawPullRequest,
     FlatTest,
     ReportMeta,
     BranchEntry,
@@ -43,7 +46,7 @@ import type {
 import type { PipelineRun, PipelineJob } from '../types/ci-cd.js';
 import type { ArtifactParseResult } from './artifact-parser.js';
 import type { ParseResult } from '../result_parser.js';
-import { mergeCategoryArrays } from './raw-merge.js';
+import { mergeCategoryArrays, mergeProvenance } from './raw-merge.js';
 import { gateRawData, type QualityReport, type QualityCategory, type QualityCategoryMap } from './quality.js';
 import { loadQuarantine, type QuarantineStore } from '../quarantine.js';
 import { rootLogger } from '../logger.js';
@@ -51,6 +54,7 @@ import { askTestSource } from './test-source-fallback.js';
 import type { FallbackResult } from './test-source-fallback.js';
 import {
     calcPipelinePassRate,
+    calcRunPassRate,
     calcAvgDuration,
     calcSuiteSpeedP95,
     calcFlakyFromPipelineRuns,
@@ -224,13 +228,73 @@ export class DataHubImpl implements DataHub {
     loadPerformanceMetrics(): PerformanceMetrics | null {
         return this.persistence.loadPerformanceMetrics();
     }
+    savePullRequests(pullRequests: RawPullRequest[]): void {
+        this.persistence.savePullRequests(pullRequests);
+    }
+    loadPullRequests(): RawPullRequest[] {
+        return this.persistence.loadPullRequests();
+    }
 
     /**
      * Quality report for a gated ST-1 category, computed at the ingest boundary.
      * Reflects the trustworthy in-memory model (hub.raw), never the durable store.
      */
     getQuality(category: QualityCategory): QualityReport | undefined {
-        return this.quality[category];
+        const entry = Object.entries(this.quality).find(([key]) => key === category);
+
+        return entry ? entry[1] : undefined;
+    }
+
+    // ─── SSOT Serving (EIXO C): typed category accessors ────────────────────
+    // Return the gated in-memory model (hub.raw). Never expose persistence here.
+    // `undefined` means the category was not fetched — never an empty sentinel.
+
+    getRuns(): PipelineRun[] {
+        return this.raw.runs;
+    }
+
+    getFailureRecords(): FailureRecord[] | undefined {
+        return this.raw.failureRecords;
+    }
+
+    getSecurityFindings(): SecurityFinding[] | undefined {
+        return this.raw.securityFindings;
+    }
+
+    getDeployments(): Deployment[] | undefined {
+        return this.raw.deployments;
+    }
+
+    getReleases(): Release[] | undefined {
+        return this.raw.releases;
+    }
+
+    getDoraMetrics(): DoraMetrics | undefined {
+        return this.raw.doraMetrics;
+    }
+
+    getPmIssues(): RawIssue[] | undefined {
+        return this.raw.pmIssues;
+    }
+
+    getCoverageFiles(): CoverageFile[] | undefined {
+        return this.raw.coverageFiles;
+    }
+
+    getCoverage(): RawCoverage | undefined {
+        return this.raw.coverage;
+    }
+
+    getPerformanceMetrics(): PerformanceMetrics | undefined {
+        return this.raw.performanceMetrics;
+    }
+
+    getPullRequests(): RawPullRequest[] | undefined {
+        return this.raw.pullRequests;
+    }
+
+    getProvenance(): Map<string, DataSource> | undefined {
+        return this.raw.provenance;
     }
 
     /**
@@ -554,10 +618,7 @@ export class DataHubImpl implements DataHub {
         const runs: PipelineRun[] = [];
         const runsArray = Array.isArray(store.runs) ? store.runs : [];
 
-        for (let i = 0; i < runsArray.length; i++) {
-            const m = runsArray[i];
-            if (m == null) continue;
-
+        for (const [i, m] of runsArray.entries()) {
             parsedArtifacts.set(i, [
                 {
                     fileName: 'metrics-store',
@@ -661,17 +722,24 @@ export class DataHubImpl implements DataHub {
         DataHubImpl.mergeFirstNonNull(target, source);
         DataHubImpl.mergeMaps(target, source);
         mergeCategoryArrays(target, source);
+        mergeProvenance(target, source);
     }
 
-    private static mergeFirstNonNull(target: RawData, source: RawData): void {
+    private static mergeCoverage(target: RawData, source: RawData): void {
         if (source.coverage != null && target.coverage == null) target.coverage = source.coverage;
         if (source.coverageHistory != null && source.coverageHistory.length > 0) {
             if (target.coverageHistory == null) target.coverageHistory = [];
             target.coverageHistory.push(...source.coverageHistory);
         }
-        DataHubImpl.assignIfNull(target, 'jiraIssues', source.jiraIssues);
-        DataHubImpl.assignIfNull(target, 'framework', source.framework);
-        DataHubImpl.assignIfNull(target, 'gitlabTestReport', source.gitlabTestReport);
+    }
+
+    private static mergeFirstNonNull(target: RawData, source: RawData): void {
+        DataHubImpl.mergeCoverage(target, source);
+        if (source.jiraIssues != null && target.jiraIssues == null) target.jiraIssues = source.jiraIssues;
+        if (source.framework != null && target.framework == null) target.framework = source.framework;
+        if (source.gitlabTestReport != null && target.gitlabTestReport == null) {
+            target.gitlabTestReport = source.gitlabTestReport;
+        }
         if (source.commitLog && !target.commitLog) target.commitLog = source.commitLog;
         if (source.ciRuns && source.ciRuns.length > 0 && (!target.ciRuns || target.ciRuns.length === 0)) {
             target.ciRuns = source.ciRuns;
@@ -698,10 +766,6 @@ export class DataHubImpl implements DataHub {
                 target.xray.testRuns.push(run);
             }
         }
-    }
-
-    private static assignIfNull<K extends keyof RawData>(target: RawData, key: K, value: RawData[K]): void {
-        if (value != null && target[key] == null) target[key] = value;
     }
 
     private static mergeMaps(target: RawData, source: RawData): void {
@@ -754,6 +818,7 @@ export class DataHubImpl implements DataHub {
         const testCounts = DataHubImpl.aggregateTestCounts(raw.parsedArtifacts);
         const testPassRate =
             testCounts.total > 0 ? Math.round((testCounts.passed / testCounts.total) * 100 * 100) / 100 : 0;
+        const runPassRate = calcRunPassRate({ passed: testCounts.passed, failed: testCounts.failed });
         const framework = raw.framework ?? 'unknown';
 
         return {
@@ -782,6 +847,7 @@ export class DataHubImpl implements DataHub {
             testDurationP95,
             runFailureRate,
             testDurationMap,
+            runPassRate,
             retryFlaky,
             computeCost,
         };

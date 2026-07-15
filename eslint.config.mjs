@@ -28,6 +28,22 @@ export default defineConfig(
     security.configs.recommended,
     promise.configs['flat/recommended'],
     sonarjs.configs.recommended,
+    // Explicit sonarjs rule configuration (override of the recommended bundle above,
+    // which was previously inherited with no deliberate decision). `parameterized-tests`
+    // and `explicit-test-skip` are confirmed over-eager on this codebase:
+    //  - parameterized-tests flags ~20 blocks that assert DIFFERENT properties of one
+    //    generated artifact (HTML/CLI output renders) as if they should be collapsed
+    //    into a single parameterized test — merging would hurt readability.
+    //  - explicit-test-skip flags an already-correct `if (!x) return;` guard as if it
+    //    were a missing `test.skip()`.
+    // Both are kept as 'warn' (visible, non-blocking) pending the upstream fix; the
+    // genuine data-driven findings are fixed in code via it.each.
+    {
+        rules: {
+            'sonarjs/parameterized-tests': 'warn',
+            'sonarjs/explicit-test-skip': 'warn',
+        },
+    },
     {
         files: [
             '**/*.test.ts',

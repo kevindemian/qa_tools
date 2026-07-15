@@ -33,9 +33,26 @@ export function mergeCategoryArrays(target: RawData, source: RawData): void {
     target.releases = appendDedup(target.releases, source.releases, (r) => String(r.id));
     target.pmIssues = appendDedup(target.pmIssues, source.pmIssues, (i) => `${i.source}|${i.id}`);
     target.coverageFiles = appendDedup(target.coverageFiles, source.coverageFiles, (c) => c.file);
+    target.pullRequests = appendDedup(target.pullRequests, source.pullRequests, (p) => String(p.id));
     if (source.doraMetrics != null && target.doraMetrics == null) target.doraMetrics = source.doraMetrics;
     if (source.performanceMetrics != null && target.performanceMetrics == null) {
         target.performanceMetrics = source.performanceMetrics;
+    }
+    mergeProvenance(target, source);
+}
+
+/**
+ * Merge data provenance from `source` into `target` (union by key).
+ * Target keeps priority for already-present keys; source entries for keys not
+ * yet present are added. Never drops provenance (AGENTS §25 — no silent loss).
+ * Shared by `DataHubImpl.mergeRawData` and `CompositeProvider` so both preserve
+ * the trust channel across multi-provider builds.
+ */
+export function mergeProvenance(target: RawData, source: RawData): void {
+    if (source.provenance == null) return;
+    if (target.provenance == null) target.provenance = new Map();
+    for (const [key, value] of source.provenance) {
+        if (!target.provenance.has(key)) target.provenance.set(key, value);
     }
 }
 

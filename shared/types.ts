@@ -1,5 +1,6 @@
 /** Shared type definitions — barrel re-export from 8 domain modules. */
 export * from './types/common.js';
+export * from './types/project.js';
 export * from './types/llm.js';
 export * from './types/xray.js';
 export * from './types/jira.js';

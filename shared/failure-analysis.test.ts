@@ -17,9 +17,12 @@ import fs from 'fs';
 
 import { llmPrompt } from './llm-client.js';
 import { reviewWithLlm } from './llm-review.js';
-import { analyzeFailuresWithReport, classifyFailure } from './failure-analysis.js';
+import { analyzeFailuresWithReport, classifyFailure, crossReferenceFailures } from './failure-analysis.js';
 import type { FlatTest } from './result_parser.js';
 import { nonNull } from './test-utils.js';
+import { makeDataHubMock } from './test-utils/factories/data-hub-mock.js';
+import type { DataSource, FailureRecord } from './types/data-hub.js';
+import type { QualityCategory, QualityReport } from './data-hub/quality.js';
 
 const mockReviewWithLlm = vi.mocked(reviewWithLlm);
 const mockLlmPrompt = vi.mocked(llmPrompt);
@@ -231,6 +234,82 @@ describe('Failure Analysis', () => {
 
         it('rejects category-only without colon', () => {
             expect(regex.test('ASSERTION')).toBeFalsy();
+        });
+    });
+
+    describe('EIXO C — crossReferenceFailures (C-3f)', () => {
+        const tests: FlatTest[] = [
+            { title: 'Login fails', state: 'failed', duration: 10 },
+            { title: 'Signup passes', state: 'passed', duration: 5 },
+            { title: 'Checkout broken', state: 'failed', duration: 8 },
+        ];
+
+        it('cross-references failed tests against historical failure records by name', () => {
+            expect.hasAssertions();
+
+            const records: FailureRecord[] = [
+                { name: 'Login fails', status: 'failed', category: 'assertion', confidence: 0.9, source: 'junit' },
+                { name: 'Checkout broken', status: 'broken', category: 'environment', confidence: 0.7, source: 'log' },
+            ];
+            const provenance = new Map<string, DataSource>([
+                ['failureRecords', { source: 'github', confidence: 0.8, timestamp: '2026-01-01T00:00:00.000Z' }],
+            ]);
+            const quality: Partial<Record<QualityCategory, QualityReport>> = {
+                failureRecords: { valid: true, issues: [] },
+            };
+            const hub = makeDataHubMock({
+                raw: {
+                    runs: [],
+                    jobs: new Map(),
+                    artifacts: new Map(),
+                    failureReasons: new Map(),
+                    failureRecords: records,
+                },
+                provenance,
+                quality,
+            });
+
+            const cross = crossReferenceFailures(tests, hub);
+
+            expect(cross).toHaveLength(2);
+            expect(cross[0]).toStrictEqual({
+                title: 'Login fails',
+                found: true,
+                priorCategory: 'assertion',
+                priorConfidence: 0.9,
+                qualityValid: true,
+                sourceConfidence: 0.8,
+            });
+            expect(cross[1]?.found).toBeTruthy();
+            expect(cross[1]?.priorCategory).toBe('environment');
+        });
+
+        it('flags missing prior record and surfaces quality issues', () => {
+            expect.hasAssertions();
+
+            const provenance = new Map<string, DataSource>([
+                ['failureRecords', { source: 'github', confidence: 0.4, timestamp: '2026-01-01T00:00:00.000Z' }],
+            ]);
+            const quality: Partial<Record<QualityCategory, QualityReport>> = {
+                failureRecords: { valid: false, issues: ['missing classification'] },
+            };
+            const hub = makeDataHubMock({
+                raw: {
+                    runs: [],
+                    jobs: new Map(),
+                    artifacts: new Map(),
+                    failureReasons: new Map(),
+                    failureRecords: [],
+                },
+                provenance,
+                quality,
+            });
+
+            const cross = crossReferenceFailures([{ title: 'Unknown test', state: 'failed', duration: 1 }], hub);
+
+            expect(cross[0]?.found).toBeFalsy();
+            expect(cross[0]?.qualityValid).toBeFalsy();
+            expect(cross[0]?.sourceConfidence).toBe(0.4);
         });
     });
 });

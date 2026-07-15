@@ -183,15 +183,6 @@ function loadProjects(): Record<string, string> {
     if (_projects) return _projects;
     try {
         _projects = JSON.parse(fs.readFileSync(PROJECTS_PATH, 'utf8')) as Record<string, string>;
-        const projectOverrides = Config.getAllPrefixed('PROJECT_ID_');
-        const overrideEntries = Object.entries(projectOverrides);
-        for (const key of Object.keys(_projects)) {
-            const envKey = 'PROJECT_ID_' + key.toUpperCase();
-            const overrideEntry = overrideEntries.find(([k]) => k === envKey);
-            if (overrideEntry) {
-                Reflect.set(_projects, key, overrideEntry[1]);
-            }
-        }
     } catch (err: unknown) {
         rootLogger.error(`Falha ao carregar configuração de projetos de "${PROJECTS_PATH}": ${formatErr(err)}`, {
             configPath: PROJECTS_PATH,

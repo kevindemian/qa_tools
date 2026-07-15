@@ -357,31 +357,18 @@ describe('Prompt Input Inquirer', () => {
             { name: 'Option 2', value: '2' },
         ];
 
-        it('returns selected value by number', async () => {
+        it.each([
+            { input: '1', expected: '1', title: 'returns selected value by number' },
+            { input: '2', expected: '2', title: 'returns 0 for second choice by number' },
+            { input: 'Option 1', expected: 'Option 1', title: 'handles choice by alias' },
+            { input: '0', expected: '0', title: 'returns 0 for exit choice' },
+        ])('$title', async ({ input, expected }) => {
             expect.hasAssertions();
 
-            mockReadlineQuestion.mockReturnValue('1');
+            mockReadlineQuestion.mockReturnValue(input);
             const result = await showSelect('Choose', choices);
 
-            expect(result).toBe('1');
-        });
-
-        it('returns 0 for second choice by number', async () => {
-            expect.hasAssertions();
-
-            mockReadlineQuestion.mockReturnValue('2');
-            const result = await showSelect('Choose', choices);
-
-            expect(result).toBe('2');
-        });
-
-        it('handles choice by alias', async () => {
-            expect.hasAssertions();
-
-            mockReadlineQuestion.mockReturnValue('Option 1');
-            const result = await showSelect('Choose', choices);
-
-            expect(result).toBe('Option 1');
+            expect(result).toBe(expected);
         });
 
         it('throws CancelError on navigation command', async () => {
@@ -390,15 +377,6 @@ describe('Prompt Input Inquirer', () => {
             mockReadlineQuestion.mockReturnValue('/help');
 
             await expect(showSelect('Choose', choices)).rejects.toThrow('/help');
-        });
-
-        it('returns 0 for exit choice', async () => {
-            expect.hasAssertions();
-
-            mockReadlineQuestion.mockReturnValue('0');
-            const result = await showSelect('Choose', choices);
-
-            expect(result).toBe('0');
         });
 
         it('handles sections in fallback mode', async () => {

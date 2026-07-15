@@ -5,6 +5,7 @@ import path from 'path';
 import { sanitizePath } from './path-utils.js';
 import { execFileSync } from 'child_process';
 import type { FlatTest } from './result_parser.js';
+import type { DataHub, FailureRecord } from './types/data-hub.js';
 import { llmPrompt } from './llm-client.js';
 import type { LlmPromptOptions } from './types/llm.js';
 import { reviewWithLlm, type ReviewResult } from './llm-review.js';
@@ -31,6 +32,43 @@ export interface LlmContext {
     gitCommits?: string;
     gitTrend?: string;
     jiraIssues?: string;
+}
+
+/** Cross-reference of a failed test against the unified model's historical failure records. */
+export interface FailureCrossReference {
+    title: string;
+    found: boolean;
+    priorCategory?: string | undefined;
+    priorConfidence?: number | undefined;
+    qualityValid: boolean;
+    sourceConfidence: number | null;
+}
+
+/**
+ * EIXO C (C-3f): cross-reference failed tests against the unified model's failure records by
+ * test-name fingerprint, attaching prior root-cause category + data-quality/provenance signal.
+ * Consumes the typed accessor surface (getFailureRecords / getQuality / getProvenance) — never
+ * the raw store directly.
+ */
+export function crossReferenceFailures(tests: FlatTest[], hub: DataHub): FailureCrossReference[] {
+    const records = hub.getFailureRecords() ?? [];
+    const byName = new Map<string, FailureRecord>();
+    for (const r of records) byName.set(r.name, r);
+    const quality = hub.getQuality('failureRecords');
+    const provenance = hub.getProvenance()?.get('failureRecords');
+    return tests
+        .filter((t) => t.state === 'failed')
+        .map((t) => {
+            const rec = byName.get(t.title);
+            return {
+                title: t.title,
+                found: Boolean(rec),
+                priorCategory: rec?.category,
+                priorConfidence: rec?.confidence,
+                qualityValid: quality ? quality.valid : true,
+                sourceConfidence: provenance?.confidence ?? null,
+            };
+        });
 }
 
 function extractFilesFromDiff(diff: string): Set<string> {
@@ -113,7 +151,11 @@ function formatFailedTests(failed: FlatTest[]): string {
 
 /** Analyze all failed tests via an LLM review, generate a full HTML report, and snapshot LLM metrics.
  * Returns empty content immediately when there are no failures. */
-export async function analyzeFailuresWithReport(tests: FlatTest[], context?: LlmContext): Promise<AnalysisReport> {
+export async function analyzeFailuresWithReport(
+    tests: FlatTest[],
+    context?: LlmContext,
+    options?: { dataHub?: DataHub | undefined },
+): Promise<AnalysisReport> {
     const failed = tests.filter((t) => t.state === 'failed');
     if (failed.length === 0) return { content: '', confidence: 'high', fallbackUsed: false };
 
@@ -131,6 +173,17 @@ export async function analyzeFailuresWithReport(tests: FlatTest[], context?: Llm
     }
     if (context?.jiraIssues) {
         userMessage += 'Related Jira Issues:\n' + sanitizeForLlm(context.jiraIssues) + '\n\n';
+    }
+    if (options?.dataHub) {
+        const cross = crossReferenceFailures(tests, options.dataHub);
+        if (cross.length > 0) {
+            const lines = cross.map((c) => {
+                const category = c.found ? `prior category=${c.priorCategory ?? 'unknown'}` : 'no prior failure record';
+                const qualityNote = c.qualityValid ? '' : ' [failure-records quality issue]';
+                return `- ${c.title}: ${category}${qualityNote}`;
+            });
+            userMessage += 'Prior Failure Records (cross-referenced by test name):\n' + lines.join('\n') + '\n\n';
+        }
     }
     userMessage += 'Failed Tests:\n' + failedTests;
 

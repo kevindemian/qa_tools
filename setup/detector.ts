@@ -3,6 +3,10 @@ import path from 'path';
 import type { TestReportSource, Framework } from './context.js';
 import { rootLogger } from '../shared/logger.js';
 import { getErrorMessage } from '../shared/errors.js';
+import { readConfigFileSafe } from './secure-io.js';
+import { executeConfigInIsolate, logIsolateFallback } from './reporter-isolate.js';
+import { extractReportersAst, extractReportersFromJsonObject } from './reporter-ast.js';
+import { matchReporter } from './reporter-registry.js';
 
 export interface DetectionResult {
     framework: Framework;
@@ -56,56 +60,101 @@ const DEFAULTS: Record<Framework, DetectionResult> = {
     },
 };
 
-/**
- * Common vitest/vite config file names checked for CTRF reporter configuration.
- */
-const VITEST_CONFIG_NAMES = [
-    'vitest.config.ts',
-    'vitest.config.js',
-    'vitest.config.mjs',
-    'vite.config.ts',
-    'vite.config.js',
+/** Candidate config files (basename w/o extension) scanned per project. */
+const CONFIG_CANDIDATES: Array<{ name: string }> = [
+    { name: 'vitest.config' },
+    { name: 'vite.config' },
+    { name: 'jest.config' },
+    { name: 'cypress.config' },
+    { name: 'playwright.config' },
 ];
+const CONFIG_EXTENSIONS = ['.ts', '.js', '.mjs', '.cjs'];
 
 /**
- * Pattern to detect reporter usage in a vitest/vite config file.
- * Matches CTRF, JUnit, and Mochawesome reporters.
+ * Detect whether any test reporter (CTRF/JUnit/Mochawesome) is configured in
+ * the project's config files or package.json. Isolate-first, AST-fallback.
+ *
+ * The detection is data-driven via the reporter registry (`matchReporter`),
+ * replacing the previous regex-only approach. It covers all frameworks
+ * (vitest, vite, jest, cypress, playwright) and eliminates false positives
+ * from comments/strings because only the structural `reporters`/`reporter`
+ * arrays are inspected.
  */
-const REPORTER_PATTERNS = [
-    /vitest[-@]?ctrf|@[\w-]+\/vitest-ctrf|ctrf-json|\.\/.*?ctrf.*?reporter|VitestCtrfReporter/i,
-    /@d2t\/vitest-junit|vitest-junit-reporter|junit/i,
-    /mochawesome/i,
-];
-
-/**
- * Scans project root for a vitest/vite config file and checks if a test reporter
- * is already configured. Returns true if found.
- */
-export function detectTestReporter(projectRoot?: string): boolean {
-    const dir = projectRoot || process.cwd();
-    for (const name of VITEST_CONFIG_NAMES) {
-        const configPath = path.join(dir, name);
-        try {
-            if (fs.existsSync(path.resolve(configPath))) {
-                const content = fs.readFileSync(path.resolve(configPath), 'utf8');
-                for (const pattern of REPORTER_PATTERNS) {
-                    if (pattern.test(content)) {
-                        return true;
-                    }
-                }
-            }
-        } catch (err) {
-            rootLogger.debug('detectTestReporter: failed to read config, skipping: ' + getErrorMessage(err));
-            continue;
-        }
-    }
-    return false;
+export async function detectTestReporter(projectRoot: string): Promise<boolean> {
+    const reporters = await collectReporters(projectRoot);
+    return reporters.some((name) => matchReporter(name) !== null);
 }
 
-function detectFromPkg(pkg: { [key: string]: unknown }): Framework {
+async function collectReporters(projectRoot: string): Promise<string[]> {
+    const found: string[] = [];
+
+    await Promise.all(
+        CONFIG_CANDIDATES.flatMap((cand) =>
+            CONFIG_EXTENSIONS.map(async (ext) => {
+                const relativeName = cand.name + ext;
+                const content = await readConfigFileSafe(projectRoot, relativeName);
+                if (content === null) return;
+                const reporters = await extractReporters(relativeName, content);
+                found.push(...reporters);
+            }),
+        ),
+    );
+
+    const pkgContent = await readConfigFileSafe(projectRoot, 'package.json');
+    if (pkgContent !== null) {
+        try {
+            const pkg = JSON.parse(pkgContent) as Record<string, unknown>;
+            found.push(...extractInlinePkgReporters(pkg));
+        } catch (err) {
+            rootLogger.debug(`collectReporters: package.json parse failed: ${getErrorMessage(err)}`);
+        }
+    }
+
+    return found;
+}
+
+/**
+ * Extract raw reporter identifiers from a config file: isolate-first, AST on
+ * any failure. The isolate throws on evaluation failure; we log (never
+ * swallow) and delegate to the AST extractor, which never executes code.
+ */
+async function extractReporters(configPath: string, content: string): Promise<string[]> {
+    try {
+        return await executeConfigInIsolate(configPath, content);
+    } catch (err) {
+        logIsolateFallback(configPath, err);
+        return extractReportersAst(configPath, content);
+    }
+}
+
+/** Inline reporter detection from package.json: reporter deps + jest/vitest blocks. */
+function extractInlinePkgReporters(pkg: Record<string, unknown>): string[] {
+    const out: string[] = [];
+
     const deps = {
-        ...(pkg['dependencies'] as Record<string, string>),
-        ...(pkg['devDependencies'] as Record<string, string>),
+        ...asRecord(pkg['dependencies']),
+        ...asRecord(pkg['devDependencies']),
+    };
+    for (const depName of Object.keys(deps)) {
+        if (matchReporter(depName) !== null) out.push(depName);
+    }
+
+    const jest = asRecord(pkg['jest']);
+    if (jest !== undefined) {
+        out.push(...extractReportersFromJsonObject(jest));
+    }
+    const vitest = asRecord(pkg['vitest']);
+    if (vitest !== undefined) {
+        out.push(...extractReportersFromJsonObject(vitest));
+    }
+
+    return out;
+}
+
+function detectFromPkg(pkg: Record<string, unknown>): Framework {
+    const deps = {
+        ...asRecord(pkg['dependencies']),
+        ...asRecord(pkg['devDependencies']),
     };
 
     if (deps['cypress']) return 'cypress';
@@ -116,39 +165,49 @@ function detectFromPkg(pkg: { [key: string]: unknown }): Framework {
 }
 
 /**
- * Detect framework and test reporter configuration from a project's package.json and config files.
+ * Detect framework and whether a test reporter is already configured.
  *
- * For vitest projects, checks if a reporter is already configured in vitest.config.ts/vite.config.ts.
- * If found, sets testReportSource to 'config-file' and keeps the existing test command.
- * If not found, sets testReportSource to 'missing' (the wizard will suggest installation).
- *
- * For other frameworks, defaults to 'cli-flag' (--reporter ctrf).
+ * Routes every framework through `detectTestReporter`. If a reporter is found,
+ * `testReportSource` is `config-file`; otherwise it falls back to the
+ * framework default (`cli-flag` for cypress/playwright/jest, `missing` for
+ * vitest/generic).
  */
-export function detectFramework(packageJsonPath?: string): DetectionResult {
-    try {
-        const pkgPath = packageJsonPath || path.join(process.cwd(), 'package.json');
-        const content = fs.readFileSync(path.resolve(pkgPath), 'utf8');
-        const pkg = JSON.parse(content) as { [key: string]: unknown };
-        const framework = detectFromPkg(pkg);
-        const defaults = { ...Reflect.get(DEFAULTS, framework) };
+export async function detectFramework(packageJsonPath: string): Promise<DetectionResult> {
+    const resolvedPath = packageJsonPath;
+    const projectRoot = path.dirname(path.resolve(packageJsonPath));
 
-        if (framework === 'vitest' || framework === 'generic') {
-            const projectRoot = packageJsonPath ? path.dirname(packageJsonPath) : process.cwd();
-            if (detectTestReporter(projectRoot)) {
-                defaults.testReportSource = 'config-file';
-            }
+    let pkg: Record<string, unknown> = {};
+    const pkgContent = await readConfigFileSafe(projectRoot, path.basename(resolvedPath));
+    if (pkgContent !== null) {
+        try {
+            pkg = JSON.parse(pkgContent) as Record<string, unknown>;
+        } catch (err) {
+            rootLogger.debug(`detectFramework: package.json parse failed: ${getErrorMessage(err)}`);
         }
-
-        return defaults;
-    } catch (err) {
-        rootLogger.debug('detectFramework: fell back to generic defaults: ' + getErrorMessage(err));
-        return { ...DEFAULTS.generic };
     }
+
+    const framework = detectFromPkg(pkg);
+    const defaults: DetectionResult = { ...DEFAULTS[framework] };
+
+    const hasReporter = await detectTestReporter(projectRoot);
+    if (hasReporter) {
+        defaults.testReportSource = 'config-file';
+    }
+
+    return defaults;
 }
 
-export function extractRepoFromGit(): { owner: string; repo: string } {
+function asRecord(value: unknown): Record<string, unknown> | undefined {
+    if (value !== null && typeof value === 'object' && !Array.isArray(value)) {
+        return value as Record<string, unknown>;
+    }
+    return undefined;
+}
+
+export function extractRepoFromGit(projectRoot: string): { owner: string; repo: string } {
+    const root = projectRoot;
     try {
-        const gitConfig = fs.readFileSync(path.resolve(process.cwd()) + '/.git/config', 'utf8');
+        const gitConfig = fs.readFileSync(path.resolve(root, '.git', 'config'), 'utf8');
         const match = /url\s*=\s*\S+(?:github\.com|gitlab\.com)[/:]([^/]+)\/([^/\s]+?)(?:\.git)?\s/.exec(gitConfig);
         if (match) {
             const owner = String(match[1] ?? '');

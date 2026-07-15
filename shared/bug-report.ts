@@ -4,12 +4,13 @@ import * as path from 'path';
 import { sanitizePath } from './path-utils.js';
 import { ask, askMultiline, askConfirm, info, printError, title, warn } from './prompt.js';
 import { rootLogger } from './logger.js';
-import { classifyFailure } from './failure-analysis.js';
+import { classifyFailure, crossReferenceFailures } from './failure-analysis.js';
 import { llmPrompt } from './llm-client.js';
 import { AiBugReportSchema } from './bug-report.schema.js';
 import Config from './config.js';
 import type { BugReport, JiraLinkManagerLike, JiraResourceLike, LLMEnrichment, TestResult } from './types.js';
 import type { ParseResult } from './result_parser.js';
+import type { DataHub } from './types/data-hub.js';
 
 const ERROR_TRUNCATION_LIMIT = 500;
 const LLM_DESC_TRUNCATION_LIMIT = 1000;
@@ -183,7 +184,15 @@ export function collectAutomated(
         commitSha?: string;
         provider?: string;
     },
+    options?: { dataHub?: DataHub | undefined },
 ): BugReport {
+    const metadata: NonNullable<BugReport['metadata']> = { ...(pipelineInfo ?? {}) };
+    if (options?.dataHub) {
+        const cross = crossReferenceFailures(result.tests, options.dataHub);
+        const confidences = cross.map((c) => c.sourceConfidence).filter((c): c is number => c != null);
+        metadata.dataQualityConfidence = confidences.length ? Math.min(...confidences) : null;
+        metadata.priorFailureCount = cross.filter((c) => c.found).length;
+    }
     return {
         summary: buildSummaryFromFailures(result),
         description: buildDescriptionFromFailures(result),
@@ -194,7 +203,7 @@ export function collectAutomated(
             model: 'analysis',
             confidence: LLM_CONFIDENCE,
         },
-        ...(pipelineInfo ? { metadata: pipelineInfo } : {}),
+        ...(Object.keys(metadata).length > 0 ? { metadata } : {}),
     };
 }
 

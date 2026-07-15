@@ -3609,25 +3609,25 @@ Pesquisa externa (fontes indicadas pelo usuário) confirma esse ecossistema:
 
 - **LA-1** Camada 3: `CheckRunAnnotation` (`ci-cd.ts`) estendido p/ `end_line, start_column, end_column, title, raw_details, blob_href`; `getCheckRuns` traz esses campos; `fromAnnotations` (`failure-classifier.ts`) mapeia todos os níveis → `FailureRecord` CTRF/Allure `{ status(failed|broken), message, trace:raw_details, file, line, column, level, category, confidence:'high', source:'check-run-annotation' }`; `classifyFailures` faz **merge** de fontes (não first-wins). Desbloqueia parte do `CDH-L4X1` (file:line) sem acesso a FS.
 - **LA-2** Camada 1: `GET /actions/runs/{id}/usage` → minutos faturáveis reais (precisão `pipelineCost`/`perRunCosts`); fallback estimativa se 404 (nunca NaN); `attempts` → re-run detection → `retries`/`flaky`.
-- **LA-3** Camada 6 (GitLab): `test_report_summary` (rápido) p/ counts; `test_report` completo → `stack_trace`/`system_output` em `FailureRecord.trace`; DORA `/dora/metrics` → `doraMetrics` (guard de tier ULTIMATE; ausência explícita).
-- **LA-4** Camada 2: CTRF `flaky/retries/environment.userAgent/tool.name/version/calculations`; Playwright `file/line` por teste.
-- **LA-5** Camada 5: reporter-prediction (ler workflow CI → detectar jest-junit/vitest json/pytest junitxml → prever artifact) + **Security** nativa (GitHub/GitLab) + **Performance** (queue/duration/runner) + **Deployments/Environments/Releases** (→ DORA) + **PRs/MRs** (reviews/approvals).
+- **LA-3** Camada 6 (GitLab): `test_report_summary` (rápido) p/ counts; `test_report` completo → `stack_trace`/`system_output` em `FailureRecord.trace`; DORA `/dora/metrics` → `doraMetrics` (guard de tier ULTIMATE; ausência explícita). **✅ CONCLUÍDO 2026-07-13** (`gitlab_manager.getDoraMetrics/getDeployments/getReleases/getIssues` + `gitlab-provider.fetchRawData` → `raw.doraMetrics/deployments/releases/pmIssues`; guards `Number.isFinite`).
+- **LA-4** Camada 2: CTRF `flaky/retries/environment.userAgent/tool.name/version/calculations`; Playwright `file/line` por teste. **✅ CONCLUÍDO 2026-07-13** (`github-provider.extractArtifactFailureRecords` → `FailureRecord` com `retries/flaky/file/line`, `category:'environment'` se flaky; nunca fabrica).
+- **LA-5** Camada 5: reporter-prediction (ler workflow CI → detectar jest-junit/vitest json/pytest junitxml → prever artifact) + **Security** nativa (GitHub/GitLab) + **Performance** (queue/duration/runner) + **Deployments/Environments/Releases** (→ DORA) + **PRs/MRs** (reviews/approvals). **✅ CONCLUÍDO 2026-07-13** (`github_manager.getDeployments/getReleases/getSecurityAlerts/getPullRequests/getIssues`; `detectReporterFromWorkflows`; `github-provider` popula `raw.deployments/releases/securityFindings/pullRequests/performanceMetrics/pmIssues`).
 
 **FASE PM — Gerenciadores (`CDH-PM0`–`PM4`)**
 
-- **PM-0** Contrato `ProjectManagerProvider` (espelho de `DataProvider`); `RawData.pmIssues` genérico + `RawIssue` canônico.
-- **PM-1** Jira (FECHA GAP profundidade): `mapIssue` + components/priority/fixVersions/sprint/issueLinks/epic/parent/storyPoints/statusCategory; paginação `startAt`; guards p/ campos ausentes (`undefined` explícito).
-- **PM-2** GitHub Issues (token existente): `GET /repos/{o}/{r}/issues` → `RawIssue`; vincular issues↔PRs↔runs.
-- **PM-3** GitLab Issues (token existente): `GET /projects/:id/issues` (epic/iteration).
+- **PM-0** Contrato `ProjectManagerProvider` (espelho de `DataProvider`); `RawData.pmIssues` genérico + `RawIssue` canônico. **✅ CONCLUÍDO 2026-07-13**: `RawIssue` canônico (`types/data-hub.ts`) + `RawData.pmIssues` populado por PM-2/PM-3 via `getIssues` (GitHub/GitLab). NOTA: não foi criado contrato `ProjectManagerProvider` separado — `pmIssues` é populado diretamente pelos providers GitLab/GitHub (unificação `jiraIssues`→`pmIssues` NÃO executada; Jira segue em `raw.jiraIssues`).
+- **PM-1** Jira (FECHA GAP profundidade): `mapIssue` + components/priority/fixVersions/sprint/issueLinks/epic/parent/storyPoints/statusCategory; paginação `startAt`; guards p/ campos ausentes (`undefined` explícito). **✅ CONCLUÍDO (sessão anterior)** — `raw.jiraIssues` via `RawJiraIssue`.
+- **PM-2** GitHub Issues (token existente): `GET /repos/{o}/{r}/issues` → `RawIssue`; vincular issues↔PRs↔runs. **✅ CONCLUÍDO 2026-07-13** (`github_manager.getIssues` + `github-provider.fetchPmIssues` → `raw.pmIssues`).
+- **PM-3** GitLab Issues (token existente): `GET /projects/:id/issues` (epic/iteration). **✅ CONCLUÍDO 2026-07-13** (`gitlab_manager.getIssues` + `gitlab-provider` → `raw.pmIssues`).
 - **PM-4** Composição em `composite-provider.ts` (CI + PMs em paralelo, merge c/ provenance).
 
 **FASE XR — Xray (`CDH-XR1`–`XR2`)**
 
-- Extrair Test Plans/Executions/Runs + cobertura de requisitos + defects → `RawData.xrayData` (com provenance/confidence).
+- Extrair Test Plans/Executions/Runs + cobertura de requisitos + defects → `RawData.xrayData` (com provenance/confidence). **✅ CONCLUÍDO 2026-07-13**: XR-1 (Test Executions/Runs) + XR-2 (`requirementCoverage` + `defects` em `RawXrayData`, mapeados em `xray-provider.mapResponse`; creds Xray vazios → teste unitário com client mockado).
 
 **FASE COV — Coverage detalhado (`CDH-COV`)**
 
-- Por arquivo/branch/function → `coverage.files`.
+- Por arquivo/branch/function → `coverage.files`. **✅ CONCLUÍDO 2026-07-13**: `coverage-files-extractor.ts` (Istanbul/Cobertura/JaCoCo) → `raw.coverageFiles`. Extração integrada NO PASSO DE DOWNLOAD DE ARTEFATOS dos providers GitHub/GitLab (`downloadCoverageArtifacts`), eliminando fetch duplicado de pipelines (SSOT: 1 `getRecentPipelines` por provider). `CoverageDataProvider` (classe separada) REMOVIDO — era provider paralelo que re-buscava `getRecentPipelines`, violando single-fetch + quebrando o teste de cache `ci-data-getOrFetch.integration.test.ts`.
 
 ### EIXO B — STORE (persistência quality-gated) — fundação
 
@@ -3639,8 +3639,52 @@ Pesquisa externa (fontes indicadas pelo usuário) confirma esse ecossistema:
 
 ### EIXO C — SERVE (consumo)
 
-- Features (health-score, quality-gate, traceability, flakiness, failure-analysis, bug-report, pr-report) consomem do modelo único armazenado, cientes de `confidence`/`quality`.
-- `DataHub` expõe acessores tipados por categoria (sem acesso direto a persistence).
+**Escopo total, ZERO deferral.** Todas as 7 features (health-score, quality-gate, traceability, flakiness, failure-analysis, bug-report, pr-report) consomem o modelo único, cientes de `confidence`/`quality`/`provenance`. `DataHub` expõe acessores tipados por categoria (sem acesso direto a persistence). Fonte de leitura = `hub.raw.<cat>` (SSOT gated).
+
+#### C-0 — Fix prévio bloqueante (defeito, não deferral)
+
+`mergeRawData` (`hub.ts:655`) **não mergeia `raw.provenance`** → perda silenciosa de provenance em multi-provider (viola ZERO-silenciamento). Union dos maps `provenance` + teste de merge multi-provider.
+
+#### C-1 — Acessores tipados (mudança de contrato)
+
+Adicionar à interface `DataHub` (`shared/types/data-hub.ts`) getters que leem `hub.raw.<cat>` e expõem `getQuality(name)`:
+`getRuns()`, `getFailureRecords()`, `getSecurityFindings()`, `getDeployments()`, `getReleases()`, `getDoraMetrics()`, `getPmIssues()`, `getCoverageFiles()`, `getPerformanceMetrics()`, `getPullRequests()`.
+Implementação em `hub.ts` (delega `this.raw.<cat>`); `persistence` permanece encapsulado. (AGENTS §2/§6: produtores = `DataHubImpl`+`factory`; consumidores = 7 features + leituras existentes.)
+
+#### C-2 — Migrar leituras diretas para getters
+
+Substituir acessos `hub.raw.*`/`hub.computed.*` por getters em todos os consumidores atuais (health-score, quality-gate, traceability, pr-report, flakiness) + testes.
+
+#### C-3 — Wire das 8 categorias não servidas + awareness (todas 7)
+
+**Grupo 1 (já recebem DataHub):**
+
+- **C-3a health-score:** consumir `getDeployments/Releases/DoraMetrics/CoverageFiles`; weight/annotate por `confidence` (per-record + `DataSource`) e superfícies `getQuality()` gaps.
+- **C-3b quality-gate:** `runQualityGate` (já obrigatório `dataHub`) incorpora `getQuality(category)` no pass/fail + reporta `incompleteItems`; estende checagens a securityFindings/deployments/releases/doraMetrics/coverage/pmIssues/performanceMetrics.
+- **C-3c traceability:** consumir `getPmIssues/getPullRequests/getFailureRecords/getSecurityFindings`; renderizar `provenance` + `confidence` por entidade (hoje só `runs`/`jiraIssues`).
+- **C-3d flakiness:** já consome `computed.flakyTests`; superfícies `confidence`/`source` dos entries + `getQuality('failureRecords')`.
+- **C-3e pr-report:** já constrói hub (`pr-report-core.ts:824`); superfícies `quality`/`confidence`/`provenance` no relatório.
+
+**Grupo 2 (não recebem DataHub — full scope):**
+
+- **C-3f failure-analysis** (`analyzeFailuresWithReport` `shared/failure-analysis.ts:116`): param opcional `hub?`. No `case17` (`:355`) garantir hub via `createDataHubFromParseResult(result, …)` (padrão `pr-report-core.ts:824`, após `result` em `:346`); cross-reference `FlatTest[]` × `getFailureRecords()/getSecurityFindings()` por fingerprint; anexar `confidence`/`provenance`/`source` ao `AnalysisReport`.
+- **C-3g bug-report** (`collectAutomated` `shared/bug-report.ts:178`): construir/consumir hub do `ParseResult` (`createDataHubFromParseResult`) e anexar `confidence`/`provenance` ao `BugReport`. Path free-text (`generateBugReportFromDescription`, case20) sem dados estruturados → **limitação documentada, não deferral**. Garantir hub em `git_triggers/pipeline-jira.ts`.
+
+#### C-4 — Eliminar acessos diretos a `GitProvider`/`*Manager`
+
+Redirecionar features que ainda batem em providers/manager direto para `hub.get*()` (SSOT).
+
+#### C-5 — 4 warnings severity-1 (`hub.ts` `security/detect-object-injection`)
+
+Antes diferidos; agora incorporados. Ao adicionar getters (C-1), corrigir acessos indexados inseguros (chaves `as const`/`Object.hasOwn`/`Map`) → 0 warnings. (ZERO TOLERÂNCIA.)
+
+#### C-6 — Verificação
+
+- Test-First: cada feature ganha teste que **ASSERTE** leitura de `confidence`/`quality`/`provenance` (mocks estritos, shapes completas); negative/edge cases prioritários; property test p/ NaN bounds.
+- Contract tests dos getters (`hub.raw.<cat>` + `getQuality`).
+- Checkpoints abaixo. Commits granulares por fase.
+
+> **Risco a verificar/fixar em C-3f:** `jira_management/main.ts:235` chama `getDataHub()` incondicionalmente mas **não inicializa o hub** (sem `ensureDataHub`/`setDataHub` na árvore `jira_management/`, exceto testes). `case17` via `git_triggers` funciona (hub inicializado em `interactive-mode.ts:960`), mas o path standalone `jira_management/main.ts` pode quebrar. C-3f garante o hub via `createDataHubFromParseResult(result)` independente do singleton — corrige o gap.
 
 ### Ordem de execução
 
@@ -4047,3 +4091,23 @@ Track FASE EXPAND + STORE retomado e **concluído**:
 - `stash@{0}` (WIP obsoleto em `feat/ssot-gap-corrections`, base `dd3931ec`): conteúdo já em `main`; **dropado** (2026-07-13) para evitar misapplication.
 
 **Conclusão:** track encerrado. Nenhuma pendência executável de código. Planos reconciliados (WS1 = SUPERSEDED).
+
+## RETOMADA 2 — 2026-07-13 (EIXO A — FASE EXPAND + STORE completa)
+
+Após WS4, a FASE EXPAND + STORE (EIXO A — "última gota") estava NAO executada. Completada nesta data:
+
+- **LA-1** ✅ (CheckRunAnnotation — sessão anterior)
+- **LA-2** ✅ (usage.billable — sessão anterior)
+- **LA-3/4/5** ✅ (GitLab DORA/deployments/releases/issues, GitHub security/deployments/releases/PRs/issues/perf, CTRF flaky/retries/file:line, reporter-prediction)
+- **PM-0/1/2/3/4** ✅ (`RawIssue` canônico + `pmIssues` via GitHub/GitLab `getIssues`; Jira em `jiraIssues`; CompositeProvider funde)
+- **XR-1/2** ✅ (Test Executions/Runs + requirement coverage + defects)
+- **COV** ✅ (`coverageFiles` via artefatos CI; extraído em `downloadCoverageArtifacts` nos providers GitHub/GitLab — sem fetch duplicado de pipelines)
+- **ST-1/2/3** ✅ (fundação — `pullRequests` adicionado: `RawPullRequest`, `validateAndScorePullRequests`, `QualityCategory`, `gateRawData`, `persistence`, `raw-merge`, `hub`)
+
+Verificação: `npx tsc --noEmit`=0; `npm run lint`=0; `npx vitest run shared/data-hub git_triggers`=1347 pass; `rg "NaN"` nos providers=0. Pendência conhecida: XR-2 live exige `XRAY_CLIENT_ID`/`XRAY_CLIENT_SECRET` (vazios em `.env.local`) — implementado + teste mockado; validação live pendente de creds.
+
+### Correção de CI pós-push (mesma data)
+
+CI run `29287396947` (Test Node 24) FALHOU: `ci-data-getOrFetch.integration.test.ts` — contagem de `getRecentPipelines` dobrou (1→2, 2→4). Root cause: `CoverageDataProvider` era provider paralelo em `factory.buildDataProviders` que re-buscava pipelines (`readCoverageFiles` → `getRecentPipelines`) já buscados pelo provider principal — fetch duplicado (viola single-fetch SSOT). Fix em origem: extração de coverage por arquivo integrada no passo de download de artefatos de `github-provider.ts`/`gitlab-provider.ts` (`downloadCoverageArtifacts`, em `fetchArtifacts` — mesmo `listPipelineArtifacts`, sem `getRecentPipelines` extra); `CoverageDataProvider` + testes específicos REMOVIDOS; `coverage-files-extractor.ts` preservado e coberto por novo teste unitário `coverage-files-extractor.test.ts`. Após fix: 600 testes `data-hub`+`git_triggers` pass; `getOrFetch` volta a 1 fetch/provider (cache validado).
+
+**Conclusão 2:** FASE EXPAND + STORE (EIXO A) CONCLUÍDA. Código em `main` via push GitHub API.

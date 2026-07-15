@@ -14,6 +14,7 @@ import {
     categorizeFailure,
     type TestRunTab,
     type ReportOptions,
+    type TestHistoryRun,
 } from '../../shared/report-generator.js';
 import { getDataHub, isDataHubInitialized } from '../../shared/data-hub/global-hub.js';
 import { calcFlakinessEntries } from '../../shared/data-hub/compute/flakiness-entries.js';
@@ -23,13 +24,12 @@ import { analyzeFailuresWithReport, type LlmContext } from '../../shared/failure
 import { collectAutomated, interactiveBugReportFlow } from '../../shared/bug-report.js';
 import { openWithFallback } from '../../shared/open.js';
 import { publishReport } from '../../shared/publish.js';
-import { TestHistoryCache } from '../xray-history.js';
+import { createHistoryProvider, TestHistoryCache } from '../xray-history.js';
 import type { CommandContext } from './context.js';
 import { buildGitTrendHtml, buildJiraContextHtml, injectAnalysisSection, parseCliExtra } from './case17-helpers.js';
-import { computeDiff, resolveTestHistory } from './case17-test-utils.js';
 import { resolveTestDataSource, resolveSessionContext } from '../../shared/session-context.js';
 // commit-log removed — DataHub.raw.commitLog is SSOT (Invariant 6)
-import type { MetricsRun } from '../../shared/types/data-hub.js';
+import type { DataHub, MetricsRun } from '../../shared/types/data-hub.js';
 
 import Config from '../../shared/config.js';
 
@@ -66,7 +66,10 @@ async function _fetchJiraContext(
 }
 
 async function _addAiAnalysis(html: string, tests: ParseResult['tests'], context?: LlmContext): Promise<string> {
-    const analysis = await withSpinner('Analisando falhas com IA...', () => analyzeFailuresWithReport(tests, context));
+    const hub = isDataHubInitialized() ? getDataHub() : undefined;
+    const analysis = await withSpinner('Analisando falhas com IA...', () =>
+        analyzeFailuresWithReport(tests, context, { dataHub: hub }),
+    );
     if (!analysis.content) return html;
     return injectAnalysisSection(html, analysis.content);
 }
@@ -300,7 +303,8 @@ async function _handleInteractiveBugReport(c: CommandContext, result: ParseResul
         result.stats.failed > 0 &&
         (await askConfirm('Deseja criar um relatório de bug (Bug Report) no Jira para as falhas?', false))
     ) {
-        const automatedReport = collectAutomated(result);
+        const hub = isDataHubInitialized() ? getDataHub() : undefined;
+        const automatedReport = collectAutomated(result, undefined, { dataHub: hub });
         await interactiveBugReportFlow(c.jiraResource, c.ctx.project_name, automatedReport, c.linkManager);
     }
 }
@@ -412,6 +416,116 @@ async function handler(c: CommandContext): Promise<boolean | void> {
     if (!gateOk) return false;
 
     await _handleInteractiveBugReport(c, result);
+}
+
+function getMappingCandidates(): string[] {
+    return [Config.get('QA_MAPPING_PATH'), sanitizePath(process.cwd(), 'mapping.json')];
+}
+
+function parseTestFile(candidate: string): Map<string, string> | null {
+    try {
+        const raw = fs.readFileSync(sanitizePath(process.cwd(), candidate), 'utf8');
+        const data: { tests?: Array<Record<string, string>> } = JSON.parse(raw) as {
+            tests?: Array<Record<string, string>>;
+        };
+        const tests: Array<Record<string, string>> = data.tests ?? [];
+        if (tests.length === 0) return new Map();
+        const entries: Array<[string, string]> = [];
+        for (const t of tests) {
+            if (t['title'] && t['key']) entries.push([t['title'], t['key']]);
+        }
+        return new Map(entries);
+    } catch (err) {
+        rootLogger.warn('case17: failed to parse test data, trying next: ' + String(err));
+        return null;
+    }
+}
+
+function resolveMapping(): Map<string, string> {
+    for (const candidate of getMappingCandidates()) {
+        if (!candidate || !fs.existsSync(sanitizePath(process.cwd(), candidate))) continue;
+        const result = parseTestFile(candidate);
+        if (result !== null) return result;
+    }
+    return new Map();
+}
+
+async function resolveTestHistory(
+    tests: FlatTest[],
+    c: CommandContext,
+    cache: TestHistoryCache,
+): Promise<Record<string, TestHistoryRun[]>> {
+    const mapping = resolveMapping();
+    if (mapping.size === 0) return {};
+    const provider = createHistoryProvider(c.jiraResource);
+
+    const keys = tests.map((t) => mapping.get(t.title) ?? mapping.get(t.fullTitle ?? '') ?? '').filter(Boolean);
+    if (keys.length === 0) return {};
+    const uniqueKeys = [...new Set(keys)];
+    const results = await Promise.allSettled(
+        uniqueKeys.map(async (key) => {
+            const cached = cache.get(key);
+            if (cached) return { key, history: cached };
+            const history = await provider.getHistory(key);
+            cache.set(key, history);
+            return { key, history };
+        }),
+    );
+
+    const keyToHistory = new Map<string, TestHistoryRun[]>();
+    for (const result of results) {
+        if (result.status === 'fulfilled') {
+            keyToHistory.set(result.value.key, result.value.history);
+        }
+    }
+    const titleToHistory: Record<string, TestHistoryRun[]> = {};
+    for (const t of tests) {
+        const key = mapping.get(t.title) ?? mapping.get(t.fullTitle ?? '') ?? '';
+        if (key && keyToHistory.has(key)) {
+            titleToHistory[t.title] = keyToHistory.get(key) ?? [];
+        }
+    }
+    return titleToHistory;
+}
+
+function loadLastTests(store?: DataHub, project?: string): Array<{ name: string; status: string }> {
+    if (!store || !project) return [];
+    const stored = store.loadMetrics<{
+        tests?: Array<{ title: string; state: string }>;
+    }>();
+    if (stored?.tests && Array.isArray(stored.tests) && stored.tests.length > 0) {
+        return stored.tests.map((t) => ({ name: t.title, status: t.state }));
+    }
+    return [];
+}
+
+function computeDiff(
+    current: FlatTest[],
+    store?: DataHub,
+    project?: string,
+): {
+    newFailures: FlatTest[];
+    newPasses: FlatTest[];
+    flaky: FlatTest[];
+} {
+    const lastTests = loadLastTests(store, project);
+
+    if (lastTests.length === 0) {
+        return { newFailures: [], newPasses: [], flaky: [] };
+    }
+
+    const lastByTitle = new Map(lastTests.map((t) => [t.name, t]));
+    const newFailures: FlatTest[] = [];
+    const newPasses: FlatTest[] = [];
+    const flaky: FlatTest[] = [];
+    for (const t of current) {
+        const last = lastByTitle.get(t.title);
+        if (!last) continue;
+        if (t.state === 'failed' && last.status === 'passed') newFailures.push(t);
+        if (t.state === 'passed' && last.status === 'failed') newPasses.push(t);
+        if (last.status === 'failed') flaky.push(t);
+    }
+    return { newFailures, newPasses, flaky };
 }
 
 export default { handler };

@@ -131,42 +131,18 @@ describe('LinkTypeManager', () => {
             mockJiraResource.getJiraResource.mockResolvedValue({ issueLinkTypes: fakeTypes });
         });
 
-        it('matches by name', async () => {
+        const resolveIdCases = [
+            { input: 'Tests', label: 'matches by name' },
+            { input: 'is tested by', label: 'matches by inward' },
+            { input: 'tests', label: 'matches by outward' },
+            { input: 'TESTS', label: 'is case insensitive' },
+            { input: '  Tests  ', label: 'trims whitespace' },
+        ];
+
+        it.each(resolveIdCases)('$label', async ({ input }) => {
             expect.hasAssertions();
 
-            const id = await manager.resolveLinkTypeId('Tests');
-
-            expect(id).toBe('200');
-        });
-
-        it('matches by inward', async () => {
-            expect.hasAssertions();
-
-            const id = await manager.resolveLinkTypeId('is tested by');
-
-            expect(id).toBe('200');
-        });
-
-        it('matches by outward', async () => {
-            expect.hasAssertions();
-
-            const id = await manager.resolveLinkTypeId('tests');
-
-            expect(id).toBe('200');
-        });
-
-        it('is case insensitive', async () => {
-            expect.hasAssertions();
-
-            const id = await manager.resolveLinkTypeId('TESTS');
-
-            expect(id).toBe('200');
-        });
-
-        it('trims whitespace', async () => {
-            expect.hasAssertions();
-
-            const id = await manager.resolveLinkTypeId('  Tests  ');
+            const id = await manager.resolveLinkTypeId(input);
 
             expect(id).toBe('200');
         });

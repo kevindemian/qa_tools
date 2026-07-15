@@ -4,7 +4,16 @@
  * Adapts GitLabManager (GitProvider) to the DataProvider interface.
  * Fetches raw CI/CD data from GitLab CI API.
  */
-import type { GitProvider, PipelineJob, ArtifactInfo, GitLabTestReport, PipelineRun } from '../../types/ci-cd.js';
+import type {
+    GitProvider,
+    PipelineJob,
+    ArtifactInfo,
+    GitLabTestReport,
+    PipelineRun,
+    GitLabDeploymentRaw,
+    GitLabReleaseRaw,
+    GitLabIssueRaw,
+} from '../../types/ci-cd.js';
 import type {
     DataProvider,
     FetchOptions,
@@ -13,12 +22,18 @@ import type {
     CiRunStats,
     DataSource,
     FailureRecord,
+    Deployment,
+    Release,
+    RawIssue,
+    DoraMetrics,
+    CoverageFile,
 } from '../../types/data-hub.js';
 import type { ArtifactParseResult } from '../artifact-parser.js';
 import { parsePipelineRun, validateRawDataOrThrow } from '../schemas.js';
 import { rootLogger } from '../../logger.js';
 import { extractErrorMessage } from '../../prompt-errors.js';
 import { extractCoverage } from '../extractors/coverage-extractor.js';
+import { extractCoverageFiles, isCoverageArtifact } from '../extractors/coverage-files-extractor.js';
 import { isTestArtifact, parseArtifactBufferAll } from '../artifact-parser.js';
 import { detectFrameworkCascade } from '../extractors/framework-detector.js';
 import { classifyFailures, failureEntryToRecord, type FailureInput } from '../extractors/failure-classifier.js';
@@ -67,6 +82,7 @@ export class GitLabDataProvider implements DataProvider {
         const failureReasonsMap = new Map<number, string[]>();
         const failureRecords: FailureRecord[] = [];
         const parsedArtifactsMap = new Map<number, ArtifactParseResult[]>();
+        const coverageFiles: CoverageFile[] = [];
 
         const maxArtifacts = options.maxArtifactsPerRun ?? DEFAULT_MAX_ARTIFACTS_PER_RUN;
         const { gitlabTestReport, coverage } = await this.collectFromRuns(
@@ -77,13 +93,17 @@ export class GitLabDataProvider implements DataProvider {
             failureRecords,
             parsedArtifactsMap,
             maxArtifacts,
+            coverageFiles,
         );
         this.appendGitLabTestReportFailures(failureRecords, gitlabTestReport);
 
         const framework = await this.detectFrameworkFromFirstRun(runs);
         const commitLog = buildCommitLog(runs);
         const ciRuns = this.deriveCiRuns(runs, parsedArtifactsMap);
+        const now = new Date().toISOString();
         const provenance = this.buildProvenance(coverage, framework, gitlabTestReport);
+        if (coverageFiles.length > 0)
+            provenance.set('coverageFiles', { confidence: 0.85, source: 'gitlab-ci-artifacts', timestamp: now });
 
         const rawData: RawData = {
             runs,
@@ -96,9 +116,15 @@ export class GitLabDataProvider implements DataProvider {
             ...(gitlabTestReport != null ? { gitlabTestReport } : {}),
             ...(commitLog ? { commitLog } : {}),
             ...(ciRuns.length > 0 ? { ciRuns } : {}),
+            ...(coverageFiles.length > 0 ? { coverageFiles } : {}),
             failureRecords,
             provenance,
         };
+
+        // EIXO A (FASE EXPAND+STORE): GitLab-side DORA / deployments / releases / issues.
+        // Only populated when the provider exposes the optional methods (guarded separately
+        // so a missing method on a non-GitLab provider never breaks extraction).
+        await this.collectExpandedData(rawData);
 
         // Gap 1: reject malformed provider output explicitly at the boundary.
         return validateRawDataOrThrow(rawData);
@@ -113,6 +139,119 @@ export class GitLabDataProvider implements DataProvider {
         return runs;
     }
 
+    /**
+     * EIXO A (FASE EXPAND+STORE) — populate raw.doraMetrics / deployments / releases /
+     * pmIssues from GitLab-specific GitProvider methods, but ONLY when each optional
+     * method is actually present on the provider (typeof === 'function'). Each category
+     * is guarded independently so a missing method never breaks the others. Each populated
+     * category records a provenance entry at confidence 0.9.
+     */
+    private async collectExpandedData(rawData: RawData): Promise<void> {
+        const now = new Date().toISOString();
+        const provenance = rawData.provenance ?? new Map<string, DataSource>();
+        rawData.provenance = provenance;
+
+        await this.collectDora(rawData, provenance, now);
+        await this.collectDeployments(rawData, provenance, now);
+        await this.collectReleases(rawData, provenance, now);
+        await this.collectPmIssues(rawData, provenance, now);
+    }
+
+    /** LA-3 — map GitLabDoraRaw → DoraMetrics. Non-finite values are omitted (never coerced). */
+    private async collectDora(rawData: RawData, provenance: Map<string, DataSource>, now: string): Promise<void> {
+        if (typeof this.provider.getDoraMetrics !== 'function') return;
+        const doraRaw = await this.provider.getDoraMetrics();
+        if (doraRaw == null) return;
+
+        const dora: DoraMetrics = { source: 'gitlab', confidence: 0.9 };
+        if (Number.isFinite(doraRaw.deployment_frequency)) dora.deploymentFrequency = doraRaw.deployment_frequency;
+        if (Number.isFinite(doraRaw.lead_time_for_changes)) dora.leadTimeForChanges = doraRaw.lead_time_for_changes;
+        if (Number.isFinite(doraRaw.time_to_restore_service)) dora.meanTimeToRecovery = doraRaw.time_to_restore_service;
+        if (Number.isFinite(doraRaw.change_failure_rate)) dora.changeFailureRate = doraRaw.change_failure_rate;
+
+        rawData.doraMetrics = dora;
+        provenance.set('doraMetrics', { confidence: 0.9, source: 'gitlab-api', timestamp: now });
+    }
+
+    /** LA-5 — map GitLabDeploymentRaw[] → Deployment[]. */
+    private async collectDeployments(
+        rawData: RawData,
+        provenance: Map<string, DataSource>,
+        now: string,
+    ): Promise<void> {
+        if (typeof this.provider.getDeployments !== 'function') return;
+        const deploysRaw = (await this.provider.getDeployments()) as GitLabDeploymentRaw[];
+        const deployments: Deployment[] = [];
+        for (const d of deploysRaw) {
+            deployments.push({
+                id: String(d.id),
+                environment: d.environment?.name ?? '',
+                status: d.status ?? '',
+                sha: d.sha,
+                ref: d.ref,
+                createdAt: d.created_at ?? '',
+                updatedAt: d.updated_at,
+                url: d.url,
+                confidence: 0.9,
+            });
+        }
+        if (deployments.length > 0) {
+            rawData.deployments = deployments;
+            provenance.set('deployments', { confidence: 0.9, source: 'gitlab-api', timestamp: now });
+        }
+    }
+
+    /** LA-5 — map GitLabReleaseRaw[] → Release[]. */
+    private async collectReleases(rawData: RawData, provenance: Map<string, DataSource>, now: string): Promise<void> {
+        if (typeof this.provider.getReleases !== 'function') return;
+        const releasesRaw = (await this.provider.getReleases()) as GitLabReleaseRaw[];
+        const releases: Release[] = [];
+        for (const r of releasesRaw) {
+            releases.push({
+                id: r.id != null ? String(r.id) : (r.tag_name ?? ''),
+                tag: r.tag_name ?? '',
+                draft: false,
+                prerelease: Boolean(r.upcoming),
+                createdAt: r.released_at ?? r.created_at ?? '',
+                name: r.name,
+                url: r._links?.self,
+                confidence: 0.9,
+            });
+        }
+        if (releases.length > 0) {
+            rawData.releases = releases;
+            provenance.set('releases', { confidence: 0.9, source: 'gitlab-api', timestamp: now });
+        }
+    }
+
+    /** PM-3 — map GitLabIssueRaw[] → RawIssue[]. Issues missing id/title/state are dropped. */
+    private async collectPmIssues(rawData: RawData, provenance: Map<string, DataSource>, now: string): Promise<void> {
+        if (typeof this.provider.getIssues !== 'function') return;
+        const issuesRaw = (await this.provider.getIssues()) as GitLabIssueRaw[];
+        const pmIssues: RawIssue[] = [];
+        for (const i of issuesRaw) {
+            const rawId = (i as { id?: number | null }).id;
+            if (rawId == null || !i.title || !i.state) continue;
+            pmIssues.push({
+                source: 'gitlab',
+                id: String(rawId),
+                key: i.iid,
+                title: i.title,
+                state: i.state,
+                author: i.author?.username,
+                labels: i.labels || [],
+                createdAt: i.created_at ?? '',
+                updatedAt: i.updated_at,
+                url: i.web_url,
+                confidence: 0.9,
+            });
+        }
+        if (pmIssues.length > 0) {
+            rawData.pmIssues = pmIssues;
+            provenance.set('pmIssues', { confidence: 0.9, source: 'gitlab-api', timestamp: now });
+        }
+    }
+
     private async collectFromRuns(
         runs: PipelineRun[],
         jobsMap: Map<number, PipelineJob[]>,
@@ -121,6 +260,7 @@ export class GitLabDataProvider implements DataProvider {
         failureRecords: FailureRecord[],
         parsedArtifactsMap: Map<number, ArtifactParseResult[]>,
         maxArtifacts: number,
+        coverageFiles: CoverageFile[],
     ): Promise<{ gitlabTestReport: GitLabTestReport | undefined; coverage: RawCoverage | undefined }> {
         let coverage: RawCoverage | undefined;
         let gitlabTestReport: GitLabTestReport | undefined;
@@ -136,6 +276,7 @@ export class GitLabDataProvider implements DataProvider {
                 parsedArtifactsMap,
                 run,
                 maxArtifacts,
+                coverageFiles,
             );
             if (gitlabTestReport == null && report != null) gitlabTestReport = report;
             coverage = await this.extractCoverageIfNeeded(coverage, jobsMap, runIdNum);
@@ -192,11 +333,12 @@ export class GitLabDataProvider implements DataProvider {
         parsedArtifactsMap: Map<number, ArtifactParseResult[]>,
         run: PipelineRun,
         maxArtifacts: number,
+        coverageFiles: CoverageFile[],
     ): Promise<GitLabTestReport | undefined> {
         try {
             const runJobs = await this.provider.getPipelineJobs(runIdNum);
             jobsMap.set(runIdNum, runJobs);
-            await this.fetchArtifacts(runIdNum, artifactsMap, parsedArtifactsMap, maxArtifacts);
+            await this.fetchArtifacts(runIdNum, artifactsMap, parsedArtifactsMap, maxArtifacts, coverageFiles);
             const testReport = await this.fetchTestReport(runIdNum);
             await this.fetchFailureReasons(runJobs, failureReasonsMap, failureRecords, run);
             return testReport;
@@ -211,15 +353,48 @@ export class GitLabDataProvider implements DataProvider {
         artifactsMap: Map<number, ArtifactInfo[]>,
         parsedArtifactsMap: Map<number, ArtifactParseResult[]>,
         maxArtifacts: number,
+        coverageFiles: CoverageFile[],
     ): Promise<void> {
         try {
             const arts = await this.provider.listPipelineArtifacts(runIdNum);
             artifactsMap.set(runIdNum, arts);
             const parsed = await this.downloadTestArtifacts(arts, maxArtifacts);
             if (parsed.length > 0) parsedArtifactsMap.set(runIdNum, parsed);
+            const cov = await this.downloadCoverageArtifacts(arts, maxArtifacts);
+            if (cov.length > 0) coverageFiles.push(...cov);
         } catch (err) {
             rootLogger.debug(`GitLab: artifacts fetch failed for run ${runIdNum}: ${extractErrorMessage(err)}`);
         }
+    }
+
+    /**
+     * Download coverage-report artifacts and decode them into per-file coverage.
+     * Runs in the SAME artifact pass as test artifacts — no extra pipeline fetch.
+     */
+    private async downloadCoverageArtifacts(artifacts: ArtifactInfo[], maxArtifacts: number): Promise<CoverageFile[]> {
+        const coverageArtifacts = artifacts.filter((a) => isCoverageArtifact(a.name));
+        const files: CoverageFile[] = [];
+        let downloaded = 0;
+
+        for (const artifact of coverageArtifacts) {
+            if (downloaded >= maxArtifacts) break;
+            try {
+                const result = await this.provider.downloadArtifact(artifact.id);
+                const extracted = extractCoverageFiles(artifact.name, result.buffer);
+                if (extracted.errors.length > 0)
+                    rootLogger.debug(
+                        `GitLab: coverage artifact ${String(artifact.name)} had ${extracted.errors.length} parse error(s)`,
+                    );
+                files.push(...extracted.files);
+                downloaded++;
+            } catch (err) {
+                rootLogger.debug(
+                    `GitLab: coverage artifact download failed for ${String(artifact.name)}: ${extractErrorMessage(err)}`,
+                );
+            }
+        }
+
+        return files;
     }
 
     private async fetchTestReport(runIdNum: number): Promise<GitLabTestReport | undefined> {

@@ -29,6 +29,7 @@ import type {
     BranchEntry,
 } from '../../types/data-hub.js';
 import type { QualityReport, QualityCategory } from '../../data-hub/quality.js';
+import type { DataSource } from '../../types/data-hub.js';
 import type { QuarantineStore } from '../../quarantine.js';
 
 /** Default `computed` metrics — all zeros/empty so overrides can be partial. */
@@ -108,6 +109,8 @@ export function makeDataHubPersistenceMock(): DataHubPersistence {
         loadCoverageFiles: vi.fn().mockReturnValue([]),
         savePerformanceMetrics: vi.fn(),
         loadPerformanceMetrics: vi.fn().mockReturnValue(null),
+        savePullRequests: vi.fn(),
+        loadPullRequests: vi.fn().mockReturnValue([]),
         // ─── Test-result cache (SHA-keyed) — owned by DataHub (replaces legacy Store) ─
         loadReport: vi.fn<(sha: string) => { tests: FlatTest[] } | null>().mockReturnValue(null),
         saveReport: vi.fn<(sha: string, tests: FlatTest[]) => void>(),
@@ -119,6 +122,78 @@ export function makeDataHubPersistenceMock(): DataHubPersistence {
     };
 }
 
+/**
+ * SSOT category getters for DataHub mocks (EIXO C). Returns the gated in-memory
+ * model (`raw.*`) so mocks mirror `DataHubImpl`'s serving surface without
+ * duplicating the real implementation.
+ */
+export function makeDataHubGetters(): Pick<
+    DataHub,
+    | 'getRuns'
+    | 'getFailureRecords'
+    | 'getSecurityFindings'
+    | 'getDeployments'
+    | 'getReleases'
+    | 'getDoraMetrics'
+    | 'getPmIssues'
+    | 'getCoverageFiles'
+    | 'getCoverage'
+    | 'getPerformanceMetrics'
+    | 'getPullRequests'
+    | 'getProvenance'
+> {
+    return {
+        getRuns(this: DataHub) {
+            const raw = this.raw as RawData | undefined;
+            return raw?.runs ?? [];
+        },
+        getFailureRecords(this: DataHub) {
+            const raw = this.raw as RawData | undefined;
+            return raw?.failureRecords ?? [];
+        },
+        getSecurityFindings(this: DataHub) {
+            const raw = this.raw as RawData | undefined;
+            return raw?.securityFindings ?? [];
+        },
+        getDeployments(this: DataHub) {
+            const raw = this.raw as RawData | undefined;
+            return raw?.deployments ?? [];
+        },
+        getReleases(this: DataHub) {
+            const raw = this.raw as RawData | undefined;
+            return raw?.releases ?? [];
+        },
+        getDoraMetrics(this: DataHub) {
+            const raw = this.raw as RawData | undefined;
+            return raw?.doraMetrics;
+        },
+        getPmIssues(this: DataHub) {
+            const raw = this.raw as RawData | undefined;
+            return raw?.pmIssues ?? [];
+        },
+        getCoverageFiles(this: DataHub) {
+            const raw = this.raw as RawData | undefined;
+            return raw?.coverageFiles ?? [];
+        },
+        getCoverage(this: DataHub) {
+            const raw = this.raw as RawData | undefined;
+            return raw?.coverage;
+        },
+        getPerformanceMetrics(this: DataHub) {
+            const raw = this.raw as RawData | undefined;
+            return raw?.performanceMetrics;
+        },
+        getPullRequests(this: DataHub) {
+            const raw = this.raw as RawData | undefined;
+            return raw?.pullRequests ?? [];
+        },
+        getProvenance(this: DataHub) {
+            const raw = this.raw as RawData | undefined;
+            return raw?.provenance;
+        },
+    };
+}
+
 /** Build a fully-satisfied `DataHub` mock with overridable raw/computed. */
 export function makeDataHubMock(
     overrides: {
@@ -126,13 +201,18 @@ export function makeDataHubMock(
         computed?: Partial<ComputedMetrics>;
         provider?: 'github' | 'gitlab';
         repo?: string;
+        provenance?: Map<string, DataSource>;
+        quality?: Partial<Record<QualityCategory, QualityReport>>;
     } = {},
 ): DataHub {
-    const raw: RawData = overrides.raw ?? {
-        runs: [],
-        jobs: new Map(),
-        artifacts: new Map(),
-        failureReasons: new Map(),
+    const raw: RawData = {
+        ...(overrides.raw ?? {
+            runs: [],
+            jobs: new Map(),
+            artifacts: new Map(),
+            failureReasons: new Map(),
+        }),
+        ...(overrides.provenance ? { provenance: overrides.provenance } : {}),
     };
     const computed: ComputedMetrics = { ...defaultComputed, ...overrides.computed };
     return {
@@ -177,8 +257,13 @@ export function makeDataHubMock(
         loadCoverageFiles: vi.fn().mockReturnValue([]),
         savePerformanceMetrics: vi.fn(),
         loadPerformanceMetrics: vi.fn().mockReturnValue(null),
-        getQuality: vi.fn<(category: QualityCategory) => QualityReport | undefined>(),
+        savePullRequests: vi.fn(),
+        loadPullRequests: vi.fn().mockReturnValue([]),
+        getQuality: vi.fn<(category: QualityCategory) => QualityReport | undefined>(
+            overrides.quality ? (category: QualityCategory) => overrides.quality?.[category] : undefined,
+        ),
         getQuarantine: vi.fn<() => QuarantineStore>(() => ({ entries: [] })),
+        ...makeDataHubGetters(),
         getBranchPassRate: (branch: string): number => calcPipelinePassRate(raw.runs, branch),
         mergeIncremental: vi.fn<(incoming: RawData) => void>(),
         // ─── Test-result cache (SHA-keyed) ─────────────────────────────────────

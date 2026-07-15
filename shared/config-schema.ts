@@ -197,6 +197,27 @@ export const CONFIG_SCHEMA: ConfigField[] = [
     },
     { key: 'xdgStateHome', envVar: 'XDG_STATE_HOME', type: 'string', category: 'state', description: 'XDG state home' },
     {
+        key: 'qaCurrentProject',
+        envVar: 'QA_CURRENT_PROJECT',
+        type: 'string',
+        category: 'project',
+        description: 'Currently selected project name (multi-project mode)',
+    },
+    {
+        key: 'qaProjectDir',
+        envVar: 'QA_PROJECT_DIR',
+        type: 'string',
+        category: 'project',
+        description: 'Absolute directory of the currently selected project',
+    },
+    {
+        key: 'xdgConfigHome',
+        envVar: 'XDG_CONFIG_HOME',
+        type: 'string',
+        category: 'state',
+        description: 'XDG config home override (registry location)',
+    },
+    {
         key: 'llmProvider',
         envVar: 'LLM_PROVIDER',
         type: 'string',

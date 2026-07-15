@@ -36,6 +36,10 @@ export interface BugReport {
         branch?: string;
         commitSha?: string;
         provider?: string;
+        /** EIXO C awareness: confidence (0-1) of the failure-records source feeding this report. */
+        dataQualityConfidence?: number | null;
+        /** EIXO C awareness: number of failed tests matched to prior failure records. */
+        priorFailureCount?: number;
     };
 }
 
@@ -112,4 +116,9 @@ export interface HealthScoreResult {
     provenance?: HealthScoreProvenance;
     runCount: number;
     timestamp: string;
+    /**
+     * EIXO C awareness: data-quality summary of the unified model consumed by
+     * this score (confidence, per-category validity via getQuality(), provenance).
+     */
+    dataQuality?: import('../data-quality.js').DataQualitySummary;
 }

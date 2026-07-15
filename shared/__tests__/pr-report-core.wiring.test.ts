@@ -1,5 +1,7 @@
 import { describe, expect, it, vi, beforeEach } from 'vitest';
 import type { GitProvider } from '../types/ci-cd.js';
+import type { RawData, DataSource } from '../types/data-hub.js';
+import { makeDataHubGetters, makeDataHubMock } from '../test-utils/factories/data-hub-mock.js';
 
 const mockGlobalHub = vi.hoisted(() => ({
     setDataHub: vi.fn(),
@@ -70,10 +72,11 @@ vi.mock('../feature-config.js', () => ({
 }));
 
 import fs from 'node:fs';
-import { main } from '../pr-report-core.js';
+import { main, generatePrReport } from '../pr-report-core.js';
 
 function makeFetchedHub(): Record<string, unknown> {
     return {
+        ...makeDataHubGetters(),
         raw: { runs: [], jobs: new Map(), artifacts: new Map(), failureReasons: new Map() },
         computed: {},
         timestamp: new Date(),
@@ -212,6 +215,75 @@ describe('TryCreateDataHub wiring', () => {
 
             expect(factory).not.toHaveBeenCalled();
             expect(mockFactory.createDataHub).not.toHaveBeenCalled();
+        });
+    });
+
+    describe('C-3e data-quality awareness', () => {
+        it('surfaces the unified-model data-quality summary in the PR report', async () => {
+            expect.hasAssertions();
+
+            const raw: RawData = {
+                runs: [],
+                jobs: new Map(),
+                artifacts: new Map(),
+                failureReasons: new Map(),
+                failureRecords: [{ name: 't1', status: 'failed', confidence: 0.9, source: 'junit' }],
+                provenance: new Map<string, DataSource>([
+                    ['failureRecords', { confidence: 0.9, source: 'github-api', timestamp: new Date().toISOString() }],
+                ]),
+            };
+            const dataHub = makeDataHubMock({ raw });
+
+            const result = await generatePrReport({
+                tests: [],
+                stats: { passed: 0, failed: 0, skipped: 0, total: 0, duration: 0 },
+                dataHub,
+                project: 'p',
+            });
+
+            expect(result.dataQuality).toBeDefined();
+            expect(result.dataQuality?.status).toBe('ok');
+            expect(result.dataQuality?.minConfidence).toBeCloseTo(0.9);
+
+            expect(mockPRComment.postPrComment).toHaveBeenCalledTimes(1);
+
+            const body = mockPRComment.postPrComment.mock.calls[0]?.[0] as string;
+
+            expect(body).toContain('### ✅ Data Quality');
+            expect(body).toContain('**Min. confidence:** 90%');
+        });
+
+        it('reports degraded data quality when a category has quality issues', async () => {
+            expect.hasAssertions();
+
+            const raw: RawData = {
+                runs: [],
+                jobs: new Map(),
+                artifacts: new Map(),
+                failureReasons: new Map(),
+                failureRecords: [{ name: 't1', status: 'failed', confidence: 0.4, source: 'junit' }],
+                provenance: new Map<string, DataSource>([
+                    ['failureRecords', { confidence: 0.4, source: 'github-api', timestamp: new Date().toISOString() }],
+                ]),
+            };
+            const dataHub = makeDataHubMock({ raw });
+            dataHub.getQuality = vi.fn().mockReturnValue({
+                valid: false,
+                issues: ['low confidence'],
+            });
+
+            const result = await generatePrReport({
+                tests: [],
+                stats: { passed: 0, failed: 0, skipped: 0, total: 0, duration: 0 },
+                dataHub,
+                project: 'p',
+            });
+
+            expect(result.dataQuality?.status).toBe('degraded');
+
+            const body = mockPRComment.postPrComment.mock.calls[0]?.[0] as string;
+
+            expect(body).toContain('### ⚠️ Data Quality');
         });
     });
 });

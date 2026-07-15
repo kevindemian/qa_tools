@@ -1,8 +1,11 @@
 import { buildTraceabilityMatrix, generateTraceabilityHtml } from './traceability-matrix.js';
-import type { MetricsRun, FlakyResult } from './types/data-hub.js';
+import type { MetricsRun, FlakyResult, RawData } from './types/data-hub.js';
+import type { QualityCategory, QualityReport } from './data-hub/quality.js';
+import type { DataSource } from './types/data-hub.js';
 import { rootLogger } from './logger.js';
 import { nonNull } from './test-utils.js';
 import { createTestHub } from './__tests__/test-hub.js';
+import { makeDataHubMock } from './test-utils/factories/data-hub-mock.js';
 
 /** Wrapper que injeta DataHub (SSOT) obrigatório, com flakyRate opcional. */
 function matrix(
@@ -419,6 +422,7 @@ describe('GenerateTraceabilityHtml', () => {
             totalTests: 0,
             overallCoverage: 0,
             timestamp: '2026-01-01T00:00:00.000Z',
+            awareness: { categories: [], minConfidence: null },
         };
         const html = generateTraceabilityHtml(result);
 
@@ -435,43 +439,22 @@ describe('GenerateTraceabilityHtml', () => {
         vi.restoreAllMocks();
     });
 
-    it('shows error severity for coverage below 50', () => {
+    it.each([
+        { coverage: 30, severity: 'error', title: 'shows error severity for coverage below 50' },
+        { coverage: 65, severity: 'warn', title: 'shows warn severity for coverage between 50 and 80' },
+        { coverage: 95, severity: 'success', title: 'shows success severity for coverage above 80' },
+    ])('$title', ({ coverage, severity }) => {
         const result: ReturnType<typeof buildTraceabilityMatrix> = {
             nodes: [],
             totalEpics: 0,
             totalTests: 0,
-            overallCoverage: 30,
+            overallCoverage: coverage,
             timestamp: '2026-01-01T00:00:00.000Z',
+            awareness: { categories: [], minConfidence: null },
         };
         const html = generateTraceabilityHtml(result);
 
-        expect(html).toContain('data-severity="error"');
-    });
-
-    it('shows warn severity for coverage between 50 and 80', () => {
-        const result: ReturnType<typeof buildTraceabilityMatrix> = {
-            nodes: [],
-            totalEpics: 0,
-            totalTests: 0,
-            overallCoverage: 65,
-            timestamp: '2026-01-01T00:00:00.000Z',
-        };
-        const html = generateTraceabilityHtml(result);
-
-        expect(html).toContain('data-severity="warn"');
-    });
-
-    it('shows success severity for coverage above 80', () => {
-        const result: ReturnType<typeof buildTraceabilityMatrix> = {
-            nodes: [],
-            totalEpics: 0,
-            totalTests: 0,
-            overallCoverage: 95,
-            timestamp: '2026-01-01T00:00:00.000Z',
-        };
-        const html = generateTraceabilityHtml(result);
-
-        expect(html).toContain('data-severity="success"');
+        expect(html).toContain(`data-severity="${severity}"`);
     });
 
     it('includes health bar for nodes with stories', () => {
@@ -503,5 +486,74 @@ describe('GenerateTraceabilityHtml', () => {
         const html = generateTraceabilityHtml(result);
 
         expect(html).toContain('health-bar');
+    });
+});
+
+describe('EIXO C — traceability awareness (C-3c)', () => {
+    it('surfaces cross-referenced categories with provenance confidence + getQuality() validity', () => {
+        expect.hasAssertions();
+
+        const provenance = new Map<string, DataSource>([
+            ['pmIssues', { source: 'github', confidence: 0.8, timestamp: '2026-01-01T00:00:00.000Z' }],
+            ['securityFindings', { source: 'github', confidence: 0.6, timestamp: '2026-01-01T00:00:00.000Z' }],
+        ]);
+        const quality: Partial<Record<QualityCategory, QualityReport>> = {
+            pmIssues: { valid: true, issues: [] },
+            securityFindings: { valid: false, issues: ['f1 schema gap'] },
+        };
+        const raw: RawData = {
+            runs: [],
+            jobs: new Map(),
+            artifacts: new Map(),
+            failureReasons: new Map(),
+            pmIssues: [
+                {
+                    source: 'github',
+                    id: 1,
+                    key: 'PROJ-1',
+                    title: 'story',
+                    state: 'open',
+                    labels: [],
+                    createdAt: '2026-01-01',
+                    confidence: 0.9,
+                },
+            ],
+            securityFindings: [{ tool: 'codeql', severity: 'low', title: 'f1', confidence: 0.9 }],
+        };
+        const hub = makeDataHubMock({ raw, provenance, quality });
+
+        const result = buildTraceabilityMatrix([], undefined, hub);
+
+        const cats = result.awareness.categories;
+
+        expect(cats).toHaveLength(2);
+
+        const pm = cats.find((c) => c.category === 'pmIssues');
+
+        expect(pm?.entities[0]).toStrictEqual({ id: 'PROJ-1', confidence: 0.8, valid: true });
+
+        const sec = cats.find((c) => c.category === 'securityFindings');
+
+        expect(sec?.entities[0]).toStrictEqual({ id: 'f1', confidence: 0.6, valid: false });
+
+        expect(result.awareness.minConfidence).toBe(0.6);
+
+        const html = generateTraceabilityHtml(result);
+
+        expect(html).toContain('Cross-References');
+        expect(html).toContain('PROJ-1');
+        expect(html).toContain('⚠ invalid');
+    });
+
+    it('omits the awareness panel when no ST-1 category is present', () => {
+        expect.hasAssertions();
+
+        const hub = makeDataHubMock({
+            raw: { runs: [], jobs: new Map(), artifacts: new Map(), failureReasons: new Map() },
+        });
+        const result = buildTraceabilityMatrix([], undefined, hub);
+
+        expect(result.awareness.categories).toHaveLength(0);
+        expect(generateTraceabilityHtml(result)).not.toContain('Cross-References');
     });
 });
