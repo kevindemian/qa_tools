@@ -308,14 +308,14 @@ function convertTestCases(
             fields: { Action: stepText },
         }));
 
-        const pc = (Reflect.get(resolvedPreConditions, idx) as TestCasePreCondition[] | undefined)?.[0];
-        const precondition = resolvePrecondition(pc, createdKeys);
+        const pcs = (Reflect.get(resolvedPreConditions, idx) as TestCasePreCondition[] | undefined) ?? [];
+        const precondition = pcs.flatMap((entry) => resolvePrecondition(entry, createdKeys));
 
         return {
             title: item.title,
             description: '',
             steps,
-            ...(precondition ? { precondition } : {}),
+            ...(precondition.length > 0 ? { precondition } : {}),
         };
     });
 }
@@ -323,22 +323,22 @@ function convertTestCases(
 function resolvePrecondition(
     pc: TestCasePreCondition | undefined,
     createdKeys: Map<string, string>,
-): { type: 'inline' | 'reference'; value: string } | null {
-    if (!pc) return null;
+): Array<{ type: 'inline' | 'reference'; value: string }> {
+    if (!pc) return [];
 
     if (pc.type === 'reference' && pc.key) {
-        return { type: 'reference', value: pc.key };
+        return [{ type: 'reference', value: pc.key }];
     }
 
     if (pc.type === 'create' && pc.summary) {
         const newKey = createdKeys.get(pc.summary);
         if (newKey) {
-            return { type: 'reference', value: newKey };
+            return [{ type: 'reference', value: newKey }];
         }
-        return { type: 'inline', value: pc.summary };
+        return [{ type: 'inline', value: pc.summary }];
     }
 
-    return null;
+    return [];
 }
 
 export default { handler };

@@ -98,7 +98,7 @@ describe('Import Loop', () => {
             const factory = makeFactory();
             linker.associatePrecondition.mockResolvedValue({ action: 'abort' });
             factory.postSteps.mockResolvedValue(null);
-            const test: TestCase = { ...testBase, precondition: { type: 'reference', value: 'PREC-1' } };
+            const test: TestCase = { ...testBase, precondition: [{ type: 'reference', value: 'PREC-1' }] };
             const result = await linkTestRelations({
                 linker,
                 test,
@@ -161,7 +161,7 @@ describe('Import Loop', () => {
         });
 
         it('inline precondition appended to description', () => {
-            const test: TestCase = { ...testBase, precondition: { type: 'inline', value: 'must login' } };
+            const test: TestCase = { ...testBase, precondition: [{ type: 'inline', value: 'must login' }] };
             const result = buildTestData(test, 'PROJ', []);
 
             expect((result.fields as Record<string, unknown>)['description']).toContain('Pre-condition: must login');

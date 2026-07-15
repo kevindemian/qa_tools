@@ -24,6 +24,7 @@ function makeResource(withoutApiRoot = false): JiraResourceLike {
         getJiraResource: vi.fn().mockResolvedValue({}),
         postJiraResource: vi.fn().mockResolvedValue({}),
         putJiraResource: vi.fn().mockResolvedValue(null),
+        baseUrl: 'http://localhost:1999/jira/rest/api/2',
         log,
         getProjectId: vi.fn().mockResolvedValue(''),
         getProjectVersions: vi.fn().mockResolvedValue([]),

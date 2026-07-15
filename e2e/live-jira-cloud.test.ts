@@ -1,5 +1,5 @@
 /**
- * Live connectivity smoke for Jira Cloud via the Atlassian Cloud Gateway.
+ * Live connectivity smoke for Jira Cloud.
  *
  * Runs ONLY when JIRA_LIVE_TEST=1 is set. In that mode it explicitly loads the
  * real credentials from .env.local (overriding the hermetic .env.test that vitest
@@ -7,12 +7,21 @@
  * the hermetic suite and is unaffected.
  *
  * Verifies the full path end-to-end against the real API:
- *   - JIRA_BASE_URL points at the gateway (api.atlassian.com/ex/jira/<cloudId>)
- *   - auth header is `Bearer <JIRA_PERSONAL_TOKEN>` (gateway service-account)
- *   - egress proxy (QA_PROXY_URL) is honored
+ *   - JIRA_BASE_URL points at a Jira Cloud site: either the Atlassian Cloud
+ *     Gateway `api.atlassian.com/ex/jira/<cloudId>` OR a direct
+ *     `*.atlassian.net` / `*.atlassian.com` site.
+ *   - auth is honored. The VALIDATED path for API-token auth is Cloud Basic
+ *     `Basic base64(email:apiToken)`. The Cloud Gateway `/ex/jira/<cloudId>`
+ *     REQUIRES an OAuth 2.0 (3LO) access token and REJECTS API tokens with 401
+ *     ("Client must be authenticated"), so it is NOT usable with an API token.
+ *   - egress proxy (HTTPS_PROXY / QA_PROXY_URL) is honored.
  *
  * Run (user environment, behind corporate proxy):
- *   JIRA_LIVE_TEST=1 npx vitest run e2e/live-jira-cloud --no-coverage
+ *   HTTPS_PROXY=http://127.0.0.1:9000 JIRA_LIVE_TEST=1 npx vitest run e2e/live-jira-cloud --no-coverage
+ *
+ * NOTE: behind Zscaler the TLS-intercepting CA must be trusted — `shared/tls.ts`
+ * appends `shared_docker/zscaler.crt` to Node's CA bundle. Without it requests
+ * fail with UNABLE_TO_GET_ISSUER_CERT_LOCALLY.
  */
 import { describe, it, expect, beforeAll } from 'vitest';
 import { config as loadDotenv } from 'dotenv';
@@ -27,7 +36,7 @@ if (runLive) {
     loadDotenv({ path: resolve(import.meta.dirname, '..', '.env.local'), override: true });
 }
 
-describe('Live Jira Cloud (gateway + Bearer + proxy)', () => {
+describe('Live Jira Cloud connectivity (Basic auth + proxy)', () => {
     let client: JiraClient;
 
     beforeAll(() => {
@@ -42,20 +51,20 @@ describe('Live Jira Cloud (gateway + Bearer + proxy)', () => {
     });
 
     it.runIf(runLive)(
-        'base URL targets the Atlassian Cloud gateway',
+        'base URL targets a Jira Cloud site',
         () => {
-            expect.assertions(2);
+            expect.assertions(1);
 
             const baseUrl = Config.get('jiraBaseUrl');
 
-            expect(baseUrl).toContain('/ex/jira/');
-            expect(baseUrl).toContain('api.atlassian.com');
+            // Cloud Gateway (OAuth 3LO) OR direct Cloud site (API-token Basic).
+            expect(baseUrl).toMatch(/\/ex\/jira\/|atlassian\.(net|com)/);
         },
         60000,
     );
 
     it.runIf(runLive)(
-        'authenticates via gateway Bearer and reaches the API through the proxy',
+        'authenticates via Cloud Basic and reaches the API through the proxy',
         async () => {
             expect.assertions(2);
 

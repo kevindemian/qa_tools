@@ -49,11 +49,11 @@ export interface TestCase {
     description?: string;
     /** Ordered list of execution steps. */
     steps: TestStep[];
-    /** Precondition supplied inline or as an external reference. */
-    precondition?: {
+    /** Preconditions supplied inline or as external references. */
+    precondition?: Array<{
         type: 'inline' | 'reference';
         value: string;
-    };
+    }>;
     /** Logical grouping label (e.g. smoke, regression). */
     group?: string;
     /** Jira issues linked to this test. */

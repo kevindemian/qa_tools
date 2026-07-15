@@ -1,6 +1,7 @@
 const mockPrompt = vi.hoisted(() => ({
     success: vi.fn(),
     info: vi.fn(),
+    warn: vi.fn(),
     onError: vi.fn(),
     isQuiet: vi.fn().mockReturnValue(true),
     ProgressBar: vi.fn<(...args: [total: number, options?: { width?: number }]) => { update: Mock; stop: Mock }>(

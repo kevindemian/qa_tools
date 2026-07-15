@@ -6,7 +6,7 @@ import { Readable } from 'stream';
 import { rootLogger } from '../shared/logger.js';
 import { normalizeFieldName, sanitizeCellValue } from '../shared/field-names.js';
 import type { TestCase } from '../shared/types.js';
-import { parseQuotedValue, extractPreconditionKey } from '../shared/quoted-string.js';
+import { parseQuotedValue, PRECONDITION_KEY_PATTERN } from '../shared/quoted-string.js';
 import { CsvRowSchema } from './csv-import-schema.js';
 import type { CsvRow } from './csv-import-schema.js';
 
@@ -58,18 +58,18 @@ class CsvResource {
         return value || null;
     }
 
-    parsePrecondition(value: string | null | undefined): { type: 'reference' | 'inline'; value: string } | null {
-        if (!value) return null;
+    parsePreconditions(value: string | null | undefined): Array<{ type: 'reference' | 'inline'; value: string }> {
+        if (!value) return [];
         const trimmed = value.trim();
-        if (!trimmed) return null;
+        if (!trimmed) return [];
 
-        const key = extractPreconditionKey(trimmed);
+        const keys = [...trimmed.matchAll(new RegExp(PRECONDITION_KEY_PATTERN, 'g'))].map((m) => m[0]);
 
-        if (key) {
-            return { type: 'reference', value: key };
+        if (keys.length > 0) {
+            return keys.map((k) => ({ type: 'reference' as const, value: k }));
         }
 
-        return { type: 'inline', value: trimmed };
+        return [{ type: 'inline', value: trimmed }];
     }
 
     parseLinkedIssues(lines: string[]): Array<{ key: string; linkType: string }> {
@@ -212,12 +212,12 @@ class CsvResource {
         lines: string[],
     ): Promise<TestCase> {
         const steps = await this.readCsvFromString(csvString);
-        const precondition = this.parsePrecondition(precValue) ?? undefined;
+        const precondition = this.parsePreconditions(precValue);
         const group = this.parseGroup(lines) ?? undefined;
         return {
             title,
             description,
-            ...(precondition ? { precondition } : {}),
+            ...(precondition.length > 0 ? { precondition } : {}),
             linkedIssues: this.parseLinkedIssues(lines),
             ...(group ? { group } : {}),
             steps,

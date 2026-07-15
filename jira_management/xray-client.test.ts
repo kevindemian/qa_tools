@@ -1,5 +1,4 @@
 import { createStepImporter } from './xray-client.js';
-import type JiraResource from './jira_resource.js';
 import type { TestStep } from '../shared/types.js';
 import Config from '../shared/config.js';
 import { createMockConfigInstance } from '../shared/test-utils/factories/index.js';
@@ -81,7 +80,10 @@ describe('CloudStepImporter', () => {
 
         mockGraphqlMutation.mockResolvedValue(undefined);
 
-        const importer = createStepImporter({} as JiraResource, 'cloud');
+        const mockJira = createMockJiraResource();
+        mockJira.getJiraResource.mockResolvedValue({ id: '12345' });
+
+        const importer = createStepImporter(mockJira, 'cloud');
         const step: TestStep = { fields: { Action: 'Click', Data: 'Button', 'Expected Result': 'Done' } };
 
         await importer.importStep('TEST-1', 0, step);
@@ -91,7 +93,10 @@ describe('CloudStepImporter', () => {
         const callArgs = mockGraphqlMutation.mock.calls[0] as [string, Record<string, unknown>, string, string];
 
         expect(callArgs[0]).toContain('addTestStep');
-        expect(callArgs[1]).toMatchObject({ issueId: 'TEST-1', index: 0 });
+        expect(callArgs[1]).toMatchObject({
+            issueId: '12345',
+            step: { action: 'Click', result: 'Done', data: 'Button' },
+        });
         expect(callArgs[2]).toBe('test-client-id');
         expect(callArgs[3]).toBe('test-client-secret');
     });
@@ -106,7 +111,7 @@ describe('CloudStepImporter', () => {
         };
         vi.spyOn(Config, 'getDefault').mockReturnValue(mockConfig);
 
-        const importer = createStepImporter({} as JiraResource, 'cloud');
+        const importer = createStepImporter(createMockJiraResource(), 'cloud');
         const step: TestStep = { fields: { Action: 'Click' } };
 
         await expect(importer.importStep('TEST-1', 0, step)).rejects.toThrow(
@@ -119,7 +124,10 @@ describe('CloudStepImporter', () => {
 
         mockGraphqlMutation.mockRejectedValue(new Error('Xray Cloud GraphQL mutation failed: field not found'));
 
-        const importer = createStepImporter({} as JiraResource, 'cloud');
+        const mockJira = createMockJiraResource();
+        mockJira.getJiraResource.mockResolvedValue({ id: '12345' });
+
+        const importer = createStepImporter(mockJira, 'cloud');
         const step: TestStep = { fields: { Action: 'Click' } };
 
         await expect(importer.importStep('TEST-1', 0, step)).rejects.toThrow(/Xray Cloud GraphQL/);

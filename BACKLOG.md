@@ -127,3 +127,38 @@ npm run lint                           # 0 errors
 ### Commit (FASE L4)
 
 `refactor(data-hub): harden Layer 4 log parser — structured-first, NaN-safe, framework/version registry, CTRF/Allure-aligned failure records`
+
+---
+
+## 🔌 Sprint Jira Cloud — Conectividade + Xray (2026-07-13)
+
+**Origem:** verificação pós-merge de `origin/main` (update Jira Cloud gateway + Bearer + proxy). Objetivo: confirmar que a ferramenta conecta e faz CRUD real em Jira Cloud atrás do proxy Zscaler.
+
+| ID  | Item                                                                                                                                                                                                                                                                                                                                                                                     | Arquivo(s)                      | Status                    |
+| --- | ---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | ------------------------------- | ------------------------- |
+| JC0 | 🔧 TLS Zscaler (intercept): `shared/tls.ts` carrega `shared_docker/zscaler.crt` e anexa a `tls.rootCertificates`; sem isso → `UNABLE_TO_GET_ISSUER_CERT_LOCALLY` ao usar o proxy                                                                                                                                                                                                         | `shared/tls.ts`                 | ✅                        |
+| JC1 | 🔧 Root cause do 401 original: email errado no `.env.local` (`kevin.borges.contractor@euronext.com` → `kborges@euronext.com`). Token era válido; Basic `kborges:token` → 200                                                                                                                                                                                                             | `.env.local`                    | ✅                        |
+| JC2 | ⚠️ Gateway `api.atlassian.com/ex/jira/<cloudId>` **NÃO aceita API token** (401 "Client must be authenticated"); exige **OAuth 2.0 (3LO)**. Header `Authorization` é preservado pelo proxy (testado via echo) → 401 é rejeição real do Atlassian, não do proxy                                                                                                                            | `jira-client.ts` (gateway path) | ⚠️ limitação              |
+| JC3 | 📋 `jira.corp.cloud.int` **inacessível** via proxy Zscaler (HTTP 000). Use `euronext.atlassian.net` (Cloud direto)                                                                                                                                                                                                                                                                       | `.env.local`                    | ✅                        |
+| JC4 | ✅ CRUD via Cloud Basic (`euronext.atlassian.net` + `kborges@euronext.com:token`): CREATE/READ/UPDATE OK (ECSPOL-1513). DELETE → 403 (conta contractor sem "Delete Issues" — permissão, não bug). Priority: schema custom do projeto (IDs 10000–10007); `priority:{name:'Medium'}` → 400, usar `{id:'10002'}`                                                                            | `jira-client.ts`                | ✅                        |
+| JC5 | ⚠️ Xray em `ECSPOL` é **Cloud** (raven 404 em euronext). Steps Cloud usam GraphQL (`xray.cloud.getxray.app`), não `/rest/raven`. Exigem `XRAY_CLIENT_ID`+`XRAY_CLIENT_SECRET` (Xray Cloud API Keys). Jira cred (email+token) NÃO autentica Xray (401 testado). `.env.local` tinha `XRAY_MODE=server` (→cloud) e `XRAY_CLOUD_URL=jira.corp.cloud.int` (→`https://xray.cloud.getxray.app`) | `.env.local`, `xray-client.ts`  | ⚠️ bloqueado (credencial) |
+| JC6 | ✅ `XrayCloudClient` plugado (TLS+proxy+GraphQL `addTestStep`); só falta credencial Xray Cloud. `ECSPOL-1255` é Test issue (candidato a steps)                                                                                                                                                                                                                                           | `xray-cloud-client.ts`          | ✅                        |
+| JC7 | 🔒 `jira_xray_config_backup.md` tinha segredos reais no working tree (JIRA_PERSONAL_TOKEN/GITHUB_TOKEN/JIRA_USER_EMAIL) → redactado (placeholders). **Segredos AINDA no git HISTORY (commit `04c1c771`)** → requer rotacionar tokens + `git filter-repo` + force push (ação destrutiva, pendente de aprovação)                                                                           | `jira_xray_config_backup.md`    | 🔒                        |
+| JC8 | 📋 Config validada (`.env.local`): `JIRA_BASE_URL=https://euronext.atlassian.net`, `JIRA_USER_EMAIL=kborges@euronext.com`, `JIRA_MODE=cloud`, `XRAY_MODE=cloud`, `XRAY_CLOUD_URL=https://xray.cloud.getxray.app`, `HTTPS_PROXY=http://127.0.0.1:9000` (Windows loopback — WSL não alcança)                                                                                               | `.env.local`                    | ✅                        |
+| JC9 | 🔧 Teste gated `e2e/live-jira-cloud.test.ts` corrigido: Test 1 aceita gateway OU `*.atlassian.net`; Test 2 valida Cloud Basic via proxy (nome anterior dizia "gateway Bearer", inexato)                                                                                                                                                                                                  | `e2e/live-jira-cloud.test.ts`   | ✅                        |
+
+### Como rodar os testes live (Windows, atrás do Zscaler)
+
+```powershell
+$env:HTTPS_PROXY='http://127.0.0.1:9000'
+$env:JIRA_LIVE_TEST='1'
+npx vitest run e2e/live-jira-cloud --no-coverage
+```
+
+O `shared/tls.ts` já anexa `shared_docker/zscaler.crt`; `NODE_EXTRA_CA_CERTS` não é necessário. O proxy só é alcançável a partir do Windows (loopback `127.0.0.1:9000`), por isso os testes live rodam via `powershell.exe`, não via WSL.
+
+### Follow-up obrigatório (JC7)
+
+- Rotacionar `JIRA_PERSONAL_TOKEN` (Atlassian) e `GITHUB_TOKEN` (já expostos em `04c1c771`).
+- `git filter-repo` para remover os segredos do history + force push (requer aprovação explícita — ação destrutiva).
+- `.env` contém chaves LLM reais (OpenRouter/Groq/Gemini/NVIDIA) — está gitignored, mas o env-loader recomenda mover para `.env.local`.

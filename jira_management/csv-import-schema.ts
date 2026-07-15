@@ -22,16 +22,16 @@ const TestStepSchema = z.object({
     }),
 });
 
+export const PreconditionItemSchema = z.object({
+    type: z.enum(['inline', 'reference']),
+    value: z.string(),
+});
+
 export const TestCaseSchema = z.object({
     title: z.string().trim().min(1, 'Título é obrigatório'),
     description: z.string().optional(),
     steps: z.array(TestStepSchema).min(1, 'Pelo menos um step é obrigatório'),
-    precondition: z
-        .object({
-            type: z.enum(['inline', 'reference']),
-            value: z.string(),
-        })
-        .optional(),
+    precondition: z.array(PreconditionItemSchema).optional(),
     group: z.string().optional(),
     linkedIssues: z
         .array(
@@ -57,7 +57,7 @@ export const ImportJsonItemSchema = z.object({
     title: z.string().min(1, 'Título é obrigatório'),
     description: z.string().optional().default(''),
     steps: z.array(ImportJsonStepSchema).min(1, 'Pelo menos um step é obrigatório'),
-    precondition: z.string().optional(),
+    precondition: z.union([z.string(), z.array(z.string())]).optional(),
     group: z.string().optional(),
     linkedIssues: z
         .array(z.union([z.string(), z.object({ key: z.string(), linkType: z.string().optional() })]))

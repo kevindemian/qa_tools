@@ -17,6 +17,18 @@ import Config from './config.js';
 import { checkCircuitBreaker, recordCircuitFailure, recordCircuitSuccess } from './circuit-breaker.js';
 import type { JsonObject, JiraResourceLike, SearchIssuesResponse } from './types.js';
 
+/** JQL is frequently assembled with '+' as clause separators (GET-style encoding).
+ *  The v3 POST /search/jql endpoint expects real whitespace, so '+' must be
+ *  converted to ' ' — but only outside of quoted literals (which may legitimately
+ *  contain '+'). */
+export function normalizeJqlForCloud(jql: string): string {
+    const parts = jql.split('"');
+    for (let i = 0; i < parts.length; i += 2) {
+        parts[i] = (parts[i] ?? '').replace(/\+/g, ' ');
+    }
+    return parts.join('"');
+}
+
 class JiraClient implements JiraResourceLike {
     baseUrl: string;
     originUrl: string;
@@ -154,6 +166,15 @@ class JiraClient implements JiraResourceLike {
     }
 
     async searchJiraIssues(jql: string, maxResults = 200): Promise<SearchIssuesResponse> {
+        if (this.jiraMode === 'cloud') {
+            // Jira Cloud removed GET/POST /rest/api/2/search (CHANGE-2046).
+            // The supported endpoint is POST /rest/api/3/search/jql.
+            const res = await this.postToApiRoot('/rest/api/3/search/jql', {
+                jql: normalizeJqlForCloud(jql),
+                maxResults,
+            });
+            return (res ?? { issues: [], total: 0 }) as unknown as SearchIssuesResponse;
+        }
         const query = `search?jql=${encodeURIComponent(jql)}&maxResults=${maxResults}`;
         return this.getJiraResource<SearchIssuesResponse>(query);
     }

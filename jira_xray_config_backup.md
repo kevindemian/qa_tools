@@ -10,16 +10,16 @@ The application loads settings from the `.env` file located at the project root.
 
 ### Credentials & Connections
 
-| Variable              | Description                                                     | Active Backup Value / Example                                                                   |
-| :-------------------- | :-------------------------------------------------------------- | :---------------------------------------------------------------------------------------------- |
-| `JIRA_BASE_URL`       | Base domain/URL of the Jira enterprise server.                  | `https://jiraprod.srv.euronext.com`                                                             |
-| `JIRA_PERSONAL_TOKEN` | Bearer personal access token for Jira API authentication.       | `NTc0MjMwNzg5MDcxOoXlL2xT0Nh2kr24Oca2jp9g7mrw`                                                  |
-| `JIRA_USER_EMAIL`     | Email associated with the Jira connection/user.                 | `kevin.borges.contractor@euronext.com`                                                          |
-| `XRAY_BASE_URL`       | Complete base URL path specifically for the Xray REST API v2.   | `https://jiraprod.srv.euronext.com/rest/raven/2.0/api`                                          |
-| `GIT_TOKEN`           | Authentication Token for GitLab API interaction (Git triggers). | _(Supplied at runtime or global environment)_                                                   |
-| `GIT_BASE_URL`        | Base domain/URL of the GitLab instance.                         | _(Supplied at runtime or global environment)_                                                   |
-| `GITHUB_TOKEN`        | GitHub Personal Access Token for git trigger actions.           | `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` |
-| `GITHUB_API_URL`      | API Base URL for GitHub (defaults to api.github.com if unset).  | `https://api.github.com`                                                                        |
+| Variable              | Description                                                     | Active Backup Value / Example                          |
+| :-------------------- | :-------------------------------------------------------------- | :----------------------------------------------------- |
+| `JIRA_BASE_URL`       | Base domain/URL of the Jira enterprise server.                  | `https://jiraprod.srv.euronext.com`                    |
+| `JIRA_PERSONAL_TOKEN` | Bearer personal access token for Jira API authentication.       | `<REDACTED_JIRA_PERSONAL_TOKEN>`                       |
+| `JIRA_USER_EMAIL`     | Email associated with the Jira connection/user.                 | `<REDACTED_JIRA_USER_EMAIL>`                           |
+| `XRAY_BASE_URL`       | Complete base URL path specifically for the Xray REST API v2.   | `https://jiraprod.srv.euronext.com/rest/raven/2.0/api` |
+| `GIT_TOKEN`           | Authentication Token for GitLab API interaction (Git triggers). | _(Supplied at runtime or global environment)_          |
+| `GIT_BASE_URL`        | Base domain/URL of the GitLab instance.                         | _(Supplied at runtime or global environment)_          |
+| `GITHUB_TOKEN`        | GitHub Personal Access Token for git trigger actions.           | `<REDACTED_GITHUB_PAT>`                                |
+| `GITHUB_API_URL`      | API Base URL for GitHub (defaults to api.github.com if unset).  | `https://api.github.com`                               |
 
 ### Paths & Execution Defaults
 

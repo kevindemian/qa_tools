@@ -21,7 +21,7 @@ class JiraLinkManager {
         this.jiraResource = jiraResource;
         this.linkTypeManager = new LinkTypeManager(jiraResource);
         this.linkOperations = new LinkOperations(jiraResource, this.linkTypeManager);
-        this.preconditionHandler = new PreconditionHandler(jiraResource, this);
+        this.preconditionHandler = new PreconditionHandler(jiraResource);
     }
 
     get linkTypesCache() {
@@ -47,6 +47,10 @@ class JiraLinkManager {
         return this.preconditionHandler._getPreconditionFieldId();
     }
     async associatePrecondition(testKey: string, preconditionKey: string) {
+        if (this.preconditionHandler.isCloud && !this.preconditionHandler.hasXrayCreds) {
+            await this.createIssueLink(testKey, preconditionKey, 'Pre-Condition');
+            return null;
+        }
         return this.preconditionHandler.associatePrecondition(testKey, preconditionKey);
     }
     async _resolvePreconditionIssueTypeId() {

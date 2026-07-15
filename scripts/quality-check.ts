@@ -60,7 +60,11 @@ function grepLines(file: string, pattern: RegExp): Array<{ line: number; content
 }
 
 function allTsFiles(): string[] {
-    return globSync('**/*.ts', { ignore: ['node_modules/**'] });
+    // Normalize to forward slashes so path filters (startsWith('scripts/'),
+    // f !== 'scripts/quality-check.test.ts') work on Windows too, where
+    // globSync returns backslash-separated paths. Without this, the intended
+    // exclusions silently fail and the script scans its own source/fixtures.
+    return globSync('**/*.ts', { ignore: ['node_modules/**'] }).map((f) => f.replace(/\\/g, '/'));
 }
 
 export function checkNoPattern(name: string, pattern: RegExp, files: string[], excludePattern?: RegExp): CheckResult {
@@ -374,7 +378,7 @@ export function checkQualityGateFiles(): CheckResult {
 }
 
 // markdown.ts/markdown-lexer.ts: `!` is markdown image syntax, not non-null assertion
-// xray-history.ts/xray-client.ts: GraphQL return types have known non-null fields
+// xray-history.ts/xray-client.ts/xray-cloud-client.ts: GraphQL types have known non-null fields
 // case02.ts: structured test assertions
 // pipeline-handler.test.ts: test assertions
 export function checkNonNullAssertion(): CheckResult {
@@ -382,7 +386,7 @@ export function checkNonNullAssertion(): CheckResult {
         .filter((f) => !f.startsWith('scripts/'))
         .filter(
             (f) =>
-                !/markdown\.ts$|markdown-lexer\.ts$|xray-history\.ts$|xray-client\.ts$|case02\.ts$|pipeline-handler\.test\.ts$/.test(
+                !/markdown\.ts$|markdown-lexer\.ts$|xray-history\.ts$|xray-client\.ts$|xray-cloud-client\.ts$|case02\.ts$|pipeline-handler\.test\.ts$/.test(
                     f,
                 ),
         );
@@ -444,7 +448,7 @@ export function checkIntegrity(): CheckResult {
         const selfContent = readFileSync('scripts/quality-check.ts', 'utf-8');
         const contentWithoutHash = selfContent.replace(/\/\* HASH:[0-9a-f]{64} \*\//g, '');
         const currentHash = createHash('sha256').update(contentWithoutHash, 'utf-8').digest('hex');
-        /* HASH:c65e28a4aed01f106f7ae96e838fee433397a7aa765c3358584f7fefb6202a3b */
+        /* HASH:009017177987f9c5cd6d2bd577aa366655b0ebe6beadb62c97b0541bca7ddba5 */
         const match = /\/\* HASH:([0-9a-f]{64}) \*\//.exec(selfContent);
         if (!match) {
             violations.push({ file: 'scripts/quality-check.ts', line: 1, content: 'Missing HASH comment' });

@@ -59,8 +59,8 @@ class MappingFileGenerator {
             const test = (Reflect.get(tests, i) as TestCase | undefined) || emptyTestCase();
             const m: MappingEntry = { title: test.title || '', key };
             if (test.description) m.description = test.description;
-            if (test.precondition && test.precondition.value) {
-                m.precondition = test.precondition.value;
+            if (test.precondition && test.precondition.length > 0) {
+                m.precondition = test.precondition.map((p) => p.value).join(', ');
             }
             if (test.steps.length) {
                 m.steps = test.steps.map((s) => ({

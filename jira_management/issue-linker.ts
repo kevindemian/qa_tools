@@ -94,15 +94,25 @@ class IssueLinker {
         issueKey: string,
         _opLog: { info: (msg: string, meta?: LogContext) => void },
     ): Promise<ActionResult | null> {
-        if (!test.precondition) return null;
-        try {
-            await this.linkManager.associatePrecondition(issueKey, test.precondition.value);
-            if (!isQuiet()) success('  Pre-condition ' + test.precondition.value + ' associada');
-            return null;
-        } catch (err) {
-            const action = onError('  Pre-condition de "' + test.title + '"', err, { details: true });
-            return { action };
+        if (!test.precondition || test.precondition.length === 0) return null;
+        const references = test.precondition.filter((p) => p.type === 'reference');
+        if (references.length === 0) return null;
+        let result: ActionResult | null = null;
+        for (const p of references) {
+            try {
+                await this.linkManager.associatePrecondition(issueKey, p.value);
+                if (!isQuiet()) success('  Pre-condition ' + p.value + ' associada');
+            } catch (err) {
+                if (!result) {
+                    result = {
+                        action: onError('  Pre-condition de "' + test.title + '" (' + p.value + ')', err, {
+                            details: true,
+                        }),
+                    };
+                }
+            }
         }
+        return result;
     }
 
     async linkIssues(issueKey: string, test: TestCase): Promise<ActionResult | null> {

@@ -26,7 +26,9 @@ function _renderTestHeader(t: TestCase, index: number, keys?: string[]): string 
 
 function _renderTestMeta(t: TestCase): string {
     const parts: string[] = [];
-    if (t.precondition) parts.push('**Pre-cond:** ' + t.precondition.value);
+    if (t.precondition && t.precondition.length > 0) {
+        parts.push('**Pre-cond:** ' + t.precondition.map((p) => p.value).join(', '));
+    }
     if (t.group) parts.push('**Group:** ' + t.group);
     if (t.linkedIssues && t.linkedIssues.length > 0) {
         parts.push('**Links:** ' + t.linkedIssues.map((li) => li.key).join(', '));

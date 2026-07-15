@@ -228,7 +228,7 @@ describe('GeneratePreviewMarkdown', () => {
                 { fields: { Action: 'a', Data: '', 'Expected Result': 'b' } },
                 { fields: { Action: 'c', Data: 'd', 'Expected Result': 'e' } },
             ],
-            precondition: { type: 'inline' as const, value: 'Usuario existe' },
+            precondition: [{ type: 'inline' as const, value: 'Usuario existe' }],
             group: 'Auth',
             linkedIssues: [{ key: 'US-123', linkType: 'Tests' }],
         },

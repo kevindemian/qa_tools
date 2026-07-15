@@ -28,6 +28,7 @@ import { createHistoryProvider, TestHistoryCache } from '../xray-history.js';
 import type { CommandContext } from './context.js';
 import { buildGitTrendHtml, buildJiraContextHtml, injectAnalysisSection, parseCliExtra } from './case17-helpers.js';
 import { resolveTestDataSource, resolveSessionContext } from '../../shared/session-context.js';
+import { normalizeJqlForCloud } from '../../shared/jira-client.js';
 // commit-log removed — DataHub.raw.commitLog is SSOT (Invariant 6)
 import type { DataHub, MetricsRun } from '../../shared/types/data-hub.js';
 
@@ -44,9 +45,23 @@ async function _fetchJiraContext(
     const summaryClauses = testNames.map((t) => `summary~"${t}"`).join(' OR ');
     const jql = `project=${projectName} AND issuetype=Bug AND (${summaryClauses})`;
     try {
-        const data = await jiraResource.getJiraResource<JiraSearchResult>(
-            'search?jql=' + encodeURIComponent(jql) + '&maxResults=5',
-        );
+        let data: JiraSearchResult;
+        const rootResource = jiraResource as {
+            postToApiRoot?: (relativePath: string, body: unknown) => Promise<unknown>;
+        };
+        if (Config.get('jiraMode') === 'cloud' && typeof rootResource.postToApiRoot === 'function') {
+            // Jira Cloud removed GET/POST /rest/api/2/search (CHANGE-2046).
+            const res = await rootResource.postToApiRoot('/rest/api/3/search/jql', {
+                jql: normalizeJqlForCloud(jql),
+                maxResults: 5,
+                startAt: 0,
+            });
+            data = (res ?? { issues: [] }) as JiraSearchResult;
+        } else {
+            data = await jiraResource.getJiraResource<JiraSearchResult>(
+                'search?jql=' + encodeURIComponent(jql) + '&maxResults=5',
+            );
+        }
         const issues = data.issues;
         if (issues.length === 0) return '';
 
