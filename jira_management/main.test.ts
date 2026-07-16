@@ -89,6 +89,9 @@ vi.mock('./jira_resource');
 vi.mock('./jira_link_manager');
 vi.mock('./csv_resource');
 vi.mock('./package_version_manager');
+vi.mock('./create_tests', () => ({
+    default: { createTestsFromCsv: vi.fn() },
+}));
 
 vi.mock('./commands', () => ({
     getHandler: vi.fn().mockReturnValue(null),
@@ -134,6 +137,10 @@ import * as commandsModule from './commands/index.js';
 import { CancelError } from '../shared/prompt.js';
 import { mask } from '../shared/cli_base.js';
 import fs from 'fs';
+import type { RuntimeResources } from './main.js';
+import type JiraResource from './jira_resource.js';
+import type JiraLinkManager from './jira_link_manager.js';
+import type CsvResource from './csv_resource.js';
 
 // ── Types ──────────────────────────────────────────────────────────────────
 interface MenuChoice {
@@ -803,6 +810,185 @@ describe('Main.ts', () => {
             await mod.showGapBadge(mockJiraResource, 'TESTPROJ');
 
             expect(mockJiraResource.searchJiraIssues).toHaveBeenCalledWith(expect.stringContaining('TESTPROJ'), 0);
+        });
+    });
+
+    describe('Csv headless import', () => {
+        let parseCsvArg: typeof import('./main.js').parseCsvArg;
+        let describeCsvFailure: typeof import('./main.js').describeCsvFailure;
+        let runHeadlessCsvImport: typeof import('./main.js').runHeadlessCsvImport;
+        let createTests: (typeof import('./create_tests.js'))['default'];
+        let ExitCode: typeof import('../shared/types.js').ExitCode;
+
+        beforeAll(async () => {
+            ({ parseCsvArg } = await import('./main.js'));
+            ({ describeCsvFailure } = await import('./main.js'));
+            ({ runHeadlessCsvImport } = await import('./main.js'));
+            createTests = (await import('./create_tests.js')).default;
+            ({ ExitCode } = await import('../shared/types.js'));
+        });
+
+        const csvPath = path.join(os.tmpdir(), 'headless-import.csv');
+
+        const makeRes = (): RuntimeResources => ({
+            jiraResource: {} as JiraResource,
+            jiraResourceXray: {} as JiraResource,
+            linkManager: {} as JiraLinkManager,
+            linkManagerXray: {} as JiraLinkManager,
+            csvResource: {} as CsvResource,
+            ctx: { project_name: 'TESTPROJ', isBusy: false } as RuntimeResources['ctx'],
+            pushHistory: vi.fn(),
+            printSessionSummary: vi.fn(),
+        });
+
+        describe('ParseCsvArg', () => {
+            it('reads explicit --csv <path>', () => {
+                expect.hasAssertions();
+                expect(parseCsvArg(['node', 'main', '--csv', csvPath])).toBe(csvPath);
+            });
+
+            it('falls back to CSV_PATH env when --auto is set', () => {
+                expect.hasAssertions();
+
+                const prev = process.env['CSV_PATH'];
+                const envPath = path.join(os.tmpdir(), 'env.csv');
+                process.env['CSV_PATH'] = envPath;
+
+                try {
+                    expect(parseCsvArg(['node', 'main', '--auto'])).toBe(envPath);
+                } finally {
+                    if (prev === undefined) delete process.env['CSV_PATH'];
+                    else process.env['CSV_PATH'] = prev;
+                }
+            });
+
+            it('returns undefined when no csv source is provided', () => {
+                expect.hasAssertions();
+
+                const prev = process.env['CSV_PATH'];
+                delete process.env['CSV_PATH'];
+
+                try {
+                    expect(parseCsvArg(['node', 'main'])).toBeUndefined();
+                } finally {
+                    if (prev !== undefined) process.env['CSV_PATH'] = prev;
+                }
+            });
+        });
+
+        describe('DescribeCsvFailure', () => {
+            it('maps missing to a file-not-found message', () => {
+                expect.hasAssertions();
+                expect(describeCsvFailure('missing', csvPath)).toContain(csvPath);
+            });
+
+            it('maps empty to a no-valid-tests message', () => {
+                expect.hasAssertions();
+                expect(describeCsvFailure('empty', csvPath)).toMatch(/nenhum teste valido/i);
+            });
+
+            it('prefers the underlying error for read-error', () => {
+                expect.hasAssertions();
+                expect(describeCsvFailure('read-error', csvPath, 'boom')).toBe('boom');
+            });
+
+            it('falls back to a generic message when read-error has no error', () => {
+                expect.hasAssertions();
+                expect(describeCsvFailure('read-error', csvPath)).toMatch(/ler o CSV/i);
+            });
+        });
+
+        describe('RunHeadlessCsvImport', () => {
+            it('returns OK and records history on success', async () => {
+                expect.hasAssertions();
+
+                vi.mocked(createTests.createTestsFromCsv).mockResolvedValue({
+                    ok: true,
+                    result: {
+                        summary: '1/1 testes criados',
+                        status: 'ok',
+                        failedLinks: [],
+                        inMemoryTasksId: ['TEST-1'],
+                        inMemoryTasksText: ['TC01'],
+                        sourcePath: csvPath,
+                    },
+                });
+
+                const res = makeRes();
+                const code = await runHeadlessCsvImport(res, csvPath);
+
+                expect(code).toBe(ExitCode.OK);
+                expect(res.pushHistory).toHaveBeenCalledWith('csv-import', '1/1 testes criados', 'ok');
+            });
+
+            it('reports failedLinks via printError and returns ERROR', async () => {
+                expect.hasAssertions();
+
+                vi.mocked(createTests.createTestsFromCsv).mockResolvedValue({
+                    ok: true,
+                    result: {
+                        summary: '0/1 testes criados; 1 vínculo(s) perdido(s): KEY-100',
+                        status: 'error',
+                        failedLinks: ['KEY-100'],
+                        inMemoryTasksId: ['TEST-1'],
+                        inMemoryTasksText: ['TC01'],
+                        sourcePath: csvPath,
+                    },
+                });
+
+                const res = makeRes();
+                const code = await runHeadlessCsvImport(res, csvPath);
+
+                expect(code).toBe(ExitCode.ERROR);
+                expect(printError).toHaveBeenCalledWith(
+                    '0/1 testes criados; 1 vínculo(s) perdido(s): KEY-100',
+                    undefined,
+                );
+            });
+
+            it('returns ERROR and records history on read failure (missing)', async () => {
+                expect.hasAssertions();
+
+                vi.mocked(createTests.createTestsFromCsv).mockResolvedValue({
+                    ok: false,
+                    reason: 'missing',
+                    error: undefined,
+                });
+
+                const res = makeRes();
+                const code = await runHeadlessCsvImport(res, csvPath);
+
+                expect(code).toBe(ExitCode.ERROR);
+                expect(res.pushHistory).toHaveBeenCalledWith('csv-import', expect.stringContaining(csvPath), 'error');
+            });
+
+            it('returns ERROR and records history on read failure with error detail', async () => {
+                expect.hasAssertions();
+
+                vi.mocked(createTests.createTestsFromCsv).mockResolvedValue({
+                    ok: false,
+                    reason: 'read-error',
+                    error: 'EACCES',
+                });
+
+                const res = makeRes();
+                const code = await runHeadlessCsvImport(res, csvPath);
+
+                expect(code).toBe(ExitCode.ERROR);
+                expect(printError).toHaveBeenCalledWith('Importação CSV falhou', expect.any(Error));
+            });
+
+            it('returns ERROR and records history on unexpected throw', async () => {
+                expect.hasAssertions();
+
+                vi.mocked(createTests.createTestsFromCsv).mockRejectedValue(new Error('connection reset'));
+
+                const res = makeRes();
+                const code = await runHeadlessCsvImport(res, csvPath);
+
+                expect(code).toBe(ExitCode.ERROR);
+                expect(res.pushHistory).toHaveBeenCalledWith('csv-import', 'erro', 'error');
+            });
         });
     });
 });

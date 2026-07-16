@@ -38,7 +38,7 @@ function updateStateTyped(fn: (state: StateSchema) => void): void {
     updateState((s) => fn(s));
 }
 
-interface RuntimeResources {
+export interface RuntimeResources {
     jiraResource: JiraResource;
     jiraResourceXray: JiraResource;
     linkManager: JiraLinkManager;
@@ -63,7 +63,7 @@ function _isBatchOrCI(): boolean {
 }
 
 /** Extract the CSV path from `--csv <path>`; falls back to CSV_PATH env (used with --auto). */
-function parseCsvArg(argv: string[]): string | undefined {
+export function parseCsvArg(argv: string[]): string | undefined {
     const idx = argv.indexOf('--csv');
     if (idx !== -1 && argv[idx + 1]) return argv[idx + 1];
     if (argv.includes('--auto') && process.env['CSV_PATH']) return process.env['CSV_PATH'];
@@ -71,7 +71,11 @@ function parseCsvArg(argv: string[]): string | undefined {
 }
 
 /** Human-readable message for each distinguishable CSV read failure (never generic). */
-function describeCsvFailure(reason: 'empty' | 'missing' | 'read-error', csvPath: string, error?: string): string {
+export function describeCsvFailure(
+    reason: 'empty' | 'missing' | 'read-error',
+    csvPath: string,
+    error?: string,
+): string {
     switch (reason) {
         case 'missing':
             return 'Arquivo CSV nao encontrado: ' + csvPath;
@@ -84,7 +88,7 @@ function describeCsvFailure(reason: 'empty' | 'missing' | 'read-error', csvPath:
 
 /** Headless CSV import: runs the real pipeline without the interactive menu.
  *  Exits non-zero on any explicit failure so CI/automation can detect it. */
-async function runHeadlessCsvImport(res: RuntimeResources, csvPath: string): Promise<ExitCode> {
+export async function runHeadlessCsvImport(res: RuntimeResources, csvPath: string): Promise<ExitCode> {
     const sessionLog = rootLogger.child({ session: 'csv-import-headless' });
     const onBusy = (busy: boolean) => {
         res.ctx.isBusy = busy;
