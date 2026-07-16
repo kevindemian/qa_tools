@@ -26,7 +26,7 @@ qa_tools/
 ├── shared/               # Biblioteca compartilhada (tipos, http-client, llm, invariants, store, reports)
 ├── setup/                # Setup wizard interativo (detecta framework, gera CI pipelines)
 ├── scripts/              # Utilitários (build, quality-check, ux-audit, smartwizard)
-├── config/               # JSON configs (projects.json, providers.json, reviewers.json)
+├── config/               # JSON configs legados (providers.json, reviewers.json) — registry em XDG (~/.config/qa-tools)
 ├── docs/                 # Documentação para humanos (13 arquivos)
 ├── e2e/                  # End-to-end tests (24 files)
 ```
@@ -972,8 +972,8 @@ import { globSync } from 'glob'; // file globbing
 
 **Config files:**
 
-- `config/projects.json` — Project ID mappings
-- `config/providers.json` — Git provider per project (gitlab/github)
+- Registry de projetos (multi-projeto): `~/.config/qa-tools/projects.json` (XDG). Ver documentação canônica em [`07-projetos-registry.md`](07-projetos-registry.md). O legado `config/projects.json` é migrado automaticamente no boot (renomeado para `.migrated`).
+- `config/providers.json` — Git provider per project (legado; preferir o campo `provider` do registry)
 - `config/reviewers.json` — Reviewer user IDs
 
 ---
@@ -1069,8 +1069,8 @@ Features divergentes devem ser registradas no backlog para conformização.
 | `~/.local/state/qa-tools/state.json`      | Persisted session state                                            |
 | `~/.qa-tools/`                            | Logs, cache, temporary files                                       |
 | `.env`                                    | Environment config (project root)                                  |
-| `config/projects.json`                    | Project ID mappings                                                |
-| `config/providers.json`                   | Git provider per project                                           |
+| `~/.config/qa-tools/projects.json`        | Registry multi-projeto (XDG); ver [`07-projetos-registry.md`](07-projetos-registry.md) |
+| `config/providers.json`                   | Git provider per project (legado)                                  |
 | `config/reviewers.json`                   | Reviewer user IDs                                                  |
 | `config/features.json`                    | Feature toggles store (Zod-validated)                              |
 | `shared/feature-config.ts`                | Feature config accessor — PR-Report-specific                       |

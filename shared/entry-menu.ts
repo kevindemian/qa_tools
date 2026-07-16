@@ -33,6 +33,26 @@ import {
 
 export { isProjectProtected } from './entry-menu-logic.js';
 
+import { migrateLegacyProjects } from './migration/migrate-projects.js';
+
+/**
+ * Bootstrap de infraestrutura executado uma única vez na subida do CLI (Fase 8.081).
+ * Faz o cutover atômico legado→XDG: migra `config/projects.json` (se existir) para o
+ * registry XDG e renomeia o legado para `.migrated`. Falhas são logadas mas NÃO silenciadas
+ * de forma a corromper estado — o erro propaga para o chamador do `main`.
+ */
+export function _initInfrastructure(baseDir: string = process.cwd()): void {
+    try {
+        const result = migrateLegacyProjects(baseDir);
+        if (result.migrated > 0 || result.skipped > 0) {
+            rootLogger.info(`Migração legado→XDG: ${result.migrated} migrado(s), ${result.skipped} já existente(s).`);
+        }
+    } catch (err: unknown) {
+        rootLogger.error('Falha na migração legado→XDG: ' + formatErr(err));
+        throw err;
+    }
+}
+
 const root = join(import.meta.dirname, '..');
 const TSX_BIN = join(root, 'node_modules', '.bin', 'tsx');
 const RETRY_DELAY_BASE_MS = 60_000;
@@ -380,6 +400,8 @@ export async function main(): Promise<void> {
     }
 
     checkQualitySignals();
+
+    _initInfrastructure();
 
     let projectPrompted = false;
     for (;;) {

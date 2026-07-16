@@ -63,7 +63,7 @@ async function setupBatchProject(batch: BatchCliArgs): Promise<{
     const projectName = batch.project || (firstEntry ? firstEntry[0] : '');
     const projectEntry = projsEntries.find(([k]) => k === projectName);
     if (!projectEntry) {
-        error('Projeto "' + projectName + '" não encontrado em config/projects.json.');
+        error('Projeto "' + projectName + '" não encontrado. Registre-o via Setup Wizard (opção "Adicionar projeto").');
         return null;
     }
 

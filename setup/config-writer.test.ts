@@ -1,7 +1,6 @@
 import fs from 'fs';
 import path from 'path';
-import { rootLogger } from '../shared/logger.js';
-import { writeProjectsConfig, writeDotEnvExample, writeFeaturesConfig } from './config-writer.js';
+import { writeDotEnvExample, writeFeaturesConfig } from './config-writer.js';
 
 vi.mock('fs');
 const MockFs = vi.mocked(fs);
@@ -10,98 +9,6 @@ const mockSetPrReportConfig = vi.hoisted(() => vi.fn());
 vi.mock('../shared/feature-config.js', () => ({
     setPrReportConfig: mockSetPrReportConfig,
 }));
-
-describe('WriteProjectsConfig', () => {
-    beforeEach(() => {
-        vi.clearAllMocks();
-        vi.spyOn(MockFs, 'existsSync').mockReturnValue(false);
-        vi.spyOn(MockFs, 'mkdirSync').mockImplementation(vi.fn());
-        vi.spyOn(MockFs, 'writeFileSync').mockImplementation(vi.fn());
-    });
-
-    it('creates projects.json when neither exists', () => {
-        const result = writeProjectsConfig({
-            projectName: 'myapp',
-            gitProvider: 'github',
-            repoName: 'myapp',
-            repoOwner: 'myorg',
-        });
-
-        expect(result.filesCreated).toHaveLength(1);
-        expect(result.filesSkipped).toHaveLength(0);
-        expect(MockFs.writeFileSync).toHaveBeenCalledTimes(1);
-    });
-
-    it('warns instead of swallowing when existing config is unreadable', () => {
-        expect.hasAssertions();
-
-        const warnSpy = vi.spyOn(rootLogger, 'warn').mockImplementation(() => undefined);
-        MockFs.existsSync.mockReturnValue(true);
-        MockFs.readFileSync.mockImplementation(() => {
-            throw new Error('not json');
-        });
-
-        const result = writeProjectsConfig({
-            projectName: 'myapp',
-            gitProvider: 'github',
-            repoName: 'myapp',
-            repoOwner: 'myorg',
-        });
-
-        expect(result.filesCreated.length).toBeGreaterThan(0);
-        expect(warnSpy).toHaveBeenCalledWith(expect.stringContaining('not json'));
-
-        warnSpy.mockRestore();
-    });
-
-    it('appends new project to existing projects.json', () => {
-        vi.spyOn(MockFs, 'existsSync').mockReturnValue(true);
-        vi.spyOn(MockFs, 'readFileSync').mockReturnValue(JSON.stringify({ existing: '123' }));
-
-        const result = writeProjectsConfig({
-            projectName: 'newapp',
-            gitProvider: 'github',
-            repoName: 'newapp',
-            repoOwner: 'myorg',
-        });
-
-        expect(result.filesCreated).toHaveLength(1);
-
-        const writeCalls = MockFs.writeFileSync.mock.calls;
-        const lastProjectsWrite = (writeCalls[0]?.[1] ?? '') as string;
-
-        expect(lastProjectsWrite).toContain('existing');
-        expect(lastProjectsWrite).toContain('newapp');
-    });
-
-    it('skips when project already exists', () => {
-        vi.spyOn(MockFs, 'existsSync').mockReturnValue(true);
-        vi.spyOn(MockFs, 'readFileSync').mockReturnValue(JSON.stringify({ myapp: 'myapp' }));
-
-        const result = writeProjectsConfig({
-            projectName: 'myapp',
-            gitProvider: 'github',
-            repoName: 'myapp',
-            repoOwner: 'myorg',
-        });
-
-        expect(result.filesSkipped).toHaveLength(1);
-    });
-
-    it('handles corrupt existing file by overwriting', () => {
-        vi.spyOn(MockFs, 'existsSync').mockReturnValue(true);
-        vi.spyOn(MockFs, 'readFileSync').mockReturnValue('not json');
-
-        const result = writeProjectsConfig({
-            projectName: 'myapp',
-            gitProvider: 'gitlab',
-            repoName: 'myapp',
-            repoOwner: 'myorg',
-        });
-
-        expect(result.filesCreated).toHaveLength(1);
-    });
-});
 
 describe('WriteDotEnvExample', () => {
     beforeEach(() => {

@@ -1,7 +1,8 @@
 import dotenv from 'dotenv';
 import * as path from 'path';
 import * as fs from 'fs';
-import { isValidProjectName, projectEnvPath } from './project-paths.js';
+import { isValidProjectName, projectConfigDir, projectEnvPath } from './project-paths.js';
+import type { ProjectEntry } from './types/project.js';
 
 let _rootLogger: { warn: (msg: string) => void; info: (msg: string) => void; error: (msg: string) => void } | null =
     null;
@@ -216,4 +217,28 @@ export function applyProjectEnvOverlay(name: string): void {
             });
         throw err;
     }
+}
+
+/**
+ * Write the per-project `.env` overlay (D-E1/D-E3) for the given project. Only the project-specific
+ * override keys are written — the global `.env` retains shared secrets. Keys mirror the whitelist used
+ * by `applyProjectEnvOverlay` (project-context OVERRIDE_ENV_MAP): `QA_PROJECT_PROVIDER`,
+ * `QA_PROJECT_PROJECT_ID`, `QA_PROJECT_JIRA_KEY`, `QA_PROJECT_FRAMEWORK`.
+ *
+ * Throws on invalid name (path traversal) — never silent. Writes atomically via a `.tmp` + rename.
+ */
+export function writeProjectEnvOverlay(name: string, entry: ProjectEntry): void {
+    if (!isValidProjectName(name)) throw new Error('Nome de projeto inválido (path traversal): ' + name);
+
+    const lines: string[] = [];
+    if (entry.provider) lines.push('QA_PROJECT_PROVIDER=' + entry.provider);
+    if (entry.projectId) lines.push('QA_PROJECT_PROJECT_ID=' + entry.projectId);
+    if (entry.jiraKey) lines.push('QA_PROJECT_JIRA_KEY=' + entry.jiraKey);
+    if (entry.framework) lines.push('QA_PROJECT_FRAMEWORK=' + entry.framework);
+
+    const filePath = projectEnvPath(name);
+    fs.mkdirSync(projectConfigDir(name), { recursive: true });
+    const tmp = filePath + '.tmp';
+    fs.writeFileSync(tmp, lines.join('\n') + (lines.length > 0 ? '\n' : ''), 'utf8');
+    fs.renameSync(tmp, filePath);
 }

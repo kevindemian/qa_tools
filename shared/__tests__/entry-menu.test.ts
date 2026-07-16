@@ -7,7 +7,8 @@ import path from 'node:path';
 import Config from '../config-accessor.js';
 import { addProject, removeProject } from '../project-registry.js';
 import { clearCurrentProject, getCurrentProject, isProjectSelected, setCurrentProject } from '../project-context.js';
-import { type MenuUI, moduleEnv, runModule, selectProject } from '../entry-menu.js';
+import { type MenuUI, moduleEnv, runModule, selectProject, _initInfrastructure } from '../entry-menu.js';
+import { listProjects } from '../project-registry.js';
 
 function makeUI(selectQueue: string[], promptQueue: string[] = [], confirmQueue: boolean[] = []) {
     const infoCalls: string[] = [];
@@ -201,6 +202,40 @@ describe('Entry-menu (Fase 5 interactive wrappers, DI)', () => {
         expect.hasAssertions();
 
         await expect(runModule('jira', fakeSpawn(0))).resolves.toBeUndefined();
+    });
+
+    it('_initInfrastructure migra config/projects.json legado para o registry XDG (Fase 8.081)', () => {
+        expect.hasAssertions();
+
+        const legacyDir = fs.mkdtempSync(path.join(os.tmpdir(), 'em-legacy-'));
+        fs.mkdirSync(path.join(legacyDir, 'config'), { recursive: true });
+        fs.writeFileSync(
+            path.join(legacyDir, 'config', 'projects.json'),
+            JSON.stringify({ legacyproj: 'LEG-1' }),
+            'utf8',
+        );
+
+        _initInfrastructure(legacyDir);
+
+        const names = listProjects().map((p) => p.name);
+
+        expect(names).toContain('legacyproj');
+
+        const entry = listProjects().find((p) => p.name === 'legacyproj');
+
+        expect(entry?.projectId).toBe('LEG-1');
+        expect(entry?.migrated).toBeTruthy();
+        expect(fs.existsSync(path.join(legacyDir, 'config', 'projects.json'))).toBeFalsy();
+        expect(fs.existsSync(path.join(legacyDir, 'config', 'projects.json.migrated'))).toBeTruthy();
+    });
+
+    it('_initInfrastructure é no-op quando não há legado', () => {
+        expect.hasAssertions();
+
+        const emptyDir = fs.mkdtempSync(path.join(os.tmpdir(), 'em-empty-'));
+
+        expect(() => _initInfrastructure(emptyDir)).not.toThrow();
+        expect(listProjects()).toHaveLength(0);
     });
 
     it('runModule rejeita em código não-zero', async () => {

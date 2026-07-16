@@ -3,12 +3,10 @@ import path from 'path';
 import { ask, askConfirm, title, info, divider } from '../shared/prompt.js';
 import { loadTypedState } from '../shared/state.js';
 import { detectFramework, extractRepoFromGit } from './detector.js';
-import {
-    writeProjectsConfig,
-    writeDotEnvExample,
-    writePrePushHook as writeHookFile,
-    writeFeaturesConfig,
-} from './config-writer.js';
+import { writeDotEnvExample, writePrePushHook as writeHookFile, writeFeaturesConfig } from './config-writer.js';
+import { addProject } from '../shared/project-registry.js';
+import { writeProjectEnvOverlay } from '../shared/env-loader.js';
+import { projectEnvPath } from '../shared/project-paths.js';
 import { generateCIWorkflow, generateQaPostProcessAction } from './templates/github-ci.js';
 import { generateQaPostProcessWorkflow } from './templates/qa-post-process-workflow.js';
 import { injectPostProcessJob } from '../shared/ci-injector.js';
@@ -18,6 +16,22 @@ import type { SetupContext, Framework, GitProvider } from './context.js';
 import { main as configureLlm } from '../scripts/smartwizard-llm.js';
 import { rootLogger } from '../shared/logger.js';
 import { getErrorMessage } from '../shared/errors.js';
+
+/** Parse `--dir <path>` from argv. Returns the resolved directory, or null when not provided. */
+function parseCliDir(argv: string[]): string | null {
+    for (const arg of argv) {
+        if (arg === '--dir' || arg === '-d') continue;
+        if (arg.startsWith('--dir=')) return path.resolve(arg.slice('--dir='.length));
+        if (arg.startsWith('-d=')) return path.resolve(arg.slice('-d='.length));
+    }
+    const idx = argv.findIndex((a) => a === '--dir' || a === '-d');
+    if (idx === -1) return null;
+    const value = argv[idx + 1];
+    if (!value) {
+        throw new Error('Opção --dir requer um caminho (ex: --dir /caminho/do/projeto)');
+    }
+    return path.resolve(value);
+}
 
 function detectGitProvider(): GitProvider {
     try {
@@ -43,15 +57,16 @@ async function promptProjectName(detected: string, existing?: string): Promise<s
     return answer.trim() || def;
 }
 
-async function gatherSetupContext(): Promise<SetupContext> {
+async function gatherSetupContext(baseDir: string): Promise<SetupContext> {
     const state = loadTypedState();
     const lastProject = state.lastProject || '';
-    const detection = await detectFramework(path.join(process.cwd(), 'package.json'));
+    const packageJsonPath = path.join(baseDir, 'package.json');
+    const detection = await detectFramework(packageJsonPath);
 
     info('Framework detectado: ' + detection.framework);
     info('Comando de teste: ' + detection.testCmd);
 
-    const gitInfo = extractRepoFromGit(process.cwd());
+    const gitInfo = extractRepoFromGit(baseDir);
     const projectName = await promptProjectName(gitInfo.repo || 'meu-projeto', lastProject);
     const gitProvider = gitInfo.owner ? detectGitProvider() : await promptGitProvider();
     const repoOwner = gitInfo.owner || (await ask('Repo owner (user/org)', { default: '' }));
@@ -71,6 +86,8 @@ async function gatherSetupContext(): Promise<SetupContext> {
         hint: 'Name for uploaded test report artifact (DataHub uses this)',
     });
     const nodeVersion = await ask('Node version [' + detection.nodeVersion + ']', { default: detection.nodeVersion });
+
+    const jiraKey = (await ask('Jira project key (opcional)', { default: '' })).trim();
 
     divider();
 
@@ -120,6 +137,7 @@ async function gatherSetupContext(): Promise<SetupContext> {
         gitProvider,
         repoOwner,
         repoName,
+        jiraKey,
         workflowDir: gitProvider === 'github' ? '.github/workflows' : '.gitlab-ci.yml',
         features,
     };
@@ -207,7 +225,10 @@ function generatePrePushHookFiles(ctx: SetupContext): { created: string[]; skipp
     return { created, skipped };
 }
 
-async function generateConfigFiles(ctx: SetupContext): Promise<{ created: string[]; skipped: string[] }> {
+async function generateConfigFiles(
+    ctx: SetupContext,
+    baseDir: string,
+): Promise<{ created: string[]; skipped: string[] }> {
     const created: string[] = [];
     const skipped: string[] = [];
 
@@ -216,9 +237,9 @@ async function generateConfigFiles(ctx: SetupContext): Promise<{ created: string
     created.push(...providerResult.created);
     skipped.push(...providerResult.skipped);
 
-    const configResult = writeProjectsConfig(ctx);
-    created.push(...configResult.filesCreated);
-    skipped.push(...configResult.filesSkipped);
+    const entryResult = registerProject(ctx, baseDir);
+    created.push(...entryResult.created);
+    skipped.push(...entryResult.skipped);
 
     const envResult = writeDotEnvExample(ctx);
     created.push(...envResult.filesCreated);
@@ -235,6 +256,50 @@ async function generateConfigFiles(ctx: SetupContext): Promise<{ created: string
     }
 
     return { created, skipped };
+}
+
+/**
+ * Register the project in the XDG registry (single source of truth, D2) and write its per-project
+ * `.env` overlay (D-E1/D-E3). Replaces the legacy dual-write to `config/projects.json` (T1).
+ * Idempotent: `addProject` upserts by name.
+ */
+function registerProject(ctx: SetupContext, baseDir: string): { created: string[]; skipped: string[] } {
+    const created: string[] = [];
+    const skipped: string[] = [];
+
+    const features: string[] = [];
+    if (ctx.features.qualityGate) features.push('qualityGate');
+    if (ctx.features.flakinessDashboard) features.push('flakinessDashboard');
+    if (ctx.features.aiFailureAnalysis) features.push('aiFailureAnalysis');
+    if (ctx.features.prePushHook) features.push('prePushHook');
+    if (ctx.features.prReport) features.push('prReport');
+
+    const projectId = ctx.repoName;
+    const entry: import('../shared/types/project.js').ProjectEntry = {
+        name: ctx.projectName,
+        dir: baseDir,
+        provider: ctx.gitProvider,
+        projectId,
+        framework: ctx.framework,
+        features,
+    };
+    if (ctx.jiraKey) entry.jiraKey = ctx.jiraKey;
+
+    addProject(entry);
+    created.push('registry:' + ctx.projectName);
+
+    writeProjectEnvOverlay(ctx.projectName, entry);
+    created.push(projectEnvPathSafe(ctx.projectName));
+
+    return { created, skipped };
+}
+
+function projectEnvPathSafe(name: string): string {
+    try {
+        return projectEnvPath(name);
+    } catch {
+        return 'registry:' + name + '/.env';
+    }
 }
 
 function printSetupSummary(created: string[], skipped: string[]): void {
@@ -259,15 +324,21 @@ function printSetupSummary(created: string[], skipped: string[]): void {
     info('  npx tsx scripts/smartwizard-llm.ts');
 }
 
-async function main(): Promise<void> {
+async function main(args: string[] = process.argv.slice(2)): Promise<void> {
     title('QA Tools — Auto Setup');
 
-    const ctx = await gatherSetupContext();
+    const dirArg = parseCliDir(args);
+    const baseDir = dirArg ?? process.cwd();
+    if (!fs.existsSync(baseDir)) {
+        throw new Error('Diretório --dir inválido (não existe): ' + baseDir);
+    }
+
+    const ctx = await gatherSetupContext(baseDir);
 
     divider();
     info('Gerando arquivos...\n');
 
-    const { created, skipped } = await generateConfigFiles(ctx);
+    const { created, skipped } = await generateConfigFiles(ctx, baseDir);
     printSetupSummary(created, skipped);
 
     divider();
@@ -277,4 +348,4 @@ async function main(): Promise<void> {
     }
 }
 
-export { main };
+export { main, parseCliDir };

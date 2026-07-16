@@ -23,6 +23,8 @@ export interface SetupContext {
     gitProvider: GitProvider;
     repoOwner: string;
     repoName: string;
+    /** Jira project key (optional). Persisted on the registry entry (D-U3). */
+    jiraKey?: string;
     workflowDir: string;
     features: {
         qualityGate: boolean;

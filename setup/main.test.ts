@@ -1,7 +1,8 @@
 import fs from 'fs';
+import path from 'path';
 import * as prompt from '../shared/prompt.js';
 import { detectFramework, extractRepoFromGit } from './detector.js';
-import { writeProjectsConfig, writeDotEnvExample, writePrePushHook } from './config-writer.js';
+import { writeDotEnvExample, writePrePushHook } from './config-writer.js';
 import { generateCIWorkflow } from './templates/github-ci.js';
 import { generateGitLabCI } from './templates/gitlab-ci.js';
 import { generatePrePushHook } from './templates/pre-push-hook.js';
@@ -22,7 +23,6 @@ vi.mock('./detector', () => ({
     extractRepoFromGit: vi.fn(),
 }));
 vi.mock('./config-writer', () => ({
-    writeProjectsConfig: vi.fn(),
     writeDotEnvExample: vi.fn(),
     writePrePushHook: vi.fn(),
     writeFeaturesConfig: vi.fn(() => ({ filesCreated: [], filesSkipped: [] })),
@@ -53,7 +53,6 @@ vi.mock('../scripts/smartwizard-llm', () => ({
 const MockFs = vi.mocked(fs);
 const MockDetect = vi.mocked(detectFramework);
 const MockExtract = vi.mocked(extractRepoFromGit);
-const MockWriteProjects = vi.mocked(writeProjectsConfig);
 const MockWriteEnv = vi.mocked(writeDotEnvExample);
 const MockWriteHook = vi.mocked(writePrePushHook);
 const MockGenGithub = vi.mocked(generateCIWorkflow);
@@ -61,13 +60,76 @@ const MockGenGitlab = vi.mocked(generateGitLabCI);
 const MockGenHook = vi.mocked(generatePrePushHook);
 const MockGenPostProcess = vi.mocked(generateQaPostProcessWorkflow);
 const MockInjectPostProcess = vi.mocked(injectPostProcessJob);
-const MockAsk = vi.spyOn(prompt, 'ask');
-const MockAskConfirm = vi.spyOn(prompt, 'askConfirm');
 
-import { main } from './main.js';
+import { main, parseCliDir } from './main.js';
+import * as projectRegistry from '../shared/project-registry.js';
+import * as envLoader from '../shared/env-loader.js';
 
 import { main as configureLlm } from '../scripts/smartwizard-llm.js';
 const MockConfigureLlm = vi.mocked(configureLlm);
+
+const MockAddProject = vi.spyOn(projectRegistry, 'addProject');
+const MockWriteEnvOverlay = vi.spyOn(envLoader, 'writeProjectEnvOverlay');
+const MockAsk = vi.mocked(prompt).ask;
+const MockAskConfirm = vi.mocked(prompt).askConfirm;
+
+/**
+ * Factory de respostas para o wizard. Estado compartilhado (`wizardAnswers`)
+ * definido por teste e lido pelas implementações de mock fixadas em beforeEach.
+ * Respostas determinísticas (nunca `undefined`) — sem dessincronização de posição.
+ */
+interface WizardAnswers {
+    gitProvider?: 'github' | 'gitlab';
+    repoOwner?: string;
+    jiraKey?: string;
+    prReport?: boolean;
+    qualityGate?: boolean;
+    flakinessDashboard?: boolean;
+    aiFailureAnalysis?: boolean;
+    prePushHook?: boolean;
+    configureLlm?: boolean;
+    overwriteGitlab?: boolean;
+}
+
+let wizardAnswers: WizardAnswers = {};
+
+function setupWizardAnswers(a: WizardAnswers): void {
+    wizardAnswers = a;
+}
+
+function applyWizardMockImplementations(): void {
+    MockAsk.mockImplementation((question?: string) => {
+        const q = (question ?? '').toLowerCase();
+        let value = '';
+        if (q.includes('git provider')) value = wizardAnswers.gitProvider ?? 'github';
+        else if (q.includes('repo owner')) value = wizardAnswers.repoOwner ?? 'myorg';
+        else if (q.includes('jira project key')) value = wizardAnswers.jiraKey ?? '';
+        else if (q.includes('target de publicação')) {
+            const target = (wizardAnswers.gitProvider ?? 'github') === 'github' ? 'github-actions' : 'gitlab-ci';
+            value = target;
+        } else if (q.includes('project name')) value = 'myapp';
+        else if (q.includes('test framework')) value = 'cypress';
+        else if (q.includes('test command')) value = 'npx cypress run';
+        else if (q.includes('install command')) value = 'npm ci';
+        else if (q.includes('test report path')) value = 'ctrf-report.json';
+        else if (q.includes('artifact name')) value = 'test-report';
+        else if (q.includes('node version')) value = '20';
+        return Promise.resolve(value);
+    });
+
+    MockAskConfirm.mockImplementation((message?: string) => {
+        const m = (message ?? '').toLowerCase();
+        let value = false;
+        if (m.includes('pr report')) value = wizardAnswers.prReport ?? true;
+        else if (m.includes('quality gate')) value = wizardAnswers.qualityGate ?? true;
+        else if (m.includes('flakiness')) value = wizardAnswers.flakinessDashboard ?? true;
+        else if (m.includes('análise de falhas')) value = wizardAnswers.aiFailureAnalysis ?? true;
+        else if (m.includes('pre-push')) value = wizardAnswers.prePushHook ?? false;
+        else if (m.includes('llm')) value = wizardAnswers.configureLlm ?? false;
+        else if (m.includes('sobrescrever') || m.includes('overwrite')) value = wizardAnswers.overwriteGitlab ?? false;
+        return Promise.resolve(value);
+    });
+}
 
 function mockGitHubDetect() {
     vi.spyOn(MockFs, 'readFileSync').mockImplementation((p: fs.PathOrFileDescriptor) => {
@@ -78,27 +140,13 @@ function mockGitHubDetect() {
     });
 }
 
-function mockAskForTests(prePush: boolean) {
-    MockAsk.mockResolvedValueOnce('myapp')
-        .mockResolvedValueOnce('cypress')
-        .mockResolvedValueOnce('npx cypress run')
-        .mockResolvedValueOnce('npm ci')
-        .mockResolvedValueOnce('ctrf-report.json') // testReportPath
-        .mockResolvedValueOnce('test-report') // artifactName
-        .mockResolvedValueOnce('20')
-        .mockResolvedValueOnce('github-actions');
-    MockAskConfirm.mockResolvedValueOnce(true) // prReport
-        .mockResolvedValueOnce(true) // qualityGate
-        .mockResolvedValueOnce(true) // flakinessDashboard
-        .mockResolvedValueOnce(true) // aiFailureAnalysis
-        .mockResolvedValueOnce(prePush) // prePushHook
-        .mockResolvedValueOnce(false); // configureLlm
-}
-
 describe('Setup main', () => {
     beforeEach(() => {
         vi.clearAllMocks();
-        vi.spyOn(MockFs, 'existsSync').mockReturnValue(false);
+        wizardAnswers = {};
+        vi.spyOn(MockFs, 'existsSync').mockImplementation(
+            (p: fs.PathOrFileDescriptor) => p.toString() === process.cwd(),
+        );
         vi.spyOn(MockFs, 'mkdirSync').mockImplementation(vi.fn());
         vi.spyOn(MockFs, 'writeFileSync').mockImplementation(vi.fn());
         vi.spyOn(MockFs, 'chmodSync').mockImplementation(vi.fn());
@@ -110,15 +158,14 @@ describe('Setup main', () => {
             nodeVersion: '20',
             testReportSource: 'cli-flag',
         });
-        MockWriteProjects.mockReturnValue({
-            filesCreated: ['config/projects.json', 'config/providers.json'],
-            filesSkipped: [],
-        });
         MockWriteEnv.mockReturnValue({ filesCreated: ['.env.example'], filesSkipped: [] });
         MockWriteHook.mockReturnValue({ filesCreated: ['.git/hooks/pre-push'], filesSkipped: [] });
         MockGenGithub.mockReturnValue('name: QA\n');
         MockGenGitlab.mockReturnValue('stages:\n  - test\n');
         MockGenHook.mockReturnValue('#!/bin/sh\necho "running"\n');
+        MockGenPostProcess.mockReturnValue('name: QA Post-Process\n');
+        MockInjectPostProcess.mockImplementation((content: string) => content);
+        applyWizardMockImplementations();
     });
 
     it('generates GitHub workflow when repo has owner', async () => {
@@ -126,7 +173,7 @@ describe('Setup main', () => {
 
         MockExtract.mockReturnValue({ owner: 'myorg', repo: 'my-repo' });
         mockGitHubDetect();
-        mockAskForTests(false);
+        setupWizardAnswers({ prePushHook: false, configureLlm: false });
 
         await main();
 
@@ -138,30 +185,68 @@ describe('Setup main', () => {
         );
     });
 
+    it('registers project in XDG registry and writes per-project .env overlay', async () => {
+        expect.hasAssertions();
+
+        MockExtract.mockReturnValue({ owner: 'myorg', repo: 'my-repo' });
+        mockGitHubDetect();
+        setupWizardAnswers({ prePushHook: false, configureLlm: false });
+
+        await main();
+
+        expect(MockAddProject).toHaveBeenCalledTimes(1);
+
+        const entry = MockAddProject.mock.calls[0]?.[0];
+
+        expect(entry).toBeDefined();
+        expect(entry?.name).toBe('myapp');
+        expect(entry?.provider).toBe('github');
+        expect(entry?.projectId).toBe('my-repo');
+        expect(entry?.framework).toBe('cypress');
+        expect(entry?.jiraKey).toBeUndefined();
+        expect(Array.isArray(entry?.features)).toBeTruthy();
+    });
+
+    it('writes per-project .env overlay with the registered entry', async () => {
+        expect.hasAssertions();
+
+        MockExtract.mockReturnValue({ owner: 'myorg', repo: 'my-repo' });
+        mockGitHubDetect();
+        setupWizardAnswers({ prePushHook: false, configureLlm: false });
+
+        await main();
+
+        expect(MockWriteEnvOverlay).toHaveBeenCalledTimes(1);
+
+        const overlayEntry = MockWriteEnvOverlay.mock.calls[0]?.[1];
+
+        expect(overlayEntry?.name).toBe('myapp');
+    });
+
+    it('captures jiraKey when provided', async () => {
+        expect.hasAssertions();
+
+        MockExtract.mockReturnValue({ owner: 'myorg', repo: 'my-repo' });
+        mockGitHubDetect();
+        setupWizardAnswers({ jiraKey: 'PROJ', prePushHook: false, configureLlm: false });
+
+        await main();
+
+        const entry = MockAddProject.mock.calls[0]?.[0];
+
+        expect(entry?.jiraKey).toBe('PROJ');
+    });
+
     it('generates GitLab CI when user picks gitlab', async () => {
         expect.hasAssertions();
 
         MockExtract.mockReturnValue({ owner: '', repo: '' });
-        MockAsk.mockResolvedValueOnce('myapp')
-            .mockResolvedValueOnce('gitlab')
-            .mockResolvedValueOnce('myorg')
-            .mockResolvedValueOnce('cypress')
-            .mockResolvedValueOnce('npx cypress run')
-            .mockResolvedValueOnce('npm ci')
-            .mockResolvedValueOnce('ctrf-report.json') // testReportPath
-            .mockResolvedValueOnce('test-report') // artifactName
-            .mockResolvedValueOnce('20')
-            .mockResolvedValueOnce('gitlab-ci');
-        MockAskConfirm.mockResolvedValueOnce(true) // prReport
-            .mockResolvedValueOnce(true) // qualityGate
-            .mockResolvedValueOnce(true) // flakinessDashboard
-            .mockResolvedValueOnce(true) // aiFailureAnalysis
-            .mockResolvedValueOnce(false) // prePushHook
-            .mockResolvedValueOnce(false); // configureLlm
+        setupWizardAnswers({ gitProvider: 'gitlab', repoOwner: 'myorg', prePushHook: false, configureLlm: false });
 
         await main();
 
         expect(MockGenGitlab).toHaveBeenCalledTimes(1);
+        expect(MockAddProject.mock.calls[0]?.[0]?.provider).toBe('gitlab');
     });
 
     it('writes .env.example via config-writer', async () => {
@@ -169,7 +254,7 @@ describe('Setup main', () => {
 
         MockExtract.mockReturnValue({ owner: 'myorg', repo: 'my-repo' });
         mockGitHubDetect();
-        mockAskForTests(false);
+        setupWizardAnswers({ prePushHook: false, configureLlm: false });
 
         await main();
 
@@ -181,7 +266,7 @@ describe('Setup main', () => {
 
         MockExtract.mockReturnValue({ owner: 'myorg', repo: 'my-repo' });
         mockGitHubDetect();
-        mockAskForTests(true);
+        setupWizardAnswers({ prePushHook: true, configureLlm: false });
 
         await main();
 
@@ -194,7 +279,7 @@ describe('Setup main', () => {
 
         MockExtract.mockReturnValue({ owner: 'myorg', repo: 'my-repo' });
         mockGitHubDetect();
-        mockAskForTests(false);
+        setupWizardAnswers({ prePushHook: false, configureLlm: false });
 
         await main();
 
@@ -206,20 +291,7 @@ describe('Setup main', () => {
 
         MockExtract.mockReturnValue({ owner: 'myorg', repo: 'my-repo' });
         mockGitHubDetect();
-        MockAsk.mockResolvedValueOnce('myapp')
-            .mockResolvedValueOnce('cypress')
-            .mockResolvedValueOnce('npx cypress run')
-            .mockResolvedValueOnce('npm ci')
-            .mockResolvedValueOnce('ctrf-report.json') // testReportPath
-            .mockResolvedValueOnce('test-report') // artifactName
-            .mockResolvedValueOnce('20')
-            .mockResolvedValueOnce('github-actions');
-        MockAskConfirm.mockResolvedValueOnce(true) // prReport
-            .mockResolvedValueOnce(true) // qualityGate
-            .mockResolvedValueOnce(true) // flakinessDashboard
-            .mockResolvedValueOnce(true) // aiFailureAnalysis
-            .mockResolvedValueOnce(false) // prePushHook
-            .mockResolvedValueOnce(true); // configure LLM = yes
+        setupWizardAnswers({ prePushHook: false, configureLlm: true });
 
         await main();
 
@@ -231,49 +303,27 @@ describe('Setup main', () => {
 
         MockExtract.mockReturnValue({ owner: 'myorg', repo: 'my-repo' });
         mockGitHubDetect();
-        MockAsk.mockResolvedValueOnce('myapp')
-            .mockResolvedValueOnce('cypress')
-            .mockResolvedValueOnce('npx cypress run')
-            .mockResolvedValueOnce('npm ci')
-            .mockResolvedValueOnce('ctrf-report.json') // testReportPath
-            .mockResolvedValueOnce('test-report') // artifactName
-            .mockResolvedValueOnce('20')
-            .mockResolvedValueOnce('github-actions');
-        MockAskConfirm.mockResolvedValueOnce(true) // prReport
-            .mockResolvedValueOnce(true) // qualityGate
-            .mockResolvedValueOnce(true) // flakinessDashboard
-            .mockResolvedValueOnce(true) // aiFailureAnalysis
-            .mockResolvedValueOnce(false) // prePushHook
-            .mockResolvedValueOnce(false); // configure LLM = no
+        setupWizardAnswers({ prePushHook: false, configureLlm: false });
 
         await main();
 
         expect(MockConfigureLlm).not.toHaveBeenCalled();
     });
 
-    it('skips existing GitLab pipeline file', async () => {
+    it('skips existing GitLab pipeline file when overwrite declined', async () => {
         expect.hasAssertions();
 
         MockExtract.mockReturnValue({ owner: '', repo: '' });
-        MockAsk.mockResolvedValueOnce('myapp')
-            .mockResolvedValueOnce('gitlab')
-            .mockResolvedValueOnce('myorg')
-            .mockResolvedValueOnce('cypress')
-            .mockResolvedValueOnce('npx cypress run')
-            .mockResolvedValueOnce('npm ci')
-            .mockResolvedValueOnce('ctrf-report.json') // testReportPath
-            .mockResolvedValueOnce('test-report') // artifactName
-            .mockResolvedValueOnce('20')
-            .mockResolvedValueOnce('gitlab-ci');
-        MockAskConfirm.mockResolvedValueOnce(true) // prReport
-            .mockResolvedValueOnce(true) // qualityGate
-            .mockResolvedValueOnce(true) // flakinessDashboard
-            .mockResolvedValueOnce(true) // aiFailureAnalysis
-            .mockResolvedValueOnce(false) // prePushHook
-            .mockResolvedValueOnce(false); // configureLlm
-        vi.spyOn(MockFs, 'existsSync').mockImplementation((p: string | Buffer | URL) => {
-            return p.toString().includes('.gitlab-ci.yml');
+        setupWizardAnswers({
+            gitProvider: 'gitlab',
+            repoOwner: 'myorg',
+            prePushHook: false,
+            configureLlm: false,
+            overwriteGitlab: false,
         });
+        vi.spyOn(MockFs, 'existsSync').mockImplementation(
+            (p: fs.PathOrFileDescriptor) => p.toString() === process.cwd() || p.toString().includes('.gitlab-ci.yml'),
+        );
 
         await main();
 
@@ -289,9 +339,10 @@ describe('Setup main', () => {
 describe('Setup main — pr-report workflow generation', () => {
     beforeEach(() => {
         vi.clearAllMocks();
-        MockAsk.mockReset();
-        MockAskConfirm.mockReset();
-        vi.spyOn(MockFs, 'existsSync').mockReturnValue(false);
+        wizardAnswers = {};
+        vi.spyOn(MockFs, 'existsSync').mockImplementation(
+            (p: fs.PathOrFileDescriptor) => p.toString() === process.cwd(),
+        );
         vi.spyOn(MockFs, 'mkdirSync').mockImplementation(vi.fn());
         vi.spyOn(MockFs, 'writeFileSync').mockImplementation(vi.fn());
         vi.spyOn(MockFs, 'chmodSync').mockImplementation(vi.fn());
@@ -303,10 +354,6 @@ describe('Setup main — pr-report workflow generation', () => {
             nodeVersion: '20',
             testReportSource: 'cli-flag',
         });
-        MockWriteProjects.mockReturnValue({
-            filesCreated: ['config/projects.json', 'config/providers.json'],
-            filesSkipped: [],
-        });
         MockWriteEnv.mockReturnValue({ filesCreated: ['.env.example'], filesSkipped: [] });
         MockWriteHook.mockReturnValue({ filesCreated: ['.git/hooks/pre-push'], filesSkipped: [] });
         MockGenGithub.mockReturnValue('name: CI\n');
@@ -314,6 +361,7 @@ describe('Setup main — pr-report workflow generation', () => {
         MockGenHook.mockReturnValue('#!/bin/sh\necho "running"\n');
         MockGenPostProcess.mockReturnValue('name: QA Post-Process\n');
         MockInjectPostProcess.mockImplementation((content: string) => content);
+        applyWizardMockImplementations();
     });
 
     it('generates qa-post-process.yml when prReport enabled', async () => {
@@ -321,7 +369,7 @@ describe('Setup main — pr-report workflow generation', () => {
 
         MockExtract.mockReturnValue({ owner: 'myorg', repo: 'my-repo' });
         mockGitHubDetect();
-        mockAskForTests(true);
+        setupWizardAnswers({ prePushHook: true, configureLlm: false });
 
         await main();
 
@@ -338,20 +386,7 @@ describe('Setup main — pr-report workflow generation', () => {
 
         MockExtract.mockReturnValue({ owner: 'myorg', repo: 'my-repo' });
         mockGitHubDetect();
-        MockAsk.mockResolvedValueOnce('myapp')
-            .mockResolvedValueOnce('cypress')
-            .mockResolvedValueOnce('npx cypress run')
-            .mockResolvedValueOnce('npm ci')
-            .mockResolvedValueOnce('ctrf-report.json') // testReportPath
-            .mockResolvedValueOnce('test-report') // artifactName
-            .mockResolvedValueOnce('20')
-            .mockResolvedValueOnce('github-actions');
-        MockAskConfirm.mockResolvedValueOnce(false) // prReport = false
-            .mockResolvedValueOnce(false)
-            .mockResolvedValueOnce(false)
-            .mockResolvedValueOnce(false)
-            .mockResolvedValueOnce(false)
-            .mockResolvedValueOnce(false);
+        setupWizardAnswers({ prReport: false, configureLlm: false });
 
         await main();
 
@@ -363,23 +398,10 @@ describe('Setup main — pr-report workflow generation', () => {
 
         MockExtract.mockReturnValue({ owner: 'myorg', repo: 'my-repo' });
         mockGitHubDetect();
-        MockAsk.mockResolvedValueOnce('myapp')
-            .mockResolvedValueOnce('cypress')
-            .mockResolvedValueOnce('npx cypress run')
-            .mockResolvedValueOnce('npm ci')
-            .mockResolvedValueOnce('ctrf-report.json') // testReportPath
-            .mockResolvedValueOnce('test-report') // artifactName
-            .mockResolvedValueOnce('20')
-            .mockResolvedValueOnce('github-actions');
-        MockAskConfirm.mockResolvedValueOnce(true) // prReport
-            .mockResolvedValueOnce(false)
-            .mockResolvedValueOnce(false)
-            .mockResolvedValueOnce(false)
-            .mockResolvedValueOnce(false)
-            .mockResolvedValueOnce(false);
-        vi.spyOn(MockFs, 'existsSync').mockImplementation((p: string | Buffer | URL) => {
-            return p.toString().includes('ci.yml');
-        });
+        setupWizardAnswers({ prReport: true, configureLlm: false });
+        vi.spyOn(MockFs, 'existsSync').mockImplementation(
+            (p: fs.PathOrFileDescriptor) => p.toString() === process.cwd() || p.toString().includes('ci.yml'),
+        );
         vi.spyOn(MockFs, 'readFileSync').mockReturnValue('name: CI\n\njobs:\n  test:\n');
 
         await main();
@@ -392,7 +414,7 @@ describe('Setup main — pr-report workflow generation', () => {
 
         MockExtract.mockReturnValue({ owner: 'myorg', repo: 'my-repo' });
         mockGitHubDetect();
-        mockAskForTests(true);
+        setupWizardAnswers({ prePushHook: true, configureLlm: false });
 
         await main();
 
@@ -406,5 +428,21 @@ describe('Setup main — pr-report workflow generation', () => {
         expect(ctx?.installCmd).toBe('npm ci');
         expect(ctx?.gitProvider).toBe('github');
         expect(ctx?.repoOwner).toBe('myorg');
+    });
+});
+
+describe('ParseCliDir', () => {
+    it('returns null when --dir is absent', () => {
+        expect(parseCliDir([])).toBeNull();
+        expect(parseCliDir(['--batch', '--project', 'x'])).toBeNull();
+    });
+
+    it('returns resolved path for --dir', () => {
+        expect(parseCliDir(['--dir', '/abs/path'])).toBe('/abs/path');
+        expect(parseCliDir(['-d', 'rel'])).toBe(path.resolve('rel'));
+    });
+
+    it('throws when --dir has no value', () => {
+        expect(() => parseCliDir(['--dir'])).toThrow(/caminho/);
     });
 });

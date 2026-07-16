@@ -2,70 +2,10 @@ import fs from 'fs';
 import path from 'path';
 import type { SetupContext } from './context.js';
 import { setPrReportConfig } from '../shared/feature-config.js';
-import { rootLogger } from '../shared/logger.js';
-import { getErrorMessage } from '../shared/errors.js';
 
 interface WriterResult {
     filesCreated: string[];
     filesSkipped: string[];
-}
-
-type ConfigCtx = Pick<SetupContext, 'projectName' | 'gitProvider' | 'repoName' | 'repoOwner'>;
-
-function writeJsonConfig(
-    filePath: string,
-    ctx: ConfigCtx,
-    makeEntry: (ctx: ConfigCtx) => unknown,
-    result: WriterResult,
-): void {
-    if (!fs.existsSync(path.resolve(filePath))) {
-        fs.writeFileSync(
-            path.resolve(filePath),
-            JSON.stringify({ [ctx.projectName]: makeEntry(ctx) }, null, 2) + '\n',
-            'utf8',
-        );
-        result.filesCreated.push(filePath);
-        return;
-    }
-    try {
-        const existing = JSON.parse(fs.readFileSync(path.resolve(filePath), 'utf8')) as { [key: string]: unknown };
-        if (ctx.projectName in existing) {
-            result.filesSkipped.push(filePath);
-        } else {
-            existing[ctx.projectName] = makeEntry(ctx);
-            fs.writeFileSync(path.resolve(filePath), JSON.stringify(existing, null, 2) + '\n', 'utf8');
-            result.filesCreated.push(filePath);
-        }
-    } catch (err) {
-        rootLogger.warn(
-            'writeJsonConfig: failed to merge existing config, writing fresh entry: ' + getErrorMessage(err),
-        );
-        fs.writeFileSync(
-            path.resolve(filePath),
-            JSON.stringify({ [ctx.projectName]: makeEntry(ctx) }, null, 2) + '\n',
-            'utf8',
-        );
-        result.filesCreated.push(filePath);
-    }
-}
-
-function makeProjectEntry(ctx: ConfigCtx): unknown {
-    return ctx.gitProvider === 'github' ? ctx.repoName : ctx.projectName;
-}
-
-function ensureConfigDir(): string {
-    const configDir = path.resolve(process.cwd(), 'config');
-    fs.mkdirSync(path.resolve(configDir), { recursive: true });
-    return configDir;
-}
-
-export function writeProjectsConfig(ctx: ConfigCtx): WriterResult {
-    const result: WriterResult = { filesCreated: [], filesSkipped: [] };
-    const configDir = ensureConfigDir();
-
-    writeJsonConfig(path.join(configDir, 'projects.json'), ctx, makeProjectEntry, result);
-
-    return result;
 }
 
 export function writeDotEnvExample(ctx: Pick<SetupContext, 'projectName' | 'gitProvider'>): WriterResult {
