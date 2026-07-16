@@ -15,49 +15,49 @@
 
 ### Fase R1 — Testes de Integração Consumidores
 
-| ID    | Item                                                                              | Arquivo(s)                                                              | Status |
-| ----- | --------------------------------------------------------------------------------- | ----------------------------------------------------------------------- | ------ |
-| CDH-R1a | 📋 Adicionar cenários ciData em health-score.integration.test.ts                | `shared/__tests__/integration/health-score.integration.test.ts`        | ✅     |
-| CDH-R1b | 📋 Adicionar cenários ciData em quality-gate.integration.test.ts                | `shared/__tests__/integration/quality-gate.integration.test.ts`        | ✅     |
-| CDH-R1c | 📋 Adicionar cenários ciData em pr-report-core.integration.test.ts              | `shared/__tests__/integration/pr-report-core.integration.test.ts`      | ✅     |
-| CDH-R1d | 📋 Adicionar cenários ciData em pipeline-cost.integration.test.ts               | `shared/__tests__/integration/pipeline-cost.integration.test.ts`       | ✅     |
-| CDH-R1e | 📋 Adicionar cenários ciData em traceability-matrix.integration.test.ts         | `shared/__tests__/integration/traceability-matrix.integration.test.ts` | ✅     |
-| CDH-R1f | 📋 Adicionar cenários ciData em flakiness-dashboard.integration.test.ts         | `shared/__tests__/integration/flakiness-dashboard.integration.test.ts` | ⏭️ N/A (não aceita ciData diretamente) |
-| CDH-R1g | 📋 Adicionar cenários ciData em defect-trend.integration.test.ts                | `shared/__tests__/integration/defect-trend.integration.test.ts`        | ⏭️ N/A (não aceita ciData diretamente) |
-| CDH-R1h | 📋 Adicionar cenários ciData em quarantine.integration.test.ts                  | `shared/__tests__/integration/quarantine.integration.test.ts`          | ⏭️ N/A (não aceita ciData diretamente) |
-| CDH-R1i | 📋 Adicionar cenários ciData em run-comparison.integration.test.ts              | `shared/__tests__/integration/run-comparison.integration.test.ts`      | ⏭️ N/A (não aceita ciData diretamente) |
+| ID      | Item                                                                    | Arquivo(s)                                                             | Status                                 |
+| ------- | ----------------------------------------------------------------------- | ---------------------------------------------------------------------- | -------------------------------------- |
+| CDH-R1a | 📋 Adicionar cenários ciData em health-score.integration.test.ts        | `shared/__tests__/integration/health-score.integration.test.ts`        | ✅                                     |
+| CDH-R1b | 📋 Adicionar cenários ciData em quality-gate.integration.test.ts        | `shared/__tests__/integration/quality-gate.integration.test.ts`        | ✅                                     |
+| CDH-R1c | 📋 Adicionar cenários ciData em pr-report-core.integration.test.ts      | `shared/__tests__/integration/pr-report-core.integration.test.ts`      | ✅                                     |
+| CDH-R1d | 📋 Adicionar cenários ciData em pipeline-cost.integration.test.ts       | `shared/__tests__/integration/pipeline-cost.integration.test.ts`       | ✅                                     |
+| CDH-R1e | 📋 Adicionar cenários ciData em traceability-matrix.integration.test.ts | `shared/__tests__/integration/traceability-matrix.integration.test.ts` | ✅                                     |
+| CDH-R1f | 📋 Adicionar cenários ciData em flakiness-dashboard.integration.test.ts | `shared/__tests__/integration/flakiness-dashboard.integration.test.ts` | ⏭️ N/A (não aceita ciData diretamente) |
+| CDH-R1g | 📋 Adicionar cenários ciData em defect-trend.integration.test.ts        | `shared/__tests__/integration/defect-trend.integration.test.ts`        | ⏭️ N/A (não aceita ciData diretamente) |
+| CDH-R1h | 📋 Adicionar cenários ciData em quarantine.integration.test.ts          | `shared/__tests__/integration/quarantine.integration.test.ts`          | ⏭️ N/A (não aceita ciData diretamente) |
+| CDH-R1i | 📋 Adicionar cenários ciData em run-comparison.integration.test.ts      | `shared/__tests__/integration/run-comparison.integration.test.ts`      | ⏭️ N/A (não aceita ciData diretamente) |
 
 ### Fase R2 — Testes de Sistema
 
-| ID    | Item                                                                              | Arquivo(s)                                    | Status |
-| ----- | --------------------------------------------------------------------------------- | --------------------------------------------- | ------ |
-| CDH-R2a | 📋 Criar ci-data-system.test.ts — fluxo completo: GitProvider → hub → consumers  | `shared/__tests__/system/ci-data-system.test.ts` | ✅     |
+| ID      | Item                                                                            | Arquivo(s)                                       | Status |
+| ------- | ------------------------------------------------------------------------------- | ------------------------------------------------ | ------ |
+| CDH-R2a | 📋 Criar ci-data-system.test.ts — fluxo completo: GitProvider → hub → consumers | `shared/__tests__/system/ci-data-system.test.ts` | ✅     |
 
 ### Fase R3 — Testes E2E
 
-| ID    | Item                                                                              | Arquivo(s)                                    | Status |
-| ----- | --------------------------------------------------------------------------------- | --------------------------------------------- | ------ |
-| CDH-R3a | 📋 Criar ci-data-e2e.test.ts — pipeline completo: API → hub → report HTML        | `shared/__tests__/e2e/ci-data-e2e.test.ts`    | ✅     |
+| ID      | Item                                                                      | Arquivo(s)                                 | Status |
+| ------- | ------------------------------------------------------------------------- | ------------------------------------------ | ------ |
+| CDH-R3a | 📋 Criar ci-data-e2e.test.ts — pipeline completo: API → hub → report HTML | `shared/__tests__/e2e/ci-data-e2e.test.ts` | ✅     |
 
 ### Fase R4 — Menu Integration
 
-| ID    | Item                                                                              | Arquivo(s)                                    | Status |
-| ----- | --------------------------------------------------------------------------------- | --------------------------------------------- | ------ |
-| CDH-R4a | 🔧 Verificar/criar entrada CiDataHub no menu interactive-mode                     | `git_triggers/interactive-mode.ts`            | ✅     |
-| CDH-R4b | 📋 Teste que valida opção existe no menu                                          | `shared/__tests__/integration/ci-menu.integration.test.ts` | ✅ (arquivo criado nesta sprint, 7 testes) |
+| ID      | Item                                                          | Arquivo(s)                                                 | Status                                     |
+| ------- | ------------------------------------------------------------- | ---------------------------------------------------------- | ------------------------------------------ |
+| CDH-R4a | 🔧 Verificar/criar entrada CiDataHub no menu interactive-mode | `git_triggers/interactive-mode.ts`                         | ✅                                         |
+| CDH-R4b | 📋 Teste que valida opção existe no menu                      | `shared/__tests__/integration/ci-menu.integration.test.ts` | ✅ (arquivo criado nesta sprint, 7 testes) |
 
 ### Fase R5 — Documentação
 
-| ID    | Item                                                                              | Arquivo(s)                                    | Status |
-| ----- | --------------------------------------------------------------------------------- | --------------------------------------------- | ------ |
-| CDH-R5a | 📋 Atualizar TECHDOC.md com seção CiDataHub                                       | `docs/TECHDOC.md`                             | ✅     |
+| ID      | Item                                        | Arquivo(s)        | Status |
+| ------- | ------------------------------------------- | ----------------- | ------ |
+| CDH-R5a | 📋 Atualizar TECHDOC.md com seção CiDataHub | `docs/TECHDOC.md` | ✅     |
 
 ### Fase R6 — Correções D5.5/D6.4
 
-| ID    | Item                                                                              | Arquivo(s)                                    | Status |
-| ----- | --------------------------------------------------------------------------------- | --------------------------------------------- | ------ |
-| CDH-R6a | 🔧 D5.5: outlier treatment em avgDuration (ceiling) + suiteSpeedP95 (P95), justificativa documentada | `shared/ci-data.ts` | ✅ |
-| CDH-R6b | 🔧 D6.4: progress feedback durante criação do CiDataHub                           | `shared/ci-data.ts`                           | ✅     |
+| ID      | Item                                                                                                 | Arquivo(s)          | Status |
+| ------- | ---------------------------------------------------------------------------------------------------- | ------------------- | ------ |
+| CDH-R6a | 🔧 D5.5: outlier treatment em avgDuration (ceiling) + suiteSpeedP95 (P95), justificativa documentada | `shared/ci-data.ts` | ✅     |
+| CDH-R6b | 🔧 D6.4: progress feedback durante criação do CiDataHub                                              | `shared/ci-data.ts` | ✅     |
 
 ### Justificativa D5.5 — Outlier Treatment
 
@@ -65,87 +65,87 @@
 
 Outlier treatment foi implementado em `ci-data.ts` para as duas métricas que produzem valores contínuos com risco de outliers extremos:
 
-| Métrica | Tratamento | Justificativa |
-|---------|------------|---------------|
-| `avgDuration` | Ceiling em 86400s (24h) | Duração de run pode ser distorcida por jobs travados, retenções manuais, ou timeouts. Ceiling previne skewing da média |
-| `suiteSpeedP95` | Percentil P95 naturalmente ignora top 5% | P95 é definido como percentil — já filtra outliers por design |
+| Métrica         | Tratamento                               | Justificativa                                                                                                          |
+| --------------- | ---------------------------------------- | ---------------------------------------------------------------------------------------------------------------------- |
+| `avgDuration`   | Ceiling em 86400s (24h)                  | Duração de run pode ser distorcida por jobs travados, retenções manuais, ou timeouts. Ceiling previne skewing da média |
+| `suiteSpeedP95` | Percentil P95 naturalmente ignora top 5% | P95 é definido como percentil — já filtra outliers por design                                                          |
 
 **Métricas que NÃO precisam de outlier treatment:**
 
-| Métrica | Justificativa |
-|---------|---------------|
-| `passRate` | Percentage (0-100). Valores extremos (0% ou 100%) são legítimos, não outliers |
-| `topFailingJobs` | Top-10 por taxa de falha. Já filtrado por ranking, não produz valores distorcidos |
-| `branchBreakdown` | Percentage por branch. Valores são legítimos (branch pode ter 0% ou 100%) |
-| `flakyTests` | Rate (0-100). Valores altos indicam flakiness real, não outliers |
-| `defectTrends` | Contagem por data. Valores altos indicam spike real de defeitos |
-| `costEstimate` | Baseado em minutos reais do CI. Valores altos refletem custo real |
+| Métrica           | Justificativa                                                                     |
+| ----------------- | --------------------------------------------------------------------------------- |
+| `passRate`        | Percentage (0-100). Valores extremos (0% ou 100%) são legítimos, não outliers     |
+| `topFailingJobs`  | Top-10 por taxa de falha. Já filtrado por ranking, não produz valores distorcidos |
+| `branchBreakdown` | Percentage por branch. Valores são legítimos (branch pode ter 0% ou 100%)         |
+| `flakyTests`      | Rate (0-100). Valores altos indicam flakiness real, não outliers                  |
+| `defectTrends`    | Contagem por data. Valores altos indicam spike real de defeitos                   |
+| `costEstimate`    | Baseado em minutos reais do CI. Valores altos refletem custo real                 |
 
 ### Fase R7 — Auditoria Pós-Implementação
 
-| ID    | Item                                                                              | Status |
-| ----- | --------------------------------------------------------------------------------- | ------ |
-| CDH-R7a | 🔧 18.1 Auditoria integridade (5 consumers, fallback)                            | ✅     |
-| CDH-R7b | 🔧 18.2 Auditoria contrato (readonly, typing, flush)                             | ✅     |
-| CDH-R7c | 🔧 18.3 Auditoria cobertura (≥90% ci-data.ts)                                    | ✅     |
-| CDH-R7d | 🔧 18.4 Auditoria regressão (mesmo output CI vs fallback)                        | ✅     |
+| ID      | Item                                                      | Status |
+| ------- | --------------------------------------------------------- | ------ |
+| CDH-R7a | 🔧 18.1 Auditoria integridade (5 consumers, fallback)     | ✅     |
+| CDH-R7b | 🔧 18.2 Auditoria contrato (readonly, typing, flush)      | ✅     |
+| CDH-R7c | 🔧 18.3 Auditoria cobertura (≥90% ci-data.ts)             | ✅     |
+| CDH-R7d | 🔧 18.4 Auditoria regressão (mesmo output CI vs fallback) | ✅     |
 
 ### Fase R8 — Validação Final
 
-| ID    | Item                                                                              | Status |
-| ----- | --------------------------------------------------------------------------------- | ------ |
-| CDH-R8a | 🔧 npx tsc --noEmit = 0 erros                                                    | ✅     |
-| CDH-R8b | 🔧 npx vitest run = 100% pass                                                     | ✅     |
-| CDH-R8c | 🔧 npm run lint = 0 violações                                                     | ✅     |
-| CDH-R8d | 📋 Atualizar BACKLOG.md status CDH-R1 a CDH-R8                                    | ✅     |
+| ID      | Item                                           | Status |
+| ------- | ---------------------------------------------- | ------ |
+| CDH-R8a | 🔧 npx tsc --noEmit = 0 erros                  | ✅     |
+| CDH-R8b | 🔧 npx vitest run = 100% pass                  | ✅     |
+| CDH-R8c | 🔧 npm run lint = 0 violações                  | ✅     |
+| CDH-R8d | 📋 Atualizar BACKLOG.md status CDH-R1 a CDH-R8 | ✅     |
 
 ### Auditoria de Consumidores — Correção GAP-2
 
 **Data:** 2026-07-03
 **Resultado:** 6 arquivos de produção importam MetricsStore/MetricsRun. 5 aceitam ciData. 1 é N/A.
 
-| # | Arquivo | Importa | Aceita ciData | Justificativa |
-|---|---------|---------|---------------|---------------|
-| 1 | `shared/health-score.ts` | MetricsStore, MetricsRun | ✅ (line 331) | Usa dados de CI para score |
-| 2 | `shared/quality-gate.ts` | MetricsRun | ✅ (line 40) | Usa dados de CI para gate |
-| 3 | `shared/pr-report-core.ts` | CiDataHub | ✅ (line 82) | Fonte primária de dados CI |
-| 4 | `shared/pipeline-cost.ts` | MetricsRun | ✅ (line 46) | Usa runs para custo |
-| 5 | `shared/traceability-matrix.ts` | MetricsStore | ✅ (line 163) | Usa dados de CI para matriz |
-| 6 | `shared/run-comparison.ts` | MetricsRun | ❌ N/A | Usa MetricsRun como input para LLM (compara dois runs), não como fonte de dados CI. Não precisa de ciData porque recebe dados já processados |
+| #   | Arquivo                         | Importa                  | Aceita ciData | Justificativa                                                                                                                                |
+| --- | ------------------------------- | ------------------------ | ------------- | -------------------------------------------------------------------------------------------------------------------------------------------- |
+| 1   | `shared/health-score.ts`        | MetricsStore, MetricsRun | ✅ (line 331) | Usa dados de CI para score                                                                                                                   |
+| 2   | `shared/quality-gate.ts`        | MetricsRun               | ✅ (line 40)  | Usa dados de CI para gate                                                                                                                    |
+| 3   | `shared/pr-report-core.ts`      | CiDataHub                | ✅ (line 82)  | Fonte primária de dados CI                                                                                                                   |
+| 4   | `shared/pipeline-cost.ts`       | MetricsRun               | ✅ (line 46)  | Usa runs para custo                                                                                                                          |
+| 5   | `shared/traceability-matrix.ts` | MetricsStore             | ✅ (line 163) | Usa dados de CI para matriz                                                                                                                  |
+| 6   | `shared/run-comparison.ts`      | MetricsRun               | ❌ N/A        | Usa MetricsRun como input para LLM (compara dois runs), não como fonte de dados CI. Não precisa de ciData porque recebe dados já processados |
 
 **run-comparison.ts é N/A porque:** A função `compareRuns()` recebe dois `MetricsRun` já existentes e gera uma comparação via LLM. Ela não busca nem processa dados do CI — apenas formata dados que já existem para análise. CiDataHub é uma fonte de dados, não um formatador de comparação.
 
 ### Métricas Alvo
 
-| Métrica                            | Alvo      |
-| ---------------------------------- | --------- |
-| `npx tsc --noEmit`                 | **0**     |
-| `npx vitest run`                   | **100%**  |
-| `npm run lint`                     | **0**     |
-| Consumer tests com ciData          | **≥9**    |
-| System tests                       | **≥3**    |
-| E2E tests                          | **≥3**    |
-| Menu integration                   | **verificado** |
-| TECHDOC.md atualizado              | **sim**   |
-| Cobertura ci-data.ts               | **≥90%**  |
-| Auditoria 18.1-18.4                | **todos OK** |
-| Coverage geral                     | **≥90% stmts** ✅ 90.85% |
+| Métrica                   | Alvo                     |
+| ------------------------- | ------------------------ |
+| `npx tsc --noEmit`        | **0**                    |
+| `npx vitest run`          | **100%**                 |
+| `npm run lint`            | **0**                    |
+| Consumer tests com ciData | **≥9**                   |
+| System tests              | **≥3**                   |
+| E2E tests                 | **≥3**                   |
+| Menu integration          | **verificado**           |
+| TECHDOC.md atualizado     | **sim**                  |
+| Cobertura ci-data.ts      | **≥90%**                 |
+| Auditoria 18.1-18.4       | **todos OK**             |
+| Coverage geral            | **≥90% stmts** ✅ 90.85% |
 
 ### Resumo da Sessão de Correção (2026-07-03)
 
 **Objetivo:** Corrigir 8 gaps identificados na implementação original do CiDataHub.
 
-| Fase | Item | Resultado |
-|------|------|-----------|
-| A | Coverage verification | ✅ 90.85% stmts, 83.28% branches, 93.91% funcs, 91.81% lines |
-| B | Consumer audit | ✅ run-comparison.ts justificado como N/A |
-| C | Menu integration test | ✅ `ci-menu.integration.test.ts` criado (7 testes) |
-| D | E2E live tests | ✅ `ci-data-e2e-live.test.ts` criado (5 testes com API real) |
-| E | JSDoc documentation | ✅ `_showCiDataHubSummary` documentado |
-| F | @deprecated annotations | ❌ Removido — causa 221 violações lint (tipos ainda em uso ativo) |
-| G | Empty catch fix | ✅ `ci-data.ts:136` agora loga via rootLogger.debug |
-| H | D5.5 justification | ✅ Justificativa documentada por métrica |
-| I | BACKLOG corrections | ✅ Status CDH-R4b e CDH-R6a corrigidos |
+| Fase | Item                    | Resultado                                                         |
+| ---- | ----------------------- | ----------------------------------------------------------------- |
+| A    | Coverage verification   | ✅ 90.85% stmts, 83.28% branches, 93.91% funcs, 91.81% lines      |
+| B    | Consumer audit          | ✅ run-comparison.ts justificado como N/A                         |
+| C    | Menu integration test   | ✅ `ci-menu.integration.test.ts` criado (7 testes)                |
+| D    | E2E live tests          | ✅ `ci-data-e2e-live.test.ts` criado (5 testes com API real)      |
+| E    | JSDoc documentation     | ✅ `_showCiDataHubSummary` documentado                            |
+| F    | @deprecated annotations | ❌ Removido — causa 221 violações lint (tipos ainda em uso ativo) |
+| G    | Empty catch fix         | ✅ `ci-data.ts:136` agora loga via rootLogger.debug               |
+| H    | D5.5 justification      | ✅ Justificativa documentada por métrica                          |
+| I    | BACKLOG corrections     | ✅ Status CDH-R4b e CDH-R6a corrigidos                            |
 
 **Testes adicionados:** 12 novos testes (7 menu + 5 e2e live)
 **Coverage CiDataHub:** 99.38% stmts, 83.75% branches, 100% funcs, 100% lines
@@ -2457,14 +2457,14 @@ A auditoria automatizada (senior-auditor) identificou 10 problemas. Após solici
 **Prioridade:** ALTA — investigação e correção
 **Origem:** Investigação de causa raiz do PR Report não gerado em CI. `loadFeatureConfig()` silenciou falha e o logger não produziu nenhuma evidência diagnosticável. Auditoria de robuteza do sistema de log revelou 6 problemas.
 
-| ID     | Problema                                                                                                                                                                                                                                              | Arquivo                       | Severidade |
-| ------ | ----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | ----------------------------- | ---------- |
-| LOG-01 | **`loadFeatureConfig` silencia `fs.existsSync` falso** — retorna `{}` sem warning quando `config/features.json` não existe. Fallback silencioso para `DEFAULT_PR_REPORT_CONFIG` (`enabled: false`) sem log. CAUSA RAIZ do PR Report não gerado em CI. | `shared/feature-config.ts:22` | CRITICAL   |
-| LOG-02 | **`_writeFile` não filtra por nível** — `_writeConsole` respeita `logLevel` mas `_writeFile` escreve DEBUG a ERROR incondicionalmente. Inconsistência arquitetural.                                                                                   | `shared/logger.ts:167`        | HIGH       |
-| LOG-03 | **`_ensureDir()` falha permanentemente** — seta `_fileError = true` na primeira falha e nunca mais tenta. Sem retry, sem recovery.                                                                                                                    | `shared/logger.ts:67`         | MEDIUM     |
-| LOG-04 | **`rootLogger` singleton criado sem config** — construtor recebe `_config = null`, delega para `Config.get()` estático. Se `Config` não foi inicializado, comportamento imprevisível.                                                                 | `shared/logger.ts:57`         | MEDIUM     |
-| LOG-05 | **`maskDeep` não é recursivo** — só mascara chaves top-level. Objetos aninhados com `token`/`secret` vazam.                                                                                                                                           | `shared/logger.ts:29`         | MEDIUM     |
-| LOG-06 | **Performance: `fs.existsSync` em todo log** — `_ensureDir` faz syscall a cada `_write` até o primeiro cache hit. Mínimo mas desnecessário.                                                                                                           | `shared/logger.ts:67`         | LOW        |
+| ID     | Problema                                                                                                                                                                                                                                              | Arquivo                       | Severidade | Status (2026-07-16)                                                                                                                                                                                                                                                                           |
+| ------ | ----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | ----------------------------- | ---------- | --------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| LOG-01 | **`loadFeatureConfig` silencia `fs.existsSync` falso** — retorna `{}` sem warning quando `config/features.json` não existe. Fallback silencioso para `DEFAULT_PR_REPORT_CONFIG` (`enabled: false`) sem log. CAUSA RAIZ do PR Report não gerado em CI. | `shared/feature-config.ts:22` | CRITICAL   | ✅ RESOLVIDO (teste `shared/feature-config.test.ts`) — `loadFeatureConfig` emite `rootLogger.warn` explícito com a causa quando o arquivo não existe.                                                                                                                                         |
+| LOG-02 | **`_writeFile` não filtra por nível** — `_writeConsole` respeita `logLevel` mas `_writeFile` escreve DEBUG a ERROR incondicionalmente. Inconsistência arquitetural.                                                                                   | `shared/logger.ts:167`        | HIGH       | ✅ RESOLVIDO (teste `shared/logger.test.ts`) — filtro de nível aplicado em `_writeFile` + correção de case-sensitivity (`logLevel: 'error'` minúsculo antes retornava `envLevelNum=1`, quebrando o filtro de arquivo E console).                                                              |
+| LOG-03 | **`_ensureDir()` falha permanentemente** — seta `_fileError = true` na primeira falha e nunca mais tenta. Sem retry, sem recovery.                                                                                                                    | `shared/logger.ts:67`         | MEDIUM     | ✅ RESOLVIDO (teste `shared/logger.test.ts`) — `_fileError` resetado a cada `_writeFile` e `_ensureDir` reconstrói o path; recovery de falha transitória verificado.                                                                                                                          |
+| LOG-04 | **`rootLogger` singleton criado sem config** — construtor recebe `_config = null`, delega para `Config.get()` estático. Se `Config` não foi inicializado, comportamento imprevisível.                                                                 | `shared/logger.ts:57`         | MEDIUM     | ✅ RESOLVIDO POR DESIGN — `Logger` lê `Config.get(...)` de forma _lazy_ em cada `_write`/`_ensureDir` (não no construtor), então o nível/dir efetivo é resolvido no momento do log, após `Config.load()`.                                                                                     |
+| LOG-05 | **`maskDeep` não é recursivo** — só mascara chaves top-level. Objetos aninhados com `token`/`secret` vazam.                                                                                                                                           | `shared/logger.ts:29`         | MEDIUM     | ✅ OBSOLETO (verificado 2026-07-16) — `maskDeep` (linhas 40-56) **já é recursivo**: itera `Object.entries`, mascara `SECRET_RE` em qualquer profundidade, mapeia arrays e recursa em objetos. Nenhuma alteração necessária.                                                                   |
+| LOG-06 | **Performance: `fs.existsSync` em todo log** — `_ensureDir` faz syscall a cada `_write` até o primeiro cache hit. Mínimo mas desnecessário.                                                                                                           | `shared/logger.ts:67`         | LOW        | ✅ RESOLVIDO (teste `shared/logger.test.ts` LOG-06) — cache validado contra `fs.existsSync(this._filePathCached)`: se o arquivo for removido externamente, o logger recria em vez de silenciar. O `existsSync` de cache agora é proposital (validação de vida do path), não desperdício cego. |
 
 ### Evidência do Impacto (LOG-01)
 
@@ -2474,14 +2474,14 @@ No CI run `27485916538` (push `b7d6021`), o post-processing logou:
 i PR Report disabled in config. Skipping.
 ```
 
-Sem warning, sem info adicional. A causa (`config/features.json` não encontrado) foi engolida por `loadFeatureConfig()` que retorna `{}` silenciosamente quando o arquivo não existe. O fallback para `DEFAULT_PR_REPORT_CONFIG` com `enabled: false` produziu um falso diagnóstico ("disabled in config") que ocultou a falha real de I/O.
+Sem warning, sem info adicional. A causa (`config/features.json` não encontrado) foi engolida por `loadFeatureConfig()` que retorna `{}` silenciosamente quando o arquivo não existe. O fallback para `DEFAULT_PR_REPORT_CONFIG` com `enabled: false` produziu um falso diagnóstico ("disabled in config") que ocultou a falha real de I/O. **Corrigido em 2026-07-16**: o warning explícito diferencia "arquivo ausente (não configurado)" de "usuário desabilitou por escolha".
 
 ### Ação Requerida
 
-1. Corrigir LOG-01 (adição imediata de warning)
-2. Investigar por que `config/features.json` não é encontrado no CI (CWD vs checkout)
-3. Corrigir LOG-02 a LOG-06 em sequência de severidade
-4. Garantir que o sistema de log produza evidência rastreável para qualquer ponto de falha em produção
+1. ~~Corrigir LOG-01 (adição imediata de warning)~~ ✅ CONCLUÍDO
+2. Investigar por que `config/features.json` não é encontrado no CI (CWD vs checkout) — **pendente de investigação em runtime de CI**; o warning agora torna a causa visível nos logs.
+3. ~~Corrigir LOG-02 a LOG-06 em sequência de severidade~~ ✅ CONCLUÍDO (LOG-02/03/04/05/06)
+4. Garantir que o sistema de log produza evidência rastreável para qualquer ponto de falha em produção — ✅ atendido pelas correções acima + nova Camada A (`local-no-swallow/no-swallow`) que bloqueia catch vazio / `console.error` direto em novo código.
 
 ---
 
@@ -2905,39 +2905,61 @@ export function buildAllStyles(): string {
 **Estratégia:** Auditoria separada da auditoria funcional corrente, a ser executada após conclusão do Grupo 3.
 **Regra absoluta:** zero workarounds, 100% teste para código novo/alterado.
 
-| Fase | Descrição                                                    | Itens | Status |
-| ---- | ------------------------------------------------------------ | ----- | ------ |
-| 1    | Auditar `Logger` class — error handling, masking, rotação    | LSA-1 | 📌     |
-| 2    | Corrigir T14 no logger — 3 ocorrências de `(err as Error)`   | LSA-2 | 📌     |
-| 3    | Auditar consumo — todos os catch blocks usam logger correto? | LSA-3 | 📌     |
-| 4    | Adicionar testes (unit + PBT) para o logger                  | LSA-4 | 📌     |
-| 5    | Validação: tsc + vitest + lint                               | LSA-5 | 📌     |
+| Fase | Descrição                                                    | Itens | Status (2026-07-16)                                                      |
+| ---- | ------------------------------------------------------------ | ----- | ------------------------------------------------------------------------ |
+| 1    | Auditar `Logger` class — error handling, masking, rotação    | LSA-1 | ✅ Concluída                                                             |
+| 2    | Corrigir T14 no logger — 3 ocorrências de `(err as Error)`   | LSA-2 | ✅ OBSOLETO (não há `(err as Error)` no código atual)                    |
+| 3    | Auditar consumo — todos os catch blocks usam logger correto? | LSA-3 | ⚠️ Parcial (ver abaixo)                                                  |
+| 4    | Adicionar testes (unit + PBT) para o logger                  | LSA-4 | ✅ Concluída (`shared/logger.test.ts` + `shared/feature-config.test.ts`) |
+| 5    | Validação: tsc + vitest + lint                               | LSA-5 | ✅ Concluída                                                             |
 
 ### Fase 1 — Auditoria Logger Class
 
-| ID     | Item                                                                | Arquivo(s)         | Status |
-| ------ | ------------------------------------------------------------------- | ------------------ | ------ |
-| LSA-1a | 🔍 Error handling: catch blocks validam erro com `instanceof`?      | `shared/logger.ts` | 📌     |
-| LSA-1b | 🔍 `maskDeep` cobre todos os campos sensíveis (token, secret, key)? | `shared/logger.ts` | 📌     |
-| LSA-1c | 🔍 Rotação não corrompe logs?                                       | `shared/logger.ts` | 📌     |
-| LSA-1d | 🔍 File handles gerenciados corretamente?                           | `shared/logger.ts` | 📌     |
-| LSA-1e | 🔍 Level filtering funciona para todos os níveis?                   | `shared/logger.ts` | 📌     |
+| ID     | Item                                                                | Arquivo(s)         | Status (2026-07-16)                                                                                                                                            |
+| ------ | ------------------------------------------------------------------- | ------------------ | -------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| LSA-1a | 🔍 Error handling: catch blocks validam erro com `instanceof`?      | `shared/logger.ts` | ✅ OK — usa `String(err)` e `('code' in Object(err) && (err as {code?:string}).code)` (Node errors podem não ser `instanceof Error`; `String(err)` é robusto). |
+| LSA-1b | 🔍 `maskDeep` cobre todos os campos sensíveis (token, secret, key)? | `shared/logger.ts` | ✅ OK — recursivo (linhas 40-56).                                                                                                                              |
+| LSA-1c | 🔍 Rotação não corrompe logs?                                       | `shared/logger.ts` | ✅ OK — `_rotateIfNeeded` renomeia e zera `_bytesWritten`.                                                                                                     |
+| LSA-1d | 🔍 File handles gerenciados corretamente?                           | `shared/logger.ts` | ✅ OK — `appendFileSync` (sem handle persistente).                                                                                                             |
+| LSA-1e | 🔍 Level filtering funciona para todos os níveis?                   | `shared/logger.ts` | ✅ CORRIGIDO — `_writeFile` + case-sensitivity (LOG-02).                                                                                                       |
 
 ### Fase 2 — Corrigir T14
 
-| ID     | Item                                                                | Arquivo(s)             | Status |
-| ------ | ------------------------------------------------------------------- | ---------------------- | ------ |
-| LSA-2a | 🐛 `_ensureDir` catch: `(err as Error).message` → `instanceof`      | `shared/logger.ts:90`  | 📌     |
-| LSA-2b | 🐛 `_rotateIfNeeded` catch: `(err as Error).message` → `instanceof` | `shared/logger.ts:109` | 📌     |
-| LSA-2c | 🐛 `_writeFile` catch: `(err as Error).message` → `instanceof`      | `shared/logger.ts:163` | 📌     |
+| ID     | Item                                                                | Arquivo(s)             | Status (2026-07-16)                                                 |
+| ------ | ------------------------------------------------------------------- | ---------------------- | ------------------------------------------------------------------- |
+| LSA-2a | 🐛 `_ensureDir` catch: `(err as Error).message` → `instanceof`      | `shared/logger.ts:90`  | ✅ OBSOLETO — código atual usa `String(err)`, não `(err as Error)`. |
+| LSA-2b | 🐛 `_rotateIfNeeded` catch: `(err as Error).message` → `instanceof` | `shared/logger.ts:109` | ✅ OBSOLETO — código atual usa `String(err)`.                       |
+| LSA-2c | 🐛 `_writeFile` catch: `(err as Error).message` → `instanceof`      | `shared/logger.ts:163` | ✅ OBSOLETO — código atual usa `String(err)`.                       |
 
 ### Fase 3 — Auditoria de Consumo
 
-| ID     | Item                                                            | Arquivo(s) | Status |
-| ------ | --------------------------------------------------------------- | ---------- | ------ |
-| LSA-3a | 🔍 Todos os catch blocks da codebase usam `rootLogger.error()`? | todos      | 📌     |
-| LSA-3b | 🔍 Algum catch block tem `console.error` direto sem logger?     | todos      | 📌     |
-| LSA-3c | 🔍 Algum catch block engole erro silenciosamente?               | todos      | 📌     |
+| ID     | Item                                                            | Arquivo(s) | Status (2026-07-16)                                                                                                                                                                                                     |
+| ------ | --------------------------------------------------------------- | ---------- | ----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| LSA-3a | 🔍 Todos os catch blocks da codebase usam `rootLogger.error()`? | todos      | ⚠️ Mitigado prospectivamente — nova regra ESLint `local-no-swallow/no-swallow` bloqueia catch vazio / `console.error` direto em código novo. Auditoria exaustiva do estoque existente fica fora do escopo desta sessão. |
+| LSA-3b | 🔍 Algum catch block tem `console.error` direto sem logger?     | todos      | ⚠️ Idem LSA-3a.                                                                                                                                                                                                         |
+| LSA-3c | 🔍 Algum catch block engole erro silenciosamente?               | todos      | ⚠️ Idem LSA-3a.                                                                                                                                                                                                         |
+
+---
+
+## 🔴 Débito: no-swallow legado (88 catch-blocks que engolem erro) — 2026-07-16
+
+**Status:** EM ABERTO — migrado para `audit/suppressions.yaml` com **sunset 7 dias (2026-07-23)**. Corrigir na raiz após o vencimento.
+
+**Causa:** O detector `local-no-swallow/no-swallow` (Camada A do error-handling-enforcement) foi ativado como `error` global em `eslint.config.mjs`. Ele identificou **81 catch-blocks** no estoque que engolem erro silenciosamente (catch vazio ou `return {} / [] / null` sem log), violando AGENTS §25 (zero silencing).
+
+**Decisão (usuário, 2026-07-16):** corrigir as de MAIOR severidade na raiz; migrar o restante para `audit/suppressions.yaml` com **sunset de 7 dias** (não 90). O detector continua `error` global; novos catch-swallow são bloqueados imediatamente.
+
+**Mecanismo de alerta:** `scripts/audit-suppressions.ts` emite AVISO DE SUNSET (URGENTE quando faltam <=7d) **toda vez que roda**, para cada entrada ativa com sunset. A partir de 2026-07-24 o script **falha** (`isExpired` → FATAL), forçando a correção na raiz.
+
+**Correção na raiz (após vencimento):** cada entrada em `audit/suppressions.yaml` (rule `local-no-swallow/no-swallow`) deve ser substituída por:
+
+- `throw err;` (relançar), ou
+- `throw new ExternalError(String(err));` (envolver e relançar), ou
+- `rootLogger.error('contexto', err); return <sentinela de contrato documentada>;`
+
+**Arquivos afetados (amostra):** `e2e/csv-import-errors.test.ts:83`, `git_triggers/interactive-mode.ts:901`, `git_triggers/pipeline-handler.ts:289`, `git_triggers/session-state.ts:199`, `git_triggers/test-results.ts:30/42/65`, `jira_management/commands/case11.ts:39`, `jira_management/commands/case18.ts:63`, `shared/result_parser.test.ts:153/182`, `shared/show-docs.ts:19`, `shared/state.ts:145`, `shared/store-backend.ts:55/106`. Lista completa em `audit/suppressions.yaml`.
+
+**Validação:** `npx tsx scripts/audit-suppressions.ts` (job CI `quality` → `audit-suppressions`).
 
 ---
 
@@ -3168,129 +3190,129 @@ Das 7 oportunidades, **3 são aplicáveis ao GitLab** com esforço similar ao Gi
 
 ### Fase 0 — Correção imediata do quality gate
 
-| ID    | Item                                                                                                    | Arquivo(s)                       | Status |
-| ----- | ------------------------------------------------------------------------------------------------------- | -------------------------------- | ------ |
-| CDH-0 | 🔧 Bug fix: `runQualityGate()` aceita `coverageOverride?`, `generatePrReport()` passa coverage override | `shared/quality-gate.ts`, `shared/pr-report-core.ts` | ✅ |
+| ID    | Item                                                                                                    | Arquivo(s)                                           | Status |
+| ----- | ------------------------------------------------------------------------------------------------------- | ---------------------------------------------------- | ------ |
+| CDH-0 | 🔧 Bug fix: `runQualityGate()` aceita `coverageOverride?`, `generatePrReport()` passa coverage override | `shared/quality-gate.ts`, `shared/pr-report-core.ts` | ✅     |
 
 ### Fase 1 — Completar GC-07 (metrics.ts usando Store)
 
-| ID    | Item                                                                                         | Arquivo(s)         | Status |
-| ----- | -------------------------------------------------------------------------------------------- | ------------------ | ------ |
-| CDH-1 | ♻️ Integrar `metrics.ts` com StoreBackend do Sprint C, corrigir GAP-3 (flush chamado)        | `shared/metrics.ts` | ✅ |
+| ID    | Item                                                                                  | Arquivo(s)          | Status |
+| ----- | ------------------------------------------------------------------------------------- | ------------------- | ------ |
+| CDH-1 | ♻️ Integrar `metrics.ts` com StoreBackend do Sprint C, corrigir GAP-3 (flush chamado) | `shared/metrics.ts` | ✅     |
 
 ### Fase 2 — Enriquecer tipos
 
-| ID    | Item                                                                                         | Arquivo(s)         | Status |
-| ----- | -------------------------------------------------------------------------------------------- | ------------------ | ------ |
-| CDH-2 | ✨ Adicionar `run_started_at`, `duration`, `started_at`, `finished_at` nos tipos CI/CD       | `shared/types/ci-cd.ts` | ✅ |
+| ID    | Item                                                                                   | Arquivo(s)              | Status |
+| ----- | -------------------------------------------------------------------------------------- | ----------------------- | ------ |
+| CDH-2 | ✨ Adicionar `run_started_at`, `duration`, `started_at`, `finished_at` nos tipos CI/CD | `shared/types/ci-cd.ts` | ✅     |
 
 ### Fase 3 — Criar CI Data Hub
 
-| ID    | Item                                                                                         | Arquivo(s)         | Status |
-| ----- | -------------------------------------------------------------------------------------------- | ------------------ | ------ |
-| CDH-3 | ✨ Criar `shared/ci-data.ts` — repositório central de métricas do CI                         | `shared/ci-data.ts` | ✅ |
+| ID    | Item                                                                 | Arquivo(s)          | Status |
+| ----- | -------------------------------------------------------------------- | ------------------- | ------ |
+| CDH-3 | ✨ Criar `shared/ci-data.ts` — repositório central de métricas do CI | `shared/ci-data.ts` | ✅     |
 
 ### Fase 4 — Integrar no pr-report-core
 
-| ID    | Item                                                                                         | Arquivo(s)         | Status |
-| ----- | -------------------------------------------------------------------------------------------- | ------------------ | ------ |
-| CDH-4 | ♻️ `generatePrReport()` aceita `ciData?: CiDataHub`, fallback para MetricsStore              | `shared/pr-report-core.ts` | ✅ |
+| ID    | Item                                                                            | Arquivo(s)                 | Status |
+| ----- | ------------------------------------------------------------------------------- | -------------------------- | ------ |
+| CDH-4 | ♻️ `generatePrReport()` aceita `ciData?: CiDataHub`, fallback para MetricsStore | `shared/pr-report-core.ts` | ✅     |
 
 ### Fase 5 — Atualizar health-score.ts
 
-| ID    | Item                                                                                         | Arquivo(s)         | Status |
-| ----- | -------------------------------------------------------------------------------------------- | ------------------ | ------ |
-| CDH-5 | ♻️ `calculateHealthScore()` aceita `ciData?: CiDataHub`                                      | `shared/health-score.ts` | ✅ |
+| ID    | Item                                                    | Arquivo(s)               | Status |
+| ----- | ------------------------------------------------------- | ------------------------ | ------ |
+| CDH-5 | ♻️ `calculateHealthScore()` aceita `ciData?: CiDataHub` | `shared/health-score.ts` | ✅     |
 
 ### Fase 6 — Atualizar quality-gate.ts
 
-| ID    | Item                                                                                         | Arquivo(s)         | Status |
-| ----- | -------------------------------------------------------------------------------------------- | ------------------ | ------ |
-| CDH-6 | ♻️ `runQualityGate()` aceita `ciData?: CiDataHub` + `coverageOverride?`                      | `shared/quality-gate.ts` | ✅ |
+| ID    | Item                                                                    | Arquivo(s)               | Status |
+| ----- | ----------------------------------------------------------------------- | ------------------------ | ------ |
+| CDH-6 | ♻️ `runQualityGate()` aceita `ciData?: CiDataHub` + `coverageOverride?` | `shared/quality-gate.ts` | ✅     |
 
 ### Fase 7 — Atualizar pipeline-cost.ts
 
-| ID    | Item                                                                                         | Arquivo(s)         | Status |
-| ----- | -------------------------------------------------------------------------------------------- | ------------------ | ------ |
-| CDH-7 | ♻️ `calculatePipelineCost()` aceita `ciData?: CiDataHub`                                     | `shared/pipeline-cost.ts` | ✅ |
+| ID    | Item                                                     | Arquivo(s)                | Status |
+| ----- | -------------------------------------------------------- | ------------------------- | ------ |
+| CDH-7 | ♻️ `calculatePipelineCost()` aceita `ciData?: CiDataHub` | `shared/pipeline-cost.ts` | ✅     |
 
 ### Fase 8 — Atualizar traceability-matrix.ts
 
-| ID    | Item                                                                                         | Arquivo(s)         | Status |
-| ----- | -------------------------------------------------------------------------------------------- | ------------------ | ------ |
-| CDH-8 | ♻️ `buildTraceabilityMatrix()` aceita `ciData?: CiDataHub`                                   | `shared/traceability-matrix.ts` | ✅ |
+| ID    | Item                                                       | Arquivo(s)                      | Status |
+| ----- | ---------------------------------------------------------- | ------------------------------- | ------ |
+| CDH-8 | ♻️ `buildTraceabilityMatrix()` aceita `ciData?: CiDataHub` | `shared/traceability-matrix.ts` | ✅     |
 
 ### Fase 9 — Atualizar 13 dashboards do Grupo 2
 
-| ID    | Item                                                                                         | Arquivo(s)         | Status |
-| ----- | -------------------------------------------------------------------------------------------- | ------------------ | ------ |
-| CDH-9 | ♻️ Todos os 13 dashboards leem de CiDataHub quando disponível                                | `shared/flakiness-dashboard.ts`, `shared/defect-trend.ts`, `shared/defect-seasonality.ts`, `shared/silent-regression.ts`, `shared/cross-squad-benchmark.ts`, `shared/suite-optimization.ts`, `shared/developer-profile.ts`, `shared/backlog-health.ts`, `shared/impact-alert.ts` | ✅ |
+| ID    | Item                                                          | Arquivo(s)                                                                                                                                                                                                                                                                       | Status |
+| ----- | ------------------------------------------------------------- | -------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | ------ |
+| CDH-9 | ♻️ Todos os 13 dashboards leem de CiDataHub quando disponível | `shared/flakiness-dashboard.ts`, `shared/defect-trend.ts`, `shared/defect-seasonality.ts`, `shared/silent-regression.ts`, `shared/cross-squad-benchmark.ts`, `shared/suite-optimization.ts`, `shared/developer-profile.ts`, `shared/backlog-health.ts`, `shared/impact-alert.ts` | ✅     |
 
 ### Fase 10 — Atualizar test impact (Grupo 3)
 
-| ID    | Item                                                                                         | Arquivo(s)         | Status |
-| ----- | -------------------------------------------------------------------------------------------- | ------------------ | ------ |
-| CDH-10 | ♻️ `calculateQuarantine()` e `compareRuns()` aceitam `ciData?: CiDataHub`                    | `shared/quarantine.ts`, `shared/run-comparison.ts` | ✅ |
+| ID     | Item                                                                      | Arquivo(s)                                         | Status |
+| ------ | ------------------------------------------------------------------------- | -------------------------------------------------- | ------ |
+| CDH-10 | ♻️ `calculateQuarantine()` e `compareRuns()` aceitam `ciData?: CiDataHub` | `shared/quarantine.ts`, `shared/run-comparison.ts` | ✅     |
 
 ### Fase 11 — Integrar git-artifact-downloader.ts
 
-| ID    | Item                                                                                         | Arquivo(s)         | Status |
-| ----- | -------------------------------------------------------------------------------------------- | ------------------ | ------ |
-| CDH-11 | ♻️ Torna-se parte da cadeia de fetch do CiDataHub                                            | `shared/git-artifact-downloader.ts` | ✅ |
+| ID     | Item                                              | Arquivo(s)                          | Status |
+| ------ | ------------------------------------------------- | ----------------------------------- | ------ |
+| CDH-11 | ♻️ Torna-se parte da cadeia de fetch do CiDataHub | `shared/git-artifact-downloader.ts` | ✅     |
 
 ### Fase 12 — Atualizar report-sections.ts
 
-| ID    | Item                                                                                         | Arquivo(s)         | Status |
-| ----- | -------------------------------------------------------------------------------------------- | ------------------ | ------ |
-| CDH-12 | ♻️ `buildHealthSection()`, `buildTimeline()`, `buildFlakySection()` recebem CiDataHub         | `shared/report-sections.ts` | ✅ |
+| ID     | Item                                                                                  | Arquivo(s)                  | Status |
+| ------ | ------------------------------------------------------------------------------------- | --------------------------- | ------ |
+| CDH-12 | ♻️ `buildHealthSection()`, `buildTimeline()`, `buildFlakySection()` recebem CiDataHub | `shared/report-sections.ts` | ✅     |
 
 ### Fase 13 — Testes unitários do CiDataHub
 
-| ID    | Item                                                                                         | Arquivo(s)         | Status |
-| ----- | -------------------------------------------------------------------------------------------- | ------------------ | ------ |
-| CDH-13 | 🧪 13 cenários: factory, métricas derivadas, edge cases                                     | `shared/__tests__/ci-data.test.ts` | ✅ |
+| ID     | Item                                                    | Arquivo(s)                         | Status |
+| ------ | ------------------------------------------------------- | ---------------------------------- | ------ |
+| CDH-13 | 🧪 13 cenários: factory, métricas derivadas, edge cases | `shared/__tests__/ci-data.test.ts` | ✅     |
 
 ### Fase 14 — Testes de integração do CiDataHub
 
-| ID    | Item                                                                                         | Arquivo(s)         | Status |
-| ----- | -------------------------------------------------------------------------------------------- | ------------------ | ------ |
-| CDH-14 | 🧪 10 cenários: API real, fallback, fluxo completo hub → consumers                          | `shared/__tests__/integration/ci-data.integration.test.ts` | ✅ |
+| ID     | Item                                                               | Arquivo(s)                                                 | Status |
+| ------ | ------------------------------------------------------------------ | ---------------------------------------------------------- | ------ |
+| CDH-14 | 🧪 10 cenários: API real, fallback, fluxo completo hub → consumers | `shared/__tests__/integration/ci-data.integration.test.ts` | ✅     |
 
 ### Fase 15 — Testes de integração dos consumidores
 
-| ID    | Item                                                                                         | Arquivo(s)         | Status |
-| ----- | -------------------------------------------------------------------------------------------- | ------------------ | ------ |
-| CDH-15 | 🧪 Atualizar testes existentes para incluir cenários com CiDataHub                          | `shared/__tests__/integration/health-score.integration.test.ts`, `shared/__tests__/integration/quality-gate.integration.test.ts` | ✅ |
+| ID     | Item                                                               | Arquivo(s)                                                                                                                       | Status |
+| ------ | ------------------------------------------------------------------ | -------------------------------------------------------------------------------------------------------------------------------- | ------ |
+| CDH-15 | 🧪 Atualizar testes existentes para incluir cenários com CiDataHub | `shared/__tests__/integration/health-score.integration.test.ts`, `shared/__tests__/integration/quality-gate.integration.test.ts` | ✅     |
 
 ### Fase 16 — Sanitização de estruturas deprecadas
 
-| ID    | Item                                                                                         | Arquivo(s)         | Status |
-| ----- | -------------------------------------------------------------------------------------------- | ------------------ | ------ |
-| CDH-16 | ♻️ Marcar estruturas com `@deprecated` quando CI disponível, manter como fallback              | múltiplos | ✅ |
+| ID     | Item                                                                              | Arquivo(s) | Status |
+| ------ | --------------------------------------------------------------------------------- | ---------- | ------ |
+| CDH-16 | ♻️ Marcar estruturas com `@deprecated` quando CI disponível, manter como fallback | múltiplos  | ✅     |
 
 ### Fase 17 — Verificação e Validação
 
-| ID    | Item                                                                                         | Critério           | Status |
-| ----- | -------------------------------------------------------------------------------------------- | ------------------ | ------ |
-| CDH-17 | 🔍 tsc + vitest + lint + unused-exports + depcruise + validação de dados e fallback          | 0 erros, 100% pass | ✅ |
+| ID     | Item                                                                                | Critério           | Status |
+| ------ | ----------------------------------------------------------------------------------- | ------------------ | ------ |
+| CDH-17 | 🔍 tsc + vitest + lint + unused-exports + depcruise + validação de dados e fallback | 0 erros, 100% pass | ✅     |
 
 ### Fase 18 — Auditoria pós-implementação
 
-| ID    | Item                                                                                         | Critério           | Status |
-| ----- | -------------------------------------------------------------------------------------------- | ------------------ | ------ |
-| CDH-18 | 🔍 Auditoria completa: integridade, contrato, cobertura, regressão                          | 21/21 consumers integrados, 100% coverage | ✅ |
+| ID     | Item                                                               | Critério                                  | Status |
+| ------ | ------------------------------------------------------------------ | ----------------------------------------- | ------ |
+| CDH-18 | 🔍 Auditoria completa: integridade, contrato, cobertura, regressão | 21/21 consumers integrados, 100% coverage | ✅     |
 
 ### Métricas Alvo
 
-| Métrica                              | Alvo                   |
-| ------------------------------------ | ---------------------- |
-| `tsc --noEmit`                       | **0 erros**            |
-| `vitest run`                         | **100% pass**          |
-| `npm run lint`                       | **0 violações**        |
-| `npm run unused-exports`             | **0 exports não utilizados** |
-| `npx depcruise`                      | **0 violações**        |
-| Health score no PR comment = check run | **idêntico**         |
-| Quality gate usa coverage override   | **sim**                |
-| 21 consumers integrados              | **21/21**              |
-| Cobertura CiDataHub                  | **≥90% statements**    |
-| Testes de integração                 | **10+ cenários**       |
+| Métrica                                | Alvo                         |
+| -------------------------------------- | ---------------------------- |
+| `tsc --noEmit`                         | **0 erros**                  |
+| `vitest run`                           | **100% pass**                |
+| `npm run lint`                         | **0 violações**              |
+| `npm run unused-exports`               | **0 exports não utilizados** |
+| `npx depcruise`                        | **0 violações**              |
+| Health score no PR comment = check run | **idêntico**                 |
+| Quality gate usa coverage override     | **sim**                      |
+| 21 consumers integrados                | **21/21**                    |
+| Cobertura CiDataHub                    | **≥90% statements**          |
+| Testes de integração                   | **10+ cenários**             |
