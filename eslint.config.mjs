@@ -10,7 +10,7 @@ import promise from 'eslint-plugin-promise';
 import vitest from '@vitest/eslint-plugin';
 import sonarjs from 'eslint-plugin-sonarjs';
 import unusedImports from 'eslint-plugin-unused-imports';
-import localResult from './scripts/eslint-plugins/result-catraca.cjs';
+import localNoSwallow from './scripts/eslint-plugins/no-swallow.cjs';
 
 const tsconfigRootDir = dirname(fileURLToPath(import.meta.url));
 
@@ -187,7 +187,7 @@ export default defineConfig(
         },
         plugins: {
             'unused-imports': unusedImports,
-            'local-result': localResult,
+            'local-no-swallow': localNoSwallow,
         },
         rules: {
             'prefer-const': 'error',
@@ -210,9 +210,13 @@ export default defineConfig(
             '@typescript-eslint/no-unsafe-member-access': 'error',
             '@typescript-eslint/no-unsafe-argument': 'error',
             '@typescript-eslint/no-unsafe-return': 'error',
-            // Catraca (turnstile): obriga tratamento de Result (port de Rust #[must_use]).
-            // Só morde valores do tipo neverthrow.Result, logo é zero-falso-positivo em código legado.
-            'local-result/must-use-result': 'error',
+            // Detector de supressão real: bloqueia catch que engole erro (fallback silencioso,
+            // retorno de default sem log, ou swallow de Result). Substitui a catraca
+            // 'result-catraca' (teatral: repo não usa neverthrow, logo 0 disparos).
+            // Estoque legado (88 ocorrências) migrado para audit/suppressions.yaml com
+            // sunset 7d (2026-07-23); apos o vencimento voltam a quebrar o CI. Novo código
+            // é bloqueado imediatamente.
+            'local-no-swallow/no-swallow': 'error',
             'no-restricted-syntax': [
                 'error',
                 {

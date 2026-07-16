@@ -1,0 +1,25 @@
+{
+    "$schema": "https://stryker-mutator.io/stryker-configuration-schema.json",
+    "packageManager": "npm",
+    "reporters": ["html", "clear-text", "progress"],
+    "testRunner": "vitest",
+    "vitest": {
+        "configFile": "vitest.config.ts"
+    },
+    "checkers": ["typescript"],
+    "tsconfigFile": "tsconfig.json",
+    "coverageAnalysis": "perTest",
+    "thresholds": {
+        "mutation": 50,
+        "break": true
+    },
+    "mutate": ["shared/**/*.ts", "jira_management/**/*.ts", "git_triggers/**/*.ts", "scripts/**/*.ts"],
+    "ignorePatterns": [
+        "**/*.test.ts",
+        "**/node_modules/**",
+        "**/dist/**",
+        "scripts/eslint-plugins/**",
+        "scripts/run-mutation.ts",
+        "scripts/audit-suppressions.ts"
+    ]
+}
