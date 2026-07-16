@@ -1,4 +1,7 @@
 import { EventEmitter } from 'events';
+import fs from 'node:fs';
+import os from 'node:os';
+import path from 'node:path';
 import { Output, defaultOutput } from './output.js';
 import * as entryMenuModule from './entry-menu.js';
 import * as promptModule from './prompt.js';
@@ -15,6 +18,9 @@ vi.mock('./output', () => {
 });
 
 vi.mock('child_process', () => ({ spawn: vi.fn() }));
+vi.mock('./migration/migrate-projects.js', () => ({
+    migrateLegacyProjects: vi.fn(() => ({ migrated: 0, skipped: 0, renamed: false })),
+}));
 
 import { spawn } from 'child_process';
 const mockSpawn = vi.mocked(spawn);
@@ -94,15 +100,23 @@ describe('RunModule', () => {
 
 describe('Main', () => {
     let printSpy: ReturnType<typeof vi.spyOn>;
+    let xdg: string;
 
     beforeEach(() => {
         vi.clearAllMocks();
         vi.spyOn(console, 'clear').mockImplementation(() => {});
         printSpy = vi.spyOn(defaultOutput, 'print');
+        // Isola registry/state XDG para o boot do menu não enxergar projetos
+        // de outras suítes nem migrar config/projects.json do cwd (coberto por
+        // testes dedicados de _initInfrastructure).
+        xdg = fs.mkdtempSync(path.join(os.tmpdir(), 'em-main-xdg-'));
+        process.env['XDG_CONFIG_HOME'] = xdg;
+        process.env['XDG_STATE_HOME'] = xdg;
     });
 
     afterEach(() => {
         vi.restoreAllMocks();
+        fs.rmSync(xdg, { recursive: true, force: true });
     });
 
     it('prints usage when not TTY', async () => {
