@@ -29,7 +29,12 @@
         "osv-scan": "osv-scanner --lockfile=package-lock.json --format json > osv-report.json 2>&1 || true",
         "sonar": "npx sonar-scanner",
         "type-coverage": "npx type-coverage --detail --at-least 95",
-        "depcruise": "npx depcruise --config .dependency-cruiser.js shared/ jira_management/ git_triggers/ scripts/"
+        "depcruise": "npx depcruise --config .dependency-cruiser.js shared/ jira_management/ git_triggers/ scripts/",
+        "semgrep": "npx tsx scripts/run-semgrep.ts",
+        "semgrep:diff": "npx tsx scripts/run-semgrep.ts --diff",
+        "no-swallow": "npx tsx scripts/run-noswallow.ts",
+        "mutation": "npx tsx scripts/run-mutation.ts",
+        "audit-suppressions": "npx tsx scripts/audit-suppressions.ts"
     },
     "license": "ISC",
     "type": "module",
@@ -84,6 +89,9 @@
         "nock": "^14.0.16",
         "prettier": "^3.8.4",
         "quickjs-emscripten": "^0.32.0",
+        "@stryker-mutator/core": "^9.0.0",
+        "@stryker-mutator/vitest-runner": "^9.0.0",
+        "@stryker-mutator/typescript-checker": "^9.0.0",
         "ts-morph": "^28.0.0",
         "ts-prune": "^0.10.3",
         "tsx": "^4.22.3",

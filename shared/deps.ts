@@ -26,8 +26,9 @@ import yaml from 'yaml';
 import zod from 'zod';
 import { globSync } from 'glob';
 import fc from 'fast-check';
+import nock from 'nock';
 
-export { chalk, axios, AdmZip, cliProgress, CliTable3, csv, dotenv, figlet, readlineSync, yaml, zod, fc };
+export { chalk, axios, AdmZip, cliProgress, CliTable3, csv, dotenv, figlet, readlineSync, yaml, zod, fc, nock };
 
 export { globSync };
 

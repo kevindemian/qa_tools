@@ -78,12 +78,13 @@ export class Logger {
     }
 
     _ensureDir(): boolean {
-        if (this._fileError) return false;
         const logFile = this._config?.get('logFile') ?? Config.get('logFile');
         if (!logFile) return false;
 
         const logDir = this._config?.get('logDir') ?? Config.get('logDir');
-        if (this._logDir == logDir && this._filePathCached) return true;
+        if (this._logDir == logDir && this._filePathCached && fs.existsSync(this._filePathCached)) {
+            return true;
+        }
         if (!logDir) return false;
 
         try {
@@ -92,6 +93,7 @@ export class Logger {
             const date = formatDateISO();
             this._filePathCached = path.join(logDir, `qa-tools-${date}.log`);
             this._initFileBytes();
+            this._fileError = false;
             return true;
         } catch (err) {
             this._fileError = true;
@@ -138,8 +140,8 @@ export class Logger {
 
     _writeConsole(level: string, msg: string, data?: unknown): void {
         const levelNum = LEVELS.get(level) ?? 1;
-        const envLevel = this._config?.get('logLevel') ?? Config.get('logLevel') ?? 'info';
-        const envLevelNum = LEVELS.get(envLevel) ?? 1;
+        const envLevelRaw = this._config?.get('logLevel') ?? Config.get('logLevel') ?? 'info';
+        const envLevelNum = LEVELS.get(String(envLevelRaw).toUpperCase()) ?? 1;
         if (levelNum < envLevelNum) return;
 
         const prefix = PREFIXES.get(level) ?? '?';
@@ -161,6 +163,12 @@ export class Logger {
     }
 
     _writeFile(level: string, msg: string, data?: unknown): void {
+        const levelNum = LEVELS.get(level) ?? 1;
+        const envLevelRaw = this._config?.get('logLevel') ?? Config.get('logLevel') ?? 'info';
+        const envLevelNum = LEVELS.get(String(envLevelRaw).toUpperCase()) ?? 1;
+        if (levelNum < envLevelNum) return;
+
+        this._fileError = false;
         if (!this._ensureDir()) return;
 
         const timestamp = new Date().toISOString();
