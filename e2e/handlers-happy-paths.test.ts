@@ -1,21 +1,46 @@
-vi.mock('../shared/prompt', async () => {
-    const actual = await vi.importActual<typeof import('../shared/prompt.js')>('../shared/prompt');
-    return {
-        ...actual,
-        prompt: vi.fn<(...args: []) => string>().mockReturnValue(''),
-        confirm: vi.fn<(...args: []) => boolean>().mockReturnValue(true),
-        ask: vi.fn<(...args: []) => Promise<string>>().mockResolvedValue(''),
-        askMultiline: vi.fn<(...args: []) => Promise<string>>().mockResolvedValue(''),
-        askConfirm: vi.fn<(...args: []) => Promise<boolean>>().mockResolvedValue(true),
-        smartPrompt: vi.fn<(...args: []) => Promise<string>>().mockResolvedValue('v2.0.0'),
-    };
-});
+vi.mock('../shared/prompt', () => ({
+    __setConfig: vi.fn(),
+    __setOraDep: vi.fn(),
+    isQuiet: vi.fn<() => boolean>().mockReturnValue(true),
+    __setSelectMod: vi.fn(),
+    __setInputMod: vi.fn(),
+    __setConfirmMod: vi.fn(),
+    __setEditorMod: vi.fn(),
+    badge: vi.fn(),
+    success: vi.fn(),
+    error: vi.fn(),
+    warn: vi.fn(),
+    info: vi.fn(),
+    helpLine: vi.fn(),
+    print: vi.fn(),
+    title: vi.fn(),
+    divider: vi.fn(),
+    humanizeError: vi.fn((e: unknown) => (e instanceof Error ? e.message : String(e))),
+    extractErrorMessage: vi.fn((e: unknown) => (e instanceof Error ? e.message : String(e))),
+    printError: vi.fn(),
+    printSummary: vi.fn(),
+    onError: vi.fn(),
+    tableView: vi.fn(),
+    CancelError: class extends Error {},
+    ProgressBar: class {
+        update(): void {}
+        stop(): void {}
+    },
+    withSpinner: vi.fn(async (_label: string, fn: () => Promise<unknown>) => fn()),
+    prompt: vi.fn<(...args: []) => string>().mockReturnValue(''),
+    confirm: vi.fn<(...args: []) => boolean>().mockReturnValue(true),
+    smartPrompt: vi.fn<(...args: []) => Promise<string>>().mockResolvedValue('v2.0.0'),
+    showSelect: vi.fn<(...args: []) => Promise<string>>().mockResolvedValue(''),
+    askFilePath: vi.fn<(...args: []) => Promise<string>>().mockResolvedValue(''),
+    ask: vi.fn<(...args: []) => Promise<string>>().mockResolvedValue(''),
+    askMultiline: vi.fn<(...args: []) => Promise<string>>().mockResolvedValue(''),
+    askConfirm: vi.fn<(...args: []) => Promise<boolean>>().mockResolvedValue(true),
+}));
 vi.mock('../shared/state', () => ({
     load: vi.fn<(...args: []) => { [key: string]: unknown }>().mockReturnValue({}),
     update: vi.fn<(...args: [{ [key: string]: unknown }]) => void>(),
 }));
 vi.mock('../shared/open', () => ({ openWithOsOrFallback: vi.fn<(...args: [string]) => void>() }));
-
 import fs from 'fs';
 import path from 'path';
 import os from 'os';
@@ -76,6 +101,12 @@ describe('Handlers Happy Paths', () => {
         process.env['JIRA_PERSONAL_TOKEN'] = E2E_TOKEN;
         process.env['XRAY_BASE_URL'] = HOST;
         process.env['QUIET'] = 'true';
+        // The repo's .env.test forces JIRA_MODE=cloud. These e2e suites mock the
+        // Jira Server HTTP surface via nock (issue links, custom fields), so the
+        // real Config must resolve to server mode. We set it explicitly so the
+        // production code runs with the mode its mocks represent (no internal
+        // mock/theater). This is the external boundary, not internal logic.
+        process.env['JIRA_MODE'] = 'server';
         nock.disableNetConnect();
     });
 
@@ -542,9 +573,17 @@ describe('Handlers Happy Paths', () => {
                 { id: '11802', name: 'Test Execution' },
             ]);
             api.post('/issue').reply(201, { key: 'EXEC-1', id: '20001' });
-            // createWithLinks → GET /issue/EXEC-1 to check existing links
-            api.get('/issue/EXEC-1').reply(200, { key: 'EXEC-1', fields: { issuelinks: [] } });
-            // createIssueLinks → GET /issueLinkType (cached), POST /issueLink per key
+            // Server mode: create() resolves the Xray Server custom field to attach tests.
+            api.get('/field').reply(200, [
+                {
+                    id: 'customfield_10010',
+                    name: 'Test Execution Tests',
+                    schema: { custom: 'com.xpandit.plugins.xray:testexec-tests-custom-field' },
+                },
+            ]);
+            // createWithLinks → GET /issue/EXEC-1 to check existing links, then link tests via issue links.
+            api.get('/issue/EXEC-1').reply(200, { key: 'EXEC-1', id: '20001', fields: { issuelinks: [] } });
+            // createIssueLink → GET /issueLinkType (cached), POST /issueLink per test key.
             api.get('/issueLinkType').reply(200, {
                 issueLinkTypes: [{ id: '10201', name: 'Tests', inward: 'is tested by', outward: 'tests' }],
             });
@@ -568,6 +607,7 @@ describe('Handlers Happy Paths', () => {
             await mod.handler(c);
 
             expect(c.pushHistory).toHaveBeenCalledWith('create-testexec', 'EXEC-1', 'ok');
+            // Server mode: tests are associated to the TE via the "Tests" issue link.
             expect(nock.isDone()).toBeTruthy();
         });
     });
@@ -614,7 +654,17 @@ describe('Handlers Happy Paths', () => {
                 { id: '11802', name: 'Test Execution' },
             ]);
             api.post('/issue').reply(201, { key: 'EXEC-1', id: '20001' });
-            api.get('/issue/EXEC-1').reply(200, { key: 'EXEC-1', fields: { issuelinks: [] } });
+            // Server mode: create() resolves the Xray Server custom field to attach tests.
+            api.get('/field').reply(200, [
+                {
+                    id: 'customfield_10010',
+                    name: 'Test Execution Tests',
+                    schema: { custom: 'com.xpandit.plugins.xray:testexec-tests-custom-field' },
+                },
+            ]);
+            // createWithLinks → GET /issue/EXEC-1 to check existing links, then link tests via issue links.
+            api.get('/issue/EXEC-1').reply(200, { key: 'EXEC-1', id: '20001', fields: { issuelinks: [] } });
+            // createIssueLink → GET /issueLinkType (cached), POST /issueLink per test key.
             api.get('/issueLinkType').reply(200, {
                 issueLinkTypes: [{ id: '10201', name: 'Tests', inward: 'is tested by', outward: 'tests' }],
             });
@@ -637,6 +687,7 @@ describe('Handlers Happy Paths', () => {
 
             expect(c.pushHistory).toHaveBeenCalledWith('importar-json', '1 testes', 'ok');
             expect(c.pushHistory).toHaveBeenCalledWith('create-testexec', 'EXEC-1', 'ok');
+            // Server mode: tests are associated to the TE via the "Tests" issue link.
             expect(nock.isDone()).toBeTruthy();
         }, 15000);
     });

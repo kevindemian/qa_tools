@@ -1,30 +1,27 @@
-import { describe, it, expect, vi } from 'vitest';
+import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest';
+import { nock } from '../shared/deps.js';
 
-vi.mock('../shared/config', () => ({
-    default: {
-        getDefault: () => ({
-            get: (_key: string) => undefined,
-        }),
-        get: (_key: string) => undefined,
-    },
-}));
+const XRAY_CLOUD = 'http://localhost:1999';
+const XRAY_CLOUD_PATH = '/xray';
 
-import { importExecutionResults } from './result_reporter.js';
+let lastGraphqlBody: { variables?: { testExecIssueId?: string; testIssueIds?: string[] } } | undefined;
+
+import { importExecutionResults, linkTestsToTe } from './result_reporter.js';
 import type { JiraResourceLike } from '../shared/types.js';
 
 function makeResource(withApiRoot: boolean): JiraResourceLike {
-    const base: JiraResourceLike = {
-        getJiraResource: vi.fn().mockResolvedValue({}),
-        postJiraResource: vi.fn().mockResolvedValue({}),
-        putJiraResource: vi.fn().mockResolvedValue(null),
-        searchJiraIssues: vi.fn().mockResolvedValue({ issues: [] }),
-        getTransitionsForIssue: vi.fn().mockResolvedValue({}),
-        transitionIssue: vi.fn().mockResolvedValue(undefined),
+    const res: JiraResourceLike = {
+        getJiraResource: vi.fn(() => Promise.resolve({})) as unknown as JiraResourceLike['getJiraResource'],
+        postJiraResource: vi.fn(() => Promise.resolve({})) as unknown as JiraResourceLike['postJiraResource'],
+        putJiraResource: vi.fn(() => Promise.resolve(null)),
+        searchJiraIssues: vi.fn(() => Promise.resolve({ issues: [], total: 0 })),
+        getTransitionsForIssue: vi.fn(() => Promise.resolve({})),
+        transitionIssue: vi.fn(() => Promise.resolve(undefined)),
     };
     if (withApiRoot) {
-        base.postToApiRoot = vi.fn().mockResolvedValue(null);
+        res.postToApiRoot = vi.fn(() => Promise.resolve(null));
     }
-    return base;
+    return res;
 }
 
 const matched = [
@@ -40,7 +37,7 @@ describe('ImportExecutionResults (C0)', () => {
         const resource = makeResource(true);
         await importExecutionResults(resource, 'EXEC-1', matched);
 
-        const mock = resource.postToApiRoot as ReturnType<typeof vi.fn>;
+        const mock = vi.mocked(resource.postToApiRoot as NonNullable<JiraResourceLike['postToApiRoot']>);
 
         expect(mock).toHaveBeenCalledWith('rest/raven/2.0/api/import/execution/json', expect.any(Object));
 
@@ -78,10 +75,82 @@ describe('ImportExecutionResults (C0)', () => {
         expect.hasAssertions();
 
         const resource = makeResource(true);
-        const mock = resource.postToApiRoot as ReturnType<typeof vi.fn>;
+        const mock = vi.mocked(resource.postToApiRoot as NonNullable<JiraResourceLike['postToApiRoot']>);
         mock.mockRejectedValueOnce(new Error('401 Unauthorized'));
 
         await expect(importExecutionResults(resource, 'EXEC-1', matched)).resolves.toBeUndefined();
         expect(mock).toHaveBeenCalledWith('rest/raven/2.0/api/import/execution/json', expect.any(Object));
+    });
+});
+
+describe('LinkTestsToTe (Xray Cloud association)', () => {
+    const matchedTests = [
+        { key: 'TEST-1', status: 'passed' },
+        { key: 'TEST-2', status: 'failed' },
+        { key: 'TEST-3', status: 'skipped' },
+    ];
+
+    function makeCloudResource(): JiraResourceLike {
+        return {
+            getJiraResource: ((path: string) => {
+                if (path === 'issue/TEST-1') return Promise.resolve({ id: '200' });
+                if (path === 'issue/TEST-2') return Promise.resolve({ id: '201' });
+                if (path === 'issue/EXEC-1') return Promise.resolve({ id: '100' });
+                return Promise.resolve({ id: '0' });
+            }) as JiraResourceLike['getJiraResource'],
+            postJiraResource: vi.fn(() => Promise.resolve({})) as unknown as JiraResourceLike['postJiraResource'],
+            putJiraResource: vi.fn(() => Promise.resolve(null)),
+            searchJiraIssues: vi.fn(() => Promise.resolve({ issues: [], total: 0 })),
+            getTransitionsForIssue: vi.fn(() => Promise.resolve({})),
+            transitionIssue: vi.fn(() => Promise.resolve(undefined) as ReturnType<JiraResourceLike['transitionIssue']>),
+        };
+    }
+
+    function mockXrayCloudGraphql(): nock.Scope {
+        const xray = nock(XRAY_CLOUD + XRAY_CLOUD_PATH).defaultReplyHeaders({ 'Content-Type': 'application/json' });
+        xray.post('/api/v2/authenticate').reply(200, 'mock-token');
+        return xray.post('/api/v2/graphql').reply(200, (_uri: string, reqBody: unknown) => {
+            lastGraphqlBody = reqBody as { variables?: { testExecIssueId?: string; testIssueIds?: string[] } };
+            return { data: { addTestsToTestExecution: { addedTests: 2, warning: null } } };
+        });
+    }
+
+    beforeEach(() => {
+        process.env['JIRA_MODE'] = 'cloud';
+        process.env['XRAY_CLIENT_ID'] = 'cid';
+        process.env['XRAY_CLIENT_SECRET'] = 'csecret';
+        process.env['XRAY_CLOUD_URL'] = XRAY_CLOUD + XRAY_CLOUD_PATH;
+        lastGraphqlBody = undefined;
+        nock.cleanAll();
+        nock.disableNetConnect();
+    });
+
+    afterEach(() => {
+        nock.cleanAll();
+        nock.enableNetConnect();
+        delete process.env['JIRA_MODE'];
+        delete process.env['XRAY_CLIENT_ID'];
+        delete process.env['XRAY_CLIENT_SECRET'];
+        delete process.env['XRAY_CLOUD_URL'];
+    });
+
+    it('associates via native Xray Cloud GraphQL, skipping skipped tests, never issue links', async () => {
+        expect.hasAssertions();
+
+        const resource = makeCloudResource();
+        const linkManager = {
+            createIssueLink: vi.fn(() => Promise.resolve(undefined)),
+        } as unknown as import('./jira_link_manager.js').default;
+
+        mockXrayCloudGraphql();
+
+        await linkTestsToTe(matchedTests, { key: 'EXEC-1' }, linkManager, resource);
+
+        expect(lastGraphqlBody).toBeDefined();
+        expect(lastGraphqlBody?.variables?.testExecIssueId).toBe('100');
+        expect(lastGraphqlBody?.variables?.testIssueIds).toStrictEqual(['200', '201']);
+        expect(
+            (linkManager as unknown as { createIssueLink: (...a: unknown[]) => Promise<unknown> }).createIssueLink,
+        ).not.toHaveBeenCalled();
     });
 });

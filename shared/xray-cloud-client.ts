@@ -137,4 +137,39 @@ export class XrayCloudClient {
         `;
         await this.graphqlMutation(mutation, { testIssueId, preconditionIssueIds }, clientId, clientSecret);
     }
+
+    /** Associate one or more Test issues to a Test Execution in Xray Cloud.
+     *  Uses the native GraphQL `addTestsToTestExecution` mutation (numeric issue ids),
+     *  which creates the native Xray Test Execution relationship — NOT a Jira issue link.
+     *  A plain Jira "Tests" issue link does NOT make the tests appear under the
+     *  execution's Tests section in Cloud mode (defect: test-execution-cloud-association-defect).
+     *  Throws on failure (GraphQL errors are surfaced by graphqlMutation). */
+    async addTestsToTestExecution(
+        testExecutionIssueId: string,
+        testIssueIds: string[],
+        clientId: string,
+        clientSecret: string,
+    ): Promise<number> {
+        if (!testExecutionIssueId) {
+            throw new Error('addTestsToTestExecution requires a test execution issue id');
+        }
+        if (!Array.isArray(testIssueIds) || testIssueIds.length === 0) {
+            throw new Error('addTestsToTestExecution requires at least one test issue id');
+        }
+        const mutation = `
+            mutation AddTestsToTestExecution($testExecIssueId: String!, $testIssueIds: [String!]!) {
+                addTestsToTestExecution(testExecIssueId: $testExecIssueId, testIssueIds: $testIssueIds) {
+                    addedTests
+                    warning
+                }
+            }
+        `;
+        await this.graphqlMutation(
+            mutation,
+            { testExecIssueId: testExecutionIssueId, testIssueIds },
+            clientId,
+            clientSecret,
+        );
+        return testIssueIds.length;
+    }
 }

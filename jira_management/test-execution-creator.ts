@@ -3,6 +3,7 @@ import { formatErr } from '../shared/errors.js';
 import { rootLogger } from '../shared/logger.js';
 import { success, info, withSpinner } from '../shared/prompt.js';
 import Config from '../shared/config.js';
+import { XrayCloudClient } from '../shared/xray-cloud-client.js';
 import type { JiraResourceLike } from '../shared/types.js';
 import type JiraLinkManager from './jira_link_manager.js';
 import {
@@ -176,6 +177,10 @@ export class TestExecutionCreator {
             return { linked: 0, failed: 0 };
         }
 
+        if (this._isCloud()) {
+            return this._linkTestsToExecutionCloud(teKey, unlinked, linked);
+        }
+
         await withSpinner('Linkando ' + unlinked.length + ' teste(s)...', async () => {
             for (const key of unlinked) {
                 try {
@@ -194,6 +199,84 @@ export class TestExecutionCreator {
         });
         if (linked > 0) success(linked + '/' + unlinked.length + ' testes vinculados.');
         return { linked, failed };
+    }
+
+    /** Resolve a Jira issue key to its numeric id via the REST API. */
+    private async _resolveNumericId(key: string): Promise<number | null> {
+        try {
+            const issue = await this.jiraResource.getJiraResource<{ id?: string } | undefined>('issue/' + key);
+            const numeric = Number(issue?.id);
+            return Number.isFinite(numeric) && numeric > 0 ? numeric : null;
+        } catch (err) {
+            rootLogger.warn('Falha ao resolver id numérico de ' + key + ': ' + formatErr(err));
+            return null;
+        }
+    }
+
+    /** Read Xray Cloud credentials from Config (throws if missing — safety mechanism). */
+    private _getCloudCredentials(): { clientId: string; clientSecret: string } {
+        const clientId = Config.getDefault().get('xrayClientId');
+        const clientSecret = Config.getDefault().get('xrayClientSecret');
+        if (!clientId || !clientSecret) {
+            throw new Error(
+                'Credenciais Xray Cloud (XRAY_CLIENT_ID/XRAY_CLIENT_SECRET) ausentes. Associação nativa Cloud indisponível.',
+            );
+        }
+        return { clientId, clientSecret };
+    }
+
+    /** Cloud-native test association via Xray GraphQL (addTestsToTestExecution). */
+    private async _linkTestsToExecutionCloud(
+        teKey: string,
+        unlinked: string[],
+        alreadyLinked: number,
+    ): Promise<{ linked: number; failed: number }> {
+        const cloudLog = rootLogger.child({ xray: 'cloud', target: teKey });
+        const teId = await this._resolveNumericId(teKey);
+        const testIds: number[] = [];
+        const unresolved: string[] = [];
+        for (const key of unlinked) {
+            const id = await this._resolveNumericId(key);
+            if (id === null) {
+                unresolved.push(key);
+            } else {
+                testIds.push(id);
+            }
+        }
+        if (teId === null) {
+            cloudLog.error('Test Execution ' + teKey + ' não possui id numérico válido (Cloud exige id numérico).');
+            return { linked: alreadyLinked, failed: unlinked.length };
+        }
+        if (testIds.length === 0) {
+            cloudLog.warn('Nenhum teste com id numérico válido para associar ao Test Execution Cloud.');
+            return { linked: alreadyLinked, failed: unlinked.length };
+        }
+        try {
+            const { clientId, clientSecret } = this._getCloudCredentials();
+            const client = new XrayCloudClient();
+            const associated = await client.addTestsToTestExecution(
+                String(teId),
+                testIds.map(String),
+                clientId,
+                clientSecret,
+            );
+            const failedCount = testIds.length - associated + unresolved.length;
+            if (associated > 0) success(associated + '/' + testIds.length + ' teste(s) associado(s) (Xray Cloud).');
+            if (unresolved.length > 0) {
+                cloudLog.warn(
+                    unresolved.length +
+                        ' teste(s) sem id numérico não puderam ser associados: ' +
+                        unresolved.join(', '),
+                );
+            }
+            if (failedCount > 0) {
+                cloudLog.error(failedCount + ' teste(s) falharam ao associar ao Test Execution Cloud.');
+            }
+            return { linked: alreadyLinked + associated, failed: failedCount };
+        } catch (err: unknown) {
+            cloudLog.error('Falha na associação nativa Xray Cloud: ' + formatErr(err));
+            return { linked: alreadyLinked, failed: testIds.length + unresolved.length };
+        }
     }
 
     /** Associate test keys with an existing Test Execution (custom field + issue links). */
@@ -237,7 +320,7 @@ export class TestExecutionCreator {
             rootLogger.error(CUSTOM_FIELD_NOT_FOUND);
             return null;
         } else {
-            execLog.info('Cloud mode: associando testes à TE via issue links (Xray Cloud nativo).');
+            execLog.info('Cloud mode: associando testes à TE via Xray Cloud nativo (GraphQL addTestsToTestExecution).');
         }
 
         const { linked, failed } = await this._linkTestsToExecution(teKey, testKeys);

@@ -169,4 +169,45 @@ describe('Shared/xray-cloud-client', () => {
             expect(headers?.Authorization).toContain('Bearer');
         });
     });
+
+    describe('AddTestsToTestExecution', () => {
+        it('throws when test execution issue id is empty', async () => {
+            expect.hasAssertions();
+            await expect(makeClient().addTestsToTestExecution('', ['1'], 'id', 'secret')).rejects.toThrow(
+                'requires a test execution issue id',
+            );
+        });
+
+        it('throws when test issue id list is empty', async () => {
+            expect.hasAssertions();
+            await expect(makeClient().addTestsToTestExecution('5', [], 'id', 'secret')).rejects.toThrow(
+                'requires at least one test issue id',
+            );
+        });
+
+        it('delegates to graphqlMutation with the native addTestsToTestExecution mutation', async () => {
+            expect.hasAssertions();
+
+            postSpy.mockResolvedValue({ data: { data: {}, errors: [] } });
+            await makeClient().addTestsToTestExecution('100', ['10', '11'], 'id', 'secret');
+
+            const call = postSpy.mock.calls.find((c) => c[0] === '/api/v2/graphql');
+
+            expect(call?.[0]).toBe('/api/v2/graphql');
+
+            expect((call?.[1] as { query?: string } | undefined)?.query).toContain('addTestsToTestExecution');
+
+            expect(
+                (call?.[1] as { variables?: { testExecIssueId?: string; testIssueIds?: string[] } } | undefined)
+                    ?.variables,
+            ).toStrictEqual({
+                testExecIssueId: '100',
+                testIssueIds: ['10', '11'],
+            });
+
+            const headers = (call?.[2] as { headers?: { Authorization?: string } } | undefined)?.headers;
+
+            expect(headers?.Authorization).toContain('Bearer');
+        });
+    });
 });

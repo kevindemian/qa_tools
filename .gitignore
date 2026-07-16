@@ -63,3 +63,6 @@ qa-quarantine.json
 .scannerwork/
 .eslintcache
 .prettier-cache/
+
+# === Session artifacts (ephemeral, not part of the project) ===
+archive/
