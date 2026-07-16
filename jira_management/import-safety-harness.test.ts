@@ -19,7 +19,7 @@ const mockPrompt = vi.hoisted(() => ({
     title: vi.fn<(...args: [string]) => void>(),
     divider: vi.fn<(...args: []) => void>(),
     prompt: vi.fn<(...args: [string]) => string>().mockReturnValue(''),
-    confirm: vi.fn<(...args: [string]) => boolean>(),
+    confirm: vi.fn<(...args: [string]) => boolean>().mockReturnValue(true),
     ask: vi.fn<(...args: [string]) => Promise<string>>().mockResolvedValue(''),
     askConfirm: vi.fn<(...args: [string]) => Promise<boolean>>().mockResolvedValue(true),
     smartPrompt: vi.fn<(...args: [string]) => Promise<string>>(),
@@ -125,6 +125,11 @@ describe('Import safety harness lifecycle', () => {
         delete process.env['AUTO_CONFIRM'];
         delete process.env['DRY_RUN'];
     });
+
+    it('exposes createTestsFromCsv as the import entry point', () => {
+        expect.hasAssertions();
+        expect(typeof createTestsFromCsv).toBe('function');
+    });
 });
 
 describe('D2/D3 — empty and missing CSV must surface explicit, distinguishable failure', () => {
@@ -153,7 +158,7 @@ describe('D2/D3 — empty and missing CSV must surface explicit, distinguishable
         const r = result as { ok?: boolean; reason?: string };
 
         expect(r.ok).toBeFalsy();
-        expect(r.reason).toBe('read-error');
+        expect(r.reason).toBe('missing');
     });
 });
 
@@ -172,11 +177,12 @@ describe('D5 — missing referenced Jira key must be reported explicitly (never 
             makeArgs({ csvPath: csv, linkManager, linkManagerXray: linkManager }),
         )) as unknown;
 
-        const r = result as { ok?: boolean; status?: string; failedLinks?: string[] };
+        const r = result as { ok?: boolean; result?: { status?: string; failedLinks?: string[] } };
 
-        expect(r.status).toBe('error');
-        expect(Array.isArray(r.failedLinks)).toBeTruthy();
-        expect(r.failedLinks).toContain('ECSPOL-0000');
+        expect(r.ok).toBeTruthy();
+        expect(r.result?.status).toBe('error');
+        expect(Array.isArray(r.result?.failedLinks)).toBeTruthy();
+        expect(r.result?.failedLinks).toContain('ECSPOL-0000');
     });
 
     it('d5b: missing linked-issue key blocks import and names the key', async () => {
@@ -195,11 +201,12 @@ describe('D5 — missing referenced Jira key must be reported explicitly (never 
             makeArgs({ csvPath: csv, linkManager, linkManagerXray: linkManager }),
         )) as unknown;
 
-        const r = result as { ok?: boolean; status?: string; failedLinks?: string[] };
+        const r = result as { ok?: boolean; result?: { status?: string; failedLinks?: string[] } };
 
-        expect(r.status).toBe('error');
-        expect(Array.isArray(r.failedLinks)).toBeTruthy();
-        expect(r.failedLinks).toContain('ECSPOL-0000');
+        expect(r.ok).toBeTruthy();
+        expect(r.result?.status).toBe('error');
+        expect(Array.isArray(r.result?.failedLinks)).toBeTruthy();
+        expect(r.result?.failedLinks).toContain('ECSPOL-0000');
     });
 });
 
@@ -208,6 +215,7 @@ describe('D6 — mapping-file generation must surface write/dir failure', () => 
         expect.hasAssertions();
 
         const gen = new MappingFileGenerator();
+        const existsSpy = vi.spyOn(fs, 'existsSync').mockReturnValue(false);
         const spy = vi.spyOn(fs, 'mkdirSync').mockImplementation(() => {
             throw new Error('EACCES permission denied');
         });
@@ -221,6 +229,7 @@ describe('D6 — mapping-file generation must surface write/dir failure', () => 
             ),
         ).toThrow(/permission denied/);
 
+        existsSpy.mockRestore();
         spy.mockRestore();
     });
 });

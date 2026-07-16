@@ -62,3 +62,29 @@
 | D7 | `create_tests.test.ts:766,776` | TEST-AS-DEFECT | HIGH | doc-only |
 
 **Recommended fix order (separate authorized pass):** D2/D3 (root: make `createTestsFromCsv` return explicit result/throw) → D4 (surface in `case01`) → D5 (make missing-key non-fatal-skip into explicit error) → D6 (surface generator failure) → D7 (correct codifying tests to match fixed behavior).
+
+---
+
+## BUG5 — No headless entry point for CSV import (CI/automation cannot run import non-interactively)
+
+- **Evidence:** `main.ts` only launches the interactive `runMainLoop`; there was no `--csv <path>` / `--auto` flag wired to `createTestsFromCsv`. Automation had to drive the menu or script `stdin`.
+- **Observed:** importing via CSV from CI required interactive prompts; failures could not be detected via exit code because the path did not exist.
+- **Expected (UX principle — recoverable errors must expose a recovery path; CI needs deterministic non-zero exit on failure):** a headless entry that runs the real pipeline, prints an explicit result, and exits `0` on success / non-zero on any explicit failure.
+- **Severity:** MEDIUM (automation/CI gap).
+- **Status:** RESOLVED. `main.ts` now parses `--csv <path>` (and `--auto` with `CSV_PATH` env), calls `createTestsFromCsv` directly, prints the `summary`, and calls `gracefulExit(ExitCode.ERROR)` on any `!outcome.ok` or thrown error. Verified: missing/empty/unreadable CSV and Jira-unreachable errors all exit non-zero with an explicit message; no interactive prompt is shown.
+
+---
+
+## Resolution status (fix pass applied)
+
+| ID | Fix | Verification |
+|----|-----|--------------|
+| D2/D3 | `readCsvTests`/`readJsonTests` return explicit `ReadTestsResult`; `createTestsFromCsv`/`Json` return `CsvImportOutcome` (never `undefined`). Empty vs missing vs read-error remain distinguishable. | `import-safety-harness.test.ts` d2/d3 GREEN |
+| D4 | `case01.ts` treats `!result.ok` with `warn` + `pushHistory(..., 'error')` + `return` (no silent no-op). | `case01.integration.test.ts` FT-41d GREEN |
+| D5 | `issue-linker.ts` `isMissingKeyError` + abort with `missingKey`; `failedLinks` threaded through loop → orchestrator → `summary` (`N vínculo(s) perdido(s): KEY`). Recoverable 403/network errors keep `onError`. | `import-safety-harness.test.ts` d5a/d5b GREEN |
+| D6 | `MappingFileGenerator.generate` throws on dir/write failure (cause preserved); dead path-traversal guards removed. | `import-safety-harness.test.ts` d6 GREEN |
+| D7 | `create_tests.test.ts:766,776` corrected to assert explicit failure; all consumers (`case01`, `case15`, `handlers`, e2e, integration) updated to the new contract. | `create_tests.test.ts`, `handlers.test.ts`, `case15.test.ts` GREEN |
+| BUG5 | Headless `--csv`/`--auto` entry in `main.ts` with deterministic exit codes. | manual `tsx main.ts --csv` smoke (exit 1 on failure) |
+
+**Validation:** `npx tsc --noEmit` clean; `npm run lint` clean (pre-existing `fs` non-literal warnings only); full `jira_management` suite GREEN (1044 tests). No workarounds, no silenced errors, no safety-mechanism weakening.
+

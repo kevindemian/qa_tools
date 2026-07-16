@@ -106,12 +106,14 @@ vi.mock('../commands/test-execution-flow.js', () => ({
 }));
 vi.mock('../create_tests.js', () => ({
     default: {
-        createTestsFromCsv: vi
-            .fn()
-            .mockResolvedValue({ inMemoryTasksId: [], inMemoryTasksText: [], summary: '', status: 'ok' }),
-        createTestsFromJson: vi
-            .fn()
-            .mockResolvedValue({ inMemoryTasksId: [], inMemoryTasksText: [], summary: '', status: 'ok' }),
+        createTestsFromCsv: vi.fn().mockResolvedValue({
+            ok: true,
+            result: { inMemoryTasksId: [], inMemoryTasksText: [], summary: '', status: 'ok', sourcePath: '' },
+        }),
+        createTestsFromJson: vi.fn().mockResolvedValue({
+            ok: true,
+            result: { inMemoryTasksId: [], inMemoryTasksText: [], summary: '', status: 'ok', sourcePath: '' },
+        }),
     },
 }));
 vi.mock('../../shared/dashboard-menu.js', () => ({

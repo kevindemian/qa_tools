@@ -136,6 +136,7 @@ describe('Import Orchestrator', () => {
                 summary: 'DRY-RUN simulado',
                 status: 'ok',
                 sourcePath: '/p.csv',
+                failedLinks: [],
             });
             const result = await prepareTestRun({
                 tests: makeTestCases(2),
@@ -153,6 +154,7 @@ describe('Import Orchestrator', () => {
                 summary: 'DRY-RUN simulado',
                 status: 'ok',
                 sourcePath: '/p.csv',
+                failedLinks: [],
             });
         });
     });
@@ -184,6 +186,7 @@ describe('Import Orchestrator', () => {
                 onBusy,
                 info: vi.fn(),
                 printSummary: vi.fn(),
+                failedLinks: [],
             });
 
             expect(result?.status).toBe('error');

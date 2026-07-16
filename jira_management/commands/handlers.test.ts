@@ -55,12 +55,15 @@ interface CreateTestsResult {
     summary: string;
     status: string;
     sourcePath: string;
+    failedLinks?: string[];
 }
+
+type CreateTestsOutcome = { ok: true; result: CreateTestsResult } | { ok: false; reason: string; error?: string };
 
 const mockCreateTests = vi.hoisted(() => {
     return {
-        createTestsFromCsv: vi.fn<(opts: { onBusy: (v: boolean) => void }) => Promise<CreateTestsResult | undefined>>(),
-        createTestsFromJson: vi.fn<(params: object) => Promise<CreateTestsResult | undefined>>(),
+        createTestsFromCsv: vi.fn<(opts: { onBusy: (v: boolean) => void }) => Promise<CreateTestsOutcome>>(),
+        createTestsFromJson: vi.fn<(params: object) => Promise<CreateTestsOutcome>>(),
         createTestExecutionWithLinks: vi.fn<(params: object) => Promise<{ key: string; summary: string } | null>>(),
     };
 });
@@ -801,11 +804,15 @@ describe('Handlers', () => {
 
             mockConfigMod['jsonPath'] = '/fake/tests.json';
             mockCreateTests.createTestsFromJson.mockResolvedValueOnce({
-                inMemoryTasksId: ['TEST-10', 'TEST-11'],
-                inMemoryTasksText: ['JSON test 1', 'JSON test 2'],
-                summary: '',
-                status: '',
-                sourcePath: '/fake/tests.json',
+                ok: true,
+                result: {
+                    inMemoryTasksId: ['TEST-10', 'TEST-11'],
+                    inMemoryTasksText: ['JSON test 1', 'JSON test 2'],
+                    summary: '',
+                    status: '',
+                    sourcePath: '/fake/tests.json',
+                    failedLinks: [],
+                },
             });
             const prompt = vi.mocked(promptModule);
             const mod = case15;
@@ -815,7 +822,7 @@ describe('Handlers', () => {
                 expect.objectContaining({ jsonPath: '/fake/tests.json' }),
             );
             expect(mockSessionContext.inMemoryTasksId).toStrictEqual(['TEST-10', 'TEST-11']);
-            expect(prompt.success).toHaveBeenCalledWith('Importacao JSON concluída: 2 testes');
+            expect(prompt.success).toHaveBeenCalledWith('Importacao JSON concluida: 2 testes');
             expect(baseContext.pushHistory).toHaveBeenCalledWith('importar-json', '2 testes', 'ok');
         });
 
@@ -823,7 +830,7 @@ describe('Handlers', () => {
             expect.hasAssertions();
 
             mockConfigMod['jsonPath'] = '/fake/tests.json';
-            mockCreateTests.createTestsFromJson.mockResolvedValueOnce(undefined);
+            mockCreateTests.createTestsFromJson.mockResolvedValueOnce({ ok: false, reason: 'read-error' });
             const mod = case15;
 
             await expect(mod.handler(baseContext)).resolves.toBeUndefined();
@@ -936,11 +943,14 @@ describe('Handlers', () => {
             mockConfigMod['csvPath'] = '/fake/test.csv';
             mockConfigMod['csvLabels'] = 'label1, label2';
             mockCreateTests.createTestsFromCsv.mockResolvedValueOnce({
-                inMemoryTasksId: ['TEST-1', 'TEST-2'],
-                inMemoryTasksText: ['First test', 'Second test'],
-                summary: '2 tests created from CSV',
-                status: 'ok',
-                sourcePath: '',
+                ok: true,
+                result: {
+                    inMemoryTasksId: ['TEST-1', 'TEST-2'],
+                    inMemoryTasksText: ['First test', 'Second test'],
+                    summary: '2 tests created from CSV',
+                    status: 'ok',
+                    sourcePath: '',
+                },
             });
             const mod = case01;
             await mod.handler(baseContext);
@@ -963,11 +973,14 @@ describe('Handlers', () => {
                     _opts.onBusy(true);
                     _opts.onBusy(false);
                     return {
-                        inMemoryTasksId: ['TEST-1'],
-                        inMemoryTasksText: ['Test'],
-                        summary: '1 test',
-                        status: 'ok',
-                        sourcePath: '',
+                        ok: true,
+                        result: {
+                            inMemoryTasksId: ['TEST-1'],
+                            inMemoryTasksText: ['Test'],
+                            summary: '1 test',
+                            status: 'ok',
+                            sourcePath: '',
+                        },
                     };
                 },
             );
@@ -988,11 +1001,14 @@ describe('Handlers', () => {
             state.load.mockReturnValue({ lastCsvPath: '/fake/test.csv' });
             state.loadTypedState.mockReturnValue({ lastCsvPath: '/fake/test.csv' });
             mockCreateTests.createTestsFromCsv.mockResolvedValueOnce({
-                inMemoryTasksId: ['TEST-1', 'TEST-2'],
-                inMemoryTasksText: ['Test 1', 'Test 2'],
-                summary: '2 tests',
-                status: 'ok',
-                sourcePath: '',
+                ok: true,
+                result: {
+                    inMemoryTasksId: ['TEST-1', 'TEST-2'],
+                    inMemoryTasksText: ['Test 1', 'Test 2'],
+                    summary: '2 tests',
+                    status: 'ok',
+                    sourcePath: '',
+                },
             });
             const flow = vi.mocked(flowModule);
             flow.offerTestExecutionAssociation.mockResolvedValueOnce({
@@ -1017,11 +1033,14 @@ describe('Handlers', () => {
             mockConfigMod['csvPath'] = '/fake/test.csv';
             mockConfigMod['csvLabels'] = '';
             mockCreateTests.createTestsFromJson.mockResolvedValueOnce({
-                inMemoryTasksId: ['TEST-10', 'TEST-11'],
-                inMemoryTasksText: ['JSON test 2b', 'JSON test 2c'],
-                summary: 'success',
-                status: '',
-                sourcePath: '',
+                ok: true,
+                result: {
+                    inMemoryTasksId: ['TEST-10', 'TEST-11'],
+                    inMemoryTasksText: ['JSON test 2b', 'JSON test 2c'],
+                    summary: 'success',
+                    status: '',
+                    sourcePath: '',
+                },
             });
             const prompt = vi.mocked(promptModule);
             prompt.ask.mockResolvedValueOnce('');

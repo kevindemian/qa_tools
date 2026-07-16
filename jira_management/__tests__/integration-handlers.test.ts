@@ -58,10 +58,14 @@ vi.mock('../../shared/first-run.js', () => ({
 vi.mock('../create_tests.js', () => ({
     default: {
         createTestsFromCsv: vi.fn().mockResolvedValue({
-            inMemoryTasksId: ['TEST-1', 'TEST-2'],
-            inMemoryTasksText: ['Test 1', 'Test 2'],
-            summary: '2 testes importados',
-            status: 'ok',
+            ok: true,
+            result: {
+                inMemoryTasksId: ['TEST-1', 'TEST-2'],
+                inMemoryTasksText: ['Test 1', 'Test 2'],
+                summary: '2 testes importados',
+                status: 'ok',
+                sourcePath: '',
+            },
         }),
     },
 }));

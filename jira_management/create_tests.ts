@@ -11,7 +11,7 @@ import MappingFileGenerator from './mapping-file-generator.js';
 import { rootLogger } from '../shared/logger.js';
 import IssueLinker from './issue-linker.js';
 import { resolveCsvPath, resolveJsonPath, resolveLabels, parseJsonTests } from './import-prep.js';
-import { createTestsFromTestCases } from './import-orchestrator.js';
+import { createTestsFromTestCases, type CreateTestsFromTestCasesResult } from './import-orchestrator.js';
 import { isQuiet, info, warn, printError } from '../shared/prompt.js';
 
 interface CreateFromFileParams {
@@ -27,35 +27,57 @@ interface CreateFromFileParams {
     jiraLabels?: string[];
 }
 
-/** Read and parse test cases from a CSV file. Returns undefined on error. */
-async function readCsvTests(csvResource: CsvResource, csvPath: string): Promise<TestCase[] | undefined> {
+/** Why a CSV/JSON read did not yield tests. Empty and missing must stay distinguishable (AGENTS.md §25). */
+type ReadFailure = 'empty' | 'missing' | 'read-error';
+
+type ReadTestsResult = { ok: true; tests: TestCase[] } | { ok: false; reason: ReadFailure; error?: string | undefined };
+
+/** Outcome of a full import: either the created issues, or an explicit, distinguishable failure. */
+type CsvImportOutcome =
+    | { ok: true; result: CreateTestsFromTestCasesResult }
+    | { ok: false; reason: ReadFailure; error?: string | undefined };
+
+function _isMissingFile(err: unknown): boolean {
+    return err instanceof Error && (err.message.includes('ENOENT') || err.message.includes('no such file'));
+}
+
+/** Read and parse test cases from a CSV file. Never returns undefined — failures are explicit. */
+async function readCsvTests(csvResource: CsvResource, csvPath: string): Promise<ReadTestsResult> {
     if (!isQuiet()) info('Lendo CSV...');
     try {
         const tests = await csvResource.readBulkCsv(csvPath);
         if (tests.length === 0) {
             warn('Nenhum teste encontrado no CSV.');
-            return undefined;
+            return { ok: false, reason: 'empty' };
         }
-        return tests;
+        return { ok: true, tests };
     } catch (err) {
         printError('Erro ao ler CSV', err);
-        return undefined;
+        return {
+            ok: false,
+            reason: _isMissingFile(err) ? 'missing' : 'read-error',
+            error: err instanceof Error ? err.message : String(err),
+        };
     }
 }
 
-/** Read and validate test cases from a JSON file. Returns undefined on error. */
-function readJsonTests(jsonPath: string): TestCase[] | undefined {
+/** Read and validate test cases from a JSON file. Never returns undefined — failures are explicit. */
+function readJsonTests(jsonPath: string): ReadTestsResult {
     if (!isQuiet()) info('Lendo JSON...');
     try {
         const tests = parseJsonTests(jsonPath);
         if (tests.length === 0) {
             warn('Nenhum teste encontrado no JSON.');
-            return undefined;
+            return { ok: false, reason: 'empty' };
         }
-        return tests;
+        return { ok: true, tests };
     } catch (err) {
         printError('Erro ao ler JSON', err);
-        return undefined;
+        return {
+            ok: false,
+            reason: _isMissingFile(err) ? 'missing' : 'read-error',
+            error: err instanceof Error ? err.message : String(err),
+        };
     }
 }
 
@@ -75,14 +97,14 @@ async function createTestsFromCsv({
 }: CreateFromFileParams & {
     csvResource: CsvResource;
     csvPath?: string;
-}): Promise<ReturnType<typeof createTestsFromTestCases>> {
+}): Promise<CsvImportOutcome> {
     const csvPath = await resolveCsvPath(csvPathInput);
     const jiraLabels = resolveLabels(jiraLabelsInput, 'csvLabels');
-    const tests = await readCsvTests(csvResource, csvPath);
-    if (!tests) return;
+    const read = await readCsvTests(csvResource, csvPath);
+    if (!read.ok) return { ok: false, reason: read.reason, error: read.error };
 
-    return createTestsFromTestCases({
-        tests,
+    const result = await createTestsFromTestCases({
+        tests: read.tests,
         jiraResource,
         jiraResourceXray,
         linkManager,
@@ -95,6 +117,8 @@ async function createTestsFromCsv({
         sourceType: 'csv',
         jiraLabels,
     });
+    if (!result) return { ok: false, reason: 'read-error', error: 'Falha ao criar testes a partir do CSV.' };
+    return { ok: true, result };
 }
 
 /** Full JSON import flow: read, validate, create issues, link, and optionally create test execution. */
@@ -111,16 +135,16 @@ async function createTestsFromJson({
     jiraLabels: jiraLabelsInput,
 }: CreateFromFileParams & {
     jsonPath?: string;
-}): Promise<ReturnType<typeof createTestsFromTestCases>> {
+}): Promise<CsvImportOutcome> {
     const jsonPath = await resolveJsonPath(jsonPathInput);
-    if (!jsonPath) return;
+    if (!jsonPath) return { ok: false, reason: 'missing', error: 'Caminho do arquivo JSON não informado.' };
 
     const jiraLabels = resolveLabels(jiraLabelsInput, 'jsonLabels');
-    const tests = readJsonTests(jsonPath);
-    if (!tests) return;
+    const read = readJsonTests(jsonPath);
+    if (!read.ok) return { ok: false, reason: read.reason, error: read.error };
 
-    return createTestsFromTestCases({
-        tests,
+    const result = await createTestsFromTestCases({
+        tests: read.tests,
         jiraResource,
         jiraResourceXray,
         linkManager,
@@ -133,6 +157,8 @@ async function createTestsFromJson({
         sourceType: 'json',
         jiraLabels,
     });
+    if (!result) return { ok: false, reason: 'read-error', error: 'Falha ao criar testes a partir do JSON.' };
+    return { ok: true, result };
 }
 
 interface CreateTeOptions {

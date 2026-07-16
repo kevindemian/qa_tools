@@ -1,6 +1,6 @@
 /** Import CSV → Create Test Cases: configure CSV path and start the import pipeline. */
 import Config from '../../shared/config.js';
-import { ask, askFilePath, printError } from '../../shared/prompt.js';
+import { ask, askFilePath, printError, warn } from '../../shared/prompt.js';
 import { loadTypedState } from '../../shared/state.js';
 import { rootLogger } from '../../shared/logger.js';
 import path from 'path';
@@ -8,6 +8,18 @@ import type { CommandContext } from './context.js';
 // anti-circular (prompt → create_tests → session-context → prompt)
 import createTests from '../create_tests.js';
 import { offerTestExecutionAssociation, showResults } from './test-execution-flow.js';
+
+/** Human-readable message for each distinguishable CSV read failure (never generic). */
+function describeCsvFailure(reason: 'empty' | 'missing' | 'read-error', csvPath: string): string {
+    switch (reason) {
+        case 'missing':
+            return 'Arquivo CSV não encontrado: ' + csvPath;
+        case 'empty':
+            return 'O CSV não contém nenhum teste válido. Verifique o conteúdo do arquivo.';
+        default:
+            return 'Falha ao ler o CSV. Verifique o caminho e o formato do arquivo.';
+    }
+}
 
 async function handler(c: CommandContext): Promise<boolean | void> {
     try {
@@ -44,13 +56,18 @@ async function handler(c: CommandContext): Promise<boolean | void> {
             csvPath: csvPath,
             jiraLabels: jiraLabels,
         });
-        if (result) {
-            c.ctx.inMemoryTasksId = result.inMemoryTasksId;
-            c.ctx.inMemoryTasksText = result.inMemoryTasksText;
-            c.pushHistory('csv-import', result.summary, result.status);
-            c.ctx.lastOperation = result.summary;
+        if (!result.ok) {
+            const detail = describeCsvFailure(result.reason, csvPath);
+            warn(detail);
+            c.pushHistory('csv-import', detail, 'error');
+            c.ctx.lastOperation = detail;
+            return;
         }
-        if (result && c.ctx.inMemoryTasksId.length > 0) {
+        c.ctx.inMemoryTasksId = result.result.inMemoryTasksId;
+        c.ctx.inMemoryTasksText = result.result.inMemoryTasksText;
+        c.pushHistory('csv-import', result.result.summary, result.result.status);
+        c.ctx.lastOperation = result.result.summary;
+        if (c.ctx.inMemoryTasksId.length > 0) {
             const csvName = state.lastCsvPath ? path.basename(state.lastCsvPath, '.csv') : 'Automated Execution';
             const teResult = await offerTestExecutionAssociation(c, c.ctx.inMemoryTasksId, csvName);
             await showResults(c, c.ctx.inMemoryTasksId, teResult);

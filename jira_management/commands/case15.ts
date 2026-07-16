@@ -11,6 +11,18 @@ import type { CommandContext } from './context.js';
 import createTests from '../create_tests.js';
 import { offerTestExecutionAssociation, showResults } from './test-execution-flow.js';
 
+/** Human-readable message for each distinguishable JSON read failure (never generic). */
+function describeJsonFailure(reason: 'empty' | 'missing' | 'read-error'): string {
+    switch (reason) {
+        case 'missing':
+            return 'Arquivo JSON nao encontrado.';
+        case 'empty':
+            return 'O JSON nao contem nenhum teste valido.';
+        default:
+            return 'Falha ao ler o JSON. Verifique o caminho e o formato do arquivo.';
+    }
+}
+
 function getSourceMessage(resolvedData: { source: string }, sha: string | null): string {
     if (resolvedData.source === 'cache') {
         return 'Usando dados em cache (SHA ' + (sha as string).slice(0, 7) + ')';
@@ -82,7 +94,7 @@ async function handler(c: CommandContext): Promise<boolean | void> {
     });
 
     /* Register import in Store for future cache hits */
-    if (result && sha && resolvedData) {
+    if (result.ok && sha && resolvedData) {
         store.saveReport(sha, resolvedData.result.tests);
         store.put(sha, {
             sha,
@@ -98,23 +110,30 @@ async function handler(c: CommandContext): Promise<boolean | void> {
         store.flush('qa-tools: case15 import ' + sha.slice(0, 7));
     }
 
-    if (result) {
-        c.ctx.inMemoryTasksId = result.inMemoryTasksId;
-        c.ctx.inMemoryTasksText = result.inMemoryTasksText;
-        const okCount = result.inMemoryTasksId.length;
-        success('Importacao JSON concluída: ' + okCount + ' testes');
-        c.ctx.results = result.inMemoryTasksId.map((key: string) => ({
-            status: 'ok' as const,
-            label: key,
-            message: '',
-        }));
-        c.pushHistory('importar-json', okCount + ' testes', 'ok');
-
-        const keys = result.inMemoryTasksId;
-        const srcName = result.sourcePath ? path.basename(result.sourcePath, '.json') : 'json-import';
-        const teResult = await offerTestExecutionAssociation(c, keys, srcName);
-        await showResults(c, keys, teResult);
+    if (!result.ok) {
+        const detail = describeJsonFailure(result.reason);
+        warn(detail);
+        c.pushHistory('importar-json', detail, 'error');
+        c.ctx.lastOperation = detail;
+        return;
     }
+
+    const imported = result.result;
+    c.ctx.inMemoryTasksId = imported.inMemoryTasksId;
+    c.ctx.inMemoryTasksText = imported.inMemoryTasksText;
+    const okCount = imported.inMemoryTasksId.length;
+    success('Importacao JSON concluida: ' + okCount + ' testes');
+    c.ctx.results = imported.inMemoryTasksId.map((key: string) => ({
+        status: 'ok' as const,
+        label: key,
+        message: '',
+    }));
+    c.pushHistory('importar-json', okCount + ' testes', 'ok');
+
+    const keys = imported.inMemoryTasksId;
+    const srcName = imported.sourcePath ? path.basename(imported.sourcePath, '.json') : 'json-import';
+    const teResult = await offerTestExecutionAssociation(c, keys, srcName);
+    await showResults(c, keys, teResult);
 }
 
 export default { handler };

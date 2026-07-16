@@ -20,7 +20,9 @@ import createTestsModule from '../../create_tests.js';
 import * as testExecFlow from '../test-execution-flow.js';
 
 const mockConfigGet = vi.spyOn(configModule, 'get');
-const mockCreateTestsFromCsv = vi.spyOn(createTestsModule, 'createTestsFromCsv').mockResolvedValue(undefined);
+const mockCreateTestsFromCsv = vi
+    .spyOn(createTestsModule, 'createTestsFromCsv')
+    .mockResolvedValue({ ok: false, reason: 'read-error' });
 const mockOfferTE = vi.spyOn(testExecFlow, 'offerTestExecutionAssociation').mockResolvedValue({ associated: false });
 
 function makeContext(overrides: Record<string, unknown> = {}) {
@@ -121,10 +123,15 @@ describe('Case01.Integration', () => {
 
             mockConfigGet.mockReturnValue(undefined);
             mockCreateTestsFromCsv.mockResolvedValue({
-                inMemoryTasksId: ['TEST-1', 'TEST-2'],
-                inMemoryTasksText: ['test 1', 'test 2'],
-                summary: '2 tests imported',
-                status: 'OK',
+                ok: true,
+                result: {
+                    inMemoryTasksId: ['TEST-1', 'TEST-2'],
+                    inMemoryTasksText: ['test 1', 'test 2'],
+                    summary: '2 tests imported',
+                    status: 'OK',
+                    sourcePath: '/x.csv',
+                    failedLinks: [],
+                },
             } as never);
 
             const ctx = makeContext();
@@ -141,10 +148,15 @@ describe('Case01.Integration', () => {
 
             mockConfigGet.mockReturnValue(undefined);
             mockCreateTestsFromCsv.mockResolvedValue({
-                inMemoryTasksId: [],
-                inMemoryTasksText: [],
-                summary: 'imported',
-                status: 'OK',
+                ok: true,
+                result: {
+                    inMemoryTasksId: [],
+                    inMemoryTasksText: [],
+                    summary: 'imported',
+                    status: 'OK',
+                    sourcePath: '/x.csv',
+                    failedLinks: [],
+                },
             } as never);
 
             await case01.handler(makeContext());
@@ -157,10 +169,15 @@ describe('Case01.Integration', () => {
 
             mockConfigGet.mockReturnValue(undefined);
             mockCreateTestsFromCsv.mockResolvedValue({
-                inMemoryTasksId: ['TEST-1'],
-                inMemoryTasksText: ['test 1'],
-                summary: 'imported',
-                status: 'OK',
+                ok: true,
+                result: {
+                    inMemoryTasksId: ['TEST-1'],
+                    inMemoryTasksText: ['test 1'],
+                    summary: 'imported',
+                    status: 'OK',
+                    sourcePath: '/x.csv',
+                    failedLinks: [],
+                },
             } as never);
 
             const ctx = makeContext();
@@ -175,7 +192,7 @@ describe('Case01.Integration', () => {
             expect.hasAssertions();
 
             mockConfigGet.mockReturnValue(undefined);
-            mockCreateTestsFromCsv.mockResolvedValue(undefined);
+            mockCreateTestsFromCsv.mockResolvedValue({ ok: false, reason: 'read-error' });
 
             await expect(case01.handler(makeContext())).resolves.toBeUndefined();
         });

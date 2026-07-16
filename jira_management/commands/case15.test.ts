@@ -62,11 +62,15 @@ describe('Case15', () => {
             store: mockStore(),
         });
         vi.spyOn(createTests, 'createTestsFromJson').mockResolvedValue({
-            inMemoryTasksId: ['TEST-1', 'TEST-2'],
-            inMemoryTasksText: ['test 1', 'test 2'],
-            summary: '2 testes importados',
-            status: 'ok',
-            sourcePath: path.join(os.tmpdir(), 'qa-resolve-abc123-12345.json'),
+            ok: true,
+            result: {
+                inMemoryTasksId: ['TEST-1', 'TEST-2'],
+                inMemoryTasksText: ['test 1', 'test 2'],
+                summary: '2 testes importados',
+                status: 'ok',
+                sourcePath: path.join(os.tmpdir(), 'qa-resolve-abc123-12345.json'),
+                failedLinks: [],
+            },
         });
     });
 

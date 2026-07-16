@@ -12,6 +12,7 @@ const MIN_GROUP_MEMBERS = 2;
 
 interface ActionResult {
     action?: string;
+    missingKey?: string;
 }
 
 interface CrossRefMember {
@@ -22,6 +23,13 @@ interface CrossRefMember {
 interface CrossRefGroup {
     name: string;
     members: CrossRefMember[];
+}
+
+/** A referenced Jira key that does not exist is a data defect, not a recoverable error.
+ *  It must block the import (hard fail) rather than be silently skipped. */
+function isMissingKeyError(err: unknown): boolean {
+    const msg = err instanceof Error ? err.message : String(err);
+    return /(404|not found|does not exist|issue.*not.*found|could not find|no issue.*with key)/i.test(msg);
 }
 
 function buildCrossRefGroups(tests: TestCase[], ids: string[]): Record<string, CrossRefGroup> {
@@ -103,6 +111,10 @@ class IssueLinker {
                 await this.linkManager.associatePrecondition(issueKey, p.value);
                 if (!isQuiet()) success('  Pre-condition ' + p.value + ' associada');
             } catch (err) {
+                // A referenced key that does not exist is a data defect: block, never skip silently.
+                if (isMissingKeyError(err)) {
+                    return { action: 'abort', missingKey: p.value };
+                }
                 if (!result) {
                     result = {
                         action: onError('  Pre-condition de "' + test.title + '" (' + p.value + ')', err, {
@@ -122,6 +134,10 @@ class IssueLinker {
             if (!isQuiet()) success('  ' + test.linkedIssues.length + ' linked issue(s) criados');
             return null;
         } catch (err) {
+            // A referenced key that does not exist is a data defect: block, never skip silently.
+            if (isMissingKeyError(err)) {
+                return { action: 'abort', missingKey: test.linkedIssues.map((l) => l.key).join(', ') };
+            }
             return {
                 action: onError('  Linked issues de "' + test.title + '"', err, { details: true }),
             };

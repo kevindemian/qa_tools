@@ -9,6 +9,7 @@ import { JiraPayloadSchema } from './csv-import-schema.js';
 interface LinkRelationsResult {
     abort: boolean;
     errored: boolean;
+    failedLinkKeys: string[];
 }
 
 interface TestDataPayload {
@@ -94,33 +95,85 @@ interface LinkTestRelationsOptions {
 async function linkTestRelations(opts: LinkTestRelationsOptions): Promise<LinkRelationsResult> {
     const { linker, test, createdTestIssue, factory, opLog, testTitle, results } = opts;
     let errored = false;
+    const failedLinkKeys: string[] = [];
 
-    if (test.precondition && test.precondition.some((p) => p.type === 'reference')) {
-        const precResult = await linker.associatePrecondition(test, createdTestIssue.key, opLog);
-        if (precResult) {
-            if (precResult.action === 'abort') {
-                results.push({ status: 'error', label: testTitle, message: 'Falha ao associar pre-condition' });
-                return { abort: true, errored: true };
-            }
-            errored = true;
-        }
+    const precOutcome = await _associatePrecondition(linker, test, createdTestIssue.key, opLog, testTitle, results);
+    if (precOutcome) {
+        if (precOutcome.abort) return { abort: true, errored: true, failedLinkKeys: precOutcome.keys };
+        errored = true;
+        failedLinkKeys.push(...precOutcome.keys);
     }
 
     const stepsResult = await factory.postSteps(createdTestIssue.key, test, opLog);
     if (stepsResult && stepsResult.action === 'abort') {
         results.push({ status: 'error', label: testTitle, message: 'Falha ao criar steps' });
-        return { abort: true, errored: true };
+        return { abort: true, errored: true, failedLinkKeys };
     }
 
-    if (test.linkedIssues && test.linkedIssues.length > 0) {
-        const linkResult = await linker.linkIssues(createdTestIssue.key, test);
-        if (linkResult && linkResult.action === 'abort') {
-            results.push({ status: 'error', label: testTitle, message: 'Falha ao criar linked issues' });
-            return { abort: true, errored: true };
-        }
+    const linkOutcome = await _linkReferencedIssues(linker, test, createdTestIssue.key, testTitle, results);
+    if (linkOutcome) {
+        if (linkOutcome.abort) return { abort: true, errored: true, failedLinkKeys: linkOutcome.keys };
     }
 
-    return { abort: false, errored };
+    return { abort: false, errored, failedLinkKeys };
+}
+
+interface RelationOutcome {
+    abort: boolean;
+    keys: string[];
+}
+
+async function _associatePrecondition(
+    linker: IssueLinker,
+    test: TestCase,
+    createdKey: string,
+    opLog: ReturnType<typeof rootLogger.child>,
+    testTitle: string,
+    results: TestResult[],
+): Promise<RelationOutcome | null> {
+    if (!test.precondition || !test.precondition.some((p) => p.type === 'reference')) return null;
+
+    const refs = test.precondition.filter((p) => p.type === 'reference').map((p) => p.value);
+    const precResult = await linker.associatePrecondition(test, createdKey, opLog);
+    if (!precResult) return null;
+
+    if (precResult.action === 'abort') {
+        const keys = precResult.missingKey ? [precResult.missingKey] : refs;
+        results.push({
+            status: 'error',
+            label: testTitle,
+            message: 'Falha ao associar pre-condition: ' + keys.join(', '),
+        });
+        return { abort: true, keys };
+    }
+
+    return { abort: false, keys: refs };
+}
+
+async function _linkReferencedIssues(
+    linker: IssueLinker,
+    test: TestCase,
+    createdKey: string,
+    testTitle: string,
+    results: TestResult[],
+): Promise<RelationOutcome | null> {
+    if (!test.linkedIssues || test.linkedIssues.length === 0) return null;
+
+    const linkKeys = test.linkedIssues.map((l) => l.key);
+    const linkResult = await linker.linkIssues(createdKey, test);
+    if (!linkResult) return null;
+
+    if (linkResult.action === 'abort') {
+        const keys = linkResult.missingKey ? linkResult.missingKey.split(', ') : linkKeys;
+        results.push({
+            status: 'error',
+            label: testTitle,
+            message: 'Falha ao criar linked issues: ' + keys.join(', '),
+        });
+        return { abort: true, keys };
+    }
+
+    return { abort: false, keys: linkKeys };
 }
 
 function buildTestData(test: TestCase, projectName: string, jiraLabels: string[]): TestDataPayload {
@@ -200,6 +253,7 @@ export interface TestCreationLoopOptions {
     isQuiet: () => boolean;
     reportInfo: (msg: string) => void;
     reportPrint: (msg: string) => void;
+    failedLinks: string[];
 }
 
 async function notifyBatch(
@@ -235,6 +289,7 @@ interface ProcessOneTestOptions {
     isQuiet: () => boolean;
     reportInfo: (msg: string) => void;
     reportPrint: (msg: string) => void;
+    failedLinks: string[];
 }
 
 function recordSkippedTest(results: TestResult[], testTitle: string): void {
@@ -266,6 +321,7 @@ async function _finalizeAfterIssueCreation(
         isQuiet,
         reportInfo,
         reportPrint,
+        failedLinks,
         createdTestIssue,
         issueResult,
     } = opts;
@@ -276,6 +332,7 @@ async function _finalizeAfterIssueCreation(
     }
     saveCheckpoint({ sourcePath, sourceType, projectName, tests, inMemoryTasksId, inMemoryTasksText });
     const linkState = await linkTestRelations({ linker, test, createdTestIssue, factory, opLog, testTitle, results });
+    if (linkState.failedLinkKeys.length) failedLinks.push(...linkState.failedLinkKeys);
     if (linkState.abort) return 'abort';
     const testStatus = linkState.errored ? 'error' : 'ok';
     if (!isQuiet()) reportPrint('  -> ' + baseUrl + '/browse/' + createdTestIssue.key);
@@ -326,6 +383,7 @@ async function executeTestCreationLoop(opts: TestCreationLoopOptions): Promise<v
         isQuiet,
         reportInfo,
         reportPrint,
+        failedLinks,
     } = opts;
 
     for (let t = resumeFrom; t < tests.length; t++) {
@@ -355,6 +413,7 @@ async function executeTestCreationLoop(opts: TestCreationLoopOptions): Promise<v
             isQuiet,
             reportInfo,
             reportPrint,
+            failedLinks,
         });
         if (signal === 'abort') break;
     }

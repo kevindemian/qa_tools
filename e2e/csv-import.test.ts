@@ -114,7 +114,8 @@ describe('E2E: CSV Import', () => {
             onBusy,
         };
 
-        const result = nonNull(await createTestsFromCsv(state));
+        const outcome = nonNull(await createTestsFromCsv(state));
+        const result = nonNull(outcome.ok ? outcome.result : null);
 
         expect(result.inMemoryTasksId).toStrictEqual(['TEST-1', 'TEST-2']);
         expect(result.inMemoryTasksText).toStrictEqual(['TC01 - Login valido', 'TC02 - Login invalido']);

@@ -119,6 +119,18 @@ import { createMockLogger, nonNull } from '../shared/test-utils.js';
 import { createMockJiraResource } from '../shared/test-utils/factories/jira-resource-factory.js';
 import { createMockLinkManager } from '../shared/test-utils/factories/link-manager-factory.js';
 
+type CsvImportOutcomeForTest =
+    | { ok: true; result: { summary: string; sourcePath: string; failedLinks: string[] } }
+    | { ok: false; reason: string };
+function expectOk(r: CsvImportOutcomeForTest) {
+    if (!r.ok) throw new Error('expected import ok, got failure');
+    return r.result;
+}
+function expectFail(r: CsvImportOutcomeForTest) {
+    if (r.ok) throw new Error('expected import failure, got ok');
+    return r;
+}
+
 const MOCK_ISSUE_TYPES = [
     { id: '11200', name: 'Epic' },
     { id: '11800', name: 'Test' },
@@ -627,7 +639,7 @@ describe('CreateTestsFromJson', () => {
         vi.spyOn(PROMPT, 'askFilePath').mockResolvedValueOnce('');
         const result = await createTestsFromJson(BASE_PARAMS());
 
-        expect(result).toBeUndefined();
+        expect(expectFail(result).reason).toBe('missing');
         expect(PROMPT.warn).toHaveBeenCalledWith(expect.stringContaining('vazio'));
     });
 
@@ -638,7 +650,7 @@ describe('CreateTestsFromJson', () => {
         FS.readFileSync.mockReturnValue('not json');
         const result = await createTestsFromJson(BASE_PARAMS());
 
-        expect(result).toBeUndefined();
+        expect(expectFail(result).reason).toBe('empty');
         expect(PROMPT.warn).toHaveBeenCalledTimes(2);
     });
 
@@ -649,7 +661,7 @@ describe('CreateTestsFromJson', () => {
         FS.readFileSync.mockReturnValue('[]');
         const result = await createTestsFromJson(BASE_PARAMS());
 
-        expect(result).toBeUndefined();
+        expect(expectFail(result).reason).toBe('empty');
         expect(PROMPT.warn).toHaveBeenCalledTimes(2);
     });
 
@@ -660,7 +672,7 @@ describe('CreateTestsFromJson', () => {
         FS.readFileSync.mockReturnValue(JSON.stringify([{}]));
         const result = await createTestsFromJson(BASE_PARAMS());
 
-        expect(result).toBeUndefined();
+        expect(expectFail(result).reason).toBe('empty');
         expect(PROMPT.warn).toHaveBeenCalledTimes(2);
     });
 
@@ -678,8 +690,8 @@ describe('CreateTestsFromJson', () => {
         );
         const result = await createTestsFromJson(BASE_PARAMS());
 
-        expect(nonNull(result).summary).toContain('2');
-        expect(nonNull(result).sourcePath).toBe('/fake/path.json');
+        expect(expectOk(result).summary).toContain('2');
+        expect(expectOk(result).sourcePath).toBe('/fake/path.json');
     });
 
     it('parseia precondition como reference (formato ABC-123)', async () => {
@@ -693,7 +705,7 @@ describe('CreateTestsFromJson', () => {
         );
         const result = await createTestsFromJson(BASE_PARAMS());
 
-        expect(nonNull(result).summary).toContain('1');
+        expect(expectOk(result).summary).toContain('1');
     });
 
     it('parseia linkedIssues como strings', async () => {
@@ -707,7 +719,7 @@ describe('CreateTestsFromJson', () => {
         );
         const result = await createTestsFromJson(BASE_PARAMS());
 
-        expect(nonNull(result).summary).toContain('1');
+        expect(expectOk(result).summary).toContain('1');
     });
 
     it('parseia linkedIssues como objetos', async () => {
@@ -723,7 +735,7 @@ describe('CreateTestsFromJson', () => {
         );
         const result = await createTestsFromJson(BASE_PARAMS());
 
-        expect(nonNull(result).summary).toContain('1');
+        expect(expectOk(result).summary).toContain('1');
     });
 });
 
@@ -757,23 +769,33 @@ describe('ReadCsvTests (via createTestsFromCsv)', () => {
         vi.spyOn(csvResource, 'readBulkCsv');
     });
 
-    it('empty CSV -> warn', async () => {
+    it('empty CSV -> explicit failure (not undefined)', async () => {
         expect.hasAssertions();
 
         csvResource.readBulkCsv.mockResolvedValue([]);
         const result = await createTestsFromCsv(makeCsvArgs({ csvPath: '/empty.csv' }));
 
-        expect(result).toBeUndefined();
+        expect(result).toBeDefined();
+
+        const r = result as { ok: boolean; reason?: string };
+
+        expect(r.ok).toBeFalsy();
+        expect(r.reason).toBe('empty');
         expect(PROMPT.warn).toHaveBeenCalledWith(expect.stringContaining('Nenhum teste'));
     });
 
-    it('cSV read error -> printError', async () => {
+    it('cSV read error -> explicit failure (distinguishable from empty)', async () => {
         expect.hasAssertions();
 
         csvResource.readBulkCsv.mockRejectedValue(new Error('file not found'));
         const result = await createTestsFromCsv(makeCsvArgs({ csvPath: '/bad.csv' }));
 
-        expect(result).toBeUndefined();
+        expect(result).toBeDefined();
+
+        const r = result as { ok: boolean; reason?: string };
+
+        expect(r.ok).toBeFalsy();
+        expect(r.reason).toBe('read-error');
         expect(PROMPT.printError).toHaveBeenCalledWith('Erro ao ler CSV', expect.any(Error));
     });
 });
@@ -839,6 +861,6 @@ describe('CreateTestsFromCsv', () => {
         csvResource.readBulkCsv.mockResolvedValue([{ title: 'TC1', steps: [{ fields: { Action: 'Click' } }] }]);
         const result = await createTestsFromCsv(makeFullArgs());
 
-        expect(nonNull(result).summary).toContain('1');
+        expect(expectOk(result).summary).toContain('1');
     });
 });

@@ -25,6 +25,7 @@ import { palette, applyPalette } from '../shared/palette.js';
 import { SessionContext } from '../shared/session-context.js';
 import { ExitCode, type StateSchema } from '../shared/types.js';
 import type { CommandContext } from './commands/context.js';
+import createTests from './create_tests.js';
 import { ensureDirs, registerCleanup } from '../shared/temp-dir.js';
 import { CATEGORY_IDS, CATEGORY_TITLES } from './menu-data.js';
 import { dispatchChoice, getAndResolveChoice } from './ui-helpers.js';
@@ -59,6 +60,69 @@ function _isBatchOrCI(): boolean {
     const args = process.argv.slice(2).join(' ');
     if (args.includes('--batch') || args.includes('--auto')) return true;
     return false;
+}
+
+/** Extract the CSV path from `--csv <path>`; falls back to CSV_PATH env (used with --auto). */
+function parseCsvArg(argv: string[]): string | undefined {
+    const idx = argv.indexOf('--csv');
+    if (idx !== -1 && argv[idx + 1]) return argv[idx + 1];
+    if (argv.includes('--auto') && process.env['CSV_PATH']) return process.env['CSV_PATH'];
+    return undefined;
+}
+
+/** Human-readable message for each distinguishable CSV read failure (never generic). */
+function describeCsvFailure(reason: 'empty' | 'missing' | 'read-error', csvPath: string, error?: string): string {
+    switch (reason) {
+        case 'missing':
+            return 'Arquivo CSV nao encontrado: ' + csvPath;
+        case 'empty':
+            return 'O CSV nao contem nenhum teste valido.';
+        default:
+            return error ? error : 'Falha ao ler o CSV.';
+    }
+}
+
+/** Headless CSV import: runs the real pipeline without the interactive menu.
+ *  Exits non-zero on any explicit failure so CI/automation can detect it. */
+async function runHeadlessCsvImport(res: RuntimeResources, csvPath: string): Promise<ExitCode> {
+    const sessionLog = rootLogger.child({ session: 'csv-import-headless' });
+    const onBusy = (busy: boolean) => {
+        res.ctx.isBusy = busy;
+    };
+    try {
+        const outcome = await createTests.createTestsFromCsv({
+            jiraResource: res.jiraResource,
+            jiraResourceXray: res.jiraResourceXray,
+            linkManager: res.linkManager,
+            linkManagerXray: res.linkManagerXray,
+            csvResource: res.csvResource,
+            project_name: res.ctx.project_name,
+            base_url,
+            sessionLog,
+            onBusy,
+            csvPath,
+        });
+
+        if (!outcome.ok) {
+            const detail = describeCsvFailure(outcome.reason, csvPath, outcome.error);
+            printError(detail);
+            res.pushHistory('csv-import', detail, 'error');
+            return ExitCode.ERROR;
+        }
+
+        const { summary, status, failedLinks } = outcome.result;
+        if (failedLinks.length) {
+            printError(summary, undefined);
+        } else {
+            info(summary);
+        }
+        res.pushHistory('csv-import', summary, status);
+        return status === 'ok' ? ExitCode.OK : ExitCode.ERROR;
+    } catch (err) {
+        printError('Erro inesperado na importacao CSV', err);
+        res.pushHistory('csv-import', 'erro', 'error');
+        return ExitCode.ERROR;
+    }
 }
 
 /** Show a compact coverage badge on Jira module entry.
@@ -326,6 +390,8 @@ async function main(): Promise<void> {
         rootLogger.info('Opcoes:');
         rootLogger.info('  --help, -h     Exibe esta ajuda');
         rootLogger.info('  --version      Exibe a versao');
+        rootLogger.info('  --csv <path>   Importa um CSV de testes sem menu interativo (headless)');
+        rootLogger.info('  --auto         Forca AUTO_CONFIRM (usado com --csv em automacao/CI)');
         gracefulExit(ExitCode.OK);
         return;
     }
@@ -376,6 +442,13 @@ async function main(): Promise<void> {
         () => res.ctx.isBusy,
         () => res.printSessionSummary(),
     );
+
+    const headlessCsvPath = parseCsvArg(process.argv);
+    if (headlessCsvPath) {
+        const code = await runHeadlessCsvImport(res, headlessCsvPath);
+        gracefulExit(code);
+        return;
+    }
 
     await showGapBadge(res.jiraResource, res.ctx.project_name);
 

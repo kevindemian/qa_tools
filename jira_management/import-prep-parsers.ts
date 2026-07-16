@@ -50,6 +50,7 @@ export function handleDryRun(
     summary: string;
     status: string;
     sourcePath: string;
+    failedLinks: string[];
 } | null {
     if (!Config.get('dryRun')) return null;
 
@@ -62,6 +63,7 @@ export function handleDryRun(
         summary: 'DRY-RUN: ' + tests.length + ' testes simulados',
         status: 'ok',
         sourcePath,
+        failedLinks: [],
     };
 }
 

@@ -109,7 +109,7 @@ describe('Import Loop', () => {
                 results: resultSink,
             });
 
-            expect(result).toStrictEqual({ abort: true, errored: true });
+            expect(result).toStrictEqual({ abort: true, errored: true, failedLinkKeys: ['PREC-1'] });
             expect(nonNull(resultSink[0]).message).toContain('pre-condition');
         });
 
@@ -135,7 +135,7 @@ describe('Import Loop', () => {
                 results: resultSink,
             });
 
-            expect(result).toStrictEqual({ abort: true, errored: true });
+            expect(result).toStrictEqual({ abort: true, errored: true, failedLinkKeys: ['BUG-1'] });
         });
     });
 
@@ -313,6 +313,7 @@ describe('Import Loop', () => {
                 isQuiet: () => true,
                 reportInfo: vi.fn(),
                 reportPrint: vi.fn(),
+                failedLinks: [],
             });
 
             expect(inMemoryTasksId).toStrictEqual(['T-NEW']);

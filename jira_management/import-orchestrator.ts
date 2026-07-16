@@ -29,12 +29,13 @@ interface CreateTestsFromTestCasesParams {
     jiraLabels: string[];
 }
 
-type CreateTestsFromTestCasesResult = {
+export type CreateTestsFromTestCasesResult = {
     inMemoryTasksId: string[];
     inMemoryTasksText: string[];
     summary: string;
     status: string;
     sourcePath: string;
+    failedLinks: string[];
 };
 
 type PrepareTestRunResult =
@@ -97,6 +98,7 @@ interface FinalizeTestCreationParams {
     onBusy: (busy: boolean) => void;
     info: (msg: string) => void;
     printSummary: (results: TestResult[]) => void;
+    failedLinks: string[];
 }
 
 type FinalizeTestCreationResult = {
@@ -105,6 +107,7 @@ type FinalizeTestCreationResult = {
     summary: string;
     status: string;
     sourcePath: string;
+    failedLinks: string[];
 };
 
 async function finalizeTestCreation({
@@ -121,6 +124,7 @@ async function finalizeTestCreation({
     onBusy,
     info,
     printSummary,
+    failedLinks,
 }: FinalizeTestCreationParams): Promise<FinalizeTestCreationResult | undefined> {
     info('Passo 4 de 5: Atualizando referências e gerando mapeamentos...');
     await postProcessCheckpoint({
@@ -139,12 +143,16 @@ async function finalizeTestCreation({
     printSummary(results);
 
     const okCount = results.filter((r) => r.status === 'ok').length;
-    const errored = results.some((r) => r.status === 'error');
-    const summary = okCount + '/' + tests.length + ' testes criados';
+    const errored = results.some((r) => r.status === 'error') || failedLinks.length > 0;
+    let summary = okCount + '/' + tests.length + ' testes criados';
+    if (failedLinks.length > 0) {
+        summary += '; ' + failedLinks.length + ' vínculo(s) perdido(s): ' + failedLinks.join(', ');
+    }
     opLog.info('Operação concluída', {
         passed: okCount,
         failed: results.length - okCount,
         total: tests.length,
+        failedLinks,
     });
 
     onBusy(false);
@@ -155,6 +163,7 @@ async function finalizeTestCreation({
         summary,
         status: errored ? 'error' : 'ok',
         sourcePath,
+        failedLinks,
     };
 }
 
@@ -219,6 +228,7 @@ interface RunCreationLoopOptions {
 
 async function runCreationLoop(opts: RunCreationLoopOptions): Promise<FinalizeTestCreationResult | undefined> {
     const { filtered, factory, linker, results, params, resumeFrom, opLog, inMemoryTasksId, inMemoryTasksText } = opts;
+    const failedLinks: string[] = [];
     const loopOpts: TestCreationLoopOptions = {
         tests: filtered,
         factory,
@@ -236,6 +246,7 @@ async function runCreationLoop(opts: RunCreationLoopOptions): Promise<FinalizeTe
         isQuiet,
         reportInfo: info,
         reportPrint: print,
+        failedLinks,
     };
     await executeTestCreationLoop(loopOpts);
     return finalizeTestCreation({
@@ -252,6 +263,7 @@ async function runCreationLoop(opts: RunCreationLoopOptions): Promise<FinalizeTe
         onBusy: params.onBusy,
         info,
         printSummary,
+        failedLinks,
     });
 }
 
