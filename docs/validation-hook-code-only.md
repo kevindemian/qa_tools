@@ -9,11 +9,11 @@
 ## Root Cause do bloqueio de commit
 
 O commit dos docs do plano DataHub (`BACKLOG.md` novo + rename `BACKLOG.md` →
-`BACKLOG_sanitize.md`) foi bloqueado pelo pre-commit NÃO porque a validação varria
+`docs/archive/BACKLOG_sanitize.md`) foi bloqueado pelo pre-commit NÃO porque a validação varria
 chat/prosa, mas porque:
 
 - `.husky/pre-commit` linha 22 exclui `BACKLOG.md` e `shared/plans/` do `--check`,
-  mas **NÃO** exclui `BACKLOG_sanitize.md`.
+  mas **NÃO** exclui `docs/archive/BACKLOG_sanitize.md`.
 - O rename colocou o conteúdo do BACKLOG antigo (que contém `as unknown as` em prosa)
   no diff staged.
 - O hook antigo aplicava `sanitizeAndReject` a TODO o diff (prosa incluída) →

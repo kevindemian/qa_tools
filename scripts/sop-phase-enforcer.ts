@@ -24,7 +24,7 @@ const GIT_BIN = '/usr/bin/git';
 const VITEST_BIN = resolve(__dirname, '..', 'node_modules', '.bin', 'vitest');
 const TSC_BIN = resolve(__dirname, '..', 'node_modules', '.bin', 'tsc');
 
-const PROGRESS_FILE = 'FUNCTIONAL-AUDIT-PROGRESS.md';
+const PROGRESS_FILE = 'audit/functional/PROGRESS.md';
 
 const PHASES = [
     { id: '0', label: 'Preparacao' },

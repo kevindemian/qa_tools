@@ -1,6 +1,6 @@
 # Backlog
 
-> ⚠️ Sprints anteriores a esta estão **concluídos**. Movidos para `BACKLOG-historico.md` (e o arquivo não-sanitizado `BACKLOG_sanitize.md`).
+> ⚠️ Sprints anteriores a esta estão **concluídos**. Movidos para `docs/archive/BACKLOG-historico.md` (e o arquivo não-sanitizado `docs/archive/BACKLOG_sanitize.md`).
 > Consulte os históricos para detalhes de sprints passados.
 
 ---

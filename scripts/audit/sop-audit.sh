@@ -1,6 +1,6 @@
 #!/usr/bin/env bash
 # sop-audit.sh — SOP deterministic audit executor
-# Executa TODOS os comandos determinísticos de FUNCTIONAL-AUDIT-SOP.md
+# Executa TODOS os comandos determinísticos de audit/functional/SOP.md
 # Uso: bash scripts/audit/sop-audit.sh --feature <name> [flags]
 #      bash scripts/audit/sop-audit.sh --all
 #      bash scripts/audit/sop-audit.sh --dry-run --feature <name>
