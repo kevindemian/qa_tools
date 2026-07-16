@@ -8,9 +8,12 @@ interface WriterResult {
     filesSkipped: string[];
 }
 
-export function writeDotEnvExample(ctx: Pick<SetupContext, 'projectName' | 'gitProvider'>): WriterResult {
+export function writeDotEnvExample(
+    ctx: Pick<SetupContext, 'projectName' | 'gitProvider'>,
+    baseDir: string = process.cwd(),
+): WriterResult {
     const result: WriterResult = { filesCreated: [], filesSkipped: [] };
-    const envPath = path.resolve(process.cwd(), '.env.example');
+    const envPath = path.resolve(baseDir, '.env.example');
 
     const lines: string[] = [];
     if (ctx.gitProvider === 'github') {
@@ -41,9 +44,12 @@ export function writeDotEnvExample(ctx: Pick<SetupContext, 'projectName' | 'gitP
     return result;
 }
 
-export function writePrePushHook(ctx: Pick<SetupContext, 'projectName'>): WriterResult {
+export function writePrePushHook(
+    ctx: Pick<SetupContext, 'projectName'>,
+    baseDir: string = process.cwd(),
+): WriterResult {
     const result: WriterResult = { filesCreated: [], filesSkipped: [] };
-    const hookDir = path.resolve(process.cwd(), '.git', 'hooks');
+    const hookDir = path.resolve(baseDir, '.git', 'hooks');
     fs.mkdirSync(path.resolve(hookDir), { recursive: true });
 
     const hookPath = path.join(hookDir, 'pre-push');
@@ -78,19 +84,23 @@ exit 0
     return result;
 }
 
-export function writeFeaturesConfig(ctx: SetupContext): WriterResult {
+export function writeFeaturesConfig(ctx: SetupContext, baseDir: string = process.cwd()): WriterResult {
     const result: WriterResult = { filesCreated: [], filesSkipped: [] };
     if (!ctx.features.prReport) {
         return result;
     }
-    setPrReportConfig(ctx.projectName, {
-        enabled: true,
-        publishTarget: ctx.features.prReportPublishTarget as 'github-actions' | 'gitlab-ci',
-        // Persist skip flags — when feature is disabled, skip it in runtime
-        skipAi: !ctx.features.aiFailureAnalysis,
-        skipQuality: !ctx.features.qualityGate,
-        skipFlaky: !ctx.features.flakinessDashboard,
-    });
-    result.filesCreated.push('config/features.json');
+    setPrReportConfig(
+        ctx.projectName,
+        {
+            enabled: true,
+            publishTarget: ctx.features.prReportPublishTarget as 'github-actions' | 'gitlab-ci',
+            // Persist skip flags — when feature is disabled, skip it in runtime
+            skipAi: !ctx.features.aiFailureAnalysis,
+            skipQuality: !ctx.features.qualityGate,
+            skipFlaky: !ctx.features.flakinessDashboard,
+        },
+        baseDir,
+    );
+    result.filesCreated.push(path.resolve(baseDir, 'config', 'features.json'));
     return result;
 }

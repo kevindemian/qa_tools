@@ -89,14 +89,18 @@ describe('WriteFeaturesConfig', () => {
 
         const result = writeFeaturesConfig(ctx);
 
-        expect(result.filesCreated).toContain('config/features.json');
-        expect(mockSetPrReportConfig).toHaveBeenCalledWith('myapp', {
-            enabled: true,
-            publishTarget: 'github-actions',
-            skipAi: false,
-            skipQuality: false,
-            skipFlaky: false,
-        });
+        expect(result.filesCreated).toContain(path.resolve(process.cwd(), 'config', 'features.json'));
+        expect(mockSetPrReportConfig).toHaveBeenCalledWith(
+            'myapp',
+            {
+                enabled: true,
+                publishTarget: 'github-actions',
+                skipAi: false,
+                skipQuality: false,
+                skipFlaky: false,
+            },
+            process.cwd(),
+        );
     });
 
     it('persists inverted skip flags correctly', () => {
@@ -114,13 +118,17 @@ describe('WriteFeaturesConfig', () => {
 
         writeFeaturesConfig(ctx);
 
-        expect(mockSetPrReportConfig).toHaveBeenCalledWith('myapp', {
-            enabled: true,
-            publishTarget: 'gitlab-ci',
-            skipAi: true,
-            skipQuality: true,
-            skipFlaky: true,
-        });
+        expect(mockSetPrReportConfig).toHaveBeenCalledWith(
+            'myapp',
+            {
+                enabled: true,
+                publishTarget: 'gitlab-ci',
+                skipAi: true,
+                skipQuality: true,
+                skipFlaky: true,
+            },
+            process.cwd(),
+        );
     });
 
     it('handles mixed skip flags correctly', () => {
@@ -138,12 +146,16 @@ describe('WriteFeaturesConfig', () => {
 
         writeFeaturesConfig(ctx);
 
-        expect(mockSetPrReportConfig).toHaveBeenCalledWith('myapp', {
-            enabled: true,
-            publishTarget: 'github-actions',
-            skipAi: false,
-            skipQuality: false,
-            skipFlaky: true,
-        });
+        expect(mockSetPrReportConfig).toHaveBeenCalledWith(
+            'myapp',
+            {
+                enabled: true,
+                publishTarget: 'github-actions',
+                skipAi: false,
+                skipQuality: false,
+                skipFlaky: true,
+            },
+            process.cwd(),
+        );
     });
 });

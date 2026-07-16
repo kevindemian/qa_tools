@@ -1,4 +1,7 @@
 import { EventEmitter } from 'events';
+import fs from 'node:fs';
+import os from 'node:os';
+import path from 'node:path';
 import type { ChildProcess } from 'child_process';
 import { showSplash } from '../shared/splash.js';
 import { main as entryMain } from '../shared/entry-menu.js';
@@ -20,6 +23,12 @@ vi.mock('../shared/output', () => {
         defaultOutput: mockOutput,
     };
 });
+// Isola a migração legado→XDG: é coberta por testes dedicados de
+// _initInfrastructure. Evita renomear config/projects.json do cwd e poluir
+// o registry durante o boot do menu nesta suíte e2e.
+vi.mock('../shared/migration/migrate-projects.js', () => ({
+    migrateLegacyProjects: vi.fn(() => ({ migrated: 0, skipped: 0, renamed: false })),
+}));
 
 vi.mock('child_process', () => ({ spawn: vi.fn() }));
 import { spawn } from 'child_process';
@@ -37,9 +46,18 @@ function mockSpawnWithExit(code: number): void {
 }
 
 describe('Entry-menu to module spawn — full flow (CR-3c)', () => {
+    let xdg: string;
+
     beforeEach(() => {
         vi.clearAllMocks();
         vi.spyOn(console, 'clear').mockImplementation(() => {});
+        xdg = fs.mkdtempSync(path.join(os.tmpdir(), 'e2e-entry-xdg-'));
+        process.env['XDG_CONFIG_HOME'] = xdg;
+        process.env['XDG_STATE_HOME'] = xdg;
+    });
+
+    afterEach(() => {
+        fs.rmSync(xdg, { recursive: true, force: true });
     });
 
     it('launches git module on selection and spawns correct command', async () => {

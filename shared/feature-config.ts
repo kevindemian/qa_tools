@@ -9,11 +9,18 @@ import {
     DEFAULT_PR_REPORT_CONFIG,
 } from './types/feature-config.js';
 
-const CONFIG_PATH = path.resolve('config', 'features.json');
+/**
+ * Resolve the `config/features.json` path relative to a base directory.
+ * Defaults to the current working directory (runtime reads from the project
+ * where qa-tools runs); the setup wizard passes the target project's `--dir`.
+ */
+function featureConfigPath(baseDir: string = process.cwd()): string {
+    return path.resolve(baseDir, 'config', 'features.json');
+}
 
-function ensureDir(): void {
+function ensureDir(configPath: string): void {
     try {
-        fs.mkdirSync(path.dirname(CONFIG_PATH), { recursive: true });
+        fs.mkdirSync(path.dirname(configPath), { recursive: true });
     } catch (err) {
         rootLogger.warn(
             'Failed to create config directory. Check write permissions and disk space: ' +
@@ -24,12 +31,13 @@ function ensureDir(): void {
 }
 
 /** Load the full feature config store from disk. Returns empty store on failure. */
-export function loadFeatureConfig(): FeatureConfigStore {
+export function loadFeatureConfig(baseDir: string = process.cwd()): FeatureConfigStore {
+    const configPath = featureConfigPath(baseDir);
     try {
-        if (!fs.existsSync(CONFIG_PATH)) {
+        if (!fs.existsSync(configPath)) {
             return {};
         }
-        const raw = fs.readFileSync(CONFIG_PATH, 'utf8');
+        const raw = fs.readFileSync(configPath, 'utf8');
         const parsed: unknown = JSON.parse(raw);
         const result = FeatureConfigStoreSchema.safeParse(parsed);
         if (!result.success) {
@@ -49,10 +57,11 @@ export function loadFeatureConfig(): FeatureConfigStore {
 }
 
 /** Save the full feature config store to disk. */
-export function saveFeatureConfig(store: FeatureConfigStore): void {
+export function saveFeatureConfig(store: FeatureConfigStore, baseDir: string = process.cwd()): void {
+    const configPath = featureConfigPath(baseDir);
     try {
-        ensureDir();
-        fs.writeFileSync(CONFIG_PATH, JSON.stringify(store, null, 2) + '\n', 'utf8');
+        ensureDir(configPath);
+        fs.writeFileSync(configPath, JSON.stringify(store, null, 2) + '\n', 'utf8');
     } catch (err) {
         rootLogger.warn(
             'Failed to save features.json. Check write permissions and disk space: ' +
@@ -77,8 +86,12 @@ export function getPrReportConfig(projectName: string): PrReportFeatureConfig {
 }
 
 /** Set PR Report config for a project. Creates project entry if it doesn't exist. */
-export function setPrReportConfig(projectName: string, config: PrReportFeatureConfig): void {
-    const store = loadFeatureConfig();
+export function setPrReportConfig(
+    projectName: string,
+    config: PrReportFeatureConfig,
+    baseDir: string = process.cwd(),
+): void {
+    const store = loadFeatureConfig(baseDir);
     const entries = Object.entries(store);
     const existing = entries.find(([k]) => k === projectName);
     if (!existing) {
@@ -94,7 +107,7 @@ export function setPrReportConfig(projectName: string, config: PrReportFeatureCo
     if (projectEntry) {
         projectEntry[1].features.prReport = config;
     }
-    saveFeatureConfig(Object.fromEntries(entries));
+    saveFeatureConfig(Object.fromEntries(entries), baseDir);
 }
 
 /** Check if PR Report is enabled for a given project. */

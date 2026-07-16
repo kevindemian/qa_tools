@@ -147,14 +147,14 @@ function addUnique(list: string[], value: string): void {
     if (!list.includes(value)) list.push(value);
 }
 
-function generateGitHubWorkflows(ctx: SetupContext): { created: string[]; skipped: string[] } {
+function generateGitHubWorkflows(ctx: SetupContext, baseDir: string): { created: string[]; skipped: string[] } {
     const created: string[] = [];
     const skipped: string[] = [];
-    const workflowDir = path.resolve(process.cwd(), '.github/workflows');
+    const workflowDir = path.resolve(baseDir, '.github/workflows');
     fs.mkdirSync(path.resolve(workflowDir), { recursive: true });
     const wfPath = path.join(workflowDir, 'ci.yml');
     const ppWfPath = path.join(workflowDir, 'qa-post-process.yml');
-    const actionsDir = path.resolve(process.cwd(), '.github/actions/qa-post-process');
+    const actionsDir = path.resolve(baseDir, '.github/actions/qa-post-process');
     fs.mkdirSync(path.resolve(actionsDir), { recursive: true });
     const actionPath = path.join(actionsDir, 'action.yml');
 
@@ -184,10 +184,13 @@ function generateGitHubWorkflows(ctx: SetupContext): { created: string[]; skippe
     return { created, skipped };
 }
 
-async function generateGitLabCIFile(ctx: SetupContext): Promise<{ created: string[]; skipped: string[] }> {
+async function generateGitLabCIFile(
+    ctx: SetupContext,
+    baseDir: string,
+): Promise<{ created: string[]; skipped: string[] }> {
     const created: string[] = [];
     const skipped: string[] = [];
-    const wfPath = path.resolve(process.cwd(), '.gitlab-ci.yml');
+    const wfPath = path.resolve(baseDir, '.gitlab-ci.yml');
     const yaml = generateGitLabCI(ctx);
 
     if (fs.existsSync(path.resolve(wfPath))) {
@@ -206,13 +209,13 @@ async function generateGitLabCIFile(ctx: SetupContext): Promise<{ created: strin
     return { created, skipped };
 }
 
-function generatePrePushHookFiles(ctx: SetupContext): { created: string[]; skipped: string[] } {
+function generatePrePushHookFiles(ctx: SetupContext, baseDir: string): { created: string[]; skipped: string[] } {
     const created: string[] = [];
     const skipped: string[] = [];
-    const hookResult = writeHookFile(ctx);
+    const hookResult = writeHookFile(ctx, baseDir);
     created.push(...hookResult.filesCreated);
     skipped.push(...hookResult.filesSkipped);
-    const hookDir = path.resolve(process.cwd(), '.git', 'hooks');
+    const hookDir = path.resolve(baseDir, '.git', 'hooks');
     fs.mkdirSync(path.resolve(hookDir), { recursive: true });
     const hookPath = path.join(hookDir, 'pre-push');
     if (!fs.existsSync(path.resolve(hookPath))) {
@@ -233,7 +236,7 @@ async function generateConfigFiles(
     const skipped: string[] = [];
 
     const providerResult =
-        ctx.gitProvider === 'github' ? generateGitHubWorkflows(ctx) : await generateGitLabCIFile(ctx);
+        ctx.gitProvider === 'github' ? generateGitHubWorkflows(ctx, baseDir) : await generateGitLabCIFile(ctx, baseDir);
     created.push(...providerResult.created);
     skipped.push(...providerResult.skipped);
 
@@ -241,16 +244,16 @@ async function generateConfigFiles(
     created.push(...entryResult.created);
     skipped.push(...entryResult.skipped);
 
-    const envResult = writeDotEnvExample(ctx);
+    const envResult = writeDotEnvExample(ctx, baseDir);
     created.push(...envResult.filesCreated);
     skipped.push(...envResult.filesSkipped);
 
-    const featuresResult = writeFeaturesConfig(ctx);
+    const featuresResult = writeFeaturesConfig(ctx, baseDir);
     created.push(...featuresResult.filesCreated);
     skipped.push(...featuresResult.filesSkipped);
 
     if (ctx.features.prePushHook) {
-        const hookResult = generatePrePushHookFiles(ctx);
+        const hookResult = generatePrePushHookFiles(ctx, baseDir);
         created.push(...hookResult.created);
         skipped.push(...hookResult.skipped);
     }
