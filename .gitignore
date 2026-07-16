@@ -63,3 +63,6 @@ qa-quarantine.json
 .scannerwork/
 .eslintcache
 .prettier-cache/
+
+# === Cleanup archive (relocated obsolete docs / stale artifacts; review manually) ===
+/archive/
