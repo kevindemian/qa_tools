@@ -40,6 +40,13 @@ vi.mock('../shared/prompt', () => ({
     withSpinner: vi.fn(async (_label: string, fn: () => Promise<void>) => fn()),
 }));
 
+vi.mock('../shared/config', () => ({
+    default: {
+        getDefault: () => ({ get: () => undefined }),
+        get: () => undefined,
+    },
+}));
+
 const MOCK_ISSUE_TYPES = [
     { id: '11802', name: 'Test Execution' },
     { id: '11800', name: 'Test' },

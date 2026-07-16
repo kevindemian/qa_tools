@@ -3,6 +3,8 @@ import { formatErr } from '../shared/errors.js';
 import fs from 'fs';
 import path from 'path';
 import { rootLogger } from '../shared/logger.js';
+import Config from '../shared/config.js';
+import { XrayCloudClient } from '../shared/xray-cloud-client.js';
 import type { JiraResourceLike } from '../shared/types.js';
 // anti-circular (prompt → create_tests → session-context → prompt)
 import createTests from './create_tests.js';
@@ -145,19 +147,62 @@ function _buildExecutionPayload(
     return { summary, testKeys };
 }
 
-async function linkTestsToTe(
+export async function linkTestsToTe(
     matchedResults: Array<{ key: string; status: string }>,
     te: { key: string },
     linkManager: import('../jira_management/jira_link_manager.js').default,
+    jiraResource: JiraResourceLike,
 ): Promise<void> {
-    try {
-        for (const m of matchedResults) {
-            if (m.status === 'skipped') continue;
-            await linkManager.createIssueLink(m.key, te.key, 'Tests');
+    const tests = matchedResults.filter((m) => m.status !== 'skipped');
+    if (tests.length === 0) return;
+
+    const isCloud = (() => {
+        try {
+            return Config.getDefault().get('jiraMode') === 'cloud';
+        } catch {
+            return false;
         }
-    } catch (err) {
-        rootLogger.warn('Falha ao linkar alguns testes: ' + formatErr(err));
+    })();
+
+    if (isCloud) {
+        const clientId = Config.getDefault().get('xrayClientId');
+        const clientSecret = Config.getDefault().get('xrayClientSecret');
+        if (!clientId || !clientSecret) {
+            rootLogger.error(
+                'Cloud mode: XRAY_CLIENT_ID/XRAY_CLIENT_SECRET ausentes — não é possível associar testes nativamente à TE.',
+            );
+            return;
+        }
+        const client = new XrayCloudClient();
+        try {
+            const teId = await resolveNumericId(jiraResource, te.key);
+            const testIds = await Promise.all(tests.map((m) => resolveNumericId(jiraResource, m.key)));
+            await client.addTestsToTestExecution(teId, testIds, clientId, clientSecret);
+        } catch (err) {
+            rootLogger.error('Falha ao associar testes à TE (Xray Cloud nativo): ' + formatErr(err));
+        }
+        return;
     }
+
+    for (const m of tests) {
+        try {
+            await linkManager.createIssueLink(m.key, te.key, 'Tests');
+        } catch (err: unknown) {
+            const msg = formatErr(err);
+            if (!msg.includes('already exists') && !msg.includes('already linked')) {
+                rootLogger.warn('Falha ao linkar ' + m.key + ': ' + msg);
+            }
+        }
+    }
+}
+
+/** Xray Cloud identifies issues by their numeric Jira id (not the key). */
+async function resolveNumericId(jiraResource: JiraResourceLike, issueKey: string): Promise<string> {
+    const issue = await jiraResource.getJiraResource<{ id?: string }>('issue/' + issueKey);
+    if (!issue.id) {
+        throw new Error('issue ' + issueKey + ' has no numeric id');
+    }
+    return issue.id;
 }
 
 const RAVEN_IMPORT_STATUS: Record<string, string> = {
@@ -223,7 +268,7 @@ async function createTestExecutionFromResults(opts: CreateTeOpts): Promise<TestE
         });
 
         if (te && te.key && opts.matchedResults.length > 0) {
-            await linkTestsToTe(opts.matchedResults, te, opts.linkManager);
+            await linkTestsToTe(opts.matchedResults, te, opts.linkManager, opts.jiraResource);
         }
     }
 
