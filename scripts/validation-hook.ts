@@ -1610,7 +1610,7 @@ function isCodeValidator(path: string): ((line: string) => string[]) | null {
  * arquivos de código; documentação (.md etc.) é ignorada. Foco em bypass/supressão
  * reais no código, não em texto.
  */
-function runCheck(diff: string): CheckResult {
+export function runCheck(diff: string): CheckResult {
     const t0 = Date.now();
     const issues: ValidationIssue[] = [];
     let currentFile = '';

@@ -1,59 +1,161 @@
-import { LlmError, LlmRateLimitError, LlmProviderError, LlmTimeoutError, LlmAuthError } from './errors.js';
+import { describe, expect, it } from 'vitest';
+import {
+    classifyGitError,
+    formatErr,
+    getErrorMessage,
+    humanizeError,
+    isCancelError,
+    ExternalError,
+    LlmError,
+    LlmRateLimitError,
+    LlmProviderError,
+    LlmTimeoutError,
+    LlmAuthError,
+    DataIntegrityError,
+    DataFetchError,
+} from './errors.js';
+import type { ExternalErrorContext } from './errors.js';
 
-describe('Typed LLM errors', () => {
-    it('llmError has the correct name', () => {
-        const err = new LlmError('generic');
+const CTX: ExternalErrorContext = { operation: 'list pipelines' };
 
-        expect(err.name).toBe('LlmError');
-        expect(err.message).toBe('generic');
-        expect(err).toBeInstanceOf(Error);
+describe('Shared/errors', () => {
+    describe('ClassifyGitError', () => {
+        it('classifies 401 as auth with remediation', () => {
+            expect.hasAssertions();
+
+            const e = classifyGitError({ response: { status: 401 }, config: { url: '/x' } }, CTX);
+
+            expect(e.kind).toBe('auth');
+            expect(e.status).toBe(401);
+            expect(e.remediation).toMatch(/Token inválido/);
+        });
+
+        it('classifies 403 with scope note and scoped remediation', () => {
+            expect.hasAssertions();
+
+            const e = classifyGitError(
+                { response: { status: 403 }, config: { url: '/x' } },
+                { ...CTX, scope: 'contents:read' },
+            );
+
+            expect(e.kind).toBe('permission');
+            expect(e.remediation).toContain('contents:read');
+        });
+
+        it('classifies 403 without scope using generic remediation', () => {
+            expect.hasAssertions();
+
+            const e = classifyGitError({ response: { status: 403 }, config: { url: '/x' } }, CTX);
+
+            expect(e.kind).toBe('permission');
+            expect(e.remediation).toContain('escopo necessário');
+        });
+
+        it('classifies 404 as notFound', () => {
+            expect.hasAssertions();
+
+            const e = classifyGitError({ response: { status: 404 }, config: { url: '/x' } }, CTX);
+
+            expect(e.kind).toBe('notFound');
+        });
+
+        it('classifies 429 as rateLimit', () => {
+            expect.hasAssertions();
+
+            const e = classifyGitError({ response: { status: 429 }, config: { url: '/x' } }, CTX);
+
+            expect(e.kind).toBe('rateLimit');
+            expect(e.remediation).toMatch(/Aguarde/);
+        });
+
+        it('classifies 5xx as server', () => {
+            expect.hasAssertions();
+
+            const e = classifyGitError({ response: { status: 503 }, config: { url: '/x' } }, CTX);
+
+            expect(e.kind).toBe('server');
+        });
+
+        it('classifies network error codes as network', () => {
+            expect.hasAssertions();
+
+            const e = classifyGitError({ code: 'ECONNRESET', message: 'reset' }, CTX);
+
+            expect(e.kind).toBe('network');
+            expect(e.remediation).toMatch(/rede/);
+        });
+
+        it('falls back to unknown when nothing matches', () => {
+            expect.hasAssertions();
+
+            const e = classifyGitError({ message: 'weird' }, CTX);
+
+            expect(e.kind).toBe('unknown');
+        });
     });
 
-    it('llmRateLimitError is an instance of LlmError', () => {
-        const err = new LlmRateLimitError('rate limited');
+    describe('FormatErr / getErrorMessage / humanizeError', () => {
+        it('extracts message from Error objects', () => {
+            expect.hasAssertions();
+            expect(formatErr(new Error('boom'))).toBe('boom');
+        });
 
-        expect(err).toBeInstanceOf(LlmError);
-        expect(err.name).toBe('LlmRateLimitError');
+        it('stringifies non-Error thrown values', () => {
+            expect.hasAssertions();
+            expect(formatErr('plain string')).toBe('plain string');
+            expect(formatErr(42)).toBe('42');
+        });
+
+        it('getErrorMessage aliases formatErr', () => {
+            expect.hasAssertions();
+            expect(getErrorMessage({ message: 'm' })).toBe('m');
+        });
+
+        it('humanizeError prefixes the context', () => {
+            expect.hasAssertions();
+            expect(humanizeError(new Error('x'), 'ctx')).toBe('ctx: x');
+        });
     });
 
-    it('llmProviderError is an instance of LlmError', () => {
-        const err = new LlmProviderError('provider failed');
+    describe('IsCancelError', () => {
+        it('returns true for a CancelError-shaped value', () => {
+            expect.hasAssertions();
+            expect(isCancelError({ name: 'CancelError' })).toBeTruthy();
+        });
 
-        expect(err).toBeInstanceOf(LlmError);
-        expect(err.name).toBe('LlmProviderError');
+        it('returns false for other values', () => {
+            expect.hasAssertions();
+            expect(isCancelError(null)).toBeFalsy();
+            expect(isCancelError({ name: 'Other' })).toBeFalsy();
+        });
     });
 
-    it('llmTimeoutError is an instance of LlmError', () => {
-        const err = new LlmTimeoutError('timed out');
+    describe('Error classes', () => {
+        it('sets names on LLM error hierarchy', () => {
+            expect.hasAssertions();
+            expect(new LlmError('a').name).toBe('LlmError');
+            expect(new LlmRateLimitError('a').name).toBe('LlmRateLimitError');
+            expect(new LlmProviderError('a').name).toBe('LlmProviderError');
+            expect(new LlmTimeoutError('a').name).toBe('LlmTimeoutError');
+            expect(new LlmAuthError('a').name).toBe('LlmAuthError');
+        });
 
-        expect(err).toBeInstanceOf(LlmError);
-        expect(err.name).toBe('LlmTimeoutError');
-    });
+        it('dataIntegrityError and DataFetchError carry messages', () => {
+            expect.hasAssertions();
+            expect(new DataIntegrityError('bad').message).toBe('bad');
+            expect(new DataFetchError('no', { cause: 'x' }).message).toBe('no');
+            expect(new DataFetchError('no').name).toBe('DataFetchError');
+        });
 
-    it('llmAuthError is an instance of LlmError', () => {
-        const err = new LlmAuthError('auth failure');
+        it('externalError exposes kind/status/operation', () => {
+            expect.hasAssertions();
 
-        expect(err).toBeInstanceOf(LlmError);
-        expect(err.name).toBe('LlmAuthError');
-    });
+            const e = new ExternalError('auth', 'm', { operation: 'op', status: 401 });
 
-    it('can be caught with instanceof LlmError', () => {
-        const fn = (): never => {
-            throw new LlmProviderError('fail');
-        };
-
-        expect(() => fn()).toThrow(LlmError);
-    });
-
-    it('can distinguish between error types', () => {
-        const fn = (type: string): never => {
-            if (type === 'rate') throw new LlmRateLimitError('rate');
-            if (type === 'auth') throw new LlmAuthError('auth');
-            throw new LlmProviderError('provider');
-        };
-
-        expect(() => fn('rate')).toThrow(LlmRateLimitError);
-        expect(() => fn('auth')).toThrow(LlmAuthError);
-        expect(() => fn('provider')).toThrow(LlmProviderError);
+            expect(e).toBeInstanceOf(Error);
+            expect(e.kind).toBe('auth');
+            expect(e.operation).toBe('op');
+            expect(e.status).toBe(401);
+        });
     });
 });

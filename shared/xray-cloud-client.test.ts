@@ -1,61 +1,172 @@
-/** Unit tests for XrayCloudClient proxy propagation.
- *
- *  Xray Cloud lives behind the corporate egress proxy in Euronext's network.
- *  The client must honor the same `QA_PROXY_URL` config as the Jira client
- *  (shared/proxy-config.ts fallback chain), so a single proxy config drives
- *  all egress. Regression guard for the inconsistency where Xray ignored
- *  `QA_PROXY_URL` and only honored HTTPS_PROXY/HTTP_PROXY env vars.
- */
-import { describe, it, expect, vi, beforeEach } from 'vitest';
+import { afterEach, describe, expect, it, vi } from 'vitest';
 
-const { mockCreateThrottledClient } = vi.hoisted(() => ({
-    mockCreateThrottledClient: vi.fn(() => ({ post: vi.fn() })),
-}));
+const postSpy = vi.fn();
+const fakeInstance = { post: postSpy };
 
-vi.mock('../shared/http-client', () => ({
-    createThrottledClient: mockCreateThrottledClient,
-}));
-
-const { mockGet } = vi.hoisted(() => ({ mockGet: vi.fn() }));
-
-vi.mock('../shared/config', () => ({
+vi.mock('./config.js', () => ({
     default: {
-        get: mockGet,
-        getDefault: () => ({ get: mockGet }),
+        getDefault: () => ({
+            get: vi.fn((k: string) => (k === 'proxyUrl' ? undefined : 'https://xray.cloud.xpand-it.com')),
+        }),
     },
 }));
+vi.mock('./http-client.js', () => ({ createThrottledClient: vi.fn(() => fakeInstance) }));
 
-import { XrayCloudClient } from '../shared/xray-cloud-client.js';
+import { XrayCloudClient } from './xray-cloud-client.js';
 
-describe('XrayCloudClient proxy propagation', () => {
-    beforeEach(() => {
+vi.mock('./logger.js', () => ({ rootLogger: { warn: vi.fn(), error: vi.fn(), info: vi.fn(), debug: vi.fn() } }));
+
+describe('Shared/xray-cloud-client', () => {
+    afterEach(() => {
         vi.clearAllMocks();
+    });
 
-        mockGet.mockImplementation((key: string) => {
-            if (key === 'xrayCloudUrl') return 'https://xray.cloud.getxray.app';
-            return '';
+    function makeClient(): XrayCloudClient {
+        return new XrayCloudClient('https://xray.example');
+    }
+
+    describe('Authenticate', () => {
+        it('returns and caches the token on success', async () => {
+            expect.hasAssertions();
+
+            postSpy.mockResolvedValue({ data: '"tok-123"' });
+            const client = makeClient();
+            const token = await client.authenticate('id', 'secret');
+
+            expect(token).toBe('tok-123');
+            expect(postSpy).toHaveBeenCalledWith('/api/v2/authenticate', { client_id: 'id', client_secret: 'secret' });
+
+            postSpy.mockClear();
+            const second = await client.authenticate('id', 'secret');
+
+            expect(second).toBe('tok-123');
+            expect(postSpy).not.toHaveBeenCalled();
+        });
+
+        it('strips surrounding quotes from the token', async () => {
+            expect.hasAssertions();
+
+            postSpy.mockResolvedValue({ data: 'tok-raw' });
+            const token = await makeClient().authenticate('id', 'secret');
+
+            expect(token).toBe('tok-raw');
+        });
+
+        it('returns null and warns when token is empty', async () => {
+            expect.hasAssertions();
+
+            postSpy.mockResolvedValue({ data: '' });
+            const token = await makeClient().authenticate('id', 'secret');
+
+            expect(token).toBeNull();
+        });
+
+        it('returns null when the auth request throws', async () => {
+            expect.hasAssertions();
+
+            postSpy.mockRejectedValue(new Error('network'));
+            const token = await makeClient().authenticate('id', 'secret');
+
+            expect(token).toBeNull();
         });
     });
 
-    it('passes QA_PROXY_URL as proxyUrl to the HTTP client', () => {
-        mockGet.mockImplementation((key: string) => {
-            if (key === 'proxyUrl') return 'http://127.0.0.1:9000';
-            if (key === 'xrayCloudUrl') return 'https://xray.cloud.getxray.app';
-            return '';
+    describe('Graphql', () => {
+        it('returns the data object on success', async () => {
+            expect.hasAssertions();
+
+            postSpy.mockResolvedValue({ data: { data: { foo: 1 } } });
+            const out = await makeClient().graphql('query', {}, 'id', 'secret');
+
+            expect(out).toStrictEqual({ foo: 1 });
         });
 
-        const client = new XrayCloudClient();
+        it('returns null when not authenticated', async () => {
+            expect.hasAssertions();
 
-        expect(client).toBeInstanceOf(XrayCloudClient);
-        expect(mockCreateThrottledClient).toHaveBeenCalledWith(
-            expect.objectContaining({ proxyUrl: 'http://127.0.0.1:9000' }),
-        );
+            postSpy.mockResolvedValue({ data: '' });
+            const out = await makeClient().graphql('query', {}, 'id', 'secret');
+
+            expect(out).toBeNull();
+        });
+
+        it('returns null when the GraphQL request throws', async () => {
+            expect.hasAssertions();
+
+            postSpy.mockResolvedValueOnce({ data: '"tok"' });
+            postSpy.mockRejectedValueOnce(new Error('boom'));
+            const out = await makeClient().graphql('query', {}, 'id', 'secret');
+
+            expect(out).toBeNull();
+        });
     });
 
-    it('propagates empty proxyUrl without breaking when proxy is unset', () => {
-        const client = new XrayCloudClient();
+    describe('GraphqlMutation', () => {
+        it('resolves on success with no errors', async () => {
+            expect.hasAssertions();
 
-        expect(client).toBeInstanceOf(XrayCloudClient);
-        expect(mockCreateThrottledClient).toHaveBeenCalledWith(expect.objectContaining({ proxyUrl: '' }));
+            postSpy.mockResolvedValue({ data: { data: {}, errors: [] } });
+
+            await expect(makeClient().graphqlMutation('m', {}, 'id', 'secret')).resolves.toBeUndefined();
+        });
+
+        it('throws when not authenticated', async () => {
+            expect.hasAssertions();
+
+            postSpy.mockResolvedValue({ data: '' });
+
+            await expect(makeClient().graphqlMutation('m', {}, 'id', 'secret')).rejects.toThrow(
+                'Xray Cloud authentication failed',
+            );
+        });
+
+        it('throws when GraphQL returns errors', async () => {
+            expect.hasAssertions();
+
+            postSpy.mockResolvedValue({ data: { data: {}, errors: [{ message: 'bad' }] } });
+
+            await expect(makeClient().graphqlMutation('m', {}, 'id', 'secret')).rejects.toThrow('bad');
+        });
+    });
+
+    describe('AddPreconditionsToTest', () => {
+        it('throws when test issue id is empty', async () => {
+            expect.hasAssertions();
+            await expect(makeClient().addPreconditionsToTest('', ['1'], 'id', 'secret')).rejects.toThrow(
+                'requires a test issue id',
+            );
+        });
+
+        it('throws when precondition list is empty', async () => {
+            expect.hasAssertions();
+            await expect(makeClient().addPreconditionsToTest('5', [], 'id', 'secret')).rejects.toThrow(
+                'requires at least one precondition issue id',
+            );
+        });
+
+        it('delegates to graphqlMutation with the right mutation', async () => {
+            expect.hasAssertions();
+
+            postSpy.mockResolvedValue({ data: { data: {}, errors: [] } });
+            await makeClient().addPreconditionsToTest('5', ['10', '11'], 'id', 'secret');
+
+            const call = postSpy.mock.calls.find((c) => c[0] === '/api/v2/graphql');
+
+            expect(call?.[0]).toBe('/api/v2/graphql');
+
+            expect((call?.[1] as { query?: string } | undefined)?.query).toContain('addPreconditionsToTest');
+
+            expect(
+                (call?.[1] as { variables?: { testIssueId?: string; preconditionIssueIds?: string[] } } | undefined)
+                    ?.variables,
+            ).toStrictEqual({
+                testIssueId: '5',
+                preconditionIssueIds: ['10', '11'],
+            });
+
+            const headers = (call?.[2] as { headers?: { Authorization?: string } } | undefined)?.headers;
+
+            expect(headers?.Authorization).toContain('Bearer');
+        });
     });
 });

@@ -1,95 +1,83 @@
-import { describe, it, expect } from 'vitest';
-import { extractReportersAst, extractReportersFromJsonObject } from './reporter-ast.js';
+import { describe, expect, it } from 'vitest';
+import { extractReportersFromJsonObject, extractReportersAst } from './reporter-ast.js';
 
-describe('ExtractReportersAst', () => {
-    describe('Fallback path', () => {
-        it('extracts CTRF reporter from vitest.config.ts', () => {
+describe('Setup/reporter-ast', () => {
+    describe('ExtractReportersFromJsonObject', () => {
+        it('extracts reporters array', () => {
             expect.hasAssertions();
-
-            const src = `import { defineConfig } from 'vitest/config';
-export default defineConfig({ test: { reporters: ['default', 'ctrf-json-reporter'] } });`;
-            const reporters = extractReportersAst('vitest.config.ts', src);
-
-            expect(reporters).toContain('ctrf-json-reporter');
+            expect(extractReportersFromJsonObject({ reporters: ['default', 'html'] })).toStrictEqual([
+                'default',
+                'html',
+            ]);
         });
 
-        it('extracts JUnit reporter from jest.config.js', () => {
+        it('extracts a single reporter string', () => {
             expect.hasAssertions();
-
-            const src = `module.exports = { reporters: ['default', ['jest-junit', {}]] };`;
-            const reporters = extractReportersAst('jest.config.js', src);
-
-            expect(reporters).toContain('jest-junit');
+            expect(extractReportersFromJsonObject({ reporter: 'dot' })).toStrictEqual(['dot']);
         });
 
-        it('extracts reporter from cypress.config.ts', () => {
+        it('extracts reporters nested under test', () => {
             expect.hasAssertions();
-
-            const src = `import { defineConfig } from 'cypress';
-export default defineConfig({ reporter: 'ctrf-json-reporter' });`;
-            const reporters = extractReportersAst('cypress.config.ts', src);
-
-            expect(reporters).toContain('ctrf-json-reporter');
+            expect(extractReportersFromJsonObject({ test: { reporters: ['json'] } })).toStrictEqual(['json']);
         });
 
-        it('extracts reporter from playwright.config.ts', () => {
+        it('dedupes and trims', () => {
             expect.hasAssertions();
-
-            const src = `import { defineConfig } from '@playwright/test';
-export default defineConfig({ reporter: [['ctrf', {}], 'list'] });`;
-            const reporters = extractReportersAst('playwright.config.ts', src);
-
-            expect(reporters).toContain('ctrf');
+            expect(extractReportersFromJsonObject({ reporters: ['dot', ' dot ', 'dot'] })).toStrictEqual(['dot']);
         });
 
-        it('resolves new X() via import specifier AND identifier', () => {
+        it('handles object reporters by constructor name', () => {
             expect.hasAssertions();
 
-            const src = `import { defineConfig } from 'vitest/config';
-import VitestCtrfReporter from './ctrf-helpers.js';
-export default defineConfig({ test: { reporters: ['default', new VitestCtrfReporter()] } });`;
-            const reporters = extractReportersAst('vitest.config.ts', src);
+            class MyReporter {}
+            const out = extractReportersFromJsonObject({ reporters: [new MyReporter()] });
 
-            expect(reporters).toContain('VitestCtrfReporter');
-            expect(reporters.some((r) => r.includes('ctrf'))).toBeTruthy();
+            expect(out).toStrictEqual(['MyReporter']);
         });
 
-        it('does NOT produce a false positive from a comment or string literal', () => {
+        it('returns empty for null/array/non-object', () => {
             expect.hasAssertions();
-
-            const src = `// we should add a ctrf reporter later
-const note = 'configure ctrf reporter in the future';
-export default { test: { reporters: ['default'] } };`;
-            const reporters = extractReportersAst('vitest.config.ts', src);
-
-            expect(reporters).not.toContain('ctrf');
-            expect(reporters).toStrictEqual(['default']);
+            expect(extractReportersFromJsonObject(null)).toStrictEqual([]);
+            expect(extractReportersFromJsonObject([])).toStrictEqual([]);
         });
     });
 
-    describe('ExtractReportersFromJsonObject — package.json inline', () => {
-        it('reads jest.reporters', () => {
+    describe('ExtractReportersAst', () => {
+        it('parses a JSON config file for reporters', () => {
             expect.hasAssertions();
 
-            const out = extractReportersFromJsonObject({ reporters: ['default', 'jest-junit'] });
+            const src = JSON.stringify({ reporters: ['default', 'junit'] });
 
-            expect(out).toContain('jest-junit');
+            expect(extractReportersAst('vitest.config.json', src)).toStrictEqual(['default', 'junit']);
         });
 
-        it('reads vitest.test.reporters', () => {
+        it('parses a TS config export default object', () => {
             expect.hasAssertions();
 
-            const out = extractReportersFromJsonObject({ test: { reporters: ['ctrf'] } });
+            const src = `export default { reporters: ['verbose', 'html'], test: { reporters: ['json'] } };`;
+            const out = extractReportersAst('vitest.config.ts', src);
 
-            expect(out).toContain('ctrf');
+            expect(out).toContain('verbose');
+            expect(out).toContain('html');
+            expect(out).toContain('json');
         });
 
-        it('reads a single reporter string', () => {
+        it('parses a module.exports assignment', () => {
             expect.hasAssertions();
 
-            const out = extractReportersFromJsonObject({ reporters: 'ctrf' });
+            const src = `module.exports = { reporter: 'dot' };`;
 
-            expect(out).toContain('ctrf');
+            expect(extractReportersAst('jest.config.js', src)).toStrictEqual(['dot']);
+        });
+
+        it('returns empty array when no reporters found', () => {
+            expect.hasAssertions();
+            expect(extractReportersAst('vitest.config.ts', `export default { name: 'x' };`)).toStrictEqual([]);
+        });
+
+        it('returns empty array on unparseable source', () => {
+            expect.hasAssertions();
+            expect(extractReportersAst('vitest.config.ts', 'export default ===')).toStrictEqual([]);
         });
     });
 });

@@ -298,6 +298,40 @@ describe('ParseCtrfResults', () => {
         expect(result.stats.failed).toBe(1);
         expect(result.stats.total).toBe(2);
     });
+
+    it('prefers computed stats when CTRF summary disagrees (warns, keeps computed)', () => {
+        expect.hasAssertions();
+
+        const input = {
+            results: {
+                summary: { tests: 99, passed: 99, failed: 99, skipped: 99, pending: 0, other: 0, start: 0, stop: 0 },
+                tests: [
+                    { name: 'T1', status: 'passed' as const, duration: 100 },
+                    { name: 'T2', status: 'failed' as const, duration: 200 },
+                ],
+            },
+        };
+        const result = parseCtrfResults(input);
+
+        expect(result.stats.passed).toBe(1);
+        expect(result.stats.failed).toBe(1);
+        expect(result.stats.total).toBe(2);
+    });
+
+    it('prefers computed skipped when CTRF summary skipped disagrees', () => {
+        expect.hasAssertions();
+
+        const input = {
+            results: {
+                summary: { tests: 5, passed: 0, failed: 0, skipped: 5, pending: 0, other: 0, start: 0, stop: 0 },
+                tests: [{ name: 'T1', status: 'passed' as const, duration: 100 }],
+            },
+        };
+        const result = parseCtrfResults(input);
+
+        expect(result.stats.skipped).toBe(0);
+        expect(result.stats.passed).toBe(1);
+    });
 });
 
 describe('ParseTestResults (dispatch)', () => {
