@@ -105,7 +105,7 @@ async function runHeadlessCsvImport(res: RuntimeResources, csvPath: string): Pro
 
         if (!outcome.ok) {
             const detail = describeCsvFailure(outcome.reason, csvPath, outcome.error);
-            printError(detail);
+            printError('Importação CSV falhou', outcome.error ? new Error(outcome.error) : new Error(detail));
             res.pushHistory('csv-import', detail, 'error');
             return ExitCode.ERROR;
         }

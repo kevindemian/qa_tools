@@ -286,7 +286,8 @@ describe('E2E: CSV Import - Error Paths', () => {
         expect(result.inMemoryTasksId).toStrictEqual(['TEST-1']);
         expect(result.inMemoryTasksText).toStrictEqual(['TC01']);
         expect(result.status).toBe('error');
-        expect(result.summary).toBe('0/1 testes criados');
+        expect(result.summary).toBe('0/1 testes criados; 1 vínculo(s) perdido(s): KEY-100');
+        expect(result.failedLinks).toStrictEqual(['KEY-100']);
         expect(nock.isDone()).toBeTruthy();
     }, 120000);
 
