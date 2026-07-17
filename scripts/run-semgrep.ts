@@ -61,7 +61,9 @@ function buildSemgrepArgs(opts: { diffMode: boolean; jsonMode: boolean }): strin
     const cmdArgs = ['scan', '--config', RULES_PATH, '--error', '--severity', 'ERROR'];
     if (opts.jsonMode) cmdArgs.push('--json');
     if (opts.diffMode) {
-        cmdArgs.push('--baseline-commit', 'origin/dev', '--diff');
+        // Semgrep 1.168.0 removed the standalone `--diff` flag; diff scanning is
+        // triggered by `--baseline-commit <ref>` against the working tree.
+        cmdArgs.push('--baseline-commit', 'origin/dev');
     } else {
         // Scan do repo inteiro: exclui testes (catraca por diff cobre testes novos/modificados).
         cmdArgs.push(ROOT, '--exclude', '*.test.ts');

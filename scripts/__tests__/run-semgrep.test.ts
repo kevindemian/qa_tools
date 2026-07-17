@@ -101,7 +101,7 @@ describe('Run-semgrep', () => {
             ]);
         });
 
-        it('modo diff: usa baseline origin/dev + --diff e NAO passa ROOT', () => {
+        it('modo diff: usa baseline origin/dev (sem flag --diff, removida na 1.168.0) e NAO passa ROOT', () => {
             const args = buildSemgrepArgs({ diffMode: true, jsonMode: false });
 
             expect(args).toStrictEqual([
@@ -113,9 +113,9 @@ describe('Run-semgrep', () => {
                 'ERROR',
                 '--baseline-commit',
                 'origin/dev',
-                '--diff',
             ]);
             expect(args).not.toContain(ROOT);
+            expect(args).not.toContain('--diff');
         });
 
         it('jsonMode adiciona --json antes das flags de modo', () => {
@@ -129,8 +129,9 @@ describe('Run-semgrep', () => {
             const args = buildSemgrepArgs({ diffMode: true, jsonMode: true });
 
             expect(args).toContain('--json');
-            expect(args).toContain('--diff');
             expect(args).toContain('--baseline-commit');
+            expect(args).toContain('origin/dev');
+            expect(args).not.toContain('--diff');
         });
     });
 
