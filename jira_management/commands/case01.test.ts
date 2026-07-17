@@ -7,7 +7,7 @@ vi.mock('../../shared/state', () => ({
     update: vi.fn(),
 }));
 
-vi.mock('../../shared/config', () => {
+vi.mock('../../shared/config-accessor.js', () => {
     const mockGet = vi.fn();
     return {
         default: {

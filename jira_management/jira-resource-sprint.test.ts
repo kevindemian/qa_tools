@@ -1,7 +1,7 @@
 import { createHttpClient } from '../shared/http-client.js';
 import { createMockAxiosInstance } from '../shared/test-utils/factories/response-factory.js';
 
-vi.mock('../shared/config', () => ({
+vi.mock('../shared/config-accessor.js', () => ({
     default: {
         get: () => undefined,
         getDefault: () => ({ get: () => undefined }),

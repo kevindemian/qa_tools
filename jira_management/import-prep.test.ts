@@ -20,7 +20,7 @@ const mockConfig = vi.hoisted(() => {
     };
 });
 
-vi.mock('../shared/config', () => ({ default: mockConfig }));
+vi.mock('../shared/config-accessor.js', () => ({ default: mockConfig }));
 
 vi.mock('../shared/prompt', () => ({
     confirm: vi.fn(),

@@ -19,7 +19,7 @@ vi.mock('fs', () => ({
     },
 }));
 
-vi.mock('./config', () => ({
+vi.mock('./config-accessor.js', () => ({
     default: {
         get: vi.fn(() => path.join(os.tmpdir(), '.local', 'state', 'qa-tools')),
     },

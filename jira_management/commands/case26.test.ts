@@ -61,7 +61,7 @@ vi.mock('../../shared/data-hub/compute/flakiness-entries', () => ({
     calcFlakinessEntries: mockCalcFlakyEntries,
 }));
 
-vi.mock('../../shared/config', () => ({
+vi.mock('../../shared/config-accessor.js', () => ({
     default: { get: vi.fn().mockReturnValue('TEST') },
 }));
 

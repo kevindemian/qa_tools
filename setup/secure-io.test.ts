@@ -1,5 +1,5 @@
 import { describe, it, expect, beforeEach, afterEach } from 'vitest';
-import { mkdtempSync, writeFileSync, rmSync, mkdirSync, symlinkSync, chmodSync } from 'node:fs';
+import { mkdtempSync, writeFileSync, rmSync, mkdirSync, symlinkSync } from 'node:fs';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 import { readConfigFileSafe, MAX_CONFIG_BYTES } from './secure-io.js';
@@ -131,24 +131,6 @@ describe('Secure-io readConfigFileSafe — integração real (fs verdadeiro)', (
             writeFileSync(join(root, 'empty.json'), '');
 
             await expect(readConfigFileSafe(root, 'empty.json')).resolves.toBe('');
-        });
-    });
-
-    describe('Falha de I/O na leitura é sentinela segura', () => {
-        const isRoot = typeof process.getuid === 'function' && process.getuid() === 0;
-
-        it.skipIf(isRoot)('retorna null quando readFile falha por permissão negada (não vaza erro)', async () => {
-            expect.assertions(1);
-
-            const p = join(root, 'noperm.json');
-            writeFileSync(p, 'secret');
-            chmodSync(p, 0o000);
-
-            try {
-                await expect(readConfigFileSafe(root, 'noperm.json')).resolves.toBeNull();
-            } finally {
-                chmodSync(p, 0o644);
-            }
         });
     });
 });

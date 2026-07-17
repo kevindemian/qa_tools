@@ -46,7 +46,7 @@ vi.mock('../shared/data-hub/global-hub.js', () => ({
     setDataHub: vi.fn(),
 }));
 
-vi.mock('../shared/config', () => ({
+vi.mock('../shared/config-accessor.js', () => ({
     __esModule: true,
     default: {
         jiraProject: 'TEST',

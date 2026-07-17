@@ -11,7 +11,7 @@ vi.mock('./llm-client', () => ({
     parseRetryAfter: vi.fn(() => 2000),
 }));
 
-vi.mock('./config', () => {
+vi.mock('./config-accessor.js', () => {
     const mockConfig: Record<string, string> = {};
     return {
         __esModule: true,

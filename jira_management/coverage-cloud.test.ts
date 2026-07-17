@@ -1,6 +1,6 @@
 import { describe, it, expect, vi } from 'vitest';
 
-vi.mock('../shared/config', () => ({
+vi.mock('../shared/config-accessor.js', () => ({
     default: {
         getDefault: () => ({
             get: (key: string) => (key === 'jiraMode' ? 'cloud' : undefined),

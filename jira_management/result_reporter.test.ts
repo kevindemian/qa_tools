@@ -40,7 +40,7 @@ vi.mock('../shared/prompt', () => ({
     withSpinner: vi.fn(async (_label: string, fn: () => Promise<void>) => fn()),
 }));
 
-vi.mock('../shared/config', () => ({
+vi.mock('../shared/config-accessor.js', () => ({
     default: {
         getDefault: () => ({ get: () => undefined }),
         get: () => undefined,

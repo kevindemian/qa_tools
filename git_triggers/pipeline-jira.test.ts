@@ -6,7 +6,7 @@ vi.mock('../shared/prompt', () => ({
     printError: vi.fn(),
 }));
 
-vi.mock('../shared/config', () => ({
+vi.mock('../shared/config-accessor.js', () => ({
     default: {
         jiraProject: 'ECSPOL',
         get(key: string) {

@@ -2,7 +2,7 @@ import { nonNull } from '../shared/test-utils.js';
 import type { Mock } from 'vitest';
 import { createHttpClient } from '../shared/http-client.js';
 
-vi.mock('../shared/config', () => ({
+vi.mock('../shared/config-accessor.js', () => ({
     default: {
         get: () => undefined,
         getDefault: () => ({ get: () => undefined }),

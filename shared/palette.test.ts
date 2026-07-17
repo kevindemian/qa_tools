@@ -1,4 +1,4 @@
-vi.mock('./config', () => ({
+vi.mock('./config-accessor.js', () => ({
     default: {
         get: vi.fn((key: string) => key === 'noColor'),
     },

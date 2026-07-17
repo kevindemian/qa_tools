@@ -1,6 +1,6 @@
 /**
- * Smoke test for XRAY_MODE=cloud — only runs when the env var is set.
- * Run: XRAY_MODE=cloud npx vitest run e2e/smoke-xray-cloud --no-coverage
+ * Smoke test for Xray Cloud mode. Forces XRAY_MODE=cloud via Config override
+ * so the suite is hermetic and always executes (no environment-gated skip).
  */
 
 import Config from '../shared/config-accessor.js';
@@ -25,13 +25,18 @@ describe('Smoke-xray-cloud', () => {
     beforeEach(() => {
         vi.clearAllMocks();
         vi.restoreAllMocks();
+        Config.set('xrayMode', 'cloud');
     });
 
-    it.runIf(process.env['XRAY_MODE'] === 'cloud')('config.xrayMode returns "cloud"', () => {
+    afterEach(() => {
+        Config.reset();
+    });
+
+    it('config.xrayMode returns "cloud"', () => {
         expect(Config.get('xrayMode')).toBe('cloud');
     });
 
-    it.runIf(process.env['XRAY_MODE'] === 'cloud')('default XrayClient instantiates from JiraResource', async () => {
+    it('default XrayClient instantiates from JiraResource', async () => {
         expect.hasAssertions();
 
         const mod = await import('../jira_management/xray-client.js');
@@ -40,24 +45,21 @@ describe('Smoke-xray-cloud', () => {
         expect(typeof (mod as Record<string, unknown>)['default']).toBe('undefined');
     });
 
-    it.runIf(process.env['XRAY_MODE'] === 'cloud')(
-        'createStepImporter returns CloudStepImporter when mode=cloud',
-        () => {
-            const jira = new JiraResource('test', 'https://example.atlassian.net');
-            const importer = createStepImporter(jira, 'cloud');
+    it('createStepImporter returns CloudStepImporter when mode=cloud', () => {
+        const jira = new JiraResource('test', 'https://example.atlassian.net');
+        const importer = createStepImporter(jira, 'cloud');
 
-            expect(importer).toBeDefined();
-        },
-    );
+        expect(importer).toBeDefined();
+    });
 
-    it.runIf(process.env['XRAY_MODE'] === 'cloud')('jiraResource with cloud base URL is valid', () => {
+    it('jiraResource with cloud base URL is valid', () => {
         const jira = new JiraResource('test', 'https://example.atlassian.net');
 
         expect(jira.baseUrl).toContain('atlassian.net');
         expect(jira.baseUrl).toMatch(/^https/);
     });
 
-    it.runIf(process.env['XRAY_MODE'] === 'cloud')('resolves egress proxy from HTTPS_PROXY config', () => {
+    it('resolves egress proxy from HTTPS_PROXY config', () => {
         const saved: Record<string, string | undefined> = {
             QA_PROXY_URL: process.env['QA_PROXY_URL'],
             HTTPS_PROXY: process.env['HTTPS_PROXY'],
@@ -81,31 +83,28 @@ describe('Smoke-xray-cloud', () => {
         }
     });
 
-    it.runIf(process.env['XRAY_MODE'] === 'cloud')(
-        'importExecutionResults posts to raven 2.0 cloud import endpoint',
-        async () => {
-            expect.hasAssertions();
+    it('importExecutionResults posts to raven 2.0 cloud import endpoint', async () => {
+        expect.hasAssertions();
 
-            const resource: JiraResourceLike = {
-                getJiraResource: vi.fn().mockResolvedValue({}),
-                postJiraResource: vi.fn().mockResolvedValue({}),
-                putJiraResource: vi.fn().mockResolvedValue(null),
-                searchJiraIssues: vi.fn().mockResolvedValue({ issues: [] }),
-                getTransitionsForIssue: vi.fn().mockResolvedValue({}),
-                transitionIssue: vi.fn().mockResolvedValue(undefined),
-                postToApiRoot: vi.fn().mockResolvedValue(null),
-            };
+        const resource: JiraResourceLike = {
+            getJiraResource: vi.fn().mockResolvedValue({}),
+            postJiraResource: vi.fn().mockResolvedValue({}),
+            putJiraResource: vi.fn().mockResolvedValue(null),
+            searchJiraIssues: vi.fn().mockResolvedValue({ issues: [] }),
+            getTransitionsForIssue: vi.fn().mockResolvedValue({}),
+            transitionIssue: vi.fn().mockResolvedValue(undefined),
+            postToApiRoot: vi.fn().mockResolvedValue(null),
+        };
 
-            const matched = [
-                { key: 'ECSPOL-1', status: 'passed', duration: 10 },
-                { key: 'ECSPOL-2', status: 'failed', duration: 20 },
-            ];
+        const matched = [
+            { key: 'ECSPOL-1', status: 'passed', duration: 10 },
+            { key: 'ECSPOL-2', status: 'failed', duration: 20 },
+        ];
 
-            await importExecutionResults(resource, 'ECSPOL-1255', matched);
+        await importExecutionResults(resource, 'ECSPOL-1255', matched);
 
-            const mock = resource.postToApiRoot as ReturnType<typeof vi.fn>;
+        const mock = resource.postToApiRoot as ReturnType<typeof vi.fn>;
 
-            expect(mock).toHaveBeenCalledWith('rest/raven/2.0/api/import/execution/json', expect.any(Object));
-        },
-    );
+        expect(mock).toHaveBeenCalledWith('rest/raven/2.0/api/import/execution/json', expect.any(Object));
+    });
 });

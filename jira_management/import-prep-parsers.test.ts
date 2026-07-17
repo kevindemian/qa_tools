@@ -1,7 +1,7 @@
 import { nonNull } from '../shared/test-utils.js';
 import { handleDryRun, resolveCsvPath, resolveLabels, resolveJsonPath } from './import-prep-parsers.js';
 
-vi.mock('../shared/config', () => ({ default: { get: vi.fn() } }));
+vi.mock('../shared/config-accessor.js', () => ({ default: { get: vi.fn() } }));
 vi.mock('../shared/logger', () => ({
     rootLogger: {
         child: vi.fn().mockReturnValue({ info: vi.fn(), warn: vi.fn(), error: vi.fn() }),

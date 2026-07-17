@@ -480,8 +480,4 @@ main().catch((err: unknown) => {
     rootLogger.error('Main error', { error: String(err) });
 });
 
-// Re-exports for backward compatibility (tests use require('./main'))
-export { resolveAlias, buildMenuChoices, _configHint } from './menu-data.js';
-export { showHelp, showDocs, showHelpLoop, handleSpecialInput } from './ui-helpers.js';
-
 export { main, showSplash, dispatchChoice, dispatchAndHandleResult, showGapBadge, _isJiraConfigured };

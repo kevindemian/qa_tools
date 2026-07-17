@@ -5,7 +5,7 @@ vi.mock('../../../shared/state', () => ({
     loadTypedState: vi.fn().mockReturnValue({}),
     update: vi.fn(),
 }));
-vi.mock('../../../shared/config', () => {
+vi.mock('../../../shared/config-accessor.js', () => {
     const mockGet = vi.fn();
     return {
         default: { get: mockGet, getInstance: vi.fn().mockReturnValue({ get: mockGet }) },

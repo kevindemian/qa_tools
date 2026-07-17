@@ -10,7 +10,7 @@ vi.mock('../shared/logger', () => ({
 vi.mock('fs');
 
 const mockConfigGet = vi.fn<(key: string) => string | undefined>();
-vi.mock('../shared/config', () => ({
+vi.mock('../shared/config-accessor.js', () => ({
     default: {
         get: (key: string) => mockConfigGet(key),
         getDefault: () => ({ get: (key: string) => mockConfigGet(key) }),

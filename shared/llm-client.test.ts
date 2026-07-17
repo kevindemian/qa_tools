@@ -1,5 +1,5 @@
 vi.useFakeTimers();
-vi.mock('./config', () => {
+vi.mock('./config-accessor.js', () => {
     const mockConfig: Record<string, string> = {};
     const ConfigMock = {
         get llmApiKey() {

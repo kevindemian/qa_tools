@@ -14,7 +14,7 @@ vi.mock('../shared/xray-cloud-client', () => ({
     }),
 }));
 
-vi.mock('../shared/config');
+vi.mock('../shared/config-accessor.js');
 
 describe('ServerStepImporter', () => {
     it('calls postJiraResource with correct endpoint and payload', async () => {

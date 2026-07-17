@@ -15,7 +15,7 @@ vi.mock('fs', () => ({
     readFileSync: mockFsReadFileSync,
 }));
 vi.mock('../../shared/prompt');
-vi.mock('../../shared/config', () => ({
+vi.mock('../../shared/config-accessor.js', () => ({
     default: {
         get: vi.fn(),
         getAllPrefixed: vi.fn(() => ({})),

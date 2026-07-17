@@ -4,13 +4,14 @@ vi.mock('./output', () => ({
 }));
 vi.mock('./breadcrumbs', () => ({ getBreadcrumbPath: vi.fn(() => '') }));
 vi.mock('./logger', () => ({ rootLogger: { writeFileOnly: vi.fn() } }));
-vi.mock('./config', () => {
+vi.mock('./config-accessor.js', () => {
     const mockConfig = { quiet: false };
     return {
         __esModule: true,
         default: {
             get: (key: string) => (key === 'quiet' ? mockConfig.quiet : undefined),
             getDefault: () => ({ get: (k: string) => (k === 'quiet' ? mockConfig.quiet : undefined) }),
+            create: (overrides: Record<string, unknown> = {}) => ({ ...mockConfig, ...overrides }),
         },
     };
 });

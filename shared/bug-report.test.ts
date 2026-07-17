@@ -20,7 +20,7 @@ vi.mock('./failure-analysis', async (importOriginal) => {
 
 vi.mock('./logger');
 
-vi.mock('./config', () => ({
+vi.mock('./config-accessor.js', () => ({
     __esModule: true,
     default: {
         jiraProject: '',

@@ -17,7 +17,7 @@ vi.mock('../shared/prompt', () => ({
     }),
 }));
 
-vi.mock('../shared/config', () => ({
+vi.mock('../shared/config-accessor.js', () => ({
     default: { getDefault: () => ({ get: () => undefined }) },
 }));
 

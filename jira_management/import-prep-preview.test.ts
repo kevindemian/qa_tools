@@ -20,7 +20,7 @@ vi.mock('../shared/prompt', () => ({
     success: vi.fn(),
 }));
 
-vi.mock('../shared/config', () => ({
+vi.mock('../shared/config-accessor.js', () => ({
     default: { get: (...args: [key: string, defaultValue?: boolean]) => mockConfigGet(...args) },
 }));
 

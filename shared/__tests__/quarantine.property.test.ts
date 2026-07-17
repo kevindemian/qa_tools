@@ -14,7 +14,7 @@ import { describe, expect, it, afterEach } from 'vitest';
 import { generatePipelineQuarantine, loadQuarantine, filterExpiredEntries } from '../quarantine.js';
 import type { QuarantineEntry, QuarantineStore } from '../quarantine.js';
 
-vi.mock('../config', () => ({
+vi.mock('../config-accessor.js', () => ({
     __esModule: true,
     default: {
         xdgStateHome: path.join(os.tmpdir(), 'qa-tools-quarantine-pbt'),

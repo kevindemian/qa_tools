@@ -1,4 +1,4 @@
-vi.mock('../shared/config', () => ({
+vi.mock('../shared/config-accessor.js', () => ({
     default: {
         get: () => undefined,
         getDefault: () => ({ get: () => undefined }),

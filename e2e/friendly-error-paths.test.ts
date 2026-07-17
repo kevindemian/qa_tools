@@ -78,7 +78,7 @@ vi.mock('../shared/state', () => ({
     getStatePath: vi.fn(() => path.join(os.tmpdir(), 'state.json')),
 }));
 
-vi.mock('../shared/config', () => ({
+vi.mock('../shared/config-accessor.js', () => ({
     default: {
         get(key: string) {
             const empty: Record<string, string> = {

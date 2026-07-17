@@ -8,7 +8,7 @@ vi.mock('../shared/cli_base', () => ({
     mask: vi.fn((v: string) => v),
     sanitizeUrl: vi.fn((url: string) => url),
 }));
-vi.mock('../shared/config', () => ({ default: { get: vi.fn(() => '') }, __esModule: true }));
+vi.mock('../shared/config-accessor.js', () => ({ default: { get: vi.fn(() => '') }, __esModule: true }));
 vi.mock('../shared/splash', () => ({ showSplash: vi.fn() }));
 vi.mock('../shared/data-hub/global-hub.js', () => ({
     getDataHub: vi.fn().mockReturnValue({

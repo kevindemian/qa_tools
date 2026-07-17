@@ -50,7 +50,7 @@ vi.mock('./session-state', () => ({
     currentProvider: 'gitlab',
 }));
 
-vi.mock('../shared/config', () => ({
+vi.mock('../shared/config-accessor.js', () => ({
     __esModule: true,
     default: {
         jiraProject: 'TEST',

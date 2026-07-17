@@ -49,7 +49,7 @@ function createMockConfig() {
     };
 }
 
-vi.mock('../shared/config', createMockConfig);
+vi.mock('../shared/config-accessor.js', createMockConfig);
 
 vi.mock('../shared/session-context', () => ({
     SessionContext: vi.fn(function () {

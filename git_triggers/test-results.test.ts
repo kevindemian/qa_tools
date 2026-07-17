@@ -36,7 +36,7 @@ vi.mock('../shared/deps', () => ({
     }),
 }));
 
-vi.mock('../shared/config', () => {
+vi.mock('../shared/config-accessor.js', () => {
     const cfg: Record<string, unknown> = {
         jiraBaseUrl: 'https://jira.example.com',
         jiraPersonalToken: 'token',

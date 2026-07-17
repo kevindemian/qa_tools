@@ -14,7 +14,7 @@ vi.mock('fs', () => ({
 const mockConfigGet: Mock<(...args: [string]) => string | undefined> = vi.hoisted(() =>
     vi.fn((key: string) => Reflect.get(process.env, key) || undefined),
 );
-vi.mock('./config', () => ({
+vi.mock('./config-accessor.js', () => ({
     default: { get: mockConfigGet },
 }));
 

@@ -1,4 +1,4 @@
-vi.mock('./config', () => {
+vi.mock('./config-accessor.js', () => {
     const mockConfig: Record<string, string> = {};
     return {
         __esModule: true,

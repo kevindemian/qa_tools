@@ -20,7 +20,7 @@ vi.mock('../shared/xray-cloud-client', () => ({
     }),
 }));
 
-vi.mock('../shared/config');
+vi.mock('../shared/config-accessor.js');
 
 let mockIssueGet: MockedJiraResource['getJiraResource'];
 let mockOriginGet: MockedJiraResource['getFromOriginPath'];

@@ -32,7 +32,7 @@ vi.mock('../shared/breadcrumbs', () => ({
     getBreadcrumbPath: vi.fn(() => 'GIT > proj-a'),
 }));
 vi.mock('../shared/show-docs', () => ({ showDocs: vi.fn(() => Promise.resolve()) }));
-vi.mock('../shared/config', () => {
+vi.mock('../shared/config-accessor.js', () => {
     const cfg: Record<string, unknown> = {
         autoConfirm: false,
         dryRun: true,

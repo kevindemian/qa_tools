@@ -11,7 +11,7 @@ vi.mock('./logger', () => ({
     rootLogger: { error: vi.fn(), info: vi.fn(), child: vi.fn().mockReturnThis() },
 }));
 
-vi.mock('./config', () => ({
+vi.mock('./config-accessor.js', () => ({
     default: { get: vi.fn(() => '') },
     get: vi.fn((key: string) => {
         if (key === 'CI_COMMIT_BRANCH') return 'main';

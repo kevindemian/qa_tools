@@ -6,7 +6,7 @@ import path from 'path';
 const TEST_TITLE = 'tests/login.spec.ts';
 const MOCK_STATE_HOME = path.join(os.tmpdir(), 'qa-tools-quarantine-test-mock');
 
-vi.mock('./config', () => ({
+vi.mock('./config-accessor.js', () => ({
     __esModule: true,
     default: {
         xdgStateHome: path.join(os.tmpdir(), 'qa-tools-quarantine-test-mock'),
