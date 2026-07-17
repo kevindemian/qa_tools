@@ -2,7 +2,7 @@
 import path from 'path';
 import { resolve, join } from 'path';
 import { mkdirSync, writeFileSync, existsSync, rmSync } from 'fs';
-import Config from './config.js';
+import Config from './config-accessor.js';
 import { formatDateISO } from './date-utils.js';
 import { rootLogger } from './logger.js';
 import { getCurrentProjectDir } from './project-context.js';

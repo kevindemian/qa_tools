@@ -1,7 +1,7 @@
 import { formatErr } from '../shared/errors.js';
 import { info } from '../shared/prompt.js';
 import { rootLogger } from '../shared/logger.js';
-import Config from '../shared/config.js';
+import Config from '../shared/config-accessor.js';
 import { XrayCloudClient } from '../shared/xray-cloud-client.js';
 import type { JsonObject, PreConditionSummary, JiraResourceLike } from '../shared/types.js';
 

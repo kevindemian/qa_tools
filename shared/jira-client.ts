@@ -13,7 +13,7 @@ import { createHttpClient } from './http-client.js';
 import { extractErrorMessage } from './prompt.js';
 import { rootLogger } from './logger.js';
 import { createJiraAuthHeader, isAtlassianCloudGateway, type JiraMode } from './jira-auth.js';
-import Config from './config.js';
+import Config from './config-accessor.js';
 import { checkCircuitBreaker, recordCircuitFailure, recordCircuitSuccess } from './circuit-breaker.js';
 import type { JsonObject, JiraResourceLike, SearchIssuesResponse } from './types.js';
 

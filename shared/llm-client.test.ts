@@ -95,7 +95,7 @@ vi.mock('./disk-cache', () => ({
 }));
 import { diskCacheGet } from './disk-cache.js';
 import { LlmError } from './errors.js';
-import Config from './config.js';
+import Config from './config-accessor.js';
 import {
     llmPrompt,
     clearCache,

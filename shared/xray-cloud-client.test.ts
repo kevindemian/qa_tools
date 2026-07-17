@@ -3,7 +3,7 @@ import { afterEach, describe, expect, it, vi } from 'vitest';
 const postSpy = vi.fn();
 const fakeInstance = { post: postSpy };
 
-vi.mock('./config.js', () => ({
+vi.mock('./config-accessor.js', () => ({
     default: {
         getDefault: () => ({
             get: vi.fn((k: string) => (k === 'proxyUrl' ? undefined : 'https://xray.cloud.xpand-it.com')),

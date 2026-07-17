@@ -200,7 +200,7 @@ describe('ReviewWithLlm', () => {
     });
 });
 
-import Config from './config.js';
+import Config from './config-accessor.js';
 import { detectHedging, detectContradictions, shouldSkipAdversarialReview } from './llm-review.js';
 
 const mockReviewResult = (content: string, confidence: 'high' | 'medium' | 'low' = 'medium', notes?: string) => ({

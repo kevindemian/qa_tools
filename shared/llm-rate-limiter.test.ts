@@ -22,7 +22,7 @@ vi.mock('./config', () => {
     };
 });
 
-import Config from './config.js';
+import Config from './config-accessor.js';
 import { checkRateLimit, resetRateLimiter, jitter, LLM_RATE_WINDOW_MS } from './llm-rate-limiter.js';
 import { LlmRateLimitError } from './errors.js';
 

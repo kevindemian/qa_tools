@@ -771,7 +771,7 @@ describe('Main.ts', () => {
         it('returns true when jiraBaseUrl and jiraPersonalToken have real values', async () => {
             expect.hasAssertions();
 
-            const configMod = await import('../shared/config.js');
+            const configMod = await import('../shared/config-accessor.js');
             vi.spyOn(configMod.default, 'get').mockReturnValue('https://jira.example.com');
 
             expect(mod._isJiraConfigured()).toBeTruthy();
@@ -780,7 +780,7 @@ describe('Main.ts', () => {
         it('returns false when jiraBaseUrl contains placeholder', async () => {
             expect.hasAssertions();
 
-            const configMod = await import('../shared/config.js');
+            const configMod = await import('../shared/config-accessor.js');
             vi.spyOn(configMod.default, 'get').mockReturnValue('seu-jira-server');
 
             expect(mod._isJiraConfigured()).toBeFalsy();
@@ -789,7 +789,7 @@ describe('Main.ts', () => {
         it('returns false when jiraPersonalToken is placeholder', async () => {
             expect.hasAssertions();
 
-            const configMod = await import('../shared/config.js');
+            const configMod = await import('../shared/config-accessor.js');
             vi.spyOn(configMod.default, 'get')
                 .mockReturnValueOnce('https://jira.example.com')
                 .mockReturnValueOnce('seu-token-aqui');
@@ -803,7 +803,7 @@ describe('Main.ts', () => {
             expect.hasAssertions();
 
             process.env['CI'] = 'false';
-            const configMod = await import('../shared/config.js');
+            const configMod = await import('../shared/config-accessor.js');
             vi.spyOn(configMod.default, 'get').mockReturnValue('https://jira.example.com');
 
             const mockJiraResource = { searchJiraIssues: vi.fn().mockResolvedValue({ total: 42 }) };

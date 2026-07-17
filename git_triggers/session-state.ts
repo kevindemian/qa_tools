@@ -1,5 +1,5 @@
 /** Session state — persist/load session context as JSON for the git_triggers lifecycle. */
-import Config from '../shared/config.js';
+import Config from '../shared/config-accessor.js';
 import { rootLogger } from '../shared/logger.js';
 import { SessionContext } from '../shared/session-context.js';
 import { load as loadState, update as updateState } from '../shared/state.js';

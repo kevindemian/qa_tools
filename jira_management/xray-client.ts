@@ -2,7 +2,7 @@
 import { formatErr } from '../shared/errors.js';
 import type { JiraResourceLike } from '../shared/types.js';
 import type { TestStep } from '../shared/types.js';
-import Config from '../shared/config.js';
+import Config from '../shared/config-accessor.js';
 import { XrayCloudClient } from '../shared/xray-cloud-client.js';
 
 export interface XrayStepImporter {

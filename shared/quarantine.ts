@@ -7,7 +7,7 @@ import path from 'path';
 import os from 'os';
 import { z } from 'zod';
 import { rootLogger } from './logger.js';
-import Config from './config.js';
+import Config from './config-accessor.js';
 
 // N2-B (security/detect-non-literal-fs-filename): the 6 FS calls below wrap their
 // path args in path.resolve(...)/path.join(...) over Config-derived paths

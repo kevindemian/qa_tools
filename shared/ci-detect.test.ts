@@ -1,12 +1,12 @@
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 
-vi.mock('./config.js', () => ({
+vi.mock('./config-accessor.js', () => ({
     default: {
         get: vi.fn(),
     },
 }));
 
-const { default: config } = await import('./config.js');
+const { default: config } = await import('./config-accessor.js');
 
 describe('IsGitHubCi', () => {
     beforeEach(() => {

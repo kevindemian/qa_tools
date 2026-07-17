@@ -10,7 +10,7 @@ import { llmPrompt } from './llm-client.js';
 import { rootLogger } from './logger.js';
 import { gracefulExit } from './cli_base.js';
 import { ExitCode } from './types.js';
-import Config from './config.js';
+import Config from './config-accessor.js';
 import { defaultOutput } from './output.js';
 import {
     loadFailureAnalysisFixtures,

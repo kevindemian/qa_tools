@@ -12,7 +12,7 @@ import os from 'node:os';
 
 const BASE_DIR = fs.mkdtempSync(path.join(os.tmpdir(), 'pbt-tempdir-'));
 
-vi.mock('../config.js', () => ({
+vi.mock('../config-accessor.js', () => ({
     default: {
         get: vi.fn((key: string) => {
             if (key === 'QA_TOOLS_REPORTS_DIR') return path.join(BASE_DIR, 'reports');

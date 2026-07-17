@@ -14,7 +14,7 @@
  * @module palette
  */
 import chalk, { type ChalkInstance } from 'chalk';
-import Config from './config.js';
+import Config from './config-accessor.js';
 
 if (Config.get<boolean>('noColor')) {
     chalk.level = 0;

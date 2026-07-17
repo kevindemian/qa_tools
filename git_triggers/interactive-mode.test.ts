@@ -564,7 +564,7 @@ describe('Interactive-mode test exports', () => {
         it('warns when Jira not configured', async () => {
             expect.hasAssertions();
 
-            const configMod = await import('../shared/config.js');
+            const configMod = await import('../shared/config-accessor.js');
             (configMod.default.get as ReturnType<typeof vi.fn>).mockReturnValue('');
             const result = await _testExports.handleBugReportFlow({} as never);
 
@@ -577,7 +577,7 @@ describe('Interactive-mode test exports', () => {
         it('runs bug report flow when Jira configured', async () => {
             expect.hasAssertions();
 
-            const configMod = await import('../shared/config.js');
+            const configMod = await import('../shared/config-accessor.js');
             (configMod.default.get as ReturnType<typeof vi.fn>).mockReturnValue('configured');
             const result = await _testExports.handleBugReportFlow({} as never);
 
@@ -1299,7 +1299,7 @@ describe('Interactive-mode test exports', () => {
             expect.hasAssertions();
 
             vi.mocked(getCurrentProject).mockReturnValue('proj1');
-            const configMod = await import('../shared/config.js');
+            const configMod = await import('../shared/config-accessor.js');
             (configMod.default.get as ReturnType<typeof vi.fn>).mockReturnValue('configured');
             await _testExports._dashboardCoverageGap();
 

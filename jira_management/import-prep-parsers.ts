@@ -2,7 +2,7 @@
 import { formatErr } from '../shared/errors.js';
 import * as fs from 'fs';
 import * as path from 'path';
-import Config from '../shared/config.js';
+import Config from '../shared/config-accessor.js';
 import { rootLogger } from '../shared/logger.js';
 import { load as loadState } from '../shared/state.js';
 import { isPreconditionKey } from '../shared/quoted-string.js';

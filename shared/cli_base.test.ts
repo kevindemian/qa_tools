@@ -43,7 +43,7 @@ vi.mock('readline', () => ({
 
 import * as cliBase from './cli_base.js';
 import * as readline from 'readline';
-import Config from './config.js';
+import Config from './config-accessor.js';
 
 const ENV_BACKUP = { ...process.env };
 

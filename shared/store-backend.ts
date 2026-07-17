@@ -4,7 +4,7 @@ import os from 'os';
 import { execFileSync } from 'child_process';
 import { rootLogger } from './logger.js';
 import { sanitizePath } from './path-utils.js';
-import Config from './config.js';
+import Config from './config-accessor.js';
 
 const GIT_BIN = '/usr/bin/git';
 

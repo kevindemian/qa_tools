@@ -18,7 +18,7 @@
  *   llm-cache         — in-memory + disk response cache
  *   llm-fallback      — tier configs, provider calls, fallback chain
  */
-import Config from './config.js';
+import Config from './config-accessor.js';
 import { rootLogger } from './logger.js';
 import { LlmError } from './errors.js';
 

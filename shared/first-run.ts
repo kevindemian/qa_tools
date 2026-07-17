@@ -9,7 +9,7 @@ import { formatErr } from './errors.js';
 import { title, info, divider, warn, showSelect } from './prompt.js';
 import { loadTypedState, update as updateState } from './state.js';
 import { main as setupMain } from '../setup/main.js';
-import Config from './config.js';
+import Config from './config-accessor.js';
 
 const FIRST_RUN_FLAG = '_firstRunDone';
 

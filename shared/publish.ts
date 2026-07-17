@@ -4,7 +4,7 @@ import { formatErr } from './errors.js';
 import path from 'path';
 import { execFileSync } from 'child_process';
 import { rootLogger } from './logger.js';
-import Config from './config.js';
+import Config from './config-accessor.js';
 import { cpSync, mkdirSync } from 'fs';
 import os from 'os';
 import { join } from 'path';

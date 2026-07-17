@@ -1,4 +1,4 @@
-import Config from '../shared/config.js';
+import Config from '../shared/config-accessor.js';
 import { showSplash } from '../shared/splash.js';
 import { defaultOutput } from '../shared/output.js';
 import { warn, helpLine, title, divider, prompt, printError, showSelect, tableView } from '../shared/prompt.js';

@@ -15,7 +15,7 @@ import { mkdtempSync, rmSync, readdirSync, readFileSync, existsSync } from 'node
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 import { readlineSync } from '../shared/deps.js';
-import Config from '../shared/config.js';
+import Config from '../shared/config-accessor.js';
 import { analyzeFailuresWithReport } from '../shared/failure-analysis.js';
 import type { analyzeFailuresWithReport as AnalyzeFailuresFn } from '../shared/failure-analysis.js';
 import type { AnalysisReport } from '../shared/failure-analysis.js';

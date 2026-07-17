@@ -5,7 +5,7 @@ import path from 'path';
 import { sanitizePath } from './path-utils.js';
 import { z } from 'zod';
 import { rootLogger } from './logger.js';
-import Config from './config.js';
+import Config from './config-accessor.js';
 
 const DISK_CACHE_TTL_MS = 60 * 60 * 1000;
 const CACHE_DIR_PERM = 0o700;

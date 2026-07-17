@@ -4,7 +4,7 @@ import { mkdtempSync, rmSync, readFileSync, existsSync } from 'node:fs';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 import { Logger } from './logger.js';
-import Config from './config.js';
+import Config from './config-accessor.js';
 
 class StubConfig {
     private readonly map: Record<string, unknown>;

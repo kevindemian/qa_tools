@@ -4,7 +4,7 @@
  */
 import { pushBreadcrumb, clearBreadcrumbs } from '../shared/breadcrumbs.js';
 import { createValidateEnv, offerEnvSetup, setupSigint } from '../shared/cli_base.js';
-import Config from '../shared/config.js';
+import Config from '../shared/config-accessor.js';
 import { getCurrentProject, setCurrentProject } from '../shared/project-context.js';
 import { showSplash } from '../shared/splash.js';
 import { calcFlakinessEntries } from '../shared/data-hub/compute/flakiness-entries.js';

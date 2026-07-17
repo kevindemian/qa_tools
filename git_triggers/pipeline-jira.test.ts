@@ -34,7 +34,7 @@ vi.mock('../shared/bug-report', () => ({
 }));
 
 import { confirm, success, printError } from '../shared/prompt.js';
-import Config from '../shared/config.js';
+import Config from '../shared/config-accessor.js';
 import { _jiraEnv } from './test-results.js';
 import { currentProvider, pushHistory } from './session-state.js';
 import { collectAutomated, fileToJira } from '../shared/bug-report.js';

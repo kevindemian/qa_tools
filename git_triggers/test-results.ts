@@ -1,7 +1,7 @@
 /** Test results — collect, parse, and report test results from CI artifacts to Jira. */
 import path from 'path';
 import { AdmZip, globSync } from '../shared/deps.js';
-import Config from '../shared/config.js';
+import Config from '../shared/config-accessor.js';
 import JiraClient from '../shared/jira-client.js';
 import type { JiraMode } from '../shared/jira-auth.js';
 import JiraLinkManager from '../jira_management/jira_link_manager.js';

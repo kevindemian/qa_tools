@@ -1,6 +1,6 @@
 import { createGitHubSmokeManager } from './smoke-shared.js';
 import { generatePrDescription } from '../git_triggers/ai-pr-desc.js';
-import Config from '../shared/config.js';
+import Config from '../shared/config-accessor.js';
 import { rootLogger } from '../shared/logger.js';
 
 function hasLlmKeys(): boolean {

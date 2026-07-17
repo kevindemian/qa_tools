@@ -4,7 +4,7 @@
 
 import { formatErr } from '../shared/errors.js';
 import type JiraResource from './jira_resource.js';
-import Config from '../shared/config.js';
+import Config from '../shared/config-accessor.js';
 import { rootLogger } from '../shared/logger.js';
 import type { JsonObject, JiraIssue } from '../shared/types.js';
 import { XrayCloudClient } from '../shared/xray-cloud-client.js';

@@ -40,7 +40,7 @@ const mockPrompt = vi.hoisted(() => ({
 vi.mock('../shared/prompt', () => mockPrompt);
 
 vi.mock('../shared/config', async (importOriginal) => {
-    const mod = await importOriginal<typeof import('../shared/config.js')>();
+    const mod = await importOriginal<typeof import('../shared/config-accessor.js')>();
     const inst = mod.default.getDefault();
     const realGet = inst.get.bind(inst);
     inst.get = ((key: string): string | undefined =>

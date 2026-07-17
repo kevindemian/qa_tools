@@ -1,4 +1,4 @@
-import Config from '../shared/config.js';
+import Config from '../shared/config-accessor.js';
 import GitHubManager from '../git_triggers/github_manager.js';
 
 const E2E_REPO = 'kevindemian/qa_tools';

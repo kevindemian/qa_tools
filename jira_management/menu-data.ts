@@ -1,4 +1,4 @@
-import Config from '../shared/config.js';
+import Config from '../shared/config-accessor.js';
 import { loadTypedState } from '../shared/state.js';
 import { NOT_CONFIGURED } from './constants.js';
 

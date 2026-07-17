@@ -2,7 +2,7 @@
 import { formatErr } from '../shared/errors.js';
 import { rootLogger } from '../shared/logger.js';
 import { success, info, withSpinner } from '../shared/prompt.js';
-import Config from '../shared/config.js';
+import Config from '../shared/config-accessor.js';
 import { XrayCloudClient } from '../shared/xray-cloud-client.js';
 import type { JiraResourceLike } from '../shared/types.js';
 import type JiraLinkManager from './jira_link_manager.js';

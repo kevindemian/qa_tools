@@ -1,7 +1,7 @@
 /** Pipeline Jira — bug creation from CI/CD failure analysis.
  *  Supports QA_AUTO_BUG=true env var to skip interactive confirmation. */
 import { confirm, success, printError } from '../shared/prompt.js';
-import Config from '../shared/config.js';
+import Config from '../shared/config-accessor.js';
 import JiraClient from '../shared/jira-client.js';
 import { collectAutomated, fileToJira } from '../shared/bug-report.js';
 import { _jiraEnv } from './test-results.js';

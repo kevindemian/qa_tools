@@ -1,5 +1,5 @@
 import { describe, it, expect, afterEach } from 'vitest';
-import Config from '../config.js';
+import Config from '../config-accessor.js';
 import { generateHtmlReport, generateCoverageHtml } from '../report-html.js';
 
 describe('Report HTML qa-project meta tag', () => {

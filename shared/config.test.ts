@@ -1,7 +1,7 @@
 const mockDotenvConfig = vi.hoisted(() => vi.fn<(...args: [object]) => () => void>());
 vi.mock('dotenv', () => ({ default: { config: mockDotenvConfig } }));
 
-import Config from './config.js';
+import Config from './config-accessor.js';
 import { __resetDotenvLoaded } from './env-utils.js';
 
 describe('Config', () => {

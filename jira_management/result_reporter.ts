@@ -3,7 +3,7 @@ import { formatErr } from '../shared/errors.js';
 import fs from 'fs';
 import path from 'path';
 import { rootLogger } from '../shared/logger.js';
-import Config from '../shared/config.js';
+import Config from '../shared/config-accessor.js';
 import { XrayCloudClient } from '../shared/xray-cloud-client.js';
 import type { JiraResourceLike } from '../shared/types.js';
 // anti-circular (prompt → create_tests → session-context → prompt)

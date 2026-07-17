@@ -1,4 +1,4 @@
-import Config from '../shared/config.js';
+import Config from '../shared/config-accessor.js';
 import JiraResource from './jira_resource.js';
 import JiraLinkManager from './jira_link_manager.js';
 import CsvResource from './csv_resource.js';

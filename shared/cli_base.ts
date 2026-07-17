@@ -3,7 +3,7 @@ import * as readline from 'readline';
 import { print, success, error, warn, info, divider, confirm } from './prompt.js';
 import { rootLogger } from './logger.js';
 import { formatErr } from './errors.js';
-import Config from './config.js';
+import Config from './config-accessor.js';
 import { getDataHub } from './data-hub/global-hub.js';
 import { calculateHealthScore } from './health-score.js';
 import { ExitCode } from './types.js';

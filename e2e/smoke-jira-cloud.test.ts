@@ -6,7 +6,7 @@
  * Run: JIRA_MODE=cloud npx vitest run e2e/smoke-jira-cloud --no-coverage
  */
 
-import Config from '../shared/config.js';
+import Config from '../shared/config-accessor.js';
 import { createJiraAuthHeader, isAtlassianCloudGateway } from '../shared/jira-auth.js';
 import type JiraClientType from '../shared/jira-client.js';
 import { CONFIG_SCHEMA } from '../shared/config-schema.js';

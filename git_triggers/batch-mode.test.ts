@@ -85,7 +85,7 @@ vi.mock('fs', () => ({
 }));
 vi.mock('../shared/temp-dir', () => ({ writeReport: vi.fn(() => path.join(os.tmpdir(), 'qa-flakiness-test.html')) }));
 
-import Config from '../shared/config.js';
+import Config from '../shared/config-accessor.js';
 const setAutoConfirmSpy = vi.spyOn(Config, 'setAutoConfirm');
 import { success, error, printError } from '../shared/prompt.js';
 import { pushHistory, getProjects } from './session-state.js';

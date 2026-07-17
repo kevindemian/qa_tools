@@ -1,7 +1,7 @@
 /** Tests for Xray per-test history providers, cache, and factory. */
 
 import { createHistoryProvider, TestHistoryCache, type TestRun, type TestHistoryProvider } from './xray-history.js';
-import Config from '../shared/config.js';
+import Config from '../shared/config-accessor.js';
 import type JiraResource from './jira_resource.js';
 import { createMockConfigInstance } from '../shared/test-utils/factories/index.js';
 import { createMockJiraResource } from '../shared/test-utils/factories/jira-resource-factory.js';

@@ -11,7 +11,7 @@ import type { DataHub, DataHubPersistence, DataProvider } from '../types/data-hu
 import type { ParseResult } from '../result_parser.js';
 import { rootLogger } from '../logger.js';
 import { formatErr } from '../errors.js';
-import Config from '../config.js';
+import Config from '../config-accessor.js';
 // `createDataHubPersistence` is an internal data-hub factory (see persistence.ts).
 // It is consumed ONLY within `shared/data-hub/` (here, by `createDataHub`).
 import { createDataHubPersistence } from './persistence.js';

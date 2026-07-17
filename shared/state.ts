@@ -9,7 +9,7 @@
  * the legacy `<xdgStateHome>/qa-tools/state.json`. */
 import fs from 'fs';
 import path from 'path';
-import Config from './config.js';
+import Config from './config-accessor.js';
 import { rootLogger } from './logger.js';
 import { warn } from './prompt.js';
 import { isValidProjectName } from './project-paths.js';

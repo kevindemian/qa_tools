@@ -82,7 +82,7 @@ vi.mock('./sanitize', () => ({
 
 import { checkRateLimit } from './llm-rate-limiter.js';
 import { checkCircuitBreaker, recordCircuitFailure, recordCircuitSuccess } from './circuit-breaker.js';
-import Config from './config.js';
+import Config from './config-accessor.js';
 import {
     tierToConfig,
     parseRawOnce,

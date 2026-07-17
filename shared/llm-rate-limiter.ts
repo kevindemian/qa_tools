@@ -5,7 +5,7 @@
 import type { LlmTier } from './types.js';
 import crypto from 'crypto';
 import { LlmRateLimitError } from './errors.js';
-import Config from './config.js';
+import Config from './config-accessor.js';
 
 export const LLM_RATE_WINDOW_MS = 60000;
 

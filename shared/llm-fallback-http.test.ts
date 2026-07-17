@@ -52,7 +52,7 @@ vi.mock('./llm-cache', () => ({
 }));
 
 import { checkCircuitBreaker } from './circuit-breaker.js';
-import Config from './config.js';
+import Config from './config-accessor.js';
 import {
     parseRawOnce,
     parseRetryAfter,

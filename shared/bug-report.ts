@@ -7,7 +7,7 @@ import { rootLogger } from './logger.js';
 import { classifyFailure, crossReferenceFailures } from './failure-analysis.js';
 import { llmPrompt } from './llm-client.js';
 import { AiBugReportSchema } from './bug-report.schema.js';
-import Config from './config.js';
+import Config from './config-accessor.js';
 import type { BugReport, JiraLinkManagerLike, JiraResourceLike, LLMEnrichment, TestResult } from './types.js';
 import type { ParseResult } from './result_parser.js';
 import type { DataHub } from './types/data-hub.js';

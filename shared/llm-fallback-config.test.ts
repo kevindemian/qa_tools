@@ -83,7 +83,7 @@ import {
     LlmErrorPayloadSchema,
     estimateCostUSD,
 } from './llm-fallback-config.js';
-import Config from './config.js';
+import Config from './config-accessor.js';
 
 describe('Llm Fallback Config', () => {
     beforeEach(() => {

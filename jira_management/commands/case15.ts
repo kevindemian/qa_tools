@@ -2,7 +2,7 @@
  * Uses Store-backed resolution: SHA cache → CI download → branch baseline,
  * falling back to manual file path when no automated data source is available. */
 import path from 'path';
-import Config from '../../shared/config.js';
+import Config from '../../shared/config-accessor.js';
 import { ask, warn, success } from '../../shared/prompt.js';
 import { writeEphemeral } from '../../shared/temp-dir.js';
 import { resolveTestDataSource, resolveSessionContext } from '../../shared/session-context.js';

@@ -9,7 +9,7 @@
  * This allows users to set just LLM_PROVIDER + LLM_API_KEY and get all
  * 6 tiers configured automatically.
  */
-import Config from './config.js';
+import Config from './config-accessor.js';
 import { rootLogger } from './logger.js';
 import { z } from 'zod';
 import type { LlmTier, ResponseFormat } from './types.js';

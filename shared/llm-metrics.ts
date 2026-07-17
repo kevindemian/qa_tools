@@ -8,7 +8,7 @@ import { formatErr } from './errors.js';
 import fs from 'fs';
 import path from 'path';
 import os from 'os';
-import Config from './config.js';
+import Config from './config-accessor.js';
 import { rootLogger } from './logger.js';
 import { safeParseJson } from './safe-json.js';
 import type { LlmTier } from './types.js';

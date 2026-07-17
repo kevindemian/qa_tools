@@ -32,7 +32,7 @@ import { normalizeJqlForCloud } from '../../shared/jira-client.js';
 // commit-log removed — DataHub.raw.commitLog is SSOT (Invariant 6)
 import type { DataHub, MetricsRun } from '../../shared/types/data-hub.js';
 
-import Config from '../../shared/config.js';
+import Config from '../../shared/config-accessor.js';
 
 async function _fetchJiraContext(
     failedTests: FlatTest[],

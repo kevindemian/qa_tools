@@ -44,7 +44,7 @@ vi.mock('cli-progress', () => ({
 vi.mock('@inquirer/input', () => ({ default: vi.fn().mockRejectedValue(new Error('mock fail')) }));
 vi.mock('@inquirer/confirm', () => ({ default: vi.fn().mockResolvedValue(true) }));
 
-import Config from './config.js';
+import Config from './config-accessor.js';
 import * as promptModule from './prompt.js';
 
 describe('Prompt', () => {

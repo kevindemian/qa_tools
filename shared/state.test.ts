@@ -19,7 +19,7 @@ import { nonNull } from './test-utils.js';
 
 import fs from 'fs';
 import path from 'path';
-import Config from './config.js';
+import Config from './config-accessor.js';
 import * as stateModule from './state.js';
 
 const XDG_HOME = path.join(path.dirname(new URL(import.meta.url).pathname), '..', '..', '.tmp', 'test-xdg-state');

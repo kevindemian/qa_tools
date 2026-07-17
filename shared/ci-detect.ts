@@ -1,4 +1,4 @@
-import Config from './config.js';
+import Config from './config-accessor.js';
 import type { FlakinessEntry } from './types/data-hub.js';
 
 export const GIT_HISTORY_RUNS = 5;

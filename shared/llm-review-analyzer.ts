@@ -3,7 +3,7 @@
  * Change frequency: threshold / pattern adjustments.
  */
 import type { ArtifactType, ReviewResult } from './llm-review-types.js';
-import Config from './config.js';
+import Config from './config-accessor.js';
 import { rootLogger } from './logger.js';
 
 /** Portuguese hedging patterns — objective heuristic, not LLM. */

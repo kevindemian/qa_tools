@@ -4,7 +4,7 @@
 import { formatErr } from './errors.js';
 import { createThrottledClient } from './http-client.js';
 import { rootLogger } from './logger.js';
-import Config from './config.js';
+import Config from './config-accessor.js';
 
 const AUTH_PATH = '/api/v2/authenticate';
 const GRAPHQL_PATH = '/api/v2/graphql';

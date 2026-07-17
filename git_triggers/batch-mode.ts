@@ -23,7 +23,7 @@ import { collectTestResults as _collectTestResults } from './test-results.js';
 import { generatePrReport } from '../shared/pr-report-core.js';
 import { isPrReportEnabled, getPrReportConfig } from '../shared/feature-config.js';
 import type { PipelineTriggerResult } from '../shared/types.js';
-import Config from '../shared/config.js';
+import Config from '../shared/config-accessor.js';
 import JiraClient from '../shared/jira-client.js';
 import JiraLinkManager from '../jira_management/jira_link_manager.js';
 import { writeReport } from '../shared/temp-dir.js';

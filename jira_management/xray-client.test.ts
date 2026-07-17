@@ -1,6 +1,6 @@
 import { createStepImporter } from './xray-client.js';
 import type { TestStep } from '../shared/types.js';
-import Config from '../shared/config.js';
+import Config from '../shared/config-accessor.js';
 import { createMockConfigInstance } from '../shared/test-utils/factories/index.js';
 import { createMockJiraResource } from '../shared/test-utils/factories/jira-resource-factory.js';
 

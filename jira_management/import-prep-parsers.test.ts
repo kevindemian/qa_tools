@@ -29,7 +29,7 @@ vi.mock('../shared/markdown', () => ({
     mdToHtml: vi.fn((s: string) => s),
 }));
 
-import * as CONFIG from '../shared/config.js';
+import * as CONFIG from '../shared/config-accessor.js';
 import * as PROMPT from '../shared/prompt.js';
 import * as STATE from '../shared/state.js';
 

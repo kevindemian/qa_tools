@@ -2,7 +2,7 @@
 import { formatErr } from '../shared/errors.js';
 import type { JsonObject } from '../shared/types.js';
 import { rootLogger } from '../shared/logger.js';
-import Config from '../shared/config.js';
+import Config from '../shared/config-accessor.js';
 import type JiraResource from './jira_resource.js';
 
 interface CoverageResult {

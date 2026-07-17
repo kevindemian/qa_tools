@@ -1,7 +1,7 @@
 import { chalk } from './deps.js';
 import fs from 'fs';
 import path from 'path';
-import Config from './config.js';
+import Config from './config-accessor.js';
 import { formatDateISO } from './date-utils.js';
 
 /** Numeric severity: DEBUG < INFO < WARN < ERROR. */

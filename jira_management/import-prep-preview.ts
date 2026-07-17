@@ -1,5 +1,5 @@
 /** Preview rendering — Markdown generation, terminal/HTML preview, test filtering, confirmation. */
-import Config from '../shared/config.js';
+import Config from '../shared/config-accessor.js';
 import { md, mdToHtml } from '../shared/markdown.js';
 import { writeEphemeral } from '../shared/temp-dir.js';
 import { openWithOsOrFallback } from '../shared/open.js';

@@ -2,7 +2,7 @@
  * Use {@link defaultOutput} as the singleton. */
 import type { BoxOptions } from './box.js';
 import { box as boxRender } from './box.js';
-import Config from './config.js';
+import Config from './config-accessor.js';
 
 export class Output {
     static isTTY(): boolean {

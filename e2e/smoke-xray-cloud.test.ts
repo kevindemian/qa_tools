@@ -3,7 +3,7 @@
  * Run: XRAY_MODE=cloud npx vitest run e2e/smoke-xray-cloud --no-coverage
  */
 
-import Config from '../shared/config.js';
+import Config from '../shared/config-accessor.js';
 import JiraResource from '../jira_management/jira_resource.js';
 import { createStepImporter } from '../jira_management/xray-client.js';
 import { importExecutionResults } from '../jira_management/result_reporter.js';

@@ -26,7 +26,7 @@
 import { describe, it, expect, beforeAll } from 'vitest';
 import { config as loadDotenv } from 'dotenv';
 import { resolve } from 'node:path';
-import Config from '../shared/config.js';
+import Config from '../shared/config-accessor.js';
 import JiraClient from '../shared/jira-client.js';
 import type { JiraMode } from '../shared/jira-auth.js';
 

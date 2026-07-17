@@ -33,7 +33,7 @@ import {
 } from './report-sections.js';
 import { buildTestTable, precomputeCategories } from './report-table.js';
 import { buildDiffComparisonSection } from './report-diff.js';
-import Config from './config.js';
+import Config from './config-accessor.js';
 import { Card, MetricCard, Badge } from './primitives/index.js';
 
 export function generateHtmlReport(tests: FlatTest[], options?: ReportOptions): string {

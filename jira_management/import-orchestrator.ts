@@ -11,7 +11,7 @@ import { showPreview, filterTests, confirmOrCancel, validateImportBatch, handleD
 import { executeTestCreationLoop, updateFinalState, type TestCreationLoopOptions } from './import-loop.js';
 import { OPERATION_CANCELLED } from './constants.js';
 import { info, warn, isQuiet, print, printSummary } from '../shared/prompt.js';
-import Config from '../shared/config.js';
+import Config from '../shared/config-accessor.js';
 import { createStepImporter, type XrayStepImporter } from './xray-client.js';
 
 interface CreateTestsFromTestCasesParams {

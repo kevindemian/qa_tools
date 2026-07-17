@@ -78,7 +78,7 @@ import {
     CancelError,
     tableView,
 } from './prompt-ui.js';
-import Config from './config.js';
+import Config from './config-accessor.js';
 
 const mockIsTTY = vi.spyOn(Output, 'isTTY');
 

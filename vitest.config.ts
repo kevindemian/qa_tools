@@ -25,7 +25,6 @@ export default defineConfig({
                 '**/e2e/**',
                 'scripts/smartwizard-llm.ts',
                 'scripts/smartwizard-discovery.ts',
-                'shared/config.ts',
                 'shared/env-utils.ts',
                 'shared/prompt.ts',
                 'shared/prompt-input.ts',
