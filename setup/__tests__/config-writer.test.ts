@@ -1,12 +1,12 @@
 import fs from 'fs';
 import path from 'path';
-import { writeDotEnvExample, writeFeaturesConfig } from './config-writer.js';
+import { writeDotEnvExample, writeFeaturesConfig } from '../config-writer.js';
 
 vi.mock('fs');
 const MockFs = vi.mocked(fs);
 
 const mockSetPrReportConfig = vi.hoisted(() => vi.fn());
-vi.mock('../shared/feature-config.js', () => ({
+vi.mock('../../shared/feature-config.js', () => ({
     setPrReportConfig: mockSetPrReportConfig,
 }));
 

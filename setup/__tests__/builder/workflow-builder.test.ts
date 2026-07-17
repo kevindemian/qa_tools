@@ -1,4 +1,4 @@
-import { WorkflowBuilder } from './workflow-builder.js';
+import { WorkflowBuilder } from '../../builder/workflow-builder.js';
 
 describe('WorkflowBuilder', () => {
     it('builds an empty workflow for GitHub', () => {

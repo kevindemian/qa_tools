@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { extractReportersFromJsonObject, extractReportersAst } from './reporter-ast.js';
+import { extractReportersFromJsonObject, extractReportersAst } from '../reporter-ast.js';
 
 describe('Setup/reporter-ast', () => {
     describe('ExtractReportersFromJsonObject', () => {

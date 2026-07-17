@@ -1,7 +1,7 @@
 import { describe, it, expect } from 'vitest';
-import { generateQaPostProcessWorkflow } from './qa-post-process-workflow.js';
-import { ACTION_VERSIONS } from '../../shared/test-utils/constants.js';
-import type { SetupContext } from '../context.js';
+import { generateQaPostProcessWorkflow } from '../../templates/qa-post-process-workflow.js';
+import { ACTION_VERSIONS } from '../../../shared/test-utils/constants.js';
+import type { SetupContext } from '../../context.js';
 
 const MOCK_CTX: SetupContext = {
     projectName: 'test-proj',

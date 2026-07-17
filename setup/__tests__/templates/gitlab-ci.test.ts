@@ -1,5 +1,5 @@
-import { generateGitLabCI } from './gitlab-ci.js';
-import type { SetupContext } from '../context.js';
+import { generateGitLabCI } from '../../templates/gitlab-ci.js';
+import type { SetupContext } from '../../context.js';
 
 const MOCK_CTX_BASIC: SetupContext = {
     projectName: 'test-proj',

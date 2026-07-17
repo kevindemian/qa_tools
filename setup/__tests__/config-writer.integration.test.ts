@@ -2,7 +2,7 @@ import { describe, it, expect, beforeEach, afterEach } from 'vitest';
 import { mkdtempSync, rmSync, writeFileSync, readFileSync, statSync, existsSync, mkdirSync } from 'node:fs';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
-import { writePrePushHook, writeDotEnvExample } from './config-writer.js';
+import { writePrePushHook, writeDotEnvExample } from '../config-writer.js';
 
 describe('Config-writer — integração real (fs verdadeiro)', () => {
     let base: string;

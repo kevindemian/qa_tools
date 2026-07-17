@@ -3,7 +3,7 @@ import os from 'os';
 import path from 'path';
 import { randomUUID } from 'crypto';
 import { describe, it, expect, afterEach } from 'vitest';
-import { executeConfigInIsolate } from './reporter-isolate.js';
+import { executeConfigInIsolate } from '../reporter-isolate.js';
 
 const created: string[] = [];
 

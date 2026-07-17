@@ -2,8 +2,8 @@ import fs from 'fs';
 import os from 'os';
 import path from 'path';
 import { describe, it, expect, afterEach } from 'vitest';
-import { readConfigFileSafe, MAX_CONFIG_BYTES } from './secure-io.js';
-import { detectTestReporter } from './detector.js';
+import { readConfigFileSafe, MAX_CONFIG_BYTES } from '../secure-io.js';
+import { detectTestReporter } from '../detector.js';
 
 const created: string[] = [];
 function tmpDir(prefix: string): string {

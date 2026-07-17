@@ -2,10 +2,10 @@ import fs from 'fs';
 import os from 'os';
 import path from 'path';
 import { describe, it, expect, afterEach } from 'vitest';
-import { detectFramework } from './detector.js';
-import { generateCIWorkflow } from './templates/github-ci.js';
-import type { SetupContext } from './context.js';
-import type { DetectionResult } from './detector.js';
+import { detectFramework } from '../detector.js';
+import { generateCIWorkflow } from '../templates/github-ci.js';
+import type { SetupContext } from '../context.js';
+import type { DetectionResult } from '../detector.js';
 
 const created: string[] = [];
 function makeProject(files: Record<string, string>): string {

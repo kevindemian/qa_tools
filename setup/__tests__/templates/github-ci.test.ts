@@ -1,6 +1,6 @@
-import { generateCIWorkflow, generateQaPostProcessAction } from './github-ci.js';
-import { ACTION_VERSIONS } from '../../shared/test-utils/constants.js';
-import type { SetupContext } from '../context.js';
+import { generateCIWorkflow, generateQaPostProcessAction } from '../../templates/github-ci.js';
+import { ACTION_VERSIONS } from '../../../shared/test-utils/constants.js';
+import type { SetupContext } from '../../context.js';
 
 const MOCK_CTX_BASIC: SetupContext = {
     projectName: 'test-proj',

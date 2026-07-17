@@ -1,5 +1,5 @@
-import { generatePrePushHook } from './pre-push-hook.js';
-import type { SetupContext } from '../context.js';
+import { generatePrePushHook } from '../../templates/pre-push-hook.js';
+import type { SetupContext } from '../../context.js';
 
 const MOCK_CTX: SetupContext = {
     projectName: 'test-proj',
