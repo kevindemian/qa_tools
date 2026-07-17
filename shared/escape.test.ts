@@ -1,3 +1,4 @@
+import fc from 'fast-check';
 import { sanitizeHtml } from './escape.js';
 
 describe('SanitizeHtml', () => {
@@ -40,5 +41,64 @@ describe('SanitizeHtml', () => {
         expect(sanitizeHtml('<<<>>>&&&"""\'\'\'')).toBe(
             '&lt;&lt;&lt;&gt;&gt;&gt;&amp;&amp;&amp;&quot;&quot;&quot;&#39;&#39;&#39;',
         );
+    });
+
+    describe('Property-based invariants', () => {
+        const SPECIAL = ['&', '<', '>', '"', "'"];
+
+        it('never leaves an unescaped special character in the output', () => {
+            expect.hasAssertions();
+
+            fc.assert(
+                fc.property(fc.string(), (input) => {
+                    const out = sanitizeHtml(input);
+                    // After escaping, the only allowed occurrences of < > " ' are inside entities;
+                    // ampersands must always begin a known entity. Re-escaping the entity-stripped
+                    // text must be a no-op, proving no raw special char survived.
+                    const stripped = out
+                        .replace(/&amp;/g, '')
+                        .replace(/&lt;/g, '')
+                        .replace(/&gt;/g, '')
+                        .replace(/&quot;/g, '')
+                        .replace(/&#39;/g, '');
+
+                    expect(SPECIAL.every((ch) => !stripped.includes(ch))).toBeTruthy();
+                }),
+            );
+        });
+
+        it('leaves strings without special characters unchanged', () => {
+            expect.hasAssertions();
+
+            const safeString = fc.string().map((s) => s.replace(/[&<>"']/g, ''));
+            fc.assert(
+                fc.property(safeString, (input) => {
+                    expect(sanitizeHtml(input)).toBe(input);
+                }),
+            );
+        });
+
+        it('is deterministic (same input yields same output)', () => {
+            expect.hasAssertions();
+
+            fc.assert(
+                fc.property(fc.string(), (input) => {
+                    const first = sanitizeHtml(input);
+                    const second = sanitizeHtml(input);
+
+                    expect(first).toBe(second);
+                }),
+            );
+        });
+
+        it('escaping is not shorter than the input (entities are >= 1 char)', () => {
+            expect.hasAssertions();
+
+            fc.assert(
+                fc.property(fc.string(), (input) => {
+                    expect(sanitizeHtml(input).length).toBeGreaterThanOrEqual(input.length);
+                }),
+            );
+        });
     });
 });

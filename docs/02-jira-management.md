@@ -1,7 +1,9 @@
 # Gerenciamento Jira — QA Tools
 
 > Ferramenta de linha de comando para gerenciar testes, versões e releases no Jira/Xray.
-> Projeto ativo: `ECSPOL` (configurável via opção 9).
+> O projeto ativo é definido pelo entry-menu / registry de projetos (ver
+> [`07-projetos-registry.md`](07-projetos-registry.md)) e pode ser trocado na sessão
+> pela opção 9 ou pela flag `--project <name>`.
 
 ---
 
@@ -234,13 +236,14 @@ Marca uma versão como released no Jira. Valida que todas as tarefas estão conc
 
 ### 9 — Alterar projeto Jira
 
-Troca o projeto Jira ativo na sessão atual. O nome é persistido em `state.lastProject`.
+Troca o projeto ativo na sessão atual. A escolha é lembrada nas próximas
+execuções. Para trocar sem passar pelo menu, use a flag `--project <nome>` ao
+abrir o CLI (ver [`07-projetos-registry.md`](07-projetos-registry.md)).
 
 **Fluxo:**
 
 1. Usuário informa o novo nome do projeto (ex: `PROJ`).
-2. Atualiza `ctx.project_name` e persiste em `state.lastProject`.
-3. O menu passa a exibir o novo projeto.
+2. O menu passa a exibir o novo projeto.
 
 **Arquivos relacionados:**
 
@@ -648,7 +651,9 @@ Durante qualquer prompt de texto (não só no menu), os seguintes comandos `/` e
 
 ## Histórico de operações
 
-Todas as operações são registradas em `~/.local/state/qa_tools_state.json` com timestamp, operação, detalhe e status. As últimas 50 operações ficam disponíveis. O menu exibe contadores de operações ok/erro da sessão atual.
+Todas as operações são registradas por projeto, com timestamp, operação, detalhe
+e status. As últimas 50 operações ficam disponíveis. O menu exibe contadores de
+operações ok/erro da sessão atual.
 
 Digite `/history` no menu para visualizar as últimas 10 operações.
 
@@ -721,16 +726,16 @@ Registra um feedback de análise de IA para uma issue Jira. Permite ao usuário 
 
 ### 24 — Setup wizard CI/CD
 
-Executa o wizard interativo de configuração de CI/CD. Gera pipelines GitHub Actions ou GitLab CI, configura projetos e hook pre-push.
+Executa o wizard interativo de configuração de CI/CD. Gera o pipeline (GitHub Actions ou GitLab CI), registra o projeto e instala o hook de pre-push.
 
 **Fluxo:**
 
-1. Detecta framework de testes (Cypress/Playwright/Jest/Vitest) a partir do `package.json`
-2. Pergunta features desejadas (Jira, flakiness, análise IA)
-3. Gera `.github/workflows/qa.yml` ou `.gitlab-ci.yml`
-4. Cria `config/projects.json` + `config/providers.json`
-5. Gera `.env.example` com variáveis necessárias
-6. Instala hook `.git/hooks/pre-push` (opcional)
+1. Detecta o framework de testes (Cypress/Playwright/Jest/Vitest)
+2. Pergunta as features desejadas (Jira, flakiness, análise IA)
+3. Gera o pipeline CI (GitHub Actions ou GitLab CI)
+4. Registra o projeto para uso nas próximas execuções
+5. Gera `.env.example` com as variáveis necessárias
+6. Instala o hook de pre-push (opcional)
 
 **Arquivo:** `setup/main.ts` — orquestração do wizard
 
@@ -748,7 +753,7 @@ Executa o wizard interativo de configuração de CI/CD. Gera pipelines GitHub Ac
 3. Adicione um comentário explicativo
 4. A CLI registra o feedback no estado local para consulta futura
 
-**Saída:** O feedback é persistido em `~/.local/state/qa_tools_state.json` e exibido no sumário da sessão.
+**Saída:** O feedback é registrado no projeto ativo e exibido no sumário da sessão.
 
 | Alias                 | Resolve para |
 | --------------------- | ------------ |

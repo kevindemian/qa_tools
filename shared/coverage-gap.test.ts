@@ -444,5 +444,139 @@ describe('Coverage Gap', () => {
 
             expect(result.totals.totalIssues).toBe(0);
         });
+
+        describe('Linked-test batch matching (fetchLinkedTestsBatch → collectTestLinksForIssue)', () => {
+            it('casa Test com link outward apontando para a issue conhecida', async () => {
+                expect.hasAssertions();
+
+                mockSearch
+                    .mockResolvedValueOnce({ issues: [], total: 2 })
+                    .mockResolvedValueOnce({ issues: [makeIssue('PROJ-1'), makeIssue('PROJ-2')], total: 2 })
+                    .mockResolvedValueOnce({
+                        issues: [
+                            {
+                                key: 'TEST-9',
+                                fields: {
+                                    issuelinks: [{ inwardIssue: { key: 'TEST-9' }, outwardIssue: { key: 'PROJ-1' } }],
+                                },
+                            },
+                        ],
+                        total: 1,
+                    });
+                const result = await analyzeCoverageGaps(mockJiraResource, 'PROJ');
+
+                const proj1 = result.items.find((i) => i.issueKey === 'PROJ-1');
+
+                expect(proj1?.hasTest).toBeTruthy();
+                expect(proj1?.linkedTestKeys).toContain('TEST-9');
+            });
+
+            it('resolve direção inward: quando outwardIssue é o próprio Test, usa inwardIssue', async () => {
+                expect.hasAssertions();
+
+                mockSearch
+                    .mockResolvedValueOnce({ issues: [], total: 1 })
+                    .mockResolvedValueOnce({ issues: [makeIssue('PROJ-1')], total: 1 })
+                    .mockResolvedValueOnce({
+                        issues: [
+                            {
+                                key: 'TEST-7',
+                                fields: {
+                                    issuelinks: [{ inwardIssue: { key: 'PROJ-1' }, outwardIssue: { key: 'TEST-7' } }],
+                                },
+                            },
+                        ],
+                        total: 1,
+                    });
+                const result = await analyzeCoverageGaps(mockJiraResource, 'PROJ');
+
+                expect(result.items.find((i) => i.issueKey === 'PROJ-1')?.linkedTestKeys).toContain('TEST-7');
+            });
+
+            it('ignora links do Test que apontam para issues fora do conjunto conhecido', async () => {
+                expect.hasAssertions();
+
+                mockSearch
+                    .mockResolvedValueOnce({ issues: [], total: 1 })
+                    .mockResolvedValueOnce({ issues: [makeIssue('PROJ-1')], total: 1 })
+                    .mockResolvedValueOnce({
+                        issues: [
+                            {
+                                key: 'TEST-5',
+                                fields: {
+                                    issuelinks: [
+                                        { inwardIssue: { key: 'TEST-5' }, outwardIssue: { key: 'UNKNOWN-99' } },
+                                    ],
+                                },
+                            },
+                        ],
+                        total: 1,
+                    });
+                const result = await analyzeCoverageGaps(mockJiraResource, 'PROJ');
+
+                expect(result.items.find((i) => i.issueKey === 'PROJ-1')?.hasTest).toBeFalsy();
+            });
+
+            it('ignora Test cujo campo issuelinks não é um array', async () => {
+                expect.hasAssertions();
+
+                mockSearch
+                    .mockResolvedValueOnce({ issues: [], total: 1 })
+                    .mockResolvedValueOnce({ issues: [makeIssue('PROJ-1')], total: 1 })
+                    .mockResolvedValueOnce({
+                        issues: [{ key: 'TEST-3', fields: { issuelinks: 'not-an-array' } }],
+                        total: 1,
+                    });
+                const result = await analyzeCoverageGaps(mockJiraResource, 'PROJ');
+
+                expect(result.items.find((i) => i.issueKey === 'PROJ-1')?.hasTest).toBeFalsy();
+            });
+
+            it('acumula múltiplos Tests vinculados à mesma issue sem duplicar', async () => {
+                expect.hasAssertions();
+
+                mockSearch
+                    .mockResolvedValueOnce({ issues: [], total: 1 })
+                    .mockResolvedValueOnce({ issues: [makeIssue('PROJ-1')], total: 1 })
+                    .mockResolvedValueOnce({
+                        issues: [
+                            {
+                                key: 'TEST-A',
+                                fields: {
+                                    issuelinks: [{ inwardIssue: { key: 'TEST-A' }, outwardIssue: { key: 'PROJ-1' } }],
+                                },
+                            },
+                            {
+                                key: 'TEST-B',
+                                fields: {
+                                    issuelinks: [{ inwardIssue: { key: 'TEST-B' }, outwardIssue: { key: 'PROJ-1' } }],
+                                },
+                            },
+                        ],
+                        total: 2,
+                    });
+                const result = await analyzeCoverageGaps(mockJiraResource, 'PROJ');
+
+                const proj1 = result.items.find((i) => i.issueKey === 'PROJ-1');
+
+                expect(proj1?.linkedTestKeys).toContain('TEST-A');
+                expect(proj1?.linkedTestKeys).toContain('TEST-B');
+            });
+
+            it('ignora link sem chave resolvível (inwardIssue e outwardIssue ausentes)', async () => {
+                expect.hasAssertions();
+
+                mockSearch
+                    .mockResolvedValueOnce({ issues: [], total: 1 })
+                    .mockResolvedValueOnce({ issues: [makeIssue('PROJ-1')], total: 1 })
+                    .mockResolvedValueOnce({
+                        issues: [{ key: 'TEST-Z', fields: { issuelinks: [{ type: { name: 'Test' } }] } }],
+                        total: 1,
+                    });
+                const result = await analyzeCoverageGaps(mockJiraResource, 'PROJ');
+
+                expect(result.items.find((i) => i.issueKey === 'PROJ-1')?.hasTest).toBeFalsy();
+            });
+        });
     });
 });

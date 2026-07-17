@@ -11,6 +11,9 @@ export function safeParseJson<T>(raw: string, fallback: T): T {
         const parsed: unknown = JSON.parse(raw);
         return parsed as T;
     } catch (err) {
+        // `err` is typed `unknown` (any value can be thrown in JS). Native JSON.parse
+        // only throws SyntaxError, but the non-Error arm is a required safeguard for the
+        // `unknown` catch type and any future/indirect throw source — not dead code.
         rootLogger.warn(
             'safeParseJson: invalid JSON, returning fallback: ' + (err instanceof Error ? err.message : String(err)),
         );

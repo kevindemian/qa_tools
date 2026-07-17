@@ -186,15 +186,16 @@ Integra resultados de pipeline CI (GitLab ou GitHub) ao Jira/Xray, criando uma T
 
 2. **Selecionar o projeto**
 
-    A CLI lista os projetos de `config/projects.json`.  
-    Escolha pelo número. Exemplo:
+    A CLI lista os seus projetos. Escolha pelo número. Exemplo:
 
     ```
     1 - qa_ibabs (gitlab)
     2 - qa_ibabs_cast (gitlab)
     ```
 
-    O provedor (GitLab/GitHub) é resolvido em `config/providers.json`.
+    O provedor (GitLab/GitHub) já foi definido quando o projeto foi registrado.
+    Para pular a seleção, use `--project <nome>` ao abrir o CLI (ver
+    [`07-projetos-registry.md`](07-projetos-registry.md)).
 
 3. **Opção 1 — Disparar pipeline**
 
@@ -396,12 +397,11 @@ Configura um projeto do zero: pipeline CI, configuração de projeto e hook pre-
 
 5. **Revisar arquivos gerados**
 
-    Ao final, o wizard lista todos os arquivos criados:
+    Ao final, o wizard lista todos os arquivos criados e registra o projeto para
+    uso nas próximas execuções:
 
     ```
     ✅ Criado: .github/workflows/qa.yml
-    ✅ Criado: config/projects.json
-    ✅ Criado: config/providers.json
     ✅ Criado: .env.example
     ⏭️  Ignorado (já existe): .git/hooks/pre-push
     ```

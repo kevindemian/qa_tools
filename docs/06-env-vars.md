@@ -2,6 +2,11 @@
 
 Todas as variáveis são carregadas do arquivo `.env` na raiz do projeto.
 
+> **Multi-projeto:** ao registrar um projeto, o QA Tools guarda as credenciais e
+> configurações daquele projeto separadamente e as aplica automaticamente quando
+> você o seleciona. Você pode manter um `.env` por projeto sem que um interfira no
+> outro. Veja [`07-projetos-registry.md`](07-projetos-registry.md).
+
 ---
 
 ## Jira / Xray

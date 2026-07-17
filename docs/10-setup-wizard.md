@@ -10,6 +10,12 @@
 npx tsx setup/main.ts
 ```
 
+Para configurar um projeto que está em **outra pasta**, informe o caminho:
+
+```bash
+npx tsx setup/main.ts --dir /caminho/do/projeto
+```
+
 O wizard guia o usuário por 3 etapas:
 
 ### Etapa 1 — Detecção
@@ -32,8 +38,9 @@ O wizard pergunta:
 
 | Pergunta                   | Default                                                                | Descrição                        |
 | -------------------------- | ---------------------------------------------------------------------- | -------------------------------- |
-| Nome do projeto            | Nome do repositório (extraído do `.git/config`)                        | Chave usada em `projects.json`   |
+| Nome do projeto            | Nome do repositório (extraído do `.git/config`)                        | Identifica o projeto no menu      |
 | Git provider               | Detectado (`github`/`gitlab`)                                          | Define qual template usar        |
+| Jira project key           | (vazio)                                                                | Chave do projeto no Jira/Xray (opcional) |
 | Repo owner (user/org)      | Dono do repositório remoto                                             | Usado no template GitHub         |
 | Test framework             | Detectado                                                              | Framework de testes              |
 | Test command               | Detectado                                                              | Comando que gera CTRF            |
@@ -47,15 +54,14 @@ O wizard pergunta:
 
 ### Etapa 3 — Geração
 
-Os seguintes arquivos são gerados/atualizados:
+O wizard registra o projeto para uso nas próximas execuções e gera/atualiza:
 
-| Arquivo                                        | Ação                         |
-| ---------------------------------------------- | ---------------------------- |
-| `.github/workflows/qa.yml` ou `.gitlab-ci.yml` | Pipeline CI completa         |
-| `config/projects.json`                         | Mapeia projeto → ID/repo     |
-| `config/providers.json`                        | Define provedor Git          |
-| `.env.example`                                 | Template com tokens + config |
-| `.git/hooks/pre-push` (se solicitado)          | Hook que executa testes      |
+| Item                                           | Ação                                  |
+| ---------------------------------------------- | ------------------------------------- |
+| `.github/workflows/qa.yml` ou `.gitlab-ci.yml` | Pipeline CI completa                  |
+| Registro do projeto                            | Salva provedor, repositório e Jira key para uso futuro |
+| `.env.example`                                 | Template com tokens + config          |
+| `.git/hooks/pre-push` (se solicitado)          | Hook que executa testes               |
 
 Nenhum arquivo existente é sobrescrito (merge seguro).
 
@@ -147,24 +153,12 @@ exit 0
 
 ## 5. Arquivos de Configuração
 
-### `config/projects.json`
+O provedor, o repositório e a Jira key do projeto são **registrados** pelo wizard
+e ficam disponíveis quando você seleciona o projeto no menu — você não precisa
+editar arquivos de configuração manualmente. Veja
+[`07-projetos-registry.md`](07-projetos-registry.md).
 
-```json
-{
-    "meu-projeto": "owner/meu-repo"
-}
-```
-
-- **GitHub**: valor = `"owner/repo"`
-- **GitLab**: valor = project ID (string)
-
-### `config/providers.json`
-
-```json
-{
-    "meu-projeto": { "provider": "github", "repo": "owner/meu-repo" }
-}
-```
+O wizard também gera um `.env.example` como ponto de partida para as credenciais:
 
 ### `.env.example`
 
@@ -192,7 +186,7 @@ QA_FAIL_ON=90
 | `setup/templates/github-ci.ts`      | Template GitHub Actions                                |
 | `setup/templates/gitlab-ci.ts`      | Template GitLab CI                                     |
 | `setup/templates/pre-push-hook.ts`  | Script shell do hook pre-push                          |
-| `setup/config-writer.ts`            | Gera `projects.json`, `providers.json`, `.env.example` |
+| `setup/config-writer.ts`            | Gera `.env.example`                                    |
 
 ---
 

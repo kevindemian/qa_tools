@@ -18,6 +18,22 @@ async function getRootLogger(): Promise<{
     return _rootLogger;
 }
 
+/**
+ * Dispatch a log line through the lazily-imported root logger without blocking the caller.
+ * Single source of truth for the fire-and-forget logging used across env loading (SRP/DRY).
+ * The `.catch` arm is a §24 safeguard: it defends the log dispatch against a logger-init
+ * failure and never alters control flow of the caller (callers that must fail still throw).
+ */
+function logViaRootLogger(level: 'warn' | 'info' | 'error', message: string): void {
+    getRootLogger()
+        .then((l) => l[level](message))
+        .catch((err: unknown) => {
+            process.stderr.write(
+                '[env-loader] Logger init failed: ' + (err instanceof Error ? err.message : String(err)) + '\n',
+            );
+        });
+}
+
 let dotenvLoaded = false;
 
 const SECRET_PATTERNS: { label: string; regex: RegExp }[] = [
@@ -36,7 +52,7 @@ function hasSecretPattern(val: string): string | null {
     return null;
 }
 
-function warnSecretsInFile(filePath: string, label: string): void {
+export function warnSecretsInFile(filePath: string, label: string): void {
     try {
         const content = fs.readFileSync(path.resolve(filePath), 'utf-8');
         const lines = content.split('\n');
@@ -48,15 +64,7 @@ function warnSecretsInFile(filePath: string, label: string): void {
             const val = trimmed.slice(eqIdx + 1);
             const match = hasSecretPattern(val);
             if (match) {
-                getRootLogger()
-                    .then((l) => l.warn(`[env-loader] WARNING: ${match} detected in ${label}. Move to .env.local.`))
-                    .catch((err: unknown) => {
-                        process.stderr.write(
-                            '[env-loader] Logger init failed: ' +
-                                (err instanceof Error ? err.message : String(err)) +
-                                '\n',
-                        );
-                    });
+                logViaRootLogger('warn', `[env-loader] WARNING: ${match} detected in ${label}. Move to .env.local.`);
             }
         }
     } catch (err) {
@@ -68,10 +76,16 @@ function warnSecretsInFile(filePath: string, label: string): void {
     }
 }
 
-/** Load `.env.local` (priority) then `.env` (fallback). Idempotent. */
-export function ensureDotenv(): void {
+/**
+ * Load `.env.local` (priority) then `.env` (fallback). Idempotent.
+ *
+ * @param projectRoot - Optional project root override. Defaults to the source tree root
+ *   (`import.meta.dirname/..`). The override exists for hermetic testability of the
+ *   production (`!isTest`) load path and the secret-scan safety mechanism; production
+ *   callers omit it and receive the identical default behavior.
+ */
+export function ensureDotenv(projectRoot: string = path.resolve(import.meta.dirname, '..')): void {
     if (dotenvLoaded) return;
-    const projectRoot = path.resolve(import.meta.dirname, '..');
 
     const isTest = process.env['VITEST'] === 'true' || process.env['NODE_ENV'] === 'test';
 
@@ -109,13 +123,7 @@ export function ensureDotenv(): void {
     if (current && isValidProjectName(current)) {
         applyProjectEnvOverlay(current);
     } else if (current) {
-        getRootLogger()
-            .then((l) => l.warn('[env-loader] QA_CURRENT_PROJECT inválido, overlay ignorado: ' + current))
-            .catch((err: unknown) => {
-                process.stderr.write(
-                    '[env-loader] Logger init failed: ' + (err instanceof Error ? err.message : String(err)) + '\n',
-                );
-            });
+        logViaRootLogger('warn', '[env-loader] QA_CURRENT_PROJECT inválido, overlay ignorado: ' + current);
     }
 
     dotenvLoaded = true;
@@ -134,6 +142,8 @@ function loadTestEnv(projectRoot: string): void {
         try {
             dotenv.config({ path: filePath });
         } catch (err) {
+            // §24 safeguard: dotenv.config returns `{ error }` for a missing file (does not throw).
+            // This arm defends only against an unexpected I/O fault; not reachable with real inputs.
             process.stderr.write(
                 '[env-loader] Failed to load ' +
                     filePath +
@@ -201,20 +211,15 @@ export function applyProjectEnvOverlay(name: string): void {
             process.env[k] = v;
         }
     } catch (err: unknown) {
-        getRootLogger()
-            .then((l) =>
-                l.error(
-                    '[env-loader] Falha ao aplicar overlay do projeto "' +
-                        name +
-                        '": ' +
-                        (err instanceof Error ? err.message : String(err)),
-                ),
-            )
-            .catch((e2: unknown) => {
-                process.stderr.write(
-                    '[env-loader] Logger init failed: ' + (e2 instanceof Error ? e2.message : String(e2)) + '\n',
-                );
-            });
+        // §25: surface the overlay failure, then re-throw (never swallow). The dispatch is
+        // fire-and-forget; the throw below is the primary contract and always runs.
+        logViaRootLogger(
+            'error',
+            '[env-loader] Falha ao aplicar overlay do projeto "' +
+                name +
+                '": ' +
+                (err instanceof Error ? err.message : String(err)),
+        );
         throw err;
     }
 }

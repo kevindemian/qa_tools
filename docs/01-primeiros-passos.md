@@ -20,13 +20,20 @@ O wrapper `qatools.sh` detecta automaticamente os diretórios que possuem `main.
 
 ## 2. Primeira execução — seleção de projeto
 
-Na primeira execução, o CLI pergunta o nome do projeto Jira:
+Ao abrir o CLI, um menu inicial mostra seus projetos e pede qual usar antes de
+entrar no menu principal:
 
-```
--> Nome do projeto Jira [ECSPOL]:
-```
+- **Nenhum projeto ainda:** você pode escolher **"Adicionar projeto"** (abre o
+  setup) ou **"Continuar sem projeto"** (modo legado).
+- **Só um projeto:** ele é selecionado automaticamente.
+- **Vários projetos:** aparece uma lista numerada. Um projeto marcado como
+  **`[INVÁLIDO]`** teve sua pasta removida; **`[MIGRADO]`** veio de uma
+  configuração antiga. A lista também traz **"Adicionar projeto"** e
+  **"Gerenciar projetos"**.
 
-O valor padrão é `ECSPOL`. O nome escolhido é salvo em estado persistente e reutilizado nas próximas execuções. Para alterar depois, use a **Opção 9** no menu.
+O projeto escolhido é lembrado nas próximas execuções. Para trocar sem passar
+pelo menu, use a flag `--project <nome>` ao abrir o CLI, ou a **Opção 9** dentro
+do menu. Veja [`07-projetos-registry.md`](07-projetos-registry.md).
 
 ---
 
@@ -113,13 +120,8 @@ DRY_RUN=true AUTO_CONFIRM=true AUTO_CHOICE=1 npx tsx jira_management/main.ts
 
 ## 6. Histórico persistente
 
-As últimas **50 operações** ficam salvas em:
-
-```
-~/.local/state/qa-tools/state.json
-```
-
-O arquivo contém um array `history` com entradas no formato:
+As últimas **50 operações** de cada projeto ficam salvas e disponíveis via
+`/history`. Cada entrada tem o formato:
 
 ```json
 {
@@ -130,7 +132,7 @@ O arquivo contém um array `history` com entradas no formato:
 }
 ```
 
-Um backup automático é mantido em `state.json.bak` no mesmo diretório.
+O histórico é preservado entre sessões, com backup automático para recuperação.
 
 ---
 

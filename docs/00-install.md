@@ -222,7 +222,7 @@ npx tsx git_triggers/main.ts --batch --project qa_ibabs --branch release/v2
 | Flag                   | Descrição                                               |
 | ---------------------- | ------------------------------------------------------- |
 | `--batch` ou `--auto`  | Ativa modo batch (implica `AUTO_CONFIRM=true`)          |
-| `--project` / `-p`     | Nome do projeto (fallback: primeiro do `projects.json`) |
+| `--project` / `-p`     | Nome do projeto no registry. Se omitido, o entry-menu pede a seleção (sem fallback silencioso) |
 | `--branch` / `-b`      | Branch para disparo (fallback: `main`)                  |
 | `--run-impacted-tests` | Seleciona testes impactados pelo diff para execução     |
 | `--conservative`       | Modo conservador: smoke obrigatórios + testes afetados  |
@@ -271,10 +271,12 @@ npx tsx setup/main.ts
 
 O wizard interativo detecta o framework de testes (Cypress/Playwright/Jest/Vitest) a partir do `package.json`, pergunta as features desejadas (Jira, flakiness, análise IA) e gera:
 
-- `.github/workflows/qa.yml` ou `.gitlab-ci.yml`
-- `config/projects.json` + `config/providers.json`
+- O pipeline CI (GitHub Actions ou GitLab CI)
+- Registra o projeto para uso nas próximas execuções
 - `.env.example` com as variáveis necessárias
-- Hook `.git/hooks/pre-push` (opcional)
+- Hook de pre-push (opcional)
+
+Use `--dir <caminho>` para registrar um projeto que está em outra pasta.
 
 Consulte [`docs/10-setup-wizard.md`](10-setup-wizard.md) para detalhes.
 
