@@ -1,6 +1,6 @@
 import type { AxiosInstance } from '../shared/deps.js';
 import type { JsonObject } from '../shared/types.js';
-import { handleError } from '../shared/git-provider-error.js';
+import { classifyGitError } from '../shared/errors.js';
 import { checkCircuitBreaker, recordCircuitFailure, recordCircuitSuccess } from '../shared/circuit-breaker.js';
 
 export function projectPath(owner: string, repo: string): string {
@@ -10,7 +10,7 @@ export function projectPath(owner: string, repo: string): string {
 export async function apiGet<T = JsonObject>(
     client: AxiosInstance,
     url: string,
-    opts?: { operation?: string; returnNull?: boolean; params?: JsonObject },
+    opts?: { operation?: string; params?: JsonObject },
 ): Promise<T | null> {
     checkCircuitBreaker('gitlab-api');
     try {
@@ -21,10 +21,7 @@ export async function apiGet<T = JsonObject>(
     } catch (err) {
         const axiosErr = err as { response?: unknown; code?: string };
         if (!axiosErr.response) recordCircuitFailure('gitlab-api');
-        return handleError(err, {
-            context: opts?.operation || url,
-            ...(opts?.returnNull ? { returnNull: true as const } : {}),
-        });
+        throw classifyGitError(err, { operation: opts?.operation || url });
     }
 }
 
@@ -43,7 +40,7 @@ export async function apiPost<T = JsonObject>(
     } catch (err) {
         const axiosErr = err as { response?: unknown; code?: string };
         if (!axiosErr.response) recordCircuitFailure('gitlab-api');
-        return handleError(err, { context: opts?.operation || url });
+        throw classifyGitError(err, { operation: opts?.operation || url });
     }
 }
 
@@ -62,7 +59,7 @@ export async function apiPut<T = JsonObject>(
     } catch (err) {
         const axiosErr = err as { response?: unknown; code?: string };
         if (!axiosErr.response) recordCircuitFailure('gitlab-api');
-        return handleError(err, { context: opts?.operation || url });
+        throw classifyGitError(err, { operation: opts?.operation || url });
     }
 }
 

@@ -103,6 +103,7 @@ export interface ExternalErrorContext {
     scope?: string | undefined;
     resource?: string | undefined;
     remediation?: string | undefined;
+    response?: { status?: number; data?: unknown } | undefined;
 }
 
 export class ExternalError extends Error {
@@ -112,6 +113,7 @@ export class ExternalError extends Error {
     readonly resource?: string | undefined;
     readonly operation: string;
     readonly remediation?: string | undefined;
+    readonly response?: { status?: number; data?: unknown } | undefined;
     constructor(kind: ExternalErrorKind, message: string, ctx: ExternalErrorContext) {
         super(message);
         this.name = 'ExternalError';
@@ -121,6 +123,7 @@ export class ExternalError extends Error {
         this.resource = ctx.resource;
         this.operation = ctx.operation;
         this.remediation = ctx.remediation;
+        this.response = ctx.response;
     }
 }
 
@@ -150,10 +153,11 @@ export function classifyGitError(err: unknown, ctx: ExternalErrorContext): Exter
     const e = err as AxiosLikeErr;
     const status = e.response?.status;
     const url = e.config?.url;
+    const ctxWithResponse: ExternalErrorContext = { ...ctx, response: e.response };
     const base = `operação "${ctx.operation}" falhou`;
     if (status === 401) {
         return new ExternalError('auth', `${base}: token inválido ou expirado (HTTP 401)`, {
-            ...ctx,
+            ...ctxWithResponse,
             status,
             resource: url,
             remediation: 'Token inválido ou expirado. Reconfigure via /setup ou edite o arquivo .env.',
@@ -162,7 +166,7 @@ export function classifyGitError(err: unknown, ctx: ExternalErrorContext): Exter
     if (status === 403) {
         const scopeNote = ctx.scope ? ` para ${ctx.scope}` : '';
         return new ExternalError('permission', `${base}: token sem permissão${scopeNote} (HTTP 403)`, {
-            ...ctx,
+            ...ctxWithResponse,
             status,
             resource: url,
             remediation: ctx.scope
@@ -172,14 +176,14 @@ export function classifyGitError(err: unknown, ctx: ExternalErrorContext): Exter
     }
     if (status === 404) {
         return new ExternalError('notFound', `${base}: recurso não encontrado (HTTP 404)`, {
-            ...ctx,
+            ...ctxWithResponse,
             status,
             resource: url,
         });
     }
     if (status === 429) {
         return new ExternalError('rateLimit', `${base}: rate limit atingido (HTTP 429)`, {
-            ...ctx,
+            ...ctxWithResponse,
             status,
             resource: url,
             remediation: 'Muitas requisições. Aguarde e tente novamente.',
@@ -187,20 +191,20 @@ export function classifyGitError(err: unknown, ctx: ExternalErrorContext): Exter
     }
     if (status !== undefined && status >= 500) {
         return new ExternalError('server', `${base}: erro no servidor (HTTP ${status})`, {
-            ...ctx,
+            ...ctxWithResponse,
             status,
             resource: url,
         });
     }
     if (e.code && NETWORK_CODES.has(e.code)) {
         return new ExternalError('network', `${base}: erro de rede (${e.code})`, {
-            ...ctx,
+            ...ctxWithResponse,
             resource: url,
             remediation: 'Verifique a conexão de rede e tente novamente.',
         });
     }
     return new ExternalError('unknown', `${base}: ${e.message || 'erro desconhecido'}`, {
-        ...ctx,
+        ...ctxWithResponse,
         status,
         resource: url,
     });

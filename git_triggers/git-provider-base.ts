@@ -1,6 +1,6 @@
 /** Base class for Git provider clients (GitHub/GitLab) — shared API call + error handling. */
 import type { JsonObject, DirEntry, GitLabTestReport, WorkflowUsage } from '../shared/types.js';
-import { handleError } from '../shared/git-provider-error.js';
+import { classifyGitError } from '../shared/errors.js';
 import type { createHttpClient } from '../shared/http-client.js';
 
 type HttpClient = ReturnType<typeof createHttpClient>;
@@ -30,17 +30,14 @@ export abstract class GitProviderBase {
 
     protected async _get<T = JsonObject>(
         url: string,
-        opts?: { operation?: string; returnNull?: boolean; params?: JsonObject },
+        opts?: { operation?: string; params?: JsonObject },
     ): Promise<T | null> {
         try {
             const args = opts?.params ? [{ params: opts.params }] : [];
             const response = await this.client.get<T>(url, ...args);
             return response.data;
         } catch (err) {
-            return handleError(err, {
-                context: opts?.operation || url,
-                ...(opts?.returnNull ? { returnNull: true as const } : {}),
-            });
+            throw classifyGitError(err, { operation: opts?.operation || url });
         }
     }
 
@@ -50,7 +47,7 @@ export abstract class GitProviderBase {
             const response = await this.client.post<T>(url, ...args);
             return response.data;
         } catch (err) {
-            return handleError(err, { context: opts?.operation || url });
+            throw classifyGitError(err, { operation: opts?.operation || url });
         }
     }
 

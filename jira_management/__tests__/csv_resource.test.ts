@@ -1,0 +1,631 @@
+import os from 'os';
+import path from 'path';
+import { writeFileSync, unlinkSync } from 'fs';
+import { nonNull } from '../../shared/test-utils.js';
+import { rootLogger } from '../../shared/logger.js';
+import CsvResource from '../csv_resource.js';
+
+describe('CsvResource', () => {
+    let csvResource: InstanceType<typeof CsvResource>;
+
+    beforeEach(() => {
+        csvResource = new CsvResource();
+    });
+
+    describe('ParseDescription', () => {
+        it('extracts description from Description: header', () => {
+            const lines = ['Title: Test', 'Description: Verifica feature Y', 'Action,Data,Expected'];
+
+            expect(csvResource.parseDescription(lines)).toBe('Verifica feature Y');
+        });
+
+        it('returns empty string when no Description header', () => {
+            const lines = ['Title: Test', 'Action,Data,Expected'];
+
+            expect(csvResource.parseDescription(lines)).toBe('');
+        });
+
+        it('handles multiline descriptions', () => {
+            const lines = ['Title: Test', 'Description: Line 1\\nLine 2', 'Action,Data,Expected'];
+
+            expect(csvResource.parseDescription(lines)).toBe('Line 1\\nLine 2');
+        });
+    });
+
+    describe('ParsePreconditions', () => {
+        it('detects reference type for Jira keys', () => {
+            expect(csvResource.parsePreconditions('ECSPOL-PRE-42')).toStrictEqual([
+                { type: 'reference', value: 'ECSPOL-PRE-42' },
+            ]);
+        });
+
+        it('detects inline type for plain text', () => {
+            expect(csvResource.parsePreconditions('User must be logged in')).toStrictEqual([
+                { type: 'inline', value: 'User must be logged in' },
+            ]);
+        });
+
+        it('returns empty array for null/undefined/empty', () => {
+            expect(csvResource.parsePreconditions(null)).toStrictEqual([]);
+            expect(csvResource.parsePreconditions(undefined)).toStrictEqual([]);
+            expect(csvResource.parsePreconditions('')).toStrictEqual([]);
+            expect(csvResource.parsePreconditions('   ')).toStrictEqual([]);
+        });
+
+        it('extracts key from KEY-100 (descricao)', () => {
+            expect(csvResource.parsePreconditions('ECSPOL-PRE-42 (descricao do pre-cond)')).toStrictEqual([
+                { type: 'reference', value: 'ECSPOL-PRE-42' },
+            ]);
+        });
+
+        it('extracts key from KEY-100 (with extra parenthetical info)', () => {
+            expect(csvResource.parsePreconditions('ABC-123 (some context here)')).toStrictEqual([
+                { type: 'reference', value: 'ABC-123' },
+            ]);
+        });
+
+        it('returns inline for multi-line text (already extracted)', () => {
+            expect(csvResource.parsePreconditions('User must be logged in\nwith admin privileges')).toStrictEqual([
+                { type: 'inline', value: 'User must be logged in\nwith admin privileges' },
+            ]);
+        });
+
+        it('splits comma-separated references into multiple items', () => {
+            expect(csvResource.parsePreconditions('ECSPOL-809, ECSPOL-810, ECSPOL-811')).toStrictEqual([
+                { type: 'reference', value: 'ECSPOL-809' },
+                { type: 'reference', value: 'ECSPOL-810' },
+                { type: 'reference', value: 'ECSPOL-811' },
+            ]);
+        });
+
+        it('treats inline text containing a comma as a single inline item', () => {
+            expect(csvResource.parsePreconditions('must be logged in, then click login')).toStrictEqual([
+                { type: 'inline', value: 'must be logged in, then click login' },
+            ]);
+        });
+    });
+
+    describe('ReadBulkCsv with quoted Pre-condition', () => {
+        it('parses multi-line quoted Pre-condition', async () => {
+            expect.hasAssertions();
+
+            const tmp = path.join(os.tmpdir(), 'qa-test-pre-quoted.csv');
+            writeFileSync(
+                path.resolve(path.resolve(tmp)),
+                [
+                    'Title: TC - Pre quoted',
+                    'Description: Test',
+                    'Pre-condition: "User must be logged in',
+                    'with admin privileges',
+                    'and valid SSL cert"',
+                    'Action,Data,Expected',
+                    'x,y,z',
+                ].join('\n'),
+                'utf-8',
+            );
+            const results = await csvResource.readBulkCsv(tmp);
+
+            expect(nonNull(results[0]).precondition).toStrictEqual([
+                {
+                    type: 'inline',
+                    value: 'User must be logged in\nwith admin privileges\nand valid SSL cert',
+                },
+            ]);
+            expect(nonNull(results[0]).steps).toHaveLength(1);
+
+            unlinkSync(path.resolve(tmp));
+        });
+
+        it('parses single-line quoted Pre-condition', async () => {
+            expect.hasAssertions();
+
+            const tmp = path.join(os.tmpdir(), 'qa-test-pre-quoted-single.csv');
+            writeFileSync(
+                path.resolve(path.resolve(tmp)),
+                [
+                    'Title: TC - Pre quoted single',
+                    'Description: Test',
+                    'Pre-condition: "User must be logged in"',
+                    'Action,Data,Expected',
+                    'x,y,z',
+                ].join('\n'),
+                'utf-8',
+            );
+            const results = await csvResource.readBulkCsv(tmp);
+
+            expect(nonNull(results[0]).precondition).toStrictEqual([
+                {
+                    type: 'inline',
+                    value: 'User must be logged in',
+                },
+            ]);
+
+            unlinkSync(path.resolve(tmp));
+        });
+
+        it('parses unquoted Pre-condition (range mode fallback)', async () => {
+            expect.hasAssertions();
+
+            const tmp = path.join(os.tmpdir(), 'qa-test-pre-range.csv');
+            writeFileSync(
+                path.resolve(path.resolve(tmp)),
+                [
+                    'Title: TC - Pre range',
+                    'Description: Test',
+                    'Pre-condition: User must be logged in',
+                    'Action,Data,Expected',
+                    'x,y,z',
+                ].join('\n'),
+                'utf-8',
+            );
+            const results = await csvResource.readBulkCsv(tmp);
+
+            expect(nonNull(results[0]).precondition).toStrictEqual([
+                {
+                    type: 'inline',
+                    value: 'User must be logged in',
+                },
+            ]);
+
+            unlinkSync(path.resolve(tmp));
+        });
+    });
+
+    describe('ParseGroup', () => {
+        it('extracts group from Group: header', () => {
+            const lines = ['Title: Test', 'Group: LOGIN-FLOW', 'Action,Data,Expected'];
+
+            expect(csvResource.parseGroup(lines)).toBe('LOGIN-FLOW');
+        });
+
+        it('returns null when no Group: header', () => {
+            const lines = ['Title: Test', 'Action,Data,Expected'];
+
+            expect(csvResource.parseGroup(lines)).toBeNull();
+        });
+
+        it('returns null for whitespace-only Group:', () => {
+            const lines = ['Title: Test', 'Group:   ', 'Action,Data,Expected'];
+
+            expect(csvResource.parseGroup(lines)).toBeNull();
+        });
+    });
+
+    describe('ParseLinkedIssues', () => {
+        it('parses single linked issue', () => {
+            const lines = ['Title: Test', 'Linked Issues: ECSPOL-100 (is tested by)', 'Action,Data,Expected'];
+
+            expect(csvResource.parseLinkedIssues(lines)).toStrictEqual([
+                { key: 'ECSPOL-100', linkType: 'is tested by' },
+            ]);
+        });
+
+        it('parses multiple linked issues', () => {
+            const lines = ['Title: Test', 'Linked Issues: ECSPOL-100 (is tested by), ECSPOL-200 (relates to)'];
+
+            expect(csvResource.parseLinkedIssues(lines)).toStrictEqual([
+                { key: 'ECSPOL-100', linkType: 'is tested by' },
+                { key: 'ECSPOL-200', linkType: 'relates to' },
+            ]);
+        });
+
+        it('returns empty array when no Linked Issues header', () => {
+            const lines = ['Title: Test', 'Action,Data,Expected'];
+
+            expect(csvResource.parseLinkedIssues(lines)).toStrictEqual([]);
+        });
+    });
+
+    describe('ReadBulkCsv edge cases', () => {
+        it('skips block without Title and warns', async () => {
+            expect.hasAssertions();
+
+            const warnSpy = vi.spyOn(rootLogger, 'warn').mockImplementation(() => {});
+            const tmp = path.join(os.tmpdir(), 'qa-test-no-title.csv');
+            writeFileSync(
+                path.resolve(tmp),
+                'Action,Data,Expected\nx,y,z\n---\nTitle: Real\nAction,Data,Expected\na,b,c\n',
+                'utf-8',
+            );
+            const results = await csvResource.readBulkCsv(tmp);
+
+            expect(results).toHaveLength(1);
+            expect(nonNull(results[0]).title).toBe('Real');
+            expect(warnSpy).toHaveBeenCalledWith(expect.stringContaining('formato flat'));
+
+            warnSpy.mockRestore();
+            unlinkSync(path.resolve(tmp));
+        });
+
+        it('parses single-line quoted description', async () => {
+            expect.hasAssertions();
+
+            const tmp = path.join(os.tmpdir(), 'qa-test-desc-quoted.csv');
+            writeFileSync(
+                path.resolve(tmp),
+                'Title: TC\nDescription:"Quoted desc"\nAction,Data,Expected\nx,y,z\n',
+                'utf-8',
+            );
+            const results = await csvResource.readBulkCsv(tmp);
+
+            expect(nonNull(results[0]).description).toBe('Quoted desc');
+
+            unlinkSync(path.resolve(tmp));
+        });
+
+        it('parses multi-line quoted description without closing quote', async () => {
+            expect.hasAssertions();
+
+            const warnSpy = vi.spyOn(rootLogger, 'warn').mockImplementation(() => {});
+            const tmp = path.join(os.tmpdir(), 'qa-test-desc-unclosed.csv');
+            writeFileSync(
+                path.resolve(path.resolve(tmp)),
+                ['Title: TC', 'Description:"Line 1', 'Line 2', 'Action,Data,Expected', 'x,y,z'].join('\n'),
+                'utf-8',
+            );
+            const results = await csvResource.readBulkCsv(tmp);
+
+            expect(nonNull(results[0]).description).toContain('Line 1');
+            expect(nonNull(results[0]).description).toContain('Line 2');
+            expect(warnSpy).toHaveBeenCalledWith(expect.stringContaining('Description sem aspas de fechamento'));
+
+            warnSpy.mockRestore();
+            unlinkSync(path.resolve(tmp));
+        });
+
+        it('parses multi-line quoted description with proper closing', async () => {
+            expect.hasAssertions();
+
+            const tmp = path.join(os.tmpdir(), 'qa-test-desc-closed.csv');
+            writeFileSync(
+                path.resolve(path.resolve(tmp)),
+                ['Title: TC', 'Description:"Line 1', 'Line 2"', 'Action,Data,Expected', 'x,y,z'].join('\n'),
+                'utf-8',
+            );
+            const results = await csvResource.readBulkCsv(tmp);
+
+            expect(nonNull(results[0]).description).toBe('Line 1\nLine 2');
+
+            unlinkSync(path.resolve(tmp));
+        });
+
+        it('parses multi-line description in range mode (no quotes)', async () => {
+            expect.hasAssertions();
+
+            const tmp = path.join(os.tmpdir(), 'qa-test-desc-range-multi.csv');
+            writeFileSync(
+                path.resolve(path.resolve(tmp)),
+                [
+                    'Title: TC',
+                    'Description: First line',
+                    'Second line',
+                    'Third line',
+                    'Action,Data,Expected',
+                    'x,y,z',
+                ].join('\n'),
+                'utf-8',
+            );
+            const results = await csvResource.readBulkCsv(tmp);
+
+            expect(nonNull(results[0]).description).toBe('First line\nSecond line\nThird line');
+
+            unlinkSync(path.resolve(tmp));
+        });
+
+        it('parses description in range mode with stop prefix adjacent', async () => {
+            expect.hasAssertions();
+
+            const tmp = path.join(os.tmpdir(), 'qa-test-desc-range.csv');
+            writeFileSync(
+                path.resolve(path.resolve(tmp)),
+                ['Title: TC', 'Description:Some desc', 'Group: G1', 'Action,Data,Expected', 'x,y,z'].join('\n'),
+                'utf-8',
+            );
+            const results = await csvResource.readBulkCsv(tmp);
+
+            expect(nonNull(results[0]).description).toBe('Some desc');
+            expect(nonNull(results[0]).group).toBe('G1');
+
+            unlinkSync(path.resolve(tmp));
+        });
+
+        it('parses empty description after Description: with metadata on next line', async () => {
+            expect.hasAssertions();
+
+            const tmp = path.join(os.tmpdir(), 'qa-test-desc-empty.csv');
+            writeFileSync(
+                path.resolve(path.resolve(tmp)),
+                ['Title: TC', 'Description:', 'Pre-condition: LOGIN', 'Action,Data,Expected', 'x,y,z'].join('\n'),
+                'utf-8',
+            );
+            const results = await csvResource.readBulkCsv(tmp);
+
+            expect(nonNull(results[0]).description).toBe('');
+            expect(nonNull(results[0]).precondition).toBeDefined();
+
+            unlinkSync(path.resolve(tmp));
+        });
+
+        it('warns on multi-line quoted pre-condition without closing quote', async () => {
+            expect.hasAssertions();
+
+            const warnSpy = vi.spyOn(rootLogger, 'warn').mockImplementation(() => {});
+            const tmp = path.join(os.tmpdir(), 'qa-test-pre-unclosed.csv');
+            writeFileSync(
+                path.resolve(path.resolve(tmp)),
+                [
+                    'Title: TC',
+                    'Description: Test',
+                    'Pre-condition: "Unclosed',
+                    'multiline',
+                    'Action,Data,Expected',
+                    'x,y,z',
+                ].join('\n'),
+                'utf-8',
+            );
+            const results = await csvResource.readBulkCsv(tmp);
+
+            expect(nonNull(results[0]).precondition).toBeDefined();
+            expect(warnSpy).toHaveBeenCalledWith(expect.stringContaining('Pre-condition sem aspas de fechamento'));
+
+            warnSpy.mockRestore();
+            unlinkSync(path.resolve(tmp));
+        });
+
+        it('throws on CSV parse error', async () => {
+            expect.hasAssertions();
+
+            const errorSpy = vi.spyOn(rootLogger, 'error').mockImplementation(() => {});
+            const orig = csvResource['readCsvFromString'];
+            csvResource.readCsvFromString = vi
+                .fn<(...args: [string]) => Promise<never>>()
+                .mockRejectedValue(new Error('CSV parse error'));
+            const tmp = path.join(os.tmpdir(), 'qa-test-csv-error.csv');
+            writeFileSync(path.resolve(tmp), 'Title: TC\nDescription: Test\nAction,Data,Expected\nx,y,z\n', 'utf-8');
+
+            await expect(csvResource.readBulkCsv(tmp)).rejects.toThrow('CSV parse error');
+            expect(errorSpy).toHaveBeenCalledWith(expect.stringContaining('Erro ao analisar bloco CSV'));
+
+            csvResource.readCsvFromString = orig;
+            errorSpy.mockRestore();
+            unlinkSync(path.resolve(tmp));
+        });
+    });
+
+    describe('ParseLinkedIssues edge cases', () => {
+        it('returns empty array when Linked Issues value is empty', () => {
+            const lines = ['Title: Test', 'Linked Issues:   ', 'Action,Data,Expected'];
+
+            expect(csvResource.parseLinkedIssues(lines)).toStrictEqual([]);
+        });
+    });
+
+    describe('DetectSeparator', () => {
+        it('returns comma for normal CSV', () => {
+            expect(CsvResource.detectSeparator('Action,Data,Expected Result')).toBe(',');
+        });
+
+        it('returns semicolon when first line has ; and no comma', () => {
+            expect(CsvResource.detectSeparator('Action;Data;Expected Result')).toBe(';');
+        });
+
+        it('returns comma when first line has both ; and ,', () => {
+            expect(CsvResource.detectSeparator('"Action;Extra",Data,Expected Result')).toBe(',');
+        });
+
+        it('returns comma for empty first line', () => {
+            expect(CsvResource.detectSeparator('')).toBe(',');
+        });
+    });
+
+    describe('ReadCsvFromString', () => {
+        it('skips CSV row with empty Action field', async () => {
+            expect.hasAssertions();
+
+            const csvString = 'Action,Data,Expected Result\n,y,z';
+            const result = await csvResource.readCsvFromString(csvString);
+
+            expect(result).toHaveLength(0);
+        });
+
+        it('parses CSV with empty Data field', async () => {
+            expect.hasAssertions();
+
+            const csvString = 'Action,Data,Expected Result\nx,,z';
+            const result = await csvResource.readCsvFromString(csvString);
+
+            expect(result).toHaveLength(1);
+            expect(nonNull(result[0]).fields.Data).toBe('');
+            expect(nonNull(result[0]).fields['Expected Result']).toBe('z');
+        });
+
+        it('parses CSV with semicolon separator', async () => {
+            expect.hasAssertions();
+
+            const csvString = 'Action;Data;Expected Result\nstep1;data1;result1';
+            const result = await csvResource.readCsvFromString(csvString);
+
+            expect(result).toHaveLength(1);
+            expect(nonNull(result[0]).fields.Action).toBe('step1');
+            expect(nonNull(result[0]).fields.Data).toBe('data1');
+            expect(nonNull(result[0]).fields['Expected Result']).toBe('result1');
+        });
+
+        it('normalizes ExpectedResult (camelCase) header', async () => {
+            expect.hasAssertions();
+
+            const warnSpy = vi.spyOn(rootLogger, 'warn').mockImplementation(() => {});
+            const csvString = 'Action,Data,ExpectedResult\nx,y,z';
+            const result = await csvResource.readCsvFromString(csvString);
+
+            expect(result).toHaveLength(1);
+            expect(nonNull(result[0]).fields['Expected Result']).toBe('z');
+            expect(warnSpy).toHaveBeenCalledWith(expect.stringContaining('normalizada'));
+
+            warnSpy.mockRestore();
+        });
+
+        it('normalizes lowercase expected result header', async () => {
+            expect.hasAssertions();
+
+            const csvString = 'action,data,expected result\nx,y,z';
+            const result = await csvResource.readCsvFromString(csvString);
+
+            expect(result).toHaveLength(1);
+            expect(nonNull(result[0]).fields.Action).toBe('x');
+            expect(nonNull(result[0]).fields['Expected Result']).toBe('z');
+        });
+
+        it('normalizes header with trailing \\r', async () => {
+            expect.hasAssertions();
+
+            const csvString = 'Action,Data,Expected Result\r\nstep1,data1,result1';
+            const result = await csvResource.readCsvFromString(csvString);
+
+            expect(result).toHaveLength(1);
+            expect(nonNull(result[0]).fields['Expected Result']).toBe('result1');
+        });
+
+        it('deduplicates normalization warnings per column', async () => {
+            expect.hasAssertions();
+
+            const warnSpy = vi.spyOn(rootLogger, 'warn').mockImplementation(() => {});
+            const csvString = 'Action,ExpectedResult,ExpectedResult\nx,y,z\nw,v,u';
+            const result = await csvResource.readCsvFromString(csvString);
+
+            expect(result).toHaveLength(2);
+
+            // Only 1 warn for normalization (deduped), not 2
+            const normalizeWarns = warnSpy.mock.calls.filter((c) => String(c[0]).includes('normalizada')).length;
+
+            expect(normalizeWarns).toBe(1);
+
+            warnSpy.mockRestore();
+        });
+
+        it('strips \\r from cell values', async () => {
+            expect.hasAssertions();
+
+            const csvString = 'Action,Data,Expected Result\nstep1\r,data1\r,result1\r';
+            const result = await csvResource.readCsvFromString(csvString);
+
+            expect(result).toHaveLength(1);
+            expect(nonNull(result[0]).fields.Action).toBe('step1');
+            expect(nonNull(result[0]).fields.Data).toBe('data1');
+            expect(nonNull(result[0]).fields['Expected Result']).toBe('result1');
+        });
+
+        it('preserves \\n inside quoted cell values', async () => {
+            expect.hasAssertions();
+
+            const csvString = 'Action,Data,Expected Result\n"line1\nline2",data,result\nstep3,data3,result3';
+            const result = await csvResource.readCsvFromString(csvString);
+
+            expect(result).toHaveLength(2);
+            expect(nonNull(result[0]).fields.Action).toBe('line1\nline2');
+            expect(nonNull(result[1]).fields.Action).toBe('step3');
+        });
+    });
+
+    describe('ProcessBulkCsvBlock flat CSV warning', () => {
+        it('warns with diagnostic for flat CSV (Title,Action,... header)', async () => {
+            expect.hasAssertions();
+
+            const warnSpy = vi.spyOn(rootLogger, 'warn').mockImplementation(() => {});
+            // Flat CSV format: header row with Title,Action,Data,Expected Result (no ---, no Title:)
+            const tmp = path.join(os.tmpdir(), 'qa-test-flat.csv');
+            writeFileSync(
+                path.resolve(tmp),
+                'Title,Action,Data,Expected Result\nTC1,Step1,,Result1\nTC2,Step2,,Result2\n',
+                'utf-8',
+            );
+            const results = await csvResource.readBulkCsv(tmp);
+
+            // No bulk-format blocks found, so 0 results
+            expect(results).toHaveLength(0);
+            expect(warnSpy).toHaveBeenCalledWith(expect.stringContaining('formato flat'));
+
+            warnSpy.mockRestore();
+            unlinkSync(path.resolve(tmp));
+        });
+
+        it('warns with diagnostic for flat CSV (just Action,Data,...)', async () => {
+            expect.hasAssertions();
+
+            const warnSpy = vi.spyOn(rootLogger, 'warn').mockImplementation(() => {});
+            const tmp = path.join(os.tmpdir(), 'qa-test-flat-action.csv');
+            writeFileSync(path.resolve(tmp), 'Action,Data,Expected Result\nStep1,Data1,Result1\n', 'utf-8');
+            const results = await csvResource.readBulkCsv(tmp);
+
+            expect(results).toHaveLength(0);
+            expect(warnSpy).toHaveBeenCalledWith(expect.stringContaining('formato flat'));
+
+            warnSpy.mockRestore();
+            unlinkSync(path.resolve(tmp));
+        });
+    });
+
+    describe('ReadBulkCsv — CRLF normalization', () => {
+        it('splits blocks correctly with CRLF line endings', async () => {
+            expect.hasAssertions();
+
+            const tmp = path.join(os.tmpdir(), 'qa-test-crlf-bulk.csv');
+            const crlf = '\r\n';
+            const csvContent =
+                [
+                    'Title: Test A',
+                    'Action,Data,Expected Result',
+                    'a1,d1,r1',
+                    '---',
+                    'Title: Test B',
+                    'Action,Data,Expected Result',
+                    'a2,d2,r2',
+                ].join(crlf) + crlf;
+            writeFileSync(path.resolve(tmp), csvContent, 'utf-8');
+            const results = await csvResource.readBulkCsv(tmp);
+
+            expect(results).toHaveLength(2);
+            expect(nonNull(results[0]).title).toBe('Test A');
+            expect(nonNull(results[1]).title).toBe('Test B');
+            expect(nonNull(results[0]).steps).toHaveLength(1);
+            expect(nonNull(nonNull(results[0]).steps[0]).fields['Expected Result']).toBe('r1');
+
+            unlinkSync(path.resolve(tmp));
+        });
+
+        it('strips BOM character at start of file', async () => {
+            expect.hasAssertions();
+
+            const tmp = path.join(os.tmpdir(), 'qa-test-bom-bulk.csv');
+            const bom = '\uFEFF';
+            const csvContent = bom + 'Title: Com BOM\nAction,Data,Expected Result\na,d,r\n';
+            writeFileSync(path.resolve(tmp), csvContent, 'utf-8');
+            const results = await csvResource.readBulkCsv(tmp);
+
+            expect(results).toHaveLength(1);
+            expect(nonNull(results[0]).title).toBe('Com BOM');
+            expect(nonNull(nonNull(results[0]).steps[0]).fields['Expected Result']).toBe('r');
+
+            unlinkSync(path.resolve(tmp));
+        });
+
+        it('handles BOM + CRLF + semicolons combined', async () => {
+            expect.hasAssertions();
+
+            const tmp = path.join(os.tmpdir(), 'qa-test-bom-crlf-semi.csv');
+            const bom = '\uFEFF';
+            const crlf = '\r\n';
+            const csvContent =
+                bom + ['Title: Combined quirks', 'Action;Data;ExpectedResult', 'step1;d1;r1'].join(crlf) + crlf;
+            writeFileSync(path.resolve(tmp), csvContent, 'utf-8');
+            const results = await csvResource.readBulkCsv(tmp);
+
+            expect(results).toHaveLength(1);
+            expect(nonNull(results[0]).title).toBe('Combined quirks');
+            expect(nonNull(nonNull(results[0]).steps[0]).fields['Expected Result']).toBe('r1');
+            expect(nonNull(nonNull(results[0]).steps[0]).fields.Action).toBe('step1');
+
+            unlinkSync(path.resolve(tmp));
+        });
+    });
+});

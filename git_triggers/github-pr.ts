@@ -1,6 +1,7 @@
 import type { AxiosInstance } from '../shared/deps.js';
 import { info } from '../shared/prompt.js';
-import { handleError } from '../shared/git-provider-error.js';
+import { classifyGitError } from '../shared/errors.js';
+import { ExternalError } from '../shared/errors.js';
 import type { MergeRequestInfo, JsonObject } from '../shared/types.js';
 import { apiGet, apiPost, apiPatch } from './github-api.js';
 
@@ -66,7 +67,7 @@ export async function prCreateMergeRequest(
                 }
             }
         }
-        return handleError(err, { context: 'criar PR' });
+        throw classifyGitError(err, { operation: 'criar PR' });
     }
 }
 
@@ -95,11 +96,13 @@ export async function prGetMergeRequest(
     iid: string | number,
 ): Promise<MergeRequestInfo | null> {
     const repoPath = '/repos/' + owner + '/' + repo;
-    const data = await apiGet(client, repoPath + '/pulls/' + iid, {
-        operation: 'buscar PR',
-        returnNull: true,
-    });
-    return data ? formatPR(data) : null;
+    try {
+        const data = await apiGet(client, repoPath + '/pulls/' + iid, { operation: 'buscar PR' });
+        return formatPR(data);
+    } catch (err) {
+        if (err instanceof ExternalError && err.kind === 'notFound') return null;
+        throw err;
+    }
 }
 
 export async function prSearchMergeRequests(
@@ -116,17 +119,20 @@ export async function prSearchMergeRequests(
     if (targetBranch) params['base'] = targetBranch;
     if (searchStatus) params['state'] = searchStatus === 'opened' ? 'open' : searchStatus;
 
-    const data = await apiGet<JsonObject[]>(client, repoPath + '/pulls', {
-        operation: 'buscar PRs',
-        params,
-        returnNull: true,
-    });
-    if (!data) return [];
-    return data.reduce<MergeRequestInfo[]>((acc, pr) => {
-        const formatted = formatPR(pr);
-        if (formatted) acc.push(formatted);
-        return acc;
-    }, []);
+    try {
+        const data = await apiGet<JsonObject[]>(client, repoPath + '/pulls', {
+            operation: 'buscar PRs',
+            params,
+        });
+        return (data ?? []).reduce<MergeRequestInfo[]>((acc, pr) => {
+            const formatted = formatPR(pr);
+            if (formatted) acc.push(formatted);
+            return acc;
+        }, []);
+    } catch (err) {
+        if (err instanceof ExternalError && err.kind === 'notFound') return [];
+        throw err;
+    }
 }
 
 export async function prAcceptMergeRequest(
@@ -149,7 +155,7 @@ export async function prAcceptMergeRequest(
         const response = await client.put<JsonObject>(repoPath + '/pulls/' + iid + '/merge', body);
         return formatPR(response.data);
     } catch (err) {
-        return handleError(err, { context: 'fazer merge' });
+        throw classifyGitError(err, { operation: 'fazer merge' });
     }
 }
 
@@ -160,9 +166,13 @@ export async function prIsApproved(
     prNumber: string | number,
 ): Promise<boolean> {
     const repoPath = '/repos/' + owner + '/' + repo;
-    const data = await apiGet<JsonObject[]>(client, repoPath + '/pulls/' + prNumber + '/reviews', {
-        operation: 'verificar reviews',
-        returnNull: true,
-    });
-    return (data || []).some((r: JsonObject) => r['state'] === 'APPROVED');
+    try {
+        const data = await apiGet<JsonObject[]>(client, repoPath + '/pulls/' + prNumber + '/reviews', {
+            operation: 'verificar reviews',
+        });
+        return (data ?? []).some((r: JsonObject) => r['state'] === 'APPROVED');
+    } catch (err) {
+        if (err instanceof ExternalError && err.kind === 'notFound') return false;
+        throw err;
+    }
 }

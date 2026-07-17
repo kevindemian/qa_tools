@@ -2,6 +2,7 @@ import os from 'os';
 import path from 'path';
 import { describe, it, expect, vi, beforeEach } from 'vitest';
 import { createMockContext } from '../../shared/test-utils/factories/context-factory.js';
+import { rootLogger } from '../../shared/logger.js';
 
 vi.mock('../../shared/prompt.js', () => ({
     ask: vi.fn().mockResolvedValue('test-value'),
@@ -36,8 +37,9 @@ vi.mock('../../shared/jira-helper.js', () => ({
         try {
             await fn();
             (c as { pushHistory: (op: string, label: string, status: string) => void }).pushHistory(op, label, 'ok');
-        } catch {
+        } catch (err) {
             (c as { pushHistory: (op: string, label: string, status: string) => void }).pushHistory(op, label, 'error');
+            rootLogger.warn('safeJiraCall mock capturou erro', { err });
         }
     }),
 }));

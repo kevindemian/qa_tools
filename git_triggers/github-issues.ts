@@ -8,7 +8,6 @@ export async function getOpenIssues(client: AxiosInstance, owner: string, repo: 
     const data = await apiGet(client, '/repos/' + owner + '/' + repo + '/issues', {
         operation: 'buscar issues',
         params: { state: 'open', per_page: ISSUES_PAGE_SIZE },
-        returnNull: true,
     });
     const items: unknown[] = Array.isArray(data) ? data : [];
     return items

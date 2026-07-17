@@ -1,4 +1,5 @@
 import type { AxiosInstance } from '../shared/deps.js';
+import { ExternalError } from '../shared/errors.js';
 import { apiGet, formatDiffResponse, projectPath } from './gitlab-api.js';
 
 const DIFF_TRUNCATION_LIMIT = 15000;
@@ -10,11 +11,17 @@ export async function glGetBranch(
     branch: string,
 ): Promise<{ name: string } | null> {
     const base = projectPath(owner, repo);
-    const data = await apiGet<{ name: string }>(client, base + `/repository/branches/${encodeURIComponent(branch)}`, {
-        operation: 'buscar branch',
-        returnNull: true,
-    });
-    return data ? { name: data.name } : null;
+    try {
+        const data = await apiGet<{ name: string } | null>(
+            client,
+            base + `/repository/branches/${encodeURIComponent(branch)}`,
+            { operation: 'buscar branch' },
+        );
+        return data?.name ? { name: data.name } : null;
+    } catch (err) {
+        if (err instanceof ExternalError && err.kind === 'notFound') return null;
+        throw err;
+    }
 }
 
 export async function glGetDiff(
@@ -25,10 +32,9 @@ export async function glGetDiff(
     target: string,
 ): Promise<string> {
     const base = projectPath(owner, repo);
-    const data = await apiGet<{ diffs?: Array<Record<string, unknown>> }>(client, base + '/repository/compare', {
+    const data = await apiGet<{ diffs?: Array<Record<string, unknown>> } | null>(client, base + '/repository/compare', {
         operation: 'comparar branches',
         params: { from: source, to: target },
-        returnNull: true,
     });
     return formatDiffResponse(data?.diffs, 'diff', 'new_path', DIFF_TRUNCATION_LIMIT);
 }

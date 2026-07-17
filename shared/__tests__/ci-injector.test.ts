@@ -112,10 +112,10 @@ describe('GeneratePostProcessWorkflowYaml', () => {
     it('accepts custom node version', () => {
         const yaml = generatePostProcessWorkflowYaml({
             projectName: 'p',
-            nodeVersion: '20',
+            nodeVersion: '22',
         });
 
-        expect(yaml).toContain('node-version: 20');
+        expect(yaml).toContain('node-version: 22');
     });
 
     it('accepts custom install command', () => {

@@ -1,5 +1,6 @@
 import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest';
 import { createMockContext } from '../../shared/test-utils/factories/context-factory.js';
+import { rootLogger } from '../../shared/logger.js';
 import fs from 'node:fs';
 import path from 'node:path';
 import os from 'node:os';
@@ -35,8 +36,9 @@ vi.mock('../../shared/jira-helper.js', () => ({
         try {
             await fn();
             (c as { pushHistory: (op: string, label: string, status: string) => void }).pushHistory(op, label, 'ok');
-        } catch {
+        } catch (err) {
             (c as { pushHistory: (op: string, label: string, status: string) => void }).pushHistory(op, label, 'error');
+            rootLogger.warn('safeJiraCall mock capturou erro', { err });
         }
     }),
 }));
