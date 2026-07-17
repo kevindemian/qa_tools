@@ -34,7 +34,8 @@
         "semgrep:diff": "npx tsx scripts/run-semgrep.ts --diff",
         "no-swallow": "npx tsx scripts/run-noswallow.ts",
         "mutation": "npx tsx scripts/run-mutation.ts",
-        "audit-suppressions": "npx tsx scripts/audit-suppressions.ts"
+        "audit-suppressions": "npx tsx scripts/audit-suppressions.ts",
+        "ci-status": "npx tsx scripts/ci-status.ts"
     },
     "license": "ISC",
     "type": "module",
@@ -98,5 +99,8 @@
         "typescript": "^6.0.3",
         "typescript-eslint": "^8.62.0",
         "vitest": "^4.1.9"
+    },
+    "overrides": {
+        "qs": "^6.15.2"
     }
 }

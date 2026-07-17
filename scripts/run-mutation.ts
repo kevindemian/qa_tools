@@ -15,9 +15,32 @@ import { fileURLToPath } from 'node:url';
 import { dirname, resolve } from 'node:path';
 
 const ROOT = resolve(dirname(fileURLToPath(import.meta.url)), '..');
+const GIT_BIN = process.env['GIT_BIN'] || '/usr/bin/git';
 const TSX_BIN = resolve(ROOT, 'node_modules', '.bin', 'tsx');
 const STRYKER_BIN = resolve(ROOT, 'node_modules', '.bin', 'stryker');
 const STRYKER_PATH = resolve(ROOT, 'stryker.conf.json');
+
+function diffFiles(): string[] {
+    const base = process.env['GITHUB_BASE_REF'] || 'dev';
+    let out: string;
+    try {
+        out = execFileSync(GIT_BIN, ['diff', '--name-only', '--diff-filter=d', `origin/${base}...HEAD`], {
+            cwd: ROOT,
+            encoding: 'utf8',
+        });
+    } catch (err) {
+        const e = err as { status?: number };
+        throw new Error(
+            `[run-mutation] git diff contra origin/${base} falhou (exit ${e.status ?? '?'}). ` +
+                `Garanta que origin/${base} esta disponivel (fetch-depth: 0 no CI).`,
+            { cause: err },
+        );
+    }
+    return out
+        .split('\n')
+        .map((s) => s.trim())
+        .filter((s) => s.endsWith('.ts') && !s.endsWith('.test.ts'));
+}
 
 function main(): void {
     const args = process.argv.slice(2);
@@ -43,11 +66,12 @@ function main(): void {
 
     const cmdArgs = ['run', '--configFile', STRYKER_PATH];
     if (diffMode) {
-        // Mutate incremental: apenas arquivos modificados no PR.
-        cmdArgs.push(
-            '--mutate',
-            '$(git diff --name-only origin/dev...HEAD | grep -E "\\.ts$" | grep -v "\\.test\\.ts$" | tr "\\n" ",")',
-        );
+        const files = diffFiles();
+        if (files.length === 0) {
+            process.stderr.write('[run-mutation] nenhum arquivo .ts de producao no diff; pulando.\n');
+            process.exit(0);
+        }
+        cmdArgs.push('--mutate', files.join(','));
     }
 
     process.stderr.write(`[run-mutation] Stryker ${diffMode ? '(incremental/diff)' : '(repo inteiro)'}\n`);
