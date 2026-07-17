@@ -3,15 +3,15 @@
  * so the suite is hermetic and always executes (no environment-gated skip).
  */
 
-import Config from '../shared/config-accessor.js';
-import JiraResource from '../jira_management/jira_resource.js';
-import { createStepImporter } from '../jira_management/xray-client.js';
-import { importExecutionResults } from '../jira_management/result_reporter.js';
-import { resolveProxyUrl } from '../shared/proxy-config.js';
-import type { JiraResourceLike } from '../shared/types.js';
+import Config from '../../shared/config-accessor.js';
+import JiraResource from '../../jira_management/jira_resource.js';
+import { createStepImporter } from '../../jira_management/xray-client.js';
+import { importExecutionResults } from '../../jira_management/result_reporter.js';
+import { resolveProxyUrl } from '../../shared/proxy-config.js';
+import type { JiraResourceLike } from '../../shared/types.js';
 
-vi.mock('../shared/prompt', async () => {
-    const actual = await vi.importActual<typeof import('../shared/prompt.js')>('../shared/prompt');
+vi.mock('../../shared/prompt', async () => {
+    const actual = await vi.importActual<typeof import('../../shared/prompt.js')>('../../shared/prompt');
     return {
         ...actual,
         prompt: vi.fn().mockReturnValue(''),
@@ -39,7 +39,7 @@ describe('Smoke-xray-cloud', () => {
     it('default XrayClient instantiates from JiraResource', async () => {
         expect.hasAssertions();
 
-        const mod = await import('../jira_management/xray-client.js');
+        const mod = await import('../../jira_management/xray-client.js');
 
         expect(mod).toBeDefined();
         expect(typeof (mod as Record<string, unknown>)['default']).toBe('undefined');

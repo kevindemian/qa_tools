@@ -12,7 +12,7 @@ const mockMkdirSync = vi.fn();
 const mockCopyFileSync = vi.fn();
 const mockStatSync = vi.fn();
 
-vi.unmock('../shared/deps.js');
+vi.unmock('../../shared/deps.js');
 
 vi.mock('node:child_process', () => ({
     execFileSync: mockExecFileSync,
@@ -33,7 +33,7 @@ vi.mock('node:fs', () => ({
 
 let DB_PATH: string;
 async function loadModule() {
-    const mod = await import('./opencode-db-maintenance.js');
+    const mod = await import('../opencode-db-maintenance.js');
     DB_PATH = mod.DB_PATH;
     return mod;
 }
@@ -85,7 +85,7 @@ describe('Opencode Db Maintenance', () => {
             const origEnv = process.env['OPENCODE_DB_TIMEOUT_MS'];
             process.env['OPENCODE_DB_TIMEOUT_MS'] = '60000';
             vi.resetModules();
-            const { DB_TIMEOUT_MS } = await import('./opencode-db-maintenance.js');
+            const { DB_TIMEOUT_MS } = await import('../opencode-db-maintenance.js');
 
             expect(DB_TIMEOUT_MS).toBe(60_000);
 
@@ -445,7 +445,7 @@ describe('Opencode Db Maintenance', () => {
                 if (bin === '/usr/bin/sqlite3') return '3.40.0\n';
                 return '';
             });
-            const { checkSqlite3 } = await import('./opencode-db-maintenance.js');
+            const { checkSqlite3 } = await import('../opencode-db-maintenance.js');
 
             expect(checkSqlite3()).toBeTruthy();
         });
@@ -457,7 +457,7 @@ describe('Opencode Db Maintenance', () => {
                 if (bin === '/usr/bin/sqlite3') throw new Error('ENOENT');
                 return '';
             });
-            const { checkSqlite3 } = await import('./opencode-db-maintenance.js');
+            const { checkSqlite3 } = await import('../opencode-db-maintenance.js');
 
             expect(checkSqlite3()).toBeFalsy();
         });
@@ -465,7 +465,7 @@ describe('Opencode Db Maintenance', () => {
 
     describe('Main', () => {
         beforeEach(async () => {
-            const mod = await import('./opencode-db-maintenance.js');
+            const mod = await import('../opencode-db-maintenance.js');
             DB_PATH = mod.DB_PATH;
             mockExistsSync.mockReturnValue(true);
             mockExecFileSync.mockImplementation((bin: string, args: string[]) => {
@@ -488,7 +488,7 @@ describe('Opencode Db Maintenance', () => {
                 if (bin === '/usr/bin/sqlite3') throw new Error('ENOENT');
                 return '';
             });
-            const { main } = await import('./opencode-db-maintenance.js');
+            const { main } = await import('../opencode-db-maintenance.js');
             const stderrSpy = vi.spyOn(process.stderr, 'write').mockImplementation(() => true);
             const result = main();
 
@@ -501,7 +501,7 @@ describe('Opencode Db Maintenance', () => {
             expect.hasAssertions();
 
             mockExistsSync.mockReturnValue(false);
-            const { main } = await import('./opencode-db-maintenance.js');
+            const { main } = await import('../opencode-db-maintenance.js');
             const stdoutSpy = vi.spyOn(process.stdout, 'write').mockImplementation(() => true);
             const result = main();
 
@@ -519,7 +519,7 @@ describe('Opencode Db Maintenance', () => {
             mockMkdirSync.mockImplementation(() => {
                 throw new Error('EACCES');
             });
-            const { main } = await import('./opencode-db-maintenance.js');
+            const { main } = await import('../opencode-db-maintenance.js');
             const stderrSpy = vi.spyOn(process.stderr, 'write').mockImplementation(() => true);
             const result = main();
 

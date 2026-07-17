@@ -6,11 +6,11 @@
  * Run: JIRA_MODE=cloud npx vitest run e2e/smoke-jira-cloud --no-coverage
  */
 
-import Config from '../shared/config-accessor.js';
-import { createJiraAuthHeader, isAtlassianCloudGateway } from '../shared/jira-auth.js';
-import type JiraClientType from '../shared/jira-client.js';
-import { CONFIG_SCHEMA } from '../shared/config-schema.js';
-import { resolveProxyUrl } from '../shared/proxy-config.js';
+import Config from '../../shared/config-accessor.js';
+import { createJiraAuthHeader, isAtlassianCloudGateway } from '../../shared/jira-auth.js';
+import type JiraClientType from '../../shared/jira-client.js';
+import { CONFIG_SCHEMA } from '../../shared/config-schema.js';
+import { resolveProxyUrl } from '../../shared/proxy-config.js';
 
 const mockCreateHttpClient = vi.fn(() => ({
     get: vi.fn().mockResolvedValue({ data: {} }),
@@ -18,12 +18,12 @@ const mockCreateHttpClient = vi.fn(() => ({
     put: vi.fn().mockResolvedValue({ data: {} }),
 }));
 
-vi.mock('../shared/http-client', () => ({
+vi.mock('../../shared/http-client', () => ({
     createHttpClient: mockCreateHttpClient,
 }));
 
-vi.mock('../shared/prompt', async () => {
-    const actual = await vi.importActual<typeof import('../shared/prompt.js')>('../shared/prompt');
+vi.mock('../../shared/prompt', async () => {
+    const actual = await vi.importActual<typeof import('../../shared/prompt.js')>('../../shared/prompt');
     return {
         ...actual,
         prompt: vi.fn().mockReturnValue(''),
@@ -37,7 +37,7 @@ let JiraClient: typeof JiraClientType;
 
 describe('Smoke Jira Cloud', () => {
     beforeAll(async () => {
-        JiraClient = (await vi.importActual<typeof import('../shared/jira-client.js')>('../shared/jira-client'))
+        JiraClient = (await vi.importActual<typeof import('../../shared/jira-client.js')>('../../shared/jira-client'))
             .default;
     });
 

@@ -23,7 +23,7 @@ vi.mock('node:fs', async () => {
 });
 
 async function load() {
-    return import('./validation-hook.js');
+    return import('../validation-hook.js');
 }
 
 describe('Validation-hook', () => {
@@ -266,7 +266,7 @@ describe('Validation-hook', () => {
 
             const m = await load();
 
-            expect(() => m.validatePath('../etc/passwd')).toThrow(/perigoso/);
+            expect(() => m.validatePath('../../etc/passwd')).toThrow(/perigoso/);
             expect(() => m.validatePath('/etc/passwd')).toThrow(/perigoso/);
         });
 

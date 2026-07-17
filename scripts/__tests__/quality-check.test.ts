@@ -11,8 +11,8 @@ vi.mock('fs', async () => {
     };
 });
 
-vi.mock('../shared/deps.js', async (importOriginal) => {
-    const actual = await importOriginal<typeof import('../shared/deps.js')>();
+vi.mock('../../shared/deps.js', async (importOriginal) => {
+    const actual = await importOriginal<typeof import('../../shared/deps.js')>();
     return {
         ...actual,
         globSync: vi.fn((_p: string) => [
@@ -24,11 +24,11 @@ vi.mock('../shared/deps.js', async (importOriginal) => {
     };
 });
 
-vi.mock('../shared/cli_base.js', () => ({
+vi.mock('../../shared/cli_base.js', () => ({
     gracefulExit: vi.fn(),
 }));
 
-vi.mock('../shared/types.js', () => ({
+vi.mock('../../shared/types.js', () => ({
     ExitCode: { OK: 0, ERROR: 1 },
 }));
 
@@ -49,7 +49,7 @@ describe('Quality-check unit tests', () => {
             expect.hasAssertions();
 
             vi.mocked(readFileSync).mockReturnValue('ok line\n');
-            const { checkNoPattern } = await import('./quality-check.js');
+            const { checkNoPattern } = await import('../quality-check.js');
             const result = checkNoPattern('test', /xyz/, ['test.ts']);
 
             expect(result.passed).toBeTruthy();
@@ -59,7 +59,7 @@ describe('Quality-check unit tests', () => {
             expect.hasAssertions();
 
             vi.mocked(readFileSync).mockReturnValue('xyz found here\n');
-            const { checkNoPattern } = await import('./quality-check.js');
+            const { checkNoPattern } = await import('../quality-check.js');
             const result = checkNoPattern('test', /xyz/, ['test.ts']);
 
             expect(result.passed).toBeFalsy();
@@ -73,7 +73,7 @@ describe('Quality-check unit tests', () => {
                 if (path === 'skip.ts') return 'xyz found with skip pattern\n';
                 return 'no match here\n';
             });
-            const { checkNoPattern } = await import('./quality-check.js');
+            const { checkNoPattern } = await import('../quality-check.js');
             const result = checkNoPattern('test', /xyz/, ['test.ts', 'skip.ts'], /skip/);
 
             expect(result.passed).toBeTruthy();
@@ -90,7 +90,7 @@ describe('Quality-check unit tests', () => {
                     messages: [],
                 },
             ]);
-            const { checkEslintBaseline } = await import('./quality-check.js');
+            const { checkEslintBaseline } = await import('../quality-check.js');
             const r = await checkEslintBaseline();
 
             expect(r.passed).toBeTruthy();
@@ -105,7 +105,7 @@ describe('Quality-check unit tests', () => {
                     messages: [{ ruleId: 'no-console', severity: 2, message: 'x', line: 1 }],
                 },
             ]);
-            const { checkEslintBaseline } = await import('./quality-check.js');
+            const { checkEslintBaseline } = await import('../quality-check.js');
             const r = await checkEslintBaseline();
 
             expect(r.passed).toBeFalsy();
@@ -126,7 +126,7 @@ describe('Quality-check unit tests', () => {
                     })),
                 },
             ]);
-            const { checkEslintBaseline } = await import('./quality-check.js');
+            const { checkEslintBaseline } = await import('../quality-check.js');
             const r = await checkEslintBaseline();
 
             expect(r.passed).toBeFalsy();
@@ -137,7 +137,7 @@ describe('Quality-check unit tests', () => {
             expect.hasAssertions();
 
             mockLintResults.mockRejectedValue(new Error('lint failed'));
-            const { checkEslintBaseline } = await import('./quality-check.js');
+            const { checkEslintBaseline } = await import('../quality-check.js');
             const r = await checkEslintBaseline();
 
             expect(r.passed).toBeFalsy();
@@ -154,7 +154,7 @@ describe('Quality-check unit tests', () => {
                 return '';
             });
             vi.mocked(readdirSync).mockReturnValue([]);
-            const { checkHandlerConsistency } = await import('./quality-check.js');
+            const { checkHandlerConsistency } = await import('../quality-check.js');
             const r = checkHandlerConsistency();
 
             expect(r.passed).toBeFalsy();
@@ -166,7 +166,7 @@ describe('Quality-check unit tests', () => {
             vi.mocked(readFileSync).mockImplementation(() => {
                 throw new Error('read fail');
             });
-            const { checkHandlerConsistency } = await import('./quality-check.js');
+            const { checkHandlerConsistency } = await import('../quality-check.js');
             const r = checkHandlerConsistency();
 
             expect(r.passed).toBeFalsy();
@@ -178,7 +178,7 @@ describe('Quality-check unit tests', () => {
             expect.hasAssertions();
 
             vi.mocked(readFileSync).mockReturnValue("throw 'error'\n");
-            const { checkThrowString } = await import('./quality-check.js');
+            const { checkThrowString } = await import('../quality-check.js');
             const r = checkThrowString();
 
             expect(r.passed).toBeFalsy();
@@ -188,7 +188,7 @@ describe('Quality-check unit tests', () => {
             expect.hasAssertions();
 
             vi.mocked(readFileSync).mockReturnValue('throw "err"\n');
-            const { checkThrowDoubleQuote } = await import('./quality-check.js');
+            const { checkThrowDoubleQuote } = await import('../quality-check.js');
             const r = checkThrowDoubleQuote();
 
             expect(r.passed).toBeFalsy();
@@ -214,7 +214,7 @@ describe('Quality-check unit tests', () => {
             vi.mocked(readFileSync).mockImplementation((_path: PathOrFileDescriptor) =>
                 exportsList.map((e) => `export function ${e}\n`).join(''),
             );
-            const { checkArtifactValidators } = await import('./quality-check.js');
+            const { checkArtifactValidators } = await import('../quality-check.js');
             const r = checkArtifactValidators();
 
             expect(r.passed).toBeTruthy();
@@ -225,7 +225,7 @@ describe('Quality-check unit tests', () => {
 
             vi.mocked(existsSync).mockReturnValue(true);
             vi.mocked(readFileSync).mockReturnValue('export function foo\n');
-            const { checkArtifactValidators } = await import('./quality-check.js');
+            const { checkArtifactValidators } = await import('../quality-check.js');
             const r = checkArtifactValidators();
 
             expect(r.passed).toBeFalsy();
@@ -235,7 +235,7 @@ describe('Quality-check unit tests', () => {
             expect.hasAssertions();
 
             vi.mocked(existsSync).mockReturnValue(false);
-            const { checkArtifactValidatorsExist } = await import('./quality-check.js');
+            const { checkArtifactValidatorsExist } = await import('../quality-check.js');
             const r = checkArtifactValidatorsExist();
 
             expect(r.passed).toBeFalsy();
@@ -280,7 +280,7 @@ describe('Quality-check unit tests', () => {
             vi.mocked(readFileSync).mockImplementation((_path: PathOrFileDescriptor) =>
                 funcs.map((f) => `export function ${f}\n`).join(''),
             );
-            const { checkDashboardExports } = await import('./quality-check.js');
+            const { checkDashboardExports } = await import('../quality-check.js');
             const r = checkDashboardExports();
 
             expect(r.passed).toBeTruthy();
@@ -290,7 +290,7 @@ describe('Quality-check unit tests', () => {
             expect.hasAssertions();
 
             vi.mocked(existsSync).mockReturnValue(false);
-            const { checkDashboardExports } = await import('./quality-check.js');
+            const { checkDashboardExports } = await import('../quality-check.js');
             const r = checkDashboardExports();
 
             expect(r.passed).toBeFalsy();
@@ -300,7 +300,7 @@ describe('Quality-check unit tests', () => {
             expect.hasAssertions();
 
             vi.mocked(existsSync).mockReturnValue(true);
-            const { checkQualityGateFiles } = await import('./quality-check.js');
+            const { checkQualityGateFiles } = await import('../quality-check.js');
             const r = checkQualityGateFiles();
 
             expect(r.passed).toBeTruthy();
@@ -310,7 +310,7 @@ describe('Quality-check unit tests', () => {
             expect.hasAssertions();
 
             vi.mocked(existsSync).mockReturnValue(false);
-            const { checkQualityGateFiles } = await import('./quality-check.js');
+            const { checkQualityGateFiles } = await import('../quality-check.js');
             const r = checkQualityGateFiles();
 
             expect(r.passed).toBeFalsy();
@@ -320,7 +320,7 @@ describe('Quality-check unit tests', () => {
             expect.hasAssertions();
 
             vi.mocked(readFileSync).mockReturnValue('x!\n');
-            const { checkNonNullAssertion } = await import('./quality-check.js');
+            const { checkNonNullAssertion } = await import('../quality-check.js');
             const r = checkNonNullAssertion();
 
             expect(r.passed).toBeFalsy();
@@ -336,7 +336,7 @@ describe('Quality-check unit tests', () => {
                 }
                 return '';
             });
-            const { checkDepWall } = await import('./quality-check.js');
+            const { checkDepWall } = await import('../quality-check.js');
             const r = checkDepWall();
 
             expect(r.passed).toBeFalsy();
@@ -346,7 +346,7 @@ describe('Quality-check unit tests', () => {
             expect.hasAssertions();
 
             vi.mocked(readFileSync).mockReturnValue('if (true) {\n');
-            const { checkIfTrueFalse } = await import('./quality-check.js');
+            const { checkIfTrueFalse } = await import('../quality-check.js');
             const r = checkIfTrueFalse();
 
             expect(r.passed).toBeFalsy();
@@ -358,7 +358,7 @@ describe('Quality-check unit tests', () => {
             vi.mocked(readFileSync).mockReturnValue(
                 'some content\n/* HASH:1111111111111111111111111111111111111111111111111111111111111111 */\n',
             );
-            const { checkIntegrity } = await import('./quality-check.js');
+            const { checkIntegrity } = await import('../quality-check.js');
             const r = checkIntegrity();
 
             expect(r.passed).toBeFalsy();
@@ -368,7 +368,7 @@ describe('Quality-check unit tests', () => {
             expect.hasAssertions();
 
             vi.mocked(readFileSync).mockReturnValue('no hash here\n');
-            const { checkIntegrity } = await import('./quality-check.js');
+            const { checkIntegrity } = await import('../quality-check.js');
             const r = checkIntegrity();
 
             expect(r.passed).toBeFalsy();
@@ -380,7 +380,7 @@ describe('Quality-check unit tests', () => {
             vi.mocked(readFileSync).mockImplementation(() => {
                 throw new Error('read fail');
             });
-            const { checkIntegrity } = await import('./quality-check.js');
+            const { checkIntegrity } = await import('../quality-check.js');
             const r = checkIntegrity();
 
             expect(r.passed).toBeFalsy();
@@ -390,7 +390,7 @@ describe('Quality-check unit tests', () => {
             expect.hasAssertions();
 
             vi.mocked(readFileSync).mockReturnValue('vi.fn<unknown, any>()\n');
-            const { checkViFnUnknown } = await import('./quality-check.js');
+            const { checkViFnUnknown } = await import('../quality-check.js');
             const r = checkViFnUnknown();
 
             expect(r.passed).toBeFalsy();
@@ -400,7 +400,7 @@ describe('Quality-check unit tests', () => {
             expect.hasAssertions();
 
             vi.mocked(readFileSync).mockReturnValue('vi.fn<any, unknown[]>()->void\n');
-            const { checkViFnUnknownArray } = await import('./quality-check.js');
+            const { checkViFnUnknownArray } = await import('../quality-check.js');
             const r = checkViFnUnknownArray();
 
             expect(r.passed).toBeFalsy();
@@ -473,7 +473,7 @@ describe('Quality-check unit tests', () => {
             vi.mocked(existsSync).mockReturnValue(true);
             vi.mocked(readdirSync).mockReturnValue([]);
 
-            const { main } = await import('./quality-check.js');
+            const { main } = await import('../quality-check.js');
 
             await expect(main()).resolves.toBeUndefined();
         });

@@ -3,20 +3,20 @@ import fs from 'node:fs';
 import os from 'node:os';
 import path from 'node:path';
 import type { ChildProcess } from 'child_process';
-import { showSplash } from '../shared/splash.js';
-import { main as entryMain } from '../shared/entry-menu.js';
-import { showSelect } from '../shared/prompt.js';
-import { Output } from '../shared/output.js';
+import { showSplash } from '../../shared/splash.js';
+import { main as entryMain } from '../../shared/entry-menu.js';
+import { showSelect } from '../../shared/prompt.js';
+import { Output } from '../../shared/output.js';
 
-vi.mock('../shared/splash', () => ({ showSplash: vi.fn() }));
-vi.mock('../shared/prompt', () => ({
+vi.mock('../../shared/splash', () => ({ showSplash: vi.fn() }));
+vi.mock('../../shared/prompt', () => ({
     showSelect: vi.fn(),
     confirm: vi.fn(),
     info: vi.fn(),
     warn: vi.fn(),
     divider: vi.fn(),
 }));
-vi.mock('../shared/output', () => {
+vi.mock('../../shared/output', () => {
     const mockOutput = { box: vi.fn(), print: vi.fn() };
     return {
         Output: { isTTY: vi.fn(), isCI: vi.fn() },
@@ -26,7 +26,7 @@ vi.mock('../shared/output', () => {
 // Isola a migração legado→XDG: é coberta por testes dedicados de
 // _initInfrastructure. Evita renomear config/projects.json do cwd e poluir
 // o registry durante o boot do menu nesta suíte e2e.
-vi.mock('../shared/migration/migrate-projects.js', () => ({
+vi.mock('../../shared/migration/migrate-projects.js', () => ({
     migrateLegacyProjects: vi.fn(() => ({ migrated: 0, skipped: 0, renamed: false })),
 }));
 

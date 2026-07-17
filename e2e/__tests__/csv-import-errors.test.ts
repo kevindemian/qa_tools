@@ -1,18 +1,18 @@
-vi.mock('../shared/open', () => ({ openWithOsOrFallback: vi.fn() }));
+vi.mock('../../shared/open', () => ({ openWithOsOrFallback: vi.fn() }));
 
 import fs from 'fs';
 import path from 'path';
 import os from 'os';
 import nock from 'nock';
-import { sanitizePath } from '../shared/path-utils.js';
-import JiraResource from '../jira_management/jira_resource.js';
-import JiraLinkManager from '../jira_management/jira_link_manager.js';
-import CsvResource from '../jira_management/csv_resource.js';
-import createTests from '../jira_management/create_tests.js';
-import { rootLogger } from '../shared/logger.js';
-import { tempDirPath } from '../shared/temp-dir.js';
-import { nonNull } from '../shared/test-utils.js';
-import { setTestSleep } from '../shared/http-client.js';
+import { sanitizePath } from '../../shared/path-utils.js';
+import JiraResource from '../../jira_management/jira_resource.js';
+import JiraLinkManager from '../../jira_management/jira_link_manager.js';
+import CsvResource from '../../jira_management/csv_resource.js';
+import createTests from '../../jira_management/create_tests.js';
+import { rootLogger } from '../../shared/logger.js';
+import { tempDirPath } from '../../shared/temp-dir.js';
+import { nonNull } from '../../shared/test-utils.js';
+import { setTestSleep } from '../../shared/http-client.js';
 
 const { createTestsFromCsv } = createTests;
 
@@ -78,10 +78,8 @@ describe('E2E: CSV Import - Error Paths', () => {
         process.env['AUTO_CONFIRM'] = 'true';
         process.env['ON_ERROR'] = 'skip';
         const cachePath = sanitizePath(tempDirPath(), path.join('cache', 'link-types-cache.json'));
-        try {
+        if (fs.existsSync(cachePath)) {
             fs.unlinkSync(cachePath);
-        } catch {
-            /* ignore */
         }
     });
 

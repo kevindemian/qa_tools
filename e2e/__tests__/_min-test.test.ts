@@ -1,5 +1,5 @@
-vi.mock('../shared/prompt', async () => {
-    const actual = await vi.importActual('../shared/prompt');
+vi.mock('../../shared/prompt', async () => {
+    const actual = await vi.importActual('../../shared/prompt');
     const askMock = vi
         .fn()
         .mockResolvedValueOnce('v2.0.0') // Nome da versão
@@ -18,14 +18,14 @@ vi.mock('../shared/prompt', async () => {
         askConfirm: askConfirmMock,
     };
 });
-vi.mock('../shared/state', () => ({ load: vi.fn().mockReturnValue({}), update: vi.fn() }));
+vi.mock('../../shared/state', () => ({ load: vi.fn().mockReturnValue({}), update: vi.fn() }));
 
 import nock from 'nock';
-import { SessionContext } from '../shared/session-context.js';
-import type { CommandContext } from '../jira_management/commands/context.js';
-import { createMockLinkManager } from '../shared/test-utils/factories/link-manager-factory.js';
-import CsvResource from '../jira_management/csv_resource.js';
-import { createMockLogger } from '../shared/test-utils.js';
+import { SessionContext } from '../../shared/session-context.js';
+import type { CommandContext } from '../../jira_management/commands/context.js';
+import { createMockLinkManager } from '../../shared/test-utils/factories/link-manager-factory.js';
+import CsvResource from '../../jira_management/csv_resource.js';
+import { createMockLogger } from '../../shared/test-utils.js';
 
 describe('Case04', () => {
     beforeEach(() => {
@@ -44,9 +44,9 @@ describe('Case04', () => {
     it('happy path', async () => {
         expect.hasAssertions();
 
-        const { default: JiraResource } = await vi.importActual<typeof import('../jira_management/jira_resource.js')>(
-            '../jira_management/jira_resource',
-        );
+        const { default: JiraResource } = await vi.importActual<
+            typeof import('../../jira_management/jira_resource.js')
+        >('../../jira_management/jira_resource');
         const API = 'http://localhost:1999/rest/api/2';
         const api = nock(API).defaultReplyHeaders({ 'Content-Type': 'application/json' });
         // updateFixVersions is called PER TASK in the handler's for loop
@@ -78,8 +78,8 @@ describe('Case04', () => {
         };
 
         const mod = (
-            await vi.importActual<typeof import('../jira_management/commands/case04.js')>(
-                '../jira_management/commands/case04',
+            await vi.importActual<typeof import('../../jira_management/commands/case04.js')>(
+                '../../jira_management/commands/case04',
             )
         ).default;
         await mod.handler(c);

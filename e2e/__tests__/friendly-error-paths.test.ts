@@ -4,17 +4,17 @@
 import os from 'os';
 import path from 'path';
 import nock from 'nock';
-import { offerEnvSetup } from '../shared/cli_base.js';
-import { getProjects } from '../git_triggers/session-state.js';
-import { resolveAlias } from '../jira_management/menu-data.js';
-import * as breadcrumbs from '../shared/breadcrumbs.js';
-import { confirm as _confirm } from '../shared/prompt.js';
-import { loadTypedState as _loadTypedState } from '../shared/state.js';
+import { offerEnvSetup } from '../../shared/cli_base.js';
+import { getProjects } from '../../git_triggers/session-state.js';
+import { resolveAlias } from '../../jira_management/menu-data.js';
+import * as breadcrumbs from '../../shared/breadcrumbs.js';
+import { confirm as _confirm } from '../../shared/prompt.js';
+import { loadTypedState as _loadTypedState } from '../../shared/state.js';
 
 const mockConfirm = vi.mocked(_confirm);
 const mockLoadTypedState = vi.mocked(_loadTypedState);
 
-vi.mock('../shared/project-registry', () => ({
+vi.mock('../../shared/project-registry', () => ({
     getProject: vi.fn((name: string) => {
         if (name === 'qa_tools_e2e') {
             return {
@@ -44,7 +44,7 @@ vi.mock('../shared/project-registry', () => ({
     saveRegistry: vi.fn(),
 }));
 
-vi.mock('../shared/prompt', () => ({
+vi.mock('../../shared/prompt', () => ({
     print: vi.fn(),
     success: vi.fn(),
     error: vi.fn(),
@@ -60,7 +60,7 @@ vi.mock('../shared/prompt', () => ({
     helpLine: vi.fn(),
 }));
 
-vi.mock('../shared/logger', () => ({
+vi.mock('../../shared/logger', () => ({
     rootLogger: {
         child: vi.fn(() => ({ info: vi.fn(), warn: vi.fn(), error: vi.fn() })),
         warn: vi.fn(),
@@ -71,14 +71,14 @@ vi.mock('../shared/logger', () => ({
     Logger: vi.fn(),
 }));
 
-vi.mock('../shared/state', () => ({
+vi.mock('../../shared/state', () => ({
     load: vi.fn(() => ({})),
     loadTypedState: vi.fn<() => object>(),
     update: vi.fn(),
     getStatePath: vi.fn(() => path.join(os.tmpdir(), 'state.json')),
 }));
 
-vi.mock('../shared/config-accessor.js', () => ({
+vi.mock('../../shared/config-accessor.js', () => ({
     default: {
         get(key: string) {
             const empty: Record<string, string> = {
@@ -160,8 +160,8 @@ describe('Friendly error paths (Sprint W)', () => {
             expect.hasAssertions();
 
             const { createManagerForProject: createMaker } = await vi.importActual<
-                typeof import('../git_triggers/session-state.js')
-            >('../git_triggers/session-state');
+                typeof import('../../git_triggers/session-state.js')
+            >('../../git_triggers/session-state');
 
             expect(() => createMaker('qa_tools', '123')).toThrow('GIT_TOKEN');
         });
@@ -170,8 +170,8 @@ describe('Friendly error paths (Sprint W)', () => {
             expect.hasAssertions();
 
             const { createManagerForProject: createMaker } = await vi.importActual<
-                typeof import('../git_triggers/session-state.js')
-            >('../git_triggers/session-state');
+                typeof import('../../git_triggers/session-state.js')
+            >('../../git_triggers/session-state');
 
             expect(() => createMaker('qa_tools_e2e', '456')).toThrow('GITHUB_TOKEN');
         });

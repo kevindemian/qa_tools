@@ -4,7 +4,7 @@ import * as parser from '@typescript-eslint/parser';
 import { createRequire } from 'node:module';
 
 const require = createRequire(import.meta.url);
-const plugin = require('./no-swallow.cjs') as { rules: { 'no-swallow': Rule.RuleModule } };
+const plugin = require('../../eslint-plugins/no-swallow.cjs') as { rules: { 'no-swallow': Rule.RuleModule } };
 const rule = plugin.rules['no-swallow'];
 
 const ruleTester = new RuleTester({

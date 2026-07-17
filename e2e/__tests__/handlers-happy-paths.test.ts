@@ -1,4 +1,4 @@
-vi.mock('../shared/prompt', () => ({
+vi.mock('../../shared/prompt', () => ({
     __setConfig: vi.fn(),
     __setOraDep: vi.fn(),
     isQuiet: vi.fn<() => boolean>().mockReturnValue(true),
@@ -36,16 +36,16 @@ vi.mock('../shared/prompt', () => ({
     askMultiline: vi.fn<(...args: []) => Promise<string>>().mockResolvedValue(''),
     askConfirm: vi.fn<(...args: []) => Promise<boolean>>().mockResolvedValue(true),
 }));
-vi.mock('../shared/state', () => ({
+vi.mock('../../shared/state', () => ({
     load: vi.fn<(...args: []) => { [key: string]: unknown }>().mockReturnValue({}),
     update: vi.fn<(...args: [{ [key: string]: unknown }]) => void>(),
 }));
-vi.mock('../shared/open', () => ({ openWithOsOrFallback: vi.fn<(...args: [string]) => void>() }));
+vi.mock('../../shared/open', () => ({ openWithOsOrFallback: vi.fn<(...args: [string]) => void>() }));
 import fs from 'fs';
 import path from 'path';
 import os from 'os';
-import * as promptModule from '../shared/prompt.js';
-import * as stateModule from '../shared/state.js';
+import * as promptModule from '../../shared/prompt.js';
+import * as stateModule from '../../shared/state.js';
 
 const tmpHome = fs.mkdtempSync(path.join(os.tmpdir(), 'qa-e2e-hp-'));
 const tmpGitDir = fs.mkdtempSync(path.join(os.tmpdir(), 'qa-e2e-git-'));
@@ -65,29 +65,29 @@ fs.writeFileSync(
 );
 
 import nock from 'nock';
-import JiraResource from '../jira_management/jira_resource.js';
-import JiraLinkManager from '../jira_management/jira_link_manager.js';
-import CsvResource from '../jira_management/csv_resource.js';
-import { rootLogger } from '../shared/logger.js';
-import { SessionContext } from '../shared/session-context.js';
-import { setDataHub } from '../shared/data-hub/global-hub.js';
-import { makeDataHubMock } from '../shared/test-utils/factories/data-hub-mock.js';
-import case02 from '../jira_management/commands/case02.js';
-import case03 from '../jira_management/commands/case03.js';
-import case04 from '../jira_management/commands/case04.js';
-import case05 from '../jira_management/commands/case05.js';
-import case06 from '../jira_management/commands/case06.js';
-import case07 from '../jira_management/commands/case07.js';
-import case08 from '../jira_management/commands/case08.js';
-import case09 from '../jira_management/commands/case09.js';
-import case10 from '../jira_management/commands/case10.js';
-import case11 from '../jira_management/commands/case11.js';
-import case12 from '../jira_management/commands/case12.js';
-import case13 from '../jira_management/commands/case13.js';
-import case14 from '../jira_management/commands/case14.js';
-import case15 from '../jira_management/commands/case15.js';
-import case16 from '../jira_management/commands/case16.js';
-import PackageVersionManager from '../jira_management/package_version_manager.js';
+import JiraResource from '../../jira_management/jira_resource.js';
+import JiraLinkManager from '../../jira_management/jira_link_manager.js';
+import CsvResource from '../../jira_management/csv_resource.js';
+import { rootLogger } from '../../shared/logger.js';
+import { SessionContext } from '../../shared/session-context.js';
+import { setDataHub } from '../../shared/data-hub/global-hub.js';
+import { makeDataHubMock } from '../../shared/test-utils/factories/data-hub-mock.js';
+import case02 from '../../jira_management/commands/case02.js';
+import case03 from '../../jira_management/commands/case03.js';
+import case04 from '../../jira_management/commands/case04.js';
+import case05 from '../../jira_management/commands/case05.js';
+import case06 from '../../jira_management/commands/case06.js';
+import case07 from '../../jira_management/commands/case07.js';
+import case08 from '../../jira_management/commands/case08.js';
+import case09 from '../../jira_management/commands/case09.js';
+import case10 from '../../jira_management/commands/case10.js';
+import case11 from '../../jira_management/commands/case11.js';
+import case12 from '../../jira_management/commands/case12.js';
+import case13 from '../../jira_management/commands/case13.js';
+import case14 from '../../jira_management/commands/case14.js';
+import case15 from '../../jira_management/commands/case15.js';
+import case16 from '../../jira_management/commands/case16.js';
+import PackageVersionManager from '../../jira_management/package_version_manager.js';
 
 const E2E_TOKEN = process.env['E2E_JIRA_TOKEN'] ?? 'e2e-token';
 const HOST = 'http://localhost:1996';
@@ -142,10 +142,8 @@ describe('Handlers Happy Paths', () => {
         nock.enableNetConnect();
         nock.restore();
         [tmpHome, tmpGitDir].forEach((d) => {
-            try {
+            if (fs.existsSync(d)) {
                 fs.rmSync(d, { recursive: true, force: true });
-            } catch {
-                /* ignore */
             }
         });
     });

@@ -1,5 +1,5 @@
-vi.mock('../shared/config-accessor.js', async (importOriginal) => {
-    const mod = await importOriginal<typeof import('../shared/config-accessor.js')>();
+vi.mock('../../shared/config-accessor.js', async (importOriginal) => {
+    const mod = await importOriginal<typeof import('../../shared/config-accessor.js')>();
     const inst = mod.default.getDefault();
     const realGet = inst.get.bind(inst);
     inst.get = ((key: string): string | undefined =>
@@ -8,11 +8,11 @@ vi.mock('../shared/config-accessor.js', async (importOriginal) => {
 });
 
 import nock from 'nock';
-import JiraResource from '../jira_management/jira_resource.js';
-import JiraLinkManager from '../jira_management/jira_link_manager.js';
-import TestExecutionCreator from '../jira_management/test-execution-creator.js';
-import { nonNull } from '../shared/test-utils.js';
-import createTests from '../jira_management/create_tests.js';
+import JiraResource from '../../jira_management/jira_resource.js';
+import JiraLinkManager from '../../jira_management/jira_link_manager.js';
+import TestExecutionCreator from '../../jira_management/test-execution-creator.js';
+import { nonNull } from '../../shared/test-utils.js';
+import createTests from '../../jira_management/create_tests.js';
 
 const { createTestExecution } = createTests;
 

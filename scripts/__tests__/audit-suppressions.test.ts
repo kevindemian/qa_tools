@@ -5,7 +5,7 @@ import {
     THRESHOLD_TABLE,
     SUNSET_DAYS,
     parseYamlSimple,
-} from './audit-suppressions.js';
+} from '../audit-suppressions.js';
 
 describe('Audit-suppressions threshold mapping (C1)', () => {
     it('mapeia contador para teto conforme tabela hardcoded', () => {

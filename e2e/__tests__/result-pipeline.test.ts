@@ -1,5 +1,5 @@
-vi.mock('../shared/config-accessor.js', async (importOriginal) => {
-    const mod = await importOriginal<typeof import('../shared/config-accessor.js')>();
+vi.mock('../../shared/config-accessor.js', async (importOriginal) => {
+    const mod = await importOriginal<typeof import('../../shared/config-accessor.js')>();
     const inst = mod.default.getDefault();
     const realGet = inst.get.bind(inst);
     inst.get = ((key: string): string | undefined =>
@@ -11,17 +11,17 @@ import fs from 'fs';
 import path from 'path';
 import os from 'os';
 import nock from 'nock';
-import JiraResource from '../jira_management/jira_resource.js';
-import JiraLinkManager from '../jira_management/jira_link_manager.js';
-import { parseTestResults } from '../shared/result_parser.js';
-import { nonNull } from '../shared/test-utils.js';
-import { matchResultsToTests, createTestExecutionFromResults } from '../jira_management/result_reporter.js';
+import JiraResource from '../../jira_management/jira_resource.js';
+import JiraLinkManager from '../../jira_management/jira_link_manager.js';
+import { parseTestResults } from '../../shared/result_parser.js';
+import { nonNull } from '../../shared/test-utils.js';
+import { matchResultsToTests, createTestExecutionFromResults } from '../../jira_management/result_reporter.js';
 
 const E2E_TOKEN = process.env['E2E_JIRA_TOKEN'] ?? (process.env['CI'] ? '' : 'e2e-token');
 
 const tmpHome = fs.mkdtempSync(path.join(os.tmpdir(), 'qa-e2e-'));
 
-const FIXTURES = path.join(import.meta.dirname, 'fixtures');
+const FIXTURES = path.join(import.meta.dirname, '..', 'fixtures');
 
 function setupJiraMocks(base: string): void {
     const api = nock(base + '/rest/api/2');

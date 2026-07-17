@@ -7,7 +7,7 @@ import { fileURLToPath } from 'node:url';
 const BASH_BIN = '/usr/bin/bash';
 
 const __dirname = dirname(fileURLToPath(import.meta.url));
-const QA_SCRIPT = resolve(__dirname, 'qa.sh');
+const QA_SCRIPT = resolve(__dirname, '..', 'qa.sh');
 
 describe('Qa.sh — OpenCode container wrapper', () => {
     describe('File integrity', () => {

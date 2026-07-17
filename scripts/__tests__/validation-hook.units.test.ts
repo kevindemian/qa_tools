@@ -23,7 +23,7 @@ vi.mock('node:fs', async () => {
 });
 
 async function load() {
-    return import('./validation-hook.js');
+    return import('../validation-hook.js');
 }
 
 describe('Validation-hook — exported units', () => {
@@ -140,7 +140,7 @@ describe('Validation-hook — exported units', () => {
 
             const m = await load();
 
-            expect(() => m.validatePath('../etc/passwd')).toThrow(/REJEITADO/);
+            expect(() => m.validatePath('../../etc/passwd')).toThrow(/REJEITADO/);
         });
 
         it('rejects empty path', async () => {

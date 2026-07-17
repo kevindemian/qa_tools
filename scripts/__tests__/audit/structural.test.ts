@@ -1,6 +1,6 @@
 import { execFileSync } from 'child_process';
 
-vi.mock('../../shared/logger.js', () => ({
+vi.mock('../../../shared/logger.js', () => ({
     rootLogger: { warn: vi.fn(), info: vi.fn(), debug: vi.fn() },
 }));
 
@@ -42,7 +42,7 @@ describe('Structural.ts — module loads and runs', () => {
         });
 
         mockExecFileSync.mockReturnValue(Buffer.from(''));
-        await import('./structural.js');
+        await import('../../audit/structural.js');
         process.stdout.write = originalWrite;
         const data: Finding[] = JSON.parse(captured) as Finding[];
 
@@ -68,6 +68,6 @@ describe('Structural.ts — module loads and runs', () => {
             throw new Error('rg missing');
         });
 
-        await expect(import('./structural.js')).resolves.toBeDefined();
+        await expect(import('../../audit/structural.js')).resolves.toBeDefined();
     });
 });
