@@ -302,7 +302,7 @@ export default defineConfig(
                         { name: 'dotenv', message: 'Use shared/env-loader instead of direct dotenv import' },
                         {
                             name: 'readline-sync',
-                            message: 'Use shared/readline or shared/deps instead of direct readline-sync',
+                            message: 'Use shared/deps instead of direct readline-sync',
                         },
                         { name: 'zod', message: 'Use shared/validation instead of direct zod import' },
                         { name: 'axios', message: 'Use shared/deps instead of direct axios import' },
