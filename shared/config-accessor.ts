@@ -1,4 +1,4 @@
-import { ensureDotenv, envVal, toBool, toInt } from './env-utils.js';
+import { ensureDotenv, envVal, toBool, toInt } from './env-loader.js';
 import type { ConfigOverrides } from './types.js';
 import { CONFIG_SCHEMA } from './config-schema.js';
 import { validateRequiredEnv } from './config-validator.js';
