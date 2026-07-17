@@ -92,8 +92,7 @@ export function mockPromptModuleMinimal() {
  */
 export function mockGitProviderError() {
     return {
-        handleError: vi.fn((err: unknown, opts?: { returnNull?: boolean }) => {
-            if (opts?.returnNull) return null;
+        handleError: vi.fn((err: unknown) => {
             throw err;
         }),
     };

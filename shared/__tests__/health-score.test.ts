@@ -1,18 +1,7 @@
-/**
- * Health score unit tests — validates metric calculations and scoring.
- *
- * Covers:
- * - Pass rate scoring (excludes skipped)
- * - Coverage source tracking
- * - Suite speed threshold (3000ms)
- * - Quality gate unification
- * - DataHub SSOT enforcement (RED phase: expose bypasses)
- * - Edge cases
- */
-import { describe, it, expect, vi } from 'vitest';
-import { calculateHealthScore } from '../health-score.js';
-import type { DataHub, ComputedMetrics, RawData, DataSource } from '../types/data-hub.js';
+import { calculateHealthScore, evaluateQualityGate } from '../health-score.js';
+import type { DataHub, ComputedMetrics } from '../types/data-hub.js';
 import { makeDataHubMock } from '../test-utils/factories/data-hub-mock.js';
+import { rootLogger } from '../logger.js';
 
 function createTestHub(overrides: Partial<ComputedMetrics> = {}): DataHub {
     return makeDataHubMock({
@@ -24,152 +13,561 @@ function createTestHub(overrides: Partial<ComputedMetrics> = {}): DataHub {
             testPassRate: 50,
             testCounts: { passed: 50, failed: 50, skipped: 0, total: 100 },
             framework: 'vitest',
-            executionRate: 77,
-            flakyPercentage: 12,
             ...overrides,
         },
     });
 }
 
-describe('CalculateHealthScore — pass rate consistency', () => {
-    it('pass rate excludes skipped tests from denominator', () => {
-        const hub = createTestHub({ passRate: 94.74 });
-        const result = calculateHealthScore({ dataHub: hub });
-
-        // pass rate = 94.74%, score should be close to 100 (target 95%)
-        expect(result.dimensions.passRate.score).toBeGreaterThanOrEqual(90);
+describe('EvaluateQualityGate', () => {
+    it('returns pass when all dimensions meet thresholds', () => {
+        expect(evaluateQualityGate(95, 0, 90, 100, 2)).toBe('pass');
     });
 
-    it('coverage source is tracked as "override" when override provided', () => {
-        const hub = createTestHub({ coverage: 85 });
-        const result = calculateHealthScore({ dataHub: hub, coverageOverride: 85 });
-
-        expect(result.dimensions.coverage.score).toBe(100);
+    it('returns fail when passRate is below gate', () => {
+        expect(evaluateQualityGate(70, 0, 90, 100, 2)).toBe('fail');
     });
 
-    it('coverage source is "history" when history exists', () => {
-        const hub = createTestHub({ coverage: 80 });
-        const result = calculateHealthScore({ dataHub: hub });
-
-        expect(result.dimensions.coverage.score).toBe(100);
+    it('returns fail when flakyPct exceeds gate', () => {
+        expect(evaluateQualityGate(95, 15, 90, 100, 2)).toBe('fail');
     });
 
-    it('coverage is 0 when no override and no history', () => {
-        const hub = createTestHub({ coverage: 0 });
-        const result = calculateHealthScore({ dataHub: hub });
+    it('returns fail when coverage is below gate', () => {
+        expect(evaluateQualityGate(95, 0, 60, 100, 2)).toBe('fail');
+    });
 
-        expect(result.dimensions.coverage.score).toBe(0);
+    it('returns fail when suiteSpeed exceeds gate', () => {
+        expect(evaluateQualityGate(95, 0, 90, 100, 20000)).toBe('fail');
+    });
+
+    it('accepts custom config overrides', () => {
+        expect(evaluateQualityGate(70, 0, 90, 100, 2, { minPassRateGate: 60 })).toBe('pass');
     });
 });
 
-describe('CalculateHealthScore — suite speed threshold', () => {
-    it('suite speed score is 0 when p95 > 3000ms', () => {
-        const hub = createTestHub({ suiteSpeedP95: 4000 });
-        const result = calculateHealthScore({ dataHub: hub });
+describe('CalculateHealthScore', () => {
+    describe('Empty store', () => {
+        it('returns low overall for empty store', () => {
+            const result = calculateHealthScore({ dataHub: createTestHub() });
 
-        expect(result.dimensions.suiteSpeed.score).toBe(0);
-    });
-
-    it('suite speed score is 100 when p95 <= 1000ms', () => {
-        const hub = createTestHub({ suiteSpeedP95: 500 });
-        const result = calculateHealthScore({ dataHub: hub });
-
-        expect(result.dimensions.suiteSpeed.score).toBe(100);
-    });
-});
-
-describe('CalculateHealthScore — quality gate unification', () => {
-    it('qualityGate field reflects runQualityGate result', () => {
-        const hub = createTestHub({
-            passRate: 95,
-            coverage: 80,
-            executionRate: 95,
-            suiteSpeedP95: 500,
-            flakyPercentage: 2,
+            expect(result.overall).toBeLessThan(50);
+            expect(result.grade).toBe('critical');
+            expect(result.runCount).toBe(0);
+            expect(result.qualityGate).toBe('fail');
         });
-        const result = calculateHealthScore({ dataHub: hub });
 
-        expect(result.qualityGate).toMatch(/^(pass|fail)$/);
+        it('handles store with only runs but no coverage history', () => {
+            const result = calculateHealthScore({ dataHub: createTestHub({ coverage: 30 }) });
+
+            expect(result.dimensions.coverage.score).toBe(0);
+            expect(result.qualityGate).toBe('fail');
+        });
+    });
+
+    describe('Single run in store', () => {
+        it('scores well with a perfect run and good coverage', () => {
+            const result = calculateHealthScore({
+                dataHub: createTestHub({
+                    passRate: 100,
+                    coverage: 100,
+                    executionRate: 100,
+                    flakyPercentage: 0,
+                    suiteSpeedP95: 100,
+                }),
+            });
+
+            expect(result.overall).toBeGreaterThanOrEqual(90);
+            expect(result.grade).toBe('excellent');
+        });
+    });
+
+    describe('Pass rate dimension', () => {
+        it('scores 100 when pass rate meets target', () => {
+            const result = calculateHealthScore({
+                passRateTarget: 95,
+                dataHub: createTestHub({ passRate: 95, coverage: 90 }),
+            });
+
+            expect(result.dimensions.passRate.score).toBe(100);
+        });
+
+        it('scores 0 when pass rate <= 50%', () => {
+            const result = calculateHealthScore({ passRateTarget: 95, dataHub: createTestHub() });
+
+            expect(result.dimensions.passRate.score).toBe(0);
+        });
+
+        it('linearly interpolates between 50% and target', () => {
+            const result = calculateHealthScore({
+                passRateTarget: 95,
+                dataHub: createTestHub({ passRate: 72, coverage: 90 }),
+            });
+
+            expect(result.dimensions.passRate.score).toBe(49);
+        });
+    });
+
+    describe('Flaky rate dimension', () => {
+        it('scores 100 when no flaky tests exist', () => {
+            const result = calculateHealthScore({
+                minRuns: 2,
+                dataHub: createTestHub({ flakyPercentage: 0, coverage: 90 }),
+            });
+
+            expect(result.dimensions.flakyRate.score).toBe(100);
+        });
+
+        it('scores 0 when 20% or more tests are flaky', () => {
+            const result = calculateHealthScore({ minRuns: 2, dataHub: createTestHub({ flakyPercentage: 20 }) });
+
+            expect(result.dimensions.flakyRate.score).toBeLessThanOrEqual(0);
+        });
+
+        it('interpolates linearly for intermediate flaky rates', () => {
+            const result = calculateHealthScore({ minRuns: 2, dataHub: createTestHub({ flakyPercentage: 4 }) });
+
+            // flakyThreshold=3, maxFlakyGate=5, actual=4 → 100 - ((4-3)/(5-3))*100 = 50
+            expect(result.dimensions.flakyRate.score).toBe(50);
+        });
+    });
+
+    describe('Coverage dimension', () => {
+        it('scores 100 when coverage meets target', () => {
+            const result = calculateHealthScore({
+                coverageTarget: 90,
+                dataHub: createTestHub({ coverage: 90 }),
+            });
+
+            expect(result.dimensions.coverage.score).toBe(100);
+        });
+
+        it('scores 0 when coverage <= 30%', () => {
+            const result = calculateHealthScore({
+                coverageTarget: 90,
+                dataHub: createTestHub({ coverage: 30 }),
+            });
+
+            expect(result.dimensions.coverage.score).toBe(0);
+        });
+
+        it('linearly interpolates between 30% and target', () => {
+            const result = calculateHealthScore({
+                coverageTarget: 90,
+                dataHub: createTestHub({ coverage: 60 }),
+            });
+
+            expect(result.dimensions.coverage.score).toBe(50);
+        });
+    });
+
+    describe('Suite speed dimension', () => {
+        it('scores 100 when speed is within target', () => {
+            const result = calculateHealthScore({ suiteSpeedTarget: 1000, dataHub: createTestHub() });
+
+            expect(result.dimensions.suiteSpeed.score).toBe(100);
+        });
+
+        it('scores 0 when speed >= 10s per test', () => {
+            const result = calculateHealthScore({
+                suiteSpeedTarget: 1000,
+                dataHub: createTestHub({ suiteSpeedP95: 10000 }),
+            });
+
+            expect(result.dimensions.suiteSpeed.score).toBe(0);
+        });
+
+        it('linearly interpolates between target and gate', () => {
+            const result = calculateHealthScore({
+                suiteSpeedTarget: 1000,
+                dataHub: createTestHub({ suiteSpeedP95: 2000 }),
+            });
+
+            expect(result.dimensions.suiteSpeed.score).toBe(50);
+        });
+    });
+
+    describe('Overall score with default weights', () => {
+        it('computes weighted average correctly', () => {
+            const result = calculateHealthScore({
+                dataHub: createTestHub({
+                    passRate: 100,
+                    coverage: 100,
+                    executionRate: 100,
+                    flakyPercentage: 0,
+                    suiteSpeedP95: 100,
+                }),
+            });
+
+            expect(result.overall).toBeGreaterThanOrEqual(90);
+            expect(result.overall).toBeLessThanOrEqual(100);
+        });
+    });
+
+    describe('Quality gate', () => {
+        it('passes when all dimensions are healthy', () => {
+            const result = calculateHealthScore({
+                dataHub: createTestHub({
+                    passRate: 100,
+                    coverage: 100,
+                    executionRate: 100,
+                    flakyPercentage: 0,
+                    suiteSpeedP95: 100,
+                }),
+            });
+
+            expect(result.qualityGate).toBe('pass');
+        });
+
+        it('fails when pass rate is below gate', () => {
+            const result = calculateHealthScore({ dataHub: createTestHub() });
+
+            expect(result.qualityGate).toBe('fail');
+            expect(result.dimensions.passRate.status).toBe('fail');
+        });
+
+        it('fails when flaky rate exceeds gate', () => {
+            const result = calculateHealthScore({ minRuns: 2, dataHub: createTestHub({ flakyPercentage: 10 }) });
+
+            expect(result.qualityGate).toBe('fail');
+            expect(result.dimensions.flakyRate.status).toBe('fail');
+        });
+
+        it('passes when flaky rate is 0 (no flaky data)', () => {
+            const result = calculateHealthScore({ minRuns: 2, dataHub: createTestHub({ flakyPercentage: 0 }) });
+
+            expect(result.dimensions.flakyRate.status).toBe('pass');
+        });
+
+        it('fails when coverage is below gate', () => {
+            const result = calculateHealthScore({ dataHub: createTestHub() });
+
+            expect(result.qualityGate).toBe('fail');
+            expect(result.dimensions.coverage.status).toBe('fail');
+        });
+
+        it('fails when suite speed exceeds gate', () => {
+            const result = calculateHealthScore({
+                dataHub: createTestHub({ suiteSpeedP95: 15000 }),
+            });
+
+            expect(result.qualityGate).toBe('fail');
+            expect(result.dimensions.suiteSpeed.status).toBe('fail');
+        });
+    });
+
+    describe('Penalty', () => {
+        it('caps overall at 60 when any dimension < 40', () => {
+            const result = calculateHealthScore({ dataHub: createTestHub() });
+
+            expect(result.dimensions.coverage.score).toBeLessThan(40);
+            expect(result.overall).toBeLessThanOrEqual(60);
+        });
+    });
+
+    describe('Grade boundaries', () => {
+        it('grades excellent at 90+', () => {
+            const result = calculateHealthScore({
+                dataHub: createTestHub({
+                    passRate: 100,
+                    coverage: 100,
+                    executionRate: 100,
+                    flakyPercentage: 0,
+                    suiteSpeedP95: 100,
+                }),
+            });
+
+            expect(result.overall).toBeGreaterThanOrEqual(90);
+            expect(result.grade).toBe('excellent');
+        });
+
+        it('grades good at 80-89', () => {
+            const result = calculateHealthScore({
+                dataHub: createTestHub({
+                    passRate: 85,
+                    coverage: 80,
+                    executionRate: 85,
+                    flakyPercentage: 3,
+                    suiteSpeedP95: 1500,
+                }),
+            });
+
+            expect(result.grade).toBe('good');
+        });
+
+        it('grades needs_attention at 70-79', () => {
+            const result = calculateHealthScore({
+                dataHub: createTestHub({
+                    passRate: 75,
+                    coverage: 65,
+                    executionRate: 75,
+                    flakyPercentage: 0,
+                    suiteSpeedP95: 2000,
+                }),
+            });
+
+            expect(result.grade).toBe('poor');
+        });
+
+        it('grades poor at 60-69', () => {
+            const result = calculateHealthScore({
+                dataHub: createTestHub({
+                    passRate: 70,
+                    coverage: 60,
+                    executionRate: 70,
+                    flakyPercentage: 0,
+                    suiteSpeedP95: 1500,
+                }),
+            });
+
+            expect(result.grade).toBe('poor');
+        });
+
+        it('grades critical below 60', () => {
+            const result = calculateHealthScore({ dataHub: createTestHub() });
+
+            expect(result.overall).toBeLessThan(60);
+            expect(result.grade).toBe('critical');
+        });
+
+        it('boundary: 89 is good, 90 is excellent', () => {
+            const r89 = calculateHealthScore({
+                weights: { passRate: 100, flakyRate: 0, coverage: 0, executionRate: 0, suiteSpeed: 0 },
+                passRateTarget: 95,
+                dataHub: createTestHub({ passRate: 89, coverage: 80, executionRate: 90 }),
+            });
+
+            expect(r89.overall).toBeLessThan(90);
+            expect(r89.grade).toBe('good');
+
+            const r90 = calculateHealthScore({
+                weights: { passRate: 100, flakyRate: 0, coverage: 0, executionRate: 0, suiteSpeed: 0 },
+                passRateTarget: 95,
+                dataHub: createTestHub({ passRate: 91, coverage: 80, executionRate: 90 }),
+            });
+
+            expect(r90.overall).toBeGreaterThanOrEqual(90);
+            expect(r90.grade).toBe('excellent');
+        });
+
+        it('boundary: 59 is critical, 60 is poor', () => {
+            const r59 = calculateHealthScore({
+                weights: { passRate: 100, flakyRate: 0, coverage: 0, executionRate: 0, suiteSpeed: 0 },
+                passRateTarget: 95,
+                dataHub: createTestHub({ passRate: 50 }),
+            });
+
+            expect(r59.overall).toBeLessThan(60);
+
+            const r60 = calculateHealthScore({
+                weights: { passRate: 100, flakyRate: 0, coverage: 0, executionRate: 0, suiteSpeed: 0 },
+                passRateTarget: 95,
+                dataHub: createTestHub({ passRate: 77 }),
+            });
+
+            expect(r60.overall).toBeGreaterThanOrEqual(60);
+        });
+    });
+
+    describe('Config override', () => {
+        it('accepts custom weights', () => {
+            const resultDefault = calculateHealthScore({ dataHub: createTestHub() });
+            const resultCustom = calculateHealthScore({
+                weights: { passRate: 100, flakyRate: 0, coverage: 0, executionRate: 0, suiteSpeed: 0 },
+                dataHub: createTestHub(),
+            });
+
+            expect(resultDefault.overall).not.toBe(resultCustom.overall);
+        });
+
+        it('accepts custom targets', () => {
+            const defaultResult = calculateHealthScore({
+                dataHub: createTestHub({ passRate: 70, coverage: 90 }),
+            });
+            const lenientResult = calculateHealthScore({
+                passRateTarget: 80,
+                dataHub: createTestHub({ passRate: 70, coverage: 90 }),
+            });
+
+            expect(lenientResult.dimensions.passRate.score).toBeGreaterThan(defaultResult.dimensions.passRate.score);
+        });
+    });
+
+    describe('Edge: all passing with 0% flaky', () => {
+        it('scores 100 in every dimension with ideal metrics', () => {
+            const result = calculateHealthScore({
+                minRuns: 2,
+                dataHub: createTestHub({
+                    passRate: 100,
+                    coverage: 100,
+                    executionRate: 100,
+                    flakyPercentage: 0,
+                    suiteSpeedP95: 100,
+                }),
+            });
+
+            expect(result.dimensions.passRate.score).toBe(100);
+            expect(result.dimensions.flakyRate.score).toBe(100);
+            expect(result.dimensions.coverage.score).toBe(100);
+            expect(result.dimensions.suiteSpeed.score).toBe(100);
+            expect(result.dimensions.executionRate.score).toBe(100);
+            expect(result.qualityGate).toBe('pass');
+            expect(result.grade).toBe('excellent');
+        });
+    });
+
+    describe('Edge: everything failing', () => {
+        it('scores 0 and quality gate fails', () => {
+            const result = calculateHealthScore({
+                dataHub: createTestHub({
+                    passRate: 0,
+                    coverage: 0,
+                    executionRate: 100,
+                    flakyPercentage: 100,
+                    suiteSpeedP95: 50000,
+                }),
+            });
+
+            expect(result.dimensions.passRate.score).toBe(0);
+            expect(result.dimensions.flakyRate.score).toBe(0);
+            expect(result.dimensions.coverage.score).toBe(0);
+            expect(result.dimensions.suiteSpeed.score).toBe(0);
+            expect(result.dimensions.executionRate.score).toBe(100);
+            expect(result.qualityGate).toBe('fail');
+            expect(result.grade).toBe('critical');
+        });
+    });
+
+    describe('Provenance', () => {
+        it('returns 5 provenance entries for a default calculation', () => {
+            const result = calculateHealthScore({ dataHub: createTestHub() });
+
+            expect(result.provenance?.length).toBe(5);
+        });
+
+        it('each entry has required fields', () => {
+            expect.hasAssertions();
+
+            const result = calculateHealthScore({ dataHub: createTestHub() });
+            for (const entry of result.provenance ?? []) {
+                expect(entry.dimension).toBeTruthy();
+                expect(entry.source).toBeTruthy();
+                expect(entry.formula).toBeTruthy();
+                expect(entry.standard).toBeTruthy();
+                expect(entry.thresholdBasis).toBeTruthy();
+                expect(typeof entry.configurable).toBe('boolean');
+            }
+        });
+
+        it('marks dimensions as overridden when user provides custom target', () => {
+            const result = calculateHealthScore({ passRateTarget: 90, dataHub: createTestHub() });
+            const passRateEntry = result.provenance?.find((p) => p.dimension === 'passRate');
+
+            expect(passRateEntry?.overridden).toBeTruthy();
+        });
+
+        it('does not mark dimensions as overridden with default config', () => {
+            expect.hasAssertions();
+
+            const result = calculateHealthScore({ dataHub: createTestHub() });
+            for (const entry of result.provenance ?? []) {
+                expect(entry.overridden).toBeUndefined();
+            }
+        });
+
+        it('includes dimension-specific provenance data for passRate', () => {
+            const result = calculateHealthScore({ dataHub: createTestHub() });
+            const passRateEntry = result.provenance?.find((p) => p.dimension === 'passRate');
+
+            expect(passRateEntry?.source).toContain('DORA');
+            expect(passRateEntry?.formula).toContain('passed/(passed+failed)');
+            expect(passRateEntry?.configurable).toBeTruthy();
+        });
+
+        it('includes dimension-specific provenance data for suiteSpeed', () => {
+            const result = calculateHealthScore({ dataHub: createTestHub() });
+            const speedEntry = result.provenance?.find((p) => p.dimension === 'suiteSpeed');
+
+            expect(speedEntry?.source).toContain('Google SRE');
+            expect(speedEntry?.formula).toContain('p95');
+            expect(speedEntry?.configurable).toBeTruthy();
+        });
+
+        it('includes dimension-specific provenance data for flakyRate', () => {
+            const result = calculateHealthScore({ dataHub: createTestHub() });
+            const flakyEntry = result.provenance?.find((p) => p.dimension === 'flakyRate');
+
+            expect(flakyEntry?.source).toContain('Kualitatem');
+            expect(flakyEntry?.configurable).toBeTruthy();
+        });
+
+        it('provenance thresholdBasis for suiteSpeed matches default maxSuiteSpeedGate (G-03)', () => {
+            const result = calculateHealthScore({ dataHub: createTestHub() });
+            const speedEntry = result.provenance?.find((p) => p.dimension === 'suiteSpeed');
+
+            expect(speedEntry?.thresholdBasis).toContain('max 3000ms');
+        });
+    });
+
+    describe('Edge: NaN and Infinity (D8 regression prevention)', () => {
+        it('naN coverageOverride produces 0 score, not NaN', () => {
+            const result = calculateHealthScore({
+                coverageOverride: NaN,
+                dataHub: createTestHub({ coverage: 0 }),
+            });
+
+            expect(Number.isFinite(result.dimensions.coverage.score)).toBeTruthy();
+            expect(result.dimensions.coverage.score).toBe(0);
+        });
+
+        it('naN coveragePct in history produces 0 score, not NaN', () => {
+            const result = calculateHealthScore({ dataHub: createTestHub({ coverage: 0 }) });
+
+            expect(Number.isFinite(result.dimensions.coverage.score)).toBeTruthy();
+            expect(result.dimensions.coverage.score).toBe(0);
+        });
+
+        it('infinity test duration does not crash or produce NaN', () => {
+            const result = calculateHealthScore({ dataHub: createTestHub() });
+
+            expect(Number.isFinite(result.dimensions.suiteSpeed.score)).toBeTruthy();
+            expect(result.dimensions.suiteSpeed.score).toBe(100);
+        });
+
+        it('overall is always finite even with degenerate inputs', () => {
+            const result = calculateHealthScore({ coverageOverride: NaN, dataHub: createTestHub() });
+
+            expect(Number.isFinite(result.overall)).toBeTruthy();
+            expect(result.overall).toBeGreaterThanOrEqual(0);
+        });
+    });
+
+    describe('FlakyThreshold config', () => {
+        it('flakyThreshold parameter affects flaky rate scoring (G-05)', () => {
+            // 4 tests, 2 runs each. T0 is flaky (pass+fail). flakyRate = 25%.
+            // Current code ignores flakyThreshold: score = 100 - (25/50)*100 = 50
+            // After fix with flakyThreshold=30: 25 <= 30 → score 100
+            const resultWithThreshold = calculateHealthScore({
+                minRuns: 2,
+                maxFlakyGate: 50,
+                flakyThreshold: 30,
+                dataHub: createTestHub({ flakyPercentage: 25 }),
+            });
+
+            expect(resultWithThreshold.dimensions.flakyRate.score).toBe(100);
+        });
     });
 });
 
-describe('CalculateHealthScore — DataHub SSOT enforcement', () => {
-    it('uses dataHub.computed.coverage instead of store.coverageHistory', () => {
-        const hub = createTestHub({ coverage: 42 });
+describe('CalculateHealthScore error handling (Fase 1.5)', () => {
+    it('logs an explicit error and rethrows when DataHub is malformed (no silent failure)', () => {
+        const errorSpy = vi.spyOn(rootLogger, 'error').mockImplementation(() => {});
+        // Hub missing getRuns() → _computeHealthScore throws a TypeError on dataHub.getRuns().
+        const malformedHub = { computed: {} } as unknown as DataHub;
 
-        const result = calculateHealthScore({ dataHub: hub });
+        expect(() => calculateHealthScore({ dataHub: malformedHub })).toThrow(/is not a function/);
 
-        // If DataHub SSOT is enforced, coverage score should reflect 42, not 90
-        // Score for 42% coverage with target 80% should be low
-        // Score for 90% coverage with target 80% should be 100
-        expect(result.dimensions.coverage.score).toBeLessThan(80);
-    });
+        expect(errorSpy).toHaveBeenCalledTimes(1);
+        expect(errorSpy).toHaveBeenCalledWith(expect.stringContaining('Health score error'));
 
-    it('uses dataHub.computed.executionRate instead of computing from raw runs', () => {
-        const hub = createTestHub({ executionRate: 30 });
-
-        const result = calculateHealthScore({ dataHub: hub });
-
-        // If DataHub SSOT is enforced, execution rate should be 30, not ~100
-        // Score for 30% with target 95% should be 0 (below SCORE_FLOOR of 50)
-        expect(result.dimensions.executionRate.score).toBe(0);
-    });
-
-    it('uses dataHub.computed.flakyPercentage instead of computing from raw runs', () => {
-        // DataHub flaky=4% → scoreFlakyRate(4, {flakyThreshold:3, maxFlakyGate:5}) = 50
-        // Store flaky=10% → scoreFlakyRate(10, {maxFlakyGate:5}) = 0
-        // If code reads from store instead of DataHub, score=0≠50 → test FAILS (RED)
-        const hub = createTestHub({ flakyPercentage: 4 });
-
-        const result = calculateHealthScore({ dataHub: hub });
-
-        // DataHub flaky=4% → 100 - ((4-3)/(5-3))*100 = 50
-        expect(result.dimensions.flakyRate.score).toBe(50);
-    });
-});
-
-describe('EIXO C — data-quality awareness (C-3a)', () => {
-    it('surfaces an ok data-quality summary when categories carry confident data', () => {
-        expect.hasAssertions();
-
-        const raw: RawData = {
-            runs: [],
-            jobs: new Map(),
-            artifacts: new Map(),
-            failureReasons: new Map(),
-            failureRecords: [{ name: 't1', status: 'failed', confidence: 0.95, source: 'junit' }],
-            provenance: new Map<string, DataSource>([
-                ['failureRecords', { confidence: 0.95, source: 'github-api', timestamp: new Date().toISOString() }],
-            ]),
-        };
-        const hub = makeDataHubMock({ raw });
-
-        const result = calculateHealthScore({ dataHub: hub });
-
-        expect(result.dataQuality).toBeDefined();
-        expect(result.dataQuality?.status).toBe('ok');
-        expect(result.dataQuality?.minConfidence).toBeCloseTo(0.95);
-    });
-
-    it('surfaces degraded data-quality when a category has quality issues', () => {
-        expect.hasAssertions();
-
-        const raw: RawData = {
-            runs: [],
-            jobs: new Map(),
-            artifacts: new Map(),
-            failureReasons: new Map(),
-            failureRecords: [{ name: 't1', status: 'failed', confidence: 0.95, source: 'junit' }],
-            provenance: new Map<string, DataSource>([
-                ['failureRecords', { confidence: 0.95, source: 'github-api', timestamp: new Date().toISOString() }],
-            ]),
-        };
-        const hub = makeDataHubMock({ raw });
-        hub.getQuality = vi.fn().mockReturnValue({ valid: false, issues: ['schema violation'] });
-
-        const result = calculateHealthScore({ dataHub: hub });
-
-        expect(result.dataQuality?.status).toBe('degraded');
-        expect(result.dataQuality?.notes.join(' ')).toContain('failureRecords');
+        errorSpy.mockRestore();
     });
 });

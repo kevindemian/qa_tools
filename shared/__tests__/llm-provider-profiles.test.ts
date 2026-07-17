@@ -1,0 +1,152 @@
+/**
+ * Tests for llm-provider-profiles.ts.
+ * Pure data module — no mocks needed.
+ */
+import { describe, it, expect } from 'vitest';
+
+describe('PROVIDER_PROFILES', () => {
+    it('contains all known providers', async () => {
+        expect.hasAssertions();
+
+        const { PROVIDER_PROFILES, KNOWN_PROVIDERS } = await import('../llm-provider-profiles.js');
+        for (const p of KNOWN_PROVIDERS) {
+            expect(Reflect.get(PROVIDER_PROFILES, p)).toBeDefined();
+        }
+    });
+
+    it('each profile has required fields', async () => {
+        expect.hasAssertions();
+
+        const { PROVIDER_PROFILES } = await import('../llm-provider-profiles.js');
+        const allValid = Object.entries(PROVIDER_PROFILES).every(([id, profile]) => {
+            return (
+                profile.displayName &&
+                /^(openai|gemini|anthropic)$/.test(profile.format) &&
+                (id === 'custom' ||
+                    (profile.tiers.main &&
+                        profile.tiers.fast &&
+                        profile.tiers.reviewer &&
+                        profile.tiers.report &&
+                        profile.tiers.fallback &&
+                        profile.tiers.batch)) &&
+                (id === 'custom' || profile.baseUrl) &&
+                (id === 'custom' || profile.keyHint)
+            );
+        });
+
+        expect(allValid).toBeTruthy();
+    });
+
+    it('opencode-go is default (non-free)', async () => {
+        expect.hasAssertions();
+
+        const { PROVIDER_PROFILES } = await import('../llm-provider-profiles.js');
+        const go = PROVIDER_PROFILES['opencode-go'];
+
+        expect(go.free).toBeUndefined();
+        expect(go.baseUrl).toContain('opencode.ai/zen/go');
+    });
+
+    it('free providers are marked', async () => {
+        expect.hasAssertions();
+
+        const { PROVIDER_PROFILES } = await import('../llm-provider-profiles.js');
+
+        expect(PROVIDER_PROFILES['groq'].free).toBeTruthy();
+        expect(PROVIDER_PROFILES['github-models'].free).toBeTruthy();
+        expect(PROVIDER_PROFILES['nvidia-nim'].free).toBeTruthy();
+    });
+
+    it('custom provider has empty baseUrl and requiresBaseUrl', async () => {
+        expect.hasAssertions();
+
+        const { PROVIDER_PROFILES } = await import('../llm-provider-profiles.js');
+        const c = PROVIDER_PROFILES['custom'];
+
+        expect(c.baseUrl).toBe('');
+        expect(c.requiresBaseUrl).toBeTruthy();
+    });
+});
+
+describe('IsKnownProvider', () => {
+    it('returns true for known providers', async () => {
+        expect.hasAssertions();
+
+        const { isKnownProvider } = await import('../llm-provider-profiles.js');
+
+        expect(isKnownProvider('openrouter')).toBeTruthy();
+        expect(isKnownProvider('openai')).toBeTruthy();
+        expect(isKnownProvider('anthropic')).toBeTruthy();
+    });
+
+    it('returns false for unknown providers', async () => {
+        expect.hasAssertions();
+
+        const { isKnownProvider } = await import('../llm-provider-profiles.js');
+
+        expect(isKnownProvider('unknown')).toBeFalsy();
+        expect(isKnownProvider('')).toBeFalsy();
+    });
+});
+
+describe('GetProviderProfile', () => {
+    it('returns profile for known provider', async () => {
+        expect.hasAssertions();
+
+        const { getProviderProfile } = await import('../llm-provider-profiles.js');
+        const p = getProviderProfile('openrouter');
+
+        expect(p).toBeDefined();
+        expect(p && p.displayName).toBe('OpenRouter');
+    });
+
+    it('returns undefined for unknown provider', async () => {
+        expect.hasAssertions();
+
+        const { getProviderProfile } = await import('../llm-provider-profiles.js');
+
+        expect(getProviderProfile('nonexistent')).toBeUndefined();
+    });
+});
+
+describe('InferProviderFromKey', () => {
+    it.each([
+        { name: 'OpenRouter keys', input: 'sk-or-v1-abc123', expected: 'openrouter' },
+        { name: 'Anthropic keys', input: 'sk-ant-abc123', expected: 'anthropic' },
+        { name: 'Groq keys', input: 'gsk_abc123', expected: 'groq' },
+        { name: 'Gemini keys', input: 'AIzaSyABC123', expected: 'gemini' },
+        { name: 'NVIDIA NIM keys', input: 'nvapi-abc123', expected: 'nvidia-nim' },
+        { name: 'OpenAI keys', input: 'sk-abc123', expected: 'openai' },
+    ])('detects $name', async ({ input, expected }) => {
+        expect.hasAssertions();
+
+        const { inferProviderFromKey } = await import('../llm-provider-profiles.js');
+
+        expect(inferProviderFromKey(input)).toBe(expected);
+    });
+
+    it.each([
+        { name: 'unknown key patterns', input: 'unknown-key-format' },
+        { name: 'empty string', input: '' },
+    ])('returns null for $name', async ({ input }) => {
+        expect.hasAssertions();
+
+        const { inferProviderFromKey } = await import('../llm-provider-profiles.js');
+
+        expect(inferProviderFromKey(input)).toBeNull();
+    });
+});
+
+describe('FormatProviderList', () => {
+    it('returns a non-empty string with provider names', async () => {
+        expect.hasAssertions();
+
+        const { formatProviderList } = await import('../llm-provider-profiles.js');
+        const list = formatProviderList();
+
+        expect(list).toContain('openrouter');
+        expect(list).toContain('OpenRouter');
+        expect(list).toContain('groq');
+        expect(list).not.toContain('custom');
+    });
+});
