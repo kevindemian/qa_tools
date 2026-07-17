@@ -1,47 +1,47 @@
 name: QA Post-Process
 
 on:
-  workflow_call:
-    inputs:
-      project-name:
-        description: Project name for feature config lookup
-        required: true
-        type: string
-      test-report-path:
-        description: Path to test report files (CTRF/JUnit/Mochawesome)
-        required: false
-        default: reports/
-        type: string
-      artifact-name:
-        description: Name of the test report artifact
-        required: false
-        default: test-report
-        type: string
+    workflow_call:
+        inputs:
+            project-name:
+                description: Project name for feature config lookup
+                required: true
+                type: string
+            test-report-path:
+                description: Path to test report files (CTRF/JUnit/Mochawesome)
+                required: false
+                default: reports/
+                type: string
+            artifact-name:
+                description: Name of the test report artifact
+                required: false
+                default: test-report
+                type: string
 
 permissions:
     contents: read
     actions: read
 
 jobs:
-  post-process:
-    runs-on: ubuntu-latest
-    steps:
-      - uses: actions/checkout@v5
-      - uses: actions/setup-node@v6
-        with:
-          node-version: 22
-          cache: npm
-      - name: Install dependencies
-        run: npm ci
-      - name: Run QA Tools Post-Processing
-        if: always()
-        run: npx tsx git_triggers/pr-report-entry.ts --project ${{ inputs.project-name }}
-        env:
-          GITHUB_TOKEN: ${{ github.token }}
-      - name: Upload PR Report HTML
-        if: always()
-        uses: actions/upload-artifact@v7
-        with:
-          name: pr-report-html
-          path: reports/pr-report.html
-          if-no-files-found: warn
+    post-process:
+        runs-on: ubuntu-latest
+        steps:
+            - uses: actions/checkout@v5
+            - uses: actions/setup-node@v6
+              with:
+                  node-version: 22
+                  cache: npm
+            - name: Install dependencies
+              run: npm ci
+            - name: Run QA Tools Post-Processing
+              if: always()
+              run: npx tsx shared/pr-report-core.ts --project ${{ inputs.project-name }}
+              env:
+                  GITHUB_TOKEN: ${{ github.token }}
+            - name: Upload PR Report HTML
+              if: always()
+              uses: actions/upload-artifact@v7
+              with:
+                  name: pr-report-html
+                  path: reports/pr-report.html
+                  if-no-files-found: warn

@@ -7,7 +7,7 @@
  *
  * The generated workflow:
  * - Uploads test report artifacts from the external project's test job
- * - Runs pr-report-entry.ts which uses DataHub (fetches artifacts via GitHub API)
+ * - Runs shared/pr-report-core.ts which uses DataHub (fetches artifacts via GitHub API)
  * - No CTRF file downloads — DataHub is the SSOT for test data
  *
  * Used by both:
@@ -43,7 +43,7 @@ export interface PostProcessWorkflowOptions {
  * The generated workflow:
  * 1. Checks out qa_tools
  * 2. Installs dependencies
- * 3. Runs pr-report-entry.ts (DataHub fetches artifacts via GitHub API)
+ * 3. Runs shared/pr-report-core.ts (DataHub fetches artifacts via GitHub API)
  * 4. Uploads PR report HTML as artifact
  */
 export function generatePostProcessWorkflowYaml(options: PostProcessWorkflowOptions): string {
@@ -56,50 +56,50 @@ export function generatePostProcessWorkflowYaml(options: PostProcessWorkflowOpti
         'name: QA Post-Process',
         '',
         'on:',
-        '  workflow_call:',
-        '    inputs:',
-        '      project-name:',
-        '        description: Project name for feature config lookup',
-        '        required: true',
-        '        type: string',
-        '      test-report-path:',
-        '        description: Path to test report files (CTRF/JUnit/Mochawesome)',
-        '        required: false',
-        '        default: ' + testReportPath,
-        '        type: string',
-        '      artifact-name:',
-        '        description: Name of the test report artifact',
-        '        required: false',
-        '        default: ' + artifactName,
-        '        type: string',
+        '    workflow_call:',
+        '        inputs:',
+        '            project-name:',
+        '                description: Project name for feature config lookup',
+        '                required: true',
+        '                type: string',
+        '            test-report-path:',
+        '                description: Path to test report files (CTRF/JUnit/Mochawesome)',
+        '                required: false',
+        '                default: ' + testReportPath,
+        '                type: string',
+        '            artifact-name:',
+        '                description: Name of the test report artifact',
+        '                required: false',
+        '                default: ' + artifactName,
+        '                type: string',
         '',
         'permissions:',
         '    contents: read',
         '    actions: read',
         '',
         'jobs:',
-        '  post-process:',
-        '    runs-on: ubuntu-latest',
-        '    steps:',
-        `      - uses: ${ACTION_VERSIONS.CHECKOUT}`,
-        `      - uses: ${ACTION_VERSIONS.SETUP_NODE}`,
-        '        with:',
-        '          node-version: ' + nodeVersion,
-        '          cache: npm',
-        '      - name: Install dependencies',
-        '        run: ' + installCmd,
-        '      - name: Run QA Tools Post-Processing',
-        '        if: always()',
-        '        run: npx tsx git_triggers/pr-report-entry.ts --project ${{ inputs.project-name }}',
-        '        env:',
-        '          GITHUB_TOKEN: ${{ github.token }}',
-        '      - name: Upload PR Report HTML',
-        '        if: always()',
-        `        uses: ${ACTION_VERSIONS.UPLOAD_ARTIFACT}`,
-        '        with:',
-        '          name: pr-report-html',
-        '          path: reports/pr-report.html',
-        '          if-no-files-found: warn',
+        '    post-process:',
+        '        runs-on: ubuntu-latest',
+        '        steps:',
+        `            - uses: ${ACTION_VERSIONS.CHECKOUT}`,
+        `            - uses: ${ACTION_VERSIONS.SETUP_NODE}`,
+        '              with:',
+        '                  node-version: ' + nodeVersion,
+        '                  cache: npm',
+        '            - name: Install dependencies',
+        '              run: ' + installCmd,
+        '            - name: Run QA Tools Post-Processing',
+        '              if: always()',
+        '              run: npx tsx shared/pr-report-core.ts --project ${{ inputs.project-name }}',
+        '              env:',
+        '                  GITHUB_TOKEN: ${{ github.token }}',
+        '            - name: Upload PR Report HTML',
+        '              if: always()',
+        `              uses: ${ACTION_VERSIONS.UPLOAD_ARTIFACT}`,
+        '              with:',
+        '                  name: pr-report-html',
+        '                  path: reports/pr-report.html',
+        '                  if-no-files-found: warn',
     ].join('\n');
 }
 

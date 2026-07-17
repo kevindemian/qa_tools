@@ -957,11 +957,14 @@ export async function main(
 
 // Self-exec guard: run main() only when invoked directly (not when imported by tests or modules).
 // When running via tsx, process.argv[1] is the tsx binary — the script path is argv[2].
+// On direct execution, inject the Git provider factory (from git_triggers layer) via dynamic
+// import so that shared/ stays free of a static upward dependency on git_triggers.
 const entryArg = (process.argv[1] ?? '').replace(/\\/g, '/');
 const scriptArg = (process.argv[2] ?? '').replace(/\\/g, '/');
 const isDirectExecution = entryArg.includes('pr-report-core') || scriptArg.includes('pr-report-core');
 if (!process.env['VITEST'] && isDirectExecution) {
-    main().catch((err) => {
+    const { createGitProvider } = await import('../git_triggers/git-provider-factory.js');
+    main(createGitProvider).catch((err) => {
         rootLogger.error(`pr-report failed: ${String(err)}`);
         process.exit(1);
     });

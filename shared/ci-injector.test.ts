@@ -141,10 +141,10 @@ describe('GeneratePostProcessWorkflowYaml', () => {
         expect(yaml).toContain('pr-report-html');
     });
 
-    it('references git_triggers/pr-report-entry.ts in run command', () => {
+    it('references shared/pr-report-core.ts in run command', () => {
         const yaml = generatePostProcessWorkflowYaml({ projectName: 'p' });
 
-        expect(yaml).toContain('git_triggers/pr-report-entry.ts');
+        expect(yaml).toContain('shared/pr-report-core.ts');
         expect(yaml).toContain('--project ${{ inputs.project-name }}');
     });
 });

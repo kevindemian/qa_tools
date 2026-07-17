@@ -28,7 +28,7 @@ function generateQaPostProcessActionYaml(): string {
         '    - name: Run QA Tools Post-Processing',
         '      shell: bash',
         '      working-directory: ${{ github.workspace }}',
-        '      run: npx tsx git_triggers/pr-report-entry.ts --project ${{ inputs.project-name }}',
+        '      run: npx tsx shared/pr-report-core.ts --project ${{ inputs.project-name }}',
         '      env:',
         '        GITHUB_TOKEN: ${{ github.token }}',
     ].join('\n');

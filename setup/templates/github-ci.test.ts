@@ -103,7 +103,7 @@ describe('GenerateQaPostProcessAction', () => {
 
         expect(yaml).toContain('name: QA Tools Post-Process');
         expect(yaml).toContain('using: composite');
-        expect(yaml).toContain('git_triggers/pr-report-entry.ts');
+        expect(yaml).toContain('shared/pr-report-core.ts');
         expect(yaml).toContain('GITHUB_TOKEN');
     });
 
