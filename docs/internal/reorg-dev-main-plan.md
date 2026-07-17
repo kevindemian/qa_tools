@@ -32,6 +32,12 @@ Cada tarefa é **atômica, commitável e testável**: termina com `tsc --noEmit`
 - Comandos: `npx tsc --noEmit` (0 erros), `npx vitest run` (contar testes pass), `npx eslint .` (0 erros), `npx depcruise --config .dependency-cruiser.js . --output-type err` (0 violações), `npx vitest run --coverage` (anotar %).
 - Critério: números registrados no checkpoint.
 
+**BASELINE CAPTURADO (F0, 2026-07-17):**
+- `npx tsc --noEmit` → 0 erros
+- `npx eslint .` → 0 erros / 687 warnings (pré-existentes, não bloqueiam)
+- `npx depcruise` → 0 violações (956 módulos, 3785 deps)
+- `npx vitest run` → 7063 pass / 18 skip (7081 total), 516 files passed / 4 skipped
+
 ### FASE 1 — Sanitização (wrappers / órfãos) — toca `main`
 
 **T1.1** Eliminar `shared/config.ts` (barrel trivial `export { default } from './config-accessor.js'`).
