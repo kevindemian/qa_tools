@@ -19,6 +19,29 @@ No execution, assumption, inference, approximation or continuation is permitted.
 
 ---
 
+## 0.1 ARCHITECTURE CONTRACT — MANDATORY COMPLIANCE
+
+The architecture anti-pollution invariants defined in
+`dev/docs/internal/ARCHITECTURE-CONTRACT.md` are **mandatory and non-overridable**.
+
+Cumprimento obrigatório:
+
+- Every architectural change, relocation of files, or new entry point MUST be
+  validated against `dev/docs/internal/ARCHITECTURE-CONTRACT.md` (G1–G5).
+- Before moving/relocating ANY file, classify it (runtime consumer vs
+  documentation-only) per G5. Relocation that breaks a runtime consumer is a
+  system-level violation and must be corrected at origin.
+- The PR Report entry point is unique: `git_triggers/main.ts pr-report`.
+  `shared/pr-report-core.ts` is a pure library (G1).
+- CI `*.yml` are 100% generated via `shared/ci/ci-injector.ts` + `setup/templates/*`;
+  manual editing is prohibited (G2).
+- `shared/` MUST NOT import `git_triggers/` (G3).
+
+Non-compliance with the contract is a defect at the root cause. STOP → correct
+at origin → revalidate.
+
+---
+
 ## 1. AUTHORITY MODEL
 
 Valid authority only:

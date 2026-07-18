@@ -46,6 +46,7 @@ qa_tools/
 │                    git_triggers/                             │
 │  main.ts → cli-args.ts → cli-dispatch.ts →                  │
 │    → batch-mode.ts | interactive-mode.ts                    │
+│    → pr-report (runPrReport via createGitProvider factory)  │
 │    → pipeline-handler, mr-handler, nivelar, ai-pr-desc     │
 ├─────────────────────────────────────────────────────────────┤
 │                    shared/                                   │
@@ -863,7 +864,7 @@ import { globSync } from 'glob'; // file globbing
 | ------------------------------------------- | ----------------------------------------- |
 | `main.ts`                                   | Entry point: interactive + batch dispatch |
 | `cli-args.ts`                               | CLI argument parser (discriminated union) |
-| `cli-dispatch.ts`                           | Mode dispatcher                           |
+| `cli-dispatch.ts`                           | Mode dispatcher (inclui caso `'pr-report'` → `runPrReport(createGitProvider)`) |
 | `interactive-mode.ts`                       | Interactive menu loop (920 lines)         |
 | `batch-mode.ts`                             | Batch/CI mode                             |
 | `session-state.ts`                          | Session context management                |
@@ -1144,10 +1145,12 @@ Features divergentes devem ser registradas no backlog para conformização.
 | `shared/backlog-health.ts`                | Backlog health analysis (stale/unassigned/untested)                |
 | `shared/pipeline-cost.ts`                 | Pipeline cost analytics (cost/duration per run)                    |
 | `shared/requirement-score.ts`             | Requirement quality score (AI-generated test acceptance/retention) |
-| `shared/pr-report-core.ts`                | PR Report runtime (CLI entry point)                                |
+| `shared/pr-report-core.ts`                | PR Report core library (pure; consumed by `git_triggers/main.ts pr-report`) |
 | `shared/report-html.ts`                   | HTML report generator (sections, charts, themes)                   |
 | `shared/parseArgs()`                      | CLI parser (--help, --project, unknown flag warn)                  |
 | `git_triggers/pr-report-setup-handler.ts` | Reconfig handler (via git_triggers menu)                           |
+| `git_triggers/cli-dispatch.ts`            | Dispatcher de modos; caso `'pr-report'` → `runPrReport(createGitProvider)` (entry-point único de pr-report) |
+| `shared/ci/ci-injector.ts`                | Gerador/injetor de `*.yml` de CI (100% via templates; edição manual proibida) |
 | `.audit/`                                 | Generated audit reports (JSON + MD)                                |
 | `coverage/`                               | Coverage reports (generated)                                       |
 | `data/`                                   | Data files                                                         |
