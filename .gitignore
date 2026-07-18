@@ -77,3 +77,4 @@ qa-quarantine.json
 
 # === Session artifacts (ephemeral, not part of the project) ===
 archive/
+.stryker-tmp/

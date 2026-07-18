@@ -11,7 +11,8 @@
         "e2e/**/*.ts",
         "scripts/**/*.ts",
         ".tmp/**/*.ts",
-        ".shared/**/*.ts"
+        ".shared/**/*.ts",
+        "vitest.config.stryker.ts"
     ],
     "exclude": ["node_modules", "docs-archive"]
 }

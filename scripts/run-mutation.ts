@@ -78,8 +78,8 @@ function main(): void {
         process.exit(1);
     }
 
-    if (!readFileSync(STRYKER_PATH, 'utf8').includes('mutation')) {
-        process.stderr.write('[run-mutation] FATAL: stryker.conf.json sem thresholds.mutation.\n');
+    if (!readFileSync(STRYKER_PATH, 'utf8').includes('break')) {
+        process.stderr.write('[run-mutation] FATAL: stryker.conf.json sem thresholds.break.\n');
         process.exit(1);
     }
 

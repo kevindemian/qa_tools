@@ -4,17 +4,30 @@
     "reporters": ["html", "clear-text", "progress"],
     "testRunner": "vitest",
     "vitest": {
-        "configFile": "vitest.config.ts"
+        "configFile": "vitest.config.stryker.ts",
+        "related": false
     },
     "checkers": ["typescript"],
     "tsconfigFile": "tsconfig.json",
-    "coverageAnalysis": "perTest",
+    "coverageAnalysis": "all",
     "thresholds": {
         "break": 50
     },
-    "mutate": ["shared/**/*.ts", "jira_management/**/*.ts", "git_triggers/**/*.ts", "scripts/**/*.ts"],
+    "mutate": [
+        "shared/**/*.ts",
+        "!shared/**/*.test.ts",
+        "!shared/**/*.spec.ts",
+        "jira_management/**/*.ts",
+        "!jira_management/**/*.test.ts",
+        "!jira_management/**/*.spec.ts",
+        "git_triggers/**/*.ts",
+        "!git_triggers/**/*.test.ts",
+        "!git_triggers/**/*.spec.ts",
+        "scripts/**/*.ts",
+        "!scripts/**/*.test.ts",
+        "!scripts/**/*.spec.ts"
+    ],
     "ignorePatterns": [
-        "**/*.test.ts",
         "**/node_modules/**",
         "**/dist/**",
         "scripts/eslint-plugins/**",
