@@ -4,14 +4,18 @@
  * Coverage targets:
  * - injectPostProcessJob: idempotency, injection correctness, edge cases
  * - generatePostProcessWorkflowYaml: output structure, overrides
- * - extractFirstJobName: extraction accuracy, fallback
+ * - extractArtifactProducerJobName: extraction accuracy, fallback
  * - Contract: deployed qa-post-process.yml must match generator output
  * - Contract: ci-injector and setup wizard generators must produce equivalent YAML
  */
 import fs from 'node:fs';
 import path from 'node:path';
 import { describe, it, expect } from 'vitest';
-import { generatePostProcessWorkflowYaml, extractFirstJobName, injectPostProcessJob } from '../ci/ci-injector.js';
+import {
+    generatePostProcessWorkflowYaml,
+    extractArtifactProducerJobName,
+    injectPostProcessJob,
+} from '../ci/ci-injector.js';
 import { generateQaPostProcessWorkflow } from '../../setup/templates/qa-post-process-workflow.js';
 import { ACTION_VERSIONS } from '../test-utils/constants.js';
 import type { SetupContext } from '../../setup/context.js';
@@ -141,37 +145,49 @@ describe('GeneratePostProcessWorkflowYaml', () => {
         expect(yaml).toContain('pr-report-html');
     });
 
-    it('references shared/pr-report-core.ts in run command', () => {
+    it('references git_triggers/main.ts pr-report in run command', () => {
         const yaml = generatePostProcessWorkflowYaml({ projectName: 'p' });
 
-        expect(yaml).toContain('shared/pr-report-core.ts');
+        expect(yaml).toContain('git_triggers/main.ts pr-report');
         expect(yaml).toContain('--project ${{ inputs.project-name }}');
     });
 });
 
-/* ── extractFirstJobName ───────────────────────────────────────────────── */
+/* ── extractArtifactProducerJobName ───────────────────────────────────── */
 
-describe('ExtractFirstJobName', () => {
-    it('extracts first job name from simple ci.yml', () => {
-        expect(extractFirstJobName(SIMPLE_CI_YML)).toBe('test');
-    });
-
-    it('extracts first job from multi-job ci.yml', () => {
-        expect(extractFirstJobName(CI_WITH_MULTIPLE_JOBS)).toBe('lint');
+describe('ExtractArtifactProducerJobName', () => {
+    it('returns default when no job uploads an artifact', () => {
+        expect(extractArtifactProducerJobName(SIMPLE_CI_YML)).toBe('test');
     });
 
     it('returns default when no jobs section exists', () => {
-        expect(extractFirstJobName(NO_JOBS_CI_YML)).toBe('test');
+        expect(extractArtifactProducerJobName(NO_JOBS_CI_YML)).toBe('test');
     });
 
     it('returns default for empty string', () => {
-        expect(extractFirstJobName(EMPTY_STRING)).toBe('test');
+        expect(extractArtifactProducerJobName(EMPTY_STRING)).toBe('test');
     });
 
-    it('extracts name even with unusual job name', () => {
-        const yml = 'name: CI\n\njobs:\n  qa-tools:\n    runs-on: ubuntu-latest\n';
+    it('extracts the job that uploads the test-report artifact, not the first job', () => {
+        const yml =
+            [
+                'name: CI',
+                '',
+                'on: [push]',
+                '',
+                'jobs:',
+                '  quality:',
+                '    runs-on: ubuntu-latest',
+                '    steps:',
+                '      - run: npm run lint',
+                '  test:',
+                '    runs-on: ubuntu-latest',
+                '    steps:',
+                '      - uses: actions/upload-artifact@v4',
+                '      - run: npm test',
+            ].join('\n') + '\n';
 
-        expect(extractFirstJobName(yml)).toBe('qa-tools');
+        expect(extractArtifactProducerJobName(yml)).toBe('test');
     });
 });
 
@@ -182,7 +198,7 @@ describe('InjectPostProcessJob', () => {
         const result = injectPostProcessJob(SIMPLE_CI_YML, 'my-project');
 
         expect(result).toContain('post-process:');
-        expect(result).toContain('if: always()');
+        expect(result).toContain("if: always() && github.event_name != 'schedule'");
         expect(result).toContain('needs: [test]');
         expect(result).toContain('qa-post-process.yml');
         expect(result).toContain('project-name: my-project');
@@ -203,10 +219,10 @@ describe('InjectPostProcessJob', () => {
         expect(result).toBe(CI_ALREADY_HAS_POST_PROCESS);
     });
 
-    it('uses first job name for needs: in multi-job setup', () => {
+    it('needs: points to the job that uploads the artifact, not the first job', () => {
         const result = injectPostProcessJob(CI_WITH_MULTIPLE_JOBS, 'p');
 
-        expect(result).toContain('needs: [lint]');
+        expect(result).toContain('needs: [test]');
     });
 
     it('handles empty content gracefully', () => {

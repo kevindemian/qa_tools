@@ -35,7 +35,7 @@ jobs:
               run: npm ci
             - name: Run QA Tools Post-Processing
               if: always()
-              run: npx tsx shared/pr-report-core.ts --project ${{ inputs.project-name }}
+              run: npx tsx git_triggers/main.ts pr-report --project ${{ inputs.project-name }}
               env:
                   GITHUB_TOKEN: ${{ github.token }}
             - name: Upload PR Report HTML

@@ -1,7 +1,7 @@
 /**
  * GitHub Actions reusable workflow for QA Tools post-processing.
  *
- * Called by ci.yml after tests complete. Runs pr-report-core.ts on the
+ * Called by ci.yml after tests complete. Runs git_triggers/main.ts pr-report on the
  * test report uploaded by the test job and uploads the resulting HTML.
  */
 import { ACTION_VERSIONS } from '../../shared/test-utils/constants.js';
@@ -46,7 +46,7 @@ export function generateQaPostProcessWorkflow(ctx: SetupContext): string {
         '              run: ' + ctx.installCmd,
         '            - name: Run QA Tools Post-Processing',
         '              if: always()',
-        '              run: npx tsx shared/pr-report-core.ts --project ${{ inputs.project-name }}',
+        '              run: npx tsx git_triggers/main.ts pr-report --project ${{ inputs.project-name }}',
         '              env:',
         '                  GITHUB_TOKEN: ${{ github.token }}',
         '            - name: Upload PR Report HTML',

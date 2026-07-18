@@ -28,7 +28,7 @@ function generateQaPostProcessActionYaml(): string {
         '    - name: Run QA Tools Post-Processing',
         '      shell: bash',
         '      working-directory: ${{ github.workspace }}',
-        '      run: npx tsx shared/pr-report-core.ts --project ${{ inputs.project-name }}',
+        '      run: npx tsx git_triggers/main.ts pr-report --project ${{ inputs.project-name }}',
         '      env:',
         '        GITHUB_TOKEN: ${{ github.token }}',
     ].join('\n');
@@ -77,7 +77,7 @@ export function generateCIWorkflow(ctx: SetupContext): string {
 
     if (ctx.features.prReport) {
         const postProcessJob: JobConfig = {
-            if: 'always()',
+            if: "always() && github.event_name != 'schedule'",
             needs: ['qa-tools'],
             uses: './.github/workflows/qa-post-process.yml',
             with: {

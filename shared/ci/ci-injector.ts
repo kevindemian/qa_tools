@@ -7,7 +7,7 @@
  *
  * The generated workflow:
  * - Uploads test report artifacts from the external project's test job
- * - Runs shared/pr-report-core.ts which uses DataHub (fetches artifacts via GitHub API)
+ * - Runs git_triggers/main.ts pr-report which uses DataHub (fetches artifacts via GitHub API)
  * - No CTRF file downloads — DataHub is the SSOT for test data
  *
  * Used by both:
@@ -43,7 +43,7 @@ export interface PostProcessWorkflowOptions {
  * The generated workflow:
  * 1. Checks out qa_tools
  * 2. Installs dependencies
- * 3. Runs shared/pr-report-core.ts (DataHub fetches artifacts via GitHub API)
+ * 3. Runs git_triggers/main.ts pr-report (DataHub fetches artifacts via GitHub API)
  * 4. Uploads PR report HTML as artifact
  */
 export function generatePostProcessWorkflowYaml(options: PostProcessWorkflowOptions): string {
@@ -90,7 +90,7 @@ export function generatePostProcessWorkflowYaml(options: PostProcessWorkflowOpti
         '              run: ' + installCmd,
         '            - name: Run QA Tools Post-Processing',
         '              if: always()',
-        '              run: npx tsx shared/pr-report-core.ts --project ${{ inputs.project-name }}',
+        '              run: npx tsx git_triggers/main.ts pr-report --project ${{ inputs.project-name }}',
         '              env:',
         '                  GITHUB_TOKEN: ${{ github.token }}',
         '            - name: Upload PR Report HTML',
@@ -118,22 +118,33 @@ export function generatePostProcessWorkflowFromContext(ctx: SetupContext): strin
 }
 
 /**
- * Extract the name of the first job defined in ci.yml.
- * Used to populate `needs:` in the injected post-process job.
+ * Extract the name of the job that PRODUCES the test-report artifact.
+ *
+ * The injected post-process job consumes that artifact, so `needs:` must point
+ * to the producer — NOT the first job defined (which may be a `quality`/`lint`
+ * job that does not upload the artifact). Detection scans each job's steps for
+ * an `actions/upload-artifact` step (the artifact producer) and returns that
+ * job's name.
  *
  * @param ciYaml - Full content of ci.yml
- * @returns The first job name, or `'test'` if none found (safe default)
+ * @returns The artifact-producing job name, or `'test'` if none found (safe default)
  */
-export function extractFirstJobName(ciYaml: string): string {
-    // Match lines like "  jobname:" at the top level under jobs:
-    // After the "jobs:" line, capture the first indented key at the same level
+export function extractArtifactProducerJobName(ciYaml: string): string {
     const jobsMatch = /^jobs:\s*$/m.exec(ciYaml);
     if (!jobsMatch) return 'test';
 
     const afterJobs = ciYaml.slice(jobsMatch.index + jobsMatch[0].length);
-    const jobMatch = /^\s{2}([\w-]+):/m.exec(afterJobs);
 
-    return jobMatch?.[1] ?? 'test';
+    // Capture each top-level job name together with its full body in one pass,
+    // avoiding numeric-index access that trips object-injection checks.
+    const jobPattern = /^\s{2}([\w-]+):([\s\S]*?)(?=^\s{2}[\w-]+:|$)/gm;
+    for (const match of afterJobs.matchAll(jobPattern)) {
+        const jobName = match[1];
+        const jobBody = match[2] ?? '';
+        if (jobName && /upload-artifact/.test(jobBody)) return jobName;
+    }
+
+    return 'test';
 }
 
 /**
@@ -152,13 +163,13 @@ export function injectPostProcessJob(ciYaml: string, projectName: string): strin
     // Idempotency guard: if post-process job already exists, do nothing
     if (/^\s{2}post-process:/m.test(ciYaml)) return ciYaml;
 
-    const firstJob = extractFirstJobName(ciYaml);
-    const needsList = firstJob === 'test' ? '[test]' : `[${firstJob}]`;
+    const producerJob = extractArtifactProducerJobName(ciYaml);
+    const needsList = producerJob === 'test' ? '[test]' : `[${producerJob}]`;
 
     // Build the post-process job YAML block with the same indentation (2 spaces)
     const postProcessBlock = [
         '  post-process:',
-        '    if: always()',
+        "    if: always() && github.event_name != 'schedule'",
         `    needs: ${needsList}`,
         '    uses: ./.github/workflows/qa-post-process.yml',
         '    with:',

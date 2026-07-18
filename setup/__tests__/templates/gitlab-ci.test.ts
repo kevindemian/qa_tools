@@ -65,7 +65,7 @@ describe('GenerateGitLabCI', () => {
     it('adds post-processing step when prReport enabled', () => {
         const yaml = generateGitLabCI(MOCK_CTX_WITH_FEATURES);
 
-        expect(yaml).toContain('shared/pr-report-core.ts');
+        expect(yaml).toContain('git_triggers/main.ts pr-report');
     });
 
     it('does not add post-processing when prReport disabled', () => {

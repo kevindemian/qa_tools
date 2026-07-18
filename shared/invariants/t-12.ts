@@ -1,5 +1,5 @@
-import type { InvariantFn, ValidationContext, ValidationResult } from '../artifact-validator.js';
-import { pass, fail, warn } from '../artifact-validator.js';
+import type { InvariantFn, ValidationContext, ValidationResult } from '../validation/artifact-validator.js';
+import { pass, fail, warn } from '../validation/artifact-validator.js';
 import { parseTests } from './types.js';
 import { detectNumericRange } from './numeric.js';
 

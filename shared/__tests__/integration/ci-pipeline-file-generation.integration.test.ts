@@ -105,13 +105,16 @@ it('passes', () => { expect(1 + 1).toBe(2); });`,
         );
 
         // Sem dados do versionador/Jira e sem TEST_REPORT_PATH em contexto não-
-        // interativo: main() deve FALHAR explicitamente (exit != 0), nunca silenciar.
+        // interativo: o entry-point deve FALHAR explicitamente (exit != 0), nunca
+        // silenciar. O entry-point correto é git_triggers/main.ts pr-report
+        // (shared/pr-report-core.ts é biblioteca pura, sem self-exec).
         expect(() =>
             execFileSync(
                 NODE_BIN,
                 [
                     TSX_BIN,
-                    'shared/pr-report-core.ts',
+                    'git_triggers/main.ts',
+                    'pr-report',
                     '--project',
                     'qa_tools',
                     '--no-ai',
@@ -127,7 +130,7 @@ it('passes', () => { expect(1 + 1).toBe(2); });`,
                     env: { ...process.env, VITEST: undefined },
                 },
             ),
-        ).toThrow(/sem dados do versionador/);
+        ).toThrow(/sem dados do versionador|Projeto não registrado/);
 
         // Em falha explícita, o arquivo HTML NÃO é gerado.
         expect(fs.existsSync(htmlFile)).toBeFalsy();

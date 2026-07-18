@@ -51,10 +51,10 @@ describe('GenerateQaPostProcessWorkflow', () => {
         expect(yaml).toContain('default: reports/');
     });
 
-    it('runs shared/pr-report-core.ts with correct arguments', () => {
+    it('runs git_triggers/main.ts pr-report with correct arguments', () => {
         const yaml = generateQaPostProcessWorkflow(MOCK_CTX);
 
-        expect(yaml).toContain('shared/pr-report-core.ts');
+        expect(yaml).toContain('git_triggers/main.ts pr-report');
         expect(yaml).toContain('--project ${{ inputs.project-name }}');
     });
 

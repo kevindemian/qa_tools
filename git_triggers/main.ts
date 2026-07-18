@@ -27,4 +27,5 @@ dispatchCli(parseCliArgs()).catch((err) => {
     printError('Erro inesperado', err);
     printSessionSummary();
     rootLogger.error('Main error', { error: String(err) });
+    gracefulExit(ExitCode.ERROR);
 });

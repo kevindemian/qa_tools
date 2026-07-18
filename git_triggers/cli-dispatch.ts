@@ -10,6 +10,8 @@ import { printUsage, type CliArgs } from './cli-args.js';
 import { tryBatchMode } from './batch-mode.js';
 import { runInteractiveMode } from './interactive-mode.js';
 import { setCurrentProject } from '../shared/project-context.js';
+import { main as runPrReport } from '../shared/pr-report-core.js';
+import { createGitProvider } from './git-provider-factory.js';
 
 /**
  * Resolve and activate the multi-project context for a CLI invocation (055).
@@ -55,5 +57,10 @@ export async function dispatchCli(args: CliArgs): Promise<void> {
         case 'interactive':
             await runInteractiveMode(args);
             break;
+        case 'pr-report': {
+            await runPrReport(createGitProvider);
+            gracefulExit(ExitCode.OK);
+            break;
+        }
     }
 }

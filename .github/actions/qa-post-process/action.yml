@@ -10,6 +10,6 @@ runs:
     - name: Run QA Tools Post-Processing
       shell: bash
       working-directory: ${{ github.workspace }}
-      run: npx tsx shared/pr-report-core.ts --project ${{ inputs.project-name }}
+      run: npx tsx git_triggers/main.ts pr-report --project ${{ inputs.project-name }}
       env:
         GITHUB_TOKEN: ${{ github.token }}
