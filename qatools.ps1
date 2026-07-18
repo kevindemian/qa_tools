@@ -55,6 +55,7 @@ if (!(Test-Path $envFile)) {
     if ($resp -eq "n" -or $resp -eq "N") { exit }
 }
 
-# Delegate to the canonical interactive menu (entry-menu.ts)
-& "npx" tsx "$entryMenu" @args
+# Delegate to the canonical interactive menu (entry-menu.ts).
+# Repass $tool (first positional, used by the WSL branch) so no argument is lost.
+& "npx" tsx "$entryMenu" $tool @args
 exit $LASTEXITCODE
