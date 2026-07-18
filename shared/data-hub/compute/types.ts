@@ -5,59 +5,6 @@
  * These are pure value types with no runtime dependencies.
  */
 
-/** Configuration for scoring functions (linear interpolation). */
-export interface ScoringConfig {
-    /** Pass rate target (0-100). Score=100 at target, score=0 at floor. */
-    passRateTarget: number;
-    /** Floor for pass rate scoring. Below this, score=0. */
-    passRateFloor: number;
-    /** Flaky rate threshold (0-100). Score=100 at 0%, score=0 at threshold. */
-    flakyThreshold: number;
-    /** Coverage target (0-100). Score=100 at target, score=0 at floor. */
-    coverageTarget: number;
-    /** Floor for coverage scoring. */
-    coverageFloor: number;
-    /** Execution rate target (0-100). */
-    executionRateTarget: number;
-    /** Floor for execution rate scoring. */
-    executionRateFloor: number;
-    /** Suite speed target in milliseconds (P95). */
-    suiteSpeedTarget: number;
-    /** Suite speed ceiling in ms. Above this, score=0. */
-    suiteSpeedCeiling: number;
-}
-
-/**
- * Default scoring thresholds with normative references.
- *
- * References:
- * - DORA State of DevOps Report 2025: pass rate, execution rate thresholds
- * - Google Test Engineering: flaky rate <1% (target), <5% (acceptable)
- * - Microsoft Research (2014): 72-80% coverage as optimal range
- * - ISTQB Foundation: coverage >70% for adequate testing
- * - Google SRE Book: P95 latency targets for CI/CD pipelines
- */
-export const DEFAULT_SCORING_CONFIG: ScoringConfig = {
-    /** DORA: elite performers achieve >95% change success rate */
-    passRateTarget: 95,
-    /** Below 50%, pipeline is unreliable — no normative basis, empirical */
-    passRateFloor: 50,
-    /** Google Test Engineering: <5% flaky rate is acceptable threshold */
-    flakyThreshold: 5,
-    /** Microsoft Research (2014): 80% coverage as optimal target */
-    coverageTarget: 80,
-    /** ISTQB: <30% coverage indicates inadequate testing */
-    coverageFloor: 30,
-    /** DORA: elite performers achieve >95% deployment success rate */
-    executionRateTarget: 95,
-    /** Below 50%, test suite is unreliable — empirical threshold */
-    executionRateFloor: 50,
-    /** Google SRE: unit tests should complete within 1 second */
-    suiteSpeedTarget: 1000,
-    /** Google SRE: CI pipeline >3min impacts developer productivity */
-    suiteSpeedCeiling: 3000,
-};
-
 /** Grade boundaries mapping. */
 export interface GradeBoundaries {
     excellent: number;
@@ -115,28 +62,6 @@ export const DEFAULT_WEIGHTS: DimensionWeights = {
     executionRate: 15,
     /** Google SRE: speed impacts developer productivity */
     suiteSpeed: 10,
-};
-
-/** Pipeline cost configuration. */
-export interface PipelineCostConfig {
-    /** Cost per minute of CI time in USD. */
-    costPerMinute: number;
-}
-
-/** Default cost per minute (GitHub Actions Linux runner). */
-export const DEFAULT_PIPELINE_COST_CONFIG: PipelineCostConfig = {
-    costPerMinute: 0.008,
-};
-
-/** Trends configuration. */
-export interface TrendsConfig {
-    /** Number of recent data points to include. */
-    windowSize: number;
-}
-
-/** Default trends window. */
-export const DEFAULT_TRENDS_CONFIG: TrendsConfig = {
-    windowSize: 10,
 };
 
 /** Quarantine configuration. */

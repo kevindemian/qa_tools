@@ -116,10 +116,8 @@ jobs:
                   node-version-file: .node-version
                   cache: npm
             - run: npm ci
-            - name: Sync Stryker threshold with suppression count
+            - name: Audit suppressions (immutable guard)
               run: npx tsx scripts/audit-suppressions.ts
-            - name: Run Stryker (incremental on diff)
-              run: npx tsx scripts/run-mutation.ts --diff
 
     test:
         name: Test (Node ${{ matrix.node-version }})

@@ -14,7 +14,6 @@
  * - `setup/main.ts` (full setup wizard)
  * - `pr-report-setup-handler.ts` (PR Report config wizard)
  */
-import type { SetupContext } from '../../setup/context.js';
 import { ACTION_VERSIONS } from '../test-utils/constants.js';
 
 /* ── Constants ─────────────────────────────────────────────────────────── */
@@ -101,20 +100,6 @@ export function generatePostProcessWorkflowYaml(options: PostProcessWorkflowOpti
         '                  path: reports/pr-report.html',
         '                  if-no-files-found: warn',
     ].join('\n');
-}
-
-/**
- * Convenience overload: accept SetupContext (full setup wizard).
- * Maps SetupContext fields to PostProcessWorkflowOptions.
- */
-export function generatePostProcessWorkflowFromContext(ctx: SetupContext): string {
-    return generatePostProcessWorkflowYaml({
-        projectName: ctx.projectName,
-        testReportPath: ctx.testReportPath,
-        artifactName: ctx.artifactName,
-        nodeVersion: ctx.nodeVersion,
-        installCmd: ctx.installCmd,
-    });
 }
 
 /**

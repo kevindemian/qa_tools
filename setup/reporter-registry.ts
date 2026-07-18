@@ -51,8 +51,3 @@ export function matchReporter(name: string): ReporterRegistryEntry | null {
     }
     return null;
 }
-
-/** True if any of the given raw reporter identifiers maps to a known format. */
-export function matchesAnyReporter(names: string[]): boolean {
-    return names.some((name) => matchReporter(name) !== null);
-}

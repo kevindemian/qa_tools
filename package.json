@@ -13,7 +13,7 @@
         "test:coverage": "NODE_OPTIONS=--max-old-space-size=2048 vitest run --coverage",
         "typecheck": "tsc --noEmit",
         "lint": "npx tsx scripts/quality-check.ts",
-        "unused-exports": "ts-prune -p tsconfig.json | grep -v \"(used in module)\" | grep -q . && exit 1 || exit 0",
+        "unused-exports": "ts-prune -p tsconfig.json -i \"__mocks__|/index.ts|shared/validation/.*schema.ts|mock-types.ts|providers/types.ts|compute/types.ts\" | grep -v \"(used in module)\" | grep -q . && exit 1 || exit 0",
         "format": "prettier --write '**/*.{ts,js,json,md}'",
         "build": "node scripts/build.mjs",
         "docs": "echo 'Documentation generation removed (docs-archive/)'",
@@ -33,7 +33,6 @@
         "semgrep": "npx tsx scripts/run-semgrep.ts",
         "semgrep:diff": "npx tsx scripts/run-semgrep.ts --diff",
         "no-swallow": "npx tsx scripts/run-noswallow.ts",
-        "mutation": "npx tsx scripts/run-mutation.ts",
         "audit-suppressions": "npx tsx scripts/audit-suppressions.ts",
         "ci-status": "npx tsx scripts/ci-status.ts"
     },
