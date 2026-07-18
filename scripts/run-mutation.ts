@@ -10,7 +10,7 @@
  */
 
 import { execFileSync } from 'node:child_process';
-import { readFileSync } from 'node:fs';
+import { readFileSync, existsSync } from 'node:fs';
 import { fileURLToPath } from 'node:url';
 import { dirname, resolve } from 'node:path';
 import { minimatch } from 'minimatch';
@@ -37,28 +37,80 @@ function strykerIgnorePatterns(): string[] {
     }
 }
 
+function readEventBaseHead(): { base: string; head: string } | null {
+    const path = process.env['GITHUB_EVENT_PATH'];
+    if (path && existsSync(path)) {
+        try {
+            const ev = JSON.parse(readFileSync(path, 'utf8')) as {
+                pull_request?: { base?: { sha?: string }; head?: { sha?: string } };
+                before?: string;
+                after?: string;
+            };
+            const pr = ev.pull_request;
+            const prBase = pr && pr.base && pr.base.sha;
+            const prHead = pr && pr.head && pr.head.sha;
+            if (prBase && prHead) {
+                return { base: prBase, head: prHead };
+            }
+            if (ev.before && ev.after) return { base: ev.before, head: ev.after };
+        } catch (err) {
+            process.stderr.write(
+                `[run-mutation] nao foi possivel ler GITHUB_EVENT_PATH (${String(err)}); usando fallback de ref.\n`,
+            );
+        }
+    }
+    const base = process.env['BASE_SHA'];
+    const head = process.env['HEAD_SHA'];
+    if (base && head) return { base, head };
+    return null;
+}
+
 function diffFiles(): string[] {
-    const base = process.env['GITHUB_BASE_REF'] || 'dev';
+    // Diferença real do evento: só o que o PR/push entregou, nunca o repo inteiro.
+    const event = readEventBaseHead();
+    let range: string;
+    if (event) {
+        range = `${event.base}...${event.head}`;
+    } else if (process.env['GITHUB_EVENT_NAME'] === 'push') {
+        range = 'HEAD~1...HEAD';
+    } else {
+        const base = process.env['GITHUB_BASE_REF'] || 'dev';
+        range = `origin/${base}...HEAD`;
+    }
+
     let out: string;
     try {
-        out = execFileSync(GIT_BIN, ['diff', '--name-only', '--diff-filter=d', `origin/${base}...HEAD`], {
+        out = execFileSync(GIT_BIN, ['diff', '--name-only', '--diff-filter=d', range], {
             cwd: ROOT,
             encoding: 'utf8',
         });
     } catch (err) {
         const e = err as { status?: number };
         throw new Error(
-            `[run-mutation] git diff contra origin/${base} falhou (exit ${e.status ?? '?'}). ` +
-                `Garanta que origin/${base} esta disponivel (fetch-depth: 0 no CI).`,
+            `[run-mutation] git diff contra ${range} falhou (exit ${e.status ?? '?'}). ` +
+                `Garanta que o ref base esta disponivel (fetch-depth: 0 no CI).`,
             { cause: err },
         );
     }
     const ignores = strykerIgnorePatterns();
-    return out
+    const files = out
         .split('\n')
         .map((s) => s.trim())
         .filter((s) => s.endsWith('.ts') && !s.endsWith('.test.ts'))
         .filter((s) => !ignores.some((p) => minimatch(s, p, { dot: true })));
+
+    // Guard (AGENTS §24): diff massivo indica base errada — mutar centenas de
+    // arquivos travaria o Stryker (roda a suíte completa por mutante). Aborta
+    // explicitamente em vez de produzir um run inviável/silenzioso.
+    const MAX_DIFF_FILES = 50;
+    if (files.length > MAX_DIFF_FILES) {
+        process.stderr.write(
+            `[run-mutation] AVISO: diff retornou ${files.length} arquivos (>${MAX_DIFF_FILES}). ` +
+                `Base provavelmente incorreta. Abortando para evitar Stryker inviavel.\n`,
+        );
+        process.exit(1);
+    }
+    return files;
 }
 
 function main(): void {
