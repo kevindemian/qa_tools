@@ -17,6 +17,11 @@ export default defineConfig({
             // mutação e quebram no sandbox do Stryker. Separados do gate de mutação.
             'scripts/__tests__/quality-check.test.ts',
             'scripts/__tests__/opencode-db-maintenance.test.ts',
+            // Testes que usam process.chdir(): o vitest em worker threads (pool do
+            // Stryker) não suporta chdir. Válidos no npm test normal; incompatíveis
+            // com o runner do Stryker. Excluídos apenas da suíte de mutação.
+            'shared/__tests__/store-backend.test.ts',
+            'shared/__tests__/git-sha.test.ts',
         ],
         testTimeout: 15000,
         hookTimeout: 30000,
