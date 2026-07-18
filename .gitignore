@@ -43,6 +43,11 @@ shared/.local/state/*.json
 shared/.local/state/*.json.bak
 cloud/*.log
 archive/
+# Root-level runtime state (F5 root cleanup): xdg state home, temp, lint/log artifacts
+.qa-tools/
+.tmp/
+eslint-results.json
+job_logs.txt
 
 # === Backup files ===
 *.bak
