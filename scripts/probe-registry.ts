@@ -22,10 +22,10 @@ import path from 'path';
 import { readFileSync, writeFileSync } from 'node:fs';
 import { resolve, dirname } from 'node:path';
 import { fileURLToPath } from 'node:url';
-import { discoverModels, assignTierHints } from '../shared/model-discovery.js';
-import { getAdapter } from '../shared/model-adapter.js';
-import type { RegistryModel } from '../shared/model-resolver.js';
-import type { LlmProvider } from '../shared/llm-provider-profiles.js';
+import { discoverModels, assignTierHints } from '../shared/llm/model-discovery.js';
+import { getAdapter } from '../shared/llm/model-adapter.js';
+import type { RegistryModel } from '../shared/llm/model-resolver.js';
+import type { LlmProvider } from '../shared/llm/llm-provider-profiles.js';
 import { rootLogger } from '../shared/logger.js';
 
 export { diffModels, writeMarkdownReport, parseArgs, getProviderModels, enrichFromOpenRouter };

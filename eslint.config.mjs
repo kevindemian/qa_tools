@@ -16,10 +16,15 @@ const tsconfigRootDir = dirname(fileURLToPath(import.meta.url));
 
 export default defineConfig(
     // Global: set tsconfigRootDir to avoid ambiguity with .opencode/guard/backups/tsconfig.json
+    // Use an explicit tsconfig.eslint.json project for ALL type-checked rules so the
+    // parser builds a single correct program per file and does not fall back to an
+    // isolated program (which previously caused cross-file contamination in batch
+    // scans: violations from one .test.ts leaking into unrelated files).
     {
         languageOptions: {
             parserOptions: {
                 tsconfigRootDir,
+                project: ['./tsconfig.eslint.json'],
             },
         },
     },
@@ -179,12 +184,6 @@ export default defineConfig(
         },
     },
     {
-        languageOptions: {
-            parserOptions: {
-                project: './tsconfig.json',
-                tsconfigRootDir,
-            },
-        },
         plugins: {
             'unused-imports': unusedImports,
             'local-no-swallow': localNoSwallow,
@@ -329,6 +328,7 @@ export default defineConfig(
             '**/*.cjs',
             '.config/',
             '.opencode/',
+            '.mimocode/',
             '.tmp/',
             '.shared/',
             'scripts/validation-hook.ts',

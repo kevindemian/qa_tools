@@ -11,7 +11,7 @@ import {
     __setGradientDep,
     __setHttpsDep,
     __setHttpDep,
-} from '../splash.js';
+} from '../ui/splash.js';
 
 describe('BuildSplashLines', () => {
     it('formats logo lines with help hint', () => {
@@ -76,7 +76,7 @@ describe('BuildSplashLines', () => {
 
 vi.mock('gradient-string', () => ({ default: undefined }));
 
-vi.mock('../output', () => ({
+vi.mock('../ui/output.js', () => ({
     Output: { isTTY: vi.fn().mockReturnValue(true), isCI: vi.fn().mockReturnValue(false) },
     defaultOutput: { box: vi.fn(), print: vi.fn() },
 }));
@@ -225,7 +225,7 @@ describe('ShowSplash', () => {
     };
 
     beforeEach(async () => {
-        outputMod = await vi.importMock<typeof outputMod>('../output');
+        outputMod = await vi.importMock<typeof outputMod>('../ui/output.js');
         outputMod.Output.isTTY.mockReturnValue(true);
         outputMod.Output.isCI.mockReturnValue(false);
         __setFigletDep(mockFiglet);

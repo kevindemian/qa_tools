@@ -32,7 +32,7 @@ import {
     generatePipelineQuarantine,
     loadQuarantine,
     markPermanent,
-} from '../../quarantine.js';
+} from '../../validation/quarantine.js';
 import { nonNull } from '../../test-utils.js';
 
 function storePath(): string {

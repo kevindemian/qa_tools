@@ -2,9 +2,9 @@ import { nonNull } from '../../shared/test-utils.js';
 import { createMockGitProvider } from '../../shared/test-utils/factories/index.js';
 import { generatePrDescription } from '../ai-pr-desc.js';
 import type { GitProvider } from '../../shared/types.js';
-import { llmPrompt } from '../../shared/llm-client.js';
+import { llmPrompt } from '../../shared/llm/llm-client.js';
 
-vi.mock('../../shared/llm-client');
+vi.mock('../../shared/llm/llm-client.js');
 
 describe('GeneratePrDescription', () => {
     const mockProvider: GitProvider = createMockGitProvider();

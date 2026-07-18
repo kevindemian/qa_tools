@@ -1,4 +1,4 @@
-import { calculateHealthScore, evaluateQualityGate } from '../health-score.js';
+import { calculateHealthScore, evaluateQualityGate } from '../quality/health-score.js';
 import type { DataHub, ComputedMetrics } from '../types/data-hub.js';
 import { makeDataHubMock } from '../test-utils/factories/data-hub-mock.js';
 import { rootLogger } from '../logger.js';

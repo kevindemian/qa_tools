@@ -53,7 +53,7 @@ describe('Smoke-startup', () => {
     it('entry-menu não crasha com JIRA/XRAY vars vazias', async () => {
         expect.hasAssertions();
 
-        const child = spawn(process.execPath, [TSX_BIN, 'shared/entry-menu.ts'], {
+        const child = spawn(process.execPath, [TSX_BIN, 'shared/ui/entry-menu.ts'], {
             cwd: ROOT,
             env: {
                 ...process.env,

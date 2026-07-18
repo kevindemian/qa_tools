@@ -1,7 +1,7 @@
 import os from 'os';
 import path from 'path';
 // ── Mocks ──────────────────────────────────────────────────────────────────
-vi.mock('../../shared/prompt', () => {
+vi.mock('../../shared/ui/prompt.js', () => {
     class CancelError extends Error {
         constructor(msg?: string) {
             super(msg);
@@ -23,7 +23,7 @@ vi.mock('../../shared/prompt', () => {
     };
 });
 
-vi.mock('../../shared/spinner.js', () => ({
+vi.mock('../../shared/ui/spinner.js', () => ({
     withSpinner: async (_label: string, fn: () => Promise<unknown>): Promise<unknown> => fn(),
     ProgressBar: class {
         update = (): void => {};
@@ -68,11 +68,11 @@ vi.mock('../../shared/logger', () => ({
     Logger: vi.fn(),
 }));
 
-vi.mock('../../shared/first-run', () => ({
+vi.mock('../../shared/ui/first-run.js', () => ({
     maybeRunFirstRunWizard: vi.fn().mockResolvedValue(undefined),
 }));
 
-vi.mock('../../shared/cli_base', () => ({
+vi.mock('../../shared/ui/cli_base.js', () => ({
     mask: vi.fn((v: string) => (v ? v.slice(0, 4) + '****' : '')),
     createValidateEnv: vi.fn().mockReturnValue(vi.fn()),
     offerEnvSetup: vi.fn().mockReturnValue(false),
@@ -137,14 +137,14 @@ vi.mock('fs', async (importOriginal) => {
 });
 
 // ── Imports ────────────────────────────────────────────────────────────────
-import { createValidateEnv } from '../../shared/cli_base.js';
-import { warn, prompt, printError } from '../../shared/prompt.js';
+import { createValidateEnv } from '../../shared/ui/cli_base.js';
+import { warn, prompt, printError } from '../../shared/ui/prompt.js';
 import { getStatePath } from '../../shared/state.js';
 import * as openModule from '../../shared/open.js';
 import * as cp from 'child_process';
 import * as commandsModule from '../commands/index.js';
-import { CancelError } from '../../shared/prompt.js';
-import { mask } from '../../shared/cli_base.js';
+import { CancelError } from '../../shared/ui/prompt.js';
+import { mask } from '../../shared/ui/cli_base.js';
 import type { RuntimeResources } from '../main.js';
 import type JiraResource from '../jira_resource.js';
 import type JiraLinkManager from '../jira_link_manager.js';

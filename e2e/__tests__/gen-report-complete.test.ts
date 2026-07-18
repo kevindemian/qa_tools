@@ -7,7 +7,7 @@ import path from 'path';
 import { describe, expect, it, vi, afterEach } from 'vitest';
 
 // Mock only network/infrastructure deps — business logic is real
-vi.mock('../../shared/http-client.js', () => ({
+vi.mock('../../shared/infra/http-client.js', () => ({
     createHttpClient: vi.fn(() => ({
         get: vi.fn().mockResolvedValue({ data: { workflow_runs: [] } }),
     })),
@@ -21,7 +21,7 @@ vi.mock('../../shared/logger.js', () => ({
     rootLogger: { info: vi.fn(), error: vi.fn() },
 }));
 
-vi.mock('../../shared/cli_base.js', () => ({
+vi.mock('../../shared/ui/cli_base.js', () => ({
     gracefulExit: vi.fn(),
 }));
 
@@ -60,7 +60,7 @@ describe('Gen-report-complete', () => {
 
         process.argv = ['node', 'gen-report-complete.ts', '--ctrf=e2e/fixtures/ctrf-report.json', '--skip-jira'];
 
-        const tempDir = await import('../../shared/temp-dir.js');
+        const tempDir = await import('../../shared/infra/temp-dir.js');
         const writeSpy = vi.spyOn(tempDir, 'writeReport').mockImplementation((name, _content) => {
             return path.join(import.meta.dirname, '..', '..', '.tmp', name);
         });

@@ -12,7 +12,7 @@
  */
 import * as fc from 'fast-check';
 import { describe, expect, it } from 'vitest';
-import { calculateRequirementScores, generateRequirementScoreHtml } from '../requirement-score.js';
+import { calculateRequirementScores, generateRequirementScoreHtml } from '../quality/requirement-score.js';
 import type { AiGenerationRecord, AiModification } from '../types/llm.js';
 
 vi.mock('../logger', () => ({
@@ -34,14 +34,12 @@ describe('Requirement Score.Property', () => {
             action: ActionArb,
             reason: fc.option(fc.string({ minLength: 0, maxLength: 30 }), { nil: undefined }),
         })
-        .map(
-            (r): AiModification => ({
-                testKey: r.testKey,
-                recordedAt: r.recordedAt,
-                action: r.action,
-                ...(r.reason !== undefined ? { reason: r.reason } : {}),
-            }),
-        );
+        .map((r): AiModification => ({
+            testKey: r.testKey,
+            recordedAt: r.recordedAt,
+            action: r.action,
+            ...(r.reason !== undefined ? { reason: r.reason } : {}),
+        }));
 
     const AiGenerationRecordArb = fc
         .record({
@@ -67,18 +65,16 @@ describe('Requirement Score.Property', () => {
             ),
             feedback: fc.option(fc.array(AiModificationArb, { minLength: 0, maxLength: 8 }), { nil: undefined }),
         })
-        .map(
-            (r): AiGenerationRecord => ({
-                id: r.id,
-                generatedAt: r.generatedAt,
-                promptVersion: r.promptVersion,
-                userStory: r.userStory,
-                acceptanceCriteria: r.acceptanceCriteria,
-                generatedTests: r.generatedTests,
-                preconditionMatches: r.preconditionMatches,
-                ...(r.feedback !== undefined ? { feedback: r.feedback } : {}),
-            }),
-        );
+        .map((r): AiGenerationRecord => ({
+            id: r.id,
+            generatedAt: r.generatedAt,
+            promptVersion: r.promptVersion,
+            userStory: r.userStory,
+            acceptanceCriteria: r.acceptanceCriteria,
+            generatedTests: r.generatedTests,
+            preconditionMatches: r.preconditionMatches,
+            ...(r.feedback !== undefined ? { feedback: r.feedback } : {}),
+        }));
 
     const ValidGrades = ['A', 'B', 'C', 'D', 'F'] as const;
 

@@ -1,11 +1,11 @@
 /** History/Coverage dashboard — execution trends, flakiness analysis, health score, coverage gaps. */
-import { info, warn, title, divider, tableView, printError, showSelect, withSpinner } from '../../shared/prompt.js';
+import { info, warn, title, divider, tableView, printError, showSelect, withSpinner } from '../../shared/ui/prompt.js';
 import { getDataHub } from '../../shared/data-hub/global-hub.js';
 import { calcFlakinessEntries } from '../../shared/data-hub/compute/flakiness-entries.js';
 import { calcMetricsTrends } from '../../shared/data-hub/compute/metrics-trends.js';
-import { calculateHealthScore } from '../../shared/health-score.js';
+import { calculateHealthScore } from '../../shared/quality/health-score.js';
 import { analyzeCoverage } from '../coverage.js';
-import { compareRuns } from '../../shared/run-comparison.js';
+import { compareRuns } from '../../shared/quality/run-comparison.js';
 import type { MetricsRun } from '../../shared/types/data-hub.js';
 import type { CommandContext } from './context.js';
 

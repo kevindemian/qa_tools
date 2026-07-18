@@ -7,7 +7,7 @@
  * @module primitives/layout
  */
 
-import { tokens } from '../theme-tokens.js';
+import { tokens } from '../ui/theme-tokens.js';
 
 export interface ContainerProps {
     children: string;

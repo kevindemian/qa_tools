@@ -2,7 +2,7 @@ import fs from 'fs';
 import path from 'path';
 import os from 'os';
 import { afterAll, describe, expect, it } from 'vitest';
-import { getHeadSha, getCurrentBranch, detectGitDir } from '../git-sha.js';
+import { getHeadSha, getCurrentBranch, detectGitDir } from '../ci/git-sha.js';
 
 const tmpDir = fs.mkdtempSync(path.join(os.tmpdir(), 'qa-git-sha-test-'));
 

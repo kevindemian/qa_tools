@@ -4,15 +4,15 @@ const spies = vi.hoisted(() => ({
     print: vi.mocked(vi.fn()),
 }));
 
-vi.mock('../../shared/cli_base.js', () => ({ gracefulExit: vi.fn(), ExitCode: { OK: 0, ERROR: 1 } }));
-vi.mock('../../shared/output.js', () => ({ defaultOutput: { print: spies.print } }));
+vi.mock('../../shared/ui/cli_base.js', () => ({ gracefulExit: vi.fn(), ExitCode: { OK: 0, ERROR: 1 } }));
+vi.mock('../../shared/ui/output.js', () => ({ defaultOutput: { print: spies.print } }));
 vi.mock('../cli-args.js', () => ({ printUsage: vi.fn() }));
 vi.mock('../batch-mode.js', () => ({ tryBatchMode: vi.fn() }));
 vi.mock('../interactive-mode.js', () => ({ runInteractiveMode: vi.fn() }));
 vi.mock('../../shared/project-context.js', () => ({ setCurrentProject: vi.fn() }));
 
 import { dispatchCli, applyProjectContext } from '../cli-dispatch.js';
-import { gracefulExit } from '../../shared/cli_base.js';
+import { gracefulExit } from '../../shared/ui/cli_base.js';
 import { printUsage } from '../cli-args.js';
 import type { BatchCliArgs } from '../cli-args.js';
 import { tryBatchMode } from '../batch-mode.js';

@@ -1,15 +1,15 @@
 import os from 'os';
 import path from 'path';
-vi.mock('../../../shared/prompt');
+vi.mock('../../../shared/ui/prompt.js');
 vi.mock('../../../shared/state');
 vi.mock('../../../shared/logger');
-vi.mock('../../../shared/cli_base');
+vi.mock('../../../shared/ui/cli_base.js');
 vi.mock('../../jira_link_manager');
 vi.mock('../../csv_resource');
 
 import type { Mock } from 'vitest';
 import { mockedSafe } from '../../../shared/test-utils/mock-types.js';
-import * as promptModule from '../../../shared/prompt.js';
+import * as promptModule from '../../../shared/ui/prompt.js';
 import * as stateModule from '../../../shared/state.js';
 
 import * as loggerModule from '../../../shared/logger.js';

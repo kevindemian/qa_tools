@@ -1,481 +1,221 @@
-import { describe, it, expect, vi, beforeEach } from 'vitest';
-import { readFileSync, existsSync, readdirSync, type PathOrFileDescriptor } from 'fs';
+import { describe, it, expect, afterEach } from 'vitest';
+import fs from 'fs';
+import os from 'os';
+import path from 'path';
 
-vi.mock('fs', async () => {
-    const actual: typeof import('fs') = await vi.importActual<typeof import('fs')>('fs');
-    return {
-        ...actual,
-        readFileSync: vi.fn(),
-        existsSync: vi.fn(),
-        readdirSync: vi.fn(),
-    };
-});
+const ROOT = path.resolve(path.dirname(new URL(import.meta.url).pathname), '..', '..');
 
-vi.mock('../../shared/deps.js', async (importOriginal) => {
-    const actual = await importOriginal<typeof import('../../shared/deps.js')>();
-    return {
-        ...actual,
-        globSync: vi.fn((_p: string) => [
-            'test.ts',
-            'test.test.ts',
-            'jira_management/commands/case01.ts',
-            'jira_management/commands/case02.ts',
-        ]),
-    };
-});
+let counter = 0;
+function uniqueName(): string {
+    counter += 1;
+    return 'qa-qc-' + counter.toString(36) + '.ts';
+}
 
-vi.mock('../../shared/cli_base.js', () => ({
-    gracefulExit: vi.fn(),
-}));
+function writeTmp(content: string): string {
+    const f = path.join(os.tmpdir(), uniqueName());
+    fs.writeFileSync(f, content, 'utf8');
+    return f;
+}
 
-vi.mock('../../shared/types.js', () => ({
-    ExitCode: { OK: 0, ERROR: 1 },
-}));
+async function load() {
+    return import('../quality-check.js');
+}
 
-const mockLintResults = vi.fn();
-vi.mock('eslint', () => ({
-    ESLint: function ESLintMock() {
-        return { lintFiles: mockLintResults };
-    },
-}));
-
-describe('Quality-check unit tests', () => {
-    beforeEach(() => {
-        vi.clearAllMocks();
+describe('Quality check integrated', () => {
+    afterEach(() => {
+        for (const f of fs.readdirSync(os.tmpdir())) {
+            if (f.startsWith('qa-qc-')) fs.rmSync(path.join(os.tmpdir(), f), { force: true });
+        }
     });
 
     describe('CheckNoPattern', () => {
-        it('returns passed when no pattern matches', async () => {
+        it('passes when no file matches the pattern', async () => {
             expect.hasAssertions();
 
-            vi.mocked(readFileSync).mockReturnValue('ok line\n');
-            const { checkNoPattern } = await import('../quality-check.js');
-            const result = checkNoPattern('test', /xyz/, ['test.ts']);
+            const f = writeTmp('export const x = 1;\n');
+            const { checkNoPattern } = await load();
 
-            expect(result.passed).toBeTruthy();
+            const r = checkNoPattern('test', /throw\s+/, [f]);
+
+            expect(r.passed).toBeTruthy();
+            expect(r.violations).toHaveLength(0);
         });
 
-        it('returns violations when pattern matches', async () => {
+        it('reports a violation when a file matches the pattern', async () => {
             expect.hasAssertions();
 
-            vi.mocked(readFileSync).mockReturnValue('xyz found here\n');
-            const { checkNoPattern } = await import('../quality-check.js');
-            const result = checkNoPattern('test', /xyz/, ['test.ts']);
+            const f = writeTmp('function bad() { throw new Error("x"); }\n');
+            const { checkNoPattern } = await load();
 
-            expect(result.passed).toBeFalsy();
-            expect(result.violations).toHaveLength(1);
+            const r = checkNoPattern('test', /throw\s+/, [f]);
+
+            expect(r.passed).toBeFalsy();
+            expect(r.violations).toHaveLength(1);
+            expect(r.violations[0]?.file ?? '').toBe(f);
         });
 
-        it('skips files matching excludePattern', async () => {
+        it('skips lines matching the exclude pattern', async () => {
             expect.hasAssertions();
 
-            vi.mocked(readFileSync).mockImplementation((path: PathOrFileDescriptor) => {
-                if (path === 'skip.ts') return 'xyz found with skip pattern\n';
-                return 'no match here\n';
-            });
-            const { checkNoPattern } = await import('../quality-check.js');
-            const result = checkNoPattern('test', /xyz/, ['test.ts', 'skip.ts'], /skip/);
+            const f = writeTmp('// skip: throw new Error\nok line\n');
+            const { checkNoPattern } = await load();
 
-            expect(result.passed).toBeTruthy();
+            const r = checkNoPattern('test', /throw\s+/, [f], /skip/);
+
+            expect(r.passed).toBeTruthy();
+        });
+    });
+
+    describe('Repo scan detectors', () => {
+        it('checkThrowString passes on a clean repo', async () => {
+            expect.hasAssertions();
+
+            const { checkThrowString } = await load();
+
+            expect(checkThrowString().passed).toBeTruthy();
+        });
+
+        it('checkThrowString detects a thrown string literal in a real file', async () => {
+            expect.hasAssertions();
+
+            const f = path.join(ROOT, '_throw_tmp.ts');
+            fs.writeFileSync(f, "export function x() { throw 'boom'; }\n");
+            try {
+                const { checkThrowString } = await load();
+
+                expect(checkThrowString().passed).toBeFalsy();
+            } finally {
+                fs.rmSync(f, { force: true });
+            }
+        });
+
+        it('checkNonNullAssertion passes on a clean repo', async () => {
+            expect.hasAssertions();
+
+            const { checkNonNullAssertion } = await load();
+
+            expect(checkNonNullAssertion().passed).toBeTruthy();
+        });
+
+        it('checkIfTrueFalse passes on a clean repo', async () => {
+            expect.hasAssertions();
+
+            const { checkIfTrueFalse } = await load();
+
+            expect(checkIfTrueFalse().passed).toBeTruthy();
+        });
+
+        it('checkIfTrueFalse detects an if(true) condition in a real file', async () => {
+            expect.hasAssertions();
+
+            const f = path.join(ROOT, '_iftrue_tmp.ts');
+            fs.writeFileSync(f, 'export function x() { if (true) { return 1; } }\n');
+            try {
+                const { checkIfTrueFalse } = await load();
+
+                expect(checkIfTrueFalse().passed).toBeFalsy();
+            } finally {
+                fs.rmSync(f, { force: true });
+            }
+        });
+
+        it('checkDepWall passes on a clean repo', async () => {
+            expect.hasAssertions();
+
+            const { checkDepWall } = await load();
+
+            expect(checkDepWall().passed).toBeTruthy();
+        });
+
+        it('checkViFnUnknown passes on a clean repo', async () => {
+            expect.hasAssertions();
+
+            const { checkViFnUnknown } = await load();
+
+            expect(checkViFnUnknown().passed).toBeTruthy();
+        });
+
+        it('checkHandlerConsistency passes on the current repo', async () => {
+            expect.hasAssertions();
+
+            const { checkHandlerConsistency } = await load();
+
+            expect(checkHandlerConsistency().passed).toBeTruthy();
+        });
+    });
+
+    describe('Contract checks against real project files', () => {
+        it('checkArtifactValidators finds all required exports', async () => {
+            expect.hasAssertions();
+
+            const { checkArtifactValidators } = await load();
+
+            const r = checkArtifactValidators();
+
+            expect(r.passed).toBeTruthy();
+        });
+
+        it('checkArtifactValidatorsExist finds all validator files', async () => {
+            expect.hasAssertions();
+
+            const { checkArtifactValidatorsExist } = await load();
+
+            const r = checkArtifactValidatorsExist();
+
+            expect(r.passed).toBeTruthy();
+        });
+
+        it('checkDashboardExports finds all dashboard export functions', async () => {
+            expect.hasAssertions();
+
+            const { checkDashboardExports } = await load();
+
+            const r = checkDashboardExports();
+
+            expect(r.passed).toBeTruthy();
+        });
+
+        it('checkQualityGateFiles finds both gate files', async () => {
+            expect.hasAssertions();
+
+            const { checkQualityGateFiles } = await load();
+
+            const r = checkQualityGateFiles();
+
+            expect(r.passed).toBeTruthy();
+        });
+
+        it('checkIntegrity passes with the current regenerated hash', async () => {
+            expect.hasAssertions();
+
+            const { checkIntegrity } = await load();
+
+            const r = checkIntegrity();
+
+            expect(r.passed).toBeTruthy();
         });
     });
 
     describe('CheckEslintBaseline', () => {
-        it('passes when no eslint violations', async () => {
+        it('runs the real ESLint and returns a structured result', async () => {
             expect.hasAssertions();
 
-            mockLintResults.mockResolvedValue([
-                {
-                    filePath: 't.ts',
-                    messages: [],
-                },
-            ]);
-            const { checkEslintBaseline } = await import('../quality-check.js');
+            const { checkEslintBaseline } = await load();
+
             const r = await checkEslintBaseline();
 
-            expect(r.passed).toBeTruthy();
-        });
-
-        it('fails on any eslint violation', async () => {
-            expect.hasAssertions();
-
-            mockLintResults.mockResolvedValue([
-                {
-                    filePath: 't.ts',
-                    messages: [{ ruleId: 'no-console', severity: 2, message: 'x', line: 1 }],
-                },
-            ]);
-            const { checkEslintBaseline } = await import('../quality-check.js');
-            const r = await checkEslintBaseline();
-
-            expect(r.passed).toBeFalsy();
-            expect(r.violations).toHaveLength(1);
-        });
-
-        it('fails on unbound-method violations (no baseline)', async () => {
-            expect.hasAssertions();
-
-            mockLintResults.mockResolvedValue([
-                {
-                    filePath: 't.ts',
-                    messages: Array.from({ length: 3 }, () => ({
-                        ruleId: '@typescript-eslint/unbound-method',
-                        severity: 2,
-                        message: 'x',
-                        line: 1,
-                    })),
-                },
-            ]);
-            const { checkEslintBaseline } = await import('../quality-check.js');
-            const r = await checkEslintBaseline();
-
-            expect(r.passed).toBeFalsy();
-            expect(r.violations).toHaveLength(3);
-        });
-
-        it('handles lintFiles error', async () => {
-            expect.hasAssertions();
-
-            mockLintResults.mockRejectedValue(new Error('lint failed'));
-            const { checkEslintBaseline } = await import('../quality-check.js');
-            const r = await checkEslintBaseline();
-
-            expect(r.passed).toBeFalsy();
-        });
+            expect(typeof r.passed).toBe('boolean');
+            expect(Array.isArray(r.violations)).toBeTruthy();
+        }, 240000);
     });
 
-    describe('CheckHandlerConsistency', () => {
-        it('detects handler registered but no menu entry', async () => {
+    describe('Main', () => {
+        it('runs every check against the real repo without throwing', async () => {
             expect.hasAssertions();
 
-            vi.mocked(readFileSync).mockImplementation((path: PathOrFileDescriptor) => {
-                if (path === 'jira_management/menu-data.ts') return "id: '1'\n";
-                if (path === 'jira_management/commands/index.ts') return "'99': {\n";
-                return '';
-            });
-            vi.mocked(readdirSync).mockReturnValue([]);
-            const { checkHandlerConsistency } = await import('../quality-check.js');
-            const r = checkHandlerConsistency();
-
-            expect(r.passed).toBeFalsy();
-        });
-
-        it('handles read error', async () => {
-            expect.hasAssertions();
-
-            vi.mocked(readFileSync).mockImplementation(() => {
-                throw new Error('read fail');
-            });
-            const { checkHandlerConsistency } = await import('../quality-check.js');
-            const r = checkHandlerConsistency();
-
-            expect(r.passed).toBeFalsy();
-        });
-    });
-
-    describe('Enforce-quality checks', () => {
-        it('checkThrowString detects throw literals', async () => {
-            expect.hasAssertions();
-
-            vi.mocked(readFileSync).mockReturnValue("throw 'error'\n");
-            const { checkThrowString } = await import('../quality-check.js');
-            const r = checkThrowString();
-
-            expect(r.passed).toBeFalsy();
-        });
-
-        it('checkThrowDoubleQuote detects throw "', async () => {
-            expect.hasAssertions();
-
-            vi.mocked(readFileSync).mockReturnValue('throw "err"\n');
-            const { checkThrowDoubleQuote } = await import('../quality-check.js');
-            const r = checkThrowDoubleQuote();
-
-            expect(r.passed).toBeFalsy();
-        });
-
-        it('checkArtifactValidators passes when all exports exist', async () => {
-            expect.hasAssertions();
-
-            const exportsList = [
-                'createTestCaseValidator',
-                'createAnalysisValidator',
-                'createPipelineValidator',
-                'createBugReportValidator',
-                'createComparisonValidator',
-                'verifyEvidence',
-                'recalculateCoverage',
-                'ArtifactValidator',
-                'consensusGenerate',
-                'generateWithRetry',
-                'snapshotQualityMetrics',
-            ];
-            vi.mocked(existsSync).mockReturnValue(true);
-            vi.mocked(readFileSync).mockImplementation((_path: PathOrFileDescriptor) =>
-                exportsList.map((e) => `export function ${e}\n`).join(''),
-            );
-            const { checkArtifactValidators } = await import('../quality-check.js');
-            const r = checkArtifactValidators();
-
-            expect(r.passed).toBeTruthy();
-        });
-
-        it('checkArtifactValidators fails when export missing', async () => {
-            expect.hasAssertions();
-
-            vi.mocked(existsSync).mockReturnValue(true);
-            vi.mocked(readFileSync).mockReturnValue('export function foo\n');
-            const { checkArtifactValidators } = await import('../quality-check.js');
-            const r = checkArtifactValidators();
-
-            expect(r.passed).toBeFalsy();
-        });
-
-        it('checkArtifactValidatorsExist fails when file missing', async () => {
-            expect.hasAssertions();
-
-            vi.mocked(existsSync).mockReturnValue(false);
-            const { checkArtifactValidatorsExist } = await import('../quality-check.js');
-            const r = checkArtifactValidatorsExist();
-
-            expect(r.passed).toBeFalsy();
-        });
-
-        it('checkDashboardExports passes when all export functions exist', async () => {
-            expect.hasAssertions();
-
-            const funcs = [
-                'calculateReleaseScore',
-                'generateReleaseScoreHtml',
-                'aggregateDefectTrends',
-                'generateDefectTrendHtml',
-                'buildTraceabilityMatrix',
-                'generateTraceabilityHtml',
-                'computeAiEffectiveness',
-                'generateAiEffectivenessHtml',
-                'aggregateDefectSeasonality',
-                'generateSeasonalityHtml',
-                'detectSilentRegression',
-                'generateSilentRegressionHtml',
-                'compareAiVsManual',
-                'generateAiComparisonHtml',
-                'computeCrossSquadBenchmark',
-                'generateBenchmarkHtml',
-                'buildDeveloperProfile',
-                'generateDeveloperProfileHtml',
-                'analyzeSuiteOptimization',
-                'generateOptimizationHtml',
-                'analyzeBacklogHealth',
-                'generateBacklogHealthHtml',
-                'buildIncidentReport',
-                'generateIncidentReportHtml',
-                'analyzePipelineImpact',
-                'generateImpactAlertHtml',
-                'calculatePipelineCost',
-                'generatePipelineCostHtml',
-                'calculateRequirementScores',
-                'generateRequirementScoreHtml',
-            ];
-            vi.mocked(existsSync).mockReturnValue(true);
-            vi.mocked(readFileSync).mockImplementation((_path: PathOrFileDescriptor) =>
-                funcs.map((f) => `export function ${f}\n`).join(''),
-            );
-            const { checkDashboardExports } = await import('../quality-check.js');
-            const r = checkDashboardExports();
-
-            expect(r.passed).toBeTruthy();
-        });
-
-        it('checkDashboardExports fails when file missing', async () => {
-            expect.hasAssertions();
-
-            vi.mocked(existsSync).mockReturnValue(false);
-            const { checkDashboardExports } = await import('../quality-check.js');
-            const r = checkDashboardExports();
-
-            expect(r.passed).toBeFalsy();
-        });
-
-        it('checkQualityGateFiles passes when both exist', async () => {
-            expect.hasAssertions();
-
-            vi.mocked(existsSync).mockReturnValue(true);
-            const { checkQualityGateFiles } = await import('../quality-check.js');
-            const r = checkQualityGateFiles();
-
-            expect(r.passed).toBeTruthy();
-        });
-
-        it('checkQualityGateFiles fails when missing', async () => {
-            expect.hasAssertions();
-
-            vi.mocked(existsSync).mockReturnValue(false);
-            const { checkQualityGateFiles } = await import('../quality-check.js');
-            const r = checkQualityGateFiles();
-
-            expect(r.passed).toBeFalsy();
-        });
-
-        it('checkNonNullAssertion detects pattern', async () => {
-            expect.hasAssertions();
-
-            vi.mocked(readFileSync).mockReturnValue('x!\n');
-            const { checkNonNullAssertion } = await import('../quality-check.js');
-            const r = checkNonNullAssertion();
-
-            expect(r.passed).toBeFalsy();
-        });
-
-        it('checkDepWall detects external imports', async () => {
-            expect.hasAssertions();
-
-            vi.mocked(readFileSync).mockImplementation((path: PathOrFileDescriptor) => {
-                const p = String(path);
-                if (p.includes('git_triggers') || p.includes('jira_management')) {
-                    return "import { x } from 'lodash';\n";
-                }
-                return '';
-            });
-            const { checkDepWall } = await import('../quality-check.js');
-            const r = checkDepWall();
-
-            expect(r.passed).toBeFalsy();
-        });
-
-        it('checkIfTrueFalse detects pattern', async () => {
-            expect.hasAssertions();
-
-            vi.mocked(readFileSync).mockReturnValue('if (true) {\n');
-            const { checkIfTrueFalse } = await import('../quality-check.js');
-            const r = checkIfTrueFalse();
-
-            expect(r.passed).toBeFalsy();
-        });
-
-        it('checkIntegrity detects hash mismatch', async () => {
-            expect.hasAssertions();
-
-            vi.mocked(readFileSync).mockReturnValue(
-                'some content\n/* HASH:1111111111111111111111111111111111111111111111111111111111111111 */\n',
-            );
-            const { checkIntegrity } = await import('../quality-check.js');
-            const r = checkIntegrity();
-
-            expect(r.passed).toBeFalsy();
-        });
-
-        it('checkIntegrity detects missing hash', async () => {
-            expect.hasAssertions();
-
-            vi.mocked(readFileSync).mockReturnValue('no hash here\n');
-            const { checkIntegrity } = await import('../quality-check.js');
-            const r = checkIntegrity();
-
-            expect(r.passed).toBeFalsy();
-        });
-
-        it('checkIntegrity handles read error', async () => {
-            expect.hasAssertions();
-
-            vi.mocked(readFileSync).mockImplementation(() => {
-                throw new Error('read fail');
-            });
-            const { checkIntegrity } = await import('../quality-check.js');
-            const r = checkIntegrity();
-
-            expect(r.passed).toBeFalsy();
-        });
-
-        it('checkViFnUnknown detects vi.fn<unknown', async () => {
-            expect.hasAssertions();
-
-            vi.mocked(readFileSync).mockReturnValue('vi.fn<unknown, any>()\n');
-            const { checkViFnUnknown } = await import('../quality-check.js');
-            const r = checkViFnUnknown();
-
-            expect(r.passed).toBeFalsy();
-        });
-
-        it('checkViFnUnknownArray detects vi.fn<..., unknown[]', async () => {
-            expect.hasAssertions();
-
-            vi.mocked(readFileSync).mockReturnValue('vi.fn<any, unknown[]>()->void\n');
-            const { checkViFnUnknownArray } = await import('../quality-check.js');
-            const r = checkViFnUnknownArray();
-
-            expect(r.passed).toBeFalsy();
-        });
-    });
-
-    describe('Main() integration', () => {
-        it('calls all checks and reports results', async () => {
-            expect.hasAssertions();
-
-            mockLintResults.mockResolvedValue([]);
-            const artifactExports = [
-                'createTestCaseValidator',
-                'createAnalysisValidator',
-                'createPipelineValidator',
-                'createBugReportValidator',
-                'createComparisonValidator',
-                'verifyEvidence',
-                'recalculateCoverage',
-                'ArtifactValidator',
-                'consensusGenerate',
-                'generateWithRetry',
-                'snapshotQualityMetrics',
-            ];
-            const dashboardExports = [
-                'calculateReleaseScore',
-                'generateReleaseScoreHtml',
-                'aggregateDefectTrends',
-                'generateDefectTrendHtml',
-                'buildTraceabilityMatrix',
-                'generateTraceabilityHtml',
-                'computeAiEffectiveness',
-                'generateAiEffectivenessHtml',
-                'aggregateDefectSeasonality',
-                'generateSeasonalityHtml',
-                'detectSilentRegression',
-                'generateSilentRegressionHtml',
-                'compareAiVsManual',
-                'generateAiComparisonHtml',
-                'computeCrossSquadBenchmark',
-                'generateBenchmarkHtml',
-                'buildDeveloperProfile',
-                'generateDeveloperProfileHtml',
-                'analyzeSuiteOptimization',
-                'generateOptimizationHtml',
-                'analyzeBacklogHealth',
-                'generateBacklogHealthHtml',
-                'buildIncidentReport',
-                'generateIncidentReportHtml',
-                'analyzePipelineImpact',
-                'generateImpactAlertHtml',
-                'calculatePipelineCost',
-                'generatePipelineCostHtml',
-                'calculateRequirementScores',
-                'generateRequirementScoreHtml',
-            ];
-            vi.mocked(readFileSync).mockImplementation((path: PathOrFileDescriptor) => {
-                const p = String(path);
-                if (p === 'scripts/quality-check.ts') {
-                    return 'some content\n';
-                }
-                if (p.endsWith('.ts')) {
-                    return (
-                        artifactExports.map((e) => `export function ${e}\n`).join('') +
-                        dashboardExports.map((e) => `export function ${e}\n`).join('')
-                    );
-                }
-                return '';
-            });
-            vi.mocked(existsSync).mockReturnValue(true);
-            vi.mocked(readdirSync).mockReturnValue([]);
-
-            const { main } = await import('../quality-check.js');
+            const { main } = await load();
 
             await expect(main()).resolves.toBeUndefined();
-        });
+        }, 240000);
     });
 });

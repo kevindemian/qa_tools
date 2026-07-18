@@ -1,4 +1,4 @@
-import { z, parseOrThrow } from '../validation.js';
+import { z, parseOrThrow } from '../validation/validation.js';
 
 describe('Validation — zod wrapper', () => {
     describe('ParseOrThrow', () => {

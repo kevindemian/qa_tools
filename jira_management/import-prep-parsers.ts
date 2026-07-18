@@ -7,9 +7,9 @@ import { rootLogger } from '../shared/logger.js';
 import { load as loadState } from '../shared/state.js';
 import { isPreconditionKey } from '../shared/quoted-string.js';
 import { ImportJsonSchema, ImportJsonItemSchema } from './csv-import-schema.js';
-import { warn, prompt, printSummary, askFilePath } from '../shared/prompt.js';
+import { warn, prompt, printSummary, askFilePath } from '../shared/ui/prompt.js';
 import type { TestCase } from '../shared/types.js';
-import { z } from '../shared/validation.js';
+import { z } from '../shared/validation/validation.js';
 
 type JsonTestItem = z.infer<typeof ImportJsonItemSchema>;
 

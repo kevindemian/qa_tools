@@ -4,7 +4,7 @@ import fs from 'fs';
 import path from 'path';
 import { rootLogger } from '../shared/logger.js';
 import Config from '../shared/config-accessor.js';
-import { XrayCloudClient } from '../shared/xray-cloud-client.js';
+import { XrayCloudClient } from '../shared/jira/xray-cloud-client.js';
 import type { JiraResourceLike } from '../shared/types.js';
 // anti-circular (prompt → create_tests → session-context → prompt)
 import createTests from './create_tests.js';

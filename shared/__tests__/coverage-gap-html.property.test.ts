@@ -9,14 +9,14 @@
  */
 import fc from 'fast-check';
 import { describe, expect, it } from 'vitest';
-import { generateCoverageGapHtml } from '../generate-coverage-gap-html.js';
+import { generateCoverageGapHtml } from '../report/generate-coverage-gap-html.js';
 import type { CoverageGapResult } from '../types.js';
 
 vi.mock('../logger', () => ({
     rootLogger: { error: vi.fn(), info: vi.fn(), child: vi.fn().mockReturnThis() },
 }));
 
-vi.mock('../config', () => ({
+vi.mock('../../config.js', () => ({
     default: { get: vi.fn(() => '') },
     get: vi.fn(() => ''),
 }));

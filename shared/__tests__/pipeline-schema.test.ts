@@ -1,4 +1,4 @@
-import { PipelineClassificationSchema, PipelineCategorySchema } from '../pipeline-schema.js';
+import { PipelineClassificationSchema, PipelineCategorySchema } from '../validation/pipeline-schema.js';
 
 describe('PipelineCategorySchema', () => {
     it('accepts valid categories', () => {

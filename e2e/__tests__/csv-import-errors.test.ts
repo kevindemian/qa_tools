@@ -10,9 +10,9 @@ import JiraLinkManager from '../../jira_management/jira_link_manager.js';
 import CsvResource from '../../jira_management/csv_resource.js';
 import createTests from '../../jira_management/create_tests.js';
 import { rootLogger } from '../../shared/logger.js';
-import { tempDirPath } from '../../shared/temp-dir.js';
+import { tempDirPath } from '../../shared/infra/temp-dir.js';
 import { nonNull } from '../../shared/test-utils.js';
-import { setTestSleep } from '../../shared/http-client.js';
+import { setTestSleep } from '../../shared/infra/http-client.js';
 
 const { createTestsFromCsv } = createTests;
 

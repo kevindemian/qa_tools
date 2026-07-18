@@ -3,7 +3,7 @@
  */
 
 import { describe, expect, it, vi, beforeEach, afterEach } from 'vitest';
-import { createCheckRun, getCheckRuns } from '../github-check-run.js';
+import { createCheckRun, getCheckRuns } from '../ci/github-check-run.js';
 
 const mockPost = vi.hoisted(() => vi.fn<(...args: unknown[]) => unknown>());
 const mockGet = vi.hoisted(() => vi.fn<(...args: unknown[]) => unknown>());

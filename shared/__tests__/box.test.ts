@@ -1,4 +1,4 @@
-import { box, divider, card } from '../box.js';
+import { box, divider, card } from '../ui/box.js';
 
 describe('Box', () => {
     it('renders single border box with content', () => {

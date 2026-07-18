@@ -11,7 +11,7 @@
  * empty Xray payload (the composite/DataHub ignore empty results), never a
  * silent swallowed error.
  */
-import type { XrayCloudClient } from '../../xray-cloud-client.js';
+import type { XrayCloudClient } from '../../jira/xray-cloud-client.js';
 import type {
     DataProvider,
     DataSource,

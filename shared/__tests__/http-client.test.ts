@@ -22,12 +22,12 @@ const mockInstance = Object.assign(vi.fn<(...args: [config: object]) => Promise<
 vi.mock('axios', () => ({
     default: { create: vi.fn<(...args: [object]) => typeof mockInstance>(() => mockInstance) },
 }));
-import * as httpClientModule from '../http-client.js';
+import * as httpClientModule from '../infra/http-client.js';
 import { rootLogger } from '../logger.js';
-import { HostSemaphore } from '../host-semaphore.js';
+import { HostSemaphore } from '../infra/host-semaphore.js';
 import axios from 'axios';
 import { nonNull } from '../test-utils.js';
-import { parseProxyUrl, resolveProxyUrl } from '../proxy-config.js';
+import { parseProxyUrl, resolveProxyUrl } from '../infra/proxy-config.js';
 
 /** Restore proxy env vars without coercing `undefined` into the string `'undefined'`.
  *  `process.env[key] = undefined` silently converts to the literal string `'undefined'`,
@@ -42,7 +42,7 @@ function restoreProxyEnv(saved: Record<string, string | undefined>): void {
 }
 
 describe('HTTP Client', () => {
-    let httpClient: typeof import('../http-client.js');
+    let httpClient: typeof import('../infra/http-client.js');
 
     beforeAll(() => {
         httpClient = httpClientModule;

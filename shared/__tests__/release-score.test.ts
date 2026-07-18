@@ -1,5 +1,5 @@
-import { calculateReleaseScore, generateReleaseScoreHtml } from '../release-score.js';
-import type { ReleaseScoreResult } from '../release-score.js';
+import { calculateReleaseScore, generateReleaseScoreHtml } from '../quality/release-score.js';
+import type { ReleaseScoreResult } from '../quality/release-score.js';
 
 describe('CalculateReleaseScore', () => {
     describe('Grade boundaries', () => {

@@ -1,10 +1,10 @@
 import { vi } from 'vitest';
-import { computeCrossSquadBenchmark, generateBenchmarkHtml } from '../cross-squad-benchmark.js';
-import type { CrossSquadResult } from '../cross-squad-benchmark.js';
+import { computeCrossSquadBenchmark, generateBenchmarkHtml } from '../quality/cross-squad-benchmark.js';
+import type { CrossSquadResult } from '../quality/cross-squad-benchmark.js';
 
 const mockBuildCss = vi.hoisted(() => vi.fn());
-vi.mock('../report-styles.js', async (importOriginal) => {
-    const mod = await importOriginal<typeof import('../report-styles.js')>();
+vi.mock('../report/report-styles.js', async (importOriginal) => {
+    const mod = await importOriginal<typeof import('../report/report-styles.js')>();
     mockBuildCss.mockImplementation(mod.buildCss);
     return { buildCss: mockBuildCss };
 });

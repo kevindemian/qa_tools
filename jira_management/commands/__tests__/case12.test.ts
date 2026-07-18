@@ -1,7 +1,7 @@
-vi.mock('../../../shared/prompt');
+vi.mock('../../../shared/ui/prompt.js');
 vi.mock('../../../shared/logger');
 
-vi.mock('../../../shared/cli_base', () => ({
+vi.mock('../../../shared/ui/cli_base.js', () => ({
     sanitizeUrl: vi.fn((url: string) => url),
 }));
 
@@ -20,7 +20,7 @@ const mockGetDataHubFn = vi.hoisted(() =>
 const mockPrint = vi.hoisted(() => vi.fn<(...args: [string]) => void>());
 const mockPaletteYellow = vi.hoisted(() => vi.fn<(...args: [string]) => string>());
 
-vi.mock('../../../shared/palette', () => ({
+vi.mock('../../../shared/ui/palette.js', () => ({
     palette: {
         red: vi.fn<(...args: [string]) => string>(),
         green: vi.fn<(...args: [string]) => string>(),
@@ -29,7 +29,7 @@ vi.mock('../../../shared/palette', () => ({
     },
 }));
 
-vi.mock('../../../shared/output', () => ({
+vi.mock('../../../shared/ui/output.js', () => ({
     defaultOutput: { print: mockPrint },
 }));
 
@@ -38,7 +38,7 @@ vi.mock('../../../shared/data-hub/global-hub.js', () => ({
     isDataHubInitialized: vi.fn().mockReturnValue(true),
 }));
 
-import { tableView } from '../../../shared/prompt.js';
+import { tableView } from '../../../shared/ui/prompt.js';
 import case12 from '../case12.js';
 import { makeMockCommandContext } from '../../../shared/test-utils.js';
 

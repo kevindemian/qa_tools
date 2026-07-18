@@ -36,12 +36,12 @@ const MOCK_PROMPT: {
     divider?: Mock;
     confirm?: Mock;
 } = vi.hoisted(() => ({ error: vi.fn(), warn: vi.fn(), info: vi.fn(), confirm: vi.fn().mockReturnValue(false) }));
-vi.mock('../prompt', () => MOCK_PROMPT);
+vi.mock('../ui/prompt.js', () => MOCK_PROMPT);
 vi.mock('readline', () => ({
     createInterface: vi.fn(),
 }));
 
-import * as cliBase from '../cli_base.js';
+import * as cliBase from '../ui/cli_base.js';
 import * as readline from 'readline';
 import Config from '../config-accessor.js';
 

@@ -2,8 +2,8 @@
  * Tests for silent-regression — Silent Regression Detector.
  */
 
-import { detectSilentRegression, generateSilentRegressionHtml } from '../silent-regression.js';
-import type { RegressionResult } from '../silent-regression.js';
+import { detectSilentRegression, generateSilentRegressionHtml } from '../quality/silent-regression.js';
+import type { RegressionResult } from '../quality/silent-regression.js';
 import { nonNull } from '../test-utils.js';
 
 describe('DetectSilentRegression', () => {

@@ -7,7 +7,7 @@
  * - `detectFrameworkFromAPI()` — uses GitProvider to read package.json via Contents API
  */
 import type { GitProvider, FrameworkDetectionResult } from './types/ci-cd.js';
-import { extractErrorMessage } from './prompt-errors.js';
+import { extractErrorMessage } from './ui/prompt-errors.js';
 import { rootLogger } from './logger.js';
 
 const MANIFEST_PATTERN =

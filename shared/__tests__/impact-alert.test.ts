@@ -2,9 +2,9 @@
  * Tests for impact-alert — Impact-Aware Pipeline Alert.
  */
 
-import * as reportStyles from '../report-styles.js';
-import { analyzePipelineImpact, generateImpactAlertHtml } from '../impact-alert.js';
-import type { ImpactAlertResult } from '../impact-alert.js';
+import * as reportStyles from '../report/report-styles.js';
+import { analyzePipelineImpact, generateImpactAlertHtml } from '../report/impact-alert.js';
+import type { ImpactAlertResult } from '../report/impact-alert.js';
 import { nullAs, undefinedAs, nonNull } from '../test-utils.js';
 
 describe('AnalyzePipelineImpact', () => {

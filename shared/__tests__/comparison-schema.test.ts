@@ -1,4 +1,4 @@
-import { RunComparisonSchema, ChangeImpactSchema } from '../comparison-schema.js';
+import { RunComparisonSchema, ChangeImpactSchema } from '../validation/comparison-schema.js';
 
 describe('ChangeImpactSchema', () => {
     it('accepts valid impacts', () => {

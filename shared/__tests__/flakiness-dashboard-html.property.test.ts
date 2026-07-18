@@ -13,7 +13,7 @@
  */
 import fc from 'fast-check';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
-import { generateFlakinessHtml, filterHighFlakiness } from '../flakiness-dashboard.js';
+import { generateFlakinessHtml, filterHighFlakiness } from '../report/flakiness-dashboard.js';
 import type { FlakinessEntry } from '../types/data-hub.js';
 
 vi.mock('../logger.js', () => ({

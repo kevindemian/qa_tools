@@ -6,7 +6,7 @@
  */
 import { describe, it, expect, vi } from 'vitest';
 import { XrayDataProvider } from '../../providers/xray-provider.js';
-import type { XrayCloudClient } from '../../../xray-cloud-client.js';
+import type { XrayCloudClient } from '../../../jira/xray-cloud-client.js';
 
 /** Fixture with executions, a test run carrying defects + requirement coverage,
  *  and a second run repeating a requirement (must be deduped). */

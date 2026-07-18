@@ -3,14 +3,14 @@ import path from 'path';
 import os from 'os';
 
 vi.mock('../../shared/logger', () => ({ rootLogger: { warn: vi.fn() } }));
-vi.mock('../../shared/prompt', () => ({ info: vi.fn(), isQuiet: vi.fn().mockReturnValue(true) }));
+vi.mock('../../shared/ui/prompt.js', () => ({ info: vi.fn(), isQuiet: vi.fn().mockReturnValue(true) }));
 
 const mockReportsDir = vi.hoisted(() => vi.fn());
-vi.mock('../../shared/temp-dir', () => ({
+vi.mock('../../shared/infra/temp-dir.js', () => ({
     reportsDir: mockReportsDir,
 }));
 
-import * as prompt from '../../shared/prompt.js';
+import * as prompt from '../../shared/ui/prompt.js';
 import { nonNull } from '../../shared/test-utils.js';
 import MappingFileGenerator from '../mapping-file-generator.js';
 

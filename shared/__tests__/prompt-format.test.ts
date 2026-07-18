@@ -1,8 +1,8 @@
-vi.mock('../output', () => ({
+vi.mock('../ui/output.js', () => ({
     defaultOutput: { print: vi.fn() },
     Output: { columns: vi.fn(() => 80), isTTY: vi.fn(() => true) },
 }));
-vi.mock('../breadcrumbs', () => ({ getBreadcrumbPath: vi.fn(() => '') }));
+vi.mock('../ui/breadcrumbs.js', () => ({ getBreadcrumbPath: vi.fn(() => '') }));
 vi.mock('../logger', () => ({ rootLogger: { writeFileOnly: vi.fn() } }));
 vi.mock('../config-accessor.js', () => {
     const mockConfig = { quiet: false };
@@ -28,9 +28,9 @@ import {
     tableView,
     getConfig,
     __setConfig,
-} from '../prompt-format.js';
-import { defaultOutput as output } from '../output.js';
-import { getBreadcrumbPath } from '../breadcrumbs.js';
+} from '../ui/prompt-format.js';
+import { defaultOutput as output } from '../ui/output.js';
+import { getBreadcrumbPath } from '../ui/breadcrumbs.js';
 import ConfigAccessor from '../config-accessor.js';
 
 describe('Badge', () => {

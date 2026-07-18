@@ -1,5 +1,5 @@
 /** Nivelar — automatically create a merge request to sync (level) branches in GitLab. */
-import { ask, info, success, printError, withSpinner, warn } from '../shared/prompt.js';
+import { ask, info, success, printError, withSpinner, warn } from '../shared/ui/prompt.js';
 import type { GitProvider } from '../shared/types.js';
 
 async function createNivelamentoMr(

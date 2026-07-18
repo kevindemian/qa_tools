@@ -1,5 +1,5 @@
 import { describe, it, expect } from 'vitest';
-import { createJiraAuthHeader, isAtlassianCloudGateway } from '../jira-auth.js';
+import { createJiraAuthHeader, isAtlassianCloudGateway } from '../jira/jira-auth.js';
 
 describe('CreateJiraAuthHeader', () => {
     it('server mode defaults to Bearer (PAT)', () => {

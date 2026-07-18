@@ -1,4 +1,4 @@
-import { exportTestsCsv, exportTestsJson } from '../report-export.js';
+import { exportTestsCsv, exportTestsJson } from '../report/report-export.js';
 import type { FlatTest } from '../result_parser.js';
 
 describe('ExportTestsCsv', () => {

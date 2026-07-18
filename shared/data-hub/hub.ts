@@ -48,7 +48,7 @@ import type { ArtifactParseResult } from './artifact-parser.js';
 import type { ParseResult } from '../result_parser.js';
 import { mergeCategoryArrays, mergeProvenance } from './raw-merge.js';
 import { gateRawData, type QualityReport, type QualityCategory, type QualityCategoryMap } from './quality.js';
-import { loadQuarantine, type QuarantineStore } from '../quarantine.js';
+import { loadQuarantine, type QuarantineStore } from '../validation/quarantine.js';
 import { rootLogger } from '../logger.js';
 import { askTestSource } from './test-source-fallback.js';
 import type { FallbackResult } from './test-source-fallback.js';

@@ -1,6 +1,6 @@
 import { glGetOpenIssues } from '../gitlab-issues.js';
 import { ExternalError } from '../../shared/errors.js';
-import { resetCircuitState } from '../../shared/circuit-breaker.js';
+import { resetCircuitState } from '../../shared/infra/circuit-breaker.js';
 import { nonNull } from '../../shared/test-utils.js';
 import type { Mocked } from 'vitest';
 import { createMockAxiosInstance } from '../../shared/test-utils/factories/response-factory.js';

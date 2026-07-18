@@ -2,10 +2,14 @@
  * Tests for defect-seasonality — Defect Seasonality Dashboard aggregator and HTML generator.
  */
 
-import { aggregateDefectSeasonality, generateSeasonalityHtml, type SeasonalityResult } from '../defect-seasonality.js';
+import {
+    aggregateDefectSeasonality,
+    generateSeasonalityHtml,
+    type SeasonalityResult,
+} from '../quality/defect-seasonality.js';
 import type { FailureClassification } from '../types/data-hub.js';
 import { nonNull } from '../test-utils.js';
-import * as reportStyles from '../report-styles.js';
+import * as reportStyles from '../report/report-styles.js';
 
 const sampleClass: FailureClassification = {
     timestamp: '2026-06-01T10:00:00Z',

@@ -31,7 +31,7 @@ describe('Integration: Benchmark Metrics', () => {
         it('computes criteria coverage from matching titles', async () => {
             expect.hasAssertions();
 
-            const { computeCoverageMetrics } = await import('../../benchmark-metrics.js');
+            const { computeCoverageMetrics } = await import('../../quality/benchmark-metrics.js');
             const body = JSON.stringify([
                 { title: 'login validates credentials', steps: ['enter username', 'enter password'] },
                 { title: 'dashboard renders charts', steps: ['navigate to dashboard'] },
@@ -47,7 +47,7 @@ describe('Integration: Benchmark Metrics', () => {
         it('returns zeros for empty test array', async () => {
             expect.hasAssertions();
 
-            const { computeCoverageMetrics } = await import('../../benchmark-metrics.js');
+            const { computeCoverageMetrics } = await import('../../quality/benchmark-metrics.js');
             const body = JSON.stringify([]);
             const fixture = createFixture();
             const result = computeCoverageMetrics(body, fixture);
@@ -59,7 +59,7 @@ describe('Integration: Benchmark Metrics', () => {
         it('returns zeros for invalid JSON', async () => {
             expect.hasAssertions();
 
-            const { computeCoverageMetrics } = await import('../../benchmark-metrics.js');
+            const { computeCoverageMetrics } = await import('../../quality/benchmark-metrics.js');
             const result = computeCoverageMetrics('not json', createFixture());
 
             expect(result.totalTests).toBe(0);
@@ -68,7 +68,7 @@ describe('Integration: Benchmark Metrics', () => {
         it('returns zeros for non-array JSON', async () => {
             expect.hasAssertions();
 
-            const { computeCoverageMetrics } = await import('../../benchmark-metrics.js');
+            const { computeCoverageMetrics } = await import('../../quality/benchmark-metrics.js');
             const result = computeCoverageMetrics('{"key": "value"}', createFixture());
 
             expect(result.totalTests).toBe(0);
@@ -77,7 +77,7 @@ describe('Integration: Benchmark Metrics', () => {
         it('computes partition coverage for numeric ranges', async () => {
             expect.hasAssertions();
 
-            const { computeCoverageMetrics } = await import('../../benchmark-metrics.js');
+            const { computeCoverageMetrics } = await import('../../quality/benchmark-metrics.js');
             const body = JSON.stringify([
                 { title: 'valid input', steps: ['enter 50'] },
                 { title: 'below min', steps: ['enter -1'] },
@@ -101,7 +101,7 @@ describe('RED: G1 — catch vazio sem log', () => {
 
         const { rootLogger } = await import('../../logger.js');
         const warnSpy = vi.spyOn(rootLogger, 'warn');
-        const { computeCoverageMetrics } = await import('../../benchmark-metrics.js');
+        const { computeCoverageMetrics } = await import('../../quality/benchmark-metrics.js');
         const result = computeCoverageMetrics('not json', createFixture());
 
         expect(warnSpy).toHaveBeenCalledWith(expect.stringContaining('Failed to compute benchmark metrics'));

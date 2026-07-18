@@ -11,7 +11,7 @@ vi.mock('../../shared/logger', () => ({
     },
 }));
 vi.mock('../../shared/state', () => ({ load: vi.fn(), update: vi.fn() }));
-vi.mock('../../shared/prompt', () => ({
+vi.mock('../../shared/ui/prompt.js', () => ({
     warn: vi.fn(),
     prompt: vi.fn(),
     printSummary: vi.fn(),
@@ -24,13 +24,13 @@ vi.mock('../../shared/prompt', () => ({
     isQuiet: vi.fn().mockReturnValue(true),
 }));
 vi.mock('../../shared/quoted-string', () => ({ isPreconditionKey: vi.fn() }));
-vi.mock('../../shared/markdown', () => ({
+vi.mock('../../shared/report/markdown.js', () => ({
     md: vi.fn((s: string) => s),
     mdToHtml: vi.fn((s: string) => s),
 }));
 
 import * as CONFIG from '../../shared/config-accessor.js';
-import * as PROMPT from '../../shared/prompt.js';
+import * as PROMPT from '../../shared/ui/prompt.js';
 import * as STATE from '../../shared/state.js';
 
 describe('HandleDryRun', () => {

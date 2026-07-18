@@ -1,10 +1,10 @@
 import { getDataHub } from '../../shared/data-hub/global-hub.js';
 import { calcFlakinessEntries } from '../../shared/data-hub/compute/flakiness-entries.js';
-import { calculateHealthScore } from '../../shared/health-score.js';
-import { calculateReleaseScore, generateReleaseScoreHtml } from '../../shared/release-score.js';
-import { info, warn, title, printError } from '../../shared/prompt.js';
+import { calculateHealthScore } from '../../shared/quality/health-score.js';
+import { calculateReleaseScore, generateReleaseScoreHtml } from '../../shared/quality/release-score.js';
+import { info, warn, title, printError } from '../../shared/ui/prompt.js';
 import { openWithFallback } from '../../shared/open.js';
-import { writeReport } from '../../shared/temp-dir.js';
+import { writeReport } from '../../shared/infra/temp-dir.js';
 import type { CommandContext } from './context.js';
 
 async function handler(c: CommandContext): Promise<boolean | void> {

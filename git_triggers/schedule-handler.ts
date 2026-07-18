@@ -1,36 +1,36 @@
 /** Scheduled tasks — run metrics, flakiness analysis, flaky auto-actions, and generate scheduled reports. */
-import { print, success, warn, info, prompt, printError, withSpinner } from '../shared/prompt.js';
+import { print, success, warn, info, prompt, printError, withSpinner } from '../shared/ui/prompt.js';
 import type { GitProvider, StateContainer } from '../shared/types.js';
 import { calcFlakinessEntries } from '../shared/data-hub/compute/flakiness-entries.js';
 import { calcTestDurationMap } from '../shared/data-hub/compute/test-duration-map.js';
 import { calcRunFailureRate } from '../shared/data-hub/compute/run-failure-rate.js';
-import { calculateHealthScore } from '../shared/health-score.js';
-import { aggregateDefectTrends, generateDefectTrendHtml } from '../shared/defect-trend.js';
-import { calculateReleaseScore, generateReleaseScoreHtml } from '../shared/release-score.js';
-import { computeAiEffectiveness, generateAiEffectivenessHtml } from '../shared/ai-effectiveness.js';
-import { buildTraceabilityMatrix, generateTraceabilityHtml } from '../shared/traceability-matrix.js';
+import { calculateHealthScore } from '../shared/quality/health-score.js';
+import { aggregateDefectTrends, generateDefectTrendHtml } from '../shared/quality/defect-trend.js';
+import { calculateReleaseScore, generateReleaseScoreHtml } from '../shared/quality/release-score.js';
+import { computeAiEffectiveness, generateAiEffectivenessHtml } from '../shared/report/ai-effectiveness.js';
+import { buildTraceabilityMatrix, generateTraceabilityHtml } from '../shared/report/traceability-matrix.js';
 
 import { openWithFallback } from '../shared/open.js';
-import { generateFlakinessHtml } from '../shared/flakiness-dashboard.js';
-import { analyzeBacklogHealth, generateBacklogHealthHtml } from '../shared/backlog-health.js';
-import { aggregateDefectSeasonality, generateSeasonalityHtml } from '../shared/defect-seasonality.js';
-import { detectSilentRegression, generateSilentRegressionHtml } from '../shared/silent-regression.js';
-import { compareAiVsManual, generateAiComparisonHtml } from '../shared/ai-comparison.js';
-import { computeCrossSquadBenchmark, generateBenchmarkHtml } from '../shared/cross-squad-benchmark.js';
-import { buildDeveloperProfile, generateDeveloperProfileHtml } from '../shared/developer-profile.js';
-import { analyzeSuiteOptimization, generateOptimizationHtml } from '../shared/suite-optimization.js';
-import { buildIncidentReport, generateIncidentReportHtml } from '../shared/incident-report.js';
-import { analyzePipelineImpact, generateImpactAlertHtml } from '../shared/impact-alert.js';
-import { calculatePipelineCost, generatePipelineCostHtml } from '../shared/pipeline-cost.js';
-import { calculateRequirementScores, generateRequirementScoreHtml } from '../shared/requirement-score.js';
+import { generateFlakinessHtml } from '../shared/report/flakiness-dashboard.js';
+import { analyzeBacklogHealth, generateBacklogHealthHtml } from '../shared/report/backlog-health.js';
+import { aggregateDefectSeasonality, generateSeasonalityHtml } from '../shared/quality/defect-seasonality.js';
+import { detectSilentRegression, generateSilentRegressionHtml } from '../shared/quality/silent-regression.js';
+import { compareAiVsManual, generateAiComparisonHtml } from '../shared/report/ai-comparison.js';
+import { computeCrossSquadBenchmark, generateBenchmarkHtml } from '../shared/quality/cross-squad-benchmark.js';
+import { buildDeveloperProfile, generateDeveloperProfileHtml } from '../shared/quality/developer-profile.js';
+import { analyzeSuiteOptimization, generateOptimizationHtml } from '../shared/quality/suite-optimization.js';
+import { buildIncidentReport, generateIncidentReportHtml } from '../shared/report/incident-report.js';
+import { analyzePipelineImpact, generateImpactAlertHtml } from '../shared/report/impact-alert.js';
+import { calculatePipelineCost, generatePipelineCostHtml } from '../shared/quality/pipeline-cost.js';
+import { calculateRequirementScores, generateRequirementScoreHtml } from '../shared/quality/requirement-score.js';
 import {
     generateGitMetricsRuns,
     generateGitFailureClassifications,
     getLastGitLogError,
-} from '../shared/git-metrics-adapter.js';
-import { runQualityGate, formatQualityGateText } from '../shared/quality-gate.js';
+} from '../shared/ci/git-metrics-adapter.js';
+import { runQualityGate, formatQualityGateText } from '../shared/quality/quality-gate.js';
 
-import { writeReport } from '../shared/temp-dir.js';
+import { writeReport } from '../shared/infra/temp-dir.js';
 import {
     currentProvider,
     pushHistory,

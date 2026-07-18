@@ -11,8 +11,8 @@
  */
 import * as fc from 'fast-check';
 import { describe, expect, it, vi } from 'vitest';
-import { analyzePipelineImpact, generateImpactAlertHtml } from '../impact-alert.js';
-import type { ImpactAlertResult } from '../impact-alert.js';
+import { analyzePipelineImpact, generateImpactAlertHtml } from '../report/impact-alert.js';
+import type { ImpactAlertResult } from '../report/impact-alert.js';
 
 vi.mock('../logger.js', () => ({
     rootLogger: { error: vi.fn(), info: vi.fn(), child: vi.fn().mockReturnThis() },

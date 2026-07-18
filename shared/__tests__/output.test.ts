@@ -1,6 +1,6 @@
-import { Output, defaultOutput } from '../output.js';
+import { Output, defaultOutput } from '../ui/output.js';
 import type { Mock } from 'vitest';
-import * as boxModule from '../box.js';
+import * as boxModule from '../ui/box.js';
 
 describe('Output', () => {
     let stdoutWriteSpy: Mock;

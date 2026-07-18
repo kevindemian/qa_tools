@@ -1,11 +1,11 @@
 /** MR/PR handler — process merge requests: AI description, test-impact, and scheduling. */
-import { print, success, warn, info, prompt, confirm, printError, withSpinner, divider } from '../shared/prompt.js';
+import { print, success, warn, info, prompt, confirm, printError, withSpinner, divider } from '../shared/ui/prompt.js';
 import type { GitProvider, MergeRequestInfo } from '../shared/types.js';
 import { currentProvider, pushHistory } from './session-state.js';
 import { generatePrDescription } from './ai-pr-desc.js';
 import { assessTestImpact } from './ai-test-impact.js';
 import { nivelarBranches } from './nivelar.js';
-import { reportsDir } from '../shared/temp-dir.js';
+import { reportsDir } from '../shared/infra/temp-dir.js';
 
 export async function nivelarBranchesWrapper(gitlab: GitProvider): Promise<void> {
     await nivelarBranches(gitlab, { pushHistory });

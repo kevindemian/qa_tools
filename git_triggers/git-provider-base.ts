@@ -1,7 +1,7 @@
 /** Base class for Git provider clients (GitHub/GitLab) — shared API call + error handling. */
 import type { JsonObject, DirEntry, GitLabTestReport, WorkflowUsage } from '../shared/types.js';
 import { classifyGitError } from '../shared/errors.js';
-import type { createHttpClient } from '../shared/http-client.js';
+import type { createHttpClient } from '../shared/infra/http-client.js';
 
 type HttpClient = ReturnType<typeof createHttpClient>;
 

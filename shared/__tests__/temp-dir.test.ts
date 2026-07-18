@@ -9,7 +9,7 @@ import {
     writeEphemeral,
     ensureDirs,
     registerCleanup,
-} from '../temp-dir.js';
+} from '../infra/temp-dir.js';
 import { rootLogger } from '../logger.js';
 
 vi.mock('fs', (): Pick<typeof fs, 'mkdirSync' | 'writeFileSync' | 'existsSync' | 'rmSync'> => ({

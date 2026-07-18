@@ -11,7 +11,7 @@
  */
 import * as fc from 'fast-check';
 import { describe, expect, it, beforeEach, vi } from 'vitest';
-import { buildIncidentReport, generateIncidentReportHtml } from '../incident-report.js';
+import { buildIncidentReport, generateIncidentReportHtml } from '../report/incident-report.js';
 
 vi.mock('../logger', () => ({
     rootLogger: { error: vi.fn(), warn: vi.fn(), info: vi.fn(), child: vi.fn().mockReturnThis() },

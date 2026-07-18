@@ -1,7 +1,7 @@
 import type { AxiosInstance } from '../shared/deps.js';
 import type { JsonObject } from '../shared/types.js';
 import { classifyGitError } from '../shared/errors.js';
-import { checkCircuitBreaker, recordCircuitFailure, recordCircuitSuccess } from '../shared/circuit-breaker.js';
+import { checkCircuitBreaker, recordCircuitFailure, recordCircuitSuccess } from '../shared/infra/circuit-breaker.js';
 
 export function projectPath(owner: string, repo: string): string {
     return '/projects/' + encodeURIComponent(owner ? owner + '/' + repo : repo);

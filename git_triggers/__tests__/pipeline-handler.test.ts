@@ -1,4 +1,4 @@
-vi.mock('../../shared/prompt', () => {
+vi.mock('../../shared/ui/prompt.js', () => {
     const mockConfirm = vi.fn();
     return {
         print: vi.fn(),
@@ -30,13 +30,13 @@ vi.mock('../../shared/state', () => ({
     }),
 }));
 
-vi.mock('../../shared/http-client', () => ({ sleep: vi.fn() }));
-vi.mock('../../shared/git-sha.js', () => ({
+vi.mock('../../shared/infra/http-client.js', () => ({ sleep: vi.fn() }));
+vi.mock('../../shared/ci/git-sha.js', () => ({
     getHeadSha: vi.fn().mockReturnValue('pipeline-sha-999'),
     getCurrentBranch: vi.fn().mockReturnValue('main'),
     detectGitDir: vi.fn().mockReturnValue('/project'),
 }));
-vi.mock('../../shared/store-backend.js', () => ({
+vi.mock('../../shared/infra/store-backend.js', () => ({
     detectStoreBackend: vi.fn(),
     detectProjectGitDir: vi.fn().mockReturnValue('/project'),
 }));
@@ -67,12 +67,12 @@ vi.mock('../llm-pipeline', () => ({
     offerPipelineFailureAnalysis: vi.fn(),
 }));
 
-vi.mock('../../shared/bug-report', () => ({
+vi.mock('../../shared/report/bug-report.js', () => ({
     collectAutomated: vi.fn(() => ({ description: '', title: 'Bug', severity: 'major' })),
     fileToJira: vi.fn(() => 'BUG-1'),
 }));
 
-vi.mock('../../shared/jira-client', () => ({
+vi.mock('../../shared/jira/jira-client.js', () => ({
     __esModule: true,
     default: vi.fn(function () {
         return {
@@ -81,7 +81,7 @@ vi.mock('../../shared/jira-client', () => ({
     }),
 }));
 
-import { success, warn, info, prompt, confirm, printError } from '../../shared/prompt.js';
+import { success, warn, info, prompt, confirm, printError } from '../../shared/ui/prompt.js';
 import { pushHistory, setIsBusy, MSG_OPERATION_CANCELED } from '../session-state.js';
 import {
     isComplete,
@@ -93,9 +93,9 @@ import {
     downloadTestArtifacts,
     collectTestResults,
 } from '../pipeline-handler.js';
-import type JiraClient from '../../shared/jira-client.js';
+import type JiraClient from '../../shared/jira/jira-client.js';
 import type JiraLinkManager from '../../jira_management/jira_link_manager.js';
-import type { AnalysisReport } from '../../shared/failure-analysis.js';
+import type { AnalysisReport } from '../../shared/validation/failure-analysis.js';
 import type { ParseResult } from '../../shared/result_parser.js';
 import { createMockGitProvider } from '../../shared/test-utils/factories/index.js';
 import { makeDataHubMock } from '../../shared/test-utils/factories/data-hub-mock.js';
@@ -103,7 +103,7 @@ import { getDataHub } from '../../shared/data-hub/global-hub.js';
 import * as testResultsModule from '../test-results.js';
 import * as stateModule from '../../shared/state.js';
 import * as llmModule from '../llm-pipeline.js';
-import * as bugReportModule from '../../shared/bug-report.js';
+import * as bugReportModule from '../../shared/report/bug-report.js';
 
 const mockPrompt = vi.mocked(prompt);
 const mockConfirm = vi.mocked(confirm);

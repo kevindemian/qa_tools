@@ -17,7 +17,7 @@ describe('Llm Metrics', () => {
 
     async function loadMod() {
         vi.resetModules();
-        const mod = await import('../llm-metrics.js');
+        const mod = await import('../llm/llm-metrics.js');
         mod.clearLlmMetrics();
         return mod;
     }

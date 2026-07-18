@@ -52,11 +52,11 @@ const mockHtml = vi.hoisted(() => ({
     generateHtmlReport: vi.fn(),
 }));
 
-vi.mock('../health-score.js', () => mockHealthScore);
-vi.mock('../quality-gate.js', () => mockQualityGate);
-vi.mock('../github-check-run.js', () => mockCheckRun);
-vi.mock('../github-pr-comment.js', () => mockPRComment);
-vi.mock('../report-html.js', () => mockHtml);
+vi.mock('../quality/health-score.js', () => mockHealthScore);
+vi.mock('../quality/quality-gate.js', () => mockQualityGate);
+vi.mock('../ci/github-check-run.js', () => mockCheckRun);
+vi.mock('../ci/github-pr-comment.js', () => mockPRComment);
+vi.mock('../report/report-html.js', () => mockHtml);
 vi.mock('../data-hub/global-hub.js', () => ({
     getDataHub: vi.fn().mockReturnValue({
         saveParseResult: vi.fn(),

@@ -1,14 +1,14 @@
 /** Tests for case24 handler — launches first-run wizard on demand. */
-vi.mock('../../../shared/first-run', () => ({
+vi.mock('../../../shared/ui/first-run.js', () => ({
     maybeRunFirstRunWizard: vi.fn(),
 }));
-vi.mock('../../../shared/prompt', () => ({
+vi.mock('../../../shared/ui/prompt.js', () => ({
     info: vi.fn(),
     printError: vi.fn(),
 }));
 
-import { maybeRunFirstRunWizard } from '../../../shared/first-run.js';
-import { info, printError } from '../../../shared/prompt.js';
+import { maybeRunFirstRunWizard } from '../../../shared/ui/first-run.js';
+import { info, printError } from '../../../shared/ui/prompt.js';
 import { createMockContext } from '../../../shared/test-utils/factories/context-factory.js';
 import handlerModule from '../case24.js';
 

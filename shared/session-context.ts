@@ -14,14 +14,14 @@ function getErrorMessage(err: unknown): string {
     }
     return String(err);
 }
-import { withSpinner } from './prompt.js';
-import { getHeadSha, getCurrentBranch } from './git-sha.js';
+import { withSpinner } from './ui/prompt.js';
+import { getHeadSha, getCurrentBranch } from './ci/git-sha.js';
 import type { DataHub, ReportMeta } from './types/data-hub.js';
 // ci-test-downloader removed — DataHub.raw.parsedArtifacts is SSOT (Invariant 6)
 import { isDataHubInitialized, getDataHub } from './data-hub/global-hub.js';
 import type { ParseResult } from './result_parser.js';
 import { rootLogger } from './logger.js';
-import { statsFromTests } from './report-utils.js';
+import { statsFromTests } from './report/report-utils.js';
 
 interface SessionCountersItem {
     op: string;

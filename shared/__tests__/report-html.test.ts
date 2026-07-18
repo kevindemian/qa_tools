@@ -3,9 +3,9 @@
  */
 
 import { nonNull, nullAs } from '../test-utils.js';
-import { generateHtmlReport, generateCoverageHtml, generateReportWithFallback } from '../report-html.js';
+import { generateHtmlReport, generateCoverageHtml, generateReportWithFallback } from '../report/report-html.js';
 import type { FlatTest } from '../result_parser.js';
-import type { CoverageEpic, TestRunTab } from '../report-types.js';
+import type { CoverageEpic, TestRunTab } from '../report/report-types.js';
 
 vi.mock('../logger', () => ({
     rootLogger: { error: vi.fn(), info: vi.fn(), child: vi.fn().mockReturnThis() },

@@ -1,4 +1,4 @@
-vi.mock('../../shared/prompt', () => ({
+vi.mock('../../shared/ui/prompt.js', () => ({
     info: vi.fn(),
     warn: vi.fn(),
 }));
@@ -27,7 +27,7 @@ import JiraLinkManager, {
     matchPreconditionByDualThreshold,
 } from '../jira_link_manager.js';
 import { rootLogger } from '../../shared/logger.js';
-import { tempDirPath } from '../../shared/temp-dir.js';
+import { tempDirPath } from '../../shared/infra/temp-dir.js';
 
 const rootLoggerWarnSpy = vi.spyOn(rootLogger, 'warn');
 

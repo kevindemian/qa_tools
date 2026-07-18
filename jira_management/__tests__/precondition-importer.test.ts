@@ -1,4 +1,4 @@
-vi.mock('../../shared/prompt', () => ({
+vi.mock('../../shared/ui/prompt.js', () => ({
     info: vi.fn(),
     warn: vi.fn(),
     extractErrorMessage: vi.fn((err: unknown) => String(err)),
@@ -19,7 +19,7 @@ const hoistedXray = vi.hoisted(() => ({
     graphqlMutation: vi.fn().mockResolvedValue(undefined),
     authenticate: vi.fn().mockResolvedValue('tok'),
 }));
-vi.mock('../../shared/xray-cloud-client', () => {
+vi.mock('../../shared/jira/xray-cloud-client.js', () => {
     class XrayCloudClientMock {
         addPreconditionsToTest(...args: unknown[]) {
             return (hoistedXray.addPreconditionsToTest as unknown as (...a: unknown[]) => unknown)(...args);

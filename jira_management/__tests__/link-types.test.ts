@@ -9,7 +9,7 @@ import type { Mock } from 'vitest';
 import path from 'path';
 import { LinkTypeManager } from '../link-types.js';
 import { rootLogger } from '../../shared/logger.js';
-import { tempDirPath } from '../../shared/temp-dir.js';
+import { tempDirPath } from '../../shared/infra/temp-dir.js';
 
 const rootLoggerWarnSpy = vi.spyOn(rootLogger, 'warn');
 import { nonNull } from '../../shared/test-utils.js';

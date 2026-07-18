@@ -1,7 +1,11 @@
 /** Interactive bug-report flow — collect details and create Jira issue. */
 
-import { ask, askMultiline, askConfirm, info, printError, title } from '../../shared/prompt.js';
-import { collectManual, generateBugReportFromDescription, interactiveBugReportFlow } from '../../shared/bug-report.js';
+import { ask, askMultiline, askConfirm, info, printError, title } from '../../shared/ui/prompt.js';
+import {
+    collectManual,
+    generateBugReportFromDescription,
+    interactiveBugReportFlow,
+} from '../../shared/report/bug-report.js';
 import type { CommandContext } from './context.js';
 import type { BugReport } from '../../shared/types.js';
 

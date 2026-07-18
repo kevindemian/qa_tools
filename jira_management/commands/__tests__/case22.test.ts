@@ -14,14 +14,14 @@ vi.mock('fs', () => ({
     existsSync: mockFsExistsSync,
     readFileSync: mockFsReadFileSync,
 }));
-vi.mock('../../../shared/prompt');
+vi.mock('../../../shared/ui/prompt.js');
 vi.mock('../../../shared/config-accessor.js', () => ({
     default: {
         get: vi.fn(),
         getAllPrefixed: vi.fn(() => ({})),
     },
 }));
-vi.mock('../../../shared/test-impact', () => ({
+vi.mock('../../../shared/quality/test-impact.js', () => ({
     analyzeTestImpact: vi.fn(),
 }));
 vi.mock('../../../shared/data-hub/global-hub.js', () => ({
@@ -41,8 +41,8 @@ vi.mock('../../../shared/logger', () => ({
 
 import { execFileSync } from 'child_process';
 import { existsSync, PathLike } from 'fs';
-import { ask, info, warn, title, printError } from '../../../shared/prompt.js';
-import { analyzeTestImpact } from '../../../shared/test-impact.js';
+import { ask, info, warn, title, printError } from '../../../shared/ui/prompt.js';
+import { analyzeTestImpact } from '../../../shared/quality/test-impact.js';
 import { getDataHub } from '../../../shared/data-hub/global-hub.js';
 import { calcFlakinessEntries } from '../../../shared/data-hub/compute/flakiness-entries.js';
 import { makeMockCommandContext } from '../../../shared/test-utils.js';

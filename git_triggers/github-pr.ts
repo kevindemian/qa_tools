@@ -1,5 +1,5 @@
 import type { AxiosInstance } from '../shared/deps.js';
-import { info } from '../shared/prompt.js';
+import { info } from '../shared/ui/prompt.js';
 import { classifyGitError } from '../shared/errors.js';
 import { ExternalError } from '../shared/errors.js';
 import type { MergeRequestInfo, JsonObject } from '../shared/types.js';

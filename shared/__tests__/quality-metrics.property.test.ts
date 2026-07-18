@@ -10,8 +10,8 @@
  */
 import * as fc from 'fast-check';
 import { describe, expect, it } from 'vitest';
-import { QualityMetricsCollector } from '../quality-metrics.js';
-import type { QualityMetricsSnapshot } from '../quality-metrics.js';
+import { QualityMetricsCollector } from '../quality/quality-metrics.js';
+import type { QualityMetricsSnapshot } from '../quality/quality-metrics.js';
 
 /* ── Helpers ─────────────────────────────────────────────────── */
 

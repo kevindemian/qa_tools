@@ -27,7 +27,7 @@ import { execFileSync } from 'child_process';
 import { existsSync, readFileSync } from 'fs';
 import type { PathLike } from 'fs';
 import { nonNull } from '../test-utils.js';
-import { analyzeTestImpact, generateTestSelectionJson } from '../test-impact.js';
+import { analyzeTestImpact, generateTestSelectionJson } from '../quality/test-impact.js';
 
 const mockExecFileSync = vi.mocked(execFileSync);
 const mockExistsSync = vi.mocked(existsSync);

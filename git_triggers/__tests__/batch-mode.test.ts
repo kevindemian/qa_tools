@@ -1,6 +1,6 @@
 import os from 'os';
 import path from 'path';
-vi.mock('../../shared/prompt', () => ({
+vi.mock('../../shared/ui/prompt.js', () => ({
     print: vi.fn(),
     success: vi.fn(),
     warn: vi.fn(),
@@ -67,7 +67,7 @@ vi.mock('../llm-pipeline', () => ({ offerPipelineFailureAnalysis: vi.fn() }));
 
 vi.mock('../test-results', () => ({ collectTestResults: vi.fn(() => null) }));
 
-vi.mock('../../shared/flakiness-dashboard', () => ({ generateFlakinessHtml: vi.fn(() => '<html>') }));
+vi.mock('../../shared/report/flakiness-dashboard.js', () => ({ generateFlakinessHtml: vi.fn(() => '<html>') }));
 
 vi.mock('../../shared/data-hub/global-hub.js', () => ({
     getDataHub: vi.fn(() => ({
@@ -83,13 +83,13 @@ vi.mock('fs', () => ({
     mkdirSync: vi.fn(),
     existsSync: vi.fn(() => false),
 }));
-vi.mock('../../shared/temp-dir', () => ({
+vi.mock('../../shared/infra/temp-dir.js', () => ({
     writeReport: vi.fn(() => path.join(os.tmpdir(), 'qa-flakiness-test.html')),
 }));
 
 import Config from '../../shared/config-accessor.js';
 const setAutoConfirmSpy = vi.spyOn(Config, 'setAutoConfirm');
-import { success, error, printError } from '../../shared/prompt.js';
+import { success, error, printError } from '../../shared/ui/prompt.js';
 import { pushHistory, getProjects } from '../session-state.js';
 import { pollPipeline } from '../pipeline-handler.js';
 import { tryBatchMode } from '../batch-mode.js';

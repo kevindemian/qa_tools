@@ -1,10 +1,10 @@
 import { rootLogger } from '../logger.js';
-import { buildHtmlPage, buildErrorPage } from '../html-factory.js';
-import { buildDeveloperProfile, generateDeveloperProfileHtml } from '../developer-profile.js';
+import { buildHtmlPage, buildErrorPage } from '../report/html-factory.js';
+import { buildDeveloperProfile, generateDeveloperProfileHtml } from '../quality/developer-profile.js';
 
 vi.mock('../logger');
-vi.mock('../html-factory');
-vi.mock('../report-styles', () => ({ buildCss: () => ':root{}' }));
+vi.mock('../report/html-factory.js');
+vi.mock('../report/report-styles.js', () => ({ buildCss: () => ':root{}' }));
 vi.mock('../escape', () => ({ sanitizeHtml: (s: string) => s }));
 vi.mock('../primitives', () => ({
     Badge: ({ variant, children }: { variant?: string; children: string }) =>

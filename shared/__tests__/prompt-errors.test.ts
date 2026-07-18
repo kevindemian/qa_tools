@@ -1,12 +1,12 @@
 vi.mock('readline-sync', () => ({ question: vi.fn() }));
-vi.mock('../output', () => ({
+vi.mock('../ui/output.js', () => ({
     defaultOutput: { print: vi.fn() },
 }));
-vi.mock('../box', () => ({
+vi.mock('../ui/box.js', () => ({
     box: vi.fn<(...args: [string[]]) => string>((lines) => lines.filter(Boolean).join('\n')),
     divider: () => '',
 }));
-vi.mock('../prompt-format', () => ({
+vi.mock('../ui/prompt-format.js', () => ({
     isQuiet: vi.fn(() => false),
     getConfig: vi.fn(),
     icon: vi.fn(() => '!'),
@@ -19,9 +19,9 @@ vi.mock('../prompt-format', () => ({
     STACK_TRACE_LINES: 4,
 }));
 
-import { humanizeError, extractErrorMessage, printError, CancelError, onError } from '../prompt-errors.js';
-import { getConfig, isQuiet } from '../prompt-format.js';
-import { defaultOutput as output } from '../output.js';
+import { humanizeError, extractErrorMessage, printError, CancelError, onError } from '../ui/prompt-errors.js';
+import { getConfig, isQuiet } from '../ui/prompt-format.js';
+import { defaultOutput as output } from '../ui/output.js';
 import { createMockConfigInstance } from '../test-utils/factories/index.js';
 
 describe('HumanizeError', () => {

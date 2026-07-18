@@ -12,7 +12,7 @@
  */
 import * as fc from 'fast-check';
 import { describe, expect, it, vi } from 'vitest';
-import { calculatePipelineCost, generatePipelineCostHtml } from '../pipeline-cost.js';
+import { calculatePipelineCost, generatePipelineCostHtml } from '../quality/pipeline-cost.js';
 import type { DataHub } from '../types/data-hub.js';
 import type { PipelineRun } from '../types/ci-cd.js';
 import { createTestHub } from './test-hub.js';

@@ -11,7 +11,7 @@ import createTests from '../../jira_management/create_tests.js';
 import { rootLogger } from '../../shared/logger.js';
 import { nonNull } from '../../shared/test-utils.js';
 import { setupHandlers, resetHandlers } from '../handlers.js';
-import { setTestSleep } from '../../shared/http-client.js';
+import { setTestSleep } from '../../shared/infra/http-client.js';
 
 const { createTestsFromCsv } = createTests;
 

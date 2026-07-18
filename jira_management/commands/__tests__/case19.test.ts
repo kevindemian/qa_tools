@@ -1,6 +1,6 @@
 import { expect } from 'vitest';
 
-vi.mock('../../../shared/prompt');
+vi.mock('../../../shared/ui/prompt.js');
 vi.mock('../../../shared/logger');
 
 vi.mock('../../../shared/data-hub/global-hub.js', () => ({
@@ -15,11 +15,11 @@ vi.mock('../../../shared/data-hub/compute/metrics-trends.js', () => ({
     calcMetricsTrends: vi.fn(),
 }));
 
-vi.mock('../../../shared/health-score', () => ({
+vi.mock('../../../shared/quality/health-score.js', () => ({
     calculateHealthScore: vi.fn(),
 }));
 
-vi.mock('../../../shared/run-comparison', () => ({
+vi.mock('../../../shared/quality/run-comparison.js', () => ({
     compareRuns: vi.fn(),
 }));
 
@@ -34,11 +34,11 @@ vi.mock('../../../shared/logger', () => ({
     },
 }));
 
-import * as promptModule from '../../../shared/prompt.js';
+import * as promptModule from '../../../shared/ui/prompt.js';
 import * as globalHubModule from '../../../shared/data-hub/global-hub.js';
 import * as flakinessModule from '../../../shared/data-hub/compute/flakiness-entries.js';
 import * as trendsModule from '../../../shared/data-hub/compute/metrics-trends.js';
-import * as healthScoreModule from '../../../shared/health-score.js';
+import * as healthScoreModule from '../../../shared/quality/health-score.js';
 import * as coverageModule from '../../coverage.js';
 import case19Module from '../case19.js';
 import { createMockContext } from '../../../shared/test-utils/factories/context-factory.js';

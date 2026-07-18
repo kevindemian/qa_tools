@@ -1,5 +1,5 @@
 /** View project versions from Jira. */
-import { info, error, divider, printError } from '../../shared/prompt.js';
+import { info, error, divider, printError } from '../../shared/ui/prompt.js';
 import { rootLogger } from '../../shared/logger.js';
 import type { CommandContext } from './context.js';
 

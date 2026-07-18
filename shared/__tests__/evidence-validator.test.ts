@@ -1,5 +1,5 @@
-import { verifyEvidence, evidenceValidationResult } from '../evidence-validator.js';
-import type { ValidationContext } from '../artifact-validator.js';
+import { verifyEvidence, evidenceValidationResult } from '../validation/evidence-validator.js';
+import type { ValidationContext } from '../validation/artifact-validator.js';
 
 function makeCtx(input: string): ValidationContext {
     return { inputRaw: input, outputRaw: {}, artifactType: 'test-suite' };

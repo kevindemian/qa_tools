@@ -10,8 +10,8 @@ import {
     calculateBacklogScore,
     analyzeBacklogHealth,
     generateBacklogHealthHtml,
-} from '../backlog-health.js';
-import type { BacklogHealthIssue, BacklogHealthResult } from '../backlog-health.js';
+} from '../report/backlog-health.js';
+import type { BacklogHealthIssue, BacklogHealthResult } from '../report/backlog-health.js';
 
 const now = new Date();
 function daysAgo(d: number): string {

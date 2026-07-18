@@ -1,6 +1,6 @@
 /** Add tasks to sprint — assign issue keys to the current active sprint. */
 import { formatErr } from '../../shared/errors.js';
-import { print, success, warn, title, ask, askConfirm, printError, printSummary } from '../../shared/prompt.js';
+import { print, success, warn, title, ask, askConfirm, printError, printSummary } from '../../shared/ui/prompt.js';
 import { rootLogger } from '../../shared/logger.js';
 import type { CommandContext } from './context.js';
 import { OPERATION_CANCELLED, ERR_ADD_TASKS_TO_SPRINT } from '../constants.js';

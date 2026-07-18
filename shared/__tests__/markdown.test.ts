@@ -1,4 +1,4 @@
-import { md, mdBox, mdToHtml, __setLexer } from '../markdown.js';
+import { md, mdBox, mdToHtml, __setLexer } from '../report/markdown.js';
 
 describe('Md', () => {
     afterEach(() => {

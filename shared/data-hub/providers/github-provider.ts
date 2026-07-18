@@ -4,7 +4,7 @@
  * Adapts GitHubManager (GitProvider) to the DataProvider interface.
  * Fetches raw CI/CD data from GitHub Actions API.
  */
-import { extractErrorMessage, humanizeError } from '../../prompt-errors.js';
+import { extractErrorMessage, humanizeError } from '../../ui/prompt-errors.js';
 import type {
     GitProvider,
     PipelineJob,
@@ -76,7 +76,7 @@ import {
     type StepConclusion,
     type FailureInput,
 } from '../extractors/failure-classifier.js';
-import { getCheckRuns } from '../../github-check-run.js';
+import { getCheckRuns } from '../../ci/github-check-run.js';
 import { buildCommitLog } from '../extractors/commit-log-extractor.js';
 
 const DEFAULT_MAX_ARTIFACTS_PER_RUN = 5;

@@ -1,4 +1,4 @@
-vi.mock('../llm-client', () => ({ llmPrompt: vi.fn() }));
+vi.mock('../llm/llm-client.js', () => ({ llmPrompt: vi.fn() }));
 vi.mock('../logger', () => ({
     rootLogger: {
         warn: vi.fn(),
@@ -54,8 +54,8 @@ vi.mock('../prompts/__fixtures__/index', () => ({
     ]),
 }));
 
-import { runBenchmark } from '../llm-benchmark.js';
-import { llmPrompt } from '../llm-client.js';
+import { runBenchmark } from '../llm/llm-benchmark.js';
+import { llmPrompt } from '../llm/llm-client.js';
 import type { Mock } from 'vitest';
 import { withEnv } from '../test-utils.js';
 

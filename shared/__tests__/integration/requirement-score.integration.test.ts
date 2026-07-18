@@ -78,7 +78,7 @@ describe('Requirement Score.Integration', () => {
                 expect.hasAssertions();
 
                 const { calculateRequirementScores, generateRequirementScoreHtml } =
-                    await import('../../requirement-score.js');
+                    await import('../../quality/requirement-score.js');
                 const result = calculateRequirementScores(makeRecords());
                 const html = generateRequirementScoreHtml(result);
 
@@ -96,7 +96,7 @@ describe('Requirement Score.Integration', () => {
                 expect.hasAssertions();
 
                 const { calculateRequirementScores, generateRequirementScoreHtml } =
-                    await import('../../requirement-score.js');
+                    await import('../../quality/requirement-score.js');
                 const result = calculateRequirementScores(makeRecords());
                 const html = generateRequirementScoreHtml(result);
 
@@ -112,7 +112,7 @@ describe('Requirement Score.Integration', () => {
                 expect.hasAssertions();
 
                 const { calculateRequirementScores, generateRequirementScoreHtml } =
-                    await import('../../requirement-score.js');
+                    await import('../../quality/requirement-score.js');
                 const result = calculateRequirementScores([]);
                 const html = generateRequirementScoreHtml(result);
 
@@ -126,7 +126,7 @@ describe('Requirement Score.Integration', () => {
             it('returns error page for null result', async () => {
                 expect.hasAssertions();
 
-                const { generateRequirementScoreHtml } = await import('../../requirement-score.js');
+                const { generateRequirementScoreHtml } = await import('../../quality/requirement-score.js');
                 const html = generateRequirementScoreHtml(null);
 
                 expect(html).toContain('Requirement Score Report Error');
@@ -135,7 +135,7 @@ describe('Requirement Score.Integration', () => {
             it('returns error page for undefined result', async () => {
                 expect.hasAssertions();
 
-                const { generateRequirementScoreHtml } = await import('../../requirement-score.js');
+                const { generateRequirementScoreHtml } = await import('../../quality/requirement-score.js');
                 const html = generateRequirementScoreHtml(undefined);
 
                 expect(html).toContain('Requirement Score Report Error');
@@ -147,7 +147,7 @@ describe('Requirement Score.Integration', () => {
                 expect.hasAssertions();
 
                 const { calculateRequirementScores, generateRequirementScoreHtml } =
-                    await import('../../requirement-score.js');
+                    await import('../../quality/requirement-score.js');
                 const result = calculateRequirementScores(makeRecords());
                 const html = generateRequirementScoreHtml(result, 'Sprint Review Scores');
 
@@ -159,7 +159,7 @@ describe('Requirement Score.Integration', () => {
                 expect.hasAssertions();
 
                 const { calculateRequirementScores, generateRequirementScoreHtml } =
-                    await import('../../requirement-score.js');
+                    await import('../../quality/requirement-score.js');
                 const result = calculateRequirementScores(makeRecords());
                 const html = generateRequirementScoreHtml(result);
 

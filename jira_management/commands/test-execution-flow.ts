@@ -2,7 +2,7 @@
  * plus a unified preview of created tests and their TE association.
  * Extracted to a single module per SRP: all creation handlers call this instead of duplicating prompts. */
 import { formatErr } from '../../shared/errors.js';
-import { printError, ask, askMultiline, info, warn, success, title, divider } from '../../shared/prompt.js';
+import { printError, ask, askMultiline, info, warn, success, title, divider } from '../../shared/ui/prompt.js';
 import type { CommandContext } from './context.js';
 import type { TestExecutionSummary } from '../../shared/types.js';
 import TestExecutionCreator from '../test-execution-creator.js';

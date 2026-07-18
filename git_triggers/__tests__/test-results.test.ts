@@ -7,7 +7,7 @@ import {
 } from '../../shared/test-utils/factories/index.js';
 import type { ParseResult } from '../../shared/result_parser.js';
 import type { ArtifactInfo } from '../../shared/types.js';
-import JiraClient from '../../shared/jira-client.js';
+import JiraClient from '../../shared/jira/jira-client.js';
 import JiraLinkManager from '../../jira_management/jira_link_manager.js';
 
 // ── Shared mock functions ───────────────────────────────────────────────────
@@ -49,7 +49,7 @@ vi.mock('../../shared/config-accessor.js', () => {
     return { __esModule: true, default: cfg };
 });
 
-vi.mock('../../shared/prompt', () => ({
+vi.mock('../../shared/ui/prompt.js', () => ({
     warn: vi.fn(),
     info: vi.fn(),
     success: vi.fn(),
@@ -74,7 +74,7 @@ vi.mock('../../shared/logger', () => ({
     Logger: vi.fn(),
 }));
 
-vi.mock('../../shared/temp-dir', () => ({
+vi.mock('../../shared/infra/temp-dir.js', () => ({
     reportsDir: mockReportsDir,
 }));
 
@@ -104,7 +104,7 @@ vi.mock('../../shared/data-hub/global-hub.js', () => ({
     }),
 }));
 
-vi.mock('../../shared/jira-client', () => ({
+vi.mock('../../shared/jira/jira-client.js', () => ({
     __esModule: true,
     default: vi.fn(),
 }));

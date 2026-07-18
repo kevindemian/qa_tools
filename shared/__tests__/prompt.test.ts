@@ -45,10 +45,10 @@ vi.mock('@inquirer/input', () => ({ default: vi.fn().mockRejectedValue(new Error
 vi.mock('@inquirer/confirm', () => ({ default: vi.fn().mockResolvedValue(true) }));
 
 import Config from '../config-accessor.js';
-import * as promptModule from '../prompt.js';
+import * as promptModule from '../ui/prompt.js';
 
 describe('Prompt', () => {
-    let prompt: typeof import('../prompt.js');
+    let prompt: typeof import('../ui/prompt.js');
     let mockLog: MockInstance, mockError: MockInstance, mockWarn: MockInstance;
 
     beforeAll(() => {

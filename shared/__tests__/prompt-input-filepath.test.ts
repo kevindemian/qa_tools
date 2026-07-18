@@ -1,4 +1,4 @@
-vi.mock('../output', () => {
+vi.mock('../ui/output.js', () => {
     const mockOutput = { print: vi.fn() };
     return {
         Output: { isTTY: vi.fn(), isCI: vi.fn(), columns: vi.fn(() => 80), rows: vi.fn(() => 24) },
@@ -17,13 +17,13 @@ vi.mock('../logger', () => ({
     },
 }));
 
-vi.mock('../box', () => ({
+vi.mock('../ui/box.js', () => ({
     box: vi.fn((lines: string[]) => lines.join('\n')),
     divider: vi.fn(() => '---'),
     visibleWidth: vi.fn((s: string) => s.length),
 }));
 
-vi.mock('../palette', () => {
+vi.mock('../ui/palette.js', () => {
     const purpleFn = (s: string) => s;
     purpleFn.bold = (s: string) => s;
     return {
@@ -40,8 +40,8 @@ vi.mock('../palette', () => {
     };
 });
 
-vi.mock('../prompt-ui', async () => {
-    const actual = await vi.importActual<typeof import('../prompt-ui.js')>('../prompt-ui');
+vi.mock('../ui/prompt-ui.js', async () => {
+    const actual = await vi.importActual<typeof import('../ui/prompt-ui.js')>('../ui/prompt-ui.js');
     return {
         ...actual,
         getConfig: vi.fn(async () => {
@@ -73,8 +73,8 @@ import * as os from 'os';
 import * as path from 'path';
 import readlineSync from 'readline-sync';
 import ConfigAccessor from '../config-accessor.js';
-import { CancelError, getConfig } from '../prompt-ui.js';
-import { filePathCompleter, askFilePath } from '../prompt-input-filepath.js';
+import { CancelError, getConfig } from '../ui/prompt-ui.js';
+import { filePathCompleter, askFilePath } from '../ui/prompt-input-filepath.js';
 const _mockRl = mockRlForReadline;
 
 const mockReadlineQuestion = vi.spyOn(readlineSync, 'question').mockImplementation(() => '');

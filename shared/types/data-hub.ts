@@ -14,7 +14,7 @@ import type { ArtifactParseResult } from '../data-hub/artifact-parser.js';
 import type { FlatTest, ParseResult } from '../result_parser.js';
 import type { CoverageSnapshot } from './coverage.js';
 import type { QualityReport, QualityCategory } from '../data-hub/quality.js';
-import type { QuarantineStore } from '../quarantine.js';
+import type { QuarantineStore } from '../validation/quarantine.js';
 
 /** Quality engineering metrics snapshot — invariant fire rates, layer pass rates, drift detection. */
 export interface QualityMetricsSnapshot {

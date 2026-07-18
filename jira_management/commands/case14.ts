@@ -1,5 +1,5 @@
 /** Set the Cypress results directory path. */
-import { success, warn, ask } from '../../shared/prompt.js';
+import { success, warn, ask } from '../../shared/ui/prompt.js';
 import { update as updateState } from '../../shared/state.js';
 import path from 'path';
 import type { CommandContext } from './context.js';

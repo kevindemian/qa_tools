@@ -11,7 +11,7 @@
  */
 import { writeFileSync } from 'node:fs';
 import { resolve } from 'node:path';
-import { CONFIG_SCHEMA } from '../shared/config-schema.js';
+import { CONFIG_SCHEMA } from '../shared/validation/config-schema.js';
 
 const HEADER = `# ═══════════════════════════════════════════════════════════════
 # QA Tools — Environment Configuration

@@ -1,6 +1,6 @@
 import type { JsonObject } from '../shared/types.js';
 import { classifyGitError } from '../shared/errors.js';
-import { checkCircuitBreaker, recordCircuitFailure, recordCircuitSuccess } from '../shared/circuit-breaker.js';
+import { checkCircuitBreaker, recordCircuitFailure, recordCircuitSuccess } from '../shared/infra/circuit-breaker.js';
 import type { AxiosInstance } from '../shared/deps.js';
 
 export async function apiGet<T = JsonObject>(

@@ -14,8 +14,8 @@ import {
     analyzeUnassignedIssues,
     analyzeBugsWithoutTests,
     generateBacklogHealthHtml,
-} from '../backlog-health.js';
-import type { BacklogHealthIssue } from '../backlog-health.js';
+} from '../report/backlog-health.js';
+import type { BacklogHealthIssue } from '../report/backlog-health.js';
 
 /* ── Helpers ─────────────────────────────────────────────────── */
 

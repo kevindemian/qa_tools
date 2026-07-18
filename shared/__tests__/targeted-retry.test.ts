@@ -1,8 +1,8 @@
-vi.mock('../llm-metrics', () => ({
+vi.mock('../llm/llm-metrics.js', () => ({
     recordRetry: vi.fn(),
 }));
 
-import { generateWithRetry } from '../targeted-retry.js';
+import { generateWithRetry } from '../quality/targeted-retry.js';
 
 const mockLlmPrompt = vi.fn();
 

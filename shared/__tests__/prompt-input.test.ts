@@ -13,7 +13,7 @@ import {
     __setSelectMod,
     __setInputMod,
     __setConfirmMod,
-} from '../prompt-input.js';
+} from '../ui/prompt-input.js';
 
 describe('Prompt-input barrel', () => {
     it('re-exports prompt', () => {

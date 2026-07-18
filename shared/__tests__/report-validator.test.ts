@@ -1,4 +1,4 @@
-import { ReportValidator, type ValidationRule } from '../report-validator.js';
+import { ReportValidator, type ValidationRule } from '../report/report-validator.js';
 
 const testSchema: ValidationRule[] = [
     { field: 'title', required: true, type: 'string', minLength: 3 },

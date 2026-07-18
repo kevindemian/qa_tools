@@ -1,10 +1,10 @@
-vi.mock('../llm-client', () => ({
+vi.mock('../llm/llm-client.js', () => ({
     llmPrompt: vi.fn(),
 }));
 
-import { llmPrompt } from '../llm-client.js';
-import { ArtifactValidator } from '../artifact-validator.js';
-import { consensusGenerate, refineWithConsistency } from '../llm-self-consistency.js';
+import { llmPrompt } from '../llm/llm-client.js';
+import { ArtifactValidator } from '../validation/artifact-validator.js';
+import { consensusGenerate, refineWithConsistency } from '../llm/llm-self-consistency.js';
 
 const mockLlmPrompt = vi.mocked(llmPrompt);
 

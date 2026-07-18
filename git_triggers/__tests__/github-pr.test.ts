@@ -8,12 +8,12 @@ import {
     prIsApproved,
 } from '../github-pr.js';
 import { ExternalError } from '../../shared/errors.js';
-import { resetCircuitState } from '../../shared/circuit-breaker.js';
+import { resetCircuitState } from '../../shared/infra/circuit-breaker.js';
 import { nullAs, nonNull } from '../../shared/test-utils.js';
 import type { Mocked } from 'vitest';
 import { createMockAxiosInstance } from '../../shared/test-utils/factories/response-factory.js';
 import type { AxiosInstance } from '../../shared/deps.js';
-import * as prompt from '../../shared/prompt.js';
+import * as prompt from '../../shared/ui/prompt.js';
 
 vi.mock('../../shared/logger', () => ({
     Logger: vi.fn().mockImplementation(() => ({

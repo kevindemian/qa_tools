@@ -1,4 +1,4 @@
-vi.mock('../../../shared/prompt');
+vi.mock('../../../shared/ui/prompt.js');
 
 vi.mock('../../../shared/state', () => ({
     load: vi.fn().mockReturnValue({}),

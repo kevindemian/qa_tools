@@ -6,11 +6,11 @@ const mockUpdateTyped = vi.hoisted(() => vi.fn<(fn: (s: Record<string, unknown>)
 
 vi.mock('../logger');
 
-vi.mock('../quality-metrics', () => ({
+vi.mock('../quality/quality-metrics.js', () => ({
     detectDrift: mockDetectDrift,
 }));
 
-vi.mock('../llm-metrics', () => ({
+vi.mock('../llm/llm-metrics.js', () => ({
     snapshotLlmMetrics: mockSnapshot,
 }));
 
@@ -18,7 +18,7 @@ vi.mock('../state', () => ({
     updateTyped: mockUpdateTyped,
 }));
 
-import { checkQualitySignals, failureRate, severityFromLatency } from '../quality-suggester.js';
+import { checkQualitySignals, failureRate, severityFromLatency } from '../quality/quality-suggester.js';
 
 const defaultSnapshot = {
     totalRequests: 0,

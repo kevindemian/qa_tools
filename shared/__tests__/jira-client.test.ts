@@ -1,4 +1,4 @@
-vi.mock('../http-client', () => ({
+vi.mock('../infra/http-client.js', () => ({
     createHttpClient: vi.fn(() => ({
         get: mockGet,
         post: mockPost,
@@ -6,8 +6,8 @@ vi.mock('../http-client', () => ({
     })),
 }));
 
-import JiraClient from '../jira-client.js';
-import { createHttpClient } from '../http-client.js';
+import JiraClient from '../jira/jira-client.js';
+import { createHttpClient } from '../infra/http-client.js';
 
 const mockGet = vi.fn();
 const mockPost = vi.fn();

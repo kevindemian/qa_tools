@@ -1,8 +1,13 @@
 import os from 'os';
 import path from 'path';
-import { QualityMetricsCollector } from '../quality-metrics.js';
-import { recordInvariantFire, detectDrift, snapshotQualityMetrics, resetQualityMetrics } from '../quality-metrics.js';
-import type { QualityMetricsSnapshot } from '../quality-metrics.js';
+import { QualityMetricsCollector } from '../quality/quality-metrics.js';
+import {
+    recordInvariantFire,
+    detectDrift,
+    snapshotQualityMetrics,
+    resetQualityMetrics,
+} from '../quality/quality-metrics.js';
+import type { QualityMetricsSnapshot } from '../quality/quality-metrics.js';
 
 vi.mock('fs', () => ({
     existsSync: vi.fn(() => false),

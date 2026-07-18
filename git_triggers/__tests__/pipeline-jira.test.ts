@@ -1,6 +1,6 @@
 import os from 'os';
 import path from 'path';
-vi.mock('../../shared/prompt', () => ({
+vi.mock('../../shared/ui/prompt.js', () => ({
     confirm: vi.fn(),
     success: vi.fn(),
     printError: vi.fn(),
@@ -28,21 +28,21 @@ vi.mock('../session-state', () => ({
     pushHistory: vi.fn(),
 }));
 
-vi.mock('../../shared/bug-report', () => ({
+vi.mock('../../shared/report/bug-report.js', () => ({
     collectAutomated: vi.fn(),
     fileToJira: vi.fn(),
 }));
 
-import { confirm, success, printError } from '../../shared/prompt.js';
+import { confirm, success, printError } from '../../shared/ui/prompt.js';
 import Config from '../../shared/config-accessor.js';
 import { _jiraEnv } from '../test-results.js';
 import { currentProvider, pushHistory } from '../session-state.js';
-import { collectAutomated, fileToJira } from '../../shared/bug-report.js';
+import { collectAutomated, fileToJira } from '../../shared/report/bug-report.js';
 import { handleBugCreation } from '../pipeline-jira.js';
 import type { ParseResult } from '../../shared/result_parser.js';
-import type { AnalysisReport } from '../../shared/failure-analysis.js';
-import type JiraClient from '../../shared/jira-client.js';
-import { FsStoreBackend } from '../../shared/store-backend.js';
+import type { AnalysisReport } from '../../shared/validation/failure-analysis.js';
+import type JiraClient from '../../shared/jira/jira-client.js';
+import { FsStoreBackend } from '../../shared/infra/store-backend.js';
 import { setDataHub } from '../../shared/data-hub/global-hub.js';
 import { makeDataHubMock } from '../../shared/test-utils/factories/data-hub-mock.js';
 import type { DataHub } from '../../shared/types/data-hub.js';

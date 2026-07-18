@@ -1,5 +1,5 @@
-import { recalculateCoverage } from '../coverage-verifier.js';
-import type { ValidationContext } from '../artifact-validator.js';
+import { recalculateCoverage } from '../validation/coverage-verifier.js';
+import type { ValidationContext } from '../validation/artifact-validator.js';
 
 function makeCtx(input: string): ValidationContext {
     return { inputRaw: input, outputRaw: {}, artifactType: 'test-suite' };

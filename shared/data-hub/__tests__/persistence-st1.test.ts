@@ -3,7 +3,7 @@
  * through a StoreBackend and that missing files never return null (safeguard).
  */
 import { describe, it, expect, beforeEach } from 'vitest';
-import type { StoreBackend } from '../../store-backend.js';
+import type { StoreBackend } from '../../infra/store-backend.js';
 import type {
     FailureRecord,
     SecurityFinding,

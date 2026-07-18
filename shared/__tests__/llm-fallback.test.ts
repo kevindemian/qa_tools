@@ -63,14 +63,14 @@ vi.mock('../config-accessor.js', () => {
         },
     };
 });
-vi.mock('../llm-rate-limiter', async () => {
-    const original = await vi.importActual<typeof import('../llm-rate-limiter.js')>('../llm-rate-limiter');
+vi.mock('../llm/llm-rate-limiter.js', async () => {
+    const original = await vi.importActual<typeof import('../llm/llm-rate-limiter.js')>('../llm/llm-rate-limiter.js');
     return {
         ...original,
         checkRateLimit: vi.fn(),
     };
 });
-vi.mock('../circuit-breaker', () => ({
+vi.mock('../infra/circuit-breaker.js', () => ({
     checkCircuitBreaker: vi.fn(),
     recordCircuitFailure: vi.fn(),
     recordCircuitSuccess: vi.fn(),
@@ -80,8 +80,8 @@ vi.mock('../sanitize', () => ({
     sanitizeForLlm: vi.fn((s: string) => s),
 }));
 
-import { checkRateLimit } from '../llm-rate-limiter.js';
-import { checkCircuitBreaker, recordCircuitFailure, recordCircuitSuccess } from '../circuit-breaker.js';
+import { checkRateLimit } from '../llm/llm-rate-limiter.js';
+import { checkCircuitBreaker, recordCircuitFailure, recordCircuitSuccess } from '../infra/circuit-breaker.js';
 import Config from '../config-accessor.js';
 import {
     tierToConfig,
@@ -91,7 +91,7 @@ import {
     _estimateInputTokens,
     getLlmClientMetrics,
     resetLlmClientMetrics,
-} from '../llm-fallback.js';
+} from '../llm/llm-fallback.js';
 
 const mockFetch = vi.fn();
 global.fetch = mockFetch;

@@ -10,9 +10,9 @@ import {
     buildCategoryBadge,
     buildFlakinessBadge,
     buildTestTable,
-} from '../report-table.js';
+} from '../report/report-table.js';
 import type { FlatTest } from '../result_parser.js';
-import type { TestHistoryRun } from '../report-types.js';
+import type { TestHistoryRun } from '../report/report-types.js';
 
 describe('PrecomputeCategories', () => {
     it('returns empty map when no failures', () => {

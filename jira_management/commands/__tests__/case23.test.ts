@@ -1,7 +1,7 @@
-vi.mock('../../../shared/prompt');
+vi.mock('../../../shared/ui/prompt.js');
 vi.mock('../../../shared/logger');
 
-vi.mock('../../../shared/ai-feedback', () => ({
+vi.mock('../../../shared/quality/ai-feedback.js', () => ({
     getAiFeedbackSummary: vi.fn(),
     getRecentAiRecords: vi.fn(),
 }));
@@ -13,8 +13,8 @@ vi.mock('../../../shared/logger', () => ({
     },
 }));
 
-import { warn, tableView, showSelect } from '../../../shared/prompt.js';
-import { getAiFeedbackSummary, getRecentAiRecords } from '../../../shared/ai-feedback.js';
+import { warn, tableView, showSelect } from '../../../shared/ui/prompt.js';
+import { getAiFeedbackSummary, getRecentAiRecords } from '../../../shared/quality/ai-feedback.js';
 
 const mockGetSummary = vi.mocked(getAiFeedbackSummary);
 const mockGetRecent = vi.mocked(getRecentAiRecords);

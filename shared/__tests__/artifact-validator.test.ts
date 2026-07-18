@@ -1,4 +1,4 @@
-import { ArtifactValidator, type ValidationContext, fail, pass, warn } from '../artifact-validator.js';
+import { ArtifactValidator, type ValidationContext, fail, pass, warn } from '../validation/artifact-validator.js';
 
 describe('ArtifactValidator', () => {
     const ctx: ValidationContext = {

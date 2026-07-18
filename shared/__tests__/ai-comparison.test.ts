@@ -2,9 +2,9 @@
  * Tests for ai-comparison — AI Test Effectiveness Comparison.
  */
 
-import { compareAiVsManual, generateAiComparisonHtml } from '../ai-comparison.js';
-import type { AiComparisonRecord, AiComparisonResult } from '../ai-comparison.js';
-import * as htmlFactory from '../html-factory.js';
+import { compareAiVsManual, generateAiComparisonHtml } from '../report/ai-comparison.js';
+import type { AiComparisonRecord, AiComparisonResult } from '../report/ai-comparison.js';
+import * as htmlFactory from '../report/html-factory.js';
 
 function makeRecord(overrides: Partial<AiComparisonRecord> & { generatedBy: 'ai' | 'manual' }): AiComparisonRecord {
     return {

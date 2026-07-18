@@ -1,6 +1,6 @@
 /** Tests for shared/jira-helper.ts — safeJiraCall. */
-import { safeJiraCall } from '../jira-helper.js';
-import type { printError as PrintErrorFn } from '../prompt.js';
+import { safeJiraCall } from '../jira/jira-helper.js';
+import type { printError as PrintErrorFn } from '../ui/prompt.js';
 import type { rootLogger } from '../logger.js';
 type LoggerRoot = typeof rootLogger;
 
@@ -8,7 +8,7 @@ const mockPushHistory = vi.fn();
 const mockPrintError = vi.fn();
 const mockRootLoggerError = vi.fn();
 
-vi.mock('../prompt', () => ({
+vi.mock('../ui/prompt.js', () => ({
     printError: vi.fn<(...args: Parameters<typeof PrintErrorFn>) => void>((label, error) => {
         mockPrintError(label, error);
     }),

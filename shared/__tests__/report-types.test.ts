@@ -5,7 +5,7 @@ import {
     PASS_RATE_GOOD_THRESHOLD,
     PASS_RATE_WARN_THRESHOLD,
     CATEGORY_COLORS,
-} from '../report-types.js';
+} from '../report/report-types.js';
 import type { FlatTest } from '../result_parser.js';
 
 describe('Report-types constants', () => {

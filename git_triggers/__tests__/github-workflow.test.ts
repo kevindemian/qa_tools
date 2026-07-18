@@ -47,7 +47,7 @@ vi.mock('../../shared/logger', () => ({
     },
 }));
 
-vi.mock('../../shared/git-provider-error', () => ({
+vi.mock('../../shared/ci/git-provider-error.js', () => ({
     handleError: vi.fn<(...args: [err: Error, opts?: { returnNull?: boolean }]) => null>(
         (err: Error, opts?: { returnNull?: boolean }) => {
             if (opts?.returnNull) return null;

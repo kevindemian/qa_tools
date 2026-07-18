@@ -1,4 +1,4 @@
-vi.mock('../llm-client', () => ({
+vi.mock('../llm/llm-client.js', () => ({
     llmPrompt: vi.fn(),
     getLlmClientMetrics: vi.fn(() => ({
         cacheHits: 0,
@@ -35,8 +35,8 @@ vi.mock('../config-accessor.js', () => {
     };
 });
 
-import { llmPrompt } from '../llm-client.js';
-import { reviewWithLlm } from '../llm-review.js';
+import { llmPrompt } from '../llm/llm-client.js';
+import { reviewWithLlm } from '../llm/llm-review.js';
 import { nonNull } from '../test-utils.js';
 
 const mockLlmPrompt = vi.mocked(llmPrompt);
@@ -201,7 +201,7 @@ describe('ReviewWithLlm', () => {
 });
 
 import Config from '../config-accessor.js';
-import { detectHedging, detectContradictions, shouldSkipAdversarialReview } from '../llm-review.js';
+import { detectHedging, detectContradictions, shouldSkipAdversarialReview } from '../llm/llm-review.js';
 
 const mockReviewResult = (content: string, confidence: 'high' | 'medium' | 'low' = 'medium', notes?: string) => ({
     content,

@@ -1,4 +1,4 @@
-import { extractHost, HostSemaphore } from '../host-semaphore.js';
+import { extractHost, HostSemaphore } from '../infra/host-semaphore.js';
 
 describe('ExtractHost', () => {
     it('returns hostname for valid URL', () => {

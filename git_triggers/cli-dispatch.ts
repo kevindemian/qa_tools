@@ -2,9 +2,9 @@
  * CLI dispatch logic — executes the appropriate mode based on parsed arguments.
  * Separated from main.ts for testability and single responsibility.
  */
-import { gracefulExit } from '../shared/cli_base.js';
+import { gracefulExit } from '../shared/ui/cli_base.js';
 import { ExitCode } from '../shared/types.js';
-import { defaultOutput } from '../shared/output.js';
+import { defaultOutput } from '../shared/ui/output.js';
 import pkg from '../package.json';
 import { printUsage, type CliArgs } from './cli-args.js';
 import { tryBatchMode } from './batch-mode.js';

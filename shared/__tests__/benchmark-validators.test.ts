@@ -1,4 +1,4 @@
-import { validateJsonSchema, validateJsonArray, validateClassify } from '../benchmark-validators.js';
+import { validateJsonSchema, validateJsonArray, validateClassify } from '../quality/benchmark-validators.js';
 
 const VALID_SCHEMA_ITEM = {
     title: 'Login test',

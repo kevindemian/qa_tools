@@ -7,11 +7,11 @@ import Config from '../../shared/config-accessor.js';
 import JiraResource from '../../jira_management/jira_resource.js';
 import { createStepImporter } from '../../jira_management/xray-client.js';
 import { importExecutionResults } from '../../jira_management/result_reporter.js';
-import { resolveProxyUrl } from '../../shared/proxy-config.js';
+import { resolveProxyUrl } from '../../shared/infra/proxy-config.js';
 import type { JiraResourceLike } from '../../shared/types.js';
 
-vi.mock('../../shared/prompt', async () => {
-    const actual = await vi.importActual<typeof import('../../shared/prompt.js')>('../../shared/prompt');
+vi.mock('../../shared/ui/prompt.js', async () => {
+    const actual = await vi.importActual<typeof import('../../shared/ui/prompt.js')>('../../shared/ui/prompt.js');
     return {
         ...actual,
         prompt: vi.fn().mockReturnValue(''),

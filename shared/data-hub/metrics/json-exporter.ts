@@ -1,5 +1,5 @@
 import { rootLogger } from '../../logger.js';
-import { extractErrorMessage } from '../../prompt-errors.js';
+import { extractErrorMessage } from '../../ui/prompt-errors.js';
 import type { ComputedMetrics } from '../../types/data-hub.js';
 
 const REQUIRED_TOP_KEYS = ['passRate', 'avgDuration', 'coverage', 'pipelineCost', 'releaseScore'] as const;

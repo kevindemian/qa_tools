@@ -12,7 +12,7 @@ import type { JsonObject } from '../types/common.js';
 
 /**
  * Mock Logger Module
- * Creates a mock object compatible with vi.mock('../shared/logger', ...)
+ * Creates a mock object compatible with vi.mock('../logger.js', ...)
  *
  * @returns Object with Logger constructor and rootLogger
  */
@@ -132,7 +132,7 @@ export function mockSessionStateModule(overrides?: Partial<{ currentProvider: st
 
 /**
  * Mock State Module
- * Creates a mock object compatible with vi.mock('../shared/state', ...)
+ * Creates a mock object compatible with vi.mock('../state.js', ...)
  *
  * @returns Object with load and update functions
  */

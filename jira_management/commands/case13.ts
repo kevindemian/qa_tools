@@ -1,5 +1,5 @@
 /** Create a Test Execution for existing test issues (standalone flow). */
-import { warn, info, ask, askConfirm } from '../../shared/prompt.js';
+import { warn, info, ask, askConfirm } from '../../shared/ui/prompt.js';
 import type { CommandContext } from './context.js';
 import { offerTestExecutionAssociation, showResults } from './test-execution-flow.js';
 

@@ -1,14 +1,14 @@
 /** Pipeline handler — monitor CI/CD status, parse results, and offer failure analysis. */
-import { print, success, warn, info, title, prompt, confirm, printError, withSpinner } from '../shared/prompt.js';
+import { print, success, warn, info, title, prompt, confirm, printError, withSpinner } from '../shared/ui/prompt.js';
 import { load as loadState, update as updateState } from '../shared/state.js';
-import { sleep } from '../shared/http-client.js';
+import { sleep } from '../shared/infra/http-client.js';
 import type { ParseResult } from '../shared/result_parser.js';
 import type { PipelineTriggerResult, StateContainer } from '../shared/types.js';
 import type { GitProvider } from '../shared/types.js';
-import { writeEphemeral } from '../shared/temp-dir.js';
-import { getHeadSha } from '../shared/git-sha.js';
+import { writeEphemeral } from '../shared/infra/temp-dir.js';
+import { getHeadSha } from '../shared/ci/git-sha.js';
 import { getDataHub } from '../shared/data-hub/global-hub.js';
-import { detectStoreBackend } from '../shared/store-backend.js';
+import { detectStoreBackend } from '../shared/infra/store-backend.js';
 import {
     collectTestResults as _collectTestResults,
     createTestExecution as _createTestExecution,
@@ -20,11 +20,11 @@ import {
 } from './test-results.js';
 import { offerPipelineFailureAnalysis } from './llm-pipeline.js';
 import { handleBugCreation } from './pipeline-jira.js';
-import JiraClient from '../shared/jira-client.js';
-import type { JiraMode } from '../shared/jira-auth.js';
+import JiraClient from '../shared/jira/jira-client.js';
+import type { JiraMode } from '../shared/jira/jira-auth.js';
 import JiraLinkManager from '../jira_management/jira_link_manager.js';
 import { currentProvider, pushHistory, setIsBusy, MSG_OPERATION_CANCELED } from './session-state.js';
-import { confirmDestructiveAction } from '../shared/cli_base.js';
+import { confirmDestructiveAction } from '../shared/ui/cli_base.js';
 
 const PIPELINE_POLL_INTERVAL_MS = 5000;
 const PIPELINE_POLL_TIMEOUT_MS = 300000;

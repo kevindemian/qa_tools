@@ -8,7 +8,7 @@ describe('PROVIDER_PROFILES', () => {
     it('contains all known providers', async () => {
         expect.hasAssertions();
 
-        const { PROVIDER_PROFILES, KNOWN_PROVIDERS } = await import('../llm-provider-profiles.js');
+        const { PROVIDER_PROFILES, KNOWN_PROVIDERS } = await import('../llm/llm-provider-profiles.js');
         for (const p of KNOWN_PROVIDERS) {
             expect(Reflect.get(PROVIDER_PROFILES, p)).toBeDefined();
         }
@@ -17,7 +17,7 @@ describe('PROVIDER_PROFILES', () => {
     it('each profile has required fields', async () => {
         expect.hasAssertions();
 
-        const { PROVIDER_PROFILES } = await import('../llm-provider-profiles.js');
+        const { PROVIDER_PROFILES } = await import('../llm/llm-provider-profiles.js');
         const allValid = Object.entries(PROVIDER_PROFILES).every(([id, profile]) => {
             return (
                 profile.displayName &&
@@ -40,7 +40,7 @@ describe('PROVIDER_PROFILES', () => {
     it('opencode-go is default (non-free)', async () => {
         expect.hasAssertions();
 
-        const { PROVIDER_PROFILES } = await import('../llm-provider-profiles.js');
+        const { PROVIDER_PROFILES } = await import('../llm/llm-provider-profiles.js');
         const go = PROVIDER_PROFILES['opencode-go'];
 
         expect(go.free).toBeUndefined();
@@ -50,7 +50,7 @@ describe('PROVIDER_PROFILES', () => {
     it('free providers are marked', async () => {
         expect.hasAssertions();
 
-        const { PROVIDER_PROFILES } = await import('../llm-provider-profiles.js');
+        const { PROVIDER_PROFILES } = await import('../llm/llm-provider-profiles.js');
 
         expect(PROVIDER_PROFILES['groq'].free).toBeTruthy();
         expect(PROVIDER_PROFILES['github-models'].free).toBeTruthy();
@@ -60,7 +60,7 @@ describe('PROVIDER_PROFILES', () => {
     it('custom provider has empty baseUrl and requiresBaseUrl', async () => {
         expect.hasAssertions();
 
-        const { PROVIDER_PROFILES } = await import('../llm-provider-profiles.js');
+        const { PROVIDER_PROFILES } = await import('../llm/llm-provider-profiles.js');
         const c = PROVIDER_PROFILES['custom'];
 
         expect(c.baseUrl).toBe('');
@@ -72,7 +72,7 @@ describe('IsKnownProvider', () => {
     it('returns true for known providers', async () => {
         expect.hasAssertions();
 
-        const { isKnownProvider } = await import('../llm-provider-profiles.js');
+        const { isKnownProvider } = await import('../llm/llm-provider-profiles.js');
 
         expect(isKnownProvider('openrouter')).toBeTruthy();
         expect(isKnownProvider('openai')).toBeTruthy();
@@ -82,7 +82,7 @@ describe('IsKnownProvider', () => {
     it('returns false for unknown providers', async () => {
         expect.hasAssertions();
 
-        const { isKnownProvider } = await import('../llm-provider-profiles.js');
+        const { isKnownProvider } = await import('../llm/llm-provider-profiles.js');
 
         expect(isKnownProvider('unknown')).toBeFalsy();
         expect(isKnownProvider('')).toBeFalsy();
@@ -93,7 +93,7 @@ describe('GetProviderProfile', () => {
     it('returns profile for known provider', async () => {
         expect.hasAssertions();
 
-        const { getProviderProfile } = await import('../llm-provider-profiles.js');
+        const { getProviderProfile } = await import('../llm/llm-provider-profiles.js');
         const p = getProviderProfile('openrouter');
 
         expect(p).toBeDefined();
@@ -103,7 +103,7 @@ describe('GetProviderProfile', () => {
     it('returns undefined for unknown provider', async () => {
         expect.hasAssertions();
 
-        const { getProviderProfile } = await import('../llm-provider-profiles.js');
+        const { getProviderProfile } = await import('../llm/llm-provider-profiles.js');
 
         expect(getProviderProfile('nonexistent')).toBeUndefined();
     });
@@ -120,7 +120,7 @@ describe('InferProviderFromKey', () => {
     ])('detects $name', async ({ input, expected }) => {
         expect.hasAssertions();
 
-        const { inferProviderFromKey } = await import('../llm-provider-profiles.js');
+        const { inferProviderFromKey } = await import('../llm/llm-provider-profiles.js');
 
         expect(inferProviderFromKey(input)).toBe(expected);
     });
@@ -131,7 +131,7 @@ describe('InferProviderFromKey', () => {
     ])('returns null for $name', async ({ input }) => {
         expect.hasAssertions();
 
-        const { inferProviderFromKey } = await import('../llm-provider-profiles.js');
+        const { inferProviderFromKey } = await import('../llm/llm-provider-profiles.js');
 
         expect(inferProviderFromKey(input)).toBeNull();
     });
@@ -141,7 +141,7 @@ describe('FormatProviderList', () => {
     it('returns a non-empty string with provider names', async () => {
         expect.hasAssertions();
 
-        const { formatProviderList } = await import('../llm-provider-profiles.js');
+        const { formatProviderList } = await import('../llm/llm-provider-profiles.js');
         const list = formatProviderList();
 
         expect(list).toContain('openrouter');

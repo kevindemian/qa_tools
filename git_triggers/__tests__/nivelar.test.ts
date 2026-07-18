@@ -1,10 +1,10 @@
-import * as prompt from '../../shared/prompt.js';
+import * as prompt from '../../shared/ui/prompt.js';
 import type { Mock, Mocked } from 'vitest';
 import { nivelarBranches } from '../nivelar.js';
 import type { GitProvider } from '../../shared/types.js';
 import { createMockGitProvider } from '../../shared/test-utils/factories/index.js';
 
-vi.mock('../../shared/prompt', () => ({
+vi.mock('../../shared/ui/prompt.js', () => ({
     ask: vi.fn(),
     info: vi.fn(),
     success: vi.fn(),

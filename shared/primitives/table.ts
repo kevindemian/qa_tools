@@ -7,7 +7,7 @@
  * @module primitives/table
  */
 
-import { tokens } from '../theme-tokens.js';
+import { tokens } from '../ui/theme-tokens.js';
 
 export type TableAlign = 'left' | 'center' | 'right';
 

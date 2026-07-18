@@ -22,7 +22,7 @@ describe('IsGitHubCi', () => {
             return undefined;
         });
 
-        const { isGitHubCi } = await import('../ci-detect.js');
+        const { isGitHubCi } = await import('../ci/ci-detect.js');
 
         expect(isGitHubCi()).toBeTruthy();
     });
@@ -35,7 +35,7 @@ describe('IsGitHubCi', () => {
             return undefined;
         });
 
-        const { isGitHubCi } = await import('../ci-detect.js');
+        const { isGitHubCi } = await import('../ci/ci-detect.js');
 
         expect(isGitHubCi()).toBeFalsy();
     });
@@ -48,7 +48,7 @@ describe('IsGitHubCi', () => {
             return undefined;
         });
 
-        const { isGitHubCi } = await import('../ci-detect.js');
+        const { isGitHubCi } = await import('../ci/ci-detect.js');
 
         expect(isGitHubCi()).toBeFalsy();
     });
@@ -58,7 +58,7 @@ describe('IsGitHubCi', () => {
 
         vi.spyOn(config, 'get').mockReturnValue(undefined);
 
-        const { isGitHubCi } = await import('../ci-detect.js');
+        const { isGitHubCi } = await import('../ci/ci-detect.js');
 
         expect(isGitHubCi()).toBeFalsy();
     });
@@ -78,7 +78,7 @@ describe('IsGitLabCi', () => {
             return undefined;
         });
 
-        const { isGitLabCi } = await import('../ci-detect.js');
+        const { isGitLabCi } = await import('../ci/ci-detect.js');
 
         expect(isGitLabCi()).toBeTruthy();
     });
@@ -91,7 +91,7 @@ describe('IsGitLabCi', () => {
             return undefined;
         });
 
-        const { isGitLabCi } = await import('../ci-detect.js');
+        const { isGitLabCi } = await import('../ci/ci-detect.js');
 
         expect(isGitLabCi()).toBeFalsy();
     });
@@ -104,7 +104,7 @@ describe('IsGitLabCi', () => {
             return undefined;
         });
 
-        const { isGitLabCi } = await import('../ci-detect.js');
+        const { isGitLabCi } = await import('../ci/ci-detect.js');
 
         expect(isGitLabCi()).toBeFalsy();
     });
@@ -114,7 +114,7 @@ describe('IsGitLabCi', () => {
 
         vi.spyOn(config, 'get').mockReturnValue(undefined);
 
-        const { isGitLabCi } = await import('../ci-detect.js');
+        const { isGitLabCi } = await import('../ci/ci-detect.js');
 
         expect(isGitLabCi()).toBeFalsy();
     });
@@ -124,7 +124,7 @@ describe('Constants', () => {
     it('exports GIT_HISTORY_RUNS', async () => {
         expect.hasAssertions();
 
-        const { GIT_HISTORY_RUNS } = await import('../ci-detect.js');
+        const { GIT_HISTORY_RUNS } = await import('../ci/ci-detect.js');
 
         expect(GIT_HISTORY_RUNS).toBe(5);
     });

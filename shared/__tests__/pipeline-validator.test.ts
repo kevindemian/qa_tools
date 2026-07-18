@@ -3,8 +3,8 @@ import {
     invariantMinConfidence,
     invariantEvidenceNonEmpty,
     invariantCategoryHasRecommendation,
-} from '../pipeline-validator.js';
-import type { ValidationContext } from '../artifact-validator.js';
+} from '../validation/pipeline-validator.js';
+import type { ValidationContext } from '../validation/artifact-validator.js';
 
 function makeCtx(input: string): ValidationContext {
     return { inputRaw: input, outputRaw: {}, artifactType: 'pipeline' };

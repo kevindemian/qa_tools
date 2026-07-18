@@ -1,7 +1,7 @@
 import { nonNull, nullAs } from '../test-utils.js';
-import { generateHtmlReport, generateCoverageHtml } from '../report-generator.js';
+import { generateHtmlReport, generateCoverageHtml } from '../report/report-generator.js';
 import type { FlatTest } from '../result_parser.js';
-import type { CoverageEpic, TestRunTab } from '../report-generator.js';
+import type { CoverageEpic, TestRunTab } from '../report/report-generator.js';
 
 describe('GenerateHtmlReport', () => {
     it('generates a complete HTML document with summary cards', () => {

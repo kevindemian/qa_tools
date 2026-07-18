@@ -1,6 +1,6 @@
 /** Tests for report-utils — formatting and stats for HTML report generation. */
 import type { FlatTest } from '../result_parser.js';
-import { statsFromTests, fmtDuration, pctClass, pct, pctSub } from '../report-utils.js';
+import { statsFromTests, fmtDuration, pctClass, pct, pctSub } from '../report/report-utils.js';
 
 describe('StatsFromTests', () => {
     const tests: FlatTest[] = [

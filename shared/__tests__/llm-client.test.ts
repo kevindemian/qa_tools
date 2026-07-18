@@ -83,17 +83,17 @@ vi.mock('../config-accessor.js', () => {
     };
     return { __esModule: true, default: ConfigMock };
 });
-vi.mock('../model-resolver', () => ({
+vi.mock('../llm/model-resolver.js', () => ({
     initModelResolver: vi.fn(),
     getRegistry: vi.fn(() => ({ providers: {} })),
     resolveModel: vi.fn(() => ({ id: 'test-model' })),
 }));
-vi.mock('../disk-cache', () => ({
+vi.mock('../infra/disk-cache.js', () => ({
     diskCacheGet: vi.fn(() => null),
     diskCacheSet: vi.fn(),
     clearDiskCache: vi.fn(),
 }));
-import { diskCacheGet } from '../disk-cache.js';
+import { diskCacheGet } from '../infra/disk-cache.js';
 import { LlmError } from '../errors.js';
 import Config from '../config-accessor.js';
 import {
@@ -104,7 +104,7 @@ import {
     parseRetryAfter,
     getLlmClientMetrics,
     resetLlmClientMetrics,
-} from '../llm-client.js';
+} from '../llm/llm-client.js';
 import { rootLogger } from '../logger.js';
 import { safeParseJson } from '../safe-json.js';
 

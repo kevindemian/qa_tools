@@ -23,7 +23,7 @@ vi.mock('../config-accessor.js', () => {
 });
 
 import Config from '../config-accessor.js';
-import { checkRateLimit, resetRateLimiter, jitter, LLM_RATE_WINDOW_MS } from '../llm-rate-limiter.js';
+import { checkRateLimit, resetRateLimiter, jitter, LLM_RATE_WINDOW_MS } from '../llm/llm-rate-limiter.js';
 import { LlmRateLimitError } from '../errors.js';
 
 describe('Llm Rate Limiter', () => {

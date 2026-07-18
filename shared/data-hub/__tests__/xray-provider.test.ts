@@ -5,7 +5,7 @@
  */
 import { describe, it, expect, vi } from 'vitest';
 
-vi.mock('../../xray-cloud-client.js', () => ({
+vi.mock('../../jira/xray-cloud-client.js', () => ({
     XrayCloudClient: class {
         graphql = vi.fn();
     },
@@ -40,7 +40,7 @@ describe('XrayDataProvider', () => {
     it('maps test executions with aggregated counts', async () => {
         expect.hasAssertions();
 
-        const { XrayCloudClient } = await import('../../xray-cloud-client.js');
+        const { XrayCloudClient } = await import('../../jira/xray-cloud-client.js');
         const client = new XrayCloudClient();
         (client.graphql as ReturnType<typeof vi.fn>).mockResolvedValue(GRAPHQL_RESPONSE);
         const provider = new XrayDataProvider(client, 'id', 'secret', 'CALC');
@@ -62,7 +62,7 @@ describe('XrayDataProvider', () => {
     it('maps test runs with status and identity', async () => {
         expect.hasAssertions();
 
-        const { XrayCloudClient } = await import('../../xray-cloud-client.js');
+        const { XrayCloudClient } = await import('../../jira/xray-cloud-client.js');
         const client = new XrayCloudClient();
         (client.graphql as ReturnType<typeof vi.fn>).mockResolvedValue(GRAPHQL_RESPONSE);
         const provider = new XrayDataProvider(client, 'id', 'secret', 'CALC');
@@ -81,7 +81,7 @@ describe('XrayDataProvider', () => {
     it('omits xray when graphql returns null (auth/network failure)', async () => {
         expect.hasAssertions();
 
-        const { XrayCloudClient } = await import('../../xray-cloud-client.js');
+        const { XrayCloudClient } = await import('../../jira/xray-cloud-client.js');
         const client = new XrayCloudClient();
         (client.graphql as ReturnType<typeof vi.fn>).mockResolvedValue(null);
         const provider = new XrayDataProvider(client, 'id', 'secret', 'CALC');

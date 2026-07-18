@@ -3,9 +3,9 @@ import { createMockGitProvider } from '../../shared/test-utils/factories/index.j
 import fs from 'fs';
 import { assessTestImpact } from '../ai-test-impact.js';
 import type { GitProvider } from '../../shared/types.js';
-import { llmPrompt } from '../../shared/llm-client.js';
+import { llmPrompt } from '../../shared/llm/llm-client.js';
 
-vi.mock('../../shared/llm-client');
+vi.mock('../../shared/llm/llm-client.js');
 
 vi.mock('fs', () => ({
     default: { readFileSync: vi.fn() },

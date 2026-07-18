@@ -22,7 +22,7 @@ const mockConfig = vi.hoisted(() => {
 
 vi.mock('../../shared/config-accessor.js', () => ({ default: mockConfig }));
 
-vi.mock('../../shared/prompt', () => ({
+vi.mock('../../shared/ui/prompt.js', () => ({
     confirm: vi.fn(),
     prompt: vi.fn(),
     warn: vi.fn(),
@@ -62,7 +62,7 @@ vi.mock('fs', async () => {
 
 const mockMd = vi.hoisted(() => vi.fn<(...args: [string]) => string>((s: string) => s));
 const mockMdToHtml = vi.hoisted(() => vi.fn<(...args: [string]) => string>((s: string) => '<html>' + s + '</html>'));
-vi.mock('../../shared/markdown', () => ({ md: mockMd, mdToHtml: mockMdToHtml }));
+vi.mock('../../shared/report/markdown.js', () => ({ md: mockMd, mdToHtml: mockMdToHtml }));
 
 import {
     _checkResumeCheckpoint,
@@ -72,7 +72,7 @@ import {
     showPreview,
     parseJsonTests,
 } from '../import-prep.js';
-import * as PROMPT from '../../shared/prompt.js';
+import * as PROMPT from '../../shared/ui/prompt.js';
 import type { Mock } from 'vitest';
 import * as STATE from '../../shared/state.js';
 import * as FS from 'fs';

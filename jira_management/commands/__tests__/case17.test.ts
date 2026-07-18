@@ -2,14 +2,14 @@ import os from 'os';
 import path from 'path';
 import { expect, vi } from 'vitest';
 
-vi.mock('../../../shared/prompt');
+vi.mock('../../../shared/ui/prompt.js');
 vi.mock('../../../shared/logger');
 
 vi.mock('../../../shared/result_parser', () => ({
     parseTestResultsFile: vi.fn(),
 }));
 
-vi.mock('../../../shared/report-generator', () => ({
+vi.mock('../../../shared/report/report-generator.js', () => ({
     generateHtmlReport: vi.fn(),
 
     categorizeFailure: vi.fn(),
@@ -19,7 +19,7 @@ vi.mock('../../../shared/publish', () => ({
     publishReport: vi.fn(),
 }));
 
-vi.mock('../../../shared/failure-analysis', () => ({
+vi.mock('../../../shared/validation/failure-analysis.js', () => ({
     analyzeFailuresWithReport: vi.fn(),
 }));
 
@@ -28,22 +28,22 @@ vi.mock('../../../shared/open', () => ({
     openWithFallback: vi.fn(),
 }));
 
-vi.mock('../../../shared/temp-dir', () => ({
+vi.mock('../../../shared/infra/temp-dir.js', () => ({
     writeReport: vi.fn(() => path.join(os.tmpdir(), 'qa-test-report.html')),
 }));
 
-vi.mock('../../../shared/bug-report', () => ({
+vi.mock('../../../shared/report/bug-report.js', () => ({
     collectAutomated: vi.fn(),
     interactiveBugReportFlow: vi.fn(),
 }));
 
-vi.mock('../../../shared/git-sha', () => ({
+vi.mock('../../../shared/ci/git-sha.js', () => ({
     detectGitDir: vi.fn().mockReturnValue(null),
     getHeadSha: vi.fn().mockReturnValue(null),
     getCurrentBranch: vi.fn().mockReturnValue(null),
 }));
 
-vi.mock('../../../shared/store-backend', () => ({
+vi.mock('../../../shared/infra/store-backend.js', () => ({
     detectStoreBackend: vi.fn().mockReturnValue({
         init: vi.fn(),
         read: vi.fn().mockReturnValue(null),
@@ -87,16 +87,16 @@ vi.mock('../../../shared/logger', () => ({
 
 vi.mock('fs');
 
-vi.mock('../../../shared/http-client', () => ({
+vi.mock('../../../shared/infra/http-client.js', () => ({
     createHttpClient: vi.fn(),
     createThrottledClient: vi.fn(),
     setTestSleep: vi.fn(),
 }));
 
-import * as promptModule from '../../../shared/prompt.js';
+import * as promptModule from '../../../shared/ui/prompt.js';
 import * as parserModule from '../../../shared/result_parser.js';
-import * as reportGenModule from '../../../shared/report-generator.js';
-import * as analysisModule from '../../../shared/failure-analysis.js';
+import * as reportGenModule from '../../../shared/report/report-generator.js';
+import * as analysisModule from '../../../shared/validation/failure-analysis.js';
 import * as publishModule from '../../../shared/publish.js';
 import * as openModule from '../../../shared/open.js';
 import fs from 'fs';

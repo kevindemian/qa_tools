@@ -12,8 +12,8 @@ import * as fs from 'fs';
 import path from 'path';
 import { parseTestResultsFile } from '../result_parser.js';
 import { rootLogger } from '../logger.js';
-import { askFilePath } from '../prompt-input-filepath.js';
-import { Output } from '../output.js';
+import { askFilePath } from '../ui/prompt-input-filepath.js';
+import { Output } from '../ui/output.js';
 import { isCancelError, humanizeError } from '../errors.js';
 
 export const DATAHUB_ERRORS = {

@@ -1,6 +1,6 @@
 import { describe, it, expect, assert } from 'vitest';
-import { getAdapter, getRegisteredAdapters, type ModelAdapter } from '../model-adapter.js';
-import type { LlmProvider } from '../llm-provider-profiles.js';
+import { getAdapter, getRegisteredAdapters, type ModelAdapter } from '../llm/model-adapter.js';
+import type { LlmProvider } from '../llm/llm-provider-profiles.js';
 
 function expectAdapter(provider: LlmProvider): ModelAdapter {
     const adapter = getAdapter(provider);

@@ -11,8 +11,8 @@ import fs from 'fs';
 import os from 'os';
 import path from 'path';
 import { describe, expect, it, afterEach } from 'vitest';
-import { generatePipelineQuarantine, loadQuarantine, filterExpiredEntries } from '../quarantine.js';
-import type { QuarantineEntry, QuarantineStore } from '../quarantine.js';
+import { generatePipelineQuarantine, loadQuarantine, filterExpiredEntries } from '../validation/quarantine.js';
+import type { QuarantineEntry, QuarantineStore } from '../validation/quarantine.js';
 
 vi.mock('../config-accessor.js', () => ({
     __esModule: true,

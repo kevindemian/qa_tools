@@ -1,6 +1,6 @@
 import { describe, it, expect, vi, beforeEach } from 'vitest';
-import { discoverModels, assignTierHints } from '../model-discovery.js';
-import type { RegistryModel } from '../model-resolver.js';
+import { discoverModels, assignTierHints } from '../llm/model-discovery.js';
+import type { RegistryModel } from '../llm/model-resolver.js';
 
 function mockFetch(body: unknown) {
     globalThis.fetch = vi.fn().mockResolvedValue({

@@ -4,6 +4,7 @@ node_modules
 # === Generated / Temp ===
 logs/
 reports/*
+shared/reports/
 temp/
 *.log
 __pycache__

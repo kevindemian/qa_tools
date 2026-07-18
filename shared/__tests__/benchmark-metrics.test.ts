@@ -1,4 +1,4 @@
-import { computeCoverageMetrics } from '../benchmark-metrics.js';
+import { computeCoverageMetrics } from '../quality/benchmark-metrics.js';
 
 const ageFixture = {
     name: 'numeric-age-validation',

@@ -2,7 +2,7 @@
  * Tests for report-chart — SVG chart builders using primitives.
  */
 
-import { buildChartSvg, buildMiniTrendChart, buildTrendSection, buildChartSection } from '../report-chart.js';
+import { buildChartSvg, buildMiniTrendChart, buildTrendSection, buildChartSection } from '../report/report-chart.js';
 
 describe('BuildChartSvg', () => {
     it('returns SVG string with passed/failed/skipped sections', () => {

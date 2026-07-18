@@ -2,7 +2,7 @@ import AdmZip from 'adm-zip';
 import { parseCtrfResults, parseTestResults, isCtrfFormat } from '../result_parser.js';
 import { parseJUnitXml } from '../junit-xml-parser.js';
 import { rootLogger } from '../logger.js';
-import { extractErrorMessage } from '../prompt-errors.js';
+import { extractErrorMessage } from '../ui/prompt-errors.js';
 import type { ParseResult, FlatTest, CtrfData } from '../result_parser.js';
 import type { JUnitParseResult } from '../junit-xml-parser.js';
 import type { RawCoverage } from '../types/data-hub.js';

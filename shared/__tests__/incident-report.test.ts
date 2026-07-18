@@ -3,7 +3,7 @@
  */
 
 import { beforeEach, describe, expect, it, vi } from 'vitest';
-import { buildIncidentReport, generateIncidentReportHtml } from '../incident-report.js';
+import { buildIncidentReport, generateIncidentReportHtml } from '../report/incident-report.js';
 
 vi.mock('../logger', () => ({
     rootLogger: { error: vi.fn(), warn: vi.fn(), info: vi.fn(), child: vi.fn().mockReturnThis() },

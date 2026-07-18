@@ -1,8 +1,13 @@
 import { describe, it, expect, beforeEach, afterAll } from 'vitest';
-import { CONFIG_SCHEMA } from '../config-schema.js';
+import { CONFIG_SCHEMA } from '../validation/config-schema.js';
 
 // Import functions under test - need dynamic import to avoid module-level side effects
-import { validateRequiredEnv, validateConfigValues, warnUnknownEnv, validateAll } from '../config-validator.js';
+import {
+    validateRequiredEnv,
+    validateConfigValues,
+    warnUnknownEnv,
+    validateAll,
+} from '../validation/config-validator.js';
 
 describe('ValidateRequiredEnv', () => {
     const REQUIRED = ['JIRA_BASE_URL', 'JIRA_PERSONAL_TOKEN', 'XRAY_BASE_URL'];

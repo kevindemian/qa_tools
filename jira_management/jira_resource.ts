@@ -1,7 +1,7 @@
 /** Jira REST API client — extends shared JiraClient with project/version/sprint operations. */
-import JiraClient from '../shared/jira-client.js';
-import type { JiraMode } from '../shared/jira-auth.js';
-import { extractErrorMessage } from '../shared/prompt.js';
+import JiraClient from '../shared/jira/jira-client.js';
+import type { JiraMode } from '../shared/jira/jira-auth.js';
+import { extractErrorMessage } from '../shared/ui/prompt.js';
 import { Logger } from '../shared/logger.js';
 import {
     getProjectId as versionGetProjectId,

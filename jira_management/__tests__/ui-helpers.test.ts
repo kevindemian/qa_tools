@@ -1,6 +1,6 @@
 import os from 'os';
 import path from 'path';
-vi.mock('../../shared/prompt', () => {
+vi.mock('../../shared/ui/prompt.js', () => {
     class CancelError extends Error {
         constructor(msg?: string) {
             super(msg);
@@ -22,7 +22,7 @@ vi.mock('../../shared/prompt', () => {
     };
 });
 
-vi.mock('../../shared/show-docs', () => ({ showDocs: vi.fn(() => Promise.resolve()) }));
+vi.mock('../../shared/report/show-docs.js', () => ({ showDocs: vi.fn(() => Promise.resolve()) }));
 vi.mock('../../shared/config-accessor.js', () => ({
     default: {
         jiraBaseUrl: '',
@@ -64,7 +64,7 @@ vi.mock('../../shared/logger', () => ({
     Logger: vi.fn(),
 }));
 
-vi.mock('../../shared/cli_base', () => ({
+vi.mock('../../shared/ui/cli_base.js', () => ({
     mask: vi.fn((v: string) => (v ? v.slice(0, 4) + '****' : '')),
     createValidateEnv: vi.fn().mockReturnValue(vi.fn()),
     setupSigint: vi.fn(),
@@ -107,7 +107,7 @@ vi.mock('../../shared/open', () => ({
     openWithFallback: vi.fn(),
 }));
 
-import { warn, helpLine, title, prompt } from '../../shared/prompt.js';
+import { warn, helpLine, title, prompt } from '../../shared/ui/prompt.js';
 
 import { showHelp, showHelpLoop, handleSpecialInput, dispatchChoice } from '../ui-helpers.js';
 import { _configHint, buildMenuChoices, type MenuChoice } from '../menu-data.js';
@@ -313,7 +313,8 @@ describe('Ui Helpers', () => {
         it('handles CancelError in showHelpLoop (line 84-85)', async () => {
             expect.hasAssertions();
 
-            const { CancelError } = await vi.importMock<typeof import('../../shared/prompt.js')>('../../shared/prompt');
+            const { CancelError } =
+                await vi.importMock<typeof import('../../shared/ui/prompt.js')>('../../shared/ui/prompt.js');
             vi.mocked(prompt).mockImplementationOnce(() => {
                 throw new CancelError('/back');
             });

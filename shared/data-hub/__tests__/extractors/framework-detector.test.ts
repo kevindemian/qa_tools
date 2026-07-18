@@ -1,13 +1,13 @@
 import { describe, it, expect, vi, beforeEach } from 'vitest';
 
-vi.mock('../../../prompt-format.js', async () => {
-    const actual = await vi.importActual<typeof import('../../../prompt-format.js')>('../../../prompt-format.js');
+vi.mock('../../../ui/prompt-format.js', async () => {
+    const actual = await vi.importActual<typeof import('../../../ui/prompt-format.js')>('../../../ui/prompt-format.js');
     return { ...actual, warn: vi.fn() };
 });
 
 import { detectFrameworkCascade } from '../../extractors/framework-detector.js';
 import { rootLogger } from '../../../logger.js';
-import { warn } from '../../../prompt-format.js';
+import { warn } from '../../../ui/prompt-format.js';
 import { ExternalError, type ExternalErrorKind } from '../../../errors.js';
 import type { GitProvider } from '../../../types/ci-cd.js';
 

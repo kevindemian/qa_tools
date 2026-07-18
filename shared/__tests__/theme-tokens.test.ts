@@ -4,7 +4,7 @@
  * @module theme-tokens.test
  */
 
-import { tokens, getToken } from '../theme-tokens.js';
+import { tokens, getToken } from '../ui/theme-tokens.js';
 
 describe('Theme-tokens', () => {
     describe('Color.semantic', () => {

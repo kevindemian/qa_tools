@@ -10,7 +10,7 @@
  */
 import * as fc from 'fast-check';
 import { describe, expect, it, vi } from 'vitest';
-import { buildDeveloperProfile, generateDeveloperProfileHtml } from '../developer-profile.js';
+import { buildDeveloperProfile, generateDeveloperProfileHtml } from '../quality/developer-profile.js';
 
 vi.mock('../logger.js', () => ({
     rootLogger: { error: vi.fn(), info: vi.fn(), child: vi.fn().mockReturnThis() },

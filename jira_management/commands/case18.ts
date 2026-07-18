@@ -24,11 +24,11 @@ import {
     printError,
     title,
     divider,
-} from '../../shared/prompt.js';
+} from '../../shared/ui/prompt.js';
 import { rootLogger } from '../../shared/logger.js';
-import { llmPrompt } from '../../shared/llm-client.js';
+import { llmPrompt } from '../../shared/llm/llm-client.js';
 import { sanitizeForLlm, sanitizeTerminal } from '../../shared/sanitize.js';
-import { recordAiGeneration } from '../../shared/ai-feedback.js';
+import { recordAiGeneration } from '../../shared/quality/ai-feedback.js';
 import type { CommandContext } from './context.js';
 import { TestCaseArraySchema } from './case18.schema.js';
 import { matchPreconditionByDualThreshold } from '../jira_link_manager.js';

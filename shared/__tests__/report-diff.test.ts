@@ -1,4 +1,4 @@
-import { buildDiffComparisonSection } from '../report-diff.js';
+import { buildDiffComparisonSection } from '../report/report-diff.js';
 import type { FlatTest } from '../result_parser.js';
 
 describe('BuildDiffComparisonSection', () => {

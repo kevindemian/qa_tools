@@ -1,4 +1,4 @@
-import { analyzeCoverageGaps } from '../coverage-gap.js';
+import { analyzeCoverageGaps } from '../report/coverage-gap.js';
 import { getDataHub } from '../data-hub/global-hub.js';
 import { nonNull } from '../test-utils.js';
 

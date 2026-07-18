@@ -1,11 +1,11 @@
 import type { JsonObject } from '../../shared/types.js';
 import { nonNull, nullAs, undefinedAs } from '../../shared/test-utils.js';
 import { ExternalError } from '../../shared/errors.js';
-import { resetCircuitState } from '../../shared/circuit-breaker.js';
+import { resetCircuitState } from '../../shared/infra/circuit-breaker.js';
 import type { Mocked } from 'vitest';
 import { createMockAxiosInstance } from '../../shared/test-utils/factories/response-factory.js';
 import type { AxiosInstance } from '../../shared/deps.js';
-import * as prompt from '../../shared/prompt.js';
+import * as prompt from '../../shared/ui/prompt.js';
 import {
     formatPR,
     glCreateMergeRequest,

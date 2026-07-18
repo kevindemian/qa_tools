@@ -2,11 +2,11 @@
 import path from 'path';
 import { AdmZip, globSync } from '../shared/deps.js';
 import Config from '../shared/config-accessor.js';
-import JiraClient from '../shared/jira-client.js';
-import type { JiraMode } from '../shared/jira-auth.js';
+import JiraClient from '../shared/jira/jira-client.js';
+import type { JiraMode } from '../shared/jira/jira-auth.js';
 import JiraLinkManager from '../jira_management/jira_link_manager.js';
-import { warn, info, success, printError, withSpinner, ask } from '../shared/prompt.js';
-import { reportsDir } from '../shared/temp-dir.js';
+import { warn, info, success, printError, withSpinner, ask } from '../shared/ui/prompt.js';
+import { reportsDir } from '../shared/infra/temp-dir.js';
 import { parseTestResults as detectAndParseTestResults } from '../shared/result_parser.js';
 import type { ParseResult } from '../shared/result_parser.js';
 import { matchResultsToTests, createTestExecutionFromResults } from '../jira_management/result_reporter.js';

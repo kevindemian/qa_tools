@@ -1,4 +1,4 @@
-import { runQualityGate, formatQualityGateJson, formatQualityGateText } from '../quality-gate.js';
+import { runQualityGate, formatQualityGateJson, formatQualityGateText } from '../quality/quality-gate.js';
 
 vi.mock('../data-hub/global-hub.js', () => ({
     getDataHub: vi.fn(),

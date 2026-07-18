@@ -8,7 +8,7 @@ vi.mock('../../shared/logger', () => ({
     Logger: function () {},
 }));
 
-vi.mock('../../shared/prompt', () => ({
+vi.mock('../../shared/ui/prompt.js', () => ({
     success: vi.fn(),
     info: vi.fn(),
     extractErrorMessage: vi.fn((err: unknown) => String(err)),
@@ -297,7 +297,7 @@ describe('TestExecutionCreator', () => {
             setupCreate('TE-1');
             mockJiraResource.getJiraResource.mockResolvedValueOnce({ fields: {} });
 
-            const prompt = await vi.importMock<{ withSpinner: Mock }>('../../shared/prompt');
+            const prompt = await vi.importMock<{ withSpinner: Mock }>('../../shared/ui/prompt.js');
             prompt.withSpinner.mockRejectedValueOnce(new Error('Spinner error'));
 
             await creator.createWithLinks(projectName, testKeys, csvName);

@@ -1,5 +1,5 @@
-import type { InvariantFn, ValidationContext, ValidationResult } from '../artifact-validator.js';
-import { pass, warn } from '../artifact-validator.js';
+import type { InvariantFn, ValidationContext, ValidationResult } from '../validation/artifact-validator.js';
+import { pass, warn } from '../validation/artifact-validator.js';
 import { parseTests, type TestCaseShape } from './types.js';
 import { similarity } from './text-utils.js';
 

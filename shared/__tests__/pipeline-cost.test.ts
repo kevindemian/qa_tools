@@ -2,9 +2,9 @@
  * Tests for pipeline-cost — Pipeline Cost Analytics.
  */
 
-import * as reportStyles from '../report-styles.js';
-import { calculatePipelineCost, generatePipelineCostHtml } from '../pipeline-cost.js';
-import type { PipelineCostResult } from '../pipeline-cost.js';
+import * as reportStyles from '../report/report-styles.js';
+import { calculatePipelineCost, generatePipelineCostHtml } from '../quality/pipeline-cost.js';
+import type { PipelineCostResult } from '../quality/pipeline-cost.js';
 import type { DataHub } from '../types/data-hub.js';
 import type { PipelineRun } from '../types/ci-cd.js';
 import { nullAs, undefinedAs, nonNull } from '../test-utils.js';

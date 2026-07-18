@@ -1,4 +1,4 @@
-vi.mock('../../../shared/prompt');
+vi.mock('../../../shared/ui/prompt.js');
 
 vi.mock('fs', () => ({
     copyFileSync: vi.fn(),

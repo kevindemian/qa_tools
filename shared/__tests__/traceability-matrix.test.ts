@@ -1,4 +1,4 @@
-import { buildTraceabilityMatrix, generateTraceabilityHtml } from '../traceability-matrix.js';
+import { buildTraceabilityMatrix, generateTraceabilityHtml } from '../report/traceability-matrix.js';
 import type { MetricsRun, FlakyResult, RawData } from '../types/data-hub.js';
 import type { QualityCategory, QualityReport } from '../data-hub/quality.js';
 import type { DataSource } from '../types/data-hub.js';

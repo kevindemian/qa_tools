@@ -4,11 +4,11 @@
 import os from 'os';
 import path from 'path';
 import nock from 'nock';
-import { offerEnvSetup } from '../../shared/cli_base.js';
+import { offerEnvSetup } from '../../shared/ui/cli_base.js';
 import { getProjects } from '../../git_triggers/session-state.js';
 import { resolveAlias } from '../../jira_management/menu-data.js';
-import * as breadcrumbs from '../../shared/breadcrumbs.js';
-import { confirm as _confirm } from '../../shared/prompt.js';
+import * as breadcrumbs from '../../shared/ui/breadcrumbs.js';
+import { confirm as _confirm } from '../../shared/ui/prompt.js';
 import { loadTypedState as _loadTypedState } from '../../shared/state.js';
 
 const mockConfirm = vi.mocked(_confirm);
@@ -44,7 +44,7 @@ vi.mock('../../shared/project-registry', () => ({
     saveRegistry: vi.fn(),
 }));
 
-vi.mock('../../shared/prompt', () => ({
+vi.mock('../../shared/ui/prompt.js', () => ({
     print: vi.fn(),
     success: vi.fn(),
     error: vi.fn(),

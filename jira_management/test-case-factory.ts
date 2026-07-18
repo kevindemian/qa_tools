@@ -1,5 +1,5 @@
 /** Test-case factory — creates test issues in Jira via Xray REST API. */
-import { success, info as promptInfo, warn, onError, isQuiet, ProgressBar } from '../shared/prompt.js';
+import { success, info as promptInfo, warn, onError, isQuiet, ProgressBar } from '../shared/ui/prompt.js';
 import type { JiraResourceLike } from '../shared/types.js';
 import type { XrayStepImporter } from './xray-client.js';
 import type { JsonObject, LogContext, TestCase } from '../shared/types.js';

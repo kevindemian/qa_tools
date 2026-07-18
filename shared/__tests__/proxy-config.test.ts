@@ -1,5 +1,5 @@
 import { describe, it, expect, afterEach, vi } from 'vitest';
-import { parseProxyUrl, resolveProxyUrl } from '../proxy-config.js';
+import { parseProxyUrl, resolveProxyUrl } from '../infra/proxy-config.js';
 
 describe('ProxyConfig', () => {
     afterEach(() => {

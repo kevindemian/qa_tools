@@ -3,7 +3,7 @@ import type { FlakinessEntry, MetricsRun } from '../../shared/types/data-hub.js'
 import { calcRunPassRate } from '../../shared/data-hub/compute/run-pass-rate.js';
 import { calcFlakinessEntries } from '../../shared/data-hub/compute/flakiness-entries.js';
 
-export { isGitHubCi, isGitLabCi } from '../../shared/ci-detect.js';
+export { isGitHubCi, isGitLabCi } from '../../shared/ci/ci-detect.js';
 
 function buildRunsBarChartHtml(runs: MetricsRun[]): string {
     let html = '<div style="margin-bottom:8px">';

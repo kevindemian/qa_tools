@@ -1,4 +1,4 @@
-vi.mock('../../../shared/prompt', () => ({
+vi.mock('../../../shared/ui/prompt.js', () => ({
     ask: vi.fn(),
     askMultiline: vi.fn(),
     askConfirm: vi.fn(),
@@ -7,18 +7,18 @@ vi.mock('../../../shared/prompt', () => ({
     title: vi.fn(),
 }));
 
-vi.mock('../../../shared/bug-report', () => ({
+vi.mock('../../../shared/report/bug-report.js', () => ({
     collectManual: vi.fn(),
     interactiveBugReportFlow: vi.fn(),
     generateBugReportFromDescription: vi.fn(),
 }));
 
-import { printError, askConfirm, ask, askMultiline } from '../../../shared/prompt.js';
+import { printError, askConfirm, ask, askMultiline } from '../../../shared/ui/prompt.js';
 import {
     collectManual,
     interactiveBugReportFlow,
     generateBugReportFromDescription,
-} from '../../../shared/bug-report.js';
+} from '../../../shared/report/bug-report.js';
 import type { CommandContext } from '../context.js';
 import { nonNull } from '../../../shared/test-utils.js';
 import { createMockContext } from '../../../shared/test-utils/factories/context-factory.js';

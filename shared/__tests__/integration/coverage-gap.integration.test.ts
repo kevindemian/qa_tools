@@ -97,7 +97,7 @@ describe('Integration: Coverage Gap (FT-18)', () => {
         it('produces complete HTML with summary and gap table', async () => {
             expect.hasAssertions();
 
-            const { generateCoverageGapHtml } = await import('../../generate-coverage-gap-html.js');
+            const { generateCoverageGapHtml } = await import('../../report/generate-coverage-gap-html.js');
             const result = makeResult();
             const html = generateCoverageGapHtml(result, 'Gap Report');
 
@@ -113,7 +113,7 @@ describe('Integration: Coverage Gap (FT-18)', () => {
         it('shows no-gaps message and passing quality gate', async () => {
             expect.hasAssertions();
 
-            const { generateCoverageGapHtml } = await import('../../generate-coverage-gap-html.js');
+            const { generateCoverageGapHtml } = await import('../../report/generate-coverage-gap-html.js');
             const result = makeResult({
                 items: [
                     {
@@ -149,7 +149,7 @@ describe('Integration: Coverage Gap (FT-18)', () => {
                 throw new Error('simulated failure');
             });
             const { rootLogger } = await import('../../logger.js');
-            const { generateCoverageGapHtml } = await import('../../generate-coverage-gap-html.js');
+            const { generateCoverageGapHtml } = await import('../../report/generate-coverage-gap-html.js');
             const result = generateCoverageGapHtml(makeResult());
 
             expect(result).toContain('Error generating coverage gap report');

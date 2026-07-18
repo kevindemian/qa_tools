@@ -2,7 +2,7 @@
  * Unified CLI argument parser for git_triggers.
  * Supports both interactive and batch modes with discriminated union.
  */
-import { defaultOutput } from '../shared/output.js';
+import { defaultOutput } from '../shared/ui/output.js';
 import { parseProjectFlag } from '../shared/parse-project-flag.js';
 export type CliMode = 'interactive' | 'batch' | 'help' | 'version';
 

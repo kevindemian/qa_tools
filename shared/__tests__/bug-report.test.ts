@@ -8,10 +8,10 @@ const mockPrompt = vi.hoisted(() => ({
     warn: vi.fn(),
 }));
 
-vi.mock('../prompt', () => mockPrompt);
+vi.mock('../ui/prompt.js', () => mockPrompt);
 
-vi.mock('../failure-analysis', async (importOriginal) => {
-    const actual = await importOriginal<typeof import('../failure-analysis.js')>();
+vi.mock('../validation/failure-analysis.js', async (importOriginal) => {
+    const actual = await importOriginal<typeof import('../validation/failure-analysis.js')>();
     return {
         ...actual,
         classifyFailure: vi.fn(actual.classifyFailure),
@@ -30,8 +30,14 @@ vi.mock('../config-accessor.js', () => ({
     },
 }));
 
-import { collectManual, collectAutomated, compose, fileToJira, interactiveBugReportFlow } from '../bug-report.js';
-import { classifyFailure } from '../failure-analysis.js';
+import {
+    collectManual,
+    collectAutomated,
+    compose,
+    fileToJira,
+    interactiveBugReportFlow,
+} from '../report/bug-report.js';
+import { classifyFailure } from '../validation/failure-analysis.js';
 import type { Mock } from 'vitest';
 import type { ParseResult } from '../result_parser.js';
 import type { BugReport } from '../types.js';
@@ -617,7 +623,7 @@ describe('BugReport Service', () => {
     });
 });
 
-vi.mock('../llm-client', () => ({ llmPrompt: vi.fn() }));
+vi.mock('../llm/llm-client.js', () => ({ llmPrompt: vi.fn() }));
 vi.mock('fs', async () => {
     const actual = await vi.importActual<typeof import('fs')>('fs');
     return {
@@ -629,13 +635,13 @@ vi.mock('fs', async () => {
     };
 });
 
-import { generateBugReportFromDescription } from '../bug-report.js';
+import { generateBugReportFromDescription } from '../report/bug-report.js';
 
 let mockLlmPrompt: Mock;
 
 describe('GenerateBugReportFromDescription', () => {
     beforeAll(async () => {
-        const llmClient = await vi.importMock<typeof import('../llm-client.js')>('../llm-client');
+        const llmClient = await vi.importMock<typeof import('../llm/llm-client.js')>('../llm/llm-client.js');
         mockLlmPrompt = vi.spyOn(llmClient, 'llmPrompt');
     });
 

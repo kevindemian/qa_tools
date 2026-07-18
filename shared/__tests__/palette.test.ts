@@ -5,7 +5,7 @@ vi.mock('../config-accessor.js', () => ({
     __esModule: true,
 }));
 
-import * as paletteModule from '../palette.js';
+import * as paletteModule from '../ui/palette.js';
 import chalk from 'chalk';
 
 describe('Palette', () => {

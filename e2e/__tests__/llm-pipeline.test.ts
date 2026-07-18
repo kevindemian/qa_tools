@@ -1,4 +1,4 @@
-vi.mock('../../shared/llm-client', () => ({
+vi.mock('../../shared/llm/llm-client.js', () => ({
     llmPrompt: vi.fn(),
     clearCache: vi.fn(),
     getLlmClientMetrics: vi.fn(() => ({
@@ -13,10 +13,10 @@ vi.mock('../../shared/llm-client', () => ({
     resetCircuitState: vi.fn(),
     resetRateLimiter: vi.fn(),
 }));
-import { llmPrompt } from '../../shared/llm-client.js';
-import { reviewWithLlm } from '../../shared/llm-review.js';
-import { snapshotLlmMetrics } from '../../shared/llm-metrics.js';
-import { clearCache } from '../../shared/llm-client.js';
+import { llmPrompt } from '../../shared/llm/llm-client.js';
+import { reviewWithLlm } from '../../shared/llm/llm-review.js';
+import { snapshotLlmMetrics } from '../../shared/llm/llm-metrics.js';
+import { clearCache } from '../../shared/llm/llm-client.js';
 
 const mockLlmPrompt = vi.mocked(llmPrompt);
 

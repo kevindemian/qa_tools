@@ -1,4 +1,4 @@
-vi.mock('../output', () => {
+vi.mock('../ui/output.js', () => {
     const mockOutput = { print: vi.fn() };
     return {
         Output: { isTTY: vi.fn(), isCI: vi.fn(), columns: vi.fn(() => 80), rows: vi.fn(() => 24) },
@@ -17,7 +17,7 @@ vi.mock('../logger', () => ({
     },
 }));
 
-vi.mock('../palette', () => {
+vi.mock('../ui/palette.js', () => {
     const purpleFn = (s: string) => s;
     purpleFn.bold = (s: string) => s;
     return {
@@ -34,8 +34,8 @@ vi.mock('../palette', () => {
     };
 });
 
-vi.mock('../prompt-ui', async () => {
-    const actual = await vi.importActual<typeof import('../prompt-ui.js')>('../prompt-ui');
+vi.mock('../ui/prompt-ui.js', async () => {
+    const actual = await vi.importActual<typeof import('../ui/prompt-ui.js')>('../ui/prompt-ui.js');
     return {
         ...actual,
         getConfig: vi.fn(() => ({
@@ -77,8 +77,8 @@ vi.mock('readline', () => ({
 
 vi.mock('@inquirer/editor', () => ({ default: vi.fn() }));
 
-import { askMultiline, __setEditorMod } from '../prompt-input-editor.js';
-import { CancelError } from '../prompt-ui.js';
+import { askMultiline, __setEditorMod } from '../ui/prompt-input-editor.js';
+import { CancelError } from '../ui/prompt-ui.js';
 
 describe('Prompt Input Editor', () => {
     beforeEach(() => {

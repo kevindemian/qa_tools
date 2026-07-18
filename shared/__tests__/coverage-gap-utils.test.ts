@@ -8,7 +8,7 @@ import {
     checkQualityGate,
     getCoverageGateDefaults,
     loadEpicSummaries,
-} from '../coverage-gap-utils.js';
+} from '../report/coverage-gap-utils.js';
 import type { CoverageGapItem, EpicCoverage } from '../types.js';
 import { nonNull } from '../test-utils.js';
 

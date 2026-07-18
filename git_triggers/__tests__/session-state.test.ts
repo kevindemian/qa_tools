@@ -1,7 +1,7 @@
 import os from 'os';
 import { makeDataHubGetters } from '../../shared/test-utils/factories/data-hub-mock.js';
 
-vi.mock('../../shared/prompt', () => ({
+vi.mock('../../shared/ui/prompt.js', () => ({
     print: vi.fn(),
     success: vi.fn(),
     warn: vi.fn(),
@@ -15,7 +15,7 @@ vi.mock('../../shared/prompt', () => ({
     divider: vi.fn(),
 }));
 
-vi.mock('../../shared/prompt-ui', () => ({
+vi.mock('../../shared/ui/prompt-ui.js', () => ({
     CancelError: class extends Error {
         cmd: string;
         constructor(cmd: string) {
@@ -63,7 +63,7 @@ vi.mock('../../shared/session-context', () => ({
 
 vi.mock('../../shared/state', () => ({ update: vi.fn() }));
 
-vi.mock('../../shared/cli_base', () => ({ printSessionSummary: vi.fn() }));
+vi.mock('../../shared/ui/cli_base.js', () => ({ printSessionSummary: vi.fn() }));
 
 vi.mock('../../shared/project-registry', () => ({
     listProjects: vi.fn(() => [
@@ -90,7 +90,7 @@ vi.mock('../../shared/project-context', () => ({
     clearCurrentProject: vi.fn(),
 }));
 
-vi.mock('../../shared/flakiness-dashboard', () => ({ generateFlakinessHtml: vi.fn(() => '<html>') }));
+vi.mock('../../shared/report/flakiness-dashboard.js', () => ({ generateFlakinessHtml: vi.fn(() => '<html>') }));
 
 vi.mock('../gitlab_manager', () => {
     return {
@@ -116,7 +116,7 @@ vi.mock('../github_manager', () => {
 
 vi.mock('../ui-helpers', () => ({ providerLabel: vi.fn(() => 'GitLab') }));
 
-import * as prompt from '../../shared/prompt.js';
+import * as prompt from '../../shared/ui/prompt.js';
 import * as sessionState from '../session-state.js';
 import { getCurrentProject } from '../../shared/project-context.js';
 import { createMockGitProvider } from '../../shared/test-utils/factories/index.js';

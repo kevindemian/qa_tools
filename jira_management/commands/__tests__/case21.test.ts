@@ -1,19 +1,19 @@
 import { expect } from 'vitest';
 
-vi.mock('../../../shared/prompt');
+vi.mock('../../../shared/ui/prompt.js');
 vi.mock('../../../shared/logger');
 
-vi.mock('../../../shared/coverage-gap', () => ({
+vi.mock('../../../shared/report/coverage-gap.js', () => ({
     analyzeCoverageGaps: vi.fn(),
 }));
 
-vi.mock('../../../shared/generate-coverage-gap-html', () => ({
+vi.mock('../../../shared/report/generate-coverage-gap-html.js', () => ({
     generateCoverageGapHtml: vi.fn().mockReturnValue('<html></html>'),
 }));
 
 vi.mock('../../../shared/open', () => ({ openWithFallback: vi.fn() }));
 
-vi.mock('../../../shared/ai-feedback', () => ({
+vi.mock('../../../shared/quality/ai-feedback.js', () => ({
     recordAiGeneration: vi.fn(),
 }));
 
@@ -30,9 +30,9 @@ vi.mock('../../../shared/logger', () => ({
     },
 }));
 
-import * as promptModule from '../../../shared/prompt.js';
-import * as coverageGapModule from '../../../shared/coverage-gap.js';
-import * as htmlModule from '../../../shared/generate-coverage-gap-html.js';
+import * as promptModule from '../../../shared/ui/prompt.js';
+import * as coverageGapModule from '../../../shared/report/coverage-gap.js';
+import * as htmlModule from '../../../shared/report/generate-coverage-gap-html.js';
 import * as openModule from '../../../shared/open.js';
 
 import type { CoverageGapResult, CoverageGapItem } from '../../../shared/types/coverage.js';

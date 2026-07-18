@@ -2,14 +2,14 @@ import fs from 'fs';
 import os from 'os';
 import path from 'path';
 import type { GitProvider, PipelineInfo } from '../../shared/types.js';
-import type JiraClient from '../../shared/jira-client.js';
+import type JiraClient from '../../shared/jira/jira-client.js';
 import type JiraLinkManager from '../../jira_management/jira_link_manager.js';
 import { createMockGitProvider } from '../../shared/test-utils/factories/index.js';
 import { nonNull } from '../../shared/test-utils.js';
-import * as prompt from '../../shared/prompt.js';
+import * as prompt from '../../shared/ui/prompt.js';
 import * as state from '../../shared/state.js';
 import * as nivelar from '../nivelar.js';
-import * as cliBase from '../../shared/cli_base.js';
+import * as cliBase from '../../shared/ui/cli_base.js';
 import { parseCliArgs } from '../cli-args.js';
 // sessionContext import removed — unused
 
@@ -25,13 +25,13 @@ vi.mock('fs', async (importOriginal) => {
     };
 });
 
-vi.mock('../../shared/breadcrumbs', () => ({
+vi.mock('../../shared/ui/breadcrumbs.js', () => ({
     pushBreadcrumb: vi.fn(),
     popBreadcrumb: vi.fn(),
     clearBreadcrumbs: vi.fn(),
     getBreadcrumbPath: vi.fn(() => 'GIT > proj-a'),
 }));
-vi.mock('../../shared/show-docs', () => ({ showDocs: vi.fn(() => Promise.resolve()) }));
+vi.mock('../../shared/report/show-docs.js', () => ({ showDocs: vi.fn(() => Promise.resolve()) }));
 vi.mock('../../shared/config-accessor.js', () => {
     const cfg: Record<string, unknown> = {
         autoConfirm: false,
@@ -92,7 +92,7 @@ vi.mock('../../shared/project-context', () => ({
     clearCurrentProject: vi.fn(),
 }));
 
-vi.mock('../../shared/prompt', () => ({
+vi.mock('../../shared/ui/prompt.js', () => ({
     print: vi.fn(),
     success: vi.fn(),
     error: vi.fn(),
@@ -144,7 +144,7 @@ vi.mock('../../shared/logger', () => ({
     Logger: vi.fn(),
 }));
 
-vi.mock('../../shared/cli_base', () => ({
+vi.mock('../../shared/ui/cli_base.js', () => ({
     createValidateEnv: vi.fn(() => vi.fn()),
     offerEnvSetup: vi.fn<(prompt: object) => Promise<boolean>>().mockResolvedValue(false),
     setupSigint: vi.fn(),
@@ -167,7 +167,7 @@ vi.mock('../../jira_management/result_reporter', () => ({
     createTestExecutionFromResults: vi.fn(),
 }));
 
-vi.mock('../../shared/http-client', () => ({
+vi.mock('../../shared/infra/http-client.js', () => ({
     sleep: vi.fn<(ms: number) => Promise<void>>(async () => {}),
 }));
 
@@ -184,7 +184,7 @@ vi.mock('../../shared/data-hub/global-hub.js', () => ({
     ensureDataHub: vi.fn().mockResolvedValue(undefined),
 }));
 
-vi.mock('../../shared/jira-client', () => ({
+vi.mock('../../shared/jira/jira-client.js', () => ({
     __esModule: true,
     default: vi.fn(),
 }));
@@ -211,7 +211,7 @@ vi.mock('../nivelar', () => ({
 vi.mock('../case00-handler', () => ({
     handleSetupWizard: vi.fn(() => Promise.resolve(false)),
 }));
-vi.mock('../../shared/temp-dir', () => ({
+vi.mock('../../shared/infra/temp-dir.js', () => ({
     ensureDirs: vi.fn(),
     registerCleanup: vi.fn(),
     writeEphemeral: vi.fn(() => path.join(os.tmpdir(), 'qa-test')),
@@ -591,7 +591,7 @@ describe('Main', () => {
         it('cancels when user declines', async () => {
             expect.hasAssertions();
 
-            const cliBase: typeof import('../../shared/cli_base.js') = await import('../../shared/cli_base.js');
+            const cliBase: typeof import('../../shared/ui/cli_base.js') = await import('../../shared/ui/cli_base.js');
             vi.spyOn(cliBase, 'confirmDestructiveAction').mockReturnValueOnce(false);
 
             await mainModule.handleExportVariables(mockProvider);
@@ -1074,8 +1074,8 @@ describe('Main', () => {
         it('prints goodbye and returns true', async () => {
             expect.hasAssertions();
 
-            const breadcrumbs: typeof import('../../shared/breadcrumbs.js') =
-                await import('../../shared/breadcrumbs.js');
+            const breadcrumbs: typeof import('../../shared/ui/breadcrumbs.js') =
+                await import('../../shared/ui/breadcrumbs.js');
             const result = mainModule._handleExit();
 
             expect(result).toBeTruthy();
@@ -1107,7 +1107,7 @@ describe('Main', () => {
         const ns = ['proj-a', 'proj-b'];
 
         beforeAll(async () => {
-            const outputMod: typeof import('../../shared/output.js') = await import('../../shared/output.js');
+            const outputMod: typeof import('../../shared/ui/output.js') = await import('../../shared/ui/output.js');
             vi.spyOn(outputMod.defaultOutput, 'box').mockImplementation(() => {});
         });
 

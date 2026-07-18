@@ -23,7 +23,7 @@ import fs from 'node:fs';
 import os from 'node:os';
 import path from 'node:path';
 import { afterEach, beforeEach, describe, expect, it } from 'vitest';
-import { FsStoreBackend } from '../../store-backend.js';
+import { FsStoreBackend } from '../../infra/store-backend.js';
 import { createDataHubPersistence } from '../../data-hub/persistence.js';
 import type { ReportMeta } from '../../types/data-hub.js';
 import { createFlatTestArrayFixture } from './integration-helpers.js';

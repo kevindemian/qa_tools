@@ -11,8 +11,8 @@
  * State is mocked to avoid filesystem side effects.
  */
 import { describe, expect, it, vi, beforeEach, assert } from 'vitest';
-import * as qualityMetrics from '../../quality-metrics.js';
-import * as llmMetrics from '../../llm-metrics.js';
+import * as qualityMetrics from '../../quality/quality-metrics.js';
+import * as llmMetrics from '../../llm/llm-metrics.js';
 
 vi.mock('../../state', () => ({
     updateTyped: vi.fn(),
@@ -20,7 +20,7 @@ vi.mock('../../state', () => ({
 
 vi.mock('../../logger');
 
-import { checkQualitySignals } from '../../quality-suggester.js';
+import { checkQualitySignals } from '../../quality/quality-suggester.js';
 
 const EMPTY_SNAPSHOT = {
     totalRequests: 0,

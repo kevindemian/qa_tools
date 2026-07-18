@@ -1,6 +1,6 @@
 /** Jira version management: create, publish, list, and assign fix versions to issues. */
 import { formatDateISO } from '../shared/date-utils.js';
-import { success, info, extractErrorMessage, ProgressBar } from '../shared/prompt.js';
+import { success, info, extractErrorMessage, ProgressBar } from '../shared/ui/prompt.js';
 import type { Logger } from '../shared/logger.js';
 import type { VersionData, JiraIssue, SearchResponse, JiraResourceLike } from './jira-resource-types.js';
 import {
@@ -21,8 +21,8 @@ import {
     NO_UNRELEASED_VERSIONS,
 } from './constants.js';
 import type { JsonObject } from '../shared/types.js';
-import { isAtlassianCloudGateway } from '../shared/jira-auth.js';
-import { normalizeJqlForCloud } from '../shared/jira-client.js';
+import { isAtlassianCloudGateway } from '../shared/jira/jira-auth.js';
+import { normalizeJqlForCloud } from '../shared/jira/jira-client.js';
 
 function sanitizeJqlValue(value: string): string {
     if (!value || typeof value !== 'string') {

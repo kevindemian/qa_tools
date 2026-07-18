@@ -1,6 +1,6 @@
-vi.mock('../../../shared/prompt');
+vi.mock('../../../shared/ui/prompt.js');
 
-vi.mock('../../../shared/jira-helper', () => ({
+vi.mock('../../../shared/jira/jira-helper.js', () => ({
     safeJiraCall: vi.fn(),
 }));
 

@@ -1,11 +1,11 @@
-vi.mock('../disk-cache', () => ({
+vi.mock('../infra/disk-cache.js', () => ({
     diskCacheGet: vi.fn(() => null),
     diskCacheSet: vi.fn(),
     clearDiskCache: vi.fn(),
 }));
 
 import { z } from 'zod';
-import { diskCacheGet, diskCacheSet, clearDiskCache } from '../disk-cache.js';
+import { diskCacheGet, diskCacheSet, clearDiskCache } from '../infra/disk-cache.js';
 import {
     configUniqueKey,
     cacheKey,
@@ -17,7 +17,7 @@ import {
     checkSchema,
     warnIfNotJson,
     CACHE_TTL_MS,
-} from '../llm-cache.js';
+} from '../llm/llm-cache.js';
 import { rootLogger } from '../logger.js';
 
 const testSchema = z.object({ ok: z.boolean() });

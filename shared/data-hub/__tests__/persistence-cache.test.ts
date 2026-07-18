@@ -19,7 +19,7 @@ import fs from 'node:fs';
 import path from 'node:path';
 import os from 'node:os';
 import { afterAll, beforeEach, describe, expect, it, vi } from 'vitest';
-import { FsStoreBackend } from '../../store-backend.js';
+import { FsStoreBackend } from '../../infra/store-backend.js';
 import { createDataHubPersistence } from '../persistence.js';
 import type { DataHubPersistence, ReportMeta } from '../../types/data-hub.js';
 

@@ -2,13 +2,13 @@
  * Tests for report-sections — HTML UI section builders.
  */
 
-vi.mock('../report-table', () => ({
+vi.mock('../report/report-table.js', () => ({
     buildTestTable: vi.fn(() => '<table>mock</table>'),
 }));
 
 import { nonNull } from '../test-utils.js';
 import type { FlatTest } from '../result_parser.js';
-import type { TestRunTab, ReportOptions, ReportStats } from '../report-types.js';
+import type { TestRunTab, ReportOptions, ReportStats } from '../report/report-types.js';
 import {
     buildTabs,
     buildTabContents,
@@ -21,7 +21,7 @@ import {
     buildFailedSummary,
     buildReleaseSection,
     buildHealthSection,
-} from '../report-sections.js';
+} from '../report/report-sections.js';
 
 const sampleTests: FlatTest[] = [
     { title: 'TC01', state: 'passed', duration: 100 },

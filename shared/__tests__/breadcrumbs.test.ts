@@ -4,7 +4,7 @@ import {
     clearBreadcrumbs,
     getBreadcrumbPath,
     __resetBreadcrumbs,
-} from '../breadcrumbs.js';
+} from '../ui/breadcrumbs.js';
 
 describe('Breadcrumbs', () => {
     beforeEach(() => {

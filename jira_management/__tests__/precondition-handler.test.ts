@@ -1,5 +1,5 @@
 import type { Mock } from 'vitest';
-vi.mock('../../shared/prompt', () => ({
+vi.mock('../../shared/ui/prompt.js', () => ({
     info: vi.fn(),
     warn: vi.fn(),
 }));
@@ -16,7 +16,7 @@ vi.mock('../../shared/config-accessor.js', () => ({
 const hoistedXray = vi.hoisted(() => ({
     addPreconditionsToTest: vi.fn(),
 }));
-vi.mock('../../shared/xray-cloud-client', () => ({
+vi.mock('../../shared/jira/xray-cloud-client.js', () => ({
     XrayCloudClient: class {
         graphqlMutation() {
             return Promise.resolve({ data: {} });

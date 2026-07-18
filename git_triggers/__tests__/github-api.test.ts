@@ -1,6 +1,6 @@
 import { apiGet, apiPost, apiPatch, formatDiffResponse } from '../github-api.js';
 import { ExternalError } from '../../shared/errors.js';
-import { resetCircuitState } from '../../shared/circuit-breaker.js';
+import { resetCircuitState } from '../../shared/infra/circuit-breaker.js';
 import type { Mocked } from 'vitest';
 import { createMockAxiosInstance } from '../../shared/test-utils/factories/response-factory.js';
 import type { AxiosInstance } from '../../shared/deps.js';

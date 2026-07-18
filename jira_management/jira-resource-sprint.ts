@@ -1,6 +1,6 @@
 /** Jira sprint management: add tasks to active sprint. */
 import { formatErr } from '../shared/errors.js';
-import { success, info, warn, extractErrorMessage } from '../shared/prompt.js';
+import { success, info, warn, extractErrorMessage } from '../shared/ui/prompt.js';
 import Config from '../shared/config-accessor.js';
 import type { JiraResourceLike } from './jira-resource-types.js';
 import {

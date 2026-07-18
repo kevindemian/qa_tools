@@ -1,4 +1,4 @@
-vi.mock('../../shared/prompt');
+vi.mock('../../shared/ui/prompt.js');
 vi.mock('../../shared/logger');
 vi.mock('../session-state', () => ({
     pushHistory: vi.fn(),
@@ -9,7 +9,7 @@ vi.mock('../../setup/main', () => {
     return { main: mainFn };
 });
 
-import { title, info, divider, printError } from '../../shared/prompt.js';
+import { title, info, divider, printError } from '../../shared/ui/prompt.js';
 import type { Mocked } from 'vitest';
 import { pushHistory } from '../session-state.js';
 import { handleSetupWizard } from '../case00-handler.js';

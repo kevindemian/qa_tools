@@ -11,7 +11,7 @@ vi.mock('child_process', async () => {
 });
 
 import { execFileSync } from 'child_process';
-import { detectStoreBackend, FsStoreBackend } from '../store-backend.js';
+import { detectStoreBackend, FsStoreBackend } from '../infra/store-backend.js';
 
 describe('DetectStoreBackend fallback', () => {
     const origXdg = process.env['XDG_STATE_HOME'];

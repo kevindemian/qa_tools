@@ -10,7 +10,7 @@ type MockedJiraResource = ReturnType<typeof createMockJiraResource>;
 
 const mockGraphql = vi.fn();
 
-vi.mock('../../shared/xray-cloud-client', () => ({
+vi.mock('../../shared/jira/xray-cloud-client.js', () => ({
     XrayCloudClient: vi.fn(function () {
         return {
             graphql: mockGraphql,

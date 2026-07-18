@@ -14,7 +14,7 @@ import {
     getLastGitLogError,
     parseGitLogOutput,
     clearGitLogError,
-} from '../git-metrics-adapter.js';
+} from '../ci/git-metrics-adapter.js';
 
 vi.mock('../logger', () => ({
     rootLogger: { error: vi.fn(), warn: vi.fn(), info: vi.fn(), child: vi.fn().mockReturnThis() },

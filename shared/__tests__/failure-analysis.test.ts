@@ -2,16 +2,16 @@ import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 
 vi.mock('../config-accessor.js', () => ({ default: { get: vi.fn<(k: string) => string>(() => '') } }));
 vi.mock('child_process', () => ({ execFileSync: vi.fn(() => '') }));
-vi.mock('../spinner.js', () => ({ withSpinner: vi.fn((_label: string, fn: () => Promise<unknown>) => fn()) }));
+vi.mock('../ui/spinner.js', () => ({ withSpinner: vi.fn((_label: string, fn: () => Promise<unknown>) => fn()) }));
 vi.mock('fs', async () => {
     const actual = await vi.importActual<typeof import('fs')>('fs');
     const readFileSync = vi.fn(actual.readFileSync);
     return { ...actual, readFileSync, default: { ...actual, readFileSync } };
 });
-vi.mock('../llm-review.js', () => ({ reviewWithLlm: vi.fn() }));
-vi.mock('../report-generator.js', () => ({ generateReportWithFallback: vi.fn(() => '<html>report</html>') }));
-vi.mock('../llm-metrics.js', () => ({ snapshotLlmMetrics: vi.fn() }));
-vi.mock('../llm-client.js', () => ({ llmPrompt: vi.fn() }));
+vi.mock('../llm/llm-review.js', () => ({ reviewWithLlm: vi.fn() }));
+vi.mock('../report/report-generator.js', () => ({ generateReportWithFallback: vi.fn(() => '<html>report</html>') }));
+vi.mock('../llm/llm-metrics.js', () => ({ snapshotLlmMetrics: vi.fn() }));
+vi.mock('../llm/llm-client.js', () => ({ llmPrompt: vi.fn() }));
 
 import { execFileSync } from 'child_process';
 import Config from '../config-accessor.js';
@@ -21,12 +21,12 @@ import {
     classifyFailure,
     crossReferenceFailures,
     getCommitAuthor,
-} from '../failure-analysis.js';
-import { reviewWithLlm } from '../llm-review.js';
-import type { ReviewResult } from '../llm-review.js';
-import { generateReportWithFallback } from '../report-generator.js';
-import { snapshotLlmMetrics } from '../llm-metrics.js';
-import { llmPrompt } from '../llm-client.js';
+} from '../validation/failure-analysis.js';
+import { reviewWithLlm } from '../llm/llm-review.js';
+import type { ReviewResult } from '../llm/llm-review.js';
+import { generateReportWithFallback } from '../report/report-generator.js';
+import { snapshotLlmMetrics } from '../llm/llm-metrics.js';
+import { llmPrompt } from '../llm/llm-client.js';
 import { rootLogger } from '../logger.js';
 import type { FlatTest } from '../result_parser.js';
 import type { DataHub, FailureRecord } from '../types/data-hub.js';

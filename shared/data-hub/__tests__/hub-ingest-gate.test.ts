@@ -7,7 +7,7 @@
 import { describe, it, expect, vi } from 'vitest';
 import type { DataProvider, RawData, FailureRecord } from '../../types/data-hub.js';
 import type { PipelineRun } from '../../types/ci-cd.js';
-import { loadQuarantine } from '../../quarantine.js';
+import { loadQuarantine } from '../../validation/quarantine.js';
 import { DataHubImpl } from '../hub.js';
 import { makeDataHubPersistenceMock } from '../../test-utils/factories/data-hub-mock.js';
 

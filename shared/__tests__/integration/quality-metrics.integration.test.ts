@@ -20,7 +20,7 @@ describe('Integration: Quality Metrics', () => {
         it('counts fires per invariant and computes rate', async () => {
             expect.hasAssertions();
 
-            const { QualityMetricsCollector } = await import('../../quality-metrics.js');
+            const { QualityMetricsCollector } = await import('../../quality/quality-metrics.js');
             const collector = new QualityMetricsCollector();
 
             collector.recordInvariantFire('A-01');
@@ -35,7 +35,7 @@ describe('Integration: Quality Metrics', () => {
         it('returns 0 for unknown invariant', async () => {
             expect.hasAssertions();
 
-            const { QualityMetricsCollector } = await import('../../quality-metrics.js');
+            const { QualityMetricsCollector } = await import('../../quality/quality-metrics.js');
             const collector = new QualityMetricsCollector();
 
             expect(collector.invariantFireRate('UNKNOWN')).toBe(0);
@@ -46,7 +46,7 @@ describe('Integration: Quality Metrics', () => {
         it('computes pass rate per layer', async () => {
             expect.hasAssertions();
 
-            const { QualityMetricsCollector } = await import('../../quality-metrics.js');
+            const { QualityMetricsCollector } = await import('../../quality/quality-metrics.js');
             const collector = new QualityMetricsCollector();
 
             collector.recordLayerAttempt('layer1');
@@ -59,7 +59,7 @@ describe('Integration: Quality Metrics', () => {
         it('returns 1 when no attempts', async () => {
             expect.hasAssertions();
 
-            const { QualityMetricsCollector } = await import('../../quality-metrics.js');
+            const { QualityMetricsCollector } = await import('../../quality/quality-metrics.js');
             const collector = new QualityMetricsCollector();
 
             expect(collector.layerPassRate('layer1')).toBe(1);
@@ -70,7 +70,7 @@ describe('Integration: Quality Metrics', () => {
         it('counts artifact types', async () => {
             expect.hasAssertions();
 
-            const { QualityMetricsCollector } = await import('../../quality-metrics.js');
+            const { QualityMetricsCollector } = await import('../../quality/quality-metrics.js');
             const collector = new QualityMetricsCollector();
 
             collector.recordArtifactType('test-case');
@@ -88,7 +88,7 @@ describe('Integration: Quality Metrics', () => {
         it('creates snapshot with all fields', async () => {
             expect.hasAssertions();
 
-            const { QualityMetricsCollector } = await import('../../quality-metrics.js');
+            const { QualityMetricsCollector } = await import('../../quality/quality-metrics.js');
             const collector = new QualityMetricsCollector();
 
             collector.recordInvariantFire('T-01');
@@ -112,7 +112,7 @@ describe('Integration: Quality Metrics', () => {
         it('resets all accumulators', async () => {
             expect.hasAssertions();
 
-            const { QualityMetricsCollector } = await import('../../quality-metrics.js');
+            const { QualityMetricsCollector } = await import('../../quality/quality-metrics.js');
             const collector = new QualityMetricsCollector();
 
             collector.recordInvariantFire('A-01');
@@ -129,7 +129,7 @@ describe('Integration: Quality Metrics', () => {
         it('detects drift when current ratio exceeds 2σ from baseline', async () => {
             expect.hasAssertions();
 
-            const { QualityMetricsCollector } = await import('../../quality-metrics.js');
+            const { QualityMetricsCollector } = await import('../../quality/quality-metrics.js');
             // Baseline: A-02 ratio = 0.91, 0.89 => mean 0.90, σ 0.01, 2σ upper = 0.92
             const baseline = [
                 {
@@ -166,7 +166,7 @@ describe('Integration: Quality Metrics', () => {
         it('returns empty when baseline too small', async () => {
             expect.hasAssertions();
 
-            const { QualityMetricsCollector } = await import('../../quality-metrics.js');
+            const { QualityMetricsCollector } = await import('../../quality/quality-metrics.js');
             const collector = new QualityMetricsCollector();
             collector.recordInvariantFire('A-01');
 

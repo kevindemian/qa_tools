@@ -6,7 +6,7 @@
 import { describe, it, expect, vi, beforeEach } from 'vitest';
 import { createDataHubPersistence } from '../persistence.js';
 import type { MetricsRun, MetricsStore, CoverageSnapshot, FailureClassification } from '../../types/data-hub.js';
-import type { StoreBackend } from '../../store-backend.js';
+import type { StoreBackend } from '../../infra/store-backend.js';
 import type { ParseResult } from '../../result_parser.js';
 
 /* ── Mock StoreBackend ──────────────────────────────────────────────────── */

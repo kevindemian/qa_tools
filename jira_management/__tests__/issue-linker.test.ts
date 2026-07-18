@@ -15,9 +15,9 @@ const mockHttpClient = vi.hoisted(() => ({
     sleep: vi.fn().mockResolvedValue(undefined),
 }));
 
-vi.mock('../../shared/prompt', () => mockPrompt);
+vi.mock('../../shared/ui/prompt.js', () => mockPrompt);
 vi.mock('../../shared/logger', () => mockLogger);
-vi.mock('../../shared/http-client', () => mockHttpClient);
+vi.mock('../../shared/infra/http-client.js', () => mockHttpClient);
 
 import type { TestCase, JiraResourceLike } from '../../shared/types.js';
 import type { Mocked } from 'vitest';

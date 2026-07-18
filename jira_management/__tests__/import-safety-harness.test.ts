@@ -37,7 +37,7 @@ const mockPrompt = vi.hoisted(() => ({
     extractErrorMessage: vi.fn<(...args: [unknown]) => string>((err: unknown) => String(err)),
 }));
 
-vi.mock('../../shared/prompt', () => mockPrompt);
+vi.mock('../../shared/ui/prompt.js', () => mockPrompt);
 
 vi.mock('../../shared/config-accessor.js', async (importOriginal) => {
     const mod = await importOriginal<typeof import('../../shared/config-accessor.js')>();
@@ -53,7 +53,7 @@ vi.mock('../../shared/state', () => ({
     update: vi.fn<(...args: [(state: object) => void]) => object>(),
 }));
 
-vi.mock('../../shared/temp-dir', () => ({
+vi.mock('../../shared/infra/temp-dir.js', () => ({
     reportsDir: vi.fn<(...args: []) => string>().mockReturnValue(path.join(os.tmpdir(), 'qa-tools-reports-harness')),
     writeEphemeral: vi.fn<(...args: [string, string, string]) => string>(),
     tempDirPath: vi.fn<(...args: []) => string>().mockReturnValue(path.join(os.tmpdir(), 'qa-tools-temp')),

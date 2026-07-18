@@ -1,11 +1,11 @@
-import { ArtifactValidator } from '../artifact-validator.js';
+import { ArtifactValidator } from '../validation/artifact-validator.js';
 import {
     invariantNoPlaceholder,
     invariantNoMarkdown,
     invariantEvidenceExists,
     invariantNoEmptyStrings,
     invariantConclusionHasEvidence,
-} from '../shared-invariants.js';
+} from '../validation/shared-invariants.js';
 import { invariantCoverageComplete } from './t-01.js';
 import { invariantCoverageThreshold } from './t-02.js';
 import { invariantStateMutation } from './t-03.js';

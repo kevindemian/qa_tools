@@ -18,7 +18,7 @@
 import AdmZip from 'adm-zip';
 import { XMLParser } from 'fast-xml-parser';
 import type { CoverageFile } from '../../types/data-hub.js';
-import { extractErrorMessage } from '../../prompt-errors.js';
+import { extractErrorMessage } from '../../ui/prompt-errors.js';
 
 /** Confidence assigned to every extracted per-file coverage entry. */
 export const COVERAGE_FILES_CONFIDENCE = 0.85;

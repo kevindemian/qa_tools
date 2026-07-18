@@ -1,4 +1,4 @@
-import { buildHtmlPage, buildThemeScript, buildErrorPage } from '../html-factory.js';
+import { buildHtmlPage, buildThemeScript, buildErrorPage } from '../report/html-factory.js';
 import { sanitizeHtml } from '../escape.js';
 
 describe('BuildHtmlPage', () => {

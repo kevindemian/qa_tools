@@ -2,14 +2,20 @@ import { EventEmitter } from 'events';
 import fs from 'node:fs';
 import os from 'node:os';
 import path from 'node:path';
-import { Output, defaultOutput } from '../output.js';
-import * as entryMenuModule from '../entry-menu.js';
-import * as promptModule from '../prompt.js';
+import { Output, defaultOutput } from '../ui/output.js';
+import * as entryMenuModule from '../ui/entry-menu.js';
+import * as promptModule from '../ui/prompt.js';
 import { type ChildProcess } from 'child_process';
 
-vi.mock('../splash', () => ({ showSplash: vi.fn() }));
-vi.mock('../prompt', () => ({ showSelect: vi.fn(), confirm: vi.fn(), info: vi.fn(), warn: vi.fn(), divider: vi.fn() }));
-vi.mock('../output', () => {
+vi.mock('../ui/splash.js', () => ({ showSplash: vi.fn() }));
+vi.mock('../ui/prompt.js', () => ({
+    showSelect: vi.fn(),
+    confirm: vi.fn(),
+    info: vi.fn(),
+    warn: vi.fn(),
+    divider: vi.fn(),
+}));
+vi.mock('../ui/output.js', () => {
     const mockOutput = { box: vi.fn(), print: vi.fn() };
     return {
         Output: { isTTY: vi.fn(), isCI: vi.fn() },

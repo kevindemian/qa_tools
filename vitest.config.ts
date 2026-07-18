@@ -26,9 +26,9 @@ export default defineConfig({
                 'scripts/smartwizard-llm.ts',
                 'scripts/smartwizard-discovery.ts',
 
-                'shared/prompt.ts',
-                'shared/prompt-input.ts',
-                'shared/prompt-ui.ts',
+                'shared/ui/prompt.ts',
+                'shared/ui/prompt-input.ts',
+                'shared/ui/prompt-ui.ts',
                 'jira_management/import-prep.ts',
                 'git_triggers/main.ts',
                 'git_triggers/batch-mode.ts',

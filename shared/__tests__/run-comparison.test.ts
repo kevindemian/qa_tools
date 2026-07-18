@@ -1,4 +1,4 @@
-vi.mock('../llm-client', () => ({
+vi.mock('../llm/llm-client.js', () => ({
     llmPrompt: vi.fn(),
     getLlmClientMetrics: vi.fn(() => ({
         cacheHits: 0,
@@ -16,8 +16,8 @@ vi.mock('../logger', () => ({
     rootLogger: { error: mockLoggerError, info: vi.fn(), warn: vi.fn(), child: vi.fn().mockReturnThis() },
 }));
 
-import { llmPrompt } from '../llm-client.js';
-import { compareRuns } from '../run-comparison.js';
+import { llmPrompt } from '../llm/llm-client.js';
+import { compareRuns } from '../quality/run-comparison.js';
 import { sanitizeForLlm } from '../sanitize.js';
 import { nonNull } from '../test-utils.js';
 import type { MetricsRun } from '../types/data-hub.js';

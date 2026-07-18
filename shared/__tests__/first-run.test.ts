@@ -6,7 +6,7 @@ const mockWarn = vi.fn<(...args: [message: string]) => void>();
 const mockLoadTypedState = vi.fn<(...args: []) => Record<string, unknown>>();
 const mockUpdateState = vi.fn<(...args: [(state: object) => void]) => void>();
 
-vi.mock('../prompt', () => ({
+vi.mock('../ui/prompt.js', () => ({
     title: mockTitle,
     info: mockInfo,
     divider: mockDivider,
@@ -27,7 +27,7 @@ vi.mock('../../setup/main', () => ({
     main: mockSetupMain,
 }));
 
-vi.mock('../show-docs', () => ({
+vi.mock('../report/show-docs.js', () => ({
     showDocs: mockShowDocs,
 }));
 
@@ -35,7 +35,7 @@ const OLD_ENV = { ...process.env };
 const OLD_ARGV = [...process.argv];
 
 async function loadModule() {
-    return import('../first-run.js');
+    return import('../ui/first-run.js');
 }
 
 describe('First Run', () => {

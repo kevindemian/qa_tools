@@ -2,7 +2,7 @@
  * Tests for flakiness-dashboard — HTML flakiness report using primitives.
  */
 
-import { filterHighFlakiness, generateFlakinessHtml } from '../flakiness-dashboard.js';
+import { filterHighFlakiness, generateFlakinessHtml } from '../report/flakiness-dashboard.js';
 import type { FlakinessEntry } from '../types/data-hub.js';
 import type { QualityCategory, QualityReport } from '../data-hub/quality.js';
 import type { DataSource } from '../types/data-hub.js';

@@ -20,7 +20,7 @@ function errorResponse(status: number): Response {
     return new Response('error', { status });
 }
 
-import { detectProvider, probeApiKey, discoverProvider, autoAssignTiers } from '../llm-probe.js';
+import { detectProvider, probeApiKey, discoverProvider, autoAssignTiers } from '../llm/llm-probe.js';
 
 describe('DetectProvider', () => {
     it('returns null for empty key', () => {
@@ -177,7 +177,7 @@ describe('ProbeApiKey', () => {
 
         mockFetch.mockResolvedValueOnce(okResponse());
 
-        const { getDefaultMetrics } = await import('../llm-metrics.js');
+        const { getDefaultMetrics } = await import('../llm/llm-metrics.js');
         const recordSpy = vi.spyOn(getDefaultMetrics(), 'recordLlmRequest');
 
         const result = await probeApiKey('sk-test', 'openai');

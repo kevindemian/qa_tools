@@ -30,7 +30,7 @@ import type {
 } from '../../types/data-hub.js';
 import type { QualityReport, QualityCategory } from '../../data-hub/quality.js';
 import type { DataSource } from '../../types/data-hub.js';
-import type { QuarantineStore } from '../../quarantine.js';
+import type { QuarantineStore } from '../../validation/quarantine.js';
 
 /** Default `computed` metrics — all zeros/empty so overrides can be partial. */
 const defaultComputed: ComputedMetrics = {

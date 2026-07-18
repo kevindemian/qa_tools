@@ -3,10 +3,10 @@ import path from 'path';
 import { describe, it, expect, vi, beforeEach } from 'vitest';
 import { createMockContext } from '../../shared/test-utils/factories/context-factory.js';
 import type { MetricsRun } from '../../shared/types/data-hub.js';
-import type { TraceabilityResult } from '../../shared/traceability-matrix.js';
-import type { ReleaseScoreResult } from '../../shared/release-score.js';
+import type { TraceabilityResult } from '../../shared/report/traceability-matrix.js';
+import type { ReleaseScoreResult } from '../../shared/quality/release-score.js';
 
-vi.mock('../../shared/prompt.js', () => ({
+vi.mock('../../shared/ui/prompt.js', () => ({
     showSelect: vi.fn(),
     warn: vi.fn(),
     info: vi.fn(),
@@ -22,24 +22,24 @@ vi.mock('../../shared/data-hub/global-hub.js', () => ({
 vi.mock('../../shared/data-hub/compute/flakiness-entries.js', () => ({
     calcFlakinessEntries: vi.fn().mockReturnValue([]),
 }));
-vi.mock('../../shared/temp-dir.js', () => ({
+vi.mock('../../shared/infra/temp-dir.js', () => ({
     writeReport: vi.fn(),
 }));
-vi.mock('../../shared/traceability-matrix.js', () => ({
+vi.mock('../../shared/report/traceability-matrix.js', () => ({
     buildTraceabilityMatrix: vi.fn(),
     generateTraceabilityHtml: vi.fn(),
 }));
-vi.mock('../../shared/health-score.js', () => ({
+vi.mock('../../shared/quality/health-score.js', () => ({
     calculateHealthScore: vi.fn(),
 }));
-vi.mock('../../shared/release-score.js', () => ({
+vi.mock('../../shared/quality/release-score.js', () => ({
     calculateReleaseScore: vi.fn(),
     generateReleaseScoreHtml: vi.fn(),
 }));
-vi.mock('../../shared/coverage-gap.js', () => ({
+vi.mock('../../shared/report/coverage-gap.js', () => ({
     analyzeCoverageGaps: vi.fn(),
 }));
-vi.mock('../../shared/generate-coverage-gap-html.js', () => ({
+vi.mock('../../shared/report/generate-coverage-gap-html.js', () => ({
     generateCoverageGapHtml: vi.fn(),
 }));
 vi.mock('../../shared/open.js', () => ({
@@ -172,7 +172,7 @@ describe('Case-d — dashboard menu', () => {
     it('shows dashboard menu when project is set', async () => {
         expect.hasAssertions();
 
-        const { showSelect } = await import('../../shared/prompt.js');
+        const { showSelect } = await import('../../shared/ui/prompt.js');
         vi.mocked(showSelect).mockResolvedValue('0');
         const ctx = createMockContext();
         const { default: caseD } = await import('../commands/case-d.js');
@@ -184,13 +184,13 @@ describe('Case-d — dashboard menu', () => {
     it('executes case25 when user selects traceability', async () => {
         expect.hasAssertions();
 
-        const { showSelect } = await import('../../shared/prompt.js');
+        const { showSelect } = await import('../../shared/ui/prompt.js');
         vi.mocked(showSelect).mockResolvedValue('25');
         const { getDataHub } = await import('../../shared/data-hub/global-hub.js');
         vi.mocked(getDataHub).mockReturnValue({
             computed: { metricsRuns: [] },
         } as never);
-        const { writeReport } = await import('../../shared/temp-dir.js');
+        const { writeReport } = await import('../../shared/infra/temp-dir.js');
         vi.mocked(writeReport).mockReturnValue(path.join(os.tmpdir(), 'qa-test-report.html'));
         const ctx = createMockContext();
         const { default: caseD } = await import('../commands/case-d.js');
@@ -202,13 +202,14 @@ describe('Case-d — dashboard menu', () => {
     it('executes case26 when user selects release score', async () => {
         expect.hasAssertions();
 
-        const { showSelect } = await import('../../shared/prompt.js');
+        const { showSelect } = await import('../../shared/ui/prompt.js');
         vi.mocked(showSelect).mockResolvedValue('26');
         const { getDataHub } = await import('../../shared/data-hub/global-hub.js');
         const { calcFlakinessEntries } = await import('../../shared/data-hub/compute/flakiness-entries.js');
-        const { calculateHealthScore } = await import('../../shared/health-score.js');
-        const { calculateReleaseScore, generateReleaseScoreHtml } = await import('../../shared/release-score.js');
-        const { writeReport } = await import('../../shared/temp-dir.js');
+        const { calculateHealthScore } = await import('../../shared/quality/health-score.js');
+        const { calculateReleaseScore, generateReleaseScoreHtml } =
+            await import('../../shared/quality/release-score.js');
+        const { writeReport } = await import('../../shared/infra/temp-dir.js');
         vi.mocked(getDataHub).mockReturnValue({
             computed: { metricsRuns: [{ project: 'TEST' }] },
         } as never);
@@ -236,11 +237,11 @@ describe('Case-d — dashboard menu', () => {
     it('executes case27 when user selects coverage dashboard', async () => {
         expect.hasAssertions();
 
-        const { showSelect } = await import('../../shared/prompt.js');
+        const { showSelect } = await import('../../shared/ui/prompt.js');
         vi.mocked(showSelect).mockResolvedValue('27');
-        const { analyzeCoverageGaps } = await import('../../shared/coverage-gap.js');
-        const { generateCoverageGapHtml } = await import('../../shared/generate-coverage-gap-html.js');
-        const { writeReport } = await import('../../shared/temp-dir.js');
+        const { analyzeCoverageGaps } = await import('../../shared/report/coverage-gap.js');
+        const { generateCoverageGapHtml } = await import('../../shared/report/generate-coverage-gap-html.js');
+        const { writeReport } = await import('../../shared/infra/temp-dir.js');
         vi.mocked(analyzeCoverageGaps).mockResolvedValue(makeCoverageResult());
         vi.mocked(generateCoverageGapHtml).mockReturnValue(HTML_WITH_DOCTYPE);
         vi.mocked(writeReport).mockReturnValue(path.join(os.tmpdir(), 'qa-test-report.html'));
@@ -265,7 +266,7 @@ describe('Case25 — Traceability Matrix', () => {
 
         expect(ctx.pushHistory).not.toHaveBeenCalled();
 
-        const { warn } = await import('../../shared/prompt.js');
+        const { warn } = await import('../../shared/ui/prompt.js');
 
         expect(vi.mocked(warn)).toHaveBeenCalledWith('Nenhum projeto Jira selecionado.');
     });
@@ -275,8 +276,8 @@ describe('Case25 — Traceability Matrix', () => {
 
         const { getDataHub } = await import('../../shared/data-hub/global-hub.js');
         const { buildTraceabilityMatrix, generateTraceabilityHtml } =
-            await import('../../shared/traceability-matrix.js');
-        const { writeReport } = await import('../../shared/temp-dir.js');
+            await import('../../shared/report/traceability-matrix.js');
+        const { writeReport } = await import('../../shared/infra/temp-dir.js');
         const runs = [makeRun('TEST')];
         vi.mocked(getDataHub).mockReturnValue({
             computed: { metricsRuns: runs },
@@ -296,8 +297,8 @@ describe('Case25 — Traceability Matrix', () => {
         expect.hasAssertions();
 
         const { buildTraceabilityMatrix, generateTraceabilityHtml } =
-            await import('../../shared/traceability-matrix.js');
-        const { writeReport } = await import('../../shared/temp-dir.js');
+            await import('../../shared/report/traceability-matrix.js');
+        const { writeReport } = await import('../../shared/infra/temp-dir.js');
         vi.mocked(buildTraceabilityMatrix).mockReturnValue(makeTraceabilityResult());
         vi.mocked(generateTraceabilityHtml).mockReturnValue(HTML_WITH_DOCTYPE);
         vi.mocked(writeReport).mockReturnValue(path.join(os.tmpdir(), 'qa-test-report.html'));
@@ -312,7 +313,7 @@ describe('Case25 — Traceability Matrix', () => {
     it('writes report with correct filename pattern', async () => {
         expect.hasAssertions();
 
-        const { writeReport } = await import('../../shared/temp-dir.js');
+        const { writeReport } = await import('../../shared/infra/temp-dir.js');
         vi.mocked(writeReport).mockReturnValue(path.join(os.tmpdir(), 'qa-test-report.html'));
         const ctx = createMockContext();
         ctx.ctx.project_name = 'PROJ-XYZ';
@@ -325,7 +326,7 @@ describe('Case25 — Traceability Matrix', () => {
     it('opens report in browser', async () => {
         expect.hasAssertions();
 
-        const { writeReport } = await import('../../shared/temp-dir.js');
+        const { writeReport } = await import('../../shared/infra/temp-dir.js');
         const { openWithFallback } = await import('../../shared/open.js');
         vi.mocked(writeReport).mockReturnValue(path.join(os.tmpdir(), 'qa-traceability-matrix-TEST.html'));
         vi.mocked(openWithFallback).mockResolvedValue(undefined);
@@ -343,7 +344,7 @@ describe('Case25 — Traceability Matrix', () => {
     it('pushes history with project name on success', async () => {
         expect.hasAssertions();
 
-        const { writeReport } = await import('../../shared/temp-dir.js');
+        const { writeReport } = await import('../../shared/infra/temp-dir.js');
         vi.mocked(writeReport).mockReturnValue(path.join(os.tmpdir(), 'qa-test-report.html'));
         const ctx = createMockContext();
         ctx.ctx.project_name = 'AUDIT-PROJ';
@@ -357,8 +358,8 @@ describe('Case25 — Traceability Matrix', () => {
         expect.hasAssertions();
 
         const { getDataHub } = await import('../../shared/data-hub/global-hub.js');
-        const { buildTraceabilityMatrix } = await import('../../shared/traceability-matrix.js');
-        const { writeReport } = await import('../../shared/temp-dir.js');
+        const { buildTraceabilityMatrix } = await import('../../shared/report/traceability-matrix.js');
+        const { writeReport } = await import('../../shared/infra/temp-dir.js');
         vi.mocked(getDataHub).mockReturnValue({
             computed: { metricsRuns: [] },
         } as never);
@@ -385,7 +386,7 @@ describe('Case25 — Traceability Matrix', () => {
 
         await expect(case25.handler(ctx)).resolves.not.toThrow();
 
-        const { printError } = await import('../../shared/prompt.js');
+        const { printError } = await import('../../shared/ui/prompt.js');
 
         expect(vi.mocked(printError)).toHaveBeenCalledTimes(1);
     });
@@ -393,12 +394,12 @@ describe('Case25 — Traceability Matrix', () => {
     it('calls title with correct label', async () => {
         expect.hasAssertions();
 
-        const { writeReport } = await import('../../shared/temp-dir.js');
+        const { writeReport } = await import('../../shared/infra/temp-dir.js');
         vi.mocked(writeReport).mockReturnValue(path.join(os.tmpdir(), 'qa-test-report.html'));
         const ctx = createMockContext();
         const { default: case25 } = await import('../commands/case25.js');
         await case25.handler(ctx);
-        const { title } = await import('../../shared/prompt.js');
+        const { title } = await import('../../shared/ui/prompt.js');
 
         expect(vi.mocked(title)).toHaveBeenCalledWith('Traceability Matrix');
     });
@@ -423,9 +424,10 @@ describe('Case26 — Release Score', () => {
 
         const { getDataHub } = await import('../../shared/data-hub/global-hub.js');
         const { calcFlakinessEntries } = await import('../../shared/data-hub/compute/flakiness-entries.js');
-        const { calculateHealthScore } = await import('../../shared/health-score.js');
-        const { calculateReleaseScore, generateReleaseScoreHtml } = await import('../../shared/release-score.js');
-        const { writeReport } = await import('../../shared/temp-dir.js');
+        const { calculateHealthScore } = await import('../../shared/quality/health-score.js');
+        const { calculateReleaseScore, generateReleaseScoreHtml } =
+            await import('../../shared/quality/release-score.js');
+        const { writeReport } = await import('../../shared/infra/temp-dir.js');
         const allRuns = [makeRun('OTHER'), makeRun('TEST'), makeRun('OTHER'), makeRun('TEST')];
         vi.mocked(getDataHub).mockReturnValue({
             computed: { metricsRuns: allRuns },
@@ -455,9 +457,10 @@ describe('Case26 — Release Score', () => {
     it('passes correct parameters to calculateReleaseScore', async () => {
         expect.hasAssertions();
 
-        const { calculateHealthScore } = await import('../../shared/health-score.js');
-        const { calculateReleaseScore, generateReleaseScoreHtml } = await import('../../shared/release-score.js');
-        const { writeReport } = await import('../../shared/temp-dir.js');
+        const { calculateHealthScore } = await import('../../shared/quality/health-score.js');
+        const { calculateReleaseScore, generateReleaseScoreHtml } =
+            await import('../../shared/quality/release-score.js');
+        const { writeReport } = await import('../../shared/infra/temp-dir.js');
         vi.mocked(calculateHealthScore).mockReturnValue({
             overall: 85,
             grade: 'good',
@@ -479,8 +482,8 @@ describe('Case26 — Release Score', () => {
     it('generates HTML with correct title', async () => {
         expect.hasAssertions();
 
-        const { generateReleaseScoreHtml } = await import('../../shared/release-score.js');
-        const { writeReport } = await import('../../shared/temp-dir.js');
+        const { generateReleaseScoreHtml } = await import('../../shared/quality/release-score.js');
+        const { writeReport } = await import('../../shared/infra/temp-dir.js');
         vi.mocked(generateReleaseScoreHtml).mockReturnValue(HTML_WITH_DOCTYPE);
         vi.mocked(writeReport).mockReturnValue(path.join(os.tmpdir(), 'qa-test-report.html'));
         const ctx = createMockContext();
@@ -495,8 +498,8 @@ describe('Case26 — Release Score', () => {
     it('writes report with correct filename pattern', async () => {
         expect.hasAssertions();
 
-        const { generateReleaseScoreHtml } = await import('../../shared/release-score.js');
-        const { writeReport } = await import('../../shared/temp-dir.js');
+        const { generateReleaseScoreHtml } = await import('../../shared/quality/release-score.js');
+        const { writeReport } = await import('../../shared/infra/temp-dir.js');
         vi.mocked(generateReleaseScoreHtml).mockReturnValue(HTML_WITH_DOCTYPE);
         vi.mocked(writeReport).mockReturnValue(path.join(os.tmpdir(), 'qa-test-report.html'));
         const ctx = createMockContext();
@@ -510,8 +513,8 @@ describe('Case26 — Release Score', () => {
     it('opens report in browser', async () => {
         expect.hasAssertions();
 
-        const { generateReleaseScoreHtml } = await import('../../shared/release-score.js');
-        const { writeReport } = await import('../../shared/temp-dir.js');
+        const { generateReleaseScoreHtml } = await import('../../shared/quality/release-score.js');
+        const { writeReport } = await import('../../shared/infra/temp-dir.js');
         const { openWithFallback } = await import('../../shared/open.js');
         vi.mocked(generateReleaseScoreHtml).mockReturnValue(HTML_WITH_DOCTYPE);
         vi.mocked(writeReport).mockReturnValue(path.join(os.tmpdir(), 'qa-release-score-TEST.html'));
@@ -530,8 +533,8 @@ describe('Case26 — Release Score', () => {
     it('pushes history with project name on success', async () => {
         expect.hasAssertions();
 
-        const { generateReleaseScoreHtml } = await import('../../shared/release-score.js');
-        const { writeReport } = await import('../../shared/temp-dir.js');
+        const { generateReleaseScoreHtml } = await import('../../shared/quality/release-score.js');
+        const { writeReport } = await import('../../shared/infra/temp-dir.js');
         vi.mocked(generateReleaseScoreHtml).mockReturnValue(HTML_WITH_DOCTYPE);
         vi.mocked(writeReport).mockReturnValue(path.join(os.tmpdir(), 'qa-test-report.html'));
         const ctx = createMockContext();
@@ -554,7 +557,7 @@ describe('Case26 — Release Score', () => {
 
         await expect(case26.handler(ctx)).resolves.not.toThrow();
 
-        const { printError } = await import('../../shared/prompt.js');
+        const { printError } = await import('../../shared/ui/prompt.js');
 
         expect(vi.mocked(printError)).toHaveBeenCalledTimes(1);
     });
@@ -562,14 +565,14 @@ describe('Case26 — Release Score', () => {
     it('calls title with correct label', async () => {
         expect.hasAssertions();
 
-        const { generateReleaseScoreHtml } = await import('../../shared/release-score.js');
-        const { writeReport } = await import('../../shared/temp-dir.js');
+        const { generateReleaseScoreHtml } = await import('../../shared/quality/release-score.js');
+        const { writeReport } = await import('../../shared/infra/temp-dir.js');
         vi.mocked(generateReleaseScoreHtml).mockReturnValue(HTML_WITH_DOCTYPE);
         vi.mocked(writeReport).mockReturnValue(path.join(os.tmpdir(), 'qa-test-report.html'));
         const ctx = createMockContext();
         const { default: case26 } = await import('../commands/case26.js');
         await case26.handler(ctx);
-        const { title } = await import('../../shared/prompt.js');
+        const { title } = await import('../../shared/ui/prompt.js');
 
         expect(vi.mocked(title)).toHaveBeenCalledWith('Release Score');
     });
@@ -579,9 +582,10 @@ describe('Case26 — Release Score', () => {
 
         const { getDataHub } = await import('../../shared/data-hub/global-hub.js');
         const { calcFlakinessEntries } = await import('../../shared/data-hub/compute/flakiness-entries.js');
-        const { calculateHealthScore } = await import('../../shared/health-score.js');
-        const { calculateReleaseScore, generateReleaseScoreHtml } = await import('../../shared/release-score.js');
-        const { writeReport } = await import('../../shared/temp-dir.js');
+        const { calculateHealthScore } = await import('../../shared/quality/health-score.js');
+        const { calculateReleaseScore, generateReleaseScoreHtml } =
+            await import('../../shared/quality/release-score.js');
+        const { writeReport } = await import('../../shared/infra/temp-dir.js');
         vi.mocked(getDataHub).mockReturnValue({
             computed: { metricsRuns: [makeRun('TEST')] },
         } as never);
@@ -609,9 +613,10 @@ describe('Case26 — Release Score', () => {
 
         const { getDataHub } = await import('../../shared/data-hub/global-hub.js');
         const { calcFlakinessEntries } = await import('../../shared/data-hub/compute/flakiness-entries.js');
-        const { calculateHealthScore } = await import('../../shared/health-score.js');
-        const { calculateReleaseScore, generateReleaseScoreHtml } = await import('../../shared/release-score.js');
-        const { writeReport } = await import('../../shared/temp-dir.js');
+        const { calculateHealthScore } = await import('../../shared/quality/health-score.js');
+        const { calculateReleaseScore, generateReleaseScoreHtml } =
+            await import('../../shared/quality/release-score.js');
+        const { writeReport } = await import('../../shared/infra/temp-dir.js');
         vi.mocked(getDataHub).mockReturnValue({
             computed: { metricsRuns: [makeRun('TEST')] },
         } as never);
@@ -652,9 +657,9 @@ describe('Case27 — Coverage Dashboard', () => {
     it('calls analyzeCoverageGaps with jiraResource and project name', async () => {
         expect.hasAssertions();
 
-        const { analyzeCoverageGaps } = await import('../../shared/coverage-gap.js');
-        const { generateCoverageGapHtml } = await import('../../shared/generate-coverage-gap-html.js');
-        const { writeReport } = await import('../../shared/temp-dir.js');
+        const { analyzeCoverageGaps } = await import('../../shared/report/coverage-gap.js');
+        const { generateCoverageGapHtml } = await import('../../shared/report/generate-coverage-gap-html.js');
+        const { writeReport } = await import('../../shared/infra/temp-dir.js');
         vi.mocked(analyzeCoverageGaps).mockResolvedValue(makeCoverageResult());
         vi.mocked(generateCoverageGapHtml).mockReturnValue(HTML_WITH_DOCTYPE);
         vi.mocked(writeReport).mockReturnValue(path.join(os.tmpdir(), 'qa-test-report.html'));
@@ -668,9 +673,9 @@ describe('Case27 — Coverage Dashboard', () => {
     it('generates HTML with project name in title', async () => {
         expect.hasAssertions();
 
-        const { analyzeCoverageGaps } = await import('../../shared/coverage-gap.js');
-        const { generateCoverageGapHtml } = await import('../../shared/generate-coverage-gap-html.js');
-        const { writeReport } = await import('../../shared/temp-dir.js');
+        const { analyzeCoverageGaps } = await import('../../shared/report/coverage-gap.js');
+        const { generateCoverageGapHtml } = await import('../../shared/report/generate-coverage-gap-html.js');
+        const { writeReport } = await import('../../shared/infra/temp-dir.js');
         vi.mocked(analyzeCoverageGaps).mockResolvedValue(makeCoverageResult());
         vi.mocked(generateCoverageGapHtml).mockReturnValue(HTML_WITH_DOCTYPE);
         vi.mocked(writeReport).mockReturnValue(path.join(os.tmpdir(), 'qa-test-report.html'));
@@ -685,9 +690,9 @@ describe('Case27 — Coverage Dashboard', () => {
     it('writes report with correct filename pattern', async () => {
         expect.hasAssertions();
 
-        const { analyzeCoverageGaps } = await import('../../shared/coverage-gap.js');
-        const { generateCoverageGapHtml } = await import('../../shared/generate-coverage-gap-html.js');
-        const { writeReport } = await import('../../shared/temp-dir.js');
+        const { analyzeCoverageGaps } = await import('../../shared/report/coverage-gap.js');
+        const { generateCoverageGapHtml } = await import('../../shared/report/generate-coverage-gap-html.js');
+        const { writeReport } = await import('../../shared/infra/temp-dir.js');
         vi.mocked(analyzeCoverageGaps).mockResolvedValue(makeCoverageResult());
         vi.mocked(generateCoverageGapHtml).mockReturnValue(HTML_WITH_DOCTYPE);
         vi.mocked(writeReport).mockReturnValue(path.join(os.tmpdir(), 'qa-test-report.html'));
@@ -702,9 +707,9 @@ describe('Case27 — Coverage Dashboard', () => {
     it('opens report in browser', async () => {
         expect.hasAssertions();
 
-        const { analyzeCoverageGaps } = await import('../../shared/coverage-gap.js');
-        const { generateCoverageGapHtml } = await import('../../shared/generate-coverage-gap-html.js');
-        const { writeReport } = await import('../../shared/temp-dir.js');
+        const { analyzeCoverageGaps } = await import('../../shared/report/coverage-gap.js');
+        const { generateCoverageGapHtml } = await import('../../shared/report/generate-coverage-gap-html.js');
+        const { writeReport } = await import('../../shared/infra/temp-dir.js');
         const { openWithFallback } = await import('../../shared/open.js');
         vi.mocked(analyzeCoverageGaps).mockResolvedValue(makeCoverageResult());
         vi.mocked(generateCoverageGapHtml).mockReturnValue(HTML_WITH_DOCTYPE);
@@ -724,9 +729,9 @@ describe('Case27 — Coverage Dashboard', () => {
     it('pushes history with coverage summary on success', async () => {
         expect.hasAssertions();
 
-        const { analyzeCoverageGaps } = await import('../../shared/coverage-gap.js');
-        const { generateCoverageGapHtml } = await import('../../shared/generate-coverage-gap-html.js');
-        const { writeReport } = await import('../../shared/temp-dir.js');
+        const { analyzeCoverageGaps } = await import('../../shared/report/coverage-gap.js');
+        const { generateCoverageGapHtml } = await import('../../shared/report/generate-coverage-gap-html.js');
+        const { writeReport } = await import('../../shared/infra/temp-dir.js');
         vi.mocked(analyzeCoverageGaps).mockResolvedValue(makeCoverageResult());
         vi.mocked(generateCoverageGapHtml).mockReturnValue(HTML_WITH_DOCTYPE);
         vi.mocked(writeReport).mockReturnValue(path.join(os.tmpdir(), 'qa-test-report.html'));
@@ -740,7 +745,7 @@ describe('Case27 — Coverage Dashboard', () => {
     it('returns false when analysis fails', async () => {
         expect.hasAssertions();
 
-        const { analyzeCoverageGaps } = await import('../../shared/coverage-gap.js');
+        const { analyzeCoverageGaps } = await import('../../shared/report/coverage-gap.js');
         vi.mocked(analyzeCoverageGaps).mockRejectedValue(new Error('Jira API down'));
         const ctx = createMockContext();
         const { default: case27 } = await import('../commands/case27.js');
@@ -748,7 +753,7 @@ describe('Case27 — Coverage Dashboard', () => {
 
         expect(result).toBeFalsy();
 
-        const { printError } = await import('../../shared/prompt.js');
+        const { printError } = await import('../../shared/ui/prompt.js');
 
         expect(vi.mocked(printError)).toHaveBeenCalledTimes(1);
     });
@@ -756,8 +761,8 @@ describe('Case27 — Coverage Dashboard', () => {
     it('does not call writeReport when analysis fails', async () => {
         expect.hasAssertions();
 
-        const { analyzeCoverageGaps } = await import('../../shared/coverage-gap.js');
-        const { writeReport } = await import('../../shared/temp-dir.js');
+        const { analyzeCoverageGaps } = await import('../../shared/report/coverage-gap.js');
+        const { writeReport } = await import('../../shared/infra/temp-dir.js');
         vi.mocked(analyzeCoverageGaps).mockRejectedValue(new Error('timeout'));
         const ctx = createMockContext();
         const { default: case27 } = await import('../commands/case27.js');
@@ -769,9 +774,9 @@ describe('Case27 — Coverage Dashboard', () => {
     it('handles openWithFallback error gracefully', async () => {
         expect.hasAssertions();
 
-        const { analyzeCoverageGaps } = await import('../../shared/coverage-gap.js');
-        const { generateCoverageGapHtml } = await import('../../shared/generate-coverage-gap-html.js');
-        const { writeReport } = await import('../../shared/temp-dir.js');
+        const { analyzeCoverageGaps } = await import('../../shared/report/coverage-gap.js');
+        const { generateCoverageGapHtml } = await import('../../shared/report/generate-coverage-gap-html.js');
+        const { writeReport } = await import('../../shared/infra/temp-dir.js');
         const { openWithFallback } = await import('../../shared/open.js');
         vi.mocked(analyzeCoverageGaps).mockResolvedValue(makeCoverageResult());
         vi.mocked(generateCoverageGapHtml).mockReturnValue(HTML_WITH_DOCTYPE);
@@ -786,16 +791,16 @@ describe('Case27 — Coverage Dashboard', () => {
     it('calls title with correct label', async () => {
         expect.hasAssertions();
 
-        const { analyzeCoverageGaps } = await import('../../shared/coverage-gap.js');
-        const { generateCoverageGapHtml } = await import('../../shared/generate-coverage-gap-html.js');
-        const { writeReport } = await import('../../shared/temp-dir.js');
+        const { analyzeCoverageGaps } = await import('../../shared/report/coverage-gap.js');
+        const { generateCoverageGapHtml } = await import('../../shared/report/generate-coverage-gap-html.js');
+        const { writeReport } = await import('../../shared/infra/temp-dir.js');
         vi.mocked(analyzeCoverageGaps).mockResolvedValue(makeCoverageResult());
         vi.mocked(generateCoverageGapHtml).mockReturnValue(HTML_WITH_DOCTYPE);
         vi.mocked(writeReport).mockReturnValue(path.join(os.tmpdir(), 'qa-test-report.html'));
         const ctx = createMockContext();
         const { default: case27 } = await import('../commands/case27.js');
         await case27.handler(ctx);
-        const { title } = await import('../../shared/prompt.js');
+        const { title } = await import('../../shared/ui/prompt.js');
 
         expect(vi.mocked(title)).toHaveBeenCalledWith('Coverage Dashboard');
     });
@@ -803,16 +808,16 @@ describe('Case27 — Coverage Dashboard', () => {
     it('uses withSpinner during analysis', async () => {
         expect.hasAssertions();
 
-        const { analyzeCoverageGaps } = await import('../../shared/coverage-gap.js');
-        const { generateCoverageGapHtml } = await import('../../shared/generate-coverage-gap-html.js');
-        const { writeReport } = await import('../../shared/temp-dir.js');
+        const { analyzeCoverageGaps } = await import('../../shared/report/coverage-gap.js');
+        const { generateCoverageGapHtml } = await import('../../shared/report/generate-coverage-gap-html.js');
+        const { writeReport } = await import('../../shared/infra/temp-dir.js');
         vi.mocked(analyzeCoverageGaps).mockResolvedValue(makeCoverageResult());
         vi.mocked(generateCoverageGapHtml).mockReturnValue(HTML_WITH_DOCTYPE);
         vi.mocked(writeReport).mockReturnValue(path.join(os.tmpdir(), 'qa-test-report.html'));
         const ctx = createMockContext();
         const { default: case27 } = await import('../commands/case27.js');
         await case27.handler(ctx);
-        const { withSpinner } = await import('../../shared/prompt.js');
+        const { withSpinner } = await import('../../shared/ui/prompt.js');
 
         expect(vi.mocked(withSpinner)).toHaveBeenCalledWith('Analisando cobertura...', expect.any(Function));
     });

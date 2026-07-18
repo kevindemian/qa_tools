@@ -2,13 +2,13 @@ import { afterEach, describe, expect, it, vi } from 'vitest';
 
 const client = { get: vi.fn(), put: vi.fn(), post: vi.fn() };
 
-vi.mock('../../shared/http-client.js', () => ({ createThrottledClient: vi.fn(() => client) }));
+vi.mock('../../shared/infra/http-client.js', () => ({ createThrottledClient: vi.fn(() => client) }));
 vi.mock('../../shared/logger.js', () => ({
     Logger: class {
         constructor(_o?: unknown) {}
     },
 }));
-vi.mock('../../shared/git-provider-error.js', () => ({ handleError: vi.fn((_e: unknown) => null) }));
+vi.mock('../../shared/ci/git-provider-error.js', () => ({ handleError: vi.fn((_e: unknown) => null) }));
 
 vi.mock('../gitlab-workflow.js', () => ({
     glTriggerPipeline: vi.fn(),
@@ -37,7 +37,7 @@ vi.mock('../gitlab-pr.js', () => ({
 vi.mock('../gitlab-issues.js', () => ({ glGetOpenIssues: vi.fn() }));
 vi.mock('../gitlab-branch.js', () => ({ glGetBranch: vi.fn(), glGetDiff: vi.fn() }));
 
-import { handleError } from '../../shared/git-provider-error.js';
+import { handleError } from '../../shared/ci/git-provider-error.js';
 import GitLabManager from '../gitlab_manager.js';
 
 import * as wf from '../gitlab-workflow.js';

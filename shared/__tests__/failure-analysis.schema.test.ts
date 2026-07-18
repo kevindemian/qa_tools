@@ -3,7 +3,7 @@ import {
     FailureAnalysisTestSchema,
     TestClassificationSchema,
     TestSeveritySchema,
-} from '../failure-analysis.schema.js';
+} from '../validation/failure-analysis.schema.js';
 
 describe('TestClassificationSchema', () => {
     it('accepts valid classifications', () => {

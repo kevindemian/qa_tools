@@ -1,4 +1,4 @@
-import { CONFIG_SCHEMA } from '../config-schema.js';
+import { CONFIG_SCHEMA } from '../validation/config-schema.js';
 import { nonNull } from '../test-utils.js';
 
 describe('CONFIG_SCHEMA', () => {

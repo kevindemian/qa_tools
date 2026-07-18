@@ -5,7 +5,7 @@ import { confirmOrCancel } from '../import-prep-preview.js';
 const mockConfirm = vi.fn<(...args: [message: string, defaultValue?: boolean]) => boolean>();
 const mockConfigGet = vi.fn<(...args: [key: string, defaultValue?: boolean]) => boolean>();
 
-vi.mock('../../shared/prompt', () => ({
+vi.mock('../../shared/ui/prompt.js', () => ({
     confirm: (...args: [message: string, defaultValue?: boolean]) => mockConfirm(...args),
     prompt: vi.fn(),
     warn: vi.fn(),
@@ -24,12 +24,12 @@ vi.mock('../../shared/config-accessor.js', () => ({
     default: { get: (...args: [key: string, defaultValue?: boolean]) => mockConfigGet(...args) },
 }));
 
-vi.mock('../../shared/markdown', () => ({
+vi.mock('../../shared/report/markdown.js', () => ({
     md: vi.fn((s: string) => s),
     mdToHtml: vi.fn((s: string) => '<html>' + s + '</html>'),
 }));
 
-vi.mock('../../shared/temp-dir', () => ({
+vi.mock('../../shared/infra/temp-dir.js', () => ({
     writeEphemeral: vi.fn((_dir: string, _name: string, _content: string) => path.join(os.tmpdir(), _name)),
 }));
 

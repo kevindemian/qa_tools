@@ -28,7 +28,7 @@ const mockPrompt = vi.hoisted(() => ({
 }));
 
 // 2. vi.mock BEFORE any require that uses those modules
-vi.mock('../../shared/prompt', () => mockPrompt);
+vi.mock('../../shared/ui/prompt.js', () => mockPrompt);
 
 vi.mock('../../shared/config-accessor.js', async (importOriginal) => {
     const mod = await importOriginal<typeof import('../../shared/config-accessor.js')>();
@@ -57,7 +57,7 @@ vi.mock('../../shared/state', () => ({
     update: vi.fn<(...args: [(state: object) => void]) => object>(),
 }));
 
-vi.mock('../../shared/temp-dir', () => ({
+vi.mock('../../shared/infra/temp-dir.js', () => ({
     reportsDir: vi.fn<(...args: []) => string>(),
     writeEphemeral: vi.fn<(...args: [string, string, string]) => string>(),
     tempDirPath: vi.fn<(...args: []) => string>().mockReturnValue(path.join(os.tmpdir(), 'qa-tools-temp')),
@@ -102,7 +102,7 @@ import type { TestCase } from '../../shared/types.js';
 import CsvResource from '../csv_resource.js';
 import IssueLinker from '../issue-linker.js';
 import createTestsModule from '../create_tests.js';
-import * as tempDirModule from '../../shared/temp-dir.js';
+import * as tempDirModule from '../../shared/infra/temp-dir.js';
 const {
     createTestsFromCsv,
     createTestExecution,
@@ -112,7 +112,7 @@ const {
     createTestsFromJson,
     updateCrossReferences,
 } = createTestsModule;
-import * as PROMPT from '../../shared/prompt.js';
+import * as PROMPT from '../../shared/ui/prompt.js';
 import fs from 'fs';
 
 import { createMockLogger, nonNull } from '../../shared/test-utils.js';

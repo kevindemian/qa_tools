@@ -4,7 +4,7 @@ import {
     PreConditionSchema,
     CoverageRefSchema,
     CoverageTableSchema,
-} from '../test-suite.schema.js';
+} from '../validation/test-suite.schema.js';
 
 describe('PreConditionSchema', () => {
     it('accepts valid preconditions', () => {

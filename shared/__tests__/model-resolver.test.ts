@@ -2,8 +2,8 @@
  * Tests for model-resolver.ts — deterministic tier-to-model resolution.
  */
 import { describe, it, expect } from 'vitest';
-import { resolveModel, getRegistry } from '../model-resolver.js';
-import type { RegistryModel } from '../model-resolver.js';
+import { resolveModel, getRegistry } from '../llm/model-resolver.js';
+import type { RegistryModel } from '../llm/model-resolver.js';
 
 describe('GetRegistry', () => {
     it('returns a non-empty registry with version', () => {

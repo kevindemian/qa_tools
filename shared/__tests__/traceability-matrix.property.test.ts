@@ -11,7 +11,7 @@
  */
 import * as fc from 'fast-check';
 import { describe, expect, it } from 'vitest';
-import { buildTraceabilityMatrix, generateTraceabilityHtml } from '../traceability-matrix.js';
+import { buildTraceabilityMatrix, generateTraceabilityHtml } from '../report/traceability-matrix.js';
 import type { MetricsRun } from '../types/data-hub.js';
 import { createTestHub } from './test-hub.js';
 

@@ -3,11 +3,11 @@ import path from 'path';
 const mockPrint = vi.hoisted(() => vi.fn());
 const mockGetBreadcrumbPath = vi.hoisted(() => vi.fn(() => ''));
 
-vi.mock('../breadcrumbs', () => ({
+vi.mock('../ui/breadcrumbs.js', () => ({
     getBreadcrumbPath: mockGetBreadcrumbPath,
 }));
 
-vi.mock('../output', () => ({
+vi.mock('../ui/output.js', () => ({
     Output: { isTTY: vi.fn(), columns: vi.fn(() => 80) },
     defaultOutput: { print: mockPrint },
 }));
@@ -33,13 +33,13 @@ vi.mock('../logger', () => ({
     },
 }));
 
-vi.mock('../box', () => ({
+vi.mock('../ui/box.js', () => ({
     box: vi.fn((lines: string[]) => lines.join('\n')),
     divider: vi.fn(() => '---'),
     visibleWidth: vi.fn((s: string) => s.length),
 }));
 
-vi.mock('../palette', () => ({
+vi.mock('../ui/palette.js', () => ({
     palette: {
         green: (s: string) => s,
         red: (s: string) => s,
@@ -55,7 +55,7 @@ vi.mock('../palette', () => ({
 vi.mock('readline-sync', () => ({ default: { question: vi.fn(() => '') } }));
 
 import readlineSync from 'readline-sync';
-import { Output } from '../output.js';
+import { Output } from '../ui/output.js';
 import {
     __setConfig,
     getConfig,
@@ -77,7 +77,7 @@ import {
     onError,
     CancelError,
     tableView,
-} from '../prompt-ui.js';
+} from '../ui/prompt-ui.js';
 import Config from '../config-accessor.js';
 
 const mockIsTTY = vi.spyOn(Output, 'isTTY');

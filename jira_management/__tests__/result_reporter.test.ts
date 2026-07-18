@@ -32,7 +32,7 @@ vi.mock('../../shared/logger', () => ({
     }),
 }));
 
-vi.mock('../../shared/prompt', () => ({
+vi.mock('../../shared/ui/prompt.js', () => ({
     info: vi.fn(),
     success: vi.fn(),
     warn: vi.fn(),

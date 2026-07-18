@@ -3,8 +3,8 @@ import {
     invariantChangesNonEmpty,
     invariantSummaryLength,
     invariantNumbersMatchInput,
-} from '../comparison-validator.js';
-import type { ValidationContext } from '../artifact-validator.js';
+} from '../validation/comparison-validator.js';
+import type { ValidationContext } from '../validation/artifact-validator.js';
 
 function makeCtx(input: string): ValidationContext {
     return { inputRaw: input, outputRaw: {}, artifactType: 'comparison' };

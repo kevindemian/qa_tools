@@ -13,7 +13,7 @@
 
 import { XMLParser } from 'fast-xml-parser';
 import { rootLogger } from './logger.js';
-import { extractErrorMessage } from './prompt-errors.js';
+import { extractErrorMessage } from './ui/prompt-errors.js';
 
 interface JUnitTestcase {
     '@_name'?: string;

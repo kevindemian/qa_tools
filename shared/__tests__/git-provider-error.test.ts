@@ -1,5 +1,5 @@
-import { handleError } from '../git-provider-error.js';
-import { humanizeError } from '../prompt-errors.js';
+import { handleError } from '../ci/git-provider-error.js';
+import { humanizeError } from '../ui/prompt-errors.js';
 
 vi.mock('../logger', () => ({ rootLogger: { error: vi.fn() } }));
 

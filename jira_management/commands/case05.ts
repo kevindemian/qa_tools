@@ -1,5 +1,5 @@
 /** Update package version and prepend release notes. */
-import { success, warn, ask, printError } from '../../shared/prompt.js';
+import { success, warn, ask, printError } from '../../shared/ui/prompt.js';
 import type { CommandContext } from './context.js';
 import { NO_TASKS_FOUND_FOR_VERSION } from '../constants.js';
 

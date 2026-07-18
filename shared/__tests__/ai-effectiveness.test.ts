@@ -2,8 +2,8 @@
  * Tests for ai-effectiveness — AI Generation Effectiveness Dashboard.
  */
 
-import { computeAiEffectiveness, generateAiEffectivenessHtml } from '../ai-effectiveness.js';
-import * as htmlFactory from '../html-factory.js';
+import { computeAiEffectiveness, generateAiEffectivenessHtml } from '../report/ai-effectiveness.js';
+import * as htmlFactory from '../report/html-factory.js';
 
 interface AiFeedbackRecord {
     timestamp: string;

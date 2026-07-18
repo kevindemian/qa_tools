@@ -1,10 +1,10 @@
 /** Diagnose Jira/Xray connection by probing key endpoints, plus local health readiness. */
 import { formatErr } from '../../shared/errors.js';
-import { title, printSummary, divider, badge, tableView } from '../../shared/prompt.js';
-import { sanitizeUrl } from '../../shared/cli_base.js';
+import { title, printSummary, divider, badge, tableView } from '../../shared/ui/prompt.js';
+import { sanitizeUrl } from '../../shared/ui/cli_base.js';
 import { rootLogger } from '../../shared/logger.js';
-import { palette } from '../../shared/palette.js';
-import { defaultOutput } from '../../shared/output.js';
+import { palette } from '../../shared/ui/palette.js';
+import { defaultOutput } from '../../shared/ui/output.js';
 import { getDataHub, isDataHubInitialized } from '../../shared/data-hub/global-hub.js';
 import type { CommandContext } from './context.js';
 

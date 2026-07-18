@@ -6,13 +6,13 @@ import {
     buildSelfCritiquePrompt,
     buildAdversarialRetryPrompt,
     buildRetryPrompt,
-} from '../llm-review-prompts.js';
-import type { ArtifactType } from '../llm-review-types.js';
-import { TestSuiteSchema } from '../test-suite.schema.js';
-import { FailureAnalysisSchema } from '../failure-analysis.schema.js';
-import { PipelineClassificationSchema } from '../pipeline-schema.js';
-import { AiBugReportSchema } from '../bug-report.schema.js';
-import { RunComparisonSchema } from '../comparison-schema.js';
+} from '../llm/llm-review-prompts.js';
+import type { ArtifactType } from '../llm/llm-review-types.js';
+import { TestSuiteSchema } from '../validation/test-suite.schema.js';
+import { FailureAnalysisSchema } from '../validation/failure-analysis.schema.js';
+import { PipelineClassificationSchema } from '../validation/pipeline-schema.js';
+import { AiBugReportSchema } from '../validation/bug-report.schema.js';
+import { RunComparisonSchema } from '../validation/comparison-schema.js';
 
 const TYPES: ArtifactType[] = ['test-suite', 'analysis', 'bug-report', 'comparison', 'pipeline'];
 

@@ -15,7 +15,7 @@
  */
 
 import { ensureDotenv } from '../shared/env-loader.js';
-import { createHttpClient } from '../shared/http-client.js';
+import { createHttpClient } from '../shared/infra/http-client.js';
 import { rootLogger } from '../shared/logger.js';
 
 interface WorkflowRun {

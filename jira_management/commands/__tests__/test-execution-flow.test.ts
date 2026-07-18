@@ -5,7 +5,7 @@ import {
     createMockTestExecutionCreator,
 } from '../../../shared/test-utils/factories/index.js';
 
-vi.mock('../../../shared/prompt', () => ({
+vi.mock('../../../shared/ui/prompt.js', () => ({
     printError: vi.fn(),
     ask: vi.fn(),
     askMultiline: vi.fn(),
@@ -33,7 +33,7 @@ vi.mock('../../test-execution-creator', () => ({
     }),
 }));
 
-import { ask, askMultiline, printError } from '../../../shared/prompt.js';
+import { ask, askMultiline, printError } from '../../../shared/ui/prompt.js';
 import TestExecutionCreator from '../../test-execution-creator.js';
 
 describe('Test Execution Flow', () => {
@@ -352,7 +352,7 @@ describe('Test Execution Flow', () => {
             });
             await showResults(c, ['TEST-1']);
 
-            const prompt = await import('../../../shared/prompt.js');
+            const prompt = await import('../../../shared/ui/prompt.js');
 
             expect(prompt.info).toHaveBeenCalledWith(expect.any(String));
         });
@@ -371,7 +371,7 @@ describe('Test Execution Flow', () => {
                 mode: 'created',
             });
 
-            const prompt = await import('../../../shared/prompt.js');
+            const prompt = await import('../../../shared/ui/prompt.js');
 
             expect(prompt.info).toHaveBeenCalledWith(expect.any(String));
         });
@@ -385,7 +385,7 @@ describe('Test Execution Flow', () => {
             });
             await showResults(c, ['TEST-1'], { associated: false });
 
-            const prompt = await import('../../../shared/prompt.js');
+            const prompt = await import('../../../shared/ui/prompt.js');
 
             expect(prompt.info).toHaveBeenCalledWith(expect.any(String));
         });

@@ -1,12 +1,12 @@
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 import { SessionContext } from '../session-context.js';
 
-vi.mock('../git-sha.js', () => ({
+vi.mock('../ci/git-sha.js', () => ({
     getHeadSha: vi.fn(),
     getCurrentBranch: vi.fn(),
 }));
 
-vi.mock('../store-backend.js', () => ({
+vi.mock('../infra/store-backend.js', () => ({
     detectStoreBackend: vi.fn(),
     detectProjectGitDir: vi.fn(),
 }));
@@ -16,7 +16,7 @@ vi.mock('../data-hub/global-hub.js', () => ({
     getDataHub: vi.fn(),
 }));
 
-import { getHeadSha, getCurrentBranch } from '../git-sha.js';
+import { getHeadSha, getCurrentBranch } from '../ci/git-sha.js';
 import { isDataHubInitialized, getDataHub } from '../data-hub/global-hub.js';
 import { makeDataHubMock } from '../test-utils/factories/data-hub-mock.js';
 

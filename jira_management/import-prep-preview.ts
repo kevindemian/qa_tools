@@ -1,9 +1,9 @@
 /** Preview rendering — Markdown generation, terminal/HTML preview, test filtering, confirmation. */
 import Config from '../shared/config-accessor.js';
-import { md, mdToHtml } from '../shared/markdown.js';
-import { writeEphemeral } from '../shared/temp-dir.js';
+import { md, mdToHtml } from '../shared/report/markdown.js';
+import { writeEphemeral } from '../shared/infra/temp-dir.js';
 import { openWithOsOrFallback } from '../shared/open.js';
-import { confirm, info, warn, print, title, divider, prompt } from '../shared/prompt.js';
+import { confirm, info, warn, print, title, divider, prompt } from '../shared/ui/prompt.js';
 import { OPERATION_CANCELLED } from './constants.js';
 import type { TestCase } from '../shared/types.js';
 

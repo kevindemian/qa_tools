@@ -1,11 +1,11 @@
-import { createThrottledClient } from '../../shared/http-client.js';
+import { createThrottledClient } from '../../shared/infra/http-client.js';
 import GitHubManager from '../github_manager.js';
 import { ExternalError } from '../../shared/errors.js';
-import { resetCircuitState } from '../../shared/circuit-breaker.js';
+import { resetCircuitState } from '../../shared/infra/circuit-breaker.js';
 import { nonNull, nullAs } from '../../shared/test-utils.js';
 import { createMockAxiosInstance } from '../../shared/test-utils/factories/response-factory.js';
 
-vi.mock('../../shared/http-client', () => ({
+vi.mock('../../shared/infra/http-client.js', () => ({
     createHttpClient: vi.fn(),
     createThrottledClient: vi.fn(),
 }));
@@ -17,7 +17,7 @@ vi.mock('../../shared/logger', () => ({
     rootLogger: { error: vi.fn(), warn: vi.fn() },
 }));
 
-vi.mock('../../shared/prompt', () => ({
+vi.mock('../../shared/ui/prompt.js', () => ({
     info: vi.fn(),
     extractErrorMessage: vi.fn((err: Error) => err.message || 'Erro desconhecido'),
 }));

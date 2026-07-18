@@ -30,14 +30,14 @@ vi.mock('../config-accessor.js', () => {
         },
     };
 });
-vi.mock('../llm-rate-limiter', async () => {
-    const original = await vi.importActual<typeof import('../llm-rate-limiter.js')>('../llm-rate-limiter');
+vi.mock('../llm/llm-rate-limiter.js', async () => {
+    const original = await vi.importActual<typeof import('../llm/llm-rate-limiter.js')>('../llm/llm-rate-limiter.js');
     return {
         ...original,
         checkRateLimit: vi.fn(),
     };
 });
-vi.mock('../circuit-breaker', () => ({
+vi.mock('../infra/circuit-breaker.js', () => ({
     checkCircuitBreaker: vi.fn(),
     recordCircuitFailure: vi.fn(),
     recordCircuitSuccess: vi.fn(),
@@ -45,13 +45,13 @@ vi.mock('../circuit-breaker', () => ({
 vi.mock('../sanitize', () => ({
     sanitizeForLlm: vi.fn((s: string) => s),
 }));
-vi.mock('../llm-cache', () => ({
+vi.mock('../llm/llm-cache.js', () => ({
     configUniqueKey: vi.fn(
         (cfg: { apiKey: string; model: string; baseUrl: string }) => cfg.apiKey + '@' + cfg.model + '@' + cfg.baseUrl,
     ),
 }));
 
-import { checkCircuitBreaker } from '../circuit-breaker.js';
+import { checkCircuitBreaker } from '../infra/circuit-breaker.js';
 import Config from '../config-accessor.js';
 import {
     parseRawOnce,
@@ -61,8 +61,8 @@ import {
     buildAnthropicPayload,
     fetchWithRetry,
     sendToProvider,
-} from '../llm-fallback-http.js';
-import { resetLlmClientMetrics, getLlmClientMetrics } from '../llm-fallback-config.js';
+} from '../llm/llm-fallback-http.js';
+import { resetLlmClientMetrics, getLlmClientMetrics } from '../llm/llm-fallback-config.js';
 import { LlmAuthError } from '../errors.js';
 
 const mockFetch = vi.fn();
@@ -498,7 +498,7 @@ describe('Llm Fallback Http', () => {
                 mockOkResponse(JSON.stringify({ choices: [{ message: { content: 'ok' } }] })),
             );
 
-            const { getDefaultMetrics } = await import('../llm-metrics.js');
+            const { getDefaultMetrics } = await import('../llm/llm-metrics.js');
             const latencySpy = vi.spyOn(getDefaultMetrics(), 'recordModelLatency');
 
             const cfg = {

@@ -10,7 +10,7 @@ vi.mock('fs', async () => {
 });
 
 import fs from 'fs';
-import { diskCacheGet, diskCacheSet, clearDiskCache } from '../disk-cache.js';
+import { diskCacheGet, diskCacheSet, clearDiskCache } from '../infra/disk-cache.js';
 
 const origEnv = { ...process.env };
 let cacheDir = '';

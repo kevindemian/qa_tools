@@ -1,20 +1,20 @@
 import os from 'os';
 import path from 'path';
-vi.mock('../output', () => ({
+vi.mock('../ui/output.js', () => ({
     defaultOutput: { print: vi.fn() },
 }));
 vi.mock('../logger', () => ({
     rootLogger: { filePath: path.join(os.tmpdir(), 'qa-test.log'), info: vi.fn(), warn: vi.fn() },
 }));
-vi.mock('../prompt-format', async () => ({
-    ...(await vi.importActual<typeof import('../prompt-format.js')>('../prompt-format')),
+vi.mock('../ui/prompt-format.js', async () => ({
+    ...(await vi.importActual<typeof import('../ui/prompt-format.js')>('../ui/prompt-format.js')),
     isQuiet: vi.fn(() => false),
     success: vi.fn(),
 }));
 
-import { printSummary } from '../prompt-summary.js';
-import { defaultOutput as output } from '../output.js';
-import { isQuiet } from '../prompt-format.js';
+import { printSummary } from '../ui/prompt-summary.js';
+import { defaultOutput as output } from '../ui/output.js';
+import { isQuiet } from '../ui/prompt-format.js';
 import type { TestResult } from '../types.js';
 
 function makeResult(overrides: Partial<TestResult>): TestResult {

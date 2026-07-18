@@ -9,8 +9,8 @@
  */
 import { rootLogger } from '../logger.js';
 import { getErrorMessage } from '../errors.js';
-import { detectProjectGitDir, detectStoreBackend } from '../store-backend.js';
-import type { StoreBackend } from '../store-backend.js';
+import { detectProjectGitDir, detectStoreBackend } from '../infra/store-backend.js';
+import type { StoreBackend } from '../infra/store-backend.js';
 import type {
     DataHubPersistence,
     MetricsRun,
@@ -31,7 +31,7 @@ import type {
     BranchEntry,
 } from '../types/data-hub.js';
 import type { ParseResult, FlatTest } from '../result_parser.js';
-import { extractErrorMessage, humanizeError } from '../prompt-errors.js';
+import { extractErrorMessage, humanizeError } from '../ui/prompt-errors.js';
 import { MetricsStoreSchema } from './schemas.js';
 import {
     validateAndScoreFailureRecords,

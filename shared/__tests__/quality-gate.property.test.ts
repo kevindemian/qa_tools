@@ -8,8 +8,8 @@
  */
 import * as fc from 'fast-check';
 import { describe, expect, it } from 'vitest';
-import { formatQualityGateJson, formatQualityGateText } from '../quality-gate.js';
-import type { QualityGateResult } from '../quality-gate.js';
+import { formatQualityGateJson, formatQualityGateText } from '../quality/quality-gate.js';
+import type { QualityGateResult } from '../quality/quality-gate.js';
 
 /* ── Arbitraries ─────────────────────────────────────────────── */
 

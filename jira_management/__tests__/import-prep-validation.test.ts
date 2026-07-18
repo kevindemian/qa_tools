@@ -12,7 +12,7 @@ vi.mock('../../shared/logger', () => ({
     },
 }));
 
-vi.mock('../../shared/prompt', () => ({
+vi.mock('../../shared/ui/prompt.js', () => ({
     confirm: vi.fn(),
     info: vi.fn(),
     warn: (...args: unknown[]) => {

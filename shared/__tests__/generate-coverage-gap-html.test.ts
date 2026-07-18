@@ -3,7 +3,7 @@
  */
 
 import { describe, expect, it, vi } from 'vitest';
-import { generateCoverageGapHtml } from '../generate-coverage-gap-html.js';
+import { generateCoverageGapHtml } from '../report/generate-coverage-gap-html.js';
 import type { CoverageGapResult } from '../types.js';
 
 vi.mock('../date-utils.js', () => ({

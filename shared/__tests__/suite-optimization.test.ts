@@ -1,4 +1,4 @@
-import { analyzeSuiteOptimization, generateOptimizationHtml } from '../suite-optimization.js';
+import { analyzeSuiteOptimization, generateOptimizationHtml } from '../quality/suite-optimization.js';
 
 const DEFAULT_SLOW = 5;
 const DEFAULT_FLAKY = 0.3;
@@ -300,7 +300,7 @@ describe('GenerateOptimizationHtml', () => {
     });
 
     it('shows metric values from the result', () => {
-        const result: import('../suite-optimization.js').OptimizationResult = {
+        const result: import('../quality/suite-optimization.js').OptimizationResult = {
             optimizations: [],
             totalTests: 42,
             totalDuration: 120.5,
@@ -317,7 +317,7 @@ describe('GenerateOptimizationHtml', () => {
     });
 
     it('uses success severity for positive savings', () => {
-        const result: import('../suite-optimization.js').OptimizationResult = {
+        const result: import('../quality/suite-optimization.js').OptimizationResult = {
             optimizations: [],
             totalTests: 0,
             totalDuration: 0,
@@ -332,7 +332,7 @@ describe('GenerateOptimizationHtml', () => {
     });
 
     it('falls back to default action variant for unknown action', () => {
-        const result: import('../suite-optimization.js').OptimizationResult = {
+        const result: import('../quality/suite-optimization.js').OptimizationResult = {
             optimizations: [
                 {
                     testTitle: 'custom',
@@ -356,7 +356,7 @@ describe('GenerateOptimizationHtml', () => {
     });
 
     it('handles unknown action variant gracefully', () => {
-        const result: import('../suite-optimization.js').OptimizationResult = {
+        const result: import('../quality/suite-optimization.js').OptimizationResult = {
             optimizations: [
                 {
                     testTitle: 'unknown_action',

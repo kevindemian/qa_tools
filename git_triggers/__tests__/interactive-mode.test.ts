@@ -1,7 +1,7 @@
 import os from 'os';
 import path from 'path';
-vi.mock('../../shared/breadcrumbs', () => ({ pushBreadcrumb: vi.fn(), clearBreadcrumbs: vi.fn() }));
-vi.mock('../../shared/cli_base', () => ({
+vi.mock('../../shared/ui/breadcrumbs.js', () => ({ pushBreadcrumb: vi.fn(), clearBreadcrumbs: vi.fn() }));
+vi.mock('../../shared/ui/cli_base.js', () => ({
     createValidateEnv: vi.fn(() => vi.fn()),
     offerEnvSetup: vi.fn(() => false),
     setupSigint: vi.fn(),
@@ -9,7 +9,7 @@ vi.mock('../../shared/cli_base', () => ({
     sanitizeUrl: vi.fn((url: string) => url),
 }));
 vi.mock('../../shared/config-accessor.js', () => ({ default: { get: vi.fn(() => '') }, __esModule: true }));
-vi.mock('../../shared/splash', () => ({ showSplash: vi.fn() }));
+vi.mock('../../shared/ui/splash.js', () => ({ showSplash: vi.fn() }));
 vi.mock('../../shared/data-hub/global-hub.js', () => ({
     getDataHub: vi.fn().mockReturnValue({
         computed: { metricsRuns: [] },
@@ -19,18 +19,18 @@ vi.mock('../../shared/data-hub/global-hub.js', () => ({
 vi.mock('../../shared/data-hub/compute/flakiness-entries.js', () => ({
     calcFlakinessEntries: vi.fn().mockReturnValue([]),
 }));
-vi.mock('../../shared/run-comparison', () => ({ compareRuns: vi.fn(() => '') }));
-vi.mock('../../shared/health-score', () => ({
+vi.mock('../../shared/quality/run-comparison.js', () => ({ compareRuns: vi.fn(() => '') }));
+vi.mock('../../shared/quality/health-score.js', () => ({
     calculateHealthScore: vi.fn(() => ({
         overall: 50,
         grade: 'C',
         dimensions: { passRate: { score: 80 }, flakyRate: { score: 90 }, coverage: { score: 70 } },
     })),
 }));
-vi.mock('../../shared/palette', () => ({
+vi.mock('../../shared/ui/palette.js', () => ({
     palette: { muted: vi.fn((s: string) => s), green: vi.fn((s: string) => s), red: vi.fn((s: string) => s) },
 }));
-vi.mock('../../shared/output', () => ({ defaultOutput: { box: vi.fn() } }));
+vi.mock('../../shared/ui/output.js', () => ({ defaultOutput: { box: vi.fn() } }));
 vi.mock('../../shared/logger', () => ({
     rootLogger: {
         error: vi.fn(),
@@ -42,7 +42,7 @@ vi.mock('../../shared/logger', () => ({
         writeFileOnly: vi.fn(),
     },
 }));
-vi.mock('../../shared/prompt', () => {
+vi.mock('../../shared/ui/prompt.js', () => {
     class CancelError extends Error {
         constructor(msg?: string) {
             super(msg);
@@ -96,14 +96,14 @@ vi.mock('../session-state', () => ({
     },
     projectId: '',
 }));
-vi.mock('../../shared/temp-dir', () => ({
+vi.mock('../../shared/infra/temp-dir.js', () => ({
     ensureDirs: vi.fn(),
     registerCleanup: vi.fn(),
     writeReport: vi.fn(() => path.join(os.tmpdir(), 'qa-test-report.html')),
 }));
 vi.mock('../ai-pr-desc', () => ({ generatePrDescription: vi.fn() }));
-vi.mock('../../shared/bug-report', () => ({ interactiveBugReportFlow: vi.fn() }));
-vi.mock('../../shared/jira-client', () => ({ default: vi.fn() }));
+vi.mock('../../shared/report/bug-report.js', () => ({ interactiveBugReportFlow: vi.fn() }));
+vi.mock('../../shared/jira/jira-client.js', () => ({ default: vi.fn() }));
 vi.mock('../../jira_management/jira_link_manager', () => ({ default: vi.fn() }));
 vi.mock('../pipeline-handler', () => ({
     handleTriggerPipeline: vi.fn(),
@@ -131,51 +131,51 @@ vi.mock('../schedule-handler', () => ({
     generateWeeklyQualityReport: vi.fn(),
 }));
 vi.mock('../batch-mode', () => ({ tryBatchMode: vi.fn(), handlePipelineHealth: vi.fn() }));
-vi.mock('../../shared/release-score', () => ({
+vi.mock('../../shared/quality/release-score.js', () => ({
     generateReleaseScoreHtml: vi.fn(() => ''),
     calculateReleaseScore: vi.fn(() => ({})),
 }));
-vi.mock('../../shared/defect-trend', () => ({
+vi.mock('../../shared/quality/defect-trend.js', () => ({
     generateDefectTrendHtml: vi.fn(() => ''),
     aggregateDefectTrends: vi.fn(() => ({ trends: [] })),
 }));
-vi.mock('../../shared/traceability-matrix', () => ({
+vi.mock('../../shared/report/traceability-matrix.js', () => ({
     generateTraceabilityHtml: vi.fn(() => ''),
     buildTraceabilityMatrix: vi.fn(() => ({ nodes: [] })),
 }));
-vi.mock('../../shared/ai-effectiveness', () => ({
+vi.mock('../../shared/report/ai-effectiveness.js', () => ({
     generateAiEffectivenessHtml: vi.fn(() => ''),
     computeAiEffectiveness: vi.fn(() => ({})),
 }));
-vi.mock('../../shared/defect-seasonality', () => ({
+vi.mock('../../shared/quality/defect-seasonality.js', () => ({
     generateSeasonalityHtml: vi.fn(() => ''),
     aggregateDefectSeasonality: vi.fn(() => ({ peakDay: '' })),
 }));
-vi.mock('../../shared/silent-regression', () => ({
+vi.mock('../../shared/quality/silent-regression.js', () => ({
     generateSilentRegressionHtml: vi.fn(() => ''),
     detectSilentRegression: vi.fn(() => ({ regressions: [] })),
 }));
-vi.mock('../../shared/ai-comparison', () => ({
+vi.mock('../../shared/report/ai-comparison.js', () => ({
     generateAiComparisonHtml: vi.fn(() => ''),
     compareAiVsManual: vi.fn(() => []),
 }));
-vi.mock('../../shared/cross-squad-benchmark', () => ({
+vi.mock('../../shared/quality/cross-squad-benchmark.js', () => ({
     generateBenchmarkHtml: vi.fn(() => ''),
     computeCrossSquadBenchmark: vi.fn(() => ({})),
 }));
-vi.mock('../../shared/developer-profile', () => ({
+vi.mock('../../shared/quality/developer-profile.js', () => ({
     generateDeveloperProfileHtml: vi.fn(() => ''),
     buildDeveloperProfile: vi.fn(() => []),
 }));
-vi.mock('../../shared/suite-optimization', () => ({
+vi.mock('../../shared/quality/suite-optimization.js', () => ({
     generateOptimizationHtml: vi.fn(() => ''),
     analyzeSuiteOptimization: vi.fn(() => ({})),
 }));
-vi.mock('../../shared/backlog-health', () => ({
+vi.mock('../../shared/report/backlog-health.js', () => ({
     generateBacklogHealthHtml: vi.fn(() => ''),
     analyzeBacklogHealth: vi.fn(() => ({})),
 }));
-vi.mock('../../shared/incident-report', () => ({
+vi.mock('../../shared/report/incident-report.js', () => ({
     generateIncidentReportHtml: vi.fn(() => ''),
     buildIncidentReport: vi.fn(() => ({
         events: [],
@@ -188,26 +188,26 @@ vi.mock('../../shared/incident-report', () => ({
         timestamp: new Date().toISOString(),
     })),
 }));
-vi.mock('../../shared/pipeline-cost', () => ({
+vi.mock('../../shared/quality/pipeline-cost.js', () => ({
     generatePipelineCostHtml: vi.fn(() => ''),
     calculatePipelineCost: vi.fn(() => ({})),
 }));
-vi.mock('../../shared/impact-alert', () => ({
+vi.mock('../../shared/report/impact-alert.js', () => ({
     generateImpactAlertHtml: vi.fn(() => ''),
     analyzePipelineImpact: vi.fn(() => ({})),
 }));
-vi.mock('../../shared/requirement-score', () => ({
+vi.mock('../../shared/quality/requirement-score.js', () => ({
     generateRequirementScoreHtml: vi.fn(() => ''),
     calculateRequirementScores: vi.fn(() => []),
 }));
-vi.mock('../../shared/quality-gate', () => ({
+vi.mock('../../shared/quality/quality-gate.js', () => ({
     runQualityGate: vi.fn(() => ({ overall: 'pass', checks: [], score: 85 })),
     formatQualityGateText: vi.fn(() => ''),
 }));
 vi.mock('../../shared/open', () => ({ openWithFallback: vi.fn() }));
-vi.mock('../../shared/generate-coverage-gap-html', () => ({ generateCoverageGapHtml: vi.fn(() => '') }));
-vi.mock('../../shared/coverage-gap', () => ({ analyzeCoverageGaps: vi.fn(() => []) }));
-vi.mock('../../shared/git-metrics-adapter', () => ({
+vi.mock('../../shared/report/generate-coverage-gap-html.js', () => ({ generateCoverageGapHtml: vi.fn(() => '') }));
+vi.mock('../../shared/report/coverage-gap.js', () => ({ analyzeCoverageGaps: vi.fn(() => []) }));
+vi.mock('../../shared/ci/git-metrics-adapter.js', () => ({
     generateGitMetricsRuns: vi.fn(() => []),
     generateGitFailureClassifications: vi.fn(() => []),
     getLastGitLogError: vi.fn(() => undefined),
@@ -215,17 +215,17 @@ vi.mock('../../shared/git-metrics-adapter', () => ({
 }));
 vi.mock('../ui-helpers', () => ({ handleHelp: vi.fn(), handleShowHistory: vi.fn() }));
 vi.mock('../case00-handler', () => ({ handleSetupWizard: vi.fn() }));
-vi.mock('../../shared/show-docs', () => ({ showDocs: vi.fn() }));
-vi.mock('../../shared/dashboard-menu', () => ({ showDashboardMenu: vi.fn() }));
-vi.mock('../../shared/flakiness-dashboard', () => ({ generateFlakinessHtml: vi.fn(() => '') }));
+vi.mock('../../shared/report/show-docs.js', () => ({ showDocs: vi.fn() }));
+vi.mock('../../shared/ui/dashboard-menu.js', () => ({ showDashboardMenu: vi.fn() }));
+vi.mock('../../shared/report/flakiness-dashboard.js', () => ({ generateFlakinessHtml: vi.fn(() => '') }));
 
 import { _testExports } from '../interactive-mode.js';
-import { warn, printError } from '../../shared/prompt.js';
-import { setupSigint } from '../../shared/cli_base.js';
+import { warn, printError } from '../../shared/ui/prompt.js';
+import { setupSigint } from '../../shared/ui/cli_base.js';
 import { load } from '../../shared/state.js';
-import { ensureDirs, registerCleanup } from '../../shared/temp-dir.js';
+import { ensureDirs, registerCleanup } from '../../shared/infra/temp-dir.js';
 import { openWithFallback } from '../../shared/open.js';
-import { showDashboardMenu } from '../../shared/dashboard-menu.js';
+import { showDashboardMenu } from '../../shared/ui/dashboard-menu.js';
 import { getDataHub as getSessionDataHub } from '../session-state.js';
 import { getCurrentProject } from '../../shared/project-context.js';
 const mockWarn = vi.mocked(warn);
@@ -512,7 +512,7 @@ describe('Interactive-mode test exports', () => {
                     failureClassifications: [],
                 },
             } as never);
-            const gitMod = await import('../../shared/git-metrics-adapter.js');
+            const gitMod = await import('../../shared/ci/git-metrics-adapter.js');
             (gitMod.generateGitMetricsRuns as ReturnType<typeof vi.fn>).mockReturnValue([
                 {
                     project: 'proj1',
@@ -589,7 +589,7 @@ describe('Interactive-mode test exports', () => {
         it('warns when source branch empty', async () => {
             expect.hasAssertions();
 
-            const promptMod = await import('../../shared/prompt.js');
+            const promptMod = await import('../../shared/ui/prompt.js');
             (promptMod.prompt as ReturnType<typeof vi.fn>).mockReturnValue('');
             const result = await _testExports.handleAiPrDescription({} as never);
 
@@ -600,7 +600,7 @@ describe('Interactive-mode test exports', () => {
         it('handles AI PR description generation', async () => {
             expect.hasAssertions();
 
-            const promptMod = await import('../../shared/prompt.js');
+            const promptMod = await import('../../shared/ui/prompt.js');
             (promptMod.prompt as ReturnType<typeof vi.fn>).mockReturnValue('feature/my-branch');
             const aiMod = await import('../ai-pr-desc.js');
             (aiMod.generatePrDescription as ReturnType<typeof vi.fn>).mockResolvedValue('Generated PR description');
@@ -612,7 +612,7 @@ describe('Interactive-mode test exports', () => {
         it('warns when AI PR description fails', async () => {
             expect.hasAssertions();
 
-            const promptMod = await import('../../shared/prompt.js');
+            const promptMod = await import('../../shared/ui/prompt.js');
             (promptMod.prompt as ReturnType<typeof vi.fn>).mockReturnValue('feature/my-branch');
             const aiMod = await import('../ai-pr-desc.js');
             (aiMod.generatePrDescription as ReturnType<typeof vi.fn>).mockResolvedValue('');
@@ -667,7 +667,7 @@ describe('Interactive-mode test exports', () => {
                     failureClassifications: [],
                 },
             } as never);
-            const runCompMod = await import('../../shared/run-comparison.js');
+            const runCompMod = await import('../../shared/quality/run-comparison.js');
             (runCompMod.compareRuns as ReturnType<typeof vi.fn>).mockReturnValue('comparison');
             const result = await _testExports.handleRunComparison();
 

@@ -24,7 +24,12 @@ vi.mock('../logger', () => ({
     rootLogger: { error: vi.fn(), warn: vi.fn(), info: vi.fn() },
 }));
 
-import { recordAiGeneration, recordAiModification, getAiFeedbackSummary, getRecentAiRecords } from '../ai-feedback.js';
+import {
+    recordAiGeneration,
+    recordAiModification,
+    getAiFeedbackSummary,
+    getRecentAiRecords,
+} from '../quality/ai-feedback.js';
 import { nonNull } from '../test-utils.js';
 import type { AiGenerationRecord, AiModification } from '../types.js';
 

@@ -2,7 +2,7 @@
  * Tests for report-styles — CSS builder for HTML reports using design tokens.
  */
 
-import { buildCss, buildCssVars, buildDarkVars } from '../report-styles.js';
+import { buildCss, buildCssVars, buildDarkVars } from '../report/report-styles.js';
 
 describe('Report-styles', () => {
     describe('BuildCssVars', () => {

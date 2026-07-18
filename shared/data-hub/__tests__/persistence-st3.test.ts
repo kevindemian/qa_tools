@@ -5,7 +5,7 @@
  * data is TAGGED AND STORED (never dropped).
  */
 import { describe, it, expect, beforeEach } from 'vitest';
-import type { StoreBackend } from '../../store-backend.js';
+import type { StoreBackend } from '../../infra/store-backend.js';
 import type { FailureRecord, DoraMetrics } from '../../types/data-hub.js';
 import { createDataHubPersistence } from '../persistence.js';
 

@@ -1,6 +1,6 @@
 import { expect } from 'vitest';
 
-vi.mock('../../../shared/prompt', () => ({
+vi.mock('../../../shared/ui/prompt.js', () => ({
     ask: vi.fn(),
     askMultiline: vi.fn(),
     askConfirm: vi.fn(),
@@ -13,7 +13,7 @@ vi.mock('../../../shared/prompt', () => ({
 }));
 vi.mock('../../../shared/logger');
 
-vi.mock('../../../shared/llm-client', () => ({
+vi.mock('../../../shared/llm/llm-client.js', () => ({
     llmPrompt: vi.fn(),
     getLlmClientMetrics: vi.fn(() => ({
         cacheHits: 0,
@@ -35,7 +35,7 @@ vi.mock('../../../shared/logger', () => ({
     },
 }));
 
-vi.mock('../../../shared/ai-feedback', () => ({
+vi.mock('../../../shared/quality/ai-feedback.js', () => ({
     recordAiGeneration: vi.fn(),
 }));
 
@@ -51,10 +51,10 @@ vi.mock('../../jira_link_manager', () => ({
     matchPreconditionByDualThreshold: vi.fn(),
 }));
 
-import * as promptModule from '../../../shared/prompt.js';
-import * as llmClientModule from '../../../shared/llm-client.js';
+import * as promptModule from '../../../shared/ui/prompt.js';
+import * as llmClientModule from '../../../shared/llm/llm-client.js';
 import * as jiraLinkManagerModule from '../../jira_link_manager.js';
-import * as aiFeedbackModule from '../../../shared/ai-feedback.js';
+import * as aiFeedbackModule from '../../../shared/quality/ai-feedback.js';
 import * as fsModule from 'fs';
 import case18Module from '../case18.js';
 import { createMockContext } from '../../../shared/test-utils/factories/context-factory.js';

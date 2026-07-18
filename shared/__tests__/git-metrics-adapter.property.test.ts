@@ -20,7 +20,7 @@ import {
     generateGitMetricsRuns,
     generateGitFailureClassifications,
     getLastGitLogError,
-} from '../git-metrics-adapter.js';
+} from '../ci/git-metrics-adapter.js';
 
 vi.mock('child_process', () => ({
     execFileSync: vi.fn(() => ''),

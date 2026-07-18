@@ -1,4 +1,4 @@
-import type { InvariantFn, ValidationContext } from '../artifact-validator.js';
+import type { InvariantFn, ValidationContext } from '../validation/artifact-validator.js';
 export type { InvariantFn, ValidationContext };
 
 export interface TestCaseShape {

@@ -1,7 +1,7 @@
 /** AI-powered test-impact assessment — analyze which tests to run based on code changes. */
 import { formatErr } from '../shared/errors.js';
 import fs from 'fs';
-import { llmPrompt } from '../shared/llm-client.js';
+import { llmPrompt } from '../shared/llm/llm-client.js';
 import { sanitizePath } from '../shared/path-utils.js';
 import { rootLogger } from '../shared/logger.js';
 import { sanitizeForLlm } from '../shared/sanitize.js';

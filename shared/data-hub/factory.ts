@@ -140,7 +140,7 @@ async function buildDataProviders(provider: GitProvider): Promise<DataProvider[]
     if (xrayClientId && xrayClientSecret && jiraProject) {
         try {
             const { XrayDataProvider } = await import('./providers/xray-provider.js');
-            const { XrayCloudClient } = await import('../xray-cloud-client.js');
+            const { XrayCloudClient } = await import('../jira/xray-cloud-client.js');
             dataProviders.push(
                 new XrayDataProvider(new XrayCloudClient(), xrayClientId, xrayClientSecret, jiraProject),
             );

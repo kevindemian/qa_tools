@@ -1,6 +1,6 @@
 import os from 'os';
 import path from 'path';
-vi.mock('../../shared/prompt', () => ({
+vi.mock('../../shared/ui/prompt.js', () => ({
     print: vi.fn(),
     success: vi.fn(),
     warn: vi.fn(),
@@ -21,11 +21,11 @@ vi.mock('../ai-pr-desc', () => ({ generatePrDescription: vi.fn() }));
 vi.mock('../ai-test-impact', () => ({ assessTestImpact: vi.fn() }));
 vi.mock('../nivelar', () => ({ nivelarBranches: vi.fn() }));
 
-vi.mock('../../shared/temp-dir', () => ({
+vi.mock('../../shared/infra/temp-dir.js', () => ({
     reportsDir: vi.fn(() => path.join(os.tmpdir(), 'qa-test-reports')),
 }));
 
-import { success, warn, info, prompt, confirm, printError } from '../../shared/prompt.js';
+import { success, warn, info, prompt, confirm, printError } from '../../shared/ui/prompt.js';
 import { pushHistory } from '../session-state.js';
 import { generatePrDescription } from '../ai-pr-desc.js';
 import { assessTestImpact } from '../ai-test-impact.js';

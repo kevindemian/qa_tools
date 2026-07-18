@@ -1,4 +1,4 @@
-import { ClassifyResponseSchema } from '../classify.schema.js';
+import { ClassifyResponseSchema } from '../validation/classify.schema.js';
 
 describe('ClassifyResponseSchema', () => {
     it('accepts ASSERTION response', () => {

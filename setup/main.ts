@@ -1,6 +1,6 @@
 import fs from 'fs';
 import path from 'path';
-import { ask, askConfirm, title, info, divider } from '../shared/prompt.js';
+import { ask, askConfirm, title, info, divider } from '../shared/ui/prompt.js';
 import { loadTypedState } from '../shared/state.js';
 import { detectFramework, extractRepoFromGit } from './detector.js';
 import { writeDotEnvExample, writePrePushHook as writeHookFile, writeFeaturesConfig } from './config-writer.js';
@@ -9,7 +9,7 @@ import { writeProjectEnvOverlay } from '../shared/env-loader.js';
 import { projectEnvPath } from '../shared/project-paths.js';
 import { generateCIWorkflow, generateQaPostProcessAction } from './templates/github-ci.js';
 import { generateQaPostProcessWorkflow } from './templates/qa-post-process-workflow.js';
-import { injectPostProcessJob } from '../shared/ci-injector.js';
+import { injectPostProcessJob } from '../shared/ci/ci-injector.js';
 import { generateGitLabCI } from './templates/gitlab-ci.js';
 import { generatePrePushHook } from './templates/pre-push-hook.js';
 import type { SetupContext, Framework, GitProvider } from './context.js';

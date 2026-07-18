@@ -7,7 +7,7 @@ import {
     CIRCUIT_BREAK_THRESHOLD,
     CIRCUIT_BREAK_MS,
     HALF_OPEN_PROBE_INTERVAL_MS,
-} from '../circuit-breaker.js';
+} from '../infra/circuit-breaker.js';
 
 const CFG_KEY = 'test-provider';
 

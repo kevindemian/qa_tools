@@ -1,6 +1,6 @@
 import { createMockAxiosInstance } from '../../shared/test-utils/factories/response-factory.js';
 import { ExternalError } from '../../shared/errors.js';
-import { resetCircuitState } from '../../shared/circuit-breaker.js';
+import { resetCircuitState } from '../../shared/infra/circuit-breaker.js';
 import { GitProviderBase } from '../git-provider-base.js';
 
 class TestProvider extends GitProviderBase {

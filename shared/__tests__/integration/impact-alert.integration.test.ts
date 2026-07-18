@@ -8,7 +8,7 @@
  * - Custom title
  */
 import { beforeEach, describe, expect, it, vi } from 'vitest';
-import type { ImpactAlertResult } from '../../impact-alert.js';
+import type { ImpactAlertResult } from '../../report/impact-alert.js';
 
 vi.mock('../../logger.js', () => ({
     rootLogger: { error: vi.fn(), info: vi.fn(), child: vi.fn().mockReturnThis() },
@@ -54,7 +54,7 @@ describe('Integration: Impact Alert (FT-30)', () => {
         it('produces complete HTML with alert cards and summary', async () => {
             expect.hasAssertions();
 
-            const { generateImpactAlertHtml } = await import('../../impact-alert.js');
+            const { generateImpactAlertHtml } = await import('../../report/impact-alert.js');
             const result = makeResult();
             const html = generateImpactAlertHtml(result, 'Alert Report');
 
@@ -78,7 +78,7 @@ describe('Integration: Impact Alert (FT-30)', () => {
         it('shows no-alerts message', async () => {
             expect.hasAssertions();
 
-            const { generateImpactAlertHtml } = await import('../../impact-alert.js');
+            const { generateImpactAlertHtml } = await import('../../report/impact-alert.js');
             const result = makeResult({ alerts: [], criticalCount: 0, warningCount: 0, infoCount: 0 });
             const html = generateImpactAlertHtml(result);
 
@@ -91,7 +91,7 @@ describe('Integration: Impact Alert (FT-30)', () => {
         it('uses custom title in HTML', async () => {
             expect.hasAssertions();
 
-            const { generateImpactAlertHtml } = await import('../../impact-alert.js');
+            const { generateImpactAlertHtml } = await import('../../report/impact-alert.js');
             const result = makeResult({ alerts: [], criticalCount: 0, warningCount: 0, infoCount: 0 });
             const html = generateImpactAlertHtml(result, 'Custom Alert');
 

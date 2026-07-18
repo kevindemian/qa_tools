@@ -1,4 +1,4 @@
-vi.mock('../../../shared/prompt');
+vi.mock('../../../shared/ui/prompt.js');
 
 import case05 from '../case05.js';
 import { makeMockCommandContext } from '../../../shared/test-utils.js';

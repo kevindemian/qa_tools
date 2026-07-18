@@ -10,7 +10,7 @@ import { update as updateState } from '../shared/state.js';
 import { showPreview, filterTests, confirmOrCancel, validateImportBatch, handleDryRun } from './import-prep.js';
 import { executeTestCreationLoop, updateFinalState, type TestCreationLoopOptions } from './import-loop.js';
 import { OPERATION_CANCELLED } from './constants.js';
-import { info, warn, isQuiet, print, printSummary } from '../shared/prompt.js';
+import { info, warn, isQuiet, print, printSummary } from '../shared/ui/prompt.js';
 import Config from '../shared/config-accessor.js';
 import { createStepImporter, type XrayStepImporter } from './xray-client.js';
 

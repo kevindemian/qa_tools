@@ -18,7 +18,7 @@ describe('Integration: Release Score', () => {
         it('returns score in 0-100 range', async () => {
             expect.hasAssertions();
 
-            const { calculateReleaseScore } = await import('../../release-score.js');
+            const { calculateReleaseScore } = await import('../../quality/release-score.js');
             const result = calculateReleaseScore(80, 85, 'pass', 90, 5);
 
             expect(result.score).toBeGreaterThanOrEqual(0);
@@ -28,7 +28,7 @@ describe('Integration: Release Score', () => {
         it('weights: tasks=25%, health=30%, coverage=25%, flakiness=20%', async () => {
             expect.hasAssertions();
 
-            const { calculateReleaseScore } = await import('../../release-score.js');
+            const { calculateReleaseScore } = await import('../../quality/release-score.js');
             // All dimensions at 100 → score should be ~100
             const perfect = calculateReleaseScore(100, 100, 'pass', 100, 0);
 
@@ -39,7 +39,7 @@ describe('Integration: Release Score', () => {
         it('all zeros → score 0', async () => {
             expect.hasAssertions();
 
-            const { calculateReleaseScore } = await import('../../release-score.js');
+            const { calculateReleaseScore } = await import('../../quality/release-score.js');
             const result = calculateReleaseScore(0, 0, 'fail', 0, 100);
 
             expect(result.score).toBe(0);
@@ -51,7 +51,7 @@ describe('Integration: Release Score', () => {
         it('excellent ≥ 90', async () => {
             expect.hasAssertions();
 
-            const { calculateReleaseScore } = await import('../../release-score.js');
+            const { calculateReleaseScore } = await import('../../quality/release-score.js');
             const result = calculateReleaseScore(90, 95, 'pass', 90, 2);
 
             expect(result.grade).toBe('excellent');
@@ -60,7 +60,7 @@ describe('Integration: Release Score', () => {
         it('good ≥ 70', async () => {
             expect.hasAssertions();
 
-            const { calculateReleaseScore } = await import('../../release-score.js');
+            const { calculateReleaseScore } = await import('../../quality/release-score.js');
             const result = calculateReleaseScore(70, 75, 'pass', 70, 10);
 
             expect(result.grade).toBe('good');
@@ -69,7 +69,7 @@ describe('Integration: Release Score', () => {
         it('critical < 50', async () => {
             expect.hasAssertions();
 
-            const { calculateReleaseScore } = await import('../../release-score.js');
+            const { calculateReleaseScore } = await import('../../quality/release-score.js');
             const result = calculateReleaseScore(30, 30, 'fail', 30, 50);
 
             expect(result.grade).toBe('critical');
@@ -80,7 +80,7 @@ describe('Integration: Release Score', () => {
         it('has 4 dimension entries', async () => {
             expect.hasAssertions();
 
-            const { calculateReleaseScore } = await import('../../release-score.js');
+            const { calculateReleaseScore } = await import('../../quality/release-score.js');
             const result = calculateReleaseScore(80, 85, 'pass', 90, 5);
 
             expect(result.breakdown).toHaveLength(4);
@@ -92,7 +92,7 @@ describe('Integration: Release Score', () => {
         it('says ready when all dimensions pass', async () => {
             expect.hasAssertions();
 
-            const { calculateReleaseScore } = await import('../../release-score.js');
+            const { calculateReleaseScore } = await import('../../quality/release-score.js');
             const result = calculateReleaseScore(90, 95, 'pass', 90, 2);
 
             expect(result.recommendation).toContain('Ready');
@@ -101,7 +101,7 @@ describe('Integration: Release Score', () => {
         it('lists failing dimensions', async () => {
             expect.hasAssertions();
 
-            const { calculateReleaseScore } = await import('../../release-score.js');
+            const { calculateReleaseScore } = await import('../../quality/release-score.js');
             const result = calculateReleaseScore(30, 50, 'fail', 40, 50);
 
             expect(result.recommendation).toContain('Improve');
@@ -112,7 +112,7 @@ describe('Integration: Release Score', () => {
         it('generates valid HTML', async () => {
             expect.hasAssertions();
 
-            const { calculateReleaseScore, generateReleaseScoreHtml } = await import('../../release-score.js');
+            const { calculateReleaseScore, generateReleaseScoreHtml } = await import('../../quality/release-score.js');
             const result = calculateReleaseScore(80, 85, 'pass', 90, 5);
             const html = generateReleaseScoreHtml(result);
 

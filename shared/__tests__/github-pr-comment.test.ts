@@ -5,7 +5,7 @@
  */
 
 import { describe, expect, it, vi, beforeEach, afterEach } from 'vitest';
-import { postPrComment } from '../github-pr-comment.js';
+import { postPrComment } from '../ci/github-pr-comment.js';
 
 const mockPost = vi.hoisted(() => vi.fn<(...args: unknown[]) => unknown>());
 

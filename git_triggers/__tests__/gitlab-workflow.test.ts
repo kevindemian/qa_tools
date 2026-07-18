@@ -24,7 +24,7 @@ vi.mock('../gitlab-api', () => ({
     projectPath: vi.fn(),
 }));
 
-vi.mock('../../shared/git-provider-error', () => ({
+vi.mock('../../shared/ci/git-provider-error.js', () => ({
     handleError: vi.fn((err: unknown, opts?: { returnNull?: boolean }) => {
         if (opts?.returnNull) return null;
         throw err;

@@ -2,7 +2,7 @@
  * Tests for defect-trend — Defect Trend Dashboard aggregator and HTML generator.
  */
 
-import { aggregateDefectTrends, generateDefectTrendHtml, sanitizeTrendResult } from '../defect-trend.js';
+import { aggregateDefectTrends, generateDefectTrendHtml, sanitizeTrendResult } from '../quality/defect-trend.js';
 import type { FailureClassification } from '../types/data-hub.js';
 
 describe('AggregateDefectTrends', () => {

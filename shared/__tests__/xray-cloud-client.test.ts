@@ -10,9 +10,9 @@ vi.mock('../config-accessor.js', () => ({
         }),
     },
 }));
-vi.mock('../http-client.js', () => ({ createThrottledClient: vi.fn(() => fakeInstance) }));
+vi.mock('../infra/http-client.js', () => ({ createThrottledClient: vi.fn(() => fakeInstance) }));
 
-import { XrayCloudClient } from '../xray-cloud-client.js';
+import { XrayCloudClient } from '../jira/xray-cloud-client.js';
 
 vi.mock('../logger.js', () => ({ rootLogger: { warn: vi.fn(), error: vi.fn(), info: vi.fn(), debug: vi.fn() } }));
 

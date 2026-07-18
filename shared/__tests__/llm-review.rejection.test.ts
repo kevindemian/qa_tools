@@ -1,12 +1,12 @@
 import { describe, it, expect, vi, beforeEach, afterEach, type MockInstance } from 'vitest';
 
-vi.mock('../llm-client.js', () => ({
+vi.mock('../llm/llm-client.js', () => ({
     llmPrompt: vi.fn(),
 }));
 
-import { llmPrompt } from '../llm-client.js';
-import { reviewWithLlm } from '../llm-review.js';
-import * as llmMetrics from '../llm-metrics.js';
+import { llmPrompt } from '../llm/llm-client.js';
+import { reviewWithLlm } from '../llm/llm-review.js';
+import * as llmMetrics from '../llm/llm-metrics.js';
 import Config from '../config-accessor.js';
 
 const VALID_ANALYSIS = {

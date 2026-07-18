@@ -1,4 +1,4 @@
-vi.mock('../../shared/prompt', () => ({
+vi.mock('../../shared/ui/prompt.js', () => ({
     __setConfig: vi.fn(),
     __setOraDep: vi.fn(),
     isQuiet: vi.fn<() => boolean>().mockReturnValue(true),
@@ -44,7 +44,7 @@ vi.mock('../../shared/open', () => ({ openWithOsOrFallback: vi.fn<(...args: [str
 import fs from 'fs';
 import path from 'path';
 import os from 'os';
-import * as promptModule from '../../shared/prompt.js';
+import * as promptModule from '../../shared/ui/prompt.js';
 import * as stateModule from '../../shared/state.js';
 
 const tmpHome = fs.mkdtempSync(path.join(os.tmpdir(), 'qa-e2e-hp-'));

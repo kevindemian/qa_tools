@@ -3,20 +3,20 @@ import fs from 'node:fs';
 import os from 'node:os';
 import path from 'node:path';
 import type { ChildProcess } from 'child_process';
-import { showSplash } from '../../shared/splash.js';
-import { main as entryMain } from '../../shared/entry-menu.js';
-import { showSelect } from '../../shared/prompt.js';
-import { Output } from '../../shared/output.js';
+import { showSplash } from '../../shared/ui/splash.js';
+import { main as entryMain } from '../../shared/ui/entry-menu.js';
+import { showSelect } from '../../shared/ui/prompt.js';
+import { Output } from '../../shared/ui/output.js';
 
-vi.mock('../../shared/splash', () => ({ showSplash: vi.fn() }));
-vi.mock('../../shared/prompt', () => ({
+vi.mock('../../shared/ui/splash.js', () => ({ showSplash: vi.fn() }));
+vi.mock('../../shared/ui/prompt.js', () => ({
     showSelect: vi.fn(),
     confirm: vi.fn(),
     info: vi.fn(),
     warn: vi.fn(),
     divider: vi.fn(),
 }));
-vi.mock('../../shared/output', () => {
+vi.mock('../../shared/ui/output.js', () => {
     const mockOutput = { box: vi.fn(), print: vi.fn() };
     return {
         Output: { isTTY: vi.fn(), isCI: vi.fn() },

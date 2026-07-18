@@ -3,7 +3,7 @@ import path from 'path';
 import os from 'os';
 import { execFileSync } from 'child_process';
 import { afterAll, beforeEach, describe, expect, it, vi } from 'vitest';
-import { FsStoreBackend, GitStoreBackend, detectStoreBackend, detectProjectGitDir } from '../store-backend.js';
+import { FsStoreBackend, GitStoreBackend, detectStoreBackend, detectProjectGitDir } from '../infra/store-backend.js';
 
 const GIT_BIN = '/usr/bin/git';
 const tmpDir = fs.mkdtempSync(path.join(os.tmpdir(), 'qa-store-backend-test-'));

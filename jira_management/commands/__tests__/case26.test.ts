@@ -37,7 +37,7 @@ const {
     mockWriteReport: vi.fn().mockReturnValue('/test/qa-test/release-score.html'),
 }));
 
-vi.mock('../../../shared/prompt', () => ({
+vi.mock('../../../shared/ui/prompt.js', () => ({
     info: vi.fn(),
     warn: vi.fn(),
     title: vi.fn(),
@@ -65,11 +65,11 @@ vi.mock('../../../shared/config-accessor.js', () => ({
     default: { get: vi.fn().mockReturnValue('TEST') },
 }));
 
-vi.mock('../../../shared/health-score', () => ({
+vi.mock('../../../shared/quality/health-score.js', () => ({
     calculateHealthScore: mockCalcHealth,
 }));
 
-vi.mock('../../../shared/release-score', () => ({
+vi.mock('../../../shared/quality/release-score.js', () => ({
     calculateReleaseScore: mockCalcRelease,
     generateReleaseScoreHtml: mockGenHtml,
 }));
@@ -78,17 +78,17 @@ vi.mock('../../../shared/open', () => ({
     openWithFallback: mockOpen,
 }));
 
-vi.mock('../../../shared/temp-dir', () => ({
+vi.mock('../../../shared/infra/temp-dir.js', () => ({
     writeReport: mockWriteReport,
 }));
 
-vi.mock('../../../shared/output', () => ({
+vi.mock('../../../shared/ui/output.js', () => ({
     defaultOutput: { print: vi.fn() },
 }));
 
-import { warn, printError } from '../../../shared/prompt.js';
+import { warn, printError } from '../../../shared/ui/prompt.js';
 import { makeMockCommandContext } from '../../../shared/test-utils.js';
-import type { calculateHealthScore } from '../../../shared/health-score.js';
+import type { calculateHealthScore } from '../../../shared/quality/health-score.js';
 import case26 from '../case26.js';
 
 function makeRun(

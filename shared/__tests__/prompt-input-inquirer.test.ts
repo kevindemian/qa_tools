@@ -1,4 +1,4 @@
-vi.mock('../output', () => {
+vi.mock('../ui/output.js', () => {
     const mockOutput = { print: vi.fn() };
     return {
         Output: { isTTY: vi.fn(), isCI: vi.fn(), columns: vi.fn(() => 80), rows: vi.fn(() => 24) },
@@ -17,13 +17,13 @@ vi.mock('../logger', () => ({
     },
 }));
 
-vi.mock('../box', () => ({
+vi.mock('../ui/box.js', () => ({
     box: vi.fn((lines: string[]) => lines.join('\n')),
     divider: vi.fn(() => '---'),
     visibleWidth: vi.fn((s: string) => s.length),
 }));
 
-vi.mock('../palette', () => {
+vi.mock('../ui/palette.js', () => {
     const purpleFn = (s: string) => s;
     purpleFn.bold = (s: string) => s;
     return {
@@ -40,8 +40,8 @@ vi.mock('../palette', () => {
     };
 });
 
-vi.mock('../prompt-ui', async () => {
-    const actual = await vi.importActual<typeof import('../prompt-ui.js')>('../prompt-ui');
+vi.mock('../ui/prompt-ui.js', async () => {
+    const actual = await vi.importActual<typeof import('../ui/prompt-ui.js')>('../ui/prompt-ui.js');
     return {
         ...actual,
         getConfig: vi.fn(async () => {
@@ -70,7 +70,7 @@ vi.mock('@inquirer/confirm', () => ({ default: vi.fn() }));
 
 import readlineSync from 'readline-sync';
 import ConfigAccessor from '../config-accessor.js';
-import { getConfig, warn, CancelError } from '../prompt-ui.js';
+import { getConfig, warn, CancelError } from '../ui/prompt-ui.js';
 import {
     smartPrompt,
     ask,
@@ -80,7 +80,7 @@ import {
     __setInputMod,
     __setConfirmMod,
     SelectChoice,
-} from '../prompt-input-inquirer.js';
+} from '../ui/prompt-input-inquirer.js';
 
 const mockReadlineQuestion = vi.spyOn(readlineSync, 'question').mockImplementation(() => '');
 const mockGetConfig = vi.mocked(getConfig);

@@ -82,7 +82,7 @@ import {
     LLM_ERROR_BODY_TRUNCATION,
     LlmErrorPayloadSchema,
     estimateCostUSD,
-} from '../llm-fallback-config.js';
+} from '../llm/llm-fallback-config.js';
 import Config from '../config-accessor.js';
 
 describe('Llm Fallback Config', () => {

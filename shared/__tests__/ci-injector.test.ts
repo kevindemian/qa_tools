@@ -11,7 +11,7 @@
 import fs from 'node:fs';
 import path from 'node:path';
 import { describe, it, expect } from 'vitest';
-import { generatePostProcessWorkflowYaml, extractFirstJobName, injectPostProcessJob } from '../ci-injector.js';
+import { generatePostProcessWorkflowYaml, extractFirstJobName, injectPostProcessJob } from '../ci/ci-injector.js';
 import { generateQaPostProcessWorkflow } from '../../setup/templates/qa-post-process-workflow.js';
 import { ACTION_VERSIONS } from '../test-utils/constants.js';
 import type { SetupContext } from '../../setup/context.js';

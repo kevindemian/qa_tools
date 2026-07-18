@@ -2,7 +2,7 @@
  * Tests for theme — terminal UI theme derived from design tokens.
  */
 
-import { getTheme, defaultTheme } from '../theme.js';
+import { getTheme, defaultTheme } from '../ui/theme.js';
 
 describe('Theme', () => {
     it('getTheme returns defaultTheme', () => {

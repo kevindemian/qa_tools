@@ -8,7 +8,7 @@
 import { describe, it, expect } from 'vitest';
 import { readFileSync } from 'node:fs';
 import { resolve } from 'node:path';
-import { CONFIG_SCHEMA } from '../../shared/config-schema.js';
+import { CONFIG_SCHEMA } from '../validation/config-schema.js';
 
 describe('Env example stays in sync with CONFIG_SCHEMA', () => {
     const example = readFileSync(resolve(import.meta.dirname, '../..', '.env.example'), 'utf-8');

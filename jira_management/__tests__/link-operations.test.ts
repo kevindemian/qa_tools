@@ -1,4 +1,4 @@
-vi.mock('../../shared/prompt', () => ({
+vi.mock('../../shared/ui/prompt.js', () => ({
     info: vi.fn(),
     warn: vi.fn(),
 }));

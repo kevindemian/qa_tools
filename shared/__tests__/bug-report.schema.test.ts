@@ -1,4 +1,4 @@
-import { AiBugReportSchema } from '../bug-report.schema.js';
+import { AiBugReportSchema } from '../validation/bug-report.schema.js';
 
 describe('AiBugReportSchema', () => {
     const validReport = {

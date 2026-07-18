@@ -1,5 +1,5 @@
-vi.mock('../../shared/prompt', async () => {
-    const actual = await vi.importActual('../../shared/prompt');
+vi.mock('../../shared/ui/prompt.js', async () => {
+    const actual = await vi.importActual('../../shared/ui/prompt.js');
     const askMock = vi
         .fn()
         .mockResolvedValueOnce('v2.0.0') // Nome da versão

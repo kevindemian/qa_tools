@@ -1,6 +1,6 @@
 import os from 'os';
 import path from 'path';
-vi.mock('../../../shared/prompt');
+vi.mock('../../../shared/ui/prompt.js');
 
 vi.mock('../../../shared/state', () => ({
     load: vi.fn().mockReturnValue({}),
@@ -145,7 +145,7 @@ describe('Case15', () => {
 
             vi.mocked(resolveTestDataSource).mockResolvedValue(null);
 
-            const { ask } = await import('../../../shared/prompt.js');
+            const { ask } = await import('../../../shared/ui/prompt.js');
             vi.mocked(ask).mockResolvedValue('/manual/path.json');
 
             const result = await case15.handler(mockContext);
@@ -158,7 +158,7 @@ describe('Case15', () => {
             expect.hasAssertions();
 
             vi.mocked(resolveTestDataSource).mockResolvedValue(null);
-            const { ask, warn } = await import('../../../shared/prompt.js');
+            const { ask, warn } = await import('../../../shared/ui/prompt.js');
             vi.mocked(ask).mockResolvedValue('');
 
             const result = await case15.handler(mockContext);
@@ -177,7 +177,7 @@ describe('Case15', () => {
                 store: mockStore(),
             });
 
-            const { ask } = await import('../../../shared/prompt.js');
+            const { ask } = await import('../../../shared/ui/prompt.js');
             vi.mocked(ask).mockResolvedValue('/manual/path.json');
 
             const result = await case15.handler(mockContext);

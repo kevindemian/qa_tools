@@ -1,15 +1,15 @@
 import fs from 'fs';
 import path from 'path';
-import * as prompt from '../../shared/prompt.js';
+import * as prompt from '../../shared/ui/prompt.js';
 import { detectFramework, extractRepoFromGit } from '../detector.js';
 import { writeDotEnvExample, writePrePushHook } from '../config-writer.js';
 import { generateCIWorkflow } from '../templates/github-ci.js';
 import { generateGitLabCI } from '../templates/gitlab-ci.js';
 import { generatePrePushHook } from '../templates/pre-push-hook.js';
 import { generateQaPostProcessWorkflow } from '../templates/qa-post-process-workflow.js';
-import { injectPostProcessJob } from '../../shared/ci-injector.js';
+import { injectPostProcessJob } from '../../shared/ci/ci-injector.js';
 
-vi.mock('../../shared/prompt.js', () => ({
+vi.mock('../../shared/ui/prompt.js', () => ({
     ask: vi.fn(),
     askConfirm: vi.fn(),
     title: vi.fn(),
@@ -40,7 +40,7 @@ vi.mock('../templates/pre-push-hook.js', () => ({
 vi.mock('../templates/qa-post-process-workflow.js', () => ({
     generateQaPostProcessWorkflow: vi.fn(() => 'name: QA Post-Process\n'),
 }));
-vi.mock('../../shared/ci-injector.js', () => ({
+vi.mock('../../shared/ci/ci-injector.js', () => ({
     injectPostProcessJob: vi.fn((content: string) => content),
 }));
 vi.mock('../../shared/state.js', () => ({

@@ -38,7 +38,7 @@ describe('Integration: Health Score', () => {
         it('returns score 0-100', async () => {
             expect.hasAssertions();
 
-            const { calculateHealthScore } = await import('../../health-score.js');
+            const { calculateHealthScore } = await import('../../quality/health-score.js');
             const result = calculateHealthScore({ dataHub: createTestHub() });
 
             expect(result.overall).toBeGreaterThanOrEqual(0);
@@ -48,7 +48,7 @@ describe('Integration: Health Score', () => {
         it('assigns grade based on score', async () => {
             expect.hasAssertions();
 
-            const { calculateHealthScore } = await import('../../health-score.js');
+            const { calculateHealthScore } = await import('../../quality/health-score.js');
             // excellent: near-perfect pass rate + good coverage
             const excellent = calculateHealthScore({
                 dataHub: createTestHub({
@@ -79,7 +79,7 @@ describe('Integration: Health Score', () => {
         it('all 5 dimensions are present', async () => {
             expect.hasAssertions();
 
-            const { calculateHealthScore } = await import('../../health-score.js');
+            const { calculateHealthScore } = await import('../../quality/health-score.js');
             const result = calculateHealthScore({ dataHub: createTestHub() });
 
             expect(result.dimensions).toBeDefined();
@@ -93,7 +93,7 @@ describe('Integration: Health Score', () => {
         it('passRate score reflects actual pass rate', async () => {
             expect.hasAssertions();
 
-            const { calculateHealthScore } = await import('../../health-score.js');
+            const { calculateHealthScore } = await import('../../quality/health-score.js');
             const result = calculateHealthScore({ dataHub: createTestHub({ passRate: 95 }) });
 
             expect(result.dimensions.passRate.score).toBeGreaterThanOrEqual(80);
@@ -104,7 +104,7 @@ describe('Integration: Health Score', () => {
         it('provenance has 5 entries', async () => {
             expect.hasAssertions();
 
-            const { calculateHealthScore } = await import('../../health-score.js');
+            const { calculateHealthScore } = await import('../../quality/health-score.js');
             const result = calculateHealthScore({ dataHub: createTestHub() });
 
             expect(result.provenance).toBeDefined();
@@ -114,7 +114,7 @@ describe('Integration: Health Score', () => {
         it('each provenance entry has source and formula', async () => {
             expect.hasAssertions();
 
-            const { calculateHealthScore } = await import('../../health-score.js');
+            const { calculateHealthScore } = await import('../../quality/health-score.js');
             const result = calculateHealthScore({ dataHub: createTestHub() });
 
             for (const p of result.provenance ?? []) {
@@ -129,7 +129,7 @@ describe('Integration: Health Score', () => {
         it('returns "pass" when score >= 70 and all thresholds satisfied', async () => {
             expect.hasAssertions();
 
-            const { calculateHealthScore } = await import('../../health-score.js');
+            const { calculateHealthScore } = await import('../../quality/health-score.js');
             const result = calculateHealthScore({
                 dataHub: createTestHub({
                     passRate: 95,
@@ -146,7 +146,7 @@ describe('Integration: Health Score', () => {
         it('returns "fail" when coverage is below threshold', async () => {
             expect.hasAssertions();
 
-            const { calculateHealthScore } = await import('../../health-score.js');
+            const { calculateHealthScore } = await import('../../quality/health-score.js');
             const result = calculateHealthScore({ dataHub: createTestHub() });
 
             expect(result.qualityGate).toBe('fail');
@@ -157,7 +157,7 @@ describe('Integration: Health Score', () => {
         it('custom grade boundaries change grade assignment', async () => {
             expect.hasAssertions();
 
-            const { calculateHealthScore } = await import('../../health-score.js');
+            const { calculateHealthScore } = await import('../../quality/health-score.js');
             const low = calculateHealthScore({
                 gradeBoundaries: { excellent: 0, good: 0, needs_attention: 0, poor: 0, critical: 0 },
                 dataHub: createTestHub(),
@@ -176,7 +176,7 @@ describe('Integration: Health Score', () => {
         it('handles store with single run', async () => {
             expect.hasAssertions();
 
-            const { calculateHealthScore } = await import('../../health-score.js');
+            const { calculateHealthScore } = await import('../../quality/health-score.js');
             const result = calculateHealthScore({ dataHub: createTestHub() });
 
             expect(result.overall).toBeGreaterThanOrEqual(0);
@@ -185,7 +185,7 @@ describe('Integration: Health Score', () => {
         it('handles store with zero tests — returns score 0, grade critical', async () => {
             expect.hasAssertions();
 
-            const { calculateHealthScore } = await import('../../health-score.js');
+            const { calculateHealthScore } = await import('../../quality/health-score.js');
             const result = calculateHealthScore({
                 dataHub: createTestHub({
                     passRate: 0,
@@ -206,7 +206,7 @@ describe('Integration: Health Score', () => {
         it('handles coverageHistory entry with missing coveragePct without NaN (G1 RED)', async () => {
             expect.hasAssertions();
 
-            const { calculateHealthScore } = await import('../../health-score.js');
+            const { calculateHealthScore } = await import('../../quality/health-score.js');
             const result = calculateHealthScore({ dataHub: createTestHub({ coverage: 0 }) });
 
             expect(Number.isNaN(result.dimensions.coverage.score)).toBeFalsy();
@@ -312,7 +312,7 @@ describe('Integration: Health Score', () => {
         it('dataHub passRate overrides MetricsStore passRate when provided', async () => {
             expect.hasAssertions();
 
-            const { calculateHealthScore } = await import('../../health-score.js');
+            const { calculateHealthScore } = await import('../../quality/health-score.js');
             const hub = makeDataHub({ computed: { passRate: 95 } }); // 95% from CI
 
             const withHub = calculateHealthScore({ dataHub: hub });
@@ -325,7 +325,7 @@ describe('Integration: Health Score', () => {
         it('dataHub passRate overrides MetricsStore when provided', async () => {
             expect.hasAssertions();
 
-            const { calculateHealthScore } = await import('../../health-score.js');
+            const { calculateHealthScore } = await import('../../quality/health-score.js');
             const hub = makeDataHub({ computed: { passRate: 90 } }); // 90% from CI
 
             const withHub = calculateHealthScore({ dataHub: hub });

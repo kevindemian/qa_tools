@@ -1,10 +1,10 @@
-vi.mock('../../../shared/prompt');
+vi.mock('../../../shared/ui/prompt.js');
 vi.mock('../../../shared/logger');
 
 import { describe, it, expect, vi, beforeEach } from 'vitest';
 import case02 from '../case02.js';
 import { makeMockCommandContext } from '../../../shared/test-utils.js';
-import * as promptModule from '../../../shared/prompt.js';
+import * as promptModule from '../../../shared/ui/prompt.js';
 
 const mockInfo = vi.mocked(promptModule.info);
 const mockDivider = vi.mocked(promptModule.divider);

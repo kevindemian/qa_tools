@@ -1,5 +1,5 @@
-vi.mock('../../shared/prompt-ui', () => ({ isQuiet: vi.fn() }));
-vi.mock('../../shared/output', () => {
+vi.mock('../ui/prompt-ui.js', () => ({ isQuiet: vi.fn() }));
+vi.mock('../ui/output.js', () => {
     const mockOutput = { print: vi.fn() };
     return {
         Output: { isTTY: vi.fn(), isCI: vi.fn(), columns: vi.fn(() => 80) },
@@ -17,9 +17,9 @@ vi.mock('cli-progress', () => ({
     },
 }));
 
-import { isQuiet } from '../../shared/prompt-ui.js';
-import { Output, defaultOutput } from '../../shared/output.js';
-import { withSpinner, ProgressBar, __setOraDep } from '../spinner.js';
+import { isQuiet } from '../ui/prompt-ui.js';
+import { Output, defaultOutput } from '../ui/output.js';
+import { withSpinner, ProgressBar, __setOraDep } from '../ui/spinner.js';
 
 const mockIsQuiet = vi.mocked(isQuiet);
 const mockIsTTY = vi.spyOn(Output, 'isTTY');

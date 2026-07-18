@@ -1,7 +1,7 @@
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 import type { FailureClassification } from '../../types/data-hub.js';
-import type { SeasonalityResult } from '../../defect-seasonality.js';
-import * as reportStyles from '../../report-styles.js';
+import type { SeasonalityResult } from '../../quality/defect-seasonality.js';
+import * as reportStyles from '../../report/report-styles.js';
 
 vi.mock('../../logger.js', () => ({
     rootLogger: { error: vi.fn(), info: vi.fn(), child: vi.fn().mockReturnThis() },
@@ -30,7 +30,7 @@ describe('Integration: Defect Seasonality (FT-21)', () => {
         it('groups by day and hour', async () => {
             expect.hasAssertions();
 
-            const { aggregateDefectSeasonality } = await import('../../defect-seasonality.js');
+            const { aggregateDefectSeasonality } = await import('../../quality/defect-seasonality.js');
             const result = aggregateDefectSeasonality(makeClassifications());
 
             expect(result.totalRecords).toBe(4);
@@ -43,7 +43,7 @@ describe('Integration: Defect Seasonality (FT-21)', () => {
         it('returns correct day distribution', async () => {
             expect.hasAssertions();
 
-            const { aggregateDefectSeasonality } = await import('../../defect-seasonality.js');
+            const { aggregateDefectSeasonality } = await import('../../quality/defect-seasonality.js');
             const result = aggregateDefectSeasonality(makeClassifications());
             const monday = result.byDayOfWeek.find((d) => d.dayOfWeek === 'Mon');
             if (monday === undefined) throw new Error('Monday not found');
@@ -61,7 +61,7 @@ describe('Integration: Defect Seasonality (FT-21)', () => {
         it('returns zero-filled result for empty array', async () => {
             expect.hasAssertions();
 
-            const { aggregateDefectSeasonality } = await import('../../defect-seasonality.js');
+            const { aggregateDefectSeasonality } = await import('../../quality/defect-seasonality.js');
             const result = aggregateDefectSeasonality([]);
 
             expect(result.totalRecords).toBe(0);
@@ -74,7 +74,7 @@ describe('Integration: Defect Seasonality (FT-21)', () => {
         it('returns zero-filled result for null', async () => {
             expect.hasAssertions();
 
-            const { aggregateDefectSeasonality } = await import('../../defect-seasonality.js');
+            const { aggregateDefectSeasonality } = await import('../../quality/defect-seasonality.js');
             const result = aggregateDefectSeasonality(null);
 
             expect(result.totalRecords).toBe(0);
@@ -83,7 +83,7 @@ describe('Integration: Defect Seasonality (FT-21)', () => {
         it('returns zero-filled result for undefined', async () => {
             expect.hasAssertions();
 
-            const { aggregateDefectSeasonality } = await import('../../defect-seasonality.js');
+            const { aggregateDefectSeasonality } = await import('../../quality/defect-seasonality.js');
             const result = aggregateDefectSeasonality(undefined);
 
             expect(result.totalRecords).toBe(0);
@@ -94,7 +94,8 @@ describe('Integration: Defect Seasonality (FT-21)', () => {
         it('produces complete HTML with data', async () => {
             expect.hasAssertions();
 
-            const { aggregateDefectSeasonality, generateSeasonalityHtml } = await import('../../defect-seasonality.js');
+            const { aggregateDefectSeasonality, generateSeasonalityHtml } =
+                await import('../../quality/defect-seasonality.js');
             const result = aggregateDefectSeasonality(makeClassifications());
             const html = generateSeasonalityHtml(result, 'Seasonality Report');
 
@@ -108,7 +109,7 @@ describe('Integration: Defect Seasonality (FT-21)', () => {
         it('shows no-data message when totalRecords is 0', async () => {
             expect.hasAssertions();
 
-            const { generateSeasonalityHtml } = await import('../../defect-seasonality.js');
+            const { generateSeasonalityHtml } = await import('../../quality/defect-seasonality.js');
             const emptyResult: SeasonalityResult = {
                 byDayOfWeek: [],
                 byHour: [],
@@ -128,7 +129,7 @@ describe('Integration: Defect Seasonality (FT-21)', () => {
         it('returns zero-filled result when aggregation receives null', async () => {
             expect.hasAssertions();
 
-            const { aggregateDefectSeasonality } = await import('../../defect-seasonality.js');
+            const { aggregateDefectSeasonality } = await import('../../quality/defect-seasonality.js');
             const result = aggregateDefectSeasonality(null);
 
             expect(result.byDayOfWeek).toHaveLength(7);
@@ -146,7 +147,8 @@ describe('Integration: Defect Seasonality (FT-21)', () => {
             const spy = vi.spyOn(reportStyles, 'buildCss').mockImplementation(() => {
                 throw new Error('CSS failure');
             });
-            const { aggregateDefectSeasonality, generateSeasonalityHtml } = await import('../../defect-seasonality.js');
+            const { aggregateDefectSeasonality, generateSeasonalityHtml } =
+                await import('../../quality/defect-seasonality.js');
             const input: FailureClassification[] = [
                 { timestamp: '2026-06-01T10:00:00Z', testTitle: 't1', category: 'ASSERTION', project: 'p1' },
             ];

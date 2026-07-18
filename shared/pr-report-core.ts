@@ -27,20 +27,20 @@ import { rootLogger } from './logger.js';
 import { formatErr } from './errors.js';
 import { getDataHub, setDataHub, isDataHubInitialized } from './data-hub/global-hub.js';
 import { calcRunPassRate } from './data-hub/compute/run-pass-rate.js';
-import { runQualityGate } from './quality-gate.js';
-import { createCheckRun } from './github-check-run.js';
-import { postPrComment } from './github-pr-comment.js';
-import { generateHtmlReport } from './report-html.js';
-import type { ReportOptions } from './report-types.js';
-import { calculateHealthScore } from './health-score.js';
+import { runQualityGate } from './quality/quality-gate.js';
+import { createCheckRun } from './ci/github-check-run.js';
+import { postPrComment } from './ci/github-pr-comment.js';
+import { generateHtmlReport } from './report/report-html.js';
+import type { ReportOptions } from './report/report-types.js';
+import { calculateHealthScore } from './quality/health-score.js';
 import type { FlatTest, ParseResult } from './result_parser.js';
 import { getPrReportConfig } from './feature-config.js';
 import type { DataHub, MetricsRun } from './types/data-hub.js';
 import { askTestSource, DATAHUB_ERRORS } from './data-hub/test-source-fallback.js';
 import { createDataHubFromParseResult } from './data-hub/factory.js';
 import { DataHubImpl } from './data-hub/hub.js';
-import { summarizeDataQuality } from './data-quality.js';
-import type { DataQualitySummary } from './data-quality.js';
+import { summarizeDataQuality } from './quality/data-quality.js';
+import type { DataQualitySummary } from './quality/data-quality.js';
 
 /**
  * Read CI-injected environment variables with typed fallbacks.

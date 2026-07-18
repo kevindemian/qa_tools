@@ -4,8 +4,8 @@ import {
     invariantEvidenceExists,
     invariantNoEmptyStrings,
     invariantConclusionHasEvidence,
-} from '../shared-invariants.js';
-import type { ValidationContext } from '../artifact-validator.js';
+} from '../validation/shared-invariants.js';
+import type { ValidationContext } from '../validation/artifact-validator.js';
 
 function makeCtx(input = ''): ValidationContext {
     return { inputRaw: input, outputRaw: {}, artifactType: 'test-suite' };

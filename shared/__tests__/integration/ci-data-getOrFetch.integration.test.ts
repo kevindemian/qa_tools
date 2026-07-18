@@ -59,7 +59,7 @@ describe('Integration: getOrFetchDataHub', () => {
     it('returns cached hub on cache hit without re-fetching', { timeout: 15000 }, async () => {
         expect.hasAssertions();
 
-        const { getOrFetchDataHub } = await import('../../ci-data.js');
+        const { getOrFetchDataHub } = await import('../../ci/ci-data.js');
         const mockProvider = createMockGitProvider('github');
 
         // First call — cache miss, triggers fetch
@@ -76,7 +76,7 @@ describe('Integration: getOrFetchDataHub', () => {
     it('selects GitLab provider when provider.provider === "gitlab"', async () => {
         expect.hasAssertions();
 
-        const { getOrFetchDataHub } = await import('../../ci-data.js');
+        const { getOrFetchDataHub } = await import('../../ci/ci-data.js');
         const mockProvider = createMockGitProvider('gitlab');
 
         const hub = await getOrFetchDataHub(mockProvider, 'gitlab-repo');
@@ -89,7 +89,7 @@ describe('Integration: getOrFetchDataHub', () => {
     it('selects GitHub provider when provider.provider === "github"', async () => {
         expect.hasAssertions();
 
-        const { getOrFetchDataHub } = await import('../../ci-data.js');
+        const { getOrFetchDataHub } = await import('../../ci/ci-data.js');
         const mockProvider = createMockGitProvider('github');
 
         const hub = await getOrFetchDataHub(mockProvider, 'github-repo');
@@ -101,7 +101,7 @@ describe('Integration: getOrFetchDataHub', () => {
     it('returns hub with empty data when provider throws', async () => {
         expect.hasAssertions();
 
-        const { getOrFetchDataHub } = await import('../../ci-data.js');
+        const { getOrFetchDataHub } = await import('../../ci/ci-data.js');
         const mockProvider = createMockGitProvider('github');
         mockProvider.getRecentPipelines = vi.fn().mockRejectedValue(new Error('API rate limit')) as never;
 
@@ -116,7 +116,7 @@ describe('Integration: getOrFetchDataHub', () => {
     it('caches different repos independently', async () => {
         expect.hasAssertions();
 
-        const { getOrFetchDataHub } = await import('../../ci-data.js');
+        const { getOrFetchDataHub } = await import('../../ci/ci-data.js');
         const mockProvider = createMockGitProvider('github');
 
         const hub1 = await getOrFetchDataHub(mockProvider, 'repo-a');

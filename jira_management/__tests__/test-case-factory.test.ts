@@ -11,7 +11,7 @@ const mockPrompt = vi.hoisted(() => ({
     ),
 }));
 
-vi.mock('../../shared/prompt', () => mockPrompt);
+vi.mock('../../shared/ui/prompt.js', () => mockPrompt);
 
 import { createMockJiraResource } from '../../shared/test-utils/factories/jira-resource-factory.js';
 import type { Mock } from 'vitest';
