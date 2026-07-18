@@ -38,6 +38,11 @@ shared_docker/.selected_project
 
 # === Runtime state ===
 shared/.local/
+# Explicit runtime artifacts (F5/T5.1): generated state, logs and backups
+shared/.local/state/*.json
+shared/.local/state/*.json.bak
+cloud/*.log
+archive/
 
 # === Backup files ===
 *.bak
