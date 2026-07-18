@@ -54,7 +54,7 @@ interface SuppressionsFile {
 }
 
 interface StrykerConfig {
-    thresholds?: { mutation?: number };
+    thresholds?: { break?: number | null; high?: number; low?: number };
     coverageAnalysis?: string;
     [key: string]: unknown;
 }
@@ -248,7 +248,7 @@ function loadSuppressions(): SuppressionsFile {
 function syncStryker(expectedThreshold: number): void {
     if (!existsSync(STRYKER_PATH)) {
         const created: StrykerConfig = {
-            thresholds: { mutation: expectedThreshold },
+            thresholds: { break: expectedThreshold },
             coverageAnalysis: 'perTest',
         };
         writeFileSync(STRYKER_PATH, JSON.stringify(created, null, 2) + '\n');
@@ -261,14 +261,14 @@ function syncStryker(expectedThreshold: number): void {
     } catch {
         fail('stryker.conf.json inválido.');
     }
-    const current = stryker.thresholds?.mutation;
+    const current = stryker.thresholds?.break;
     if (typeof current === 'number' && current < expectedThreshold) {
         fail(
             `stryker.conf.json tem teto ${current}% < esperado ${expectedThreshold}%. Rebaixar teto sem aprovação é contorno de segurança (AGENTS §5).`,
         );
     }
     if (current !== expectedThreshold) {
-        stryker.thresholds = { ...(stryker.thresholds ?? {}), mutation: expectedThreshold };
+        stryker.thresholds = { ...(stryker.thresholds ?? {}), break: expectedThreshold };
         writeFileSync(STRYKER_PATH, JSON.stringify(stryker, null, 2) + '\n');
         writeOut(`[audit-suppressions] stryker.conf.json atualizado para teto ${expectedThreshold}%.`);
     }

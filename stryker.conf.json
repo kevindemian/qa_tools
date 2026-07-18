@@ -10,8 +10,7 @@
     "tsconfigFile": "tsconfig.json",
     "coverageAnalysis": "perTest",
     "thresholds": {
-        "mutation": 50,
-        "break": true
+        "break": 50
     },
     "mutate": ["shared/**/*.ts", "jira_management/**/*.ts", "git_triggers/**/*.ts", "scripts/**/*.ts"],
     "ignorePatterns": [

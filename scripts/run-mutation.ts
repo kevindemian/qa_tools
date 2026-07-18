@@ -13,12 +13,29 @@ import { execFileSync } from 'node:child_process';
 import { readFileSync } from 'node:fs';
 import { fileURLToPath } from 'node:url';
 import { dirname, resolve } from 'node:path';
+import { minimatch } from 'minimatch';
 
 const ROOT = resolve(dirname(fileURLToPath(import.meta.url)), '..');
 const GIT_BIN = process.env['GIT_BIN'] || '/usr/bin/git';
 const TSX_BIN = resolve(ROOT, 'node_modules', '.bin', 'tsx');
 const STRYKER_BIN = resolve(ROOT, 'node_modules', '.bin', 'stryker');
 const STRYKER_PATH = resolve(ROOT, 'stryker.conf.json');
+
+interface StrykerIgnoreConfig {
+    ignorePatterns?: string[];
+}
+
+function strykerIgnorePatterns(): string[] {
+    try {
+        const cfg = JSON.parse(readFileSync(STRYKER_PATH, 'utf8')) as StrykerIgnoreConfig;
+        return cfg.ignorePatterns ?? [];
+    } catch (err) {
+        throw new Error(
+            `[run-mutation] falha ao ler ignorePatterns de ${STRYKER_PATH}: ${err instanceof Error ? err.message : String(err)}`,
+            { cause: err },
+        );
+    }
+}
 
 function diffFiles(): string[] {
     const base = process.env['GITHUB_BASE_REF'] || 'dev';
@@ -36,10 +53,12 @@ function diffFiles(): string[] {
             { cause: err },
         );
     }
+    const ignores = strykerIgnorePatterns();
     return out
         .split('\n')
         .map((s) => s.trim())
-        .filter((s) => s.endsWith('.ts') && !s.endsWith('.test.ts'));
+        .filter((s) => s.endsWith('.ts') && !s.endsWith('.test.ts'))
+        .filter((s) => !ignores.some((p) => minimatch(s, p, { dot: true })));
 }
 
 function main(): void {
@@ -64,7 +83,7 @@ function main(): void {
         process.exit(1);
     }
 
-    const cmdArgs = ['run', '--configFile', STRYKER_PATH];
+    const cmdArgs = ['run', STRYKER_PATH];
     if (diffMode) {
         const files = diffFiles();
         if (files.length === 0) {
