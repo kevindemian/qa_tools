@@ -91,7 +91,8 @@ export async function checkEslintBaseline(): Promise<CheckResult> {
         const eslint = new ESLint({
             overrideConfigFile: 'eslint.config.mjs',
             fix: false,
-            cache: false,
+            cache: true,
+            cacheLocation: '.eslintcache',
         });
 
         const results = await eslint.lintFiles(['.']);
@@ -448,7 +449,7 @@ export function checkIntegrity(): CheckResult {
         const selfContent = readFileSync('scripts/quality-check.ts', 'utf-8');
         const contentWithoutHash = selfContent.replace(/\/\* HASH:[0-9a-f]{64} \*\//g, '');
         const currentHash = createHash('sha256').update(contentWithoutHash, 'utf-8').digest('hex');
-        /* HASH:fa0bb4387e2ab3ce2f64e073bfddbf8ca812b03473d1edca588a54d7ce8749a4 */
+        /* HASH:e8cde8d2094e7394401e4ba96aff47ce7cff0e8bb707fe6e9ce087c51dfd7bf6 */
         const match = /\/\* HASH:([0-9a-f]{64}) \*\//.exec(selfContent);
         if (!match) {
             violations.push({ file: 'scripts/quality-check.ts', line: 1, content: 'Missing HASH comment' });
