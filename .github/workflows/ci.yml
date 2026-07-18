@@ -56,6 +56,8 @@ jobs:
                   GITLEAKS_VERSION="8.24.3"
                   curl -sSL "https://github.com/gitleaks/gitleaks/releases/download/v${GITLEAKS_VERSION}/gitleaks_${GITLEAKS_VERSION}_linux_x64.tar.gz" | sudo tar -xz -C /usr/local/bin gitleaks
             - run: npm run gitleaks
+            - name: Install osv-scanner
+              run: npm install -g osv-scanner
             - run: npm run osv-scan
             - name: Snyk test
               if: env.SNYK_TOKEN != ''
