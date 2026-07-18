@@ -1,10 +1,37 @@
 #!/usr/bin/env bash
 set -euo pipefail
 
-PLUGIN="$HOME/.config/opencode/plugin/validation_plugin.ts"
-HOOK_SRC="/project/.config/validation_hook.ts"
-HOOK_DST="$HOME/.config/opencode/validation_hook.ts"
-VALIDATION_JSON="/project/.opencode/validation.json"
+# ─────────────────────────────────────────────────────────────────────────────
+# OBSOLETO — NÃO EXECUTAR EM PRODUÇÃO
+# ─────────────────────────────────────────────────────────────────────────────
+# Este script foi desativado em 2026-07-18 (Fase 4 / T4.4 da reestruturação).
+#
+# Motivo (raiz, não workaround):
+#   1. Referencia caminhos absolutos de um ambiente legado (`/project/...`) que
+#      não existem neste repositório.
+#   2. Manipula arquivos de configuração do opencode em
+#      `$HOME/.config/opencode/` (validation_hook.ts, validation_plugin.ts,
+#      validation.json), os quais são PROIBIDOS de acesso/escrita por
+#      AGENTS.md §17 (Protected Paths — Zero Access).
+#   3. A proteção de hooks hoje é garantida por `.husky/` (pre-commit /
+#      pre-push) versionados no repositório, não por patches externos ao
+#      opencode.
+#
+# A lógica foi preservada abaixo APENAS como documentação histórica. Qualquer
+# reativação deve ser feita via PR autorizado que remova as referências a
+# paths protegidos e ao ambiente `/project/`.
+# ─────────────────────────────────────────────────────────────────────────────
+
+echo "=== sync-hooks.sh — OBSOLETO (desativado em 2026-07-18, F4/T4.4) ==="
+echo "Este script não deve ser executado. Veja o cabeçalho para o motivo."
+echo "Se precisar reativá-lo, abra um PR autorizado corrigindo os paths protegidos."
+exit 0
+
+# ─── Conteúdo legado (preservado para auditoria, NÃO executado) ───────────────
+LEGACY_PLUGIN="$HOME/.config/opencode/plugin/validation_plugin.ts"
+LEGACY_HOOK_SRC="/project/.config/validation_hook.ts"
+LEGACY_HOOK_DST="$HOME/.config/opencode/validation_hook.ts"
+LEGACY_VALIDATION_JSON="/project/.opencode/validation.json"
 
 echo "=== sync-hooks.sh — Ativação da proteção permanente ==="
 echo ""
