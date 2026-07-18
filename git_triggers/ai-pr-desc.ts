@@ -1,6 +1,6 @@
 /** AI-powered PR description generation from git diff + branch metadata. */
 import { formatErr } from '../shared/errors.js';
-import { llmPrompt } from '../shared/llm-client.js';
+import { llmPrompt } from '../shared/llm/llm-client.js';
 import { rootLogger } from '../shared/logger.js';
 import { sanitizeForLlm } from '../shared/sanitize.js';
 import type { GitProvider } from '../shared/types.js';

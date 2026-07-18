@@ -1,6 +1,6 @@
 /** Close all tasks for a given version — transition unresolved issues to Done. */
 import { formatErr } from '../../shared/errors.js';
-import { warn, askConfirm, ask, printSummary, printError } from '../../shared/prompt.js';
+import { warn, askConfirm, ask, printSummary, printError } from '../../shared/ui/prompt.js';
 import { rootLogger } from '../../shared/logger.js';
 import type { CommandContext } from './context.js';
 import { NO_TASKS_FOUND_FOR_VERSION, OPERATION_CANCELLED } from '../constants.js';

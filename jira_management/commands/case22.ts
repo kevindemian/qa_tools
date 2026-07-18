@@ -1,8 +1,8 @@
 /** Test impact analysis — three-tier impact from git diff, with flaky footnote and cross-feature hints. */
 import { execFileSync } from 'child_process';
 import fs from 'fs';
-import { ask, info, warn, title, divider, tableView, printError } from '../../shared/prompt.js';
-import { analyzeTestImpact } from '../../shared/test-impact.js';
+import { ask, info, warn, title, divider, tableView, printError } from '../../shared/ui/prompt.js';
+import { analyzeTestImpact } from '../../shared/quality/test-impact.js';
 import { getDataHub } from '../../shared/data-hub/global-hub.js';
 import { calcFlakinessEntries } from '../../shared/data-hub/compute/flakiness-entries.js';
 import type { CommandContext } from './context.js';

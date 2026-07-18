@@ -31,7 +31,7 @@ import type {
 import type { ArtifactParseResult } from '../artifact-parser.js';
 import { parsePipelineRun, validateRawDataOrThrow } from '../schemas.js';
 import { rootLogger } from '../../logger.js';
-import { extractErrorMessage } from '../../prompt-errors.js';
+import { extractErrorMessage } from '../../ui/prompt-errors.js';
 import { extractCoverage } from '../extractors/coverage-extractor.js';
 import { extractCoverageFiles, isCoverageArtifact } from '../extractors/coverage-files-extractor.js';
 import { isTestArtifact, parseArtifactBufferAll } from '../artifact-parser.js';

@@ -6,7 +6,7 @@
  * @module primitives/badge
  */
 
-import { tokens } from '../theme-tokens.js';
+import { tokens } from '../ui/theme-tokens.js';
 
 export interface BadgeProps {
     variant?: 'default' | 'pass' | 'fail' | 'skip' | 'info' | 'warn';

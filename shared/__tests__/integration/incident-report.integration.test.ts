@@ -23,7 +23,8 @@ describe('Incident Report.Integration', () => {
             it('generates valid HTML from real event data', async () => {
                 expect.hasAssertions();
 
-                const { buildIncidentReport, generateIncidentReportHtml } = await import('../../incident-report.js');
+                const { buildIncidentReport, generateIncidentReportHtml } =
+                    await import('../../report/incident-report.js');
                 const report = buildIncidentReport(45, 3, 'December Peak', ['EPIC-1'], 50);
                 const html = generateIncidentReportHtml(report);
 
@@ -39,7 +40,8 @@ describe('Incident Report.Integration', () => {
             it('includes all event types in sorted order', async () => {
                 expect.hasAssertions();
 
-                const { buildIncidentReport, generateIncidentReportHtml } = await import('../../incident-report.js');
+                const { buildIncidentReport, generateIncidentReportHtml } =
+                    await import('../../report/incident-report.js');
                 const report = buildIncidentReport(45, 5, 'January Spike', ['EPIC-X', 'EPIC-Y'], 50);
                 const html = generateIncidentReportHtml(report);
 
@@ -54,7 +56,8 @@ describe('Incident Report.Integration', () => {
             it('generates HTML with no-incidents message when no events exist', async () => {
                 expect.hasAssertions();
 
-                const { buildIncidentReport, generateIncidentReportHtml } = await import('../../incident-report.js');
+                const { buildIncidentReport, generateIncidentReportHtml } =
+                    await import('../../report/incident-report.js');
                 const report = buildIncidentReport(10, 0, 'N/A', [], 95);
                 const html = generateIncidentReportHtml(report);
 
@@ -68,7 +71,7 @@ describe('Incident Report.Integration', () => {
             it('returns error page for null report', async () => {
                 expect.hasAssertions();
 
-                const { generateIncidentReportHtml } = await import('../../incident-report.js');
+                const { generateIncidentReportHtml } = await import('../../report/incident-report.js');
                 const html = generateIncidentReportHtml(null);
 
                 expect(html).toContain('Error generating incident investigation report');
@@ -77,7 +80,7 @@ describe('Incident Report.Integration', () => {
             it('returns error page for undefined report', async () => {
                 expect.hasAssertions();
 
-                const { generateIncidentReportHtml } = await import('../../incident-report.js');
+                const { generateIncidentReportHtml } = await import('../../report/incident-report.js');
                 const html = generateIncidentReportHtml(undefined);
 
                 expect(html).toContain('Error generating incident investigation report');
@@ -88,7 +91,8 @@ describe('Incident Report.Integration', () => {
             it('uses custom title in HTML and page title', async () => {
                 expect.hasAssertions();
 
-                const { buildIncidentReport, generateIncidentReportHtml } = await import('../../incident-report.js');
+                const { buildIncidentReport, generateIncidentReportHtml } =
+                    await import('../../report/incident-report.js');
                 const report = buildIncidentReport(10, 0, 'N/A', [], 95);
                 const html = generateIncidentReportHtml(report, 'Sprint 42 Incident Report');
 
@@ -99,7 +103,8 @@ describe('Incident Report.Integration', () => {
             it('defaults to Incident Investigation Report when no title given', async () => {
                 expect.hasAssertions();
 
-                const { buildIncidentReport, generateIncidentReportHtml } = await import('../../incident-report.js');
+                const { buildIncidentReport, generateIncidentReportHtml } =
+                    await import('../../report/incident-report.js');
                 const report = buildIncidentReport(10, 0, 'N/A', [], 95);
                 const html = generateIncidentReportHtml(report);
 

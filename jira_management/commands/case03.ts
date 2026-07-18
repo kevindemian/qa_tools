@@ -1,6 +1,6 @@
 /** Create a new version in the Jira project. */
-import { warn, ask, askMultiline } from '../../shared/prompt.js';
-import { safeJiraCall } from '../../shared/jira-helper.js';
+import { warn, ask, askMultiline } from '../../shared/ui/prompt.js';
+import { safeJiraCall } from '../../shared/jira/jira-helper.js';
 import type { CommandContext } from './context.js';
 
 async function handler(c: CommandContext): Promise<boolean | void> {

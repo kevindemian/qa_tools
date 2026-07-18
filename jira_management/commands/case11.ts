@@ -8,7 +8,7 @@
  *    - test_steps_template.csv (94 lines, bulk format, 7 example blocks)
  *    - test_cases_template.json (86 lines, 5 example cases, comprehensive) */
 import { formatErr } from '../../shared/errors.js';
-import { success, error, info, ask } from '../../shared/prompt.js';
+import { success, error, info, ask } from '../../shared/ui/prompt.js';
 import fs from 'fs';
 import path from 'path';
 import type { CommandContext } from './context.js';

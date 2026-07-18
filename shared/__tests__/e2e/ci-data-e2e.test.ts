@@ -17,7 +17,7 @@ vi.mock('../../logger.js', () => ({
     rootLogger: { error: vi.fn(), info: vi.fn(), warn: vi.fn(), debug: vi.fn(), child: vi.fn().mockReturnThis() },
 }));
 
-vi.mock('../../config.js', () => ({
+vi.mock('../../config-accessor.js', () => ({
     default: { get: vi.fn(() => '') },
     get: vi.fn(() => ''),
 }));
@@ -76,7 +76,7 @@ describe('E2E: CI Data Hub — Complete Pipeline Flow', () => {
         it('produces correct cost data from CI runs', async () => {
             expect.hasAssertions();
 
-            const { calculatePipelineCost, generatePipelineCostHtml } = await import('../../pipeline-cost.js');
+            const { calculatePipelineCost, generatePipelineCostHtml } = await import('../../quality/pipeline-cost.js');
 
             const runs = [
                 makeRun(1, {
@@ -120,7 +120,7 @@ describe('E2E: CI Data Hub — Complete Pipeline Flow', () => {
         it('health score reflects CI data quality', async () => {
             expect.hasAssertions();
 
-            const { calculateHealthScore } = await import('../../health-score.js');
+            const { calculateHealthScore } = await import('../../quality/health-score.js');
 
             const runs = [
                 makeRun(1, { conclusion: 'success' }),
@@ -145,7 +145,8 @@ describe('E2E: CI Data Hub — Complete Pipeline Flow', () => {
         it('traceability matrix produces valid HTML with CI flaky data', async () => {
             expect.hasAssertions();
 
-            const { buildTraceabilityMatrix, generateTraceabilityHtml } = await import('../../traceability-matrix.js');
+            const { buildTraceabilityMatrix, generateTraceabilityHtml } =
+                await import('../../report/traceability-matrix.js');
 
             const runs = [makeRun(1)];
             const jobsMap = new Map<number, PipelineJob[]>([
@@ -192,8 +193,8 @@ describe('E2E: CI Data Hub — Complete Pipeline Flow', () => {
         it('complete pipeline works when provider fails', async () => {
             expect.hasAssertions();
 
-            const { calculatePipelineCost } = await import('../../pipeline-cost.js');
-            const { calculateHealthScore } = await import('../../health-score.js');
+            const { calculatePipelineCost } = await import('../../quality/pipeline-cost.js');
+            const { calculateHealthScore } = await import('../../quality/health-score.js');
 
             const provider = createFailingProvider(new Error('Network error'));
             const { hub } = await DataHubImpl.create([provider], { repo: 'owner/repo' }, mockPersistence);

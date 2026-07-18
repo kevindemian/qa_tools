@@ -11,7 +11,7 @@ import path from 'path';
 import { afterEach, beforeEach, describe, expect, it } from 'vitest';
 
 import type { TestImpactResult } from '../../types/coverage.js';
-import { generateTestSelectionJson } from '../../test-impact.js';
+import { generateTestSelectionJson } from '../../quality/test-impact.js';
 
 const GIT_BIN = '/usr/bin/git';
 let TEST_DIR: string;

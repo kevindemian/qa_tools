@@ -120,5 +120,5 @@ export interface HealthScoreResult {
      * EIXO C awareness: data-quality summary of the unified model consumed by
      * this score (confidence, per-category validity via getQuality(), provenance).
      */
-    dataQuality?: import('../data-quality.js').DataQualitySummary;
+    dataQuality?: import('../quality/data-quality.js').DataQualitySummary;
 }

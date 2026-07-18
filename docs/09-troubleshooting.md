@@ -64,7 +64,7 @@ WARN  Branch 'feature/x' não encontrada em gitlab
 
 **Solução**:
 
-1. Verifique o nome do branch no config/projects.json
+1. Confira o nome do branch que você digitou
 2. Confirme que o branch foi criado e feito push
 3. Verifique se `GIT_TOKEN` tem permissão de leitura no repositório
 
@@ -187,6 +187,27 @@ generatePrDescription retornou string vazia
 1. Verifique `LLM_FAST_API_KEY` e `LLM_FAST_BASE_URL`
 2. Groq tem limite de contexto (~8K tokens para `llama3-8b`); diffs muito grandes são truncados
 3. Considere trocar para `LLM_FAST_MODEL=mixtral-8x7b-32768` (maior contexto) se os diffs forem extensos
+
+## Projetos (multi-projeto)
+
+**Projeto aparece com `[INVÁLIDO]`**
+
+- **Causa**: a pasta do projeto foi movida ou removida.
+- **Solução**: no menu inicial, use "Gerenciar projetos → Editar diretório" para
+  apontar para o novo caminho.
+
+**Não consigo editar ou remover um projeto `[MIGRADO]`**
+
+- **Causa**: projetos vindos de configuração antiga são protegidos pelo menu.
+- **Solução**: registre o projeto novamente pelo Setup Wizard ("Adicionar projeto").
+
+**O menu não mostra nenhum projeto**
+
+- **Causa**: nenhum projeto foi registrado ainda.
+- **Solução**: escolha "Adicionar projeto" para registrar o primeiro, ou
+  "Continuar sem projeto" para usar o modo legado.
+
+Detalhes da jornada em [`07-projetos-registry.md`](07-projetos-registry.md).
 
 ---
 

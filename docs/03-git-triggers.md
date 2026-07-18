@@ -10,7 +10,9 @@ Ferramenta de linha de comando para automação de operações Git em projetos d
 npx tsx git_triggers/main.ts
 ```
 
-Ao iniciar, um menu interativo é exibido. O usuário seleciona um projeto (mapeado em `config/projects.json`) e acessa as operações disponíveis.
+Ao iniciar, um menu lista seus projetos (ver
+[`07-projetos-registry.md`](07-projetos-registry.md)); você seleciona um projeto
+— ou informa `--project <nome>` — e acessa as operações disponíveis.
 
 **Opções do menu:**
 
@@ -69,48 +71,23 @@ Em terminais não-TTY ou modo quiet (`QUIET=true`), o menu é renderizado em mod
 - Workflows disparados via `workflow_dispatch`
 - Suporte a workflows, artifacts, PRs, variáveis CI/CD
 
-A seleção do provedor é feita por projeto no arquivo `config/providers.json`.
+O provedor (GitLab ou GitHub) é definido por projeto quando você o registra.
 
 ---
 
-## 3. Configuração
+## 3. Configuração de projetos
 
-### `config/projects.json`
+O provedor e o identificador do repositório de cada projeto são definidos quando
+você **adiciona** ou **gerencia** um projeto — pelo Setup Wizard ou pelas opções
+"Adicionar projeto" / "Gerenciar projetos" do menu inicial. Não é preciso editar
+arquivos de configuração manualmente.
 
-Mapeia nomes de projeto → identificador no provedor:
+Consulte [`07-projetos-registry.md`](07-projetos-registry.md) para a jornada
+completa de projetos (adicionar, selecionar, gerenciar, `--project` / `--dir`).
 
-```json
-{
-    "qa_ibabs": "47849962",
-    "qa_irmanager": "41268567"
-}
-```
-
-- **GitLab**: valor = Project ID (inteiro)
-- **GitHub**: valor = `"owner/repo"`
-- Pode ser sobrescrito por variável de ambiente `PROJECT_ID_<NOME_MAIUSCULO>`
-
-### `config/providers.json`
-
-Define o provedor de cada projeto:
-
-```json
-{
-    "qa_ibabs": { "provider": "gitlab" },
-    "qa_irmanager": { "provider": "github", "repo": "myorg/qa-irmanager" }
-}
-```
-
-- `provider`: `"gitlab"` | `"github"`
-- `repo` (GitHub): opcional, substitui o valor de `projects.json` como `owner/repo`
-
-### `config/reviewers.json`
-
-Lista de IDs de revisores para MRs (IDs do GitLab):
-
-```json
-[12161752, 14566471, 23136801]
-```
+> **Vindo de uma versão antiga?** Se você já usava a configuração antiga de
+> projetos, ela é convertida automaticamente na primeira vez que você abre o CLI
+> — nenhuma ação é necessária.
 
 ---
 
@@ -330,7 +307,7 @@ O batch mode permite disparar uma pipeline, coletar resultados, analisar falhas 
 | Flag                   | Descrição                                               |
 | ---------------------- | ------------------------------------------------------- |
 | `--batch` ou `--auto`  | Ativa modo batch (implica `AUTO_CONFIRM=true`)          |
-| `--project` / `-p`     | Nome do projeto (fallback: primeiro do `projects.json`) |
+| `--project` / `-p`     | Nome do projeto a usar (se omitido, o menu pede a seleção) |
 | `--branch` / `-b`      | Branch para disparo (fallback: `main`)                  |
 | `--run-impacted-tests` | Analisa diff desde HEAD~1 e gera `test-selection.json`  |
 | `--conservative`       | Modo conservador: smoke obrigatórios + testes afetados  |
@@ -352,7 +329,7 @@ npx tsx git_triggers/main.ts --batch --project qa_ibabs --branch release/v2
 ### Fluxo
 
 1. `parseBatchArgs()` analisa `process.argv` em busca das flags
-2. Carrega projeto de `config/projects.json` (ou usa o especificado)
+2. Usa o projeto informado em `--project` (ou o projeto lembrado da última sessão)
 3. Configura manager (`GitLabManager` / `GitHubManager`) e define sessão
 4. Valida branch via `getBranch()`
 5. Dispara pipeline via `triggerPipeline()`
@@ -632,4 +609,4 @@ Exibe informações sobre o adaptador que gera métricas sintéticas a partir do
 
 ---
 
-← [Voltar ao README](../README.md) | [Config Files](07-config-files.md) | [Env Vars](06-env-vars.md)
+← [Voltar ao README](../README.md) | [Registry de projetos](07-projetos-registry.md) | [Env Vars](06-env-vars.md)

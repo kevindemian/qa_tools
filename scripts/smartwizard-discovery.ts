@@ -18,12 +18,12 @@
  * Example:
  *   npx tsx scripts/smartwizard-discovery.ts --provider openai --key sk-... --provider anthropic --key sk-ant-...
  */
-import { initModelResolver, getRegistry } from '../shared/model-resolver.js';
-import { discoverModels } from '../shared/model-discovery.js';
+import { initModelResolver, getRegistry } from '../shared/llm/model-resolver.js';
+import { discoverModels } from '../shared/llm/model-discovery.js';
 import { loadTypedState, updateTyped } from '../shared/state.js';
 import { rootLogger } from '../shared/logger.js';
-import type { LlmProvider } from '../shared/llm-provider-profiles.js';
-import type { RegistryModel } from '../shared/model-resolver.js';
+import type { LlmProvider } from '../shared/llm/llm-provider-profiles.js';
+import type { RegistryModel } from '../shared/llm/model-resolver.js';
 
 const RETRY_DELAY_BASE_MS = 60_000; // 1 min base for exponential spacing
 const MAX_ATTEMPTS = 3;

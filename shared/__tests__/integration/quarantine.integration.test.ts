@@ -14,7 +14,7 @@ import { describe, expect, it, beforeEach, afterEach } from 'vitest';
 
 const MOCK_STATE_HOME = path.join(os.tmpdir(), 'qa-tools-quarantine-integration');
 
-vi.mock('../../config', () => ({
+vi.mock('../../config-accessor.js', () => ({
     __esModule: true,
     default: {
         xdgStateHome: path.join(os.tmpdir(), 'qa-tools-quarantine-integration'),
@@ -32,7 +32,7 @@ import {
     generatePipelineQuarantine,
     loadQuarantine,
     markPermanent,
-} from '../../quarantine.js';
+} from '../../validation/quarantine.js';
 import { nonNull } from '../../test-utils.js';
 
 function storePath(): string {

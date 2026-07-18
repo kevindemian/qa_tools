@@ -12,7 +12,7 @@ import type { GitProvider, FrameworkDetectionResult } from '../../types/ci-cd.js
 import { detectFrameworkFromAPI } from '../../framework-detection.js';
 import { rootLogger } from '../../logger.js';
 import { ExternalError, getErrorMessage } from '../../errors.js';
-import { warn } from '../../prompt-format.js';
+import { warn } from '../../ui/prompt-format.js';
 
 /**
  * Framework Detector — runs the full cascade to detect test framework.

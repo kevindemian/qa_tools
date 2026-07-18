@@ -17,11 +17,11 @@ vi.mock('../../result_parser.js', () => ({
     parseTestResultsFile: mockParseTestResultsFile,
 }));
 
-vi.mock('../../prompt-input-filepath.js', () => ({
+vi.mock('../../ui/prompt-input-filepath.js', () => ({
     askFilePath: mockAskFilePath,
 }));
 
-vi.mock('../../output.js', () => ({
+vi.mock('../../ui/output.js', () => ({
     Output: {
         isTTY: mockIsTTY,
         isCI: mockIsCI,

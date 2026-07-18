@@ -8,7 +8,7 @@
  * The function is a PURE transformation: raw workflow/pipeline runs -> formatted
  * commit log string. It performs no I/O, which keeps it trivially unit-testable.
  */
-import { GIT_HISTORY_RUNS } from '../../ci-detect.js';
+import { GIT_HISTORY_RUNS } from '../../ci/ci-detect.js';
 
 /** Shape accepted by `buildCommitLog`. GitHub uses `head_commit`; GitLab uses `title`. */
 export interface CommitLogRunInput {

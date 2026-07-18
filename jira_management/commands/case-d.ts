@@ -1,4 +1,4 @@
-import { showDashboardMenu, type DashboardDef } from '../../shared/dashboard-menu.js';
+import { showDashboardMenu, type DashboardDef } from '../../shared/ui/dashboard-menu.js';
 import type { CommandContext } from './context.js';
 import case25 from './case25.js';
 import case26 from './case26.js';

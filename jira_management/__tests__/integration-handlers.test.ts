@@ -1,10 +1,11 @@
 import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest';
 import { createMockContext } from '../../shared/test-utils/factories/context-factory.js';
+import { rootLogger } from '../../shared/logger.js';
 import fs from 'node:fs';
 import path from 'node:path';
 import os from 'node:os';
 
-vi.mock('../../shared/prompt.js', () => ({
+vi.mock('../../shared/ui/prompt.js', () => ({
     ask: vi.fn(),
     askMultiline: vi.fn(),
     askConfirm: vi.fn(),
@@ -30,13 +31,14 @@ vi.mock('../../shared/logger.js', () => ({
         child: vi.fn().mockReturnThis(),
     })),
 }));
-vi.mock('../../shared/jira-helper.js', () => ({
+vi.mock('../../shared/jira/jira-helper.js', () => ({
     safeJiraCall: vi.fn(async (c: unknown, op: string, label: string, fn: () => Promise<unknown>) => {
         try {
             await fn();
             (c as { pushHistory: (op: string, label: string, status: string) => void }).pushHistory(op, label, 'ok');
-        } catch {
+        } catch (err) {
             (c as { pushHistory: (op: string, label: string, status: string) => void }).pushHistory(op, label, 'error');
+            rootLogger.warn('safeJiraCall mock capturou erro', { err });
         }
     }),
 }));
@@ -48,11 +50,11 @@ vi.mock('../../shared/state.js', () => ({
 vi.mock('../../shared/open.js', () => ({
     openWithFallback: vi.fn(),
 }));
-vi.mock('../../shared/temp-dir.js', () => ({
+vi.mock('../../shared/infra/temp-dir.js', () => ({
     writeReport: vi.fn(() => path.join(os.tmpdir(), 'qa-test-report.html')),
     reportsDir: vi.fn(() => path.join(os.tmpdir(), 'qa-test-reports')),
 }));
-vi.mock('../../shared/first-run.js', () => ({
+vi.mock('../../shared/ui/first-run.js', () => ({
     maybeRunFirstRunWizard: vi.fn(),
 }));
 vi.mock('../create_tests.js', () => ({
@@ -80,7 +82,7 @@ describe('Case01 — Import CSV', () => {
     it('calls createTestsFromCsv with correct args', async () => {
         expect.hasAssertions();
 
-        const { askFilePath, ask } = await import('../../shared/prompt.js');
+        const { askFilePath, ask } = await import('../../shared/ui/prompt.js');
         vi.mocked(askFilePath).mockResolvedValueOnce(path.join(os.tmpdir(), 'qa-test.csv'));
         vi.mocked(ask).mockResolvedValueOnce('label1,label2');
         const ctx = createMockContext();
@@ -100,7 +102,7 @@ describe('Case01 — Import CSV', () => {
     it('stores results in ctx.inMemoryTasksId', async () => {
         expect.hasAssertions();
 
-        const { askFilePath, ask } = await import('../../shared/prompt.js');
+        const { askFilePath, ask } = await import('../../shared/ui/prompt.js');
         vi.mocked(askFilePath).mockResolvedValueOnce(path.join(os.tmpdir(), 'qa-test.csv'));
         vi.mocked(ask).mockResolvedValueOnce('');
         const ctx = createMockContext();
@@ -113,7 +115,7 @@ describe('Case01 — Import CSV', () => {
     it('pushes history on success', async () => {
         expect.hasAssertions();
 
-        const { askFilePath, ask } = await import('../../shared/prompt.js');
+        const { askFilePath, ask } = await import('../../shared/ui/prompt.js');
         vi.mocked(askFilePath).mockResolvedValueOnce(path.join(os.tmpdir(), 'qa-test.csv'));
         vi.mocked(ask).mockResolvedValueOnce('');
         const ctx = createMockContext();
@@ -130,7 +132,7 @@ describe('Case03 — Create Version', () => {
     it('calls jiraResource.createVersion with correct args', async () => {
         expect.hasAssertions();
 
-        const { ask, askMultiline } = await import('../../shared/prompt.js');
+        const { ask, askMultiline } = await import('../../shared/ui/prompt.js');
         vi.mocked(ask).mockResolvedValueOnce('v3.0.0');
         vi.mocked(askMultiline).mockResolvedValueOnce('release notes');
         const ctx = createMockContext();
@@ -144,7 +146,7 @@ describe('Case03 — Create Version', () => {
     it('warns if version name is empty', async () => {
         expect.hasAssertions();
 
-        const { ask, warn } = await import('../../shared/prompt.js');
+        const { ask, warn } = await import('../../shared/ui/prompt.js');
         vi.mocked(ask).mockResolvedValueOnce('   ');
         const ctx = createMockContext();
         const { default: case03 } = await import('../commands/case03.js');
@@ -156,8 +158,8 @@ describe('Case03 — Create Version', () => {
     it('calls safeJiraCall wrapping createVersion', async () => {
         expect.hasAssertions();
 
-        const { ask, askMultiline } = await import('../../shared/prompt.js');
-        const { safeJiraCall } = await import('../../shared/jira-helper.js');
+        const { ask, askMultiline } = await import('../../shared/ui/prompt.js');
+        const { safeJiraCall } = await import('../../shared/jira/jira-helper.js');
         vi.mocked(ask).mockResolvedValueOnce('v1.0');
         vi.mocked(askMultiline).mockResolvedValueOnce('');
         const ctx = createMockContext();
@@ -174,7 +176,7 @@ describe('Case04 — Add Sprint Tasks', () => {
     it('uses in-memory tasks when confirmed and calls updateFixVersions', async () => {
         expect.hasAssertions();
 
-        const { askConfirm, ask } = await import('../../shared/prompt.js');
+        const { askConfirm, ask } = await import('../../shared/ui/prompt.js');
         vi.mocked(askConfirm).mockResolvedValue(true);
         vi.mocked(ask).mockResolvedValue('v2.0');
         const ctx = createMockContext();
@@ -193,7 +195,7 @@ describe('Case04 — Add Sprint Tasks', () => {
     it('prompts for manual input when no in-memory tasks', async () => {
         expect.hasAssertions();
 
-        const { askConfirm, ask } = await import('../../shared/prompt.js');
+        const { askConfirm, ask } = await import('../../shared/ui/prompt.js');
         vi.mocked(askConfirm).mockResolvedValue(true);
         vi.mocked(ask).mockResolvedValue('KEY-1 KEY-2');
         const ctx = createMockContext();
@@ -211,7 +213,7 @@ describe('Case04 — Add Sprint Tasks', () => {
     it('pushes history with operation result', async () => {
         expect.hasAssertions();
 
-        const { askConfirm, ask } = await import('../../shared/prompt.js');
+        const { askConfirm, ask } = await import('../../shared/ui/prompt.js');
         vi.mocked(askConfirm).mockResolvedValue(true);
         vi.mocked(ask).mockResolvedValue('v1.0');
         const ctx = createMockContext();
@@ -230,7 +232,7 @@ describe('Case04 — Add Sprint Tasks', () => {
     it('returns false after processing', async () => {
         expect.hasAssertions();
 
-        const { askConfirm, ask } = await import('../../shared/prompt.js');
+        const { askConfirm, ask } = await import('../../shared/ui/prompt.js');
         vi.mocked(askConfirm).mockResolvedValue(true);
         vi.mocked(ask).mockResolvedValue('v1.0');
         const ctx = createMockContext();
@@ -249,7 +251,7 @@ describe('Case05 — Update Package Version', () => {
     it('calls getReleaseTasks with correct project and version', async () => {
         expect.hasAssertions();
 
-        const { ask } = await import('../../shared/prompt.js');
+        const { ask } = await import('../../shared/ui/prompt.js');
         vi.mocked(ask).mockResolvedValueOnce(path.join(os.tmpdir(), 'qa-repo')).mockResolvedValueOnce('v2.7.0');
         const ctx = createMockContext();
         ctx.ctx.createPackageManager = vi.fn().mockReturnValue({
@@ -266,7 +268,7 @@ describe('Case05 — Update Package Version', () => {
     it('calls packageManager.updateVersion and updateReleaseNotes', async () => {
         expect.hasAssertions();
 
-        const { ask } = await import('../../shared/prompt.js');
+        const { ask } = await import('../../shared/ui/prompt.js');
         const mockPm = { updateVersion: vi.fn(), updateReleaseNotes: vi.fn() };
         vi.mocked(ask).mockResolvedValueOnce(path.join(os.tmpdir(), 'qa-repo')).mockResolvedValueOnce('v2.7.0');
         const ctx = createMockContext();
@@ -282,7 +284,7 @@ describe('Case05 — Update Package Version', () => {
     it('pushes history on success', async () => {
         expect.hasAssertions();
 
-        const { ask } = await import('../../shared/prompt.js');
+        const { ask } = await import('../../shared/ui/prompt.js');
         vi.mocked(ask).mockResolvedValueOnce(path.join(os.tmpdir(), 'qa-repo')).mockResolvedValueOnce('v2.7.0');
         const ctx = createMockContext();
         ctx.ctx.createPackageManager = vi.fn().mockReturnValue({
@@ -303,8 +305,8 @@ describe('Case06 — Check Release Task Status', () => {
     it('calls checkReleaseTasksStatus via safeJiraCall', async () => {
         expect.hasAssertions();
 
-        const { ask } = await import('../../shared/prompt.js');
-        const { safeJiraCall } = await import('../../shared/jira-helper.js');
+        const { ask } = await import('../../shared/ui/prompt.js');
+        const { safeJiraCall } = await import('../../shared/jira/jira-helper.js');
         vi.mocked(ask).mockResolvedValueOnce('v2.8.0');
         const ctx = createMockContext();
         const { default: case06 } = await import('../commands/case06.js');
@@ -316,7 +318,7 @@ describe('Case06 — Check Release Task Status', () => {
     it('pushes history with version name', async () => {
         expect.hasAssertions();
 
-        const { ask } = await import('../../shared/prompt.js');
+        const { ask } = await import('../../shared/ui/prompt.js');
         vi.mocked(ask).mockResolvedValueOnce('v2.8.0');
         const ctx = createMockContext();
         const { default: case06 } = await import('../commands/case06.js');
@@ -336,7 +338,7 @@ describe('Case07 — Close Tasks', () => {
     it('fetches release tasks and calls moveCardsToDone', async () => {
         expect.hasAssertions();
 
-        const { ask, askConfirm } = await import('../../shared/prompt.js');
+        const { ask, askConfirm } = await import('../../shared/ui/prompt.js');
         vi.mocked(ask).mockResolvedValue('v2.0');
         vi.mocked(askConfirm).mockResolvedValue(true);
         const ctx = createMockContext();
@@ -357,7 +359,7 @@ describe('Case07 — Close Tasks', () => {
     it('warns if no tasks found', async () => {
         expect.hasAssertions();
 
-        const { ask, askConfirm, warn } = await import('../../shared/prompt.js');
+        const { ask, askConfirm, warn } = await import('../../shared/ui/prompt.js');
         vi.mocked(ask).mockResolvedValue('v2.0');
         vi.mocked(askConfirm).mockResolvedValue(true);
         const ctx = createMockContext();
@@ -373,7 +375,7 @@ describe('Case07 — Close Tasks', () => {
     it('returns true when user cancels', async () => {
         expect.hasAssertions();
 
-        const { ask, askConfirm } = await import('../../shared/prompt.js');
+        const { ask, askConfirm } = await import('../../shared/ui/prompt.js');
         vi.mocked(ask).mockResolvedValue('v2.0');
         vi.mocked(askConfirm).mockResolvedValue(false);
         const ctx = createMockContext();
@@ -392,7 +394,7 @@ describe('Case08 — Publish Version', () => {
     it('calls releaseVersion with correct version', async () => {
         expect.hasAssertions();
 
-        const { ask, askConfirm } = await import('../../shared/prompt.js');
+        const { ask, askConfirm } = await import('../../shared/ui/prompt.js');
         vi.mocked(ask).mockResolvedValue('v3.0');
         vi.mocked(askConfirm).mockResolvedValue(true);
         const ctx = createMockContext();
@@ -406,7 +408,7 @@ describe('Case08 — Publish Version', () => {
     it('pushes history on success', async () => {
         expect.hasAssertions();
 
-        const { ask, askConfirm } = await import('../../shared/prompt.js');
+        const { ask, askConfirm } = await import('../../shared/ui/prompt.js');
         vi.mocked(ask).mockResolvedValue('v3.0');
         vi.mocked(askConfirm).mockResolvedValue(true);
         const ctx = createMockContext();
@@ -419,7 +421,7 @@ describe('Case08 — Publish Version', () => {
     it('returns false after publishing', async () => {
         expect.hasAssertions();
 
-        const { ask, askConfirm } = await import('../../shared/prompt.js');
+        const { ask, askConfirm } = await import('../../shared/ui/prompt.js');
         vi.mocked(ask).mockResolvedValue('v3.0');
         vi.mocked(askConfirm).mockResolvedValue(true);
         const ctx = createMockContext();
@@ -436,7 +438,7 @@ describe('Case09 — Change Project', () => {
     it('updates project name in context', async () => {
         expect.hasAssertions();
 
-        const { ask } = await import('../../shared/prompt.js');
+        const { ask } = await import('../../shared/ui/prompt.js');
         vi.mocked(ask).mockResolvedValueOnce('NEW_PROJECT');
         const ctx = createMockContext();
         const { default: case09 } = await import('../commands/case09.js');
@@ -448,7 +450,7 @@ describe('Case09 — Change Project', () => {
     it('calls updateState to persist', async () => {
         expect.hasAssertions();
 
-        const { ask } = await import('../../shared/prompt.js');
+        const { ask } = await import('../../shared/ui/prompt.js');
         vi.mocked(ask).mockResolvedValueOnce('NEW_PROJECT');
         const { update } = await import('../../shared/state.js');
         const ctx = createMockContext();
@@ -461,7 +463,7 @@ describe('Case09 — Change Project', () => {
     it('pushes history', async () => {
         expect.hasAssertions();
 
-        const { ask } = await import('../../shared/prompt.js');
+        const { ask } = await import('../../shared/ui/prompt.js');
         vi.mocked(ask).mockResolvedValueOnce('PROJ');
         const ctx = createMockContext();
         const { default: case09 } = await import('../commands/case09.js');
@@ -477,7 +479,7 @@ describe('Case10 — Set Git Directory', () => {
     it('sets ctx.git_directory to provided path', async () => {
         expect.hasAssertions();
 
-        const { ask } = await import('../../shared/prompt.js');
+        const { ask } = await import('../../shared/ui/prompt.js');
         vi.mocked(ask).mockResolvedValueOnce('/path/to/repo');
         const ctx = createMockContext();
         const { default: case10 } = await import('../commands/case10.js');
@@ -489,7 +491,7 @@ describe('Case10 — Set Git Directory', () => {
     it('calls createPackageManager', async () => {
         expect.hasAssertions();
 
-        const { ask } = await import('../../shared/prompt.js');
+        const { ask } = await import('../../shared/ui/prompt.js');
         vi.mocked(ask).mockResolvedValueOnce('/path/to/repo');
         const ctx = createMockContext();
         ctx.ctx.createPackageManager = vi.fn().mockReturnValue({}) as never;
@@ -502,7 +504,7 @@ describe('Case10 — Set Git Directory', () => {
     it('pushes history on success', async () => {
         expect.hasAssertions();
 
-        const { ask, success } = await import('../../shared/prompt.js');
+        const { ask, success } = await import('../../shared/ui/prompt.js');
         vi.mocked(ask).mockResolvedValueOnce('/path/to/repo');
         const ctx = createMockContext();
         const { default: case10 } = await import('../commands/case10.js');
@@ -527,7 +529,7 @@ describe('Case11 — Generate Template', () => {
     it('copies CSV template when format is csv', async () => {
         expect.hasAssertions();
 
-        const { ask } = await import('../../shared/prompt.js');
+        const { ask } = await import('../../shared/ui/prompt.js');
         vi.mocked(ask).mockResolvedValueOnce('csv').mockResolvedValueOnce(path.join(tmpDir, 'output.csv'));
         const ctx = createMockContext();
         const { default: case11 } = await import('../commands/case11.js');
@@ -539,7 +541,7 @@ describe('Case11 — Generate Template', () => {
     it('pushes history after generating template', async () => {
         expect.hasAssertions();
 
-        const { ask } = await import('../../shared/prompt.js');
+        const { ask } = await import('../../shared/ui/prompt.js');
         vi.mocked(ask).mockResolvedValueOnce('csv').mockResolvedValueOnce(path.join(tmpDir, 'out.csv'));
         const ctx = createMockContext();
         const { default: case11 } = await import('../commands/case11.js');
@@ -555,7 +557,7 @@ describe('Case13 — Create Test Execution', () => {
     it('uses inMemoryTasksId when available', async () => {
         expect.hasAssertions();
 
-        const { askConfirm } = await import('../../shared/prompt.js');
+        const { askConfirm } = await import('../../shared/ui/prompt.js');
         vi.mocked(askConfirm).mockResolvedValue(true);
         const ctx = createMockContext();
         ctx.ctx.inMemoryTasksId = ['TASK-1', 'TASK-2'];
@@ -573,7 +575,7 @@ describe('Case13 — Create Test Execution', () => {
     it('calls offerTestExecutionAssociation', async () => {
         expect.hasAssertions();
 
-        const { askConfirm, ask } = await import('../../shared/prompt.js');
+        const { askConfirm, ask } = await import('../../shared/ui/prompt.js');
         vi.mocked(askConfirm).mockResolvedValue(false);
         vi.mocked(ask).mockResolvedValue('KEY-1 KEY-2');
         const ctx = createMockContext();
@@ -587,7 +589,7 @@ describe('Case13 — Create Test Execution', () => {
     it('calls showResults', async () => {
         expect.hasAssertions();
 
-        const { askConfirm } = await import('../../shared/prompt.js');
+        const { askConfirm } = await import('../../shared/ui/prompt.js');
         vi.mocked(askConfirm).mockResolvedValue(true);
         const ctx = createMockContext();
         ctx.ctx.inMemoryTasksId = ['TASK-1'];
@@ -605,7 +607,7 @@ describe('Case14 — Set Cypress Directory', () => {
     it('pushes history with config-tests', async () => {
         expect.hasAssertions();
 
-        const { ask } = await import('../../shared/prompt.js');
+        const { ask } = await import('../../shared/ui/prompt.js');
         vi.mocked(ask).mockResolvedValueOnce(path.join(os.tmpdir(), 'qa-cypress-results'));
         const ctx = createMockContext();
         const { default: case14 } = await import('../commands/case14.js');
@@ -625,7 +627,7 @@ describe('Case16 — Set JSON Directory', () => {
     it('pushes history with config-json-dir', async () => {
         expect.hasAssertions();
 
-        const { ask } = await import('../../shared/prompt.js');
+        const { ask } = await import('../../shared/ui/prompt.js');
         vi.mocked(ask).mockResolvedValueOnce(path.join(os.tmpdir(), 'qa-json-results'));
         const ctx = createMockContext();
         const { default: case16 } = await import('../commands/case16.js');
@@ -645,7 +647,7 @@ describe('Case24 — Setup Wizard', () => {
     it('calls maybeRunFirstRunWizard', async () => {
         expect.hasAssertions();
 
-        const { maybeRunFirstRunWizard } = await import('../../shared/first-run.js');
+        const { maybeRunFirstRunWizard } = await import('../../shared/ui/first-run.js');
         const ctx = createMockContext();
         const { default: case24 } = await import('../commands/case24.js');
         await case24.handler(ctx);

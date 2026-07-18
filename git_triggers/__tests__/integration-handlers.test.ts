@@ -5,7 +5,7 @@ import { getCurrentProject } from '../../shared/project-context.js';
 
 let _currentProvider: 'gitlab' | 'github' = 'gitlab';
 
-vi.mock('../../shared/prompt.js', () => ({
+vi.mock('../../shared/ui/prompt.js', () => ({
     prompt: vi.fn(),
     confirm: vi.fn(),
     print: vi.fn(),
@@ -68,7 +68,7 @@ vi.mock('../ai-test-impact.js', () => ({
 vi.mock('../nivelar.js', () => ({
     nivelarBranches: vi.fn(),
 }));
-vi.mock('../../shared/temp-dir.js', () => ({
+vi.mock('../../shared/infra/temp-dir.js', () => ({
     writeReport: vi.fn(() => path.join(os.tmpdir(), 'qa-test-report.html')),
     reportsDir: vi.fn(() => path.join(os.tmpdir(), 'qa-test-reports')),
     writeEphemeral: vi.fn(),
@@ -76,23 +76,23 @@ vi.mock('../../shared/temp-dir.js', () => ({
 vi.mock('../../shared/open.js', () => ({
     openWithFallback: vi.fn(),
 }));
-vi.mock('../../shared/flakiness-dashboard.js', () => ({
+vi.mock('../../shared/report/flakiness-dashboard.js', () => ({
     generateFlakinessHtml: vi.fn(() => '<html/>'),
 }));
 vi.mock('../pipeline-health-renderer.js', () => ({
     renderPipelineHealthHtml: vi.fn(() => '<html/>'),
 }));
-vi.mock('../../shared/quarantine.js', () => ({
+vi.mock('../../shared/validation/quarantine.js', () => ({
     expireQuarantine: vi.fn(),
     listQuarantined: vi.fn(),
     quarantineRatio: vi.fn(),
     generatePipelineQuarantine: vi.fn(),
 }));
-vi.mock('../../shared/git-metrics-adapter.js', () => ({
+vi.mock('../../shared/ci/git-metrics-adapter.js', () => ({
     generateGitMetricsRuns: vi.fn(() => []),
     generateGitFailureClassifications: vi.fn(() => []),
 }));
-vi.mock('../../shared/report-export.js', () => ({
+vi.mock('../../shared/report/report-export.js', () => ({
     exportTestsCsv: vi.fn(),
     exportTestsJson: vi.fn(),
 }));
@@ -108,13 +108,13 @@ vi.mock('../llm-pipeline.js', () => ({
 vi.mock('../pipeline-jira.js', () => ({
     handleBugCreation: vi.fn(),
 }));
-vi.mock('../../shared/http-client.js', () => ({
+vi.mock('../../shared/infra/http-client.js', () => ({
     sleep: vi.fn(),
 }));
-vi.mock('../../shared/git-sha.js', () => ({
+vi.mock('../../shared/ci/git-sha.js', () => ({
     getHeadSha: vi.fn(() => 'abc123'),
 }));
-vi.mock('../../shared/cli_base.js', () => ({
+vi.mock('../../shared/ui/cli_base.js', () => ({
     confirmDestructiveAction: vi.fn(),
 }));
 vi.mock('../cli-args.js', () => ({
@@ -174,7 +174,7 @@ describe('HandleListSchedules', () => {
         const m = makeMockGitProvider();
         const { handleListSchedules } = await import('../schedule-handler.js');
         _currentProvider = 'github';
-        const { warn } = await import('../../shared/prompt.js');
+        const { warn } = await import('../../shared/ui/prompt.js');
         await handleListSchedules(m as never);
 
         expect(vi.mocked(warn)).toHaveBeenCalledWith('Opção não disponivel para GitHub.');
@@ -205,7 +205,7 @@ describe('HandleRunSchedule', () => {
         expect.hasAssertions();
 
         const m = makeMockGitProvider();
-        const { prompt } = await import('../../shared/prompt.js');
+        const { prompt } = await import('../../shared/ui/prompt.js');
         vi.mocked(prompt).mockReturnValue('42');
         const { handleRunSchedule } = await import('../schedule-handler.js');
         const { pushHistory } = await import('../session-state.js');
@@ -221,7 +221,7 @@ describe('HandleRunSchedule', () => {
         const m = makeMockGitProvider();
         const { handleRunSchedule } = await import('../schedule-handler.js');
         _currentProvider = 'github';
-        const { warn } = await import('../../shared/prompt.js');
+        const { warn } = await import('../../shared/ui/prompt.js');
         await handleRunSchedule(m as never);
 
         expect(vi.mocked(warn)).toHaveBeenCalledWith('Opção não disponivel para GitHub.');
@@ -240,7 +240,7 @@ describe('HandleCreateMR', () => {
         expect.hasAssertions();
 
         const m = makeMockGitProvider();
-        const { prompt, confirm } = await import('../../shared/prompt.js');
+        const { prompt, confirm } = await import('../../shared/ui/prompt.js');
         vi.mocked(prompt)
             .mockReturnValueOnce('feature-x')
             .mockReturnValueOnce('main')
@@ -259,7 +259,7 @@ describe('HandleCreateMR', () => {
         expect.hasAssertions();
 
         const m = makeMockGitProvider();
-        const { prompt, confirm } = await import('../../shared/prompt.js');
+        const { prompt, confirm } = await import('../../shared/ui/prompt.js');
         vi.mocked(prompt)
             .mockReturnValueOnce('feature-x')
             .mockReturnValueOnce('main')
@@ -286,7 +286,7 @@ describe('HandleListApprovedMRs', () => {
         expect.hasAssertions();
 
         const m = makeMockGitProvider();
-        const { prompt } = await import('../../shared/prompt.js');
+        const { prompt } = await import('../../shared/ui/prompt.js');
         vi.mocked(prompt).mockReturnValue('opened');
         const { handleListApprovedMRs } = await import('../mr-handler.js');
         const { pushHistory } = await import('../session-state.js');
@@ -301,7 +301,7 @@ describe('HandleListApprovedMRs', () => {
 
         const m = makeMockGitProvider();
         m.searchMergeRequests.mockResolvedValue([]);
-        const { prompt } = await import('../../shared/prompt.js');
+        const { prompt } = await import('../../shared/ui/prompt.js');
         vi.mocked(prompt).mockReturnValue('opened');
         const { handleListApprovedMRs } = await import('../mr-handler.js');
         const { pushHistory } = await import('../session-state.js');
@@ -322,7 +322,7 @@ describe('HandleMergeMR', () => {
         expect.hasAssertions();
 
         const m = makeMockGitProvider();
-        const { prompt } = await import('../../shared/prompt.js');
+        const { prompt } = await import('../../shared/ui/prompt.js');
         vi.mocked(prompt).mockReturnValue('42');
         const { handleMergeMR } = await import('../mr-handler.js');
         const { pushHistory } = await import('../session-state.js');
@@ -345,7 +345,7 @@ describe('HandleFlakinessDashboard', () => {
 
         vi.mocked(getCurrentProject).mockReturnValue('');
         const { handleFlakinessDashboard } = await import('../schedule-handler.js');
-        const { warn } = await import('../../shared/prompt.js');
+        const { warn } = await import('../../shared/ui/prompt.js');
         await handleFlakinessDashboard();
 
         expect(vi.mocked(warn)).toHaveBeenCalledTimes(1);

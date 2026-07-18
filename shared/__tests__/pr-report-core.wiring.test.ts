@@ -60,10 +60,10 @@ vi.mock('fs', () => ({
     writeFileSync: vi.fn(),
     existsSync: vi.fn(),
 }));
-vi.mock('../quality-gate.js', () => mockQualityGate);
-vi.mock('../github-check-run.js', () => mockCheckRun);
-vi.mock('../github-pr-comment.js', () => mockPRComment);
-vi.mock('../report-html.js', () => mockHtml);
+vi.mock('../quality/quality-gate.js', () => mockQualityGate);
+vi.mock('../ci/github-check-run.js', () => mockCheckRun);
+vi.mock('../ci/github-pr-comment.js', () => mockPRComment);
+vi.mock('../report/report-html.js', () => mockHtml);
 vi.mock('../feature-config.js', () => ({
     getPrReportConfig: mockGetConfig,
     isAiSkipped: mockFeatureConfig.isAiSkipped,

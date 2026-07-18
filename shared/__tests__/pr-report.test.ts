@@ -8,10 +8,10 @@ import fs from 'node:fs';
 import path from 'node:path';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import { parseTestResultsFile } from '../result_parser.js';
-import type { QuarantineStore } from '../quarantine.js';
+import type { QuarantineStore } from '../validation/quarantine.js';
 import { makeDataHubGetters } from '../test-utils/factories/data-hub-mock.js';
 
-vi.mock('../github-pr-comment.js', () => ({
+vi.mock('../ci/github-pr-comment.js', () => ({
     postPrComment: vi.fn().mockResolvedValue({
         id: 1,
         html_url: 'https://github.com/owner/repo/pull/42#issuecomment-1',
@@ -19,11 +19,11 @@ vi.mock('../github-pr-comment.js', () => ({
 }));
 
 const mockCreateCheckRun = vi.fn().mockResolvedValue({ id: 1, html_url: 'https://example.com/check/1' });
-vi.mock('../github-check-run.js', () => ({
+vi.mock('../ci/github-check-run.js', () => ({
     createCheckRun: mockCreateCheckRun,
 }));
 
-vi.mock('../quality-gate.js', () => ({
+vi.mock('../quality/quality-gate.js', () => ({
     runQualityGate: vi.fn(() => ({
         overall: 'pass',
         score: 85,
@@ -39,11 +39,11 @@ vi.mock('../quality-gate.js', () => ({
     formatQualityGateText: vi.fn(),
 }));
 
-vi.mock('../quarantine.js', () => ({
+vi.mock('../validation/quarantine.js', () => ({
     isQuarantined: vi.fn(() => undefined),
 }));
 
-vi.mock('../health-score.js', () => ({
+vi.mock('../quality/health-score.js', () => ({
     calculateHealthScore: vi.fn(() => ({
         overall: 90,
         grade: 'good',
@@ -62,7 +62,7 @@ vi.mock('../health-score.js', () => ({
 const mockGenerateHtmlReport = vi.fn(
     (_tests: unknown, _options?: unknown) => '<html><body>Mock HTML Report</body></html>',
 );
-vi.mock('../report-html.js', () => ({
+vi.mock('../report/report-html.js', () => ({
     generateHtmlReport: mockGenerateHtmlReport,
 }));
 
@@ -147,7 +147,7 @@ vi.mock('../feature-config.js', () => ({
     loadFeatureConfig: vi.fn(() => ({})),
 }));
 
-const { postPrComment } = await import('../github-pr-comment.js');
+const { postPrComment } = await import('../ci/github-pr-comment.js');
 
 const TEST_CTRF_DIR = path.resolve('reports', 'shared-test');
 const TEST_CTRF_PATH = path.join(TEST_CTRF_DIR, 'ctrf-report.json');
@@ -337,7 +337,7 @@ describe('Pr-report entry point — quality gate check run', () => {
     it('calls createCheckRun with failure conclusion when quality gate fails', async () => {
         expect.hasAssertions();
 
-        const qgMod = await import('../quality-gate.js');
+        const qgMod = await import('../quality/quality-gate.js');
         vi.mocked(qgMod.runQualityGate).mockReturnValueOnce({
             overall: 'fail',
             score: 55,
@@ -505,7 +505,7 @@ describe('Pr-report entry point — flaky detection with quarantine', () => {
         ];
         mockDataHubComputed.flakinessEntries = mockEntries;
 
-        const quarantineMod = await import('../quarantine.js');
+        const quarantineMod = await import('../validation/quarantine.js');
         vi.mocked(quarantineMod.isQuarantined).mockReturnValue(undefined);
 
         createCtrfFixture([{ name: 'pass-1', status: 'passed', duration: 100 }]);
@@ -682,7 +682,7 @@ describe('Pr-report entry point — HTML report generation', () => {
 
         createCtrfFixture([{ name: 'pass-1', status: 'passed', duration: 100 }]);
 
-        const healthMod = await import('../health-score.js');
+        const healthMod = await import('../quality/health-score.js');
         vi.mocked(healthMod.calculateHealthScore).mockReturnValueOnce({
             overall: 75,
             grade: 'needs_attention',

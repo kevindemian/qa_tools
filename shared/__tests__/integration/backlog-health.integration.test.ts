@@ -7,13 +7,13 @@
  * - Edge cases
  */
 import { beforeEach, describe, expect, it, vi } from 'vitest';
-import type { BacklogHealthIssue } from '../../backlog-health.js';
+import type { BacklogHealthIssue } from '../../report/backlog-health.js';
 
 vi.mock('../../logger.js', () => ({
     rootLogger: { error: vi.fn(), info: vi.fn(), child: vi.fn().mockReturnThis() },
 }));
 
-vi.mock('../../config.js', () => ({
+vi.mock('../../config-accessor.js', () => ({
     default: { get: vi.fn(() => '') },
     get: vi.fn(() => ''),
 }));
@@ -75,7 +75,7 @@ describe('Integration: Backlog Health (FT-28)', () => {
         it('produces dashboard with issue sections for each category', async () => {
             expect.hasAssertions();
 
-            const { analyzeBacklogHealth, generateBacklogHealthHtml } = await import('../../backlog-health.js');
+            const { analyzeBacklogHealth, generateBacklogHealthHtml } = await import('../../report/backlog-health.js');
             const result = analyzeBacklogHealth(makeIssues());
             const html = generateBacklogHealthHtml(result);
 
@@ -92,7 +92,7 @@ describe('Integration: Backlog Health (FT-28)', () => {
         it('includes Density by Epic section', async () => {
             expect.hasAssertions();
 
-            const { analyzeBacklogHealth, generateBacklogHealthHtml } = await import('../../backlog-health.js');
+            const { analyzeBacklogHealth, generateBacklogHealthHtml } = await import('../../report/backlog-health.js');
             const result = analyzeBacklogHealth(makeIssues());
             const html = generateBacklogHealthHtml(result);
 
@@ -104,7 +104,7 @@ describe('Integration: Backlog Health (FT-28)', () => {
         it('shows perfect score and no flagged sections', async () => {
             expect.hasAssertions();
 
-            const { analyzeBacklogHealth, generateBacklogHealthHtml } = await import('../../backlog-health.js');
+            const { analyzeBacklogHealth, generateBacklogHealthHtml } = await import('../../report/backlog-health.js');
             const result = analyzeBacklogHealth([]);
             const html = generateBacklogHealthHtml(result);
 
@@ -120,7 +120,7 @@ describe('Integration: Backlog Health (FT-28)', () => {
         it('respects maxIssues when analyzing', async () => {
             expect.hasAssertions();
 
-            const { analyzeBacklogHealth } = await import('../../backlog-health.js');
+            const { analyzeBacklogHealth } = await import('../../report/backlog-health.js');
             const result = analyzeBacklogHealth(makeIssues(), { maxIssues: 2 });
 
             expect(result.unassignedIssues.length + result.staleIssues.length).toBeLessThanOrEqual(2);

@@ -7,7 +7,7 @@
  * @module primitives/card
  */
 
-import { tokens } from '../theme-tokens.js';
+import { tokens } from '../ui/theme-tokens.js';
 
 export interface CardProps {
     variant?: 'default' | 'elevated' | 'bordered';

@@ -5,7 +5,7 @@ import { execFileSync } from 'node:child_process';
 
 const GIT_BIN = '/usr/bin/git';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
-import * as prompt from '../../prompt.js';
+import * as prompt from '../../ui/prompt.js';
 import { main, parseCliDir } from '../../../setup/main.js';
 import { listProjects, removeProject } from '../../project-registry.js';
 import { projectEnvPath } from '../../project-paths.js';
@@ -19,7 +19,7 @@ import { projectEnvPath } from '../../project-paths.js';
  * headless (CI/--dir), não registra nem escreve o .env.
  */
 
-vi.mock('../../prompt.js', () => ({
+vi.mock('../../ui/prompt.js', () => ({
     ask: vi.fn(),
     askConfirm: vi.fn(),
     askFilePath: vi.fn(),

@@ -9,7 +9,7 @@
  */
 import * as fc from 'fast-check';
 import { describe, expect, it } from 'vitest';
-import { computeCoverageMetrics } from '../benchmark-metrics.js';
+import { computeCoverageMetrics } from '../quality/benchmark-metrics.js';
 import type { UserStoryFixture } from '../prompts/__fixtures__/index.js';
 
 function randomCriterion(): fc.Arbitrary<string> {

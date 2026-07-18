@@ -7,11 +7,11 @@ const mockUpdateTyped = vi.hoisted(() => vi.fn());
 
 vi.mock('../logger');
 
-vi.mock('../quality-metrics', () => ({
+vi.mock('../quality/quality-metrics.js', () => ({
     detectDrift: mockDetectDrift,
 }));
 
-vi.mock('../llm-metrics', () => ({
+vi.mock('../llm/llm-metrics.js', () => ({
     snapshotLlmMetrics: mockSnapshot,
 }));
 
@@ -19,7 +19,7 @@ vi.mock('../state', () => ({
     updateTyped: mockUpdateTyped,
 }));
 
-import { checkQualitySignals, severityFromLatency, failureRate } from '../quality-suggester.js';
+import { checkQualitySignals, severityFromLatency, failureRate } from '../quality/quality-suggester.js';
 
 describe('SeverityFromLatency — property-based', () => {
     it('severidade é monotônica: latência maior → severidade maior ou igual', () => {

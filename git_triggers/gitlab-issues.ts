@@ -9,7 +9,6 @@ export async function glGetOpenIssues(client: AxiosInstance, owner: string, repo
     const data = await apiGet(client, base + '/issues', {
         operation: 'buscar issues',
         params: { state: 'opened', per_page: ISSUES_PAGE_SIZE },
-        returnNull: true,
     });
     const items: unknown[] = Array.isArray(data) ? data : [];
     return items

@@ -1,14 +1,17 @@
 /**
- * PR Report core — self-contained module for generating PR test reports.
+ * PR Report core — library module for generating PR test reports.
  *
- * An entry point (`main()`) with self-exec guard enables direct CLI usage:
- *   npx tsx shared/pr-report-core.ts [--no-ai] [--no-quality] [--no-flaky] [--project <name>]
+ * This module is layer-pure: it MUST NOT import from git_triggers/ (upward
+ * layer). The Git provider factory is injected by the caller via main().
  *
  * Programmatic API:
- *   import { generatePrReport, computeDiffComparison } from './pr-report-core.js'
+ *   import { generatePrReport, computeDiffComparison, main } from './pr-report-core.js'
+ *
+ * Entry point (injected provider, no upward dependency):
+ *   git_triggers/main.ts — dispatch 'pr-report' calls main(createGitProvider)
  *
  * Consumido por:
- *   1. CLI (ator principal) — via self-exec guard
+ *   1. CLI (ator principal) — via git_triggers/main.ts (dispatch 'pr-report')
  *   2. Pipeline (git_triggers/batch-mode.ts) — post-test-collection
  *   3. Tests — invocação direta
  *
@@ -27,20 +30,20 @@ import { rootLogger } from './logger.js';
 import { formatErr } from './errors.js';
 import { getDataHub, setDataHub, isDataHubInitialized } from './data-hub/global-hub.js';
 import { calcRunPassRate } from './data-hub/compute/run-pass-rate.js';
-import { runQualityGate } from './quality-gate.js';
-import { createCheckRun } from './github-check-run.js';
-import { postPrComment } from './github-pr-comment.js';
-import { generateHtmlReport } from './report-html.js';
-import type { ReportOptions } from './report-types.js';
-import { calculateHealthScore } from './health-score.js';
+import { runQualityGate } from './quality/quality-gate.js';
+import { createCheckRun } from './ci/github-check-run.js';
+import { postPrComment } from './ci/github-pr-comment.js';
+import { generateHtmlReport } from './report/report-html.js';
+import type { ReportOptions } from './report/report-types.js';
+import { calculateHealthScore } from './quality/health-score.js';
 import type { FlatTest, ParseResult } from './result_parser.js';
 import { getPrReportConfig } from './feature-config.js';
 import type { DataHub, MetricsRun } from './types/data-hub.js';
 import { askTestSource, DATAHUB_ERRORS } from './data-hub/test-source-fallback.js';
 import { createDataHubFromParseResult } from './data-hub/factory.js';
 import { DataHubImpl } from './data-hub/hub.js';
-import { summarizeDataQuality } from './data-quality.js';
-import type { DataQualitySummary } from './data-quality.js';
+import { summarizeDataQuality } from './quality/data-quality.js';
+import type { DataQualitySummary } from './quality/data-quality.js';
 
 /**
  * Read CI-injected environment variables with typed fallbacks.
@@ -708,7 +711,7 @@ function parseArgs(args: string[]): CliOptions {
             case '-h':
                 rootLogger.info(
                     [
-                        'Uso: npx tsx shared/pr-report-core.ts [opções]',
+                        'Uso: npx tsx git_triggers/main.ts pr-report [opções]',
                         '',
                         'Opções:',
                         '  --html-output <path>   Caminho do HTML (default: reports/pr-report.html)',
@@ -955,14 +958,6 @@ export async function main(
     }
 }
 
-// Self-exec guard: run main() only when invoked directly (not when imported by tests or modules).
-// When running via tsx, process.argv[1] is the tsx binary — the script path is argv[2].
-const entryArg = (process.argv[1] ?? '').replace(/\\/g, '/');
-const scriptArg = (process.argv[2] ?? '').replace(/\\/g, '/');
-const isDirectExecution = entryArg.includes('pr-report-core') || scriptArg.includes('pr-report-core');
-if (!process.env['VITEST'] && isDirectExecution) {
-    main().catch((err) => {
-        rootLogger.error(`pr-report failed: ${String(err)}`);
-        process.exit(1);
-    });
-}
+// No self-exec guard: this is a library module. The Git provider factory is
+// injected by the caller (git_triggers/main.ts dispatch 'pr-report'), keeping
+// this module free of an upward layer dependency (shared/ -> git_triggers/).

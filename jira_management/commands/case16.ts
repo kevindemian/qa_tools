@@ -1,5 +1,5 @@
 /** Set the default JSON results directory path. */
-import { success, warn, ask } from '../../shared/prompt.js';
+import { success, warn, ask } from '../../shared/ui/prompt.js';
 import path from 'path';
 import type { CommandContext } from './context.js';
 

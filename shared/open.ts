@@ -4,7 +4,7 @@ import { spawn, spawnSync, execFileSync } from 'child_process';
 import { platform } from 'os';
 import { readFileSync, writeFileSync, mkdirSync } from 'fs';
 import { basename, dirname, join, resolve } from 'path';
-import Config from './config.js';
+import Config from './config-accessor.js';
 import { rootLogger } from './logger.js';
 
 const CMD_EXE_BIN = '/mnt/c/WINDOWS/system32/cmd.exe';

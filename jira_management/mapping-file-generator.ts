@@ -2,8 +2,8 @@
 import { formatErr } from '../shared/errors.js';
 import fs from 'fs';
 import path from 'path';
-import { info, isQuiet } from '../shared/prompt.js';
-import { reportsDir } from '../shared/temp-dir.js';
+import { info, isQuiet } from '../shared/ui/prompt.js';
+import { reportsDir } from '../shared/infra/temp-dir.js';
 import type { TestCase } from '../shared/types.js';
 import { generatePreviewMarkdown } from './import-prep.js';
 

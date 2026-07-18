@@ -1,0 +1,211 @@
+import os from 'os';
+import path from 'path';
+vi.mock('../../../shared/ui/prompt.js');
+
+vi.mock('../../../shared/state', () => ({
+    load: vi.fn().mockReturnValue({}),
+    update: vi.fn(),
+}));
+
+vi.mock('../../../shared/config-accessor.js', () => {
+    const mockGet = vi.fn();
+    return {
+        default: {
+            get: mockGet,
+            getInstance: vi.fn().mockReturnValue({ get: mockGet }),
+        },
+    };
+});
+
+vi.mock('../../create_tests', () => {
+    const mockCreateTestsFromJson = vi.fn();
+    return {
+        default: {
+            createTestsFromCsv: vi.fn(),
+            createTestsFromJson: mockCreateTestsFromJson,
+            createTestExecutionWithLinks: vi.fn(),
+        },
+    };
+});
+
+vi.mock('../test-execution-flow', () => ({
+    offerTestExecutionAssociation: vi.fn().mockResolvedValue({ associated: false }),
+    showResults: vi.fn().mockResolvedValue(undefined),
+}));
+
+vi.mock('../../../shared/session-context', () => ({
+    resolveSessionContext: vi.fn(),
+    resolveTestDataSource: vi.fn(),
+}));
+
+import type { DataHub } from '../../../shared/types/data-hub.js';
+import { describe, expect, it, vi, beforeEach } from 'vitest';
+import case15 from '../case15.js';
+import { makeMockCommandContext } from '../../../shared/test-utils.js';
+import { resolveSessionContext, resolveTestDataSource } from '../../../shared/session-context.js';
+import { makeDataHubMock } from '../../../shared/test-utils/factories/data-hub-mock.js';
+import createTests from '../../create_tests.js';
+import { showResults, offerTestExecutionAssociation } from '../test-execution-flow.js';
+
+function mockStore(): DataHub {
+    return makeDataHubMock();
+}
+
+const mockContext = makeMockCommandContext();
+
+describe('Case15', () => {
+    beforeEach(() => {
+        vi.clearAllMocks();
+        vi.mocked(resolveSessionContext).mockReturnValue({
+            sha: 'abc123def456',
+            branch: 'main',
+            store: mockStore(),
+        });
+        vi.spyOn(createTests, 'createTestsFromJson').mockResolvedValue({
+            ok: true,
+            result: {
+                inMemoryTasksId: ['TEST-1', 'TEST-2'],
+                inMemoryTasksText: ['test 1', 'test 2'],
+                summary: '2 testes importados',
+                status: 'ok',
+                sourcePath: path.join(os.tmpdir(), 'qa-resolve-abc123-12345.json'),
+                failedLinks: [],
+            },
+        });
+    });
+
+    describe('Case15 — create tests from JSON', () => {
+        it('exports a handler function', () => {
+            expect(case15).toBeDefined();
+            expect(typeof case15.handler).toBe('function');
+        });
+
+        it('warns and returns when no project is selected', async () => {
+            expect.hasAssertions();
+
+            const ctx = makeMockCommandContext();
+            ctx.ctx.project_name = '';
+            const result = await case15.handler(ctx);
+
+            expect(result).toBeUndefined();
+            expect(vi.mocked(resolveSessionContext)).not.toHaveBeenCalled();
+        });
+
+        it('uses resolveTestDataSource when SHA is available and data is found', async () => {
+            expect.hasAssertions();
+
+            const store = mockStore();
+            vi.mocked(resolveSessionContext).mockReturnValue({
+                sha: 'abc123def456',
+                branch: 'main',
+                store,
+            });
+            vi.mocked(resolveTestDataSource).mockResolvedValue({
+                result: {
+                    tests: [
+                        { title: 'Test 1', state: 'passed', duration: 100 },
+                        { title: 'Test 2', state: 'failed', duration: 200 },
+                    ],
+                    stats: { passed: 1, failed: 1, skipped: 0, total: 2, duration: 300 },
+                },
+                source: 'cache',
+            });
+
+            const result = await case15.handler(mockContext);
+
+            expect(typeof result === 'boolean' || result === undefined).toBeTruthy();
+            expect(vi.mocked(resolveTestDataSource)).toHaveBeenCalledWith(
+                mockContext.ctx.project_name,
+                'abc123def456',
+                'main',
+                store,
+            );
+            expect(vi.spyOn(createTests, 'createTestsFromJson')).toHaveBeenCalledTimes(1);
+        });
+
+        it('falls back to CI download when cache misses', async () => {
+            expect.hasAssertions();
+
+            vi.mocked(resolveTestDataSource).mockResolvedValue({
+                result: {
+                    tests: [{ title: 'CI Test', state: 'passed', duration: 50 }],
+                    stats: { passed: 1, failed: 0, skipped: 0, total: 1, duration: 50 },
+                },
+                source: 'ci',
+            });
+
+            const result = await case15.handler(mockContext);
+
+            expect(typeof result === 'boolean' || result === undefined).toBeTruthy();
+            expect(vi.spyOn(createTests, 'createTestsFromJson')).toHaveBeenCalledTimes(1);
+        });
+
+        it('falls back to manual path when resolveTestDataSource returns null', async () => {
+            expect.hasAssertions();
+
+            vi.mocked(resolveTestDataSource).mockResolvedValue(null);
+
+            const { ask } = await import('../../../shared/ui/prompt.js');
+            vi.mocked(ask).mockResolvedValue('/manual/path.json');
+
+            const result = await case15.handler(mockContext);
+
+            expect(typeof result === 'boolean' || result === undefined).toBeTruthy();
+            expect(vi.spyOn(createTests, 'createTestsFromJson')).toHaveBeenCalledTimes(1);
+        });
+
+        it('cancels when manual path is empty', async () => {
+            expect.hasAssertions();
+
+            vi.mocked(resolveTestDataSource).mockResolvedValue(null);
+            const { ask, warn } = await import('../../../shared/ui/prompt.js');
+            vi.mocked(ask).mockResolvedValue('');
+
+            const result = await case15.handler(mockContext);
+
+            expect(result).toBeUndefined();
+            expect(vi.spyOn(createTests, 'createTestsFromJson')).not.toHaveBeenCalled();
+            expect(warn).toHaveBeenCalledWith('Caminho do JSON vazio. Operação cancelada.');
+        });
+
+        it('does not call resolveTestDataSource when SHA is null', async () => {
+            expect.hasAssertions();
+
+            vi.mocked(resolveSessionContext).mockReturnValue({
+                sha: null,
+                branch: null,
+                store: mockStore(),
+            });
+
+            const { ask } = await import('../../../shared/ui/prompt.js');
+            vi.mocked(ask).mockResolvedValue('/manual/path.json');
+
+            const result = await case15.handler(mockContext);
+
+            expect(typeof result === 'boolean' || result === undefined).toBeTruthy();
+            expect(vi.mocked(resolveTestDataSource)).not.toHaveBeenCalled();
+            expect(vi.spyOn(createTests, 'createTestsFromJson')).toHaveBeenCalledTimes(1);
+        });
+
+        it('displays results after successful import', async () => {
+            expect.hasAssertions();
+
+            vi.mocked(resolveTestDataSource).mockResolvedValue({
+                result: {
+                    tests: [{ title: 'T1', state: 'passed', duration: 1 }],
+                    stats: { passed: 1, failed: 0, skipped: 0, total: 1, duration: 1 },
+                },
+                source: 'cache',
+            });
+
+            await case15.handler(mockContext);
+
+            expect(offerTestExecutionAssociation).toHaveBeenCalledWith(
+                mockContext,
+                ['TEST-1', 'TEST-2'],
+                'qa-resolve-abc123-12345',
+            );
+            expect(showResults).toHaveBeenCalledWith(mockContext, ['TEST-1', 'TEST-2'], { associated: false });
+        });
+    });
+});

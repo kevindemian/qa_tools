@@ -1,5 +1,5 @@
-import type { InvariantFn, ValidationContext, ValidationResult } from '../artifact-validator.js';
-import { pass, warn } from '../artifact-validator.js';
+import type { InvariantFn, ValidationContext, ValidationResult } from '../validation/artifact-validator.js';
+import { pass, warn } from '../validation/artifact-validator.js';
 import { parseTests } from './types.js';
 
 const MUTATION_KEYWORDS = /\b(create|update|delete|post|put|patch|register|remove|add|edit|save)\b/i;

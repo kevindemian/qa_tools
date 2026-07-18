@@ -4,9 +4,9 @@ function stripTrailingSlashes(s: string): string {
     return s.slice(0, end);
 }
 
-import { createThrottledClient } from '../shared/http-client.js';
+import { createThrottledClient } from '../shared/infra/http-client.js';
 import { Logger } from '../shared/logger.js';
-import { handleError } from '../shared/git-provider-error.js';
+import { handleError } from '../shared/ci/git-provider-error.js';
 import { GitProviderBase } from './git-provider-base.js';
 import type {
     GitProvider,

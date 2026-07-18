@@ -1,5 +1,5 @@
 /** Change the active Jira project name. */
-import { success, warn, ask } from '../../shared/prompt.js';
+import { success, warn, ask } from '../../shared/ui/prompt.js';
 import { update as updateState } from '../../shared/state.js';
 import type { CommandContext } from './context.js';
 

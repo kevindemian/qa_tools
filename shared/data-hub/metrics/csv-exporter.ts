@@ -1,6 +1,9 @@
 import type { ComputedMetrics } from '../../types/data-hub.js';
 
-type FlatRow = Record<string, string | number>;
+interface FlatRow {
+    metric: string;
+    value: string | number;
+}
 
 function flattenMetrics(metrics: ComputedMetrics): FlatRow[] {
     const rows: FlatRow[] = [];
@@ -26,7 +29,7 @@ function flattenMetrics(metrics: ComputedMetrics): FlatRow[] {
 function toCsv(rows: FlatRow[]): string {
     const lines = ['metric,value'];
     for (const row of rows) {
-        lines.push(`${String(row['metric'] ?? '')},${String(row['value'] ?? '')}`);
+        lines.push(`${row.metric},${String(row.value)}`);
     }
     return lines.join('\n');
 }

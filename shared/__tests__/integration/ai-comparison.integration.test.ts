@@ -1,12 +1,12 @@
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 import crypto from 'node:crypto';
-import type { AiComparisonRecord } from '../../ai-comparison.js';
+import type { AiComparisonRecord } from '../../report/ai-comparison.js';
 
 vi.mock('../../logger.js', () => ({
     rootLogger: { error: vi.fn(), info: vi.fn(), child: vi.fn().mockReturnThis() },
 }));
 
-vi.mock('../../config.js', () => ({
+vi.mock('../../config-accessor.js', () => ({
     default: { get: vi.fn(() => '') },
     get: vi.fn(() => ''),
 }));
@@ -20,7 +20,7 @@ describe('Integration: AI Comparison Dashboard (FT-24)', () => {
         it('returns complete HTML document with data', async () => {
             expect.hasAssertions();
 
-            const { compareAiVsManual, generateAiComparisonHtml } = await import('../../ai-comparison.js');
+            const { compareAiVsManual, generateAiComparisonHtml } = await import('../../report/ai-comparison.js');
             const records: AiComparisonRecord[] = [
                 {
                     testTitle: 'Login Test',
@@ -59,7 +59,7 @@ describe('Integration: AI Comparison Dashboard (FT-24)', () => {
         it('shows no data message for empty records', async () => {
             expect.hasAssertions();
 
-            const { compareAiVsManual, generateAiComparisonHtml } = await import('../../ai-comparison.js');
+            const { compareAiVsManual, generateAiComparisonHtml } = await import('../../report/ai-comparison.js');
             const result = compareAiVsManual([]);
             const html = generateAiComparisonHtml(result);
 
@@ -70,7 +70,7 @@ describe('Integration: AI Comparison Dashboard (FT-24)', () => {
         it('uses custom title', async () => {
             expect.hasAssertions();
 
-            const { compareAiVsManual, generateAiComparisonHtml } = await import('../../ai-comparison.js');
+            const { compareAiVsManual, generateAiComparisonHtml } = await import('../../report/ai-comparison.js');
             const result = compareAiVsManual([]);
             const html = generateAiComparisonHtml(result, 'Sprint 11 Analysis');
 
@@ -83,7 +83,7 @@ describe('Integration: AI Comparison Dashboard (FT-24)', () => {
         it('handles all AI records', async () => {
             expect.hasAssertions();
 
-            const { compareAiVsManual, generateAiComparisonHtml } = await import('../../ai-comparison.js');
+            const { compareAiVsManual, generateAiComparisonHtml } = await import('../../report/ai-comparison.js');
             const records: AiComparisonRecord[] = [
                 {
                     testTitle: 't1',
@@ -128,7 +128,7 @@ describe('Integration: AI Comparison Dashboard (FT-24)', () => {
         it('handles all manual records', async () => {
             expect.hasAssertions();
 
-            const { compareAiVsManual } = await import('../../ai-comparison.js');
+            const { compareAiVsManual } = await import('../../report/ai-comparison.js');
             const records: AiComparisonRecord[] = [
                 {
                     testTitle: 't1',
@@ -160,7 +160,7 @@ describe('Integration: AI Comparison Dashboard (FT-24)', () => {
         it('handles 100 records without error', async () => {
             expect.hasAssertions();
 
-            const { compareAiVsManual, generateAiComparisonHtml } = await import('../../ai-comparison.js');
+            const { compareAiVsManual, generateAiComparisonHtml } = await import('../../report/ai-comparison.js');
             const records: AiComparisonRecord[] = [];
             for (let i = 0; i < 100; i++) {
                 records.push({
@@ -187,7 +187,7 @@ describe('Integration: AI Comparison Dashboard (FT-24)', () => {
         it('contains proper HTML structure', async () => {
             expect.hasAssertions();
 
-            const { compareAiVsManual, generateAiComparisonHtml } = await import('../../ai-comparison.js');
+            const { compareAiVsManual, generateAiComparisonHtml } = await import('../../report/ai-comparison.js');
             const records: AiComparisonRecord[] = [
                 {
                     testTitle: 't1',
@@ -233,7 +233,7 @@ describe('Integration: AI Comparison Dashboard (FT-24)', () => {
         it('handles null records without crashing', async () => {
             expect.hasAssertions();
 
-            const { compareAiVsManual } = await import('../../ai-comparison.js');
+            const { compareAiVsManual } = await import('../../report/ai-comparison.js');
             const result = compareAiVsManual(null);
 
             expect(result.aiTotal).toBe(0);
@@ -243,7 +243,7 @@ describe('Integration: AI Comparison Dashboard (FT-24)', () => {
         it('handles undefined records without crashing', async () => {
             expect.hasAssertions();
 
-            const { compareAiVsManual } = await import('../../ai-comparison.js');
+            const { compareAiVsManual } = await import('../../report/ai-comparison.js');
             const result = compareAiVsManual(undefined);
 
             expect(result.aiTotal).toBe(0);
@@ -253,7 +253,7 @@ describe('Integration: AI Comparison Dashboard (FT-24)', () => {
         it('handles null result in generateAiComparisonHtml without crashing', async () => {
             expect.hasAssertions();
 
-            const { generateAiComparisonHtml } = await import('../../ai-comparison.js');
+            const { generateAiComparisonHtml } = await import('../../report/ai-comparison.js');
             const html = generateAiComparisonHtml(null);
 
             expect(html).toContain('Error generating dashboard');
@@ -264,8 +264,8 @@ describe('Integration: AI Comparison Dashboard (FT-24)', () => {
         it('returns error page when buildHtmlPage throws', async () => {
             expect.hasAssertions();
 
-            const { compareAiVsManual, generateAiComparisonHtml } = await import('../../ai-comparison.js');
-            const htmlFactory = await import('../../html-factory.js');
+            const { compareAiVsManual, generateAiComparisonHtml } = await import('../../report/ai-comparison.js');
+            const htmlFactory = await import('../../report/html-factory.js');
             const spy = vi.spyOn(htmlFactory, 'buildHtmlPage').mockImplementation(() => {
                 throw new Error('mock crash');
             });

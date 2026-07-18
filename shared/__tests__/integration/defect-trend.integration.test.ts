@@ -8,19 +8,19 @@
  * - Dark mode
  */
 import { beforeEach, describe, expect, it, vi } from 'vitest';
-import type { DefectTrendResult } from '../../defect-trend.js';
+import type { DefectTrendResult } from '../../quality/defect-trend.js';
 
 vi.mock('../../logger.js', () => ({
     rootLogger: { error: vi.fn(), info: vi.fn(), child: vi.fn().mockReturnThis() },
 }));
 
-vi.mock('../../config.js', () => ({
+vi.mock('../../config-accessor.js', () => ({
     default: { get: vi.fn(() => '') },
     get: vi.fn(() => ''),
 }));
 
-vi.mock('../../html-factory.js', async (importOriginal) => {
-    const actual = await importOriginal<typeof import('../../html-factory.js')>();
+vi.mock('../../report/html-factory.js', async (importOriginal) => {
+    const actual = await importOriginal<typeof import('../../report/html-factory.js')>();
     return { ...actual, buildHtmlPage: vi.fn(actual.buildHtmlPage) };
 });
 
@@ -48,7 +48,7 @@ describe('Integration: Defect Trend (FT-20)', () => {
         it('produces complete HTML with table and summary cards', async () => {
             expect.hasAssertions();
 
-            const { generateDefectTrendHtml } = await import('../../defect-trend.js');
+            const { generateDefectTrendHtml } = await import('../../quality/defect-trend.js');
             const result = makeResult();
             const html = generateDefectTrendHtml(result, 'Defect Report');
 
@@ -66,7 +66,7 @@ describe('Integration: Defect Trend (FT-20)', () => {
         it('shows no-data message', async () => {
             expect.hasAssertions();
 
-            const { generateDefectTrendHtml } = await import('../../defect-trend.js');
+            const { generateDefectTrendHtml } = await import('../../quality/defect-trend.js');
             const result = makeResult({ trends: [], topCategories: [], period: { from: '', to: '' } });
             const html = generateDefectTrendHtml(result);
 
@@ -78,8 +78,8 @@ describe('Integration: Defect Trend (FT-20)', () => {
         it('returns buildErrorPage when buildHtmlPage throws', async () => {
             expect.hasAssertions();
 
-            const { generateDefectTrendHtml } = await import('../../defect-trend.js');
-            const { buildHtmlPage } = await import('../../html-factory.js');
+            const { generateDefectTrendHtml } = await import('../../quality/defect-trend.js');
+            const { buildHtmlPage } = await import('../../report/html-factory.js');
             const { rootLogger } = await import('../../logger.js');
 
             vi.mocked(buildHtmlPage).mockImplementationOnce(() => {
@@ -106,7 +106,7 @@ describe('Integration: Defect Trend (FT-20)', () => {
         it('includes theme toggle and dark mode CSS', async () => {
             expect.hasAssertions();
 
-            const { generateDefectTrendHtml } = await import('../../defect-trend.js');
+            const { generateDefectTrendHtml } = await import('../../quality/defect-trend.js');
             const html = generateDefectTrendHtml(makeResult());
 
             expect(html).toContain('qa-report-theme');

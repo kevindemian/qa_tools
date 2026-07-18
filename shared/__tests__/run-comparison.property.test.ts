@@ -4,7 +4,7 @@ import type { MetricsRun } from '../types/data-hub.js';
 import { nonNull } from '../test-utils.js';
 import { calcRunPassRate } from '../data-hub/compute/run-pass-rate.js';
 
-vi.mock('../llm-client.js', () => ({
+vi.mock('../llm/llm-client.js', () => ({
     llmPrompt: vi.fn().mockResolvedValue('analysis'),
     getLlmClientMetrics: vi.fn(() => ({
         cacheHits: 0,
@@ -17,8 +17,8 @@ vi.mock('../llm-client.js', () => ({
     parseRetryAfter: vi.fn(() => 2000),
 }));
 
-import { llmPrompt } from '../llm-client.js';
-import { compareRuns } from '../run-comparison.js';
+import { llmPrompt } from '../llm/llm-client.js';
+import { compareRuns } from '../quality/run-comparison.js';
 
 const mockLlmPrompt = vi.mocked(llmPrompt);
 

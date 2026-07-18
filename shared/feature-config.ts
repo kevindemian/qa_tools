@@ -35,6 +35,10 @@ export function loadFeatureConfig(baseDir: string = process.cwd()): FeatureConfi
     const configPath = featureConfigPath(baseDir);
     try {
         if (!fs.existsSync(configPath)) {
+            rootLogger.warn(
+                `config/features.json not found at ${configPath}; using DEFAULT_PR_REPORT_CONFIG ` +
+                    `(prReport disabled). Verify CWD/checkout — this is NOT an explicit disable by choice.`,
+            );
             return {};
         }
         const raw = fs.readFileSync(configPath, 'utf8');

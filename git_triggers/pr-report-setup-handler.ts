@@ -1,10 +1,10 @@
 import fs from 'node:fs';
 import path from 'node:path';
 import { getPrReportConfig, setPrReportConfig } from '../shared/feature-config.js';
-import { confirm as promptConfirm, prompt as ask, info, success, warn, title, divider } from '../shared/prompt.js';
+import { confirm as promptConfirm, prompt as ask, info, success, warn, title, divider } from '../shared/ui/prompt.js';
 import { pushHistory } from './session-state.js';
 import { getCurrentProject } from '../shared/project-context.js';
-import { generatePostProcessWorkflowYaml, injectPostProcessJob } from '../shared/ci-injector.js';
+import { generatePostProcessWorkflowYaml, injectPostProcessJob } from '../shared/ci/ci-injector.js';
 
 export function handlePrReportReconfig(): void {
     title('Configuração do PR Report');

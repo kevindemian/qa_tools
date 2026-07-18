@@ -3,7 +3,7 @@
  * GitLab CI configs, project config files, and git hooks.
  * Previously located in jira_management/commands/case00.ts — moved here
  * during Sprint N UX restructuring. */
-import { title, info, divider, printError } from '../shared/prompt.js';
+import { title, info, divider, printError } from '../shared/ui/prompt.js';
 import { pushHistory } from './session-state.js';
 import { main as setupMain } from '../setup/main.js';
 

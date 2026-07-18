@@ -1,5 +1,5 @@
-import type { InvariantFn, ValidationContext, ValidationResult } from '../artifact-validator.js';
-import { pass, fail } from '../artifact-validator.js';
+import type { InvariantFn, ValidationContext, ValidationResult } from '../validation/artifact-validator.js';
+import { pass, fail } from '../validation/artifact-validator.js';
 import { parseTests, type TestCaseShape } from './types.js';
 
 const PASSIVE_STEP_RE = /^(validate that|check if|ensure that|verificar se|validar se|confirm that)/i;

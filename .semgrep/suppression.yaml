@@ -1,0 +1,34 @@
+# Regras Semgrep custom — detecção de supressão semântica (Camada B).
+# Complementa a regra ESLint local-no-swallow (camada sintática de precisão).
+# Estas regras pegam padroes que a regra ESLint permite conscientemente.
+
+rules:
+    - id: return-null-option-sink
+      severity: ERROR
+      languages: [typescript]
+      message: >
+          Opcao { returnNull: true } colapsa 401/403/404/500 em null opaco
+          (AGENTS §25). Substituir por ExternalError classificado ou throw explicito.
+          Ver shared/errors.ts + classifyGitError. O sink retorna null indistinguivel
+          de "nao encontrado" — corrigir causa raiz, nao mascarar.
+      patterns:
+          - pattern: |
+                { returnNull: true }
+          - pattern-inside: |
+                $FUNC(...)
+
+    - id: silent-retry-loop
+      severity: ERROR
+      languages: [typescript]
+      message: >
+          Retry loop cujo catch nao propaga o erro (AGENTS §25). O erro e engolido
+          apos N tentativas. Relance ou registre falha explicita apos exaurir retries.
+      patterns:
+          - pattern: |
+                for (let $I = 0; $I < $N; $I++) {
+                  try { ... } catch ($E) { ... }
+                }
+          - pattern-not-inside: |
+                for (let $I = 0; $I < $N; $I++) {
+                  try { ... } catch ($E) { ... throw $E; }
+                }

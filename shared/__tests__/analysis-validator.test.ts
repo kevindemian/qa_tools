@@ -1,0 +1,148 @@
+import {
+    createAnalysisValidator,
+    invariantTestTitleExists,
+    invariantUnknownHasReason,
+    invariantHighSeverityRecommendation,
+    invariantSeverityConsistent,
+    invariantRecommendationReferencesError,
+} from '../validation/analysis-validator.js';
+import type { ValidationContext } from '../validation/artifact-validator.js';
+
+function makeCtx(input: string): ValidationContext {
+    return { inputRaw: input, outputRaw: {}, artifactType: 'analysis' };
+}
+
+describe('AnalysisValidator — createAnalysisValidator', () => {
+    it('creates validator with all invariants registered', () => {
+        const v = createAnalysisValidator();
+        const invariants = v.listInvariants();
+
+        const ids = ['A-01', 'A-02', 'A-03', 'A-04', 'A-05', 'I-01', 'I-02', 'I-03', 'I-04', 'I-05'];
+
+        expect(ids.every((id) => invariants.includes(id))).toBeTruthy();
+    });
+
+    it('passes a well-formed analysis', () => {
+        const v = createAnalysisValidator();
+        const analysis = {
+            tests: [
+                {
+                    title: 'Login fails with invalid credentials',
+                    classification: 'ASSERTION' as const,
+                    severity: 'high' as const,
+                    recommendation: 'Fix assertion on line 42 — expected 200 but got 401',
+                },
+            ],
+        };
+        const ctx = makeCtx('1. [failed] Login fails with invalid credentials (42ms)\nerror: expected 200 got 401');
+        const result = v.validate(analysis, ctx);
+
+        expect(result.failed).toBe(0);
+    });
+});
+
+describe('InvariantTestTitleExists (A-01)', () => {
+    it('passes when titles match input', () => {
+        const results = invariantTestTitleExists(
+            { tests: [{ title: 'Login fails' }] },
+            makeCtx('1. [failed] Login fails (100ms)'),
+        );
+
+        expect(results.some((r) => r.passed)).toBeTruthy();
+    });
+
+    it('fails when title not in input', () => {
+        const results = invariantTestTitleExists(
+            { tests: [{ title: 'Missing test' }] },
+            makeCtx('1. [failed] Login fails (100ms)'),
+        );
+
+        expect(results.some((r) => !r.passed && r.invariantId === 'A-01')).toBeTruthy();
+    });
+});
+
+describe('InvariantUnknownHasReason (A-04)', () => {
+    it('passes UNKNOWN with reason', () => {
+        const results = invariantUnknownHasReason(
+            {
+                tests: [
+                    {
+                        classification: 'UNKNOWN',
+                        recommendation:
+                            'Insufficient data to classify — error message is generic timeout without stack trace',
+                    },
+                ],
+            },
+            makeCtx(''),
+        );
+
+        expect(results.some((r) => r.passed)).toBeTruthy();
+    });
+
+    it('fails UNKNOWN with short recommendation', () => {
+        const results = invariantUnknownHasReason(
+            { tests: [{ classification: 'UNKNOWN', recommendation: 'Not sure' }] },
+            makeCtx(''),
+        );
+
+        expect(results.some((r) => !r.passed && r.invariantId === 'A-04')).toBeTruthy();
+    });
+});
+
+describe('InvariantHighSeverityRecommendation (A-05)', () => {
+    it('passes when high severity has long recommendation', () => {
+        const results = invariantHighSeverityRecommendation(
+            {
+                tests: [
+                    {
+                        severity: 'high',
+                        recommendation: 'Fix assertion logic with proper error handling and validation',
+                    },
+                ],
+            },
+            makeCtx(''),
+        );
+
+        expect(results.some((r) => r.passed)).toBeTruthy();
+    });
+
+    it('fails when high severity has short recommendation', () => {
+        const results = invariantHighSeverityRecommendation(
+            { tests: [{ severity: 'high', recommendation: 'Fix it' }] },
+            makeCtx(''),
+        );
+
+        expect(results.some((r) => !r.passed && r.invariantId === 'A-05')).toBeTruthy();
+    });
+});
+
+describe('InvariantSeverityConsistent (A-03)', () => {
+    it('passes consistent severity', () => {
+        const results = invariantSeverityConsistent(
+            { tests: [{ classification: 'ASSERTION', severity: 'high' }] },
+            makeCtx(''),
+        );
+
+        expect(results.some((r) => r.passed)).toBeTruthy();
+    });
+
+    it('warns on ASSERTION low severity', () => {
+        const results = invariantSeverityConsistent(
+            { tests: [{ classification: 'ASSERTION', severity: 'low' }] },
+            makeCtx(''),
+        );
+
+        expect(results.some((r) => !r.passed && r.invariantId === 'A-03')).toBeTruthy();
+    });
+});
+
+describe('InvariantRecommendationReferencesError (A-02)', () => {
+    it('passes when recommendation references error', () => {
+        const results = invariantRecommendationReferencesError(
+            { tests: [{ title: 'Test', recommendation: 'Fix assertion error in login module' }] },
+            makeCtx('error: assertion failed in login module\nexception: timeout'),
+        );
+
+        expect(results.some((r) => r.passed)).toBeTruthy();
+    });
+});

@@ -24,10 +24,10 @@ import type {
     PerformanceMetrics,
 } from '../../../types/data-hub.js';
 
-import { getCheckRuns } from '../../../github-check-run.js';
+import { getCheckRuns } from '../../../ci/github-check-run.js';
 import type { CheckRunAnnotation } from '../../../types/ci-cd.js';
 
-vi.mock('../../../github-check-run.js', () => ({
+vi.mock('../../../ci/github-check-run.js', () => ({
     getCheckRuns: vi.fn(),
 }));
 

@@ -3,7 +3,7 @@ import { describe, it, expect, beforeEach, vi } from 'vitest';
 import type { GitProvider, PipelineRun } from '../types/ci-cd.js';
 import type { DataHub, RawData } from '../types/data-hub.js';
 
-import { getOrFetchDataHub, latestRunTimestamp } from '../ci-data.js';
+import { getOrFetchDataHub, latestRunTimestamp } from '../ci/ci-data.js';
 import { makeDataHubMock } from '../test-utils/factories/data-hub-mock.js';
 import { createMockGitProvider } from '../test-utils/factories/index.js';
 

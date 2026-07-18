@@ -11,10 +11,10 @@ import {
     printError,
     withSpinner,
     askConfirm,
-} from '../../shared/prompt.js';
-import { analyzeCoverageGaps } from '../../shared/coverage-gap.js';
+} from '../../shared/ui/prompt.js';
+import { analyzeCoverageGaps } from '../../shared/report/coverage-gap.js';
 import { openWithFallback } from '../../shared/open.js';
-import { generateCoverageGapHtml } from '../../shared/generate-coverage-gap-html.js';
+import { generateCoverageGapHtml } from '../../shared/report/generate-coverage-gap-html.js';
 import { getDataHub } from '../../shared/data-hub/global-hub.js';
 import { rootLogger } from '../../shared/logger.js';
 import fs from 'fs';

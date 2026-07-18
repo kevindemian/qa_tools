@@ -2,9 +2,9 @@
  * Unified CLI argument parser for git_triggers.
  * Supports both interactive and batch modes with discriminated union.
  */
-import { defaultOutput } from '../shared/output.js';
+import { defaultOutput } from '../shared/ui/output.js';
 import { parseProjectFlag } from '../shared/parse-project-flag.js';
-export type CliMode = 'interactive' | 'batch' | 'help' | 'version';
+export type CliMode = 'interactive' | 'batch' | 'help' | 'version' | 'pr-report';
 
 export interface BaseCliArgs {
     mode: CliMode;
@@ -39,7 +39,11 @@ export interface VersionCliArgs extends BaseCliArgs {
     mode: 'version';
 }
 
-export type CliArgs = BatchCliArgs | InteractiveCliArgs | HelpCliArgs | VersionCliArgs;
+export interface PrReportCliArgs extends BaseCliArgs {
+    mode: 'pr-report';
+}
+
+export type CliArgs = BatchCliArgs | InteractiveCliArgs | HelpCliArgs | VersionCliArgs | PrReportCliArgs;
 
 /**
  * Extracts the next argument value after a flag, or undefined if out of bounds.
@@ -131,10 +135,15 @@ export function parseCliArgs(): CliArgs {
     const project = _extractProject(args);
 
     if (help) {
-        return { mode: 'help', help: true, version: false, noClear: false, ...(project ? { project } : {}) };
+        return buildBaseArgs('help', noClear, project, true, false);
     }
     if (version) {
-        return { mode: 'version', help: false, version: true, noClear: false, ...(project ? { project } : {}) };
+        return buildBaseArgs('version', noClear, project, false, true);
+    }
+
+    const isPrReport = args[0] === 'pr-report';
+    if (isPrReport) {
+        return buildBaseArgs('pr-report', noClear, project, false, false);
     }
 
     if (hasBatchFlag) {
@@ -166,13 +175,27 @@ export function parseCliArgs(): CliArgs {
         return result;
     }
 
+    return buildBaseArgs('interactive', noClear, project, false, false);
+}
+
+/**
+ * Builds the common CLI args shape shared by all modes.
+ * The `mode` determines which of `help`/`version` flags are set.
+ */
+function buildBaseArgs(
+    mode: CliMode,
+    noClear: boolean,
+    project: string | undefined,
+    help: boolean,
+    version: boolean,
+): CliArgs {
     return {
-        mode: 'interactive',
-        help: false,
-        version: false,
+        mode,
+        help,
+        version,
         noClear,
         ...(project ? { project } : {}),
-    };
+    } as CliArgs;
 }
 
 /**
@@ -188,8 +211,9 @@ export function printUsage(packageVersion: string): void {
         '',
         'Modes:',
         '  (no flags)           Interactive menu mode',
+        '  pr-report            Generate the PR report (injected Git provider)',
         '  --auto, --batch      Batch mode (headless CI/CD)',
-        '  --project, -p <name> Project name (batch)',
+        '  --project, -p <name> Project name (batch / pr-report)',
         '  --branch, -b <name>  Branch name (batch)',
         '',
         'Batch options:',

@@ -17,7 +17,7 @@ vi.mock('../../logger.js', () => ({
     rootLogger: { error: vi.fn(), info: vi.fn(), child: vi.fn().mockReturnThis() },
 }));
 
-vi.mock('../../config.js', () => ({
+vi.mock('../../config-accessor.js', () => ({
     default: { get: vi.fn(() => '') },
     get: vi.fn(() => ''),
 }));
@@ -31,7 +31,8 @@ describe('Integration: AI Effectiveness Dashboard (FT-23)', () => {
         it('returns complete HTML document with data', async () => {
             expect.hasAssertions();
 
-            const { computeAiEffectiveness, generateAiEffectivenessHtml } = await import('../../ai-effectiveness.js');
+            const { computeAiEffectiveness, generateAiEffectivenessHtml } =
+                await import('../../report/ai-effectiveness.js');
             const store: AiFeedbackStore = {
                 records: [
                     { timestamp: '2026-06-01T10:00:00Z', promptVersion: 'v1', testTitle: 'Login Test', accepted: true },
@@ -61,7 +62,8 @@ describe('Integration: AI Effectiveness Dashboard (FT-23)', () => {
         it('shows no data message for empty store', async () => {
             expect.hasAssertions();
 
-            const { computeAiEffectiveness, generateAiEffectivenessHtml } = await import('../../ai-effectiveness.js');
+            const { computeAiEffectiveness, generateAiEffectivenessHtml } =
+                await import('../../report/ai-effectiveness.js');
             const result = computeAiEffectiveness({ records: [] });
             const html = generateAiEffectivenessHtml(result);
 
@@ -73,7 +75,8 @@ describe('Integration: AI Effectiveness Dashboard (FT-23)', () => {
         it('uses custom title', async () => {
             expect.hasAssertions();
 
-            const { computeAiEffectiveness, generateAiEffectivenessHtml } = await import('../../ai-effectiveness.js');
+            const { computeAiEffectiveness, generateAiEffectivenessHtml } =
+                await import('../../report/ai-effectiveness.js');
             const store: AiFeedbackStore = {
                 records: [{ timestamp: '2026-06-01T10:00:00Z', promptVersion: 'v1', testTitle: 't1', accepted: true }],
             };
@@ -89,7 +92,8 @@ describe('Integration: AI Effectiveness Dashboard (FT-23)', () => {
         it('handles all accepted records', async () => {
             expect.hasAssertions();
 
-            const { computeAiEffectiveness, generateAiEffectivenessHtml } = await import('../../ai-effectiveness.js');
+            const { computeAiEffectiveness, generateAiEffectivenessHtml } =
+                await import('../../report/ai-effectiveness.js');
             const store: AiFeedbackStore = {
                 records: [
                     { timestamp: '2026-06-01T10:00:00Z', promptVersion: 'v1', testTitle: 't1', accepted: true },
@@ -111,7 +115,7 @@ describe('Integration: AI Effectiveness Dashboard (FT-23)', () => {
         it('handles all rejected records', async () => {
             expect.hasAssertions();
 
-            const { computeAiEffectiveness } = await import('../../ai-effectiveness.js');
+            const { computeAiEffectiveness } = await import('../../report/ai-effectiveness.js');
             const store: AiFeedbackStore = {
                 records: [
                     {
@@ -140,7 +144,8 @@ describe('Integration: AI Effectiveness Dashboard (FT-23)', () => {
         it('handles 100 records without error', async () => {
             expect.hasAssertions();
 
-            const { computeAiEffectiveness, generateAiEffectivenessHtml } = await import('../../ai-effectiveness.js');
+            const { computeAiEffectiveness, generateAiEffectivenessHtml } =
+                await import('../../report/ai-effectiveness.js');
             const records: AiFeedbackRecord[] = [];
             for (let i = 0; i < 100; i++) {
                 records.push({
@@ -166,7 +171,8 @@ describe('Integration: AI Effectiveness Dashboard (FT-23)', () => {
         it('contains proper HTML structure', async () => {
             expect.hasAssertions();
 
-            const { computeAiEffectiveness, generateAiEffectivenessHtml } = await import('../../ai-effectiveness.js');
+            const { computeAiEffectiveness, generateAiEffectivenessHtml } =
+                await import('../../report/ai-effectiveness.js');
             const store: AiFeedbackStore = {
                 records: [{ timestamp: '2026-06-01T10:00:00Z', promptVersion: 'v1', testTitle: 't1', accepted: true }],
             };
@@ -193,7 +199,7 @@ describe('Integration: AI Effectiveness Dashboard (FT-23)', () => {
         it('handles null store without crashing (returning empty result)', async () => {
             expect.hasAssertions();
 
-            const { computeAiEffectiveness } = await import('../../ai-effectiveness.js');
+            const { computeAiEffectiveness } = await import('../../report/ai-effectiveness.js');
             const result = computeAiEffectiveness(null);
 
             expect(result.acceptanceRate).toBe(0);
@@ -204,7 +210,7 @@ describe('Integration: AI Effectiveness Dashboard (FT-23)', () => {
         it('handles undefined store without crashing', async () => {
             expect.hasAssertions();
 
-            const { computeAiEffectiveness } = await import('../../ai-effectiveness.js');
+            const { computeAiEffectiveness } = await import('../../report/ai-effectiveness.js');
             const result = computeAiEffectiveness(undefined);
 
             expect(result.acceptanceRate).toBe(0);
@@ -214,7 +220,7 @@ describe('Integration: AI Effectiveness Dashboard (FT-23)', () => {
         it('handles null result in generateAiEffectivenessHtml without crashing', async () => {
             expect.hasAssertions();
 
-            const { generateAiEffectivenessHtml } = await import('../../ai-effectiveness.js');
+            const { generateAiEffectivenessHtml } = await import('../../report/ai-effectiveness.js');
             const html = generateAiEffectivenessHtml(null);
 
             expect(html).toContain('Error generating dashboard');
@@ -225,8 +231,9 @@ describe('Integration: AI Effectiveness Dashboard (FT-23)', () => {
         it('returns error page when buildHtmlPage throws', async () => {
             expect.hasAssertions();
 
-            const { computeAiEffectiveness, generateAiEffectivenessHtml } = await import('../../ai-effectiveness.js');
-            const htmlFactory = await import('../../html-factory.js');
+            const { computeAiEffectiveness, generateAiEffectivenessHtml } =
+                await import('../../report/ai-effectiveness.js');
+            const htmlFactory = await import('../../report/html-factory.js');
             const spy = vi.spyOn(htmlFactory, 'buildHtmlPage').mockImplementation(() => {
                 throw new Error('mock crash');
             });

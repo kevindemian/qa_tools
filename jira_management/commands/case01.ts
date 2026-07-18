@@ -1,6 +1,6 @@
 /** Import CSV → Create Test Cases: configure CSV path and start the import pipeline. */
-import Config from '../../shared/config.js';
-import { ask, askFilePath, printError, warn } from '../../shared/prompt.js';
+import Config from '../../shared/config-accessor.js';
+import { ask, askFilePath, printError, warn } from '../../shared/ui/prompt.js';
 import { loadTypedState } from '../../shared/state.js';
 import { rootLogger } from '../../shared/logger.js';
 import path from 'path';

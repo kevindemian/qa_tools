@@ -1,6 +1,7 @@
 import type { AxiosInstance } from '../shared/deps.js';
-import { info } from '../shared/prompt.js';
-import { handleError } from '../shared/git-provider-error.js';
+import { info } from '../shared/ui/prompt.js';
+import { classifyGitError } from '../shared/errors.js';
+import { ExternalError } from '../shared/errors.js';
 import type { MergeRequestInfo, JsonObject } from '../shared/types.js';
 import { apiGet, apiPost, apiPut, projectPath } from './gitlab-api.js';
 
@@ -80,11 +81,15 @@ export async function glGetMergeRequest(
     iid: string | number,
 ): Promise<MergeRequestInfo | null> {
     const base = projectPath(owner, repo);
-    const data = await apiGet<JsonObject>(client, base + `/merge_requests/${iid}`, {
-        operation: 'buscar MR',
-        returnNull: true,
-    });
-    return data ? formatPR(data) : null;
+    try {
+        const data = await apiGet<JsonObject>(client, base + `/merge_requests/${iid}`, {
+            operation: 'buscar MR',
+        });
+        return formatPR(data);
+    } catch (err) {
+        if (err instanceof ExternalError && err.kind === 'notFound') return null;
+        throw err;
+    }
 }
 
 export async function glSearchMergeRequests(
@@ -96,17 +101,21 @@ export async function glSearchMergeRequests(
     searchStatus: string,
 ): Promise<MergeRequestInfo[]> {
     const base = projectPath(owner, repo);
-    const data = await apiGet<JsonObject[]>(client, base + '/merge_requests', {
-        operation: 'buscar MRs',
-        params: {
-            state: searchStatus,
-            source_branch: sourceBranch,
-            target_branch: targetBranch,
-            per_page: SEARCH_MRS_PAGE_SIZE,
-        },
-        returnNull: true,
-    });
-    return (data ?? []).map((mr) => formatPR(mr)).filter((x): x is MergeRequestInfo => x !== null);
+    try {
+        const data = await apiGet<JsonObject[]>(client, base + '/merge_requests', {
+            operation: 'buscar MRs',
+            params: {
+                state: searchStatus,
+                source_branch: sourceBranch,
+                target_branch: targetBranch,
+                per_page: SEARCH_MRS_PAGE_SIZE,
+            },
+        });
+        return (data ?? []).map((mr) => formatPR(mr)).filter((x): x is MergeRequestInfo => x !== null);
+    } catch (err) {
+        if (err instanceof ExternalError && err.kind === 'notFound') return [];
+        throw err;
+    }
 }
 
 export async function glAcceptMergeRequest(
@@ -132,7 +141,7 @@ export async function glAcceptMergeRequest(
         );
         return data ? formatPR(data) : null;
     } catch (err) {
-        return handleError(err, { context: 'fazer merge' });
+        throw classifyGitError(err, { operation: 'fazer merge' });
     }
 }
 
@@ -143,9 +152,15 @@ export async function glIsApproved(
     mergeRequestIid: string | number,
 ): Promise<boolean> {
     const base = projectPath(owner, repo);
-    const data = await apiGet<{ approved?: boolean }>(client, base + `/merge_requests/${mergeRequestIid}/approvals`, {
-        operation: 'verificar aprovação',
-        returnNull: true,
-    });
-    return !!data?.approved;
+    try {
+        const data = await apiGet<{ approved?: boolean }>(
+            client,
+            base + `/merge_requests/${mergeRequestIid}/approvals`,
+            { operation: 'verificar aprovação' },
+        );
+        return !!data?.approved;
+    } catch (err) {
+        if (err instanceof ExternalError && err.kind === 'notFound') return false;
+        throw err;
+    }
 }

@@ -3,7 +3,7 @@
  *
  * Generates a `.gitlab-ci.yml` file with:
  * 1. Install + test steps
- * 2. Optional PR Report post-processing via pr-report-core.ts
+ * 2. Optional PR Report post-processing via git_triggers/main.ts pr-report
  */
 import { WorkflowBuilder, type JobConfig } from '../builder/workflow-builder.js';
 import type { SetupContext } from '../context.js';
@@ -22,7 +22,7 @@ export function generateGitLabCI(ctx: SetupContext): string {
         ]
             .filter(Boolean)
             .join(' ');
-        scriptLines.push('npx tsx shared/pr-report-core.ts ' + flags);
+        scriptLines.push('npx tsx git_triggers/main.ts pr-report ' + flags);
     }
 
     const job: JobConfig = {

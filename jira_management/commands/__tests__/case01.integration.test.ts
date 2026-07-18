@@ -1,11 +1,11 @@
-vi.mock('../../../shared/prompt');
+vi.mock('../../../shared/ui/prompt.js');
 vi.mock('../../../shared/logger');
 vi.mock('../../../shared/state', () => ({
     load: vi.fn().mockReturnValue({}),
     loadTypedState: vi.fn().mockReturnValue({}),
     update: vi.fn(),
 }));
-vi.mock('../../../shared/config', () => {
+vi.mock('../../../shared/config-accessor.js', () => {
     const mockGet = vi.fn();
     return {
         default: { get: mockGet, getInstance: vi.fn().mockReturnValue({ get: mockGet }) },
@@ -15,7 +15,7 @@ vi.mock('../../../shared/config', () => {
 import { describe, it, expect, vi, beforeEach } from 'vitest';
 import case01 from '../case01.js';
 import { makeMockCommandContext } from '../../../shared/test-utils.js';
-import configModule from '../../../shared/config.js';
+import configModule from '../../../shared/config-accessor.js';
 import createTestsModule from '../../create_tests.js';
 import * as testExecFlow from '../test-execution-flow.js';
 

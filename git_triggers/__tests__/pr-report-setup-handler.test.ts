@@ -25,7 +25,7 @@ vi.mock('../../shared/feature-config.js', () => ({
     setPrReportConfig: mocks.mockSetPrReportConfig,
 }));
 
-vi.mock('../../shared/prompt.js', () => ({
+vi.mock('../../shared/ui/prompt.js', () => ({
     confirm: mocks.mockPromptConfirm,
     prompt: mocks.mockAsk,
     info: mocks.mockInfo,
@@ -58,7 +58,7 @@ vi.mock('node:fs', () => ({
     mkdirSync: mocks.mockMkdirSync,
 }));
 
-vi.mock('../../shared/ci-injector.js', () => ({
+vi.mock('../../shared/ci/ci-injector.js', () => ({
     generatePostProcessWorkflowYaml: mocks.mockGenerateYaml,
     injectPostProcessJob: mocks.mockInjectJob,
 }));

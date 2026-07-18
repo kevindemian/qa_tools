@@ -1,4 +1,4 @@
-import { info } from '../shared/prompt.js';
+import { info } from '../shared/ui/prompt.js';
 import type { JsonObject, JiraResourceLike } from '../shared/types.js';
 import type { LinkTypeManager } from './link-types.js';
 

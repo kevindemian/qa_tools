@@ -12,7 +12,7 @@ import os from 'node:os';
 
 const BASE_DIR = fs.mkdtempSync(path.join(os.tmpdir(), 'pbt-tempdir-'));
 
-vi.mock('../config.js', () => ({
+vi.mock('../config-accessor.js', () => ({
     default: {
         get: vi.fn((key: string) => {
             if (key === 'QA_TOOLS_REPORTS_DIR') return path.join(BASE_DIR, 'reports');
@@ -36,7 +36,7 @@ describe('PBT: Temp Dir', () => {
         it('reportsDir always returns an absolute path', async () => {
             expect.hasAssertions();
 
-            const { reportsDir } = await import('../temp-dir.js');
+            const { reportsDir } = await import('../infra/temp-dir.js');
             const dir = reportsDir();
 
             expect(dir).toBeTruthy();
@@ -46,7 +46,7 @@ describe('PBT: Temp Dir', () => {
         it('logsDir always returns an absolute path', async () => {
             expect.hasAssertions();
 
-            const { logsDir } = await import('../temp-dir.js');
+            const { logsDir } = await import('../infra/temp-dir.js');
             const dir = logsDir();
 
             expect(dir).toBeTruthy();
@@ -56,7 +56,7 @@ describe('PBT: Temp Dir', () => {
         it('tempDirPath always returns an absolute path', async () => {
             expect.hasAssertions();
 
-            const { tempDirPath } = await import('../temp-dir.js');
+            const { tempDirPath } = await import('../infra/temp-dir.js');
             const dir = tempDirPath();
 
             expect(dir).toBeTruthy();
@@ -68,7 +68,7 @@ describe('PBT: Temp Dir', () => {
         it('returns absolute path ending with original filename for any valid filename', async () => {
             expect.hasAssertions();
 
-            const { writeReport } = await import('../temp-dir.js');
+            const { writeReport } = await import('../infra/temp-dir.js');
             fc.assert(
                 fc.property(FilenameArb, ContentArb, (filename, content) => {
                     const result = writeReport(filename, content);
@@ -85,7 +85,7 @@ describe('PBT: Temp Dir', () => {
         it('returns path containing category for any valid category and filename', async () => {
             expect.hasAssertions();
 
-            const { writeEphemeral } = await import('../temp-dir.js');
+            const { writeEphemeral } = await import('../infra/temp-dir.js');
             fc.assert(
                 fc.property(CategoryArb, FilenameArb, ContentArb, (category, filename, content) => {
                     const result = writeEphemeral(category, filename, content);

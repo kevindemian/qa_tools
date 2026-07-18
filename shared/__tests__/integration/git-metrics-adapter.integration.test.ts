@@ -17,7 +17,7 @@ import {
     generateGitMetricsRuns,
     generateGitFailureClassifications,
     getLastGitLogError,
-} from '../../git-metrics-adapter.js';
+} from '../../ci/git-metrics-adapter.js';
 
 const GIT_BIN = '/usr/bin/git';
 

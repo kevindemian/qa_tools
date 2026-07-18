@@ -4,7 +4,7 @@ vi.mock('../../logger.js', () => ({
     rootLogger: { error: vi.fn(), info: vi.fn(), child: vi.fn().mockReturnThis() },
 }));
 
-vi.mock('../../config.js', () => ({
+vi.mock('../../config-accessor.js', () => ({
     default: { get: vi.fn(() => '') },
     get: vi.fn(() => ''),
 }));
@@ -18,7 +18,8 @@ describe('Integration: Suite Optimization (FT-26)', () => {
         it('returns complete HTML document with data', async () => {
             expect.hasAssertions();
 
-            const { analyzeSuiteOptimization, generateOptimizationHtml } = await import('../../suite-optimization.js');
+            const { analyzeSuiteOptimization, generateOptimizationHtml } =
+                await import('../../quality/suite-optimization.js');
             const tests = [
                 { title: 'Slow Test', duration: 10, flakiness: 0.05 },
                 { title: 'Fast Test', duration: 2, flakiness: 0 },
@@ -38,7 +39,8 @@ describe('Integration: Suite Optimization (FT-26)', () => {
         it('shows clean state when no optimizations needed', async () => {
             expect.hasAssertions();
 
-            const { analyzeSuiteOptimization, generateOptimizationHtml } = await import('../../suite-optimization.js');
+            const { analyzeSuiteOptimization, generateOptimizationHtml } =
+                await import('../../quality/suite-optimization.js');
             const tests = [{ title: 'Fast Test', duration: 2, flakiness: 0 }];
             const result = analyzeSuiteOptimization(tests);
             const html = generateOptimizationHtml(result);
@@ -49,7 +51,8 @@ describe('Integration: Suite Optimization (FT-26)', () => {
         it('shows clean state for empty input', async () => {
             expect.hasAssertions();
 
-            const { analyzeSuiteOptimization, generateOptimizationHtml } = await import('../../suite-optimization.js');
+            const { analyzeSuiteOptimization, generateOptimizationHtml } =
+                await import('../../quality/suite-optimization.js');
             const result = analyzeSuiteOptimization([]);
             const html = generateOptimizationHtml(result);
 
@@ -59,7 +62,8 @@ describe('Integration: Suite Optimization (FT-26)', () => {
         it('uses custom title', async () => {
             expect.hasAssertions();
 
-            const { analyzeSuiteOptimization, generateOptimizationHtml } = await import('../../suite-optimization.js');
+            const { analyzeSuiteOptimization, generateOptimizationHtml } =
+                await import('../../quality/suite-optimization.js');
             const result = analyzeSuiteOptimization([]);
             const html = generateOptimizationHtml(result, 'My Custom Report');
 
@@ -72,8 +76,9 @@ describe('Integration: Suite Optimization (FT-26)', () => {
         it('returns error page when buildHtmlPage throws', async () => {
             expect.hasAssertions();
 
-            const { analyzeSuiteOptimization, generateOptimizationHtml } = await import('../../suite-optimization.js');
-            const htmlFactory = await import('../../html-factory.js');
+            const { analyzeSuiteOptimization, generateOptimizationHtml } =
+                await import('../../quality/suite-optimization.js');
+            const htmlFactory = await import('../../report/html-factory.js');
             const spy = vi.spyOn(htmlFactory, 'buildHtmlPage').mockImplementation(() => {
                 throw new Error('mock crash');
             });

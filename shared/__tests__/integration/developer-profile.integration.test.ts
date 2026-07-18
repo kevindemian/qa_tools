@@ -9,13 +9,13 @@
  * - Custom title
  */
 import { beforeEach, describe, expect, it, vi } from 'vitest';
-import type { DeveloperProfileResult } from '../../developer-profile.js';
+import type { DeveloperProfileResult } from '../../quality/developer-profile.js';
 
 vi.mock('../../logger.js', () => ({
     rootLogger: { error: vi.fn(), info: vi.fn(), child: vi.fn().mockReturnThis() },
 }));
 
-vi.mock('../../config.js', () => ({
+vi.mock('../../config-accessor.js', () => ({
     default: { get: vi.fn(() => '') },
     get: vi.fn(() => ''),
 }));
@@ -58,7 +58,7 @@ describe('Integration: Developer Profile (FT-27)', () => {
         it('produces complete HTML with summary and author sections', async () => {
             expect.hasAssertions();
 
-            const { generateDeveloperProfileHtml } = await import('../../developer-profile.js');
+            const { generateDeveloperProfileHtml } = await import('../../quality/developer-profile.js');
             const result = makeResult();
             const html = generateDeveloperProfileHtml(result, 'Developer Report');
 
@@ -77,7 +77,7 @@ describe('Integration: Developer Profile (FT-27)', () => {
         it('shows no-data message', async () => {
             expect.hasAssertions();
 
-            const { generateDeveloperProfileHtml } = await import('../../developer-profile.js');
+            const { generateDeveloperProfileHtml } = await import('../../quality/developer-profile.js');
             const result = makeResult({
                 authors: [],
                 totalAuthors: 0,
@@ -97,7 +97,7 @@ describe('Integration: Developer Profile (FT-27)', () => {
         it('returns error page for null result', async () => {
             expect.hasAssertions();
 
-            const { generateDeveloperProfileHtml } = await import('../../developer-profile.js');
+            const { generateDeveloperProfileHtml } = await import('../../quality/developer-profile.js');
             const html = generateDeveloperProfileHtml(null);
 
             expect(html).toContain('Error generating developer profile');
@@ -107,7 +107,7 @@ describe('Integration: Developer Profile (FT-27)', () => {
         it('returns error page for undefined result', async () => {
             expect.hasAssertions();
 
-            const { generateDeveloperProfileHtml } = await import('../../developer-profile.js');
+            const { generateDeveloperProfileHtml } = await import('../../quality/developer-profile.js');
             const html = generateDeveloperProfileHtml(undefined);
 
             expect(html).toContain('Error generating developer profile');
@@ -118,7 +118,7 @@ describe('Integration: Developer Profile (FT-27)', () => {
         it('uses custom title in HTML page', async () => {
             expect.hasAssertions();
 
-            const { generateDeveloperProfileHtml } = await import('../../developer-profile.js');
+            const { generateDeveloperProfileHtml } = await import('../../quality/developer-profile.js');
             const result = makeResult({
                 authors: [],
                 totalAuthors: 0,

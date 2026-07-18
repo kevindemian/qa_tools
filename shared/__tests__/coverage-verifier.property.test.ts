@@ -14,7 +14,7 @@
  */
 import * as fc from 'fast-check';
 import { describe, expect, it } from 'vitest';
-import { recalculateCoverage } from '../coverage-verifier.js';
+import { recalculateCoverage } from '../validation/coverage-verifier.js';
 
 function makeCtx(input: string) {
     return { inputRaw: input, outputRaw: {}, artifactType: 'test-suite' as const };

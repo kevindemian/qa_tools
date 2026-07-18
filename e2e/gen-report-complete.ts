@@ -3,12 +3,12 @@
 import path from 'path';
 import fs from 'fs';
 import { parseTestResultsFile } from '../shared/result_parser.js';
-import { generateHtmlReport } from '../shared/report-generator.js';
-import { writeReport } from '../shared/temp-dir.js';
-import { createHttpClient } from '../shared/http-client.js';
+import { generateHtmlReport } from '../shared/report/report-generator.js';
+import { writeReport } from '../shared/infra/temp-dir.js';
+import { createHttpClient } from '../shared/infra/http-client.js';
 import JiraResource from '../jira_management/jira_resource.js';
 import { rootLogger } from '../shared/logger.js';
-import { gracefulExit } from '../shared/cli_base.js';
+import { gracefulExit } from '../shared/ui/cli_base.js';
 
 const JIRA_BASE = process.env['JIRA_BASE_URL'] || 'https://jiraprod.srv.euronext.com';
 const TOKEN = process.env['JIRA_PERSONAL_TOKEN'] || '';

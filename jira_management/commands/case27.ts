@@ -1,8 +1,8 @@
-import { analyzeCoverageGaps } from '../../shared/coverage-gap.js';
-import { generateCoverageGapHtml } from '../../shared/generate-coverage-gap-html.js';
-import { info, warn, title, printError, withSpinner } from '../../shared/prompt.js';
+import { analyzeCoverageGaps } from '../../shared/report/coverage-gap.js';
+import { generateCoverageGapHtml } from '../../shared/report/generate-coverage-gap-html.js';
+import { info, warn, title, printError, withSpinner } from '../../shared/ui/prompt.js';
 import { openWithFallback } from '../../shared/open.js';
-import { writeReport } from '../../shared/temp-dir.js';
+import { writeReport } from '../../shared/infra/temp-dir.js';
 import type { CommandContext } from './context.js';
 
 async function handler(c: CommandContext): Promise<boolean | void> {

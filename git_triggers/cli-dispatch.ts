@@ -2,14 +2,16 @@
  * CLI dispatch logic — executes the appropriate mode based on parsed arguments.
  * Separated from main.ts for testability and single responsibility.
  */
-import { gracefulExit } from '../shared/cli_base.js';
+import { gracefulExit } from '../shared/ui/cli_base.js';
 import { ExitCode } from '../shared/types.js';
-import { defaultOutput } from '../shared/output.js';
+import { defaultOutput } from '../shared/ui/output.js';
 import pkg from '../package.json';
 import { printUsage, type CliArgs } from './cli-args.js';
 import { tryBatchMode } from './batch-mode.js';
 import { runInteractiveMode } from './interactive-mode.js';
 import { setCurrentProject } from '../shared/project-context.js';
+import { main as runPrReport } from '../shared/pr-report-core.js';
+import { createGitProvider } from './git-provider-factory.js';
 
 /**
  * Resolve and activate the multi-project context for a CLI invocation (055).
@@ -55,5 +57,10 @@ export async function dispatchCli(args: CliArgs): Promise<void> {
         case 'interactive':
             await runInteractiveMode(args);
             break;
+        case 'pr-report': {
+            await runPrReport(createGitProvider);
+            gracefulExit(ExitCode.OK);
+            break;
+        }
     }
 }

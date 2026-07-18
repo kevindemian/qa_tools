@@ -19,7 +19,7 @@ import * as globalHubModule from '../../data-hub/global-hub.js';
 import { makeDataHubMock, makeDataHubGetters } from '../../test-utils/factories/data-hub-mock.js';
 
 async function loadModules() {
-    const qg = await import('../../quality-gate.js');
+    const qg = await import('../../quality/quality-gate.js');
     return {
         runQualityGate: qg.runQualityGate,
         formatQualityGateJson: qg.formatQualityGateJson,

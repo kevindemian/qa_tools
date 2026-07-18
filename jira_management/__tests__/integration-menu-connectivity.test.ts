@@ -2,8 +2,9 @@ import os from 'os';
 import path from 'path';
 import { describe, it, expect, vi, beforeEach } from 'vitest';
 import { createMockContext } from '../../shared/test-utils/factories/context-factory.js';
+import { rootLogger } from '../../shared/logger.js';
 
-vi.mock('../../shared/prompt.js', () => ({
+vi.mock('../../shared/ui/prompt.js', () => ({
     ask: vi.fn().mockResolvedValue('test-value'),
     askMultiline: vi.fn().mockResolvedValue('test-value'),
     askConfirm: vi.fn().mockResolvedValue(true),
@@ -31,13 +32,14 @@ vi.mock('../../shared/logger.js', () => ({
         child: vi.fn().mockReturnThis(),
     })),
 }));
-vi.mock('../../shared/jira-helper.js', () => ({
+vi.mock('../../shared/jira/jira-helper.js', () => ({
     safeJiraCall: vi.fn(async (c: unknown, op: string, label: string, fn: () => Promise<unknown>) => {
         try {
             await fn();
             (c as { pushHistory: (op: string, label: string, status: string) => void }).pushHistory(op, label, 'ok');
-        } catch {
+        } catch (err) {
             (c as { pushHistory: (op: string, label: string, status: string) => void }).pushHistory(op, label, 'error');
+            rootLogger.warn('safeJiraCall mock capturou erro', { err });
         }
     }),
 }));
@@ -54,7 +56,7 @@ vi.mock('../../shared/data-hub/global-hub.js', () => ({
 vi.mock('../../shared/data-hub/compute/flakiness-entries.js', () => ({
     calcFlakinessEntries: vi.fn().mockReturnValue([]),
 }));
-vi.mock('../../shared/traceability-matrix.js', () => ({
+vi.mock('../../shared/report/traceability-matrix.js', () => ({
     buildTraceabilityMatrix: vi.fn(() => ({
         nodes: [],
         totalEpics: 0,
@@ -64,7 +66,7 @@ vi.mock('../../shared/traceability-matrix.js', () => ({
     })),
     generateTraceabilityHtml: vi.fn(() => '<html/>'),
 }));
-vi.mock('../../shared/health-score.js', () => ({
+vi.mock('../../shared/quality/health-score.js', () => ({
     calculateHealthScore: vi.fn(() => ({
         overall: 80,
         grade: 'good',
@@ -74,7 +76,7 @@ vi.mock('../../shared/health-score.js', () => ({
         timestamp: '',
     })),
 }));
-vi.mock('../../shared/release-score.js', () => ({
+vi.mock('../../shared/quality/release-score.js', () => ({
     calculateReleaseScore: vi.fn(() => ({
         score: 85,
         grade: 'good',
@@ -84,20 +86,20 @@ vi.mock('../../shared/release-score.js', () => ({
     })),
     generateReleaseScoreHtml: vi.fn(() => '<html/>'),
 }));
-vi.mock('../../shared/coverage-gap.js', () => ({
+vi.mock('../../shared/report/coverage-gap.js', () => ({
     analyzeCoverageGaps: vi.fn(() => ({ totals: { rawCoveragePct: 75, gap: 5 }, items: [], byEpic: {} })),
 }));
-vi.mock('../../shared/generate-coverage-gap-html.js', () => ({
+vi.mock('../../shared/report/generate-coverage-gap-html.js', () => ({
     generateCoverageGapHtml: vi.fn(() => '<html/>'),
 }));
 vi.mock('../../shared/open.js', () => ({
     openWithFallback: vi.fn(),
 }));
-vi.mock('../../shared/temp-dir.js', () => ({
+vi.mock('../../shared/infra/temp-dir.js', () => ({
     writeReport: vi.fn(() => path.join(os.tmpdir(), 'qa-test-report.html')),
     reportsDir: vi.fn(() => path.join(os.tmpdir(), 'qa-test-reports')),
 }));
-vi.mock('../../shared/first-run.js', () => ({
+vi.mock('../../shared/ui/first-run.js', () => ({
     maybeRunFirstRunWizard: vi.fn(),
 }));
 vi.mock('../commands/test-execution-flow.js', () => ({
@@ -116,7 +118,7 @@ vi.mock('../create_tests.js', () => ({
         }),
     },
 }));
-vi.mock('../../shared/dashboard-menu.js', () => ({
+vi.mock('../../shared/ui/dashboard-menu.js', () => ({
     showDashboardMenu: vi.fn(),
 }));
 
@@ -242,7 +244,7 @@ describe('Jira_management — case handlers are connected', () => {
         expect(handler).not.toBeNull();
 
         const ctx = createMockContext();
-        const { ask } = await import('../../shared/prompt.js');
+        const { ask } = await import('../../shared/ui/prompt.js');
         vi.mocked(ask).mockResolvedValue('NEW_PROJ');
         await (handler as (ctx: ReturnType<typeof createMockContext>) => Promise<boolean | void>)(ctx);
 
@@ -291,7 +293,7 @@ describe('Jira_management — case handlers are connected', () => {
         expect(handler).not.toBeNull();
 
         const ctx = createMockContext();
-        const { analyzeCoverageGaps } = await import('../../shared/coverage-gap.js');
+        const { analyzeCoverageGaps } = await import('../../shared/report/coverage-gap.js');
         await (handler as (ctx: ReturnType<typeof createMockContext>) => Promise<boolean | void>)(ctx);
 
         expect(vi.mocked(analyzeCoverageGaps)).toHaveBeenCalledWith(expect.anything(), expect.any(String));

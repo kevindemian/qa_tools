@@ -6,7 +6,7 @@ import {
     resolveManageChoice,
     resolveManageOneAction,
     moduleScript,
-} from '../entry-menu-logic.js';
+} from '../ui/entry-menu-logic.js';
 
 function p(name: string, over: Partial<ListedProject> = {}): ListedProject {
     return { name, dir: '/d/' + name, valid: true, ...over };

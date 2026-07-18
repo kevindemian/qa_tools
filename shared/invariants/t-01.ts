@@ -1,5 +1,5 @@
-import type { InvariantFn, ValidationContext, ValidationResult } from '../artifact-validator.js';
-import { pass, fail } from '../artifact-validator.js';
+import type { InvariantFn, ValidationContext, ValidationResult } from '../validation/artifact-validator.js';
+import { pass, fail } from '../validation/artifact-validator.js';
 import { parseTests, extractCriteria } from './types.js';
 
 function collectCoveredCriteria(tests: ReturnType<typeof parseTests>, criteria: string[]): Set<string> {

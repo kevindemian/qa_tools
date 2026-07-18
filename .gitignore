@@ -4,6 +4,7 @@ node_modules
 # === Generated / Temp ===
 logs/
 reports/*
+shared/reports/
 temp/
 *.log
 __pycache__
@@ -37,6 +38,16 @@ shared_docker/.selected_project
 
 # === Runtime state ===
 shared/.local/
+# Explicit runtime artifacts (F5/T5.1): generated state, logs and backups
+shared/.local/state/*.json
+shared/.local/state/*.json.bak
+cloud/*.log
+archive/
+# Root-level runtime state (F5 root cleanup): xdg state home, temp, lint/log artifacts
+.qa-tools/
+.tmp/
+eslint-results.json
+job_logs.txt
 
 # === Backup files ===
 *.bak
@@ -63,3 +74,6 @@ qa-quarantine.json
 .scannerwork/
 .eslintcache
 .prettier-cache/
+
+# === Session artifacts (ephemeral, not part of the project) ===
+archive/

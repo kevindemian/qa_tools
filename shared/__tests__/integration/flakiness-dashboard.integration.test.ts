@@ -14,7 +14,7 @@ vi.mock('../../logger.js', () => ({
     rootLogger: { error: vi.fn(), info: vi.fn(), child: vi.fn().mockReturnThis() },
 }));
 
-vi.mock('../../config.js', () => ({
+vi.mock('../../config-accessor.js', () => ({
     default: { get: vi.fn(() => '') },
     get: vi.fn(() => ''),
 }));
@@ -46,7 +46,7 @@ describe('Integration: Flakiness Dashboard (FT-19)', () => {
         it('produces complete HTML with summary and table', async () => {
             expect.hasAssertions();
 
-            const { generateFlakinessHtml } = await import('../../flakiness-dashboard.js');
+            const { generateFlakinessHtml } = await import('../../report/flakiness-dashboard.js');
             const entries = makeEntries();
             const html = generateFlakinessHtml(entries, 'Flakiness Report');
 
@@ -62,7 +62,7 @@ describe('Integration: Flakiness Dashboard (FT-19)', () => {
         it('shows no-failure message when all entries below threshold', async () => {
             expect.hasAssertions();
 
-            const { generateFlakinessHtml } = await import('../../flakiness-dashboard.js');
+            const { generateFlakinessHtml } = await import('../../report/flakiness-dashboard.js');
             const entries: FlakinessEntry[] = [
                 {
                     title: 'Stable test',
@@ -85,7 +85,7 @@ describe('Integration: Flakiness Dashboard (FT-19)', () => {
         it('renders custom title in heading', async () => {
             expect.hasAssertions();
 
-            const { generateFlakinessHtml } = await import('../../flakiness-dashboard.js');
+            const { generateFlakinessHtml } = await import('../../report/flakiness-dashboard.js');
             const html = generateFlakinessHtml([], 'My Dashboard');
 
             expect(html).toContain('My Dashboard');
@@ -96,7 +96,7 @@ describe('Integration: Flakiness Dashboard (FT-19)', () => {
         it('includes theme toggle and dark mode CSS', async () => {
             expect.hasAssertions();
 
-            const { generateFlakinessHtml } = await import('../../flakiness-dashboard.js');
+            const { generateFlakinessHtml } = await import('../../report/flakiness-dashboard.js');
             const html = generateFlakinessHtml([]);
 
             expect(html).toContain('qa-report-theme');
@@ -115,7 +115,7 @@ describe('Integration: Flakiness Dashboard (FT-19)', () => {
                 throw new Error('simulated failure');
             });
             const { rootLogger } = await import('../../logger.js');
-            const { generateFlakinessHtml } = await import('../../flakiness-dashboard.js');
+            const { generateFlakinessHtml } = await import('../../report/flakiness-dashboard.js');
             const html = generateFlakinessHtml([]);
 
             expect(html).toContain('Error generating dashboard');
@@ -129,7 +129,7 @@ describe('Integration: Flakiness Dashboard (FT-19)', () => {
         it('handles NaN and Infinity rates without crashing', async () => {
             expect.hasAssertions();
 
-            const { generateFlakinessHtml } = await import('../../flakiness-dashboard.js');
+            const { generateFlakinessHtml } = await import('../../report/flakiness-dashboard.js');
             const entries: FlakinessEntry[] = [
                 {
                     title: 'NaN-test',

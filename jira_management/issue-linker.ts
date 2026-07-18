@@ -1,8 +1,8 @@
 /** Issue linker — links test issues to requirements/stories and associates pre-conditions. */
-import { applyPalette } from '../shared/palette.js';
-import { success, isQuiet, onError, print } from '../shared/prompt.js';
+import { applyPalette } from '../shared/ui/palette.js';
+import { success, isQuiet, onError, print } from '../shared/ui/prompt.js';
 import { rootLogger } from '../shared/logger.js';
-import { sleep } from '../shared/http-client.js';
+import { sleep } from '../shared/infra/http-client.js';
 import type { JiraResourceLike } from '../shared/types.js';
 import type JiraLinkManager from './jira_link_manager.js';
 import type { LogContext, TestCase } from '../shared/types.js';

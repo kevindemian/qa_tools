@@ -1,5 +1,5 @@
 /** Publish a version — mark it as released in Jira. */
-import { warn, askConfirm, ask, printError, printSummary } from '../../shared/prompt.js';
+import { warn, askConfirm, ask, printError, printSummary } from '../../shared/ui/prompt.js';
 import type { CommandContext } from './context.js';
 import { OPERATION_CANCELLED } from '../constants.js';
 

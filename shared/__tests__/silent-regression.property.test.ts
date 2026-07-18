@@ -1,12 +1,12 @@
 import fc from 'fast-check';
 import { describe, expect, it, vi } from 'vitest';
-import { detectSilentRegression, generateSilentRegressionHtml } from '../silent-regression.js';
+import { detectSilentRegression, generateSilentRegressionHtml } from '../quality/silent-regression.js';
 
 vi.mock('../logger.js', () => ({
     rootLogger: { error: vi.fn(), info: vi.fn(), child: vi.fn().mockReturnThis() },
 }));
 
-vi.mock('../config.js', () => ({
+vi.mock('../config-accessor.js', () => ({
     default: { get: vi.fn(() => '') },
     get: vi.fn(() => ''),
 }));

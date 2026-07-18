@@ -17,7 +17,7 @@ import {
     getCurrentProjectDir,
     setCurrentProject,
 } from '../../project-context.js';
-import { isProjectProtected, moduleEnv, selectProject } from '../../entry-menu.js';
+import { isProjectProtected, moduleEnv, selectProject } from '../../ui/entry-menu.js';
 import { _extractProject } from '../../../git_triggers/cli-args.js';
 import { applyProjectContext } from '../../../git_triggers/cli-dispatch.js';
 

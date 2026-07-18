@@ -1,8 +1,8 @@
-import Config from '../shared/config.js';
-import { showSplash } from '../shared/splash.js';
-import { defaultOutput } from '../shared/output.js';
-import { warn, helpLine, title, divider, prompt, printError, showSelect, tableView } from '../shared/prompt.js';
-import { palette } from '../shared/palette.js';
+import Config from '../shared/config-accessor.js';
+import { showSplash } from '../shared/ui/splash.js';
+import { defaultOutput } from '../shared/ui/output.js';
+import { warn, helpLine, title, divider, prompt, printError, showSelect, tableView } from '../shared/ui/prompt.js';
+import { palette } from '../shared/ui/palette.js';
 import { rootLogger } from '../shared/logger.js';
 import { isCancelError } from '../shared/errors.js';
 import { loadTypedState, getStatePath } from '../shared/state.js';
@@ -10,7 +10,7 @@ import { getHandler } from './commands/index.js';
 import { SessionContext } from '../shared/session-context.js';
 import type { CommandContext } from './commands/context.js';
 import { HELP_TOPICS, CATEGORY_IDS, CATEGORY_TITLES, resolveAlias, buildMenuChoices } from './menu-data.js';
-import { showDocs } from '../shared/show-docs.js';
+import { showDocs } from '../shared/report/show-docs.js';
 export { showDocs };
 export function showHelp(topic?: string): void {
     if (!topic) {

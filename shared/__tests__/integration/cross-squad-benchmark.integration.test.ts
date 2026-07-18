@@ -4,7 +4,7 @@ vi.mock('../../logger.js', () => ({
     rootLogger: { error: vi.fn(), info: vi.fn(), warn: vi.fn(), child: vi.fn().mockReturnThis() },
 }));
 
-vi.mock('../../config.js', () => ({
+vi.mock('../../config-accessor.js', () => ({
     default: { get: vi.fn(() => '') },
     get: vi.fn(() => ''),
 }));
@@ -19,7 +19,7 @@ describe('Integration: Cross-Squad Benchmark (FT-25)', () => {
             expect.hasAssertions();
 
             const { computeCrossSquadBenchmark, generateBenchmarkHtml } =
-                await import('../../cross-squad-benchmark.js');
+                await import('../../quality/cross-squad-benchmark.js');
             const projects = [
                 {
                     name: 'Squad Alpha',
@@ -57,7 +57,7 @@ describe('Integration: Cross-Squad Benchmark (FT-25)', () => {
             expect.hasAssertions();
 
             const { computeCrossSquadBenchmark, generateBenchmarkHtml } =
-                await import('../../cross-squad-benchmark.js');
+                await import('../../quality/cross-squad-benchmark.js');
             const result = computeCrossSquadBenchmark([]);
             const html = generateBenchmarkHtml(result);
 
@@ -69,7 +69,7 @@ describe('Integration: Cross-Squad Benchmark (FT-25)', () => {
             expect.hasAssertions();
 
             const { computeCrossSquadBenchmark, generateBenchmarkHtml } =
-                await import('../../cross-squad-benchmark.js');
+                await import('../../quality/cross-squad-benchmark.js');
             const result = computeCrossSquadBenchmark([]);
             const html = generateBenchmarkHtml(result, 'Sprint 11 Review');
 
@@ -82,7 +82,7 @@ describe('Integration: Cross-Squad Benchmark (FT-25)', () => {
         it('returns error page when CSS dependency fails', async () => {
             expect.hasAssertions();
 
-            const { generateBenchmarkHtml } = await import('../../cross-squad-benchmark.js');
+            const { generateBenchmarkHtml } = await import('../../quality/cross-squad-benchmark.js');
             const html = generateBenchmarkHtml(null);
 
             expect(html).toContain('Error generating benchmark report');
@@ -91,7 +91,7 @@ describe('Integration: Cross-Squad Benchmark (FT-25)', () => {
         it('returns error page when result is undefined', async () => {
             expect.hasAssertions();
 
-            const { generateBenchmarkHtml } = await import('../../cross-squad-benchmark.js');
+            const { generateBenchmarkHtml } = await import('../../quality/cross-squad-benchmark.js');
             const html = generateBenchmarkHtml(undefined);
 
             expect(html).toContain('Error generating benchmark report');
@@ -102,7 +102,7 @@ describe('Integration: Cross-Squad Benchmark (FT-25)', () => {
         it('handles null projects', async () => {
             expect.hasAssertions();
 
-            const { computeCrossSquadBenchmark } = await import('../../cross-squad-benchmark.js');
+            const { computeCrossSquadBenchmark } = await import('../../quality/cross-squad-benchmark.js');
             const result = computeCrossSquadBenchmark(null);
 
             expect(result.benchmarks).toStrictEqual([]);
@@ -112,7 +112,7 @@ describe('Integration: Cross-Squad Benchmark (FT-25)', () => {
         it('handles undefined projects', async () => {
             expect.hasAssertions();
 
-            const { computeCrossSquadBenchmark } = await import('../../cross-squad-benchmark.js');
+            const { computeCrossSquadBenchmark } = await import('../../quality/cross-squad-benchmark.js');
             const result = computeCrossSquadBenchmark(undefined);
 
             expect(result.benchmarks).toStrictEqual([]);

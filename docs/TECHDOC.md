@@ -67,7 +67,7 @@ qa_tools/
 | **Provider Strategy**        | `git_triggers/`                                               | `GitProvider` interface → `GitLabManager` / `GitHubManager` estendem `GitProviderBase`  |
 | **Dependency Wall**          | `shared/deps.ts`                                              | Todo import externo passa por este arquivo. ESLint `no-restricted-imports` enforced     |
 | **Resilience Stack**         | `shared/http-client.ts`, `shared/llm-*.ts`                    | Circuit breaker + rate limiter + cache (memória + disco) + fallback chain (6 tiers)     |
-| **State Persistence**        | `shared/state.ts`                                             | JSON file `~/.local/state/qa-tools/state.json` com backup recovery                      |
+| **State Persistence**        | `shared/state.ts`                                             | Per-project `<xdgStateHome>/qa-tools/<project>/state.json` + shared `global.json`, com backup recovery |
 | **Store (Git-backed Cache)** | `shared/store.ts`                                             | SHA-keyed report cache, commits com `[skip ci]`, cross-session/sync                     |
 | **Invariants**               | `shared/invariants/`                                          | 13 regras T-01 a T-13 + 5 I-01 a I-05 para validação de artefatos de teste              |
 | **Feature Config**           | `shared/feature-config.ts` + `shared/types/feature-config.ts` | Config store + Zod schema — **PR-Report-specific** até segundo consumer existir         |
@@ -686,6 +686,35 @@ interface InteractiveCliArgs extends BaseCliArgs {
 type CliArgs = BatchCliArgs | InteractiveCliArgs | HelpCliArgs | VersionCliArgs;
 ```
 
+### Project / Multi-Project Types (`shared/types/project.ts`)
+
+Single source of truth for the multi-project registry. `name` and `dir` are
+mandatory (D1: `dir` is never omitted); the registry maps project name →
+`ProjectEntry` (D2).
+
+```typescript
+const projectEntrySchema = z.object({
+    name: z.string().min(1), // unique id (no '/', '..', '\')
+    dir: z.string().min(1), // PROJECT_ROOT; artifacts/state resolve from here
+    provider: z.string().optional(), // 'github' | 'gitlab'
+    projectId: z.string().optional(), // 'org/repo' (GitHub) or numeric id (GitLab)
+    jiraKey: z.string().optional(), // Jira/Xray project key
+    framework: z.string().optional(), // detected test framework
+    features: z.array(z.string()).optional(),
+    migrated: z.boolean().optional(), // true = came from legacy→XDG migration (menu-protected)
+});
+type ProjectEntry = z.infer<typeof projectEntrySchema>;
+
+// name -> ProjectEntry
+const projectRegistrySchema = z.record(z.string(), projectEntrySchema);
+type ProjectRegistry = z.infer<typeof projectRegistrySchema>;
+```
+
+Runtime propagation to child modules is via env vars: `QA_CURRENT_PROJECT`,
+`QA_PROJECT_DIR`, plus the per-project overlay keys written by the Setup Wizard
+(`QA_PROJECT_PROVIDER`, `QA_PROJECT_ID`, `QA_PROJECT_JIRA_KEY`,
+`QA_PROJECT_FRAMEWORK`). A `--project <name>` flag skips interactive selection.
+
 ### Dependency Wall (`shared/deps.ts`)
 
 ```typescript
@@ -744,7 +773,13 @@ import { globSync } from 'glob'; // file globbing
 | `logger.ts`                     | Structured logger (console + file, rotation)           | `Logger`, `rootLogger`                                                            |
 | `http-client.ts`                | Axios wrapper (retry, backoff, circuit-breaker)        | `createHttpClient()`                                                              |
 | `jira-client.ts`                | Base Jira REST client                                  | `JiraClient` class                                                                |
-| `state.ts`                      | Persisted JSON state file                              | `loadTypedState()`, `update()`                                                    |
+| `state.ts`                      | Persisted JSON state, per-project + shared globals     | `loadTypedState()`, `update()`                                                    |
+| `project-registry.ts`           | Multi-project registry (SSOT), CRUD over XDG store     | `loadRegistry()`, `saveRegistry()`, `addProject()`, `updateProject()`, `removeProject()`, `listProjects()`, `getProject()` |
+| `project-context.ts`            | Active-project resolution & per-project config load    | `getCurrentProject()`, `setCurrentProject()`, `loadProjectConfig()`               |
+| `project-paths.ts`              | XDG path helpers for registry/config/env/state         | `registryDir()`, `projectConfigDir()`, `projectEnvPath()`                         |
+| `parse-project-flag.ts`         | Parse global `--project`/`-p` flag from argv           | `parseProjectFlag()`                                                              |
+| `migration/migrate-projects.ts` | Atomic legacy→XDG cutover of `config/projects.json`    | `migrateLegacyProjects()`                                                         |
+| `entry-menu.ts`                 | Project selection/management menu before module boot   | `selectProject()`, `_initInfrastructure()`                                        |
 | `session-context.ts`            | Per-session context                                    | `SessionContext` class                                                            |
 | `llm-client.ts`                 | Multi-tier LLM client (6 tiers)                        | `llmPrompt()`, `setModel()`                                                       |
 | `llm-cache.ts`                  | LRU + disk cache for LLM responses                     | `LlmCache` class                                                                  |
@@ -924,6 +959,20 @@ import { globSync } from 'glob'; // file globbing
 
 **Global:** `--help`, `--version`, `--no-clear`
 
+**Global project selection (Jira & Git CLIs):** `--project, -p <name>` — parsed by
+`parseProjectFlag()`; when present, skips the interactive entry-menu selection.
+When absent, the entry-menu prompts for a project (no silent fallback).
+
+### Setup Wizard (`npx tsx setup/main.ts`)
+
+| Flag              | Description                                                    |
+| ----------------- | ------------------------------------------------------------- |
+| `--dir, -d <path>` | Register/configure a project located in another directory     |
+
+Registers the project in the XDG registry (`addProject`), writes the per-project
+`.env` overlay (`writeProjectEnvOverlay`), generates the CI pipeline and optional
+pre-push hook. Prompts for an optional Jira project key.
+
 ---
 
 ## CONFIG & ENV
@@ -970,11 +1019,21 @@ import { globSync } from 'glob'; // file globbing
 
 **CI/CD:** `CI`, `GITHUB_REPOSITORY`, `CI_JOB_NAME`, `GITHUB_WORKFLOW`, `CI_JOB_URL`, etc.
 
-**Config files:**
+**Multi-project storage (SSOT):**
 
-- Registry de projetos (multi-projeto): `~/.config/qa-tools/projects.json` (XDG). Ver documentação canônica em [`07-projetos-registry.md`](07-projetos-registry.md). O legado `config/projects.json` é migrado automaticamente no boot (renomeado para `.migrated`).
-- `config/providers.json` — Git provider per project (legado; preferir o campo `provider` do registry)
-- `config/reviewers.json` — Reviewer user IDs
+- **Registry:** `~/.config/qa-tools/projects.json` (`$XDG_CONFIG_HOME/qa-tools/projects.json` when set). Maps name → `ProjectEntry` (see Domain Model). Corrupt registry auto-restored from `projects.json.bak`.
+- **Per-project env overlay:** `<projectDir>/.qa-tools/<name>.env`, written by the Setup Wizard and applied at runtime by `project-context` (`OVERRIDE_ENV_MAP`).
+- **Per-project state:** `<xdgStateHome>/qa-tools/<name>/state.json`; shared global keys (`lastProject`, `_llm*`) in `<xdgStateHome>/qa-tools/global.json`.
+- **Legacy migration:** on boot, `_initInfrastructure()` runs `migrateLegacyProjects()`, converting any old `config/projects.json` to `ProjectEntry` (`migrated: true`, `dir` = PROJECT_ROOT) and renaming the legacy file to `config/projects.json.migrated` (no dual-write; idempotent; throws on invalid name / corrupt JSON).
+- **Runtime propagation env vars:** `QA_CURRENT_PROJECT`, `QA_PROJECT_DIR`, and overlay keys `QA_PROJECT_PROVIDER`, `QA_PROJECT_ID`, `QA_PROJECT_JIRA_KEY`, `QA_PROJECT_FRAMEWORK`. `--project <name>` skips interactive selection.
+
+User-facing journey (select/add/manage) is documented in [`07-projetos-registry.md`](07-projetos-registry.md).
+
+**Legacy `config/` files (post-migration):**
+
+- `config/providers.json` — Git provider per project (**legacy**; prefer the `provider` field of the registry `ProjectEntry`)
+- `config/reviewers.json` — Reviewer user IDs (per project)
+- `config/features.json` — Per-project feature toggles (keyed by project name; e.g. `prReport`), Zod-validated via `shared/feature-config.ts`
 
 ---
 
@@ -1005,7 +1064,8 @@ import { globSync } from 'glob'; // file globbing
 | **Palette wrapper** (`palette.ts`) | Abstraction over `chalk` so color scheme can be swapped centrally.                                                                                                                                  |
 | **Invariants (13 domain rules)**   | Type-level enforcement for test artifact quality. Each invariant has dedicated test. No workarounds allowed.                                                                                        |
 | **Portuguese CLI**                 | Default UI language is Portuguese (aliases, menus, messages). English supported via env.                                                                                                            |
-| **State persistence** (`state.ts`) | JSON file in `~/.local/state/qa-tools/` with automatic backup recovery. Prevents data loss on crash.                                                                                                |
+| **State persistence** (`state.ts`) | Per-project JSON in `<xdgStateHome>/qa-tools/<project>/state.json` + shared `global.json`, with automatic backup recovery. Isolates state per project; prevents data loss on crash.                   |
+| **Project Registry (XDG SSOT)**    | Single registry at `~/.config/qa-tools/projects.json` replaces per-workspace `config/projects.json`/`providers.json`. One registration per project; `dir` mandatory (D1); legacy auto-migrated on boot (no dual-write). Enables true multi-project isolation. |
 | **No web framework**               | Pure CLI — no Express, React, etc. Terminal UI via `@inquirer/*`, `chalk`, `cli-table3`.                                                                                                            |
 
 ---
@@ -1015,7 +1075,7 @@ import { globSync } from 'glob'; // file globbing
 Toda feature que requer conexão com ferramentas externas, configuração por projeto, ou execução em CI/CD DEVE seguir o padrão:
 
 ```
-Wizard (setup/) → Config (config/*.json) → Runtime (shared/)
+Wizard (setup/) → Config (registry XDG + per-project .env overlay; config/features.json) → Runtime (shared/)
 ```
 
 ### Camadas
@@ -1023,7 +1083,7 @@ Wizard (setup/) → Config (config/*.json) → Runtime (shared/)
 | Camada | Nome                   | Responsabilidade                                                                                                     |
 | ------ | ---------------------- | -------------------------------------------------------------------------------------------------------------------- |
 | 1      | **Setup/Wizard**       | Coleta configuração do usuário uma vez (interativo). Detecta ambiente, pergunta opções, escreve config + CI template |
-| 2      | **Config persistente** | `config/features.json` + `.env` + CI template gerado. A config determina o comportamento do runtime                  |
+| 2      | **Config persistente** | Registro no registry XDG (`addProject`) + overlay `.env` por projeto + `config/features.json` + CI template gerado. A config determina o comportamento do runtime |
 | 3      | **Runtime**            | Lê config, executa comportamento determinado. Sem hardcoded paths, sem flags manuais de CI                           |
 
 ### Critérios de Conformidade
@@ -1066,7 +1126,11 @@ Features divergentes devem ser registradas no backlog para conformização.
 
 | Path                                      | Purpose                                                            |
 | ----------------------------------------- | ------------------------------------------------------------------ |
-| `~/.local/state/qa-tools/state.json`      | Persisted session state                                            |
+| `<xdgStateHome>/qa-tools/<project>/state.json` | Per-project persisted session state (`.bak` backup alongside) |
+| `<xdgStateHome>/qa-tools/global.json`     | Shared global state keys (`lastProject`, `_llm*`)                   |
+| `<xdgStateHome>/qa-tools/state.json`      | Legacy single-file state (migrated to per-project on boot)          |
+| `<projectDir>/.qa-tools/{reports,logs,artifacts}` | Per-project outputs (overridden by `QA_TOOLS_*_DIR`)       |
+| `<projectDir>/.qa-tools/<name>.env`       | Per-project `.env` overlay (written by Setup Wizard)               |
 | `~/.qa-tools/`                            | Logs, cache, temporary files                                       |
 | `.env`                                    | Environment config (project root)                                  |
 | `~/.config/qa-tools/projects.json`        | Registry multi-projeto (XDG); ver [`07-projetos-registry.md`](07-projetos-registry.md) |

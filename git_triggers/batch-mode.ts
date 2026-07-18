@@ -2,31 +2,31 @@
  * Batch mode — run metrics, flakiness dashboard, pipeline failure analysis, and test-impact selection headlessly.
  * Uses unified CLI args from cli-args.ts.
  */
-import { success, error, info, printError, warn, withSpinner } from '../shared/prompt.js';
-import { extractErrorMessage } from '../shared/prompt-errors.js';
+import { success, error, info, printError, warn, withSpinner } from '../shared/ui/prompt.js';
+import { extractErrorMessage } from '../shared/ui/prompt-errors.js';
 import { getDataHub, setDataHub } from '../shared/data-hub/global-hub.js';
 import { calcFlakinessEntries } from '../shared/data-hub/compute/flakiness-entries.js';
-import { generateFlakinessHtml } from '../shared/flakiness-dashboard.js';
+import { generateFlakinessHtml } from '../shared/report/flakiness-dashboard.js';
 import {
     expireQuarantine,
     listQuarantined,
     quarantineRatio,
     generatePipelineQuarantine,
-} from '../shared/quarantine.js';
+} from '../shared/validation/quarantine.js';
 import { renderPipelineHealthHtml } from './pipeline-health-renderer.js';
 import type { PipelineHealthData } from './pipeline-health-renderer.js';
-import { exportTestsCsv, exportTestsJson } from '../shared/report-export.js';
-import { generateGitMetricsRuns, getLastGitLogError } from '../shared/git-metrics-adapter.js';
-import { analyzeTestImpact, generateTestSelectionJson } from '../shared/test-impact.js';
+import { exportTestsCsv, exportTestsJson } from '../shared/report/report-export.js';
+import { generateGitMetricsRuns, getLastGitLogError } from '../shared/ci/git-metrics-adapter.js';
+import { analyzeTestImpact, generateTestSelectionJson } from '../shared/quality/test-impact.js';
 import { offerPipelineFailureAnalysis } from './llm-pipeline.js';
 import { collectTestResults as _collectTestResults } from './test-results.js';
 import { generatePrReport } from '../shared/pr-report-core.js';
 import { isPrReportEnabled, getPrReportConfig } from '../shared/feature-config.js';
 import type { PipelineTriggerResult } from '../shared/types.js';
-import Config from '../shared/config.js';
-import JiraClient from '../shared/jira-client.js';
+import Config from '../shared/config-accessor.js';
+import JiraClient from '../shared/jira/jira-client.js';
 import JiraLinkManager from '../jira_management/jira_link_manager.js';
-import { writeReport } from '../shared/temp-dir.js';
+import { writeReport } from '../shared/infra/temp-dir.js';
 import { publishReport } from '../shared/publish.js';
 import {
     currentProvider,
@@ -171,7 +171,7 @@ async function _collectPipelineResults(
             await offerPipelineFailureAnalysis(parsed);
             let dataHub: import('../shared/types/data-hub.js').DataHub | undefined;
             try {
-                const { getOrFetchDataHub } = await import('../shared/ci-data.js');
+                const { getOrFetchDataHub } = await import('../shared/ci/ci-data.js');
                 dataHub = await getOrFetchDataHub(m, projectName);
             } catch (err: unknown) {
                 error('batch-mode: DataHub fetch failed — ' + extractErrorMessage(err));
@@ -387,7 +387,7 @@ function generateTestExport(projectName: string): void {
 
 async function generatePipelineHealthReport(m: import('../shared/types.js').GitProvider): Promise<void> {
     try {
-        const { getOrFetchDataHub } = await import('../shared/ci-data.js');
+        const { getOrFetchDataHub } = await import('../shared/ci/ci-data.js');
         const dataHub = await getOrFetchDataHub(m, getCurrentProject() ?? '');
         if (!dataHub || dataHub.raw.runs.length === 0) return;
 

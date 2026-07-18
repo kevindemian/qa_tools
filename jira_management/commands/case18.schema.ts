@@ -1,5 +1,5 @@
 /** Zod schemas for AI-generated test case validation (case18 — Generate Stories from User Story). */
-import { z } from '../../shared/validation.js';
+import { z } from '../../shared/validation/validation.js';
 
 export const PreConditionInputSchema = z.object({
     type: z.enum(['reference', 'create']),

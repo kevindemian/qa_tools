@@ -1,0 +1,479 @@
+import os from 'os';
+import { sanitizePath } from '../../shared/path-utils.js';
+vi.mock('../../shared/ui/prompt.js', () => ({
+    print: vi.fn(),
+    success: vi.fn(),
+    warn: vi.fn(),
+    info: vi.fn(),
+    title: vi.fn(),
+    prompt: vi.fn(),
+    confirm: vi.fn(),
+    printError: vi.fn(),
+    withSpinner: vi.fn(<T>(_: string, fn: () => Promise<T>) => fn()),
+}));
+
+const mockState = { currentProvider: 'gitlab' };
+
+vi.mock('../../shared/project-context', () => ({
+    getCurrentProject: vi.fn(() => ''),
+    setCurrentProject: vi.fn(),
+    clearCurrentProject: vi.fn(),
+}));
+
+vi.mock('../session-state', () => ({
+    pushHistory: vi.fn(),
+    displayProjects: vi.fn(),
+    displayRecentPipelines: vi.fn(),
+    createManagerForProject: vi.fn(() => mockManager),
+    getProviderForProject: vi.fn(() => 'gitlab'),
+    setProjectId: vi.fn(),
+    setManager: vi.fn(),
+    getProjects: vi.fn(() => ({})),
+    getDataHub: vi.fn().mockReturnValue({
+        computed: { metricsRuns: [] },
+        raw: { failureClassifications: [] },
+    }),
+    get currentProvider() {
+        return mockState.currentProvider;
+    },
+}));
+
+vi.mock('../../shared/data-hub/global-hub.js', () => ({
+    getDataHub: vi.fn().mockReturnValue({
+        computed: { metricsRuns: [] },
+        raw: { failureClassifications: [] },
+    }),
+}));
+
+vi.mock('../../shared/data-hub/compute/flakiness-entries.js', () => ({
+    calcFlakinessEntries: vi.fn().mockReturnValue([]),
+}));
+
+vi.mock('../../shared/quality/health-score.js', () => ({
+    calculateHealthScore: vi.fn(() => ({
+        overall: 50,
+        grade: 'needs_attention',
+        dimensions: { passRate: { score: 50 }, flakyRate: { score: 50 }, coverage: { score: 50 } },
+        qualityGate: 'fail',
+    })),
+}));
+vi.mock('../../shared/quality/defect-trend.js', () => ({
+    aggregateDefectTrends: vi.fn(() => ({ trends: [] })),
+    generateDefectTrendHtml: vi.fn(() => ''),
+}));
+vi.mock('../../shared/quality/release-score.js', () => ({
+    calculateReleaseScore: vi.fn(() => ({})),
+    generateReleaseScoreHtml: vi.fn(() => ''),
+}));
+vi.mock('../../shared/report/ai-effectiveness.js', () => ({
+    computeAiEffectiveness: vi.fn(() => ({})),
+    generateAiEffectivenessHtml: vi.fn(() => ''),
+}));
+vi.mock('../../shared/report/traceability-matrix.js', () => ({
+    buildTraceabilityMatrix: vi.fn(() => ({ nodes: [] })),
+    generateTraceabilityHtml: vi.fn(() => ''),
+}));
+vi.mock('../../shared/report/backlog-health.js', () => ({
+    analyzeBacklogHealth: vi.fn(() => ({})),
+    generateBacklogHealthHtml: vi.fn(() => ''),
+}));
+vi.mock('../../shared/quality/defect-seasonality.js', () => ({
+    aggregateDefectSeasonality: vi.fn(() => ({ peakDay: '' })),
+    generateSeasonalityHtml: vi.fn(() => ''),
+}));
+vi.mock('../../shared/quality/silent-regression.js', () => ({
+    detectSilentRegression: vi.fn(() => ({ regressions: [] })),
+    generateSilentRegressionHtml: vi.fn(() => ''),
+}));
+vi.mock('../../shared/report/ai-comparison.js', () => ({
+    compareAiVsManual: vi.fn(() => []),
+    generateAiComparisonHtml: vi.fn(() => ''),
+}));
+vi.mock('../../shared/quality/cross-squad-benchmark.js', () => ({
+    computeCrossSquadBenchmark: vi.fn(() => ({})),
+    generateBenchmarkHtml: vi.fn(() => ''),
+}));
+vi.mock('../../shared/quality/developer-profile.js', () => ({
+    buildDeveloperProfile: vi.fn(() => []),
+    generateDeveloperProfileHtml: vi.fn(() => ''),
+}));
+vi.mock('../../shared/quality/suite-optimization.js', () => ({
+    analyzeSuiteOptimization: vi.fn(() => ({})),
+    generateOptimizationHtml: vi.fn(() => ''),
+}));
+vi.mock('../../shared/report/incident-report.js', () => ({
+    buildIncidentReport: vi.fn(() => ({
+        events: [],
+        eventCount: 0,
+        highCount: 0,
+        mediumCount: 0,
+        lowCount: 0,
+        summary: '',
+        overallSeverity: 'none' as const,
+        timestamp: new Date().toISOString(),
+    })),
+    generateIncidentReportHtml: vi.fn(() => ''),
+}));
+vi.mock('../../shared/report/impact-alert.js', () => ({
+    analyzePipelineImpact: vi.fn(() => ({})),
+    generateImpactAlertHtml: vi.fn(() => ''),
+}));
+vi.mock('../../shared/quality/pipeline-cost.js', () => ({
+    calculatePipelineCost: vi.fn(() => ({})),
+    generatePipelineCostHtml: vi.fn(() => ''),
+}));
+vi.mock('../../shared/quality/requirement-score.js', () => ({
+    calculateRequirementScores: vi.fn(() => []),
+    generateRequirementScoreHtml: vi.fn(() => ''),
+}));
+vi.mock('../../shared/ci/git-metrics-adapter.js', () => ({
+    generateGitMetricsRuns: vi.fn(() => []),
+    generateGitFailureClassifications: vi.fn(() => []),
+    getLastGitLogError: vi.fn(() => undefined),
+    clearGitLogError: vi.fn(),
+}));
+vi.mock('../../shared/quality/quality-gate.js', () => ({
+    runQualityGate: vi.fn(() => ({ overall: 'pass', checks: [], score: 85 })),
+    formatQualityGateText: vi.fn(() => ''),
+}));
+vi.mock('../../shared/infra/temp-dir.js', () => ({
+    writeReport: vi.fn((name: string) => sanitizePath(os.tmpdir(), name)),
+}));
+vi.mock('../../shared/jira/jira-client.js', () => ({ default: vi.fn() }));
+
+vi.mock('../../shared/report/flakiness-dashboard.js', () => ({ generateFlakinessHtml: vi.fn(() => '<html>') }));
+
+vi.mock('../../shared/open', () => ({ openWithFallback: vi.fn() }));
+
+vi.mock('../../shared/state', () => ({ update: vi.fn() }));
+
+vi.mock('fs', () => ({
+    writeFileSync: vi.fn(),
+    mkdirSync: vi.fn(),
+    existsSync: vi.fn(),
+    rmSync: vi.fn(),
+}));
+
+import { success, warn, info, print, prompt, printError } from '../../shared/ui/prompt.js';
+import { getCurrentProject, setCurrentProject } from '../../shared/project-context.js';
+import {
+    pushHistory,
+    getProjects,
+    setProjectId,
+    setManager,
+    getDataHub as getSessionDataHub,
+} from '../session-state.js';
+import { calcFlakinessEntries } from '../../shared/data-hub/compute/flakiness-entries.js';
+import { generateFlakinessHtml } from '../../shared/report/flakiness-dashboard.js';
+import {
+    handleListSchedules,
+    handleRunSchedule,
+    handleChangeProject,
+    handleFlakinessDashboard,
+    generateWeeklyQualityReport,
+} from '../schedule-handler.js';
+import { createMockGitProvider } from '../../shared/test-utils/factories/index.js';
+
+const mockPrompt = vi.mocked(prompt);
+const mockPushHistory = vi.mocked(pushHistory);
+const mockPrintError = vi.mocked(printError);
+const mockWarn = vi.mocked(warn);
+const mockInfo = vi.mocked(info);
+const mockGetDataHub = vi.mocked(getSessionDataHub);
+const mockCalcFlakinessEntries = vi.mocked(calcFlakinessEntries);
+const mockGenerateHtml = vi.mocked(generateFlakinessHtml);
+
+const mockManager = createMockGitProvider();
+
+describe('Schedule Handler', () => {
+    beforeAll(async () => {
+        const openModule = (await import('../../shared/open.js')) as {
+            openWithFallback: (...args: unknown[]) => unknown;
+        };
+        if (!vi.isMockFunction(openModule.openWithFallback)) {
+            throw new Error('Guard FAILED: openWithFallback is NOT mocked. Browser would open!');
+        }
+    });
+
+    beforeEach(() => {
+        vi.clearAllMocks();
+        mockState.currentProvider = 'gitlab';
+        vi.mocked(getCurrentProject).mockReturnValue('');
+    });
+
+    describe('HandleListSchedules', () => {
+        it('lists schedules for gitlab', async () => {
+            expect.hasAssertions();
+
+            const schedules = [
+                { id: '1', description: 'Nightly', next_run_at: '2026-01-01' },
+                { id: '2', description: '' },
+            ];
+            vi.spyOn(mockManager, 'getSchedules').mockResolvedValue(schedules);
+
+            await handleListSchedules(mockManager);
+
+            expect(info).toHaveBeenCalledWith(expect.stringContaining('Schedules'));
+            expect(print).toHaveBeenCalledTimes(2);
+            expect(mockPushHistory).toHaveBeenCalledWith('list-schedules', '2 schedules', 'ok');
+        });
+
+        it('warns on empty schedules', async () => {
+            expect.hasAssertions();
+
+            vi.spyOn(mockManager, 'getSchedules').mockResolvedValue([]);
+
+            await handleListSchedules(mockManager);
+
+            expect(mockWarn).toHaveBeenCalledWith(expect.stringContaining('Nenhum schedule'));
+        });
+
+        it('warns for github provider', async () => {
+            expect.hasAssertions();
+
+            mockState.currentProvider = 'github';
+
+            await handleListSchedules(mockManager);
+
+            expect(mockWarn).toHaveBeenCalledWith(expect.stringContaining('GitHub'));
+            expect(mockManager.getSchedules).not.toHaveBeenCalled();
+        });
+
+        it('handles error', async () => {
+            expect.hasAssertions();
+
+            vi.spyOn(mockManager, 'getSchedules').mockRejectedValue(new Error('API error'));
+
+            await handleListSchedules(mockManager);
+
+            expect(mockPrintError).toHaveBeenCalledWith(expect.any(String), expect.any(Error));
+        });
+    });
+
+    describe('HandleRunSchedule', () => {
+        it('runs schedule for gitlab', async () => {
+            expect.hasAssertions();
+
+            mockPrompt.mockReturnValue('schedule-1');
+            vi.spyOn(mockManager, 'runSchedule').mockResolvedValue({ status: 'success' });
+
+            await handleRunSchedule(mockManager);
+
+            expect(mockManager.runSchedule).toHaveBeenCalledWith('schedule-1');
+            expect(success).toHaveBeenCalledWith(expect.stringContaining('Schedule'));
+            expect(mockPushHistory).toHaveBeenCalledWith('schedule-run', 'schedule-1', 'ok');
+        });
+
+        it('warns for github provider', async () => {
+            expect.hasAssertions();
+
+            mockState.currentProvider = 'github';
+
+            await handleRunSchedule(mockManager);
+
+            expect(mockWarn).toHaveBeenCalledWith(expect.stringContaining('GitHub'));
+            expect(mockManager.runSchedule).not.toHaveBeenCalled();
+        });
+
+        it('handles error', async () => {
+            expect.hasAssertions();
+
+            mockPrompt.mockReturnValue('sched-1');
+            vi.spyOn(mockManager, 'runSchedule').mockRejectedValue(new Error('fail'));
+
+            await handleRunSchedule(mockManager);
+
+            expect(mockPrintError).toHaveBeenCalledWith(expect.any(String), expect.any(Error));
+        });
+    });
+
+    describe('HandleChangeProject', () => {
+        const names = ['proj1', 'proj2'];
+
+        it('changes to valid project', async () => {
+            expect.hasAssertions();
+
+            mockPrompt.mockReturnValue('1');
+            vi.mocked(getProjects).mockReturnValue({ proj1: '1', proj2: '2' });
+
+            await handleChangeProject(names);
+
+            expect(setCurrentProject).toHaveBeenCalledWith('proj1');
+            expect(setProjectId).toHaveBeenCalledWith('1');
+            expect(setManager).toHaveBeenCalledWith(expect.anything());
+            expect(success).toHaveBeenCalledWith(expect.stringContaining('proj1'));
+        });
+
+        it('warns on invalid index', async () => {
+            expect.hasAssertions();
+
+            mockPrompt.mockReturnValue('99');
+
+            await handleChangeProject(names);
+
+            expect(mockWarn).toHaveBeenCalledWith(expect.stringContaining('inválida'));
+        });
+
+        it('warns on NaN', async () => {
+            expect.hasAssertions();
+
+            mockPrompt.mockReturnValue('abc');
+
+            await handleChangeProject(names);
+
+            expect(mockWarn).toHaveBeenCalledWith(expect.stringContaining('inválida'));
+        });
+    });
+
+    describe('HandleFlakinessDashboard', () => {
+        it('warns when no project selected', () => {
+            void handleFlakinessDashboard();
+
+            expect(mockWarn).toHaveBeenCalledWith(expect.stringContaining('Nenhum projeto'));
+        });
+
+        it('warns when less than 2 runs', () => {
+            vi.mocked(getCurrentProject).mockReturnValue('proj1');
+            mockGetDataHub.mockReturnValue({
+                computed: {
+                    metricsRuns: [
+                        {
+                            project: 'proj1',
+                            timestamp: '',
+                            total: 0,
+                            passed: 0,
+                            failed: 0,
+                            skipped: 0,
+                            duration: 0,
+                            tests: [],
+                        },
+                    ],
+                },
+                raw: { failureClassifications: [] },
+            } as never);
+
+            void handleFlakinessDashboard();
+
+            expect(mockWarn).toHaveBeenCalledWith(expect.stringContaining('Menos de 2'));
+        });
+
+        it('informs when no flaky tests', () => {
+            vi.mocked(getCurrentProject).mockReturnValue('proj1');
+            mockGetDataHub.mockReturnValue({
+                computed: {
+                    metricsRuns: [
+                        {
+                            project: 'proj1',
+                            timestamp: '',
+                            total: 0,
+                            passed: 0,
+                            failed: 0,
+                            skipped: 0,
+                            duration: 0,
+                            tests: [],
+                        },
+                        {
+                            project: 'proj1',
+                            timestamp: '',
+                            total: 0,
+                            passed: 0,
+                            failed: 0,
+                            skipped: 0,
+                            duration: 0,
+                            tests: [],
+                        },
+                    ],
+                },
+                raw: { failureClassifications: [] },
+            } as never);
+            mockCalcFlakinessEntries.mockReturnValue([]);
+
+            void handleFlakinessDashboard();
+
+            expect(mockInfo).toHaveBeenCalledWith(expect.stringContaining('Nenhum teste flaky'));
+        });
+
+        it('generates dashboard HTML and opens browser', async () => {
+            expect.hasAssertions();
+
+            vi.mocked(getCurrentProject).mockReturnValue('proj1');
+            mockGetDataHub.mockReturnValue({
+                computed: {
+                    metricsRuns: [
+                        {
+                            project: 'proj1',
+                            timestamp: '',
+                            total: 0,
+                            passed: 0,
+                            failed: 0,
+                            skipped: 0,
+                            duration: 0,
+                            tests: [],
+                        },
+                        {
+                            project: 'proj1',
+                            timestamp: '',
+                            total: 0,
+                            passed: 0,
+                            failed: 0,
+                            skipped: 0,
+                            duration: 0,
+                            tests: [],
+                        },
+                    ],
+                },
+                raw: { failureClassifications: [] },
+            } as never);
+            mockCalcFlakinessEntries.mockReturnValue([
+                { title: 't1', project: 'test', rate: 0.5, passCount: 1, failCount: 0, skipCount: 0, totalRuns: 1 },
+            ]);
+
+            await handleFlakinessDashboard();
+
+            expect(mockGenerateHtml).toHaveBeenCalledWith(expect.any(Array), expect.any(String));
+
+            const { openWithFallback } = (await import('../../shared/open.js')) as {
+                openWithFallback: (...args: unknown[]) => unknown;
+            };
+
+            expect(openWithFallback).toHaveBeenCalledWith(
+                expect.stringContaining('flakiness'),
+                'Dashboard de flaky',
+                info,
+            );
+        });
+    });
+
+    describe('GenerateWeeklyQualityReport', () => {
+        it('warns when no project selected', () => {
+            vi.mocked(getCurrentProject).mockReturnValue('');
+            generateWeeklyQualityReport();
+
+            expect(mockWarn).toHaveBeenCalledWith(expect.stringContaining('Nenhum projeto'));
+        });
+
+        it('warns when less than 2 runs and git fallback fails', () => {
+            vi.mocked(getCurrentProject).mockReturnValue('proj1');
+            mockGetDataHub.mockReturnValue({
+                computed: {
+                    metricsRuns: [
+                        {
+                            project: 'proj1',
+                            timestamp: '',
+                            total: 0,
+                            passed: 0,
+                            failed: 0,
+                            skipped: 0,
+                            duration: 0,
+                            tests: [],
+                        },
+                    ],
+                },
+                raw: { failureClassifications: [] },
+            } as never);
+            generateWeeklyQualityReport();
+
+            expect(mockWarn).toHaveBeenCalledWith(expect.stringContaining('Menos de 2'));
+        });
+    });
+});

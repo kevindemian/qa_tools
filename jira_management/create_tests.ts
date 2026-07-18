@@ -12,7 +12,7 @@ import { rootLogger } from '../shared/logger.js';
 import IssueLinker from './issue-linker.js';
 import { resolveCsvPath, resolveJsonPath, resolveLabels, parseJsonTests } from './import-prep.js';
 import { createTestsFromTestCases, type CreateTestsFromTestCasesResult } from './import-orchestrator.js';
-import { isQuiet, info, warn, printError } from '../shared/prompt.js';
+import { isQuiet, info, warn, printError } from '../shared/ui/prompt.js';
 
 interface CreateFromFileParams {
     jiraResource: JiraResourceLike;

@@ -43,4 +43,4 @@ if [ ! -f "$SCRIPT_DIR/.env" ]; then
 fi
 
 # Delegate to interactive TypeScript menu
-npx tsx "$SCRIPT_DIR/shared/entry-menu.ts" "$@"
+npx tsx "$SCRIPT_DIR/shared/ui/entry-menu.ts" "$@"

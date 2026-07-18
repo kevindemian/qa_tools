@@ -1,6 +1,14 @@
 import { describe, it, expect, vi, beforeEach } from 'vitest';
+
+vi.mock('../../../ui/prompt-format.js', async () => {
+    const actual = await vi.importActual<typeof import('../../../ui/prompt-format.js')>('../../../ui/prompt-format.js');
+    return { ...actual, warn: vi.fn() };
+});
+
 import { detectFrameworkCascade } from '../../extractors/framework-detector.js';
 import { rootLogger } from '../../../logger.js';
+import { warn } from '../../../ui/prompt-format.js';
+import { ExternalError, type ExternalErrorKind } from '../../../errors.js';
 import type { GitProvider } from '../../../types/ci-cd.js';
 
 function createMockGitProvider(): GitProvider {
@@ -79,5 +87,59 @@ describe('DetectFrameworkCascade', () => {
         expect(debugSpy).toHaveBeenCalledWith(expect.stringContaining('API error'));
 
         debugSpy.mockRestore();
+    });
+
+    describe('Infrastructure-error surfacing (must warn the user, never silently degrade)', () => {
+        const INFRA_KINDS: ExternalErrorKind[] = ['auth', 'permission', 'rateLimit', 'network', 'server'];
+
+        beforeEach(() => {
+            vi.mocked(warn).mockClear();
+        });
+
+        it.each(INFRA_KINDS)('surfaces an ExternalError of kind "%s" to the user via warn()', async (kind) => {
+            expect.assertions(3);
+
+            mockGetFileContents.mockRejectedValue(
+                new ExternalError(kind, `boundary failure (${kind})`, { operation: 'getFileContents' }),
+            );
+
+            const result = await detectFrameworkCascade(mockProvider, 'main');
+
+            expect(result).toStrictEqual({ framework: 'unknown', confidence: 0 });
+            expect(warn).toHaveBeenCalledTimes(1);
+            expect(vi.mocked(warn).mock.calls[0]?.[0]).toContain(kind);
+        });
+
+        it('appends the remediation hint to the warning when present', async () => {
+            expect.assertions(2);
+
+            mockGetFileContents.mockRejectedValue(
+                new ExternalError('auth', 'token invalid (HTTP 401)', {
+                    operation: 'getFileContents',
+                    remediation: 'Reconfigure the token via /setup',
+                }),
+            );
+
+            await detectFrameworkCascade(mockProvider, 'main');
+
+            expect(warn).toHaveBeenCalledTimes(1);
+            expect(vi.mocked(warn).mock.calls[0]?.[0]).toContain('Reconfigure the token via /setup');
+        });
+
+        it('does NOT warn for non-infrastructure ExternalError kinds (notFound falls through to debug)', async () => {
+            expect.assertions(2);
+
+            const debugSpy = vi.spyOn(rootLogger, 'debug').mockImplementation(() => undefined);
+            mockGetFileContents.mockRejectedValue(
+                new ExternalError('notFound', 'missing resource', { operation: 'getFileContents' }),
+            );
+
+            const result = await detectFrameworkCascade(mockProvider, 'main');
+
+            expect(warn).not.toHaveBeenCalled();
+            expect(result).toStrictEqual({ framework: 'unknown', confidence: 0 });
+
+            debugSpy.mockRestore();
+        });
     });
 });

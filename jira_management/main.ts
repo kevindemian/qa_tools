@@ -1,14 +1,14 @@
-import Config from '../shared/config.js';
+import Config from '../shared/config-accessor.js';
 import JiraResource from './jira_resource.js';
 import JiraLinkManager from './jira_link_manager.js';
 import CsvResource from './csv_resource.js';
 import PackageVersionManager from './package_version_manager.js';
-import { showSplash } from '../shared/splash.js';
-import type { JiraMode } from '../shared/jira-auth.js';
-import { calculateHealthScore } from '../shared/health-score.js';
+import { showSplash } from '../shared/ui/splash.js';
+import type { JiraMode } from '../shared/jira/jira-auth.js';
+import { calculateHealthScore } from '../shared/quality/health-score.js';
 import pkg from '../package.json';
-import { info, title, prompt, printError, warn } from '../shared/prompt.js';
-import { withSpinner } from '../shared/spinner.js';
+import { info, title, prompt, printError, warn } from '../shared/ui/prompt.js';
+import { withSpinner } from '../shared/ui/spinner.js';
 import {
     mask,
     createValidateEnv,
@@ -16,20 +16,20 @@ import {
     setupSigint,
     gracefulExit,
     printSessionSummary as sharedPrintSessionSummary,
-} from '../shared/cli_base.js';
+} from '../shared/ui/cli_base.js';
 import { rootLogger } from '../shared/logger.js';
-import { pushBreadcrumb, popBreadcrumb, clearBreadcrumbs } from '../shared/breadcrumbs.js';
+import { pushBreadcrumb, popBreadcrumb, clearBreadcrumbs } from '../shared/ui/breadcrumbs.js';
 import { loadTypedState, update as updateState, getStatePath } from '../shared/state.js';
 import { getDataHub } from '../shared/data-hub/global-hub.js';
-import { palette, applyPalette } from '../shared/palette.js';
+import { palette, applyPalette } from '../shared/ui/palette.js';
 import { SessionContext } from '../shared/session-context.js';
 import { ExitCode, type StateSchema } from '../shared/types.js';
 import type { CommandContext } from './commands/context.js';
 import createTests from './create_tests.js';
-import { ensureDirs, registerCleanup } from '../shared/temp-dir.js';
+import { ensureDirs, registerCleanup } from '../shared/infra/temp-dir.js';
 import { CATEGORY_IDS, CATEGORY_TITLES } from './menu-data.js';
 import { dispatchChoice, getAndResolveChoice } from './ui-helpers.js';
-import { maybeRunFirstRunWizard } from '../shared/first-run.js';
+import { maybeRunFirstRunWizard } from '../shared/ui/first-run.js';
 import { setCurrentProject, getCurrentProject, loadProjectConfig } from '../shared/project-context.js';
 import { parseProjectFlag } from '../shared/parse-project-flag.js';
 
@@ -479,9 +479,5 @@ main().catch((err: unknown) => {
     sharedPrintSessionSummary([], '', state.history || []);
     rootLogger.error('Main error', { error: String(err) });
 });
-
-// Re-exports for backward compatibility (tests use require('./main'))
-export { resolveAlias, buildMenuChoices, _configHint } from './menu-data.js';
-export { showHelp, showDocs, showHelpLoop, handleSpecialInput } from './ui-helpers.js';
 
 export { main, showSplash, dispatchChoice, dispatchAndHandleResult, showGapBadge, _isJiraConfigured };

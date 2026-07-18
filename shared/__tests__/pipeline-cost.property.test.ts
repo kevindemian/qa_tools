@@ -12,7 +12,7 @@
  */
 import * as fc from 'fast-check';
 import { describe, expect, it, vi } from 'vitest';
-import { calculatePipelineCost, generatePipelineCostHtml } from '../pipeline-cost.js';
+import { calculatePipelineCost, generatePipelineCostHtml } from '../quality/pipeline-cost.js';
 import type { DataHub } from '../types/data-hub.js';
 import type { PipelineRun } from '../types/ci-cd.js';
 import { createTestHub } from './test-hub.js';
@@ -21,7 +21,7 @@ vi.mock('../logger.js', () => ({
     rootLogger: { error: vi.fn(), info: vi.fn(), child: vi.fn().mockReturnThis() },
 }));
 
-vi.mock('../config.js', () => ({
+vi.mock('../config-accessor.js', () => ({
     default: { get: vi.fn(() => '') },
     get: vi.fn(() => ''),
 }));

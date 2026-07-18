@@ -1,12 +1,12 @@
 import fc from 'fast-check';
 import { describe, expect, it, vi } from 'vitest';
-import { computeAiEffectiveness, generateAiEffectivenessHtml } from '../ai-effectiveness.js';
+import { computeAiEffectiveness, generateAiEffectivenessHtml } from '../report/ai-effectiveness.js';
 
 vi.mock('../logger', () => ({
     rootLogger: { error: vi.fn(), info: vi.fn(), child: vi.fn().mockReturnThis() },
 }));
 
-vi.mock('../config', () => ({
+vi.mock('../../config.js', () => ({
     default: { get: vi.fn(() => '') },
     get: vi.fn(() => ''),
 }));

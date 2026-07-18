@@ -343,6 +343,16 @@ Never justify decisions using:
 - **Decisão vigente:** REGRA ATIVA E COMPLACENTE. Nenhuma ação necessária. O audit trail anterior é mantido acima apenas para histórico; a recomendação "não reativar" não se aplica pois a regra já está ativa.
 - **Comentário:** não há explicação inline em `tsconfig.json` (linha 17 apenas habilita a flag).
 
+### Mudança de contrato — `shared/env-loader.ts` (SH-3b)
+
+- **Data:** 2026-07-17
+- **Autorização:** explícita do usuário — "mudança de contrato autorizada desde que a alteração tenha como finalidade e consequência mensurável superioridade técnica e/ou segurança".
+- **Mudança 1:** `ensureDotenv()` → `ensureDotenv(projectRoot?: string)` (parâmetro opcional, default `path.resolve(import.meta.dirname, '..')`). Retrocompatível: os 5 call-sites (`config-accessor.ts`, `ci-status.ts`, `cypress_test.ts`, `env-utils.ts` re-export, testes) chamam sem argumento → comportamento default idêntico (§10 equivalência).
+- **Mudança 2:** `warnSecretsInFile` passou de `function` interna para `export function` (assinatura inalterada). 0 consumidores externos afetados.
+- **Mudança 3 (refactor SRP/DRY §6):** extraído `logViaRootLogger(level, message)` consolidando 3 blocos duplicados `getRootLogger().then().catch()` num único ponto.
+- **Finalidade/consequência mensurável:** tornar exercitável em teste hermético (fs real, sem mock-teatro §26) (a) o mecanismo de segurança de secret-scan §25 — antes 0% coberto — e (b) o caminho de produção `!isTest` de `ensureDotenv`. Cobertura de `env-loader.ts`: 76% → 96.11% stmts / 85.29% branch / 93.33% funcs / 95.4% lines (todos ≥ floor).
+- **Safeguards §24 documentados inline (não código morto, não exercitáveis com dados reais):** arms de catch de `dotenv.config` (não lança em arquivo ausente) e o único `.catch` de falha de init do logger em `logViaRootLogger`. Linhas descobertas remanescentes (31/104/114/147) são esses safeguards.
+
 ---
 
 ## 16. FINAL INVARIANT

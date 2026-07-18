@@ -102,7 +102,7 @@ describe('System: CI Data Hub — Full Pipeline Flow', () => {
         it('health score uses DataHub passRate instead of MetricsStore when provided', async () => {
             expect.hasAssertions();
 
-            const { calculateHealthScore } = await import('../../health-score.js');
+            const { calculateHealthScore } = await import('../../quality/health-score.js');
             const runs = [makeRun(1, { conclusion: 'success' }), makeRun(2, { conclusion: 'failure' })];
             const rawData: RawData = { runs, jobs: new Map(), failureReasons: new Map(), artifacts: new Map() };
             const provider = createMockDataProvider(rawData);
@@ -120,7 +120,7 @@ describe('System: CI Data Hub — Full Pipeline Flow', () => {
         it('pipeline cost uses DataHub runs for real cost calculation', async () => {
             expect.hasAssertions();
 
-            const { calculatePipelineCost } = await import('../../pipeline-cost.js');
+            const { calculatePipelineCost } = await import('../../quality/pipeline-cost.js');
             const runs = [
                 makeRun(1, {
                     run_started_at: '2026-07-01T10:00:00Z',
@@ -147,7 +147,7 @@ describe('System: CI Data Hub — Full Pipeline Flow', () => {
         it('traceability matrix uses DataHub flaky tests for flakiness', async () => {
             expect.hasAssertions();
 
-            const { buildTraceabilityMatrix } = await import('../../traceability-matrix.js');
+            const { buildTraceabilityMatrix } = await import('../../report/traceability-matrix.js');
             const runs = [makeRun(1)];
             const jobsMap = new Map<number, PipelineJob[]>([
                 [1, [makeJob(10, { status: 'failure' }), makeJob(11, { status: 'success' })]],
@@ -189,7 +189,7 @@ describe('System: CI Data Hub — Full Pipeline Flow', () => {
         it('empty DataHub uses computed metrics (SSOT), not MetricsStore fallback', async () => {
             expect.hasAssertions();
 
-            const { calculateHealthScore } = await import('../../health-score.js');
+            const { calculateHealthScore } = await import('../../quality/health-score.js');
 
             const rawData: RawData = { runs: [], jobs: new Map(), failureReasons: new Map(), artifacts: new Map() };
             const provider = createMockDataProvider(rawData);

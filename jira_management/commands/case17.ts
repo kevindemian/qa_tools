@@ -1,13 +1,13 @@
 import { formatErr } from '../../shared/errors.js';
 import fs from 'fs';
 import path from 'path';
-import { createHttpClient } from '../../shared/http-client.js';
+import { createHttpClient } from '../../shared/infra/http-client.js';
 import { sanitizePath } from '../../shared/path-utils.js';
 import { rootLogger } from '../../shared/logger.js';
-import { ask, askConfirm, info, print, printError, title, withSpinner } from '../../shared/prompt.js';
+import { ask, askConfirm, info, print, printError, title, withSpinner } from '../../shared/ui/prompt.js';
 import type { JiraSearchResult } from '../../shared/types.js';
 import type { ParseResult, FlatTest } from '../../shared/result_parser.js';
-import { writeReport } from '../../shared/temp-dir.js';
+import { writeReport } from '../../shared/infra/temp-dir.js';
 import { parseTestResultsFile } from '../../shared/result_parser.js';
 import {
     generateHtmlReport,
@@ -15,24 +15,24 @@ import {
     type TestRunTab,
     type ReportOptions,
     type TestHistoryRun,
-} from '../../shared/report-generator.js';
+} from '../../shared/report/report-generator.js';
 import { getDataHub, isDataHubInitialized } from '../../shared/data-hub/global-hub.js';
 import { calcFlakinessEntries } from '../../shared/data-hub/compute/flakiness-entries.js';
 import { calcRunPassRate } from '../../shared/data-hub/compute/run-pass-rate.js';
-import { statsFromTests } from '../../shared/report-utils.js';
-import { analyzeFailuresWithReport, type LlmContext } from '../../shared/failure-analysis.js';
-import { collectAutomated, interactiveBugReportFlow } from '../../shared/bug-report.js';
+import { statsFromTests } from '../../shared/report/report-utils.js';
+import { analyzeFailuresWithReport, type LlmContext } from '../../shared/validation/failure-analysis.js';
+import { collectAutomated, interactiveBugReportFlow } from '../../shared/report/bug-report.js';
 import { openWithFallback } from '../../shared/open.js';
 import { publishReport } from '../../shared/publish.js';
 import { createHistoryProvider, TestHistoryCache } from '../xray-history.js';
 import type { CommandContext } from './context.js';
 import { buildGitTrendHtml, buildJiraContextHtml, injectAnalysisSection, parseCliExtra } from './case17-helpers.js';
 import { resolveTestDataSource, resolveSessionContext } from '../../shared/session-context.js';
-import { normalizeJqlForCloud } from '../../shared/jira-client.js';
+import { normalizeJqlForCloud } from '../../shared/jira/jira-client.js';
 // commit-log removed — DataHub.raw.commitLog is SSOT (Invariant 6)
 import type { DataHub, MetricsRun } from '../../shared/types/data-hub.js';
 
-import Config from '../../shared/config.js';
+import Config from '../../shared/config-accessor.js';
 
 async function _fetchJiraContext(
     failedTests: FlatTest[],

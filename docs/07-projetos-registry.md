@@ -1,92 +1,78 @@
-# 07 — Registry de Projetos Multi-Projeto (Canônico)
+# 07 — Projetos (Multi-Projeto)
 
-Este guia é a documentação canônica do suporte multi-projeto do QA Tools. Ele
-substitui a seção legada de `projects.json`/`providers.json` (ver
-[`07-config-files.md`](07-config-files.md) para os demais arquivos de configuração).
+Este guia explica como o QA Tools trabalha com **vários projetos** e como você
+seleciona, adiciona e gerencia projetos no dia a dia.
 
 ## Visão geral
 
-A partir do suporte multi-projeto, cada projeto é registrado **uma única vez**
-em um *registry* persistido em XDG (`~/.config/qa-tools/projects.json`), e não
-mais em `config/projects.json` no diretório de trabalho.
+Você registra cada projeto **uma única vez**. A partir daí, ao abrir o CLI, basta
+escolher com qual projeto trabalhar — o QA Tools mantém as configurações,
+credenciais e o histórico de cada projeto **separados**, sem interferência entre
+eles. O projeto escolhido é lembrado para a próxima vez.
 
-- **Registro central:** `~/.config/qa-tools/projects.json`
-  (`$XDG_CONFIG_HOME/qa-tools/projects.json` quando definido).
-- **Config por projeto:** `<projectDir>/.qa-tools/<projectName>.env`
-  (escrito pelo Setup Wizard, carregado como overlay em runtime).
-- **Artifacts por projeto:** `<projectDir>/.qa-tools/`
-- **Estado por projeto:** `<projectDir>/.qa-tools/state.json` (isolado).
+## Selecionar o projeto
 
-## Estrutura de `ProjectEntry`
+Ao abrir o CLI (`npm run jira` ou `npm run git`), um menu inicial mostra seus
+projetos antes de entrar no menu principal:
 
-Cada entrada do registry segue o schema `ProjectEntry`:
+- **Nenhum projeto ainda:** escolha **"Adicionar projeto"** (abre o setup) ou
+  **"Continuar sem projeto"** (modo legado).
+- **Só um projeto:** ele é selecionado automaticamente.
+- **Vários projetos:** aparece uma lista numerada, além de **"Adicionar projeto"**
+  e **"Gerenciar projetos"**. Alguns itens podem ter marcadores:
+  - **`[INVÁLIDO]`** — a pasta do projeto não existe mais. Use "Gerenciar
+    projetos → Editar diretório" para corrigir.
+  - **`[MIGRADO]`** — o projeto veio de uma configuração antiga (ver
+    [Vindo de uma versão antiga](#vindo-de-uma-versão-antiga)).
 
-| Campo       | Tipo     | Obrigatório | Descrição |
-| ----------- | -------- | ----------- | --------- |
-| `name`      | string   | sim         | Identificador único do projeto (sem `/`, `..`, `\`). |
-| `dir`       | string   | sim         | Diretório-raiz do projeto (PROJECT_ROOT). Todos os artifacts/estado residem aqui. |
-| `provider`  | string   | não         | Provedor Git: `github` \| `gitlab`. |
-| `projectId` | string   | não         | ID/repo do projeto no provedor (ex.: `org/repo` ou `REPO-123`). |
-| `jiraKey`   | string   | não         | Chave de projeto Jira/Xray (ex.: `PROJ`). |
-| `migrated`  | boolean  | não         | `true` quando a entrada veio da migração legado→XDG (protegida contra edição/remoção pelo menu). |
+Para pular o menu e ir direto a um projeto, use a flag ao abrir o CLI:
 
-`dir` recebe o PROJECT_ROOT (D1). Projetos com `migrated: true` são **protegidos**
-contra edição/remoção pelo menu Gerenciar (D-U4).
+```bash
+npm run jira -- --project meu_projeto
+```
 
-## Comandos e fluxos
+## Adicionar um projeto
 
-### Setup Wizard (registrar projeto)
+Escolha **"Adicionar projeto"** no menu inicial (ou rode o Setup Wizard). O
+assistente:
+
+1. Detecta o framework de testes e o provedor Git do projeto.
+2. Pergunta a chave do projeto no Jira/Xray (opcional).
+3. Registra o projeto para uso nas próximas execuções.
+
+Para registrar um projeto que está em **outra pasta**, informe o caminho:
 
 ```bash
 npx tsx setup/main.ts --dir /caminho/do/projeto
 ```
 
-O wizard:
+## Gerenciar projetos
 
-1. Detecta o framework (`tsx`, `maven`, ...) e o provedor Git.
-2. Pergunta o `jiraKey` do projeto (opcional).
-3. Registra a entrada via `addProject()` no registry XDG.
-4. Escreve o overlay `<projectDir>/.qa-tools/<name>.env` com
-   `QA_PROJECT_PROVIDER`, `QA_PROJECT_ID`, `QA_PROJECT_JIRA_KEY`, `QA_PROJECT_FRAMEWORK`.
+Escolha **"Gerenciar projetos"** no menu inicial para editar o diretório de um
+projeto, ajustar seus dados ou removê-lo. Projetos marcados como **`[MIGRADO]`**
+são protegidos contra edição e remoção pelo menu.
 
-### Entry menu (selecionar projeto ativo)
+## Trabalhando sem projeto (modo legado)
 
-Ao subir o CLI (`npm run jira` / `npm run git`), o menu:
+Se você não registrar nenhum projeto, o CLI continua funcionando como antes:
+escolha **"Continuar sem projeto"** e use as operações normalmente. Registrar
+projetos é opcional e não quebra instalações antigas.
 
-- Lista os projetos do registry com flag de validade (`[INVÁLIDO]`) e de migração
-  (`[MIGRADO]`).
-- Auto-seleciona se houver apenas um projeto válido.
-- Oferece "Adicionar projeto" (dispara o Setup Wizard) e "Gerenciar projetos".
+## Vindo de uma versão antiga?
 
-O projeto ativo é propagado aos módulos-filho via `QA_CURRENT_PROJECT` /
-`QA_PROJECT_DIR` (env vars). Se o módulo já recebe `--project <name>`, a seleção
-interativa é pulada.
+Se você já usava a configuração antiga de projetos, ela é convertida
+automaticamente na **primeira vez** que você abre o CLI — nenhuma ação é
+necessária. Os projetos convertidos aparecem com o marcador **`[MIGRADO]`**.
 
-### Migração legado → XDG (cutover atômico)
+## Problemas comuns
 
-Na subida do CLI, `_initInfrastructure()` executa `migrateLegacyProjects()`:
+- **Projeto aparece como `[INVÁLIDO]`:** a pasta do projeto foi movida ou
+  removida. Use "Gerenciar projetos → Editar diretório".
+- **Não consigo editar/remover um projeto `[MIGRADO]`:** projetos migrados são
+  protegidos pelo menu; registre-o novamente pelo Setup Wizard se precisar
+  alterá-lo.
 
-- Se existir `config/projects.json` (formato antigo) no diretório de trabalho,
-  cada entrada é convertida para `ProjectEntry` (com `migrated: true`,
-  `dir` = PROJECT_ROOT) e registrada no registry XDG.
-- O legado é renomeado para `config/projects.json.migrated` (não há dual-write).
-- Idempotente: entradas já existentes no registry são puladas (`skipped`), não duplicadas.
-- Nomes inválidos (path traversal) ou JSON corrompido **lançam erro** (não silenciado).
-
-## Backward compatibility (modo legado)
-
-Se nenhum projeto estiver registrado, o CLI opera como antes: o usuário pode
-escolher "Continuar sem projeto (modo legado)" e os módulos funcionam sem
-contexto de projeto. A migração é opcional e não quebra instalações antigas.
-
-## Troubleshooting
-
-- **Projeto `[INVÁLIDO]`:** o `dir` não existe mais no disco. Use "Gerenciar
-  projetos → Editar diretório".
-- **Registry corrompido:** restaurado automaticamente do backup
-  `~/.config/qa-tools/projects.json.bak`.
-- **`migrated: true` não pode ser editado/removido pelo menu:** remova a entrada
-  diretamente do registry XDG e rode o Setup Wizard novamente, se necessário.
+---
 
 Veja também: [`06-env-vars.md`](06-env-vars.md), [`10-setup-wizard.md`](10-setup-wizard.md),
-[`07-config-files.md`](07-config-files.md), [`TECHDOC.md`](TECHDOC.md).
+[`TECHDOC.md`](TECHDOC.md) (detalhes técnicos de armazenamento e formato).

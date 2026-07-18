@@ -3,7 +3,7 @@ import type { JsonObject, TestCase } from '../shared/types.js';
 import { TestCaseSchema } from './csv-import-schema.js';
 import { rootLogger } from '../shared/logger.js';
 import { load as loadState } from '../shared/state.js';
-import { confirm, info, warn, error } from '../shared/prompt.js';
+import { confirm, info, warn, error } from '../shared/ui/prompt.js';
 
 const CHECKPOINT_MAX_AGE_MS = 86400000;
 const MAX_WARNINGS_TO_SHOW = 5;

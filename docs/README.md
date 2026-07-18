@@ -22,16 +22,14 @@ multi-projeto.
 
 ### Configuração e contexto
 - [06 — Variáveis de ambiente](06-env-vars.md): tabela completa de env vars.
-- [07 — Registry de projetos (multi-projeto)](07-projetos-registry.md): **canônico** — registry XDG, `ProjectEntry`, per-project `.env`, migração.
-- [07b — Arquivos de configuração](07-config-files.md): `providers.json`, `reviewers.json` (legado).
+- [07 — Projetos (multi-projeto)](07-projetos-registry.md): **canônico** — selecionar, adicionar e gerenciar projetos, `--project` / `--dir`, migração de config antiga.
 - [08 — Fluxos completos](08-fluxos-completos.md): jornadas típicas CSV→Test Execution, release, pipeline CI.
 
 ### Suporte
 - [09 — Troubleshooting](09-troubleshooting.md): problemas comuns e soluções.
 - [TECHDOC.md](../docs/TECHDOC.md): documentação técnica de referência (arquitetura, contratos).
 
-## Mapa de arquitetura relevante
-- Registry: `shared/project-registry.ts` → `~/.config/qa-tools/projects.json`.
-- Env overlay: `shared/env-loader.ts` (`writeProjectEnvOverlay`).
-- Migração legado→XDG: `shared/migration/migrate-projects.ts` (disparada em `shared/entry-menu.ts:_initInfrastructure`).
-- Seleção de projeto: `shared/entry-menu.ts` (`selectProject`), `shared/project-context.ts`.
+## Detalhes técnicos
+
+Arquitetura interna, contratos, módulos e formatos de armazenamento do suporte
+multi-projeto estão documentados em [TECHDOC.md](TECHDOC.md).

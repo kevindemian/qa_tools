@@ -2,8 +2,8 @@
  * git_triggers entry point — thin wrapper that parses CLI args and dispatches.
  * All logic has been extracted to cli-args.ts, cli-dispatch.ts, and interactive-mode.ts.
  */
-import { printError } from '../shared/prompt.js';
-import { gracefulExit } from '../shared/cli_base.js';
+import { printError } from '../shared/ui/prompt.js';
+import { gracefulExit } from '../shared/ui/cli_base.js';
 import { ExitCode } from '../shared/types.js';
 import { rootLogger } from '../shared/logger.js';
 import { printSessionSummary } from './session-state.js';
@@ -27,4 +27,5 @@ dispatchCli(parseCliArgs()).catch((err) => {
     printError('Erro inesperado', err);
     printSessionSummary();
     rootLogger.error('Main error', { error: String(err) });
+    gracefulExit(ExitCode.ERROR);
 });

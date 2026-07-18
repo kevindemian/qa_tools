@@ -2,9 +2,9 @@ name: CI
 
 on:
     push:
-        branches: [main]
+        branches: [main, dev]
     pull_request:
-        branches: [main]
+        branches: [main, dev]
     schedule:
         - cron: 0 6 * * 1
 
@@ -29,13 +29,17 @@ jobs:
               with:
                   node-version-file: .node-version
                   cache: npm
+            - name: Reapply immutable bit on audit-suppressions.ts (AGENTS §18)
+              run: chattr +i scripts/audit-suppressions.ts || echo "chattr unavailable (non-fatal on this runner)"
+            - name: Verify audit-suppressions.ts immutable bit
+              run: lsattr scripts/audit-suppressions.ts
             - run: npm ci
             - run: npm run typecheck
             - name: Security vigilant scan
               run: |
                   VIGILANT="npx tsx scripts/rule-vigilant.ts"
                   FAIL=0
-                  for f in eslint.config.mjs .dependency-cruiser.js .gitleaks.toml AGENTS.md scripts/quality-check.ts; do
+                  for f in eslint.config.mjs .dependency-cruiser.js .gitleaks.toml AGENTS.md scripts/quality-check.ts scripts/audit-suppressions.ts; do
                     if [ -f "$f" ]; then
                       COUNT=$($VIGILANT --file "$f" --json | npx tsx -e "import { readFileSync } from 'fs'; const d = JSON.parse(readFileSync(0,'utf-8')); process.stdout.write(String(d.length));")
                       echo "  $f: $COUNT warning(s)"
@@ -66,6 +70,56 @@ jobs:
                   else
                     echo "validation_hook.ts not found — skipping (only available on dev machines)"
                   fi
+
+    semgrep:
+        name: Semgrep (suppression detection)
+        if: github.event_name != 'schedule'
+        runs-on: ubuntu-latest
+        steps:
+            - uses: actions/checkout@v5
+              with:
+                  fetch-depth: 0
+            - uses: actions/setup-python@v5
+              with:
+                  python-version: '3.12'
+            - name: Install Semgrep (version pinned in .semgrep/version)
+              run: pip install "semgrep==$(cat .semgrep/version)"
+            - name: Run Semgrep on diff (turnstile)
+              run: npx tsx scripts/run-semgrep.ts --diff
+
+    no-swallow:
+        name: No-swallow (catch suppression, diff only)
+        if: github.event_name != 'schedule'
+        runs-on: ubuntu-latest
+        steps:
+            - uses: actions/checkout@v5
+              with:
+                  fetch-depth: 0
+            - uses: actions/setup-node@v6
+              with:
+                  node-version-file: .node-version
+                  cache: npm
+            - run: npm ci
+            - name: Run no-swallow detector on diff (turnstile)
+              run: npx tsx scripts/run-noswallow.ts
+
+    mutation:
+        name: Mutation testing (Stryker)
+        if: github.event_name != 'schedule'
+        runs-on: ubuntu-latest
+        steps:
+            - uses: actions/checkout@v5
+              with:
+                  fetch-depth: 0
+            - uses: actions/setup-node@v6
+              with:
+                  node-version-file: .node-version
+                  cache: npm
+            - run: npm ci
+            - name: Sync Stryker threshold with suppression count
+              run: npx tsx scripts/audit-suppressions.ts
+            - name: Run Stryker (incremental on diff)
+              run: npx tsx scripts/run-mutation.ts --diff
 
     test:
         name: Test (Node ${{ matrix.node-version }})

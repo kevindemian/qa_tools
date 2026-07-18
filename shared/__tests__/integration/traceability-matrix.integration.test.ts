@@ -11,7 +11,7 @@
 import { describe, expect, it, beforeEach, vi } from 'vitest';
 import type { MetricsRun } from '../../types/data-hub.js';
 import type { DataHub } from '../../types/data-hub.js';
-import { buildTraceabilityMatrix } from '../../traceability-matrix.js';
+import { buildTraceabilityMatrix } from '../../report/traceability-matrix.js';
 import { createTestHub } from '../test-hub.js';
 import { makeDataHubMock } from '../../test-utils/factories/data-hub-mock.js';
 
@@ -54,7 +54,7 @@ describe('Traceability Matrix.Integration', () => {
             it('generates valid HTML from matrix data with epic tree', async () => {
                 expect.hasAssertions();
 
-                const { generateTraceabilityHtml } = await import('../../traceability-matrix.js');
+                const { generateTraceabilityHtml } = await import('../../report/traceability-matrix.js');
                 const metrics = singleRunMetrics([
                     { title: 'TC-001', state: 'passed', duration: 200 },
                     { title: 'TC-002', state: 'passed', duration: 150 },
@@ -88,7 +88,7 @@ describe('Traceability Matrix.Integration', () => {
             it('renders health bars and status badges', async () => {
                 expect.hasAssertions();
 
-                const { generateTraceabilityHtml } = await import('../../traceability-matrix.js');
+                const { generateTraceabilityHtml } = await import('../../report/traceability-matrix.js');
                 const metrics = singleRunMetrics([
                     { title: 'TC-PASS', state: 'passed', duration: 100 },
                     { title: 'TC-FAIL', state: 'failed', duration: 50 },
@@ -118,7 +118,7 @@ describe('Traceability Matrix.Integration', () => {
             it('generates HTML with no-data message when no epics exist', async () => {
                 expect.hasAssertions();
 
-                const { generateTraceabilityHtml } = await import('../../traceability-matrix.js');
+                const { generateTraceabilityHtml } = await import('../../report/traceability-matrix.js');
                 const metrics: MetricsRun[] = [];
                 const result = matrix(metrics);
                 const html = generateTraceabilityHtml(result);
@@ -133,7 +133,7 @@ describe('Traceability Matrix.Integration', () => {
             it('returns error page for null result', async () => {
                 expect.hasAssertions();
 
-                const { generateTraceabilityHtml } = await import('../../traceability-matrix.js');
+                const { generateTraceabilityHtml } = await import('../../report/traceability-matrix.js');
                 const html = generateTraceabilityHtml(null);
 
                 expect(html).toContain('Error generating traceability matrix');
@@ -142,7 +142,7 @@ describe('Traceability Matrix.Integration', () => {
             it('returns error page for undefined result', async () => {
                 expect.hasAssertions();
 
-                const { generateTraceabilityHtml } = await import('../../traceability-matrix.js');
+                const { generateTraceabilityHtml } = await import('../../report/traceability-matrix.js');
                 const html = generateTraceabilityHtml(undefined);
 
                 expect(html).toContain('Error generating traceability matrix');
@@ -153,7 +153,7 @@ describe('Traceability Matrix.Integration', () => {
             it('uses custom title in HTML and page title', async () => {
                 expect.hasAssertions();
 
-                const { generateTraceabilityHtml } = await import('../../traceability-matrix.js');
+                const { generateTraceabilityHtml } = await import('../../report/traceability-matrix.js');
                 const metrics = singleRunMetrics([]);
                 const result = matrix(metrics);
                 const html = generateTraceabilityHtml(result, 'Release 3.0 Traceability');
@@ -165,7 +165,7 @@ describe('Traceability Matrix.Integration', () => {
             it('defaults to Traceability Matrix when no title given', async () => {
                 expect.hasAssertions();
 
-                const { generateTraceabilityHtml } = await import('../../traceability-matrix.js');
+                const { generateTraceabilityHtml } = await import('../../report/traceability-matrix.js');
                 const metrics = singleRunMetrics([]);
                 const result = matrix(metrics);
                 const html = generateTraceabilityHtml(result);

@@ -9,7 +9,7 @@
  */
 import * as fc from 'fast-check';
 import { describe, expect, it, vi } from 'vitest';
-import { analyzeTestImpact, generateTestSelectionJson } from '../test-impact.js';
+import { analyzeTestImpact, generateTestSelectionJson } from '../quality/test-impact.js';
 import type { ImpactedTest, TestImpactResult } from '../types/coverage.js';
 
 vi.mock('../logger.js', () => ({

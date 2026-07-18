@@ -10,11 +10,11 @@
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 import type { PipelineHealthData } from '../../pipeline-health-renderer.js';
 
-vi.mock('../../shared/logger.js', () => ({
+vi.mock('../../../shared/logger.js', () => ({
     rootLogger: { error: vi.fn(), info: vi.fn(), child: vi.fn().mockReturnThis() },
 }));
 
-vi.mock('../../shared/config.js', () => ({
+vi.mock('../../../shared/config-accessor.js', () => ({
     default: { get: vi.fn(() => '') },
     get: vi.fn(() => ''),
 }));

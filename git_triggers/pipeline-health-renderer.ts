@@ -1,8 +1,8 @@
 /** Pipeline health HTML renderer — accepts pre-computed metrics from DataHub.
  *  Pure rendering logic — no I/O, no side effects. */
 import { sanitizeHtml } from '../shared/escape.js';
-import { buildHtmlPage } from '../shared/html-factory.js';
-import { buildCss } from '../shared/report-styles.js';
+import { buildHtmlPage } from '../shared/report/html-factory.js';
+import { buildCss } from '../shared/report/report-styles.js';
 
 const ERROR_KEYWORDS = ['Error', 'Failure', 'Timeout', 'Exception', 'FATAL', 'OOMKilled'];
 const ERROR_LOG_PATTERN = new RegExp('(?:' + ERROR_KEYWORDS.join('|') + '):?\\s*(.+)$', 'gim');

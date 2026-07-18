@@ -2,19 +2,19 @@
  * Interactive mode — handles the main menu loop and project selection.
  * Extracted from main.ts for single responsibility and testability.
  */
-import { pushBreadcrumb, clearBreadcrumbs } from '../shared/breadcrumbs.js';
-import { createValidateEnv, offerEnvSetup, setupSigint } from '../shared/cli_base.js';
-import Config from '../shared/config.js';
+import { pushBreadcrumb, clearBreadcrumbs } from '../shared/ui/breadcrumbs.js';
+import { createValidateEnv, offerEnvSetup, setupSigint } from '../shared/ui/cli_base.js';
+import Config from '../shared/config-accessor.js';
 import { getCurrentProject, setCurrentProject } from '../shared/project-context.js';
-import { showSplash } from '../shared/splash.js';
+import { showSplash } from '../shared/ui/splash.js';
 import { calcFlakinessEntries } from '../shared/data-hub/compute/flakiness-entries.js';
 import { calcTestDurationMap } from '../shared/data-hub/compute/test-duration-map.js';
 import { calcRunFailureRate } from '../shared/data-hub/compute/run-failure-rate.js';
 import type { MetricsRun, RawXrayData } from '../shared/types/data-hub.js';
-import { compareRuns } from '../shared/run-comparison.js';
-import { calculateHealthScore } from '../shared/health-score.js';
-import { palette } from '../shared/palette.js';
-import { defaultOutput } from '../shared/output.js';
+import { compareRuns } from '../shared/quality/run-comparison.js';
+import { calculateHealthScore } from '../shared/quality/health-score.js';
+import { palette } from '../shared/ui/palette.js';
+import { defaultOutput } from '../shared/ui/output.js';
 import { rootLogger } from '../shared/logger.js';
 import { formatErr } from '../shared/errors.js';
 import {
@@ -26,7 +26,7 @@ import {
     showSelect,
     printError,
     confirm as promptConfirm,
-} from '../shared/prompt.js';
+} from '../shared/ui/prompt.js';
 import { load as loadState, update as updateState } from '../shared/state.js';
 import type { GitProvider, JsonObject, StateContainer } from '../shared/types.js';
 import {
@@ -64,7 +64,7 @@ import {
     collectTestResults,
 } from './pipeline-handler.js';
 import { nivelarBranchesWrapper, handleCreateMR, handleListApprovedMRs, handleMergeMR } from './mr-handler.js';
-import { ensureDirs, registerCleanup } from '../shared/temp-dir.js';
+import { ensureDirs, registerCleanup } from '../shared/infra/temp-dir.js';
 import {
     handleListSchedules,
     handleRunSchedule,
@@ -74,56 +74,56 @@ import {
 } from './schedule-handler.js';
 import { tryBatchMode, handlePipelineHealth } from './batch-mode.js';
 import { generatePrDescription } from './ai-pr-desc.js';
-import { interactiveBugReportFlow } from '../shared/bug-report.js';
-import JiraClient from '../shared/jira-client.js';
+import { interactiveBugReportFlow } from '../shared/report/bug-report.js';
+import JiraClient from '../shared/jira/jira-client.js';
 import JiraLinkManager from '../jira_management/jira_link_manager.js';
 
-import { generateReleaseScoreHtml } from '../shared/release-score.js';
-import { generateDefectTrendHtml } from '../shared/defect-trend.js';
-import { generateTraceabilityHtml } from '../shared/traceability-matrix.js';
-import { generateAiEffectivenessHtml } from '../shared/ai-effectiveness.js';
-import { generateSeasonalityHtml } from '../shared/defect-seasonality.js';
-import { generateSilentRegressionHtml } from '../shared/silent-regression.js';
-import { generateAiComparisonHtml } from '../shared/ai-comparison.js';
-import { generateBenchmarkHtml } from '../shared/cross-squad-benchmark.js';
-import { generateDeveloperProfileHtml } from '../shared/developer-profile.js';
-import { generateOptimizationHtml } from '../shared/suite-optimization.js';
-import { generateBacklogHealthHtml } from '../shared/backlog-health.js';
-import { generateIncidentReportHtml } from '../shared/incident-report.js';
-import { generatePipelineCostHtml } from '../shared/pipeline-cost.js';
-import { generateImpactAlertHtml } from '../shared/impact-alert.js';
-import { generateRequirementScoreHtml } from '../shared/requirement-score.js';
-import { calculateReleaseScore } from '../shared/release-score.js';
-import { aggregateDefectTrends } from '../shared/defect-trend.js';
-import { buildTraceabilityMatrix } from '../shared/traceability-matrix.js';
-import { computeAiEffectiveness } from '../shared/ai-effectiveness.js';
-import { aggregateDefectSeasonality } from '../shared/defect-seasonality.js';
-import { detectSilentRegression } from '../shared/silent-regression.js';
-import { compareAiVsManual } from '../shared/ai-comparison.js';
-import { computeCrossSquadBenchmark } from '../shared/cross-squad-benchmark.js';
-import { buildDeveloperProfile } from '../shared/developer-profile.js';
-import { analyzeSuiteOptimization } from '../shared/suite-optimization.js';
-import { analyzeBacklogHealth } from '../shared/backlog-health.js';
-import { buildIncidentReport } from '../shared/incident-report.js';
-import { analyzePipelineImpact } from '../shared/impact-alert.js';
-import { calculatePipelineCost } from '../shared/pipeline-cost.js';
-import { calculateRequirementScores } from '../shared/requirement-score.js';
-import { writeReport } from '../shared/temp-dir.js';
-import { runQualityGate, formatQualityGateText } from '../shared/quality-gate.js';
+import { generateReleaseScoreHtml } from '../shared/quality/release-score.js';
+import { generateDefectTrendHtml } from '../shared/quality/defect-trend.js';
+import { generateTraceabilityHtml } from '../shared/report/traceability-matrix.js';
+import { generateAiEffectivenessHtml } from '../shared/report/ai-effectiveness.js';
+import { generateSeasonalityHtml } from '../shared/quality/defect-seasonality.js';
+import { generateSilentRegressionHtml } from '../shared/quality/silent-regression.js';
+import { generateAiComparisonHtml } from '../shared/report/ai-comparison.js';
+import { generateBenchmarkHtml } from '../shared/quality/cross-squad-benchmark.js';
+import { generateDeveloperProfileHtml } from '../shared/quality/developer-profile.js';
+import { generateOptimizationHtml } from '../shared/quality/suite-optimization.js';
+import { generateBacklogHealthHtml } from '../shared/report/backlog-health.js';
+import { generateIncidentReportHtml } from '../shared/report/incident-report.js';
+import { generatePipelineCostHtml } from '../shared/quality/pipeline-cost.js';
+import { generateImpactAlertHtml } from '../shared/report/impact-alert.js';
+import { generateRequirementScoreHtml } from '../shared/quality/requirement-score.js';
+import { calculateReleaseScore } from '../shared/quality/release-score.js';
+import { aggregateDefectTrends } from '../shared/quality/defect-trend.js';
+import { buildTraceabilityMatrix } from '../shared/report/traceability-matrix.js';
+import { computeAiEffectiveness } from '../shared/report/ai-effectiveness.js';
+import { aggregateDefectSeasonality } from '../shared/quality/defect-seasonality.js';
+import { detectSilentRegression } from '../shared/quality/silent-regression.js';
+import { compareAiVsManual } from '../shared/report/ai-comparison.js';
+import { computeCrossSquadBenchmark } from '../shared/quality/cross-squad-benchmark.js';
+import { buildDeveloperProfile } from '../shared/quality/developer-profile.js';
+import { analyzeSuiteOptimization } from '../shared/quality/suite-optimization.js';
+import { analyzeBacklogHealth } from '../shared/report/backlog-health.js';
+import { buildIncidentReport } from '../shared/report/incident-report.js';
+import { analyzePipelineImpact } from '../shared/report/impact-alert.js';
+import { calculatePipelineCost } from '../shared/quality/pipeline-cost.js';
+import { calculateRequirementScores } from '../shared/quality/requirement-score.js';
+import { writeReport } from '../shared/infra/temp-dir.js';
+import { runQualityGate, formatQualityGateText } from '../shared/quality/quality-gate.js';
 import { openWithFallback } from '../shared/open.js';
-import { generateCoverageGapHtml } from '../shared/generate-coverage-gap-html.js';
-import { analyzeCoverageGaps } from '../shared/coverage-gap.js';
+import { generateCoverageGapHtml } from '../shared/report/generate-coverage-gap-html.js';
+import { analyzeCoverageGaps } from '../shared/report/coverage-gap.js';
 import {
     generateGitMetricsRuns,
     generateGitFailureClassifications,
     getLastGitLogError,
-} from '../shared/git-metrics-adapter.js';
+} from '../shared/ci/git-metrics-adapter.js';
 import { handleHelp as _handleHelp, handleShowHistory as _handleShowHistory } from './ui-helpers.js';
 import { handleSetupWizard as _handleSetupWizard } from './case00-handler.js';
 import { handlePrReportReconfig } from './pr-report-setup-handler.js';
-import { showDocs } from '../shared/show-docs.js';
-import { showDashboardMenu } from '../shared/dashboard-menu.js';
-import type { DashboardDef } from '../shared/dashboard-menu.js';
+import { showDocs } from '../shared/report/show-docs.js';
+import { showDashboardMenu } from '../shared/ui/dashboard-menu.js';
+import type { DashboardDef } from '../shared/ui/dashboard-menu.js';
 import type { CliArgs } from './cli-args.js';
 
 const validateEnv = createValidateEnv([

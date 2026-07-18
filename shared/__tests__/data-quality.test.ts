@@ -1,6 +1,6 @@
 import { describe, expect, it, vi } from 'vitest';
 import { makeDataHubMock } from '../test-utils/factories/data-hub-mock.js';
-import { summarizeDataQuality } from '../data-quality.js';
+import { summarizeDataQuality } from '../quality/data-quality.js';
 import type { FailureRecord } from '../types/data-hub.js';
 import type { QualityCategory } from '../data-hub/quality.js';
 

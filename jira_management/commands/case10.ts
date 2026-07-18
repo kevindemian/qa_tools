@@ -1,5 +1,5 @@
 /** Set the git working directory for version management. */
-import { success, ask } from '../../shared/prompt.js';
+import { success, ask } from '../../shared/ui/prompt.js';
 import type { CommandContext } from './context.js';
 
 async function handler(c: CommandContext): Promise<boolean | void> {

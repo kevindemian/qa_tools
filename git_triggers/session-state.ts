@@ -1,12 +1,12 @@
 /** Session state — persist/load session context as JSON for the git_triggers lifecycle. */
-import Config from '../shared/config.js';
+import Config from '../shared/config-accessor.js';
 import { rootLogger } from '../shared/logger.js';
 import { SessionContext } from '../shared/session-context.js';
 import { load as loadState, update as updateState } from '../shared/state.js';
-import { printSessionSummary as sharedPrintSessionSummary } from '../shared/cli_base.js';
+import { printSessionSummary as sharedPrintSessionSummary } from '../shared/ui/cli_base.js';
 import { providerLabel as _providerLabel } from './ui-helpers.js';
-import { print, title, warn } from '../shared/prompt.js';
-import { palette } from '../shared/palette.js';
+import { print, title, warn } from '../shared/ui/prompt.js';
+import { palette } from '../shared/ui/palette.js';
 import type { GitProvider, JsonObject, StateContainer } from '../shared/types.js';
 import type { DataHub } from '../shared/types/data-hub.js';
 import {
@@ -55,14 +55,14 @@ export async function ensureDataHub(): Promise<DataHub | undefined> {
         // Gap 4 (G4.5): refresh incrementally (no full refetch) when stale.
         const activeManager = manager;
         return _ensureGlobalHub(async () => {
-            const { getOrFetchDataHub } = await import('../shared/ci-data.js');
+            const { getOrFetchDataHub } = await import('../shared/ci/ci-data.js');
             return getOrFetchDataHub(activeManager, activeProject, cached);
         });
     }
     if (!manager || !activeProject) return undefined;
     const activeManager = manager;
     return _ensureGlobalHub(async () => {
-        const { getOrFetchDataHub } = await import('../shared/ci-data.js');
+        const { getOrFetchDataHub } = await import('../shared/ci/ci-data.js');
         return getOrFetchDataHub(activeManager, activeProject);
     });
 }
@@ -83,7 +83,7 @@ export async function prefetchAllProjects(): Promise<void> {
         return;
     }
 
-    const { getOrFetchDataHub } = await import('../shared/ci-data.js');
+    const { getOrFetchDataHub } = await import('../shared/ci/ci-data.js');
 
     const results = await Promise.allSettled(
         projectEntries.map(async ([name, id]) => {

@@ -2,7 +2,7 @@ import { formatErr } from '../shared/errors.js';
 import fs from 'fs';
 import path from 'path';
 import { rootLogger } from '../shared/logger.js';
-import { tempDirPath } from '../shared/temp-dir.js';
+import { tempDirPath } from '../shared/infra/temp-dir.js';
 import type { JiraResourceLike } from '../shared/types.js';
 
 export interface LinkType {

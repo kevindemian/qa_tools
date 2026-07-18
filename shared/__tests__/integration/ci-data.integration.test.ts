@@ -111,7 +111,7 @@ describe('Integration: CI Data Hub', () => {
         it('health score uses DataHub passRate instead of MetricsStore', async () => {
             expect.hasAssertions();
 
-            const { calculateHealthScore } = await import('../../health-score.js');
+            const { calculateHealthScore } = await import('../../quality/health-score.js');
 
             const runs = [
                 makeRun(1, { conclusion: 'success' }),
@@ -132,7 +132,7 @@ describe('Integration: CI Data Hub', () => {
         it('quality gate uses DataHub when forwarded', async () => {
             expect.hasAssertions();
 
-            const { runQualityGate } = await import('../../quality-gate.js');
+            const { runQualityGate } = await import('../../quality/quality-gate.js');
 
             const runs = [
                 makeRun(1, { conclusion: 'success' }),

@@ -13,14 +13,14 @@
  */
 import fc from 'fast-check';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
-import { generateFlakinessHtml, filterHighFlakiness } from '../flakiness-dashboard.js';
+import { generateFlakinessHtml, filterHighFlakiness } from '../report/flakiness-dashboard.js';
 import type { FlakinessEntry } from '../types/data-hub.js';
 
 vi.mock('../logger.js', () => ({
     rootLogger: { error: vi.fn(), info: vi.fn(), child: vi.fn().mockReturnThis() },
 }));
 
-vi.mock('../config.js', () => ({
+vi.mock('../config-accessor.js', () => ({
     default: { get: vi.fn(() => '') },
     get: vi.fn(() => ''),
 }));

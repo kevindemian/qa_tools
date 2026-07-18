@@ -21,13 +21,13 @@ import fs from 'node:fs';
 import { spawn } from 'node:child_process';
 import { resolve, dirname } from 'node:path';
 import { fileURLToPath } from 'node:url';
-import { inferProviderFromKey, KNOWN_PROVIDERS } from '../shared/llm-provider-profiles.js';
-import { autoAssignTiers, probeApiKey, type TierAssignment } from '../shared/llm-probe.js';
+import { inferProviderFromKey, KNOWN_PROVIDERS } from '../shared/llm/llm-provider-profiles.js';
+import { autoAssignTiers, probeApiKey, type TierAssignment } from '../shared/llm/llm-probe.js';
 import { reloadDotenv } from '../shared/env-loader.js';
 import { updateTyped as updateState } from '../shared/state.js';
-import { ask, askConfirm, title, info, warn, divider } from '../shared/prompt.js';
+import { ask, askConfirm, title, info, warn, divider } from '../shared/ui/prompt.js';
 import { rootLogger } from '../shared/logger.js';
-import type { LlmProvider } from '../shared/llm-provider-profiles.js';
+import type { LlmProvider } from '../shared/llm/llm-provider-profiles.js';
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = dirname(__filename);

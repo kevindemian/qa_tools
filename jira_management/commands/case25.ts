@@ -1,8 +1,8 @@
 import { getDataHub } from '../../shared/data-hub/global-hub.js';
-import { buildTraceabilityMatrix, generateTraceabilityHtml } from '../../shared/traceability-matrix.js';
-import { info, warn, title, printError } from '../../shared/prompt.js';
+import { buildTraceabilityMatrix, generateTraceabilityHtml } from '../../shared/report/traceability-matrix.js';
+import { info, warn, title, printError } from '../../shared/ui/prompt.js';
 import { openWithFallback } from '../../shared/open.js';
-import { writeReport } from '../../shared/temp-dir.js';
+import { writeReport } from '../../shared/infra/temp-dir.js';
 import type { CommandContext } from './context.js';
 
 async function handler(c: CommandContext): Promise<boolean | void> {

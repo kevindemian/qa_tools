@@ -17,7 +17,7 @@ vi.mock('../../logger.js', () => ({
     rootLogger: { error: vi.fn(), info: vi.fn(), child: vi.fn().mockReturnThis() },
 }));
 
-vi.mock('../../config.js', () => ({
+vi.mock('../../config-accessor.js', () => ({
     default: { get: vi.fn(() => '') },
     get: vi.fn(() => ''),
 }));
@@ -49,7 +49,7 @@ describe('Integration: Pipeline Cost (FT-29)', () => {
         it('produces complete HTML with summary and data table', async () => {
             expect.hasAssertions();
 
-            const { calculatePipelineCost, generatePipelineCostHtml } = await import('../../pipeline-cost.js');
+            const { calculatePipelineCost, generatePipelineCostHtml } = await import('../../quality/pipeline-cost.js');
             const hub = makeDataHub([
                 makeCiRun({
                     id: 1,
@@ -82,7 +82,7 @@ describe('Integration: Pipeline Cost (FT-29)', () => {
         it('shows no-data message and zeroed metrics', async () => {
             expect.hasAssertions();
 
-            const { calculatePipelineCost, generatePipelineCostHtml } = await import('../../pipeline-cost.js');
+            const { calculatePipelineCost, generatePipelineCostHtml } = await import('../../quality/pipeline-cost.js');
             const result = calculatePipelineCost(undefined, makeDataHub([]));
             const html = generatePipelineCostHtml(result);
 
@@ -97,7 +97,7 @@ describe('Integration: Pipeline Cost (FT-29)', () => {
         it('uses custom title in HTML page', async () => {
             expect.hasAssertions();
 
-            const { calculatePipelineCost, generatePipelineCostHtml } = await import('../../pipeline-cost.js');
+            const { calculatePipelineCost, generatePipelineCostHtml } = await import('../../quality/pipeline-cost.js');
             const result = calculatePipelineCost(undefined, makeDataHub([]));
             const html = generatePipelineCostHtml(result, 'My Cost Report');
 
@@ -109,7 +109,7 @@ describe('Integration: Pipeline Cost (FT-29)', () => {
         it('uses dataHub.raw.runs for cost calculation when dataHub provided', async () => {
             expect.hasAssertions();
 
-            const { calculatePipelineCost } = await import('../../pipeline-cost.js');
+            const { calculatePipelineCost } = await import('../../quality/pipeline-cost.js');
             const ciRuns = [
                 makeCiRun({
                     id: 1,
@@ -134,7 +134,7 @@ describe('Integration: Pipeline Cost (FT-29)', () => {
         it('duration derived from timestamps, not from MetricsStore duration', async () => {
             expect.hasAssertions();
 
-            const { calculatePipelineCost } = await import('../../pipeline-cost.js');
+            const { calculatePipelineCost } = await import('../../quality/pipeline-cost.js');
             // CI run spans 1200s (20min) per timestamps.
             const hub = makeDataHub([
                 makeCiRun({
@@ -153,7 +153,7 @@ describe('Integration: Pipeline Cost (FT-29)', () => {
         it('returns zeroed result when DataHub has no runs', async () => {
             expect.hasAssertions();
 
-            const { calculatePipelineCost } = await import('../../pipeline-cost.js');
+            const { calculatePipelineCost } = await import('../../quality/pipeline-cost.js');
             const hub = makeDataHub([]);
 
             const result = calculatePipelineCost(0.01, hub);

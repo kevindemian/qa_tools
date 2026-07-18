@@ -13,17 +13,17 @@ vi.mock('../../logger.js', () => ({
     rootLogger: { error: vi.fn(), info: vi.fn(), child: vi.fn().mockReturnThis() },
 }));
 
-vi.mock('../../config.js', () => ({
+vi.mock('../../config-accessor.js', () => ({
     default: { get: vi.fn(() => '') },
     get: vi.fn(() => ''),
 }));
 
-vi.mock('../../html-factory.js', async (importOriginal) => {
-    const actual = await importOriginal<typeof import('../../html-factory.js')>();
+vi.mock('../../report/html-factory.js', async (importOriginal) => {
+    const actual = await importOriginal<typeof import('../../report/html-factory.js')>();
     return { ...actual, buildHtmlPage: vi.fn(actual.buildHtmlPage) };
 });
 
-vi.mock('../../cli_base.js', () => ({
+vi.mock('../../ui/cli_base.js', () => ({
     sanitizeUrl: (url: string) => url,
 }));
 
@@ -36,7 +36,7 @@ describe('Integration: HTML Report (FT-17)', () => {
         it('returns complete HTML document', { timeout: 15000 }, async () => {
             expect.hasAssertions();
 
-            const { generateHtmlReport } = await import('../../report-html.js');
+            const { generateHtmlReport } = await import('../../report/report-html.js');
             const tests = [
                 { title: 'Login Test', state: 'passed' as const, duration: 1.2, fullTitle: 'Auth > Login' },
                 { title: 'Fail Test', state: 'failed' as const, duration: 0.5, fullTitle: 'Auth > Fail' },
@@ -54,7 +54,7 @@ describe('Integration: HTML Report (FT-17)', () => {
         it('handles empty test array gracefully', async () => {
             expect.hasAssertions();
 
-            const { generateHtmlReport } = await import('../../report-html.js');
+            const { generateHtmlReport } = await import('../../report/report-html.js');
             const html = generateHtmlReport([], { title: 'Empty' });
 
             expect(html).toContain('<!DOCTYPE html>');
@@ -65,7 +65,7 @@ describe('Integration: HTML Report (FT-17)', () => {
         it('includes health score section when provided', async () => {
             expect.hasAssertions();
 
-            const { generateHtmlReport } = await import('../../report-html.js');
+            const { generateHtmlReport } = await import('../../report/report-html.js');
             const tests = [{ title: 'T1', state: 'passed' as const, duration: 1 }];
             const healthScore = {
                 overall: 85,
@@ -90,7 +90,7 @@ describe('Integration: HTML Report (FT-17)', () => {
         it('includes quality gate section when gate fails', async () => {
             expect.hasAssertions();
 
-            const { generateHtmlReport } = await import('../../report-html.js');
+            const { generateHtmlReport } = await import('../../report/report-html.js');
             const tests = [
                 { title: 'Pass', state: 'passed' as const, duration: 1 },
                 { title: 'Fail', state: 'failed' as const, duration: 2 },
@@ -103,7 +103,7 @@ describe('Integration: HTML Report (FT-17)', () => {
         it('renders multi-run tabs', async () => {
             expect.hasAssertions();
 
-            const { generateHtmlReport } = await import('../../report-html.js');
+            const { generateHtmlReport } = await import('../../report/report-html.js');
             const chromeTests = [{ title: 'C1', state: 'passed' as const, duration: 1 }];
             const firefoxTests = [{ title: 'F1', state: 'passed' as const, duration: 2 }];
             const html = generateHtmlReport(chromeTests, {
@@ -124,7 +124,7 @@ describe('Integration: HTML Report (FT-17)', () => {
         it('returns complete HTML document', async () => {
             expect.hasAssertions();
 
-            const { generateCoverageHtml } = await import('../../report-html.js');
+            const { generateCoverageHtml } = await import('../../report/report-html.js');
             const epics = [
                 {
                     key: 'EPIC-1',
@@ -146,7 +146,7 @@ describe('Integration: HTML Report (FT-17)', () => {
         it('shows per-epic close percentage', async () => {
             expect.hasAssertions();
 
-            const { generateCoverageHtml } = await import('../../report-html.js');
+            const { generateCoverageHtml } = await import('../../report/report-html.js');
             const epics = [
                 {
                     key: 'EPIC-A',
@@ -173,8 +173,8 @@ describe('Integration: HTML Report (FT-17)', () => {
         it('returns buildErrorPage when buildHtmlPage throws', async () => {
             expect.hasAssertions();
 
-            const { generateHtmlReport } = await import('../../report-html.js');
-            const { buildHtmlPage } = await import('../../html-factory.js');
+            const { generateHtmlReport } = await import('../../report/report-html.js');
+            const { buildHtmlPage } = await import('../../report/html-factory.js');
             const { rootLogger } = await import('../../logger.js');
 
             vi.mocked(buildHtmlPage).mockImplementationOnce(() => {
@@ -196,7 +196,7 @@ describe('Integration: HTML Report (FT-17)', () => {
         it('handles empty epics gracefully', async () => {
             expect.hasAssertions();
 
-            const { generateCoverageHtml } = await import('../../report-html.js');
+            const { generateCoverageHtml } = await import('../../report/report-html.js');
             const html = generateCoverageHtml([]);
 
             expect(html).toContain('<!DOCTYPE html>');

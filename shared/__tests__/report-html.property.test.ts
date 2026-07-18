@@ -7,14 +7,14 @@
  */
 import fc from 'fast-check';
 import { describe, expect, it } from 'vitest';
-import { generateCoverageHtml, generateHtmlReport } from '../report-html.js';
+import { generateCoverageHtml, generateHtmlReport } from '../report/report-html.js';
 import type { FlatTest } from '../result_parser.js';
 
 vi.mock('../logger', () => ({
     rootLogger: { error: vi.fn(), info: vi.fn(), child: vi.fn().mockReturnThis() },
 }));
 
-vi.mock('../config', () => ({
+vi.mock('../../config.js', () => ({
     default: { get: vi.fn(() => '') },
     get: vi.fn(() => ''),
 }));

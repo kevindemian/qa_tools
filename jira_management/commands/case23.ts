@@ -1,6 +1,6 @@
 /** AI Feedback handler — view records, summary stats, and recent generation history. */
-import { warn, title, divider, tableView, showSelect } from '../../shared/prompt.js';
-import { getAiFeedbackSummary, getRecentAiRecords } from '../../shared/ai-feedback.js';
+import { warn, title, divider, tableView, showSelect } from '../../shared/ui/prompt.js';
+import { getAiFeedbackSummary, getRecentAiRecords } from '../../shared/quality/ai-feedback.js';
 import type { CommandContext } from './context.js';
 
 function showFeedbackSummary(): void {

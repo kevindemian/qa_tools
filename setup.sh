@@ -44,12 +44,16 @@ echo -e "${GREEN}  Done.${NC}"
 echo ""
 
 # -- Git hooks ----------------------------------------------------------
+# Source of truth for hooks is .husky/ (managed by husky, more complete than
+# the legacy .githooks/ which was removed during the F4 reconciliation).
 echo "--- Configuring git hooks ---"
-git config core.hooksPath .githooks
-if [ -f .githooks/pre-push ]; then
-    chmod +x .githooks/pre-push
-fi
-echo -e "${GREEN}  Hooks installed (pre-push: typecheck + tests).${NC}"
+git config core.hooksPath .husky
+for h in commit-msg pre-commit pre-push; do
+    if [ -f ".husky/$h" ]; then
+        chmod +x ".husky/$h"
+    fi
+done
+echo -e "${GREEN}  Hooks installed from .husky/ (pre-commit + pre-push security gates).${NC}"
 echo ""
 
 # -- Typecheck ----------------------------------------------------------

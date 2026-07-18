@@ -11,7 +11,7 @@
  */
 import * as fc from 'fast-check';
 import { describe, expect, it } from 'vitest';
-import { calculateReleaseScore } from '../release-score.js';
+import { calculateReleaseScore } from '../quality/release-score.js';
 
 /* ── Helpers ─────────────────────────────────────────────────── */
 

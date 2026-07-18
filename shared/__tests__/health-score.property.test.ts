@@ -14,7 +14,7 @@
 import * as fc from 'fast-check';
 import { describe, expect, it } from 'vitest';
 import type { MetricsStore, MetricsRun, DataHub, ComputedMetrics } from '../types/data-hub.js';
-import { calculateHealthScore } from '../health-score.js';
+import { calculateHealthScore } from '../quality/health-score.js';
 import { makeDataHubMock } from '../test-utils/factories/data-hub-mock.js';
 
 function createTestHub(overrides: Partial<ComputedMetrics> = {}): DataHub {

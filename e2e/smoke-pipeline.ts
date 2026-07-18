@@ -1,9 +1,9 @@
-import type JiraClient from '../shared/jira-client.js';
+import type JiraClient from '../shared/jira/jira-client.js';
 import type JiraLinkManager from '../jira_management/jira_link_manager.js';
 import { createGitHubSmokeManager } from './smoke-shared.js';
 import { getDataHub, isDataHubInitialized } from '../shared/data-hub/global-hub.js';
 import { calcFlakinessEntries } from '../shared/data-hub/compute/flakiness-entries.js';
-import { generateFlakinessHtml } from '../shared/flakiness-dashboard.js';
+import { generateFlakinessHtml } from '../shared/report/flakiness-dashboard.js';
 import { pollPipeline } from '../git_triggers/pipeline-handler.js';
 import { collectTestResults } from '../git_triggers/test-results.js';
 import { offerPipelineFailureAnalysis } from '../git_triggers/llm-pipeline.js';
