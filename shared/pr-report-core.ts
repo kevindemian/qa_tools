@@ -1,14 +1,17 @@
 /**
- * PR Report core — self-contained module for generating PR test reports.
+ * PR Report core — library module for generating PR test reports.
  *
- * An entry point (`main()`) with self-exec guard enables direct CLI usage:
- *   npx tsx shared/pr-report-core.ts [--no-ai] [--no-quality] [--no-flaky] [--project <name>]
+ * This module is layer-pure: it MUST NOT import from git_triggers/ (upward
+ * layer). The Git provider factory is injected by the caller via main().
  *
  * Programmatic API:
- *   import { generatePrReport, computeDiffComparison } from './pr-report-core.js'
+ *   import { generatePrReport, computeDiffComparison, main } from './pr-report-core.js'
+ *
+ * Entry point (injected provider, no upward dependency):
+ *   git_triggers/main.ts — dispatch 'pr-report' calls main(createGitProvider)
  *
  * Consumido por:
- *   1. CLI (ator principal) — via self-exec guard
+ *   1. CLI (ator principal) — via git_triggers/main.ts (dispatch 'pr-report')
  *   2. Pipeline (git_triggers/batch-mode.ts) — post-test-collection
  *   3. Tests — invocação direta
  *
@@ -708,7 +711,7 @@ function parseArgs(args: string[]): CliOptions {
             case '-h':
                 rootLogger.info(
                     [
-                        'Uso: npx tsx shared/pr-report-core.ts [opções]',
+                        'Uso: npx tsx git_triggers/main.ts pr-report [opções]',
                         '',
                         'Opções:',
                         '  --html-output <path>   Caminho do HTML (default: reports/pr-report.html)',
@@ -955,17 +958,6 @@ export async function main(
     }
 }
 
-// Self-exec guard: run main() only when invoked directly (not when imported by tests or modules).
-// When running via tsx, process.argv[1] is the tsx binary — the script path is argv[2].
-// On direct execution, inject the Git provider factory (from git_triggers layer) via dynamic
-// import so that shared/ stays free of a static upward dependency on git_triggers.
-const entryArg = (process.argv[1] ?? '').replace(/\\/g, '/');
-const scriptArg = (process.argv[2] ?? '').replace(/\\/g, '/');
-const isDirectExecution = entryArg.includes('pr-report-core') || scriptArg.includes('pr-report-core');
-if (!process.env['VITEST'] && isDirectExecution) {
-    const { createGitProvider } = await import('../git_triggers/git-provider-factory.js');
-    main(createGitProvider).catch((err) => {
-        rootLogger.error(`pr-report failed: ${String(err)}`);
-        process.exit(1);
-    });
-}
+// No self-exec guard: this is a library module. The Git provider factory is
+// injected by the caller (git_triggers/main.ts dispatch 'pr-report'), keeping
+// this module free of an upward layer dependency (shared/ -> git_triggers/).
