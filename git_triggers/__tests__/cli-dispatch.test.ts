@@ -9,7 +9,7 @@ vi.mock('../../shared/ui/output.js', () => ({ defaultOutput: { print: spies.prin
 vi.mock('../cli-args.js', () => ({ printUsage: vi.fn() }));
 vi.mock('../batch-mode.js', () => ({ tryBatchMode: vi.fn() }));
 vi.mock('../interactive-mode.js', () => ({ runInteractiveMode: vi.fn() }));
-vi.mock('../../shared/project-context.js', () => ({ setCurrentProject: vi.fn() }));
+vi.mock('../../shared/project-context.js', () => ({ ensureSelfHostProject: vi.fn() }));
 
 import { dispatchCli, applyProjectContext } from '../cli-dispatch.js';
 import { gracefulExit } from '../../shared/ui/cli_base.js';
@@ -17,7 +17,7 @@ import { printUsage } from '../cli-args.js';
 import type { BatchCliArgs } from '../cli-args.js';
 import { tryBatchMode } from '../batch-mode.js';
 import { runInteractiveMode } from '../interactive-mode.js';
-import { setCurrentProject } from '../../shared/project-context.js';
+import { ensureSelfHostProject } from '../../shared/project-context.js';
 
 const BATCH_ARGS: BatchCliArgs = {
     mode: 'batch',
@@ -48,7 +48,7 @@ describe('Cli-dispatch', () => {
         it('returns undefined when no project flag or env set', () => {
             expect.hasAssertions();
             expect(applyProjectContext({})).toBeUndefined();
-            expect(setCurrentProject).not.toHaveBeenCalled();
+            expect(ensureSelfHostProject).not.toHaveBeenCalled();
         });
 
         it('prefers the --project flag over the env var', () => {
@@ -58,7 +58,7 @@ describe('Cli-dispatch', () => {
             const result = applyProjectContext({ project: 'flagProject' });
 
             expect(result).toBe('flagProject');
-            expect(setCurrentProject).toHaveBeenCalledWith('flagProject');
+            expect(ensureSelfHostProject).toHaveBeenCalledWith('flagProject');
         });
 
         it('falls back to the env var when no flag given', () => {
@@ -68,7 +68,7 @@ describe('Cli-dispatch', () => {
             const result = applyProjectContext({});
 
             expect(result).toBe('envProject');
-            expect(setCurrentProject).toHaveBeenCalledWith('envProject');
+            expect(ensureSelfHostProject).toHaveBeenCalledWith('envProject');
         });
 
         it('ignores an empty env var', () => {
@@ -77,7 +77,7 @@ describe('Cli-dispatch', () => {
             process.env['QA_CURRENT_PROJECT'] = '';
 
             expect(applyProjectContext({})).toBeUndefined();
-            expect(setCurrentProject).not.toHaveBeenCalled();
+            expect(ensureSelfHostProject).not.toHaveBeenCalled();
         });
     });
 

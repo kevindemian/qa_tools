@@ -9,7 +9,7 @@ import pkg from '../package.json';
 import { printUsage, type CliArgs } from './cli-args.js';
 import { tryBatchMode } from './batch-mode.js';
 import { runInteractiveMode } from './interactive-mode.js';
-import { setCurrentProject } from '../shared/project-context.js';
+import { ensureSelfHostProject } from '../shared/project-context.js';
 import { main as runPrReport } from '../shared/pr-report-core.js';
 import { createGitProvider } from './git-provider-factory.js';
 
@@ -24,7 +24,7 @@ export function applyProjectContext(args: Pick<CliArgs, 'project'>): string | un
     const fromEnv = process.env['QA_CURRENT_PROJECT'];
     const name = fromFlag ?? (fromEnv && fromEnv.length > 0 ? fromEnv : undefined);
     if (!name) return undefined;
-    setCurrentProject(name);
+    ensureSelfHostProject(name);
     return name;
 }
 
