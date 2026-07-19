@@ -228,8 +228,12 @@ export function runQualityGate(options: QualityGateOptions): QualityGateResult {
 
         const healthConfig =
             options.coverageOverride !== undefined
-                ? { coverageOverride: options.coverageOverride, dataHub: hub }
-                : { dataHub: hub };
+                ? {
+                      coverageOverride: options.coverageOverride,
+                      dataHub: hub,
+                      ...(options.project ? { branch: options.project } : {}),
+                  }
+                : { dataHub: hub, ...(options.project ? { branch: options.project } : {}) };
         const health = calculateHealthScore(healthConfig);
         _buildChecks(checks, health, hub);
         _buildCategoryChecks(checks, incompleteItems, hub);

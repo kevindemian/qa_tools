@@ -210,6 +210,75 @@ describe('RunQualityGate', () => {
         expect(result.checks.length).toBeGreaterThanOrEqual(1);
     });
 
+    it('aGGRESIVE: branch scope uses the branch OWN metrics, not repo aggregate (Bug 16)', () => {
+        mockCalcFlakinessEntries.mockReturnValue([]);
+        const mockHub = createMockHub({
+            raw: {
+                runs: [
+                    {
+                        id: 1,
+                        conclusion: 'success',
+                        head_branch: 'feature/x',
+                        created_at: '2025-01-01T00:00:00.000Z',
+                        updated_at: '2025-01-01T00:00:00.000Z',
+                    },
+                    {
+                        id: 2,
+                        conclusion: 'success',
+                        head_branch: 'feature/x',
+                        created_at: '2025-01-01T00:00:00.000Z',
+                        updated_at: '2025-01-01T00:00:00.000Z',
+                    },
+                    {
+                        id: 3,
+                        conclusion: 'failure',
+                        head_branch: 'main',
+                        created_at: '2025-01-01T00:00:00.000Z',
+                        updated_at: '2025-01-01T00:00:00.000Z',
+                    },
+                ],
+                jobs: new Map(),
+                artifacts: new Map(),
+                failureReasons: new Map(),
+            },
+            computed: {
+                passRate: 66,
+                avgDuration: 10000,
+                suiteSpeedP95: 500,
+                flakyRate: [],
+                coverage: 80,
+                pipelineCost: { totalMinutes: 0, estimatedCost: 0 },
+                defectTrends: [],
+                branchBreakdown: {},
+                topFailingJobs: [],
+                topFailureReasons: [],
+                releaseScore: { score: 0, dimensions: {} as never, grade: 'critical' },
+                quarantineStatus: { flakyCount: 0, quarantinedCount: 0 },
+                testPassRate: 66,
+                testCounts: { passed: 2, failed: 1, skipped: 0, total: 3 },
+                framework: 'vitest',
+                executionRate: 66,
+                flakyPercentage: 0,
+            },
+        }) as never;
+
+        const repoGate = runQualityGate({ dataHub: mockHub });
+        const branchGate = runQualityGate({ project: 'feature/x', dataHub: mockHub });
+
+        const repoPass = repoGate.checks.find((c) => c.name === 'pass-rate');
+        const branchPass = branchGate.checks.find((c) => c.name === 'pass-rate');
+
+        // 'feature/x' pass rate = 100% (2/2 success) → dimension score 100.
+        expect(branchPass?.score).toBe(100);
+        expect(branchPass?.status).toBe('pass');
+        // Repo aggregate = 2/3 = 66.7% → dimension score below 100 (not the branch's 100).
+        expect(repoPass?.score).not.toBe(100);
+        expect(repoPass?.score).toBeGreaterThan(0);
+        expect(repoPass?.score).toBeLessThan(100);
+        // The branch gate must NOT equal the repo gate (proves real scoping, not aggregate reuse).
+        expect(branchGate.overall).not.toBe(repoGate.overall);
+    });
+
     it('fails when flaky rate exceeds threshold', () => {
         mockCalcFlakinessEntries.mockReturnValue([
             { title: 'flaky-test-1', project: 'test', rate: 1, passCount: 1, failCount: 1, skipCount: 0, totalRuns: 2 },

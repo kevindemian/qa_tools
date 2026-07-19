@@ -18,6 +18,12 @@ import type { HealthScoreResult, HealthScoreGrade, HealthScoreDimensions, Health
 import { summarizeDataQuality } from './data-quality.js';
 import { extractErrorMessage, humanizeError } from '../ui/prompt-errors.js';
 import { rootLogger } from '../logger.js';
+import { calcPipelinePassRate } from '../data-hub/compute/pass-rate.js';
+import { calcFlakyFromPipelineRuns } from '../data-hub/compute/flaky-rate.js';
+import { calcFlakyPercentage } from '../data-hub/compute/flaky-percentage.js';
+import { calcExecutionRate } from '../data-hub/compute/execution-rate.js';
+import { calcSuiteSpeedP95 } from '../data-hub/compute/suite-speed.js';
+import type { PipelineRun } from '../types/ci-cd.js';
 
 export interface HealthScoreConfig {
     weights: { passRate: number; flakyRate: number; coverage: number; executionRate: number; suiteSpeed: number };
@@ -119,7 +125,15 @@ export function evaluateQualityGate(
 }
 
 /** Compute actual metrics — DataHub.computed is the ONLY source. */
-function computeActualMetrics(dataHub: DataHub): ActualMetrics {
+function computeActualMetrics(dataHub: DataHub, branch?: string): ActualMetrics {
+    // Branch scope (Gap 3): when a branch is requested, compute the dimensions from the
+    // branch-filtered runs/jobs so the score reflects THAT branch, not the whole repo.
+    // Coverage has no branch-scoped source in the model, so the repo-wide value is used
+    // (same limitation as the rest of the system) — documented, not masked.
+    if (branch != null) {
+        return computeBranchMetrics(dataHub, branch);
+    }
+
     const c = dataHub.computed;
 
     const passRate = Number.isFinite(c.passRate) ? c.passRate : 0;
@@ -129,6 +143,26 @@ function computeActualMetrics(dataHub: DataHub): ActualMetrics {
     const coverage = Number.isFinite(c.coverage) ? c.coverage : 0;
     const executionRate = Number.isFinite(c.executionRate ?? 0) ? (c.executionRate ?? 0) : 0;
     const suiteSpeed = Number.isFinite(c.suiteSpeedP95) ? c.suiteSpeedP95 : 0;
+
+    return { passRate, flakyPct, coverage, executionRate, suiteSpeed };
+}
+
+/**
+ * Compute dimensions from branch-filtered runs using the SSOT compute layer.
+ * Honest branch scoping: passRate/flaky/executionRate/suiteSpeed are branch-specific;
+ * coverage is repo-wide (no branch source exists).
+ */
+function computeBranchMetrics(dataHub: DataHub, branch: string): ActualMetrics {
+    const allRuns = dataHub.getRuns();
+    const scopedRuns: PipelineRun[] = allRuns.filter((r) => (r.head_branch ?? r.ref) === branch);
+    const jobsMap = dataHub.raw.jobs;
+
+    const passRate = calcPipelinePassRate(scopedRuns, branch);
+    const flakyResults = calcFlakyFromPipelineRuns(scopedRuns, jobsMap, branch);
+    const flakyPct = _normalizeFlakyPct(calcFlakyPercentage(flakyResults, scopedRuns, jobsMap));
+    const coverage = Number.isFinite(dataHub.computed.coverage) ? dataHub.computed.coverage : 0;
+    const executionRate = calcExecutionRate(scopedRuns);
+    const suiteSpeed = calcSuiteSpeedP95(jobsMap, dataHub.raw.timing);
 
     return { passRate, flakyPct, coverage, executionRate, suiteSpeed };
 }
@@ -269,7 +303,9 @@ function _buildProvenance(options?: Partial<HealthScoreConfig>): HealthScoreProv
  * @param options - Configuration overrides AND DataHub (required). DataHub is the sole source of truth.
  * @returns HealthScoreResult with overall score, grade, dimensions, and provenance.
  */
-export function calculateHealthScore(options: Partial<HealthScoreConfig> & { dataHub: DataHub }): HealthScoreResult {
+export function calculateHealthScore(
+    options: Partial<HealthScoreConfig> & { dataHub: DataHub; branch?: string },
+): HealthScoreResult {
     try {
         return _computeHealthScore(options);
     } catch (err: unknown) {
@@ -281,10 +317,12 @@ export function calculateHealthScore(options: Partial<HealthScoreConfig> & { dat
     }
 }
 
-function _computeHealthScore(options: Partial<HealthScoreConfig> & { dataHub: DataHub }): HealthScoreResult {
+function _computeHealthScore(
+    options: Partial<HealthScoreConfig> & { dataHub: DataHub; branch?: string },
+): HealthScoreResult {
     const config = pickConfig(options);
     const dataHub = options.dataHub;
-    const actual = computeActualMetrics(dataHub);
+    const actual = computeActualMetrics(dataHub, options.branch);
     const dataQuality = summarizeDataQuality(dataHub);
 
     const scPassRate = scorePassRate(actual.passRate, config);
