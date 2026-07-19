@@ -1,24 +1,16 @@
 /**
  * Tests for report-html — HTML report generation using primitives.
+ *
+ * NOTE: local modules (logger, config-accessor) are NOT mocked — anti-mock-theater
+ * (T3): the flow must run real and integrated (AGENTS §26.2). Config values that
+ * the report reads are supplied via process.env, which the real Config accessor
+ * reads. The real rootLogger is used (logs to stderr, harmless in tests).
  */
 
 import { nonNull, nullAs } from '../test-utils.js';
 import { generateHtmlReport, generateCoverageHtml, generateReportWithFallback } from '../report/report-html.js';
 import type { FlatTest } from '../result_parser.js';
 import type { CoverageEpic, TestRunTab } from '../report/report-types.js';
-
-vi.mock('../logger', () => ({
-    rootLogger: { error: vi.fn(), info: vi.fn(), child: vi.fn().mockReturnThis() },
-}));
-
-vi.mock('../config-accessor.js', () => ({
-    default: { get: vi.fn(() => '') },
-    get: vi.fn((key: string) => {
-        if (key === 'CI_COMMIT_BRANCH') return 'main';
-        if (key === 'CI_JOB_URL') return 'https://ci.example.com/job/42';
-        return '';
-    }),
-}));
 
 const MOCK_TESTS: FlatTest[] = [
     { title: 'Login Test', state: 'passed', duration: 1.2, fullTitle: 'Auth > Login Test' },
@@ -57,6 +49,16 @@ const HEALTH_SCORE: import('../types.js').HealthScoreResult = {
 };
 
 describe('GenerateHtmlReport', () => {
+    beforeEach(() => {
+        process.env['CI_COMMIT_BRANCH'] = 'main';
+        process.env['CI_JOB_URL'] = 'https://ci.example.com/job/42';
+    });
+
+    afterEach(() => {
+        delete process.env['CI_COMMIT_BRANCH'];
+        delete process.env['CI_JOB_URL'];
+    });
+
     it('returns valid HTML for basic test list', () => {
         const html = generateHtmlReport(MOCK_TESTS);
 

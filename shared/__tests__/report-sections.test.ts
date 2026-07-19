@@ -1,10 +1,10 @@
 /**
  * Tests for report-sections — HTML UI section builders.
+ *
+ * NOTE: report-sections integrates with the real local `report-table` module
+ * (buildTestTable). The local module is NOT mocked — anti-mock-theater (T3):
+ * the flow must run real and integrated (AGENTS §26.2).
  */
-
-vi.mock('../report/report-table.js', () => ({
-    buildTestTable: vi.fn(() => '<table>mock</table>'),
-}));
 
 import { nonNull } from '../test-utils.js';
 import type { FlatTest } from '../result_parser.js';

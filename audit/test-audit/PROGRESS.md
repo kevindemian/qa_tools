@@ -36,53 +36,56 @@ Status: pending | audited-clean | fixed-Tx
 - [audited-clean] shared/**tests**/state.property.test.ts
 - [audited-clean] shared/**tests**/state.test.ts
 
-## B1.2a — report/html (split de B1.2)
+## B1.2a — report/html (split de B1.2) — AUDITADA: 47/47, 2 fixes T3
 
-- [pending] shared/**tests**/ai-comparison.property.test.ts
-- [pending] shared/**tests**/ai-comparison.test.ts
-- [pending] shared/**tests**/ai-effectiveness.property.test.ts
-- [pending] shared/**tests**/ai-effectiveness.test.ts
-- [pending] shared/**tests**/ai-feedback.test.ts
-- [pending] shared/**tests**/backlog-health.property.test.ts
-- [pending] shared/**tests**/backlog-health.test.ts
-- [pending] shared/**tests**/bug-report-validator.test.ts
-- [pending] shared/**tests**/bug-report.schema.test.ts
-- [pending] shared/**tests**/bug-report.test.ts
-- [pending] shared/**tests**/coverage-gap-html.property.test.ts
-- [pending] shared/**tests**/coverage-gap-utils.test.ts
-- [pending] shared/**tests**/coverage-gap.test.ts
-- [pending] shared/**tests**/flakiness-dashboard-html.property.test.ts
-- [pending] shared/**tests**/flakiness-dashboard.test.ts
-- [pending] shared/**tests**/generate-coverage-gap-html.test.ts
-- [pending] shared/**tests**/html-factory.test.ts
-- [pending] shared/**tests**/impact-alert.property.test.ts
-- [pending] shared/**tests**/impact-alert.test.ts
-- [pending] shared/**tests**/incident-report.property.test.ts
-- [pending] shared/**tests**/incident-report.test.ts
-- [pending] shared/**tests**/markdown.test.ts
-- [pending] shared/**tests**/pr-report-core.compute-diff.test.ts
-- [pending] shared/**tests**/pr-report-core.main.test.ts
-- [pending] shared/**tests**/pr-report-core.property.test.ts
-- [pending] shared/**tests**/pr-report-core.test.ts
-- [pending] shared/**tests**/pr-report-core.wiring.property.test.ts
-- [pending] shared/**tests**/pr-report-core.wiring.test.ts
-- [pending] shared/**tests**/report-chart.test.ts
-- [pending] shared/**tests**/report-diff.test.ts
-- [pending] shared/**tests**/report-export.test.ts
-- [pending] shared/**tests**/report-generator.test.ts
-- [pending] shared/**tests**/report-html-project.test.ts
-- [pending] shared/**tests**/report-html.property.test.ts
-- [pending] shared/**tests**/report-html.test.ts
-- [pending] shared/**tests**/report-scripts.test.ts
-- [pending] shared/**tests**/report-sections.test.ts
-- [pending] shared/**tests**/report-styles.test.ts
-- [pending] shared/**tests**/report-table.test.ts
-- [pending] shared/**tests**/report-types.test.ts
-- [pending] shared/**tests**/report-utils.test.ts
-- [pending] shared/**tests**/report-validator.test.ts
-- [pending] shared/**tests**/show-docs.test.ts
-- [pending] shared/**tests**/traceability-matrix.property.test.ts
-- [pending] shared/**tests**/traceability-matrix.test.ts
+- [audited-clean] shared/**tests**/ai-comparison.property.test.ts
+- [audited-clean] shared/**tests**/ai-comparison.test.ts
+- [audited-clean] shared/**tests**/ai-effectiveness.property.test.ts
+- [audited-clean] shared/**tests**/ai-effectiveness.test.ts
+- [audited-clean] shared/**tests**/ai-feedback.test.ts
+- [audited-clean] shared/**tests**/backlog-health.property.test.ts
+- [audited-clean] shared/**tests**/backlog-health.test.ts
+- [audited-clean] shared/**tests**/bug-report-validator.test.ts
+- [audited-clean] shared/**tests**/bug-report.schema.test.ts
+- [audited-clean] shared/**tests**/bug-report.test.ts
+- [audited-clean] shared/**tests**/coverage-gap-html.property.test.ts
+- [audited-clean] shared/**tests**/coverage-gap-utils.test.ts
+- [audited-clean] shared/**tests**/coverage-gap.test.ts
+- [audited-clean] shared/**tests**/flakiness-dashboard-html.property.test.ts
+- [audited-clean] shared/**tests**/flakiness-dashboard.test.ts
+- [audited-clean] shared/**tests**/generate-coverage-gap-html.test.ts
+- [audited-clean] shared/**tests**/html-factory.test.ts
+- [audited-clean] shared/**tests**/impact-alert.property.test.ts
+- [audited-clean] shared/**tests**/impact-alert.test.ts
+- [audited-clean] shared/**tests**/incident-report.property.test.ts
+- [audited-clean] shared/**tests**/incident-report.test.ts
+- [audited-clean] shared/**tests**/markdown.test.ts
+- [audited-clean] shared/**tests**/pr-report-core.compute-diff.test.ts
+- [audited-clean] shared/**tests**/pr-report-core.main.test.ts
+- [audited-clean] shared/**tests**/pr-report-core.property.test.ts
+- [audited-clean] shared/**tests**/pr-report-core.test.ts
+- [audited-clean] shared/**tests**/pr-report-core.wiring.property.test.ts
+- [audited-clean] shared/**tests**/pr-report-core.wiring.test.ts
+- [audited-clean] shared/**tests**/report-chart.test.ts
+- [audited-clean] shared/**tests**/report-diff.test.ts
+- [audited-clean] shared/**tests**/report-export.test.ts
+- [audited-clean] shared/**tests**/report-generator.test.ts
+- [audited-clean] shared/**tests**/report-html-project.test.ts
+- [audited-clean] shared/**tests**/report-html.property.test.ts
+- [fixed-T3] shared/**tests**/report-html.test.ts (opção2: removeu vi.mock local config-accessor/logger → env real)
+- [fixed-T3] shared/**tests**/report-sections.test.ts (opção2: removeu vi.mock local report-table → buildTestTable real)
+- [audited-clean] shared/**tests**/report-scripts.test.ts
+- [audited-clean] shared/**tests**/report-sections.test.ts
+- [audited-clean] shared/**tests**/report-styles.test.ts
+- [audited-clean] shared/**tests**/report-table.test.ts
+- [audited-clean] shared/**tests**/report-types.test.ts
+- [audited-clean] shared/**tests**/report-utils.test.ts
+- [audited-clean] shared/**tests**/report-validator.test.ts
+- [audited-clean] shared/**tests**/show-docs.test.ts
+- [audited-clean] shared/**tests**/traceability-matrix.property.test.ts
+- [audited-clean] shared/**tests**/traceability-matrix.test.ts
+- [audited-clean] shared/**tests**/pr-report.test.ts
+- [audited-clean] shared/**tests**/vitest-ctrf-reporter.test.ts
 
 ## B1.2b — quality/score (split de B1.2)
 
