@@ -9,7 +9,9 @@ describe('CreateMockLinkManager', () => {
             'resolveLinkTypeId',
             'linkIssues',
             'createIssueLink',
+            '_getPreconditionFieldId',
             'associatePrecondition',
+            '_resolvePreconditionIssueTypeId',
             'listPreconditions',
             'createPrecondition',
             'listTestExecutions',
@@ -18,6 +20,10 @@ describe('CreateMockLinkManager', () => {
         ] as const;
 
         expect(methods.every((m) => m in mock)).toBeTruthy();
+        expect('jiraResource' in mock).toBeTruthy();
+        expect('linkTypeManager' in mock).toBeTruthy();
+        expect('linkOperations' in mock).toBeTruthy();
+        expect('preconditionHandler' in mock).toBeTruthy();
     });
 
     it('returns null for cache properties by default', () => {

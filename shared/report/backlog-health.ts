@@ -37,6 +37,7 @@ export interface BacklogHealthResult {
     staleIssues: BacklogHealthIssue[];
     bugsWithoutTests: BacklogHealthIssue[];
     densityByEpic: Array<{ epic: string; bugCount: number; testCount: number }>;
+    totalIssues: number;
     score: number;
     timestamp: string;
 }
@@ -60,11 +61,12 @@ const SCORE_THRESHOLD_SUCCESS = 80;
 const SCORE_THRESHOLD_WARN = 50;
 
 function daysSince(dateStr: string): number {
+    if (dateStr === '') return Infinity;
     const updated = new Date(dateStr);
     const now = new Date();
     const diff = now.getTime() - updated.getTime();
-    if (!Number.isFinite(diff)) return 0;
-    return Math.floor(diff / (1000 * 60 * 60 * 24));
+    if (!Number.isFinite(diff) || !Number.isFinite(updated.getTime())) return Infinity;
+    return Math.max(0, Math.floor(diff / (1000 * 60 * 60 * 24)));
 }
 
 export function analyzeUnassignedIssues(issues: BacklogHealthIssue[]): BacklogHealthIssue[] {
@@ -90,10 +92,7 @@ export function calculateBacklogScore(result: BacklogHealthResult): number {
         ...result.bugsWithoutTests.map((i) => i.key),
     ]).size;
 
-    const totalIssues = result.densityByEpic.reduce(
-        (sum, e) => sum + (Number.isFinite(e.bugCount) ? e.bugCount : 0),
-        0,
-    );
+    const totalIssues = Number.isFinite(result.totalIssues) ? result.totalIssues : 0;
     const effective = Math.max(totalIssues, totalFlagged, 1);
 
     const unassignScore = Math.max(0, 100 - (result.unassignedIssues.length / effective) * 100);
@@ -135,6 +134,7 @@ export function analyzeBacklogHealth(
         staleIssues: stale,
         bugsWithoutTests: bugs,
         densityByEpic,
+        totalIssues: limited.length,
         score: 0,
         timestamp: new Date().toISOString(),
     };

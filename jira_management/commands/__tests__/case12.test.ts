@@ -69,7 +69,19 @@ describe('Case12', () => {
             const result = await case12.handler(mockContext);
 
             expect(result).toBeUndefined();
-            expect(vi.mocked(tableView)).toHaveBeenCalledWith();
+
+            const tableViewArg = vi.mocked(tableView).mock.calls[0]?.[0] as Array<{
+                Endpoint: string;
+                Status: string;
+                Time: string;
+            }>;
+
+            expect(Array.isArray(tableViewArg)).toBeTruthy();
+            expect(tableViewArg.length).toBeGreaterThan(0);
+            expect(typeof tableViewArg[0]?.Endpoint).toBe('string');
+            expect(typeof tableViewArg[0]?.Status).toBe('string');
+            expect(vi.mocked(tableView).mock.calls[0]?.[1]).toStrictEqual(['Endpoint', 'Status', 'Time']);
+            expect(vi.mocked(tableView).mock.calls[0]?.[2]).toBe('Status');
             expect(vi.mocked(mockContext.pushHistory)).toHaveBeenCalledWith('diagnostico', '3/4 ok', 'ok');
         });
 

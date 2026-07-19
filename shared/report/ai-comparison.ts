@@ -37,6 +37,29 @@ export interface AiComparisonResult {
     timestamp: string;
 }
 
+interface GroupSummary {
+    total: number;
+    passRate: number;
+    flakinessAvg: number;
+    acceptanceRate: number;
+}
+
+function summarizeGroup(records: AiComparisonRecord[]): GroupSummary {
+    const total = records.length;
+    if (total === 0) {
+        return { total: 0, passRate: 0, flakinessAvg: 0, acceptanceRate: 0 };
+    }
+    const passed = records.filter((r) => r.passed).length;
+    const accepted = records.filter((r) => r.accepted).length;
+    const flakinessSum = records.reduce((s, r) => s + r.flakiness, 0);
+    return {
+        total,
+        passRate: Math.round((passed / total) * 100),
+        flakinessAvg: flakinessSum / total,
+        acceptanceRate: accepted / total,
+    };
+}
+
 export function compareAiVsManual(records: AiComparisonRecord[] | null | undefined): AiComparisonResult {
     const timestamp = new Date().toISOString();
 
@@ -49,7 +72,7 @@ export function compareAiVsManual(records: AiComparisonRecord[] | null | undefin
             manualTotal: 0,
             manualPassRate: 0,
             manualFlakinessAvg: 0,
-            manualAcceptanceRate: 1,
+            manualAcceptanceRate: 0,
             aiAdvantage: 'none',
             byVersion: [],
             timestamp,
@@ -59,18 +82,18 @@ export function compareAiVsManual(records: AiComparisonRecord[] | null | undefin
     const aiRecords = records.filter((r) => r.generatedBy === 'ai');
     const manualRecords = records.filter((r) => r.generatedBy === 'manual');
 
-    const aiTotal = aiRecords.length;
-    const aiPassed = aiRecords.filter((r) => r.passed).length;
-    const aiPassRate = aiTotal > 0 ? Math.round((aiPassed / aiTotal) * 100) : 0;
-    const aiFlakinessAvg = aiTotal > 0 ? aiRecords.reduce((s, r) => s + r.flakiness, 0) / aiTotal : 0;
-    const aiAccepted = aiRecords.filter((r) => r.accepted).length;
-    const aiAcceptanceRate = aiTotal > 0 ? aiAccepted / aiTotal : 0;
+    const ai = summarizeGroup(aiRecords);
+    const manual = summarizeGroup(manualRecords);
 
-    const manualTotal = manualRecords.length;
-    const manualPassed = manualRecords.filter((r) => r.passed).length;
-    const manualPassRate = manualTotal > 0 ? Math.round((manualPassed / manualTotal) * 100) : 0;
-    const manualFlakinessAvg = manualTotal > 0 ? manualRecords.reduce((s, r) => s + r.flakiness, 0) / manualTotal : 0;
-    const manualAcceptanceRate = 1;
+    const aiTotal = ai.total;
+    const aiPassRate = ai.passRate;
+    const aiFlakinessAvg = ai.flakinessAvg;
+    const aiAcceptanceRate = ai.acceptanceRate;
+
+    const manualTotal = manual.total;
+    const manualPassRate = manual.passRate;
+    const manualFlakinessAvg = manual.flakinessAvg;
+    const manualAcceptanceRate = manual.acceptanceRate;
 
     let aiAdvantage: 'pass_rate' | 'flakiness' | 'none' = 'none';
     if (aiTotal > 0 && manualTotal > 0) {
@@ -122,7 +145,7 @@ function buildComparisonCards(result: AiComparisonResult): string {
             MetricCard({ label: 'AI Avg Flakiness', value: result.aiFlakinessAvg.toFixed(3) }) +
             MetricCard({ label: 'Manual Avg Flakiness', value: result.manualFlakinessAvg.toFixed(3) }) +
             MetricCard({ label: 'AI Acceptance', value: result.aiAcceptanceRate.toFixed(2) }) +
-            MetricCard({ label: 'Manual Acceptance', value: '1.00' }),
+            MetricCard({ label: 'Manual Acceptance', value: result.manualAcceptanceRate.toFixed(2) }),
     });
 }
 

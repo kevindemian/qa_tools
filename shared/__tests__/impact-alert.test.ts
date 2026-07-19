@@ -42,6 +42,36 @@ describe('AnalyzePipelineImpact', () => {
         expect(nonNull(result.alerts[0]).title).toBe('Insufficient data');
     });
 
+    it('returns insufficient-data result for NaN passRate (no false critical alert) — AGGRESSIVE §24', () => {
+        const result = analyzePipelineImpact(NaN, 0, [], 45, ['Epic-1']);
+
+        expect(result.alerts).toHaveLength(1);
+        expect(result.criticalCount).toBe(0);
+        expect(nonNull(result.alerts[0]).title).toBe('Insufficient data');
+    });
+
+    it('returns insufficient-data result for NaN coveragePct — AGGRESSIVE §24', () => {
+        const result = analyzePipelineImpact(50, 3, ['x'], NaN, ['Epic-1']);
+
+        expect(result.criticalCount).toBe(0);
+        expect(nonNull(result.alerts[0]).title).toBe('Insufficient data');
+    });
+
+    it('treats NaN/negative failingJobs as zero (no malformed alert) — AGGRESSIVE §24', () => {
+        const result = analyzePipelineImpact(50, NaN, ['x'], 45, ['Epic-1']);
+
+        expect(Number.isNaN(result.criticalCount)).toBeFalsy();
+
+        const hasNaNText = result.alerts.some((a) => /NaN/.test(a.message) || /NaN/.test(a.title));
+
+        expect(hasNaNText).toBeFalsy();
+
+        const neg = analyzePipelineImpact(50, -5, ['x'], 45, ['Epic-1']);
+        const hasBadText = neg.alerts.some((a) => /-5/.test(a.message) || /NaN/.test(a.message));
+
+        expect(hasBadText).toBeFalsy();
+    });
+
     it('generates CRITICAL alert when passRate < 70 and coveragePct < 70', () => {
         const result = analyzePipelineImpact(50, 3, ['Login failure', 'DB timeout'], 45, ['Epic-1']);
 

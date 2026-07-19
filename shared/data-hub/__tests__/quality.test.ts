@@ -23,6 +23,7 @@ import {
     validateAndScoreCoverageFiles,
     validateAndScoreDoraMetrics,
     validateAndScorePerformanceMetrics,
+    gateRawData,
 } from '../quality.js';
 
 describe('ConfidenceForSource', () => {
@@ -273,5 +274,42 @@ describe('ValidateAndScorePerformanceMetrics (object)', () => {
 
         expect(quality.valid).toBeFalsy();
         expect(quality.issues.join(' ')).toContain('schema invalid');
+    });
+});
+
+describe('GateRawData (ingest boundary — AGGRESIVE robustness)', () => {
+    it('does NOT throw when an array category contains a null/invalid element', () => {
+        const raw = {
+            runs: [],
+            jobs: new Map(),
+            artifacts: new Map(),
+            failureReasons: new Map(),
+            failureRecords: [
+                null as unknown as FailureRecord,
+                { source: 'ctrf', name: 'x', status: 'failed', confidence: 1 },
+            ],
+        } as never;
+
+        expect(() => gateRawData(raw)).not.toThrow();
+
+        const { raw: gated, quality } = gateRawData(raw);
+
+        // Valid element preserved; the null one is tagged, not dropped or crashing the gate.
+        expect(gated.failureRecords).toHaveLength(1);
+        expect(quality.failureRecords.issues.join(' ')).toMatch(/unparseable|invalid/);
+    });
+
+    it('preserves all other RawData fields untouched when a category is malformed', () => {
+        const raw = {
+            runs: [],
+            jobs: new Map([[1, [1] as unknown as never]]),
+            artifacts: new Map(),
+            failureReasons: new Map(),
+            deployments: [null as unknown as Deployment],
+        } as never;
+
+        const { raw: gated } = gateRawData(raw);
+
+        expect(gated.jobs.get(1)).toStrictEqual([1]);
     });
 });

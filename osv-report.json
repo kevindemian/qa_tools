@@ -1,0 +1,12 @@
+Starting filesystem walk for root: /
+Scanned /home/kdemian/PROJETOS/qa_tools/qa_tools/package-lock.json file and found 598 packages
+End status: 0 dirs visited, 1 inodes visited, 1 Extract calls, 75.312887ms elapsed, 75.313086ms wall time
+{
+  "results": [],
+  "experimental_config": {
+    "licenses": {
+      "summary": false,
+      "allowlist": null
+    }
+  }
+}

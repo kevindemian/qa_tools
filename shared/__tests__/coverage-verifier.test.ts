@@ -38,6 +38,43 @@ describe('RecalculateCoverage', () => {
         expect(result.coverageDelta).toBe(0);
     });
 
+    it('rejects declared coverage above 100 as invalid (no absurd oversell delta) — AGGRESSIVE §24', () => {
+        const result = recalculateCoverage(
+            {
+                tests: [{ title: 'Test user can log in' }],
+                coverageTable: { coverage: 250 },
+            },
+            makeCtx('Given user can log in'),
+        );
+
+        expect(result.declaredCoverage).toBeNull();
+        expect(result.coverageDelta).toBe(0);
+    });
+
+    it('rejects negative declared coverage as invalid — AGGRESSIVE §24', () => {
+        const result = recalculateCoverage(
+            {
+                tests: [{ title: 'Test user can log in' }],
+                coverageTable: { coverage: -50 },
+            },
+            makeCtx('Given user can log in'),
+        );
+
+        expect(result.declaredCoverage).toBeNull();
+    });
+
+    it('rejects Infinity declared coverage as invalid — AGGRESSIVE §24', () => {
+        const result = recalculateCoverage(
+            {
+                tests: [{ title: 'Test user can log in' }],
+                coverageTable: { coverage: Infinity },
+            },
+            makeCtx('Given user can log in'),
+        );
+
+        expect(result.declaredCoverage).toBeNull();
+    });
+
     it('reports gaps for uncovered criteria', () => {
         const result = recalculateCoverage(
             {

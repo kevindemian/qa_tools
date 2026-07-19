@@ -12,7 +12,7 @@ import type { TableColumn, TableRow } from '../primitives/index.js';
 import { rootLogger } from '../logger.js';
 import type { DataHub } from '../types/data-hub.js';
 
-const DEFAULT_COST_PER_MINUTE = 0.01;
+export const DEFAULT_COST_PER_MINUTE = 0.01;
 
 export interface PipelineCostEntry {
     timestamp: string;
@@ -40,7 +40,10 @@ function mapConclusionToStatus(conclusion: string | undefined): 'passed' | 'fail
 }
 
 export function calculatePipelineCost(costPerMinute: number | undefined, dataHub: DataHub): PipelineCostResult {
-    const cpm = costPerMinute ?? (Number(process.env['QA_COST_PER_COMPUTE_MINUTE']) || DEFAULT_COST_PER_MINUTE);
+    const envCpm = Number(process.env['QA_COST_PER_COMPUTE_MINUTE']);
+    const rawCpm = costPerMinute ?? (Number.isFinite(envCpm) && envCpm >= 0 ? envCpm : DEFAULT_COST_PER_MINUTE);
+    // Rule 24 — cost rate must be a finite, non-negative number; negative/NaN rates are rejected (never produce negative/NaN costs).
+    const cpm = Number.isFinite(rawCpm) && rawCpm >= 0 ? rawCpm : DEFAULT_COST_PER_MINUTE;
 
     // SSOT: custo de pipeline vem exclusivamente do DataHub (Camadas 1–6 do CI).
     const ciRuns = dataHub.getRuns();

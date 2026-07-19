@@ -638,11 +638,35 @@ describe('Schedule Handler', () => {
                 expect.any(Number),
                 expect.any(Number),
             );
-            expect(mockComputeCrossSquadBenchmark).toHaveBeenCalledWith();
-            expect(mockAnalyzePipelineImpact).toHaveBeenCalledWith();
-            expect(mockCalculatePipelineCost).toHaveBeenCalledWith();
-            expect(mockRunQualityGate).toHaveBeenCalledWith();
-            expect(mockBuildIncidentReport).toHaveBeenCalledWith();
+
+            const benchmarkInput = mockComputeCrossSquadBenchmark.mock.calls[0]?.[0] as Array<{
+                name: string;
+                runCount: number;
+                healthScore: number;
+                grade: string;
+                passRate: number;
+                flakyRate: number;
+                coveragePct: number;
+            }>;
+
+            expect(Array.isArray(benchmarkInput)).toBeTruthy();
+            expect(benchmarkInput.some((b) => b.name === 'proj1' && b.runCount === 2)).toBeTruthy();
+            expect(mockAnalyzePipelineImpact).toHaveBeenCalledWith(
+                expect.any(Number),
+                expect.any(Number),
+                expect.any(Array),
+                expect.any(Number),
+                expect.any(Array),
+            );
+            expect(mockCalculatePipelineCost).toHaveBeenCalledWith(undefined, expect.anything());
+            expect(mockRunQualityGate).toHaveBeenCalledWith(expect.objectContaining({ project: 'proj1' }));
+            expect(mockBuildIncidentReport).toHaveBeenCalledWith(
+                expect.any(Number),
+                expect.any(Number),
+                expect.any(String),
+                expect.any(Array),
+                expect.any(Number),
+            );
         });
 
         it('writes exactly one report file with the project-specific path', () => {

@@ -18,6 +18,12 @@ const GIT_PROVIDER_METHODS = [
     'listPipelineArtifacts',
     'downloadArtifact',
     'getDiff',
+    'getJobLogs',
+    'getWorkflowRunTiming',
+    'getWorkflowUsage',
+    'getFileContents',
+    'listDirectory',
+    'getTestReport',
 ];
 
 describe('CreateMockGitProvider', () => {

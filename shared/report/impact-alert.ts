@@ -181,15 +181,17 @@ export function analyzePipelineImpact(
     coveragePct: number | null | undefined,
     uncoveredEpics: string[],
 ): ImpactAlertResult {
-    if (passRate == null || coveragePct == null) {
+    // Rule 24 — non-finite metrics are missing data, not "low". Never generate false critical alerts from NaN.
+    if (passRate == null || coveragePct == null || !Number.isFinite(passRate) || !Number.isFinite(coveragePct)) {
         return DEFAULT_RESULT;
     }
+    const safeFailingJobs = Number.isFinite(failingJobs) && failingJobs >= 0 ? failingJobs : 0;
 
     const alerts: ImpactAlert[] = [];
 
     addLowPassRateLowCoverageAlert(passRate, coveragePct, topFailures, alerts);
-    addLowPassRateFailingAlert(passRate, failingJobs, topFailures, alerts);
-    addFailingUncoveredAlert(failingJobs, uncoveredEpics, alerts);
+    addLowPassRateFailingAlert(passRate, safeFailingJobs, topFailures, alerts);
+    addFailingUncoveredAlert(safeFailingJobs, uncoveredEpics, alerts);
     addLowCoverageAlert(coveragePct, uncoveredEpics, alerts);
     addAllClearAlert(passRate, coveragePct, alerts);
 

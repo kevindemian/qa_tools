@@ -40,7 +40,9 @@ describe('Case16', () => {
             const result = await case16.handler(mockContext);
 
             expect(result).toBeUndefined();
-            expect(vi.mocked(success)).toHaveBeenCalledWith();
+            expect(vi.mocked(success)).toHaveBeenCalledWith(
+                expect.stringMatching(/Diretório padrao JSON alterado para:.*resultados/),
+            );
             expect(vi.mocked(mockContext.pushHistory)).toHaveBeenCalledWith(
                 'config-json-dir',
                 expect.any(String),

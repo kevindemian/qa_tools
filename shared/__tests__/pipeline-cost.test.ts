@@ -3,7 +3,7 @@
  */
 
 import * as reportStyles from '../report/report-styles.js';
-import { calculatePipelineCost, generatePipelineCostHtml } from '../quality/pipeline-cost.js';
+import { calculatePipelineCost, generatePipelineCostHtml, DEFAULT_COST_PER_MINUTE } from '../quality/pipeline-cost.js';
 import type { PipelineCostResult } from '../quality/pipeline-cost.js';
 import type { DataHub } from '../types/data-hub.js';
 import type { PipelineRun } from '../types/ci-cd.js';
@@ -144,6 +144,27 @@ describe('CalculatePipelineCost', () => {
                 process.env['QA_COST_PER_COMPUTE_MINUTE'] = prev;
             }
         }
+    });
+
+    it('aGGRESIVE: negative cost per minute is rejected (Rule 24) and falls back to default, never producing negative cost', () => {
+        const hub = makeHub([
+            makeCiRun({ id: 1, run_started_at: '2026-06-01T12:00:00.000Z', updated_at: '2026-06-01T12:01:00.000Z' }),
+        ]);
+        const result = calculatePipelineCost(-5, hub);
+
+        expect(result.costPerMinute).toBe(DEFAULT_COST_PER_MINUTE);
+        expect(result.totalCost).toBeGreaterThanOrEqual(0);
+        expect(nonNull(result.costByRun[0]).cost).toBeGreaterThanOrEqual(0);
+    });
+
+    it('aGGRESIVE: NaN cost per minute is rejected (Rule 24) and falls back to default', () => {
+        const hub = makeHub([
+            makeCiRun({ id: 1, run_started_at: '2026-06-01T12:00:00.000Z', updated_at: '2026-06-01T12:01:00.000Z' }),
+        ]);
+        const result = calculatePipelineCost(Number.NaN, hub);
+
+        expect(result.costPerMinute).toBe(DEFAULT_COST_PER_MINUTE);
+        expect(Number.isFinite(result.totalCost)).toBeTruthy();
     });
 
     it('sorts entries by timestamp descending', () => {

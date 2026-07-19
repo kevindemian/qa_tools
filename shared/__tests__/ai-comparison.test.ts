@@ -30,7 +30,7 @@ describe('CompareAiVsManual', () => {
             manualTotal: 0,
             manualPassRate: 0,
             manualFlakinessAvg: 0,
-            manualAcceptanceRate: 1,
+            manualAcceptanceRate: 0,
             aiAdvantage: 'none',
             byVersion: [],
         });
@@ -52,7 +52,20 @@ describe('CompareAiVsManual', () => {
         expect(result.manualTotal).toBe(0);
         expect(result.manualPassRate).toBe(0);
         expect(result.manualFlakinessAvg).toBe(0);
-        expect(result.manualAcceptanceRate).toBe(1);
+        expect(result.manualAcceptanceRate).toBe(0);
+    });
+
+    it('computes manualAcceptanceRate from actual manual accepted flags (not hardcoded)', () => {
+        const records: AiComparisonRecord[] = [
+            makeRecord({ generatedBy: 'manual', passed: true, flakiness: 0.2, accepted: true }),
+            makeRecord({ generatedBy: 'manual', passed: true, flakiness: 0.1, accepted: false }),
+            makeRecord({ generatedBy: 'manual', passed: true, flakiness: 0.1, accepted: false }),
+        ];
+        const result = compareAiVsManual(records);
+
+        expect(result.manualTotal).toBe(3);
+        expect(result.manualAcceptanceRate).toBeCloseTo(1 / 3, 5);
+        expect(result.manualAcceptanceRate).not.toBe(1);
     });
 
     it('computes AI-only advantage as none when no manual records', () => {

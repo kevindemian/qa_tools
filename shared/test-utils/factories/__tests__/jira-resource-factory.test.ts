@@ -4,6 +4,7 @@ const JIRA_RESOURCE_METHODS = [
     'getJiraResource',
     'postJiraResource',
     'putJiraResource',
+    'getFromOriginPath',
     'searchJiraIssues',
     'getTransitionsForIssue',
     'transitionIssue',

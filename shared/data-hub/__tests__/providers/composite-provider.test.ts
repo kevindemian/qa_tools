@@ -6,6 +6,7 @@
 import { describe, it, expect, vi } from 'vitest';
 import { CompositeProvider } from '../../providers/composite-provider.js';
 import type { DataProvider, FetchOptions, RawData } from '../../../types/data-hub.js';
+import { rootLogger } from '../../../logger.js';
 
 /* ── Mock DataProvider ─────────────────────────────────────────────────── */
 
@@ -67,8 +68,10 @@ describe('CompositeProvider', () => {
         expect(coverage?.percentage).toBe(80);
     });
 
-    it('skips providers that fail', async () => {
+    it('skips providers that fail and surfaces the rejection (no silent swallow)', async () => {
         expect.hasAssertions();
+
+        const warnSpy = vi.spyOn(rootLogger, 'warn').mockImplementation(() => {});
 
         const failingProvider: DataProvider = {
             name: 'failing',
@@ -87,10 +90,16 @@ describe('CompositeProvider', () => {
         const result = await composite.fetchRawData(options);
 
         expect(result.runs).toHaveLength(1);
+        expect(warnSpy).toHaveBeenCalledWith(expect.stringContaining('failing'));
+        expect(warnSpy).toHaveBeenCalledWith(expect.stringContaining('Network error'));
+
+        warnSpy.mockRestore();
     });
 
-    it('returns empty data when all providers fail', async () => {
+    it('returns empty data when all providers fail and surfaces every rejection', async () => {
         expect.hasAssertions();
+
+        const warnSpy = vi.spyOn(rootLogger, 'warn').mockImplementation(() => {});
 
         const failingProvider1: DataProvider = {
             name: 'failing1',
@@ -109,6 +118,12 @@ describe('CompositeProvider', () => {
 
         expect(result.runs).toHaveLength(0);
         expect(result.jobs.size).toBe(0);
+        expect(warnSpy).toHaveBeenCalledWith(expect.stringContaining('failing1'));
+        expect(warnSpy).toHaveBeenCalledWith(expect.stringContaining('failing2'));
+        expect(warnSpy).toHaveBeenCalledWith(expect.stringContaining('Error 1'));
+        expect(warnSpy).toHaveBeenCalledWith(expect.stringContaining('Error 2'));
+
+        warnSpy.mockRestore();
     });
 
     it('returns empty data when no providers', async () => {

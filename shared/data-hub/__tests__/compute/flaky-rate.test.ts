@@ -56,6 +56,34 @@ describe('Compute/flaky-rate', () => {
             expect(calcFlakyFromPipelineRuns(runs, jobsMap)).toStrictEqual([]);
         });
 
+        it('does NOT flag cancelled/skipped as flaky (no genuine pass+fail) — AGGRESSIVE domain', () => {
+            expect.hasAssertions();
+
+            const runs = [makePipelineRun(1), makePipelineRun(2), makePipelineRun(3)];
+            const jobsMap = new Map([
+                [1, [makeJob('job', 'success')]],
+                [2, [makeJob('job', 'cancelled')]],
+                [3, [makeJob('job', 'skipped')]],
+            ]);
+
+            expect(calcFlakyFromPipelineRuns(runs, jobsMap)).toStrictEqual([]);
+        });
+
+        it('flags genuine success+failure oscillation as flaky — AGGRESSIVE domain', () => {
+            expect.hasAssertions();
+
+            const runs = [makePipelineRun(1), makePipelineRun(2)];
+            const jobsMap = new Map([
+                [1, [makeJob('job', 'success')]],
+                [2, [makeJob('job', 'failure')]],
+            ]);
+
+            const result = calcFlakyFromPipelineRuns(runs, jobsMap);
+
+            expect(result).toHaveLength(1);
+            expect(result[0]?.title).toBe('job');
+        });
+
         it('detects multiple flaky jobs', () => {
             expect.hasAssertions();
 

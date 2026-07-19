@@ -66,8 +66,11 @@ function detectFlakyFromHistory(jobHistory: Map<string, Map<number, string>>): F
 }
 
 function isFlaky(statuses: string[]): boolean {
+    // A job is genuinely flaky only when it intermittently passes AND fails.
+    // Non-success statuses such as 'cancelled', 'skipped', 'pending' or 'error'
+    // are NOT flaky-test failures and must not pollute flaky detection.
     const hasSuccess = statuses.includes('success');
-    const hasFailure = statuses.some((s) => s !== 'success');
+    const hasFailure = statuses.includes('failure');
     return hasSuccess && hasFailure;
 }
 

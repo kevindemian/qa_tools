@@ -43,7 +43,9 @@ describe('Case14', () => {
             expect(result).toBeUndefined();
             expect(vi.mocked(update)).toHaveBeenCalledWith(expect.any(Function));
             expect(vi.mocked(mockContext.pushHistory)).toHaveBeenCalledWith('config-tests', expect.any(String), 'ok');
-            expect(vi.mocked(success)).toHaveBeenCalledWith();
+            expect(vi.mocked(success)).toHaveBeenCalledWith(
+                expect.stringMatching(/Diretório de testes alterado para:.*testes/),
+            );
         });
     });
 });

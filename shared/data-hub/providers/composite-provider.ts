@@ -6,6 +6,8 @@
  */
 import type { DataProvider, FetchOptions, RawData } from '../../types/data-hub.js';
 import { mergeCategoryArrays, mergeProvenance } from '../raw-merge.js';
+import { rootLogger } from '../../logger.js';
+import { extractErrorMessage } from '../../ui/prompt-errors.js';
 
 export class CompositeProvider implements DataProvider {
     readonly name = 'composite';
@@ -27,8 +29,14 @@ export class CompositeProvider implements DataProvider {
 
         const seenRunIds = new Set<string | number>();
 
-        for (const result of results) {
-            if (result.status === 'rejected') continue;
+        for (const [index, result] of results.entries()) {
+            if (result.status === 'rejected') {
+                const provider = index >= 0 && index < this.providers.length ? this.providers[index] : undefined;
+                rootLogger.warn(
+                    `composite-provider: provider "${provider?.name ?? index}" failed — ${extractErrorMessage(result.reason)}`,
+                );
+                continue;
+            }
             this.mergeProviderData(merged, result.value, seenRunIds);
         }
 

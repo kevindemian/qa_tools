@@ -914,7 +914,7 @@ describe('Interactive-mode test exports', () => {
 
             await _testExports._dashboardBacklogHealth();
 
-            expect(mockAnalyzeBacklogHealth).toHaveBeenCalledWith();
+            expect(mockAnalyzeBacklogHealth).toHaveBeenCalledWith([]);
             expect(mockWriteReport).toHaveBeenCalledTimes(1);
 
             const writtenHtml = mockWriteReport.mock.calls[0]?.[1] as string;
@@ -1226,7 +1226,18 @@ describe('Interactive-mode test exports', () => {
             } as never);
             await _testExports._dashboardBenchmark();
 
-            expect(mockComputeCrossSquadBenchmark).toHaveBeenCalledWith();
+            const benchmarkInput = mockComputeCrossSquadBenchmark.mock.calls[0]?.[0] as Array<{
+                name: string;
+                runCount: number;
+                healthScore: number;
+                grade: string;
+                passRate: number;
+                flakyRate: number;
+                coveragePct: number;
+            }>;
+
+            expect(Array.isArray(benchmarkInput)).toBeTruthy();
+            expect(benchmarkInput.some((b) => b.name === 'proj1')).toBeTruthy();
             expect(mockWriteReport).toHaveBeenCalledTimes(1);
 
             const writtenHtml = mockWriteReport.mock.calls[0]?.[1] as string;

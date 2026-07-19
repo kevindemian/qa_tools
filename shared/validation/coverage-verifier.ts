@@ -140,8 +140,10 @@ function extractDeclaredCoverage(artifact: unknown): number | null {
     if (typeof artifact !== 'object' || artifact === null) return null;
     const obj = artifact as { [key: string]: unknown };
     const ct = obj['coverageTable'] as { [key: string]: unknown } | undefined;
-    if (ct && typeof ct['coverage'] === 'number' && !isNaN(ct['coverage'])) {
-        return ct['coverage'];
+    const raw = ct?.['coverage'];
+    // Rule 24 — coverage is a finite percentage within [0,100]. Out-of-range / non-finite values are invalid, not "declared".
+    if (typeof raw === 'number' && Number.isFinite(raw) && raw >= 0 && raw <= 100) {
+        return raw;
     }
     return null;
 }

@@ -267,13 +267,48 @@ export function validateAndScore<T>(
     const out: T[] = [];
 
     for (const raw of items) {
-        const naturalKey = opts.key(raw);
+        let naturalKey: string;
+        try {
+            naturalKey = opts.key(raw);
+        } catch {
+            // Malformed element (e.g. null) — never crash the ingest gate (AGENTS §25: tag, don't throw/drop).
+            naturalKey = `invalid:${out.length}`;
+            issues.push(`element unparseable — tagged and skipped [${naturalKey}]`);
+            continue;
+        }
 
         if (seen.has(naturalKey)) {
             continue; // dedup: collapse duplicate, keep first occurrence
         }
         seen.add(naturalKey);
 
+        // Any unexpected failure processing this element must be tagged, never crash the gate (§25).
+        const processed = processItem(raw, naturalKey, opts, schema, issues);
+        if (processed.kind === 'issue') {
+            issues.push(processed.issue);
+            continue;
+        }
+        out.push(processed.item);
+    }
+
+    return { items: out, quality: { valid: issues.length === 0, issues } };
+}
+
+/**
+ * Process a single raw element: schema validation, provenance tagging and confidence
+ * normalization. Returns a discriminated result (item or tagged issue) so the ingest
+ * gate never crashes — AGENTS §25.
+ */
+type ProcessItemResult<T> = { kind: 'item'; item: T } | { kind: 'issue'; issue: string };
+
+function processItem<T>(
+    raw: T,
+    naturalKey: string,
+    opts: ValidateAndScoreOptions<T>,
+    schema: z.ZodType<T>,
+    issues: string[],
+): ProcessItemResult<T> {
+    try {
         const parsed = schema.safeParse(raw);
         let item: T = raw;
         if (!parsed.success) {
@@ -294,10 +329,13 @@ export function validateAndScore<T>(
             item = { ...item, confidence: assigned };
         }
 
-        out.push(item);
+        return { kind: 'item', item };
+    } catch (err) {
+        return {
+            kind: 'issue',
+            issue: `element processing failed [${naturalKey}]: ${err instanceof Error ? err.message : String(err)}`,
+        };
     }
-
-    return { items: out, quality: { valid: issues.length === 0, issues } };
 }
 
 /* ───────────────────────────────────────────────────────────────────────────

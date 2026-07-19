@@ -73,6 +73,7 @@ const emptyResult: BacklogHealthResult = {
     staleIssues: [],
     bugsWithoutTests: [],
     densityByEpic: [],
+    totalIssues: 0,
     score: 100,
     timestamp: new Date().toISOString(),
 };
@@ -114,6 +115,34 @@ describe('AnalyzeStaleIssues', () => {
     it('handles empty input', () => {
         expect(analyzeStaleIssues([])).toHaveLength(0);
     });
+
+    it('aggressive: invalid/empty updated date is treated as STALE, not fresh (no silent misclassification)', () => {
+        const corrupted: BacklogHealthIssue[] = [
+            { key: 'X-1', summary: 's', assignee: 'a', updated: '', type: 'Bug', priority: 'low', linkedTestCount: 0 },
+            {
+                key: 'X-2',
+                summary: 's',
+                assignee: 'a',
+                updated: 'not-a-date',
+                type: 'Bug',
+                priority: 'low',
+                linkedTestCount: 0,
+            },
+            {
+                key: 'X-3',
+                summary: 's',
+                assignee: 'a',
+                updated: daysAgo(1),
+                type: 'Bug',
+                priority: 'low',
+                linkedTestCount: 0,
+            },
+        ];
+        const result = analyzeStaleIssues(corrupted, { staleDays: 30 });
+
+        expect(result).toHaveLength(2);
+        expect(result.map((i) => i.key).sort((a, b) => a.localeCompare(b))).toStrictEqual(['X-1', 'X-2']);
+    });
 });
 
 describe('AnalyzeBugsWithoutTests', () => {
@@ -152,6 +181,7 @@ describe('CalculateBacklogScore', () => {
             staleIssues: [nonNull(sampleIssues[2]), nonNull(sampleIssues[3])],
             bugsWithoutTests: [nonNull(sampleIssues[1]), nonNull(sampleIssues[3])],
             densityByEpic: [{ epic: 'PROJ', bugCount: 3, testCount: 1 }],
+            totalIssues: 3,
             score: 0,
             timestamp: new Date().toISOString(),
         };
@@ -167,6 +197,7 @@ describe('CalculateBacklogScore', () => {
             staleIssues: [nonNull(sampleIssues[2]), nonNull(sampleIssues[3])],
             bugsWithoutTests: [nonNull(sampleIssues[1]), nonNull(sampleIssues[3])],
             densityByEpic: [{ epic: 'PROJ', bugCount: 3, testCount: 1 }],
+            totalIssues: 3,
             score: 0,
             timestamp: new Date().toISOString(),
         };
@@ -178,6 +209,62 @@ describe('CalculateBacklogScore', () => {
         // bugNoTestScore = 100 - (2/3)*100 = 33.33
         // weighted = 66.67*0.30 + 33.33*0.35 + 33.33*0.35 = 43.33
         expect(score).toBe(43);
+    });
+
+    it('aggressive: score scales with proportion of flagged non-bug issues (denominator = total issues, not bug-only)', () => {
+        const makeIssue = (key: string): BacklogHealthIssue => ({
+            key,
+            summary: 'task',
+            assignee: null,
+            updated: daysAgo(1),
+            type: 'Task',
+            priority: 'low',
+            linkedTestCount: 1,
+        });
+
+        const allUnassigned = Array.from({ length: 10 }, (_, i) => makeIssue(`P-${i}`));
+        const result: BacklogHealthResult = {
+            unassignedIssues: allUnassigned,
+            staleIssues: [],
+            bugsWithoutTests: [],
+            densityByEpic: [{ epic: 'P', bugCount: 0, testCount: 10 }],
+            totalIssues: allUnassigned.length,
+            score: 0,
+            timestamp: new Date().toISOString(),
+        };
+
+        // All 10 non-bug issues unassigned → unassignScore=0, others 100 → 0*0.30+100*0.35+100*0.35 = 70.
+        // The key bug fix: denominator is totalIssues (10), so the ratio is real (was collapsing to bug-only count).
+        const fullUnassignedScore = calculateBacklogScore(result);
+
+        expect(fullUnassignedScore).toBe(70);
+
+        const halfUnassigned = allUnassigned.slice(0, 5);
+        const partial: BacklogHealthResult = {
+            ...result,
+            unassignedIssues: halfUnassigned,
+            totalIssues: allUnassigned.length,
+        };
+        const partialScore = calculateBacklogScore(partial);
+
+        // 5/10 unassigned → unassignScore = 50, others 100 → 50*0.30 + 100*0.35 + 100*0.35 = 85
+        expect(partialScore).toBe(85);
+        // Score must differ between 50% and 100% unassigned (proves ratio-sensitivity, not collapse).
+        expect(partialScore).not.toBe(fullUnassignedScore);
+    });
+
+    it('aggressive: totalIssues missing/invalid does not crash and reports 100 when no flags', () => {
+        const noFlags: BacklogHealthResult = {
+            unassignedIssues: [],
+            staleIssues: [],
+            bugsWithoutTests: [],
+            densityByEpic: [],
+            totalIssues: 0,
+            score: 0,
+            timestamp: new Date().toISOString(),
+        };
+
+        expect(calculateBacklogScore(noFlags)).toBe(100);
     });
 });
 
